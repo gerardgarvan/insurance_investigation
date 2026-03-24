@@ -27,7 +27,11 @@
 3. User can configure file paths, ICD code lists (149 HL codes: 77 ICD-10 C81.xx + 72 ICD-9 201.xx), and payer mapping rules via `00_config.R`
 4. User can access utility functions for attrition logging (`init_attrition_log()`, `log_attrition()`) and HIPAA suppression (primary + secondary suppression)
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Config, scaffolding, date parser, attrition logger (LOAD-02, LOAD-03)
+- [ ] 01-02-PLAN.md -- PCORnet CSV loader with explicit col_types for 9 tables (LOAD-01)
 
 ---
 
@@ -74,7 +78,7 @@
 
 **Success Criteria** (what must be TRUE):
 1. User can produce attrition waterfall chart showing progressive cohort reduction through filter steps (vertical bars with N excluded at each step)
-2. User can produce payer-stratified Sankey/alluvial diagram showing patient flow from enrollment → diagnosis → treatment, with flow thickness proportional to N patients and colored by payer category
+2. User can produce payer-stratified Sankey/alluvial diagram showing patient flow from enrollment -> diagnosis -> treatment, with flow thickness proportional to N patients and colored by payer category
 3. User can verify all outputs apply HIPAA small-cell suppression (counts 1-10 replaced with "<11" with secondary suppression to prevent back-calculation)
 4. User can save visualizations as PNG files (`output/figures/waterfall_attrition.png`, `output/figures/sankey_patient_flow.png`)
 
@@ -86,15 +90,14 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Data Loading | 0/? | Not started | - |
+| 1. Foundation & Data Loading | 0/2 | Planned | - |
 | 2. Payer Harmonization | 0/? | Not started | - |
 | 3. Cohort Building | 0/? | Not started | - |
 | 4. Visualization | 0/? | Not started | - |
 
 ## Next Actions
 
-1. Review and approve roadmap
-2. Execute `/gsd:plan-phase 1` to break down Foundation & Data Loading into plans
+1. Execute `/gsd:execute-phase 1` to implement Foundation & Data Loading plans
 
 ---
 
