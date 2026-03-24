@@ -15,12 +15,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Load PCORnet CDM CSV tables from HiPerGator with correct data types — Validated in Phase 1: Foundation Data Loading (9 primary tables with explicit col_types)
 - [x] Multi-format date parsing for PCORnet data — Validated in Phase 1: 4-format fallback chain (ISO, Excel serial, SAS DATE9, compact)
 - [x] Attrition logging infrastructure — Validated in Phase 1: init_attrition_log() + log_attrition() for patient-level counts
+- [x] Harmonize payer variables into 9 categories matching the Python pipeline — Validated in Phase 2: Payer Harmonization (map_payer_category with prefix-based case_when)
+- [x] Implement dual-eligible detection (Medicare+Medicaid combinations) — Validated in Phase 2: encounter-level cross-payer detection + codes {14, 141, 142}
+- [x] ICD code normalization and HL diagnosis matching — Validated in Phase 2: utils_icd.R with 149 codes (77 ICD-10 + 72 ICD-9)
 
 ### Active
 
 - [ ] Load remaining 13 PCORnet CDM CSV tables as needed
-- [ ] Harmonize payer variables into 9 categories matching the Python pipeline (Medicare, Medicaid, Dual eligible, Private, Other government, No payment/Self-pay, Other, Unavailable, Unknown)
-- [ ] Implement dual-eligible detection (Medicare+Medicaid combinations)
 - [ ] Build cohort filter chain using named predicates (has_*, with_*, exclude_*)
 - [ ] Log N patients before and after every filter step automatically
 - [ ] Identify HL patients using 149 ICD codes (77 ICD-10 C81.xx, 72 ICD-9 201.xx)
@@ -63,7 +64,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Standalone R (not consuming Python output) | Enables independent exploration without Python pipeline dependency | — Pending |
-| Replicate exact payer logic from Python pipeline | Ensures results are comparable across both pipelines | — Pending |
+| Replicate exact payer logic from Python pipeline | Ensures results are comparable across both pipelines | ✓ Phase 2 |
 | Cohort + viz only for v1 | Focus on getting the filter chain and visualizations working before adding analysis tables | — Pending |
 | Named predicate functions for filtering | Readability — code should read like a clinical protocol | — Pending |
 
@@ -85,4 +86,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after Phase 1 completion*
+*Last updated: 2026-03-24 after Phase 2 completion*
