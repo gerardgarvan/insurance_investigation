@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHRT-02 | Phase 3 | Pending |
 | CHRT-03 | Phase 3 | Pending |
 | VIZ-01 | Phase 4 | Pending |
-| VIZ-02 | Phase 5 | Pending |
-| VIZ-03 | Phase 1 | Pending |
+| VIZ-02 | Phase 4 | Pending |
+| VIZ-03 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
@@ -101,4 +101,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after initial definition*
+*Last updated: 2026-03-24 after roadmap creation*
