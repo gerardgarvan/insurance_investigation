@@ -12,11 +12,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Load PCORnet CDM CSV tables from HiPerGator with correct data types — Validated in Phase 1: Foundation Data Loading (9 primary tables with explicit col_types)
+- [x] Multi-format date parsing for PCORnet data — Validated in Phase 1: 4-format fallback chain (ISO, Excel serial, SAS DATE9, compact)
+- [x] Attrition logging infrastructure — Validated in Phase 1: init_attrition_log() + log_attrition() for patient-level counts
 
 ### Active
 
-- [ ] Load 22 PCORnet CDM CSV tables from HiPerGator with correct data types
+- [ ] Load remaining 13 PCORnet CDM CSV tables as needed
 - [ ] Harmonize payer variables into 9 categories matching the Python pipeline (Medicare, Medicaid, Dual eligible, Private, Other government, No payment/Self-pay, Other, Unavailable, Unknown)
 - [ ] Implement dual-eligible detection (Medicare+Medicaid combinations)
 - [ ] Build cohort filter chain using named predicates (has_*, with_*, exclude_*)
@@ -83,4 +85,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after initialization*
+*Last updated: 2026-03-24 after Phase 1 completion*
