@@ -31,7 +31,7 @@
 
 Plans:
 - [x] 01-01-PLAN.md -- Config, scaffolding, date parser, attrition logger (LOAD-02, LOAD-03)
-- [ ] 01-02-PLAN.md -- PCORnet CSV loader with explicit col_types for 9 tables (LOAD-01)
+- [x] 01-02-PLAN.md -- PCORnet CSV loader with explicit col_types for 9 tables (LOAD-01)
 
 ---
 

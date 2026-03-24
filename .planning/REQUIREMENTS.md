@@ -9,7 +9,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Loading & Configuration
 
-- [ ] **LOAD-01**: User can load 22 PCORnet CDM CSV tables with explicit column type specifications
+- [x] **LOAD-01**: User can load 22 PCORnet CDM CSV tables with explicit column type specifications
 - [x] **LOAD-02**: User can parse dates in multiple SAS export formats (DATE9, DATETIME, YYYYMMDD)
 - [x] **LOAD-03**: User can configure file paths, ICD code lists (149 HL codes), and payer mappings via `00_config.R`
 
@@ -81,7 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOAD-01 | Phase 1 | Pending |
+| LOAD-01 | Phase 1 | Complete |
 | LOAD-02 | Phase 1 | Complete |
 | LOAD-03 | Phase 1 | Complete |
 | PAYR-01 | Phase 2 | Pending |
