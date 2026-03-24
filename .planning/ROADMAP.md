@@ -51,7 +51,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md -- ICD utility, 9-category payer mapping, dual-eligible detection, patient summary, enrollment completeness report (PAYR-01, PAYR-02, PAYR-03)
+- [x] 02-01-PLAN.md -- ICD utility, 9-category payer mapping, dual-eligible detection, patient summary, enrollment completeness report (PAYR-01, PAYR-02, PAYR-03)
 
 ---
 

@@ -15,9 +15,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Payer Harmonization
 
-- [ ] **PAYR-01**: User can harmonize payer variables into 9 standard categories matching the Python pipeline (Medicare, Medicaid, Dual eligible, Private, Other government, No payment/Self-pay, Other, Unavailable, Unknown)
-- [ ] **PAYR-02**: User can detect dual-eligible patients via temporal overlap of Medicare + Medicaid enrollment periods
-- [ ] **PAYR-03**: User can generate per-partner enrollment completeness report (% with enrollment records, mean duration, gap patterns)
+- [x] **PAYR-01**: User can harmonize payer variables into 9 standard categories matching the Python pipeline (Medicare, Medicaid, Dual eligible, Private, Other government, No payment/Self-pay, Other, Unavailable, Unknown)
+- [x] **PAYR-02**: User can detect dual-eligible patients via temporal overlap of Medicare + Medicaid enrollment periods
+- [x] **PAYR-03**: User can generate per-partner enrollment completeness report (% with enrollment records, mean duration, gap patterns)
 
 ### Cohort Building
 
@@ -84,9 +84,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOAD-01 | Phase 1 | Complete |
 | LOAD-02 | Phase 1 | Complete |
 | LOAD-03 | Phase 1 | Complete |
-| PAYR-01 | Phase 2 | Pending |
-| PAYR-02 | Phase 2 | Pending |
-| PAYR-03 | Phase 2 | Pending |
+| PAYR-01 | Phase 2 | Complete |
+| PAYR-02 | Phase 2 | Complete |
+| PAYR-03 | Phase 2 | Complete |
 | CHRT-01 | Phase 3 | Pending |
 | CHRT-02 | Phase 3 | Pending |
 | CHRT-03 | Phase 3 | Pending |
