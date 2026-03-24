@@ -210,6 +210,7 @@ CONFIG$analysis <- list(
 # These are sourced automatically when 00_config.R is loaded
 source("R/utils_dates.R")
 source("R/utils_attrition.R")
+source("R/utils_icd.R")
 
 # ==============================================================================
 # End of configuration
