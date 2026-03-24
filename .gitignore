@@ -1,0 +1,27 @@
+# R session artifacts
+.Rhistory
+.RData
+.Rproj.user/
+
+# renv package library
+renv/library/
+renv/staging/
+renv/cellar/
+
+# RStudio project files
+*.Rproj
+
+# Output files (keep directory structure, ignore contents)
+output/figures/*.png
+output/figures/*.pdf
+output/tables/*.csv
+output/tables/*.xlsx
+output/cohort/*.csv
+output/cohort/*.rds
+
+# Mac artifacts
+.DS_Store
+
+# Temporary files
+*.tmp
+*~
