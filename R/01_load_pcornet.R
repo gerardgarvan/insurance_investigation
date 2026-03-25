@@ -345,10 +345,10 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
     }
   }
 
-  # --- Date range validation: 1900-01-01 to today + 5 years ---
-  # Flags SAS epoch sentinels (1899-12-30) and extreme future dates
+  # --- Date range validation: data collection period 2012-01-01 to 2025-03-31 ---
+  # Flags dates outside the study period and SAS epoch sentinels (1899-12-30)
   date_range_min <- as.Date("1900-01-01")
-  date_range_max <- Sys.Date() + (5 * 365)  # 5-year future tolerance
+  date_range_max <- as.Date("2025-03-31")  # End of data collection period
   for (dcol in date_cols) {
     if (dcol %in% names(df) && inherits(df[[dcol]], "Date")) {
       valid_col_name <- paste0(dcol, "_VALID")

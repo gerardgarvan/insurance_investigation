@@ -19,7 +19,7 @@ library(glue)
 NOT_DATE_COLS <- c("DXDATE_IMPUTED")
 
 date_col_regex <- "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)"
-date_max <- Sys.Date() + 5 * 365
+date_max <- as.Date("2025-03-31")  # End of data collection period
 
 message("\n", strrep("=", 70))
 message("DATE AUDIT ACROSS ALL PCORNET TABLES")
