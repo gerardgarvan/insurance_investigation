@@ -15,7 +15,7 @@ library(glue)
 
 # --- Load raw text (dates stay as character strings) ---
 enr_raw <- read_csv(
-  PCORNET_PATHS$ENROLLMENT,
+  PCORNET_PATHS[["ENROLLMENT"]],
   col_types = cols(.default = col_character()),
   show_col_types = FALSE
 )

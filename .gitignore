@@ -19,6 +19,17 @@ output/tables/*.xlsx
 output/cohort/*.csv
 output/cohort/*.rds
 
+# Root-level diagnostic/output artifacts
+/*.csv
+/*.png
+/*.html
+/nul
+/csv_columns.txt
+/project.md
+
+# Output diagnostics
+output/diagnostics/*.csv
+
 # Mac artifacts
 .DS_Store
 
