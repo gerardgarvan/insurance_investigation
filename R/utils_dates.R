@@ -46,6 +46,10 @@ parse_pcornet_date <- function(date_char) {
     return(date_char)
   }
 
+  # Strip SAS datetime suffixes (e.g., "05NOV1998:00:00:00.000000" -> "05NOV1998")
+  # Also handles "2020-01-15T00:00:00" ISO datetime and "01/15/2020 12:00:00"
+  date_char <- str_replace(date_char, "[T: ]\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$", "")
+
   # Initialize result vector
   result <- rep(as.Date(NA), length(date_char))
 
