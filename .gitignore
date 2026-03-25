@@ -25,3 +25,6 @@ output/cohort/*.rds
 # Temporary files
 *.tmp
 *~
+
+# Claude Code
+CLAUDE.md
