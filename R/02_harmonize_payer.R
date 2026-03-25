@@ -174,14 +174,17 @@ dx_dates <- pcornet$DIAGNOSIS %>%
 
 # Get earliest from TUMOR_REGISTRY tables
 tr_tables <- list()
-if (!is.null(pcornet$TUMOR_REGISTRY1)) {
+if (!is.null(pcornet$TUMOR_REGISTRY1) &&
+    "DATE_OF_DIAGNOSIS" %in% names(pcornet$TUMOR_REGISTRY1)) {
   tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY1 %>% select(ID, DATE_OF_DIAGNOSIS)))
 }
-if (!is.null(pcornet$TUMOR_REGISTRY2)) {
-  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY2 %>% select(ID, DATE_OF_DIAGNOSIS)))
+if (!is.null(pcornet$TUMOR_REGISTRY2) &&
+    "DXDATE" %in% names(pcornet$TUMOR_REGISTRY2)) {
+  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY2 %>% select(ID, DATE_OF_DIAGNOSIS = DXDATE)))
 }
-if (!is.null(pcornet$TUMOR_REGISTRY3)) {
-  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY3 %>% select(ID, DATE_OF_DIAGNOSIS)))
+if (!is.null(pcornet$TUMOR_REGISTRY3) &&
+    "DXDATE" %in% names(pcornet$TUMOR_REGISTRY3)) {
+  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY3 %>% select(ID, DATE_OF_DIAGNOSIS = DXDATE)))
 }
 
 if (length(tr_tables) > 0) {
