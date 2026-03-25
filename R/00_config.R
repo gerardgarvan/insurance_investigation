@@ -134,6 +134,28 @@ ICD_CODES <- list(
 
     # 201.9x: Hodgkin's disease, unspecified
     "201.90", "201.91", "201.92", "201.93", "201.94", "201.95", "201.96", "201.97", "201.98"
+  ),
+
+  # ICD-O-3 Histology codes for Hodgkin Lymphoma (morphology codes 9650-9667)
+  # Used for TUMOR_REGISTRY table matching (TR1: HISTOLOGICAL_TYPE, TR2/TR3: MORPH)
+  # Reference: SEER ICD-O-3 Hematopoietic and Lymphoid code lists
+  #
+  # 9650: Hodgkin lymphoma, NOS
+  # 9651: Hodgkin lymphoma, lymphocyte-rich
+  # 9652: Hodgkin lymphoma, mixed cellularity, NOS
+  # 9653: Hodgkin lymphoma, lymphocytic depletion, NOS
+  # 9654: Hodgkin lymphoma, lymphocytic depletion, diffuse fibrosis
+  # 9655: Hodgkin lymphoma, lymphocytic depletion, reticular
+  # 9659: Nodular lymphocyte predominant Hodgkin lymphoma
+  # 9661: Hodgkin granuloma (obsolete)
+  # 9662: Hodgkin sarcoma (obsolete)
+  # 9663: Hodgkin lymphoma, nodular sclerosis, NOS
+  # 9664: Hodgkin lymphoma, nodular sclerosis, cellular phase
+  # 9665: Hodgkin lymphoma, nodular sclerosis, grade 1
+  # 9667: Hodgkin lymphoma, nodular sclerosis, grade 2
+  hl_histology = c(
+    "9650", "9651", "9652", "9653", "9654", "9655", "9659",
+    "9661", "9662", "9663", "9664", "9665", "9667"
   )
 )
 

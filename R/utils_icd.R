@@ -98,6 +98,46 @@ is_hl_diagnosis <- function(icd_code, icd_type) {
   return(result)
 }
 
+#' Check if ICD-O-3 histology code is Hodgkin Lymphoma
+#'
+#' Matches against ICD-O-3 histology codes 9650-9667 defined in ICD_CODES$hl_histology
+#' (00_config.R). Handles both plain codes ("9650") and codes with behavior suffix
+#' ("9650/3") by extracting the first 4 digits.
+#'
+#' @param histology_code Character or numeric vector of histology/morphology codes
+#' @return Logical vector indicating HL histology matches (FALSE for NA)
+#'
+#' @examples
+#' is_hl_histology(c("9650", "9663", "8000", NA))
+#' # Returns: c(TRUE, TRUE, FALSE, FALSE)
+#'
+#' is_hl_histology(c("9650/3", "8000/3"))
+#' # Returns: c(TRUE, FALSE)
+#'
+is_hl_histology <- function(histology_code) {
+  if (length(histology_code) == 0) {
+    return(logical(0))
+  }
+
+  # Initialize result as all FALSE
+  result <- rep(FALSE, length(histology_code))
+
+  # Handle NA: NA -> FALSE (already initialized)
+  valid <- !is.na(histology_code)
+
+  if (!any(valid)) {
+    return(result)
+  }
+
+  # Extract first 4 digits to handle "9650/3" format (behavior suffix)
+  hist_4digit <- str_extract(as.character(histology_code[valid]), "^\\d{4}")
+
+  # Match against config list
+  result[valid] <- !is.na(hist_4digit) & hist_4digit %in% ICD_CODES$hl_histology
+
+  return(result)
+}
+
 # ==============================================================================
 # End of utils_icd.R
 # ==============================================================================
