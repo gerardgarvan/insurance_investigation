@@ -46,6 +46,12 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **RECT-04**: User can view R vs Python payer mapping differences documented side-by-side in code comments
 - [x] **RECT-05**: User can rebuild full pipeline end-to-end after fixes and verify all issues are resolved or explained via data_quality_summary.csv
 
+### Gap Analysis (Phase 7)
+
+- [ ] **GAP-01**: User can view complete diagnosis history for all excluded "Neither" patients including lymphoma/cancer code subset (C81-C96, 200-208) stratified by site
+- [ ] **GAP-02**: User can see per-patient gap classification (phantom record, coding gap, non-HL diagnoses only, etc.) with enrollment and tumor registry cross-reference
+- [ ] **GAP-03**: User can determine whether the HL identification gap is closable (missed ICD codes) or a data quality limitation (no HL-related codes present)
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -117,12 +123,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RECT-03 | Phase 6 | Complete |
 | RECT-04 | Phase 6 | Complete |
 | RECT-05 | Phase 6 | Complete |
+| GAP-01 | Phase 7 | Pending |
+| GAP-02 | Phase 7 | Pending |
+| GAP-03 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 21 total
-- Mapped to phases: 21
+- v1 requirements: 24 total
+- Mapped to phases: 24
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-25 after Phase 6 planning*
+*Last updated: 2026-03-25 after Phase 7 planning*

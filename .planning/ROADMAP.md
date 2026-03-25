@@ -106,11 +106,11 @@ Plans:
 | 4. Visualization | 1/1 | Complete | 2026-03-25 |
 | 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress |  |
 | 6. Use Debug Output to Rectify Issues | 3/3 | Complete | 2026-03-25 |
+| 7. Dx Gap Analysis for Neither Patients | 0/1 | Planned |  |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 5` to complete remaining plan (05-03)
-2. Execute `/gsd:execute-phase 6` to apply data-driven fixes based on diagnostics
+1. Execute `/gsd:execute-phase 7` to run gap analysis investigation
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -135,6 +135,16 @@ Plans:
 - [x] 06-01-PLAN.md -- HL_SOURCE tracking in cohort predicates + Neither exclusion with audit CSV (RECT-01, RECT-02)
 - [x] 06-02-PLAN.md -- Data-driven fixes: date parser, regex, col_types, validation columns, payer docs (RECT-03, RECT-04)
 - [x] 06-03-PLAN.md -- Diagnostics update, data quality summary script, full pipeline rebuild + verification (RECT-05)
+
+### Phase 7: Dx gap analysis for excluded Neither patients
+
+**Goal:** Investigate the 19 patients excluded as "Neither" (no HL evidence) to characterize the data gap by diagnosis history, enrollment, and tumor registry cross-reference, and determine whether the gap is closable or a data quality limitation
+**Requirements**: GAP-01, GAP-02, GAP-03
+**Depends on:** Phase 6
+**Plans:** 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md -- Gap analysis script with diagnosis exploration, enrollment/TR cross-reference, gap classification, and pipeline decision checkpoint (GAP-01, GAP-02, GAP-03)
 
 ---
 
