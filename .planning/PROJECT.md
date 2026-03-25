@@ -23,6 +23,11 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Identify HL patients using 149 ICD codes (77 ICD-10 C81.xx, 72 ICD-9 201.xx) — Validated in Phase 3: has_hodgkin_diagnosis() via is_hl_diagnosis() with dotted/undotted normalization
 - [x] Handle multi-site data (OneFlorida+ partner institutions: AMS, UMI, FLM, VRT) — Validated in Phase 3: primary site strategy via inner_join on SOURCE
 
+- [x] Track HL identification source (DIAGNOSIS, TR, Both) per patient — Validated in Phase 6: HL_SOURCE column in has_hodgkin_diagnosis() with Neither exclusion
+- [x] Add numeric range validation for age, tumor size, and date fields — Validated in Phase 6: _VALID suffix columns in load_pcornet_table()
+- [x] Document R vs Python payer mapping comparison — Validated in Phase 6: comparison table in 00_config.R
+- [x] Full pipeline end-to-end verification with data quality summary — Validated in Phase 6: 08_data_quality_summary.R with 13-category resolution tracker
+
 ### Active
 
 - [ ] Produce attrition waterfall chart from filter log
@@ -87,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after Phase 3 completion*
+*Last updated: 2026-03-25 after Phase 6 completion*
