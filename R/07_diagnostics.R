@@ -399,10 +399,419 @@ if (length(tr_type_audit_results) > 0) {
 }
 
 # ==============================================================================
-# End of Section 3 (Sections 4-6 to be added in Task 2)
+# SECTION 4: HL Identification Source Comparison -- Venn Breakdown (D-04, D-07, D-08, D-09)
+# ==============================================================================
+
+message("\n", strrep("-", 60))
+message("SECTION 4: HL Identification Source Comparison")
+message(strrep("-", 60))
+
+# 1. DIAGNOSIS source: patients with HL diagnosis codes
+dx_patients <- pcornet$DIAGNOSIS %>%
+  filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
+  mutate(dx_icd_type = if_else(DX_TYPE == "10", "ICD-10", "ICD-9")) %>%
+  group_by(ID) %>%
+  summarise(
+    has_dx_code = 1L,
+    dx_icd_type = first(dx_icd_type),  # Take first match if multiple
+    .groups = "drop"
+  )
+
+message(glue("DIAGNOSIS source: {nrow(dx_patients)} patients with HL diagnosis codes"))
+
+# 2. TUMOR_REGISTRY source: patients with HL histology codes
+tr_patients_list <- list()
+
+# TR1: HISTOLOGICAL_TYPE
+if (!is.null(pcornet$TUMOR_REGISTRY1) && "HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY1)) {
+  tr1_hl <- pcornet$TUMOR_REGISTRY1 %>%
+    filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
+    select(ID) %>%
+    mutate(tr_table = "TR1")
+  tr_patients_list <- c(tr_patients_list, list(tr1_hl))
+  message(glue("  TR1 (HISTOLOGICAL_TYPE): {nrow(tr1_hl)} patients"))
+}
+
+# TR2: MORPH
+if (!is.null(pcornet$TUMOR_REGISTRY2) && "MORPH" %in% names(pcornet$TUMOR_REGISTRY2)) {
+  tr2_hl <- pcornet$TUMOR_REGISTRY2 %>%
+    filter(is_hl_histology(MORPH)) %>%
+    select(ID) %>%
+    mutate(tr_table = "TR2")
+  tr_patients_list <- c(tr_patients_list, list(tr2_hl))
+  message(glue("  TR2 (MORPH): {nrow(tr2_hl)} patients"))
+}
+
+# TR3: MORPH
+if (!is.null(pcornet$TUMOR_REGISTRY3) && "MORPH" %in% names(pcornet$TUMOR_REGISTRY3)) {
+  tr3_hl <- pcornet$TUMOR_REGISTRY3 %>%
+    filter(is_hl_histology(MORPH)) %>%
+    select(ID) %>%
+    mutate(tr_table = "TR3")
+  tr_patients_list <- c(tr_patients_list, list(tr3_hl))
+  message(glue("  TR3 (MORPH): {nrow(tr3_hl)} patients"))
+}
+
+# Combine TR sources
+if (length(tr_patients_list) > 0) {
+  tr_patients <- bind_rows(tr_patients_list) %>%
+    group_by(ID) %>%
+    summarise(
+      has_tr_code = 1L,
+      tr_table = paste(unique(tr_table), collapse = "+"),  # Show which TR tables
+      .groups = "drop"
+    )
+} else {
+  tr_patients <- tibble(ID = character(), has_tr_code = integer(), tr_table = character())
+}
+
+message(glue("TUMOR_REGISTRY source: {nrow(tr_patients)} patients with HL histology codes"))
+
+# 3. Full outer join against DEMOGRAPHIC (all patients)
+hl_venn <- pcornet$DEMOGRAPHIC %>%
+  select(ID, SOURCE) %>%
+  left_join(dx_patients, by = "ID") %>%
+  left_join(tr_patients, by = "ID") %>%
+  mutate(
+    has_dx_code = coalesce(has_dx_code, 0L),
+    has_tr_code = coalesce(has_tr_code, 0L),
+    hl_source = case_when(
+      has_dx_code == 1 & has_tr_code == 1 ~ "Both DIAGNOSIS and TR",
+      has_dx_code == 1 & has_tr_code == 0 ~ "DIAGNOSIS only",
+      has_dx_code == 0 & has_tr_code == 1 ~ "TR only",
+      TRUE ~ "Neither (data quality issue)"
+    )
+  )
+
+# 4. Site-stratified breakdown (D-08)
+message("\n=== HL Identification by Source and Site ===")
+hl_venn_tabyl <- hl_venn %>%
+  tabyl(SOURCE, hl_source) %>%
+  adorn_totals(c("row", "col"))
+
+print(hl_venn_tabyl)
+
+# Write detailed output
+hl_venn_summary <- hl_venn %>%
+  count(SOURCE, hl_source, name = "n")
+
+write_csv(hl_venn_summary, file.path(CONFIG$output_dir, "diagnostics", "hl_identification_venn.csv"))
+
+hl_detail <- hl_venn %>%
+  select(ID, SOURCE, has_dx_code, has_tr_code, hl_source, dx_icd_type, tr_table)
+
+write_csv(hl_detail, file.path(CONFIG$output_dir, "diagnostics", "hl_identification_detail.csv"))
+
+message(glue("\nWrote HL identification breakdown to hl_identification_venn.csv and hl_identification_detail.csv"))
+
+# 5. Method breakdown (D-08)
+message("\n=== HL Identification Method Breakdown ===")
+dx_method <- dx_patients %>% count(dx_icd_type, name = "n")
+message("DIAGNOSIS source by ICD type:")
+for (i in 1:nrow(dx_method)) {
+  message(glue("  {dx_method$dx_icd_type[i]}: {dx_method$n[i]}"))
+}
+
+tr_method <- tr_patients %>% count(tr_table, name = "n")
+message("\nTUMOR_REGISTRY source by table:")
+for (i in 1:nrow(tr_method)) {
+  message(glue("  {tr_method$tr_table[i]}: {tr_method$n[i]}"))
+}
+
+# 6. Extract scope check (D-09)
+n_neither <- sum(hl_venn$hl_source == "Neither (data quality issue)")
+if (n_neither > 0) {
+  message("\n", strrep("!", 60))
+  message(glue("WARNING: {n_neither} patients in Mailhot HL extract have NO HL evidence"))
+  message("in DIAGNOSIS or TUMOR_REGISTRY. This is unexpected for a pre-filtered HL cohort.")
+  message(strrep("!", 60))
+} else {
+  message("\nExtract scope check: ALL patients have HL evidence in at least one source")
+}
+
+# ==============================================================================
+# SECTION 5: Payer Mapping Audit (D-20)
+# ==============================================================================
+
+message("\n", strrep("-", 60))
+message("SECTION 5: Payer Mapping Audit")
+message(strrep("-", 60))
+
+# Check if payer_summary exists (from sourcing 02_harmonize_payer.R upstream)
+if (!exists("payer_summary")) {
+  payer_csv <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")
+  if (file.exists(payer_csv)) {
+    payer_summary <- read_csv(payer_csv, show_col_types = FALSE)
+    message("  Loaded payer_summary from CSV")
+  } else {
+    message("  WARNING: payer_summary not found. Run 02_harmonize_payer.R first. Skipping payer audit.")
+    payer_summary <- NULL
+  }
+}
+
+if (!is.null(payer_summary)) {
+  # 2. Category distribution
+  category_dist <- payer_summary %>%
+    filter(!is.na(PAYER_CATEGORY_PRIMARY)) %>%
+    count(PAYER_CATEGORY_PRIMARY, name = "n_patients") %>%
+    mutate(pct_of_total = round(100 * n_patients / sum(n_patients), 2)) %>%
+    arrange(desc(n_patients))
+
+  message("\n=== Payer Category Distribution ===")
+  for (i in 1:nrow(category_dist)) {
+    message(glue("  {category_dist$PAYER_CATEGORY_PRIMARY[i]}: {category_dist$n_patients[i]} ({category_dist$pct_of_total[i]}%)"))
+  }
+
+  # Check for missing expected categories
+  expected_categories <- PAYER_MAPPING$categories
+  found_categories <- category_dist$PAYER_CATEGORY_PRIMARY
+  missing_categories <- setdiff(expected_categories, found_categories)
+  if (length(missing_categories) > 0) {
+    message(glue("\n  Missing categories: {paste(missing_categories, collapse = ', ')}"))
+  } else {
+    message("\n  All 9 expected categories are represented")
+  }
+
+  # 3. Dual-eligible validation
+  n_dual <- sum(payer_summary$DUAL_ELIGIBLE == 1, na.rm = TRUE)
+  n_medicare <- sum(payer_summary$PAYER_CATEGORY_PRIMARY == "Medicare", na.rm = TRUE)
+  n_medicaid <- sum(payer_summary$PAYER_CATEGORY_PRIMARY == "Medicaid", na.rm = TRUE)
+  medicare_medicaid_total <- n_medicare + n_medicaid
+
+  message(glue("\n=== Dual-Eligible Validation ==="))
+  message(glue("  Dual-eligible patients: {n_dual}"))
+  if (medicare_medicaid_total > 0) {
+    dual_pct <- round(100 * n_dual / medicare_medicaid_total, 1)
+    message(glue("  Dual-eligible rate (% of Medicare+Medicaid): {dual_pct}%"))
+    if (dual_pct < 10 || dual_pct > 20) {
+      message(glue("  WARNING: Dual-eligible rate ({dual_pct}%) outside expected 10-20% range"))
+    } else {
+      message(glue("  Dual-eligible rate within expected 10-20% range"))
+    }
+  }
+
+  # 4. Raw payer code distribution
+  payer_raw_primary <- pcornet$ENCOUNTER %>%
+    filter(!is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0) %>%
+    count(PAYER_TYPE_PRIMARY, name = "n_encounters") %>%
+    arrange(desc(n_encounters)) %>%
+    mutate(field = "primary") %>%
+    head(20)
+
+  payer_raw_secondary <- pcornet$ENCOUNTER %>%
+    filter(!is.na(PAYER_TYPE_SECONDARY) & nchar(trimws(PAYER_TYPE_SECONDARY)) > 0) %>%
+    count(PAYER_TYPE_SECONDARY, name = "n_encounters") %>%
+    arrange(desc(n_encounters)) %>%
+    mutate(field = "secondary") %>%
+    head(20)
+
+  message("\n=== Top 20 Raw Payer Codes (Primary) ===")
+  for (i in 1:min(20, nrow(payer_raw_primary))) {
+    message(glue("  {payer_raw_primary$PAYER_TYPE_PRIMARY[i]}: {payer_raw_primary$n_encounters[i]} encounters"))
+  }
+
+  # 5. Unmapped codes check
+  # Codes that don't match any prefix rule or exact-match override
+  unmapped_codes <- pcornet$ENCOUNTER %>%
+    filter(!is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0) %>%
+    filter(
+      !str_starts(PAYER_TYPE_PRIMARY, "1") &
+      !str_starts(PAYER_TYPE_PRIMARY, "2") &
+      !str_starts(PAYER_TYPE_PRIMARY, "3") &
+      !str_starts(PAYER_TYPE_PRIMARY, "4") &
+      !str_starts(PAYER_TYPE_PRIMARY, "5") &
+      !str_starts(PAYER_TYPE_PRIMARY, "6") &
+      !str_starts(PAYER_TYPE_PRIMARY, "7") &
+      !str_starts(PAYER_TYPE_PRIMARY, "8") &
+      !str_starts(PAYER_TYPE_PRIMARY, "9") &
+      !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$unavailable_codes &
+      !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$unknown_codes &
+      !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$dual_eligible_codes
+    ) %>%
+    count(PAYER_TYPE_PRIMARY, name = "n_encounters") %>%
+    arrange(desc(n_encounters))
+
+  if (nrow(unmapped_codes) > 0) {
+    message(glue("\n  WARNING: {nrow(unmapped_codes)} payer codes don't match any mapping rule:"))
+    for (i in 1:min(10, nrow(unmapped_codes))) {
+      message(glue("    {unmapped_codes$PAYER_TYPE_PRIMARY[i]}: {unmapped_codes$n_encounters[i]} encounters"))
+    }
+  } else {
+    message("\n  All payer codes match at least one mapping rule")
+  }
+
+  # Write outputs
+  write_csv(category_dist, file.path(CONFIG$output_dir, "diagnostics", "payer_mapping_audit.csv"))
+
+  payer_raw_codes <- bind_rows(
+    payer_raw_primary %>% rename(payer_type = PAYER_TYPE_PRIMARY),
+    payer_raw_secondary %>% rename(payer_type = PAYER_TYPE_SECONDARY)
+  )
+  write_csv(payer_raw_codes, file.path(CONFIG$output_dir, "diagnostics", "payer_raw_codes.csv"))
+
+  message(glue("\nWrote payer audit to payer_mapping_audit.csv and payer_raw_codes.csv"))
+}
+
+# ==============================================================================
+# SECTION 6: Numeric Range Checks (D-18)
+# ==============================================================================
+
+message("\n", strrep("-", 60))
+message("SECTION 6: Numeric Range Checks")
+message(strrep("-", 60))
+
+numeric_range_issues <- list()
+
+# 1. Age checks (TR1, TR2, TR3)
+for (table_name in c("TUMOR_REGISTRY1", "TUMOR_REGISTRY2", "TUMOR_REGISTRY3")) {
+  if (!is.null(pcornet[[table_name]])) {
+    df <- pcornet[[table_name]]
+
+    # TR1: AGE_AT_DIAGNOSIS
+    if (table_name == "TUMOR_REGISTRY1" && "AGE_AT_DIAGNOSIS" %in% names(df)) {
+      age_col <- df$AGE_AT_DIAGNOSIS
+      n_negative <- sum(age_col < 0, na.rm = TRUE)
+      n_extreme <- sum(age_col > 120, na.rm = TRUE)
+
+      if (n_negative > 0) {
+        sample_vals <- paste(head(sort(age_col[age_col < 0]), 5), collapse = " | ")
+        numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+          table = table_name,
+          column = "AGE_AT_DIAGNOSIS",
+          issue_type = "negative_age",
+          n_affected = n_negative,
+          sample_values = sample_vals
+        )
+      }
+
+      if (n_extreme > 0) {
+        sample_vals <- paste(head(sort(age_col[age_col > 120 & !is.na(age_col)]), 5), collapse = " | ")
+        numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+          table = table_name,
+          column = "AGE_AT_DIAGNOSIS",
+          issue_type = "extreme_age",
+          n_affected = n_extreme,
+          sample_values = sample_vals
+        )
+      }
+    }
+
+    # TR2/TR3: DXAGE
+    if (table_name %in% c("TUMOR_REGISTRY2", "TUMOR_REGISTRY3") && "DXAGE" %in% names(df)) {
+      age_col <- df$DXAGE
+      n_negative <- sum(age_col < 0, na.rm = TRUE)
+      n_extreme <- sum(age_col > 120, na.rm = TRUE)
+
+      if (n_negative > 0) {
+        sample_vals <- paste(head(sort(age_col[age_col < 0]), 5), collapse = " | ")
+        numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+          table = table_name,
+          column = "DXAGE",
+          issue_type = "negative_age",
+          n_affected = n_negative,
+          sample_values = sample_vals
+        )
+      }
+
+      if (n_extreme > 0) {
+        sample_vals <- paste(head(sort(age_col[age_col > 120 & !is.na(age_col)]), 5), collapse = " | ")
+        numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+          table = table_name,
+          column = "DXAGE",
+          issue_type = "extreme_age",
+          n_affected = n_extreme,
+          sample_values = sample_vals
+        )
+      }
+    }
+  }
+}
+
+# 2. Date sanity (already covered in Section 1, but add explicit check summary)
+# Re-use date_range_results from Section 1
+if (length(date_range_results) > 0) {
+  for (i in 1:length(date_range_results)) {
+    dr <- date_range_results[[i]]
+    if (dr$n_before_1900 > 0) {
+      numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+        table = dr$table,
+        column = dr$column,
+        issue_type = "pre_1900_date",
+        n_affected = dr$n_before_1900,
+        sample_values = dr$min_date
+      )
+    }
+    if (dr$n_future > 0) {
+      numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+        table = dr$table,
+        column = dr$column,
+        issue_type = "future_date",
+        n_affected = dr$n_future,
+        sample_values = dr$max_date
+      )
+    }
+  }
+}
+
+# 3. Tumor size checks (TR1 only)
+if (!is.null(pcornet$TUMOR_REGISTRY1)) {
+  df <- pcornet$TUMOR_REGISTRY1
+
+  for (size_col in c("TUMOR_SIZE_SUMMARY", "TUMOR_SIZE_CLINICAL", "TUMOR_SIZE_PATHOLOGIC")) {
+    if (size_col %in% names(df)) {
+      size_vals <- df[[size_col]]
+      n_negative <- sum(size_vals < 0, na.rm = TRUE)
+      n_extreme <- sum(size_vals > 999, na.rm = TRUE)
+
+      if (n_negative > 0) {
+        sample_vals <- paste(head(sort(size_vals[size_vals < 0]), 5), collapse = " | ")
+        numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+          table = "TUMOR_REGISTRY1",
+          column = size_col,
+          issue_type = "negative_size",
+          n_affected = n_negative,
+          sample_values = sample_vals
+        )
+      }
+
+      if (n_extreme > 0) {
+        sample_vals <- paste(head(sort(size_vals[size_vals > 999 & !is.na(size_vals)]), 5), collapse = " | ")
+        numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
+          table = "TUMOR_REGISTRY1",
+          column = size_col,
+          issue_type = "extreme_size",
+          n_affected = n_extreme,
+          sample_values = sample_vals
+        )
+      }
+    }
+  }
+}
+
+# Write numeric range issues
+if (length(numeric_range_issues) > 0) {
+  numeric_range_df <- bind_rows(numeric_range_issues)
+  write_csv(numeric_range_df, file.path(CONFIG$output_dir, "diagnostics", "numeric_range_issues.csv"))
+
+  message(glue("\n=== Numeric Range Issues ==="))
+  issue_summary <- numeric_range_df %>%
+    count(issue_type, name = "n_occurrences") %>%
+    arrange(desc(n_occurrences))
+
+  for (i in 1:nrow(issue_summary)) {
+    message(glue("  {issue_summary$issue_type[i]}: {issue_summary$n_occurrences[i]} occurrences"))
+  }
+
+  message(glue("\nWrote {nrow(numeric_range_df)} numeric range issues to numeric_range_issues.csv"))
+} else {
+  message("\nNo numeric range issues detected")
+}
+
+# ==============================================================================
+# FOOTER
 # ==============================================================================
 
 message("\n", strrep("=", 60))
-message("Sections 1-3 complete (Task 1)")
-message("Sections 4-6 will be added in Task 2")
+message("Diagnostics complete.")
+message(glue("Results written to: {file.path(CONFIG$output_dir, 'diagnostics')}"))
 message(strrep("=", 60))
