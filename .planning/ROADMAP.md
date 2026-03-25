@@ -92,7 +92,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md -- Waterfall attrition chart + payer-stratified Sankey diagram with colorblind-safe palette (VIZ-01, VIZ-02, VIZ-03)
+- [x] 04-01-PLAN.md -- Waterfall attrition chart + payer-stratified Sankey diagram with colorblind-safe palette (VIZ-01, VIZ-02, VIZ-03)
 
 ---
 
