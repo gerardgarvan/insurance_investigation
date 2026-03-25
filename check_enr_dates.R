@@ -1,75 +1,94 @@
 # ==============================================================================
-# check_enr_dates.R -- Print invalid ENR dates with their original text values
+# check_enr_dates.R -- Print all out-of-range and unparseable dates across
+#                      every PCORnet table, with original text values
 # ==============================================================================
-# Loads ENROLLMENT twice:
-#   1. Raw (dates as character) to preserve original text
-#   2. Parsed (via 01_load_pcornet.R) to get _VALID flags
-# Then joins them so you can see: ID, SOURCE, raw text, parsed date, valid flag
+# For each table:
+#   1. Loads raw CSV (dates as character) to preserve original text
+#   2. Uses the parsed version from 01_load_pcornet.R to get _VALID flags
+#   3. Reports out-of-range dates and parse failures side-by-side
 # ==============================================================================
 
-source("R/00_config.R")
+source("R/01_load_pcornet.R")
 
 library(readr)
 library(dplyr)
+library(stringr)
 library(glue)
 
-# --- Load raw text (dates stay as character strings) ---
-enr_raw <- read_csv(
-  PCORNET_PATHS[["ENROLLMENT"]],
-  col_types = cols(.default = col_character()),
-  show_col_types = FALSE
-)
-
-# Add a row number so we can join back after parsing
-enr_raw <- enr_raw %>%
-  mutate(.row = row_number()) %>%
-  select(.row, ID, SOURCE,
-         ENR_START_DATE_RAW = ENR_START_DATE,
-         ENR_END_DATE_RAW   = ENR_END_DATE)
-
-# --- Load parsed version (gets _VALID flags from 01_load_pcornet.R) ---
-source("R/01_load_pcornet.R")
-
-enr_parsed <- pcornet$ENROLLMENT %>%
-  mutate(.row = row_number()) %>%
-  select(.row,
-         ENR_START_DATE, ENR_START_DATE_VALID,
-         ENR_END_DATE,   ENR_END_DATE_VALID)
-
-# --- Join raw text with parsed dates ---
-enr_combined <- inner_join(enr_raw, enr_parsed, by = ".row")
-
-# --- Filter to rows with at least one invalid date ---
-bad_rows <- enr_combined %>%
-  filter(ENR_START_DATE_VALID == FALSE | ENR_END_DATE_VALID == FALSE) %>%
-  select(-.row)
-
-# ---------- Print results ----------
-
+date_col_regex <- "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)"
 date_max <- Sys.Date() + 5 * 365
 
 message("\n", strrep("=", 70))
-message("ENROLLMENT rows with out-of-range dates")
+message("DATE AUDIT ACROSS ALL PCORNET TABLES")
 message("Valid range: 1900-01-01 to ", date_max)
 message(strrep("=", 70))
 
-# Split by which date column is bad
-bad_start <- bad_rows %>% filter(ENR_START_DATE_VALID == FALSE)
-bad_end   <- bad_rows %>% filter(ENR_END_DATE_VALID == FALSE)
+total_out_of_range <- 0
+total_parse_fail   <- 0
 
-message(glue("\n--- ENR_START_DATE invalid: {nrow(bad_start)} rows ---"))
-if (nrow(bad_start) > 0) {
-  bad_start %>%
-    select(ID, SOURCE, ENR_START_DATE_RAW, ENR_START_DATE) %>%
-    print(n = Inf)
+for (tbl_name in names(pcornet)) {
+  parsed_df <- pcornet[[tbl_name]]
+  if (is.null(parsed_df)) next
+
+  # Find date columns in the parsed table
+  date_cols <- names(parsed_df)[str_detect(names(parsed_df), date_col_regex)]
+  # Exclude the _VALID flag columns
+
+  date_cols <- date_cols[!str_detect(date_cols, "_VALID$")]
+
+  if (length(date_cols) == 0) next
+
+  # Load raw version of the same table (all character)
+  raw_df <- read_csv(
+    PCORNET_PATHS[[tbl_name]],
+    col_types = cols(.default = col_character()),
+    show_col_types = FALSE
+  )
+
+  # Add row index for joining
+  raw_df    <- raw_df %>% mutate(.row = row_number())
+  parsed_df <- parsed_df %>% mutate(.row = row_number())
+
+  # ID column for display (ID in most tables, ENCOUNTERID in ENCOUNTER, etc.)
+  id_col <- if ("ID" %in% names(raw_df)) "ID" else names(raw_df)[1]
+
+  for (dcol in date_cols) {
+    valid_col <- paste0(dcol, "_VALID")
+
+    # --- Out-of-range dates ---
+    if (valid_col %in% names(parsed_df)) {
+      bad_idx <- which(parsed_df[[valid_col]] == FALSE)
+      if (length(bad_idx) > 0) {
+        total_out_of_range <- total_out_of_range + length(bad_idx)
+        message(glue("\n--- {tbl_name}.{dcol} out of range: {length(bad_idx)} rows ---"))
+        out <- tibble(
+          ID         = raw_df[[id_col]][bad_idx],
+          SOURCE     = if ("SOURCE" %in% names(raw_df)) raw_df$SOURCE[bad_idx] else NA_character_,
+          raw_text   = raw_df[[dcol]][bad_idx],
+          parsed     = parsed_df[[dcol]][bad_idx]
+        )
+        print(out, n = Inf)
+      }
+    }
+
+    # --- Parse failures (non-empty text -> NA after parsing) ---
+    raw_vals    <- raw_df[[dcol]]
+    parsed_vals <- parsed_df[[dcol]]
+    fail_idx <- which(!is.na(raw_vals) & raw_vals != "" & is.na(parsed_vals))
+    if (length(fail_idx) > 0) {
+      total_parse_fail <- total_parse_fail + length(fail_idx)
+      message(glue("\n--- {tbl_name}.{dcol} parse failures: {length(fail_idx)} rows ---"))
+      out <- tibble(
+        ID       = raw_df[[id_col]][fail_idx],
+        SOURCE   = if ("SOURCE" %in% names(raw_df)) raw_df$SOURCE[fail_idx] else NA_character_,
+        raw_text = raw_vals[fail_idx]
+      )
+      print(out, n = Inf)
+    }
+  }
 }
 
-message(glue("\n--- ENR_END_DATE invalid: {nrow(bad_end)} rows ---"))
-if (nrow(bad_end) > 0) {
-  bad_end %>%
-    select(ID, SOURCE, ENR_END_DATE_RAW, ENR_END_DATE) %>%
-    print(n = Inf)
-}
-
-message(glue("\nTotal ENROLLMENT rows: {format(nrow(enr_combined), big.mark = ',')}"))
-message(glue("Rows with any invalid date: {nrow(bad_rows)}"))
+message("\n", strrep("=", 70))
+message(glue("TOTAL out-of-range dates: {total_out_of_range}"))
+message(glue("TOTAL parse failures:     {total_parse_fail}"))
+message(strrep("=", 70))
