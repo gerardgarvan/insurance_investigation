@@ -272,7 +272,9 @@ for (table_name in names(pcornet)) {
     }
 
     # Columns in data but not in spec
+    # Exclude _VALID validation columns added by load_pcornet_table() (Phase 6, Plan 02)
     extra_in_data <- setdiff(actual_cols, spec_cols)
+    extra_in_data <- extra_in_data[!str_detect(extra_in_data, "_VALID$")]
     for (col in extra_in_data) {
       column_discrepancy_results[[length(column_discrepancy_results) + 1]] <- tibble(
         table = table_name,
@@ -527,6 +529,18 @@ if (n_neither > 0) {
   message(strrep("!", 60))
 } else {
   message("\nExtract scope check: ALL patients have HL evidence in at least one source")
+}
+
+# 7. Check for excluded patients file (D-02, Phase 6 Plan 01)
+excl_path <- file.path(CONFIG$output_dir, "cohort", "excluded_no_hl_evidence.csv")
+if (file.exists(excl_path)) {
+  excl_df <- read_csv(excl_path, show_col_types = FALSE)
+  message(glue("\n  Excluded patients (Neither): {nrow(excl_df)} (written to excluded_no_hl_evidence.csv)"))
+  if ("HL_SOURCE" %in% names(excl_df)) {
+    message(glue("  HL_SOURCE values: {paste(unique(excl_df$HL_SOURCE), collapse = ', ')}"))
+  }
+} else {
+  message("\n  No excluded patients file found (no 'Neither' patients excluded yet, or pipeline not yet rebuilt)")
 }
 
 # ==============================================================================
@@ -786,6 +800,40 @@ if (!is.null(pcornet$TUMOR_REGISTRY1)) {
       }
     }
   }
+}
+
+# 4. Summarize _VALID column results (Phase 6, Plan 02 validation columns)
+message("\n=== Validation Column Summary (_VALID) ===")
+valid_col_summary <- list()
+for (tbl_name in names(pcornet)) {
+  if (is.null(pcornet[[tbl_name]])) next
+  valid_cols <- names(pcornet[[tbl_name]])[str_detect(names(pcornet[[tbl_name]]), "_VALID$")]
+  for (vcol in valid_cols) {
+    n_total <- sum(!is.na(pcornet[[tbl_name]][[vcol]]))
+    n_invalid <- sum(!pcornet[[tbl_name]][[vcol]], na.rm = TRUE)
+    n_valid <- sum(pcornet[[tbl_name]][[vcol]], na.rm = TRUE)
+    if (n_total > 0) {
+      valid_col_summary[[length(valid_col_summary) + 1]] <- tibble(
+        table = tbl_name,
+        column = vcol,
+        n_valid = n_valid,
+        n_invalid = n_invalid,
+        n_na = nrow(pcornet[[tbl_name]]) - n_total,
+        pct_invalid = round(100 * n_invalid / n_total, 2)
+      )
+      if (n_invalid > 0) {
+        message(glue("  {tbl_name}.{vcol}: {n_invalid} invalid values ({round(100 * n_invalid / n_total, 1)}%)"))
+      }
+    }
+  }
+}
+
+if (length(valid_col_summary) > 0) {
+  valid_col_df <- bind_rows(valid_col_summary)
+  write_csv(valid_col_df, file.path(CONFIG$output_dir, "diagnostics", "validation_column_summary.csv"))
+  message(glue("  Wrote {nrow(valid_col_df)} validation column summaries to validation_column_summary.csv"))
+} else {
+  message("  No _VALID columns found (run pipeline with updated 01_load_pcornet.R first)")
 }
 
 # Write numeric range issues
