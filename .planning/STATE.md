@@ -77,6 +77,7 @@ Plan: Not started
 
 - Phase 5 added: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 - Phase 6 added: Use debug output to rectify issues
+- Phase 7 added: look at dx info of those that did not have an HL diagnosis to fill gap
 
 ### Active Blockers
 
