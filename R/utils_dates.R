@@ -66,20 +66,24 @@ parse_pcornet_date <- function(date_char) {
 
   # ------------------------------------------------------------------------------
   # Attempt 2: MM/DD/YYYY (US format, e.g., 01/15/2020 or 1/15/2020)
-  # Must come before dmy() so US format wins for ambiguous dates
+  # ONLY for numeric-only strings (digits + separators) — skip strings with
+  # letters (like 07SEP1939) to avoid mdy() misinterpreting DDMMMYYYY formats
   # ------------------------------------------------------------------------------
   remaining <- is.na(result) & !is.na(date_char)
   if (any(remaining)) {
-    parsed_mdy <- suppressWarnings(mdy(date_char[remaining], quiet = TRUE))
-    if (any(!is.na(parsed_mdy))) {
-      idx_in_remaining <- which(remaining)[!is.na(parsed_mdy)]
-      result[idx_in_remaining] <- parsed_mdy[!is.na(parsed_mdy)]
+    is_numeric_date <- remaining & !str_detect(date_char, "[A-Za-z]")
+    if (any(is_numeric_date)) {
+      parsed_mdy <- suppressWarnings(mdy(date_char[is_numeric_date], quiet = TRUE))
+      if (any(!is.na(parsed_mdy))) {
+        idx_in_remaining <- which(is_numeric_date)[!is.na(parsed_mdy)]
+        result[idx_in_remaining] <- parsed_mdy[!is.na(parsed_mdy)]
+      }
     }
   }
 
   # ------------------------------------------------------------------------------
   # Attempt 3: DDMMMYYYY / DD-MMM-YYYY / DD MMM YYYY (SAS DATE9 and variants)
-  # e.g., 15JAN2020, 15-Jan-2020, 15 January 2020
+  # e.g., 15JAN2020, 07SEP1939, 15-Jan-2020, 15 January 2020
   # Uses dmy() which handles text month names in all these formats
   # ------------------------------------------------------------------------------
   remaining <- is.na(result) & !is.na(date_char)
