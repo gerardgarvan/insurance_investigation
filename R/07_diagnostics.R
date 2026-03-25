@@ -164,7 +164,7 @@ message("SECTION 2: Column Detection Regex Audit")
 message(strrep("-", 60))
 
 # Read csv_columns.txt and extract all column names from all 22 tables
-csv_columns_path <- "csv_columns.txt"
+csv_columns_path <- here("csv_columns.txt")
 if (file.exists(csv_columns_path)) {
   csv_text <- readLines(csv_columns_path, warn = FALSE)
 
