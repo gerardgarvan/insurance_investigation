@@ -8,7 +8,7 @@
 ## Phases
 
 - [x] **Phase 1: Foundation & Data Loading** - Configure paths, load 22 PCORnet CSV tables with correct data types, build utilities
-- [ ] **Phase 2: Payer Harmonization** - Implement 9-category payer mapping with encounter-level dual-eligible detection
+- [x] **Phase 2: Payer Harmonization** - Implement 9-category payer mapping with encounter-level dual-eligible detection
 - [ ] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
 - [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
 
@@ -68,7 +68,11 @@ Plans:
 3. User can match HL diagnosis codes across both dotted (C81.10, 201.90) and undotted (C8110, 20190) ICD formats via normalization
 4. User can generate final cohort dataset with all 149 HL codes identified, payer categories assigned, and enrollment periods validated
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md -- Treatment code config + named filter predicates and treatment flag functions (CHRT-01, CHRT-03)
+- [ ] 03-02-PLAN.md -- Cohort build pipeline with filter chain, attrition logging, and CSV output (CHRT-01, CHRT-02, CHRT-03)
 
 ---
 
@@ -94,13 +98,13 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Data Loading | 2/2 | Complete | 2026-03-24 |
-| 2. Payer Harmonization | 0/1 | Planned | - |
-| 3. Cohort Building | 0/? | Not started | - |
+| 2. Payer Harmonization | 1/1 | Complete | 2026-03-24 |
+| 3. Cohort Building | 0/2 | Planned | - |
 | 4. Visualization | 0/? | Not started | - |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 2` to implement Payer Harmonization plan
+1. Execute `/gsd:execute-phase 3` to build HL cohort
 
 ---
 
