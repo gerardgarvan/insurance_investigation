@@ -21,9 +21,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Cohort Building
 
-- [ ] **CHRT-01**: User can apply named filter predicates (`has_*`, `with_*`, `exclude_*`) that read like clinical protocol steps
-- [ ] **CHRT-02**: User can see N patients before and after every filter step via automatic attrition logging
-- [ ] **CHRT-03**: User can match HL diagnosis codes across both dotted (C81.10) and undotted (C8110) ICD formats
+- [x] **CHRT-01**: User can apply named filter predicates (`has_*`, `with_*`, `exclude_*`) that read like clinical protocol steps
+- [x] **CHRT-02**: User can see N patients before and after every filter step via automatic attrition logging
+- [x] **CHRT-03**: User can match HL diagnosis codes across both dotted (C81.10) and undotted (C8110) ICD formats
 
 ### Visualization
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAYR-01 | Phase 2 | Complete |
 | PAYR-02 | Phase 2 | Complete |
 | PAYR-03 | Phase 2 | Complete |
-| CHRT-01 | Phase 3 | Pending |
-| CHRT-02 | Phase 3 | Pending |
-| CHRT-03 | Phase 3 | Pending |
+| CHRT-01 | Phase 3 | Complete |
+| CHRT-02 | Phase 3 | Complete |
+| CHRT-03 | Phase 3 | Complete |
 | VIZ-01 | Phase 4 | Pending |
 | VIZ-02 | Phase 4 | Pending |
 | VIZ-03 | Phase 4 | Pending |
