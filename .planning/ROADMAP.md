@@ -119,7 +119,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Config + utility fixes: ICD-O-3 histology codes, is_hl_histology(), expanded has_hodgkin_diagnosis(), date regex update (FIX-01, FIX-02, FIX-03)
+- [x] 05-01-PLAN.md -- Config + utility fixes: ICD-O-3 histology codes, is_hl_histology(), expanded has_hodgkin_diagnosis(), date regex update (FIX-01, FIX-02, FIX-03)
 - [ ] 05-02-PLAN.md -- Reusable diagnostic script 07_diagnostics.R with 6 audit sections (FIX-01, FIX-02, FIX-03, FIX-04)
 - [ ] 05-03-PLAN.md -- Cohort rebuild with expanded HL identification + human verification checkpoint (FIX-01, FIX-02)
 

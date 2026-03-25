@@ -33,9 +33,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Quality & Parsing Fixes
 
-- [ ] **FIX-01**: User can identify and fix date parsing failures across all 9 PCORnet CDM tables with diagnostic CSV output
-- [ ] **FIX-02**: User can identify HL patients via BOTH DIAGNOSIS table (ICD-9/10) AND TUMOR_REGISTRY histology codes (ICD-O-3 9650-9667)
-- [ ] **FIX-03**: User can run a reusable diagnostic script (07_diagnostics.R) that audits column types, date regex coverage, encoding issues, and numeric ranges
+- [x] **FIX-01**: User can identify and fix date parsing failures across all 9 PCORnet CDM tables with diagnostic CSV output
+- [x] **FIX-02**: User can identify HL patients via BOTH DIAGNOSIS table (ICD-9/10) AND TUMOR_REGISTRY histology codes (ICD-O-3 9650-9667)
+- [x] **FIX-03**: User can run a reusable diagnostic script (07_diagnostics.R) that audits column types, date regex coverage, encoding issues, and numeric ranges
 - [ ] **FIX-04**: User can audit payer mapping correctness with comparison against Python pipeline reference counts
 
 ## v2 Requirements
@@ -100,9 +100,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIZ-01 | Phase 4 | Pending |
 | VIZ-02 | Phase 4 | Pending |
 | VIZ-03 | Phase 4 | Pending |
-| FIX-01 | Phase 5 | Pending |
-| FIX-02 | Phase 5 | Pending |
-| FIX-03 | Phase 5 | Pending |
+| FIX-01 | Phase 5 | Complete |
+| FIX-02 | Phase 5 | Complete |
+| FIX-03 | Phase 5 | Complete |
 | FIX-04 | Phase 5 | Pending |
 
 **Coverage:**
