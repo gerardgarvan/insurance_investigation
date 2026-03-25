@@ -275,7 +275,10 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
   # DIAGNOSTIC VALIDATION (Phase 6, Plan 02 -- date_column_regex_audit.csv):
   #   ALL date columns have regex_match = TRUE. No missed columns detected.
   #   No regex expansion needed for this cohort extract.
+  # Columns that match the date regex but are NOT dates (Y/N flags, etc.)
+  NOT_DATE_COLS <- c("DXDATE_IMPUTED")
   date_cols <- names(df)[str_detect(names(df), "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)")]
+  date_cols <- date_cols[!date_cols %in% NOT_DATE_COLS]
   for (col in date_cols) {
     if (is.character(df[[col]])) {
       df[[col]] <- parse_pcornet_date(df[[col]])

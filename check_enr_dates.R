@@ -15,6 +15,9 @@ library(dplyr)
 library(stringr)
 library(glue)
 
+# Columns that match the date regex but are NOT dates
+NOT_DATE_COLS <- c("DXDATE_IMPUTED")
+
 date_col_regex <- "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)"
 date_max <- Sys.Date() + 5 * 365
 
@@ -35,6 +38,7 @@ for (tbl_name in names(pcornet)) {
   # Exclude the _VALID flag columns
 
   date_cols <- date_cols[!str_detect(date_cols, "_VALID$")]
+  date_cols <- date_cols[!date_cols %in% NOT_DATE_COLS]
 
   if (length(date_cols) == 0) next
 

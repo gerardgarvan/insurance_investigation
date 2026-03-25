@@ -4,6 +4,7 @@
 #
 # PCORnet sites export dates in different formats depending on SAS configuration:
 #   - YYYY-MM-DD (ISO format, most common in recent exports)
+#   - MM/DD/YYYY (US format, common in some site exports)
 #   - DDMMMYYYY (SAS DATE9 format, e.g., 15JAN2020)
 #   - YYYYMMDD (compact format, no separators)
 #   - Excel serial numbers (rare, from Excel-origin exports)
@@ -59,7 +60,19 @@ parse_pcornet_date <- function(date_char) {
   result[!is.na(parsed)] <- parsed[!is.na(parsed)]
 
   # ------------------------------------------------------------------------------
-  # Attempt 2: Excel serial numbers (numeric strings like "44562")
+  # Attempt 2: MM/DD/YYYY (US format, e.g., 01/15/2020 or 1/15/2020)
+  # ------------------------------------------------------------------------------
+  remaining <- is.na(result) & !is.na(date_char)
+  if (any(remaining)) {
+    parsed_mdy <- suppressWarnings(mdy(date_char[remaining], quiet = TRUE))
+    if (any(!is.na(parsed_mdy))) {
+      idx_in_remaining <- which(remaining)[!is.na(parsed_mdy)]
+      result[idx_in_remaining] <- parsed_mdy[!is.na(parsed_mdy)]
+    }
+  }
+
+  # ------------------------------------------------------------------------------
+  # Attempt 3 (was 2): Excel serial numbers (numeric strings like "44562")
   # ------------------------------------------------------------------------------
   remaining <- is.na(result) & !is.na(date_char)
   if (any(remaining)) {
@@ -75,7 +88,7 @@ parse_pcornet_date <- function(date_char) {
   }
 
   # ------------------------------------------------------------------------------
-  # Attempt 3: SAS DATE9 (DDMMMYYYY like 15JAN2020)
+  # Attempt 4 (was 3): SAS DATE9 (DDMMMYYYY like 15JAN2020)
   # ------------------------------------------------------------------------------
   remaining <- is.na(result) & !is.na(date_char)
   if (any(remaining)) {
@@ -89,7 +102,7 @@ parse_pcornet_date <- function(date_char) {
   }
 
   # ------------------------------------------------------------------------------
-  # Attempt 4: YYYYMMDD (compact format, no separators)
+  # Attempt 5 (was 4): YYYYMMDD (compact format, no separators)
   # ------------------------------------------------------------------------------
   remaining <- is.na(result) & !is.na(date_char)
   if (any(remaining)) {
