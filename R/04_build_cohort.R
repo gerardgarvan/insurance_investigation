@@ -49,7 +49,7 @@ attrition_log <- log_attrition(attrition_log, "Initial population", n_distinct(c
 
 # Step 1: has_hodgkin_diagnosis() (D-01 first filter)
 cohort <- cohort %>% has_hodgkin_diagnosis()
-attrition_log <- log_attrition(attrition_log, "Has HL diagnosis (ICD-9/10)", n_distinct(cohort$ID))
+attrition_log <- log_attrition(attrition_log, "Has HL diagnosis (ICD or histology)", n_distinct(cohort$ID))
 
 # Step 2: with_enrollment_period() (D-03: any enrollment, no min days)
 cohort <- cohort %>% with_enrollment_period()
