@@ -68,6 +68,7 @@ Plan: 3 of 3
 ### Roadmap Evolution
 
 - Phase 5 added: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
+- Phase 6 added: Use debug output to rectify issues
 
 ### Active Blockers
 
