@@ -100,17 +100,26 @@ ICD_CODES <- list(
     "C81.70", "C81.71", "C81.72", "C81.73", "C81.74", "C81.75", "C81.76", "C81.77", "C81.78", "C81.79",
 
     # C81.9x: Hodgkin lymphoma, unspecified
-    "C81.90", "C81.91", "C81.92", "C81.93", "C81.94", "C81.95", "C81.96", "C81.97", "C81.98", "C81.99"
+    "C81.90", "C81.91", "C81.92", "C81.93", "C81.94", "C81.95", "C81.96", "C81.97", "C81.98", "C81.99",
+
+    # C81.xA: Hodgkin lymphoma, in remission (FY2025 ICD-10-CM, effective Oct 2024)
+    # Found in OneFlorida+ data — 15 "Neither" patients had C81.9A missed by original list
+    "C81.0A", "C81.1A", "C81.2A", "C81.3A", "C81.4A", "C81.7A", "C81.9A"
   ),
 
-  # ICD-9-CM: 201.xx (72 codes total)
-  # 8 subtypes × 9 anatomic sites (0-8)
+  # ICD-9-CM: 201.xx (72 site-specific + 8 parent codes = 80 total)
+  # 8 subtypes × 9 anatomic sites (0-8) + parent codes without site digit
   # No 201.3x in ICD-9-CM (gap in Hodgkin coding)
   #
   # Anatomic site codes: 0=unspecified, 1=head/neck, 2=intrathoracic,
   # 3=intra-abdominal, 4=axilla/upper limb, 5=inguinal/lower limb,
   # 6=intrapelvic, 7=spleen, 8=multiple sites
   hl_icd9 = c(
+    # 201.x: Parent codes without anatomic site digit
+    # Some sites (FLM, TMA) code without the 5th digit — "201.2" not "201.20"
+    # Found in OneFlorida+ data: 3 patients missed due to short codes
+    "201.0", "201.1", "201.2", "201.4", "201.5", "201.6", "201.7", "201.9",
+
     # 201.0x: Hodgkin's paragranuloma
     "201.00", "201.01", "201.02", "201.03", "201.04", "201.05", "201.06", "201.07", "201.08",
 
