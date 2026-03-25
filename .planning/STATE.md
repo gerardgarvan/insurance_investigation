@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-25T19:23:53.690Z"
+last_updated: "2026-03-25T22:30:36.336Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 5
-  total_plans: 12
+  total_plans: 13
   completed_plans: 11
 ---
 
@@ -20,12 +20,12 @@ progress:
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** All phases complete
+**Current focus:** Phase 07 — look-at-dx-info-of-those-that-did-not-have-an-hl-diagnosis-to-fill-gap
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
+Phase: 07 (look-at-dx-info-of-those-that-did-not-have-an-hl-diagnosis-to-fill-gap) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Plan: Not started
 - Phase 5 added: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 - Phase 6 added: Use debug output to rectify issues
 - Phase 7 added: look at dx info of those that did not have an HL diagnosis to fill gap
+- Phase 8 added: Add insurance mode around three treatment types (chemo, radiation, stem cell) from procedures tables with plus/minus 30 days window
 
 ### Active Blockers
 
