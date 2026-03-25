@@ -24,9 +24,9 @@ library(lubridate)
 library(glue)
 library(readr)
 
-message("\n" %>% strrep(60, "="))
+message("\n", strrep("=", 60))
 message("Payer Harmonization Pipeline")
-message("=" %>% strrep(60))
+message(strrep("=", 60))
 
 # ==============================================================================
 # SECTION 1: NAMED PAYER FUNCTIONS
@@ -404,9 +404,9 @@ write_csv(payer_summary, output_path)
 message(glue("\nPayer summary saved to: {output_path}"))
 message(glue("Columns: {paste(names(payer_summary), collapse = ', ')}"))
 
-message("\n" %>% strrep(60, "="))
+message("\n", strrep("=", 60))
 message("Payer harmonization complete")
-message("=" %>% strrep(60))
+message(strrep("=", 60))
 
 # ==============================================================================
 # End of script
