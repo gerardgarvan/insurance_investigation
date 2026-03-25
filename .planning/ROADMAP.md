@@ -104,7 +104,7 @@ Plans:
 | 2. Payer Harmonization | 1/1 | Complete | 2026-03-24 |
 | 3. Cohort Building | 2/2 | Complete | 2026-03-25 |
 | 4. Visualization | 0/1 | Planned | - |
-| 5. Fix Parsing & HL Diagnosis Gaps | 0/3 | Planned | - |
+| 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress|  |
 
 ## Next Actions
 
@@ -116,11 +116,11 @@ Plans:
 **Goal:** Fix date parsing and column detection issues across the pipeline, expand HL identification to include TUMOR_REGISTRY histology codes (ICD-O-3 9650-9667), and produce a reusable diagnostic script auditing data quality across all loaded tables
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04
 **Depends on:** Phase 4 (builds on completed pipeline)
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 05-01-PLAN.md -- Config + utility fixes: ICD-O-3 histology codes, is_hl_histology(), expanded has_hodgkin_diagnosis(), date regex update (FIX-01, FIX-02, FIX-03)
-- [ ] 05-02-PLAN.md -- Reusable diagnostic script 07_diagnostics.R with 6 audit sections (FIX-01, FIX-02, FIX-03, FIX-04)
+- [x] 05-02-PLAN.md -- Reusable diagnostic script 07_diagnostics.R with 6 audit sections (FIX-01, FIX-02, FIX-03, FIX-04)
 - [ ] 05-03-PLAN.md -- Cohort rebuild with expanded HL identification + human verification checkpoint (FIX-01, FIX-02)
 
 ---
