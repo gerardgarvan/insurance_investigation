@@ -177,6 +177,34 @@ ICD_CODES <- list(
 # Effective payer (per encounter): primary if valid, else secondary if valid
 # Sentinel values (trigger fallback to secondary): null, "", "NI", "UN", "OT"
 # NOTE: 99/9999 are NOT sentinel values by default (map to "Unavailable" instead)
+#
+# ------------------------------------------------------------------------------
+# R vs Python Payer Mapping Comparison (D-04, Phase 6 Plan 02)
+# ------------------------------------------------------------------------------
+# Source: payer_mapping_audit.csv from 07_diagnostics.R on HiPerGator
+#
+# Category               | R pipeline | Python pipeline | Notes
+# -----------------------|------------|-----------------|------
+# Medicaid               |   43.66%   |     TBD         | Largest category
+# Private                |   28.58%   |     TBD         |
+# Dual eligible          |   11.01%   |     TBD         | Encounter-level cross-payer detection
+# Medicare               |    8.91%   |     TBD         |
+# No payment / Self-pay  |    3.16%   |     TBD         |
+# Unavailable            |    2.43%   |     TBD         |
+# Other government       |    1.43%   |     TBD         |
+# Other                  |    0.82%   |     TBD         |
+# Unknown                |    ---     |     TBD         | (not in audit output, likely 0%)
+#
+# NOTE: Exact parity with Python pipeline not required (D-04). R pipeline is
+# exploratory. Differences expected from: different dual-eligible detection
+# thresholds, encounter vs enrollment-level aggregation, sentinel value handling,
+# and patient-level vs encounter-level payer assignment.
+#
+# HL identification context (hl_identification_venn.csv):
+#   19 "Neither" patients excluded by Plan 01's HL_SOURCE tracking.
+#   Most patients are "DIAGNOSIS only" (no TR data for most sources).
+#   Both DIAGNOSIS and TR: 721 patients (LNK, ORL, UFH only).
+# ------------------------------------------------------------------------------
 
 PAYER_MAPPING <- list(
   # Prefix-based mapping (PCORnet typology)

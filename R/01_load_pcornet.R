@@ -19,6 +19,7 @@
 source("R/00_config.R")
 
 library(readr)
+library(dplyr)
 library(stringr)
 library(purrr)
 library(glue)
@@ -80,6 +81,11 @@ PROCEDURES_SPEC <- cols(
 # ------------------------------------------------------------------------------
 # 4. PRESCRIBING (24 columns)
 # ------------------------------------------------------------------------------
+# Missing values (missing_values_audit.csv):
+#   RX_DAYS_SUPPLY: 92.89% missing (expected -- optional field, rarely populated)
+#   RX_END_DATE: 50 future dates (max 2037-08-08) flagged by date _VALID
+# Encoding (encoding_issues.csv):
+#   No encoding issues in PRESCRIBING.
 PRESCRIBING_SPEC <- cols(
   PRESCRIBINGID = col_character(),
   ID = col_character(),
@@ -110,6 +116,10 @@ PRESCRIBING_SPEC <- cols(
 # ------------------------------------------------------------------------------
 # 5. ENCOUNTER (19 columns)
 # ------------------------------------------------------------------------------
+# Missing values (missing_values_audit.csv):
+#   DISCHARGE_DATE: 70.87% missing (expected -- most encounters are outpatient)
+#   PAYER_TYPE_SECONDARY: 75.04% missing (expected -- not all encounters have secondary payer)
+#   Both are optional PCORnet CDM fields; no parsing fix needed.
 ENCOUNTER_SPEC <- cols(
   ENCOUNTERID = col_character(),
   ID = col_character(),
@@ -155,6 +165,25 @@ DEMOGRAPHIC_SPEC <- cols(
 # ------------------------------------------------------------------------------
 # Strategy: Most columns are character codes/text
 # Only numeric: AGE_AT_DIAGNOSIS (integer), TUMOR_SIZE_* (double)
+#
+# DIAGNOSTIC VALIDATION (Phase 6, Plan 02 -- tr_type_audit.csv):
+#   Many columns flagged as "Consider col_double()" (HISTOLOGICAL_TYPE, GRADE,
+#   SITE_CODE, LATERALITY, BEHAVIOR_CODE, etc.) but these are coded categorical
+#   values (ICD-O-3 morphology codes, NAACCR staging codes). They MUST stay as
+#   character to preserve leading zeros and categorical semantics. Changing to
+#   numeric would lose "0200" -> 200, misrepresenting morphology/site codes.
+#
+# Known data quality (numeric_range_issues.csv):
+#   AGE_AT_DIAGNOSIS: 3 values of 200 (sentinel for "unknown age")
+#   TUMOR_SIZE_*: within expected ranges
+#
+# Missing values (missing_values_audit.csv):
+#   All 17 date columns are 100% NA in this dataset (empty columns).
+#   Many coded columns have high missingness -- expected for optional NAACCR fields.
+#
+# Encoding (encoding_issues.csv):
+#   HISTOLOGICAL_TYPE_DESCRIPTION: 8 non-ASCII characters, no BOM.
+#   Accepted as cosmetic -- does not affect analysis (coded values unaffected).
 TUMOR_REGISTRY1_SPEC <- cols(
   .default = col_character(),
   AGE_AT_DIAGNOSIS = col_integer(),
@@ -166,6 +195,13 @@ TUMOR_REGISTRY1_SPEC <- cols(
 # ------------------------------------------------------------------------------
 # 8. TUMOR_REGISTRY2 (140 columns - use .default strategy)
 # ------------------------------------------------------------------------------
+# DIAGNOSTIC VALIDATION (Phase 6, Plan 02 -- tr_type_audit.csv):
+#   Same rationale as TR1: coded columns (MORPH, SITE, GRADE, etc.) stay character.
+#
+# Known data quality (numeric_range_issues.csv):
+#   DXAGE: 2 negative values (-84, -76) and 2 sentinels (200) -- flagged by _VALID
+#
+# Missing values: 404 rows total, many columns 100% missing (small dataset).
 TUMOR_REGISTRY2_SPEC <- cols(
   .default = col_character(),
   DXAGE = col_integer()
@@ -174,6 +210,13 @@ TUMOR_REGISTRY2_SPEC <- cols(
 # ------------------------------------------------------------------------------
 # 9. TUMOR_REGISTRY3 (140 columns - use .default strategy)
 # ------------------------------------------------------------------------------
+# DIAGNOSTIC VALIDATION (Phase 6, Plan 02 -- tr_type_audit.csv):
+#   Same rationale as TR1/TR2: coded columns stay character.
+#
+# Known data quality (numeric_range_issues.csv):
+#   DXAGE: 13 sentinel values of 999 (unknown age) -- flagged by _VALID
+#
+# Missing values: 15 rows total, many columns 100% missing (very small dataset).
 TUMOR_REGISTRY3_SPEC <- cols(
   .default = col_character(),
   DXAGE = col_integer()
@@ -228,10 +271,94 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
   # Catches: *DATE*, ^DT_*, BDATE, DOD, DT_FU, DXDATE, *_DT (end), RECUR_DT,
   #          COMBINED_LAST_CONTACT, ADDRESS_PERIOD_START/END
   # Verified against csv_columns.txt (2026-03-25)
+  #
+  # DIAGNOSTIC VALIDATION (Phase 6, Plan 02 -- date_column_regex_audit.csv):
+  #   ALL date columns have regex_match = TRUE. No missed columns detected.
+  #   No regex expansion needed for this cohort extract.
   date_cols <- names(df)[str_detect(names(df), "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)")]
   for (col in date_cols) {
     if (is.character(df[[col]])) {
       df[[col]] <- parse_pcornet_date(df[[col]])
+    }
+  }
+
+  # ============================================================================
+  # Numeric range validation (Phase 6, Plan 02 -- D-08)
+  # ============================================================================
+  # Preserve raw values; add _VALID flag columns for downstream filtering.
+  # Ranges based on clinical plausibility; sentinels (200, 999, negative) flagged.
+  # Findings from numeric_range_issues.csv drove these specific validations.
+
+  # --- Age validation: range 0-120 (flags sentinels like 200, 999, negatives) ---
+  if (table_name == "TUMOR_REGISTRY1" && "AGE_AT_DIAGNOSIS" %in% names(df)) {
+    df <- df %>%
+      mutate(
+        AGE_AT_DIAGNOSIS_VALID = case_when(
+          is.na(AGE_AT_DIAGNOSIS) ~ NA,
+          AGE_AT_DIAGNOSIS < 0 ~ FALSE,
+          AGE_AT_DIAGNOSIS > 120 ~ FALSE,
+          TRUE ~ TRUE
+        )
+      )
+    n_invalid <- sum(!df$AGE_AT_DIAGNOSIS_VALID, na.rm = TRUE)
+    if (n_invalid > 0) {
+      message(glue("  Validation: {n_invalid} invalid AGE_AT_DIAGNOSIS values flagged (sentinel/out-of-range)"))
+    }
+  }
+
+  if (table_name %in% c("TUMOR_REGISTRY2", "TUMOR_REGISTRY3") && "DXAGE" %in% names(df)) {
+    df <- df %>%
+      mutate(
+        DXAGE_VALID = case_when(
+          is.na(DXAGE) ~ NA,
+          DXAGE < 0 ~ FALSE,
+          DXAGE > 120 ~ FALSE,
+          TRUE ~ TRUE
+        )
+      )
+    n_invalid <- sum(!df$DXAGE_VALID, na.rm = TRUE)
+    if (n_invalid > 0) {
+      message(glue("  Validation: {n_invalid} invalid DXAGE values flagged in {table_name} (sentinel/out-of-range)"))
+    }
+  }
+
+  # --- Tumor size validation: range 0-989 (990+ are NAACCR sentinel codes) ---
+  tumor_size_cols <- c("TUMOR_SIZE_SUMMARY", "TUMOR_SIZE_CLINICAL", "TUMOR_SIZE_PATHOLOGIC")
+  if (table_name == "TUMOR_REGISTRY1") {
+    for (ts_col in tumor_size_cols) {
+      if (ts_col %in% names(df)) {
+        valid_col_name <- paste0(ts_col, "_VALID")
+        df[[valid_col_name]] <- case_when(
+          is.na(df[[ts_col]]) ~ NA,
+          df[[ts_col]] < 0 ~ FALSE,
+          df[[ts_col]] >= 990 ~ FALSE,   # 990-999 are NAACCR sentinel codes
+          TRUE ~ TRUE
+        )
+        n_invalid <- sum(!df[[valid_col_name]], na.rm = TRUE)
+        if (n_invalid > 0) {
+          message(glue("  Validation: {n_invalid} invalid {ts_col} values flagged"))
+        }
+      }
+    }
+  }
+
+  # --- Date range validation: 1900-01-01 to today + 5 years ---
+  # Flags SAS epoch sentinels (1899-12-30) and extreme future dates
+  date_range_min <- as.Date("1900-01-01")
+  date_range_max <- Sys.Date() + (5 * 365)  # 5-year future tolerance
+  for (dcol in date_cols) {
+    if (dcol %in% names(df) && inherits(df[[dcol]], "Date")) {
+      valid_col_name <- paste0(dcol, "_VALID")
+      df[[valid_col_name]] <- case_when(
+        is.na(df[[dcol]]) ~ NA,
+        df[[dcol]] < date_range_min ~ FALSE,   # Pre-1900 (SAS epoch sentinel)
+        df[[dcol]] > date_range_max ~ FALSE,    # Extreme future dates
+        TRUE ~ TRUE
+      )
+      n_invalid <- sum(!df[[valid_col_name]], na.rm = TRUE)
+      if (n_invalid > 0) {
+        message(glue("  Validation: {n_invalid} invalid {dcol} values flagged (out of {date_range_min} to {date_range_max} range)"))
+      }
     }
   }
 
