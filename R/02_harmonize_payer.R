@@ -333,10 +333,10 @@ completeness_report <- patients_per_partner %>%
   left_join(covered_days, by = "SOURCE") %>%
   left_join(n_with_gaps_per_partner, by = "SOURCE") %>%
   mutate(
-    n_with_enrollment = replace_na(n_with_enrollment, 0L),
+    n_with_enrollment = coalesce(n_with_enrollment, 0L),
     pct_enrolled = round(100 * n_with_enrollment / n_patients, 1),
-    mean_covered_days = replace_na(mean_covered_days, 0),
-    n_with_gaps = replace_na(n_with_gaps, 0L)
+    mean_covered_days = coalesce(mean_covered_days, 0),
+    n_with_gaps = coalesce(n_with_gaps, 0L)
   )
 
 message("\n=== Enrollment Completeness by Partner ===")
