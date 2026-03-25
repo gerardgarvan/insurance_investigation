@@ -9,7 +9,7 @@
 
 - [x] **Phase 1: Foundation & Data Loading** - Configure paths, load 22 PCORnet CSV tables with correct data types, build utilities
 - [x] **Phase 2: Payer Harmonization** - Implement 9-category payer mapping with encounter-level dual-eligible detection
-- [ ] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
+- [x] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
 - [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
 
 ## Phase Details
@@ -77,7 +77,7 @@ Plans:
 ---
 
 ### Phase 4: Visualization
-**Goal**: User can visualize cohort attrition and payer-stratified patient flow with HIPAA-compliant suppression
+**Goal**: User can visualize cohort attrition and payer-stratified patient flow
 
 **Depends on**: Phase 3 (requires final cohort and attrition log)
 
@@ -85,11 +85,14 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
 1. User can produce attrition waterfall chart showing progressive cohort reduction through filter steps (vertical bars with N excluded at each step)
-2. User can produce payer-stratified Sankey/alluvial diagram showing patient flow from enrollment -> diagnosis -> treatment, with flow thickness proportional to N patients and colored by payer category
-3. User can verify all outputs apply HIPAA small-cell suppression (counts 1-10 replaced with "<11" with secondary suppression to prevent back-calculation)
+2. User can produce payer-stratified Sankey/alluvial diagram showing patient flow from payer category to treatment type, with flow thickness proportional to N patients and colored by payer category
+3. User can verify HIPAA small-cell suppression is deferred to v2 per D-11 (exploratory outputs on HiPerGator)
 4. User can save visualizations as PNG files (`output/figures/waterfall_attrition.png`, `output/figures/sankey_patient_flow.png`)
 
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md -- Waterfall attrition chart + payer-stratified Sankey diagram with colorblind-safe palette (VIZ-01, VIZ-02, VIZ-03)
 
 ---
 
@@ -99,13 +102,13 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation & Data Loading | 2/2 | Complete | 2026-03-24 |
 | 2. Payer Harmonization | 1/1 | Complete | 2026-03-24 |
-| 3. Cohort Building | 0/2 | Planned | - |
-| 4. Visualization | 0/? | Not started | - |
+| 3. Cohort Building | 2/2 | Complete | 2026-03-25 |
+| 4. Visualization | 0/1 | Planned | - |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 3` to build HL cohort
+1. Execute `/gsd:execute-phase 4` to create visualization scripts
 
 ---
 
-*Last updated: 2026-03-24*
+*Last updated: 2026-03-25*
