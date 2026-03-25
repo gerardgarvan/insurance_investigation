@@ -39,21 +39,66 @@ library(glue)
 # SECTION 1: FILTER PREDICATES (tibble-in, tibble-out)
 # ==============================================================================
 
-#' Filter to patients with Hodgkin Lymphoma diagnosis
+#' Filter to patients with Hodgkin Lymphoma diagnosis (DIAGNOSIS or TUMOR_REGISTRY)
 #'
 #' Returns only patients who have at least one HL diagnosis code in the
-#' DIAGNOSIS table. Uses is_hl_diagnosis() which handles both ICD-9 (201.xx)
-#' and ICD-10 (C81.xx) codes in dotted or undotted format.
+#' DIAGNOSIS table (ICD-9 201.xx or ICD-10 C81.xx) OR at least one HL
+#' histology code in TUMOR_REGISTRY tables (ICD-O-3 9650-9667).
+#'
+#' Per D-06: Single source of truth for HL identification.
+#' Per D-07: Checks TR1 (HISTOLOGICAL_TYPE), TR2/TR3 (MORPH).
 #'
 #' @param patient_df Tibble with at least an ID column
 #' @return Filtered tibble containing only patients with HL diagnosis
 #'
 has_hodgkin_diagnosis <- function(patient_df) {
-  hl_patients <- pcornet$DIAGNOSIS %>%
+
+  # Source 1: DIAGNOSIS table (ICD-9/10)
+  dx_hl_patients <- pcornet$DIAGNOSIS %>%
     filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
     distinct(ID)
 
-  message(glue("[Predicate] has_hodgkin_diagnosis: {nrow(hl_patients)} patients with HL diagnosis in DIAGNOSIS table"))
+  # Source 2: TUMOR_REGISTRY1 (verbose NAACCR column: HISTOLOGICAL_TYPE)
+  tr1_hl_patients <- if (!is.null(pcornet$TUMOR_REGISTRY1) &&
+                         "HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY1)) {
+    pcornet$TUMOR_REGISTRY1 %>%
+      filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
+      distinct(ID)
+  } else {
+    tibble(ID = character())
+  }
+
+  # Source 3: TUMOR_REGISTRY2 (compact column: MORPH)
+  tr2_hl_patients <- if (!is.null(pcornet$TUMOR_REGISTRY2) &&
+                         "MORPH" %in% names(pcornet$TUMOR_REGISTRY2)) {
+    pcornet$TUMOR_REGISTRY2 %>%
+      filter(is_hl_histology(MORPH)) %>%
+      distinct(ID)
+  } else {
+    tibble(ID = character())
+  }
+
+  # Source 4: TUMOR_REGISTRY3 (compact column: MORPH)
+  tr3_hl_patients <- if (!is.null(pcornet$TUMOR_REGISTRY3) &&
+                         "MORPH" %in% names(pcornet$TUMOR_REGISTRY3)) {
+    pcornet$TUMOR_REGISTRY3 %>%
+      filter(is_hl_histology(MORPH)) %>%
+      distinct(ID)
+  } else {
+    tibble(ID = character())
+  }
+
+  # Union all sources
+  tr_all <- bind_rows(tr1_hl_patients, tr2_hl_patients, tr3_hl_patients) %>%
+    distinct(ID)
+
+  hl_patients <- bind_rows(dx_hl_patients, tr_all) %>%
+    distinct(ID)
+
+  message(glue("[Predicate] has_hodgkin_diagnosis: {nrow(hl_patients)} patients with HL evidence"))
+  message(glue("  DIAGNOSIS (ICD-9/10): {nrow(dx_hl_patients)} patients"))
+  message(glue("  TUMOR_REGISTRY (histology): {nrow(tr_all)} patients"))
+  message(glue("  (Union removes duplicates appearing in both sources)"))
 
   patient_df %>%
     semi_join(hl_patients, by = "ID")

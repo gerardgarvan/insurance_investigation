@@ -224,8 +224,11 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
   df <- read_csv(file_path, col_types = col_spec, show_col_types = FALSE)
 
   # Parse all date columns with multi-format parser
-  # Detect date columns by name pattern (DATE, TIME, BDATE, DOD, DT_*)
-  date_cols <- names(df)[str_detect(names(df), "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE)")]
+  # Detect date columns by name pattern for automatic date parsing
+  # Catches: *DATE*, ^DT_*, BDATE, DOD, DT_FU, DXDATE, *_DT (end), RECUR_DT,
+  #          COMBINED_LAST_CONTACT, ADDRESS_PERIOD_START/END
+  # Verified against csv_columns.txt (2026-03-25)
+  date_cols <- names(df)[str_detect(names(df), "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)")]
   for (col in date_cols) {
     if (is.character(df[[col]])) {
       df[[col]] <- parse_pcornet_date(df[[col]])
