@@ -18,16 +18,15 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Harmonize payer variables into 9 categories matching the Python pipeline — Validated in Phase 2: Payer Harmonization (map_payer_category with prefix-based case_when)
 - [x] Implement dual-eligible detection (Medicare+Medicaid combinations) — Validated in Phase 2: encounter-level cross-payer detection + codes {14, 141, 142}
 - [x] ICD code normalization and HL diagnosis matching — Validated in Phase 2: utils_icd.R with 149 codes (77 ICD-10 + 72 ICD-9)
+- [x] Build cohort filter chain using named predicates (has_*, with_*, exclude_*) — Validated in Phase 3: Cohort Building (has_hodgkin_diagnosis, with_enrollment_period, exclude_missing_payer)
+- [x] Log N patients before and after every filter step automatically — Validated in Phase 3: attrition_log data frame with step_name, n_before, n_after, n_excluded
+- [x] Identify HL patients using 149 ICD codes (77 ICD-10 C81.xx, 72 ICD-9 201.xx) — Validated in Phase 3: has_hodgkin_diagnosis() via is_hl_diagnosis() with dotted/undotted normalization
+- [x] Handle multi-site data (OneFlorida+ partner institutions: AMS, UMI, FLM, VRT) — Validated in Phase 3: primary site strategy via inner_join on SOURCE
 
 ### Active
 
-- [ ] Load remaining 13 PCORnet CDM CSV tables as needed
-- [ ] Build cohort filter chain using named predicates (has_*, with_*, exclude_*)
-- [ ] Log N patients before and after every filter step automatically
-- [ ] Identify HL patients using 149 ICD codes (77 ICD-10 C81.xx, 72 ICD-9 201.xx)
 - [ ] Produce attrition waterfall chart from filter log
 - [ ] Produce Sankey/alluvial showing enrollment → diagnosis date → treatment type, stratified by payer
-- [ ] Handle multi-site data (OneFlorida+ partner institutions: AMS, UMI, FLM, VRT)
 - [ ] Apply HIPAA small-cell suppression (counts 1-10) in outputs
 
 ### Out of Scope
@@ -66,7 +65,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Standalone R (not consuming Python output) | Enables independent exploration without Python pipeline dependency | — Pending |
 | Replicate exact payer logic from Python pipeline | Ensures results are comparable across both pipelines | ✓ Phase 2 |
 | Cohort + viz only for v1 | Focus on getting the filter chain and visualizations working before adding analysis tables | — Pending |
-| Named predicate functions for filtering | Readability — code should read like a clinical protocol | — Pending |
+| Named predicate functions for filtering | Readability — code should read like a clinical protocol | ✓ Phase 3 |
+| Treatment flag detection from multiple sources | TUMOR_REGISTRY dates (primary) + PROCEDURES/PRESCRIBING codes (supplemental) for maximum coverage | ✓ Phase 3 |
+| Primary site strategy for multi-site patients | Inner join on SOURCE to keep enrollment from patient's primary site | ✓ Phase 3 |
 
 ## Evolution
 
@@ -86,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after Phase 2 completion*
+*Last updated: 2026-03-25 after Phase 3 completion*
