@@ -38,6 +38,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FIX-03**: User can run a reusable diagnostic script (07_diagnostics.R) that audits column types, date regex coverage, encoding issues, and numeric ranges
 - [x] **FIX-04**: User can audit payer mapping correctness with comparison against Python pipeline reference counts
 
+### Data Quality Remediation (Phase 6)
+
+- [ ] **RECT-01**: User can track HL identification source (DIAGNOSIS only, TR only, Both) per patient with HL_SOURCE column in cohort output
+- [ ] **RECT-02**: User can exclude patients without HL evidence ("Neither" source) from final cohort, with excluded patients written to separate audit CSV
+- [ ] **RECT-03**: User can fix date parsing, column types, date regex, and numeric validation issues identified by 07_diagnostics.R based on actual diagnostic output
+- [ ] **RECT-04**: User can view R vs Python payer mapping differences documented side-by-side in code comments
+- [ ] **RECT-05**: User can rebuild full pipeline end-to-end after fixes and verify all issues are resolved or explained via data_quality_summary.csv
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -49,8 +57,8 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### Analysis
 
-- **ANLY-01**: User can analyze payer × treatment initiation timing (days from diagnosis → first treatment by payer)
-- **ANLY-02**: User can analyze payer × diagnosis timing (days from enrollment start → index diagnosis by payer)
+- **ANLY-01**: User can analyze payer x treatment initiation timing (days from diagnosis -> first treatment by payer)
+- **ANLY-02**: User can analyze payer x diagnosis timing (days from enrollment start -> index diagnosis by payer)
 - **ANLY-03**: User can produce payer distribution tables by site
 - **ANLY-04**: User can produce missing data audit by site and year
 - **ANLY-05**: User can run statistical models / regressions on payer disparities
@@ -104,12 +112,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-02 | Phase 5 | Complete |
 | FIX-03 | Phase 5 | Complete |
 | FIX-04 | Phase 5 | Complete |
+| RECT-01 | Phase 6 | Pending |
+| RECT-02 | Phase 6 | Pending |
+| RECT-03 | Phase 6 | Pending |
+| RECT-04 | Phase 6 | Pending |
+| RECT-05 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 16 total
-- Mapped to phases: 16
-- Unmapped: 0 ✓
+- v1 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after roadmap creation*
+*Last updated: 2026-03-25 after Phase 6 planning*

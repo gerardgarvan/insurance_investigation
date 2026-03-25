@@ -3,7 +3,7 @@
 **Project:** PCORnet CDM Payer Analysis Pipeline (R)
 **Created:** 2026-03-24
 **Granularity:** Coarse (4 phases)
-**Coverage:** 12/12 v1 requirements mapped
+**Coverage:** 21/21 v1 requirements mapped
 
 ## Phases
 
@@ -103,13 +103,14 @@ Plans:
 | 1. Foundation & Data Loading | 2/2 | Complete | 2026-03-24 |
 | 2. Payer Harmonization | 1/1 | Complete | 2026-03-24 |
 | 3. Cohort Building | 2/2 | Complete | 2026-03-25 |
-| 4. Visualization | 0/1 | Planned | - |
-| 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress|  |
+| 4. Visualization | 1/1 | Complete | 2026-03-25 |
+| 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress |  |
+| 6. Use Debug Output to Rectify Issues | 0/3 | Planned | - |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 4` to create visualization scripts
-2. Execute `/gsd:execute-phase 5` to fix parsing and investigate HL diagnosis gaps
+1. Execute `/gsd:execute-phase 5` to complete remaining plan (05-03)
+2. Execute `/gsd:execute-phase 6` to apply data-driven fixes based on diagnostics
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -122,6 +123,18 @@ Plans:
 - [x] 05-01-PLAN.md -- Config + utility fixes: ICD-O-3 histology codes, is_hl_histology(), expanded has_hodgkin_diagnosis(), date regex update (FIX-01, FIX-02, FIX-03)
 - [x] 05-02-PLAN.md -- Reusable diagnostic script 07_diagnostics.R with 6 audit sections (FIX-01, FIX-02, FIX-03, FIX-04)
 - [ ] 05-03-PLAN.md -- Cohort rebuild with expanded HL identification + human verification checkpoint (FIX-01, FIX-02)
+
+### Phase 6: Use debug output to rectify issues
+
+**Goal:** Take the diagnostic output from 07_diagnostics.R and use those findings to fix data quality issues across the pipeline: HL_SOURCE tracking, date parser expansion, col_types corrections, numeric validation, payer documentation, and full pipeline rebuild with data quality summary
+**Requirements**: RECT-01, RECT-02, RECT-03, RECT-04, RECT-05
+**Depends on:** Phase 5
+**Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md -- HL_SOURCE tracking in cohort predicates + Neither exclusion with audit CSV (RECT-01, RECT-02)
+- [ ] 06-02-PLAN.md -- Data-driven fixes: date parser, regex, col_types, validation columns, payer docs (RECT-03, RECT-04)
+- [ ] 06-03-PLAN.md -- Diagnostics update, data quality summary script, full pipeline rebuild + verification (RECT-05)
 
 ---
 
