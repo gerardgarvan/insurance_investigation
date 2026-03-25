@@ -276,10 +276,10 @@ payer_summary <- patient_source %>%
   left_join(patient_dual, by = "ID") %>%
   left_join(payer_transition, by = "ID") %>%
   mutate(
-    N_ENCOUNTERS = replace_na(N_ENCOUNTERS, 0L),
-    N_ENCOUNTERS_WITH_PAYER = replace_na(N_ENCOUNTERS_WITH_PAYER, 0L),
-    DUAL_ELIGIBLE = replace_na(DUAL_ELIGIBLE, 0L),
-    PAYER_TRANSITION = replace_na(PAYER_TRANSITION, 0L)
+    N_ENCOUNTERS = coalesce(N_ENCOUNTERS, 0L),
+    N_ENCOUNTERS_WITH_PAYER = coalesce(N_ENCOUNTERS_WITH_PAYER, 0L),
+    DUAL_ELIGIBLE = coalesce(DUAL_ELIGIBLE, 0L),
+    PAYER_TRANSITION = coalesce(PAYER_TRANSITION, 0L)
   )
 
 message(glue("\nPatient-level summary:"))

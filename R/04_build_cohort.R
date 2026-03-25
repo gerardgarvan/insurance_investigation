@@ -149,9 +149,9 @@ cohort <- cohort %>%
   left_join(rad_flags, by = "ID") %>%
   left_join(sct_flags, by = "ID") %>%
   mutate(
-    HAD_CHEMO = replace_na(HAD_CHEMO, 0L),
-    HAD_RADIATION = replace_na(HAD_RADIATION, 0L),
-    HAD_SCT = replace_na(HAD_SCT, 0L)
+    HAD_CHEMO = coalesce(HAD_CHEMO, 0L),
+    HAD_RADIATION = coalesce(HAD_RADIATION, 0L),
+    HAD_SCT = coalesce(HAD_SCT, 0L)
   )
 
 message(glue("  HAD_CHEMO = 1: {sum(cohort$HAD_CHEMO == 1)} patients ({round(100 * mean(cohort$HAD_CHEMO), 1)}%)"))

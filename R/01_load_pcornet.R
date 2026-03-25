@@ -246,9 +246,9 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
 # MAIN LOADING BLOCK
 # ==============================================================================
 
-message("=" %>% strrep(60))
+message(strrep("=", 60))
 message("Loading PCORnet CDM tables...")
-message("=" %>% strrep(60))
+message(strrep("=", 60))
 
 pcornet <- imap(PCORNET_PATHS, function(path, table_name) {
   spec <- TABLE_SPECS[[table_name]]
@@ -263,12 +263,12 @@ pcornet <- imap(PCORNET_PATHS, function(path, table_name) {
 loaded_tables <- names(pcornet)[!sapply(pcornet, is.null)]
 skipped_tables <- names(pcornet)[sapply(pcornet, is.null)]
 
-message(glue("\n{'=' %>% strrep(60)}"))
+message("\n", strrep("=", 60))
 message(glue("Loading complete: {length(loaded_tables)}/{length(PCORNET_PATHS)} tables loaded"))
 if (length(skipped_tables) > 0) {
   message(glue("Skipped: {paste(skipped_tables, collapse = ', ')}"))
 }
-message(glue("{'=' %>% strrep(60)}"))
+message(strrep("=", 60))
 
 # ==============================================================================
 # End of script
