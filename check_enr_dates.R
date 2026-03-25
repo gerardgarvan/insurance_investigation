@@ -76,9 +76,11 @@ for (tbl_name in names(pcornet)) {
     }
 
     # --- Parse failures (non-empty text -> NA after parsing) ---
+    # Exclude sentinel missing values that the parser intentionally converts to NA
+    missing_sentinels <- c("NULL", "null", "", ".", "NA")
     raw_vals    <- raw_df[[dcol]]
     parsed_vals <- parsed_df[[dcol]]
-    fail_idx <- which(!is.na(raw_vals) & raw_vals != "" & is.na(parsed_vals))
+    fail_idx <- which(!is.na(raw_vals) & !(raw_vals %in% missing_sentinels) & is.na(parsed_vals))
     if (length(fail_idx) > 0) {
       total_parse_fail <- total_parse_fail + length(fail_idx)
       message(glue("\n--- {tbl_name}.{dcol} parse failures: {length(fail_idx)} rows ---"))
