@@ -63,6 +63,10 @@ Plan: Not started
 - [ ] Review and approve roadmap structure
 - [ ] Execute `/gsd:plan-phase 1` to begin Foundation & Data Loading
 
+### Roadmap Evolution
+
+- Phase 5 added: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
+
 ### Active Blockers
 
 (None)
