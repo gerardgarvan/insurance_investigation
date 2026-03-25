@@ -42,8 +42,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **RECT-01**: User can track HL identification source (DIAGNOSIS only, TR only, Both) per patient with HL_SOURCE column in cohort output
 - [x] **RECT-02**: User can exclude patients without HL evidence ("Neither" source) from final cohort, with excluded patients written to separate audit CSV
-- [ ] **RECT-03**: User can fix date parsing, column types, date regex, and numeric validation issues identified by 07_diagnostics.R based on actual diagnostic output
-- [ ] **RECT-04**: User can view R vs Python payer mapping differences documented side-by-side in code comments
+- [x] **RECT-03**: User can fix date parsing, column types, date regex, and numeric validation issues identified by 07_diagnostics.R based on actual diagnostic output
+- [x] **RECT-04**: User can view R vs Python payer mapping differences documented side-by-side in code comments
 - [ ] **RECT-05**: User can rebuild full pipeline end-to-end after fixes and verify all issues are resolved or explained via data_quality_summary.csv
 
 ## v2 Requirements
@@ -114,8 +114,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-04 | Phase 5 | Complete |
 | RECT-01 | Phase 6 | Complete |
 | RECT-02 | Phase 6 | Complete |
-| RECT-03 | Phase 6 | Pending |
-| RECT-04 | Phase 6 | Pending |
+| RECT-03 | Phase 6 | Complete |
+| RECT-04 | Phase 6 | Complete |
 | RECT-05 | Phase 6 | Pending |
 
 **Coverage:**

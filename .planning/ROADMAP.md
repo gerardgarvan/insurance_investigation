@@ -133,7 +133,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md -- HL_SOURCE tracking in cohort predicates + Neither exclusion with audit CSV (RECT-01, RECT-02)
-- [ ] 06-02-PLAN.md -- Data-driven fixes: date parser, regex, col_types, validation columns, payer docs (RECT-03, RECT-04)
+- [x] 06-02-PLAN.md -- Data-driven fixes: date parser, regex, col_types, validation columns, payer docs (RECT-03, RECT-04)
 - [ ] 06-03-PLAN.md -- Diagnostics update, data quality summary script, full pipeline rebuild + verification (RECT-05)
 
 ---
