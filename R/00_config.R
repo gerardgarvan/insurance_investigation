@@ -203,6 +203,66 @@ CONFIG$analysis <- list(
 )
 
 # ------------------------------------------------------------------------------
+# 5.5 TREATMENT CODE LISTS (for treatment flag detection)
+# ------------------------------------------------------------------------------
+#
+# Used by 03_cohort_predicates.R to identify chemotherapy, radiation, and SCT
+# evidence in PROCEDURES (CPT/HCPCS) and PRESCRIBING (RXNORM) tables.
+#
+# Primary treatment evidence comes from TUMOR_REGISTRY date columns:
+#   - TR1: CHEMO_START_DATE_SUMMARY (chemo), no DT_RAD column
+#   - TR2/TR3: DT_CHEMO, DT_RAD, DT_HTE (hematologic transplant/endocrine)
+# Supplemental evidence comes from PROCEDURES and PRESCRIBING codes below.
+#
+# Per D-07: HAD_SCT covers both autologous and allogeneic (single flag).
+#
+# Sources:
+#   - Radiation CPT: CMS 2026 complexity-based codes (77385/77386 deleted 2026-01-01)
+#   - SCT CPT: ASBMT coding guidelines (38240-38243)
+#   - Chemo RXNORM: ABVD regimen components (standard first-line HL treatment)
+#   - Chemo HCPCS: J-code range for injectable chemotherapy drugs
+
+TREATMENT_CODES <- list(
+  # Chemotherapy HCPCS J-codes (injectable chemo drugs commonly used in HL)
+  # ABVD regimen: Doxorubicin (J9000), Bleomycin (J9040), Vinblastine (J9360), Dacarbazine (J9130)
+  # Additional HL agents: Brentuximab vedotin (J9042), Nivolumab (J9299)
+  chemo_hcpcs = c(
+    "J9000",   # Doxorubicin HCl (Adriamycin)
+    "J9040",   # Bleomycin sulfate
+    "J9360",   # Vinblastine sulfate
+    "J9130",   # Dacarbazine (DTIC)
+    "J9042",   # Brentuximab vedotin (Adcetris)
+    "J9299"    # Nivolumab (Opdivo)
+  ),
+
+  # Chemotherapy RXNORM CUIs for PRESCRIBING table matching
+  # ABVD regimen base ingredients (RxNorm concept IDs)
+  chemo_rxnorm = c(
+    "3639",    # Doxorubicin
+    "11213",   # Bleomycin
+    "67228",   # Vinblastine
+    "3946"     # Dacarbazine
+  ),
+
+  # Radiation therapy CPT codes (active treatment, not planning-only)
+  # 2026 complexity-based codes replaced technique-based codes (77385/77386 deleted)
+  radiation_cpt = c(
+    "77427",   # Radiation treatment management (weekly, per 5 fractions) - most common
+    "77407",   # Radiation treatment delivery, simple (2026 new code)
+    "77412",   # Radiation treatment delivery, complex (2026 new code)
+    "77402"    # Radiation treatment delivery, intermediate (2026 new code)
+  ),
+
+  # Stem cell transplant CPT codes (autologous + allogeneic per D-07)
+  sct_cpt = c(
+    "38240",   # Allogeneic HPC transplantation
+    "38241",   # Autologous HPC transplantation
+    "38242",   # Allogeneic donor lymphocyte infusion (DLI)
+    "38243"    # Allogeneic HPC boost
+  )
+)
+
+# ------------------------------------------------------------------------------
 # 6. AUTO-SOURCE UTILITY FUNCTIONS
 # ------------------------------------------------------------------------------
 
