@@ -105,7 +105,7 @@ Plans:
 | 3. Cohort Building | 2/2 | Complete | 2026-03-25 |
 | 4. Visualization | 1/1 | Complete | 2026-03-25 |
 | 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress |  |
-| 6. Use Debug Output to Rectify Issues | 1/3 | In Progress|  |
+| 6. Use Debug Output to Rectify Issues | 3/3 | Complete | 2026-03-25 |
 
 ## Next Actions
 
@@ -129,12 +129,12 @@ Plans:
 **Goal:** Take the diagnostic output from 07_diagnostics.R and use those findings to fix data quality issues across the pipeline: HL_SOURCE tracking, date parser expansion, col_types corrections, numeric validation, payer documentation, and full pipeline rebuild with data quality summary
 **Requirements**: RECT-01, RECT-02, RECT-03, RECT-04, RECT-05
 **Depends on:** Phase 5
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 - [x] 06-01-PLAN.md -- HL_SOURCE tracking in cohort predicates + Neither exclusion with audit CSV (RECT-01, RECT-02)
 - [x] 06-02-PLAN.md -- Data-driven fixes: date parser, regex, col_types, validation columns, payer docs (RECT-03, RECT-04)
-- [ ] 06-03-PLAN.md -- Diagnostics update, data quality summary script, full pipeline rebuild + verification (RECT-05)
+- [x] 06-03-PLAN.md -- Diagnostics update, data quality summary script, full pipeline rebuild + verification (RECT-05)
 
 ---
 
