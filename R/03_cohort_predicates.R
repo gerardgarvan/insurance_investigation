@@ -34,6 +34,7 @@
 library(dplyr)
 library(lubridate)
 library(glue)
+library(readr)
 
 # ==============================================================================
 # SECTION 1: FILTER PREDICATES (tibble-in, tibble-out)
@@ -88,20 +89,66 @@ has_hodgkin_diagnosis <- function(patient_df) {
     tibble(ID = character())
   }
 
-  # Union all sources
+  # Union all TR sources
   tr_all <- bind_rows(tr1_hl_patients, tr2_hl_patients, tr3_hl_patients) %>%
     distinct(ID)
 
-  hl_patients <- bind_rows(dx_hl_patients, tr_all) %>%
-    distinct(ID)
+  # Build HL source mapping for ALL patients in patient_df (D-20)
+  hl_source_map <- patient_df %>%
+    select(ID) %>%
+    distinct() %>%
+    left_join(
+      dx_hl_patients %>% mutate(has_dx = TRUE) %>% distinct(ID, has_dx),
+      by = "ID"
+    ) %>%
+    left_join(
+      tr_all %>% mutate(has_tr = TRUE) %>% distinct(ID, has_tr),
+      by = "ID"
+    ) %>%
+    mutate(
+      has_dx = coalesce(has_dx, FALSE),
+      has_tr = coalesce(has_tr, FALSE),
+      HL_SOURCE = case_when(
+        has_dx & has_tr ~ "Both",
+        has_dx & !has_tr ~ "DIAGNOSIS only",
+        !has_dx & has_tr ~ "TR only",
+        TRUE ~ "Neither"
+      )
+    ) %>%
+    select(ID, HL_SOURCE)
 
-  message(glue("[Predicate] has_hodgkin_diagnosis: {nrow(hl_patients)} patients with HL evidence"))
-  message(glue("  DIAGNOSIS (ICD-9/10): {nrow(dx_hl_patients)} patients"))
-  message(glue("  TUMOR_REGISTRY (histology): {nrow(tr_all)} patients"))
-  message(glue("  (Union removes duplicates appearing in both sources)"))
+  # Log HL source breakdown (D-20)
+  message(glue("[Predicate] has_hodgkin_diagnosis source breakdown:"))
+  source_counts <- hl_source_map %>% count(HL_SOURCE)
+  for (i in seq_len(nrow(source_counts))) {
+    message(glue("  {source_counts$HL_SOURCE[i]}: {source_counts$n[i]}"))
+  }
 
+  # Write excluded "Neither" patients to CSV (D-02)
+  excluded <- patient_df %>%
+    inner_join(
+      hl_source_map %>% filter(HL_SOURCE == "Neither"),
+      by = "ID"
+    ) %>%
+    mutate(
+      EXCLUSION_REASON = "No HL evidence in DIAGNOSIS or TUMOR_REGISTRY tables"
+    )
+
+  if (nrow(excluded) > 0) {
+    excl_dir <- file.path(CONFIG$output_dir, "cohort")
+    dir.create(excl_dir, showWarnings = FALSE, recursive = TRUE)
+    write_csv(excluded, file.path(excl_dir, "excluded_no_hl_evidence.csv"))
+    message(glue("  Wrote {nrow(excluded)} excluded patients to excluded_no_hl_evidence.csv"))
+  } else {
+    message("  No 'Neither' patients found (all have HL evidence)")
+  }
+
+  # Return patients WITH HL evidence, including HL_SOURCE column (D-02, D-20)
   patient_df %>%
-    semi_join(hl_patients, by = "ID")
+    inner_join(
+      hl_source_map %>% filter(HL_SOURCE != "Neither"),
+      by = "ID"
+    )
 }
 
 #' Filter to patients with at least one enrollment record
