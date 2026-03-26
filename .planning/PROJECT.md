@@ -38,6 +38,12 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 - [x] Treatment-anchored payer mode (PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT) computed within +/-30 day window of first treatment date — Validated in Phase 8
 
+### Validated (Phase 9)
+
+- [x] Expanded treatment detection to DISPENSING/MED_ADMIN (RXNORM_CUI), DIAGNOSIS (Z/V codes), ENCOUNTER (DRG), PROCEDURES (revenue codes) — Validated in Phase 9
+- [x] Multi-source treatment date extraction for payer anchoring (7 sources chemo, 4 radiation/SCT) — Validated in Phase 9
+- [x] Aggregate per-source treatment contribution logging — Validated in Phase 9
+
 ### Out of Scope
 
 - Statistical modeling / regression — exploration only for v1
@@ -53,7 +59,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` handles production-grade data loading, cleaning, and payer analysis using Python/Polars. This R project is a parallel exploration tool, not a replacement.
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
-- **PCORnet CDM tables in scope**: ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC (primary), plus reference to DEATH, HARVEST for metadata
+- **PCORnet CDM tables in scope**: ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC, DISPENSING, MED_ADMIN (primary — 11 tables), plus TUMOR_REGISTRY1/2/3 and reference to DEATH, HARVEST for metadata
 - **Payer logic reference**: `docs/PAYER_VARIABLES_AND_CATEGORIES.md` in the Python pipeline defines the exact 9-category mapping and dual-eligible rules to replicate
 - **ICD codes**: 149 HL diagnosis codes — ICD-10 C81.00–C81.9A (77 codes) and ICD-9 201.00–201.98 (72 codes), format-adaptive (dotted and undotted)
 - **Partner provenance**: Some partners are claims-only (FLM), some have mapped ICD codes (AMS, UMI), one is death-only (VRT)
@@ -78,6 +84,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Treatment flag detection from multiple sources | TUMOR_REGISTRY dates (primary) + PROCEDURES/PRESCRIBING codes (supplemental) for maximum coverage | ✓ Phase 3 |
 | Primary site strategy for multi-site patients | Inner join on SOURCE to keep enrollment from patient's primary site | ✓ Phase 3 |
 | Treatment-anchored payer mode via +/-30 day window | Reuses Section 4c mode pattern from payer harmonization, anchors on PX_DATE per treatment type | ✓ Phase 8 |
+| Expanded treatment detection across all docx-specified sources | Maximizes sensitivity by querying DISPENSING, MED_ADMIN, DIAGNOSIS, ENCOUNTER DRG, and PROCEDURES revenue codes | ✓ Phase 9 |
 
 ## Evolution
 
@@ -97,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 8 completion*
+*Last updated: 2026-03-26 after Phase 9 completion*
