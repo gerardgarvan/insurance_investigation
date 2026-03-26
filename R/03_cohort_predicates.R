@@ -206,14 +206,30 @@ exclude_missing_payer <- function(patient_df, payer_summary) {
 #'   - TUMOR_REGISTRY1: CHEMO_START_DATE_SUMMARY (non-NA)
 #'   - TUMOR_REGISTRY2/3: DT_CHEMO (non-NA)
 #'   - PROCEDURES: PX_TYPE == "CH" and PX in TREATMENT_CODES$chemo_hcpcs
+#'   - PROCEDURES: PX_TYPE == "RE" and PX in TREATMENT_CODES$chemo_revenue (Phase 9)
 #'   - PRESCRIBING: RXNORM_CUI in TREATMENT_CODES$chemo_rxnorm
+#'   - DISPENSING: RXNORM_CUI in TREATMENT_CODES$chemo_rxnorm (Phase 9)
+#'   - MED_ADMIN: RXNORM_CUI in TREATMENT_CODES$chemo_rxnorm (Phase 9)
+#'   - DIAGNOSIS: Z51.11/Z51.12 (ICD-10), V58.11/V58.12 (ICD-9) (Phase 9)
+#'   - ENCOUNTER: DRG in TREATMENT_CODES$chemo_drg (Phase 9)
 #'
 #' @return Tibble with columns: ID, HAD_CHEMO (integer 1 for all rows)
 #'
 has_chemo <- function() {
   chemo_ids <- character(0)
 
+  # Initialize source counters for aggregate logging (D-14)
+  n_tr <- 0L
+  n_px <- 0L
+  n_rx <- 0L
+  n_dx <- 0L
+  n_drg <- 0L
+  n_disp <- 0L
+  n_ma <- 0L
+  n_rev <- 0L
+
   # TUMOR_REGISTRY1: CHEMO_START_DATE_SUMMARY (different column name from TR2/TR3)
+  tr1_chemo <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY1) &&
       "CHEMO_START_DATE_SUMMARY" %in% names(pcornet$TUMOR_REGISTRY1)) {
     tr1_chemo <- pcornet$TUMOR_REGISTRY1 %>%
@@ -223,6 +239,7 @@ has_chemo <- function() {
   }
 
   # TUMOR_REGISTRY2: DT_CHEMO
+  tr2_chemo <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY2) &&
       "DT_CHEMO" %in% names(pcornet$TUMOR_REGISTRY2)) {
     tr2_chemo <- pcornet$TUMOR_REGISTRY2 %>%
@@ -232,6 +249,7 @@ has_chemo <- function() {
   }
 
   # TUMOR_REGISTRY3: DT_CHEMO
+  tr3_chemo <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY3) &&
       "DT_CHEMO" %in% names(pcornet$TUMOR_REGISTRY3)) {
     tr3_chemo <- pcornet$TUMOR_REGISTRY3 %>%
@@ -240,7 +258,11 @@ has_chemo <- function() {
     chemo_ids <- c(chemo_ids, tr3_chemo)
   }
 
+  # Aggregate TR source count
+  n_tr <- length(unique(c(tr1_chemo, tr2_chemo, tr3_chemo)))
+
   # PROCEDURES: chemo CPT/HCPCS, ICD-9-CM, ICD-10-PCS codes
+  px_chemo <- character(0)
   if (!is.null(pcornet$PROCEDURES)) {
     px_chemo <- pcornet$PROCEDURES %>%
       filter(
@@ -248,21 +270,82 @@ has_chemo <- function() {
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
         (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes)
       ) %>%
+      distinct(ID) %>%
       pull(ID)
     chemo_ids <- c(chemo_ids, px_chemo)
   }
+  n_px <- length(px_chemo)
 
   # PRESCRIBING: any prescription record (matches Python pipeline's broad definition)
   # Python counts any patient with RX_ORDER_DATE or RX_START_DATE as chemo evidence
+  rx_chemo <- character(0)
   if (!is.null(pcornet$PRESCRIBING)) {
     rx_chemo <- pcornet$PRESCRIBING %>%
       filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
+      distinct(ID) %>%
       pull(ID)
     chemo_ids <- c(chemo_ids, rx_chemo)
   }
+  n_rx <- length(rx_chemo)
+
+  # --- Phase 9: Expanded treatment detection sources ---
+
+  # DIAGNOSIS: Z51.11/Z51.12 (ICD-10), V58.11/V58.12 (ICD-9) per D-09
+  if (!is.null(pcornet$DIAGNOSIS)) {
+    dx_chemo <- pcornet$DIAGNOSIS %>%
+      filter(
+        (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
+        (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+      ) %>%
+      distinct(ID) %>%
+      pull(ID)
+    chemo_ids <- c(chemo_ids, dx_chemo)
+    n_dx <- length(dx_chemo)
+  }
+
+  # ENCOUNTER: DRGs 837-839, 846-848 per D-10
+  if (!is.null(pcornet$ENCOUNTER)) {
+    drg_chemo <- pcornet$ENCOUNTER %>%
+      filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
+      distinct(ID) %>%
+      pull(ID)
+    chemo_ids <- c(chemo_ids, drg_chemo)
+    n_drg <- length(drg_chemo)
+  }
+
+  # DISPENSING: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
+  if (!is.null(pcornet$DISPENSING)) {
+    disp_chemo <- pcornet$DISPENSING %>%
+      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
+      distinct(ID) %>%
+      pull(ID)
+    chemo_ids <- c(chemo_ids, disp_chemo)
+    n_disp <- length(disp_chemo)
+  }
+
+  # MED_ADMIN: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
+  if (!is.null(pcornet$MED_ADMIN)) {
+    ma_chemo <- pcornet$MED_ADMIN %>%
+      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
+      distinct(ID) %>%
+      pull(ID)
+    chemo_ids <- c(chemo_ids, ma_chemo)
+    n_ma <- length(ma_chemo)
+  }
+
+  # PROCEDURES revenue codes: 0331/0332/0335 per D-11 (PX_TYPE = "RE")
+  if (!is.null(pcornet$PROCEDURES)) {
+    rev_chemo <- pcornet$PROCEDURES %>%
+      filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue) %>%
+      distinct(ID) %>%
+      pull(ID)
+    chemo_ids <- c(chemo_ids, rev_chemo)
+    n_rev <- length(rev_chemo)
+  }
 
   result <- tibble(ID = unique(chemo_ids), HAD_CHEMO = 1L)
-  message(glue("[Treatment] has_chemo: {nrow(result)} patients with chemotherapy evidence"))
+  message(glue("[Treatment] has_chemo: {nrow(result)} patients total"))
+  message(glue("  Sources: TR={n_tr}, PX={n_px}, RX={n_rx}, DX={n_dx}, DRG={n_drg}, DISP={n_disp}, MA={n_ma}, REV={n_rev}"))
   result
 }
 
