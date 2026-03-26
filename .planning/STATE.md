@@ -80,6 +80,7 @@ Plan: Not started
 - Phase 6 added: Use debug output to rectify issues
 - Phase 7 added: look at dx info of those that did not have an HL diagnosis to fill gap
 - Phase 8 added: Add insurance mode around three treatment types (chemo, radiation, stem cell) from procedures tables with plus/minus 30 days window
+- Phase 9 added: Expand treatment detection using docx-specified tables and researched codes
 
 ### Active Blockers
 
