@@ -35,6 +35,7 @@ library(dplyr)
 library(lubridate)
 library(glue)
 library(readr)
+library(stringr)
 
 # ==============================================================================
 # SECTION 1: FILTER PREDICATES (tibble-in, tibble-out)
@@ -239,10 +240,14 @@ has_chemo <- function() {
     chemo_ids <- c(chemo_ids, tr3_chemo)
   }
 
-  # PROCEDURES: chemo HCPCS codes
+  # PROCEDURES: chemo CPT/HCPCS, ICD-9-CM, ICD-10-PCS codes
   if (!is.null(pcornet$PROCEDURES)) {
     px_chemo <- pcornet$PROCEDURES %>%
-      filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) %>%
+      filter(
+        (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
+        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
+        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes)
+      ) %>%
       pull(ID)
     chemo_ids <- c(chemo_ids, px_chemo)
   }
@@ -292,10 +297,19 @@ has_radiation <- function() {
     rad_ids <- c(rad_ids, tr3_rad)
   }
 
-  # PROCEDURES: radiation CPT codes
+  # PROCEDURES: radiation CPT, ICD-9-CM, ICD-10-PCS codes
   if (!is.null(pcornet$PROCEDURES)) {
     px_rad <- pcornet$PROCEDURES %>%
-      filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) %>%
+      filter(
+        (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
+        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
+        (PX_TYPE == "10" & (
+          str_starts(PX, "D70") |
+          str_starts(PX, "D71") |
+          str_starts(PX, "D72") |
+          str_starts(PX, "D7Y")
+        ))
+      ) %>%
       pull(ID)
     rad_ids <- c(rad_ids, px_rad)
   }
@@ -352,10 +366,14 @@ has_sct <- function() {
     sct_ids <- c(sct_ids, tr3_sct)
   }
 
-  # PROCEDURES: SCT CPT codes
+  # PROCEDURES: SCT CPT, ICD-9-CM, ICD-10-PCS codes
   if (!is.null(pcornet$PROCEDURES)) {
     px_sct <- pcornet$PROCEDURES %>%
-      filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) %>%
+      filter(
+        (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) |
+        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
+      ) %>%
       pull(ID)
     sct_ids <- c(sct_ids, px_sct)
   }
