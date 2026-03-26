@@ -107,10 +107,12 @@ Plans:
 | 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress |  |
 | 6. Use Debug Output to Rectify Issues | 3/3 | Complete | 2026-03-25 |
 | 7. Dx Gap Analysis for Neither Patients | 0/1 | Planned |  |
+| 8. Treatment-Anchored Payer Mode | 0/1 | Planned |  |
 
 ## Next Actions
 
 1. Execute `/gsd:execute-phase 7` to run gap analysis investigation
+2. Execute `/gsd:execute-phase 8` to add treatment-anchored payer columns
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -145,6 +147,16 @@ Plans:
 
 Plans:
 - [ ] 07-01-PLAN.md -- Gap analysis script with diagnosis exploration, enrollment/TR cross-reference, gap classification, and pipeline decision checkpoint (GAP-01, GAP-02, GAP-03)
+
+### Phase 8: Add insurance mode around three treatment types (chemo, radiation, stem cell) from procedures tables with plus/minus 30 days window
+
+**Goal:** For each of three treatment types (chemotherapy, radiation, stem cell transplant), compute the patient's insurance payer mode within a +-30 day window around the first treatment procedure date, adding PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT columns (plus first treatment dates) to the existing hl_cohort output
+**Requirements**: TPAY-01, TPAY-02, TPAY-03
+**Depends on:** Phase 7
+**Plans:** 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md -- ICD procedure code config + treatment-anchored payer mode script + cohort integration (TPAY-01, TPAY-02, TPAY-03)
 
 ---
 
