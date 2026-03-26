@@ -272,7 +272,9 @@ CONFIG$analysis <- list(
 # ------------------------------------------------------------------------------
 #
 # Used by 03_cohort_predicates.R to identify chemotherapy, radiation, and SCT
-# evidence in PROCEDURES (CPT/HCPCS) and PRESCRIBING (RXNORM) tables.
+# evidence in PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue codes),
+# PRESCRIBING (RXNORM), DISPENSING (RXNORM), MED_ADMIN (RXNORM),
+# DIAGNOSIS (Z/V codes), and ENCOUNTER (DRG codes) tables.
 #
 # Primary treatment evidence comes from TUMOR_REGISTRY date columns:
 #   - TR1: CHEMO_START_DATE_SUMMARY (chemo), no DT_RAD column
@@ -338,7 +340,8 @@ TREATMENT_CODES <- list(
 
   # Chemotherapy ICD-9-CM Volume 3 (PX_TYPE = "09")
   chemo_icd9 = c(
-    "99.25"    # Injection or infusion of cancer chemotherapeutic substance
+    "99.25",   # Injection or infusion of cancer chemotherapeutic substance
+    "99.28"    # Injection or infusion of immunotherapy (D-07)
   ),
 
   # Chemotherapy ICD-10-PCS (PX_TYPE = "10")
@@ -408,6 +411,65 @@ TREATMENT_CODES <- list(
     "30233Y1",  # Nonautologous HPC (other), peripheral vein, percutaneous
     "30243Y0",  # Autologous HPC (other), central vein, percutaneous
     "30243Y1"   # Nonautologous HPC (other), central vein, percutaneous
+  ),
+
+  # --- Phase 9: Expanded detection codes (D-09, D-10, D-11) ---
+
+  # Diagnosis-based treatment evidence (ICD-10-CM Z/T codes, ICD-9-CM V codes)
+  chemo_dx_icd10 = c(
+    "Z51.11",   # Encounter for antineoplastic chemotherapy
+    "Z51.12"    # Encounter for antineoplastic immunotherapy
+  ),
+  chemo_dx_icd9 = c(
+    "V58.11",   # Encounter for antineoplastic chemotherapy
+    "V58.12"    # Encounter for antineoplastic immunotherapy
+  ),
+  radiation_dx_icd10 = c(
+    "Z51.0"     # Encounter for antineoplastic radiation therapy
+  ),
+  radiation_dx_icd9 = c(
+    "V58.0"     # Encounter for radiotherapy
+  ),
+  sct_dx_icd10 = c(
+    "Z94.84",   # Stem cells transplant status
+    "T86.5",    # Complications of stem cell transplant
+    "T86.09",   # Other complications of bone marrow transplant
+    "Z48.290",  # Encounter for aftercare following bone marrow transplant
+    "T86.0"     # Complications of bone marrow transplant (per D-09 in CONTEXT.md)
+  ),
+
+  # MS-DRG treatment evidence (ENCOUNTER table DRG column)
+  chemo_drg = c(
+    "837",   # Chemo w/o acute leukemia as SDx w MCC
+    "838",   # Chemo w/o acute leukemia as SDx w CC
+    "839",   # Chemo w/o acute leukemia as SDx w/o CC/MCC
+    "846",   # Chemo w hematologic malignancy as SDx w MCC
+    "847",   # Chemo w hematologic malignancy as SDx w CC
+    "848"    # Chemo w hematologic malignancy as SDx w/o CC/MCC
+  ),
+  radiation_drg = c(
+    "849"    # Radiotherapy
+  ),
+  sct_drg = c(
+    "014",   # Allogeneic bone marrow transplant
+    "016",   # Autologous BMT w CC/MCC or T-cell immunotherapy
+    "017"    # Autologous BMT w/o CC/MCC
+    # NOTE: DRG 015 deleted FY2012, omitted per research pitfall 4
+  ),
+
+  # Revenue codes (PROCEDURES table PX_TYPE = "RE")
+  chemo_revenue = c(
+    "0331",   # Chemo - injected
+    "0332",   # Chemo - oral
+    "0335"    # Chemo - IV push
+  ),
+  radiation_revenue = c(
+    "0330",   # General classification (therapeutic radiology)
+    "0333"    # Radiation therapy
+  ),
+  sct_revenue = c(
+    "0362",   # Organ transplant - other than kidney (includes SCT)
+    "0815"    # Allogeneic stem cell acquisition/donor services
   )
 )
 
