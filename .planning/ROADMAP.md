@@ -166,7 +166,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Expanded treatment code lists in config + DISPENSING/MED_ADMIN table loading (TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04)
+- [x] 09-01-PLAN.md -- Expanded treatment code lists in config + DISPENSING/MED_ADMIN table loading (TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04)
 - [ ] 09-02-PLAN.md -- Expand has_chemo/radiation/sct() with DIAGNOSIS, DRG, DISPENSING, MED_ADMIN, revenue sources (TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04, TXEXP-05)
 - [ ] 09-03-PLAN.md -- Expand compute_payer_at_chemo/radiation/sct() date extraction with new sources (TXEXP-06)
 
