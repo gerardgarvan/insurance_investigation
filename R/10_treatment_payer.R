@@ -46,6 +46,10 @@ library(glue)
 #' @param payer_col_name Character, name for output payer column
 #' @return Tibble with columns: ID, {payer_col_name}
 compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analysis$treatment_window_days, payer_col_name = "PAYER_MODE") {
+  # Detect the date column (the non-ID column) and rename to anchor_date
+  date_col <- setdiff(names(first_dates), "ID")
+  first_dates <- first_dates %>% rename(anchor_date = !!date_col[1])
+
   result <- encounters %>%
     filter(!is.na(effective_payer) &
            nchar(trimws(effective_payer)) > 0 &
