@@ -381,29 +381,33 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
 # MAIN LOADING BLOCK
 # ==============================================================================
 
-message(strrep("=", 60))
-message("Loading PCORnet CDM tables...")
-message(strrep("=", 60))
+if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
+  message("PCORnet tables already loaded — skipping reload. (rm(pcornet) to force reload)")
+} else {
+  message(strrep("=", 60))
+  message("Loading PCORnet CDM tables...")
+  message(strrep("=", 60))
 
-pcornet <- imap(PCORNET_PATHS, function(path, table_name) {
-  spec <- TABLE_SPECS[[table_name]]
-  if (is.null(spec)) {
-    message(glue("WARNING: No col_types spec defined for {table_name}. Using .default = col_character()."))
-    spec <- cols(.default = col_character())
+  pcornet <- imap(PCORNET_PATHS, function(path, table_name) {
+    spec <- TABLE_SPECS[[table_name]]
+    if (is.null(spec)) {
+      message(glue("WARNING: No col_types spec defined for {table_name}. Using .default = col_character()."))
+      spec <- cols(.default = col_character())
+    }
+    load_pcornet_table(table_name, path, spec)
+  })
+
+  # Summary
+  loaded_tables <- names(pcornet)[!sapply(pcornet, is.null)]
+  skipped_tables <- names(pcornet)[sapply(pcornet, is.null)]
+
+  message("\n", strrep("=", 60))
+  message(glue("Loading complete: {length(loaded_tables)}/{length(PCORNET_PATHS)} tables loaded"))
+  if (length(skipped_tables) > 0) {
+    message(glue("Skipped: {paste(skipped_tables, collapse = ', ')}"))
   }
-  load_pcornet_table(table_name, path, spec)
-})
-
-# Summary
-loaded_tables <- names(pcornet)[!sapply(pcornet, is.null)]
-skipped_tables <- names(pcornet)[sapply(pcornet, is.null)]
-
-message("\n", strrep("=", 60))
-message(glue("Loading complete: {length(loaded_tables)}/{length(PCORNET_PATHS)} tables loaded"))
-if (length(skipped_tables) > 0) {
-  message(glue("Skipped: {paste(skipped_tables, collapse = ', ')}"))
+  message(strrep("=", 60))
 }
-message(strrep("=", 60))
 
 # ==============================================================================
 # End of script
