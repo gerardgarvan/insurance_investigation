@@ -273,6 +273,9 @@ CONFIG$analysis <- list(
 #   - TR2/TR3: DT_CHEMO, DT_RAD, DT_HTE (hematologic transplant/endocrine)
 # Supplemental evidence comes from PROCEDURES and PRESCRIBING codes below.
 #
+# ICD procedure codes (PX_TYPE "09" for ICD-9-CM Volume 3, "10" for ICD-10-PCS)
+# for all three treatment types added in Phase 8 Plan 01.
+#
 # Per D-07: HAD_SCT covers both autologous and allogeneic (single flag).
 #
 # Sources:
@@ -280,6 +283,8 @@ CONFIG$analysis <- list(
 #   - SCT CPT: ASBMT coding guidelines (38240-38243)
 #   - Chemo RXNORM: ABVD regimen components (standard first-line HL treatment)
 #   - Chemo HCPCS: J-code range for injectable chemotherapy drugs
+#   - ICD-9-CM Vol 3: chemo (99.25), radiation (92.2x, 92.3x, 92.41), SCT (41.0x)
+#   - ICD-10-PCS: chemo (3E0 series antineoplastic), radiation (D7 series), SCT (302 series HPC)
 
 TREATMENT_CODES <- list(
   # Chemotherapy HCPCS J-codes (injectable chemo drugs commonly used in HL)
@@ -318,6 +323,82 @@ TREATMENT_CODES <- list(
     "38241",   # Autologous HPC transplantation
     "38242",   # Allogeneic donor lymphocyte infusion (DLI)
     "38243"    # Allogeneic HPC boost
+  ),
+
+  # --- ICD Procedure Codes (D-02, D-04: all PX_TYPE values) ---
+
+  # Chemotherapy ICD-9-CM Volume 3 (PX_TYPE = "09")
+  chemo_icd9 = c(
+    "99.25"    # Injection or infusion of cancer chemotherapeutic substance
+  ),
+
+  # Chemotherapy ICD-10-PCS (PX_TYPE = "10")
+  # Section 3 Administration, Root Operation Introduction, Qualifier 5 = Antineoplastic
+  # Prefix-matched in 10_treatment_payer.R via str_starts() -- store prefixes only
+  chemo_icd10pcs_prefixes = c(
+    "3E03305",  # Antineoplastic into peripheral vein, percutaneous
+    "3E04305",  # Antineoplastic into central vein, percutaneous
+    "3E05305",  # Antineoplastic into peripheral artery, percutaneous
+    "3E06305"   # Antineoplastic into central artery, percutaneous
+  ),
+
+  # Radiation therapy ICD-9-CM Volume 3 (PX_TYPE = "09")
+  radiation_icd9 = c(
+    "92.20",   # Infusion of liquid brachytherapy radioisotope
+    "92.21",   # Superficial radiation
+    "92.22",   # Orthovoltage radiation
+    "92.23",   # Radioisotopic teleradiotherapy
+    "92.24",   # Teleradiotherapy using photons
+    "92.25",   # Teleradiotherapy using electrons
+    "92.26",   # Teleradiotherapy of other particulate radiation
+    "92.27",   # Implantation or insertion of radioactive elements
+    "92.29",   # Other radiotherapeutic procedure
+    "92.30",   # Stereotactic radiosurgery, NOS
+    "92.31",   # Single source photon radiosurgery
+    "92.32",   # Multi-source photon radiosurgery (Gamma Knife)
+    "92.33",   # Particulate radiosurgery
+    "92.41"    # Intra-operative electron radiation therapy (IERT)
+  ),
+
+  # Radiation therapy ICD-10-PCS prefixes (PX_TYPE = "10")
+  # Section D Radiation Therapy, Body System 7 Lymphatic and Hematologic
+  # Prefix-matched in 10_treatment_payer.R via str_starts()
+  radiation_icd10pcs_prefixes = c(
+    "D70",     # Beam Radiation, lymphatic/hematologic
+    "D71",     # Brachytherapy, lymphatic/hematologic
+    "D72",     # Stereotactic Radiosurgery, lymphatic/hematologic
+    "D7Y"      # Other Radiation, lymphatic/hematologic
+  ),
+
+  # Stem cell transplant ICD-9-CM Volume 3 (PX_TYPE = "09")
+  sct_icd9 = c(
+    "41.00",   # Bone marrow transplant, NOS
+    "41.01",   # Autologous bone marrow transplant without purging
+    "41.02",   # Allogeneic bone marrow transplant with purging
+    "41.03",   # Allogeneic bone marrow transplant without purging
+    "41.04",   # Autologous hematopoietic stem cell transplant without purging
+    "41.05",   # Allogeneic hematopoietic stem cell transplant without purging
+    "41.06",   # Cord blood stem cell transplant
+    "41.07",   # Autologous hematopoietic stem cell transplant with purging
+    "41.08",   # Allogeneic hematopoietic stem cell transplant with purging
+    "41.09"    # Autologous bone marrow transplant with purging
+  ),
+
+  # Stem cell transplant ICD-10-PCS (PX_TYPE = "10")
+  # Section 3 Administration, Root Operation Transfusion, Substance = Hematopoietic Stem Cells
+  sct_icd10pcs = c(
+    "30233G0",  # Autologous HPC, peripheral vein, percutaneous
+    "30233G1",  # Nonautologous HPC, peripheral vein, percutaneous
+    "30243G0",  # Autologous HPC, central vein, percutaneous
+    "30243G1",  # Nonautologous HPC, central vein, percutaneous
+    "30233X0",  # Autologous cord blood stem cells, peripheral vein
+    "30233X1",  # Nonautologous cord blood stem cells, peripheral vein
+    "30243X0",  # Autologous cord blood stem cells, central vein
+    "30243X1",  # Nonautologous cord blood stem cells, central vein
+    "30233Y0",  # Autologous HPC (other), peripheral vein, percutaneous
+    "30233Y1",  # Nonautologous HPC (other), peripheral vein, percutaneous
+    "30243Y0",  # Autologous HPC (other), central vein, percutaneous
+    "30243Y1"   # Nonautologous HPC (other), central vein, percutaneous
   )
 )
 
