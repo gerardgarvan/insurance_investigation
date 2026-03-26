@@ -39,8 +39,8 @@ normalize_icd <- function(icd_code) {
     return(icd_code)
   }
 
-  # Remove all dots
-  str_remove_all(icd_code, "\\.")
+  # Uppercase then remove dots (matches Python pipeline's normalize_dx)
+  toupper(str_remove_all(icd_code, "\\."))
 }
 
 #' Check if ICD code is a Hodgkin Lymphoma diagnosis
