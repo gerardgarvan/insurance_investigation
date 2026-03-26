@@ -36,8 +36,12 @@ message("HL Cohort Building Pipeline")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 2: FILTER CHAIN WITH ATTRITION LOGGING
+# SECTION 2: COHORT SELECTION (matches Python pipeline logic)
 # ==============================================================================
+#
+# Python's encounter_payer_summary assumes all patients in the extract are HL
+# and filters only by enrollment. We match that logic here but add an HL_VERIFIED
+# flag so downstream analyses can filter if needed.
 
 # Initialize attrition tracking (CHRT-02)
 attrition_log <- init_attrition_log()
@@ -47,16 +51,62 @@ cohort <- pcornet$DEMOGRAPHIC %>%
   select(ID, SOURCE, SEX, RACE, HISPANIC, BIRTH_DATE)
 attrition_log <- log_attrition(attrition_log, "Initial population", n_distinct(cohort$ID))
 
-# Step 1: has_hodgkin_diagnosis() (D-01 first filter)
-cohort <- cohort %>% has_hodgkin_diagnosis()
-attrition_log <- log_attrition(attrition_log, "Has HL diagnosis (ICD or histology, excludes Neither)", n_distinct(cohort$ID))
+# Step 1: Build HL_SOURCE and HL_VERIFIED flag (but do NOT filter)
+# Runs the same HL identification logic to tag patients, then retains all
+hl_source_map <- cohort %>%
+  select(ID) %>%
+  distinct() %>%
+  left_join(
+    pcornet$DIAGNOSIS %>%
+      filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
+      distinct(ID) %>%
+      mutate(has_dx = TRUE),
+    by = "ID"
+  ) %>%
+  left_join(
+    {
+      tr_all <- bind_rows(
+        if (!is.null(pcornet$TUMOR_REGISTRY1) && "HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY1))
+          pcornet$TUMOR_REGISTRY1 %>% filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>% distinct(ID) else tibble(ID = character()),
+        if (!is.null(pcornet$TUMOR_REGISTRY2) && "MORPH" %in% names(pcornet$TUMOR_REGISTRY2))
+          pcornet$TUMOR_REGISTRY2 %>% filter(is_hl_histology(MORPH)) %>% distinct(ID) else tibble(ID = character()),
+        if (!is.null(pcornet$TUMOR_REGISTRY3) && "MORPH" %in% names(pcornet$TUMOR_REGISTRY3))
+          pcornet$TUMOR_REGISTRY3 %>% filter(is_hl_histology(MORPH)) %>% distinct(ID) else tibble(ID = character())
+      ) %>% distinct(ID) %>% mutate(has_tr = TRUE)
+    },
+    by = "ID"
+  ) %>%
+  mutate(
+    has_dx = coalesce(has_dx, FALSE),
+    has_tr = coalesce(has_tr, FALSE),
+    HL_SOURCE = case_when(
+      has_dx & has_tr ~ "Both",
+      has_dx & !has_tr ~ "DIAGNOSIS only",
+      !has_dx & has_tr ~ "TR only",
+      TRUE ~ "Neither"
+    ),
+    HL_VERIFIED = as.integer(HL_SOURCE != "Neither")
+  ) %>%
+  select(ID, HL_SOURCE, HL_VERIFIED)
 
-# Step 2: with_enrollment_period() (D-03: any enrollment, no min days)
+# Log HL source breakdown
+message("[Cohort] HL verification (flag only, no exclusion):")
+source_counts <- hl_source_map %>% count(HL_SOURCE)
+for (i in seq_len(nrow(source_counts))) {
+  message(glue("  {source_counts$HL_SOURCE[i]}: {source_counts$n[i]}"))
+}
+n_unverified <- sum(hl_source_map$HL_VERIFIED == 0L)
+message(glue("  HL_VERIFIED=0 (Neither): {n_unverified} patients retained with flag"))
+
+# Join HL flag to cohort
+cohort <- cohort %>%
+  left_join(hl_source_map, by = "ID")
+
+attrition_log <- log_attrition(attrition_log, "HL flag applied (all retained)", n_distinct(cohort$ID))
+
+# Step 2: with_enrollment_period() (matches Python: enrolled patients only)
 cohort <- cohort %>% with_enrollment_period()
 attrition_log <- log_attrition(attrition_log, "Has enrollment record", n_distinct(cohort$ID))
-
-# Step 3: Payer exclusion removed to match Python pipeline (keeps all patients)
-# Patients with NA/Unknown/Unavailable payer are retained with their labels intact
 
 # ==============================================================================
 # SECTION 3: ENROLLMENT AGGREGATION (D-10 age calculation)
@@ -186,6 +236,7 @@ hl_cohort <- cohort %>%
     ID,
     SOURCE,
     HL_SOURCE,
+    HL_VERIFIED,
     SEX,
     RACE,
     HISPANIC,
@@ -219,6 +270,7 @@ message("HL COHORT SUMMARY")
 message(strrep("=", 60))
 
 message(glue("\nTotal patients: {nrow(hl_cohort)}"))
+message(glue("  HL_VERIFIED=1: {sum(hl_cohort$HL_VERIFIED == 1)} | HL_VERIFIED=0: {sum(hl_cohort$HL_VERIFIED == 0)}"))
 
 message("\n--- Payer Distribution ---")
 payer_dist <- hl_cohort %>%
