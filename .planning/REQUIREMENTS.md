@@ -64,8 +64,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TXEXP-02**: User can detect treatment via DIAGNOSIS-based evidence codes (Z51.11/Z51.12/Z51.0 for chemo/radiation; Z94.84/T86.5/T86.09 for SCT)
 - [x] **TXEXP-03**: User can detect treatment via ENCOUNTER DRG codes (837-839, 846-848 for chemo; 849 for radiation; 014-017 for SCT)
 - [x] **TXEXP-04**: User can detect treatment via PROCEDURES revenue codes (PX_TYPE="RE": 0331/0332/0335 for chemo; 0330/0333 for radiation; 0362/0815 for SCT)
-- [ ] **TXEXP-05**: User can see aggregate source contribution counts per treatment type logged to console (e.g., "Sources: TR=X, PX=Y, DX=Z, DRG=W")
-- [ ] **TXEXP-06**: User can see expanded treatment-anchored payer dates from all new sources feeding into PAYER_AT_CHEMO/RADIATION/SCT computation
+- [x] **TXEXP-05**: User can see aggregate source contribution counts per treatment type logged to console (e.g., "Sources: TR=X, PX=Y, DX=Z, DRG=W")
+- [x] **TXEXP-06**: User can see expanded treatment-anchored payer dates from all new sources feeding into PAYER_AT_CHEMO/RADIATION/SCT computation
 
 ## v2 Requirements
 
@@ -148,8 +148,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TXEXP-02 | Phase 9 | Complete |
 | TXEXP-03 | Phase 9 | Complete |
 | TXEXP-04 | Phase 9 | Complete |
-| TXEXP-05 | Phase 9 | Pending |
-| TXEXP-06 | Phase 9 | Pending |
+| TXEXP-05 | Phase 9 | Complete |
+| TXEXP-06 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total
