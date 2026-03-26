@@ -352,18 +352,30 @@ has_chemo <- function() {
 #' Identify patients with radiation therapy evidence
 #'
 #' Combines evidence from:
+#'   - TUMOR_REGISTRY1: RAD_START_DATE_SUMMARY (non-NA)
 #'   - TUMOR_REGISTRY2/3: DT_RAD (non-NA)
 #'   - PROCEDURES: PX_TYPE == "CH" and PX in TREATMENT_CODES$radiation_cpt
+#'   - PROCEDURES: PX_TYPE == "RE" and PX in TREATMENT_CODES$radiation_revenue (Phase 9)
+#'   - DIAGNOSIS: Z51.0 (ICD-10), V58.0 (ICD-9) (Phase 9)
+#'   - ENCOUNTER: DRG in TREATMENT_CODES$radiation_drg (Phase 9)
 #'
-#' Note: TUMOR_REGISTRY1 does NOT have DT_RAD column (has REASON_NO_RADIATION
-#' but no date field).
+#' Note: Radiation does NOT use DISPENSING or MED_ADMIN (radiation is a procedure,
+#' not a drug dispensation). No RXNORM_CUI matching for radiation.
 #'
 #' @return Tibble with columns: ID, HAD_RADIATION (integer 1 for all rows)
 #'
 has_radiation <- function() {
   rad_ids <- character(0)
 
+  # Initialize source counters for aggregate logging (D-14)
+  n_tr <- 0L
+  n_px <- 0L
+  n_dx <- 0L
+  n_drg <- 0L
+  n_rev <- 0L
+
   # TUMOR_REGISTRY1: RAD_START_DATE_SUMMARY (Python pipeline checks this)
+  tr1_rad <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY1) &&
       "RAD_START_DATE_SUMMARY" %in% names(pcornet$TUMOR_REGISTRY1)) {
     tr1_rad <- pcornet$TUMOR_REGISTRY1 %>%
@@ -373,6 +385,7 @@ has_radiation <- function() {
   }
 
   # TUMOR_REGISTRY2: DT_RAD
+  tr2_rad <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY2) &&
       "DT_RAD" %in% names(pcornet$TUMOR_REGISTRY2)) {
     tr2_rad <- pcornet$TUMOR_REGISTRY2 %>%
@@ -382,6 +395,7 @@ has_radiation <- function() {
   }
 
   # TUMOR_REGISTRY3: DT_RAD
+  tr3_rad <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY3) &&
       "DT_RAD" %in% names(pcornet$TUMOR_REGISTRY3)) {
     tr3_rad <- pcornet$TUMOR_REGISTRY3 %>%
@@ -390,7 +404,11 @@ has_radiation <- function() {
     rad_ids <- c(rad_ids, tr3_rad)
   }
 
+  # Aggregate TR source count
+  n_tr <- length(unique(c(tr1_rad, tr2_rad, tr3_rad)))
+
   # PROCEDURES: radiation CPT, ICD-9-CM, ICD-10-PCS codes
+  px_rad <- character(0)
   if (!is.null(pcornet$PROCEDURES)) {
     px_rad <- pcornet$PROCEDURES %>%
       filter(
@@ -403,12 +421,50 @@ has_radiation <- function() {
           str_starts(PX, "D7Y")
         ))
       ) %>%
+      distinct(ID) %>%
       pull(ID)
     rad_ids <- c(rad_ids, px_rad)
   }
+  n_px <- length(px_rad)
+
+  # --- Phase 9: Expanded treatment detection sources ---
+
+  # DIAGNOSIS: Z51.0 (ICD-10), V58.0 (ICD-9) per D-09
+  if (!is.null(pcornet$DIAGNOSIS)) {
+    dx_rad <- pcornet$DIAGNOSIS %>%
+      filter(
+        (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
+        (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+      ) %>%
+      distinct(ID) %>%
+      pull(ID)
+    rad_ids <- c(rad_ids, dx_rad)
+    n_dx <- length(dx_rad)
+  }
+
+  # ENCOUNTER: DRG 849 per D-10
+  if (!is.null(pcornet$ENCOUNTER)) {
+    drg_rad <- pcornet$ENCOUNTER %>%
+      filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
+      distinct(ID) %>%
+      pull(ID)
+    rad_ids <- c(rad_ids, drg_rad)
+    n_drg <- length(drg_rad)
+  }
+
+  # PROCEDURES revenue codes: 0330/0333 per D-11 (PX_TYPE = "RE")
+  if (!is.null(pcornet$PROCEDURES)) {
+    rev_rad <- pcornet$PROCEDURES %>%
+      filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue) %>%
+      distinct(ID) %>%
+      pull(ID)
+    rad_ids <- c(rad_ids, rev_rad)
+    n_rev <- length(rev_rad)
+  }
 
   result <- tibble(ID = unique(rad_ids), HAD_RADIATION = 1L)
-  message(glue("[Treatment] has_radiation: {nrow(result)} patients with radiation evidence"))
+  message(glue("[Treatment] has_radiation: {nrow(result)} patients total"))
+  message(glue("  Sources: TR={n_tr}, PX={n_px}, DX={n_dx}, DRG={n_drg}, REV={n_rev}"))
   result
 }
 
@@ -416,12 +472,18 @@ has_radiation <- function() {
 #'
 #' Combines evidence from:
 #'   - TUMOR_REGISTRY1: HEMATOLOGIC_TRANSPLANT_AND_ENDOC (non-NA, non-empty, non-"00")
-#'   - TUMOR_REGISTRY2/3: DT_HTE (non-NA)
+#'   - TUMOR_REGISTRY2/3: DT_HTE (non-NA) + Python pipeline SCT date columns
 #'   - PROCEDURES: PX_TYPE == "CH" and PX in TREATMENT_CODES$sct_cpt
+#'   - PROCEDURES: PX_TYPE == "RE" and PX in TREATMENT_CODES$sct_revenue (Phase 9)
+#'   - DIAGNOSIS: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only) (Phase 9)
+#'   - ENCOUNTER: DRG in TREATMENT_CODES$sct_drg (Phase 9)
 #'
 #' Note: DT_HTE may include endocrine therapy, not just SCT. However, for HL,
 #' endocrine therapy is not standard, so DT_HTE evidence in an HL cohort is a
 #' reasonable SCT signal.
+#'
+#' Note: SCT does NOT use DISPENSING or MED_ADMIN (transplant is a procedure,
+#' not a drug dispensation). No RXNORM_CUI matching for SCT.
 #'
 #' Per D-07: Single flag covering both autologous and allogeneic transplant.
 #'
@@ -430,7 +492,15 @@ has_radiation <- function() {
 has_sct <- function() {
   sct_ids <- character(0)
 
+  # Initialize source counters for aggregate logging (D-14)
+  n_tr <- 0L
+  n_px <- 0L
+  n_dx <- 0L
+  n_drg <- 0L
+  n_rev <- 0L
+
   # TUMOR_REGISTRY1: HEMATOLOGIC_TRANSPLANT_AND_ENDOC (code field, not date)
+  tr1_sct <- character(0)
   if (!is.null(pcornet$TUMOR_REGISTRY1) &&
       "HEMATOLOGIC_TRANSPLANT_AND_ENDOC" %in% names(pcornet$TUMOR_REGISTRY1)) {
     tr1_sct <- pcornet$TUMOR_REGISTRY1 %>%
@@ -443,6 +513,7 @@ has_sct <- function() {
 
   # TUMOR_REGISTRY2/3: DT_HTE + Python pipeline SCT date columns
   # Python checks: DT_SCT, SCT_DATE, BMT_DATE, TRANSPLANT_DATE, HCT_DATE, DT_TRANSPLANT
+  tr_sct_from_loop <- character(0)
   sct_date_cols <- c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
                      "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT")
   for (tr_name in c("TUMOR_REGISTRY2", "TUMOR_REGISTRY3")) {
@@ -454,11 +525,16 @@ has_sct <- function() {
           filter(if_any(all_of(present_cols), ~ !is.na(.))) %>%
           pull(ID)
         sct_ids <- c(sct_ids, tr_sct)
+        tr_sct_from_loop <- c(tr_sct_from_loop, tr_sct)
       }
     }
   }
 
+  # Aggregate TR source count
+  n_tr <- length(unique(c(tr1_sct, tr_sct_from_loop)))
+
   # PROCEDURES: SCT CPT, ICD-9-CM, ICD-10-PCS codes
+  px_sct <- character(0)
   if (!is.null(pcornet$PROCEDURES)) {
     px_sct <- pcornet$PROCEDURES %>%
       filter(
@@ -466,12 +542,47 @@ has_sct <- function() {
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
         (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
       ) %>%
+      distinct(ID) %>%
       pull(ID)
     sct_ids <- c(sct_ids, px_sct)
   }
+  n_px <- length(px_sct)
+
+  # --- Phase 9: Expanded treatment detection sources ---
+
+  # DIAGNOSIS: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only, no ICD-9 SCT dx codes) per D-09
+  if (!is.null(pcornet$DIAGNOSIS)) {
+    dx_sct <- pcornet$DIAGNOSIS %>%
+      filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
+      distinct(ID) %>%
+      pull(ID)
+    sct_ids <- c(sct_ids, dx_sct)
+    n_dx <- length(dx_sct)
+  }
+
+  # ENCOUNTER: DRGs 014, 016, 017 per D-10
+  if (!is.null(pcornet$ENCOUNTER)) {
+    drg_sct <- pcornet$ENCOUNTER %>%
+      filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
+      distinct(ID) %>%
+      pull(ID)
+    sct_ids <- c(sct_ids, drg_sct)
+    n_drg <- length(drg_sct)
+  }
+
+  # PROCEDURES revenue codes: 0362/0815 per D-11 (PX_TYPE = "RE")
+  if (!is.null(pcornet$PROCEDURES)) {
+    rev_sct <- pcornet$PROCEDURES %>%
+      filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
+      distinct(ID) %>%
+      pull(ID)
+    sct_ids <- c(sct_ids, rev_sct)
+    n_rev <- length(rev_sct)
+  }
 
   result <- tibble(ID = unique(sct_ids), HAD_SCT = 1L)
-  message(glue("[Treatment] has_sct: {nrow(result)} patients with SCT evidence"))
+  message(glue("[Treatment] has_sct: {nrow(result)} patients total"))
+  message(glue("  Sources: TR={n_tr}, PX={n_px}, DX={n_dx}, DRG={n_drg}, REV={n_rev}"))
   result
 }
 
