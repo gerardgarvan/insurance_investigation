@@ -662,7 +662,6 @@ chemo_first_enr <- check_enr_covers_window(
 
 chemo_last_enr <- check_enr_covers_window(
   chemo_patients %>%
-    left_join(last_chemo_dates, by = "ID") %>%
     select(ID, LAST_CHEMO_DATE) %>%
     filter(!is.na(LAST_CHEMO_DATE)),
   "LAST_CHEMO_DATE"
@@ -671,11 +670,9 @@ chemo_last_enr <- check_enr_covers_window(
 chemo_enr <- chemo_patients %>%
   left_join(chemo_first_enr, by = "ID") %>%
   left_join(chemo_last_enr, by = "ID") %>%
-  left_join(payer_at_last_chemo, by = "ID") %>%
   mutate(
     chemo_first_enr = coalesce(chemo_first_enr, FALSE),
-    chemo_last_enr = coalesce(chemo_last_enr, FALSE),
-    PAYER_AT_LAST_CHEMO = rename_payer(PAYER_AT_LAST_CHEMO)
+    chemo_last_enr = coalesce(chemo_last_enr, FALSE)
   )
 
 tbl11 <- build_treatment_enr_table(
@@ -696,7 +693,6 @@ rad_first_enr <- check_enr_covers_window(
 
 rad_last_enr <- check_enr_covers_window(
   rad_patients %>%
-    left_join(last_rad_dates, by = "ID") %>%
     select(ID, LAST_RADIATION_DATE) %>%
     filter(!is.na(LAST_RADIATION_DATE)),
   "LAST_RADIATION_DATE"
@@ -705,11 +701,9 @@ rad_last_enr <- check_enr_covers_window(
 rad_enr <- rad_patients %>%
   left_join(rad_first_enr, by = "ID") %>%
   left_join(rad_last_enr, by = "ID") %>%
-  left_join(payer_at_last_rad, by = "ID") %>%
   mutate(
     rad_first_enr = coalesce(rad_first_enr, FALSE),
-    rad_last_enr = coalesce(rad_last_enr, FALSE),
-    PAYER_AT_LAST_RADIATION = rename_payer(PAYER_AT_LAST_RADIATION)
+    rad_last_enr = coalesce(rad_last_enr, FALSE)
   )
 
 tbl12 <- build_treatment_enr_table(
@@ -730,7 +724,6 @@ sct_first_enr <- check_enr_covers_window(
 
 sct_last_enr <- check_enr_covers_window(
   sct_patients %>%
-    left_join(last_sct_dates, by = "ID") %>%
     select(ID, LAST_SCT_DATE) %>%
     filter(!is.na(LAST_SCT_DATE)),
   "LAST_SCT_DATE"
@@ -739,11 +732,9 @@ sct_last_enr <- check_enr_covers_window(
 sct_enr <- sct_patients %>%
   left_join(sct_first_enr, by = "ID") %>%
   left_join(sct_last_enr, by = "ID") %>%
-  left_join(payer_at_last_sct, by = "ID") %>%
   mutate(
     sct_first_enr = coalesce(sct_first_enr, FALSE),
-    sct_last_enr = coalesce(sct_last_enr, FALSE),
-    PAYER_AT_LAST_SCT = rename_payer(PAYER_AT_LAST_SCT)
+    sct_last_enr = coalesce(sct_last_enr, FALSE)
   )
 
 tbl13 <- build_treatment_enr_table(
