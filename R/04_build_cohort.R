@@ -159,6 +159,24 @@ message(glue("  HAD_RADIATION = 1: {sum(cohort$HAD_RADIATION == 1)} patients ({r
 message(glue("  HAD_SCT = 1: {sum(cohort$HAD_SCT == 1)} patients ({round(100 * mean(cohort$HAD_SCT), 1)}%)"))
 
 # ==============================================================================
+# SECTION 6.5: TREATMENT-ANCHORED PAYER MODE (D-08, D-09, D-10)
+# ==============================================================================
+
+message("\n--- Treatment-Anchored Payer Mode ---")
+source("R/10_treatment_payer.R")
+
+# Compute payer mode at first treatment for each type
+chemo_payer <- compute_payer_at_chemo()
+rad_payer <- compute_payer_at_radiation()
+sct_payer <- compute_payer_at_sct()
+
+# Join to cohort (D-08: add directly to hl_cohort; D-11: NA for no-match via left_join)
+cohort <- cohort %>%
+  left_join(chemo_payer, by = "ID") %>%
+  left_join(rad_payer, by = "ID") %>%
+  left_join(sct_payer, by = "ID")
+
+# ==============================================================================
 # SECTION 7: FINAL COHORT ASSEMBLY (D-09 column order)
 # ==============================================================================
 
@@ -184,6 +202,12 @@ hl_cohort <- cohort %>%
     HAD_CHEMO,
     HAD_RADIATION,
     HAD_SCT,
+    FIRST_CHEMO_DATE,
+    FIRST_RADIATION_DATE,
+    FIRST_SCT_DATE,
+    PAYER_AT_CHEMO,
+    PAYER_AT_RADIATION,
+    PAYER_AT_SCT,
     enrollment_duration_days
   )
 
@@ -209,6 +233,11 @@ message("\n--- Treatment Flags ---")
 message(glue("  Chemotherapy: {sum(hl_cohort$HAD_CHEMO == 1)} ({round(100 * mean(hl_cohort$HAD_CHEMO), 1)}%)"))
 message(glue("  Radiation: {sum(hl_cohort$HAD_RADIATION == 1)} ({round(100 * mean(hl_cohort$HAD_RADIATION), 1)}%)"))
 message(glue("  SCT: {sum(hl_cohort$HAD_SCT == 1)} ({round(100 * mean(hl_cohort$HAD_SCT), 1)}%)"))
+
+message("\n--- Treatment-Anchored Payer ---")
+message(glue("  PAYER_AT_CHEMO: {sum(!is.na(hl_cohort$PAYER_AT_CHEMO))} assigned, {sum(is.na(hl_cohort$PAYER_AT_CHEMO))} NA"))
+message(glue("  PAYER_AT_RADIATION: {sum(!is.na(hl_cohort$PAYER_AT_RADIATION))} assigned, {sum(is.na(hl_cohort$PAYER_AT_RADIATION))} NA"))
+message(glue("  PAYER_AT_SCT: {sum(!is.na(hl_cohort$PAYER_AT_SCT))} assigned, {sum(is.na(hl_cohort$PAYER_AT_SCT))} NA"))
 
 message("\n--- Demographics ---")
 message(glue("  Age at enrollment start: median {median(hl_cohort$age_at_enr_start, na.rm = TRUE)}, range [{min(hl_cohort$age_at_enr_start, na.rm = TRUE)}, {max(hl_cohort$age_at_enr_start, na.rm = TRUE)}]"))
