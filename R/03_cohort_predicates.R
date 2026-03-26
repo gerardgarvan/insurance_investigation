@@ -252,10 +252,11 @@ has_chemo <- function() {
     chemo_ids <- c(chemo_ids, px_chemo)
   }
 
-  # PRESCRIBING: chemo RXNORM codes
+  # PRESCRIBING: any prescription record (matches Python pipeline's broad definition)
+  # Python counts any patient with RX_ORDER_DATE or RX_START_DATE as chemo evidence
   if (!is.null(pcornet$PRESCRIBING)) {
     rx_chemo <- pcornet$PRESCRIBING %>%
-      filter(!is.na(RXNORM_CUI) & RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
+      filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
       pull(ID)
     chemo_ids <- c(chemo_ids, rx_chemo)
   }
@@ -278,6 +279,15 @@ has_chemo <- function() {
 #'
 has_radiation <- function() {
   rad_ids <- character(0)
+
+  # TUMOR_REGISTRY1: RAD_START_DATE_SUMMARY (Python pipeline checks this)
+  if (!is.null(pcornet$TUMOR_REGISTRY1) &&
+      "RAD_START_DATE_SUMMARY" %in% names(pcornet$TUMOR_REGISTRY1)) {
+    tr1_rad <- pcornet$TUMOR_REGISTRY1 %>%
+      filter(!is.na(RAD_START_DATE_SUMMARY)) %>%
+      pull(ID)
+    rad_ids <- c(rad_ids, tr1_rad)
+  }
 
   # TUMOR_REGISTRY2: DT_RAD
   if (!is.null(pcornet$TUMOR_REGISTRY2) &&
@@ -348,22 +358,21 @@ has_sct <- function() {
     sct_ids <- c(sct_ids, tr1_sct)
   }
 
-  # TUMOR_REGISTRY2: DT_HTE (hematologic transplant/endocrine date)
-  if (!is.null(pcornet$TUMOR_REGISTRY2) &&
-      "DT_HTE" %in% names(pcornet$TUMOR_REGISTRY2)) {
-    tr2_sct <- pcornet$TUMOR_REGISTRY2 %>%
-      filter(!is.na(DT_HTE)) %>%
-      pull(ID)
-    sct_ids <- c(sct_ids, tr2_sct)
-  }
-
-  # TUMOR_REGISTRY3: DT_HTE
-  if (!is.null(pcornet$TUMOR_REGISTRY3) &&
-      "DT_HTE" %in% names(pcornet$TUMOR_REGISTRY3)) {
-    tr3_sct <- pcornet$TUMOR_REGISTRY3 %>%
-      filter(!is.na(DT_HTE)) %>%
-      pull(ID)
-    sct_ids <- c(sct_ids, tr3_sct)
+  # TUMOR_REGISTRY2/3: DT_HTE + Python pipeline SCT date columns
+  # Python checks: DT_SCT, SCT_DATE, BMT_DATE, TRANSPLANT_DATE, HCT_DATE, DT_TRANSPLANT
+  sct_date_cols <- c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+                     "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT")
+  for (tr_name in c("TUMOR_REGISTRY2", "TUMOR_REGISTRY3")) {
+    tr_df <- pcornet[[tr_name]]
+    if (!is.null(tr_df)) {
+      present_cols <- intersect(sct_date_cols, names(tr_df))
+      if (length(present_cols) > 0) {
+        tr_sct <- tr_df %>%
+          filter(if_any(all_of(present_cols), ~ !is.na(.))) %>%
+          pull(ID)
+        sct_ids <- c(sct_ids, tr_sct)
+      }
+    }
   }
 
   # PROCEDURES: SCT CPT, ICD-9-CM, ICD-10-PCS codes

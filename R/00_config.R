@@ -317,14 +317,17 @@ TREATMENT_CODES <- list(
   # Radiation therapy CPT codes (active treatment, not planning-only)
   # 2026 complexity-based codes replaced technique-based codes (77385/77386 deleted)
   radiation_cpt = c(
-    "77427",   # Radiation treatment management (weekly, per 5 fractions) - most common
+    "77401",   # External beam radiation delivery (Python pipeline)
+    "77402",   # Radiation treatment delivery, intermediate (2026 new code)
     "77407",   # Radiation treatment delivery, simple (2026 new code)
     "77412",   # Radiation treatment delivery, complex (2026 new code)
-    "77402"    # Radiation treatment delivery, intermediate (2026 new code)
+    "77427"    # Radiation treatment management (weekly, per 5 fractions) - most common
   ),
 
   # Stem cell transplant CPT codes (autologous + allogeneic per D-07)
   sct_cpt = c(
+    "38230",   # Bone marrow harvesting (Python pipeline)
+    "38232",   # Bone marrow harvesting (Python pipeline)
     "38240",   # Allogeneic HPC transplantation
     "38241",   # Autologous HPC transplantation
     "38242",   # Allogeneic donor lymphocyte infusion (DLI)

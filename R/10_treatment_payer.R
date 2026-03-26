@@ -91,14 +91,15 @@ compute_payer_at_chemo <- function() {
       summarise(px_date = min(PX_DATE, na.rm = TRUE), .groups = "drop")
   }
 
-  # Extract chemo dates from PRESCRIBING
+  # Extract chemo dates from PRESCRIBING (any prescription, matches Python pipeline)
   rx_dates <- NULL
   if (!is.null(pcornet$PRESCRIBING)) {
     rx_dates <- pcornet$PRESCRIBING %>%
-      filter(!is.na(RXNORM_CUI) & RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-      filter(!is.na(RX_ORDER_DATE)) %>%
+      filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
+      mutate(rx_date_raw = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
+      filter(!is.na(rx_date_raw)) %>%
       group_by(ID) %>%
-      summarise(rx_date = min(RX_ORDER_DATE, na.rm = TRUE), .groups = "drop")
+      summarise(rx_date = min(rx_date_raw, na.rm = TRUE), .groups = "drop")
   }
 
   # Combine PROCEDURES and PRESCRIBING dates
