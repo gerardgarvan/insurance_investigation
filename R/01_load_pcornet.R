@@ -2,7 +2,7 @@
 # 01_load_pcornet.R -- Load PCORnet CDM CSV tables with explicit column types
 # ==============================================================================
 #
-# Loads 9 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
+# Loads 11 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
 # All date columns are parsed via parse_pcornet_date() (multi-format fallback)
 # All ID columns are loaded as character (prevents leading-zero truncation)
 # Missing files produce a warning and NULL entry (per D-10)
@@ -13,7 +13,7 @@
 #   pcornet$ENROLLMENT  # Access loaded table
 #
 # Requirement: LOAD-01 (load 22 CDM tables with explicit col_types)
-# Phase 1 loads 9 primary tables; remaining 13 added as needed
+# Phase 1 loads 9 primary tables; Phase 9 adds DISPENSING and MED_ADMIN
 # ==============================================================================
 
 source("R/00_config.R")
@@ -222,6 +222,53 @@ TUMOR_REGISTRY3_SPEC <- cols(
   DXAGE = col_integer()
 )
 
+# ------------------------------------------------------------------------------
+# 10. DISPENSING (15 columns)
+# ------------------------------------------------------------------------------
+# Phase 9: Added for expanded treatment detection (D-08, D-15)
+# RXNORM_CUI is the key matching column for chemo drugs (D-12: no NDC matching)
+# DISPENSE_DATE used for treatment date anchoring
+# Column list from PCORnet CDM v7.0 specification (Jan 2025)
+DISPENSING_SPEC <- cols(
+  DISPENSINGID = col_character(),
+  PRESCRIBINGID = col_character(),
+  ID = col_character(),
+  DISPENSE_DATE = col_character(),       # Parsed by parse_pcornet_date()
+  NDC = col_character(),
+  DISPENSE_SUP = col_integer(),          # Days supply
+  DISPENSE_AMT = col_double(),           # Quantity dispensed
+  DISPENSE_DOSE_DISP = col_double(),
+  DISPENSE_DOSE_DISP_UNIT = col_character(),
+  DISPENSE_ROUTE = col_character(),
+  RAW_NDC = col_character(),
+  RXNORM_CUI = col_character(),          # KEY: chemo matching per D-12
+  DISPENSE_SOURCE = col_character(),
+  RAW_DISPENSE_MED_NAME = col_character(),
+  SOURCE = col_character()
+)
+
+# ------------------------------------------------------------------------------
+# 11. MED_ADMIN (12 columns)
+# ------------------------------------------------------------------------------
+# Phase 9: Added for expanded treatment detection (D-08, D-15)
+# RXNORM_CUI is the key matching column for chemo drugs (D-12: no NDC matching)
+# MEDADMIN_START_DATE used for treatment date anchoring
+# Column list from PCORnet CDM v7.0 specification (Jan 2025)
+MED_ADMIN_SPEC <- cols(
+  MEDADMINID = col_character(),
+  ID = col_character(),
+  ENCOUNTERID = col_character(),
+  PRESCRIBINGID = col_character(),
+  MEDADMIN_CODE = col_character(),
+  MEDADMIN_TYPE = col_character(),
+  MEDADMIN_START_DATE = col_character(),  # Parsed by parse_pcornet_date()
+  MEDADMIN_STOP_DATE = col_character(),   # Parsed by parse_pcornet_date()
+  MEDADMIN_ROUTE = col_character(),
+  RXNORM_CUI = col_character(),          # KEY: chemo matching per D-12
+  RAW_MEDADMIN_MED_NAME = col_character(),
+  SOURCE = col_character()
+)
+
 # ==============================================================================
 # TABLE SPECS LOOKUP
 # ==============================================================================
@@ -235,7 +282,9 @@ TABLE_SPECS <- list(
   DEMOGRAPHIC = DEMOGRAPHIC_SPEC,
   TUMOR_REGISTRY1 = TUMOR_REGISTRY1_SPEC,
   TUMOR_REGISTRY2 = TUMOR_REGISTRY2_SPEC,
-  TUMOR_REGISTRY3 = TUMOR_REGISTRY3_SPEC
+  TUMOR_REGISTRY3 = TUMOR_REGISTRY3_SPEC,
+  DISPENSING = DISPENSING_SPEC,          # Phase 9
+  MED_ADMIN = MED_ADMIN_SPEC            # Phase 9
 )
 
 # ==============================================================================

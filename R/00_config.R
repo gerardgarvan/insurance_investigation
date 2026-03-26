@@ -43,11 +43,12 @@ CONFIG <- list(
 # 2. PCORNET CDM TABLE PATHS
 # ------------------------------------------------------------------------------
 
-# Primary load set: 9 tables
+# Primary load set: 11 tables
 # - 6 standard CDM tables: ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING,
 #   ENCOUNTER, DEMOGRAPHIC
 # - 3 TUMOR_REGISTRY tables: contain HL-specific diagnosis dates (DATE_OF_DIAGNOSIS)
 #   and treatment dates (DT_CHEMO, DT_RAD, etc.)
+# - 2 medication tables (Phase 9): DISPENSING, MED_ADMIN for expanded treatment detection
 #
 # File naming pattern: TABLE_Mailhot_V1.csv
 # Example: ENROLLMENT_Mailhot_V1.csv
@@ -61,7 +62,9 @@ PCORNET_TABLES <- c(
   "DEMOGRAPHIC",
   "TUMOR_REGISTRY1",
   "TUMOR_REGISTRY2",
-  "TUMOR_REGISTRY3"
+  "TUMOR_REGISTRY3",
+  "DISPENSING",       # Phase 9: expanded treatment detection
+  "MED_ADMIN"         # Phase 9: expanded treatment detection
 )
 
 # Build full paths as named character vector
