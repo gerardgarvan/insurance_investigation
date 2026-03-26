@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-25T22:30:36.336Z"
+last_updated: "2026-03-26T00:11:04.461Z"
 progress:
-  total_phases: 7
-  completed_phases: 5
-  total_plans: 13
-  completed_plans: 11
+  total_phases: 8
+  completed_phases: 6
+  total_plans: 14
+  completed_plans: 12
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
@@ -20,11 +20,11 @@ progress:
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 07 — look-at-dx-info-of-those-that-did-not-have-an-hl-diagnosis-to-fill-gap
+**Current focus:** Phase 08 — add-insurance-mode-around-three-treatment-types-chemo-radiation-stem-cell-from-procedures-tables-with-plus-minus-30-days-window
 
 ## Current Position
 
-Phase: 07 (look-at-dx-info-of-those-that-did-not-have-an-hl-diagnosis-to-fill-gap) — EXECUTING
+Phase: 08 (add-insurance-mode-around-three-treatment-types-chemo-radiation-stem-cell-from-procedures-tables-with-plus-minus-30-days-window) — EXECUTING
 Plan: 1 of 1
 
 ## Performance Metrics
@@ -54,6 +54,7 @@ Plan: 1 of 1
 | Phase 06 P01 | 121 | 2 tasks | 2 files |
 | Phase 06 P02 | 4 | 2 tasks | 3 files |
 | Phase 06 P03 | 35 | 2 tasks | 2 files |
+| Phase 08 P01 | 3 | 2 tasks | 3 files |
 
 ### Key Decisions
 

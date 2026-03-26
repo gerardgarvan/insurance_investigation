@@ -54,9 +54,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Treatment-Anchored Payer Mode (Phase 8)
 
-- [ ] **TPAY-01**: User can see first treatment dates (FIRST_CHEMO_DATE, FIRST_RADIATION_DATE, FIRST_SCT_DATE) in hl_cohort output, derived from PROCEDURES (all PX_TYPE values) and PRESCRIBING (chemo only)
-- [ ] **TPAY-02**: User can see payer mode at each treatment type (PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT) computed within +-30 days of first treatment date, using the same mode calculation as PAYER_CATEGORY_AT_FIRST_DX
-- [ ] **TPAY-03**: User can see logged match counts per treatment type (N matched, M no encounters in window set to NA) for transparency about payer assignment coverage
+- [x] **TPAY-01**: User can see first treatment dates (FIRST_CHEMO_DATE, FIRST_RADIATION_DATE, FIRST_SCT_DATE) in hl_cohort output, derived from PROCEDURES (all PX_TYPE values) and PRESCRIBING (chemo only)
+- [x] **TPAY-02**: User can see payer mode at each treatment type (PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT) computed within +-30 days of first treatment date, using the same mode calculation as PAYER_CATEGORY_AT_FIRST_DX
+- [x] **TPAY-03**: User can see logged match counts per treatment type (N matched, M no encounters in window set to NA) for transparency about payer assignment coverage
 
 ## v2 Requirements
 
@@ -132,9 +132,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GAP-01 | Phase 7 | Pending |
 | GAP-02 | Phase 7 | Pending |
 | GAP-03 | Phase 7 | Pending |
-| TPAY-01 | Phase 8 | Pending |
-| TPAY-02 | Phase 8 | Pending |
-| TPAY-03 | Phase 8 | Pending |
+| TPAY-01 | Phase 8 | Complete |
+| TPAY-02 | Phase 8 | Complete |
+| TPAY-03 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
