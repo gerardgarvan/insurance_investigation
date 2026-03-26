@@ -314,7 +314,7 @@ has_chemo <- function() {
   }
 
   # DISPENSING: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
-  if (!is.null(pcornet$DISPENSING)) {
+  if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
     disp_chemo <- pcornet$DISPENSING %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       distinct(ID) %>%
@@ -324,7 +324,7 @@ has_chemo <- function() {
   }
 
   # MED_ADMIN: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
-  if (!is.null(pcornet$MED_ADMIN)) {
+  if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
     ma_chemo <- pcornet$MED_ADMIN %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       distinct(ID) %>%

@@ -119,13 +119,13 @@ compute_last_dates <- function(treatment_type) {
         filter(!is.na(ADMIT_DATE)) %>%
         group_by(ID) %>% summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
     }
-    if (!is.null(pcornet$DISPENSING)) {
+    if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
       sources$disp <- pcornet$DISPENSING %>%
         filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
         filter(!is.na(DISPENSE_DATE)) %>%
         group_by(ID) %>% summarise(d = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
     }
-    if (!is.null(pcornet$MED_ADMIN)) {
+    if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
       sources$ma <- pcornet$MED_ADMIN %>%
         filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
         filter(!is.na(MEDADMIN_START_DATE)) %>%

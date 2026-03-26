@@ -147,7 +147,7 @@ compute_payer_at_chemo <- function() {
 
   # DISPENSING DISPENSE_DATE: RXNORM_CUI matching per D-12
   disp_dates <- NULL
-  if (!is.null(pcornet$DISPENSING)) {
+  if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
     disp_dates <- pcornet$DISPENSING %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
@@ -157,7 +157,7 @@ compute_payer_at_chemo <- function() {
 
   # MED_ADMIN MEDADMIN_START_DATE: RXNORM_CUI matching per D-12
   ma_dates <- NULL
-  if (!is.null(pcornet$MED_ADMIN)) {
+  if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
     ma_dates <- pcornet$MED_ADMIN %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
