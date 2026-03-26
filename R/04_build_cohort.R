@@ -55,9 +55,8 @@ attrition_log <- log_attrition(attrition_log, "Has HL diagnosis (ICD or histolog
 cohort <- cohort %>% with_enrollment_period()
 attrition_log <- log_attrition(attrition_log, "Has enrollment record", n_distinct(cohort$ID))
 
-# Step 3: exclude_missing_payer() (D-04: remove NA/Unknown/Unavailable)
-cohort <- cohort %>% exclude_missing_payer(payer_summary)
-attrition_log <- log_attrition(attrition_log, "Valid payer category", n_distinct(cohort$ID))
+# Step 3: Payer exclusion removed to match Python pipeline (keeps all patients)
+# Patients with NA/Unknown/Unavailable payer are retained with their labels intact
 
 # ==============================================================================
 # SECTION 3: ENROLLMENT AGGREGATION (D-10 age calculation)
