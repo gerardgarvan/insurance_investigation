@@ -30,7 +30,13 @@ CONFIG <- list(
   project_dir = "/blue/erin.mobley-hl.bcu/R",
 
   # Output directory: Figures, tables, cohort files
-  output_dir = "output"
+  output_dir = "output",
+
+  # Performance tuning (vroom multi-threaded CSV loading)
+  # Match to SLURM --cpus-per-task allocation (Open OnDemand RStudio: 16 cores)
+  performance = list(
+    num_threads = 16
+  )
 )
 
 # ------------------------------------------------------------------------------

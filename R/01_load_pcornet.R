@@ -18,7 +18,7 @@
 
 source("R/00_config.R")
 
-library(readr)
+library(vroom)
 library(dplyr)
 library(stringr)
 library(purrr)
@@ -264,7 +264,9 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
   }
 
   # Load with explicit col_types (per D-08)
-  df <- read_csv(file_path, col_types = col_spec, show_col_types = FALSE)
+  df <- vroom(file_path, col_types = col_spec, show_col_types = FALSE,
+              .name_repair = "check_unique",
+              num_threads = CONFIG$performance$num_threads)
 
   # Parse all date columns with multi-format parser
   # Detect date columns by name pattern for automatic date parsing
