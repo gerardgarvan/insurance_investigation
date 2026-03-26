@@ -107,12 +107,12 @@ Plans:
 | 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress |  |
 | 6. Use Debug Output to Rectify Issues | 3/3 | Complete | 2026-03-25 |
 | 7. Dx Gap Analysis for Neither Patients | 0/1 | Planned |  |
-| 8. Treatment-Anchored Payer Mode | 0/1 | Planned |  |
+| 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
+| 9. Expand Treatment Detection | 0/3 | Planned |  |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 7` to run gap analysis investigation
-2. Execute `/gsd:execute-phase 8` to add treatment-anchored payer columns
+1. Execute `/gsd:execute-phase 9` to expand treatment detection with docx-specified sources
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -158,6 +158,18 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md -- ICD procedure code config + treatment-anchored payer mode script + cohort integration (TPAY-01, TPAY-02, TPAY-03)
 
+### Phase 9: Expand treatment detection using docx-specified tables and researched codes
+
+**Goal:** Expand treatment detection for the existing 3 treatment types (chemotherapy, radiation, SCT) to cover all data sources specified in TreatmentVariables_2024.07.17.docx, adding DISPENSING, MED_ADMIN, DIAGNOSIS Z/V codes, ENCOUNTER DRG codes, and PROCEDURES revenue codes to both HAD_* flags and treatment-anchored payer computation
+**Requirements**: TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04, TXEXP-05, TXEXP-06
+**Depends on:** Phase 8
+**Plans:** 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md -- Expanded treatment code lists in config + DISPENSING/MED_ADMIN table loading (TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04)
+- [ ] 09-02-PLAN.md -- Expand has_chemo/radiation/sct() with DIAGNOSIS, DRG, DISPENSING, MED_ADMIN, revenue sources (TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04, TXEXP-05)
+- [ ] 09-03-PLAN.md -- Expand compute_payer_at_chemo/radiation/sct() date extraction with new sources (TXEXP-06)
+
 ---
 
-*Last updated: 2026-03-25*
+*Last updated: 2026-03-26*

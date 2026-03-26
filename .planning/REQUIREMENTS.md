@@ -58,6 +58,15 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TPAY-02**: User can see payer mode at each treatment type (PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT) computed within +-30 days of first treatment date, using the same mode calculation as PAYER_CATEGORY_AT_FIRST_DX
 - [x] **TPAY-03**: User can see logged match counts per treatment type (N matched, M no encounters in window set to NA) for transparency about payer assignment coverage
 
+### Expanded Treatment Detection (Phase 9)
+
+- [ ] **TXEXP-01**: User can detect treatment via DISPENSING and MED_ADMIN tables (RXNORM_CUI matching for chemo drugs)
+- [ ] **TXEXP-02**: User can detect treatment via DIAGNOSIS-based evidence codes (Z51.11/Z51.12/Z51.0 for chemo/radiation; Z94.84/T86.5/T86.09 for SCT)
+- [ ] **TXEXP-03**: User can detect treatment via ENCOUNTER DRG codes (837-839, 846-848 for chemo; 849 for radiation; 014-017 for SCT)
+- [ ] **TXEXP-04**: User can detect treatment via PROCEDURES revenue codes (PX_TYPE="RE": 0331/0332/0335 for chemo; 0330/0333 for radiation; 0362/0815 for SCT)
+- [ ] **TXEXP-05**: User can see aggregate source contribution counts per treatment type logged to console (e.g., "Sources: TR=X, PX=Y, DX=Z, DRG=W")
+- [ ] **TXEXP-06**: User can see expanded treatment-anchored payer dates from all new sources feeding into PAYER_AT_CHEMO/RADIATION/SCT computation
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -135,12 +144,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TPAY-01 | Phase 8 | Complete |
 | TPAY-02 | Phase 8 | Complete |
 | TPAY-03 | Phase 8 | Complete |
+| TXEXP-01 | Phase 9 | Pending |
+| TXEXP-02 | Phase 9 | Pending |
+| TXEXP-03 | Phase 9 | Pending |
+| TXEXP-04 | Phase 9 | Pending |
+| TXEXP-05 | Phase 9 | Pending |
+| TXEXP-06 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 27 total
-- Mapped to phases: 27
+- v1 requirements: 33 total
+- Mapped to phases: 33
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-25 after Phase 8 planning*
+*Last updated: 2026-03-26 after Phase 9 planning*
