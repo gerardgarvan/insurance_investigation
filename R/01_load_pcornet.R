@@ -267,6 +267,7 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
   df <- vroom(file_path, col_types = col_spec, show_col_types = FALSE,
               .name_repair = "check_unique",
               num_threads = CONFIG$performance$num_threads)
+  n_parse_problems <- nrow(problems(df))
 
   # Parse all date columns with multi-format parser
   # Detect date columns by name pattern for automatic date parsing
@@ -368,7 +369,6 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
   }
 
   # Print load summary (per D-12)
-  n_parse_problems <- nrow(problems(df))
   message(glue("Loaded {table_name}: {format(nrow(df), big.mark=',')} rows, {ncol(df)} columns"))
   if (n_parse_problems > 0) {
     message(glue("  WARNING: {n_parse_problems} parse failures in {table_name}"))
