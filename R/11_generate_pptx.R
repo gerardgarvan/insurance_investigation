@@ -3,7 +3,7 @@
 # ==============================================================================
 #
 # Produces insurance_tables_YYYY-MM-DD.pptx matching the Python pipeline's
-# 14-slide output, computed entirely from R pipeline data.
+# 15-slide output, computed entirely from R pipeline data.
 #
 # Slides:
 #   1. Title: Insurance Coverage by Treatment Type (cohort counts)
@@ -19,7 +19,8 @@
 #  11. Chemotherapy - Insurance by Enrollment Coverage
 #  12. Radiation - Insurance by Enrollment Coverage
 #  13. SCT - Insurance by Enrollment Coverage
-#  14. Unknown Post-Treatment Payer - Encounter Breakdown
+#  14. Last Treatment = Last Encounter (±30 day window)
+#  15. Unknown Post-Treatment Payer - Encounter Breakdown
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -746,8 +747,86 @@ pptx <- add_table_slide(pptx,
   glue("Payer at first/last SCT: patients with vs without enrollment covering \u00b130 day window"),
   tbl13)
 
-# ---- Slide 14: Unknown Post-Treatment Payer - Encounter Breakdown ----
-message("  Slide 14: Unknown Post-Treatment Encounter Breakdown")
+# ---- Slide 14: Last Treatment = Last Encounter (±30 day window) ----
+message("  Slide 14: Last Treatment = Last Encounter")
+
+# For each patient, compute their last encounter date
+last_encounter_per_patient <- encounters %>%
+  filter(!is.na(ADMIT_DATE)) %>%
+  group_by(ID) %>%
+  summarise(LAST_ENCOUNTER_DATE = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+
+# Join to cohort with last treatment dates
+last_tx_vs_enc <- cohort_full %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  inner_join(last_encounter_per_patient, by = "ID") %>%
+  mutate(
+    days_last_enc_after_last_tx = as.numeric(LAST_ENCOUNTER_DATE - LAST_ANY_TREATMENT_DATE),
+    last_tx_is_last_enc = abs(days_last_enc_after_last_tx) <= WINDOW_DAYS
+  )
+
+# Also compute per treatment type (LAST_*_DATE columns already in cohort_full)
+last_tx_vs_enc <- last_tx_vs_enc %>%
+  mutate(
+    chemo_is_last_enc = if_else(
+      !is.na(LAST_CHEMO_DATE),
+      abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_CHEMO_DATE)) <= WINDOW_DAYS,
+      NA
+    ),
+    rad_is_last_enc = if_else(
+      !is.na(LAST_RADIATION_DATE),
+      abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_RADIATION_DATE)) <= WINDOW_DAYS,
+      NA
+    ),
+    sct_is_last_enc = if_else(
+      !is.na(LAST_SCT_DATE),
+      abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_SCT_DATE)) <= WINDOW_DAYS,
+      NA
+    )
+  )
+
+# Build summary table
+n_any_tx <- nrow(last_tx_vs_enc)
+n_any_match <- sum(last_tx_vs_enc$last_tx_is_last_enc, na.rm = TRUE)
+
+n_chemo_tx <- sum(!is.na(last_tx_vs_enc$LAST_CHEMO_DATE))
+n_chemo_match <- sum(last_tx_vs_enc$chemo_is_last_enc, na.rm = TRUE)
+
+n_rad_tx <- sum(!is.na(last_tx_vs_enc$LAST_RADIATION_DATE))
+n_rad_match <- sum(last_tx_vs_enc$rad_is_last_enc, na.rm = TRUE)
+
+n_sct_tx <- sum(!is.na(last_tx_vs_enc$LAST_SCT_DATE))
+n_sct_match <- sum(last_tx_vs_enc$sct_is_last_enc, na.rm = TRUE)
+
+tbl14 <- tibble(
+  `Treatment Type` = c("Any Treatment", "Chemotherapy", "Radiation", "Stem Cell Transplant"),
+  `N With Treatment` = c(
+    format(n_any_tx, big.mark = ","),
+    format(n_chemo_tx, big.mark = ","),
+    format(n_rad_tx, big.mark = ","),
+    format(n_sct_tx, big.mark = ",")
+  ),
+  `Last Tx = Last Encounter` = c(
+    format_count_pct(n_any_match, n_any_tx),
+    format_count_pct(n_chemo_match, n_chemo_tx),
+    format_count_pct(n_rad_match, n_rad_tx),
+    format_count_pct(n_sct_match, n_sct_tx)
+  ),
+  `Had Follow-up Encounters` = c(
+    format_count_pct(n_any_tx - n_any_match, n_any_tx),
+    format_count_pct(n_chemo_tx - n_chemo_match, n_chemo_tx),
+    format_count_pct(n_rad_tx - n_rad_match, n_rad_tx),
+    format_count_pct(n_sct_tx - n_sct_match, n_sct_tx)
+  )
+)
+
+pptx <- add_table_slide(pptx,
+  "Last Treatment = Last Encounter",
+  glue("Patients whose last treatment was within \u00b130 days of their last encounter (no follow-up)"),
+  tbl14)
+
+# ---- Slide 15: Unknown Post-Treatment Payer - Encounter Breakdown ----
+message("  Slide 15: Unknown Post-Treatment Encounter Breakdown")
 
 # Patients with Unknown or NA post-treatment payer: how many encounters after last treatment?
 unknown_post <- cohort_full %>%
@@ -774,7 +853,7 @@ unknown_post_counts <- unknown_post %>%
 
 # Bin into categories
 n_unknown <- nrow(unknown_post_counts)
-tbl14 <- unknown_post_counts %>%
+tbl15 <- unknown_post_counts %>%
   mutate(
     bin = case_when(
       n_post_encounters == 0 ~ "0",
@@ -792,7 +871,7 @@ tbl14 <- unknown_post_counts %>%
 pptx <- add_table_slide(pptx,
   "Unknown Post-Treatment Payer \u2014 Encounter Breakdown",
   glue("Patients with Unknown post-treatment payer: how many encounters exist after last treatment?"),
-  tbl14)
+  tbl15)
 
 # ==============================================================================
 # SECTION 6: SAVE PPTX
@@ -803,7 +882,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 14"))
+message(glue("  Slides: 15"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
