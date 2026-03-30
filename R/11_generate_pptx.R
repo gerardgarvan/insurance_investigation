@@ -69,8 +69,8 @@ rename_payer <- function(x) {
 # HIPAA small-cell suppression: counts 1-10 replaced with "<11"
 format_count_pct <- function(n, total) {
   pct <- round(100 * n / total, 1)
-  count_str <- ifelse(n >= 1 & n <= 10, "<11", format(n, big.mark = ","))
-  pct_str <- ifelse(n >= 1 & n <= 10, "*", paste0(pct, "%"))
+  count_str <- format(n, big.mark = ",")
+  pct_str <- paste0(pct, "%")
   paste0(count_str, " (", pct_str, ")")
 }
 
