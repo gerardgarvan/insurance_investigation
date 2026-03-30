@@ -272,7 +272,7 @@ all_last_dates <- hl_cohort %>%
   ungroup() %>%
   select(ID, LAST_ANY_TREATMENT_DATE)
 
-# Compute post-treatment payer: mode of encounters AFTER last treatment
+# Compute post-treatment payer: mode of encounters in +30 day window after last treatment
 post_treatment_payer <- all_last_dates %>%
   filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
   inner_join(
@@ -282,7 +282,8 @@ post_treatment_payer <- all_last_dates %>%
              !effective_payer %in% PAYER_MAPPING$sentinel_values),
     by = "ID"
   ) %>%
-  filter(ADMIT_DATE > LAST_ANY_TREATMENT_DATE) %>%
+  filter(ADMIT_DATE > LAST_ANY_TREATMENT_DATE &
+         ADMIT_DATE <= LAST_ANY_TREATMENT_DATE + days(WINDOW_DAYS)) %>%
   group_by(ID, payer_category) %>%
   summarise(n = n(), .groups = "drop") %>%
   arrange(ID, desc(n), payer_category) %>%
@@ -612,7 +613,7 @@ tbl3 <- build_payer_table_with_na(cohort_full, list(
 ))
 pptx <- add_table_slide(pptx,
   "Post-Treatment Insurance \u2014 All Patients",
-  glue("Most prevalent payer after last treatment date \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
+  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
   tbl3)
 
 # ---- Slide 4: Chemotherapy Insurance ----
@@ -639,7 +640,7 @@ tbl5 <- build_payer_table(chemo_post, list(
 ))
 pptx <- add_table_slide(pptx,
   "Chemotherapy Post-Treatment Insurance",
-  glue("Most prevalent payer after last treatment date \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
+  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
   tbl5)
 
 # ---- Slide 6: Radiation Insurance ----
@@ -665,7 +666,7 @@ tbl7 <- build_payer_table(rad_post, list(
 ))
 pptx <- add_table_slide(pptx,
   "Radiation Post-Treatment Insurance",
-  glue("Most prevalent payer after last treatment date \u2014 N = {format(N_RAD, big.mark = ',')}"),
+  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_RAD, big.mark = ',')}"),
   tbl7)
 
 # ---- Slide 8: SCT Insurance ----
@@ -691,7 +692,7 @@ tbl9 <- build_payer_table(sct_post, list(
 ))
 pptx <- add_table_slide(pptx,
   "SCT Post-Treatment Insurance",
-  glue("Most prevalent payer after last treatment date \u2014 N = {format(N_SCT, big.mark = ',')}"),
+  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_SCT, big.mark = ',')}"),
   tbl9)
 
 # ---- Slide 10: Diagnosis - Enrollment Coverage ----
