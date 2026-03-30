@@ -272,9 +272,27 @@ all_last_dates <- hl_cohort %>%
   ungroup() %>%
   select(ID, LAST_ANY_TREATMENT_DATE)
 
+# Identify patients whose last treatment IS their last encounter (±30 day window)
+# These patients have no follow-up, so post-treatment payer should be N/A
+last_encounter_per_patient <- encounters %>%
+  filter(!is.na(ADMIT_DATE)) %>%
+  group_by(ID) %>%
+  summarise(LAST_ENCOUNTER_DATE = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+
+last_tx_is_last_enc_ids <- all_last_dates %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  inner_join(last_encounter_per_patient, by = "ID") %>%
+  mutate(last_tx_is_last_enc = abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_ANY_TREATMENT_DATE)) <= WINDOW_DAYS) %>%
+  filter(last_tx_is_last_enc) %>%
+  pull(ID)
+
+message(glue("  Last treatment = last encounter: {length(last_tx_is_last_enc_ids)} patients (no follow-up)"))
+
 # Compute post-treatment payer: mode of encounters in +30 day window after last treatment
+# Excludes patients whose last treatment is their last encounter (no follow-up)
 post_treatment_payer <- all_last_dates %>%
   filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  filter(!ID %in% last_tx_is_last_enc_ids) %>%
   inner_join(
     encounters %>%
       filter(!is.na(effective_payer) &
@@ -335,14 +353,18 @@ cohort_full <- hl_cohort %>%
   left_join(post_treatment_payer, by = "ID")
 
 # Rename payer categories to match Python PPTX display names
+# POST_TREATMENT_PAYER excluded: NA must stay NA for the N/A row (no follow-up)
 cohort_full <- cohort_full %>%
   mutate(
     across(
       c(PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
         PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT,
-        PAYER_AT_LAST_CHEMO, PAYER_AT_LAST_RADIATION, PAYER_AT_LAST_SCT,
-        POST_TREATMENT_PAYER),
+        PAYER_AT_LAST_CHEMO, PAYER_AT_LAST_RADIATION, PAYER_AT_LAST_SCT),
       rename_payer
+    ),
+    POST_TREATMENT_PAYER = case_when(
+      POST_TREATMENT_PAYER == "No payment / Self-pay" ~ "Self-pay",
+      TRUE ~ POST_TREATMENT_PAYER
     )
   )
 
@@ -807,13 +829,7 @@ pptx <- add_table_slide(pptx,
 # ---- Slide 14: Last Treatment = Last Encounter (±30 day window) ----
 message("  Slide 14: Last Treatment = Last Encounter")
 
-# For each patient, compute their last encounter date
-last_encounter_per_patient <- encounters %>%
-  filter(!is.na(ADMIT_DATE)) %>%
-  group_by(ID) %>%
-  summarise(LAST_ENCOUNTER_DATE = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
-
-# Join to cohort with last treatment dates
+# Reuse last_encounter_per_patient computed in section 2c
 last_tx_vs_enc <- cohort_full %>%
   filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
   inner_join(last_encounter_per_patient, by = "ID") %>%
