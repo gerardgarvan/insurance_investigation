@@ -77,6 +77,13 @@ format_count_pct <- function(n, total) {
 # Treatment window (days)
 WINDOW_DAYS <- CONFIG$analysis$treatment_window_days  # 30
 
+# UF Health brand colors (matches Python pipeline)
+UF_BLUE    <- "#003087"
+UF_ORANGE  <- "#FA4616"
+LIGHT_BLUE <- "#CCD5EA"   # Alternating row color (odd rows)
+LIGHT_ORANGE <- "#FDD9CC" # Alternating row color (even rows)
+DARK_TEXT  <- "#333333"
+
 # ==============================================================================
 # SECTION 2: COMPUTE ADDITIONAL DATA (last treatment, post-treatment, enrollment)
 # ==============================================================================
@@ -449,22 +456,31 @@ build_treatment_enr_table <- function(data, first_payer_col, last_payer_col,
 # ==============================================================================
 
 style_table <- function(ft) {
-  ft %>%
-    fontsize(size = 10, part = "all") %>%
+  n_rows <- nrow_part(ft, "body")
+  odd_rows <- seq(1, n_rows, by = 2)
+  even_rows <- seq(2, n_rows, by = 2)
+
+  ft <- ft %>%
+    fontsize(size = 10, part = "body") %>%
+    fontsize(size = 11, part = "header") %>%
     font(fontname = "Calibri", part = "all") %>%
     bold(part = "header") %>%
-    bg(bg = "#2C3E50", part = "header") %>%
+    bold(j = 1, part = "body") %>%
+    bg(bg = UF_BLUE, part = "header") %>%
     color(color = "white", part = "header") %>%
+    color(color = DARK_TEXT, part = "body") %>%
     align(align = "center", part = "header") %>%
     align(j = 1, align = "left", part = "body") %>%
     align(j = -1, align = "center", part = "body") %>%
     border_remove() %>%
-    hline(part = "header", border = fp_border(color = "white", width = 1)) %>%
-    hline_top(part = "header", border = fp_border(color = "#2C3E50", width = 2)) %>%
-    hline_bottom(part = "body", border = fp_border(color = "#2C3E50", width = 2)) %>%
-    hline(part = "body", border = fp_border(color = "#BDC3C7", width = 0.5)) %>%
-    padding(padding = 4, part = "all") %>%
-    autofit()
+    padding(padding.left = 6, padding.right = 6,
+            padding.top = 3, padding.bottom = 3, part = "all")
+
+  # Alternating row colors (light blue / light orange, matching Python)
+  if (length(odd_rows) > 0) ft <- ft %>% bg(i = odd_rows, bg = LIGHT_BLUE, part = "body")
+  if (length(even_rows) > 0) ft <- ft %>% bg(i = even_rows, bg = LIGHT_ORANGE, part = "body")
+
+  ft %>% autofit()
 }
 
 # ==============================================================================
@@ -475,27 +491,48 @@ message("\n--- Building PowerPoint slides ---")
 
 pptx <- read_pptx()
 
+# Set 16:9 widescreen slide dimensions (matching Python pipeline: 10" x 5.625")
+tryCatch({
+  pres_node <- pptx$doc_obj$get()
+  sld_sz <- xml2::xml_find_first(pres_node, "//p:sldSz", xml2::xml_ns(pres_node))
+  xml2::xml_attr(sld_sz, "cx") <- "9144000"   # 10 inches * 914400 EMU/inch
+  xml2::xml_attr(sld_sz, "cy") <- "5143500"    # 5.625 inches * 914400 EMU/inch
+  message("  Set slide dimensions to 16:9 widescreen (10\" x 5.625\")")
+}, error = function(e) {
+  message(glue("  Note: Using default slide dimensions ({e$message})"))
+})
+
 # Helper to add a slide with title, subtitle, and table
 add_table_slide <- function(pptx, title, subtitle, tbl_data) {
   ft <- flextable(tbl_data) %>% style_table()
+
+  # Set column widths (Payer Category = 2.2", rest evenly distributed)
+  n_cols <- ncol(tbl_data)
+  if (n_cols > 1) {
+    payer_width <- 2.2
+    data_col_width <- (9.0 - payer_width) / (n_cols - 1)
+    ft <- ft %>%
+      width(j = 1, width = payer_width) %>%
+      width(j = 2:n_cols, width = data_col_width)
+  }
 
   pptx <- pptx %>%
     add_slide(layout = "Blank") %>%
     ph_with(
       value = fpar(ftext(title, prop = fp_text(font.size = 22, bold = TRUE,
                                                 font.family = "Calibri",
-                                                color = "#2C3E50"))),
-      location = ph_location(left = 0.5, top = 0.3, width = 9, height = 0.5)
+                                                color = UF_BLUE))),
+      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.5)
     ) %>%
     ph_with(
       value = fpar(ftext(subtitle, prop = fp_text(font.size = 12, italic = TRUE,
                                                    font.family = "Calibri",
-                                                   color = "#7F8C8D"))),
-      location = ph_location(left = 0.5, top = 0.8, width = 9, height = 0.4)
+                                                   color = DARK_TEXT))),
+      location = ph_location(left = 0.5, top = 0.65, width = 9, height = 0.3)
     ) %>%
     ph_with(
       value = ft,
-      location = ph_location(left = 0.5, top = 1.3, width = 9, height = 5)
+      location = ph_location(left = 0.5, top = 1.1, width = 9, height = 4)
     )
 
   pptx
@@ -509,34 +546,52 @@ N_SCT <- sum(cohort_full$HAD_SCT == 1)
 
 # ---- Slide 1: Title ----
 message("  Slide 1: Title")
+
+# Orange accent bar (single-cell flextable with UF Orange background)
+accent_bar <- flextable(data.frame(x = "")) %>%
+  delete_part(part = "header") %>%
+  bg(bg = UF_ORANGE, part = "body") %>%
+  border_remove() %>%
+  fontsize(size = 1, part = "body") %>%
+  color(color = UF_ORANGE, part = "body") %>%
+  height(height = 0.04, part = "body") %>%
+  width(j = 1, width = 4) %>%
+  padding(padding = 0, part = "all")
+
+cohort_text_prop <- fp_text(font.size = 14, font.family = "Calibri", color = DARK_TEXT)
+
 pptx <- pptx %>%
   add_slide(layout = "Blank") %>%
   ph_with(
     value = fpar(ftext("Insurance Coverage by Treatment Type",
                        prop = fp_text(font.size = 28, bold = TRUE,
-                                      font.family = "Calibri", color = "#2C3E50"))),
-    location = ph_location(left = 0.5, top = 1.0, width = 9, height = 1)
+                                      font.family = "Calibri", color = UF_BLUE)),
+                 fp_p = fp_par(text.align = "center")),
+    location = ph_location(left = 0.5, top = 1.2, width = 9, height = 1)
   ) %>%
   ph_with(
-    value = block_list(
-      fpar(ftext("Hodgkin Lymphoma Cohort \u2014 UF Health",
-                 prop = fp_text(font.size = 16, italic = TRUE,
-                                font.family = "Calibri", color = "#7F8C8D")))
-    ),
-    location = ph_location(left = 0.5, top = 2.0, width = 9, height = 0.5)
+    value = accent_bar,
+    location = ph_location(left = 3.0, top = 2.0, width = 4, height = 0.06)
+  ) %>%
+  ph_with(
+    value = fpar(ftext("Hodgkin Lymphoma Cohort \u2014 UF Health",
+                       prop = fp_text(font.size = 16, font.family = "Calibri",
+                                      color = DARK_TEXT)),
+                 fp_p = fp_par(text.align = "center")),
+    location = ph_location(left = 0.5, top = 2.2, width = 9, height = 0.5)
   ) %>%
   ph_with(
     value = block_list(
       fpar(ftext(glue("Total Cohort: N = {format(N_TOTAL, big.mark = ',')}"),
-                 prop = fp_text(font.size = 18, font.family = "Calibri"))),
+                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center")),
       fpar(ftext(glue("Chemotherapy: N = {format(N_CHEMO, big.mark = ',')}"),
-                 prop = fp_text(font.size = 18, font.family = "Calibri"))),
+                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center")),
       fpar(ftext(glue("Radiation: N = {format(N_RAD, big.mark = ',')}"),
-                 prop = fp_text(font.size = 18, font.family = "Calibri"))),
+                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center")),
       fpar(ftext(glue("Stem Cell Transplant: N = {format(N_SCT, big.mark = ',')}"),
-                 prop = fp_text(font.size = 18, font.family = "Calibri")))
+                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center"))
     ),
-    location = ph_location(left = 0.5, top = 3.0, width = 9, height = 3)
+    location = ph_location(left = 0.5, top = 3.0, width = 9, height = 1.5)
   )
 
 # ---- Slide 2: Insurance Coverage Overview ----
