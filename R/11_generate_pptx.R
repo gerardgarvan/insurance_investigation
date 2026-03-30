@@ -21,6 +21,7 @@
 #  13. SCT - Insurance by Enrollment Coverage
 #  14. Last Treatment = Last Encounter (±30 day window)
 #  15. Unknown Post-Treatment Payer - Encounter Breakdown
+#  16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -873,6 +874,89 @@ pptx <- add_table_slide(pptx,
   glue("Patients with Unknown post-treatment payer: how many encounters exist after last treatment?"),
   tbl15)
 
+# ---- Slide 16: Insurance After Last Treatment & Dataset Retention ----
+message("  Slide 16: Post-Last-Treatment Insurance & Retention")
+
+# Compute payer at last treatment of any type (mode in ±30 day window)
+payer_at_last_any <- all_last_dates %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  compute_payer_mode_in_window(payer_col_name = "PAYER_AT_LAST_TX")
+
+# Determine which treated patients have ANY encounter after their last treatment
+treated_ids <- cohort_full %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  select(ID, LAST_ANY_TREATMENT_DATE)
+
+patients_with_post_enc <- treated_ids %>%
+  inner_join(
+    encounters %>% select(ID, ADMIT_DATE),
+    by = "ID",
+    relationship = "many-to-many"
+  ) %>%
+  filter(ADMIT_DATE > LAST_ANY_TREATMENT_DATE) %>%
+  distinct(ID) %>%
+  mutate(has_post_encounter = TRUE)
+
+# Build retention dataset
+tx_retention <- treated_ids %>%
+  left_join(patients_with_post_enc, by = "ID") %>%
+  mutate(has_post_encounter = coalesce(has_post_encounter, FALSE)) %>%
+  left_join(post_treatment_payer, by = "ID") %>%
+  left_join(payer_at_last_any, by = "ID") %>%
+  mutate(
+    POST_TREATMENT_PAYER = rename_payer(POST_TREATMENT_PAYER),
+    PAYER_AT_LAST_TX = rename_payer(PAYER_AT_LAST_TX)
+  )
+
+n_treated <- nrow(tx_retention)
+n_still_in <- sum(tx_retention$has_post_encounter)
+n_missing <- n_treated - n_still_in
+n_no_tx <- N_TOTAL - n_treated
+
+still_data <- tx_retention %>% filter(has_post_encounter)
+missing_data <- tx_retention %>% filter(!has_post_encounter)
+
+message(glue("  Treated: {n_treated} | Still in dataset: {n_still_in} | Missing: {n_missing} | No treatment: {n_no_tx}"))
+
+# Build payer breakdown: still in dataset (post-tx payer) vs missing (last known payer)
+still_col <- glue("Still in Dataset (N={format(n_still_in, big.mark=',')})")
+missing_col <- glue("No Longer in Dataset (N={format(n_missing, big.mark=',')})")
+
+rows16 <- lapply(PAYER_ORDER, function(cat) {
+  n_s <- sum(still_data$POST_TREATMENT_PAYER == cat, na.rm = TRUE)
+  n_m <- sum(missing_data$PAYER_AT_LAST_TX == cat, na.rm = TRUE)
+  tibble(
+    `Payer Category` = cat,
+    !!still_col := if (n_still_in > 0) format_count_pct(n_s, n_still_in) else "0 (0.0%)",
+    !!missing_col := if (n_missing > 0) format_count_pct(n_m, n_missing) else "0 (0.0%)"
+  )
+})
+tbl16 <- bind_rows(rows16)
+
+# Add N/A row (no payer matched in window)
+n_na_s <- sum(is.na(still_data$POST_TREATMENT_PAYER))
+n_na_m <- sum(is.na(missing_data$PAYER_AT_LAST_TX))
+tbl16 <- bind_rows(tbl16, tibble(
+  `Payer Category` = "N/A (No Payer Match)",
+  !!still_col := if (n_still_in > 0) format_count_pct(n_na_s, n_still_in) else "0 (0.0%)",
+  !!missing_col := if (n_missing > 0) format_count_pct(n_na_m, n_missing) else "0 (0.0%)"
+))
+
+# Add No Treatment row to show completeness
+tbl16 <- bind_rows(tbl16, tibble(
+  `Payer Category` = "No Treatment Recorded",
+  !!still_col := "\u2014",
+  !!missing_col := format(n_no_tx, big.mark = ",")
+))
+
+pct_still <- if (n_treated > 0) round(100 * n_still_in / n_treated, 1) else 0
+pct_missing <- if (n_treated > 0) round(100 * n_missing / n_treated, 1) else 0
+
+pptx <- add_table_slide(pptx,
+  "Insurance After Last Treatment \u2014 Dataset Retention",
+  glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset | {format(n_no_tx, big.mark=',')} had no recorded treatment"),
+  tbl16)
+
 # ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
@@ -882,7 +966,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 15"))
+message(glue("  Slides: 16"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
