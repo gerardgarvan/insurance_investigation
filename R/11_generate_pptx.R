@@ -272,45 +272,63 @@ all_last_dates <- hl_cohort %>%
   ungroup() %>%
   select(ID, LAST_ANY_TREATMENT_DATE)
 
-# Identify patients whose last treatment IS their last encounter (±30 day window)
-# These patients have no follow-up, so post-treatment payer should be N/A
+# Last encounter date per patient (reused in Slide 14)
 last_encounter_per_patient <- encounters %>%
   filter(!is.na(ADMIT_DATE)) %>%
   group_by(ID) %>%
   summarise(LAST_ENCOUNTER_DATE = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
 
-last_tx_is_last_enc_ids <- all_last_dates %>%
-  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
-  inner_join(last_encounter_per_patient, by = "ID") %>%
-  mutate(last_tx_is_last_enc = abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_ANY_TREATMENT_DATE)) <= WINDOW_DAYS) %>%
-  filter(last_tx_is_last_enc) %>%
-  pull(ID)
+# Helper: compute post-treatment payer (most prevalent anytime after a given date)
+# Patients whose treatment date = last encounter (±30 days) get N/A (no follow-up)
+compute_post_tx_payer <- function(patient_dates, date_col, payer_col_name) {
+  # Identify patients with no follow-up (last treatment = last encounter)
+  no_followup_ids <- patient_dates %>%
+    filter(!is.na(!!sym(date_col))) %>%
+    inner_join(last_encounter_per_patient, by = "ID") %>%
+    filter(abs(as.numeric(LAST_ENCOUNTER_DATE - !!sym(date_col))) <= WINDOW_DAYS) %>%
+    pull(ID)
 
-message(glue("  Last treatment = last encounter: {length(last_tx_is_last_enc_ids)} patients (no follow-up)"))
+  result <- patient_dates %>%
+    filter(!is.na(!!sym(date_col))) %>%
+    filter(!ID %in% no_followup_ids) %>%
+    inner_join(
+      encounters %>%
+        filter(!is.na(effective_payer) &
+               nchar(trimws(effective_payer)) > 0 &
+               !effective_payer %in% PAYER_MAPPING$sentinel_values),
+      by = "ID"
+    ) %>%
+    filter(ADMIT_DATE > !!sym(date_col)) %>%
+    group_by(ID, payer_category) %>%
+    summarise(n = n(), .groups = "drop") %>%
+    arrange(ID, desc(n), payer_category) %>%
+    group_by(ID) %>%
+    slice(1) %>%
+    ungroup() %>%
+    select(ID, !!payer_col_name := payer_category)
 
-# Compute post-treatment payer: mode of encounters in +30 day window after last treatment
-# Excludes patients whose last treatment is their last encounter (no follow-up)
-post_treatment_payer <- all_last_dates %>%
-  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
-  filter(!ID %in% last_tx_is_last_enc_ids) %>%
-  inner_join(
-    encounters %>%
-      filter(!is.na(effective_payer) &
-             nchar(trimws(effective_payer)) > 0 &
-             !effective_payer %in% PAYER_MAPPING$sentinel_values),
-    by = "ID"
-  ) %>%
-  filter(ADMIT_DATE > LAST_ANY_TREATMENT_DATE &
-         ADMIT_DATE <= LAST_ANY_TREATMENT_DATE + days(WINDOW_DAYS)) %>%
-  group_by(ID, payer_category) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  arrange(ID, desc(n), payer_category) %>%
-  group_by(ID) %>%
-  slice(1) %>%
-  ungroup() %>%
-  select(ID, POST_TREATMENT_PAYER = payer_category)
+  message(glue("  {payer_col_name}: {nrow(result)} with follow-up, {length(no_followup_ids)} N/A (no follow-up)"))
+  result
+}
 
-message(glue("  Post-treatment payer: {nrow(post_treatment_payer)} patients with encounters after treatment"))
+# Post-treatment payer: anytime after last treatment of ANY type
+post_treatment_payer <- compute_post_tx_payer(
+  all_last_dates, "LAST_ANY_TREATMENT_DATE", "POST_TREATMENT_PAYER"
+)
+
+# Post-treatment payer per treatment type
+post_chemo_payer <- compute_post_tx_payer(
+  last_chemo_dates %>% rename(LAST_DATE = LAST_CHEMO_DATE),
+  "LAST_DATE", "POST_CHEMO_PAYER"
+)
+post_rad_payer <- compute_post_tx_payer(
+  last_rad_dates %>% rename(LAST_DATE = LAST_RADIATION_DATE),
+  "LAST_DATE", "POST_RAD_PAYER"
+)
+post_sct_payer <- compute_post_tx_payer(
+  last_sct_dates %>% rename(LAST_DATE = LAST_SCT_DATE),
+  "LAST_DATE", "POST_SCT_PAYER"
+)
 
 # ---- 2d. Enrollment coverage analysis ----
 
@@ -350,7 +368,10 @@ cohort_full <- hl_cohort %>%
   left_join(payer_at_last_rad, by = "ID") %>%
   left_join(payer_at_last_sct, by = "ID") %>%
   left_join(all_last_dates, by = "ID") %>%
-  left_join(post_treatment_payer, by = "ID")
+  left_join(post_treatment_payer, by = "ID") %>%
+  left_join(post_chemo_payer, by = "ID") %>%
+  left_join(post_rad_payer, by = "ID") %>%
+  left_join(post_sct_payer, by = "ID")
 
 # Rename payer categories to match Python PPTX display names
 # POST_TREATMENT_PAYER excluded: NA must stay NA for the N/A row (no follow-up)
@@ -362,9 +383,9 @@ cohort_full <- cohort_full %>%
         PAYER_AT_LAST_CHEMO, PAYER_AT_LAST_RADIATION, PAYER_AT_LAST_SCT),
       rename_payer
     ),
-    POST_TREATMENT_PAYER = case_when(
-      POST_TREATMENT_PAYER == "No payment / Self-pay" ~ "Self-pay",
-      TRUE ~ POST_TREATMENT_PAYER
+    across(
+      c(POST_TREATMENT_PAYER, POST_CHEMO_PAYER, POST_RAD_PAYER, POST_SCT_PAYER),
+      ~ case_when(.x == "No payment / Self-pay" ~ "Self-pay", TRUE ~ .x)
     )
   )
 
@@ -632,10 +653,10 @@ pptx <- add_table_slide(pptx,
 message("  Slide 3: Post-Treatment Insurance")
 tbl3 <- build_payer_table_with_na(cohort_full, list(
   list(col = "POST_TREATMENT_PAYER", label = "Post-Treatment Insurance")
-))
+), na_label = "N/A (No Follow-up)")
 pptx <- add_table_slide(pptx,
   "Post-Treatment Insurance \u2014 All Patients",
-  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
+  glue("Most prevalent payer after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
   tbl3)
 
 # ---- Slide 4: Chemotherapy Insurance ----
@@ -653,16 +674,12 @@ pptx <- add_table_slide(pptx,
 
 # ---- Slide 5: Chemotherapy Post-Treatment Insurance ----
 message("  Slide 5: Chemo Post-Treatment Insurance")
-# Post-treatment for chemo patients only
-chemo_post <- chemo_patients %>%
-  left_join(post_treatment_payer %>% rename(CHEMO_POST_TX = POST_TREATMENT_PAYER), by = "ID") %>%
-  mutate(CHEMO_POST_TX = rename_payer(CHEMO_POST_TX))
-tbl5 <- build_payer_table(chemo_post, list(
-  list(col = "CHEMO_POST_TX", label = "Post-Treatment Insurance")
-))
+tbl5 <- build_payer_table_with_na(chemo_patients, list(
+  list(col = "POST_CHEMO_PAYER", label = "Post-Treatment Insurance")
+), na_label = "N/A (No Follow-up)")
 pptx <- add_table_slide(pptx,
   "Chemotherapy Post-Treatment Insurance",
-  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
+  glue("Most prevalent payer after last chemotherapy \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
   tbl5)
 
 # ---- Slide 6: Radiation Insurance ----
@@ -680,15 +697,12 @@ pptx <- add_table_slide(pptx,
 
 # ---- Slide 7: Radiation Post-Treatment Insurance ----
 message("  Slide 7: Radiation Post-Treatment Insurance")
-rad_post <- rad_patients %>%
-  left_join(post_treatment_payer %>% rename(RAD_POST_TX = POST_TREATMENT_PAYER), by = "ID") %>%
-  mutate(RAD_POST_TX = rename_payer(RAD_POST_TX))
-tbl7 <- build_payer_table(rad_post, list(
-  list(col = "RAD_POST_TX", label = "Post-Treatment Insurance")
-))
+tbl7 <- build_payer_table_with_na(rad_patients, list(
+  list(col = "POST_RAD_PAYER", label = "Post-Treatment Insurance")
+), na_label = "N/A (No Follow-up)")
 pptx <- add_table_slide(pptx,
   "Radiation Post-Treatment Insurance",
-  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_RAD, big.mark = ',')}"),
+  glue("Most prevalent payer after last radiation \u2014 N = {format(N_RAD, big.mark = ',')}"),
   tbl7)
 
 # ---- Slide 8: SCT Insurance ----
@@ -706,15 +720,12 @@ pptx <- add_table_slide(pptx,
 
 # ---- Slide 9: SCT Post-Treatment Insurance ----
 message("  Slide 9: SCT Post-Treatment Insurance")
-sct_post <- sct_patients %>%
-  left_join(post_treatment_payer %>% rename(SCT_POST_TX = POST_TREATMENT_PAYER), by = "ID") %>%
-  mutate(SCT_POST_TX = rename_payer(SCT_POST_TX))
-tbl9 <- build_payer_table(sct_post, list(
-  list(col = "SCT_POST_TX", label = "Post-Treatment Insurance")
-))
+tbl9 <- build_payer_table_with_na(sct_patients, list(
+  list(col = "POST_SCT_PAYER", label = "Post-Treatment Insurance")
+), na_label = "N/A (No Follow-up)")
 pptx <- add_table_slide(pptx,
   "SCT Post-Treatment Insurance",
-  glue("Most prevalent payer within 30 days after last treatment \u2014 N = {format(N_SCT, big.mark = ',')}"),
+  glue("Most prevalent payer after last SCT \u2014 N = {format(N_SCT, big.mark = ',')}"),
   tbl9)
 
 # ---- Slide 10: Diagnosis - Enrollment Coverage ----
