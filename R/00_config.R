@@ -339,6 +339,13 @@ TREATMENT_CODES <- list(
     "38243"    # Allogeneic HPC boost
   ),
 
+  # Stem cell transplant HCPCS codes (Phase 10: added from VariableDetails.xlsx)
+  sct_hcpcs = c(
+    "S2140",   # Cord blood harvesting for transplantation, allogeneic
+    "S2142",   # Cord blood-derived stem-cell transplantation, allogeneic
+    "S2150"    # Bone marrow or blood-derived stem cells; allogeneic or autologous
+  ),
+
   # --- ICD Procedure Codes (D-02, D-04: all PX_TYPE values) ---
 
   # Chemotherapy ICD-9-CM Volume 3 (PX_TYPE = "09")
@@ -401,19 +408,82 @@ TREATMENT_CODES <- list(
 
   # Stem cell transplant ICD-10-PCS (PX_TYPE = "10")
   # Section 3 Administration, Root Operation Transfusion, Substance = Hematopoietic Stem Cells
+  # Phase 10: Expanded from VariableDetails.xlsx to include open approach (3023x/3024x),
+  # allogeneic related/unrelated (G2/G3, U2/U3, X2/X3, Y2/Y3), and new technology (XW1xx) codes.
+  # Nonautologous variants (G1, X1, Y1) retained from Phase 9 original list.
   sct_icd10pcs = c(
+    # Open approach (0) -- added from VariableDetails.xlsx
+    "30230C0",  # Autologous HPC (genetically modified), peripheral vein, open
+    "30230G0",  # Autologous bone marrow, peripheral vein, open
+    "30230X0",  # Autologous cord blood stem cells, peripheral vein, open
+    "30230Y0",  # Autologous HPC, peripheral vein, open
+    "30240C0",  # Autologous HPC (genetically modified), central vein, open
+    "30240G0",  # Autologous bone marrow, central vein, open
+    "30240X0",  # Autologous cord blood stem cells, central vein, open
+    "30240Y0",  # Autologous HPC, central vein, open
+    # Percutaneous approach (3) -- autologous
+    "30233C0",  # Autologous HPC (genetically modified), peripheral vein, percutaneous
     "30233G0",  # Autologous HPC, peripheral vein, percutaneous
-    "30233G1",  # Nonautologous HPC, peripheral vein, percutaneous
-    "30243G0",  # Autologous HPC, central vein, percutaneous
-    "30243G1",  # Nonautologous HPC, central vein, percutaneous
-    "30233X0",  # Autologous cord blood stem cells, peripheral vein
-    "30233X1",  # Nonautologous cord blood stem cells, peripheral vein
-    "30243X0",  # Autologous cord blood stem cells, central vein
-    "30243X1",  # Nonautologous cord blood stem cells, central vein
+    "30233X0",  # Autologous cord blood stem cells, peripheral vein, percutaneous
     "30233Y0",  # Autologous HPC (other), peripheral vein, percutaneous
-    "30233Y1",  # Nonautologous HPC (other), peripheral vein, percutaneous
+    "30243C0",  # Autologous HPC (genetically modified), central vein, percutaneous
+    "30243G0",  # Autologous HPC, central vein, percutaneous
+    "30243X0",  # Autologous cord blood stem cells, central vein, percutaneous
     "30243Y0",  # Autologous HPC (other), central vein, percutaneous
-    "30243Y1"   # Nonautologous HPC (other), central vein, percutaneous
+    # Percutaneous approach (3) -- nonautologous (from Phase 9 original list)
+    "30233G1",  # Nonautologous HPC, peripheral vein, percutaneous
+    "30233X1",  # Nonautologous cord blood stem cells, peripheral vein, percutaneous
+    "30233Y1",  # Nonautologous HPC (other), peripheral vein, percutaneous
+    "30243G1",  # Nonautologous HPC, central vein, percutaneous
+    "30243X1",  # Nonautologous cord blood stem cells, central vein, percutaneous
+    "30243Y1",  # Nonautologous HPC (other), central vein, percutaneous
+    # Allogeneic related (2) and unrelated (3) -- added from VariableDetails.xlsx
+    "30233G2",  # Allogeneic related bone marrow, peripheral vein, percutaneous
+    "30233G3",  # Allogeneic unrelated bone marrow, peripheral vein, percutaneous
+    "30233U2",  # Allogeneic related T-cell depleted bone marrow, peripheral vein, percutaneous
+    "30233U3",  # Allogeneic unrelated T-cell depleted bone marrow, peripheral vein, percutaneous
+    "30233X2",  # Allogeneic related cord blood stem cells, peripheral vein, percutaneous
+    "30233X3",  # Allogeneic unrelated cord blood stem cells, peripheral vein, percutaneous
+    "30233Y2",  # Allogeneic related HPC, peripheral vein, percutaneous
+    "30233Y3",  # Allogeneic unrelated HPC, peripheral vein, percutaneous
+    "30243G2",  # Allogeneic related bone marrow, central vein, percutaneous
+    "30243G3",  # Allogeneic unrelated bone marrow, central vein, percutaneous
+    "30243U2",  # Allogeneic related T-cell depleted bone marrow, central vein, percutaneous
+    "30243U3",  # Allogeneic unrelated T-cell depleted bone marrow, central vein, percutaneous
+    "30243X2",  # Allogeneic related cord blood stem cells, central vein, percutaneous
+    "30243X3",  # Allogeneic unrelated cord blood stem cells, central vein, percutaneous
+    "30243Y2",  # Allogeneic related HPC, central vein, percutaneous
+    "30243Y3",  # Allogeneic unrelated HPC, central vein, percutaneous
+    # Embryonic stem cells (added from VariableDetails.xlsx)
+    "30230AZ",  # Embryonic stem cells, peripheral vein, open
+    "30233AZ",  # Embryonic stem cells, peripheral vein, percutaneous
+    "30240AZ",  # Embryonic stem cells, central vein, open
+    "30243AZ",  # Embryonic stem cells, central vein, percutaneous
+    # New technology (XW1xx) -- Omidubicel (added from VariableDetails.xlsx)
+    "XW133C8",  # Transfusion of Omidubicel into Peripheral Vein, Percutaneous Approach
+    "XW143C8"   # Transfusion of Omidubicel into Central Vein, Percutaneous Approach
+  ),
+
+  # CAR T-cell and other immunotherapies ICD-10-PCS (DRG 018)
+  # Phase 10: Added from VariableDetails.xlsx (codes with * denote prefix patterns)
+  # Prefix-matched in treatment scripts via str_starts()
+  cart_icd10pcs_prefixes = c(
+    "XW033C7",  # Autologous engineered chimeric antigen receptor T-cell immunotherapy, peripheral vein
+    "XW033G7",  # Allogeneic engineered chimeric antigen receptor T-cell, peripheral vein
+    "XW033H7",  # Axicabtagene ciloleucel, peripheral vein
+    "XW033J7",  # Tisagenlecleucel immunotherapy, peripheral vein
+    "XW033K7",  # Idecabtagene vicleucel immunotherapy, peripheral vein
+    "XW033L7",  # Lifileucel immunotherapy, peripheral vein
+    "XW033M7",  # Brexucabtagene autoleucel, peripheral vein
+    "XW033N7",  # Lisocabtagene maraleucel, peripheral vein
+    "XW043C7",  # Autologous engineered chimeric antigen receptor T-cell, central vein
+    "XW043G7",  # Allogeneic engineered chimeric antigen receptor T-cell, central vein
+    "XW043H7",  # Axicabtagene ciloleucel, central vein
+    "XW043J7",  # Tisagenlecleucel immunotherapy, central vein
+    "XW043K7",  # Idecabtagene vicleucel immunotherapy, central vein
+    "XW043L7",  # Lifileucel immunotherapy, central vein
+    "XW043M7",  # Brexucabtagene autoleucel, central vein
+    "XW043N7"   # Lisocabtagene maraleucel, central vein
   ),
 
   # --- Phase 9: Expanded detection codes (D-09, D-10, D-11) ---
@@ -473,6 +543,282 @@ TREATMENT_CODES <- list(
   sct_revenue = c(
     "0362",   # Organ transplant - other than kidney (includes SCT)
     "0815"    # Allogeneic stem cell acquisition/donor services
+  )
+)
+
+# ------------------------------------------------------------------------------
+# 5.6 SURVEILLANCE CODES (Phase 10) -- transcribed from VariableDetails.xlsx "Surveillance Strategy"
+# ------------------------------------------------------------------------------
+#
+# 9 modalities: Mammogram, Breast MRI, Echocardiogram, Stress test,
+# Electrocardiogram, MUGA, Pulmonary function test, TSH, CBC
+#
+# Code systems present per modality:
+#   Mammogram:         CPT, ICD-10-PCS
+#   Breast MRI:        CPT, HCPCS, ICD-10-PCS
+#   Echocardiogram:    CPT, ICD-10-PCS, ICD-10 (screening Z code)
+#   Stress test:       CPT (nuclear cardiology)
+#   Electrocardiogram: CPT, ICD-10 (screening Z code)
+#   MUGA:              CPT, ICD-10-PCS
+#   PFT:               CPT, ICD-10 (screening Z code)
+#   TSH:               CPT, HCPCS, LOINC
+#   CBC:               CPT, HCPCS, LOINC
+#
+# Source: VariableDetails.xlsx "Surveillance Strategy" sheet (2025 extract)
+SURVEILLANCE_CODES <- list(
+  # Mammogram
+  mammogram_cpt = c(
+    "77063",   # Bilateral screening mammogram with tomosynthesis (screening)
+    "77067",   # Bilateral screening mammogram with tomosynthesis (variant)
+    "77062",   # Bilateral diagnostic mammogram with tomosynthesis
+    "77066",   # Bilateral diagnostic mammogram with tomosynthesis (variant)
+    "77061",   # Unilateral diagnostic mammogram with tomosynthesis
+    "77065",   # Unilateral diagnostic mammogram with tomosynthesis (variant)
+    "G0279"    # HCPCS: Diagnostic tomosynthesis mammogram (Medicare benefit)
+  ),
+  mammogram_icd10pcs = c(
+    "BH00ZZZ",  # Plain Radiography of Right Breast
+    "BH01ZZZ",  # Plain Radiography of Left Breast
+    "BH02ZZZ"   # Plain Radiography of Bilateral Breasts
+  ),
+
+  # Breast MRI
+  breast_mri_cpt = c(
+    "77046",   # MRI breast without contrast, unilateral
+    "77048",   # MRI breast without and with contrast, unilateral
+    "77047",   # MRI breast without contrast, bilateral
+    "77049"    # MRI breast without and with contrast, bilateral
+  ),
+  breast_mri_hcpcs = c(
+    "C8903",   # MRI breast without contrast, unilateral
+    "C8905",   # MRI breast without and with contrast, unilateral
+    "C8906",   # MRI breast without contrast, bilateral
+    "C8908"    # MRI breast without and with contrast, bilateral
+  ),
+  breast_mri_icd10pcs = c(
+    "BH30ZZZ",  # MRI of Right Breast without contrast
+    "BH31ZZZ",  # MRI of Left Breast without contrast
+    "BH32ZZZ",  # MRI of Bilateral Breasts without contrast
+    "BH30Y0Z",  # MRI of Right Breast with other contrast
+    "BH31Y0Z",  # MRI of Left Breast with other contrast
+    "BH32Y0Z"   # MRI of Bilateral Breasts with other contrast
+  ),
+
+  # Echocardiogram
+  echo_cpt = c(
+    "93306",   # Echocardiography, complete with doppler and color flow
+    "93307",   # Echocardiography, complete without doppler
+    "93308",   # Echocardiography, limited or follow-up
+    "93350",   # Stress echocardiography (exercise or pharmacological)
+    "93351",   # Stress echocardiography with contrast
+    "93352"    # Stress echocardiography, additional contrast (add-on)
+  ),
+  echo_icd10pcs = c(
+    "X2JAX47"  # Measurement of Cardiac Output using Echocardiography, New Technology
+  ),
+  echo_icd10_dx = c(
+    "Z13.6"    # Encounter for screening for cardiovascular disorders
+  ),
+
+  # Stress test (nuclear cardiology)
+  stress_test_cpt = c(
+    "78451",   # Myocardial perfusion imaging, SPECT, single study at rest or stress
+    "78452"    # Myocardial perfusion imaging, SPECT, multiple studies at rest and stress
+  ),
+
+  # Electrocardiogram
+  ecg_cpt = c(
+    "93000",   # Electrocardiogram, routine ECG with 12 leads; with interpretation and report
+    "93005",   # Electrocardiogram, routine ECG, tracing only
+    "93010",   # Electrocardiogram, routine ECG, interpretation and report only
+    "93015",   # Cardiovascular stress test with ECG monitoring and supervision
+    "93016",   # Cardiovascular stress test, physician supervision only
+    "93017",   # Cardiovascular stress test, tracing only
+    "93018",   # Cardiovascular stress test, interpretation and report only
+    "93040",   # Rhythm ECG, 1-3 leads; with interpretation and report
+    "93041",   # Rhythm ECG, 1-3 leads; tracing only
+    "93042"    # Rhythm ECG, 1-3 leads; interpretation and report only
+  ),
+  ecg_icd10_dx = c(
+    "Z13.6"    # Encounter for screening for cardiovascular disorders
+  ),
+
+  # MUGA (Multiple Gated Acquisition scan)
+  muga_cpt = c(
+    "78472",   # Cardiac blood pool imaging, gated equilibrium, planar; single study at rest
+    "78473",   # Cardiac blood pool imaging, gated equilibrium, planar; multiple studies
+    "78481",   # Cardiac blood pool imaging, first pass technique; single study at rest
+    "78483",   # Cardiac blood pool imaging, first pass technique; multiple studies
+    "78494",   # Cardiac blood pool imaging, gated equilibrium, SPECT; single study
+    "78496"    # Cardiac blood pool imaging, gated equilibrium with wall motion study
+  ),
+  muga_icd10pcs = c(
+    "C21G1ZZ",  # Planar Nuclear Medicine Imaging of Heart using Technetium 99m
+    "C22G1ZZ"   # Tomographic Nuclear Medicine Imaging of Heart using Technetium 99m
+  ),
+
+  # Pulmonary function test
+  pft_cpt = c(
+    "94010",   # Spirometry (FVC, FEV1, FEF)
+    "94011",   # Spirometry measurement, pediatric patients
+    "94012",   # Spirometry measurement, pediatric patients, minimum 2 curves
+    "94060",   # Spirometry with bronchodilator response
+    "94070",   # Bronchospasm provocation evaluation with multiple spirometric determinations
+    "94150",   # Vital capacity, total
+    "94200",   # Maximum breathing capacity (MVV or MBC)
+    "94375",   # Respiratory flow volume loop
+    "94726",   # Plethysmography for determination of lung volumes and airway resistance
+    "94727",   # Gas dilution techniques for determination of lung volumes
+    "94729"    # Diffusing capacity (DLCO)
+  ),
+  pft_icd10_dx = c(
+    "Z13.83"   # Encounter for screening for respiratory disorder NEC
+  ),
+
+  # Thyroid stimulating hormone (TSH)
+  tsh_cpt = c(
+    "84443"    # Thyroid stimulating hormone (TSH) assay
+  ),
+  tsh_hcpcs = c(
+    "224576"   # TSH lab test (Medicare clinical lab code)
+  ),
+  tsh_loinc = c(
+    "11580-8", # Thyrotropin [Units/volume] in Serum or Plasma
+    "3024-7"   # Thyrotropin [Units/volume] in Serum or Plasma (variant)
+  ),
+
+  # Complete blood count (CBC)
+  cbc_cpt = c(
+    "85025",   # Blood count; complete (CBC), automated (Hgb, Hct, RBC, WBC and platelet count)
+    "85027"    # Blood count; complete (CBC), automated (RBC, WBC, Hgb, Hct, MCV, MCH, MCHC)
+  ),
+  cbc_hcpcs = c(
+    "G0306",   # CBC without differential (Medicare preventive service)
+    "G0307"    # CBC with differential (Medicare preventive service)
+  ),
+  cbc_loinc = c(
+    "58410-2", # CBC panel - Blood by Automated count
+    "57021-8", # CBC W Auto Differential panel - Blood
+    "57782-5", # CBC W Ordered Manual Differential panel - Blood
+    "57022-6", # CBC W Differential panel - Blood (unspecified method)
+    "24364-2"  # CBC panel - Blood (alternate)
+  )
+)
+
+# ------------------------------------------------------------------------------
+# 5.7 LAB CODES (Phase 10) -- transcribed from VariableDetails.xlsx "Labs" sheet
+# ------------------------------------------------------------------------------
+#
+# Lab types: CRP, ALT, AST, ALP, GGT, Bilirubin, Platelets, FOBT
+# TSH and CBC LOINC codes are included here (duplicated from SURVEILLANCE_CODES
+# for convenience in lab-specific queries)
+#
+# Note: platelets LOINC 777-3 is broad (covers all platelet count methods).
+# APRI Index (86465-2) and PDF (80563-0) are derived/calculated values included
+# for completeness as they appear in the Labs sheet.
+#
+# Source: VariableDetails.xlsx "Labs" sheet (2025 extract)
+LAB_CODES <- list(
+  # C-reactive protein
+  crp_cpt   = c("86141"),     # CRP, high sensitivity (cardiac)
+  crp_loinc = c("30522-7"),   # C-Reactive Protein, Cardiac (high sensitivity)
+
+  # Liver function tests -- ALT
+  alt_cpt   = c("84460"),     # Alanine amino transferase (ALT/SGPT)
+  alt_loinc = c("1742-6"),    # ALT [Enzymatic activity/volume] in Serum or Plasma
+
+  # Liver function tests -- AST
+  ast_cpt   = c("84450"),     # Aspartate amino transferase (AST/SGOT)
+  ast_loinc = c("1920-8"),    # AST [Enzymatic activity/volume] in Serum or Plasma
+
+  # Alkaline phosphatase
+  alp_cpt   = c("84075"),     # Alkaline phosphatase
+  alp_loinc = c("6768-6"),    # ALP [Enzymatic activity/volume] in Serum or Plasma
+
+  # GGT (gamma-glutamyl transferase)
+  ggt_cpt   = c("82977"),     # Glutamyltransferase, gamma (GGT)
+  ggt_loinc = c("2324-2"),    # GGT [Enzymatic activity/volume] in Serum or Plasma
+
+  # Bilirubin
+  bilirubin_cpt   = c("82247"),             # Bilirubin, total
+  bilirubin_loinc = c(
+    "1975-2",   # Bilirubin, Total [Mass/volume] in Serum or Plasma
+    "1968-7",   # Bilirubin Fraction, Neonatal
+    "1971-1"    # Bili, Indirect, Neonatal
+  ),
+
+  # Platelets (from Labs sheet -- no CPT listed)
+  platelets_loinc = c(
+    "777-3",    # Platelets [#/volume] in Blood by Automated count
+    "86465-2",  # APRI Index (APRI = AST/Platelet Ratio Index, derived value)
+    "80563-0"   # PDF (platelet distribution function, derived value)
+  ),
+
+  # Fecal occult blood test (FOBT)
+  fobt_cpt   = c("82274"),     # Blood, occult, by immunoassay (FOBT, iFOBT)
+  fobt_loinc = c("29771-3"),   # Hemoglobin.gastrointestinal [Presence] in Stool by Immunoassay
+
+  # TSH (duplicated from SURVEILLANCE_CODES for lab query convenience)
+  tsh_loinc = c(
+    "11580-8", # Thyrotropin [Units/volume] in Serum or Plasma
+    "3024-7"   # Thyrotropin [Units/volume] in Serum or Plasma (variant)
+  ),
+
+  # CBC (duplicated from SURVEILLANCE_CODES for lab query convenience)
+  cbc_loinc = c(
+    "58410-2", # CBC panel - Blood by Automated count
+    "57021-8", # CBC W Auto Differential panel - Blood
+    "57782-5", # CBC W Ordered Manual Differential panel - Blood
+    "57022-6", # CBC W Differential panel - Blood (unspecified method)
+    "24364-2"  # CBC panel - Blood (alternate)
+  )
+)
+
+# ------------------------------------------------------------------------------
+# 5.8 SURVIVORSHIP CODES (Phase 10) -- personal history codes per D-09
+# ------------------------------------------------------------------------------
+#
+# Used by 14_survivorship_encounters.R to identify patients with personal history
+# of chemotherapy/radiation (cancer survivor status).
+#
+# ICD-9-CM V codes and ICD-10-CM Z codes for personal history of chemotherapy,
+# radiation, and antineoplastic therapy.
+#
+# Source: RESEARCH.md D-09 verified NUCC/ICD codes
+SURVIVORSHIP_CODES <- list(
+  personal_history_icd9 = c(
+    "V87.41",  # Personal history of antineoplastic chemotherapy
+    "V87.42",  # Personal history of monoclonal drug therapy
+    "V87.43",  # Personal history of estrogen therapy
+    "V87.46",  # Personal history of immunosuppression therapy
+    "V15.3"    # Personal history of irradiation
+  ),
+  personal_history_icd10 = c(
+    "Z92.21",  # Personal history of antineoplastic chemotherapy
+    "Z92.22",  # Personal history of monoclonal drug therapy
+    "Z92.23",  # Personal history of estrogen therapy
+    "Z92.25",  # Personal history of immunosuppression therapy
+    "Z92.3"    # Personal history of irradiation
+  )
+)
+
+# ------------------------------------------------------------------------------
+# 5.9 PROVIDER SPECIALTIES (Phase 10) -- NUCC taxonomy codes per D-10
+# ------------------------------------------------------------------------------
+#
+# Used by 14_survivorship_encounters.R and 13_surveillance.R to identify
+# oncology provider encounters (surveillance visits with oncology providers).
+#
+# NUCC taxonomy codes sourced from RESEARCH.md verified NUCC Health Care Provider
+# Taxonomy Code Set (effective 2025).
+PROVIDER_SPECIALTIES <- list(
+  cancer_oncology = c(
+    "207RH0000X",  # Internal Medicine: Hematology
+    "207RH0003X",  # Internal Medicine: Hematology & Oncology
+    "207RX0202X",  # Internal Medicine: Medical Oncology
+    "2085R0001X",  # Radiology: Radiation Oncology
+    "2086X0206X",  # Surgery: Surgical Oncology
+    "2080P0207X"   # Pediatrics: Pediatric Hematology-Oncology
   )
 )
 
