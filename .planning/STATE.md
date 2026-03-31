@@ -3,9 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-31T16:06:26.768Z"
+last_updated: "2026-03-31T16:11:34.053Z"
 progress:
   total_phases: 10
+  completed_phases: 7
+  total_plans: 22
+  completed_plans: 19
+  percent: 86
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-31T16:06:26.768Z"
+progress:
+  [█████████░] 86%
   completed_phases: 7
   total_plans: 22
   completed_plans: 18
@@ -42,7 +56,7 @@ progress:
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-03-31
-**Project status:** Phase 10 in progress — Plan 03 complete
+**Project status:** Phase 10 in progress — Plan 04 complete
 
 ## Project Reference
 
@@ -53,7 +67,7 @@ progress:
 ## Current Position
 
 Phase: 10
-Plan: 03 (complete)
+Plan: 04 (complete)
 
 ## Performance Metrics
 
@@ -87,6 +101,7 @@ Plan: 03 (complete)
 | Phase 09-expand-treatment-detection-using-docx-specified-tables-and-researched-codes P02 | 3 | 2 tasks | 1 files |
 | Phase 09 P03 | 3 | 2 tasks | 1 files |
 | Phase 10 P01 | 25 | 2 tasks | 2 files |
+| Phase 10 P04 | 5 | 1 tasks | 1 files |
 | Phase 10 P03 | 2 | 1 tasks | 1 files |
 | Phase 10 P02 | 15 | 1 tasks | 1 files |
 
@@ -103,6 +118,8 @@ Plan: 03 (complete)
 | 13-category data quality summary | Before/after counts with fixed/accepted/documented status for all diagnostic findings | Phase 06 | 2026-03-25 |
 | _VALID columns excluded from discrepancy checks | Programmatically added columns should not trigger false positives in column audits | Phase 06 | 2026-03-25 |
 | All surveillance/lab codes from VariableDetails.xlsx directly | Plan directive to transcribe from xlsx, not from RESEARCH.md illustrative examples | Phase 10 | 2026-03-31 |
+| Use matches() regex in select() for surveillance columns | More maintainable than enumerating all ~57 columns explicitly; handles future modality additions without code change | Phase 10 P04 | 2026-03-31 |
+| Reuse post_dx_date_map tibble in Section 6.8 | Defined once in Section 6.7, reused in 6.8 to avoid redundant cohort slice | Phase 10 P04 | 2026-03-31 |
 | sct_hcpcs and expanded sct_icd10pcs added to TREATMENT_CODES | VariableDetails.xlsx Treatment sheet contained SCT HCPCS codes and 30+ ICD-10-PCS codes not in Phase 9 config | Phase 10 | 2026-03-31 |
 | ICD_CODES$hl_icd10 and ICD_CODES$hl_icd9 for Level 2 HL filter (not generic cancer codes) | D-07 requires HL-specific diagnosis check on encounter; actual list names confirmed from 00_config.R | Phase 10 | 2026-03-31 |
 | left_join to PROVIDER table to preserve NULL PROVIDERID rows | Pitfall 2: many ENCOUNTER rows have no PROVIDERID; inner_join would silently discard them | Phase 10 | 2026-03-31 |
@@ -132,9 +149,9 @@ Plan: 03 (complete)
 
 ## Session Continuity
 
-**What we just did:** Completed Phase 10 Plan 03 -- created R/14_survivorship_encounters.R with classify_survivorship_encounters() implementing 4-level encounter hierarchy (ENC_NONACUTE_CARE, ENC_CANCER_RELATED, ENC_CANCER_PROVIDER, ENC_SURVIVORSHIP) per D-05 through D-10. Returns 12-column wide tibble per patient. NULL-safe PROVIDER table guard implemented.
+**What we just did:** Completed Phase 10 Plan 04 -- wired surveillance (13_surveillance.R), survivorship (14_survivorship_encounters.R), and timing derivation (DAYS_DX_TO_CHEMO/RADIATION/SCT) into 04_build_cohort.R via Sections 6.6/6.7/6.8. Section 7 select() extended with matches()/starts_with() for ~70+ new columns. Section 8 summary now reports surveillance modalities, lab results, survivorship levels, and timing medians.
 
-**What's next:** Phase 10 Plan 04 -- regenerate Treatment_Variable_Documentation.docx incorporating all new variables from Plans 01-03.
+**What's next:** Phase 10 Plan 05 -- regenerate Treatment_Variable_Documentation.docx incorporating all new variables from Plans 01-04.
 
 **Context for next session:**
 
