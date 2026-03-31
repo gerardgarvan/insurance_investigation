@@ -83,6 +83,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TDOC-02**: User can run an R script that auto-generates comprehensive variable documentation covering all pipeline variables (treatment, surveillance, labs, survivorship, payer, cohort, timing)
 - [x] **TDOC-03**: User can get documentation output as both .md (source of truth) and .docx (sharing copy), generated programmatically from 00_config.R code lists
 
+### PPTX Clarity & Missing Data Consolidation (Phase 11)
+
+- [ ] **PPTX-01**: User can see a single "Missing" category in all PPTX tables replacing Unknown, Unavailable, Other, and No Information payer labels
+- [ ] **PPTX-02**: User can see column totals on every PPTX table (bold row with header-matching styling)
+- [ ] **PPTX-03**: User can see encounter analysis slides in PPTX: histogram of encounters per person by payor, post-treatment encounters by DX year, total encounters by DX year
+- [ ] **PPTX-04**: User can see age group breakdown (0-17, 18-39, 40-64, 65+) with Yes/No post-treatment encounter analysis in PPTX
+- [ ] **PPTX-05**: User can see unambiguous slide titles, subtitles, and labels throughout PPTX with no vague terminology
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -178,9 +186,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TDOC-02 | Phase 10 | Complete |
 | TDOC-03 | Phase 10 | Complete |
 
+| PPTX-01 | Phase 11 | Pending |
+| PPTX-02 | Phase 11 | Pending |
+| PPTX-03 | Phase 11 | Pending |
+| PPTX-04 | Phase 11 | Pending |
+| PPTX-05 | Phase 11 | Pending |
+
 **Coverage:**
-- v1 requirements: 44 total
-- Mapped to phases: 44
+- v1 requirements: 49 total
+- Mapped to phases: 49
 - Unmapped: 0
 
 ---

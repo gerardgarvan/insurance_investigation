@@ -11,6 +11,7 @@
 - [x] **Phase 2: Payer Harmonization** - Implement 9-category payer mapping with encounter-level dual-eligible detection
 - [x] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
 - [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
+- [ ] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides
 
 ## Phase Details
 
@@ -184,6 +185,12 @@ Plans:
 - [ ] 10-03-PLAN.md -- Survivorship encounter classification 14_survivorship_encounters.R with 4 levels (SVENC-02, SVENC-03)
 - [ ] 10-04-PLAN.md -- Cohort integration: timing derivation + surveillance/survivorship joins in 04_build_cohort.R (SURV-04, SVENC-04, TDOC-01)
 - [ ] 10-05-PLAN.md -- Auto-documentation generation 15_generate_documentation.R with .md and .docx output (TDOC-02, TDOC-03)
+
+### Phase 11: PPTX Clarity & Missing Data Consolidation
+
+**Goal:** Make every PPTX slide unambiguous by collapsing Unknown, Unavailable, Other, and No Information payer categories into a single "Missing" label; add encounter analysis visualizations (histograms by payor, encounters by DX year, age group breakdowns); incorporate column totals, age groups (0-17/18-39/40-64/65+), DX year, and post-treatment encounter Yes/No flag
+**Requirements**: PPTX-01, PPTX-02, PPTX-03, PPTX-04, PPTX-05
+**Depends on:** Phase 10
 
 ---
 
