@@ -20,7 +20,7 @@
 #  12. Radiation - Insurance by Enrollment Coverage
 #  13. SCT - Insurance by Enrollment Coverage
 #  14. Last Treatment = Last Encounter (±30 day window)
-#  15. Unknown Post-Treatment Payer - Encounter Breakdown
+#  15. Missing Post-Treatment Payer - Encounter Breakdown
 #  16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
 #
 # Dependencies:
@@ -51,17 +51,18 @@ message(strrep("=", 60))
 # SECTION 1: CONFIGURATION
 # ==============================================================================
 
-# Payer category display order (matches Python PPTX)
+# Payer category display order -- 6 categories + Missing (consolidates Other/Unavailable/Unknown)
 PAYER_ORDER <- c(
   "Medicare", "Medicaid", "Dual eligible", "Private",
-  "Other government", "Self-pay", "Other", "Unavailable", "Unknown"
+  "Other government", "No payment / Self-pay", "Missing"
 )
 
 # Map R pipeline category names to PPTX display names
+# Collapses Other, Unavailable, Unknown, and NA all into "Missing"
 rename_payer <- function(x) {
   case_when(
-    x == "No payment / Self-pay" ~ "Self-pay",
-    is.na(x) ~ "Unknown",
+    x %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+    is.na(x)                                      ~ "Missing",
     TRUE ~ x
   )
 }
@@ -385,7 +386,10 @@ cohort_full <- cohort_full %>%
     ),
     across(
       c(POST_TREATMENT_PAYER, POST_CHEMO_PAYER, POST_RAD_PAYER, POST_SCT_PAYER),
-      ~ case_when(.x == "No payment / Self-pay" ~ "Self-pay", TRUE ~ .x)
+      ~ case_when(
+          .x %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+          TRUE ~ .x  # preserves NA as NA, preserves all other values
+        )
     )
   )
 
@@ -457,11 +461,11 @@ build_enr_coverage_table <- function(data, payer_col, enr_covers_col, total_n = 
   })
   tbl <- bind_rows(rows)
 
-  # Add N/A row for patients without the payer assignment
+  # Add No Payer Assigned row for patients without the payer assignment
   n_na_c <- sum(is.na(covers_data[[payer_col]]))
   n_na_g <- sum(is.na(gap_data[[payer_col]]))
   tbl <- bind_rows(tbl, tibble(
-    `Payer Category` = "N/A",
+    `Payer Category` = "No Payer Assigned",
     `ENR Covers Window` = format_count_pct(n_na_c, n_covers),
     `ENR Does Not Cover` = format_count_pct(n_na_g, n_gap)
   ))
@@ -498,9 +502,9 @@ build_treatment_enr_table <- function(data, first_payer_col, last_payer_col,
   })
   tbl <- bind_rows(rows)
 
-  # N/A row
+  # No Payer Assigned row
   tbl <- bind_rows(tbl, tibble(
-    `Payer Category` = "N/A",
+    `Payer Category` = "No Payer Assigned",
     !!paste0("First ", first_label, " ENR Covers") :=
       format_count_pct(sum(is.na(fc[[first_payer_col]])), nrow(fc)),
     !!paste0("First ", first_label, " ENR Gap") :=
@@ -949,13 +953,13 @@ pptx <- add_table_slide(pptx,
   glue("Patients whose last treatment was within \u00b130 days of their last encounter (no follow-up)"),
   tbl14)
 
-# ---- Slide 15: Unknown Post-Treatment Payer - Encounter Breakdown ----
-message("  Slide 15: Unknown Post-Treatment Encounter Breakdown")
+# ---- Slide 15: Missing Post-Treatment Payer - Encounter Breakdown ----
+message("  Slide 15: Missing Post-Treatment Encounter Breakdown")
 
-# Patients with Unknown or NA post-treatment payer: how many encounters after last treatment?
+# Patients with Missing or NA post-treatment payer: how many encounters after last treatment?
 unknown_post <- cohort_full %>%
   filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
-  filter(is.na(POST_TREATMENT_PAYER) | POST_TREATMENT_PAYER == "Unknown")
+  filter(is.na(POST_TREATMENT_PAYER) | POST_TREATMENT_PAYER == "Missing")
 
 # Count encounters after last treatment for each patient
 post_tx_encounter_counts <- unknown_post %>%
@@ -994,8 +998,8 @@ tbl15 <- unknown_post_counts %>%
   bind_rows(tibble(`Payer Category` = "Total", `N Patients` = format_count_pct(n_unknown, n_unknown)))
 
 pptx <- add_table_slide(pptx,
-  "Unknown Post-Treatment Payer \u2014 Encounter Breakdown",
-  glue("Patients with Unknown post-treatment payer: how many encounters exist after last treatment?"),
+  "Missing Post-Treatment Payer \u2014 Encounter Breakdown",
+  glue("Patients with Missing post-treatment payer: how many encounters exist after last treatment?"),
   tbl15)
 
 # ---- Slide 16: Insurance After Last Treatment & Dataset Retention ----
@@ -1028,7 +1032,11 @@ tx_retention <- treated_ids %>%
   left_join(post_treatment_payer, by = "ID") %>%
   left_join(payer_at_last_any, by = "ID") %>%
   mutate(
-    POST_TREATMENT_PAYER = rename_payer(POST_TREATMENT_PAYER),
+    # POST_TREATMENT_PAYER: preserve NA so the "No Payer Assigned" row logic works
+    POST_TREATMENT_PAYER = case_when(
+      POST_TREATMENT_PAYER %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      TRUE ~ POST_TREATMENT_PAYER
+    ),
     PAYER_AT_LAST_TX = rename_payer(PAYER_AT_LAST_TX)
   )
 
@@ -1057,11 +1065,11 @@ rows16 <- lapply(PAYER_ORDER, function(cat) {
 })
 tbl16 <- bind_rows(rows16)
 
-# Add N/A row (no payer matched in window)
+# Add No Payer Assigned row (no payer matched in window)
 n_na_s <- sum(is.na(still_data$POST_TREATMENT_PAYER))
 n_na_m <- sum(is.na(missing_data$PAYER_AT_LAST_TX))
 tbl16 <- bind_rows(tbl16, tibble(
-  `Payer Category` = "N/A (No Payer Match)",
+  `Payer Category` = "No Payer Assigned",
   !!still_col := if (n_still_in > 0) format_count_pct(n_na_s, n_still_in) else "0 (0.0%)",
   !!missing_col := if (n_missing > 0) format_count_pct(n_na_m, n_missing) else "0 (0.0%)"
 ))
