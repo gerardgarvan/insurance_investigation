@@ -2,7 +2,7 @@
 # 01_load_pcornet.R -- Load PCORnet CDM CSV tables with explicit column types
 # ==============================================================================
 #
-# Loads 11 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
+# Loads 13 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
 # All date columns are parsed via parse_pcornet_date() (multi-format fallback)
 # All ID columns are loaded as character (prevents leading-zero truncation)
 # Missing files produce a warning and NULL entry (per D-10)
@@ -13,7 +13,8 @@
 #   pcornet$ENROLLMENT  # Access loaded table
 #
 # Requirement: LOAD-01 (load 22 CDM tables with explicit col_types)
-# Phase 1 loads 9 primary tables; Phase 9 adds DISPENSING and MED_ADMIN
+# Phase 1 loads 9 primary tables; Phase 9 adds DISPENSING and MED_ADMIN;
+# Phase 10 adds LAB_RESULT_CM and PROVIDER
 # ==============================================================================
 
 source("R/00_config.R")
@@ -269,6 +270,57 @@ MED_ADMIN_SPEC <- cols(
   SOURCE = col_character()
 )
 
+# ------------------------------------------------------------------------------
+# 12. LAB_RESULT_CM (23 columns)
+# ------------------------------------------------------------------------------
+# Phase 10: Added for surveillance lab value detection
+# LAB_LOINC is the primary matching column against LAB_CODES list
+# RESULT_NUM is the only numeric column; dates are character for parse_pcornet_date()
+# LAB_PX / LAB_PX_TYPE allow CPT-based matching when LOINC is missing
+# Schema from PCORnet CDM v7.0 specification (Jan 2025)
+LAB_RESULT_CM_SPEC <- cols(
+  .default = col_character(),
+  LAB_RESULTID = col_character(),
+  ID = col_character(),
+  ENCOUNTERID = col_character(),
+  LAB_ORDER_DATE = col_character(),     # Parsed by parse_pcornet_date()
+  RESULT_DATE = col_character(),        # Parsed by parse_pcornet_date()
+  SPECIMEN_DATE = col_character(),      # Parsed by parse_pcornet_date()
+  LAB_LOINC = col_character(),          # KEY: LOINC-based lab matching
+  LAB_LOINC_SOURCE = col_character(),
+  LAB_PX = col_character(),             # CPT fallback matching
+  LAB_PX_TYPE = col_character(),
+  RESULT_NUM = col_double(),            # Numeric result value
+  RESULT_UNIT = col_character(),
+  RESULT_QUAL = col_character(),
+  RESULT_MODIFIER = col_character(),
+  SPECIMEN_SOURCE = col_character(),
+  ABN_IND = col_character(),
+  NORM_RANGE_HIGH = col_character(),
+  NORM_RANGE_LOW = col_character(),
+  RAW_LAB_CODE = col_character(),
+  RAW_LAB_NAME = col_character(),
+  RAW_RESULT = col_character(),
+  SOURCE = col_character()
+)
+
+# ------------------------------------------------------------------------------
+# 13. PROVIDER (7 columns)
+# ------------------------------------------------------------------------------
+# Phase 10: Added for oncology provider specialty identification
+# PROVIDER_SPECIALTY_PRIM is the primary matching column against PROVIDER_SPECIALTIES
+# PROVIDERID links to PROVIDERID in ENCOUNTER, DIAGNOSIS, PROCEDURES tables
+# Schema from PCORnet CDM v7.0 specification (Jan 2025)
+PROVIDER_SPEC <- cols(
+  PROVIDERID = col_character(),
+  PROVIDER_NPI = col_character(),
+  PROVIDER_SPECIALTY_PRIM = col_character(),  # KEY: NUCC taxonomy code matching
+  PROVIDER_SPECIALTY_SEC = col_character(),
+  PROVIDER_SEX = col_character(),
+  ACTIVE_IND = col_character(),
+  SOURCE = col_character()
+)
+
 # ==============================================================================
 # TABLE SPECS LOOKUP
 # ==============================================================================
@@ -284,7 +336,9 @@ TABLE_SPECS <- list(
   TUMOR_REGISTRY2 = TUMOR_REGISTRY2_SPEC,
   TUMOR_REGISTRY3 = TUMOR_REGISTRY3_SPEC,
   DISPENSING = DISPENSING_SPEC,          # Phase 9
-  MED_ADMIN = MED_ADMIN_SPEC            # Phase 9
+  MED_ADMIN = MED_ADMIN_SPEC,            # Phase 9
+  LAB_RESULT_CM = LAB_RESULT_CM_SPEC,   # Phase 10: surveillance lab values
+  PROVIDER = PROVIDER_SPEC              # Phase 10: oncology provider specialty
 )
 
 # ==============================================================================
@@ -456,6 +510,31 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
     message(glue("Skipped: {paste(skipped_tables, collapse = ', ')}"))
   }
   message(strrep("=", 60))
+
+  # --------------------------------------------------------------------------
+  # Phase 10 diagnostic logging: PROVIDER specialty values and LAB_LOINC null rate
+  # --------------------------------------------------------------------------
+
+  # PROVIDER: log distinct PROVIDER_SPECIALTY_PRIM values (sample of 20)
+  # Used to validate NUCC taxonomy codes align with actual data before downstream matching
+  if (!is.null(pcornet$PROVIDER)) {
+    message("\n[PROVIDER] Distinct PROVIDER_SPECIALTY_PRIM values (sample up to 20):")
+    pcornet$PROVIDER %>%
+      dplyr::distinct(PROVIDER_SPECIALTY_PRIM) %>%
+      dplyr::slice_head(n = 20) %>%
+      print()
+  }
+
+  # LAB_RESULT_CM: log row count and LAB_LOINC null rate
+  # High null rate indicates CPT fallback (LAB_PX) will be needed for lab matching
+  if (!is.null(pcornet$LAB_RESULT_CM)) {
+    n_total <- nrow(pcornet$LAB_RESULT_CM)
+    n_na_loinc <- sum(is.na(pcornet$LAB_RESULT_CM$LAB_LOINC))
+    message(glue(
+      "\n[LAB_RESULT_CM] {format(n_total, big.mark=',')} rows loaded, ",
+      "{n_na_loinc} ({round(100 * n_na_loinc / n_total, 1)}%) with NA LAB_LOINC"
+    ))
+  }
 }
 
 # ==============================================================================

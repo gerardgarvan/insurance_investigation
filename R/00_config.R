@@ -64,7 +64,9 @@ PCORNET_TABLES <- c(
   "TUMOR_REGISTRY2",
   "TUMOR_REGISTRY3",
   "DISPENSING",       # Phase 9: expanded treatment detection
-  "MED_ADMIN"         # Phase 9: expanded treatment detection
+  "MED_ADMIN",        # Phase 9: expanded treatment detection
+  "LAB_RESULT_CM",    # Phase 10: surveillance lab values (LOINC-based matching)
+  "PROVIDER"          # Phase 10: oncology provider specialty matching
 )
 
 # Build full paths as named character vector
