@@ -226,6 +226,48 @@ cohort <- cohort %>%
   left_join(sct_payer, by = "ID")
 
 # ==============================================================================
+# SECTION 6.6: TIMING DERIVATION (D-12)
+# ==============================================================================
+
+message("\n--- Timing Derivation ---")
+
+cohort <- cohort %>%
+  mutate(
+    DAYS_DX_TO_CHEMO     = as.integer(FIRST_CHEMO_DATE - first_hl_dx_date),
+    DAYS_DX_TO_RADIATION = as.integer(FIRST_RADIATION_DATE - first_hl_dx_date),
+    DAYS_DX_TO_SCT       = as.integer(FIRST_SCT_DATE - first_hl_dx_date)
+  )
+
+message(glue("  DAYS_DX_TO_CHEMO: median {median(cohort$DAYS_DX_TO_CHEMO, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_CHEMO))})"))
+message(glue("  DAYS_DX_TO_RADIATION: median {median(cohort$DAYS_DX_TO_RADIATION, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_RADIATION))})"))
+message(glue("  DAYS_DX_TO_SCT: median {median(cohort$DAYS_DX_TO_SCT, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_SCT))})"))
+
+# ==============================================================================
+# SECTION 6.7: SURVEILLANCE MODALITY FLAGS (D-01, D-02, D-03, D-04)
+# ==============================================================================
+
+message("\n--- Surveillance Modality Detection ---")
+source("R/13_surveillance.R")
+
+post_dx_date_map <- cohort %>% select(ID, first_hl_dx_date)
+surveillance_flags <- assemble_surveillance_flags(post_dx_date_map)
+
+cohort <- cohort %>%
+  left_join(surveillance_flags, by = "ID")
+
+# ==============================================================================
+# SECTION 6.8: SURVIVORSHIP ENCOUNTER CLASSIFICATION (D-05 through D-10)
+# ==============================================================================
+
+message("\n--- Survivorship Encounter Classification ---")
+source("R/14_survivorship_encounters.R")
+
+survivorship_flags <- classify_survivorship_encounters(post_dx_date_map)
+
+cohort <- cohort %>%
+  left_join(survivorship_flags, by = "ID")
+
+# ==============================================================================
 # SECTION 7: FINAL COHORT ASSEMBLY (D-09 column order)
 # ==============================================================================
 
@@ -258,7 +300,17 @@ hl_cohort <- cohort %>%
     PAYER_AT_CHEMO,
     PAYER_AT_RADIATION,
     PAYER_AT_SCT,
-    enrollment_duration_days
+    enrollment_duration_days,
+    # Timing derivation (D-12)
+    DAYS_DX_TO_CHEMO,
+    DAYS_DX_TO_RADIATION,
+    DAYS_DX_TO_SCT,
+    # Surveillance modality flags (D-01 through D-04)
+    matches("^(HAD|FIRST|N)_(MAMMOGRAM|BREAST_MRI|ECHO|STRESS_TEST|ECG|MUGA|PFT|TSH|CBC|CRP|ALT|AST|ALP|GGT|BILIRUBIN|PLATELETS|FOBT)"),
+    # Survivorship encounter flags (D-05 through D-10)
+    starts_with("HAD_ENC_"),
+    starts_with("N_ENC_"),
+    starts_with("FIRST_ENC_")
   )
 
 # ==============================================================================
@@ -301,6 +353,37 @@ site_dist <- hl_cohort %>%
 for (i in seq_len(nrow(site_dist))) {
   message(glue("  {site_dist$SOURCE[i]}: {site_dist$n[i]}"))
 }
+
+message("\n--- Surveillance Modalities ---")
+surv_modalities <- c("MAMMOGRAM", "BREAST_MRI", "ECHO", "STRESS_TEST", "ECG", "MUGA", "PFT", "TSH", "CBC")
+for (mod in surv_modalities) {
+  had_col <- paste0("HAD_", mod)
+  if (had_col %in% names(hl_cohort)) {
+    n <- sum(hl_cohort[[had_col]] == 1, na.rm = TRUE)
+    message(glue("  {mod}: {n} patients ({round(100*n/nrow(hl_cohort), 1)}%)"))
+  }
+}
+
+message("\n--- Lab Results ---")
+lab_types <- c("CRP", "ALT", "AST", "ALP", "GGT", "BILIRUBIN", "PLATELETS", "FOBT")
+for (lab in lab_types) {
+  had_col <- paste0("HAD_", lab)
+  if (had_col %in% names(hl_cohort)) {
+    n <- sum(hl_cohort[[had_col]] == 1, na.rm = TRUE)
+    message(glue("  {lab}: {n} patients ({round(100*n/nrow(hl_cohort), 1)}%)"))
+  }
+}
+
+message("\n--- Survivorship Encounters ---")
+message(glue("  Non-acute care (L1): {sum(hl_cohort$HAD_ENC_NONACUTE == 1, na.rm = TRUE)} patients"))
+message(glue("  Cancer-related (L2): {sum(hl_cohort$HAD_ENC_CANCER_RELATED == 1, na.rm = TRUE)} patients"))
+message(glue("  Cancer provider (L3): {sum(hl_cohort$HAD_ENC_CANCER_PROVIDER == 1, na.rm = TRUE)} patients"))
+message(glue("  Survivorship (L4): {sum(hl_cohort$HAD_ENC_SURVIVORSHIP == 1, na.rm = TRUE)} patients"))
+
+message("\n--- Timing ---")
+message(glue("  DAYS_DX_TO_CHEMO: median {median(hl_cohort$DAYS_DX_TO_CHEMO, na.rm = TRUE)} days"))
+message(glue("  DAYS_DX_TO_RADIATION: median {median(hl_cohort$DAYS_DX_TO_RADIATION, na.rm = TRUE)} days"))
+message(glue("  DAYS_DX_TO_SCT: median {median(hl_cohort$DAYS_DX_TO_SCT, na.rm = TRUE)} days"))
 
 # ==============================================================================
 # SECTION 9: ATTRITION SUMMARY (CHRT-02)
