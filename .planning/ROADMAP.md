@@ -108,11 +108,12 @@ Plans:
 | 6. Use Debug Output to Rectify Issues | 3/3 | Complete | 2026-03-25 |
 | 7. Dx Gap Analysis for Neither Patients | 0/1 | Planned |  |
 | 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
-| 9. Expand Treatment Detection | 0/3 | Planned |  |
+| 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
+| 10. Surveillance, Survivorship & Documentation | 0/5 | Planned |  |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 9` to expand treatment detection with docx-specified sources
+1. Execute `/gsd:execute-phase 10` to add surveillance, survivorship encounters, timing derivation, and auto-documentation
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -170,6 +171,20 @@ Plans:
 - [x] 09-02-PLAN.md -- Expand has_chemo/radiation/sct() with DIAGNOSIS, DRG, DISPENSING, MED_ADMIN, revenue sources (TXEXP-01, TXEXP-02, TXEXP-03, TXEXP-04, TXEXP-05)
 - [x] 09-03-PLAN.md -- Expand compute_payer_at_chemo/radiation/sct() date extraction with new sources (TXEXP-06)
 
+### Phase 10: Incorporate VariableDetails.xlsx surveillance strategy and Treatment_Variable_Documentation.docx variables into pipeline, then regenerate Treatment_Variable_Documentation.docx
+
+**Goal:** Add post-diagnosis surveillance modality detection (9 modalities + labs), survivorship encounter classification (4 levels), timing derivation variables (DAYS_DX_TO_*), and auto-generated comprehensive variable documentation covering the full pipeline output
+**Requirements**: SURV-01, SURV-02, SURV-03, SURV-04, SVENC-01, SVENC-02, SVENC-03, SVENC-04, TDOC-01, TDOC-02, TDOC-03
+**Depends on:** Phase 9
+**Plans:** 5 plans
+
+Plans:
+- [ ] 10-01-PLAN.md -- Config code lists from VariableDetails.xlsx + LAB_RESULT_CM/PROVIDER table loading (SURV-01, SVENC-01)
+- [ ] 10-02-PLAN.md -- Surveillance detection script 13_surveillance.R with 9 modalities + labs (SURV-02, SURV-03)
+- [ ] 10-03-PLAN.md -- Survivorship encounter classification 14_survivorship_encounters.R with 4 levels (SVENC-02, SVENC-03)
+- [ ] 10-04-PLAN.md -- Cohort integration: timing derivation + surveillance/survivorship joins in 04_build_cohort.R (SURV-04, SVENC-04, TDOC-01)
+- [ ] 10-05-PLAN.md -- Auto-documentation generation 15_generate_documentation.R with .md and .docx output (TDOC-02, TDOC-03)
+
 ---
 
-*Last updated: 2026-03-26*
+*Last updated: 2026-03-31*
