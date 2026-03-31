@@ -72,16 +72,16 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SURV-01**: User can configure surveillance modality CPT/HCPCS/LOINC code lists and lab LOINC codes in 00_config.R, transcribed from VariableDetails.xlsx
 - [x] **SURV-02**: User can detect post-diagnosis surveillance modalities (Mammogram, Breast MRI, Echocardiogram, Stress test, ECG, MUGA, PFT, TSH, CBC) via PROCEDURES and LAB_RESULT_CM tables
 - [x] **SURV-03**: User can detect post-diagnosis lab results (CRP, ALT, AST, ALP, GGT, bilirubin, platelets, FOBT) via LAB_RESULT_CM LOINC matching
-- [ ] **SURV-04**: User can see surveillance and lab columns (HAD_/FIRST_/N_ per modality) in hl_cohort.csv output
+- [x] **SURV-04**: User can see surveillance and lab columns (HAD_/FIRST_/N_ per modality) in hl_cohort.csv output
 
 - [x] **SVENC-01**: User can configure survivorship ICD codes and cancer provider NUCC taxonomy codes in 00_config.R, and load PROVIDER + LAB_RESULT_CM tables
 - [x] **SVENC-02**: User can classify post-diagnosis encounters into 4 survivorship levels (non-acute, cancer-related, cancer-provider, survivorship) per VariableDetails.xlsx definitions
 - [x] **SVENC-03**: User can see per-patient survivorship encounter flags (HAD_/N_/FIRST_ per level) using ENCOUNTER, DIAGNOSIS, and PROVIDER table joins
-- [ ] **SVENC-04**: User can see survivorship encounter columns in hl_cohort.csv output
+- [x] **SVENC-04**: User can see survivorship encounter columns in hl_cohort.csv output
 
-- [ ] **TDOC-01**: User can see timing derivation columns (DAYS_DX_TO_CHEMO, DAYS_DX_TO_RADIATION, DAYS_DX_TO_SCT) in hl_cohort.csv output
-- [ ] **TDOC-02**: User can run an R script that auto-generates comprehensive variable documentation covering all pipeline variables (treatment, surveillance, labs, survivorship, payer, cohort, timing)
-- [ ] **TDOC-03**: User can get documentation output as both .md (source of truth) and .docx (sharing copy), generated programmatically from 00_config.R code lists
+- [x] **TDOC-01**: User can see timing derivation columns (DAYS_DX_TO_CHEMO, DAYS_DX_TO_RADIATION, DAYS_DX_TO_SCT) in hl_cohort.csv output
+- [x] **TDOC-02**: User can run an R script that auto-generates comprehensive variable documentation covering all pipeline variables (treatment, surveillance, labs, survivorship, payer, cohort, timing)
+- [x] **TDOC-03**: User can get documentation output as both .md (source of truth) and .docx (sharing copy), generated programmatically from 00_config.R code lists
 
 ## v2 Requirements
 
@@ -169,14 +169,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SURV-01 | Phase 10 | Complete |
 | SURV-02 | Phase 10 | Complete |
 | SURV-03 | Phase 10 | Complete |
-| SURV-04 | Phase 10 | Pending |
+| SURV-04 | Phase 10 | Complete |
 | SVENC-01 | Phase 10 | Complete |
 | SVENC-02 | Phase 10 | Complete |
 | SVENC-03 | Phase 10 | Complete |
-| SVENC-04 | Phase 10 | Pending |
-| TDOC-01 | Phase 10 | Pending |
-| TDOC-02 | Phase 10 | Pending |
-| TDOC-03 | Phase 10 | Pending |
+| SVENC-04 | Phase 10 | Complete |
+| TDOC-01 | Phase 10 | Complete |
+| TDOC-02 | Phase 10 | Complete |
+| TDOC-03 | Phase 10 | Complete |
 
 **Coverage:**
 - v1 requirements: 44 total
