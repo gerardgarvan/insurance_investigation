@@ -3,9 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-31T17:49:31.212Z"
+progress:
+  total_phases: 11
+  completed_phases: 8
+  total_plans: 24
+  completed_plans: 21
+  percent: 88
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-31T16:17:22.892Z"
 progress:
-  total_phases: 10
+  [█████████░] 88%
   completed_phases: 8
   total_plans: 22
   completed_plans: 20
@@ -70,18 +84,18 @@ progress:
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-03-31
-**Project status:** Phase 10 complete — Plan 05 complete (all 5 plans done)
+**Project status:** Phase 11 in progress — Plan 01 complete
 
 ## Project Reference
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 10 — incorporate-variabledetails-xlsx-surveillance-strategy-and-treatment-variable-documentation-docx-variables-into-pipeline
+**Current focus:** Phase 11 — pptx-clarity-and-missing-data-consolidation
 
 ## Current Position
 
-Phase: 10
-Plan: 05 (complete -- all plans in phase 10 done)
+Phase: 11
+Plan: 01 (complete -- 11-01 done)
 
 ## Performance Metrics
 
@@ -119,6 +133,7 @@ Plan: 05 (complete -- all plans in phase 10 done)
 | Phase 10 P03 | 2 | 1 tasks | 1 files |
 | Phase 10 P02 | 15 | 1 tasks | 1 files |
 | Phase 10 P05 | 2 | 1 tasks | 1 files |
+| Phase 11 P01 | 15 | 1 tasks | 1 files |
 
 ### Key Decisions
 
@@ -141,6 +156,9 @@ Plan: 05 (complete -- all plans in phase 10 done)
 | DX_TYPE filter on personal history codes prevents ICD-9/ICD-10 cross-era false matches | D-09 / Pitfall 4: V87.4x codes look numeric; without DX_TYPE check could match ICD-10 era data incorrectly | Phase 10 | 2026-03-31 |
 | YAML front matter in .md enables rmarkdown::render() to produce .docx without separate template | Single source file approach; .md with front matter is both readable and renderable | Phase 10 P05 | 2026-03-31 |
 | tryCatch around rmarkdown::render ensures .md always written even if pandoc unavailable | .md is the source of truth; .docx is a sharing copy -- failure to render .docx should not block .md output | Phase 10 P05 | 2026-03-31 |
+| PAYER_ORDER consolidated from 9 to 7: 6 clinical categories + Missing | Collapses Other/Unavailable/Unknown into single Missing category for unambiguous clinical presentation | Phase 11 P01 | 2026-03-31 |
+| POST_TREATMENT columns use asymmetric case_when (preserve NA as NA) | rename_payer() maps NA to Missing which would destroy the N/A (No Follow-up) row logic on post-treatment slides | Phase 11 P01 | 2026-03-31 |
+| Bare N/A payer labels replaced with No Payer Assigned | Consistent clinical language across all three table builder functions and Slide 16 inline table | Phase 11 P01 | 2026-03-31 |
 
 ### Current Todos
 
@@ -166,17 +184,16 @@ Plan: 05 (complete -- all plans in phase 10 done)
 
 ## Session Continuity
 
-**What we just did:** Completed Phase 10 Plan 05 -- created 15_generate_documentation.R, an auto-documentation generator that reads all code lists from 00_config.R programmatically and produces Treatment_Variable_Documentation.md and .docx. Covers all 11 sections (cohort, demographics, payer, treatment, timing, surveillance, labs, survivorship, pending). Phase 10 is now complete (all 5 plans done).
+**What we just did:** Completed Phase 11 Plan 01 -- updated R/11_generate_pptx.R to consolidate 9 payer categories into 6+Missing. PAYER_ORDER now has 7 entries; rename_payer() maps Other/Unavailable/Unknown/NA to Missing; POST_TREATMENT columns use asymmetric pattern to preserve NA for N/A (No Follow-up) rows; Slide 15 updated from Unknown to Missing; bare N/A payer labels replaced with No Payer Assigned throughout.
 
-**What's next:** All Phase 10 plans complete. Project milestone v1.0 pipeline is functionally complete.
+**What's next:** Phase 11 Plan 01 complete. Continue with remaining Phase 11 plans if any, or mark phase done.
 
 **Context for next session:**
 
-- 00_config.R: SURVEILLANCE_CODES, LAB_CODES, SURVIVORSHIP_CODES, PROVIDER_SPECIALTIES all defined and ready
-- 01_load_pcornet.R: LAB_RESULT_CM and PROVIDER tables will load when CSVs are available; graceful NULL if missing
-- TREATMENT_CODES now includes sct_hcpcs (S2140/S2142/S2150) and expanded sct_icd10pcs (50+ codes) plus CAR T-cell prefixes
-- Downstream scripts 13_surveillance.R and 14_survivorship_encounters.R can now reference these config lists directly
-- PROVIDER_SPECIALTY_PRIM diagnostic logging will validate NUCC taxonomy codes against actual data on first run
+- R/11_generate_pptx.R: PAYER_ORDER has 7 entries (6 categories + Missing); all payer tables show Missing instead of Unknown/Unavailable/Other
+- N/A (No Follow-up) rows on Slides 3/5/7/9 are preserved (POST_TREATMENT NA preserved as NA)
+- No Payer Assigned rows appear in enrollment coverage tables (Slides 10-13) and Slide 16
+- Slide 15 now titled "Missing Post-Treatment Payer" and filters POST_TREATMENT_PAYER == "Missing"
 
 ---
 
