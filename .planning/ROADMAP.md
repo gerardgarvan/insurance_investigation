@@ -11,7 +11,7 @@
 - [x] **Phase 2: Payer Harmonization** - Implement 9-category payer mapping with encounter-level dual-eligible detection
 - [x] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
 - [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
-- [ ] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides
+- [x] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides (completed 2026-03-31)
 
 ## Phase Details
 
@@ -111,7 +111,7 @@ Plans:
 | 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
 | 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
-| 11. PPTX Clarity & Missing Data | 1/2 | In Progress|  |
+| 11. PPTX Clarity & Missing Data | 2/2 | Complete   | 2026-03-31 |
 
 ## Next Actions
 
@@ -192,7 +192,7 @@ Plans:
 **Goal:** Make every PPTX slide unambiguous by collapsing Unknown, Unavailable, Other, and No Information payer categories into a single "Missing" label; add encounter analysis visualizations (histograms by payor, encounters by DX year, age group breakdowns); incorporate column totals, age groups (0-17/18-39/40-64/65+), DX year, and post-treatment encounter Yes/No flag
 **Requirements**: PPTX-01, PPTX-02, PPTX-03, PPTX-04, PPTX-05
 **Depends on:** Phase 10
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 11-01-PLAN.md -- Consolidate 9 payer categories to 6+Missing, fix all labels for clarity (PPTX-01, PPTX-02, PPTX-05)

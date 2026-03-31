@@ -3,9 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-31T17:49:31.212Z"
+last_updated: "2026-03-31T17:54:05.731Z"
 progress:
   total_phases: 11
+  completed_phases: 9
+  total_plans: 24
+  completed_plans: 22
+  percent: 92
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-03-31T17:49:31.212Z"
+progress:
+  [█████████░] 92%
   completed_phases: 8
   total_plans: 24
   completed_plans: 21
@@ -84,7 +98,7 @@ progress:
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-03-31
-**Project status:** Phase 11 in progress — Plan 01 complete
+**Project status:** Phase 11 in progress — Plans 01-02 complete
 
 ## Project Reference
 
@@ -95,7 +109,7 @@ progress:
 ## Current Position
 
 Phase: 11
-Plan: 01 (complete -- 11-01 done)
+Plan: 02 (complete -- 11-02 done)
 
 ## Performance Metrics
 
@@ -134,6 +148,7 @@ Plan: 01 (complete -- 11-01 done)
 | Phase 10 P02 | 15 | 1 tasks | 1 files |
 | Phase 10 P05 | 2 | 1 tasks | 1 files |
 | Phase 11 P01 | 15 | 1 tasks | 1 files |
+| Phase 11 P02 | 10 | 1 tasks | 1 files |
 
 ### Key Decisions
 
@@ -159,6 +174,8 @@ Plan: 01 (complete -- 11-01 done)
 | PAYER_ORDER consolidated from 9 to 7: 6 clinical categories + Missing | Collapses Other/Unavailable/Unknown into single Missing category for unambiguous clinical presentation | Phase 11 P01 | 2026-03-31 |
 | POST_TREATMENT columns use asymmetric case_when (preserve NA as NA) | rename_payer() maps NA to Missing which would destroy the N/A (No Follow-up) row logic on post-treatment slides | Phase 11 P01 | 2026-03-31 |
 | Bare N/A payer labels replaced with No Payer Assigned | Consistent clinical language across all three table builder functions and Slide 16 inline table | Phase 11 P01 | 2026-03-31 |
+| add_image_slide() guards with file.exists() -- missing PNGs skip with message, not error | Script must be runnable without 16_encounter_analysis.R PNGs present; graceful degradation to 16 slides | Phase 11 P02 | 2026-03-31 |
+| Slide 17 uses wider image (img_width=9, img_height=5.5) | Histogram PNG is 12x8 inches; wider embedding prevents clipping on 10-inch slide | Phase 11 P02 | 2026-03-31 |
 
 ### Current Todos
 
@@ -184,16 +201,18 @@ Plan: 01 (complete -- 11-01 done)
 
 ## Session Continuity
 
-**What we just did:** Completed Phase 11 Plan 01 -- updated R/11_generate_pptx.R to consolidate 9 payer categories into 6+Missing. PAYER_ORDER now has 7 entries; rename_payer() maps Other/Unavailable/Unknown/NA to Missing; POST_TREATMENT columns use asymmetric pattern to preserve NA for N/A (No Follow-up) rows; Slide 15 updated from Unknown to Missing; bare N/A payer labels replaced with No Payer Assigned throughout.
+**What we just did:** Completed Phase 11 Plan 02 -- added add_image_slide() helper and Slides 17-20 to R/11_generate_pptx.R. Slides embed PNG figures from 16_encounter_analysis.R via external_img(); file.exists() guard ensures graceful skip with message when PNGs absent. Slide count updated to 20 (16 tables + 4 encounter analysis).
 
-**What's next:** Phase 11 Plan 01 complete. Continue with remaining Phase 11 plans if any, or mark phase done.
+**What's next:** Phase 11 Plans 01-02 complete. Phase 11 may be complete if no additional plans remain.
 
 **Context for next session:**
 
-- R/11_generate_pptx.R: PAYER_ORDER has 7 entries (6 categories + Missing); all payer tables show Missing instead of Unknown/Unavailable/Other
-- N/A (No Follow-up) rows on Slides 3/5/7/9 are preserved (POST_TREATMENT NA preserved as NA)
-- No Payer Assigned rows appear in enrollment coverage tables (Slides 10-13) and Slide 16
-- Slide 15 now titled "Missing Post-Treatment Payer" and filters POST_TREATMENT_PAYER == "Missing"
+- R/11_generate_pptx.R: Now produces 20 slides when encounter PNGs exist; 16 slides otherwise (graceful degradation)
+- add_image_slide() helper at line 636: file.exists() guard + title/subtitle/external_img() on Blank layout
+- Slides 17-20: encounters_per_person_by_payor.png, post_tx_encounters_by_dx_year.png, total_encounters_by_dx_year.png, post_tx_by_age_group.png
+- Run 16_encounter_analysis.R before 11_generate_pptx.R to get all 20 slides
+- R/11_generate_pptx.R: PAYER_ORDER has 7 entries (6 categories + Missing); all payer tables show Missing instead of Unknown/Unavailable/Other (from Plan 01)
+- N/A (No Follow-up) rows on Slides 3/5/7/9 are preserved (POST_TREATMENT NA preserved as NA) (from Plan 01)
 
 ---
 
