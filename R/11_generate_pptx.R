@@ -409,7 +409,15 @@ build_payer_table <- function(data, col_specs, total_n = NULL) {
     }
     as_tibble(row)
   })
-  bind_rows(rows)
+  tbl <- bind_rows(rows)
+
+  # Add totals row
+  total_row <- list(`Payer Category` = "Total")
+  for (spec in col_specs) {
+    n_total <- sum(!is.na(data[[spec$col]]))
+    total_row[[spec$label]] <- format_count_pct(n_total, total_n)
+  }
+  bind_rows(tbl, as_tibble(total_row))
 }
 
 # Build a payer table with an extra "N/A" row for patients without data
@@ -424,7 +432,9 @@ build_payer_table_with_na <- function(data, col_specs, na_label = "N/A (No Treat
     n_na <- sum(is.na(data[[spec$col]]))
     na_row[[spec$label]] <- format_count_pct(n_na, total_n)
   }
-  bind_rows(tbl, as_tibble(na_row))
+  # tbl already has Total row from build_payer_table; insert N/A before it
+  n_rows <- nrow(tbl)
+  bind_rows(tbl[1:(n_rows - 1), ], as_tibble(na_row), tbl[n_rows, ])
 }
 
 # Build enrollment coverage split table
@@ -450,10 +460,17 @@ build_enr_coverage_table <- function(data, payer_col, enr_covers_col, total_n = 
   # Add N/A row for patients without the payer assignment
   n_na_c <- sum(is.na(covers_data[[payer_col]]))
   n_na_g <- sum(is.na(gap_data[[payer_col]]))
-  bind_rows(tbl, tibble(
+  tbl <- bind_rows(tbl, tibble(
     `Payer Category` = "N/A",
     `ENR Covers Window` = format_count_pct(n_na_c, n_covers),
     `ENR Does Not Cover` = format_count_pct(n_na_g, n_gap)
+  ))
+
+  # Add totals row
+  bind_rows(tbl, tibble(
+    `Payer Category` = "Total",
+    `ENR Covers Window` = format_count_pct(n_covers, n_covers),
+    `ENR Does Not Cover` = format_count_pct(n_gap, n_gap)
   ))
 }
 
@@ -482,7 +499,7 @@ build_treatment_enr_table <- function(data, first_payer_col, last_payer_col,
   tbl <- bind_rows(rows)
 
   # N/A row
-  bind_rows(tbl, tibble(
+  tbl <- bind_rows(tbl, tibble(
     `Payer Category` = "N/A",
     !!paste0("First ", first_label, " ENR Covers") :=
       format_count_pct(sum(is.na(fc[[first_payer_col]])), nrow(fc)),
@@ -493,13 +510,26 @@ build_treatment_enr_table <- function(data, first_payer_col, last_payer_col,
     !!paste0("Last ", last_label, " ENR Gap") :=
       format_count_pct(sum(is.na(lg[[last_payer_col]])), nrow(lg))
   ))
+
+  # Totals row
+  bind_rows(tbl, tibble(
+    `Payer Category` = "Total",
+    !!paste0("First ", first_label, " ENR Covers") :=
+      format_count_pct(nrow(fc), nrow(fc)),
+    !!paste0("First ", first_label, " ENR Gap") :=
+      format_count_pct(nrow(fg), nrow(fg)),
+    !!paste0("Last ", last_label, " ENR Covers") :=
+      format_count_pct(nrow(lc), nrow(lc)),
+    !!paste0("Last ", last_label, " ENR Gap") :=
+      format_count_pct(nrow(lg), nrow(lg))
+  ))
 }
 
 # ==============================================================================
 # SECTION 4: FLEXTABLE STYLING
 # ==============================================================================
 
-style_table <- function(ft) {
+style_table <- function(ft, total_row = integer(0)) {
   n_rows <- nrow_part(ft, "body")
   odd_rows <- seq(1, n_rows, by = 2)
   even_rows <- seq(2, n_rows, by = 2)
@@ -523,6 +553,14 @@ style_table <- function(ft) {
   # Alternating row colors (light blue / light orange, matching Python)
   if (length(odd_rows) > 0) ft <- ft %>% bg(i = odd_rows, bg = LIGHT_BLUE, part = "body")
   if (length(even_rows) > 0) ft <- ft %>% bg(i = even_rows, bg = LIGHT_ORANGE, part = "body")
+
+  # Bold the Total row with distinct styling
+  if (length(total_row) > 0 && total_row[1] > 0) {
+    ft <- ft %>%
+      bold(i = total_row[1], part = "body") %>%
+      bg(i = total_row[1], bg = UF_BLUE, part = "body") %>%
+      color(i = total_row[1], color = "white", part = "body")
+  }
 
   ft %>% autofit()
 }
@@ -548,7 +586,9 @@ tryCatch({
 
 # Helper to add a slide with title, subtitle, and table
 add_table_slide <- function(pptx, title, subtitle, tbl_data) {
-  ft <- flextable(tbl_data) %>% style_table()
+  # Find Total row index (if any) for bold styling
+  total_row_idx <- which(tbl_data[[1]] == "Total")
+  ft <- flextable(tbl_data) %>% style_table(total_row = total_row_idx)
 
   # Set column widths (Payer Category = 2.2", rest evenly distributed)
   n_cols <- ncol(tbl_data)
@@ -950,7 +990,8 @@ tbl15 <- unknown_post_counts %>%
   ) %>%
   count(bin, name = "n") %>%
   mutate(`N Patients` = format_count_pct(n, n_unknown)) %>%
-  select(`Payer Category` = bin, `N Patients`)
+  select(`Payer Category` = bin, `N Patients`) %>%
+  bind_rows(tibble(`Payer Category` = "Total", `N Patients` = format_count_pct(n_unknown, n_unknown)))
 
 pptx <- add_table_slide(pptx,
   "Unknown Post-Treatment Payer \u2014 Encounter Breakdown",
@@ -1023,6 +1064,13 @@ tbl16 <- bind_rows(tbl16, tibble(
   `Payer Category` = "N/A (No Payer Match)",
   !!still_col := if (n_still_in > 0) format_count_pct(n_na_s, n_still_in) else "0 (0.0%)",
   !!missing_col := if (n_missing > 0) format_count_pct(n_na_m, n_missing) else "0 (0.0%)"
+))
+
+# Add totals row for treated patients
+tbl16 <- bind_rows(tbl16, tibble(
+  `Payer Category` = "Total",
+  !!still_col := if (n_still_in > 0) format_count_pct(n_still_in, n_still_in) else "0 (0.0%)",
+  !!missing_col := if (n_missing > 0) format_count_pct(n_missing, n_missing) else "0 (0.0%)"
 ))
 
 # Add No Treatment row to show completeness

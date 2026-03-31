@@ -196,10 +196,12 @@ if (length(tr_tables) > 0) {
   tr_dates <- data.frame(ID = character(), first_dx_date_tr = as.Date(character()), stringsAsFactors = FALSE)
 }
 
-# Combine and take earliest
+# Combine: prefer tumor registry date; fall back to diagnosis table if no TR data
 first_dx <- dx_dates %>%
   full_join(tr_dates, by = "ID") %>%
-  mutate(first_hl_dx_date = pmin(first_dx_date_diagnosis, first_dx_date_tr, na.rm = TRUE)) %>%
+  mutate(first_hl_dx_date = if_else(!is.na(first_dx_date_tr),
+                                     first_dx_date_tr,
+                                     first_dx_date_diagnosis)) %>%
   select(ID, first_hl_dx_date)
 
 message(glue("\nFirst HL diagnosis:"))

@@ -243,6 +243,33 @@ message(glue("  DAYS_DX_TO_RADIATION: median {median(cohort$DAYS_DX_TO_RADIATION
 message(glue("  DAYS_DX_TO_SCT: median {median(cohort$DAYS_DX_TO_SCT, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_SCT))})"))
 
 # ==============================================================================
+# SECTION 6.65: AGE AT DX, AGE GROUP, DX YEAR, POST-TX ENCOUNTER FLAG
+# ==============================================================================
+
+message("\n--- Age & DX Year Derivation ---")
+
+cohort <- cohort %>%
+  mutate(
+    age_at_dx = as.integer(
+      time_length(interval(BIRTH_DATE, first_hl_dx_date), "years")
+    ),
+    AGE_GROUP = case_when(
+      age_at_dx >= 0  & age_at_dx <= 17 ~ "0-17",
+      age_at_dx >= 18 & age_at_dx <= 39 ~ "18-39",
+      age_at_dx >= 40 & age_at_dx <= 64 ~ "40-64",
+      age_at_dx >= 65                    ~ "65+",
+      TRUE                               ~ NA_character_
+    ),
+    DX_YEAR = year(first_hl_dx_date)
+  )
+
+message(glue("  Age at diagnosis: median {median(cohort$age_at_dx, na.rm = TRUE)}, range [{min(cohort$age_at_dx, na.rm = TRUE)}, {max(cohort$age_at_dx, na.rm = TRUE)}]"))
+age_grp_dist <- cohort %>% filter(!is.na(AGE_GROUP)) %>% count(AGE_GROUP)
+for (i in seq_len(nrow(age_grp_dist))) {
+  message(glue("  {age_grp_dist$AGE_GROUP[i]}: {age_grp_dist$n[i]}"))
+}
+
+# ==============================================================================
 # SECTION 6.7: SURVEILLANCE MODALITY FLAGS (D-01, D-02, D-03, D-04)
 # ==============================================================================
 
@@ -267,6 +294,16 @@ survivorship_flags <- classify_survivorship_encounters(post_dx_date_map)
 cohort <- cohort %>%
   left_join(survivorship_flags, by = "ID")
 
+# Post-treatment encounter flag: Yes/No based on any non-acute post-dx encounter
+cohort <- cohort %>%
+  mutate(
+    HAS_POST_TX_ENCOUNTERS = if_else(
+      coalesce(HAD_ENC_NONACUTE_CARE, 0L) == 1L, "Yes", "No"
+    )
+  )
+
+message(glue("\n  Post-treatment encounters: {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'Yes', na.rm = TRUE)} Yes, {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'No', na.rm = TRUE)} No"))
+
 # ==============================================================================
 # SECTION 7: FINAL COHORT ASSEMBLY (D-09 column order)
 # ==============================================================================
@@ -284,7 +321,10 @@ hl_cohort <- cohort %>%
     HISPANIC,
     age_at_enr_start,
     age_at_enr_end,
+    age_at_dx,
+    AGE_GROUP,
     first_hl_dx_date,
+    DX_YEAR,
     PAYER_CATEGORY_PRIMARY,
     PAYER_CATEGORY_AT_FIRST_DX,
     DUAL_ELIGIBLE,
@@ -310,7 +350,8 @@ hl_cohort <- cohort %>%
     # Survivorship encounter flags (D-05 through D-10)
     starts_with("HAD_ENC_"),
     starts_with("N_ENC_"),
-    starts_with("FIRST_ENC_")
+    starts_with("FIRST_ENC_"),
+    HAS_POST_TX_ENCOUNTERS
   )
 
 # ==============================================================================
