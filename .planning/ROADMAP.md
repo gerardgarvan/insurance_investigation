@@ -111,7 +111,7 @@ Plans:
 | 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
 | 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
-| 11. PPTX Clarity & Missing Data | 2/2 | Complete   | 2026-03-31 |
+| 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
 
 ## Next Actions
 
