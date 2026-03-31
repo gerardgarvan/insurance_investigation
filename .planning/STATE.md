@@ -3,9 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
+last_updated: "2026-03-31T16:00:50.371Z"
+progress:
+  total_phases: 10
+  completed_phases: 7
+  total_plans: 22
+  completed_plans: 16
+  percent: 73
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
 last_updated: "2026-03-26T16:01:26.371Z"
 progress:
-  total_phases: 9
+  [███████░░░] 73%
   completed_phases: 7
   total_plans: 17
   completed_plans: 15
@@ -20,12 +34,12 @@ progress:
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 09 — expand-treatment-detection-using-docx-specified-tables-and-researched-codes
+**Current focus:** Phase 10 — incorporate-variabledetails-xlsx-surveillance-strategy-and-treatment-variable-documentation-docx-variables-into-pipeline
 
 ## Current Position
 
-Phase: 09
-Plan: Not started
+Phase: 10
+Plan: 01 (complete)
 
 ## Performance Metrics
 
@@ -58,6 +72,7 @@ Plan: Not started
 | Phase 09-expand-treatment-detection-using-docx-specified-tables-and-researched-codes P01 | 151 | 2 tasks | 2 files |
 | Phase 09-expand-treatment-detection-using-docx-specified-tables-and-researched-codes P02 | 3 | 2 tasks | 1 files |
 | Phase 09 P03 | 3 | 2 tasks | 1 files |
+| Phase 10 P01 | 25 | 2 tasks | 2 files |
 
 ### Key Decisions
 
@@ -71,6 +86,8 @@ Plan: Not started
 | _VALID suffix pattern for range validation | Non-destructive validation columns preserving raw data for downstream filtering | Phase 06 | 2026-03-25 |
 | 13-category data quality summary | Before/after counts with fixed/accepted/documented status for all diagnostic findings | Phase 06 | 2026-03-25 |
 | _VALID columns excluded from discrepancy checks | Programmatically added columns should not trigger false positives in column audits | Phase 06 | 2026-03-25 |
+| All surveillance/lab codes from VariableDetails.xlsx directly | Plan directive to transcribe from xlsx, not from RESEARCH.md illustrative examples | Phase 10 | 2026-03-31 |
+| sct_hcpcs and expanded sct_icd10pcs added to TREATMENT_CODES | VariableDetails.xlsx Treatment sheet contained SCT HCPCS codes and 30+ ICD-10-PCS codes not in Phase 9 config | Phase 10 | 2026-03-31 |
 
 ### Current Todos
 
@@ -96,17 +113,17 @@ Plan: Not started
 
 ## Session Continuity
 
-**What we just did:** Completed Phase 6 Plan 03 (final plan) -- updated 07_diagnostics.R for Plan 01/02 changes, created 08_data_quality_summary.R with 13-category resolution tracker. User verified full pipeline runs end-to-end on HiPerGator. D-16 "clean enough" criterion met.
+**What we just did:** Completed Phase 10 Plan 01 -- populated SURVEILLANCE_CODES (9 modalities), LAB_CODES (10 lab types), SURVIVORSHIP_CODES, PROVIDER_SPECIALTIES in 00_config.R with codes from VariableDetails.xlsx; added LAB_RESULT_CM and PROVIDER table specs to 01_load_pcornet.R; expanded TREATMENT_CODES with sct_hcpcs/expanded sct_icd10pcs/cart_icd10pcs_prefixes.
 
-**What's next:** All planned phases (1-6) are complete. The R pipeline is fully functional from data loading through visualization with all data quality issues addressed.
+**What's next:** Phase 10 Plan 02+ -- implement 13_surveillance.R detection script using the new code lists; implement 14_survivorship_encounters.R; regenerate Treatment_Variable_Documentation.docx.
 
 **Context for next session:**
 
-- Full pipeline verified: 00_config through 06_sankey runs end-to-end on HiPerGator
-- data_quality_summary.csv tracks 13 diagnostic categories with fixed/accepted/documented status
-- All 21 v1 requirements mapped; 18 complete (VIZ-01, VIZ-02, VIZ-03 pending REQUIREMENTS update verification)
-- Phase 5 Plan 03 (cohort rebuild checkpoint) was superseded by Phase 6 which performed the full rebuild
-- Pipeline ready for v2 enhancements (PERF, ANLY, REPT, CMPL requirements)
+- 00_config.R: SURVEILLANCE_CODES, LAB_CODES, SURVIVORSHIP_CODES, PROVIDER_SPECIALTIES all defined and ready
+- 01_load_pcornet.R: LAB_RESULT_CM and PROVIDER tables will load when CSVs are available; graceful NULL if missing
+- TREATMENT_CODES now includes sct_hcpcs (S2140/S2142/S2150) and expanded sct_icd10pcs (50+ codes) plus CAR T-cell prefixes
+- Downstream scripts 13_surveillance.R and 14_survivorship_encounters.R can now reference these config lists directly
+- PROVIDER_SPECIALTY_PRIM diagnostic logging will validate NUCC taxonomy codes against actual data on first run
 
 ---
 
