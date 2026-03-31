@@ -22,10 +22,16 @@
 #  14. Last Treatment = Last Encounter (±30 day window)
 #  15. Missing Post-Treatment Payer - Encounter Breakdown
 #  16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
+#  17. Encounters per Person by Payer Category (histogram)
+#  18. Mean Post-Treatment Encounters by Year of Diagnosis
+#  19. Mean Total Encounters by Year of Diagnosis
+#  20. Post-Treatment Encounter Presence by Age Group
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
 #     encounters, payer_summary in the global environment)
+#   - 16_encounter_analysis.R should be run first to produce PNG figures
+#     in output/figures/ (slides 17-20 will be skipped if PNGs are absent)
 #   - Packages: officer, flextable, dplyr, glue, lubridate, purrr, scales
 #
 # Usage:
@@ -626,6 +632,32 @@ add_table_slide <- function(pptx, title, subtitle, tbl_data) {
   pptx
 }
 
+# Helper to add a slide with title, subtitle, and a centered PNG figure
+add_image_slide <- function(pptx, title, subtitle, img_path,
+                             img_width = 8.5, img_height = 4.2) {
+  if (!file.exists(img_path)) {
+    message(glue("  SKIPPED: {title} -- {img_path} not found. Run 16_encounter_analysis.R first."))
+    return(pptx)
+  }
+  pptx %>%
+    add_slide(layout = "Blank") %>%
+    ph_with(
+      value = fpar(ftext(title, prop = fp_text(font.size = 22, bold = TRUE,
+                                               font.family = "Calibri", color = UF_BLUE))),
+      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.5)
+    ) %>%
+    ph_with(
+      value = fpar(ftext(subtitle, prop = fp_text(font.size = 12, italic = TRUE,
+                                                  font.family = "Calibri", color = DARK_TEXT))),
+      location = ph_location(left = 0.5, top = 0.65, width = 9, height = 0.35)
+    ) %>%
+    ph_with(
+      value = external_img(img_path, width = img_width, height = img_height),
+      location = ph_location(left = (10 - img_width) / 2, top = 1.1,
+                              width = img_width, height = img_height)
+    )
+}
+
 # ---- Counts for title slide ----
 N_TOTAL <- nrow(cohort_full)
 N_CHEMO <- sum(cohort_full$HAD_CHEMO == 1)
@@ -1097,6 +1129,45 @@ pptx <- add_table_slide(pptx,
   tbl16)
 
 # ==============================================================================
+# SECTION 5b: ENCOUNTER ANALYSIS SLIDES (from 16_encounter_analysis.R figures)
+# ==============================================================================
+
+message("\n--- Encounter Analysis Slides ---")
+
+# ---- Slide 17: Encounter histogram by payor ----
+message("  Slide 17: Encounters per Person by Payer Category")
+pptx <- add_image_slide(pptx,
+  "Encounters per Person by Payer Category",
+  glue("Distribution of total encounter counts by primary payer -- N = {format(N_TOTAL, big.mark=',')}"),
+  "output/figures/encounters_per_person_by_payor.png",
+  img_width = 9, img_height = 5.5
+)
+
+# ---- Slide 18: Post-treatment encounters by DX year ----
+message("  Slide 18: Post-Treatment Encounters by DX Year")
+pptx <- add_image_slide(pptx,
+  "Mean Post-Treatment Encounters by Year of Diagnosis",
+  "Non-acute care encounters per person after last treatment, stratified by HL diagnosis year",
+  "output/figures/post_tx_encounters_by_dx_year.png"
+)
+
+# ---- Slide 19: Total encounters by DX year ----
+message("  Slide 19: Total Encounters by DX Year")
+pptx <- add_image_slide(pptx,
+  "Mean Total Encounters by Year of Diagnosis",
+  "All encounters per person across the full observation window, stratified by HL diagnosis year",
+  "output/figures/total_encounters_by_dx_year.png"
+)
+
+# ---- Slide 20: Post-treatment encounters by age group ----
+message("  Slide 20: Post-Treatment Encounters by Age Group")
+pptx <- add_image_slide(pptx,
+  "Post-Treatment Encounter Presence by Age Group at Diagnosis",
+  "Proportion with any post-treatment encounter by age group (0-17, 18-39, 40-64, 65+)",
+  "output/figures/post_tx_by_age_group.png"
+)
+
+# ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
 
@@ -1105,7 +1176,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 16"))
+message(glue("  Slides: 20 (16 tables + 4 encounter analysis)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
