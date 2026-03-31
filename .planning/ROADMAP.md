@@ -109,7 +109,7 @@ Plans:
 | 7. Dx Gap Analysis for Neither Patients | 0/1 | Planned |  |
 | 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
-| 10. Surveillance, Survivorship & Documentation | 1/5 | In Progress|  |
+| 10. Surveillance, Survivorship & Documentation | 3/5 | In Progress|  |
 
 ## Next Actions
 
@@ -176,7 +176,7 @@ Plans:
 **Goal:** Add post-diagnosis surveillance modality detection (9 modalities + labs), survivorship encounter classification (4 levels), timing derivation variables (DAYS_DX_TO_*), and auto-generated comprehensive variable documentation covering the full pipeline output
 **Requirements**: SURV-01, SURV-02, SURV-03, SURV-04, SVENC-01, SVENC-02, SVENC-03, SVENC-04, TDOC-01, TDOC-02, TDOC-03
 **Depends on:** Phase 9
-**Plans:** 1/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 - [ ] 10-01-PLAN.md -- Config code lists from VariableDetails.xlsx + LAB_RESULT_CM/PROVIDER table loading (SURV-01, SVENC-01)
