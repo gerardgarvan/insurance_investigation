@@ -13,6 +13,7 @@
 - [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
 - [x] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides (completed 2026-03-31)
 - [ ] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (gap closure pending)
+- [ ] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables
 
 ## Phase Details
 
@@ -114,10 +115,12 @@ Plans:
 | 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
 | 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
 | 12. More PPTX Polishing | 3/4 | Gap Closure   | |
+| 13. Summary Tables Value Audit | 0/1 | Planned | |
 
 ## Next Actions
 
 1. Execute `/gsd:execute-phase 12` to run gap closure plan (generate PNGs on HiPerGator)
+2. Execute `/gsd:execute-phase 13` to create value audit tables
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -212,6 +215,16 @@ Plans:
 - [x] 12-02-PLAN.md -- Replace title slide with glossary, remove NTR row, add summary stats slide (PPTX2-01, PPTX2-03, PPTX2-05)
 - [x] 12-03-PLAN.md -- Add per-slide footnotes with term definitions and DX_YEAR exclusion note (PPTX2-02, PPTX2-06)
 - [ ] 12-04-PLAN.md -- Gap closure: HiPerGator execution helper + visual verification of generated PNGs (PPTX2-04, PPTX2-07)
+
+### Phase 13: Summary Tables Value Audit
+
+**Goal:** Create comprehensive frequency/summary tables for every categorical variable across all 13 loaded PCORnet CDM tables, enumerating every distinct value so the user can review for coding inconsistencies
+**Requirements**: AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04
+**Depends on:** Phase 1 (only needs loaded PCORnet tables; optionally uses Phase 2/3 derived variables)
+**Plans:** 1 plan
+
+Plans:
+- [ ] 13-01-PLAN.md -- Value audit script R/17_value_audit.R with per-table CSV output and HIPAA suppression (AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04)
 
 ---
 
