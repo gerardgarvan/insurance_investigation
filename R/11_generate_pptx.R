@@ -659,6 +659,19 @@ add_image_slide <- function(pptx, title, subtitle, img_path,
     )
 }
 
+# Footnote text formatting (8pt italic gray at bottom of slide)
+footnote_prop <- fp_text(font.size = 8, italic = TRUE, font.family = "Calibri", color = "#666666")
+footnote_location <- ph_location(left = 0.5, top = 5.05, width = 9, height = 0.45)
+
+# Helper to add a footnote to the current (last-added) slide
+add_footnote <- function(pptx, text) {
+  pptx %>%
+    ph_with(
+      value = fpar(ftext(text, prop = footnote_prop)),
+      location = footnote_location
+    )
+}
+
 # ---- Counts for title slide ----
 N_TOTAL <- nrow(cohort_full)
 N_CHEMO <- sum(cohort_full$HAD_CHEMO == 1)
@@ -721,7 +734,8 @@ tbl2 <- build_payer_table(cohort_full, list(
 pptx <- add_table_slide(pptx,
   "Insurance Coverage Overview",
   glue("All enrolled patients \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
-  tbl2)
+  tbl2) %>%
+  add_footnote("Primary Insurance = most prevalent payer across all encounters. First Diagnosis = payer mode within \u00b130 days of first HL diagnosis date.")
 
 # ---- Slide 3: Post-Treatment Insurance (all patients) ----
 message("  Slide 3: Post-Treatment Insurance")
@@ -731,7 +745,8 @@ tbl3 <- build_payer_table_with_na(cohort_full, list(
 pptx <- add_table_slide(pptx,
   "Post-Treatment Insurance \u2014 All Patients",
   glue("Most prevalent payer after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
-  tbl3)
+  tbl3) %>%
+  add_footnote("Post-Treatment Insurance = most prevalent payer after last treatment of any type. N/A (No Follow-up) = last treatment was patient's final encounter (\u00b130 days).")
 
 # ---- Slide 4: Chemotherapy Insurance ----
 message("  Slide 4: Chemotherapy Insurance")
@@ -744,7 +759,8 @@ tbl4 <- build_payer_table(chemo_patients, list(
 pptx <- add_table_slide(pptx,
   "Chemotherapy Insurance",
   glue("Insurance at primary, first, and last chemotherapy \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
-  tbl4)
+  tbl4) %>%
+  add_footnote("Primary Insurance = most prevalent payer across all encounters. First/Last Chemo = payer mode within \u00b130 days of first/last chemotherapy date.")
 
 # ---- Slide 5: Chemotherapy Post-Treatment Insurance ----
 message("  Slide 5: Chemo Post-Treatment Insurance")
@@ -754,7 +770,8 @@ tbl5 <- build_payer_table_with_na(chemo_patients, list(
 pptx <- add_table_slide(pptx,
   "Chemotherapy Post-Treatment Insurance",
   glue("Most prevalent payer after last chemotherapy \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
-  tbl5)
+  tbl5) %>%
+  add_footnote("Post-Treatment Insurance = most prevalent payer after last chemotherapy. N/A (No Follow-up) = last chemo was patient's final encounter (\u00b130 days).")
 
 # ---- Slide 6: Radiation Insurance ----
 message("  Slide 6: Radiation Insurance")
@@ -767,7 +784,8 @@ tbl6 <- build_payer_table(rad_patients, list(
 pptx <- add_table_slide(pptx,
   "Radiation Insurance",
   glue("Insurance at primary, first, and last radiation \u2014 N = {format(N_RAD, big.mark = ',')}"),
-  tbl6)
+  tbl6) %>%
+  add_footnote("Primary Insurance = most prevalent payer across all encounters. First/Last Radiation = payer mode within \u00b130 days of first/last radiation date.")
 
 # ---- Slide 7: Radiation Post-Treatment Insurance ----
 message("  Slide 7: Radiation Post-Treatment Insurance")
@@ -777,7 +795,8 @@ tbl7 <- build_payer_table_with_na(rad_patients, list(
 pptx <- add_table_slide(pptx,
   "Radiation Post-Treatment Insurance",
   glue("Most prevalent payer after last radiation \u2014 N = {format(N_RAD, big.mark = ',')}"),
-  tbl7)
+  tbl7) %>%
+  add_footnote("Post-Treatment Insurance = most prevalent payer after last radiation. N/A (No Follow-up) = last radiation was patient's final encounter (\u00b130 days).")
 
 # ---- Slide 8: SCT Insurance ----
 message("  Slide 8: SCT Insurance")
@@ -790,7 +809,8 @@ tbl8 <- build_payer_table(sct_patients, list(
 pptx <- add_table_slide(pptx,
   "Stem Cell Transplant Insurance",
   glue("Insurance at primary, first, and last SCT \u2014 N = {format(N_SCT, big.mark = ',')}"),
-  tbl8)
+  tbl8) %>%
+  add_footnote("Primary Insurance = most prevalent payer across all encounters. First/Last SCT = payer mode within \u00b130 days of first/last stem cell transplant date.")
 
 # ---- Slide 9: SCT Post-Treatment Insurance ----
 message("  Slide 9: SCT Post-Treatment Insurance")
@@ -800,7 +820,8 @@ tbl9 <- build_payer_table_with_na(sct_patients, list(
 pptx <- add_table_slide(pptx,
   "SCT Post-Treatment Insurance",
   glue("Most prevalent payer after last SCT \u2014 N = {format(N_SCT, big.mark = ',')}"),
-  tbl9)
+  tbl9) %>%
+  add_footnote("Post-Treatment Insurance = most prevalent payer after last SCT. N/A (No Follow-up) = last SCT was patient's final encounter (\u00b130 days).")
 
 # ---- Slide 10: Diagnosis - Enrollment Coverage ----
 message("  Slide 10: Diagnosis Enrollment Coverage")
@@ -816,7 +837,8 @@ tbl10 <- build_enr_coverage_table(cohort_dx_enr, "PAYER_CATEGORY_AT_FIRST_DX", "
 pptx <- add_table_slide(pptx,
   "Diagnosis \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first HL diagnosis: patients with vs without enrollment covering \u00b130 day window"),
-  tbl10)
+  tbl10) %>%
+  add_footnote("ENR Covers Window = enrollment records span the full \u00b130 day window around first HL diagnosis. ENR Does Not Cover = enrollment gap in that window.")
 
 # ---- Slide 11: Chemo - Enrollment Coverage ----
 message("  Slide 11: Chemo Enrollment Coverage")
@@ -847,7 +869,8 @@ tbl11 <- build_treatment_enr_table(
 pptx <- add_table_slide(pptx,
   "Chemotherapy \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first/last chemo: patients with vs without enrollment covering \u00b130 day window"),
-  tbl11)
+  tbl11) %>%
+  add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last chemotherapy. ENR Gap = enrollment gap in that window.")
 
 # ---- Slide 12: Radiation - Enrollment Coverage ----
 message("  Slide 12: Radiation Enrollment Coverage")
@@ -878,7 +901,8 @@ tbl12 <- build_treatment_enr_table(
 pptx <- add_table_slide(pptx,
   "Radiation \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first/last radiation: patients with vs without enrollment covering \u00b130 day window"),
-  tbl12)
+  tbl12) %>%
+  add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last radiation. ENR Gap = enrollment gap in that window.")
 
 # ---- Slide 13: SCT - Enrollment Coverage ----
 message("  Slide 13: SCT Enrollment Coverage")
@@ -909,7 +933,8 @@ tbl13 <- build_treatment_enr_table(
 pptx <- add_table_slide(pptx,
   "SCT \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first/last SCT: patients with vs without enrollment covering \u00b130 day window"),
-  tbl13)
+  tbl13) %>%
+  add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last SCT. ENR Gap = enrollment gap in that window.")
 
 # ---- Slide 14: Last Treatment = Last Encounter (±30 day window) ----
 message("  Slide 14: Last Treatment = Last Encounter")
@@ -981,7 +1006,8 @@ tbl14 <- tibble(
 pptx <- add_table_slide(pptx,
   "Last Treatment = Last Encounter",
   glue("Patients whose last treatment was within \u00b130 days of their last encounter (no follow-up)"),
-  tbl14)
+  tbl14) %>%
+  add_footnote("Last Tx = Last Encounter: patient's last treatment date is within \u00b130 days of their last encounter date in the dataset.")
 
 # ---- Slide 15: Missing Post-Treatment Payer - Encounter Breakdown ----
 message("  Slide 15: Missing Post-Treatment Encounter Breakdown")
@@ -1030,7 +1056,8 @@ tbl15 <- unknown_post_counts %>%
 pptx <- add_table_slide(pptx,
   "Missing Post-Treatment Payer \u2014 Encounter Breakdown",
   glue("Patients with Missing post-treatment payer: how many encounters exist after last treatment?"),
-  tbl15)
+  tbl15) %>%
+  add_footnote("Shows how many post-treatment encounters exist for patients whose post-treatment payer is Missing or unassigned.")
 
 # ---- Slide 16: Insurance After Last Treatment & Dataset Retention ----
 message("  Slide 16: Post-Last-Treatment Insurance & Retention")
@@ -1116,7 +1143,8 @@ pct_missing <- if (n_treated > 0) round(100 * n_missing / n_treated, 1) else 0
 pptx <- add_table_slide(pptx,
   "Insurance After Last Treatment \u2014 Dataset Retention",
   glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset"),
-  tbl16)
+  tbl16) %>%
+  add_footnote("Still in Dataset = patient has encounters after last treatment. No Longer in Dataset = last treatment was final encounter (\u00b130 days). Payer shown is post-treatment (still) or at last treatment (no longer).")
 
 # ==============================================================================
 # SECTION 5b: ENCOUNTER ANALYSIS SLIDES (from 16_encounter_analysis.R figures)
