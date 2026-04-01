@@ -103,8 +103,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### CSV Values Data Audit & Code Optimization (Phase 14)
 
-- [ ] **CSVAUDIT-01**: User can review value_audit CSV output (from 17_value_audit.R) for coding inconsistencies with Claude in conversation
-- [ ] **CSVAUDIT-02**: User can identify and discuss which coding inconsistencies represent real data capture problems vs expected PCORnet CDM variation
+- [x] **CSVAUDIT-01**: User can review value_audit CSV output (from 17_value_audit.R) for coding inconsistencies with Claude in conversation
+- [x] **CSVAUDIT-02**: User can identify and discuss which coding inconsistencies represent real data capture problems vs expected PCORnet CDM variation
 - [x] **OPTIM-01**: User can see dead code removed and redundant operations consolidated across R scripts 00-17 (TUMOR_REGISTRY bind_rows, duplicate HIPAA suppression, unused variables)
 - [x] **OPTIM-02**: User can see style-preserving optimizations (reduced bind_rows duplication, consolidated PROCEDURES queries, early column selection) applied to the pipeline without changing function signatures
 
@@ -214,8 +214,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX2-05 | Phase 12 | Complete |
 | PPTX2-06 | Phase 12 | Complete |
 | PPTX2-07 | Phase 12 | Pending |
-| CSVAUDIT-01 | Phase 14 | Pending |
-| CSVAUDIT-02 | Phase 14 | Pending |
+| CSVAUDIT-01 | Phase 14 | Complete |
+| CSVAUDIT-02 | Phase 14 | Complete |
 | OPTIM-01 | Phase 14 | Complete |
 | OPTIM-02 | Phase 14 | Complete |
 
