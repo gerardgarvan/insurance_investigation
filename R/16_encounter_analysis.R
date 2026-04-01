@@ -89,8 +89,14 @@ message("  Saved: output/figures/encounters_per_person_by_payor.png")
 
 message("\n--- Post-treatment encounters by DX year ---")
 
+# Count masked dates before filtering
+n_masked <- hl_cohort %>%
+  filter(!is.na(DX_YEAR), DX_YEAR == 1900) %>%
+  nrow()
+message(glue("  {n_masked} patients with masked diagnosis date (DX_YEAR=1900) excluded from DX year plots"))
+
 enc_by_year <- hl_cohort %>%
-  filter(!is.na(DX_YEAR), !is.na(N_ENC_NONACUTE_CARE)) %>%
+  filter(!is.na(DX_YEAR), DX_YEAR != 1900, !is.na(N_ENC_NONACUTE_CARE)) %>%
   group_by(DX_YEAR) %>%
   summarise(
     n_patients = n(),
@@ -106,11 +112,14 @@ p2 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_post_tx_enc)) +
   geom_text(aes(label = round(mean_post_tx_enc, 1)), vjust = -0.3, size = 3) +
   labs(
     title = "Mean Post-Treatment Encounters per Person by Year of Diagnosis",
+    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
     x = "Year of Diagnosis",
     y = "Mean Post-Treatment Encounters"
   ) +
   theme_minimal(base_size = 11) +
-  scale_x_continuous(breaks = pretty_breaks())
+  scale_x_continuous(breaks = pretty_breaks()) +
+  coord_cartesian(clip = "off", ylim = c(0, max(enc_by_year$mean_post_tx_enc, na.rm = TRUE) * 1.15)) +
+  theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/post_tx_encounters_by_dx_year.png", p2,
        width = 10, height = 6, dpi = 300)
@@ -127,11 +136,14 @@ p3 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_total_enc)) +
   geom_text(aes(label = round(mean_total_enc, 1)), vjust = -0.3, size = 3) +
   labs(
     title = "Mean Total Encounters per Person by Year of Diagnosis",
+    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
     x = "Year of Diagnosis",
     y = "Mean Total Encounters"
   ) +
   theme_minimal(base_size = 11) +
-  scale_x_continuous(breaks = pretty_breaks())
+  scale_x_continuous(breaks = pretty_breaks()) +
+  coord_cartesian(clip = "off", ylim = c(0, max(enc_by_year$mean_total_enc, na.rm = TRUE) * 1.15)) +
+  theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/total_encounters_by_dx_year.png", p3,
        width = 10, height = 6, dpi = 300)
@@ -196,10 +208,13 @@ age_post_tx <- hl_cohort %>%
   mutate(pct = round(100 * n / sum(n), 1)) %>%
   ungroup()
 
+max_y_p4 <- max(age_post_tx$n, na.rm = TRUE)
+
 p4 <- ggplot(age_post_tx, aes(x = AGE_GROUP, y = n, fill = HAS_POST_TX_ENCOUNTERS)) +
   geom_col(position = "dodge") +
   geom_text(aes(label = paste0(n, "\n(", pct, "%)")),
             position = position_dodge(width = 0.9), vjust = -0.3, size = 3) +
+  coord_cartesian(clip = "off", ylim = c(0, max_y_p4 * 1.2)) +
   labs(
     title = "Post-Treatment Encounters by Age Group (Yes/No)",
     x = "Age Group at Diagnosis",
@@ -207,6 +222,7 @@ p4 <- ggplot(age_post_tx, aes(x = AGE_GROUP, y = n, fill = HAS_POST_TX_ENCOUNTER
     fill = "Has Post-Tx\nEncounters"
   ) +
   theme_minimal(base_size = 11) +
+  theme(plot.margin = margin(t = 15, r = 5, b = 5, l = 5)) +
   scale_fill_manual(values = c("Yes" = "#2c7fb8", "No" = "#d95f02"))
 
 ggsave("output/figures/post_tx_by_age_group.png", p4,
