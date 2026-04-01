@@ -60,39 +60,29 @@ has_hodgkin_diagnosis <- function(patient_df) {
     filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
     distinct(ID)
 
-  # Source 2: TUMOR_REGISTRY1 (verbose NAACCR column: HISTOLOGICAL_TYPE)
-  tr1_hl_patients <- if (!is.null(pcornet$TUMOR_REGISTRY1) &&
-                         "HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY1)) {
-    pcornet$TUMOR_REGISTRY1 %>%
-      filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
-      distinct(ID)
+  # Source 2: TUMOR_REGISTRY_ALL (Phase 14 optimization: use combined TR table)
+  # TR1 uses HISTOLOGICAL_TYPE, TR2/TR3 use MORPH -- check both columns
+  tr_all <- if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+    tr_hist <- if ("HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
+      pcornet$TUMOR_REGISTRY_ALL %>%
+        filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
+        distinct(ID)
+    } else {
+      tibble(ID = character())
+    }
+
+    tr_morph <- if ("MORPH" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
+      pcornet$TUMOR_REGISTRY_ALL %>%
+        filter(is_hl_histology(MORPH)) %>%
+        distinct(ID)
+    } else {
+      tibble(ID = character())
+    }
+
+    bind_rows(tr_hist, tr_morph) %>% distinct(ID)
   } else {
     tibble(ID = character())
   }
-
-  # Source 3: TUMOR_REGISTRY2 (compact column: MORPH)
-  tr2_hl_patients <- if (!is.null(pcornet$TUMOR_REGISTRY2) &&
-                         "MORPH" %in% names(pcornet$TUMOR_REGISTRY2)) {
-    pcornet$TUMOR_REGISTRY2 %>%
-      filter(is_hl_histology(MORPH)) %>%
-      distinct(ID)
-  } else {
-    tibble(ID = character())
-  }
-
-  # Source 4: TUMOR_REGISTRY3 (compact column: MORPH)
-  tr3_hl_patients <- if (!is.null(pcornet$TUMOR_REGISTRY3) &&
-                         "MORPH" %in% names(pcornet$TUMOR_REGISTRY3)) {
-    pcornet$TUMOR_REGISTRY3 %>%
-      filter(is_hl_histology(MORPH)) %>%
-      distinct(ID)
-  } else {
-    tibble(ID = character())
-  }
-
-  # Union all TR sources
-  tr_all <- bind_rows(tr1_hl_patients, tr2_hl_patients, tr3_hl_patients) %>%
-    distinct(ID)
 
   # Build HL source mapping for ALL patients in patient_df (D-20)
   hl_source_map <- patient_df %>%
@@ -228,38 +218,21 @@ has_chemo <- function() {
   n_ma <- 0L
   n_rev <- 0L
 
-  # TUMOR_REGISTRY1: CHEMO_START_DATE_SUMMARY (different column name from TR2/TR3)
-  tr1_chemo <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY1) &&
-      "CHEMO_START_DATE_SUMMARY" %in% names(pcornet$TUMOR_REGISTRY1)) {
-    tr1_chemo <- pcornet$TUMOR_REGISTRY1 %>%
-      filter(!is.na(CHEMO_START_DATE_SUMMARY)) %>%
-      pull(ID)
-    chemo_ids <- c(chemo_ids, tr1_chemo)
+  # TUMOR_REGISTRY: chemo dates from combined TR (Phase 14 optimization)
+  # TR1 uses CHEMO_START_DATE_SUMMARY, TR2/TR3 use DT_CHEMO
+  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+    tr_chemo_cols <- intersect(
+      c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
+      names(pcornet$TUMOR_REGISTRY_ALL)
+    )
+    if (length(tr_chemo_cols) > 0) {
+      tr_chemo <- pcornet$TUMOR_REGISTRY_ALL %>%
+        filter(if_any(all_of(tr_chemo_cols), ~ !is.na(.))) %>%
+        pull(ID) %>% unique()
+      chemo_ids <- c(chemo_ids, tr_chemo)
+      n_tr <- length(unique(tr_chemo))
+    }
   }
-
-  # TUMOR_REGISTRY2: DT_CHEMO
-  tr2_chemo <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY2) &&
-      "DT_CHEMO" %in% names(pcornet$TUMOR_REGISTRY2)) {
-    tr2_chemo <- pcornet$TUMOR_REGISTRY2 %>%
-      filter(!is.na(DT_CHEMO)) %>%
-      pull(ID)
-    chemo_ids <- c(chemo_ids, tr2_chemo)
-  }
-
-  # TUMOR_REGISTRY3: DT_CHEMO
-  tr3_chemo <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY3) &&
-      "DT_CHEMO" %in% names(pcornet$TUMOR_REGISTRY3)) {
-    tr3_chemo <- pcornet$TUMOR_REGISTRY3 %>%
-      filter(!is.na(DT_CHEMO)) %>%
-      pull(ID)
-    chemo_ids <- c(chemo_ids, tr3_chemo)
-  }
-
-  # Aggregate TR source count
-  n_tr <- length(unique(c(tr1_chemo, tr2_chemo, tr3_chemo)))
 
   # PROCEDURES: chemo CPT/HCPCS, ICD-9-CM, ICD-10-PCS codes
   px_chemo <- character(0)
@@ -374,38 +347,21 @@ has_radiation <- function() {
   n_drg <- 0L
   n_rev <- 0L
 
-  # TUMOR_REGISTRY1: RAD_START_DATE_SUMMARY (Python pipeline checks this)
-  tr1_rad <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY1) &&
-      "RAD_START_DATE_SUMMARY" %in% names(pcornet$TUMOR_REGISTRY1)) {
-    tr1_rad <- pcornet$TUMOR_REGISTRY1 %>%
-      filter(!is.na(RAD_START_DATE_SUMMARY)) %>%
-      pull(ID)
-    rad_ids <- c(rad_ids, tr1_rad)
+  # TUMOR_REGISTRY: radiation dates from combined TR (Phase 14 optimization)
+  # TR1 uses RAD_START_DATE_SUMMARY, TR2/TR3 use DT_RAD
+  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+    tr_rad_cols <- intersect(
+      c("RAD_START_DATE_SUMMARY", "DT_RAD"),
+      names(pcornet$TUMOR_REGISTRY_ALL)
+    )
+    if (length(tr_rad_cols) > 0) {
+      tr_rad <- pcornet$TUMOR_REGISTRY_ALL %>%
+        filter(if_any(all_of(tr_rad_cols), ~ !is.na(.))) %>%
+        pull(ID) %>% unique()
+      rad_ids <- c(rad_ids, tr_rad)
+      n_tr <- length(unique(tr_rad))
+    }
   }
-
-  # TUMOR_REGISTRY2: DT_RAD
-  tr2_rad <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY2) &&
-      "DT_RAD" %in% names(pcornet$TUMOR_REGISTRY2)) {
-    tr2_rad <- pcornet$TUMOR_REGISTRY2 %>%
-      filter(!is.na(DT_RAD)) %>%
-      pull(ID)
-    rad_ids <- c(rad_ids, tr2_rad)
-  }
-
-  # TUMOR_REGISTRY3: DT_RAD
-  tr3_rad <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY3) &&
-      "DT_RAD" %in% names(pcornet$TUMOR_REGISTRY3)) {
-    tr3_rad <- pcornet$TUMOR_REGISTRY3 %>%
-      filter(!is.na(DT_RAD)) %>%
-      pull(ID)
-    rad_ids <- c(rad_ids, tr3_rad)
-  }
-
-  # Aggregate TR source count
-  n_tr <- length(unique(c(tr1_rad, tr2_rad, tr3_rad)))
 
   # PROCEDURES: radiation CPT, ICD-9-CM, ICD-10-PCS codes
   px_rad <- character(0)
@@ -499,39 +455,33 @@ has_sct <- function() {
   n_drg <- 0L
   n_rev <- 0L
 
-  # TUMOR_REGISTRY1: HEMATOLOGIC_TRANSPLANT_AND_ENDOC (code field, not date)
-  tr1_sct <- character(0)
-  if (!is.null(pcornet$TUMOR_REGISTRY1) &&
-      "HEMATOLOGIC_TRANSPLANT_AND_ENDOC" %in% names(pcornet$TUMOR_REGISTRY1)) {
-    tr1_sct <- pcornet$TUMOR_REGISTRY1 %>%
-      filter(!is.na(HEMATOLOGIC_TRANSPLANT_AND_ENDOC) &
-             HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "" &
-             HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "00") %>%
-      pull(ID)
-    sct_ids <- c(sct_ids, tr1_sct)
-  }
-
-  # TUMOR_REGISTRY2/3: DT_HTE + Python pipeline SCT date columns
-  # Python checks: DT_SCT, SCT_DATE, BMT_DATE, TRANSPLANT_DATE, HCT_DATE, DT_TRANSPLANT
-  tr_sct_from_loop <- character(0)
-  sct_date_cols <- c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-                     "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT")
-  for (tr_name in c("TUMOR_REGISTRY2", "TUMOR_REGISTRY3")) {
-    tr_df <- pcornet[[tr_name]]
-    if (!is.null(tr_df)) {
-      present_cols <- intersect(sct_date_cols, names(tr_df))
-      if (length(present_cols) > 0) {
-        tr_sct <- tr_df %>%
-          filter(if_any(all_of(present_cols), ~ !is.na(.))) %>%
-          pull(ID)
-        sct_ids <- c(sct_ids, tr_sct)
-        tr_sct_from_loop <- c(tr_sct_from_loop, tr_sct)
-      }
+  # TUMOR_REGISTRY: SCT evidence from combined TR (Phase 14 optimization)
+  # TR1 uses HEMATOLOGIC_TRANSPLANT_AND_ENDOC (code), TR2/TR3 use date columns
+  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+    # Check for TR1's code-based field
+    if ("HEMATOLOGIC_TRANSPLANT_AND_ENDOC" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
+      tr1_sct <- pcornet$TUMOR_REGISTRY_ALL %>%
+        filter(!is.na(HEMATOLOGIC_TRANSPLANT_AND_ENDOC) &
+               HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "" &
+               HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "00") %>%
+        pull(ID)
+      sct_ids <- c(sct_ids, tr1_sct)
     }
-  }
 
-  # Aggregate TR source count
-  n_tr <- length(unique(c(tr1_sct, tr_sct_from_loop)))
+    # Check for TR2/TR3 date columns (DT_HTE, DT_SCT, etc.)
+    sct_date_cols <- c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+                       "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT")
+    tr_sct_date_cols <- intersect(sct_date_cols, names(pcornet$TUMOR_REGISTRY_ALL))
+    if (length(tr_sct_date_cols) > 0) {
+      tr_sct_dates <- pcornet$TUMOR_REGISTRY_ALL %>%
+        filter(if_any(all_of(tr_sct_date_cols), ~ !is.na(.))) %>%
+        pull(ID)
+      sct_ids <- c(sct_ids, tr_sct_dates)
+    }
+
+    # Aggregate TR source count
+    n_tr <- length(unique(sct_ids[sct_ids %in% pcornet$TUMOR_REGISTRY_ALL$ID]))
+  }
 
   # PROCEDURES: SCT CPT, ICD-9-CM, ICD-10-PCS codes
   px_sct <- character(0)
