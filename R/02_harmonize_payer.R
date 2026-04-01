@@ -172,23 +172,10 @@ dx_dates <- pcornet$DIAGNOSIS %>%
   group_by(ID) %>%
   summarise(first_dx_date_diagnosis = if (all(is.na(DX_DATE))) as.Date(NA) else min(DX_DATE, na.rm = TRUE), .groups = "drop")
 
-# Get earliest from TUMOR_REGISTRY tables
-tr_tables <- list()
-if (!is.null(pcornet$TUMOR_REGISTRY1) &&
-    "DATE_OF_DIAGNOSIS" %in% names(pcornet$TUMOR_REGISTRY1)) {
-  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY1 %>% select(ID, DATE_OF_DIAGNOSIS)))
-}
-if (!is.null(pcornet$TUMOR_REGISTRY2) &&
-    "DXDATE" %in% names(pcornet$TUMOR_REGISTRY2)) {
-  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY2 %>% select(ID, DATE_OF_DIAGNOSIS = DXDATE)))
-}
-if (!is.null(pcornet$TUMOR_REGISTRY3) &&
-    "DXDATE" %in% names(pcornet$TUMOR_REGISTRY3)) {
-  tr_tables <- c(tr_tables, list(pcornet$TUMOR_REGISTRY3 %>% select(ID, DATE_OF_DIAGNOSIS = DXDATE)))
-}
-
-if (length(tr_tables) > 0) {
-  tr_dates <- bind_rows(tr_tables) %>%
+# Get earliest from TUMOR_REGISTRY_ALL (consolidated in 01_load_pcornet.R)
+if (!is.null(pcornet$TUMOR_REGISTRY_ALL) &&
+    "DATE_OF_DIAGNOSIS" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
+  tr_dates <- pcornet$TUMOR_REGISTRY_ALL %>%
     filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
     group_by(ID) %>%
     summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop")
