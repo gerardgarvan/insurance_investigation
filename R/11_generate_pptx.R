@@ -27,12 +27,16 @@
 #  19. Mean Post-Treatment Encounters by Year of Diagnosis
 #  20. Mean Total Encounters by Year of Diagnosis
 #  21. Post-Treatment Encounter Presence by Age Group
+#  22. Unique Encounter Dates per Person by Payer Category (histogram)
+#  23. Summary Statistics: Unique Dates per Payer Category (table)
+#  24. Mean Post-Treatment Unique Dates by Year of Diagnosis
+#  25. Mean Total Unique Dates by Year of Diagnosis
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
 #     encounters, payer_summary in the global environment)
 #   - 16_encounter_analysis.R should be run first to produce PNG figures
-#     in output/figures/ (slides 17-20 will be skipped if PNGs are absent)
+#     in output/figures/ (slides 17-20, 22-25 will be skipped if PNGs are absent)
 #   - Packages: officer, flextable, dplyr, glue, lubridate, purrr, scales
 #
 # Usage:
@@ -1259,6 +1263,118 @@ if (file.exists(age_group_path)) {
 }
 
 # ==============================================================================
+# SECTION 5c: UNIQUE DATES SLIDES (distinct encounter dates per patient)
+# ==============================================================================
+
+message("\n--- Unique Dates Slides ---")
+
+# Compute unique encounter dates per patient from the encounters table
+unique_dates_total <- encounters %>%
+  filter(!is.na(ADMIT_DATE)) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES = n_distinct(ADMIT_DATE), .groups = "drop")
+
+# Compute unique post-treatment dates (AV+TH post-diagnosis, mirrors Level 1)
+first_dx_map <- cohort_full %>%
+  select(ID, first_hl_dx_date) %>%
+  filter(!is.na(first_hl_dx_date))
+
+unique_dates_post_tx <- pcornet$ENCOUNTER %>%
+  filter(ENC_TYPE %in% c("AV", "TH")) %>%
+  inner_join(first_dx_map, by = "ID") %>%
+  filter(!is.na(ADMIT_DATE), ADMIT_DATE > first_hl_dx_date) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES_POST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
+
+cohort_ud <- cohort_full %>%
+  left_join(unique_dates_total, by = "ID") %>%
+  left_join(unique_dates_post_tx, by = "ID") %>%
+  mutate(
+    N_UNIQUE_DATES = coalesce(N_UNIQUE_DATES, 0L),
+    N_UNIQUE_DATES_POST_TX = coalesce(N_UNIQUE_DATES_POST_TX, 0L)
+  )
+
+# ---- Slide 22: Unique dates histogram by payor ----
+message("  Slide 22: Unique Dates per Person by Payer Category")
+ud_hist_path <- "output/figures/unique_dates_per_person_by_payor.png"
+pptx <- add_image_slide(pptx,
+  "Unique Encounter Dates per Person by Payer Category",
+  glue("Distribution of distinct encounter dates by primary payer -- N = {format(N_TOTAL, big.mark=',')}"),
+  ud_hist_path
+)
+if (file.exists(ud_hist_path)) {
+  pptx <- add_footnote(pptx, "Unique dates = distinct ADMIT_DATEs per patient. Multiple encounters on the same day count as one date.")
+}
+
+# ---- Slide 23: Summary Statistics -- Unique Dates per Person by Payer ----
+message("  Slide 23: Summary Statistics -- Unique Dates per Payer")
+
+ud_summary_stats <- cohort_ud %>%
+  filter(!is.na(N_UNIQUE_DATES)) %>%
+  mutate(PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(PAYER_DISPLAY) %>%
+  summarise(
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Median = round(median(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Min = min(N_UNIQUE_DATES, na.rm = TRUE),
+    Q1 = round(quantile(N_UNIQUE_DATES, 0.25, na.rm = TRUE), 1),
+    Q3 = round(quantile(N_UNIQUE_DATES, 0.75, na.rm = TRUE), 1),
+    Max = max(N_UNIQUE_DATES, na.rm = TRUE),
+    `300+` = sum(N_UNIQUE_DATES > 300, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY)
+
+ud_summary_totals <- cohort_ud %>%
+  filter(!is.na(N_UNIQUE_DATES), !is.na(PAYER_CATEGORY_PRIMARY)) %>%
+  summarise(
+    `Payer Category` = "Total",
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Median = round(median(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Min = min(N_UNIQUE_DATES, na.rm = TRUE),
+    Q1 = round(quantile(N_UNIQUE_DATES, 0.25, na.rm = TRUE), 1),
+    Q3 = round(quantile(N_UNIQUE_DATES, 0.75, na.rm = TRUE), 1),
+    Max = max(N_UNIQUE_DATES, na.rm = TRUE),
+    `300+` = sum(N_UNIQUE_DATES > 300, na.rm = TRUE)
+  )
+
+ud_summary_stats <- bind_rows(ud_summary_stats, ud_summary_totals) %>%
+  mutate(N = format(N, big.mark = ","))
+
+pptx <- add_table_slide(pptx,
+  "Summary Statistics: Unique Dates per Person by Payer Category",
+  glue("Distribution of distinct encounter dates by primary insurance category -- N = {format(N_TOTAL, big.mark = ',')}"),
+  ud_summary_stats) %>%
+  add_footnote("Unique dates = distinct ADMIT_DATEs per patient. 300+ = patients with more than 300 unique encounter dates.")
+
+# ---- Slide 24: Post-treatment unique dates by DX year ----
+message("  Slide 24: Post-Treatment Unique Dates by DX Year")
+post_tx_ud_path <- "output/figures/post_tx_unique_dates_by_dx_year.png"
+pptx <- add_image_slide(pptx,
+  "Mean Post-Treatment Unique Dates by Year of Diagnosis",
+  "Distinct encounter dates per person after last treatment, stratified by HL diagnosis year",
+  post_tx_ud_path
+)
+if (file.exists(post_tx_ud_path) && nchar(masked_footnote) > 0) {
+  pptx <- add_footnote(pptx, masked_footnote)
+}
+
+# ---- Slide 25: Total unique dates by DX year ----
+message("  Slide 25: Total Unique Dates by DX Year")
+total_ud_dx_path <- "output/figures/total_unique_dates_by_dx_year.png"
+pptx <- add_image_slide(pptx,
+  "Mean Total Unique Dates by Year of Diagnosis",
+  "Distinct encounter dates per person across the full observation window, stratified by HL diagnosis year",
+  total_ud_dx_path
+)
+if (file.exists(total_ud_dx_path) && nchar(masked_footnote) > 0) {
+  pptx <- add_footnote(pptx, masked_footnote)
+}
+
+# ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
 
@@ -1267,7 +1383,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 21 (1 glossary + 16 tables + 4 encounter analysis)"))
+message(glue("  Slides: 25 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 

@@ -238,6 +238,140 @@ print(age_summary)
 write_csv(age_post_tx, "output/tables/post_tx_encounters_by_age_group.csv")
 message("  Saved: output/tables/post_tx_encounters_by_age_group.csv")
 
+# ==============================================================================
+# SECTION 6: UNIQUE DATES -- Same analyses using distinct encounter dates per ID
+# ==============================================================================
+
+message("\n--- Unique Dates Analysis (distinct dates per patient) ---")
+
+# 6a. Compute unique encounter dates per patient (total)
+unique_dates_total <- encounters %>%
+  filter(!is.na(ADMIT_DATE)) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES = n_distinct(ADMIT_DATE), .groups = "drop")
+
+# 6b. Compute unique post-treatment dates (AV+TH post-diagnosis, mirrors Level 1)
+first_dx_map <- hl_cohort %>%
+  select(ID, first_hl_dx_date) %>%
+  filter(!is.na(first_hl_dx_date))
+
+unique_dates_post_tx <- pcornet$ENCOUNTER %>%
+  filter(ENC_TYPE %in% c("AV", "TH")) %>%
+  inner_join(first_dx_map, by = "ID") %>%
+  filter(!is.na(ADMIT_DATE), ADMIT_DATE > first_hl_dx_date) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES_POST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
+
+# Join to cohort for this analysis
+cohort_ud <- hl_cohort %>%
+  left_join(unique_dates_total, by = "ID") %>%
+  left_join(unique_dates_post_tx, by = "ID") %>%
+  mutate(
+    N_UNIQUE_DATES = coalesce(N_UNIQUE_DATES, 0L),
+    N_UNIQUE_DATES_POST_TX = coalesce(N_UNIQUE_DATES_POST_TX, 0L)
+  )
+
+message(glue("  Total unique dates: mean={round(mean(cohort_ud$N_UNIQUE_DATES),1)}, median={median(cohort_ud$N_UNIQUE_DATES)}"))
+message(glue("  Post-tx unique dates: mean={round(mean(cohort_ud$N_UNIQUE_DATES_POST_TX),1)}, median={median(cohort_ud$N_UNIQUE_DATES_POST_TX)}"))
+
+# 6c. Histogram: unique dates per person by payer category
+hist_data_ud <- cohort_ud %>%
+  filter(!is.na(PAYER_CATEGORY_PRIMARY), !is.na(N_UNIQUE_DATES)) %>%
+  mutate(
+    PAYER_CATEGORY_PRIMARY = case_when(
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      TRUE ~ PAYER_CATEGORY_PRIMARY
+    ),
+    PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
+      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
+                 "Other government", "No payment / Self-pay", "Missing"))
+  )
+
+x_cap_ud <- 300
+
+overflow_counts_ud <- hist_data_ud %>%
+  filter(N_UNIQUE_DATES > x_cap_ud) %>%
+  count(PAYER_CATEGORY_PRIMARY, name = "n_overflow", .drop = FALSE)
+
+hist_data_ud <- hist_data_ud %>%
+  mutate(N_UD_CAPPED = if_else(N_UNIQUE_DATES > x_cap_ud, as.numeric(x_cap_ud + 1), as.numeric(N_UNIQUE_DATES)))
+
+n_beyond_ud <- sum(cohort_ud$N_UNIQUE_DATES > x_cap_ud, na.rm = TRUE)
+
+p_ud1 <- ggplot(hist_data_ud, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
+  geom_histogram(binwidth = 15, color = "white", linewidth = 0.2) +
+  geom_text(data = overflow_counts_ud %>% filter(n_overflow > 0),
+            aes(x = x_cap_ud + 10, y = Inf, label = paste0(">", x_cap_ud, ": ", n_overflow)),
+            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
+  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  coord_cartesian(xlim = c(0, x_cap_ud + 30)) +
+  scale_x_continuous(breaks = seq(0, x_cap_ud, by = 50),
+                     labels = c(seq(0, x_cap_ud - 50, by = 50), paste0(x_cap_ud, "+"))) +
+  labs(
+    title = "Unique Encounter Dates per Person by Payer Category",
+    subtitle = glue("{n_beyond_ud} patients with >{x_cap_ud} unique dates shown in overflow bin"),
+    x = "Number of Unique Encounter Dates",
+    y = "Number of Patients"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = "bold")) +
+  scale_fill_viridis_d()
+
+ggsave("output/figures/unique_dates_per_person_by_payor.png", p_ud1,
+       width = 12, height = 8, dpi = 300)
+message("  Saved: output/figures/unique_dates_per_person_by_payor.png")
+
+# 6d. Post-treatment unique dates by DX year
+enc_ud_by_year <- cohort_ud %>%
+  filter(!is.na(DX_YEAR), DX_YEAR != 1900, !is.na(N_UNIQUE_DATES_POST_TX)) %>%
+  group_by(DX_YEAR) %>%
+  summarise(
+    n_patients = n(),
+    mean_post_tx_ud = mean(N_UNIQUE_DATES_POST_TX, na.rm = TRUE),
+    median_post_tx_ud = median(N_UNIQUE_DATES_POST_TX, na.rm = TRUE),
+    mean_total_ud = mean(N_UNIQUE_DATES, na.rm = TRUE),
+    median_total_ud = median(N_UNIQUE_DATES, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+p_ud2 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_post_tx_ud)) +
+  geom_col(fill = "#2c7fb8", alpha = 0.8) +
+  geom_text(aes(label = round(mean_post_tx_ud, 1)), vjust = -0.3, size = 3) +
+  labs(
+    title = "Mean Post-Treatment Unique Dates per Person by Year of Diagnosis",
+    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
+    x = "Year of Diagnosis",
+    y = "Mean Unique Post-Treatment Dates"
+  ) +
+  theme_minimal(base_size = 11) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  coord_cartesian(clip = "off", ylim = c(0, max(enc_ud_by_year$mean_post_tx_ud, na.rm = TRUE) * 1.15)) +
+  theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
+
+ggsave("output/figures/post_tx_unique_dates_by_dx_year.png", p_ud2,
+       width = 10, height = 6, dpi = 300)
+message("  Saved: output/figures/post_tx_unique_dates_by_dx_year.png")
+
+# 6e. Total unique dates by DX year
+p_ud3 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_total_ud)) +
+  geom_col(fill = "#41ae76", alpha = 0.8) +
+  geom_text(aes(label = round(mean_total_ud, 1)), vjust = -0.3, size = 3) +
+  labs(
+    title = "Mean Total Unique Dates per Person by Year of Diagnosis",
+    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
+    x = "Year of Diagnosis",
+    y = "Mean Unique Encounter Dates"
+  ) +
+  theme_minimal(base_size = 11) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  coord_cartesian(clip = "off", ylim = c(0, max(enc_ud_by_year$mean_total_ud, na.rm = TRUE) * 1.15)) +
+  theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
+
+ggsave("output/figures/total_unique_dates_by_dx_year.png", p_ud3,
+       width = 10, height = 6, dpi = 300)
+message("  Saved: output/figures/total_unique_dates_by_dx_year.png")
+
 message("\n", strrep("=", 60))
 message("Encounter analysis complete")
 message(strrep("=", 60))
