@@ -12,7 +12,7 @@
 - [x] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
 - [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
 - [x] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides (completed 2026-03-31)
-- [x] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (completed 2026-04-01)
+- [ ] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (gap closure pending)
 
 ## Phase Details
 
@@ -113,11 +113,11 @@ Plans:
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
 | 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
 | 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
-| 12. More PPTX Polishing | 3/3 | Complete   | 2026-04-01 |
+| 12. More PPTX Polishing | 3/4 | Gap Closure   | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 12` to polish PPTX with glossary, footnotes, graph fixes, and summary stats
+1. Execute `/gsd:execute-phase 12` to run gap closure plan (generate PNGs on HiPerGator)
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -205,12 +205,13 @@ Plans:
 **Goal:** Add glossary/definitions slide replacing title slide, per-slide footnotes with term definitions, fix encounter analysis graphs (payer consolidation, overflow bin, masked date filtering, label clipping), remove "No Treatment Recorded" row, and add summary statistics slide
 **Requirements**: PPTX2-01, PPTX2-02, PPTX2-03, PPTX2-04, PPTX2-05, PPTX2-06, PPTX2-07
 **Depends on:** Phase 11
-**Plans:** 3/3 plans complete
+**Plans:** 4 plans (3 complete, 1 gap closure)
 
 Plans:
 - [x] 12-01-PLAN.md -- Fix encounter analysis graphs: payer consolidation, overflow bin, DX_YEAR filter, label clipping (PPTX2-04, PPTX2-06, PPTX2-07)
 - [x] 12-02-PLAN.md -- Replace title slide with glossary, remove NTR row, add summary stats slide (PPTX2-01, PPTX2-03, PPTX2-05)
 - [x] 12-03-PLAN.md -- Add per-slide footnotes with term definitions and DX_YEAR exclusion note (PPTX2-02, PPTX2-06)
+- [ ] 12-04-PLAN.md -- Gap closure: HiPerGator execution helper + visual verification of generated PNGs (PPTX2-04, PPTX2-07)
 
 ---
 
