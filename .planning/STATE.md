@@ -203,6 +203,7 @@ Plan: 02 (complete -- 11-02 done)
 - Phase 8 added: Add insurance mode around three treatment types (chemo, radiation, stem cell) from procedures tables with plus/minus 30 days window
 - Phase 9 added: Expand treatment detection using docx-specified tables and researched codes
 - Phase 10 added: Incorporate VariableDetails.xlsx surveillance strategy and Treatment_Variable_Documentation.docx variables into pipeline, then regenerate Treatment_Variable_Documentation.docx
+- Phase 12 added: more pptx polishing
 
 ### Active Blockers
 
