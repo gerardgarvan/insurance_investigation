@@ -183,7 +183,16 @@ audit_date_column <- function(df, col_name) {
 #' @param table_name Table name (string) for labeling
 #' @return Combined tibble with audit rows for all columns
 audit_table <- function(df, table_name) {
-  col_results <- map(names(df), function(col_name) {
+  # Skip ID columns -- unique per row, produce massive useless frequency tables
+  id_cols <- str_detect(names(df), "(?i)(^ID$|ID$)")
+  skip_cols <- names(df)[id_cols]
+  audit_cols <- names(df)[!id_cols]
+
+  if (length(skip_cols) > 0) {
+    message(glue("  Skipping {length(skip_cols)} ID columns: {paste(skip_cols, collapse = ', ')}"))
+  }
+
+  col_results <- map(audit_cols, function(col_name) {
     col_data <- df[[col_name]]
 
     if (inherits(col_data, "Date") || inherits(col_data, "POSIXct")) {
