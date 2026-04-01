@@ -237,8 +237,8 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md -- Conversational CSV value audit review: user provides HiPerGator output, Claude identifies coding inconsistencies (CSVAUDIT-01, CSVAUDIT-02)
-- [ ] 14-02-PLAN.md -- Optimize foundation scripts: consolidate TUMOR_REGISTRY bind_rows in 01_load_pcornet.R, simplify TR queries in 03_cohort_predicates.R (OPTIM-01, OPTIM-02)
+- [x] 14-01-PLAN.md -- Conversational CSV value audit review: user provides HiPerGator output, Claude identifies coding inconsistencies (CSVAUDIT-01, CSVAUDIT-02)
+- [x] 14-02-PLAN.md -- Optimize foundation scripts: consolidate TUMOR_REGISTRY bind_rows in 01_load_pcornet.R, simplify TR queries in 03_cohort_predicates.R (OPTIM-01, OPTIM-02)
 - [ ] 14-03-PLAN.md -- Optimize analysis scripts: consolidate PROCEDURES queries in 10_treatment_payer.R, extract HIPAA helper in 17_value_audit.R, dead code scan across 02-16 (OPTIM-01, OPTIM-02)
 
 ---
