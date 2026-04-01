@@ -233,9 +233,9 @@ message("\n--- Timing Derivation ---")
 
 cohort <- cohort %>%
   mutate(
-    DAYS_DX_TO_CHEMO     = as.integer(FIRST_CHEMO_DATE - first_hl_dx_date),
-    DAYS_DX_TO_RADIATION = as.integer(FIRST_RADIATION_DATE - first_hl_dx_date),
-    DAYS_DX_TO_SCT       = as.integer(FIRST_SCT_DATE - first_hl_dx_date)
+    DAYS_DX_TO_CHEMO     = suppressWarnings(as.integer(FIRST_CHEMO_DATE - first_hl_dx_date)),
+    DAYS_DX_TO_RADIATION = suppressWarnings(as.integer(FIRST_RADIATION_DATE - first_hl_dx_date)),
+    DAYS_DX_TO_SCT       = suppressWarnings(as.integer(FIRST_SCT_DATE - first_hl_dx_date))
   )
 
 message(glue("  DAYS_DX_TO_CHEMO: median {median(cohort$DAYS_DX_TO_CHEMO, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_CHEMO))})"))
@@ -416,7 +416,7 @@ for (lab in lab_types) {
 }
 
 message("\n--- Survivorship Encounters ---")
-message(glue("  Non-acute care (L1): {sum(hl_cohort$HAD_ENC_NONACUTE == 1, na.rm = TRUE)} patients"))
+message(glue("  Non-acute care (L1): {sum(hl_cohort$HAD_ENC_NONACUTE_CARE == 1, na.rm = TRUE)} patients"))
 message(glue("  Cancer-related (L2): {sum(hl_cohort$HAD_ENC_CANCER_RELATED == 1, na.rm = TRUE)} patients"))
 message(glue("  Cancer provider (L3): {sum(hl_cohort$HAD_ENC_CANCER_PROVIDER == 1, na.rm = TRUE)} patients"))
 message(glue("  Survivorship (L4): {sum(hl_cohort$HAD_ENC_SURVIVORSHIP == 1, na.rm = TRUE)} patients"))

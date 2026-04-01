@@ -308,16 +308,13 @@ LAB_RESULT_CM_SPEC <- cols(
 # 13. PROVIDER (7 columns)
 # ------------------------------------------------------------------------------
 # Phase 10: Added for oncology provider specialty identification
-# PROVIDER_SPECIALTY_PRIM is the primary matching column against PROVIDER_SPECIALTIES
+# PROVIDER_SPECIALTY_PRIMARY is the primary matching column against PROVIDER_SPECIALTIES
 # PROVIDERID links to PROVIDERID in ENCOUNTER, DIAGNOSIS, PROCEDURES tables
 # Schema from PCORnet CDM v7.0 specification (Jan 2025)
 PROVIDER_SPEC <- cols(
   PROVIDERID = col_character(),
-  PROVIDER_NPI = col_character(),
-  PROVIDER_SPECIALTY_PRIM = col_character(),  # KEY: NUCC taxonomy code matching
-  PROVIDER_SPECIALTY_SEC = col_character(),
   PROVIDER_SEX = col_character(),
-  ACTIVE_IND = col_character(),
+  PROVIDER_SPECIALTY_PRIMARY = col_character(),  # KEY: NUCC taxonomy code matching
   SOURCE = col_character()
 )
 
@@ -515,12 +512,12 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   # Phase 10 diagnostic logging: PROVIDER specialty values and LAB_LOINC null rate
   # --------------------------------------------------------------------------
 
-  # PROVIDER: log distinct PROVIDER_SPECIALTY_PRIM values (sample of 20)
+  # PROVIDER: log distinct PROVIDER_SPECIALTY_PRIMARY values (sample of 20)
   # Used to validate NUCC taxonomy codes align with actual data before downstream matching
   if (!is.null(pcornet$PROVIDER)) {
-    message("\n[PROVIDER] Distinct PROVIDER_SPECIALTY_PRIM values (sample up to 20):")
+    message("\n[PROVIDER] Distinct PROVIDER_SPECIALTY_PRIMARY values (sample up to 20):")
     pcornet$PROVIDER %>%
-      dplyr::distinct(PROVIDER_SPECIALTY_PRIM) %>%
+      dplyr::distinct(PROVIDER_SPECIALTY_PRIMARY) %>%
       dplyr::slice_head(n = 20) %>%
       print()
   }

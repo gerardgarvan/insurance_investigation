@@ -1,0 +1,113 @@
+================================================================================
+PCORnet Payer Variable Investigation — Pipeline Run Commands
+================================================================================
+
+ENVIRONMENT: RStudio on HiPerGator
+PREREQUISITE: module load R/4.4.2
+
+================================================================================
+FULL PIPELINE (run in order)
+================================================================================
+
+source("R/00_config.R")           # Load config, paths, ICD codes, payer mapping
+source("R/01_load_pcornet.R")     # Load all PCORnet CDM CSV tables
+source("R/02_harmonize_payer.R")  # Harmonize payer codes to 9 categories
+source("R/03_cohort_predicates.R")# Define cohort filter predicates (has_*, with_*, exclude_*)
+source("R/04_build_cohort.R")     # Build filtered HL cohort with attrition logging
+source("R/05_visualize_waterfall.R") # Attrition waterfall plot
+source("R/06_visualize_sankey.R")    # Sankey/alluvial payer flow plot
+
+================================================================================
+DIAGNOSTICS (run after full pipeline)
+================================================================================
+
+source("R/07_diagnostics.R")         # Pipeline diagnostics and validation
+source("R/08_data_quality_summary.R") # Data quality summary report
+source("R/09_dx_gap_analysis.R")      # Gap analysis for excluded "Neither" patients
+
+================================================================================
+TREATMENT & PAYER ANALYSIS (run after full pipeline)
+================================================================================
+
+source("R/10_treatment_payer.R")      # Treatment-anchored payer mode computation
+source("R/12_no_treatment_medicaid.R")# Profile Medicaid patients with no treatment
+
+================================================================================
+SURVEILLANCE & SURVIVORSHIP (run after full pipeline)
+================================================================================
+
+source("R/13_surveillance.R")            # Surveillance modality detection (procedures + labs)
+source("R/14_survivorship_encounters.R") # 4-level survivorship encounter classification
+
+================================================================================
+ENCOUNTER ANALYSIS (run after full pipeline)
+================================================================================
+
+source("R/16_encounter_analysis.R")   # Encounter analysis by payer, DX year, age group
+
+================================================================================
+POWERPOINT GENERATION (run after full pipeline)
+================================================================================
+
+# 16_encounter_analysis.R must run before 11_generate_pptx.R —
+# it produces PNG figures in output/figures/ used by slides 17-20.
+
+# If cohort is already built (hl_cohort, pcornet, encounters exist):
+source("R/16_encounter_analysis.R")
+source("R/11_generate_pptx.R")
+
+# Output: insurance_tables_YYYY-MM-DD.pptx in project root (20 slides)
+
+================================================================================
+DOCUMENTATION GENERATION (run after full pipeline)
+================================================================================
+
+source("R/15_generate_documentation.R") # Auto-generate variable documentation (.md + .docx)
+
+================================================================================
+QUICK RE-RUN AFTER CODE CHANGES (e.g., ICD code list fix)
+================================================================================
+
+# If you only changed 00_config.R (ICD codes, payer mapping, etc.):
+source("R/00_config.R")
+source("R/01_load_pcornet.R")
+source("R/03_cohort_predicates.R")
+source("R/04_build_cohort.R")
+
+# Then re-run visualizations:
+source("R/05_visualize_waterfall.R")
+source("R/06_visualize_sankey.R")
+
+# Then re-run gap analysis to confirm fix:
+source("R/09_dx_gap_analysis.R")
+
+================================================================================
+SINGLE-LINE FULL RUN (copy-paste)
+================================================================================
+
+source("R/01_load_pcornet.R"); source("R/02_harmonize_payer.R"); source("R/03_cohort_predicates.R"); source("R/04_build_cohort.R"); source("R/05_visualize_waterfall.R"); source("R/06_visualize_sankey.R")
+
+================================================================================
+SINGLE-LINE FULL RUN + ALL ANALYSIS + PPTX (copy-paste)
+================================================================================
+
+source("R/01_load_pcornet.R"); source("R/02_harmonize_payer.R"); source("R/03_cohort_predicates.R"); source("R/04_build_cohort.R"); source("R/10_treatment_payer.R"); source("R/13_surveillance.R"); source("R/14_survivorship_encounters.R"); source("R/16_encounter_analysis.R"); source("R/11_generate_pptx.R")
+
+================================================================================
+SINGLE-LINE FULL RUN + PPTX ONLY (copy-paste)
+================================================================================
+
+source("R/01_load_pcornet.R"); source("R/02_harmonize_payer.R"); source("R/03_cohort_predicates.R"); source("R/04_build_cohort.R"); source("R/16_encounter_analysis.R"); source("R/11_generate_pptx.R")
+
+================================================================================
+NOTES
+================================================================================
+
+- 01_load_pcornet.R automatically sources 00_config.R, utils_icd.R,
+  utils_dates.R, and utils_attrition.R — no need to source those separately.
+- Each script sources its own dependencies, so you can run any script
+  standalone if its upstream outputs already exist.
+- Output CSVs go to: output/cohort/, output/diagnostics/
+- Output plots go to: output/plots/
+- Output PPTX goes to: project root (insurance_tables_YYYY-MM-DD.pptx)
+- Output docs go to: output/ (TreatmentVariableDocumentation.md + .docx)

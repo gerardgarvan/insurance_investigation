@@ -35,7 +35,7 @@
 #   post_dx_date_map  -- tibble(ID, first_hl_dx_date)  -- one row per cohort patient
 #   pcornet$ENCOUNTER -- ENCOUNTERID, ID, ENC_TYPE, ADMIT_DATE, PROVIDERID
 #   pcornet$DIAGNOSIS -- ENCOUNTERID, ID, DX, DX_TYPE
-#   pcornet$PROVIDER  -- PROVIDERID, PROVIDER_SPECIALTY_PRIM (may be NULL if file missing)
+#   pcornet$PROVIDER  -- PROVIDERID, PROVIDER_SPECIALTY_PRIMARY (may be NULL if file missing)
 #
 # OUTPUT:
 #   tibble with columns (3 per level x 4 levels = 12 columns):
@@ -185,10 +185,10 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
     # left_join to preserve all Level 2 encounters even when PROVIDERID is NULL
     level3_encounters <- level2_encounters %>%
       left_join(
-        pcornet$PROVIDER %>% select(PROVIDERID, PROVIDER_SPECIALTY_PRIM),
+        pcornet$PROVIDER %>% select(PROVIDERID, PROVIDER_SPECIALTY_PRIMARY),
         by = "PROVIDERID"
       ) %>%
-      filter(PROVIDER_SPECIALTY_PRIM %in% PROVIDER_SPECIALTIES$cancer_oncology)
+      filter(PROVIDER_SPECIALTY_PRIMARY %in% PROVIDER_SPECIALTIES$cancer_oncology)
 
     level3_per_patient <- level3_encounters %>%
       group_by(ID) %>%

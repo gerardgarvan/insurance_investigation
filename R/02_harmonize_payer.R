@@ -170,7 +170,7 @@ message(glue("  Dual-eligible encounters: {format(n_dual_eligible_enc, big.mark=
 dx_dates <- pcornet$DIAGNOSIS %>%
   filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
   group_by(ID) %>%
-  summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop")
+  summarise(first_dx_date_diagnosis = if (all(is.na(DX_DATE))) NA_real_ else min(DX_DATE, na.rm = TRUE), .groups = "drop")
 
 # Get earliest from TUMOR_REGISTRY tables
 tr_tables <- list()
