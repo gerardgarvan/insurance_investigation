@@ -55,6 +55,30 @@ suppress_hipaa <- function(n_vec) {
   )
 }
 
+#' Apply HIPAA suppression to audit result tibble
+#'
+#' Replaces n counts 1-10 with "<11" and marks their pct as "suppressed"
+#'
+#' @param result Audit result tibble with n and pct columns
+#' @return Tibble with HIPAA-suppressed n and pct
+apply_hipaa_to_audit <- function(result) {
+  result %>%
+    mutate(
+      n_raw = suppressWarnings(as.numeric(n)),
+      n = case_when(
+        is.na(n_raw) ~ as.character(n),
+        n_raw >= 1 & n_raw <= 10 ~ "<11",
+        n_raw == 0 ~ "0",
+        TRUE ~ format(n_raw, big.mark = ",", trim = TRUE)
+      ),
+      pct = case_when(
+        n == "<11" ~ "suppressed",
+        TRUE ~ as.character(pct)
+      )
+    ) %>%
+    select(-n_raw)
+}
+
 #' Audit a single character/factor column
 #'
 #' @param df Data frame
@@ -236,21 +260,7 @@ for (tbl_name in names(pcornet)) {
   audit_results[[tbl_name]] <- result
 
   # Apply HIPAA suppression to character frequency counts (n column)
-  result <- result %>%
-    mutate(
-      n_raw = suppressWarnings(as.numeric(n)),
-      n = case_when(
-        is.na(n_raw) ~ as.character(n),
-        n_raw >= 1 & n_raw <= 10 ~ "<11",
-        n_raw == 0 ~ "0",
-        TRUE ~ format(n_raw, big.mark = ",", trim = TRUE)
-      ),
-      pct = case_when(
-        n == "<11" ~ "suppressed",
-        TRUE ~ as.character(pct)
-      )
-    ) %>%
-    select(-n_raw)
+  result <- apply_hipaa_to_audit(result)
 
   # Write CSV
   output_file <- file.path(output_dir, glue("{tbl_name}_values.csv"))
@@ -308,21 +318,7 @@ if (length(derived_audits) > 0) {
     result <- derived_audits[[name]]
 
     # Apply HIPAA suppression
-    result <- result %>%
-      mutate(
-        n_raw = suppressWarnings(as.numeric(n)),
-        n = case_when(
-          is.na(n_raw) ~ as.character(n),
-          n_raw >= 1 & n_raw <= 10 ~ "<11",
-          n_raw == 0 ~ "0",
-          TRUE ~ format(n_raw, big.mark = ",", trim = TRUE)
-        ),
-        pct = case_when(
-          n == "<11" ~ "suppressed",
-          TRUE ~ as.character(pct)
-        )
-      ) %>%
-      select(-n_raw)
+    result <- apply_hipaa_to_audit(result)
 
     output_file <- file.path(output_dir, glue("{name}_values.csv"))
     write_csv(result, output_file)

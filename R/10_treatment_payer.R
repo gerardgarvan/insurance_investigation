@@ -81,28 +81,28 @@ compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analy
 
 #' Compute payer mode at first chemotherapy procedure
 #'
-#' Extracts first chemo procedure dates from 7 sources:
-#'   - PROCEDURES CPT/HCPCS, ICD-9-CM, ICD-10-PCS
+#' Extracts first chemo procedure dates from 6 source queries:
+#'   - PROCEDURES CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue (0331/0332/0335)
 #'   - PRESCRIBING RXNORM
 #'   - DIAGNOSIS Z51.11/Z51.12 (ICD-10), V58.11/V58.12 (ICD-9)
 #'   - ENCOUNTER DRGs 837-839, 846-848
 #'   - DISPENSING RXNORM_CUI
 #'   - MED_ADMIN RXNORM_CUI
-#'   - PROCEDURES revenue codes 0331/0332/0335
 #'
 #' Takes minimum date per patient across all sources, then computes payer mode
 #' within +/-30 day window.
 #'
 #' @return Tibble with columns: ID, FIRST_CHEMO_DATE, PAYER_AT_CHEMO
 compute_payer_at_chemo <- function() {
-  # Extract chemo dates from PROCEDURES CPT/ICD codes
+  # Extract chemo dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue)
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
     px_dates <- pcornet$PROCEDURES %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes)
+        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes) |
+        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       group_by(ID) %>%
@@ -165,21 +165,10 @@ compute_payer_at_chemo <- function() {
       summarise(ma_date = min(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
   }
 
-  # PROCEDURES revenue codes PX_DATE: 0331/0332/0335 per D-11
-  rev_dates <- NULL
-  if (!is.null(pcornet$PROCEDURES)) {
-    rev_dates <- pcornet$PROCEDURES %>%
-      filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue) %>%
-      filter(!is.na(PX_DATE)) %>%
-      group_by(ID) %>%
-      summarise(rev_date = min(PX_DATE, na.rm = TRUE), .groups = "drop")
-  }
-
   # Combine ALL date sources into single first-date-per-patient
   all_date_sources <- list(
     px_dates = px_dates, rx_dates = rx_dates, dx_dates = dx_dates,
-    drg_dates = drg_dates, disp_dates = disp_dates, ma_dates = ma_dates,
-    rev_dates = rev_dates
+    drg_dates = drg_dates, disp_dates = disp_dates, ma_dates = ma_dates
   )
 
   # Filter out NULLs and rename date columns to generic "src_date"
@@ -205,7 +194,7 @@ compute_payer_at_chemo <- function() {
     filter(!is.infinite(FIRST_CHEMO_DATE))
 
   # Log source-level date counts
-  message(glue("  Chemo date sources: PX={nrow_or_0(px_dates)}, RX={nrow_or_0(rx_dates)}, DX={nrow_or_0(dx_dates)}, DRG={nrow_or_0(drg_dates)}, DISP={nrow_or_0(disp_dates)}, MA={nrow_or_0(ma_dates)}, REV={nrow_or_0(rev_dates)}"))
+  message(glue("  Chemo date sources: PX={nrow_or_0(px_dates)}, RX={nrow_or_0(rx_dates)}, DX={nrow_or_0(dx_dates)}, DRG={nrow_or_0(drg_dates)}, DISP={nrow_or_0(disp_dates)}, MA={nrow_or_0(ma_dates)}"))
   message(glue("  Patients with chemo dates: {nrow(first_dates)}"))
 
   # Compute payer mode in window
@@ -226,18 +215,17 @@ compute_payer_at_chemo <- function() {
 
 #' Compute payer mode at first radiation therapy procedure
 #'
-#' Extracts first radiation dates from 4 sources:
-#'   - PROCEDURES CPT, ICD-9-CM, ICD-10-PCS
+#' Extracts first radiation dates from 3 source queries:
+#'   - PROCEDURES CPT, ICD-9-CM, ICD-10-PCS, revenue (0330/0333)
 #'   - DIAGNOSIS Z51.0 (ICD-10), V58.0 (ICD-9)
 #'   - ENCOUNTER DRG 849
-#'   - PROCEDURES revenue codes 0330/0333
 #'
 #' Takes minimum date per patient across all sources, then computes payer mode
 #' within +/-30 day window.
 #'
 #' @return Tibble with columns: ID, FIRST_RADIATION_DATE, PAYER_AT_RADIATION
 compute_payer_at_radiation <- function() {
-  # Extract radiation dates from PROCEDURES CPT/ICD codes
+  # Extract radiation dates from PROCEDURES (CPT, ICD-9-CM, ICD-10-PCS, revenue)
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
     px_dates <- pcornet$PROCEDURES %>%
@@ -249,7 +237,8 @@ compute_payer_at_radiation <- function() {
           str_starts(PX, "D71") |
           str_starts(PX, "D72") |
           str_starts(PX, "D7Y")
-        ))
+        )) |
+        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       group_by(ID) %>%
@@ -281,20 +270,10 @@ compute_payer_at_radiation <- function() {
       summarise(drg_date = min(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
   }
 
-  # PROCEDURES revenue codes PX_DATE: 0330/0333 per D-11
-  rev_dates <- NULL
-  if (!is.null(pcornet$PROCEDURES)) {
-    rev_dates <- pcornet$PROCEDURES %>%
-      filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue) %>%
-      filter(!is.na(PX_DATE)) %>%
-      group_by(ID) %>%
-      summarise(rev_date = min(PX_DATE, na.rm = TRUE), .groups = "drop")
-  }
-
   # Combine ALL date sources
   all_date_sources <- list(
     px_dates = px_dates, dx_dates = dx_dates,
-    drg_dates = drg_dates, rev_dates = rev_dates
+    drg_dates = drg_dates
   )
 
   non_null_sources <- compact(all_date_sources)
@@ -317,7 +296,7 @@ compute_payer_at_radiation <- function() {
     summarise(FIRST_RADIATION_DATE = min(src_date, na.rm = TRUE), .groups = "drop") %>%
     filter(!is.infinite(FIRST_RADIATION_DATE))
 
-  message(glue("  Radiation date sources: PX={nrow_or_0(px_dates)}, DX={nrow_or_0(dx_dates)}, DRG={nrow_or_0(drg_dates)}, REV={nrow_or_0(rev_dates)}"))
+  message(glue("  Radiation date sources: PX={nrow_or_0(px_dates)}, DX={nrow_or_0(dx_dates)}, DRG={nrow_or_0(drg_dates)}"))
   message(glue("  Patients with radiation dates: {nrow(first_dates)}"))
 
   if (nrow(first_dates) == 0) {
@@ -343,25 +322,25 @@ compute_payer_at_radiation <- function() {
 
 #' Compute payer mode at first stem cell transplant procedure
 #'
-#' Extracts first SCT dates from 4 sources:
-#'   - PROCEDURES CPT, ICD-9-CM, ICD-10-PCS
+#' Extracts first SCT dates from 3 source queries:
+#'   - PROCEDURES CPT/HCPCS (incl. S2140/S2142/S2150), ICD-9-CM, ICD-10-PCS, revenue (0362/0815)
 #'   - DIAGNOSIS Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only)
 #'   - ENCOUNTER DRGs 014, 016, 017
-#'   - PROCEDURES revenue codes 0362/0815
 #'
 #' Takes minimum date per patient across all sources, then computes payer mode
 #' within +/-30 day window.
 #'
 #' @return Tibble with columns: ID, FIRST_SCT_DATE, PAYER_AT_SCT
 compute_payer_at_sct <- function() {
-  # Extract SCT dates from PROCEDURES CPT/ICD codes
+  # Extract SCT dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue)
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
     px_dates <- pcornet$PROCEDURES %>%
       filter(
-        (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) |
+        (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
+        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       group_by(ID) %>%
@@ -390,20 +369,10 @@ compute_payer_at_sct <- function() {
       summarise(drg_date = min(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
   }
 
-  # PROCEDURES revenue codes PX_DATE: 0362/0815 per D-11
-  rev_dates <- NULL
-  if (!is.null(pcornet$PROCEDURES)) {
-    rev_dates <- pcornet$PROCEDURES %>%
-      filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
-      filter(!is.na(PX_DATE)) %>%
-      group_by(ID) %>%
-      summarise(rev_date = min(PX_DATE, na.rm = TRUE), .groups = "drop")
-  }
-
   # Combine ALL date sources
   all_date_sources <- list(
     px_dates = px_dates, dx_dates = dx_dates,
-    drg_dates = drg_dates, rev_dates = rev_dates
+    drg_dates = drg_dates
   )
 
   non_null_sources <- compact(all_date_sources)
@@ -426,7 +395,7 @@ compute_payer_at_sct <- function() {
     summarise(FIRST_SCT_DATE = min(src_date, na.rm = TRUE), .groups = "drop") %>%
     filter(!is.infinite(FIRST_SCT_DATE))
 
-  message(glue("  SCT date sources: PX={nrow_or_0(px_dates)}, DX={nrow_or_0(dx_dates)}, DRG={nrow_or_0(drg_dates)}, REV={nrow_or_0(rev_dates)}"))
+  message(glue("  SCT date sources: PX={nrow_or_0(px_dates)}, DX={nrow_or_0(dx_dates)}, DRG={nrow_or_0(drg_dates)}"))
   message(glue("  Patients with SCT dates: {nrow(first_dates)}"))
 
   if (nrow(first_dates) == 0) {
