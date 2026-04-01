@@ -546,8 +546,8 @@ style_table <- function(ft, total_row = integer(0)) {
   even_rows <- seq(2, n_rows, by = 2)
 
   ft <- ft %>%
-    fontsize(size = 10, part = "body") %>%
-    fontsize(size = 11, part = "header") %>%
+    fontsize(size = 12, part = "body") %>%
+    fontsize(size = 13, part = "header") %>%
     font(fontname = "Calibri", part = "all") %>%
     bold(part = "header") %>%
     bold(j = 1, part = "body") %>%
@@ -614,20 +614,20 @@ add_table_slide <- function(pptx, title, subtitle, tbl_data) {
   pptx <- pptx %>%
     add_slide(layout = "Blank") %>%
     ph_with(
-      value = fpar(ftext(title, prop = fp_text(font.size = 22, bold = TRUE,
+      value = fpar(ftext(title, prop = fp_text(font.size = 26, bold = TRUE,
                                                 font.family = "Calibri",
                                                 color = UF_BLUE))),
-      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.5)
+      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
     ) %>%
     ph_with(
-      value = fpar(ftext(subtitle, prop = fp_text(font.size = 12, italic = TRUE,
+      value = fpar(ftext(subtitle, prop = fp_text(font.size = 14, italic = TRUE,
                                                    font.family = "Calibri",
                                                    color = DARK_TEXT))),
-      location = ph_location(left = 0.5, top = 0.65, width = 9, height = 0.3)
+      location = ph_location(left = 0.5, top = 0.85, width = 9, height = 0.4)
     ) %>%
     ph_with(
       value = ft,
-      location = ph_location(left = 0.5, top = 1.1, width = 9, height = 4)
+      location = ph_location(left = 0.5, top = 1.4, width = 9, height = 5.0)
     )
 
   pptx
@@ -635,7 +635,7 @@ add_table_slide <- function(pptx, title, subtitle, tbl_data) {
 
 # Helper to add a slide with title, subtitle, and a centered PNG figure
 add_image_slide <- function(pptx, title, subtitle, img_path,
-                             img_width = 8.5, img_height = 4.2) {
+                             img_width = 8.5, img_height = 5.0) {
   if (!file.exists(img_path)) {
     message(glue("  SKIPPED: {title} -- {img_path} not found. Run 16_encounter_analysis.R first."))
     return(pptx)
@@ -643,25 +643,25 @@ add_image_slide <- function(pptx, title, subtitle, img_path,
   pptx %>%
     add_slide(layout = "Blank") %>%
     ph_with(
-      value = fpar(ftext(title, prop = fp_text(font.size = 22, bold = TRUE,
+      value = fpar(ftext(title, prop = fp_text(font.size = 26, bold = TRUE,
                                                font.family = "Calibri", color = UF_BLUE))),
-      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.5)
+      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
     ) %>%
     ph_with(
-      value = fpar(ftext(subtitle, prop = fp_text(font.size = 12, italic = TRUE,
+      value = fpar(ftext(subtitle, prop = fp_text(font.size = 14, italic = TRUE,
                                                   font.family = "Calibri", color = DARK_TEXT))),
-      location = ph_location(left = 0.5, top = 0.65, width = 9, height = 0.35)
+      location = ph_location(left = 0.5, top = 0.85, width = 9, height = 0.4)
     ) %>%
     ph_with(
       value = external_img(img_path, width = img_width, height = img_height),
-      location = ph_location(left = (10 - img_width) / 2, top = 1.1,
+      location = ph_location(left = (10 - img_width) / 2, top = 1.4,
                               width = img_width, height = img_height)
     )
 }
 
-# Footnote text formatting (8pt italic gray at bottom of slide)
-footnote_prop <- fp_text(font.size = 8, italic = TRUE, font.family = "Calibri", color = "#666666")
-footnote_location <- ph_location(left = 0.5, top = 5.05, width = 9, height = 0.45)
+# Footnote text formatting (10pt italic gray at bottom of slide)
+footnote_prop <- fp_text(font.size = 10, italic = TRUE, font.family = "Calibri", color = "#666666")
+footnote_location <- ph_location(left = 0.5, top = 6.9, width = 9, height = 0.5)
 
 # Helper to add a footnote to the current (last-added) slide
 add_footnote <- function(pptx, text) {
@@ -685,44 +685,44 @@ pptx <- pptx %>%
   add_slide(layout = "Blank") %>%
   ph_with(
     value = fpar(ftext("Definitions and Glossary",
-                       prop = fp_text(font.size = 24, bold = TRUE,
+                       prop = fp_text(font.size = 28, bold = TRUE,
                                       font.family = "Calibri", color = UF_BLUE))),
-    location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.5)
+    location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
   ) %>%
   ph_with(
     value = block_list(
-      fpar(ftext("Primary Insurance: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Most prevalent payer across all encounters for the patient.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("First Diagnosis: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Payer mode within \u00b130 days of first HL diagnosis date.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("First Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Payer mode within \u00b130 day window of first treatment date for that treatment type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("Last Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Payer mode within \u00b130 day window of last treatment date for that treatment type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("Post-Treatment Insurance: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Most prevalent payer after last treatment of any type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext(" ", prop = fp_text(font.size = 6))),
-      fpar(ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Consolidation of Unknown, Unavailable, Other, and No Information payer categories.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Last treatment encounter was the patient's final encounter in the dataset (\u00b130 days).", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("N/A (No Treatment): ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Patient had no recorded treatment of that type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext(" ", prop = fp_text(font.size = 6))),
-      fpar(ftext("ENR Covers Window: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Patient has enrollment records spanning the full \u00b130 day window around the event date.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
-      fpar(ftext("ENR Does Not Cover: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
-           ftext("Patient's enrollment records do not fully cover the \u00b130 day window.", prop = fp_text(font.size = 11, font.family = "Calibri")))
+      fpar(ftext("Primary Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Most prevalent payer across all encounters for the patient.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("First Diagnosis: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Payer mode within \u00b130 days of first HL diagnosis date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("First Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Payer mode within \u00b130 day window of first treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("Last Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Payer mode within \u00b130 day window of last treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("Post-Treatment Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Most prevalent payer after last treatment of any type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext(" ", prop = fp_text(font.size = 10))),
+      fpar(ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Consolidation of Unknown, Unavailable, Other, and No Information payer categories.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Last treatment encounter was the patient's final encounter in the dataset (\u00b130 days).", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("N/A (No Treatment): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Patient had no recorded treatment of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext(" ", prop = fp_text(font.size = 10))),
+      fpar(ftext("ENR Covers Window: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Patient has enrollment records spanning the full \u00b130 day window around the event date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(ftext("ENR Does Not Cover: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+           ftext("Patient's enrollment records do not fully cover the \u00b130 day window.", prop = fp_text(font.size = 14, font.family = "Calibri")))
     ),
-    location = ph_location(left = 0.5, top = 0.9, width = 9, height = 4.5)
+    location = ph_location(left = 0.5, top = 1.1, width = 9, height = 5.5)
   ) %>%
   ph_with(
     value = fpar(ftext(glue("Hodgkin Lymphoma Cohort -- N = {format(N_TOTAL, big.mark = ',')} | Chemo: {format(N_CHEMO, big.mark = ',')} | Radiation: {format(N_RAD, big.mark = ',')} | SCT: {format(N_SCT, big.mark = ',')}"),
-                       prop = fp_text(font.size = 9, italic = TRUE,
+                       prop = fp_text(font.size = 11, italic = TRUE,
                                       font.family = "Calibri", color = "#666666"))),
-    location = ph_location(left = 0.5, top = 5.15, width = 9, height = 0.35)
+    location = ph_location(left = 0.5, top = 6.9, width = 9, height = 0.5)
   )
 
 # ---- Slide 2: Insurance Coverage Overview ----
@@ -1158,8 +1158,7 @@ enc_hist_path <- "output/figures/encounters_per_person_by_payor.png"
 pptx <- add_image_slide(pptx,
   "Encounters per Person by Payer Category",
   glue("Distribution of total encounter counts by primary payer -- N = {format(N_TOTAL, big.mark=',')}"),
-  enc_hist_path,
-  img_width = 9, img_height = 5.0
+  enc_hist_path
 )
 if (file.exists(enc_hist_path)) {
   pptx <- add_footnote(pptx, "Primary Insurance = most prevalent payer across all encounters. Payer categories consolidated to 6 + Missing.")
