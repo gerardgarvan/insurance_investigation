@@ -6,7 +6,7 @@
 # 15-slide output, computed entirely from R pipeline data.
 #
 # Slides:
-#   1. Title: Insurance Coverage by Treatment Type (cohort counts)
+#   1. Definitions & Glossary
 #   2. Insurance Coverage Overview (Primary + First Dx, all patients)
 #   3. Post-Treatment Insurance (all patients)
 #   4. Chemotherapy Insurance (Primary + First + Last Chemo)
@@ -664,54 +664,51 @@ N_CHEMO <- sum(cohort_full$HAD_CHEMO == 1)
 N_RAD <- sum(cohort_full$HAD_RADIATION == 1)
 N_SCT <- sum(cohort_full$HAD_SCT == 1)
 
-# ---- Slide 1: Title ----
-message("  Slide 1: Title")
-
-# Orange accent bar (single-cell flextable with UF Orange background)
-accent_bar <- flextable(data.frame(x = "")) %>%
-  delete_part(part = "header") %>%
-  bg(bg = UF_ORANGE, part = "body") %>%
-  border_remove() %>%
-  fontsize(size = 1, part = "body") %>%
-  color(color = UF_ORANGE, part = "body") %>%
-  height(height = 0.04, part = "body") %>%
-  width(j = 1, width = 4) %>%
-  padding(padding = 0, part = "all")
-
-cohort_text_prop <- fp_text(font.size = 14, font.family = "Calibri", color = DARK_TEXT)
+# ---- Slide 1: Definitions & Glossary ----
+message("  Slide 1: Definitions & Glossary")
 
 pptx <- pptx %>%
   add_slide(layout = "Blank") %>%
   ph_with(
-    value = fpar(ftext("Insurance Coverage by Treatment Type",
-                       prop = fp_text(font.size = 28, bold = TRUE,
-                                      font.family = "Calibri", color = UF_BLUE)),
-                 fp_p = fp_par(text.align = "center")),
-    location = ph_location(left = 0.5, top = 1.2, width = 9, height = 1)
-  ) %>%
-  ph_with(
-    value = accent_bar,
-    location = ph_location(left = 3.0, top = 2.0, width = 4, height = 0.06)
-  ) %>%
-  ph_with(
-    value = fpar(ftext("Hodgkin Lymphoma Cohort \u2014 UF Health",
-                       prop = fp_text(font.size = 16, font.family = "Calibri",
-                                      color = DARK_TEXT)),
-                 fp_p = fp_par(text.align = "center")),
-    location = ph_location(left = 0.5, top = 2.2, width = 9, height = 0.5)
+    value = fpar(ftext("Definitions and Glossary",
+                       prop = fp_text(font.size = 24, bold = TRUE,
+                                      font.family = "Calibri", color = UF_BLUE))),
+    location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.5)
   ) %>%
   ph_with(
     value = block_list(
-      fpar(ftext(glue("Total Cohort: N = {format(N_TOTAL, big.mark = ',')}"),
-                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center")),
-      fpar(ftext(glue("Chemotherapy: N = {format(N_CHEMO, big.mark = ',')}"),
-                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center")),
-      fpar(ftext(glue("Radiation: N = {format(N_RAD, big.mark = ',')}"),
-                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center")),
-      fpar(ftext(glue("Stem Cell Transplant: N = {format(N_SCT, big.mark = ',')}"),
-                 prop = cohort_text_prop), fp_p = fp_par(text.align = "center"))
+      fpar(ftext("Primary Insurance: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Most prevalent payer across all encounters for the patient.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("First Diagnosis: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Payer mode within \u00b130 days of first HL diagnosis date.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("First Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Payer mode within \u00b130 day window of first treatment date for that treatment type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("Last Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Payer mode within \u00b130 day window of last treatment date for that treatment type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("Post-Treatment Insurance: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Most prevalent payer after last treatment of any type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext(""), prop = fp_text(font.size = 6)),
+      fpar(ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Consolidation of Unknown, Unavailable, Other, and No Information payer categories.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Last treatment encounter was the patient's final encounter in the dataset (\u00b130 days).", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("N/A (No Treatment): ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Patient had no recorded treatment of that type.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext(""), prop = fp_text(font.size = 6)),
+      fpar(ftext("ENR Covers Window: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Patient has enrollment records spanning the full \u00b130 day window around the event date.", prop = fp_text(font.size = 11, font.family = "Calibri"))),
+      fpar(ftext("ENR Does Not Cover: ", prop = fp_text(bold = TRUE, font.size = 11, font.family = "Calibri")),
+           ftext("Patient's enrollment records do not fully cover the \u00b130 day window.", prop = fp_text(font.size = 11, font.family = "Calibri")))
     ),
-    location = ph_location(left = 0.5, top = 3.0, width = 9, height = 1.5)
+    location = ph_location(left = 0.5, top = 0.9, width = 9, height = 4.5)
+  ) %>%
+  ph_with(
+    value = fpar(ftext(glue("Hodgkin Lymphoma Cohort -- N = {format(N_TOTAL, big.mark = ',')} | Chemo: {format(N_CHEMO, big.mark = ',')} | Radiation: {format(N_RAD, big.mark = ',')} | SCT: {format(N_SCT, big.mark = ',')}"),
+                       prop = fp_text(font.size = 9, italic = TRUE,
+                                      font.family = "Calibri", color = "#666666"))),
+    location = ph_location(left = 0.5, top = 5.15, width = 9, height = 0.35)
   )
 
 # ---- Slide 2: Insurance Coverage Overview ----
@@ -1075,12 +1072,11 @@ tx_retention <- treated_ids %>%
 n_treated <- nrow(tx_retention)
 n_still_in <- sum(tx_retention$has_post_encounter)
 n_missing <- n_treated - n_still_in
-n_no_tx <- N_TOTAL - n_treated
 
 still_data <- tx_retention %>% filter(has_post_encounter)
 missing_data <- tx_retention %>% filter(!has_post_encounter)
 
-message(glue("  Treated: {n_treated} | Still in dataset: {n_still_in} | Missing: {n_missing} | No treatment: {n_no_tx}"))
+message(glue("  Treated: {n_treated} | Still in dataset: {n_still_in} | Missing: {n_missing}"))
 
 # Build payer breakdown: still in dataset (post-tx payer) vs missing (last known payer)
 still_col <- glue("Still in Dataset (N={format(n_still_in, big.mark=',')})")
@@ -1113,19 +1109,12 @@ tbl16 <- bind_rows(tbl16, tibble(
   !!missing_col := if (n_missing > 0) format_count_pct(n_missing, n_missing) else "0 (0.0%)"
 ))
 
-# Add No Treatment row to show completeness
-tbl16 <- bind_rows(tbl16, tibble(
-  `Payer Category` = "No Treatment Recorded",
-  !!still_col := "\u2014",
-  !!missing_col := format(n_no_tx, big.mark = ",")
-))
-
 pct_still <- if (n_treated > 0) round(100 * n_still_in / n_treated, 1) else 0
 pct_missing <- if (n_treated > 0) round(100 * n_missing / n_treated, 1) else 0
 
 pptx <- add_table_slide(pptx,
   "Insurance After Last Treatment \u2014 Dataset Retention",
-  glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset | {format(n_no_tx, big.mark=',')} had no recorded treatment"),
+  glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset"),
   tbl16)
 
 # ==============================================================================
@@ -1176,7 +1165,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 20 (16 tables + 4 encounter analysis)"))
+message(glue("  Slides: 20 (1 glossary + 15 tables + 4 encounter analysis)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
