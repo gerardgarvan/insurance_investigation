@@ -509,6 +509,28 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   message(strrep("=", 60))
 
   # --------------------------------------------------------------------------
+  # COMBINED TUMOR REGISTRY (Phase 14: consolidate repeated bind_rows)
+  # --------------------------------------------------------------------------
+  # Previously, 03_cohort_predicates.R, 10_treatment_payer.R, and other scripts
+  # each separately bind_rows(TR1, TR2, TR3). Binding once here avoids
+  # redundant operations and simplifies downstream code.
+  tr_tables <- compact(list(
+    pcornet$TUMOR_REGISTRY1,
+    pcornet$TUMOR_REGISTRY2,
+    pcornet$TUMOR_REGISTRY3
+  ))
+  if (length(tr_tables) > 0) {
+    pcornet$TUMOR_REGISTRY_ALL <- bind_rows(tr_tables)
+    message(glue(
+      "Combined TUMOR_REGISTRY_ALL: {format(nrow(pcornet$TUMOR_REGISTRY_ALL), big.mark=',')} rows ",
+      "from {length(tr_tables)} TR tables"
+    ))
+  } else {
+    pcornet$TUMOR_REGISTRY_ALL <- NULL
+    message("No TUMOR_REGISTRY tables loaded -- TUMOR_REGISTRY_ALL is NULL")
+  }
+
+  # --------------------------------------------------------------------------
   # Phase 10 diagnostic logging: PROVIDER specialty values and LAB_LOINC null rate
   # --------------------------------------------------------------------------
 
