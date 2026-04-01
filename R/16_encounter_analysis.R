@@ -36,11 +36,17 @@ message("\n--- Histogram: Encounters per person by payor ---")
 hist_data <- hl_cohort %>%
   filter(!is.na(PAYER_CATEGORY_PRIMARY), !is.na(N_ENCOUNTERS))
 
+# Cap x-axis at 500 to show bulk of distribution (median ~93, Q3 ~243)
+x_cap <- 500
+n_beyond <- sum(hist_data$N_ENCOUNTERS > x_cap)
+
 p1 <- ggplot(hist_data, aes(x = N_ENCOUNTERS, fill = PAYER_CATEGORY_PRIMARY)) +
-  geom_histogram(binwidth = 5, color = "white", linewidth = 0.2) +
+  geom_histogram(binwidth = 20, color = "white", linewidth = 0.2) +
   facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  coord_cartesian(xlim = c(0, x_cap)) +
   labs(
     title = "Number of Encounters per Person by Payor Category",
+    subtitle = glue("{n_beyond} patients with >{x_cap} encounters not shown"),
     x = "Number of Encounters",
     y = "Number of Patients"
   ) +
