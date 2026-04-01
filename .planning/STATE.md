@@ -2,110 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T17:58:06.445Z"
+status: Ready to execute
+last_updated: "2026-04-01T15:01:36.398Z"
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 9
-  total_plans: 24
-  completed_plans: 22
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T17:54:05.731Z"
-progress:
-  total_phases: 11
-  completed_phases: 9
-  total_plans: 24
-  completed_plans: 22
-  percent: 92
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T17:49:31.212Z"
-progress:
-  [█████████░] 92%
-  completed_phases: 8
-  total_plans: 24
-  completed_plans: 21
-  percent: 88
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T16:17:22.892Z"
-progress:
-  [█████████░] 88%
-  completed_phases: 8
-  total_plans: 22
-  completed_plans: 20
-  percent: 91
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T16:11:34.053Z"
-progress:
-  [█████████░] 91%
-  completed_phases: 7
-  total_plans: 22
-  completed_plans: 19
-  percent: 86
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T16:06:26.768Z"
-progress:
-  [█████████░] 86%
-  completed_phases: 7
-  total_plans: 22
-  completed_plans: 18
-  percent: 82
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-31T16:00:50.371Z"
-progress:
-  [████████░░] 82%
-  completed_phases: 7
-  total_plans: 22
-  completed_plans: 16
-  percent: 73
----
-
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-26T16:01:26.371Z"
-progress:
-  [███████░░░] 73%
-  completed_phases: 7
-  total_plans: 17
-  completed_plans: 15
+  total_plans: 27
+  completed_plans: 24
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
@@ -117,12 +20,12 @@ progress:
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 11 — pptx-clarity-and-missing-data-consolidation
+**Current focus:** Phase 12 — more-pptx-polishing
 
 ## Current Position
 
-Phase: 11
-Plan: 02 (complete -- 11-02 done)
+Phase: 12 (more-pptx-polishing) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -162,6 +65,8 @@ Plan: 02 (complete -- 11-02 done)
 | Phase 10 P05 | 2 | 1 tasks | 1 files |
 | Phase 11 P01 | 15 | 1 tasks | 1 files |
 | Phase 11 P02 | 10 | 1 tasks | 1 files |
+| Phase 12 P01 | 99 | 2 tasks | 1 files |
+| Phase 12 P02 | 3 | 2 tasks | 1 files |
 
 ### Key Decisions
 
@@ -189,6 +94,10 @@ Plan: 02 (complete -- 11-02 done)
 | Bare N/A payer labels replaced with No Payer Assigned | Consistent clinical language across all three table builder functions and Slide 16 inline table | Phase 11 P01 | 2026-03-31 |
 | add_image_slide() guards with file.exists() -- missing PNGs skip with message, not error | Script must be runnable without 16_encounter_analysis.R PNGs present; graceful degradation to 16 slides | Phase 11 P02 | 2026-03-31 |
 | Slide 17 uses wider image (img_width=9, img_height=5.5) | Histogram PNG is 12x8 inches; wider embedding prevents clipping on 10-inch slide | Phase 11 P02 | 2026-03-31 |
+| Histogram payer categories consolidated to 6+Missing | Matches Phase 11 table consolidation for consistency across all slides | Phase 12 P01 | 2026-04-01 |
+| Per-facet overflow bin annotation for encounters >500 | Makes excluded high-encounter patients visible with counts per payer category | Phase 12 P01 | 2026-04-01 |
+| DX_YEAR=1900 filtered from bar charts with tracked exclusion count | Year 1900 is a masking placeholder; tracking count provides transparency | Phase 12 P01 | 2026-04-01 |
+| coord_cartesian(clip='off') + expanded y-axis limits prevent label clipping | Both clip control and limit expansion needed for labels above bars | Phase 12 P01 | 2026-04-01 |
 
 ### Current Todos
 
@@ -215,18 +124,19 @@ Plan: 02 (complete -- 11-02 done)
 
 ## Session Continuity
 
-**What we just did:** Completed Phase 11 Plan 02 -- added add_image_slide() helper and Slides 17-20 to R/11_generate_pptx.R. Slides embed PNG figures from 16_encounter_analysis.R via external_img(); file.exists() guard ensures graceful skip with message when PNGs absent. Slide count updated to 20 (16 tables + 4 encounter analysis).
+**What we just did:** Completed Phase 12 Plan 01 -- fixed four graph issues in R/16_encounter_analysis.R. Consolidated histogram payer categories to 6+Missing matching Phase 11 tables, added per-facet overflow bin annotation for encounters >500, filtered DX_YEAR=1900 masked dates from bar charts with tracked exclusion count in subtitle, and fixed label clipping on all bar charts via coord_cartesian(clip="off") and expanded y-axis limits.
 
-**What's next:** Phase 11 Plans 01-02 complete. Phase 11 may be complete if no additional plans remain.
+**What's next:** Phase 12 Plan 02 -- Add definitions/glossary slide and per-slide footnotes to R/11_generate_pptx.R.
 
 **Context for next session:**
 
-- R/11_generate_pptx.R: Now produces 20 slides when encounter PNGs exist; 16 slides otherwise (graceful degradation)
-- add_image_slide() helper at line 636: file.exists() guard + title/subtitle/external_img() on Blank layout
-- Slides 17-20: encounters_per_person_by_payor.png, post_tx_encounters_by_dx_year.png, total_encounters_by_dx_year.png, post_tx_by_age_group.png
-- Run 16_encounter_analysis.R before 11_generate_pptx.R to get all 20 slides
-- R/11_generate_pptx.R: PAYER_ORDER has 7 entries (6 categories + Missing); all payer tables show Missing instead of Unknown/Unavailable/Other (from Plan 01)
-- N/A (No Follow-up) rows on Slides 3/5/7/9 are preserved (POST_TREATMENT NA preserved as NA) (from Plan 01)
+- R/16_encounter_analysis.R: Histogram now shows 6+Missing payer facets (Other/Unavailable/Unknown consolidated to Missing)
+- Histogram includes per-facet overflow bin annotation (">500: N" text via geom_text)
+- N_ENC_CAPPED variable at 501 bins overflow patients for visual separation
+- DX_YEAR=1900 filtered from enc_by_year pipeline; n_masked count displayed in p2/p3 subtitle
+- All bar charts (p2, p3, p4) have coord_cartesian(clip="off") + expanded ylim (15-20% buffer) + increased top margin
+- Run 16_encounter_analysis.R before 11_generate_pptx.R to regenerate corrected PNGs
+- Commits: a74c585 (payer consolidation + overflow bin), 34fc69f (masked date filter + label clipping)
 
 ---
 

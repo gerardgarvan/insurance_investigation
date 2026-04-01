@@ -113,7 +113,7 @@ Plans:
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
 | 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
 | 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
-| 12. More PPTX Polishing | 0/3 | Planned | |
+| 12. More PPTX Polishing | 1/3 | In Progress|  |
 
 ## Next Actions
 
@@ -205,10 +205,10 @@ Plans:
 **Goal:** Add glossary/definitions slide replacing title slide, per-slide footnotes with term definitions, fix encounter analysis graphs (payer consolidation, overflow bin, masked date filtering, label clipping), remove "No Treatment Recorded" row, and add summary statistics slide
 **Requirements**: PPTX2-01, PPTX2-02, PPTX2-03, PPTX2-04, PPTX2-05, PPTX2-06, PPTX2-07
 **Depends on:** Phase 11
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 12-01-PLAN.md -- Fix encounter analysis graphs: payer consolidation, overflow bin, DX_YEAR filter, label clipping (PPTX2-04, PPTX2-06, PPTX2-07)
+- [x] 12-01-PLAN.md -- Fix encounter analysis graphs: payer consolidation, overflow bin, DX_YEAR filter, label clipping (PPTX2-04, PPTX2-06, PPTX2-07)
 - [ ] 12-02-PLAN.md -- Replace title slide with glossary, remove NTR row, add summary stats slide (PPTX2-01, PPTX2-03, PPTX2-05)
 - [ ] 12-03-PLAN.md -- Add per-slide footnotes with term definitions and DX_YEAR exclusion note (PPTX2-02, PPTX2-06)
 
