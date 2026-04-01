@@ -23,9 +23,10 @@
 #  15. Missing Post-Treatment Payer - Encounter Breakdown
 #  16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
 #  17. Encounters per Person by Payer Category (histogram)
-#  18. Mean Post-Treatment Encounters by Year of Diagnosis
-#  19. Mean Total Encounters by Year of Diagnosis
-#  20. Post-Treatment Encounter Presence by Age Group
+#  18. Summary Statistics: Encounters per Payer Category (table)
+#  19. Mean Post-Treatment Encounters by Year of Diagnosis
+#  20. Mean Total Encounters by Year of Diagnosis
+#  21. Post-Treatment Encounter Presence by Age Group
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -1132,24 +1133,71 @@ pptx <- add_image_slide(pptx,
   img_width = 9, img_height = 5.5
 )
 
-# ---- Slide 18: Post-treatment encounters by DX year ----
-message("  Slide 18: Post-Treatment Encounters by DX Year")
+# ---- Slide 18 (new): Summary Statistics -- Encounters per Person by Payer ----
+message("  Slide 18: Summary Statistics -- Encounters per Payer")
+
+summary_stats <- cohort_full %>%
+  filter(!is.na(N_ENCOUNTERS)) %>%
+  mutate(PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(PAYER_DISPLAY) %>%
+  summarise(
+    N = n(),
+    Mean = round(mean(N_ENCOUNTERS, na.rm = TRUE), 1),
+    Median = round(median(N_ENCOUNTERS, na.rm = TRUE), 1),
+    Min = min(N_ENCOUNTERS, na.rm = TRUE),
+    Q1 = round(quantile(N_ENCOUNTERS, 0.25, na.rm = TRUE), 1),
+    Q3 = round(quantile(N_ENCOUNTERS, 0.75, na.rm = TRUE), 1),
+    Max = max(N_ENCOUNTERS, na.rm = TRUE),
+    `N > 500` = sum(N_ENCOUNTERS > 500, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY)
+
+# Add totals row
+summary_totals <- cohort_full %>%
+  filter(!is.na(N_ENCOUNTERS), !is.na(PAYER_CATEGORY_PRIMARY)) %>%
+  summarise(
+    `Payer Category` = "Total",
+    N = n(),
+    Mean = round(mean(N_ENCOUNTERS, na.rm = TRUE), 1),
+    Median = round(median(N_ENCOUNTERS, na.rm = TRUE), 1),
+    Min = min(N_ENCOUNTERS, na.rm = TRUE),
+    Q1 = round(quantile(N_ENCOUNTERS, 0.25, na.rm = TRUE), 1),
+    Q3 = round(quantile(N_ENCOUNTERS, 0.75, na.rm = TRUE), 1),
+    Max = max(N_ENCOUNTERS, na.rm = TRUE),
+    `N > 500` = sum(N_ENCOUNTERS > 500, na.rm = TRUE)
+  )
+
+summary_stats <- bind_rows(summary_stats, summary_totals)
+
+# Format N with commas for display
+summary_stats <- summary_stats %>%
+  mutate(N = format(N, big.mark = ","))
+
+pptx <- add_table_slide(pptx,
+  "Summary Statistics: Encounters per Person by Payer Category",
+  glue("Distribution of total encounter counts by primary insurance category -- N = {format(N_TOTAL, big.mark = ',')}"),
+  summary_stats)
+
+# ---- Slide 19: Post-treatment encounters by DX year ----
+message("  Slide 19: Post-Treatment Encounters by DX Year")
 pptx <- add_image_slide(pptx,
   "Mean Post-Treatment Encounters by Year of Diagnosis",
   "Non-acute care encounters per person after last treatment, stratified by HL diagnosis year",
   "output/figures/post_tx_encounters_by_dx_year.png"
 )
 
-# ---- Slide 19: Total encounters by DX year ----
-message("  Slide 19: Total Encounters by DX Year")
+# ---- Slide 20: Total encounters by DX year ----
+message("  Slide 20: Total Encounters by DX Year")
 pptx <- add_image_slide(pptx,
   "Mean Total Encounters by Year of Diagnosis",
   "All encounters per person across the full observation window, stratified by HL diagnosis year",
   "output/figures/total_encounters_by_dx_year.png"
 )
 
-# ---- Slide 20: Post-treatment encounters by age group ----
-message("  Slide 20: Post-Treatment Encounters by Age Group")
+# ---- Slide 21: Post-treatment encounters by age group ----
+message("  Slide 21: Post-Treatment Encounters by Age Group")
 pptx <- add_image_slide(pptx,
   "Post-Treatment Encounter Presence by Age Group at Diagnosis",
   "Proportion with any post-treatment encounter by age group (0-17, 18-39, 40-64, 65+)",
@@ -1165,7 +1213,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 20 (1 glossary + 15 tables + 4 encounter analysis)"))
+message(glue("  Slides: 21 (1 glossary + 16 tables + 4 encounter analysis)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
