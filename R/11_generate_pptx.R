@@ -1180,7 +1180,7 @@ summary_stats <- cohort_full %>%
     Q1 = round(quantile(N_ENCOUNTERS, 0.25, na.rm = TRUE), 1),
     Q3 = round(quantile(N_ENCOUNTERS, 0.75, na.rm = TRUE), 1),
     Max = max(N_ENCOUNTERS, na.rm = TRUE),
-    `N > 500` = sum(N_ENCOUNTERS > 500, na.rm = TRUE),
+    `500+` = sum(N_ENCOUNTERS > 500, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   rename(`Payer Category` = PAYER_DISPLAY)
@@ -1197,7 +1197,7 @@ summary_totals <- cohort_full %>%
     Q1 = round(quantile(N_ENCOUNTERS, 0.25, na.rm = TRUE), 1),
     Q3 = round(quantile(N_ENCOUNTERS, 0.75, na.rm = TRUE), 1),
     Max = max(N_ENCOUNTERS, na.rm = TRUE),
-    `N > 500` = sum(N_ENCOUNTERS > 500, na.rm = TRUE)
+    `500+` = sum(N_ENCOUNTERS > 500, na.rm = TRUE)
   )
 
 summary_stats <- bind_rows(summary_stats, summary_totals)
@@ -1210,7 +1210,7 @@ pptx <- add_table_slide(pptx,
   "Summary Statistics: Encounters per Person by Payer Category",
   glue("Distribution of total encounter counts by primary insurance category -- N = {format(N_TOTAL, big.mark = ',')}"),
   summary_stats) %>%
-  add_footnote("Primary Insurance = most prevalent payer across all encounters. N > 500 = patients with more than 500 total encounters.")
+  add_footnote("Primary Insurance = most prevalent payer across all encounters. 500+ = patients with more than 500 total encounters.")
 
 # Count masked diagnosis dates for footnote
 n_masked_dx <- cohort_full %>%
