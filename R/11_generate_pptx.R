@@ -1154,12 +1154,16 @@ message("\n--- Encounter Analysis Slides ---")
 
 # ---- Slide 17: Encounter histogram by payor ----
 message("  Slide 17: Encounters per Person by Payer Category")
+enc_hist_path <- "output/figures/encounters_per_person_by_payor.png"
 pptx <- add_image_slide(pptx,
   "Encounters per Person by Payer Category",
   glue("Distribution of total encounter counts by primary payer -- N = {format(N_TOTAL, big.mark=',')}"),
-  "output/figures/encounters_per_person_by_payor.png",
-  img_width = 9, img_height = 5.5
+  enc_hist_path,
+  img_width = 9, img_height = 5.0
 )
+if (file.exists(enc_hist_path)) {
+  pptx <- add_footnote(pptx, "Primary Insurance = most prevalent payer across all encounters. Payer categories consolidated to 6 + Missing.")
+}
 
 # ---- Slide 18 (new): Summary Statistics -- Encounters per Person by Payer ----
 message("  Slide 18: Summary Statistics -- Encounters per Payer")
@@ -1206,31 +1210,54 @@ summary_stats <- summary_stats %>%
 pptx <- add_table_slide(pptx,
   "Summary Statistics: Encounters per Person by Payer Category",
   glue("Distribution of total encounter counts by primary insurance category -- N = {format(N_TOTAL, big.mark = ',')}"),
-  summary_stats)
+  summary_stats) %>%
+  add_footnote("Primary Insurance = most prevalent payer across all encounters. N > 500 = patients with more than 500 total encounters.")
+
+# Count masked diagnosis dates for footnote
+n_masked_dx <- cohort_full %>%
+  filter(!is.na(DX_YEAR), DX_YEAR == 1900) %>%
+  nrow()
+masked_footnote <- if (n_masked_dx > 0) {
+  glue("{n_masked_dx} patients with masked diagnosis date (year 1900) excluded from this analysis.")
+} else {
+  ""
+}
 
 # ---- Slide 19: Post-treatment encounters by DX year ----
 message("  Slide 19: Post-Treatment Encounters by DX Year")
+post_tx_dx_path <- "output/figures/post_tx_encounters_by_dx_year.png"
 pptx <- add_image_slide(pptx,
   "Mean Post-Treatment Encounters by Year of Diagnosis",
   "Non-acute care encounters per person after last treatment, stratified by HL diagnosis year",
-  "output/figures/post_tx_encounters_by_dx_year.png"
+  post_tx_dx_path
 )
+if (file.exists(post_tx_dx_path) && nchar(masked_footnote) > 0) {
+  pptx <- add_footnote(pptx, masked_footnote)
+}
 
 # ---- Slide 20: Total encounters by DX year ----
 message("  Slide 20: Total Encounters by DX Year")
+total_enc_dx_path <- "output/figures/total_encounters_by_dx_year.png"
 pptx <- add_image_slide(pptx,
   "Mean Total Encounters by Year of Diagnosis",
   "All encounters per person across the full observation window, stratified by HL diagnosis year",
-  "output/figures/total_encounters_by_dx_year.png"
+  total_enc_dx_path
 )
+if (file.exists(total_enc_dx_path) && nchar(masked_footnote) > 0) {
+  pptx <- add_footnote(pptx, masked_footnote)
+}
 
 # ---- Slide 21: Post-treatment encounters by age group ----
 message("  Slide 21: Post-Treatment Encounters by Age Group")
+age_group_path <- "output/figures/post_tx_by_age_group.png"
 pptx <- add_image_slide(pptx,
   "Post-Treatment Encounter Presence by Age Group at Diagnosis",
   "Proportion with any post-treatment encounter by age group (0-17, 18-39, 40-64, 65+)",
-  "output/figures/post_tx_by_age_group.png"
+  age_group_path
 )
+if (file.exists(age_group_path)) {
+  pptx <- add_footnote(pptx, "Age group determined at date of first HL diagnosis. Post-treatment = any encounter after last treatment of any type.")
+}
 
 # ==============================================================================
 # SECTION 6: SAVE PPTX
