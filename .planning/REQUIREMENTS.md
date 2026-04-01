@@ -28,7 +28,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Visualization
 
 - [ ] **VIZ-01**: User can produce an attrition waterfall chart showing progressive cohort reduction through filter steps
-- [ ] **VIZ-02**: User can produce a payer-stratified Sankey/alluvial diagram showing enrollment → diagnosis → treatment flow
+- [ ] **VIZ-02**: User can produce a payer-stratified Sankey/alluvial diagram showing enrollment -> diagnosis -> treatment flow
 - [ ] **VIZ-03**: User can apply HIPAA small-cell suppression (counts 1-10 suppressed) in all outputs
 
 ### Data Quality & Parsing Fixes
@@ -90,6 +90,16 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PPTX-03**: User can see encounter analysis slides in PPTX: histogram of encounters per person by payor, post-treatment encounters by DX year, total encounters by DX year
 - [x] **PPTX-04**: User can see age group breakdown (0-17, 18-39, 40-64, 65+) with Yes/No post-treatment encounter analysis in PPTX
 - [x] **PPTX-05**: User can see unambiguous slide titles, subtitles, and labels throughout PPTX with no vague terminology
+
+### More PPTX Polishing (Phase 12)
+
+- [ ] **PPTX2-01**: User can see a definitions/glossary slide as the first slide with all payer term definitions (Primary Insurance, First Diagnosis, First/Last treatment types, Post-Treatment Insurance, Missing, No Payer Assigned, N/A labels, ENR coverage terms)
+- [ ] **PPTX2-02**: User can see contextual footnotes on every data slide (small italic text at slide bottom) defining the terms used on that specific slide
+- [ ] **PPTX2-03**: User can see Slide 16 without the "No Treatment Recorded" row (row removed)
+- [ ] **PPTX2-04**: User can see the encounter histogram with payer categories consolidated to 6+Missing (matching table consolidation) and a >500 overflow bin with per-facet count annotation
+- [ ] **PPTX2-05**: User can see a summary statistics slide after the encounter histogram showing N, Mean, Median, Min, Q1, Q3, Max, N>500 per payer category
+- [ ] **PPTX2-06**: User can see DX year bar charts (Slides 19-20) without DX_YEAR=1900 data points, with a footnote noting how many patients with masked diagnosis date were excluded
+- [ ] **PPTX2-07**: User can see age group bar chart labels that are not clipped at the top of the plot
 
 ## v2 Requirements
 
@@ -185,18 +195,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TDOC-01 | Phase 10 | Complete |
 | TDOC-02 | Phase 10 | Complete |
 | TDOC-03 | Phase 10 | Complete |
-
 | PPTX-01 | Phase 11 | Complete |
 | PPTX-02 | Phase 11 | Complete |
 | PPTX-03 | Phase 11 | Complete |
 | PPTX-04 | Phase 11 | Complete |
 | PPTX-05 | Phase 11 | Complete |
+| PPTX2-01 | Phase 12 | Pending |
+| PPTX2-02 | Phase 12 | Pending |
+| PPTX2-03 | Phase 12 | Pending |
+| PPTX2-04 | Phase 12 | Pending |
+| PPTX2-05 | Phase 12 | Pending |
+| PPTX2-06 | Phase 12 | Pending |
+| PPTX2-07 | Phase 12 | Pending |
 
 **Coverage:**
-- v1 requirements: 49 total
-- Mapped to phases: 49
+- v1 requirements: 56 total
+- Mapped to phases: 56
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-31 after Phase 10 planning*
+*Last updated: 2026-04-01 after Phase 12 planning*
