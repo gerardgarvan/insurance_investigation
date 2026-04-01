@@ -101,6 +101,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PPTX2-06**: User can see DX year bar charts (Slides 19-20) without DX_YEAR=1900 data points, with a footnote noting how many patients with masked diagnosis date were excluded
 - [ ] **PPTX2-07**: User can see age group bar chart labels that are not clipped at the top of the plot
 
+### CSV Values Data Audit & Code Optimization (Phase 14)
+
+- [ ] **CSVAUDIT-01**: User can review value_audit CSV output (from 17_value_audit.R) for coding inconsistencies with Claude in conversation
+- [ ] **CSVAUDIT-02**: User can identify and discuss which coding inconsistencies represent real data capture problems vs expected PCORnet CDM variation
+- [ ] **OPTIM-01**: User can see dead code removed and redundant operations consolidated across R scripts 00-17 (TUMOR_REGISTRY bind_rows, duplicate HIPAA suppression, unused variables)
+- [ ] **OPTIM-02**: User can see style-preserving optimizations (reduced bind_rows duplication, consolidated PROCEDURES queries, early column selection) applied to the pipeline without changing function signatures
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -207,12 +214,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX2-05 | Phase 12 | Complete |
 | PPTX2-06 | Phase 12 | Complete |
 | PPTX2-07 | Phase 12 | Pending |
+| CSVAUDIT-01 | Phase 14 | Pending |
+| CSVAUDIT-02 | Phase 14 | Pending |
+| OPTIM-01 | Phase 14 | Pending |
+| OPTIM-02 | Phase 14 | Pending |
 
 **Coverage:**
-- v1 requirements: 56 total
-- Mapped to phases: 56
+- v1 requirements: 60 total
+- Mapped to phases: 60
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-01 after Phase 12 planning*
+*Last updated: 2026-04-01 after Phase 14 planning*

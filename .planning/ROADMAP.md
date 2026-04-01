@@ -14,6 +14,7 @@
 - [x] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides (completed 2026-03-31)
 - [ ] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (gap closure pending)
 - [ ] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables
+- [ ] **Phase 14: CSV Values Data Audit & Code Optimization** - Review value_audit CSVs for coding inconsistencies, optimize R pipeline code
 
 ## Phase Details
 
@@ -116,11 +117,13 @@ Plans:
 | 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
 | 12. More PPTX Polishing | 3/4 | Gap Closure   | |
 | 13. Summary Tables Value Audit | 0/1 | Planned | |
+| 14. CSV Values Data Audit & Code Optimization | 0/3 | Planned | |
 
 ## Next Actions
 
 1. Execute `/gsd:execute-phase 12` to run gap closure plan (generate PNGs on HiPerGator)
 2. Execute `/gsd:execute-phase 13` to create value audit tables
+3. Execute `/gsd:execute-phase 14` to review CSVs and optimize code
 
 ### Phase 5: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 
@@ -225,6 +228,18 @@ Plans:
 
 Plans:
 - [ ] 13-01-PLAN.md -- Value audit script R/17_value_audit.R with per-table CSV output and HIPAA suppression (AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04)
+
+### Phase 14: CSV Values Data Audit & Code Optimization
+
+**Goal:** Review value_audit CSVs for coding inconsistencies (same concept coded differently across tables/columns) via conversational analysis with Claude, then apply style-preserving code optimizations across all R scripts (00-17) to eliminate redundant operations, dead code, and unnecessary data copies while preserving named predicate patterns and dplyr chains
+**Requirements**: CSVAUDIT-01, CSVAUDIT-02, OPTIM-01, OPTIM-02
+**Depends on:** Phase 13
+**Plans:** 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md -- Conversational CSV value audit review: user provides HiPerGator output, Claude identifies coding inconsistencies (CSVAUDIT-01, CSVAUDIT-02)
+- [ ] 14-02-PLAN.md -- Optimize foundation scripts: consolidate TUMOR_REGISTRY bind_rows in 01_load_pcornet.R, simplify TR queries in 03_cohort_predicates.R (OPTIM-01, OPTIM-02)
+- [ ] 14-03-PLAN.md -- Optimize analysis scripts: consolidate PROCEDURES queries in 10_treatment_payer.R, extract HIPAA helper in 17_value_audit.R, dead code scan across 02-16 (OPTIM-01, OPTIM-02)
 
 ---
 
