@@ -1216,12 +1216,10 @@ pptx <- add_table_slide(pptx,
   summary_stats) %>%
   add_footnote("Primary Insurance = most prevalent payer across all encounters. 500+ = patients with more than 500 total encounters.")
 
-# Count masked diagnosis dates for footnote
-n_masked_dx <- cohort_full %>%
-  filter(!is.na(DX_YEAR), DX_YEAR == 1900) %>%
-  nrow()
-masked_footnote <- if (n_masked_dx > 0) {
-  glue("{n_masked_dx} patients with masked diagnosis date (year 1900) excluded from this analysis.")
+# Count patients with missing DX_YEAR (includes nullified 1900 sentinels) for footnote
+n_missing_dx_year <- sum(is.na(cohort_full$DX_YEAR))
+masked_footnote <- if (n_missing_dx_year > 0) {
+  glue("{n_missing_dx_year} patients with missing diagnosis date excluded from this analysis.")
 } else {
   ""
 }

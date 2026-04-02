@@ -157,6 +157,16 @@ message("\n--- First HL Diagnosis Date ---")
 cohort <- cohort %>%
   left_join(first_dx, by = "ID")
 
+# Nullify 1900 sentinel dates (SAS epoch) -- these are missing, not real diagnoses.
+# Must happen HERE so all downstream code (survivorship encounters, payer windows,
+# treatment timing, visualizations) automatically excludes these patients.
+n_sentinel_dx <- sum(year(cohort$first_hl_dx_date) == 1900L, na.rm = TRUE)
+if (n_sentinel_dx > 0) {
+  message(glue("  Nullifying {n_sentinel_dx} sentinel diagnosis dates (year 1900)"))
+  cohort <- cohort %>%
+    mutate(first_hl_dx_date = if_else(year(first_hl_dx_date) == 1900L, as.Date(NA), first_hl_dx_date))
+}
+
 message(glue("  Patients with first_hl_dx_date: {sum(!is.na(cohort$first_hl_dx_date))}"))
 message(glue("  Patients missing first_hl_dx_date: {sum(is.na(cohort$first_hl_dx_date))}"))
 
@@ -259,12 +269,8 @@ message("\n--- Age & DX Year Derivation ---")
 
 cohort <- cohort %>%
   mutate(
-    # Treat 1900 diagnosis dates as missing (SAS epoch sentinel -> negative age)
-    age_at_dx_raw = if_else(
-      year(first_hl_dx_date) == 1900L,
-      NA_integer_,
-      as.integer(time_length(interval(BIRTH_DATE, first_hl_dx_date), "years"))
-    ),
+    # first_hl_dx_date is already NA for 1900 sentinels (nullified in Section 4)
+    age_at_dx_raw = as.integer(time_length(interval(BIRTH_DATE, first_hl_dx_date), "years")),
     # Validate: set impossible ages to NA (negatives = date error, >120 = sentinel/error)
     age_at_dx = if_else(
       !is.na(age_at_dx_raw) & age_at_dx_raw >= 0L & age_at_dx_raw <= 120L,
@@ -289,7 +295,7 @@ cohort <- cohort %>%
       age_at_dx >= 65                    ~ "65+",
       TRUE                               ~ NA_character_
     ),
-    DX_YEAR = if_else(year(first_hl_dx_date) == 1900L, NA_integer_, year(first_hl_dx_date))
+    DX_YEAR = year(first_hl_dx_date)
   )
 
 # Log invalid ages that were set to NA

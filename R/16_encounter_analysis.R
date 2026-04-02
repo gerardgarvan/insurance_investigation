@@ -89,14 +89,13 @@ message("  Saved: output/figures/encounters_per_person_by_payor.png")
 
 message("\n--- Post-treatment encounters by DX year ---")
 
-# Count masked dates before filtering
-n_masked <- hl_cohort %>%
-  filter(!is.na(DX_YEAR), DX_YEAR == 1900) %>%
-  nrow()
-message(glue("  {n_masked} patients with masked diagnosis date (DX_YEAR=1900) excluded from DX year plots"))
+# 1900 sentinel dates are already nullified in 04_build_cohort.R Section 4,
+# so DX_YEAR is NA for those patients.
+n_missing_dx_year <- sum(is.na(hl_cohort$DX_YEAR))
+message(glue("  {n_missing_dx_year} patients with missing DX_YEAR (includes nullified 1900 sentinels) excluded from DX year plots"))
 
 enc_by_year <- hl_cohort %>%
-  filter(!is.na(DX_YEAR), DX_YEAR != 1900, !is.na(N_ENC_NONACUTE_CARE)) %>%
+  filter(!is.na(DX_YEAR), !is.na(N_ENC_NONACUTE_CARE)) %>%
   group_by(DX_YEAR) %>%
   summarise(
     n_patients = n(),
@@ -112,7 +111,7 @@ p2 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_post_tx_enc)) +
   geom_text(aes(label = round(mean_post_tx_enc, 1)), vjust = -0.3, size = 3) +
   labs(
     title = "Mean Post-Treatment Encounters per Person by Year of Diagnosis",
-    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
+    subtitle = if (n_missing_dx_year > 0) glue("{n_missing_dx_year} patients with missing diagnosis date excluded") else NULL,
     x = "Year of Diagnosis",
     y = "Mean Post-Treatment Encounters"
   ) +
@@ -136,7 +135,7 @@ p3 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_total_enc)) +
   geom_text(aes(label = round(mean_total_enc, 1)), vjust = -0.3, size = 3) +
   labs(
     title = "Mean Total Encounters per Person by Year of Diagnosis",
-    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
+    subtitle = if (n_missing_dx_year > 0) glue("{n_missing_dx_year} patients with missing diagnosis date excluded") else NULL,
     x = "Year of Diagnosis",
     y = "Mean Total Encounters"
   ) +
@@ -324,7 +323,7 @@ message("  Saved: output/figures/unique_dates_per_person_by_payor.png")
 
 # 6d. Post-treatment unique dates by DX year
 enc_ud_by_year <- cohort_ud %>%
-  filter(!is.na(DX_YEAR), DX_YEAR != 1900, !is.na(N_UNIQUE_DATES_POST_TX)) %>%
+  filter(!is.na(DX_YEAR), !is.na(N_UNIQUE_DATES_POST_TX)) %>%
   group_by(DX_YEAR) %>%
   summarise(
     n_patients = n(),
@@ -340,7 +339,7 @@ p_ud2 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_post_tx_ud)) +
   geom_text(aes(label = round(mean_post_tx_ud, 1)), vjust = -0.3, size = 3) +
   labs(
     title = "Mean Post-Treatment Unique Dates per Person by Year of Diagnosis",
-    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
+    subtitle = if (n_missing_dx_year > 0) glue("{n_missing_dx_year} patients with missing diagnosis date excluded") else NULL,
     x = "Year of Diagnosis",
     y = "Mean Unique Post-Treatment Dates"
   ) +
@@ -359,7 +358,7 @@ p_ud3 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_total_ud)) +
   geom_text(aes(label = round(mean_total_ud, 1)), vjust = -0.3, size = 3) +
   labs(
     title = "Mean Total Unique Dates per Person by Year of Diagnosis",
-    subtitle = if (n_masked > 0) glue("{n_masked} patients with masked diagnosis date (year 1900) excluded") else NULL,
+    subtitle = if (n_missing_dx_year > 0) glue("{n_missing_dx_year} patients with missing diagnosis date excluded") else NULL,
     x = "Year of Diagnosis",
     y = "Mean Unique Encounter Dates"
   ) +
