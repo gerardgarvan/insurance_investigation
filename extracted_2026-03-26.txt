@@ -1,0 +1,292 @@
+================================================================================
+FILE: insurance_tables_2026-03-26.pptx
+Total slides: 14
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 1
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Insurance Coverage by Treatment Type
+
+  [PLACEHOLDER (14)]
+    Hodgkin Lymphoma Cohort — UF Health
+
+  [PLACEHOLDER (14)]
+    Total Cohort: N = 8,770
+    Chemotherapy: N = 7,337
+    Radiation: N = 1,207
+    Stem Cell Transplant: N = 952
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 2
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Insurance Coverage Overview
+
+  [PLACEHOLDER (14)]
+    All enrolled patients — N = 8,770
+
+  [TABLE] (rows=10, cols=3)
+    HDR: Payer Category     │ Primary Insurance   │ First Diagnosis  
+    ─────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 647 (7.4%)          │ 338 (3.9%)       
+    R02: Medicaid           │ 3,161 (36%)         │ 2,945 (33.6%)    
+    R03: Dual eligible      │ 809 (9.2%)          │ 536 (6.1%)       
+    R04: Private            │ 1,941 (22.1%)       │ 1,090 (12.4%)    
+    R05: Other government   │ 100 (1.1%)          │ 91 (1%)          
+    R06: Self-pay           │ 211 (2.4%)          │ 154 (1.8%)       
+    R07: Other              │ 62 (0.7%)           │ 28 (0.3%)        
+    R08: Unavailable        │ 181 (2.1%)          │ 132 (1.5%)       
+    R09: Unknown            │ 1,658 (18.9%)       │ 3,456 (39.4%)    
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 3
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Post-Treatment Insurance — All Patients
+
+  [PLACEHOLDER (14)]
+    Most prevalent payer after last treatment date — N = 8,770
+
+  [TABLE] (rows=11, cols=2)
+    HDR: Payer Category       │ Post-Treatment Insurance  
+    ──────────────────────────────────────────────────────
+    R01: Medicare             │ 382 (4.4%)                
+    R02: Medicaid             │ 1,592 (18.2%)             
+    R03: Dual eligible        │ 562 (6.4%)                
+    R04: Private              │ 860 (9.8%)                
+    R05: Other government     │ 51 (0.6%)                 
+    R06: Self-pay             │ 141 (1.6%)                
+    R07: Other                │ 33 (0.4%)                 
+    R08: Unavailable          │ 262 (3%)                  
+    R09: Unknown              │ 4,887 (55.7%)             
+    R10: N/A (No Treatment)   │ 0 (0%)                    
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 4
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Chemotherapy Insurance
+
+  [PLACEHOLDER (14)]
+    Insurance at primary, first, and last chemotherapy — N = 7,337
+
+  [TABLE] (rows=10, cols=4)
+    HDR: Payer Category     │ Primary Insurance   │ First Chemo     │ Last Chemo     
+    ─────────────────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 621 (8.5%)          │ 495 (6.7%)      │ 704 (9.6%)     
+    R02: Medicaid           │ 2,574 (35.1%)       │ 2,271 (31%)     │ 1,810 (24.7%)  
+    R03: Dual eligible      │ 531 (7.2%)          │ 305 (4.2%)      │ 544 (7.4%)     
+    R04: Private            │ 1,787 (24.4%)       │ 1,670 (22.8%)   │ 1,464 (20%)    
+    R05: Other government   │ 92 (1.3%)           │ 126 (1.7%)      │ 99 (1.3%)      
+    R06: Self-pay           │ 195 (2.7%)          │ 277 (3.8%)      │ 233 (3.2%)     
+    R07: Other              │ 54 (0.7%)           │ 93 (1.3%)       │ 68 (0.9%)      
+    R08: Unavailable        │ 162 (2.2%)          │ 189 (2.6%)      │ 222 (3%)       
+    R09: Unknown            │ 1,321 (18%)         │ 1,911 (26%)     │ 2,193 (29.9%)  
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 5
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Chemotherapy Post-Treatment Insurance
+
+  [PLACEHOLDER (14)]
+    Most prevalent payer after last treatment date — N = 7,337
+
+  [TABLE] (rows=10, cols=2)
+    HDR: Payer Category     │ Post-Treatment Insurance  
+    ────────────────────────────────────────────────────
+    R01: Medicare           │ 380 (5.2%)                
+    R02: Medicaid           │ 1,555 (21.2%)             
+    R03: Dual eligible      │ 543 (7.4%)                
+    R04: Private            │ 854 (11.6%)               
+    R05: Other government   │ 51 (0.7%)                 
+    R06: Self-pay           │ 141 (1.9%)                
+    R07: Other              │ 33 (0.4%)                 
+    R08: Unavailable        │ 262 (3.6%)                
+    R09: Unknown            │ 3,518 (47.9%)             
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 6
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Radiation Insurance
+
+  [PLACEHOLDER (14)]
+    Insurance at primary, first, and last radiation — N = 1,207
+
+  [TABLE] (rows=10, cols=4)
+    HDR: Payer Category     │ Primary Insurance   │ First Radiation   │ Last Radiation  
+    ────────────────────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 59 (4.9%)           │ 37 (3.1%)         │ 40 (3.3%)       
+    R02: Medicaid           │ 639 (52.9%)         │ 590 (48.9%)       │ 577 (47.8%)     
+    R03: Dual eligible      │ 114 (9.4%)          │ 95 (7.9%)         │ 105 (8.7%)      
+    R04: Private            │ 206 (17.1%)         │ 126 (10.4%)       │ 120 (9.9%)      
+    R05: Other government   │ <11 (*)             │ <11 (*)           │ <11 (*)         
+    R06: Self-pay           │ 16 (1.3%)           │ 18 (1.5%)         │ 17 (1.4%)       
+    R07: Other              │ <11 (*)             │ <11 (*)           │ 0 (0%)          
+    R08: Unavailable        │ <11 (*)             │ <11 (*)           │ <11 (*)         
+    R09: Unknown            │ 153 (12.7%)         │ 324 (26.8%)       │ 333 (27.6%)     
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 7
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Radiation Post-Treatment Insurance
+
+  [PLACEHOLDER (14)]
+    Most prevalent payer after last treatment date — N = 1,207
+
+  [TABLE] (rows=10, cols=2)
+    HDR: Payer Category     │ Post-Treatment Insurance  
+    ────────────────────────────────────────────────────
+    R01: Medicare           │ 40 (3.3%)                 
+    R02: Medicaid           │ 428 (35.5%)               
+    R03: Dual eligible      │ 125 (10.4%)               
+    R04: Private            │ 100 (8.3%)                
+    R05: Other government   │ <11 (*)                   
+    R06: Self-pay           │ 15 (1.2%)                 
+    R07: Other              │ <11 (*)                   
+    R08: Unavailable        │ 29 (2.4%)                 
+    R09: Unknown            │ 465 (38.5%)               
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 8
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Stem Cell Transplant Insurance
+
+  [PLACEHOLDER (14)]
+    Insurance at primary, first, and last SCT — N = 952
+
+  [TABLE] (rows=10, cols=4)
+    HDR: Payer Category     │ Primary Insurance   │ First SCT     │ Last SCT     
+    ─────────────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 53 (5.6%)           │ 48 (5%)       │ 52 (5.5%)    
+    R02: Medicaid           │ 331 (34.8%)         │ 281 (29.5%)   │ 218 (22.9%)  
+    R03: Dual eligible      │ 53 (5.6%)           │ 45 (4.7%)     │ 83 (8.7%)    
+    R04: Private            │ 249 (26.2%)         │ 225 (23.6%)   │ 194 (20.4%)  
+    R05: Other government   │ 11 (1.2%)           │ 13 (1.4%)     │ 11 (1.2%)    
+    R06: Self-pay           │ 19 (2%)             │ 25 (2.6%)     │ 28 (2.9%)    
+    R07: Other              │ <11 (*)             │ <11 (*)       │ <11 (*)      
+    R08: Unavailable        │ <11 (*)             │ <11 (*)       │ 13 (1.4%)    
+    R09: Unknown            │ 222 (23.3%)         │ 309 (32.5%)   │ 348 (36.6%)  
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 9
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: SCT Post-Treatment Insurance
+
+  [PLACEHOLDER (14)]
+    Most prevalent payer after last treatment date — N = 952
+
+  [TABLE] (rows=10, cols=2)
+    HDR: Payer Category     │ Post-Treatment Insurance  
+    ────────────────────────────────────────────────────
+    R01: Medicare           │ 44 (4.6%)                 
+    R02: Medicaid           │ 140 (14.7%)               
+    R03: Dual eligible      │ 62 (6.5%)                 
+    R04: Private            │ 100 (10.5%)               
+    R05: Other government   │ <11 (*)                   
+    R06: Self-pay           │ 16 (1.7%)                 
+    R07: Other              │ <11 (*)                   
+    R08: Unavailable        │ 37 (3.9%)                 
+    R09: Unknown            │ 548 (57.6%)               
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 10
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Diagnosis — Insurance by Enrollment Coverage
+
+  [PLACEHOLDER (14)]
+    Payer at first HL diagnosis: patients with vs without enrollment covering ±30 day window
+
+  [TABLE] (rows=11, cols=3)
+    HDR: Payer Category     │ ENR Covers Window   │ ENR Does Not Cover  
+    ────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 106 (6.1%)          │ 232 (3.3%)          
+    R02: Medicaid           │ 596 (34.3%)         │ 2,349 (33.4%)       
+    R03: Dual eligible      │ 221 (12.7%)         │ 315 (4.5%)          
+    R04: Private            │ 243 (14%)           │ 847 (12%)           
+    R05: Other government   │ 19 (1.1%)           │ 72 (1%)             
+    R06: Self-pay           │ 34 (2%)             │ 120 (1.7%)          
+    R07: Other              │ <11 (*)             │ 27 (0.4%)           
+    R08: Unavailable        │ 32 (1.8%)           │ 100 (1.4%)          
+    R09: Unknown            │ 486 (28%)           │ 2,970 (42.2%)       
+    R10: N/A                │ 0 (0%)              │ 0 (0%)              
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 11
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Chemotherapy — Insurance by Enrollment Coverage
+
+  [PLACEHOLDER (14)]
+    Payer at first/last chemo: patients with vs without enrollment covering ±30 day window
+
+  [TABLE] (rows=11, cols=5)
+    HDR: Payer Category     │ First Chemo ENR Covers   │ First Chemo ENR Gap   │ Last Chemo ENR Covers   │ Last Chemo ENR Gap  
+    ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 91 (5.9%)                │ 404 (7%)              │ 136 (7.7%)              │ 568 (10.2%)         
+    R02: Medicaid           │ 448 (29.2%)              │ 1,823 (31.4%)         │ 499 (28.2%)             │ 1,311 (23.5%)       
+    R03: Dual eligible      │ 88 (5.7%)                │ 217 (3.7%)            │ 120 (6.8%)              │ 424 (7.6%)          
+    R04: Private            │ 290 (18.9%)              │ 1,380 (23.8%)         │ 293 (16.6%)             │ 1,171 (21%)         
+    R05: Other government   │ 22 (1.4%)                │ 104 (1.8%)            │ 16 (0.9%)               │ 83 (1.5%)           
+    R06: Self-pay           │ 46 (3%)                  │ 231 (4%)              │ 25 (1.4%)               │ 208 (3.7%)          
+    R07: Other              │ <11 (*)                  │ 89 (1.5%)             │ <11 (*)                 │ 62 (1.1%)           
+    R08: Unavailable        │ 31 (2%)                  │ 158 (2.7%)            │ 32 (1.8%)               │ 190 (3.4%)          
+    R09: Unknown            │ 512 (33.4%)              │ 1,399 (24.1%)         │ 642 (36.3%)             │ 1,551 (27.9%)       
+    R10: N/A                │ 0 (0%)                   │ 0 (0%)                │ 0 (0%)                  │ 0 (0%)              
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 12
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Radiation — Insurance by Enrollment Coverage
+
+  [PLACEHOLDER (14)]
+    Payer at first/last radiation: patients with vs without enrollment covering ±30 day window
+
+  [TABLE] (rows=11, cols=5)
+    HDR: Payer Category     │ First Radiation ENR Covers   │ First Radiation ENR Gap   │ Last Radiation ENR Covers   │ Last Radiation ENR Gap  
+    ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 21 (5.2%)                    │ 16 (2%)                   │ 25 (6.1%)                   │ 15 (1.9%)               
+    R02: Medicaid           │ 156 (38.8%)                  │ 434 (53.9%)               │ 155 (37.8%)                 │ 422 (52.9%)             
+    R03: Dual eligible      │ 36 (9%)                      │ 59 (7.3%)                 │ 40 (9.8%)                   │ 65 (8.2%)               
+    R04: Private            │ 60 (14.9%)                   │ 66 (8.2%)                 │ 61 (14.9%)                  │ 59 (7.4%)               
+    R05: Other government   │ <11 (*)                      │ <11 (*)                   │ <11 (*)                     │ <11 (*)                 
+    R06: Self-pay           │ <11 (*)                      │ <11 (*)                   │ <11 (*)                     │ <11 (*)                 
+    R07: Other              │ 0 (0%)                       │ <11 (*)                   │ 0 (0%)                      │ 0 (0%)                  
+    R08: Unavailable        │ <11 (*)                      │ <11 (*)                   │ <11 (*)                     │ <11 (*)                 
+    R09: Unknown            │ 117 (29.1%)                  │ 207 (25.7%)               │ 117 (28.5%)                 │ 216 (27.1%)             
+    R10: N/A                │ 0 (0%)                       │ 0 (0%)                    │ 0 (0%)                      │ 0 (0%)                  
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 13
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: SCT — Insurance by Enrollment Coverage
+
+  [PLACEHOLDER (14)]
+    Payer at first/last SCT: patients with vs without enrollment covering ±30 day window
+
+  [TABLE] (rows=11, cols=5)
+    HDR: Payer Category     │ First SCT ENR Covers   │ First SCT ENR Gap   │ Last SCT ENR Covers   │ Last SCT ENR Gap  
+    ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    R01: Medicare           │ 28 (7.9%)              │ 20 (3.4%)           │ 28 (8.7%)             │ 24 (3.8%)         
+    R02: Medicaid           │ 60 (16.9%)             │ 221 (37.1%)         │ 44 (13.6%)            │ 174 (27.7%)       
+    R03: Dual eligible      │ 12 (3.4%)              │ 33 (5.5%)           │ 19 (5.9%)             │ 64 (10.2%)        
+    R04: Private            │ 117 (32.9%)            │ 108 (18.1%)         │ 88 (27.2%)            │ 106 (16.9%)       
+    R05: Other government   │ <11 (*)                │ <11 (*)             │ <11 (*)               │ <11 (*)           
+    R06: Self-pay           │ 12 (3.4%)              │ 13 (2.2%)           │ 13 (4%)               │ 15 (2.4%)         
+    R07: Other              │ <11 (*)                │ <11 (*)             │ <11 (*)               │ <11 (*)           
+    R08: Unavailable        │ <11 (*)                │ <11 (*)             │ 0 (0%)                │ 13 (2.1%)         
+    R09: Unknown            │ 120 (33.7%)            │ 189 (31.7%)         │ 125 (38.7%)           │ 223 (35.5%)       
+    R10: N/A                │ 0 (0%)                 │ 0 (0%)              │ 0 (0%)                │ 0 (0%)            
+
+────────────────────────────────────────────────────────────────────────────────
+SLIDE 14
+────────────────────────────────────────────────────────────────────────────────
+  TITLE: Unknown Post-Treatment Payer — Encounter Breakdown
+
+  [PLACEHOLDER (14)]
+    Patients with Unknown post-treatment payer: how many encounters exist after last treatment?
+
+  [TABLE] (rows=6, cols=2)
+    HDR: Payer Category   │ N Patients     
+    ───────────────────────────────────────
+    R01: 0                │ 1,965 (56.1%)  
+    R02: 1-5              │ 809 (23.1%)    
+    R03: 6-10             │ 264 (7.5%)     
+    R04: 11-20            │ 211 (6%)       
+    R05: 21+              │ 252 (7.2%)     

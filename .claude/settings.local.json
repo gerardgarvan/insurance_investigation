@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix\\(13\\): skip ID columns in value audit \\(useless unique-per-row tables\\)\n\nExcludes any column ending in \"ID\" \\(ID, ENCOUNTERID, PROVIDERID,\nDIAGNOSISID, FACILITYID, etc.\\) from frequency counting.\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "WebSearch",
+      "Bash(wc:*)",
+      "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\":*)",
+      "Bash(node:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs\\(phase-14\\): complete Wave 1 — value audit review and foundation optimization\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
+    ]
+  }
+}

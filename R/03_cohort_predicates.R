@@ -249,11 +249,13 @@ has_chemo <- function() {
   }
   n_px <- length(px_chemo)
 
-  # PRESCRIBING: any prescription record (matches Python pipeline's broad definition)
-  # Python counts any patient with RX_ORDER_DATE or RX_START_DATE as chemo evidence
+  # PRESCRIBING: RXNORM_CUI matching for known chemo drugs (ABVD regimen components)
+  # Previous version counted ANY prescription as chemo evidence, inflating HAD_CHEMO.
+  # Now filters to TREATMENT_CODES$chemo_rxnorm (Doxorubicin, Bleomycin, Vinblastine, Dacarbazine).
   rx_chemo <- character(0)
   if (!is.null(pcornet$PRESCRIBING)) {
     rx_chemo <- pcornet$PRESCRIBING %>%
+      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
       distinct(ID) %>%
       pull(ID)

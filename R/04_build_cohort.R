@@ -238,6 +238,15 @@ cohort <- cohort %>%
     DAYS_DX_TO_SCT       = suppressWarnings(as.integer(FIRST_SCT_DATE - first_hl_dx_date))
   )
 
+# Validate treatment timing: flag negative values (treatment before diagnosis)
+for (tx_col in c("DAYS_DX_TO_CHEMO", "DAYS_DX_TO_RADIATION", "DAYS_DX_TO_SCT")) {
+  vals <- cohort[[tx_col]]
+  n_negative <- sum(vals < 0, na.rm = TRUE)
+  if (n_negative > 0) {
+    message(glue("  WARNING: {n_negative} patients have negative {tx_col} (treatment before diagnosis), min = {min(vals, na.rm = TRUE)} days"))
+  }
+}
+
 message(glue("  DAYS_DX_TO_CHEMO: median {median(cohort$DAYS_DX_TO_CHEMO, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_CHEMO))})"))
 message(glue("  DAYS_DX_TO_RADIATION: median {median(cohort$DAYS_DX_TO_RADIATION, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_RADIATION))})"))
 message(glue("  DAYS_DX_TO_SCT: median {median(cohort$DAYS_DX_TO_SCT, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_SCT))})"))
@@ -250,11 +259,28 @@ message("\n--- Age & DX Year Derivation ---")
 
 cohort <- cohort %>%
   mutate(
-    # Treat 1900 diagnosis dates as missing (SAS epoch sentinel → negative age)
-    age_at_dx = if_else(
+    # Treat 1900 diagnosis dates as missing (SAS epoch sentinel -> negative age)
+    age_at_dx_raw = if_else(
       year(first_hl_dx_date) == 1900L,
       NA_integer_,
       as.integer(time_length(interval(BIRTH_DATE, first_hl_dx_date), "years"))
+    ),
+    # Validate: set impossible ages to NA (negatives = date error, >120 = sentinel/error)
+    age_at_dx = if_else(
+      !is.na(age_at_dx_raw) & age_at_dx_raw >= 0L & age_at_dx_raw <= 120L,
+      age_at_dx_raw,
+      NA_integer_
+    ),
+    # Also validate enrollment ages
+    age_at_enr_start = if_else(
+      !is.na(age_at_enr_start) & age_at_enr_start >= 0L & age_at_enr_start <= 120L,
+      age_at_enr_start,
+      NA_integer_
+    ),
+    age_at_enr_end = if_else(
+      !is.na(age_at_enr_end) & age_at_enr_end >= 0L & age_at_enr_end <= 120L,
+      age_at_enr_end,
+      NA_integer_
     ),
     AGE_GROUP = case_when(
       age_at_dx >= 0  & age_at_dx <= 17 ~ "0-17",
@@ -265,6 +291,17 @@ cohort <- cohort %>%
     ),
     DX_YEAR = if_else(year(first_hl_dx_date) == 1900L, NA_integer_, year(first_hl_dx_date))
   )
+
+# Log invalid ages that were set to NA
+n_invalid_age <- sum(!is.na(cohort$age_at_dx_raw) & is.na(cohort$age_at_dx))
+if (n_invalid_age > 0) {
+  invalid_range <- cohort %>% filter(!is.na(age_at_dx_raw) & is.na(cohort$age_at_dx))
+  message(glue("  WARNING: {n_invalid_age} patients had impossible age_at_dx (outside 0-120) set to NA"))
+  message(glue("  Invalid age values: [{min(invalid_range$age_at_dx_raw)}, {max(invalid_range$age_at_dx_raw)}]"))
+}
+
+# Drop raw column
+cohort <- cohort %>% select(-age_at_dx_raw)
 
 message(glue("  Age at diagnosis: median {median(cohort$age_at_dx, na.rm = TRUE)}, range [{min(cohort$age_at_dx, na.rm = TRUE)}, {max(cohort$age_at_dx, na.rm = TRUE)}]"))
 age_grp_dist <- cohort %>% filter(!is.na(AGE_GROUP)) %>% count(AGE_GROUP)
