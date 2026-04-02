@@ -447,9 +447,14 @@ build_payer_table_with_na <- function(data, col_specs, na_label = "N/A (No Treat
     n_na <- sum(is.na(data[[spec$col]]))
     na_row[[spec$label]] <- format_count_pct(n_na, total_n)
   }
-  # tbl already has Total row from build_payer_table; insert N/A before it
+  # Replace Total row to include N/A patients (so percentages sum to 100%)
   n_rows <- nrow(tbl)
-  bind_rows(tbl[1:(n_rows - 1), ], as_tibble(na_row), tbl[n_rows, ])
+  total_row <- list(`Payer Category` = "Total")
+  for (spec in col_specs) {
+    total_row[[spec$label]] <- format_count_pct(total_n, total_n)
+  }
+
+  bind_rows(tbl[1:(n_rows - 1), ], as_tibble(na_row), as_tibble(total_row))
 }
 
 # Build enrollment coverage split table
