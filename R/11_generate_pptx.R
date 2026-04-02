@@ -35,7 +35,7 @@
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
 #     encounters, payer_summary in the global environment)
-#   - 16_encounter_analysis.R should be run first to produce PNG figures
+#   - 16_encounter_analysis.R is sourced automatically to regenerate PNG figures
 #     in output/figures/ (slides 17-20, 22-25 will be skipped if PNGs are absent)
 #   - Packages: officer, flextable, dplyr, glue, lubridate, purrr, scales
 #
@@ -1153,6 +1153,11 @@ pptx <- add_table_slide(pptx,
 # ==============================================================================
 # SECTION 5b: ENCOUNTER ANALYSIS SLIDES (from 16_encounter_analysis.R figures)
 # ==============================================================================
+
+# Regenerate encounter analysis PNGs to ensure they reflect current cohort data.
+# Without this, stale PNGs from a previous run get embedded in the pptx.
+message("\n--- Regenerating encounter analysis figures ---")
+source("R/16_encounter_analysis.R")
 
 message("\n--- Encounter Analysis Slides ---")
 
