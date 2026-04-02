@@ -250,8 +250,11 @@ message("\n--- Age & DX Year Derivation ---")
 
 cohort <- cohort %>%
   mutate(
-    age_at_dx = as.integer(
-      time_length(interval(BIRTH_DATE, first_hl_dx_date), "years")
+    # Treat 1900 diagnosis dates as missing (SAS epoch sentinel → negative age)
+    age_at_dx = if_else(
+      year(first_hl_dx_date) == 1900L,
+      NA_integer_,
+      as.integer(time_length(interval(BIRTH_DATE, first_hl_dx_date), "years"))
     ),
     AGE_GROUP = case_when(
       age_at_dx >= 0  & age_at_dx <= 17 ~ "0-17",
@@ -260,7 +263,7 @@ cohort <- cohort %>%
       age_at_dx >= 65                    ~ "65+",
       TRUE                               ~ NA_character_
     ),
-    DX_YEAR = year(first_hl_dx_date)
+    DX_YEAR = if_else(year(first_hl_dx_date) == 1900L, NA_integer_, year(first_hl_dx_date))
   )
 
 message(glue("  Age at diagnosis: median {median(cohort$age_at_dx, na.rm = TRUE)}, range [{min(cohort$age_at_dx, na.rm = TRUE)}, {max(cohort$age_at_dx, na.rm = TRUE)}]"))

@@ -94,7 +94,7 @@ compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analy
 #'
 #' @return Tibble with columns: ID, FIRST_CHEMO_DATE, PAYER_AT_CHEMO
 compute_payer_at_chemo <- function() {
-  # Extract chemo dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue)
+  # Extract chemo dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue) - consolidated query
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
     px_dates <- pcornet$PROCEDURES %>%
@@ -225,7 +225,7 @@ compute_payer_at_chemo <- function() {
 #'
 #' @return Tibble with columns: ID, FIRST_RADIATION_DATE, PAYER_AT_RADIATION
 compute_payer_at_radiation <- function() {
-  # Extract radiation dates from PROCEDURES (CPT, ICD-9-CM, ICD-10-PCS, revenue)
+  # Extract radiation dates from PROCEDURES (CPT, ICD-9-CM, ICD-10-PCS, revenue) - consolidated query
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
     px_dates <- pcornet$PROCEDURES %>%
