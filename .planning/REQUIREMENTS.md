@@ -96,10 +96,10 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PPTX2-01**: User can see a definitions/glossary slide as the first slide with all payer term definitions (Primary Insurance, First Diagnosis, First/Last treatment types, Post-Treatment Insurance, Missing, No Payer Assigned, N/A labels, ENR coverage terms)
 - [x] **PPTX2-02**: User can see contextual footnotes on every data slide (small italic text at slide bottom) defining the terms used on that specific slide
 - [x] **PPTX2-03**: User can see Slide 16 without the "No Treatment Recorded" row (row removed)
-- [ ] **PPTX2-04**: User can see the encounter histogram with payer categories consolidated to 6+Missing (matching table consolidation) and a >500 overflow bin with per-facet count annotation
+- [x] **PPTX2-04**: User can see the encounter histogram with payer categories consolidated to 6+Missing (matching table consolidation) and a >500 overflow bin with per-facet count annotation
 - [x] **PPTX2-05**: User can see a summary statistics slide after the encounter histogram showing N, Mean, Median, Min, Q1, Q3, Max, N>500 per payer category
 - [x] **PPTX2-06**: User can see DX year bar charts (Slides 19-20) without DX_YEAR=1900 data points, with a footnote noting how many patients with masked diagnosis date were excluded
-- [ ] **PPTX2-07**: User can see age group bar chart labels that are not clipped at the top of the plot
+- [x] **PPTX2-07**: User can see age group bar chart labels that are not clipped at the top of the plot
 
 ### CSV Values Data Audit & Code Optimization (Phase 14)
 
@@ -134,9 +134,9 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 
 ### Visualization Polish
 
-- [ ] **VIZP-01**: Filter 1900 sentinel dates from all PPTX content (tables and graphs) so they never appear
+- [x] **VIZP-01**: Filter 1900 sentinel dates from all PPTX content (tables and graphs) so they never appear
 - [ ] **VIZP-02**: New PPTX slide with summary table showing unique encounter dates per person by payer category, counted only after `max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE)`
-- [ ] **VIZP-03**: Stacked encounter histograms by payer with post-treatment on bottom of each bar and pre-treatment on top, faceted by payer category
+- [x] **VIZP-03**: Stacked encounter histograms by payer with post-treatment on bottom of each bar and pre-treatment on top, faceted by payer category
 
 ## v2 Requirements
 
@@ -240,10 +240,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX2-01 | Phase 12 | Complete |
 | PPTX2-02 | Phase 12 | Complete |
 | PPTX2-03 | Phase 12 | Complete |
-| PPTX2-04 | Phase 17 | Pending |
+| PPTX2-04 | Phase 17 | Complete |
 | PPTX2-05 | Phase 12 | Complete |
 | PPTX2-06 | Phase 12 | Complete |
-| PPTX2-07 | Phase 17 | Pending |
+| PPTX2-07 | Phase 17 | Complete |
 | CSVAUDIT-01 | Phase 14 | Complete |
 | CSVAUDIT-02 | Phase 14 | Complete |
 | OPTIM-01 | Phase 14 | Complete |
@@ -259,9 +259,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SNAP-05 | Phase 16 | Complete |
 | GIT-01 | Phase 15 | Complete |
 | GIT-02 | Phase 15 | Complete |
-| VIZP-01 | Phase 17 | Pending |
+| VIZP-01 | Phase 17 | Complete |
 | VIZP-02 | Phase 17 | Pending |
-| VIZP-03 | Phase 17 | Pending |
+| VIZP-03 | Phase 17 | Complete |
 
 **Coverage:**
 - v1 requirements: 60 total
