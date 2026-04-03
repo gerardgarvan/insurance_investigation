@@ -1428,6 +1428,75 @@ if (file.exists(total_ud_dx_path) && nchar(masked_footnote) > 0) {
   pptx <- add_footnote(pptx, masked_footnote)
 }
 
+# ---- Slide 26: Unique Encounter Dates per Person by Payer (Post-Last Treatment) ----
+message("  Slide 26: Post-Last-Treatment Unique Encounter Dates by Payer")
+
+# Per D-05: This uses LAST_ANY_TREATMENT_DATE as anchor (post-LAST-treatment),
+# NOT first_hl_dx_date (post-diagnosis) which Section 6 of 16_encounter_analysis.R uses.
+
+# Step 1: Compute per-patient unique post-last-treatment encounter dates
+post_last_tx_dates <- encounters %>%
+  inner_join(all_last_dates, by = "ID") %>%
+  filter(
+    !is.na(LAST_ANY_TREATMENT_DATE),       # Only patients with treatment (per D-04)
+    !is.na(ADMIT_DATE),
+    ADMIT_DATE > LAST_ANY_TREATMENT_DATE,   # Post-last-treatment encounters only
+    year(ADMIT_DATE) != 1900L               # Filter 1900 sentinels (per VIZP-01)
+  ) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES_POST_LAST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
+
+# Step 2: Join to treated patients with payer, fill 0 for those with no post-tx encounters
+# Only include patients who HAVE treatment (per D-04)
+treated_cohort_ids <- cohort_full %>%
+  inner_join(all_last_dates %>% filter(!is.na(LAST_ANY_TREATMENT_DATE)), by = "ID") %>%
+  select(ID, PAYER_CATEGORY_PRIMARY)
+
+post_last_tx_summary <- treated_cohort_ids %>%
+  left_join(post_last_tx_dates, by = "ID") %>%
+  mutate(
+    N_UNIQUE_DATES_POST_LAST_TX = coalesce(N_UNIQUE_DATES_POST_LAST_TX, 0L),
+    PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)
+  ) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(PAYER_DISPLAY) %>%
+  summarise(
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE), 1),
+    Median = median(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Min = min(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Max = max(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY)
+
+# Add totals row
+post_last_tx_totals <- treated_cohort_ids %>%
+  left_join(post_last_tx_dates, by = "ID") %>%
+  mutate(N_UNIQUE_DATES_POST_LAST_TX = coalesce(N_UNIQUE_DATES_POST_LAST_TX, 0L)) %>%
+  summarise(
+    `Payer Category` = "Total",
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE), 1),
+    Median = median(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Min = min(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Max = max(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE)
+  )
+
+post_last_tx_summary <- bind_rows(post_last_tx_summary, post_last_tx_totals) %>%
+  mutate(N = format(N, big.mark = ","))
+
+n_treated_for_slide <- nrow(treated_cohort_ids)
+
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(post_last_tx_summary, "post_last_tx_unique_dates_summary_data")
+
+pptx <- add_table_slide(pptx,
+  "Unique Encounter Dates per Person (Post-Last Treatment)",
+  glue("Distinct encounter dates after last treatment (any type) -- Treated patients only, N = {format(n_treated_for_slide, big.mark = ',')}"),
+  post_last_tx_summary) %>%
+  add_footnote("Post-Last Treatment = encounters after max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE). Patients with no treatment excluded. Unique dates = distinct ADMIT_DATEs per patient.")
+
 # ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
