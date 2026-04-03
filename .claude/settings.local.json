@@ -9,7 +9,8 @@
       "Bash(node \"$HOME/.claude/get-shit-done/bin/gsd-tools.cjs\":*)",
       "Bash(node:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs\\(phase-14\\): complete Wave 1 — value audit review and foundation optimization\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(python:*)"
     ]
   }
 }
