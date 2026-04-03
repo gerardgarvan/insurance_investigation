@@ -135,7 +135,7 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 ### Visualization Polish
 
 - [x] **VIZP-01**: Filter 1900 sentinel dates from all PPTX content (tables and graphs) so they never appear
-- [ ] **VIZP-02**: New PPTX slide with summary table showing unique encounter dates per person by payer category, counted only after `max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE)`
+- [x] **VIZP-02**: New PPTX slide with summary table showing unique encounter dates per person by payer category, counted only after `max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE)`
 - [x] **VIZP-03**: Stacked encounter histograms by payer with post-treatment on bottom of each bar and pre-treatment on top, faceted by payer category
 
 ## v2 Requirements
@@ -260,7 +260,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GIT-01 | Phase 15 | Complete |
 | GIT-02 | Phase 15 | Complete |
 | VIZP-01 | Phase 17 | Complete |
-| VIZP-02 | Phase 17 | Pending |
+| VIZP-02 | Phase 17 | Complete |
 | VIZP-03 | Phase 17 | Complete |
 
 **Coverage:**
