@@ -406,6 +406,9 @@ cohort_full <- cohort_full %>%
 
 message(glue("\n  Full cohort assembled: {nrow(cohort_full)} patients, {ncol(cohort_full)} columns"))
 
+# Snapshot: PPTX master source data (per SNAP-04)
+save_output_data(cohort_full, "pptx_cohort_full_data")
+
 # ==============================================================================
 # SECTION 3: TABLE BUILDING FUNCTIONS
 # ==============================================================================
@@ -1012,6 +1015,9 @@ tbl14 <- tibble(
   )
 )
 
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(tbl14, "last_tx_equals_last_encounter_data")
+
 pptx <- add_table_slide(pptx,
   "Last Treatment = Last Encounter",
   glue("Patients whose last treatment was within \u00b130 days of their last encounter (no follow-up)"),
@@ -1061,6 +1067,9 @@ tbl15 <- unknown_post_counts %>%
   mutate(`N Patients` = format_count_pct(n, n_unknown)) %>%
   select(`Payer Category` = bin, `N Patients`) %>%
   bind_rows(tibble(`Payer Category` = "Total", `N Patients` = format_count_pct(n_unknown, n_unknown)))
+
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(tbl15, "missing_post_tx_payer_breakdown_data")
 
 pptx <- add_table_slide(pptx,
   "Missing Post-Treatment Payer \u2014 Encounter Breakdown",
@@ -1149,6 +1158,9 @@ tbl16 <- bind_rows(tbl16, tibble(
 pct_still <- if (n_treated > 0) round(100 * n_still_in / n_treated, 1) else 0
 pct_missing <- if (n_treated > 0) round(100 * n_missing / n_treated, 1) else 0
 
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(tbl16, "insurance_after_last_tx_retention_data")
+
 pptx <- add_table_slide(pptx,
   "Insurance After Last Treatment \u2014 Dataset Retention",
   glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset"),
@@ -1219,6 +1231,9 @@ summary_stats <- bind_rows(summary_stats, summary_totals)
 # Format N with commas for display
 summary_stats <- summary_stats %>%
   mutate(N = format(N, big.mark = ","))
+
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(summary_stats, "encounter_summary_stats_by_payer_data")
 
 pptx <- add_table_slide(pptx,
   "Summary Statistics: Encounters per Person by Payer Category",
@@ -1351,6 +1366,9 @@ ud_summary_totals <- cohort_ud %>%
 
 ud_summary_stats <- bind_rows(ud_summary_stats, ud_summary_totals) %>%
   mutate(N = format(N, big.mark = ","))
+
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(ud_summary_stats, "unique_dates_summary_stats_by_payer_data")
 
 pptx <- add_table_slide(pptx,
   "Summary Statistics: Unique Dates per Person by Payer Category",

@@ -57,6 +57,9 @@ overflow_counts <- hist_data %>%
 hist_data <- hist_data %>%
   mutate(N_ENC_CAPPED = if_else(N_ENCOUNTERS > x_cap, as.numeric(x_cap + 1), as.numeric(N_ENCOUNTERS)))
 
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(hist_data, "encounters_per_person_by_payor_data")
+
 n_beyond <- sum(hist_data$N_ENCOUNTERS > x_cap)
 
 p1 <- ggplot(hist_data, aes(x = N_ENC_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
@@ -106,6 +109,9 @@ enc_by_year <- hl_cohort %>%
     .groups = "drop"
   )
 
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(enc_by_year, "post_tx_encounters_by_dx_year_data")
+
 p2 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_post_tx_enc)) +
   geom_col(fill = "#2c7fb8", alpha = 0.8) +
   geom_text(aes(label = round(mean_post_tx_enc, 1)), vjust = -0.3, size = 3) +
@@ -129,6 +135,9 @@ message("  Saved: output/figures/post_tx_encounters_by_dx_year.png")
 # ==============================================================================
 
 message("\n--- Total encounters by DX year ---")
+
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(enc_by_year, "total_encounters_by_dx_year_data")
 
 p3 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_total_enc)) +
   geom_col(fill = "#41ae76", alpha = 0.8) +
@@ -191,6 +200,9 @@ grand_total <- summary_tbl %>%
 summary_with_sums <- bind_rows(summary_tbl, payor_totals, grand_total) %>%
   arrange(PAYER_CATEGORY_PRIMARY, AGE_GROUP)
 
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(summary_with_sums, "encounter_summary_by_payor_age_data")
+
 write_csv(summary_with_sums, "output/tables/encounter_summary_by_payor_age.csv")
 message("  Saved: output/tables/encounter_summary_by_payor_age.csv")
 
@@ -206,6 +218,9 @@ age_post_tx <- hl_cohort %>%
   group_by(AGE_GROUP) %>%
   mutate(pct = round(100 * n / sum(n), 1)) %>%
   ungroup()
+
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(age_post_tx, "post_tx_by_age_group_data")
 
 max_y_p4 <- max(age_post_tx$n, na.rm = TRUE)
 
@@ -295,6 +310,9 @@ overflow_counts_ud <- hist_data_ud %>%
 hist_data_ud <- hist_data_ud %>%
   mutate(N_UD_CAPPED = if_else(N_UNIQUE_DATES > x_cap_ud, as.numeric(x_cap_ud + 1), as.numeric(N_UNIQUE_DATES)))
 
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(hist_data_ud, "unique_dates_per_person_by_payor_data")
+
 n_beyond_ud <- sum(cohort_ud$N_UNIQUE_DATES > x_cap_ud, na.rm = TRUE)
 
 p_ud1 <- ggplot(hist_data_ud, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
@@ -334,6 +352,9 @@ enc_ud_by_year <- cohort_ud %>%
     .groups = "drop"
   )
 
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(enc_ud_by_year, "post_tx_unique_dates_by_dx_year_data")
+
 p_ud2 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_post_tx_ud)) +
   geom_col(fill = "#2c7fb8", alpha = 0.8) +
   geom_text(aes(label = round(mean_post_tx_ud, 1)), vjust = -0.3, size = 3) +
@@ -353,6 +374,9 @@ ggsave("output/figures/post_tx_unique_dates_by_dx_year.png", p_ud2,
 message("  Saved: output/figures/post_tx_unique_dates_by_dx_year.png")
 
 # 6e. Total unique dates by DX year
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(enc_ud_by_year, "total_unique_dates_by_dx_year_data")
+
 p_ud3 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_total_ud)) +
   geom_col(fill = "#41ae76", alpha = 0.8) +
   geom_text(aes(label = round(mean_total_ud, 1)), vjust = -0.3, size = 3) +
