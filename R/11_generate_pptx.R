@@ -1452,7 +1452,7 @@ post_last_tx_dates <- encounters %>%
 # Step 2: Join to treated patients with payer, fill 0 for those with no post-tx encounters
 # Only include patients who HAVE treatment (per D-04)
 treated_cohort_ids <- cohort_full %>%
-  inner_join(all_last_dates %>% filter(!is.na(LAST_ANY_TREATMENT_DATE)), by = "ID") %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
   select(ID, PAYER_CATEGORY_PRIMARY)
 
 post_last_tx_summary <- treated_cohort_ids %>%
@@ -1518,7 +1518,7 @@ message("  Slide 28: Summary Statistics -- Pre/Post Encounters by Payer")
 
 # Compute pre/post encounter stats per payer for treated patients
 stacked_stats <- cohort_full %>%
-  inner_join(all_last_dates %>% filter(!is.na(LAST_ANY_TREATMENT_DATE)), by = "ID") %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
   select(ID, PAYER_CATEGORY_PRIMARY, LAST_ANY_TREATMENT_DATE) %>%
   inner_join(
     encounters %>% filter(!is.na(ADMIT_DATE)) %>%
