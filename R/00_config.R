@@ -36,6 +36,21 @@ CONFIG <- list(
   # Match to SLURM --cpus-per-task allocation (Open OnDemand RStudio: 16 cores)
   performance = list(
     num_threads = 16
+  ),
+
+  # ---------------------------------------------------------------------------
+  # RDS Cache Settings (Phase 15)
+  # ---------------------------------------------------------------------------
+  # Persistent RDS cache for loaded PCORnet tables. After first CSV parse,
+  # tables are serialized to .rds files. Subsequent runs load from cache
+  # if the .rds file is newer than the source CSV (file.mtime() comparison).
+  #
+  # IMPORTANT: cache_dir is GITIGNORED and must NOT be a repo-internal path.
+  # See .gitignore: /blue/erin.mobley-hl.bcu/clean/ is excluded from git.
+  # RDS files are 100MB-2GB each; committing them would break the repository.
+  cache = list(
+    cache_dir    = "/blue/erin.mobley-hl.bcu/clean/rds/raw",
+    force_reload = FALSE   # Set to TRUE to bypass cache and re-parse all CSVs
   )
 )
 

@@ -39,3 +39,6 @@ output/diagnostics/*.csv
 
 # Claude Code
 CLAUDE.md
+
+# RDS cache on blue storage (Phase 15 -- large binary files, 100MB-2GB each)
+/blue/erin.mobley-hl.bcu/clean/
