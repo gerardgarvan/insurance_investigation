@@ -347,21 +347,63 @@ TABLE_SPECS <- list(
 #' @param table_name Character. Name of the table (e.g., "ENROLLMENT")
 #' @param file_path Character. Full path to CSV file
 #' @param col_spec readr cols() specification
+#' @param cache_dir Character or NULL. Path to RDS cache directory. If NULL, caching disabled.
+#' @param force_reload Logical. If TRUE, bypass cache and re-parse CSV. Default FALSE.
 #'
 #' @return Tibble with loaded data, or NULL if file not found
 #'
 #' @details
 #' - Checks file existence before attempting load (warns and returns NULL if missing)
-#' - Loads CSV with explicit col_types (prevents type inference errors)
-#' - Auto-detects date columns by name pattern and parses via parse_pcornet_date()
-#' - Prints load summary: table name, row count, column count
+#' - If cache_dir is set and force_reload is FALSE, checks for cached RDS file
+#'   that is newer than source CSV (file.mtime comparison per D-02)
+#' - On CACHE HIT: loads via readRDS(), logs time saved vs original CSV parse
+#' - On CSV PARSE: loads via vroom with explicit col_types, parses dates,
+#'   validates numeric ranges, then writes RDS cache with csv_parse_seconds attribute
+#' - Prints [CACHE HIT] or [CSV PARSE] status per table
 #' - Warns if any parse problems occurred
-load_pcornet_table <- function(table_name, file_path, col_spec) {
+load_pcornet_table <- function(table_name, file_path, col_spec,
+                                cache_dir = NULL, force_reload = FALSE) {
   # Check file exists (per D-10: warn and skip)
   if (!file.exists(file_path)) {
     message(glue("WARNING: {table_name} not found at {file_path}. Skipping."))
     return(NULL)
   }
+
+  # ---------------------------------------------------------------------------
+  # RDS Cache Check (Phase 15: CACHE-01, CACHE-02, CACHE-04)
+  # ---------------------------------------------------------------------------
+  # Per D-02: file.mtime() comparison only. RDS newer than CSV = cache hit.
+  # Per D-01: csv_parse_seconds stored as attr() on cached object.
+  # Per D-04: Skip post-load diagnostics on cache hit (data already trusted).
+  if (!is.null(cache_dir) && !force_reload) {
+    cache_path <- file.path(cache_dir, paste0(table_name, ".rds"))
+    if (file.exists(cache_path) && file.mtime(cache_path) > file.mtime(file_path)) {
+      cache_start <- Sys.time()
+      df <- readRDS(cache_path)
+      cache_seconds <- as.numeric(difftime(Sys.time(), cache_start, units = "secs"))
+
+      original_parse_seconds <- attr(df, "csv_parse_seconds")
+      if (!is.null(original_parse_seconds)) {
+        time_saved <- original_parse_seconds - cache_seconds
+        message(glue(
+          "[CACHE HIT] {table_name}: {round(cache_seconds, 1)}s (cache) vs ",
+          "{round(original_parse_seconds, 1)}s (CSV) -- saved {round(time_saved, 1)}s ",
+          "({format(nrow(df), big.mark=',')} rows)"
+        ))
+      } else {
+        message(glue(
+          "[CACHE HIT] {table_name}: {round(cache_seconds, 1)}s ",
+          "({format(nrow(df), big.mark=',')} rows)"
+        ))
+      }
+      return(df)
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # CSV Parse (existing logic, now timed for cache metadata)
+  # ---------------------------------------------------------------------------
+  parse_start <- Sys.time()
 
   # Load with explicit col_types (per D-08)
   df <- vroom(file_path, col_types = col_spec, show_col_types = FALSE,
@@ -468,8 +510,35 @@ load_pcornet_table <- function(table_name, file_path, col_spec) {
     }
   }
 
-  # Print load summary (per D-12)
-  message(glue("Loaded {table_name}: {format(nrow(df), big.mark=',')} rows, {ncol(df)} columns"))
+  # ---------------------------------------------------------------------------
+  # Cache Write + Load Summary (Phase 15: CACHE-01, CACHE-04)
+  # ---------------------------------------------------------------------------
+  parse_seconds <- as.numeric(difftime(Sys.time(), parse_start, units = "secs"))
+
+  # Store parse time as attribute (per D-01: readRDS preserves attributes)
+  attr(df, "csv_parse_seconds") <- parse_seconds
+
+  # Write to cache if cache_dir is configured
+  if (!is.null(cache_dir)) {
+    # Auto-create cache directory if it does not exist
+    if (!dir.exists(cache_dir)) {
+      dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+      message(glue("  Created cache directory: {cache_dir}"))
+    }
+    cache_path <- file.path(cache_dir, paste0(table_name, ".rds"))
+    saveRDS(df, cache_path, compress = TRUE)
+    message(glue(
+      "[CSV PARSE] {table_name}: {round(parse_seconds, 1)}s -- ",
+      "{format(nrow(df), big.mark=',')} rows, {ncol(df)} columns -- ",
+      "cached to {basename(cache_path)}"
+    ))
+  } else {
+    message(glue(
+      "Loaded {table_name}: {format(nrow(df), big.mark=',')} rows, {ncol(df)} columns ",
+      "({round(parse_seconds, 1)}s)"
+    ))
+  }
+
   if (n_parse_problems > 0) {
     message(glue("  WARNING: {n_parse_problems} parse failures in {table_name}"))
   }
