@@ -254,7 +254,11 @@ Plans:
 4. User can see wall-clock time saved per table logged when loading from cache (e.g., "ENROLLMENT: 2.3s (cache) vs 18.7s (CSV) — saved 16.4s")
 5. User can verify cache directory is gitignored and documented in config
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 15-01-PLAN.md -- Config cache settings in 00_config.R + .gitignore for blue storage (CACHE-03, GIT-01, GIT-02)
+- [ ] 15-02-PLAN.md -- Cache-check/write logic in load_pcornet_table() + TUMOR_REGISTRY_ALL caching + diagnostic skip on cache hits (CACHE-01, CACHE-02, CACHE-04)
 
 ---
 
@@ -314,16 +318,16 @@ Plans:
 | 12. More PPTX Polishing | 3/4 | Gap Closure   | |
 | 13. Summary Tables Value Audit | 0/1 | Planned | |
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
-| 15. RDS Caching Infrastructure | 0/? | Not started | |
+| 15. RDS Caching Infrastructure | 0/2 | Planned | |
 | 16. Dataset Snapshots | 0/? | Not started | |
 | 17. Visualization Polish | 0/? | Not started | |
 
 ## Next Actions
 
-1. Execute `/gsd:plan-phase 15` to create RDS caching infrastructure plan
+1. Execute `/gsd:execute-phase 15` to implement RDS caching infrastructure
 2. Execute `/gsd:plan-phase 16` to create dataset snapshots plan
 3. Execute `/gsd:plan-phase 17` to create visualization polish plan
 
 ---
 
-*Last updated: 2026-04-02 (milestone v1.1 phases added)*
+*Last updated: 2026-04-03 (Phase 15 plans created)*
