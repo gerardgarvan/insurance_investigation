@@ -15,7 +15,7 @@
 - [ ] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (gap closure pending)
 - [ ] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables
 - [x] **Phase 14: CSV Values Data Audit & Code Optimization** - Review value_audit CSVs for coding inconsistencies, optimize R pipeline code (completed 2026-04-01)
-- [ ] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging
+- [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
 - [ ] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files
 - [ ] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms
 
@@ -254,11 +254,11 @@ Plans:
 4. User can see wall-clock time saved per table logged when loading from cache (e.g., "ENROLLMENT: 2.3s (cache) vs 18.7s (CSV) — saved 16.4s")
 5. User can verify cache directory is gitignored and documented in config
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 15-01-PLAN.md -- Config cache settings in 00_config.R + .gitignore for blue storage (CACHE-03, GIT-01, GIT-02)
-- [ ] 15-02-PLAN.md -- Cache-check/write logic in load_pcornet_table() + TUMOR_REGISTRY_ALL caching + diagnostic skip on cache hits (CACHE-01, CACHE-02, CACHE-04)
+- [x] 15-02-PLAN.md -- Cache-check/write logic in load_pcornet_table() + TUMOR_REGISTRY_ALL caching + diagnostic skip on cache hits (CACHE-01, CACHE-02, CACHE-04)
 
 ---
 
@@ -318,7 +318,7 @@ Plans:
 | 12. More PPTX Polishing | 3/4 | Gap Closure   | |
 | 13. Summary Tables Value Audit | 0/1 | Planned | |
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
-| 15. RDS Caching Infrastructure | 1/2 | In Progress|  |
+| 15. RDS Caching Infrastructure | 2/2 | Complete   | 2026-04-03 |
 | 16. Dataset Snapshots | 0/? | Not started | |
 | 17. Visualization Polish | 0/? | Not started | |
 

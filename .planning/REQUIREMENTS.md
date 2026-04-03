@@ -114,10 +114,10 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 
 ### RDS Caching
 
-- [ ] **CACHE-01**: After each raw PCORnet table is loaded and validated, serialize it to `.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/raw/` with consistent naming (e.g., `ENROLLMENT.rds`, `DIAGNOSIS.rds`)
-- [ ] **CACHE-02**: At pipeline startup, check if `.rds` exists and is newer than source CSV — load from `.rds` via `readRDS()` if so, log `[CACHE HIT]` vs `[CSV PARSE]` per table
+- [x] **CACHE-01**: After each raw PCORnet table is loaded and validated, serialize it to `.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/raw/` with consistent naming (e.g., `ENROLLMENT.rds`, `DIAGNOSIS.rds`)
+- [x] **CACHE-02**: At pipeline startup, check if `.rds` exists and is newer than source CSV — load from `.rds` via `readRDS()` if so, log `[CACHE HIT]` vs `[CSV PARSE]` per table
 - [x] **CACHE-03**: `FORCE_RELOAD` flag in `00_config.R` (default `FALSE`) bypasses cache and re-parses all CSVs when set to `TRUE`
-- [ ] **CACHE-04**: Log wall-clock time saved per table when loading from cache vs CSV
+- [x] **CACHE-04**: Log wall-clock time saved per table when loading from cache vs CSV
 
 ### Dataset Snapshots
 
@@ -248,10 +248,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CSVAUDIT-02 | Phase 14 | Complete |
 | OPTIM-01 | Phase 14 | Complete |
 | OPTIM-02 | Phase 14 | Complete |
-| CACHE-01 | Phase 15 | Pending |
-| CACHE-02 | Phase 15 | Pending |
+| CACHE-01 | Phase 15 | Complete |
+| CACHE-02 | Phase 15 | Complete |
 | CACHE-03 | Phase 15 | Complete |
-| CACHE-04 | Phase 15 | Pending |
+| CACHE-04 | Phase 15 | Complete |
 | SNAP-01 | Phase 16 | Pending |
 | SNAP-02 | Phase 16 | Pending |
 | SNAP-03 | Phase 16 | Pending |
