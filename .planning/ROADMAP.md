@@ -16,7 +16,7 @@
 - [ ] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables
 - [x] **Phase 14: CSV Values Data Audit & Code Optimization** - Review value_audit CSVs for coding inconsistencies, optimize R pipeline code (completed 2026-04-01)
 - [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
-- [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
+- [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
 - [ ] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms
 
 ## Phase Details
@@ -300,7 +300,11 @@ Plans:
 4. User can see encounter histogram with 6+Missing payer categories and >500 overflow bin with per-facet count annotation (completing PPTX2-04)
 5. User can see age group bar chart with labels not clipped at plot top (completing PPTX2-07)
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 17-01-PLAN.md -- Filter 1900 sentinel dates from PPTX display layer + stacked pre/post histogram in encounter analysis (VIZP-01, VIZP-03, PPTX2-04, PPTX2-07)
+- [ ] 17-02-PLAN.md -- New PPTX slides: post-treatment encounter summary table + stacked histogram embedding + summary stats (VIZP-02, VIZP-03)
 
 ---
 
@@ -324,13 +328,12 @@ Plans:
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
 | 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
-| 17. Visualization Polish | 0/? | Not started | |
+| 17. Visualization Polish | 0/2 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 16` to implement dataset snapshots
-2. Execute `/gsd:plan-phase 17` to create visualization polish plan
+1. Execute `/gsd:execute-phase 17` to implement visualization polish
 
 ---
 
-*Last updated: 2026-04-03 (Phase 16 plans created)*
+*Last updated: 2026-04-03 (Phase 17 plans created)*
