@@ -28,11 +28,24 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Document R vs Python payer mapping comparison — Validated in Phase 6: comparison table in 00_config.R
 - [x] Full pipeline end-to-end verification with data quality summary — Validated in Phase 6: 08_data_quality_summary.R with 13-category resolution tracker
 
-### Active
+### Active (carried from v1.0)
 
 - [ ] Produce attrition waterfall chart from filter log
 - [ ] Produce Sankey/alluvial showing enrollment → diagnosis date → treatment type, stratified by payer
 - [ ] Apply HIPAA small-cell suppression (counts 1-10) in outputs
+
+## Current Milestone: v1.1 RDS Cache & Visualization Polish
+
+**Goal:** Eliminate redundant CSV parsing with persistent RDS caching, fix remaining 1900 sentinel date display issues, and add post-treatment encounter analysis with stacked histograms.
+
+**Target features:**
+- RDS caching for all PCORnet tables with cache-check, FORCE_RELOAD flag, and time-savings logging
+- Cohort snapshot `.rds` files at each filter step and final cohort
+- Output-backing datasets: every figure/table gets its source data frame saved as `.rds`
+- Shared `save_output_data()` helper utility
+- 1900 sentinel date filtering across all PPTX content
+- Post-treatment summary table (unique encounter dates per person by payer, after last treatment)
+- Stacked encounter histograms with post-treatment shading (post-treatment on bottom)
 
 ### Validated (Phase 8)
 
@@ -85,6 +98,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Primary site strategy for multi-site patients | Inner join on SOURCE to keep enrollment from patient's primary site | ✓ Phase 3 |
 | Treatment-anchored payer mode via +/-30 day window | Reuses Section 4c mode pattern from payer harmonization, anchors on PX_DATE per treatment type | ✓ Phase 8 |
 | Expanded treatment detection across all docx-specified sources | Maximizes sensitivity by querying DISPENSING, MED_ADMIN, DIAGNOSIS, ENCOUNTER DRG, and PROCEDURES revenue codes | ✓ Phase 9 |
+| `.rds` over `.RData` for caching | `readRDS()` returns a single named object directly into an assignment — no namespace side-effects | — v1.1 |
+| Cache at `/blue/erin.mobley-hl.bcu/clean/rds/` | Keeps large binary files on blue storage, outside repo root, gitignored | — v1.1 |
 
 ## Evolution
 
@@ -104,4 +119,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-01 after Phase 14 completion*
+*Last updated: 2026-04-02 after milestone v1.1 initialization*
