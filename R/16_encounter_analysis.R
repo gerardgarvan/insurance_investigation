@@ -30,6 +30,7 @@ message(strrep("=", 60))
 # ==============================================================================
 # SECTION 1: HISTOGRAM -- Encounters per person by payor category
 # ==============================================================================
+# PPTX2-04: Verified -- 6+Missing payer, >500 overflow bin with per-facet annotation (Phase 12)
 
 message("\n--- Histogram: Encounters per person by payor ---")
 
@@ -222,6 +223,7 @@ age_post_tx <- hl_cohort %>%
 # Snapshot: figure backing data (per SNAP-03)
 save_output_data(age_post_tx, "post_tx_by_age_group_data")
 
+# PPTX2-07: Verified -- clip="off" + ylim expansion prevents label clipping (Phase 12)
 max_y_p4 <- max(age_post_tx$n, na.rm = TRUE)
 
 p4 <- ggplot(age_post_tx, aes(x = AGE_GROUP, y = n, fill = HAS_POST_TX_ENCOUNTERS)) +

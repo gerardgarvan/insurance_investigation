@@ -243,6 +243,22 @@ message(glue("  Last chemo dates: {nrow(last_chemo_dates)} patients"))
 message(glue("  Last radiation dates: {nrow(last_rad_dates)} patients"))
 message(glue("  Last SCT dates: {nrow(last_sct_dates)} patients"))
 
+# Filter 1900 sentinel dates from computed last treatment dates (per VIZP-01)
+n_sentinel_last_chemo <- sum(year(last_chemo_dates$LAST_CHEMO_DATE) == 1900L, na.rm = TRUE)
+n_sentinel_last_rad <- sum(year(last_rad_dates$LAST_RADIATION_DATE) == 1900L, na.rm = TRUE)
+n_sentinel_last_sct <- sum(year(last_sct_dates$LAST_SCT_DATE) == 1900L, na.rm = TRUE)
+n_sentinel_total <- n_sentinel_last_chemo + n_sentinel_last_rad + n_sentinel_last_sct
+
+if (n_sentinel_total > 0) {
+  message(glue("  VIZP-01: Filtering {n_sentinel_total} sentinel dates (year 1900) from last treatment dates"))
+  last_chemo_dates <- last_chemo_dates %>%
+    filter(is.na(LAST_CHEMO_DATE) | year(LAST_CHEMO_DATE) != 1900L)
+  last_rad_dates <- last_rad_dates %>%
+    filter(is.na(LAST_RADIATION_DATE) | year(LAST_RADIATION_DATE) != 1900L)
+  last_sct_dates <- last_sct_dates %>%
+    filter(is.na(LAST_SCT_DATE) | year(LAST_SCT_DATE) != 1900L)
+}
+
 # ---- 2b. Payer at LAST treatment (mode in ±30 day window around last date) ----
 
 compute_payer_at_last <- function(last_dates, payer_col_name) {
@@ -384,6 +400,16 @@ cohort_full <- hl_cohort %>%
   left_join(post_chemo_payer, by = "ID") %>%
   left_join(post_rad_payer, by = "ID") %>%
   left_join(post_sct_payer, by = "ID")
+
+# Filter 1900 sentinel dates from FIRST treatment dates shown in PPTX (per VIZP-01)
+# Note: first_hl_dx_date is already nullified in 04_build_cohort.R and should NOT be touched here
+cohort_full <- cohort_full %>%
+  mutate(
+    across(
+      c(FIRST_CHEMO_DATE, FIRST_RADIATION_DATE, FIRST_SCT_DATE),
+      ~ if_else(year(.x) == 1900L, as.Date(NA), .x)
+    )
+  )
 
 # Rename payer categories to match Python PPTX display names
 # POST_TREATMENT_PAYER excluded: NA must stay NA for the N/A row (no follow-up)
@@ -1242,6 +1268,8 @@ pptx <- add_table_slide(pptx,
   add_footnote("Primary Insurance = most prevalent payer across all encounters. 500+ = patients with more than 500 total encounters.")
 
 # Count patients with missing DX_YEAR (includes nullified 1900 sentinels) for footnote
+# VIZP-01: DX_YEAR filtering already handled correctly via is.na() since DX_YEAR derives from
+# the already-nullified first_hl_dx_date (nullified in 04_build_cohort.R lines 176-183)
 n_missing_dx_year <- sum(is.na(cohort_full$DX_YEAR))
 masked_footnote <- if (n_missing_dx_year > 0) {
   glue("{n_missing_dx_year} patients with missing diagnosis date excluded from this analysis.")
@@ -1410,6 +1438,7 @@ print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
 message(glue("  Slides: 25 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates)"))
+message(glue("  Note: Phase 17 Plan 02 will add additional slides for stacked histograms"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
