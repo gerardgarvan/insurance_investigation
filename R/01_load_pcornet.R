@@ -558,7 +558,7 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   message(strrep("=", 60))
 
   # Read cache settings from CONFIG (Plan 01 added CONFIG$cache)
-  cache_dir    <- CONFIG$cache$cache_dir
+  cache_dir    <- CONFIG$cache$raw_dir
   force_reload <- CONFIG$cache$force_reload
 
   pcornet <- imap(PCORNET_PATHS, function(path, table_name) {

@@ -49,8 +49,20 @@ CONFIG <- list(
   # See .gitignore: /blue/erin.mobley-hl.bcu/clean/ is excluded from git.
   # RDS files are 100MB-2GB each; committing them would break the repository.
   cache = list(
-    cache_dir    = "/blue/erin.mobley-hl.bcu/clean/rds/raw",
-    force_reload = FALSE   # Set to TRUE to bypass cache and re-parse all CSVs
+    # Base RDS cache directory (gitignored: /blue/erin.mobley-hl.bcu/clean/)
+    # IMPORTANT: cache_dir is GITIGNORED and must NOT be a repo-internal path.
+    # RDS files are 100MB-2GB each; committing them would break the repository.
+    cache_dir    = "/blue/erin.mobley-hl.bcu/clean/rds",
+    force_reload = FALSE,   # Set to TRUE to bypass cache and re-parse all CSVs
+
+    # Phase 15: Raw PCORnet table cache
+    raw_dir      = "/blue/erin.mobley-hl.bcu/clean/rds/raw",
+
+    # Phase 16: Cohort filter step snapshots
+    cohort_dir   = "/blue/erin.mobley-hl.bcu/clean/rds/cohort",
+
+    # Phase 16: Figure/table backing data snapshots
+    outputs_dir  = "/blue/erin.mobley-hl.bcu/clean/rds/outputs"
   )
 )
 
@@ -848,6 +860,7 @@ PROVIDER_SPECIALTIES <- list(
 source("R/utils_dates.R")
 source("R/utils_attrition.R")
 source("R/utils_icd.R")
+source("R/utils_snapshot.R")  # Phase 16: snapshot helper
 
 # ==============================================================================
 # End of configuration
