@@ -277,10 +277,10 @@ Plans:
 4. User can see table-backing data frames (e.g., `payer_summary_table_data.rds`) saved before PPTX table creation
 5. User can call `save_output_data(df, "name")` helper from any script for consistent snapshot creation with automatic path construction and logging
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 16-01-PLAN.md -- Config cache extension + utils_snapshot.R helper + cohort filter step snapshots (SNAP-01, SNAP-02, SNAP-05)
+- [x] 16-01-PLAN.md -- Config cache extension + utils_snapshot.R helper + cohort filter step snapshots (SNAP-01, SNAP-02, SNAP-05)
 - [ ] 16-02-PLAN.md -- Visualization backing data snapshots in waterfall, sankey, encounter analysis, and PPTX scripts (SNAP-03, SNAP-04)
 
 ---
@@ -323,7 +323,7 @@ Plans:
 | 13. Summary Tables Value Audit | 0/1 | Planned | |
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
-| 16. Dataset Snapshots | 0/2 | Planned | |
+| 16. Dataset Snapshots | 1/2 | In Progress|  |
 | 17. Visualization Polish | 0/? | Not started | |
 
 ## Next Actions
