@@ -397,6 +397,260 @@ ggsave("output/figures/total_unique_dates_by_dx_year.png", p_ud3,
        width = 10, height = 6, dpi = 300)
 message("  Saved: output/figures/total_unique_dates_by_dx_year.png")
 
+# ==============================================================================
+# SECTION 7: STACKED HISTOGRAM -- Pre/Post-Treatment Encounters by Payer (VIZP-03)
+# ==============================================================================
+
+message("\n--- Stacked Histogram: Pre/Post-Treatment Encounters by Payer ---")
+
+# 7a. Compute LAST_ANY_TREATMENT_DATE per patient
+# Reuse the same logic as 11_generate_pptx.R Section 2c
+
+# Helper to compute last dates from treatment sources
+compute_last_tx_dates_from_procedures <- function(treatment_type) {
+  sources <- list()
+
+  if (treatment_type == "chemo") {
+    # Chemo from PROCEDURES
+    if (!is.null(pcornet$PROCEDURES)) {
+      sources$px <- pcornet$PROCEDURES %>%
+        filter(
+          (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
+          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
+        ) %>%
+        filter(!is.na(PX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    # Chemo from PRESCRIBING
+    if (!is.null(pcornet$PRESCRIBING)) {
+      sources$rx <- pcornet$PRESCRIBING %>%
+        filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
+        mutate(d = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
+        filter(!is.na(d)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(d, na.rm = TRUE), .groups = "drop")
+    }
+    # Chemo from DIAGNOSIS
+    if (!is.null(pcornet$DIAGNOSIS)) {
+      sources$dx <- pcornet$DIAGNOSIS %>%
+        filter(
+          (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+        ) %>%
+        filter(!is.na(DX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    # Chemo from ENCOUNTER DRG
+    if (!is.null(pcornet$ENCOUNTER)) {
+      sources$drg <- pcornet$ENCOUNTER %>%
+        filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
+        filter(!is.na(ADMIT_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    # Chemo from DISPENSING
+    if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
+      sources$disp <- pcornet$DISPENSING %>%
+        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
+        filter(!is.na(DISPENSE_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    # Chemo from MED_ADMIN
+    if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
+      sources$ma <- pcornet$MED_ADMIN %>%
+        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
+        filter(!is.na(MEDADMIN_START_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
+    }
+  } else if (treatment_type == "radiation") {
+    if (!is.null(pcornet$PROCEDURES)) {
+      sources$px <- pcornet$PROCEDURES %>%
+        filter(
+          (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
+        ) %>%
+        filter(!is.na(PX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    if (!is.null(pcornet$DIAGNOSIS)) {
+      sources$dx <- pcornet$DIAGNOSIS %>%
+        filter(
+          (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+        ) %>%
+        filter(!is.na(DX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    if (!is.null(pcornet$ENCOUNTER)) {
+      sources$drg <- pcornet$ENCOUNTER %>%
+        filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
+        filter(!is.na(ADMIT_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+    }
+  } else if (treatment_type == "sct") {
+    if (!is.null(pcornet$PROCEDURES)) {
+      sources$px <- pcornet$PROCEDURES %>%
+        filter(
+          (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) |
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
+        ) %>%
+        filter(!is.na(PX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    if (!is.null(pcornet$DIAGNOSIS)) {
+      sources$dx <- pcornet$DIAGNOSIS %>%
+        filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
+        filter(!is.na(DX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    if (!is.null(pcornet$ENCOUNTER)) {
+      sources$drg <- pcornet$ENCOUNTER %>%
+        filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
+        filter(!is.na(ADMIT_DATE)) %>%
+        group_by(ID) %>%
+        summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+    }
+  }
+
+  non_null <- compact(sources)
+  if (length(non_null) == 0) {
+    return(tibble(ID = character(0), tx_date = as.Date(character(0))))
+  }
+
+  bind_rows(non_null) %>%
+    group_by(ID) %>%
+    summarise(tx_date = max(tx_date, na.rm = TRUE), .groups = "drop") %>%
+    filter(!is.infinite(tx_date))
+}
+
+# Compute last treatment dates for each type
+last_chemo_for_stacked <- compute_last_tx_dates_from_procedures("chemo")
+last_rad_for_stacked <- compute_last_tx_dates_from_procedures("radiation")
+last_sct_for_stacked <- compute_last_tx_dates_from_procedures("sct")
+
+# Combine to get LAST_ANY_TREATMENT_DATE
+tx_dates_for_stacked <- bind_rows(
+  last_chemo_for_stacked,
+  last_rad_for_stacked,
+  last_sct_for_stacked
+) %>%
+  # Filter 1900 sentinel dates (per VIZP-01)
+  filter(year(tx_date) != 1900L) %>%
+  group_by(ID) %>%
+  summarise(LAST_ANY_TX_DATE = max(tx_date, na.rm = TRUE), .groups = "drop") %>%
+  filter(!is.infinite(LAST_ANY_TX_DATE))
+
+n_treated_for_stacked <- nrow(tx_dates_for_stacked)
+message(glue("  {n_treated_for_stacked} patients with treatment dates for stacked histogram"))
+
+# 7b. Split encounters into pre/post treatment (per D-07)
+stacked_enc <- encounters %>%
+  inner_join(tx_dates_for_stacked, by = "ID") %>%  # Only treated patients (per D-10)
+  filter(!is.na(ADMIT_DATE)) %>%
+  mutate(
+    ENCOUNTER_PERIOD = if_else(
+      ADMIT_DATE > LAST_ANY_TX_DATE,
+      "Post-treatment",
+      "Pre-treatment"
+    )
+  )
+
+# 7c. Count per patient per period (per D-09: use raw N_ENCOUNTERS count basis)
+stacked_counts <- stacked_enc %>%
+  count(ID, ENCOUNTER_PERIOD, name = "n_enc") %>%
+  complete(ID, ENCOUNTER_PERIOD, fill = list(n_enc = 0))  # Ensure all patients have both periods
+
+# 7d. Compute total encounters per patient for histogram x-axis
+patient_totals_stacked <- stacked_counts %>%
+  group_by(ID) %>%
+  summarise(N_TOTAL = sum(n_enc), .groups = "drop")
+
+# 7e. Join payer category (per D-08: faceted by 6+Missing)
+stacked_plot_data <- stacked_counts %>%
+  left_join(
+    hl_cohort %>% select(ID, PAYER_CATEGORY_PRIMARY),
+    by = "ID"
+  ) %>%
+  left_join(patient_totals_stacked, by = "ID") %>%
+  mutate(
+    PAYER_CATEGORY_PRIMARY = case_when(
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      is.na(PAYER_CATEGORY_PRIMARY) ~ "Missing",
+      TRUE ~ PAYER_CATEGORY_PRIMARY
+    ),
+    PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
+      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
+                 "Other government", "No payment / Self-pay", "Missing")),
+    # Post-treatment on bottom (first level = bottom in stacked histogram) per D-07
+    ENCOUNTER_PERIOD = factor(ENCOUNTER_PERIOD,
+      levels = c("Post-treatment", "Pre-treatment"))
+  )
+
+# 7f. Overflow bin at >500 (matching Section 1 pattern)
+x_cap_stk <- 500
+
+overflow_stk <- patient_totals_stacked %>%
+  left_join(
+    stacked_plot_data %>% distinct(ID, PAYER_CATEGORY_PRIMARY),
+    by = "ID"
+  ) %>%
+  filter(N_TOTAL > x_cap_stk) %>%
+  count(PAYER_CATEGORY_PRIMARY, name = "n_overflow", .drop = FALSE)
+
+# Cap total encounters for binning
+patient_totals_stacked <- patient_totals_stacked %>%
+  mutate(N_TOTAL_CAPPED = if_else(N_TOTAL > x_cap_stk, as.numeric(x_cap_stk + 1), as.numeric(N_TOTAL)))
+
+# Join capped totals back to plot data
+stacked_plot_data <- stacked_plot_data %>%
+  select(-N_TOTAL) %>%
+  left_join(patient_totals_stacked %>% select(ID, N_TOTAL_CAPPED), by = "ID")
+
+n_beyond_stk <- sum(patient_totals_stacked$N_TOTAL > x_cap_stk)
+
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(stacked_plot_data, "encounters_stacked_pre_post_data")
+
+# 7g. Create stacked histogram
+p_stacked <- ggplot(stacked_plot_data, aes(x = N_TOTAL_CAPPED, weight = n_enc, fill = ENCOUNTER_PERIOD)) +
+  geom_histogram(position = "stack", binwidth = 20, color = "white", linewidth = 0.2) +
+  geom_text(data = overflow_stk %>% filter(n_overflow > 0),
+            aes(x = x_cap_stk + 10, y = Inf, label = paste0(">", x_cap_stk, ": ", n_overflow)),
+            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
+  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  coord_cartesian(xlim = c(0, x_cap_stk + 40)) +
+  scale_x_continuous(breaks = seq(0, x_cap_stk, by = 100),
+                     labels = c(seq(0, x_cap_stk - 100, by = 100), paste0(x_cap_stk, "+"))) +
+  scale_fill_manual(values = c("Post-treatment" = "#2c7fb8", "Pre-treatment" = "#ff7f0e")) +
+  labs(
+    title = "Encounters per Person by Payor (Pre/Post-Treatment Split)",
+    subtitle = glue("Treated patients only (N = {format(n_treated_for_stacked, big.mark = ',')}) | {n_beyond_stk} with >{x_cap_stk} encounters in overflow bin"),
+    x = "Number of Encounters",
+    y = "Number of Patients",
+    fill = "Period"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(strip.text = element_text(face = "bold"),
+        legend.position = "bottom")
+
+ggsave("output/figures/encounters_stacked_pre_post_by_payor.png", p_stacked,
+       width = 12, height = 8, dpi = 300)
+message("  Saved: output/figures/encounters_stacked_pre_post_by_payor.png")
+
 message("\n", strrep("=", 60))
 message("Encounter analysis complete")
 message(strrep("=", 60))
