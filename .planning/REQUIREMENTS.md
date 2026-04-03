@@ -116,7 +116,7 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 
 - [ ] **CACHE-01**: After each raw PCORnet table is loaded and validated, serialize it to `.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/raw/` with consistent naming (e.g., `ENROLLMENT.rds`, `DIAGNOSIS.rds`)
 - [ ] **CACHE-02**: At pipeline startup, check if `.rds` exists and is newer than source CSV — load from `.rds` via `readRDS()` if so, log `[CACHE HIT]` vs `[CSV PARSE]` per table
-- [ ] **CACHE-03**: `FORCE_RELOAD` flag in `00_config.R` (default `FALSE`) bypasses cache and re-parses all CSVs when set to `TRUE`
+- [x] **CACHE-03**: `FORCE_RELOAD` flag in `00_config.R` (default `FALSE`) bypasses cache and re-parses all CSVs when set to `TRUE`
 - [ ] **CACHE-04**: Log wall-clock time saved per table when loading from cache vs CSV
 
 ### Dataset Snapshots
@@ -129,8 +129,8 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 
 ### Git Exclusion
 
-- [ ] **GIT-01**: Add `/blue/erin.mobley-hl.bcu/clean/` to `.gitignore`
-- [ ] **GIT-02**: Add comment in `00_config.R` next to `CACHE_DIR` noting it is gitignored and must not be a repo-internal path
+- [x] **GIT-01**: Add `/blue/erin.mobley-hl.bcu/clean/` to `.gitignore`
+- [x] **GIT-02**: Add comment in `00_config.R` next to `CACHE_DIR` noting it is gitignored and must not be a repo-internal path
 
 ### Visualization Polish
 
@@ -250,15 +250,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPTIM-02 | Phase 14 | Complete |
 | CACHE-01 | Phase 15 | Pending |
 | CACHE-02 | Phase 15 | Pending |
-| CACHE-03 | Phase 15 | Pending |
+| CACHE-03 | Phase 15 | Complete |
 | CACHE-04 | Phase 15 | Pending |
 | SNAP-01 | Phase 16 | Pending |
 | SNAP-02 | Phase 16 | Pending |
 | SNAP-03 | Phase 16 | Pending |
 | SNAP-04 | Phase 16 | Pending |
 | SNAP-05 | Phase 16 | Pending |
-| GIT-01 | Phase 15 | Pending |
-| GIT-02 | Phase 15 | Pending |
+| GIT-01 | Phase 15 | Complete |
+| GIT-02 | Phase 15 | Complete |
 | VIZP-01 | Phase 17 | Pending |
 | VIZP-02 | Phase 17 | Pending |
 | VIZP-03 | Phase 17 | Pending |
