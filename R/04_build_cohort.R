@@ -51,6 +51,14 @@ cohort <- pcornet$DEMOGRAPHIC %>%
   select(ID, SOURCE, SEX, RACE, HISPANIC, BIRTH_DATE)
 attrition_log <- log_attrition(attrition_log, "Initial population", n_distinct(cohort$ID))
 
+# Snapshot: Step 0 -- Initial population (per SNAP-01)
+if (!dir.exists(CONFIG$cache$cohort_dir)) {
+  dir.create(CONFIG$cache$cohort_dir, recursive = TRUE, showWarnings = FALSE)
+  message("  Created snapshot directory: cohort/")
+}
+saveRDS(cohort, file.path(CONFIG$cache$cohort_dir, "cohort_00_initial_population.rds"), compress = TRUE)
+message(glue("  Snapshot: cohort_00_initial_population.rds ({nrow(cohort)} rows, {ncol(cohort)} cols)"))
+
 # Step 1: Build HL_SOURCE and HL_VERIFIED flag (but do NOT filter)
 # Runs the same HL identification logic to tag patients, then retains all
 hl_source_map <- cohort %>%
@@ -104,9 +112,17 @@ cohort <- cohort %>%
 
 attrition_log <- log_attrition(attrition_log, "HL flag applied (all retained)", n_distinct(cohort$ID))
 
+# Snapshot: Step 1 -- HL flag applied (per SNAP-01)
+saveRDS(cohort, file.path(CONFIG$cache$cohort_dir, "cohort_01_hl_flag.rds"), compress = TRUE)
+message(glue("  Snapshot: cohort_01_hl_flag.rds ({nrow(cohort)} rows, {ncol(cohort)} cols)"))
+
 # Step 2: with_enrollment_period() (matches Python: enrolled patients only)
 cohort <- cohort %>% with_enrollment_period()
 attrition_log <- log_attrition(attrition_log, "Has enrollment record", n_distinct(cohort$ID))
+
+# Snapshot: Step 2 -- Has enrollment record (per SNAP-01)
+saveRDS(cohort, file.path(CONFIG$cache$cohort_dir, "cohort_02_has_enrollment.rds"), compress = TRUE)
+message(glue("  Snapshot: cohort_02_has_enrollment.rds ({nrow(cohort)} rows, {ncol(cohort)} cols)"))
 
 # ==============================================================================
 # SECTION 3: ENROLLMENT AGGREGATION (D-10 age calculation)
@@ -400,6 +416,10 @@ hl_cohort <- cohort %>%
     HAS_POST_TX_ENCOUNTERS
   )
 
+# Snapshot: Final cohort (per SNAP-02)
+saveRDS(hl_cohort, file.path(CONFIG$cache$cohort_dir, "cohort_final.rds"), compress = TRUE)
+message(glue("  Snapshot: cohort_final.rds ({nrow(hl_cohort)} rows, {ncol(hl_cohort)} cols)"))
+
 # ==============================================================================
 # SECTION 8: COHORT SUMMARY (console output)
 # ==============================================================================
@@ -478,6 +498,10 @@ message(glue("  DAYS_DX_TO_SCT: median {median(hl_cohort$DAYS_DX_TO_SCT, na.rm =
 
 message("\n--- Attrition Log ---")
 print(attrition_log)
+
+# Snapshot: Attrition log (per SNAP-02)
+saveRDS(attrition_log, file.path(CONFIG$cache$cohort_dir, "attrition_log.rds"), compress = TRUE)
+message(glue("  Snapshot: attrition_log.rds ({nrow(attrition_log)} rows, {ncol(attrition_log)} cols)"))
 
 # ==============================================================================
 # SECTION 10: CSV OUTPUT (D-11)
