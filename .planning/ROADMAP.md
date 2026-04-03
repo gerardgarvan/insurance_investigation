@@ -323,7 +323,7 @@ Plans:
 | 13. Summary Tables Value Audit | 0/1 | Planned | |
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
-| 16. Dataset Snapshots | 2/2 | Complete   | 2026-04-03 |
+| 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
 | 17. Visualization Polish | 0/? | Not started | |
 
 ## Next Actions
