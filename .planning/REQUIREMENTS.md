@@ -123,8 +123,8 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 
 - [x] **SNAP-01**: After each named filter step in cohort chain, save resulting data frame to `/blue/erin.mobley-hl.bcu/clean/rds/cohort/` as `cohort_<step_name>.rds`
 - [x] **SNAP-02**: Save final analysis-ready cohort as `cohort_final.rds` and attrition log as `attrition_log.rds`
-- [ ] **SNAP-03**: Every figure gets its ggplot-ready data frame saved as `<figure_name>_data.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/outputs/`
-- [ ] **SNAP-04**: Every summary table gets its source data frame saved as `<table_name>_data.rds` before rendering
+- [x] **SNAP-03**: Every figure gets its ggplot-ready data frame saved as `<figure_name>_data.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/outputs/`
+- [x] **SNAP-04**: Every summary table gets its source data frame saved as `<table_name>_data.rds` before rendering
 - [x] **SNAP-05**: Shared `save_output_data(df, name)` helper function for consistent path construction, logging, and `saveRDS()`
 
 ### Git Exclusion
@@ -254,8 +254,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CACHE-04 | Phase 15 | Complete |
 | SNAP-01 | Phase 16 | Complete |
 | SNAP-02 | Phase 16 | Complete |
-| SNAP-03 | Phase 16 | Pending |
-| SNAP-04 | Phase 16 | Pending |
+| SNAP-03 | Phase 16 | Complete |
+| SNAP-04 | Phase 16 | Complete |
 | SNAP-05 | Phase 16 | Complete |
 | GIT-01 | Phase 15 | Complete |
 | GIT-02 | Phase 15 | Complete |
