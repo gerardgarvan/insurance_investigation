@@ -108,6 +108,36 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OPTIM-01**: User can see dead code removed and redundant operations consolidated across R scripts 00-17 (TUMOR_REGISTRY bind_rows, duplicate HIPAA suppression, unused variables)
 - [x] **OPTIM-02**: User can see style-preserving optimizations (reduced bind_rows duplication, consolidated PROCEDURES queries, early column selection) applied to the pipeline without changing function signatures
 
+## v1.1 Requirements
+
+Requirements for milestone v1.1: RDS Cache & Visualization Polish.
+
+### RDS Caching
+
+- [ ] **CACHE-01**: After each raw PCORnet table is loaded and validated, serialize it to `.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/raw/` with consistent naming (e.g., `ENROLLMENT.rds`, `DIAGNOSIS.rds`)
+- [ ] **CACHE-02**: At pipeline startup, check if `.rds` exists and is newer than source CSV — load from `.rds` via `readRDS()` if so, log `[CACHE HIT]` vs `[CSV PARSE]` per table
+- [ ] **CACHE-03**: `FORCE_RELOAD` flag in `00_config.R` (default `FALSE`) bypasses cache and re-parses all CSVs when set to `TRUE`
+- [ ] **CACHE-04**: Log wall-clock time saved per table when loading from cache vs CSV
+
+### Dataset Snapshots
+
+- [ ] **SNAP-01**: After each named filter step in cohort chain, save resulting data frame to `/blue/erin.mobley-hl.bcu/clean/rds/cohort/` as `cohort_<step_name>.rds`
+- [ ] **SNAP-02**: Save final analysis-ready cohort as `cohort_final.rds` and attrition log as `attrition_log.rds`
+- [ ] **SNAP-03**: Every figure gets its ggplot-ready data frame saved as `<figure_name>_data.rds` in `/blue/erin.mobley-hl.bcu/clean/rds/outputs/`
+- [ ] **SNAP-04**: Every summary table gets its source data frame saved as `<table_name>_data.rds` before rendering
+- [ ] **SNAP-05**: Shared `save_output_data(df, name)` helper function for consistent path construction, logging, and `saveRDS()`
+
+### Git Exclusion
+
+- [ ] **GIT-01**: Add `/blue/erin.mobley-hl.bcu/clean/` to `.gitignore`
+- [ ] **GIT-02**: Add comment in `00_config.R` next to `CACHE_DIR` noting it is gitignored and must not be a repo-internal path
+
+### Visualization Polish
+
+- [ ] **VIZP-01**: Filter 1900 sentinel dates from all PPTX content (tables and graphs) so they never appear
+- [ ] **VIZP-02**: New PPTX slide with summary table showing unique encounter dates per person by payer category, counted only after `max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE)`
+- [ ] **VIZP-03**: Stacked encounter histograms by payer with post-treatment on bottom of each bar and pre-treatment on top, faceted by payer category
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -226,4 +256,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-01 after Phase 14 planning*
+*Last updated: 2026-04-02 after milestone v1.1 requirements definition*
