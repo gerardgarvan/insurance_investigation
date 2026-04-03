@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: RDS Cache & Visualization Polish
-status: Defining requirements
+status: Roadmap complete
 last_updated: "2026-04-02T00:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -14,7 +14,7 @@ progress:
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-04-02
-**Project status:** Milestone v1.1 — Defining requirements
+**Project status:** Milestone v1.1 — Roadmap complete, ready for planning
 
 ## Project Reference
 
@@ -24,27 +24,33 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-02 — Milestone v1.1 started
+Phase: Phase 15 (RDS Caching Infrastructure)
+Plan: Not started
+Status: Roadmap complete, awaiting plan creation
+Last activity: 2026-04-02 — Milestone v1.1 roadmap created
 
 ## Performance Metrics
 
-**Velocity:** N/A (no phases completed yet)
-**Quality:** N/A (no phases completed yet)
+**Velocity:** N/A (new milestone, no phases completed yet)
+**Quality:** N/A (new milestone, no phases completed yet)
 
-### Completed Phases
+### Milestone v1.1 Phases
 
-(None yet)
+| Phase | Description | Requirements | Status |
+|-------|-------------|--------------|--------|
+| 15 | RDS Caching Infrastructure | CACHE-01 to CACHE-04, GIT-01, GIT-02 | Not started |
+| 16 | Dataset Snapshots | SNAP-01 to SNAP-05 | Not started |
+| 17 | Visualization Polish | VIZP-01 to VIZP-03, PPTX2-04, PPTX2-07 | Not started |
 
 ### Phase Timing
 
 | Phase | Started | Completed | Duration | Plans | Outcome |
 |-------|---------|-----------|----------|-------|---------|
-| - | - | - | - | - | - |
+| 15 | - | - | - | TBD | - |
+| 16 | - | - | - | TBD | - |
+| 17 | - | - | - | TBD | - |
 
-## Accumulated Context
+## Accumulated Context (from v1.0)
 
 | Phase 01 P01 | 220 | 3 tasks | 7 files |
 | Phase 01 P02 | 95 | 1 tasks | 1 files |
@@ -102,14 +108,18 @@ Last activity: 2026-04-02 — Milestone v1.1 started
 | Per-facet overflow bin annotation for encounters >500 | Makes excluded high-encounter patients visible with counts per payer category | Phase 12 P01 | 2026-04-01 |
 | DX_YEAR=1900 filtered from bar charts with tracked exclusion count | Year 1900 is a masking placeholder; tracking count provides transparency | Phase 12 P01 | 2026-04-01 |
 | coord_cartesian(clip='off') + expanded y-axis limits prevent label clipping | Both clip control and limit expansion needed for labels above bars | Phase 12 P01 | 2026-04-01 |
+| .rds over .RData for caching | readRDS() returns single named object directly into assignment — no namespace side-effects | Roadmapping v1.1 | 2026-04-02 |
+| Cache at /blue/erin.mobley-hl.bcu/clean/rds/ | Keeps large binary files on blue storage, outside repo root, gitignored | Roadmapping v1.1 | 2026-04-02 |
 
 ### Current Todos
 
-- [ ] Review and approve roadmap structure
-- [ ] Execute `/gsd:plan-phase 1` to begin Foundation & Data Loading
+- [ ] Execute `/gsd:plan-phase 15` to create RDS caching infrastructure plan
+- [ ] Execute `/gsd:plan-phase 16` to create dataset snapshots plan
+- [ ] Execute `/gsd:plan-phase 17` to create visualization polish plan
 
 ### Roadmap Evolution
 
+**v1.0 milestones:**
 - Phase 5 added: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
 - Phase 6 added: Use debug output to rectify issues
 - Phase 7 added: look at dx info of those that did not have an HL diagnosis to fill gap
@@ -118,6 +128,11 @@ Last activity: 2026-04-02 — Milestone v1.1 started
 - Phase 10 added: Incorporate VariableDetails.xlsx surveillance strategy and Treatment_Variable_Documentation.docx variables into pipeline, then regenerate Treatment_Variable_Documentation.docx
 - Phase 12 added: more pptx polishing
 - Phase 14 added: CSV values data audit - verify captured data accuracy and optimize code
+
+**v1.1 milestones:**
+- Phase 15 added: RDS Caching Infrastructure (CACHE-01 to CACHE-04, GIT-01, GIT-02)
+- Phase 16 added: Dataset Snapshots (SNAP-01 to SNAP-05)
+- Phase 17 added: Visualization Polish (VIZP-01 to VIZP-03, completing PPTX2-04, PPTX2-07)
 
 ### Active Blockers
 
@@ -129,20 +144,36 @@ Last activity: 2026-04-02 — Milestone v1.1 started
 
 ## Session Continuity
 
-**What we just did:** Completed Phase 12 Plan 01 -- fixed four graph issues in R/16_encounter_analysis.R. Consolidated histogram payer categories to 6+Missing matching Phase 11 tables, added per-facet overflow bin annotation for encounters >500, filtered DX_YEAR=1900 masked dates from bar charts with tracked exclusion count in subtitle, and fixed label clipping on all bar charts via coord_cartesian(clip="off") and expanded y-axis limits.
+**What we just did:** Created milestone v1.1 roadmap with 3 phases (15-17) covering RDS caching, dataset snapshots, and visualization polish. All 14 v1.1 requirements mapped to phases with 100% coverage.
 
-**What's next:** Phase 12 Plan 02 -- Add definitions/glossary slide and per-slide footnotes to R/11_generate_pptx.R.
+**What's next:** Phase 15 planning — create execution plan for RDS caching infrastructure (cache-check logic, FORCE_RELOAD flag, time-savings logging, gitignore setup).
 
 **Context for next session:**
 
-- R/16_encounter_analysis.R: Histogram now shows 6+Missing payer facets (Other/Unavailable/Unknown consolidated to Missing)
-- Histogram includes per-facet overflow bin annotation (">500: N" text via geom_text)
-- N_ENC_CAPPED variable at 501 bins overflow patients for visual separation
-- DX_YEAR=1900 filtered from enc_by_year pipeline; n_masked count displayed in p2/p3 subtitle
-- All bar charts (p2, p3, p4) have coord_cartesian(clip="off") + expanded ylim (15-20% buffer) + increased top margin
-- Run 16_encounter_analysis.R before 11_generate_pptx.R to regenerate corrected PNGs
-- Commits: a74c585 (payer consolidation + overflow bin), 34fc69f (masked date filter + label clipping)
+**Milestone v1.1 structure:**
+- Phase 15: RDS Caching Infrastructure (6 requirements: CACHE-01 to CACHE-04, GIT-01, GIT-02)
+  - Extends `load_pcornet_table()` in Phase 1 foundation
+  - Cache directory: `/blue/erin.mobley-hl.bcu/clean/rds/raw/`
+  - Success criteria: RDS serialization, cache-check logging, FORCE_RELOAD override, time-savings tracking
+
+- Phase 16: Dataset Snapshots (5 requirements: SNAP-01 to SNAP-05)
+  - Depends on Phase 15 cache directory structure + Phase 3 cohort chain
+  - Snapshot locations: cohort steps, final outputs, figure/table backing data
+  - `save_output_data(df, name)` helper for consistent snapshot creation
+
+- Phase 17: Visualization Polish (5 requirements: VIZP-01 to VIZP-03, PPTX2-04, PPTX2-07)
+  - Completes Phase 12 gap closure (PPTX2-04, PPTX2-07)
+  - Filters 1900 sentinel dates from all PPTX content
+  - New slides: post-treatment encounter summary, stacked histograms
+
+**Requirement coverage:** 14/14 v1.1 requirements mapped (100%)
+
+**Files ready:**
+- `.planning/ROADMAP.md` updated with Phase 15-17 details appended
+- `.planning/STATE.md` updated for milestone v1.1
+- `.planning/REQUIREMENTS.md` traceability section needs update (next step)
 
 ---
 
 *State tracking initialized: 2026-03-24*
+*Milestone v1.1 roadmap created: 2026-04-02*

@@ -240,20 +240,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX2-01 | Phase 12 | Complete |
 | PPTX2-02 | Phase 12 | Complete |
 | PPTX2-03 | Phase 12 | Complete |
-| PPTX2-04 | Phase 12 | Pending |
+| PPTX2-04 | Phase 17 | Pending |
 | PPTX2-05 | Phase 12 | Complete |
 | PPTX2-06 | Phase 12 | Complete |
-| PPTX2-07 | Phase 12 | Pending |
+| PPTX2-07 | Phase 17 | Pending |
 | CSVAUDIT-01 | Phase 14 | Complete |
 | CSVAUDIT-02 | Phase 14 | Complete |
 | OPTIM-01 | Phase 14 | Complete |
 | OPTIM-02 | Phase 14 | Complete |
+| CACHE-01 | Phase 15 | Pending |
+| CACHE-02 | Phase 15 | Pending |
+| CACHE-03 | Phase 15 | Pending |
+| CACHE-04 | Phase 15 | Pending |
+| SNAP-01 | Phase 16 | Pending |
+| SNAP-02 | Phase 16 | Pending |
+| SNAP-03 | Phase 16 | Pending |
+| SNAP-04 | Phase 16 | Pending |
+| SNAP-05 | Phase 16 | Pending |
+| GIT-01 | Phase 15 | Pending |
+| GIT-02 | Phase 15 | Pending |
+| VIZP-01 | Phase 17 | Pending |
+| VIZP-02 | Phase 17 | Pending |
+| VIZP-03 | Phase 17 | Pending |
 
 **Coverage:**
 - v1 requirements: 60 total
 - Mapped to phases: 60
 - Unmapped: 0
 
+**v1.1 requirements:** 14 total
+- Mapped to phases: 14
+- Unmapped: 0
+
+**Total coverage:** 74/74 requirements mapped (100%)
+
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-02 after milestone v1.1 requirements definition*
+*Last updated: 2026-04-02 after milestone v1.1 roadmap creation*
