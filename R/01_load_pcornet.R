@@ -557,13 +557,18 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   message("Loading PCORnet CDM tables...")
   message(strrep("=", 60))
 
+  # Read cache settings from CONFIG (Plan 01 added CONFIG$cache)
+  cache_dir    <- CONFIG$cache$cache_dir
+  force_reload <- CONFIG$cache$force_reload
+
   pcornet <- imap(PCORNET_PATHS, function(path, table_name) {
     spec <- TABLE_SPECS[[table_name]]
     if (is.null(spec)) {
       message(glue("WARNING: No col_types spec defined for {table_name}. Using .default = col_character()."))
       spec <- cols(.default = col_character())
     }
-    load_pcornet_table(table_name, path, spec)
+    load_pcornet_table(table_name, path, spec,
+                       cache_dir = cache_dir, force_reload = force_reload)
   })
 
   # Summary
@@ -580,48 +585,102 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   # --------------------------------------------------------------------------
   # COMBINED TUMOR REGISTRY (Phase 14: consolidate repeated bind_rows)
   # --------------------------------------------------------------------------
-  # Previously, 03_cohort_predicates.R, 10_treatment_payer.R, and other scripts
-  # each separately bind_rows(TR1, TR2, TR3). Binding once here avoids
-  # redundant operations and simplifies downstream code.
-  tr_tables <- compact(list(
-    pcornet$TUMOR_REGISTRY1,
-    pcornet$TUMOR_REGISTRY2,
-    pcornet$TUMOR_REGISTRY3
-  ))
-  if (length(tr_tables) > 0) {
-    pcornet$TUMOR_REGISTRY_ALL <- bind_rows(tr_tables)
-    message(glue(
-      "Combined TUMOR_REGISTRY_ALL: {format(nrow(pcornet$TUMOR_REGISTRY_ALL), big.mark=',')} rows ",
-      "from {length(tr_tables)} TR tables"
+  # Phase 15: Check for cached TUMOR_REGISTRY_ALL before re-binding
+  tr_all_from_cache <- FALSE
+  if (!is.null(cache_dir) && !force_reload) {
+    tr_all_cache_path <- file.path(cache_dir, "TUMOR_REGISTRY_ALL.rds")
+    if (file.exists(tr_all_cache_path)) {
+      # TR_ALL cache is valid if it's newer than all individual TR source CSVs
+      tr_csv_paths <- PCORNET_PATHS[c("TUMOR_REGISTRY1", "TUMOR_REGISTRY2", "TUMOR_REGISTRY3")]
+      tr_csv_paths <- tr_csv_paths[file.exists(tr_csv_paths)]
+      tr_all_mtime <- file.mtime(tr_all_cache_path)
+
+      if (length(tr_csv_paths) == 0 || all(tr_all_mtime > file.mtime(tr_csv_paths))) {
+        cache_start <- Sys.time()
+        pcornet$TUMOR_REGISTRY_ALL <- readRDS(tr_all_cache_path)
+        cache_seconds <- as.numeric(difftime(Sys.time(), cache_start, units = "secs"))
+
+        original_parse_seconds <- attr(pcornet$TUMOR_REGISTRY_ALL, "csv_parse_seconds")
+        if (!is.null(original_parse_seconds)) {
+          time_saved <- original_parse_seconds - cache_seconds
+          message(glue(
+            "[CACHE HIT] TUMOR_REGISTRY_ALL: {round(cache_seconds, 1)}s (cache) vs ",
+            "{round(original_parse_seconds, 1)}s (CSV) -- saved {round(time_saved, 1)}s ",
+            "({format(nrow(pcornet$TUMOR_REGISTRY_ALL), big.mark=',')} rows)"
+          ))
+        } else {
+          message(glue(
+            "[CACHE HIT] TUMOR_REGISTRY_ALL: {round(cache_seconds, 1)}s ",
+            "({format(nrow(pcornet$TUMOR_REGISTRY_ALL), big.mark=',')} rows)"
+          ))
+        }
+        tr_all_from_cache <- TRUE
+      }
+    }
+  }
+
+  if (!tr_all_from_cache) {
+    # Original bind_rows logic (only runs if not loaded from cache)
+    tr_tables <- compact(list(
+      pcornet$TUMOR_REGISTRY1,
+      pcornet$TUMOR_REGISTRY2,
+      pcornet$TUMOR_REGISTRY3
     ))
-  } else {
-    pcornet$TUMOR_REGISTRY_ALL <- NULL
-    message("No TUMOR_REGISTRY tables loaded -- TUMOR_REGISTRY_ALL is NULL")
+    if (length(tr_tables) > 0) {
+      pcornet$TUMOR_REGISTRY_ALL <- bind_rows(tr_tables)
+      message(glue(
+        "Combined TUMOR_REGISTRY_ALL: {format(nrow(pcornet$TUMOR_REGISTRY_ALL), big.mark=',')} rows ",
+        "from {length(tr_tables)} TR tables"
+      ))
+
+      # Cache TUMOR_REGISTRY_ALL separately (per D-03)
+      if (!is.null(cache_dir)) {
+        tr_all_cache_path <- file.path(cache_dir, "TUMOR_REGISTRY_ALL.rds")
+        tr_parse_total <- sum(c(
+          attr(pcornet$TUMOR_REGISTRY1, "csv_parse_seconds"),
+          attr(pcornet$TUMOR_REGISTRY2, "csv_parse_seconds"),
+          attr(pcornet$TUMOR_REGISTRY3, "csv_parse_seconds")
+        ), na.rm = TRUE)
+        attr(pcornet$TUMOR_REGISTRY_ALL, "csv_parse_seconds") <- tr_parse_total
+        saveRDS(pcornet$TUMOR_REGISTRY_ALL, tr_all_cache_path, compress = TRUE)
+        message(glue("  Cached TUMOR_REGISTRY_ALL to {basename(tr_all_cache_path)}"))
+      }
+    } else {
+      pcornet$TUMOR_REGISTRY_ALL <- NULL
+      message("No TUMOR_REGISTRY tables loaded -- TUMOR_REGISTRY_ALL is NULL")
+    }
   }
 
   # --------------------------------------------------------------------------
   # Phase 10 diagnostic logging: PROVIDER specialty values and LAB_LOINC null rate
   # --------------------------------------------------------------------------
+  # Per D-04: Skip on cache hits. Run on first load or FORCE_RELOAD.
+  run_diagnostics <- force_reload ||
+    is.null(cache_dir) ||
+    !file.exists(file.path(cache_dir, "PROVIDER.rds")) ||
+    !file.exists(file.path(cache_dir, "LAB_RESULT_CM.rds"))
 
-  # PROVIDER: log distinct PROVIDER_SPECIALTY_PRIMARY values (sample of 20)
-  # Used to validate NUCC taxonomy codes align with actual data before downstream matching
-  if (!is.null(pcornet$PROVIDER)) {
-    message("\n[PROVIDER] Distinct PROVIDER_SPECIALTY_PRIMARY values (sample up to 20):")
-    pcornet$PROVIDER %>%
-      dplyr::distinct(PROVIDER_SPECIALTY_PRIMARY) %>%
-      dplyr::slice_head(n = 20) %>%
-      print()
-  }
+  if (run_diagnostics) {
+    # PROVIDER: log distinct PROVIDER_SPECIALTY_PRIMARY values (sample of 20)
+    # Used to validate NUCC taxonomy codes align with actual data before downstream matching
+    if (!is.null(pcornet$PROVIDER)) {
+      message("\n[PROVIDER] Distinct PROVIDER_SPECIALTY_PRIMARY values (sample up to 20):")
+      pcornet$PROVIDER %>%
+        dplyr::distinct(PROVIDER_SPECIALTY_PRIMARY) %>%
+        dplyr::slice_head(n = 20) %>%
+        print()
+    }
 
-  # LAB_RESULT_CM: log row count and LAB_LOINC null rate
-  # High null rate indicates CPT fallback (LAB_PX) will be needed for lab matching
-  if (!is.null(pcornet$LAB_RESULT_CM)) {
-    n_total <- nrow(pcornet$LAB_RESULT_CM)
-    n_na_loinc <- sum(is.na(pcornet$LAB_RESULT_CM$LAB_LOINC))
-    message(glue(
-      "\n[LAB_RESULT_CM] {format(n_total, big.mark=',')} rows loaded, ",
-      "{n_na_loinc} ({round(100 * n_na_loinc / n_total, 1)}%) with NA LAB_LOINC"
-    ))
+    # LAB_RESULT_CM: log row count and LAB_LOINC null rate
+    # High null rate indicates CPT fallback (LAB_PX) will be needed for lab matching
+    if (!is.null(pcornet$LAB_RESULT_CM)) {
+      n_total <- nrow(pcornet$LAB_RESULT_CM)
+      n_na_loinc <- sum(is.na(pcornet$LAB_RESULT_CM$LAB_LOINC))
+      message(glue(
+        "\n[LAB_RESULT_CM] {format(n_total, big.mark=',')} rows loaded, ",
+        "{n_na_loinc} ({round(100 * n_na_loinc / n_total, 1)}%) with NA LAB_LOINC"
+      ))
+    }
   }
 }
 
