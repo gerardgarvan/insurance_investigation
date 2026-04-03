@@ -15,7 +15,7 @@
 - [ ] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (gap closure pending)
 - [ ] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables
 - [x] **Phase 14: CSV Values Data Audit & Code Optimization** - Review value_audit CSVs for coding inconsistencies, optimize R pipeline code (completed 2026-04-01)
-- [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
+- [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
 - [ ] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files
 - [ ] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms
 
@@ -277,7 +277,11 @@ Plans:
 4. User can see table-backing data frames (e.g., `payer_summary_table_data.rds`) saved before PPTX table creation
 5. User can call `save_output_data(df, "name")` helper from any script for consistent snapshot creation with automatic path construction and logging
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 16-01-PLAN.md -- Config cache extension + utils_snapshot.R helper + cohort filter step snapshots (SNAP-01, SNAP-02, SNAP-05)
+- [ ] 16-02-PLAN.md -- Visualization backing data snapshots in waterfall, sankey, encounter analysis, and PPTX scripts (SNAP-03, SNAP-04)
 
 ---
 
@@ -319,15 +323,14 @@ Plans:
 | 13. Summary Tables Value Audit | 0/1 | Planned | |
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
-| 16. Dataset Snapshots | 0/? | Not started | |
+| 16. Dataset Snapshots | 0/2 | Planned | |
 | 17. Visualization Polish | 0/? | Not started | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 15` to implement RDS caching infrastructure
-2. Execute `/gsd:plan-phase 16` to create dataset snapshots plan
-3. Execute `/gsd:plan-phase 17` to create visualization polish plan
+1. Execute `/gsd:execute-phase 16` to implement dataset snapshots
+2. Execute `/gsd:plan-phase 17` to create visualization polish plan
 
 ---
 
-*Last updated: 2026-04-03 (Phase 15 plans created)*
+*Last updated: 2026-04-03 (Phase 16 plans created)*
