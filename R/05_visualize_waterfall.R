@@ -35,6 +35,9 @@ attrition_plot_data <- attrition_log %>%
     )
   )
 
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(attrition_plot_data, "waterfall_attrition_data")
+
 message(glue("Prepared {nrow(attrition_plot_data)} attrition steps for visualization"))
 message(glue("Range: {comma(max(attrition_plot_data$n_before))} -> {comma(min(attrition_plot_data$n_after))} patients"))
 

@@ -147,6 +147,9 @@ sankey_data <- sankey_data %>%
 message(glue("Created stratum labels with N counts for {n_distinct(sankey_data$PAYER_LABEL)} payer categories"))
 message(glue("Created stratum labels with N counts for {n_distinct(sankey_data$TREATMENT_LABEL)} treatment categories"))
 
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(sankey_data, "sankey_patient_flow_data")
+
 # ==============================================================================
 # SECTION 5: BUILD GGALLUVIAL PLOT (D-05, D-07)
 # ==============================================================================
