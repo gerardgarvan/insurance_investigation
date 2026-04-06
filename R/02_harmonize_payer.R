@@ -199,6 +199,15 @@ first_dx <- dx_dates %>%
                                      first_dx_date_diagnosis)) %>%
   select(ID, first_hl_dx_date)
 
+# Nullify 1900 sentinel dates at the source (SAS/Excel epoch sentinels)
+# These are missing dates, not real diagnoses -- must be NA before any downstream use
+n_sentinel_first_dx <- sum(year(first_dx$first_hl_dx_date) == 1900L, na.rm = TRUE)
+if (n_sentinel_first_dx > 0) {
+  message(glue("  Nullifying {n_sentinel_first_dx} sentinel first-diagnosis dates (year 1900)"))
+  first_dx <- first_dx %>%
+    mutate(first_hl_dx_date = if_else(year(first_hl_dx_date) == 1900L, as.Date(NA), first_hl_dx_date))
+}
+
 message(glue("\nFirst HL diagnosis:"))
 message(glue("  Patients with HL diagnosis found: {format(nrow(first_dx), big.mark=',')}"))
 

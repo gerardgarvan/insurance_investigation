@@ -138,7 +138,12 @@ enrollment_primary <- pcornet$ENROLLMENT %>%
   )
 
 # Aggregate enrollment dates per patient
+# Exclude 1900 sentinel dates from aggregation (SAS/Excel epoch sentinels)
 enrollment_dates <- enrollment_primary %>%
+  mutate(
+    ENR_START_DATE = if_else(year(ENR_START_DATE) == 1900L, as.Date(NA), ENR_START_DATE),
+    ENR_END_DATE   = if_else(year(ENR_END_DATE) == 1900L, as.Date(NA), ENR_END_DATE)
+  ) %>%
   group_by(ID) %>%
   summarise(
     enr_start_date = min(ENR_START_DATE, na.rm = TRUE),

@@ -99,7 +99,7 @@ n_missing_dx_year <- sum(is.na(hl_cohort$DX_YEAR))
 message(glue("  {n_missing_dx_year} patients with missing DX_YEAR (includes nullified 1900 sentinels) excluded from DX year plots"))
 
 enc_by_year <- hl_cohort %>%
-  filter(!is.na(DX_YEAR), !is.na(N_ENC_NONACUTE_CARE)) %>%
+  filter(!is.na(DX_YEAR), DX_YEAR > 1900L, !is.na(N_ENC_NONACUTE_CARE)) %>%
   group_by(DX_YEAR) %>%
   summarise(
     n_patients = n(),
@@ -343,7 +343,7 @@ message("  Saved: output/figures/unique_dates_per_person_by_payor.png")
 
 # 6d. Post-treatment unique dates by DX year
 enc_ud_by_year <- cohort_ud %>%
-  filter(!is.na(DX_YEAR), !is.na(N_UNIQUE_DATES_POST_TX)) %>%
+  filter(!is.na(DX_YEAR), DX_YEAR > 1900L, !is.na(N_UNIQUE_DATES_POST_TX)) %>%
   group_by(DX_YEAR) %>%
   summarise(
     n_patients = n(),
