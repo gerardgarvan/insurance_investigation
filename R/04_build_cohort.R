@@ -361,15 +361,30 @@ survivorship_flags <- classify_survivorship_encounters(post_dx_date_map)
 cohort <- cohort %>%
   left_join(survivorship_flags, by = "ID")
 
-# Post-treatment encounter flag: Yes/No based on any non-acute post-dx encounter
+# Post-treatment encounter flag: Yes/No based on encounters after last treatment date
+# Requires treatment evidence (chemo, radiation, or SCT); NA for untreated patients
+message("\n--- Post-Treatment Encounter Flag ---")
+last_tx_for_cohort <- compute_last_any_treatment_date()
+
+# Identify patients with any encounter after their last treatment date
+post_tx_encounter_ids <- encounters %>%
+  inner_join(last_tx_for_cohort, by = "ID") %>%
+  filter(!is.na(ADMIT_DATE), ADMIT_DATE > LAST_ANY_TX_DATE) %>%
+  distinct(ID) %>%
+  pull(ID)
+
 cohort <- cohort %>%
+  left_join(last_tx_for_cohort, by = "ID") %>%
   mutate(
-    HAS_POST_TX_ENCOUNTERS = if_else(
-      coalesce(HAD_ENC_NONACUTE_CARE, 0L) == 1L, "Yes", "No"
+    HAS_POST_TX_ENCOUNTERS = case_when(
+      is.na(LAST_ANY_TX_DATE) ~ NA_character_,    # No treatment = not applicable
+      ID %in% post_tx_encounter_ids ~ "Yes",       # Has encounters after last tx
+      TRUE ~ "No"                                   # Treatment but no post-tx encounters
     )
   )
 
-message(glue("\n  Post-treatment encounters: {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'Yes', na.rm = TRUE)} Yes, {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'No', na.rm = TRUE)} No"))
+n_treated <- sum(!is.na(cohort$LAST_ANY_TX_DATE))
+message(glue("\n  Post-treatment encounters (among {n_treated} treated): {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'Yes', na.rm = TRUE)} Yes, {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'No', na.rm = TRUE)} No, {sum(is.na(cohort$HAS_POST_TX_ENCOUNTERS))} N/A (untreated)"))
 
 # ==============================================================================
 # SECTION 7: FINAL COHORT ASSEMBLY (D-09 column order)
@@ -407,6 +422,7 @@ hl_cohort <- cohort %>%
     PAYER_AT_CHEMO,
     PAYER_AT_RADIATION,
     PAYER_AT_SCT,
+    LAST_ANY_TX_DATE,
     enrollment_duration_days,
     # Timing derivation (D-12)
     DAYS_DX_TO_CHEMO,

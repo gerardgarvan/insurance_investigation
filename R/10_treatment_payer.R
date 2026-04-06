@@ -422,6 +422,144 @@ compute_payer_at_sct <- function() {
   result
 }
 
+#' Compute last treatment date across all treatment types per patient
+#'
+#' Scans PROCEDURES, PRESCRIBING, DIAGNOSIS, ENCOUNTER, DISPENSING, and MED_ADMIN
+#' for the latest treatment date (max across chemo, radiation, SCT) per patient.
+#' Filters 1900 sentinel dates. Used by 04_build_cohort.R for HAS_POST_TX_ENCOUNTERS.
+#'
+#' @return Tibble with columns: ID, LAST_ANY_TX_DATE
+compute_last_any_treatment_date <- function() {
+
+  # Helper: extract max treatment dates for one type from all available sources
+  last_dates_for_type <- function(treatment_type) {
+    sources <- list()
+
+    if (treatment_type == "chemo") {
+      if (!is.null(pcornet$PROCEDURES)) {
+        sources$px <- pcornet$PROCEDURES %>%
+          filter(
+            (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
+            (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes) |
+            (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
+          ) %>% filter(!is.na(PX_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$PRESCRIBING)) {
+        sources$rx <- pcornet$PRESCRIBING %>%
+          filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
+          mutate(d = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
+          filter(!is.na(d)) %>%
+          group_by(ID) %>% summarise(tx_date = max(d, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$DIAGNOSIS)) {
+        sources$dx <- pcornet$DIAGNOSIS %>%
+          filter(
+            (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
+            (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+          ) %>% filter(!is.na(DX_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$ENCOUNTER)) {
+        sources$drg <- pcornet$ENCOUNTER %>%
+          filter(DRG %in% TREATMENT_CODES$chemo_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
+        sources$disp <- pcornet$DISPENSING %>%
+          filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>% filter(!is.na(DISPENSE_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
+        sources$ma <- pcornet$MED_ADMIN %>%
+          filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>% filter(!is.na(MEDADMIN_START_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
+      }
+
+    } else if (treatment_type == "radiation") {
+      if (!is.null(pcornet$PROCEDURES)) {
+        sources$px <- pcornet$PROCEDURES %>%
+          filter(
+            (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
+            (PX_TYPE == "10" & (
+              str_starts(PX, "D70") | str_starts(PX, "D71") |
+              str_starts(PX, "D72") | str_starts(PX, "D7Y")
+            )) |
+            (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
+          ) %>% filter(!is.na(PX_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$DIAGNOSIS)) {
+        sources$dx <- pcornet$DIAGNOSIS %>%
+          filter(
+            (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
+            (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+          ) %>% filter(!is.na(DX_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$ENCOUNTER)) {
+        sources$drg <- pcornet$ENCOUNTER %>%
+          filter(DRG %in% TREATMENT_CODES$radiation_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+      }
+
+    } else if (treatment_type == "sct") {
+      if (!is.null(pcornet$PROCEDURES)) {
+        sources$px <- pcornet$PROCEDURES %>%
+          filter(
+            (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+            (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+            (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
+          ) %>% filter(!is.na(PX_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$DIAGNOSIS)) {
+        sources$dx <- pcornet$DIAGNOSIS %>%
+          filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
+          filter(!is.na(DX_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+      }
+      if (!is.null(pcornet$ENCOUNTER)) {
+        sources$drg <- pcornet$ENCOUNTER %>%
+          filter(DRG %in% TREATMENT_CODES$sct_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
+          group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+      }
+    }
+
+    non_null <- compact(sources)
+    if (length(non_null) == 0) return(tibble(ID = character(0), tx_date = as.Date(character(0))))
+
+    bind_rows(non_null) %>%
+      group_by(ID) %>%
+      summarise(tx_date = max(tx_date, na.rm = TRUE), .groups = "drop") %>%
+      filter(!is.infinite(tx_date))
+  }
+
+  # Combine all treatment types, take overall max per patient
+  all_dates <- bind_rows(
+    last_dates_for_type("chemo"),
+    last_dates_for_type("radiation"),
+    last_dates_for_type("sct")
+  )
+
+  if (nrow(all_dates) == 0) {
+    message("  LAST_ANY_TX_DATE: 0 patients (no treatment evidence found)")
+    return(tibble(ID = character(0), LAST_ANY_TX_DATE = as.Date(character(0))))
+  }
+
+  result <- all_dates %>%
+    filter(tx_date > as.Date("1900-12-31")) %>%
+    group_by(ID) %>%
+    summarise(LAST_ANY_TX_DATE = max(tx_date, na.rm = TRUE), .groups = "drop") %>%
+    filter(!is.infinite(LAST_ANY_TX_DATE))
+
+  message(glue("  LAST_ANY_TX_DATE: {nrow(result)} patients with treatment"))
+  result
+}
+
 # ==============================================================================
 # End of 10_treatment_payer.R
 # ==============================================================================

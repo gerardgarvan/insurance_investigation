@@ -1311,7 +1311,7 @@ message("  Slide 21: Post-Treatment Encounters by Age Group")
 age_group_path <- "output/figures/post_tx_by_age_group.png"
 pptx <- add_image_slide(pptx,
   "Post-Treatment Encounter Presence by Age Group at Diagnosis",
-  "Proportion with any post-treatment encounter by age group (0-17, 18-39, 40-64, 65+)",
+  "Among treated patients: proportion with any encounter after last treatment, by age group (0-17, 18-39, 40-64, 65+)",
   age_group_path
 )
 if (file.exists(age_group_path)) {

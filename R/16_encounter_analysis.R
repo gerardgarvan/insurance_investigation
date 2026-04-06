@@ -213,12 +213,16 @@ message("  Saved: output/tables/encounter_summary_by_payor_age.csv")
 
 message("\n--- Post-treatment encounters by age group ---")
 
+# Filter to treated patients only (HAS_POST_TX_ENCOUNTERS is NA for untreated)
 age_post_tx <- hl_cohort %>%
-  filter(!is.na(AGE_GROUP)) %>%
+  filter(!is.na(AGE_GROUP), !is.na(HAS_POST_TX_ENCOUNTERS)) %>%
   count(AGE_GROUP, HAS_POST_TX_ENCOUNTERS, name = "n") %>%
   group_by(AGE_GROUP) %>%
   mutate(pct = round(100 * n / sum(n), 1)) %>%
   ungroup()
+
+n_treated_for_age <- sum(age_post_tx$n)
+n_untreated_for_age <- sum(!is.na(hl_cohort$AGE_GROUP) & is.na(hl_cohort$HAS_POST_TX_ENCOUNTERS))
 
 # Snapshot: figure backing data (per SNAP-03)
 save_output_data(age_post_tx, "post_tx_by_age_group_data")
@@ -232,7 +236,8 @@ p4 <- ggplot(age_post_tx, aes(x = AGE_GROUP, y = n, fill = HAS_POST_TX_ENCOUNTER
             position = position_dodge(width = 0.9), vjust = -0.3, size = 3) +
   coord_cartesian(clip = "off", ylim = c(0, max_y_p4 * 1.2)) +
   labs(
-    title = "Post-Treatment Encounters by Age Group (Yes/No)",
+    title = "Post-Treatment Encounter Presence by Age Group at Diagnosis",
+    subtitle = glue("Treated patients only (N = {format(n_treated_for_age, big.mark = ',')}); {format(n_untreated_for_age, big.mark = ',')} untreated excluded"),
     x = "Age Group at Diagnosis",
     y = "Number of Patients",
     fill = "Has Post-Tx\nEncounters"
