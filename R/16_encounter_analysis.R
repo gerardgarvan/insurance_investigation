@@ -427,6 +427,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
     # Chemo from PRESCRIBING
     if (!is.null(pcornet$PRESCRIBING)) {
       sources$rx <- pcornet$PRESCRIBING %>%
+        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
         filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
         mutate(d = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
         filter(!is.na(d)) %>%
