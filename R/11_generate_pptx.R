@@ -1094,8 +1094,8 @@ tbl15 <- unknown_post_counts %>%
   ) %>%
   count(bin, name = "n") %>%
   mutate(`N Patients` = format_count_pct(n, n_unknown)) %>%
-  select(`Payer Category` = bin, `N Patients`) %>%
-  bind_rows(tibble(`Payer Category` = "Total", `N Patients` = format_count_pct(n_unknown, n_unknown)))
+  select(`Number of Encounters` = bin, `N Patients`) %>%
+  bind_rows(tibble(`Number of Encounters` = "Total", `N Patients` = format_count_pct(n_unknown, n_unknown)))
 
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(tbl15, "missing_post_tx_payer_breakdown_data")
@@ -1516,7 +1516,8 @@ if (file.exists(stacked_hist_path)) {
 message("  Slide 28: Summary Statistics -- Pre/Post Encounters by Payer")
 
 # Compute pre/post encounter stats per payer for treated patients
-stacked_stats <- cohort_full %>%
+# One row per payer (no doubling) with Pre/Post columns side by side
+stacked_long <- cohort_full %>%
   filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
   select(ID, PAYER_CATEGORY_PRIMARY, LAST_ANY_TREATMENT_DATE) %>%
   inner_join(
@@ -1538,17 +1539,25 @@ stacked_stats <- cohort_full %>%
     N = n_distinct(ID),
     Mean = round(mean(n_enc, na.rm = TRUE), 1),
     Median = round(median(n_enc, na.rm = TRUE), 1),
-    Min = min(n_enc, na.rm = TRUE),
-    Q1 = round(quantile(n_enc, 0.25, na.rm = TRUE), 1),
-    Q3 = round(quantile(n_enc, 0.75, na.rm = TRUE), 1),
-    Max = max(n_enc, na.rm = TRUE),
     .groups = "drop"
+  )
+
+stacked_stats <- stacked_long %>%
+  tidyr::pivot_wider(
+    id_cols = PAYER_DISPLAY,
+    names_from = PERIOD,
+    values_from = c(N, Mean, Median),
+    names_glue = "{PERIOD} {.value}"
   ) %>%
   rename(`Payer Category` = PAYER_DISPLAY) %>%
-  arrange(`Payer Category`, PERIOD)
-
-stacked_stats <- stacked_stats %>%
-  mutate(N = format(N, big.mark = ","))
+  select(`Payer Category`,
+         `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
+         `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`) %>%
+  arrange(`Payer Category`) %>%
+  mutate(
+    `Pre-treatment N` = format(`Pre-treatment N`, big.mark = ","),
+    `Post-treatment N` = format(`Post-treatment N`, big.mark = ",")
+  )
 
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(stacked_stats, "stacked_encounter_stats_by_payer_period_data")
@@ -1557,7 +1566,7 @@ pptx <- add_table_slide(pptx,
   "Summary Statistics: Pre/Post-Treatment Encounters by Payer",
   glue("Encounter count statistics by primary payer and treatment period -- Treated patients only"),
   stacked_stats) %>%
-  add_footnote("Post-treatment = encounters after last treatment date. Pre-treatment = encounters on or before last treatment date. Separate rows per period per payer.")
+  add_footnote("Post-treatment = encounters after last treatment date. Pre-treatment = encounters on or before last treatment date.")
 
 # ==============================================================================
 # SECTION 6: SAVE PPTX
