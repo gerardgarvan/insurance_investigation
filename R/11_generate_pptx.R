@@ -19,7 +19,7 @@
 #  11. Chemotherapy - Insurance by Enrollment Coverage
 #  12. Radiation - Insurance by Enrollment Coverage
 #  13. SCT - Insurance by Enrollment Coverage
-#  14. Last Treatment = Last Encounter (±30 day window)
+#  14. Last Treatment = Last Encounter
 #  15. Missing Post-Treatment Payer - Encounter Breakdown
 #  16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
 #  17. Encounters per Person by Payer Category (histogram)
@@ -310,13 +310,13 @@ last_encounter_per_patient <- encounters %>%
   summarise(LAST_ENCOUNTER_DATE = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
 
 # Helper: compute post-treatment payer (most prevalent anytime after a given date)
-# Patients whose treatment date = last encounter (±30 days) get N/A (no follow-up)
+# Patients whose treatment date = last encounter get N/A (no follow-up)
 compute_post_tx_payer <- function(patient_dates, date_col, payer_col_name) {
   # Identify patients with no follow-up (last treatment = last encounter)
   no_followup_ids <- patient_dates %>%
     filter(!is.na(!!sym(date_col))) %>%
     inner_join(last_encounter_per_patient, by = "ID") %>%
-    filter(abs(as.numeric(LAST_ENCOUNTER_DATE - !!sym(date_col))) <= WINDOW_DAYS) %>%
+    filter(LAST_ENCOUNTER_DATE == !!sym(date_col)) %>%
     pull(ID)
 
   result <- patient_dates %>%
@@ -977,7 +977,7 @@ pptx <- add_table_slide(pptx,
   tbl13) %>%
   add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last SCT. ENR Gap = enrollment gap in that window.")
 
-# ---- Slide 14: Last Treatment = Last Encounter (±30 day window) ----
+# ---- Slide 14: Last Treatment = Last Encounter ----
 message("  Slide 14: Last Treatment = Last Encounter")
 
 # Reuse last_encounter_per_patient computed in section 2c
@@ -986,7 +986,7 @@ last_tx_vs_enc <- cohort_full %>%
   inner_join(last_encounter_per_patient, by = "ID") %>%
   mutate(
     days_last_enc_after_last_tx = as.numeric(LAST_ENCOUNTER_DATE - LAST_ANY_TREATMENT_DATE),
-    last_tx_is_last_enc = abs(days_last_enc_after_last_tx) <= WINDOW_DAYS
+    last_tx_is_last_enc = LAST_ENCOUNTER_DATE == LAST_ANY_TREATMENT_DATE
   )
 
 # Also compute per treatment type (LAST_*_DATE columns already in cohort_full)
@@ -994,17 +994,17 @@ last_tx_vs_enc <- last_tx_vs_enc %>%
   mutate(
     chemo_is_last_enc = if_else(
       !is.na(LAST_CHEMO_DATE),
-      abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_CHEMO_DATE)) <= WINDOW_DAYS,
+      LAST_ENCOUNTER_DATE == LAST_CHEMO_DATE,
       NA
     ),
     rad_is_last_enc = if_else(
       !is.na(LAST_RADIATION_DATE),
-      abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_RADIATION_DATE)) <= WINDOW_DAYS,
+      LAST_ENCOUNTER_DATE == LAST_RADIATION_DATE,
       NA
     ),
     sct_is_last_enc = if_else(
       !is.na(LAST_SCT_DATE),
-      abs(as.numeric(LAST_ENCOUNTER_DATE - LAST_SCT_DATE)) <= WINDOW_DAYS,
+      LAST_ENCOUNTER_DATE == LAST_SCT_DATE,
       NA
     )
   )
@@ -1049,9 +1049,9 @@ save_output_data(tbl14, "last_tx_equals_last_encounter_data")
 
 pptx <- add_table_slide(pptx,
   "Last Treatment = Last Encounter",
-  glue("Patients whose last treatment was within \u00b130 days of their last encounter (no follow-up)"),
+  glue("Patients whose last treatment date equals their last encounter date (no follow-up)"),
   tbl14) %>%
-  add_footnote("Last Tx = Last Encounter: patient's last treatment date is within \u00b130 days of their last encounter date in the dataset.")
+  add_footnote("Last Tx = Last Encounter: patient's last treatment date is the same as their last encounter date in the dataset.")
 
 # ---- Slide 15: Missing Post-Treatment Payer - Encounter Breakdown ----
 message("  Slide 15: Missing Post-Treatment Encounter Breakdown")
@@ -1194,7 +1194,7 @@ pptx <- add_table_slide(pptx,
   "Insurance After Last Treatment \u2014 Dataset Retention",
   glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset"),
   tbl16) %>%
-  add_footnote("Still in Dataset = patient has encounters after last treatment. No Longer in Dataset = last treatment was final encounter (\u00b130 days). Payer shown is post-treatment (still) or at last treatment (no longer).")
+  add_footnote("Still in Dataset = patient has encounters after last treatment. No Longer in Dataset = last treatment date was the last encounter date. Payer shown is post-treatment (still) or at last treatment (no longer).")
 
 # ==============================================================================
 # SECTION 5b: ENCOUNTER ANALYSIS SLIDES (from 16_encounter_analysis.R figures)
@@ -1443,8 +1443,7 @@ post_last_tx_dates <- encounters %>%
   filter(
     !is.na(LAST_ANY_TREATMENT_DATE),       # Only patients with treatment (per D-04)
     !is.na(ADMIT_DATE),
-    ADMIT_DATE > LAST_ANY_TREATMENT_DATE,   # Post-last-treatment encounters only
-    year(ADMIT_DATE) != 1900L               # Filter 1900 sentinels (per VIZP-01)
+    ADMIT_DATE > LAST_ANY_TREATMENT_DATE    # Post-last-treatment encounters only (1900 sentinels filtered at source in 02_harmonize_payer.R)
   ) %>%
   group_by(ID) %>%
   summarise(N_UNIQUE_DATES_POST_LAST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
@@ -1533,7 +1532,7 @@ stacked_stats <- cohort_full %>%
   ) %>%
   filter(!is.na(PAYER_DISPLAY)) %>%
   count(ID, PERIOD, PAYER_DISPLAY, name = "n_enc") %>%
-  tidyr::complete(ID, PERIOD, fill = list(n_enc = 0)) %>%
+  tidyr::complete(tidyr::nesting(ID, PAYER_DISPLAY), PERIOD, fill = list(n_enc = 0)) %>%
   group_by(PAYER_DISPLAY, PERIOD) %>%
   summarise(
     N = n_distinct(ID),

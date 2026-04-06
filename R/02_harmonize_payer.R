@@ -150,6 +150,14 @@ encounters <- pcornet$ENCOUNTER %>%
     payer_category = map_payer_category(effective_payer, dual_eligible_encounter)
   )
 
+# Filter 1900 sentinel dates from encounters (SAS/Excel epoch sentinels)
+n_sentinel_enc <- sum(year(encounters$ADMIT_DATE) == 1900L, na.rm = TRUE)
+if (n_sentinel_enc > 0) {
+  message(glue("  Filtering {n_sentinel_enc} encounters with 1900 sentinel ADMIT_DATE"))
+  encounters <- encounters %>%
+    filter(is.na(ADMIT_DATE) | year(ADMIT_DATE) != 1900L)
+}
+
 # Log encounter processing stats
 n_total_encounters <- nrow(encounters)
 n_with_valid_payer <- sum(!is.na(encounters$effective_payer) &
