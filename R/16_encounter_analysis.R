@@ -651,6 +651,103 @@ ggsave("output/figures/encounters_stacked_pre_post_by_payor.png", p_stacked,
        width = 12, height = 8, dpi = 300)
 message("  Saved: output/figures/encounters_stacked_pre_post_by_payor.png")
 
+# ==============================================================================
+# SECTION 8: STACKED HISTOGRAM -- Pre/Post-Treatment UNIQUE DATES by Payer
+# ==============================================================================
+
+message("\n--- Stacked Histogram: Pre/Post-Treatment Unique Dates by Payer ---")
+
+# Reuse tx_dates_for_stacked from Section 7
+
+# 8a. Split encounters into pre/post treatment, then count DISTINCT dates per period
+stacked_ud <- encounters %>%
+  inner_join(tx_dates_for_stacked, by = "ID") %>%
+  filter(!is.na(ADMIT_DATE)) %>%
+  mutate(
+    ENCOUNTER_PERIOD = if_else(
+      ADMIT_DATE > LAST_ANY_TX_DATE,
+      "Post-treatment",
+      "Pre-treatment"
+    )
+  ) %>%
+  group_by(ID, ENCOUNTER_PERIOD) %>%
+  summarise(n_unique_dates = n_distinct(ADMIT_DATE), .groups = "drop") %>%
+  complete(ID, ENCOUNTER_PERIOD, fill = list(n_unique_dates = 0))
+
+# 8b. Compute total unique dates per patient for histogram x-axis
+patient_totals_ud_stk <- stacked_ud %>%
+  group_by(ID) %>%
+  summarise(N_TOTAL_UD = sum(n_unique_dates), .groups = "drop")
+
+# 8c. Join payer category (faceted by 6+Missing)
+stacked_ud_plot <- stacked_ud %>%
+  left_join(
+    hl_cohort %>% select(ID, PAYER_CATEGORY_PRIMARY),
+    by = "ID"
+  ) %>%
+  left_join(patient_totals_ud_stk, by = "ID") %>%
+  mutate(
+    PAYER_CATEGORY_PRIMARY = case_when(
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      is.na(PAYER_CATEGORY_PRIMARY) ~ "Missing",
+      TRUE ~ PAYER_CATEGORY_PRIMARY
+    ),
+    PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
+      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
+                 "Other government", "No payment / Self-pay", "Missing")),
+    ENCOUNTER_PERIOD = factor(ENCOUNTER_PERIOD,
+      levels = c("Post-treatment", "Pre-treatment"))
+  )
+
+# 8d. Overflow bin at >300 (matching Section 6c unique dates pattern)
+x_cap_ud_stk <- 300
+
+overflow_ud_stk <- patient_totals_ud_stk %>%
+  left_join(
+    stacked_ud_plot %>% distinct(ID, PAYER_CATEGORY_PRIMARY),
+    by = "ID"
+  ) %>%
+  filter(N_TOTAL_UD > x_cap_ud_stk) %>%
+  count(PAYER_CATEGORY_PRIMARY, name = "n_overflow", .drop = FALSE)
+
+patient_totals_ud_stk <- patient_totals_ud_stk %>%
+  mutate(N_TOTAL_UD_CAPPED = if_else(N_TOTAL_UD > x_cap_ud_stk, as.numeric(x_cap_ud_stk + 1), as.numeric(N_TOTAL_UD)))
+
+stacked_ud_plot <- stacked_ud_plot %>%
+  select(-N_TOTAL_UD) %>%
+  left_join(patient_totals_ud_stk %>% select(ID, N_TOTAL_UD_CAPPED), by = "ID")
+
+n_beyond_ud_stk <- sum(patient_totals_ud_stk$N_TOTAL_UD > x_cap_ud_stk)
+
+# Snapshot: figure backing data (per SNAP-03)
+save_output_data(stacked_ud_plot, "unique_dates_stacked_pre_post_data")
+
+# 8e. Create stacked histogram
+p_ud_stacked <- ggplot(stacked_ud_plot, aes(x = N_TOTAL_UD_CAPPED, weight = n_unique_dates, fill = ENCOUNTER_PERIOD)) +
+  geom_histogram(position = "stack", binwidth = 15, color = "white", linewidth = 0.2) +
+  geom_text(data = overflow_ud_stk %>% filter(n_overflow > 0),
+            aes(x = x_cap_ud_stk + 10, y = Inf, label = paste0(">", x_cap_ud_stk, ": ", n_overflow)),
+            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
+  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  coord_cartesian(xlim = c(0, x_cap_ud_stk + 30)) +
+  scale_x_continuous(breaks = seq(0, x_cap_ud_stk, by = 50),
+                     labels = c(seq(0, x_cap_ud_stk - 50, by = 50), paste0(x_cap_ud_stk, "+"))) +
+  scale_fill_manual(values = c("Post-treatment" = "#2c7fb8", "Pre-treatment" = "#ff7f0e")) +
+  labs(
+    title = "Unique Encounter Dates per Person by Payor (Pre/Post-Treatment Split)",
+    subtitle = glue("Treated patients only (N = {format(n_treated_for_stacked, big.mark = ',')}) | {n_beyond_ud_stk} with >{x_cap_ud_stk} unique dates in overflow bin"),
+    x = "Number of Unique Encounter Dates",
+    y = "Number of Patients",
+    fill = "Period"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(strip.text = element_text(face = "bold"),
+        legend.position = "bottom")
+
+ggsave("output/figures/unique_dates_stacked_pre_post_by_payor.png", p_ud_stacked,
+       width = 12, height = 8, dpi = 300)
+message("  Saved: output/figures/unique_dates_stacked_pre_post_by_payor.png")
+
 message("\n", strrep("=", 60))
 message("Encounter analysis complete")
 message(strrep("=", 60))

@@ -34,6 +34,7 @@
 #  26. Unique Encounter Dates per Person by Payer (Post-Last Treatment) [VIZP-02]
 #  27. Stacked Encounters Pre/Post-Treatment by Payer [VIZP-03]
 #  28. Summary Statistics: Pre/Post-Treatment Encounters by Payer [VIZP-03]
+#  29. Stacked Unique Dates Pre/Post-Treatment by Payer
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -1568,6 +1569,19 @@ pptx <- add_table_slide(pptx,
   stacked_stats) %>%
   add_footnote("Post-treatment = encounters after last treatment date. Pre-treatment = encounters on or before last treatment date.")
 
+# ---- Slide 29: Stacked Unique Dates Histogram (Pre/Post-Treatment) ----
+message("  Slide 29: Stacked Unique Dates Pre/Post-Treatment by Payer")
+stacked_ud_hist_path <- "output/figures/unique_dates_stacked_pre_post_by_payor.png"
+pptx <- add_image_slide(pptx,
+  "Unique Encounter Dates per Person by Payor (Pre/Post-Treatment Split)",
+  glue("Distinct encounter dates split by pre/post-treatment period -- Treated patients only"),
+  stacked_ud_hist_path,
+  img_width = 9, img_height = 5.5
+)
+if (file.exists(stacked_ud_hist_path)) {
+  pptx <- add_footnote(pptx, "Post-treatment = encounters after max(last chemo, last radiation, last SCT date). Patients with no treatment excluded. Unique dates = distinct ADMIT_DATEs. Blue = post-treatment, orange = pre-treatment.")
+}
+
 # ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
@@ -1577,7 +1591,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 28 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates + 3 Phase 17 visualization polish)"))
+message(glue("  Slides: 29 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates + 4 Phase 17 visualization polish)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
