@@ -35,6 +35,7 @@
 #  27. Stacked Encounters Pre/Post-Treatment by Payer [VIZP-03]
 #  28. Summary Statistics: Pre/Post-Treatment Encounters by Payer [VIZP-03]
 #  29. Stacked Unique Dates Pre/Post-Treatment by Payer
+#  30. Summary Statistics: Pre/Post-Treatment Unique Dates by Payer
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -1583,6 +1584,61 @@ if (file.exists(stacked_ud_hist_path)) {
   pptx <- add_footnote(pptx, "Post-treatment = encounters after max(last chemo, last radiation, last SCT date). Patients with no treatment excluded. Unique dates = distinct ADMIT_DATEs. Blue = post-treatment, orange = pre-treatment.")
 }
 
+# ---- Slide 30: Summary Statistics -- Pre/Post Unique Dates by Payer ----
+message("  Slide 30: Summary Statistics -- Pre/Post Unique Dates by Payer")
+
+stacked_ud_long <- cohort_full %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  select(ID, PAYER_CATEGORY_PRIMARY, LAST_ANY_TREATMENT_DATE) %>%
+  inner_join(
+    encounters %>% filter(!is.na(ADMIT_DATE)) %>%
+      mutate(ADMIT_DATE_CLEAN = ADMIT_DATE) %>%
+      select(ID, ADMIT_DATE_CLEAN),
+    by = "ID",
+    relationship = "many-to-many"
+  ) %>%
+  mutate(
+    PERIOD = if_else(ADMIT_DATE_CLEAN > LAST_ANY_TREATMENT_DATE, "Post-treatment", "Pre-treatment"),
+    PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)
+  ) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(ID, PERIOD, PAYER_DISPLAY) %>%
+  summarise(n_unique_dates = n_distinct(ADMIT_DATE_CLEAN), .groups = "drop") %>%
+  tidyr::complete(tidyr::nesting(ID, PAYER_DISPLAY), PERIOD, fill = list(n_unique_dates = 0)) %>%
+  group_by(PAYER_DISPLAY, PERIOD) %>%
+  summarise(
+    N = n_distinct(ID),
+    Mean = round(mean(n_unique_dates, na.rm = TRUE), 1),
+    Median = round(median(n_unique_dates, na.rm = TRUE), 1),
+    .groups = "drop"
+  )
+
+stacked_ud_stats <- stacked_ud_long %>%
+  tidyr::pivot_wider(
+    id_cols = PAYER_DISPLAY,
+    names_from = PERIOD,
+    values_from = c(N, Mean, Median),
+    names_glue = "{PERIOD} {.value}"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY) %>%
+  select(`Payer Category`,
+         `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
+         `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`) %>%
+  arrange(`Payer Category`) %>%
+  mutate(
+    `Pre-treatment N` = format(`Pre-treatment N`, big.mark = ","),
+    `Post-treatment N` = format(`Post-treatment N`, big.mark = ",")
+  )
+
+# Snapshot: table backing data (per SNAP-04)
+save_output_data(stacked_ud_stats, "stacked_unique_dates_stats_by_payer_period_data")
+
+pptx <- add_table_slide(pptx,
+  "Summary Statistics: Pre/Post-Treatment Unique Dates by Payer",
+  glue("Unique encounter date statistics by primary payer and treatment period -- Treated patients only"),
+  stacked_ud_stats) %>%
+  add_footnote("Post-treatment = unique dates after last treatment date. Pre-treatment = unique dates on or before last treatment date. Unique dates = distinct ADMIT_DATEs per patient (multiple encounters on same day count as one).")
+
 # ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
@@ -1592,7 +1648,7 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 29 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates + 4 Phase 17 visualization polish)"))
+message(glue("  Slides: 30 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates + 5 Phase 17 visualization polish)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
 message(glue("  Date: {Sys.Date()}"))
 
