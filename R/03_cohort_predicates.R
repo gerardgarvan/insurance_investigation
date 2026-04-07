@@ -490,7 +490,7 @@ has_sct <- function() {
   if (!is.null(pcornet$PROCEDURES)) {
     px_sct <- pcornet$PROCEDURES %>%
       filter(
-        (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) |
+        (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
         (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
       ) %>%

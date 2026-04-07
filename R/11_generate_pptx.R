@@ -164,6 +164,29 @@ compute_last_dates <- function(treatment_type) {
         filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
+    # TUMOR_REGISTRY: chemo dates (CHEMO_START_DATE_SUMMARY, DT_CHEMO)
+    if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+      tr_chemo_cols <- intersect(
+        c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
+        names(pcornet$TUMOR_REGISTRY_ALL)
+      )
+      if (length(tr_chemo_cols) > 0) {
+        tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+          select(ID, all_of(tr_chemo_cols)) %>%
+          filter(if_any(all_of(tr_chemo_cols), ~ !is.na(.)))
+        if (nrow(tr_data) > 0) {
+          if (length(tr_chemo_cols) == 1) {
+            tr_data$d <- tr_data[[tr_chemo_cols[1]]]
+          } else {
+            tr_data$d <- do.call(pmax, c(tr_data[tr_chemo_cols], na.rm = TRUE))
+          }
+          sources$tr <- tr_data %>%
+            filter(!is.na(d)) %>%
+            group_by(ID) %>%
+            summarise(d = max(d, na.rm = TRUE), .groups = "drop")
+        }
+      }
+    }
 
   } else if (treatment_type == "radiation") {
     sources <- list()
@@ -199,13 +222,36 @@ compute_last_dates <- function(treatment_type) {
         filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
+    # TUMOR_REGISTRY: radiation dates (RAD_START_DATE_SUMMARY, DT_RAD)
+    if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+      tr_rad_cols <- intersect(
+        c("RAD_START_DATE_SUMMARY", "DT_RAD"),
+        names(pcornet$TUMOR_REGISTRY_ALL)
+      )
+      if (length(tr_rad_cols) > 0) {
+        tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+          select(ID, all_of(tr_rad_cols)) %>%
+          filter(if_any(all_of(tr_rad_cols), ~ !is.na(.)))
+        if (nrow(tr_data) > 0) {
+          if (length(tr_rad_cols) == 1) {
+            tr_data$d <- tr_data[[tr_rad_cols[1]]]
+          } else {
+            tr_data$d <- do.call(pmax, c(tr_data[tr_rad_cols], na.rm = TRUE))
+          }
+          sources$tr <- tr_data %>%
+            filter(!is.na(d)) %>%
+            group_by(ID) %>%
+            summarise(d = max(d, na.rm = TRUE), .groups = "drop")
+        }
+      }
+    }
 
   } else if (treatment_type == "sct") {
     sources <- list()
     if (!is.null(pcornet$PROCEDURES)) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
-          (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) |
+          (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
           (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
           (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
         ) %>% filter(!is.na(PX_DATE)) %>%
@@ -228,6 +274,30 @@ compute_last_dates <- function(treatment_type) {
         filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
         filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+    }
+    # TUMOR_REGISTRY: SCT dates (DT_HTE, DT_SCT, SCT_DATE, BMT_DATE, etc.)
+    if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+      tr_sct_cols <- intersect(
+        c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+          "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
+        names(pcornet$TUMOR_REGISTRY_ALL)
+      )
+      if (length(tr_sct_cols) > 0) {
+        tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+          select(ID, all_of(tr_sct_cols)) %>%
+          filter(if_any(all_of(tr_sct_cols), ~ !is.na(.)))
+        if (nrow(tr_data) > 0) {
+          if (length(tr_sct_cols) == 1) {
+            tr_data$d <- tr_data[[tr_sct_cols[1]]]
+          } else {
+            tr_data$d <- do.call(pmax, c(tr_data[tr_sct_cols], na.rm = TRUE))
+          }
+          sources$tr <- tr_data %>%
+            filter(!is.na(d)) %>%
+            group_by(ID) %>%
+            summarise(d = max(d, na.rm = TRUE), .groups = "drop")
+        }
+      }
     }
   }
 
