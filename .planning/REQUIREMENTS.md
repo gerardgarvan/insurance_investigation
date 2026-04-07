@@ -108,6 +108,12 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OPTIM-01**: User can see dead code removed and redundant operations consolidated across R scripts 00-17 (TUMOR_REGISTRY bind_rows, duplicate HIPAA suppression, unused variables)
 - [x] **OPTIM-02**: User can see style-preserving optimizations (reduced bind_rows duplication, consolidated PROCEDURES queries, early column selection) applied to the pipeline without changing function signatures
 
+### Neither Patient Investigation (Phase 18)
+
+- [ ] **INV-01**: User can see the exact ICD codes for the single enrolled "Neither" patient via gap analysis CSV output (neither_lymphoma_codes.csv) run on HiPerGator
+- [ ] **INV-02**: Root cause for the "Neither" classification is diagnosed as one of 5 possibilities: (a) missing code in ICD_CODES, (b) DX_TYPE mismatch, (c) normalization bug in normalize_icd(), (d) histology code outside 9650-9667 range, (e) correctly excluded non-HL lymphoma
+- [ ] **INV-03**: If root cause is a code/normalization fix: the fix is applied and validated via full pipeline rerun showing corrected HL_SOURCE breakdown. If correctly excluded: the exclusion is documented with specific codes and rationale in R/09_dx_gap_analysis.R
+
 ## v1.1 Requirements
 
 Requirements for milestone v1.1: RDS Cache & Visualization Polish.
@@ -262,18 +268,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIZP-01 | Phase 17 | Complete |
 | VIZP-02 | Phase 17 | Complete |
 | VIZP-03 | Phase 17 | Complete |
+| INV-01 | Phase 18 | Pending |
+| INV-02 | Phase 18 | Pending |
+| INV-03 | Phase 18 | Pending |
 
 **Coverage:**
-- v1 requirements: 60 total
-- Mapped to phases: 60
+- v1 requirements: 63 total
+- Mapped to phases: 63
 - Unmapped: 0
 
 **v1.1 requirements:** 14 total
 - Mapped to phases: 14
 - Unmapped: 0
 
-**Total coverage:** 74/74 requirements mapped (100%)
+**Total coverage:** 77/77 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-02 after milestone v1.1 roadmap creation*
+*Last updated: 2026-04-07 after Phase 18 requirement definitions added*
