@@ -18,7 +18,7 @@
 - [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
 - [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
 - [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
-- [ ] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes
+- [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
 
 ## Phase Details
 
@@ -323,10 +323,10 @@ Plans:
 3. If fix applied: patient appears in cohort with corrected HL_SOURCE after pipeline rerun
 4. If correctly excluded: exclusion documented with specific codes and rationale
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 18-01-PLAN.md -- HiPerGator gap analysis, root cause diagnosis, targeted fix or documentation (INV-01, INV-02, INV-03)
+- [x] 18-01-PLAN.md -- HiPerGator gap analysis, root cause diagnosis, targeted fix or documentation (INV-01, INV-02, INV-03)
 
 ---
 
@@ -351,7 +351,7 @@ Plans:
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
 | 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
 | 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
-| 18. One Enrolled Person Without HL Diagnosis | 0/1 | Planned | |
+| 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete   | 2026-04-07 |
 
 ## Next Actions
 
