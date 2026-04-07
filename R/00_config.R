@@ -6,7 +6,7 @@
 # This file defines all project-wide configuration including:
 #   - Data paths (HiPerGator /orange and /blue directories)
 #   - PCORnet CDM table paths (9 primary tables for loading)
-#   - ICD code lists (149 Hodgkin Lymphoma diagnosis codes)
+#   - ICD code lists (150 Hodgkin Lymphoma diagnosis codes)
 #   - Payer mapping rules (9-category system matching Python pipeline)
 #   - Analysis parameters (thresholds for cohort filtering)
 #
@@ -107,7 +107,7 @@ PCORNET_PATHS <- setNames(
 # NOTE: SOURCE column = partner/site identifier (AMS, UMI, FLM, VRT)
 
 # ------------------------------------------------------------------------------
-# 3. ICD CODE LISTS (149 Hodgkin Lymphoma diagnosis codes)
+# 3. ICD CODE LISTS (150 Hodgkin Lymphoma diagnosis codes)
 # ------------------------------------------------------------------------------
 
 ICD_CODES <- list(
@@ -145,7 +145,7 @@ ICD_CODES <- list(
     "C81.0A", "C81.1A", "C81.2A", "C81.3A", "C81.4A", "C81.7A", "C81.9A"
   ),
 
-  # ICD-9-CM: 201.xx (72 site-specific + 8 parent codes = 80 total)
+  # ICD-9-CM: 201.xx (72 site-specific + 8 parent codes + 1 bare parent = 81 total)
   # 8 subtypes × 9 anatomic sites (0-8) + parent codes without site digit
   # No 201.3x in ICD-9-CM (gap in Hodgkin coding)
   #
@@ -153,6 +153,10 @@ ICD_CODES <- list(
   # 3=intra-abdominal, 4=axilla/upper limb, 5=inguinal/lower limb,
   # 6=intrapelvic, 7=spleen, 8=multiple sites
   hl_icd9 = c(
+    # Phase 18: Added "201" (unspecified parent, no subtype digit) found in gap analysis
+    # for 1 Neither patient at site LNK. Bare 3-digit code did not match 4-5 digit variants.
+    "201",
+
     # 201.x: Parent codes without anatomic site digit
     # Some sites (FLM, TMA) code without the 5th digit — "201.2" not "201.20"
     # Found in OneFlorida+ data: 3 patients missed due to short codes

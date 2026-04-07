@@ -45,9 +45,9 @@ normalize_icd <- function(icd_code) {
 
 #' Check if ICD code is a Hodgkin Lymphoma diagnosis
 #'
-#' Matches against the 149 HL diagnosis codes defined in 00_config.R:
-#'   - 77 ICD-10 codes: C81.00–C81.99 (7 subtypes × 10 anatomic sites + C81.4x)
-#'   - 72 ICD-9 codes: 201.00–201.98 (8 subtypes × 9 anatomic sites)
+#' Matches against the 150 HL diagnosis codes defined in 00_config.R:
+#'   - 77 ICD-10 codes: C81.00–C81.99 (7 subtypes × 10 anatomic sites + C81.xA remission)
+#'   - 81 ICD-9 codes: 201–201.98 (bare parent + 8 parent codes + 72 site-specific)
 #'
 #' Both input codes and config codes are normalized (dots removed) before matching.
 #'

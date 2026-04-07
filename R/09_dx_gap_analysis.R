@@ -373,5 +373,36 @@ message(glue("Wrote {nrow(patient_summary)} rows to neither_patient_summary.csv"
 message(glue("\nAll outputs saved to {diag_dir}/"))
 
 # ==============================================================================
+# Phase 18 Investigation (2026-04-07)
+# ==============================================================================
+# Patient investigation: 1 enrolled patient classified as "Neither" (site LNK)
+#
+# Gap analysis output (neither_lymphoma_codes.csv):
+#   ID: SEP15202520240072100004713
+#   DX: 201 (ICD-9, DX_TYPE=09)
+#   DX_normalized: 201
+#   is_hl: FALSE (at time of analysis)
+#   2 diagnosis records, both from site FLM, dates 2013-03-16 and 2013-08-08
+#
+# Root cause: (a) Missing code variant
+#   The bare 3-digit ICD-9 code "201" (Hodgkin's disease, unspecified) was not
+#   in ICD_CODES$hl_icd9. After normalization (dot removal), "201" stays as "201"
+#   (3 chars) while the list codes become "2010"-"2019" and "20100"-"20198"
+#   (4-5 chars). No match occurred.
+#
+# Fix applied:
+#   Added "201" to ICD_CODES$hl_icd9 in R/00_config.R (targeted addition per D-04).
+#   Updated code count from 149 to 150 (77 ICD-10 + 81 ICD-9 = 158 total incl.
+#   histology codes tracked separately). ICD-9 subcount: 72 site-specific +
+#   8 parent codes + 1 bare parent = 81.
+#
+# Expected outcome after pipeline rerun:
+#   Patient should appear with HL_SOURCE = "DIAGNOSIS only" and HL_VERIFIED = 1.
+#   Neither count should drop from 1 to 0 for enrolled patients.
+#
+# Decision reference: D-03 (root cause tree), D-04 (targeted fix only)
+# ==============================================================================
+
+# ==============================================================================
 # End of 09_dx_gap_analysis.R
 # ==============================================================================
