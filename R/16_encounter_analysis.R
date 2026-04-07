@@ -828,6 +828,134 @@ ggsave("output/figures/unique_dates_stacked_pre_post_by_payor.png", p_ud_stacked
        width = 12, height = 8, dpi = 300)
 message("  Saved: output/figures/unique_dates_stacked_pre_post_by_payor.png")
 
+# ==============================================================================
+# SECTION 9: TREATED PATIENTS ONLY -- UNIQUE DATES ANALYSIS
+# ==============================================================================
+
+message("\n--- Treated Patients Only: Unique Dates Analysis ---")
+
+# Reuse tx_dates_for_stacked from Section 7 (LAST_ANY_TX_DATE per treated patient)
+cohort_ud_treated <- cohort_ud %>%
+  inner_join(tx_dates_for_stacked %>% select(ID, LAST_ANY_TX_DATE), by = "ID")
+
+# Compute post-last-treatment unique dates (all encounter types, anchored on LAST_ANY_TX_DATE)
+ud_post_last_tx_treated <- encounters %>%
+  inner_join(tx_dates_for_stacked, by = "ID") %>%
+  filter(!is.na(ADMIT_DATE), ADMIT_DATE > LAST_ANY_TX_DATE) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES_POST_LAST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
+
+cohort_ud_treated <- cohort_ud_treated %>%
+  left_join(ud_post_last_tx_treated, by = "ID") %>%
+  mutate(N_UNIQUE_DATES_POST_LAST_TX = coalesce(N_UNIQUE_DATES_POST_LAST_TX, 0L))
+
+n_treated_ud <- nrow(cohort_ud_treated)
+message(glue("  Treated patients with unique dates data: {n_treated_ud}"))
+
+# 9a. Histogram: unique dates per person by payer category (treated only)
+hist_data_ud_tx <- cohort_ud_treated %>%
+  filter(!is.na(PAYER_CATEGORY_PRIMARY), !is.na(N_UNIQUE_DATES)) %>%
+  mutate(
+    PAYER_CATEGORY_PRIMARY = case_when(
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      TRUE ~ PAYER_CATEGORY_PRIMARY
+    ),
+    PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
+      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
+                 "Other government", "No payment / Self-pay", "Missing"))
+  )
+
+x_cap_ud_tx <- 300
+
+overflow_counts_ud_tx <- hist_data_ud_tx %>%
+  filter(N_UNIQUE_DATES > x_cap_ud_tx) %>%
+  count(PAYER_CATEGORY_PRIMARY, name = "n_overflow", .drop = FALSE)
+
+hist_data_ud_tx <- hist_data_ud_tx %>%
+  mutate(N_UD_CAPPED = if_else(N_UNIQUE_DATES > x_cap_ud_tx, as.numeric(x_cap_ud_tx + 1), as.numeric(N_UNIQUE_DATES)))
+
+save_output_data(hist_data_ud_tx, "unique_dates_per_person_by_payor_treated_data")
+
+n_beyond_ud_tx <- sum(cohort_ud_treated$N_UNIQUE_DATES > x_cap_ud_tx, na.rm = TRUE)
+
+p_ud_tx1 <- ggplot(hist_data_ud_tx, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
+  geom_histogram(binwidth = 15, color = "white", linewidth = 0.2) +
+  geom_text(data = overflow_counts_ud_tx %>% filter(n_overflow > 0),
+            aes(x = x_cap_ud_tx + 10, y = Inf, label = paste0(">", x_cap_ud_tx, ": ", n_overflow)),
+            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
+  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  coord_cartesian(xlim = c(0, x_cap_ud_tx + 30)) +
+  scale_x_continuous(breaks = seq(0, x_cap_ud_tx, by = 50),
+                     labels = c(seq(0, x_cap_ud_tx - 50, by = 50), paste0(x_cap_ud_tx, "+"))) +
+  labs(
+    title = "Unique Encounter Dates per Person by Payer (Treated Only)",
+    subtitle = glue("Treated patients only (N = {format(n_treated_ud, big.mark = ',')}) | {n_beyond_ud_tx} with >{x_cap_ud_tx} unique dates in overflow bin"),
+    x = "Number of Unique Encounter Dates",
+    y = "Number of Patients"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = "bold")) +
+  scale_fill_viridis_d()
+
+ggsave("output/figures/unique_dates_per_person_by_payor_treated.png", p_ud_tx1,
+       width = 12, height = 8, dpi = 300)
+message("  Saved: output/figures/unique_dates_per_person_by_payor_treated.png")
+
+# 9b. Median post-last-treatment unique dates by DX year (treated only)
+n_missing_dx_year_tx <- sum(is.na(cohort_ud_treated$DX_YEAR))
+
+enc_ud_by_year_tx <- cohort_ud_treated %>%
+  filter(!is.na(DX_YEAR), DX_YEAR > 1900L) %>%
+  group_by(DX_YEAR) %>%
+  summarise(
+    n_patients = n(),
+    median_post_tx_ud = median(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    median_total_ud = median(N_UNIQUE_DATES, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+save_output_data(enc_ud_by_year_tx, "post_tx_unique_dates_by_dx_year_treated_data")
+
+p_ud_tx2 <- ggplot(enc_ud_by_year_tx, aes(x = DX_YEAR, y = median_post_tx_ud)) +
+  geom_col(fill = "#2c7fb8", alpha = 0.8) +
+  geom_text(aes(label = round(median_post_tx_ud, 1)), vjust = -0.3, size = 3) +
+  labs(
+    title = "Median Post-Treatment Unique Dates by Year of Diagnosis (Treated Only)",
+    subtitle = if (n_missing_dx_year_tx > 0) glue("{n_missing_dx_year_tx} treated patients with missing diagnosis date excluded") else NULL,
+    x = "Year of Diagnosis",
+    y = "Median Unique Post-Treatment Dates"
+  ) +
+  theme_minimal(base_size = 11) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  coord_cartesian(clip = "off", ylim = c(0, max(enc_ud_by_year_tx$median_post_tx_ud, na.rm = TRUE) * 1.15)) +
+  theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
+
+ggsave("output/figures/post_tx_unique_dates_by_dx_year_treated_median.png", p_ud_tx2,
+       width = 10, height = 6, dpi = 300)
+message("  Saved: output/figures/post_tx_unique_dates_by_dx_year_treated_median.png")
+
+# 9c. Median total unique dates by DX year (treated only)
+save_output_data(enc_ud_by_year_tx, "total_unique_dates_by_dx_year_treated_data")
+
+p_ud_tx3 <- ggplot(enc_ud_by_year_tx, aes(x = DX_YEAR, y = median_total_ud)) +
+  geom_col(fill = "#41ae76", alpha = 0.8) +
+  geom_text(aes(label = round(median_total_ud, 1)), vjust = -0.3, size = 3) +
+  labs(
+    title = "Median Total Unique Dates by Year of Diagnosis (Treated Only)",
+    subtitle = if (n_missing_dx_year_tx > 0) glue("{n_missing_dx_year_tx} treated patients with missing diagnosis date excluded") else NULL,
+    x = "Year of Diagnosis",
+    y = "Median Unique Encounter Dates"
+  ) +
+  theme_minimal(base_size = 11) +
+  scale_x_continuous(breaks = pretty_breaks()) +
+  coord_cartesian(clip = "off", ylim = c(0, max(enc_ud_by_year_tx$median_total_ud, na.rm = TRUE) * 1.15)) +
+  theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
+
+ggsave("output/figures/total_unique_dates_by_dx_year_treated_median.png", p_ud_tx3,
+       width = 10, height = 6, dpi = 300)
+message("  Saved: output/figures/total_unique_dates_by_dx_year_treated_median.png")
+
 message("\n", strrep("=", 60))
 message("Encounter analysis complete")
 message(strrep("=", 60))

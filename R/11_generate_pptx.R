@@ -36,6 +36,15 @@
 #  28. Summary Statistics: Pre/Post-Treatment Encounters by Payer [VIZP-03]
 #  29. Stacked Unique Dates Pre/Post-Treatment by Payer
 #  30. Summary Statistics: Pre/Post-Treatment Unique Dates by Payer
+#  --- Treated Only / Unique Dates Section (versions of 17-30) ---
+#  31. Unique Encounter Dates per Person by Payer (Treated Only) [histogram]
+#  32. Summary Statistics: Unique Dates per Payer (Treated Only) [table]
+#  33. Median Post-Treatment Unique Dates by Year of Diagnosis (Treated Only)
+#  34. Median Total Unique Dates by Year of Diagnosis (Treated Only)
+#  35. Post-Treatment Encounter Presence by Age Group (Treated Only)
+#  36. Unique Encounter Dates Post-Last Treatment (Treated Only) [table]
+#  37. Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only)
+#  38. Summary Statistics: Pre/Post Unique Dates by Payer (Treated Only) [table]
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -1721,6 +1730,259 @@ pptx <- add_table_slide(pptx,
   add_footnote("Post-treatment = unique dates after last treatment date. Pre-treatment = unique dates on or before last treatment date. Unique dates = distinct ADMIT_DATEs per patient (multiple encounters on same day count as one).")
 
 # ==============================================================================
+# SECTION 5d: TREATED PATIENTS ONLY -- UNIQUE DATES ANALYSIS
+# ==============================================================================
+# Versions of slides 17-30 filtered to treated patients only, using unique
+# encounter dates throughout. By-year charts use median instead of mean.
+# De-duplicated: raw-encounter slides and unique-date slides collapse to the
+# same output when everything uses unique dates, giving 8 slides (31-38).
+
+message("\n--- Treated Patients Only: Unique Dates Slides ---")
+
+# Count treated patients for subtitles
+N_TREATED <- sum(!is.na(cohort_full$LAST_ANY_TREATMENT_DATE))
+
+# Filter cohort_ud (from Section 5c) to treated patients only
+treated_ids_for_ud <- cohort_full %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  pull(ID)
+
+cohort_ud_treated <- cohort_ud %>%
+  filter(ID %in% treated_ids_for_ud)
+
+# Compute post-last-treatment unique dates (all encounter types)
+post_last_tx_ud_treated <- encounters %>%
+  inner_join(
+    cohort_full %>%
+      filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+      select(ID, LAST_ANY_TREATMENT_DATE),
+    by = "ID"
+  ) %>%
+  filter(!is.na(ADMIT_DATE), ADMIT_DATE > LAST_ANY_TREATMENT_DATE) %>%
+  group_by(ID) %>%
+  summarise(N_UNIQUE_DATES_POST_LAST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
+
+cohort_ud_treated <- cohort_ud_treated %>%
+  left_join(post_last_tx_ud_treated, by = "ID") %>%
+  mutate(N_UNIQUE_DATES_POST_LAST_TX = coalesce(N_UNIQUE_DATES_POST_LAST_TX, 0L))
+
+# ---- Slide 31: Unique Dates Histogram by Payer (Treated Only) ----
+# Versions of slides 17 & 22 — treated patients only, unique encounter dates
+message("  Slide 31: Unique Dates per Person by Payer (Treated Only)")
+ud_hist_treated_path <- "output/figures/unique_dates_per_person_by_payor_treated.png"
+pptx <- add_image_slide(pptx,
+  "Unique Encounter Dates per Person by Payer (Treated Only)",
+  glue("Distribution of distinct encounter dates by primary payer -- Treated patients only, N = {format(N_TREATED, big.mark=',')}"),
+  ud_hist_treated_path
+)
+if (file.exists(ud_hist_treated_path)) {
+  pptx <- add_footnote(pptx, "Treated Only = patients with chemo, radiation, or SCT records. Unique dates = distinct ADMIT_DATEs per patient.")
+}
+
+# ---- Slide 32: Summary Statistics — Unique Dates by Payer (Treated Only) ----
+# Versions of slides 18 & 23 — treated patients only, unique encounter dates
+message("  Slide 32: Summary Statistics -- Unique Dates by Payer (Treated Only)")
+
+ud_summary_treated <- cohort_ud_treated %>%
+  filter(!is.na(N_UNIQUE_DATES)) %>%
+  mutate(PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(PAYER_DISPLAY) %>%
+  summarise(
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Median = round(median(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Min = min(N_UNIQUE_DATES, na.rm = TRUE),
+    Q1 = round(quantile(N_UNIQUE_DATES, 0.25, na.rm = TRUE), 1),
+    Q3 = round(quantile(N_UNIQUE_DATES, 0.75, na.rm = TRUE), 1),
+    Max = max(N_UNIQUE_DATES, na.rm = TRUE),
+    `300+` = sum(N_UNIQUE_DATES > 300, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY)
+
+ud_summary_treated_totals <- cohort_ud_treated %>%
+  filter(!is.na(N_UNIQUE_DATES), !is.na(PAYER_CATEGORY_PRIMARY)) %>%
+  summarise(
+    `Payer Category` = "Total",
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Median = round(median(N_UNIQUE_DATES, na.rm = TRUE), 1),
+    Min = min(N_UNIQUE_DATES, na.rm = TRUE),
+    Q1 = round(quantile(N_UNIQUE_DATES, 0.25, na.rm = TRUE), 1),
+    Q3 = round(quantile(N_UNIQUE_DATES, 0.75, na.rm = TRUE), 1),
+    Max = max(N_UNIQUE_DATES, na.rm = TRUE),
+    `300+` = sum(N_UNIQUE_DATES > 300, na.rm = TRUE)
+  )
+
+ud_summary_treated <- bind_rows(ud_summary_treated, ud_summary_treated_totals) %>%
+  mutate(N = format(N, big.mark = ","))
+
+save_output_data(ud_summary_treated, "unique_dates_summary_stats_by_payer_treated_data")
+
+pptx <- add_table_slide(pptx,
+  "Summary Statistics: Unique Dates per Person by Payer (Treated Only)",
+  glue("Distribution of distinct encounter dates by primary insurance -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
+  ud_summary_treated) %>%
+  add_footnote("Treated Only = patients with chemo, radiation, or SCT records. Unique dates = distinct ADMIT_DATEs per patient. 300+ = patients with more than 300 unique encounter dates.")
+
+# Count treated patients with missing DX_YEAR for footnotes
+n_missing_dx_year_treated <- sum(is.na(cohort_ud_treated$DX_YEAR))
+masked_footnote_treated <- if (n_missing_dx_year_treated > 0) {
+  glue("{n_missing_dx_year_treated} treated patients with missing diagnosis date excluded from this analysis.")
+} else {
+  ""
+}
+
+# ---- Slide 33: Median Post-Treatment Unique Dates by DX Year (Treated Only) ----
+# Versions of slides 19 & 24 — treated only, unique dates, median
+message("  Slide 33: Median Post-Treatment Unique Dates by DX Year (Treated Only)")
+post_tx_ud_treated_path <- "output/figures/post_tx_unique_dates_by_dx_year_treated_median.png"
+pptx <- add_image_slide(pptx,
+  "Median Post-Treatment Unique Dates by Year of Diagnosis (Treated Only)",
+  "Distinct encounter dates per person after last treatment, stratified by HL diagnosis year (treated patients only)",
+  post_tx_ud_treated_path
+)
+if (file.exists(post_tx_ud_treated_path) && nchar(masked_footnote_treated) > 0) {
+  pptx <- add_footnote(pptx, masked_footnote_treated)
+}
+
+# ---- Slide 34: Median Total Unique Dates by DX Year (Treated Only) ----
+# Versions of slides 20 & 25 — treated only, unique dates, median
+message("  Slide 34: Median Total Unique Dates by DX Year (Treated Only)")
+total_ud_treated_path <- "output/figures/total_unique_dates_by_dx_year_treated_median.png"
+pptx <- add_image_slide(pptx,
+  "Median Total Unique Dates by Year of Diagnosis (Treated Only)",
+  "Distinct encounter dates per person across the full observation window, stratified by HL diagnosis year (treated patients only)",
+  total_ud_treated_path
+)
+if (file.exists(total_ud_treated_path) && nchar(masked_footnote_treated) > 0) {
+  pptx <- add_footnote(pptx, masked_footnote_treated)
+}
+
+# ---- Slide 35: Post-Treatment Encounter Presence by Age Group (Treated Only) ----
+# Version of slide 21 — already treated only; binary presence unchanged by unique dates
+message("  Slide 35: Post-Treatment Encounter Presence by Age Group (Treated Only)")
+pptx <- add_image_slide(pptx,
+  "Post-Treatment Encounter Presence by Age Group (Treated Only)",
+  "Among treated patients: proportion with any encounter after last treatment, by age group (0-17, 18-39, 40-64, 65+)",
+  age_group_path
+)
+if (file.exists(age_group_path)) {
+  pptx <- add_footnote(pptx, "Same as Slide 21. Binary presence/absence is unchanged by unique dates filter. Age group at date of first HL diagnosis.")
+}
+
+# ---- Slide 36: Unique Dates Post-Last-Treatment by Payer (Treated Only) ----
+# Version of slide 26 — already treated + unique dates
+message("  Slide 36: Unique Dates Post-Last-Treatment by Payer (Treated Only)")
+
+# Recompute for treated-only section (same logic as slide 26)
+post_last_tx_summary_treated <- cohort_ud_treated %>%
+  mutate(PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(PAYER_DISPLAY) %>%
+  summarise(
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE), 1),
+    Median = median(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Min = min(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Max = max(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY)
+
+post_last_tx_totals_treated <- cohort_ud_treated %>%
+  mutate(PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  summarise(
+    `Payer Category` = "Total",
+    N = n(),
+    Mean = round(mean(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE), 1),
+    Median = median(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Min = min(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE),
+    Max = max(N_UNIQUE_DATES_POST_LAST_TX, na.rm = TRUE)
+  )
+
+post_last_tx_summary_treated <- bind_rows(post_last_tx_summary_treated, post_last_tx_totals_treated) %>%
+  mutate(N = format(N, big.mark = ","))
+
+save_output_data(post_last_tx_summary_treated, "post_last_tx_unique_dates_summary_treated_data")
+
+pptx <- add_table_slide(pptx,
+  "Unique Encounter Dates per Person — Post-Last Treatment (Treated Only)",
+  glue("Distinct encounter dates after last treatment (any type) -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
+  post_last_tx_summary_treated) %>%
+  add_footnote("Post-Last Treatment = encounters after max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE). Unique dates = distinct ADMIT_DATEs per patient.")
+
+# ---- Slide 37: Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only) ----
+# Versions of slides 27 & 29 — already treated + unique dates in slide 29
+message("  Slide 37: Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only)")
+pptx <- add_image_slide(pptx,
+  "Unique Encounter Dates per Person by Payor — Pre/Post-Treatment (Treated Only)",
+  glue("Distinct encounter dates split by pre/post-treatment period -- Treated patients only"),
+  stacked_ud_hist_path,
+  img_width = 9, img_height = 5.5
+)
+if (file.exists(stacked_ud_hist_path)) {
+  pptx <- add_footnote(pptx, "Same as Slide 29. Already filtered to treated patients with unique dates. Blue = post-treatment, orange = pre-treatment.")
+}
+
+# ---- Slide 38: Summary Stats Pre/Post Unique Dates by Payer (Treated Only) ----
+# Versions of slides 28 & 30 — unique dates version is slide 30 (already treated)
+message("  Slide 38: Summary Statistics -- Pre/Post Unique Dates by Payer (Treated Only)")
+
+# Recompute for treated-only section (same logic as slide 30)
+stacked_ud_long_treated <- cohort_full %>%
+  filter(!is.na(LAST_ANY_TREATMENT_DATE)) %>%
+  select(ID, PAYER_CATEGORY_PRIMARY, LAST_ANY_TREATMENT_DATE) %>%
+  inner_join(
+    encounters %>% filter(!is.na(ADMIT_DATE)) %>%
+      select(ID, ADMIT_DATE),
+    by = "ID",
+    relationship = "many-to-many"
+  ) %>%
+  mutate(
+    PERIOD = if_else(ADMIT_DATE > LAST_ANY_TREATMENT_DATE, "Post-treatment", "Pre-treatment"),
+    PAYER_DISPLAY = rename_payer(PAYER_CATEGORY_PRIMARY)
+  ) %>%
+  filter(!is.na(PAYER_DISPLAY)) %>%
+  group_by(ID, PERIOD, PAYER_DISPLAY) %>%
+  summarise(n_unique_dates = n_distinct(ADMIT_DATE), .groups = "drop") %>%
+  tidyr::complete(tidyr::nesting(ID, PAYER_DISPLAY), PERIOD, fill = list(n_unique_dates = 0)) %>%
+  group_by(PAYER_DISPLAY, PERIOD) %>%
+  summarise(
+    N = n_distinct(ID),
+    Mean = round(mean(n_unique_dates, na.rm = TRUE), 1),
+    Median = round(median(n_unique_dates, na.rm = TRUE), 1),
+    .groups = "drop"
+  )
+
+stacked_ud_stats_treated <- stacked_ud_long_treated %>%
+  tidyr::pivot_wider(
+    id_cols = PAYER_DISPLAY,
+    names_from = PERIOD,
+    values_from = c(N, Mean, Median),
+    names_glue = "{PERIOD} {.value}"
+  ) %>%
+  rename(`Payer Category` = PAYER_DISPLAY) %>%
+  select(`Payer Category`,
+         `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
+         `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`) %>%
+  arrange(`Payer Category`) %>%
+  mutate(
+    `Pre-treatment N` = format(`Pre-treatment N`, big.mark = ","),
+    `Post-treatment N` = format(`Post-treatment N`, big.mark = ",")
+  )
+
+save_output_data(stacked_ud_stats_treated, "stacked_unique_dates_stats_treated_data")
+
+pptx <- add_table_slide(pptx,
+  "Summary Statistics: Pre/Post-Treatment Unique Dates by Payer (Treated Only)",
+  glue("Unique encounter date statistics by primary payer and treatment period -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
+  stacked_ud_stats_treated) %>%
+  add_footnote("Post-treatment = unique dates after last treatment date. Pre-treatment = unique dates on or before last treatment date. Unique dates = distinct ADMIT_DATEs per patient.")
+
+# ==============================================================================
 # SECTION 6: SAVE PPTX
 # ==============================================================================
 
@@ -1729,8 +1991,8 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 30 (1 glossary + 16 tables + 4 encounter analysis + 4 unique dates + 5 Phase 17 visualization polish)"))
-message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients"))
+message(glue("  Slides: 38 (30 original + 8 treated-only unique dates)"))
+message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients ({format(N_TREATED, big.mark = ',')} treated)"))
 message(glue("  Date: {Sys.Date()}"))
 
 message("\n", strrep("=", 60))
