@@ -17,7 +17,8 @@
 - [x] **Phase 14: CSV Values Data Audit & Code Optimization** - Review value_audit CSVs for coding inconsistencies, optimize R pipeline code (completed 2026-04-01)
 - [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
 - [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
-- [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
+- [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
+- [ ] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes
 
 ## Phase Details
 
@@ -308,6 +309,27 @@ Plans:
 
 ---
 
+### Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught
+
+**Goal:** Investigate and resolve why one enrolled patient is classified as "Neither" (no HL evidence) despite having lymphoma/cancer codes, by diagnosing the root cause and applying a targeted fix or documenting correct exclusion
+
+**Depends on:** Phase 17
+
+**Requirements**: INV-01, INV-02, INV-03
+
+**Success Criteria** (what must be TRUE):
+1. User can see the exact ICD codes for the "Neither" patient via gap analysis CSV output
+2. Root cause is diagnosed as one of 5 possibilities: missing code, DX_TYPE mismatch, normalization bug, histology outside range, or correctly excluded non-HL lymphoma
+3. If fix applied: patient appears in cohort with corrected HL_SOURCE after pipeline rerun
+4. If correctly excluded: exclusion documented with specific codes and rationale
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 18-01-PLAN.md -- HiPerGator gap analysis, root cause diagnosis, targeted fix or documentation (INV-01, INV-02, INV-03)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -329,11 +351,10 @@ Plans:
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
 | 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
 | 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
+| 18. One Enrolled Person Without HL Diagnosis | 0/1 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 17` to implement visualization polish
+1. Execute `/gsd:execute-phase 18` to investigate the single Neither patient
 
----
-
-*Last updated: 2026-04-03 (Phase 17 plans created)*
+*Last updated: 2026-04-07 (Phase 18 plan created)*
