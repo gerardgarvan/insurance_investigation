@@ -853,14 +853,25 @@ pptx <- add_table_slide(pptx,
 
 # ---- Slide 3: Post-Treatment Insurance (all patients) ----
 message("  Slide 3: Post-Treatment Insurance")
-tbl3 <- build_payer_table_with_na(cohort_full, list(
+tbl3_base <- build_payer_table(cohort_full, list(
   list(col = "POST_TREATMENT_PAYER", label = "Post-Treatment Insurance")
-), na_label = "N/A (No Follow-up)")
+), total_n = N_TOTAL)
+# Split N/A into two sub-rows: no treatment evidence vs no encounters after treatment
+n_no_treatment <- sum(is.na(cohort_full$LAST_ANY_TREATMENT_DATE))
+n_no_post_enc  <- sum(!is.na(cohort_full$LAST_ANY_TREATMENT_DATE) & is.na(cohort_full$POST_TREATMENT_PAYER))
+message(glue("    N/A breakdown: {n_no_treatment} no treatment evidence, {n_no_post_enc} no encounters after last treatment"))
+na_row1 <- tibble(`Payer Category` = "N/A: No evidence of treatment",
+                   `Post-Treatment Insurance` = format_count_pct(n_no_treatment, N_TOTAL))
+na_row2 <- tibble(`Payer Category` = "N/A: No encounters after last treatment",
+                   `Post-Treatment Insurance` = format_count_pct(n_no_post_enc, N_TOTAL))
+total_row3 <- tibble(`Payer Category` = "Total",
+                      `Post-Treatment Insurance` = format_count_pct(N_TOTAL, N_TOTAL))
+tbl3 <- bind_rows(tbl3_base[1:(nrow(tbl3_base) - 1), ], na_row1, na_row2, total_row3)
 pptx <- add_table_slide(pptx,
   "Post-Treatment Insurance \u2014 All Patients",
   glue("Most prevalent payer after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
   tbl3) %>%
-  add_footnote("Post-Treatment Insurance = mode of payer from encounters after last treatment of any type. N/A (No Follow-up) = no encounters after last treatment date.")
+  add_footnote("Post-Treatment Insurance = mode of payer from encounters after last treatment of any type. N/A rows: 'No evidence of treatment' = no chemo/radiation/SCT found; 'No encounters after last treatment' = treatment found but no subsequent encounters.")
 
 # ---- Slide 4: Chemotherapy Insurance ----
 message("  Slide 4: Chemotherapy Insurance")
