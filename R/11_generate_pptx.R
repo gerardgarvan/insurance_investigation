@@ -312,14 +312,14 @@ last_encounter_per_patient <- encounters %>%
   group_by(ID) %>%
   summarise(LAST_ENCOUNTER_DATE = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
 
-# Helper: compute post-treatment payer (most prevalent anytime after a given date)
-# Patients whose treatment date = last encounter get N/A (no follow-up)
+# Helper: compute post-treatment payer (mode of payer after last treatment date)
+# Patients with no encounters after last treatment date get N/A (no follow-up)
 compute_post_tx_payer <- function(patient_dates, date_col, payer_col_name) {
-  # Identify patients with no follow-up (last treatment = last encounter)
+  # Identify patients with no follow-up (no encounters after last treatment date)
   no_followup_ids <- patient_dates %>%
     filter(!is.na(!!sym(date_col))) %>%
     inner_join(last_encounter_per_patient, by = "ID") %>%
-    filter(LAST_ENCOUNTER_DATE == !!sym(date_col)) %>%
+    filter(LAST_ENCOUNTER_DATE <= !!sym(date_col)) %>%
     pull(ID)
 
   result <- patient_dates %>%
@@ -744,14 +744,14 @@ pptx <- pptx %>%
       fpar(ftext("Last Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
            ftext("Payer mode within \u00b130 day window of last treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext("Post-Treatment Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Most prevalent payer after last treatment of any type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+           ftext("Mode of payer from encounters after last treatment date of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext(" ", prop = fp_text(font.size = 10))),
       fpar(ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
            ftext("Consolidation of Unknown, Unavailable, Other, and No Information payer categories.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
            ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Last treatment encounter was the patient's final encounter in the dataset (\u00b130 days).", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+           ftext("No encounters after the patient's last treatment date in the dataset.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext("N/A (No Treatment): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
            ftext("Patient had no recorded treatment of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext(" ", prop = fp_text(font.size = 10))),
@@ -790,7 +790,7 @@ pptx <- add_table_slide(pptx,
   "Post-Treatment Insurance \u2014 All Patients",
   glue("Most prevalent payer after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
   tbl3) %>%
-  add_footnote("Post-Treatment Insurance = most prevalent payer after last treatment of any type. N/A (No Follow-up) = last treatment was patient's final encounter (\u00b130 days).")
+  add_footnote("Post-Treatment Insurance = mode of payer from encounters after last treatment of any type. N/A (No Follow-up) = no encounters after last treatment date.")
 
 # ---- Slide 4: Chemotherapy Insurance ----
 message("  Slide 4: Chemotherapy Insurance")
@@ -815,7 +815,7 @@ pptx <- add_table_slide(pptx,
   "Chemotherapy Post-Treatment Insurance",
   glue("Most prevalent payer after last chemotherapy \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
   tbl5) %>%
-  add_footnote("Post-Treatment Insurance = most prevalent payer after last chemotherapy. N/A (No Follow-up) = last chemo was patient's final encounter (\u00b130 days).")
+  add_footnote("Post-Treatment Insurance = mode of payer from encounters after last chemotherapy date. N/A (No Follow-up) = no encounters after last chemotherapy date.")
 
 # ---- Slide 6: Radiation Insurance ----
 message("  Slide 6: Radiation Insurance")
@@ -840,7 +840,7 @@ pptx <- add_table_slide(pptx,
   "Radiation Post-Treatment Insurance",
   glue("Most prevalent payer after last radiation \u2014 N = {format(N_RAD, big.mark = ',')}"),
   tbl7) %>%
-  add_footnote("Post-Treatment Insurance = most prevalent payer after last radiation. N/A (No Follow-up) = last radiation was patient's final encounter (\u00b130 days).")
+  add_footnote("Post-Treatment Insurance = mode of payer from encounters after last radiation date. N/A (No Follow-up) = no encounters after last radiation date.")
 
 # ---- Slide 8: SCT Insurance ----
 message("  Slide 8: SCT Insurance")
@@ -865,7 +865,7 @@ pptx <- add_table_slide(pptx,
   "SCT Post-Treatment Insurance",
   glue("Most prevalent payer after last SCT \u2014 N = {format(N_SCT, big.mark = ',')}"),
   tbl9) %>%
-  add_footnote("Post-Treatment Insurance = most prevalent payer after last SCT. N/A (No Follow-up) = last SCT was patient's final encounter (\u00b130 days).")
+  add_footnote("Post-Treatment Insurance = mode of payer from encounters after last SCT date. N/A (No Follow-up) = no encounters after last SCT date.")
 
 # ---- Slide 10: Diagnosis - Enrollment Coverage ----
 message("  Slide 10: Diagnosis Enrollment Coverage")
