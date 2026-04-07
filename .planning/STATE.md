@@ -142,6 +142,7 @@ Last activity: 2026-04-03
 - Phase 15 added: RDS Caching Infrastructure (CACHE-01 to CACHE-04, GIT-01, GIT-02)
 - Phase 16 added: Dataset Snapshots (SNAP-01 to SNAP-05)
 - Phase 17 added: Visualization Polish (VIZP-01 to VIZP-03, completing PPTX2-04, PPTX2-07)
+- Phase 18 added: one enrolled person does not have an HL diagnosis caught
 
 ### Active Blockers
 
