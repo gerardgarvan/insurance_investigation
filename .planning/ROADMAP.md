@@ -20,6 +20,7 @@
 - [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
 - [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
 - [ ] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison
+- [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
 
 ## Phase Details
 
@@ -354,6 +355,29 @@ Plans:
 
 ---
 
+### Phase 20: Check Duplicate Dates of FLM Subjects
+
+**Goal:** Investigate whether FLM-sourced patients have duplicate ENCOUNTER rows on the same date from multiple data sources, quantify duplication rates (same-date collisions and exact row duplicates), compare payer data completeness across sources for duplicate encounters, and recommend which source to prefer
+
+**Depends on:** Phase 19
+
+**Requirements**: FLMDUP-01, FLMDUP-02, FLMDUP-03, FLMDUP-04
+
+**Success Criteria** (what must be TRUE):
+1. User can see same-date duplicate encounter counts and rates for all FLM patients
+2. User can see exact row duplicates detected separately from same-date collisions
+3. User can see which SOURCE values contribute to duplicate-date encounters (multi-source dates)
+4. User can compare payer data completeness across sources for multi-source duplicate encounters
+5. User can see source-preference recommendation based on payer completeness rates
+6. User can see 3 CSV files in output/tables/ with patient-level, date-level, and aggregate summaries
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 20-01-PLAN.md -- Standalone diagnostic script R/19_flm_duplicate_dates.R with same-date and exact duplicate detection, multi-source identification, payer completeness comparison, source recommendation, and 3 CSV outputs (FLMDUP-01, FLMDUP-02, FLMDUP-03, FLMDUP-04)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -377,9 +401,10 @@ Plans:
 | 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
 | 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete    | 2026-04-07 |
 | 19. Investigate Insurance Missingness (UF) | 0/1 | Planned | |
+| 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 19` to create the UFH insurance missingness diagnostic script
+1. Execute `/gsd:execute-phase 20` to create the FLM duplicate date diagnostic script
 
-*Last updated: 2026-04-09 (Phase 19 plan created)*
+*Last updated: 2026-04-09 (Phase 20 plan created)*

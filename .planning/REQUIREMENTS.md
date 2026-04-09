@@ -121,6 +121,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **UFMISS-03**: User can see raw vs harmonized missingness comparison -- side-by-side rates showing whether the gap originates at data submission (raw field missing) or harmonization logic (raw present but harmonized to Unknown/Unavailable), both overall and by year
 - [ ] **UFMISS-04**: User can see CSV output files in output/tables/ with all UFH missingness breakdowns: uf_payer_raw_value_distribution.csv, uf_payer_missingness_by_year.csv, uf_payer_missingness_by_enc_type.csv, uf_payer_missingness_year_x_enc_type.csv, uf_payer_raw_vs_harmonized.csv
 
+### FLM Duplicate Date Investigation (Phase 20)
+
+- [ ] **FLMDUP-01**: User can see same-date duplicate encounters and exact row duplicates for ALL FLM patients (identified via DEMOGRAPHIC.SOURCE == "FLM"), with duplicate counts on ADMIT_DATE and DISCHARGE_DATE, grouped by ID + date only (not ENC_TYPE)
+- [ ] **FLMDUP-02**: User can see which SOURCE values contribute to duplicate-date encounters (multi-source dates where n_distinct(SOURCE) > 1 for a patient-date), with source combinations listed per patient-date
+- [ ] **FLMDUP-03**: User can compare payer data completeness (PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY) across sources for multi-source duplicate encounters, using Phase 19 missingness definition (NA, empty, NI, UN, OT, 99, 9999), with source-preference recommendation
+- [ ] **FLMDUP-04**: User can see 3 CSV output files in output/tables/: flm_patient_duplicate_summary.csv (patient-level), flm_date_level_duplicate_detail.csv (date-level with sources and payer data), flm_duplicate_aggregate_summary.csv (overall rates and source completeness comparison)
+
 ## v1.1 Requirements
 
 Requirements for milestone v1.1: RDS Cache & Visualization Polish.
@@ -282,6 +289,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UFMISS-02 | Phase 19 | Pending |
 | UFMISS-03 | Phase 19 | Pending |
 | UFMISS-04 | Phase 19 | Pending |
+| FLMDUP-01 | Phase 20 | Pending |
+| FLMDUP-02 | Phase 20 | Pending |
+| FLMDUP-03 | Phase 20 | Pending |
+| FLMDUP-04 | Phase 20 | Pending |
 
 **Coverage:**
 - v1 requirements: 67 total
@@ -292,8 +303,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 14
 - Unmapped: 0
 
-**Total coverage:** 81/81 requirements mapped (100%)
+**Investigation requirements:** 8 total (Phase 19: 4, Phase 20: 4)
+- Mapped to phases: 8
+- Unmapped: 0
+
+**Total coverage:** 89/89 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-09 after Phase 19 UFMISS requirement definitions added*
+*Last updated: 2026-04-09 after Phase 20 FLMDUP requirement definitions added*
