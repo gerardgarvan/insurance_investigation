@@ -18,7 +18,8 @@
 - [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
 - [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
 - [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
-- [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
+- [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
+- [ ] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison
 
 ## Phase Details
 
@@ -330,6 +331,29 @@ Plans:
 
 ---
 
+### Phase 19: Investigate Insurance Missingness Source UF Specifically
+
+**Goal:** Characterize why insurance/payer data is missing for UFH (University of Florida) patients by profiling raw ENCOUNTER PAYER_TYPE fields and derived harmonized categories, with breakdowns by year, encounter type, and their combination
+
+**Depends on:** Phase 18
+
+**Requirements**: UFMISS-01, UFMISS-02, UFMISS-03, UFMISS-04
+
+**Success Criteria** (what must be TRUE):
+1. User can see overall payer missingness rate for UFH encounters on both PRIMARY and SECONDARY fields
+2. User can see missingness broken down by admission year to identify temporal submission gaps
+3. User can see missingness broken down by encounter type to identify systematic data gaps
+4. User can see year x encounter type crosstab revealing concentrated missingness patterns
+5. User can see raw vs harmonized missingness comparison to determine if gap is in data submission or harmonization logic
+6. User can see 5 CSV files in output/tables/ with all UFH missingness breakdowns
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md -- Standalone diagnostic script R/18_uf_insurance_missingness.R with raw field profiling, temporal/encounter-type breakdowns, raw vs harmonized comparison, and CSV outputs (UFMISS-01, UFMISS-02, UFMISS-03, UFMISS-04)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -352,9 +376,10 @@ Plans:
 | 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
 | 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
 | 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete    | 2026-04-07 |
+| 19. Investigate Insurance Missingness (UF) | 0/1 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 18` to investigate the single Neither patient
+1. Execute `/gsd:execute-phase 19` to create the UFH insurance missingness diagnostic script
 
-*Last updated: 2026-04-07 (Phase 18 plan created)*
+*Last updated: 2026-04-09 (Phase 19 plan created)*
