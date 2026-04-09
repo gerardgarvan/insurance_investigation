@@ -3,32 +3,32 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-04-07T16:52:24.382Z"
-last_activity: 2026-04-07
+last_updated: "2026-04-09T19:00:00Z"
+last_activity: 2026-04-09 -- Phase 19 Plan 01 Task 1 complete; awaiting checkpoint
 progress:
-  total_phases: 18
+  total_phases: 20
   completed_phases: 14
-  total_plans: 39
+  total_plans: 41
   completed_plans: 35
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Last updated:** 2026-04-02
-**Project status:** Milestone v1.1 — Roadmap complete, ready for planning
+**Last updated:** 2026-04-09
+**Project status:** Phase 19 Plan 01 -- awaiting checkpoint:human-verify (Task 2)
 
 ## Project Reference
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 18 — one-enrolled-person-does-not-have-an-hl-diagnosis-caught
+**Current focus:** Phase 19 — investigate-insurance-missingness-source-uf-specifically
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
-Status: Executing Phase 18
-Last activity: 2026-04-07
+Phase: 19 (investigate-insurance-missingness-source-uf-specifically) -- CHECKPOINT
+Plan: 1 of 1
+Status: Task 1 complete; awaiting checkpoint:human-verify (Task 2)
+Last activity: 2026-04-09 -- Phase 19 Plan 01 Task 1 committed (d1a0888)
 
 ## Performance Metrics
 
@@ -117,6 +117,8 @@ Last activity: 2026-04-07
 | coord_cartesian(clip='off') + expanded y-axis limits prevent label clipping | Both clip control and limit expansion needed for labels above bars | Phase 12 P01 | 2026-04-01 |
 | .rds over .RData for caching | readRDS() returns single named object directly into assignment — no namespace side-effects | Roadmapping v1.1 | 2026-04-02 |
 | Cache at /blue/erin.mobley-hl.bcu/clean/rds/ | Keeps large binary files on blue storage, outside repo root, gitignored | Roadmapping v1.1 | 2026-04-02 |
+| Combined sentinel_values + unavailable_codes as missing_indicators | Broader missingness definition (NA, empty, NI, UN, OT, 99, 9999) per D-01 to D-04 | Phase 19 | 2026-04-09 |
+| NA ENC_TYPE preserved as visible "<NA>" category | Avoid filtering out encounters with missing type; makes missingness visible in breakdowns | Phase 19 | 2026-04-09 |
 
 ### Current Todos
 
@@ -156,36 +158,17 @@ Last activity: 2026-04-07
 
 ## Session Continuity
 
-**What we just did:** Created milestone v1.1 roadmap with 3 phases (15-17) covering RDS caching, dataset snapshots, and visualization polish. All 14 v1.1 requirements mapped to phases with 100% coverage.
+**What we just did:** Created R/18_uf_insurance_missingness.R (379 lines, 8 sections) -- standalone UFH payer missingness diagnostic script profiling raw and harmonized payer data with year, encounter type, and year x type breakdowns. Committed as d1a0888.
 
-**What's next:** Phase 15 planning — create execution plan for RDS caching infrastructure (cache-check logic, FORCE_RELOAD flag, time-savings logging, gitignore setup).
+**What's next:** User runs `source("R/18_uf_insurance_missingness.R")` on HiPerGator and reviews the console output and 5 CSV files in output/tables/. After verification, the plan is complete.
 
 **Context for next session:**
 
-**Milestone v1.1 structure:**
-
-- Phase 15: RDS Caching Infrastructure (6 requirements: CACHE-01 to CACHE-04, GIT-01, GIT-02)
-  - Extends `load_pcornet_table()` in Phase 1 foundation
-  - Cache directory: `/blue/erin.mobley-hl.bcu/clean/rds/raw/`
-  - Success criteria: RDS serialization, cache-check logging, FORCE_RELOAD override, time-savings tracking
-
-- Phase 16: Dataset Snapshots (5 requirements: SNAP-01 to SNAP-05)
-  - Depends on Phase 15 cache directory structure + Phase 3 cohort chain
-  - Snapshot locations: cohort steps, final outputs, figure/table backing data
-  - `save_output_data(df, name)` helper for consistent snapshot creation
-
-- Phase 17: Visualization Polish (5 requirements: VIZP-01 to VIZP-03, PPTX2-04, PPTX2-07)
-  - Completes Phase 12 gap closure (PPTX2-04, PPTX2-07)
-  - Filters 1900 sentinel dates from all PPTX content
-  - New slides: post-treatment encounter summary, stacked histograms
-
-**Requirement coverage:** 14/14 v1.1 requirements mapped (100%)
-
-**Files ready:**
-
-- `.planning/ROADMAP.md` updated with Phase 15-17 details appended
-- `.planning/STATE.md` updated for milestone v1.1
-- `.planning/REQUIREMENTS.md` traceability section needs update (next step)
+**Phase 19 status:**
+- Task 1 (auto): COMPLETE -- R/18_uf_insurance_missingness.R created and committed
+- Task 2 (checkpoint:human-verify): AWAITING -- User must run script on HiPerGator
+- Script produces 5 CSVs: raw value distribution, year breakdown, enc type breakdown, year x type crosstab, raw vs harmonized comparison
+- After user approval, SUMMARY.md needs final commit and requirements can be marked complete
 
 ---
 

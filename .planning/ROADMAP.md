@@ -19,7 +19,7 @@
 - [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
 - [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
 - [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
-- [ ] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison
+- [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
 - [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
 
 ## Phase Details
@@ -348,10 +348,10 @@ Plans:
 5. User can see raw vs harmonized missingness comparison to determine if gap is in data submission or harmonization logic
 6. User can see 5 CSV files in output/tables/ with all UFH missingness breakdowns
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 19-01-PLAN.md -- Standalone diagnostic script R/18_uf_insurance_missingness.R with raw field profiling, temporal/encounter-type breakdowns, raw vs harmonized comparison, and CSV outputs (UFMISS-01, UFMISS-02, UFMISS-03, UFMISS-04)
+- [x] 19-01-PLAN.md -- Standalone diagnostic script R/18_uf_insurance_missingness.R with raw field profiling, temporal/encounter-type breakdowns, raw vs harmonized comparison, and CSV outputs (UFMISS-01, UFMISS-02, UFMISS-03, UFMISS-04)
 
 ---
 
@@ -400,7 +400,7 @@ Plans:
 | 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
 | 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
 | 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete    | 2026-04-07 |
-| 19. Investigate Insurance Missingness (UF) | 0/1 | Planned | |
+| 19. Investigate Insurance Missingness (UF) | 1/1 | Complete   | 2026-04-09 |
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 
 ## Next Actions

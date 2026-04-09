@@ -116,10 +116,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### UF Insurance Missingness Investigation (Phase 19)
 
-- [ ] **UFMISS-01**: User can see overall UFH payer missingness visibility -- raw PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY value distributions for all UFH encounters, with frequency counts and percentages for each distinct value including NA/sentinel codes
-- [ ] **UFMISS-02**: User can see temporal and encounter-type missingness breakdowns -- primary/secondary/both missingness rates grouped by admission year, encounter type, and year x encounter type crosstab, identifying concentrated patterns
-- [ ] **UFMISS-03**: User can see raw vs harmonized missingness comparison -- side-by-side rates showing whether the gap originates at data submission (raw field missing) or harmonization logic (raw present but harmonized to Unknown/Unavailable), both overall and by year
-- [ ] **UFMISS-04**: User can see CSV output files in output/tables/ with all UFH missingness breakdowns: uf_payer_raw_value_distribution.csv, uf_payer_missingness_by_year.csv, uf_payer_missingness_by_enc_type.csv, uf_payer_missingness_year_x_enc_type.csv, uf_payer_raw_vs_harmonized.csv
+- [x] **UFMISS-01**: User can see overall UFH payer missingness visibility -- raw PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY value distributions for all UFH encounters, with frequency counts and percentages for each distinct value including NA/sentinel codes
+- [x] **UFMISS-02**: User can see temporal and encounter-type missingness breakdowns -- primary/secondary/both missingness rates grouped by admission year, encounter type, and year x encounter type crosstab, identifying concentrated patterns
+- [x] **UFMISS-03**: User can see raw vs harmonized missingness comparison -- side-by-side rates showing whether the gap originates at data submission (raw field missing) or harmonization logic (raw present but harmonized to Unknown/Unavailable), both overall and by year
+- [x] **UFMISS-04**: User can see CSV output files in output/tables/ with all UFH missingness breakdowns: uf_payer_raw_value_distribution.csv, uf_payer_missingness_by_year.csv, uf_payer_missingness_by_enc_type.csv, uf_payer_missingness_year_x_enc_type.csv, uf_payer_raw_vs_harmonized.csv
 
 ### FLM Duplicate Date Investigation (Phase 20)
 
@@ -285,10 +285,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INV-01 | Phase 18 | Pending |
 | INV-02 | Phase 18 | Pending |
 | INV-03 | Phase 18 | Pending |
-| UFMISS-01 | Phase 19 | Pending |
-| UFMISS-02 | Phase 19 | Pending |
-| UFMISS-03 | Phase 19 | Pending |
-| UFMISS-04 | Phase 19 | Pending |
+| UFMISS-01 | Phase 19 | Complete |
+| UFMISS-02 | Phase 19 | Complete |
+| UFMISS-03 | Phase 19 | Complete |
+| UFMISS-04 | Phase 19 | Complete |
 | FLMDUP-01 | Phase 20 | Pending |
 | FLMDUP-02 | Phase 20 | Pending |
 | FLMDUP-03 | Phase 20 | Pending |
