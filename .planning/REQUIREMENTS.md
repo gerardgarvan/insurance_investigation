@@ -114,6 +114,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **INV-02**: Root cause for the "Neither" classification is diagnosed as one of 5 possibilities: (a) missing code in ICD_CODES, (b) DX_TYPE mismatch, (c) normalization bug in normalize_icd(), (d) histology code outside 9650-9667 range, (e) correctly excluded non-HL lymphoma
 - [ ] **INV-03**: If root cause is a code/normalization fix: the fix is applied and validated via full pipeline rerun showing corrected HL_SOURCE breakdown. If correctly excluded: the exclusion is documented with specific codes and rationale in R/09_dx_gap_analysis.R
 
+### UF Insurance Missingness Investigation (Phase 19)
+
+- [ ] **UFMISS-01**: User can see overall UFH payer missingness visibility -- raw PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY value distributions for all UFH encounters, with frequency counts and percentages for each distinct value including NA/sentinel codes
+- [ ] **UFMISS-02**: User can see temporal and encounter-type missingness breakdowns -- primary/secondary/both missingness rates grouped by admission year, encounter type, and year x encounter type crosstab, identifying concentrated patterns
+- [ ] **UFMISS-03**: User can see raw vs harmonized missingness comparison -- side-by-side rates showing whether the gap originates at data submission (raw field missing) or harmonization logic (raw present but harmonized to Unknown/Unavailable), both overall and by year
+- [ ] **UFMISS-04**: User can see CSV output files in output/tables/ with all UFH missingness breakdowns: uf_payer_raw_value_distribution.csv, uf_payer_missingness_by_year.csv, uf_payer_missingness_by_enc_type.csv, uf_payer_missingness_year_x_enc_type.csv, uf_payer_raw_vs_harmonized.csv
+
 ## v1.1 Requirements
 
 Requirements for milestone v1.1: RDS Cache & Visualization Polish.
@@ -271,18 +278,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INV-01 | Phase 18 | Pending |
 | INV-02 | Phase 18 | Pending |
 | INV-03 | Phase 18 | Pending |
+| UFMISS-01 | Phase 19 | Pending |
+| UFMISS-02 | Phase 19 | Pending |
+| UFMISS-03 | Phase 19 | Pending |
+| UFMISS-04 | Phase 19 | Pending |
 
 **Coverage:**
-- v1 requirements: 63 total
-- Mapped to phases: 63
+- v1 requirements: 67 total
+- Mapped to phases: 67
 - Unmapped: 0
 
 **v1.1 requirements:** 14 total
 - Mapped to phases: 14
 - Unmapped: 0
 
-**Total coverage:** 77/77 requirements mapped (100%)
+**Total coverage:** 81/81 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-07 after Phase 18 requirement definitions added*
+*Last updated: 2026-04-09 after Phase 19 UFMISS requirement definitions added*
