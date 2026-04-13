@@ -147,6 +147,7 @@ Last activity: 2026-04-09 -- Phase 20 execution started
 - Phase 18 added: one enrolled person does not have an HL diagnosis caught
 - Phase 19 added: investigate insurance missingness source UF specifically
 - Phase 20 added: check duplicate dates of FLM subjects
+- Phase 21 added: generalize phase 19 to all sources
 
 ### Active Blockers
 
