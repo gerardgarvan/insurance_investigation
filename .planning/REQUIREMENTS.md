@@ -128,6 +128,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **FLMDUP-03**: User can compare payer data completeness (PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY) across sources for multi-source duplicate encounters, using Phase 19 missingness definition (NA, empty, NI, UN, OT, 99, 9999), with source-preference recommendation
 - [ ] **FLMDUP-04**: User can see 3 CSV output files in output/tables/: flm_patient_duplicate_summary.csv (patient-level), flm_date_level_duplicate_detail.csv (date-level with sources and payer data), flm_duplicate_aggregate_summary.csv (overall rates and source completeness comparison)
 
+### All-Source Payer Missingness Investigation (Phase 21)
+
+- [ ] **ALLMISS-01**: User can see raw PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY value distributions for all HL cohort encounters grouped by SOURCE (AMS, UMI, FLM, VRT, UFH) in a single combined CSV with SOURCE column, frequency counts, and percentages per site
+- [ ] **ALLMISS-02**: User can see temporal, encounter-type, and year x encounter-type missingness breakdowns grouped by SOURCE -- same 3 breakdown types as Phase 19 (UFMISS-02) but with SOURCE as additional grouping dimension
+- [ ] **ALLMISS-03**: User can see raw vs harmonized missingness comparison grouped by SOURCE -- per-site and per-year rates showing whether payer data gaps originate at submission or harmonization, for each partner site
+- [ ] **ALLMISS-04**: User can see a cross-site summary CSV (all_source_cross_site_summary.csv) with one row per site showing n_patients, n_encounters, and overall PRIMARY/SECONDARY/BOTH missingness rates for head-to-head site comparison, plus an ALL aggregate row
+- [ ] **ALLMISS-05**: User can see console output on HiPerGator with per-site missingness summary, overall rates, and list of 6 CSV files written to output/tables/ with all_source_ prefix
+
 ## v1.1 Requirements
 
 Requirements for milestone v1.1: RDS Cache & Visualization Polish.
@@ -293,6 +301,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FLMDUP-02 | Phase 20 | Pending |
 | FLMDUP-03 | Phase 20 | Pending |
 | FLMDUP-04 | Phase 20 | Pending |
+| ALLMISS-01 | Phase 21 | Pending |
+| ALLMISS-02 | Phase 21 | Pending |
+| ALLMISS-03 | Phase 21 | Pending |
+| ALLMISS-04 | Phase 21 | Pending |
+| ALLMISS-05 | Phase 21 | Pending |
 
 **Coverage:**
 - v1 requirements: 67 total
@@ -303,12 +316,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 14
 - Unmapped: 0
 
-**Investigation requirements:** 8 total (Phase 19: 4, Phase 20: 4)
-- Mapped to phases: 8
+**Investigation requirements:** 13 total (Phase 19: 4, Phase 20: 4, Phase 21: 5)
+- Mapped to phases: 13
 - Unmapped: 0
 
-**Total coverage:** 89/89 requirements mapped (100%)
+**Total coverage:** 94/94 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-09 after Phase 20 FLMDUP requirement definitions added*
+*Last updated: 2026-04-13 after Phase 21 ALLMISS requirement definitions added*

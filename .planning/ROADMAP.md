@@ -19,8 +19,9 @@
 - [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
 - [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
 - [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
-- [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
+- [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
 - [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
+- [ ] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison
 
 ## Phase Details
 
@@ -378,6 +379,29 @@ Plans:
 
 ---
 
+### Phase 21: Generalize Phase 19 to All Sources
+
+**Goal:** Extend Phase 19's UFH-specific payer missingness investigation to all 5 partner sites (AMS, UMI, FLM, VRT, UFH) using group_by(SOURCE) instead of site-specific filtering, producing combined CSVs with cross-site comparison for head-to-head payer data completeness assessment
+
+**Depends on:** Phase 20
+
+**Requirements**: ALLMISS-01, ALLMISS-02, ALLMISS-03, ALLMISS-04, ALLMISS-05
+
+**Success Criteria** (what must be TRUE):
+1. User can see raw payer value distributions for all 5 sites in a single CSV with SOURCE column
+2. User can see temporal, encounter-type, and year x type missingness breakdowns grouped by SOURCE
+3. User can see raw vs harmonized comparison grouped by SOURCE identifying per-site submission vs harmonization gaps
+4. User can see cross-site summary CSV with one row per site for head-to-head missingness comparison
+5. User can review per-site missingness rates in console output on HiPerGator
+6. User can see 6 CSV files in output/tables/ with all_source_ prefix
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 21-01-PLAN.md -- Standalone diagnostic script R/20_all_source_missingness.R with grouped missingness breakdowns, cross-site summary CSV, and console output (ALLMISS-01, ALLMISS-02, ALLMISS-03, ALLMISS-04, ALLMISS-05)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -402,9 +426,10 @@ Plans:
 | 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete    | 2026-04-07 |
 | 19. Investigate Insurance Missingness (UF) | 1/1 | Complete   | 2026-04-09 |
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
+| 21. Generalize Phase 19 to All Sources | 0/1 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 20` to create the FLM duplicate date diagnostic script
+1. Execute `/gsd:execute-phase 21` to create the all-source missingness diagnostic script
 
-*Last updated: 2026-04-09 (Phase 20 plan created)*
+*Last updated: 2026-04-13 (Phase 21 plan created)*
