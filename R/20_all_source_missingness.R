@@ -87,7 +87,10 @@ missing_indicators <- c(PAYER_MAPPING$sentinel_values, PAYER_MAPPING$unavailable
 message(glue("Missing indicators: {paste(missing_indicators, collapse=', ')}"))
 
 # Join encounters to HL patients and attach SOURCE from DEMOGRAPHIC (Pitfall 1)
+# NOTE: ENCOUNTER also has a SOURCE column (PCORnet CDM metadata), so we must
+# drop it before joining to avoid SOURCE.x/SOURCE.y name collision.
 all_encounters <- pcornet$ENCOUNTER %>%
+  select(-SOURCE) %>%
   inner_join(hl_patients, by = "ID") %>%
   left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
   mutate(
@@ -311,7 +314,10 @@ message("\n--- SECTION 7: Raw vs Harmonized Comparison (ALLMISS-03) ---")
 
 # Get encounter-level harmonized categories from the `encounters` tibble
 # (produced by 02_harmonize_payer.R sourced in dependencies)
+# NOTE: `encounters` inherits SOURCE from ENCOUNTER; drop it to avoid collision
+# with DEMOGRAPHIC's SOURCE (partner site identifier).
 all_encounters_harmonized <- encounters %>%
+  select(-SOURCE) %>%
   inner_join(hl_patients, by = "ID") %>%
   left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
   filter(!is.na(ADMIT_DATE) & year(ADMIT_DATE) != 1900L) %>%
