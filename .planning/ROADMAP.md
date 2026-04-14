@@ -444,10 +444,10 @@ Plans:
 5. User can see consistent styling (UF blue headers, alternating rows, footnotes) matching existing Slides 1-38
 6. User can see dynamic slide count in console output reflecting all new slides
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 23-01-PLAN.md -- Generate 3 bar chart PNGs and add Phase 21 missingness slides to PPTX (PPTX3-01, PPTX3-02, PPTX3-03, PPTX3-04)
+- [x] 23-01-PLAN.md -- Generate 3 bar chart PNGs and add Phase 21 missingness slides to PPTX (PPTX3-01, PPTX3-02, PPTX3-03, PPTX3-04)
 - [ ] 23-02-PLAN.md -- Add Phase 22 duplication slides, update SAVE section, HiPerGator verification (PPTX3-05, PPTX3-06, PPTX3-07)
 
 ---
@@ -478,7 +478,7 @@ Plans:
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
-| 23. Visual Presentation of Phase 21/22 Tables | 0/2 | Planned | |
+| 23. Visual Presentation of Phase 21/22 Tables | 1/2 | In Progress|  |
 
 ## Next Actions
 

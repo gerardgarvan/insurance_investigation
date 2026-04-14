@@ -146,10 +146,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### PPTX Visual Presentation (Phase 23)
 
-- [ ] **PPTX3-01**: User can see all 6 Phase 21 payer missingness CSVs (cross-site summary, raw value distribution, missingness by year, missingness by encounter type, year x encounter type, raw vs harmonized) as formatted table slides in the PPTX with consistent UF blue/orange styling
-- [ ] **PPTX3-02**: User can see wide/tall tables (e.g., encounter type breakdowns across 14+ sites) split across multiple slides with chunk labels (e.g., "1/2", "2/2") for readability
-- [ ] **PPTX3-03**: User can see 3 bar chart PNG visualizations generated and embedded as PPTX slides: primary payer missingness % by site, duplicate date rate % by site, and grouped missingness by encounter type across sites
-- [ ] **PPTX3-04**: User can see HIPAA small-cell suppression applied to site-level count columns (values 1-10 replaced with "<11") in presentation tables where individual patient counts could be small
+- [x] **PPTX3-01**: User can see all 6 Phase 21 payer missingness CSVs (cross-site summary, raw value distribution, missingness by year, missingness by encounter type, year x encounter type, raw vs harmonized) as formatted table slides in the PPTX with consistent UF blue/orange styling
+- [x] **PPTX3-02**: User can see wide/tall tables (e.g., encounter type breakdowns across 14+ sites) split across multiple slides with chunk labels (e.g., "1/2", "2/2") for readability
+- [x] **PPTX3-03**: User can see 3 bar chart PNG visualizations generated and embedded as PPTX slides: primary payer missingness % by site, duplicate date rate % by site, and grouped missingness by encounter type across sites
+- [x] **PPTX3-04**: User can see HIPAA small-cell suppression applied to site-level count columns (values 1-10 replaced with "<11") in presentation tables where individual patient counts could be small
 - [ ] **PPTX3-05**: User can see all 5 Phase 22 duplicate date CSVs (cross-site summary, patient duplicate summary, date-level detail, aggregate summary, source payer completeness) as formatted table slides in the PPTX
 - [ ] **PPTX3-06**: User can see detail-level CSVs (9,332-row patient summary, 262K-row date detail) summarized into per-site aggregates for presentation instead of raw row-level data
 - [ ] **PPTX3-07**: User can see dynamic slide count in PPTX save console output reflecting all new Phase 21/22 slides, and can visually verify all new slides render correctly on HiPerGator
@@ -329,10 +329,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALLDUP-03 | Phase 22 | Pending |
 | ALLDUP-04 | Phase 22 | Pending |
 | ALLDUP-05 | Phase 22 | Pending |
-| PPTX3-01 | Phase 23 | Pending |
-| PPTX3-02 | Phase 23 | Pending |
-| PPTX3-03 | Phase 23 | Pending |
-| PPTX3-04 | Phase 23 | Pending |
+| PPTX3-01 | Phase 23 | Complete |
+| PPTX3-02 | Phase 23 | Complete |
+| PPTX3-03 | Phase 23 | Complete |
+| PPTX3-04 | Phase 23 | Complete |
 | PPTX3-05 | Phase 23 | Pending |
 | PPTX3-06 | Phase 23 | Pending |
 | PPTX3-07 | Phase 23 | Pending |
