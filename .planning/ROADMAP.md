@@ -21,7 +21,8 @@
 - [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
 - [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
 - [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
-- [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
+- [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
+- [ ] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations
 
 ## Phase Details
 
@@ -402,6 +403,30 @@ Plans:
 
 ---
 
+### Phase 22: Generalize Phase 20 to All Sites
+
+**Goal:** Extend Phase 20's FLM-specific duplicate date investigation to ALL 5 partner sites (AMS, UMI, FLM, VRT, UFH) using DEMOGRAPHIC.SOURCE as site assignment, producing combined CSVs with per-site duplicate detection, multi-source identification, payer completeness comparison, per-site source-preference recommendations, and a cross-site summary for head-to-head duplication rate comparison
+
+**Depends on:** Phase 21
+
+**Requirements**: ALLDUP-01, ALLDUP-02, ALLDUP-03, ALLDUP-04, ALLDUP-05
+
+**Success Criteria** (what must be TRUE):
+1. User can see same-date duplicate encounter counts and rates for ALL patients at each of the 5 partner sites
+2. User can see exact row duplicates detected separately from same-date collisions per site
+3. User can see which ENCOUNTER.SOURCE values contribute to multi-source duplicate dates per DEMOGRAPHIC.SOURCE site
+4. User can compare payer data completeness across ENCOUNTER.SOURCE values for multi-source duplicates at each site
+5. User can see per-site source-preference recommendations based on payer completeness rates
+6. User can see a cross-site summary CSV with one row per site for head-to-head comparison of duplication rates
+7. User can see 5 CSV files in output/tables/ with all_site_ prefix
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 22-01-PLAN.md -- Standalone diagnostic script R/21_all_site_duplicate_dates.R with per-site duplicate detection, multi-source identification, payer completeness comparison, source recommendations, cross-site summary, and 5 CSV outputs (ALLDUP-01, ALLDUP-02, ALLDUP-03, ALLDUP-04, ALLDUP-05)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -427,9 +452,10 @@ Plans:
 | 19. Investigate Insurance Missingness (UF) | 1/1 | Complete   | 2026-04-09 |
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
+| 22. Generalize Phase 20 to All Sites | 0/1 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 21` to create the all-source missingness diagnostic script
+1. Execute `/gsd:execute-phase 22` to create the all-site duplicate date investigation script
 
-*Last updated: 2026-04-13 (Phase 21 plan created)*
+*Last updated: 2026-04-14 (Phase 22 plan created)*

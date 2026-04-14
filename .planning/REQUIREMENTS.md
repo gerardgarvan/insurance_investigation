@@ -136,6 +136,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **ALLMISS-04**: User can see a cross-site summary CSV (all_source_cross_site_summary.csv) with one row per site showing n_patients, n_encounters, and overall PRIMARY/SECONDARY/BOTH missingness rates for head-to-head site comparison, plus an ALL aggregate row
 - [ ] **ALLMISS-05**: User can see console output on HiPerGator with per-site missingness summary, overall rates, and list of 6 CSV files written to output/tables/ with all_source_ prefix
 
+### All-Site Duplicate Date Investigation (Phase 22)
+
+- [ ] **ALLDUP-01**: User can see same-date duplicate encounters and exact row duplicates for ALL patients at each of the 5 partner sites (AMS, UMI, FLM, VRT, UFH), with duplicate counts on ADMIT_DATE and DISCHARGE_DATE per site, grouped by ID + date only (not ENC_TYPE), using DEMOGRAPHIC.SOURCE for site assignment
+- [ ] **ALLDUP-02**: User can see which ENCOUNTER.SOURCE values contribute to multi-source duplicate dates per DEMOGRAPHIC.SOURCE site, with source combinations and encounter type breakdown per patient-date
+- [ ] **ALLDUP-03**: User can compare payer data completeness (PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY) across ENCOUNTER.SOURCE values for multi-source duplicate encounters at each site, with per-site source-preference recommendations based on primary payer completeness rates
+- [ ] **ALLDUP-04**: User can see a cross-site summary CSV (all_site_cross_site_summary.csv) with one row per site showing n_patients, n_encounters, duplicate rates, multi-source rates, and recommended source for head-to-head comparison, plus an ALL aggregate row
+- [ ] **ALLDUP-05**: User can see 5 CSV output files in output/tables/ with all_site_ prefix: all_site_patient_duplicate_summary.csv (patient-level), all_site_date_level_duplicate_detail.csv (date-level), all_site_duplicate_aggregate_summary.csv (per-site metrics), all_site_source_payer_completeness.csv (per-site source ranking), all_site_cross_site_summary.csv (head-to-head)
+
 ## v1.1 Requirements
 
 Requirements for milestone v1.1: RDS Cache & Visualization Polish.
@@ -306,6 +314,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ALLMISS-03 | Phase 21 | Pending |
 | ALLMISS-04 | Phase 21 | Pending |
 | ALLMISS-05 | Phase 21 | Pending |
+| ALLDUP-01 | Phase 22 | Pending |
+| ALLDUP-02 | Phase 22 | Pending |
+| ALLDUP-03 | Phase 22 | Pending |
+| ALLDUP-04 | Phase 22 | Pending |
+| ALLDUP-05 | Phase 22 | Pending |
 
 **Coverage:**
 - v1 requirements: 67 total
@@ -316,12 +329,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 14
 - Unmapped: 0
 
-**Investigation requirements:** 13 total (Phase 19: 4, Phase 20: 4, Phase 21: 5)
-- Mapped to phases: 13
+**Investigation requirements:** 18 total (Phase 19: 4, Phase 20: 4, Phase 21: 5, Phase 22: 5)
+- Mapped to phases: 18
 - Unmapped: 0
 
-**Total coverage:** 94/94 requirements mapped (100%)
+**Total coverage:** 99/99 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-13 after Phase 21 ALLMISS requirement definitions added*
+*Last updated: 2026-04-14 after Phase 22 ALLDUP requirement definitions added*
