@@ -490,10 +490,10 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
     }
   }
 
-  # --- Date range validation: data collection period 2012-01-01 to 2025-03-31 ---
+  # --- Date range validation: data collection period (bounds from CONFIG$analysis) ---
   # Flags dates outside the study period and SAS epoch sentinels (1899-12-30)
-  date_range_min <- as.Date("1901-01-01")  # Catches both SAS epoch (1899-12-30) and Excel epoch (1900-01-01) sentinels
-  date_range_max <- as.Date("2025-03-31")  # End of data collection period
+  date_range_min <- CONFIG$analysis$date_range_min
+  date_range_max <- CONFIG$analysis$date_range_max
   for (dcol in date_cols) {
     if (dcol %in% names(df) && inherits(df[[dcol]], "Date")) {
       valid_col_name <- paste0(dcol, "_VALID")

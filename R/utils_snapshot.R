@@ -38,7 +38,10 @@ save_output_data <- function(df, name, subdir = "outputs") {
 
   # Create directory if needed (idempotent)
   if (!dir.exists(target_dir)) {
-    dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
+    created <- dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
+    if (!created) {
+      stop(glue("save_output_data: Failed to create directory '{target_dir}'. Check permissions."))
+    }
     message(glue("  Created snapshot directory: {subdir}/"))
   }
 

@@ -415,6 +415,10 @@ message("\n--- Stacked Histogram: Pre/Post-Treatment Encounters by Payer ---")
 compute_last_tx_dates_from_procedures <- function(treatment_type) {
   sources <- list()
 
+  # Build prefix regexes once (config defines these as prefixes, not exact codes)
+  chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
+  rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
+
   if (treatment_type == "chemo") {
     # Chemo from PROCEDURES
     if (!is.null(pcornet$PROCEDURES)) {
@@ -422,7 +426,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
           (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes) |
+          (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
           (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
         ) %>%
         filter(!is.na(PX_DATE)) %>%
@@ -503,10 +507,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
           (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-          (PX_TYPE == "10" & (
-            str_starts(PX, "D70") | str_starts(PX, "D71") |
-            str_starts(PX, "D72") | str_starts(PX, "D7Y")
-          )) |
+          (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
           (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
         ) %>%
         filter(!is.na(PX_DATE)) %>%

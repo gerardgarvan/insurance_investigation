@@ -235,13 +235,14 @@ has_chemo <- function() {
   }
 
   # PROCEDURES: chemo CPT/HCPCS, ICD-9-CM, ICD-10-PCS codes
+  chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
   px_chemo <- character(0)
   if (!is.null(pcornet$PROCEDURES)) {
     px_chemo <- pcornet$PROCEDURES %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes)
+        (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx))
       ) %>%
       distinct(ID) %>%
       pull(ID)
@@ -366,18 +367,14 @@ has_radiation <- function() {
   }
 
   # PROCEDURES: radiation CPT, ICD-9-CM, ICD-10-PCS codes
+  rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
   px_rad <- character(0)
   if (!is.null(pcornet$PROCEDURES)) {
     px_rad <- pcornet$PROCEDURES %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-        (PX_TYPE == "10" & (
-          str_starts(PX, "D70") |
-          str_starts(PX, "D71") |
-          str_starts(PX, "D72") |
-          str_starts(PX, "D7Y")
-        ))
+        (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx))
       ) %>%
       distinct(ID) %>%
       pull(ID)

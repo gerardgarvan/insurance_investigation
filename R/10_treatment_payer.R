@@ -94,6 +94,9 @@ compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analy
 #'
 #' @return Tibble with columns: ID, FIRST_CHEMO_DATE, PAYER_AT_CHEMO
 compute_payer_at_chemo <- function() {
+  # Build chemo ICD-10-PCS prefix regex once (config defines these as prefixes, not exact codes)
+  chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
+
   # Extract chemo dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue) - consolidated query
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
@@ -101,7 +104,7 @@ compute_payer_at_chemo <- function() {
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes) |
+        (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
@@ -254,6 +257,9 @@ compute_payer_at_chemo <- function() {
 #'
 #' @return Tibble with columns: ID, FIRST_RADIATION_DATE, PAYER_AT_RADIATION
 compute_payer_at_radiation <- function() {
+  # Build radiation ICD-10-PCS prefix regex once (config defines these as prefixes, not exact codes)
+  rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
+
   # Extract radiation dates from PROCEDURES (CPT, ICD-9-CM, ICD-10-PCS, revenue) - consolidated query
   px_dates <- NULL
   if (!is.null(pcornet$PROCEDURES)) {
@@ -261,12 +267,7 @@ compute_payer_at_radiation <- function() {
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-        (PX_TYPE == "10" & (
-          str_starts(PX, "D70") |
-          str_starts(PX, "D71") |
-          str_starts(PX, "D72") |
-          str_starts(PX, "D7Y")
-        )) |
+        (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
@@ -513,13 +514,17 @@ compute_last_any_treatment_date <- function() {
   last_dates_for_type <- function(treatment_type) {
     sources <- list()
 
+    # Build prefix regexes once for this call
+    chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
+    rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
+
     if (treatment_type == "chemo") {
       if (!is.null(pcornet$PROCEDURES)) {
         sources$px <- pcornet$PROCEDURES %>%
           filter(
             (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
             (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-            (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes) |
+            (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
             (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
           ) %>% filter(!is.na(PX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
@@ -584,10 +589,7 @@ compute_last_any_treatment_date <- function() {
           filter(
             (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
             (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-            (PX_TYPE == "10" & (
-              str_starts(PX, "D70") | str_starts(PX, "D71") |
-              str_starts(PX, "D72") | str_starts(PX, "D7Y")
-            )) |
+            (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
             (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
           ) %>% filter(!is.na(PX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")

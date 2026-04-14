@@ -140,6 +140,10 @@ compute_last_dates <- function(treatment_type) {
   # Reuses the same source-extraction logic as 10_treatment_payer.R
   # but takes max() instead of min()
 
+  # Build prefix regexes once (config defines these as prefixes, not exact codes)
+  chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
+  rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
+
   if (treatment_type == "chemo") {
     sources <- list()
     if (!is.null(pcornet$PROCEDURES)) {
@@ -147,7 +151,7 @@ compute_last_dates <- function(treatment_type) {
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
           (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$chemo_icd10pcs_prefixes)
+          (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx))
         ) %>% filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
@@ -222,10 +226,7 @@ compute_last_dates <- function(treatment_type) {
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
           (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-          (PX_TYPE == "10" & (
-            str_starts(PX, "D70") | str_starts(PX, "D71") |
-            str_starts(PX, "D72") | str_starts(PX, "D7Y")
-          ))
+          (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx))
         ) %>% filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }

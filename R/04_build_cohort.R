@@ -73,14 +73,27 @@ hl_source_map <- cohort %>%
   ) %>%
   left_join(
     {
-      tr_all <- bind_rows(
-        if (!is.null(pcornet$TUMOR_REGISTRY1) && "HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY1))
-          pcornet$TUMOR_REGISTRY1 %>% filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>% distinct(ID) else tibble(ID = character()),
-        if (!is.null(pcornet$TUMOR_REGISTRY2) && "MORPH" %in% names(pcornet$TUMOR_REGISTRY2))
-          pcornet$TUMOR_REGISTRY2 %>% filter(is_hl_histology(MORPH)) %>% distinct(ID) else tibble(ID = character()),
-        if (!is.null(pcornet$TUMOR_REGISTRY3) && "MORPH" %in% names(pcornet$TUMOR_REGISTRY3))
-          pcornet$TUMOR_REGISTRY3 %>% filter(is_hl_histology(MORPH)) %>% distinct(ID) else tibble(ID = character())
-      ) %>% distinct(ID) %>% mutate(has_tr = TRUE)
+      # Use TUMOR_REGISTRY_ALL (pre-built in 01_load_pcornet.R), matching 03_cohort_predicates.R pattern
+      tr_all <- if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+        tr_hist <- if ("HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
+          pcornet$TUMOR_REGISTRY_ALL %>%
+            filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
+            distinct(ID)
+        } else {
+          tibble(ID = character())
+        }
+        tr_morph <- if ("MORPH" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
+          pcornet$TUMOR_REGISTRY_ALL %>%
+            filter(is_hl_histology(MORPH)) %>%
+            distinct(ID)
+        } else {
+          tibble(ID = character())
+        }
+        bind_rows(tr_hist, tr_morph) %>% distinct(ID)
+      } else {
+        tibble(ID = character())
+      }
+      tr_all %>% mutate(has_tr = TRUE)
     },
     by = "ID"
   ) %>%
@@ -138,7 +151,7 @@ enrollment_primary <- pcornet$ENROLLMENT %>%
   )
 
 # Aggregate enrollment dates per patient
-# Exclude 1900 sentinel dates from aggregation (SAS/Excel epoch sentinels)
+# Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
 enrollment_dates <- enrollment_primary %>%
   mutate(
     ENR_START_DATE = if_else(year(ENR_START_DATE) == 1900L, as.Date(NA), ENR_START_DATE),
@@ -178,6 +191,7 @@ message("\n--- First HL Diagnosis Date ---")
 cohort <- cohort %>%
   left_join(first_dx, by = "ID")
 
+# Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
 # Nullify 1900 sentinel dates (SAS epoch) -- these are missing, not real diagnoses.
 # Must happen HERE so all downstream code (survivorship encounters, payer windows,
 # treatment timing, visualizations) automatically excludes these patients.
@@ -269,14 +283,22 @@ cohort <- cohort %>%
     DAYS_DX_TO_SCT       = suppressWarnings(as.integer(FIRST_SCT_DATE - first_hl_dx_date))
   )
 
-# Validate treatment timing: flag negative values (treatment before diagnosis)
+# Validate treatment timing: log and nullify negative values (treatment before diagnosis is data error)
 for (tx_col in c("DAYS_DX_TO_CHEMO", "DAYS_DX_TO_RADIATION", "DAYS_DX_TO_SCT")) {
   vals <- cohort[[tx_col]]
   n_negative <- sum(vals < 0, na.rm = TRUE)
   if (n_negative > 0) {
-    message(glue("  WARNING: {n_negative} patients have negative {tx_col} (treatment before diagnosis), min = {min(vals, na.rm = TRUE)} days"))
+    message(glue("  WARNING: {n_negative} patients have negative {tx_col} (treatment before diagnosis), min = {min(vals, na.rm = TRUE)} days — setting to NA"))
   }
 }
+
+# Set negative timing values to NA (treatment-before-diagnosis indicates data error)
+cohort <- cohort %>%
+  mutate(
+    DAYS_DX_TO_CHEMO     = if_else(DAYS_DX_TO_CHEMO < 0L, NA_integer_, DAYS_DX_TO_CHEMO),
+    DAYS_DX_TO_RADIATION = if_else(DAYS_DX_TO_RADIATION < 0L, NA_integer_, DAYS_DX_TO_RADIATION),
+    DAYS_DX_TO_SCT       = if_else(DAYS_DX_TO_SCT < 0L, NA_integer_, DAYS_DX_TO_SCT)
+  )
 
 message(glue("  DAYS_DX_TO_CHEMO: median {median(cohort$DAYS_DX_TO_CHEMO, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_CHEMO))})"))
 message(glue("  DAYS_DX_TO_RADIATION: median {median(cohort$DAYS_DX_TO_RADIATION, na.rm = TRUE)} days (N={sum(!is.na(cohort$DAYS_DX_TO_RADIATION))})"))

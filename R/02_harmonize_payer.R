@@ -136,6 +136,11 @@ map_payer_category <- function(effective_payer, dual_eligible_encounter) {
 # SECTION 2: ENCOUNTER-LEVEL PROCESSING
 # ==============================================================================
 
+# Guard: ENCOUNTER table is required for payer harmonization
+if (is.null(pcornet$ENCOUNTER)) {
+  stop("[Harmonize] pcornet$ENCOUNTER is NULL. ENCOUNTER table is required for payer harmonization. Ensure ENCOUNTER.csv is present.")
+}
+
 # Check if PAYER_TYPE_SECONDARY column exists (Pitfall 3)
 if (!"PAYER_TYPE_SECONDARY" %in% names(pcornet$ENCOUNTER)) {
   message("WARNING: PAYER_TYPE_SECONDARY not found in ENCOUNTER table. Setting all dual_eligible = 0")
@@ -150,6 +155,7 @@ encounters <- pcornet$ENCOUNTER %>%
     payer_category = map_payer_category(effective_payer, dual_eligible_encounter)
   )
 
+# Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
 # Filter 1900 sentinel dates from encounters (SAS/Excel epoch sentinels)
 n_sentinel_enc <- sum(year(encounters$ADMIT_DATE) == 1900L, na.rm = TRUE)
 if (n_sentinel_enc > 0) {
