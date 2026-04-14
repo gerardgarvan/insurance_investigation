@@ -67,6 +67,8 @@ library(lubridate)
 library(purrr)
 library(scales)
 library(stringr)
+library(readr)
+library(tidyr)
 
 message("\n", strrep("=", 60))
 message("Generating Insurance Tables PowerPoint")
@@ -1981,6 +1983,345 @@ pptx <- add_table_slide(pptx,
   glue("Unique encounter date statistics by primary payer and treatment period -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
   stacked_ud_stats_treated) %>%
   add_footnote("Post-treatment = unique dates after last treatment date. Pre-treatment = unique dates on or before last treatment date. Unique dates = distinct ADMIT_DATEs per patient.")
+
+# ==============================================================================
+# SECTION 7: PHASE 21/22 BAR CHART PNG GENERATION
+# ==============================================================================
+
+message("\n--- Generating Phase 21/22 bar chart PNGs ---")
+
+# Ensure output/figures/ exists
+dir.create("output/figures", showWarnings = FALSE, recursive = TRUE)
+
+# ---- Chart 1: Primary payer missingness % by site (D-05) ----
+p21_cross_site <- read_csv("output/tables/all_source_cross_site_summary.csv",
+                            show_col_types = FALSE)
+
+chart1_data <- p21_cross_site %>%
+  filter(SOURCE != "ALL") %>%
+  arrange(desc(pct_primary_missing)) %>%
+  mutate(SOURCE = factor(SOURCE, levels = SOURCE))
+
+p1 <- ggplot(chart1_data, aes(x = SOURCE, y = pct_primary_missing)) +
+  geom_col(fill = UF_BLUE) +
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent_format(scale = 1),
+                     limits = c(0, NA),
+                     expand = expansion(mult = c(0, 0.05))) +
+  geom_text(aes(label = paste0(pct_primary_missing, "%")),
+            hjust = -0.1, size = 3.5, color = DARK_TEXT) +
+  labs(
+    title = "Primary Payer Missingness by Partner Site",
+    x = "Partner Site",
+    y = "% Encounters Missing Primary Payer"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", color = UF_BLUE),
+    panel.grid.major.y = element_blank()
+  )
+
+ggsave("output/figures/phase21_missingness_by_site.png", p1,
+       width = 10, height = 6, dpi = 300)
+message("  Saved: output/figures/phase21_missingness_by_site.png")
+
+# ---- Chart 2: Duplicate date rate % by site (D-05) ----
+p22_cross_site <- read_csv("output/tables/all_site_cross_site_summary.csv",
+                            show_col_types = FALSE)
+
+chart2_data <- p22_cross_site %>%
+  filter(SITE != "ALL") %>%
+  arrange(desc(pct_duplicate_rate)) %>%
+  mutate(SITE = factor(SITE, levels = SITE))
+
+p2 <- ggplot(chart2_data, aes(x = SITE, y = pct_duplicate_rate)) +
+  geom_col(fill = UF_ORANGE) +
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent_format(scale = 1),
+                     limits = c(0, NA),
+                     expand = expansion(mult = c(0, 0.05))) +
+  geom_text(aes(label = paste0(pct_duplicate_rate, "%")),
+            hjust = -0.1, size = 3.5, color = DARK_TEXT) +
+  labs(
+    title = "Duplicate Date Rate by Partner Site",
+    x = "Partner Site",
+    y = "% Patient-Dates with Duplicate Encounters"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", color = UF_BLUE),
+    panel.grid.major.y = element_blank()
+  )
+
+ggsave("output/figures/phase22_duplication_by_site.png", p2,
+       width = 10, height = 6, dpi = 300)
+message("  Saved: output/figures/phase22_duplication_by_site.png")
+
+# ---- Chart 3: Grouped bar chart of missingness by encounter type across sites (D-05) ----
+p21_by_enc_type <- read_csv("output/tables/all_source_payer_missingness_by_enc_type.csv",
+                             show_col_types = FALSE)
+
+chart3_data <- p21_by_enc_type %>%
+  filter(SOURCE != "ALL") %>%
+  select(SOURCE, ENC_TYPE_LABEL, pct_primary_missing, pct_secondary_missing) %>%
+  pivot_longer(
+    cols = starts_with("pct_"),
+    names_to = "field",
+    values_to = "pct_missing"
+  ) %>%
+  mutate(
+    field = case_when(
+      field == "pct_primary_missing" ~ "Primary",
+      field == "pct_secondary_missing" ~ "Secondary",
+      TRUE ~ field
+    )
+  )
+
+p3 <- ggplot(chart3_data, aes(x = ENC_TYPE_LABEL, y = pct_missing, fill = field)) +
+  geom_col(position = "dodge", width = 0.7) +
+  facet_wrap(~ SOURCE, ncol = 3, scales = "free_y") +
+  scale_fill_viridis_d(option = "mako", begin = 0.3, end = 0.7) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(
+    title = "Payer Missingness by Encounter Type and Partner Site",
+    x = "Encounter Type",
+    y = "% Missing",
+    fill = "Payer Field"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", color = UF_BLUE),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 7),
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+
+ggsave("output/figures/phase21_missingness_by_enc_type.png", p3,
+       width = 14, height = 10, dpi = 300)
+message("  Saved: output/figures/phase21_missingness_by_enc_type.png")
+
+# ==============================================================================
+# SECTION 8: PHASE 21 MISSINGNESS SLIDES (D-01, D-04, D-06)
+# ==============================================================================
+
+message("\n--- Adding Phase 21 Missingness Slides ---")
+
+# HIPAA helper: suppress count columns 1-10 with "<11"
+suppress_small_counts <- function(df) {
+  df %>%
+    mutate(across(where(is.numeric), ~ {
+      x_char <- if_else(. >= 1 & . <= 10, "<11",
+                        format(., big.mark = ",", trim = TRUE))
+      x_char
+    }))
+}
+
+# ---- Slide 39: Cross-Site Payer Missingness Summary (all_source_cross_site_summary.csv) ----
+message("  Slide 39: Cross-Site Payer Missingness Summary")
+
+p21_cross_display <- p21_cross_site %>%
+  mutate(
+    SOURCE = if_else(SOURCE == "ALL", "ALL (Aggregate)", SOURCE),
+    pct_primary_missing = paste0(pct_primary_missing, "%"),
+    pct_secondary_missing = paste0(pct_secondary_missing, "%"),
+    pct_both_missing = paste0(pct_both_missing, "%"),
+    n_patients = format(n_patients, big.mark = ","),
+    n_encounters = format(n_encounters, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SOURCE,
+    `Patients` = n_patients,
+    `Encounters` = n_encounters,
+    `% Primary Missing` = pct_primary_missing,
+    `% Secondary Missing` = pct_secondary_missing,
+    `% Both Missing` = pct_both_missing
+  )
+
+pptx <- add_table_slide(pptx,
+  "Payer Missingness: Cross-Site Comparison",
+  "Primary, secondary, and both payer fields missing by partner site (HL cohort encounters)",
+  p21_cross_display) %>%
+  add_footnote("Missing = NA, empty, NI, UN, OT, 99, 9999. ALL row = aggregate across all sites.")
+
+# ---- Slide 40: Bar chart -- Primary Missingness by Site (D-05) ----
+message("  Slide 40: Primary Payer Missingness by Site (bar chart)")
+
+pptx <- add_image_slide(pptx,
+  "Primary Payer Missingness by Partner Site",
+  "Percentage of HL cohort encounters with missing primary payer data, sorted descending",
+  "output/figures/phase21_missingness_by_site.png",
+  img_width = 9, img_height = 5.0) %>%
+  add_footnote("Missing = NA, empty, NI, UN, OT, 99, 9999. Excludes ALL aggregate row.")
+
+# ---- Slide 41: Raw Value Distribution -- top values per site (all_source_payer_raw_value_distribution.csv) ----
+message("  Slide 41: Raw Payer Value Distribution (top values by site)")
+
+p21_raw_values <- read_csv("output/tables/all_source_payer_raw_value_distribution.csv",
+                            show_col_types = FALSE)
+
+# Show top 5 PRIMARY values per site for readability
+raw_top5 <- p21_raw_values %>%
+  filter(field == "PRIMARY") %>%
+  group_by(SOURCE) %>%
+  slice_max(n, n = 5, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(
+    pct = paste0(pct, "%"),
+    n = format(n, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SOURCE,
+    `PAYER_TYPE_PRIMARY Value` = value,
+    `Count` = n,
+    `%` = pct
+  )
+
+pptx <- add_table_slide(pptx,
+  "Raw PAYER_TYPE_PRIMARY: Top 5 Values per Site",
+  "Most frequent raw primary payer values in HL cohort encounters, by partner site",
+  raw_top5) %>%
+  add_footnote("Shows top 5 values per site. Full distribution in all_source_payer_raw_value_distribution.csv.")
+
+# ---- Slides 42-43: Missingness by Encounter Type (split if needed, D-02) ----
+message("  Slides 42-43: Missingness by Encounter Type (split by site)")
+
+p21_enc_type <- read_csv("output/tables/all_source_payer_missingness_by_enc_type.csv",
+                          show_col_types = FALSE)
+
+# Get unique sites (excluding ALL if present)
+enc_sites <- sort(unique(p21_enc_type$SOURCE))
+enc_sites <- enc_sites[enc_sites != "ALL"]
+
+# Split into chunks of 4 sites per slide for readability
+site_chunks <- split(enc_sites, ceiling(seq_along(enc_sites) / 4))
+
+for (i in seq_along(site_chunks)) {
+  chunk_data <- p21_enc_type %>%
+    filter(SOURCE %in% site_chunks[[i]]) %>%
+    mutate(
+      pct_primary_missing = paste0(pct_primary_missing, "%"),
+      pct_secondary_missing = paste0(pct_secondary_missing, "%"),
+      n_encounters = format(n_encounters, big.mark = ",")
+    ) %>%
+    select(
+      `Site` = SOURCE,
+      `Enc Type` = ENC_TYPE_LABEL,
+      `Encounters` = n_encounters,
+      `% Primary Missing` = pct_primary_missing,
+      `% Secondary Missing` = pct_secondary_missing
+    )
+
+  slide_title <- if (length(site_chunks) > 1) {
+    glue("Payer Missingness by Encounter Type ({i}/{length(site_chunks)})")
+  } else {
+    "Payer Missingness by Encounter Type"
+  }
+
+  pptx <- add_table_slide(pptx,
+    slide_title,
+    glue("Primary and secondary payer missingness by encounter type -- Sites: {paste(site_chunks[[i]], collapse=', ')}"),
+    chunk_data) %>%
+    add_footnote("ENC_TYPE codes: AV=Ambulatory, IP=Inpatient, ED=Emergency, EI=ED-to-Inpatient, IS=Non-acute Institutional, OS=Observation, TH=Telehealth, OT=Other, <NA>=Missing.")
+}
+
+# ---- Slide 44: Grouped bar chart -- Missingness by Enc Type across Sites (D-05) ----
+message("  Slide 44: Missingness by Encounter Type (grouped bar chart)")
+
+pptx <- add_image_slide(pptx,
+  "Payer Missingness by Encounter Type and Site",
+  "Primary vs secondary payer missingness by encounter type, faceted by partner site",
+  "output/figures/phase21_missingness_by_enc_type.png",
+  img_width = 9.5, img_height = 5.5) %>%
+  add_footnote("Bars show % of encounters with missing payer data. Faceted by DEMOGRAPHIC.SOURCE partner site.")
+
+# ---- Slide 45: Raw vs Harmonized Comparison (all_source_payer_raw_vs_harmonized.csv) ----
+message("  Slide 45: Raw vs Harmonized Missingness Comparison")
+
+p21_raw_harm <- read_csv("output/tables/all_source_payer_raw_vs_harmonized.csv",
+                          show_col_types = FALSE)
+
+# Show OVERALL rows only (one per site) for the table slide
+raw_harm_overall <- p21_raw_harm %>%
+  filter(year == "OVERALL") %>%
+  mutate(
+    delta_pp = round(pct_harmonized - pct_raw_primary, 1),
+    pct_raw_primary = paste0(pct_raw_primary, "%"),
+    pct_harmonized = paste0(pct_harmonized, "%"),
+    delta_pp = paste0(delta_pp, " pp"),
+    n_encounters = format(n_encounters, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SOURCE,
+    `Encounters` = n_encounters,
+    `% Raw Primary Missing` = pct_raw_primary,
+    `% Harmonized Missing` = pct_harmonized,
+    `Delta` = delta_pp
+  )
+
+pptx <- add_table_slide(pptx,
+  "Raw vs Harmonized Payer Missingness by Site",
+  "Comparison of raw field missingness vs harmonized category missingness (OVERALL)",
+  raw_harm_overall) %>%
+  add_footnote("Raw = PAYER_TYPE_PRIMARY is NA/empty/sentinel. Harmonized = payer_category is NA/Unknown/Unavailable. Delta = harmonized minus raw (positive = harmonization increases missingness).")
+
+# ---- Slide 46: Year x Enc Type -- summary only (all_source_payer_missingness_year_x_enc_type.csv is 1015 rows) ----
+message("  Slide 46: Year x Enc Type Missingness (top combinations)")
+
+p21_year_enc <- read_csv("output/tables/all_source_payer_missingness_year_x_enc_type.csv",
+                          show_col_types = FALSE)
+
+# Show top 20 combinations by primary missingness % (min 50 encounters)
+year_enc_top20 <- p21_year_enc %>%
+  filter(n_encounters >= 50) %>%
+  arrange(desc(pct_primary_missing)) %>%
+  head(20) %>%
+  mutate(
+    pct_primary_missing = paste0(pct_primary_missing, "%"),
+    n_encounters = format(n_encounters, big.mark = ","),
+    n_primary_missing = format(n_primary_missing, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SOURCE,
+    `Year` = admit_year,
+    `Enc Type` = ENC_TYPE_LABEL,
+    `Encounters` = n_encounters,
+    `Primary Missing` = n_primary_missing,
+    `% Missing` = pct_primary_missing
+  )
+
+pptx <- add_table_slide(pptx,
+  "Highest Missingness: Year x Encounter Type Combinations",
+  "Top 20 site-year-encounter type combinations by primary payer missingness (min 50 encounters)",
+  year_enc_top20) %>%
+  add_footnote("Full crosstab (1,015 rows) in all_source_payer_missingness_year_x_enc_type.csv. Filtered to combinations with >= 50 encounters.")
+
+# ---- Slide 47: Temporal Missingness by Year -- summary (all_source_payer_missingness_by_year.csv) ----
+message("  Slide 47: Temporal Missingness by Year (latest 5 years per site)")
+
+p21_by_year <- read_csv("output/tables/all_source_payer_missingness_by_year.csv",
+                         show_col_types = FALSE)
+
+# Show most recent 5 years per site for presentation brevity
+year_recent <- p21_by_year %>%
+  group_by(SOURCE) %>%
+  slice_max(admit_year, n = 5, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(
+    pct_primary_missing = paste0(pct_primary_missing, "%"),
+    n_encounters = format(n_encounters, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SOURCE,
+    `Year` = admit_year,
+    `Encounters` = n_encounters,
+    `% Primary Missing` = pct_primary_missing
+  )
+
+pptx <- add_table_slide(pptx,
+  "Payer Missingness by Year (Recent 5 Years per Site)",
+  "Primary payer missingness trend by admission year, most recent 5 years per partner site",
+  year_recent) %>%
+  add_footnote("Full temporal breakdown in all_source_payer_missingness_by_year.csv. 1900 sentinel dates excluded.")
 
 # ==============================================================================
 # SECTION 6: SAVE PPTX
