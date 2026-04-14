@@ -149,6 +149,7 @@ Last activity: 2026-04-14
 - Phase 20 added: check duplicate dates of FLM subjects
 - Phase 21 added: generalize phase 19 to all sources
 - Phase 22 added: generalize phase 20 to all sites
+- Phase 23 added: make visual presentation of tables from last 2 pages
 
 ### Active Blockers
 
