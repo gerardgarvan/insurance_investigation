@@ -45,6 +45,22 @@
 #  36. Unique Encounter Dates Post-Last Treatment (Treated Only) [table]
 #  37. Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only)
 #  38. Summary Statistics: Pre/Post Unique Dates by Payer (Treated Only) [table]
+#  --- Phase 21: Payer Missingness Slides (Section 8) ---
+#  39. Payer Missingness: Cross-Site Comparison [table]
+#  40. Primary Payer Missingness by Site [bar chart]
+#  41. Raw PAYER_TYPE_PRIMARY: Top 5 Values per Site [table]
+#  42-43. Payer Missingness by Encounter Type (split by site) [tables]
+#  44. Payer Missingness by Encounter Type and Site [grouped bar chart]
+#  45. Raw vs Harmonized Payer Missingness by Site [table]
+#  46. Highest Missingness: Year x Enc Type Combinations [table]
+#  47. Payer Missingness by Year (Recent 5 Years per Site) [table]
+#  --- Phase 22: Duplicate Date Slides (Section 9) ---
+#  48. Duplicate Dates: Cross-Site Comparison [table]
+#  49. Duplicate Date Rate by Site [bar chart]
+#  50-51. Per-Site Duplicate Metrics [table, split if >7 sites]
+#  52. Source Payer Completeness for Multi-Source Dates [table]
+#  53. Patient Duplicate Summary by Site [aggregated table]
+#  54. Multi-Source Date Detail: Payer Missingness by Source [aggregated table]
 #
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
@@ -2324,7 +2340,240 @@ pptx <- add_table_slide(pptx,
   add_footnote("Full temporal breakdown in all_source_payer_missingness_by_year.csv. 1900 sentinel dates excluded.")
 
 # ==============================================================================
-# SECTION 6: SAVE PPTX
+# SECTION 9: PHASE 22 DUPLICATION SLIDES (D-01, D-03, D-04, D-06)
+# ==============================================================================
+
+message("\n--- Adding Phase 22 Duplication Slides ---")
+
+# ---- Slide: Cross-Site Duplicate Date Summary (all_site_cross_site_summary.csv) ----
+message("  Adding slide: Cross-Site Duplicate Date Summary")
+
+# p22_cross_site was already loaded in Section 7 (chart generation)
+p22_cross_display <- p22_cross_site %>%
+  mutate(
+    SITE = if_else(SITE == "ALL", "ALL (Aggregate)", SITE),
+    pct_duplicate_rate = paste0(pct_duplicate_rate, "%"),
+    pct_multi_source_of_dupes = paste0(pct_multi_source_of_dupes, "%"),
+    recommended_source_completeness_pct = if_else(
+      is.na(recommended_source_completeness_pct), "--",
+      paste0(recommended_source_completeness_pct, "%")),
+    recommended_source = if_else(is.na(recommended_source), "--", recommended_source),
+    n_patients = format(n_patients, big.mark = ","),
+    n_encounters = format(n_encounters, big.mark = ","),
+    n_unique_dates = format(n_unique_dates, big.mark = ","),
+    n_dupe_patient_dates = format(n_dupe_patient_dates, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SITE,
+    `Patients` = n_patients,
+    `Encounters` = n_encounters,
+    `Unique Dates` = n_unique_dates,
+    `Dup Dates` = n_dupe_patient_dates,
+    `% Dup Rate` = pct_duplicate_rate,
+    `Rec. Source` = recommended_source
+  )
+
+pptx <- add_table_slide(pptx,
+  "Duplicate Dates: Cross-Site Comparison",
+  "Same-date duplicate encounters by partner site with recommended source for payer data",
+  p22_cross_display) %>%
+  add_footnote("Duplicate = >1 encounter on same ADMIT_DATE for same patient. Rec. Source = ENCOUNTER.SOURCE with highest primary payer completeness for multi-source duplicates.")
+
+# ---- Slide: Bar chart -- Duplicate Date Rate by Site (D-05) ----
+message("  Adding slide: Duplicate Date Rate by Site (bar chart)")
+
+pptx <- add_image_slide(pptx,
+  "Duplicate Date Rate by Partner Site",
+  "Percentage of patient-dates with duplicate encounters, sorted descending",
+  "output/figures/phase22_duplication_by_site.png",
+  img_width = 9, img_height = 5.0) %>%
+  add_footnote("Duplicate date = patient has >1 encounter row on the same ADMIT_DATE. Excludes ALL aggregate row.")
+
+# ---- Slide: Aggregate Summary per Site (all_site_duplicate_aggregate_summary.csv) ----
+message("  Adding slide: Per-Site Aggregate Duplicate Metrics")
+
+p22_aggregate <- read_csv("output/tables/all_site_duplicate_aggregate_summary.csv",
+                           show_col_types = FALSE)
+
+# Pivot from long to wide: rows=metrics, cols=sites
+# Filter to core metrics only (exclude per-source completeness rows)
+core_metrics <- c(
+  "Total patients (DEMOGRAPHIC)",
+  "Total encounters",
+  "Encounters with valid ADMIT_DATE",
+  "Unique patient-dates",
+  "Patient-dates with same-date duplicates",
+  "Patient-dates with multiple SOURCEs",
+  "Exact row duplicates",
+  "Near-exact duplicates"
+)
+
+agg_wide <- p22_aggregate %>%
+  filter(metric %in% core_metrics) %>%
+  mutate(
+    value = format(as.numeric(value), big.mark = ",", trim = TRUE),
+    metric = factor(metric, levels = core_metrics)
+  ) %>%
+  arrange(metric) %>%
+  pivot_wider(names_from = SITE, values_from = value) %>%
+  rename(`Metric` = metric)
+
+# If table is too wide (>7 sites), split across 2 slides
+n_site_cols <- ncol(agg_wide) - 1  # minus Metric column
+if (n_site_cols > 7) {
+  site_names <- names(agg_wide)[-1]
+  half <- ceiling(n_site_cols / 2)
+  chunk1_cols <- c("Metric", site_names[1:half])
+  chunk2_cols <- c("Metric", site_names[(half+1):n_site_cols])
+
+  pptx <- add_table_slide(pptx,
+    "Per-Site Duplicate Metrics (1/2)",
+    glue("Core duplication statistics -- Sites: {paste(site_names[1:half], collapse=', ')}"),
+    agg_wide[, chunk1_cols]) %>%
+    add_footnote("Same-date = >1 encounter on same ADMIT_DATE. Multi-source = encounters from different ENCOUNTER.SOURCE values on same date.")
+
+  pptx <- add_table_slide(pptx,
+    "Per-Site Duplicate Metrics (2/2)",
+    glue("Core duplication statistics -- Sites: {paste(site_names[(half+1):n_site_cols], collapse=', ')}"),
+    agg_wide[, chunk2_cols]) %>%
+    add_footnote("Same-date = >1 encounter on same ADMIT_DATE. Multi-source = encounters from different ENCOUNTER.SOURCE values on same date.")
+} else {
+  pptx <- add_table_slide(pptx,
+    "Per-Site Duplicate Metrics",
+    "Core duplication statistics by partner site",
+    agg_wide) %>%
+    add_footnote("Same-date = >1 encounter on same ADMIT_DATE. Multi-source = encounters from different ENCOUNTER.SOURCE values on same date.")
+}
+
+# ---- Slide: Source Payer Completeness (all_site_source_payer_completeness.csv) ----
+message("  Adding slide: Source Payer Completeness for Multi-Source Duplicates")
+
+p22_source_comp <- read_csv("output/tables/all_site_source_payer_completeness.csv",
+                             show_col_types = FALSE)
+
+if (nrow(p22_source_comp) > 0) {
+  source_comp_display <- p22_source_comp %>%
+    mutate(
+      pct_primary_present = paste0(pct_primary_present, "%"),
+      pct_secondary_present = paste0(pct_secondary_present, "%"),
+      n_encounters = format(n_encounters, big.mark = ",")
+    ) %>%
+    select(
+      `Site` = SITE,
+      `ENC Source` = ENCOUNTER_SOURCE,
+      `Encounters` = n_encounters,
+      `% Primary Present` = pct_primary_present,
+      `% Secondary Present` = pct_secondary_present
+    )
+
+  # Split by site chunks if many sites
+  comp_sites <- sort(unique(source_comp_display$Site))
+  comp_chunks <- split(comp_sites, ceiling(seq_along(comp_sites) / 5))
+
+  for (i in seq_along(comp_chunks)) {
+    chunk <- source_comp_display %>% filter(Site %in% comp_chunks[[i]])
+    slide_title <- if (length(comp_chunks) > 1) {
+      glue("Source Payer Completeness ({i}/{length(comp_chunks)})")
+    } else {
+      "Source Payer Completeness for Multi-Source Dates"
+    }
+
+    pptx <- add_table_slide(pptx,
+      slide_title,
+      "Payer data completeness by ENCOUNTER.SOURCE for multi-source duplicate dates",
+      chunk) %>%
+      add_footnote("Shows only encounters on dates where >1 ENCOUNTER.SOURCE contributed. Higher % = more payer data available from that source.")
+  }
+} else {
+  message("  SKIPPED: Source payer completeness -- no multi-source encounters found.")
+}
+
+# ---- Slide: Patient Duplicate Summary -- aggregated per D-03 ----
+message("  Adding slide: Patient Duplicate Summary (aggregated)")
+
+p22_patient_summary <- read_csv("output/tables/all_site_patient_duplicate_summary.csv",
+                                 show_col_types = FALSE)
+
+# D-03: Summarize 9332 patient rows into per-site aggregates
+patient_agg <- p22_patient_summary %>%
+  group_by(SITE) %>%
+  summarise(
+    n_patients = n(),
+    n_with_any_dupes = sum(n_duplicate_dates > 0),
+    pct_with_dupes = round(100 * n_with_any_dupes / n_patients, 1),
+    n_with_multi_source = sum(n_multi_source_dates > 0),
+    pct_with_multi_source = round(100 * n_with_multi_source / n_patients, 1),
+    mean_pct_primary_present = round(mean(pct_primary_present, na.rm = TRUE), 1),
+    median_dup_dates = median(n_duplicate_dates),
+    max_dup_dates = max(n_duplicate_dates),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_with_dupes = paste0(pct_with_dupes, "%"),
+    pct_with_multi_source = paste0(pct_with_multi_source, "%"),
+    mean_pct_primary_present = paste0(mean_pct_primary_present, "%"),
+    n_patients = format(n_patients, big.mark = ","),
+    n_with_any_dupes = format(n_with_any_dupes, big.mark = ","),
+    n_with_multi_source = format(n_with_multi_source, big.mark = ",")
+  ) %>%
+  select(
+    `Site` = SITE,
+    `Patients` = n_patients,
+    `With Dupes` = n_with_any_dupes,
+    `% Duped` = pct_with_dupes,
+    `Multi-Src` = n_with_multi_source,
+    `% Multi-Src` = pct_with_multi_source,
+    `Med Dup Dates` = median_dup_dates,
+    `Max Dup Dates` = max_dup_dates,
+    `Mean % Prim Present` = mean_pct_primary_present
+  )
+
+pptx <- add_table_slide(pptx,
+  "Patient Duplicate Summary by Site",
+  "Per-site aggregation of patient-level duplicate encounter statistics",
+  patient_agg) %>%
+  add_footnote("Aggregated from 9,332 patient rows. Dupes = patient-dates with >1 encounter. Multi-Src = dates with encounters from different ENCOUNTER.SOURCE values. Full patient detail in all_site_patient_duplicate_summary.csv.")
+
+# ---- Slide: Date-Level Detail -- aggregated per D-03 ----
+message("  Adding slide: Date-Level Duplicate Detail (aggregated)")
+
+p22_date_detail <- read_csv("output/tables/all_site_date_level_duplicate_detail.csv",
+                             show_col_types = FALSE)
+
+if (nrow(p22_date_detail) > 0) {
+  # D-03: Summarize 262K rows into per-site source breakdown
+  date_detail_agg <- p22_date_detail %>%
+    group_by(SITE, ENCOUNTER_SOURCE) %>%
+    summarise(
+      n_encounters = n(),
+      n_primary_missing = sum(primary_missing, na.rm = TRUE),
+      pct_primary_missing = round(100 * n_primary_missing / n_encounters, 1),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      pct_primary_missing = paste0(pct_primary_missing, "%"),
+      n_encounters = format(n_encounters, big.mark = ","),
+      n_primary_missing = format(n_primary_missing, big.mark = ",")
+    ) %>%
+    select(
+      `Site` = SITE,
+      `ENC Source` = ENCOUNTER_SOURCE,
+      `Encounters` = n_encounters,
+      `Primary Missing` = n_primary_missing,
+      `% Missing` = pct_primary_missing
+    )
+
+  pptx <- add_table_slide(pptx,
+    "Multi-Source Date Detail: Payer Missingness by Source",
+    "Payer data quality for encounters on multi-source duplicate dates, aggregated by site and ENCOUNTER.SOURCE",
+    date_detail_agg) %>%
+    add_footnote("Aggregated from 262K encounter rows on multi-source dates. Shows which ENCOUNTER.SOURCE values have better payer data. Full detail in all_site_date_level_duplicate_detail.csv.")
+} else {
+  message("  SKIPPED: Date-level detail -- no multi-source encounters found.")
+}
+
+# ==============================================================================
+# SECTION 10: SAVE PPTX
 # ==============================================================================
 
 output_filename <- glue("insurance_tables_{Sys.Date()}.pptx")
@@ -2332,7 +2581,8 @@ output_path <- file.path(output_filename)
 print(pptx, target = output_path)
 
 message(glue("\n  PowerPoint saved to: {output_path}"))
-message(glue("  Slides: 38 (30 original + 8 treated-only unique dates)"))
+n_slides <- length(pptx)
+message(glue("  Slides: {n_slides} (38 original + {n_slides - 38} Phase 21/22 diagnostics)"))
 message(glue("  Cohort: {format(N_TOTAL, big.mark = ',')} patients ({format(N_TREATED, big.mark = ',')} treated)"))
 message(glue("  Date: {Sys.Date()}"))
 
