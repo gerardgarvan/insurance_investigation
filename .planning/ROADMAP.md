@@ -10,17 +10,17 @@
 - [x] **Phase 1: Foundation & Data Loading** - Configure paths, load 22 PCORnet CSV tables with correct data types, build utilities
 - [x] **Phase 2: Payer Harmonization** - Implement 9-category payer mapping with encounter-level dual-eligible detection
 - [x] **Phase 3: Cohort Building** - Build HL cohort using named filter predicates with attrition logging
-- [ ] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression
+- [x] **Phase 4: Visualization** - Produce attrition waterfall and payer-stratified Sankey diagrams with HIPAA suppression (completed 2026-03-25)
 - [x] **Phase 11: PPTX Clarity & Missing Data Consolidation** - Eliminate ambiguous labels, collapse Unknown/Other/Unavailable into "Missing", add encounter analysis slides (completed 2026-03-31)
-- [ ] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (gap closure pending)
-- [ ] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables
+- [x] **Phase 12: More PPTX Polishing** - Add glossary slide, per-slide footnotes, fix graph issues, add summary stats slide (completed 2026-04-01)
+- [x] **Phase 13: Summary Tables Value Audit** - Comprehensive frequency/summary tables for every column across all 13 PCORnet CDM tables (completed 2026-04-01)
 - [x] **Phase 14: CSV Values Data Audit & Code Optimization** - Review value_audit CSVs for coding inconsistencies, optimize R pipeline code (completed 2026-04-01)
 - [x] **Phase 15: RDS Caching Infrastructure** - Add persistent RDS cache for all PCORnet tables with cache-check logic and time-savings logging (completed 2026-04-03)
 - [x] **Phase 16: Dataset Snapshots** - Save cohort snapshots, final outputs, and figure/table backing data as RDS files (completed 2026-04-03)
 - [x] **Phase 17: Visualization Polish** - Filter 1900 sentinel dates, add post-treatment encounter analysis, stacked histograms (completed 2026-04-03)
 - [x] **Phase 18: One Enrolled Person Does Not Have an HL Diagnosis Caught** - Investigate and fix single patient classified as "Neither" despite having lymphoma codes (completed 2026-04-07)
 - [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
-- [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
+- [x] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison (completed 2026-04-09)
 - [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
 - [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
 - [x] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations (completed 2026-04-14)
@@ -114,12 +114,12 @@ Plans:
 **Goal:** Fix date parsing and column detection issues across the pipeline, expand HL identification to include TUMOR_REGISTRY histology codes (ICD-O-3 9650-9667), and produce a reusable diagnostic script auditing data quality across all loaded tables
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04
 **Depends on:** Phase 4 (builds on completed pipeline)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 05-01-PLAN.md -- Config + utility fixes: ICD-O-3 histology codes, is_hl_histology(), expanded has_hodgkin_diagnosis(), date regex update (FIX-01, FIX-02, FIX-03)
 - [x] 05-02-PLAN.md -- Reusable diagnostic script 07_diagnostics.R with 6 audit sections (FIX-01, FIX-02, FIX-03, FIX-04)
-- [ ] 05-03-PLAN.md -- Cohort rebuild with expanded HL identification + human verification checkpoint (FIX-01, FIX-02)
+- [x] 05-03-PLAN.md -- Cohort rebuild with expanded HL identification + human verification checkpoint (FIX-01, FIX-02) -- superseded by Phase 6
 
 ---
 
@@ -142,10 +142,10 @@ Plans:
 **Goal:** Investigate the 19 patients excluded as "Neither" (no HL evidence) to characterize the data gap by diagnosis history, enrollment, and tumor registry cross-reference, and determine whether the gap is closable or a data quality limitation
 **Requirements**: GAP-01, GAP-02, GAP-03
 **Depends on:** Phase 6
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 07-01-PLAN.md -- Gap analysis script with diagnosis exploration, enrollment/TR cross-reference, gap classification, and pipeline decision checkpoint (GAP-01, GAP-02, GAP-03)
+- [x] 07-01-PLAN.md -- Gap analysis script with diagnosis exploration, enrollment/TR cross-reference, gap classification, and pipeline decision checkpoint (GAP-01, GAP-02, GAP-03)
 
 ---
 
@@ -209,13 +209,13 @@ Plans:
 **Goal:** Add glossary/definitions slide replacing title slide, per-slide footnotes with term definitions, fix encounter analysis graphs (payer consolidation, overflow bin, masked date filtering, label clipping), remove "No Treatment Recorded" row, and add summary statistics slide
 **Requirements**: PPTX2-01, PPTX2-02, PPTX2-03, PPTX2-04, PPTX2-05, PPTX2-06, PPTX2-07
 **Depends on:** Phase 11
-**Plans:** 4 plans (3 complete, 1 gap closure)
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md -- Fix encounter analysis graphs: payer consolidation, overflow bin, DX_YEAR filter, label clipping (PPTX2-04, PPTX2-06, PPTX2-07)
 - [x] 12-02-PLAN.md -- Replace title slide with glossary, remove NTR row, add summary stats slide (PPTX2-01, PPTX2-03, PPTX2-05)
 - [x] 12-03-PLAN.md -- Add per-slide footnotes with term definitions and DX_YEAR exclusion note (PPTX2-02, PPTX2-06)
-- [ ] 12-04-PLAN.md -- Gap closure: HiPerGator execution helper + visual verification of generated PNGs (PPTX2-04, PPTX2-07)
+- [x] 12-04-PLAN.md -- Gap closure: HiPerGator execution helper + visual verification of generated PNGs (PPTX2-04, PPTX2-07)
 
 ---
 
@@ -224,10 +224,10 @@ Plans:
 **Goal:** Create comprehensive frequency/summary tables for every categorical variable across all 13 loaded PCORnet CDM tables, enumerating every distinct value so the user can review for coding inconsistencies
 **Requirements**: AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04
 **Depends on:** Phase 1 (only needs loaded PCORnet tables; optionally uses Phase 2/3 derived variables)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 13-01-PLAN.md -- Value audit script R/17_value_audit.R with per-table CSV output and HIPAA suppression (AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04)
+- [x] 13-01-PLAN.md -- Value audit script R/17_value_audit.R with per-table CSV output and HIPAA suppression (AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04)
 
 ---
 
@@ -374,10 +374,10 @@ Plans:
 5. User can see source-preference recommendation based on payer completeness rates
 6. User can see 3 CSV files in output/tables/ with patient-level, date-level, and aggregate summaries
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 20-01-PLAN.md -- Standalone diagnostic script R/19_flm_duplicate_dates.R with same-date and exact duplicate detection, multi-source identification, payer completeness comparison, source recommendation, and 3 CSV outputs (FLMDUP-01, FLMDUP-02, FLMDUP-03, FLMDUP-04)
+- [x] 20-01-PLAN.md -- Standalone diagnostic script R/19_flm_duplicate_dates.R with same-date and exact duplicate detection, multi-source identification, payer completeness comparison, source recommendation, and 3 CSV outputs (FLMDUP-01, FLMDUP-02, FLMDUP-03, FLMDUP-04)
 
 ---
 
@@ -460,28 +460,28 @@ Plans:
 | 2. Payer Harmonization | 1/1 | Complete | 2026-03-24 |
 | 3. Cohort Building | 2/2 | Complete | 2026-03-25 |
 | 4. Visualization | 1/1 | Complete | 2026-03-25 |
-| 5. Fix Parsing & HL Diagnosis Gaps | 2/3 | In Progress |  |
+| 5. Fix Parsing & HL Diagnosis Gaps | 3/3 | Complete | 2026-03-25 |
 | 6. Use Debug Output to Rectify Issues | 3/3 | Complete | 2026-03-25 |
-| 7. Dx Gap Analysis for Neither Patients | 0/1 | Planned |  |
+| 7. Dx Gap Analysis for Neither Patients | 1/1 | Complete | 2026-03-25 |
 | 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
 | 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
 | 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
-| 12. More PPTX Polishing | 3/4 | Gap Closure   | |
-| 13. Summary Tables Value Audit | 0/1 | Planned | |
+| 12. More PPTX Polishing | 4/4 | Complete | 2026-04-01 |
+| 13. Summary Tables Value Audit | 1/1 | Complete | 2026-04-01 |
 | 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
 | 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
 | 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
 | 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
 | 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete    | 2026-04-07 |
 | 19. Investigate Insurance Missingness (UF) | 1/1 | Complete   | 2026-04-09 |
-| 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
+| 20. Check Duplicate Dates of FLM Subjects | 1/1 | Complete | 2026-04-09 |
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
 | 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete    | 2026-04-14 |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 23` to add Phase 21/22 slides to the PPTX
+All 23 phases complete. 45/45 plans executed. Project ready for final verification and archival.
 
-*Last updated: 2026-04-14 (Phase 23 plan created)*
+*Last updated: 2026-04-14 (all phases complete -- closing summaries written)*
