@@ -22,7 +22,8 @@
 - [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
 - [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
 - [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
-- [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
+- [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
+- [ ] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations
 
 ## Phase Details
 
@@ -427,6 +428,30 @@ Plans:
 
 ---
 
+### Phase 23: Make Visual Presentation of Tables from Last 2 Pages
+
+**Goal:** Convert Phase 21 (all-source payer missingness, 6 CSVs) and Phase 22 (all-site duplicate dates, 5 CSVs) diagnostic outputs into formatted PPTX slides with both data tables and bar chart visualizations, appended to the existing 38-slide insurance_tables presentation
+
+**Depends on:** Phase 22
+
+**Requirements**: PPTX3-01, PPTX3-02, PPTX3-03, PPTX3-04, PPTX3-05, PPTX3-06, PPTX3-07
+
+**Success Criteria** (what must be TRUE):
+1. User can see all 11 CSV outputs from Phase 21 and Phase 22 as formatted PPTX slides
+2. User can see 3 bar chart visualizations: missingness by site, duplication by site, missingness by encounter type
+3. User can see wide/tall tables split across multiple slides for readability
+4. User can see detail-level CSVs (9332 rows, 262K rows) summarized into presentation-friendly aggregates
+5. User can see consistent styling (UF blue headers, alternating rows, footnotes) matching existing Slides 1-38
+6. User can see dynamic slide count in console output reflecting all new slides
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 23-01-PLAN.md -- Generate 3 bar chart PNGs and add Phase 21 missingness slides to PPTX (PPTX3-01, PPTX3-02, PPTX3-03, PPTX3-04)
+- [ ] 23-02-PLAN.md -- Add Phase 22 duplication slides, update SAVE section, HiPerGator verification (PPTX3-05, PPTX3-06, PPTX3-07)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -453,9 +478,10 @@ Plans:
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
+| 23. Visual Presentation of Phase 21/22 Tables | 0/2 | Planned | |
 
 ## Next Actions
 
-1. Execute `/gsd:execute-phase 22` to create the all-site duplicate date investigation script
+1. Execute `/gsd:execute-phase 23` to add Phase 21/22 slides to the PPTX
 
-*Last updated: 2026-04-14 (Phase 22 plan created)*
+*Last updated: 2026-04-14 (Phase 23 plan created)*
