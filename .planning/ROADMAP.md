@@ -478,7 +478,7 @@ Plans:
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
-| 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete   | 2026-04-14 |
+| 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete    | 2026-04-14 |
 
 ## Next Actions
 
