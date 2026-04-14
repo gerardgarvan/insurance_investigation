@@ -22,7 +22,7 @@
 - [x] **Phase 19: Investigate Insurance Missingness Source UF Specifically** - Standalone diagnostic script profiling UFH payer data missingness by year, encounter type, and raw vs harmonized comparison (completed 2026-04-09)
 - [ ] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison
 - [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
-- [ ] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations
+- [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
 
 ## Phase Details
 
@@ -420,10 +420,10 @@ Plans:
 6. User can see a cross-site summary CSV with one row per site for head-to-head comparison of duplication rates
 7. User can see 5 CSV files in output/tables/ with all_site_ prefix
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 22-01-PLAN.md -- Standalone diagnostic script R/21_all_site_duplicate_dates.R with per-site duplicate detection, multi-source identification, payer completeness comparison, source recommendations, cross-site summary, and 5 CSV outputs (ALLDUP-01, ALLDUP-02, ALLDUP-03, ALLDUP-04, ALLDUP-05)
+- [x] 22-01-PLAN.md -- Standalone diagnostic script R/21_all_site_duplicate_dates.R with per-site duplicate detection, multi-source identification, payer completeness comparison, source recommendations, cross-site summary, and 5 CSV outputs (ALLDUP-01, ALLDUP-02, ALLDUP-03, ALLDUP-04, ALLDUP-05)
 
 ---
 
@@ -452,7 +452,7 @@ Plans:
 | 19. Investigate Insurance Missingness (UF) | 1/1 | Complete   | 2026-04-09 |
 | 20. Check Duplicate Dates of FLM Subjects | 0/1 | Planned | |
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
-| 22. Generalize Phase 20 to All Sites | 0/1 | Planned | |
+| 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
 
 ## Next Actions
 
