@@ -172,12 +172,13 @@ split_df <- function(df, chunk_size) {
   split(df, ceiling(seq_len(nrow(df)) / chunk_size))
 }
 
-assert_required_files <- function(paths) {
+assert_required_files <- function(paths, missing_hint = NULL) {
   missing <- paths[!file.exists(paths)]
   if (length(missing) > 0) {
+    hint <- if (is.null(missing_hint)) "" else paste0("\n\n", missing_hint)
     stop(
       glue(
-        "Missing required input files:\n- {paste(missing, collapse = '\n- ')}\n\nRun Phase 19 and 20 scripts first."
+        "Missing required input files:\n- {paste(missing, collapse = '\n- ')}{hint}"
       ),
       call. = FALSE
     )
@@ -201,7 +202,28 @@ input_files <- list(
   flm_source = "output/tables/flm_source_payer_completeness.csv"
 )
 
-assert_required_files(unlist(input_files, use.names = FALSE))
+required_input_files <- unlist(input_files[c(
+  "uf_raw_values",
+  "uf_by_year",
+  "uf_by_enc",
+  "uf_year_x_enc",
+  "uf_raw_vs_harm",
+  "flm_patient",
+  "flm_date_detail",
+  "flm_agg"
+)], use.names = FALSE)
+
+missing_required <- required_input_files[!file.exists(required_input_files)]
+if (length(missing_required) > 0) {
+  message("Some Phase 19/20 CSVs are missing. Attempting to generate them now...")
+  try(source("R/18_uf_insurance_missingness.R"), silent = TRUE)
+  try(source("R/19_flm_duplicate_dates.R"), silent = TRUE)
+}
+
+assert_required_files(
+  required_input_files,
+  missing_hint = "Run Phase 19 and 20 scripts first:\nsource(\"R/18_uf_insurance_missingness.R\")\nsource(\"R/19_flm_duplicate_dates.R\")"
+)
 
 # ------------------------------------------------------------------------------
 # Read data
@@ -215,7 +237,24 @@ uf_raw_vs_harm <- read_csv(input_files$uf_raw_vs_harm, show_col_types = FALSE)
 flm_patient <- read_csv(input_files$flm_patient, show_col_types = FALSE)
 flm_date_detail <- read_csv(input_files$flm_date_detail, show_col_types = FALSE)
 flm_agg <- read_csv(input_files$flm_agg, show_col_types = FALSE)
-flm_source <- read_csv(input_files$flm_source, show_col_types = FALSE)
+flm_source <- if (file.exists(input_files$flm_source)) {
+  read_csv(input_files$flm_source, show_col_types = FALSE)
+} else {
+  message("Optional file not found: output/tables/flm_source_payer_completeness.csv")
+  message("Continuing with N/A source-completeness chart and recommendation fallback.")
+  tibble(
+    SOURCE = character(),
+    n_encounters = integer(),
+    n_primary_present = integer(),
+    pct_primary_present = double(),
+    n_secondary_present = integer(),
+    pct_secondary_present = double(),
+    n_both_present = integer(),
+    pct_both_present = double(),
+    n_either_present = integer(),
+    pct_either_present = double()
+  )
+}
 
 message("Loaded Phase 19/20 input files.")
 
@@ -358,23 +397,31 @@ chart_uf_enc <- uf_by_enc %>%
     legend.position = "bottom"
   )
 
-chart_flm_source <- flm_source %>%
-  select(SOURCE, pct_primary_present, pct_secondary_present) %>%
-  pivot_longer(cols = starts_with("pct_"), names_to = "field", values_to = "pct_present") %>%
-  mutate(field = recode(field, pct_primary_present = "Primary", pct_secondary_present = "Secondary")) %>%
-  ggplot(aes(x = reorder(SOURCE, pct_present), y = pct_present, fill = field)) +
-  geom_col(position = "dodge", width = 0.7) +
-  coord_flip() +
-  scale_fill_manual(values = c("Primary" = UF_BLUE, "Secondary" = UF_ORANGE)) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1), expand = expansion(mult = c(0, 0.05))) +
-  labs(
-    title = "FLM Payer Completeness by Encounter Source",
-    x = "Encounter Source",
-    y = "% Present",
-    fill = "Payer Field"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(plot.title = element_text(face = "bold", color = UF_BLUE), legend.position = "bottom")
+chart_flm_source <- if (nrow(flm_source) > 0) {
+  flm_source %>%
+    select(SOURCE, pct_primary_present, pct_secondary_present) %>%
+    pivot_longer(cols = starts_with("pct_"), names_to = "field", values_to = "pct_present") %>%
+    mutate(field = recode(field, pct_primary_present = "Primary", pct_secondary_present = "Secondary")) %>%
+    ggplot(aes(x = reorder(SOURCE, pct_present), y = pct_present, fill = field)) +
+    geom_col(position = "dodge", width = 0.7) +
+    coord_flip() +
+    scale_fill_manual(values = c("Primary" = UF_BLUE, "Secondary" = UF_ORANGE)) +
+    scale_y_continuous(labels = scales::percent_format(scale = 1), expand = expansion(mult = c(0, 0.05))) +
+    labs(
+      title = "FLM Payer Completeness by Encounter Source",
+      x = "Encounter Source",
+      y = "% Present",
+      fill = "Payer Field"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold", color = UF_BLUE), legend.position = "bottom")
+} else {
+  ggplot() +
+    annotate("text", x = 1, y = 1, label = "No multi-source FLM encounters found.\nSource completeness table not generated.", size = 6, color = DARK_TEXT) +
+    labs(title = "FLM Payer Completeness by Encounter Source") +
+    theme_void() +
+    theme(plot.title = element_text(face = "bold", color = UF_BLUE, hjust = 0.5))
+}
 
 chart_flm_top_patients <- flm_patient %>%
   arrange(desc(n_duplicate_dates)) %>%
