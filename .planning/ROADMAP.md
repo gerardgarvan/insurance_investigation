@@ -23,7 +23,9 @@
 - [x] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison (completed 2026-04-09)
 - [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
 - [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
-- [x] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations (completed 2026-04-14)
+- [x] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations
+ (completed 2026-04-14)
+- [ ] **Phase 24: Make Presentation of Just Phases 19 and 20** - Build a focused PPTX containing only UF missingness (Phase 19) and FLM duplicate-date (Phase 20) outputs
 
 ## Phase Details
 
@@ -452,6 +454,27 @@ Plans:
 
 ---
 
+### Phase 24: Make Presentation of Just Phases 19 and 20
+
+**Goal:** Create a focused presentation that includes only the Phase 19 (UF insurance missingness) and Phase 20 (FLM duplicate dates) analyses, without the generalized all-site/all-source content from Phases 21/22
+
+**Depends on:** Phase 23
+
+**Requirements**: PPTX4-01, PPTX4-02, PPTX4-03, PPTX4-04
+
+**Success Criteria** (what must be TRUE):
+1. User can generate a PPTX containing Phase 19 outputs (UF missingness tables/charts) and Phase 20 outputs (FLM duplicate-date tables/charts) only
+2. User can confirm no Phase 21/22 all-site/all-source slides appear in the focused deck
+3. User can see consistent visual styling with existing presentation conventions (titles, footnotes, table formatting)
+4. User can save the focused deck with a clear filename distinguishing it from the full multi-phase presentation
+
+**Plans:** 0/1 plans complete
+
+Plans:
+- [ ] 24-01-PLAN.md -- Add focused Phase 19/20 PPTX generation path with UF + FLM-only slide set and output naming (PPTX4-01, PPTX4-02, PPTX4-03, PPTX4-04)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -479,9 +502,10 @@ Plans:
 | 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
 | 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete    | 2026-04-14 |
+| 24. Focused Presentation of Phases 19/20 | 0/1 | Planned | - |
 
 ## Next Actions
 
-All 23 phases complete. 45/45 plans executed. Project ready for final verification and archival.
+Phase 24 added and pending planning/execution. 45/46 plans executed.
 
-*Last updated: 2026-04-14 (all phases complete -- closing summaries written)*
+*Last updated: 2026-04-15 (phase 24 added for focused phase 19/20 presentation)*
