@@ -58,8 +58,8 @@ FOOTNOTE_TEXT <- "#666666"
 # ------------------------------------------------------------------------------
 style_table <- function(ft, total_row = integer(0), body_font_size = 11) {
   n_rows <- nrow_part(ft, "body")
-  odd_rows <- seq(1, n_rows, by = 2)
-  even_rows <- seq(2, n_rows, by = 2)
+  odd_rows <- if (n_rows >= 1) seq(1, n_rows, by = 2) else integer(0)
+  even_rows <- if (n_rows >= 2) seq(2, n_rows, by = 2) else integer(0)
 
   ft <- ft %>%
     fontsize(size = body_font_size, part = "body") %>%
@@ -186,6 +186,17 @@ assert_required_files <- function(paths, missing_hint = NULL) {
 }
 
 fmt_pct <- function(x) paste0(x, "%")
+
+as_logical_flag <- function(x) {
+  if (is.logical(x)) return(x)
+  if (is.numeric(x)) return(x != 0)
+  x_chr <- tolower(trimws(as.character(x)))
+  ifelse(
+    x_chr %in% c("true", "t", "1", "yes", "y"),
+    TRUE,
+    ifelse(x_chr %in% c("false", "f", "0", "no", "n"), FALSE, NA)
+  )
+}
 
 # ------------------------------------------------------------------------------
 # Input files
@@ -328,7 +339,11 @@ recommendation_tbl <- if (nrow(flm_source) > 0) {
 
 # Summarize date-level detail instead of showing raw rows
 flm_date_summary <- flm_date_detail %>%
-  mutate(admit_date_parsed = as.Date(admit_date_parsed)) %>%
+  mutate(
+    admit_date_parsed = as.Date(admit_date_parsed),
+    primary_missing = as_logical_flag(primary_missing),
+    secondary_missing = as_logical_flag(secondary_missing)
+  ) %>%
   group_by(admit_date_parsed) %>%
   summarise(
     n_encounters = n(),
