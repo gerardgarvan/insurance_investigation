@@ -230,47 +230,57 @@ message(glue("Patients with 2+ sources: {format(length(multi_source_ids), big.ma
 
 enc_multi <- enc_for_join %>% filter(ID %in% multi_source_ids)
 
-# Process in chunks of 5000 patients to cap memory on the self-join
-CHUNK_SIZE <- 5000
-patient_chunks <- split(multi_source_ids, ceiling(seq_along(multi_source_ids) / CHUNK_SIZE))
-message(glue("Processing {length(patient_chunks)} chunk(s) of up to {CHUNK_SIZE} patients each..."))
-
-same_week_list <- vector("list", length(patient_chunks))
-
-for (i in seq_along(patient_chunks)) {
-  chunk_enc <- enc_multi %>% filter(ID %in% patient_chunks[[i]])
-
-  chunk_pairs <- chunk_enc %>%
-    inner_join(chunk_enc, by = "ID", suffix = c("_x", "_y")) %>%
-    filter(
-      SOURCE_x != SOURCE_y,
-      abs(as.integer(admit_date_x - admit_date_y)) >= 1,
-      abs(as.integer(admit_date_x - admit_date_y)) <= 7
-    ) %>%
-    # Deduplicate: canonical ordering by SOURCE (alphabetical) to keep one direction
-    filter(SOURCE_x < SOURCE_y) %>%
-    mutate(
-      day_gap      = as.integer(abs(admit_date_x - admit_date_y)),
-      source_combo = paste(SOURCE_x, SOURCE_y, sep = "+")
-    ) %>%
-    select(
-      ID,
-      admit_date_1 = admit_date_x,
-      source_1     = SOURCE_x,
-      admit_date_2 = admit_date_y,
-      source_2     = SOURCE_y,
-      day_gap,
-      source_combo
-    )
-
-  same_week_list[[i]] <- chunk_pairs
-
-  if (length(patient_chunks) > 1) {
-    message(glue("  Chunk {i}/{length(patient_chunks)}: {format(nrow(chunk_pairs), big.mark=',')} pairs from {length(patient_chunks[[i]])} patients"))
-  }
+# Use data.table non-equi join for efficient range-based matching
+# This avoids materializing N^2 rows — only produces actual matches
+if (!requireNamespace("data.table", quietly = TRUE)) {
+  stop("data.table package required for efficient same-week detection. Install with: install.packages('data.table')")
 }
 
-same_week_detail <- bind_rows(same_week_list) %>%
+dt <- data.table::as.data.table(enc_multi)
+dt[, admit_int := as.integer(admit_date)]
+
+# Create range columns for non-equi join: match where other date is within 1-7 days
+dt[, date_lo := admit_int + 1L]
+dt[, date_hi := admit_int + 7L]
+
+# Non-equi join: for each row in dt, find rows with same ID where admit_int falls in [date_lo, date_hi]
+# This only looks forward (1-7 days ahead), so no double-counting
+message("Running data.table non-equi join (range-based, no N^2 expansion)...")
+
+pairs_dt <- dt[dt,
+  on = .(ID = ID, admit_int >= date_lo, admit_int <= date_hi),
+  .(ID = x.ID,
+    admit_date_1 = i.admit_date,
+    source_1 = i.SOURCE,
+    admit_date_2 = x.admit_date,
+    source_2 = x.SOURCE,
+    day_gap = x.admit_int - i.admit_int),
+  nomatch = NULL,
+  allow.cartesian = TRUE
+]
+
+# Keep only cross-source pairs and deduplicate with canonical source ordering
+pairs_dt <- pairs_dt[source_1 != source_2]
+pairs_dt[, `:=`(
+  src_lo = pmin(source_1, source_2),
+  src_hi = pmax(source_1, source_2)
+)]
+pairs_dt[, source_combo := paste(src_lo, src_hi, sep = "+")]
+
+# Deduplicate: keep canonical direction (source_1 = alphabetically first)
+pairs_dt[, `:=`(
+  source_1 = src_lo,
+  source_2 = src_hi
+)]
+pairs_dt[, c("src_lo", "src_hi") := NULL]
+
+# Remove exact duplicates (same patient, same dates, same sources)
+pairs_dt <- unique(pairs_dt, by = c("ID", "admit_date_1", "source_1", "admit_date_2", "source_2"))
+
+message(glue("Non-equi join complete: {format(nrow(pairs_dt), big.mark=',')} pairs found"))
+
+same_week_detail <- tibble::as_tibble(pairs_dt) %>%
+  select(ID, admit_date_1, source_1, admit_date_2, source_2, day_gap, source_combo) %>%
   arrange(source_combo, ID, admit_date_1)
 
 message(glue("Total same-week near-duplicate pairs: {format(nrow(same_week_detail), big.mark=',')}"))
