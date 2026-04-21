@@ -212,7 +212,8 @@ for (i in seq_len(nrow(top10_sd))) {
 # ==============================================================================
 
 message(glue("\n--- SECTION 5: Same-Week Near-Duplicate Detection (SAMEWK-01) ---"))
-message("Finding encounter pairs from different sources within 1-7 calendar days (pairwise)...")
+message("Finding encounter pairs from different sources within 1-7 calendar days...")
+message("Strategy: iterate day-by-day through calendar, compare each day's encounters to next 7 days")
 
 # Pre-filter: only patients with encounters from 2+ distinct sources can produce pairs
 enc_for_join <- enc_valid %>%
@@ -230,57 +231,79 @@ message(glue("Patients with 2+ sources: {format(length(multi_source_ids), big.ma
 
 enc_multi <- enc_for_join %>% filter(ID %in% multi_source_ids)
 
-# Use data.table non-equi join for efficient range-based matching
-# This avoids materializing N^2 rows — only produces actual matches
-if (!requireNamespace("data.table", quietly = TRUE)) {
-  stop("data.table package required for efficient same-week detection. Install with: install.packages('data.table')")
+# Build a lookup: for each date, which patients have encounters and from which sources
+# Key insight: index by date, not by patient — avoids any patient-level self-join
+enc_by_date <- split(
+  enc_multi %>% select(ID, admit_date, SOURCE),
+  enc_multi$admit_date
+)
+
+# Get the full date range present in data
+all_dates <- sort(unique(enc_multi$admit_date))
+n_dates <- length(all_dates)
+message(glue("Date range: {min(all_dates)} to {max(all_dates)} ({n_dates} unique dates with encounters)"))
+
+# Day-by-day iteration with progress bar
+# For each date D: get encounters on D, get encounters on D+1..D+7, find cross-source same-patient pairs
+same_week_list <- vector("list", n_dates)
+total_pairs <- 0L
+progress_interval <- max(1L, n_dates %/% 50)  # update ~50 times
+
+message(glue("\nProcessing {n_dates} dates:"))
+message(strrep("-", 52))
+bar_chars <- 0L
+
+for (idx in seq_along(all_dates)) {
+  day_d <- all_dates[idx]
+  enc_day_d <- enc_by_date[[as.character(day_d)]]
+
+  if (is.null(enc_day_d) || nrow(enc_day_d) == 0) next
+
+  # Collect encounters from the next 1-7 days
+  future_dates <- as.character(seq(day_d + 1, day_d + 7, by = 1))
+  enc_window <- bind_rows(lapply(future_dates, function(fd) enc_by_date[[fd]]))
+
+  if (is.null(enc_window) || nrow(enc_window) == 0) next
+
+  # Cross-join day_d encounters with window encounters on same patient, different source
+  pairs <- inner_join(
+    enc_day_d %>% rename(admit_date_1 = admit_date, source_1 = SOURCE),
+    enc_window %>% rename(admit_date_2 = admit_date, source_2 = SOURCE),
+    by = "ID",
+    relationship = "many-to-many"
+  ) %>%
+    filter(source_1 != source_2) %>%
+    mutate(
+      day_gap = as.integer(admit_date_2 - admit_date_1),
+      src_lo  = pmin(source_1, source_2),
+      src_hi  = pmax(source_1, source_2),
+      source_combo = paste(src_lo, src_hi, sep = "+"),
+      source_1 = src_lo,
+      source_2 = src_hi
+    ) %>%
+    select(ID, admit_date_1, source_1, admit_date_2, source_2, day_gap, source_combo) %>%
+    distinct()
+
+  if (nrow(pairs) > 0) {
+    same_week_list[[idx]] <- pairs
+    total_pairs <- total_pairs + nrow(pairs)
+  }
+
+  # Progress bar: print a '#' every ~2% of dates
+  if (idx %% progress_interval == 0 || idx == n_dates) {
+    new_chars <- round(50 * idx / n_dates) - bar_chars
+    if (new_chars > 0) {
+      cat(strrep("#", new_chars))
+      bar_chars <- bar_chars + new_chars
+    }
+  }
 }
+cat("\n")
+message(strrep("-", 52))
+message(glue("Day-by-day scan complete: {format(total_pairs, big.mark=',')} pairs across {n_dates} dates"))
 
-dt <- data.table::as.data.table(enc_multi)
-dt[, admit_int := as.integer(admit_date)]
-
-# Create range columns for non-equi join: match where other date is within 1-7 days
-dt[, date_lo := admit_int + 1L]
-dt[, date_hi := admit_int + 7L]
-
-# Non-equi join: for each row in dt, find rows with same ID where admit_int falls in [date_lo, date_hi]
-# This only looks forward (1-7 days ahead), so no double-counting
-message("Running data.table non-equi join (range-based, no N^2 expansion)...")
-
-pairs_dt <- dt[dt,
-  on = .(ID = ID, admit_int >= date_lo, admit_int <= date_hi),
-  .(ID = x.ID,
-    admit_date_1 = i.admit_date,
-    source_1 = i.SOURCE,
-    admit_date_2 = x.admit_date,
-    source_2 = x.SOURCE,
-    day_gap = x.admit_int - i.admit_int),
-  nomatch = NULL,
-  allow.cartesian = TRUE
-]
-
-# Keep only cross-source pairs and deduplicate with canonical source ordering
-pairs_dt <- pairs_dt[source_1 != source_2]
-pairs_dt[, `:=`(
-  src_lo = pmin(source_1, source_2),
-  src_hi = pmax(source_1, source_2)
-)]
-pairs_dt[, source_combo := paste(src_lo, src_hi, sep = "+")]
-
-# Deduplicate: keep canonical direction (source_1 = alphabetically first)
-pairs_dt[, `:=`(
-  source_1 = src_lo,
-  source_2 = src_hi
-)]
-pairs_dt[, c("src_lo", "src_hi") := NULL]
-
-# Remove exact duplicates (same patient, same dates, same sources)
-pairs_dt <- unique(pairs_dt, by = c("ID", "admit_date_1", "source_1", "admit_date_2", "source_2"))
-
-message(glue("Non-equi join complete: {format(nrow(pairs_dt), big.mark=',')} pairs found"))
-
-same_week_detail <- tibble::as_tibble(pairs_dt) %>%
-  select(ID, admit_date_1, source_1, admit_date_2, source_2, day_gap, source_combo) %>%
+same_week_detail <- bind_rows(same_week_list) %>%
+  distinct(ID, admit_date_1, source_1, admit_date_2, source_2, .keep_all = TRUE) %>%
   arrange(source_combo, ID, admit_date_1)
 
 message(glue("Total same-week near-duplicate pairs: {format(nrow(same_week_detail), big.mark=',')}"))
