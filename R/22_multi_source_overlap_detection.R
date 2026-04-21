@@ -214,40 +214,64 @@ for (i in seq_len(nrow(top10_sd))) {
 message(glue("\n--- SECTION 5: Same-Week Near-Duplicate Detection (SAMEWK-01) ---"))
 message("Finding encounter pairs from different sources within 1-7 calendar days (pairwise)...")
 
-# Pairwise self-join on ID; filter different SOURCE and 1-7 day gap
-# Deduplicate using SOURCE_x < SOURCE_y OR (SOURCE_x == SOURCE_y AND admit_date_x < admit_date_y)
-# to avoid counting (A,B) and (B,A) as separate pairs.
-# Strategy: limit to SOURCE_x <= SOURCE_y and use tie-breaking for equal sources (impossible since SOURCE_x != SOURCE_y)
-
+# Pre-filter: only patients with encounters from 2+ distinct sources can produce pairs
 enc_for_join <- enc_valid %>%
   select(ID, ENCOUNTERID, admit_date_parsed, SOURCE) %>%
   rename(admit_date = admit_date_parsed)
 
-same_week_pairs <- enc_for_join %>%
-  inner_join(enc_for_join, by = "ID", suffix = c("_x", "_y")) %>%
-  filter(
-    SOURCE_x != SOURCE_y,
-    abs(as.integer(admit_date_x - admit_date_y)) >= 1,
-    abs(as.integer(admit_date_x - admit_date_y)) <= 7
-  ) %>%
-  # Deduplicate: canonical ordering by SOURCE (alphabetical) to keep one direction
-  filter(SOURCE_x < SOURCE_y | (SOURCE_x == SOURCE_y & admit_date_x <= admit_date_y)) %>%
-  mutate(
-    day_gap     = as.integer(abs(admit_date_x - admit_date_y)),
-    source_combo = paste(pmin(SOURCE_x, SOURCE_y), pmax(SOURCE_x, SOURCE_y), sep = "+")
-  ) %>%
-  select(
-    ID,
-    admit_date_1 = admit_date_x,
-    source_1     = SOURCE_x,
-    admit_date_2 = admit_date_y,
-    source_2     = SOURCE_y,
-    day_gap,
-    source_combo
-  ) %>%
-  arrange(source_combo, ID, admit_date_1)
+multi_source_ids <- enc_for_join %>%
+  group_by(ID) %>%
+  summarise(n_src = n_distinct(SOURCE), .groups = "drop") %>%
+  filter(n_src > 1) %>%
+  pull(ID)
 
-same_week_detail <- same_week_pairs
+message(glue("Patients with 2+ sources: {format(length(multi_source_ids), big.mark=',')} ",
+             "(skipping {format(n_distinct(enc_for_join$ID) - length(multi_source_ids), big.mark=',')} single-source patients)"))
+
+enc_multi <- enc_for_join %>% filter(ID %in% multi_source_ids)
+
+# Process in chunks of 5000 patients to cap memory on the self-join
+CHUNK_SIZE <- 5000
+patient_chunks <- split(multi_source_ids, ceiling(seq_along(multi_source_ids) / CHUNK_SIZE))
+message(glue("Processing {length(patient_chunks)} chunk(s) of up to {CHUNK_SIZE} patients each..."))
+
+same_week_list <- vector("list", length(patient_chunks))
+
+for (i in seq_along(patient_chunks)) {
+  chunk_enc <- enc_multi %>% filter(ID %in% patient_chunks[[i]])
+
+  chunk_pairs <- chunk_enc %>%
+    inner_join(chunk_enc, by = "ID", suffix = c("_x", "_y")) %>%
+    filter(
+      SOURCE_x != SOURCE_y,
+      abs(as.integer(admit_date_x - admit_date_y)) >= 1,
+      abs(as.integer(admit_date_x - admit_date_y)) <= 7
+    ) %>%
+    # Deduplicate: canonical ordering by SOURCE (alphabetical) to keep one direction
+    filter(SOURCE_x < SOURCE_y) %>%
+    mutate(
+      day_gap      = as.integer(abs(admit_date_x - admit_date_y)),
+      source_combo = paste(SOURCE_x, SOURCE_y, sep = "+")
+    ) %>%
+    select(
+      ID,
+      admit_date_1 = admit_date_x,
+      source_1     = SOURCE_x,
+      admit_date_2 = admit_date_y,
+      source_2     = SOURCE_y,
+      day_gap,
+      source_combo
+    )
+
+  same_week_list[[i]] <- chunk_pairs
+
+  if (length(patient_chunks) > 1) {
+    message(glue("  Chunk {i}/{length(patient_chunks)}: {format(nrow(chunk_pairs), big.mark=',')} pairs from {length(patient_chunks[[i]])} patients"))
+  }
+}
+
+same_week_detail <- bind_rows(same_week_list) %>%
+  arrange(source_combo, ID, admit_date_1)
 
 message(glue("Total same-week near-duplicate pairs: {format(nrow(same_week_detail), big.mark=',')}"))
 message(glue("Patients with at least one same-week near-duplicate: {format(n_distinct(same_week_detail$ID), big.mark=',')}"))
