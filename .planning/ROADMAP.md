@@ -23,9 +23,10 @@
 - [x] **Phase 20: Check Duplicate Dates of FLM Subjects** - Standalone diagnostic script investigating FLM encounter date duplication across data sources with payer completeness comparison (completed 2026-04-09)
 - [x] **Phase 21: Generalize Phase 19 to All Sources** - Standalone diagnostic script profiling payer data missingness across all 5 partner sites with cross-site comparison (completed 2026-04-13)
 - [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
-- [x] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations
- (completed 2026-04-14)
+- [x] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations (completed 2026-04-14)
 - [ ] **Phase 24: Make Presentation of Just Phases 19 and 20** - Build a focused PPTX containing only UF missingness (Phase 19) and FLM duplicate-date (Phase 20) outputs
+- [ ] **Phase 25: Multi-Source Overlap Detection** - Detect same-date and same-week multi-source encounter pairs across all 5 sites, with per-site counts and source combination frequencies
+- [ ] **Phase 26: Overlap Classification and Recommendations** - Classify multi-source encounter groups as Identical/Partial/Distinct via field comparison and produce CSV outputs, console summary, and per-site actionable recommendations
 
 ## Phase Details
 
@@ -475,6 +476,51 @@ Plans:
 
 ---
 
+### Phase 25: Multi-Source Overlap Detection
+
+**Goal:** User can identify all patient-date and patient-week groups where encounters originate from more than one distinct ENCOUNTER.SOURCE value, across all 5 partner sites, with per-site counts and source combination frequencies
+
+**Depends on:** Phase 24 (builds on Phase 22 detection patterns in R/21_all_site_duplicate_dates.R)
+
+**Requirements**: SAMEDT-01, SAMEDT-02, SAMEDT-03, SAMEWK-01, SAMEWK-02, SAMEWK-03
+
+**Success Criteria** (what must be TRUE):
+1. User can see all patient-date pairs where encounters come from more than one distinct ENCOUNTER.SOURCE on the same ADMIT_DATE, across all 5 sites (AMS, UMI, FLM, VRT, UFH)
+2. User can see per-site counts of patients affected and total same-date multi-source encounter pairs, separated from same-week-only near-duplicates
+3. User can see which SOURCE combinations appear together on the same date (e.g., UFH+FLM, AMS+UMI) with frequency counts per site
+4. User can see same-week near-duplicates (encounters from different sources within a 7-day window but not on the same date) identified and categorized separately
+5. User can see per-site counts and rates for same-week near-duplicates alongside same-date exact counts for direct comparison
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 25-01-PLAN.md -- Standalone R script R/22_multi_source_overlap_detection.R: same-date grouping, 7-day window near-duplicate detection, per-site counts, source combination frequencies (SAMEDT-01, SAMEDT-02, SAMEDT-03, SAMEWK-01, SAMEWK-02, SAMEWK-03)
+
+---
+
+### Phase 26: Overlap Classification and Recommendations
+
+**Goal:** User can see each multi-source encounter group (same-date and same-week) classified as Identical, Partial, or Distinct based on field-by-field comparison, with CSV outputs, a console summary, and per-site actionable recommendations on whether to deduplicate or retain encounters
+
+**Depends on:** Phase 25 (consumes detection output from R/22_multi_source_overlap_detection.R)
+
+**Requirements**: OVRLP-01, OVRLP-02, OVRLP-03, OVRLP-04, OUTPT-01, OUTPT-02, OUTPT-03
+
+**Success Criteria** (what must be TRUE):
+1. User can see field-by-field match/mismatch flags for ENC_TYPE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY, PROVIDERID, and DISCHARGE_DATE for each same-date multi-source group
+2. User can see each multi-source group labeled Identical (all compared fields match), Partial (some fields match), or Distinct (most fields differ), for both same-date and same-week groups
+3. User can see per-site overlap profiles showing the percentage breakdown of Identical vs Partial vs Distinct for same-date and same-week encounter groups
+4. User can see CSV files in output/tables/ with patient-level same-date detail, same-week detail, and per-site aggregate summaries including overlap classification counts
+5. User can see a console summary on HiPerGator with per-site multi-source rates, Identical/Partial/Distinct breakdown, and key findings
+6. User can read per-site actionable recommendations derived from overlap patterns (e.g., "Site X: 85% Identical — safe to deduplicate by keeping preferred source; Site Y: 60% Distinct — encounters are genuinely different, retain all")
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 26-01-PLAN.md -- Standalone R script R/23_overlap_classification.R: field comparison flags, Identical/Partial/Distinct labeling for same-date and same-week groups, CSV outputs, console summary, per-site recommendations (OVRLP-01, OVRLP-02, OVRLP-03, OVRLP-04, OUTPT-01, OUTPT-02, OUTPT-03)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -488,24 +534,26 @@ Plans:
 | 7. Dx Gap Analysis for Neither Patients | 1/1 | Complete | 2026-03-25 |
 | 8. Treatment-Anchored Payer Mode | 1/1 | Complete | 2026-03-26 |
 | 9. Expand Treatment Detection | 3/3 | Complete | 2026-03-31 |
-| 10. Surveillance, Survivorship & Documentation | 5/5 | Complete   | 2026-03-31 |
-| 11. PPTX Clarity & Missing Data | 2/2 | Complete    | 2026-03-31 |
+| 10. Surveillance, Survivorship & Documentation | 5/5 | Complete | 2026-03-31 |
+| 11. PPTX Clarity & Missing Data | 2/2 | Complete | 2026-03-31 |
 | 12. More PPTX Polishing | 4/4 | Complete | 2026-04-01 |
 | 13. Summary Tables Value Audit | 1/1 | Complete | 2026-04-01 |
-| 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete    | 2026-04-01 |
-| 15. RDS Caching Infrastructure | 2/2 | Complete    | 2026-04-03 |
-| 16. Dataset Snapshots | 2/2 | Complete    | 2026-04-03 |
-| 17. Visualization Polish | 2/2 | Complete    | 2026-04-03 |
-| 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete    | 2026-04-07 |
-| 19. Investigate Insurance Missingness (UF) | 1/1 | Complete   | 2026-04-09 |
+| 14. CSV Values Data Audit & Code Optimization | 3/3 | Complete | 2026-04-01 |
+| 15. RDS Caching Infrastructure | 2/2 | Complete | 2026-04-03 |
+| 16. Dataset Snapshots | 2/2 | Complete | 2026-04-03 |
+| 17. Visualization Polish | 2/2 | Complete | 2026-04-03 |
+| 18. One Enrolled Person Without HL Diagnosis | 1/1 | Complete | 2026-04-07 |
+| 19. Investigate Insurance Missingness (UF) | 1/1 | Complete | 2026-04-09 |
 | 20. Check Duplicate Dates of FLM Subjects | 1/1 | Complete | 2026-04-09 |
-| 21. Generalize Phase 19 to All Sources | 1/1 | Complete    | 2026-04-13 |
-| 22. Generalize Phase 20 to All Sites | 1/1 | Complete    | 2026-04-14 |
-| 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete    | 2026-04-14 |
+| 21. Generalize Phase 19 to All Sources | 1/1 | Complete | 2026-04-13 |
+| 22. Generalize Phase 20 to All Sites | 1/1 | Complete | 2026-04-14 |
+| 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete | 2026-04-14 |
 | 24. Focused Presentation of Phases 19/20 | 0/1 | Planned | - |
+| 25. Multi-Source Overlap Detection | 0/1 | Not started | - |
+| 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
 
 ## Next Actions
 
-Phase 24 added and pending planning/execution. 45/46 plans executed.
+Phase 24 pending planning/execution. Phases 25-26 (v1.2 milestone) added and ready for planning after Phase 24 completes.
 
-*Last updated: 2026-04-15 (phase 24 added for focused phase 19/20 presentation)*
+*Last updated: 2026-04-21 (phases 25-26 added for milestone v1.2 Multi-Source Overlap Investigation)*

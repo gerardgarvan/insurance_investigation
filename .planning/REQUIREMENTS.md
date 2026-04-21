@@ -365,6 +365,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX3-05 | Phase 23 | Pending |
 | PPTX3-06 | Phase 23 | Pending |
 | PPTX3-07 | Phase 23 | Pending |
+| SAMEDT-01 | Phase 25 | Pending |
+| SAMEDT-02 | Phase 25 | Pending |
+| SAMEDT-03 | Phase 25 | Pending |
+| SAMEWK-01 | Phase 25 | Pending |
+| SAMEWK-02 | Phase 25 | Pending |
+| SAMEWK-03 | Phase 25 | Pending |
+| OVRLP-01 | Phase 26 | Pending |
+| OVRLP-02 | Phase 26 | Pending |
+| OVRLP-03 | Phase 26 | Pending |
+| OVRLP-04 | Phase 26 | Pending |
+| OUTPT-01 | Phase 26 | Pending |
+| OUTPT-02 | Phase 26 | Pending |
+| OUTPT-03 | Phase 26 | Pending |
 
 **Coverage:**
 - v1 requirements: 67 total
@@ -380,11 +393,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Unmapped: 0
 
 **v1.2 requirements:** 13 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 13
+- Mapped to phases: 13 (Phase 25: 6, Phase 26: 7)
+- Unmapped: 0
 
-**Total coverage:** 106/119 requirements mapped (89% — v1.2 pending roadmap)
+**Total coverage:** 119/119 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-21 after milestone v1.2 requirements defined*
+*Last updated: 2026-04-21 after v1.2 roadmap created (Phases 25-26 added)*
