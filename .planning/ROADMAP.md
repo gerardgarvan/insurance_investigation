@@ -25,7 +25,7 @@
 - [x] **Phase 22: Generalize Phase 20 to All Sites** - Standalone diagnostic script extending FLM duplicate date investigation to all 5 partner sites with cross-site comparison and per-site source recommendations (completed 2026-04-14)
 - [x] **Phase 23: Make Visual Presentation of Tables from Last 2 Pages** - Convert Phase 21/22 CSV outputs into PPTX slides with formatted tables and bar chart visualizations (completed 2026-04-14)
 - [ ] **Phase 24: Make Presentation of Just Phases 19 and 20** - Build a focused PPTX containing only UF missingness (Phase 19) and FLM duplicate-date (Phase 20) outputs
-- [ ] **Phase 25: Multi-Source Overlap Detection** - Detect same-date and same-week multi-source encounter pairs across all 5 sites, with per-site counts and source combination frequencies
+- [x] **Phase 25: Multi-Source Overlap Detection** - Detect same-date and same-week multi-source encounter pairs across all 5 sites, with per-site counts and source combination frequencies (completed 2026-04-21)
 - [ ] **Phase 26: Overlap Classification and Recommendations** - Classify multi-source encounter groups as Identical/Partial/Distinct via field comparison and produce CSV outputs, console summary, and per-site actionable recommendations
 
 ## Phase Details
@@ -491,7 +491,7 @@ Plans:
 4. User can see same-week near-duplicates (encounters from different sources within a 7-day window but not on the same date) identified and categorized separately
 5. User can see per-site counts and rates for same-week near-duplicates alongside same-date exact counts for direct comparison
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 25-01-PLAN.md -- Standalone R script R/22_multi_source_overlap_detection.R: same-date grouping, 7-day window near-duplicate detection, per-site counts, source combination frequencies (SAMEDT-01, SAMEDT-02, SAMEDT-03, SAMEWK-01, SAMEWK-02, SAMEWK-03)
@@ -549,7 +549,7 @@ Plans:
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete | 2026-04-14 |
 | 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete | 2026-04-14 |
 | 24. Focused Presentation of Phases 19/20 | 0/1 | Planned | - |
-| 25. Multi-Source Overlap Detection | 0/1 | Not started | - |
+| 25. Multi-Source Overlap Detection | 1/1 | Complete   | 2026-04-21 |
 | 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
 
 ## Next Actions

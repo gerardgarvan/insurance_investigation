@@ -190,15 +190,15 @@ Requirements for milestone v1.2: Multi-Source Overlap Investigation.
 
 ### Same-Date Multi-Source Detection
 
-- [ ] **SAMEDT-01**: User can see all patient-date pairs where encounters exist from >1 distinct ENCOUNTER.SOURCE value on the same ADMIT_DATE, across all 5 sites (AMS, UMI, FLM, VRT, UFH)
-- [ ] **SAMEDT-02**: User can see per-site counts of patients affected and total same-date multi-source encounter pairs
-- [ ] **SAMEDT-03**: User can see which SOURCE combinations appear together on same dates (e.g., UFH+FLM, AMS+UMI) with frequency counts
+- [x] **SAMEDT-01**: User can see all patient-date pairs where encounters exist from >1 distinct ENCOUNTER.SOURCE value on the same ADMIT_DATE, across all 5 sites (AMS, UMI, FLM, VRT, UFH)
+- [x] **SAMEDT-02**: User can see per-site counts of patients affected and total same-date multi-source encounter pairs
+- [x] **SAMEDT-03**: User can see which SOURCE combinations appear together on same dates (e.g., UFH+FLM, AMS+UMI) with frequency counts
 
 ### Same-Week Near-Duplicate Detection
 
-- [ ] **SAMEWK-01**: User can see patient encounters from different sources within a 7-day window that are not same-date (near-duplicates), across all 5 sites
-- [ ] **SAMEWK-02**: User can see same-week near-duplicates categorized separately from exact same-date matches
-- [ ] **SAMEWK-03**: User can see per-site counts and rates for same-week near-duplicates vs same-date exact matches
+- [x] **SAMEWK-01**: User can see patient encounters from different sources within a 7-day window that are not same-date (near-duplicates), across all 5 sites
+- [x] **SAMEWK-02**: User can see same-week near-duplicates categorized separately from exact same-date matches
+- [x] **SAMEWK-03**: User can see per-site counts and rates for same-week near-duplicates vs same-date exact matches
 
 ### Overlap Classification
 
@@ -365,12 +365,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX3-05 | Phase 23 | Pending |
 | PPTX3-06 | Phase 23 | Pending |
 | PPTX3-07 | Phase 23 | Pending |
-| SAMEDT-01 | Phase 25 | Pending |
-| SAMEDT-02 | Phase 25 | Pending |
-| SAMEDT-03 | Phase 25 | Pending |
-| SAMEWK-01 | Phase 25 | Pending |
-| SAMEWK-02 | Phase 25 | Pending |
-| SAMEWK-03 | Phase 25 | Pending |
+| SAMEDT-01 | Phase 25 | Complete |
+| SAMEDT-02 | Phase 25 | Complete |
+| SAMEDT-03 | Phase 25 | Complete |
+| SAMEWK-01 | Phase 25 | Complete |
+| SAMEWK-02 | Phase 25 | Complete |
+| SAMEWK-03 | Phase 25 | Complete |
 | OVRLP-01 | Phase 26 | Pending |
 | OVRLP-02 | Phase 26 | Pending |
 | OVRLP-03 | Phase 26 | Pending |
