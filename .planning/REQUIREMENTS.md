@@ -184,6 +184,35 @@ Requirements for milestone v1.1: RDS Cache & Visualization Polish.
 - [x] **VIZP-02**: New PPTX slide with summary table showing unique encounter dates per person by payer category, counted only after `max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE)`
 - [x] **VIZP-03**: Stacked encounter histograms by payer with post-treatment on bottom of each bar and pre-treatment on top, faceted by payer category
 
+## v1.2 Requirements
+
+Requirements for milestone v1.2: Multi-Source Overlap Investigation.
+
+### Same-Date Multi-Source Detection
+
+- [x] **SAMEDT-01**: User can see all patient-date pairs where encounters exist from >1 distinct ENCOUNTER.SOURCE value on the same ADMIT_DATE, across all 5 sites (AMS, UMI, FLM, VRT, UFH)
+- [x] **SAMEDT-02**: User can see per-site counts of patients affected and total same-date multi-source encounter pairs
+- [x] **SAMEDT-03**: User can see which SOURCE combinations appear together on same dates (e.g., UFH+FLM, AMS+UMI) with frequency counts
+
+### Same-Week Near-Duplicate Detection
+
+- [x] **SAMEWK-01**: User can see patient encounters from different sources within a 7-day window that are not same-date (near-duplicates), across all 5 sites
+- [x] **SAMEWK-02**: User can see same-week near-duplicates categorized separately from exact same-date matches
+- [x] **SAMEWK-03**: User can see per-site counts and rates for same-week near-duplicates vs same-date exact matches
+
+### Overlap Classification
+
+- [ ] **OVRLP-01**: User can see field-by-field comparison for each same-date multi-source group: ENC_TYPE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY, PROVIDERID, and DISCHARGE_DATE match/mismatch flags
+- [ ] **OVRLP-02**: User can see each multi-source group classified as Identical (all compared fields match), Partial (some fields match), or Distinct (most fields differ)
+- [ ] **OVRLP-03**: User can see per-site overlap profile showing what percentage of multi-source same-date encounters are Identical vs Partial vs Distinct
+- [ ] **OVRLP-04**: User can see the same field comparison and classification applied to same-week near-duplicates
+
+### Output & Diagnostics
+
+- [ ] **OUTPT-01**: User can see CSV files in output/tables/ with patient-level same-date detail, same-week detail, and per-site aggregate summaries
+- [ ] **OUTPT-02**: User can see console summary on HiPerGator with per-site multi-source rates, overlap classification breakdown, and key findings
+- [ ] **OUTPT-03**: User can see actionable per-site recommendations based on overlap patterns (e.g., "Site X: 85% identical -- safe to deduplicate by keeping preferred source")
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -336,6 +365,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PPTX3-05 | Phase 23 | Pending |
 | PPTX3-06 | Phase 23 | Pending |
 | PPTX3-07 | Phase 23 | Pending |
+| SAMEDT-01 | Phase 25 | Complete |
+| SAMEDT-02 | Phase 25 | Complete |
+| SAMEDT-03 | Phase 25 | Complete |
+| SAMEWK-01 | Phase 25 | Complete |
+| SAMEWK-02 | Phase 25 | Complete |
+| SAMEWK-03 | Phase 25 | Complete |
+| OVRLP-01 | Phase 26 | Pending |
+| OVRLP-02 | Phase 26 | Pending |
+| OVRLP-03 | Phase 26 | Pending |
+| OVRLP-04 | Phase 26 | Pending |
+| OUTPT-01 | Phase 26 | Pending |
+| OUTPT-02 | Phase 26 | Pending |
+| OUTPT-03 | Phase 26 | Pending |
 
 **Coverage:**
 - v1 requirements: 67 total
@@ -350,8 +392,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 25
 - Unmapped: 0
 
-**Total coverage:** 106/106 requirements mapped (100%)
+**v1.2 requirements:** 13 total
+- Mapped to phases: 13 (Phase 25: 6, Phase 26: 7)
+- Unmapped: 0
+
+**Total coverage:** 119/119 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-14 after Phase 23 PPTX3 requirement definitions added*
+*Last updated: 2026-04-21 after v1.2 roadmap created (Phases 25-26 added)*

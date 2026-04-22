@@ -1,184 +1,73 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
+milestone: v1.2
 milestone_name: milestone
-status: complete
-last_updated: "2026-04-14T17:02:15.542Z"
-last_activity: 2026-04-14
+status: planning
+stopped_at: Completed 25-01-PLAN.md — awaiting human-verify checkpoint for HiPerGator execution
+last_updated: "2026-04-21T18:30:32.915Z"
+last_activity: 2026-04-21 — v1.2 roadmap created, Phases 25-26 added
 progress:
-  total_phases: 23
-  completed_phases: 23
-  total_plans: 45
-  completed_plans: 45
+  total_phases: 26
+  completed_phases: 25
+  total_plans: 47
+  completed_plans: 47
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Last updated:** 2026-04-14
-**Project status:** All 23 phases complete -- 45/45 plans executed
+**Last updated:** 2026-04-21
+**Project status:** Milestone v1.2 — roadmap created, Phase 24 pending, Phases 25-26 ready to plan
 
 ## Project Reference
 
+See: .planning/PROJECT.md (updated 2026-04-03)
+
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** All phases complete -- project ready for archival
+**Current focus:** v1.2 Multi-Source Overlap Investigation — same-date and same-week duplicate analysis with field-level overlap classification across all 5 sites
 
 ## Current Position
 
-Phase: All 23 phases complete
-Plan: 45/45 plans executed
-Status: All 23 phases complete -- milestone v1.0/v1.1 finished
-Last activity: 2026-04-14
+Phase: 25 of 26 (Phase 25 plan 01 complete pending human-verify; Phase 26 not started)
+Plan: 1 of 1 in Phase 25 (awaiting HiPerGator execution checkpoint)
+Status: Human-verify checkpoint — run R/22_multi_source_overlap_detection.R on HiPerGator
+Last activity: 2026-04-21 — Phase 25 plan 01 executed, R/22_multi_source_overlap_detection.R created
+
+Progress: [██████████] 100% — 47/47 plans (25 phases done)
 
 ## Performance Metrics
 
-**Velocity:** N/A (new milestone, no phases completed yet)
-**Quality:** N/A (new milestone, no phases completed yet)
+**Velocity:** 47 plans across 25 phases completed (v1.0 + v1.1 + v1.2 Phase 25)
+**Quality:** All phases executed without rework
 
-### Milestone v1.1 Phases
+| Phase | Plans | Status | Duration |
+|-------|-------|--------|----------|
+| 25. Multi-Source Overlap Detection | 1/1 | Complete (pending HiPerGator verify) | 15 min |
+| 26. Overlap Classification & Recommendations | 0/1 | Not started | — |
 
-| Phase | Description | Requirements | Status |
-|-------|-------------|--------------|--------|
-| 15 | RDS Caching Infrastructure | CACHE-01 to CACHE-04, GIT-01, GIT-02 | Complete (2026-04-03) |
-| 16 | Dataset Snapshots | SNAP-01 to SNAP-05 | Complete (2026-04-03) |
-| 17 | Visualization Polish | VIZP-01 to VIZP-03, PPTX2-04, PPTX2-07 | Complete (2026-04-03) |
-| Phase 15 P01 | 54 | 1 tasks | 2 files |
-| Phase 15 P02 | 120 | 2 tasks | 1 files |
-| Phase 16 P01 | 180 | 2 tasks | 4 files |
-| Phase 16 P02 | 4 | 2 tasks | 4 files |
-| Phase 17 P01 | 3 | 2 tasks | 2 files |
-| Phase 17 P02 | 3 | 2 tasks | 1 files |
-| Phase 23 P01 | 165 | 1 tasks | 1 files |
-| Phase 23 P02 | 159 | 1 tasks | 1 files |
+## Accumulated Context
 
-### Phase Timing
+### Key Decisions (relevant to v1.2)
 
-| Phase | Started | Completed | Duration | Plans | Outcome |
-|-------|---------|-----------|----------|-------|---------|
-| 15 | 2026-04-03 | 2026-04-03 | Same day | 2/2 | Complete |
-| 16 | 2026-04-03 | 2026-04-03 | Same day | 2/2 | Complete |
-| 17 | 2026-04-03 | 2026-04-03 | Same day | 2/2 | Complete |
+- Phase 20/22: Duplicate detection patterns use DEMOGRAPHIC.SOURCE for site assignment and ENCOUNTER.SOURCE for multi-source identification — Phase 25 continues this pattern
+- Phase 19: Missing payer defined as NA, empty, NI, UN, OT, 99, 9999 — same definition applies to Phase 26 field comparison
+- Phase 21/22: Standalone scripts (R/20_all_source_missingness.R, R/21_all_site_duplicate_dates.R) one script per investigation — Phase 25 and 26 each produce one new R script following this pattern
+- Phase 25-01: Use ENCOUNTER.SOURCE directly with no DEMOGRAPHIC join for cross-source overlap detection (confirmed no site assignment needed)
+- Phase 25-01: Same-week pairwise self-join with SOURCE_x < SOURCE_y deduplication to avoid double-counting (A,B) and (B,A)
+- Phase 25-01: HIPAA suppression applied to CSV count columns only; console output retains raw values for investigator use
 
-## Accumulated Context (from v1.0)
+### Pending Todos
 
-| Phase 01 P01 | 220 | 3 tasks | 7 files |
-| Phase 01 P02 | 95 | 1 tasks | 1 files |
-| Phase 02 P01 | 3 | 2 tasks | 3 files |
-| Phase 03 P01 | 142 | 2 tasks | 2 files |
-| Phase 03 P02 | 81 | 2 tasks | 1 files |
-| Phase 05 P01 | 2 | 2 tasks | 4 files |
-| Phase 05-fix-parsing P02 | 4 | 2 tasks | 1 files |
-| Phase 06 P01 | 121 | 2 tasks | 2 files |
-| Phase 06 P02 | 4 | 2 tasks | 3 files |
-| Phase 06 P03 | 35 | 2 tasks | 2 files |
-| Phase 08 P01 | 3 | 2 tasks | 3 files |
-| Phase 09-expand-treatment-detection-using-docx-specified-tables-and-researched-codes P01 | 151 | 2 tasks | 2 files |
-| Phase 09-expand-treatment-detection-using-docx-specified-tables-and-researched-codes P02 | 3 | 2 tasks | 1 files |
-| Phase 09 P03 | 3 | 2 tasks | 1 files |
-| Phase 10 P01 | 25 | 2 tasks | 2 files |
-| Phase 10 P04 | 5 | 1 tasks | 1 files |
-| Phase 10 P03 | 2 | 1 tasks | 1 files |
-| Phase 10 P02 | 15 | 1 tasks | 1 files |
-| Phase 10 P05 | 2 | 1 tasks | 1 files |
-| Phase 11 P01 | 15 | 1 tasks | 1 files |
-| Phase 11 P02 | 10 | 1 tasks | 1 files |
-| Phase 12 P01 | 99 | 2 tasks | 1 files |
-| Phase 12 P02 | 3 | 2 tasks | 1 files |
-| Phase 12 P03 | 169 | 2 tasks | 1 files |
-| Phase 14 P03 | 10 | 3 tasks | 3 files |
+None.
 
-### Key Decisions
+### Blockers/Concerns
 
-| Decision | Rationale | Phase | Date |
-|----------|-----------|-------|------|
-| 4 phases (coarse granularity) | Coarse setting + natural requirement grouping → compress waterfall+sankey into single viz phase | Roadmapping | 2026-03-24 |
-| Payer harmonization as Phase 2 | Highest technical risk (dual-eligible detection) needs early validation | Roadmapping | 2026-03-24 |
-| Foundation includes utilities | Attrition logging and suppression utilities needed by all downstream phases | Roadmapping | 2026-03-24 |
-| TR coded columns stay character | Preserves ICD-O-3 morphology codes and NAACCR staging semantics despite numeric audit flags | Phase 06 | 2026-03-25 |
-| No new date format/regex handlers needed | Diagnostics confirmed existing implementations correct for this cohort extract | Phase 06 | 2026-03-25 |
-| _VALID suffix pattern for range validation | Non-destructive validation columns preserving raw data for downstream filtering | Phase 06 | 2026-03-25 |
-| 13-category data quality summary | Before/after counts with fixed/accepted/documented status for all diagnostic findings | Phase 06 | 2026-03-25 |
-| _VALID columns excluded from discrepancy checks | Programmatically added columns should not trigger false positives in column audits | Phase 06 | 2026-03-25 |
-| All surveillance/lab codes from VariableDetails.xlsx directly | Plan directive to transcribe from xlsx, not from RESEARCH.md illustrative examples | Phase 10 | 2026-03-31 |
-| Use matches() regex in select() for surveillance columns | More maintainable than enumerating all ~57 columns explicitly; handles future modality additions without code change | Phase 10 P04 | 2026-03-31 |
-| Reuse post_dx_date_map tibble in Section 6.8 | Defined once in Section 6.7, reused in 6.8 to avoid redundant cohort slice | Phase 10 P04 | 2026-03-31 |
-| sct_hcpcs and expanded sct_icd10pcs added to TREATMENT_CODES | VariableDetails.xlsx Treatment sheet contained SCT HCPCS codes and 30+ ICD-10-PCS codes not in Phase 9 config | Phase 10 | 2026-03-31 |
-| ICD_CODES$hl_icd10 and ICD_CODES$hl_icd9 for Level 2 HL filter (not generic cancer codes) | D-07 requires HL-specific diagnosis check on encounter; actual list names confirmed from 00_config.R | Phase 10 | 2026-03-31 |
-| left_join to PROVIDER table to preserve NULL PROVIDERID rows | Pitfall 2: many ENCOUNTER rows have no PROVIDERID; inner_join would silently discard them | Phase 10 | 2026-03-31 |
-| DX_TYPE filter on personal history codes prevents ICD-9/ICD-10 cross-era false matches | D-09 / Pitfall 4: V87.4x codes look numeric; without DX_TYPE check could match ICD-10 era data incorrectly | Phase 10 | 2026-03-31 |
-| YAML front matter in .md enables rmarkdown::render() to produce .docx without separate template | Single source file approach; .md with front matter is both readable and renderable | Phase 10 P05 | 2026-03-31 |
-| tryCatch around rmarkdown::render ensures .md always written even if pandoc unavailable | .md is the source of truth; .docx is a sharing copy -- failure to render .docx should not block .md output | Phase 10 P05 | 2026-03-31 |
-| PAYER_ORDER consolidated from 9 to 7: 6 clinical categories + Missing | Collapses Other/Unavailable/Unknown into single Missing category for unambiguous clinical presentation | Phase 11 P01 | 2026-03-31 |
-| POST_TREATMENT columns use asymmetric case_when (preserve NA as NA) | rename_payer() maps NA to Missing which would destroy the N/A (No Follow-up) row logic on post-treatment slides | Phase 11 P01 | 2026-03-31 |
-| Bare N/A payer labels replaced with No Payer Assigned | Consistent clinical language across all three table builder functions and Slide 16 inline table | Phase 11 P01 | 2026-03-31 |
-| add_image_slide() guards with file.exists() -- missing PNGs skip with message, not error | Script must be runnable without 16_encounter_analysis.R PNGs present; graceful degradation to 16 slides | Phase 11 P02 | 2026-03-31 |
-| Slide 17 uses wider image (img_width=9, img_height=5.5) | Histogram PNG is 12x8 inches; wider embedding prevents clipping on 10-inch slide | Phase 11 P02 | 2026-03-31 |
-| Histogram payer categories consolidated to 6+Missing | Matches Phase 11 table consolidation for consistency across all slides | Phase 12 P01 | 2026-04-01 |
-| Per-facet overflow bin annotation for encounters >500 | Makes excluded high-encounter patients visible with counts per payer category | Phase 12 P01 | 2026-04-01 |
-| DX_YEAR=1900 filtered from bar charts with tracked exclusion count | Year 1900 is a masking placeholder; tracking count provides transparency | Phase 12 P01 | 2026-04-01 |
-| coord_cartesian(clip='off') + expanded y-axis limits prevent label clipping | Both clip control and limit expansion needed for labels above bars | Phase 12 P01 | 2026-04-01 |
-| .rds over .RData for caching | readRDS() returns single named object directly into assignment — no namespace side-effects | Roadmapping v1.1 | 2026-04-02 |
-| Cache at /blue/erin.mobley-hl.bcu/clean/rds/ | Keeps large binary files on blue storage, outside repo root, gitignored | Roadmapping v1.1 | 2026-04-02 |
-| Combined sentinel_values + unavailable_codes as missing_indicators | Broader missingness definition (NA, empty, NI, UN, OT, 99, 9999) per D-01 to D-04 | Phase 19 | 2026-04-09 |
-| NA ENC_TYPE preserved as visible "<NA>" category | Avoid filtering out encounters with missing type; makes missingness visible in breakdowns | Phase 19 | 2026-04-09 |
-
-### Current Todos
-
-- [x] All 23 planned phases complete -- 45/45 plans executed
-- [x] All closing summaries written for plans 05-03, 07-01, 12-04, 13-01, 20-01
-- [x] ROADMAP.md progress table updated to reflect all phases complete
-
-### Roadmap Evolution
-
-**v1.0 milestones:**
-
-- Phase 5 added: Fix parsing of dates and other possible parsing errors and investigate why not everyone has an HL diagnosis
-- Phase 6 added: Use debug output to rectify issues
-- Phase 7 added: look at dx info of those that did not have an HL diagnosis to fill gap
-- Phase 8 added: Add insurance mode around three treatment types (chemo, radiation, stem cell) from procedures tables with plus/minus 30 days window
-- Phase 9 added: Expand treatment detection using docx-specified tables and researched codes
-- Phase 10 added: Incorporate VariableDetails.xlsx surveillance strategy and Treatment_Variable_Documentation.docx variables into pipeline, then regenerate Treatment_Variable_Documentation.docx
-- Phase 12 added: more pptx polishing
-- Phase 14 added: CSV values data audit - verify captured data accuracy and optimize code
-
-**v1.1 milestones:**
-
-- Phase 15 added: RDS Caching Infrastructure (CACHE-01 to CACHE-04, GIT-01, GIT-02)
-- Phase 16 added: Dataset Snapshots (SNAP-01 to SNAP-05)
-- Phase 17 added: Visualization Polish (VIZP-01 to VIZP-03, completing PPTX2-04, PPTX2-07)
-- Phase 18 added: one enrolled person does not have an HL diagnosis caught
-- Phase 19 added: investigate insurance missingness source UF specifically
-- Phase 20 added: check duplicate dates of FLM subjects
-- Phase 21 added: generalize phase 19 to all sources
-- Phase 22 added: generalize phase 20 to all sites
-- Phase 23 added: make visual presentation of tables from last 2 pages
-- Phase 25 added: Close gaps between existing code and OneFLQuestions.docx and QuantAnalysisMtgNotes_ZoomAI.docx, lowest hanging fruit first
-
-### Active Blockers
-
-(None)
-
-### Resolved Blockers
-
-(None yet)
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260414-jqd | Write closing summaries for 5 incomplete plans and update tracking | 2026-04-14 | cce9789 | [260414-jqd-write-closing-summaries-for-5-incomplete](./quick/260414-jqd-write-closing-summaries-for-5-incomplete/) |
+None. Phase 25 builds directly on detection logic in R/21_all_site_duplicate_dates.R.
 
 ## Session Continuity
 
-**What we just did:** Gathered context for Phase 25 — closing gaps between existing code and OneFLQuestions.docx / QuantAnalysisMtgNotes_ZoomAI.docx. Identified 8 concrete gaps, discussed 4 gray areas, captured 11 implementation decisions in CONTEXT.md.
+Last session: 2026-04-21T18:30:32.904Z
+Stopped at: Completed 25-01-PLAN.md — awaiting human-verify checkpoint for HiPerGator execution
+Resume file: None
 
-**What's next:** Plan Phase 25 — create detailed PLAN.md with task breakdown for the 8 gap-closing items (3-way payer split, DX date QA + sourcing, FLM overlap script, Medicaid QA, ORL date validation, sensitivity analysis, source precedence docs).
-
-**Context for next session:**
-
-Phase 25 context gathered at `.planning/phases/25-close-gaps-between-existing-code-and-oneflquestions-docx-and-quantanalysismtgnotes-zoomai-docx-lowest-hanging-fruit-first/25-CONTEXT.md`. Ready for `/gsd:plan-phase 25`.
-
----
-
-*State tracking initialized: 2026-03-24*
-*Milestone v1.1 roadmap created: 2026-04-02*
+Next step: Plan Phase 24 (focused PPTX for Phases 19/20), then plan Phase 25 (multi-source overlap detection).

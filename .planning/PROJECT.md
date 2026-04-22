@@ -34,15 +34,25 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Produce Sankey/alluvial showing enrollment → diagnosis date → treatment type, stratified by payer
 - [ ] Apply HIPAA small-cell suppression (counts 1-10) in outputs
 
-## Current Milestone: v1.1 RDS Cache & Visualization Polish
+## Current Milestone: v1.2 Multi-Source Overlap Investigation
+
+**Goal:** Determine whether patient IDs with encounters from multiple data sources on the same date (and same week) represent truly duplicated/overlapping data or genuinely different encounters, across all 5 partner sites.
+
+**Target features:**
+- Same-date multi-source encounter detection across all 5 sites (AMS, UMI, FLM, VRT, UFH)
+- Same-week (7-day window) near-duplicate detection for encounters from different sources
+- Full field comparison (ENC_TYPE, payer fields, diagnosis codes, provider) to classify overlap as identical, partial, or distinct
+- Diagnostic CSVs and console summaries characterizing overlap patterns per site
+
+## Previous Milestone: v1.1 RDS Cache & Visualization Polish (Complete)
 
 **Goal:** Eliminate redundant CSV parsing with persistent RDS caching, fix remaining 1900 sentinel date display issues, and add post-treatment encounter analysis with stacked histograms.
 
-**Target features:**
+**Shipped:**
 - RDS caching for all PCORnet tables with cache-check, FORCE_RELOAD flag, and time-savings logging
-- ~~Cohort snapshot `.rds` files at each filter step and final cohort~~ — Validated in Phase 16
-- ~~Output-backing datasets: every figure/table gets its source data frame saved as `.rds`~~ — Validated in Phase 16
-- ~~Shared `save_output_data()` helper utility~~ — Validated in Phase 16
+- Cohort snapshot `.rds` files at each filter step and final cohort — Validated in Phase 16
+- Output-backing datasets: every figure/table gets its source data frame saved as `.rds` — Validated in Phase 16
+- Shared `save_output_data()` helper utility — Validated in Phase 16
 - 1900 sentinel date filtering across all PPTX content
 - Post-treatment summary table (unique encounter dates per person by payer, after last treatment)
 - Stacked encounter histograms with post-treatment shading (post-treatment on bottom)
