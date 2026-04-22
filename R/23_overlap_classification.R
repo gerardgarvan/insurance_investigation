@@ -252,8 +252,10 @@ sd_pairs <- sd_pairs %>%
   )
 
 # Create detailed label per D-06
+# Build source_combo from the pair's ENCOUNTER_SOURCE values (alphabetically sorted by filter above)
 sd_pairs <- sd_pairs %>%
   mutate(
+    source_combo = paste0(ENCOUNTER_SOURCE_1, "+", ENCOUNTER_SOURCE_2),
     classification_detail = paste0(classification, " (", match_count, "/", n_fields, ")"),
     basis = "same_date (5 fields)"
   )
@@ -360,9 +362,11 @@ for (i in seq_len(nrow(sw_classification_counts))) {
 
 message(glue("\n--- SECTION 5: Per-Site Overlap Profiles (OVRLP-03) ---"))
 
-# Per-site profile for same-date pairs
+# Per-source-combo profile for same-date pairs
+# Group by source_combo (encounter source pair) -- not DEMOGRAPHIC.SOURCE which is
+# a single "home" site per patient and collapses all multi-source overlap into one site
 sd_site_profile <- sd_pairs %>%
-  group_by(SITE_1) %>%
+  group_by(source_combo) %>%
   summarise(
     n_pairs = n(),
     n_identical = sum(classification == "Identical"),
@@ -370,7 +374,6 @@ sd_site_profile <- sd_pairs %>%
     n_distinct_class = sum(classification == "Distinct"),
     .groups = "drop"
   ) %>%
-  rename(SITE = SITE_1) %>%
   mutate(
     pct_identical = round(100 * n_identical / n_pairs, 1),
     pct_partial = round(100 * n_partial / n_pairs, 1),
@@ -388,12 +391,11 @@ sd_site_profile <- sd_site_profile %>%
     )
   )
 
-message(glue("Same-date per-site profiles computed for {nrow(sd_site_profile)} sites"))
+message(glue("Same-date per-source-combo profiles computed for {nrow(sd_site_profile)} combos"))
 
-# Per-site profile for same-week pairs
+# Per-source-combo profile for same-week pairs
 sw_site_profile <- sw_pairs %>%
-  filter(!is.na(SITE)) %>%
-  group_by(SITE) %>%
+  group_by(source_combo) %>%
   summarise(
     n_pairs = n(),
     n_identical = sum(classification == "Identical", na.rm = TRUE),
@@ -418,25 +420,10 @@ sw_site_profile <- sw_site_profile %>%
     )
   )
 
-message(glue("Same-week per-site profiles computed for {nrow(sw_site_profile)} sites"))
+message(glue("Same-week per-source-combo profiles computed for {nrow(sw_site_profile)} combos"))
 
-# Ensure all 5 sites appear even if zero multi-source pairs
-all_sites <- sort(unique(na.omit(enc_prepared$SITE)))
-sd_site_profile <- sd_site_profile %>%
-  complete(SITE = all_sites, fill = list(
-    n_pairs = 0, n_identical = 0, n_partial = 0, n_distinct_class = 0,
-    pct_identical = 0, pct_partial = 0, pct_distinct = 0,
-    basis = "same_date (5 fields)",
-    recommendation = "No multi-source encounters"
-  ))
-
-sw_site_profile <- sw_site_profile %>%
-  complete(SITE = all_sites, fill = list(
-    n_pairs = 0, n_identical = 0, n_partial = 0, n_distinct_class = 0,
-    pct_identical = 0, pct_partial = 0, pct_distinct = 0,
-    basis = "same_week (4 fields)",
-    recommendation = "No multi-source encounters"
-  ))
+# Note: source_combo profiles only include combos that actually have overlap pairs
+# (no need to fill missing combos -- absence means no overlap detected)
 
 # ==============================================================================
 # SECTION 6: Preferred source from payer completeness (D-08)
@@ -444,11 +431,11 @@ sw_site_profile <- sw_site_profile %>%
 
 message(glue("\n--- SECTION 6: Preferred Source from Payer Completeness (D-08) ---"))
 
-# From same-date encounter pairs data (before classification aggregation),
-# compute per (SITE, ENCOUNTER_SOURCE) payer completeness
+# From same-date encounter pairs data, compute per ENCOUNTER_SOURCE payer completeness
+# across all multi-source encounters (not per DEMOGRAPHIC site)
 source_completeness <- sd_encounters %>%
-  filter(!is.na(SITE), !is.na(ENCOUNTER_SOURCE)) %>%
-  group_by(SITE, ENCOUNTER_SOURCE) %>%
+  filter(!is.na(ENCOUNTER_SOURCE)) %>%
+  group_by(ENCOUNTER_SOURCE) %>%
   summarise(
     n_encounters = n(),
     n_primary_present = sum(!is_missing_payer(PAYER_TYPE_PRIMARY)),
@@ -458,22 +445,33 @@ source_completeness <- sd_encounters %>%
     .groups = "drop"
   )
 
-message(glue("Source completeness computed for {nrow(source_completeness)} (SITE, ENCOUNTER_SOURCE) combinations"))
+message(glue("Source completeness computed for {nrow(source_completeness)} ENCOUNTER_SOURCE values"))
 
-# Per site, identify preferred source as the one with highest pct_primary_present
-preferred_source <- source_completeness %>%
-  group_by(SITE) %>%
-  slice_max(pct_primary_present, n = 1, with_ties = FALSE) %>%
-  ungroup() %>%
-  select(SITE, preferred_source = ENCOUNTER_SOURCE, preferred_source_pct = pct_primary_present)
+# For each source_combo, identify preferred source as the one with highest pct_primary_present
+# Split source_combo back into its two sources and look up completeness for each
+preferred_by_combo <- sd_site_profile %>%
+  select(source_combo) %>%
+  mutate(
+    src_1 = str_extract(source_combo, "^[^+]+"),
+    src_2 = str_extract(source_combo, "[^+]+$")
+  ) %>%
+  left_join(source_completeness %>% select(ENCOUNTER_SOURCE, pct_1 = pct_primary_present),
+            by = c("src_1" = "ENCOUNTER_SOURCE")) %>%
+  left_join(source_completeness %>% select(ENCOUNTER_SOURCE, pct_2 = pct_primary_present),
+            by = c("src_2" = "ENCOUNTER_SOURCE")) %>%
+  mutate(
+    preferred_source = if_else(coalesce(pct_1, 0) >= coalesce(pct_2, 0), src_1, src_2),
+    preferred_source_pct = pmax(coalesce(pct_1, 0), coalesce(pct_2, 0))
+  ) %>%
+  select(source_combo, preferred_source, preferred_source_pct)
 
-message(glue("Preferred source identified for {nrow(preferred_source)} sites"))
+message(glue("Preferred source identified for {nrow(preferred_by_combo)} source combos"))
 
-# Join preferred source back to per-site profile (same-date only, as recommendation applies to same-date)
+# Join preferred source back to per-combo profile
 sd_site_profile <- sd_site_profile %>%
-  left_join(preferred_source, by = "SITE")
+  left_join(preferred_by_combo, by = "source_combo")
 
-# Update recommendation text for sites with pct_identical >= 70 to include preferred source
+# Update recommendation text for combos with pct_identical >= 70 to include preferred source
 sd_site_profile <- sd_site_profile %>%
   mutate(
     recommendation = case_when(
@@ -485,7 +483,7 @@ sd_site_profile <- sd_site_profile %>%
 
 # Same for same-week profile
 sw_site_profile <- sw_site_profile %>%
-  left_join(preferred_source, by = "SITE") %>%
+  left_join(preferred_by_combo, by = "source_combo") %>%
   mutate(
     recommendation = case_when(
       pct_identical >= 70 & !is.na(preferred_source) ~
@@ -503,11 +501,9 @@ message(glue("\n--- SECTION 7: Writing CSV Outputs ---"))
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # --- CSV 1: classified_same_date_detail.csv ---
-# Build source_combo from the pair's ENCOUNTER_SOURCE values
 csv1 <- sd_pairs %>%
-  mutate(source_combo = paste0(ENCOUNTER_SOURCE_1, " + ", ENCOUNTER_SOURCE_2)) %>%
   select(
-    SITE = SITE_1, ID, ADMIT_DATE, ENCOUNTER_SOURCE_1, ENCOUNTER_SOURCE_2, source_combo,
+    source_combo, ID, ADMIT_DATE, ENCOUNTER_SOURCE_1, ENCOUNTER_SOURCE_2,
     ENC_TYPE_1, ENC_TYPE_2, enc_type_match,
     payer_primary_norm_1, payer_primary_norm_2, payer_pri_match,
     payer_secondary_norm_1, payer_secondary_norm_2, payer_sec_match,
@@ -522,7 +518,7 @@ message(glue("  Written: classified_same_date_detail.csv ({format(nrow(csv1), bi
 # --- CSV 2: classified_same_week_detail.csv ---
 csv2 <- sw_pairs %>%
   select(
-    SITE, ID, admit_date_1, source_1, admit_date_2, source_2, day_gap, source_combo,
+    source_combo, ID, admit_date_1, source_1, admit_date_2, source_2, day_gap,
     ENC_TYPE_1, ENC_TYPE_2, enc_type_match,
     payer_primary_norm_1, payer_primary_norm_2, payer_pri_match,
     payer_secondary_norm_1, payer_secondary_norm_2, payer_sec_match,
@@ -540,7 +536,7 @@ csv3 <- bind_rows(sd_site_profile, sw_site_profile)
 # Add ALL aggregate rows
 all_sd <- sd_pairs %>%
   summarise(
-    SITE = "ALL",
+    source_combo = "ALL",
     n_pairs = n(),
     n_identical = sum(classification == "Identical"),
     n_partial = sum(classification == "Partial"),
@@ -551,12 +547,12 @@ all_sd <- sd_pairs %>%
     basis = "same_date (5 fields)",
     preferred_source = NA_character_,
     preferred_source_pct = NA_real_,
-    recommendation = "See per-site recommendations"
+    recommendation = "See per-combo recommendations"
   )
 
 all_sw <- sw_pairs %>%
   summarise(
-    SITE = "ALL",
+    source_combo = "ALL",
     n_pairs = n(),
     n_identical = sum(classification == "Identical", na.rm = TRUE),
     n_partial = sum(classification == "Partial", na.rm = TRUE),
@@ -567,7 +563,7 @@ all_sw <- sw_pairs %>%
     basis = "same_week (4 fields)",
     preferred_source = NA_character_,
     preferred_source_pct = NA_real_,
-    recommendation = "See per-site recommendations"
+    recommendation = "See per-combo recommendations"
   )
 
 csv3 <- bind_rows(csv3, all_sd, all_sw) %>%
@@ -607,25 +603,25 @@ for (i in seq_len(nrow(sw_classification_counts))) {
   message(glue("  {r$classification}: {format(r$n, big.mark=',')} ({r$pct}%)"))
 }
 
-message(glue("\n--- Per-Site Summary (Same-Date) ---"))
+message(glue("\n--- Per-Source-Combo Summary (Same-Date) ---"))
 for (i in seq_len(nrow(sd_site_profile))) {
   r <- sd_site_profile[i, ]
   if (r$n_pairs > 0) {
     rec_short <- if_else(r$pct_identical >= 70, "Safe to dedup",
                  if_else(r$pct_identical >= 30, "Mixed", "Retain all"))
     message(glue(
-      "  {r$SITE}: {format(r$n_pairs, big.mark=',')} pairs | ",
+      "  {r$source_combo}: {format(r$n_pairs, big.mark=',')} pairs | ",
       "{r$pct_identical}% Identical | {r$pct_partial}% Partial | {r$pct_distinct}% Distinct | ",
       "Rec: {rec_short}"
     ))
   }
 }
 
-message(glue("\n--- Per-Site Recommendations (OUTPT-03) ---"))
+message(glue("\n--- Per-Source-Combo Recommendations (OUTPT-03) ---"))
 for (i in seq_len(nrow(sd_site_profile))) {
   r <- sd_site_profile[i, ]
   if (r$n_pairs > 0) {
-    message(glue("  {r$SITE}: {r$recommendation}"))
+    message(glue("  {r$source_combo}: {r$recommendation}"))
   }
 }
 
