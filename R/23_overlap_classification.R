@@ -503,9 +503,11 @@ message(glue("\n--- SECTION 7: Writing CSV Outputs ---"))
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # --- CSV 1: classified_same_date_detail.csv ---
+# Build source_combo from the pair's ENCOUNTER_SOURCE values
 csv1 <- sd_pairs %>%
+  mutate(source_combo = paste0(ENCOUNTER_SOURCE_1, " + ", ENCOUNTER_SOURCE_2)) %>%
   select(
-    SITE = SITE_1, ID, ADMIT_DATE, ENCOUNTER_SOURCE_1, ENCOUNTER_SOURCE_2, source_combo = source_combo_1,
+    SITE = SITE_1, ID, ADMIT_DATE, ENCOUNTER_SOURCE_1, ENCOUNTER_SOURCE_2, source_combo,
     ENC_TYPE_1, ENC_TYPE_2, enc_type_match,
     payer_primary_norm_1, payer_primary_norm_2, payer_pri_match,
     payer_secondary_norm_1, payer_secondary_norm_2, payer_sec_match,
