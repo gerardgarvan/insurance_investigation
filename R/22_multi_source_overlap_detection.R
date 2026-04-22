@@ -154,8 +154,7 @@ multi_source_dates_set <- same_date_detail %>%
   select(ID, ADMIT_DATE)
 
 enc_on_multi_dates <- enc_valid %>%
-  rename(ADMIT_DATE = admit_date_parsed) %>%
-  semi_join(multi_source_dates_set, by = c("ID", "ADMIT_DATE"))
+  semi_join(multi_source_dates_set, by = c("ID", "admit_date_parsed" = "ADMIT_DATE"))
 
 per_source_overlap_counts <- enc_on_multi_dates %>%
   group_by(SOURCE) %>%
