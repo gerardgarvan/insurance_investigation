@@ -20,7 +20,13 @@
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
 #   Optionally sources R/utils_dates.R if date parse rate < 50%.
-#   Requires: pcornet$ENCOUNTER (ID, ENCOUNTERID, ADMIT_DATE, SOURCE)
+#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ADMIT_DATE, SOURCE)
+#
+# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
+#   data loading. data.table is RETAINED as a documented exception -- this script
+#   converts to data.table immediately after loading for its grouping/aggregation
+#   performance. DuckDB serves only as the data source; all processing is in-memory
+#   via data.table. See plan 32-01 for rationale.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -34,8 +40,12 @@ library(data.table)
 library(glue)
 library(readr)
 
-# Load tables if not already loaded
-if (!exists("pcornet")) source("R/01_load_pcornet.R")
+# Load tables if not already loaded (RDS mode)
+if (!USE_DUCKDB && !exists("pcornet")) source("R/01_load_pcornet.R")
+# DuckDB mode: open connection if needed
+if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con()
+}
 
 # ==============================================================================
 # SECTION 2: Load and Prepare Encounters
@@ -49,9 +59,10 @@ message(glue("{strrep('=', 70)}\n"))
 message("--- SECTION 2: Load and Prepare Encounters ---")
 
 # Load ENCOUNTER table
-enc <- pcornet$ENCOUNTER
+# Phase 32: Use get_pcornet_table() then materialize before data.table conversion
+enc <- get_pcornet_table("ENCOUNTER") %>% materialize()
 
-# Convert to data.table
+# Convert to data.table (data.table retained as documented exception -- see header)
 enc_dt <- as.data.table(enc)
 
 # Log table dimensions
@@ -68,7 +79,7 @@ message(glue("Encounters with NA SOURCE: {format(sum(is.na(enc_dt$SOURCE)), big.
 # Parse ADMIT_DATE
 enc_dt[, admit_date_parsed := as.Date(ADMIT_DATE, format = "%Y-%m-%d")]
 
-n_admit_raw <- sum(!is.na(enc_dt$ADMIT_DATE) & nchar(trimws(enc_dt$ADMIT_DATE)) > 0)
+n_admit_raw <- sum(!is.na(enc_dt$ADMIT_DATE) & enc_dt$ADMIT_DATE != "")
 n_admit_parsed <- sum(!is.na(enc_dt$admit_date_parsed))
 admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_raw, 1) else 100
 
