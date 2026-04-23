@@ -622,10 +622,10 @@ Plans:
 5. User can see all existing named predicates passing smoke test on 100-patient sample under both backends with PATID set equality
 6. User can review `docs/DUCKDB_TRANSLATION_NOTES.md` documenting any dbplyr translation gaps found and workarounds applied
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 30-01-PLAN.md -- Backend abstraction helpers in utils_duckdb.R with get_pcornet_table dispatcher and connection management (DBAPI-01, DBAPI-02, DBAPI-03)
+- [x] 30-01-PLAN.md -- Backend abstraction helpers in utils_duckdb.R with get_pcornet_table dispatcher and connection management (DBAPI-01, DBAPI-02, DBAPI-03)
 - [ ] 30-02-PLAN.md -- Smoke test all predicates on both backends with 100-patient sample and document translation gaps (DBAPI-04)
 
 ---
@@ -709,7 +709,7 @@ Plans:
 | 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
 | 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
 | 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
-| 30. Query Backend Abstraction Layer | 0/2 | Not started | - |
+| 30. Query Backend Abstraction Layer | 1/2 | In Progress|  |
 | 31. Cohort Pipeline DuckDB Migration | 0/2 | Not started | - |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
 

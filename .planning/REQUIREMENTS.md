@@ -233,9 +233,9 @@ Requirements for milestone v1.3: DuckDB Backend Migration.
 
 ### Backend Abstraction (Phase 30)
 
-- [ ] **DBAPI-01**: User can call `get_pcornet_table(name, con)` to get a pipeable dplyr-compatible object from either RDS or DuckDB backend transparently
-- [ ] **DBAPI-02**: User can toggle `USE_DUCKDB` flag in `00_config.R` to switch between RDS and DuckDB backends without changing any downstream script code
-- [ ] **DBAPI-03**: User can manage DuckDB connections via `open_pcornet_con()` / `close_pcornet_con()` with read-only enforcement, and convert lazy queries to tibbles via `materialize()`
+- [x] **DBAPI-01**: User can call `get_pcornet_table(name, con)` to get a pipeable dplyr-compatible object from either RDS or DuckDB backend transparently
+- [x] **DBAPI-02**: User can toggle `USE_DUCKDB` flag in `00_config.R` to switch between RDS and DuckDB backends without changing any downstream script code
+- [x] **DBAPI-03**: User can manage DuckDB connections via `open_pcornet_con()` / `close_pcornet_con()` with read-only enforcement, and convert lazy queries to tibbles via `materialize()`
 - [ ] **DBAPI-04**: User can see all named predicates passing a smoke test on both backends (100-patient sample, PATID set equality), with translation gaps documented in `docs/DUCKDB_TRANSLATION_NOTES.md`
 
 ### Cohort Migration (Phase 31)
@@ -425,9 +425,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBING-01 | Phase 29 | Complete |
 | DBING-02 | Phase 29 | Complete |
 | DBING-03 | Phase 29 | Complete |
-| DBAPI-01 | Phase 30 | Pending |
-| DBAPI-02 | Phase 30 | Pending |
-| DBAPI-03 | Phase 30 | Pending |
+| DBAPI-01 | Phase 30 | Complete |
+| DBAPI-02 | Phase 30 | Complete |
+| DBAPI-03 | Phase 30 | Complete |
 | DBAPI-04 | Phase 30 | Pending |
 | DBCOH-01 | Phase 31 | Pending |
 | DBCOH-02 | Phase 31 | Pending |
