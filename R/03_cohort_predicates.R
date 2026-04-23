@@ -24,7 +24,7 @@
 # Usage:
 #   source("R/02_harmonize_payer.R")  # Loads everything upstream
 #   source("R/03_cohort_predicates.R")
-#   cohort <- pcornet$DEMOGRAPHIC %>%
+#   cohort <- get_pcornet_table("DEMOGRAPHIC") %>%
 #     select(ID, SOURCE) %>%
 #     has_hodgkin_diagnosis() %>%
 #     with_enrollment_period() %>%
