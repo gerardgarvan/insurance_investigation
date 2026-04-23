@@ -75,16 +75,21 @@ CONFIG <- list(
 )
 
 # ------------------------------------------------------------------------------
-# 1.5 BACKEND SELECTION (Phase 30)
+# 1.5 BACKEND SELECTION (Phase 30, default flipped Phase 32)
 # ------------------------------------------------------------------------------
 # Toggle between RDS in-memory tibbles and DuckDB lazy SQL queries.
-# FALSE = RDS mode (default): tables loaded via pcornet$TABLE_NAME list
-# TRUE  = DuckDB mode: tables accessed via get_pcornet_table() returning tbl_dbi
+# FALSE = RDS mode: tables loaded via pcornet$TABLE_NAME list
+# TRUE  = DuckDB mode (default): tables accessed via get_pcornet_table() returning tbl_dbi
 #
 # When TRUE, open_pcornet_con() is called automatically in 01_load_pcornet.R.
 # All downstream scripts use get_pcornet_table() for backend-transparent access.
-# Phase 31 will migrate cohort pipeline; Phase 32 will flip default to TRUE.
-USE_DUCKDB <- FALSE
+#
+# DEPRECATION NOTICE (Phase 32, 2026-04-23):
+#   RDS mode (USE_DUCKDB = FALSE) is retained for backward compatibility and
+#   bisecting against historical behavior. It will be removed in a future milestone.
+#   New scripts should use DuckDB mode exclusively.
+#   See docs/DUCKDB_MIGRATION_GUIDE.md for the migration pattern.
+USE_DUCKDB <- TRUE
 
 # ------------------------------------------------------------------------------
 # 2. PCORNET CDM TABLE PATHS
