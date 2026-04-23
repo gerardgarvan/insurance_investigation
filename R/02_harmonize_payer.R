@@ -137,23 +137,30 @@ map_payer_category <- function(effective_payer, dual_eligible_encounter) {
 # ==============================================================================
 
 # Guard: ENCOUNTER table is required for payer harmonization
-if (is.null(pcornet$ENCOUNTER)) {
-  stop("[Harmonize] pcornet$ENCOUNTER is NULL. ENCOUNTER table is required for payer harmonization. Ensure ENCOUNTER.csv is present.")
+enc_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
+if (is.null(enc_tbl)) {
+  stop("[Harmonize] ENCOUNTER table is NULL. ENCOUNTER table is required for payer harmonization. Ensure ENCOUNTER.csv is present.")
 }
 
 # Check if PAYER_TYPE_SECONDARY column exists (Pitfall 3)
-if (!"PAYER_TYPE_SECONDARY" %in% names(pcornet$ENCOUNTER)) {
+enc_cols <- colnames(enc_tbl)
+if (!"PAYER_TYPE_SECONDARY" %in% enc_cols) {
   message("WARNING: PAYER_TYPE_SECONDARY not found in ENCOUNTER table. Setting all dual_eligible = 0")
-  pcornet$ENCOUNTER$PAYER_TYPE_SECONDARY <- NA_character_
+  # For DuckDB mode, add column via mutate (cannot assign directly to tbl_dbi)
+  encounters_raw <- enc_tbl %>%
+    mutate(PAYER_TYPE_SECONDARY = NA_character_)
+} else {
+  encounters_raw <- enc_tbl
 }
 
 # Process all encounters
-encounters <- pcornet$ENCOUNTER %>%
+encounters <- encounters_raw %>%
   mutate(
     effective_payer = compute_effective_payer(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
     dual_eligible_encounter = detect_dual_eligible(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
     payer_category = map_payer_category(effective_payer, dual_eligible_encounter)
-  )
+  ) %>%
+  materialize()  # Materialize at section boundary (D-04)
 
 # Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
 # Filter 1900 sentinel dates from encounters (SAS/Excel epoch sentinels)
@@ -181,15 +188,23 @@ message(glue("  Dual-eligible encounters: {format(n_dual_eligible_enc, big.mark=
 # ==============================================================================
 
 # Get earliest HL diagnosis from DIAGNOSIS table
-dx_dates <- pcornet$DIAGNOSIS %>%
-  filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
+# Translation gap workaround: replace is_hl_diagnosis() with inline %in% matching
+hl_icd10_undotted <- ICD_CODES$hl_icd10
+hl_icd9_undotted <- ICD_CODES$hl_icd9
+
+dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
+  filter(
+    (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
+    (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+  ) %>%
   group_by(ID) %>%
   summarise(first_dx_date_diagnosis = if (all(is.na(DX_DATE))) as.Date(NA) else min(DX_DATE, na.rm = TRUE), .groups = "drop")
 
 # Get earliest from TUMOR_REGISTRY_ALL (consolidated in 01_load_pcornet.R)
-if (!is.null(pcornet$TUMOR_REGISTRY_ALL) &&
-    "DATE_OF_DIAGNOSIS" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
-  tr_dates <- pcornet$TUMOR_REGISTRY_ALL %>%
+tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
+if (!is.null(tr_tbl) &&
+    "DATE_OF_DIAGNOSIS" %in% colnames(tr_tbl)) {
+  tr_dates <- tr_tbl %>%
     filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
     group_by(ID) %>%
     summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop")
@@ -279,7 +294,7 @@ payer_transition <- encounters %>%
   select(ID, PAYER_TRANSITION)
 
 # 4f. Get SOURCE from DEMOGRAPHIC (one row per patient)
-patient_source <- pcornet$DEMOGRAPHIC %>%
+patient_source <- get_pcornet_table("DEMOGRAPHIC") %>%
   select(ID, SOURCE) %>%
   distinct()
 

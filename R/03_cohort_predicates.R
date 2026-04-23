@@ -18,7 +18,8 @@
 #   - is_hl_diagnosis() from utils_icd.R
 #   - normalize_icd() from utils_icd.R
 #   - TREATMENT_CODES from 00_config.R
-#   - pcornet$* tables from 01_load_pcornet.R
+#   - get_pcornet_table() from utils_duckdb.R
+#   - materialize() from utils_duckdb.R
 #
 # Usage:
 #   source("R/02_harmonize_payer.R")  # Loads everything upstream
@@ -56,30 +57,46 @@ library(stringr)
 has_hodgkin_diagnosis <- function(patient_df) {
 
   # Source 1: DIAGNOSIS table (ICD-9/10)
-  dx_hl_patients <- pcornet$DIAGNOSIS %>%
-    filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
+  # Translation gap workaround: replace is_hl_diagnosis() with inline %in% matching
+  # Build both dotted and undotted ICD code lists for robust matching
+  hl_icd10_undotted <- ICD_CODES$hl_icd10
+  hl_icd9_undotted <- ICD_CODES$hl_icd9
+
+  dx_hl_patients <- get_pcornet_table("DIAGNOSIS") %>%
+    filter(
+      (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
+      (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+    ) %>%
     distinct(ID)
 
   # Source 2: TUMOR_REGISTRY_ALL (Phase 14 optimization: use combined TR table)
   # TR1 uses HISTOLOGICAL_TYPE, TR2/TR3 use MORPH -- check both columns
-  tr_all <- if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
-    tr_hist <- if ("HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
-      pcornet$TUMOR_REGISTRY_ALL %>%
-        filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
+  # NULL-guard: use tryCatch since get_pcornet_table() returns tbl_dbi (never NULL) in DuckDB mode
+  tr_all_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
+
+  tr_all <- if (!is.null(tr_all_tbl)) {
+    tr_cols <- colnames(tr_all_tbl)
+
+    tr_hist <- if ("HISTOLOGICAL_TYPE" %in% tr_cols) {
+      # Translation gap workaround: replace is_hl_histology() with substr()
+      tr_all_tbl %>%
+        filter(substr(as.character(HISTOLOGICAL_TYPE), 1, 4) %in% ICD_CODES$hl_histology) %>%
         distinct(ID)
     } else {
       tibble(ID = character())
     }
 
-    tr_morph <- if ("MORPH" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
-      pcornet$TUMOR_REGISTRY_ALL %>%
-        filter(is_hl_histology(MORPH)) %>%
+    tr_morph <- if ("MORPH" %in% tr_cols) {
+      # Translation gap workaround: replace is_hl_histology() with substr()
+      tr_all_tbl %>%
+        filter(substr(as.character(MORPH), 1, 4) %in% ICD_CODES$hl_histology) %>%
         distinct(ID)
     } else {
       tibble(ID = character())
     }
 
-    bind_rows(tr_hist, tr_morph) %>% distinct(ID)
+    # Materialize before bind_rows (lazy query cannot be bound with tibbles)
+    bind_rows(materialize(tr_hist), materialize(tr_morph)) %>% distinct(ID)
   } else {
     tibble(ID = character())
   }
@@ -152,8 +169,10 @@ has_hodgkin_diagnosis <- function(patient_df) {
 #' @return Filtered tibble containing only patients with enrollment records
 #'
 with_enrollment_period <- function(patient_df) {
-  enrolled_patients <- pcornet$ENROLLMENT %>%
-    distinct(ID)
+  # Materialize enrolled_patients since we need nrow() for message and semi_join needs in-memory data
+  enrolled_patients <- get_pcornet_table("ENROLLMENT") %>%
+    distinct(ID) %>%
+    materialize()
 
   message(glue("[Predicate] with_enrollment_period: {nrow(enrolled_patients)} patients with enrollment records"))
 
@@ -220,14 +239,22 @@ has_chemo <- function() {
 
   # TUMOR_REGISTRY: chemo dates from combined TR (Phase 14 optimization)
   # TR1 uses CHEMO_START_DATE_SUMMARY, TR2/TR3 use DT_CHEMO
-  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+  # NULL-guard: use tryCatch for DuckDB compatibility
+  tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
+  if (!is.null(tr_tbl)) {
     tr_chemo_cols <- intersect(
       c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
-      names(pcornet$TUMOR_REGISTRY_ALL)
+      colnames(tr_tbl)
     )
     if (length(tr_chemo_cols) > 0) {
-      tr_chemo <- pcornet$TUMOR_REGISTRY_ALL %>%
-        filter(if_any(all_of(tr_chemo_cols), ~ !is.na(.))) %>%
+      # Translation gap workaround: replace if_any with explicit OR
+      if (length(tr_chemo_cols) == 1) {
+        filter_expr <- paste0("!is.na(", tr_chemo_cols[1], ")")
+      } else {
+        filter_expr <- paste0("!is.na(", tr_chemo_cols, ")", collapse = " | ")
+      }
+      tr_chemo <- tr_tbl %>%
+        filter(!!rlang::parse_expr(filter_expr)) %>%
         pull(ID) %>% unique()
       chemo_ids <- c(chemo_ids, tr_chemo)
       n_tr <- length(unique(tr_chemo))
@@ -235,27 +262,36 @@ has_chemo <- function() {
   }
 
   # PROCEDURES: chemo CPT/HCPCS, ICD-9-CM, ICD-10-PCS codes
+  # Translation gap workaround for str_detect: two-step (lazy filter, materialize, R-side regex)
   chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
   px_chemo <- character(0)
-  if (!is.null(pcornet$PROCEDURES)) {
-    px_chemo <- pcornet$PROCEDURES %>%
+  proc_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
+  if (!is.null(proc_tbl)) {
+    # For ICD-10-PCS prefix matching, filter PX_TYPE first (lazy), then materialize for R-side str_detect
+    px_10_chemo <- proc_tbl %>%
+      filter(PX_TYPE == "10") %>%
+      materialize() %>%
+      filter(str_detect(PX, chemo_icd10pcs_rx)) %>%
+      pull(ID)
+
+    px_other_chemo <- proc_tbl %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-        (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx))
+        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9)
       ) %>%
       distinct(ID) %>%
       pull(ID)
+
+    px_chemo <- unique(c(px_10_chemo, px_other_chemo))
     chemo_ids <- c(chemo_ids, px_chemo)
   }
   n_px <- length(px_chemo)
 
   # PRESCRIBING: RXNORM_CUI matching for known chemo drugs (ABVD regimen components)
-  # Previous version counted ANY prescription as chemo evidence, inflating HAD_CHEMO.
-  # Now filters to TREATMENT_CODES$chemo_rxnorm (Doxorubicin, Bleomycin, Vinblastine, Dacarbazine).
   rx_chemo <- character(0)
-  if (!is.null(pcornet$PRESCRIBING)) {
-    rx_chemo <- pcornet$PRESCRIBING %>%
+  rx_tbl <- tryCatch(get_pcornet_table("PRESCRIBING"), error = function(e) NULL)
+  if (!is.null(rx_tbl)) {
+    rx_chemo <- rx_tbl %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
       distinct(ID) %>%
@@ -267,8 +303,9 @@ has_chemo <- function() {
   # --- Phase 9: Expanded treatment detection sources ---
 
   # DIAGNOSIS: Z51.11/Z51.12 (ICD-10), V58.11/V58.12 (ICD-9) per D-09
-  if (!is.null(pcornet$DIAGNOSIS)) {
-    dx_chemo <- pcornet$DIAGNOSIS %>%
+  dx_tbl <- tryCatch(get_pcornet_table("DIAGNOSIS"), error = function(e) NULL)
+  if (!is.null(dx_tbl)) {
+    dx_chemo <- dx_tbl %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
@@ -280,8 +317,9 @@ has_chemo <- function() {
   }
 
   # ENCOUNTER: DRGs 837-839, 846-848 per D-10
-  if (!is.null(pcornet$ENCOUNTER)) {
-    drg_chemo <- pcornet$ENCOUNTER %>%
+  enc_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
+  if (!is.null(enc_tbl)) {
+    drg_chemo <- enc_tbl %>%
       filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
       distinct(ID) %>%
       pull(ID)
@@ -290,8 +328,9 @@ has_chemo <- function() {
   }
 
   # DISPENSING: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
-  if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
-    disp_chemo <- pcornet$DISPENSING %>%
+  disp_tbl <- tryCatch(get_pcornet_table("DISPENSING"), error = function(e) NULL)
+  if (!is.null(disp_tbl) && "RXNORM_CUI" %in% colnames(disp_tbl)) {
+    disp_chemo <- disp_tbl %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       distinct(ID) %>%
       pull(ID)
@@ -300,8 +339,9 @@ has_chemo <- function() {
   }
 
   # MED_ADMIN: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
-  if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
-    ma_chemo <- pcornet$MED_ADMIN %>%
+  ma_tbl <- tryCatch(get_pcornet_table("MED_ADMIN"), error = function(e) NULL)
+  if (!is.null(ma_tbl) && "RXNORM_CUI" %in% colnames(ma_tbl)) {
+    ma_chemo <- ma_tbl %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       distinct(ID) %>%
       pull(ID)
@@ -310,8 +350,9 @@ has_chemo <- function() {
   }
 
   # PROCEDURES revenue codes: 0331/0332/0335 per D-11 (PX_TYPE = "RE")
-  if (!is.null(pcornet$PROCEDURES)) {
-    rev_chemo <- pcornet$PROCEDURES %>%
+  # Reuse proc_tbl from above if already fetched
+  if (!is.null(proc_tbl)) {
+    rev_chemo <- proc_tbl %>%
       filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue) %>%
       distinct(ID) %>%
       pull(ID)
@@ -352,14 +393,21 @@ has_radiation <- function() {
 
   # TUMOR_REGISTRY: radiation dates from combined TR (Phase 14 optimization)
   # TR1 uses RAD_START_DATE_SUMMARY, TR2/TR3 use DT_RAD
-  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+  tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
+  if (!is.null(tr_tbl)) {
     tr_rad_cols <- intersect(
       c("RAD_START_DATE_SUMMARY", "DT_RAD"),
-      names(pcornet$TUMOR_REGISTRY_ALL)
+      colnames(tr_tbl)
     )
     if (length(tr_rad_cols) > 0) {
-      tr_rad <- pcornet$TUMOR_REGISTRY_ALL %>%
-        filter(if_any(all_of(tr_rad_cols), ~ !is.na(.))) %>%
+      # Translation gap workaround: replace if_any with explicit OR
+      if (length(tr_rad_cols) == 1) {
+        filter_expr <- paste0("!is.na(", tr_rad_cols[1], ")")
+      } else {
+        filter_expr <- paste0("!is.na(", tr_rad_cols, ")", collapse = " | ")
+      }
+      tr_rad <- tr_tbl %>%
+        filter(!!rlang::parse_expr(filter_expr)) %>%
         pull(ID) %>% unique()
       rad_ids <- c(rad_ids, tr_rad)
       n_tr <- length(unique(tr_rad))
@@ -367,17 +415,26 @@ has_radiation <- function() {
   }
 
   # PROCEDURES: radiation CPT, ICD-9-CM, ICD-10-PCS codes
+  # Translation gap workaround for str_detect: two-step (lazy filter, materialize, R-side regex)
   rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
   px_rad <- character(0)
-  if (!is.null(pcornet$PROCEDURES)) {
-    px_rad <- pcornet$PROCEDURES %>%
+  proc_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
+  if (!is.null(proc_tbl)) {
+    px_10_rad <- proc_tbl %>%
+      filter(PX_TYPE == "10") %>%
+      materialize() %>%
+      filter(str_detect(PX, rad_icd10pcs_rx)) %>%
+      pull(ID)
+
+    px_other_rad <- proc_tbl %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-        (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx))
+        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9)
       ) %>%
       distinct(ID) %>%
       pull(ID)
+
+    px_rad <- unique(c(px_10_rad, px_other_rad))
     rad_ids <- c(rad_ids, px_rad)
   }
   n_px <- length(px_rad)
@@ -385,8 +442,9 @@ has_radiation <- function() {
   # --- Phase 9: Expanded treatment detection sources ---
 
   # DIAGNOSIS: Z51.0 (ICD-10), V58.0 (ICD-9) per D-09
-  if (!is.null(pcornet$DIAGNOSIS)) {
-    dx_rad <- pcornet$DIAGNOSIS %>%
+  dx_tbl <- tryCatch(get_pcornet_table("DIAGNOSIS"), error = function(e) NULL)
+  if (!is.null(dx_tbl)) {
+    dx_rad <- dx_tbl %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
@@ -398,8 +456,9 @@ has_radiation <- function() {
   }
 
   # ENCOUNTER: DRG 849 per D-10
-  if (!is.null(pcornet$ENCOUNTER)) {
-    drg_rad <- pcornet$ENCOUNTER %>%
+  enc_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
+  if (!is.null(enc_tbl)) {
+    drg_rad <- enc_tbl %>%
       filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
       distinct(ID) %>%
       pull(ID)
@@ -408,8 +467,8 @@ has_radiation <- function() {
   }
 
   # PROCEDURES revenue codes: 0330/0333 per D-11 (PX_TYPE = "RE")
-  if (!is.null(pcornet$PROCEDURES)) {
-    rev_rad <- pcornet$PROCEDURES %>%
+  if (!is.null(proc_tbl)) {
+    rev_rad <- proc_tbl %>%
       filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue) %>%
       distinct(ID) %>%
       pull(ID)
@@ -456,10 +515,13 @@ has_sct <- function() {
 
   # TUMOR_REGISTRY: SCT evidence from combined TR (Phase 14 optimization)
   # TR1 uses HEMATOLOGIC_TRANSPLANT_AND_ENDOC (code), TR2/TR3 use date columns
-  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+  tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
+  if (!is.null(tr_tbl)) {
+    tr_cols <- colnames(tr_tbl)
+
     # Check for TR1's code-based field
-    if ("HEMATOLOGIC_TRANSPLANT_AND_ENDOC" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
-      tr1_sct <- pcornet$TUMOR_REGISTRY_ALL %>%
+    if ("HEMATOLOGIC_TRANSPLANT_AND_ENDOC" %in% tr_cols) {
+      tr1_sct <- tr_tbl %>%
         filter(!is.na(HEMATOLOGIC_TRANSPLANT_AND_ENDOC) &
                HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "" &
                HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "00") %>%
@@ -470,22 +532,30 @@ has_sct <- function() {
     # Check for TR2/TR3 date columns (DT_HTE, DT_SCT, etc.)
     sct_date_cols <- c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
                        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT")
-    tr_sct_date_cols <- intersect(sct_date_cols, names(pcornet$TUMOR_REGISTRY_ALL))
+    tr_sct_date_cols <- intersect(sct_date_cols, tr_cols)
     if (length(tr_sct_date_cols) > 0) {
-      tr_sct_dates <- pcornet$TUMOR_REGISTRY_ALL %>%
-        filter(if_any(all_of(tr_sct_date_cols), ~ !is.na(.))) %>%
+      # Translation gap workaround: replace if_any with explicit OR
+      if (length(tr_sct_date_cols) == 1) {
+        filter_expr <- paste0("!is.na(", tr_sct_date_cols[1], ")")
+      } else {
+        filter_expr <- paste0("!is.na(", tr_sct_date_cols, ")", collapse = " | ")
+      }
+      tr_sct_dates <- tr_tbl %>%
+        filter(!!rlang::parse_expr(filter_expr)) %>%
         pull(ID)
       sct_ids <- c(sct_ids, tr_sct_dates)
     }
 
-    # Aggregate TR source count
-    n_tr <- length(unique(sct_ids[sct_ids %in% pcornet$TUMOR_REGISTRY_ALL$ID]))
+    # Aggregate TR source count (check against materialized TR IDs)
+    tr_all_ids <- tr_tbl %>% pull(ID) %>% unique()
+    n_tr <- length(unique(sct_ids[sct_ids %in% tr_all_ids]))
   }
 
   # PROCEDURES: SCT CPT, ICD-9-CM, ICD-10-PCS codes
   px_sct <- character(0)
-  if (!is.null(pcornet$PROCEDURES)) {
-    px_sct <- pcornet$PROCEDURES %>%
+  proc_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
+  if (!is.null(proc_tbl)) {
+    px_sct <- proc_tbl %>%
       filter(
         (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
@@ -500,8 +570,9 @@ has_sct <- function() {
   # --- Phase 9: Expanded treatment detection sources ---
 
   # DIAGNOSIS: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only, no ICD-9 SCT dx codes) per D-09
-  if (!is.null(pcornet$DIAGNOSIS)) {
-    dx_sct <- pcornet$DIAGNOSIS %>%
+  dx_tbl <- tryCatch(get_pcornet_table("DIAGNOSIS"), error = function(e) NULL)
+  if (!is.null(dx_tbl)) {
+    dx_sct <- dx_tbl %>%
       filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
       distinct(ID) %>%
       pull(ID)
@@ -510,8 +581,9 @@ has_sct <- function() {
   }
 
   # ENCOUNTER: DRGs 014, 016, 017 per D-10
-  if (!is.null(pcornet$ENCOUNTER)) {
-    drg_sct <- pcornet$ENCOUNTER %>%
+  enc_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
+  if (!is.null(enc_tbl)) {
+    drg_sct <- enc_tbl %>%
       filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
       distinct(ID) %>%
       pull(ID)
@@ -520,8 +592,8 @@ has_sct <- function() {
   }
 
   # PROCEDURES revenue codes: 0362/0815 per D-11 (PX_TYPE = "RE")
-  if (!is.null(pcornet$PROCEDURES)) {
-    rev_sct <- pcornet$PROCEDURES %>%
+  if (!is.null(proc_tbl)) {
+    rev_sct <- proc_tbl %>%
       filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
       distinct(ID) %>%
       pull(ID)
