@@ -84,14 +84,8 @@ message(strrep("=", 60))
 build_start <- Sys.time()
 
 con <- DBI::dbConnect(duckdb::duckdb(), dbdir = TMP_PATH)
-on.exit({
-  tryCatch(DBI::dbDisconnect(con, shutdown = TRUE), error = function(e) NULL)
-  # Clean up .tmp on error (per D-03: don't swap partial builds)
-  if (file.exists(TMP_PATH)) {
-    message(glue("Cleaning up .tmp file after error: {TMP_PATH}"))
-    file.remove(TMP_PATH)
-  }
-}, add = TRUE)
+# NOTE: on.exit() removed — unreliable at top level of source()'d scripts
+# (no stable function frame). Cleanup handled explicitly via tryCatch below.
 
 # ==============================================================================
 # INITIALIZE INGEST LOG
@@ -105,132 +99,148 @@ ingest_log <- tibble(
 )
 
 # ==============================================================================
-# SEQUENTIAL TABLE INGESTION LOOP
+# SEQUENTIAL TABLE INGESTION + INDEXING + VERIFICATION (wrapped in tryCatch)
 # ==============================================================================
+# Explicit error handling instead of on.exit() — more reliable in source()'d scripts
 
-for (tbl_name in TABLES_TO_INGEST) {
-  rds_path <- file.path(CONFIG$cache$raw_dir, paste0(tbl_name, ".rds"))
+ingest_ok <- tryCatch({
 
-  if (!file.exists(rds_path)) {
-    stop(glue("RDS file not found for {tbl_name}: {rds_path}"))
-  }
+  for (tbl_name in TABLES_TO_INGEST) {
+    rds_path <- file.path(CONFIG$cache$raw_dir, paste0(tbl_name, ".rds"))
 
-  message(glue("\n[{which(TABLES_TO_INGEST == tbl_name)}/{length(TABLES_TO_INGEST)}] Ingesting {tbl_name}..."))
-  tbl_start <- Sys.time()
-
-  # Load from RDS cache
-  df <- readRDS(rds_path)
-  message(glue("  Loaded RDS: {format(nrow(df), big.mark=',')} rows x {ncol(df)} cols"))
-
-  # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
-  DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)
-
-  # Record metrics
-  duration <- as.numeric(difftime(Sys.time(), tbl_start, units = "secs"))
-  ingest_log <- bind_rows(ingest_log, tibble(
-    table_name   = tbl_name,
-    row_count    = nrow(df),
-    col_count    = ncol(df),
-    duration_sec = round(duration, 2)
-  ))
-
-  message(glue("  Written to DuckDB in {round(duration, 1)}s"))
-
-  # Free memory before next table
-  rm(df)
-  gc(verbose = FALSE)
-}
-
-# ==============================================================================
-# INDEX CREATION (Phase 29 Plan 02 -- DBING-03)
-# ==============================================================================
-# Build indexes AFTER all data is loaded (faster than during insert).
-# Per D-04: tryCatch() per index -- failed index = warning, not error.
-# An unindexed table is still queryable, just slower.
-
-message(glue("\n{strrep('=', 60)}"))
-message("Creating indexes...")
-message(strrep("=", 60))
-
-index_results <- tibble(
-  table_name = character(),
-  index_name = character(),
-  column     = character(),
-  status     = character()
-)
-
-# PATID indexes on all 13 tables (universal join key)
-# NOTE: PCORnet CDM uses "ID" as the patient ID column name, not "PATID"
-for (tbl_name in TABLES_TO_INGEST) {
-  idx_name <- paste0("idx_", tolower(tbl_name), "_patid")
-  tryCatch({
-    DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ID)"))
-    message(glue("  Created: {idx_name}"))
-    index_results <- bind_rows(index_results, tibble(
-      table_name = tbl_name, index_name = idx_name,
-      column = "ID", status = "created"
-    ))
-  }, error = function(e) {
-    warning(glue("  FAILED: {idx_name} -- {e$message}"))
-    index_results <<- bind_rows(index_results, tibble(
-      table_name = tbl_name, index_name = idx_name,
-      column = "ID", status = paste0("failed: ", e$message)
-    ))
-  })
-}
-
-# ENCOUNTERID indexes on tables that have it (6 tables)
-for (tbl_name in TABLES_WITH_ENCOUNTERID) {
-  idx_name <- paste0("idx_", tolower(tbl_name), "_encounterid")
-  tryCatch({
-    DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ENCOUNTERID)"))
-    message(glue("  Created: {idx_name}"))
-    index_results <- bind_rows(index_results, tibble(
-      table_name = tbl_name, index_name = idx_name,
-      column = "ENCOUNTERID", status = "created"
-    ))
-  }, error = function(e) {
-    warning(glue("  FAILED: {idx_name} -- {e$message}"))
-    index_results <<- bind_rows(index_results, tibble(
-      table_name = tbl_name, index_name = idx_name,
-      column = "ENCOUNTERID", status = paste0("failed: ", e$message)
-    ))
-  })
-}
-
-n_created <- sum(index_results$status == "created")
-n_failed  <- sum(index_results$status != "created")
-message(glue("\nIndexes: {n_created} created, {n_failed} failed (of {nrow(index_results)} total)"))
-
-# ==============================================================================
-# ROUND-TRIP VERIFICATION (Phase 29 Plan 02 -- DBING-03)
-# ==============================================================================
-# Verify dimensions and column names match between RDS source and DuckDB copy.
-# Full value parity testing is deferred to Phase 31.
-
-message(glue("\n{strrep('=', 60)}"))
-message("Round-trip verification...")
-message(strrep("=", 60))
-
-all_ok <- TRUE
-for (tbl_name in TABLES_TO_INGEST) {
-  result <- verify_duckdb_roundtrip(tbl_name, con)
-  if (result$ok) {
-    message(glue("  PASS: {tbl_name} ({format(result$rds_nrow, big.mark=',')} rows x {result$rds_ncol} cols)"))
-  } else {
-    message(glue("  FAIL: {tbl_name} -- dim_match={result$dim_match}, col_match={result$col_match}"))
-    if (length(result$mismatched_cols) > 0) {
-      message(glue("         {paste(result$mismatched_cols, collapse = '; ')}"))
+    if (!file.exists(rds_path)) {
+      stop(glue("RDS file not found for {tbl_name}: {rds_path}"))
     }
-    all_ok <- FALSE
+
+    message(glue("\n[{which(TABLES_TO_INGEST == tbl_name)}/{length(TABLES_TO_INGEST)}] Ingesting {tbl_name}..."))
+    tbl_start <- Sys.time()
+
+    # Load from RDS cache
+    df <- readRDS(rds_path)
+    message(glue("  Loaded RDS: {format(nrow(df), big.mark=',')} rows x {ncol(df)} cols"))
+
+    # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
+    DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)
+
+    # Record metrics
+    duration <- as.numeric(difftime(Sys.time(), tbl_start, units = "secs"))
+    ingest_log <<- bind_rows(ingest_log, tibble(
+      table_name   = tbl_name,
+      row_count    = nrow(df),
+      col_count    = ncol(df),
+      duration_sec = round(duration, 2)
+    ))
+
+    message(glue("  Written to DuckDB in {round(duration, 1)}s"))
+
+    # Free memory before next table
+    rm(df)
+    gc(verbose = FALSE)
   }
-}
 
-if (!all_ok) {
-  stop("Round-trip verification FAILED for one or more tables. DuckDB file NOT promoted.")
-}
+  # ============================================================================
+  # INDEX CREATION (Phase 29 Plan 02 -- DBING-03)
+  # ============================================================================
+  # Build indexes AFTER all data is loaded (faster than during insert).
+  # Per D-04: tryCatch() per index -- failed index = warning, not error.
+  # An unindexed table is still queryable, just slower.
 
-message(glue("\nAll {length(TABLES_TO_INGEST)} tables passed round-trip verification."))
+  message(glue("\n{strrep('=', 60)}"))
+  message("Creating indexes...")
+  message(strrep("=", 60))
+
+  index_results <<- tibble(
+    table_name = character(),
+    index_name = character(),
+    column     = character(),
+    status     = character()
+  )
+
+  # PATID indexes on all 13 tables (universal join key)
+  # NOTE: PCORnet CDM uses "ID" as the patient ID column name, not "PATID"
+  for (tbl_name in TABLES_TO_INGEST) {
+    idx_name <- paste0("idx_", tolower(tbl_name), "_patid")
+    tryCatch({
+      DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ID)"))
+      message(glue("  Created: {idx_name}"))
+      index_results <<- bind_rows(index_results, tibble(
+        table_name = tbl_name, index_name = idx_name,
+        column = "ID", status = "created"
+      ))
+    }, error = function(e) {
+      warning(glue("  FAILED: {idx_name} -- {e$message}"))
+      index_results <<- bind_rows(index_results, tibble(
+        table_name = tbl_name, index_name = idx_name,
+        column = "ID", status = paste0("failed: ", e$message)
+      ))
+    })
+  }
+
+  # ENCOUNTERID indexes on tables that have it (6 tables)
+  for (tbl_name in TABLES_WITH_ENCOUNTERID) {
+    idx_name <- paste0("idx_", tolower(tbl_name), "_encounterid")
+    tryCatch({
+      DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ENCOUNTERID)"))
+      message(glue("  Created: {idx_name}"))
+      index_results <<- bind_rows(index_results, tibble(
+        table_name = tbl_name, index_name = idx_name,
+        column = "ENCOUNTERID", status = "created"
+      ))
+    }, error = function(e) {
+      warning(glue("  FAILED: {idx_name} -- {e$message}"))
+      index_results <<- bind_rows(index_results, tibble(
+        table_name = tbl_name, index_name = idx_name,
+        column = "ENCOUNTERID", status = paste0("failed: ", e$message)
+      ))
+    })
+  }
+
+  n_created <<- sum(index_results$status == "created")
+  n_failed  <<- sum(index_results$status != "created")
+  message(glue("\nIndexes: {n_created} created, {n_failed} failed (of {nrow(index_results)} total)"))
+
+  # ============================================================================
+  # ROUND-TRIP VERIFICATION (Phase 29 Plan 02 -- DBING-03)
+  # ============================================================================
+  # Verify dimensions and column names match between RDS source and DuckDB copy.
+  # Full value parity testing is deferred to Phase 31.
+
+  message(glue("\n{strrep('=', 60)}"))
+  message("Round-trip verification...")
+  message(strrep("=", 60))
+
+  all_ok <- TRUE
+  for (tbl_name in TABLES_TO_INGEST) {
+    result <- verify_duckdb_roundtrip(tbl_name, con)
+    if (result$ok) {
+      message(glue("  PASS: {tbl_name} ({format(result$rds_nrow, big.mark=',')} rows x {result$rds_ncol} cols)"))
+    } else {
+      message(glue("  FAIL: {tbl_name} -- dim_match={result$dim_match}, col_match={result$col_match}"))
+      if (length(result$mismatched_cols) > 0) {
+        message(glue("         {paste(result$mismatched_cols, collapse = '; ')}"))
+      }
+      all_ok <- FALSE
+    }
+  }
+
+  if (!all_ok) {
+    stop("Round-trip verification FAILED for one or more tables. DuckDB file NOT promoted.")
+  }
+
+  message(glue("\nAll {length(TABLES_TO_INGEST)} tables passed round-trip verification."))
+
+  TRUE  # signal success
+
+}, error = function(e) {
+  # Cleanup on error: disconnect and remove partial .tmp (per D-03)
+  message(glue("\nINGEST ERROR: {e$message}"))
+  tryCatch(DBI::dbDisconnect(con, shutdown = TRUE), error = function(e2) NULL)
+  if (file.exists(TMP_PATH)) {
+    message(glue("Cleaning up .tmp file after error: {TMP_PATH}"))
+    file.remove(TMP_PATH)
+  }
+  stop(e$message)
+})
 
 # ==============================================================================
 # ATOMIC SWAP: DISCONNECT AND RENAME .TMP TO CANONICAL PATH
@@ -238,7 +248,6 @@ message(glue("\nAll {length(TABLES_TO_INGEST)} tables passed round-trip verifica
 
 # Disconnect cleanly before file operations
 DBI::dbDisconnect(con, shutdown = TRUE)
-on.exit()  # Clear the on.exit hook (build succeeded, don't clean up .tmp)
 
 # Atomic swap: remove old canonical, rename .tmp to canonical
 if (file.exists(DUCKDB_PATH)) {
