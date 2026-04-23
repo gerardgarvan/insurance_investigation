@@ -24,7 +24,11 @@
 #
 # Dependencies: Sources R/00_config.R (CONFIG, PAYER_MAPPING).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: pcornet$DEMOGRAPHIC (ID, SOURCE), pcornet$ENCOUNTER (19 cols).
+#   Requires: get_pcornet_table("DEMOGRAPHIC"), get_pcornet_table("ENCOUNTER").
+#
+# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
+#   access. Materializes early because downstream logic uses nrow(), get_dupes(),
+#   iterative loops, and add_count() which require in-memory data.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -38,16 +42,21 @@ library(stringr)
 library(janitor)
 library(tidyr)
 
-# Load tables if not already loaded
-if (!exists("pcornet")) source("R/01_load_pcornet.R")
+# Load tables if not already loaded (RDS mode)
+if (!USE_DUCKDB && !exists("pcornet")) source("R/01_load_pcornet.R")
+# DuckDB mode: open connection if needed
+if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con()
+}
 
 # ==============================================================================
 # Missingness Definition (Phase 19/20 pattern, D-04)
 # ==============================================================================
 # Missing = NA, empty string, NI, UN, OT, 99, 9999
+# Phase 32: nchar(trimws()) replaced with direct empty-string check (DuckDB translation gap #7)
 is_missing_payer <- function(payer_value) {
   is.na(payer_value) |
-    nchar(trimws(payer_value)) == 0 |
+    payer_value == "" |
     payer_value %in% c("NI", "UN", "OT", "99", "9999")
 }
 
@@ -64,19 +73,22 @@ message(glue("{strrep('=', 70)}\n"))
 
 message("--- SECTION 1: Identify All Patients per Site from DEMOGRAPHIC ---")
 
-all_sites <- sort(unique(pcornet$DEMOGRAPHIC$SOURCE))
+# Phase 32: Use get_pcornet_table() and materialize for in-memory operations
+demographic_tbl <- get_pcornet_table("DEMOGRAPHIC") %>% materialize()
+
+all_sites <- sort(unique(demographic_tbl$SOURCE))
 message(glue("Sites found in DEMOGRAPHIC.SOURCE: {paste(all_sites, collapse=', ')}"))
 message(glue("Total unique sites: {length(all_sites)}"))
 
 # Log N patients per site
 for (site in all_sites) {
-  n_site <- pcornet$DEMOGRAPHIC %>%
+  n_site <- demographic_tbl %>%
     filter(SOURCE == site) %>%
     n_distinct(.$ID)
   message(glue("  {site}: {format(n_site, big.mark=',')} patients"))
 }
 
-total_patients <- n_distinct(pcornet$DEMOGRAPHIC$ID)
+total_patients <- n_distinct(demographic_tbl$ID)
 message(glue("\nTotal patients across all sites: {format(total_patients, big.mark=',')}"))
 
 # ==============================================================================
@@ -88,10 +100,12 @@ message(glue("\nTotal patients across all sites: {format(total_patients, big.mar
 
 message(glue("\n--- SECTION 2: Build All-Site Encounter Dataset ---"))
 
-all_encounters <- pcornet$ENCOUNTER %>%
+# Phase 32: Use get_pcornet_table() and materialize after join
+all_encounters <- get_pcornet_table("ENCOUNTER") %>%
   rename(ENCOUNTER_SOURCE = SOURCE) %>%
-  left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
-  rename(SITE = SOURCE)
+  left_join(demographic_tbl %>% select(ID, SOURCE), by = "ID") %>%
+  rename(SITE = SOURCE) %>%
+  materialize()
 
 # Handle encounters with no DEMOGRAPHIC record
 n_no_site <- sum(is.na(all_encounters$SITE))
@@ -157,7 +171,7 @@ all_encounters <- all_encounters %>%
   )
 
 # Check if standard format parsing succeeded
-n_admit_raw <- sum(!is.na(all_encounters$ADMIT_DATE) & nchar(trimws(all_encounters$ADMIT_DATE)) > 0)
+n_admit_raw <- sum(!is.na(all_encounters$ADMIT_DATE) & all_encounters$ADMIT_DATE != "")
 n_admit_parsed <- sum(!is.na(all_encounters$admit_date_parsed))
 admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_raw, 1) else 100
 
@@ -230,7 +244,7 @@ near_exact_dupes <- all_encounters %>%
 # Log counts per SITE by joining back to SITE assignment
 if (nrow(exact_dupes) > 0) {
   exact_dupes_with_site <- exact_dupes %>%
-    left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
+    left_join(demographic_tbl %>% select(ID, SOURCE), by = "ID") %>%
     rename(SITE = SOURCE) %>%
     mutate(SITE = if_else(is.na(SITE), "<No Site>", SITE))
 
@@ -246,7 +260,7 @@ if (nrow(exact_dupes) > 0) {
 
 if (nrow(near_exact_dupes) > 0) {
   near_exact_dupes_with_site <- near_exact_dupes %>%
-    left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
+    left_join(demographic_tbl %>% select(ID, SOURCE), by = "ID") %>%
     rename(SITE = SOURCE) %>%
     mutate(SITE = if_else(is.na(SITE), "<No Site>", SITE))
 
@@ -489,7 +503,7 @@ aggregate_rows <- list()
 for (site in sort(unique(all_encounters$SITE))) {
   site_enc <- all_encounters %>% filter(SITE == site)
   site_pds <- patient_date_stats %>% filter(SITE == site)
-  n_site_patients <- pcornet$DEMOGRAPHIC %>% filter(SOURCE == site) %>% n_distinct(.$ID)
+  n_site_patients <- demographic_tbl %>% filter(SOURCE == site) %>% n_distinct(.$ID)
 
   # Exact/near-exact counts for this site
   n_exact_site <- if (nrow(exact_dupes_with_site) > 0) {
@@ -592,7 +606,7 @@ cross_site_rows <- list()
 for (site in sort(unique(all_encounters$SITE))) {
   site_enc <- all_encounters %>% filter(SITE == site)
   site_pds <- patient_date_stats %>% filter(SITE == site)
-  n_site_patients <- pcornet$DEMOGRAPHIC %>% filter(SOURCE == site) %>% n_distinct(.$ID)
+  n_site_patients <- demographic_tbl %>% filter(SOURCE == site) %>% n_distinct(.$ID)
 
   n_unique_dates <- nrow(site_pds)
   n_dupe_pd <- sum(site_pds$n_enc_this_date > 1)
