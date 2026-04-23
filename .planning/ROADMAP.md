@@ -29,7 +29,7 @@
 - [ ] **Phase 26: Overlap Classification and Recommendations** - Classify multi-source encounter groups as Identical/Partial/Distinct via field comparison and produce CSV outputs, console summary, and per-site actionable recommendations
 - [x] **Phase 29: DuckDB Ingest Infrastructure** - Ingest 13 PCORnet tables from RDS cache into indexed DuckDB file with atomic write and round-trip verification (completed 2026-04-23)
 - [x] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends (completed 2026-04-23)
-- [ ] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison
+- [x] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison (completed 2026-04-23)
 - [ ] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB
 
 ## Phase Details
@@ -644,11 +644,11 @@ Plans:
 3. User can see RDS vs DuckDB benchmark timings in `output/logs/duckdb_benchmark.csv` from 3 runs per backend with median comparison
 4. User can confirm `USE_DUCKDB = FALSE` still reproduces Phase 16 RDS snapshot behavior (no regression)
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 
 Plans:
 - [x] 31-01-PLAN.md -- Migrate cohort build script to get_pcornet_table calls with late materialize and full parity testing (DBCOH-01, DBCOH-02)
-- [ ] 31-02-PLAN.md -- Benchmark wrapper helper and cohort build timing comparison (DBCOH-03)
+- [x] 31-02-PLAN.md -- Benchmark wrapper helper and cohort build timing comparison (DBCOH-03)
 
 ---
 
