@@ -24,10 +24,14 @@
 #
 # Dependencies: Sources 02_harmonize_payer.R which loads the full chain
 #   (02 -> 01 -> 00 + utils). Provides:
-#   - pcornet$ENCOUNTER (raw PAYER_TYPE fields)
-#   - pcornet$DEMOGRAPHIC (SOURCE column for site identification)
+#   - get_pcornet_table("ENCOUNTER") (raw PAYER_TYPE fields)
+#   - get_pcornet_table("DEMOGRAPHIC") (SOURCE column for site identification)
 #   - encounters tibble (with payer_category from harmonization)
 #   - PAYER_MAPPING config (sentinel_values, unavailable_codes)
+#
+# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
+#   access. Materializes early because downstream logic uses nrow(), sum(), and
+#   iterative loops that require in-memory data.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -63,7 +67,7 @@ message(glue("HL patients in dataset: {format(nrow(hl_patients), big.mark=',')}"
 
 # Log per-site patient counts by joining to DEMOGRAPHIC
 hl_patients_by_source <- hl_patients %>%
-  left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
+  left_join(get_pcornet_table("DEMOGRAPHIC") %>% select(ID, SOURCE) %>% materialize(), by = "ID") %>%
   group_by(SOURCE) %>%
   summarise(n_patients = n_distinct(ID), .groups = "drop") %>%
   arrange(SOURCE)
@@ -89,16 +93,19 @@ message(glue("Missing indicators: {paste(missing_indicators, collapse=', ')}"))
 # Join encounters to HL patients and attach SOURCE from DEMOGRAPHIC (Pitfall 1)
 # NOTE: ENCOUNTER also has a SOURCE column (PCORnet CDM metadata), so we must
 # drop it before joining to avoid SOURCE.x/SOURCE.y name collision.
-all_encounters <- pcornet$ENCOUNTER %>%
+# Phase 32: Use get_pcornet_table() and materialize before in-memory operations.
+# nchar(trimws(...)) replaced with direct empty-string check (DuckDB translation gap #7).
+all_encounters <- get_pcornet_table("ENCOUNTER") %>%
   select(-SOURCE) %>%
   inner_join(hl_patients, by = "ID") %>%
-  left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
+  left_join(get_pcornet_table("DEMOGRAPHIC") %>% select(ID, SOURCE), by = "ID") %>%
+  materialize() %>%
   mutate(
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |
-                      nchar(trimws(PAYER_TYPE_PRIMARY)) == 0 |
+                      PAYER_TYPE_PRIMARY == "" |
                       PAYER_TYPE_PRIMARY %in% missing_indicators,
     secondary_missing = is.na(PAYER_TYPE_SECONDARY) |
-                        nchar(trimws(PAYER_TYPE_SECONDARY)) == 0 |
+                        PAYER_TYPE_SECONDARY == "" |
                         PAYER_TYPE_SECONDARY %in% missing_indicators,
     both_missing = primary_missing & secondary_missing
   )
@@ -319,7 +326,7 @@ message("\n--- SECTION 7: Raw vs Harmonized Comparison (ALLMISS-03) ---")
 all_encounters_harmonized <- encounters %>%
   select(-SOURCE) %>%
   inner_join(hl_patients, by = "ID") %>%
-  left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
+  left_join(get_pcornet_table("DEMOGRAPHIC") %>% select(ID, SOURCE) %>% materialize(), by = "ID") %>%
   filter(!is.na(ADMIT_DATE) & year(ADMIT_DATE) != 1900L) %>%
   mutate(
     admit_year = year(ADMIT_DATE),
@@ -327,8 +334,9 @@ all_encounters_harmonized <- encounters %>%
     harmonized_missing = is.na(payer_category) |
                          payer_category %in% c("Unknown", "Unavailable"),
     # Raw primary missingness (same logic as Section 2)
+    # Phase 32: nchar(trimws()) replaced with direct empty-string check (translation gap #7)
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |
-                      nchar(trimws(PAYER_TYPE_PRIMARY)) == 0 |
+                      PAYER_TYPE_PRIMARY == "" |
                       PAYER_TYPE_PRIMARY %in% missing_indicators
   )
 
