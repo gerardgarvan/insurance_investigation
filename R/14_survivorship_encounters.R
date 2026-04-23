@@ -147,12 +147,13 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
   # Pitfall 2: PROVIDERID may be NULL in many ENCOUNTER rows -- use left_join
   # ----------------------------------------------------------------------------
 
-  if (is.null(get_pcornet_table("PROVIDER"))) {
+  provider_tbl <- get_pcornet_table("PROVIDER")
+  if (is.null(provider_tbl)) {
     warning(glue(
-      "[Survivorship] get_pcornet_table("PROVIDER") is NULL. ",
-      "Level 3 (ENC_CANCER_PROVIDER) and Level 4 (ENC_SURVIVORSHIP) ",
-      "will be set to 0 for all patients. ",
-      "Ensure PROVIDER.csv is present if provider-level classification is needed."
+      '[Survivorship] PROVIDER table is unavailable. ',
+      'Level 3 (ENC_CANCER_PROVIDER) and Level 4 (ENC_SURVIVORSHIP) ',
+      'will be set to 0 for all patients. ',
+      'Ensure PROVIDER.csv is present if provider-level classification is needed.'
     ))
 
     # Force all Level 3 / Level 4 columns to zero
@@ -185,7 +186,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
     # left_join to preserve all Level 2 encounters even when PROVIDERID is NULL
     level3_encounters <- level2_encounters %>%
       left_join(
-        get_pcornet_table("PROVIDER") %>% select(PROVIDERID, PROVIDER_SPECIALTY_PRIMARY),
+        provider_tbl %>% select(PROVIDERID, PROVIDER_SPECIALTY_PRIMARY) %>% materialize(),
         by = "PROVIDERID"
       ) %>%
       filter(PROVIDER_SPECIALTY_PRIMARY %in% PROVIDER_SPECIALTIES$cancer_oncology)

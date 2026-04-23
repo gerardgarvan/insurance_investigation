@@ -177,12 +177,13 @@ close_pcornet_con <- function() {
 get_pcornet_table <- function(table_name, con = NULL) {
   if (!exists("USE_DUCKDB", envir = .GlobalEnv) || !get("USE_DUCKDB", envir = .GlobalEnv)) {
     # RDS mode: return tibble from global pcornet list (D-01, D-02)
+    # Returns NULL for missing tables (matches original pcornet$TABLE semantics)
     if (!exists("pcornet", envir = .GlobalEnv)) {
       stop(glue("pcornet list not found. Run source('R/01_load_pcornet.R') first."))
     }
     pcornet_list <- get("pcornet", envir = .GlobalEnv)
     if (!table_name %in% names(pcornet_list)) {
-      stop(glue("Table '{table_name}' not found in pcornet list. Available: {paste(names(pcornet_list), collapse=', ')}"))
+      return(NULL)
     }
     return(pcornet_list[[table_name]])
   } else {
@@ -193,7 +194,11 @@ get_pcornet_table <- function(table_name, con = NULL) {
       }
       con <- get("pcornet_con", envir = .GlobalEnv)
     }
-    return(dplyr::tbl(con, table_name))
+    # Returns NULL for missing tables (matches original pcornet$TABLE semantics)
+    tryCatch(
+      dplyr::tbl(con, table_name),
+      error = function(e) NULL
+    )
   }
 }
 

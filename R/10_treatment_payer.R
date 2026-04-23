@@ -153,7 +153,7 @@ compute_payer_at_chemo <- function() {
 
   # DISPENSING DISPENSE_DATE: RXNORM_CUI matching per D-12
   disp_dates <- NULL
-  if (!is.null(get_pcornet_table("DISPENSING")) && "RXNORM_CUI" %in% names(get_pcornet_table("DISPENSING"))) {
+  if (!is.null(get_pcornet_table("DISPENSING")) && "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
     disp_dates <- get_pcornet_table("DISPENSING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
@@ -163,7 +163,7 @@ compute_payer_at_chemo <- function() {
 
   # MED_ADMIN MEDADMIN_START_DATE: RXNORM_CUI matching per D-12
   ma_dates <- NULL
-  if (!is.null(get_pcornet_table("MED_ADMIN")) && "RXNORM_CUI" %in% names(get_pcornet_table("MED_ADMIN"))) {
+  if (!is.null(get_pcornet_table("MED_ADMIN")) && "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
     ma_dates <- get_pcornet_table("MED_ADMIN") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
@@ -176,7 +176,7 @@ compute_payer_at_chemo <- function() {
   if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_chemo_cols <- intersect(
       c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
-      names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_chemo_cols) > 0) {
       tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
@@ -305,7 +305,7 @@ compute_payer_at_radiation <- function() {
   if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_rad_cols <- intersect(
       c("RAD_START_DATE_SUMMARY", "DT_RAD"),
-      names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_rad_cols) > 0) {
       tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
@@ -430,7 +430,7 @@ compute_payer_at_sct <- function() {
     tr_sct_cols <- intersect(
       c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
         "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
-      names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_sct_cols) > 0) {
       tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
@@ -549,12 +549,12 @@ compute_last_any_treatment_date <- function() {
           filter(DRG %in% TREATMENT_CODES$chemo_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(get_pcornet_table("DISPENSING")) && "RXNORM_CUI" %in% names(get_pcornet_table("DISPENSING"))) {
+      if (!is.null(get_pcornet_table("DISPENSING")) && "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
         sources$disp <- get_pcornet_table("DISPENSING") %>%
           filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>% filter(!is.na(DISPENSE_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(get_pcornet_table("MED_ADMIN")) && "RXNORM_CUI" %in% names(get_pcornet_table("MED_ADMIN"))) {
+      if (!is.null(get_pcornet_table("MED_ADMIN")) && "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
         sources$ma <- get_pcornet_table("MED_ADMIN") %>%
           filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>% filter(!is.na(MEDADMIN_START_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
@@ -563,7 +563,7 @@ compute_last_any_treatment_date <- function() {
       if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
         tr_chemo_cols <- intersect(
           c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
-          names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+          colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
         )
         if (length(tr_chemo_cols) > 0) {
           tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
@@ -611,7 +611,7 @@ compute_last_any_treatment_date <- function() {
       if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
         tr_rad_cols <- intersect(
           c("RAD_START_DATE_SUMMARY", "DT_RAD"),
-          names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+          colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
         )
         if (length(tr_rad_cols) > 0) {
           tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
@@ -658,7 +658,7 @@ compute_last_any_treatment_date <- function() {
         tr_sct_cols <- intersect(
           c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
             "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
-          names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+          colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
         )
         if (length(tr_sct_cols) > 0) {
           tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
