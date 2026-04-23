@@ -245,6 +245,34 @@ _List any errors from tryCatch during smoke test._
 
 _Note any significant timing differences._
 
+## Phase 32 Findings: Diagnostic Script Migration
+
+Phase 32 migrated 5 diagnostic scripts (R/20 through R/24) to the DuckDB backend. No new translation gaps were discovered beyond Phase 31's existing catalog. Key observations:
+
+### Migration Pattern for Diagnostic Scripts
+
+All 5 diagnostic scripts follow a simpler migration pattern than the cohort pipeline (Phase 31) because they operate primarily in-memory after initial data loading:
+
+1. **Replace `pcornet$TABLE` with `get_pcornet_table("TABLE") %>% materialize()`** -- Diagnostic scripts immediately use `nrow()`, `sum()`, `n_distinct()`, `split()`, `as.data.table()`, `get_dupes()`, and iterative `for` loops that all require in-memory data. Unlike the cohort pipeline where lazy queries could be chained, diagnostic scripts need materialization right after load.
+
+2. **`nchar(trimws())` pattern replaced consistently** -- All 5 scripts had `nchar(trimws(x)) == 0` for empty-string detection (the same gap #7 found in Phase 31). Replaced with `x == ""` throughout.
+
+3. **No new translation gaps** -- The diagnostic scripts do not use predicates, `if_any()`, `str_detect()`, or other patterns that caused Phase 31 issues. Their dplyr usage (group_by, summarise, filter, mutate, join) all materializes early, so no dbplyr SQL translation is attempted for the complex logic.
+
+### R/24 data.table Exception
+
+`R/24_per_patient_source_detection.R` uses `data.table` for its grouping/aggregation performance. This is retained as a documented exception per plan 32-01: DuckDB serves only as the data source (via `get_pcornet_table("ENCOUNTER") %>% materialize()`), then all processing is in-memory via `data.table`. No DuckDB-vs-data.table benchmark comparison was performed since the plan defers that to runtime on HiPerGator.
+
+### Scripts Migrated
+
+| Script | Tables Used | Materialization Point | Notes |
+|--------|------------|----------------------|-------|
+| R/20_all_source_missingness.R | ENCOUNTER, DEMOGRAPHIC | After joins, before nrow/sum | Also uses `encounters` tibble from 02_harmonize_payer.R |
+| R/21_all_site_duplicate_dates.R | ENCOUNTER, DEMOGRAPHIC | After joins; DEMOGRAPHIC cached as `demographic_tbl` | Uses janitor::get_dupes() (in-memory only) |
+| R/22_multi_source_overlap_detection.R | ENCOUNTER | Immediately after load | split() + day-by-day loop requires in-memory |
+| R/23_overlap_classification.R | ENCOUNTER, DEMOGRAPHIC | Before rename; DEMOGRAPHIC after select | Self-join field comparison in-memory |
+| R/24_per_patient_source_detection.R | ENCOUNTER | Before as.data.table() | data.table retained as documented exception |
+
 ## Phase 31 Refactoring Recommendations
 
 Based on translation gaps found, Phase 31 execution status:
