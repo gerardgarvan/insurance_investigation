@@ -122,9 +122,9 @@ open_pcornet_con <- function(db_path = CONFIG$cache$duckdb_path, read_only = TRU
   )
 
   # Create TUMOR_REGISTRY_ALL view (D-03)
-  # IF NOT EXISTS avoids errors if view already exists from prior session
+  # TEMP view: session-local, works in read-only mode (no persistent DDL needed)
   DBI::dbExecute(con, "
-    CREATE VIEW IF NOT EXISTS TUMOR_REGISTRY_ALL AS
+    CREATE TEMP VIEW IF NOT EXISTS TUMOR_REGISTRY_ALL AS
     SELECT * FROM TUMOR_REGISTRY1
     UNION ALL BY NAME
     SELECT * FROM TUMOR_REGISTRY2
