@@ -28,7 +28,7 @@
 - [x] **Phase 25: Multi-Source Overlap Detection** - Detect same-date and same-week multi-source encounter pairs across all 5 sites, with per-site counts and source combination frequencies (completed 2026-04-21)
 - [ ] **Phase 26: Overlap Classification and Recommendations** - Classify multi-source encounter groups as Identical/Partial/Distinct via field comparison and produce CSV outputs, console summary, and per-site actionable recommendations
 - [x] **Phase 29: DuckDB Ingest Infrastructure** - Ingest 13 PCORnet tables from RDS cache into indexed DuckDB file with atomic write and round-trip verification (completed 2026-04-23)
-- [ ] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends
+- [x] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends (completed 2026-04-23)
 - [ ] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison
 - [ ] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB
 
@@ -622,11 +622,11 @@ Plans:
 5. User can see all existing named predicates passing smoke test on 100-patient sample under both backends with PATID set equality
 6. User can review `docs/DUCKDB_TRANSLATION_NOTES.md` documenting any dbplyr translation gaps found and workarounds applied
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 30-01-PLAN.md -- Backend abstraction helpers in utils_duckdb.R with get_pcornet_table dispatcher and connection management (DBAPI-01, DBAPI-02, DBAPI-03)
-- [ ] 30-02-PLAN.md -- Smoke test all predicates on both backends with 100-patient sample and document translation gaps (DBAPI-04)
+- [x] 30-02-PLAN.md -- Smoke test all predicates on both backends with 100-patient sample and document translation gaps (DBAPI-04)
 
 ---
 
@@ -709,7 +709,7 @@ Plans:
 | 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
 | 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
 | 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
-| 30. Query Backend Abstraction Layer | 1/2 | In Progress|  |
+| 30. Query Backend Abstraction Layer | 2/2 | Complete   | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 0/2 | Not started | - |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
 
