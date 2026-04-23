@@ -126,9 +126,9 @@ open_pcornet_con <- function(db_path = CONFIG$cache$duckdb_path, read_only = TRU
   DBI::dbExecute(con, "
     CREATE VIEW IF NOT EXISTS TUMOR_REGISTRY_ALL AS
     SELECT * FROM TUMOR_REGISTRY1
-    UNION ALL
+    UNION ALL BY NAME
     SELECT * FROM TUMOR_REGISTRY2
-    UNION ALL
+    UNION ALL BY NAME
     SELECT * FROM TUMOR_REGISTRY3
   ")
 
