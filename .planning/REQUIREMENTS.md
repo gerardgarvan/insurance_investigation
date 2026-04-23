@@ -221,6 +221,36 @@ Requirements for milestone v1.2: Multi-Source Overlap Investigation.
 - [ ] **PDSRC-04**: User can see HIPAA-suppressed counts (values 1-10 replaced with "<11") in all 3 CSV output files, with raw counts in console output
 - [ ] **PDSRC-05**: User can see console summary on HiPerGator with total encounters, ADMIT_DATE parse rate, single vs multi-source patient-date breakdown, per-source counts, top 10 source combinations, and list of CSV files written
 
+## v1.3 Requirements
+
+Requirements for milestone v1.3: DuckDB Backend Migration.
+
+### DuckDB Ingest (Phase 29)
+
+- [ ] **DBING-01**: User can ingest all 13 PCORnet tables from RDS cache into a single DuckDB file with atomic write (`.tmp` file swap ensuring interrupted runs leave canonical file untouched)
+- [ ] **DBING-02**: User can see per-table ingest log CSV (`output/logs/duckdb_ingest_<EXTRACT_DATE>.csv`) with row counts and durations for all 13 tables
+- [ ] **DBING-03**: User can see PATID indexes on all 13 tables and ENCOUNTERID indexes on 8 tables, with round-trip dimension/column verification passing for all tables
+
+### Backend Abstraction (Phase 30)
+
+- [ ] **DBAPI-01**: User can call `get_pcornet_table(name, con)` to get a pipeable dplyr-compatible object from either RDS or DuckDB backend transparently
+- [ ] **DBAPI-02**: User can toggle `USE_DUCKDB` flag in `00_config.R` to switch between RDS and DuckDB backends without changing any downstream script code
+- [ ] **DBAPI-03**: User can manage DuckDB connections via `open_pcornet_con()` / `close_pcornet_con()` with read-only enforcement, and convert lazy queries to tibbles via `materialize()`
+- [ ] **DBAPI-04**: User can see all named predicates passing a smoke test on both backends (100-patient sample, PATID set equality), with translation gaps documented in `docs/DUCKDB_TRANSLATION_NOTES.md`
+
+### Cohort Migration (Phase 31)
+
+- [ ] **DBCOH-01**: User can run the cohort build pipeline end-to-end under DuckDB backend with lazy evaluation up to the final `materialize()` call
+- [ ] **DBCOH-02**: User can verify full parity between RDS and DuckDB cohort outputs via `waldo::compare()` — row count, PATID set equality, and full structural equality on both final cohort and attrition log
+- [ ] **DBCOH-03**: User can see RDS vs DuckDB benchmark timings (3 runs each backend, median comparison) in `output/logs/duckdb_benchmark.csv`
+
+### Diagnostic Migration & Reporting (Phase 32)
+
+- [ ] **DBDIAG-01**: User can run 5 diagnostic scripts (R/20-24) under DuckDB backend without error
+- [ ] **DBDIAG-02**: User can verify CSV output parity for all 5 migrated scripts via md5sum comparison (or waldo investigation for boundary diffs)
+- [ ] **DBDIAG-03**: User can see a generated speedup report (`output/reports/duckdb_speedup_report.md`) with per-script RDS vs DuckDB median timing and speedup ratio
+- [ ] **DBDIAG-04**: User can read a migration guide (`docs/DUCKDB_MIGRATION_GUIDE.md`) with connection pattern, template script, and translation gap reference, and `USE_DUCKDB` defaults to `TRUE` in `00_config.R`
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -392,25 +422,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PDSRC-04 | Phase 28 | Pending |
 | PDSRC-05 | Phase 28 | Pending |
 
+| DBING-01 | Phase 29 | Pending |
+| DBING-02 | Phase 29 | Pending |
+| DBING-03 | Phase 29 | Pending |
+| DBAPI-01 | Phase 30 | Pending |
+| DBAPI-02 | Phase 30 | Pending |
+| DBAPI-03 | Phase 30 | Pending |
+| DBAPI-04 | Phase 30 | Pending |
+| DBCOH-01 | Phase 31 | Pending |
+| DBCOH-02 | Phase 31 | Pending |
+| DBCOH-03 | Phase 31 | Pending |
+| DBDIAG-01 | Phase 32 | Pending |
+| DBDIAG-02 | Phase 32 | Pending |
+| DBDIAG-03 | Phase 32 | Pending |
+| DBDIAG-04 | Phase 32 | Pending |
+
 **Coverage:**
-- v1 requirements: 67 total
-- Mapped to phases: 67
-- Unmapped: 0
+- v1 requirements: 67 total — Mapped: 67, Unmapped: 0
+- v1.1 requirements: 14 total — Mapped: 14, Unmapped: 0
+- Investigation requirements: 25 total — Mapped: 25, Unmapped: 0
+- v1.2 requirements: 18 total — Mapped: 18, Unmapped: 0
+- v1.3 requirements: 14 total — Mapped: 14 (Phase 29: 3, Phase 30: 4, Phase 31: 3, Phase 32: 4), Unmapped: 0
 
-**v1.1 requirements:** 14 total
-- Mapped to phases: 14
-- Unmapped: 0
-
-**Investigation requirements:** 25 total (Phase 19: 4, Phase 20: 4, Phase 21: 5, Phase 22: 5, Phase 23: 7)
-- Mapped to phases: 25
-- Unmapped: 0
-
-**v1.2 requirements:** 18 total
-- Mapped to phases: 18 (Phase 25: 6, Phase 26: 7, Phase 28: 5)
-- Unmapped: 0
-
-**Total coverage:** 124/124 requirements mapped (100%)
+**Total coverage:** 138/138 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-23 after Phase 28 planned (per-patient source detection added)*
+*Last updated: 2026-04-23 after milestone v1.3 requirements defined (DuckDB Backend Migration)*
