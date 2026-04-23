@@ -34,16 +34,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Produce Sankey/alluvial showing enrollment → diagnosis date → treatment type, stratified by payer
 - [ ] Apply HIPAA small-cell suppression (counts 1-10) in outputs
 
-## Current Milestone: v1.3 DuckDB Backend Migration
+## Previous Milestone: v1.3 DuckDB Backend Migration (Complete)
 
 **Goal:** Migrate the PCORnet R pipeline's data access layer from RDS/CSV to DuckDB for faster queries, with a dual-backend abstraction that preserves RDS fallback, parity-tested against existing outputs, and benchmarked for speedup.
 
-**Target features:**
-- Atomic DuckDB ingest from existing RDS cache (13 tables, PATID + ENCOUNTERID indexes)
-- Backend abstraction layer (`get_pcornet_table()` dispatcher with `USE_DUCKDB` flag)
-- Cohort pipeline migration with full parity testing against Phase 16 snapshots
-- 5 diagnostic scripts migrated with per-script RDS vs DuckDB benchmarks
-- Speedup report, migration guide, and default flip to DuckDB
+**Shipped:**
+- Atomic DuckDB ingest from existing RDS cache (13 tables, PATID + ENCOUNTERID indexes) — Phase 29
+- Backend abstraction layer (`get_pcornet_table()` dispatcher with `USE_DUCKDB` flag) — Phase 30
+- Cohort pipeline migration with full parity testing against Phase 16 snapshots — Phase 31
+- 5 diagnostic scripts migrated with per-script RDS vs DuckDB benchmarks — Phase 32
+- Speedup report generator, migration guide, and default flip to DuckDB (`USE_DUCKDB <- TRUE`) — Phase 32
 
 ## Previous Milestone: v1.2 Multi-Source Overlap Investigation (On Hold)
 
@@ -139,4 +139,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after milestone v1.3 (DuckDB Backend Migration) started*
+*Last updated: 2026-04-23 after milestone v1.3 (DuckDB Backend Migration) completed — all 4 phases (29-32) shipped*
