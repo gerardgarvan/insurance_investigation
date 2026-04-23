@@ -103,13 +103,15 @@ ingest_log <- tibble(
 # ==============================================================================
 # Explicit error handling instead of on.exit() — more reliable in source()'d scripts
 
+tables_ingested <- character(0)
+
 ingest_ok <- tryCatch({
 
   for (tbl_name in TABLES_TO_INGEST) {
     rds_path <- file.path(CONFIG$cache$raw_dir, paste0(tbl_name, ".rds"))
 
     if (!file.exists(rds_path)) {
-      message(glue("  SKIPPED: {tbl_name} -- RDS file not found ({rds_path})"))
+      message(glue("\n  SKIPPED: {tbl_name} -- RDS file not found ({rds_path})"))
       next
     }
 
@@ -133,6 +135,7 @@ ingest_ok <- tryCatch({
     ))
 
     message(glue("  Written to DuckDB in {round(duration, 1)}s"))
+    tables_ingested <<- c(tables_ingested, tbl_name)
 
     # Free memory before next table
     rm(df)
@@ -157,9 +160,11 @@ ingest_ok <- tryCatch({
     status     = character()
   )
 
-  # PATID indexes on all 13 tables (universal join key)
+  # PATID indexes on ingested tables (universal join key)
   # NOTE: PCORnet CDM uses "ID" as the patient ID column name, not "PATID"
-  for (tbl_name in TABLES_TO_INGEST) {
+  # PROVIDER table uses PROVIDERID instead of ID — skip it for PATID index
+  tables_with_id <- setdiff(tables_ingested, "PROVIDER")
+  for (tbl_name in tables_with_id) {
     idx_name <- paste0("idx_", tolower(tbl_name), "_patid")
     tryCatch({
       DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ID)"))
@@ -177,8 +182,8 @@ ingest_ok <- tryCatch({
     })
   }
 
-  # ENCOUNTERID indexes on tables that have it (6 tables)
-  for (tbl_name in TABLES_WITH_ENCOUNTERID) {
+  # ENCOUNTERID indexes on ingested tables that have it
+  for (tbl_name in intersect(TABLES_WITH_ENCOUNTERID, tables_ingested)) {
     idx_name <- paste0("idx_", tolower(tbl_name), "_encounterid")
     tryCatch({
       DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ENCOUNTERID)"))
@@ -211,7 +216,7 @@ ingest_ok <- tryCatch({
   message(strrep("=", 60))
 
   all_ok <- TRUE
-  for (tbl_name in TABLES_TO_INGEST) {
+  for (tbl_name in tables_ingested) {
     result <- verify_duckdb_roundtrip(tbl_name, con)
     if (result$ok) {
       message(glue("  PASS: {tbl_name} ({format(result$rds_nrow, big.mark=',')} rows x {result$rds_ncol} cols)"))
@@ -228,7 +233,7 @@ ingest_ok <- tryCatch({
     stop("Round-trip verification FAILED for one or more tables. DuckDB file NOT promoted.")
   }
 
-  message(glue("\nAll {length(TABLES_TO_INGEST)} tables passed round-trip verification."))
+  message(glue("\nAll {length(tables_ingested)} ingested tables passed round-trip verification."))
 
   TRUE  # signal success
 
