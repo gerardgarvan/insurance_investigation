@@ -684,6 +684,39 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   }
 }
 
+# --------------------------------------------------------------------------
+# Phase 30: DuckDB Backend Connection Setup (per D-05)
+# --------------------------------------------------------------------------
+# If USE_DUCKDB = TRUE, open a read-only DuckDB connection for the pipeline.
+# The TUMOR_REGISTRY_ALL SQL view is created inside open_pcornet_con() (D-03).
+# All data access setup happens in one place (D-05).
+#
+# In DuckDB mode, downstream scripts can use:
+#   get_pcornet_table("DIAGNOSIS")  -- returns tbl_dbi (lazy)
+#   materialize(lazy_query)         -- converts to tibble
+#   close_pcornet_con()             -- cleanup at end of pipeline
+#
+if (exists("USE_DUCKDB") && USE_DUCKDB) {
+  duckdb_path <- CONFIG$cache$duckdb_path
+  if (!file.exists(duckdb_path)) {
+    warning(glue(
+      "USE_DUCKDB is TRUE but DuckDB file not found at {duckdb_path}. ",
+      "Run R/25_duckdb_ingest.R first to create the DuckDB file. ",
+      "Falling back to RDS mode."
+    ))
+    USE_DUCKDB <<- FALSE
+  } else {
+    open_pcornet_con(db_path = duckdb_path, read_only = TRUE)
+    message(glue(
+      "[DuckDB] Backend enabled. Use get_pcornet_table('TABLE_NAME') for access.\n",
+      "[DuckDB] TUMOR_REGISTRY_ALL view created (combines TR1 + TR2 + TR3).\n",
+      "[DuckDB] Call close_pcornet_con() at end of pipeline to release connection."
+    ))
+  }
+} else {
+  message("[RDS] Backend active. Tables available via pcornet$TABLE_NAME.")
+}
+
 # ==============================================================================
 # End of script
 # ==============================================================================
