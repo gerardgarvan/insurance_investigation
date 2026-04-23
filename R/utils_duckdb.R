@@ -3,12 +3,16 @@
 # ==============================================================================
 #
 # Phase 29: verify_duckdb_roundtrip() for ingest validation
-# Phase 30: Will add get_pcornet_table(), open_pcornet_con(), close_pcornet_con(),
-#           materialize(), and USE_DUCKDB dispatcher logic
+# Phase 30: Backend abstraction layer
+#   - get_pcornet_table(): RDS/DuckDB dispatcher
+#   - open_pcornet_con(), close_pcornet_con(): connection management
+#   - materialize(): lazy query materialization
 #
 # ==============================================================================
 
 library(DBI)
+library(duckdb)
+library(dplyr)
 library(glue)
 
 # ------------------------------------------------------------------------------
@@ -90,4 +94,126 @@ verify_duckdb_roundtrip <- function(table_name, con, raw_dir = CONFIG$cache$raw_
     col_match = col_match,
     mismatched_cols = if (length(mismatched) > 0) mismatched else character()
   )
+}
+
+# ------------------------------------------------------------------------------
+# open_pcornet_con() -- Phase 30
+# ------------------------------------------------------------------------------
+#' Open a read-only DuckDB connection and store as global pcornet_con
+#'
+#' Creates a DBI connection to the PCORnet DuckDB file with read_only = TRUE.
+#' Also creates the TUMOR_REGISTRY_ALL view (D-03: SQL VIEW combining TR1/TR2/TR3).
+#' Stores connection as pcornet_con in the global environment (D-04).
+#'
+#' @param db_path Character. Path to DuckDB file. Default: CONFIG$cache$duckdb_path
+#' @param read_only Logical. Enforce read-only mode. Default: TRUE
+#' @return DBI connection object (invisibly)
+#'
+open_pcornet_con <- function(db_path = CONFIG$cache$duckdb_path, read_only = TRUE) {
+  if (exists("pcornet_con", envir = .GlobalEnv)) {
+    warning("DuckDB connection already open. Closing and reopening.")
+    close_pcornet_con()
+  }
+
+  con <- DBI::dbConnect(
+    duckdb::duckdb(),
+    dbdir = db_path,
+    read_only = read_only
+  )
+
+  # Create TUMOR_REGISTRY_ALL view (D-03)
+  # IF NOT EXISTS avoids errors if view already exists from prior session
+  DBI::dbExecute(con, "
+    CREATE VIEW IF NOT EXISTS TUMOR_REGISTRY_ALL AS
+    SELECT * FROM TUMOR_REGISTRY1
+    UNION ALL
+    SELECT * FROM TUMOR_REGISTRY2
+    UNION ALL
+    SELECT * FROM TUMOR_REGISTRY3
+  ")
+
+  assign("pcornet_con", con, envir = .GlobalEnv)
+  message(glue("[DuckDB] Connection opened (read_only={read_only}): {db_path}"))
+  invisible(con)
+}
+
+# ------------------------------------------------------------------------------
+# close_pcornet_con() -- Phase 30
+# ------------------------------------------------------------------------------
+#' Close the global DuckDB connection
+#'
+#' Disconnects pcornet_con and removes it from the global environment.
+#' Warns if no connection exists.
+#'
+close_pcornet_con <- function() {
+  if (!exists("pcornet_con", envir = .GlobalEnv)) {
+    warning("No DuckDB connection to close.")
+    return(invisible(NULL))
+  }
+
+  con <- get("pcornet_con", envir = .GlobalEnv)
+  DBI::dbDisconnect(con, shutdown = TRUE)
+  rm(pcornet_con, envir = .GlobalEnv)
+  message("[DuckDB] Connection closed.")
+  invisible(NULL)
+}
+
+# ------------------------------------------------------------------------------
+# get_pcornet_table() -- Phase 30
+# ------------------------------------------------------------------------------
+#' Get a PCORnet table from either RDS or DuckDB backend
+#'
+#' Dispatcher function returning a dplyr-compatible object:
+#'   - RDS mode (USE_DUCKDB = FALSE): returns in-memory tibble from pcornet$ list (D-01)
+#'   - DuckDB mode (USE_DUCKDB = TRUE): returns tbl_dbi lazy query object
+#'
+#' Accesses pcornet$ list as a global variable (D-02). No signature changes
+#' needed in downstream code.
+#'
+#' @param table_name Character. PCORnet table name (e.g., "DIAGNOSIS", "ENROLLMENT")
+#' @param con DBI connection (optional). If NULL, uses global pcornet_con.
+#' @return A dplyr-compatible object (tibble or tbl_dbi)
+#'
+get_pcornet_table <- function(table_name, con = NULL) {
+  if (!exists("USE_DUCKDB", envir = .GlobalEnv) || !get("USE_DUCKDB", envir = .GlobalEnv)) {
+    # RDS mode: return tibble from global pcornet list (D-01, D-02)
+    if (!exists("pcornet", envir = .GlobalEnv)) {
+      stop(glue("pcornet list not found. Run source('R/01_load_pcornet.R') first."))
+    }
+    pcornet_list <- get("pcornet", envir = .GlobalEnv)
+    if (!table_name %in% names(pcornet_list)) {
+      stop(glue("Table '{table_name}' not found in pcornet list. Available: {paste(names(pcornet_list), collapse=', ')}"))
+    }
+    return(pcornet_list[[table_name]])
+  } else {
+    # DuckDB mode: return tbl_dbi lazy query object
+    if (is.null(con)) {
+      if (!exists("pcornet_con", envir = .GlobalEnv)) {
+        stop("DuckDB connection not found. Run open_pcornet_con() first.")
+      }
+      con <- get("pcornet_con", envir = .GlobalEnv)
+    }
+    return(dplyr::tbl(con, table_name))
+  }
+}
+
+# ------------------------------------------------------------------------------
+# materialize() -- Phase 30
+# ------------------------------------------------------------------------------
+#' Convert a lazy DuckDB query to an in-memory tibble
+#'
+#' Wrapper around dplyr::collect() for consistent API. In RDS mode, this is
+#' a no-op pass-through (tibbles are already in memory). In DuckDB mode,
+#' executes the lazy query and returns results as a tibble.
+#'
+#' @param lazy_tbl A dplyr-compatible object (tibble or tbl_dbi)
+#' @return A tibble (in-memory data frame)
+#'
+materialize <- function(lazy_tbl) {
+  if (inherits(lazy_tbl, "tbl_lazy")) {
+    dplyr::collect(lazy_tbl)
+  } else {
+    # Already a tibble/data.frame -- no-op pass-through
+    lazy_tbl
+  }
 }
