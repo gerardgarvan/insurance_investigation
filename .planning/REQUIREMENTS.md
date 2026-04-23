@@ -240,8 +240,8 @@ Requirements for milestone v1.3: DuckDB Backend Migration.
 
 ### Cohort Migration (Phase 31)
 
-- [ ] **DBCOH-01**: User can run the cohort build pipeline end-to-end under DuckDB backend with lazy evaluation up to the final `materialize()` call
-- [ ] **DBCOH-02**: User can verify full parity between RDS and DuckDB cohort outputs via `waldo::compare()` — row count, PATID set equality, and full structural equality on both final cohort and attrition log
+- [x] **DBCOH-01**: User can run the cohort build pipeline end-to-end under DuckDB backend with lazy evaluation up to the final `materialize()` call
+- [x] **DBCOH-02**: User can verify full parity between RDS and DuckDB cohort outputs via `waldo::compare()` — row count, PATID set equality, and full structural equality on both final cohort and attrition log
 - [ ] **DBCOH-03**: User can see RDS vs DuckDB benchmark timings (3 runs each backend, median comparison) in `output/logs/duckdb_benchmark.csv`
 
 ### Diagnostic Migration & Reporting (Phase 32)
@@ -429,8 +429,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBAPI-02 | Phase 30 | Complete |
 | DBAPI-03 | Phase 30 | Complete |
 | DBAPI-04 | Phase 30 | Complete |
-| DBCOH-01 | Phase 31 | Pending |
-| DBCOH-02 | Phase 31 | Pending |
+| DBCOH-01 | Phase 31 | Complete |
+| DBCOH-02 | Phase 31 | Complete |
 | DBCOH-03 | Phase 31 | Pending |
 | DBDIAG-01 | Phase 32 | Pending |
 | DBDIAG-02 | Phase 32 | Pending |

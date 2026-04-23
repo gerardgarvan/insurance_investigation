@@ -644,10 +644,10 @@ Plans:
 3. User can see RDS vs DuckDB benchmark timings in `output/logs/duckdb_benchmark.csv` from 3 runs per backend with median comparison
 4. User can confirm `USE_DUCKDB = FALSE` still reproduces Phase 16 RDS snapshot behavior (no regression)
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 31-01-PLAN.md -- Migrate cohort build script to get_pcornet_table calls with late materialize and full parity testing (DBCOH-01, DBCOH-02)
+- [x] 31-01-PLAN.md -- Migrate cohort build script to get_pcornet_table calls with late materialize and full parity testing (DBCOH-01, DBCOH-02)
 - [ ] 31-02-PLAN.md -- Benchmark wrapper helper and cohort build timing comparison (DBCOH-03)
 
 ---
@@ -710,7 +710,7 @@ Plans:
 | 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
 | 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
-| 31. Cohort Pipeline DuckDB Migration | 0/2 | Not started | - |
+| 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
 
 ## Next Actions
