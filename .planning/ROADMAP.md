@@ -708,7 +708,7 @@ Plans:
 | 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
 | 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
 | 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
-| 29. DuckDB Ingest Infrastructure | 2/2 | Complete   | 2026-04-23 |
+| 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
 | 30. Query Backend Abstraction Layer | 0/2 | Not started | - |
 | 31. Cohort Pipeline DuckDB Migration | 0/2 | Not started | - |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
