@@ -24,7 +24,11 @@
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
 #   Optionally sources R/utils_dates.R if date parse rate < 50%.
-#   Requires: pcornet$ENCOUNTER (ID, ENCOUNTERID, ADMIT_DATE, SOURCE, etc.)
+#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ADMIT_DATE, SOURCE, etc.)
+#
+# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
+#   access. Materializes immediately after loading because all downstream logic
+#   (split, self-join in loop, nrow, n_distinct) requires in-memory data.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -37,8 +41,12 @@ library(readr)
 library(stringr)
 library(tidyr)
 
-# Load tables if not already loaded
-if (!exists("pcornet")) source("R/01_load_pcornet.R")
+# Load tables if not already loaded (RDS mode)
+if (!USE_DUCKDB && !exists("pcornet")) source("R/01_load_pcornet.R")
+# DuckDB mode: open connection if needed
+if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con()
+}
 
 # ==============================================================================
 # HIPAA suppression helper
@@ -70,7 +78,8 @@ message(glue("{strrep('=', 70)}\n"))
 
 message("--- SECTION 1: Load and Prepare Encounters ---")
 
-enc <- pcornet$ENCOUNTER
+# Phase 32: Use get_pcornet_table() and materialize for in-memory operations
+enc <- get_pcornet_table("ENCOUNTER") %>% materialize()
 
 total_encounters <- nrow(enc)
 total_patients <- n_distinct(enc$ID)
@@ -86,7 +95,7 @@ message(glue("Encounters with NA SOURCE: {format(sum(is.na(enc$SOURCE)), big.mar
 enc <- enc %>%
   mutate(admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"))
 
-n_admit_raw <- sum(!is.na(enc$ADMIT_DATE) & nchar(trimws(enc$ADMIT_DATE)) > 0)
+n_admit_raw <- sum(!is.na(enc$ADMIT_DATE) & enc$ADMIT_DATE != "")
 n_admit_parsed <- sum(!is.na(enc$admit_date_parsed))
 admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_raw, 1) else 100
 
