@@ -711,7 +711,7 @@ Plans:
 | 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
-| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete   | 2026-04-23 |
+| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
 
 ## Next Actions
 
