@@ -27,6 +27,10 @@
 - [ ] **Phase 24: Make Presentation of Just Phases 19 and 20** - Build a focused PPTX containing only UF missingness (Phase 19) and FLM duplicate-date (Phase 20) outputs
 - [x] **Phase 25: Multi-Source Overlap Detection** - Detect same-date and same-week multi-source encounter pairs across all 5 sites, with per-site counts and source combination frequencies (completed 2026-04-21)
 - [ ] **Phase 26: Overlap Classification and Recommendations** - Classify multi-source encounter groups as Identical/Partial/Distinct via field comparison and produce CSV outputs, console summary, and per-site actionable recommendations
+- [ ] **Phase 29: DuckDB Ingest Infrastructure** - Ingest 13 PCORnet tables from RDS cache into indexed DuckDB file with atomic write and round-trip verification
+- [ ] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends
+- [ ] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison
+- [ ] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB
 
 ## Phase Details
 
@@ -504,7 +508,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 25-01-PLAN.md -- Standalone R script R/22_multi_source_overlap_detection.R: same-date grouping, 7-day window near-duplicate detection, per-site counts, source combination frequencies (SAMEDT-01, SAMEDT-02, SAMEDT-03, SAMEWK-01, SAMEWK-02, SAMEWK-03)
+- [x] 25-01-PLAN.md -- Standalone R script R/22_multi_source_overlap_detection.R: same-date grouping, 7-day window near-duplicate detection, per-site counts, source combination frequencies (SAMEDT-01, SAMEDT-02, SAMEDT-03, SAMEWK-01, SAMEWK-02, SAMEWK-03)
 
 ---
 
@@ -579,6 +583,99 @@ Plans:
 
 ---
 
+### Phase 29: DuckDB Ingest Infrastructure
+
+**Goal:** User can ingest all 13 PCORnet tables from RDS cache into a single indexed DuckDB file with atomic write and round-trip verification
+
+**Depends on:** Phase 15 (requires RDS cache infrastructure)
+
+**Requirements**: DBING-01, DBING-02, DBING-03
+
+**Success Criteria** (what must be TRUE):
+1. User can see all 13 PCORnet tables (ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC, DISPENSING, MED_ADMIN, LAB_RESULT_CM, PROVIDER, TUMOR_REGISTRY1/2/3) ingested into a single DuckDB file at configured path
+2. User can verify atomic write via `.tmp` file swap — interrupted runs leave the canonical DuckDB file untouched
+3. User can see per-table ingest log CSV showing row counts and durations for all 13 tables
+4. User can see PATID indexes on all 13 tables and ENCOUNTERID indexes on 8 tables that have it
+5. User can verify round-trip dimension and column verification passes for all tables (no schema drift)
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 29-01-PLAN.md -- DuckDB ingest script with atomic write, per-table logging, and sequential table ingestion from RDS cache (DBING-01, DBING-02)
+- [ ] 29-02-PLAN.md -- Index creation after ingest and round-trip verification helper (DBING-03)
+
+---
+
+### Phase 30: Query Backend Abstraction Layer
+
+**Goal:** User can transparently query PCORnet tables from either RDS or DuckDB backend via a single dispatcher function with USE_DUCKDB flag control
+
+**Depends on:** Phase 29 (requires DuckDB file with indexed tables)
+
+**Requirements**: DBAPI-01, DBAPI-02, DBAPI-03, DBAPI-04
+
+**Success Criteria** (what must be TRUE):
+1. User can call `get_pcornet_table(name, con)` to get a pipeable dplyr-compatible object from either backend
+2. User can toggle `USE_DUCKDB` flag in `00_config.R` to switch all scripts between RDS and DuckDB without changing downstream code
+3. User can open/close DuckDB connections via `open_pcornet_con()` / `close_pcornet_con()` with read-only enforcement
+4. User can convert lazy DuckDB queries to tibbles via `materialize()` helper
+5. User can see all existing named predicates passing smoke test on 100-patient sample under both backends with PATID set equality
+6. User can review `docs/DUCKDB_TRANSLATION_NOTES.md` documenting any dbplyr translation gaps found and workarounds applied
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 30-01-PLAN.md -- Backend abstraction helpers in utils_duckdb.R with get_pcornet_table dispatcher and connection management (DBAPI-01, DBAPI-02, DBAPI-03)
+- [ ] 30-02-PLAN.md -- Smoke test all predicates on both backends with 100-patient sample and document translation gaps (DBAPI-04)
+
+---
+
+### Phase 31: Cohort Pipeline DuckDB Migration
+
+**Goal:** User can run the full cohort build pipeline under DuckDB backend with verified parity against Phase 16 RDS snapshots and benchmark comparison
+
+**Depends on:** Phase 30 (requires abstraction layer and smoke-tested predicates)
+
+**Requirements**: DBCOH-01, DBCOH-02, DBCOH-03
+
+**Success Criteria** (what must be TRUE):
+1. User can run cohort build end-to-end under `USE_DUCKDB = TRUE` with lazy evaluation up to final materialize call
+2. User can verify full parity between RDS and DuckDB outputs via `waldo::compare()` — row count equality, PATID set equality, and full structural equality on final cohort and attrition log
+3. User can see RDS vs DuckDB benchmark timings in `output/logs/duckdb_benchmark.csv` from 3 runs per backend with median comparison
+4. User can confirm `USE_DUCKDB = FALSE` still reproduces Phase 16 RDS snapshot behavior (no regression)
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 31-01-PLAN.md -- Migrate cohort build script to get_pcornet_table calls with late materialize and full parity testing (DBCOH-01, DBCOH-02)
+- [ ] 31-02-PLAN.md -- Benchmark wrapper helper and cohort build timing comparison (DBCOH-03)
+
+---
+
+### Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks
+
+**Goal:** User can run all 5 diagnostic scripts under DuckDB backend with parity-verified outputs, speedup report, migration guide, and DuckDB as the new default
+
+**Depends on:** Phase 31 (requires cohort migration pattern and benchmark infrastructure)
+
+**Requirements**: DBDIAG-01, DBDIAG-02, DBDIAG-03, DBDIAG-04
+
+**Success Criteria** (what must be TRUE):
+1. User can run 5 diagnostic scripts (R/20-24: all-source missingness, all-site duplicates, multi-source overlap, overlap classification, per-patient source detection) under `USE_DUCKDB = TRUE` without error
+2. User can verify CSV output parity for all 5 scripts via md5sum comparison or documented tolerance for HIPAA boundary diffs only
+3. User can read generated speedup report (`output/reports/duckdb_speedup_report.md`) showing per-script RDS vs DuckDB median timing and speedup ratio
+4. User can read migration guide (`docs/DUCKDB_MIGRATION_GUIDE.md`) with connection pattern, template script, translation gap reference, and parity test methodology
+5. User can verify `USE_DUCKDB` defaults to `TRUE` in `00_config.R` with deprecation comment and RDS fallback documented
+6. User can run full pipeline end-to-end on HiPerGator with new default and verify all outputs match expected shapes
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 32-01-PLAN.md -- Migrate 5 diagnostic scripts with parity testing and benchmark all vs RDS baseline (DBDIAG-01, DBDIAG-02)
+- [ ] 32-02-PLAN.md -- Generate speedup report, write migration guide, flip USE_DUCKDB default to TRUE, full pipeline verification (DBDIAG-03, DBDIAG-04)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -607,13 +704,19 @@ Plans:
 | 22. Generalize Phase 20 to All Sites | 1/1 | Complete | 2026-04-14 |
 | 23. Visual Presentation of Phase 21/22 Tables | 2/2 | Complete | 2026-04-14 |
 | 24. Focused Presentation of Phases 19/20 | 0/1 | Planned | - |
-| 25. Multi-Source Overlap Detection | 1/1 | Complete   | 2026-04-21 |
+| 25. Multi-Source Overlap Detection | 1/1 | Complete | 2026-04-21 |
 | 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
 | 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
 | 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
+| 29. DuckDB Ingest Infrastructure | 0/2 | Not started | - |
+| 30. Query Backend Abstraction Layer | 0/2 | Not started | - |
+| 31. Cohort Pipeline DuckDB Migration | 0/2 | Not started | - |
+| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
 
 ## Next Actions
 
-Phase 28 planned with 1 plan in 1 wave. Execute with `/gsd:execute-phase 28`.
+Milestone v1.3 (DuckDB Backend Migration) roadmap created. Phases 29-32 added with 8 plans total. All 14 v1.3 requirements mapped.
 
-*Last updated: 2026-04-23 (Phase 28 planned -- per-patient source detection by date using data.table)*
+Execute Phase 29 with `/gsd:execute-phase 29`.
+
+*Last updated: 2026-04-23 (Phases 29-32 added for milestone v1.3 DuckDB Backend Migration)*
