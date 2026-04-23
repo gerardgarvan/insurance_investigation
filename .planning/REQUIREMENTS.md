@@ -227,8 +227,8 @@ Requirements for milestone v1.3: DuckDB Backend Migration.
 
 ### DuckDB Ingest (Phase 29)
 
-- [ ] **DBING-01**: User can ingest all 13 PCORnet tables from RDS cache into a single DuckDB file with atomic write (`.tmp` file swap ensuring interrupted runs leave canonical file untouched)
-- [ ] **DBING-02**: User can see per-table ingest log CSV (`output/logs/duckdb_ingest_<EXTRACT_DATE>.csv`) with row counts and durations for all 13 tables
+- [x] **DBING-01**: User can ingest all 13 PCORnet tables from RDS cache into a single DuckDB file with atomic write (`.tmp` file swap ensuring interrupted runs leave canonical file untouched)
+- [x] **DBING-02**: User can see per-table ingest log CSV (`output/logs/duckdb_ingest_<EXTRACT_DATE>.csv`) with row counts and durations for all 13 tables
 - [ ] **DBING-03**: User can see PATID indexes on all 13 tables and ENCOUNTERID indexes on 8 tables, with round-trip dimension/column verification passing for all tables
 
 ### Backend Abstraction (Phase 30)
@@ -422,8 +422,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PDSRC-04 | Phase 28 | Pending |
 | PDSRC-05 | Phase 28 | Pending |
 
-| DBING-01 | Phase 29 | Pending |
-| DBING-02 | Phase 29 | Pending |
+| DBING-01 | Phase 29 | Complete |
+| DBING-02 | Phase 29 | Complete |
 | DBING-03 | Phase 29 | Pending |
 | DBAPI-01 | Phase 30 | Pending |
 | DBAPI-02 | Phase 30 | Pending |

@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: DuckDB Backend Migration
-status: roadmap_complete
-stopped_at: null
-last_updated: "2026-04-23T16:00:00.000Z"
-last_activity: 2026-04-23 -- Milestone v1.3 roadmap created
+milestone: v7.0
+milestone_name: milestone
+status: executing
+last_updated: "2026-04-23T16:14:58.070Z"
+last_activity: 2026-04-23
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 8
-  completed_plans: 0
+  total_phases: 32
+  completed_phases: 25
+  total_plans: 53
+  completed_plans: 48
   percent: 0
 ---
 
@@ -25,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Milestone v1.3 — DuckDB Backend Migration (roadmap complete, ready to plan Phase 29)
+**Current focus:** Phase 29 — duckdb-ingest-infrastructure
 
 ## Current Position
 
-Phase: Phase 29 (DuckDB Ingest Infrastructure)
-Plan: Not started (awaiting /gsd:plan-phase 29)
-Status: Roadmap complete
-Last activity: 2026-04-23 — Milestone v1.3 roadmap created with Phases 29-32
+Phase: 29 (duckdb-ingest-infrastructure) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-23 -- Completed 29-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0% — 0/8 plans (0 phases done)
+Progress: [█████████░] 91% — 48/53 plans
 
 ## Accumulated Context
 
@@ -45,6 +44,7 @@ Progress: [░░░░░░░░░░] 0% — 0/8 plans (0 phases done)
 - `.rds` over `.RData` for caching — `readRDS()` returns a single named object directly
 - Pre-written plans (29-01 through 32-02) define the full DuckDB migration scope with REQ-IDs
 - Milestone v1.3: 4 phases (29-32) with 8 pre-written plans covering DuckDB ingest, abstraction layer, cohort migration, and diagnostic script migration
+- Phase 29-01: EXTRACT_DATE as top-level constant; DuckDB path at /blue/.../clean/duckdb/ (inherits gitignore); TUMOR_REGISTRY_ALL excluded from ingest (derived table)
 
 ### Pending Todos
 

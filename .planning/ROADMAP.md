@@ -598,10 +598,10 @@ Plans:
 4. User can see PATID indexes on all 13 tables and ENCOUNTERID indexes on 8 tables that have it
 5. User can verify round-trip dimension and column verification passes for all tables (no schema drift)
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 29-01-PLAN.md -- DuckDB ingest script with atomic write, per-table logging, and sequential table ingestion from RDS cache (DBING-01, DBING-02)
+- [x] 29-01-PLAN.md -- DuckDB ingest script with atomic write, per-table logging, and sequential table ingestion from RDS cache (DBING-01, DBING-02)
 - [ ] 29-02-PLAN.md -- Index creation after ingest and round-trip verification helper (DBING-03)
 
 ---
@@ -708,7 +708,7 @@ Plans:
 | 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
 | 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
 | 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
-| 29. DuckDB Ingest Infrastructure | 0/2 | Not started | - |
+| 29. DuckDB Ingest Infrastructure | 1/2 | In Progress|  |
 | 30. Query Backend Abstraction Layer | 0/2 | Not started | - |
 | 31. Cohort Pipeline DuckDB Migration | 0/2 | Not started | - |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
