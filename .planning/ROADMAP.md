@@ -474,6 +474,16 @@ Plans:
 Plans:
 - [ ] 24-01-PLAN.md -- Add focused Phase 19/20 PPTX generation path with UF + FLM-only slide set and output naming (PPTX4-01, PPTX4-02, PPTX4-03, PPTX4-04)
 
+### Phase 25: Close gaps between existing code and OneFLQuestions.docx and QuantAnalysisMtgNotes_ZoomAI.docx, lowest hanging fruit first
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 24
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 25 to break down)
+
 ---
 
 ### Phase 25: Multi-Source Overlap Detection
@@ -521,6 +531,32 @@ Plans:
 
 ---
 
+### Phase 27: Cross-Table Data Quality Assessment
+
+**Goal:** Run a comprehensive QA pass across all 13 loaded PCORnet CDM tables applying 6 QA dimensions (field completeness, value validity against CDM v7.0 value sets, exact/semantic row duplicates, multi-source overlap, temporal consistency, and referential integrity), producing per-table CSV reports and a full console scorecard identifying data that is not analytically useful
+
+**Depends on:** Phase 26
+
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12
+
+**Success Criteria** (what must be TRUE):
+1. User can see per-column completeness percentages and sentinel counts for every column in all 13 tables
+2. User can see invalid values flagged against PCORnet CDM v7.0 value sets for coded columns
+3. User can see exact and semantic row duplicate counts per table
+4. User can see multi-source overlap detection for tables with date fields (skipping DEMOGRAPHIC, PROVIDER)
+5. User can see temporal consistency violations (start > end, future dates, sentinel dates)
+6. User can see referential integrity gaps (orphaned IDs not in DEMOGRAPHIC)
+7. User can see per-table CSV reports in output/tables/ with qa_ prefix and HIPAA-suppressed counts
+8. User can see a console scorecard with per-table findings across all 6 dimensions
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 27-01-PLAN.md -- Create R/24_cross_table_qa.R with QA framework, PCORnet CDM v7.0 value sets, and four mandatory dimensions (completeness, validity, duplicates, overlap) (D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12)
+- [ ] 27-02-PLAN.md -- Add temporal consistency and referential integrity dimensions, expand console scorecard, HiPerGator verification (D-03, D-04, D-07, D-10, D-11)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -551,9 +587,10 @@ Plans:
 | 24. Focused Presentation of Phases 19/20 | 0/1 | Planned | - |
 | 25. Multi-Source Overlap Detection | 1/1 | Complete   | 2026-04-21 |
 | 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
+| 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
 
 ## Next Actions
 
-Phase 24 pending planning/execution. Phases 25-26 (v1.2 milestone) added and ready for planning after Phase 24 completes.
+Phase 27 planned with 2 plans in 2 waves. Execute with `/gsd:execute-phase 27`.
 
-*Last updated: 2026-04-21 (phases 25-26 added for milestone v1.2 Multi-Source Overlap Investigation)*
+*Last updated: 2026-04-22 (Phase 27 planned -- cross-table data quality assessment)*
