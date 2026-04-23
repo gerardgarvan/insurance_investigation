@@ -71,7 +71,7 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
       !!count_col := 0L
     )
 
-  if (is.null(pcornet$PROCEDURES)) {
+  if (is.null(get_pcornet_table("PROCEDURES"))) {
     message(glue("[Surveillance] PROCEDURES not loaded -- skipping {modality_name}"))
     return(result)
   }
@@ -86,7 +86,7 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
     if (is.null(px_type)) next
     codes <- code_vectors[[code_type]]
     if (length(codes) == 0) next
-    hits <- pcornet$PROCEDURES %>%
+    hits <- get_pcornet_table("PROCEDURES") %>%
       filter(PX_TYPE == px_type, PX %in% codes)
     px_hits <- bind_rows(px_hits, hits)
   }
@@ -149,7 +149,7 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
       !!count_col := 0L
     )
 
-  if (is.null(pcornet$LAB_RESULT_CM)) {
+  if (is.null(get_pcornet_table("LAB_RESULT_CM"))) {
     message(glue("[Surveillance] LAB_RESULT_CM not loaded -- skipping {lab_name}"))
     return(result)
   }
@@ -160,7 +160,7 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
   }
 
   # Best available date: SPECIMEN_DATE preferred, fall back to LAB_ORDER_DATE
-  lab_hits <- pcornet$LAB_RESULT_CM %>%
+  lab_hits <- get_pcornet_table("LAB_RESULT_CM") %>%
     filter(LAB_LOINC %in% loinc_codes) %>%
     inner_join(post_dx_date_map, by = "ID") %>%
     mutate(lab_date = coalesce(SPECIMEN_DATE, LAB_ORDER_DATE)) %>%

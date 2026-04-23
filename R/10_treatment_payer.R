@@ -23,8 +23,8 @@
 # Per D-12: Logs match counts per treatment type; DISPENSING/MED_ADMIN RXNORM_CUI
 #
 # Dependencies:
-#   - pcornet$PROCEDURES (via 01_load_pcornet.R) -- PX, PX_TYPE, PX_DATE, ID
-#   - pcornet$PRESCRIBING (via 01_load_pcornet.R) -- RXNORM_CUI, RX_ORDER_DATE, ID
+#   - get_pcornet_table("PROCEDURES") (via 01_load_pcornet.R) -- PX, PX_TYPE, PX_DATE, ID
+#   - get_pcornet_table("PRESCRIBING") (via 01_load_pcornet.R) -- RXNORM_CUI, RX_ORDER_DATE, ID
 #   - encounters (via 02_harmonize_payer.R) -- ID, ADMIT_DATE, effective_payer, payer_category
 #   - TREATMENT_CODES (via 00_config.R) -- all code lists
 #   - CONFIG$analysis$treatment_window_days (via 00_config.R)
@@ -99,8 +99,8 @@ compute_payer_at_chemo <- function() {
 
   # Extract chemo dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue) - consolidated query
   px_dates <- NULL
-  if (!is.null(pcornet$PROCEDURES)) {
-    px_dates <- pcornet$PROCEDURES %>%
+  if (!is.null(get_pcornet_table("PROCEDURES"))) {
+    px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
@@ -116,8 +116,8 @@ compute_payer_at_chemo <- function() {
   # Previous version used ANY prescription date, inflating FIRST_CHEMO_DATE counts.
   # Now filters to TREATMENT_CODES$chemo_rxnorm before extracting dates.
   rx_dates <- NULL
-  if (!is.null(pcornet$PRESCRIBING)) {
-    rx_dates <- pcornet$PRESCRIBING %>%
+  if (!is.null(get_pcornet_table("PRESCRIBING"))) {
+    rx_dates <- get_pcornet_table("PRESCRIBING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
       mutate(rx_date_raw = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
@@ -130,8 +130,8 @@ compute_payer_at_chemo <- function() {
 
   # DIAGNOSIS DX_DATE: Z51.11/Z51.12 (ICD-10), V58.11/V58.12 (ICD-9) per D-09
   dx_dates <- NULL
-  if (!is.null(pcornet$DIAGNOSIS)) {
-    dx_dates <- pcornet$DIAGNOSIS %>%
+  if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+    dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
@@ -143,8 +143,8 @@ compute_payer_at_chemo <- function() {
 
   # ENCOUNTER ADMIT_DATE: DRGs 837-839, 846-848 per D-10
   drg_dates <- NULL
-  if (!is.null(pcornet$ENCOUNTER)) {
-    drg_dates <- pcornet$ENCOUNTER %>%
+  if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+    drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       group_by(ID) %>%
@@ -153,8 +153,8 @@ compute_payer_at_chemo <- function() {
 
   # DISPENSING DISPENSE_DATE: RXNORM_CUI matching per D-12
   disp_dates <- NULL
-  if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
-    disp_dates <- pcornet$DISPENSING %>%
+  if (!is.null(get_pcornet_table("DISPENSING")) && "RXNORM_CUI" %in% names(get_pcornet_table("DISPENSING"))) {
+    disp_dates <- get_pcornet_table("DISPENSING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
       group_by(ID) %>%
@@ -163,8 +163,8 @@ compute_payer_at_chemo <- function() {
 
   # MED_ADMIN MEDADMIN_START_DATE: RXNORM_CUI matching per D-12
   ma_dates <- NULL
-  if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
-    ma_dates <- pcornet$MED_ADMIN %>%
+  if (!is.null(get_pcornet_table("MED_ADMIN")) && "RXNORM_CUI" %in% names(get_pcornet_table("MED_ADMIN"))) {
+    ma_dates <- get_pcornet_table("MED_ADMIN") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
       group_by(ID) %>%
@@ -173,13 +173,13 @@ compute_payer_at_chemo <- function() {
 
   # TUMOR_REGISTRY: chemo dates (CHEMO_START_DATE_SUMMARY, DT_CHEMO)
   tr_dates <- NULL
-  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_chemo_cols <- intersect(
       c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
-      names(pcornet$TUMOR_REGISTRY_ALL)
+      names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_chemo_cols) > 0) {
-      tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
         select(ID, all_of(tr_chemo_cols)) %>%
         filter(if_any(all_of(tr_chemo_cols), ~ !is.na(.)))
       if (nrow(tr_data) > 0) {
@@ -262,8 +262,8 @@ compute_payer_at_radiation <- function() {
 
   # Extract radiation dates from PROCEDURES (CPT, ICD-9-CM, ICD-10-PCS, revenue) - consolidated query
   px_dates <- NULL
-  if (!is.null(pcornet$PROCEDURES)) {
-    px_dates <- pcornet$PROCEDURES %>%
+  if (!is.null(get_pcornet_table("PROCEDURES"))) {
+    px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
@@ -279,8 +279,8 @@ compute_payer_at_radiation <- function() {
 
   # DIAGNOSIS DX_DATE: Z51.0 (ICD-10), V58.0 (ICD-9) per D-09
   dx_dates <- NULL
-  if (!is.null(pcornet$DIAGNOSIS)) {
-    dx_dates <- pcornet$DIAGNOSIS %>%
+  if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+    dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
@@ -292,8 +292,8 @@ compute_payer_at_radiation <- function() {
 
   # ENCOUNTER ADMIT_DATE: DRG 849 per D-10
   drg_dates <- NULL
-  if (!is.null(pcornet$ENCOUNTER)) {
-    drg_dates <- pcornet$ENCOUNTER %>%
+  if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+    drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       group_by(ID) %>%
@@ -302,13 +302,13 @@ compute_payer_at_radiation <- function() {
 
   # TUMOR_REGISTRY: radiation dates (RAD_START_DATE_SUMMARY, DT_RAD)
   tr_dates <- NULL
-  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_rad_cols <- intersect(
       c("RAD_START_DATE_SUMMARY", "DT_RAD"),
-      names(pcornet$TUMOR_REGISTRY_ALL)
+      names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_rad_cols) > 0) {
-      tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
         select(ID, all_of(tr_rad_cols)) %>%
         filter(if_any(all_of(tr_rad_cols), ~ !is.na(.)))
       if (nrow(tr_data) > 0) {
@@ -389,8 +389,8 @@ compute_payer_at_radiation <- function() {
 compute_payer_at_sct <- function() {
   # Extract SCT dates from PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue)
   px_dates <- NULL
-  if (!is.null(pcornet$PROCEDURES)) {
-    px_dates <- pcornet$PROCEDURES %>%
+  if (!is.null(get_pcornet_table("PROCEDURES"))) {
+    px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
         (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
@@ -406,8 +406,8 @@ compute_payer_at_sct <- function() {
 
   # DIAGNOSIS DX_DATE: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only) per D-09
   dx_dates <- NULL
-  if (!is.null(pcornet$DIAGNOSIS)) {
-    dx_dates <- pcornet$DIAGNOSIS %>%
+  if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+    dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
       filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
       filter(!is.na(DX_DATE)) %>%
       group_by(ID) %>%
@@ -416,8 +416,8 @@ compute_payer_at_sct <- function() {
 
   # ENCOUNTER ADMIT_DATE: DRGs 014, 016, 017 per D-10
   drg_dates <- NULL
-  if (!is.null(pcornet$ENCOUNTER)) {
-    drg_dates <- pcornet$ENCOUNTER %>%
+  if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+    drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       group_by(ID) %>%
@@ -426,14 +426,14 @@ compute_payer_at_sct <- function() {
 
   # TUMOR_REGISTRY: SCT dates (DT_HTE, DT_SCT, SCT_DATE, BMT_DATE, etc.)
   tr_dates <- NULL
-  if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_sct_cols <- intersect(
       c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
         "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
-      names(pcornet$TUMOR_REGISTRY_ALL)
+      names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_sct_cols) > 0) {
-      tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
         select(ID, all_of(tr_sct_cols)) %>%
         filter(if_any(all_of(tr_sct_cols), ~ !is.na(.)))
       if (nrow(tr_data) > 0) {
@@ -519,8 +519,8 @@ compute_last_any_treatment_date <- function() {
     rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
 
     if (treatment_type == "chemo") {
-      if (!is.null(pcornet$PROCEDURES)) {
-        sources$px <- pcornet$PROCEDURES %>%
+      if (!is.null(get_pcornet_table("PROCEDURES"))) {
+        sources$px <- get_pcornet_table("PROCEDURES") %>%
           filter(
             (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
             (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
@@ -529,44 +529,44 @@ compute_last_any_treatment_date <- function() {
           ) %>% filter(!is.na(PX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$PRESCRIBING)) {
-        sources$rx <- pcornet$PRESCRIBING %>%
+      if (!is.null(get_pcornet_table("PRESCRIBING"))) {
+        sources$rx <- get_pcornet_table("PRESCRIBING") %>%
           filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
           mutate(d = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
           filter(!is.na(d)) %>%
           group_by(ID) %>% summarise(tx_date = max(d, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$DIAGNOSIS)) {
-        sources$dx <- pcornet$DIAGNOSIS %>%
+      if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+        sources$dx <- get_pcornet_table("DIAGNOSIS") %>%
           filter(
             (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
             (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
           ) %>% filter(!is.na(DX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$ENCOUNTER)) {
-        sources$drg <- pcornet$ENCOUNTER %>%
+      if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+        sources$drg <- get_pcornet_table("ENCOUNTER") %>%
           filter(DRG %in% TREATMENT_CODES$chemo_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
-        sources$disp <- pcornet$DISPENSING %>%
+      if (!is.null(get_pcornet_table("DISPENSING")) && "RXNORM_CUI" %in% names(get_pcornet_table("DISPENSING"))) {
+        sources$disp <- get_pcornet_table("DISPENSING") %>%
           filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>% filter(!is.na(DISPENSE_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
-        sources$ma <- pcornet$MED_ADMIN %>%
+      if (!is.null(get_pcornet_table("MED_ADMIN")) && "RXNORM_CUI" %in% names(get_pcornet_table("MED_ADMIN"))) {
+        sources$ma <- get_pcornet_table("MED_ADMIN") %>%
           filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>% filter(!is.na(MEDADMIN_START_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
       }
       # TUMOR_REGISTRY: chemo dates (CHEMO_START_DATE_SUMMARY, DT_CHEMO)
-      if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+      if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
         tr_chemo_cols <- intersect(
           c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
-          names(pcornet$TUMOR_REGISTRY_ALL)
+          names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
         )
         if (length(tr_chemo_cols) > 0) {
-          tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+          tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
             select(ID, all_of(tr_chemo_cols)) %>%
             filter(if_any(all_of(tr_chemo_cols), ~ !is.na(.)))
           if (nrow(tr_data) > 0) {
@@ -584,8 +584,8 @@ compute_last_any_treatment_date <- function() {
       }
 
     } else if (treatment_type == "radiation") {
-      if (!is.null(pcornet$PROCEDURES)) {
-        sources$px <- pcornet$PROCEDURES %>%
+      if (!is.null(get_pcornet_table("PROCEDURES"))) {
+        sources$px <- get_pcornet_table("PROCEDURES") %>%
           filter(
             (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
             (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
@@ -594,27 +594,27 @@ compute_last_any_treatment_date <- function() {
           ) %>% filter(!is.na(PX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$DIAGNOSIS)) {
-        sources$dx <- pcornet$DIAGNOSIS %>%
+      if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+        sources$dx <- get_pcornet_table("DIAGNOSIS") %>%
           filter(
             (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
             (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
           ) %>% filter(!is.na(DX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$ENCOUNTER)) {
-        sources$drg <- pcornet$ENCOUNTER %>%
+      if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+        sources$drg <- get_pcornet_table("ENCOUNTER") %>%
           filter(DRG %in% TREATMENT_CODES$radiation_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
       }
       # TUMOR_REGISTRY: radiation dates (RAD_START_DATE_SUMMARY, DT_RAD)
-      if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+      if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
         tr_rad_cols <- intersect(
           c("RAD_START_DATE_SUMMARY", "DT_RAD"),
-          names(pcornet$TUMOR_REGISTRY_ALL)
+          names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
         )
         if (length(tr_rad_cols) > 0) {
-          tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+          tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
             select(ID, all_of(tr_rad_cols)) %>%
             filter(if_any(all_of(tr_rad_cols), ~ !is.na(.)))
           if (nrow(tr_data) > 0) {
@@ -632,8 +632,8 @@ compute_last_any_treatment_date <- function() {
       }
 
     } else if (treatment_type == "sct") {
-      if (!is.null(pcornet$PROCEDURES)) {
-        sources$px <- pcornet$PROCEDURES %>%
+      if (!is.null(get_pcornet_table("PROCEDURES"))) {
+        sources$px <- get_pcornet_table("PROCEDURES") %>%
           filter(
             (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
             (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
@@ -642,26 +642,26 @@ compute_last_any_treatment_date <- function() {
           ) %>% filter(!is.na(PX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(PX_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$DIAGNOSIS)) {
-        sources$dx <- pcornet$DIAGNOSIS %>%
+      if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+        sources$dx <- get_pcornet_table("DIAGNOSIS") %>%
           filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
           filter(!is.na(DX_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
       }
-      if (!is.null(pcornet$ENCOUNTER)) {
-        sources$drg <- pcornet$ENCOUNTER %>%
+      if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+        sources$drg <- get_pcornet_table("ENCOUNTER") %>%
           filter(DRG %in% TREATMENT_CODES$sct_drg) %>% filter(!is.na(ADMIT_DATE)) %>%
           group_by(ID) %>% summarise(tx_date = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
       }
       # TUMOR_REGISTRY: SCT dates (DT_HTE, DT_SCT, SCT_DATE, BMT_DATE, etc.)
-      if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
+      if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
         tr_sct_cols <- intersect(
           c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
             "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
-          names(pcornet$TUMOR_REGISTRY_ALL)
+          names(get_pcornet_table("TUMOR_REGISTRY_ALL"))
         )
         if (length(tr_sct_cols) > 0) {
-          tr_data <- pcornet$TUMOR_REGISTRY_ALL %>%
+          tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
             select(ID, all_of(tr_sct_cols)) %>%
             filter(if_any(all_of(tr_sct_cols), ~ !is.na(.)))
           if (nrow(tr_data) > 0) {

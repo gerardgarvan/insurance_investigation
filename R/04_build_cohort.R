@@ -47,8 +47,10 @@ message(strrep("=", 60))
 attrition_log <- init_attrition_log()
 
 # Step 0: Initial population from DEMOGRAPHIC (one row per patient)
-cohort <- pcornet$DEMOGRAPHIC %>%
-  select(ID, SOURCE, SEX, RACE, HISPANIC, BIRTH_DATE)
+# Materialize immediately since we need n_distinct(), nrow(), saveRDS()
+cohort <- get_pcornet_table("DEMOGRAPHIC") %>%
+  select(ID, SOURCE, SEX, RACE, HISPANIC, BIRTH_DATE) %>%
+  materialize()
 attrition_log <- log_attrition(attrition_log, "Initial population", n_distinct(cohort$ID))
 
 # Snapshot: Step 0 -- Initial population (per SNAP-01)
@@ -61,40 +63,51 @@ message(glue("  Snapshot: cohort_00_initial_population.rds ({nrow(cohort)} rows,
 
 # Step 1: Build HL_SOURCE and HL_VERIFIED flag (but do NOT filter)
 # Runs the same HL identification logic to tag patients, then retains all
+# Translation gap workaround: inline ICD matching (same pattern as 03_cohort_predicates.R)
+hl_icd10_undotted <- ICD_CODES$hl_icd10
+hl_icd9_undotted <- ICD_CODES$hl_icd9
+
+dx_hl <- get_pcornet_table("DIAGNOSIS") %>%
+  filter(
+    (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
+    (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+  ) %>%
+  distinct(ID) %>%
+  mutate(has_dx = TRUE)
+
+# TUMOR_REGISTRY: same pattern as 03_cohort_predicates.R
+tr_all_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
+tr_all <- if (!is.null(tr_all_tbl)) {
+  tr_cols <- colnames(tr_all_tbl)
+
+  tr_hist <- if ("HISTOLOGICAL_TYPE" %in% tr_cols) {
+    tr_all_tbl %>%
+      filter(substr(as.character(HISTOLOGICAL_TYPE), 1, 4) %in% ICD_CODES$hl_histology) %>%
+      distinct(ID)
+  } else {
+    tibble(ID = character())
+  }
+
+  tr_morph <- if ("MORPH" %in% tr_cols) {
+    tr_all_tbl %>%
+      filter(substr(as.character(MORPH), 1, 4) %in% ICD_CODES$hl_histology) %>%
+      distinct(ID)
+  } else {
+    tibble(ID = character())
+  }
+
+  bind_rows(materialize(tr_hist), materialize(tr_morph)) %>% distinct(ID)
+} else {
+  tibble(ID = character())
+}
+
+# Build HL source map
 hl_source_map <- cohort %>%
   select(ID) %>%
   distinct() %>%
+  left_join(dx_hl, by = "ID") %>%
   left_join(
-    pcornet$DIAGNOSIS %>%
-      filter(is_hl_diagnosis(DX, DX_TYPE)) %>%
-      distinct(ID) %>%
-      mutate(has_dx = TRUE),
-    by = "ID"
-  ) %>%
-  left_join(
-    {
-      # Use TUMOR_REGISTRY_ALL (pre-built in 01_load_pcornet.R), matching 03_cohort_predicates.R pattern
-      tr_all <- if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
-        tr_hist <- if ("HISTOLOGICAL_TYPE" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
-          pcornet$TUMOR_REGISTRY_ALL %>%
-            filter(is_hl_histology(HISTOLOGICAL_TYPE)) %>%
-            distinct(ID)
-        } else {
-          tibble(ID = character())
-        }
-        tr_morph <- if ("MORPH" %in% names(pcornet$TUMOR_REGISTRY_ALL)) {
-          pcornet$TUMOR_REGISTRY_ALL %>%
-            filter(is_hl_histology(MORPH)) %>%
-            distinct(ID)
-        } else {
-          tibble(ID = character())
-        }
-        bind_rows(tr_hist, tr_morph) %>% distinct(ID)
-      } else {
-        tibble(ID = character())
-      }
-      tr_all %>% mutate(has_tr = TRUE)
-    },
+    tr_all %>% mutate(has_tr = TRUE),
     by = "ID"
   ) %>%
   mutate(
@@ -144,14 +157,15 @@ message(glue("  Snapshot: cohort_02_has_enrollment.rds ({nrow(cohort)} rows, {nc
 message("\n--- Enrollment Aggregation ---")
 
 # Get primary site enrollment only (D-13: primary site strategy)
-enrollment_primary <- pcornet$ENROLLMENT %>%
+enrollment_primary <- get_pcornet_table("ENROLLMENT") %>%
   inner_join(
-    pcornet$DEMOGRAPHIC %>% select(ID, SOURCE),
+    get_pcornet_table("DEMOGRAPHIC") %>% select(ID, SOURCE),
     by = c("ID", "SOURCE")
   )
 
 # Aggregate enrollment dates per patient
 # Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
+# Materialize after summarise since downstream uses interval() (R-side lubridate function)
 enrollment_dates <- enrollment_primary %>%
   mutate(
     ENR_START_DATE = if_else(year(ENR_START_DATE) == 1900L, as.Date(NA), ENR_START_DATE),
@@ -165,11 +179,14 @@ enrollment_dates <- enrollment_primary %>%
   ) %>%
   mutate(
     enrollment_duration_days = as.numeric(enr_end_date - enr_start_date)
-  )
+  ) %>%
+  materialize()
 
 # Join enrollment dates and calculate ages (D-10)
+# Materialize cohort before age calculation (lubridate::interval is R-side only)
 cohort <- cohort %>%
   left_join(enrollment_dates, by = "ID") %>%
+  materialize() %>%
   mutate(
     age_at_enr_start = as.integer(
       time_length(interval(BIRTH_DATE, enr_start_date), "years")

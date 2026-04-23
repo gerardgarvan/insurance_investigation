@@ -18,7 +18,7 @@
 #   Level 3: ENC_CANCER_PROVIDER  (D-10)
 #     Level 2 encounters where the visit PROVIDER has oncology NUCC taxonomy code
 #     PROVIDER_SPECIALTIES$cancer_oncology (Hematology, Hematology/Oncology, etc.)
-#     NULL-safe: if pcornet$PROVIDER is NULL, Level 3 and 4 are forced to 0
+#     NULL-safe: if get_pcornet_table("PROVIDER") is NULL, Level 3 and 4 are forced to 0
 #
 #   Level 4: ENC_SURVIVORSHIP  (D-09)
 #     Level 3 encounters where the SAME encounter also has a personal history
@@ -33,9 +33,9 @@
 #
 # INPUT:
 #   post_dx_date_map  -- tibble(ID, first_hl_dx_date)  -- one row per cohort patient
-#   pcornet$ENCOUNTER -- ENCOUNTERID, ID, ENC_TYPE, ADMIT_DATE, PROVIDERID
-#   pcornet$DIAGNOSIS -- ENCOUNTERID, ID, DX, DX_TYPE
-#   pcornet$PROVIDER  -- PROVIDERID, PROVIDER_SPECIALTY_PRIMARY (may be NULL if file missing)
+#   get_pcornet_table("ENCOUNTER") -- ENCOUNTERID, ID, ENC_TYPE, ADMIT_DATE, PROVIDERID
+#   get_pcornet_table("DIAGNOSIS") -- ENCOUNTERID, ID, DX, DX_TYPE
+#   get_pcornet_table("PROVIDER")  -- PROVIDERID, PROVIDER_SPECIALTY_PRIMARY (may be NULL if file missing)
 #
 # OUTPUT:
 #   tibble with columns (3 per level x 4 levels = 12 columns):
@@ -70,11 +70,11 @@ library(glue)
 #'   Patients with no qualifying encounters at a level receive 0 / NA.
 #'
 #' @details
-#'   Accesses pcornet$ENCOUNTER, pcornet$DIAGNOSIS, pcornet$PROVIDER,
+#'   Accesses get_pcornet_table("ENCOUNTER"), get_pcornet_table("DIAGNOSIS"), get_pcornet_table("PROVIDER"),
 #'   ICD_CODES, SURVIVORSHIP_CODES, and PROVIDER_SPECIALTIES from the
 #'   calling environment (loaded by 00_config.R + 01_load_pcornet.R).
 #'
-#'   NULL-safe for pcornet$PROVIDER: if the PROVIDER table is unavailable,
+#'   NULL-safe for get_pcornet_table("PROVIDER"): if the PROVIDER table is unavailable,
 #'   Level 3 and Level 4 are set to 0 for all patients and a warning is logged.
 classify_survivorship_encounters <- function(post_dx_date_map) {
 
@@ -93,7 +93,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
   # D-03: post-diagnosis = ADMIT_DATE strictly after first_hl_dx_date
   # ----------------------------------------------------------------------------
 
-  enc_av_th <- pcornet$ENCOUNTER %>%
+  enc_av_th <- get_pcornet_table("ENCOUNTER") %>%
     filter(ENC_TYPE %in% c("AV", "TH")) %>%
     inner_join(post_dx_date_map, by = "ID") %>%
     filter(!is.na(ADMIT_DATE), !is.na(first_hl_dx_date),
@@ -118,7 +118,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
   # D-07: HL codes ONLY -- C81.xx ICD-10, 201.xx ICD-9
   # ----------------------------------------------------------------------------
 
-  hl_dx_on_encounter <- pcornet$DIAGNOSIS %>%
+  hl_dx_on_encounter <- get_pcornet_table("DIAGNOSIS") %>%
     filter(
       (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
       (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
@@ -147,9 +147,9 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
   # Pitfall 2: PROVIDERID may be NULL in many ENCOUNTER rows -- use left_join
   # ----------------------------------------------------------------------------
 
-  if (is.null(pcornet$PROVIDER)) {
+  if (is.null(get_pcornet_table("PROVIDER"))) {
     warning(glue(
-      "[Survivorship] pcornet$PROVIDER is NULL. ",
+      "[Survivorship] get_pcornet_table("PROVIDER") is NULL. ",
       "Level 3 (ENC_CANCER_PROVIDER) and Level 4 (ENC_SURVIVORSHIP) ",
       "will be set to 0 for all patients. ",
       "Ensure PROVIDER.csv is present if provider-level classification is needed."
@@ -185,7 +185,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
     # left_join to preserve all Level 2 encounters even when PROVIDERID is NULL
     level3_encounters <- level2_encounters %>%
       left_join(
-        pcornet$PROVIDER %>% select(PROVIDERID, PROVIDER_SPECIALTY_PRIMARY),
+        get_pcornet_table("PROVIDER") %>% select(PROVIDERID, PROVIDER_SPECIALTY_PRIMARY),
         by = "PROVIDERID"
       ) %>%
       filter(PROVIDER_SPECIALTY_PRIMARY %in% PROVIDER_SPECIALTIES$cancer_oncology)
@@ -209,7 +209,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
     #            Must filter by DX_TYPE to avoid cross-era false matches
     # --------------------------------------------------------------------------
 
-    has_personal_hx <- pcornet$DIAGNOSIS %>%
+    has_personal_hx <- get_pcornet_table("DIAGNOSIS") %>%
       filter(
         (DX_TYPE == "09" & DX %in% SURVIVORSHIP_CODES$personal_history_icd9) |
         (DX_TYPE == "10" & DX %in% SURVIVORSHIP_CODES$personal_history_icd10)
