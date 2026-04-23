@@ -213,6 +213,14 @@ Requirements for milestone v1.2: Multi-Source Overlap Investigation.
 - [ ] **OUTPT-02**: User can see console summary on HiPerGator with per-site multi-source rates, overlap classification breakdown, and key findings
 - [ ] **OUTPT-03**: User can see actionable per-site recommendations based on overlap patterns (e.g., "Site X: 85% identical -- safe to deduplicate by keeping preferred source")
 
+### Per-Patient Source Detection by Date (Phase 28)
+
+- [ ] **PDSRC-01**: User can see one row per (patient, date) with n_sources, source_combo (alphabetical), and n_encounters for ALL dates (including single-source dates), written to patient_date_source_detail.csv
+- [ ] **PDSRC-02**: User can see source combination frequency summary showing how often each combo appears across patient-dates (e.g., "UFH" = 50,000, "FLM+UFH" = 1,234), written to source_combo_frequencies.csv with rank
+- [ ] **PDSRC-03**: User can see per-source aggregate counts (total_encounters, n_patient_dates, n_patients) written to per_source_summary.csv
+- [ ] **PDSRC-04**: User can see HIPAA-suppressed counts (values 1-10 replaced with "<11") in all 3 CSV output files, with raw counts in console output
+- [ ] **PDSRC-05**: User can see console summary on HiPerGator with total encounters, ADMIT_DATE parse rate, single vs multi-source patient-date breakdown, per-source counts, top 10 source combinations, and list of CSV files written
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -378,6 +386,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OUTPT-01 | Phase 26 | Pending |
 | OUTPT-02 | Phase 26 | Pending |
 | OUTPT-03 | Phase 26 | Pending |
+| PDSRC-01 | Phase 28 | Pending |
+| PDSRC-02 | Phase 28 | Pending |
+| PDSRC-03 | Phase 28 | Pending |
+| PDSRC-04 | Phase 28 | Pending |
+| PDSRC-05 | Phase 28 | Pending |
 
 **Coverage:**
 - v1 requirements: 67 total
@@ -392,12 +405,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 25
 - Unmapped: 0
 
-**v1.2 requirements:** 13 total
-- Mapped to phases: 13 (Phase 25: 6, Phase 26: 7)
+**v1.2 requirements:** 18 total
+- Mapped to phases: 18 (Phase 25: 6, Phase 26: 7, Phase 28: 5)
 - Unmapped: 0
 
-**Total coverage:** 119/119 requirements mapped (100%)
+**Total coverage:** 124/124 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-21 after v1.2 roadmap created (Phases 25-26 added)*
+*Last updated: 2026-04-23 after Phase 28 planned (per-patient source detection added)*

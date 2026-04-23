@@ -557,6 +557,28 @@ Plans:
 
 ---
 
+### Phase 28: Per-Patient Source Detection by Date
+
+**Goal:** For each patient on each date, detect which ENCOUNTER.SOURCE values are present and how many encounters each source contributes, replacing the Phase 25-26 pairwise overlap approach with a simpler per-date source enumeration strategy using data.table for speed
+
+**Depends on:** Phase 27
+
+**Requirements**: PDSRC-01, PDSRC-02, PDSRC-03, PDSRC-04, PDSRC-05
+
+**Success Criteria** (what must be TRUE):
+1. User can see one row per (patient, date) with n_sources, source_combo, n_encounters for ALL dates (including single-source)
+2. User can see source combination frequency summary showing how often each combo (e.g., "UFH", "FLM+UFH") appears across patient-dates
+3. User can see per-source aggregate counts (total encounters, patient-dates, patients)
+4. User can see HIPAA-suppressed counts (1-10 replaced with "<11") in all 3 CSV outputs
+5. User can see console summary with total encounters, parse rate, single vs multi-source breakdown, per-source counts, top 10 combos
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 28-01-PLAN.md -- Standalone R script R/24_per_patient_source_detection.R: data.table per-date source enumeration, 3 CSV outputs, HIPAA suppression, console summary (PDSRC-01, PDSRC-02, PDSRC-03, PDSRC-04, PDSRC-05)
+
+---
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -588,9 +610,10 @@ Plans:
 | 25. Multi-Source Overlap Detection | 1/1 | Complete   | 2026-04-21 |
 | 26. Overlap Classification and Recommendations | 0/1 | Not started | - |
 | 27. Cross-Table Data Quality Assessment | 0/2 | Planned | - |
+| 28. Per-Patient Source Detection by Date | 0/1 | Planned | - |
 
 ## Next Actions
 
-Phase 27 planned with 2 plans in 2 waves. Execute with `/gsd:execute-phase 27`.
+Phase 28 planned with 1 plan in 1 wave. Execute with `/gsd:execute-phase 28`.
 
-*Last updated: 2026-04-22 (Phase 27 planned -- cross-table data quality assessment)*
+*Last updated: 2026-04-23 (Phase 28 planned -- per-patient source detection by date using data.table)*
