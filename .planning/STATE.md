@@ -4,12 +4,12 @@ milestone: v7.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 28 context gathered
-last_updated: "2026-04-23T14:22:45.912Z"
-last_activity: 2026-04-22 -- Phase 26 execution started
+last_updated: "2026-04-23T14:50:39.607Z"
+last_activity: 2026-04-23 -- Phase 28 execution started
 progress:
   total_phases: 29
   completed_phases: 25
-  total_plans: 50
+  total_plans: 51
   completed_plans: 47
   percent: 100
 ---
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 26 — overlap-classification-and-recommendations
+**Current focus:** Phase 28 — per-patient-source-detection-by-date-redo-phases-25-26-approach-by-detecting-which-sources-are-present-on-each-patient-date-counting-source-presence-per-date-rather-than-pairwise-overlap
 
 ## Current Position
 
-Phase: 26 (overlap-classification-and-recommendations) — EXECUTING
+Phase: 28 (per-patient-source-detection-by-date-redo-phases-25-26-approach-by-detecting-which-sources-are-present-on-each-patient-date-counting-source-presence-per-date-rather-than-pairwise-overlap) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 26
-Last activity: 2026-04-22 -- Phase 26 execution started
+Status: Executing Phase 28
+Last activity: 2026-04-23 -- Phase 28 execution started
 
 Progress: [██████████] 100% — 47/47 plans (25 phases done)
 

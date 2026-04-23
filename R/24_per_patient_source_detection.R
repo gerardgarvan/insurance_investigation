@@ -38,15 +38,6 @@ library(readr)
 if (!exists("pcornet")) source("R/01_load_pcornet.R")
 
 # ==============================================================================
-# SECTION 1: HIPAA Suppression Helper
-# ==============================================================================
-# Replace count values 1-10 with "<11" in CSV outputs (not console).
-hipaa_suppress <- function(x) {
-  x_num <- suppressWarnings(as.numeric(x))
-  ifelse(!is.na(x_num) & x_num >= 1 & x_num <= 10, "<11", as.character(x))
-}
-
-# ==============================================================================
 # SECTION 2: Load and Prepare Encounters
 # ==============================================================================
 
@@ -194,41 +185,28 @@ for (i in 1:nrow(per_source_summary)) {
 }
 
 # ==============================================================================
-# SECTION 6: HIPAA Suppression and CSV Output (PDSRC-04)
+# SECTION 6: CSV Output (PDSRC-04)
 # ==============================================================================
 
-message(glue("\n--- SECTION 6: HIPAA Suppression and CSV Output (PDSRC-04) ---"))
+message(glue("\n--- SECTION 6: CSV Output (PDSRC-04) ---"))
 
 output_dir <- file.path(CONFIG$output_dir, "tables")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # CSV 1: patient_date_source_detail.csv
-csv1 <- copy(patient_date_detail)
-csv1[, n_sources := hipaa_suppress(n_sources)]
-csv1[, n_encounters := hipaa_suppress(n_encounters)]
-
 csv1_path <- file.path(output_dir, "patient_date_source_detail.csv")
-write_csv(csv1, csv1_path)
-message(glue("Wrote {format(nrow(csv1), big.mark=',')} rows to {csv1_path}"))
+write_csv(patient_date_detail, csv1_path)
+message(glue("Wrote {format(nrow(patient_date_detail), big.mark=',')} rows to {csv1_path}"))
 
 # CSV 2: source_combo_frequencies.csv
-csv2 <- copy(combo_freq)
-csv2[, n_patient_dates := hipaa_suppress(n_patient_dates)]
-csv2[, n_total_encounters := hipaa_suppress(n_total_encounters)]
-
 csv2_path <- file.path(output_dir, "source_combo_frequencies.csv")
-write_csv(csv2, csv2_path)
-message(glue("Wrote {format(nrow(csv2), big.mark=',')} rows to {csv2_path}"))
+write_csv(combo_freq, csv2_path)
+message(glue("Wrote {format(nrow(combo_freq), big.mark=',')} rows to {csv2_path}"))
 
 # CSV 3: per_source_summary.csv
-csv3 <- copy(per_source_summary)
-csv3[, total_encounters := hipaa_suppress(total_encounters)]
-csv3[, n_patient_dates := hipaa_suppress(n_patient_dates)]
-csv3[, n_patients := hipaa_suppress(n_patients)]
-
 csv3_path <- file.path(output_dir, "per_source_summary.csv")
-write_csv(csv3, csv3_path)
-message(glue("Wrote {format(nrow(csv3), big.mark=',')} rows to {csv3_path}"))
+write_csv(per_source_summary, csv3_path)
+message(glue("Wrote {format(nrow(per_source_summary), big.mark=',')} rows to {csv3_path}"))
 
 # ==============================================================================
 # SECTION 7: Final Console Summary (PDSRC-05)
@@ -261,9 +239,9 @@ for (i in 1:top_n) {
 }
 
 message("\nCSV files written to output/tables/:")
-message(glue("  - patient_date_source_detail.csv ({format(nrow(csv1), big.mark=',')} rows)"))
-message(glue("  - source_combo_frequencies.csv ({format(nrow(csv2), big.mark=',')} rows)"))
-message(glue("  - per_source_summary.csv ({format(nrow(csv3), big.mark=',')} rows)"))
+message(glue("  - patient_date_source_detail.csv ({format(nrow(patient_date_detail), big.mark=',')} rows)"))
+message(glue("  - source_combo_frequencies.csv ({format(nrow(combo_freq), big.mark=',')} rows)"))
+message(glue("  - per_source_summary.csv ({format(nrow(per_source_summary), big.mark=',')} rows)"))
 
 message(glue("\n{strrep('=', 70)}"))
 message("END OF PER-PATIENT SOURCE DETECTION BY DATE")
