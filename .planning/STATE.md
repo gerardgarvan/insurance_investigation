@@ -1,61 +1,49 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: milestone
-status: executing
-stopped_at: Phase 28 context gathered
-last_updated: "2026-04-23T14:50:39.607Z"
-last_activity: 2026-04-23 -- Phase 28 execution started
+milestone: v1.3
+milestone_name: DuckDB Backend Migration
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-04-23T16:00:00.000Z"
+last_activity: 2026-04-23 -- Milestone v1.3 started
 progress:
-  total_phases: 29
-  completed_phases: 25
-  total_plans: 51
-  completed_plans: 47
-  percent: 100
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 8
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Last updated:** 2026-04-21
-**Project status:** Milestone v1.2 — roadmap created, Phase 24 pending, Phases 25-26 ready to plan
+**Last updated:** 2026-04-23
+**Project status:** Milestone v1.3 — defining requirements
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-03)
+See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 28 — per-patient-source-detection-by-date-redo-phases-25-26-approach-by-detecting-which-sources-are-present-on-each-patient-date-counting-source-presence-per-date-rather-than-pairwise-overlap
+**Current focus:** Milestone v1.3 — DuckDB Backend Migration (defining requirements)
 
 ## Current Position
 
-Phase: 28 (per-patient-source-detection-by-date-redo-phases-25-26-approach-by-detecting-which-sources-are-present-on-each-patient-date-counting-source-presence-per-date-rather-than-pairwise-overlap) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 28
-Last activity: 2026-04-23 -- Phase 28 execution started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-23 — Milestone v1.3 started
 
-Progress: [██████████] 100% — 47/47 plans (25 phases done)
-
-## Performance Metrics
-
-**Velocity:** 47 plans across 25 phases completed (v1.0 + v1.1 + v1.2 Phase 25)
-**Quality:** All phases executed without rework
-
-| Phase | Plans | Status | Duration |
-|-------|-------|--------|----------|
-| 25. Multi-Source Overlap Detection | 1/1 | Complete (pending HiPerGator verify) | 15 min |
-| 26. Overlap Classification & Recommendations | 0/1 | Not started | — |
+Progress: [░░░░░░░░░░] 0% — 0/8 plans (0 phases done)
 
 ## Accumulated Context
 
-### Key Decisions (relevant to v1.2)
+### Key Decisions (relevant to v1.3)
 
-- Phase 20/22: Duplicate detection patterns use DEMOGRAPHIC.SOURCE for site assignment and ENCOUNTER.SOURCE for multi-source identification — Phase 25 continues this pattern
-- Phase 19: Missing payer defined as NA, empty, NI, UN, OT, 99, 9999 — same definition applies to Phase 26 field comparison
-- Phase 21/22: Standalone scripts (R/20_all_source_missingness.R, R/21_all_site_duplicate_dates.R) one script per investigation — Phase 25 and 26 each produce one new R script following this pattern
-- Phase 25-01: Use ENCOUNTER.SOURCE directly with no DEMOGRAPHIC join for cross-source overlap detection (confirmed no site assignment needed)
-- Phase 25-01: Same-week pairwise self-join with SOURCE_x < SOURCE_y deduplication to avoid double-counting (A,B) and (B,A)
-- Phase 25-01: HIPAA suppression applied to CSV count columns only; console output retains raw values for investigator use
+- Phase 15: RDS caching at `/blue/erin.mobley-hl.bcu/clean/rds/` — DuckDB ingest reads from this RDS cache, not raw CSVs
+- Phase 16: Cohort snapshots as `.rds` — these serve as parity baselines for DuckDB migration
+- `.rds` over `.RData` for caching — `readRDS()` returns a single named object directly
+- Pre-written plans (29-01 through 32-02) define the full DuckDB migration scope with REQ-IDs
 
 ### Pending Todos
 
@@ -63,17 +51,9 @@ None.
 
 ### Roadmap Evolution
 
-- Phase 27 added: logical next step to identify data that isn't useful
-- Phase 28 added: Per-patient source detection by date — redo phases 25-26 approach by detecting which sources are present on each patient-date
+- v1.2 Phases 24, 26, 27, 28 deferred (on hold) to focus on DuckDB migration
+- v1.3 milestone started with 4 phases (29-32) and 8 pre-written plans
 
 ### Blockers/Concerns
 
-None. Phase 25 builds directly on detection logic in R/21_all_site_duplicate_dates.R.
-
-## Session Continuity
-
-Last session: 2026-04-23T14:22:45.906Z
-Stopped at: Phase 28 context gathered
-Resume file: .planning/phases/28-per-patient-source-detection-by-date-redo-phases-25-26-approach-by-detecting-which-sources-are-present-on-each-patient-date-counting-source-presence-per-date-rather-than-pairwise-overlap/28-CONTEXT.md
-
-Next step: Plan Phase 24 (focused PPTX for Phases 19/20), then plan Phase 25 (multi-source overlap detection).
+None.

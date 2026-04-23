@@ -34,15 +34,24 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Produce Sankey/alluvial showing enrollment → diagnosis date → treatment type, stratified by payer
 - [ ] Apply HIPAA small-cell suppression (counts 1-10) in outputs
 
-## Current Milestone: v1.2 Multi-Source Overlap Investigation
+## Current Milestone: v1.3 DuckDB Backend Migration
+
+**Goal:** Migrate the PCORnet R pipeline's data access layer from RDS/CSV to DuckDB for faster queries, with a dual-backend abstraction that preserves RDS fallback, parity-tested against existing outputs, and benchmarked for speedup.
+
+**Target features:**
+- Atomic DuckDB ingest from existing RDS cache (13 tables, PATID + ENCOUNTERID indexes)
+- Backend abstraction layer (`get_pcornet_table()` dispatcher with `USE_DUCKDB` flag)
+- Cohort pipeline migration with full parity testing against Phase 16 snapshots
+- 5 diagnostic scripts migrated with per-script RDS vs DuckDB benchmarks
+- Speedup report, migration guide, and default flip to DuckDB
+
+## Previous Milestone: v1.2 Multi-Source Overlap Investigation (On Hold)
 
 **Goal:** Determine whether patient IDs with encounters from multiple data sources on the same date (and same week) represent truly duplicated/overlapping data or genuinely different encounters, across all 5 partner sites.
 
-**Target features:**
-- Same-date multi-source encounter detection across all 5 sites (AMS, UMI, FLM, VRT, UFH)
-- Same-week (7-day window) near-duplicate detection for encounters from different sources
-- Full field comparison (ENC_TYPE, payer fields, diagnosis codes, provider) to classify overlap as identical, partial, or distinct
-- Diagnostic CSVs and console summaries characterizing overlap patterns per site
+**Shipped:** Same-date and same-week multi-source encounter detection (Phase 25), all-source missingness and all-site duplicate profiling (Phases 19-23).
+
+**Deferred:** Phase 24 (focused PPTX), Phase 26 (overlap classification), Phase 27 (cross-table QA), Phase 28 (per-patient source detection).
 
 ## Previous Milestone: v1.1 RDS Cache & Visualization Polish (Complete)
 
@@ -130,4 +139,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after Phase 17 (Visualization Polish) completion*
+*Last updated: 2026-04-23 after milestone v1.3 (DuckDB Backend Migration) started*
