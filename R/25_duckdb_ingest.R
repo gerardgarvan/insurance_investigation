@@ -19,10 +19,11 @@
 #   - Sequential table ingestion with gc() between tables
 #   - Note: TUMOR_REGISTRY_ALL is NOT ingested -- it is a derived table (TR1+TR2+TR3)
 #
-# Requirements: DBING-01, DBING-02
+# Requirements: DBING-01, DBING-02, DBING-03
 # ==============================================================================
 
 source("R/00_config.R")
+source("R/utils_duckdb.R")
 
 library(duckdb)
 library(DBI)
@@ -37,6 +38,13 @@ library(glue)
 # Tables to ingest (same as PCORNET_TABLES from 00_config.R, 13 tables)
 # Note: TUMOR_REGISTRY_ALL is NOT ingested -- it's a derived bind_rows(TR1+TR2+TR3)
 TABLES_TO_INGEST <- PCORNET_TABLES
+
+# Tables that have an ENCOUNTERID column (verified from 01_load_pcornet.R col_type specs)
+# Used for secondary index creation. DISPENSING and PROVIDER do NOT have ENCOUNTERID.
+TABLES_WITH_ENCOUNTERID <- c(
+  "DIAGNOSIS", "PROCEDURES", "PRESCRIBING", "ENCOUNTER",
+  "MED_ADMIN", "LAB_RESULT_CM"
+)
 
 DUCKDB_PATH <- CONFIG$cache$duckdb_path
 DUCKDB_DIR  <- CONFIG$cache$duckdb_dir
@@ -134,6 +142,97 @@ for (tbl_name in TABLES_TO_INGEST) {
 }
 
 # ==============================================================================
+# INDEX CREATION (Phase 29 Plan 02 -- DBING-03)
+# ==============================================================================
+# Build indexes AFTER all data is loaded (faster than during insert).
+# Per D-04: tryCatch() per index -- failed index = warning, not error.
+# An unindexed table is still queryable, just slower.
+
+message(glue("\n{strrep('=', 60)}"))
+message("Creating indexes...")
+message(strrep("=", 60))
+
+index_results <- tibble(
+  table_name = character(),
+  index_name = character(),
+  column     = character(),
+  status     = character()
+)
+
+# PATID indexes on all 13 tables (universal join key)
+# NOTE: PCORnet CDM uses "ID" as the patient ID column name, not "PATID"
+for (tbl_name in TABLES_TO_INGEST) {
+  idx_name <- paste0("idx_", tolower(tbl_name), "_patid")
+  tryCatch({
+    DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ID)"))
+    message(glue("  Created: {idx_name}"))
+    index_results <- bind_rows(index_results, tibble(
+      table_name = tbl_name, index_name = idx_name,
+      column = "ID", status = "created"
+    ))
+  }, error = function(e) {
+    warning(glue("  FAILED: {idx_name} -- {e$message}"))
+    index_results <<- bind_rows(index_results, tibble(
+      table_name = tbl_name, index_name = idx_name,
+      column = "ID", status = paste0("failed: ", e$message)
+    ))
+  })
+}
+
+# ENCOUNTERID indexes on tables that have it (6 tables)
+for (tbl_name in TABLES_WITH_ENCOUNTERID) {
+  idx_name <- paste0("idx_", tolower(tbl_name), "_encounterid")
+  tryCatch({
+    DBI::dbExecute(con, glue("CREATE INDEX {idx_name} ON {tbl_name} (ENCOUNTERID)"))
+    message(glue("  Created: {idx_name}"))
+    index_results <- bind_rows(index_results, tibble(
+      table_name = tbl_name, index_name = idx_name,
+      column = "ENCOUNTERID", status = "created"
+    ))
+  }, error = function(e) {
+    warning(glue("  FAILED: {idx_name} -- {e$message}"))
+    index_results <<- bind_rows(index_results, tibble(
+      table_name = tbl_name, index_name = idx_name,
+      column = "ENCOUNTERID", status = paste0("failed: ", e$message)
+    ))
+  })
+}
+
+n_created <- sum(index_results$status == "created")
+n_failed  <- sum(index_results$status != "created")
+message(glue("\nIndexes: {n_created} created, {n_failed} failed (of {nrow(index_results)} total)"))
+
+# ==============================================================================
+# ROUND-TRIP VERIFICATION (Phase 29 Plan 02 -- DBING-03)
+# ==============================================================================
+# Verify dimensions and column names match between RDS source and DuckDB copy.
+# Full value parity testing is deferred to Phase 31.
+
+message(glue("\n{strrep('=', 60)}"))
+message("Round-trip verification...")
+message(strrep("=", 60))
+
+all_ok <- TRUE
+for (tbl_name in TABLES_TO_INGEST) {
+  result <- verify_duckdb_roundtrip(tbl_name, con)
+  if (result$ok) {
+    message(glue("  PASS: {tbl_name} ({format(result$rds_nrow, big.mark=',')} rows x {result$rds_ncol} cols)"))
+  } else {
+    message(glue("  FAIL: {tbl_name} -- dim_match={result$dim_match}, col_match={result$col_match}"))
+    if (length(result$mismatched_cols) > 0) {
+      message(glue("         {paste(result$mismatched_cols, collapse = '; ')}"))
+    }
+    all_ok <- FALSE
+  }
+}
+
+if (!all_ok) {
+  stop("Round-trip verification FAILED for one or more tables. DuckDB file NOT promoted.")
+}
+
+message(glue("\nAll {length(TABLES_TO_INGEST)} tables passed round-trip verification."))
+
+# ==============================================================================
 # ATOMIC SWAP: DISCONNECT AND RENAME .TMP TO CANONICAL PATH
 # ==============================================================================
 
@@ -168,6 +267,8 @@ message(glue("  File: {DUCKDB_PATH}"))
 message(glue("  Size: {file_size_mb} MB"))
 message(glue("  Tables: {nrow(ingest_log)}"))
 message(glue("  Total rows: {format(sum(ingest_log$row_count), big.mark=',')}"))
+message(glue("  Indexes: {n_created} created ({n_failed} failed)"))
+message(glue("  Verification: {length(TABLES_TO_INGEST)}/{length(TABLES_TO_INGEST)} tables passed"))
 message(glue("  Build time: {round(build_duration, 1)}s ({round(build_duration/60, 1)} min)"))
 message(glue("  Ingest log: {log_path}"))
 message(strrep("=", 60))
