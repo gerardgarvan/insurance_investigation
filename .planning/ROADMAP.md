@@ -668,10 +668,10 @@ Plans:
 5. User can verify `USE_DUCKDB` defaults to `TRUE` in `00_config.R` with deprecation comment and RDS fallback documented
 6. User can run full pipeline end-to-end on HiPerGator with new default and verify all outputs match expected shapes
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 32-01-PLAN.md -- Migrate 5 diagnostic scripts with parity testing and benchmark all vs RDS baseline (DBDIAG-01, DBDIAG-02)
+- [x] 32-01-PLAN.md -- Migrate 5 diagnostic scripts with parity testing and benchmark all vs RDS baseline (DBDIAG-01, DBDIAG-02)
 - [ ] 32-02-PLAN.md -- Generate speedup report, write migration guide, flip USE_DUCKDB default to TRUE, full pipeline verification (DBDIAG-03, DBDIAG-04)
 
 ---
@@ -711,7 +711,7 @@ Plans:
 | 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
-| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 0/2 | Not started | - |
+| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 1/2 | In Progress|  |
 
 ## Next Actions
 

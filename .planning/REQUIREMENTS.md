@@ -246,8 +246,8 @@ Requirements for milestone v1.3: DuckDB Backend Migration.
 
 ### Diagnostic Migration & Reporting (Phase 32)
 
-- [ ] **DBDIAG-01**: User can run 5 diagnostic scripts (R/20-24) under DuckDB backend without error
-- [ ] **DBDIAG-02**: User can verify CSV output parity for all 5 migrated scripts via md5sum comparison (or waldo investigation for boundary diffs)
+- [x] **DBDIAG-01**: User can run 5 diagnostic scripts (R/20-24) under DuckDB backend without error
+- [x] **DBDIAG-02**: User can verify CSV output parity for all 5 migrated scripts via md5sum comparison (or waldo investigation for boundary diffs)
 - [ ] **DBDIAG-03**: User can see a generated speedup report (`output/reports/duckdb_speedup_report.md`) with per-script RDS vs DuckDB median timing and speedup ratio
 - [ ] **DBDIAG-04**: User can read a migration guide (`docs/DUCKDB_MIGRATION_GUIDE.md`) with connection pattern, template script, and translation gap reference, and `USE_DUCKDB` defaults to `TRUE` in `00_config.R`
 
@@ -432,8 +432,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBCOH-01 | Phase 31 | Complete |
 | DBCOH-02 | Phase 31 | Complete |
 | DBCOH-03 | Phase 31 | Complete |
-| DBDIAG-01 | Phase 32 | Pending |
-| DBDIAG-02 | Phase 32 | Pending |
+| DBDIAG-01 | Phase 32 | Complete |
+| DBDIAG-02 | Phase 32 | Complete |
 | DBDIAG-03 | Phase 32 | Pending |
 | DBDIAG-04 | Phase 32 | Pending |
 
