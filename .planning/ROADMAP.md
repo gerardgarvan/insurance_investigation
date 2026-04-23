@@ -30,7 +30,7 @@
 - [x] **Phase 29: DuckDB Ingest Infrastructure** - Ingest 13 PCORnet tables from RDS cache into indexed DuckDB file with atomic write and round-trip verification (completed 2026-04-23)
 - [x] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends (completed 2026-04-23)
 - [x] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison (completed 2026-04-23)
-- [ ] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB
+- [x] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB (completed 2026-04-23)
 
 ## Phase Details
 
@@ -668,11 +668,11 @@ Plans:
 5. User can verify `USE_DUCKDB` defaults to `TRUE` in `00_config.R` with deprecation comment and RDS fallback documented
 6. User can run full pipeline end-to-end on HiPerGator with new default and verify all outputs match expected shapes
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 32-01-PLAN.md -- Migrate 5 diagnostic scripts with parity testing and benchmark all vs RDS baseline (DBDIAG-01, DBDIAG-02)
-- [ ] 32-02-PLAN.md -- Generate speedup report, write migration guide, flip USE_DUCKDB default to TRUE, full pipeline verification (DBDIAG-03, DBDIAG-04)
+- [x] 32-02-PLAN.md -- Generate speedup report, write migration guide, flip USE_DUCKDB default to TRUE, full pipeline verification (DBDIAG-03, DBDIAG-04)
 
 ---
 
@@ -711,7 +711,7 @@ Plans:
 | 29. DuckDB Ingest Infrastructure | 2/2 | Complete    | 2026-04-23 |
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
-| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 1/2 | In Progress|  |
+| 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete   | 2026-04-23 |
 
 ## Next Actions
 
