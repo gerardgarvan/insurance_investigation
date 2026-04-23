@@ -22,6 +22,10 @@
 # 1. DATA PATHS
 # ------------------------------------------------------------------------------
 
+# Extract date for current PCORnet CDM data pull (Mailhot_V1_20250915)
+# Update this when a new extract arrives. Used for ingest log filenames.
+EXTRACT_DATE <- "2025-09-15"
+
 CONFIG <- list(
   # Data directory: Raw PCORnet CDM CSV files (Mailhot HL cohort extract 2025-09-15)
   data_dir = "/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915",
@@ -62,7 +66,11 @@ CONFIG <- list(
     cohort_dir   = "/blue/erin.mobley-hl.bcu/clean/rds/cohort",
 
     # Phase 16: Figure/table backing data snapshots
-    outputs_dir  = "/blue/erin.mobley-hl.bcu/clean/rds/outputs"
+    outputs_dir  = "/blue/erin.mobley-hl.bcu/clean/rds/outputs",
+
+    # Phase 29: DuckDB file storage (gitignored via /blue/erin.mobley-hl.bcu/clean/)
+    duckdb_dir   = "/blue/erin.mobley-hl.bcu/clean/duckdb",
+    duckdb_path  = "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb"
   )
 )
 
