@@ -21,12 +21,14 @@
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: pcornet$ENCOUNTER (ID, ADMIT_DATE, ENC_TYPE, PAYER_TYPE_PRIMARY,
-#             PAYER_TYPE_SECONDARY, PROVIDERID, DISCHARGE_DATE, SOURCE)
-#             pcornet$DEMOGRAPHIC (ID, SOURCE)
+#   Requires: get_pcornet_table("ENCOUNTER"), get_pcornet_table("DEMOGRAPHIC")
 #   Requires: Phase 25 CSVs in output/tables/:
 #             multi_source_same_date_detail.csv
 #             multi_source_same_week_detail.csv
+#
+# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
+#   access. Materializes early because downstream logic uses self-joins, nrow(),
+#   field_match() comparisons, and iterative loops requiring in-memory data.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -39,17 +41,22 @@ library(readr)
 library(stringr)
 library(tidyr)
 
-# Load tables if not already loaded
-if (!exists("pcornet")) source("R/01_load_pcornet.R")
+# Load tables if not already loaded (RDS mode)
+if (!USE_DUCKDB && !exists("pcornet")) source("R/01_load_pcornet.R")
+# DuckDB mode: open connection if needed
+if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con()
+}
 
 # ==============================================================================
 # SECTION 0: Helper functions
 # ==============================================================================
 
 # Missing payer definition (copy from R/21_all_site_duplicate_dates.R lines 48-52, D-03)
+# Phase 32: nchar(trimws()) replaced with direct empty-string check (DuckDB translation gap #7)
 is_missing_payer <- function(payer_value) {
   is.na(payer_value) |
-    nchar(trimws(payer_value)) == 0 |
+    payer_value == "" |
     payer_value %in% c("NI", "UN", "OT", "99", "9999")
 }
 
@@ -121,14 +128,16 @@ message(glue("Loaded multi_source_same_week_detail.csv: {format(nrow(same_week_d
 # Prepare ENCOUNTER data
 message(glue("\nPreparing ENCOUNTER data for field comparison..."))
 
-enc_prepared <- pcornet$ENCOUNTER %>%
+# Phase 32: Use get_pcornet_table() and materialize for in-memory operations
+enc_prepared <- get_pcornet_table("ENCOUNTER") %>%
+  materialize() %>%
   rename(ENCOUNTER_SOURCE = SOURCE)
 
 # Parse ADMIT_DATE and DISCHARGE_DATE
 enc_prepared <- enc_prepared %>%
   mutate(admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"))
 
-n_admit_raw <- sum(!is.na(enc_prepared$ADMIT_DATE) & nchar(trimws(enc_prepared$ADMIT_DATE)) > 0)
+n_admit_raw <- sum(!is.na(enc_prepared$ADMIT_DATE) & enc_prepared$ADMIT_DATE != "")
 n_admit_parsed <- sum(!is.na(enc_prepared$admit_date_parsed))
 admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_raw, 1) else 100
 
@@ -151,7 +160,7 @@ message(glue("ADMIT_DATE parse rate: {admit_parse_rate}% ({format(n_admit_parsed
 enc_prepared <- enc_prepared %>%
   mutate(discharge_date_parsed = as.Date(DISCHARGE_DATE, format = "%Y-%m-%d"))
 
-n_discharge_raw <- sum(!is.na(enc_prepared$DISCHARGE_DATE) & nchar(trimws(enc_prepared$DISCHARGE_DATE)) > 0)
+n_discharge_raw <- sum(!is.na(enc_prepared$DISCHARGE_DATE) & enc_prepared$DISCHARGE_DATE != "")
 n_discharge_parsed <- sum(!is.na(enc_prepared$discharge_date_parsed))
 discharge_parse_rate <- if (n_discharge_raw > 0) round(100 * n_discharge_parsed / n_discharge_raw, 1) else 100
 
@@ -176,8 +185,9 @@ enc_prepared <- enc_prepared %>%
   )
 
 # Join to DEMOGRAPHIC for SITE
+# Phase 32: Use get_pcornet_table() for DEMOGRAPHIC access
 enc_prepared <- enc_prepared %>%
-  left_join(pcornet$DEMOGRAPHIC %>% select(ID, SOURCE), by = "ID") %>%
+  left_join(get_pcornet_table("DEMOGRAPHIC") %>% select(ID, SOURCE) %>% materialize(), by = "ID") %>%
   rename(SITE = SOURCE)
 
 n_no_site <- sum(is.na(enc_prepared$SITE))
