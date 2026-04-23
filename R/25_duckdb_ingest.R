@@ -109,7 +109,8 @@ ingest_ok <- tryCatch({
     rds_path <- file.path(CONFIG$cache$raw_dir, paste0(tbl_name, ".rds"))
 
     if (!file.exists(rds_path)) {
-      stop(glue("RDS file not found for {tbl_name}: {rds_path}"))
+      message(glue("  SKIPPED: {tbl_name} -- RDS file not found ({rds_path})"))
+      next
     }
 
     message(glue("\n[{which(TABLES_TO_INGEST == tbl_name)}/{length(TABLES_TO_INGEST)}] Ingesting {tbl_name}..."))
