@@ -27,10 +27,11 @@
 - [ ] **Phase 24: Make Presentation of Just Phases 19 and 20** - Build a focused PPTX containing only UF missingness (Phase 19) and FLM duplicate-date (Phase 20) outputs
 - [x] **Phase 25: Multi-Source Overlap Detection** - Detect same-date and same-week multi-source encounter pairs across all 5 sites, with per-site counts and source combination frequencies (completed 2026-04-21)
 - [ ] **Phase 26: Overlap Classification and Recommendations** - Classify multi-source encounter groups as Identical/Partial/Distinct via field comparison and produce CSV outputs, console summary, and per-site actionable recommendations
-- [x] **Phase 29: DuckDB Ingest Infrastructure** - Ingest 13 PCORnet tables from RDS cache into indexed DuckDB file with atomic write and round-trip verification (completed 2026-04-23)
-- [x] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends (completed 2026-04-23)
+- [x] **Phase 29: DuckDB Ingest Infrastructure** - Ingest 13 PCORnet tables from RDS cache into indexed DuckDB file with atomic write and round-trip verification (completed 2026-04-23)
+- [x] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends (completed 2026-04-23)
 - [x] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison (completed 2026-04-23)
-- [x] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB (completed 2026-04-23)
+- [x] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB (completed 2026-04-23)
+- [ ] **Phase 33: AV+TH Multi-Source Overlap Detection & Classification** - Repeat Phase 25/26 overlap analysis restricted to Ambulatory Visit and Telehealth encounters only
 
 ## Phase Details
 
@@ -674,6 +675,29 @@ Plans:
 - [x] 32-01-PLAN.md -- Migrate 5 diagnostic scripts with parity testing and benchmark all vs RDS baseline (DBDIAG-01, DBDIAG-02)
 - [x] 32-02-PLAN.md -- Generate speedup report, write migration guide, flip USE_DUCKDB default to TRUE, full pipeline verification (DBDIAG-03, DBDIAG-04)
 
+### Phase 33: AV+TH Multi-Source Overlap Detection & Classification
+
+**Goal:** User can run the Phase 25 (multi-source overlap detection) and Phase 26 (overlap classification and recommendations) analyses restricted to Ambulatory Visit (AV) and Telehealth (TH) encounter types only, producing separate CSV outputs with _av_th suffix for focused outpatient/non-institutional analysis
+
+**Depends on:** Phase 32 (uses DuckDB backend infrastructure), Phase 25 (reuses detection logic from R/22)
+
+**Requirements**: AVTH-DET-01, AVTH-DET-02, AVTH-DET-03, AVTH-DET-04, AVTH-DET-05, AVTH-DET-06, AVTH-CLS-01, AVTH-CLS-02, AVTH-CLS-03, AVTH-CLS-04, AVTH-CLS-05, AVTH-CLS-06, AVTH-CLS-07
+
+**Success Criteria** (what must be TRUE):
+1. User can see same-date multi-source encounter groups restricted to AV+TH encounter types
+2. User can see same-week near-duplicate pairs restricted to AV+TH encounter types
+3. User can see per-source counts and source combination frequencies for AV+TH encounters
+4. User can see ENC_TYPE distribution after filtering logged to console with per-site AV/TH counts
+5. User can see field-by-field match/mismatch flags for AV+TH same-date groups
+6. User can see AV+TH groups classified as Identical/Partial/Distinct with recommendations
+7. Phase 25/26 baseline CSVs are preserved (outputs use _av_th suffix)
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 33-01-PLAN.md -- Clone R/22 as R/33_multi_source_overlap_av_th.R with ENC_TYPE filter for AV+TH and _av_th output naming (AVTH-DET-01, AVTH-DET-02, AVTH-DET-03, AVTH-DET-04, AVTH-DET-05, AVTH-DET-06)
+- [ ] 33-02-PLAN.md -- Clone R/23 as R/34_overlap_classification_av_th.R with AV+TH input paths, ENC_TYPE filter, and _av_th output naming (AVTH-CLS-01, AVTH-CLS-02, AVTH-CLS-03, AVTH-CLS-04, AVTH-CLS-05, AVTH-CLS-06, AVTH-CLS-07)
+
 ---
 
 ## Progress
@@ -712,11 +736,10 @@ Plans:
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
+| 33. AV+TH Multi-Source Overlap | 0/2 | Planned | - |
 
 ## Next Actions
 
-Milestone v1.3 (DuckDB Backend Migration) roadmap created. Phases 29-32 added with 8 plans total. All 14 v1.3 requirements mapped.
+Execute Phase 33 with `/gsd:execute-phase 33`.
 
-Execute Phase 29 with `/gsd:execute-phase 29`.
-
-*Last updated: 2026-04-23 (Phases 29-32 added for milestone v1.3 DuckDB Backend Migration)*
+*Last updated: 2026-04-23 (Phase 33 planned: AV+TH Multi-Source Overlap Detection & Classification)*
