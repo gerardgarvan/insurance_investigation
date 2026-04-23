@@ -251,6 +251,29 @@ Requirements for milestone v1.3: DuckDB Backend Migration.
 - [x] **DBDIAG-03**: User can see a generated speedup report (`output/reports/duckdb_speedup_report.md`) with per-script RDS vs DuckDB median timing and speedup ratio
 - [x] **DBDIAG-04**: User can read a migration guide (`docs/DUCKDB_MIGRATION_GUIDE.md`) with connection pattern, template script, and translation gap reference, and `USE_DUCKDB` defaults to `TRUE` in `00_config.R`
 
+## v1.4 Requirements
+
+Requirements for milestone v1.4: AV+TH Subset Analysis.
+
+### AV+TH Multi-Source Overlap Detection (Phase 33)
+
+- [ ] **AVTH-DET-01**: User can see same-date multi-source encounter groups restricted to Ambulatory Visit (AV) and Telehealth (TH) encounter types only, via R/33_multi_source_overlap_av_th.R that clones R/22 logic with an `ENC_TYPE %in% c("AV", "TH")` filter applied before overlap detection
+- [ ] **AVTH-DET-02**: User can see same-week (7-day window) near-duplicate pairs restricted to AV+TH encounter types only, with same-week pairs categorized separately from same-date exact matches
+- [ ] **AVTH-DET-03**: User can see per-source counts (patients affected, total multi-source encounter pairs) and source combination frequencies (e.g., UFH+FLM, AMS+UMI) for AV+TH encounters only
+- [ ] **AVTH-DET-04**: User can see ENC_TYPE distribution after AV+TH filtering logged to console with per-site AV and TH encounter counts, including warnings for sites with zero AV or zero TH encounters
+- [ ] **AVTH-DET-05**: User can see 4 CSV output files in output/tables/ with `_av_th` suffix: multi_source_same_date_detail_av_th.csv, multi_source_same_week_detail_av_th.csv, multi_source_combo_frequencies_av_th.csv, multi_source_per_source_summary_av_th.csv
+- [ ] **AVTH-DET-06**: Phase 25 baseline CSV outputs (without `_av_th` suffix) are preserved unchanged -- R/22_multi_source_overlap_detection.R is not modified
+
+### AV+TH Overlap Classification & Recommendations (Phase 33)
+
+- [ ] **AVTH-CLS-01**: User can see field-by-field match/mismatch flags (ENC_TYPE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY, PROVIDERID, DISCHARGE_DATE) for each same-date AV+TH multi-source group, via R/34_overlap_classification_av_th.R that clones R/23 logic with AV+TH-filtered inputs
+- [ ] **AVTH-CLS-02**: User can see each AV+TH multi-source group classified as Identical (all compared fields match), Partial (some fields match), or Distinct (most fields differ), for both same-date and same-week groups
+- [ ] **AVTH-CLS-03**: User can see per-source-combo overlap profiles for AV+TH encounters showing the percentage breakdown of Identical vs Partial vs Distinct classifications
+- [ ] **AVTH-CLS-04**: User can see per-site actionable recommendations for AV+TH encounter deduplication derived from classification patterns (e.g., "Site X: 90% Identical AV+TH -- safe to deduplicate; Site Y: 55% Distinct -- retain all")
+- [ ] **AVTH-CLS-05**: User can see a console summary with AV+TH-specific classification breakdown, key findings, and count comparison against the full-encounter-type Phase 26 baseline
+- [ ] **AVTH-CLS-06**: User can see 4 CSV output files in output/tables/ with `_av_th` suffix: classified_same_date_detail_av_th.csv, classified_same_week_detail_av_th.csv, per_site_overlap_profile_av_th.csv, overlap_source_payer_completeness_av_th.csv
+- [ ] **AVTH-CLS-07**: Phase 26 baseline CSV outputs (without `_av_th` suffix) are preserved unchanged -- R/23_overlap_classification.R is not modified, and ENCOUNTER table is filtered to AV+TH before field comparison to prevent cross-type joins
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -437,15 +460,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBDIAG-03 | Phase 32 | Complete |
 | DBDIAG-04 | Phase 32 | Complete |
 
+| AVTH-DET-01 | Phase 33 | Pending |
+| AVTH-DET-02 | Phase 33 | Pending |
+| AVTH-DET-03 | Phase 33 | Pending |
+| AVTH-DET-04 | Phase 33 | Pending |
+| AVTH-DET-05 | Phase 33 | Pending |
+| AVTH-DET-06 | Phase 33 | Pending |
+| AVTH-CLS-01 | Phase 33 | Pending |
+| AVTH-CLS-02 | Phase 33 | Pending |
+| AVTH-CLS-03 | Phase 33 | Pending |
+| AVTH-CLS-04 | Phase 33 | Pending |
+| AVTH-CLS-05 | Phase 33 | Pending |
+| AVTH-CLS-06 | Phase 33 | Pending |
+| AVTH-CLS-07 | Phase 33 | Pending |
+
 **Coverage:**
 - v1 requirements: 67 total — Mapped: 67, Unmapped: 0
 - v1.1 requirements: 14 total — Mapped: 14, Unmapped: 0
 - Investigation requirements: 25 total — Mapped: 25, Unmapped: 0
 - v1.2 requirements: 18 total — Mapped: 18, Unmapped: 0
 - v1.3 requirements: 14 total — Mapped: 14 (Phase 29: 3, Phase 30: 4, Phase 31: 3, Phase 32: 4), Unmapped: 0
+- v1.4 requirements: 13 total — Mapped: 13 (Phase 33: 13), Unmapped: 0
 
-**Total coverage:** 138/138 requirements mapped (100%)
+**Total coverage:** 151/151 requirements mapped (100%)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-04-23 after milestone v1.3 requirements defined (DuckDB Backend Migration)*
+*Last updated: 2026-04-23 after milestone v1.4 requirements defined (AV+TH Subset Analysis)*
