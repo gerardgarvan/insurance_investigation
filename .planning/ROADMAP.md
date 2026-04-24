@@ -692,10 +692,10 @@ Plans:
 6. User can see AV+TH groups classified as Identical/Partial/Distinct with recommendations
 7. Phase 25/26 baseline CSVs are preserved (outputs use _av_th suffix)
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 33-01-PLAN.md -- Clone R/22 as R/33_multi_source_overlap_av_th.R with ENC_TYPE filter for AV+TH and _av_th output naming (AVTH-DET-01, AVTH-DET-02, AVTH-DET-03, AVTH-DET-04, AVTH-DET-05, AVTH-DET-06)
+- [x] 33-01-PLAN.md -- Clone R/22 as R/33_multi_source_overlap_av_th.R with ENC_TYPE filter for AV+TH and _av_th output naming (AVTH-DET-01, AVTH-DET-02, AVTH-DET-03, AVTH-DET-04, AVTH-DET-05, AVTH-DET-06)
 - [ ] 33-02-PLAN.md -- Clone R/23 as R/34_overlap_classification_av_th.R with AV+TH input paths, ENC_TYPE filter, and _av_th output naming (AVTH-CLS-01, AVTH-CLS-02, AVTH-CLS-03, AVTH-CLS-04, AVTH-CLS-05, AVTH-CLS-06, AVTH-CLS-07)
 
 ---
@@ -736,7 +736,7 @@ Plans:
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
-| 33. AV+TH Multi-Source Overlap | 0/2 | Planned | - |
+| 33. AV+TH Multi-Source Overlap | 1/2 | In Progress|  |
 
 ## Next Actions
 

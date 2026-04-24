@@ -257,12 +257,12 @@ Requirements for milestone v1.4: AV+TH Subset Analysis.
 
 ### AV+TH Multi-Source Overlap Detection (Phase 33)
 
-- [ ] **AVTH-DET-01**: User can see same-date multi-source encounter groups restricted to Ambulatory Visit (AV) and Telehealth (TH) encounter types only, via R/33_multi_source_overlap_av_th.R that clones R/22 logic with an `ENC_TYPE %in% c("AV", "TH")` filter applied before overlap detection
-- [ ] **AVTH-DET-02**: User can see same-week (7-day window) near-duplicate pairs restricted to AV+TH encounter types only, with same-week pairs categorized separately from same-date exact matches
-- [ ] **AVTH-DET-03**: User can see per-source counts (patients affected, total multi-source encounter pairs) and source combination frequencies (e.g., UFH+FLM, AMS+UMI) for AV+TH encounters only
-- [ ] **AVTH-DET-04**: User can see ENC_TYPE distribution after AV+TH filtering logged to console with per-site AV and TH encounter counts, including warnings for sites with zero AV or zero TH encounters
-- [ ] **AVTH-DET-05**: User can see 4 CSV output files in output/tables/ with `_av_th` suffix: multi_source_same_date_detail_av_th.csv, multi_source_same_week_detail_av_th.csv, multi_source_combo_frequencies_av_th.csv, multi_source_per_source_summary_av_th.csv
-- [ ] **AVTH-DET-06**: Phase 25 baseline CSV outputs (without `_av_th` suffix) are preserved unchanged -- R/22_multi_source_overlap_detection.R is not modified
+- [x] **AVTH-DET-01**: User can see same-date multi-source encounter groups restricted to Ambulatory Visit (AV) and Telehealth (TH) encounter types only, via R/33_multi_source_overlap_av_th.R that clones R/22 logic with an `ENC_TYPE %in% c("AV", "TH")` filter applied before overlap detection
+- [x] **AVTH-DET-02**: User can see same-week (7-day window) near-duplicate pairs restricted to AV+TH encounter types only, with same-week pairs categorized separately from same-date exact matches
+- [x] **AVTH-DET-03**: User can see per-source counts (patients affected, total multi-source encounter pairs) and source combination frequencies (e.g., UFH+FLM, AMS+UMI) for AV+TH encounters only
+- [x] **AVTH-DET-04**: User can see ENC_TYPE distribution after AV+TH filtering logged to console with per-site AV and TH encounter counts, including warnings for sites with zero AV or zero TH encounters
+- [x] **AVTH-DET-05**: User can see 4 CSV output files in output/tables/ with `_av_th` suffix: multi_source_same_date_detail_av_th.csv, multi_source_same_week_detail_av_th.csv, multi_source_combo_frequencies_av_th.csv, multi_source_per_source_summary_av_th.csv
+- [x] **AVTH-DET-06**: Phase 25 baseline CSV outputs (without `_av_th` suffix) are preserved unchanged -- R/22_multi_source_overlap_detection.R is not modified
 
 ### AV+TH Overlap Classification & Recommendations (Phase 33)
 
@@ -460,12 +460,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBDIAG-03 | Phase 32 | Complete |
 | DBDIAG-04 | Phase 32 | Complete |
 
-| AVTH-DET-01 | Phase 33 | Pending |
-| AVTH-DET-02 | Phase 33 | Pending |
-| AVTH-DET-03 | Phase 33 | Pending |
-| AVTH-DET-04 | Phase 33 | Pending |
-| AVTH-DET-05 | Phase 33 | Pending |
-| AVTH-DET-06 | Phase 33 | Pending |
+| AVTH-DET-01 | Phase 33 | Complete |
+| AVTH-DET-02 | Phase 33 | Complete |
+| AVTH-DET-03 | Phase 33 | Complete |
+| AVTH-DET-04 | Phase 33 | Complete |
+| AVTH-DET-05 | Phase 33 | Complete |
+| AVTH-DET-06 | Phase 33 | Complete |
 | AVTH-CLS-01 | Phase 33 | Pending |
 | AVTH-CLS-02 | Phase 33 | Pending |
 | AVTH-CLS-03 | Phase 33 | Pending |
