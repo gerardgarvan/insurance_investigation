@@ -502,6 +502,43 @@ csv4 <- per_source_same_date %>%
 write_csv(csv4, file.path(output_dir, "multi_source_per_source_summary_av_th.csv"))
 message(glue("  Written: multi_source_per_source_summary_av_th.csv ({nrow(csv4)} rows)"))
 
+# --- CSV 5: multi_source_encounter_payer_av_th.csv ---
+# Per-encounter detail for same-date multi-source patient-dates, with decoded payer.
+# Joins same_date_detail back to ENCOUNTER to get SOURCE and raw payer codes,
+# then decodes PAYER_TYPE_PRIMARY/SECONDARY using PCORnet CDM prefix rules.
+decode_payer <- function(code) {
+  case_when(
+    is.na(code) | code == ""                     ~ NA_character_,
+    code %in% c("NI", "UN", "OT", "UNKNOWN")    ~ "Unknown",
+    code %in% c("99", "9999")                    ~ "Unavailable",
+    str_starts(code, "1")                        ~ "Medicare",
+    str_starts(code, "2")                        ~ "Medicaid",
+    str_starts(code, "5") | str_starts(code, "6") ~ "Private",
+    str_starts(code, "3") | str_starts(code, "4") ~ "Other government",
+    str_starts(code, "8")                        ~ "No payment / Self-pay",
+    str_starts(code, "7") | str_starts(code, "9") ~ "Other",
+    TRUE                                         ~ "Other"
+  )
+}
+
+csv5 <- same_date_detail %>%
+  select(ID, ADMIT_DATE, n_sources, source_combo) %>%
+  inner_join(
+    enc_valid %>% select(ID, ADMIT_DATE = admit_date_parsed, SOURCE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
+    by = c("ID", "ADMIT_DATE")
+  ) %>%
+  mutate(
+    PAYER_PRIMARY_DECODED   = decode_payer(PAYER_TYPE_PRIMARY),
+    PAYER_SECONDARY_DECODED = decode_payer(PAYER_TYPE_SECONDARY)
+  ) %>%
+  select(ID, ADMIT_DATE, n_sources, source_combo, SOURCE,
+         PAYER_TYPE_PRIMARY, PAYER_PRIMARY_DECODED,
+         PAYER_TYPE_SECONDARY, PAYER_SECONDARY_DECODED) %>%
+  arrange(desc(n_sources), ID, ADMIT_DATE, SOURCE)
+
+write_csv(csv5, file.path(output_dir, "multi_source_encounter_payer_av_th.csv"))
+message(glue("  Written: multi_source_encounter_payer_av_th.csv ({format(nrow(csv5), big.mark=',')} rows)"))
+
 # ==============================================================================
 # Final console summary
 # ==============================================================================
@@ -551,6 +588,7 @@ message("  - multi_source_same_date_detail_av_th.csv")
 message("  - multi_source_same_week_detail_av_th.csv")
 message("  - multi_source_combo_frequencies_av_th.csv")
 message("  - multi_source_per_source_summary_av_th.csv")
+message("  - multi_source_encounter_payer_av_th.csv")
 
 message(glue("\nPhase 26 note: These outputs feed R/34_overlap_classification_av_th.R for field-by-field comparison"))
 
