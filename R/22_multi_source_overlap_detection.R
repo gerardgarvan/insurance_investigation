@@ -49,25 +49,6 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 }
 
 # ==============================================================================
-# HIPAA suppression helper
-# ==============================================================================
-# Replace count values 1-10 with "<11" in CSV outputs (not console).
-hipaa_suppress <- function(x) {
-  x_num <- suppressWarnings(as.numeric(x))
-  ifelse(!is.na(x_num) & x_num >= 1 & x_num <= 10, "<11", as.character(x))
-}
-
-# Apply HIPAA suppression to all count/n_ columns in a data frame
-suppress_counts <- function(df) {
-  count_cols <- grep("^n_|^n$|_count$|_pairs$|_affected$|_dates$|_encounters$|_patients$|^rank$",
-                     names(df), value = TRUE)
-  # Exclude columns that are not counts (rates, pcts)
-  count_cols <- count_cols[!grepl("pct_|_rate$|_pct$", count_cols)]
-  df %>%
-    mutate(across(all_of(count_cols), ~ hipaa_suppress(.x)))
-}
-
-# ==============================================================================
 # SECTION 1: Load and prepare encounters
 # ==============================================================================
 
@@ -429,12 +410,7 @@ dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # --- CSV 1: multi_source_same_date_detail.csv ---
 # Columns: ID, ADMIT_DATE, n_sources, n_encounters, source_combo, sources_list
-# HIPAA suppression on n_sources, n_encounters
-csv1 <- same_date_detail %>%
-  mutate(
-    n_sources    = hipaa_suppress(n_sources),
-    n_encounters = hipaa_suppress(n_encounters)
-  )
+csv1 <- same_date_detail
 
 write_csv(csv1, file.path(output_dir, "multi_source_same_date_detail.csv"))
 message(glue("  Written: multi_source_same_date_detail.csv ({format(nrow(csv1), big.mark=',')} rows)"))
@@ -462,11 +438,7 @@ csv3_same_week <- same_week_combo_freq %>%
   ) %>%
   select(match_type, source_combo, n_patient_dates, n_total_encounters, rank)
 
-csv3 <- bind_rows(csv3_same_date, csv3_same_week) %>%
-  mutate(
-    n_patient_dates    = hipaa_suppress(n_patient_dates),
-    n_total_encounters = hipaa_suppress(n_total_encounters)
-  )
+csv3 <- bind_rows(csv3_same_date, csv3_same_week)
 
 write_csv(csv3, file.path(output_dir, "multi_source_combo_frequencies.csv"))
 message(glue("  Written: multi_source_combo_frequencies.csv ({nrow(csv3)} rows: {nrow(csv3_same_date)} same-date + {nrow(csv3_same_week)} same-week)"))
@@ -493,15 +465,7 @@ csv4 <- per_source_same_date %>%
     n_same_week_near_dup_pairs    = coalesce(n_same_week_near_dup_pairs, 0L),
     n_same_week_patients_affected = coalesce(n_same_week_patients_affected, 0L)
   ) %>%
-  arrange(SOURCE) %>%
-  # HIPAA suppression on count columns
-  mutate(
-    total_encounters                  = hipaa_suppress(total_encounters),
-    n_same_date_multi_source_dates    = hipaa_suppress(n_same_date_multi_source_dates),
-    n_same_date_patients_affected     = hipaa_suppress(n_same_date_patients_affected),
-    n_same_week_near_dup_pairs        = hipaa_suppress(n_same_week_near_dup_pairs),
-    n_same_week_patients_affected     = hipaa_suppress(n_same_week_patients_affected)
-  )
+  arrange(SOURCE)
 
 write_csv(csv4, file.path(output_dir, "multi_source_per_source_summary.csv"))
 message(glue("  Written: multi_source_per_source_summary.csv ({nrow(csv4)} rows)"))

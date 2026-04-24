@@ -110,7 +110,6 @@ rename_payer <- function(x) {
   )
 }
 
-# HIPAA small-cell suppression: counts 1-10 replaced with "<11"
 format_count_pct <- function(n, total) {
   pct <- round(100 * n / total, 1)
   count_str <- format(n, big.mark = ",")
@@ -2537,15 +2536,6 @@ if (nrow(p22_date_detail) > 0) {
 
 message("\n--- Adding Phase 21 Missingness Slides ---")
 
-# HIPAA helper: suppress count columns 1-10 with "<11"
-suppress_small_counts <- function(df) {
-  df %>%
-    mutate(across(where(is.numeric), ~ {
-      x_char <- if_else(. >= 1 & . <= 10, "<11",
-                        format(., big.mark = ",", trim = TRUE))
-      x_char
-    }))
-}
 
 # ---- Slide 39: Cross-Site Payer Missingness Summary (grouped bar chart) ----
 message("  Slide 39: Cross-Site Payer Missingness Summary (chart)")

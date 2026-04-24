@@ -14,7 +14,6 @@
 #   - Date: min, max, n_missing, n_valid
 #   - Logical (_VALID flags): converted to character frequency table
 #
-# HIPAA compliance: All counts 1-10 are suppressed as "<11"
 #
 # Usage:
 #   source("R/17_value_audit.R")
@@ -40,43 +39,6 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 # HELPER FUNCTIONS
 # ==============================================================================
 
-#' Apply HIPAA small-cell suppression to a count vector
-#'
-#' Counts 1-10 become "<11". Zero stays "0". NA stays NA. Values >10 formatted.
-#'
-#' @param n_vec Numeric vector of counts
-#' @return Character vector with suppressed values
-suppress_hipaa <- function(n_vec) {
-  case_when(
-    is.na(n_vec) ~ NA_character_,
-    n_vec == 0 ~ "0",
-    n_vec >= 1 & n_vec <= 10 ~ "<11",
-    TRUE ~ format(n_vec, big.mark = ",", trim = TRUE)
-  )
-}
-
-#' Apply HIPAA suppression to audit result tibble
-#'
-#' Replaces n counts 1-10 with "<11" and marks their pct as "suppressed"
-#'
-#' @param result Audit result tibble with n and pct columns
-#' @return Tibble with HIPAA-suppressed n and pct
-apply_hipaa_to_audit <- function(result) {
-  result %>%
-    mutate(
-      n_raw = suppressWarnings(as.numeric(n)),
-      n = case_when(
-        is.na(n_raw) ~ as.character(n),
-        n_raw >= 1 & n_raw <= 10 ~ "<11",
-        n_raw == 0 ~ "0",
-        TRUE ~ format(n_raw, big.mark = ",", trim = TRUE)
-      ),
-      pct = case_when(
-        n == "<11" ~ "suppressed",
-        TRUE ~ as.character(pct)
-      )
-    ) %>%
-    select(-n_raw)
 }
 
 #' Audit a single character/factor column
@@ -114,15 +76,7 @@ audit_numeric_column <- function(df, col_name) {
   n_valid <- sum(!is.na(vals))
   n_dist <- n_distinct(vals, na.rm = TRUE)
 
-  # If n_valid is 1-10, suppress all stats (HIPAA)
-  if (n_valid >= 1 & n_valid <= 10) {
-    stats <- tibble(
-      stat = c("min", "max", "mean", "median", "n_missing", "n_valid", "n_distinct"),
-      value = c(rep("suppressed", 4), as.character(n_missing), "<11", "suppressed"),
-      n = NA_real_,
-      pct = NA_real_
-    )
-  } else if (n_valid == 0) {
+  if (n_valid == 0) {
     stats <- tibble(
       stat = c("min", "max", "mean", "median", "n_missing", "n_valid", "n_distinct"),
       value = c(rep(NA_character_, 4), as.character(n_missing), "0", "0"),
@@ -164,15 +118,7 @@ audit_date_column <- function(df, col_name) {
   n_missing <- sum(is.na(vals))
   n_valid <- sum(!is.na(vals))
 
-  # If n_valid is 1-10, suppress all stats (HIPAA)
-  if (n_valid >= 1 & n_valid <= 10) {
-    stats <- tibble(
-      stat = c("min", "max", "n_missing", "n_valid"),
-      value = c("suppressed", "suppressed", as.character(n_missing), "<11"),
-      n = NA_real_,
-      pct = NA_real_
-    )
-  } else if (n_valid == 0) {
+  if (n_valid == 0) {
     stats <- tibble(
       stat = c("min", "max", "n_missing", "n_valid"),
       value = c(NA_character_, NA_character_, as.character(n_missing), "0"),
@@ -259,9 +205,6 @@ for (tbl_name in names(pcornet)) {
   result <- audit_table(df, tbl_name)
   audit_results[[tbl_name]] <- result
 
-  # Apply HIPAA suppression to character frequency counts (n column)
-  result <- apply_hipaa_to_audit(result)
-
   # Write CSV
   output_file <- file.path(output_dir, glue("{tbl_name}_values.csv"))
   write_csv(result, output_file)
@@ -316,9 +259,6 @@ if (exists("hl_cohort", envir = .GlobalEnv)) {
 if (length(derived_audits) > 0) {
   for (name in names(derived_audits)) {
     result <- derived_audits[[name]]
-
-    # Apply HIPAA suppression
-    result <- apply_hipaa_to_audit(result)
 
     output_file <- file.path(output_dir, glue("{name}_values.csv"))
     write_csv(result, output_file)

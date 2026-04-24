@@ -4,7 +4,6 @@
 # Produces two-axis alluvial diagram: Payer Category -> Treatment Type
 # Flows colored by payer category using colorblind-safe viridis palette.
 # Requirements: VIZ-02
-# NOTE: HIPAA small-cell suppression deferred to v2 (D-11). Outputs are exploratory, remain on HiPerGator.
 # ==============================================================================
 
 source("R/04_build_cohort.R")  # Loads hl_cohort, all upstream

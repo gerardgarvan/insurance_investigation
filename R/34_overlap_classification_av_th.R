@@ -61,20 +61,6 @@ is_missing_payer <- function(payer_value) {
     payer_value %in% c("NI", "UN", "OT", "99", "9999")
 }
 
-# HIPAA suppression helpers (copy from R/22_multi_source_overlap_detection.R lines 47-60)
-hipaa_suppress <- function(x) {
-  x_num <- suppressWarnings(as.numeric(x))
-  ifelse(!is.na(x_num) & x_num >= 1 & x_num <= 10, "<11", as.character(x))
-}
-
-suppress_counts <- function(df) {
-  count_cols <- grep("^n_|^n$|_count$|_pairs$|_affected$|_dates$|_encounters$|_patients$|^rank$",
-                     names(df), value = TRUE)
-  count_cols <- count_cols[!grepl("pct_|_rate$|_pct$", count_cols)]
-  df %>%
-    mutate(across(all_of(count_cols), ~ hipaa_suppress(.x)))
-}
-
 # Field comparison helper (D-01, D-02)
 field_match <- function(val1, val2) {
   both_na <- is.na(val1) & is.na(val2)
@@ -101,8 +87,8 @@ same_date_detail <- read_csv(
   col_types = cols(
     ID = col_character(),
     ADMIT_DATE = col_date(format = "%Y-%m-%d"),
-    n_sources = col_character(),      # HIPAA-suppressed string
-    n_encounters = col_character(),   # HIPAA-suppressed string
+    n_sources = col_integer(),
+    n_encounters = col_integer(),
     source_combo = col_character(),
     sources_list = col_character()
   ),
@@ -589,15 +575,13 @@ all_sw <- sw_pairs %>%
     recommendation = "See per-combo recommendations"
   )
 
-csv3 <- bind_rows(csv3, all_sd, all_sw) %>%
-  suppress_counts()
+csv3 <- bind_rows(csv3, all_sd, all_sw)
 
 write_csv(csv3, file.path(output_dir, "per_site_overlap_profile_av_th.csv"))
 message(glue("  Written: per_site_overlap_profile_av_th.csv ({nrow(csv3)} rows)"))
 
 # --- CSV 4: overlap_source_payer_completeness_av_th.csv ---
-csv4 <- source_completeness %>%
-  suppress_counts()
+csv4 <- source_completeness
 
 write_csv(csv4, file.path(output_dir, "overlap_source_payer_completeness_av_th.csv"))
 message(glue("  Written: overlap_source_payer_completeness_av_th.csv ({nrow(csv4)} rows)"))

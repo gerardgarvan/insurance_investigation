@@ -14,7 +14,6 @@
 #   7. Date parsing success summary
 #   8. Full pipeline console output capture (load + harmonize + cohort build)
 #
-# HIPAA: All patient counts 1-10 are suppressed as "<11"
 #
 # Usage (on HiPerGator):
 #   source("R/99_claude_diagnostics.R")
@@ -35,10 +34,9 @@ sink_con <- file(output_file, open = "wt")
 sink(sink_con, type = "output")
 sink(sink_con, type = "message")
 
-# Helper: HIPAA-safe count (suppresses 1-10)
+# Helper: format count with commas
 safe_count <- function(n) {
   if (is.na(n)) return("NA")
-  if (n >= 1 & n <= 10) return("<11")
   format(n, big.mark = ",")
 }
 
