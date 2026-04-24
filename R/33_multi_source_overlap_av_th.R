@@ -123,7 +123,11 @@ message(glue("Encounters with NA SOURCE: {format(sum(is.na(enc$SOURCE)), big.mar
 enc <- enc %>%
   mutate(admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"))
 
-n_admit_raw <- sum(!is.na(enc$ADMIT_DATE) & enc$ADMIT_DATE != "")
+n_admit_raw <- if (inherits(enc$ADMIT_DATE, "Date")) {
+  sum(!is.na(enc$ADMIT_DATE))
+} else {
+  sum(!is.na(enc$ADMIT_DATE) & enc$ADMIT_DATE != "")
+}
 n_admit_parsed <- sum(!is.na(enc$admit_date_parsed))
 admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_raw, 1) else 100
 

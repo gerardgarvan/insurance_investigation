@@ -142,7 +142,11 @@ message(glue("  (Filtered ENCOUNTER to AV+TH only for field comparison)"))
 enc_prepared <- enc_prepared %>%
   mutate(admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"))
 
-n_admit_raw <- sum(!is.na(enc_prepared$ADMIT_DATE) & enc_prepared$ADMIT_DATE != "")
+n_admit_raw <- if (inherits(enc_prepared$ADMIT_DATE, "Date")) {
+  sum(!is.na(enc_prepared$ADMIT_DATE))
+} else {
+  sum(!is.na(enc_prepared$ADMIT_DATE) & enc_prepared$ADMIT_DATE != "")
+}
 n_admit_parsed <- sum(!is.na(enc_prepared$admit_date_parsed))
 admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_raw, 1) else 100
 
@@ -165,7 +169,11 @@ message(glue("ADMIT_DATE parse rate: {admit_parse_rate}% ({format(n_admit_parsed
 enc_prepared <- enc_prepared %>%
   mutate(discharge_date_parsed = as.Date(DISCHARGE_DATE, format = "%Y-%m-%d"))
 
-n_discharge_raw <- sum(!is.na(enc_prepared$DISCHARGE_DATE) & enc_prepared$DISCHARGE_DATE != "")
+n_discharge_raw <- if (inherits(enc_prepared$DISCHARGE_DATE, "Date")) {
+  sum(!is.na(enc_prepared$DISCHARGE_DATE))
+} else {
+  sum(!is.na(enc_prepared$DISCHARGE_DATE) & enc_prepared$DISCHARGE_DATE != "")
+}
 n_discharge_parsed <- sum(!is.na(enc_prepared$discharge_date_parsed))
 discharge_parse_rate <- if (n_discharge_raw > 0) round(100 * n_discharge_parsed / n_discharge_raw, 1) else 100
 
