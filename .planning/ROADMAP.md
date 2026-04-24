@@ -736,7 +736,7 @@ Plans:
 | 30. Query Backend Abstraction Layer | 2/2 | Complete    | 2026-04-23 |
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
-| 33. AV+TH Multi-Source Overlap | 2/2 | Complete   | 2026-04-24 |
+| 33. AV+TH Multi-Source Overlap | 2/2 | Complete    | 2026-04-24 |
 
 ## Next Actions
 
