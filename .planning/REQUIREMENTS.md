@@ -266,13 +266,13 @@ Requirements for milestone v1.4: AV+TH Subset Analysis.
 
 ### AV+TH Overlap Classification & Recommendations (Phase 33)
 
-- [ ] **AVTH-CLS-01**: User can see field-by-field match/mismatch flags (ENC_TYPE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY, PROVIDERID, DISCHARGE_DATE) for each same-date AV+TH multi-source group, via R/34_overlap_classification_av_th.R that clones R/23 logic with AV+TH-filtered inputs
-- [ ] **AVTH-CLS-02**: User can see each AV+TH multi-source group classified as Identical (all compared fields match), Partial (some fields match), or Distinct (most fields differ), for both same-date and same-week groups
-- [ ] **AVTH-CLS-03**: User can see per-source-combo overlap profiles for AV+TH encounters showing the percentage breakdown of Identical vs Partial vs Distinct classifications
-- [ ] **AVTH-CLS-04**: User can see per-site actionable recommendations for AV+TH encounter deduplication derived from classification patterns (e.g., "Site X: 90% Identical AV+TH -- safe to deduplicate; Site Y: 55% Distinct -- retain all")
-- [ ] **AVTH-CLS-05**: User can see a console summary with AV+TH-specific classification breakdown, key findings, and count comparison against the full-encounter-type Phase 26 baseline
-- [ ] **AVTH-CLS-06**: User can see 4 CSV output files in output/tables/ with `_av_th` suffix: classified_same_date_detail_av_th.csv, classified_same_week_detail_av_th.csv, per_site_overlap_profile_av_th.csv, overlap_source_payer_completeness_av_th.csv
-- [ ] **AVTH-CLS-07**: Phase 26 baseline CSV outputs (without `_av_th` suffix) are preserved unchanged -- R/23_overlap_classification.R is not modified, and ENCOUNTER table is filtered to AV+TH before field comparison to prevent cross-type joins
+- [x] **AVTH-CLS-01**: User can see field-by-field match/mismatch flags (ENC_TYPE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY, PROVIDERID, DISCHARGE_DATE) for each same-date AV+TH multi-source group, via R/34_overlap_classification_av_th.R that clones R/23 logic with AV+TH-filtered inputs
+- [x] **AVTH-CLS-02**: User can see each AV+TH multi-source group classified as Identical (all compared fields match), Partial (some fields match), or Distinct (most fields differ), for both same-date and same-week groups
+- [x] **AVTH-CLS-03**: User can see per-source-combo overlap profiles for AV+TH encounters showing the percentage breakdown of Identical vs Partial vs Distinct classifications
+- [x] **AVTH-CLS-04**: User can see per-site actionable recommendations for AV+TH encounter deduplication derived from classification patterns (e.g., "Site X: 90% Identical AV+TH -- safe to deduplicate; Site Y: 55% Distinct -- retain all")
+- [x] **AVTH-CLS-05**: User can see a console summary with AV+TH-specific classification breakdown, key findings, and count comparison against the full-encounter-type Phase 26 baseline
+- [x] **AVTH-CLS-06**: User can see 4 CSV output files in output/tables/ with `_av_th` suffix: classified_same_date_detail_av_th.csv, classified_same_week_detail_av_th.csv, per_site_overlap_profile_av_th.csv, overlap_source_payer_completeness_av_th.csv
+- [x] **AVTH-CLS-07**: Phase 26 baseline CSV outputs (without `_av_th` suffix) are preserved unchanged -- R/23_overlap_classification.R is not modified, and ENCOUNTER table is filtered to AV+TH before field comparison to prevent cross-type joins
 
 ## v2 Requirements
 
@@ -466,13 +466,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AVTH-DET-04 | Phase 33 | Complete |
 | AVTH-DET-05 | Phase 33 | Complete |
 | AVTH-DET-06 | Phase 33 | Complete |
-| AVTH-CLS-01 | Phase 33 | Pending |
-| AVTH-CLS-02 | Phase 33 | Pending |
-| AVTH-CLS-03 | Phase 33 | Pending |
-| AVTH-CLS-04 | Phase 33 | Pending |
-| AVTH-CLS-05 | Phase 33 | Pending |
-| AVTH-CLS-06 | Phase 33 | Pending |
-| AVTH-CLS-07 | Phase 33 | Pending |
+| AVTH-CLS-01 | Phase 33 | Complete |
+| AVTH-CLS-02 | Phase 33 | Complete |
+| AVTH-CLS-03 | Phase 33 | Complete |
+| AVTH-CLS-04 | Phase 33 | Complete |
+| AVTH-CLS-05 | Phase 33 | Complete |
+| AVTH-CLS-06 | Phase 33 | Complete |
+| AVTH-CLS-07 | Phase 33 | Complete |
 
 **Coverage:**
 - v1 requirements: 67 total — Mapped: 67, Unmapped: 0
