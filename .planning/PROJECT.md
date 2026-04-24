@@ -49,9 +49,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Goal:** Determine whether patient IDs with encounters from multiple data sources on the same date (and same week) represent truly duplicated/overlapping data or genuinely different encounters, across all 5 partner sites.
 
-**Shipped:** Same-date and same-week multi-source encounter detection (Phase 25), all-source missingness and all-site duplicate profiling (Phases 19-23).
+**Shipped:** Same-date and same-week multi-source encounter detection (Phase 25), all-source missingness and all-site duplicate profiling (Phases 19-23). AV+TH subset analysis of overlap detection and classification (Phase 33).
 
-**Deferred:** Phase 24 (focused PPTX), Phase 26 (overlap classification), Phase 27 (cross-table QA), Phase 28 (per-patient source detection).
+**Deferred:** Phase 24 (focused PPTX), Phase 26 (overlap classification for all encounter types), Phase 27 (cross-table QA), Phase 28 (per-patient source detection).
 
 ## Previous Milestone: v1.1 RDS Cache & Visualization Polish (Complete)
 
@@ -139,4 +139,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after milestone v1.3 (DuckDB Backend Migration) completed — all 4 phases (29-32) shipped*
+*Last updated: 2026-04-24 after Phase 33 (AV+TH Multi-Source Overlap Detection & Classification) completed*
