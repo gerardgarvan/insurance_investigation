@@ -65,6 +65,7 @@ None.
 - All 14 v1.3 requirements mapped to phases
 - Coverage: 138/138 requirements mapped (100%)
 - Phase 33 added: do 25 and 26 but only for AV+TH encounters
+- Phase 34 added: Insurance code frequency summary of encounter table using PayerVariable xlsx codes for AV+TH encounters
 
 ### Blockers/Concerns
 
