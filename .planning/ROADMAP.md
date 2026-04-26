@@ -31,7 +31,8 @@
 - [x] **Phase 30: Query Backend Abstraction Layer** - Create dual-backend dispatcher with USE_DUCKDB flag and smoke test predicates on both backends (completed 2026-04-23)
 - [x] **Phase 31: Cohort Pipeline DuckDB Migration** - Migrate cohort build to DuckDB with full parity testing and benchmark comparison (completed 2026-04-23)
 - [x] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB (completed 2026-04-23)
-- [x] **Phase 33: AV+TH Multi-Source Overlap Detection & Classification** - Repeat Phase 25/26 overlap analysis restricted to Ambulatory Visit and Telehealth encounters only (completed 2026-04-24)
+- [x] **Phase 33: AV+TH Multi-Source Overlap Detection & Classification** - Repeat Phase 25/26 overlap analysis restricted to Ambulatory Visit and Telehealth encounters only (completed 2026-04-24)
+- [ ] **Phase 34: Payer Code Frequency Summary (AV+TH)** - Frequency tables of raw payer codes in AV+TH encounters cross-referenced against PayerVariable.xlsx descriptions and categories
 
 ## Phase Details
 
@@ -698,6 +699,27 @@ Plans:
 - [x] 33-01-PLAN.md -- Clone R/22 as R/33_multi_source_overlap_av_th.R with ENC_TYPE filter for AV+TH and _av_th output naming (AVTH-DET-01, AVTH-DET-02, AVTH-DET-03, AVTH-DET-04, AVTH-DET-05, AVTH-DET-06)
 - [x] 33-02-PLAN.md -- Clone R/23 as R/34_overlap_classification_av_th.R with AV+TH input paths, ENC_TYPE filter, and _av_th output naming (AVTH-CLS-01, AVTH-CLS-02, AVTH-CLS-03, AVTH-CLS-04, AVTH-CLS-05, AVTH-CLS-06, AVTH-CLS-07)
 
+### Phase 34: Payer Code Frequency Summary (AV+TH)
+
+**Goal:** User can see frequency tables of every raw PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY code in AV+TH encounters, cross-referenced against PayerVariable.xlsx to show each code's description and mapped category, with a category-level aggregate summary
+
+**Depends on:** Phase 33 (uses DuckDB backend infrastructure and AV+TH filtering pattern)
+
+**Requirements**: PAYFREQ-01, PAYFREQ-02, PAYFREQ-03, PAYFREQ-04, PAYFREQ-05, PAYFREQ-06
+
+**Success Criteria** (what must be TRUE):
+1. User can see every distinct PAYER_TYPE_PRIMARY code with its xlsx description, xlsx category, encounter count, and percentage
+2. User can see every distinct PAYER_TYPE_SECONDARY code with same cross-reference columns
+3. User can see codes found in data but not in PayerVariable.xlsx flagged as "NOT IN XLSX"
+4. User can see category-level summary aggregating counts by xlsx "New Value" column for both primary and secondary
+5. User can see console summary with top codes and category breakdown on HiPerGator
+6. User can see PayerVariable.xlsx read dynamically at runtime (not hardcoded lookup table)
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 34-01-PLAN.md -- Standalone R script R/35_payer_code_frequency_av_th.R: read PayerVariable.xlsx, load AV+TH encounters, produce per-code and per-category frequency CSVs with xlsx cross-reference, console summary (PAYFREQ-01, PAYFREQ-02, PAYFREQ-03, PAYFREQ-04, PAYFREQ-05, PAYFREQ-06)
+
 ---
 
 ## Progress
@@ -737,9 +759,10 @@ Plans:
 | 31. Cohort Pipeline DuckDB Migration | 1/2 | In Progress|  |
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
 | 33. AV+TH Multi-Source Overlap | 2/2 | Complete    | 2026-04-24 |
+| 34. Payer Code Frequency Summary (AV+TH) | 0/1 | Planned | - |
 
 ## Next Actions
 
-Execute Phase 33 with `/gsd:execute-phase 33`.
+Execute Phase 34 with `/gsd:execute-phase 34`.
 
-*Last updated: 2026-04-23 (Phase 33 planned: AV+TH Multi-Source Overlap Detection & Classification)*
+*Last updated: 2026-04-26 (Phase 34 planned: Payer Code Frequency Summary using PayerVariable.xlsx for AV+TH encounters)*
