@@ -35,6 +35,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Diagnostic scripts DuckDB migration + speedup report — v1.3 Phase 32
 - [x] AV+TH multi-source overlap detection (R/33) — v1.4 Phase 33
 - [x] AV+TH overlap classification (Identical/Partial/Distinct, R/34) — v1.4 Phase 33
+- [x] Payer code frequency analysis with xlsx cross-reference (R/35) — Phase 34
 
 ### Active
 
@@ -93,7 +94,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 35 phases completed across 5 milestones (v1.0-v1.4), ~36 R scripts, DuckDB as default backend
+- **Current state**: 36 phases completed across 5 milestones (v1.0-v1.4), ~37 R scripts, DuckDB as default backend
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -146,4 +147,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-27 after v1.4 milestone completion*
+*Last updated: 2026-04-27 after Phase 34 completion*
