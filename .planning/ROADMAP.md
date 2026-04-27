@@ -30,7 +30,7 @@
 | 24, 26-28 | v1.2 (deferred) | On hold | - |
 | 29-32 | v1.3 | Complete | 2026-04-23 |
 | 33 | v1.4 | Complete | 2026-04-24 |
-| 34 | 1/1 | Complete   | 2026-04-27 |
+| 34 | 1/1 | Complete    | 2026-04-27 |
 | 35 | Unassigned | Complete | 2026-04-27 |
 
 ---
