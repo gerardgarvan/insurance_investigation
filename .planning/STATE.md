@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: milestone
-status: verifying
-last_updated: "2026-04-27T16:41:31.376Z"
+milestone: v1.4
+milestone_name: AV+TH Subset Analysis
+status: complete
+last_updated: "2026-04-27T18:30:00.000Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 36
@@ -15,44 +15,33 @@ progress:
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Last updated:** 2026-04-23
-**Project status:** Milestone v1.3 — roadmap complete
+**Last updated:** 2026-04-27
+**Project status:** Milestone v1.4 shipped — planning next milestone
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-23)
+See: .planning/PROJECT.md (updated 2026-04-27)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 35 — tiered-same-day-payer-categorization
+**Current focus:** Milestone v1.4 complete. Run `/gsd:new-milestone` for next cycle.
 
 ## Current Position
 
-Phase: 35
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 35 (last completed)
+Plan: Complete
+Status: Milestone v1.4 shipped
 Last activity: 2026-04-27
 
-Progress: [█████████░] 93% — 55/59 plans
+Progress: [█████████░] 93% — 58/63 plans
 
 ## Accumulated Context
 
-### Key Decisions (relevant to v1.3)
+### Key Decisions
 
-- Phase 15: RDS caching at `/blue/erin.mobley-hl.bcu/clean/rds/` — DuckDB ingest reads from this RDS cache, not raw CSVs
-- Phase 16: Cohort snapshots as `.rds` — these serve as parity baselines for DuckDB migration
-- `.rds` over `.RData` for caching — `readRDS()` returns a single named object directly
-- Pre-written plans (29-01 through 32-02) define the full DuckDB migration scope with REQ-IDs
-- Milestone v1.3: 4 phases (29-32) with 8 pre-written plans covering DuckDB ingest, abstraction layer, cohort migration, and diagnostic script migration
-- Phase 29-01: EXTRACT_DATE as top-level constant; DuckDB path at /blue/.../clean/duckdb/ (inherits gitignore); TUMOR_REGISTRY_ALL excluded from ingest (derived table)
-- Phase 29-02: PATID indexes use column name ID (not PATID) matching PCORnet CDM data schema; 6 tables get ENCOUNTERID indexes (not 8 as RESEARCH.md suggested); utils_duckdb.R structured as extensible foundation file for Phase 30
-- Phase 31-02: 3-run median comparison for benchmark statistical robustness; Materialize-then-filter pattern as general solution for dbplyr translation gaps
-- Phase 32-01: Materialize-early pattern for all 5 diagnostic scripts (all downstream logic is in-memory)
-- Phase 32-01: data.table retained as documented exception in R/24 (DuckDB loads data, data.table processes)
-- Phase 32-01: No new DuckDB translation gaps found in diagnostic scripts beyond Phase 31 catalog
-- Phase 32-02: USE_DUCKDB default flipped to TRUE; RDS mode deprecated with open timeline
-- Phase 32-02: Migration guide created with 7 sections including copy-pasteable template script
-- Phase 32-02: Speedup report generator script for automated benchmark analysis
+- Clone-and-filter pattern for ENC_TYPE subsetting (Phase 33) — reusable for future encounter type analyses
+- DuckDB as default backend (Phase 32) — USE_DUCKDB = TRUE, RDS fallback available
+- Materialize-early pattern for diagnostic scripts (Phase 32)
 
 ### Pending Todos
 
@@ -60,13 +49,9 @@ None.
 
 ### Roadmap Evolution
 
-- v1.2 Phases 24, 26, 27, 28 deferred (on hold) to focus on DuckDB migration
-- v1.3 milestone roadmap created 2026-04-23 with Phases 29-32
-- All 14 v1.3 requirements mapped to phases
-- Coverage: 138/138 requirements mapped (100%)
-- Phase 33 added: do 25 and 26 but only for AV+TH encounters
-- Phase 34 added: Insurance code frequency summary of encounter table using PayerVariable xlsx codes for AV+TH encounters
-- Phase 35 added: Tiered same-day payer categorization — raw payer frequency table (all encounters) and hierarchical same-day resolution per Amy Crisp framework
+- Milestone v1.4 completed and archived 2026-04-27
+- Remaining unassigned phases: 24, 26, 27, 28, 34 (deferred), 35 (complete but unassigned)
+- Next milestone needs `/gsd:new-milestone` to define scope and requirements
 
 ### Blockers/Concerns
 

@@ -12,89 +12,94 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Validated
 
-- [x] Load PCORnet CDM CSV tables from HiPerGator with correct data types — Validated in Phase 1: Foundation Data Loading (9 primary tables with explicit col_types)
-- [x] Multi-format date parsing for PCORnet data — Validated in Phase 1: 4-format fallback chain (ISO, Excel serial, SAS DATE9, compact)
-- [x] Attrition logging infrastructure — Validated in Phase 1: init_attrition_log() + log_attrition() for patient-level counts
-- [x] Harmonize payer variables into 9 categories matching the Python pipeline — Validated in Phase 2: Payer Harmonization (map_payer_category with prefix-based case_when)
-- [x] Implement dual-eligible detection (Medicare+Medicaid combinations) — Validated in Phase 2: encounter-level cross-payer detection + codes {14, 141, 142}
-- [x] ICD code normalization and HL diagnosis matching — Validated in Phase 2: utils_icd.R with 149 codes (77 ICD-10 + 72 ICD-9)
-- [x] Build cohort filter chain using named predicates (has_*, with_*, exclude_*) — Validated in Phase 3: Cohort Building (has_hodgkin_diagnosis, with_enrollment_period, exclude_missing_payer)
-- [x] Log N patients before and after every filter step automatically — Validated in Phase 3: attrition_log data frame with step_name, n_before, n_after, n_excluded
-- [x] Identify HL patients using 149 ICD codes (77 ICD-10 C81.xx, 72 ICD-9 201.xx) — Validated in Phase 3: has_hodgkin_diagnosis() via is_hl_diagnosis() with dotted/undotted normalization
-- [x] Handle multi-site data (OneFlorida+ partner institutions: AMS, UMI, FLM, VRT) — Validated in Phase 3: primary site strategy via inner_join on SOURCE
+- [x] Load PCORnet CDM CSV tables from HiPerGator with correct data types — v1.0 Phase 1
+- [x] Multi-format date parsing for PCORnet data — v1.0 Phase 1
+- [x] Attrition logging infrastructure — v1.0 Phase 1
+- [x] Harmonize payer variables into 9 categories matching Python pipeline — v1.0 Phase 2
+- [x] Dual-eligible detection (Medicare+Medicaid) — v1.0 Phase 2
+- [x] ICD code normalization and HL diagnosis matching (149 codes) — v1.0 Phase 2
+- [x] Named predicate cohort filter chain (has_*, with_*, exclude_*) — v1.0 Phase 3
+- [x] Automatic attrition logging at every filter step — v1.0 Phase 3
+- [x] HL_SOURCE tracking (DIAGNOSIS, TR, Both) with Neither exclusion — v1.0 Phase 6
+- [x] Treatment-anchored payer mode (+/-30 day window) — v1.0 Phase 8
+- [x] Expanded treatment detection (7 source types) — v1.0 Phase 9
+- [x] Surveillance modality + survivorship encounter detection — v1.0 Phase 10
+- [x] Auto-generated variable documentation (.md + .docx) — v1.0 Phase 10
+- [x] PPTX presentation with glossary, footnotes, encounter analysis — v1.0 Phases 11-12
+- [x] RDS caching with FORCE_RELOAD and time-savings logging — v1.1 Phase 15
+- [x] Cohort + output snapshots as .rds files — v1.1 Phase 16
+- [x] 1900 sentinel date filtering + stacked histograms — v1.1 Phase 17
+- [x] DuckDB ingest with atomic write and round-trip verification — v1.3 Phase 29
+- [x] Backend abstraction layer (get_pcornet_table dispatcher) — v1.3 Phase 30
+- [x] Cohort pipeline DuckDB migration with parity testing — v1.3 Phase 31
+- [x] Diagnostic scripts DuckDB migration + speedup report — v1.3 Phase 32
+- [x] AV+TH multi-source overlap detection (R/33) — v1.4 Phase 33
+- [x] AV+TH overlap classification (Identical/Partial/Distinct, R/34) — v1.4 Phase 33
 
-- [x] Track HL identification source (DIAGNOSIS, TR, Both) per patient — Validated in Phase 6: HL_SOURCE column in has_hodgkin_diagnosis() with Neither exclusion
-- [x] Add numeric range validation for age, tumor size, and date fields — Validated in Phase 6: _VALID suffix columns in load_pcornet_table()
-- [x] Document R vs Python payer mapping comparison — Validated in Phase 6: comparison table in 00_config.R
-- [x] Full pipeline end-to-end verification with data quality summary — Validated in Phase 6: 08_data_quality_summary.R with 13-category resolution tracker
+### Active
 
-### Active (carried from v1.0)
-
-- [ ] Produce attrition waterfall chart from filter log
-- [ ] Produce Sankey/alluvial showing enrollment → diagnosis date → treatment type, stratified by payer
-- [ ] Apply HIPAA small-cell suppression (counts 1-10) in outputs
-
-## Previous Milestone: v1.3 DuckDB Backend Migration (Complete)
-
-**Goal:** Migrate the PCORnet R pipeline's data access layer from RDS/CSV to DuckDB for faster queries, with a dual-backend abstraction that preserves RDS fallback, parity-tested against existing outputs, and benchmarked for speedup.
-
-**Shipped:**
-- Atomic DuckDB ingest from existing RDS cache (13 tables, PATID + ENCOUNTERID indexes) — Phase 29
-- Backend abstraction layer (`get_pcornet_table()` dispatcher with `USE_DUCKDB` flag) — Phase 30
-- Cohort pipeline migration with full parity testing against Phase 16 snapshots — Phase 31
-- 5 diagnostic scripts migrated with per-script RDS vs DuckDB benchmarks — Phase 32
-- Speedup report generator, migration guide, and default flip to DuckDB (`USE_DUCKDB <- TRUE`) — Phase 32
-
-## Previous Milestone: v1.2 Multi-Source Overlap Investigation (On Hold)
-
-**Goal:** Determine whether patient IDs with encounters from multiple data sources on the same date (and same week) represent truly duplicated/overlapping data or genuinely different encounters, across all 5 partner sites.
-
-**Shipped:** Same-date and same-week multi-source encounter detection (Phase 25), all-source missingness and all-site duplicate profiling (Phases 19-23). AV+TH subset analysis of overlap detection and classification (Phase 33).
-
-**Deferred:** Phase 24 (focused PPTX), Phase 26 (overlap classification for all encounter types), Phase 27 (cross-table QA), Phase 28 (per-patient source detection).
-
-## Previous Milestone: v1.1 RDS Cache & Visualization Polish (Complete)
-
-**Goal:** Eliminate redundant CSV parsing with persistent RDS caching, fix remaining 1900 sentinel date display issues, and add post-treatment encounter analysis with stacked histograms.
-
-**Shipped:**
-- RDS caching for all PCORnet tables with cache-check, FORCE_RELOAD flag, and time-savings logging
-- Cohort snapshot `.rds` files at each filter step and final cohort — Validated in Phase 16
-- Output-backing datasets: every figure/table gets its source data frame saved as `.rds` — Validated in Phase 16
-- Shared `save_output_data()` helper utility — Validated in Phase 16
-- 1900 sentinel date filtering across all PPTX content
-- Post-treatment summary table (unique encounter dates per person by payer, after last treatment)
-- Stacked encounter histograms with post-treatment shading (post-treatment on bottom)
-
-### Validated (Phase 8)
-
-- [x] Treatment-anchored payer mode (PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT) computed within +/-30 day window of first treatment date — Validated in Phase 8
-
-### Validated (Phase 9)
-
-- [x] Expanded treatment detection to DISPENSING/MED_ADMIN (RXNORM_CUI), DIAGNOSIS (Z/V codes), ENCOUNTER (DRG), PROCEDURES (revenue codes) — Validated in Phase 9
-- [x] Multi-source treatment date extraction for payer anchoring (7 sources chemo, 4 radiation/SCT) — Validated in Phase 9
-- [x] Aggregate per-source treatment contribution logging — Validated in Phase 9
+- [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
+- [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
+- [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
 
 ### Out of Scope
 
-- Statistical modeling / regression — exploration only for v1
-- Payer × treatment initiation timing analysis — v2
-- Payer × diagnosis timing analysis — v2
-- Missing data audit by site and year — v2
+- Statistical modeling / regression — exploration only
+- Payer x treatment initiation timing analysis — v2
+- Payer x diagnosis timing analysis — v2
 - RMarkdown / Shiny rendering — v1 produces raw R scripts and PNG figures
-- Replicating the Python pipeline's data cleaning (deduplication, consistency flags) — R pipeline loads raw CSVs and applies its own filter chain
-- Publication-ready figure formatting — exploratory quality is fine
+- Replicating Python pipeline's data cleaning — R pipeline applies its own filter chain
+- Publication-ready figure formatting — exploratory quality is sufficient
+
+## Previous Milestones
+
+### v1.4 AV+TH Subset Analysis (Shipped 2026-04-27)
+
+**Goal:** AV+TH-restricted multi-source overlap detection and classification with preserved baseline outputs.
+
+**Shipped:**
+- R/33_multi_source_overlap_av_th.R — same-date and same-week detection for AV+TH encounters
+- R/34_overlap_classification_av_th.R — Identical/Partial/Distinct classification with per-site recommendations
+- ENC_TYPE subset analysis pattern (clone-and-filter with _av_th suffix)
+
+### v1.3 DuckDB Backend Migration (Shipped 2026-04-23)
+
+**Goal:** Migrate data access layer from RDS/CSV to DuckDB with dual-backend abstraction.
+
+**Shipped:**
+- Atomic DuckDB ingest (13 tables, PATID + ENCOUNTERID indexes) — Phase 29
+- Backend abstraction layer (get_pcornet_table dispatcher with USE_DUCKDB flag) — Phase 30
+- Cohort pipeline migration with full parity testing — Phase 31
+- 5 diagnostic scripts migrated with speedup report and migration guide — Phase 32
+
+### v1.2 Multi-Source Overlap Investigation (On Hold)
+
+**Goal:** Determine whether multi-source same-date encounters represent duplicates or genuine encounters.
+
+**Shipped:** Same-date/same-week detection (Phase 25), all-source missingness and all-site duplicate profiling (Phases 19-23).
+**Deferred:** Phase 24, 26, 27, 28.
+
+### v1.1 RDS Cache & Visualization Polish (Shipped 2026-04-03)
+
+**Goal:** RDS caching, 1900 sentinel date filtering, post-treatment encounter analysis.
+
+**Shipped:** RDS cache infrastructure, cohort snapshots, output-backing datasets, stacked histograms.
+
+### v1.0 MVP (Shipped 2026-04-01)
+
+**Goal:** Working cohort filter chain with payer-stratified visualizations.
+
+**Shipped:** Foundation (Phases 1-4), data quality fixes (Phases 5-7), treatment-anchored payer (Phase 8), expanded treatment detection (Phase 9), surveillance/survivorship (Phase 10), PPTX presentations (Phases 11-14).
 
 ## Context
 
-- **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` handles production-grade data loading, cleaning, and payer analysis using Python/Polars. This R project is a parallel exploration tool, not a replacement.
+- **Current state**: 35 phases completed across 5 milestones (v1.0-v1.4), ~36 R scripts, DuckDB as default backend
+- **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
-- **PCORnet CDM tables in scope**: ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC, DISPENSING, MED_ADMIN (primary — 11 tables), plus TUMOR_REGISTRY1/2/3 and reference to DEATH, HARVEST for metadata
-- **Payer logic reference**: `docs/PAYER_VARIABLES_AND_CATEGORIES.md` in the Python pipeline defines the exact 9-category mapping and dual-eligible rules to replicate
-- **ICD codes**: 149 HL diagnosis codes — ICD-10 C81.00–C81.9A (77 codes) and ICD-9 201.00–201.98 (72 codes), format-adaptive (dotted and undotted)
-- **Partner provenance**: Some partners are claims-only (FLM), some have mapped ICD codes (AMS, UMI), one is death-only (VRT)
+- **PCORnet CDM tables in scope**: 13 tables loaded via DuckDB (ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC, DISPENSING, MED_ADMIN, LAB_RESULT_CM, PROVIDER, TUMOR_REGISTRY1/2/3)
+- **Partner sites**: AMS, UMI, FLM (claims-only), VRT (death-only), UFH
+- **Recent work**: Phase 34 (payer code frequency), Phase 35 (tiered same-day payer categorization per Amy Crisp framework) — both beyond v1.4 scope, pending milestone assignment
 
 ## Constraints
 
@@ -120,6 +125,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | `.rds` over `.RData` for caching | `readRDS()` returns a single named object directly into an assignment — no namespace side-effects | ✓ Phase 15/16 |
 | Cache at `/blue/erin.mobley-hl.bcu/clean/rds/` | Keeps large binary files on blue storage, outside repo root, gitignored | ✓ Phase 15/16 |
 | Cohort + output snapshots via `save_output_data()` helper | Consistent path construction, logging, and RDS serialization for all 21 snapshot files | ✓ Phase 16 |
+| DuckDB as default backend with RDS fallback | DuckDB provides faster queries; USE_DUCKDB flag enables transparent switching | ✓ Phase 32 |
+| Clone-and-filter for encounter type subsetting | Clone baseline script with ENC_TYPE filter + _suffix outputs preserves baseline while enabling focused analysis | ✓ Phase 33 |
 
 ## Evolution
 
@@ -139,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-27 after Phase 35 (Tiered Same-Day Payer Categorization) completed — dual-scope frequency tables + hierarchical same-day payer resolution per Amy Crisp framework*
+*Last updated: 2026-04-27 after v1.4 milestone completion*
