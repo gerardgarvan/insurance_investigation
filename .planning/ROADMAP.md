@@ -33,6 +33,7 @@
 - [x] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB (completed 2026-04-23)
 - [x] **Phase 33: AV+TH Multi-Source Overlap Detection & Classification** - Repeat Phase 25/26 overlap analysis restricted to Ambulatory Visit and Telehealth encounters only (completed 2026-04-24)
 - [ ] **Phase 34: Payer Code Frequency Summary (AV+TH)** - Frequency tables of raw payer codes in AV+TH encounters cross-referenced against PayerVariable.xlsx descriptions and categories
+- [ ] **Phase 35: Tiered Same-Day Payer Categorization** - Dual-scope (all encounters + AV+TH) raw payer frequency tables and hierarchical same-day resolution per Amy Crisp framework
 
 ## Phase Details
 
@@ -720,6 +721,28 @@ Plans:
 Plans:
 - [ ] 34-01-PLAN.md -- Standalone R script R/35_payer_code_frequency_av_th.R: read PayerVariable.xlsx, load AV+TH encounters, produce per-code and per-category frequency CSVs with xlsx cross-reference, console summary (PAYFREQ-01, PAYFREQ-02, PAYFREQ-03, PAYFREQ-04, PAYFREQ-05, PAYFREQ-06)
 
+### Phase 35: Tiered Same-Day Payer Categorization
+
+**Goal:** User can see dual-scope (all encounters + AV+TH) raw payer code frequency tables with PayerVariable.xlsx cross-reference AND hierarchical same-day payer resolution using Medicaid > Medicare > Private > Other > Self-pay > Uninsured > Missing priority per Amy Crisp's framework, with configurable tier mapping, FLM source override, codes 93/14 override, and before-vs-after impact comparison
+
+**Depends on:** Phase 34
+
+**Requirements**: TIER-01, TIER-02, TIER-03, TIER-04, TIER-05, TIER-06, TIER-07, TIER-08, TIER-09, TIER-10
+
+**Success Criteria** (what must be TRUE):
+1. User can see raw payer code frequency tables for BOTH all encounters and AV+TH encounters with PayerVariable.xlsx cross-reference
+2. User can see a configurable TIER_MAPPING named list at the top of the script that PIs can edit with one-line changes
+3. User can see same-day payer resolution for each patient-date using the Amy Crisp hierarchy with FLM source override and codes 93/14 override
+4. User can see per-patient-per-date detail CSV with resolved_payer, original codes, n_encounters, resolution_reason for both scopes
+5. User can see patient-level summary with modal resolved payer for both scopes
+6. User can see before vs after category distribution showing the impact of hierarchical resolution for both scopes
+7. User can see 12 CSV files total in output/tables/ (6 frequency + 6 resolution)
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 35-01-PLAN.md -- Standalone R script R/36_tiered_same_day_payer.R: configurable tier mapping, dual-scope frequency tables, same-day payer resolution with FLM/93/14 overrides, before-vs-after impact, 12 CSV outputs (TIER-01 through TIER-10)
+
 ---
 
 ## Progress
@@ -760,9 +783,10 @@ Plans:
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
 | 33. AV+TH Multi-Source Overlap | 2/2 | Complete    | 2026-04-24 |
 | 34. Payer Code Frequency Summary (AV+TH) | 0/1 | Planned | - |
+| 35. Tiered Same-Day Payer Categorization | 0/1 | Planned | - |
 
 ## Next Actions
 
-Execute Phase 34 with `/gsd:execute-phase 34`.
+Execute Phase 35 with `/gsd:execute-phase 35`.
 
-*Last updated: 2026-04-26 (Phase 34 planned: Payer Code Frequency Summary using PayerVariable.xlsx for AV+TH encounters)*
+*Last updated: 2026-04-27 (Phase 35 planned: Tiered same-day payer categorization with dual-scope frequency tables and hierarchical resolution per Amy Crisp framework)*
