@@ -727,7 +727,7 @@ Plans:
 
 **Depends on:** Phase 34
 
-**Requirements**: TIER-01, TIER-02, TIER-03, TIER-04, TIER-05, TIER-06, TIER-07, TIER-08, TIER-09, TIER-10
+**Requirements**: TBD
 
 **Success Criteria** (what must be TRUE):
 1. User can see raw payer code frequency tables for BOTH all encounters and AV+TH encounters with PayerVariable.xlsx cross-reference
@@ -741,7 +741,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 35-01-PLAN.md -- Standalone R script R/36_tiered_same_day_payer.R: configurable tier mapping, dual-scope frequency tables, same-day payer resolution with FLM/93/14 overrides, before-vs-after impact, 12 CSV outputs (TIER-01 through TIER-10)
+- [ ] 35-01-PLAN.md -- Standalone R script R/36_tiered_same_day_payer.R: configurable tier mapping, dual-scope frequency tables, same-day payer resolution with FLM/93/14 overrides, before-vs-after impact, 12 CSV outputs
 
 ---
 
