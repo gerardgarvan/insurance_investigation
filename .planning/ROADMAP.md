@@ -33,7 +33,7 @@
 - [x] **Phase 32: Diagnostic Scripts DuckDB Migration & Benchmarks** - Migrate 5 diagnostic scripts, generate speedup report and migration guide, flip default to DuckDB (completed 2026-04-23)
 - [x] **Phase 33: AV+TH Multi-Source Overlap Detection & Classification** - Repeat Phase 25/26 overlap analysis restricted to Ambulatory Visit and Telehealth encounters only (completed 2026-04-24)
 - [ ] **Phase 34: Payer Code Frequency Summary (AV+TH)** - Frequency tables of raw payer codes in AV+TH encounters cross-referenced against PayerVariable.xlsx descriptions and categories
-- [ ] **Phase 35: Tiered Same-Day Payer Categorization** - Dual-scope (all encounters + AV+TH) raw payer frequency tables and hierarchical same-day resolution per Amy Crisp framework
+- [x] **Phase 35: Tiered Same-Day Payer Categorization** - Dual-scope (all encounters + AV+TH) raw payer frequency tables and hierarchical same-day resolution per Amy Crisp framework (completed 2026-04-27)
 
 ## Phase Details
 
@@ -738,10 +738,10 @@ Plans:
 6. User can see before vs after category distribution showing the impact of hierarchical resolution for both scopes
 7. User can see 12 CSV files total in output/tables/ (6 frequency + 6 resolution)
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 35-01-PLAN.md -- Standalone R script R/36_tiered_same_day_payer.R: configurable tier mapping, dual-scope frequency tables, same-day payer resolution with FLM/93/14 overrides, before-vs-after impact, 12 CSV outputs
+- [x] 35-01-PLAN.md -- Standalone R script R/36_tiered_same_day_payer.R: configurable tier mapping, dual-scope frequency tables, same-day payer resolution with FLM/93/14 overrides, before-vs-after impact, 12 CSV outputs
 
 ---
 
@@ -783,7 +783,7 @@ Plans:
 | 32. Diagnostic Scripts DuckDB Migration & Benchmarks | 2/2 | Complete    | 2026-04-23 |
 | 33. AV+TH Multi-Source Overlap | 2/2 | Complete    | 2026-04-24 |
 | 34. Payer Code Frequency Summary (AV+TH) | 0/1 | Planned | - |
-| 35. Tiered Same-Day Payer Categorization | 0/1 | Planned | - |
+| 35. Tiered Same-Day Payer Categorization | 1/1 | Complete   | 2026-04-27 |
 
 ## Next Actions
 
