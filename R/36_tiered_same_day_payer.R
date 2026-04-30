@@ -54,7 +54,6 @@ source("R/00_config.R")
 library(dplyr)
 library(glue)
 library(readr)
-library(stringr)
 library(lubridate)
 
 # Load tables if not already loaded (RDS mode)
@@ -130,21 +129,21 @@ enc <- enc_raw %>%
       dual_codes <- PAYER_MAPPING$dual_eligible_codes
       sec_missing <- is.na(PAYER_TYPE_SECONDARY) | nchar(trimws(PAYER_TYPE_SECONDARY)) == 0
       has_dual <- PAYER_TYPE_PRIMARY %in% dual_codes | PAYER_TYPE_SECONDARY %in% dual_codes
-      cross_payer <- (str_starts(PAYER_TYPE_PRIMARY, "1") & str_starts(PAYER_TYPE_SECONDARY, "2")) |
-                     (str_starts(PAYER_TYPE_PRIMARY, "2") & str_starts(PAYER_TYPE_SECONDARY, "1"))
+      cross_payer <- (startsWith(PAYER_TYPE_PRIMARY, "1") & startsWith(PAYER_TYPE_SECONDARY, "2")) |
+                     (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
       case_when(sec_missing ~ 0L, has_dual ~ 1L, cross_payer ~ 1L, TRUE ~ 0L)
     },
     # Map to AMC 8-category: direct lookup + prefix fallback
     payer_category = {
       looked_up <- AMC_PAYER_LOOKUP[effective_payer]
       prefix_cat <- case_when(
-        str_starts(effective_payer, "1") ~ "Medicare",
-        str_starts(effective_payer, "2") ~ "Medicaid",
-        str_starts(effective_payer, "5") | str_starts(effective_payer, "6") ~ "Private",
-        str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other govt",
-        str_starts(effective_payer, "7") ~ "Private",
-        str_starts(effective_payer, "8") ~ "Uninsured",
-        str_starts(effective_payer, "9") ~ "Other",
+        startsWith(effective_payer, "1") ~ "Medicare",
+        startsWith(effective_payer, "2") ~ "Medicaid",
+        startsWith(effective_payer, "5") | startsWith(effective_payer, "6") ~ "Private",
+        startsWith(effective_payer, "3") | startsWith(effective_payer, "4") ~ "Other govt",
+        startsWith(effective_payer, "7") ~ "Private",
+        startsWith(effective_payer, "8") ~ "Uninsured",
+        startsWith(effective_payer, "9") ~ "Other",
         TRUE ~ "Other"
       )
       result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
