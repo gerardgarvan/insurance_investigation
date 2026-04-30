@@ -17,8 +17,13 @@
 - [ ] **Phase 26: Overlap Classification and Recommendations** — Field-by-field comparison and Identical/Partial/Distinct classification for all encounter types
 - [ ] **Phase 27: Cross-Table Data Quality Assessment** — 6-dimension QA pass across all 13 PCORnet CDM tables
 - [ ] **Phase 28: Per-Patient Source Detection by Date** — Per-date source enumeration replacing pairwise overlap approach
-- [x] **Phase 34: Payer Code Frequency Summary (AV+TH)** — Raw payer code frequency with PayerVariable.xlsx cross-reference (completed 2026-04-27)
+- [x] **Phase 34: Payer Code Frequency Summary (AV+TH)** — Raw payer code frequency with PayerVariable.xlsx cross-reference (completed 2026-04-27)
 - [x] **Phase 35: Tiered Same-Day Payer Categorization** — Dual-scope frequency tables + hierarchical same-day payer resolution per Amy Crisp framework (completed 2026-04-27)
+- [ ] **Phase 36: All-Encounter Payer Frequency & Same-Day Categorization (AMC 8-Category)** — Refactor R/36 to use AMC_PAYER_LOOKUP from R/00_config.R, remove PayerVariable.xlsx dependency
+  - **Goal:** R/36 uses centralized AMC 8-category mapping exclusively, producing same 12 CSVs with updated categories
+  - **Plans:** 1 plan
+  - Plans:
+    - [ ] 36-01-PLAN.md — Refactor R/36 to AMC_PAYER_LOOKUP + human verification on HiPerGator
 
 ## Progress
 
@@ -34,4 +39,4 @@
 | 35 | Unassigned | Complete | 2026-04-27 |
 
 ---
-*Last updated: 2026-04-27 after v1.4 milestone completion*
+*Last updated: 2026-04-30*
