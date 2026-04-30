@@ -2,12 +2,12 @@
 # 36_tiered_same_day_payer.R -- Tiered same-day payer categorization
 # ==============================================================================
 #
-# Phase 35: Tiered same-day payer categorization
+# Phase 36: All-encounter payer frequency and same-day categorization (AMC 8-category)
 # Requirements: Per Amy Crisp framework (payer_framework.txt)
 #
 # Purpose: Produce two deliverables per Amy Crisp's framework:
 #
-# 1. Raw payer frequency tables with PayerVariable.xlsx cross-reference for BOTH
+# 1. Raw payer frequency tables using AMC_PAYER_LOOKUP from R/00_config.R for BOTH
 #    all-encounter and AV+TH scopes (6 frequency CSVs)
 # 2. Hierarchical same-day payer resolution using the priority hierarchy:
 #    Medicaid > Medicare > Private > Other > Self-pay > Uninsured > Missing
@@ -15,6 +15,7 @@
 #
 # Output: 12 CSV files in output/tables/:
 #   Frequency tables (6):
+#     columns: code, amc_category, n, pct
 #     - payer_primary_code_freq_all.csv
 #     - payer_secondary_code_freq_all.csv
 #     - payer_category_summary_all.csv
@@ -32,11 +33,11 @@
 #
 # Usage: source("R/36_tiered_same_day_payer.R")
 #
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB, PAYER_MAPPING).
+# Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB, PAYER_MAPPING,
+#   AMC_PAYER_LOOKUP).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
 #   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ENC_TYPE,
 #     ADMIT_DATE, SOURCE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY)
-#   Requires: readxl package for reading PayerVariable.xlsx
 #
 # DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
 #   access. Materializes immediately after loading because all downstream logic
@@ -53,12 +54,8 @@ source("R/00_config.R")
 library(dplyr)
 library(glue)
 library(readr)
-library(readxl)
 library(stringr)
 library(lubridate)
-
-# Path to PayerVariable.xlsx (repo root)
-PAYER_XLSX_PATH <- "PayerVariable.xlsx"
 
 # Load tables if not already loaded (RDS mode)
 if (!USE_DUCKDB && !exists("pcornet")) source("R/01_load_pcornet.R")
@@ -69,7 +66,7 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 
 message(glue("\n{strrep('=', 70)}"))
 message("TIERED SAME-DAY PAYER CATEGORIZATION")
-message("Phase 35: Dual-scope frequency + hierarchical same-day resolution")
+message("Phase 36: AMC 8-category payer frequency + same-day resolution")
 message(glue("{strrep('=', 70)}\n"))
 
 # ==========================================================================
@@ -103,91 +100,6 @@ CODE_TO_TIER <- function(payer_category) {
   )
 }
 
-# Replicate compute_effective_payer logic inline (no source R/02_harmonize_payer.R)
-compute_effective_payer_local <- function(primary, secondary) {
-  sentinel_values <- PAYER_MAPPING$sentinel_values  # c("NI", "UN", "OT")
-
-  primary_valid <- !is.na(primary) &
-                   nchar(trimws(primary)) > 0 &
-                   !primary %in% sentinel_values
-
-  secondary_valid <- !is.na(secondary) &
-                     nchar(trimws(secondary)) > 0 &
-                     !secondary %in% sentinel_values
-
-  case_when(
-    primary_valid ~ primary,
-    secondary_valid ~ secondary,
-    TRUE ~ NA_character_
-  )
-}
-
-# Replicate detect_dual_eligible logic inline (informational flag only)
-detect_dual_eligible_local <- function(primary, secondary) {
-  dual_codes <- PAYER_MAPPING$dual_eligible_codes  # c("14", "141", "142")
-
-  secondary_missing <- is.na(secondary) | nchar(trimws(secondary)) == 0
-
-  has_dual_code <- primary %in% dual_codes | secondary %in% dual_codes
-
-  cross_payer <- (str_starts(primary, "1") & str_starts(secondary, "2")) |
-                 (str_starts(primary, "2") & str_starts(secondary, "1"))
-
-  case_when(
-    secondary_missing ~ 0L,
-    has_dual_code ~ 1L,
-    cross_payer ~ 1L,
-    TRUE ~ 0L
-  )
-}
-
-# Replicate map_payer_category logic inline (AMC 8-category system)
-map_payer_category_local <- function(effective_payer) {
-  # Direct lookup from AMC table
-  looked_up <- AMC_PAYER_LOOKUP[effective_payer]
-
-  # Prefix-based fallback for codes not in AMC_PAYER_LOOKUP
-  prefix_category <- case_when(
-    str_starts(effective_payer, "1") ~ "Medicare",
-    str_starts(effective_payer, "2") ~ "Medicaid",
-    str_starts(effective_payer, "5") | str_starts(effective_payer, "6") ~ "Private",
-    str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other govt",
-    str_starts(effective_payer, "7") ~ "Private",
-    str_starts(effective_payer, "8") ~ "Uninsured",
-    str_starts(effective_payer, "9") ~ "Other",
-    TRUE ~ "Other"
-  )
-
-  result <- if_else(!is.na(looked_up), looked_up, prefix_category)
-  result <- if_else(is.na(effective_payer), "Missing", result)
-  result
-}
-
-# ==============================================================================
-# SECTION 1: Load PayerVariable.xlsx
-# ==============================================================================
-
-message("--- SECTION 1: Load PayerVariable.xlsx ---")
-
-payer_lookup <- readxl::read_excel(PAYER_XLSX_PATH, sheet = "Sheet2")
-
-# Rename columns for R-friendliness
-names(payer_lookup) <- c("code", "description", "category")
-
-# Trim whitespace and convert all to character
-payer_lookup <- payer_lookup %>%
-  mutate(across(everything(), ~trimws(as.character(.))))
-
-message(glue("Loaded {nrow(payer_lookup)} rows from PayerVariable.xlsx (Sheet2)"))
-message(glue("Unique categories in xlsx: {paste(sort(unique(payer_lookup$category)), collapse = ', ')}"))
-message(glue("Number of unique categories: {n_distinct(payer_lookup$category)}"))
-
-message("\nFirst 5 rows:")
-for (i in seq_len(min(5, nrow(payer_lookup)))) {
-  r <- payer_lookup[i, ]
-  message(glue("  code={r$code} | desc={r$description} | cat={r$category}"))
-}
-
 # ==============================================================================
 # SECTION 2: Load ENCOUNTER table and prepare both scopes
 # ==============================================================================
@@ -205,12 +117,39 @@ enc <- enc_raw %>%
     PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
     SOURCE               = as.character(SOURCE),
     admit_date_parsed    = as.Date(ADMIT_DATE, format = "%Y-%m-%d"),
-    # Compute effective payer (primary if valid, else secondary)
-    effective_payer = compute_effective_payer_local(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
-    # Detect dual-eligible (informational flag only)
-    dual_eligible = detect_dual_eligible_local(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
-    # Map to AMC 8-category
-    payer_category = map_payer_category_local(effective_payer),
+    # Compute effective payer: primary if valid, else secondary, else NA
+    effective_payer = case_when(
+      !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
+        !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_PRIMARY,
+      !is.na(PAYER_TYPE_SECONDARY) & nchar(trimws(PAYER_TYPE_SECONDARY)) > 0 &
+        !PAYER_TYPE_SECONDARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_SECONDARY,
+      TRUE ~ NA_character_
+    ),
+    # Dual-eligible flag (informational only, does not override category)
+    dual_eligible = {
+      dual_codes <- PAYER_MAPPING$dual_eligible_codes
+      sec_missing <- is.na(PAYER_TYPE_SECONDARY) | nchar(trimws(PAYER_TYPE_SECONDARY)) == 0
+      has_dual <- PAYER_TYPE_PRIMARY %in% dual_codes | PAYER_TYPE_SECONDARY %in% dual_codes
+      cross_payer <- (str_starts(PAYER_TYPE_PRIMARY, "1") & str_starts(PAYER_TYPE_SECONDARY, "2")) |
+                     (str_starts(PAYER_TYPE_PRIMARY, "2") & str_starts(PAYER_TYPE_SECONDARY, "1"))
+      case_when(sec_missing ~ 0L, has_dual ~ 1L, cross_payer ~ 1L, TRUE ~ 0L)
+    },
+    # Map to AMC 8-category: direct lookup + prefix fallback
+    payer_category = {
+      looked_up <- AMC_PAYER_LOOKUP[effective_payer]
+      prefix_cat <- case_when(
+        str_starts(effective_payer, "1") ~ "Medicare",
+        str_starts(effective_payer, "2") ~ "Medicaid",
+        str_starts(effective_payer, "5") | str_starts(effective_payer, "6") ~ "Private",
+        str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other govt",
+        str_starts(effective_payer, "7") ~ "Private",
+        str_starts(effective_payer, "8") ~ "Uninsured",
+        str_starts(effective_payer, "9") ~ "Other",
+        TRUE ~ "Other"
+      )
+      result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
+      if_else(is.na(effective_payer), "Missing", result)
+    },
     # Map to tier
     tier = CODE_TO_TIER(payer_category),
     # Override with special codes 93/14 (check raw codes, not effective)
@@ -245,7 +184,7 @@ message(glue("Total patients (AV+TH scope): {format(n_distinct(enc_av_th$ID), bi
 
 message(glue("\n--- SECTION 3: Building Frequency Tables (Dual Scope) ---"))
 
-build_frequency_tables <- function(enc_scope, suffix, payer_lookup, output_dir) {
+build_frequency_tables <- function(enc_scope, suffix, output_dir) {
   total_enc <- nrow(enc_scope)
 
   # PRIMARY frequency table
@@ -258,16 +197,21 @@ build_frequency_tables <- function(enc_scope, suffix, payer_lookup, output_dir) 
       )
     ) %>%
     count(code, name = "n") %>%
-    arrange(desc(n)) %>%
-    left_join(payer_lookup, by = "code") %>%
     mutate(
-      description = ifelse(is.na(description) & !code %in% c("<NA>", "<EMPTY>"),
-                           "NOT IN XLSX", description),
-      category    = ifelse(is.na(category) & !code %in% c("<NA>", "<EMPTY>"),
-                           "NOT IN XLSX", category),
+      amc_category = case_when(
+        code %in% c("<NA>", "<EMPTY>") ~ "Missing",
+        !is.na(AMC_PAYER_LOOKUP[code]) ~ unname(AMC_PAYER_LOOKUP[code]),
+        substr(code, 1, 1) == "1" ~ "Medicare",
+        substr(code, 1, 1) == "2" ~ "Medicaid",
+        substr(code, 1, 1) %in% c("5", "6", "7") ~ "Private",
+        substr(code, 1, 1) %in% c("3", "4") ~ "Other govt",
+        substr(code, 1, 1) == "8" ~ "Uninsured",
+        substr(code, 1, 1) == "9" ~ "Other",
+        TRUE ~ "Other"
+      ),
       pct = round(100 * n / total_enc, 2)
     ) %>%
-    select(code, description, category, n, pct) %>%
+    select(code, amc_category, n, pct) %>%
     arrange(desc(n))
 
   # SECONDARY frequency table
@@ -280,37 +224,42 @@ build_frequency_tables <- function(enc_scope, suffix, payer_lookup, output_dir) 
       )
     ) %>%
     count(code, name = "n") %>%
-    arrange(desc(n)) %>%
-    left_join(payer_lookup, by = "code") %>%
     mutate(
-      description = ifelse(is.na(description) & !code %in% c("<NA>", "<EMPTY>"),
-                           "NOT IN XLSX", description),
-      category    = ifelse(is.na(category) & !code %in% c("<NA>", "<EMPTY>"),
-                           "NOT IN XLSX", category),
+      amc_category = case_when(
+        code %in% c("<NA>", "<EMPTY>") ~ "Missing",
+        !is.na(AMC_PAYER_LOOKUP[code]) ~ unname(AMC_PAYER_LOOKUP[code]),
+        substr(code, 1, 1) == "1" ~ "Medicare",
+        substr(code, 1, 1) == "2" ~ "Medicaid",
+        substr(code, 1, 1) %in% c("5", "6", "7") ~ "Private",
+        substr(code, 1, 1) %in% c("3", "4") ~ "Other govt",
+        substr(code, 1, 1) == "8" ~ "Uninsured",
+        substr(code, 1, 1) == "9" ~ "Other",
+        TRUE ~ "Other"
+      ),
       pct = round(100 * n / total_enc, 2)
     ) %>%
-    select(code, description, category, n, pct) %>%
+    select(code, amc_category, n, pct) %>%
     arrange(desc(n))
 
   # Category-level summary
   primary_cat <- primary_freq %>%
-    group_by(category) %>%
+    group_by(amc_category) %>%
     summarise(n = sum(n), .groups = "drop") %>%
     mutate(
       field = "PRIMARY",
       pct   = round(100 * n / total_enc, 2)
     ) %>%
-    select(field, category, n, pct) %>%
+    select(field, amc_category, n, pct) %>%
     arrange(desc(n))
 
   secondary_cat <- secondary_freq %>%
-    group_by(category) %>%
+    group_by(amc_category) %>%
     summarise(n = sum(n), .groups = "drop") %>%
     mutate(
       field = "SECONDARY",
       pct   = round(100 * n / total_enc, 2)
     ) %>%
-    select(field, category, n, pct) %>%
+    select(field, amc_category, n, pct) %>%
     arrange(desc(n))
 
   category_summary <- bind_rows(primary_cat, secondary_cat)
@@ -324,11 +273,13 @@ build_frequency_tables <- function(enc_scope, suffix, payer_lookup, output_dir) 
   message(glue("  Written: payer_secondary_code_freq{suffix}.csv ({nrow(secondary_freq)} rows)"))
   message(glue("  Written: payer_category_summary{suffix}.csv ({nrow(category_summary)} rows)"))
 
-  n_not_in_xlsx_primary <- sum(primary_freq$description == "NOT IN XLSX", na.rm = TRUE)
-  n_not_in_xlsx_secondary <- sum(secondary_freq$description == "NOT IN XLSX", na.rm = TRUE)
+  n_fallback_primary <- sum(is.na(AMC_PAYER_LOOKUP[primary_freq$code]) &
+                            !primary_freq$code %in% c("<NA>", "<EMPTY>"), na.rm = TRUE)
+  n_fallback_secondary <- sum(is.na(AMC_PAYER_LOOKUP[secondary_freq$code]) &
+                              !secondary_freq$code %in% c("<NA>", "<EMPTY>"), na.rm = TRUE)
 
-  message(glue("  Distinct PRIMARY codes: {nrow(primary_freq)} ({n_not_in_xlsx_primary} NOT IN XLSX)"))
-  message(glue("  Distinct SECONDARY codes: {nrow(secondary_freq)} ({n_not_in_xlsx_secondary} NOT IN XLSX)"))
+  message(glue("  Distinct PRIMARY codes: {nrow(primary_freq)} ({n_fallback_primary} via prefix fallback)"))
+  message(glue("  Distinct SECONDARY codes: {nrow(secondary_freq)} ({n_fallback_secondary} via prefix fallback)"))
 }
 
 output_dir <- file.path(CONFIG$output_dir, "tables")
@@ -336,11 +287,11 @@ dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
 # All encounters
 message("\n=== All Encounters Scope ===")
-build_frequency_tables(enc_all, "_all", payer_lookup, output_dir)
+build_frequency_tables(enc_all, "_all", output_dir)
 
 # AV+TH encounters
 message("\n=== AV+TH Encounters Scope ===")
-build_frequency_tables(enc_av_th, "_av_th_v2", payer_lookup, output_dir)
+build_frequency_tables(enc_av_th, "_av_th_v2", output_dir)
 
 # ==============================================================================
 # SECTION 4: Same-Day Payer Resolution (dual scope)
