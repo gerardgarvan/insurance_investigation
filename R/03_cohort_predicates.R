@@ -182,10 +182,9 @@ with_enrollment_period <- function(patient_df) {
 
 #' Exclude patients with missing or invalid payer category
 #'
-#' Returns only patients where PAYER_CATEGORY_PRIMARY is NOT NA, NOT "Unknown",
-#' and NOT "Unavailable". Per D-04: only patients with concrete payer categories
-#' (Medicare, Medicaid, Dual eligible, Private, Other government, No payment /
-#' Self-pay, Other) are retained.
+#' Returns only patients where PAYER_CATEGORY_PRIMARY is NOT NA and NOT "Missing".
+#' Under AMC 8-category system, "Missing" consolidates the former "Unknown" and
+#' "Unavailable" categories.
 #'
 #' @param patient_df Tibble with at least an ID column
 #' @param payer_summary Payer summary tibble from 02_harmonize_payer.R
@@ -195,7 +194,7 @@ exclude_missing_payer <- function(patient_df, payer_summary) {
   valid_payer_patients <- payer_summary %>%
     filter(
       !is.na(PAYER_CATEGORY_PRIMARY) &
-      !PAYER_CATEGORY_PRIMARY %in% c("Unknown", "Unavailable")
+      !PAYER_CATEGORY_PRIMARY %in% c("Missing")
     ) %>%
     distinct(ID)
 

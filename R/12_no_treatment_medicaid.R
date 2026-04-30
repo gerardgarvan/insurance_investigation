@@ -134,7 +134,7 @@ if (n_tx_has_dx > 0) {
 
 message(glue("\n--- Payer at First Diagnosis ---"))
 dx_payer_dist <- no_tx_medicaid %>%
-  mutate(PAYER_CATEGORY_AT_FIRST_DX = coalesce(PAYER_CATEGORY_AT_FIRST_DX, "Unknown")) %>%
+  mutate(PAYER_CATEGORY_AT_FIRST_DX = coalesce(PAYER_CATEGORY_AT_FIRST_DX, "Missing")) %>%
   count(PAYER_CATEGORY_AT_FIRST_DX, name = "n") %>%
   arrange(desc(n))
 for (i in seq_len(nrow(dx_payer_dist))) {
@@ -288,7 +288,7 @@ for (i in seq_len(nrow(enc_bin_dist))) {
 message(glue("\n--- Dual Eligible & Payer Transitions ---"))
 n_dual <- sum(no_tx_medicaid$DUAL_ELIGIBLE == 1)
 n_transition <- sum(no_tx_medicaid$PAYER_TRANSITION == 1)
-message(glue("  Dual eligible (any encounter): {fmt(n_dual, n_target)}"))
+message(glue("  Dual eligible flag (any encounter): {fmt(n_dual, n_target)}"))
 message(glue("  Payer transition (>1 category): {fmt(n_transition, n_target)}"))
 
 # ==============================================================================

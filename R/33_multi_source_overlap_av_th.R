@@ -507,18 +507,22 @@ message(glue("  Written: multi_source_per_source_summary_av_th.csv ({nrow(csv4)}
 # Joins same_date_detail back to ENCOUNTER to get SOURCE and raw payer codes,
 # then decodes PAYER_TYPE_PRIMARY/SECONDARY using PCORnet CDM prefix rules.
 decode_payer <- function(code) {
-  case_when(
-    is.na(code) | code == ""                     ~ NA_character_,
-    code %in% c("NI", "UN", "OT", "UNKNOWN")    ~ "Unknown",
-    code %in% c("99", "9999")                    ~ "Unavailable",
-    str_starts(code, "1")                        ~ "Medicare",
-    str_starts(code, "2")                        ~ "Medicaid",
-    str_starts(code, "5") | str_starts(code, "6") ~ "Private",
-    str_starts(code, "3") | str_starts(code, "4") ~ "Other government",
-    str_starts(code, "8")                        ~ "No payment / Self-pay",
-    str_starts(code, "7") | str_starts(code, "9") ~ "Other",
-    TRUE                                         ~ "Other"
+  # Use AMC_PAYER_LOOKUP for direct lookup, with prefix fallback
+  looked_up <- AMC_PAYER_LOOKUP[code]
+  prefix_cat <- case_when(
+    is.na(code) | code == ""                       ~ NA_character_,
+    str_starts(code, "1")                          ~ "Medicare",
+    str_starts(code, "2")                          ~ "Medicaid",
+    str_starts(code, "5") | str_starts(code, "6")  ~ "Private",
+    str_starts(code, "3") | str_starts(code, "4")  ~ "Other govt",
+    str_starts(code, "7")                          ~ "Private",
+    str_starts(code, "8")                          ~ "Uninsured",
+    str_starts(code, "9")                          ~ "Other",
+    TRUE                                           ~ "Other"
   )
+  result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
+  result <- if_else(is.na(code) | code == "", NA_character_, result)
+  result
 }
 
 csv5 <- same_date_detail %>%

@@ -2,9 +2,12 @@
 # 02_harmonize_payer.R -- Payer harmonization pipeline
 # ==============================================================================
 #
-# Implements 9-category payer mapping with encounter-level dual-eligible detection
-# matching the Python pipeline's logic exactly. Produces patient-level payer summary
-# and per-partner enrollment completeness report.
+# Implements AMC 8-category payer mapping using direct code-to-category lookup
+# from payer_primary_codes_frequency_AMC.xlsx. Produces patient-level payer
+# summary and per-partner enrollment completeness report.
+#
+# Categories: Medicaid, Medicare, Private, Other govt, Other, Self-pay,
+#             Uninsured, Missing
 #
 # Requirements: PAYR-01, PAYR-02, PAYR-03
 #
@@ -36,7 +39,6 @@ message(strrep("=", 60))
 #'
 #' Returns primary if valid, else secondary if valid, else NA.
 #' Sentinel values (NI, UN, OT) trigger fallback to secondary.
-#' 99/9999 are NOT sentinel — they are valid and map to "Unavailable".
 #'
 #' @param primary Character vector of PAYER_TYPE_PRIMARY values
 #' @param secondary Character vector of PAYER_TYPE_SECONDARY values
@@ -63,14 +65,11 @@ compute_effective_payer <- function(primary, secondary) {
   )
 }
 
-#' Detect dual-eligible encounters
+#' Detect dual-eligible encounters (informational flag only)
 #'
 #' Returns 1 if encounter is dual-eligible, 0 otherwise.
-#' Dual-eligible = (Medicare primary + Medicaid secondary) OR
-#'                 (Medicaid primary + Medicare secondary) OR
-#'                 (primary or secondary in {14, 141, 142})
-#'
-#' When secondary is missing/empty, returns 0 (cannot compute cross-payer check).
+#' NOTE: This flag is informational only under the AMC 8-category system.
+#' It does NOT override the payer category (code 14 maps to Medicaid directly).
 #'
 #' @param primary Character vector of PAYER_TYPE_PRIMARY values
 #' @param secondary Character vector of PAYER_TYPE_SECONDARY values
@@ -98,38 +97,35 @@ detect_dual_eligible <- function(primary, secondary) {
   )
 }
 
-#' Map effective payer to 9-category system
+#' Map effective payer to AMC 8-category system
 #'
-#' Applies exact-match overrides first (99/9999 -> Unavailable, NI/UN/OT/UNKNOWN -> Unknown),
-#' then prefix rules (1->Medicare, 2->Medicaid, etc.), then dual-eligible override.
+#' Uses AMC_PAYER_LOOKUP direct code-to-category table (from
+#' payer_primary_codes_frequency_AMC.xlsx). Falls back to prefix-based rules
+#' for codes not in the lookup. NA effective payer maps to "Missing".
 #'
 #' @param effective_payer Character vector of effective payer codes
-#' @param dual_eligible_encounter Integer vector (0/1) indicating dual-eligible encounters
-#' @return Character vector of payer categories (9 levels)
+#' @return Character vector of payer categories (8 levels)
 #'
-map_payer_category <- function(effective_payer, dual_eligible_encounter) {
+map_payer_category <- function(effective_payer) {
+  # Direct lookup from AMC table
+  looked_up <- AMC_PAYER_LOOKUP[effective_payer]
 
-  # First compute raw category from effective_payer
-  # CRITICAL: exact-match overrides BEFORE prefix rules
-  payer_category_raw <- case_when(
-    # Exact-match overrides
-    effective_payer %in% PAYER_MAPPING$unavailable_codes ~ "Unavailable",  # 99, 9999
-    effective_payer %in% PAYER_MAPPING$unknown_codes | is.na(effective_payer) ~ "Unknown",  # NI, UN, OT, UNKNOWN, NA
-
-    # Prefix rules
+  # Prefix-based fallback for codes not in AMC_PAYER_LOOKUP
+  prefix_category <- case_when(
     str_starts(effective_payer, "1") ~ "Medicare",
     str_starts(effective_payer, "2") ~ "Medicaid",
     str_starts(effective_payer, "5") | str_starts(effective_payer, "6") ~ "Private",
-    str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other government",
-    str_starts(effective_payer, "8") ~ "No payment / Self-pay",
-    str_starts(effective_payer, "7") | str_starts(effective_payer, "9") ~ "Other",
-
-    # Default
+    str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other govt",
+    str_starts(effective_payer, "7") ~ "Private",
+    str_starts(effective_payer, "8") ~ "Uninsured",
+    str_starts(effective_payer, "9") ~ "Other",
     TRUE ~ "Other"
   )
 
-  # Then apply dual-eligible override
-  if_else(dual_eligible_encounter == 1L, "Dual eligible", payer_category_raw)
+  # Use lookup result if found, else prefix fallback, else Missing for NA
+  result <- if_else(!is.na(looked_up), looked_up, prefix_category)
+  result <- if_else(is.na(effective_payer), "Missing", result)
+  result
 }
 
 # ==============================================================================
@@ -158,7 +154,7 @@ encounters <- encounters_raw %>%
   mutate(
     effective_payer = compute_effective_payer(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
     dual_eligible_encounter = detect_dual_eligible(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
-    payer_category = map_payer_category(effective_payer, dual_eligible_encounter)
+    payer_category = map_payer_category(effective_payer)
   ) %>%
   materialize()  # Materialize at section boundary (D-04)
 
@@ -392,7 +388,7 @@ for (src in unique(payer_by_partner$SOURCE)) {
 # SECTION 6: VALIDATION SUMMARY
 # ==============================================================================
 
-message("\n=== Payer Harmonization Validation ===")
+message("\n=== Payer Harmonization Validation (AMC 8-category) ===")
 message(glue("Total patients: {nrow(payer_summary)}"))
 
 category_counts <- payer_summary %>%
@@ -404,22 +400,8 @@ for (i in seq_len(nrow(category_counts))) {
 }
 
 n_dual <- sum(payer_summary$DUAL_ELIGIBLE == 1, na.rm = TRUE)
-n_medicare <- sum(payer_summary$PAYER_CATEGORY_PRIMARY == "Medicare", na.rm = TRUE)
-n_medicaid <- sum(payer_summary$PAYER_CATEGORY_PRIMARY == "Medicaid", na.rm = TRUE)
-medicare_medicaid_total <- n_medicare + n_medicaid
-
-message(glue("\nDual-eligible patients: {n_dual}"))
-if (medicare_medicaid_total > 0) {
-  dual_pct <- round(100 * n_dual / medicare_medicaid_total, 1)
-  message(glue("Dual-eligible rate (% of Medicare+Medicaid): {dual_pct}%"))
-  if (dual_pct < 10 | dual_pct > 20) {
-    message(glue("WARNING: Dual-eligible rate ({dual_pct}%) outside expected 10-20% range"))
-  } else {
-    message(glue("Dual-eligible rate within expected 10-20% range"))
-  }
-} else {
-  message("WARNING: No Medicare or Medicaid patients found -- cannot compute dual-eligible rate")
-}
+message(glue("\nDual-eligible patients (informational flag): {n_dual}"))
+message("NOTE: Dual-eligible is an informational flag only; category is determined by AMC lookup")
 
 # ==============================================================================
 # SECTION 7: CSV OUTPUT

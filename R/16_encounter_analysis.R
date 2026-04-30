@@ -38,12 +38,12 @@ hist_data <- hl_cohort %>%
   filter(!is.na(PAYER_CATEGORY_PRIMARY), !is.na(N_ENCOUNTERS)) %>%
   mutate(
     PAYER_CATEGORY_PRIMARY = case_when(
-      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Other govt", "Missing") ~ "Missing",
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
-                 "Other government", "No payment / Self-pay", "Missing"))
+      levels = c("Medicare", "Medicaid", "Private",
+                 "Self-pay", "Uninsured", "Missing"))
   )
 
 # Cap x-axis at 500 to show bulk of distribution (median ~93, Q3 ~243)
@@ -300,12 +300,12 @@ hist_data_ud <- cohort_ud %>%
   filter(!is.na(PAYER_CATEGORY_PRIMARY), !is.na(N_UNIQUE_DATES)) %>%
   mutate(
     PAYER_CATEGORY_PRIMARY = case_when(
-      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Other govt", "Missing") ~ "Missing",
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
-                 "Other government", "No payment / Self-pay", "Missing"))
+      levels = c("Medicare", "Medicaid", "Private",
+                 "Self-pay", "Uninsured", "Missing"))
   )
 
 x_cap_ud <- 300
@@ -669,13 +669,13 @@ stacked_plot_data <- stacked_counts %>%
   left_join(patient_totals_stacked, by = "ID") %>%
   mutate(
     PAYER_CATEGORY_PRIMARY = case_when(
-      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Other govt", "Missing") ~ "Missing",
       is.na(PAYER_CATEGORY_PRIMARY) ~ "Missing",
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
-                 "Other government", "No payment / Self-pay", "Missing")),
+      levels = c("Medicare", "Medicaid", "Private",
+                 "Self-pay", "Uninsured", "Missing")),
     # Post-treatment on bottom (first level = bottom in stacked histogram) per D-07
     ENCOUNTER_PERIOD = factor(ENCOUNTER_PERIOD,
       levels = c("Post-treatment", "Pre-treatment"))
@@ -769,13 +769,13 @@ stacked_ud_plot <- stacked_ud %>%
   left_join(patient_totals_ud_stk, by = "ID") %>%
   mutate(
     PAYER_CATEGORY_PRIMARY = case_when(
-      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Other govt", "Missing") ~ "Missing",
       is.na(PAYER_CATEGORY_PRIMARY) ~ "Missing",
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
-                 "Other government", "No payment / Self-pay", "Missing")),
+      levels = c("Medicare", "Medicaid", "Private",
+                 "Self-pay", "Uninsured", "Missing")),
     ENCOUNTER_PERIOD = factor(ENCOUNTER_PERIOD,
       levels = c("Post-treatment", "Pre-treatment"))
   )
@@ -858,12 +858,12 @@ hist_data_ud_tx <- cohort_ud_treated %>%
   filter(!is.na(PAYER_CATEGORY_PRIMARY), !is.na(N_UNIQUE_DATES)) %>%
   mutate(
     PAYER_CATEGORY_PRIMARY = case_when(
-      PAYER_CATEGORY_PRIMARY %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      PAYER_CATEGORY_PRIMARY %in% c("Other", "Other govt", "Missing") ~ "Missing",
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Dual eligible", "Private",
-                 "Other government", "No payment / Self-pay", "Missing"))
+      levels = c("Medicare", "Medicaid", "Private",
+                 "Self-pay", "Uninsured", "Missing"))
   )
 
 x_cap_ud_tx <- 300

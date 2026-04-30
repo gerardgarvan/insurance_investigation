@@ -65,9 +65,8 @@ message(glue("UFH patients in dataset: {format(nrow(ufh_patients), big.mark=',')
 
 message("\n--- SECTION 2: Build UFH Encounter Dataset with Missingness Flags ---")
 
-# Define missingness indicators per D-01 to D-04:
-#   Sentinel values (NI, UN, OT) + unavailable codes (99, 9999)
-missing_indicators <- c(PAYER_MAPPING$sentinel_values, PAYER_MAPPING$unavailable_codes)
+# Define missingness indicators: sentinel values (NI, UN, OT) + codes that map to "Missing"
+missing_indicators <- c(PAYER_MAPPING$sentinel_values, "99", "9999", "UNKNOWN")
 
 message(glue("Missing indicators: {paste(missing_indicators, collapse=', ')}"))
 
@@ -261,9 +260,9 @@ ufh_encounters_harmonized <- encounters %>%
   filter(!is.na(ADMIT_DATE) & year(ADMIT_DATE) != 1900L) %>%
   mutate(
     admit_year = year(ADMIT_DATE),
-    # Harmonized missingness: payer_category is NA, Unknown, or Unavailable
+    # Harmonized missingness: payer_category is NA or "Missing"
     harmonized_missing = is.na(payer_category) |
-                         payer_category %in% c("Unknown", "Unavailable"),
+                         payer_category == "Missing",
     # Raw primary missingness (same logic as Section 2)
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |
                       nchar(trimws(PAYER_TYPE_PRIMARY)) == 0 |
@@ -315,7 +314,7 @@ if (abs(delta) < 0.5) {
   message("  This suggests the gap originates at data SUBMISSION, not harmonization.")
 } else if (delta > 0) {
   message(glue("  Interpretation: Harmonized missingness is HIGHER than raw by {delta} pp."))
-  message("  Harmonization is increasing apparent missingness (sentinel fallback to Unknown/Unavailable).")
+  message("  Harmonization is increasing apparent missingness (sentinel fallback to Missing).")
 } else {
   message(glue("  Interpretation: Harmonized missingness is LOWER than raw by {abs(delta)} pp."))
   message("  Harmonization is recovering some payer info (e.g., SECONDARY fallback for sentinel PRIMARY).")

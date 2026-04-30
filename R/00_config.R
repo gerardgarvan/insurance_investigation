@@ -236,80 +236,128 @@ ICD_CODES <- list(
 )
 
 # ------------------------------------------------------------------------------
-# 4. PAYER MAPPING RULES (9-category system)
+# 4. PAYER MAPPING RULES (AMC 8-category system)
 # ------------------------------------------------------------------------------
 #
-# This mapping replicates the Python pipeline's payer harmonization logic.
-# Reference: C:\cygwin64\home\Owner\Data loading and cleaing\docs\PAYER_VARIABLES_AND_CATEGORIES.md
-#
-# Categories are assigned by prefix (PCORnet typology) with exact-match overrides
-# for dual-eligible, unavailable, and unknown codes.
-#
-# Dual-eligible detection (encounter-level):
-#   - Primary=Medicare (prefix 1) AND secondary=Medicaid (prefix 2), OR
-#   - Primary=Medicaid AND secondary=Medicare, OR
-#   - Primary OR secondary in {14, 141, 142}
+# Category assignment uses a direct code-to-category lookup table derived from
+# payer_primary_codes_frequency_AMC.xlsx (Amy Crisp framework).
+# "New Category" column overrides "Category" column where non-blank.
 #
 # Effective payer (per encounter): primary if valid, else secondary if valid
 # Sentinel values (trigger fallback to secondary): null, "", "NI", "UN", "OT"
-# NOTE: 99/9999 are NOT sentinel values by default (map to "Unavailable" instead)
 #
+# 8 categories: Medicaid, Medicare, Private, Other govt, Other, Self-pay,
+#               Uninsured, Missing
+#
+# Key differences from prior 9-category system:
+#   - "Dual eligible" removed — code 14 maps to Medicaid
+#   - "Other government" renamed to "Other govt"
+#   - "No payment / Self-pay" split: 81 → Self-pay, 8/821 → Uninsured
+#   - "Unknown" and "Unavailable" merged into "Missing"
+#   - NI, UN, 9999 → Missing (were Unknown/Unavailable)
+#   - OT → Other (was Unknown)
+#   - 311 (TRICARE) → Private (was Other govt)
+#   - Prefix 7 → Private (was Other)
 # ------------------------------------------------------------------------------
-# R vs Python Payer Mapping Comparison (D-04, Phase 6 Plan 02)
-# ------------------------------------------------------------------------------
-# Source: payer_mapping_audit.csv from 07_diagnostics.R on HiPerGator
-#
-# Category               | R pipeline | Python pipeline | Notes
-# -----------------------|------------|-----------------|------
-# Medicaid               |   43.66%   |     TBD         | Largest category
-# Private                |   28.58%   |     TBD         |
-# Dual eligible          |   11.01%   |     TBD         | Encounter-level cross-payer detection
-# Medicare               |    8.91%   |     TBD         |
-# No payment / Self-pay  |    3.16%   |     TBD         |
-# Unavailable            |    2.43%   |     TBD         |
-# Other government       |    1.43%   |     TBD         |
-# Other                  |    0.82%   |     TBD         |
-# Unknown                |    ---     |     TBD         | (not in audit output, likely 0%)
-#
-# NOTE: Exact parity with Python pipeline not required (D-04). R pipeline is
-# exploratory. Differences expected from: different dual-eligible detection
-# thresholds, encounter vs enrollment-level aggregation, sentinel value handling,
-# and patient-level vs encounter-level payer assignment.
-#
-# HL identification context (hl_identification_venn.csv):
-#   19 "Neither" patients excluded by Plan 01's HL_SOURCE tracking.
-#   Most patients are "DIAGNOSIS only" (no TR data for most sources).
-#   Both DIAGNOSIS and TR: 721 patients (LNK, ORL, UFH only).
-# ------------------------------------------------------------------------------
+
+# Direct code-to-category lookup from AMC spreadsheet
+# Source: payer_primary_codes_frequency_AMC.xlsx (New Category overrides Category)
+AMC_PAYER_LOOKUP <- c(
+  # Medicaid codes
+  "219"   = "Medicaid",    # Medicaid Managed Care Other
+  "29"    = "Medicaid",    # Medicaid Other
+  "14"    = "Medicaid",    # Dual Eligibility Medicare/Medicaid Organization
+  "141"   = "Medicaid",    # Dual Eligibility (subcode)
+  "142"   = "Medicaid",    # Dual Eligibility (subcode)
+  "211"   = "Medicaid",    # Medicaid HMO
+  "213"   = "Medicaid",    # Medicaid PCCM
+  "21"    = "Medicaid",    # Medicaid (Managed Care)
+  "2"     = "Medicaid",    # Medicaid
+  "23"    = "Medicaid",    # Medicaid/SCHIP
+  "25"    = "Medicaid",    # Medicaid - Out of State
+
+  # Medicare codes
+  "1"     = "Medicare",    # Medicare
+  "19"    = "Medicare",    # Medicare Other
+  "11"    = "Medicare",    # Medicare (Managed Care)
+  "111"   = "Medicare",    # Medicare HMO
+
+  # Private codes
+  "6"     = "Private",     # Blue Cross/Blue Shield
+  "5"     = "Private",     # Private Health Insurance
+  "511"   = "Private",     # Commercial Managed Care - HMO
+  "51"    = "Private",     # Managed Care (Private)
+  "52"    = "Private",     # Private Health Insurance - Indemnity
+  "71"    = "Private",     # HMO
+  "513"   = "Private",     # Commercial Managed Care - POS
+  "7"     = "Private",     # Managed Care, Unspecified
+  "521"   = "Private",     # Commercial Indemnity
+  "623"   = "Private",     # BC Medicare Supplemental Plan
+  "512"   = "Private",     # Commercial Managed Care - PPO
+  "529"   = "Private",     # Private health insurance - other commercial Indemnity
+  "311"   = "Private",     # TRICARE (CHAMPUS) — reclassified from Other govt per AMC
+
+  # Missing codes
+  "NI"    = "Missing",     # No information — reclassified from Uninsured per AMC
+  "9999"  = "Missing",     # Unavailable / No Payer Specified — reclassified per AMC
+  "UN"    = "Missing",     # Unknown — reclassified from Uninsured per AMC
+  "99"    = "Missing",     # Unavailable (short code)
+  "UNKNOWN" = "Missing",   # Unknown (text form)
+
+  # Other codes
+  "OT"    = "Other",       # Other
+  "95"    = "Other",       # Worker's Compensation
+  "9"     = "Other",       # Miscellaneous/other
+  "92"    = "Other",       # Other (Non-government)
+  "96"    = "Other",       # Auto Insurance
+
+  # Self-pay codes
+  "81"    = "Self-pay",    # Self-pay — split from Uninsured per AMC
+
+  # Uninsured codes
+  "821"   = "Uninsured",   # Charity
+  "8"     = "Uninsured",   # No payment from Organization/Agency/Program
+
+  # Other govt codes
+  "382"   = "Other govt",  # Federal, State, Local not specified - FFS
+  "349"   = "Other govt",  # Other
+  "3"     = "Other govt",  # Other Government (excl. Corrections)
+  "32126" = "Other govt",  # Other Federal Agency
+  "32121" = "Other govt",  # Fee Basis
+  "32"    = "Other govt",  # Department of Veterans Affairs
+  "44"    = "Other govt"   # Corrections Unknown Level
+)
 
 PAYER_MAPPING <- list(
-  # Prefix-based mapping (PCORnet typology)
-  medicare_prefix = "1",
-  medicaid_prefix = "2",
-  private_prefix = c("5", "6"),
-  other_gov_prefix = c("3", "4"),  # Includes 41 (Corrections Federal)
-  no_payment_prefix = "8",
-  other_prefix = c("7", "9"),      # 9 excludes 99/9999 (handled separately)
-
-  # Exact-match overrides
-  unavailable_codes = c("99", "9999"),
-  unknown_codes = c("NI", "UN", "OT", "UNKNOWN"),
-  dual_eligible_codes = c("14", "141", "142"),
-
   # Sentinel values (trigger fallback to secondary payer when appearing as primary)
   sentinel_values = c("NI", "UN", "OT"),
 
-  # 9 standard categories (for reference/validation)
+  # Dual-eligible codes (kept for informational DUAL_ELIGIBLE flag, not for category override)
+  dual_eligible_codes = c("14", "141", "142"),
+
+  # Prefix-based fallback (for codes not found in AMC_PAYER_LOOKUP)
+  prefix_fallback = list(
+    "1" = "Medicare",
+    "2" = "Medicaid",
+    "3" = "Other govt",
+    "4" = "Other govt",
+    "5" = "Private",
+    "6" = "Private",
+    "7" = "Private",
+    "8" = "Uninsured",
+    "9" = "Other"
+  ),
+
+  # 8 standard categories (AMC framework)
   categories = c(
-    "Medicare",
     "Medicaid",
-    "Dual eligible",
+    "Medicare",
     "Private",
-    "Other government",
-    "No payment / Self-pay",
+    "Other govt",
     "Other",
-    "Unavailable",
-    "Unknown"
+    "Self-pay",
+    "Uninsured",
+    "Missing"
   )
 )
 

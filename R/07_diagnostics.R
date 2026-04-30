@@ -638,9 +638,7 @@ if (!is.null(payer_summary)) {
       !str_starts(PAYER_TYPE_PRIMARY, "7") &
       !str_starts(PAYER_TYPE_PRIMARY, "8") &
       !str_starts(PAYER_TYPE_PRIMARY, "9") &
-      !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$unavailable_codes &
-      !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$unknown_codes &
-      !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$dual_eligible_codes
+      !PAYER_TYPE_PRIMARY %in% names(AMC_PAYER_LOOKUP)
     ) %>%
     count(PAYER_TYPE_PRIMARY, name = "n_encounters") %>%
     arrange(desc(n_encounters))

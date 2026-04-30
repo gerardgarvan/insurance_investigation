@@ -10,7 +10,7 @@
 # Filter chain order (per D-01):
 #   1. has_hodgkin_diagnosis() -- identify HL patients from DIAGNOSIS table
 #   2. with_enrollment_period() -- require at least one enrollment record
-#   3. exclude_missing_payer() -- remove NA/Unknown/Unavailable payer categories
+#   3. exclude_missing_payer() -- remove NA/Missing payer categories
 #   4. Tag treatment flags (HAD_CHEMO, HAD_RADIATION, HAD_SCT) -- identification only, not exclusion
 #
 # Output:

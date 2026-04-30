@@ -86,19 +86,19 @@ TIER_MAPPING <- list(
   Missing    = 7L   # Lowest priority
 )
 
-# Map the R pipeline's 9-category payer scheme to the 6 tiers
-CODE_TO_TIER <- function(payer_category_9cat) {
+# Map the AMC 8-category payer scheme to the 7 tiers
+# AMC categories already align closely with tiers; "Other govt" collapses to "Other"
+CODE_TO_TIER <- function(payer_category) {
   case_when(
-    payer_category_9cat == "Medicaid" ~ "Medicaid",
-    payer_category_9cat == "Dual eligible" ~ "Medicaid",
-    payer_category_9cat == "Medicare" ~ "Medicare",
-    payer_category_9cat == "Private" ~ "Private",
-    payer_category_9cat == "Other government" ~ "Other",
-    payer_category_9cat == "Other" ~ "Other",
-    payer_category_9cat == "No payment / Self-pay" ~ "Self-pay",
-    payer_category_9cat == "Unavailable" ~ "Missing",
-    payer_category_9cat == "Unknown" ~ "Missing",
-    is.na(payer_category_9cat) ~ "Missing",
+    payer_category == "Medicaid"  ~ "Medicaid",
+    payer_category == "Medicare"  ~ "Medicare",
+    payer_category == "Private"   ~ "Private",
+    payer_category == "Other govt" ~ "Other",
+    payer_category == "Other"     ~ "Other",
+    payer_category == "Self-pay"  ~ "Self-pay",
+    payer_category == "Uninsured" ~ "Uninsured",
+    payer_category == "Missing"   ~ "Missing",
+    is.na(payer_category)         ~ "Missing",
     TRUE ~ "Missing"
   )
 }
@@ -122,7 +122,7 @@ compute_effective_payer_local <- function(primary, secondary) {
   )
 }
 
-# Replicate detect_dual_eligible logic inline
+# Replicate detect_dual_eligible logic inline (informational flag only)
 detect_dual_eligible_local <- function(primary, secondary) {
   dual_codes <- PAYER_MAPPING$dual_eligible_codes  # c("14", "141", "142")
 
@@ -141,23 +141,26 @@ detect_dual_eligible_local <- function(primary, secondary) {
   )
 }
 
-# Replicate map_payer_category logic inline
-map_payer_category_local <- function(effective_payer, dual_eligible_encounter) {
-  payer_category_raw <- case_when(
-    # Exact-match overrides
-    effective_payer %in% PAYER_MAPPING$unavailable_codes ~ "Unavailable",
-    effective_payer %in% PAYER_MAPPING$unknown_codes | is.na(effective_payer) ~ "Unknown",
-    # Prefix rules
+# Replicate map_payer_category logic inline (AMC 8-category system)
+map_payer_category_local <- function(effective_payer) {
+  # Direct lookup from AMC table
+  looked_up <- AMC_PAYER_LOOKUP[effective_payer]
+
+  # Prefix-based fallback for codes not in AMC_PAYER_LOOKUP
+  prefix_category <- case_when(
     str_starts(effective_payer, "1") ~ "Medicare",
     str_starts(effective_payer, "2") ~ "Medicaid",
     str_starts(effective_payer, "5") | str_starts(effective_payer, "6") ~ "Private",
-    str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other government",
-    str_starts(effective_payer, "8") ~ "No payment / Self-pay",
-    str_starts(effective_payer, "7") | str_starts(effective_payer, "9") ~ "Other",
+    str_starts(effective_payer, "3") | str_starts(effective_payer, "4") ~ "Other govt",
+    str_starts(effective_payer, "7") ~ "Private",
+    str_starts(effective_payer, "8") ~ "Uninsured",
+    str_starts(effective_payer, "9") ~ "Other",
     TRUE ~ "Other"
   )
 
-  if_else(dual_eligible_encounter == 1L, "Dual eligible", payer_category_raw)
+  result <- if_else(!is.na(looked_up), looked_up, prefix_category)
+  result <- if_else(is.na(effective_payer), "Missing", result)
+  result
 }
 
 # ==============================================================================
@@ -204,12 +207,12 @@ enc <- enc_raw %>%
     admit_date_parsed    = as.Date(ADMIT_DATE, format = "%Y-%m-%d"),
     # Compute effective payer (primary if valid, else secondary)
     effective_payer = compute_effective_payer_local(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
-    # Detect dual-eligible
+    # Detect dual-eligible (informational flag only)
     dual_eligible = detect_dual_eligible_local(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
-    # Map to 9-category
-    payer_category_9cat = map_payer_category_local(effective_payer, dual_eligible),
-    # Map to 6-tier
-    tier = CODE_TO_TIER(payer_category_9cat),
+    # Map to AMC 8-category
+    payer_category = map_payer_category_local(effective_payer),
+    # Map to tier
+    tier = CODE_TO_TIER(payer_category),
     # Override with special codes 93/14 (check raw codes, not effective)
     tier = coalesce(
       case_when(

@@ -84,9 +84,8 @@ for (i in seq_len(nrow(hl_patients_by_source))) {
 
 message("\n--- SECTION 2: Build All-Source Encounter Dataset with Missingness Flags ---")
 
-# Define missingness indicators per D-08:
-#   Sentinel values (NI, UN, OT) + unavailable codes (99, 9999)
-missing_indicators <- c(PAYER_MAPPING$sentinel_values, PAYER_MAPPING$unavailable_codes)
+# Define missingness indicators: sentinel values (NI, UN, OT) + codes that map to "Missing"
+missing_indicators <- c(PAYER_MAPPING$sentinel_values, "99", "9999", "UNKNOWN")
 
 message(glue("Missing indicators: {paste(missing_indicators, collapse=', ')}"))
 
@@ -330,9 +329,9 @@ all_encounters_harmonized <- encounters %>%
   filter(!is.na(ADMIT_DATE) & year(ADMIT_DATE) != 1900L) %>%
   mutate(
     admit_year = year(ADMIT_DATE),
-    # Harmonized missingness: payer_category is NA, Unknown, or Unavailable
+    # Harmonized missingness: payer_category is NA or "Missing"
     harmonized_missing = is.na(payer_category) |
-                         payer_category %in% c("Unknown", "Unavailable"),
+                         payer_category == "Missing",
     # Raw primary missingness (same logic as Section 2)
     # Phase 32: nchar(trimws()) replaced with direct empty-string check (translation gap #7)
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |

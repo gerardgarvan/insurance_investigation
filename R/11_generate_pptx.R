@@ -94,18 +94,18 @@ message(strrep("=", 60))
 # SECTION 1: CONFIGURATION
 # ==============================================================================
 
-# Payer category display order -- 6 categories + Missing (consolidates Other/Unavailable/Unknown)
+# Payer category display order (AMC 8-category; Other/Other govt collapse to Missing for display)
 PAYER_ORDER <- c(
-  "Medicare", "Medicaid", "Dual eligible", "Private",
-  "Other government", "No payment / Self-pay", "Missing"
+  "Medicare", "Medicaid", "Private",
+  "Self-pay", "Uninsured", "Missing"
 )
 
-# Map R pipeline category names to PPTX display names
-# Collapses Other, Unavailable, Unknown, and NA all into "Missing"
+# Map AMC category names to PPTX display names
+# Collapses Other, Other govt, and NA into "Missing"
 rename_payer <- function(x) {
   case_when(
-    x %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
-    is.na(x)                                      ~ "Missing",
+    x %in% c("Other", "Other govt") ~ "Missing",
+    is.na(x)                         ~ "Missing",
     TRUE ~ x
   )
 }
@@ -527,7 +527,7 @@ cohort_full <- cohort_full %>%
     across(
       c(POST_TREATMENT_PAYER, POST_CHEMO_PAYER, POST_RAD_PAYER, POST_SCT_PAYER),
       ~ case_when(
-          .x %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+          .x %in% c("Other", "Other govt") ~ "Missing",
           TRUE ~ .x  # preserves NA as NA, preserves all other values
         )
     )
@@ -844,7 +844,7 @@ pptx <- pptx %>%
            ftext("Mode of payer from encounters after last treatment date of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext(" ", prop = fp_text(font.size = 10))),
       fpar(ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Consolidation of Unknown, Unavailable, Other, and No Information payer categories.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+           ftext("Consolidation of Other and Other govt payer categories.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
            ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
       fpar(ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
@@ -1249,7 +1249,7 @@ tx_retention <- treated_ids %>%
   mutate(
     # POST_TREATMENT_PAYER: preserve NA so the "No Payer Assigned" row logic works
     POST_TREATMENT_PAYER = case_when(
-      POST_TREATMENT_PAYER %in% c("Other", "Unavailable", "Unknown") ~ "Missing",
+      POST_TREATMENT_PAYER %in% c("Other", "Other govt") ~ "Missing",
       TRUE ~ POST_TREATMENT_PAYER
     ),
     PAYER_AT_LAST_TX = rename_payer(PAYER_AT_LAST_TX)
@@ -2595,7 +2595,7 @@ pptx <- add_image_slide(pptx,
   "Comparison of raw field missingness vs harmonized category missingness (OVERALL)",
   "output/figures/phase21_raw_vs_harmonized.png",
   img_width = 9, img_height = 5.0) %>%
-  add_footnote("Raw = PAYER_TYPE_PRIMARY is NA/empty/sentinel. Harmonized = payer_category is NA/Unknown/Unavailable. Delta in percentage points shown between dots.")
+  add_footnote("Raw = PAYER_TYPE_PRIMARY is NA/empty/sentinel. Harmonized = payer_category is NA/Missing. Delta in percentage points shown between dots.")
 
 # ---- Slide 45: Year x Enc Type -- summary only (all_source_payer_missingness_year_x_enc_type.csv is 1015 rows) ----
 message("  Slide 45: Year x Enc Type Missingness (top combinations)")
