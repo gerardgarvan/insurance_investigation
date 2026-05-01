@@ -10,7 +10,7 @@
 # 1. Raw payer frequency tables using AMC_PAYER_LOOKUP from R/00_config.R for BOTH
 #    all-encounter and AV+TH scopes (6 frequency CSVs)
 # 2. Hierarchical same-day payer resolution using the priority hierarchy:
-#    Medicaid > Medicare > Private > Other > Self-pay > Uninsured > Missing
+#    Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing
 #    for BOTH scopes (6 resolution CSVs)
 #
 # Output: 12 CSV files in output/tables/:
@@ -73,23 +73,24 @@ message(glue("{strrep('=', 70)}\n"))
 # Lower rank = higher priority. PIs can edit this with one-line changes.
 # ==========================================================================
 TIER_MAPPING <- list(
-  Medicaid   = 1L,  # Highest priority (includes dual-eligible, codes 93/14, FLM source)
-  Medicare   = 2L,
-  Private    = 3L,
-  Other      = 4L,
-  "Self-pay" = 5L,
-  Uninsured  = 6L,
-  Missing    = 7L   # Lowest priority
+  Medicaid     = 1L,  # Highest priority (includes dual-eligible, codes 93/14, FLM source)
+  Medicare     = 2L,
+  Private      = 3L,
+  "Other govt" = 4L,  # VA, TRICARE, state agencies, corrections
+  Other        = 5L,  # Generic other (worker's comp, auto insurance, etc.)
+  "Self-pay"   = 6L,
+  Uninsured    = 7L,
+  Missing      = 8L   # Lowest priority
 )
 
-# Map the AMC 8-category payer scheme to the 7 tiers
-# AMC categories already align closely with tiers; "Other govt" collapses to "Other"
+# Map the AMC 8-category payer scheme to the 8 resolution tiers
+# AMC categories now align 1:1 with tiers (no collapsing)
 CODE_TO_TIER <- function(payer_category) {
   case_when(
     payer_category == "Medicaid"  ~ "Medicaid",
     payer_category == "Medicare"  ~ "Medicare",
     payer_category == "Private"   ~ "Private",
-    payer_category == "Other govt" ~ "Other",
+    payer_category == "Other govt" ~ "Other govt",
     payer_category == "Other"     ~ "Other",
     payer_category == "Self-pay"  ~ "Self-pay",
     payer_category == "Uninsured" ~ "Uninsured",
@@ -165,7 +166,7 @@ enc <- enc_raw %>%
     # Assign tier rank
     tier_rank = unlist(TIER_MAPPING[tier]),
     # Safety net: ensure tier_rank is never NA
-    tier_rank = if_else(is.na(tier_rank), 7L, tier_rank)
+    tier_rank = if_else(is.na(tier_rank), 8L, tier_rank)
   )
 
 # Create two scoped datasets
