@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 Phase: 37 (last completed)
 Plan: All complete
 Status: Milestone v1.5 shipped
-Last activity: 2026-05-01 - Completed v1.5 milestone archival
+Last activity: 2026-05-01 - Phase 38 context gathered
 
 Progress: [██████████] 100% — v1.5 complete
 
@@ -52,6 +52,7 @@ None.
 - Milestone v1.5 completed and archived 2026-05-01
 - Remaining unassigned phases: 24, 26, 27, 28 (deferred from v1.2)
 - Active requirements: VIZ-01, VIZ-02, VIZ-03 (attrition waterfall, Sankey, HIPAA suppression)
+- Phase 38 added: Chemo Treatment Inventory by Source Table
 - Next milestone needs `/gsd:new-milestone` to define scope and requirements
 
 ### Blockers/Concerns
