@@ -1,18 +1,20 @@
 ---
 phase: 37-add-an-other-govt-tier-to-the-tiered-payer-variable
 verified: 2026-05-01T14:35:00Z
-status: human_needed
+status: verified
 score: 4/4 must-haves verified
+human_verification_completed: 2026-05-01T15:10:00Z
+human_verification_source: 37-HUMAN-UAT.md
 human_verification:
   - test: "Run script on HiPerGator with real data"
     expected: "Script executes without errors and produces 12 CSV files with 'Other govt' as distinct category"
-    why_human: "R runtime not available on Windows verification environment; requires HiPerGator with PCORnet data"
+    result: pass
   - test: "Inspect output CSV files for 'Other govt' values"
     expected: "payer_resolved_detail_*.csv, payer_resolved_patient_summary_*.csv, and payer_resolved_impact_*.csv contain 'Other govt' as a distinct resolved_payer value (not collapsed into 'Other')"
-    why_human: "Output CSVs don't exist yet; script must run on HiPerGator first"
+    result: pass
   - test: "Compare before/after counts in payer_resolved_impact_*.csv"
     expected: "Rows for 'Other govt' (rank 4) and 'Other' (rank 5) are distinct, showing separation that was previously collapsed"
-    why_human: "Behavioral verification requires actual data execution on HPC"
+    result: pass
 ---
 
 # Phase 37: Add an Other Govt tier to the tiered payer variable Verification Report
