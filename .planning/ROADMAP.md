@@ -38,5 +38,15 @@
 | 34 | 1/1 | Complete    | 2026-04-27 |
 | 35 | Unassigned | Complete | 2026-04-27 |
 
+### Phase 37: Add an Other Govt tier to the tiered payer variable
+
+**Goal:** Promote "Other govt" to its own distinct tier in the same-day payer resolution hierarchy, expanding from 7 tiers to 8 (Medicaid > Medicare > Private > Other Govt > Other > Self-pay > Uninsured > Missing)
+**Requirements**: TIER-01
+**Depends on:** Phase 36
+**Plans:** 1 plan
+
+Plans:
+- [ ] 37-01-PLAN.md — Expand tier hierarchy to 8 tiers with Other Govt at position 4
+
 ---
-*Last updated: 2026-04-30*
+*Last updated: 2026-05-01*
