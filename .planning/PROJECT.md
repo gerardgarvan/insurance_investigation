@@ -35,7 +35,10 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Diagnostic scripts DuckDB migration + speedup report — v1.3 Phase 32
 - [x] AV+TH multi-source overlap detection (R/33) — v1.4 Phase 33
 - [x] AV+TH overlap classification (Identical/Partial/Distinct, R/34) — v1.4 Phase 33
-- [x] Payer code frequency analysis with xlsx cross-reference (R/35) — Phase 34
+- [x] Payer code frequency analysis with xlsx cross-reference (R/35) — v1.5 Phase 34
+- [x] Tiered same-day payer resolution with Amy Crisp hierarchy (R/36) — v1.5 Phase 35
+- [x] AMC 8-category centralized payer mapping in R/00_config.R — v1.5 Phase 36
+- [x] 8-tier resolution hierarchy with distinct Other govt tier — v1.5 Phase 37
 
 ### Active
 
@@ -53,6 +56,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Publication-ready figure formatting — exploratory quality is sufficient
 
 ## Previous Milestones
+
+### v1.5 Payer Analysis Expansion (Shipped 2026-05-01)
+
+**Goal:** Payer code frequency analysis, hierarchical same-day payer resolution, AMC 8-category mapping, and 8-tier resolution hierarchy.
+
+**Shipped:**
+- R/35_payer_code_frequency_av_th.R — payer code frequency with xlsx cross-reference (Phase 34)
+- R/36_tiered_same_day_payer.R — dual-scope frequency + hierarchical same-day payer resolution (Phase 35)
+- AMC_PAYER_LOOKUP centralized in R/00_config.R, eliminating xlsx runtime dependency (Phase 36)
+- 8-tier hierarchy with distinct "Other govt" tier (Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing) (Phase 37)
 
 ### v1.4 AV+TH Subset Analysis (Shipped 2026-04-27)
 
@@ -94,13 +107,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 36 phases completed across 5 milestones (v1.0-v1.4), ~37 R scripts, DuckDB as default backend
+- **Current state**: 37 phases completed across 6 milestones (v1.0-v1.5), ~37 R scripts, DuckDB as default backend, AMC 8-category payer system
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
 - **PCORnet CDM tables in scope**: 13 tables loaded via DuckDB (ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC, DISPENSING, MED_ADMIN, LAB_RESULT_CM, PROVIDER, TUMOR_REGISTRY1/2/3)
 - **Partner sites**: AMS, UMI, FLM (claims-only), VRT (death-only), UFH
-- **Recent work**: Phase 34 (payer code frequency), Phase 35 (tiered same-day payer categorization per Amy Crisp framework) — both beyond v1.4 scope, pending milestone assignment
+- **Payer analysis**: AMC 8-category payer mapping centralized in R/00_config.R, 8-tier hierarchical same-day resolution, dual-scope (all encounters + AV+TH) output
 
 ## Constraints
 
@@ -109,7 +122,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - **Data access**: Raw CSVs on HiPerGator filesystem — paths configured in `R/00_config.R`
 - **HIPAA compliance**: All patient counts 1-10 must be suppressed in any output
 - **Code style**: Filtering logic uses named predicate functions (`has_*`, `with_*`, `exclude_*`) — no opaque one-liners
-- **Payer fidelity**: Must match the Python pipeline's 9-category payer mapping exactly, including dual-eligible detection
+- **Payer fidelity**: AMC 8-category payer mapping (centralized in R/00_config.R), with dual-eligible detection and hierarchical same-day resolution
 
 ## Key Decisions
 
@@ -128,6 +141,10 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Cohort + output snapshots via `save_output_data()` helper | Consistent path construction, logging, and RDS serialization for all 21 snapshot files | ✓ Phase 16 |
 | DuckDB as default backend with RDS fallback | DuckDB provides faster queries; USE_DUCKDB flag enables transparent switching | ✓ Phase 32 |
 | Clone-and-filter for encounter type subsetting | Clone baseline script with ENC_TYPE filter + _suffix outputs preserves baseline while enabling focused analysis | ✓ Phase 33 |
+| PayerVariable.xlsx for independent cross-reference | Provides independent view of raw code mapping separate from R pipeline's PAYER_MAPPING | ✓ Phase 34 |
+| Amy Crisp hierarchical same-day payer resolution | Medicaid > Medicare > Private priority resolves same-day multi-payer encounters deterministically | ✓ Phase 35 |
+| AMC 8-category centralized mapping in R/00_config.R | Single source of truth for payer categories, eliminates runtime xlsx dependency | ✓ Phase 36 |
+| Other govt as distinct tier (rank 4) | Government programs (VA, TRICARE) distinguished from generic "Other" for payer analysis | ✓ Phase 37 |
 
 ## Evolution
 
@@ -147,4 +164,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-27 after Phase 34 completion*
+*Last updated: 2026-05-01 after v1.5 milestone*
