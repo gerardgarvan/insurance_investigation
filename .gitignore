@@ -40,5 +40,16 @@ output/diagnostics/*.csv
 # Claude Code
 CLAUDE.md
 
+# Python bytecode
+__pycache__/
+
+# Office temp files
+~$*
+
+# Root-level output artifacts (not tracked)
+/*.pptx
+/*.xlsx
+/*.txt
+
 # RDS cache on blue storage (Phase 15 -- large binary files, 100MB-2GB each)
 /blue/erin.mobley-hl.bcu/clean/
