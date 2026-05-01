@@ -18,6 +18,11 @@
 - [ ] **Phase 26: Overlap Classification and Recommendations** — Field-by-field comparison and Identical/Partial/Distinct classification for all encounter types
 - [ ] **Phase 27: Cross-Table Data Quality Assessment** — 6-dimension QA pass across all 13 PCORnet CDM tables
 - [ ] **Phase 28: Per-Patient Source Detection by Date** — Per-date source enumeration replacing pairwise overlap approach
+- [ ] **Phase 38: Chemo Treatment Inventory by Source Table** — List all chemo treatments and categorize by PCORnet table (procedures, dispensing, prescribing, etc.)
+  - **Goal:** Aggregate inventory of all treatment codes (chemo, radiation, SCT, immunotherapy) across 7 PCORnet tables with styled xlsx output
+  - **Plans:** 1 plan
+  - Plans:
+    - [ ] 38-01-PLAN.md — Data extraction, aggregation, unknown code detection, styled xlsx output
 
 ## Progress
 
