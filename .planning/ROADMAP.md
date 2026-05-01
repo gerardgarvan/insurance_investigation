@@ -43,10 +43,10 @@
 **Goal:** Promote "Other govt" to its own distinct tier in the same-day payer resolution hierarchy, expanding from 7 tiers to 8 (Medicaid > Medicare > Private > Other Govt > Other > Self-pay > Uninsured > Missing)
 **Requirements**: TIER-01
 **Depends on:** Phase 36
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 37-01-PLAN.md — Expand tier hierarchy to 8 tiers with Other Govt at position 4
+- [x] 37-01-PLAN.md — Expand tier hierarchy to 8 tiers with Other Govt at position 4
 
 ---
 *Last updated: 2026-05-01*
