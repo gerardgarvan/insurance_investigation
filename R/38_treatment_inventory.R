@@ -103,16 +103,52 @@ empty_result <- function() {
 }
 
 # ==============================================================================
+# SECTION 3B: HL PATIENT ID HELPER
+# ==============================================================================
+
+#' Get patient IDs with a Hodgkin Lymphoma diagnosis
+#'
+#' Queries DIAGNOSIS table for any patient with an HL ICD-10 or ICD-9 code.
+#' Used to pull ALL drugs for HL patients (not just curated TREATMENT_CODES).
+#'
+#' @return Character vector of unique patient IDs
+get_hl_patient_ids <- function() {
+  dx_tbl <- safe_table("DIAGNOSIS")
+  if (is.null(dx_tbl)) {
+    message("  Warning: DIAGNOSIS table not found, cannot identify HL patients")
+    return(character(0))
+  }
+
+  tryCatch({
+    hl_ids <- dx_tbl %>%
+      filter(
+        (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
+        (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
+      ) %>%
+      select(ID) %>%
+      distinct() %>%
+      collect() %>%
+      pull(ID)
+    message(glue("  Found {format(length(hl_ids), big.mark = ',')} patients with HL diagnosis"))
+    hl_ids
+  }, error = function(e) {
+    message(glue("  Warning: HL patient lookup failed: {e$message}"))
+    character(0)
+  })
+}
+
+# ==============================================================================
 # SECTION 4: CODE EXTRACTION FUNCTIONS -- one per treatment type
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
 # extract_chemo_codes()
 # ------------------------------------------------------------------------------
-#' Extract chemotherapy code frequencies from all relevant PCORnet tables
+#' Extract chemotherapy code frequencies + all drugs for HL patients
 #'
-#' Queries: PROCEDURES (CPT/HCPCS, ICD-9, ICD-10-PCS, Revenue),
-#'          PRESCRIBING, DISPENSING, MED_ADMIN (RXNORM),
+#' Queries: PROCEDURES (CPT/HCPCS, ICD-9, ICD-10-PCS, Revenue) for chemo codes,
+#'          PRESCRIBING, DISPENSING, MED_ADMIN for ALL drugs prescribed to HL patients
+#'            (not limited to curated TREATMENT_CODES -- shows full drug landscape),
 #'          DIAGNOSIS (ICD-10-CM, ICD-9-CM Z/V codes),
 #'          ENCOUNTER (DRG), TUMOR_REGISTRY (date evidence)
 #'
@@ -176,59 +212,70 @@ extract_chemo_codes <- function() {
     results <- c(results, list(px_re))
   }
 
-  # --- PRESCRIBING ---
-  rx_tbl <- safe_table("PRESCRIBING")
-  if (!is.null(rx_tbl)) {
-    rx_codes <- tryCatch({
-      rx_tbl %>%
-        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-        group_by(code = RXNORM_CUI, drug_name = RAW_RX_MED_NAME) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PRESCRIBING", code_type = "RXNORM")
-    }, error = function(e) empty_result())
-    results <- c(results, list(rx_codes))
-  }
+  # --- ALL DRUGS FOR HL PATIENTS ---
+  # Instead of filtering to curated chemo_rxnorm list, pull ALL drugs
+  # prescribed/dispensed/administered to patients with an HL diagnosis.
+  # This reveals the full drug landscape, not just known ABVD codes.
+  hl_ids <- get_hl_patient_ids()
 
-  # --- DISPENSING (RXNORM) ---
-  disp_tbl <- safe_table("DISPENSING")
-  if (!is.null(disp_tbl)) {
-    # RXNORM-matched records with drug name
-    disp_rxnorm <- tryCatch({
-      disp_tbl %>%
-        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-        group_by(code = RXNORM_CUI, drug_name = RAW_DISPENSE_MED_NAME) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "DISPENSING", code_type = "RXNORM")
-    }, error = function(e) empty_result())
-    results <- c(results, list(disp_rxnorm))
+  if (length(hl_ids) > 0) {
+    # --- PRESCRIBING (all drugs for HL patients) ---
+    rx_tbl <- safe_table("PRESCRIBING")
+    if (!is.null(rx_tbl)) {
+      rx_codes <- tryCatch({
+        rx_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
+          group_by(code = RXNORM_CUI, drug_name = RAW_RX_MED_NAME) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PRESCRIBING", code_type = "RXNORM")
+      }, error = function(e) empty_result())
+      results <- c(results, list(rx_codes))
+    }
 
-    # NDC codes for the same RXNORM-matched records
-    disp_ndc <- tryCatch({
-      disp_tbl %>%
-        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-        filter(!is.na(NDC) & NDC != "") %>%
-        group_by(code = NDC, drug_name = RAW_DISPENSE_MED_NAME) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "DISPENSING", code_type = "NDC")
-    }, error = function(e) empty_result())
-    results <- c(results, list(disp_ndc))
-  }
+    # --- DISPENSING (all drugs for HL patients) ---
+    disp_tbl <- safe_table("DISPENSING")
+    if (!is.null(disp_tbl)) {
+      # RXNORM records with drug name
+      disp_rxnorm <- tryCatch({
+        disp_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
+          group_by(code = RXNORM_CUI, drug_name = RAW_DISPENSE_MED_NAME) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "DISPENSING", code_type = "RXNORM")
+      }, error = function(e) empty_result())
+      results <- c(results, list(disp_rxnorm))
 
-  # --- MED_ADMIN ---
-  ma_tbl <- safe_table("MED_ADMIN")
-  if (!is.null(ma_tbl)) {
-    ma_codes <- tryCatch({
-      ma_tbl %>%
-        filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-        group_by(code = RXNORM_CUI, drug_name = RAW_MEDADMIN_MED_NAME) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
-    }, error = function(e) empty_result())
-    results <- c(results, list(ma_codes))
+      # NDC codes with drug name
+      disp_ndc <- tryCatch({
+        disp_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(NDC) & NDC != "") %>%
+          group_by(code = NDC, drug_name = RAW_DISPENSE_MED_NAME) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "DISPENSING", code_type = "NDC")
+      }, error = function(e) empty_result())
+      results <- c(results, list(disp_ndc))
+    }
+
+    # --- MED_ADMIN (all drugs for HL patients) ---
+    ma_tbl <- safe_table("MED_ADMIN")
+    if (!is.null(ma_tbl)) {
+      ma_codes <- tryCatch({
+        ma_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
+          group_by(code = RXNORM_CUI, drug_name = RAW_MEDADMIN_MED_NAME) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
+      }, error = function(e) empty_result())
+      results <- c(results, list(ma_codes))
+    }
   }
 
   # --- DIAGNOSIS ---
@@ -731,7 +778,11 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
   wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
 
   # --- Row 2: Subtitle ---
-  subtitle <- glue("Counts and percentages of {treatment_type} codes by PCORnet table.")
+  subtitle <- if (treatment_type == "Chemotherapy") {
+    "All drugs for HL patients (PRESCRIBING/DISPENSING/MED_ADMIN) + chemo procedure codes by PCORnet table."
+  } else {
+    glue("Counts and percentages of {treatment_type} codes by PCORnet table.")
+  }
   wb$add_data(sheet = sheet_name, x = as.character(subtitle),
               start_row = 2, start_col = 1)
   wb$add_font(sheet = sheet_name, dims = "A2",
