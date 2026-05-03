@@ -55,20 +55,20 @@ TREATMENT_TYPE_COLORS <- list(
 )
 
 # CPT/HCPCS range heuristics for unknown code detection (D-08)
+# Targeted ranges to catch treatment-adjacent codes NOT in TREATMENT_CODES.
+# Intentionally narrow to avoid false positives from unrelated procedures.
 CPT_HCPCS_RANGES <- list(
   Chemotherapy = list(
-    j_codes    = "^J9[0-9]{3}$",          # J9000-J9999 injectable chemo drugs
-    admin_codes = "^96[4-5][0-9]{2}$"     # 96400-96599 chemo administration
+    j9_codes = "^J9[0-9]{3}$"            # J9000-J9999 injectable chemo drugs
   ),
   Radiation = list(
-    planning = "^770[0-9]{2}$",           # 77000-77099 radiation planning
-    delivery = "^77[4-9][0-9]{2}$"        # 77400-77999 radiation treatment delivery
+    delivery = "^774[0-9]{2}$"            # 77400-77499 radiation treatment delivery
   ),
   SCT = list(
-    transplant = "^38[2-9][0-9]{2}$"      # 38200-38999 HPC/transplant procedures
+    transplant = "^382[3-4][0-9]$"        # 38230-38249 HPC/bone marrow transplant
   ),
   Immunotherapy = list(
-    j_codes = "^J[0-9]{4}$"              # J-codes (broad net for immunotherapy drugs)
+    car_t_admin = "^XW0[34]3[A-Z][0-9]$"  # CAR T-cell administration ICD-10-PCS pattern
   )
 )
 
@@ -638,26 +638,31 @@ detect_unknown_codes <- function(treatment_type) {
 
   combined_regex <- paste(unlist(range_patterns), collapse = "|")
 
-  # Build list of ALL known CPT/HCPCS codes for this treatment type
-  known_codes <- switch(treatment_type,
-    "Chemotherapy" = c(
-      TREATMENT_CODES$chemo_hcpcs,
-      TREATMENT_CODES$chemo_icd9,
-      TREATMENT_CODES$chemo_revenue
+  # Build list of ALL known codes for this treatment type and determine PX_TYPE
+  code_info <- switch(treatment_type,
+    "Chemotherapy" = list(
+      codes = c(TREATMENT_CODES$chemo_hcpcs, TREATMENT_CODES$chemo_icd9,
+                TREATMENT_CODES$chemo_revenue),
+      px_type = "CH"
     ),
-    "Radiation" = c(
-      TREATMENT_CODES$radiation_cpt,
-      TREATMENT_CODES$radiation_icd9,
-      TREATMENT_CODES$radiation_revenue
+    "Radiation" = list(
+      codes = c(TREATMENT_CODES$radiation_cpt, TREATMENT_CODES$radiation_icd9,
+                TREATMENT_CODES$radiation_revenue),
+      px_type = "CH"
     ),
-    "SCT" = c(
-      TREATMENT_CODES$sct_cpt,
-      TREATMENT_CODES$sct_hcpcs,
-      TREATMENT_CODES$sct_icd9,
-      TREATMENT_CODES$sct_revenue
+    "SCT" = list(
+      codes = c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs,
+                TREATMENT_CODES$sct_icd9, TREATMENT_CODES$sct_revenue),
+      px_type = "CH"
     ),
-    "Immunotherapy" = character(0)  # CAR T uses ICD-10-PCS, not CPT/HCPCS
+    "Immunotherapy" = list(
+      codes = unlist(TREATMENT_CODES$cart_icd10pcs_prefixes),
+      px_type = "10"  # CAR T uses ICD-10-PCS, not CPT/HCPCS
+    )
   )
+
+  known_codes <- code_info$codes
+  px_type_filter <- code_info$px_type
 
   proc_tbl <- safe_table("PROCEDURES")
   if (is.null(proc_tbl)) {
@@ -668,7 +673,7 @@ detect_unknown_codes <- function(treatment_type) {
 
   tryCatch({
     proc_tbl %>%
-      filter(PX_TYPE == "CH") %>%
+      filter(PX_TYPE == px_type_filter) %>%
       materialize() %>%
       filter(str_detect(PX, combined_regex)) %>%
       filter(!PX %in% known_codes) %>%
@@ -676,7 +681,7 @@ detect_unknown_codes <- function(treatment_type) {
       summarise(n = n(), .groups = "drop") %>%
       mutate(
         source_table = "PROCEDURES (unmatched)",
-        code_type = "CH",
+        code_type = px_type_filter,
         treatment_type = treatment_type
       )
   }, error = function(e) {
@@ -714,7 +719,7 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
               start_row = 1, start_col = 1)
   wb$add_font(sheet = sheet_name, dims = "A1",
               name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
-  wb$merge_cells(sheet = sheet_name, rows = 1, cols = 1:5)
+  wb$merge_cells(sheet = sheet_name, dims = "A1:E1")
 
   # --- Row 2: Subtitle ---
   subtitle <- glue("Counts and percentages of {treatment_type} codes by PCORnet table.")
@@ -722,7 +727,7 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
               start_row = 2, start_col = 1)
   wb$add_font(sheet = sheet_name, dims = "A2",
               name = "Calibri", size = 10, color = wb_color("FF6B7280"))
-  wb$merge_cells(sheet = sheet_name, rows = 2, cols = 1:5)
+  wb$merge_cells(sheet = sheet_name, dims = "A2:E2")
 
   # --- Row 3: blank ---
 
