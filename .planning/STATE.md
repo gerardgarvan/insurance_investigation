@@ -56,6 +56,7 @@ None.
 - Active requirements: VIZ-01, VIZ-02, VIZ-03 (attrition waterfall, Sankey, HIPAA suppression)
 - Phase 38 added: Chemo Treatment Inventory by Source Table
 - Phase 39 added: Investigate Unmatched Codes
+- Phase 40 added: Investigate Unmatched NDC Codes
 - Next milestone needs `/gsd:new-milestone` to define scope and requirements
 
 ### Blockers/Concerns
