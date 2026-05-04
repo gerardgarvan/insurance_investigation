@@ -736,6 +736,280 @@ save_classified_rds <- function(classified_df, rds_path) {
 }
 
 # ==============================================================================
+# SECTION 8: UPDATE TREATMENT_CODES IN R/00_config.R (per D-10, D-11)
+# ==============================================================================
+
+#' Update TREATMENT_CODES in R/00_config.R with NDC and RXNORM codes
+#'
+#' Programmatically inserts classified NDC and RXNORM codes into R/00_config.R.
+#' Creates new NDC vectors (chemo_ndc, supportive_care_ndc, immunotherapy_ndc, sct_ndc)
+#' and expands/creates RXNORM vectors (chemo_rxnorm expanded, others created).
+#' Creates a backup before modification and validates with parse/source. Rolls back on failure.
+#'
+#' @param classified_codes_path Character. Path to unmatched_ndc_classified.rds
+update_config_ndc_codes <- function(classified_codes_path) {
+  # 1. Load classified codes
+  if (!file.exists(classified_codes_path)) {
+    stop(glue("Classified codes file not found: {classified_codes_path}"))
+  }
+
+  classified <- readRDS(classified_codes_path)
+
+  # 2. Filter to treatment-relevant codes (exclude Unrelated and Radiation)
+  treatment_codes_new <- classified %>%
+    filter(classification %in% c("Chemotherapy", "Supportive Care", "Immunotherapy", "SCT-related")) %>%
+    select(code, code_type, classification, drug_name)
+
+  if (nrow(treatment_codes_new) == 0) {
+    message("  No treatment codes to add (all classified as Unrelated or Radiation)")
+    return(invisible(NULL))
+  }
+
+  # 3. Category-to-vector mapping (separate by code type AND classification)
+  # NDC vectors (D-10: new vectors)
+  ndc_category_map <- c(
+    "Chemotherapy" = "chemo_ndc",
+    "Supportive Care" = "supportive_care_ndc",
+    "Immunotherapy" = "immunotherapy_ndc",
+    "SCT-related" = "sct_ndc"
+  )
+  # RXNORM vectors (D-11: expand existing chemo_rxnorm, create new for others)
+  rxnorm_category_map <- c(
+    "Chemotherapy" = "chemo_rxnorm",
+    "Supportive Care" = "supportive_care_rxnorm",
+    "Immunotherapy" = "immunotherapy_rxnorm",
+    "SCT-related" = "sct_rxnorm"
+  )
+
+  # 4. Read R/00_config.R and create backup
+  config_path <- "R/00_config.R"
+  backup_path <- paste0(config_path, ".bak")
+
+  if (!file.exists(config_path)) {
+    stop(glue("Config file not found: {config_path}"))
+  }
+
+  file.copy(config_path, backup_path, overwrite = TRUE)
+  message(glue("  Created backup: {backup_path}"))
+
+  config_lines <- readLines(config_path)
+
+  # Track which vectors we've added
+  ndc_vectors_added <- character()
+  rxnorm_vectors_added <- character()
+
+  # 5. Process each category for each code type (NDC then RXNORM)
+  for (code_type in c("NDC", "RXNORM")) {
+    category_map <- if (code_type == "NDC") ndc_category_map else rxnorm_category_map
+
+    for (cat_name in names(category_map)) {
+      vec_name <- category_map[cat_name]
+
+      # Get new codes for this combination
+      new_codes_for_cat <- treatment_codes_new %>%
+        filter(classification == cat_name, code_type == !!code_type)
+
+      if (nrow(new_codes_for_cat) == 0) {
+        next  # Skip if no codes for this combination
+      }
+
+      message(glue("  Processing {cat_name} {code_type}: {nrow(new_codes_for_cat)} codes"))
+
+      # Look for existing vector
+      vec_pattern <- glue("^\\s*{vec_name}\\s*=\\s*c\\(")
+      vec_start_idx <- grep(vec_pattern, config_lines, perl = TRUE)
+
+      if (length(vec_start_idx) == 0) {
+        # Vector doesn't exist - create new (all NDC vectors, new RXNORM vectors)
+        message(glue("    Creating new {vec_name} vector"))
+
+        # Find insertion anchor: supportive_care_hcpcs or chemo_revenue
+        anchor_idx <- grep("^\\s*supportive_care_hcpcs\\s*=\\s*c\\(", config_lines, perl = TRUE)
+        if (length(anchor_idx) == 0) {
+          anchor_idx <- grep("^\\s*chemo_revenue\\s*=\\s*c\\(", config_lines, perl = TRUE)
+        }
+        if (length(anchor_idx) == 0) {
+          stop("Cannot find insertion anchor (supportive_care_hcpcs or chemo_revenue)")
+        }
+
+        insert_pos <- anchor_idx[1] - 1
+
+        # Build new vector block
+        new_lines <- c(
+          "",
+          glue("  # {cat_name} {code_type} codes (Phase 40: drug investigation)"),
+          glue("  {vec_name} = c(")
+        )
+
+        for (i in seq_len(nrow(new_codes_for_cat))) {
+          code <- new_codes_for_cat$code[i]
+          drug_name <- new_codes_for_cat$drug_name[i]
+          drug_trunc <- ifelse(is.na(drug_name) || nchar(drug_name) == 0, "no name",
+                               substr(drug_name, 1, 40))
+
+          # Last code has no trailing comma
+          if (i == nrow(new_codes_for_cat)) {
+            new_lines <- c(new_lines, glue("    \"{code}\"    # Phase 40: {drug_trunc}"))
+          } else {
+            new_lines <- c(new_lines, glue("    \"{code}\",   # Phase 40: {drug_trunc}"))
+          }
+        }
+
+        new_lines <- c(new_lines, "  ),", "")
+
+        # Insert into config_lines
+        config_lines <- c(
+          config_lines[1:insert_pos],
+          new_lines,
+          config_lines[(insert_pos + 1):length(config_lines)]
+        )
+
+        if (code_type == "NDC") {
+          ndc_vectors_added <- c(ndc_vectors_added, vec_name)
+        } else {
+          rxnorm_vectors_added <- c(rxnorm_vectors_added, vec_name)
+        }
+
+      } else {
+        # Vector exists (chemo_rxnorm case) - expand it
+        message(glue("    Expanding existing {vec_name} vector"))
+
+        vec_start_idx <- vec_start_idx[1]
+
+        # Find closing paren
+        close_paren_idx <- NULL
+        for (i in vec_start_idx:length(config_lines)) {
+          if (grepl("^\\s*\\)", config_lines[i])) {
+            close_paren_idx <- i
+            break
+          }
+        }
+
+        if (is.null(close_paren_idx)) {
+          warning(glue("Cannot find closing paren for {vec_name} - skipping"))
+          next
+        }
+
+        # Extract existing codes
+        existing_codes <- character()
+        for (i in vec_start_idx:close_paren_idx) {
+          line <- config_lines[i]
+          matches <- str_extract_all(line, "\"([^\"]+)\"")[[1]]
+          if (length(matches) > 0) {
+            codes <- str_replace_all(matches, "\"", "")
+            existing_codes <- c(existing_codes, codes)
+          }
+        }
+
+        # Filter new codes to exclude already-existing
+        new_codes_to_add <- new_codes_for_cat %>%
+          filter(!code %in% existing_codes)
+
+        if (nrow(new_codes_to_add) == 0) {
+          message(glue("    All codes already exist in {vec_name} - skipping"))
+          next
+        }
+
+        message(glue("    Adding {nrow(new_codes_to_add)} new codes to {vec_name}"))
+
+        # Ensure last data line has trailing comma
+        last_data_idx <- close_paren_idx - 1
+        if (!grepl('"[^"]*"\\s*,', config_lines[last_data_idx])) {
+          config_lines[last_data_idx] <- sub('(.*")', '\\1,', config_lines[last_data_idx])
+        }
+
+        # Build insert lines
+        insert_lines <- character()
+        for (i in seq_len(nrow(new_codes_to_add))) {
+          code <- new_codes_to_add$code[i]
+          drug_name <- new_codes_to_add$drug_name[i]
+          drug_trunc <- ifelse(is.na(drug_name) || nchar(drug_name) == 0, "no name",
+                               substr(drug_name, 1, 40))
+
+          # Last line omits trailing comma
+          if (i == nrow(new_codes_to_add)) {
+            insert_lines <- c(insert_lines,
+                             glue("    \"{code}\"    # Phase 40: {drug_trunc}"))
+          } else {
+            insert_lines <- c(insert_lines,
+                             glue("    \"{code}\",   # Phase 40: {drug_trunc}"))
+          }
+        }
+
+        # Insert before closing paren
+        config_lines <- c(
+          config_lines[1:(close_paren_idx - 1)],
+          insert_lines,
+          config_lines[close_paren_idx:length(config_lines)]
+        )
+
+        if (code_type == "RXNORM") {
+          rxnorm_vectors_added <- c(rxnorm_vectors_added, vec_name)
+        }
+      }
+    }
+  }
+
+  # 6. Validate updated config
+  writeLines(config_lines, config_path)
+  message("  Validating updated config...")
+
+  validation_error <- tryCatch({
+    # Parse check
+    parse(config_path)
+
+    # Source check
+    env <- new.env()
+    source(config_path, local = env)
+
+    # Verify TREATMENT_CODES exists
+    if (is.null(env$TREATMENT_CODES)) {
+      stop("TREATMENT_CODES is NULL after sourcing")
+    }
+
+    # Verify each new vector exists
+    for (vec_name in c(ndc_vectors_added, rxnorm_vectors_added)) {
+      if (is.null(env$TREATMENT_CODES[[vec_name]])) {
+        warning(glue("Vector {vec_name} is NULL after update"))
+      }
+    }
+
+    NULL  # No error
+  }, error = function(e) {
+    e$message
+  })
+
+  # 7. Rollback on failure
+  if (!is.null(validation_error)) {
+    message(glue("  Config update failed: {validation_error}"))
+    message("  Restoring backup...")
+    file.copy(backup_path, config_path, overwrite = TRUE)
+    stop(glue("Config validation failed: {validation_error}"))
+  }
+
+  # 8. Cleanup and log
+  message("  Config update validated successfully")
+  file.remove(backup_path)
+
+  # Log summary of changes per vector
+  message("  Config update summary:")
+  for (code_type in c("NDC", "RXNORM")) {
+    category_map <- if (code_type == "NDC") ndc_category_map else rxnorm_category_map
+    for (cat_name in names(category_map)) {
+      vec_name <- category_map[cat_name]
+      n_new <- treatment_codes_new %>%
+        filter(classification == cat_name, code_type == !!code_type) %>%
+        nrow()
+      if (n_new > 0) {
+        message(glue("    {vec_name}: +{n_new} codes"))
+      }
+    }
+  }
+
+  invisible(NULL)
+}
+
+# ==============================================================================
 # SECTION 7: MAIN EXECUTION
 # ==============================================================================
 
@@ -796,6 +1070,12 @@ message("")
 # Step 5: Save RDS
 message("Step 5: Saving classified codes for config update...")
 save_classified_rds(all_unmatched, RDS_PATH)
+
+message("")
+
+# Step 6: Update R/00_config.R with new codes
+message("Step 6: Updating R/00_config.R with new treatment codes...")
+update_config_ndc_codes(RDS_PATH)
 
 message("")
 message("=== Phase 40 Investigation Complete ===")
