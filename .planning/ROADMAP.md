@@ -23,6 +23,13 @@
   - **Plans:** 1 plan
   - Plans:
     - [ ] 38-01-PLAN.md — Data extraction, aggregation, unknown code detection, styled xlsx output
+- [ ] **Phase 39: Investigate Unmatched Codes** — Investigate CPT/HCPCS codes in HL patient data not in curated TREATMENT_CODES lists
+  - **Goal:** Widen heuristic detection ranges, auto-classify unmatched codes via NLM API lookup and keyword heuristics, produce xlsx report, and update TREATMENT_CODES with confirmed treatment codes
+  - **Depends on:** Phase 38
+  - **Plans:** 2 plans
+  - Plans:
+    - [ ] 39-01-PLAN.md — Investigation script: extraction, NLM API lookup, classification, xlsx report
+    - [ ] 39-02-PLAN.md — Config updates: TREATMENT_CODES expansion and widened heuristic ranges
 
 ## Progress
 
@@ -37,4 +44,4 @@
 | 34-37 | v1.5 | Complete | 2026-05-01 |
 
 ---
-*Last updated: 2026-05-01*
+*Last updated: 2026-05-04*
