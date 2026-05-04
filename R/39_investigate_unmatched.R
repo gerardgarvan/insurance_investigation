@@ -624,6 +624,12 @@ update_config_treatment_codes <- function(classified_codes_path) {
 
     message(glue("    Adding {nrow(new_codes_to_add)} new codes to {vec_name}"))
 
+    # Ensure last existing code line has trailing comma before we append
+    last_data_idx <- close_paren_idx - 1
+    if (!grepl(",", config_lines[last_data_idx])) {
+      config_lines[last_data_idx] <- sub('(.*")', '\\1,', config_lines[last_data_idx])
+    }
+
     # Build lines to insert
     insert_lines <- character()
     for (i in seq_len(nrow(new_codes_to_add))) {
@@ -632,8 +638,14 @@ update_config_treatment_codes <- function(classified_codes_path) {
       desc_trunc <- ifelse(is.na(desc) || nchar(desc) == 0, "no description",
                            substr(desc, 1, 40))
 
-      insert_lines <- c(insert_lines,
-                       glue("    \"{code}\",   # Phase 39: {desc_trunc}"))
+      # Last inserted code has no trailing comma (matches existing R style)
+      if (i == nrow(new_codes_to_add)) {
+        insert_lines <- c(insert_lines,
+                         glue("    \"{code}\"    # Phase 39: {desc_trunc}"))
+      } else {
+        insert_lines <- c(insert_lines,
+                         glue("    \"{code}\",   # Phase 39: {desc_trunc}"))
+      }
     }
 
     # Insert before closing paren
