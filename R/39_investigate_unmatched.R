@@ -624,9 +624,10 @@ update_config_treatment_codes <- function(classified_codes_path) {
 
     message(glue("    Adding {nrow(new_codes_to_add)} new codes to {vec_name}"))
 
-    # Ensure last existing code line has trailing comma before we append
+    # Ensure last existing code line has trailing comma before we append.
+    # Must check for comma AFTER the closing quote (not in comments).
     last_data_idx <- close_paren_idx - 1
-    if (!grepl(",", config_lines[last_data_idx])) {
+    if (!grepl('"[^"]*"\\s*,', config_lines[last_data_idx])) {
       config_lines[last_data_idx] <- sub('(.*")', '\\1,', config_lines[last_data_idx])
     }
 
