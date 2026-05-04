@@ -461,6 +461,257 @@ write_unmatched_report <- function(df, output_path) {
 }
 
 # ==============================================================================
+# SECTION 8: UPDATE TREATMENT_CODES IN R/00_config.R (per D-08)
+# ==============================================================================
+
+#' Update TREATMENT_CODES in R/00_config.R with classified codes
+#'
+#' Programmatically inserts auto-classified treatment codes into the appropriate
+#' vectors in R/00_config.R. Creates a backup before modification and validates
+#' the updated config with parse() and source(). Rolls back on validation failure.
+#'
+#' For existing vectors (chemo_hcpcs, radiation_cpt, sct_cpt, cart_icd10pcs_prefixes),
+#' new codes are inserted before the closing paren with inline comments.
+#'
+#' For Supportive Care, creates a new supportive_care_hcpcs vector if it doesn't
+#' exist, or merges into existing vector if it does.
+#'
+#' @param classified_codes_path Character. Path to unmatched_codes_classified.rds
+update_config_treatment_codes <- function(classified_codes_path) {
+  # 1. Load classified codes
+  if (!file.exists(classified_codes_path)) {
+    stop(glue("Classified codes file not found: {classified_codes_path}"))
+  }
+
+  classified <- readRDS(classified_codes_path)
+
+  # 2. Filter to treatment-relevant codes only (exclude "Unrelated")
+  treatment_codes_new <- classified %>%
+    filter(classification != "Unrelated") %>%
+    select(code, classification, description)
+
+  if (nrow(treatment_codes_new) == 0) {
+    message("  No treatment codes to add (all classified as Unrelated)")
+    return(invisible(NULL))
+  }
+
+  # 3. Map classifications to TREATMENT_CODES vector names
+  category_map <- c(
+    "Chemotherapy" = "chemo_hcpcs",
+    "Radiation" = "radiation_cpt",
+    "SCT" = "sct_cpt",
+    "Immunotherapy" = "cart_icd10pcs_prefixes",
+    "Supportive Care" = "supportive_care_hcpcs"
+  )
+
+  # 4. Read R/00_config.R
+  config_path <- "R/00_config.R"
+  backup_path <- paste0(config_path, ".bak")
+
+  if (!file.exists(config_path)) {
+    stop(glue("Config file not found: {config_path}"))
+  }
+
+  file.copy(config_path, backup_path, overwrite = TRUE)
+  message(glue("  Created backup: {backup_path}"))
+
+  config_lines <- readLines(config_path)
+
+  # 5. For each category with new codes, insert into the appropriate vector
+  for (cat_name in names(category_map)) {
+    vec_name <- category_map[cat_name]
+
+    # Get new codes for this category
+    new_codes_for_cat <- treatment_codes_new %>%
+      filter(classification == cat_name)
+
+    if (nrow(new_codes_for_cat) == 0) {
+      next  # Skip categories with no new codes
+    }
+
+    message(glue("  Processing {cat_name}: {nrow(new_codes_for_cat)} codes"))
+
+    # Find the vector in config_lines
+    vec_pattern <- glue("^\\s*{vec_name}\\s*=\\s*c\\(")
+    vec_start_idx <- grep(vec_pattern, config_lines, perl = TRUE)
+
+    if (length(vec_start_idx) == 0) {
+      # Vector doesn't exist yet - need to create it (for supportive_care_hcpcs)
+      if (vec_name == "supportive_care_hcpcs") {
+        message(glue("    Creating new {vec_name} vector"))
+
+        # Find where to insert: before chemo_revenue
+        chemo_revenue_idx <- grep("^\\s*chemo_revenue\\s*=\\s*c\\(", config_lines, perl = TRUE)
+        if (length(chemo_revenue_idx) == 0) {
+          stop("Cannot find chemo_revenue vector to insert supportive_care_hcpcs before it")
+        }
+
+        insert_pos <- chemo_revenue_idx[1] - 1
+
+        # Build new vector block
+        new_lines <- c(
+          "",
+          "  # Supportive care HCPCS J-codes (Phase 39: growth factors, antiemetics, etc.)",
+          "  supportive_care_hcpcs = c("
+        )
+
+        for (i in seq_len(nrow(new_codes_for_cat))) {
+          code <- new_codes_for_cat$code[i]
+          desc <- new_codes_for_cat$description[i]
+          desc_trunc <- ifelse(is.na(desc) || nchar(desc) == 0, "no description",
+                               substr(desc, 1, 40))
+
+          # Last code has no trailing comma
+          if (i == nrow(new_codes_for_cat)) {
+            new_lines <- c(new_lines, glue("    \"{code}\"    # Phase 39: {desc_trunc}"))
+          } else {
+            new_lines <- c(new_lines, glue("    \"{code}\",   # Phase 39: {desc_trunc}"))
+          }
+        }
+
+        new_lines <- c(new_lines, "  ),", "")
+
+        # Insert into config_lines
+        config_lines <- c(
+          config_lines[1:insert_pos],
+          new_lines,
+          config_lines[(insert_pos + 1):length(config_lines)]
+        )
+
+      } else {
+        warning(glue("Vector {vec_name} not found in config - skipping"))
+      }
+      next
+    }
+
+    # Vector exists - find its closing paren
+    vec_start_idx <- vec_start_idx[1]
+
+    # Find the closing paren - look for line ending with ")," or just ")"
+    close_paren_idx <- NULL
+    for (i in vec_start_idx:length(config_lines)) {
+      if (grepl("^\\s*\\)", config_lines[i])) {
+        close_paren_idx <- i
+        break
+      }
+    }
+
+    if (is.null(close_paren_idx)) {
+      warning(glue("Cannot find closing paren for {vec_name} - skipping"))
+      next
+    }
+
+    # Extract existing codes from the block
+    existing_codes <- character()
+    for (i in vec_start_idx:close_paren_idx) {
+      line <- config_lines[i]
+      # Match quoted strings
+      matches <- str_extract_all(line, "\"([^\"]+)\"")[[1]]
+      if (length(matches) > 0) {
+        codes <- str_replace_all(matches, "\"", "")
+        existing_codes <- c(existing_codes, codes)
+      }
+    }
+
+    # Compute new codes = codes not already in existing
+    new_codes_to_add <- new_codes_for_cat %>%
+      filter(!code %in% existing_codes)
+
+    if (nrow(new_codes_to_add) == 0) {
+      message(glue("    All codes already exist in {vec_name} - skipping"))
+      next
+    }
+
+    message(glue("    Adding {nrow(new_codes_to_add)} new codes to {vec_name}"))
+
+    # Build lines to insert
+    insert_lines <- character()
+    for (i in seq_len(nrow(new_codes_to_add))) {
+      code <- new_codes_to_add$code[i]
+      desc <- new_codes_to_add$description[i]
+      desc_trunc <- ifelse(is.na(desc) || nchar(desc) == 0, "no description",
+                           substr(desc, 1, 40))
+
+      insert_lines <- c(insert_lines,
+                       glue("    \"{code}\",   # Phase 39: {desc_trunc}"))
+    }
+
+    # Insert before closing paren
+    config_lines <- c(
+      config_lines[1:(close_paren_idx - 1)],
+      insert_lines,
+      config_lines[close_paren_idx:length(config_lines)]
+    )
+  }
+
+  # 6. Validate the updated config
+  writeLines(config_lines, config_path)
+  message("  Validating updated config...")
+
+  validation_error <- tryCatch({
+    # Parse check
+    parse(config_path)
+
+    # Source check
+    env <- new.env()
+    source(config_path, local = env)
+
+    # Verify TREATMENT_CODES exists
+    if (is.null(env$TREATMENT_CODES)) {
+      stop("TREATMENT_CODES is NULL after sourcing")
+    }
+
+    # Verify each updated category
+    for (cat_name in names(category_map)) {
+      vec_name <- category_map[cat_name]
+      new_codes_for_cat <- treatment_codes_new %>%
+        filter(classification == cat_name) %>%
+        pull(code)
+
+      if (length(new_codes_for_cat) > 0) {
+        existing <- env$TREATMENT_CODES[[vec_name]]
+        if (is.null(existing)) {
+          warning(glue("Vector {vec_name} is NULL after update"))
+        } else {
+          missing <- setdiff(new_codes_for_cat, existing)
+          if (length(missing) > 0) {
+            warning(glue("Category {cat_name}: {length(missing)} codes not found after update: {paste(missing, collapse=', ')}"))
+          }
+        }
+      }
+    }
+
+    NULL  # No error
+  }, error = function(e) {
+    e$message
+  })
+
+  if (!is.null(validation_error)) {
+    message(glue("  Config update failed: {validation_error}"))
+    message("  Restoring backup...")
+    file.copy(backup_path, config_path, overwrite = TRUE)
+    stop(glue("Config validation failed: {validation_error}"))
+  }
+
+  message("  Config update validated successfully")
+  file.remove(backup_path)
+
+  # 7. Log summary of changes
+  message("  Config update summary:")
+  for (cat_name in names(category_map)) {
+    vec_name <- category_map[cat_name]
+    n_new <- treatment_codes_new %>%
+      filter(classification == cat_name) %>%
+      nrow()
+    if (n_new > 0) {
+      message(glue("    {vec_name}: +{n_new} codes"))
+    }
+  }
+
+  invisible(NULL)
+}
+
+# ==============================================================================
 # SECTION 7: MAIN EXECUTION
 # ==============================================================================
 
@@ -514,6 +765,11 @@ message("")
 message("Step 5: Saving classified codes for config update...")
 saveRDS(all_unmatched, file.path(CONFIG$output_dir, "unmatched_codes_classified.rds"))
 message("  Saved output/unmatched_codes_classified.rds")
+
+# Step 6: Update R/00_config.R with classified treatment codes
+message("")
+message("Step 6: Updating TREATMENT_CODES in R/00_config.R...")
+update_config_treatment_codes(file.path(CONFIG$output_dir, "unmatched_codes_classified.rds"))
 
 message("")
 message("=== Phase 39 Investigation Complete ===")
