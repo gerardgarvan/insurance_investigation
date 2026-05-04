@@ -23,7 +23,7 @@ Investigate CPT/HCPCS codes that appear in HL patient data but aren't in the cur
 - **D-03:** Skip NDC-to-treatment mapping entirely this phase — stay focused on procedure codes
 
 ### Investigation Method
-- **D-04:** Automated code-to-description lookup using CMS HCPCS/CPT reference CSV files downloaded to HiPerGator
+- **D-04:** Automated code-to-description lookup using NLM HCPCS API (clinicaltables.nlm.nih.gov — free, no auth, JSON responses)
 - **D-05:** Auto-classify ALL unmatched codes into treatment categories: chemo, radiation, SCT, immunotherapy, supportive care, unrelated — no uncertainty flags, rely on heuristic classification rules
 - **D-06:** No manual review step in the workflow — classification is fully automated
 
