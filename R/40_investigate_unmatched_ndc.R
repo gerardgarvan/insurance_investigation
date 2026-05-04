@@ -657,57 +657,37 @@ write_unmatched_ndc_report <- function(df, output_path) {
     wb$add_font(sheet = sheet_name, dims = "A4:G4",
                 name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
 
-    # Data rows (starting at row 5)
-    for (r in seq_len(nrow(df_cat))) {
-      row_num <- 4 + r
+    # Write all data rows at once (bulk write instead of cell-by-cell)
+    write_df <- data.frame(
+      Code = df_cat$code,
+      Drug_Name = ifelse(is.na(df_cat$drug_name), "", df_cat$drug_name),
+      Code_Type = df_cat$code_type,
+      Source_Table = df_cat$source_table,
+      Records = df_cat$n_records,
+      Patients = df_cat$n_patients,
+      Lookup_Status = df_cat$lookup_status,
+      stringsAsFactors = FALSE
+    )
+    wb$add_data(sheet = sheet_name, x = write_df, start_row = 5, col_names = FALSE)
 
-      # Code (with colored pill fill)
-      wb$add_data(sheet = sheet_name, x = df_cat$code[r],
-                  start_row = row_num, start_col = 1)
-      wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}"),
-                  color = wb_color(fill_color))
-      wb$add_font(sheet = sheet_name, dims = glue("A{row_num}"),
-                  name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color))
+    # Apply styles to entire ranges at once
+    last_row <- 4 + nrow(df_cat)
+    data_dims <- glue("A5:G{last_row}")
+    code_dims <- glue("A5:A{last_row}")
+    text_dims <- glue("B5:G{last_row}")
+    num_dims <- glue("E5:F{last_row}")
 
-      # Drug Name
-      drug_text <- ifelse(is.na(df_cat$drug_name[r]), "", df_cat$drug_name[r])
-      wb$add_data(sheet = sheet_name, x = drug_text,
-                  start_row = row_num, start_col = 2)
-      wb$add_font(sheet = sheet_name, dims = glue("B{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
+    # Code column: colored pill
+    wb$add_fill(sheet = sheet_name, dims = code_dims, color = wb_color(fill_color))
+    wb$add_font(sheet = sheet_name, dims = code_dims,
+                name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color))
 
-      # Code Type
-      wb$add_data(sheet = sheet_name, x = df_cat$code_type[r],
-                  start_row = row_num, start_col = 3)
-      wb$add_font(sheet = sheet_name, dims = glue("C{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
+    # Text columns: standard font
+    wb$add_font(sheet = sheet_name, dims = text_dims,
+                name = "Calibri", size = 10, color = wb_color("FF111827"))
 
-      # Source Table
-      wb$add_data(sheet = sheet_name, x = df_cat$source_table[r],
-                  start_row = row_num, start_col = 4)
-      wb$add_font(sheet = sheet_name, dims = glue("D{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
-
-      # Records
-      wb$add_data(sheet = sheet_name, x = df_cat$n_records[r],
-                  start_row = row_num, start_col = 5)
-      wb$add_numfmt(sheet = sheet_name, dims = glue("E{row_num}"), numfmt = "#,##0")
-      wb$add_font(sheet = sheet_name, dims = glue("E{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
-
-      # Patients
-      wb$add_data(sheet = sheet_name, x = df_cat$n_patients[r],
-                  start_row = row_num, start_col = 6)
-      wb$add_numfmt(sheet = sheet_name, dims = glue("F{row_num}"), numfmt = "#,##0")
-      wb$add_font(sheet = sheet_name, dims = glue("F{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
-
-      # Lookup Status
-      wb$add_data(sheet = sheet_name, x = df_cat$lookup_status[r],
-                  start_row = row_num, start_col = 7)
-      wb$add_font(sheet = sheet_name, dims = glue("G{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
-    }
+    # Numeric columns: comma formatting
+    wb$add_numfmt(sheet = sheet_name, dims = num_dims, numfmt = "#,##0")
 
     # Freeze panes at row 5 (first data row)
     wb$freeze_pane(sheet = sheet_name, first_active_row = 5)
