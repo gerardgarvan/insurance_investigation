@@ -35,7 +35,7 @@
   - **Depends on:** Phase 39
   - **Plans:** 2 plans
   - Plans:
-    - [ ] 40-01-PLAN.md — Investigation script: drug code extraction, RxNorm API lookup, classification, xlsx report + RDS artifact
+    - [x] 40-01-PLAN.md — Investigation script: drug code extraction, RxNorm API lookup, classification, xlsx report + RDS artifact
     - [ ] 40-02-PLAN.md — Config update: new NDC vectors and expanded RXNORM CUIs in TREATMENT_CODES
 
 ## Progress

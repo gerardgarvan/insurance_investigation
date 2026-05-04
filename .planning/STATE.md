@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-05-04T15:45:42.061Z"
+status: executing
+last_updated: "2026-05-04T16:39:37.658Z"
 last_activity: 2026-05-04
 progress:
-  total_phases: 36
+  total_phases: 37
   completed_phases: 31
-  total_plans: 64
-  completed_plans: 59
+  total_plans: 66
+  completed_plans: 60
   percent: 92
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-04
-**Project status:** Phase 39 Plan 02 complete — config update infrastructure
+**Project status:** Phase 40 Plan 01 complete — NDC/RXNORM investigation script
 
 ## Project Reference
 
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 39 — investigate-unmatched-codes
+**Current focus:** Phase 40 — investigate-unmatched-ndc-codes
 
 ## Current Position
 
-Phase: 39
-Plan: Not started
-Status: All plans complete
-Last activity: 2026-05-04
+Phase: 40 (investigate-unmatched-ndc-codes) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-05-04 -- Phase 40 Plan 01 execution complete
 
-Progress: [█████████░] 92% — 59/64 plans complete
+Progress: [█████████░] 91% — 60/66 plans complete
 
 ## Accumulated Context
 
@@ -44,6 +44,9 @@ Progress: [█████████░] 92% — 59/64 plans complete
 - PayerVariable.xlsx runtime dependency eliminated (Phase 36)
 - Parse/source validation with rollback ensures config remains valid R after programmatic modification (Phase 39)
 - Supportive Care classification handled via new supportive_care_hcpcs vector (Phase 39)
+- httr2 (modern) with req_retry() for RxNorm API robustness over httr (legacy) (Phase 40)
+- Supportive Care classification prioritized first to prevent G-CSF/antiemetic misclassification as chemo (Phase 40)
+- NDC lookup requires 2-step RxNorm API pattern (NDC->RxCUI->Name) (Phase 40)
 
 ### Pending Todos
 
