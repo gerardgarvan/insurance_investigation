@@ -56,13 +56,15 @@ TREATMENT_TYPE_COLORS <- list(
 
 # CPT/HCPCS range heuristics for unknown code detection (D-08)
 # Targeted ranges to catch treatment-adjacent codes NOT in TREATMENT_CODES.
-# Intentionally narrow to avoid false positives from unrelated procedures.
+# Phase 39: Widened ranges to include J0-J8 supportive care and 773xx radiation planning.
 CPT_HCPCS_RANGES <- list(
   Chemotherapy = list(
-    j9_codes = "^J9[0-9]{3}$"            # J9000-J9999 injectable chemo drugs
+    j9_codes = "^J9[0-9]{3}$",           # J9000-J9999 injectable chemo drugs
+    j0_j8_drugs = "^J[0-8][0-9]{3}$"     # J0000-J8999 for supportive care detection (Phase 39)
   ),
   Radiation = list(
-    delivery = "^774[0-9]{2}$"            # 77400-77499 radiation treatment delivery
+    delivery = "^774[0-9]{2}$",           # 77400-77499 radiation treatment delivery
+    planning = "^773[0-9]{2}$"            # 77300-77399 treatment planning (Phase 39)
   ),
   SCT = list(
     transplant = "^382[3-4][0-9]$"        # 38230-38249 HPC/bone marrow transplant
@@ -697,7 +699,8 @@ detect_unknown_codes <- function(treatment_type) {
   code_info <- switch(treatment_type,
     "Chemotherapy" = list(
       codes = c(TREATMENT_CODES$chemo_hcpcs, TREATMENT_CODES$chemo_icd9,
-                TREATMENT_CODES$chemo_revenue),
+                TREATMENT_CODES$chemo_revenue,
+                if (!is.null(TREATMENT_CODES$supportive_care_hcpcs)) TREATMENT_CODES$supportive_care_hcpcs),
       px_type = "CH"
     ),
     "Radiation" = list(
