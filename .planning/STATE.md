@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-last_updated: "2026-05-05T18:36:08.847Z"
-last_activity: 2026-05-05
+status: executing
+last_updated: "2026-05-05T19:10:28.000Z"
+last_activity: 2026-05-05 -- Phase 42 plan 01 completed
 progress:
   total_phases: 40
-  completed_phases: 35
+  completed_phases: 36
   total_plans: 69
-  completed_plans: 64
+  completed_plans: 65
   percent: 94
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-05
-**Project status:** Phase 38 complete — treatment inventory by source table
+**Project status:** Phase 42 complete — treatment codes resolved xlsx for all types
 
 ## Project Reference
 
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 38 complete — next: Phase 42 (planned, unexecuted)
+**Current focus:** Phase 42 — treatment-codes-resolved-xlsx-all-types
 
 ## Current Position
 
-Phase: 38 (chemo-treatment-inventory-by-source-table) — COMPLETE
-Plan: 1 of 1 — COMPLETE
-Status: Phase 38 complete
-Last activity: 2026-05-05 -- Phase 38 complete, summary written
+Phase: 42 (treatment-codes-resolved-xlsx-all-types) — COMPLETE
+Plan: 1 of 1 (complete)
+Status: Phase 42 complete
+Last activity: 2026-05-05 -- Phase 42 plan 01 completed
 
-Progress: [█████████░] 93% — 64/69 plans complete
+Progress: [█████████░] 94% — 65/69 plans complete
 
 ## Accumulated Context
 
@@ -55,6 +55,7 @@ Progress: [█████████░] 93% — 64/69 plans complete
 - Pre-2000 dates retained as real tumor registry historical data, not sentinels (Phase 43)
 - Pull ALL drugs for HL patients from PRESCRIBING/DISPENSING/MED_ADMIN instead of curated RXNORM list (Phase 38)
 - SCT ICD-10-PCS uses exact %in% matching (full 7-char codes), chemo/radiation/immuno use str_detect prefixes (Phase 38)
+- write_resolved_xlsx() reusable function pattern for styled 2-sheet xlsx generation per treatment category (Phase 42)
 
 ### Pending Todos
 
