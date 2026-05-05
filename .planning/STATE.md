@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-last_updated: "2026-05-05T01:16:50.060Z"
-last_activity: 2026-05-05
+status: executing
+last_updated: "2026-05-05T21:00:00.000Z"
+last_activity: 2026-05-05 -- Phase 43 complete
 progress:
-  total_phases: 38
-  completed_phases: 33
-  total_plans: 67
-  completed_plans: 62
-  percent: 93
+  total_phases: 40
+  completed_phases: 34
+  total_plans: 69
+  completed_plans: 63
+  percent: 94
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-05
-**Project status:** Phase 41 complete — combined NDC+HCPCS unmatched code report
+**Project status:** Phase 43 complete — treatment duration analysis for 4 types
 
 ## Project Reference
 
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 41 — combine-ndc-hcpcs-reports
+**Current focus:** Phase 43 complete — next: Phase 38 or 42 (both planned, unexecuted)
 
 ## Current Position
 
-Phase: 41
-Plan: Not started
-Status: Phase 41 complete
-Last activity: 2026-05-05
+Phase: 43 (establish-treatment-lengths-for-sct-chemo-and-radiation) — COMPLETE
+Plan: 1 of 1 — COMPLETE
+Status: Phase 43 verified on HiPerGator
+Last activity: 2026-05-05 -- Phase 43 complete, summary written
 
-Progress: [█████████░] 93% — 62/67 plans complete
+Progress: [█████████░] 94% — 63/69 plans complete
 
 ## Accumulated Context
 
@@ -50,6 +50,9 @@ Progress: [█████████░] 93% — 62/67 plans complete
 - Dual code-type mapping (NDC + RXNORM) with category-specific vector routing enables same classification to route to different vectors (Phase 40)
 - Unified SCT classification (SCT-related remapped to SCT) for consistent cross-source view (Phase 41)
 - Cross-source RDS harmonization pattern: load separate artifacts, mutate to common schema, bind_rows (Phase 41)
+- 90-day gap threshold for episode splitting in treatment duration analysis (Phase 43)
+- All chemo codes pooled — no regimen distinction between ABVD/BV+AVD/salvage (Phase 43)
+- Pre-2000 dates retained as real tumor registry historical data, not sentinels (Phase 43)
 
 ### Pending Todos
 
@@ -65,6 +68,7 @@ None.
 - Phase 39 added: Investigate Unmatched Codes
 - Phase 40 added: Investigate Unmatched NDC Codes
 - Phase 41 added: Combine NDC+HCPCS Reports
+- Phase 43 added: Establish Treatment Lengths for SCT, Chemo, and Radiation
 - Next milestone needs `/gsd:new-milestone` to define scope and requirements
 
 ### Blockers/Concerns
