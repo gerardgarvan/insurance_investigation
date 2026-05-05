@@ -58,7 +58,7 @@ write_resolved_xlsx <- function(df, category, output_path) {
   #'
 
   #' @param df Data frame from combined report (columns: code, description,
-  #'   code_type, source_table, n_records, n_patients)
+  #'   code_type, source_table, records, patients)
   #' @param category Character string: treatment category name
   #' @param output_path Character string: output xlsx file path
 
@@ -95,8 +95,8 @@ write_resolved_xlsx <- function(df, category, output_path) {
     Meaning      = ifelse(is.na(df$description), "", df$description),
     Code_Type    = df$code_type,
     Source_Table = df$source_table,
-    Records      = df$n_records,
-    Patients     = df$n_patients,
+    Records      = df$records,
+    Patients     = df$patients,
     stringsAsFactors = FALSE
   )
   wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
@@ -148,8 +148,9 @@ verify_chemotherapy <- function() {
 
   all_pass <- TRUE
 
-  # Read Chemotherapy sheet from combined report
-  chemo_source <- read_xlsx(COMBINED_REPORT, sheet = "Chemotherapy")
+  # Read Chemotherapy sheet from combined report (headers at row 4)
+  chemo_source <- read_xlsx(COMBINED_REPORT, sheet = "Chemotherapy", start_row = 4)
+  names(chemo_source) <- tolower(gsub(" ", "_", names(chemo_source)))
   message(glue("  Source (combined report): {nrow(chemo_source)} chemotherapy codes"))
 
   # Read chemotherapy resolved file -- detect sheet name dynamically
@@ -226,7 +227,7 @@ verify_chemotherapy <- function() {
   } else {
     # Build comparison data frame
     source_compare <- chemo_source %>%
-      select(code, n_records_source = n_records, n_patients_source = n_patients)
+      select(code, n_records_source = records, n_patients_source = patients)
 
     resolved_compare <- data.frame(
       code = as.character(chemo_resolved[[code_col_idx]]),
@@ -287,7 +288,10 @@ for (item in RESOLVE_CATEGORIES) {
   }
 
   message(glue("  Reading {item$sheet} sheet from combined report..."))
-  df <- read_xlsx(COMBINED_REPORT, sheet = item$sheet)
+  # Headers at row 4, data from row 5 (rows 1-3 are title/subtitle/blank)
+  df <- read_xlsx(COMBINED_REPORT, sheet = item$sheet, start_row = 4)
+  # Normalize column names: "Code Type" -> "code_type", "Records" -> "records", etc.
+  names(df) <- tolower(gsub(" ", "_", names(df)))
   message(glue("  Found {nrow(df)} {item$category} codes"))
 
   if (nrow(df) == 0) {
@@ -296,8 +300,8 @@ for (item in RESOLVE_CATEGORIES) {
     next
   }
 
-  # Sort by n_patients descending (most clinically relevant first)
-  df <- df %>% arrange(desc(n_patients))
+  # Sort by patients descending (most clinically relevant first)
+  df <- df %>% arrange(desc(patients))
 
   write_resolved_xlsx(df, item$category, item$output)
   message("")
