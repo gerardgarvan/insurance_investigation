@@ -569,6 +569,28 @@ saveRDS(all_durations, OUTPUT_RDS)
 message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_durations)} rows)"))
 
 
+# --- SECTION 4b: PER-TYPE CSV OUTPUT ---
+
+message("\n--- Writing per-type CSV files ---")
+
+for (type in TREATMENT_TYPES) {
+  type_data <- results_list[[type]]
+
+  # Build clean filename: lowercase, underscored
+  csv_name <- paste0(tolower(gsub(" ", "_", type)), "_durations.csv")
+  csv_path <- file.path(CONFIG$output_dir, csv_name)
+
+  # Clean column names: snake_case, no spaces or parens
+  write_df <- type_data %>%
+    rename(patient_id = ID) %>%
+    select(patient_id, first_treatment_date, last_treatment_date,
+           overall_span_days, distinct_treatment_dates, episode_count)
+
+  write.csv(write_df, csv_path, row.names = FALSE)
+  message(glue("  Wrote {csv_path} ({nrow(write_df)} rows)"))
+}
+
+
 # --- SECTION 5: STYLED XLSX REPORT ---
 
 # Per D-08: styled xlsx report using openxlsx2
@@ -759,6 +781,7 @@ if (nrow(all_durations) > 0) {
 message(glue("\n=== Phase 43 Complete ==="))
 message(glue("Outputs:"))
 message(glue("  RDS:  {OUTPUT_RDS}"))
+message(glue("  CSVs: {CONFIG$output_dir}/{{chemotherapy,radiation,sct,immunotherapy}}_durations.csv"))
 message(glue("  XLSX: {OUTPUT_XLSX}"))
 message(glue("  PNG:  {OUTPUT_PNG}"))
 message(glue("Total patients: {nrow(all_durations)} across {length(unique(all_durations$treatment_type))} treatment types"))
