@@ -58,6 +58,7 @@ None.
 ### Roadmap Evolution
 
 - Milestone v1.5 completed and archived 2026-05-01
+- Phase 42 added: Treatment Codes Resolved XLSX (All Types) — extend resolved xlsx to radiation/SCT/immunotherapy and verify chemo accuracy
 - Remaining unassigned phases: 24, 26, 27, 28 (deferred from v1.2)
 - Active requirements: VIZ-01, VIZ-02, VIZ-03 (attrition waterfall, Sankey, HIPAA suppression)
 - Phase 38 added: Chemo Treatment Inventory by Source Table
