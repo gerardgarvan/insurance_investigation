@@ -810,34 +810,29 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
   wb$add_font(sheet = sheet_name, dims = "A5:D5",
               name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
 
-  # --- Rows 6+: Summary data ---
+  # --- Rows 6+: Summary data (bulk write) ---
   current_row <- 6
   if (nrow(df_summary) > 0) {
-    for (r in seq_len(nrow(df_summary))) {
-      row_num <- current_row + r - 1
-      wb$add_data(sheet = sheet_name, x = df_summary$source_table[r],
-                  start_row = row_num, start_col = 1)
-      wb$add_data(sheet = sheet_name, x = df_summary$code_type[r],
-                  start_row = row_num, start_col = 2)
-      wb$add_data(sheet = sheet_name, x = df_summary$n[r],
-                  start_row = row_num, start_col = 3)
-      wb$add_data(sheet = sheet_name, x = df_summary$pct[r],
-                  start_row = row_num, start_col = 4)
+    summary_df <- data.frame(
+      Source_Table = df_summary$source_table,
+      Code_Type = df_summary$code_type,
+      Count = df_summary$n,
+      Pct = df_summary$pct,
+      stringsAsFactors = FALSE
+    )
+    wb$add_data(sheet = sheet_name, x = summary_df,
+                start_row = current_row, col_names = FALSE)
 
-      # Source Table column gets treatment-type colored pill
-      dims_a <- glue("A{row_num}")
-      wb$add_fill(sheet = sheet_name, dims = dims_a, color = wb_color(fill_color))
-      wb$add_font(sheet = sheet_name, dims = dims_a,
-                  name = "Calibri", size = 11, bold = TRUE, color = wb_color(font_color))
+    last_summary_row <- current_row + nrow(df_summary) - 1
+    # Source Table column: treatment-type colored pills (range-based)
+    pill_dims <- glue("A{current_row}:A{last_summary_row}")
+    wb$add_fill(sheet = sheet_name, dims = pill_dims, color = wb_color(fill_color))
+    wb$add_font(sheet = sheet_name, dims = pill_dims,
+                name = "Calibri", size = 11, bold = TRUE, color = wb_color(font_color))
+    # Number formats (range-based)
+    wb$add_numfmt(sheet = sheet_name, dims = glue("C{current_row}:C{last_summary_row}"), numfmt = "#,##0")
+    wb$add_numfmt(sheet = sheet_name, dims = glue("D{current_row}:D{last_summary_row}"), numfmt = "0.00%")
 
-      # Count format
-      dims_c <- glue("C{row_num}")
-      wb$add_numfmt(sheet = sheet_name, dims = dims_c, numfmt = "#,##0")
-
-      # Percentage format
-      dims_d <- glue("D{row_num}")
-      wb$add_numfmt(sheet = sheet_name, dims = dims_d, numfmt = "0.00%")
-    }
     current_row <- current_row + nrow(df_summary)
   }
 
@@ -880,35 +875,32 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
               name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
   current_row <- current_row + 1
 
-  # --- Detail data rows ---
+  # --- Detail data rows (bulk write for performance) ---
   detail_total <- sum(df_codes$n, na.rm = TRUE)
   if (nrow(df_codes) > 0) {
-    for (r in seq_len(nrow(df_codes))) {
-      row_num <- current_row + r - 1
-      wb$add_data(sheet = sheet_name, x = df_codes$code[r],
-                  start_row = row_num, start_col = 1)
-      wb$add_data(sheet = sheet_name, x = df_codes$code_type[r],
-                  start_row = row_num, start_col = 2)
-      wb$add_data(sheet = sheet_name, x = ifelse(is.na(df_codes$drug_name[r]), "", df_codes$drug_name[r]),
-                  start_row = row_num, start_col = 3)
-      wb$add_data(sheet = sheet_name, x = df_codes$source_table[r],
-                  start_row = row_num, start_col = 4)
-      wb$add_data(sheet = sheet_name, x = df_codes$n[r],
-                  start_row = row_num, start_col = 5)
-      pct_val <- if (detail_total > 0) df_codes$n[r] / detail_total else 0
-      wb$add_data(sheet = sheet_name, x = pct_val,
-                  start_row = row_num, start_col = 6)
+    detail_df <- data.frame(
+      Code = df_codes$code,
+      Code_Type = df_codes$code_type,
+      Drug_Name = ifelse(is.na(df_codes$drug_name), "", df_codes$drug_name),
+      Source_Table = df_codes$source_table,
+      Count = df_codes$n,
+      Pct = if (detail_total > 0) df_codes$n / detail_total else rep(0, nrow(df_codes)),
+      stringsAsFactors = FALSE
+    )
+    wb$add_data(sheet = sheet_name, x = detail_df,
+                start_row = current_row, col_names = FALSE)
 
-      # Code column: Calibri 10pt bold dark gray (CODE_FONT from csv_to_xlsx.py)
-      wb$add_font(sheet = sheet_name, dims = glue("A{row_num}"),
-                  name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151"))
-      # Body font for other columns
-      wb$add_font(sheet = sheet_name, dims = glue("B{row_num}:D{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
+    last_detail_row <- current_row + nrow(df_codes) - 1
+    # Range-based formatting (not per-row)
+    code_dims <- glue("A{current_row}:A{last_detail_row}")
+    wb$add_font(sheet = sheet_name, dims = code_dims,
+                name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151"))
+    body_dims <- glue("B{current_row}:D{last_detail_row}")
+    wb$add_font(sheet = sheet_name, dims = body_dims,
+                name = "Calibri", size = 10, color = wb_color("FF111827"))
+    wb$add_numfmt(sheet = sheet_name, dims = glue("E{current_row}:E{last_detail_row}"), numfmt = "#,##0")
+    wb$add_numfmt(sheet = sheet_name, dims = glue("F{current_row}:F{last_detail_row}"), numfmt = "0.00%")
 
-      wb$add_numfmt(sheet = sheet_name, dims = glue("E{row_num}"), numfmt = "#,##0")
-      wb$add_numfmt(sheet = sheet_name, dims = glue("F{row_num}"), numfmt = "0.00%")
-    }
     current_row <- current_row + nrow(df_codes)
   }
 
@@ -934,31 +926,27 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
                 name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
     current_row <- current_row + 1
 
-    # Unmatched data rows
+    # Unmatched data rows (bulk write)
     unmatched_total <- sum(df_unmatched$n, na.rm = TRUE)
-    for (r in seq_len(nrow(df_unmatched))) {
-      row_num <- current_row + r - 1
-      wb$add_data(sheet = sheet_name, x = df_unmatched$code[r],
-                  start_row = row_num, start_col = 1)
-      wb$add_data(sheet = sheet_name, x = df_unmatched$code_type[r],
-                  start_row = row_num, start_col = 2)
-      wb$add_data(sheet = sheet_name, x = ifelse(is.na(df_unmatched$drug_name[r]), "", df_unmatched$drug_name[r]),
-                  start_row = row_num, start_col = 3)
-      wb$add_data(sheet = sheet_name, x = df_unmatched$source_table[r],
-                  start_row = row_num, start_col = 4)
-      wb$add_data(sheet = sheet_name, x = df_unmatched$n[r],
-                  start_row = row_num, start_col = 5)
-      pct_val <- if (unmatched_total > 0) df_unmatched$n[r] / unmatched_total else 0
-      wb$add_data(sheet = sheet_name, x = pct_val,
-                  start_row = row_num, start_col = 6)
+    unmatched_df <- data.frame(
+      Code = df_unmatched$code,
+      Code_Type = df_unmatched$code_type,
+      Drug_Name = ifelse(is.na(df_unmatched$drug_name), "", df_unmatched$drug_name),
+      Source_Table = df_unmatched$source_table,
+      Count = df_unmatched$n,
+      Pct = if (unmatched_total > 0) df_unmatched$n / unmatched_total else rep(0, nrow(df_unmatched)),
+      stringsAsFactors = FALSE
+    )
+    wb$add_data(sheet = sheet_name, x = unmatched_df,
+                start_row = current_row, col_names = FALSE)
 
-      wb$add_font(sheet = sheet_name, dims = glue("A{row_num}"),
-                  name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151"))
-      wb$add_font(sheet = sheet_name, dims = glue("B{row_num}:D{row_num}"),
-                  name = "Calibri", size = 10, color = wb_color("FF111827"))
-      wb$add_numfmt(sheet = sheet_name, dims = glue("E{row_num}"), numfmt = "#,##0")
-      wb$add_numfmt(sheet = sheet_name, dims = glue("F{row_num}"), numfmt = "0.00%")
-    }
+    last_unmatched_row <- current_row + nrow(df_unmatched) - 1
+    wb$add_font(sheet = sheet_name, dims = glue("A{current_row}:A{last_unmatched_row}"),
+                name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151"))
+    wb$add_font(sheet = sheet_name, dims = glue("B{current_row}:D{last_unmatched_row}"),
+                name = "Calibri", size = 10, color = wb_color("FF111827"))
+    wb$add_numfmt(sheet = sheet_name, dims = glue("E{current_row}:E{last_unmatched_row}"), numfmt = "#,##0")
+    wb$add_numfmt(sheet = sheet_name, dims = glue("F{current_row}:F{last_unmatched_row}"), numfmt = "0.00%")
     current_row <- current_row + nrow(df_unmatched)
   }
 
@@ -971,12 +959,10 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
   wb$add_data(sheet = sheet_name, x = 1.0,
               start_row = current_row, start_col = 6)
 
-  for (col in 1:6) {
-    dims <- glue("{LETTERS[col]}{current_row}")
-    wb$add_fill(sheet = sheet_name, dims = dims, color = wb_color("FF1F2937"))
-    wb$add_font(sheet = sheet_name, dims = dims,
-                name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-  }
+  total_dims <- glue("A{current_row}:F{current_row}")
+  wb$add_fill(sheet = sheet_name, dims = total_dims, color = wb_color("FF1F2937"))
+  wb$add_font(sheet = sheet_name, dims = total_dims,
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
   wb$add_numfmt(sheet = sheet_name, dims = glue("E{current_row}"), numfmt = "#,##0")
   wb$add_numfmt(sheet = sheet_name, dims = glue("F{current_row}"), numfmt = "0.00%")
 
