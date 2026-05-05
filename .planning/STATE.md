@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-05T21:00:00.000Z"
-last_activity: 2026-05-05 -- Phase 43 complete
+status: verifying
+last_updated: "2026-05-05T18:36:08.847Z"
+last_activity: 2026-05-05
 progress:
   total_phases: 40
-  completed_phases: 34
+  completed_phases: 35
   total_plans: 69
-  completed_plans: 63
+  completed_plans: 64
   percent: 94
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-05
-**Project status:** Phase 43 complete — treatment duration analysis for 4 types
+**Project status:** Phase 38 complete — treatment inventory by source table
 
 ## Project Reference
 
@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 43 complete — next: Phase 38 or 42 (both planned, unexecuted)
+**Current focus:** Phase 38 complete — next: Phase 42 (planned, unexecuted)
 
 ## Current Position
 
-Phase: 43 (establish-treatment-lengths-for-sct-chemo-and-radiation) — COMPLETE
+Phase: 38 (chemo-treatment-inventory-by-source-table) — COMPLETE
 Plan: 1 of 1 — COMPLETE
-Status: Phase 43 verified on HiPerGator
-Last activity: 2026-05-05 -- Phase 43 complete, summary written
+Status: Phase 38 complete
+Last activity: 2026-05-05 -- Phase 38 complete, summary written
 
-Progress: [█████████░] 94% — 63/69 plans complete
+Progress: [█████████░] 93% — 64/69 plans complete
 
 ## Accumulated Context
 
@@ -53,6 +53,8 @@ Progress: [█████████░] 94% — 63/69 plans complete
 - 90-day gap threshold for episode splitting in treatment duration analysis (Phase 43)
 - All chemo codes pooled — no regimen distinction between ABVD/BV+AVD/salvage (Phase 43)
 - Pre-2000 dates retained as real tumor registry historical data, not sentinels (Phase 43)
+- Pull ALL drugs for HL patients from PRESCRIBING/DISPENSING/MED_ADMIN instead of curated RXNORM list (Phase 38)
+- SCT ICD-10-PCS uses exact %in% matching (full 7-char codes), chemo/radiation/immuno use str_detect prefixes (Phase 38)
 
 ### Pending Todos
 
