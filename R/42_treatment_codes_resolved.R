@@ -6,8 +6,8 @@
 # chemotherapy_codes_resolved.xlsx format. Also verifies chemotherapy_codes_resolved.xlsx
 # accuracy against the combined report.
 #
-# Input:  combined_unmatched_report.xlsx  (Phase 41 output)
-#         chemotherapy_codes_resolved.xlsx (verification target)
+# Input:  output/combined_unmatched_report.xlsx  (Phase 41 output)
+#         chemotherapy_codes_resolved.xlsx       (verification target)
 # Output: radiation_codes_resolved.xlsx
 #         sct_codes_resolved.xlsx
 #         immunotherapy_codes_resolved.xlsx
@@ -22,8 +22,10 @@ suppressPackageStartupMessages({
   library(openxlsx2)
 })
 
-# Paths to source files (project root)
-COMBINED_REPORT <- "combined_unmatched_report.xlsx"
+source("R/00_config.R")
+
+# Paths to source files
+COMBINED_REPORT <- file.path(CONFIG$output_dir, "combined_unmatched_report.xlsx")
 CHEMO_RESOLVED  <- "chemotherapy_codes_resolved.xlsx"
 
 # Categories to produce resolved files for (non-chemo)
