@@ -140,6 +140,82 @@ if (nrow(old) > 0) {
   message("  OK: No dates before 2000")
 }
 
+# --- 3b. Pre-2000 date deep dive ---
+old_rows <- d %>% filter(first_treatment_date < as.Date("2000-01-01"))
+if (nrow(old_rows) > 0) {
+  message("\n--- 3b. Pre-2000 Date Deep Dive ---")
+  message(glue("  {nrow(old_rows)} patients with first_treatment_date before 2000\n"))
+
+  # By type
+  message("  By treatment type:")
+  old_rows %>%
+    count(treatment_type, sort = TRUE) %>%
+    mutate(msg = glue("    {treatment_type}: {n}")) %>%
+    pull(msg) %>%
+    walk(message)
+
+  # Date distribution
+  message("\n  Earliest dates:")
+  old_rows %>%
+    arrange(first_treatment_date) %>%
+    head(20) %>%
+    mutate(msg = glue("    {ID}  {treatment_type}  first={first_treatment_date}  last={last_treatment_date}  span={overall_span_days}d  dates={distinct_treatment_dates}  episodes={episode_count}")) %>%
+    pull(msg) %>%
+    walk(message)
+
+  # Are these sentinel dates (e.g. 1900-01-01, 1800-01-01)?
+  message("\n  Date histogram (pre-2000):")
+  old_rows %>%
+    mutate(decade = paste0(10 * (as.integer(format(first_treatment_date, "%Y")) %/% 10), "s")) %>%
+    count(decade, sort = FALSE) %>%
+    arrange(decade) %>%
+    mutate(msg = glue("    {decade}: {n}")) %>%
+    pull(msg) %>%
+    walk(message)
+
+  # Do these patients also have post-2000 last_treatment_date? (would mean
+  # the pre-2000 date is pulling the span way out)
+  bridge <- old_rows %>% filter(last_treatment_date >= as.Date("2000-01-01"))
+  message(glue("\n  Bridge patients (first<2000, last>=2000): {nrow(bridge)}"))
+  if (nrow(bridge) > 0) {
+    message("    These patients have a pre-2000 first date but post-2000 last date,")
+    message("    creating artificially inflated spans.")
+    bridge %>%
+      arrange(first_treatment_date) %>%
+      head(10) %>%
+      mutate(msg = glue("    {ID}  {treatment_type}  {first_treatment_date} -> {last_treatment_date}  span={overall_span_days}d")) %>%
+      pull(msg) %>%
+      walk(message)
+  }
+
+  # Patients where BOTH first and last are pre-2000
+  both_old <- old_rows %>% filter(last_treatment_date < as.Date("2000-01-01"))
+  message(glue("\n  Both dates pre-2000: {nrow(both_old)}"))
+  if (nrow(both_old) > 0) {
+    both_old %>%
+      arrange(first_treatment_date) %>%
+      head(10) %>%
+      mutate(msg = glue("    {ID}  {treatment_type}  {first_treatment_date} -> {last_treatment_date}  span={overall_span_days}d")) %>%
+      pull(msg) %>%
+      walk(message)
+  }
+
+  # Impact on summary stats: what do stats look like WITHOUT pre-2000 dates?
+  message("\n  Impact: stats WITH vs WITHOUT pre-2000 patients:")
+  for (type in intersect(TREATMENT_TYPES, unique(old_rows$treatment_type))) {
+    all_type  <- d %>% filter(treatment_type == type)
+    clean_type <- all_type %>% filter(first_treatment_date >= as.Date("2000-01-01"))
+    n_removed <- nrow(all_type) - nrow(clean_type)
+
+    s_all   <- all_type %>% summarise(med = median(overall_span_days), mx = max(overall_span_days))
+    s_clean <- clean_type %>% summarise(med = median(overall_span_days), mx = max(overall_span_days))
+
+    message(glue("    {type} ({n_removed} removed):"))
+    message(glue("      Before: median={s_all$med}, max={s_all$mx}"))
+    message(glue("      After:  median={s_clean$med}, max={s_clean$mx}"))
+  }
+}
+
 # --- 4. Clinical plausibility flags ---
 message("\n--- 4. Clinical Plausibility ---")
 
