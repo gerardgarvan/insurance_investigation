@@ -3,10 +3,8 @@
 # ==============================================================================
 #
 # Extracts every SCT-related record from all PCORnet CDM tables, showing
-# the actual NDC codes, PX codes, DX codes, DRG codes, and RXNORM CUIs
-# found per patient per date across:
-#   PROCEDURES, DISPENSING, PRESCRIBING, MED_ADMIN, ENCOUNTER,
-#   DIAGNOSIS, TUMOR_REGISTRY
+# the actual PX codes, DX codes, DRG codes found per patient per date across:
+#   PROCEDURES, ENCOUNTER, DIAGNOSIS, TUMOR_REGISTRY
 #
 # Output: output/sct_code_inventory.xlsx (one sheet per source table + summary)
 #
@@ -149,121 +147,7 @@ extract_sct_diagnosis <- function() {
 }
 
 # ==============================================================================
-# SECTION 4: DISPENSING -- NDC codes and RXNORM for SCT-related drugs
-# ==============================================================================
-
-extract_sct_dispensing <- function() {
-  message("  DISPENSING...")
-  disp_tbl <- safe_table("DISPENSING")
-  if (is.null(disp_tbl)) return(NULL)
-
-  # Get patient IDs with known SCT evidence from PROCEDURES/ENCOUNTER/DIAGNOSIS
-  # Then pull ALL dispensing records for those patients to find SCT-related NDCs
-  sct_ids <- get_sct_patient_ids()
-  if (length(sct_ids) == 0) {
-    message("    No SCT patients found; skipping DISPENSING")
-    return(NULL)
-  }
-
-  results <- list()
-
-  # NDC codes for SCT patients
-  ndc <- tryCatch({
-    disp_tbl %>%
-      filter(ID %in% sct_ids & !is.na(NDC) & NDC != "") %>%
-      select(ID, NDC, RXNORM_CUI, RAW_DISPENSE_MED_NAME, DISPENSE_DATE) %>%
-      collect()
-  }, error = function(e) NULL)
-
-  if (!is.null(ndc) && nrow(ndc) > 0) {
-    ndc_out <- ndc %>%
-      mutate(
-        source_table = "DISPENSING",
-        code_system = "NDC",
-        drug_name = RAW_DISPENSE_MED_NAME,
-        rxnorm = RXNORM_CUI,
-        ENCOUNTERID = NA_character_
-      ) %>%
-      select(ID, source_table, code = NDC, code_system, event_date = DISPENSE_DATE,
-             ENCOUNTERID, drug_name, rxnorm)
-    results <- c(results, list(ndc_out))
-  }
-
-  bind_rows(compact(results))
-}
-
-# ==============================================================================
-# SECTION 5: PRESCRIBING -- RXNORM for SCT patients
-# ==============================================================================
-
-extract_sct_prescribing <- function() {
-  message("  PRESCRIBING...")
-  rx_tbl <- safe_table("PRESCRIBING")
-  if (is.null(rx_tbl)) return(NULL)
-
-  sct_ids <- get_sct_patient_ids()
-  if (length(sct_ids) == 0) {
-    message("    No SCT patients found; skipping PRESCRIBING")
-    return(NULL)
-  }
-
-  df <- tryCatch({
-    rx_tbl %>%
-      filter(ID %in% sct_ids & !is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-      select(ID, RXNORM_CUI, RAW_RX_MED_NAME, RX_ORDER_DATE, ENCOUNTERID) %>%
-      collect()
-  }, error = function(e) NULL)
-
-  if (is.null(df) || nrow(df) == 0) return(NULL)
-
-  df %>%
-    mutate(
-      source_table = "PRESCRIBING",
-      code_system = "RXNORM",
-      drug_name = RAW_RX_MED_NAME,
-      rxnorm = RXNORM_CUI
-    ) %>%
-    select(ID, source_table, code = RXNORM_CUI, code_system,
-           event_date = RX_ORDER_DATE, ENCOUNTERID, drug_name, rxnorm)
-}
-
-# ==============================================================================
-# SECTION 6: MED_ADMIN -- RXNORM for SCT patients
-# ==============================================================================
-
-extract_sct_med_admin <- function() {
-  message("  MED_ADMIN...")
-  ma_tbl <- safe_table("MED_ADMIN")
-  if (is.null(ma_tbl)) return(NULL)
-
-  sct_ids <- get_sct_patient_ids()
-  if (length(sct_ids) == 0) {
-    message("    No SCT patients found; skipping MED_ADMIN")
-    return(NULL)
-  }
-
-  df <- tryCatch({
-    ma_tbl %>%
-      filter(ID %in% sct_ids & !is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-      select(ID, RXNORM_CUI, RAW_MEDADMIN_MED_NAME, MEDADMIN_START_DATE, ENCOUNTERID) %>%
-      collect()
-  }, error = function(e) NULL)
-
-  if (is.null(df) || nrow(df) == 0) return(NULL)
-
-  df %>%
-    mutate(
-      source_table = "MED_ADMIN",
-      code_system = "RXNORM",
-      drug_name = RAW_MEDADMIN_MED_NAME,
-      rxnorm = RXNORM_CUI
-    ) %>%
-    select(ID, source_table, code = RXNORM_CUI, code_system,
-           event_date = MEDADMIN_START_DATE, ENCOUNTERID, drug_name, rxnorm)
-}
-
-# ==============================================================================
-# SECTION 7: TUMOR_REGISTRY -- SCT date columns
+# SECTION 4: TUMOR_REGISTRY -- SCT date columns
 # ==============================================================================
 
 extract_sct_tumor_registry <- function() {
@@ -301,11 +185,9 @@ extract_sct_tumor_registry <- function() {
           code = col,
           code_system = "DATE_COLUMN",
           event_date = as.character(!!sym(col)),
-          ENCOUNTERID = NA_character_,
-          drug_name = NA_character_,
-          rxnorm = NA_character_
+          ENCOUNTERID = NA_character_
         ) %>%
-        select(ID, source_table, code, code_system, event_date, ENCOUNTERID, drug_name, rxnorm)
+        select(ID, source_table, code, code_system, event_date, ENCOUNTERID)
       results <- c(results, list(out))
     }
   }
@@ -314,94 +196,10 @@ extract_sct_tumor_registry <- function() {
 }
 
 # ==============================================================================
-# SECTION 8: SCT PATIENT ID LOOKUP (used by DISPENSING/PRESCRIBING/MED_ADMIN)
-# ==============================================================================
-
-# Cache for SCT patient IDs (computed once, reused)
-.sct_ids_cache <- NULL
-
-get_sct_patient_ids <- function() {
-  if (!is.null(.sct_ids_cache)) return(.sct_ids_cache)
-
-  message("    Identifying SCT patients from PROCEDURES + ENCOUNTER + DIAGNOSIS...")
-  ids <- character(0)
-
-  # From PROCEDURES
-  proc_tbl <- safe_table("PROCEDURES")
-  if (!is.null(proc_tbl)) {
-    proc_ids <- tryCatch({
-      all_sct_px <- c(
-        TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs,
-        TREATMENT_CODES$sct_icd9, TREATMENT_CODES$sct_icd10pcs,
-        TREATMENT_CODES$sct_revenue
-      )
-      proc_tbl %>%
-        filter(PX %in% all_sct_px) %>%
-        select(ID) %>%
-        distinct() %>%
-        collect() %>%
-        pull(ID)
-    }, error = function(e) character(0))
-    ids <- union(ids, proc_ids)
-  }
-
-  # From ENCOUNTER (DRG)
-  enc_tbl <- safe_table("ENCOUNTER")
-  if (!is.null(enc_tbl)) {
-    enc_ids <- tryCatch({
-      enc_tbl %>%
-        filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
-        select(ID) %>%
-        distinct() %>%
-        collect() %>%
-        pull(ID)
-    }, error = function(e) character(0))
-    ids <- union(ids, enc_ids)
-  }
-
-  # From DIAGNOSIS
-  dx_tbl <- safe_table("DIAGNOSIS")
-  if (!is.null(dx_tbl)) {
-    dx_ids <- tryCatch({
-      dx_tbl %>%
-        filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
-        select(ID) %>%
-        distinct() %>%
-        collect() %>%
-        pull(ID)
-    }, error = function(e) character(0))
-    ids <- union(ids, dx_ids)
-  }
-
-  # From TUMOR_REGISTRY
-  tr_tbl <- safe_table("TUMOR_REGISTRY_ALL")
-  if (!is.null(tr_tbl)) {
-    tr_cols <- colnames(tr_tbl)
-    if ("DT_HTE" %in% tr_cols) {
-      tr_ids <- tryCatch({
-        tr_tbl %>%
-          filter(!is.na(DT_HTE)) %>%
-          select(ID) %>%
-          distinct() %>%
-          collect() %>%
-          pull(ID)
-      }, error = function(e) character(0))
-      ids <- union(ids, tr_ids)
-    }
-  }
-
-  message(glue("    Found {length(ids)} unique SCT patients"))
-  .sct_ids_cache <<- ids
-  ids
-}
-
-# ==============================================================================
-# SECTION 9: CODE MEANING LOOKUP
+# SECTION 5: CODE MEANING LOOKUP
 # ==============================================================================
 #
 # Built-in descriptions for all known SCT codes from TREATMENT_CODES in config.
-# For DISPENSING/PRESCRIBING/MED_ADMIN drug records, drug_name from the raw
-# data is used as the meaning instead.
 
 SCT_CODE_MEANINGS <- c(
   # CPT
@@ -489,15 +287,14 @@ SCT_CODE_MEANINGS <- c(
   "HEMATOLOGIC_TRANSPLANT_AND_ENDOC" = "Hematologic transplant and endocrine flag"
 )
 
-#' Look up meaning for a code, falling back to drug_name from raw data
-resolve_meaning <- function(code, drug_name) {
+#' Look up meaning for a code from the built-in dictionary
+resolve_meaning <- function(code) {
   meaning <- SCT_CODE_MEANINGS[code]
-  ifelse(!is.na(meaning), meaning,
-         ifelse(!is.na(drug_name) & drug_name != "", drug_name, ""))
+  ifelse(!is.na(meaning), meaning, "")
 }
 
 # ==============================================================================
-# SECTION 10: XLSX OUTPUT -- resolved-style format
+# SECTION 6: XLSX OUTPUT -- resolved-style format
 # ==============================================================================
 
 # SCT color scheme (matches 42_treatment_codes_resolved.R)
@@ -609,7 +406,7 @@ write_detail_sheet <- function(wb, sheet_name, df) {
 }
 
 # ==============================================================================
-# SECTION 11: MAIN EXECUTION
+# SECTION 7: MAIN EXECUTION
 # ==============================================================================
 
 message("=== SCT Code Inventory: All Codes from Every Source Table ===")
@@ -620,25 +417,19 @@ message("Extracting SCT evidence from all PCORnet tables...")
 proc_df  <- extract_sct_procedures()
 enc_df   <- extract_sct_encounters()
 dx_df    <- extract_sct_diagnosis()
-disp_df  <- extract_sct_dispensing()
-rx_df    <- extract_sct_prescribing()
-ma_df    <- extract_sct_med_admin()
 tr_df    <- extract_sct_tumor_registry()
 
-# Standardize columns (some sources have drug_name/rxnorm, others don't)
+# Standardize columns
 standardize <- function(df) {
   if (is.null(df) || nrow(df) == 0) return(NULL)
-  if (!"drug_name" %in% names(df)) df$drug_name <- NA_character_
-  if (!"rxnorm" %in% names(df)) df$rxnorm <- NA_character_
   if (!"ENCOUNTERID" %in% names(df)) df$ENCOUNTERID <- NA_character_
   df %>%
     mutate(event_date = as.character(event_date)) %>%
-    select(ID, source_table, code, code_system, event_date,
-           ENCOUNTERID, drug_name, rxnorm)
+    select(ID, source_table, code, code_system, event_date, ENCOUNTERID)
 }
 
 all_evidence <- bind_rows(compact(lapply(
-  list(proc_df, enc_df, dx_df, disp_df, rx_df, ma_df, tr_df),
+  list(proc_df, enc_df, dx_df, tr_df),
   standardize
 )))
 
@@ -677,11 +468,10 @@ resolved <- all_evidence %>%
   summarise(
     records  = n(),
     patients = n_distinct(ID),
-    drug_name_sample = first(na.omit(drug_name)),
     .groups = "drop"
   ) %>%
   mutate(
-    meaning   = mapply(resolve_meaning, code, drug_name_sample, USE.NAMES = FALSE),
+    meaning   = resolve_meaning(code),
     code_type = code_system
   ) %>%
   select(code, meaning, code_type, source_table, records, patients) %>%
@@ -700,8 +490,7 @@ if (nrow(resolved) > 0) {
 }
 
 # Per-source detail sheets
-source_tables <- c("PROCEDURES", "ENCOUNTER", "DIAGNOSIS",
-                   "DISPENSING", "PRESCRIBING", "MED_ADMIN", "TUMOR_REGISTRY")
+source_tables <- c("PROCEDURES", "ENCOUNTER", "DIAGNOSIS", "TUMOR_REGISTRY")
 
 for (src in source_tables) {
   src_data <- filter(all_evidence, source_table == src)
@@ -717,7 +506,7 @@ for (src in source_tables) {
 wb$add_worksheet("Notes")
 notes <- c(
   glue("Data Source: PCORnet CDM tables via DuckDB ({CONFIG$cache$duckdb_path})"),
-  "Code descriptions: Built-in from TREATMENT_CODES (00_config.R) + raw drug names",
+  "Code descriptions: Built-in from TREATMENT_CODES (00_config.R)",
   glue("Generated: {Sys.Date()}"),
   "Classification: Stem Cell Transplant (SCT) codes across all source tables",
   "Columns: Code | Meaning | Code Type | Source Table | Records | Patients",
