@@ -206,112 +206,102 @@ wb <- wb_workbook()
 # ---------- SHEET 1: SUMMARY ----------
 wb$add_worksheet("Summary")
 
-# Title row (merged A1:H1)
-wb$add_data("Summary", x = "Treatment Episodes by Type", startCol = 1, startRow = 1)
-wb$merge_cells("Summary", rows = 1, cols = 1:8)
-wb$add_cell_style("Summary", dims = "A1",
-                  fontSize = 16, fontName = "Calibri", bold = TRUE,
-                  fontColour = wb_colour("FF1F2937"))
+# Row 1: Title
+wb$add_data(sheet = "Summary", x = "Treatment Episodes by Type",
+            start_row = 1, start_col = 1)
+wb$add_font(sheet = "Summary", dims = "A1",
+            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$merge_cells(sheet = "Summary", dims = "A1:H1")
 
-# Subtitle row (merged A2:H2)
-subtitle <- glue("Generated: {Sys.Date()} | Gap threshold: {GAP_THRESHOLD} days | Historical cutoff: 2012-01-01")
-wb$add_data("Summary", x = subtitle, startCol = 1, startRow = 2)
-wb$merge_cells("Summary", rows = 2, cols = 1:8)
-wb$add_cell_style("Summary", dims = "A2",
-                  fontSize = 10, fontName = "Calibri",
-                  fontColour = wb_colour("FF6B7280"))
+# Row 2: Subtitle
+subtitle <- as.character(glue("Generated: {Sys.Date()} | Gap threshold: {GAP_THRESHOLD} days | Historical cutoff: 2012-01-01"))
+wb$add_data(sheet = "Summary", x = subtitle, start_row = 2, start_col = 1)
+wb$add_font(sheet = "Summary", dims = "A2",
+            name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+wb$merge_cells(sheet = "Summary", dims = "A2:H2")
 
-# Headers (row 4) with dark fill and white font
+# Row 4: Headers with dark fill and white font
 headers <- c("Treatment Type", "Patients", "Episodes", "Historical Episodes",
              "% Historical", "Median Length (days)", "Median Dates/Episode", "Max Episodes")
-wb$add_data("Summary", x = as.data.frame(t(headers)), startCol = 1, startRow = 4,
-            colNames = FALSE)
-wb$add_cell_style("Summary", dims = "A4:H4",
-                  fontSize = 11, fontName = "Calibri", bold = TRUE,
-                  fontColour = wb_colour("FFFFFFFF"),
-                  fgFill = wb_colour("FF374151"))
+for (i in seq_along(headers)) {
+  wb$add_data(sheet = "Summary", x = headers[i], start_row = 4, start_col = i)
+}
+wb$add_fill(sheet = "Summary", dims = "A4:H4", color = wb_color("FF374151"))
+wb$add_font(sheet = "Summary", dims = "A4:H4",
+            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
 
 # Data rows (5-8): one per treatment type
-summary_data <- list()
 for (i in seq_along(TREATMENT_TYPES)) {
   type <- TREATMENT_TYPES[i]
   type_data <- episodes_list[[type]]
+  row_num <- 4 + i
 
   if (nrow(type_data) == 0) {
-    summary_data[[i]] <- list(
-      treatment_type = type,
-      n_patients = 0,
-      n_episodes = 0,
-      n_historical = 0,
-      pct_historical = 0,
-      median_length = NA,
-      median_dates = NA,
-      max_episodes = 0
-    )
+    wb$add_data(sheet = "Summary", x = type, start_row = row_num, start_col = 1)
+    for (col in 2:8) wb$add_data(sheet = "Summary", x = 0L, start_row = row_num, start_col = col)
   } else {
-    summary_data[[i]] <- list(
-      treatment_type = type,
-      n_patients = n_distinct(type_data$patient_id),
-      n_episodes = nrow(type_data),
-      n_historical = sum(type_data$historical_flag),
-      pct_historical = round(100 * mean(type_data$historical_flag), 1),
-      median_length = median(type_data$episode_length_days),
-      median_dates = median(type_data$distinct_dates_in_episode),
-      max_episodes = max(type_data$episode_number)
-    )
+    wb$add_data(sheet = "Summary", x = type, start_row = row_num, start_col = 1)
+    wb$add_data(sheet = "Summary", x = as.integer(n_distinct(type_data$patient_id)),
+                start_row = row_num, start_col = 2)
+    wb$add_data(sheet = "Summary", x = as.integer(nrow(type_data)),
+                start_row = row_num, start_col = 3)
+    wb$add_data(sheet = "Summary", x = as.integer(sum(type_data$historical_flag)),
+                start_row = row_num, start_col = 4)
+    wb$add_data(sheet = "Summary", x = round(100 * mean(type_data$historical_flag), 1),
+                start_row = row_num, start_col = 5)
+    wb$add_data(sheet = "Summary", x = median(type_data$episode_length_days),
+                start_row = row_num, start_col = 6)
+    wb$add_data(sheet = "Summary", x = median(type_data$distinct_dates_in_episode),
+                start_row = row_num, start_col = 7)
+    wb$add_data(sheet = "Summary", x = as.integer(max(type_data$episode_number)),
+                start_row = row_num, start_col = 8)
   }
-}
-summary_df <- bind_rows(summary_data)
 
-wb$add_data("Summary", x = summary_df, startCol = 1, startRow = 5, colNames = FALSE)
-
-# Apply type-specific colors to column A (treatment type names)
-for (i in seq_along(TREATMENT_TYPES)) {
-  type <- TREATMENT_TYPES[i]
-  colors <- TREATMENT_TYPE_COLORS[[type]]
-  row_num <- 4 + i
-  wb$add_cell_style("Summary", dims = glue("A{row_num}"),
-                    fgFill = wb_colour(colors$fill),
-                    fontColour = wb_colour(colors$font),
-                    bold = TRUE)
+  # Apply type-specific fill color to the type name cell
+  type_dims <- glue("A{row_num}")
+  wb$add_fill(sheet = "Summary", dims = type_dims,
+              color = wb_color(TREATMENT_TYPE_COLORS[[type]]$fill))
+  wb$add_font(sheet = "Summary", dims = type_dims,
+              name = "Calibri", size = 11, bold = TRUE,
+              color = wb_color(TREATMENT_TYPE_COLORS[[type]]$font))
 }
 
 # Number formatting
-wb$add_numfmt("Summary", dims = "B5:D8", numfmt = "#,##0")
-wb$add_numfmt("Summary", dims = "E5:E8", numfmt = "#,##0.0")
-wb$add_numfmt("Summary", dims = "F5:H8", numfmt = "#,##0")
+wb$add_numfmt(sheet = "Summary", dims = "B5:D8", numfmt = "#,##0")
+wb$add_numfmt(sheet = "Summary", dims = "E5:E8", numfmt = "#,##0.0")
+wb$add_numfmt(sheet = "Summary", dims = "F5:H8", numfmt = "#,##0")
 
 # Column widths
-wb$set_col_widths("Summary", cols = 1:8, widths = c(20, 12, 12, 18, 14, 22, 20, 16))
+wb$set_col_widths(sheet = "Summary", cols = 1:8, widths = c(20, 12, 12, 18, 14, 22, 20, 16))
 
 
 # ---------- SHEETS 2-5: PER-TYPE DETAIL SHEETS ----------
 for (type in TREATMENT_TYPES) {
   type_data <- episodes_list[[type]]
-  sheet_name <- glue("{type} Episodes")
+  sheet_name <- as.character(glue("{type} Episodes"))
   wb$add_worksheet(sheet_name)
 
   n_episodes <- nrow(type_data)
   n_patients <- if (n_episodes > 0) n_distinct(type_data$patient_id) else 0
 
-  # Title row
-  title_text <- glue("{type} Treatment Episodes ({n_episodes} episodes, {n_patients} patients)")
-  wb$add_data(sheet_name, x = title_text, startCol = 1, startRow = 1)
-  wb$merge_cells(sheet_name, rows = 1, cols = 1:7)
-  wb$add_cell_style(sheet_name, dims = "A1",
-                    fontSize = 16, fontName = "Calibri", bold = TRUE)
+  # Row 1: Title
+  title_text <- as.character(glue("{type} Treatment Episodes ({n_episodes} episodes, {n_patients} patients)"))
+  wb$add_data(sheet = sheet_name, x = title_text, start_row = 1, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$merge_cells(sheet = sheet_name, dims = "A1:G1")
 
-  # Headers (row 2) with type-specific colors
+  # Row 2: Headers with type-specific colors
   detail_headers <- c("Patient ID", "Episode #", "Start Date", "Stop Date",
                       "Length (days)", "Distinct Dates", "Historical")
-  wb$add_data(sheet_name, x = as.data.frame(t(detail_headers)), startCol = 1, startRow = 2,
-              colNames = FALSE)
+  for (j in seq_along(detail_headers)) {
+    wb$add_data(sheet = sheet_name, x = detail_headers[j], start_row = 2, start_col = j)
+  }
 
   colors <- TREATMENT_TYPE_COLORS[[type]]
-  wb$add_cell_style(sheet_name, dims = "A2:G2",
-                    fontSize = 11, fontName = "Calibri", bold = TRUE,
-                    fontColour = wb_colour(colors$font),
-                    fgFill = wb_colour(colors$fill))
+  wb$add_fill(sheet = sheet_name, dims = "A2:G2", color = wb_color(colors$fill))
+  wb$add_font(sheet = sheet_name, dims = "A2:G2",
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color(colors$font))
 
   # Data rows (row 3+)
   if (n_episodes > 0) {
@@ -322,59 +312,60 @@ for (type in TREATMENT_TYPES) {
       Stop_Date = as.character(type_data$episode_stop),
       Length_Days = type_data$episode_length_days,
       Distinct_Dates = type_data$distinct_dates_in_episode,
-      Historical = type_data$historical_flag
+      Historical = type_data$historical_flag,
+      stringsAsFactors = FALSE
     )
 
-    wb$add_data(sheet_name, x = write_df, startCol = 1, startRow = 3, colNames = FALSE)
+    wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
 
     # Apply gray fill to historical rows
     historical_rows <- which(type_data$historical_flag)
     if (length(historical_rows) > 0) {
       for (row_idx in historical_rows) {
         row_num <- 2 + row_idx  # +2 because data starts at row 3
-        wb$add_cell_style(sheet_name, dims = glue("A{row_num}:G{row_num}"),
-                          fgFill = wb_colour("FFE5E5E5"))
+        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:G{row_num}"),
+                    color = wb_color("FFE5E5E5"))
       }
     }
 
     # Number formatting
     last_row <- 2 + n_episodes
-    wb$add_numfmt(sheet_name, dims = glue("E3:F{last_row}"), numfmt = "#,##0")
+    wb$add_numfmt(sheet = sheet_name, dims = glue("E3:F{last_row}"), numfmt = "#,##0")
   }
 
   # Column widths
-  wb$set_col_widths(sheet_name, cols = 1:7, widths = c(20, 12, 15, 15, 15, 15, 12))
+  wb$set_col_widths(sheet = sheet_name, cols = 1:7, widths = c(20, 12, 15, 15, 15, 15, 12))
 }
 
 
 # ---------- SHEET 6: HISTORICAL SUMMARY ----------
 wb$add_worksheet("Historical Summary")
 
-# Title row
-wb$add_data("Historical Summary", x = "Historical Episodes (pre-2012)", startCol = 1, startRow = 1)
-wb$merge_cells("Historical Summary", rows = 1, cols = 1:5)
-wb$add_cell_style("Historical Summary", dims = "A1",
-                  fontSize = 16, fontName = "Calibri", bold = TRUE,
-                  fontColour = wb_colour("FF1F2937"))
+# Row 1: Title
+wb$add_data(sheet = "Historical Summary", x = "Historical Episodes (pre-2012)",
+            start_row = 1, start_col = 1)
+wb$add_font(sheet = "Historical Summary", dims = "A1",
+            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$merge_cells(sheet = "Historical Summary", dims = "A1:E1")
 
 historical_episodes <- all_episodes %>% filter(historical_flag)
 
 if (nrow(historical_episodes) == 0) {
-  wb$add_data("Historical Summary", x = "No historical episodes found",
-              startCol = 1, startRow = 3)
+  wb$add_data(sheet = "Historical Summary", x = "No historical episodes found",
+              start_row = 3, start_col = 1)
 } else {
   # By type
-  message_text <- glue("{nrow(historical_episodes)} historical episodes found")
-  wb$add_data("Historical Summary", x = message_text, startCol = 1, startRow = 3)
+  message_text <- as.character(glue("{nrow(historical_episodes)} historical episodes found"))
+  wb$add_data(sheet = "Historical Summary", x = message_text, start_row = 3, start_col = 1)
 
   # Headers (row 5)
   hist_headers <- c("Treatment Type", "Episodes", "Patients", "Earliest Date", "Latest Date")
-  wb$add_data("Historical Summary", x = as.data.frame(t(hist_headers)),
-              startCol = 1, startRow = 5, colNames = FALSE)
-  wb$add_cell_style("Historical Summary", dims = "A5:E5",
-                    fontSize = 11, fontName = "Calibri", bold = TRUE,
-                    fontColour = wb_colour("FFFFFFFF"),
-                    fgFill = wb_colour("FF374151"))
+  for (i in seq_along(hist_headers)) {
+    wb$add_data(sheet = "Historical Summary", x = hist_headers[i], start_row = 5, start_col = i)
+  }
+  wb$add_fill(sheet = "Historical Summary", dims = "A5:E5", color = wb_color("FF374151"))
+  wb$add_font(sheet = "Historical Summary", dims = "A5:E5",
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
 
   # By-type summary
   hist_summary <- historical_episodes %>%
@@ -391,10 +382,11 @@ if (nrow(historical_episodes) == 0) {
       latest = as.character(latest)
     )
 
-  wb$add_data("Historical Summary", x = hist_summary, startCol = 1, startRow = 6, colNames = FALSE)
+  wb$add_data(sheet = "Historical Summary", x = hist_summary, start_row = 6, col_names = FALSE)
 
   # Decade distribution (row 10+)
-  wb$add_data("Historical Summary", x = "\nDecade Distribution:", startCol = 1, startRow = 10)
+  wb$add_data(sheet = "Historical Summary", x = "Decade Distribution:",
+              start_row = 10, start_col = 1)
 
   decade_dist <- historical_episodes %>%
     mutate(decade = 10 * (as.integer(format(episode_start, "%Y")) %/% 10)) %>%
@@ -403,18 +395,18 @@ if (nrow(historical_episodes) == 0) {
     mutate(decade_label = paste0(decade, "s"))
 
   decade_headers <- c("Decade", "Episodes")
-  wb$add_data("Historical Summary", x = as.data.frame(t(decade_headers)),
-              startCol = 1, startRow = 12, colNames = FALSE)
-  wb$add_cell_style("Historical Summary", dims = "A12:B12",
-                    fontSize = 11, fontName = "Calibri", bold = TRUE,
-                    fontColour = wb_colour("FFFFFFFF"),
-                    fgFill = wb_colour("FF374151"))
+  for (i in seq_along(decade_headers)) {
+    wb$add_data(sheet = "Historical Summary", x = decade_headers[i], start_row = 12, start_col = i)
+  }
+  wb$add_fill(sheet = "Historical Summary", dims = "A12:B12", color = wb_color("FF374151"))
+  wb$add_font(sheet = "Historical Summary", dims = "A12:B12",
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
 
   decade_out <- decade_dist %>% select(decade_label, n_episodes)
-  wb$add_data("Historical Summary", x = decade_out, startCol = 1, startRow = 13, colNames = FALSE)
+  wb$add_data(sheet = "Historical Summary", x = decade_out, start_row = 13, col_names = FALSE)
 }
 
-wb$set_col_widths("Historical Summary", cols = 1:5, widths = c(20, 12, 12, 15, 15))
+wb$set_col_widths(sheet = "Historical Summary", cols = 1:5, widths = c(20, 12, 12, 15, 15))
 
 
 # Save workbook
