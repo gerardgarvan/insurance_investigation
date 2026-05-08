@@ -14,7 +14,7 @@
 
 ## Remaining Phases (Unassigned)
 
-- [x] **Phase 38: Chemo Treatment Inventory by Source Table** — List all chemo treatments and categorize by PCORnet table (procedures, dispensing, prescribing, etc.) (completed 2026-05-05)
+- [x] **Phase 38: Chemo Treatment Inventory by Source Table** — List all chemo treatments and categorize by PCORnet table (procedures, dispensing, prescribing, etc.) (completed 2026-05-05)
   - **Goal:** Aggregate inventory of all treatment codes (chemo, radiation, SCT, immunotherapy) across 7 PCORnet tables with styled xlsx output
   - **Plans:** 1 plan
   - Plans:
@@ -39,18 +39,24 @@
   - **Plans:** 1 plan
   - Plans:
     - [x] 41-01-PLAN.md — Load RDS artifacts, harmonize schemas, produce combined styled xlsx report
-- [x] **Phase 42: Treatment Codes Resolved XLSX (All Types)** — Create resolved xlsx reports for other treatment types (radiation, SCT, immunotherapy) from combined_unmatched_report.xlsx, and verify chemotherapy_codes_resolved.xlsx accuracy (completed 2026-05-05)
+- [x] **Phase 42: Treatment Codes Resolved XLSX (All Types)** — Create resolved xlsx reports for other treatment types (radiation, SCT, immunotherapy) from combined_unmatched_report.xlsx, and verify chemotherapy_codes_resolved.xlsx accuracy (completed 2026-05-05)
   - **Goal:** Extend the chemotherapy_codes_resolved.xlsx pattern to all treatment categories, producing per-type resolved xlsx files, and audit chemotherapy_codes_resolved.xlsx for correctness
   - **Depends on:** Phase 41
   - **Plans:** 1 plan
   - Plans:
     - [x] 42-01-PLAN.md — Per-type resolved xlsx generation (radiation, SCT, immunotherapy, supportive care) + chemotherapy verification
-- [x] **Phase 43: Establish Treatment Lengths for SCT, Chemo, and Radiation** — Determine treatment duration windows for stem cell transplant, chemotherapy, and radiation therapy from PCORnet data (completed 2026-05-05)
+- [x] **Phase 43: Establish Treatment Lengths for SCT, Chemo, and Radiation** — Determine treatment duration windows for stem cell transplant, chemotherapy, and radiation therapy from PCORnet data (completed 2026-05-05)
   - **Goal:** Establish treatment length estimates for SCT, chemo, radiation, and immunotherapy using procedure/dispensing/prescribing timestamps with 90-day episode gap detection
   - **Depends on:** Phase 42
   - **Plans:** 1 plan
   - Plans:
-    - [ ] 43-01-PLAN.md — Multi-source date extraction, duration/episode computation, styled xlsx + boxplot PNG + RDS output
+    - [x] 43-01-PLAN.md — Multi-source date extraction, duration/episode computation, styled xlsx + boxplot PNG + RDS output
+- [ ] **Phase 44: Treatment Episode Start/Stop Dates** — Produce per-patient per-episode start and stop dates for each 90-day treatment period with episode length; single-date episodes for historical treatments outside the 2012-2025 data window
+  - **Goal:** Expand treatment duration output to include per-episode start/stop dates and episode length, with special handling for isolated historical treatment dates (e.g., tumor registry dates from 1970s-2000s)
+  - **Depends on:** Phase 43
+  - **Plans:** 1 plan
+  - Plans:
+    - [ ] 44-01-PLAN.md — Per-episode date extraction, historical flagging, styled xlsx + per-type CSVs + RDS output
 
 ## Progress
 
@@ -65,4 +71,4 @@
 | 34-37 | v1.5 | Complete | 2026-05-01 |
 
 ---
-*Last updated: 2026-05-05*
+*Last updated: 2026-05-07*
