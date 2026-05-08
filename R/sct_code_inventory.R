@@ -468,8 +468,10 @@ standardize <- function(df) {
   if (!"drug_name" %in% names(df)) df$drug_name <- NA_character_
   if (!"rxnorm" %in% names(df)) df$rxnorm <- NA_character_
   if (!"ENCOUNTERID" %in% names(df)) df$ENCOUNTERID <- NA_character_
-  df %>% select(ID, source_table, code, code_system, event_date,
-                ENCOUNTERID, drug_name, rxnorm)
+  df %>%
+    mutate(event_date = as.character(event_date)) %>%
+    select(ID, source_table, code, code_system, event_date,
+           ENCOUNTERID, drug_name, rxnorm)
 }
 
 all_evidence <- bind_rows(compact(lapply(
