@@ -396,10 +396,171 @@ get_sct_patient_ids <- function() {
 }
 
 # ==============================================================================
-# SECTION 9: XLSX OUTPUT
+# SECTION 9: CODE MEANING LOOKUP
+# ==============================================================================
+#
+# Built-in descriptions for all known SCT codes from TREATMENT_CODES in config.
+# For DISPENSING/PRESCRIBING/MED_ADMIN drug records, drug_name from the raw
+# data is used as the meaning instead.
+
+SCT_CODE_MEANINGS <- c(
+  # CPT
+  "38230"   = "Bone marrow harvesting for transplantation",
+  "38232"   = "Bone marrow harvesting for transplantation, autologous",
+  "38240"   = "Allogeneic hematopoietic cell transplantation (HCT)",
+  "38241"   = "Autologous hematopoietic cell transplantation (HCT)",
+  "38242"   = "Allogeneic donor lymphocyte infusion (DLI)",
+  "38243"   = "Allogeneic hematopoietic cell boost",
+  # HCPCS
+  "S2140"   = "Cord blood harvesting for transplantation, allogeneic",
+  "S2142"   = "Cord blood-derived stem-cell transplantation, allogeneic",
+  "S2150"   = "Bone marrow or blood-derived stem cells, allogeneic or autologous",
+  # ICD-9-CM Vol 3
+  "41.00"   = "Bone marrow transplant, NOS",
+  "41.01"   = "Autologous bone marrow transplant without purging",
+  "41.02"   = "Allogeneic bone marrow transplant with purging",
+  "41.03"   = "Allogeneic bone marrow transplant without purging",
+  "41.04"   = "Autologous hematopoietic stem cell transplant without purging",
+  "41.05"   = "Allogeneic hematopoietic stem cell transplant without purging",
+  "41.06"   = "Cord blood stem cell transplant",
+  "41.07"   = "Autologous hematopoietic stem cell transplant with purging",
+  "41.08"   = "Allogeneic hematopoietic stem cell transplant with purging",
+  "41.09"   = "Autologous bone marrow transplant with purging",
+  # ICD-10-PCS (selected -- full list is 49 codes)
+  "30230G0" = "Autologous bone marrow, peripheral vein, open",
+  "30230Y0" = "Autologous HPC, peripheral vein, open",
+  "30230C0" = "Autologous HPC (genetically modified), peripheral vein, open",
+  "30230X0" = "Autologous cord blood stem cells, peripheral vein, open",
+  "30240G0" = "Autologous bone marrow, central vein, open",
+  "30240Y0" = "Autologous HPC, central vein, open",
+  "30240C0" = "Autologous HPC (genetically modified), central vein, open",
+  "30240X0" = "Autologous cord blood stem cells, central vein, open",
+  "30233C0" = "Autologous HPC (genetically modified), peripheral vein, percutaneous",
+  "30233G0" = "Autologous HPC, peripheral vein, percutaneous",
+  "30233X0" = "Autologous cord blood stem cells, peripheral vein, percutaneous",
+  "30233Y0" = "Autologous HPC (other), peripheral vein, percutaneous",
+  "30243C0" = "Autologous HPC (genetically modified), central vein, percutaneous",
+  "30243G0" = "Autologous HPC, central vein, percutaneous",
+  "30243X0" = "Autologous cord blood stem cells, central vein, percutaneous",
+  "30243Y0" = "Autologous HPC (other), central vein, percutaneous",
+  "30233G1" = "Nonautologous HPC, peripheral vein, percutaneous",
+  "30233X1" = "Nonautologous cord blood stem cells, peripheral vein, percutaneous",
+  "30233Y1" = "Nonautologous HPC (other), peripheral vein, percutaneous",
+  "30243G1" = "Nonautologous HPC, central vein, percutaneous",
+  "30243X1" = "Nonautologous cord blood stem cells, central vein, percutaneous",
+  "30243Y1" = "Nonautologous HPC (other), central vein, percutaneous",
+  "30233G2" = "Allogeneic related bone marrow, peripheral vein, percutaneous",
+  "30233G3" = "Allogeneic unrelated bone marrow, peripheral vein, percutaneous",
+  "30233U2" = "Allogeneic related T-cell depleted BM, peripheral vein, percutaneous",
+  "30233U3" = "Allogeneic unrelated T-cell depleted BM, peripheral vein, percutaneous",
+  "30233X2" = "Allogeneic related cord blood, peripheral vein, percutaneous",
+  "30233X3" = "Allogeneic unrelated cord blood, peripheral vein, percutaneous",
+  "30233Y2" = "Allogeneic related HPC, peripheral vein, percutaneous",
+  "30233Y3" = "Allogeneic unrelated HPC, peripheral vein, percutaneous",
+  "30243G2" = "Allogeneic related bone marrow, central vein, percutaneous",
+  "30243G3" = "Allogeneic unrelated bone marrow, central vein, percutaneous",
+  "30243U2" = "Allogeneic related T-cell depleted BM, central vein, percutaneous",
+  "30243U3" = "Allogeneic unrelated T-cell depleted BM, central vein, percutaneous",
+  "30243X2" = "Allogeneic related cord blood, central vein, percutaneous",
+  "30243X3" = "Allogeneic unrelated cord blood, central vein, percutaneous",
+  "30243Y2" = "Allogeneic related HPC, central vein, percutaneous",
+  "30243Y3" = "Allogeneic unrelated HPC, central vein, percutaneous",
+  "30230AZ" = "Embryonic stem cells, peripheral vein, open",
+  "30233AZ" = "Embryonic stem cells, peripheral vein, percutaneous",
+  "30240AZ" = "Embryonic stem cells, central vein, open",
+  "30243AZ" = "Embryonic stem cells, central vein, percutaneous",
+  "XW133C8" = "Transfusion of Omidubicel, peripheral vein, percutaneous",
+  "XW143C8" = "Transfusion of Omidubicel, central vein, percutaneous",
+  # DX codes
+  "Z94.84"  = "Stem cells transplant status",
+  "T86.5"   = "Complications of stem cell transplant",
+  "T86.09"  = "Other complications of bone marrow transplant",
+  "T86.0"   = "Complications of bone marrow transplant",
+  "Z48.290" = "Encounter for aftercare following bone marrow transplant",
+  # DRG codes
+  "014"     = "Allogeneic bone marrow transplant",
+  "016"     = "Autologous BMT w CC/MCC or T-cell immunotherapy",
+  "017"     = "Autologous BMT w/o CC/MCC",
+  # Revenue codes
+  "0362"    = "Organ transplant - other than kidney (includes SCT)",
+  "0815"    = "Allogeneic stem cell acquisition/donor services",
+  # Tumor registry date columns
+  "DT_HTE"  = "Hematologic transplant and endocrine therapy date",
+  "HEMATOLOGIC_TRANSPLANT_AND_ENDOC" = "Hematologic transplant and endocrine flag"
+)
+
+#' Look up meaning for a code, falling back to drug_name from raw data
+resolve_meaning <- function(code, drug_name) {
+  meaning <- SCT_CODE_MEANINGS[code]
+  ifelse(!is.na(meaning), meaning,
+         ifelse(!is.na(drug_name) & drug_name != "", drug_name, ""))
+}
+
+# ==============================================================================
+# SECTION 10: XLSX OUTPUT -- resolved-style format
 # ==============================================================================
 
-write_sheet <- function(wb, sheet_name, df) {
+# SCT color scheme (matches 42_treatment_codes_resolved.R)
+SCT_FILL  <- "FFFFF4D6"   # light yellow
+SCT_FONT  <- "FF7F6000"   # dark olive
+
+write_resolved_sheet <- function(wb, sheet_name, df, title) {
+  wb$add_worksheet(sheet_name)
+
+  n_codes <- nrow(df)
+
+  # Row 1: Title
+  wb$add_data(sheet = sheet_name, x = glue("{title} ({n_codes} codes)"),
+              start_row = 1, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
+
+  # Row 2: Column headers
+  headers <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
+  for (i in seq_along(headers)) {
+    wb$add_data(sheet = sheet_name, x = headers[i],
+                start_row = 2, start_col = i)
+  }
+  wb$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
+  wb$add_font(sheet = sheet_name, dims = "A2:F2",
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+
+  # Row 3+: Data
+  if (n_codes > 0) {
+    write_df <- data.frame(
+      Code         = df$code,
+      Meaning      = df$meaning,
+      Code_Type    = df$code_type,
+      Source_Table = df$source_table,
+      Records      = df$records,
+      Patients     = df$patients,
+      stringsAsFactors = FALSE
+    )
+    wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
+
+    last_row <- 2 + n_codes
+
+    # Code column: SCT yellow pill
+    code_dims <- glue("A3:A{last_row}")
+    wb$add_fill(sheet = sheet_name, dims = code_dims, color = wb_color(SCT_FILL))
+    wb$add_font(sheet = sheet_name, dims = code_dims,
+                name = "Calibri", size = 10, bold = TRUE, color = wb_color(SCT_FONT))
+
+    # Number formatting
+    wb$add_numfmt(sheet = sheet_name, dims = glue("E3:F{last_row}"), numfmt = "#,##0")
+  }
+
+  # Freeze below headers
+  wb$freeze_pane(sheet = sheet_name, first_active_row = 3)
+
+  # Column widths
+  wb$set_col_widths(sheet = sheet_name, cols = 1:6, widths = c(15, 55, 14, 16, 10, 10))
+
+  invisible(wb)
+}
+
+write_detail_sheet <- function(wb, sheet_name, df) {
   wb$add_worksheet(sheet_name)
 
   # Title
@@ -423,7 +584,9 @@ write_sheet <- function(wb, sheet_name, df) {
     wb$add_data(sheet = sheet_name, x = headers[i],
                 start_row = header_row, start_col = i)
   }
-  header_dims <- glue("A{header_row}:{LETTERS[length(headers)]}{header_row}")
+  n_cols <- length(headers)
+  col_letter <- if (n_cols <= 26) LETTERS[n_cols] else paste0(LETTERS[(n_cols - 1) %/% 26], LETTERS[((n_cols - 1) %% 26) + 1])
+  header_dims <- glue("A{header_row}:{col_letter}{header_row}")
   wb$add_fill(sheet = sheet_name, dims = header_dims, color = wb_color("FF374151"))
   wb$add_font(sheet = sheet_name, dims = header_dims,
               name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
@@ -446,7 +609,7 @@ write_sheet <- function(wb, sheet_name, df) {
 }
 
 # ==============================================================================
-# SECTION 10: MAIN EXECUTION
+# SECTION 11: MAIN EXECUTION
 # ==============================================================================
 
 message("=== SCT Code Inventory: All Codes from Every Source Table ===")
@@ -505,27 +668,38 @@ if (nrow(all_evidence) > 0) {
   message("  No SCT evidence found in any table.")
 }
 
+# --- Build resolved summary: Code | Meaning | Code Type | Source Table | Records | Patients ---
+message("")
+message("Building resolved code summary...")
+
+resolved <- all_evidence %>%
+  group_by(code, code_system, source_table) %>%
+  summarise(
+    records  = n(),
+    patients = n_distinct(ID),
+    drug_name_sample = first(na.omit(drug_name)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    meaning   = mapply(resolve_meaning, code, drug_name_sample, USE.NAMES = FALSE),
+    code_type = code_system
+  ) %>%
+  select(code, meaning, code_type, source_table, records, patients) %>%
+  arrange(desc(patients), desc(records))
+
+message(glue("  {nrow(resolved)} unique code/source combinations"))
+
 # --- Write xlsx ---
 message("")
 message("Writing xlsx workbook...")
 wb <- wb_workbook()
 
-# Summary sheet
-if (nrow(all_evidence) > 0) {
-  code_summary <- all_evidence %>%
-    group_by(source_table, code_system, code) %>%
-    summarise(
-      n_records = n(),
-      n_patients = n_distinct(ID),
-      example_drug_name = first(na.omit(drug_name)),
-      .groups = "drop"
-    ) %>%
-    arrange(source_table, code_system, desc(n_records))
-
-  write_sheet(wb, "Summary", code_summary)
+# Sheet 1: Resolved summary (matches all_codes_resolved format)
+if (nrow(resolved) > 0) {
+  write_resolved_sheet(wb, "SCT Codes", resolved, "SCT Codes")
 }
 
-# Per-source sheets with all detail rows
+# Per-source detail sheets
 source_tables <- c("PROCEDURES", "ENCOUNTER", "DIAGNOSIS",
                    "DISPENSING", "PRESCRIBING", "MED_ADMIN", "TUMOR_REGISTRY")
 
@@ -535,8 +709,23 @@ for (src in source_tables) {
     sheet_df <- src_data %>%
       arrange(ID, event_date, code) %>%
       select(-source_table)
-    write_sheet(wb, src, sheet_df)
+    write_detail_sheet(wb, src, sheet_df)
   }
+}
+
+# Notes sheet
+wb$add_worksheet("Notes")
+notes <- c(
+  glue("Data Source: PCORnet CDM tables via DuckDB ({CONFIG$cache$duckdb_path})"),
+  "Code descriptions: Built-in from TREATMENT_CODES (00_config.R) + raw drug names",
+  glue("Generated: {Sys.Date()}"),
+  "Classification: Stem Cell Transplant (SCT) codes across all source tables",
+  "Columns: Code | Meaning | Code Type | Source Table | Records | Patients",
+  "Sorted by patient count (descending) for clinical relevance"
+)
+for (i in seq_along(notes)) {
+  wb$add_data(sheet = "Notes", x = as.character(notes[i]),
+              start_row = i, start_col = 1)
 }
 
 # Save
