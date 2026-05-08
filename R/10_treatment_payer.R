@@ -43,8 +43,7 @@ library(stringr)
 library(glue)
 library(purrr)  # For compact() in multi-source date combination
 
-# Helper: return nrow or 0 for NULL tibbles (for logging)
-nrow_or_0 <- function(df) if (is.null(df)) 0L else nrow(df)
+# nrow_or_0() now provided by R/utils_treatment.R (auto-sourced via R/00_config.R)
 
 #' Compute payer mode within a temporal window around anchor dates
 #'

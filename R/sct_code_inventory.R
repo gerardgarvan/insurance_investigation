@@ -27,15 +27,7 @@ OUTPUT_PATH <- file.path(CONFIG$output_dir, "sct_code_inventory.xlsx")
 # HELPER
 # ==============================================================================
 
-safe_table <- function(name) {
-  tryCatch(
-    get_pcornet_table(name),
-    error = function(e) {
-      message(glue("  Table {name} not found; skipping"))
-      NULL
-    }
-  )
-}
+# safe_table() now provided by R/utils_treatment.R (auto-sourced via R/00_config.R)
 
 # ==============================================================================
 # SECTION 1: PROCEDURES -- CPT, HCPCS, ICD-9, ICD-10-PCS, Revenue codes

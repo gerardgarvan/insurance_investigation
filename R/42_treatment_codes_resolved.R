@@ -36,15 +36,8 @@ RESOLVE_CATEGORIES <- list(
   list(category = "Supportive Care", sheet = "Supportive Care", output = "supportive_care_codes_resolved.xlsx")
 )
 
-# Color scheme per treatment type (mirrors R/41_combine_reports.R lines 30-37)
-TREATMENT_TYPE_COLORS <- list(
-  Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
-  Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
-  SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
-  Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
-  `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
-  Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
-)
+# TREATMENT_TYPE_COLORS: defined in R/00_config.R
+# Color scheme per treatment type
 
 
 # --- SECTION 2: write_resolved_xlsx() FUNCTION ---

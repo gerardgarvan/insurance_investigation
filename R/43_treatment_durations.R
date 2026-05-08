@@ -44,11 +44,8 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-# Per D-05: 90-day gap between consecutive dates defines a new treatment episode
-GAP_THRESHOLD <- 90
-
-# Per D-12: cover all four treatment types
-TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
+# GAP_THRESHOLD: defined in R/00_config.R
+# TREATMENT_TYPES: defined in R/00_config.R
 
 # Output paths
 # Per D-08: styled xlsx output
@@ -58,20 +55,8 @@ OUTPUT_PNG  <- file.path(CONFIG$output_dir, "treatment_duration_distributions.pn
 # Per D-07: RDS artifact for downstream use
 OUTPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 
-# Color scheme per treatment type (matches R/41_combine_reports.R and R/42)
-TREATMENT_TYPE_COLORS <- list(
-  Chemotherapy  = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
-  Radiation     = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
-  SCT           = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
-  Immunotherapy = list(fill = "FFE8DCF4", font = "FF4C1D7A")    # light purple / dark purple
-)
-
-# Helper: return nrow or 0 for NULL tibbles (for logging)
-nrow_or_0 <- function(df) if (is.null(df)) 0L else nrow(df)
-
-# Immunotherapy DRG -- CAR T-cell (CMS MS-DRG classification, not in TREATMENT_CODES)
-# DRG 018 = Chimeric Antigen Receptor T-cell Immunotherapy
-immuno_drg <- c("018")
+# TREATMENT_TYPE_COLORS: defined in R/00_config.R
+# nrow_or_0(): provided by R/utils_treatment.R
 
 
 # --- SECTION 2: MULTI-SOURCE DATE EXTRACTION FUNCTIONS ---
@@ -379,12 +364,11 @@ extract_immunotherapy_dates <- function() {
   }
 
   # 2. ENCOUNTER: DRG 018 (Chimeric Antigen Receptor T-cell Immunotherapy)
-  # DRG 018 is from CMS MS-DRG classification -- not currently in TREATMENT_CODES
-  # because it applies specifically to CAR-T immunotherapy, not chemo/radiation/SCT
+  # DRG 018 from CMS MS-DRG classification, now in TREATMENT_CODES$immunotherapy_drg
   drg_dates <- NULL
   if (!is.null(get_pcornet_table("ENCOUNTER"))) {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
-      filter(DRG %in% immuno_drg) %>%
+      filter(DRG %in% TREATMENT_CODES$immunotherapy_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       select(ID, treatment_date = ADMIT_DATE) %>%
       collect()

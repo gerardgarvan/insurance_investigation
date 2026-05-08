@@ -26,15 +26,8 @@ OUTPUT_PATH <- file.path(CONFIG$output_dir, "combined_unmatched_report.xlsx")
 HCPCS_RDS  <- file.path(CONFIG$output_dir, "unmatched_codes_classified.rds")
 NDC_RDS    <- file.path(CONFIG$output_dir, "unmatched_ndc_classified.rds")
 
-# Unified color scheme (uses "SCT" not "SCT-related")
-TREATMENT_TYPE_COLORS <- list(
-  Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
-  Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
-  SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
-  Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
-  `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
-  Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
-)
+# TREATMENT_TYPE_COLORS: defined in R/00_config.R
+# Unified color scheme uses "SCT" (not "SCT-related")
 
 category_order <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy",
                     "Supportive Care", "Unrelated")
@@ -70,7 +63,9 @@ if (!file.exists(HCPCS_RDS)) {
     select(code, code_type, source_table, description, n_records, n_patients,
            classification, heuristic_type, lookup_status)
 
-  # Harmonize Phase 40 to unified schema (remap "SCT-related" -> "SCT")
+  # Harmonize Phase 40 to unified schema
+  # Note: "SCT-related" -> "SCT" remap no longer needed (fixed in script 40)
+  # Defensive fallback retained in case old RDS artifacts are reused:
   ndc_harmonized <- ndc_classified %>%
     mutate(
       description = drug_name,

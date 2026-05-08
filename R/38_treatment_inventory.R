@@ -45,14 +45,8 @@ OUTPUT_PATH <- file.path(CONFIG$output_dir, "treatment_inventory.xlsx")
 # SECTION 2: TREATMENT TYPE CONFIGURATION
 # ==============================================================================
 
-# Treatment type colors for xlsx pills (8-char hex with FF alpha prefix)
-# Analogous to CATEGORY_COLORS in csv_to_xlsx.py but for treatment types
-TREATMENT_TYPE_COLORS <- list(
-  Chemotherapy  = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
-  Radiation     = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
-  SCT           = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
-  Immunotherapy = list(fill = "FFE8DCF4", font = "FF4C1D7A")    # light purple / dark purple
-)
+# Treatment type colors and constants: see R/00_config.R
+# TREATMENT_TYPE_COLORS, TREATMENT_TYPES provided via config
 
 # CPT/HCPCS range heuristics for unknown code detection (D-08)
 # Targeted ranges to catch treatment-adjacent codes NOT in TREATMENT_CODES.
@@ -74,70 +68,15 @@ CPT_HCPCS_RANGES <- list(
   )
 )
 
-TREATMENT_SHEET_ORDER <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
+# Treatment sheet order uses centralized TREATMENT_TYPES from config
+TREATMENT_SHEET_ORDER <- TREATMENT_TYPES
 
 # ==============================================================================
-# SECTION 3: SAFE TABLE ACCESS HELPER
+# SECTION 3: SAFE TABLE ACCESS AND HELPER FUNCTIONS
 # ==============================================================================
 
-#' Safely access a PCORnet table with null-guard
-#'
-#' Wraps get_pcornet_table() in tryCatch to handle missing tables gracefully.
-#' Returns NULL (not an error) when a table doesn't exist in the current
-#' data extract.
-#'
-#' @param name Character. PCORnet table name (e.g., "PROCEDURES", "DISPENSING")
-#' @return A dplyr-compatible object (tibble or tbl_dbi), or NULL if not found
-safe_table <- function(name) {
-  tryCatch(
-    get_pcornet_table(name),
-    error = function(e) {
-      message(glue("Table {name} not found; skipping"))
-      NULL
-    }
-  )
-}
-
-#' Create empty result tibble for missing tables
-empty_result <- function() {
-  tibble(code = character(), code_type = character(), source_table = character(),
-         n = integer(), drug_name = character())
-}
-
-# ==============================================================================
-# SECTION 3B: HL PATIENT ID HELPER
-# ==============================================================================
-
-#' Get patient IDs with a Hodgkin Lymphoma diagnosis
-#'
-#' Queries DIAGNOSIS table for any patient with an HL ICD-10 or ICD-9 code.
-#' Used to pull ALL drugs for HL patients (not just curated TREATMENT_CODES).
-#'
-#' @return Character vector of unique patient IDs
-get_hl_patient_ids <- function() {
-  dx_tbl <- safe_table("DIAGNOSIS")
-  if (is.null(dx_tbl)) {
-    message("  Warning: DIAGNOSIS table not found, cannot identify HL patients")
-    return(character(0))
-  }
-
-  tryCatch({
-    hl_ids <- dx_tbl %>%
-      filter(
-        (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
-        (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
-      ) %>%
-      select(ID) %>%
-      distinct() %>%
-      collect() %>%
-      pull(ID)
-    message(glue("  Found {format(length(hl_ids), big.mark = ',')} patients with HL diagnosis"))
-    hl_ids
-  }, error = function(e) {
-    message(glue("  Warning: HL patient lookup failed: {e$message}"))
-    character(0)
-  })
-}
+# safe_table(), empty_result(), get_hl_patient_ids() now provided by
+# R/utils_treatment.R (auto-sourced via R/00_config.R)
 
 # ==============================================================================
 # SECTION 4: CODE EXTRACTION FUNCTIONS -- one per treatment type

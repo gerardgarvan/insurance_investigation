@@ -39,65 +39,8 @@ library(tidyr)
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "unmatched_ndc_report.xlsx")
 RDS_PATH <- file.path(CONFIG$output_dir, "unmatched_ndc_classified.rds")
 
-# Treatment type colors for xlsx pills (8-char hex with FF alpha prefix)
-# Matching Phase 39 palette with "SCT-related" key instead of "SCT"
-TREATMENT_TYPE_COLORS <- list(
-  Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
-  Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
-  `SCT-related`     = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
-  Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
-  `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
-  Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
-)
-
-#' Safely access a PCORnet table with null-guard
-#'
-#' Wraps get_pcornet_table() in tryCatch to handle missing tables gracefully.
-#' Returns NULL (not an error) when a table doesn't exist in the current
-#' data extract.
-#'
-#' @param name Character. PCORnet table name (e.g., "DISPENSING", "PRESCRIBING")
-#' @return A dplyr-compatible object (tibble or tbl_dbi), or NULL if not found
-safe_table <- function(name) {
-  tryCatch(
-    get_pcornet_table(name),
-    error = function(e) {
-      message(glue("  Warning: {name} table not found: {e$message}"))
-      NULL
-    }
-  )
-}
-
-#' Get patient IDs with a Hodgkin Lymphoma diagnosis
-#'
-#' Queries DIAGNOSIS table for any patient with an HL ICD-10 or ICD-9 code.
-#' Used to pull ALL drugs for HL patients (not just curated TREATMENT_CODES).
-#'
-#' @return Character vector of unique patient IDs
-get_hl_patient_ids <- function() {
-  dx_tbl <- safe_table("DIAGNOSIS")
-  if (is.null(dx_tbl)) {
-    message("  Warning: DIAGNOSIS table not found, cannot identify HL patients")
-    return(character(0))
-  }
-
-  tryCatch({
-    hl_ids <- dx_tbl %>%
-      filter(
-        (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
-        (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
-      ) %>%
-      select(ID) %>%
-      distinct() %>%
-      collect() %>%
-      pull(ID)
-    message(glue("  Found {format(length(hl_ids), big.mark = ',')} patients with HL diagnosis"))
-    hl_ids
-  }, error = function(e) {
-    message(glue("  Warning: HL patient lookup failed: {e$message}"))
-    character(0)
-  })
-}
+# TREATMENT_TYPE_COLORS: defined in R/00_config.R (uses "SCT" not "SCT-related")
+# safe_table(), get_hl_patient_ids() now provided by R/utils_treatment.R
 
 # ==============================================================================
 # SECTION 2: EXTRACT UNMATCHED DRUG CODES (per D-01, D-02, D-03)
@@ -440,7 +383,7 @@ lookup_drug_codes_batch <- function(codes_df) {
 #'
 #' @param drug_name Character. Drug name from API lookup (may be NA).
 #' @return Character. One of: "Supportive Care", "Chemotherapy", "Immunotherapy",
-#'         "SCT-related", "Radiation", "Unrelated"
+#'         "SCT", "Radiation", "Unrelated"
 classify_drug <- function(drug_name) {
   name_lower <- tolower(ifelse(is.na(drug_name), "", drug_name))
 
@@ -460,10 +403,10 @@ classify_drug <- function(drug_name) {
       "nivolumab|pembrolizumab|atezolizumab|durvalumab|avelumab|ipilimumab|cemiplimab|dostarlimab|retifanlimab|toripalimab|tislelizumab|checkpoint inhibitor|anti-pd-1|anti-pd-l1|anti-ctla-4|car.t|chimeric antigen|axicabtagene|tisagenlecleucel|brexucabtagene|lisocabtagene"
     ) ~ "Immunotherapy",
 
-    # 4. SCT-related - transplant, conditioning regimens
+    # 4. SCT - transplant, conditioning regimens (consistent naming with canonical types)
     str_detect(name_lower,
       "stem cell|bone marrow|hematopoietic|transplant|conditioning|busulfan|melphalan|thiotepa|fludarabine"
-    ) ~ "SCT-related",
+    ) ~ "SCT",
 
     # 5. Radiation - radiolabeled drugs
     str_detect(name_lower,
@@ -482,7 +425,7 @@ classify_drug <- function(drug_name) {
 #' Write styled xlsx report with summary and per-category sheets
 #'
 #' Creates one sheet per classification category in order:
-#' Chemotherapy, Immunotherapy, SCT-related, Supportive Care, Radiation, Unrelated.
+#' Chemotherapy, Immunotherapy, SCT, Supportive Care, Radiation, Unrelated.
 #' Skips categories with 0 codes.
 #' Adds a Summary sheet as the first sheet with classification counts.
 #'
@@ -491,8 +434,8 @@ classify_drug <- function(drug_name) {
 write_unmatched_ndc_report <- function(df, output_path) {
   wb <- wb_workbook()
 
-  # Category order
-  category_order <- c("Chemotherapy", "Immunotherapy", "SCT-related",
+  # Category order (SCT not SCT-related now)
+  category_order <- c("Chemotherapy", "Immunotherapy", "SCT",
                       "Supportive Care", "Radiation", "Unrelated")
 
   # --- SUMMARY SHEET ---
@@ -737,7 +680,7 @@ update_config_ndc_codes <- function(classified_codes_path) {
 
   # 2. Filter to treatment-relevant codes (exclude Unrelated and Radiation)
   treatment_codes_new <- classified %>%
-    filter(classification %in% c("Chemotherapy", "Supportive Care", "Immunotherapy", "SCT-related")) %>%
+    filter(classification %in% c("Chemotherapy", "Supportive Care", "Immunotherapy", "SCT")) %>%
     select(code, code_type, classification, drug_name)
 
   if (nrow(treatment_codes_new) == 0) {
@@ -751,14 +694,14 @@ update_config_ndc_codes <- function(classified_codes_path) {
     "Chemotherapy" = "chemo_ndc",
     "Supportive Care" = "supportive_care_ndc",
     "Immunotherapy" = "immunotherapy_ndc",
-    "SCT-related" = "sct_ndc"
+    "SCT" = "sct_ndc"
   )
   # RXNORM vectors (D-11: expand existing chemo_rxnorm, create new for others)
   rxnorm_category_map <- c(
     "Chemotherapy" = "chemo_rxnorm",
     "Supportive Care" = "supportive_care_rxnorm",
     "Immunotherapy" = "immunotherapy_rxnorm",
-    "SCT-related" = "sct_rxnorm"
+    "SCT" = "sct_rxnorm"
   )
 
   # 4. Read R/00_config.R and create backup
