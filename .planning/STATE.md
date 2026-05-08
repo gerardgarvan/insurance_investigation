@@ -72,6 +72,7 @@ None.
 - Phase 40 added: Investigate Unmatched NDC Codes
 - Phase 41 added: Combine NDC+HCPCS Reports
 - Phase 43 added: Establish Treatment Lengths for SCT, Chemo, and Radiation
+- Phase 44 added: Treatment Episode Start/Stop Dates — per-episode start/stop dates with episode length, special handling for historical dates outside 2012-2025 window
 - Next milestone needs `/gsd:new-milestone` to define scope and requirements
 
 ### Blockers/Concerns
