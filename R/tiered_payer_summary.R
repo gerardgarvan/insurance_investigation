@@ -6,6 +6,9 @@
 # the tiered same-day resolution hierarchy:
 #   Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing
 #
+# Reads pre-computed CSVs from R/36_tiered_same_day_payer.R instead of
+# materializing the full ENCOUNTER table.
+#
 # Sheets:
 #   1. Patient Summary   -- patients per resolved payer tier (both scopes)
 #   2. Before vs After   -- encounter-level vs resolved patient-date distribution
@@ -21,14 +24,9 @@
 
 source("R/00_config.R")
 library(dplyr)
+library(readr)
 library(glue)
 library(openxlsx2)
-
-# Load tables
-if (!USE_DUCKDB && !exists("pcornet")) source("R/01_load_pcornet.R")
-if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
-  open_pcornet_con()
-}
 
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "tiered_payer_summary.xlsx")
 
@@ -61,150 +59,55 @@ PAYER_COLORS <- list(
   Missing      = list(fill = "FFF2F3F4", font = "FF6B7280")    # gray
 )
 
-CODE_TO_TIER <- function(payer_category) {
-  case_when(
-    payer_category == "Medicaid"   ~ "Medicaid",
-    payer_category == "Medicare"   ~ "Medicare",
-    payer_category == "Private"    ~ "Private",
-    payer_category == "Other govt" ~ "Other govt",
-    payer_category == "Other"      ~ "Other",
-    payer_category == "Self-pay"   ~ "Self-pay",
-    payer_category == "Uninsured"  ~ "Uninsured",
-    payer_category == "Missing"    ~ "Missing",
-    is.na(payer_category)          ~ "Missing",
-    TRUE                           ~ "Missing"
-  )
-}
-
 # ==============================================================================
-# SECTION 2: LOAD AND PREPARE ENCOUNTER DATA
+# SECTION 2: READ PRE-COMPUTED CSVs FROM 36_tiered_same_day_payer.R
 # ==============================================================================
 
 message("=== Tiered Payer Summary ===")
 message("")
-message("Loading ENCOUNTER table...")
+message("Reading pre-computed CSVs from R/36_tiered_same_day_payer.R...")
 
-enc_raw <- get_pcornet_table("ENCOUNTER") %>% materialize()
-message(glue("  {format(nrow(enc_raw), big.mark = ',')} encounters loaded"))
+tables_dir <- file.path(CONFIG$output_dir, "tables")
 
-enc <- enc_raw %>%
-  mutate(
-    PAYER_TYPE_PRIMARY   = as.character(PAYER_TYPE_PRIMARY),
-    PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE               = as.character(SOURCE),
-    admit_date_parsed    = as.Date(ADMIT_DATE, format = "%Y-%m-%d"),
-    effective_payer = case_when(
-      !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
-        !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_PRIMARY,
-      !is.na(PAYER_TYPE_SECONDARY) & nchar(trimws(PAYER_TYPE_SECONDARY)) > 0 &
-        !PAYER_TYPE_SECONDARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_SECONDARY,
-      TRUE ~ NA_character_
-    ),
-    payer_category = {
-      looked_up <- AMC_PAYER_LOOKUP[effective_payer]
-      prefix_cat <- case_when(
-        startsWith(effective_payer, "1") ~ "Medicare",
-        startsWith(effective_payer, "2") ~ "Medicaid",
-        startsWith(effective_payer, "5") | startsWith(effective_payer, "6") ~ "Private",
-        startsWith(effective_payer, "3") | startsWith(effective_payer, "4") ~ "Other govt",
-        startsWith(effective_payer, "7") ~ "Private",
-        startsWith(effective_payer, "8") ~ "Uninsured",
-        startsWith(effective_payer, "9") ~ "Other",
-        TRUE ~ "Other"
-      )
-      result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
-      if_else(is.na(effective_payer), "Missing", result)
-    },
-    tier = CODE_TO_TIER(payer_category),
-    tier = coalesce(
-      case_when(
-        PAYER_TYPE_PRIMARY %in% c("93", "14") ~ "Medicaid",
-        PAYER_TYPE_SECONDARY %in% c("93", "14") ~ "Medicaid",
-        TRUE ~ NA_character_
-      ),
-      tier
-    ),
-    tier = if_else(is.na(tier), "Missing", tier),
-    tier_rank = unlist(TIER_MAPPING[tier]),
-    tier_rank = if_else(is.na(tier_rank), 8L, tier_rank)
-  )
+# Resolved detail (for resolution reasons) -- CSV A from script 36
+resolved_all   <- read_csv(file.path(tables_dir, "payer_resolved_detail_all.csv"), show_col_types = FALSE)
+resolved_av_th <- read_csv(file.path(tables_dir, "payer_resolved_detail_av_th.csv"), show_col_types = FALSE)
+message(glue("  Resolved detail (all):   {format(nrow(resolved_all), big.mark = ',')} patient-dates"))
+message(glue("  Resolved detail (AV+TH): {format(nrow(resolved_av_th), big.mark = ',')} patient-dates"))
 
-enc_all   <- enc
-enc_av_th <- enc %>% filter(ENC_TYPE %in% c("AV", "TH"))
+# Patient-level modal summaries -- CSV B from script 36
+modal_all   <- read_csv(file.path(tables_dir, "payer_resolved_patient_summary_all.csv"), show_col_types = FALSE)
+modal_av_th <- read_csv(file.path(tables_dir, "payer_resolved_patient_summary_av_th.csv"), show_col_types = FALSE)
+message(glue("  Patient summary (all):   {format(nrow(modal_all), big.mark = ',')} patients"))
+message(glue("  Patient summary (AV+TH): {format(nrow(modal_av_th), big.mark = ',')} patients"))
 
-message(glue("  All scope:   {format(nrow(enc_all), big.mark = ',')} encounters, {format(n_distinct(enc_all$ID), big.mark = ',')} patients"))
-message(glue("  AV+TH scope: {format(nrow(enc_av_th), big.mark = ',')} encounters, {format(n_distinct(enc_av_th$ID), big.mark = ',')} patients"))
+# Before vs after impact -- CSV C from script 36
+impact_all_csv   <- read_csv(file.path(tables_dir, "payer_resolved_impact_all.csv"), show_col_types = FALSE)
+impact_av_th_csv <- read_csv(file.path(tables_dir, "payer_resolved_impact_av_th.csv"), show_col_types = FALSE)
+
+# Code frequency
+code_freq_all_csv   <- read_csv(file.path(tables_dir, "payer_primary_code_freq_all.csv"), show_col_types = FALSE)
+code_freq_av_th_csv <- read_csv(file.path(tables_dir, "payer_primary_code_freq_av_th_v2.csv"), show_col_types = FALSE)
 
 # ==============================================================================
-# SECTION 3: SAME-DAY RESOLUTION
+# SECTION 3: BUILD SUMMARY DATA FRAMES
 # ==============================================================================
-
-resolve_scope <- function(enc_scope) {
-  enc_scope %>%
-    filter(!is.na(admit_date_parsed)) %>%
-    group_by(ID, admit_date_parsed) %>%
-    summarise(
-      n_encounters     = n(),
-      n_distinct_tiers = n_distinct(tier),
-      has_flm          = any(SOURCE == "FLM", na.rm = TRUE),
-      has_special_code = any(PAYER_TYPE_PRIMARY %in% c("93", "14") |
-                             PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE),
-      original_tiers   = paste(sort(unique(tier)), collapse = "+"),
-      resolved_payer   = case_when(
-        any(SOURCE == "FLM", na.rm = TRUE) ~ "Medicaid",
-        any(PAYER_TYPE_PRIMARY %in% c("93", "14") |
-            PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE) ~ "Medicaid",
-        TRUE ~ tier[which.min(tier_rank)]
-      ),
-      resolution_reason = case_when(
-        n() == 1 ~ "single encounter",
-        any(SOURCE == "FLM", na.rm = TRUE) ~ "FLM source override",
-        any(PAYER_TYPE_PRIMARY %in% c("93", "14") |
-            PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE) ~ "special code override (93/14)",
-        n_distinct(tier) == 1 ~ "all encounters same tier",
-        TRUE ~ paste0("tier hierarchy (", n_distinct(tier), " tiers)")
-      ),
-      .groups = "drop"
-    )
-}
 
 message("")
-message("Resolving same-day payer conflicts...")
-resolved_all   <- resolve_scope(enc_all)
-resolved_av_th <- resolve_scope(enc_av_th)
-message(glue("  All scope:   {format(nrow(resolved_all), big.mark = ',')} patient-dates"))
-message(glue("  AV+TH scope: {format(nrow(resolved_av_th), big.mark = ',')} patient-dates"))
-
-# ==============================================================================
-# SECTION 4: BUILD SUMMARY TABLES
-# ==============================================================================
+message("Building summary tables from CSVs...")
 
 # --- Patient-level modal payer ---
-patient_modal <- function(resolved) {
-  resolved %>%
-    count(ID, resolved_payer, name = "n_dates") %>%
-    arrange(ID, desc(n_dates), resolved_payer) %>%
-    group_by(ID) %>%
-    slice(1) %>%
-    ungroup() %>%
-    rename(modal_payer = resolved_payer)
-}
-
-modal_all   <- patient_modal(resolved_all)
-modal_av_th <- patient_modal(resolved_av_th)
-
-# --- Patient summary by tier ---
 build_patient_summary <- function(modal_df, scope_label) {
   total <- nrow(modal_df)
   modal_df %>%
-    count(modal_payer, name = "patients") %>%
+    count(modal_resolved_payer, name = "patients") %>%
     mutate(
-      rank = unlist(TIER_MAPPING[modal_payer]),
+      rank = unlist(TIER_MAPPING[modal_resolved_payer]),
       pct  = patients / total,
       scope = scope_label
     ) %>%
     arrange(rank) %>%
-    select(scope, tier = modal_payer, rank, patients, pct)
+    select(scope, tier = modal_resolved_payer, rank, patients, pct)
 }
 
 patient_summary <- bind_rows(
@@ -213,38 +116,29 @@ patient_summary <- bind_rows(
 )
 
 # --- Before vs After impact ---
-build_impact <- function(enc_scope, resolved, scope_label) {
-  before <- enc_scope %>%
-    filter(!is.na(admit_date_parsed)) %>%
-    count(tier, name = "encounters") %>%
-    mutate(enc_pct = encounters / sum(encounters))
-
-  after <- resolved %>%
-    count(resolved_payer, name = "patient_dates") %>%
-    mutate(pd_pct = patient_dates / sum(patient_dates))
-
-  # Patient-level modal
-  modal <- patient_modal(resolved)
-  patient_counts <- modal %>%
-    count(modal_payer, name = "patients") %>%
+build_impact <- function(impact_csv, modal_df, scope_label) {
+  patient_counts <- modal_df %>%
+    count(modal_resolved_payer, name = "patients") %>%
     mutate(pt_pct = patients / sum(patients))
 
-  # Full join across all 3
   tibble(category = TIER_ORDER) %>%
-    left_join(before, by = c("category" = "tier")) %>%
-    left_join(after, by = c("category" = "resolved_payer")) %>%
-    left_join(patient_counts, by = c("category" = "modal_payer")) %>%
+    left_join(impact_csv, by = "category") %>%
+    left_join(patient_counts, by = c("category" = "modal_resolved_payer")) %>%
     mutate(
-      across(c(encounters, patient_dates, patients), ~coalesce(.x, 0L)),
-      across(c(enc_pct, pd_pct, pt_pct), ~coalesce(.x, 0)),
-      scope = scope_label
+      encounters    = coalesce(as.integer(n_encounters_before), 0L),
+      enc_pct       = coalesce(pct_encounters_before / 100, 0),
+      patient_dates = coalesce(as.integer(n_patient_dates_after), 0L),
+      pd_pct        = coalesce(pct_patient_dates_after / 100, 0),
+      patients      = coalesce(patients, 0L),
+      pt_pct        = coalesce(pt_pct, 0),
+      scope         = scope_label
     ) %>%
     select(scope, category, encounters, enc_pct, patient_dates, pd_pct, patients, pt_pct)
 }
 
 impact <- bind_rows(
-  build_impact(enc_all, resolved_all, "All Encounters"),
-  build_impact(enc_av_th, resolved_av_th, "AV+TH Only")
+  build_impact(impact_all_csv, modal_all, "All Encounters"),
+  build_impact(impact_av_th_csv, modal_av_th, "AV+TH Only")
 )
 
 # --- Resolution reason breakdown ---
@@ -262,30 +156,15 @@ reasons <- bind_rows(
   build_resolution_reasons(resolved_av_th, "AV+TH Only")
 )
 
-# --- Code frequency ---
-build_code_freq <- function(enc_scope, scope_label) {
-  total <- nrow(enc_scope)
-  enc_scope %>%
-    mutate(
-      code = case_when(
-        is.na(PAYER_TYPE_PRIMARY) ~ "<NA>",
-        PAYER_TYPE_PRIMARY == "" ~ "<EMPTY>",
-        TRUE ~ PAYER_TYPE_PRIMARY
-      )
-    ) %>%
-    count(code, payer_category, name = "n") %>%
-    mutate(pct = n / total, scope = scope_label) %>%
-    arrange(desc(n)) %>%
-    select(scope, code, amc_category = payer_category, n, pct)
-}
-
+# --- Code frequency (CSV pct is 0-100, convert to fraction for xlsx "0.0%" format) ---
 code_freq <- bind_rows(
-  build_code_freq(enc_all, "All Encounters"),
-  build_code_freq(enc_av_th, "AV+TH Only")
-)
+  code_freq_all_csv %>% mutate(scope = "All Encounters", pct = pct / 100),
+  code_freq_av_th_csv %>% mutate(scope = "AV+TH Only", pct = pct / 100)
+) %>%
+  select(scope, code, amc_category, n, pct)
 
 # ==============================================================================
-# SECTION 5: XLSX OUTPUT
+# SECTION 4: XLSX OUTPUT
 # ==============================================================================
 
 message("")
@@ -617,7 +496,7 @@ wb$set_col_widths(sheet = sheet4, cols = 1:4, widths = c(12, 16, 14, 12))
 wb$freeze_pane(sheet = sheet4, first_active_row = 6)
 
 # ==============================================================================
-# SECTION 6: SAVE AND SUMMARY
+# SECTION 5: SAVE AND SUMMARY
 # ==============================================================================
 
 dir.create(CONFIG$output_dir, showWarnings = FALSE, recursive = TRUE)
