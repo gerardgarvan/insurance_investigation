@@ -655,8 +655,35 @@ TREATMENT_CODES <- list(
   sct_revenue = c(
     "0362",   # Organ transplant - other than kidney (includes SCT)
     "0815"    # Allogeneic stem cell acquisition/donor services
+  ),
+
+  # Immunotherapy DRG codes
+  immunotherapy_drg = c(
+    "018"    # Chimeric Antigen Receptor (CAR) T-cell Immunotherapy
   )
 )
+
+# ------------------------------------------------------------------------------
+# 5.5b TREATMENT TYPE DEFINITIONS (Phase quick: centralized from duplicate script definitions)
+# ------------------------------------------------------------------------------
+
+# Standard treatment types for analysis (used across treatment inventory, duration, episode scripts)
+TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
+
+# Treatment type colors for xlsx styling (8-char hex with FF alpha prefix)
+# Canonical 6-category palette covering all treatment analysis needs
+TREATMENT_TYPE_COLORS <- list(
+  Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
+  Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
+  SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
+  Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
+  `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
+  Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
+)
+
+# Treatment episode gap threshold (days between consecutive dates to define new episode)
+# Used by duration/episode analysis (Phase 43, 44)
+GAP_THRESHOLD <- 90
 
 # ------------------------------------------------------------------------------
 # 5.6 SURVEILLANCE CODES (Phase 10) -- transcribed from VariableDetails.xlsx "Surveillance Strategy"
@@ -945,6 +972,7 @@ source("R/utils_attrition.R")
 source("R/utils_icd.R")
 source("R/utils_snapshot.R")  # Phase 16: snapshot helper
 source("R/utils_duckdb.R")    # Phase 30: backend abstraction helpers
+source("R/utils_treatment.R")  # Phase quick: shared treatment helpers
 
 # ==============================================================================
 # End of configuration
