@@ -419,7 +419,102 @@ TREATMENT_CODES <- list(
     "J9360",   # Vinblastine sulfate
     "J9130",   # Dacarbazine (DTIC)
     "J9042",   # Brentuximab vedotin (Adcetris)
-    "J9299"    # Nivolumab (Opdivo)
+    "J9299",    # Nivolumab (Opdivo)
+    "J9017",   # Phase 39: J9017
+    "J9019",   # Phase 39: J9019
+    "J9021",   # Phase 39: J9021
+    "J9022",   # Phase 39: J9022
+    "J9025",   # Phase 39: J9025
+    "J9030",   # Phase 39: J9030
+    "J9033",   # Phase 39: J9033
+    "J9034",   # Phase 39: J9034
+    "J9035",   # Phase 39: J9035
+    "J9036",   # Phase 39: J9036
+    "J9039",   # Phase 39: J9039
+    "J9041",   # Phase 39: J9041
+    "J9043",   # Phase 39: J9043
+    "J9045",   # Phase 39: J9045
+    "J9047",   # Phase 39: J9047
+    "J9050",   # Phase 39: J9050
+    "J9055",   # Phase 39: J9055
+    "J9057",   # Phase 39: J9057
+    "J9058",   # Phase 39: J9058
+    "J9060",   # Phase 39: J9060
+    "J9065",   # Phase 39: J9065
+    "J9070",   # Phase 39: J9070
+    "J9071",   # Phase 39: J9071
+    "J9073",   # Phase 39: J9073
+    "J9075",   # Phase 39: J9075
+    "J9098",   # Phase 39: J9098
+    "J9100",   # Phase 39: J9100
+    "J9118",   # Phase 39: J9118
+    "J9119",   # Phase 39: J9119
+    "J9145",   # Phase 39: J9145
+    "J9150",   # Phase 39: J9150
+    "J9171",   # Phase 39: J9171
+    "J9173",   # Phase 39: J9173
+    "J9178",   # Phase 39: J9178
+    "J9179",   # Phase 39: J9179
+    "J9181",   # Phase 39: J9181
+    "J9185",   # Phase 39: J9185
+    "J9190",   # Phase 39: J9190
+    "J9196",   # Phase 39: J9196
+    "J9200",   # Phase 39: J9200
+    "J9201",   # Phase 39: J9201
+    "J9202",   # Phase 39: J9202
+    "J9204",   # Phase 39: J9204
+    "J9206",   # Phase 39: J9206
+    "J9207",   # Phase 39: J9207
+    "J9208",   # Phase 39: J9208
+    "J9209",   # Phase 39: J9209
+    "J9217",   # Phase 39: J9217
+    "J9218",   # Phase 39: J9218
+    "J9223",   # Phase 39: J9223
+    "J9228",   # Phase 39: J9228
+    "J9230",   # Phase 39: J9230
+    "J9245",   # Phase 39: J9245
+    "J9246",   # Phase 39: J9246
+    "J9250",   # Phase 39: J9250
+    "J9260",   # Phase 39: J9260
+    "J9261",   # Phase 39: J9261
+    "J9263",   # Phase 39: J9263
+    "J9264",   # Phase 39: J9264
+    "J9265",   # Phase 39: J9265
+    "J9266",   # Phase 39: J9266
+    "J9267",   # Phase 39: J9267
+    "J9268",   # Phase 39: J9268
+    "J9271",   # Phase 39: J9271
+    "J9280",   # Phase 39: J9280
+    "J9286",   # Phase 39: J9286
+    "J9293",   # Phase 39: J9293
+    "J9301",   # Phase 39: J9301
+    "J9302",   # Phase 39: J9302
+    "J9304",   # Phase 39: J9304
+    "J9305",   # Phase 39: J9305
+    "J9306",   # Phase 39: J9306
+    "J9307",   # Phase 39: J9307
+    "J9308",   # Phase 39: J9308
+    "J9309",   # Phase 39: J9309
+    "J9310",   # Phase 39: J9310
+    "J9311",   # Phase 39: J9311
+    "J9312",   # Phase 39: J9312
+    "J9315",   # Phase 39: J9315
+    "J9317",   # Phase 39: J9317
+    "J9319",   # Phase 39: J9319
+    "J9321",   # Phase 39: J9321
+    "J9330",   # Phase 39: J9330
+    "J9340",   # Phase 39: J9340
+    "J9349",   # Phase 39: J9349
+    "J9351",   # Phase 39: J9351
+    "J9354",   # Phase 39: J9354
+    "J9355",   # Phase 39: J9355
+    "J9358",   # Phase 39: J9358
+    "J9359",   # Phase 39: J9359
+    "J9370",   # Phase 39: J9370
+    "J9371",   # Phase 39: J9371
+    "J9390",   # Phase 39: J9390
+    "J9395",   # Phase 39: J9395
+    "J9999"    # Phase 39: J9999
   ),
 
   # Chemotherapy RXNORM CUIs for PRESCRIBING table matching
@@ -428,7 +523,115 @@ TREATMENT_CODES <- list(
     "3639",    # Doxorubicin
     "11213",   # Bleomycin
     "67228",   # Vinblastine
-    "3946"     # Dacarbazine
+    "3946",     # Dacarbazine
+    "239178",   # Phase 40: vinblastine sulfate 1 MG/ML Injectable S
+    "1657195",   # Phase 40: 10 ML nivolumab 10 MG/ML Injection
+    "1791591",   # Phase 40: ifosfamide 3000 MG Injection [Ifex]
+    "207588",   # Phase 40: procarbazine 50 MG Oral Capsule [Matulan
+    "1991412",   # Phase 40: 24 ML nivolumab 10 MG/ML Injection
+    "134547",   # Phase 40: bendamustine
+    "1799305",   # Phase 40: DOXOrubicin  IV infusion,
+    "1147327",   # Phase 40: brentuximab vedotin 50 MG Injection [Adc
+    "1657750",   # Phase 40: 4 ML pembrolizumab 25 MG/ML Injection
+    "105585",   # Phase 40: methotrexate 2.5 MG Oral Tablet
+    "1863354",   # Phase 40: 2 ML vincristine sulfate 1 MG/ML Injecti
+    "1790115",   # Phase 40: 10 ML doxorubicin hydrochloride liposome
+    "1655960",   # Phase 40: 2 ML methotrexate 25 MG/ML Injection
+    "1791598",   # Phase 40: ifosfamide IV infusion
+    "1946772",   # Phase 40: methotrexate 25 MG/ML Injectable Solutio
+    "3098",   # Phase 40: dacarbazine
+    "1147324",   # Phase 40: Adcetris
+    "311627",   # Phase 40: METHOTREXATE SODIUM (PF) 25 MG/ML  CUSTO
+    "1734921",   # Phase 40: cyclophosphamide 2000 MG Injection
+    "2105",   # Phase 40: carmustine
+    "11198",   # Phase 40: vinblastine
+    "1114693",   # Phase 40: bendamustine hydrochloride
+    "105587",   # Phase 40: methotrexate 2.5 MG Oral Tablet [Maxtrex
+    "1544390",   # Phase 40: 0.35 ML methotrexate 50 MG/ML Auto-Injec
+    "1657196",   # Phase 40: 10 ML nivolumab 10 MG/ML Injection [Opdi
+    "1657751",   # Phase 40: 4 ML pembrolizumab 25 MG/ML Injection [K
+    "1726673",   # Phase 40: bleomycin 15 UNT Injection
+    "1790099",   # Phase 40: 10 ML doxorubicin hydrochloride 2 MG/ML 
+    "1734919",   # Phase 40: cyclophosphamide 1000 MG Injection
+    "894900",   # Phase 40: VINCRISTINE SULFATE 1 MG/ML IV CUSTOM CO
+    "637543",   # Phase 40: CYCLOPHOSPHAMIDE  CUSTOM COMPONENT IJ SO
+    "1597876",   # Phase 40: nivolumab
+    "314167",   # Phase 40: procarbazine 50 MG Oral Capsule
+    "1734340",   # Phase 40: etoposide 100 MG Injection
+    "1863349",   # Phase 40: vinCRIStine
+    "1791593",   # Phase 40: ifosfamide 1000 MG Injection
+    "2568661",   # Phase 40: 5 ML cyclophosphamide 200 MG/ML Injectio
+    "1541215",   # Phase 40: Methotrexate Sodium 2.5 MG Oral Tablet
+    "5657",   # Phase 40: ifosfamide
+    "1791588",   # Phase 40: ifosfamide 3000 MG Injection
+    "1790097",   # Phase 40: 5 ML doxorubicin hydrochloride 2 MG/ML I
+    "1805001",   # Phase 40: bendamustine hydrochloride 100 MG Inject
+    "1790127",   # Phase 40: 25 ML doxorubicin hydrochloride liposome
+    "1991413",   # Phase 40: 24 ML nivolumab 10 MG/ML Injection [Opdi
+    "1191138",   # Phase 40: doxorubicin hydrochloride 2 MG/ML Inject
+    "1731338",   # Phase 40: dacarbazine 200 MG Injection
+    "1791597",   # Phase 40: 60 ML ifosfamide 50 MG/ML Injection
+    "1719000",   # Phase 40: gemcitabine 200 MG Injection
+    "1799307",   # Phase 40: DOXOrubicin  IV infusion,
+    "1726097",   # Phase 40: bendamustine hydrochloride 25 MG/ML Inje
+    "1790103",   # Phase 40: doxorubicin hydrochloride 10 MG Injectio
+    "1655956",   # Phase 40: 40 ML methotrexate 25 MG/ML Injection
+    "1437713",   # Phase 40: mechlorethamine 0.00016 MG/MG Topical Ge
+    "11202",   # Phase 40: vincristine
+    "6851",   # Phase 40: methotrexate
+    "1655968",   # Phase 40: 8 ML methotrexate 25 MG/ML Injection
+    "1544398",   # Phase 40: 0.5 ML methotrexate 50 MG/ML Auto-Inject
+    "1147320",   # Phase 40: brentuximab vedotin
+    "309311",   # Phase 40: cisplatin 1 MG/ML Injectable Solution
+    "1734917",   # Phase 40: cyclophosphamide 500 MG Injection
+    "310973",   # Phase 40: IFOSFAMIDE 3 G IV SOLR CUSTOM COMPONENT
+    "283510",   # Phase 40: methotrexate 15 MG Oral Tablet
+    "1544388",   # Phase 40: 0.3 ML methotrexate 50 MG/ML Auto-Inject
+    "1863355",   # Phase 40: 2 ML vincristine sulfate 1 MG/ML Injecti
+    "1719003",   # Phase 40: gemcitabine 1000 MG Injection
+    "1726102",   # Phase 40: bendamustine hydrochloride 25 MG/ML Inje
+    "597195",   # Phase 40: carboplatin 10 MG/ML Injectable Solution
+    "206831",   # Phase 40: etoposide 20 MG/ML Injectable Solution [
+    "197687",   # Phase 40: etoposide 50 MG Oral Capsule
+    "4179",   # Phase 40: etoposide
+    "309638",   # Phase 40: DACARBAZINE 200 MG IV CUSTOM COMPONENT  
+    "1720975",   # Phase 40: 52.6 ML gemcitabine 38 MG/ML Injection
+    "1657193",   # Phase 40: Nivolumab
+    "1719013",   # Phase 40: gemcitabine IV infusion
+    "205821",   # Phase 40: CISplatin IV infusion
+    "1147323",   # Phase 40: brentuximab vedotin 50 MG Injection
+    "1790100",   # Phase 40: 25 ML doxorubicin hydrochloride 2 MG/ML 
+    "686161",   # Phase 40: carboplatin 10 MG/ML Injectable Solution
+    "1863347",   # Phase 40: 1 ML vincristine sulfate 1 MG/ML Injecti
+    "1731340",   # Phase 40: dacarbazine 100 MG Injection
+    "1657749",   # Phase 40: pembrolizumab 50 MG Injection [Keytruda]
+    "1655959",   # Phase 40: 10 ML methotrexate 25 MG/ML Injection
+    "1437969",   # Phase 40: cyclophosphamide 50 MG Oral Capsule
+    "1622",   # Phase 40: bleomycin
+    "105604",   # Phase 40: procarbazine 50 MG Oral Capsule [Natulan
+    "310248",   # Phase 40: etoposide 20 MG/ML Injectable Solution
+    "1863343",   # Phase 40: 1 ML vincristine sulfate 1 MG/ML Injecti
+    "226719",   # Phase 40: etoposide 100 MG Injection [Etopophos]
+    "1998783",   # Phase 40: gemcitabine 100 MG/ML Injectable Solutio
+    "1657192",   # Phase 40: 4 ML nivolumab 10 MG/ML Injection [Opdiv
+    "1790098",   # Phase 40: DOXOrubicin  IV infusion,
+    "2555",   # Phase 40: cisplatin
+    "105586",   # Phase 40: methotrexate 10 MG Oral Tablet
+    "1921592",   # Phase 40: methotrexate 2.5 MG/ML Oral Solution
+    "2001102",   # Phase 40: ADRIAMYCIN IV
+    "309012",   # Phase 40: carmustine 100 MG Injection
+    "287734",   # Phase 40: methotrexate sodium
+    "308770",   # Phase 40: Bleomycin Sulfate For Inj 30 Unit
+    "8702",   # Phase 40: procarbazine
+    "3002",   # Phase 40: cyclophosphamide
+    "311625",   # Phase 40: methotrexate 1000 MG Injection
+    "1657190",   # Phase 40: 4 ML nivolumab 10 MG/ML Injection
+    "1790129",   # Phase 40: doxorubicin hydrochloride liposome 2 MG/
+    "308771",   # Phase 40: Bleomycin Sulfate For Inj 30 Unit
+    "1726676",   # Phase 40: bleomycin 30 UNT Injection
+    "197550",   # Phase 40: cyclophosphamide 50 MG Oral Tablet
+    "1441411",   # Phase 40: 0.4 ML methotrexate 37.5 MG/ML Auto-Inje
+    "283511"    # Phase 40: methotrexate 5 MG Oral Tablet
   ),
 
   # Radiation therapy CPT codes (active treatment, not planning-only)
@@ -438,7 +641,19 @@ TREATMENT_CODES <- list(
     "77402",   # Radiation treatment delivery, intermediate (2026 new code)
     "77407",   # Radiation treatment delivery, simple (2026 new code)
     "77412",   # Radiation treatment delivery, complex (2026 new code)
-    "77427"    # Radiation treatment management (weekly, per 5 fractions) - most common
+    "77427",    # Radiation treatment management (weekly, per 5 fractions) - most common
+    "77404",   # Phase 39: no description
+    "77408",   # Phase 39: no description
+    "77413",   # Phase 39: no description
+    "77414",   # Phase 39: no description
+    "77416",   # Phase 39: no description
+    "77417",   # Phase 39: no description
+    "77418",   # Phase 39: no description
+    "77421",   # Phase 39: no description
+    "77431",   # Phase 39: no description
+    "77432",   # Phase 39: no description
+    "77435",   # Phase 39: no description
+    "77470"    # Phase 39: no description
   ),
 
   # Stem cell transplant CPT codes (autologous + allogeneic per D-07)
@@ -595,7 +810,22 @@ TREATMENT_CODES <- list(
     "XW043K7",  # Idecabtagene vicleucel immunotherapy, central vein
     "XW043L7",  # Lifileucel immunotherapy, central vein
     "XW043M7",  # Brexucabtagene autoleucel, central vein
-    "XW043N7"   # Lisocabtagene maraleucel, central vein
+    "XW043N7",   # Lisocabtagene maraleucel, central vein
+    "XW033A3",   # Phase 39: no description
+    "XW033B3",   # Phase 39: no description
+    "XW033C3",   # Phase 39: no description
+    "XW033C6",   # Phase 39: no description
+    "XW033D6",   # Phase 39: no description
+    "XW033E5",   # Phase 39: no description
+    "XW033H5",   # Phase 39: no description
+    "XW033H6",   # Phase 39: no description
+    "XW043A7",   # Phase 39: no description
+    "XW043B3",   # Phase 39: no description
+    "XW043C3",   # Phase 39: no description
+    "XW043C6",   # Phase 39: no description
+    "XW043E5",   # Phase 39: no description
+    "XW043H5",   # Phase 39: no description
+    "XW043P9"    # Phase 39: no description
   ),
 
   # --- Phase 9: Expanded detection codes (D-09, D-10, D-11) ---
@@ -643,6 +873,212 @@ TREATMENT_CODES <- list(
   ),
 
   # Revenue codes (PROCEDURES table PX_TYPE = "RE")
+
+  # Supportive Care RXNORM codes (Phase 40: drug investigation)
+  supportive_care_rxnorm = c(
+    "1812194",   # Phase 40: 1 ML dexamethasone phosphate 4 MG/ML Inj
+    "2057212",   # Phase 40: 1 ML filgrastim-aafi 0.3 MG/ML Injection
+    "197582",   # Phase 40: dexamethasone 4 MG Oral Tablet
+    "731181",   # Phase 40: 0.4 ML darbepoetin alfa 0.1 MG/ML Prefil
+    "338036",   # Phase 40: pegfilgrastim
+    "403886",   # Phase 40: Palonosetron HCl IV Soln 0.25 MG/5ML (Ba
+    "240912",   # Phase 40: granisetron 1 MG/ML Injectable Solution
+    "404465",   # Phase 40: aprepitant 80 MG Oral Capsule [Emend]
+    "29225",   # Phase 40: Ondansetron HCl - 8 MG Oral Tablet
+    "1728055",   # Phase 40: 5 ML palonosetron 0.05 MG/ML Injection
+    "2048025",   # Phase 40: 0.6 ML pegfilgrastim-jmdb 10 MG/ML Prefi
+    "197577",   # Phase 40: dexamethasone 0.5 MG Oral Tablet
+    "343033",   # Phase 40: dexamethasone 0.75 MG Oral Tablet
+    "727544",   # Phase 40: 0.8 ML filgrastim 0.6 MG/ML Prefilled Sy
+    "2057218",   # Phase 40: 1.6 ML filgrastim-aafi 0.3 MG/ML Injecti
+    "283838",   # Phase 40: darbepoetin alfa
+    "2047621",   # Phase 40: 1 ML epoetin alfa-epbx 40000 UNT/ML Inje
+    "357280",   # Phase 40: Emend
+    "727537",   # Phase 40: 0.5 ML filgrastim 0.6 MG/ML Prefilled Sy
+    "1442681",   # Phase 40: 0.5 ML tbo-filgrastim 0.6 MG/ML Prefille
+    "1947301",   # Phase 40: 2 ML palonosetron 0.125 MG/ML Injection
+    "343040",   # Phase 40: dexamethasone 0.75 MG Oral Tablet [Decad
+    "312086",   # Phase 40: ondansetron 8 MG Oral Tablet
+    "2549331",   # Phase 40: 0.6 ML pegfilgrastim 10 MG/ML Injection
+    "1649963",   # Phase 40: 1.6 ML filgrastim 0.3 MG/ML Injection
+    "731184",   # Phase 40: 1 ML darbepoetin alfa 0.5 MG/ML Prefille
+    "998032",   # Phase 40: ondansetron 8 MG Oral Film [Zuplenz]
+    "6314",   # Phase 40: dexAMETHasone Sodium Phosphate 10 MG/ML 
+    "731227",   # Phase 40: 0.4 ML darbepoetin alfa 0.1 MG/ML Prefil
+    "68442",   # Phase 40: filgrastim
+    "876690",   # Phase 40: ondansetron 4 mg oral tablet, disintegra
+    "105694",   # Phase 40: epoetin alfa
+    "309682",   # Phase 40: dexamethasone 0.001 MG/MG / tobramycin 0
+    "312085",   # Phase 40: ondansetron 0.8 MG/ML Oral Solution
+    "2057216",   # Phase 40: 0.8 ML filgrastim-aafi 0.6 MG/ML Prefill
+    "1995155",   # Phase 40: 18 ML aprepitant 7.2 MG/ML Injection [Ci
+    "240377",   # Phase 40: 1 ML epoetin alfa 3000 UNT/ML Injection
+    "1605075",   # Phase 40: 0.8 ML filgrastim-sndz 0.6 MG/ML Prefill
+    "105392",   # Phase 40: dexamethasone 0.5 MG Oral Tablet [Decadr
+    "70561",   # Phase 40: palonosetron
+    "1721690",   # Phase 40: 1 ML epoetin alfa 10000 UNT/ML Injection
+    "403810",   # Phase 40: aprepitant 80 MG Oral Capsule
+    "1731077",   # Phase 40: fosaprepitant 150 MG Injection
+    "1812095",   # Phase 40: 1 ML dexamethasone phosphate 4 MG/ML Pre
+    "239999",   # Phase 40: 1 ML epoetin alfa 4000 UNT/ML Injection
+    "727542",   # Phase 40: 0.6 ML pegfilgrastim 10 MG/ML Prefilled 
+    "2057209",   # Phase 40: 1 ML filgrastim-aafi 0.3 MG/ML Injection
+    "26237",   # Phase 40: granisetron
+    "208591",   # Phase 40: dexamethasone 1 MG/ML / neomycin 3.5 MG/
+    "1731082",   # Phase 40: fosaprepitant 150 MG Injection [Emend In
+    "795716",   # Phase 40: {12 (dexamethasone 0.75 MG Oral Tablet [
+    "998035",   # Phase 40: ondansetron 4 MG Oral Film [Zuplenz]
+    "1728050",   # Phase 40: 1.5 ML palonosetron 0.05 MG/ML Injection
+    "283504",   # Phase 40: ondansetron 2 MG/ML Injectable Solution
+    "240449",   # Phase 40: Filgrastim Inj 300 MCG/ML
+    "727545",   # Phase 40: 0.8 ML filgrastim 0.6 MG/ML Prefilled Sy
+    "1734399",   # Phase 40: 1 ML granisetron 1 MG/ML Injection
+    "197583",   # Phase 40: dexamethasone 6 MG Oral Tablet
+    "310599",   # Phase 40: granisetron 1 MG Oral Tablet
+    "792710",   # Phase 40: Epoetin Alfa Inj 10000 Unit/ML
+    "2549333",   # Phase 40: 0.6 ML pegfilgrastim 10 MG/ML Injection 
+    "2463735",   # Phase 40: epoetin alfa-epbx 20000 UNT/ML Injectabl
+    "644278",   # Phase 40: aprepitant 40 MG Oral Capsule [Emend]
+    "213475",   # Phase 40: 1 ML epoetin alfa 40000 UNT/ML Injection
+    "2056929",   # Phase 40: 5 ML palonosetron 0.05 MG/ML Prefilled S
+    "208588",   # Phase 40: dexamethasone 1 MG/ML / neomycin 3.5 MG/
+    "104897",   # Phase 40: ondansetron injection
+    "731174",   # Phase 40: 0.4 ML darbepoetin alfa 0.5 MG/ML Prefil
+    "1605071",   # Phase 40: 0.5 ML filgrastim-sndz 0.6 MG/ML Prefill
+    "1649946",   # Phase 40: 1 ML filgrastim 0.3 MG/ML Injection [Neu
+    "1998482",   # Phase 40: {21 (dexamethasone 1.5 MG Oral Tablet) }
+    "309679",   # Phase 40: dexamethasone 0.001 MG/MG / neomycin 0.0
+    "2048020",   # Phase 40: 0.6 ML pegfilgrastim-jmdb 10 MG/ML Prefi
+    "197579",   # Phase 40: dexamethasone 1 MG Oral Tablet
+    "2102705",   # Phase 40: 0.6 ML pegfilgrastim-cbqv 10 MG/ML Prefi
+    "1442683",   # Phase 40: 0.8 ML tbo-filgrastim 0.6 MG/ML Prefille
+    "2595961",   # Phase 40: 0.8 ML filgrastim-ayow 0.6 MG/ML Prefill
+    "239998",   # Phase 40: 1 ML epoetin alfa 2000 UNT/ML Injection
+    "825005",   # Phase 40: 168 HR granisetron 0.129 MG/HR Transderm
+    "2260704",   # Phase 40: 0.6 ML pegfilgrastim-bmez 10 MG/ML Prefi
+    "208601",   # Phase 40: dexamethasone 0.001 MG/MG / neomycin 0.0
+    "197580",   # Phase 40: dexamethasone 1.5 MG Oral Tablet
+    "208602",   # Phase 40: dexamethasone 0.001 MG/MG / neomycin 0.0
+    "349274",   # Phase 40: 1 ML darbepoetin alfa 0.04 MG/ML Injecti
+    "2260709",   # Phase 40: 0.6 ML pegfilgrastim-bmez 10 MG/ML Prefi
+    "64695",   # Phase 40: Ondansetron 4 MG Oral Tablet Disintegrat
+    "754508",   # Phase 40: {1 (aprepitant 125 MG Oral Capsule) / 2 
+    "1649944",   # Phase 40: 1 ML filgrastim 0.3 MG/ML Injection
+    "2047600",   # Phase 40: 1 ML epoetin alfa-epbx 2000 UNT/ML Injec
+    "26225",   # Phase 40: ondansetron
+    "2469340",   # Phase 40: 0.6 ML pegfilgrastim-apgf 10 MG/ML Prefi
+    "2047612",   # Phase 40: 1 ML epoetin alfa-epbx 4000 UNT/ML Injec
+    "731176",   # Phase 40: 0.42 ML darbepoetin alfa 0.06 MG/ML Pref
+    "901649",   # Phase 40: dexamethasone 0.1 MG/ML Oral Solution [B
+    "1740467",   # Phase 40: 2 ML ondansetron 2 MG/ML Injection
+    "104896",   # Phase 40: ondansetron
+    "104894",   # Phase 40: ondansetron 4 MG Disintegrating Oral Tab
+    "309683",   # Phase 40: dexamethasone 1 MG/ML / tobramycin 3 MG/
+    "759696",   # Phase 40: {12 (dexamethasone 0.75 MG Oral Tablet) 
+    "205717",   # Phase 40: dexamethasone 6 MG Oral Tablet [Decadron
+    "2057205",   # Phase 40: 0.5 ML filgrastim-aafi 0.6 MG/ML Prefill
+    "403811",   # Phase 40: aprepitant 125 MG Oral Capsule
+    "205712",   # Phase 40: dexamethasone 4 MG Oral Tablet [Decadron
+    "1605066",   # Phase 40: 0.5 ML filgrastim-sndz 0.6 MG/ML Prefill
+    "876693",   # Phase 40: ondansetron
+    "1721684",   # Phase 40: 1 ML epoetin alfa 10000 UNT/ML Injection
+    "2048018",   # Phase 40: pegfilgrastim-jmdb
+    "1433771",   # Phase 40: 0.8 ML tbo-filgrastim 0.6 MG/ML Prefille
+    "1812079",   # Phase 40: 1 ML dexamethasone phosphate 10 MG/ML In
+    "730044",   # Phase 40: 0.5 ML darbepoetin alfa 0.2 MG/ML Prefil
+    "2463731",   # Phase 40: epoetin alfa-epbx 10000 UNT/ML Injectabl
+    "212447",   # Phase 40: ondansetron
+    "205669",   # Phase 40: dexamethasone 1 MG/ML Ophthalmic Suspens
+    "241999",   # Phase 40: epoetin alfa 20000 UNT/ML Injectable Sol
+    "2047606",   # Phase 40: 1 ML epoetin alfa-epbx 3000 UNT/ML Injec
+    "1605064",   # Phase 40: filgrastim-sndz
+    "759697",   # Phase 40: {35 (dexamethasone 1.5 MG Oral Tablet) }
+    "1314133",   # Phase 40: 2 ML ondansetron 2 MG/ML Prefilled Syrin
+    "731179",   # Phase 40: 0.6 ML darbepoetin alfa 0.5 MG/ML Prefil
+    "358255",   # Phase 40: aprepitant
+    "1605074",   # Phase 40: 0.8 ML filgrastim-sndz 0.6 MG/ML Prefill
+    "403908",   # Phase 40: ciprofloxacin 3 MG/ML / dexamethasone 1 
+    "242706",   # Phase 40: 1 ML epoetin alfa 40000 UNT/ML Injection
+    "2261802",   # Phase 40: dexamethasone 20 MG Oral Tablet
+    "644088",   # Phase 40: aprepitant 40 MG Oral Capsule
+    "313947",   # Phase 40: Neomycin-Polymyxin-Dexamethasone Ophth O
+    "2057200",   # Phase 40: 0.5 ML filgrastim-aafi 0.6 MG/ML Prefill
+    "404466",   # Phase 40: aprepitant 125 MG Oral Capsule [Emend]
+    "755976",   # Phase 40: dexamethasone 0.1 MG/ML Oral Solution [D
+    "2047623",   # Phase 40: 1 ML epoetin alfa-epbx 40000 UNT/ML Inje
+    "205913",   # Phase 40: epoetin alfa 10000 UNT/ML Injectable Sol
+    "6316",   # Phase 40: dexAMETHasone Sodium Phosphate 4 MG/ML I
+    "998033",   # Phase 40: ondansetron 4 MG Oral Film
+    "312087",   # Phase 40: ondansetron 8 MG Disintegrating Oral Tab
+    "727535",   # Phase 40: 0.5 ML filgrastim 0.6 MG/ML Prefilled Sy
+    "404630",   # Phase 40: ciprofloxacin 3 MG/ML / dexamethasone 1 
+    "1490065",   # Phase 40: raloxifene hydrochloride 60 MG Oral Tabl
+    "1649964",   # Phase 40: 1.6 ML filgrastim 0.3 MG/ML Injection [N
+    "309696",   # Phase 40: dexamethasone phosphate 10 MG/ML Injecta
+    "3264",   # Phase 40: dexamethasone
+    "198052",   # Phase 40: ondansetron 4 MG Oral Tablet
+    "309680",   # Phase 40: dexamethasone 1 MG/ML / neomycin 3.5 MG/
+    "1728052",   # Phase 40: palonosetron injection
+    "731167",   # Phase 40: 0.3 ML darbepoetin alfa 0.2 MG/ML Prefil
+    "825003",   # Phase 40: 168 HR granisetron 0.129 MG/HR Transderm
+    "349275",   # Phase 40: 1 ML darbepoetin alfa 0.06 MG/ML Injecti
+    "2047591",   # Phase 40: 1 ML epoetin alfa-epbx 10000 UNT/ML Inje
+    "1116927",   # Phase 40: dexamethasone phosphate 4 MG/ML Injectab
+    "309686",   # Phase 40: dexamethasone 0.1 MG/ML Oral Solution
+    "309692",   # Phase 40: dexamethasone 1 MG/ML Ophthalmic Suspens
+    "240000",   # Phase 40: epoetin alfa 10000 UNT/ML Injectable Sol
+    "847225",   # Phase 40: {21 (dexamethasone 1.5 MG Oral Tablet) }
+    "2469335",   # Phase 40: 0.6 ML pegfilgrastim-apgf 10 MG/ML Prefi
+    "208813",   # Phase 40: dexamethasone 1 MG/ML / tobramycin 3 MG/
+    "1995150",   # Phase 40: 18 ML aprepitant 7.2 MG/ML Injection
+    "349273",   # Phase 40: 1 ML darbepoetin alfa 0.025 MG/ML Inject
+    "1998481",   # Phase 40: {49 (dexamethasone 1.5 MG Oral Tablet) }
+    "226343",   # Phase 40: dexamethasone phosphate 1 MG/ML Ophthalm
+    "309698",   # Phase 40: Dexamethasone Sodium Phosphate Inj 4 MG/
+    "197581",   # Phase 40: dexamethasone 2 MG Oral Tablet
+    "104895",   # Phase 40: Zofran 4 mg oral tablet
+    "309684",   # Phase 40: dexamethasone 1 MG/ML Oral Solution
+    "2102703",   # Phase 40: 0.6 ML pegfilgrastim-cbqv 10 MG/ML Prefi
+    "727539",   # Phase 40: 0.6 ML pegfilgrastim 10 MG/ML Prefilled 
+    "2101459",   # Phase 40: 1 ML tbo-filgrastim 0.3 MG/ML Injection 
+    "2469333",   # Phase 40: pegfilgrastim-apgf
+    "2057215",   # Phase 40: 0.8 ML filgrastim-aafi 0.6 MG/ML Prefill
+    "754509",   # Phase 40: {1 (aprepitant 125 MG Oral Capsule [Emen
+    "1433768",   # Phase 40: 0.5 ML tbo-filgrastim 0.6 MG/ML Prefille
+    "849115",   # Phase 40: dexamethasone 0.5 MG/ML / tobramycin 3 M
+    "2101456"    # Phase 40: 1 ML tbo-filgrastim 0.3 MG/ML Injection
+  ),
+
+
+  # Immunotherapy RXNORM codes (Phase 40: drug investigation)
+  immunotherapy_rxnorm = c(
+    "1094836",   # Phase 40: ipilimumab 5 MG/ML Injectable Solution
+    "891815",   # Phase 40: ascorbic acid 113 MG / beta carotene 716
+    "891790",   # Phase 40: ascorbic acid 226 MG / beta carotene 143
+    "1919507",   # Phase 40: 2.4 ML durvalumab 50 MG/ML Injection
+    "1090823",   # Phase 40: ascorbic acid / beta carotene / copper s
+    "1313925",   # Phase 40: alpha-tocopherol acetate 30 UNT / ascorb
+    "1248142",   # Phase 40: ascorbic acid 120 MG / beta carotene 270
+    "891716",   # Phase 40: ascorbic acid 200 MG / beta carotene 100
+    "2479140",   # Phase 40: 4.6 ML lisocabtagene maraleucel 70000000
+    "1792780",   # Phase 40: 20 ML atezolizumab 60 MG/ML Injection
+    "1090824",   # Phase 40: ascorbic acid 60 MG / beta carotene 5000
+    "891793"    # Phase 40: ascorbic acid 226 MG / beta carotene 143
+  ),
+
+
+  # SCT-related RXNORM codes (Phase 40: drug investigation)
+  sct_rxnorm = c(
+    "1740865",   # Phase 40: 2 ML fludarabine phosphate 25 MG/ML Inje
+    "253113",   # Phase 40: 10 ML busulfan 6 MG/ML Injection
+    "1660004",   # Phase 40: thiotepa 100 MG Injection
+    "284425",   # Phase 40: 10 ML busulfan 6 MG/ML Injection [Busulf
+    "197919",   # Phase 40: melphalan 2 MG Oral Tablet
+    "876399",   # Phase 40: melphalan 50 MG Injection [Alkeran]
+    "1740864",   # Phase 40: fludarabine phosphate 50 MG Injection
+    "311487"    # Phase 40: melphalan 50 MG Injection
+  ),
+
   chemo_revenue = c(
     "0331",   # Chemo - injected
     "0332",   # Chemo - oral
@@ -655,35 +1091,8 @@ TREATMENT_CODES <- list(
   sct_revenue = c(
     "0362",   # Organ transplant - other than kidney (includes SCT)
     "0815"    # Allogeneic stem cell acquisition/donor services
-  ),
-
-  # Immunotherapy DRG codes
-  immunotherapy_drg = c(
-    "018"    # Chimeric Antigen Receptor (CAR) T-cell Immunotherapy
   )
 )
-
-# ------------------------------------------------------------------------------
-# 5.5b TREATMENT TYPE DEFINITIONS (Phase quick: centralized from duplicate script definitions)
-# ------------------------------------------------------------------------------
-
-# Standard treatment types for analysis (used across treatment inventory, duration, episode scripts)
-TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
-
-# Treatment type colors for xlsx styling (8-char hex with FF alpha prefix)
-# Canonical 6-category palette covering all treatment analysis needs
-TREATMENT_TYPE_COLORS <- list(
-  Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
-  Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
-  SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
-  Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
-  `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
-  Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
-)
-
-# Treatment episode window threshold (max days from episode start to define cycle boundary)
-# Used by duration/episode analysis (Phase 43, 44)
-GAP_THRESHOLD <- 90
 
 # ------------------------------------------------------------------------------
 # 5.6 SURVEILLANCE CODES (Phase 10) -- transcribed from VariableDetails.xlsx "Surveillance Strategy"
@@ -940,6 +1349,28 @@ SURVIVORSHIP_CODES <- list(
     "Z92.3"    # Personal history of irradiation
   )
 )
+
+# ------------------------------------------------------------------------------
+# 5.5b TREATMENT TYPE DEFINITIONS (Phase quick: centralized from duplicate script definitions)
+# ------------------------------------------------------------------------------
+
+# Standard treatment types for analysis (used across treatment inventory, duration, episode scripts)
+TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
+
+# Treatment type colors for xlsx styling (8-char hex with FF alpha prefix)
+# Canonical 6-category palette covering all treatment analysis needs
+TREATMENT_TYPE_COLORS <- list(
+  Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
+  Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
+  SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
+  Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
+  `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
+  Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
+)
+
+# Treatment episode window threshold (max days from episode start to define cycle boundary)
+# Used by duration/episode analysis (Phase 43, 44)
+GAP_THRESHOLD <- 90
 
 # ------------------------------------------------------------------------------
 # 5.9 PROVIDER SPECIALTIES (Phase 10) -- NUCC taxonomy codes per D-10
