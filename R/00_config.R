@@ -681,7 +681,7 @@ TREATMENT_TYPE_COLORS <- list(
   Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
 )
 
-# Treatment episode gap threshold (days between consecutive dates to define new episode)
+# Treatment episode window threshold (max days from episode start to define cycle boundary)
 # Used by duration/episode analysis (Phase 43, 44)
 GAP_THRESHOLD <- 90
 

@@ -17,7 +17,7 @@
 #   D-02: distinct_treatment_dates count for intensity metric
 #   D-03: single-date patients produce span=0, count=1, episodes=1
 #   D-04: compute BOTH overall span AND episode-level breakdown
-#   D-05: 90-day gap threshold for episode splitting
+#   D-05: 90-day window from episode start for episode splitting
 #   D-07: RDS artifact with per-patient summary
 #   D-08: styled xlsx report using openxlsx2
 #   D-09: distribution visualization PNG
@@ -433,16 +433,45 @@ stack_and_dedup <- function(sources, type_name) {
 
 # --- SECTION 3: DURATION AND EPISODE CALCULATION ---
 
+#' Assign episode IDs using a window-based approach
+#'
+#' A new episode starts whenever a treatment date falls >= gap_threshold days
+#' from the current episode's start date (not from the previous date).
+#' This ensures no episode spans more than gap_threshold days from its first date.
+#'
+#' @param dates Date vector, must be sorted ascending
+#' @param gap_threshold Numeric. Max days from episode start before a new episode begins
+#' @return Integer vector of episode IDs (1-based)
+assign_episode_ids <- function(dates, gap_threshold) {
+  n <- length(dates)
+  if (n == 0) return(integer(0))
+
+  episode_ids <- integer(n)
+  episode_ids[1] <- 1L
+  current_episode <- 1L
+  episode_start <- dates[1]
+
+  for (i in seq_along(dates)[-1]) {
+    if (as.numeric(dates[i] - episode_start) >= gap_threshold) {
+      current_episode <- current_episode + 1L
+      episode_start <- dates[i]
+    }
+    episode_ids[i] <- current_episode
+  }
+
+  episode_ids
+}
+
 #' Calculate per-patient treatment durations and episode counts
 #'
 #' Per D-01: first-to-last span as overall_span_days
 #' Per D-02: distinct_treatment_dates count for intensity metric
 #' Per D-03: single-date patients produce span=0, count=1, episodes=1
 #' Per D-04: compute BOTH overall span AND episode-level breakdown
-#' Per D-05: 90-day gap threshold for episode splitting
+#' Per D-05: 90-day window from episode start for episode splitting
 #'
 #' @param dates_df Tibble with columns ID and treatment_date
-#' @param gap_threshold Integer. Days between consecutive dates to split episodes
+#' @param gap_threshold Integer. Max days from episode start to define cycle boundary
 #' @return Tibble with one row per patient: ID, first_treatment_date, last_treatment_date,
 #'   overall_span_days, distinct_treatment_dates, episode_count
 calculate_durations_and_episodes <- function(dates_df, gap_threshold = GAP_THRESHOLD) {
@@ -461,10 +490,8 @@ calculate_durations_and_episodes <- function(dates_df, gap_threshold = GAP_THRES
     group_by(ID) %>%
     arrange(treatment_date, .by_group = TRUE) %>%
     mutate(
-      days_since_prev = as.numeric(treatment_date - lag(treatment_date)),
-      # Per D-05: 90-day gap threshold defines new episode
-      new_episode = is.na(days_since_prev) | days_since_prev >= gap_threshold,
-      episode_id = cumsum(new_episode)
+      # Per D-05: window-based episode splitting (date - episode_start >= threshold)
+      episode_id = assign_episode_ids(treatment_date, gap_threshold)
     ) %>%
     # Per-episode summary first (per D-04: detect separate episodes)
     group_by(ID, episode_id) %>%

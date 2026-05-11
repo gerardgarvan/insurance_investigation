@@ -16,7 +16,7 @@
 #   D-08: columns: patient_id, treatment_type, episode_number, episode_start,
 #          episode_stop, episode_length_days, distinct_dates_in_episode, historical_flag
 #   D-09: one row per patient per treatment type per episode
-#   D-10: 90-day gap threshold (from Phase 43)
+#   D-10: 90-day window from episode start (not gap between consecutive dates)
 #   D-11: all chemo codes pooled (from Phase 43)
 #   D-12: four treatment types (from Phase 43)
 #   D-13: pre-2000 dates are real tumor registry data
@@ -55,13 +55,16 @@ HISTORICAL_CUTOFF <- as.Date("2012-01-01")
 
 # --- SECTION 2: EPISODE CALCULATION FUNCTION ---
 
+# assign_episode_ids() is defined in R/43_treatment_durations.R (sourced above)
+
 #' Calculate detailed episode-level data (stops at per-episode instead of per-patient)
 #'
 #' Adapted from R/43_treatment_durations.R calculate_durations_and_episodes()
-#' lines 476-492, but stops BEFORE the per-patient collapse at line 495.
+#' but uses window-based episode splitting (90-day window from episode start)
+#' instead of gap-based splitting.
 #'
 #' @param dates_df Tibble with columns ID and treatment_date
-#' @param gap_threshold Integer. Days between consecutive dates to split episodes
+#' @param gap_threshold Integer. Max days from episode start to define cycle boundary
 #' @return Tibble with one row per patient per episode: patient_id, episode_number,
 #'   episode_start, episode_stop, episode_length_days, distinct_dates_in_episode,
 #'   historical_flag
@@ -79,14 +82,12 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
     ))
   }
 
-  # Core pipeline: adapted from R/43 lines 476-492, stopping BEFORE per-patient collapse
+  # Core pipeline: window-based episode splitting (date - episode_start >= threshold)
   dates_df %>%
     group_by(ID) %>%
     arrange(treatment_date, .by_group = TRUE) %>%
     mutate(
-      days_since_prev = as.numeric(treatment_date - lag(treatment_date)),
-      new_episode = is.na(days_since_prev) | days_since_prev >= gap_threshold,
-      episode_id = cumsum(new_episode)
+      episode_id = assign_episode_ids(treatment_date, gap_threshold)
     ) %>%
     # Per-episode summary (THIS is the output level for Phase 44)
     group_by(ID, episode_id) %>%
