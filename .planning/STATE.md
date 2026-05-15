@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
 status: completed
-last_updated: "2026-05-15T16:47:31.924Z"
-last_activity: 2026-05-15 — Phase 45 Plan 02 complete (audit executed on HiPerGator, 42 new codes added, xlsx generated)
+last_updated: "2026-05-15T17:30:47.177Z"
+last_activity: 2026-05-15 — Phase 46 Plan 02 complete (triggering_codes column added to R/44_treatment_episodes.R)
 progress:
-  total_phases: 42
+  total_phases: 43
   completed_phases: 36
-  total_plans: 70
-  completed_plans: 67
+  total_plans: 72
+  completed_plans: 68
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-15
-**Project status:** Milestone v1.6 in progress — Phase 45 complete, Phase 46 next
+**Project status:** Milestone v1.6 in progress — Phase 46 Plan 02 complete, Phase 46 Plan 01 (gap report) pending
 
 ## Project Reference
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 45 (complete)
-Plan: 02 of 02 complete
-Status: Phase 45 complete — radiation CPT audit executed, config expanded to 63 codes, xlsx delivered
-Last activity: 2026-05-15 — Phase 45 Plan 02 complete (audit executed on HiPerGator, 42 new codes added, xlsx generated)
+Phase: 46 (in progress)
+Plan: 02 of 02 complete (Plan 01 pending)
+Status: Phase 46 Plan 02 complete — triggering_codes column added to R/44_treatment_episodes.R
+Last activity: 2026-05-15 — Phase 46 Plan 02 complete (triggering_codes column added, episode CSV/xlsx updated)
 
 ## Accumulated Context
 
@@ -61,6 +61,10 @@ Last activity: 2026-05-15 — Phase 45 Plan 02 complete (audit executed on HiPer
 - Audit-driven config expansion: run audit, auto-add confirmed codes, re-audit for 100% coverage (Phase 45)
 - glue format spec `:,` is Python syntax; R requires format(x, big.mark=',') (Phase 45)
 - openxlsx2 uses int2col() not int_to_col() (Phase 45)
+- triggering_codes column in episode output uses new extract_dates_with_codes() in R/44 without modifying R/43 — keeps extract_all_dates() intact for other consumers (Phase 46)
+- 3-column distinct(ID, treatment_date, triggering_code) dedup preserves all codes matching on same date — D-46-07 requirement (Phase 46)
+- TUMOR_REGISTRY sources get triggering_code = NA_character_ — date evidence only; na.omit() in paste(sort(unique(...))) cleanly removes them (Phase 46)
+- triggering_codes appended as last column (column 8) in CSV and xlsx — backward-compatible with any positional column access downstream (Phase 46)
 
 ### Pending Todos
 
