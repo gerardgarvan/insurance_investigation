@@ -81,7 +81,9 @@
   - **Goal:** Users can see patient counts and encounter counts per cancer site category across the full PCORnet extract
   - **Depends on:** Nothing (independent)
   - **Requirements:** CSITE-01, CSITE-02
-  - **Plans:** TBD
+  - **Plans:** 1 plan
+  - Plans:
+    - [ ] 47-01-PLAN.md — Cancer site frequency script: range expansion, DIAGNOSIS + TUMOR_REGISTRY queries, styled xlsx output
 
 ## Progress
 
@@ -98,4 +100,4 @@
 | 46-47 | v1.6 | Not started | — |
 
 ---
-*Last updated: 2026-05-15 (Phase 46 planned)*
+*Last updated: 2026-05-15 (Phase 47 planned)*
