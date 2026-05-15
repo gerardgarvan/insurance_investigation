@@ -652,27 +652,82 @@ TREATMENT_CODES <- list(
   # RECOMMENDATION: Use 77261-77799 (radiation oncology chapter only), not 70010-79999.
   # The pipeline uses 77261-77799 codes exclusively — imaging codes are excluded by design.
   radiation_cpt = c(
+    # --- Treatment Planning (77261-77299) ---
+    "77261",   # Therapeutic radiology treatment planning; simple
+    "77262",   # Therapeutic radiology treatment planning; intermediate
+    "77263",   # Therapeutic radiology treatment planning; complex
+    "77280",   # Therapeutic radiology simulation-aided field setting; simple
+    "77285",   # Therapeutic radiology simulation-aided field setting; intermediate
+    "77290",   # Therapeutic radiology simulation-aided field setting; complex
+    "77293",   # Respiratory motion management simulation
+
+    # --- Physics, Dosimetry & Treatment Devices (77295-77370) ---
+    "77295",   # 3-dimensional radiotherapy plan, including dose-volume histograms
+    "77300",   # Basic radiation dosimetry calculation
+    "77301",   # Intensity modulated radiotherapy plan (IMRT)
+    "77306",   # Teletherapy isodose plan; simple
+    "77307",   # Teletherapy isodose plan; complex
+    "77310",   # Teletherapy isodose plan; brachytherapy isodose calc, simple (DELETED)
+    "77315",   # Teletherapy isodose plan; brachytherapy isodose calc, complex (DELETED)
+    "77316",   # Brachytherapy isodose plan; simple
+    "77318",   # Brachytherapy isodose plan; complex
+    "77321",   # Special teletherapy port plan
+    "77331",   # Special dosimetry (TLD, calorimetry, etc.)
+    "77332",   # Treatment devices, simple
+    "77333",   # Treatment devices, intermediate
+    "77334",   # Treatment devices, complex
+    "77336",   # Continuing medical physics consultation
+    "77338",   # Multi-leaf collimator (MLC) device design and fabrication
+    "77370",   # Special medical radiation physics consultation
+
+    # --- Treatment Delivery (77371-77499) ---
+    "77371",   # SRS, multi-source Gamma Knife (DELETED 2026)
+    "77372",   # SRS, linear accelerator based (DELETED 2026)
+    "77373",   # Stereotactic body radiation therapy (SBRT), treatment delivery
+    "77385",   # IMRT delivery, simple
+    "77386",   # IMRT delivery, complex
+    "77387",   # Guidance for radiation treatment delivery (IGRT)
+    "77399",   # Unlisted procedure, radiation treatment delivery
     "77401",   # External beam radiation delivery, surface/orthovoltage (DELETED 2026; historical claims only)
     "77402",   # Radiation treatment delivery, intermediate (2026 new code)
-    "77407",   # Radiation treatment delivery, simple (2026 new code)
-    "77412",   # Radiation treatment delivery, complex (2026 new code)
-    "77427",   # Radiation treatment management (weekly, per 5 fractions) - most common
     "77404",   # Radiation treatment delivery; single area, 6-10 MeV (DELETED 2015)
+    "77407",   # Radiation treatment delivery, simple (2026 new code)
     "77408",   # Radiation treatment delivery; 2 separate areas, 3+ ports, 6-10 MeV (DELETED 2015)
+    "77412",   # Radiation treatment delivery, complex (2026 new code)
     "77413",   # Radiation treatment delivery; 3+ areas, custom blocking, 6-10 MeV (DELETED 2015)
     "77414",   # Radiation treatment delivery; 3+ areas, custom blocking, 11-19 MeV (DELETED 2015)
     "77416",   # Radiation treatment delivery; 3+ areas, complex, 20+ MeV (DELETED 2015)
     "77417",   # Port film(s) per treatment session (portal imaging) (DELETED 2026)
     "77418",   # Radiation treatment delivery, IMRT (intensity modulated) (DELETED 2015)
     "77421",   # Stereoscopic x-ray guidance for target localization (DELETED 2015)
+    "77427",   # Radiation treatment management (weekly, per 5 fractions) - most common
     "77431",   # Radiation treatment management, 1-4 treatments (end-of-course)
     "77432",   # Stereotactic radiation treatment management of cranial lesion
     "77435",   # Stereotactic body radiation therapy (SBRT) management
     "77470",   # Special treatment procedure (total body irradiation, hemibody irradiation)
+
+    # --- Proton Beam Treatment Delivery (77520-77525) ---
     "77520",   # Proton treatment delivery; simple, without compensation
     "77522",   # Proton treatment delivery; simple, with compensation
     "77523",   # Proton treatment delivery; intermediate
-    "77525"    # Proton treatment delivery; complex
+    "77525",   # Proton treatment delivery; complex
+
+    # --- Hyperthermia (77600-77620) ---
+    "77605",   # Hyperthermia, externally generated; deep (DELETED)
+
+    # --- Brachytherapy (77750-77799) ---
+    "77750",   # Infusion or instillation of radioelement solution
+    "77763",   # Interstitial radiation source application; complex
+    "77768",   # Intracavitary radiation source application; complex
+    "77770",   # Remote afterloading high dose rate brachytherapy; 1 channel
+    "77771",   # Remote afterloading high dose rate brachytherapy; 2-12 channels
+    "77772",   # Remote afterloading high dose rate brachytherapy; over 12 channels
+    "77785",   # Remote afterloading brachytherapy; 1-4 sources/ribbons, complex (DELETED)
+
+    # --- CMS G-codes: Radiation Delivery (DELETED 2026) ---
+    "G6012",   # Radiation treatment delivery, 3D conformal, intermediate (DELETED 2026)
+    "G6013",   # Radiation treatment delivery, 3D conformal, complex (DELETED 2026)
+    "G6015"    # Radiation treatment delivery, IMRT, complex (DELETED 2026)
   ),
 
   # Stem cell transplant CPT codes (autologous + allogeneic per D-07)
