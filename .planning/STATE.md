@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
 status: completed
-last_updated: "2026-05-15T17:30:47.177Z"
-last_activity: 2026-05-15 — Phase 46 Plan 02 complete (triggering_codes column added to R/44_treatment_episodes.R)
+last_updated: "2026-05-15T18:30:00.000Z"
+last_activity: 2026-05-15 — Phase 46 Plan 01 complete (treatment code cross-reference gap report script created)
 progress:
   total_phases: 43
   completed_phases: 36
   total_plans: 72
-  completed_plans: 68
+  completed_plans: 69
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-15
-**Project status:** Milestone v1.6 in progress — Phase 46 Plan 02 complete, Phase 46 Plan 01 (gap report) pending
+**Project status:** Milestone v1.6 in progress — Phase 46 Plan 01 and 02 both complete
 
 ## Project Reference
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 46 (in progress)
-Plan: 02 of 02 complete (Plan 01 pending)
-Status: Phase 46 Plan 02 complete — triggering_codes column added to R/44_treatment_episodes.R
-Last activity: 2026-05-15 — Phase 46 Plan 02 complete (triggering_codes column added, episode CSV/xlsx updated)
+Phase: 46 (complete)
+Plan: 02 of 02 complete
+Status: Phase 46 complete — Plan 01 (gap report) and Plan 02 (triggering codes) both done
+Last activity: 2026-05-15 — Phase 46 Plan 01 complete (R/46_treatment_cross_reference.R gap report script created, hardcoded reference data for all 4 treatment types)
 
 ## Accumulated Context
 
@@ -64,6 +64,10 @@ Last activity: 2026-05-15 — Phase 46 Plan 02 complete (triggering_codes column
 - triggering_codes column in episode output uses new extract_dates_with_codes() in R/44 without modifying R/43 — keeps extract_all_dates() intact for other consumers (Phase 46)
 - 3-column distinct(ID, treatment_date, triggering_code) dedup preserves all codes matching on same date — D-46-07 requirement (Phase 46)
 - TUMOR_REGISTRY sources get triggering_code = NA_character_ — date evidence only; na.omit() in paste(sort(unique(...))) cleanly removes them (Phase 46)
+- Gap report reference data hardcoded in R script (not runtime parsed) — docx/xlsx read once at plan time, codes transcribed into REFERENCE_CODES named list (Phase 46)
+- Radiation CPT cross-reference uses range-level narrative (docx says 70010-79999; config covers 77261-77799) not code-expansion comparison — D-04/D-05 (Phase 46)
+- Phase 45 added 46 radiation codes (not 42 as estimated) — verified via git diff of commit f4de3c5; all annotated in gap report (Phase 46)
+- PCS Codes Cancer Tx.xlsx contains only chemo codes (125 ICD-10-PCS 3E0xx routes); ComprehensiveSurgeryCodes.xlsx contains surgical/cancer-site codes with no treatment type label (Phase 46)
 - triggering_codes appended as last column (column 8) in CSV and xlsx — backward-compatible with any positional column access downstream (Phase 46)
 
 ### Pending Todos
