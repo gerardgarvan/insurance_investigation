@@ -65,9 +65,10 @@
   - **Goal:** The radiation CPT range 70010-79999 is documented, every code in HL patient data is classified as imaging or treatment, and proton therapy codes are captured in config
   - **Depends on:** Phase 44
   - **Requirements:** RADCPT-01, RADCPT-02, RADCPT-03
-  - **Plans:** 1 plan
+  - **Plans:** 2 plans
   - Plans:
-    - [ ] 45-01-PLAN.md — Config update (proton codes, fixed descriptions, comment block) + audit script (classification table, PROCEDURES query, styled xlsx)
+    - [x] 45-01-PLAN.md — Config update (proton codes, fixed descriptions, comment block) + audit script (classification table, PROCEDURES query, styled xlsx)
+    - [ ] 45-02-PLAN.md — Gap closure: execute audit script on HiPerGator to generate xlsx output
 - [ ] **Phase 46: Treatment Code Cross-Reference & Triggering Codes** — Two-way gap report comparing TreatmentVariables docx against config, plus triggering_codes column in episode CSV output
   - **Goal:** Users can see which codes are in the reference doc but not in config (and vice versa), and each episode row shows which code(s) triggered it
   - **Depends on:** Phase 45
