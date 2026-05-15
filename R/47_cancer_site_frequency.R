@@ -62,6 +62,12 @@ n_icdo3_nonna <- sum(!is.na(groups_df$icdo3))
 message(glue("  Categories with non-NA ICD-10 codes: {n_icd10_nonna}"))
 message(glue("  Categories with non-NA ICD-O-3 codes: {n_icdo3_nonna}"))
 
+# Debug: show first few rows of xlsx to verify column mapping
+message("  DEBUG: First 5 rows of groups_df:")
+for (r in seq_len(min(5, nrow(groups_df)))) {
+  message(glue("    [{r}] category='{groups_df$category[r]}' | icd10='{groups_df$icd10[r]}' | icdo3='{groups_df$icdo3[r]}'"))
+}
+
 # ==============================================================================
 # SECTION 3: RANGE EXPANSION FUNCTIONS
 # ==============================================================================
@@ -175,6 +181,10 @@ for (i in seq_len(nrow(groups_df))) {
 message(glue("Built ICD-10 prefix lookup: {length(icd10_prefix_to_cat)} unique prefixes across 42 categories"))
 message(glue("Built ICD-O-3 prefix lookup: {length(icdo3_prefix_to_cat)} unique prefixes across {42 - length(skipped_morph_cats)} categories (skipped {length(skipped_morph_cats)} morphology-only categories)"))
 
+# Debug: show first 10 ICD-10 prefixes and first 10 ICD-O-3 prefixes
+message(glue("  DEBUG ICD-10 prefixes (first 10): {paste(head(names(icd10_prefix_to_cat), 10), collapse = ', ')}"))
+message(glue("  DEBUG ICD-O-3 prefixes (first 10): {paste(head(names(icdo3_prefix_to_cat), 10), collapse = ', ')}"))
+
 # ==============================================================================
 # SECTION 5: QUERY DATA AND COUNT
 # ==============================================================================
@@ -190,6 +200,7 @@ diagnosis_icd10 <- get_pcornet_table("DIAGNOSIS") %>%
   mutate(DX_norm = normalize_icd(DX))
 
 message(glue("Loaded {format(nrow(diagnosis_icd10), big.mark = ',')} ICD-10 DIAGNOSIS rows"))
+message(glue("  DEBUG DX_norm sample (first 10 unique): {paste(head(unique(diagnosis_icd10$DX_norm), 10), collapse = ', ')}"))
 
 # --- ICD-O-3 from TUMOR_REGISTRY_ALL ---
 
@@ -244,6 +255,12 @@ for (i in seq_len(nrow(groups_df))) {
 
   # ICD-10 matching
   icd10_codes_i <- icd10_codes_by_cat[[i]]
+
+  # Debug first category with codes
+  if (i <= 3) {
+    message(glue("  DEBUG cat[{i}] '{groups_df$category[i]}': icd10_codes={paste(head(icd10_codes_i, 5), collapse=',')} icdo3_codes={paste(head(icdo3_codes_by_cat[[i]], 5), collapse=',')}"))
+  }
+
   if (length(icd10_codes_i) > 0) {
     dx_matches <- diagnosis_icd10 %>%
       filter(map_lgl(DX_norm, function(dx) any(startsWith(dx, icd10_codes_i))))
