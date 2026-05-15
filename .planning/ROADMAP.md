@@ -11,6 +11,7 @@
 - **v1.3 DuckDB Backend Migration** — Phases 29-32 (shipped 2026-04-23)
 - **v1.4 AV+TH Subset Analysis** — Phase 33 (shipped 2026-04-27) — [archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 Payer Analysis Expansion** — Phases 34-37 (shipped 2026-05-01) — [archive](milestones/v1.5-ROADMAP.md)
+- **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-47 — [roadmap](milestones/v1.6-ROADMAP.md)
 
 ## Remaining Phases (Unassigned)
 
@@ -58,6 +59,24 @@
   - Plans:
     - [ ] 44-01-PLAN.md — Per-episode date extraction, historical flagging, styled xlsx + per-type CSVs + RDS output
 
+## v1.6 Phases
+
+- [ ] **Phase 45: Radiation CPT Audit** — Classify CPT 70010-79999 sub-ranges with citations, identify which codes appear in HL patient data, and add proton therapy codes to config
+  - **Goal:** The radiation CPT range 70010-79999 is documented, every code in HL patient data is classified as imaging or treatment, and proton therapy codes are captured in config
+  - **Depends on:** Phase 44
+  - **Requirements:** RADCPT-01, RADCPT-02, RADCPT-03
+  - **Plans:** TBD
+- [ ] **Phase 46: Treatment Code Cross-Reference & Triggering Codes** — Two-way gap report comparing TreatmentVariables docx against config, plus triggering_codes column in episode CSV output
+  - **Goal:** Users can see which codes are in the reference doc but not in config (and vice versa), and each episode row shows which code(s) triggered it
+  - **Depends on:** Phase 45
+  - **Requirements:** TXREF-01, TXREF-02
+  - **Plans:** TBD
+- [ ] **Phase 47: Cancer Site Frequency** — Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx with styled xlsx output ready to email
+  - **Goal:** Users can see patient counts and encounter counts per cancer site category across the full PCORnet extract
+  - **Depends on:** Nothing (independent)
+  - **Requirements:** CSITE-01, CSITE-02
+  - **Plans:** TBD
+
 ## Progress
 
 | Phase | Milestone | Status | Completed |
@@ -69,6 +88,7 @@
 | 29-32 | v1.3 | Complete | 2026-04-23 |
 | 33 | v1.4 | Complete | 2026-04-24 |
 | 34-37 | v1.5 | Complete | 2026-05-01 |
+| 45-47 | v1.6 | Not started | — |
 
 ---
-*Last updated: 2026-05-07*
+*Last updated: 2026-05-15*

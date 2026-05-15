@@ -3,20 +3,20 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Treatment Code Validation & Cancer Site Analysis
 status: planning
-last_updated: "2026-05-08T12:24:59.990Z"
-last_activity: 2026-05-08 - Completed quick task 260508-n87: treatment type consistency improvements
+last_updated: "2026-05-15T00:00:00.000Z"
+last_activity: 2026-05-15 - Roadmap created for milestone v1.6 (3 phases, 7 requirements)
 progress:
-  total_phases: 41
+  total_phases: 44
   completed_phases: 36
   total_plans: 70
   completed_plans: 65
-  percent: 94
+  percent: 82
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Last updated:** 2026-05-05
-**Project status:** Phase 42 complete — treatment codes resolved xlsx for all types
+**Last updated:** 2026-05-15
+**Project status:** Milestone v1.6 roadmap created — Phase 45 next
 
 ## Project Reference
 
@@ -24,14 +24,14 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 44 — treatment-episode-start-stop-dates
+**Current focus:** Phase 45 — Radiation CPT Audit (first phase of v1.6)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 45 (not started)
 Plan: —
-Status: Defining requirements for milestone v1.6
-Last activity: 2026-05-15 — Milestone v1.6 started (Treatment Code Validation & Cancer Site Analysis)
+Status: Ready to plan Phase 45
+Last activity: 2026-05-15 — Milestone v1.6 roadmap created (Phases 45-47, 7 requirements)
 
 ## Accumulated Context
 
@@ -73,7 +73,7 @@ None.
 - Phase 41 added: Combine NDC+HCPCS Reports
 - Phase 43 added: Establish Treatment Lengths for SCT, Chemo, and Radiation
 - Phase 44 added: Treatment Episode Start/Stop Dates — per-episode start/stop dates with episode length, special handling for historical dates outside 2012-2025 window
-- Next milestone needs `/gsd:new-milestone` to define scope and requirements
+- Milestone v1.6 roadmap created 2026-05-15: Phases 45-47 (radiation CPT audit, treatment code cross-reference + triggering codes, cancer site frequency)
 
 ### Blockers/Concerns
 
