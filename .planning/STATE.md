@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
 status: completed
-last_updated: "2026-05-15T18:30:00.000Z"
-last_activity: 2026-05-15 — Phase 46 Plan 01 complete (treatment code cross-reference gap report script created)
+last_updated: "2026-05-15T17:40:53.660Z"
+last_activity: 2026-05-15 — Phase 46 Plan 01 complete (R/46_treatment_cross_reference.R gap report script created, hardcoded reference data for all 4 treatment types)
 progress:
   total_phases: 43
-  completed_phases: 36
+  completed_phases: 37
   total_plans: 72
   completed_plans: 69
 ---
