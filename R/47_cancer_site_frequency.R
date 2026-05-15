@@ -196,7 +196,8 @@ message(glue("Loaded {format(nrow(diagnosis_icd10), big.mark = ',')} ICD-10 DIAG
 message("Loading TUMOR_REGISTRY_ALL table (topography codes, all patients)...")
 
 tr_topo <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
-  select(ID, topo_raw = coalesce(TOPOGRAPHY_CODE, ICDOSITE)) %>%
+  mutate(topo_raw = coalesce(SITE_CODE, SITE)) %>%
+  select(ID, topo_raw) %>%
   filter(!is.na(topo_raw)) %>%
   materialize() %>%
   mutate(topo_norm = normalize_icd(topo_raw))
