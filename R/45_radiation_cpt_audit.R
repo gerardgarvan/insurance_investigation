@@ -186,7 +186,7 @@ message("  Materializing PROCEDURES table...")
 proc_materialized <- proc_tbl %>%
   materialize()
 
-message(glue("  Materialized {nrow(proc_materialized):,} procedure records"))
+message(glue("  Materialized {format(nrow(proc_materialized), big.mark = ',')} procedure records"))
 
 # Filter for 5-digit codes starting with 7 (CPT 70000-79999 range)
 message("  Filtering for 7xxxxx CPT codes...")
@@ -209,7 +209,7 @@ codes_in_data <- bind_rows(codes_7x, codes_gx) %>%
   ) %>%
   arrange(code, px_type)
 
-message(glue("  Found {nrow(codes_in_data):,} code-PX_TYPE combinations across all patients"))
+message(glue("  Found {format(nrow(codes_in_data), big.mark = ',')} code-PX_TYPE combinations across all patients"))
 
 # ==============================================================================
 # SECTION 5: CLASSIFY CODES FOUND IN DATA
@@ -247,7 +247,7 @@ codes_classified <- codes_in_data %>%
          in_config, patient_count, encounter_count) %>%
   arrange(code, px_type)
 
-message(glue("  Classified {nrow(codes_classified):,} code-PX_TYPE combinations"))
+message(glue("  Classified {format(nrow(codes_classified), big.mark = ',')} code-PX_TYPE combinations"))
 
 # ==============================================================================
 # SECTION 6: AUTO-ADD CONFIRMED TREATMENT CODES (D-10)
