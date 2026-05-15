@@ -46,6 +46,17 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
 
+## Current Milestone: v1.6 Treatment Code Validation & Cancer Site Analysis
+
+**Goal:** Validate treatment code coverage against TreatmentVariables reference doc, audit radiation CPT range (70010-79999) for imaging vs treatment codes with citations, add triggering codes to treatment episode output, and produce cancer site frequency table from CancerSiteCategories.xlsx.
+
+**Target features:**
+- Cancer site frequency table using CancerSiteCategories.xlsx ICD codes across PCORnet data
+- Cross-reference TREATMENT_CODES against TreatmentVariables_2024.07.17.docx — identify gaps both ways
+- Audit radiation CPT 70010-79999 range: confirm which are imaging vs treatment, cite exclusion rationale
+- Confirm proton therapy codes 77520-77525 are captured in radiation detection
+- Add triggering code(s) column to treatment episode CSV output
+
 ### Out of Scope
 
 - Statistical modeling / regression — exploration only

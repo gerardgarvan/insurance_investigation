@@ -1,8 +1,8 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
+milestone: v1.6
+milestone_name: Treatment Code Validation & Cancer Site Analysis
+status: planning
 last_updated: "2026-05-08T12:24:59.990Z"
 last_activity: 2026-05-08 - Completed quick task 260508-n87: treatment type consistency improvements
 progress:
@@ -28,12 +28,10 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 44 (treatment-episode-start-stop-dates) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 44
-Last activity: 2026-05-08 -- Phase 44 execution started
-
-Progress: [█████████░] 94% — 65/69 plans complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for milestone v1.6
+Last activity: 2026-05-15 — Milestone v1.6 started (Treatment Code Validation & Cancer Site Analysis)
 
 ## Accumulated Context
 
