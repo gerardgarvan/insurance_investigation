@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
-status: planning
-last_updated: "2026-05-15T15:37:58.336Z"
-last_activity: "2026-05-15 — Phase 45 Plan 01 complete: radiation_cpt updated (21 codes), R/45_radiation_cpt_audit.R created (513 lines)"
-last_session: "2026-05-15T15:36:39Z"
-stopped_at: "Completed 45-01-PLAN.md"
+status: Phase 45 complete — radiation CPT audit executed, config expanded to 63 codes, xlsx delivered
+last_updated: "2026-05-15T17:00:00.000Z"
+last_activity: "2026-05-15 — Phase 45 Plan 02 complete: audit script executed on HiPerGator, radiation_cpt expanded from 21 to 63 codes, xlsx deliverable generated"
+last_session: "2026-05-15T17:00:00Z"
+stopped_at: "Completed 45-02-PLAN.md"
 progress:
   total_phases: 42
   completed_phases: 36
-  total_plans: 69
-  completed_plans: 66
+  total_plans: 70
+  completed_plans: 67
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-15
-**Project status:** Milestone v1.6 roadmap created — Phase 45 next
+**Project status:** Milestone v1.6 in progress — Phase 45 complete, Phase 46 next
 
 ## Project Reference
 
@@ -25,14 +25,14 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 45 — Radiation CPT Audit (first phase of v1.6)
+**Current focus:** Phase 46 — Treatment Code Cross-Reference & Triggering Codes
 
 ## Current Position
 
-Phase: 45 (in progress — Plan 01 complete)
-Plan: 01 complete, Plan 02 next (if any)
-Status: Phase 45 Plan 01 executed — radiation CPT audit config update and audit script created
-Last activity: 2026-05-15 — Phase 45 Plan 01 complete (radiation_cpt updated with proton codes, R/45_radiation_cpt_audit.R created)
+Phase: 45 (complete)
+Plan: 02 of 02 complete
+Status: Phase 45 complete — radiation CPT audit executed, config expanded to 63 codes, xlsx delivered
+Last activity: 2026-05-15 — Phase 45 Plan 02 complete (audit executed on HiPerGator, 42 new codes added, xlsx generated)
 
 ## Accumulated Context
 
@@ -60,6 +60,9 @@ Last activity: 2026-05-15 — Phase 45 Plan 01 complete (radiation_cpt updated w
 - Hardcoded descriptions required for retired CPT codes (77404-77421 series) — NLM API only covers active codes (Phase 45)
 - Active proton codes are exactly 77520, 77522, 77523, 77525 (77521 was deleted before 2024 — do not add) (Phase 45)
 - classify_code_str() helper pattern avoids if_else type issues when classifying mixed code formats in purrr::map_chr (Phase 45)
+- Audit-driven config expansion: run audit, auto-add confirmed codes, re-audit for 100% coverage (Phase 45)
+- glue format spec `:,` is Python syntax; R requires format(x, big.mark=',') (Phase 45)
+- openxlsx2 uses int2col() not int_to_col() (Phase 45)
 
 ### Pending Todos
 

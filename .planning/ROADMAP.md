@@ -68,7 +68,7 @@
   - **Plans:** 2 plans
   - Plans:
     - [x] 45-01-PLAN.md — Config update (proton codes, fixed descriptions, comment block) + audit script (classification table, PROCEDURES query, styled xlsx)
-    - [ ] 45-02-PLAN.md — Gap closure: execute audit script on HiPerGator to generate xlsx output
+    - [x] 45-02-PLAN.md — Gap closure: execute audit script on HiPerGator to generate xlsx output
 - [ ] **Phase 46: Treatment Code Cross-Reference & Triggering Codes** — Two-way gap report comparing TreatmentVariables docx against config, plus triggering_codes column in episode CSV output
   - **Goal:** Users can see which codes are in the reference doc but not in config (and vice versa), and each episode row shows which code(s) triggered it
   - **Depends on:** Phase 45
@@ -91,7 +91,8 @@
 | 29-32 | v1.3 | Complete | 2026-04-23 |
 | 33 | v1.4 | Complete | 2026-04-24 |
 | 34-37 | v1.5 | Complete | 2026-05-01 |
-| 45-47 | v1.6 | Not started | — |
+| 45 | v1.6 | Complete | 2026-05-15 |
+| 46-47 | v1.6 | Not started | — |
 
 ---
-*Last updated: 2026-05-15*
+*Last updated: 2026-05-15 (Phase 45 complete)*
