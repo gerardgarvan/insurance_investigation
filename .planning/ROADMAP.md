@@ -61,7 +61,7 @@
 
 ## v1.6 Phases
 
-- [ ] **Phase 45: Radiation CPT Audit** — Classify CPT 70010-79999 sub-ranges with citations, identify which codes appear in HL patient data, and add proton therapy codes to config
+- [x] **Phase 45: Radiation CPT Audit** — Classify CPT 70010-79999 sub-ranges with citations, identify which codes appear in HL patient data, and add proton therapy codes to config (completed 2026-05-15)
   - **Goal:** The radiation CPT range 70010-79999 is documented, every code in HL patient data is classified as imaging or treatment, and proton therapy codes are captured in config
   - **Depends on:** Phase 44
   - **Requirements:** RADCPT-01, RADCPT-02, RADCPT-03

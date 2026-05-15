@@ -1,16 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.6
-milestone_name: Treatment Code Validation & Cancer Site Analysis
+milestone_name: Phases
 status: planning
-last_updated: "2026-05-15T00:00:00.000Z"
-last_activity: 2026-05-15 - Roadmap created for milestone v1.6 (3 phases, 7 requirements)
+last_updated: "2026-05-15T15:37:58.336Z"
+last_activity: "2026-05-15 — Phase 45 Plan 01 complete: radiation_cpt updated (21 codes), R/45_radiation_cpt_audit.R created (513 lines)"
+last_session: "2026-05-15T15:36:39Z"
+stopped_at: "Completed 45-01-PLAN.md"
 progress:
-  total_phases: 44
+  total_phases: 42
   completed_phases: 36
-  total_plans: 70
-  completed_plans: 65
-  percent: 82
+  total_plans: 69
+  completed_plans: 66
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
@@ -28,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 45 (not started)
-Plan: —
-Status: Ready to plan Phase 45
-Last activity: 2026-05-15 — Milestone v1.6 roadmap created (Phases 45-47, 7 requirements)
+Phase: 45 (in progress — Plan 01 complete)
+Plan: 01 complete, Plan 02 next (if any)
+Status: Phase 45 Plan 01 executed — radiation CPT audit config update and audit script created
+Last activity: 2026-05-15 — Phase 45 Plan 01 complete (radiation_cpt updated with proton codes, R/45_radiation_cpt_audit.R created)
 
 ## Accumulated Context
 
@@ -56,6 +57,9 @@ Last activity: 2026-05-15 — Milestone v1.6 roadmap created (Phases 45-47, 7 re
 - write_resolved_xlsx() reusable function pattern for styled 2-sheet xlsx generation per treatment category (Phase 42)
 - Treatment constants centralized once in R/00_config.R (TREATMENT_TYPES, TREATMENT_TYPE_COLORS, GAP_THRESHOLD, immunotherapy_drg) (Quick 260508-n87)
 - Shared treatment helper functions centralized in R/utils_treatment.R (safe_table, get_hl_patient_ids, empty_result, nrow_or_0) (Quick 260508-n87)
+- Hardcoded descriptions required for retired CPT codes (77404-77421 series) — NLM API only covers active codes (Phase 45)
+- Active proton codes are exactly 77520, 77522, 77523, 77525 (77521 was deleted before 2024 — do not add) (Phase 45)
+- classify_code_str() helper pattern avoids if_else type issues when classifying mixed code formats in purrr::map_chr (Phase 45)
 
 ### Pending Todos
 
