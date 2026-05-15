@@ -73,7 +73,10 @@
   - **Goal:** Users can see which codes are in the reference doc but not in config (and vice versa), and each episode row shows which code(s) triggered it
   - **Depends on:** Phase 45
   - **Requirements:** TXREF-01, TXREF-02
-  - **Plans:** TBD
+  - **Plans:** 2 plans
+  - Plans:
+    - [ ] 46-01-PLAN.md — Gap report: hardcoded reference data from docx/xlsx files, two-way comparison, DuckDB counts, styled 5-sheet xlsx
+    - [ ] 46-02-PLAN.md — Triggering codes: extract_dates_with_codes() function, triggering_codes column in episode CSV and xlsx
 - [ ] **Phase 47: Cancer Site Frequency** — Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx with styled xlsx output ready to email
   - **Goal:** Users can see patient counts and encounter counts per cancer site category across the full PCORnet extract
   - **Depends on:** Nothing (independent)
@@ -95,4 +98,4 @@
 | 46-47 | v1.6 | Not started | — |
 
 ---
-*Last updated: 2026-05-15 (Phase 45 complete)*
+*Last updated: 2026-05-15 (Phase 46 planned)*
