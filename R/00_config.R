@@ -634,26 +634,45 @@ TREATMENT_CODES <- list(
     "283511"    # Phase 40: methotrexate 5 MG Oral Tablet
   ),
 
-  # Radiation therapy CPT codes (active treatment, not planning-only)
-  # 2026 complexity-based codes replaced technique-based codes (77385/77386 deleted)
+  # AMA CPT Radiation Oncology Chapter Structure (Codes 77261-77799)
+  # ---------------------------------------------------------------
+  # TreatmentVariables.docx specifies the full radiology range 70010-79999.
+  # The AMA CPT Manual divides this range as follows:
+  #   70010-76499  Diagnostic Radiology (X-ray, CT, MRI, angiography)
+  #   76506-76999  Diagnostic Ultrasound
+  #   77001-77067  Radiological Guidance + Mammography (imaging, not treatment)
+  #   77261-77299  Radiation Treatment Planning (clinical simulation)
+  #   77295-77370  Medical Radiation Physics, Dosimetry, Treatment Devices
+  #   77371-77499  Radiation Treatment Delivery (EBRT, IMRT, SRS, SBRT, proton)
+  #   77520-77525  Proton Beam Treatment Delivery (subset of above range)
+  #   77600-77620  Hyperthermia (thermal adjunct to radiation)
+  #   77750-77799  Clinical Brachytherapy
+  #   78000-78999  Nuclear Medicine (mostly diagnostic; 78800-78816 are therapeutic)
+  #
+  # RECOMMENDATION: Use 77261-77799 (radiation oncology chapter only), not 70010-79999.
+  # The pipeline uses 77261-77799 codes exclusively — imaging codes are excluded by design.
   radiation_cpt = c(
-    "77401",   # External beam radiation delivery (Python pipeline)
+    "77401",   # External beam radiation delivery, surface/orthovoltage (DELETED 2026; historical claims only)
     "77402",   # Radiation treatment delivery, intermediate (2026 new code)
     "77407",   # Radiation treatment delivery, simple (2026 new code)
     "77412",   # Radiation treatment delivery, complex (2026 new code)
-    "77427",    # Radiation treatment management (weekly, per 5 fractions) - most common
-    "77404",   # Phase 39: no description
-    "77408",   # Phase 39: no description
-    "77413",   # Phase 39: no description
-    "77414",   # Phase 39: no description
-    "77416",   # Phase 39: no description
-    "77417",   # Phase 39: no description
-    "77418",   # Phase 39: no description
-    "77421",   # Phase 39: no description
-    "77431",   # Phase 39: no description
-    "77432",   # Phase 39: no description
-    "77435",   # Phase 39: no description
-    "77470"    # Phase 39: no description
+    "77427",   # Radiation treatment management (weekly, per 5 fractions) - most common
+    "77404",   # Radiation treatment delivery; single area, 6-10 MeV (DELETED 2015)
+    "77408",   # Radiation treatment delivery; 2 separate areas, 3+ ports, 6-10 MeV (DELETED 2015)
+    "77413",   # Radiation treatment delivery; 3+ areas, custom blocking, 6-10 MeV (DELETED 2015)
+    "77414",   # Radiation treatment delivery; 3+ areas, custom blocking, 11-19 MeV (DELETED 2015)
+    "77416",   # Radiation treatment delivery; 3+ areas, complex, 20+ MeV (DELETED 2015)
+    "77417",   # Port film(s) per treatment session (portal imaging) (DELETED 2026)
+    "77418",   # Radiation treatment delivery, IMRT (intensity modulated) (DELETED 2015)
+    "77421",   # Stereoscopic x-ray guidance for target localization (DELETED 2015)
+    "77431",   # Radiation treatment management, 1-4 treatments (end-of-course)
+    "77432",   # Stereotactic radiation treatment management of cranial lesion
+    "77435",   # Stereotactic body radiation therapy (SBRT) management
+    "77470",   # Special treatment procedure (total body irradiation, hemibody irradiation)
+    "77520",   # Proton treatment delivery; simple, without compensation
+    "77522",   # Proton treatment delivery; simple, with compensation
+    "77523",   # Proton treatment delivery; intermediate
+    "77525"    # Proton treatment delivery; complex
   ),
 
   # Stem cell transplant CPT codes (autologous + allogeneic per D-07)
