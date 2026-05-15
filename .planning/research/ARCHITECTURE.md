@@ -1,530 +1,326 @@
 # Architecture Research
 
-**Domain:** PCORnet CDM R Analysis Pipeline
-**Researched:** 2026-03-24
-**Confidence:** MEDIUM
+**Domain:** PCORnet CDM R Analysis Pipeline — v1.6 Treatment Code Validation & Cancer Site Analysis
+**Researched:** 2026-04-21
+**Confidence:** HIGH (based on direct inspection of all existing R scripts and reference files)
 
 ## Standard Architecture
 
 ### System Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   ANALYSIS ORCHESTRATION                     │
-│                     (main script / runner)                   │
-├─────────────────────────────────────────────────────────────┤
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │  Config    │  │  Loader    │  │ Harmonizer │            │
-│  │  (params,  │  │  (CSVs →   │  │  (payer    │            │
-│  │   paths)   │  │  tables)   │  │  mapping)  │            │
-│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘            │
-│        │                │                │                   │
-├────────┴────────────────┴────────────────┴───────────────────┤
-│                   COHORT CONSTRUCTION                        │
-│                  (named predicate filters)                   │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │            Attrition Logger                         │    │
-│  │     (captures N before/after each filter)           │    │
-│  └─────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                      VISUALIZATION                           │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │ Waterfall  │  │   Sankey   │  │  Tables    │            │
-│  │ (attrition)│  │  (flow)    │  │ (summary)  │            │
-│  └────────────┘  └────────────┘  └────────────┘            │
-├─────────────────────────────────────────────────────────────┤
-│                      COMPLIANCE                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │        Small Cell Suppression (<11 counts)          │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
+The existing pipeline follows a **standalone diagnostic script** pattern on top of a DuckDB backend with a centralized config layer. Each numbered script is independently runnable: it sources config, opens a DuckDB connection via `get_pcornet_table()`, does its work, and writes output to `output/` or RDS cache. There is no shared in-memory state between scripts — scripts are not chained at runtime.
 
-PCORnet CDM analysis pipelines in R follow a **layered pipeline architecture** where data flows sequentially through stages, with each layer transforming or filtering the dataset. The architecture prioritizes **transparency** (every operation is logged), **reproducibility** (same input → same output), and **regulatory compliance** (HIPAA small cell suppression).
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CONFIG LAYER                                 │
+│  R/00_config.R: TREATMENT_CODES, AMC_PAYER_LOOKUP, CONFIG, GAP_*    │
+│  R/utils_treatment.R: safe_table(), get_hl_patient_ids(), etc.       │
+├─────────────────────────────────────────────────────────────────────┤
+│                      BACKEND ABSTRACTION                             │
+│  R/01_load_pcornet.R: get_pcornet_table(name) → tbl_dbi or tibble   │
+│  USE_DUCKDB flag (default TRUE) → DuckDB lazy SQL queries            │
+│  materialize() helper for in-memory regex ops on DuckDB result sets  │
+├──────────────┬──────────────────────────────────┬───────────────────┤
+│  TREATMENT   │  TREATMENT CODES / EPISODES       │  PAYER ANALYSIS  │
+│  INVENTORY   │  R/43_treatment_durations.R        │  R/35_*, R/36_*  │
+│  R/38_*.R    │  R/44_treatment_episodes.R         │  R/45_*, R/46_*  │
+│  (4-type     │  (per-patient, per-episode dates,  │  (frequency,     │
+│  inventory   │   RDS + xlsx + per-type CSVs)      │   hierarchy)     │
+│  xlsx)       │                                    │                  │
+├──────────────┴──────────────────────────────────┴───────────────────┤
+│  RESOLVED CODE REPORTS: R/42_treatment_codes_resolved.R             │
+│  write_resolved_xlsx() → 2-sheet styled workbook per treatment type  │
+├─────────────────────────────────────────────────────────────────────┤
+│                     REFERENCE FILE INPUTS                            │
+│  VariableDetails.xlsx  (Treatment sheet: 123 rows, modality+codes)   │
+│  TreatmentVariables_2024.07.17.docx  (CPT ranges, source tables)     │
+│  CancerSiteCategories.xlsx  (Groups sheet: 43 rows, ICD10/ICDO3)     │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **Config** | Define file paths, parameters, constants | Single `00_config.R` script with named lists/vectors |
-| **Loader** | Read raw CSV files with correct data types | `readr::read_csv()` with col_types specification per PCORnet table |
-| **Harmonizer** | Map payer values to standardized categories | Custom functions using `dplyr::case_when()` or lookup tables |
-| **Cohort Constructor** | Apply sequential filters with named predicates | `has_*()`, `with_*()`, `exclude_*()` functions returning logical vectors |
-| **Attrition Logger** | Track patient counts before/after filters | Data frame accumulating step name, N before, N after, N excluded |
-| **Waterfall Visualizer** | Show cumulative cohort attrition | `ggplot2` with `geom_bar()` or `geom_col()` showing exclusions |
-| **Sankey Visualizer** | Show patient flow through states | `ggalluvial::geom_alluvium()` + `geom_stratum()` |
-| **Suppression Layer** | Mask counts 1-10 in all outputs | Function wrapping all output-generating code |
+| Component | Responsibility | Status |
+|-----------|---------------|--------|
+| `R/00_config.R` | TREATMENT_CODES (named list), AMC_PAYER_LOOKUP, CONFIG paths, GAP_THRESHOLD, TREATMENT_TYPES, TREATMENT_TYPE_COLORS | Existing — may receive additions |
+| `R/01_load_pcornet.R` | `get_pcornet_table(name)` dispatcher — returns DuckDB tbl or tibble depending on USE_DUCKDB | Existing — unchanged |
+| `R/utils_treatment.R` | `safe_table()`, `empty_result()`, `get_hl_patient_ids()`, `nrow_or_0()` | Existing — unchanged |
+| `R/38_treatment_inventory.R` | Scans all 7 PCORnet tables for 4 treatment types, produces styled multi-sheet xlsx | Existing — unchanged |
+| `R/42_treatment_codes_resolved.R` | `write_resolved_xlsx()` reusable function; produces per-type 2-sheet xlsx | Existing — unchanged |
+| `R/43_treatment_durations.R` | `extract_all_dates()` + `assign_episode_ids()` + per-patient summary | Existing — unchanged |
+| `R/44_treatment_episodes.R` | Per-episode detail from Phase 43 functions; per-type CSVs | Existing — **modified**: add triggering code column |
+| **R/45_cancer_site_frequency.R** | Read CancerSiteCategories.xlsx, expand ICD10 ranges, query TUMOR_REGISTRY + DIAGNOSIS, produce frequency table | **New** |
+| **R/46_treatment_code_crossref.R** | Parse VariableDetails.xlsx Treatment sheet + TreatmentVariables docx; diff against TREATMENT_CODES in config; produce gap report | **New** |
+| **R/47_radiation_cpt_audit.R** | Audit 70010-79999 CPT range in PROCEDURES; classify imaging vs treatment; verify proton codes 77520-77525 present | **New** |
 
 ## Recommended Project Structure
 
-```
-insurance_investigation/
-├── R/
-│   ├── 00_config.R                # Paths, ICD code lists, payer mappings
-│   ├── 01_load_pcornet.R          # Load 22 PCORnet CDM CSV tables
-│   ├── 02_harmonize_payer.R       # 9-category payer mapping + dual-eligible
-│   ├── 03_cohort_predicates.R     # has_*, with_*, exclude_* filter functions
-│   ├── 04_build_cohort.R          # Apply filter chain with attrition logging
-│   ├── 05_visualize_waterfall.R   # Attrition waterfall chart
-│   ├── 06_visualize_sankey.R      # Patient flow Sankey diagram
-│   ├── utils_attrition.R          # Attrition logging helpers
-│   ├── utils_suppression.R        # HIPAA small cell suppression (<11)
-│   └── utils_validation.R         # Data quality checks (optional)
-├── data/
-│   └── raw/                       # Symlinks or paths to HiPerGator CSVs
-│       ├── ENROLLMENT.csv
-│       ├── DIAGNOSIS.csv
-│       ├── PROCEDURES.csv
-│       └── ... (22 tables total)
-├── output/
-│   ├── figures/
-│   │   ├── waterfall_attrition.png
-│   │   └── sankey_patient_flow.png
-│   ├── tables/
-│   │   └── attrition_log.csv
-│   └── cohort/
-│       └── final_cohort.csv       # Filtered patient IDs (suppression applied)
-├── docs/
-│   └── PAYER_MAPPING.md           # Documentation of 9 payer categories
-├── .Rprofile                       # RStudio project settings
-├── renv.lock                       # Package version lockfile (renv)
-└── main.R                          # Orchestrator script (sources R/* in order)
-```
+No structural changes to directories. New scripts follow the existing numbered pattern in `R/`:
 
-### Structure Rationale
-
-- **Numbered `R/` scripts:** Scripts run in dependency order (`00_` before `01_`, etc.). Numbering makes execution sequence explicit.
-- **Utility functions separate:** `utils_*.R` files contain reusable functions sourced by multiple analysis scripts. Not numbered because they're libraries, not steps.
-- **Config first:** `00_config.R` defines all paths, constants, ICD codes, and payer mappings in one place. All other scripts load this first.
-- **Modular stages:** Each script has one responsibility (load, harmonize, filter, visualize). Makes debugging easier and enables skipping/rerunning individual stages.
-- **Output isolation:** All generated artifacts (figures, tables, cohorts) go to `output/`, never mixed with source code or raw data.
-- **Data symlinks:** Raw data stays on HiPerGator filesystem; `data/raw/` contains symlinks to avoid duplication.
+```
+R/
+├── 00_config.R                  # TREATMENT_CODES — may add proton codes, correct descriptions
+├── ...
+├── 42_treatment_codes_resolved.R  # write_resolved_xlsx() — unchanged
+├── 43_treatment_durations.R       # extract_all_dates() — unchanged
+├── 44_treatment_episodes.R        # MODIFIED: add triggering_codes column to CSV output
+├── 45_cancer_site_frequency.R     # NEW: CancerSiteCategories.xlsx → TUMOR_REGISTRY/DIAGNOSIS freq
+├── 46_treatment_code_crossref.R   # NEW: VariableDetails.xlsx + docx diff vs TREATMENT_CODES
+├── 47_radiation_cpt_audit.R       # NEW: 70010-79999 CPT audit in PROCEDURES
+output/
+├── cancer_site_frequency.xlsx     # Output from R/45
+├── treatment_code_crossref.xlsx   # Output from R/46
+├── radiation_cpt_audit.xlsx       # Output from R/47
+└── (per-type episode CSVs updated with triggering_codes column)
+```
 
 ## Architectural Patterns
 
-### Pattern 1: Sequential Numbered Scripts (Pipeline Runner)
+### Pattern 1: Standalone Diagnostic Script
 
-**What:** A set of numbered R scripts (00, 01, 02...) where each script performs one stage of analysis and passes data to the next via saved RDS files or global environment objects.
+**What:** Every v1.3+ script follows this template — `source("R/00_config.R")`, `source("R/01_load_pcornet.R")`, call `get_pcornet_table()` for lazy DuckDB access, do work, write output. No runtime coupling to other scripts.
 
-**When to use:** For linear pipelines where each stage depends on the previous, and intermediate inspection is valuable (e.g., QA after each step).
+**When to use:** All new scripts in this milestone follow this pattern.
 
-**Trade-offs:**
-- **Pros:** Easy to understand, simple to debug (run up to step N), flexible (can skip steps manually)
-- **Cons:** Doesn't automatically detect when to re-run steps, relies on manual orchestration, harder to parallelize
-
-**Example:**
+**Example structure:**
 ```r
-# main.R — orchestrator script
 source("R/00_config.R")
-source("R/01_load_pcornet.R")      # Creates 'pcornet_raw' list
-source("R/02_harmonize_payer.R")   # Creates 'pcornet_harmonized' list
-source("R/03_cohort_predicates.R") # Defines filter functions
-source("R/04_build_cohort.R")      # Creates 'cohort' + 'attrition_log'
-source("R/05_visualize_waterfall.R")
-source("R/06_visualize_sankey.R")
+source("R/01_load_pcornet.R")
 
-# Or run interactively in RStudio:
-# File > Source each script in order
+OUTPUT_PATH <- file.path(CONFIG$output_dir, "cancer_site_frequency.xlsx")
+
+# ... load reference file, query tables, write xlsx
+wb <- wb_workbook()
+# ... style and write
+wb$save(OUTPUT_PATH)
 ```
 
-### Pattern 2: Named Predicate Functions (Filter Chain)
+### Pattern 2: readxl for Spreadsheet Input, openxlsx2 for Output
 
-**What:** Filtering logic encapsulated in functions with descriptive names (`has_diagnosis()`, `with_enrollment()`, `exclude_missing_payer()`) that return logical vectors. Compose filters by passing data through a chain with logging at each step.
+**What:** Reference xlsx files (VariableDetails.xlsx, CancerSiteCategories.xlsx) are read with `readxl::read_excel()`. All output xlsx workbooks are built with `openxlsx2`, matching the styling established in R/38 and R/42 (dark header fills, color-coded first column, freeze panes, column widths).
 
-**When to use:** When cohort construction logic needs to be readable, auditable, and reusable. Essential for clinical research where inclusion/exclusion criteria must be transparent.
+**When to use:** Any script reading reference spreadsheets or writing styled output.
 
-**Trade-offs:**
-- **Pros:** Self-documenting (function names describe criteria), testable (each predicate can be unit tested), composable (mix and match filters)
-- **Cons:** Requires upfront function design, more verbose than inline filtering
+**Trade-offs:** readxl and openxlsx2 are already installed project-wide. No new dependencies needed.
 
-**Example:**
-```r
-# R/03_cohort_predicates.R
-has_hodgkin_diagnosis <- function(diagnosis_df) {
-  # ICD-10: C81.* (77 codes), ICD-9: 201.* (72 codes)
-  hl_icd10 <- paste0("C81.", c("00", "01", ..., "9A"))
-  hl_icd9  <- paste0("201.", c("00", "01", ..., "98"))
+### Pattern 3: ICD10 Range Expansion
 
-  diagnosis_df %>%
-    filter(DX_TYPE %in% c("09", "10")) %>%
-    mutate(DX_CLEAN = str_remove(DX, "\\.")) %>%
-    filter(DX_CLEAN %in% c(hl_icd10, hl_icd9)) %>%
-    pull(PATID) %>%
-    unique()
-}
+**What:** CancerSiteCategories.xlsx stores code ranges as strings (e.g., `"C810-C814, C817, C819"`). These must be parsed and expanded into individual ICD-10-CM codes before matching against TUMOR_REGISTRY or DIAGNOSIS tables. The expansion logic lives in the script that uses the file, not in a shared utility, because this is the first use of range-format ICD codes in the pipeline.
 
-with_enrollment_period <- function(enrollment_df, min_days = 30) {
-  enrollment_df %>%
-    mutate(enrollment_days = as.numeric(ENR_END_DATE - ENR_START_DATE)) %>%
-    filter(enrollment_days >= min_days) %>%
-    pull(PATID) %>%
-    unique()
-}
+**Key detail from CancerSiteCategories.xlsx inspection:**
+- Sheet: "Groups", 43 rows (42 cancer site entries + header)
+- Columns: Site, Detailed site, Primary disease site, ICD10, ICDO3
+- ICD10 column holds comma-separated ranges like `"C810-C814, C817, C819"` — requires range expansion
+- ICDO3 column holds similar ranges — optional for TUMOR_REGISTRY histology matching
+- Hodgkin Lymphoma row: ICD10 = `"C810-C814, C817, C819"`, ICDO3 = `"9650-9655, 9659, 9663-9665, 9667"`
 
-exclude_missing_payer <- function(enrollment_df) {
-  enrollment_df %>%
-    filter(!is.na(PAYER_HARMONIZED) & PAYER_HARMONIZED != "Unknown") %>%
-    pull(PATID) %>%
-    unique()
-}
+**When to use:** R/45_cancer_site_frequency.R — parse ranges once on load, then use `%in%` or `filter(DX %in% expanded_codes)`.
 
-# R/04_build_cohort.R — apply filters with logging
-attrition_log <- data.frame()
-cohort <- pcornet_raw$ENROLLMENT
+### Pattern 4: Docx Text Extraction for Cross-Reference
 
-attrition_log <- log_attrition(attrition_log, "Initial cohort", nrow(cohort))
+**What:** TreatmentVariables_2024.07.17.docx is not machine-readable as a table — it is a Word document with prose and bulleted lists. The relevant content for cross-reference is:
+- Radiation CPT range: "From PROCEDURES: 70010-79999" (broad range, not individual codes)
+- Chemo CPT: "PX = 96401-96549, J8501-J9999"
+- SCT CPT: "38240, 38241, 38242, 38243"
+- SCT ICD-10-PCS: explicit full codes (30230C0, 30230G0, etc.)
+- Immunotherapy: XW0xx CAR T-cell codes
+- DRG codes per treatment type
 
-hl_patients <- has_hodgkin_diagnosis(pcornet_raw$DIAGNOSIS)
-cohort <- cohort %>% filter(PATID %in% hl_patients)
-attrition_log <- log_attrition(attrition_log, "Has Hodgkin diagnosis", nrow(cohort))
+VariableDetails.xlsx Treatment sheet (123 rows) is the more structured source and covers SCT + immunotherapy codes explicitly. The docx provides the broader "from PROCEDURES: 70010-79999" range specification for radiation.
 
-enrolled_patients <- with_enrollment_period(cohort, min_days = 30)
-cohort <- cohort %>% filter(PATID %in% enrolled_patients)
-attrition_log <- log_attrition(attrition_log, "Enrollment ≥30 days", nrow(cohort))
+**Approach for R/46:** Parse VariableDetails.xlsx with readxl (clean tabular source), use the docx text content (accessible via unzip + XML parse in R with `xml2` package, or simpler: the docx text was confirmed extractable) to confirm the radiation range definition. The cross-reference compares codes listed in VariableDetails.xlsx Treatment sheet against codes in TREATMENT_CODES from config.
 
-# ... continue filter chain
-```
+### Pattern 5: Triggering Code Column via Back-Join
 
-### Pattern 3: Attrition Logging Wrapper (Cohort Tracking)
+**What:** R/44_treatment_episodes.R currently produces per-episode rows with no code traceability. Adding a `triggering_codes` column requires joining the episode output back to the raw date-extraction results from R/43's `extract_all_dates()`, which already knows which codes produced each date. The pattern is: extract dates with their source codes, aggregate dates into episodes as before, then for each episode collect the distinct triggering codes that fall within the episode window.
 
-**What:** A helper function that wraps every filtering operation, capturing the cohort size before and after the filter, along with a description of the criterion applied.
+**When to use:** The triggering code column in R/44 is the only case where a new column must trace back to raw code evidence.
 
-**When to use:** Mandatory for clinical cohort studies where attrition must be reported (e.g., CONSORT diagrams, waterfall charts). Enables automatic visualization generation.
-
-**Trade-offs:**
-- **Pros:** Automatic audit trail, enables reproducible attrition reporting, catches unexpected exclusions
-- **Cons:** Adds boilerplate to filter code, requires discipline to use consistently
-
-**Example:**
-```r
-# R/utils_attrition.R
-init_attrition_log <- function() {
-  data.frame(
-    step = character(),
-    n_before = integer(),
-    n_after = integer(),
-    n_excluded = integer(),
-    pct_excluded = numeric(),
-    stringsAsFactors = FALSE
-  )
-}
-
-log_attrition <- function(log_df, step_name, n_after, n_before = NULL) {
-  if (is.null(n_before)) {
-    # Infer from previous step
-    n_before <- if (nrow(log_df) > 0) tail(log_df$n_after, 1) else n_after
-  }
-
-  n_excluded <- n_before - n_after
-  pct_excluded <- if (n_before > 0) round(100 * n_excluded / n_before, 1) else 0
-
-  rbind(log_df, data.frame(
-    step = step_name,
-    n_before = n_before,
-    n_after = n_after,
-    n_excluded = n_excluded,
-    pct_excluded = pct_excluded
-  ))
-}
-
-# Usage:
-attrition <- init_attrition_log()
-cohort <- initial_data
-attrition <- log_attrition(attrition, "Initial enrollment", nrow(cohort))
-
-cohort <- cohort %>% filter(AGE >= 18)
-attrition <- log_attrition(attrition, "Age ≥18", nrow(cohort))
-```
-
-### Pattern 4: Small Cell Suppression Layer (Compliance)
-
-**What:** A wrapper function applied to all output-generating code that replaces counts between 1 and 10 with a suppression symbol (e.g., "<11" or asterisk) to comply with HIPAA and CMS policies.
-
-**When to use:** Required for all outputs (tables, figures, exported datasets) derived from healthcare data that could potentially re-identify individuals.
-
-**Trade-offs:**
-- **Pros:** Ensures regulatory compliance, prevents accidental disclosure
-- **Cons:** May reduce utility of exploratory analysis, requires careful implementation
-
-**Example:**
-```r
-# R/utils_suppression.R
-suppress_small_cells <- function(x, threshold = 11, replacement = "<11") {
-  ifelse(x > 0 & x < threshold, replacement, as.character(x))
-}
-
-apply_suppression_to_table <- function(df, count_cols) {
-  df %>%
-    mutate(across(all_of(count_cols), ~suppress_small_cells(., threshold = 11)))
-}
-
-# Usage in summary tables:
-summary_table <- cohort %>%
-  group_by(PAYER_HARMONIZED, SITE) %>%
-  summarise(n_patients = n(), .groups = "drop") %>%
-  apply_suppression_to_table(count_cols = "n_patients")
-
-# Usage in figures (requires pre-aggregation):
-plot_data <- cohort %>%
-  count(PAYER_HARMONIZED) %>%
-  mutate(n_suppressed = as.numeric(suppress_small_cells(n, threshold = 11, replacement = "10.5")))
-```
+**Implementation note:** `extract_all_dates()` in R/43 currently returns only `ID` and `treatment_date` columns. Modifying it to also return `triggering_code` and `code_type` columns (without changing its episode logic) enables the join. R/44 sources R/43 directly, so the change propagates automatically.
 
 ## Data Flow
 
-### End-to-End Analysis Flow
+### v1.6 New Data Flows
 
 ```
-[HiPerGator CSVs]
+[CancerSiteCategories.xlsx]
+    ↓  (readxl, range expansion)
+[expanded ICD10 code list by site group]
     ↓
-[01_load] → 22 PCORnet CDM tables loaded into list 'pcornet_raw'
+[TUMOR_REGISTRY_ALL via get_pcornet_table()]   [DIAGNOSIS via get_pcornet_table()]
+    ↓                                               ↓
+[count patients by cancer site + source table]
     ↓
-[02_harmonize] → Add 'PAYER_HARMONIZED' column (9 categories)
-    ↓
-[03_predicates] → Define has_*(), with_*(), exclude_*() functions
-    ↓
-[04_build_cohort] → Apply filters sequentially
-    ↓                  ↓
-    ↓            [attrition_log] → data frame tracking N at each step
-    ↓
-[05_waterfall] → ggplot2 bar chart from attrition_log
-    ↓
-[06_sankey] → ggalluvial flow diagram from cohort + payer strata
-    ↓
-[output/] → PNG figures, CSV tables (all with suppression applied)
+[cancer_site_frequency.xlsx]  ← R/45_cancer_site_frequency.R
 ```
 
-### Key Data Flows
+```
+[VariableDetails.xlsx Treatment sheet]     [TreatmentVariables_2024.07.17.docx text]
+    ↓  (readxl, forward-fill Modality col)     ↓  (xml2 or zip+read approach)
+[reference code set per modality]          [CPT range definitions per type]
+    ↓
+[diff vs TREATMENT_CODES in R/00_config.R]
+    ↓
+[in_config_not_in_reference | in_reference_not_in_config | common]
+    ↓
+[treatment_code_crossref.xlsx]  ← R/46_treatment_code_crossref.R
+```
 
-1. **Loading Flow:** `00_config.R` defines `PCORNET_PATHS` (named list of CSV paths) → `01_load_pcornet.R` iterates through paths using `readr::read_csv()` with table-specific `col_types` → stores result in named list `pcornet_raw` (e.g., `pcornet_raw$ENROLLMENT`, `pcornet_raw$DIAGNOSIS`).
+```
+[PROCEDURES via get_pcornet_table()]
+    ↓  (filter PX_TYPE == "CH", 70010 <= as.numeric(PX) <= 79999)
+[CPT codes in range]
+    ↓  (classify: imaging vs treatment vs unknown using CPT category logic)
+[radiation_cpt_audit.xlsx]  ← R/47_radiation_cpt_audit.R
+    includes: proton codes 77520-77525 presence/absence, imaging exclusion rationale
+```
 
-2. **Harmonization Flow:** `02_harmonize_payer.R` reads payer mapping rules from `00_config.R` → applies `case_when()` logic to `ENROLLMENT$RAW_PAY_TYPE` → adds `PAYER_HARMONIZED` column with 9 categories → detects dual-eligible (Medicare + Medicaid overlap) → stores enhanced list as `pcornet_harmonized`.
+```
+[R/43_treatment_durations.R: extract_all_dates() — MODIFIED]
+    ↓  (now returns ID + treatment_date + triggering_code + code_type)
+[R/44_treatment_episodes.R: calculate_episodes_detailed() — MODIFIED]
+    ↓  (group triggering codes within episode window, collapse to comma-sep string)
+[per-type CSV output with new triggering_codes column]
+```
 
-3. **Cohort Construction Flow:** `04_build_cohort.R` starts with full `ENROLLMENT` table → applies named predicates one at a time → each filter returns vector of `PATID` values meeting criterion → cohort restricted to matching `PATID` using `filter(PATID %in% qualifying_ids)` → after each filter, `log_attrition()` captures N before/after → final `cohort` data frame contains only patients meeting all criteria.
+### Key Integration Points
 
-4. **Attrition Logging Flow:** `utils_attrition.R` provides `init_attrition_log()` and `log_attrition()` → after each filter in `04_build_cohort.R`, `log_attrition()` called with step name and current cohort size → function calculates N excluded and % excluded → appends row to accumulating `attrition_log` data frame → final log saved to `output/tables/attrition_log.csv` and passed to `05_visualize_waterfall.R`.
+1. **R/00_config.R → R/45, R/46, R/47:** All three new scripts source config. R/46 reads `TREATMENT_CODES` directly to perform the diff. R/47 reads `TREATMENT_CODES$radiation_cpt` to distinguish already-captured vs newly-found codes. R/45 uses `CONFIG$output_dir` for output path.
 
-5. **Visualization Flow (Waterfall):** `05_visualize_waterfall.R` reads `attrition_log` → creates `ggplot()` with `geom_col()` showing cumulative exclusions as stacked bars → applies theme and labels → saves to `output/figures/waterfall_attrition.png`.
+2. **R/43 → R/44 (triggering codes change):** R/44 sources R/43 with `source("R/43_treatment_durations.R")`. If `extract_all_dates()` in R/43 is extended to return a `triggering_code` column, R/44 picks it up automatically. This is the only inter-script dependency change in this milestone.
 
-6. **Visualization Flow (Sankey):** `06_visualize_sankey.R` reads final `cohort` → joins with `DIAGNOSIS` (for HL diagnosis date) and `PROCEDURES`/`PRESCRIBING` (for treatment type) → creates long-format data frame with `axis1` (enrollment period), `axis2` (diagnosis date), `axis3` (treatment type), stratified by `PAYER_HARMONIZED` → uses `ggalluvial::ggplot(aes(axis1, axis2, axis3))` + `geom_alluvium()` + `geom_stratum()` → saves to `output/figures/sankey_patient_flow.png`.
+3. **CancerSiteCategories.xlsx → R/45:** The file lives in the project root. ICD10 column requires range expansion (e.g., "C810-C814" → c("C810","C811","C812","C813","C814")). ICDO3 column is optional — use for TUMOR_REGISTRY histology cross-check only.
 
-7. **Suppression Flow:** Before any output (table or figure) is saved, data is aggregated and `suppress_small_cells()` applied to count columns → ensures no cell with 1-10 patients appears in output → replaces with "<11" string or rounds to boundary value (10.5 for plotting).
+4. **VariableDetails.xlsx → R/46:** The Treatment sheet uses a merged-cell pattern (Modality column has None/NA for rows below the first in each group). readxl reads these as NA. A `fill()` forward-fill on the Modality column is required before use.
+
+5. **PROCEDURES table → R/47:** The 70010-79999 CPT range includes both imaging codes (diagnostic radiology, nuclear medicine) and therapeutic radiation delivery codes. The audit must classify each code found in data. Imaging subranges: 70010-76999 (diagnostic radiology + nuclear medicine), 77000-77299 (mostly planning/simulation codes), 77300-77399 (treatment planning), 77400-77499 (treatment delivery — these are the therapeutic ones), 77500-77999 (management + brachytherapy). Proton codes 77520-77525 fall within 77500-77599.
+
+## New vs Modified Components
+
+### New (3 scripts)
+
+| Script | Purpose | Primary Input | Output |
+|--------|---------|--------------|--------|
+| `R/45_cancer_site_frequency.R` | Cancer site frequency from ICD codes | CancerSiteCategories.xlsx, TUMOR_REGISTRY, DIAGNOSIS | `output/cancer_site_frequency.xlsx` |
+| `R/46_treatment_code_crossref.R` | Diff TREATMENT_CODES vs reference docs | VariableDetails.xlsx, TreatmentVariables docx, TREATMENT_CODES | `output/treatment_code_crossref.xlsx` |
+| `R/47_radiation_cpt_audit.R` | Classify radiation CPT 70010-79999 range | PROCEDURES table, TREATMENT_CODES$radiation_cpt | `output/radiation_cpt_audit.xlsx` |
+
+### Modified (1 script, 1 config)
+
+| Component | Change | Risk |
+|-----------|--------|------|
+| `R/43_treatment_durations.R` | `extract_all_dates()` extended to also return `triggering_code` + `code_type` columns | LOW — R/44 is the only consumer; adding columns is additive |
+| `R/44_treatment_episodes.R` | `calculate_episodes_detailed()` collects triggering codes per episode; per-type CSV output gains `triggering_codes` column | LOW — new column is additive; existing consumers of RDS/xlsx unaffected |
+| `R/00_config.R` | Correct descriptions for Phase 39 radiation_cpt codes (currently "no description"); optionally add proton codes 77520-77525 if confirmed absent | VERY LOW — string edits only |
+
+### Unchanged (all others)
+
+R/38, R/42, R/01, R/02-R/36 — no modifications. The standalone script pattern means new scripts do not require changes to existing scripts that have no dependency on them.
+
+## Build Order
+
+The four features have one internal dependency (triggering codes requires modifying R/43 before R/44). The other three features are fully independent of each other and of the triggering codes work.
+
+```
+Phase A (independent — can start anytime):
+  45_cancer_site_frequency.R   — no dependency on other new scripts
+  46_treatment_code_crossref.R — no dependency on other new scripts
+  47_radiation_cpt_audit.R     — no dependency on other new scripts
+
+Phase B (sequential — R/43 must be modified first):
+  Step 1: Modify R/43_treatment_durations.R (add triggering_code to extract_all_dates())
+  Step 2: Modify R/44_treatment_episodes.R (add triggering_codes column using R/43 output)
+```
+
+**Recommended build order (minimizes risk):**
+
+1. **R/47_radiation_cpt_audit.R** — Purely reads from PROCEDURES + config. No R script changes. Fastest to validate and provides immediate answer on proton code coverage question. Also informs any potential R/00_config.R corrections.
+
+2. **R/46_treatment_code_crossref.R** — Reads reference files + config. No R script changes. Produces gap list that may motivate adding codes to TREATMENT_CODES. Run before triggering codes work so any config updates are in place.
+
+3. **(Optional) R/00_config.R corrections** — Based on R/47 and R/46 findings: add proton codes 77520-77525 if missing; correct "Phase 39: no description" comments on radiation_cpt codes.
+
+4. **R/43_treatment_durations.R modification** — Add triggering_code to extract_all_dates() return value. Verify R/43 still produces identical duration outputs (regression check: run R/43 before and after, compare RDS/xlsx output).
+
+5. **R/44_treatment_episodes.R modification** — Add triggering_codes column. Verify per-type CSVs gain the column and episode logic is unchanged.
+
+6. **R/45_cancer_site_frequency.R** — Independent of all other changes. Can run after R/47 and R/46 are done, or in parallel. Placed last because the ICD range expansion logic has the most implementation complexity (range parsing).
 
 ## Scaling Considerations
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 1k-100k patients (typical PCORnet single-site) | Current architecture handles well in-memory with tidyverse. Load all tables upfront. |
-| 100k-1M patients (multi-site PCORnet) | Consider `arrow` package for larger-than-RAM CSV reading, or convert CSVs to Parquet format. Filter early (e.g., restrict to HL patients in `01_load` before loading all tables). |
-| 1M+ patients (national PCORnet network) | Distributed query model (PCORnet standard approach): each site runs pipeline locally, aggregates counts, sends suppressed results to coordinating center. Never centralize raw data. Use SQL backend (DuckDB, SQLite) instead of in-memory R. |
+| Concern | Current Approach | At v1.6 |
+|---------|-----------------|---------|
+| Reference file parsing | readxl one-time load | Same — files are small (43 and 123 rows) |
+| ICD range expansion | Not previously needed | Range expansion is in-memory R; 42 site rows → hundreds of codes, trivial |
+| CPT range audit (70010-79999) | Not previously done | ~990 possible CPT codes; filter on PROCEDURES with materialize() pattern |
+| Triggering codes | Not tracked | Stored as comma-separated string in CSV; no performance concern |
 
-### Scaling Priorities
+## Anti-Patterns to Avoid
 
-1. **First bottleneck:** Loading all 22 PCORnet CSV tables into memory. **Fix:** Use `arrow::read_csv_arrow()` for lazy evaluation, or load only necessary columns (`col_select` in `read_csv()`). Apply diagnosis filter early to reduce patient set before loading other tables.
+### Anti-Pattern 1: Treating TreatmentVariables Docx as Authoritative Code List
 
-2. **Second bottleneck:** Large joins between tables (e.g., `ENROLLMENT` ⋈ `DIAGNOSIS` ⋈ `PROCEDURES`). **Fix:** Use `data.table` backend (`dtplyr`) for faster joins, or use SQL via `DBI` + `duckdb` for out-of-memory joins. Pre-filter to cohort before joining.
+**What people do:** Assume the docx CPT range "70010-79999" means all codes in that range should be in TREATMENT_CODES.
 
-**Note for this project:** OneFlorida+ HL cohort is small (~thousands of patients), so in-memory tidyverse is sufficient. No optimization needed for v1.
+**Why it's wrong:** The docx defines the search range for radiation, not the inclusion list. Imaging codes (70010-76999, diagnostic radiology) are explicitly not radiation treatment. The audit (R/47) exists to classify what's in that range, not to wholesale-add all 990 codes.
 
-## Anti-Patterns
+**Do this instead:** R/47 classifies each code found in actual PROCEDURES data as imaging vs treatment. Only confirmed treatment delivery codes (77401-77470 series, proton codes 77520-77525, brachytherapy codes) belong in TREATMENT_CODES.
 
-### Anti-Pattern 1: Inline Anonymous Filtering
+### Anti-Pattern 2: Modifying extract_all_dates() Return Schema Destructively
 
-**What people do:**
-```r
-cohort <- cohort %>%
-  filter(AGE >= 18 & AGE <= 65) %>%
-  filter(!is.na(PAYER_TYPE)) %>%
-  filter(DIAGNOSIS_DATE > as.Date("2010-01-01"))
-```
+**What people do:** Change the column names or drop existing columns while adding `triggering_code`.
 
-**Why it's wrong:** Filters are opaque (what clinical criterion does "AGE >= 18" represent?). No attrition tracking. Difficult to test or reuse logic. Chain of operations doesn't describe the cohort selection protocol.
+**Why it's wrong:** R/44 directly consumes R/43's `extract_all_dates()` return value. Any breaking column rename would silently fail at runtime on HiPerGator.
 
-**Do this instead:** Extract filters into named predicate functions with clear clinical semantics. Wrap each filter in attrition logging.
-```r
-has_adult_age <- function(df) df %>% filter(AGE >= 18 & AGE <= 65) %>% pull(PATID)
-exclude_missing_payer <- function(df) df %>% filter(!is.na(PAYER_TYPE)) %>% pull(PATID)
-after_study_start <- function(df) df %>% filter(DIAGNOSIS_DATE > as.Date("2010-01-01")) %>% pull(PATID)
+**Do this instead:** Add `triggering_code` and `code_type` as new columns. Never rename or remove `ID` or `treatment_date` which are the existing columns R/44 depends on.
 
-cohort <- apply_filter(cohort, has_adult_age, "Adult age (18-65)", attrition_log)
-cohort <- apply_filter(cohort, exclude_missing_payer, "Known payer type", attrition_log)
-cohort <- apply_filter(cohort, after_study_start, "After study start date", attrition_log)
-```
+### Anti-Pattern 3: Embedding ICD Range Expansion Logic Inline
 
-### Anti-Pattern 2: Hardcoded Paths and Constants
+**What people do:** Write a one-off paste/seq loop inside R/45 without a named function.
 
-**What people do:**
-```r
-# In R/02_harmonize_payer.R
-enrollment <- read_csv("C:/Users/Owner/Data/ENROLLMENT.csv")
+**Why it's wrong:** ICD range expansion (parsing "C810-C814" → vector of 4 codes) is non-trivial for alphanumeric codes (the suffix is numeric, the prefix is alpha+numeric). Inline code is untestable and will be repeated if cancer site analysis is ever extended.
 
-# In R/05_visualize_waterfall.R
-ggsave("C:/Users/Owner/Documents/insurance_investigation/output/figures/waterfall.png")
-```
+**Do this instead:** Define `expand_icd_range(range_str)` as a named function at the top of R/45. Test it on the Hodgkin row before running against all 42 rows.
 
-**Why it's wrong:** Breaks when moved to different machine (e.g., local → HiPerGator). Impossible to reuse code for different datasets. Hard to maintain (path changes require editing multiple files).
+### Anti-Pattern 4: Forward-Fill Failure on VariableDetails.xlsx Treatment Sheet
 
-**Do this instead:** Define all paths in `00_config.R` using relative paths or environment variables. Reference via config object.
-```r
-# R/00_config.R
-CONFIG <- list(
-  data_dir = Sys.getenv("PCORNET_DATA_DIR", default = "data/raw"),
-  output_dir = "output",
-  figures_dir = "output/figures"
-)
+**What people do:** Read the Treatment sheet and use the raw Modality column with NA gaps without forward-filling.
 
-PCORNET_PATHS <- list(
-  ENROLLMENT = file.path(CONFIG$data_dir, "ENROLLMENT.csv"),
-  DIAGNOSIS  = file.path(CONFIG$data_dir, "DIAGNOSIS.csv")
-)
+**Why it's wrong:** The Treatment sheet uses merged cells for Modality (e.g., "Stem cell transplant" is only in the first row of that group; subsequent rows have NA). Without `tidyr::fill(Modality, .direction = "down")`, code-level rows lose their modality assignment.
 
-# R/02_harmonize_payer.R
-source("R/00_config.R")
-enrollment <- read_csv(PCORNET_PATHS$ENROLLMENT)
-
-# R/05_visualize_waterfall.R
-source("R/00_config.R")
-ggsave(file.path(CONFIG$figures_dir, "waterfall.png"))
-```
-
-### Anti-Pattern 3: Forgetting Small Cell Suppression
-
-**What people do:** Generate summary tables or figures directly from aggregated counts without checking for small cells.
-
-```r
-summary_table <- cohort %>%
-  group_by(SITE, PAYER_HARMONIZED) %>%
-  summarise(n = n()) %>%
-  write_csv("output/tables/summary.csv")
-```
-
-**Why it's wrong:** Violates HIPAA safe harbor rules and CMS cell size policy (n=1-10 must be suppressed). Could lead to patient re-identification. Fails IRB compliance.
-
-**Do this instead:** Always apply suppression function before saving outputs.
-```r
-source("R/utils_suppression.R")
-
-summary_table <- cohort %>%
-  group_by(SITE, PAYER_HARMONIZED) %>%
-  summarise(n = n(), .groups = "drop") %>%
-  apply_suppression_to_table(count_cols = "n") %>%
-  write_csv("output/tables/summary.csv")
-```
-
-### Anti-Pattern 4: Silent Data Type Mismatches
-
-**What people do:** Load CSVs without specifying column types, relying on `readr` auto-detection.
-
-```r
-enrollment <- read_csv("ENROLLMENT.csv")  # Dates might be read as characters
-```
-
-**Why it's wrong:** PCORnet CDM has specific data types (dates, integers, coded values). Auto-detection can fail (e.g., PATID with leading zeros truncated, dates parsed incorrectly). Silent failures lead to incorrect analyses.
-
-**Do this instead:** Explicitly specify `col_types` for each PCORnet table based on CDM specification.
-```r
-# R/01_load_pcornet.R
-ENROLLMENT_SPEC <- cols(
-  PATID = col_character(),
-  ENR_START_DATE = col_date(format = "%Y-%m-%d"),
-  ENR_END_DATE = col_date(format = "%Y-%m-%d"),
-  CHART = col_character(),
-  ENR_BASIS = col_character(),
-  RAW_BASIS = col_character(),
-  RAW_CHART = col_character()
-)
-
-enrollment <- read_csv(PCORNET_PATHS$ENROLLMENT, col_types = ENROLLMENT_SPEC)
-```
+**Do this instead:** After `read_excel(..., sheet = "Treatment")`, immediately apply `fill(Modality, .direction = "down")` before any filtering or joining.
 
 ## Integration Points
 
-### External Systems
+### External References
 
-| System | Integration Pattern | Notes |
-|--------|---------------------|-------|
-| HiPerGator Filesystem | Direct file paths via symlinks or environment variable | CSVs stored at `/blue/...` or `/orange/...` paths. Set `PCORNET_DATA_DIR` in `.Renviron`. |
-| RStudio on HiPerGator | Interactive execution in RStudio Server | Load project via `.Rproj` file, run scripts interactively or via `main.R` orchestrator. |
-| Python Pipeline | Manual comparison (not automated) | Python pipeline at `C:\cygwin64\home\Owner\Data loading and cleaing\` is separate. R pipeline does not consume Python output; both analyze same raw CSVs independently. |
-| PCORnet CDM v7.0 | Schema validation (optional) | Use `utils_validation.R` to check table names, column names, value domains against CDM spec. Not required for v1. |
+| Reference File | Location | How Used |
+|----------------|----------|----------|
+| CancerSiteCategories.xlsx | Project root | R/45 reads "Groups" sheet; ICD10 ranges expanded to code vectors for DIAGNOSIS/TUMOR_REGISTRY queries |
+| VariableDetails.xlsx | Project root | R/46 reads "Treatment" sheet (123 rows); Modality forward-filled; codes diffed vs TREATMENT_CODES |
+| TreatmentVariables_2024.07.17.docx | Project root | R/46 uses text content to confirm CPT range definitions (70010-79999 for radiation, etc.); parse via `xml2` or zip extraction |
 
-### Internal Component Boundaries
+### Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| **Config ↔ All Stages** | Global environment via `source()` | `00_config.R` defines `CONFIG`, `PCORNET_PATHS`, `ICD_CODES`, `PAYER_MAPPING`. All other scripts source this first. |
-| **Loader ↔ Harmonizer** | Named list `pcornet_raw` in global env | `01_load` creates list of data frames. `02_harmonize` reads from list, adds columns, saves as `pcornet_harmonized`. |
-| **Predicates ↔ Cohort Builder** | Function definitions | `03_predicates` defines functions but doesn't execute them. `04_build_cohort` sources predicates file and calls functions. |
-| **Cohort Builder ↔ Visualizers** | Shared data frames (`cohort`, `attrition_log`) | `04_build_cohort` creates objects in global env. `05_` and `06_` scripts read these objects. Alternative: save to RDS and load. |
-| **Utils ↔ All Stages** | Function libraries via `source()` | `utils_*.R` files are sourced by any script needing their functions. No execution on source, only definitions. |
-
-### Recommended Communication Strategy
-
-For v1, use **global environment with sequential sourcing** (simplest, works well for linear pipelines run interactively in RStudio). For v2 (if automation needed), consider **RDS intermediate files** (each stage saves output to `output/intermediate/stagename.rds`, next stage loads from file) or **`{targets}` pipeline** (automatic dependency tracking and caching).
-
-## Build Order and Dependencies
-
-### Suggested Phase Structure for Roadmap
-
-**Phase 1: Foundation**
-1. **Config** (`00_config.R`) — No dependencies. Defines all constants.
-2. **Loader** (`01_load_pcornet.R`) — Depends on Config. Validates CSVs load correctly.
-3. **Utilities** (`utils_*.R`) — Depends on Config. Attrition logging and suppression functions.
-
-**Phase 2: Harmonization**
-4. **Payer Harmonizer** (`02_harmonize_payer.R`) — Depends on Loader. Implements 9-category mapping and dual-eligible detection. Critical path item.
-
-**Phase 3: Cohort Construction**
-5. **Predicate Functions** (`03_cohort_predicates.R`) — Depends on Loader, Harmonizer. Defines `has_*`, `with_*`, `exclude_*` filters for HL diagnosis, enrollment, payer.
-6. **Cohort Builder** (`04_build_cohort.R`) — Depends on Predicates, Utilities. Applies filter chain with attrition logging. Core deliverable.
-
-**Phase 4: Visualization**
-7. **Waterfall Chart** (`05_visualize_waterfall.R`) — Depends on Cohort Builder (needs `attrition_log`). Demonstrates attrition tracking works.
-8. **Sankey Diagram** (`06_visualize_sankey.R`) — Depends on Cohort Builder (needs final `cohort`). Demonstrates payer stratification and patient flow.
-
-**Parallel Work:** Utilities and Predicates can be developed in parallel with earlier phases if specs are clear.
-
-**Integration Points:** After Phase 2, validate payer harmonization against Python pipeline output (manual spot-check). After Phase 3, validate cohort size matches expected range (hundreds to low thousands for HL).
-
-**Critical Path:** Config → Loader → Harmonizer → Cohort Builder → Visualizations. Waterfall and Sankey can be done in parallel once `04_build_cohort.R` is complete.
+| R/00_config.R ↔ R/45, R/46, R/47 | `source()` + global TREATMENT_CODES | R/46 reads TREATMENT_CODES directly for diff |
+| R/43 ↔ R/44 | `source("R/43_treatment_durations.R")` in R/44 | R/44 uses R/43's functions; adding a column to extract_all_dates() return is the only change |
+| R/01_load_pcornet.R ↔ R/45, R/47 | `get_pcornet_table()` dispatcher | Standard pattern; R/45 queries TUMOR_REGISTRY_ALL + DIAGNOSIS; R/47 queries PROCEDURES |
+| New scripts ↔ output/ | `file.path(CONFIG$output_dir, ...)` | Follows existing output path convention |
 
 ## Sources
 
-**PCORnet CDM Specification:**
-- [PCORnet Common Data Model v7.0 Specification](https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf) — Official schema and data types
-- [PCORnet Common Data Model](https://pcornet.org/data/common-data-model/) — Overview and resources
+All findings in this document are derived from direct code inspection. No external sources required — architecture is entirely captured in the existing R scripts.
 
-**R Pipeline Architecture:**
-- [Building Data Pipelines with {targets}](https://bookdown.org/pdr_higgins/rmrwr/building-data-pipelines-with-targets.html) — Modern R pipeline patterns
-- [Structuring R Projects](https://www.r-bloggers.com/2018/08/structuring-r-projects/) — Directory organization
-- [Building Data Pipelines using R](https://towardsdatascience.com/building-data-pipelines-using-r-d9883cbc15c6/) — Sequential pipeline design
-- [R Script Naming Convention](https://r4ds.hadley.nz/workflow-scripts.html) — Numbered script patterns
-
-**Cohort Analysis and Attrition:**
-- [visR: CONSORT Flow Diagram](https://rdrr.io/cran/visR/f/vignettes/Consort_flow_diagram.Rmd) — Attrition table generation
-- [dtrackr: CONSORT Example](https://cran.r-project.org/web/packages/dtrackr/vignettes/consort-example.html) — Automated attrition tracking
-- [Using {flowchart} for CONSORT Diagrams](https://bookdown.org/pdr_higgins/rmrwr/using-the-flowchart-package-for-consort-diagrams-in-r.html) — Clinical trial flow diagrams
-
-**Functional Programming and Predicates:**
-- [Common Higher-Order Functions in R](https://stat.ethz.ch/R-manual/R-devel/library/base/html/funprog.html) — Filter, Map, Reduce
-- [Building Reproducible Analytical Pipelines: Functional Programming](https://raps-with-r.dev/fprog.html) — Predicate functions and pipelines
-- [Functional Programming and Unit Testing](https://b-rodrigues.github.io/fput/tidyverse.html) — Testing predicates
-
-**Visualization:**
-- [Alluvial Plots in ggplot2](https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html) — Sankey/alluvial diagrams with ggalluvial
-- [Alluvial and Sankey Plots for Clinical Data](https://www.lexjansen.com/pharmasug-cn/2024/DV/Pharmasug-China-2024-DV10003_Final_Paper.pdf) — Patient flow visualization
-- [Waterfall Charts in Oncology Trials](https://pharmasug.org/proceedings/2012/DG/PharmaSUG-2012-DG13.pdf) — Clinical waterfall chart patterns
-
-**Small Cell Suppression:**
-- [CMS Cell Size Suppression Policy](https://resdac.org/articles/cms-cell-size-suppression-policy) — HIPAA compliance standard (n < 11)
-- [Masking Small Cell Sizes for SEER-MHOS](https://healthcaredelivery.cancer.gov/seer-mhos/support/small_cell_sizes.html) — Suppression thresholds
-- [Statistical Disclosure Control in Web-Based Data Query Systems](https://pmc.ncbi.nlm.nih.gov/articles/PMC5409873/) — Suppression strategies
-
-**Data Validation:**
-- [The validate Package](https://cran.r-project.org/web/packages/validate/vignettes/cookbook.html) — Data validation infrastructure for R
-- [dataverifyr Package](https://davzim.github.io/dataverifyr/) — Lightweight data validation
+- `R/00_config.R` (lines 412-760): TREATMENT_CODES structure, radiation_cpt codes, proton code presence check
+- `R/38_treatment_inventory.R`: Standalone diagnostic script pattern, safe_table(), CPT_HCPCS_RANGES
+- `R/42_treatment_codes_resolved.R`: write_resolved_xlsx() reusable function signature
+- `R/43_treatment_durations.R`: extract_all_dates() return schema (ID, treatment_date)
+- `R/44_treatment_episodes.R`: calculate_episodes_detailed() and per-type CSV outputs
+- `CancerSiteCategories.xlsx` (Groups sheet, 43 rows): ICD10 range format confirmed
+- `VariableDetails.xlsx` (Treatment sheet, 123 rows): Modality/Code/Description structure confirmed; note at row 63 refers to TreatmentVariables docx
+- `TreatmentVariables_2024.07.17.docx` (text extraction): "From PROCEDURES: 70010-79999" for radiation confirmed
 
 ---
-*Architecture research for: PCORnet CDM R Analysis Pipeline (Payer Investigation)*
-*Researched: 2026-03-24*
+*Architecture research for: PCORnet CDM R Analysis Pipeline — v1.6 Treatment Code Validation & Cancer Site Analysis*
+*Researched: 2026-04-21*

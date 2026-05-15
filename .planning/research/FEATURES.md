@@ -1,187 +1,239 @@
-# Feature Landscape
+# Feature Research
 
-**Domain:** PCORnet CDM cohort-building and payer analysis pipeline (R)
-**Researched:** 2026-03-24
+**Domain:** PCORnet CDM cohort-building and payer analysis pipeline (R) — v1.6 Treatment Code Validation & Cancer Site Analysis
+**Researched:** 2026-04-21
+**Confidence:** HIGH (all features are scoped extensions of existing scripts with known patterns)
 
-## Table Stakes
+---
 
-Features users expect. Missing = product feels incomplete.
+## Feature Landscape
+
+This document covers ONLY the new v1.6 features. Existing features (Phases 1-44) are already built and documented.
+
+The five new feature areas are:
+1. Cancer site frequency table from CancerSiteCategories.xlsx
+2. TREATMENT_CODES cross-reference against TreatmentVariables_2024.07.17.docx
+3. Radiation CPT 70010-79999 range audit (imaging vs treatment classification)
+4. Proton therapy CPT confirmation (77520-77525 in radiation_cpt)
+5. Triggering code column in treatment episode CSV output
+
+---
+
+### Table Stakes (Users Expect These)
+
+Features a clinical researcher expects from this pipeline in v1.6. Missing any of these makes the milestone incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| PCORnet CDM table loading | Core requirement for any PCORnet analysis — without loading ENROLLMENT, DIAGNOSIS, PROCEDURES, DEMOGRAPHIC tables, no analysis possible | Low-Medium | Must handle 22+ CSV tables with correct data types. Requires file path configuration. |
-| ICD code matching (ICD-9 + ICD-10) | Clinical cohort definition requires both historical (ICD-9) and current (ICD-10) codes; ICD-9-to-ICD-10 transition happened 2015 | Medium | Must handle both dotted (C81.00) and undotted (C8100) formats. 149 HL codes: 77 ICD-10 (C81.xx), 72 ICD-9 (201.xx). |
-| Named filter predicates | Reproducibility and auditability requirement — opaque one-liners make cohort definitions impossible to validate or replicate | Low | Functions like `has_diagnosis()`, `with_enrollment()`, `exclude_missing_values()` read like clinical protocol. |
-| Attrition logging | Table stakes for any cohort study — CONSORT diagrams and transparency standards require documenting exclusions at each step | Low | Log "N before" and "N after" for every filter operation automatically. Essential for study validity. |
-| Attrition waterfall visualization | Standard presentation format for cohort studies — papers and IRBs expect CONSORT-style flow diagrams | Medium | Vertical bar chart showing progressive cohort reduction through exclusion criteria. |
-| HIPAA small-cell suppression | Legal requirement, not optional — counts 1-10 must be suppressed in any research output using patient data | Low | Standard threshold: suppress cells with N ≤ 10. Secondary suppression may be needed to prevent inference. |
-| Multi-site data handling | PCORnet infrastructure is inherently multi-site — data provenance and site-level quality differences are fundamental to the network | Medium | OneFlorida+ has partner-level differences: claims-only (FLM), mapped EHR (AMS, UMI), death-only (VRT). Site ID must be preserved. |
-| Payer harmonization (basic) | PCORnet studies routinely investigate insurance disparities — without standardized payer categories, cross-study comparisons fail | Medium | Must map raw payer codes to standard categories. Minimum: Medicare, Medicaid, Private, Other/Unknown. |
-| Data type enforcement | PCORnet CDM has strict data types (DATE, INTEGER, VARCHAR) — loading with wrong types causes silent errors in date arithmetic and joins | Low | Dates as Date, IDs as character, counts as integer. Config-driven type specification. |
-| Encounter-based enrollment | PCORnet CDM defines enrollment as periods when events are observable — without this, cohort inclusion criteria misidentify "no diagnosis" vs "no observation window" | Medium | ENROLLMENT table or encounter-based algorithm. Critical for attrition calculations. |
+| Cancer site frequency table | CancerSiteCategories.xlsx defines 42 groups; without a frequency count across actual PCORnet data, the file is unused reference material | MEDIUM | Requires reading xlsx ICD code ranges, querying DIAGNOSIS + TUMOR_REGISTRY tables, mapping each patient to the most specific cancer site group, producing patient and record counts per group with HIPAA suppression |
+| TREATMENT_CODES vs TreatmentVariables docx gap report | The docx is the authoritative source for what codes the study protocol says should be captured; without comparing it to R/00_config.R, there is no validation that the pipeline is complete | MEDIUM | Two-directional: codes in docx but not in config (gaps), codes in config not in docx (additions). Output as xlsx with per-type sheets matching existing treatment xlsx style |
+| Radiation CPT audit (70010-79999 imaging vs treatment) | The 70010-79999 range is diagnostic imaging, but a handful of codes in the 77xxx sub-range are legitimate radiation treatment delivery codes; the pipeline needs an explicit, cited classification for every code in the range that appears in the data | HIGH | Requires per-code classification (IMAGING / TREATMENT / PLANNING / EXCLUDED) with citation source (CPT description, AMA documentation). Output must document rationale for every excluded code in radiation_cpt coverage area |
+| Proton therapy codes 77520-77525 confirmation | Proton therapy is a primary treatment modality at UFPTI; if 77520-77525 are absent from radiation_cpt, the pipeline systematically misses proton therapy cases for a UFPTI study | LOW | Grep radiation_cpt in R/00_config.R; if missing, add with citation. Single-decision task. Currently missing from config (77401-77470 range in config does not include 77520-77525) |
+| Triggering code column in episode CSV output | Per-patient episodes need traceability — knowing *which specific code* triggered the episode start date enables manual QA and downstream analysis | MEDIUM | Modifies R/44_treatment_episodes.R (or a new R/45 script). The extract_all_dates() function in R/43 currently drops source code; must be extended to carry triggering_code and triggering_source_table through to episode_start row |
 
-## Differentiators
+---
 
-Features that set product apart. Not expected, but valued.
+### Differentiators (Competitive Advantage)
+
+Features that add value beyond what a minimal implementation would provide.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Dual-eligible detection | Most payer analyses treat Medicare and Medicaid as separate — dual-eligible patients (Medicare + Medicaid simultaneously) have unique barriers and outcomes | High | Requires time-aware logic: same patient with overlapping Medicare + Medicaid enrollment periods = dual-eligible. 8.7M full-benefit duals in 2019. |
-| Sankey/alluvial visualization stratified by payer | Standard analysis shows patient flow; stratifying by payer reveals insurance-driven pathway differences that bar charts miss | High | ggalluvial package. Shows enrollment → diagnosis → treatment with flow thickness proportional to N patients, colored by payer category. |
-| Payer harmonization (9-category with dual-eligible) | Basic payer mapping lumps disparate groups; 9-category system including dual-eligible enables nuanced disparity investigation | High | Medicare, Medicaid, Dual eligible, Private, Other government, No payment/Self-pay, Other, Unavailable, Unknown. Matches established Python pipeline for cross-tool validation. |
-| Filter chain provenance tracking | Standard logging shows attrition; provenance tracking shows *which predicates were applied in which order*, enabling replication and debugging | Medium | Each filter step records predicate name, parameters, timestamp. Creates reproducible audit trail. |
-| Human-readable filter predicate names | Most pipelines use inline `filter()` with complex boolean logic; named predicates make cohort definition self-documenting | Low | `has_hodgkin_lymphoma_diagnosis()` beats `filter(dx %in% c("C81.00", "C81.01", ...))`. Code reads like methods section. |
-| Site-level data quality reporting | Multi-site data has site-specific completeness issues; flagging which sites contribute diagnosis vs procedure codes identifies bias sources | Medium | Per-site summary: N patients, diagnosis code completeness, procedure code completeness, enrollment method (claims vs EHR vs encounter-based). |
-| ICD code version metadata | ICD-9/ICD-10 transition creates temporal bias — tagging which codes/years use which version enables sensitivity analysis | Medium | Track: which diagnosis codes are ICD-9 vs ICD-10, date ranges for each, proportion of cohort identified by each version. |
-| Configuration-driven paths | Hard-coded paths break on different HPC systems; config-driven paths enable replication across institutions and environments | Low | `R/00_config.R` with paths to CSVs, output directories. One file to change for new environment. |
-| Treatment timing windows | Payer analysis often focuses on whether patients receive treatment; *when* treatment starts reveals insurance-driven delays | Medium | Out of scope for v1, but differentiator for v2. Calculate days from diagnosis to first treatment, stratified by payer. |
-| Missing data audit by site and year | Completeness varies by site and time; systematic audit reveals whether findings reflect true patterns or data artifacts | High | Out of scope for v1. Per-site, per-year heatmap of completeness for key variables (diagnosis, procedures, enrollment, payer). |
+| Cancer site frequency with ICD-O-3 + ICD-10 dual-coding | CancerSiteCategories.xlsx contains both ICD-10 and ICD-O-3 ranges; matching both code systems separately and then unioning gives higher sensitivity than matching only one | HIGH | ICD-O-3 codes appear in TUMOR_REGISTRY, ICD-10 codes appear in DIAGNOSIS. Separate match + union prevents double-counting while maximizing coverage |
+| Radiation CPT audit with AMA citation text | Audit value depends entirely on citation quality; a per-code table with the actual CPT description (not just code number) and AMA section reference is defensible for IRB/protocol documentation | MEDIUM | CPT official descriptions are paywalled, but CMS RBRVS data files contain short descriptors and are public. Supplement with AMA CPT codebook descriptions where available |
+| Gap report differentiated by code type | A flat "in docx / not in config" list is less actionable than a per-type (CPT, HCPCS, ICD-9, ICD-10-PCS, RXNORM, Revenue, DRG) breakdown matching the TREATMENT_CODES list structure | LOW | Within the same gap report script, group gaps by code type. Requires parsing both the docx tables and the TREATMENT_CODES list structure carefully |
+| Triggering code with multiple triggering codes per episode | Some episodes are confirmed by multiple codes on the same date (e.g., both a CPT delivery code and a revenue code); listing all triggering codes on episode_start date provides richer audit trail | LOW | Collapse triggering codes into comma-separated string within the triggering_codes column for the episode_start row |
 
-## Anti-Features
+---
 
-Features to explicitly NOT build.
+### Anti-Features (Commonly Requested, Often Problematic)
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Statistical modeling / regression | Premature — without validated cohort and clean visualizations, modeling findings are uninterpretable | Build cohort + viz first. Validate N patients, attrition logic, payer mapping. Model in v2 after exploration. |
-| Replicating Python pipeline's data cleaning | Two pipelines with different cleaning logic = divergent cohort definitions that can't be compared | R pipeline loads *raw* CSVs and applies its own filter chain. Python pipeline is reference for payer logic only, not data cleaning. |
-| Publication-ready figure formatting | Premature optimization — exploratory figures clarify patterns; polishing aesthetics before validating substance wastes time | PNG output at exploratory quality. Titles, labels, legends present but not publication-formatted. Save polish for validated findings. |
-| Interactive visualizations (Shiny) | Adds complexity and deployment overhead without enabling additional exploration for single-analyst use | Static R scripts + PNG output. Shiny deferred to v2 if multi-user access becomes requirement. |
-| RMarkdown report generation | Report infrastructure before validated findings = boilerplate without substance | Raw R scripts (.R files) that produce figures. RMarkdown in v2 after stabilizing analysis. |
-| Real-time data integration | PCORnet data refreshes quarterly; real-time integration adds complexity without enabling new analyses | Load static CSV extracts from HiPerGator filesystem. Refresh = re-run pipeline on new extract. |
-| Cross-CDM harmonization (OMOP, i2b2) | Scope creep — PCORnet CDM only for this study | Single CDM. PCORnet v7.0 specification. No cross-CDM mapping. |
-| De-identification beyond small-cell suppression | Over-engineering — HiPerGator is HIPAA-compliant environment; data stays on secure system | Small-cell suppression for outputs. No additional de-identification (k-anonymity, differential privacy). |
-| Custom ICD code grouping beyond HL | Feature creep — 149 HL codes are study-specific; building general ICD grouper is separate project | Hard-code 149 HL codes (77 ICD-10, 72 ICD-9). No CCS, CCSR, or other grouping systems. |
-| Version control for data files | PCORnet extracts are multi-GB; versioning data in Git breaks repository | Version control for *code* only (.R scripts, config). Data files referenced by extract date in config. |
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Full CPT 70010-79999 range scan for unknown radiation codes | Seems thorough — why not check every code in the range against what's in the data? | CPT 70010-79999 is the Radiology section; 99% of codes are diagnostic imaging (CT, MRI, X-ray, nuclear medicine). Treating them all as potential radiation therapy codes floods the output with irrelevant findings and obscures the handful of legitimate 77xxx treatment codes | Narrow the audit to 77000-77999 (radiation oncology subsection) plus verify any 70xxx codes appearing with radiation_cpt context. Document the exclusion boundary explicitly. |
+| Automated docx-to-config sync (write back to R/00_config.R) | Seems like it would close the loop on validation | Docx contains intent; config contains validated, study-specific implementation. Not every docx code belongs in the config (e.g., codes for cancer types not in the HL cohort). Automated sync bypasses the necessary human review step | Produce a gap report. Human reviews it and makes targeted additions to config. Phase 42's per-type resolved xlsx pattern is the right precedent. |
+| Cancer site frequency by site ID (per partner site) | Site-level breakdown seems informative | Small-cell suppression triggers aggressively for rare cancer sites at individual sites; most cells become suppressed and the table communicates nothing. Also raises site-specific data sensitivity concerns | Produce aggregate frequency table first. Site-level breakdowns are a v2 feature with explicit IRB review of suppression strategy. |
+| Treatment code validation via NLM API lookup (CPT codes) | Phases 39-40 used NLM API for HCPCS/NDC lookup — why not reuse for CPT validation? | NLM's RxNorm API covers drug codes; CPT code descriptions are owned by AMA and are not in NLM APIs. CPT lookup requires AMA licensing or CMS public files (RBRVS). Using NLM for CPT returns empty or incorrect results. | Use CMS Medicare Physician Fee Schedule (MPFS) RVU files for CPT short descriptors (public domain). |
+| Episode triggering code as a separate table | Normalized design would put triggering codes in a separate table joined to episodes | The existing episode output is a flat CSV consumed directly by researchers. Normalization adds a join step that breaks existing workflows and adds no value for QA use. | Store triggering_codes as a collapsed column in the episode row. Document the format (comma-separated, pipe-separated, or first-code-only). |
+
+---
 
 ## Feature Dependencies
 
 ```
-PCORnet CDM table loading
-  └─> Data type enforcement (dates, IDs load correctly)
-  └─> Multi-site data handling (site IDs preserved)
-       └─> Site-level data quality reporting (requires site ID)
+Cancer site frequency table (new R/45 or R/46)
+    requires: CancerSiteCategories.xlsx (already exists)
+    requires: DIAGNOSIS table (via get_pcornet_table dispatcher)
+    requires: TUMOR_REGISTRY_ALL table (for ICD-O-3 codes)
+    depends on existing: R/00_config.R (CONFIG paths), R/utils_duckdb.R (safe_table)
 
-ICD code matching (ICD-9 + ICD-10)
-  └─> ICD code version metadata (optional but valuable)
+TREATMENT_CODES gap report (new R/46 or R/47)
+    requires: TreatmentVariables_2024.07.17.docx (already exists, needs parsing)
+    requires: TREATMENT_CODES list in R/00_config.R (already exists)
+    uses: officer or docxtractr package for docx table extraction
+    outputs: xlsx gap report matching existing treatment xlsx visual style
 
-Named filter predicates
-  └─> Attrition logging (each predicate logs N before/after)
-       └─> Attrition waterfall visualization (visualizes logged attrition)
-  └─> Filter chain provenance tracking (records which predicates applied when)
+Radiation CPT audit (new R/47 or R/48)
+    requires: TREATMENT_CODES$radiation_cpt in R/00_config.R
+    requires: CMS MPFS RVU files or embedded CPT description lookup
+    produces: per-code classification table (TREATMENT / IMAGING / PLANNING / EXCLUDED)
+    informs: whether radiation_cpt needs additions (e.g., 77520-77525)
 
-Encounter-based enrollment
-  └─> Named filter predicates (enrollment check is a predicate)
+Proton therapy code confirmation (config update R/00_config.R)
+    requires: Radiation CPT audit output (or direct CPT lookup)
+    modifies: TREATMENT_CODES$radiation_cpt in R/00_config.R
+    blocked by: none (can be done independently as a direct config edit)
 
-Payer harmonization (basic)
-  └─> Dual-eligible detection (requires temporal overlap detection)
-       └─> Payer harmonization (9-category) (dual-eligible is 3rd category)
-
-Payer harmonization (9-category)
-  └─> Sankey/alluvial visualization stratified by payer (stratification requires clean categories)
-
-Configuration-driven paths
-  └─> PCORnet CDM table loading (paths specified in config)
+Triggering code column in episodes (modifies R/44 or new R/45)
+    requires: R/43_treatment_durations.R extract_all_dates() to carry source code
+    requires: R/44_treatment_episodes.R calculate_episodes_detailed() to retain triggering_code
+    modifies: per-type CSV output schema (adds triggering_codes column)
+    depends on existing: R/44_treatment_episodes.R column structure (D-08 schema)
 ```
 
-## MVP Recommendation
+### Dependency Notes
 
-Prioritize:
-1. **PCORnet CDM table loading** with data type enforcement and configuration-driven paths
-2. **ICD code matching** (ICD-9 + ICD-10, dotted + undotted formats) for 149 HL codes
-3. **Named filter predicates** with automatic attrition logging
-4. **Attrition waterfall visualization** from logged filter chain
-5. **Payer harmonization (9-category with dual-eligible)** matching Python pipeline
-6. **Sankey/alluvial visualization** stratified by payer
-7. **HIPAA small-cell suppression** in all outputs
-8. **Multi-site data handling** preserving site provenance
+- **Proton therapy confirmation requires radiation CPT audit:** The audit determines what's in the 77xxx range and whether 77520-77525 are present, correctly classified, and absent from the config. These can be done together.
+- **Triggering code column modifies existing script schemas:** R/43 extract_all_dates() currently returns (ID, treatment_date) only. Adding triggering_code and source_table requires modifying R/43's extraction functions AND R/44's episode aggregation. This is a schema change to existing CSV outputs — the downstream consumer should be aware.
+- **Gap report requires docx parsing:** TreatmentVariables_2024.07.17.docx contains code tables in Word table format. The officer package (available in tidyverse ecosystem) reads docx tables. This is the only new package dependency for v1.6.
+- **Cancer site frequency is independent:** No dependency on treatment code features. Can be developed in parallel.
 
-Defer:
-- **Site-level data quality reporting**: Build after validating basic pipeline — site-specific issues will surface naturally during exploration
-- **ICD code version metadata**: Nice-to-have for sensitivity analysis, but not required for initial cohort validation
-- **Filter chain provenance tracking**: Enhanced audit trail is valuable but attrition logging provides minimum transparency
-- **Treatment timing windows**: Out of scope for v1 per PROJECT.md — payer × timing analysis is v2
-- **Missing data audit by site and year**: Out of scope for v1 — comprehensive QA is v2 after establishing baseline findings
+---
 
-**Rationale for MVP:**
-- **Table stakes first**: Loading, filtering, visualization are non-negotiable for any cohort study
-- **Differentiators that enable study goals**: Dual-eligible detection and payer-stratified Sankey directly address insurance disparity investigation
-- **Defer complexity without blocking validation**: Site-level QA and provenance enhancements can be added after confirming cohort logic works
+## MVP Definition
 
-## Feature Complexity Notes
+### Launch With (v1.6)
 
-### Low Complexity (1-2 days)
-- Data type enforcement: CSVs with `col_types` specification
-- Named filter predicates: Wrapper functions around `dplyr::filter()`
-- Attrition logging: Print N before/after each filter step
-- HIPAA small-cell suppression: `if (n <= 10) NA_integer_` in output generation
-- Configuration-driven paths: `config.R` with path variables
-- Human-readable filter predicate names: Naming convention only
+Minimum set to call v1.6 complete.
 
-### Medium Complexity (3-5 days)
-- PCORnet CDM table loading: 22 tables × data type specs × validation checks
-- ICD code matching: 149 codes × 2 formats (dotted, undotted) × regex patterns
-- Attrition waterfall visualization: ggplot2 waterfall from log data
-- Multi-site data handling: Preserve site ID through pipeline, document site-specific characteristics
-- Payer harmonization (basic): Mapping raw enrollment payer codes to 4-6 standard categories
-- Encounter-based enrollment: ENROLLMENT table logic or encounter-based algorithm
-- Filter chain provenance tracking: Data structure tracking predicate names, params, timestamps
-- Site-level data quality reporting: Per-site summary tables of completeness
-- ICD code version metadata: Flag diagnosis records as ICD-9 vs ICD-10 based on date and code format
+- [ ] **Cancer site frequency table** — directly addresses PROJECT.md target feature; CancerSiteCategories.xlsx is built and waiting
+- [ ] **TREATMENT_CODES vs docx gap report** — directly addresses "cross-reference TREATMENT_CODES against TreatmentVariables" target feature; validates pipeline completeness
+- [ ] **Radiation CPT 70010-79999 audit with imaging/treatment classification** — directly addresses audit target feature; cited classification is required for protocol documentation
+- [ ] **Proton therapy 77520-77525 config update** — directly addresses "confirm proton therapy codes are captured" target feature; single config edit
+- [ ] **Triggering code column in episode CSV** — directly addresses "add triggering code(s) column" target feature; schema addition to existing output
 
-### High Complexity (1-2 weeks)
-- Dual-eligible detection: Time-aware enrollment overlap detection (Medicare + Medicaid simultaneous periods)
-- Payer harmonization (9-category with dual-eligible): 9-way mapping + temporal dual detection + validation against Python pipeline reference
-- Sankey/alluvial visualization stratified by payer: ggalluvial data reshaping + stratification + small-cell suppression in flows
-- Treatment timing windows: Identify first treatment after diagnosis per patient, calculate time deltas, handle missing data
-- Missing data audit by site and year: Per-site × per-year × per-variable completeness matrix + visualization
+### Add After Validation (v1.x)
+
+- [ ] **Cancer site frequency by ICD-O-3 topography code** — extends the frequency table with TUMOR_REGISTRY ICD-O-3 matching for sites where ICD-10 coding is incomplete; trigger: if frequency table shows high "Unclassified" counts
+- [ ] **Gap report with NLM/RxNorm cross-check for drug codes** — validates RXNORM CUI codes in TREATMENT_CODES against NLM (Phases 39-40 validated HCPCS/NDC, not RXNORM in config); trigger: if gap report surfaces unexpected RXNORM discrepancies
+
+### Future Consideration (v2+)
+
+- [ ] **Cancer site frequency stratified by payer** — payer x cancer site frequency table enables disparity analysis by tumor site; defer until v1.6 frequency table validates classification logic
+- [ ] **Site-level radiation CPT audit by partner site** — some partner sites may have different radiation coding practices; defer until aggregate audit is stable
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Cancer site frequency table | HIGH | MEDIUM | P1 |
+| TREATMENT_CODES gap report | HIGH | MEDIUM | P1 |
+| Radiation CPT audit (70010-79999) | HIGH | HIGH | P1 |
+| Proton therapy 77520-77525 config | HIGH | LOW | P1 |
+| Triggering code in episode CSV | MEDIUM | MEDIUM | P1 |
+| Cancer site by ICD-O-3 dual-coding | MEDIUM | HIGH | P2 |
+| Gap report with RXNORM cross-check | LOW | MEDIUM | P3 |
+
+**Priority key:**
+- P1: Required for v1.6 milestone
+- P2: Add after v1.6 validation
+- P3: Future consideration
+
+---
+
+## Implementation Notes by Feature
+
+### Cancer Site Frequency Table
+
+**Expected behavior:** Read CancerSiteCategories.xlsx to extract ICD code ranges and group names. Query DIAGNOSIS table for all ICD-10 codes on HL patients. Query TUMOR_REGISTRY for ICD-O-3 topography codes. For each patient, assign cancer site group based on best match (most specific group wins if code matches multiple). Produce frequency table: cancer_site_group | n_patients | n_records | pct_of_cohort. Apply HIPAA suppression (n <= 10 → suppressed). Output as styled xlsx + CSV.
+
+**Key design decisions to make:**
+- Does a single patient get counted in multiple cancer site groups if they have multiple diagnoses? (Recommendation: count unique patients per group, allow multi-group assignment, but flag)
+- What happens to ICD codes that match no category? (Recommendation: "Unclassified" catch-all group with frequency count — high count here signals gap in CancerSiteCategories.xlsx coverage)
+- Priority of ICD-O-3 vs ICD-10 when both match different groups? (Recommendation: ICD-O-3 takes precedence for TUMOR_REGISTRY records; ICD-10 for DIAGNOSIS records)
+
+**Existing pattern to follow:** R/35_payer_code_frequency_av_th.R reads a reference xlsx, matches codes against PCORnet data, and produces frequency output. Same pattern applies here.
+
+### TREATMENT_CODES Gap Report
+
+**Expected behavior:** Extract all code tables from TreatmentVariables_2024.07.17.docx using officer package. Parse code columns and treatment type labels. Compare against TREATMENT_CODES list in R/00_config.R element by element. Report: (a) codes in docx not in config by code type and treatment type, (b) codes in config not in docx (additions made during Phases 39-42). Output as multi-sheet xlsx with same visual style as treatment_inventory.xlsx.
+
+**Key design decisions to make:**
+- How to handle docx table format variation? (Recommendation: defensive parsing with fallback; log unparseable sections)
+- Should Phase 39-42 resolved codes count as "in docx" or "additions"? (Recommendation: additions are explicitly tagged with phase number in config comments — use those as "validated additions" distinct from "unexplained differences")
+
+**Existing pattern to follow:** R/42_treatment_codes_resolved.R produces per-type resolved xlsx files. The gap report is a cross-file comparison layer on top of the same data.
+
+### Radiation CPT Audit
+
+**Expected behavior:** For every CPT code in the range 70010-79999, classify it as: TREATMENT (radiation delivery or management), PLANNING (simulation, dosimetry, treatment planning — legitimate but not direct delivery), IMAGING (diagnostic radiology — should not be in radiation_cpt), or EXCLUDED (other, with rationale). For codes in the data that are currently not in radiation_cpt, determine if they should be added. For codes in radiation_cpt, confirm classification is TREATMENT or PLANNING. Cite CPT descriptions from CMS MPFS RVU file (public domain).
+
+**Key radiation CPT sub-ranges to document:**
+- 70010-76999: Diagnostic Radiology (imaging — should NOT be in radiation_cpt)
+- 77001-77299: Radiation Oncology — planning/simulation (legitimate but not delivery)
+- 77300-77399: Treatment planning and dosimetry (PLANNING)
+- 77400-77499: Radiation treatment delivery (TREATMENT — current radiation_cpt lives here)
+- 77500-77599: Radiation treatment management (TREATMENT)
+- 77600-77799: Hyperthermia and clinical brachytherapy (TREATMENT for 776xx/777xx)
+- 77785-77799: Brachytherapy (TREATMENT)
+- 78000-78999: Nuclear Medicine (imaging — NOT treatment)
+- 79000-79999: Therapeutic Nuclear Medicine (TREATMENT for some codes, IMAGING for others)
+
+**Proton therapy specifically:** 77520 (proton treatment delivery, simple), 77522 (proton delivery, simple with compensation), 77523 (proton delivery, intermediate), 77525 (proton delivery, complex) are TREATMENT codes and are absent from current radiation_cpt. These should be added.
+
+**Existing pattern to follow:** R/39_investigate_unmatched.R produces a classification report with cited rationale per code. Same output structure applies.
+
+### Triggering Code Column
+
+**Expected behavior:** Extend extract_all_dates() in R/43 to return (ID, treatment_date, triggering_code, triggering_source_table) instead of just (ID, treatment_date). In R/44's calculate_episodes_detailed(), retain the triggering_code(s) associated with episode_start: collect all distinct codes that appeared on the episode_start date. In the per-type CSV output, add a triggering_codes column (comma-separated if multiple) and a triggering_source column. The D-08 schema from Phase 44 decision log will need to be updated.
+
+**Key design decisions to make:**
+- New script (R/45) or modify R/44 in place? (Recommendation: new R/45 to preserve Phase 44 as stable reference; Phase 44 is already shipped per ROADMAP.md)
+- If same date has codes from multiple source tables, how to format? (Recommendation: pipe-separated "J9000|PROCEDURES" format for triggering_codes_with_source; or two columns: triggering_codes and triggering_sources)
+- Should triggering code be captured for ALL dates in episode or only episode_start? (Recommendation: only episode_start — this is what defines episode identity for QA purposes)
+
+---
+
+## Complexity Summary
+
+### Low Complexity (1-2 hours)
+- Proton therapy 77520-77525 config update: grep config, add 4 codes with citation comments, verify in radiation_cpt vector
+
+### Medium Complexity (half day to 1 day each)
+- Cancer site frequency table: xlsx parsing, dual-table query (DIAGNOSIS + TUMOR_REGISTRY), group matching, styled output
+- TREATMENT_CODES gap report: officer-based docx parsing + config comparison + styled xlsx
+- Triggering code column: modify extract_all_dates() schema + calculate_episodes_detailed() aggregation + CSV schema update
+
+### High Complexity (1-2 days)
+- Radiation CPT audit: CPT range research, per-code classification with citations for 70010-79999 (roughly 1000 codes, most auto-classified by range), output formatting
+
+---
 
 ## Sources
 
-### PCORnet Infrastructure and CDM
-- [PCORnet Common Data Model](https://pcornet.org/data/common-data-model/)
-- [PCORnet CDM v7.0 Specification](https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf)
-- [PCORnet Data Curation](https://pcornet.org/news/category/data-resource/data-curation/)
-- [CDM Guidance Repository (GitHub)](https://github.com/CDMFORUM/CDM-GUIDANCE)
+### Cancer Site Classification
+- CancerSiteCategories.xlsx (project file, 42 groups, ICD-10 and ICD-O-3 code ranges)
+- ICD-O-3 topography code documentation: https://www.naaccr.org/icdo3/
+- PCORnet CDM v7.0 TUMOR_REGISTRY table spec: https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf
 
-### Data Quality and Harmonization
-- [Evaluating Foundational Data Quality in PCORnet (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC5983028/)
-- [Tailoring Rule-Based Data Quality Assessment to PCORnet CDM (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC10148276/)
-- [Harmonization of Common Data Models and Open Standards (ASPE)](https://aspe.hhs.gov/harmonization-various-common-data-models-open-standards-evidence-generation)
-- [Multi-Site Data Harmonization (Chapter 6, Informatics Playbook)](https://playbook.cd2h.org/en/latest/chapters/chapter_6.html)
+### CPT Radiation Codes
+- CMS MPFS RVU files (public domain CPT short descriptors): https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files
+- AMA CPT codebook section D (Radiology, 70010-79999) — requires AMA license for full descriptors
+- CMS OPPS Addendum B (radiation oncology): https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient/addendum-b
+- Proton therapy CPT codes 77520-77525: confirmed in AMA CPT 2025 section 77520-77525 (Proton Beam Treatment Delivery)
 
-### Cohort Building and Attrition Visualization
-- [Visualizations in Pharmacoepidemiology Study Planning (Wiley)](https://onlinelibrary.wiley.com/doi/10.1002/pds.5529)
-- [dtrackr - CONSORT Statement Example (CRAN)](https://cran.r-project.org/web/packages/dtrackr/vignettes/consort-example.html)
-- [Cohort Data Management Systems Scoping Review (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC12619332/)
+### Docx Parsing (R)
+- officer package documentation: https://davidgohel.github.io/officer/
+- docxtractr package: https://cran.r-project.org/package=docxtractr
 
-### Sankey/Alluvial Diagrams
-- [Overview of Sankey Flow Diagrams in Clinical Research (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC9232856/)
-- [Exploring Patient Path Through Sankey Diagram (PubMed)](https://pubmed.ncbi.nlm.nih.gov/32570378/)
-- [ggalluvial: Layered Grammar for Alluvial Plots (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC10010671/)
-- [ggalluvial Documentation](https://corybrunson.github.io/ggalluvial/)
+### Existing Pipeline Patterns
+- R/35_payer_code_frequency_av_th.R: xlsx-reference cross-match pattern
+- R/39_investigate_unmatched.R: code classification with cited rationale pattern
+- R/42_treatment_codes_resolved.R: per-type resolved xlsx output pattern
+- R/44_treatment_episodes.R: episode CSV schema (D-08) to be extended with triggering_codes
 
-### Payer Analysis and Dual Eligibility
-- [Identifying Dual Eligible Medicare Beneficiaries (ResDAC)](https://resdac.org/articles/identifying-dual-eligible-medicare-beneficiaries-medicare-beneficiary-enrollment-files)
-- [Medicare-Medicaid Dual Enrollment Data Brief (CMS)](https://www.cms.gov/files/document/medicaremedicaiddualenrollmenteverenrolledtrendsdatabrief.pdf)
-- [State All Payer Claims Databases (ASPE)](https://aspe.hhs.gov/reports/state-all-payer-claims-databases-pcorf-multi-state-studies)
-- [Enhancing PCORnet Data with Insurance Claims (PubMed)](https://pubmed.ncbi.nlm.nih.gov/34897506/)
-
-### ICD Codes and Clinical Coding
-- [ICD-10-CM Codes C81: Hodgkin Lymphoma](https://www.icd10data.com/ICD10CM/Codes/C00-D49/C81-C96/C81-)
-- [Validation of Electronic Algorithm for Lymphoma in ICD-10-CM (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC8205565/)
-- [ICD-9-CM to ICD-10-CM General Equivalence Mappings (CMS)](https://www.cms.gov/files/document/diagnosis-code-set-general-equivalence-mappings-icd-10-cm-icd-9-cm-and-icd-9-cm-icd-10-cm.pdf)
-
-### HIPAA and Privacy
-- [CMS Cell Size Suppression Policy (ResDAC)](https://resdac.org/articles/cms-cell-size-suppression-policy)
-- [Department of Health Agency Standards for Reporting Data with Small Numbers (WA DOH)](https://www.doh.wa.gov/portals/1/documents/1500/smallnumbers.pdf)
-- [HIPAA Privacy Rule and Research (HHS.gov)](https://www.hhs.gov/hipaa/for-professionals/special-topics/research/index.html)
-
-### Reproducible Research and Configuration Management
-- [Reproducible Analytical Pipelines (Government Analysis Function)](https://analysisfunction.civilservice.gov.uk/support/reproducible-analytical-pipelines/)
-- [Building Trustworthy AI: Reproducible Pipelines and Audit Trails (Medium)](https://medium.com/prompt-engineering/building-trustworthy-ai-the-importance-of-reproducible-analytical-pipelines-and-audit-trails-for-d85a34e9cad2)
-- [Development of HIPAA-Compliant Environment for Research (PMC)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3912719/)
-
-### Claims vs EHR Data
-- [Claims Data vs EHRs in Real-World Research (Nashville Biosciences)](https://nashbio.com/blog/ehr/claims-data-vs-ehrs/)
-- [Electronic Health Records vs Medicaid Claims Completeness (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC3133583/)
+---
+*Feature research for: v1.6 Treatment Code Validation & Cancer Site Analysis*
+*Researched: 2026-04-21*

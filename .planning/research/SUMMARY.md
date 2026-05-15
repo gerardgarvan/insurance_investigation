@@ -1,284 +1,190 @@
 # Project Research Summary
 
-**Project:** PCORnet CDM Payer Analysis Pipeline (R)
-**Domain:** Healthcare Data Analysis — Multi-site Clinical Research Network
-**Researched:** 2026-03-24
-**Confidence:** MEDIUM-HIGH
+**Project:** PCORnet CDM Payer Analysis Pipeline — v1.6 Treatment Code Validation & Cancer Site Analysis
+**Domain:** R-based clinical research data pipeline (HiPerGator HPC, PCORnet CDM, DuckDB backend)
+**Researched:** 2026-04-21
+**Confidence:** HIGH
 
 ## Executive Summary
 
-This project is a **PCORnet Common Data Model (CDM) cohort-building and payer analysis pipeline** implemented in R for the University of Florida HiPerGator HPC environment. Expert practitioners in this domain build pipelines using tidyverse-based sequential numbered scripts with explicit attrition logging, named filter predicates, and multi-site data harmonization. The analysis focuses on Hodgkin Lymphoma patients within the OneFlorida+ network, investigating insurance disparities across 4 partner sites with heterogeneous data models (claims-only, EHR-mapped, and death-only sources).
+This milestone (v1.6) extends an existing, functioning PCORnet Hodgkin Lymphoma analysis pipeline (Phases 1-44) with five targeted capabilities: a cancer site frequency table derived from CancerSiteCategories.xlsx, a bidirectional gap report comparing TREATMENT_CODES in R/00_config.R against TreatmentVariables_2024.07.17.docx, an audit of the radiation CPT range 70010-79999 to classify imaging vs. treatment codes, explicit confirmation and addition of proton therapy codes 77520-77525, and a triggering code column in the treatment episode CSV output. All research was conducted against direct inspection of the existing codebase, project reference files, and authoritative CPT/ICD code documentation. The research base is strong — there are no unknowns about environment, data structures, or output formats.
 
-The recommended approach prioritizes **readability over raw performance** using tidyverse/dplyr over data.table to ensure "human-readable named predicates" that read like clinical protocols. The core technical challenge is **payer harmonization with temporal dual-eligible detection** — identifying patients simultaneously enrolled in Medicare and Medicaid via overlapping date ranges — combined with robust ICD code matching that handles both dotted (C81.10) and undotted (C8110) formats across ICD-9 and ICD-10 codes. Visualization centers on attrition waterfall charts and payer-stratified Sankey diagrams showing patient flow from enrollment through diagnosis to treatment.
+The recommended implementation approach adds three new standalone scripts (R/45, R/46, R/47) following the existing numbered diagnostic script pattern, makes additive column additions to R/43 and R/44, and requires only one new package (docxtractr 0.6.5) on top of the existing stack. The correct build order is: radiation CPT audit first (informs config corrections), then treatment code cross-reference (informs any remaining config gaps), then optional config corrections, then R/43+R/44 triggering code changes, then cancer site frequency. All five features are independent except the triggering code work, which requires modifying R/43 before R/44.
 
-Key risks include (1) **dual-eligible detection failures** from naive payer assignment without temporal overlap logic, undercounting this critical population by 50-80%, (2) **ICD code format mismatches** causing 30-50% diagnostic cohort loss, (3) **date parsing failures** from multi-format SAS exports, and (4) **HIPAA violations** from incomplete small-cell suppression. Mitigation requires explicit temporal logic with lubridate date intervals, normalized ICD code matching with both formats, multi-order date parsing, and secondary suppression to prevent back-calculation of suppressed cells.
+The two highest risks for this milestone are: (1) misapplying the docx radiation range "70010-79999" as a literal CPT filter — which would capture all diagnostic imaging as radiation treatment and inflate the treated cohort by an order of magnitude — and (2) ICD-10 range matching via string comparison rather than enumerated code vectors, which silently misses dotted/undotted format variations and causes undercounting of cancer site matches. Both risks are well-understood and fully preventable with established patterns already present in the codebase.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Core approach:** tidyverse-based pipeline for readability (dplyr 1.2.0+, ggplot2 4.0.1+, vroom 1.7.0+ for CSV loading) with automatic attrition logging via tidylog 1.1.0. Use renv 1.1.4+ for reproducible package management on HiPerGator's SLURM environment. Reject data.table despite 10-50x performance advantage due to opaque syntax conflicting with "named predicate" requirement.
+The existing pipeline stack is entirely sufficient for v1.6. No new infrastructure is required. The baseline stack — R 4.4.2, tidyverse (dplyr, stringr, ggplot2, lubridate, purrr), DuckDB + DBI, openxlsx2, readxl, officer, glue, janitor, scales, here — is already installed and validated on HiPerGator. The only new dependency is docxtractr 0.6.5, a purpose-built CRAN package for extracting structured tables from Word documents, needed to parse code tables from TreatmentVariables_2024.07.17.docx.
 
 **Core technologies:**
-- **R 4.4.2 + tidyverse 2.0.0+**: Base framework — HiPerGator standard, prioritizes code readability for clinical protocol documentation
-- **vroom 1.7.0+**: Fast CSV loading — 1.23 GB/sec lazy loading, 10-100x faster than base R while maintaining tidyverse syntax compatibility
-- **tidylog 1.1.0**: Automatic attrition logging — wraps dplyr to print N rows added/removed at each step, zero manual logging code needed
-- **ggalluvial 0.12.5**: Sankey/alluvial diagrams — standard R package for payer-stratified patient flow visualization
-- **lubridate 1.9.3+**: Date/time operations — critical for enrollment overlap detection, diagnosis timing, dual-eligible identification
-- **here 1.0.2**: Path management — project-relative paths that work in both RStudio and SLURM jobs, avoids hard-coded paths
+- `docxtractr 0.6.5`: Extract code tables from TreatmentVariables docx — NEW; cleaner than officer::docx_summary() for table-structured content; install once, run `renv::snapshot()`
+- `readxl 1.4.3+`: Read CancerSiteCategories.xlsx and VariableDetails.xlsx — already in pipeline (R/35, R/42); no change
+- `stringr 1.5.1+`: ICD range parsing and CPT code classification — prefix matching via str_starts(); already in pipeline; no change
+- `dplyr 1.2.0+`: All aggregation, joins, and frequency counts — group_by + summarise pattern; already in pipeline; no change
+- `openxlsx2 current`: Styled output workbooks matching existing visual conventions — already in pipeline; no change
 
-**Rejected alternatives:**
-- **data.table**: 10-50x faster but `DT[i, j, by]` syntax conflicts with readability requirement
-- **arrow/parquet**: 5-10x faster than CSV but input format is CSV; conversion overhead not justified for v1
+**What NOT to use:** The `icd` package (archived CRAN 2020, unmaintained, GitHub install unreliable on HiPerGator), `ICD10gm` (German codes, not US ICD-10-CM/ICD-O-3), officer for docx table extraction (flat noisy output vs. docxtractr's clean data.frame), and NLM API for CPT code descriptions (NLM covers drug codes; CPT is AMA-licensed — use CMS MPFS RVU files for public-domain descriptors).
 
 ### Expected Features
 
+All five v1.6 features are P1 (required for milestone completion). The existing pipeline covers Phases 1-44; v1.6 adds exactly these features and nothing else.
+
 **Must have (table stakes):**
-- **PCORnet CDM table loading** — 22 CSV tables with correct data types (dates, IDs, coded values); foundation for all analysis
-- **ICD code matching (ICD-9 + ICD-10)** — both historical (ICD-9 201.xx) and current (ICD-10 C81.xx) for 149 HL codes; handles dotted/undotted formats
-- **Named filter predicates** — `has_diagnosis()`, `with_enrollment()`, `exclude_missing_values()` functions that read like clinical protocol
-- **Attrition logging** — N before/after for every filter operation; CONSORT diagram requirement
-- **Attrition waterfall visualization** — vertical bar chart showing progressive cohort reduction through exclusion criteria
-- **HIPAA small-cell suppression** — counts 1-10 must be suppressed with secondary suppression to prevent back-calculation
-- **Multi-site data handling** — preserve site ID through pipeline to identify partner-specific data quality patterns
-- **Payer harmonization (9-category)** — Medicare, Medicaid, Dual-eligible, Private, Other government, No payment/Self-pay, Other, Unavailable, Unknown
-- **Dual-eligible detection** — time-aware logic identifying overlapping Medicare + Medicaid enrollment periods
+- **Cancer site frequency table** — CancerSiteCategories.xlsx defines 42 site groups; without frequency counts from PCORnet DIAGNOSIS + TUMOR_REGISTRY tables, the file is unused reference material
+- **TREATMENT_CODES vs. TreatmentVariables docx gap report** — the docx is the authoritative study protocol source; without bidirectional comparison against R/00_config.R, there is no validation that the pipeline captures the full documented treatment code set
+- **Radiation CPT 70010-79999 audit with imaging/treatment classification** — the pipeline needs a per-sub-range cited classification for every code in the range; unclassified codes cannot be defended to IRB or protocol reviewers
+- **Proton therapy codes 77520-77525 confirmation** — UFPTI is a proton therapy center; these codes are NOT in the existing radiation_cpt config and their systematic absence silently misses proton therapy patients
+- **Triggering code column in episode CSV** — per-episode traceability to the specific CPT/HCPCS code that triggered episode_start is required for manual QA and downstream analysis defensibility
 
-**Should have (competitive differentiators):**
-- **Sankey/alluvial visualization stratified by payer** — patient flow (enrollment → diagnosis → treatment) colored by payer category reveals insurance-driven pathway differences
-- **Filter chain provenance tracking** — records which predicates applied in which order for reproducible audit trail
-- **Site-level data quality reporting** — per-site completeness summary identifies bias sources in multi-site data
-- **ICD code version metadata** — track which codes are ICD-9 vs ICD-10 to enable sensitivity analysis of temporal bias
-- **Configuration-driven paths** — `00_config.R` with environment variables enables replication across institutions
+**Should have (differentiators):**
+- Bidirectional gap report (both directions: in pipeline not in docx AND in docx not in pipeline)
+- Cancer site frequency with dual ICD-O-3 + ICD-10 coding (higher sensitivity via TUMOR_REGISTRY + DIAGNOSIS)
+- Multiple triggering codes per episode (comma-separated when same date yields multiple codes)
 
-**Defer (v2+):**
-- **Statistical modeling/regression** — build validated cohort and exploratory visualizations first
-- **Treatment timing windows** — days from diagnosis to first treatment; requires additional temporal logic
-- **RMarkdown reports** — automate after analysis stabilizes; raw R scripts sufficient for v1
-- **Site × year missing data audit** — comprehensive QA heatmap deferred until baseline findings established
+**Defer to v1.x / v2+:**
+- Cancer site frequency stratified by payer (disparity analysis — defer until v1.6 classification validates)
+- Cancer site frequency by partner site (small-cell suppression triggers aggressively; IRB review required)
+- Gap report RXNORM cross-check via NLM (low priority, not surfaced in current gaps)
 
 ### Architecture Approach
 
-PCORnet CDM analysis pipelines follow a **layered sequential pipeline architecture** where data flows through numbered stages (00_config.R → 01_load → 02_harmonize → 03_predicates → 04_build_cohort → 05_waterfall → 06_sankey). Each layer transforms or filters the dataset with automatic logging. The architecture prioritizes transparency (every operation logged), reproducibility (same input → same output), and regulatory compliance (HIPAA suppression layer wraps all outputs). Named predicate functions encapsulate filtering logic into reusable, testable components that compose into documented cohort definitions.
+The pipeline uses a standalone diagnostic script pattern: every numbered script sources R/00_config.R and R/01_load_pcornet.R, opens a DuckDB lazy connection via `get_pcornet_table()`, does its work independently, and writes to output/. There is no shared runtime state between scripts. v1.6 follows this pattern exactly. Three new scripts (R/45, R/46, R/47) are added as standalone diagnostics. Two existing scripts (R/43, R/44) receive additive column additions only. The output/ directory gains three new xlsx files and the per-type episode CSVs gain a triggering_codes column.
 
 **Major components:**
-1. **Config** (`00_config.R`) — defines file paths, ICD code lists (149 HL codes), payer mapping rules, HIPAA thresholds; sourced by all other scripts
-2. **Loader** (`01_load_pcornet.R`) — reads 22 PCORnet CSV tables with explicit col_types specification to prevent date parsing failures; applies multi-format date parsing with lubridate
-3. **Harmonizer** (`02_harmonize_payer.R`) — maps raw PAYER_TYPE codes to 9 standard categories; implements temporal overlap detection for dual-eligible (Medicare + Medicaid simultaneous enrollment)
-4. **Cohort Constructor** (`03_predicates.R` + `04_build_cohort.R`) — defines named predicate functions (`has_hodgkin_diagnosis()`, `with_enrollment_period()`) and applies filter chain with attrition logging at each step
-5. **Attrition Logger** (`utils_attrition.R`) — captures N before/after each filter step; accumulates into data frame consumed by waterfall visualization
-6. **Visualizers** (`05_waterfall.R`, `06_sankey.R`) — ggplot2-based charts with small-cell suppression applied before plotting
-7. **Suppression Layer** (`utils_suppression.R`) — wraps all output generation to replace counts 1-10 with "<11"; implements secondary suppression to prevent back-calculation
+1. `R/45_cancer_site_frequency.R` (NEW) — Reads CancerSiteCategories.xlsx Groups sheet (43 rows), expands ICD10/ICDO3 ranges to code vectors via named `expand_icd_range()` function, queries DIAGNOSIS and TUMOR_REGISTRY_ALL scoped to HL cohort, produces patient-level frequency table with HIPAA suppression; output: cancer_site_frequency.xlsx
+2. `R/46_treatment_code_crossref.R` (NEW) — Reads VariableDetails.xlsx Treatment sheet (forward-fill Modality column), parses TreatmentVariables docx via docxtractr, diffs against TREATMENT_CODES in config using exact %in% matching, produces bidirectional gap report per treatment type; output: treatment_code_crossref.xlsx
+3. `R/47_radiation_cpt_audit.R` (NEW) — Queries PROCEDURES for CPT codes 70010-79999 on HL patients, classifies each by numeric sub-range (IMAGING / PLANNING / TREATMENT / NUCLEAR MED), verifies proton codes 77520-77525 presence, documents exclusion rationale with CPT citations; output: radiation_cpt_audit.xlsx
+4. `R/43_treatment_durations.R` (MODIFIED) — extract_all_dates() extended to return triggering_code + code_type columns alongside existing ID + treatment_date; additive only, does not rename existing columns
+5. `R/44_treatment_episodes.R` (MODIFIED) — calculate_episodes_detailed() collects triggering codes per episode; triggering_codes column appended as LAST column in per-type CSV output; D-08 decision log updated
 
 ### Critical Pitfalls
 
-1. **Naive payer assignment without temporal overlap detection** — Dual-eligible patients (Medicare + Medicaid simultaneously) miscategorized as single-payer, undercounting this vulnerable population by 50-80%. **Prevention:** Implement lubridate interval-based overlap detection; validate dual-eligible count is 10-20% of Medicare + Medicaid combined; prioritize dual-eligible category in 9-way hierarchy.
+1. **Radiation CPT range applied too broadly (70010-79999 as literal filter)** — Never use the docx range as a direct CPT filter. The range is a chapter reference, not an inclusion list. Apply only the radiation oncology sub-ranges: 77261-77799 (treatment, planning, management) plus proton codes 77520-77525 plus brachytherapy 77750-77799. The full 70010-79999 range includes diagnostic imaging (70010-76999) and nuclear medicine (78000-79999) — applying it literally inflates the radiation-treated patient count by an order of magnitude.
 
-2. **ICD code format mismatches** — PCORnet sites use inconsistent formats (dotted "C81.10", undotted "C8110", trailing zeros "C81.1"), causing 30-50% diagnostic cohort loss with naive string matching. **Prevention:** Normalize ALL DX codes to undotted uppercase format (`str_remove_all(DX, "\\.")`) during data load; normalize 149-code reference list identically; test with both formats.
+2. **ICD-10 range matching via string comparison instead of code enumeration** — CancerSiteCategories.xlsx stores ranges like "C810-C814, C817, C819". String comparison (`code >= "C810"`) fails for mixed-length codes, dotted/undotted format differences, and codes with letter suffixes (C81.9A). Build a named `expand_icd_range()` function, enumerate all codes between range endpoints, normalize to undotted uppercase using the existing `normalize_icd()` from utils_icd.R, then use `%in%`.
 
-3. **Date parsing failures from multi-format SAS exports** — ENR_START_DATE, DX_DATE arrive in DATE9 ("01JAN2020"), DATETIME ("01JAN2020:00:00:00"), YYYYMMDD (20200101), Excel serial (43831) formats; readr auto-detection fails 20% of time. **Prevention:** Never rely on auto-detection — use `col_character()` initially, then `parse_date_time(orders = c("dmy", "ymd", "mdy", "dmy HMS"))` with NA rate validation < 5%.
+3. **Docx cross-reference uses substring matching (str_detect) instead of exact matching (%in%)** — Substring matching produces false positives (J9000 matches a range string "J9000-J9999") and false negatives (individual codes not found when docx uses range notation). Parse docx into a structured code list, expand declared ranges to individual codes, use exact `%in%` for all comparisons. Always produce both gap directions.
 
-4. **HIPAA small-cell suppression without secondary suppression** — Primary suppression (hide 1-10 counts) but no secondary suppression enables back-calculation from marginal totals, direct HIPAA violation. **Prevention:** For every suppressed cell, suppress 2-3 additional cells in same row/column; validate that no suppressed value is recoverable by subtraction from visible totals.
+4. **Cancer site frequency table not scoped to HL cohort** — `get_pcornet_table("DIAGNOSIS")` returns all PCORnet patients. Always apply `filter(ID %in% local(hl_ids))` as the first filter using `get_hl_patient_ids()`. Sanity check: total unique patients in frequency table must not exceed HL cohort size. Use `n_distinct(ID)` not `n()` to count patients.
 
-5. **Enrollment gaps misinterpreted as "uninsured"** — PCORnet ENROLLMENT represents "periods where care is observable," not insurance coverage; gaps can mean out-of-network care, partner doesn't capture uninsured, or data quality issue. **Prevention:** Create separate "Unknown/Missing enrollment" category distinct from "No payment/Self-pay"; profile gap rates by partner (FLM claims-only has expected gaps, VRT death-only has all gaps).
+5. **Triggering code column inserted mid-schema or without auditing downstream consumers** — Append triggering_codes as the LAST column in the CSV output. Search the codebase for all scripts that read treatment_episodes.csv or the treatment_episodes.rds before modifying the schema. The column must be nullable (NA when no triggering code matched) to avoid bind_rows() failures.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on combined research, four implementation phases cover all v1.6 scope with clear internal logic. The phases are presented in recommended build order.
 
-### Phase 1: Foundation & Data Loading
-**Rationale:** Configuration and data loading with correct data types must precede all analysis. Date parsing failures and ICD format mismatches are show-stoppers that require early detection. Utilities for attrition logging and suppression are foundational infrastructure used by all downstream phases.
+### Phase A: Radiation CPT Audit + Proton Code Confirmation (R/47 + R/00_config.R)
 
-**Delivers:**
-- `00_config.R` with paths, ICD code lists, payer mappings
-- `01_load_pcornet.R` loading 22 CSV tables with explicit col_types
-- Multi-format date parser handling SAS DATE9/DATETIME/YYYYMMDD/Excel formats
-- `utils_attrition.R` with `init_attrition_log()` and `log_attrition()` functions
-- `utils_suppression.R` with primary and secondary suppression functions
+**Rationale:** R/47 is the fastest new script to validate — it reads only from PROCEDURES + existing config with no new reference file parsing complexity. It immediately answers the proton therapy gap question (77520-77525 absent from radiation_cpt), which produces a config correction that should be in place before the cross-reference phase runs. Addressing the highest-risk pitfall (range misclassification) first also provides confidence before touching other components.
 
-**Addresses (from FEATURES.md):**
-- PCORnet CDM table loading (table stakes)
-- Data type enforcement (table stakes)
-- Configuration-driven paths (differentiator)
+**Delivers:** radiation_cpt_audit.xlsx with per-sub-range classification and AMA/CMS citation; proton codes 77520-77525 confirmed absent and added to R/00_config.R with citation comments; CPT_HCPCS_RANGES heuristic in R/38 verified to confirm proton sub-range (775xx) is not covered by the existing 774xx pattern
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 3: Date parsing failures from multi-format SAS exports
-- Hardcoded paths breaking on HiPerGator vs local environments
+**Addresses features:** Radiation CPT 70010-79999 audit, Proton therapy 77520-77525 confirmation
 
-**Research flag:** Standard patterns — CSV loading with readr/vroom and config management are well-documented. No phase research needed.
+**Avoids:** Pitfall v1.6-1 (range too broad), Pitfall v1.6-6 (proton codes assumed present without data check)
 
----
+**No research needed:** CPT sub-range boundaries are specified in STACK.md with cited sources; implementation is case_when with numeric boundaries
 
-### Phase 2: Payer Harmonization & Dual-Eligible Detection
-**Rationale:** Payer harmonization is the critical path item and core research question. Dual-eligible detection requires complex temporal overlap logic that's easy to get wrong. Must validate against Python pipeline reference implementation before proceeding to cohort building. This phase has highest technical risk and needs early validation.
+### Phase B: Treatment Code Cross-Reference (R/46)
 
-**Delivers:**
-- `02_harmonize_payer.R` implementing 9-category payer mapping
-- Temporal overlap detection: identify patients with overlapping Medicare + Medicaid enrollment periods using lubridate intervals
-- Dual-eligible flag with date range documentation
-- Validation report comparing R output to Python pipeline payer counts
+**Rationale:** Depends on Phase A having corrected R/00_config.R so the gap report reflects the post-correction state of TREATMENT_CODES. R/46 uses docxtractr for the first programmatic extraction of TreatmentVariables_2024.07.17.docx — table structure must be discovered interactively at the start of implementation before writing the extraction logic. This phase should complete before triggering code work so any further config changes from the gap report are stable.
 
-**Addresses (from FEATURES.md):**
-- Payer harmonization (9-category with dual-eligible) — table stakes
-- Dual-eligible detection — differentiator
-- Multi-site data handling — table stakes
+**Delivers:** treatment_code_crossref.xlsx with bidirectional gap report (in_pipeline_not_in_docx + in_docx_not_in_pipeline), grouped by treatment type and code type; docxtractr 0.6.5 installed and renv snapshotted; VariableDetails.xlsx Treatment sheet Modality column forward-filled before use
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 1: Naive payer assignment without temporal overlap detection (CRITICAL)
-- Pitfall 4: Enrollment gaps misinterpreted as "uninsured"
-- Pitfall 8: Partner-specific data quirks treated as errors
+**Addresses features:** TREATMENT_CODES vs. TreatmentVariables docx gap report
 
-**Research flag:** NEEDS DEEP RESEARCH — temporal overlap detection with lubridate intervals is complex; dual-eligible validation logic needs explicit design; partner-specific enrollment patterns (FLM claims-only, VRT death-only) need profiling. Consider `/gsd:research-phase` for temporal logic patterns.
+**Avoids:** Pitfall v1.6-3 (substring matching), Pitfall v1.6-8 (one-direction comparison)
 
----
+**Targeted inspection needed at implementation start:** Run `docxtractr::docx_tbl_count()` and `docx_describe_tbls()` on TreatmentVariables_2024.07.17.docx interactively before writing R/46 extraction logic — this is the first programmatic extraction of this file. Budget 30-60 minutes. STACK.md provides the usage pattern; actual table indices are unknown until the docx is opened.
 
-### Phase 3: Cohort Definition & ICD Matching
-**Rationale:** With clean payer data, cohort construction applies clinical inclusion/exclusion criteria. ICD code matching for 149 HL codes is high-risk due to format variation. Named predicate functions enable reusable, testable filter logic. Attrition logging at each step provides transparency for CONSORT reporting.
+### Phase C: Triggering Code Column in Episode Output (R/43 + R/44)
 
-**Delivers:**
-- `03_cohort_predicates.R` with named filter functions:
-  - `has_hodgkin_diagnosis()` — ICD-9 (201.xx) + ICD-10 (C81.xx) with format normalization
-  - `with_enrollment_period()` — minimum enrollment duration check
-  - `exclude_missing_payer()` — filter patients with known payer categories
-- `04_build_cohort.R` — applies filter chain with attrition logging
-- Final cohort data frame + attrition log data frame
+**Rationale:** Modifying R/43 and R/44 is the only inter-script dependency change in v1.6 and carries the highest downstream risk. It must happen after Phases A and B have stabilized the config. The triggering code change is additive (new column at end of CSV), but a downstream consumer audit must be completed before the change is made. Modify R/43 first, verify its output is unchanged except for the new columns, then modify R/44.
 
-**Addresses (from FEATURES.md):**
-- ICD code matching (ICD-9 + ICD-10) — table stakes
-- Named filter predicates — table stakes
-- Attrition logging — table stakes
-- Encounter-based enrollment — table stakes
+**Delivers:** R/43 extract_all_dates() returning triggering_code + code_type alongside existing columns; R/44 per-type CSVs with new triggering_codes column (comma-separated for multiple codes on same date) appended as last column; D-08 decision log updated; Phase 44 test script re-validated
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 2: ICD code format mismatches (CRITICAL)
-- Pitfall 6: Incidence-prevalence bias from cohort definition
-- Pitfall 7: Immortal time bias from misaligned index date
+**Addresses features:** Triggering code column in episode CSV
 
-**Research flag:** NEEDS MODERATE RESEARCH — ICD code normalization patterns (dotted vs undotted) and regex for 149 codes need validation; incident vs prevalent case definition needs epidemiologic review. Standard attrition logging patterns are well-documented (dtrackr, tidylog examples).
+**Avoids:** Pitfall v1.6-4 (schema change breaks downstream consumers — requires pre-search of all readers before modifying)
 
----
+**No research needed:** Architecture is fully specified in ARCHITECTURE.md; the additive column pattern is standard and low-risk
 
-### Phase 4: Attrition Waterfall Visualization
-**Rationale:** Waterfall chart demonstrates that attrition logging works correctly and provides early validation of cohort size. Simpler than Sankey diagram (no multi-axis flow logic). Enables validation of small-cell suppression implementation before more complex visualizations.
+### Phase D: Cancer Site Frequency Table (R/45)
 
-**Delivers:**
-- `05_visualize_waterfall.R` — ggplot2 bar chart from attrition log
-- Vertical bars showing N patients excluded at each filter step
-- Small-cell suppression applied to steps with N ∈ [1, 10]
-- Secondary suppression for adjacent steps to prevent back-calculation
-- PNG output: `output/figures/waterfall_attrition.png`
+**Rationale:** Fully independent of all other v1.6 changes. Placed last because the ICD range expansion logic is the highest implementation complexity in v1.6 — range parsing for the "C810-C814, C817, C819" format, dotted/undotted normalization, dual ICD-O-3 + ICD-10 matching, HIPAA suppression, and the multi-patient-per-site-group counting decision. The `expand_icd_range()` function must be tested against boundary cases before running against all 42 site groups.
 
-**Addresses (from FEATURES.md):**
-- Attrition waterfall visualization — table stakes
-- HIPAA small-cell suppression — table stakes
+**Delivers:** cancer_site_frequency.xlsx with patient count + encounter count per cancer site group, pct_of_cohort column, HIPAA suppression (n <= 10 suppressed); optionally a second sheet excluding C81.xx (HL) codes to show comorbid cancer distribution
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 5: HIPAA small-cell suppression without secondary suppression (CRITICAL)
+**Addresses features:** Cancer site frequency table
 
-**Research flag:** Standard patterns — waterfall charts in pharmacoepidemiology are well-documented (CONSORT diagrams, dtrackr vignettes). No phase research needed.
+**Avoids:** Pitfall v1.6-2 (ICD string comparison), Pitfall v1.6-5 (not scoped to HL cohort), Pitfall v1.6-7 (C81.xx dominance not documented as expected)
 
----
-
-### Phase 5: Payer-Stratified Sankey Diagram
-**Rationale:** Sankey diagram is the key differentiator visualization showing patient flow from enrollment → diagnosis → treatment stratified by payer. Requires ggalluvial with flow-level suppression logic. More complex than waterfall due to multi-axis data reshaping and flow aggregation.
-
-**Delivers:**
-- `06_visualize_sankey.R` — ggalluvial flow diagram
-- Three axes: enrollment period, diagnosis date category, treatment type
-- Flow thickness proportional to N patients, colored by payer category
-- Small-cell suppression at flow level (suppress flows with N ∈ [1, 10])
-- Aggregation of rare payer categories into "Other" if < 20 patients
-- PNG output: `output/figures/sankey_patient_flow.png`
-
-**Addresses (from FEATURES.md):**
-- Sankey/alluvial visualization stratified by payer — differentiator (core deliverable)
-- Human-readable filter predicate names — differentiator
-
-**Avoids (from PITFALLS.md):**
-- Pitfall 5: Small-cell suppression without secondary suppression
-- Visual clutter from 9 categories where several have < 20 patients
-
-**Research flag:** NEEDS MODERATE RESEARCH — ggalluvial data reshaping for 3-axis flows with payer stratification; small-cell suppression at flow level (not just axis labels) needs design. Consider `/gsd:research-phase` for ggalluvial patterns if stuck during implementation.
-
----
+**One data decision at implementation start:** Determine whether ICDO3 matching (TUMOR_REGISTRY) is used in addition to ICD-10 (DIAGNOSIS) — requires a quick query to check how many HL cohort patients have TUMOR_REGISTRY records. If most do, dual-coding raises sensitivity significantly. If few do, ICD-10 alone is sufficient.
 
 ### Phase Ordering Rationale
 
-**Dependency-driven sequencing:**
-- Config → Loader (paths defined before loading)
-- Loader → Harmonizer (raw data loaded before payer mapping)
-- Harmonizer → Cohort Builder (payer categories assigned before filtering on payer)
-- Cohort Builder → Visualizers (cohort and attrition log created before charting)
-
-**Risk-driven prioritization:**
-- Phase 2 (Payer Harmonization) tackles highest technical risk early — dual-eligible detection is complex and easy to get wrong; early validation against Python pipeline prevents late-stage rework
-- Phase 3 (ICD Matching) is second-highest risk due to format variation; gets validation through cohort size comparison to Python pipeline
-- Phases 4-5 (Visualizations) are lower risk — standard ggplot2 patterns with suppression wrapper
-
-**Architecture-driven grouping:**
-- Phase 1 groups all "foundation infrastructure" (config, utilities, loading) — enables parallel work on later phases once foundation is solid
-- Phases 4-5 (Waterfall, Sankey) can be developed in parallel once Phase 3 completes — both read from same cohort + attrition log objects
-
-**Pitfall avoidance:**
-- Early focus on date parsing (Phase 1) prevents cascading failures in temporal logic (Phases 2-3)
-- Payer harmonization isolated in Phase 2 enables focused validation before downstream dependencies
-- Small-cell suppression utilities built in Phase 1, applied in Phases 4-5 — consistent implementation
+- Phase A before B: Config corrections from the radiation audit must be reflected in the gap report
+- Phase A+B before C: Config must be stable before modifying R/43/R/44 output schema
+- Phase D is independent but placed last due to implementation complexity, not dependency
+- Within Phase C: R/43 modification must be verified before R/44 modification (the one hard internal dependency in v1.6)
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-- **Phase 2 (Payer Harmonization):** Complex temporal overlap detection with lubridate — sparse examples for "simultaneous enrollment in two insurance types." Dual-eligible validation rules need explicit design. Partner-specific enrollment patterns need profiling. **Recommendation:** Consider `/gsd:research-phase` for temporal interval overlap patterns and dual-eligible detection algorithms.
-- **Phase 3 (Cohort Definition):** ICD code format normalization across 149 codes — need validation that regex patterns capture all variants. Incident vs prevalent case definition needs epidemiologic review if not already specified. **Recommendation:** Spot-check ICD normalization with test queries before full implementation.
-- **Phase 5 (Sankey Diagram):** ggalluvial data reshaping for multi-axis flow with payer stratification — examples exist but project-specific data structure may need experimentation. **Recommendation:** If stuck on data reshaping, use `/gsd:research-phase` for ggalluvial patterns with 3+ axes.
+Phases with standard patterns (no research-phase needed):
+- **Phase A (Radiation CPT audit):** CPT sub-range boundaries fully specified in STACK.md; CMS/ASTRO sources confirm 2026 code changes; implementation is case_when with numeric range boundaries — a standard dplyr pattern
+- **Phase C (Triggering code column):** Architecture fully documented in ARCHITECTURE.md; additive column at end of schema is a standard, low-risk R pattern; R/44 test script provides regression validation
+- **Phase D (Cancer site frequency):** ICD range format confirmed by direct xlsx inspection; normalize_icd() exists in utils_icd.R; DuckDB cohort filter pattern is established across 10+ existing scripts
 
-**Phases with standard patterns (skip phase research):**
-- **Phase 1 (Foundation):** CSV loading with readr/vroom, config management, basic utilities — thoroughly documented in tidyverse guides.
-- **Phase 4 (Waterfall):** Attrition bar charts — CONSORT diagram patterns well-documented in dtrackr, consort packages.
+Phase requiring targeted inspection (not full research-phase):
+- **Phase B (Treatment code cross-reference):** TreatmentVariables_2024.07.17.docx table structure must be discovered at runtime with `docxtractr::docx_tbl_count()` and `docx_describe_tbls()` before writing extraction logic. This is a 30-60 minute interactive inspection step at the start of Phase B implementation, not a research gap.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Core tidyverse stack (dplyr, ggplot2, vroom) verified from official CRAN releases and benchmarks. HiPerGator R module loading confirmed from UF documentation. tidylog is MEDIUM confidence (less widespread adoption) but stable 1.1.0 release. |
-| Features | MEDIUM-HIGH | Table stakes features (loading, ICD matching, attrition logging) are well-established in PCORnet literature. Dual-eligible detection and Sankey visualization are domain-standard but implementation details need validation. 9-category payer mapping matches Python reference. |
-| Architecture | MEDIUM | Sequential numbered scripts pattern is standard for R pipelines. Named predicate functions are best practice in clinical research. Small-cell suppression layer architecture is inferred from HIPAA requirements rather than documented PCORnet pattern. |
-| Pitfalls | MEDIUM-HIGH | Dual-eligible detection failure, ICD format mismatch, date parsing failures are documented in multi-site PCORnet studies. HIPAA suppression violations are well-documented in CMS policy. Immortal time bias and incidence-prevalence bias are standard epidemiologic concepts. Partner-specific quirks based on PROJECT.md context. |
+| Stack | HIGH | docxtractr 0.6.5 CRAN-current verified 2026-04-21; icd package archived status confirmed; CPT 2026 code changes confirmed via CMS/ASTRO sources; all other packages already in active use |
+| Features | HIGH | All features are scoped extensions of existing, shipping scripts with confirmed patterns; scope is unambiguous; complexity estimates are grounded in prior similar work in pipeline |
+| Architecture | HIGH | Derived from direct inspection of all existing R scripts and reference files; no inferred structure; data flow diagrams confirmed against actual function signatures |
+| Pitfalls | HIGH | v1.6 pitfalls derive from direct CPT code structure knowledge and codebase inspection; ICD range pitfalls from prior ICD matching work in same pipeline; proton code gap confirmed by direct config inspection |
 
-**Overall confidence:** MEDIUM-HIGH
-
-Research provides strong foundation for roadmap with clear phase structure. Highest risk areas (payer harmonization, ICD matching) are identified with mitigation strategies. Stack recommendations are solid. Main uncertainty is implementation details for temporal overlap detection and ggalluvial data reshaping — both solvable during execution with targeted research if needed.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**Temporal overlap detection algorithm:** Research identifies the need for dual-eligible detection via overlapping Medicare + Medicaid enrollment periods but doesn't provide explicit lubridate code pattern. **Handling:** Phase 2 should include spike to prototype overlap detection with test data; validate with Python pipeline counts before full implementation. If stuck, use `/gsd:research-phase` for lubridate interval overlap patterns.
+- **TreatmentVariables_2024.07.17.docx table structure:** Not previously parsed programmatically. At the start of Phase B, run `docxtractr::docx_tbl_count()` and `docx_describe_tbls()` interactively to discover actual table layout and numbering. Do not hardcode table indices in R/46 before this discovery step.
 
-**ICD code format variation extent:** Research documents that dotted and undotted formats exist, but doesn't quantify distribution across OneFlorida+ partners (e.g., is AMS 90% dotted, FLM 90% undotted?). **Handling:** Phase 1 should profile DX format distribution during initial load; log counts of dotted vs undotted vs other formats to inform normalization strategy in Phase 3.
+- **ICDO3 vs ICD-10 matching decision for cancer site frequency:** ARCHITECTURE.md flags the ICD-O-3 column in CancerSiteCategories.xlsx as "optional." The decision of whether to use dual-coding (ICD-O-3 via TUMOR_REGISTRY + ICD-10 via DIAGNOSIS) or ICD-10 only should be made at Phase D start based on a quick count of HL cohort patients with TUMOR_REGISTRY records. This is a one-query data decision, not a research gap.
 
-**Partner-specific enrollment data models:** PROJECT.md documents that FLM is claims-only, VRT is death-only, AMS/UMI have encounter-based enrollment, but research doesn't provide operational definitions (e.g., how to detect "this is a claims-only partner" programmatically). **Handling:** Phase 2 should create per-partner enrollment completeness report (% patients with ENROLLMENT records, mean enrollment duration, gap patterns) to validate documented partner characteristics.
-
-**Secondary suppression algorithm:** Research emphasizes need for secondary suppression to prevent back-calculation but doesn't specify selection rule (which 2-3 cells to suppress when primary cell is suppressed). **Handling:** Phase 1 utils_suppression.R should implement heuristic: suppress smallest adjacent cell in same row/column; document rule in code comments. Manual validation checklist in Phase 4 before outputs shared.
-
-**Incident vs prevalent case definition:** Research flags incidence-prevalence bias but PROJECT.md doesn't specify whether cohort should be incident (newly diagnosed) or prevalent (all with HL diagnosis). **Handling:** Clarify with project PI before Phase 3; default to incident definition (first DX_DATE in study window) with lookback period to exclude prevalent cases if data supports it.
+- **CPT sub-range MEDIUM confidence for IRB documentation:** The 70010-79999 sub-range classification in STACK.md carries MEDIUM confidence because boundaries come from industry billing sources, not the AMA CPT manual directly (which is paywalled). For IRB-grade documentation, supplement with CMS RBRVS RVU files (public domain) as the primary citation for CPT short descriptors. STACK.md identifies the relevant CMS URL.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **STACK.md:** CRAN official releases (tidyverse 2.0.0, vroom 1.7.0, ggalluvial 0.12.5), HiPerGator UF documentation, vroom benchmarks, data.table vs tidyverse comparisons
-- **FEATURES.md:** PCORnet CDM v7.0 specification (official), PCORnet data quality evaluation studies (PMC), Sankey diagram methodology (PMC publications), CMS cell size suppression policy (ResDAC), dual-eligible identification guidance (CMS/ResDAC)
-- **ARCHITECTURE.md:** PCORnet CDM v7.0 specification, R pipeline architecture (bookdown, R4DS), CONSORT diagram packages (dtrackr, consort CRAN), ggalluvial documentation
-- **PITFALLS.md:** PCORnet CDM specification, dual-eligible identification methods (ResDAC), immortal time bias literature (PMC), ICD code format regex patterns, CMS suppression policy, multi-site data heterogeneity studies
+
+- Direct inspection: R/00_config.R, R/38, R/42, R/43, R/44, R/utils_icd.R, R/utils_treatment.R — all architecture findings
+- Direct inspection: CancerSiteCategories.xlsx (Groups sheet, 43 rows) — ICD10 range format "C810-C814, C817, C819" confirmed
+- Direct inspection: VariableDetails.xlsx (Treatment sheet, 123 rows) — Modality/Code/Description structure and forward-fill requirement confirmed
+- Direct inspection: TreatmentVariables_2024.07.17.docx (text extraction) — "From PROCEDURES: 70010-79999" confirmed
+- [docxtractr CRAN](https://cran.r-project.org/web/packages/docxtractr/index.html) — version 0.6.5 current, confirmed 2026-04-21
+- [icd CRAN archived](https://cran.r-project.org/package=icd) — archived 2020-10-06 confirmed
+- [PMC: 2026 CMS Radiation Oncology codes](https://pmc.ncbi.nlm.nih.gov/articles/PMC12842826/) — 77402/77407/77412 replacing 77385/77386, confirmed
+- [ASTRO Process of Care](https://www.astro.org/practice-support/reimbursement/coding/coding-guidance/coding-faqs-and-tips/process-of-care) — 77261-77290 confirmed non-treatment (planning/simulation)
+- [SEER ICD-O-3 Site Codes](https://training.seer.cancer.gov/head-neck/abstract-code-stage/codes.html) — C##.# format confirmed
 
 ### Secondary (MEDIUM confidence)
-- **STACK.md:** tidylog package (stable but less widespread adoption), consort package (designed for RCTs, may need adaptation for observational cohorts)
-- **FEATURES.md:** Treatment timing windows complexity assessment, site-level data quality reporting patterns (inferred from multi-site studies)
-- **ARCHITECTURE.md:** Small-cell suppression layer architecture (inferred from HIPAA requirements rather than documented pattern)
-- **PITFALLS.md:** Partner-specific data quirks (based on PROJECT.md context rather than OneFlorida+ official documentation)
 
-### Tertiary (LOW confidence — needs validation)
-- Partner-specific operational definitions (how to programmatically detect "claims-only" vs "encounter-based" enrollment) — inferred from PROJECT.md, needs validation with project PI or OneFlorida+ documentation
-- Exact dual-eligible prevalence in OneFlorida+ HL cohort (research cites 10-20% as typical, but actual may vary) — validate against Python pipeline after Phase 2 implementation
+- [medicalbillersandcoders.com: Radiology Billing Codes](https://www.medicalbillersandcoders.com/blog/understand-the-basics-of-radiology-billing-codes/) — 70010-79999 subsection boundaries (industry source; supplement with CMS RBRVS for IRB citations)
+- [medicalbillersandcoders.com: Radiation Oncology Codes Part 1](https://www.medicalbillersandcoders.com/blog/radiation-oncology-codes-part-1/) — 77261-77799 subsection breakdown (MEDIUM — same recommendation)
+- [ICD10gm CRAN](https://cran.r-project.org/web/packages/ICD10gm/ICD10gm.pdf) — confirmed as German ICD-10-GM, not US ICD-10-CM/ICD-O-3; exclusion rationale confirmed
+
+### Tertiary (LOW confidence)
+
+- None — all findings have at least MEDIUM-confidence sources
 
 ---
-
-*Research completed: 2026-03-24*
+*Research completed: 2026-04-21*
+*Supersedes: SUMMARY.md dated 2026-03-24 (base pipeline research; this covers v1.6 additions only)*
 *Ready for roadmap: yes*
