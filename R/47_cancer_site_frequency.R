@@ -195,12 +195,24 @@ message(glue("Loaded {format(nrow(diagnosis_icd10), big.mark = ',')} ICD-10 DIAG
 
 message("Loading TUMOR_REGISTRY_ALL table (topography codes, all patients)...")
 
-tr_topo <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
-  mutate(topo_raw = coalesce(SITE_CODE, SITE)) %>%
-  select(ID, topo_raw) %>%
-  filter(!is.na(topo_raw)) %>%
-  materialize() %>%
-  mutate(topo_norm = normalize_icd(topo_raw))
+tr_all_lazy <- get_pcornet_table("TUMOR_REGISTRY_ALL")
+tr_cols <- colnames(tr_all_lazy)
+site_candidates <- intersect(c("SITE_CODE", "SITE", "PRIMARY_SITE"), tr_cols)
+message(glue("  Topography column candidates found: {paste(site_candidates, collapse = ', ')}"))
+
+if (length(site_candidates) == 0) {
+  warning("No topography/site column found in TUMOR_REGISTRY_ALL -- ICD-O-3 counts will be 0")
+  tr_topo <- tibble(ID = character(), topo_raw = character(), topo_norm = character())
+} else {
+  # Build coalesce expression dynamically from available columns
+  coalesce_expr <- rlang::parse_expr(paste0("coalesce(", paste(site_candidates, collapse = ", "), ")"))
+  tr_topo <- tr_all_lazy %>%
+    mutate(topo_raw = !!coalesce_expr) %>%
+    select(ID, topo_raw) %>%
+    filter(!is.na(topo_raw)) %>%
+    materialize() %>%
+    mutate(topo_norm = normalize_icd(topo_raw))
+}
 
 message(glue("Loaded {format(nrow(tr_topo), big.mark = ',')} TUMOR_REGISTRY rows with topography codes"))
 message(glue("  Sample topography values (first 10 unique): {paste(head(unique(tr_topo$topo_norm), 10), collapse = ', ')}"))
