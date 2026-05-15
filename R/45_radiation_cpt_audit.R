@@ -390,7 +390,7 @@ n_cols1 <- 7L  # code_range, ama_category, classification, rationale, citation, 
 wb$add_data(sheet = SHEET1, x = title1, start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE, color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET1, dims = glue("A1:{int_to_col(n_cols1)}1"))
+wb$merge_cells(sheet = SHEET1, dims = glue("A1:{int2col(n_cols1)}1"))
 
 # Row 2: Headers
 headers1 <- c("CPT Range", "Range Start", "Range End", "AMA Category",
@@ -398,9 +398,9 @@ headers1 <- c("CPT Range", "Range Start", "Range End", "AMA Category",
 for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET1, dims = glue("A2:{int_to_col(n_cols1)}2"),
+wb$add_fill(sheet = SHEET1, dims = glue("A2:{int2col(n_cols1)}2"),
             color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = glue("A2:{int_to_col(n_cols1)}2"),
+wb$add_font(sheet = SHEET1, dims = glue("A2:{int2col(n_cols1)}2"),
             name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT))
 
 # Rows 3+: Classification data
@@ -414,7 +414,7 @@ wb$add_data(sheet = SHEET1, x = write_df1, start_row = 3, col_names = FALSE)
 last_row1 <- 2L + nrow(write_df1)
 for (i in seq_len(nrow(write_df1))) {
   row_i <- 2L + i
-  row_dims <- glue("A{row_i}:{int_to_col(n_cols1)}{row_i}")
+  row_dims <- glue("A{row_i}:{int2col(n_cols1)}{row_i}")
   cls <- write_df1$classification[i]
   if (cls == "Radiation Treatment") {
     wb$add_fill(sheet = SHEET1, dims = row_dims, color = wb_color(GREEN_FILL))
@@ -432,10 +432,10 @@ rec_text <- paste0(
   "or nuclear medicine. The pipeline uses the narrow treatment-only range (77261-77799) by design."
 )
 wb$add_data(sheet = SHEET1, x = rec_text, start_row = rec_row, start_col = 1)
-wb$merge_cells(sheet = SHEET1, dims = glue("A{rec_row}:{int_to_col(n_cols1)}{rec_row}"))
+wb$merge_cells(sheet = SHEET1, dims = glue("A{rec_row}:{int2col(n_cols1)}{rec_row}"))
 wb$add_font(sheet = SHEET1, dims = glue("A{rec_row}"),
             name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF1B5E20"))
-wb$add_fill(sheet = SHEET1, dims = glue("A{rec_row}:{int_to_col(n_cols1)}{rec_row}"),
+wb$add_fill(sheet = SHEET1, dims = glue("A{rec_row}:{int2col(n_cols1)}{rec_row}"),
             color = wb_color("FFE8F5E9"))
 
 # Column widths
@@ -455,7 +455,7 @@ n_cols2 <- 8L
 wb$add_data(sheet = SHEET2, x = as.character(title2), start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET2, dims = "A1",
             name = "Calibri", size = 14, bold = TRUE, color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET2, dims = glue("A1:{int_to_col(n_cols2)}1"))
+wb$merge_cells(sheet = SHEET2, dims = glue("A1:{int2col(n_cols2)}1"))
 
 # Row 2: Headers
 headers2 <- c("Code", "PX Type(s)", "Description", "AMA Category",
@@ -463,9 +463,9 @@ headers2 <- c("Code", "PX Type(s)", "Description", "AMA Category",
 for (i in seq_along(headers2)) {
   wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET2, dims = glue("A2:{int_to_col(n_cols2)}2"),
+wb$add_fill(sheet = SHEET2, dims = glue("A2:{int2col(n_cols2)}2"),
             color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = glue("A2:{int_to_col(n_cols2)}2"),
+wb$add_font(sheet = SHEET2, dims = glue("A2:{int2col(n_cols2)}2"),
             name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT))
 
 # Rows 3+: Codes data
@@ -481,7 +481,7 @@ wb$add_data(sheet = SHEET2, x = write_df2, start_row = 3, col_names = FALSE)
 last_row2 <- 2L + nrow(write_df2)
 for (i in seq_len(nrow(write_df2))) {
   row_i <- 2L + i
-  row_dims <- glue("A{row_i}:{int_to_col(n_cols2)}{row_i}")
+  row_dims <- glue("A{row_i}:{int2col(n_cols2)}{row_i}")
   cls <- write_df2$classification[i]
   if (cls == "Radiation Treatment") {
     wb$add_fill(sheet = SHEET2, dims = row_dims, color = wb_color(GREEN_FILL))
@@ -492,7 +492,7 @@ for (i in seq_len(nrow(write_df2))) {
 
 # Number formatting for count columns
 if (nrow(write_df2) > 0) {
-  num_dims <- glue("G3:{int_to_col(n_cols2)}{last_row2}")
+  num_dims <- glue("G3:{int2col(n_cols2)}{last_row2}")
   wb$add_numfmt(sheet = SHEET2, dims = num_dims, numfmt = "#,##0")
 }
 
