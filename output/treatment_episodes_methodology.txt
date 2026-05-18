@@ -1,0 +1,473 @@
+================================================================================
+TREATMENT EPISODE METHODOLOGY
+How the *_episodes.csv files are produced
+================================================================================
+
+Generated from codebase analysis of:
+  - R/00_config.R        (treatment code definitions)
+  - R/43_treatment_durations.R  (date extraction and episode logic)
+  - R/44_treatment_episodes.R   (episode-level output)
+
+
+================================================================================
+1. OUTPUT FILES
+================================================================================
+
+Four CSV files are produced, one per treatment type:
+
+  chemotherapy_episodes.csv
+  radiation_episodes.csv
+  sct_episodes.csv
+  immunotherapy_episodes.csv
+
+Each row represents one treatment episode for one patient:
+
+  patient_id              - Patient identifier
+  episode_number          - Sequential episode number per patient (1, 2, 3, ...)
+  episode_start           - Date of first treatment event in the episode
+  episode_stop            - Date of last treatment event in the episode
+  episode_length_days     - Days between first and last event (0 if single-date)
+  distinct_dates_in_episode - Count of unique treatment dates within the episode
+  historical_flag         - TRUE if episode_stop falls before 2012-01-01
+
+
+================================================================================
+2. EPISODE DEFINITION (HOW DATES ARE GROUPED INTO EPISODES)
+================================================================================
+
+All treatment dates for a patient (across all data sources) are sorted
+chronologically, then grouped using a 90-day window rule:
+
+  1. The first date starts Episode 1.
+  2. Each subsequent date is compared to the START date of the current episode.
+  3. If the date is >= 90 days from the episode start, a new episode begins.
+  4. Otherwise the date is added to the current episode.
+
+This is a "window from episode start" approach, not a gap between consecutive
+dates. It ensures no episode ever spans more than 90 days from its first event.
+
+Before episode assignment, dates from all data sources are stacked and
+deduplicated: if a patient has a PROCEDURES record and a DIAGNOSIS record on
+the same day for the same treatment type, that day counts once.
+
+
+================================================================================
+3. PCORnet CDM TABLES QUERIED
+================================================================================
+
+Up to 7 tables are queried depending on treatment type:
+
+  Table               Column Used as Date     What Is Matched
+  ------------------  ----------------------  --------------------------------
+  PROCEDURES          PX_DATE                 CPT, HCPCS, ICD-9, ICD-10-PCS,
+                                              revenue codes in PX column
+  PRESCRIBING         RX_ORDER_DATE           RXNORM_CUI
+                      (fallback: RX_START_DATE)
+  DISPENSING          DISPENSE_DATE           RXNORM_CUI
+  MED_ADMIN           MEDADMIN_START_DATE     RXNORM_CUI
+  DIAGNOSIS           DX_DATE                 ICD-10-CM and ICD-9-CM codes
+  ENCOUNTER           ADMIT_DATE              MS-DRG codes
+  TUMOR_REGISTRY_ALL  (varies by column)      Treatment date columns
+
+
+================================================================================
+4. CHEMOTHERAPY -- CODE DEFINITIONS AND SOURCES
+================================================================================
+
+Chemotherapy draws from all 7 tables. All chemo codes are pooled together
+(no distinction between ABVD, BEACOPP, salvage regimens, etc.).
+
+SOURCE 1: PROCEDURES table -- HCPCS J-codes (PX_TYPE = "CH")
+--------------------------------------------------------------------------
+89 codes. The core Hodgkin Lymphoma agents plus a broad set of antineoplastic
+J-codes:
+
+  J9000   Doxorubicin HCl (Adriamycin)         -- ABVD component
+  J9040   Bleomycin sulfate                     -- ABVD component
+  J9360   Vinblastine sulfate                   -- ABVD component
+  J9130   Dacarbazine (DTIC)                    -- ABVD component
+  J9042   Brentuximab vedotin (Adcetris)        -- salvage / frontline advanced
+  J9299   Nivolumab (Opdivo)                    -- checkpoint inhibitor
+
+  Plus 83 additional J-codes: J9017, J9019, J9021, J9022, J9025, J9030,
+  J9033, J9034, J9035, J9036, J9039, J9041, J9043, J9045, J9047, J9050,
+  J9055, J9057, J9058, J9060, J9065, J9070, J9071, J9073, J9075, J9098,
+  J9100, J9118, J9119, J9145, J9150, J9171, J9173, J9178, J9179, J9181,
+  J9185, J9190, J9196, J9200, J9201, J9202, J9204, J9206, J9207, J9208,
+  J9209, J9217, J9218, J9223, J9228, J9230, J9245, J9246, J9250, J9260,
+  J9261, J9263, J9264, J9265, J9266, J9267, J9268, J9271, J9280, J9286,
+  J9293, J9301, J9302, J9304, J9305, J9306, J9307, J9308, J9309, J9310,
+  J9311, J9312, J9315, J9317, J9319, J9321, J9330, J9340, J9349, J9351,
+  J9354, J9355, J9358, J9359, J9370, J9371, J9390, J9395, J9999
+
+
+SOURCE 2: PROCEDURES table -- ICD-9-CM procedure codes (PX_TYPE = "09")
+--------------------------------------------------------------------------
+  99.25   Injection or infusion of cancer chemotherapeutic substance
+  99.28   Injection or infusion of immunotherapy
+
+
+SOURCE 3: PROCEDURES table -- ICD-10-PCS codes (PX_TYPE = "10", prefix match)
+--------------------------------------------------------------------------
+  3E03305   Antineoplastic into peripheral vein, percutaneous
+  3E04305   Antineoplastic into central vein, percutaneous
+  3E05305   Antineoplastic into peripheral artery, percutaneous
+  3E06305   Antineoplastic into central artery, percutaneous
+
+  (Any PX starting with these 7 characters is matched.)
+
+
+SOURCE 4: PROCEDURES table -- Revenue codes (PX_TYPE = "RE")
+--------------------------------------------------------------------------
+  0331    Chemotherapy - injected
+  0332    Chemotherapy - oral
+  0335    Chemotherapy - IV push
+
+
+SOURCE 5: PRESCRIBING table -- RxNorm CUIs
+--------------------------------------------------------------------------
+136 RxNorm concept IDs. Date used is RX_ORDER_DATE (falls back to
+RX_START_DATE if order date is missing).
+
+Core ABVD ingredient CUIs:
+  3639      Doxorubicin
+  11213     Bleomycin
+  67228     Vinblastine
+  3946      Dacarbazine
+
+Other HL-relevant drugs and formulations (selected examples):
+  1147327   Brentuximab vedotin 50 MG Injection [Adcetris]
+  1657750   Pembrolizumab 25 MG/ML Injection [Keytruda]
+  1657195   Nivolumab 10 MG/ML Injection
+  134547    Bendamustine
+  3002      Cyclophosphamide
+  11202     Vincristine
+  4179      Etoposide
+  5657      Ifosfamide
+  2555      Cisplatin
+  6851      Methotrexate
+  2105      Carmustine
+  8702      Procarbazine
+  1622      Bleomycin
+  1597876   Nivolumab (ingredient)
+  1147320   Brentuximab vedotin (ingredient)
+  (plus ~115 additional formulation-specific CUIs)
+
+  The same 136 RxNorm CUIs are also used to query DISPENSING and MED_ADMIN.
+
+
+SOURCE 6: DIAGNOSIS table -- encounter diagnosis codes
+--------------------------------------------------------------------------
+  ICD-10-CM:
+    Z51.11    Encounter for antineoplastic chemotherapy
+    Z51.12    Encounter for antineoplastic immunotherapy
+
+  ICD-9-CM:
+    V58.11    Encounter for antineoplastic chemotherapy
+    V58.12    Encounter for antineoplastic immunotherapy
+
+
+SOURCE 7: ENCOUNTER table -- MS-DRG codes
+--------------------------------------------------------------------------
+  837   Chemo w/o acute leukemia as secondary Dx, w MCC
+  838   Chemo w/o acute leukemia as secondary Dx, w CC
+  839   Chemo w/o acute leukemia as secondary Dx, w/o CC/MCC
+  846   Chemo w hematologic malignancy as secondary Dx, w MCC
+  847   Chemo w hematologic malignancy as secondary Dx, w CC
+  848   Chemo w hematologic malignancy as secondary Dx, w/o CC/MCC
+
+
+SOURCE 8 (conditional): TUMOR_REGISTRY_ALL -- date columns
+--------------------------------------------------------------------------
+  CHEMO_START_DATE_SUMMARY   (if column exists in the data)
+  DT_CHEMO                   (if column exists in the data)
+
+
+SOURCE 9: DISPENSING table -- RxNorm CUIs
+--------------------------------------------------------------------------
+  Same 136 chemo_rxnorm CUIs as PRESCRIBING (matched on DISPENSE_DATE).
+
+
+SOURCE 10: MED_ADMIN table -- RxNorm CUIs
+--------------------------------------------------------------------------
+  Same 136 chemo_rxnorm CUIs (matched on MEDADMIN_START_DATE).
+
+
+================================================================================
+5. RADIATION -- CODE DEFINITIONS AND SOURCES
+================================================================================
+
+SOURCE 1: PROCEDURES table -- CPT codes (PX_TYPE = "CH")
+--------------------------------------------------------------------------
+17 codes:
+  77401   External beam radiation delivery
+  77402   Radiation treatment delivery, intermediate
+  77407   Radiation treatment delivery, simple
+  77412   Radiation treatment delivery, complex
+  77427   Radiation treatment management (weekly, per 5 fractions)
+  77404, 77408, 77413, 77414, 77416, 77417, 77418, 77421,
+  77431, 77432, 77435, 77470
+
+
+SOURCE 2: PROCEDURES table -- ICD-9-CM procedure codes (PX_TYPE = "09")
+--------------------------------------------------------------------------
+14 codes:
+  92.20   Infusion of liquid brachytherapy radioisotope
+  92.21   Superficial radiation
+  92.22   Orthovoltage radiation
+  92.23   Radioisotopic teleradiotherapy
+  92.24   Teleradiotherapy using photons
+  92.25   Teleradiotherapy using electrons
+  92.26   Teleradiotherapy of other particulate radiation
+  92.27   Implantation or insertion of radioactive elements
+  92.29   Other radiotherapeutic procedure
+  92.30   Stereotactic radiosurgery, NOS
+  92.31   Single source photon radiosurgery
+  92.32   Multi-source photon radiosurgery (Gamma Knife)
+  92.33   Particulate radiosurgery
+  92.41   Intra-operative electron radiation therapy (IERT)
+
+
+SOURCE 3: PROCEDURES table -- ICD-10-PCS codes (PX_TYPE = "10", prefix match)
+--------------------------------------------------------------------------
+  D70   Beam Radiation, Lymphatic and Hematologic
+  D71   Brachytherapy, Lymphatic and Hematologic
+  D72   Stereotactic Radiosurgery, Lymphatic and Hematologic
+  D7Y   Other Radiation, Lymphatic and Hematologic
+
+  (Any PX starting with these 3-character prefixes is matched.)
+
+
+SOURCE 4: PROCEDURES table -- Revenue codes (PX_TYPE = "RE")
+--------------------------------------------------------------------------
+  0330    General classification (therapeutic radiology)
+  0333    Radiation therapy
+
+
+SOURCE 5: DIAGNOSIS table
+--------------------------------------------------------------------------
+  ICD-10-CM:
+    Z51.0     Encounter for antineoplastic radiation therapy
+
+  ICD-9-CM:
+    V58.0     Encounter for radiotherapy
+
+
+SOURCE 6: ENCOUNTER table -- MS-DRG
+--------------------------------------------------------------------------
+  849   Radiotherapy
+
+
+SOURCE 7 (conditional): TUMOR_REGISTRY_ALL -- date columns
+--------------------------------------------------------------------------
+  RAD_START_DATE_SUMMARY   (if column exists)
+  DT_RAD                   (if column exists)
+
+
+================================================================================
+6. STEM CELL TRANSPLANT (SCT) -- CODE DEFINITIONS AND SOURCES
+================================================================================
+
+SOURCE 1: PROCEDURES table -- CPT codes (PX_TYPE = "CH")
+--------------------------------------------------------------------------
+  38230   Bone marrow harvesting
+  38232   Bone marrow harvesting (variant)
+  38240   Allogeneic hematopoietic progenitor cell (HPC) transplantation
+  38241   Autologous HPC transplantation
+  38242   Allogeneic donor lymphocyte infusion (DLI)
+  38243   Allogeneic HPC boost
+
+
+SOURCE 2: PROCEDURES table -- HCPCS codes (PX_TYPE = "CH")
+--------------------------------------------------------------------------
+  S2140   Cord blood harvesting for transplantation, allogeneic
+  S2142   Cord blood-derived stem-cell transplantation, allogeneic
+  S2150   Bone marrow or blood-derived stem cells, allogeneic or autologous
+
+
+SOURCE 3: PROCEDURES table -- ICD-9-CM procedure codes (PX_TYPE = "09")
+--------------------------------------------------------------------------
+10 codes:
+  41.00   Bone marrow transplant, NOS
+  41.01   Autologous bone marrow transplant without purging
+  41.02   Allogeneic bone marrow transplant with purging
+  41.03   Allogeneic bone marrow transplant without purging
+  41.04   Autologous hematopoietic stem cell transplant without purging
+  41.05   Allogeneic hematopoietic stem cell transplant without purging
+  41.06   Cord blood stem cell transplant
+  41.07   Autologous hematopoietic stem cell transplant with purging
+  41.08   Allogeneic hematopoietic stem cell transplant with purging
+  41.09   Autologous bone marrow transplant with purging
+
+
+SOURCE 4: PROCEDURES table -- ICD-10-PCS codes (PX_TYPE = "10", exact match)
+--------------------------------------------------------------------------
+43 codes. These are matched EXACTLY (not prefix-matched like chemo/radiation).
+
+  Autologous, open approach (peripheral vein):
+    30230C0, 30230G0, 30230X0, 30230Y0
+
+  Autologous, open approach (central vein):
+    30240C0, 30240G0, 30240X0, 30240Y0
+
+  Autologous, percutaneous (peripheral vein):
+    30233C0, 30233G0, 30233X0, 30233Y0
+
+  Autologous, percutaneous (central vein):
+    30243C0, 30243G0, 30243X0, 30243Y0
+
+  Nonautologous, percutaneous (peripheral vein):
+    30233G1, 30233X1, 30233Y1
+
+  Nonautologous, percutaneous (central vein):
+    30243G1, 30243X1, 30243Y1
+
+  Allogeneic related (qualifier 2) and unrelated (qualifier 3):
+    30233G2, 30233G3, 30233U2, 30233U3, 30233X2, 30233X3, 30233Y2, 30233Y3
+    30243G2, 30243G3, 30243U2, 30243U3, 30243X2, 30243X3, 30243Y2, 30243Y3
+
+  Embryonic stem cells:
+    30230AZ, 30233AZ, 30240AZ, 30243AZ
+
+  New technology -- Omidubicel:
+    XW133C8, XW143C8
+
+
+SOURCE 5: PROCEDURES table -- Revenue codes (PX_TYPE = "RE")
+--------------------------------------------------------------------------
+  0362    Organ transplant - other than kidney (includes SCT)
+  0815    Allogeneic stem cell acquisition/donor services
+
+
+SOURCE 6: DIAGNOSIS table -- ICD-10-CM only (no ICD-9 SCT codes)
+--------------------------------------------------------------------------
+  Z94.84    Stem cells transplant status
+  T86.5     Complications of stem cell transplant
+  T86.09    Other complications of bone marrow transplant
+  Z48.290   Encounter for aftercare following bone marrow transplant
+  T86.0     Complications of bone marrow transplant
+
+
+SOURCE 7: ENCOUNTER table -- MS-DRG
+--------------------------------------------------------------------------
+  014   Allogeneic bone marrow transplant
+  016   Autologous BMT w CC/MCC or T-cell immunotherapy
+  017   Autologous BMT w/o CC/MCC
+
+  NOTE: DRG 015 was deleted in FY2012 and is intentionally omitted.
+
+
+SOURCE 8 (conditional): TUMOR_REGISTRY_ALL -- date columns
+--------------------------------------------------------------------------
+  DT_HTE, DT_SCT, SCT_DATE, BMT_DATE, TRANSPLANT_DATE, HCT_DATE,
+  DT_TRANSPLANT  (whichever columns exist in the data)
+
+
+================================================================================
+7. IMMUNOTHERAPY (CAR T-CELL) -- CODE DEFINITIONS AND SOURCES
+================================================================================
+
+Immunotherapy detection uses only 2 sources. Checkpoint inhibitors like
+nivolumab and pembrolizumab are captured under CHEMOTHERAPY (their HCPCS
+and RxNorm codes are in the chemo code lists). The immunotherapy category
+here specifically targets CAR T-cell therapies.
+
+SOURCE 1: PROCEDURES table -- ICD-10-PCS codes (PX_TYPE = "10", prefix match)
+--------------------------------------------------------------------------
+30 prefixes:
+
+  Autologous engineered CAR T-cell:
+    XW033C7 (peripheral vein), XW043C7 (central vein)
+
+  Allogeneic engineered CAR T-cell:
+    XW033G7 (peripheral vein), XW043G7 (central vein)
+
+  Named CAR T products:
+    XW033H7 / XW043H7   Axicabtagene ciloleucel (Yescarta)
+    XW033J7 / XW043J7   Tisagenlecleucel (Kymriah)
+    XW033K7 / XW043K7   Idecabtagene vicleucel (Abecma)
+    XW033L7 / XW043L7   Lifileucel (Amtagvi)
+    XW033M7 / XW043M7   Brexucabtagene autoleucel (Tecartus)
+    XW033N7 / XW043N7   Lisocabtagene maraleucel (Breyanzi)
+
+  Additional immunotherapy procedure prefixes:
+    XW033A3, XW033B3, XW033C3, XW033C6, XW033D6, XW033E5,
+    XW033H5, XW033H6, XW043A7, XW043B3, XW043C3, XW043C6,
+    XW043E5, XW043H5, XW043P9
+
+
+SOURCE 2: ENCOUNTER table -- MS-DRG (INCOMPLETE)
+--------------------------------------------------------------------------
+  The code references DRG 018 (Chimeric Antigen Receptor T-cell
+  Immunotherapy), but as of this writing the immunotherapy_drg vector
+  is NOT defined in R/00_config.R. This means the DRG-based lookup
+  silently returns no results. Only the ICD-10-PCS procedure codes
+  are actively matching immunotherapy events.
+
+
+================================================================================
+8. SUPPORTIVE CARE CODES (NOT USED FOR EPISODES)
+================================================================================
+
+The config also defines supportive_care_rxnorm codes (growth factors,
+antiemetics, steroids, etc.). These are NOT used in episode construction.
+They were classified during drug investigation (Phase 40) to separate
+true treatment drugs from supportive medications.
+
+
+================================================================================
+9. DATA FLOW SUMMARY
+================================================================================
+
+  Raw PCORnet CSVs (loaded via 01_load_pcornet.R into DuckDB)
+       |
+       v
+  43_treatment_durations.R
+    - extract_chemo_dates()         --> queries 7 tables, 10 code sources
+    - extract_radiation_dates()     --> queries 4 tables, 7 code sources
+    - extract_sct_dates()           --> queries 4 tables, 8 code sources
+    - extract_immunotherapy_dates() --> queries 2 tables, 2 code sources
+    - stack_and_dedup()             --> deduplicates same patient+date combos
+       |
+       v
+  44_treatment_episodes.R
+    - calculate_episodes_detailed() per treatment type
+      - assign_episode_ids()        --> 90-day window-from-start clustering
+      - group by (patient, episode) --> aggregate start/stop/length/count
+    - Add historical_flag           --> episode_stop < 2012-01-01
+       |
+       v
+  Output:
+    chemotherapy_episodes.csv
+    radiation_episodes.csv
+    sct_episodes.csv
+    immunotherapy_episodes.csv
+
+
+================================================================================
+10. KEY PARAMETERS
+================================================================================
+
+  GAP_THRESHOLD = 90 days    (window from episode start to split episodes)
+  HISTORICAL_CUTOFF = 2012-01-01  (episodes ending before this are flagged)
+  TREATMENT_TYPES = Chemotherapy, Radiation, SCT, Immunotherapy
+
+
+================================================================================
+11. KNOWN LIMITATIONS
+================================================================================
+
+  1. immunotherapy_drg is referenced in code but not defined in config.
+     DRG 018 (CAR T-cell Immunotherapy) is not being captured.
+
+  2. Checkpoint inhibitors (nivolumab, pembrolizumab) appear in the
+     CHEMOTHERAPY code lists, not the IMMUNOTHERAPY category. This is
+     intentional -- the diagnosis codes Z51.12 / V58.12 cover both
+     chemo and immunotherapy encounters, and HCPCS J-codes for these
+     drugs (J9299, etc.) are classified under chemo J-codes.
+
+  3. All chemotherapy codes are pooled. There is no distinction between
+     ABVD, BEACOPP, BV+AVD, salvage ICE/DHAP, or other regimens.
+
+  4. Tumor registry columns are queried only if they exist in the
+     loaded data. Column availability varies by data extract.

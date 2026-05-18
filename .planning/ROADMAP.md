@@ -87,15 +87,15 @@
   - **Requirements:** TXREF-01, TXREF-02
   - **Plans:** 2 plans
   - Plans:
-    - [ ] 46-01-PLAN.md — Gap report: hardcoded reference data from docx/xlsx files, two-way comparison, DuckDB counts, styled 5-sheet xlsx
-    - [ ] 46-02-PLAN.md — Triggering codes: extract_dates_with_codes() function, triggering_codes column in episode CSV and xlsx
-- [x] **Phase 47: Cancer Site Frequency** — Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx with styled xlsx output ready to email (completed 2026-05-15)
+    - [x] 46-01-PLAN.md — Gap report: hardcoded reference data from docx/xlsx files, two-way comparison, DuckDB counts, styled 5-sheet xlsx
+    - [x] 46-02-PLAN.md — Triggering codes: extract_dates_with_codes() function, triggering_codes column in episode CSV and xlsx
+- [ ] **Phase 47: Cancer Site Frequency** — Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx with styled xlsx output ready to email
   - **Goal:** Users can see patient counts and encounter counts per cancer site category across the full PCORnet extract
   - **Depends on:** Nothing (independent)
   - **Requirements:** CSITE-01, CSITE-02
-  - **Plans:** 1 plan
+  - **Plans:** 1 plan (script created, paused at HiPerGator execution checkpoint)
   - Plans:
-    - [ ] 47-01-PLAN.md — Cancer site frequency script: range expansion, DIAGNOSIS + TUMOR_REGISTRY queries, styled xlsx output
+    - [ ] 47-01-PLAN.md — Cancer site frequency script: range expansion, DIAGNOSIS + TUMOR_REGISTRY queries, styled xlsx output (Task 1 done, Task 2 awaiting HiPerGator)
 
 ## Progress
 
@@ -109,8 +109,8 @@
 | 33 | v1.4 | Complete | 2026-04-24 |
 | 34-37 | v1.5 | Complete | 2026-05-01 |
 | 38-46 | Unassigned | Complete | 2026-05-12 |
-| 45 | v1.6 | Complete | 2026-05-15 |
-| 46-47 | v1.6 | Not started | — |
+| 45-46 | v1.6 | Complete | 2026-05-15 |
+| 47 | v1.6 | In progress | — |
 
 ---
 *Last updated: 2026-05-18*
