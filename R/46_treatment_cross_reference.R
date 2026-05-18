@@ -483,8 +483,7 @@ REFERENCE_CODES <- list(
     ),
 
     # DRG codes -- Treatment_Variable_Documentation.docx + MSDRGs.xlsx context
-    # Note: DRG 018 is T-cell immunotherapy DRG added in recent MS-DRG versions.
-    # Note: immunotherapy_drg may not be in TREATMENT_CODES; handled with fallback in Section 5.
+    # Note: DRG 018 is T-cell immunotherapy DRG, defined in TREATMENT_CODES$immunotherapy_drg.
     drg_codes = c(
       "018"    # Chimeric antigen receptor T-cell immunotherapy
     )
@@ -755,16 +754,8 @@ message(glue("  SCT: {nrow(sct_gaps)} gap rows"))
 # ---------------------------------------------------------------------------
 # IMMUNOTHERAPY GAPS
 # ---------------------------------------------------------------------------
-# immunotherapy_drg is referenced in other scripts as TREATMENT_CODES$immunotherapy_drg
-# but does not appear in the current 00_config.R config (it may be defined in a
-# sourced utility or added later). Use the known DRG 018 directly for comparison.
-# DRG 018 = Chimeric antigen receptor T-cell immunotherapy (CMS MS-DRG).
-immuno_drg_config <- if (!is.null(TREATMENT_CODES$immunotherapy_drg)) {
-  TREATMENT_CODES$immunotherapy_drg
-} else {
-  # Known DRG 018 for CAR T immunotherapy (per Treatment_Variable_Documentation.docx)
-  c("018")
-}
+# immunotherapy_drg from TREATMENT_CODES (DRG 018 = CAR T-cell immunotherapy)
+immuno_drg_config <- TREATMENT_CODES$immunotherapy_drg
 
 immuno_gaps <- dplyr::bind_rows(
   # CAR T ICD-10-PCS codes

@@ -945,6 +945,9 @@ TREATMENT_CODES <- list(
     "017"    # Autologous BMT w/o CC/MCC
     # NOTE: DRG 015 deleted FY2012, omitted per research pitfall 4
   ),
+  immunotherapy_drg = c(
+    "018"    # Chimeric Antigen Receptor (CAR) T-cell Immunotherapy
+  ),
 
   # Revenue codes (PROCEDURES table PX_TYPE = "RE")
 
