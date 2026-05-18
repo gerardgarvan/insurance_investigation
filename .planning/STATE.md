@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
 status: completed
-last_updated: "2026-05-15T17:40:53.660Z"
-last_activity: 2026-05-15 — Phase 46 Plan 01 complete (R/46_treatment_cross_reference.R gap report script created, hardcoded reference data for all 4 treatment types)
+last_updated: "2026-05-18T12:00:00.000Z"
+last_activity: 2026-05-18 - Closed out Phases 44-46 (unassigned) with summaries and roadmap updates
 progress:
   total_phases: 43
   completed_phases: 37
@@ -14,8 +14,8 @@ progress:
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Last updated:** 2026-05-15
-**Project status:** Milestone v1.6 in progress — Phase 46 Plan 01 and 02 both complete
+**Last updated:** 2026-05-18
+**Project status:** Milestone v1.6 in progress — Phase 46 Plan 01 and 02 both complete; Phases 44-46 (unassigned) closed out
 
 ## Project Reference
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 Phase: 46 (complete)
 Plan: 02 of 02 complete
 Status: Phase 46 complete — Plan 01 (gap report) and Plan 02 (triggering codes) both done
-Last activity: 2026-05-15 — Phase 46 Plan 01 complete (R/46_treatment_cross_reference.R gap report script created, hardcoded reference data for all 4 treatment types)
+Last activity: 2026-05-18 — Closed out Phases 44-46 (unassigned) with summaries and roadmap updates
 
 ## Accumulated Context
 
@@ -55,6 +55,9 @@ Last activity: 2026-05-15 — Phase 46 Plan 01 complete (R/46_treatment_cross_re
 - write_resolved_xlsx() reusable function pattern for styled 2-sheet xlsx generation per treatment category (Phase 42)
 - Treatment constants centralized once in R/00_config.R (TREATMENT_TYPES, TREATMENT_TYPE_COLORS, GAP_THRESHOLD, immunotherapy_drg) (Quick 260508-n87)
 - Shared treatment helper functions centralized in R/utils_treatment.R (safe_table, get_hl_patient_ids, empty_result, nrow_or_0) (Quick 260508-n87)
+- Historical cutoff at 2012-01-01 for episode flagging; 90-day window from episode start (Phase 44)
+- Per-encounter payer tier without same-day collapsing; FLM source override to Medicaid (Phase 45 unassigned)
+- Episode-to-daily expansion with 3-tier fill cascade: encounter > forward/backward fill > FLM enrollment fallback (Phase 46 unassigned)
 - Hardcoded descriptions required for retired CPT codes (77404-77421 series) — NLM API only covers active codes (Phase 45)
 - Active proton codes are exactly 77520, 77522, 77523, 77525 (77521 was deleted before 2024 — do not add) (Phase 45)
 - classify_code_str() helper pattern avoids if_else type issues when classifying mixed code formats in purrr::map_chr (Phase 45)
@@ -86,6 +89,8 @@ None.
 - Phase 41 added: Combine NDC+HCPCS Reports
 - Phase 43 added: Establish Treatment Lengths for SCT, Chemo, and Radiation
 - Phase 44 added: Treatment Episode Start/Stop Dates — per-episode start/stop dates with episode length, special handling for historical dates outside 2012-2025 window
+- Phase 45 added retroactively: Tiered Encounter-Level Payer Assignment — executed outside GSD workflow
+- Phase 46 added retroactively: Tiered Date-Level Payer Assignment — executed outside GSD workflow
 - Milestone v1.6 roadmap created 2026-05-15: Phases 45-47 (radiation CPT audit, treatment code cross-reference + triggering codes, cancer site frequency)
 
 ### Blockers/Concerns
@@ -98,3 +103,9 @@ None.
 |---|-------------|------|--------|-----------|
 | 260501-gkl | Cleanup code health issues — root clutter, dead scripts, template fix, duplicate numbering, gitignore updates | 2026-05-01 | 68acd08 | [260501-gkl-cleanup-code-health-issues-root-clutter-](./quick/260501-gkl-cleanup-code-health-issues-root-clutter-/) |
 | 260508-n87 | Centralize treatment constants and shared helpers — eliminated duplicate definitions across 9 scripts | 2026-05-08 | 1552211 | [260508-n87-look-for-improvements-in-existing-code-a](./quick/260508-n87-look-for-improvements-in-existing-code-a/) |
+
+## Session Continuity
+
+Last session: 2026-05-18
+Stopped at: Closed out Phases 44-46 with summaries and roadmap updates
+Resume file: N/A

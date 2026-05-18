@@ -52,12 +52,24 @@
   - **Plans:** 1 plan
   - Plans:
     - [x] 43-01-PLAN.md — Multi-source date extraction, duration/episode computation, styled xlsx + boxplot PNG + RDS output
-- [ ] **Phase 44: Treatment Episode Start/Stop Dates** — Produce per-patient per-episode start and stop dates for each 90-day treatment period with episode length; single-date episodes for historical treatments outside the 2012-2025 data window
+- [x] **Phase 44: Treatment Episode Start/Stop Dates** — Produce per-patient per-episode start and stop dates for each 90-day treatment period with episode length; single-date episodes for historical treatments outside the 2012-2025 data window (completed 2026-05-11)
   - **Goal:** Expand treatment duration output to include per-episode start/stop dates and episode length, with special handling for isolated historical treatment dates (e.g., tumor registry dates from 1970s-2000s)
   - **Depends on:** Phase 43
   - **Plans:** 1 plan
   - Plans:
-    - [ ] 44-01-PLAN.md — Per-episode date extraction, historical flagging, styled xlsx + per-type CSVs + RDS output
+    - [x] 44-01-PLAN.md — Per-episode date extraction, historical flagging, styled xlsx + per-type CSVs + RDS output
+- [x] **Phase 45: Tiered Encounter-Level Payer Assignment** — Assign AMC 8-category payer tiers to every individual encounter without same-day collapsing (completed 2026-05-12)
+  - **Goal:** Per-encounter payer tier assignment with dual-scope (all encounters + AV+TH) detail and summary CSV output
+  - **Depends on:** Phase 37
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 45-01-PLAN.md — Encounter-level tier assignment, dual-scope CSV output (executed outside GSD workflow)
+- [x] **Phase 46: Tiered Date-Level Payer Assignment** — Expand treatment episodes to per-calendar-date rows and assign payer tiers with forward/backward fill and enrollment fallback (completed 2026-05-12)
+  - **Goal:** Per-calendar-date payer tier assignment within treatment episodes using encounter tiers, forward/backward fill, and FLM enrollment fallback
+  - **Depends on:** Phase 44, Phase 45
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 46-01-PLAN.md — Episode-to-daily expansion, tier cascade (encounter > fill > enrollment), summary CSVs (executed outside GSD workflow)
 
 ## v1.6 Phases
 
@@ -96,8 +108,9 @@
 | 29-32 | v1.3 | Complete | 2026-04-23 |
 | 33 | v1.4 | Complete | 2026-04-24 |
 | 34-37 | v1.5 | Complete | 2026-05-01 |
-| 45 | v1.6 | Complete    | 2026-05-15 |
+| 38-46 | Unassigned | Complete | 2026-05-12 |
+| 45 | v1.6 | Complete | 2026-05-15 |
 | 46-47 | v1.6 | Not started | — |
 
 ---
-*Last updated: 2026-05-15 (Phase 47 planned)*
+*Last updated: 2026-05-18*

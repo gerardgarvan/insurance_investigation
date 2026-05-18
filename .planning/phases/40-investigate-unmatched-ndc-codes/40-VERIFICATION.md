@@ -1,21 +1,21 @@
 ---
 phase: 40-investigate-unmatched-ndc-codes
-verified: 2026-05-04T21:15:00Z
-status: human_needed
-score: 7/10 must-haves verified
+verified: 2026-05-08T00:00:00Z
+status: complete
+score: 10/10 must-haves verified
 human_verification:
   - test: "Run R/40_investigate_unmatched_ndc.R on HiPerGator with data access"
     expected: "Script completes successfully, generates output/unmatched_ndc_report.xlsx and output/unmatched_ndc_classified.rds, updates R/00_config.R with new NDC vectors"
-    why_human: "Script requires PCORnet data access on HiPerGator and RxNorm API connectivity; cannot verify data-flow or xlsx output quality without execution"
+    result: "pass — all 3 HUMAN-UAT tests passed (execution, classification quality, config update)"
 ---
 
 # Phase 40: Investigate Unmatched NDC Codes Verification Report
 
 **Phase Goal:** Extract unmatched NDC and RXNORM codes from DISPENSING/PRESCRIBING/MED_ADMIN, look up drug names via RxNorm API, auto-classify into treatment categories, produce xlsx report, and update TREATMENT_CODES with new NDC vectors and expanded RXNORM CUIs
 
-**Verified:** 2026-05-04T21:15:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Verified:** 2026-05-08T00:00:00Z
+**Status:** complete
+**Re-verification:** Yes — updated from human_needed after HUMAN-UAT passed all 3 tests
 
 ## Goal Achievement
 
@@ -30,18 +30,18 @@ Plan 01 establishes 7 truths (D-01 through D-09, D-12, D-13):
 | 3   | Each code receives a drug name via RxNorm API lookup                                       | ✓ VERIFIED | Lines 284-376: lookup_rxcui_name() and lookup_ndc_to_name() functions with httr2 retry logic                   |
 | 4   | Each code is classified into one of 6 treatment categories                                 | ✓ VERIFIED | Lines 444-476: classify_drug() with 6-category case_when() (Supportive Care, Chemo, Immuno, SCT, Radiation, Unrelated) |
 | 5   | Supportive care drugs are not misclassified as chemotherapy                                | ✓ VERIFIED | Line 448: Supportive Care checked FIRST before Chemotherapy (per D-09 requirement)                             |
-| 6   | A styled xlsx report is produced with summary and per-category sheets                      | ? UNCERTAIN | Lines 491-723: write_unmatched_ndc_report() exists but output file not present (requires execution)           |
-| 7   | An RDS artifact is saved for Plan 02 config update consumption                             | ? UNCERTAIN | Line 734: saveRDS() called but output file not present (requires execution)                                    |
+| 6   | A styled xlsx report is produced with summary and per-category sheets                      | ✓ VERIFIED | Human UAT confirmed: xlsx generated with correct summary and per-category sheets (test 1 pass)                |
+| 7   | An RDS artifact is saved for Plan 02 config update consumption                             | ✓ VERIFIED | Human UAT confirmed: RDS artifact created successfully (test 1 pass)                                           |
 
 Plan 02 establishes 5 truths (D-10, D-11):
 
 | #   | Truth                                                                                    | Status     | Evidence                                                                                       |
 | --- | ---------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
-| 8   | New NDC vectors are added to TREATMENT_CODES                                             | ⚠️ HOLLOW  | Lines 770-775: chemo_ndc, supportive_care_ndc, immunotherapy_ndc, sct_ndc mapped; R/00_config.R not yet modified (config update function exists but not executed) |
-| 9   | Existing chemo_rxnorm vector is expanded with newly discovered RXNORM CUIs               | ⚠️ HOLLOW  | Lines 778-781, 874-949: chemo_rxnorm expansion logic exists; R/00_config.R unchanged (requires execution) |
-| 10  | New RXNORM vectors are created for non-chemo categories                                  | ⚠️ HOLLOW  | Lines 778-781: supportive_care_rxnorm, immunotherapy_rxnorm, sct_rxnorm mapped; not yet in config (requires execution) |
+| 8   | New NDC vectors are added to TREATMENT_CODES                                             | ✓ VERIFIED | Human UAT confirmed: config updated with chemo_ndc, supportive_care_ndc, immunotherapy_ndc, sct_ndc (test 3 pass) |
+| 9   | Existing chemo_rxnorm vector is expanded with newly discovered RXNORM CUIs               | ✓ VERIFIED | Human UAT confirmed: chemo_rxnorm expanded without duplicates, parse/source succeeds (test 3 pass) |
+| 10  | New RXNORM vectors are created for non-chemo categories                                  | ✓ VERIFIED | Human UAT confirmed: supportive_care_rxnorm, immunotherapy_rxnorm, sct_rxnorm created (test 3 pass) |
 
-**Score:** 7/10 truths verified (5 fully verified, 2 uncertain pending execution, 3 hollow pending execution)
+**Score:** 10/10 truths verified (all confirmed via code review + human UAT on HiPerGator)
 
 ### Required Artifacts
 
@@ -50,15 +50,15 @@ Plan 02 establishes 5 truths (D-10, D-11):
 | Artifact                                      | Expected                                                              | Status     | Details                                                                                                 |
 | --------------------------------------------- | --------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
 | `R/40_investigate_unmatched_ndc.R`            | NDC/RXNORM investigation script (min 400 lines)                       | ✓ VERIFIED | 1084 lines (exceeds min); exports all 5 required functions; httr2-based API lookup; 7 sections         |
-| `output/unmatched_ndc_report.xlsx`            | Styled workbook with classification results                           | ⚠️ ORPHANED | Write function exists (lines 491-723) but output not generated yet (requires HiPerGator execution)     |
-| `output/unmatched_ndc_classified.rds`         | RDS for Plan 02 config update                                         | ⚠️ ORPHANED | Save function exists (lines 733-736) but output not generated yet (requires HiPerGator execution)      |
+| `output/unmatched_ndc_report.xlsx`            | Styled workbook with classification results                           | ✓ VERIFIED | Human UAT confirmed: xlsx generated with correct sheets and classification (test 1, 2 pass)            |
+| `output/unmatched_ndc_classified.rds`         | RDS for Plan 02 config update                                         | ✓ VERIFIED | Human UAT confirmed: RDS artifact created and consumed by config update (test 1 pass)                  |
 
 **Plan 02 Artifacts:**
 
 | Artifact                                      | Expected                                                              | Status     | Details                                                                                                 |
 | --------------------------------------------- | --------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
 | `R/40_investigate_unmatched_ndc.R`            | update_config_ndc_codes() function added                              | ✓ VERIFIED | Lines 750-1010: Complete config update function with validation/rollback; called at line 1078          |
-| `R/00_config.R`                               | TREATMENT_CODES with new NDC vectors and expanded RXNORM              | ⚠️ ORPHANED | Config unchanged; chemo_ndc not found (gsd-tools verified); update function exists but not executed    |
+| `R/00_config.R`                               | TREATMENT_CODES with new NDC vectors and expanded RXNORM              | ✓ VERIFIED | Human UAT confirmed: config updated with new vectors, parse/source succeeds (test 3 pass)             |
 
 ### Key Link Verification
 
@@ -69,7 +69,7 @@ Plan 02 establishes 5 truths (D-10, D-11):
 | R/40_investigate_unmatched_ndc.R     | R/00_config.R                              | source() for TREATMENT_CODES                  | ✓ WIRED    | Line 28: `source("R/00_config.R")` present                                                  |
 | R/40_investigate_unmatched_ndc.R     | R/01_load_pcornet.R                        | source() for get_pcornet_table()              | ✓ WIRED    | Line 29: `source("R/01_load_pcornet.R")` present                                            |
 | R/40_investigate_unmatched_ndc.R     | https://rxnav.nlm.nih.gov/REST/            | httr2 HTTP requests for drug name lookup      | ✓ WIRED    | Lines 286, 335: RxNorm API endpoints used (rxcui properties, NDC idtype)                    |
-| R/40_investigate_unmatched_ndc.R     | output/unmatched_ndc_classified.rds        | saveRDS()                                     | ⚠️ PARTIAL | Line 734: saveRDS() exists in function; line 1072: called in main execution; no output yet |
+| R/40_investigate_unmatched_ndc.R     | output/unmatched_ndc_classified.rds        | saveRDS()                                     | ✓ WIRED    | Line 734: saveRDS() in function; line 1072: called in main execution; human UAT confirmed output exists |
 
 **Plan 02 Links:**
 
@@ -101,15 +101,15 @@ Plan 02 establishes 5 truths (D-10, D-11):
 | D-07        | 40-01       | Fully automated classification via keyword matching                         | ✓ SATISFIED | Lines 444-476: classify_drug() with case_when() keyword patterns                                |
 | D-08        | 40-01       | 6 treatment categories (chemo, radiation, SCT, immuno, supportive, unrelated) | ✓ SATISFIED | Lines 447-475: All 6 categories in case_when()                                                |
 | D-09        | 40-01       | Supportive Care checked first to avoid G-CSF misclassification              | ✓ SATISFIED | Line 448: "# 1. Supportive Care FIRST (per D-09)" — checked before Chemotherapy                |
-| D-12        | 40-01       | Produce xlsx report with summary and per-category sheets                    | ? NEEDS HUMAN | Lines 491-723: write_unmatched_ndc_report() exists; output quality requires execution verification |
-| D-13        | 40-01       | Produce RDS artifact for config update consumption                          | ? NEEDS HUMAN | Lines 733-736: save_classified_rds() exists; artifact presence requires execution               |
+| D-12        | 40-01       | Produce xlsx report with summary and per-category sheets                    | ✓ SATISFIED | Human UAT confirmed: xlsx generated with correct sheets and classification quality (test 1, 2 pass) |
+| D-13        | 40-01       | Produce RDS artifact for config update consumption                          | ✓ SATISFIED | Human UAT confirmed: RDS artifact created and consumed by Plan 02 (test 1 pass)                     |
 
 **Plan 02 Requirements:** D-10, D-11
 
 | Requirement | Source Plan | Description                                                                 | Status     | Evidence                                                                                        |
 | ----------- | ----------- | --------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------- |
-| D-10        | 40-02       | Add new NDC vectors to TREATMENT_CODES                                      | ⚠️ BLOCKED | Lines 770-775: Vector mapping exists; R/00_config.R not modified (function not executed)       |
-| D-11        | 40-02       | Expand chemo_rxnorm and create new RXNORM vectors                           | ⚠️ BLOCKED | Lines 778-781, 874-949: Logic exists; R/00_config.R unchanged (function not executed)          |
+| D-10        | 40-02       | Add new NDC vectors to TREATMENT_CODES                                      | ✓ SATISFIED | Human UAT confirmed: new NDC vectors inserted in R/00_config.R with Phase 40 comments (test 3 pass) |
+| D-11        | 40-02       | Expand chemo_rxnorm and create new RXNORM vectors                           | ✓ SATISFIED | Human UAT confirmed: chemo_rxnorm expanded, new RXNORM vectors created, no duplicates (test 3 pass) |
 
 **Orphaned requirements:** None — all requirement IDs from PLAN frontmatter accounted for.
 
@@ -200,16 +200,17 @@ Plan 02 establishes 5 truths (D-10, D-11):
 
 ### Gaps Summary
 
-**No gaps blocking automated script creation.** All code artifacts exist and are properly wired.
+**No gaps.** All code artifacts verified via static analysis and all execution-dependent outputs confirmed via human UAT on HiPerGator.
 
-**Execution-dependent outputs not verified:**
-- `output/unmatched_ndc_report.xlsx` — write function exists but no output (requires HiPerGator run)
-- `output/unmatched_ndc_classified.rds` — save function exists but no output (requires HiPerGator run)
-- `R/00_config.R` modifications — update function exists but not executed (requires HiPerGator run)
+All 3 HUMAN-UAT tests passed:
+- Test 1: Script execution, xlsx/RDS generation, config update — **pass**
+- Test 2: Classification quality (supportive care vs chemo separation) — **pass**
+- Test 3: Config update correctness (syntax, anchors, no corruption) — **pass**
 
-**Status rationale:** All 13 requirement IDs have corresponding implementations. The phase goal is achievable with the current code. Output artifacts (xlsx, RDS, config updates) require execution on HiPerGator with data access, which is outside the scope of static code verification. Status set to `human_needed` rather than `gaps_found` because no code is missing — only execution is pending.
+**Status rationale:** All 13 requirement IDs satisfied. All 10 observable truths verified. All artifacts confirmed present and correct. Phase complete.
 
 ---
 
-_Verified: 2026-05-04T21:15:00Z_
-_Verifier: Claude (gsd-verifier)_
+_Initially verified: 2026-05-04T21:15:00Z (static analysis, status: human_needed)_
+_Updated: 2026-05-08T00:00:00Z (human UAT passed, status: complete)_
+_Verifier: Claude (gsd-verifier) + human UAT_
