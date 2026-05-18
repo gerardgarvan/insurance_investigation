@@ -1,27 +1,22 @@
 # ==============================================================================
-# Phase 47: Cancer Site Frequency
+# Phase 47: Cancer Site Frequency (Rewrite)
 # ==============================================================================
-# Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx
-# across all patients in the PCORnet extract (not just HL cohort).
+# Bottom-up approach: classify every cancer code that appears in the data using
+# ICD-10 prefix rules defined directly in code. No external xlsx dependency.
+#
+# Categories based on SEER/NCI site groupings mapped to ICD-10-CM prefixes.
 #
 # Inputs:
-#   - CancerSiteCategories.xlsx (Groups sheet, 42 categories)
 #   - DIAGNOSIS DuckDB table (ICD-10 codes)
 #   - TUMOR_REGISTRY_ALL DuckDB table (ICD-O-3 topography codes)
 #
 # Outputs:
-#   - output/tables/cancer_site_frequency.xlsx (styled single-sheet workbook)
-#     Long format: one row per category per source (ICD-10 / ICD-O-3)
+#   - output/tables/cancer_site_frequency.xlsx (styled workbook)
+#     Sheet 1 "By Category": patient/record counts per category per source
+#     Sheet 2 "All Codes": every code with its assigned category (verification)
 #
 # Usage:
 #   Rscript R/47_cancer_site_frequency.R
-#
-# Requirements: CSITE-01, CSITE-02
-# Phase 47 Plan 01
-# ==============================================================================
-
-# ==============================================================================
-# SECTION 1: SETUP
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -29,8 +24,6 @@ suppressPackageStartupMessages({
   library(stringr)
   library(glue)
   library(openxlsx2)
-  library(readxl)
-  library(purrr)
 })
 
 source("R/00_config.R")
@@ -43,369 +36,565 @@ message("=== Phase 47: Cancer Site Frequency ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
-# SECTION 2: LOAD AND PARSE CancerSiteCategories.xlsx
+# SECTION 1: DEFINE CANCER SITE CATEGORIES
+# ==============================================================================
+# Each 3-character ICD-10 prefix maps to a cancer site category.
+# Based on SEER/NCI site groupings.  Prefix matching via substr(code, 1, 3).
+#
+# Sources:
+#   - SEER Site Recode ICD-O-3/WHO 2008
+#   - ICD-10-CM Chapter 2 (C00-D49)
 # ==============================================================================
 
-message("Loading CancerSiteCategories.xlsx (Groups sheet)...")
+PREFIX_MAP <- c(
+  # --- Solid tumors by anatomical site ---
 
-groups_raw <- read_excel("CancerSiteCategories.xlsx", sheet = "Groups")
+  # 1. Lip, Oral Cavity and Pharynx (C00-C14)
+  "C00" = "Lip, Oral Cavity and Pharynx",
+  "C01" = "Lip, Oral Cavity and Pharynx",
+  "C02" = "Lip, Oral Cavity and Pharynx",
+  "C03" = "Lip, Oral Cavity and Pharynx",
+  "C04" = "Lip, Oral Cavity and Pharynx",
+  "C05" = "Lip, Oral Cavity and Pharynx",
+  "C06" = "Lip, Oral Cavity and Pharynx",
+  "C07" = "Lip, Oral Cavity and Pharynx",
+  "C08" = "Lip, Oral Cavity and Pharynx",
+  "C09" = "Lip, Oral Cavity and Pharynx",
+  "C10" = "Lip, Oral Cavity and Pharynx",
+  "C11" = "Lip, Oral Cavity and Pharynx",
+  "C12" = "Lip, Oral Cavity and Pharynx",
+  "C13" = "Lip, Oral Cavity and Pharynx",
+  "C14" = "Lip, Oral Cavity and Pharynx",
 
-# Print column names for diagnostics -- the previous version used positional
-# selection (columns 1,2,3) which failed when columns were in a different order.
-cn <- names(groups_raw)
-message(glue("  Groups sheet has {length(cn)} columns: {paste(cn, collapse = ' | ')}"))
+  # 2. Esophagus (C15)
+  "C15" = "Esophagus",
 
-# Identify columns by header name (case-insensitive)
-cn_lower <- tolower(cn)
+  # 3. Stomach (C16)
+  "C16" = "Stomach",
 
-# Site column: named exactly "site" (not "primary disease site" or "detailed site")
-site_idx <- which(cn_lower == "site")
-if (length(site_idx) == 0) {
-  # Fallback: column containing "site" but not "primary"/"detailed"/"disease"
-  site_idx <- which(str_detect(cn_lower, "site") &
-                    !str_detect(cn_lower, "primary|detailed|disease"))
-}
+  # 4. Small Intestine (C17)
+  "C17" = "Small Intestine",
 
-# ICD-10 column: contains "icd" and "10" but not "o" between them
-icd10_idx <- which(str_detect(cn_lower, "icd") &
-                   str_detect(cn_lower, "10") &
-                   !str_detect(cn_lower, "icdo|icd.?o"))
-if (length(icd10_idx) == 0) {
-  icd10_idx <- which(str_detect(cn_lower, "icd10|icd.10"))
-}
+  # 5. Colon incl. rectosigmoid junction (C18-C19)
+  "C18" = "Colon",
+  "C19" = "Colon",
 
-# ICD-O-3 column: contains "icdo" or "icd-o" or similar
-icdo3_idx <- which(str_detect(cn_lower, "icdo|icd.?o"))
+  # 6. Rectum (C20)
+  "C20" = "Rectum",
 
-message(glue("  Detected column indices: site={paste(site_idx, collapse=',')} icd10={paste(icd10_idx, collapse=',')} icdo3={paste(icdo3_idx, collapse=',')}"))
+  # 7. Anus (C21)
+  "C21" = "Anus",
 
-# If detection fails, dump rows for manual inspection and stop
-if (length(site_idx) != 1 || length(icd10_idx) != 1 || length(icdo3_idx) != 1) {
-  message("  Column detection failed. Dumping first 3 rows for inspection:")
-  for (r in seq_len(min(3, nrow(groups_raw)))) {
-    vals <- paste(sapply(seq_along(cn), function(c) {
-      glue("[{c}] {cn[c]}='{groups_raw[[c]][r]}'")
-    }), collapse = " | ")
-    message(glue("    Row {r}: {vals}"))
-  }
-  stop("Cannot identify Site, ICD10, and ICDO3 columns. Check column names above.")
-}
+  # 8. Liver (C22)
+  "C22" = "Liver",
 
-groups_df <- tibble(
-  category = groups_raw[[site_idx]],
-  icd10    = as.character(groups_raw[[icd10_idx]]),
-  icdo3    = as.character(groups_raw[[icdo3_idx]])
+  # 9. Pancreas (C25)
+  "C25" = "Pancreas",
+
+  # 10. Other Digestive (gallbladder, biliary, other) (C23-C24, C26)
+  "C23" = "Other Digestive",
+  "C24" = "Other Digestive",
+  "C26" = "Other Digestive",
+
+  # 11. Nasal Cavity, Middle Ear, Sinuses (C30-C31)
+  "C30" = "Nasal Cavity, Middle Ear, Sinuses",
+  "C31" = "Nasal Cavity, Middle Ear, Sinuses",
+
+  # 12. Larynx (C32)
+  "C32" = "Larynx",
+
+  # 13. Lung and Bronchus (C33-C34)
+  "C33" = "Lung and Bronchus",
+  "C34" = "Lung and Bronchus",
+
+  # 14. Other Respiratory/Intrathoracic (C37-C39)
+  "C37" = "Other Respiratory/Intrathoracic",
+  "C38" = "Other Respiratory/Intrathoracic",
+  "C39" = "Other Respiratory/Intrathoracic",
+
+  # 15. Bone (C40-C41)
+  "C40" = "Bone",
+  "C41" = "Bone",
+
+  # 16. Melanoma of Skin (C43)
+  "C43" = "Melanoma of Skin",
+
+  # 17. Other Skin incl. Merkel cell (C44, C4A)
+  "C44" = "Other Skin",
+  "C4A" = "Other Skin",
+
+  # 18. Mesothelioma (C45)
+  "C45" = "Mesothelioma",
+
+  # 19. Kaposi Sarcoma (C46)
+  "C46" = "Kaposi Sarcoma",
+
+  # 20. Soft Tissue / Peripheral Nerves (C47-C49)
+  "C47" = "Soft Tissue",
+  "C48" = "Soft Tissue",
+  "C49" = "Soft Tissue",
+
+  # 21. Breast (C50)
+  "C50" = "Breast",
+
+  # 22. Cervix Uteri (C53)
+  "C53" = "Cervix Uteri",
+
+  # 23. Corpus Uteri (C54-C55)
+  "C54" = "Corpus Uteri",
+  "C55" = "Corpus Uteri",
+
+  # 24. Ovary (C56)
+  "C56" = "Ovary",
+
+  # 25. Other Female Genital (C51-C52, C57-C58)
+  "C51" = "Other Female Genital",
+  "C52" = "Other Female Genital",
+  "C57" = "Other Female Genital",
+  "C58" = "Other Female Genital",
+
+  # 26. Prostate (C61)
+  "C61" = "Prostate",
+
+  # 27. Testis (C62)
+  "C62" = "Testis",
+
+  # 28. Other Male Genital (C60, C63)
+  "C60" = "Other Male Genital",
+  "C63" = "Other Male Genital",
+
+  # 29. Kidney and Renal Pelvis (C64-C65)
+  "C64" = "Kidney and Renal Pelvis",
+  "C65" = "Kidney and Renal Pelvis",
+
+  # 30. Bladder (C67)
+  "C67" = "Bladder",
+
+  # 31. Other Urinary (C66, C68)
+  "C66" = "Other Urinary",
+  "C68" = "Other Urinary",
+
+  # 32. Eye and Orbit (C69)
+  "C69" = "Eye and Orbit",
+
+  # 33. Brain and CNS (C70-C72)
+  "C70" = "Brain and CNS",
+  "C71" = "Brain and CNS",
+  "C72" = "Brain and CNS",
+
+  # 34. Thyroid (C73)
+  "C73" = "Thyroid",
+
+  # 35. Other Endocrine (C74-C75)
+  "C74" = "Other Endocrine",
+  "C75" = "Other Endocrine",
+
+  # 36. Ill-Defined Sites (C76)
+  "C76" = "Ill-Defined Sites",
+
+  # 37. Unknown Primary Site (C80)
+  "C80" = "Unknown Primary Site",
+
+  # --- Secondary/metastatic ---
+
+  # 38. Lymph Nodes (secondary) (C77)
+  "C77" = "Lymph Nodes (Secondary)",
+
+  # 39. Secondary - Respiratory/Digestive (C78)
+  "C78" = "Secondary - Respiratory/Digestive",
+
+  # 40. Secondary - Other Sites (C79)
+  "C79" = "Secondary - Other Sites",
+
+  # --- Neuroendocrine ---
+
+  # 41. Neuroendocrine Tumors (C7A, C7B)
+  "C7A" = "Neuroendocrine Tumors",
+  "C7B" = "Neuroendocrine Tumors",
+
+  # --- Hematologic malignancies ---
+
+  # 42. Hodgkin Lymphoma (C81)
+  "C81" = "Hodgkin Lymphoma",
+
+  # 43. Non-Hodgkin Lymphoma (C82-C86, C88)
+  "C82" = "Non-Hodgkin Lymphoma",
+  "C83" = "Non-Hodgkin Lymphoma",
+  "C84" = "Non-Hodgkin Lymphoma",
+  "C85" = "Non-Hodgkin Lymphoma",
+  "C86" = "Non-Hodgkin Lymphoma",
+  "C88" = "Non-Hodgkin Lymphoma",
+
+  # 44. Multiple Myeloma / Plasma Cell (C90)
+  "C90" = "Multiple Myeloma",
+
+  # 45. Lymphoid Leukemia (C91)
+  "C91" = "Lymphoid Leukemia",
+
+  # 46. Myeloid and Monocytic Leukemia (C92-C93)
+  "C92" = "Myeloid and Monocytic Leukemia",
+  "C93" = "Myeloid and Monocytic Leukemia",
+
+  # 47. Other Leukemia (C94-C95)
+  "C94" = "Other Leukemia",
+  "C95" = "Other Leukemia",
+
+  # 48. Other Hematopoietic (C96)
+  "C96" = "Other Hematopoietic",
+
+  # --- D-codes: neoplasm-related ---
+
+  # 49. In Situ Neoplasms (D00-D09)
+  "D00" = "In Situ Neoplasms",
+  "D01" = "In Situ Neoplasms",
+  "D02" = "In Situ Neoplasms",
+  "D03" = "In Situ Neoplasms",
+  "D04" = "In Situ Neoplasms",
+  "D05" = "In Situ Neoplasms",
+  "D06" = "In Situ Neoplasms",
+  "D07" = "In Situ Neoplasms",
+  "D09" = "In Situ Neoplasms",
+
+  # 50. Benign Neoplasms (D10-D36, D3A)
+  "D10" = "Benign Neoplasms",
+  "D11" = "Benign Neoplasms",
+  "D12" = "Benign Neoplasms",
+  "D13" = "Benign Neoplasms",
+  "D14" = "Benign Neoplasms",
+  "D15" = "Benign Neoplasms",
+  "D16" = "Benign Neoplasms",
+  "D17" = "Benign Neoplasms",
+  "D18" = "Benign Neoplasms",
+  "D19" = "Benign Neoplasms",
+  "D20" = "Benign Neoplasms",
+  "D21" = "Benign Neoplasms",
+  "D22" = "Benign Neoplasms",
+  "D23" = "Benign Neoplasms",
+  "D24" = "Benign Neoplasms",
+  "D25" = "Benign Neoplasms",
+  "D26" = "Benign Neoplasms",
+  "D27" = "Benign Neoplasms",
+  "D28" = "Benign Neoplasms",
+  "D29" = "Benign Neoplasms",
+  "D30" = "Benign Neoplasms",
+  "D31" = "Benign Neoplasms",
+  "D32" = "Benign Neoplasms",
+  "D33" = "Benign Neoplasms",
+  "D34" = "Benign Neoplasms",
+  "D35" = "Benign Neoplasms",
+  "D36" = "Benign Neoplasms",
+  "D3A" = "Benign Neoplasms",
+
+  # 51. Uncertain Behavior Neoplasms (D37-D44, D48)
+  "D37" = "Uncertain Behavior Neoplasms",
+  "D38" = "Uncertain Behavior Neoplasms",
+  "D39" = "Uncertain Behavior Neoplasms",
+  "D40" = "Uncertain Behavior Neoplasms",
+  "D41" = "Uncertain Behavior Neoplasms",
+  "D42" = "Uncertain Behavior Neoplasms",
+  "D43" = "Uncertain Behavior Neoplasms",
+  "D44" = "Uncertain Behavior Neoplasms",
+  "D48" = "Uncertain Behavior Neoplasms",
+
+  # 52. MDS / Myeloproliferative (D45-D47) -- clinically important
+  "D45" = "MDS / Myeloproliferative",
+  "D46" = "MDS / Myeloproliferative",
+  "D47" = "MDS / Myeloproliferative",
+
+  # 53. Unspecified Behavior Neoplasms (D49)
+  "D49" = "Unspecified Behavior Neoplasms",
+
+  # --- ICD-O-3 only: hematopoietic site (not in ICD-10) ---
+  "C42" = "Hematopoietic System (ICD-O-3)"
 )
 
-# Verify 42 categories
-stopifnot("Expected 42 categories in CancerSiteCategories.xlsx Groups sheet" = nrow(groups_df) == 42)
-message(glue("Loaded {nrow(groups_df)} categories (expected 42) -- OK"))
+# Desired display order for categories in the output
+CATEGORY_ORDER <- c(
+  "Lip, Oral Cavity and Pharynx",
+  "Esophagus",
+  "Stomach",
+  "Small Intestine",
+  "Colon",
+  "Rectum",
+  "Anus",
+  "Liver",
+  "Pancreas",
+  "Other Digestive",
+  "Nasal Cavity, Middle Ear, Sinuses",
+  "Larynx",
+  "Lung and Bronchus",
+  "Other Respiratory/Intrathoracic",
+  "Bone",
+  "Melanoma of Skin",
+  "Other Skin",
+  "Mesothelioma",
+  "Kaposi Sarcoma",
+  "Soft Tissue",
+  "Breast",
+  "Cervix Uteri",
+  "Corpus Uteri",
+  "Ovary",
+  "Other Female Genital",
+  "Prostate",
+  "Testis",
+  "Other Male Genital",
+  "Kidney and Renal Pelvis",
+  "Bladder",
+  "Other Urinary",
+  "Eye and Orbit",
+  "Brain and CNS",
+  "Thyroid",
+  "Other Endocrine",
+  "Ill-Defined Sites",
+  "Unknown Primary Site",
+  "Lymph Nodes (Secondary)",
+  "Secondary - Respiratory/Digestive",
+  "Secondary - Other Sites",
+  "Neuroendocrine Tumors",
+  "Hodgkin Lymphoma",
+  "Non-Hodgkin Lymphoma",
+  "Multiple Myeloma",
+  "Lymphoid Leukemia",
+  "Myeloid and Monocytic Leukemia",
+  "Other Leukemia",
+  "Other Hematopoietic",
+  "In Situ Neoplasms",
+  "Benign Neoplasms",
+  "Uncertain Behavior Neoplasms",
+  "MDS / Myeloproliferative",
+  "Unspecified Behavior Neoplasms",
+  "Hematopoietic System (ICD-O-3)"
+)
 
-# Check for NA categories (merged cell issue in xlsx)
-n_na_cats <- sum(is.na(groups_df$category))
-if (n_na_cats > 0) {
-  message(glue("  WARNING: {n_na_cats} categories have NA names (merged cells in xlsx?)"))
-}
-
-n_icd10_nonna <- sum(!is.na(groups_df$icd10))
-n_icdo3_nonna <- sum(!is.na(groups_df$icdo3))
-message(glue("  Categories with non-NA ICD-10 codes: {n_icd10_nonna}"))
-message(glue("  Categories with non-NA ICD-O-3 codes: {n_icdo3_nonna}"))
-
-# Show first rows to verify column mapping is correct
-message("  First 5 rows of groups_df:")
-for (r in seq_len(min(5, nrow(groups_df)))) {
-  icd10_preview <- substr(as.character(groups_df$icd10[r]), 1, 50)
-  icdo3_preview <- substr(as.character(groups_df$icdo3[r]), 1, 50)
-  message(glue("    [{r}] category='{groups_df$category[r]}' | icd10='{icd10_preview}' | icdo3='{icdo3_preview}'"))
-}
+message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 3: RANGE EXPANSION FUNCTIONS
+# SECTION 2: CLASSIFICATION FUNCTION
 # ==============================================================================
 
-#' Expand a single token that may be a range (e.g., "C000-C006") or single code (e.g., "C01")
-#' @param token Character. Single trimmed token (no commas).
-#' @return Character vector of expanded codes, normalized via normalize_icd()
-expand_icd_token <- function(token) {
-  token <- str_trim(token)
-  if (token == "") return(character(0))
-
-  if (!str_detect(token, "-")) {
-    # Single code
-    return(normalize_icd(token))
-  }
-
-  # Range: split on first "-" only (handles codes like "C7A010-C7A012")
-  parts <- str_split(token, "-", n = 2)[[1]]
-  start <- str_trim(parts[1])
-  end   <- str_trim(parts[2])
-
-  # --- Try numeric suffix first (e.g., C000-C006) ---
-  prefix_start <- str_extract(start, "^.*?(?=\\d+$)")
-  suffix_start <- str_extract(start, "\\d+$")
-  prefix_end   <- str_extract(end,   "^.*?(?=\\d+$)")
-  suffix_end   <- str_extract(end,   "\\d+$")
-
-  if (!is.na(suffix_start) && !is.na(suffix_end) &&
-      !is.na(prefix_start) && !is.na(prefix_end)) {
-    prefix_start_up <- toupper(prefix_start)
-    prefix_end_up   <- toupper(prefix_end)
-
-    if (prefix_start_up != prefix_end_up) {
-      warning(glue("expand_icd_token: range endpoints have different prefixes in '{token}' ({prefix_start_up} vs {prefix_end_up}) -- returning endpoints only"))
-      return(normalize_icd(c(start, end)))
-    }
-
-    start_n <- as.integer(suffix_start)
-    end_n   <- as.integer(suffix_end)
-    width   <- nchar(suffix_start)
-
-    codes <- paste0(prefix_start_up, formatC(start_n:end_n, width = width, flag = "0"))
-    return(normalize_icd(codes))
-  }
-
-  # --- Try single-letter suffix (e.g., D46A-D46C) ---
-  prefix_start_l <- str_extract(start, "^.*?(?=[A-Za-z]$)")
-  suffix_start_l <- str_extract(start, "[A-Za-z]$")
-  prefix_end_l   <- str_extract(end,   "^.*?(?=[A-Za-z]$)")
-  suffix_end_l   <- str_extract(end,   "[A-Za-z]$")
-
-  if (!is.na(suffix_start_l) && !is.na(suffix_end_l) &&
-      !is.na(prefix_start_l) && !is.na(prefix_end_l)) {
-    prefix_start_l_up <- toupper(prefix_start_l)
-    prefix_end_l_up   <- toupper(prefix_end_l)
-
-    if (prefix_start_l_up != prefix_end_l_up) {
-      warning(glue("expand_icd_token: range endpoints have different prefixes in '{token}' ({prefix_start_l_up} vs {prefix_end_l_up}) -- returning endpoints only"))
-      return(normalize_icd(c(start, end)))
-    }
-
-    start_ord <- utf8ToInt(toupper(suffix_start_l))
-    end_ord   <- utf8ToInt(toupper(suffix_end_l))
-    letters_seq <- intToUtf8(start_ord:end_ord, multiple = TRUE)
-
-    codes <- paste0(prefix_start_l_up, letters_seq)
-    return(normalize_icd(codes))
-  }
-
-  warning(glue("expand_icd_token: cannot parse range '{token}' -- returning endpoints only"))
-  normalize_icd(c(start, end))
-}
-
-#' Expand a full code string from xlsx (comma-separated, may include ranges)
-#' @param code_str Character. Full cell value like "C000-C006, C008-C009, C01"
-#' @return Character vector of all individual normalized codes (unique)
-expand_code_string <- function(code_str) {
-  if (is.na(code_str) || str_trim(code_str) == "") return(character(0))
-  # Strip parenthetical annotations before parsing
-  # e.g., "C440-C449 (includes histology codes 8720-8790 only)" -> "C440-C449"
-  code_str <- str_remove_all(code_str, "\\s*\\([^)]*\\)")
-  tokens <- str_split(code_str, ",")[[1]]
-  result <- unlist(lapply(tokens, expand_icd_token))
-  unique(result[!is.na(result)])
+#' Classify ICD-10 or ICD-O-3 codes into cancer site categories
+#' @param codes Character vector of normalized codes (uppercase, no dots)
+#' @return Character vector of category names (NA for unclassified)
+classify_codes <- function(codes) {
+  prefix3 <- substr(codes, 1, 3)
+  categories <- unname(PREFIX_MAP[prefix3])
+  categories
 }
 
 # ==============================================================================
-# SECTION 4: BUILD PREFIX LOOKUP (first match wins)
+# SECTION 3: LOAD AND CLASSIFY ICD-10 DIAGNOSIS CODES
 # ==============================================================================
 
-message("Building ICD-10 and ICD-O-3 prefix lookups (first match wins)...")
+message("\nLoading DIAGNOSIS table (ICD-10 only, all patients)...")
 
-# Build ICD-10 lookup: expanded code -> category index (first match wins)
-icd10_prefix_to_cat <- list()
-for (i in seq_len(nrow(groups_df))) {
-  codes_i <- expand_code_string(groups_df$icd10[i])
-  new_codes <- setdiff(codes_i, names(icd10_prefix_to_cat))
-  for (c in new_codes) icd10_prefix_to_cat[[c]] <- i
-}
-
-# Build ICD-O-3 lookup: expanded code -> category index (first match wins)
-# Skip categories where all expanded codes are in morphology range (8000-9999 pure digits)
-icdo3_prefix_to_cat <- list()
-skipped_morph_cats <- integer(0)
-
-for (i in seq_len(nrow(groups_df))) {
-  codes_i <- expand_code_string(groups_df$icdo3[i])
-
-  if (length(codes_i) == 0) next
-
-  is_pure_numeric <- !str_detect(codes_i, "^[A-Z]")
-  numeric_vals <- suppressWarnings(as.integer(codes_i))
-  is_morphology <- is_pure_numeric & !is.na(numeric_vals) & numeric_vals >= 8000
-
-  if (all(is_morphology)) {
-    skipped_morph_cats <- c(skipped_morph_cats, i)
-    next
-  }
-
-  new_codes <- setdiff(codes_i, names(icdo3_prefix_to_cat))
-  for (c in new_codes) icdo3_prefix_to_cat[[c]] <- i
-}
-
-message(glue("Built ICD-10 prefix lookup: {length(icd10_prefix_to_cat)} unique prefixes"))
-message(glue("Built ICD-O-3 prefix lookup: {length(icdo3_prefix_to_cat)} unique prefixes (skipped {length(skipped_morph_cats)} morphology-only categories)"))
-
-message(glue("  ICD-10 prefixes (first 10): {paste(head(names(icd10_prefix_to_cat), 10), collapse = ', ')}"))
-message(glue("  ICD-O-3 prefixes (first 10): {paste(head(names(icdo3_prefix_to_cat), 10), collapse = ', ')}"))
-
-# ==============================================================================
-# SECTION 5: QUERY DATA AND COUNT
-# ==============================================================================
-
-# --- ICD-10 from DIAGNOSIS ---
-
-message("Loading DIAGNOSIS table (ICD-10 only, all patients)...")
-
-diagnosis_icd10 <- get_pcornet_table("DIAGNOSIS") %>%
+dx_icd10 <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
-  select(ID, DX, ENCOUNTERID) %>%
-  materialize() %>%
-  mutate(DX_norm = normalize_icd(DX))
+  select(ID, DX) %>%
+  collect()
 
-message(glue("Loaded {format(nrow(diagnosis_icd10), big.mark = ',')} ICD-10 DIAGNOSIS rows"))
-message(glue("  DX_norm sample (first 10 unique): {paste(head(unique(diagnosis_icd10$DX_norm), 10), collapse = ', ')}"))
+message(glue("  Total ICD-10 DIAGNOSIS rows: {format(nrow(dx_icd10), big.mark=',')}"))
 
-# --- ICD-O-3 from TUMOR_REGISTRY_ALL ---
+# Normalize codes
+dx_icd10 <- dx_icd10 %>%
+  mutate(DX_norm = toupper(str_remove_all(DX, "\\.")))
 
-message("Loading TUMOR_REGISTRY_ALL table (topography codes, all patients)...")
+# Filter to neoplasm codes only (C00-D49)
+dx_cancer <- dx_icd10 %>%
+  filter(str_detect(DX_norm, "^[CD]"))
+
+message(glue("  Neoplasm codes (C/D): {format(nrow(dx_cancer), big.mark=',')} rows"))
+
+# Classify
+dx_cancer <- dx_cancer %>%
+  mutate(category = classify_codes(DX_norm))
+
+n_unclassified <- sum(is.na(dx_cancer$category))
+if (n_unclassified > 0) {
+  unclass_codes <- dx_cancer %>% filter(is.na(category)) %>% pull(DX_norm) %>% unique()
+  message(glue("  WARNING: {n_unclassified} rows ({length(unclass_codes)} unique codes) unclassified"))
+  message(glue("    Codes: {paste(head(unclass_codes, 20), collapse=', ')}"))
+  # Label them for visibility
+  dx_cancer <- dx_cancer %>%
+    mutate(category = ifelse(is.na(category), "Unclassified", category))
+}
+
+# Aggregate by category
+icd10_by_cat <- dx_cancer %>%
+  group_by(category) %>%
+  summarise(
+    patients = n_distinct(ID),
+    records  = n(),
+    .groups  = "drop"
+  ) %>%
+  mutate(source = "ICD-10")
+
+message(glue("  ICD-10 classified into {nrow(icd10_by_cat)} categories"))
+
+# Code-level detail for Sheet 2
+icd10_codes_detail <- dx_cancer %>%
+  group_by(code = DX_norm, category) %>%
+  summarise(
+    patients = n_distinct(ID),
+    records  = n(),
+    .groups  = "drop"
+  ) %>%
+  mutate(source = "ICD-10") %>%
+  arrange(category, code)
+
+# ==============================================================================
+# SECTION 4: LOAD AND CLASSIFY ICD-O-3 TOPOGRAPHY CODES
+# ==============================================================================
+
+message("\nLoading TUMOR_REGISTRY_ALL table (topography codes)...")
 
 tr_all_lazy <- get_pcornet_table("TUMOR_REGISTRY_ALL")
 tr_cols <- colnames(tr_all_lazy)
-site_candidates <- intersect(c("SITE_CODE", "SITE", "PRIMARY_SITE"), tr_cols)
-message(glue("  Topography column candidates found: {paste(site_candidates, collapse = ', ')}"))
+
+# Find topography column(s)
+site_candidates <- intersect(c("SITE_CODE", "SITE", "PRIMARY_SITE",
+                                "TOPOGRAPHY_CODE", "ICDOSITE"), tr_cols)
+message(glue("  Topography column candidates: {paste(site_candidates, collapse=', ')}"))
 
 if (length(site_candidates) == 0) {
-  warning("No topography/site column found in TUMOR_REGISTRY_ALL -- ICD-O-3 counts will be 0")
-  tr_topo <- tibble(ID = character(), topo_raw = character(), topo_norm = character())
+  message("  WARNING: No topography column found. ICD-O-3 counts will be 0.")
+  icdo3_by_cat <- tibble(category = character(), patients = integer(),
+                         records = integer(), source = character())
+  icdo3_codes_detail <- tibble(code = character(), category = character(),
+                               patients = integer(), records = integer(),
+                               source = character())
 } else {
-  coalesce_expr <- rlang::parse_expr(paste0("coalesce(", paste(site_candidates, collapse = ", "), ")"))
+  coalesce_expr <- rlang::parse_expr(
+    paste0("coalesce(", paste(site_candidates, collapse = ", "), ")")
+  )
   tr_topo <- tr_all_lazy %>%
     mutate(topo_raw = !!coalesce_expr) %>%
     select(ID, topo_raw) %>%
     filter(!is.na(topo_raw)) %>%
-    materialize() %>%
-    mutate(topo_norm = normalize_icd(topo_raw))
+    collect()
+
+  message(glue("  Total TUMOR_REGISTRY rows with topography: {format(nrow(tr_topo), big.mark=',')}"))
+
+  # Normalize: uppercase, remove dots, prepend C if missing
+  tr_topo <- tr_topo %>%
+    mutate(
+      topo_norm = toupper(str_remove_all(topo_raw, "\\.")),
+      # Prepend "C" for bare numeric codes (e.g., "77" -> "C77")
+      topo_norm = ifelse(str_detect(topo_norm, "^[0-9]"),
+                         paste0("C", topo_norm),
+                         topo_norm)
+    )
+
+  # Classify
+  tr_topo <- tr_topo %>%
+    mutate(category = classify_codes(topo_norm))
+
+  n_unclass_tr <- sum(is.na(tr_topo$category))
+  if (n_unclass_tr > 0) {
+    unclass_tr <- tr_topo %>% filter(is.na(category)) %>% pull(topo_norm) %>% unique()
+    message(glue("  WARNING: {n_unclass_tr} rows ({length(unclass_tr)} unique codes) unclassified"))
+    message(glue("    Codes: {paste(head(unclass_tr, 20), collapse=', ')}"))
+    tr_topo <- tr_topo %>%
+      mutate(category = ifelse(is.na(category), "Unclassified", category))
+  }
+
+  # Aggregate by category
+  icdo3_by_cat <- tr_topo %>%
+    group_by(category) %>%
+    summarise(
+      patients = n_distinct(ID),
+      records  = n(),
+      .groups  = "drop"
+    ) %>%
+    mutate(source = "ICD-O-3")
+
+  message(glue("  ICD-O-3 classified into {nrow(icdo3_by_cat)} categories"))
+
+  # Code-level detail for Sheet 2
+  icdo3_codes_detail <- tr_topo %>%
+    group_by(code = topo_norm, category) %>%
+    summarise(
+      patients = n_distinct(ID),
+      records  = n(),
+      .groups  = "drop"
+    ) %>%
+    mutate(source = "ICD-O-3") %>%
+    arrange(category, code)
 }
 
-message(glue("Loaded {format(nrow(tr_topo), big.mark = ',')} TUMOR_REGISTRY rows with topography codes"))
-message(glue("  Topography sample (first 10 unique): {paste(head(unique(tr_topo$topo_norm), 10), collapse = ', ')}"))
-
-# --- Matching per category ---
-
-message("Computing per-category counts (42 categories x ICD-10 and ICD-O-3)...")
-
-icd10_codes_by_cat <- lapply(seq_len(nrow(groups_df)), function(i) {
-  expand_code_string(groups_df$icd10[i])
-})
-icdo3_codes_by_cat <- lapply(seq_len(nrow(groups_df)), function(i) {
-  expand_code_string(groups_df$icdo3[i])
-})
-
-# Collectors for overall totals (true n_distinct)
-all_matched_ids_icd10 <- character(0)
-all_matched_ids_icdo3 <- character(0)
-
-# Per-category result vectors
-cat_icd10_patients   <- integer(42)
-cat_icd10_records    <- integer(42)
-cat_icdo3_patients   <- integer(42)
-cat_icdo3_records    <- integer(42)
-
-for (i in seq_len(nrow(groups_df))) {
-
-  # ICD-10 matching
-  icd10_codes_i <- icd10_codes_by_cat[[i]]
-
-  if (i <= 3) {
-    message(glue("  cat[{i}] '{groups_df$category[i]}': icd10_codes={paste(head(icd10_codes_i, 5), collapse=',')} icdo3_codes={paste(head(icdo3_codes_by_cat[[i]], 5), collapse=',')}"))
-  }
-
-  if (length(icd10_codes_i) > 0) {
-    dx_matches <- diagnosis_icd10 %>%
-      filter(map_lgl(DX_norm, function(dx) any(startsWith(dx, icd10_codes_i))))
-    cat_icd10_patients[i] <- n_distinct(dx_matches$ID)
-    cat_icd10_records[i]  <- nrow(dx_matches)
-    all_matched_ids_icd10 <- c(all_matched_ids_icd10, dx_matches$ID)
-  }
-
-  # ICD-O-3 matching (topography only, skip morphology codes)
-  icdo3_codes_i <- icdo3_codes_by_cat[[i]]
-
-  if (length(icdo3_codes_i) > 0) {
-    is_pure_numeric <- !str_detect(icdo3_codes_i, "^[A-Z]")
-    numeric_vals <- suppressWarnings(as.integer(icdo3_codes_i))
-    is_morphology <- is_pure_numeric & !is.na(numeric_vals) & numeric_vals >= 8000
-    if (all(is_morphology)) {
-      icdo3_codes_i <- character(0)
-    }
-  }
-
-  if (length(icdo3_codes_i) > 0) {
-    tr_matches <- tr_topo %>%
-      filter(map_lgl(topo_norm, function(t) any(startsWith(t, icdo3_codes_i))))
-    cat_icdo3_patients[i] <- n_distinct(tr_matches$ID)
-    cat_icdo3_records[i]  <- nrow(tr_matches)
-    all_matched_ids_icdo3 <- c(all_matched_ids_icdo3, tr_matches$ID)
-  }
-
-  if (i %% 10 == 0) message(glue("  Processed {i}/42 categories..."))
-}
-
-message("All 42 categories processed.")
-
 # ==============================================================================
-# Build long-format result: one row per category per source
+# SECTION 5: COMBINE RESULTS
 # ==============================================================================
 
-result_long <- bind_rows(
-  tibble(
-    category = groups_df$category,
-    source   = "ICD-10",
-    patients = cat_icd10_patients,
-    records  = cat_icd10_records
-  ),
-  tibble(
-    category = groups_df$category,
-    source   = "ICD-O-3",
-    patients = cat_icdo3_patients,
-    records  = cat_icdo3_records
+message("\nCombining results...")
+
+# Category-level summary: one row per category per source
+summary_long <- bind_rows(icd10_by_cat, icdo3_by_cat)
+
+# Ensure all categories that appear in either source are present in both
+all_cats <- unique(summary_long$category)
+all_sources <- c("ICD-10", "ICD-O-3")
+
+full_grid <- expand.grid(category = all_cats, source = all_sources,
+                         stringsAsFactors = FALSE) %>%
+  as_tibble()
+
+summary_long <- full_grid %>%
+  left_join(summary_long, by = c("category", "source")) %>%
+  mutate(
+    patients = ifelse(is.na(patients), 0L, as.integer(patients)),
+    records  = ifelse(is.na(records),  0L, as.integer(records))
   )
-)
 
-# Sort: keep categories in spreadsheet order, ICD-10 before ICD-O-3 within each
-cat_order <- seq_len(nrow(groups_df))
-result_long <- result_long %>%
-  mutate(cat_idx = rep(cat_order, 2)) %>%
-  arrange(cat_idx, source) %>%
-  select(-cat_idx)
+# Sort by category order, then source
+cat_rank <- match(summary_long$category, CATEGORY_ORDER)
+# Categories not in CATEGORY_ORDER get sorted to end
+cat_rank[is.na(cat_rank)] <- 999L
+summary_long <- summary_long %>%
+  mutate(cat_rank = cat_rank) %>%
+  arrange(cat_rank, source) %>%
+  select(-cat_rank)
 
-# Totals rows
-total_icd10_patients <- n_distinct(all_matched_ids_icd10)
-total_icdo3_patients <- n_distinct(all_matched_ids_icdo3)
+# Totals
+total_icd10_patients <- n_distinct(dx_cancer$ID)
+total_icdo3_patients <- if (exists("tr_topo")) n_distinct(tr_topo$ID) else 0L
 
 totals_long <- tibble(
   category = c("TOTAL", "TOTAL"),
   source   = c("ICD-10", "ICD-O-3"),
   patients = c(total_icd10_patients, total_icdo3_patients),
-  records  = c(sum(cat_icd10_records), sum(cat_icdo3_records))
+  records  = c(
+    sum(filter(summary_long, source == "ICD-10")$records),
+    sum(filter(summary_long, source == "ICD-O-3")$records)
+  )
 )
 
 message("")
 message("=== COUNT SUMMARY ===")
-message(glue("ICD-10: {format(total_icd10_patients, big.mark=',')} unique patients, {format(sum(cat_icd10_records), big.mark=',')} records"))
-message(glue("ICD-O-3: {format(total_icdo3_patients, big.mark=',')} unique patients, {format(sum(cat_icdo3_records), big.mark=',')} records"))
+message(glue("ICD-10:  {format(total_icd10_patients, big.mark=',')} unique patients, {format(totals_long$records[1], big.mark=',')} records"))
+message(glue("ICD-O-3: {format(total_icdo3_patients, big.mark=',')} unique patients, {format(totals_long$records[2], big.mark=',')} records"))
 
-# Spot-check: Hodgkin Lymphoma
-hl_rows <- result_long %>% filter(category == "Hodgkin Lymphoma")
+# Spot-check Hodgkin Lymphoma
+hl_rows <- summary_long %>% filter(category == "Hodgkin Lymphoma")
 if (nrow(hl_rows) > 0) {
   for (r in seq_len(nrow(hl_rows))) {
     message(glue("  Hodgkin Lymphoma ({hl_rows$source[r]}): {format(hl_rows$patients[r], big.mark=',')} patients, {format(hl_rows$records[r], big.mark=',')} records"))
   }
 }
 
+# Code-level detail (both sources combined)
+all_codes_detail <- bind_rows(icd10_codes_detail, icdo3_codes_detail) %>%
+  select(code, category, source, patients, records)
+
+# Sort by category order then code
+code_rank <- match(all_codes_detail$category, CATEGORY_ORDER)
+code_rank[is.na(code_rank)] <- 999L
+all_codes_detail <- all_codes_detail %>%
+  mutate(cat_rank = code_rank) %>%
+  arrange(cat_rank, source, code) %>%
+  select(-cat_rank)
+
 # ==============================================================================
-# SECTION 6: WRITE STYLED XLSX (long format)
+# SECTION 6: WRITE STYLED XLSX
 # ==============================================================================
 
 message("")
@@ -416,93 +605,97 @@ WHITE_FONT       <- "FFFFFFFF"
 TITLE_FONT_COLOR <- "FF1F2937"
 TOTALS_FILL      <- "FFE5E7EB"
 
-n_cols <- 4L
-n_data_rows <- nrow(result_long)  # 84 rows (42 categories x 2 sources)
+wb <- wb_workbook()
 
-wb     <- wb_workbook()
-SHEET1 <- "Cancer Site Frequency"
+# ---------------------------------------------------------------------------
+# Sheet 1: By Category
+# ---------------------------------------------------------------------------
+SHEET1 <- "By Category"
 wb$add_worksheet(SHEET1)
 
-# ---------------------------------------------------------------------------
 # Row 1: Title
-# ---------------------------------------------------------------------------
 wb$add_data(sheet = SHEET1, x = "Cancer Site Frequency - All Patients",
             start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET1, dims = glue("A1:{int2col(n_cols)}1"))
+wb$merge_cells(sheet = SHEET1, dims = "A1:D1")
 
-# ---------------------------------------------------------------------------
 # Row 2: Headers
-# ---------------------------------------------------------------------------
-headers <- c("Cancer Site Category", "Source", "Patients", "Records")
-
-for (i in seq_along(headers)) {
-  wb$add_data(sheet = SHEET1, x = headers[i], start_row = 2, start_col = i)
+headers1 <- c("Cancer Site Category", "Source", "Patients", "Records")
+for (i in seq_along(headers1)) {
+  wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
-
-wb$add_fill(sheet = SHEET1,
-            dims  = glue("A2:{int2col(n_cols)}2"),
-            color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1,
-            dims  = glue("A2:{int2col(n_cols)}2"),
-            name  = "Calibri", size = 11, bold = TRUE,
+wb$add_fill(sheet = SHEET1, dims = "A2:D2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET1, dims = "A2:D2",
+            name = "Calibri", size = 11, bold = TRUE,
             color = wb_color(WHITE_FONT))
 
-# ---------------------------------------------------------------------------
-# Freeze pane at row 3
-# ---------------------------------------------------------------------------
+# Freeze pane
 wb$freeze_pane(sheet = SHEET1, first_active_row = 3, first_active_col = 1)
 
-# ---------------------------------------------------------------------------
-# Data rows (84 rows: 42 categories x 2 sources)
-# ---------------------------------------------------------------------------
-data_start_row <- 3
-data_end_row   <- data_start_row + n_data_rows - 1
+# Data rows
+data_start <- 3
+n_data     <- nrow(summary_long)
+data_end   <- data_start + n_data - 1
 
-write_data <- result_long %>% as.data.frame()
-wb$add_data(sheet = SHEET1, x = write_data, start_row = data_start_row, col_names = FALSE)
-
-# Number format for count columns C:D
-wb$add_numfmt(sheet = SHEET1,
-              dims  = glue("C{data_start_row}:{int2col(n_cols)}{data_end_row}"),
+wb$add_data(sheet = SHEET1, x = as.data.frame(summary_long),
+            start_row = data_start, col_names = FALSE)
+wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start}:D{data_end}"),
               numfmt = "#,##0")
 
-# ---------------------------------------------------------------------------
-# Totals rows (2 rows: ICD-10 total + ICD-O-3 total)
-# ---------------------------------------------------------------------------
-totals_start_row <- data_end_row + 1
-totals_end_row   <- totals_start_row + nrow(totals_long) - 1
-
-totals_data <- totals_long %>% as.data.frame()
-wb$add_data(sheet = SHEET1, x = totals_data, start_row = totals_start_row, col_names = FALSE)
-
+# Totals rows
+totals_start <- data_end + 1
+totals_end   <- totals_start + nrow(totals_long) - 1
+wb$add_data(sheet = SHEET1, x = as.data.frame(totals_long),
+            start_row = totals_start, col_names = FALSE)
 wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_start_row}:{int2col(n_cols)}{totals_end_row}"),
+            dims  = glue("A{totals_start}:D{totals_end}"),
             color = wb_color(TOTALS_FILL))
 wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_start_row}:{int2col(n_cols)}{totals_end_row}"),
+            dims  = glue("A{totals_start}:D{totals_end}"),
             name  = "Calibri", size = 11, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
 wb$add_numfmt(sheet = SHEET1,
-              dims  = glue("C{totals_start_row}:{int2col(n_cols)}{totals_end_row}"),
+              dims  = glue("C{totals_start}:D{totals_end}"),
               numfmt = "#,##0")
 
-# ---------------------------------------------------------------------------
 # Column widths
-# ---------------------------------------------------------------------------
-wb$set_col_widths(sheet = SHEET1,
-                  cols   = 1:n_cols,
-                  widths = c(40, 12, 14, 14))
+wb$set_col_widths(sheet = SHEET1, cols = 1:4, widths = c(42, 12, 14, 14))
 
 # ---------------------------------------------------------------------------
-# Save workbook
+# Sheet 2: All Codes (verification)
+# ---------------------------------------------------------------------------
+SHEET2 <- "All Codes"
+wb$add_worksheet(SHEET2)
+
+headers2 <- c("Code", "Category", "Source", "Patients", "Records")
+for (i in seq_along(headers2)) {
+  wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 1, start_col = i)
+}
+wb$add_fill(sheet = SHEET2, dims = "A1:E1", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET2, dims = "A1:E1",
+            name = "Calibri", size = 11, bold = TRUE,
+            color = wb_color(WHITE_FONT))
+
+if (nrow(all_codes_detail) > 0) {
+  wb$add_data(sheet = SHEET2, x = as.data.frame(all_codes_detail),
+              start_row = 2, col_names = FALSE)
+  code_end <- 1 + nrow(all_codes_detail)
+  wb$add_numfmt(sheet = SHEET2, dims = glue("D2:E{code_end}"), numfmt = "#,##0")
+}
+
+wb$freeze_pane(sheet = SHEET2, first_active_row = 2, first_active_col = 1)
+wb$set_col_widths(sheet = SHEET2, cols = 1:5, widths = c(14, 42, 12, 12, 12))
+
+# ---------------------------------------------------------------------------
+# Save
 # ---------------------------------------------------------------------------
 wb$save(OUTPUT_PATH)
+
 message(glue("Wrote {OUTPUT_PATH}"))
-message(glue("  Sheet '{SHEET1}': {n_data_rows} data rows + {nrow(totals_long)} total rows"))
-message(glue("  Columns: {paste(headers, collapse = ' | ')}"))
+message(glue("  Sheet '{SHEET1}': {n_data} data rows + {nrow(totals_long)} total rows"))
+message(glue("  Sheet '{SHEET2}': {nrow(all_codes_detail)} code-level rows"))
 
 message("")
 message("=== Phase 47 Cancer Site Frequency Complete ===")
