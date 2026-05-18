@@ -772,7 +772,12 @@ TREATMENT_CODES <- list(
     "3E05305",  # Antineoplastic into peripheral artery, percutaneous
     "3E0530M",  # Monoclonal antibody antineoplastic into peripheral artery, percutaneous
     "3E06305",  # Antineoplastic into central artery, percutaneous
-    "3E0630M"   # Monoclonal antibody antineoplastic into central artery, percutaneous
+    "3E0630M",  # Monoclonal antibody antineoplastic into central artery, percutaneous
+    "3E0D705",  # Antineoplastic into mouth/pharynx, via natural opening
+    "3E0G305",  # Antineoplastic into upper GI, percutaneous
+    "3E0L305",  # Antineoplastic into pleural cavity, percutaneous
+    "3E0Q305",  # Antineoplastic into cranial/peripheral nerves, percutaneous
+    "3E0R305"   # Antineoplastic into spinal canal, percutaneous (intrathecal chemo)
   ),
 
   # Radiation therapy ICD-9-CM Volume 3 (PX_TYPE = "09")
