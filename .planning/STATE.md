@@ -4,7 +4,7 @@ milestone: v1.6
 milestone_name: Phases
 status: in_progress
 last_updated: "2026-05-18T18:00:00.000Z"
-last_activity: 2026-05-18 - UAT audit completed, Phase 39 gap closed, roadmap staleness fixed
+last_activity: 2026-05-18 - Completed quick task 260518-hvq: Fix immunotherapy DRG config gap and remove codebase redundancies
 progress:
   total_phases: 43
   completed_phases: 37
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 Phase: 47 (in progress)
 Plan: 01 of 01 — Task 1 complete (script created), Task 2 awaiting HiPerGator execution
 Status: Script R/47_cancer_site_frequency.R created and syntax-verified; needs HiPerGator run + human approval
-Last activity: 2026-05-18 — UAT audit completed, Phase 39 gap closed, roadmap staleness fixed
+Last activity: 2026-05-18 — Completed quick task 260518-hvq: Fix immunotherapy DRG config gap and remove codebase redundancies
 
 ## Accumulated Context
 
