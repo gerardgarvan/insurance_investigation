@@ -129,6 +129,7 @@ for (r in seq_len(min(5, nrow(groups_df)))) {
 #' @return Character vector of expanded codes, normalized via normalize_icd()
 expand_icd_token <- function(token) {
   token <- str_trim(token)
+  if (token == "") return(character(0))
 
   if (!str_detect(token, "-")) {
     # Single code
@@ -140,37 +141,56 @@ expand_icd_token <- function(token) {
   start <- str_trim(parts[1])
   end   <- str_trim(parts[2])
 
-  # Extract prefix (everything before the trailing digit sequence) and numeric suffix
+  # --- Try numeric suffix first (e.g., C000-C006) ---
   prefix_start <- str_extract(start, "^.*?(?=\\d+$)")
   suffix_start <- str_extract(start, "\\d+$")
   prefix_end   <- str_extract(end,   "^.*?(?=\\d+$)")
   suffix_end   <- str_extract(end,   "\\d+$")
 
-  # If we can't extract numeric suffixes or prefixes differ, warn and return endpoints
-  if (is.na(suffix_start) || is.na(suffix_end) || is.na(prefix_start) || is.na(prefix_end)) {
-    warning(glue("expand_icd_token: cannot parse range '{token}' -- returning endpoints only"))
-    return(normalize_icd(c(start, end)))
+  if (!is.na(suffix_start) && !is.na(suffix_end) &&
+      !is.na(prefix_start) && !is.na(prefix_end)) {
+    prefix_start_up <- toupper(prefix_start)
+    prefix_end_up   <- toupper(prefix_end)
+
+    if (prefix_start_up != prefix_end_up) {
+      warning(glue("expand_icd_token: range endpoints have different prefixes in '{token}' ({prefix_start_up} vs {prefix_end_up}) -- returning endpoints only"))
+      return(normalize_icd(c(start, end)))
+    }
+
+    start_n <- as.integer(suffix_start)
+    end_n   <- as.integer(suffix_end)
+    width   <- nchar(suffix_start)
+
+    codes <- paste0(prefix_start_up, formatC(start_n:end_n, width = width, flag = "0"))
+    return(normalize_icd(codes))
   }
 
-  prefix_start_up <- toupper(prefix_start)
-  prefix_end_up   <- toupper(prefix_end)
+  # --- Try single-letter suffix (e.g., D46A-D46C) ---
+  prefix_start_l <- str_extract(start, "^.*?(?=[A-Za-z]$)")
+  suffix_start_l <- str_extract(start, "[A-Za-z]$")
+  prefix_end_l   <- str_extract(end,   "^.*?(?=[A-Za-z]$)")
+  suffix_end_l   <- str_extract(end,   "[A-Za-z]$")
 
-  if (prefix_start_up != prefix_end_up) {
-    warning(glue("expand_icd_token: range endpoints have different prefixes in '{token}' ({prefix_start_up} vs {prefix_end_up}) -- returning endpoints only"))
-    return(normalize_icd(c(start, end)))
+  if (!is.na(suffix_start_l) && !is.na(suffix_end_l) &&
+      !is.na(prefix_start_l) && !is.na(prefix_end_l)) {
+    prefix_start_l_up <- toupper(prefix_start_l)
+    prefix_end_l_up   <- toupper(prefix_end_l)
+
+    if (prefix_start_l_up != prefix_end_l_up) {
+      warning(glue("expand_icd_token: range endpoints have different prefixes in '{token}' ({prefix_start_l_up} vs {prefix_end_l_up}) -- returning endpoints only"))
+      return(normalize_icd(c(start, end)))
+    }
+
+    start_ord <- utf8ToInt(toupper(suffix_start_l))
+    end_ord   <- utf8ToInt(toupper(suffix_end_l))
+    letters_seq <- intToUtf8(start_ord:end_ord, multiple = TRUE)
+
+    codes <- paste0(prefix_start_l_up, letters_seq)
+    return(normalize_icd(codes))
   }
 
-  start_n <- as.integer(suffix_start)
-  end_n   <- as.integer(suffix_end)
-  width   <- nchar(suffix_start)  # zero-pad to start suffix width
-
-  if (is.na(start_n) || is.na(end_n)) {
-    warning(glue("expand_icd_token: non-numeric suffix in '{token}' -- returning endpoints only"))
-    return(normalize_icd(c(start, end)))
-  }
-
-  codes <- paste0(prefix_start_up, formatC(start_n:end_n, width = width, flag = "0"))
-  normalize_icd(codes)
+  warning(glue("expand_icd_token: cannot parse range '{token}' -- returning endpoints only"))
+  normalize_icd(c(start, end))
 }
 
 #' Expand a full code string from xlsx (comma-separated, may include ranges)
@@ -178,6 +198,9 @@ expand_icd_token <- function(token) {
 #' @return Character vector of all individual normalized codes (unique)
 expand_code_string <- function(code_str) {
   if (is.na(code_str) || str_trim(code_str) == "") return(character(0))
+  # Strip parenthetical annotations before parsing
+  # e.g., "C440-C449 (includes histology codes 8720-8790 only)" -> "C440-C449"
+  code_str <- str_remove_all(code_str, "\\s*\\([^)]*\\)")
   tokens <- str_split(code_str, ",")[[1]]
   result <- unlist(lapply(tokens, expand_icd_token))
   unique(result[!is.na(result)])
