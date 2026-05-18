@@ -759,6 +759,11 @@ TREATMENT_CODES <- list(
   # Section 3 Administration, Root Operation Introduction, Qualifier 5 = Antineoplastic
   # Prefix-matched in 10_treatment_payer.R via str_starts() -- store prefixes only
   chemo_icd10pcs_prefixes = c(
+    "3E00X05",  # Antineoplastic into skin/mucous membranes, external approach
+    "3E01305",  # Antineoplastic into subcutaneous tissue, percutaneous
+    "3E0130M",  # Monoclonal antibody antineoplastic into subcutaneous tissue, percutaneous
+    "3E02305",  # Antineoplastic into muscle, percutaneous
+    "3E03005",  # Antineoplastic into peripheral vein, open
     "3E03305",  # Antineoplastic into peripheral vein, percutaneous
     "3E04305",  # Antineoplastic into central vein, percutaneous
     "3E05305",  # Antineoplastic into peripheral artery, percutaneous
