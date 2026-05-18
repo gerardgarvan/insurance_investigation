@@ -23,7 +23,7 @@ if (is.null(procedures)) {
 # Find all rows where PX matches the deleted code
 hits <- procedures %>%
   filter(PX == DELETED_CODE) %>%
-  select(PATID, PX, PX_DATE, PX_TYPE, ENCOUNTERID) %>%
+  select(ID, PX, PX_DATE, PX_TYPE, ENCOUNTERID) %>%
   collect() %>%
   mutate(PX_DATE = as.Date(PX_DATE))
 
@@ -33,7 +33,7 @@ message(glue("Total rows matching {DELETED_CODE}: {nrow(hits)}"))
 if (nrow(hits) == 0) {
   message("No claims found with code 77521. Exclusion from config is correct.")
 } else {
-  message(glue("\nPatients with code: {n_distinct(hits$PATID)}"))
+  message(glue("\nPatients with code: {n_distinct(hits$ID)}"))
   message(glue("Date range: {min(hits$PX_DATE, na.rm = TRUE)} to {max(hits$PX_DATE, na.rm = TRUE)}"))
 
   # Break down by year
