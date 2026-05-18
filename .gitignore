@@ -26,6 +26,10 @@ output/cohort/*.rds
 /nul
 /csv_columns.txt
 /project.md
+/*.R
+/*.py
+/*.rds
+/*.docx
 
 # Output diagnostics
 output/diagnostics/*.csv
