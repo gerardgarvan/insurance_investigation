@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
-status: completed
-last_updated: "2026-05-18T12:00:00.000Z"
-last_activity: 2026-05-18 - Closed out Phases 44-46 (unassigned) with summaries and roadmap updates
+status: in_progress
+last_updated: "2026-05-18T18:00:00.000Z"
+last_activity: 2026-05-18 - UAT audit completed, Phase 39 gap closed, roadmap staleness fixed
 progress:
   total_phases: 43
   completed_phases: 37
@@ -15,7 +15,7 @@ progress:
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-18
-**Project status:** Milestone v1.6 in progress — Phase 46 Plan 01 and 02 both complete; Phases 44-46 (unassigned) closed out
+**Project status:** Milestone v1.6 in progress — Phases 45-46 complete, Phase 47 paused at HiPerGator checkpoint
 
 ## Project Reference
 
@@ -23,14 +23,14 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 46 — Treatment Code Cross-Reference & Triggering Codes
+**Current focus:** Phase 47 — Cancer Site Frequency (paused at HiPerGator checkpoint)
 
 ## Current Position
 
-Phase: 46 (complete)
-Plan: 02 of 02 complete
-Status: Phase 46 complete — Plan 01 (gap report) and Plan 02 (triggering codes) both done
-Last activity: 2026-05-18 — Closed out Phases 44-46 (unassigned) with summaries and roadmap updates
+Phase: 47 (in progress)
+Plan: 01 of 01 — Task 1 complete (script created), Task 2 awaiting HiPerGator execution
+Status: Script R/47_cancer_site_frequency.R created and syntax-verified; needs HiPerGator run + human approval
+Last activity: 2026-05-18 — UAT audit completed, Phase 39 gap closed, roadmap staleness fixed
 
 ## Accumulated Context
 
@@ -103,9 +103,10 @@ None.
 |---|-------------|------|--------|-----------|
 | 260501-gkl | Cleanup code health issues — root clutter, dead scripts, template fix, duplicate numbering, gitignore updates | 2026-05-01 | 68acd08 | [260501-gkl-cleanup-code-health-issues-root-clutter-](./quick/260501-gkl-cleanup-code-health-issues-root-clutter-/) |
 | 260508-n87 | Centralize treatment constants and shared helpers — eliminated duplicate definitions across 9 scripts | 2026-05-08 | 1552211 | [260508-n87-look-for-improvements-in-existing-code-a](./quick/260508-n87-look-for-improvements-in-existing-code-a/) |
+| 260518-hvq | Fix immunotherapy_drg config gap and remove root clutter — added missing DRG code to TREATMENT_CODES, deleted 6 stale files, hardened .gitignore | 2026-05-18 | 2fe69f1, ef91398 | [260518-hvq-fix-immunotherapy-drg-config-gap-and-rem](./quick/260518-hvq-fix-immunotherapy-drg-config-gap-and-rem/) |
 
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Closed out Phases 44-46 with summaries and roadmap updates
+Stopped at: Phase 47 paused at Task 2 HiPerGator checkpoint; UAT audit completed with 0 active gaps
 Resume file: N/A
