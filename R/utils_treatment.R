@@ -68,3 +68,19 @@ get_hl_patient_ids <- function() {
 #' @param df A data frame or NULL
 #' @return Integer row count (0 if NULL)
 nrow_or_0 <- function(df) if (is.null(df)) 0L else nrow(df)
+
+#' Verify output file exists and log size
+#'
+#' Checks if a file exists and prints formatted size message.
+#' Used for post-run verification of RDS/XLSX outputs.
+#'
+#' @param path Character. File path to check
+#' @param label Character. Human-readable label for the file
+check_file <- function(path, label) {
+  if (file.exists(path)) {
+    sz <- file.size(path)
+    message(glue("  OK: {label} ({round(sz/1024, 1)} KB)"))
+  } else {
+    message(glue("  MISSING: {label}"))
+  }
+}

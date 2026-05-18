@@ -1481,6 +1481,7 @@ source("R/utils_icd.R")
 source("R/utils_snapshot.R")  # Phase 16: snapshot helper
 source("R/utils_duckdb.R")    # Phase 30: backend abstraction helpers
 source("R/utils_treatment.R")  # Phase quick: shared treatment helpers
+source("R/utils_payer.R")      # Quick 260518-i3w: shared payer helpers
 
 # ==============================================================================
 # End of configuration
