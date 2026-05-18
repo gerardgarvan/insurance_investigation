@@ -53,6 +53,7 @@ source("R/43_treatment_durations.R")
 
 # Output paths
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
+OUTPUT_DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "treatment_episodes.xlsx")
 
 # Per D-02: historical cutoff date (matches OneFlorida+ data extraction period start)
@@ -490,6 +491,63 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
 }
 
 
+#' Annotate raw date+code rows with episode context
+#'
+#' Takes the raw 3-column data (before episode collapsing) and the episode-level
+#' output, assigns episode IDs to each raw row, then joins episode context.
+#' Returns one row per unique (patient, date, code) — the detail-level output.
+#'
+#' @param dates_df Tibble with columns: ID, treatment_date, triggering_code
+#' @param episodes_df Tibble from calculate_episodes_detailed() with episode-level data
+#' @param gap_threshold Integer. Max days from episode start (must match episodes_df)
+#' @return Tibble with columns: patient_id, treatment_date, triggering_code,
+#'   episode_number, episode_start, episode_stop, historical_flag
+annotate_detail_with_episodes <- function(dates_df, episodes_df, gap_threshold = GAP_THRESHOLD) {
+  if (nrow(dates_df) == 0 || nrow(episodes_df) == 0) {
+    return(tibble(
+      patient_id = character(0),
+      treatment_date = as.Date(character(0)),
+      triggering_code = character(0),
+      episode_number = integer(0),
+      episode_start = as.Date(character(0)),
+      episode_stop = as.Date(character(0)),
+      historical_flag = logical(0)
+    ))
+  }
+
+  # Assign episode IDs to each raw row (same logic as calculate_episodes_detailed)
+  dated_with_episodes <- dates_df %>%
+    group_by(ID) %>%
+    arrange(treatment_date, .by_group = TRUE) %>%
+    mutate(episode_id = assign_episode_ids(treatment_date, gap_threshold)) %>%
+    ungroup()
+
+  # Build episode lookup from episodes_df (which has episode_number per patient)
+  # episodes_df has one row per (patient_id, episode_number) with episode_start/stop
+  # We need to map (ID, episode_id) -> episode context
+  # episode_id is sequential per patient, matching episode_number
+  episode_lookup <- episodes_df %>%
+    select(patient_id, episode_number, episode_start, episode_stop, historical_flag)
+
+  # Join: episode_id in dated_with_episodes corresponds to episode_number in episodes_df
+  dated_with_episodes %>%
+    left_join(
+      episode_lookup,
+      by = c("ID" = "patient_id", "episode_id" = "episode_number")
+    ) %>%
+    select(
+      patient_id = ID,
+      treatment_date,
+      triggering_code,
+      episode_number = episode_id,
+      episode_start,
+      episode_stop,
+      historical_flag
+    ) %>%
+    arrange(patient_id, treatment_date)
+}
+
+
 # --- SECTION 4: CONSOLE SUMMARY FUNCTION ---
 
 #' Log episode statistics for a treatment type
@@ -528,6 +586,7 @@ log_episode_stats <- function(episodes_df, type_name) {
 message("=== Phase 44: Treatment Episode Start/Stop Dates ===\n")
 
 episodes_list <- list()
+detail_list <- list()
 
 for (type in TREATMENT_TYPES) {
   # Use new extract_dates_with_codes() instead of extract_all_dates()
@@ -545,6 +604,11 @@ for (type in TREATMENT_TYPES) {
   log_episode_stats(episodes_df, type)
 
   episodes_list[[type]] <- episodes_df
+
+  # Build detail-level data: one row per (patient, date, code) with episode context
+  detail_df <- annotate_detail_with_episodes(dates_df, episodes_df) %>%
+    mutate(treatment_type = type)
+  detail_list[[type]] <- detail_df
 }
 
 # Combine all types into single dataset — triggering_codes flows through bind_rows automatically
@@ -555,6 +619,13 @@ all_episodes <- bind_rows(episodes_list) %>%
 # Save RDS artifact
 saveRDS(all_episodes, OUTPUT_RDS)
 message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_episodes)} rows)"))
+
+# Combine detail-level data and save
+all_detail <- bind_rows(detail_list) %>%
+  select(patient_id, treatment_type, treatment_date, triggering_code,
+         episode_number, episode_start, episode_stop, historical_flag)
+saveRDS(all_detail, OUTPUT_DETAIL_RDS)
+message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))
 
 
 # --- SECTION 6: PER-TYPE CSV OUTPUT ---
@@ -574,6 +645,25 @@ for (type in TREATMENT_TYPES) {
 
   write.csv(write_df, csv_path, row.names = FALSE)
   message(glue("  Wrote {csv_path} ({nrow(write_df)} episodes)"))
+}
+
+
+# --- SECTION 6b: PER-TYPE DETAIL CSV OUTPUT ---
+
+message("\n--- Writing per-type detail CSV files ---")
+
+for (type in TREATMENT_TYPES) {
+  type_detail <- detail_list[[type]]
+  csv_name <- paste0(tolower(gsub(" ", "_", type)), "_episode_detail.csv")
+  csv_path <- file.path(CONFIG$output_dir, csv_name)
+
+  write_df <- type_detail %>%
+    select(patient_id, treatment_date, triggering_code,
+           episode_number, episode_start, episode_stop, historical_flag) %>%
+    arrange(patient_id, treatment_date)
+
+  write.csv(write_df, csv_path, row.names = FALSE)
+  message(glue("  Wrote {csv_path} ({nrow(write_df)} rows)"))
 }
 
 
@@ -791,6 +881,65 @@ if (nrow(historical_episodes) == 0) {
 wb$set_col_widths(sheet = "Historical Summary", cols = 1:5, widths = c(20, 12, 12, 15, 15))
 
 
+# ---------- SHEETS 7-10: PER-TYPE DETAIL SHEETS (one row per date+code) ----------
+for (type in TREATMENT_TYPES) {
+  type_detail <- detail_list[[type]]
+  sheet_name <- as.character(glue("{type} Detail"))
+  wb$add_worksheet(sheet_name)
+
+  n_rows <- nrow(type_detail)
+  n_patients <- if (n_rows > 0) n_distinct(type_detail$patient_id) else 0
+
+  # Row 1: Title
+  title_text <- as.character(glue("{type} Episode Detail ({n_rows} rows, {n_patients} patients)"))
+  wb$add_data(sheet = sheet_name, x = title_text, start_row = 1, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$merge_cells(sheet = sheet_name, dims = "A1:G1")
+
+  # Row 2: Headers
+  detail_headers <- c("Patient ID", "Treatment Date", "Triggering Code",
+                       "Episode #", "Episode Start", "Episode Stop", "Historical")
+  for (j in seq_along(detail_headers)) {
+    wb$add_data(sheet = sheet_name, x = detail_headers[j], start_row = 2, start_col = j)
+  }
+
+  colors <- TREATMENT_TYPE_COLORS[[type]]
+  wb$add_fill(sheet = sheet_name, dims = "A2:G2", color = wb_color(colors$fill))
+  wb$add_font(sheet = sheet_name, dims = "A2:G2",
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color(colors$font))
+
+  # Data rows (row 3+)
+  if (n_rows > 0) {
+    write_df <- data.frame(
+      Patient_ID = type_detail$patient_id,
+      Treatment_Date = as.character(type_detail$treatment_date),
+      Triggering_Code = type_detail$triggering_code,
+      Episode_Num = type_detail$episode_number,
+      Episode_Start = as.character(type_detail$episode_start),
+      Episode_Stop = as.character(type_detail$episode_stop),
+      Historical = type_detail$historical_flag,
+      stringsAsFactors = FALSE
+    )
+
+    wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
+
+    # Gray fill for historical rows
+    historical_rows <- which(type_detail$historical_flag)
+    if (length(historical_rows) > 0) {
+      for (row_idx in historical_rows) {
+        row_num <- 2 + row_idx
+        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:G{row_num}"),
+                    color = wb_color("FFE5E5E5"))
+      }
+    }
+  }
+
+  # Column widths
+  wb$set_col_widths(sheet = sheet_name, cols = 1:7, widths = c(20, 15, 20, 12, 15, 15, 12))
+}
+
+
 # Save workbook
 wb$save(OUTPUT_XLSX)
 message(glue("XLSX saved: {OUTPUT_XLSX}"))
@@ -802,7 +951,10 @@ message("\n=== Phase 44 Complete ===")
 message(glue("Total episodes: {nrow(all_episodes)}"))
 message(glue("Unique patients: {n_distinct(all_episodes$patient_id)}"))
 message(glue("Historical episodes: {sum(all_episodes$historical_flag)} ({round(100*mean(all_episodes$historical_flag), 1)}%)"))
+message(glue("Total detail rows: {nrow(all_detail)}"))
 message(glue("\nOutputs:"))
-message(glue("  RDS:  {OUTPUT_RDS}"))
+message(glue("  RDS (episodes):  {OUTPUT_RDS}"))
+message(glue("  RDS (detail):    {OUTPUT_DETAIL_RDS}"))
 message(glue("  XLSX: {OUTPUT_XLSX}"))
 message(glue("  CSVs: {CONFIG$output_dir}/*_episodes.csv"))
+message(glue("  CSVs: {CONFIG$output_dir}/*_episode_detail.csv"))
