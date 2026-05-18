@@ -27,12 +27,7 @@ if (!exists("pcornet")) source("R/01_load_pcornet.R")
 # ==============================================================================
 # Missingness Definition (Phase 19 pattern, D-10)
 # ==============================================================================
-# Missing = NA, empty string, NI, UN, OT, 99, 9999
-is_missing_payer <- function(payer_value) {
-  is.na(payer_value) |
-    nchar(trimws(payer_value)) == 0 |
-    payer_value %in% c("NI", "UN", "OT", "99", "9999")
-}
+# is_missing_payer() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
 # SECTION 1: Identify FLM patients (D-05, D-06)

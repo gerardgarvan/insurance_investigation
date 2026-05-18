@@ -83,22 +83,7 @@ TIER_MAPPING <- list(
   Missing      = 8L   # Lowest priority
 )
 
-# Map the AMC 8-category payer scheme to the 8 resolution tiers
-# AMC categories now align 1:1 with tiers (no collapsing)
-CODE_TO_TIER <- function(payer_category) {
-  case_when(
-    payer_category == "Medicaid"  ~ "Medicaid",
-    payer_category == "Medicare"  ~ "Medicare",
-    payer_category == "Private"   ~ "Private",
-    payer_category == "Other govt" ~ "Other govt",
-    payer_category == "Other"     ~ "Other",
-    payer_category == "Self-pay"  ~ "Self-pay",
-    payer_category == "Uninsured" ~ "Uninsured",
-    payer_category == "Missing"   ~ "Missing",
-    is.na(payer_category)         ~ "Missing",
-    TRUE ~ "Missing"
-  )
-}
+# CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
 # SECTION 2: Load ENCOUNTER table and prepare both scopes

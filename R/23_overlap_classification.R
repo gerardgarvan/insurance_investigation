@@ -52,20 +52,8 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 # SECTION 0: Helper functions
 # ==============================================================================
 
-# Missing payer definition (copy from R/21_all_site_duplicate_dates.R lines 48-52, D-03)
-# Phase 32: nchar(trimws()) replaced with direct empty-string check (DuckDB translation gap #7)
-is_missing_payer <- function(payer_value) {
-  is.na(payer_value) |
-    payer_value == "" |
-    payer_value %in% c("NI", "UN", "OT", "99", "9999")
-}
-
-# Field comparison helper (D-01, D-02)
-field_match <- function(val1, val2) {
-  both_na <- is.na(val1) & is.na(val2)
-  one_na  <- xor(is.na(val1), is.na(val2))
-  both_na | (!one_na & !is.na(val1) & (val1 == val2))
-}
+# is_missing_payer() provided by R/utils_payer.R (via R/00_config.R)
+# field_match() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
 # SECTION 1: Load Phase 25 CSVs and prepare ENCOUNTER data

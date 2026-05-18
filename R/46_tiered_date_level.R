@@ -66,20 +66,7 @@ TIER_MAPPING <- list(
   Missing      = 8L
 )
 
-CODE_TO_TIER <- function(payer_category) {
-  case_when(
-    payer_category == "Medicaid"   ~ "Medicaid",
-    payer_category == "Medicare"   ~ "Medicare",
-    payer_category == "Private"    ~ "Private",
-    payer_category == "Other govt" ~ "Other govt",
-    payer_category == "Other"      ~ "Other",
-    payer_category == "Self-pay"   ~ "Self-pay",
-    payer_category == "Uninsured"  ~ "Uninsured",
-    payer_category == "Missing"    ~ "Missing",
-    is.na(payer_category)          ~ "Missing",
-    TRUE ~ "Missing"
-  )
-}
+# CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
 # SECTION 1: Load Episode Data (Phase 44)

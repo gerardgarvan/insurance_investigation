@@ -52,13 +52,7 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 # ==============================================================================
 # Missingness Definition (Phase 19/20 pattern, D-04)
 # ==============================================================================
-# Missing = NA, empty string, NI, UN, OT, 99, 9999
-# Phase 32: nchar(trimws()) replaced with direct empty-string check (DuckDB translation gap #7)
-is_missing_payer <- function(payer_value) {
-  is.na(payer_value) |
-    payer_value == "" |
-    payer_value %in% c("NI", "UN", "OT", "99", "9999")
-}
+# is_missing_payer() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
 # SECTION 1: Identify all patients per site from DEMOGRAPHIC (D-01, D-02)

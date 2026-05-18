@@ -39,90 +39,17 @@ library(glue)
 library(stringr)
 library(tidyr)
 
+# Load shared pptx styling utilities
+source("R/utils_pptx.R")
+
 message("\n", strrep("=", 70))
 message("Generating focused Phase 19/20 PowerPoint")
 message(strrep("=", 70))
 
 # ------------------------------------------------------------------------------
-# Styling constants (aligned with existing deck)
+# Styling constants and helper functions
 # ------------------------------------------------------------------------------
-UF_BLUE <- "#003087"
-UF_ORANGE <- "#FA4616"
-LIGHT_BLUE <- "#CCD5EA"
-LIGHT_ORANGE <- "#FDD9CC"
-DARK_TEXT <- "#333333"
-FOOTNOTE_TEXT <- "#666666"
-
-# ------------------------------------------------------------------------------
-# Helper functions
-# ------------------------------------------------------------------------------
-style_table <- function(ft, total_row = integer(0), body_font_size = 11) {
-  n_rows <- nrow_part(ft, "body")
-  odd_rows <- if (n_rows >= 1) seq(1, n_rows, by = 2) else integer(0)
-  even_rows <- if (n_rows >= 2) seq(2, n_rows, by = 2) else integer(0)
-
-  ft <- ft %>%
-    fontsize(size = body_font_size, part = "body") %>%
-    fontsize(size = 12, part = "header") %>%
-    font(fontname = "Calibri", part = "all") %>%
-    bold(part = "header") %>%
-    bg(bg = UF_BLUE, part = "header") %>%
-    color(color = "white", part = "header") %>%
-    color(color = DARK_TEXT, part = "body") %>%
-    align(align = "center", part = "header") %>%
-    align(j = 1, align = "left", part = "body") %>%
-    align(j = -1, align = "center", part = "body") %>%
-    border_remove() %>%
-    padding(padding.left = 5, padding.right = 5, padding.top = 2, padding.bottom = 2, part = "all")
-
-  if (length(odd_rows) > 0) ft <- ft %>% bg(i = odd_rows, bg = LIGHT_BLUE, part = "body")
-  if (length(even_rows) > 0) ft <- ft %>% bg(i = even_rows, bg = LIGHT_ORANGE, part = "body")
-
-  if (length(total_row) > 0 && total_row[1] > 0) {
-    ft <- ft %>%
-      bold(i = total_row[1], part = "body") %>%
-      bg(i = total_row[1], bg = UF_BLUE, part = "body") %>%
-      color(i = total_row[1], color = "white", part = "body")
-  }
-
-  ft %>% autofit()
-}
-
-add_table_slide <- function(pptx, title, subtitle, tbl_data, footnote = NULL, body_font_size = 11) {
-  total_row_idx <- which(tbl_data[[1]] == "Total")
-  ft <- flextable(tbl_data) %>% style_table(total_row = total_row_idx, body_font_size = body_font_size)
-
-  n_cols <- ncol(tbl_data)
-  if (n_cols > 1) {
-    first_col_width <- 2.4
-    data_col_width <- (9.0 - first_col_width) / (n_cols - 1)
-    ft <- ft %>%
-      width(j = 1, width = first_col_width) %>%
-      width(j = 2:n_cols, width = data_col_width)
-  }
-
-  pptx <- pptx %>%
-    add_slide(layout = "Blank") %>%
-    ph_with(
-      value = fpar(ftext(title, prop = fp_text(font.size = 26, bold = TRUE, font.family = "Calibri", color = UF_BLUE))),
-      location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
-    ) %>%
-    ph_with(
-      value = fpar(ftext(subtitle, prop = fp_text(font.size = 13, italic = TRUE, font.family = "Calibri", color = DARK_TEXT))),
-      location = ph_location(left = 0.5, top = 0.85, width = 9, height = 0.4)
-    ) %>%
-    ph_with(value = ft, location = ph_location(left = 0.5, top = 1.35, width = 9, height = 5.3))
-
-  if (!is.null(footnote)) {
-    pptx <- pptx %>%
-      ph_with(
-        value = fpar(ftext(footnote, prop = fp_text(font.size = 10, italic = TRUE, font.family = "Calibri", color = FOOTNOTE_TEXT))),
-        location = ph_location(left = 0.5, top = 6.85, width = 9, height = 0.5)
-      )
-  }
-
-  pptx
-}
+# style_table(), add_table_slide(), color constants provided by R/utils_pptx.R
 
 add_image_slide <- function(pptx, title, subtitle, img_path, footnote = NULL, img_width = 8.8, img_height = 5.1) {
   if (!file.exists(img_path)) {

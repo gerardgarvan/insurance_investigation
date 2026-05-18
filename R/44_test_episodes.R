@@ -278,14 +278,7 @@ csv_paths <- c(
   file.path(CONFIG$output_dir, "immunotherapy_episodes.csv")
 )
 
-check_file <- function(path, label) {
-  if (file.exists(path)) {
-    sz <- file.size(path)
-    message(glue("  OK: {label} ({round(sz/1024, 1)} KB)"))
-  } else {
-    message(glue("  MISSING: {label}"))
-  }
-}
+# check_file() provided by R/utils_treatment.R (via R/00_config.R)
 
 check_file(RDS_PATH, "RDS artifact (treatment_episodes.rds)")
 check_file(xlsx_path, "XLSX report (treatment_episodes.xlsx)")

@@ -86,6 +86,9 @@ library(stringr)
 library(readr)
 library(tidyr)
 
+# Load shared pptx styling utilities
+source("R/utils_pptx.R")
+
 message("\n", strrep("=", 60))
 message("Generating Insurance Tables PowerPoint")
 message(strrep("=", 60))
@@ -120,12 +123,7 @@ format_count_pct <- function(n, total) {
 # Treatment window (days)
 WINDOW_DAYS <- CONFIG$analysis$treatment_window_days  # 30
 
-# UF Health brand colors (matches Python pipeline)
-UF_BLUE    <- "#003087"
-UF_ORANGE  <- "#FA4616"
-LIGHT_BLUE <- "#CCD5EA"   # Alternating row color (odd rows)
-LIGHT_ORANGE <- "#FDD9CC" # Alternating row color (even rows)
-DARK_TEXT  <- "#333333"
+# PPTX color constants provided by R/utils_pptx.R
 
 # ==============================================================================
 # SECTION 2: COMPUTE ADDITIONAL DATA (last treatment, post-treatment, enrollment)
@@ -681,41 +679,7 @@ build_treatment_enr_table <- function(data, first_payer_col, last_payer_col,
 # SECTION 4: FLEXTABLE STYLING
 # ==============================================================================
 
-style_table <- function(ft, total_row = integer(0)) {
-  n_rows <- nrow_part(ft, "body")
-  odd_rows <- seq(1, n_rows, by = 2)
-  even_rows <- seq(2, n_rows, by = 2)
-
-  ft <- ft %>%
-    fontsize(size = 12, part = "body") %>%
-    fontsize(size = 13, part = "header") %>%
-    font(fontname = "Calibri", part = "all") %>%
-    bold(part = "header") %>%
-    bold(j = 1, part = "body") %>%
-    bg(bg = UF_BLUE, part = "header") %>%
-    color(color = "white", part = "header") %>%
-    color(color = DARK_TEXT, part = "body") %>%
-    align(align = "center", part = "header") %>%
-    align(j = 1, align = "left", part = "body") %>%
-    align(j = -1, align = "center", part = "body") %>%
-    border_remove() %>%
-    padding(padding.left = 6, padding.right = 6,
-            padding.top = 3, padding.bottom = 3, part = "all")
-
-  # Alternating row colors (light blue / light orange, matching Python)
-  if (length(odd_rows) > 0) ft <- ft %>% bg(i = odd_rows, bg = LIGHT_BLUE, part = "body")
-  if (length(even_rows) > 0) ft <- ft %>% bg(i = even_rows, bg = LIGHT_ORANGE, part = "body")
-
-  # Bold the Total row with distinct styling
-  if (length(total_row) > 0 && total_row[1] > 0) {
-    ft <- ft %>%
-      bold(i = total_row[1], part = "body") %>%
-      bg(i = total_row[1], bg = UF_BLUE, part = "body") %>%
-      color(i = total_row[1], color = "white", part = "body")
-  }
-
-  ft %>% autofit()
-}
+# style_table() provided by R/utils_pptx.R
 
 # ==============================================================================
 # SECTION 5: BUILD PPTX SLIDES

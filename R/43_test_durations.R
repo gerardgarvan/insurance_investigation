@@ -280,14 +280,7 @@ message("\n--- 6. Output Files ---")
 xlsx_path <- file.path(CONFIG$output_dir, "treatment_durations.xlsx")
 png_path  <- file.path(CONFIG$output_dir, "treatment_duration_distributions.png")
 
-check_file <- function(path, label) {
-  if (file.exists(path)) {
-    sz <- file.size(path)
-    message(glue("  OK: {label} ({round(sz/1024, 1)} KB)"))
-  } else {
-    message(glue("  MISSING: {label}"))
-  }
-}
+# check_file() provided by R/utils_treatment.R (via R/00_config.R)
 check_file(RDS_PATH, "RDS artifact")
 check_file(xlsx_path, "XLSX report")
 check_file(png_path, "Distribution PNG")
