@@ -765,9 +765,14 @@ TREATMENT_CODES <- list(
     "3E02305",  # Antineoplastic into muscle, percutaneous
     "3E03005",  # Antineoplastic into peripheral vein, open
     "3E03305",  # Antineoplastic into peripheral vein, percutaneous
+    "3E0330M",  # Monoclonal antibody antineoplastic into peripheral vein, percutaneous
+    "3E04005",  # Antineoplastic into central vein, open
     "3E04305",  # Antineoplastic into central vein, percutaneous
+    "3E0430M",  # Monoclonal antibody antineoplastic into central vein, percutaneous
     "3E05305",  # Antineoplastic into peripheral artery, percutaneous
-    "3E06305"   # Antineoplastic into central artery, percutaneous
+    "3E0530M",  # Monoclonal antibody antineoplastic into peripheral artery, percutaneous
+    "3E06305",  # Antineoplastic into central artery, percutaneous
+    "3E0630M"   # Monoclonal antibody antineoplastic into central artery, percutaneous
   ),
 
   # Radiation therapy ICD-9-CM Volume 3 (PX_TYPE = "09")
