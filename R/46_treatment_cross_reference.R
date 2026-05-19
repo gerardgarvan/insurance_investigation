@@ -913,7 +913,9 @@ write_detail_sheet <- function(wb, sheet_name, gaps_df, type_label, colors) {
       patient_count_fmt   = dplyr::if_else(!is.na(patient_count),
                                            format(patient_count, big.mark = ","), ""),
       encounter_count_fmt = dplyr::if_else(!is.na(encounter_count),
-                                           format(encounter_count, big.mark = ","), "")
+                                           format(encounter_count, big.mark = ","), ""),
+      annotation = dplyr::if_else(is.na(annotation), "", annotation),
+      code       = dplyr::if_else(is.na(code), "", code)
     ) %>%
     dplyr::select(code, direction, code_category, source_document,
                   patient_count_fmt, encounter_count_fmt, annotation) %>%
