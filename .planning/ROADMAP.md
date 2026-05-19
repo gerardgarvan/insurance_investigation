@@ -112,5 +112,15 @@
 | 45-46 | v1.6 | Complete | 2026-05-15 |
 | 47 | v1.6 | In progress | — |
 
+### Phase 1: Combine Treatment Episode and Detail for Gantt Chart
+
+**Goal:** Export existing treatment episode and episode detail RDS artifacts as two universal CSV files (gantt_episodes.csv and gantt_detail.csv) for third-party Gantt chart visualization
+**Requirements**: GANTT-01, GANTT-02
+**Depends on:** Phase 44
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Create R/49_gantt_data_export.R: load RDS artifacts, validate columns, write gantt_episodes.csv (bars) and gantt_detail.csv (ticks)
+
 ---
-*Last updated: 2026-05-18*
+*Last updated: 2026-05-19*
