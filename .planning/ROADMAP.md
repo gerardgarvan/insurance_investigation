@@ -144,13 +144,13 @@ Plans:
 
 ### Phase 4: Confirm cancer site codes with 7-day separation — same as phase 3 but the unique dates must be at least 7 days apart
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Validate cancer site diagnosis codes using a 7-day temporal separation requirement (max date - min date >= 7 days per code per patient), producing a standalone styled xlsx with exact-code and prefix-level confirmation sheets for side-by-side comparison with Phase 3 output
+**Requirements**: C7DAY-01, C7DAY-02, C7DAY-03, C7DAY-04
 **Depends on:** Phase 3
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 4 to break down)
+- [ ] 04-01-PLAN.md — Clone R/50 to R/51_cancer_site_confirmation_7day.R with 7-day gap filter replacing 2-date count filter, styled two-sheet xlsx output
 
 ---
 *Last updated: 2026-05-19*

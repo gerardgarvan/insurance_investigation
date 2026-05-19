@@ -21,6 +21,13 @@
 - [ ] **CCONF-03**: Each sheet contains columns: Cancer Site Category, Total Patients, Confirmed Patients, Unconfirmed Patients, Confirmation Rate; only populated categories shown (no zero-count rows) -- per D-05, D-06
 - [ ] **CCONF-04**: Output is styled xlsx following openxlsx2 patterns (dark header fill, white font, freeze panes, number formatting, auto column widths) matching R/47 conventions -- per D-07
 
+## Cancer Site Confirmation with 7-Day Separation (Phase 4)
+
+- [ ] **C7DAY-01**: R/51_cancer_site_confirmation_7day.R exists as a separate script (clone of R/50, R/50 untouched) and produces cancer_site_confirmation_7day.xlsx in output/tables/ with two sheets: "Exact Code (7-Day Gap)" and "Prefix Level (7-Day Gap)" -- per D-01, D-02
+- [ ] **C7DAY-02**: Confirmation logic uses DIAGNOSIS table only, DX_DATE for date span calculation, ICD-10 codes only (DX_TYPE == "10"), and counts a code as confirmed if max(DX_DATE) - min(DX_DATE) >= 7 days for a patient's dates with that code -- per D-04, D-06
+- [ ] **C7DAY-03**: Each sheet contains columns: Cancer Site Category, Total Patients, Confirmed Patients, Unconfirmed Patients, Confirmation Rate; only populated categories shown (no zero-count rows); two confirmation levels: exact ICD-10 code and 3-character prefix -- per D-03, D-05
+- [ ] **C7DAY-04**: Output is styled xlsx following openxlsx2 patterns from R/50 (dark header fill, white font, freeze panes, number formatting, auto column widths, totals row) -- per D-07
+
 ## Traceability
 
 | Requirement | Phase | Status |
@@ -34,10 +41,14 @@
 | CCONF-02 | Phase 3 | Pending |
 | CCONF-03 | Phase 3 | Pending |
 | CCONF-04 | Phase 3 | Pending |
+| C7DAY-01 | Phase 4 | Pending |
+| C7DAY-02 | Phase 4 | Pending |
+| C7DAY-03 | Phase 4 | Pending |
+| C7DAY-04 | Phase 4 | Pending |
 
 **Coverage:**
-- Unassigned phase requirements: 9 total
-- Mapped to phases: 9
+- Unassigned phase requirements: 13 total
+- Mapped to phases: 13
 - Unmapped: 0
 
 ---
