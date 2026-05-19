@@ -122,5 +122,15 @@
 Plans:
 - [x] 01-01-PLAN.md — Create R/49_gantt_data_export.R: load RDS artifacts, validate columns, write gantt_episodes.csv (bars) and gantt_detail.csv (ticks)
 
+### Phase 2: Add descriptions of codes to the Gantt CSVs
+
+**Goal:** Enrich gantt_episodes.csv and gantt_detail.csv with human-readable code descriptions by building a static code-to-description lookup from Phase 39-41 RDS artifacts, R/45 hardcoded descriptions, and R/00_config.R inline comments
+**Requirements**: GDESC-01, GDESC-02, GDESC-03
+**Depends on:** Phase 1
+**Plans:** 1 plan
+
+Plans:
+- [ ] 02-01-PLAN.md — Build code_descriptions.rds lookup (R/48) + add description columns to both Gantt CSVs (R/49)
+
 ---
 *Last updated: 2026-05-19*
