@@ -120,7 +120,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md — Create R/49_gantt_data_export.R: load RDS artifacts, validate columns, write gantt_episodes.csv (bars) and gantt_detail.csv (ticks)
+- [x] 01-01-PLAN.md — Create R/49_gantt_data_export.R: load RDS artifacts, validate columns, write gantt_episodes.csv (bars) and gantt_detail.csv (ticks)
 
 ---
 *Last updated: 2026-05-19*
