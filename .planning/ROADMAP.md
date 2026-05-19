@@ -132,5 +132,25 @@ Plans:
 Plans:
 - [ ] 02-01-PLAN.md — Build code_descriptions.rds lookup (R/48) + add description columns to both Gantt CSVs (R/49)
 
+### Phase 3: Confirm cancer site codes by distinct date count — a person has a confirmed code if they have at least two distinct dates with the same code
+
+**Goal:** Validate cancer site diagnosis codes from the DIAGNOSIS table by requiring 2+ distinct dates per code per patient before counting as "confirmed," producing a styled two-sheet xlsx comparing total vs confirmed counts at exact-code and 3-character prefix levels
+**Requirements**: CCONF-01, CCONF-02, CCONF-03, CCONF-04
+**Depends on:** Phase 2
+**Plans:** 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md — Create R/50_cancer_site_confirmation.R: DIAGNOSIS query with DX_DATE, 2-date confirmation at exact-code and prefix levels, styled two-sheet xlsx output
+
+### Phase 4: Confirm cancer site codes with 7-day separation — same as phase 3 but the unique dates must be at least 7 days apart
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 4 to break down)
+
 ---
 *Last updated: 2026-05-19*
