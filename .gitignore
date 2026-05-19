@@ -31,6 +31,9 @@ output/cohort/*.rds
 /*.rds
 /*.docx
 
+# Gantt chart data exports (full cohort — PHI)
+output/gantt_*.csv
+
 # Output diagnostics
 output/diagnostics/*.csv
 
