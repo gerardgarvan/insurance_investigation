@@ -825,8 +825,14 @@ add_counts <- function(gaps_df) {
   gaps_df %>%
     dplyr::left_join(proc_counts, by = "code") %>%
     dplyr::mutate(
-      patient_count   = dplyr::if_else(direction != "In Reference, Not Config", NA_integer_, patient_count),
-      encounter_count = dplyr::if_else(direction != "In Reference, Not Config", NA_integer_, encounter_count)
+      # For "In Reference, Not Config" rows: coalesce NA to 0 (code exists in
+      # reference but had 0 occurrences in PROCEDURES -- still a real count)
+      patient_count   = dplyr::if_else(direction != "In Reference, Not Config",
+                                        NA_integer_,
+                                        dplyr::coalesce(patient_count, 0L)),
+      encounter_count = dplyr::if_else(direction != "In Reference, Not Config",
+                                        NA_integer_,
+                                        dplyr::coalesce(encounter_count, 0L))
     )
 }
 
@@ -905,9 +911,9 @@ write_detail_sheet <- function(wb, sheet_name, gaps_df, type_label, colors) {
   write_df <- gaps_df %>%
     dplyr::mutate(
       patient_count_fmt   = dplyr::if_else(!is.na(patient_count),
-                                           format(patient_count, big.mark = ","), NA_character_),
+                                           format(patient_count, big.mark = ","), ""),
       encounter_count_fmt = dplyr::if_else(!is.na(encounter_count),
-                                           format(encounter_count, big.mark = ","), NA_character_)
+                                           format(encounter_count, big.mark = ","), "")
     ) %>%
     dplyr::select(code, direction, code_category, source_document,
                   patient_count_fmt, encounter_count_fmt, annotation) %>%
