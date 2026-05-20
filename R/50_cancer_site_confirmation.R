@@ -421,23 +421,39 @@ total_exact <- dx_cancer %>%
 
 message(glue("  Total categories: {nrow(total_exact)}"))
 
-# Step 2: Confirmed patients -- patient has 2+ distinct non-NA DX_DATE for the same exact DX_norm
-confirmed_exact <- dx_cancer %>%
+# Step 2: Total distinct codes per category
+total_codes_exact <- dx_cancer %>%
+  group_by(category) %>%
+  summarise(total_codes = n_distinct(DX_norm), .groups = "drop")
+
+# Step 3: Confirmed patients -- patient has 2+ distinct non-NA DX_DATE for the same exact DX_norm
+confirmed_exact_detail <- dx_cancer %>%
   filter(!is.na(DX_DATE)) %>%
   distinct(ID, DX_norm, DX_DATE, category) %>%   # Deduplicate per Pitfall 3
   group_by(ID, DX_norm) %>%
   filter(n_distinct(DX_DATE) >= 2) %>%
-  ungroup() %>%
+  ungroup()
+
+confirmed_exact <- confirmed_exact_detail %>%
   group_by(category) %>%
   summarise(confirmed_patients = n_distinct(ID), .groups = "drop")
 
-# Step 3: Join and compute derived columns
+# Step 3b: Confirmed distinct codes per category (codes with at least one patient confirmed)
+confirmed_codes_exact <- confirmed_exact_detail %>%
+  group_by(category) %>%
+  summarise(confirmed_codes = n_distinct(DX_norm), .groups = "drop")
+
+# Step 4: Join and compute derived columns
 summary_exact <- total_exact %>%
   left_join(confirmed_exact, by = "category") %>%
+  left_join(total_codes_exact, by = "category") %>%
+  left_join(confirmed_codes_exact, by = "category") %>%
   mutate(
     confirmed_patients = ifelse(is.na(confirmed_patients), 0L, as.integer(confirmed_patients)),
     unconfirmed_patients = total_patients - confirmed_patients,
-    confirmation_rate = confirmed_patients / total_patients
+    confirmation_rate = confirmed_patients / total_patients,
+    total_codes = ifelse(is.na(total_codes), 0L, as.integer(total_codes)),
+    confirmed_codes = ifelse(is.na(confirmed_codes), 0L, as.integer(confirmed_codes))
   ) %>%
   filter(total_patients > 0)   # D-06: Only populated categories
 
@@ -509,7 +525,9 @@ totals_exact <- tibble(
   total_patients = sum(summary_exact$total_patients),
   confirmed_patients = sum(summary_exact$confirmed_patients),
   unconfirmed_patients = sum(summary_exact$unconfirmed_patients),
-  confirmation_rate = NA_real_   # Not meaningful across categories
+  confirmation_rate = NA_real_,   # Not meaningful across categories
+  total_codes = sum(summary_exact$total_codes),
+  confirmed_codes = sum(summary_exact$confirmed_codes)
 )
 
 totals_prefix <- tibble(
@@ -546,15 +564,15 @@ wb$add_data(sheet = SHEET1, x = "Cancer Site Confirmation - Exact Code Level",
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET1, dims = "A1:E1")
+wb$merge_cells(sheet = SHEET1, dims = "A1:G1")
 
 # Row 2: Headers
-headers1 <- c("Cancer Site Category", "Total Patients", "Confirmed Patients", "Unconfirmed Patients", "Confirmation Rate")
+headers1 <- c("Cancer Site Category", "Total Patients", "Confirmed Patients", "Unconfirmed Patients", "Confirmation Rate", "Total Codes", "Confirmed Codes")
 for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET1, dims = "A2:E2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = "A2:E2",
+wb$add_fill(sheet = SHEET1, dims = "A2:G2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET1, dims = "A2:G2",
             name = "Calibri", size = 11, bold = TRUE,
             color = wb_color(WHITE_FONT))
 
@@ -572,24 +590,29 @@ wb$add_numfmt(sheet = SHEET1, dims = glue("B{data_start}:D{data_end}"),
               numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET1, dims = glue("E{data_start}:E{data_end}"),
               numfmt = "0.0%")
+wb$add_numfmt(sheet = SHEET1, dims = glue("F{data_start}:G{data_end}"),
+              numfmt = "#,##0")
 
 # Totals rows
 totals_start <- data_end + 1
 wb$add_data(sheet = SHEET1, x = as.data.frame(totals_exact),
             start_row = totals_start, col_names = FALSE)
 wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_start}:E{totals_start}"),
+            dims  = glue("A{totals_start}:G{totals_start}"),
             color = wb_color(TOTALS_FILL))
 wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_start}:E{totals_start}"),
+            dims  = glue("A{totals_start}:G{totals_start}"),
             name  = "Calibri", size = 11, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
 wb$add_numfmt(sheet = SHEET1,
               dims  = glue("B{totals_start}:D{totals_start}"),
               numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1,
+              dims  = glue("F{totals_start}:G{totals_start}"),
+              numfmt = "#,##0")
 
 # Column widths
-wb$set_col_widths(sheet = SHEET1, cols = 1:5, widths = c(42, 14, 16, 18, 16))
+wb$set_col_widths(sheet = SHEET1, cols = 1:7, widths = c(42, 14, 16, 18, 16, 14, 16))
 
 # ---------------------------------------------------------------------------
 # Sheet 2: "Prefix Level"
