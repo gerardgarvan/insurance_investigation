@@ -28,6 +28,15 @@
 - [ ] **C7DAY-03**: Each sheet contains columns: Cancer Site Category, Total Patients, Confirmed Patients, Unconfirmed Patients, Confirmation Rate; only populated categories shown (no zero-count rows); two confirmation levels: exact ICD-10 code and 3-character prefix -- per D-03, D-05
 - [ ] **C7DAY-04**: Output is styled xlsx following openxlsx2 patterns from R/50 (dark header fill, white font, freeze panes, number formatting, auto column widths, totals row) -- per D-07
 
+## All Codes Resolved XLSX Update (Phase 5)
+
+- [ ] **RESOLVE-01**: R/52_all_codes_resolved.R exists as a standalone script (R/42 untouched as historical record) and produces all_codes_resolved.xlsx with 6 sheets: Chemotherapy, Radiation, SCT, Immunotherapy, Supportive Care, and Summary -- per D-09, D-12, D-13
+- [ ] **RESOLVE-02**: Code lists are sourced exclusively from R/00_config.R TREATMENT_CODES vectors (not from combined_unmatched_report.xlsx or any other intermediate file) -- per D-01, D-02
+- [ ] **RESOLVE-03**: Each code has patient count and record count queried from PCORnet data via DuckDB (CPT/HCPCS from PROCEDURES, NDC from DISPENSING, RXNORM from PRESCRIBING+MED_ADMIN, ICD-10-PCS from PROCEDURES, DRG from ENCOUNTER) -- per D-03, D-04
+- [ ] **RESOLVE-04**: Code descriptions use multi-source cascade: (1) Phase 39-41 RDS artifacts, (2) R/45 hardcoded radiation descriptions, (3) R/00_config.R inline comments, (4) "No description available" fallback -- per D-06
+- [ ] **RESOLVE-05**: All 5 per-type resolved xlsx files are regenerated (chemotherapy_codes_resolved.xlsx, radiation_codes_resolved.xlsx, sct_codes_resolved.xlsx, immunotherapy_codes_resolved.xlsx, supportive_care_codes_resolved.xlsx) with Code, Meaning, Code Type, Source Table, Records, Patients columns and openxlsx2 styling -- per D-10, D-11
+- [ ] **RESOLVE-06**: R/00_config.R inline comments are updated where RDS/API sources provide a better description than the existing comment, using parse/source validation with rollback -- per D-07, D-08
+
 ## Traceability
 
 | Requirement | Phase | Status |
@@ -45,12 +54,18 @@
 | C7DAY-02 | Phase 4 | Pending |
 | C7DAY-03 | Phase 4 | Pending |
 | C7DAY-04 | Phase 4 | Pending |
+| RESOLVE-01 | Phase 5 | Pending |
+| RESOLVE-02 | Phase 5 | Pending |
+| RESOLVE-03 | Phase 5 | Pending |
+| RESOLVE-04 | Phase 5 | Pending |
+| RESOLVE-05 | Phase 5 | Pending |
+| RESOLVE-06 | Phase 5 | Pending |
 
 **Coverage:**
-- Unassigned phase requirements: 13 total
-- Mapped to phases: 13
+- Unassigned phase requirements: 19 total
+- Mapped to phases: 19
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19*
+*Last updated: 2026-05-20*

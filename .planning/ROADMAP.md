@@ -152,5 +152,15 @@ Plans:
 Plans:
 - [ ] 04-01-PLAN.md — Clone R/50 to R/51_cancer_site_confirmation_7day.R with 7-day gap filter replacing 2-date count filter, styled two-sheet xlsx output
 
+### Phase 5: all_codes_resolved.xlsx update because we added more codes in config etc
+
+**Goal:** Regenerate all_codes_resolved.xlsx and 5 per-type resolved xlsx files from current R/00_config.R TREATMENT_CODES with DuckDB patient/record counts, multi-source description cascade, and config comment curation
+**Requirements**: RESOLVE-01, RESOLVE-02, RESOLVE-03, RESOLVE-04, RESOLVE-05, RESOLVE-06
+**Depends on:** Phase 4
+**Plans:** 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — Create R/52_all_codes_resolved.R: config-driven code extraction, DuckDB count queries, description cascade, config comment curation, all_codes_resolved.xlsx (6 sheets) + 5 per-type xlsx files
+
 ---
-*Last updated: 2026-05-19*
+*Last updated: 2026-05-20*
