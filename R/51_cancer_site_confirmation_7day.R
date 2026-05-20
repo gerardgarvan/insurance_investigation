@@ -13,7 +13,7 @@
 #
 # Output: output/tables/cancer_site_confirmation_7day.xlsx
 #   Sheet 1 "Exact Code (7-Day Gap)":   per-category confirmation at exact ICD-10 code level
-#   Sheet 2 "Cancer Site Category (7-Day Gap)": per-category confirmation across all codes in the same category
+#   Sheet 2 "Site Category (7-Day Gap)": per-category confirmation across all codes in the same category
 #
 # Usage:
 #   Rscript R/51_cancer_site_confirmation_7day.R
@@ -588,9 +588,9 @@ wb$add_numfmt(sheet = SHEET1,
 wb$set_col_widths(sheet = SHEET1, cols = 1:6, widths = c(14, 42, 14, 16, 18, 16))
 
 # ---------------------------------------------------------------------------
-# Sheet 2: "Cancer Site Category (7-Day Gap)"
+# Sheet 2: "Site Category (7-Day Gap)"
 # ---------------------------------------------------------------------------
-SHEET2 <- "Cancer Site Category (7-Day Gap)"
+SHEET2 <- "Site Category (7-Day Gap)"
 wb$add_worksheet(SHEET2)
 
 # Row 1: Title
