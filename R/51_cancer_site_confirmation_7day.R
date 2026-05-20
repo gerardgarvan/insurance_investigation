@@ -443,11 +443,9 @@ summary_exact <- total_exact %>%
   ) %>%
   filter(total_patients > 0)
 
-# Step 4: Order by CATEGORY_ORDER, then by code within category
-cat_rank <- setNames(seq_along(CATEGORY_ORDER), CATEGORY_ORDER)
+# Step 4: Order by confirmation rate (highest first), then by total patients descending
 summary_exact <- summary_exact %>%
-  mutate(rank = ifelse(category %in% names(cat_rank), cat_rank[category], 999L)) %>%
-  arrange(rank, DX_norm) %>%
+  arrange(desc(confirmation_rate), desc(total_patients)) %>%
   select(DX_norm, category, total_patients, confirmed_patients, unconfirmed_patients, confirmation_rate)
 
 total_confirmed_exact <- sum(summary_exact$confirmed_patients)
@@ -492,9 +490,7 @@ summary_prefix <- total_prefix %>%
     confirmation_rate = confirmed_patients / total_patients
   ) %>%
   filter(total_patients > 0) %>%
-  mutate(rank = ifelse(category %in% names(cat_rank), cat_rank[category], 999L)) %>%
-  arrange(rank) %>%
-  select(-rank)
+  arrange(desc(confirmation_rate), desc(total_patients))
 
 total_confirmed_prefix <- sum(summary_prefix$confirmed_patients)
 overall_rate_prefix <- total_confirmed_prefix / sum(summary_prefix$total_patients)
