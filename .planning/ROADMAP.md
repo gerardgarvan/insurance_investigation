@@ -170,7 +170,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 06-01-PLAN.md — Create R/53_cancer_summary.R: DIAGNOSIS query, PREFIX_MAP classification, patient-code aggregation with date metrics, description cascade, minimal xlsx + CSV output
+- [x] 06-01-PLAN.md — Create R/53_cancer_summary.R: DIAGNOSIS query, PREFIX_MAP classification, patient-code aggregation with date metrics, description cascade, minimal xlsx + CSV output
 
 ---
 *Last updated: 2026-05-21*
