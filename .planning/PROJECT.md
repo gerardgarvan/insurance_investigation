@@ -118,7 +118,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 39 phases completed across 6 milestones (v1.0-v1.5) + post-milestone work (Phases 38-43), ~43 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files
+- **Current state**: 40+ phases completed across 6 milestones (v1.0-v1.6) + post-milestone work (Phases 38-46), ~53 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, patient-code cancer summary dataset
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -175,4 +175,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-05 after Phase 42 completion*
+*Last updated: 2026-05-21 after Phase 6 completion*
