@@ -383,10 +383,10 @@ category_summary <- cancer_summary %>%
   group_by(category) %>%
   summarise(
     total_patients        = n_distinct(ID),
-    confirmed_2date       = sum(two_or_more_unique_dates, na.rm = TRUE),
-    pct_confirmed_2date   = sum(two_or_more_unique_dates, na.rm = TRUE) / n_distinct(ID),
-    confirmed_7day        = sum(two_or_more_unique_dates_gt_7, na.rm = TRUE),
-    pct_confirmed_7day    = sum(two_or_more_unique_dates_gt_7, na.rm = TRUE) / n_distinct(ID),
+    confirmed_2date       = n_distinct(ID[two_or_more_unique_dates == 1]),
+    pct_confirmed_2date   = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
+    confirmed_7day        = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    pct_confirmed_7day    = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
     mean_unique_dates     = mean(unique_dates_total, na.rm = TRUE),
     median_unique_dates   = median(unique_dates_total, na.rm = TRUE),
     mean_dates_7day_sep   = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
@@ -409,10 +409,10 @@ code_summary <- cancer_summary %>%
   group_by(cancer_code, category) %>%
   summarise(
     total_patients        = n_distinct(ID),
-    confirmed_2date       = sum(two_or_more_unique_dates, na.rm = TRUE),
-    pct_confirmed_2date   = sum(two_or_more_unique_dates, na.rm = TRUE) / n_distinct(ID),
-    confirmed_7day        = sum(two_or_more_unique_dates_gt_7, na.rm = TRUE),
-    pct_confirmed_7day    = sum(two_or_more_unique_dates_gt_7, na.rm = TRUE) / n_distinct(ID),
+    confirmed_2date       = n_distinct(ID[two_or_more_unique_dates == 1]),
+    pct_confirmed_2date   = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
+    confirmed_7day        = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    pct_confirmed_7day    = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
     mean_unique_dates     = mean(unique_dates_total, na.rm = TRUE),
     median_unique_dates   = median(unique_dates_total, na.rm = TRUE),
     mean_dates_7day_sep   = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
