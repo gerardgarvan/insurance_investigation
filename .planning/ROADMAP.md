@@ -172,5 +172,15 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Create R/53_cancer_summary.R: DIAGNOSIS query, PREFIX_MAP classification, patient-code aggregation with date metrics, description cascade, minimal xlsx + CSV output
 
+### Phase 7: Summary table of cancer_summary data
+
+**Goal:** Create R/54_cancer_summary_table.R that aggregates the Phase 6 patient-code level cancer_summary dataset into category-level and code-level summaries with patient counts, confirmation rates, date distribution stats, and DuckDB record counts, outputting a styled two-sheet cancer_summary_table.xlsx
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15
+**Depends on:** Phase 6
+**Plans:** 1 plan
+
+Plans:
+- [ ] 07-01-PLAN.md — Create R/54_cancer_summary_table.R: load cancer_summary.csv, DuckDB record count query, category + code aggregation, styled two-sheet xlsx output
+
 ---
 *Last updated: 2026-05-21*
