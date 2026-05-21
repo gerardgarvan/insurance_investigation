@@ -37,6 +37,13 @@
 - [x] **RESOLVE-05**: All 5 per-type resolved xlsx files are regenerated (chemotherapy_codes_resolved.xlsx, radiation_codes_resolved.xlsx, sct_codes_resolved.xlsx, immunotherapy_codes_resolved.xlsx, supportive_care_codes_resolved.xlsx) with Code, Meaning, Code Type, Source Table, Records, Patients columns and openxlsx2 styling -- per D-10, D-11
 - [x] **RESOLVE-06**: R/00_config.R inline comments are updated where RDS/API sources provide a better description than the existing comment, using parse/source validation with rollback -- per D-07, D-08
 
+## Cancer Summary Dataset (Phase 6)
+
+- [ ] **CSUM-01**: R/53_cancer_summary.R exists and produces cancer_summary.xlsx and cancer_summary.csv in output/tables/ with one flat sheet ("Cancer Summary") containing patient-code level rows with columns: ID, cancer_code, description, two_or_more_unique_dates, two_or_more_unique_dates_gt_7, unique_dates_total, unique_dates_with_sep_gt_7 -- per D-01, D-02, D-12, D-13, D-15, D-16, D-17
+- [ ] **CSUM-02**: Date confirmation metrics use DIAGNOSIS table only (DX_TYPE == "10"), ICD-10 neoplasm codes (C/D prefix), integer 1/0 flags for boolean columns, and correct NA handling (all-NA dates produce 0 for all metrics) -- per D-03, D-04, D-05, D-06, D-07, D-08, D-09
+- [ ] **CSUM-03**: Description column combines PREFIX_MAP cancer site category name with code-level description from multi-source cascade (Phase 39-41 RDS, hardcoded, config comments), covering all patients in DIAGNOSIS (not restricted to HL cohort) -- per D-10, D-14
+- [ ] **CSUM-04**: Output xlsx uses minimal styling (headers + data, auto column widths, integer number formatting on columns 4-7, no dark header fill) generated from scratch via openxlsx2 -- per D-11, D-18
+
 ## Traceability
 
 | Requirement | Phase | Status |
@@ -60,12 +67,16 @@
 | RESOLVE-04 | Phase 5 | Complete |
 | RESOLVE-05 | Phase 5 | Complete |
 | RESOLVE-06 | Phase 5 | Complete |
+| CSUM-01 | Phase 6 | Pending |
+| CSUM-02 | Phase 6 | Pending |
+| CSUM-03 | Phase 6 | Pending |
+| CSUM-04 | Phase 6 | Pending |
 
 **Coverage:**
-- Unassigned phase requirements: 19 total
-- Mapped to phases: 19
+- Unassigned phase requirements: 23 total
+- Mapped to phases: 23
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-20*
+*Last updated: 2026-05-21*

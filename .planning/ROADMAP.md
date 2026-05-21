@@ -162,5 +162,15 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Create R/52_all_codes_resolved.R: config-driven code extraction, DuckDB count queries, description cascade, config comment curation, all_codes_resolved.xlsx (6 sheets) + 5 per-type xlsx files
 
+### Phase 6: Make dataset that produces cancer_summary_template.xlsx
+
+**Goal:** Create R/53_cancer_summary.R that produces a patient-code level dataset from the DIAGNOSIS table with date-based confirmation metrics (2+ distinct dates, 7-day gap), outputting cancer_summary.xlsx and cancer_summary.csv to output/tables/
+**Requirements**: CSUM-01, CSUM-02, CSUM-03, CSUM-04
+**Depends on:** Phase 5
+**Plans:** 1 plan
+
+Plans:
+- [ ] 06-01-PLAN.md — Create R/53_cancer_summary.R: DIAGNOSIS query, PREFIX_MAP classification, patient-code aggregation with date metrics, description cascade, minimal xlsx + CSV output
+
 ---
-*Last updated: 2026-05-20*
+*Last updated: 2026-05-21*
