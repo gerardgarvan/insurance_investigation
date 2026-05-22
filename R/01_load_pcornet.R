@@ -62,12 +62,13 @@ DIAGNOSIS_SPEC <- cols(
 )
 
 # ------------------------------------------------------------------------------
-# 2b. CONDITION (14 columns)
+# 2b. CONDITION (12 columns)
 # ------------------------------------------------------------------------------
 # PCORnet CDM CONDITION table: diagnosed and self-reported health conditions.
 # CONDITION column holds ICD-10/ICD-9 codes (like DX in DIAGNOSIS).
 # CONDITION_TYPE: "09" = ICD-9-CM, "10" = ICD-10-CM, "11" = ICD-11, "SM" = SNOMED CT, etc.
 # Note: PCORnet CDM uses PATID but this extract uses ID as the patient identifier.
+# Note: RAW_CONDITION and RAW_CONDITION_STATUS not present in this extract.
 CONDITION_SPEC <- cols(
   CONDITIONID = col_character(),
   ID = col_character(),
@@ -79,10 +80,8 @@ CONDITION_SPEC <- cols(
   ONSET_DATE = col_character(),
   REPORT_DATE = col_character(),
   RESOLVE_DATE = col_character(),
-  RAW_CONDITION = col_character(),
   RAW_CONDITION_TYPE = col_character(),
-  RAW_CONDITION_SOURCE = col_character(),
-  RAW_CONDITION_STATUS = col_character()
+  RAW_CONDITION_SOURCE = col_character()
 )
 
 # ------------------------------------------------------------------------------
