@@ -166,7 +166,7 @@
 | 34-37 | v1.5 | Complete | 2026-05-01 |
 | 38-44 | Unassigned | Complete | 2026-05-12 |
 | 45-54 | v1.6 | Complete | 2026-05-22 |
-| 55-57 | v1.7 | Not started | — |
+| 55-57 | v1.7 | Not started | -- |
 
 ## Phase Details
 
@@ -185,7 +185,10 @@
 4. Cancer summary table Column F (Hodgkin Lymphoma %) reaches 100% after cohort confirmation
 5. First HL diagnosis source is logged (DIAGNOSIS only, TR only, or Both) for traceability
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 55-01-PLAN.md -- Create R/55_cancer_summary_refined.R: D-code removal, C81 cohort confirmation, first_hl_dx_date computation, styled xlsx regeneration, confirmed_hl_cohort.rds artifact
 
 ### Phase 56: Temporal Filtering
 
@@ -223,4 +226,4 @@
 **UI hint:** yes
 
 ---
-*Last updated: 2026-05-22 — v1.7 roadmap created*
+*Last updated: 2026-05-22 -- v1.7 Phase 55 planned*
