@@ -11,7 +11,14 @@
 - **v1.3 DuckDB Backend Migration** — Phases 29-32 (shipped 2026-04-23)
 - **v1.4 AV+TH Subset Analysis** — Phase 33 (shipped 2026-04-27) — [archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 Payer Analysis Expansion** — Phases 34-37 (shipped 2026-05-01) — [archive](milestones/v1.5-ROADMAP.md)
-- **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-47 — [roadmap](milestones/v1.6-ROADMAP.md)
+- **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-54 (shipped 2026-05-22) — [archive](milestones/v1.6-ROADMAP.md)
+- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-57 (active)
+
+## v1.7 Phases
+
+- [ ] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date
+- [ ] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis
+- [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
 
 ## Remaining Phases (Unassigned)
 
@@ -27,7 +34,7 @@
   - Plans:
     - [x] 39-01-PLAN.md — Investigation script: extraction, NLM API lookup, classification, xlsx report
     - [x] 39-02-PLAN.md — Config updates: TREATMENT_CODES expansion and widened heuristic ranges
-- [x] **Phase 40: Investigate Unmatched NDC Codes** — Investigate NDC codes and RXNORM CUIs in HL patient drug data not in curated TREATMENT_CODES lists (completed 2026-05-04)
+- [x] **Phase 40: Investigate Unmatched NDC Codes** — Investigate NDC codes and RXNORM CUIs in HL patient drug data not in curated TREATMENT_CODES lists (completed 2026-05-05)
   - **Goal:** Extract unmatched NDC and RXNORM codes from DISPENSING/PRESCRIBING/MED_ADMIN, look up drug names via RxNorm API, auto-classify into treatment categories, produce xlsx report, and update TREATMENT_CODES with new NDC vectors and expanded RXNORM CUIs
   - **Depends on:** Phase 39
   - **Plans:** 2 plans
@@ -89,13 +96,62 @@
   - Plans:
     - [x] 46-01-PLAN.md — Gap report: hardcoded reference data from docx/xlsx files, two-way comparison, DuckDB counts, styled 5-sheet xlsx
     - [x] 46-02-PLAN.md — Triggering codes: extract_dates_with_codes() function, triggering_codes column in episode CSV and xlsx
-- [ ] **Phase 47: Cancer Site Frequency** — Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx with styled xlsx output ready to email
+- [x] **Phase 47: Cancer Site Frequency** — Frequency table of all 42 cancer site categories from CancerSiteCategories.xlsx with styled xlsx output ready to email (completed 2026-05-19)
   - **Goal:** Users can see patient counts and encounter counts per cancer site category across the full PCORnet extract
   - **Depends on:** Nothing (independent)
   - **Requirements:** CSITE-01, CSITE-02
-  - **Plans:** 1 plan (script created, paused at HiPerGator execution checkpoint)
+  - **Plans:** 1 plan
   - Plans:
-    - [ ] 47-01-PLAN.md — Cancer site frequency script: range expansion, DIAGNOSIS + TUMOR_REGISTRY queries, styled xlsx output (Task 1 done, Task 2 awaiting HiPerGator)
+    - [x] 47-01-PLAN.md — Cancer site frequency script: range expansion, DIAGNOSIS + TUMOR_REGISTRY queries, styled xlsx output
+- [x] **Phase 48: Combine Treatment Episode and Detail for Gantt Chart** — Export existing treatment episode and episode detail RDS artifacts as two universal CSV files (gantt_episodes.csv and gantt_detail.csv) for third-party Gantt chart visualization (completed 2026-05-19)
+  - **Goal:** Export existing treatment episode and episode detail RDS artifacts as two universal CSV files (gantt_episodes.csv and gantt_detail.csv) for third-party Gantt chart visualization
+  - **Requirements**: GANTT-01, GANTT-02
+  - **Depends on:** Phase 44
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 48-01-PLAN.md — Create R/49_gantt_data_export.R: load RDS artifacts, validate columns, write gantt_episodes.csv (bars) and gantt_detail.csv (ticks)
+- [x] **Phase 49: Add descriptions of codes to the Gantt CSVs** — Enrich gantt_episodes.csv and gantt_detail.csv with human-readable code descriptions (completed 2026-05-22)
+  - **Goal:** Enrich gantt_episodes.csv and gantt_detail.csv with human-readable code descriptions by building a static code-to-description lookup from Phase 39-41 RDS artifacts, R/45 hardcoded descriptions, and R/00_config.R inline comments
+  - **Requirements**: GDESC-01, GDESC-02, GDESC-03
+  - **Depends on:** Phase 48
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 49-01-PLAN.md — Build code_descriptions.rds lookup (R/48) + add description columns to both Gantt CSVs (R/49)
+- [x] **Phase 50: Confirm cancer site codes by distinct date count** — Validate cancer site diagnosis codes by requiring 2+ distinct dates per code per patient (completed 2026-05-20)
+  - **Goal:** Validate cancer site diagnosis codes from the DIAGNOSIS table by requiring 2+ distinct dates per code per patient before counting as "confirmed," producing a styled two-sheet xlsx comparing total vs confirmed counts at exact-code and 3-character prefix levels
+  - **Requirements**: CCONF-01, CCONF-02, CCONF-03, CCONF-04
+  - **Depends on:** Phase 49
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 50-01-PLAN.md — Create R/50_cancer_site_confirmation.R: DIAGNOSIS query with DX_DATE, 2-date confirmation at exact-code and prefix levels, styled two-sheet xlsx output
+- [x] **Phase 51: Confirm cancer site codes with 7-day separation** — Validate cancer site diagnosis codes using a 7-day temporal separation requirement (completed 2026-05-20)
+  - **Goal:** Validate cancer site diagnosis codes using a 7-day temporal separation requirement (max date - min date >= 7 days per code per patient), producing a standalone styled xlsx with exact-code and prefix-level confirmation sheets for side-by-side comparison with Phase 50 output
+  - **Requirements**: C7DAY-01, C7DAY-02, C7DAY-03, C7DAY-04
+  - **Depends on:** Phase 50
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 51-01-PLAN.md — Clone R/50 to R/51_cancer_site_confirmation_7day.R with 7-day gap filter replacing 2-date count filter, styled two-sheet xlsx output
+- [x] **Phase 52: all_codes_resolved.xlsx update** — Regenerate all_codes_resolved.xlsx from current config with DuckDB counts (completed 2026-05-20)
+  - **Goal:** Regenerate all_codes_resolved.xlsx and 5 per-type resolved xlsx files from current R/00_config.R TREATMENT_CODES with DuckDB patient/record counts, multi-source description cascade, and config comment curation
+  - **Requirements**: RESOLVE-01, RESOLVE-02, RESOLVE-03, RESOLVE-04, RESOLVE-05, RESOLVE-06
+  - **Depends on:** Phase 51
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 52-01-PLAN.md — Create R/52_all_codes_resolved.R: config-driven code extraction, DuckDB count queries, description cascade, config comment curation, all_codes_resolved.xlsx (6 sheets) + 5 per-type xlsx files
+- [x] **Phase 53: Make dataset that produces cancer_summary_template.xlsx** — Create patient-code level cancer summary dataset (completed 2026-05-20)
+  - **Goal:** Create R/53_cancer_summary.R that produces a patient-code level dataset from the DIAGNOSIS table with date-based confirmation metrics (2+ distinct dates, 7-day gap), outputting cancer_summary.xlsx and cancer_summary.csv to output/tables/
+  - **Requirements**: CSUM-01, CSUM-02, CSUM-03, CSUM-04
+  - **Depends on:** Phase 52
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 53-01-PLAN.md — Create R/53_cancer_summary.R: DIAGNOSIS query, PREFIX_MAP classification, patient-code aggregation with date metrics, description cascade, minimal xlsx + CSV output
+- [x] **Phase 54: Summary table of cancer_summary data** — Aggregate patient-code level data into category-level and code-level summaries (completed 2026-05-22)
+  - **Goal:** Create R/54_cancer_summary_table.R that aggregates the Phase 53 patient-code level cancer_summary dataset into category-level and code-level summaries with patient counts, confirmation rates, date distribution stats, and DuckDB record counts, outputting a styled two-sheet cancer_summary_table.xlsx
+  - **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15
+  - **Depends on:** Phase 53
+  - **Plans:** 1 plan
+  - Plans:
+    - [x] 54-01-PLAN.md — Create R/54_cancer_summary_table.R: load cancer_summary.csv, DuckDB record count query, category + code aggregation, styled two-sheet xlsx output
 
 ## Progress
 
@@ -108,85 +164,63 @@
 | 29-32 | v1.3 | Complete | 2026-04-23 |
 | 33 | v1.4 | Complete | 2026-04-24 |
 | 34-37 | v1.5 | Complete | 2026-05-01 |
-| 38-46 | Unassigned | Complete | 2026-05-12 |
-| 45-46 | v1.6 | Complete | 2026-05-15 |
-| 47 | v1.6 | In progress | — |
-| 48 | Post-v1.6 | Complete | 2026-05-19 |
-| 49 | 1/1 | Complete    | 2026-05-22 |
-| 50-51 | Post-v1.6 | Planned | — |
-| 52 | Post-v1.6 | Complete | 2026-05-20 |
-| 53 | Post-v1.6 | Complete | 2026-05-20 |
-| 54 | Post-v1.6 | Complete | 2026-05-22 |
+| 38-44 | Unassigned | Complete | 2026-05-12 |
+| 45-54 | v1.6 | Complete | 2026-05-22 |
+| 55-57 | v1.7 | Not started | — |
 
-### Phase 48: Combine Treatment Episode and Detail for Gantt Chart
+## Phase Details
 
-**Goal:** Export existing treatment episode and episode detail RDS artifacts as two universal CSV files (gantt_episodes.csv and gantt_detail.csv) for third-party Gantt chart visualization
-**Requirements**: GANTT-01, GANTT-02
-**Depends on:** Phase 44
-**Plans:** 1/1 plans complete
+### Phase 55: Cancer Summary Refinement Foundation
 
-Plans:
-- [x] 48-01-PLAN.md — Create R/49_gantt_data_export.R: load RDS artifacts, validate columns, write gantt_episodes.csv (bars) and gantt_detail.csv (ticks)
+**Goal:** Cancer summary table excludes benign D-codes and is regenerated for a validated HL cohort confirmed by 2+ diagnosis codes at least 7 days apart, with first HL diagnosis date computed from both DIAGNOSIS and TUMOR_REGISTRY sources
 
-### Phase 49: Add descriptions of codes to the Gantt CSVs
+**Depends on:** Phase 54
 
-**Goal:** Enrich gantt_episodes.csv and gantt_detail.csv with human-readable code descriptions by building a static code-to-description lookup from Phase 39-41 RDS artifacts, R/45 hardcoded descriptions, and R/00_config.R inline comments
-**Requirements**: GDESC-01, GDESC-02, GDESC-03
-**Depends on:** Phase 48
-**Plans:** 1/1 plans complete
+**Requirements:** CREF-01, CREF-02, CREF-03
 
-Plans:
-- [x] 49-01-PLAN.md — Build code_descriptions.rds lookup (R/48) + add description columns to both Gantt CSVs (R/49)
+**Success Criteria** (what must be TRUE):
+1. Cancer summary table contains only malignant C-codes (benign D10-D48 codes excluded from all outputs)
+2. Cohort is filtered to patients with at least 2 HL diagnosis codes separated by 7+ days
+3. Each confirmed HL patient has a first_hl_dx_date computed as the minimum date across both DIAGNOSIS and TUMOR_REGISTRY tables
+4. Cancer summary table Column F (Hodgkin Lymphoma %) reaches 100% after cohort confirmation
+5. First HL diagnosis source is logged (DIAGNOSIS only, TR only, or Both) for traceability
 
-### Phase 50: Confirm cancer site codes by distinct date count
+**Plans:** TBD
 
-**Goal:** Validate cancer site diagnosis codes from the DIAGNOSIS table by requiring 2+ distinct dates per code per patient before counting as "confirmed," producing a styled two-sheet xlsx comparing total vs confirmed counts at exact-code and 3-character prefix levels
-**Requirements**: CCONF-01, CCONF-02, CCONF-03, CCONF-04
-**Depends on:** Phase 49
-**Plans:** 1 plan
+### Phase 56: Temporal Filtering
 
-Plans:
-- [ ] 50-01-PLAN.md — Create R/50_cancer_site_confirmation.R: DIAGNOSIS query with DX_DATE, 2-date confirmation at exact-code and prefix levels, styled two-sheet xlsx output
+**Goal:** Cancer summary table is produced in two versions (all cancers and post-HL cancers) to enable comparison of cancer burden before and after first HL diagnosis
 
-### Phase 51: Confirm cancer site codes with 7-day separation
+**Depends on:** Phase 55
 
-**Goal:** Validate cancer site diagnosis codes using a 7-day temporal separation requirement (max date - min date >= 7 days per code per patient), producing a standalone styled xlsx with exact-code and prefix-level confirmation sheets for side-by-side comparison with Phase 50 output
-**Requirements**: C7DAY-01, C7DAY-02, C7DAY-03, C7DAY-04
-**Depends on:** Phase 50
-**Plans:** 1 plan
+**Requirements:** CREF-04
 
-Plans:
-- [ ] 51-01-PLAN.md — Clone R/50 to R/51_cancer_site_confirmation_7day.R with 7-day gap filter replacing 2-date count filter, styled two-sheet xlsx output
+**Success Criteria** (what must be TRUE):
+1. Baseline cancer summary outputs (cancer_summary.csv and cancer_summary_table.xlsx) remain unchanged for reproducibility
+2. New post-HL variant outputs (cancer_summary_post_hl.csv and cancer_summary_table_post_hl.xlsx) are produced with DX_DATE > first_hl_dx_date filter applied
+3. Post-HL variant is clearly labeled as EXPLORATORY to indicate potential immortal time bias
+4. Side-by-side comparison shows denominator differences (how many patients/cancers excluded by temporal filter)
 
-### Phase 52: all_codes_resolved.xlsx update
+**Plans:** TBD
 
-**Goal:** Regenerate all_codes_resolved.xlsx and 5 per-type resolved xlsx files from current R/00_config.R TREATMENT_CODES with DuckDB patient/record counts, multi-source description cascade, and config comment curation
-**Requirements**: RESOLVE-01, RESOLVE-02, RESOLVE-03, RESOLVE-04, RESOLVE-05, RESOLVE-06
-**Depends on:** Phase 51
-**Plans:** 1/1 plans complete
+### Phase 57: Gantt Enhancements
 
-Plans:
-- [x] 52-01-PLAN.md — Create R/52_all_codes_resolved.R: config-driven code extraction, DuckDB count queries, description cascade, config comment curation, all_codes_resolved.xlsx (6 sheets) + 5 per-type xlsx files
+**Goal:** Gantt chart data includes cancer category labels and is_hodgkin flags for each treatment episode, plus death dates as a clinical endpoint for timeline visualization
 
-### Phase 53: Make dataset that produces cancer_summary_template.xlsx
+**Depends on:** Phase 55
 
-**Goal:** Create R/53_cancer_summary.R that produces a patient-code level dataset from the DIAGNOSIS table with date-based confirmation metrics (2+ distinct dates, 7-day gap), outputting cancer_summary.xlsx and cancer_summary.csv to output/tables/
-**Requirements**: CSUM-01, CSUM-02, CSUM-03, CSUM-04
-**Depends on:** Phase 52
-**Plans:** 1/1 plans complete
+**Requirements:** GANTT-01, GANTT-02, GANTT-03
 
-Plans:
-- [x] 53-01-PLAN.md — Create R/53_cancer_summary.R: DIAGNOSIS query, PREFIX_MAP classification, patient-code aggregation with date metrics, description cascade, minimal xlsx + CSV output
+**Success Criteria** (what must be TRUE):
+1. Each treatment episode row in gantt_episodes.csv and gantt_detail.csv has a cancer_category column derived from the CancerSiteCategories mapping (D-codes excluded)
+2. Each episode row has an is_hodgkin binary column (TRUE when cancer_category equals "Hodgkin Lymphoma")
+3. Death dates from DEMOGRAPHIC table are added to Gantt CSVs as pseudo-treatment rows (treatment_type = "Death")
+4. Death dates undergo the same 1900 sentinel date nullification as diagnosis dates
+5. Multi-cancer episodes show all applicable cancer categories (comma-separated or primary category with flag for multiple)
 
-### Phase 54: Summary table of cancer_summary data
+**Plans:** TBD
 
-**Goal:** Create R/54_cancer_summary_table.R that aggregates the Phase 53 patient-code level cancer_summary dataset into category-level and code-level summaries with patient counts, confirmation rates, date distribution stats, and DuckDB record counts, outputting a styled two-sheet cancer_summary_table.xlsx
-**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15
-**Depends on:** Phase 53
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 54-01-PLAN.md — Create R/54_cancer_summary_table.R: load cancer_summary.csv, DuckDB record count query, category + code aggregation, styled two-sheet xlsx output
+**UI hint:** yes
 
 ---
-*Last updated: 2026-05-22*
+*Last updated: 2026-05-22 — v1.7 roadmap created*
