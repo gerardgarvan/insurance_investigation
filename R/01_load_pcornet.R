@@ -2,7 +2,7 @@
 # 01_load_pcornet.R -- Load PCORnet CDM CSV tables with explicit column types
 # ==============================================================================
 #
-# Loads 13 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
+# Loads 14 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
 # All date columns are parsed via parse_pcornet_date() (multi-format fallback)
 # All ID columns are loaded as character (prevents leading-zero truncation)
 # Missing files produce a warning and NULL entry (per D-10)
@@ -59,6 +59,30 @@ DIAGNOSIS_SPEC <- cols(
   PDX = col_character(),
   DX_POA = col_character(),
   SOURCE = col_character()
+)
+
+# ------------------------------------------------------------------------------
+# 2b. CONDITION (14 columns)
+# ------------------------------------------------------------------------------
+# PCORnet CDM CONDITION table: diagnosed and self-reported health conditions.
+# CONDITION column holds ICD-10/ICD-9 codes (like DX in DIAGNOSIS).
+# CONDITION_TYPE: "09" = ICD-9-CM, "10" = ICD-10-CM, "11" = ICD-11, "SM" = SNOMED CT, etc.
+# Note: PCORnet CDM uses PATID but this extract uses ID as the patient identifier.
+CONDITION_SPEC <- cols(
+  CONDITIONID = col_character(),
+  ID = col_character(),
+  ENCOUNTERID = col_character(),
+  CONDITION = col_character(),
+  CONDITION_TYPE = col_character(),
+  CONDITION_SOURCE = col_character(),
+  CONDITION_STATUS = col_character(),
+  ONSET_DATE = col_character(),
+  REPORT_DATE = col_character(),
+  RESOLVE_DATE = col_character(),
+  RAW_CONDITION = col_character(),
+  RAW_CONDITION_TYPE = col_character(),
+  RAW_CONDITION_SOURCE = col_character(),
+  RAW_CONDITION_STATUS = col_character()
 )
 
 # ------------------------------------------------------------------------------
@@ -325,6 +349,7 @@ PROVIDER_SPEC <- cols(
 TABLE_SPECS <- list(
   ENROLLMENT = ENROLLMENT_SPEC,
   DIAGNOSIS = DIAGNOSIS_SPEC,
+  CONDITION = CONDITION_SPEC,
   PROCEDURES = PROCEDURES_SPEC,
   PRESCRIBING = PRESCRIBING_SPEC,
   ENCOUNTER = ENCOUNTER_SPEC,

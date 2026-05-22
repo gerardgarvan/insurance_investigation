@@ -95,9 +95,9 @@ USE_DUCKDB <- TRUE
 # 2. PCORNET CDM TABLE PATHS
 # ------------------------------------------------------------------------------
 
-# Primary load set: 11 tables
-# - 6 standard CDM tables: ENROLLMENT, DIAGNOSIS, PROCEDURES, PRESCRIBING,
-#   ENCOUNTER, DEMOGRAPHIC
+# Primary load set: 14 tables
+# - 7 standard CDM tables: ENROLLMENT, DIAGNOSIS, CONDITION, PROCEDURES,
+#   PRESCRIBING, ENCOUNTER, DEMOGRAPHIC
 # - 3 TUMOR_REGISTRY tables: contain HL-specific diagnosis dates (DATE_OF_DIAGNOSIS)
 #   and treatment dates (DT_CHEMO, DT_RAD, etc.)
 # - 2 medication tables (Phase 9): DISPENSING, MED_ADMIN for expanded treatment detection
@@ -108,6 +108,7 @@ USE_DUCKDB <- TRUE
 PCORNET_TABLES <- c(
   "ENROLLMENT",
   "DIAGNOSIS",
+  "CONDITION",        # PCORnet CDM: diagnosed/self-reported health conditions
   "PROCEDURES",
   "PRESCRIBING",
   "ENCOUNTER",

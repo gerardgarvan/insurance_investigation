@@ -2,7 +2,7 @@
 # 25_duckdb_ingest.R -- Ingest PCORnet CDM tables from RDS cache into DuckDB
 # ==============================================================================
 #
-# Reads all 13 PCORnet tables from RDS cache (Phase 15) and writes them
+# Reads all 14 PCORnet tables from RDS cache (Phase 15) and writes them
 # into a single DuckDB file with atomic write guarantee.
 #
 # Usage:
@@ -42,7 +42,7 @@ TABLES_TO_INGEST <- PCORNET_TABLES
 # Tables that have an ENCOUNTERID column (verified from 01_load_pcornet.R col_type specs)
 # Used for secondary index creation. DISPENSING and PROVIDER do NOT have ENCOUNTERID.
 TABLES_WITH_ENCOUNTERID <- c(
-  "DIAGNOSIS", "PROCEDURES", "PRESCRIBING", "ENCOUNTER",
+  "DIAGNOSIS", "CONDITION", "PROCEDURES", "PRESCRIBING", "ENCOUNTER",
   "MED_ADMIN", "LAB_RESULT_CM"
 )
 
