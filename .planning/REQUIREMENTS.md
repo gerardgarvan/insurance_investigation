@@ -9,9 +9,9 @@ Requirements for milestone v1.7 Cancer Summary Refinement & Gantt Enhancements. 
 
 ### Cancer Summary Refinement
 
-- [ ] **CREF-01**: Cancer summary table excludes benign neoplasm D-codes, retaining only malignant C-codes
-- [ ] **CREF-02**: Cancer summary table is regenerated after filtering cohort to patients with 2+ HL diagnosis codes at least 7 days apart (column F = 100% HL)
-- [ ] **CREF-03**: First HL diagnosis date is computed per patient from both DIAGNOSIS and TUMOR_REGISTRY tables (minimum date)
+- [x] **CREF-01**: Cancer summary table excludes benign neoplasm D-codes, retaining only malignant C-codes
+- [x] **CREF-02**: Cancer summary table is regenerated after filtering cohort to patients with 2+ HL diagnosis codes at least 7 days apart (column F = 100% HL)
+- [x] **CREF-03**: First HL diagnosis date is computed per patient from both DIAGNOSIS and TUMOR_REGISTRY tables (minimum date)
 - [ ] **CREF-04**: Cancer summary table is produced in two versions — all cancers and cancers occurring after first HL diagnosis date — for side-by-side comparison
 
 ### Gantt Enhancements
@@ -48,9 +48,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CREF-01 | Phase 55 | Pending |
-| CREF-02 | Phase 55 | Pending |
-| CREF-03 | Phase 55 | Pending |
+| CREF-01 | Phase 55 | Complete |
+| CREF-02 | Phase 55 | Complete |
+| CREF-03 | Phase 55 | Complete |
 | CREF-04 | Phase 56 | Pending |
 | GANTT-01 | Phase 57 | Pending |
 | GANTT-02 | Phase 57 | Pending |

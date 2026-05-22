@@ -16,7 +16,7 @@
 
 ## v1.7 Phases
 
-- [ ] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date
+- [x] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date (completed 2026-05-22)
 - [ ] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis
 - [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
 
@@ -185,10 +185,10 @@
 4. Cancer summary table Column F (Hodgkin Lymphoma %) reaches 100% after cohort confirmation
 5. First HL diagnosis source is logged (DIAGNOSIS only, TR only, or Both) for traceability
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 55-01-PLAN.md -- Create R/55_cancer_summary_refined.R: D-code removal, C81 cohort confirmation, first_hl_dx_date computation, styled xlsx regeneration, confirmed_hl_cohort.rds artifact
+- [x] 55-01-PLAN.md -- Create R/55_cancer_summary_refined.R: D-code removal, C81 cohort confirmation, first_hl_dx_date computation, styled xlsx regeneration, confirmed_hl_cohort.rds artifact
 
 ### Phase 56: Temporal Filtering
 
