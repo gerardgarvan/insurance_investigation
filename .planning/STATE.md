@@ -113,9 +113,10 @@ None.
 | 260508-n87 | Centralize treatment constants and shared helpers — eliminated duplicate definitions across 9 scripts | 2026-05-08 | 1552211 | [260508-n87-look-for-improvements-in-existing-code-a](./quick/260508-n87-look-for-improvements-in-existing-code-a/) |
 | 260518-hvq | Fix immunotherapy_drg config gap and remove root clutter — added missing DRG code to TREATMENT_CODES, deleted 6 stale files, hardened .gitignore | 2026-05-18 | 2fe69f1, ef91398 | [260518-hvq-fix-immunotherapy-drg-config-gap-and-rem](./quick/260518-hvq-fix-immunotherapy-drg-config-gap-and-rem/) |
 | 260518-i3w | Consolidate duplicated utility functions — consolidated 13 function copies (5 functions) into R/utils_payer.R and R/utils_pptx.R | 2026-05-18 | 9104736, 20a43a8 | [260518-i3w-consolidate-duplicated-utility-functions](./quick/260518-i3w-consolidate-duplicated-utility-functions/) |
+| 260522-i1d | Resolve 6 duplicate-numbered R script collisions with a/b suffixes and create SCRIPT_INDEX.md | 2026-05-22 | 8db934d, 6772a95, 99d928e | [260522-i1d-refactor-r-script-structure](./quick/260522-i1d-refactor-r-script-structure/) |
 
 ## Session Continuity
 
 Last session: 2026-05-22
-Stopped at: Phase 54 complete — next is Phase 49 (Gantt descriptions)
+Stopped at: Quick task 260522-i1d complete — next is Phase 49 (Gantt descriptions)
 Resume file: .planning/ROADMAP.md
