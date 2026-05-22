@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Phases
 status: idle
-stopped_at: Phase 7 complete
+stopped_at: Phase 54 complete
 last_updated: "2026-05-22"
-last_activity: 2026-05-22 -- Phase 07 complete, verified on HiPerGator
+last_activity: 2026-05-22 -- Phase 54 complete, verified on HiPerGator
 progress:
   total_phases: 14
   completed_phases: 11
@@ -16,7 +16,7 @@ progress:
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-22
-**Project status:** Phase 07 complete. Next: Phase 2 (Add descriptions of codes to Gantt CSVs)
+**Project status:** Phase 54 complete. Next: Phase 49 (Add descriptions of codes to Gantt CSVs)
 
 ## Project Reference
 
@@ -24,14 +24,14 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 2 — add-descriptions-of-codes-to-the-gantt-csvs (next up)
+**Current focus:** Phase 49 — add-descriptions-of-codes-to-the-gantt-csvs (next up)
 
 ## Current Position
 
-Phase: 07 (summary-table-of-cancer-summary-data) — COMPLETE
+Phase: 54 (summary-table-of-cancer-summary-data) — COMPLETE
 Plan: 1/1 complete
-Status: Idle — ready for next phase
-Last activity: 2026-05-22 -- Phase 07 verified on HiPerGator
+Status: Idle — ready for next phase (49)
+Last activity: 2026-05-22 -- Phase 54 verified on HiPerGator
 
 ## Accumulated Context
 
@@ -93,13 +93,13 @@ None.
 - Phase 45 added retroactively: Tiered Encounter-Level Payer Assignment — executed outside GSD workflow
 - Phase 46 added retroactively: Tiered Date-Level Payer Assignment — executed outside GSD workflow
 - Milestone v1.6 roadmap created 2026-05-15: Phases 45-47 (radiation CPT audit, treatment code cross-reference + triggering codes, cancer site frequency)
-- Phase 1 added: Combine treatment episode and treatment episode detail to make Gantt chart of each patient treatment
-- Phase 2 added: Add descriptions of codes to the Gantt CSVs
-- Phase 3 added: Confirm cancer site codes by distinct date count — at least two distinct dates with the same code
-- Phase 4 added: Confirm cancer site codes with 7-day separation — same as Phase 3 but dates must be at least 7 days apart
-- Phase 5 added: all_codes_resolved.xlsx update because we added more codes in config etc
-- Phase 6 added: make dataset that produces cancer_summary_template.xlsx
-- Phase 7 added: summary table of cancer_summary data
+- Phase 48 added: Combine treatment episode and treatment episode detail to make Gantt chart of each patient treatment
+- Phase 49 added: Add descriptions of codes to the Gantt CSVs
+- Phase 50 added: Confirm cancer site codes by distinct date count — at least two distinct dates with the same code
+- Phase 51 added: Confirm cancer site codes with 7-day separation — same as Phase 50 but dates must be at least 7 days apart
+- Phase 52 added: all_codes_resolved.xlsx update because we added more codes in config etc
+- Phase 53 added: make dataset that produces cancer_summary_template.xlsx
+- Phase 54 added: summary table of cancer_summary data
 
 ### Blockers/Concerns
 
@@ -117,5 +117,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-22
-Stopped at: Phase 7 complete — next is Phase 2 (Gantt descriptions)
+Stopped at: Phase 54 complete — next is Phase 49 (Gantt descriptions)
 Resume file: .planning/ROADMAP.md
