@@ -49,7 +49,7 @@ source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
 # Reuse Phase 43's assign_episode_ids() and stack_and_dedup() functions
-source("R/43_treatment_durations.R")
+source("R/43a_treatment_durations.R")
 
 # Output paths
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")

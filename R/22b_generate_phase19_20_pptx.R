@@ -1,5 +1,5 @@
 # ==============================================================================
-# 22_generate_phase19_20_pptx.R -- Focused PPTX for phases 19 and 20
+# 22b_generate_phase19_20_pptx.R -- Focused PPTX for phases 19 and 20
 # ==============================================================================
 #
 # Phase 24: Make Presentation of Just Phases 19 and 20
@@ -25,7 +25,7 @@
 #   - insurance_tables_phase19_20_YYYY-MM-DD.pptx
 #
 # Usage:
-#   source("R/22_generate_phase19_20_pptx.R")
+#   source("R/22b_generate_phase19_20_pptx.R")
 #
 # ==============================================================================
 

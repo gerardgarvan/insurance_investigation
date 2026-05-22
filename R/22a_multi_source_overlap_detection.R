@@ -1,5 +1,5 @@
 # ==============================================================================
-# 22_multi_source_overlap_detection.R -- Multi-source overlap detection
+# 22a_multi_source_overlap_detection.R -- Multi-source overlap detection
 # ==============================================================================
 #
 # Phase 25: Multi-Source Overlap Detection
@@ -19,7 +19,7 @@
 #   - multi_source_combo_frequencies.csv    (SAMEDT-03, SAMEWK-03)
 #   - multi_source_per_source_summary.csv   (SAMEDT-02, SAMEWK-02)
 #
-# Usage: source("R/22_multi_source_overlap_detection.R")
+# Usage: source("R/22a_multi_source_overlap_detection.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.

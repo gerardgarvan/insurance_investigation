@@ -700,7 +700,7 @@ phase45_annotation_row <- tibble::tibble(
   code            = NA_character_,
   direction       = "Config Only (Phase 45 Audit Additions)",
   code_category   = "CPT codes",
-  source_document = "Phase 45 audit (R/45_radiation_cpt_audit.R)",
+  source_document = "Phase 45 audit (R/45b_radiation_cpt_audit.R)",
   annotation      = glue(
     "Phase 45 audit added {length(PHASE45_ADDED_CODES)} radiation CPT codes ",
     "({sum(str_detect(PHASE45_ADDED_CODES, '^G'))} G-codes, ",

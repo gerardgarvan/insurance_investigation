@@ -1,5 +1,5 @@
 # ==============================================================================
-# 45_tiered_encounter_level.R -- Tiered payer at the encounter level
+# 45a_tiered_encounter_level.R -- Tiered payer at the encounter level
 # ==============================================================================
 #
 # Purpose: Assign AMC 8-category payer tiers to every individual encounter
@@ -13,7 +13,7 @@
 #   - encounter_tier_summary_all.csv        (tier frequency counts)
 #   - encounter_tier_summary_av_th.csv
 #
-# Usage: source("R/45_tiered_encounter_level.R")
+# Usage: source("R/45a_tiered_encounter_level.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING,
 #   AMC_PAYER_LOOKUP). Requires get_pcornet_table("ENCOUNTER").
