@@ -46,16 +46,17 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
 
-## Current Milestone: v1.6 Treatment Code Validation & Cancer Site Analysis
+## Current Milestone: v1.7 Cancer Summary Refinement & Gantt Enhancements
 
-**Goal:** Validate treatment code coverage against TreatmentVariables reference doc, audit radiation CPT range (70010-79999) for imaging vs treatment codes with citations, add triggering codes to treatment episode output, and produce cancer site frequency table from CancerSiteCategories.xlsx.
+**Goal:** Refine cancer summary table by removing benign D-codes and enforcing HL cohort confirmation, add temporal filtering relative to HL diagnosis, and enhance Gantt chart data with cancer category labels, HL flags, and death dates.
 
 **Target features:**
-- Cancer site frequency table using CancerSiteCategories.xlsx ICD codes across PCORnet data
-- Cross-reference TREATMENT_CODES against TreatmentVariables_2024.07.17.docx — identify gaps both ways
-- Audit radiation CPT 70010-79999 range: confirm which are imaging vs treatment, cite exclusion rationale
-- Confirm proton therapy codes 77520-77525 are captured in radiation detection
-- Add triggering code(s) column to treatment episode CSV output
+- Remove D-codes (benign neoplasms) from cancer_summary_table.xlsx
+- Filter cohort to patients with 2+ HL diagnosis codes 7 days apart, then rerun cancer summary table (column F = 100% HL)
+- Produce cancer_summary_table filtered to cancers occurring after first HL diagnosis date (both versions for comparison)
+- Add cancer category label to each treatment episode in Gantt data (same CancerSiteCategories mapping minus D-codes)
+- Add `is_hodgkin` binary column derived from the cancer category label
+- Add death date to Gantt chart and treat death as a treatment type for graphing
 
 ### Out of Scope
 
@@ -67,6 +68,19 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Publication-ready figure formatting — exploratory quality is sufficient
 
 ## Previous Milestones
+
+### v1.6 Treatment Code Validation & Cancer Site Analysis (Shipped 2026-05-22)
+
+**Goal:** Validate treatment code coverage, audit radiation CPT codes, add triggering codes to treatment episodes, and produce cancer site frequency and summary tables.
+
+**Shipped:**
+- Radiation CPT audit with imaging vs treatment classification (Phase 45)
+- Treatment code cross-reference + triggering codes in episode output (Phase 46)
+- Cancer site frequency table from CancerSiteCategories.xlsx (Phase 47)
+- Gantt chart CSV export with human-readable code descriptions (Phases 48-49)
+- Cancer site confirmation with 2-date and 7-day separation (Phases 50-51)
+- All codes resolved xlsx regeneration (Phase 52)
+- Cancer summary dataset and summary table (Phases 53-54)
 
 ### v1.5 Payer Analysis Expansion (Shipped 2026-05-01)
 
@@ -118,7 +132,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 40+ phases completed across 6 milestones (v1.0-v1.6) + post-milestone work (Phases 38-49), ~54 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, patient-code cancer summary dataset, Gantt CSVs with human-readable code descriptions
+- **Current state**: 54 phases completed across 7 milestones (v1.0-v1.7) + post-milestone work, ~54 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, patient-code cancer summary dataset, Gantt CSVs with human-readable code descriptions, cancer summary table with category-level and code-level sheets
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -175,4 +189,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 after Phase 49 completion*
+*Last updated: 2026-05-22 — Milestone v1.7 started*

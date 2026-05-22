@@ -1,37 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Phases
-status: executing
-stopped_at: Phase 54 complete — next is Phase 49 (Gantt descriptions)
-last_updated: "2026-05-22T16:51:46.183Z"
+milestone: v1.7
+milestone_name: Cancer Summary Refinement & Gantt Enhancements
+status: defining-requirements
+stopped_at: Milestone v1.7 started — defining requirements
+last_updated: "2026-05-22T18:00:00.000Z"
 last_activity: 2026-05-22
 progress:
-  total_phases: 7
-  completed_phases: 5
-  total_plans: 7
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State: PCORnet Payer Variable Investigation (R Pipeline)
 
 **Last updated:** 2026-05-22
-**Project status:** Phase 54 complete. Next: Phase 49 (Add descriptions of codes to Gantt CSVs)
+**Project status:** Milestone v1.7 started — defining requirements
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-01)
+See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 49 — add-descriptions-of-codes-to-the-gantt-csvs
+**Current focus:** Defining requirements for v1.7
 
 ## Current Position
 
-Phase: 50
-Plan: Not started
-Status: Executing Phase 49
-Last activity: 2026-05-22
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-22 — Milestone v1.7 started
 
 ## Accumulated Context
 
