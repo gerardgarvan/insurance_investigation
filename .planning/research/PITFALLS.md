@@ -1,8 +1,436 @@
 # Domain Pitfalls
 
-**Domain:** PCORnet CDM R Analysis — Treatment Code Validation, Radiation CPT Audit, Cancer Site Frequency Analysis
-**Researched:** 2026-04-21
-**Confidence:** HIGH (v1.6 additions based on direct codebase inspection and CPT code structure knowledge)
+**Domain:** Adding cancer summary refinement, temporal cohort confirmation, relative-date filtering, and Gantt enhancements to existing Hodgkin Lymphoma R pipeline
+**Researched:** 2026-05-22
+
+---
+
+## v1.7 Critical Pitfalls
+
+These pitfalls are specific to milestone v1.7: removing benign D-codes from cancer summary, enforcing HL cohort confirmation (2+ codes, 7-day gap), filtering cancers relative to first HL diagnosis, adding cancer category labels to Gantt data, adding is_hodgkin flag, and integrating death dates.
+
+---
+
+### Pitfall v1.7-1: Shared PREFIX_MAP Modification Breaks Downstream Consumers
+
+**What goes wrong:** Removing D-codes from PREFIX_MAP in R/00_config.R breaks all scripts that use it for cancer categorization (R/47, R/50, R/51, R/53, R/54). Scripts fail with "unknown category" errors or produce blank categories for benign neoplasm codes.
+
+**Why it happens:** PREFIX_MAP is currently duplicated across 6+ scripts rather than being centralized. Each script has its own copy including D-codes. Modifying the "wrong" copy or only some copies creates inconsistency. Even if centralized, removing D-codes changes the data contract — downstream scripts expect D-codes to map to categories.
+
+**Consequences:**
+- Cancer summary table breaks (no category for D-codes that still exist in source data)
+- Gantt chart cancer category labels fail (NULL categories for benign neoplasm encounters)
+- Code descriptions lookup fails for D-codes
+- HIPAA suppression logic may mis-count categories (fewer codes per category → more suppressions)
+- Silent data loss: rows with D-codes drop from outputs without warning
+
+**Prevention:**
+- **Phase 01 (Scope):** Decision — filter D-codes in query logic (WHERE clause), NOT by removing from PREFIX_MAP
+- **Phase 01 (Scope):** PREFIX_MAP remains complete (C-codes + D-codes); filtering happens at data layer
+- **Phase 02 (PREFIX_MAP audit):** Grep for all PREFIX_MAP occurrences; verify none are centralized in R/00_config.R yet
+- **Phase 02 (PREFIX_MAP audit):** If duplicated across scripts, decide: centralize first (separate phase) OR accept duplication and document
+- **Phase 03 (Cancer summary filtering):** Use WHERE clauses like `filter(!str_starts(cancer_code, "D"))` rather than modifying PREFIX_MAP
+- **Phase 05 (Gantt category labels):** Same approach — query filters D-codes before classify_codes(), so PREFIX_MAP never sees them
+
+**Detection:**
+- Unit test: Verify classify_codes() returns expected category for D10.1, D00.5, D48.9 (one from each D-code range)
+- Integration test: Count distinct categories before/after changes — should be stable
+- Code review: Search for `PREFIX_MAP <-` assignments — flag any that remove D-codes
+- Downstream validation: Run R/54 (cancer summary table) and verify no NA categories in output
+
+**References:**
+- [Data Contracts for Pipeline Stability](https://www.acceldata.io/blog/how-data-contracts-guarantee-pipeline-reliability-data-quality-slas)
+- [Stop Breaking Downstream Pipelines](https://dataskew.io/blog/data-contracts-for-data-engineers/)
+
+---
+
+### Pitfall v1.7-2: Immortal Time Bias from Post-Diagnosis Filtering
+
+**What goes wrong:** Filtering cancer_summary to "cancers after first HL diagnosis" creates immortal time bias. Patients must survive long enough post-HL to develop a second cancer code to be included. Analysis overstates survival and understates secondary cancer risk for patients who die shortly after HL diagnosis.
+
+**Why it happens:** Retrospective filtering based on temporal ordering introduces survivorship bias. The pipeline calculates `first_hl_dx_date`, then filters `cancer_summary` to `DX_DATE >= first_hl_dx_date`. Patients who die within months of HL diagnosis (before accumulating second cancer codes) are systematically excluded from denominator, biasing secondary cancer rates upward.
+
+**Consequences:**
+- Secondary cancer prevalence is inflated (denominator excludes early deaths)
+- Time-to-secondary-cancer is biased downward (immortal time excluded from analysis)
+- Comparisons between pre-HL and post-HL cancer burden are invalid
+- Survivorship analysis misleading — cohort no longer representative of HL population
+
+**Prevention:**
+- **Phase 01 (Scope):** Explicitly document that post-diagnosis filtering is for exploratory comparison, NOT causal inference
+- **Phase 03 (Cancer filtering):** Produce BOTH versions: (1) all cancers (unfiltered), (2) post-HL cancers (filtered)
+- **Phase 03 (Cancer filtering):** Label filtered output clearly: `cancer_summary_post_hl_EXPLORATORY.xlsx` to flag bias risk
+- **Phase 03 (Cancer filtering):** Include denominator note: "Excludes patients with no post-HL cancer codes (including early deaths)"
+- **Phase 04 (Documentation):** Add footnote to any post-HL tables: "Post-diagnosis filtering may introduce immortal time bias"
+- **Future mitigation:** Proper analysis would use landmark analysis (e.g., 1-year post-HL survivors) or time-varying exposure models
+
+**Detection:**
+- Sanity check: Compare N patients in all-cancers vs post-HL-cancers — large drop suggests immortal time issue
+- Stratified analysis: Count patients by survival time — if post-HL cohort is missing short-term survivors, bias confirmed
+- Negative control: Apply same filtering to pre-HL cancers — if rates change dramatically, temporal filtering is distorting data
+
+**References:**
+- [Immortal Time Bias in Orthopedics](https://pmc.ncbi.nlm.nih.gov/articles/PMC8478821/)
+- [Immortal Time Bias in Retrospective Studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8962148/)
+- [Statistical Methods for Immortal Time](https://arxiv.org/pdf/2202.02369)
+- [Immortal Time Bias Impact](https://blog.akianalytics.co.uk/immortal-time-bias/)
+
+---
+
+### Pitfall v1.7-3: HL Cohort Confirmation Logic Duplicates Existing Scripts
+
+**What goes wrong:** Implementing "2+ HL codes, 7-day separation" filter in a new script duplicates logic already in R/50_cancer_site_confirmation.R and R/51_cancer_site_confirmation_7day.R. Subtle differences in implementation (date parsing, gap calculation, tie-breaking) produce different patient lists, causing downstream confusion about "true" HL cohort.
+
+**Why it happens:** R/50 and R/51 implement exact code confirmation and category-level confirmation with 7-day gap logic. Rewriting this logic from scratch risks bugs, off-by-one errors in date arithmetic, and different handling of edge cases (same-date codes, NA dates, 1900 sentinels). Without unit tests, differences go undetected.
+
+**Consequences:**
+- Two "HL confirmed" cohorts with different patient lists
+- Cancer summary table filters to cohort A, but Gantt chart uses cohort B → data inconsistency
+- Debugging nightmare: "Why does patient X appear in cancer_summary but not gantt_episodes?"
+- Wasted time: reimplementing already-solved logic
+- Future maintenance burden: two codebases to update when date logic changes
+
+**Prevention:**
+- **Phase 01 (Scope):** Reuse R/51 logic rather than reimplementing
+- **Phase 02 (Cohort confirmation):** Extract shared function: `get_hl_confirmed_patients(min_codes = 2, min_gap_days = 7)`
+- **Phase 02 (Cohort confirmation):** Move function to utils_icd.R or utils_treatment.R for reuse
+- **Phase 02 (Cohort confirmation):** R/51, cancer_summary, and any future scripts call same function → guaranteed consistency
+- **Phase 03 (Integration):** Load confirmed patient list from R/51 output CSV rather than recalculating
+- **Alternative (if R/51 is insufficient):** Document exact differences in implementation and rationale for divergence
+
+**Detection:**
+- Parity test: Run both implementations on same data, compare patient lists, flag discrepancies
+- Unit test: Edge cases — patient with 2 codes same day (should exclude), patient with codes on day 0 and day 7 (should include), patient with 3 codes spanning 6 days (category-level include, exact-code may exclude)
+- Code review: Flag any new date-gap calculation logic — verify it matches existing implementation
+
+---
+
+### Pitfall v1.7-4: First HL Diagnosis Date Calculation Inconsistency (DIAGNOSIS vs TUMOR_REGISTRY)
+
+**What goes wrong:** Pipeline calculates `first_hl_dx_date` from DIAGNOSIS table only, but some patients have earlier HL dates in TUMOR_REGISTRY. Post-HL cancer filtering uses wrong anchor date, incorrectly excluding pre-DIAGNOSIS but post-TUMOR_REGISTRY cancers.
+
+**Why it happens:** Current cohort logic (R/04_build_cohort.R) defines `first_hl_dx_date` from DIAGNOSIS.DX_DATE, ignoring TUMOR_REGISTRY date fields. But R/03_cohort_predicates tracks `HL_SOURCE` (DIAGNOSIS/TR/Both), indicating some patients have HL evidence only in TR. For "TR only" patients, `first_hl_dx_date` may be NA or wrong. Filtering `cancer_summary` by this date is inconsistent with the cohort definition.
+
+**Consequences:**
+- "TR only" patients excluded from post-HL cancer analysis (denominator bias)
+- Patients with TR date earlier than DIAGNOSIS date have artificially late anchor → pre-TR cancers incorrectly classified as "post-HL"
+- Time-to-secondary-cancer calculations wrong for ~20-30% of cohort (typical TR-only proportion in cancer registries)
+- Results not reproducible if TR vs DIAGNOSIS data availability changes
+
+**Prevention:**
+- **Phase 01 (Scope):** Decision — use earliest HL date across DIAGNOSIS and TUMOR_REGISTRY as anchor
+- **Phase 02 (First HL date):** Create `compute_first_hl_date()` function that queries both tables
+- **Phase 02 (First HL date):** For each patient, take min(DIAGNOSIS.DX_DATE where HL code, TR.DX_DATE/DATE_OF_DIAGNOSIS where HL histology)
+- **Phase 02 (First HL date):** Handle NA dates: if only one source has date, use that; if both NA, first_hl_dx_date = NA
+- **Phase 02 (First HL date):** Log date source: add `first_hl_dx_source` column (DIAGNOSIS/TR/Both) for traceability
+- **Phase 03 (Integration):** Update R/04_build_cohort.R to use multi-source first HL date
+- **Phase 03 (Validation):** Compare old vs new first_hl_dx_date — expect ~10-30% changes for TR-only or Both patients
+
+**Detection:**
+- Data quality check: For patients with HL_SOURCE == "TR only", verify first_hl_dx_date is not NA
+- Sanity check: Count patients where TR date < DIAGNOSIS date — should see non-zero if TR is being used
+- Stratified validation: Group by HL_SOURCE, check first_hl_dx_date missingness — should be 0% for all groups
+- Unit test: Mock patient with DX_DATE = 2020-06-01, TR date = 2020-03-01 → first_hl_dx_date should be 2020-03-01
+
+**References:**
+- [2026 SEER Coding Manual](https://seer.cancer.gov/manuals/2026/SPCSM_2026_MainDoc.pdf)
+- [Cancer Registry Date of First Contact](https://www.registrypartners.com/ctr-coding-break-date-of-first-contact/)
+
+---
+
+### Pitfall v1.7-5: Death Date Misidentification (DEMOGRAPHIC vs DEATH Table Confusion)
+
+**What goes wrong:** Code assumes DEMOGRAPHIC table has DEATH_DATE column (based on training data), but OneFlorida+ PCORnet CDM v7.0 may use separate DEATH/DEATH_CAUSE tables. Script fails with "column not found" error or silently produces all-NA death dates.
+
+**Why it happens:** PCORnet CDM evolved across versions. Older versions (v3-v5) stored death date in DEMOGRAPHIC.DEATH_DATE. Newer versions (v6+) may use separate DEATH table with DEATH_DATE and DEATH_SOURCE columns. Training data is stale (Jan 2025 cutoff predates v7.0 release May 2025). Without inspecting actual DuckDB schema, assumptions about column location are untested.
+
+**Consequences:**
+- Script crashes at runtime on HiPerGator (works locally if local data has different schema)
+- All patients show death_date = NA → Gantt chart has no death events despite real deaths in cohort
+- Survival analysis impossible (denominator includes deceased patients as alive)
+- HIPAA suppression may fail if death counts drop to 1-10 (missing data looks like rare event)
+
+**Prevention:**
+- **Phase 01 (Scope):** Inspect actual PCORnet schema before implementation — don't assume column location
+- **Phase 02 (Death date source):** Query `PRAGMA table_info('DEMOGRAPHIC')` in DuckDB to list columns
+- **Phase 02 (Death date source):** Check for DEATH, DEATH_CAUSE, VITAL tables in `get_pcornet_table()` dispatcher
+- **Phase 02 (Death date source):** Implement flexible lookup: try DEMOGRAPHIC.DEATH_DATE first, fall back to DEATH table if exists
+- **Phase 03 (Death integration):** Add data quality check: if death_date is 100% NA, warn user and skip death visualization
+- **Phase 03 (Documentation):** Log death date source in script output: "Death dates from DEMOGRAPHIC" or "Death dates from DEATH table"
+
+**Detection:**
+- Schema validation: Run `PRAGMA table_info('DEMOGRAPHIC')` and grep for DEATH_DATE — if missing, adjust code
+- Data quality gate: Count non-NA death_date before proceeding — if 0, halt with informative error
+- Cross-validation: Compare death counts from DEMOGRAPHIC vs DEATH vs DEATH_CAUSE (if multiple sources exist) — flag discrepancies
+- Unit test: Mock both schema versions (DEMOGRAPHIC.DEATH_DATE and separate DEATH table) — verify code works in both cases
+
+**References:**
+- [PCORnet CDM v7.0 Specification](https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf)
+- [PCORnet v6.0 Schema](https://data-models-service.research.chop.edu/models/pcornet/6.0.0)
+
+---
+
+## v1.7 Moderate Pitfalls
+
+Issues causing data quality degradation or analysis errors, but recoverable.
+
+---
+
+### Pitfall v1.7-6: D-Code Classification Ambiguity (In Situ vs Benign vs Uncertain Behavior)
+
+**What goes wrong:** Treating all D-codes as "benign" misclassifies in situ neoplasms (D00-D09) and uncertain behavior neoplasms (D37-D48). In situ melanoma (D03) and DCIS (D05) are clinically significant pre-malignant conditions, not benign polyps. Filtering all D-codes removes important disease progression markers.
+
+**Why it happens:** PREFIX_MAP groups D-codes into 3 categories (In Situ, Benign, Uncertain Behavior), but decision documents refer to "removing benign D-codes" without specifying which ranges. Developers assume all D-codes are benign, but ICD-10 distinguishes:
+- D00-D09: In situ neoplasms (pre-malignant, high progression risk)
+- D10-D36: Benign neoplasms (low malignant potential)
+- D37-D48: Uncertain behavior (cannot be classified as benign or malignant)
+
+**Consequences:**
+- Secondary cancer analysis misses in situ diagnoses (DCIS, melanoma in situ, cervical CIS)
+- Progression from in situ to invasive cancer invisible in data
+- Clinical narrative breaks: patient has DCIS (D05) in 2019, then invasive breast cancer (C50) in 2020, but filtered data shows only C50 (missing precursor)
+- Misalignment with clinical practice: oncologists track in situ neoplasms closely, pipeline ignores them
+
+**Prevention:**
+- **Phase 01 (Scope):** Clarify: remove D10-D36 (benign) only, OR remove all D-codes?
+- **Phase 01 (Scope):** Clinical decision: keep D00-D09 (in situ) as clinically relevant, remove only D10-D36 + D37-D48
+- **Phase 02 (D-code filtering):** Implement tiered filtering: `filter(str_starts(cancer_code, "C") | str_sub(cancer_code, 1, 3) %in% c("D00", "D01", ..., "D09"))`
+- **Phase 03 (Documentation):** Label outputs clearly: "Malignant and In Situ Neoplasms" not "Malignant Only"
+- **Alternative:** Produce 3 versions: (1) C-codes only (malignant), (2) C+D00-D09 (malignant+in situ), (3) All codes (including benign)
+
+**Detection:**
+- Manual review: Spot-check removed codes — if D03.x or D05.x are excluded, flag for clinical review
+- Category distribution: Compare D-code categories before/after filtering — if "In Situ" category has 0 patients, filtering is too broad
+- Clinical validation: Ask oncology collaborator: should DCIS (D05) be included in secondary cancer analysis? Align code with answer.
+
+**References:**
+- [ICD-10-CM Neoplasm Codes C00-D49](https://www.icd10data.com/ICD10CM/Codes/C00-D49)
+- [SEER D-Codes Training](https://training.seer.cancer.gov/icd10cm/neoplasm/d-codes.html)
+
+---
+
+### Pitfall v1.7-7: 7-Day Gap Calculation Excludes Same-Week Confirmations
+
+**What goes wrong:** Requiring 7-day gap between HL codes excludes patients with HL codes on Monday and Sunday (6-day gap). Clinically, two codes in one week is strong confirmation, but >= 7 day filter treats it as unconfirmed.
+
+**Why it happens:** R/51 implements 7-day gap as `max(distinct_dates) - min(distinct_dates) >= 7`. For dates [2020-01-01, 2020-01-07], gap = 6 days (despite spanning 8 calendar days if inclusive). Off-by-one error in interval interpretation: "7 days apart" = 6-day gap (exclusive) or 7-day gap (inclusive)?
+
+**Consequences:**
+- ~10-20% of legitimate HL patients excluded (2 codes in same week is common for hospital admission + discharge codes)
+- Cohort shrinks unexpectedly, reducing statistical power
+- Selection bias: excludes patients with acute presentation (clustered codes), retains patients with chronic recurrent disease (spread-out codes)
+
+**Prevention:**
+- **Phase 01 (Scope):** Clinical decision: does "7 days apart" mean >= 7 days (strict) or > 6 days (relaxed)?
+- **Phase 02 (Gap logic review):** Audit R/51 — verify >= 7 vs > 6 semantics match clinical intent
+- **Phase 02 (Gap logic review):** If strict interpretation unintended, change to `>= 6` or document rationale for >= 7
+- **Phase 03 (Documentation):** Footnote: "7-day separation requires codes on different calendar weeks (>= 7 day gap)"
+- **Alternative:** Implement both thresholds, compare cohort sizes, let clinical team decide
+
+**Detection:**
+- Unit test: Patient with codes on 2020-01-01 and 2020-01-07 (6-day gap) → should be included or excluded? Verify code matches decision.
+- Sensitivity analysis: Re-run confirmation with >= 6 day threshold — if cohort size changes >10%, gap definition matters
+- Manual review: Inspect excluded patients with 2+ HL codes but <7 day gap — clinical review to confirm they should be excluded
+
+---
+
+### Pitfall v1.7-8: Gantt Episode Data Structure Assumes Single Cancer per Episode
+
+**What goes wrong:** Adding `cancer_category` column to treatment episodes assumes one-to-one relationship (one episode = one cancer type). But concurrent treatments exist: patient receives chemo for HL while also receiving radiation for secondary thyroid cancer. Single cancer_category column cannot represent this.
+
+**Why it happens:** Current Gantt data structure (R/49) has one row per patient/treatment_type/episode. Adding cancer_category as a scalar column forces single-value assignment. If triggering_codes span multiple cancer categories, classify_codes() returns first match or most frequent category, arbitrarily prioritizing one over the other.
+
+**Consequences:**
+- Concurrent multi-cancer treatment invisible in data (thyroid cancer treatment misattributed to HL)
+- Cancer category labels misleading: episode shows "Hodgkin Lymphoma" but triggering codes include C73 (thyroid)
+- Downstream Gantt visualization shows all treatment as HL-related, missing secondary cancer events
+- HIPAA suppression may undercount categories (two cancers collapsed into one → category appears less frequent)
+
+**Prevention:**
+- **Phase 01 (Scope):** Decision — how to handle multi-category episodes? Primary category only, comma-separated list, or separate rows?
+- **Phase 02 (Category assignment):** Implement hierarchical category selection: HL > Other malignant > In situ > Benign
+- **Phase 02 (Category assignment):** Add `cancer_categories_all` column (comma-separated) to preserve full list, use `cancer_category_primary` for visualization
+- **Phase 03 (Validation):** Flag multi-category episodes in log: "X episodes span multiple cancer categories"
+- **Phase 03 (Documentation):** Footnote: "Episodes with multiple cancer types show primary category only"
+- **Alternative:** Split multi-category episodes into separate rows (one per category) — increases row count but preserves detail
+
+**Detection:**
+- Multi-category detection: For each episode, count distinct cancer categories in triggering_codes — if > 1, flag for review
+- Category dominance check: In multi-category episodes, verify primary category is assigned consistently (e.g., always HL if HL codes present)
+- Manual review: Inspect high-risk cases (e.g., SCT episodes) where multi-cancer treatment is common
+
+---
+
+### Pitfall v1.7-9: Death as Treatment Type Violates Episode Model
+
+**What goes wrong:** Adding death as a treatment type breaks the episode data model. Treatments have start/stop dates and can recur (multiple chemo episodes). Death is singular, instantaneous, and final. Forcing it into treatment_type column creates semantic mismatch.
+
+**Why it happens:** Gantt chart visualizations use treatment_type to color-code bars. Adding death to the same dimension treats it as a treatment modality rather than an outcome event. Episode model assumes repeating events (patient can have 3 chemo episodes); death happens once. Episode fields like episode_number, episode_length_days, distinct_dates_in_episode become meaningless for death.
+
+**Consequences:**
+- Episode fields contain nonsensical values: episode_number = 1 (always), episode_length_days = 0 (death is instant), distinct_dates = 1 (always)
+- Treatment aggregation logic breaks: scripts that count episodes per treatment_type treat death as a "treatment" in averages
+- Filtering logic fails: scripts that filter to "patients with treatment" now include all deceased patients even if untreated
+- Semantic confusion: "patient received death treatment" is nonsensical phrasing
+
+**Prevention:**
+- **Phase 01 (Scope):** Decision — add death as separate event type, NOT treatment type
+- **Phase 02 (Data model):** Add `outcome_events` table/column: fields = patient_id, event_type (death/remission/progression), event_date
+- **Phase 02 (Gantt export):** Export treatment episodes and outcome events as separate CSVs, let visualization layer combine them
+- **Phase 03 (Gantt viz):** Modify Gantt visualization code to overlay death markers on treatment timeline (vertical line, not horizontal bar)
+- **Alternative (expedient but messy):** If death must be in treatment_type for visualization, add special handling: `if (treatment_type == "Death") skip episode logic`
+
+**Detection:**
+- Semantic code review: Grep for `treatment_type == "Death"` in episode aggregation logic — flag as code smell
+- Unit test: Verify death rows have episode_number = 1, episode_length = 0, distinct_dates = 1 (if this approach is taken)
+- Data validation: Count patients with >1 death episode — should be 0 (death happens once)
+
+---
+
+## v1.7 Minor Pitfalls
+
+Small issues that degrade clarity or maintainability but don't affect correctness.
+
+---
+
+### Pitfall v1.7-10: is_hodgkin Binary Column Redundant with Cancer Category
+
+**What goes wrong:** Adding `is_hodgkin` binary flag is redundant. `cancer_category == "Hodgkin Lymphoma"` already provides this information. Two columns for same fact increases maintenance burden and risk of inconsistency.
+
+**Why it happens:** Convenience — easier to filter `is_hodgkin == 1` than `cancer_category == "Hodgkin Lymphoma"`. But redundant columns can desynchronize if one is updated without the other.
+
+**Consequences:**
+- Wasted storage (minor — one boolean per row)
+- Maintenance risk: future code changes cancer_category logic but forgets to update is_hodgkin → data inconsistency
+- Confusion: which column is authoritative? If they disagree, which to believe?
+
+**Prevention:**
+- **Phase 01 (Scope):** Decide: is binary flag worth redundancy cost?
+- **Phase 02 (Implementation):** If including is_hodgkin, derive it from cancer_category in same mutate() call → guaranteed consistency
+- **Phase 02 (Implementation):** Add assertion: `stopifnot(all((is_hodgkin == 1) == (cancer_category == "Hodgkin Lymphoma")))`
+- **Alternative:** Skip is_hodgkin entirely; use `filter(cancer_category == "Hodgkin Lymphoma")` in downstream code
+
+**Detection:**
+- Unit test: Verify is_hodgkin = 1 iff cancer_category == "Hodgkin Lymphoma" for all rows
+- Code review: Flag any code that updates cancer_category without also updating is_hodgkin
+
+---
+
+### Pitfall v1.7-11: CSV Column Addition Breaks Downstream Parsers
+
+**What goes wrong:** Adding `triggering_code_descriptions` to gantt_episodes.csv shifts column positions. External scripts (Python, Excel macros) that reference columns by index (column 9 = historical_flag) break silently.
+
+**Why it happens:** Gantt CSVs are consumed by third-party visualization tools (Python scripts, Excel, Tableau). These tools often hard-code column positions. Adding a column in the middle shifts all subsequent columns, breaking position-based references.
+
+**Consequences:**
+- External visualization scripts fail with type errors (reading string description into numeric field)
+- Excel pivot tables reference wrong columns (historical_flag now in column 10, not 9)
+- Silent data corruption: script reads column 10 thinking it's historical_flag, but it's now triggering_code_descriptions
+
+**Prevention:**
+- **Phase 01 (Scope):** Add new columns at END of CSV, never in middle
+- **Phase 02 (Column ordering):** In gantt_episodes.csv, append `triggering_code_descriptions` as final column (column 10)
+- **Phase 03 (Documentation):** Update CSV schema documentation with new column positions
+- **Phase 03 (Versioning):** Add CSV version header: `# gantt_episodes v2.0` to signal schema change
+- **Phase 03 (Migration guide):** If external tools exist, provide migration notes: "Column 10 added, columns 1-9 unchanged"
+
+**Detection:**
+- Schema diff: Compare old vs new CSV headers — verify existing columns in same positions
+- External tool testing: If known downstream consumers exist, test them against new CSV format
+- Manual review: Open CSV in Excel, verify column positions match documentation
+
+**References:**
+- [Handle Schema Changes Without Breaking ETL](https://airbyte.com/data-engineering-resources/handle-schema-changes-without-breaking-etl-pipeline)
+
+---
+
+### Pitfall v1.7-12: 1900 Sentinel Dates in Death Date Field
+
+**What goes wrong:** DEATH_DATE column contains 1900-01-01 sentinel values (SAS missing date encoding). Code treats these as real death dates, placing all deaths at cohort start in visualizations.
+
+**Why it happens:** PCORnet CDM encodes missing dates as 1900-01-01 (SAS epoch). R/04_build_cohort.R already nullifies 1900 sentinels in diagnosis dates, but death date ingestion may not apply same filter. Without explicit 1900 check, these dates propagate to Gantt chart.
+
+**Consequences:**
+- Gantt chart shows spike of deaths on 1900-01-01 (visualization artifact)
+- Survival analysis treats sentinel dates as real → median survival = -120 years
+- HIPAA suppression may trigger on 1900-01-01 death cluster (many patients with same "death date")
+
+**Prevention:**
+- **Phase 02 (Death date ingestion):** Apply same sentinel nullification as diagnosis dates: `mutate(death_date = if_else(year(death_date) == 1900, as.Date(NA), death_date))`
+- **Phase 02 (Death date ingestion):** Log sentinel count: `message(glue("Nullified {n_sentinel} sentinel death dates (year 1900)"))`
+- **Phase 03 (Validation):** Assert no death dates before 1960 (minimum plausible cohort birth year - 20)
+
+**Detection:**
+- Data quality check: `filter(year(death_date) < 1960)` — should return 0 rows
+- Histogram: Plot death date distribution — if spike at 1900-01-01, sentinels not filtered
+- Unit test: Mock death_date = 1900-01-01 → verify it becomes NA after ingestion
+
+---
+
+## v1.7 Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| D-code filtering (Phase 03) | v1.7-1 (PREFIX_MAP breaking change) | Filter at query layer, not by modifying PREFIX_MAP |
+| D-code filtering (Phase 03) | v1.7-6 (D-code classification ambiguity) | Clarify in situ (D00-D09) vs benign (D10-D36) before filtering |
+| Cohort confirmation (Phase 02) | v1.7-3 (duplicate HL confirmation logic) | Reuse R/51 or extract shared function |
+| Cohort confirmation (Phase 02) | v1.7-7 (7-day gap excludes same-week) | Verify >= 7 vs > 6 day semantics match clinical intent |
+| First HL date (Phase 02) | v1.7-4 (DIAGNOSIS vs TR inconsistency) | Query both tables, take minimum date, log source |
+| Post-HL filtering (Phase 03) | v1.7-2 (immortal time bias) | Produce both filtered and unfiltered, label filtered as EXPLORATORY |
+| Death date integration (Phase 02) | v1.7-5 (DEMOGRAPHIC vs DEATH table) | Inspect schema first, implement flexible lookup |
+| Death date integration (Phase 02) | v1.7-12 (1900 sentinel dates) | Apply same nullification as diagnosis dates |
+| Gantt category labels (Phase 05) | v1.7-8 (multi-category episodes) | Add cancer_categories_all (comma-separated) + cancer_category_primary |
+| Death in Gantt (Phase 05) | v1.7-9 (death as treatment type) | Add as separate outcome_events, not treatment_type |
+| Gantt CSV export (Phase 05) | v1.7-11 (column position breaking change) | Add new columns at end, version CSV schema |
+
+---
+
+## Sources
+
+### Clinical Data Pipeline Pitfalls
+- [Biases in Race and Ethnicity from Filtering EHR Data](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11967746/)
+- [Temporal Relationship of Diagnoses in EHR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7890604/)
+- [Identifying Biases in Code Sequences in EHR](https://pmc.ncbi.nlm.nih.gov/articles/PMC10537851/)
+- [Limitations of Diagnosis Codes in ML for Healthcare](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10868117/)
+
+### Temporal Bias and Cohort Studies
+- [Immortal Time Bias in Orthopedics](https://pmc.ncbi.nlm.nih.gov/articles/PMC8478821/)
+- [Immortal Time Bias in Retrospective Studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8962148/)
+- [Statistical Methods for Immortal Time](https://arxiv.org/pdf/2202.02369)
+- [Immortal Time Bias Impact](https://blog.akianalytics.co.uk/immortal-time-bias/)
+- [Statistical Approaches in Cohort Studies](https://journals.lww.com/picp/fulltext/2026/01000/statistical_approaches_in_ambispective_cohort.3.aspx)
+
+### Data Pipeline Breaking Changes
+- [Data Contracts for Pipeline Stability](https://www.acceldata.io/blog/how-data-contracts-guarantee-pipeline-reliability-data-quality-slas)
+- [Stop Breaking Downstream Pipelines](https://dataskew.io/blog/data-contracts-for-data-engineers/)
+- [Schema Evolution in CDC Pipelines](https://www.decodable.co/blog/schema-evolution-in-change-data-capture-pipelines)
+- [Handle Schema Changes Without Breaking ETL](https://airbyte.com/data-engineering-resources/handle-schema-changes-without-breaking-etl-pipeline)
+
+### Cancer Registry and ICD-10 Standards
+- [ICD-10-CM Neoplasm Codes C00-D49](https://www.icd10data.com/ICD10CM/Codes/C00-D49)
+- [SEER D-Codes Training](https://training.seer.cancer.gov/icd10cm/neoplasm/d-codes.html)
+- [2026 SEER Coding Manual](https://seer.cancer.gov/manuals/2026/SPCSM_2026_MainDoc.pdf)
+- [Cancer Registry Date of First Contact](https://www.registrypartners.com/ctr-coding-break-date-of-first-contact/)
+- [PCORnet CDM v7.0 Specification](https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf)
+- [PCORnet v6.0 Schema](https://data-models-service.research.chop.edu/models/pcornet/6.0.0)
+
+### Secondary Cancer and Surveillance
+- [Risk of Secondary Cancer Among Lung Cancer Survivors](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12690424/)
+- [Demographic Risk Factors for Colorectal Adenoma Recurrence](https://www.medrxiv.org/content/10.1101/2025.03.28.25324826.full.pdf)
+
+---
+
+**Confidence Level:** HIGH for pitfalls v1.7-1 through v1.7-5 (backed by code inspection, official ICD-10/PCORnet documentation, peer-reviewed temporal bias literature), MEDIUM for pitfalls v1.7-6 through v1.7-9 (inferred from common clinical data pipeline patterns), MEDIUM for pitfalls v1.7-10 through v1.7-12 (standard software engineering practices, limited to this codebase context).
+
+**Research Method:** Codebase analysis (R/00_config.R, R/03-04, R/49-54), official ICD-10-CM and PCORnet CDM specifications, peer-reviewed literature on temporal bias and cohort study design, data pipeline best practices (2026 sources).
+
+**Validation:** All critical pitfalls (v1.7-1 through v1.7-5) have explicit prevention strategies and detection methods tied to specific phases. Moderate/minor pitfalls (v1.7-6 through v1.7-12) include mitigation guidance but may require clinical judgment for final decisions.
+
+---
+
+## Previous Milestone Pitfalls
+
+See below for pitfalls from v1.6 (Treatment Code Validation & Cancer Site Analysis) and earlier milestones. These remain relevant for ongoing maintenance.
 
 ---
 
@@ -49,362 +477,4 @@ Radiation CPT audit phase — document the sub-range breakdown and produce a str
 
 ---
 
-### Pitfall v1.6-2: Parsing ICD-10 Code Ranges from xlsx as String Comparisons Instead of Numeric Range Checks
-
-**What goes wrong:**
-CancerSiteCategories.xlsx contains ICD-10 code ranges in formats like "C000-C006, C008-C009" or "C18.0-C18.9." Implementing range matching by sorting strings ("C006" > "C000") fails for ICD-10 codes because:
-
-1. Alphabetic comparison of codes with mixed letters and digits does not equal clinical code ordering. "C10" < "C9" alphabetically but ICD C10 comes after C9 in the code hierarchy only when comparing by subrange length.
-2. Ranges that span a decimal boundary (e.g., "C18.0-C18.9") require extracting the numeric portion, not string comparison.
-3. Codes with letters after the decimal (e.g., "C81.9A" for remission) fall outside alphabetic between-range checks even though they belong to C81.9x.
-4. PCORnet data arrives both dotted and undotted (see existing Pitfall 2 in v1.0 section). Range matching code that handles dotted "C18.0-C18.9" will silently miss undotted "C180" through "C189" records in the data.
-
-**Why it happens:**
-R developers use `between()` or `dplyr::filter(code >= "C000", code <= "C006")` assuming string comparison works like numeric comparison for ICD codes. This works for simple same-prefix, same-length codes but breaks the moment codes span different lengths, contain letters post-decimal, or mix dotted/undotted formats.
-
-**How to avoid:**
-1. Parse the xlsx range expressions ("C000-C006") into explicit code vectors, not into range endpoints for comparison. For short ranges (C000-C006 is 7 codes), enumerate all valid codes between the endpoints.
-2. For longer ranges (C18.0-C18.9 is 10 codes, but C18.0x could have subcodes), use the `expand_icd10_range()` pattern: strip dot, extract alpha prefix + numeric suffix, expand to all valid subcodes.
-3. After expanding ranges to vectors, normalize ALL codes to undotted uppercase format using the existing `normalize_icd()` function in `utils_icd.R` before matching.
-4. Do NOT write a new normalization function — use the existing `normalize_icd()` from `R/utils_icd.R`, which is already sourced via `R/00_config.R`.
-5. Test the range expansion function against known codes: "C81.00" should match C81 range, "C8100" should also match, "C81.9A" should match if included.
-
-**Warning signs:**
-- Cancer site frequency counts are far lower than expected prevalence for common cancer sites
-- Patients with dotted ICD codes appear in "unclassified" category even though their code visually falls in a defined range
-- Comparing frequency table output to known cohort diagnosis code distribution shows large discrepancies
-
-**Phase to address:**
-Cancer site frequency analysis phase — build and test the range parser before running any frequency counts
-
----
-
-### Pitfall v1.6-3: Word Document Cross-Reference Uses Substring Matching Instead of Exact Code Matching
-
-**What goes wrong:**
-TreatmentVariables_2024.07.17.docx contains code lists in narrative or semi-structured format. When cross-referencing the R pipeline's `TREATMENT_CODES` vectors against the docx, analysts use `grepl()` or `str_detect()` on the extracted text. This causes:
-
-1. False positives: "J9000" matches "J9000, J9001, J9002" via substring but "J9002" is not in `TREATMENT_CODES`. The cross-reference incorrectly shows J9002 as "found."
-2. False negatives: The docx may use "J-9000" or "J9000–J9999" (range notation) where the pipeline has individual codes. Substring matching against range notation finds no match for individual codes even though they're within the documented range.
-3. Format variation in docx extraction: Word document text extraction via `officer` or `docx2txt` may introduce line-break artifacts, non-breaking spaces, or em-dashes that break exact matching.
-
-**Why it happens:**
-Analysts extract docx text as a single string and use regex to check if each code "appears" in the text. Code ranges and comma-separated lists in the docx look like matches for any prefix of a code in the list. The analyst reports "all codes found" when the actual match is against a range prefix, not the specific code.
-
-**How to avoid:**
-1. Parse the docx into a structured list of individual codes AND declared ranges separately. Do NOT treat the full extracted text as a lookup target.
-2. For range declarations in the docx (e.g., "38230-38243"), expand to individual codes before cross-referencing.
-3. Use exact string matching (`%in%`) after normalization, not `str_detect()`, for code-level cross-reference.
-4. When using the `officer` R package to read the docx, extract paragraph text and table cell text separately — code lists are more likely to be in tables than in flowing paragraph text.
-5. Produce a bidirectional gap report: (A) codes in pipeline but NOT in docx, (B) codes in docx but NOT in pipeline. Both directions matter — A indicates over-capture, B indicates under-capture.
-6. For the "PROCEDURES: 70010-79999" range in the docx, do not expand to 10,000 individual codes. Instead, document the sub-range that IS in the pipeline (77261-77799) and note it is the treatment-relevant subset.
-
-**Warning signs:**
-- Cross-reference reports "100% match" but manual inspection of specific codes shows mismatches
-- The gap report shows zero codes in either direction (too perfect — suggests substring matching not exact matching)
-- Range notation in the docx is being reported as matching individual codes
-
-**Phase to address:**
-Treatment code cross-reference phase — structure the docx parsing before writing any comparison logic
-
----
-
-### Pitfall v1.6-4: Adding Triggering Code Column Breaks Downstream CSV Consumers
-
-**What goes wrong:**
-Adding a `triggering_code` or `triggering_codes` column to the treatment episode CSV output is a schema change. Any downstream code that:
-- Reads the episode CSV with `read_csv()` and then accesses columns by position (`df[, 5]`) rather than name (`df$episode_start`)
-- Does `names(df)` assertions or column count checks
-- Has hardcoded `select()` calls that omit the new column and drop it silently
-
-...will either break or silently produce incorrect results. In an exploratory pipeline with 40+ scripts, the downstream consumers may not be obvious.
-
-**Why it happens:**
-R scripts in exploratory pipelines tend to use `read_csv()` followed by `select()` with explicit column names, which actually handles schema additions gracefully. But the risk is in any script that (1) joins on the episode file as an intermediate, (2) does a `bind_rows()` across old and new outputs, or (3) has a styled xlsx output whose column formatting is tied to column position.
-
-In this pipeline specifically, `R/44_treatment_episodes.R` produces the episode CSV. Any script sourcing or reading this output — including retrospective analyses and any future Phase 45+ scripts — will encounter the new column. The `openxlsx2` styling in Phase 44's xlsx output may have column-position-dependent formatting.
-
-**How to avoid:**
-1. Search the codebase for all scripts that read `treatment_episodes.csv` or the `treatment_episodes.rds` output before adding the column.
-2. Add the `triggering_code` column as the LAST column in the output schema, not inserted in the middle. This minimizes positional disruption.
-3. Make the column nullable (NA if no triggering code matched) rather than omitting rows. Adding rows breaks `bind_rows()` assumptions; adding a nullable column is safer.
-4. If the Phase 44 xlsx has column-position-dependent styling (e.g., `wb$add_style(col = 7)`), update the style calls to use named column lookup instead.
-5. Update the `D-08` decision note in `R/44_treatment_episodes.R` to document the new column and its source.
-6. Run the Phase 44 test script (`R/44_test_episodes.R`) after adding the column to confirm no assertion failures.
-
-**Warning signs:**
-- `bind_rows()` throws "columns do not match" error when combining old episode output with new
-- Styled xlsx has misaligned column headers after column insertion
-- A downstream script produces empty results after the schema change (silent column drop from explicit `select()`)
-
-**Phase to address:**
-Triggering code traceability phase — audit downstream consumers before modifying the episode schema
-
----
-
-### Pitfall v1.6-5: Cancer Site Frequency Table Uses DX Table Without Restricting to HL Cohort
-
-**What goes wrong:**
-The cancer site frequency analysis queries the DIAGNOSIS table for ICD codes matching CancerSiteCategories.xlsx ranges. If the query runs against the full DIAGNOSIS table (all patients in the PCORnet extract, not just the HL cohort), the frequency table reflects all cancer diagnoses across all PCORnet patients — not just Hodgkin Lymphoma patients. The result is a cancer site frequency table for the entire OneFlorida+ extract, which is meaningless for the study purpose and inflated by comorbid diagnoses in non-HL patients.
-
-Additionally, even within the HL cohort, a patient may have multiple cancer site diagnoses across encounters. Without specifying "cancer site at diagnosis" vs "any cancer site ever mentioned," the table conflates incidental mentions of other cancer sites with the patient's primary cancer type.
-
-**Why it happens:**
-DuckDB backend queries (`get_pcornet_table("DIAGNOSIS")`) return all rows from the table. Analysts add frequency counts without an initial `filter(ID %in% hl_cohort_ids)` step because they're focused on the frequency logic, not the population scoping. The existing `get_hl_patient_ids()` function in `utils_treatment.R` is available but requires knowing to call it first.
-
-**How to avoid:**
-1. Always scope the DIAGNOSIS query to the HL cohort before cancer site categorization. Use the pattern from existing scripts: `hl_ids <- get_hl_patient_ids()` then `filter(ID %in% local(hl_ids))`.
-2. Document in the script header whether the frequency table is per-patient (distinct patients per cancer site) or per-encounter (total encounter rows per cancer site). Both are valid but different.
-3. For cancer site frequency, consider restricting to DX_DATE within the study window (2012-2025) to avoid historical diagnoses from before the data collection period.
-4. Add a sanity check: the total unique patient count in the cancer site table should not exceed the HL cohort size. If it does, the cohort scoping filter was missed.
-
-**Warning signs:**
-- Total patients in cancer site frequency table is larger than the known HL cohort size
-- Cancer site categories for non-lymphoma cancers (lung, prostate, breast) show high counts, suggesting non-HL patients are included
-- The frequency counts match the total PCORnet extract volume rather than the HL cohort volume
-
-**Phase to address:**
-Cancer site frequency analysis phase — cohort scoping must be the first filter applied
-
----
-
-### Pitfall v1.6-6: Proton Therapy Codes 77520-77525 Assumed Present Without Verification
-
-**What goes wrong:**
-The milestone requirement states "Confirm proton therapy codes 77520-77525 are captured in radiation detection." An analyst reads the existing `TREATMENT_CODES$radiation_cpt` list in `R/00_config.R`, does not see 77520-77525 explicitly, and concludes they are missing — then adds them. But if they were already matched by a range heuristic (e.g., the `CPT_HCPCS_RANGES$Radiation$delivery = "^774[0-9]{2}$"` pattern in `R/38_treatment_inventory.R`), adding them explicitly creates no harm but adds noise. Conversely, assuming they ARE captured without checking means they silently miss patients who received proton therapy.
-
-Proton therapy (77520-77525) is in the 77xxx range but is a distinct modality. The existing `radiation_cpt` in config includes codes in the 77401-77470 range. 77520 starts a new sub-range (77520 Proton treatment delivery, simple; 77522 Proton treatment delivery, intermediate; 77523 complex; 77525 management). These are NOT covered by any of the existing codes 77401-77470, so they are likely missing from `TREATMENT_CODES$radiation_cpt`.
-
-**Why it happens:**
-The CPT code range in config ends at 77470. 77520-77525 appears later in the 77xxx chapter but is a separate sub-range. Analysts who built the original list focused on EBRT codes (77385/77386 legacy codes, now replaced by 77401-77412) and may not have considered proton therapy as a distinct HL treatment path.
-
-**How to avoid:**
-1. Explicitly check `TREATMENT_CODES$radiation_cpt` in config for presence of 77520, 77522, 77523, 77525.
-2. If absent, add them with specific comments citing AMA CPT code descriptions.
-3. Check the data: query `PROCEDURES` for any of 77520-77525 in the HL cohort. Even if zero occurrences exist in this dataset, document the check and the result.
-4. Do not assume the range heuristic in `38_treatment_inventory.R` covers these — the pattern `"^774[0-9]{2}$"` only matches codes starting with "774", not "775".
-
-**Warning signs:**
-- The audit table shows 77520-77525 present in PROCEDURES data but not in any TREATMENT_CODES list
-- The proton therapy confirmation task is marked complete without a data query showing either presence or absence
-
-**Phase to address:**
-Radiation CPT audit phase — include proton therapy sub-range explicitly in the audit table
-
----
-
-### Pitfall v1.6-7: ICD-10 Cancer Site Categories Overlap with HL Diagnosis Codes, Causing Double Classification
-
-**What goes wrong:**
-CancerSiteCategories.xlsx may contain a "Lymphoma" or "Hematologic" cancer site category that includes ICD-10 codes in the C81.xx range (Hodgkin Lymphoma). When building the cancer site frequency table, every patient in the HL cohort will appear under the Lymphoma/Hematologic cancer site category because their HL diagnosis code (C81.xx) matches the category definition. This is expected and correct for that category. However, if the analyst does not anticipate this, they may:
-
-1. Treat the high Lymphoma category count as a data error
-2. Attempt to exclude C81.xx codes from the cancer site analysis (removing the primary disease of interest)
-3. Fail to document that C81.xx = HL = expected dominant category in the frequency table
-
-A related problem: if a patient has both an HL diagnosis AND a comorbid cancer (e.g., secondary malignancy), they will appear in multiple cancer site categories. The frequency table should count patients, not diagnoses, but `n()` after `group_by(cancer_site)` counts rows, not distinct patients.
-
-**Why it happens:**
-Cancer site frequency tables for a cancer-specific cohort will obviously show the cohort-defining cancer as the top category. Analysts building a general-purpose frequency function don't account for the expected dominance of the cohort-defining diagnosis. The count-of-rows vs count-of-distinct-patients confusion is a common `group_by + summarize` error.
-
-**How to avoid:**
-1. Use `n_distinct(ID)` not `n()` when counting patients per cancer site category.
-2. Document that C81.xx (Hodgkin Lymphoma) is the expected top category in the output header or footnote.
-3. Consider producing TWO frequency tables: (A) including HL codes (C81.xx), (B) excluding HL codes — to show comorbid/secondary cancer site distribution separately.
-4. Add a column "pct_of_cohort" alongside the count so the C81.xx category dominance is proportionally visible.
-
-**Warning signs:**
-- Cancer site "Lymphoma" has a count equal to the total cohort size (correct, but may alarm reviewer)
-- Sum of patient counts across cancer sites exceeds cohort size (indicates rows not distinct patients)
-- A single patient appears in 3+ cancer site categories (valid if comorbid but should be documented)
-
-**Phase to address:**
-Cancer site frequency analysis phase — define the counting unit (patients vs encounters vs diagnoses) before writing aggregation logic
-
----
-
-### Pitfall v1.6-8: Cross-Reference Gap Report Uses Wrong Direction of Comparison
-
-**What goes wrong:**
-The cross-reference between TREATMENT_CODES (R pipeline) and TreatmentVariables docx (reference document) requires two-direction comparison. Analysts build only the "pipeline → docx" direction: "which pipeline codes appear in the docx?" This catches codes in the pipeline that are NOT documented. But it misses the reverse: "which docx codes are NOT in the pipeline?" — i.e., documented treatments that the pipeline fails to detect.
-
-For HL specifically, the docx may document treatment codes that the pipeline never implemented (e.g., if the docx was updated after the pipeline was built in Phases 38-43). A one-direction gap report would pass silently even if the pipeline misses 20% of the documented treatment codes.
-
-**Why it happens:**
-Analysts default to "does my code match the spec?" (pipeline → spec direction) rather than "does my code implement everything in the spec?" (spec → pipeline direction). The second direction is harder because it requires parsing the docx into a usable code list first.
-
-**How to avoid:**
-1. Build a bidirectional gap report explicitly:
-   - `in_pipeline_not_in_docx`: codes in TREATMENT_CODES that have no match in docx
-   - `in_docx_not_in_pipeline`: codes/ranges from docx that have no corresponding code in TREATMENT_CODES
-2. For the docx → pipeline direction, the range notation challenge (Pitfall v1.6-3) applies. Expand docx ranges to individual codes first, then use `%in%`.
-3. Accept that some docx ranges (70010-79999 for radiation) will expand to thousands of codes. For these, use sub-range matching: "does the pipeline capture the treatment-relevant subset (77261-77799) of this range?" rather than code-for-code matching.
-4. Report both gap directions in the output CSV, with a separate column indicating gap severity: "missing from pipeline" is higher severity than "in pipeline but not documented."
-
-**Warning signs:**
-- The gap report CSV has only one direction of comparison
-- Zero gaps reported in both directions (unlikely for a large HCPCS/CPT code list — suggests comparison logic error)
-- The in_docx_not_in_pipeline gap is empty despite the docx containing range notation that expands to codes not in the pipeline
-
-**Phase to address:**
-Treatment code cross-reference phase — structure the gap report template before implementing the comparison logic
-
----
-
-## Technical Debt Patterns (v1.6 additions)
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Apply full "70010-79999" range as radiation filter | One-line implementation, matches docx literally | Captures diagnostic imaging as radiation therapy — inflates treated count 10x, invalidates analysis | Never — always apply only the radiation oncology sub-range (77261-77799) |
-| String comparison for ICD range matching (">=" on undotted codes) | Familiar pattern, no custom parser needed | Fails for mixed-length codes, codes with letter suffixes (C81.9A), and any range spanning digit-count boundaries | Never for ICD ranges — enumerate codes or use numeric suffix comparison |
-| One-direction docx cross-reference (pipeline → docx only) | Faster to implement | Misses docx-documented codes absent from pipeline — under-coverage invisible | Only if docx is known to be a subset of pipeline (confirmed independently) |
-| Add triggering_code column in middle of episode CSV schema | Logically positioned near triggering columns | Breaks positional access in downstream scripts, misaligns xlsx column styling | Never — always append new columns at end of schema |
-| Count diagnoses rows for cancer site frequency (`n()`) instead of distinct patients (`n_distinct(ID)`) | Default `summarize(n = n())` pattern | Patients with multiple encounters per cancer site counted multiple times — inflated frequencies | Only if the explicit question is "encounter volume" not "patient count" |
-
-## Integration Gotchas (v1.6 additions)
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| CancerSiteCategories.xlsx range parsing | Apply range endpoints as string comparisons in dplyr filter | Parse ranges to explicit code vectors using a range-expansion function, normalize to undotted, use `%in%` |
-| TreatmentVariables_2024.07.17.docx extraction via `officer` | Extract full document text as one string, use `str_detect()` for code lookup | Parse paragraph and table text separately, build structured code list from docx, use exact `%in%` matching |
-| DuckDB backend for cancer site query | Forget to collect HL cohort IDs before filtering DIAGNOSIS | Use `local()` wrapping or collect cohort IDs first: `filter(ID %in% local(hl_ids))` for DuckDB tbl compatibility |
-| openxlsx2 styled xlsx schema change | Change column count in episode output without updating style call column indices | Update all `wb$add_style(col = N)` references after schema change, or switch to named column lookup |
-| CPT code range heuristics in 38_treatment_inventory.R | Assume range heuristic `"^774[0-9]{2}$"` covers proton codes (77520-77525 starts with 775) | Proton codes start with 775, not 774 — add explicit heuristic or enumerated codes for 775xx sub-range |
-
-## Performance Traps (v1.6 additions)
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Expanding ICD-10 range "C000-C999" into individual codes in R | Range expansion produces 900+ codes, enumeration hangs | Use vectorized range expansion with `sprintf()`, not `seq()` on character codes | Any range spanning more than ~100 codes |
-| Loading full DIAGNOSIS table into memory for cancer site analysis | Memory spike loading all 500k+ DIAGNOSIS rows | Use DuckDB lazy query: filter to HL cohort IDs before `collect()` | DIAGNOSIS tables > 500k rows (common in multi-site PCORnet extracts) |
-| Reading TreatmentVariables docx with `officer` on HiPerGator without Office dependency | `officer` requires no external dependencies but docx parsing may be slow for large documents | Cache extracted docx content as R list in first run, use cached version for cross-reference | Docx files > 5MB or scripts run in automated mode without caching |
-
-## "Looks Done But Isn't" Checklist (v1.6 additions)
-
-- [ ] **Radiation CPT audit:** Often marked complete when just the range 77xxx is identified — verify a structured table exists listing EACH sub-range (70010-76499, 76500-76999, 77001-77022, 77261-77799, 77520-77525, 78000-79999) with AMA classification and occurrence count in data
-- [ ] **Proton therapy confirmation:** Often assumed present without data query — verify by running `filter(PX %in% c("77520","77522","77523","77525"))` against PROCEDURES and documenting the count (zero is a valid result if no proton patients exist)
-- [ ] **Cancer site ICD range parser:** Often written as string comparison — verify by testing a code at the BOUNDARY of a range (first code, last code) and a code just outside returns FALSE
-- [ ] **Bidirectional gap report:** Often built in only one direction — verify both `in_pipeline_not_in_docx` and `in_docx_not_in_pipeline` columns exist in the output
-- [ ] **Triggering code column downstream impact:** Often added without checking consumers — verify by searching for all scripts that `read_csv()` or `readRDS()` the treatment episode output files
-- [ ] **Cancer site cohort scoping:** Often runs on full PCORnet extract — verify total unique patients in frequency table does not exceed HL cohort size
-- [ ] **HL code dominance documented:** C81.xx will be top cancer site category — verify this is noted in output or footnote, not treated as an error
-- [ ] **Dotted/undotted harmonization in cancer site matching:** Verify the range expansion function normalizes xlsx ranges and PCORnet data to the same format using existing `normalize_icd()` before matching
-
-## Recovery Strategies (v1.6 additions)
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Radiation CPT range applied too broadly (70010-79999) | MEDIUM (3-5 hours) | 1. Replace range filter with explicit 77261-77799 sub-range. 2. Re-run radiation detection query. 3. Recount radiation-treated patients. 4. Update audit table with correct sub-range citation. |
-| ICD string comparison causes missed cancer site matches | MEDIUM (2-4 hours) | 1. Build range-expansion function that enumerates all codes between endpoints. 2. Normalize to undotted format. 3. Re-run frequency table. 4. Validate against known cohort diagnosis distribution. |
-| Triggering code column breaks downstream consumer | LOW-MEDIUM (1-3 hours) | 1. Find all downstream readers of episode output. 2. Confirm column access is by name not position. 3. If positional access exists, refactor to named access. 4. Re-run affected scripts. |
-| Cancer site frequency includes non-HL patients | LOW (1-2 hours) | 1. Add `filter(ID %in% local(hl_ids))` as first filter in DIAGNOSIS query. 2. Re-run frequency table. 3. Verify total unique patients ≤ HL cohort size. |
-| One-direction gap report misses docx-undocumented pipeline codes | LOW (1-2 hours) | 1. Add reverse comparison: docx code list `%in%` pipeline TREATMENT_CODES. 2. Re-run cross-reference. 3. Add `in_docx_not_in_pipeline` column to output CSV. |
-| Proton codes 77520-77525 missing from TREATMENT_CODES | LOW (30 min) | 1. Add codes to `TREATMENT_CODES$radiation_cpt` in 00_config.R with AMA citations. 2. Re-run treatment inventory query. 3. Document count of proton therapy patients found. |
-
-## Pitfall-to-Phase Mapping (v1.6 additions)
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Radiation CPT range too broad (70010-79999 as filter) | Radiation CPT audit phase | Audit table enumerates sub-ranges; radiation-treated patient count is plausible (not 10x inflated) |
-| ICD string comparison for cancer site range matching | Cancer site frequency analysis phase | Boundary code tests pass; dotted and undotted formats both match correctly |
-| Docx cross-reference uses substring not exact matching | Treatment code cross-reference phase | Bidirectional gap report exists; zero-gap result triggers manual review |
-| Triggering code column breaks downstream consumers | Triggering code traceability phase | All downstream readers verified by grep; column appended at end of schema |
-| Cancer site query not scoped to HL cohort | Cancer site frequency analysis phase | Total unique patients in output ≤ HL cohort N |
-| Proton codes 77520-77525 assumed present without data check | Radiation CPT audit phase | PROCEDURES query for 77520-77525 executed and count documented (zero or nonzero) |
-| HL codes dominate cancer site table, treated as error | Cancer site frequency analysis phase | Output includes documentation of expected C81.xx dominance |
-| One-direction gap report misses docx undocumented codes | Treatment code cross-reference phase | Output CSV contains both in_pipeline_not_in_docx and in_docx_not_in_pipeline columns |
-
----
-
-## v1.0-v1.5 Pitfalls (Retained)
-
-The following pitfalls from earlier milestone research remain valid for the full pipeline.
-
-### Pitfall 1: Naive Payer Category Assignment Without Temporal Overlap Detection
-
-**What goes wrong:**
-Analysts assign patients to single payer categories based on enrollment start/end dates without detecting dual-eligible periods (overlapping Medicare + Medicaid enrollment). This leads to severe undercount of dual-eligible beneficiaries.
-
-**Why it happens:**
-PCORnet ENROLLMENT table contains multiple rows per patient with overlapping ENR_START_DATE and ENR_END_DATE periods. Dual-eligible status requires detecting when Medicare enrollment temporally overlaps with Medicaid enrollment.
-
-**How to avoid:**
-Implement temporal overlap detection. Create a dual-eligible flag when PAYER_TYPE_PRIMARY/SECONDARY contains both '1' and '2' with overlapping date ranges.
-
-**Warning signs:**
-Dual-eligible count is < 5% of Medicare + Medicaid combined count. Sum of 9 payer categories ≠ unique patient count.
-
-**Phase to address:**
-Phase 1 (Data Loading & Payer Harmonization)
-
----
-
-### Pitfall 2: ICD Code Matching Without Handling Both Dotted and Undotted Formats
-
-**What goes wrong:**
-ICD codes in PCORnet DIAGNOSIS table arrive in multiple formats. Naive string matching misses ~30-50% of true diagnoses.
-
-**How to avoid:**
-Normalize ALL DX codes to undotted uppercase format using `normalize_icd()` from `utils_icd.R`. Normalize reference code lists to the same format before matching.
-
-**Warning signs:**
-Cohort size is 40-60% smaller than expected. Mix of dotted and undotted codes visible in DIAGNOSIS table but filter only catches one format.
-
-**Phase to address:**
-Phase 1 (Data Loading & Payer Harmonization)
-
----
-
-### Pitfall 3: Date Parsing Failures from Multi-Format SAS Date Exports
-
-**What goes wrong:**
-PCORnet date fields export in inconsistent formats. `readr::read_csv()` auto-detection fails ~20% of the time for large files.
-
-**How to avoid:**
-Never rely on readr auto-detection for date columns. Use `col_types = cols(.default = col_character())` initially, then parse with `lubridate::parse_date_time()` with multiple orders.
-
-**Phase to address:**
-Phase 1 (Data Loading & Payer Harmonization)
-
----
-
-### Pitfall 4: HIPAA Small-Cell Suppression Applied Incorrectly (Primary Only, No Secondary)
-
-**What goes wrong:**
-Primary suppression applied without secondary suppression. Readers can subtract observed cells from totals to recover suppressed values. Direct HIPAA violation.
-
-**How to avoid:**
-Build suppression validation function. For every suppressed cell, verify it cannot be recovered from marginal totals. Apply secondary suppression to 2-3 adjacent cells.
-
-**Phase to address:**
-Phase 3 (Visualizations & Outputs)
-
----
-
-## Sources
-
-### CPT Code Structure
-- AMA CPT 2024 Code Set — Radiology section 70000-79999 chapter structure (HIGH confidence, reflected in AMA CPT manual organization)
-- CMS 2026 Physician Fee Schedule — radiation oncology codes 77261-77799 (HIGH confidence)
-- CMS 2026 changes: 77385/77386 deleted, replaced by complexity-based 77401-77412 (reflected in existing `R/00_config.R` comments)
-- Proton beam therapy 77520-77525 (AMA CPT, HIGH confidence)
-
-### ICD-10 Code Range Structure
-- ICD-10-CM Official Guidelines for Coding and Reporting (HIGH confidence for code structure)
-- Existing `utils_icd.R` and `R/00_config.R` codebase (direct inspection, HIGH confidence)
-
-### R Ecosystem
-- `officer` package documentation for docx text extraction (MEDIUM confidence — package exists, version-specific behavior not verified)
-- `openxlsx2` package for xlsx reading (HIGH confidence — already in use in pipeline)
-- `readxl` package for xlsx reading (HIGH confidence — already in use in `R/35_payer_code_frequency_av_th.R`)
-
-### Pipeline-Specific Context
-- Direct inspection of `R/00_config.R` TREATMENT_CODES list (Phase 39 additions) — HIGH confidence
-- Direct inspection of `R/38_treatment_inventory.R` CPT_HCPCS_RANGES heuristics — HIGH confidence
-- Direct inspection of `R/44_treatment_episodes.R` output schema and D-08 decision — HIGH confidence
-- Direct inspection of `R/35_payer_code_frequency_av_th.R` xlsx cross-reference pattern — HIGH confidence
-- Direct inspection of `R/utils_icd.R` normalize_icd() and is_hl_diagnosis() functions — HIGH confidence
-
----
-*Pitfalls research for: PCORnet CDM R Analysis — v1.6 Treatment Code Validation & Cancer Site Analysis*
-*Researched: 2026-04-21*
+*For complete v1.6 pitfalls and earlier milestone pitfalls, see git history or previous versions of this file.*

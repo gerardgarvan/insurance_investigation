@@ -1,239 +1,230 @@
-# Feature Research
+# Feature Landscape
 
-**Domain:** PCORnet CDM cohort-building and payer analysis pipeline (R) — v1.6 Treatment Code Validation & Cancer Site Analysis
-**Researched:** 2026-04-21
-**Confidence:** HIGH (all features are scoped extensions of existing scripts with known patterns)
+**Domain:** Cancer epidemiology cohort refinement and clinical timeline visualization (Hodgkin Lymphoma study)
+**Researched:** 2026-05-22
 
----
+## Table Stakes
 
-## Feature Landscape
-
-This document covers ONLY the new v1.6 features. Existing features (Phases 1-44) are already built and documented.
-
-The five new feature areas are:
-1. Cancer site frequency table from CancerSiteCategories.xlsx
-2. TREATMENT_CODES cross-reference against TreatmentVariables_2024.07.17.docx
-3. Radiation CPT 70010-79999 range audit (imaging vs treatment classification)
-4. Proton therapy CPT confirmation (77520-77525 in radiation_cpt)
-5. Triggering code column in treatment episode CSV output
-
----
-
-### Table Stakes (Users Expect These)
-
-Features a clinical researcher expects from this pipeline in v1.6. Missing any of these makes the milestone incomplete.
+Features expected in any cancer cohort study with temporal analysis. Missing these = protocol violations or results not credible.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Cancer site frequency table | CancerSiteCategories.xlsx defines 42 groups; without a frequency count across actual PCORnet data, the file is unused reference material | MEDIUM | Requires reading xlsx ICD code ranges, querying DIAGNOSIS + TUMOR_REGISTRY tables, mapping each patient to the most specific cancer site group, producing patient and record counts per group with HIPAA suppression |
-| TREATMENT_CODES vs TreatmentVariables docx gap report | The docx is the authoritative source for what codes the study protocol says should be captured; without comparing it to R/00_config.R, there is no validation that the pipeline is complete | MEDIUM | Two-directional: codes in docx but not in config (gaps), codes in config not in docx (additions). Output as xlsx with per-type sheets matching existing treatment xlsx style |
-| Radiation CPT audit (70010-79999 imaging vs treatment) | The 70010-79999 range is diagnostic imaging, but a handful of codes in the 77xxx sub-range are legitimate radiation treatment delivery codes; the pipeline needs an explicit, cited classification for every code in the range that appears in the data | HIGH | Requires per-code classification (IMAGING / TREATMENT / PLANNING / EXCLUDED) with citation source (CPT description, AMA documentation). Output must document rationale for every excluded code in radiation_cpt coverage area |
-| Proton therapy codes 77520-77525 confirmation | Proton therapy is a primary treatment modality at UFPTI; if 77520-77525 are absent from radiation_cpt, the pipeline systematically misses proton therapy cases for a UFPTI study | LOW | Grep radiation_cpt in R/00_config.R; if missing, add with citation. Single-decision task. Currently missing from config (77401-77470 range in config does not include 77520-77525) |
-| Triggering code column in episode CSV output | Per-patient episodes need traceability — knowing *which specific code* triggered the episode start date enables manual QA and downstream analysis | MEDIUM | Modifies R/44_treatment_episodes.R (or a new R/45 script). The extract_all_dates() function in R/43 currently drops source code; must be extended to carry triggering_code and triggering_source_table through to episode_start row |
+| Exclude benign/uncertain D-codes from cancer classification | ICD-10 Chapter 2 separates malignant (C00-D49) from benign (D10-D36), in situ (D00-D09), and uncertain behavior (D37-D48) neoplasms. Cancer registries and epidemiology studies analyze only malignant neoplasms. | Low | D00-D48 codes must be filtered out. Existing PREFIX_MAP already has ICD code prefix logic — just add filter predicate before cancer summary generation. |
+| Cohort confirmation with multiple diagnosis dates | Single-code diagnoses may be rule-out, provisional, or billing artifacts. Epidemiology standards require temporal validation (2+ codes 7+ days apart) to confirm persistent diagnosis. | Medium | Requires diagnosis date parsing, grouping by PATID+code prefix, temporal gap calculation. Existing 2-date (R/50) and 7-day separation (R/51) scripts provide foundation — apply to HL cohort filter. |
+| Temporal filtering relative to index cancer diagnosis | Secondary cancer analysis requires reference to index cancer date. SEER methodology defines index cancer as first SEER-recorded cancer; at-risk period for subsequent cancers starts at index diagnosis date. | Medium | Requires identifying first HL diagnosis date per patient, then filtering DIAGNOSIS table to DX_DATE > first_hl_date. Existing date parsing + attrition logging infrastructure supports this. |
+| Death date as clinical endpoint | PCORnet CDM includes DEATH_DATE in DEMOGRAPHIC. Death is a standard clinical endpoint for cancer timeline visualizations and survival analysis. Missing death dates = incomplete follow-up. | Low | DEMOGRAPHIC table accessible via DuckDB with DEATH_DATE column. Add to Gantt as final event (treatment type = "Death"). Existing Gantt CSV export (gantt_episodes.csv, gantt_detail.csv) supports adding new treatment types. |
+| Cancer site category labeling | Clinical interpretation of treatment episodes requires knowing what cancer is being treated. Standard practice maps ICD codes to human-readable cancer site categories (e.g., SEER site recode, ICD-O-3 groupings). | Low | CancerSiteCategories.xlsx already provides 42-category mapping via ICD code ranges. PREFIX_MAP in R/00_config.R implements prefix → category lookup. Add category column to gantt_episodes.csv via PREFIX_MAP join. |
 
----
+## Differentiators
 
-### Differentiators (Competitive Advantage)
-
-Features that add value beyond what a minimal implementation would provide.
+Features that enhance analysis quality beyond minimum standards. Not required, but add significant value.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Cancer site frequency with ICD-O-3 + ICD-10 dual-coding | CancerSiteCategories.xlsx contains both ICD-10 and ICD-O-3 ranges; matching both code systems separately and then unioning gives higher sensitivity than matching only one | HIGH | ICD-O-3 codes appear in TUMOR_REGISTRY, ICD-10 codes appear in DIAGNOSIS. Separate match + union prevents double-counting while maximizing coverage |
-| Radiation CPT audit with AMA citation text | Audit value depends entirely on citation quality; a per-code table with the actual CPT description (not just code number) and AMA section reference is defensible for IRB/protocol documentation | MEDIUM | CPT official descriptions are paywalled, but CMS RBRVS data files contain short descriptors and are public. Supplement with AMA CPT codebook descriptions where available |
-| Gap report differentiated by code type | A flat "in docx / not in config" list is less actionable than a per-type (CPT, HCPCS, ICD-9, ICD-10-PCS, RXNORM, Revenue, DRG) breakdown matching the TREATMENT_CODES list structure | LOW | Within the same gap report script, group gaps by code type. Requires parsing both the docx tables and the TREATMENT_CODES list structure carefully |
-| Triggering code with multiple triggering codes per episode | Some episodes are confirmed by multiple codes on the same date (e.g., both a CPT delivery code and a revenue code); listing all triggering codes on episode_start date provides richer audit trail | LOW | Collapse triggering codes into comma-separated string within the triggering_codes column for the episode_start row |
+| Hodgkin-specific binary flag in Gantt data | Enables quick visual filtering in Gantt charts (e.g., color-code HL vs non-HL treatments). Supports exploratory question: "Do patients receive HL-specific treatments after non-HL cancer diagnosis?" | Low | Derived from cancer category label. If category = "Hodgkin Lymphoma" → is_hodgkin = TRUE, else FALSE. Zero computation cost once category label exists. |
+| Temporal filtering with comparison outputs | Producing both filtered (cancers after HL) and unfiltered cancer summary tables enables validation of filtering logic and comparison of cancer burden before vs after HL diagnosis. | Low | Clone cancer_summary_table.xlsx generation with filtered DIAGNOSIS input. Minimal code duplication (wrap in function). Provides quality assurance for temporal filtering. |
+| 90-day gap episode aggregation (already implemented) | Treatment episodes with <90 day gaps represent continuous treatment for the same condition. Oncology claims analysis standard is 90-180 day gap bridging. This pipeline uses 90 days. | N/A | Already implemented in v1.6 treatment episode system. Referenced here because it informs Gantt bar structure — each bar = one 90-day-gapped episode. |
+| Date-based cancer confirmation metrics (already implemented) | 2+ distinct dates and 7-day gap are stronger confirmation signals than simple code frequency. Reduces false positives from rule-out diagnoses. | N/A | Already implemented in R/50 (2-date) and R/51 (7-day separation). Cancer summary table includes these metrics (columns for confirmation status). Applied to cohort filter in this milestone. |
+| Human-readable code descriptions in Gantt (already implemented) | ICD/CPT/NDC codes are not interpretable without lookup. Gantt CSV includes code descriptions (already shipped v1.6 Phase 49). | N/A | Already implemented. gantt_detail.csv includes CODE_DESCRIPTION. Enables clinical review without cross-referencing codebooks. |
 
----
+## Anti-Features
 
-### Anti-Features (Commonly Requested, Often Problematic)
+Features to explicitly NOT build.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Full CPT 70010-79999 range scan for unknown radiation codes | Seems thorough — why not check every code in the range against what's in the data? | CPT 70010-79999 is the Radiology section; 99% of codes are diagnostic imaging (CT, MRI, X-ray, nuclear medicine). Treating them all as potential radiation therapy codes floods the output with irrelevant findings and obscures the handful of legitimate 77xxx treatment codes | Narrow the audit to 77000-77999 (radiation oncology subsection) plus verify any 70xxx codes appearing with radiation_cpt context. Document the exclusion boundary explicitly. |
-| Automated docx-to-config sync (write back to R/00_config.R) | Seems like it would close the loop on validation | Docx contains intent; config contains validated, study-specific implementation. Not every docx code belongs in the config (e.g., codes for cancer types not in the HL cohort). Automated sync bypasses the necessary human review step | Produce a gap report. Human reviews it and makes targeted additions to config. Phase 42's per-type resolved xlsx pattern is the right precedent. |
-| Cancer site frequency by site ID (per partner site) | Site-level breakdown seems informative | Small-cell suppression triggers aggressively for rare cancer sites at individual sites; most cells become suppressed and the table communicates nothing. Also raises site-specific data sensitivity concerns | Produce aggregate frequency table first. Site-level breakdowns are a v2 feature with explicit IRB review of suppression strategy. |
-| Treatment code validation via NLM API lookup (CPT codes) | Phases 39-40 used NLM API for HCPCS/NDC lookup — why not reuse for CPT validation? | NLM's RxNorm API covers drug codes; CPT code descriptions are owned by AMA and are not in NLM APIs. CPT lookup requires AMA licensing or CMS public files (RBRVS). Using NLM for CPT returns empty or incorrect results. | Use CMS Medicare Physician Fee Schedule (MPFS) RVU files for CPT short descriptors (public domain). |
-| Episode triggering code as a separate table | Normalized design would put triggering codes in a separate table joined to episodes | The existing episode output is a flat CSV consumed directly by researchers. Normalization adds a join step that breaks existing workflows and adds no value for QA use. | Store triggering_codes as a collapsed column in the episode row. Document the format (comma-separated, pipe-separated, or first-code-only). |
-
----
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Automatic removal of D-codes from existing xlsx outputs retroactively | Breaks reproducibility — outputs already generated with D-codes (v1.6) are snapshots of that analysis version. | Generate new versions with "_no_benign" suffix for clarity. Preserve existing outputs for version comparison. |
+| Death date imputation or estimation | PCORnet DEATH_DATE is already populated (from SSA Death Master File + Obituary.com per PCORnet infrastructure). Imputation introduces bias and is not standard practice. | Use DEATH_DATE as-is. If missing, patient is censored (standard survival analysis approach). Do not fill NAs. |
+| Chemotherapy-specific treatment classification in Gantt | Treatment type taxonomy already exists (7 types: chemo, surgery, radiation, transplant, immunotherapy, targeted, hormone). Adding finer granularity (e.g., ABVD vs BEACOPP) requires morphology codes (ICD-O-3) not reliably in PCORnet CDM. | Use existing treatment types. Cancer category label + treatment type provides sufficient granularity for insurance disparity analysis. |
+| Global minimum gap enforcement for cancer confirmation | Not all cancers need 2+ codes 7 days apart (e.g., single pathology-confirmed diagnosis from TR). This requirement is specific to HL cohort confirmation in this study, not a universal data quality rule. | Apply 2-date + 7-day logic ONLY to HL cohort filter predicate. Do not apply globally to all cancer codes in cancer summary table. |
+| Filtering D-codes from Gantt chart | Gantt visualizes treatment episodes, not diagnosis codes. D-codes (if present) appear in DIAGNOSIS table but don't trigger treatment episodes (treatment detection uses C-codes, procedures, prescriptions). Filtering D-codes from Gantt would have no effect. | Only filter D-codes from cancer summary table (which is diagnosis-focused). Leave Gantt logic unchanged. |
+| Subsequent cancer definition based on different primary site | SEER defines subsequent primary cancers (SPCs) using complex rules (same site = recurrence unless >5 years apart, different histology, etc.). This study is exploratory — "cancer after HL diagnosis date" is sufficient temporal filter. | Use simple temporal filter (DX_DATE > first_hl_date). Do not attempt to classify recurrence vs new primary. Out of scope for insurance disparity analysis. |
 
 ## Feature Dependencies
 
 ```
-Cancer site frequency table (new R/45 or R/46)
-    requires: CancerSiteCategories.xlsx (already exists)
-    requires: DIAGNOSIS table (via get_pcornet_table dispatcher)
-    requires: TUMOR_REGISTRY_ALL table (for ICD-O-3 codes)
-    depends on existing: R/00_config.R (CONFIG paths), R/utils_duckdb.R (safe_table)
+Exclude D-codes from cancer summary
+  └─> Requires PREFIX_MAP (already exists in R/00_config.R)
 
-TREATMENT_CODES gap report (new R/46 or R/47)
-    requires: TreatmentVariables_2024.07.17.docx (already exists, needs parsing)
-    requires: TREATMENT_CODES list in R/00_config.R (already exists)
-    uses: officer or docxtractr package for docx table extraction
-    outputs: xlsx gap report matching existing treatment xlsx visual style
+HL cohort confirmation (2+ codes, 7 days apart)
+  └─> Requires R/50 2-date logic
+  └─> Requires R/51 7-day separation logic
+  └─> Applied as named predicate filter (has_confirmed_hl or similar)
 
-Radiation CPT audit (new R/47 or R/48)
-    requires: TREATMENT_CODES$radiation_cpt in R/00_config.R
-    requires: CMS MPFS RVU files or embedded CPT description lookup
-    produces: per-code classification table (TREATMENT / IMAGING / PLANNING / EXCLUDED)
-    informs: whether radiation_cpt needs additions (e.g., 77520-77525)
+Temporal filtering (cancers after first HL diagnosis)
+  └─> Requires HL cohort confirmation (to get valid first HL date)
+  └─> Requires DIAGNOSIS table with DX_DATE
+  └─> Produces filtered cancer_summary_table variant
 
-Proton therapy code confirmation (config update R/00_config.R)
-    requires: Radiation CPT audit output (or direct CPT lookup)
-    modifies: TREATMENT_CODES$radiation_cpt in R/00_config.R
-    blocked by: none (can be done independently as a direct config edit)
+Cancer category label in Gantt
+  └─> Requires PREFIX_MAP (already exists)
+  └─> Requires gantt_episodes.csv structure (already exists)
+  └─> Adds CANCER_CATEGORY column
 
-Triggering code column in episodes (modifies R/44 or new R/45)
-    requires: R/43_treatment_durations.R extract_all_dates() to carry source code
-    requires: R/44_treatment_episodes.R calculate_episodes_detailed() to retain triggering_code
-    modifies: per-type CSV output schema (adds triggering_codes column)
-    depends on existing: R/44_treatment_episodes.R column structure (D-08 schema)
+is_hodgkin flag in Gantt
+  └─> Requires cancer category label
+  └─> Derived: CANCER_CATEGORY == "Hodgkin Lymphoma" → TRUE
+
+Death date in Gantt
+  └─> Requires DEMOGRAPHIC.DEATH_DATE (already accessible via DuckDB)
+  └─> Treats death as treatment type for visualization
+  └─> Adds to gantt_episodes.csv as final bar (if DEATH_DATE exists)
 ```
 
-### Dependency Notes
+## MVP Recommendation
 
-- **Proton therapy confirmation requires radiation CPT audit:** The audit determines what's in the 77xxx range and whether 77520-77525 are present, correctly classified, and absent from the config. These can be done together.
-- **Triggering code column modifies existing script schemas:** R/43 extract_all_dates() currently returns (ID, treatment_date) only. Adding triggering_code and source_table requires modifying R/43's extraction functions AND R/44's episode aggregation. This is a schema change to existing CSV outputs — the downstream consumer should be aware.
-- **Gap report requires docx parsing:** TreatmentVariables_2024.07.17.docx contains code tables in Word table format. The officer package (available in tidyverse ecosystem) reads docx tables. This is the only new package dependency for v1.6.
-- **Cancer site frequency is independent:** No dependency on treatment code features. Can be developed in parallel.
+Prioritize table stakes in this order:
 
----
+1. **Exclude D-codes from cancer summary** — Clinical validity issue. D10-D48 codes are not malignant cancers and should never appear in cancer incidence/summary tables. Affects interpretation of all downstream results.
 
-## MVP Definition
+2. **HL cohort confirmation (2+ codes, 7+ days apart)** — Reduces false positives. Single HL code could be rule-out diagnosis. Temporal validation ensures persistent HL diagnosis. Required before temporal filtering.
 
-### Launch With (v1.6)
+3. **Cancer category label in Gantt** — Human-readability for Gantt charts. Without labels, Gantt shows ICD codes (C81.90) instead of "Hodgkin Lymphoma". Blocks clinical review.
 
-Minimum set to call v1.6 complete.
+4. **is_hodgkin flag in Gantt** — Zero-cost derivation once category label exists. Enables quick visual filtering.
 
-- [ ] **Cancer site frequency table** — directly addresses PROJECT.md target feature; CancerSiteCategories.xlsx is built and waiting
-- [ ] **TREATMENT_CODES vs docx gap report** — directly addresses "cross-reference TREATMENT_CODES against TreatmentVariables" target feature; validates pipeline completeness
-- [ ] **Radiation CPT 70010-79999 audit with imaging/treatment classification** — directly addresses audit target feature; cited classification is required for protocol documentation
-- [ ] **Proton therapy 77520-77525 config update** — directly addresses "confirm proton therapy codes are captured" target feature; single config edit
-- [ ] **Triggering code column in episode CSV** — directly addresses "add triggering code(s) column" target feature; schema addition to existing output
+5. **Death date in Gantt** — Completes clinical timeline. Shows whether patient died during follow-up, essential for survivorship analysis.
 
-### Add After Validation (v1.x)
+6. **Temporal filtering relative to first HL diagnosis** — Research question: "What other cancers occur after HL?" Deferred to after cohort confirmation because requires valid first HL date.
 
-- [ ] **Cancer site frequency by ICD-O-3 topography code** — extends the frequency table with TUMOR_REGISTRY ICD-O-3 matching for sites where ICD-10 coding is incomplete; trigger: if frequency table shows high "Unclassified" counts
-- [ ] **Gap report with NLM/RxNorm cross-check for drug codes** — validates RXNORM CUI codes in TREATMENT_CODES against NLM (Phases 39-40 validated HCPCS/NDC, not RXNORM in config); trigger: if gap report surfaces unexpected RXNORM discrepancies
+**Defer:**
+- Comparison outputs (filtered vs unfiltered cancer summary) — Validation/QA feature, not blocking. Add after filtered version works.
 
-### Future Consideration (v2+)
+**Rationale for ordering:**
+- D-code exclusion first: affects all cancer classification downstream
+- HL cohort confirmation second: reduces false positives before temporal filtering
+- Gantt enhancements (category, is_hodgkin, death) third: independent of temporal filtering, unblocks clinical review
+- Temporal filtering last: depends on confirmed HL cohort, addresses specific research question
 
-- [ ] **Cancer site frequency stratified by payer** — payer x cancer site frequency table enables disparity analysis by tumor site; defer until v1.6 frequency table validates classification logic
-- [ ] **Site-level radiation CPT audit by partner site** — some partner sites may have different radiation coding practices; defer until aggregate audit is stable
+## Implementation Complexity Assessment
 
----
+| Feature | LOC Estimate | Risk | Dependencies |
+|---------|--------------|------|--------------|
+| Exclude D-codes | ~10 | Low | Filter predicate in cancer summary generation. PREFIX_MAP already handles code prefixes. Add `!str_starts_with(dx, "D")` before summary aggregation. |
+| HL cohort confirmation | ~50 | Medium | Adapt R/50 + R/51 logic to named predicate. Group DIAGNOSIS by PATID, filter to C81.*, count distinct DX_DATEs, calculate min date gap. Risk: date parsing edge cases (already handled in existing scripts). |
+| Cancer category label | ~20 | Low | Join gantt_episodes with PREFIX_MAP. Map ICD prefix → category. Existing PREFIX_MAP tested via cancer summary table (v1.6 Phase 54). |
+| is_hodgkin flag | ~5 | Low | Derived column: `is_hodgkin = (CANCER_CATEGORY == "Hodgkin Lymphoma")`. No external dependencies. |
+| Death date in Gantt | ~30 | Medium | Query DEMOGRAPHIC.DEATH_DATE, join to cohort, add as treatment type. Risk: DEATH_DATE may have 1900 sentinels (already filtered in v1.1 Phase 17). Need to handle NAs (no death recorded). |
+| Temporal filtering | ~40 | Medium | Identify first HL diagnosis date per patient (from confirmed HL cohort), filter DIAGNOSIS to DX_DATE > first_hl_date, regenerate cancer summary table. Risk: Patients with no post-HL cancers = empty result (expected). |
 
-## Feature Prioritization Matrix
+**Total estimated LOC for all features: ~155 lines** (excluding comments/logging)
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Cancer site frequency table | HIGH | MEDIUM | P1 |
-| TREATMENT_CODES gap report | HIGH | MEDIUM | P1 |
-| Radiation CPT audit (70010-79999) | HIGH | HIGH | P1 |
-| Proton therapy 77520-77525 config | HIGH | LOW | P1 |
-| Triggering code in episode CSV | MEDIUM | MEDIUM | P1 |
-| Cancer site by ICD-O-3 dual-coding | MEDIUM | HIGH | P2 |
-| Gap report with RXNORM cross-check | LOW | MEDIUM | P3 |
+**Critical path:** HL cohort confirmation blocks temporal filtering. All other features are independent.
 
-**Priority key:**
-- P1: Required for v1.6 milestone
-- P2: Add after v1.6 validation
-- P3: Future consideration
+## Edge Cases and Validation
 
----
+### D-Code Exclusion
+- **Edge case:** What if a patient has only D-codes (no C-codes)?
+  - **Expected behavior:** Excluded from cancer summary table (no malignant cancers).
+  - **Validation:** Count patients before/after D-code filter. Log attrition.
 
-## Implementation Notes by Feature
+### HL Cohort Confirmation
+- **Edge case:** Patient has 5 HL codes all on the same date.
+  - **Expected behavior:** Fails 7-day separation rule. Excluded from confirmed HL cohort.
+  - **Validation:** Check distinct date count, not total code count.
 
-### Cancer Site Frequency Table
+- **Edge case:** Patient has 2 HL codes 6 days apart.
+  - **Expected behavior:** Fails 7-day rule (need ≥7 days). Excluded.
+  - **Validation:** Use `>=7` not `>6` in gap calculation.
 
-**Expected behavior:** Read CancerSiteCategories.xlsx to extract ICD code ranges and group names. Query DIAGNOSIS table for all ICD-10 codes on HL patients. Query TUMOR_REGISTRY for ICD-O-3 topography codes. For each patient, assign cancer site group based on best match (most specific group wins if code matches multiple). Produce frequency table: cancer_site_group | n_patients | n_records | pct_of_cohort. Apply HIPAA suppression (n <= 10 → suppressed). Output as styled xlsx + CSV.
+- **Edge case:** Patient has C81.90 and C81.01 (different subtypes) 10 days apart.
+  - **Expected behavior:** Passes confirmation. Both are C81.* (Hodgkin Lymphoma).
+  - **Validation:** Prefix match (C81.*), not exact code match.
 
-**Key design decisions to make:**
-- Does a single patient get counted in multiple cancer site groups if they have multiple diagnoses? (Recommendation: count unique patients per group, allow multi-group assignment, but flag)
-- What happens to ICD codes that match no category? (Recommendation: "Unclassified" catch-all group with frequency count — high count here signals gap in CancerSiteCategories.xlsx coverage)
-- Priority of ICD-O-3 vs ICD-10 when both match different groups? (Recommendation: ICD-O-3 takes precedence for TUMOR_REGISTRY records; ICD-10 for DIAGNOSIS records)
+### Temporal Filtering
+- **Edge case:** First HL diagnosis is the only cancer code in record.
+  - **Expected behavior:** Filtered cancer summary table is empty for this patient (no post-HL cancers).
+  - **Validation:** Patients with no post-HL cancers should not appear in filtered output.
 
-**Existing pattern to follow:** R/35_payer_code_frequency_av_th.R reads a reference xlsx, matches codes against PCORnet data, and produces frequency output. Same pattern applies here.
+- **Edge case:** Patient has non-HL cancer diagnosed same day as first HL diagnosis.
+  - **Expected behavior:** DX_DATE > first_hl_date excludes same-day diagnoses. Only strictly after.
+  - **Validation:** Use `>` not `>=` for temporal filter.
 
-### TREATMENT_CODES Gap Report
+- **Edge case:** Patient has HL relapse (new HL code after first HL).
+  - **Expected behavior:** Included in filtered cancer summary (HL after HL is still "post-HL cancer").
+  - **Validation:** Do not exclude C81.* codes from post-HL filter.
 
-**Expected behavior:** Extract all code tables from TreatmentVariables_2024.07.17.docx using officer package. Parse code columns and treatment type labels. Compare against TREATMENT_CODES list in R/00_config.R element by element. Report: (a) codes in docx not in config by code type and treatment type, (b) codes in config not in docx (additions made during Phases 39-42). Output as multi-sheet xlsx with same visual style as treatment_inventory.xlsx.
+### Cancer Category Label
+- **Edge case:** ICD code not in PREFIX_MAP (e.g., rare code).
+  - **Expected behavior:** Category = NA or "Other/Unknown".
+  - **Validation:** Left join to PREFIX_MAP. Handle NAs gracefully. Log unmapped codes.
 
-**Key design decisions to make:**
-- How to handle docx table format variation? (Recommendation: defensive parsing with fallback; log unparseable sections)
-- Should Phase 39-42 resolved codes count as "in docx" or "additions"? (Recommendation: additions are explicitly tagged with phase number in config comments — use those as "validated additions" distinct from "unexplained differences")
+- **Edge case:** Overlapping ICD ranges in CancerSiteCategories.xlsx.
+  - **Expected behavior:** PREFIX_MAP uses first match (already handled in config).
+  - **Validation:** Verify PREFIX_MAP construction in R/00_config.R. No duplicate prefixes.
 
-**Existing pattern to follow:** R/42_treatment_codes_resolved.R produces per-type resolved xlsx files. The gap report is a cross-file comparison layer on top of the same data.
+### Death Date
+- **Edge case:** DEATH_DATE = 1900-01-01 (sentinel value).
+  - **Expected behavior:** Filtered out (1900 sentinel filtering already implemented in v1.1 Phase 17).
+  - **Validation:** Apply existing `filter_1900_dates()` helper to DEATH_DATE.
 
-### Radiation CPT Audit
+- **Edge case:** DEATH_DATE is NA (no death recorded).
+  - **Expected behavior:** No death bar in Gantt. Patient is censored.
+  - **Validation:** `if (!is.na(DEATH_DATE))` before adding death treatment type.
 
-**Expected behavior:** For every CPT code in the range 70010-79999, classify it as: TREATMENT (radiation delivery or management), PLANNING (simulation, dosimetry, treatment planning — legitimate but not direct delivery), IMAGING (diagnostic radiology — should not be in radiation_cpt), or EXCLUDED (other, with rationale). For codes in the data that are currently not in radiation_cpt, determine if they should be added. For codes in radiation_cpt, confirm classification is TREATMENT or PLANNING. Cite CPT descriptions from CMS MPFS RVU file (public domain).
+- **Edge case:** DEATH_DATE < first treatment date (data quality issue).
+  - **Expected behavior:** Include anyway (data as-is philosophy). Flag in data quality report if needed.
+  - **Validation:** Do not filter. Accept that some dates may be out of sequence.
 
-**Key radiation CPT sub-ranges to document:**
-- 70010-76999: Diagnostic Radiology (imaging — should NOT be in radiation_cpt)
-- 77001-77299: Radiation Oncology — planning/simulation (legitimate but not delivery)
-- 77300-77399: Treatment planning and dosimetry (PLANNING)
-- 77400-77499: Radiation treatment delivery (TREATMENT — current radiation_cpt lives here)
-- 77500-77599: Radiation treatment management (TREATMENT)
-- 77600-77799: Hyperthermia and clinical brachytherapy (TREATMENT for 776xx/777xx)
-- 77785-77799: Brachytherapy (TREATMENT)
-- 78000-78999: Nuclear Medicine (imaging — NOT treatment)
-- 79000-79999: Therapeutic Nuclear Medicine (TREATMENT for some codes, IMAGING for others)
+## Data Quality Considerations
 
-**Proton therapy specifically:** 77520 (proton treatment delivery, simple), 77522 (proton delivery, simple with compensation), 77523 (proton delivery, intermediate), 77525 (proton delivery, complex) are TREATMENT codes and are absent from current radiation_cpt. These should be added.
-
-**Existing pattern to follow:** R/39_investigate_unmatched.R produces a classification report with cited rationale per code. Same output structure applies.
-
-### Triggering Code Column
-
-**Expected behavior:** Extend extract_all_dates() in R/43 to return (ID, treatment_date, triggering_code, triggering_source_table) instead of just (ID, treatment_date). In R/44's calculate_episodes_detailed(), retain the triggering_code(s) associated with episode_start: collect all distinct codes that appeared on the episode_start date. In the per-type CSV output, add a triggering_codes column (comma-separated if multiple) and a triggering_source column. The D-08 schema from Phase 44 decision log will need to be updated.
-
-**Key design decisions to make:**
-- New script (R/45) or modify R/44 in place? (Recommendation: new R/45 to preserve Phase 44 as stable reference; Phase 44 is already shipped per ROADMAP.md)
-- If same date has codes from multiple source tables, how to format? (Recommendation: pipe-separated "J9000|PROCEDURES" format for triggering_codes_with_source; or two columns: triggering_codes and triggering_sources)
-- Should triggering code be captured for ALL dates in episode or only episode_start? (Recommendation: only episode_start — this is what defines episode identity for QA purposes)
-
----
-
-## Complexity Summary
-
-### Low Complexity (1-2 hours)
-- Proton therapy 77520-77525 config update: grep config, add 4 codes with citation comments, verify in radiation_cpt vector
-
-### Medium Complexity (half day to 1 day each)
-- Cancer site frequency table: xlsx parsing, dual-table query (DIAGNOSIS + TUMOR_REGISTRY), group matching, styled output
-- TREATMENT_CODES gap report: officer-based docx parsing + config comparison + styled xlsx
-- Triggering code column: modify extract_all_dates() schema + calculate_episodes_detailed() aggregation + CSV schema update
-
-### High Complexity (1-2 days)
-- Radiation CPT audit: CPT range research, per-code classification with citations for 70010-79999 (roughly 1000 codes, most auto-classified by range), output formatting
-
----
+| Feature | Potential Data Issue | Mitigation |
+|---------|---------------------|------------|
+| D-code exclusion | D-codes may be coded alongside C-codes (e.g., D05 carcinoma in situ + C50 breast cancer for same patient) | Expected. Filter D-codes at summary level, not patient level. Patient can have both D and C codes. |
+| HL cohort confirmation | Missing DX_DATEs for some codes | Filter to !is.na(DX_DATE) before temporal gap calculation. Log attrition ("X patients excluded: no DX_DATE"). |
+| Temporal filtering | First HL date may predate OneFlorida enrollment | Expected (prior diagnosis). Use earliest DX_DATE in available data. Do not impute. |
+| Cancer category | PREFIX_MAP may not cover all ICD codes in data | Log unmapped codes. Review frequency. Add to PREFIX_MAP if common. |
+| Death date | DEATH_DATE may lag true death (reporting delay) | Accept lag. PCORnet quarterly refresh means some deaths may appear months later. Do not adjust. |
 
 ## Sources
 
-### Cancer Site Classification
-- CancerSiteCategories.xlsx (project file, 42 groups, ICD-10 and ICD-O-3 code ranges)
-- ICD-O-3 topography code documentation: https://www.naaccr.org/icdo3/
-- PCORnet CDM v7.0 TUMOR_REGISTRY table spec: https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf
+### ICD-10 Coding and Cancer Classification
+- [2026 ICD-10-CM Codes C00-D49: Neoplasms](https://www.icd10data.com/ICD10CM/Codes/C00-D49)
+- [ICD-10-CM Chapter 2: Neoplasms (C00-D49) | SEER Training](https://training.seer.cancer.gov/icd10cm/neoplasm/)
+- [D Codes - SEER Training Modules](https://training.seer.cancer.gov/icd10cm/neoplasm/d-codes.html)
+- [2026 ICD-10-CM Codes D37-D48: Neoplasms of uncertain behavior](https://www.icd10data.com/ICD10CM/Codes/C00-D49/D37-D48)
+- [2026 ICD-10 Excludes1 to Excludes2 Coding Updates](https://www.allzonems.com/blogs/icd10-excludes1-excludes2-updates)
 
-### CPT Radiation Codes
-- CMS MPFS RVU files (public domain CPT short descriptors): https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files
-- AMA CPT codebook section D (Radiology, 70010-79999) — requires AMA license for full descriptors
-- CMS OPPS Addendum B (radiation oncology): https://www.cms.gov/medicare/payment/prospective-payment-systems/hospital-outpatient/addendum-b
-- Proton therapy CPT codes 77520-77525: confirmed in AMA CPT 2025 section 77520-77525 (Proton Beam Treatment Delivery)
+### Cohort Confirmation and Validation
+- [September 2025 Acknowledgement 2 SEER Program Coding and Staging Manual 2026](https://seer.cancer.gov/manuals/2026/SPCSM_2026_MainDoc.pdf)
+- [2022 revised European recommendations for the coding of the basis of diagnosis of cancer cases](https://pmc.ncbi.nlm.nih.gov/articles/PMC10755738/)
+- [Real-time data in cancer registries: Validation of an automated data extraction system](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12303076/)
+- [Variations in Using Diagnosis Codes for Defining Age-Related Macular Degeneration Cohorts](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11864795/)
 
-### Docx Parsing (R)
-- officer package documentation: https://davidgohel.github.io/officer/
-- docxtractr package: https://cran.r-project.org/package=docxtractr
+### Secondary Malignancy and Temporal Analysis
+- [Second cancer risk following Hodgkin lymphoma - PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC5667959/)
+- [Subsequent Primary Cancer Risk Is on the Rise in Cancer Survivors](https://www.cancertherapyadvisor.com/news/subsequent-primary-cancer-risk-survivors/)
+- [Cancer statistics, 2026 - CA: A Cancer Journal for Clinicians](https://acsjournals.onlinelibrary.wiley.com/doi/10.3322/caac.70043)
+- [Incidence and time trends of second primary malignancies after non-Hodgkin lymphoma](https://ashpublications.org/bloodadvances/article/6/8/2657/483555/Incidence-and-time-trends-of-second-primary)
 
-### Existing Pipeline Patterns
-- R/35_payer_code_frequency_av_th.R: xlsx-reference cross-match pattern
-- R/39_investigate_unmatched.R: code classification with cited rationale pattern
-- R/42_treatment_codes_resolved.R: per-type resolved xlsx output pattern
-- R/44_treatment_episodes.R: episode CSV schema (D-08) to be extended with triggering_codes
+### PCORnet CDM and Death Date
+- [PCORnet v6.0](https://data-models-service.research.chop.edu/models/pcornet/6.0.0)
+- [Characteristics of 24,516 Patients Diagnosed with COVID-19 in PCORnet](https://www.medrxiv.org/content/10.1101/2020.08.01.20163733.full.pdf)
 
----
-*Feature research for: v1.6 Treatment Code Validation & Cancer Site Analysis*
-*Researched: 2026-04-21*
+### Clinical Timeline Visualization
+- [Communicating cancer treatment with pictogram-based timeline visualizations - PMC](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11833489/)
+- [Gantt Chart Software for Health Care Professionals](https://clickup.com/features/gantt/health-care-professionals)
+
+### Treatment Episode Methodology
+- [Real-World Treatment Patterns in Relapsed/Refractory Multiple Myeloma - PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC12301936/)
+
+### SEER Cancer Site Recoding
+- [Site Recode - SEER](https://seer.cancer.gov/siterecode/)
+- [Variable Definitions | U.S. Cancer Statistics | CDC](https://www.cdc.gov/united-states-cancer-statistics/public-use/variable-definitions.html)
+
+### Hodgkin Lymphoma ICD-10 Codes
+- [2026 ICD-10-CM Codes C81*: Hodgkin lymphoma](https://www.icd10data.com/ICD10CM/Codes/C00-D49/C81-C96/C81-)
+
+## Confidence Assessment
+
+| Source Type | Confidence | Rationale |
+|-------------|------------|-----------|
+| ICD-10 structure (C vs D codes) | HIGH | Official SEER training materials, ICD-10-CM 2026 code sets, CDC classification manuals |
+| Cancer registry practices (D-code exclusion) | HIGH | SEER coding manual 2026, European cancer registry recommendations |
+| Temporal validation (2+ codes, 7+ days) | MEDIUM | Standard practice in EHR validation studies, but 7-day threshold not universally mandated. Some studies use 30 days. Project already chose 7 days (R/51). |
+| PCORnet DEATH_DATE | HIGH | PCORnet CDM v6.0 specification, published research using PCORnet mortality data |
+| 90-day treatment episode gaps | HIGH | Oncology claims analysis standard, published studies use 90-180 day bridging |
+| Gantt chart for clinical timelines | HIGH | Published research on cancer treatment timeline visualization |
+| SEER subsequent cancer methodology | HIGH | Official SEER manuals, published cancer statistics 2026 |
+
+**Overall confidence: HIGH** — All table stakes features are standard epidemiology/cancer registry practices with official documentation. Implementation complexity is low-medium (existing infrastructure supports all features).

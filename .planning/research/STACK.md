@@ -1,290 +1,352 @@
-# Technology Stack
+# Technology Stack — v1.7 Cancer Summary Refinement & Gantt Enhancements
 
-**Project:** PCORnet CDM Payer Analysis Pipeline (R)
-**Researched:** 2026-04-21 (v1.6 milestone additions)
-**Environment:** RStudio on UF HiPerGator (HPC SLURM scheduler)
-**Confidence:** HIGH (core additions); MEDIUM (docx parsing approach)
+**Project:** PCORnet Payer Variable Investigation (R Pipeline)
+**Milestone:** v1.7 Cancer Summary Refinement & Gantt Enhancements
+**Researched:** 2026-05-22
 
----
+## Executive Summary
 
-## Baseline Stack (Validated — Do Not Re-research)
+**NO NEW PACKAGES REQUIRED.** All five new features (benign D-code filtering, HL cohort confirmation, temporal filtering, Gantt cancer category labels, death date integration) use existing validated stack. This is a logic-only enhancement milestone.
 
-The following are already installed and in use on HiPerGator. No changes needed.
+**Validated stack already provides:**
+- String pattern matching (stringr) for D-code filtering
+- Date arithmetic (lubridate) for 7-day separation and temporal filtering
+- Data manipulation (dplyr) for cohort confirmation logic
+- PREFIX_MAP infrastructure (R/53) for cancer category classification
+- DuckDB access to DEMOGRAPHIC table for death dates
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| R | 4.4.2+ | Base language |
-| tidyverse (dplyr, stringr, ggplot2, lubridate, purrr) | 2.0.0+ | Core data manipulation ecosystem |
-| duckdb + DBI | 0.10+ | Backend data access |
-| openxlsx2 | 1.x | Styled xlsx output |
-| readxl | 1.4.3+ | xlsx input (already used in R/35, R/42) |
-| officer | 0.6.x | PPTX generation |
-| glue, janitor, scales, here | latest | Utilities |
+**Zero new dependencies = zero integration risk.**
 
 ---
 
-## New Capabilities Required for v1.6
+## New Feature Requirements → Existing Stack Mapping
 
-Three distinct new technical capabilities are needed. Each is addressed below.
+### Feature 1: Remove Benign D-Codes from Cancer Summary
 
----
+**Requirement:** Filter out D10-D36 and D3A (benign neoplasms) from cancer_summary_table.xlsx
 
-## Capability 1: Cross-referencing TreatmentVariables_2024.07.17.docx Against R/00_config.R
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| Pattern matching | stringr | 1.5.1+ | ✓ Phase 2 (ICD normalization) |
+| Filtering | dplyr | 1.2.0+ | ✓ Phase 1 (all cohort logic) |
+| PREFIX_MAP lookup | Base R | — | ✓ Phase 53 (R/53_cancer_summary.R) |
 
-### What This Is
-
-Extracting code lists from a Word document (TreatmentVariables_2024.07.17.docx) and comparing them against the `TREATMENT_CODES` vectors in `R/00_config.R`. The goal is a gap analysis: codes in the docx but not in config, and codes in config but not in docx.
-
-### Recommended Approach: docxtractr
-
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| docxtractr | 0.6.5 | Extract tables from .docx files | Purpose-built for this exact task; read_docx() + docx_extract_tbl() returns data.frames directly; zero post-processing needed to get a tidy code list |
-
-**Why docxtractr over officer for this task:**
-- `officer::docx_summary()` extracts all document elements (paragraphs, tables, headers) into a flat data.frame requiring manual filtering to isolate table rows. More flexible but noisier.
-- `docxtractr::docx_extract_tbl()` extracts a specific table directly as a clean data.frame with `header = TRUE` for column name handling. Correct tool for structured tables containing code lists.
-- TreatmentVariables_2024.07.17.docx contains treatment code tables (confirmed by prior Phase 10 work using this file for code lookups). docxtractr's table-specific API is cleaner.
-
-**officer is already installed** (used by R/11_generate_pptx.R and R/22). Use it only if TreatmentVariables contains narrative text rather than structured tables — then `officer::docx_summary()` to extract paragraph text would be appropriate.
-
-**Confidence:** HIGH — docxtractr 0.6.5 is current CRAN (verified 2026-04-21), stable since 2020, in active use.
-
-### Installation
-
+**Implementation approach:**
 ```r
-install.packages("docxtractr")
+# In R/53_cancer_summary.R and R/54_cancer_summary_table.R
+BENIGN_PREFIXES <- c("D10", "D11", "D12", "D13", "D14", "D15", "D16",
+                     "D17", "D18", "D19", "D20", "D21", "D22", "D23",
+                     "D24", "D25", "D26", "D27", "D28", "D29", "D30",
+                     "D31", "D32", "D33", "D34", "D35", "D36", "D3A")
+
+dx_cancer <- dx_cancer %>%
+  filter(!substr(DX_norm, 1, 3) %in% BENIGN_PREFIXES)
 ```
 
-### Core Usage Pattern
-
-```r
-library(docxtractr)
-
-doc <- read_docx("TreatmentVariables_2024.07.17.docx")
-
-# Discover tables
-docx_tbl_count(doc)
-docx_describe_tbls(doc)
-
-# Extract specific table (e.g., table 1 = radiation codes)
-radiation_ref <- docx_extract_tbl(doc, tbl_number = 1, header = TRUE)
-
-# Compare against TREATMENT_CODES$radiation_cpt from R/00_config.R
-gaps_in_config   <- setdiff(radiation_ref$code, TREATMENT_CODES$radiation_cpt)
-gaps_in_docx     <- setdiff(TREATMENT_CODES$radiation_cpt, radiation_ref$code)
-```
-
-**Note:** Table numbering in TreatmentVariables_2024.07.17.docx must be discovered at runtime with `docx_tbl_count()` and `docx_describe_tbls()`. Do not hardcode table indices without inspection — Phase 10 used this file interactively (codes were transcribed manually). This is the first programmatic extraction.
+**Why no new package needed:** stringr::substr() and dplyr::filter() already validated for ICD code manipulation in Phase 2 (R/02_harmonize_payer.R) and all cohort scripts.
 
 ---
 
-## Capability 2: Cancer Site Frequency Analysis (CancerSiteCategories.xlsx ICD Codes)
+### Feature 2: HL Cohort Confirmation (2+ Codes, 7-Day Separation)
 
-### What This Is
+**Requirement:** Filter cohort to patients with 2+ HL diagnosis codes at least 7 days apart
 
-Reading CancerSiteCategories.xlsx, which contains ICD-O-3 topography codes and/or ICD-10-CM codes grouped by cancer site category, then joining those codes against PCORnet DIAGNOSIS and TUMOR_REGISTRY tables to produce frequency counts by site category.
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| Date arithmetic | lubridate | 1.9.3+ | ✓ Phase 1 (enrollment windows) |
+| Date sorting | dplyr | 1.2.0+ | ✓ Phase 1 (arrange()) |
+| Interval logic | Base R | — | ✓ Phase 50 (R/50_cancer_site_2date.R) |
 
-### ICD-O-3 vs ICD-10-CM Code Format — Critical Distinction
-
-**ICD-O-3 topography codes** (used in TUMOR_REGISTRY): Format `C##.#` (e.g., `C81.9`, `C32.0`). These are anatomic site codes. Ranges from C00.0 to C80.9. Already used in this pipeline — `utils_icd.R` handles ICD-O-3 histology codes (9650-9667 range). Site codes in TUMOR_REGISTRY appear as character strings.
-
-**ICD-10-CM diagnosis codes** (used in DIAGNOSIS table): Format `C##.##` (e.g., `C81.10`). Clinically applied diagnosis codes used for billing. Already normalized in `utils_icd.R`.
-
-CancerSiteCategories.xlsx likely stores code ranges (e.g., `C81-C96`, `C00.0-C14.8`) rather than individual codes — the xlsx must be inspected to confirm format at runtime.
-
-### Recommended Approach: readxl + stringr (No New Packages)
-
-**Do not use the `icd` package.** It was archived from CRAN on 2020-10-06 due to unresolved check problems. Installing from GitHub (`jackwasey/icd`) would introduce an unmanaged dependency on HiPerGator where network access to GitHub may not be available during analysis runs. The package is also unmaintained ("New maintainer/owner needed" per GitHub README).
-
-**Do not use `ICD10gm`.** It is the German ICD-10 modification (ICD-10-GM), not ICD-10-CM. Its `icd_expand()` function covers German-specific code trees and would produce incorrect results for US clinical codes.
-
-**Use readxl + stringr instead.** The pipeline already uses this combination effectively (e.g., R/35 uses `readxl::read_excel()` for payer cross-reference). ICD code range parsing for this use case requires only prefix matching — which `stringr::str_starts()` handles cleanly. No additional packages are needed.
-
-| Library | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| readxl | 1.4.3+ | Read CancerSiteCategories.xlsx | Already in pipeline; `read_excel()` with `sheet=` and `skip=` handles any layout |
-| stringr | 1.5.1+ | Parse and match ICD code ranges | `str_starts()` for prefix matching; `str_extract()` for parsing range notation; already in pipeline |
-| dplyr | 1.2.0+ | Frequency aggregation | `group_by()` + `summarise()` for site category counts; already in pipeline |
-
-**No new packages required for this capability.**
-
-### ICD Range Parsing Strategy
-
-CancerSiteCategories.xlsx stores ranges in one of two likely formats:
-
-**Format A — Prefix ranges** (e.g., `C81`, `C82-C86`):
+**Implementation approach:**
 ```r
-# Expand "C82-C86" to vector of prefixes c("C82","C83","C84","C85","C86")
-parse_prefix_range <- function(range_str) {
-  if (str_detect(range_str, "-")) {
-    parts <- str_split_1(range_str, "-")
-    letter  <- str_extract(parts[1], "^[A-Z]")
-    start_n <- as.integer(str_extract(parts[1], "[0-9]+"))
-    end_n   <- as.integer(str_extract(parts[2], "[0-9]+"))
-    paste0(letter, start_n:end_n)
-  } else {
-    range_str
-  }
-}
-
-# Match DIAGNOSIS.DX against expanded prefixes
-dx %>%
-  filter(hl_cohort) %>%
-  mutate(matches_site = str_starts(DX, site_prefix)) %>%
-  group_by(site_category) %>%
-  summarise(n_patients = n_distinct(PATID), n_records = n())
+# Pattern validated in R/50_cancer_site_2date.R
+hl_confirmed <- dx_hl %>%
+  group_by(ID) %>%
+  arrange(DX_DATE) %>%
+  mutate(next_date = lead(DX_DATE),
+         days_diff = as.numeric(next_date - DX_DATE)) %>%
+  filter(any(days_diff >= 7, na.rm = TRUE)) %>%
+  pull(ID) %>%
+  unique()
 ```
 
-**Format B — Dotted decimal ranges** (e.g., `C00.0-C14.8`): Parse start/end codes, then filter with `DX >= start & DX <= end` after standardizing to undotted form (consistent with `utils_icd.R`'s existing normalization).
+**Why no new package needed:** This is the exact pattern from Phase 50 (cancer site confirmation with 7-day separation). lubridate's date arithmetic and dplyr's group-by-mutate pattern are already validated.
 
-**Which format CancerSiteCategories.xlsx uses must be verified at runtime.** The xlsx must be read and inspected before writing the parsing logic. Budget one inspection step in the phase plan.
-
-### Integration with Existing Pipeline
-
-- TUMOR_REGISTRY1/2/3 contain `SITE_CD` (ICD-O-3 topography) and `HISTOLOGY_CD` — query site codes against CancerSiteCategories ICD-O-3 ranges
-- DIAGNOSIS table contains `DX` (ICD-10-CM / ICD-9-CM) and `DX_TYPE` — query against ICD-10-CM ranges
-- Both tables accessible via `get_pcornet_table()` abstraction (DuckDB backend)
-- Cohort filter (`hl_cohort` PATID set) applies before frequency count to scope to HL patients
+**Reference:** R/50_cancer_site_2date.R lines 84-140 (confirmed working pattern)
 
 ---
 
-## Capability 3: Radiation CPT Audit (70010-79999 Imaging vs Treatment Classification)
+### Feature 3: Temporal Filtering (Cancers After First HL Diagnosis)
 
-### What This Is
+**Requirement:** Produce cancer_summary_table filtered to cancers occurring after first HL diagnosis date
 
-Auditing the CPT range 70010-79999 to confirm which codes in PROCEDURES are radiation treatment vs. diagnostic imaging, and to produce a documented classification with cited exclusion rationale.
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| Date comparison | lubridate | 1.9.3+ | ✓ Phase 1 (date windows) |
+| Join logic | dplyr | 1.2.0+ | ✓ Phase 3 (multi-table joins) |
+| Filtering | dplyr | 1.2.0+ | ✓ Phase 1 |
 
-### No New Packages Needed
-
-This is a classification and documentation task using CPT code numeric ranges. The existing dplyr + stringr + openxlsx2 stack is sufficient.
-
-### Authoritative CPT Sub-Range Classification (MEDIUM confidence — from ASTRO/CMS sources)
-
-The AMA CPT radiology section (70010-79999) divides into these subsections relevant to the audit:
-
-| Code Range | Category | Treatment? | Action |
-|------------|----------|------------|--------|
-| 70010-76499 | Diagnostic Radiology (imaging) | NO | Exclude — diagnostic imaging |
-| 76506-76999 | Diagnostic Ultrasound | NO | Exclude — diagnostic imaging |
-| 77001-77022 | Radiologic Guidance | NO | Exclude — guidance, not treatment |
-| 77046-77067 | Mammography | NO | Exclude — screening/diagnostic |
-| 77071-77092 | Bone/Joint Studies | NO | Exclude — diagnostic |
-| 77261-77263 | Clinical Treatment Planning | PLANNING ONLY | Exclude — plan creation, no radiation delivered |
-| 77280-77293 | Simulation | PLANNING ONLY | Exclude — simulation, no radiation delivered |
-| 77295-77370 | Medical Radiation Physics, Dosimetry, Treatment Devices | PLANNING ONLY | Exclude — physics calculations, device fabrication |
-| 77371-77387 | Stereotactic Radiation Treatment Delivery | YES — TREATMENT | Include |
-| 77399-77417 | Radiation Treatment Delivery (external beam) | YES — TREATMENT | Include |
-| 77423-77425 | Neutron Beam Treatment Delivery | YES — TREATMENT | Include |
-| 77427-77432 | Radiation Treatment Management | YES — TREATMENT | Include (management of active treatment course) |
-| 77435 | SBRT treatment management | YES — TREATMENT | Include |
-| 77469-77470 | Intraoperative radiation treatment | YES — TREATMENT | Include |
-| 77520-77525 | Proton Beam Treatment | YES — TREATMENT | Include (confirm in TREATMENT_CODES) |
-| 77600-77620 | Hyperthermia | ADJUNCT | Flag for review — adjunct to radiation |
-| 77750-77799 | Brachytherapy | YES — TREATMENT | Include |
-| 78012-79999 | Nuclear Medicine | NO | Exclude — diagnostic/therapeutic nuclear medicine |
-
-**2026 code changes (ASTRO-confirmed):** 77385 and 77386 (IMRT delivery technique-based codes) were deleted January 1, 2026. Replaced by complexity-based codes 77402 (simple/level 1), 77407 (intermediate/level 2), 77412 (complex/level 3). Already reflected in `TREATMENT_CODES$radiation_cpt` in `R/00_config.R`.
-
-**Proton therapy:** 77520-77525 are in the treatment delivery subsection. Confirm they are in `TREATMENT_CODES$radiation_cpt` — current config (reviewed 2026-04-21) does NOT include them. This is a gap to flag.
-
-### Implementation Pattern
-
+**Implementation approach:**
 ```r
-# In new audit script (e.g., R/46_radiation_cpt_audit.R)
-# Uses existing get_pcornet_table() + dplyr, no new packages
+# Step 1: Get first HL diagnosis date per patient
+first_hl_date <- dx_hl %>%
+  group_by(ID) %>%
+  summarize(first_hl_date = min(DX_DATE, na.rm = TRUE))
 
-procedures <- get_pcornet_table("PROCEDURES") %>%
-  filter(PATID %in% hl_patids) %>%
-  filter(PX_TYPE == "CH") %>%                          # CPT/HCPCS
-  filter(str_detect(PX, "^7[0-9]{4}$")) %>%            # 70000-79999 range
+# Step 2: Filter cancer summary to post-HL cancers
+cancer_summary_post_hl <- cancer_summary %>%
+  left_join(first_hl_date, by = "ID") %>%
+  filter(DX_DATE >= first_hl_date)
+```
+
+**Why no new package needed:** Date comparison and left_join() are core dplyr operations validated across all cohort scripts.
+
+---
+
+### Feature 4: Add Cancer Category Labels to Gantt Episodes
+
+**Requirement:** Add cancer category label to each treatment episode in Gantt data (same CancerSiteCategories mapping minus D-codes)
+
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| PREFIX_MAP lookup | Base R | — | ✓ Phase 53 (R/53_cancer_summary.R) |
+| Join logic | dplyr | 1.2.0+ | ✓ Phase 49 (Gantt data export) |
+| Code normalization | stringr | 1.5.1+ | ✓ Phase 2 |
+
+**Implementation approach:**
+```r
+# In R/49_gantt_data_export.R or new R/55_gantt_cancer_labels.R
+# Reuse PREFIX_MAP from R/53_cancer_summary.R (copy or source)
+# Exclude benign D-codes
+
+gantt_episodes_enhanced <- gantt_episodes %>%
+  left_join(cancer_category_lookup, by = c("patient_id" = "ID")) %>%
+  mutate(is_hodgkin = ifelse(cancer_category == "Hodgkin Lymphoma", 1, 0))
+```
+
+**Why no new package needed:** PREFIX_MAP infrastructure already exists in R/53_cancer_summary.R. Just needs to be imported/reused and joined to Gantt data.
+
+**Integration note:** Requires coordination between:
+- R/53_cancer_summary.R (cancer category classification source)
+- R/49_gantt_data_export.R (Gantt CSV export destination)
+
+Consider extracting PREFIX_MAP to R/00_config.R for DRY principle (same as AMC_PAYER_LOOKUP migration in Phase 36).
+
+---
+
+### Feature 5: Add Death Date to Gantt Chart
+
+**Requirement:** Add death date from DEMOGRAPHIC/DEATH tables to Gantt chart and treat death as a treatment type for graphing
+
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| Table access | DuckDB via get_pcornet_table() | 1.3+ | ✓ Phase 30 (backend abstraction) |
+| Date parsing | lubridate | 1.9.3+ | ✓ Phase 1 (multi-format dates) |
+| Join logic | dplyr | 1.2.0+ | ✓ Phase 3 |
+
+**PCORnet CDM structure:**
+- **DEMOGRAPHIC table** already loaded (R/00_config.R line 115)
+- **DEATH_DATE column** is standard PCORnet CDM v7.0 field (date format: YYYY-MM-DD or YYYYMMDD)
+- **DEATH table** does NOT exist in PCORnet CDM — death data is in DEMOGRAPHIC
+
+**Implementation approach:**
+```r
+# In R/49_gantt_data_export.R or new enhancement script
+demographic <- get_pcornet_table("DEMOGRAPHIC") %>%
+  select(ID, BIRTH_DATE, DEATH_DATE) %>%
   collect()
 
-# Classify using numeric range
-audit <- procedures %>%
-  mutate(px_num = as.integer(PX)) %>%
-  mutate(cpt_class = case_when(
-    px_num >= 70010 & px_num <= 76499 ~ "Diagnostic Imaging — EXCLUDE",
-    px_num >= 77261 & px_num <= 77370 ~ "RT Planning/Physics — EXCLUDE",
-    px_num >= 77371 & px_num <= 77470 ~ "RT Treatment Delivery — INCLUDE",
-    px_num >= 77520 & px_num <= 77525 ~ "Proton Beam — INCLUDE (verify in config)",
-    px_num >= 77750 & px_num <= 77799 ~ "Brachytherapy — INCLUDE",
-    px_num >= 78012 & px_num <= 79999 ~ "Nuclear Medicine — EXCLUDE",
-    TRUE ~ "Other — Review"
-  ))
+# Join to gantt_episodes
+gantt_with_death <- gantt_episodes %>%
+  left_join(demographic %>% select(ID, DEATH_DATE),
+            by = c("patient_id" = "ID"))
+
+# Treat death as pseudo-treatment type for visualization
+death_events <- demographic %>%
+  filter(!is.na(DEATH_DATE)) %>%
+  transmute(
+    patient_id = ID,
+    treatment_type = "Death",
+    episode_start = DEATH_DATE,
+    episode_stop = DEATH_DATE,
+    episode_length_days = 0
+  )
 ```
 
----
+**Why no new package needed:** DEMOGRAPHIC table already loaded via DuckDB. Date parsing via parse_pcornet_date() (R/01_load_pcornet.R) already handles DEATH_DATE format.
 
-## Triggering Codes Column (Treatment Episodes Output)
-
-### No New Packages
-
-Adding triggering codes to treatment episode CSV output (R/44) requires only dplyr joins against the existing treatment code match records. The `utils_treatment.R` helper functions already track source codes. This is a data transformation using existing stack — no new libraries.
-
----
-
-## Summary: New Package Requirements for v1.6
-
-| Package | Version | New? | Purpose |
-|---------|---------|------|---------|
-| docxtractr | 0.6.5 | YES — add to renv | Extract code tables from TreatmentVariables_2024.07.17.docx |
-| readxl | 1.4.3+ | NO — already present | Read CancerSiteCategories.xlsx (already used in R/35, R/42) |
-| stringr | 1.5.1+ | NO — already present | ICD range parsing |
-| dplyr | 1.2.0+ | NO — already present | All aggregation and joins |
-| openxlsx2 | current | NO — already present | Styled output workbooks |
-
-**One new package total: docxtractr 0.6.5.**
+**PCORnet CDM reference:**
+- DEMOGRAPHIC.DEATH_DATE is a DATE field (not DATETIME)
+- Format: YYYY-MM-DD per PCORnet CDM v7.0 specification
+- Already handled by existing parse_pcornet_date() function
 
 ---
 
-## What NOT to Use
+## What NOT to Add
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| `icd` package | Archived from CRAN 2020-10-06, unmaintained, GitHub install unreliable on HiPerGator | readxl + stringr prefix matching |
-| `ICD10gm` package | German ICD-10-GM codes, not US ICD-10-CM/ICD-O-3 | readxl + stringr prefix matching |
-| `officer` for docx table extraction | `docx_summary()` returns flat element list requiring manual table isolation | docxtractr `docx_extract_tbl()` |
-| Hardcoded CPT sub-range assumptions | CPT code structure must be verified against current AMA/CMS guidance; sub-ranges shift across years | Case_when with explicit numeric boundaries + source citation comment |
-| AMA CPT manual for code descriptions | Copyrighted; cannot embed descriptions programmatically from AMA | CMS NCCI Policy Manual (public domain); ASTRO coding guidance; NLM/RxNorm API (already used in R/39-40) |
+### Rejected: New Date/Time Libraries
+
+**Considered:** data.table::fread, clock (new R date/time library)
+
+**Why NOT:**
+- data.table conflicts with named predicate requirement (opaque syntax)
+- clock is redundant with lubridate (already validated)
+- No performance bottleneck identified requiring data.table
+
+### Rejected: New Visualization Libraries
+
+**Considered:** gtsummary, gt (table formatting)
+
+**Why NOT:**
+- openxlsx2 already handles styled table output (Phase 54)
+- No requirement for publication-quality tables in v1.7
+- CSV output for Gantt charts is sufficient (third-party tool consumes)
+
+### Rejected: Dedicated Survival Analysis Libraries
+
+**Considered:** survival, survminer (for death date analysis)
+
+**Why NOT:**
+- Out of scope: "Statistical modeling / regression — exploration only" (PROJECT.md line 63)
+- Death date is treated as visualization element (Gantt pseudo-treatment), not survival endpoint
+- Defer to v2 if survival analysis becomes a requirement
 
 ---
 
-## Installation (v1.6 delta only)
+## Integration Points
 
+### 1. PREFIX_MAP Centralization (Recommended)
+
+**Current state:** PREFIX_MAP duplicated in R/47_cancer_site_frequency.R, R/53_cancer_summary.R, R/54_cancer_summary_table.R
+
+**Recommendation:** Extract to R/00_config.R (same pattern as AMC_PAYER_LOOKUP in Phase 36)
+
+**Benefits:**
+- Single source of truth for cancer category mapping
+- Eliminates drift risk when categories change
+- Easier to add benign D-code exclusion logic
+
+**Migration pattern:**
 ```r
-# On HiPerGator — interactive session only (not in SLURM script)
-install.packages("docxtractr")  # 0.6.5
-
-# Snapshot renv to capture the new dependency
-renv::snapshot()
+# In R/00_config.R (after AMC_PAYER_LOOKUP)
+CANCER_CATEGORY_MAP <- list(
+  prefix_map = c(...),  # Full PREFIX_MAP from R/53
+  benign_prefixes = c("D10", "D11", ..., "D3A"),
+  classify_codes = function(codes) { ... }
+)
 ```
+
+### 2. DEMOGRAPHIC Table Already Loaded
+
+**Current state:** DEMOGRAPHIC listed in CONFIG$tables (R/00_config.R line 115)
+
+**Validation needed:** Confirm DEATH_DATE column populated in HiPerGator data
+
+**Test query:**
+```r
+demographic <- get_pcornet_table("DEMOGRAPHIC") %>%
+  select(ID, DEATH_DATE) %>%
+  filter(!is.na(DEATH_DATE)) %>%
+  collect()
+
+message(glue("Patients with death date: {nrow(demographic)}"))
+```
+
+**Expected outcome:** Some non-zero count (VRT is death-only partner site, PROJECT.md line 140)
+
+### 3. Cohort Confirmation Pattern Reuse
+
+**Source:** R/50_cancer_site_2date.R (Phase 50 validation)
+
+**Pattern:** Group-by ID, arrange by date, calculate lead() differences, filter any() >= 7 days
+
+**Reuse in:** New cohort confirmation script or enhancement to existing cohort filter chain
+
+**No changes needed:** Pattern already validated for cancer site confirmation
 
 ---
 
-## Version Compatibility
+## Version Verification (All Current as of 2026-05-22)
 
-| Package | Version | Compatible With | Notes |
-|---------|---------|-----------------|-------|
-| docxtractr 0.6.5 | 2020-07-05 | R 3.5.0+, xml2 1.3.0+ | Depends on xml2 (already a tidyverse transitive dependency); no conflicts with existing stack |
-| readxl 1.4.3 | existing | openxlsx2, dplyr | No version conflicts; `read_excel()` and `wb_load()` serve different read contexts |
+| Package | Minimum | Latest Stable | Status |
+|---------|---------|---------------|--------|
+| dplyr | 1.2.0 | 1.2.1 (Feb 2026) | Current |
+| lubridate | 1.9.3 | 1.9.4 (Jan 2026) | Current |
+| stringr | 1.5.1 | 1.5.2 (Dec 2025) | Current |
+| openxlsx2 | Latest | 1.0.0+ (2025) | Current |
+| DuckDB | 1.3.0 | 1.3.2 (Mar 2026) | Current |
+
+**Source:** CRAN package pages (accessed 2026-05-22)
+
+All packages already in renv.lock from previous phases. No version bumps required.
+
+---
+
+## Implementation Recommendations
+
+### Phase Sequencing Suggestion
+
+1. **Phase 1:** Benign D-code filtering (modify R/53, R/54) — Lowest risk
+2. **Phase 2:** HL cohort confirmation (new cohort predicate or standalone filter) — Reuses Phase 50 pattern
+3. **Phase 3:** Temporal filtering (clone R/54, add first_hl_date join) — Independent of Phase 2
+4. **Phase 4:** PREFIX_MAP centralization (extract to R/00_config.R, update dependents) — Foundation for Phase 5
+5. **Phase 5:** Gantt cancer category labels (enhance R/49 or new script) — Requires Phase 4
+6. **Phase 6:** Death date integration (enhance R/49, add death pseudo-treatment) — Independent of Phase 5
+
+**Rationale:** D-code filtering is simplest and validates the "no new packages" assumption. HL cohort confirmation reuses proven pattern. PREFIX_MAP centralization before Gantt enhancement avoids duplication.
+
+### Testing Strategy
+
+**For each feature:**
+1. Verify row count changes make sense (benign D-code filtering should reduce cancer_summary rows)
+2. Spot-check cancer category assignments against CancerSiteCategories.xlsx
+3. Validate 7-day separation logic with known HL patients (compare to Phase 50 output)
+4. Check death date join (expect matches for VRT site patients)
+
+**Parity testing NOT required:** These are new features, not migrations. No baseline to compare against.
 
 ---
 
 ## Sources
 
-- [docxtractr CRAN package page](https://cran.r-project.org/web/packages/docxtractr/index.html) — version 0.6.5, confirmed current (accessed 2026-04-21) **HIGH confidence**
-- [docxtractr RDocumentation](https://www.rdocumentation.org/packages/docxtractr/versions/0.6.5) — function signatures verified **HIGH confidence**
-- [icd CRAN archived status](https://cran.r-project.org/package=icd) — archived 2020-10-06 confirmed via search (accessed 2026-04-21) **HIGH confidence**
-- [ICD10gm CRAN package](https://cran.r-project.org/web/packages/ICD10gm/ICD10gm.pdf) — German ICD-10-GM, not US ICD-10-CM/ICD-O-3 **HIGH confidence**
-- [PMC: 2026 CMS Radiation Oncology Treatment Delivery Codes](https://pmc.ncbi.nlm.nih.gov/articles/PMC12842826/) — 2026 code changes (77402/77407/77412), deletion of 77385/77386 confirmed **HIGH confidence**
-- [ASTRO Process of Care — Treatment Preparation](https://www.astro.org/practice-support/reimbursement/coding/coding-guidance/coding-faqs-and-tips/process-of-care) — planning/simulation codes 77261-77290 confirmed non-treatment **HIGH confidence**
-- [medicalbillersandcoders.com: Radiology Billing Codes](https://www.medicalbillersandcoders.com/blog/understand-the-basics-of-radiology-billing-codes/) — 70010-79999 subsection boundaries **MEDIUM confidence** (industry source, not AMA official)
-- [medicalbillersandcoders.com: Radiation Oncology Codes Part 1](https://www.medicalbillersandcoders.com/blog/radiation-oncology-codes-part-1/) — 77261-77799 subsection breakdown **MEDIUM confidence**
-- [SEER ICD-O-3 Site Codes format](https://training.seer.cancer.gov/head-neck/abstract-code-stage/codes.html) — C##.# format confirmed **HIGH confidence**
+- **R/00_config.R** — Existing stack configuration, DEMOGRAPHIC table loading
+- **R/53_cancer_summary.R** — PREFIX_MAP structure, cancer category classification
+- **R/50_cancer_site_2date.R** — 7-day separation pattern validation
+- **R/49_gantt_data_export.R** — Gantt CSV export structure
+- **PCORnet CDM v7.0 Specification** — DEMOGRAPHIC.DEATH_DATE field definition
+- **CRAN package pages** — dplyr 1.2.1, lubridate 1.9.4, stringr 1.5.2 (verified 2026-05-22)
+- **PROJECT.md** — Milestone goals, constraints, validated capabilities
 
 ---
 
-*Stack research for: PCORnet HL Pipeline v1.6 — Treatment Code Validation & Cancer Site Analysis*
-*Researched: 2026-04-21*
-*Supersedes: STACK.md dated 2026-03-24 (baseline stack unchanged; this adds v1.6 capability-specific entries)*
+## Confidence Assessment
+
+| Area | Confidence | Rationale |
+|------|------------|-----------|
+| D-code filtering | **HIGH** | stringr pattern matching validated in Phase 2 |
+| HL cohort confirmation | **HIGH** | Exact pattern from Phase 50 (R/50_cancer_site_2date.R) |
+| Temporal filtering | **HIGH** | lubridate date comparison used throughout cohort pipeline |
+| Gantt cancer labels | **HIGH** | PREFIX_MAP already exists, just needs join logic |
+| Death date integration | **MEDIUM** | DEMOGRAPHIC table confirmed, DEATH_DATE column needs validation on HiPerGator data |
+
+**Overall confidence:** **HIGH** — All features use validated stack components. Only uncertainty is DEATH_DATE column population in HiPerGator extract (expected to be populated per VRT partner site).
+
+---
+
+## Summary
+
+**Zero new dependencies.** All five v1.7 features are logic enhancements using:
+- Existing tidyverse packages (dplyr, lubridate, stringr)
+- Existing infrastructure (PREFIX_MAP, DuckDB backend, parse_pcornet_date)
+- Validated patterns (7-day separation from Phase 50, cancer classification from Phase 53)
+
+**Key integration point:** Consider PREFIX_MAP centralization in R/00_config.R to avoid duplication across R/47, R/53, R/54, and new Gantt enhancement script.
+
+**Risk:** Minimal. No package installation, no version conflicts, no new external dependencies.
+
+**Next step:** Validate DEATH_DATE column population in HiPerGator DEMOGRAPHIC table, then proceed with implementation using existing stack.
