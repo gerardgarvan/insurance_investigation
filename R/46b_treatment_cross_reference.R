@@ -28,7 +28,7 @@
 #     Sheet 5: "Immunotherapy"
 #
 # Usage:
-#   Rscript R/46_treatment_cross_reference.R
+#   Rscript R/46b_treatment_cross_reference.R
 #
 # Decisions implemented:
 #   D-01: All 4 active treatment types (chemo, radiation, SCT, immunotherapy)

@@ -11,7 +11,7 @@
 #     Sheet 2 "ICD-O-3 Topography": every unique topography code with counts
 #
 # Usage:
-#   Rscript R/48_extract_all_codes.R
+#   Rscript R/48a_extract_all_codes.R
 # ==============================================================================
 
 suppressPackageStartupMessages({

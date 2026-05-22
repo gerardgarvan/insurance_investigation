@@ -76,7 +76,7 @@ message("--- Loading treatment episodes (Phase 44) ---")
 
 episodes_path <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 if (!file.exists(episodes_path)) {
-  stop(glue("Missing required file: {episodes_path}\nRun R/44_treatment_episodes.R first."))
+  stop(glue("Missing required file: {episodes_path}\nRun R/44a_treatment_episodes.R first."))
 }
 
 episodes <- readRDS(episodes_path)

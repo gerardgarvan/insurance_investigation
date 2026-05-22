@@ -11,7 +11,7 @@
 #   D-03: episode flagged historical when ALL dates < 2012-01-01 (using episode_stop)
 #   D-04: single-date historical episodes get start=stop, length=0
 #   D-05: new script alongside Phase 43 (Phase 43 unchanged)
-#   D-06: new file R/44_treatment_episodes.R
+#   D-06: new file R/44a_treatment_episodes.R
 #   D-07: outputs RDS + styled xlsx + per-type CSVs
 #   D-08: columns: patient_id, treatment_type, episode_number, episode_start,
 #          episode_stop, episode_length_days, distinct_dates_in_episode, historical_flag
@@ -62,11 +62,11 @@ HISTORICAL_CUTOFF <- as.Date("2012-01-01")
 
 # --- SECTION 2: EXTRACTION FUNCTIONS WITH TRIGGERING CODES ---
 
-# These functions mirror the logic in R/43_treatment_durations.R but return
+# These functions mirror the logic in R/43a_treatment_durations.R but return
 # a 3-column tibble: ID, treatment_date, triggering_code.
 # Per D-46-08: bare codes only (PX column for PROCEDURES, DX for DIAGNOSIS, etc.)
 # TUMOR_REGISTRY dates are date evidence only — triggering_code = NA_character_
-# R/43_treatment_durations.R is NOT modified; these are new functions in R/44.
+# R/43a_treatment_durations.R is NOT modified; these are new functions in R/44.
 
 #' Stack sources with triggering_code, dedup on (ID, treatment_date, triggering_code)
 #'
@@ -101,7 +101,7 @@ stack_and_dedup_with_codes <- function(sources, type_name) {
 }
 
 #' Extract all chemotherapy dates with triggering codes
-#' Mirrors extract_chemo_dates() from R/43_treatment_durations.R but adds triggering_code
+#' Mirrors extract_chemo_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_chemo_dates_with_codes <- function() {
   chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
 
@@ -215,7 +215,7 @@ extract_chemo_dates_with_codes <- function() {
 }
 
 #' Extract all radiation dates with triggering codes
-#' Mirrors extract_radiation_dates() from R/43_treatment_durations.R but adds triggering_code
+#' Mirrors extract_radiation_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_radiation_dates_with_codes <- function() {
   rad_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
 
@@ -293,7 +293,7 @@ extract_radiation_dates_with_codes <- function() {
 }
 
 #' Extract all SCT dates with triggering codes
-#' Mirrors extract_sct_dates() from R/43_treatment_durations.R but adds triggering_code
+#' Mirrors extract_sct_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_sct_dates_with_codes <- function() {
   # 1. PROCEDURES: CPT/HCPCS, ICD-9-CM, ICD-10-PCS (exact match), revenue — bare code = PX
   px_dates <- NULL
@@ -367,7 +367,7 @@ extract_sct_dates_with_codes <- function() {
 }
 
 #' Extract all immunotherapy dates with triggering codes
-#' Mirrors extract_immunotherapy_dates() from R/43_treatment_durations.R but adds triggering_code
+#' Mirrors extract_immunotherapy_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_immunotherapy_dates_with_codes <- function() {
   cart_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$cart_icd10pcs_prefixes, collapse = "|"), ")")
 
@@ -419,7 +419,7 @@ extract_dates_with_codes <- function(type) {
 
 # --- SECTION 3: EPISODE CALCULATION FUNCTION ---
 
-# assign_episode_ids() is defined in R/43_treatment_durations.R (sourced above)
+# assign_episode_ids() is defined in R/43a_treatment_durations.R (sourced above)
 
 #' Calculate detailed episode-level data with triggering codes
 #'

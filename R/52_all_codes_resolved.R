@@ -111,7 +111,7 @@ if (file.exists(rds_40_path)) {
 api_descriptions <- api_descriptions %>% distinct(code, .keep_all = TRUE)
 message(glue("  API descriptions: {nrow(api_descriptions)} unique codes"))
 
-# Source 2: Phase 45 hardcoded radiation descriptions (from R/45_radiation_cpt_audit.R)
+# Source 2: Phase 45 hardcoded radiation descriptions (from R/45b_radiation_cpt_audit.R)
 hardcoded_descriptions <- c(
   "77401" = "External beam radiation delivery, surface/orthovoltage (DELETED 2026; historical claims only)",
   "77402" = "Radiation treatment delivery; simple (complexity-based, 2026 new code)",

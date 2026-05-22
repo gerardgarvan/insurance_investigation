@@ -16,7 +16,7 @@
 # Inputs:
 #   - cache/outputs/unmatched_codes_classified.rds (Phase 39)
 #   - cache/outputs/unmatched_ndc_classified.rds (Phase 40)
-#   - R/45_radiation_cpt_audit.R hardcoded_descriptions (sourced inline)
+#   - R/45b_radiation_cpt_audit.R hardcoded_descriptions (sourced inline)
 #   - Manual transcription from R/00_config.R inline comments
 #
 # Output:

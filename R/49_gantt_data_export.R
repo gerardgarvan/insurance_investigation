@@ -38,7 +38,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 
-# Input paths: existing RDS artifacts from R/44_treatment_episodes.R
+# Input paths: existing RDS artifacts from R/44a_treatment_episodes.R
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 DETAIL_RDS   <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 
@@ -46,7 +46,7 @@ DETAIL_RDS   <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rd
 OUTPUT_EPISODES <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
 OUTPUT_DETAIL   <- file.path(CONFIG$output_dir, "gantt_detail.csv")
 
-# Code description lookup (built by R/48_build_code_descriptions.R)
+# Code description lookup (built by R/48b_build_code_descriptions.R)
 DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 
 
@@ -56,10 +56,10 @@ message("=== Phase 01: Gantt Chart Data Export ===\n")
 
 # Verify RDS artifacts exist before attempting to load
 if (!file.exists(EPISODES_RDS)) {
-  stop(glue("ERROR: {EPISODES_RDS} not found. Run R/44_treatment_episodes.R first."))
+  stop(glue("ERROR: {EPISODES_RDS} not found. Run R/44a_treatment_episodes.R first."))
 }
 if (!file.exists(DETAIL_RDS)) {
-  stop(glue("ERROR: {DETAIL_RDS} not found. Run R/44_treatment_episodes.R first."))
+  stop(glue("ERROR: {DETAIL_RDS} not found. Run R/44a_treatment_episodes.R first."))
 }
 
 # Load episode-level data (bars: one row per patient/type/episode)
@@ -104,7 +104,7 @@ message("  Column validation passed")
 # --- SECTION 3B: LOAD CODE DESCRIPTIONS (Phase 02) ---
 
 if (!file.exists(DESCRIPTIONS_RDS)) {
-  stop(glue("ERROR: {DESCRIPTIONS_RDS} not found. Run R/48_build_code_descriptions.R first."))
+  stop(glue("ERROR: {DESCRIPTIONS_RDS} not found. Run R/48b_build_code_descriptions.R first."))
 }
 
 code_descriptions <- readRDS(DESCRIPTIONS_RDS)

@@ -4,7 +4,7 @@
 # Loads the treatment_durations.rds artifact and runs clinical plausibility
 # checks, structural validation, and anomaly detection.
 #
-# Run after R/43_treatment_durations.R to verify outputs.
+# Run after R/43a_treatment_durations.R to verify outputs.
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -18,7 +18,7 @@ source("R/00_config.R")
 RDS_PATH <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 
 if (!file.exists(RDS_PATH)) {
-  stop(glue("RDS not found: {RDS_PATH}\nRun R/43_treatment_durations.R first."))
+  stop(glue("RDS not found: {RDS_PATH}\nRun R/43a_treatment_durations.R first."))
 }
 
 d <- readRDS(RDS_PATH)
