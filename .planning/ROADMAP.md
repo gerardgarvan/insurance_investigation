@@ -112,7 +112,7 @@
 | 45-46 | v1.6 | Complete | 2026-05-15 |
 | 47 | v1.6 | In progress | — |
 | 48 | Post-v1.6 | Complete | 2026-05-19 |
-| 49 | Post-v1.6 | Not started | — |
+| 49 | 1/1 | Complete    | 2026-05-22 |
 | 50-51 | Post-v1.6 | Planned | — |
 | 52 | Post-v1.6 | Complete | 2026-05-20 |
 | 53 | Post-v1.6 | Complete | 2026-05-20 |
@@ -133,10 +133,10 @@ Plans:
 **Goal:** Enrich gantt_episodes.csv and gantt_detail.csv with human-readable code descriptions by building a static code-to-description lookup from Phase 39-41 RDS artifacts, R/45 hardcoded descriptions, and R/00_config.R inline comments
 **Requirements**: GDESC-01, GDESC-02, GDESC-03
 **Depends on:** Phase 48
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 49-01-PLAN.md — Build code_descriptions.rds lookup (R/48) + add description columns to both Gantt CSVs (R/49)
+- [x] 49-01-PLAN.md — Build code_descriptions.rds lookup (R/48) + add description columns to both Gantt CSVs (R/49)
 
 ### Phase 50: Confirm cancer site codes by distinct date count
 
