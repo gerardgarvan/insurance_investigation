@@ -17,7 +17,7 @@
 ## v1.7 Phases
 
 - [x] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date (completed 2026-05-22)
-- [ ] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis
+- [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
 - [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
 
 ## Remaining Phases (Unassigned)
@@ -204,10 +204,10 @@ Plans:
 3. Post-HL variant is clearly labeled as EXPLORATORY to indicate potential immortal time bias
 4. Side-by-side comparison shows denominator differences (how many patients/cancers excluded by temporal filter)
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 56-01-PLAN.md -- Create R/56_cancer_summary_post_hl.R: DuckDB DIAGNOSIS query, temporal filter (DX_DATE > first_hl_dx_date), re-aggregation, EXPLORATORY-labeled xlsx outputs, Comparison sheet
+- [x] 56-01-PLAN.md -- Create R/56_cancer_summary_post_hl.R: DuckDB DIAGNOSIS query, temporal filter (DX_DATE > first_hl_dx_date), re-aggregation, EXPLORATORY-labeled xlsx outputs, Comparison sheet
 
 ### Phase 57: Gantt Enhancements
 
