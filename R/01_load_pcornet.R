@@ -375,7 +375,8 @@ TABLE_SPECS <- list(
   DISPENSING = DISPENSING_SPEC,          # Phase 9
   MED_ADMIN = MED_ADMIN_SPEC,            # Phase 9
   LAB_RESULT_CM = LAB_RESULT_CM_SPEC,   # Phase 10: surveillance lab values
-  PROVIDER = PROVIDER_SPEC              # Phase 10: oncology provider specialty
+  PROVIDER = PROVIDER_SPEC,             # Phase 10: oncology provider specialty
+  DEATH = DEATH_SPEC                    # Phase 57: death dates for Gantt endpoints
 )
 
 # ==============================================================================

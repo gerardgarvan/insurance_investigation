@@ -49,6 +49,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 source("R/utils_duckdb.R")
+source("R/utils_dates.R")
 
 # Input paths: existing RDS artifacts from R/44a_treatment_episodes.R
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
@@ -409,7 +410,7 @@ if (is.null(death_raw)) {
   death_data <- death_raw %>%
     collect() %>%
     mutate(
-      DEATH_DATE = ymd(DEATH_DATE),  # Parse character to Date (per RESEARCH.md Pitfall 3)
+      DEATH_DATE = parse_pcornet_date(DEATH_DATE),  # Multi-format parse (per RESEARCH.md Pitfall 3)
       DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)  # 1900 sentinel nullification (per D-08)
     ) %>%
     filter(!is.na(DEATH_DATE)) %>%  # Exclude patients with no valid death date (per D-08)
