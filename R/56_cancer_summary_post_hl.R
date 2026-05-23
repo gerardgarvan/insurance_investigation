@@ -926,7 +926,10 @@ baseline_category <- baseline_raw %>%
 comparison_df <- category_summary_post_hl %>%
   select(category, post_hl_patients = total_patients) %>%
   full_join(baseline_category, by = "category") %>%
-  replace_na(list(baseline_patients = 0L, post_hl_patients = 0L)) %>%
+  mutate(
+    baseline_patients = ifelse(is.na(baseline_patients), 0L, baseline_patients),
+    post_hl_patients = ifelse(is.na(post_hl_patients), 0L, post_hl_patients)
+  ) %>%
   mutate(
     delta = post_hl_patients - baseline_patients,
     pct_retained = if_else(baseline_patients > 0L,
