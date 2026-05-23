@@ -17,7 +17,7 @@
 ## v1.7 Phases
 
 - [x] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date (completed 2026-05-22)
-- [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
+- [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
 - [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
 
 ## Remaining Phases (Unassigned)
@@ -220,13 +220,14 @@ Plans:
 **Success Criteria** (what must be TRUE):
 1. Each treatment episode row in gantt_episodes.csv and gantt_detail.csv has a cancer_category column derived from the CancerSiteCategories mapping (D-codes excluded)
 2. Each episode row has an is_hodgkin binary column (TRUE when cancer_category equals "Hodgkin Lymphoma")
-3. Death dates from DEMOGRAPHIC table are added to Gantt CSVs as pseudo-treatment rows (treatment_type = "Death")
+3. Death dates from DEATH table are added to Gantt CSVs as pseudo-treatment rows (treatment_type = "Death")
 4. Death dates undergo the same 1900 sentinel date nullification as diagnosis dates
 5. Multi-cancer episodes show all applicable cancer categories (comma-separated or primary category with flag for multiple)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
-**UI hint:** yes
+Plans:
+- [ ] 57-01-PLAN.md -- Modify R/00_config.R + R/01_load_pcornet.R (DEATH table infrastructure) + R/49_gantt_data_export.R (cancer categories, is_hodgkin, death pseudo-treatment rows)
 
 ---
-*Last updated: 2026-05-22 -- v1.7 Phase 56 planned*
+*Last updated: 2026-05-23 -- v1.7 Phase 57 planned*
