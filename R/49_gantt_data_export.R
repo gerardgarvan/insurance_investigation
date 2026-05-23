@@ -16,11 +16,21 @@
 #   D-04 (Phase 02): triggering_code_descriptions column in episodes CSV (comma-separated, same order)
 #   D-05 (Phase 02): Empty string for missing descriptions
 #   D-06 (Phase 02): Description columns in CSVs only
+#   D-01 (Phase 57): Cancer categories from cancer_summary.csv via PREFIX_MAP classification
+#   D-02 (Phase 57): Comma-separated cancer_category column (matches triggering_codes pattern)
+#   D-03 (Phase 57): is_hodgkin = TRUE when "Hodgkin Lymphoma" in cancer_category
+#   D-04 (Phase 57): Death dates from DEATH table (DEATH_Mailhot_V1.csv)
+#   D-05 (Phase 57): Full pipeline integration for DEATH (config + load spec + DuckDB)
+#   D-06 (Phase 57): Death rows: treatment_type="Death", single-point, episode_length_days=0
+#   D-07 (Phase 57): Death rows in BOTH gantt_episodes.csv and gantt_detail.csv
+#   D-08 (Phase 57): 1900 sentinel date nullification on DEATH_DATE
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (episode-level)
 #   - cache/outputs/treatment_episode_detail.rds (detail-level)
 #   - cache/outputs/code_descriptions.rds (Phase 02: code -> description lookup)
+#   - output/tables/cancer_summary.csv (Phase 55/57: cancer code -> category mapping)
+#   - DuckDB DEATH table (Phase 57: death dates for endpoint visualization)
 #
 # Outputs:
 #   - output/gantt_episodes.csv (bars: one row per patient/type/episode)
@@ -34,9 +44,11 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(glue)
   library(stringr)
+  library(lubridate)
 })
 
 source("R/00_config.R")
+source("R/utils_duckdb.R")
 
 # Input paths: existing RDS artifacts from R/44a_treatment_episodes.R
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
@@ -48,6 +60,9 @@ OUTPUT_DETAIL   <- file.path(CONFIG$output_dir, "gantt_detail.csv")
 
 # Code description lookup (built by R/48b_build_code_descriptions.R)
 DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
+
+# Cancer summary source (R/55 output, patient-code level with cancer_code column)
+CANCER_SUMMARY_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 
 
 # --- SECTION 2: LOAD INPUT DATA ---
@@ -69,6 +84,341 @@ message(glue("  Loaded {format(nrow(episodes), big.mark = ',')} episode rows"))
 # Load detail-level data (ticks: one row per patient/date/code)
 detail <- readRDS(DETAIL_RDS)
 message(glue("  Loaded {format(nrow(detail), big.mark = ',')} detail rows"))
+
+
+# --- SECTION 2B: LOAD AND AGGREGATE CANCER CATEGORIES (per D-01, D-02, D-03) ---
+
+message("\n--- Loading cancer categories ---")
+
+# Cancer summary CSV has columns: ID, cancer_code, description, ...
+# It does NOT have a "category" column -- we must derive it via PREFIX_MAP
+if (!file.exists(CANCER_SUMMARY_CSV)) {
+  stop(glue("ERROR: {CANCER_SUMMARY_CSV} not found. Run R/55_cancer_summary_refined.R first."))
+}
+
+cancer_summary <- read.csv(CANCER_SUMMARY_CSV, stringsAsFactors = FALSE)
+message(glue("  Loaded {format(nrow(cancer_summary), big.mark = ',')} cancer summary rows"))
+
+# PREFIX_MAP: maps 3-character ICD-10-CM prefixes to cancer site categories
+# Copied from R/55_cancer_summary_refined.R for script independence (project pattern)
+PREFIX_MAP <- c(
+  # --- Solid tumors by anatomical site ---
+
+  # 1. Lip, Oral Cavity and Pharynx (C00-C14)
+  "C00" = "Lip, Oral Cavity and Pharynx",
+  "C01" = "Lip, Oral Cavity and Pharynx",
+  "C02" = "Lip, Oral Cavity and Pharynx",
+  "C03" = "Lip, Oral Cavity and Pharynx",
+  "C04" = "Lip, Oral Cavity and Pharynx",
+  "C05" = "Lip, Oral Cavity and Pharynx",
+  "C06" = "Lip, Oral Cavity and Pharynx",
+  "C07" = "Lip, Oral Cavity and Pharynx",
+  "C08" = "Lip, Oral Cavity and Pharynx",
+  "C09" = "Lip, Oral Cavity and Pharynx",
+  "C10" = "Lip, Oral Cavity and Pharynx",
+  "C11" = "Lip, Oral Cavity and Pharynx",
+  "C12" = "Lip, Oral Cavity and Pharynx",
+  "C13" = "Lip, Oral Cavity and Pharynx",
+  "C14" = "Lip, Oral Cavity and Pharynx",
+
+  # 2. Esophagus (C15)
+  "C15" = "Esophagus",
+
+  # 3. Stomach (C16)
+  "C16" = "Stomach",
+
+  # 4. Small Intestine (C17)
+  "C17" = "Small Intestine",
+
+  # 5. Colon incl. rectosigmoid junction (C18-C19)
+  "C18" = "Colon",
+  "C19" = "Colon",
+
+  # 6. Rectum (C20)
+  "C20" = "Rectum",
+
+  # 7. Anus (C21)
+  "C21" = "Anus",
+
+  # 8. Liver (C22)
+  "C22" = "Liver",
+
+  # 9. Pancreas (C25)
+  "C25" = "Pancreas",
+
+  # 10. Other Digestive (gallbladder, biliary, other) (C23-C24, C26)
+  "C23" = "Other Digestive",
+  "C24" = "Other Digestive",
+  "C26" = "Other Digestive",
+
+  # 11. Nasal Cavity, Middle Ear, Sinuses (C30-C31)
+  "C30" = "Nasal Cavity, Middle Ear, Sinuses",
+  "C31" = "Nasal Cavity, Middle Ear, Sinuses",
+
+  # 12. Larynx (C32)
+  "C32" = "Larynx",
+
+  # 13. Lung and Bronchus (C33-C34)
+  "C33" = "Lung and Bronchus",
+  "C34" = "Lung and Bronchus",
+
+  # 14. Other Respiratory/Intrathoracic (C37-C39)
+  "C37" = "Other Respiratory/Intrathoracic",
+  "C38" = "Other Respiratory/Intrathoracic",
+  "C39" = "Other Respiratory/Intrathoracic",
+
+  # 15. Bone (C40-C41)
+  "C40" = "Bone",
+  "C41" = "Bone",
+
+  # 16. Melanoma of Skin (C43)
+  "C43" = "Melanoma of Skin",
+
+  # 17. Other Skin incl. Merkel cell (C44, C4A)
+  "C44" = "Other Skin",
+  "C4A" = "Other Skin",
+
+  # 18. Mesothelioma (C45)
+  "C45" = "Mesothelioma",
+
+  # 19. Kaposi Sarcoma (C46)
+  "C46" = "Kaposi Sarcoma",
+
+  # 20. Soft Tissue / Peripheral Nerves (C47-C49)
+  "C47" = "Soft Tissue",
+  "C48" = "Soft Tissue",
+  "C49" = "Soft Tissue",
+
+  # 21. Breast (C50)
+  "C50" = "Breast",
+
+  # 22. Cervix Uteri (C53)
+  "C53" = "Cervix Uteri",
+
+  # 23. Corpus Uteri (C54-C55)
+  "C54" = "Corpus Uteri",
+  "C55" = "Corpus Uteri",
+
+  # 24. Ovary (C56)
+  "C56" = "Ovary",
+
+  # 25. Other Female Genital (C51-C52, C57-C58)
+  "C51" = "Other Female Genital",
+  "C52" = "Other Female Genital",
+  "C57" = "Other Female Genital",
+  "C58" = "Other Female Genital",
+
+  # 26. Prostate (C61)
+  "C61" = "Prostate",
+
+  # 27. Testis (C62)
+  "C62" = "Testis",
+
+  # 28. Other Male Genital (C60, C63)
+  "C60" = "Other Male Genital",
+  "C63" = "Other Male Genital",
+
+  # 29. Kidney and Renal Pelvis (C64-C65)
+  "C64" = "Kidney and Renal Pelvis",
+  "C65" = "Kidney and Renal Pelvis",
+
+  # 30. Bladder (C67)
+  "C67" = "Bladder",
+
+  # 31. Other Urinary (C66, C68)
+  "C66" = "Other Urinary",
+  "C68" = "Other Urinary",
+
+  # 32. Eye and Orbit (C69)
+  "C69" = "Eye and Orbit",
+
+  # 33. Brain and CNS (C70-C72)
+  "C70" = "Brain and CNS",
+  "C71" = "Brain and CNS",
+  "C72" = "Brain and CNS",
+
+  # 34. Thyroid (C73)
+  "C73" = "Thyroid",
+
+  # 35. Other Endocrine (C74-C75)
+  "C74" = "Other Endocrine",
+  "C75" = "Other Endocrine",
+
+  # 36. Ill-Defined Sites (C76)
+  "C76" = "Ill-Defined Sites",
+
+  # 37. Unknown Primary Site (C80)
+  "C80" = "Unknown Primary Site",
+
+  # --- Secondary/metastatic ---
+
+  # 38. Lymph Nodes (secondary) (C77)
+  "C77" = "Lymph Nodes (Secondary)",
+
+  # 39. Secondary - Respiratory/Digestive (C78)
+  "C78" = "Secondary - Respiratory/Digestive",
+
+  # 40. Secondary - Other Sites (C79)
+  "C79" = "Secondary - Other Sites",
+
+  # --- Neuroendocrine ---
+
+  # 41. Neuroendocrine Tumors (C7A, C7B)
+  "C7A" = "Neuroendocrine Tumors",
+  "C7B" = "Neuroendocrine Tumors",
+
+  # --- Hematologic malignancies ---
+
+  # 42. Hodgkin Lymphoma (C81)
+  "C81" = "Hodgkin Lymphoma",
+
+  # 43. Non-Hodgkin Lymphoma (C82-C86, C88)
+  "C82" = "Non-Hodgkin Lymphoma",
+  "C83" = "Non-Hodgkin Lymphoma",
+  "C84" = "Non-Hodgkin Lymphoma",
+  "C85" = "Non-Hodgkin Lymphoma",
+  "C86" = "Non-Hodgkin Lymphoma",
+  "C88" = "Non-Hodgkin Lymphoma",
+
+  # 44. Multiple Myeloma / Plasma Cell (C90)
+  "C90" = "Multiple Myeloma",
+
+  # 45. Lymphoid Leukemia (C91)
+  "C91" = "Lymphoid Leukemia",
+
+  # 46. Myeloid and Monocytic Leukemia (C92-C93)
+  "C92" = "Myeloid and Monocytic Leukemia",
+  "C93" = "Myeloid and Monocytic Leukemia",
+
+  # 47. Other Leukemia (C94-C95)
+  "C94" = "Other Leukemia",
+  "C95" = "Other Leukemia",
+
+  # 48. Other Hematopoietic (C96)
+  "C96" = "Other Hematopoietic",
+
+  # --- D-codes: neoplasm-related ---
+
+  # 49. In Situ Neoplasms (D00-D09)
+  "D00" = "In Situ Neoplasms",
+  "D01" = "In Situ Neoplasms",
+  "D02" = "In Situ Neoplasms",
+  "D03" = "In Situ Neoplasms",
+  "D04" = "In Situ Neoplasms",
+  "D05" = "In Situ Neoplasms",
+  "D06" = "In Situ Neoplasms",
+  "D07" = "In Situ Neoplasms",
+  "D09" = "In Situ Neoplasms",
+
+  # 50. Benign Neoplasms (D10-D36, D3A)
+  "D10" = "Benign Neoplasms",
+  "D11" = "Benign Neoplasms",
+  "D12" = "Benign Neoplasms",
+  "D13" = "Benign Neoplasms",
+  "D14" = "Benign Neoplasms",
+  "D15" = "Benign Neoplasms",
+  "D16" = "Benign Neoplasms",
+  "D17" = "Benign Neoplasms",
+  "D18" = "Benign Neoplasms",
+  "D19" = "Benign Neoplasms",
+  "D20" = "Benign Neoplasms",
+  "D21" = "Benign Neoplasms",
+  "D22" = "Benign Neoplasms",
+  "D23" = "Benign Neoplasms",
+  "D24" = "Benign Neoplasms",
+  "D25" = "Benign Neoplasms",
+  "D26" = "Benign Neoplasms",
+  "D27" = "Benign Neoplasms",
+  "D28" = "Benign Neoplasms",
+  "D29" = "Benign Neoplasms",
+  "D30" = "Benign Neoplasms",
+  "D31" = "Benign Neoplasms",
+  "D32" = "Benign Neoplasms",
+  "D33" = "Benign Neoplasms",
+  "D34" = "Benign Neoplasms",
+  "D35" = "Benign Neoplasms",
+  "D36" = "Benign Neoplasms",
+  "D3A" = "Benign Neoplasms",
+
+  # 51. Uncertain Behavior Neoplasms (D37-D44, D48)
+  "D37" = "Uncertain Behavior Neoplasms",
+  "D38" = "Uncertain Behavior Neoplasms",
+  "D39" = "Uncertain Behavior Neoplasms",
+  "D40" = "Uncertain Behavior Neoplasms",
+  "D41" = "Uncertain Behavior Neoplasms",
+  "D42" = "Uncertain Behavior Neoplasms",
+  "D43" = "Uncertain Behavior Neoplasms",
+  "D44" = "Uncertain Behavior Neoplasms",
+  "D48" = "Uncertain Behavior Neoplasms",
+
+  # 52. MDS / Myeloproliferative (D45-D47) -- clinically important
+  "D45" = "MDS / Myeloproliferative",
+  "D46" = "MDS / Myeloproliferative",
+  "D47" = "MDS / Myeloproliferative",
+
+  # 53. Unspecified Behavior Neoplasms (D49)
+  "D49" = "Unspecified Behavior Neoplasms",
+
+  # --- ICD-O-3 only: hematopoietic site (not in ICD-10) ---
+  "C42" = "Hematopoietic System (ICD-O-3)"
+)
+
+# classify_codes: derive category from cancer_code using PREFIX_MAP
+classify_codes <- function(codes) {
+  prefixes <- substr(toupper(codes), 1, 3)
+  categories <- PREFIX_MAP[prefixes]
+  unname(categories)
+}
+
+# Derive category for each cancer code
+cancer_summary$category <- classify_codes(cancer_summary$cancer_code)
+cancer_summary$category[is.na(cancer_summary$category)] <- "Unclassified"
+
+# Aggregate to patient level: comma-separated sorted list of distinct categories (per D-02)
+# Alphabetical sort for reproducibility (Claude's discretion, see RESEARCH.md Pitfall 1)
+cancer_categories_per_patient <- cancer_summary %>%
+  group_by(ID) %>%
+  summarise(
+    cancer_category = paste(sort(unique(category)), collapse = ","),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    is_hodgkin = str_detect(cancer_category, "Hodgkin Lymphoma")  # per D-03
+  )
+
+message(glue("  Cancer categories aggregated for {format(nrow(cancer_categories_per_patient), big.mark = ',')} patients"))
+message(glue("  Hodgkin Lymphoma patients: {sum(cancer_categories_per_patient$is_hodgkin)}"))
+
+
+# --- SECTION 2C: LOAD DEATH DATA (per D-04, D-05, D-08) ---
+
+message("\n--- Loading DEATH table ---")
+
+USE_DUCKDB <- TRUE
+open_pcornet_con()
+
+death_raw <- get_pcornet_table("DEATH")
+
+if (is.null(death_raw)) {
+  warning("DEATH table not found in DuckDB. Death rows will be skipped. Re-run R/25_duckdb_ingest.R after config update.")
+  death_data <- tibble(
+    ID = character(),
+    DEATH_DATE = as.Date(character())
+  )
+} else {
+  death_data <- death_raw %>%
+    collect() %>%
+    mutate(
+      DEATH_DATE = ymd(DEATH_DATE),  # Parse character to Date (per RESEARCH.md Pitfall 3)
+      DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)  # 1900 sentinel nullification (per D-08)
+    ) %>%
+    filter(!is.na(DEATH_DATE)) %>%  # Exclude patients with no valid death date (per D-08)
+    select(ID, DEATH_DATE)
+}
+
+close_pcornet_con()
+
+message(glue("  Patients with valid death dates: {nrow(death_data)}"))
 
 
 # --- SECTION 3: VALIDATE COLUMN STRUCTURE ---
@@ -130,7 +480,7 @@ map_codes_to_descriptions <- function(codes_str) {
 
 # --- SECTION 4: SELECT AND ORDER COLUMNS (per D-01) ---
 
-# Episode-level bars table: 9 original columns + triggering_code_descriptions (per D-04)
+# Episode-level bars table: 9 original columns + triggering_code_descriptions + cancer_category + is_hodgkin
 episodes_export <- episodes %>%
   select(
     patient_id, treatment_type, episode_number,
@@ -139,9 +489,14 @@ episodes_export <- episodes %>%
   ) %>%
   mutate(
     triggering_code_descriptions = sapply(triggering_codes, map_codes_to_descriptions, USE.NAMES = FALSE)
+  ) %>%
+  left_join(cancer_categories_per_patient, by = c("patient_id" = "ID")) %>%
+  mutate(
+    cancer_category = ifelse(is.na(cancer_category), "", cancer_category),
+    is_hodgkin = ifelse(is.na(is_hodgkin), FALSE, is_hodgkin)
   )
 
-# Detail-level ticks table: 8 original columns + triggering_code_description (per D-03)
+# Detail-level ticks table: 8 original columns + triggering_code_description + cancer_category + is_hodgkin
 detail_export <- detail %>%
   select(
     patient_id, treatment_type, treatment_date, triggering_code,
@@ -149,7 +504,108 @@ detail_export <- detail %>%
   ) %>%
   mutate(
     triggering_code_description = sapply(triggering_code, lookup_description, USE.NAMES = FALSE)
+  ) %>%
+  left_join(cancer_categories_per_patient, by = c("patient_id" = "ID")) %>%
+  mutate(
+    cancer_category = ifelse(is.na(cancer_category), "", cancer_category),
+    is_hodgkin = ifelse(is.na(is_hodgkin), FALSE, is_hodgkin)
   )
+
+
+# --- SECTION 4B: BUILD AND APPEND DEATH PSEUDO-TREATMENT ROWS (per D-06, D-07) ---
+
+if (nrow(death_data) > 0) {
+  message("\n--- Building death pseudo-treatment rows ---")
+
+  # Join cancer categories to death data (Claude's discretion: Death rows get patient's categories)
+  death_with_categories <- death_data %>%
+    left_join(cancer_categories_per_patient, by = "ID") %>%
+    mutate(
+      cancer_category = ifelse(is.na(cancer_category), "", cancer_category),
+      is_hodgkin = ifelse(is.na(is_hodgkin), FALSE, is_hodgkin)
+    )
+
+  # Build death rows for episodes table (per D-06)
+  death_episodes <- death_with_categories %>%
+    mutate(
+      patient_id = ID,
+      treatment_type = "Death",
+      episode_number = 1L,
+      episode_start = DEATH_DATE,
+      episode_stop = DEATH_DATE,
+      episode_length_days = 0L,
+      distinct_dates_in_episode = 1L,
+      historical_flag = FALSE,
+      triggering_codes = "",
+      triggering_code_descriptions = ""
+    ) %>%
+    select(
+      patient_id, treatment_type, episode_number,
+      episode_start, episode_stop, episode_length_days,
+      distinct_dates_in_episode, historical_flag,
+      triggering_codes, triggering_code_descriptions,
+      cancer_category, is_hodgkin
+    )
+
+  # Build death rows for detail table (per D-06, D-07)
+  death_detail <- death_with_categories %>%
+    mutate(
+      patient_id = ID,
+      treatment_type = "Death",
+      treatment_date = DEATH_DATE,
+      triggering_code = "",
+      episode_number = 1L,
+      episode_start = DEATH_DATE,
+      episode_stop = DEATH_DATE,
+      historical_flag = FALSE,
+      triggering_code_description = ""
+    ) %>%
+    select(
+      patient_id, treatment_type, treatment_date,
+      triggering_code, episode_number, episode_start,
+      episode_stop, historical_flag,
+      triggering_code_description,
+      cancer_category, is_hodgkin
+    )
+
+  # Verify column alignment before binding (per RESEARCH.md Pitfall 4)
+  expected_ep_cols <- colnames(episodes_export)
+  death_ep_cols <- colnames(death_episodes)
+  missing_in_death_ep <- setdiff(expected_ep_cols, death_ep_cols)
+  extra_in_death_ep <- setdiff(death_ep_cols, expected_ep_cols)
+
+  if (length(missing_in_death_ep) > 0) {
+    stop(glue("Death episodes missing columns: {paste(missing_in_death_ep, collapse = ', ')}"))
+  }
+  if (length(extra_in_death_ep) > 0) {
+    warning(glue("Death episodes has extra columns: {paste(extra_in_death_ep, collapse = ', ')}"))
+  }
+
+  expected_det_cols <- colnames(detail_export)
+  death_det_cols <- colnames(death_detail)
+  missing_in_death_det <- setdiff(expected_det_cols, death_det_cols)
+  extra_in_death_det <- setdiff(death_det_cols, expected_det_cols)
+
+  if (length(missing_in_death_det) > 0) {
+    stop(glue("Death detail missing columns: {paste(missing_in_death_det, collapse = ', ')}"))
+  }
+  if (length(extra_in_death_det) > 0) {
+    warning(glue("Death detail has extra columns: {paste(extra_in_death_det, collapse = ', ')}"))
+  }
+
+  # Append death rows (per D-07: both CSVs)
+  episodes_export <- bind_rows(episodes_export, death_episodes) %>%
+    arrange(patient_id, episode_start, treatment_type)
+
+  detail_export <- bind_rows(detail_export, death_detail) %>%
+    arrange(patient_id, treatment_date, treatment_type)
+
+  message(glue("  Added {nrow(death_episodes)} death episode rows"))
+  message(glue("  Added {nrow(death_detail)} death detail rows"))
+
+} else {
+  message("\n--- No valid death dates found; skipping death rows ---")
+}
 
 
 # --- SECTION 5: WRITE CSV OUTPUTS ---
@@ -174,6 +630,12 @@ message(glue("  Total detail rows: {format(nrow(detail_export), big.mark = ',')}
 detail_has_desc <- sum(detail_export$triggering_code_description != "", na.rm = TRUE)
 detail_total <- sum(!is.na(detail_export$triggering_code) & detail_export$triggering_code != "", na.rm = TRUE)
 message(glue("  Detail rows with descriptions: {format(detail_has_desc, big.mark = ',')} / {format(detail_total, big.mark = ',')} codes"))
+
+# Phase 57 cancer category and death stats
+message(glue("  Episodes with cancer_category: {sum(episodes_export$cancer_category != '', na.rm = TRUE)}"))
+message(glue("  Episodes with is_hodgkin=TRUE: {sum(episodes_export$is_hodgkin, na.rm = TRUE)}"))
+n_death_rows <- sum(episodes_export$treatment_type == "Death", na.rm = TRUE)
+message(glue("  Death pseudo-treatment rows in episodes: {format(n_death_rows, big.mark = ',')}"))
 
 message(glue("\n  Episode bars:  {OUTPUT_EPISODES}"))
 message(glue("  Detail ticks:  {OUTPUT_DETAIL}"))
