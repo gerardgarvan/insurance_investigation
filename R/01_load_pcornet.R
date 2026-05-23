@@ -185,6 +185,22 @@ DEMOGRAPHIC_SPEC <- cols(
 )
 
 # ------------------------------------------------------------------------------
+# 6b. DEATH (6 columns)
+# ------------------------------------------------------------------------------
+# Phase 57: Death dates for Gantt chart endpoint visualization.
+# DEATH_DATE loaded as character for downstream lubridate parsing
+# (same pattern as BIRTH_DATE in DEMOGRAPHIC_SPEC).
+# Source file: DEATH_Mailhot_V1.csv
+DEATH_SPEC <- cols(
+  ID = col_character(),
+  DEATH_DATE = col_character(),
+  DEATH_DATE_IMPUTE = col_character(),
+  DEATH_SOURCE = col_character(),
+  DEATH_MATCH_CONFIDENCE = col_character(),
+  SOURCE = col_character()
+)
+
+# ------------------------------------------------------------------------------
 # 7. TUMOR_REGISTRY1 (314 columns - use .default strategy)
 # ------------------------------------------------------------------------------
 # Strategy: Most columns are character codes/text

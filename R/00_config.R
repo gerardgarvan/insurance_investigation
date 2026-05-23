@@ -119,7 +119,8 @@ PCORNET_TABLES <- c(
   "DISPENSING",       # Phase 9: expanded treatment detection
   "MED_ADMIN",        # Phase 9: expanded treatment detection
   "LAB_RESULT_CM",    # Phase 10: surveillance lab values (LOINC-based matching)
-  "PROVIDER"          # Phase 10: oncology provider specialty matching
+  "PROVIDER",         # Phase 10: oncology provider specialty matching
+  "DEATH"             # Phase 57: death dates for Gantt chart endpoint
 )
 
 # Build full paths as named character vector
