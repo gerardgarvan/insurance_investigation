@@ -18,7 +18,7 @@ Requirements for milestone v1.7 Cancer Summary Refinement & Gantt Enhancements. 
 
 - [ ] **GANTT-01**: Each treatment episode row in Gantt data includes cancer category label from CancerSiteCategories mapping (D-codes excluded)
 - [ ] **GANTT-02**: Each treatment episode row includes `is_hodgkin` binary column (TRUE when cancer category is Hodgkin Lymphoma)
-- [ ] **GANTT-03**: Death date from DEMOGRAPHIC table is added to Gantt chart data as a treatment type for visualization
+- [ ] **GANTT-03**: Death date from DEATH table is added to Gantt chart data as a treatment type for visualization
 
 ## Future Requirements
 
