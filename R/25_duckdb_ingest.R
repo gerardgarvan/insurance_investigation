@@ -118,28 +118,34 @@ ingest_ok <- tryCatch({
     message(glue("\n[{which(TABLES_TO_INGEST == tbl_name)}/{length(TABLES_TO_INGEST)}] Ingesting {tbl_name}..."))
     tbl_start <- Sys.time()
 
-    # Load from RDS cache
-    df <- readRDS(rds_path)
-    message(glue("  Loaded RDS: {format(nrow(df), big.mark=',')} rows x {ncol(df)} cols"))
+    tbl_ok <- tryCatch({
+      # Load from RDS cache
+      df <- readRDS(rds_path)
+      message(glue("  Loaded RDS: {format(nrow(df), big.mark=',')} rows x {ncol(df)} cols"))
 
-    # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
-    DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)
+      # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
+      DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)
 
-    # Record metrics
-    duration <- as.numeric(difftime(Sys.time(), tbl_start, units = "secs"))
-    ingest_log <<- bind_rows(ingest_log, tibble(
-      table_name   = tbl_name,
-      row_count    = nrow(df),
-      col_count    = ncol(df),
-      duration_sec = round(duration, 2)
-    ))
+      # Record metrics
+      duration <- as.numeric(difftime(Sys.time(), tbl_start, units = "secs"))
+      ingest_log <<- bind_rows(ingest_log, tibble(
+        table_name   = tbl_name,
+        row_count    = nrow(df),
+        col_count    = ncol(df),
+        duration_sec = round(duration, 2)
+      ))
 
-    message(glue("  Written to DuckDB in {round(duration, 1)}s"))
-    tables_ingested <<- c(tables_ingested, tbl_name)
+      message(glue("  Written to DuckDB in {round(duration, 1)}s"))
+      tables_ingested <<- c(tables_ingested, tbl_name)
 
-    # Free memory before next table
-    rm(df)
-    gc(verbose = FALSE)
+      # Free memory before next table
+      rm(df)
+      gc(verbose = FALSE)
+      TRUE
+    }, error = function(e) {
+      warning(glue("INGEST SKIPPED: {tbl_name} -- {e$message}"))
+      FALSE
+    })
   }
 
   # ============================================================================
