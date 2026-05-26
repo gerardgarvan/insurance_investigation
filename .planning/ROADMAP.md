@@ -12,13 +12,14 @@
 - **v1.4 AV+TH Subset Analysis** — Phase 33 (shipped 2026-04-27) — [archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 Payer Analysis Expansion** — Phases 34-37 (shipped 2026-05-01) — [archive](milestones/v1.5-ROADMAP.md)
 - **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-54 (shipped 2026-05-22) — [archive](milestones/v1.6-ROADMAP.md)
-- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-57 (active)
+- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-58 (active)
 
 ## v1.7 Phases
 
 - [x] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date (completed 2026-05-22)
 - [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
 - [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
+- [ ] **Phase 58: Cancer Summary Pre/Post HL Counts** — Update cancer_summary_table.xlsx: remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only)
 
 ## Remaining Phases (Unassigned)
 
@@ -229,5 +230,26 @@ Plans:
 Plans:
 - [ ] 57-01-PLAN.md -- Modify R/00_config.R + R/01_load_pcornet.R (DEATH table infrastructure) + R/49_gantt_data_export.R (cancer categories, is_hodgkin, death pseudo-treatment rows)
 
+### Phase 58: Cancer Summary Pre/Post HL Counts
+
+**Goal:** Update cancer_summary_table.xlsx to remove D codes, use confirmed 7-day HL patients as the population, and add pre/post HL diagnosis count columns showing how many patients had each cancer code before vs after their first HL diagnosis date (counts only, no percentages)
+
+**Depends on:** Phase 55
+
+**Requirements:** SC-01, SC-02, SC-03, SC-04, SC-05, SC-06
+
+**Success Criteria** (what must be TRUE):
+1. D codes are excluded from cancer_summary_table.xlsx (C codes only)
+2. Population is limited to confirmed 7-day HL patients (2+ HL codes separated by 7+ days)
+3. Each cancer code row has a pre-HL count column (patients with that code before first HL diagnosis date)
+4. Each cancer code row has a post-HL count column (patients with that code after first HL diagnosis date)
+5. Each cancer code row has a both column (patients who had that code both before AND after first HL diagnosis)
+6. All values are raw counts (no percentages)
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 58-01-PLAN.md -- Create R/58_cancer_summary_pre_post.R: DuckDB DIAGNOSIS query, temporal split (pre/post/both relative to first_hl_dx_date), baseline metrics merge, C81 exclusion, styled two-sheet xlsx output
+
 ---
-*Last updated: 2026-05-23 -- v1.7 Phase 57 planned*
+*Last updated: 2026-05-26 -- Phase 58 planned*
