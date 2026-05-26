@@ -344,16 +344,17 @@ confirmed_hl_cohort <- readRDS(INPUT_RDS)
 n_total_confirmed <- nrow(confirmed_hl_cohort)
 message(glue("  Total confirmed HL patients: {format(n_total_confirmed, big.mark=',')}"))
 
-# Filter to patients with non-NA first_hl_dx_date (same pattern as R/56)
+# Separate: full cohort for baseline stats, date-subset for pre/post/both
 n_with_date <- sum(!is.na(confirmed_hl_cohort$first_hl_dx_date))
-n_excluded_na_date <- sum(is.na(confirmed_hl_cohort$first_hl_dx_date))
-message(glue("  Patients with non-NA first_hl_dx_date: {format(n_with_date, big.mark=',')}"))
-message(glue("  Patients excluded (NA first_hl_dx_date): {format(n_excluded_na_date, big.mark=',')}"))
+n_missing_date <- sum(is.na(confirmed_hl_cohort$first_hl_dx_date))
+message(glue("  Patients with known first_hl_dx_date: {format(n_with_date, big.mark=',')}"))
+message(glue("  Patients with missing first_hl_dx_date: {format(n_missing_date, big.mark=',')}"))
 
-confirmed_hl_cohort <- confirmed_hl_cohort %>%
+cohort_with_dates <- confirmed_hl_cohort %>%
   filter(!is.na(first_hl_dx_date))
 
-message(glue("  Post-filter cohort size: {format(nrow(confirmed_hl_cohort), big.mark=',')} patients"))
+message(glue("  Full cohort (baseline stats): {format(n_total_confirmed, big.mark=',')} patients"))
+message(glue("  Date subset (pre/post/both): {format(nrow(cohort_with_dates), big.mark=',')} patients"))
 
 # Load baseline cancer_summary.csv (for baseline metrics per D-01)
 message(glue("\nLoading baseline {INPUT_CSV}..."))
@@ -361,7 +362,7 @@ cancer_summary <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
 n_loaded <- nrow(cancer_summary)
 message(glue("  Loaded {format(n_loaded, big.mark=',')} patient-code rows"))
 
-# Filter cancer_summary: remove D-codes, filter to confirmed cohort (keep C81 for baseline stats)
+# Filter cancer_summary: remove D-codes, filter to FULL confirmed cohort (keep C81 for baseline stats)
 cancer_summary <- cancer_summary %>%
   filter(!str_detect(cancer_code, "^D")) %>%
   inner_join(confirmed_hl_cohort %>% select(ID), by = "ID")
@@ -376,6 +377,7 @@ message(glue("  Unique codes: {format(n_distinct(cancer_summary$cancer_code), bi
 
 message("\nQuerying DIAGNOSIS for C-code diagnosis rows...")
 
+# Use full cohort for DuckDB query; pre/post filtering happens in Section 5
 cohort_ids <- confirmed_hl_cohort$ID
 
 dx_raw <- get_pcornet_table("DIAGNOSIS") %>%
@@ -411,9 +413,9 @@ message(glue("  C81 rows excluded: {format(n_removed_c81, big.mark=',')} ({forma
 
 message("\nComputing pre/post/both patient-code sets...")
 
-# Join dx_raw with confirmed_hl_cohort to get first_hl_dx_date per row
+# Join dx_raw with cohort_with_dates (only patients with known HL date) for temporal split
 dx_with_hl_date <- dx_raw %>%
-  inner_join(confirmed_hl_cohort %>% select(ID, first_hl_dx_date), by = "ID") %>%
+  inner_join(cohort_with_dates %>% select(ID, first_hl_dx_date), by = "ID") %>%
   filter(!is.na(DX_DATE))
 
 message(glue("  Rows with valid DX_DATE: {format(nrow(dx_with_hl_date), big.mark=',')}"))
@@ -725,7 +727,7 @@ wb$add_numfmt(sheet = SHEET1, dims = glue("N{totals_row1}:N{totals_row1}"), numf
 
 # Footnote row
 footnote_row1 <- totals_row1 + 2
-footnote_text1 <- glue("Population: Confirmed 7-day HL cohort ({nrow(confirmed_hl_cohort)} patients). Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
+footnote_text1 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
 wb$add_data(sheet = SHEET1,
             x = footnote_text1,
             start_row = footnote_row1, start_col = 1)
@@ -830,7 +832,7 @@ wb$add_numfmt(sheet = SHEET2, dims = glue("O{totals_row2}:O{totals_row2}"), numf
 
 # Footnote row
 footnote_row2 <- totals_row2 + 2
-footnote_text2 <- glue("Population: Confirmed 7-day HL cohort ({nrow(confirmed_hl_cohort)} patients). Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
+footnote_text2 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
 wb$add_data(sheet = SHEET2,
             x = footnote_text2,
             start_row = footnote_row2, start_col = 1)
