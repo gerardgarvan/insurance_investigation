@@ -566,19 +566,39 @@ category_summary <- cancer_summary %>%
     .groups = "drop"
   )
 
-# Add category-level pre/post/both and total_records from code_summary
-cat_prepost <- code_summary %>%
+# Add category-level pre/post/both using UNIQUE patients per category (not summing code counts)
+# Summing code-level counts would double-count patients with multiple codes in the same category
+cat_pre_by_category <- patients_pre %>%
+  mutate(category = classify_codes(cancer_code)) %>%
   group_by(category) %>%
-  summarise(
-    pre_hl_count  = if (all(is.na(pre_hl_count))) NA_integer_ else sum(pre_hl_count, na.rm = TRUE),
-    post_hl_count = if (all(is.na(post_hl_count))) NA_integer_ else sum(post_hl_count, na.rm = TRUE),
-    both_count    = if (all(is.na(both_count))) NA_integer_ else sum(both_count, na.rm = TRUE),
-    total_records = sum(total_records),
-    .groups = "drop"
-  )
+  summarise(pre_hl_count = n_distinct(ID), .groups = "drop")
+
+cat_post_by_category <- patients_post %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  group_by(category) %>%
+  summarise(post_hl_count = n_distinct(ID), .groups = "drop")
+
+cat_both_by_category <- patients_both %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  group_by(category) %>%
+  summarise(both_count = n_distinct(ID), .groups = "drop")
+
+# Total records can be summed (it's row counts, not patients)
+cat_records <- code_summary %>%
+  group_by(category) %>%
+  summarise(total_records = sum(total_records), .groups = "drop")
 
 category_summary <- category_summary %>%
-  left_join(cat_prepost, by = "category") %>%
+  left_join(cat_pre_by_category, by = "category") %>%
+  left_join(cat_post_by_category, by = "category") %>%
+  left_join(cat_both_by_category, by = "category") %>%
+  left_join(cat_records, by = "category") %>%
+  mutate(
+    # Hodgkin Lymphoma stays NA (C81 excluded from pre/post); others get 0 if no matches
+    pre_hl_count  = if_else(category == "Hodgkin Lymphoma", NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
+    post_hl_count = if_else(category == "Hodgkin Lymphoma", NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
+    both_count    = if_else(category == "Hodgkin Lymphoma", NA_integer_, coalesce(as.integer(both_count), 0L))
+  ) %>%
   arrange(desc(total_patients))
 
 # Handle unclassified in category_summary
@@ -586,39 +606,39 @@ category_summary$category[is.na(category_summary$category)] <- "Unclassified"
 
 message(glue("  Category summary: {nrow(category_summary)} rows"))
 
-# Build totals rows
+# Build totals rows using UNIQUE patients (not sums of per-code/category counts)
 totals_category <- tibble(
   category              = "TOTAL",
-  total_patients        = sum(category_summary$total_patients),
-  confirmed_2date       = sum(category_summary$confirmed_2date),
+  total_patients        = n_distinct(cancer_summary$ID),
+  confirmed_2date       = n_distinct(cancer_summary$ID[cancer_summary$two_or_more_unique_dates == 1]),
   pct_confirmed_2date   = NA_real_,
-  confirmed_7day        = sum(category_summary$confirmed_7day),
+  confirmed_7day        = n_distinct(cancer_summary$ID[cancer_summary$two_or_more_unique_dates_gt_7 == 1]),
   pct_confirmed_7day    = NA_real_,
   mean_unique_dates     = NA_real_,
   median_unique_dates   = NA_real_,
   mean_dates_7day_sep   = NA_real_,
   median_dates_7day_sep = NA_real_,
-  pre_hl_count          = sum(category_summary$pre_hl_count, na.rm = TRUE),
-  post_hl_count         = sum(category_summary$post_hl_count, na.rm = TRUE),
-  both_count            = sum(category_summary$both_count, na.rm = TRUE),
+  pre_hl_count          = as.integer(n_distinct(patients_pre$ID)),
+  post_hl_count         = as.integer(n_distinct(patients_post$ID)),
+  both_count            = as.integer(n_distinct(patients_both$ID)),
   total_records         = sum(category_summary$total_records)
 )
 
 totals_code <- tibble(
   cancer_code           = "TOTAL",
   category              = "",
-  total_patients        = sum(code_summary$total_patients),
-  confirmed_2date       = sum(code_summary$confirmed_2date),
+  total_patients        = n_distinct(cancer_summary$ID),
+  confirmed_2date       = n_distinct(cancer_summary$ID[cancer_summary$two_or_more_unique_dates == 1]),
   pct_confirmed_2date   = NA_real_,
-  confirmed_7day        = sum(code_summary$confirmed_7day),
+  confirmed_7day        = n_distinct(cancer_summary$ID[cancer_summary$two_or_more_unique_dates_gt_7 == 1]),
   pct_confirmed_7day    = NA_real_,
   mean_unique_dates     = NA_real_,
   median_unique_dates   = NA_real_,
   mean_dates_7day_sep   = NA_real_,
   median_dates_7day_sep = NA_real_,
-  pre_hl_count          = sum(code_summary$pre_hl_count, na.rm = TRUE),
-  post_hl_count         = sum(code_summary$post_hl_count, na.rm = TRUE),
-  both_count            = sum(code_summary$both_count, na.rm = TRUE),
+  pre_hl_count          = as.integer(n_distinct(patients_pre$ID)),
+  post_hl_count         = as.integer(n_distinct(patients_post$ID)),
+  both_count            = as.integer(n_distinct(patients_both$ID)),
   total_records         = sum(code_summary$total_records)
 )
 
