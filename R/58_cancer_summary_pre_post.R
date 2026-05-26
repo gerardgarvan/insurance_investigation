@@ -356,6 +356,42 @@ cohort_with_dates <- confirmed_hl_cohort %>%
 message(glue("  Full cohort (baseline stats): {format(n_total_confirmed, big.mark=',')} patients"))
 message(glue("  Date subset (pre/post/both): {format(nrow(cohort_with_dates), big.mark=',')} patients"))
 
+# --- HL diagnosis date diagnostics (C81 rows for confirmed cohort) ---
+message("\nHL Diagnosis Date Check (C81 rows for confirmed cohort):")
+
+hl_c81_dx <- get_pcornet_table("DIAGNOSIS") %>%
+  filter(DX_TYPE == "10") %>%
+  select(ID, DX, DX_DATE) %>%
+  collect() %>%
+  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
+  filter(str_detect(DX_norm, "^C81")) %>%
+  filter(ID %in% confirmed_hl_cohort$ID)
+
+n_with_c81_dx   <- n_distinct(hl_c81_dx$ID)
+n_no_c81_dx     <- n_total_confirmed - n_with_c81_dx
+message(glue("  Cohort patients with any C81 dx row:   {format(n_with_c81_dx, big.mark=',')}"))
+message(glue("  Cohort patients with NO C81 dx row:    {format(n_no_c81_dx, big.mark=',')}"))
+
+hl_c81_with_date <- hl_c81_dx %>% filter(!is.na(DX_DATE))
+n_valid_c81_date <- n_distinct(hl_c81_with_date$ID)
+n_no_c81_date    <- n_with_c81_dx - n_valid_c81_date
+message(glue("  With valid C81 DX_DATE:                {format(n_valid_c81_date, big.mark=',')}"))
+message(glue("  With NO valid C81 DX_DATE:             {format(n_no_c81_date, big.mark=',')}"))
+
+n_c81_7day <- hl_c81_with_date %>%
+  distinct(ID, DX_DATE) %>%
+  group_by(ID) %>%
+  filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  ungroup() %>%
+  pull(ID) %>%
+  n_distinct()
+
+message(glue("  With 2+ unique dates, 7-day span:      {format(n_c81_7day, big.mark=',')}"))
+message(glue("  Rate (of cohort):                      {scales::percent(n_c81_7day / n_total_confirmed, accuracy=0.1)}"))
+message(glue("  Rate (of those with date):             {scales::percent(n_c81_7day / n_valid_c81_date, accuracy=0.1)}"))
+
+rm(hl_c81_dx, hl_c81_with_date)
+
 # Load baseline cancer_summary.csv (for baseline metrics per D-01)
 message(glue("\nLoading baseline {INPUT_CSV}..."))
 cancer_summary <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
