@@ -4,7 +4,8 @@
 # Creates cancer_summary_table_pre_post.xlsx -- a two-sheet styled workbook
 # showing per-cancer-code patient counts split by timing relative to first HL
 # diagnosis date (pre-HL, post-HL, both). Population is the confirmed 7-day HL
-# cohort. Counts only, no percentages. C81 excluded since it is the anchor diagnosis.
+# cohort. Includes all R/55 baseline stats plus pre/post/both columns.
+# C81 rows included for baseline stats but pre/post/both left blank (anchor diagnosis).
 #
 # This script answers the clinical question "what other cancers did HL patients
 # have before vs after their HL diagnosis?" by splitting baseline cancer summary
@@ -360,13 +361,12 @@ cancer_summary <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
 n_loaded <- nrow(cancer_summary)
 message(glue("  Loaded {format(n_loaded, big.mark=',')} patient-code rows"))
 
-# Filter cancer_summary: remove D-codes, remove C81, filter to confirmed cohort
+# Filter cancer_summary: remove D-codes, filter to confirmed cohort (keep C81 for baseline stats)
 cancer_summary <- cancer_summary %>%
   filter(!str_detect(cancer_code, "^D")) %>%
-  filter(!str_detect(cancer_code, "^C81")) %>%
   inner_join(confirmed_hl_cohort %>% select(ID), by = "ID")
 
-message(glue("  After D-code removal, C81 removal, and cohort filter: {format(nrow(cancer_summary), big.mark=',')} rows"))
+message(glue("  After D-code removal and cohort filter: {format(nrow(cancer_summary), big.mark=',')} rows"))
 message(glue("  Unique patients: {format(n_distinct(cancer_summary$ID), big.mark=',')}"))
 message(glue("  Unique codes: {format(n_distinct(cancer_summary$cancer_code), big.mark=',')}"))
 
@@ -468,26 +468,31 @@ message(glue("  Both codes: {nrow(both_counts)}"))
 
 message("\nComputing baseline metrics from cancer_summary...")
 
-# Code-level baseline metrics (already filtered to confirmed cohort, no D-codes, no C81)
+# Code-level baseline metrics (already filtered to confirmed cohort, no D-codes; C81 included)
 code_baseline <- cancer_summary %>%
   group_by(cancer_code) %>%
   summarise(
-    total_patients  = n_distinct(ID),
-    confirmed_2date = n_distinct(ID[two_or_more_unique_dates == 1]),
-    confirmed_7day  = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    total_patients        = n_distinct(ID),
+    confirmed_2date       = n_distinct(ID[two_or_more_unique_dates == 1]),
+    pct_confirmed_2date   = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
+    confirmed_7day        = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    pct_confirmed_7day    = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
+    mean_unique_dates     = mean(unique_dates_total, na.rm = TRUE),
+    median_unique_dates   = median(unique_dates_total, na.rm = TRUE),
+    mean_dates_7day_sep   = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
+    median_dates_7day_sep = median(unique_dates_with_sep_gt_7, na.rm = TRUE),
     .groups = "drop"
   )
 
 message(glue("  Baseline code summary: {nrow(code_baseline)} codes"))
 
-# Query DuckDB record counts per code (filtered to confirmed cohort IDs, excluding C81)
+# Query DuckDB record counts per code (including C81)
 message("\nQuerying DIAGNOSIS for record counts...")
 
 dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
   filter(str_detect(DX_norm, "^C")) %>%
-  filter(!str_detect(DX_norm, "^C81")) %>%
   group_by(DX_norm) %>%
   summarise(total_records = n(), .groups = "drop") %>%
   collect()
@@ -519,16 +524,19 @@ code_summary <- code_baseline %>%
   left_join(both_counts, by = "cancer_code") %>%
   left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
   mutate(
-    pre_hl_count  = replace(pre_hl_count, is.na(pre_hl_count), 0L),
-    post_hl_count = replace(post_hl_count, is.na(post_hl_count), 0L),
-    both_count    = replace(both_count, is.na(both_count), 0L),
-    total_records = replace(total_records, is.na(total_records), 0L)
+    total_records = coalesce(total_records, 0L),
+    # C81 codes keep NA for pre/post/both (anchor diagnosis); others get 0
+    pre_hl_count  = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
+    post_hl_count = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
+    both_count    = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(both_count), 0L))
   )
 
-# Select columns per D-07 ordering
+# Select columns: R/55 baseline stats + pre/post/both + total records
 code_summary <- code_summary %>%
-  select(cancer_code, category, total_patients, confirmed_2date, confirmed_7day,
-         pre_hl_count, post_hl_count, both_count, total_records) %>%
+  select(cancer_code, category, total_patients, confirmed_2date, pct_confirmed_2date,
+         confirmed_7day, pct_confirmed_7day, mean_unique_dates, median_unique_dates,
+         mean_dates_7day_sep, median_dates_7day_sep, pre_hl_count, post_hl_count,
+         both_count, total_records) %>%
   arrange(desc(total_patients))
 
 message(glue("  Code summary: {nrow(code_summary)} rows"))
@@ -539,44 +547,77 @@ message(glue("  Code summary: {nrow(code_summary)} rows"))
 
 message("\nAggregating to category level...")
 
-category_summary <- code_summary %>%
+# Compute category-level base stats from patient-level data (same approach as R/55)
+category_summary <- cancer_summary %>%
+  mutate(category = classify_codes(cancer_code)) %>%
   group_by(category) %>%
   summarise(
-    total_patients  = sum(total_patients),
-    confirmed_2date = sum(confirmed_2date),
-    confirmed_7day  = sum(confirmed_7day),
-    pre_hl_count    = sum(pre_hl_count),
-    post_hl_count   = sum(post_hl_count),
-    both_count      = sum(both_count),
-    total_records   = sum(total_records),
+    total_patients        = n_distinct(ID),
+    confirmed_2date       = n_distinct(ID[two_or_more_unique_dates == 1]),
+    pct_confirmed_2date   = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
+    confirmed_7day        = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    pct_confirmed_7day    = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
+    mean_unique_dates     = mean(unique_dates_total, na.rm = TRUE),
+    median_unique_dates   = median(unique_dates_total, na.rm = TRUE),
+    mean_dates_7day_sep   = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
+    median_dates_7day_sep = median(unique_dates_with_sep_gt_7, na.rm = TRUE),
     .groups = "drop"
-  ) %>%
+  )
+
+# Add category-level pre/post/both and total_records from code_summary
+cat_prepost <- code_summary %>%
+  group_by(category) %>%
+  summarise(
+    pre_hl_count  = if (all(is.na(pre_hl_count))) NA_integer_ else sum(pre_hl_count, na.rm = TRUE),
+    post_hl_count = if (all(is.na(post_hl_count))) NA_integer_ else sum(post_hl_count, na.rm = TRUE),
+    both_count    = if (all(is.na(both_count))) NA_integer_ else sum(both_count, na.rm = TRUE),
+    total_records = sum(total_records),
+    .groups = "drop"
+  )
+
+category_summary <- category_summary %>%
+  left_join(cat_prepost, by = "category") %>%
   arrange(desc(total_patients))
+
+# Handle unclassified in category_summary
+category_summary$category[is.na(category_summary$category)] <- "Unclassified"
 
 message(glue("  Category summary: {nrow(category_summary)} rows"))
 
 # Build totals rows
 totals_category <- tibble(
-  category        = "TOTAL",
-  total_patients  = sum(category_summary$total_patients),
-  confirmed_2date = sum(category_summary$confirmed_2date),
-  confirmed_7day  = sum(category_summary$confirmed_7day),
-  pre_hl_count    = sum(category_summary$pre_hl_count),
-  post_hl_count   = sum(category_summary$post_hl_count),
-  both_count      = sum(category_summary$both_count),
-  total_records   = sum(category_summary$total_records)
+  category              = "TOTAL",
+  total_patients        = sum(category_summary$total_patients),
+  confirmed_2date       = sum(category_summary$confirmed_2date),
+  pct_confirmed_2date   = NA_real_,
+  confirmed_7day        = sum(category_summary$confirmed_7day),
+  pct_confirmed_7day    = NA_real_,
+  mean_unique_dates     = NA_real_,
+  median_unique_dates   = NA_real_,
+  mean_dates_7day_sep   = NA_real_,
+  median_dates_7day_sep = NA_real_,
+  pre_hl_count          = sum(category_summary$pre_hl_count, na.rm = TRUE),
+  post_hl_count         = sum(category_summary$post_hl_count, na.rm = TRUE),
+  both_count            = sum(category_summary$both_count, na.rm = TRUE),
+  total_records         = sum(category_summary$total_records)
 )
 
 totals_code <- tibble(
-  cancer_code     = "TOTAL",
-  category        = "",
-  total_patients  = sum(code_summary$total_patients),
-  confirmed_2date = sum(code_summary$confirmed_2date),
-  confirmed_7day  = sum(code_summary$confirmed_7day),
-  pre_hl_count    = sum(code_summary$pre_hl_count),
-  post_hl_count   = sum(code_summary$post_hl_count),
-  both_count      = sum(code_summary$both_count),
-  total_records   = sum(code_summary$total_records)
+  cancer_code           = "TOTAL",
+  category              = "",
+  total_patients        = sum(code_summary$total_patients),
+  confirmed_2date       = sum(code_summary$confirmed_2date),
+  pct_confirmed_2date   = NA_real_,
+  confirmed_7day        = sum(code_summary$confirmed_7day),
+  pct_confirmed_7day    = NA_real_,
+  mean_unique_dates     = NA_real_,
+  median_unique_dates   = NA_real_,
+  mean_dates_7day_sep   = NA_real_,
+  median_dates_7day_sep = NA_real_,
+  pre_hl_count          = sum(code_summary$pre_hl_count, na.rm = TRUE),
+  post_hl_count         = sum(code_summary$post_hl_count, na.rm = TRUE),
+  both_count            = sum(code_summary$both_count, na.rm = TRUE),
+  total_records         = sum(code_summary$total_records)
 )
 
 # ==============================================================================
@@ -594,7 +635,7 @@ TOTALS_FILL      <- "FFE5E7EB"
 wb <- wb_workbook()
 
 # ---------------------------------------------------------------------------
-# Sheet 1: "Category Summary" (per D-06, D-15)
+# Sheet 1: "Category Summary" (14 columns A-N)
 # ---------------------------------------------------------------------------
 SHEET1 <- "Category Summary"
 wb$add_worksheet(SHEET1)
@@ -605,14 +646,20 @@ wb$add_data(sheet = SHEET1, x = "Cancer Summary Table - Pre/Post HL Diagnosis (B
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET1, dims = "A1:H1")
+wb$merge_cells(sheet = SHEET1, dims = "A1:N1")
 
-# Row 2: Headers (per D-06 ordering)
+# Row 2: Headers
 headers1 <- c(
   "Cancer Site Category",
   "Total Patients",
   "Confirmed (2+ Dates)",
+  "Rate (2+ Dates)",
   "Confirmed (7-Day Gap)",
+  "Rate (7-Day Gap)",
+  "Mean Unique Dates",
+  "Median Unique Dates",
+  "Mean Dates (7-Day Sep)",
+  "Median Dates (7-Day Sep)",
   "Pre-HL",
   "Post-HL",
   "Both",
@@ -621,8 +668,8 @@ headers1 <- c(
 for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET1, dims = "A2:H2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = "A2:H2",
+wb$add_fill(sheet = SHEET1, dims = "A2:N2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET1, dims = "A2:N2",
             name = "Calibri", size = 11, bold = TRUE,
             color = wb_color(WHITE_FONT))
 
@@ -637,41 +684,62 @@ data_end1   <- data_start1 + n_data1 - 1
 wb$add_data(sheet = SHEET1, x = as.data.frame(category_summary),
             start_row = data_start1, col_names = FALSE)
 
-# Number formatting: All count columns use "#,##0" (per D-05)
-wb$add_numfmt(sheet = SHEET1, dims = glue("B{data_start1}:H{data_end1}"), numfmt = "#,##0")
+# Number formatting (matching R/55 pattern + pre/post/both)
+# B, C, E (integer counts): "#,##0"
+wb$add_numfmt(sheet = SHEET1, dims = glue("B{data_start1}:B{data_end1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start1}:C{data_end1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("E{data_start1}:E{data_end1}"), numfmt = "#,##0")
+# D, F (percentage rates): "0.0%"
+wb$add_numfmt(sheet = SHEET1, dims = glue("D{data_start1}:D{data_end1}"), numfmt = "0.0%")
+wb$add_numfmt(sheet = SHEET1, dims = glue("F{data_start1}:F{data_end1}"), numfmt = "0.0%")
+# G, H, I, J (mean/median decimals): "0.0"
+wb$add_numfmt(sheet = SHEET1, dims = glue("G{data_start1}:G{data_end1}"), numfmt = "0.0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("H{data_start1}:H{data_end1}"), numfmt = "0.0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("I{data_start1}:I{data_end1}"), numfmt = "0.0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("J{data_start1}:J{data_end1}"), numfmt = "0.0")
+# K, L, M (pre/post/both counts): "#,##0"
+wb$add_numfmt(sheet = SHEET1, dims = glue("K{data_start1}:K{data_end1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("L{data_start1}:L{data_end1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("M{data_start1}:M{data_end1}"), numfmt = "#,##0")
+# N (total records): "#,##0"
+wb$add_numfmt(sheet = SHEET1, dims = glue("N{data_start1}:N{data_end1}"), numfmt = "#,##0")
 
 # Totals row
 totals_row1 <- data_end1 + 1
 wb$add_data(sheet = SHEET1, x = as.data.frame(totals_category),
             start_row = totals_row1, col_names = FALSE)
 wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_row1}:H{totals_row1}"),
+            dims  = glue("A{totals_row1}:N{totals_row1}"),
             color = wb_color(TOTALS_FILL))
 wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_row1}:H{totals_row1}"),
+            dims  = glue("A{totals_row1}:N{totals_row1}"),
             name  = "Calibri", size = 11, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$add_numfmt(sheet = SHEET1,
-              dims  = glue("B{totals_row1}:H{totals_row1}"),
-              numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("B{totals_row1}:B{totals_row1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("C{totals_row1}:C{totals_row1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("E{totals_row1}:E{totals_row1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("K{totals_row1}:K{totals_row1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("L{totals_row1}:L{totals_row1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("M{totals_row1}:M{totals_row1}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("N{totals_row1}:N{totals_row1}"), numfmt = "#,##0")
 
 # Footnote row
 footnote_row1 <- totals_row1 + 2
-footnote_text1 <- glue("Population: Confirmed 7-day HL cohort ({nrow(confirmed_hl_cohort)} patients). Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 excluded.")
+footnote_text1 <- glue("Population: Confirmed 7-day HL cohort ({nrow(confirmed_hl_cohort)} patients). Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
 wb$add_data(sheet = SHEET1,
             x = footnote_text1,
             start_row = footnote_row1, start_col = 1)
 wb$add_font(sheet = SHEET1, dims = glue("A{footnote_row1}"),
             name = "Calibri", size = 10, italic = TRUE,
             color = wb_color("FF6B7280"))
-wb$merge_cells(sheet = SHEET1, dims = glue("A{footnote_row1}:H{footnote_row1}"))
+wb$merge_cells(sheet = SHEET1, dims = glue("A{footnote_row1}:N{footnote_row1}"))
 
 # Column widths
-wb$set_col_widths(sheet = SHEET1, cols = 1:8,
-                  widths = c(40, 14, 18, 18, 10, 10, 10, 14))
+wb$set_col_widths(sheet = SHEET1, cols = 1:14,
+                  widths = c(40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 10, 10, 10, 14))
 
 # ---------------------------------------------------------------------------
-# Sheet 2: "Code Summary" (per D-07, D-15)
+# Sheet 2: "Code Summary" (15 columns A-O)
 # ---------------------------------------------------------------------------
 SHEET2 <- "Code Summary"
 wb$add_worksheet(SHEET2)
@@ -682,15 +750,21 @@ wb$add_data(sheet = SHEET2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (B
 wb$add_font(sheet = SHEET2, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET2, dims = "A1:I1")
+wb$merge_cells(sheet = SHEET2, dims = "A1:O1")
 
-# Row 2: Headers (per D-07 ordering)
+# Row 2: Headers
 headers2 <- c(
   "ICD-10 Code",
   "Cancer Site Category",
   "Total Patients",
   "Confirmed (2+ Dates)",
+  "Rate (2+ Dates)",
   "Confirmed (7-Day Gap)",
+  "Rate (7-Day Gap)",
+  "Mean Unique Dates",
+  "Median Unique Dates",
+  "Mean Dates (7-Day Sep)",
+  "Median Dates (7-Day Sep)",
   "Pre-HL",
   "Post-HL",
   "Both",
@@ -699,8 +773,8 @@ headers2 <- c(
 for (i in seq_along(headers2)) {
   wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET2, dims = "A2:I2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = "A2:I2",
+wb$add_fill(sheet = SHEET2, dims = "A2:O2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET2, dims = "A2:O2",
             name = "Calibri", size = 11, bold = TRUE,
             color = wb_color(WHITE_FONT))
 
@@ -715,38 +789,59 @@ data_end2   <- data_start2 + n_data2 - 1
 wb$add_data(sheet = SHEET2, x = as.data.frame(code_summary),
             start_row = data_start2, col_names = FALSE)
 
-# Number formatting: All count columns use "#,##0" (per D-05)
-wb$add_numfmt(sheet = SHEET2, dims = glue("C{data_start2}:I{data_end2}"), numfmt = "#,##0")
+# Number formatting (matching R/55 pattern + pre/post/both)
+# C, D, F (integer counts): "#,##0"
+wb$add_numfmt(sheet = SHEET2, dims = glue("C{data_start2}:C{data_end2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("D{data_start2}:D{data_end2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("F{data_start2}:F{data_end2}"), numfmt = "#,##0")
+# E, G (percentage rates): "0.0%"
+wb$add_numfmt(sheet = SHEET2, dims = glue("E{data_start2}:E{data_end2}"), numfmt = "0.0%")
+wb$add_numfmt(sheet = SHEET2, dims = glue("G{data_start2}:G{data_end2}"), numfmt = "0.0%")
+# H, I, J, K (mean/median decimals): "0.0"
+wb$add_numfmt(sheet = SHEET2, dims = glue("H{data_start2}:H{data_end2}"), numfmt = "0.0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("I{data_start2}:I{data_end2}"), numfmt = "0.0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("J{data_start2}:J{data_end2}"), numfmt = "0.0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("K{data_start2}:K{data_end2}"), numfmt = "0.0")
+# L, M, N (pre/post/both counts): "#,##0"
+wb$add_numfmt(sheet = SHEET2, dims = glue("L{data_start2}:L{data_end2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("M{data_start2}:M{data_end2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("N{data_start2}:N{data_end2}"), numfmt = "#,##0")
+# O (total records): "#,##0"
+wb$add_numfmt(sheet = SHEET2, dims = glue("O{data_start2}:O{data_end2}"), numfmt = "#,##0")
 
 # Totals row
 totals_row2 <- data_end2 + 1
 wb$add_data(sheet = SHEET2, x = as.data.frame(totals_code),
             start_row = totals_row2, col_names = FALSE)
 wb$add_fill(sheet = SHEET2,
-            dims  = glue("A{totals_row2}:I{totals_row2}"),
+            dims  = glue("A{totals_row2}:O{totals_row2}"),
             color = wb_color(TOTALS_FILL))
 wb$add_font(sheet = SHEET2,
-            dims  = glue("A{totals_row2}:I{totals_row2}"),
+            dims  = glue("A{totals_row2}:O{totals_row2}"),
             name  = "Calibri", size = 11, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$add_numfmt(sheet = SHEET2,
-              dims  = glue("C{totals_row2}:I{totals_row2}"),
-              numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("C{totals_row2}:C{totals_row2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("D{totals_row2}:D{totals_row2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("F{totals_row2}:F{totals_row2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("L{totals_row2}:L{totals_row2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("M{totals_row2}:M{totals_row2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("N{totals_row2}:N{totals_row2}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("O{totals_row2}:O{totals_row2}"), numfmt = "#,##0")
 
 # Footnote row
 footnote_row2 <- totals_row2 + 2
-footnote_text2 <- glue("Population: Confirmed 7-day HL cohort ({nrow(confirmed_hl_cohort)} patients). Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 excluded.")
+footnote_text2 <- glue("Population: Confirmed 7-day HL cohort ({nrow(confirmed_hl_cohort)} patients). Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
 wb$add_data(sheet = SHEET2,
             x = footnote_text2,
             start_row = footnote_row2, start_col = 1)
 wb$add_font(sheet = SHEET2, dims = glue("A{footnote_row2}"),
             name = "Calibri", size = 10, italic = TRUE,
             color = wb_color("FF6B7280"))
-wb$merge_cells(sheet = SHEET2, dims = glue("A{footnote_row2}:I{footnote_row2}"))
+wb$merge_cells(sheet = SHEET2, dims = glue("A{footnote_row2}:O{footnote_row2}"))
 
 # Column widths
-wb$set_col_widths(sheet = SHEET2, cols = 1:9,
-                  widths = c(14, 40, 14, 18, 18, 10, 10, 10, 14))
+wb$set_col_widths(sheet = SHEET2, cols = 1:15,
+                  widths = c(14, 40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 10, 10, 10, 14))
 
 # ---------------------------------------------------------------------------
 # Save workbook
@@ -775,6 +870,6 @@ close_pcornet_con()
 message("\n=== Phase 58 complete ===")
 message(glue("  Code summary: {nrow(code_summary)} cancer codes"))
 message(glue("  Category summary: {nrow(category_summary)} cancer site categories"))
-message(glue("  Pre-HL patient count: {totals_category$pre_hl_count}"))
-message(glue("  Post-HL patient count: {totals_category$post_hl_count}"))
-message(glue("  Both (intersection): {totals_category$both_count}"))
+message(glue("  Unique patients with any pre-HL cancer code: {format(n_distinct(patients_pre$ID), big.mark=',')}"))
+message(glue("  Unique patients with any post-HL cancer code: {format(n_distinct(patients_post$ID), big.mark=',')}"))
+message(glue("  Unique patients in both pre and post: {format(n_distinct(patients_both$ID), big.mark=',')}"))
