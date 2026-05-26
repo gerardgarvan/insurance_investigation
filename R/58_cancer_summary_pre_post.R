@@ -531,9 +531,11 @@ dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
   filter(str_detect(DX_norm, "^C")) %>%
+  select(ID, DX_norm) %>%
+  collect() %>%
+  filter(ID %in% cohort_ids) %>%
   group_by(DX_norm) %>%
-  summarise(total_records = n(), .groups = "drop") %>%
-  collect()
+  summarise(total_records = n(), .groups = "drop")
 
 message(glue("  Record counts for {nrow(dx_record_counts)} codes"))
 
