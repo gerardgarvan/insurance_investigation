@@ -414,7 +414,9 @@ if (is.null(death_raw)) {
       DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)  # 1900 sentinel nullification (per D-08)
     ) %>%
     filter(!is.na(DEATH_DATE)) %>%  # Exclude patients with no valid death date (per D-08)
-    select(ID, DEATH_DATE)
+    select(ID, DEATH_DATE) %>%
+    group_by(ID) %>%
+    summarise(DEATH_DATE = min(DEATH_DATE), .groups = "drop")  # One death row per patient; take earliest date when sources disagree
 }
 
 close_pcornet_con()
