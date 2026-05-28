@@ -24,13 +24,19 @@
 #   D-06 (Phase 57): Death rows: treatment_type="Death", single-point, episode_length_days=0
 #   D-07 (Phase 57): Death rows in BOTH gantt_episodes.csv and gantt_detail.csv
 #   D-08 (Phase 57): 1900 sentinel date nullification on DEATH_DATE
+#   D-01 (Phase 59): Impossible death dates excluded (death before earliest treatment)
+#   D-02 (Phase 59): Impossible deaths REMOVED from Gantt CSVs (patient keeps treatment rows)
+#   D-07 (Phase 59): HL Diagnosis pseudo-treatment row in both CSVs (treatment_type="HL Diagnosis")
+#   D-08 (Phase 59): HL Diagnosis rows for ALL patients with HL dx, not only confirmed 7-day cohort
+#   D-09 (Phase 59): HL Diagnosis provides timeline reference point for Gantt visualization
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (episode-level)
 #   - cache/outputs/treatment_episode_detail.rds (detail-level)
 #   - cache/outputs/code_descriptions.rds (Phase 02: code -> description lookup)
 #   - output/tables/cancer_summary.csv (Phase 55/57: cancer code -> category mapping)
-#   - DuckDB DEATH table (Phase 57: death dates for endpoint visualization)
+#   - cache/outputs/confirmed_hl_cohort.rds (Phase 59: HL diagnosis dates for pseudo-treatment rows)
+#   - cache/outputs/validated_death_dates.rds (Phase 59: pre-validated death dates, impossible deaths excluded)
 #
 # Outputs:
 #   - output/gantt_episodes.csv (bars: one row per patient/type/episode)
@@ -64,6 +70,12 @@ DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 
 # Cancer summary source (R/55 output, patient-code level with cancer_code column)
 CANCER_SUMMARY_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
+
+# Validated death dates (built by R/59_death_date_validation.R, Phase 59)
+VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
+
+# Confirmed HL cohort (built by R/55_cancer_summary_refined.R, Phase 55)
+COHORT_RDS <- file.path(CONFIG$cache$outputs_dir, "confirmed_hl_cohort.rds")
 
 
 # --- SECTION 2: LOAD INPUT DATA ---
@@ -391,37 +403,65 @@ message(glue("  Cancer categories aggregated for {format(nrow(cancer_categories_
 message(glue("  Hodgkin Lymphoma patients: {sum(cancer_categories_per_patient$is_hodgkin)}"))
 
 
-# --- SECTION 2C: LOAD DEATH DATA (per D-04, D-05, D-08) ---
+# --- SECTION 2C: LOAD VALIDATED DEATH DATA (Phase 59: D-01, D-02) ---
 
-message("\n--- Loading DEATH table ---")
+message("\n--- Loading validated death dates (Phase 59) ---")
 
-USE_DUCKDB <- TRUE
-open_pcornet_con()
-
-death_raw <- get_pcornet_table("DEATH")
-
-if (is.null(death_raw)) {
-  warning("DEATH table not found in DuckDB. Death rows will be skipped. Re-run R/25_duckdb_ingest.R after config update.")
-  death_data <- tibble(
-    ID = character(),
-    DEATH_DATE = as.Date(character())
-  )
+if (!file.exists(VALIDATED_DEATHS_RDS)) {
+  warning("validated_death_dates.rds not found. Run R/59_death_date_validation.R first. Falling back to raw DEATH table.")
+  # Fallback: original DuckDB loading pattern (backward compatibility)
+  USE_DUCKDB <- TRUE
+  open_pcornet_con()
+  death_raw <- get_pcornet_table("DEATH")
+  if (is.null(death_raw)) {
+    warning("DEATH table not found in DuckDB. Death rows will be skipped.")
+    death_data <- tibble(ID = character(), DEATH_DATE = as.Date(character()))
+  } else {
+    death_data <- death_raw %>%
+      collect() %>%
+      mutate(
+        DEATH_DATE = parse_pcornet_date(DEATH_DATE),
+        DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)
+      ) %>%
+      filter(!is.na(DEATH_DATE)) %>%
+      select(ID, DEATH_DATE) %>%
+      group_by(ID) %>%
+      summarise(DEATH_DATE = min(DEATH_DATE), .groups = "drop")
+  }
+  close_pcornet_con()
 } else {
-  death_data <- death_raw %>%
-    collect() %>%
-    mutate(
-      DEATH_DATE = parse_pcornet_date(DEATH_DATE),  # Multi-format parse (per RESEARCH.md Pitfall 3)
-      DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)  # 1900 sentinel nullification (per D-08)
-    ) %>%
-    filter(!is.na(DEATH_DATE)) %>%  # Exclude patients with no valid death date (per D-08)
-    select(ID, DEATH_DATE) %>%
-    group_by(ID) %>%
-    summarise(DEATH_DATE = min(DEATH_DATE), .groups = "drop")  # One death row per patient; take earliest date when sources disagree
+  validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
+  # Only use deaths marked as valid (per D-02: impossible deaths removed from Gantt)
+  death_data <- validated_deaths %>%
+    filter(death_valid == TRUE) %>%
+    select(ID, DEATH_DATE)
+
+  n_excluded <- sum(validated_deaths$death_valid == FALSE, na.rm = TRUE)
+  message(glue("  Loaded validated death dates: {nrow(death_data)} valid, {n_excluded} impossible excluded (per D-02)"))
 }
 
-close_pcornet_con()
+message(glue("  Patients with valid death dates for Gantt: {nrow(death_data)}"))
 
-message(glue("  Patients with valid death dates: {nrow(death_data)}"))
+
+# --- SECTION 2D: LOAD HL COHORT FOR DIAGNOSIS ROWS (Phase 59: D-07, D-08) ---
+
+message("\n--- Loading HL cohort for diagnosis pseudo-treatment rows ---")
+
+if (!file.exists(COHORT_RDS)) {
+  warning("confirmed_hl_cohort.rds not found. Run R/55_cancer_summary_refined.R first. HL Diagnosis rows will be skipped.")
+  hl_cohort <- tibble(
+    ID = character(),
+    first_hl_dx_date = as.Date(character()),
+    first_hl_dx_source = character()
+  )
+} else {
+  hl_cohort <- readRDS(COHORT_RDS)
+  # Apply 1900 sentinel filtering to HL diagnosis dates (same pattern as death dates)
+  hl_cohort <- hl_cohort %>%
+    mutate(first_hl_dx_date = if_else(year(first_hl_dx_date) == 1900L, as.Date(NA), first_hl_dx_date)) %>%
+    filter(!is.na(first_hl_dx_date))
+  message(glue("  Loaded {nrow(hl_cohort)} HL patients with valid first diagnosis dates"))
+}
 
 
 # --- SECTION 3: VALIDATE COLUMN STRUCTURE ---
@@ -611,6 +651,104 @@ if (nrow(death_data) > 0) {
 }
 
 
+# --- SECTION 4C: BUILD AND APPEND HL DIAGNOSIS PSEUDO-TREATMENT ROWS (Phase 59: D-07, D-08, D-09) ---
+
+if (nrow(hl_cohort) > 0) {
+  message("\n--- Building HL Diagnosis pseudo-treatment rows ---")
+
+  # HL Diagnosis rows for episodes table (per D-07: same structure as Death rows)
+  hl_dx_episodes <- hl_cohort %>%
+    left_join(cancer_categories_per_patient, by = "ID") %>%
+    mutate(
+      cancer_category = ifelse(is.na(cancer_category), "Hodgkin Lymphoma", cancer_category),
+      is_hodgkin = TRUE
+    ) %>%
+    mutate(
+      patient_id = ID,
+      treatment_type = "HL Diagnosis",
+      episode_number = 1L,
+      episode_start = first_hl_dx_date,
+      episode_stop = first_hl_dx_date,
+      episode_length_days = 0L,
+      distinct_dates_in_episode = 1L,
+      historical_flag = FALSE,
+      triggering_codes = "",
+      triggering_code_descriptions = ""
+    ) %>%
+    select(
+      patient_id, treatment_type, episode_number,
+      episode_start, episode_stop, episode_length_days,
+      distinct_dates_in_episode, historical_flag,
+      triggering_codes, triggering_code_descriptions,
+      cancer_category, is_hodgkin
+    )
+
+  # HL Diagnosis rows for detail table (per D-07: same structure as Death detail rows)
+  hl_dx_detail <- hl_cohort %>%
+    left_join(cancer_categories_per_patient, by = "ID") %>%
+    mutate(
+      cancer_category = ifelse(is.na(cancer_category), "Hodgkin Lymphoma", cancer_category),
+      is_hodgkin = TRUE
+    ) %>%
+    mutate(
+      patient_id = ID,
+      treatment_type = "HL Diagnosis",
+      treatment_date = first_hl_dx_date,
+      triggering_code = "",
+      episode_number = 1L,
+      episode_start = first_hl_dx_date,
+      episode_stop = first_hl_dx_date,
+      historical_flag = FALSE,
+      triggering_code_description = ""
+    ) %>%
+    select(
+      patient_id, treatment_type, treatment_date,
+      triggering_code, episode_number, episode_start,
+      episode_stop, historical_flag,
+      triggering_code_description,
+      cancer_category, is_hodgkin
+    )
+
+  # Verify column alignment before binding (same pattern as Death row validation)
+  expected_ep_cols <- colnames(episodes_export)
+  hl_dx_ep_cols <- colnames(hl_dx_episodes)
+  missing_in_hl_dx_ep <- setdiff(expected_ep_cols, hl_dx_ep_cols)
+  extra_in_hl_dx_ep <- setdiff(hl_dx_ep_cols, expected_ep_cols)
+
+  if (length(missing_in_hl_dx_ep) > 0) {
+    stop(glue("HL Diagnosis episodes missing columns: {paste(missing_in_hl_dx_ep, collapse = ', ')}"))
+  }
+  if (length(extra_in_hl_dx_ep) > 0) {
+    warning(glue("HL Diagnosis episodes has extra columns: {paste(extra_in_hl_dx_ep, collapse = ', ')}"))
+  }
+
+  expected_det_cols <- colnames(detail_export)
+  hl_dx_det_cols <- colnames(hl_dx_detail)
+  missing_in_hl_dx_det <- setdiff(expected_det_cols, hl_dx_det_cols)
+  extra_in_hl_dx_det <- setdiff(hl_dx_det_cols, expected_det_cols)
+
+  if (length(missing_in_hl_dx_det) > 0) {
+    stop(glue("HL Diagnosis detail missing columns: {paste(missing_in_hl_dx_det, collapse = ', ')}"))
+  }
+  if (length(extra_in_hl_dx_det) > 0) {
+    warning(glue("HL Diagnosis detail has extra columns: {paste(extra_in_hl_dx_det, collapse = ', ')}"))
+  }
+
+  # Append HL Diagnosis rows (per D-09: appears chronologically before treatments/death)
+  episodes_export <- bind_rows(episodes_export, hl_dx_episodes) %>%
+    arrange(patient_id, episode_start, treatment_type)
+
+  detail_export <- bind_rows(detail_export, hl_dx_detail) %>%
+    arrange(patient_id, treatment_date, treatment_type)
+
+  message(glue("  Added {nrow(hl_dx_episodes)} HL Diagnosis episode rows"))
+  message(glue("  Added {nrow(hl_dx_detail)} HL Diagnosis detail rows"))
+
+} else {
+  message("\n--- No valid HL diagnosis dates found; skipping HL Diagnosis rows ---")
+}
+
+
 # --- SECTION 5: WRITE CSV OUTPUTS ---
 
 message("\n--- Writing CSV outputs ---")
@@ -639,6 +777,8 @@ message(glue("  Episodes with cancer_category: {sum(episodes_export$cancer_categ
 message(glue("  Episodes with is_hodgkin=TRUE: {sum(episodes_export$is_hodgkin, na.rm = TRUE)}"))
 n_death_rows <- sum(episodes_export$treatment_type == "Death", na.rm = TRUE)
 message(glue("  Death pseudo-treatment rows in episodes: {format(n_death_rows, big.mark = ',')}"))
+n_hl_dx_rows <- sum(episodes_export$treatment_type == "HL Diagnosis", na.rm = TRUE)
+message(glue("  HL Diagnosis pseudo-treatment rows in episodes: {format(n_hl_dx_rows, big.mark = ',')}"))
 
 message(glue("\n  Episode bars:  {OUTPUT_EPISODES}"))
 message(glue("  Detail ticks:  {OUTPUT_DETAIL}"))
