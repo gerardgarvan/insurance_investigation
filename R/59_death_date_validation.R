@@ -125,6 +125,45 @@ message(glue("  Valid death dates retained: {nrow(valid_deaths)}"))
 
 
 # ==============================================================================
+# SECTION 4B: IDENTIFY IMPOSSIBLE DEATHS BEFORE HL DIAGNOSIS
+# ==============================================================================
+
+message("\n--- Identifying impossible death dates (death before HL Diagnosis) ---")
+
+if (!file.exists(COHORT_RDS)) {
+  warning("confirmed_hl_cohort.rds not found. Skipping death-before-HL-diagnosis check.")
+} else {
+  hl_cohort_for_death_check <- readRDS(COHORT_RDS) %>%
+    filter(!is.na(first_hl_dx_date), year(first_hl_dx_date) != 1900L)
+
+  # Check valid_deaths against HL diagnosis dates
+  death_vs_hl_dx <- valid_deaths %>%
+    inner_join(hl_cohort_for_death_check, by = "ID")
+
+  impossible_before_hl_dx <- death_vs_hl_dx %>%
+    filter(DEATH_DATE < first_hl_dx_date) %>%
+    mutate(
+      death_valid = FALSE,
+      validation_reason = "Death date before HL diagnosis date"
+    ) %>%
+    select(-first_hl_dx_date, -first_hl_dx_source)
+
+  message(glue("  Impossible death dates (death before HL Diagnosis): {nrow(impossible_before_hl_dx)}"))
+
+  if (nrow(impossible_before_hl_dx) > 0) {
+    # Add to impossible_deaths pool
+    impossible_deaths <- bind_rows(impossible_deaths, impossible_before_hl_dx)
+
+    # Remove from valid_deaths
+    valid_deaths <- valid_deaths %>%
+      anti_join(impossible_before_hl_dx, by = "ID")
+
+    message(glue("  Valid death dates after HL Diagnosis check: {nrow(valid_deaths)}"))
+  }
+}
+
+
+# ==============================================================================
 # SECTION 5: DETECT POST-DEATH CLINICAL ACTIVITY (per D-03)
 # ==============================================================================
 
@@ -357,7 +396,9 @@ summary_stats <- tibble(
   Metric = c(
     "Total patients with death dates",
     "Patients with treatment records",
-    "Impossible death dates (death before treatment)",
+    "Impossible death dates (total)",
+    "  - Death before treatment",
+    "  - Death before HL Diagnosis",
     "Valid death dates retained",
     "Patients with post-death clinical activity",
     "  - Post-death encounters",
@@ -371,6 +412,8 @@ summary_stats <- tibble(
     nrow(death_data),
     nrow(death_with_treatment),
     nrow(impossible_deaths),
+    sum(impossible_deaths$validation_reason == "Death date before earliest treatment date", na.rm = TRUE),
+    sum(impossible_deaths$validation_reason == "Death date before HL diagnosis date", na.rm = TRUE),
     sum(valid_deaths$death_valid),
     sum(valid_deaths$post_death_activity),
     sum(valid_deaths$post_death_encounters > 0),
@@ -408,7 +451,10 @@ wb$add_worksheet("Flagged Patients")
 # Combine impossible deaths + post-death activity patients
 flagged_detail <- bind_rows(
   impossible_deaths %>%
-    mutate(flag_type = "Impossible death (before treatment)") %>%
+    mutate(flag_type = case_when(
+      validation_reason == "Death date before HL diagnosis date" ~ "Impossible death (before HL Diagnosis)",
+      TRUE ~ "Impossible death (before treatment)"
+    )) %>%
     select(ID, DEATH_DATE, DEATH_SOURCE, earliest_treatment_date, flag_type, validation_reason),
   valid_deaths %>%
     filter(post_death_activity) %>%
@@ -462,7 +508,11 @@ message(glue("  Validated RDS artifact: {OUTPUT_RDS}\n"))
 
 message("Key validation findings:")
 message(glue("  Total patients with death dates: {nrow(death_data)}"))
-message(glue("  Impossible deaths (before treatment): {nrow(impossible_deaths)}"))
+n_before_tx <- sum(impossible_deaths$validation_reason == "Death date before earliest treatment date", na.rm = TRUE)
+n_before_hl <- sum(impossible_deaths$validation_reason == "Death date before HL diagnosis date", na.rm = TRUE)
+message(glue("  Impossible deaths (total): {nrow(impossible_deaths)}"))
+message(glue("    - Before treatment: {n_before_tx}"))
+message(glue("    - Before HL Diagnosis: {n_before_hl}"))
 message(glue("  Valid deaths retained: {sum(valid_deaths$death_valid)}"))
 message(glue("  Patients with post-death activity: {sum(valid_deaths$post_death_activity)}"))
 message(glue("  Death-only patients (no treatment records): {nrow(death_only_patients)}"))
