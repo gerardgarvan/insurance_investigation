@@ -20,7 +20,7 @@
 - [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
 - [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
 - [ ] **Phase 58: Cancer Summary Pre/Post HL Counts** — Update cancer_summary_table.xlsx: remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only)
-- [ ] **Phase 59: Death Date Validation & Treatment Timeline Cleanup** — Validate death dates against treatment timelines, exclude impossible pre-treatment deaths, investigate patients with death dates but no treatments
+- [x] **Phase 59: Death Date Validation & Treatment Timeline Cleanup** — Validate death dates against treatment timelines, exclude impossible pre-treatment deaths, investigate patients with death dates but no treatments (completed 2026-05-28)
 
 ## Remaining Phases (Unassigned)
 
@@ -268,11 +268,11 @@ Plans:
 5. Gantt CSVs use validated death dates (impossible deaths excluded) instead of raw DEATH table data
 6. Three-sheet xlsx validation report, flat CSV, and validated_death_dates.rds artifact are produced
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 59-01-PLAN.md -- Create R/59_death_date_validation.R: death date validation, post-death activity flagging, death-only patient investigation, multi-sheet xlsx + CSV + RDS output
-- [ ] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
+- [x] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
 
 ---
 *Last updated: 2026-05-28 -- Phase 59 planned (2 plans)*
