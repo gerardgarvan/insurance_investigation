@@ -132,7 +132,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 55 phases completed across 7 milestones (v1.0-v1.7) + post-milestone work, ~55 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions, confirmed_hl_cohort.rds artifact for temporal filtering
+- **Current state**: 59 phases completed across 7 milestones (v1.0-v1.7) + post-milestone work, ~59 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions and validated death dates, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -189,4 +189,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-22 — Phase 56 complete (post-HL temporal filtering with sentinel exclusion, EXPLORATORY labeling, Comparison sheet)*
+*Last updated: 2026-05-28 — Phase 59 complete (death date validation, impossible death exclusion from Gantt, HL Diagnosis pseudo-treatment rows)*
