@@ -75,7 +75,7 @@ CANCER_SUMMARY_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv
 VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 
 # Confirmed HL cohort (built by R/55_cancer_summary_refined.R, Phase 55)
-COHORT_RDS <- file.path(CONFIG$cache$outputs_dir, "confirmed_hl_cohort.rds")
+COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
 
 # --- SECTION 2: LOAD INPUT DATA ---

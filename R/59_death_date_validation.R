@@ -29,7 +29,7 @@ OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 
 # Define input paths
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
-COHORT_RDS <- file.path(CONFIG$cache$outputs_dir, "confirmed_hl_cohort.rds")
+COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
 message(glue("Output files:"))
 message(glue("  XLSX: {OUTPUT_XLSX}"))
