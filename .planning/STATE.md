@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Phases
 status: executing
-stopped_at: Phase 58 context gathered
-last_updated: "2026-05-26T15:36:53.907Z"
-last_activity: 2026-05-23 -- Phase 57 execution started
+stopped_at: Phase 59 context gathered
+last_updated: "2026-05-28T18:06:36.452Z"
+last_activity: 2026-05-26 -- Phase 58 execution started
 progress:
-  total_phases: 57
+  total_phases: 58
   completed_phases: 47
-  total_plans: 85
+  total_plans: 86
   completed_plans: 80
 ---
 
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-05-22)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 57 — gantt-enhancements
+**Current focus:** Phase 58 — cancer-summary-pre-post-hl-counts
 
 ## Current Position
 
-Phase: 57 (gantt-enhancements) — EXECUTING
+Phase: 58 (cancer-summary-pre-post-hl-counts) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 57
-Last activity: 2026-05-23 -- Phase 57 execution started
+Status: Executing Phase 58
+Last activity: 2026-05-26 -- Phase 58 execution started
 
 Progress: [████████████████████████████████████████████████████████████] Phase 54 complete, Phase 55 starting
 
@@ -82,12 +82,13 @@ None yet.
 ### Roadmap Evolution
 
 - Phase 58 added: Cancer summary table pre/post HL counts — remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only)
+- Phase 59 added: Death date validation & treatment timeline cleanup — validate death dates against treatment timelines, investigate death-only patients, add treatment category date
 
 ## Session Continuity
 
-Last session: 2026-05-26T15:36:53.895Z
-Stopped at: Phase 58 context gathered
-Resume file: .planning/phases/58-cancer-summary-pre-post-hl-counts/58-CONTEXT.md
+Last session: 2026-05-28T18:06:36.444Z
+Stopped at: Phase 59 context gathered
+Resume file: .planning/phases/59-death-date-validation-and-treatment-timeline-cleanup/59-CONTEXT.md
 Next step: `/gsd:plan-phase 55`
 
 ---
