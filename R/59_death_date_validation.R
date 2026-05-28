@@ -314,8 +314,8 @@ validated_rds <- valid_deaths %>%
   select(ID, DEATH_DATE, DEATH_SOURCE, death_valid, post_death_activity) %>%
   bind_rows(
     impossible_deaths %>%
-      select(ID, DEATH_DATE, DEATH_SOURCE) %>%
-      mutate(death_valid = FALSE, post_death_activity = NA)
+      select(ID, DEATH_SOURCE) %>%
+      mutate(DEATH_DATE = as.Date(NA), death_valid = FALSE, post_death_activity = NA)
   )
 
 saveRDS(validated_rds, OUTPUT_RDS)

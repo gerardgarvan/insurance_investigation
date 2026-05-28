@@ -431,9 +431,9 @@ if (!file.exists(VALIDATED_DEATHS_RDS)) {
   close_pcornet_con()
 } else {
   validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
-  # Only use deaths marked as valid (per D-02: impossible deaths removed from Gantt)
+  # Keep all patients but only use non-NA death dates (impossible deaths have DEATH_DATE = NA)
   death_data <- validated_deaths %>%
-    filter(death_valid == TRUE) %>%
+    filter(!is.na(DEATH_DATE)) %>%
     select(ID, DEATH_DATE)
 
   n_excluded <- sum(validated_deaths$death_valid == FALSE, na.rm = TRUE)
