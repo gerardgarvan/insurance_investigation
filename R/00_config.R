@@ -1459,15 +1459,21 @@ SURVIVORSHIP_CODES <- list(
 TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
 
 # Treatment type colors for xlsx styling (8-char hex with FF alpha prefix)
-# Canonical 6-category palette covering all treatment analysis needs
+# Canonical palette covering all treatment analysis and Gantt visualization needs
 TREATMENT_TYPE_COLORS <- list(
   Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"),   # light blue / dark blue
   Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"),   # light green / dark green
   SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"),   # light yellow / dark olive
   Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"),   # light purple / dark purple
+  `HL Diagnosis`    = list(fill = "FFFFF0D6", font = "FF8B6914"),   # light gold / dark gold
+  Death             = list(fill = "FFFDE8E8", font = "FF991B1B"),   # light red / dark red
   `Supportive Care` = list(fill = "FFD5F5F0", font = "FF0E6655"),   # light teal / dark teal
   Unrelated         = list(fill = "FFF3F4F6", font = "FF6B7280")    # light gray / medium gray
 )
+
+# Treatment types recognized as part of the Gantt treatment category
+# Includes standard treatments + HL Diagnosis (Gantt timeline marker treated as treatment)
+GANTT_TREATMENT_TYPES <- c(TREATMENT_TYPES, "HL Diagnosis")
 
 # Treatment episode window threshold (max days from episode start to define cycle boundary)
 # Used by duration/episode analysis (Phase 43, 44)

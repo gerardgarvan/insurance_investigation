@@ -26,16 +26,16 @@
 #   D-08 (Phase 57): 1900 sentinel date nullification on DEATH_DATE
 #   D-01 (Phase 59): Impossible death dates excluded (death before earliest treatment)
 #   D-02 (Phase 59): Impossible deaths REMOVED from Gantt CSVs (patient keeps treatment rows)
-#   D-07 (Phase 59): HL Diagnosis pseudo-treatment row in both CSVs (treatment_type="HL Diagnosis")
+#   D-07 (Phase 59): HL Diagnosis treatment row in both CSVs (treatment_type="HL Diagnosis")
 #   D-08 (Phase 59): HL Diagnosis rows for ALL patients with HL dx, not only confirmed 7-day cohort
-#   D-09 (Phase 59): HL Diagnosis provides timeline reference point for Gantt visualization
+#   D-09 (Phase 59): HL Diagnosis in treatment category for Gantt (date = min(DIAGNOSIS, TUMOR_REGISTRY))
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (episode-level)
 #   - cache/outputs/treatment_episode_detail.rds (detail-level)
 #   - cache/outputs/code_descriptions.rds (Phase 02: code -> description lookup)
 #   - output/tables/cancer_summary.csv (Phase 55/57: cancer code -> category mapping)
-#   - cache/outputs/confirmed_hl_cohort.rds (Phase 59: HL diagnosis dates for pseudo-treatment rows)
+#   - cache/outputs/confirmed_hl_cohort.rds (Phase 59: HL diagnosis dates for treatment rows)
 #   - cache/outputs/validated_death_dates.rds (Phase 59: pre-validated death dates, impossible deaths excluded)
 #
 # Outputs:
@@ -445,7 +445,7 @@ message(glue("  Patients with valid death dates for Gantt: {nrow(death_data)}"))
 
 # --- SECTION 2D: LOAD HL COHORT FOR DIAGNOSIS ROWS (Phase 59: D-07, D-08) ---
 
-message("\n--- Loading HL cohort for diagnosis pseudo-treatment rows ---")
+message("\n--- Loading HL cohort for diagnosis treatment rows ---")
 
 if (!file.exists(COHORT_RDS)) {
   warning("confirmed_hl_cohort.rds not found. Run R/55_cancer_summary_refined.R first. HL Diagnosis rows will be skipped.")
@@ -651,12 +651,12 @@ if (nrow(death_data) > 0) {
 }
 
 
-# --- SECTION 4C: BUILD AND APPEND HL DIAGNOSIS PSEUDO-TREATMENT ROWS (Phase 59: D-07, D-08, D-09) ---
+# --- SECTION 4C: BUILD AND APPEND HL DIAGNOSIS TREATMENT ROWS (Phase 59: D-07, D-08, D-09) ---
 
 if (nrow(hl_cohort) > 0) {
-  message("\n--- Building HL Diagnosis pseudo-treatment rows ---")
+  message("\n--- Building HL Diagnosis treatment rows ---")
 
-  # HL Diagnosis rows for episodes table (per D-07: same structure as Death rows)
+  # HL Diagnosis rows for episodes table (per D-07, D-09: treatment category, date = min(DIAGNOSIS, TUMOR_REGISTRY))
   hl_dx_episodes <- hl_cohort %>%
     left_join(cancer_categories_per_patient, by = "ID") %>%
     mutate(
@@ -683,7 +683,7 @@ if (nrow(hl_cohort) > 0) {
       cancer_category, is_hodgkin
     )
 
-  # HL Diagnosis rows for detail table (per D-07: same structure as Death detail rows)
+  # HL Diagnosis rows for detail table (per D-07, D-09: treatment category)
   hl_dx_detail <- hl_cohort %>%
     left_join(cancer_categories_per_patient, by = "ID") %>%
     mutate(
@@ -734,7 +734,7 @@ if (nrow(hl_cohort) > 0) {
     warning(glue("HL Diagnosis detail has extra columns: {paste(extra_in_hl_dx_det, collapse = ', ')}"))
   }
 
-  # Append HL Diagnosis rows (per D-09: appears chronologically before treatments/death)
+  # Append HL Diagnosis treatment rows (per D-09: chronological order with other treatments)
   episodes_export <- bind_rows(episodes_export, hl_dx_episodes) %>%
     arrange(patient_id, episode_start, treatment_type)
 
@@ -745,7 +745,7 @@ if (nrow(hl_cohort) > 0) {
   message(glue("  Added {nrow(hl_dx_detail)} HL Diagnosis detail rows"))
 
 } else {
-  message("\n--- No valid HL diagnosis dates found; skipping HL Diagnosis rows ---")
+  message("\n--- No valid HL diagnosis dates found; skipping HL Diagnosis treatment rows ---")
 }
 
 
@@ -778,7 +778,7 @@ message(glue("  Episodes with is_hodgkin=TRUE: {sum(episodes_export$is_hodgkin, 
 n_death_rows <- sum(episodes_export$treatment_type == "Death", na.rm = TRUE)
 message(glue("  Death pseudo-treatment rows in episodes: {format(n_death_rows, big.mark = ',')}"))
 n_hl_dx_rows <- sum(episodes_export$treatment_type == "HL Diagnosis", na.rm = TRUE)
-message(glue("  HL Diagnosis pseudo-treatment rows in episodes: {format(n_hl_dx_rows, big.mark = ',')}"))
+message(glue("  HL Diagnosis treatment rows in episodes: {format(n_hl_dx_rows, big.mark = ',')}"))
 
 message(glue("\n  Episode bars:  {OUTPUT_EPISODES}"))
 message(glue("  Detail ticks:  {OUTPUT_DETAIL}"))
