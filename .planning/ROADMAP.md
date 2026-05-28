@@ -12,7 +12,7 @@
 - **v1.4 AV+TH Subset Analysis** — Phase 33 (shipped 2026-04-27) — [archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 Payer Analysis Expansion** — Phases 34-37 (shipped 2026-05-01) — [archive](milestones/v1.5-ROADMAP.md)
 - **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-54 (shipped 2026-05-22) — [archive](milestones/v1.6-ROADMAP.md)
-- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-58 (active)
+- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-59 (active)
 
 ## v1.7 Phases
 
@@ -20,6 +20,7 @@
 - [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
 - [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
 - [ ] **Phase 58: Cancer Summary Pre/Post HL Counts** — Update cancer_summary_table.xlsx: remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only)
+- [ ] **Phase 59: Death Date Validation & Treatment Timeline Cleanup** — Validate death dates against treatment timelines, exclude impossible pre-treatment deaths, investigate patients with death dates but no treatments
 
 ## Remaining Phases (Unassigned)
 
@@ -251,5 +252,27 @@ Plans:
 Plans:
 - [ ] 58-01-PLAN.md -- Create R/58_cancer_summary_pre_post.R: DuckDB DIAGNOSIS query, temporal split (pre/post/both relative to first_hl_dx_date), baseline metrics merge, C81 exclusion, styled two-sheet xlsx output
 
+### Phase 59: Death Date Validation & Treatment Timeline Cleanup
+
+**Goal:** Validate death dates against treatment timelines (exclude deaths occurring before treatment dates), flag post-death clinical activity, investigate death-only patients with full clinical characterization, add HL Diagnosis pseudo-treatment rows to Gantt CSVs, and produce validated death date artifacts for downstream use
+
+**Depends on:** Phase 57
+
+**Requirements:** DVAL-01, DVAL-02, DVAL-03, DVAL-04, DVAL-05
+
+**Success Criteria** (what must be TRUE):
+1. Death dates that occur before a patient's earliest treatment date are identified and excluded as impossible
+2. Post-death clinical activity (encounters, diagnoses, treatments after death date) is flagged for manual review
+3. Patients with death dates but no treatment records are characterized with HL status, demographics, encounter counts, and care gap classification
+4. HL Diagnosis pseudo-treatment rows appear in both gantt_episodes.csv and gantt_detail.csv for all HL patients
+5. Gantt CSVs use validated death dates (impossible deaths excluded) instead of raw DEATH table data
+6. Three-sheet xlsx validation report, flat CSV, and validated_death_dates.rds artifact are produced
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 59-01-PLAN.md -- Create R/59_death_date_validation.R: death date validation, post-death activity flagging, death-only patient investigation, multi-sheet xlsx + CSV + RDS output
+- [ ] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
+
 ---
-*Last updated: 2026-05-26 -- Phase 58 planned*
+*Last updated: 2026-05-28 -- Phase 59 planned (2 plans)*

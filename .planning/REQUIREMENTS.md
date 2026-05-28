@@ -20,6 +20,14 @@ Requirements for milestone v1.7 Cancer Summary Refinement & Gantt Enhancements. 
 - [ ] **GANTT-02**: Each treatment episode row includes `is_hodgkin` binary column (TRUE when cancer category is Hodgkin Lymphoma)
 - [ ] **GANTT-03**: Death date from DEATH table is added to Gantt chart data as a treatment type for visualization
 
+### Death Date Validation & Timeline
+
+- [ ] **DVAL-01**: Death dates occurring before a patient's earliest treatment date are identified and excluded as impossible (death before treatment is temporally impossible for patients with treatment records)
+- [ ] **DVAL-02**: Post-death clinical activity (encounters, diagnoses, treatments after death date) is flagged per patient for manual review without auto-exclusion
+- [ ] **DVAL-03**: Patients with death dates but no treatment records are characterized with HL confirmation status, demographics, encounter counts, enrollment periods, and care gap classification
+- [ ] **DVAL-04**: HL Diagnosis pseudo-treatment rows (treatment_type = "HL Diagnosis") appear in both gantt_episodes.csv and gantt_detail.csv as a timeline reference point for all HL patients
+- [ ] **DVAL-05**: Validated death dates artifact (validated_death_dates.rds) is saved with death_valid and post_death_activity flags, plus three-sheet xlsx validation report and flat CSV export
+
 ## Future Requirements
 
 Deferred to future milestone. Tracked but not in current roadmap.
@@ -55,14 +63,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GANTT-01 | Phase 57 | Pending |
 | GANTT-02 | Phase 57 | Pending |
 | GANTT-03 | Phase 57 | Pending |
+| DVAL-01 | Phase 59 | Pending |
+| DVAL-02 | Phase 59 | Pending |
+| DVAL-03 | Phase 59 | Pending |
+| DVAL-04 | Phase 59 | Pending |
+| DVAL-05 | Phase 59 | Pending |
 
 **Coverage:**
-- v1.7 requirements: 7 total
-- Mapped to phases: 7
+- v1.7 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0
 
-**Coverage validation:** ✓ 100% requirement coverage achieved
+**Coverage validation:** 100% requirement coverage achieved
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after roadmap creation*
+*Last updated: 2026-05-28 after Phase 59 planning*
