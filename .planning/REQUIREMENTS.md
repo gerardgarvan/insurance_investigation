@@ -22,11 +22,11 @@ Requirements for milestone v1.7 Cancer Summary Refinement & Gantt Enhancements. 
 
 ### Death Date Validation & Timeline
 
-- [ ] **DVAL-01**: Death dates occurring before a patient's earliest treatment date are identified and excluded as impossible (death before treatment is temporally impossible for patients with treatment records)
-- [ ] **DVAL-02**: Post-death clinical activity (encounters, diagnoses, treatments after death date) is flagged per patient for manual review without auto-exclusion
-- [ ] **DVAL-03**: Patients with death dates but no treatment records are characterized with HL confirmation status, demographics, encounter counts, enrollment periods, and care gap classification
+- [x] **DVAL-01**: Death dates occurring before a patient's earliest treatment date are identified and excluded as impossible (death before treatment is temporally impossible for patients with treatment records)
+- [x] **DVAL-02**: Post-death clinical activity (encounters, diagnoses, treatments after death date) is flagged per patient for manual review without auto-exclusion
+- [x] **DVAL-03**: Patients with death dates but no treatment records are characterized with HL confirmation status, demographics, encounter counts, enrollment periods, and care gap classification
 - [ ] **DVAL-04**: HL Diagnosis pseudo-treatment rows (treatment_type = "HL Diagnosis") appear in both gantt_episodes.csv and gantt_detail.csv as a timeline reference point for all HL patients
-- [ ] **DVAL-05**: Validated death dates artifact (validated_death_dates.rds) is saved with death_valid and post_death_activity flags, plus three-sheet xlsx validation report and flat CSV export
+- [x] **DVAL-05**: Validated death dates artifact (validated_death_dates.rds) is saved with death_valid and post_death_activity flags, plus three-sheet xlsx validation report and flat CSV export
 
 ## Future Requirements
 
@@ -63,11 +63,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GANTT-01 | Phase 57 | Pending |
 | GANTT-02 | Phase 57 | Pending |
 | GANTT-03 | Phase 57 | Pending |
-| DVAL-01 | Phase 59 | Pending |
-| DVAL-02 | Phase 59 | Pending |
-| DVAL-03 | Phase 59 | Pending |
+| DVAL-01 | Phase 59 | Complete |
+| DVAL-02 | Phase 59 | Complete |
+| DVAL-03 | Phase 59 | Complete |
 | DVAL-04 | Phase 59 | Pending |
-| DVAL-05 | Phase 59 | Pending |
+| DVAL-05 | Phase 59 | Complete |
 
 **Coverage:**
 - v1.7 requirements: 12 total

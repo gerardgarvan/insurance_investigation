@@ -268,10 +268,10 @@ Plans:
 5. Gantt CSVs use validated death dates (impossible deaths excluded) instead of raw DEATH table data
 6. Three-sheet xlsx validation report, flat CSV, and validated_death_dates.rds artifact are produced
 
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 59-01-PLAN.md -- Create R/59_death_date_validation.R: death date validation, post-death activity flagging, death-only patient investigation, multi-sheet xlsx + CSV + RDS output
+- [x] 59-01-PLAN.md -- Create R/59_death_date_validation.R: death date validation, post-death activity flagging, death-only patient investigation, multi-sheet xlsx + CSV + RDS output
 - [ ] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
 
 ---
