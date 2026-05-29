@@ -1,191 +1,234 @@
 # Project Research Summary
 
-**Project:** PCORnet Payer Variable Investigation — v1.7 Cancer Summary Refinement & Gantt Enhancements
-**Domain:** Cancer epidemiology cohort study with clinical timeline visualization (Hodgkin Lymphoma)
-**Researched:** 2026-05-22
+**Project:** v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
+**Domain:** Clinical observational research in PCORnet Common Data Model
+**Researched:** 2026-05-29
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This is a refinement milestone for an existing R-based PCORnet CDM analysis pipeline. The goal is to improve cancer classification fidelity (remove benign neoplasm D-codes), strengthen cohort validation (2+ HL codes with 7-day separation), add temporal filtering (cancers occurring after first HL diagnosis), and enhance Gantt chart interpretability (cancer category labels and death dates). All features are **logic-only enhancements** — no new packages required. The existing validated stack (tidyverse, lubridate, stringr, DuckDB) already provides all necessary capabilities.
+This milestone adds encounter-level cancer diagnosis linkage (replacing patient-level joins) and first-line therapy regimen identification (ABVD, BV+AVD, Nivo+AVD) to the existing R-based Hodgkin Lymphoma treatment analysis pipeline. The research confirms **minimal new dependencies**: all features use validated stack components (dplyr rolling joins for encounter linkage, lubridate for 28-day cycle detection, httr2 for drug name resolution via RxNorm API). The existing DuckDB-backed architecture accommodates all changes through script extensions and new numbered components (R/60-R/65).
 
-**Recommended approach:** Implement in three parallel tracks: (1) D-code filtering in cancer summary scripts (low risk, foundational), (2) HL cohort confirmation and temporal filtering (medium risk, reuses existing 7-day validation pattern from Phase 50), and (3) Gantt enhancements (cancer categories and death dates — independent of tracks 1-2). This separation allows D-code fixes to land quickly while temporal filtering logic is validated. The critical architectural insight is that the numbered-script pattern supports variants (R/53a, R/54a for post-HL filtering) and composable enhancement (R/49 extends without touching upstream scripts).
+The recommended approach leverages **hybrid encounter-diagnosis linkage**: direct ENCOUNTERID match (highest precision) with temporal proximity fallback for NULL/missing encounter links. Regimen detection requires **cycle-window grouping** (+/- 3 days) rather than same-encounter matching because infusion centers create separate encounters per drug. Critical to success: validate ENCOUNTERID population rates per table (90% in PROCEDURES vs 40% in DISPENSING at claims-heavy sites) before designing linkage strategy.
 
-**Key risks:** (1) Immortal time bias from post-diagnosis filtering (mitigate by producing both filtered and unfiltered outputs, clearly labeling filtered version as exploratory), (2) first HL date calculation must incorporate TUMOR_REGISTRY dates not just DIAGNOSIS (mitigate by querying both sources and taking minimum), and (3) PREFIX_MAP duplication across scripts creates sync risk (mitigate by filtering D-codes at query layer, not by modifying PREFIX_MAP structure). All features use validated patterns from prior phases — risk is integration complexity, not technical capability.
+Key risks center on **PCORnet data model assumptions**: NULL ENCOUNTERID in 10-60% of medication records (site-dependent), many-to-many explosion on diagnosis joins (1 encounter = 15 diagnoses), and orphan diagnoses without encounter links (15-30% at claims sites). Mitigation requires multi-tier linkage strategies, explicit diagnosis ranking (PDX/ORIGDX/DX_SOURCE), and classification-not-deletion for post-death encounters. The existing pipeline architecture (numbered scripts, RDS caching, centralized config) minimizes integration risk — extend, don't replace.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**NO NEW PACKAGES REQUIRED.** All five new features use the existing validated stack. This is purely a logic enhancement milestone with zero dependency additions and zero integration risk.
+**Zero critical new dependencies.** All v1.8 features use existing validated stack components. The pipeline already has dplyr 1.2.1 (rolling joins with `join_by(closest())`), lubridate 1.9.5 (interval testing with `%within%`), httr2 1.2.2 (RxNorm API validated in Phase 40), and DuckDB 1.3+ (encounter indexing). Only optional addition: rxnorm GitHub package (nt-williams/rxnorm) for simplified drug name resolution, but httr2 direct API calls work fine for the limited drug set (~20 HL therapy drugs).
 
-**Core technologies already validated:**
-- **stringr 1.5.1+**: String pattern matching for D-code filtering (validated in Phase 2 ICD normalization)
-- **lubridate 1.9.3+**: Date arithmetic for 7-day separation and temporal filtering (validated in Phase 1 enrollment windows)
-- **dplyr 1.2.0+**: Data manipulation for cohort confirmation logic (validated across all cohort scripts)
-- **PREFIX_MAP infrastructure**: Cancer category classification already exists in R/53 (tested via cancer_summary_table.xlsx)
-- **DuckDB backend**: Table access via get_pcornet_table() for DEMOGRAPHIC/DEATH tables (validated in Phase 30)
+**Core technologies:**
+- **dplyr 1.2.1** (rolling joins): `join_by(closest())` handles encounter-level linkage with fallback to nearest diagnosis date — mature feature since dplyr 1.1.0 (Feb 2023)
+- **lubridate 1.9.5** (interval operations): `%within%` detects 28-day cycle co-administration for regimen classification — validated in Phase 1 for enrollment windows
+- **httr2 1.2.2** (RxNorm API): Drug name resolution with retry/throttle — already working in R/40 for NDC lookup
+- **DuckDB 1.3+** (backend): ENCOUNTERID indexing for join performance — validated in Phase 29-32
+- **openxlsx2 1.0.0+** (output): New Gantt output files — validated in Phase 54 for styled xlsx tables
 
-**Alternatives considered and rejected:**
-- data.table::fread (10-50x faster but opaque syntax conflicts with named predicate requirement)
-- New visualization libraries like gtsummary, gt (openxlsx2 already handles styled table output)
-- Survival analysis libraries (out of scope — death date is visualization element, not statistical endpoint)
+**Integration points already validated:** httr2 RxNorm API pattern exists in R/40_investigate_unmatched_ndc.R (copy request builder, adapt for drug names). DuckDB ENCOUNTERID indexing confirmed in Phase 29 (verify coverage in PROCEDURES/PRESCRIBING/DISPENSING). openxlsx2 multi-sheet workbooks working in Phase 54 (reuse for death date analysis table).
 
 ### Expected Features
 
-**Must have (table stakes — missing these = protocol violations):**
-- Exclude benign/uncertain D-codes (D10-D48) from cancer classification — ICD-10 Chapter 2 separates malignant from benign neoplasms; cancer registries analyze only malignant
-- Cohort confirmation with multiple diagnosis dates — single-code diagnoses may be rule-out/provisional; epidemiology standards require temporal validation (2+ codes 7+ days apart)
-- Temporal filtering relative to index cancer diagnosis — secondary cancer analysis requires reference to first HL diagnosis date (SEER methodology standard)
-- Death date as clinical endpoint — PCORnet CDM includes DEATH_DATE in DEMOGRAPHIC; death is standard endpoint for cancer timeline visualizations
-- Cancer site category labeling — clinical interpretation of treatment episodes requires knowing what cancer is being treated
+**Must have (table stakes):**
+- **Encounter-specific cancer diagnosis linkage** — Episode-level context prevents conflating unrelated diagnoses across time; patient-level joins create false associations (HL 2015 + breast cancer 2022 flagging all encounters for both)
+- **Death date validation** — EHR death dates incomplete/inaccurate (89% of post-death encounters due to missing death status); impossible dates corrupt survival analysis
+- **First-line therapy identification** — Standard requirement for observational oncology studies; 60-day clean period with no prior chemotherapy (claims research standard)
+- **Regimen-level classification** — Clinical interpretability requires regimen names (ABVD, BV+AVD, Nivo+AVD), not drug lists; multi-agent temporal windowing essential
 
-**Should have (differentiators — add value beyond minimum):**
-- Hodgkin-specific binary flag in Gantt data — enables quick visual filtering (color-code HL vs non-HL treatments)
-- Temporal filtering with comparison outputs — producing both filtered and unfiltered tables enables validation of filtering logic
-- Human-readable code descriptions in Gantt (already implemented in v1.6)
+**Should have (competitive):**
+- **Hybrid encounter-diagnosis linkage** — Direct ENCOUNTERID match preferred, temporal fallback ensures coverage when encounter link missing; most pipelines do one or the other
+- **Second cancer confirmation with temporal separation** — 7-day-apart rule (Phase 51 pattern) extends to encounter-level HL flag; prevents duplicate diagnoses from administrative re-coding
+- **Granular treatment source validation** — Drop ICD diagnosis codes from SCT detection (diagnosis = history/status, not procedure); restrict to PROCEDURES/PRESCRIBING/DISPENSING
+- **Regimen-specific timing rules** — BV+AVD post-2019 (FDA approval 3/20/2018), Nivo+AVD post-2024 (FDA PDUFA 4/8/2026) prevent anachronistic identification
 
-**Defer (anti-features — explicitly do NOT build):**
-- Retroactive removal of D-codes from existing v1.6 outputs (breaks reproducibility)
-- Death date imputation (PCORnet DEATH_DATE already populated from SSA Death Master File)
-- Chemotherapy-specific treatment classification (requires morphology codes not reliably in PCORnet CDM)
-- Global minimum gap enforcement for all cancers (2-date + 7-day logic applies ONLY to HL cohort filter)
+**Defer (v2+):**
+- **Treatment episode boundary formalization** — Explicit start/stop dates with 45-day gap threshold; currently implicit in first-line logic
+- **Multi-line therapy sequencing** — First → second → third line progression tracking; requires episode boundaries + regimen change detection
+- **Regimen expansion** — Stanford V, BEACOPP protocols (ABVD/BV+AVD/Nivo+AVD cover most advanced HL)
+- **Pediatric protocol regimen ID** — Age <21 cohort with dose-reduced protocols; requires separate validation
+- **Payer x regimen interaction** — Does payer correlate with specific regimens? Deferred per PROJECT.md out of scope
 
 ### Architecture Approach
 
-The v1.7 features integrate cleanly into the existing numbered-script architecture with minimal cross-cutting changes. The numbered-script pattern supports variants (R/53a, R/54a for post-HL filtering) and composable enhancement (R/49 extends without touching R/44a episode generation).
+The existing linear numbered-script pattern (R/00 through R/59) accommodates v1.8 through **extension, not replacement**. ENCOUNTERID propagation modifies R/44a (treatment episode detection) to add one column. New scripts follow clone-and-enhance pattern: R/60 (encounter-cancer linkage), R/61 (regimen labeling), R/62 (enhanced Gantt v2), preserving R/49 (original Gantt) for backward compatibility. RDS artifacts (treatment_episodes.rds, regimen_labeled_episodes.rds) enable downstream consumption without re-running entire pipeline. Centralized configuration (R/00_config.R) gains REGIMEN_DEFINITIONS for drug matching logic.
 
-**Major components and modifications:**
-
-1. **Benign D-code removal** — Filter in existing R/53 + R/54 cancer summary scripts (PREFIX_MAP edit or query-layer filter)
-2. **HL cohort confirmation** — New script R/56 applies 7-day filter (reuses R/51 pattern), writes confirmed cohort RDS, then R/53/54 join to cohort
-3. **Post-HL cancer filtering** — R/53a/R/54a variants read first_hl_dx_date from cohort, filter DIAGNOSIS to DX_DATE > first_hl_date
-4. **Gantt cancer category labels** — R/49 enhancement reads cancer_summary.csv, joins on triggering_code → cancer_code, adds category + is_hodgkin flag
-5. **Death date integration** — R/00_config.R adds DEATH/DEMOGRAPHIC table path, R/49 joins death_date, exports as pseudo-treatment-type
-
-**Data flow:** DIAGNOSIS → R/56 (cohort confirmation) → R/53 (cancer summary) OR R/53a (post-HL variant) → R/54/R/54a (summary tables). Parallel: PROCEDURES + PRESCRIBING + DIAGNOSIS → R/44a (treatment episodes) → R/49 (Gantt export with cancer categories and death dates). Critical: PREFIX_MAP duplicated across R/47, R/53, R/54 — consider centralizing to R/00_config.R to avoid drift.
+**Major components:**
+1. **R/44a (modified)** — Add `encounter_ids` column to episode detection; drop ICD diagnosis codes from SCT detection (Z94.84 status codes remain, only C81.* removed)
+2. **R/60 (new)** — Encounter-level cancer linkage via ENCOUNTERID match + closest date fallback; produces `cancer_category`, `cancer_link_method`, `is_hodgkin` per episode
+3. **R/61 (new)** — First-line regimen labeling for adults 21+ at treatment; 28-day cycle window matching with dropped-agent tolerance (ABVD→AVD allowed); temporal availability rules
+4. **R/62 (new)** — Enhanced Gantt CSV export (v2 suffix) with encounter-level cancer + regimen labels; preserves v1 outputs
+5. **R/64 (optional)** — Death date analysis table (counts: patients with death dates, death as last encounter, post-death encounters); separate from Gantt integration
 
 ### Critical Pitfalls
 
-1. **Shared PREFIX_MAP modification breaks downstream consumers (v1.7-1)** — Removing D-codes from PREFIX_MAP in R/00_config.R breaks all scripts that use it for cancer categorization. **Prevention:** Filter D-codes in query logic (WHERE clause), NOT by removing from PREFIX_MAP. Use `filter(!str_starts(cancer_code, "D"))` rather than modifying shared lookup table.
+1. **NULL/missing ENCOUNTERID varies by table (10-60% site-dependent)** — DISPENSING from external pharmacies often lacks encounter link (CVS, Walgreens). **Prevent:** Pre-validate ENCOUNTERID population rate per table and source; implement multi-tier linkage (exact match → PATID+date window ±3 days → ±14 days for orphan prescriptions); document linkage tier per medication. **Phase 1 (data validation) prevents cascade failures.**
 
-2. **Immortal time bias from post-diagnosis filtering (v1.7-2)** — Filtering cancer_summary to "cancers after first HL diagnosis" excludes patients who die shortly after HL diagnosis (before accumulating second cancer codes), biasing secondary cancer rates upward. **Prevention:** Produce BOTH versions (all cancers + post-HL cancers), label filtered output as `cancer_summary_post_hl_EXPLORATORY.xlsx`, include denominator note about exclusions. Future mitigation: landmark analysis or time-varying exposure models.
+2. **Many-to-many explosion on diagnosis-to-encounter join (1 encounter = 15 diagnoses)** — Cancer patients have multiple active diagnoses (HL + solid tumor history, HL + second malignancy) plus status codes (Z94.84 SCT status). Naive join produces 100-400 rows per treatment event. **Prevent:** Pre-filter DIAGNOSIS to malignant C-codes (C00-C96), exclude Z85.* (history), T86.5 (complications); rank diagnoses by PDX='P', DX_SOURCE='Primary', DX_DATE; select top 1 per encounter; assert 1:1 cardinality. **Phase 2 (encounter linkage) requires explicit disambiguation.**
 
-3. **First HL diagnosis date calculation inconsistency (v1.7-4)** — Pipeline calculates first_hl_dx_date from DIAGNOSIS table only, but some patients have earlier HL dates in TUMOR_REGISTRY. Post-HL cancer filtering uses wrong anchor date. **Prevention:** Create `compute_first_hl_date()` function that queries both DIAGNOSIS and TUMOR_REGISTRY, takes minimum date, logs source (DIAGNOSIS/TR/Both).
+3. **Chemotherapy regimen fragmentation across encounters** — ABVD requires 4 drugs (day 1 + day 15 of 28-day cycle); infusion centers create separate encounters per drug. Naive "all 4 drugs on same ENCOUNTERID" finds zero regimens despite 200+ patients receiving it. **Prevent:** Define cycle window (+/- 3 days from anchor date); detect regimen across encounters grouped by PATID + cycle_window; allow different ENCOUNTERIDs per drug. **Phase 4 (regimen detection) fails without cycle-window grouping.**
 
-4. **Death date misidentification (DEMOGRAPHIC vs DEATH table confusion, v1.7-5)** — Code assumes DEMOGRAPHIC table has DEATH_DATE column based on training data, but OneFlorida+ PCORnet CDM v7.0 may use separate DEATH/DEATH_CAUSE tables. **Prevention:** Inspect actual PCORnet schema before implementation (`PRAGMA table_info('DEMOGRAPHIC')`), implement flexible lookup (try DEMOGRAPHIC.DEATH_DATE first, fall back to DEATH table).
+4. **BV+AVD misinterpreted as additive (5 drugs) instead of replacement** — Naming convention "BV+AVD" reads like "add BV to ABVD," but brentuximab replaces bleomycin (not added). Coding as 5-drug regimen finds zero cases. **Prevent:** Clinical validation before coding; BV+AVD = brentuximab + doxorubicin + vinblastine + dacarbazine (4 drugs, bleomycin ABSENT); detect in priority order (check brentuximab → BV+AVD, check nivolumab → Nivo+AVD, check bleomycin → ABVD). **Phase 4 (regimen definitions) must be clinically validated.**
 
-5. **7-day gap calculation excludes same-week confirmations (v1.7-7)** — Requiring >= 7 day gap between HL codes excludes patients with codes on Monday and Sunday (6-day gap). **Prevention:** Verify >= 7 vs > 6 day semantics match clinical intent, document rationale for strict interpretation.
+5. **"Encounters after death" auto-deleted instead of classified** — Death date is often REPORTED date (when facility learned of death), not ACTUAL date; post-death encounters include legitimate hospice admissions, lab results from pre-death specimens, administrative processing. Deleting removes 10-20% of end-of-life care data. **Prevent:** Classify by encounter type (impossible: active treatment >7 days after death + no subsequent; administrative: revenue code 0001, ENC_TYPE='OT'; specimen: LAB result date > death but specimen date < death; hospice: palliative care DX); flag impossible deaths but preserve legitimate encounters. **Phase 5 (death date analysis) analyzes, doesn't delete.**
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure with three parallel tracks:
+Based on research, suggested phase structure:
 
-### Phase 1: Benign D-Code Removal (Foundation)
-**Rationale:** D-code exclusion affects all cancer classification downstream. Must come first. Lowest risk — simple filter predicate. Validates "no new packages" assumption.
-**Delivers:** cancer_summary.csv and cancer_summary_table.xlsx with only malignant neoplasms (C00-C96, excluding D10-D48)
-**Addresses:** Table stakes feature — exclude benign/uncertain D-codes from cancer classification
-**Avoids:** Pitfall v1.7-1 (PREFIX_MAP breaking change) by filtering at query layer, Pitfall v1.7-6 (D-code classification ambiguity) by clarifying in situ (D00-D09) vs benign (D10-D36)
-**Implementation:** Modify R/53 and R/54 to add `filter(!str_starts(cancer_code, "D1") & !str_starts(cancer_code, "D2") & !str_starts(cancer_code, "D3") & !str_sub(cancer_code, 1, 3) %in% c("D37", "D38", ..., "D48"))` before cancer summary generation. Re-run to validate Hodgkin Lymphoma % increases to 100% in Column F.
+### Phase 60: ENCOUNTERID Propagation + SCT Code Tightening
+**Rationale:** Foundation for all encounter-level features; SCT cleanup is independent low-risk change bundled here.
+**Delivers:** Enhanced treatment_episodes.rds with `encounter_ids` column; SCT episodes exclude diagnosis codes (Z94.84, T86.5 retained for status, only C81.* removed).
+**Addresses:** ENCOUNTERID infrastructure from ARCHITECTURE.md; treatment source validation from FEATURES.md.
+**Avoids:** Pitfall v1.8-5 (dropping all ICD codes loses legitimate SCT cases) — clarify requirement during scope.
+**Research flag:** **Skip research-phase** — extends existing R/44a pattern; DuckDB ENCOUNTERID indexing validated Phase 29.
 
-### Phase 2: HL Cohort Confirmation (Parallel Track A)
-**Rationale:** Reduces false positives before temporal filtering. Reuses proven pattern from Phase 50 (7-day separation). Required before Phase 3 temporal filtering because filtered output needs valid first HL date.
-**Delivers:** confirmed_hl_cohort.rds with columns (ID, first_hl_dx_date, first_hl_dx_source)
-**Uses:** lubridate date arithmetic, dplyr group-by-mutate pattern (validated in R/50, R/51)
-**Addresses:** Table stakes feature — cohort confirmation with multiple diagnosis dates
-**Avoids:** Pitfall v1.7-3 (duplicate HL confirmation logic) by reusing R/51 pattern, Pitfall v1.7-4 (first HL date inconsistency) by querying both DIAGNOSIS and TUMOR_REGISTRY
-**Implementation:** Create R/56_hl_cohort_confirmation.R that groups DIAGNOSIS by ID, filters to 2+ HL codes with 7-day gap, computes first_hl_dx_date from min(DIAGNOSIS.DX_DATE, TR.DX_DATE), writes RDS.
+### Phase 61: Drug Name Resolution via RxNorm API
+**Rationale:** Independent of Phase 60; enables Phase 62 regimen detection; reuses httr2 pattern from Phase 40.
+**Delivers:** Drug name mapping for RXNORM_CUI codes in treatment_episode_detail.rds; foundation for regimen classification.
+**Uses:** httr2 1.2.2 (RxNorm API with retry/throttle from Phase 40); jsonlite 1.9.3+ (JSON parsing).
+**Implements:** REGIMEN_DEFINITIONS in R/00_config.R (RxNorm CUI → drug name keyword mappings).
+**Avoids:** Pitfall v1.8-4 (regimen fragmentation) partially — establishes drug detection before cycle logic.
+**Research flag:** **Skip research-phase** — httr2 RxNorm API pattern already validated in R/40_investigate_unmatched_ndc.R; copy request builder, adapt for drug names.
 
-### Phase 3: Temporal Filtering (Depends on Phase 2)
-**Rationale:** Research question "What other cancers occur after HL?" requires validated first HL date from Phase 2. Deferred until cohort confirmation works. Independent of Gantt enhancements (Phase 4-6).
-**Delivers:** cancer_summary_post_hl.csv and cancer_summary_table_post_hl.xlsx (filtered to DX_DATE > first_hl_dx_date), plus unfiltered baseline outputs for comparison
-**Uses:** lubridate date comparison, dplyr left_join (validated across all cohort scripts)
-**Implements:** R/53a (cancer_summary variant), R/54a (summary table variant)
-**Addresses:** Table stakes feature — temporal filtering relative to index cancer diagnosis
-**Avoids:** Pitfall v1.7-2 (immortal time bias) by producing both filtered and unfiltered, labeling filtered as EXPLORATORY
-**Implementation:** Clone R/53 → R/53a, add temporal filter after line 345. Clone R/54 → R/54a, update input path to cancer_summary_post_hl.csv.
+### Phase 62: 28-Day Cycle Regimen Detection
+**Rationale:** Requires Phase 61 (drug names); core feature for first-line therapy analysis.
+**Delivers:** Regimen classification (ABVD, BV+AVD, Nivo+AVD) using cycle-window grouping (+/- 3 days); dropped-agent tolerance (ABVD→AVD allowed).
+**Uses:** lubridate 1.9.5 (`%within%` for 28-day cycle detection); dplyr 1.2.1 (group_by + summarise for cycle aggregation).
+**Implements:** Cycle-window grouping pattern from ARCHITECTURE.md; regimen definitions from FEATURES.md.
+**Avoids:** Pitfall v1.8-4 (regimen fragmentation — naive same-encounter matching finds zero cases); Pitfall v1.8-7 (BV+AVD as additive instead of replacement).
+**Research flag:** **Research-phase needed** — Clinical validation required for regimen definitions (brentuximab replaces bleomycin, not additive); dropped-agent tolerance thresholds (3 of 4 drugs? 2 of 4?); temporal availability rules (BV+AVD post-2019, Nivo+AVD post-2024). **Use `/gsd:research-phase` before implementation.**
 
-### Phase 4: Gantt Cancer Category Labels (Parallel Track B)
-**Rationale:** Human-readability for Gantt charts. Independent of temporal filtering (Phases 2-3). Unblocks clinical review. Requires PREFIX_MAP already tested via Phase 1.
-**Delivers:** gantt_detail.csv and gantt_episodes.csv with cancer_category and is_hodgkin columns
-**Uses:** PREFIX_MAP infrastructure (already exists in R/53), dplyr left_join (validated in Phase 49 Gantt export)
-**Addresses:** Table stakes feature — cancer site category labeling
-**Avoids:** Pitfall v1.7-8 (multi-category episodes) by adding cancer_categories_all (comma-separated) + cancer_category_primary, Pitfall v1.7-11 (CSV column breaking change) by adding new columns at end
-**Implementation:** Modify R/49 to read cancer_summary.csv, join on (patient_id, triggering_code) = (ID, cancer_code), add category columns, derive is_hodgkin flag.
+### Phase 63: Encounter-Level Cancer Diagnosis Linkage
+**Rationale:** Requires Phase 60 (encounter_ids); foundational for Phase 65 (Gantt v2); high complexity due to many-to-many explosion risk.
+**Delivers:** Encounter-level `cancer_category`, `cancer_link_method` (encounter_id/closest_date/none), `is_hodgkin` flags; replaces patient-level join from R/49.
+**Uses:** dplyr 1.2.1 (`join_by(closest())` for temporal fallback); DuckDB DIAGNOSIS table access.
+**Implements:** Hybrid linkage strategy from ARCHITECTURE.md; diagnosis ranking logic to prevent many-to-many explosion.
+**Avoids:** Pitfall v1.8-2 (many-to-many explosion — 1 encounter = 15 diagnoses produces 100-400 rows per treatment); Pitfall v1.8-3 (orphan diagnoses without encounters lose 15-30% at claims sites).
+**Research flag:** **Research-phase needed** — Fallback window specification (7/30/60 days for closest date?); diagnosis ranking logic (PDX='P' vs ORIGDX vs DX_SOURCE priority); orphan diagnosis handling (ENCOUNTERID='OT' or NULL). **Use `/gsd:research-phase` for linkage strategy validation.**
 
-### Phase 5: Hodgkin Binary Flag (Zero-Cost Derivation)
-**Rationale:** Derived from cancer category label (Phase 4). Enables quick visual filtering. Zero computation cost once category exists.
-**Delivers:** is_hodgkin column in Gantt CSVs
-**Addresses:** Differentiator feature — Hodgkin-specific binary flag
-**Avoids:** Pitfall v1.7-10 (redundancy) by deriving in same mutate() call as cancer_category, asserting consistency
-**Implementation:** Add `is_hodgkin = as.integer(cancer_category == "Hodgkin Lymphoma")` in R/49 after category join.
+### Phase 64: First-Line Therapy Identification (Adults 21+)
+**Rationale:** Requires Phase 62 (regimen labels) and Phase 63 (encounter-level HL flag); combines multiple features.
+**Delivers:** `is_first_line` flag for chemotherapy episodes; 60-day clean period detection; age filter at treatment date (not enrollment).
+**Uses:** dplyr 1.2.1 (lag/lead for prior chemotherapy detection); lubridate 1.9.5 (age calculation, date windows).
+**Implements:** First-line definition from FEATURES.md; age-at-treatment pattern from PITFALLS.md.
+**Avoids:** Pitfall v1.8-8 (age filter applied before treatment linkage — wrong cohort); age distribution should match HL epidemiology (peak 25-35, bimodal).
+**Research flag:** **Skip research-phase** — Standard observational oncology pattern (60-day clean period from claims research); age calculation straightforward.
 
-### Phase 6: Death Date in Gantt (Parallel Track B, After Phase 4)
-**Rationale:** Completes clinical timeline. Independent of temporal filtering. Shows whether patient died during follow-up (essential for survivorship analysis).
-**Delivers:** gantt_episodes.csv with death rows (treatment_type = "Death"), gantt_detail.csv with death_date column
-**Uses:** DuckDB access to DEMOGRAPHIC/DEATH table (validated in Phase 30), lubridate date parsing (validated in Phase 1)
-**Addresses:** Table stakes feature — death date as clinical endpoint
-**Avoids:** Pitfall v1.7-5 (DEMOGRAPHIC vs DEATH table confusion) by inspecting schema first and implementing flexible lookup, Pitfall v1.7-9 (death as treatment type model violation) by adding special handling for death pseudo-episodes, Pitfall v1.7-12 (1900 sentinel dates) by applying same nullification as diagnosis dates
-**Implementation:** Add DEATH to R/00_config.R PCORNET_TABLES, re-run R/25_duckdb_ingest.R, modify R/49 to join death_date and append death pseudo-episodes.
+### Phase 65: Enhanced Gantt Export with Encounter-Level Cancer + Regimen Labels
+**Rationale:** Integrates outputs from Phase 63 (encounter-level cancer) and Phase 64 (first-line regimens); final deliverable for milestone.
+**Delivers:** gantt_episodes_v2.csv, gantt_detail_v2.csv with new columns (encounter_ids, cancer_category, cancer_link_method, is_hodgkin, regimen_label, is_first_line); preserves v1 outputs.
+**Uses:** openxlsx2 1.0.0+ (if xlsx format needed); readr 2.2.0+ (CSV export).
+**Implements:** Clone-and-enhance pattern from ARCHITECTURE.md (R/49 → R/62); versioned output files (_v2 suffix).
+**Avoids:** Breaking external tools expecting v1 schema — parallel outputs maintain backward compatibility.
+**Research flag:** **Skip research-phase** — Extends existing R/49 pattern; new columns at end preserve schema compatibility.
+
+### Phase 66: Death Date Analysis Table
+**Rationale:** Independent of other phases; extends Phase 59 validation logic; low complexity.
+**Delivers:** Summary table (counts: patients with death dates, death as last encounter, post-death encounters by type); quantifies data quality.
+**Uses:** DuckDB DEMOGRAPHIC.DEATH_DATE (validated Phase 59); lubridate 1.9.5 (date comparison); openxlsx2 (xlsx output).
+**Implements:** Death date classification from PITFALLS.md; extends Phase 59 impossible death exclusion.
+**Avoids:** Pitfall v1.8-6 (auto-deleting post-death encounters loses 10-20% of legitimate end-of-life care).
+**Research flag:** **Skip research-phase** — Extends existing Phase 59 validation; simple counts/classification.
 
 ### Phase Ordering Rationale
 
-- **D-code filtering first (Phase 1):** Affects all cancer classification downstream. Low risk, quick validation. Unblocks everything else.
-- **HL cohort confirmation second (Phase 2):** Reduces false positives. Required before temporal filtering (Phase 3). Reuses existing pattern (low risk).
-- **Gantt enhancements (Phases 4-6) parallel with temporal filtering (Phase 3):** Independent tracks. Gantt category labels don't depend on cohort confirmation. Can proceed simultaneously.
-- **Critical path:** Phase 1 → Phase 2 → Phase 3 (temporal filtering depends on cohort). Phases 4-6 can start after Phase 1 completes.
+- **Phase 60 first:** ENCOUNTERID propagation is foundation for Phase 63 (encounter-level linkage) and Phase 65 (Gantt v2). SCT code tightening bundled here as independent low-risk cleanup.
+- **Phase 61 before 62:** Drug name resolution must precede regimen detection. Independent of ENCOUNTERID work allows parallel development if needed.
+- **Phase 62 before 64:** Regimen classification required for first-line therapy identification.
+- **Phase 63 after 60:** Encounter-level cancer linkage depends on encounter_ids column from Phase 60.
+- **Phase 64 after 62+63:** First-line identification requires both regimen labels (Phase 62) and encounter-level HL flags (Phase 63).
+- **Phase 65 last:** Gantt v2 export integrates all previous enhancements (encounter-level cancer + regimen labels + first-line flags).
+- **Phase 66 independent:** Death date analysis can happen anytime after Phase 59; placed last as optional deliverable.
+
+**Grouping rationale:**
+- Phases 60-61 are infrastructure (ENCOUNTERID + drug names)
+- Phases 62-63 are detection logic (regimens + cancer linkage)
+- Phases 64-65 are integration (first-line identification + Gantt output)
+- Phase 66 is standalone analysis (death date quality)
+
+**Dependency testing:** Each phase produces RDS artifact consumed by downstream phases. Validate artifact schema after each phase before proceeding.
 
 ### Research Flags
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1 (D-code filtering):** Well-documented ICD-10 structure, simple string matching
-- **Phase 2 (HL cohort confirmation):** Reuses existing R/51 pattern, no new research needed
-- **Phase 4 (Gantt category labels):** PREFIX_MAP already tested, join pattern standard
+**Phases needing deeper research during planning:**
+- **Phase 62 (regimen detection):** Clinical validation required for regimen definitions, dropped-agent tolerance thresholds, temporal availability rules. Complex logic needs domain expert review.
+- **Phase 63 (encounter-level linkage):** Fallback window specification, diagnosis ranking priority, orphan diagnosis handling strategy — multiple design decisions need validation against PCORnet data characteristics.
 
-**Phases likely needing validation during planning:**
-- **Phase 3 (Temporal filtering):** Immortal time bias mitigation requires clinical judgment — validate "exploratory" labeling with oncology collaborator
-- **Phase 6 (Death date integration):** PCORnet schema version may vary — inspect actual HiPerGator data before implementation (DEMOGRAPHIC.DEATH_DATE vs separate DEATH table)
+**Phases with standard patterns (skip research-phase):**
+- **Phase 60 (ENCOUNTERID propagation):** Extends existing R/44a extraction pattern; DuckDB indexing validated Phase 29.
+- **Phase 61 (drug name resolution):** Reuses httr2 RxNorm API pattern from R/40_investigate_unmatched_ndc.R; copy-paste-adapt.
+- **Phase 64 (first-line identification):** Standard observational oncology pattern (60-day clean period, age calculation); well-documented in claims research.
+- **Phase 65 (Gantt v2):** Clone-and-enhance R/49; new columns at end preserve compatibility.
+- **Phase 66 (death date analysis):** Extends Phase 59 validation; simple counts/classification.
+
+**Pre-implementation validation critical for Phase 1 (data validation):**
+- ENCOUNTERID population rate per table/source (prevents Pitfall v1.8-1)
+- Diagnosis cardinality per encounter (prevents Pitfall v1.8-2)
+- Orphan diagnosis rate per site (prevents Pitfall v1.8-3)
+
+Without Phase 1 data validation, Phases 2-6 inherit site-specific failure modes (regimen detection works at UFH, fails at FLM).
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All features use validated stack components from prior phases. No new packages. stringr pattern matching (Phase 2), lubridate date arithmetic (Phase 1), dplyr joins (Phase 3), PREFIX_MAP (Phase 53), DuckDB backend (Phase 30) all tested. |
-| Features | HIGH | All table stakes features are standard epidemiology/cancer registry practices with official documentation (SEER, CDC, PCORnet CDM). Implementation complexity low-medium (155 LOC total estimated). |
-| Architecture | HIGH | Integration points verified against existing codebase structure. Numbered-script pattern supports variants (R/53a, R/54a) and composable enhancement (R/49 extends without upstream changes). |
-| Pitfalls | HIGH | Critical pitfalls (v1.7-1 through v1.7-5) backed by code inspection, official ICD-10/PCORnet documentation, peer-reviewed temporal bias literature. Moderate/minor pitfalls (v1.7-6 through v1.7-12) inferred from common clinical data pipeline patterns. |
+| Stack | **HIGH** | All required packages already in renv.lock from previous phases; dplyr rolling joins stable since 1.1.0 (3+ years); httr2 RxNorm API validated in Phase 40 |
+| Features | **MEDIUM** | Table stakes features well-documented in clinical research standards; uncertainty on dropped-agent tolerance thresholds and fallback window specifications (needs Phase 62/63 research) |
+| Architecture | **HIGH** | Existing codebase patterns clear; numbered scripts, RDS caching, clone-and-enhance all established; minimal architectural changes required |
+| Pitfalls | **MEDIUM** | PCORnet CDM structure confirmed; ENCOUNTERID population variance documented (39-90% site-dependent); clinical logic pitfalls (BV+AVD replacement) validated; needs site-specific validation for NULL rates |
 
-**Overall confidence:** HIGH — All features are logic enhancements using validated components. Only uncertainty is DEATH_DATE column population in HiPerGator extract (expected to be populated per VRT partner site mention in PROJECT.md).
+**Overall confidence:** **HIGH**
 
 ### Gaps to Address
 
-- **PREFIX_MAP centralization:** Currently duplicated across R/47, R/53, R/54. Consider extracting to R/00_config.R (same pattern as AMC_PAYER_LOOKUP in Phase 36) to avoid drift. Decision needed: centralize first (separate phase) or accept duplication and document.
+**ENCOUNTERID population rates are site-dependent (validated range 39-90%):**
+- **Gap:** Research confirms variation exists but cannot predict OneFlorida+ specific rates without data inspection.
+- **Handle during:** Phase 1 (data validation) — run population queries per table/source before designing linkage strategy.
+- **Validation query:** `SELECT SOURCE, COUNT(*) AS total, SUM(CASE WHEN ENCOUNTERID IS NULL OR ENCOUNTERID='OT' THEN 1 ELSE 0 END) AS null_count FROM PRESCRIBING GROUP BY SOURCE`
 
-- **DEATH_DATE column validation:** Confirm DEATH_DATE column populated in HiPerGator DEMOGRAPHIC table before Phase 6. Test query: `demographic <- get_pcornet_table("DEMOGRAPHIC") %>% select(ID, DEATH_DATE) %>% filter(!is.na(DEATH_DATE)) %>% collect()`. Expected: non-zero count (VRT is death-only partner site per PROJECT.md line 140).
+**Regimen detection dropped-agent tolerance thresholds:**
+- **Gap:** Research confirms bleomycin dropped from ABVD is standard practice (RATHL trial, 27.5% of patients), but unclear if 3-of-4 drugs or 2-of-4 should count as regimen match.
+- **Handle during:** Phase 62 research-phase — clinical validation with oncology SME; cross-validate detections with TUMOR_REGISTRY chemotherapy flags.
+- **Decision point:** ABVD→AVD (missing bleomycin) definitely counts; AVD only from start (never had bleomycin) may need separate category "AVD (modified ABVD)".
 
-- **Clinical decision on D-code granularity:** Clarify whether to keep D00-D09 (in situ) as clinically relevant and remove only D10-D36 (benign) + D37-D48 (uncertain behavior), OR remove all D-codes. In situ neoplasms (DCIS, melanoma in situ) are clinically significant pre-malignant conditions. Consult oncology collaborator during Phase 1 scoping.
+**Encounter-level cancer linkage fallback window:**
+- **Gap:** Research suggests 7/30/60 days as common windows, but no PCORnet-specific guidance for "closest diagnosis" temporal cutoff.
+- **Handle during:** Phase 63 research-phase — analyze distribution of days between encounter and nearest diagnosis; choose window that captures 90%+ of linkable cases without excessive false matches.
+- **Heuristic:** +/- 30 days from episode_start (typical encounter-to-coding lag in EHR systems).
 
-- **Temporal filtering interpretation:** Validate that "exploratory" labeling for post-HL cancer summary is acceptable for insurance disparity analysis use case. Immortal time bias means filtered output cannot be used for causal inference about secondary cancer risk, only exploratory comparison of cancer burden pre- vs post-HL diagnosis.
+**Orphan diagnosis linkage strategy:**
+- **Gap:** Research confirms 15-30% of diagnoses at claims-heavy sites have ENCOUNTERID='OT' or NULL, but optimal fallback strategy (nearest encounter by date vs. pseudo-encounter creation) unclear.
+- **Handle during:** Phase 63 research-phase — compare orphan diagnosis handling approaches (nearest encounter within 30 days vs. patient-level flag); validate against HL cohort confirmation (2+ codes, 7-day gap).
+- **Likely approach:** 3-tier linkage (exact ENCOUNTERID → nearest encounter within 30 days → patient-level flag for remaining orphans).
+
+**Death date classification logic:**
+- **Gap:** Research identifies legitimate post-death encounter types (hospice, administrative, lab results) but doesn't provide classification heuristics.
+- **Handle during:** Phase 66 implementation — classify by ENC_TYPE, DRG presence, revenue codes; flag "impossible deaths" (active treatment >7 days after death + no subsequent encounters); preserve administrative/hospice/specimen encounters.
+- **Rule:** NULL out death dates flagged as impossible; retain death dates with plausible post-death encounters.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **R/00_config.R, R/01_load_pcornet.R, R/04_build_cohort.R, R/49_gantt_data_export.R, R/50_cancer_site_confirmation.R, R/51_cancer_site_confirmation_7day.R, R/53_cancer_summary.R, R/54_cancer_summary_table.R** — Existing codebase structure, validated patterns, integration points (verified 2026-05-22)
-- **PCORnet CDM v6.0/v7.0 Specification** — DEMOGRAPHIC.DEATH_DATE field definition, table structure (https://pcornet.org/wp-content/uploads/2025/05/PCORnet_Common_Data_Model_v70_2025_05_01.pdf)
-- **2026 ICD-10-CM Codes C00-D49: Neoplasms** — C-codes (malignant), D00-D09 (in situ), D10-D36 (benign), D37-D48 (uncertain behavior) (https://www.icd10data.com/ICD10CM/Codes/C00-D49)
-- **SEER Coding Manual 2026** — Date of first contact, cancer site recoding, subsequent primary cancer methodology (https://seer.cancer.gov/manuals/2026/SPCSM_2026_MainDoc.pdf)
-- **CRAN package pages** — dplyr 1.2.1, lubridate 1.9.4, stringr 1.5.2 version verification (accessed 2026-05-22)
+- **Existing codebase** — R/44a_treatment_episodes.R, R/49_gantt_data_export.R, R/55_cancer_summary_refined.R, R/00_config.R, R/01_load_pcornet.R (architecture patterns, DuckDB backend, episode detection logic)
+- **CRAN official documentation** — dplyr 1.2.1 (May 2026), lubridate 1.9.5 (May 2026), httr2 1.2.2 (May 2026), openxlsx2 1.0.0, DuckDB 1.3.2 (Mar 2026) — version verification, feature stability
+- **PCORnet CDM v7.0 Specification** (May 2025) — ENCOUNTERID population rules, table cardinality, data model structure
+- **ECHELON-1 trial** (PMC5766843, PMC10628810) — BV+AVD regimen definition (brentuximab replaces bleomycin, not additive); 5-year follow-up data
+- **SWOG S1826 trial** (official results, ASH 2025) — Nivo+AVD regimen definition, FDA PDUFA date 4/8/2026, superiority over BV+AVD
 
 ### Secondary (MEDIUM confidence)
-- **Immortal time bias literature** — Statistical methods for cohort studies, temporal bias in retrospective studies (PMC8478821, PMC8962148, arxiv.org/pdf/2202.02369)
-- **Cancer registry validation standards** — 2022 revised European recommendations for coding basis of diagnosis, real-time data validation in cancer registries (PMC10755738, PMC12303076)
-- **Data pipeline best practices** — Data contracts for pipeline stability, schema evolution in CDC pipelines, handling breaking changes (acceldata.io, dataskew.io, airbyte.com)
+- **PCORnet prescribing/dispensing linkage study** (PMC6460498) — ENCOUNTERID population rates: 90.5% at integrated sites, 39.4% at non-integrated; 60.6% of dispensing without same-day prescriptions
+- **EHR death date validation** (PMC11521374, PMC6232402) — 89% of post-death encounters due to missing death status; death registries lag 1-2 years; EHR capture incomplete
+- **Chemotherapy regimen identification methodology** (PMC8058693) — Cycle timing analysis; algorithm identified 85 regimens with >98% PPV; temporal windowing for multi-agent detection
+- **ABVD real-world experience** (LA County Hospital, 2025) — 27.5% ABVD→AVD transition rate (bleomycin dropped mid-course); dose modification patterns
+- **OncoLink chemotherapy cycle calendars** — 28-day cycle standard for HL regimens; day 1 + day 15 administration for ABVD
+- **EHR-registry linkage best practices** (PMC8208472, PMC8246795) — Encounter-level diagnosis accuracy vs. problem list; cancer registry linkage methodology
 
 ### Tertiary (LOW confidence — needs validation)
-- **90-day treatment episode gap methodology** — Oncology claims analysis standard referenced in Real-World Treatment Patterns in Relapsed/Refractory Multiple Myeloma (PMC12301936), but 7-day cohort confirmation threshold not universally mandated (some studies use 30 days)
+- **rxnorm GitHub package** (nt-williams/rxnorm, v0.2.1.9000, Apr 2025) — Optional RxNorm API wrapper; GitHub-only (not CRAN); actively maintained but not production-validated for this project
 
 ---
-*Research completed: 2026-05-22*
-*Supersedes: SUMMARY.md dated 2026-04-21 (v1.6 milestone research; this covers v1.7 additions)*
+*Research completed: 2026-05-29*
+*Supersedes: SUMMARY.md dated 2026-05-22 (v1.7 milestone research; this covers v1.8 additions)*
 *Ready for roadmap: yes*
-*Next step: Validate DEATH_DATE column in HiPerGator data, clarify D-code granularity with clinical collaborator, then proceed to requirements definition*
+*Next step: Validate ENCOUNTERID population rates in HiPerGator data, clinical validation for regimen definitions, then proceed to phase planning*

@@ -1,325 +1,492 @@
-# Technology Stack — v1.7 Cancer Summary Refinement & Gantt Enhancements
+# Technology Stack — v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
 
 **Project:** PCORnet Payer Variable Investigation (R Pipeline)
-**Milestone:** v1.7 Cancer Summary Refinement & Gantt Enhancements
-**Researched:** 2026-05-22
+**Milestone:** v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
+**Researched:** 2026-05-29
 
 ## Executive Summary
 
-**NO NEW PACKAGES REQUIRED.** All five new features (benign D-code filtering, HL cohort confirmation, temporal filtering, Gantt cancer category labels, death date integration) use existing validated stack. This is a logic-only enhancement milestone.
+**MINIMAL NEW REQUIREMENTS.** Most v1.8 features use existing validated stack (dplyr rolling joins for encounter-level linkage, lubridate for 28-day cycle windows, httr2 already validated for RxNorm API). Only potential addition: consider `rxnorm` GitHub package (nt-williams/rxnorm) if manual RxNorm API calls become cumbersome for regimen drug name resolution.
 
 **Validated stack already provides:**
-- String pattern matching (stringr) for D-code filtering
-- Date arithmetic (lubridate) for 7-day separation and temporal filtering
-- Data manipulation (dplyr) for cohort confirmation logic
-- PREFIX_MAP infrastructure (R/53) for cancer category classification
-- DuckDB access to DEMOGRAPHIC table for death dates
+- Rolling joins with `closest()` (dplyr 1.2.0+) for encounter-level linkage with fallback to closest diagnosis date
+- Interval detection with `%within%` (lubridate 1.9.5+) for 28-day cycle matching
+- httr2 (1.2.2) with retry/throttle for RxNorm API (already used in Phase 40 for NDC lookup)
+- DuckDB join performance for ENCOUNTERID linkage across PROCEDURES/PRESCRIBING/DISPENSING
+- openxlsx2 for new Gantt output files
 
-**Zero new dependencies = zero integration risk.**
+**Optional addition:** rxnorm package (nt-williams/rxnorm, GitHub-only) for simplified drug name resolution, but httr2 direct API calls work fine.
+
+**Zero critical dependencies = minimal integration risk.**
 
 ---
 
 ## New Feature Requirements → Existing Stack Mapping
 
-### Feature 1: Remove Benign D-Codes from Cancer Summary
+### Feature 1: Encounter-Level Cancer Category Linkage
 
-**Requirement:** Filter out D10-D36 and D3A (benign neoplasms) from cancer_summary_table.xlsx
+**Requirement:** Replace patient-level cancer category join with encounter-level linkage (ENCOUNTERID match, fallback to closest diagnosis date)
 
 **Stack solution:**
 | Component | Package | Version | Already Validated |
 |-----------|---------|---------|-------------------|
-| Pattern matching | stringr | 1.5.1+ | ✓ Phase 2 (ICD normalization) |
-| Filtering | dplyr | 1.2.0+ | ✓ Phase 1 (all cohort logic) |
-| PREFIX_MAP lookup | Base R | — | ✓ Phase 53 (R/53_cancer_summary.R) |
+| ENCOUNTERID join | dplyr | 1.2.1 | ✓ Phase 1 (multi-table joins) |
+| Rolling join (closest date fallback) | dplyr::join_by(closest()) | 1.2.1 | ✓ Phase 1 (dplyr 1.1.0+ feature) |
+| Date comparison | lubridate | 1.9.5 | ✓ Phase 1 (date windows) |
+| DuckDB backend | DuckDB via get_pcornet_table() | 1.3+ | ✓ Phase 30 (backend abstraction) |
 
 **Implementation approach:**
 ```r
-# In R/53_cancer_summary.R and R/54_cancer_summary_table.R
-BENIGN_PREFIXES <- c("D10", "D11", "D12", "D13", "D14", "D15", "D16",
-                     "D17", "D18", "D19", "D20", "D21", "D22", "D23",
-                     "D24", "D25", "D26", "D27", "D28", "D29", "D30",
-                     "D31", "D32", "D33", "D34", "D35", "D36", "D3A")
+# Step 1: Direct ENCOUNTERID match (highest precision)
+episodes_with_dx <- treatment_episodes %>%
+  left_join(
+    diagnosis_cancer %>% select(ENCOUNTERID, DX, DX_DATE, cancer_category),
+    by = "ENCOUNTERID"
+  )
 
-dx_cancer <- dx_cancer %>%
-  filter(!substr(DX_norm, 1, 3) %in% BENIGN_PREFIXES)
+# Step 2: Fallback to closest diagnosis date (for unmatched encounters)
+episodes_unmatched <- episodes_with_dx %>%
+  filter(is.na(cancer_category))
+
+# Rolling join: closest DX_DATE <= episode_start
+episodes_fallback <- episodes_unmatched %>%
+  left_join(
+    diagnosis_cancer %>% select(ID, DX_DATE, cancer_category),
+    by = join_by(patient_id == ID, closest(episode_start >= DX_DATE))
+  )
+
+# Combine matched + fallback
+episodes_final <- bind_rows(
+  episodes_with_dx %>% filter(!is.na(cancer_category)),
+  episodes_fallback
+)
 ```
 
-**Why no new package needed:** stringr::substr() and dplyr::filter() already validated for ICD code manipulation in Phase 2 (R/02_harmonize_payer.R) and all cohort scripts.
+**Why no new package needed:** dplyr 1.2.1 includes `join_by(closest())` for rolling joins (introduced in dplyr 1.1.0, Feb 2023). DuckDB backend handles ENCOUNTERID indexing efficiently (Phase 29).
+
+**References:**
+- [dplyr::join_by documentation](https://dplyr.tidyverse.org/reference/join_by.html) — Rolling join with `closest()`
+- [dplyr 1.1.0 blog post](https://tidyverse.org/blog/2023/01/dplyr-1-1-0-joins/) — Inequality and rolling joins
+- CRAN dplyr 1.2.1 (May 2026) — Latest stable version
+
+**Confidence:** **HIGH** — Rolling joins are stable dplyr feature (3+ years old), DuckDB handles join performance.
 
 ---
 
-### Feature 2: HL Cohort Confirmation (2+ Codes, 7-Day Separation)
+### Feature 2: 28-Day Cycle Window Matching for Regimen Detection
 
-**Requirement:** Filter cohort to patients with 2+ HL diagnosis codes at least 7 days apart
-
-**Stack solution:**
-| Component | Package | Version | Already Validated |
-|-----------|---------|---------|-------------------|
-| Date arithmetic | lubridate | 1.9.3+ | ✓ Phase 1 (enrollment windows) |
-| Date sorting | dplyr | 1.2.0+ | ✓ Phase 1 (arrange()) |
-| Interval logic | Base R | — | ✓ Phase 50 (R/50_cancer_site_2date.R) |
-
-**Implementation approach:**
-```r
-# Pattern validated in R/50_cancer_site_2date.R
-hl_confirmed <- dx_hl %>%
-  group_by(ID) %>%
-  arrange(DX_DATE) %>%
-  mutate(next_date = lead(DX_DATE),
-         days_diff = as.numeric(next_date - DX_DATE)) %>%
-  filter(any(days_diff >= 7, na.rm = TRUE)) %>%
-  pull(ID) %>%
-  unique()
-```
-
-**Why no new package needed:** This is the exact pattern from Phase 50 (cancer site confirmation with 7-day separation). lubridate's date arithmetic and dplyr's group-by-mutate pattern are already validated.
-
-**Reference:** R/50_cancer_site_2date.R lines 84-140 (confirmed working pattern)
-
----
-
-### Feature 3: Temporal Filtering (Cancers After First HL Diagnosis)
-
-**Requirement:** Produce cancer_summary_table filtered to cancers occurring after first HL diagnosis date
+**Requirement:** Detect ABVD, BV+AVD, Nivo+AVD regimens using 28-day cycle windows (drugs co-administered within 28 days = same cycle)
 
 **Stack solution:**
 | Component | Package | Version | Already Validated |
 |-----------|---------|---------|-------------------|
-| Date comparison | lubridate | 1.9.3+ | ✓ Phase 1 (date windows) |
-| Join logic | dplyr | 1.2.0+ | ✓ Phase 3 (multi-table joins) |
-| Filtering | dplyr | 1.2.0+ | ✓ Phase 1 |
+| Date intervals | lubridate::interval() | 1.9.5 | ✓ Phase 1 (enrollment windows) |
+| Interval testing | lubridate::%within% | 1.9.5 | ✓ Phase 1 (date range checks) |
+| Date arithmetic | lubridate | 1.9.5 | ✓ Phase 1 (all date operations) |
+| Group-by logic | dplyr | 1.2.1 | ✓ Phase 1 (cohort filtering) |
 
 **Implementation approach:**
 ```r
-# Step 1: Get first HL diagnosis date per patient
-first_hl_date <- dx_hl %>%
-  group_by(ID) %>%
-  summarize(first_hl_date = min(DX_DATE, na.rm = TRUE))
+library(lubridate)
 
-# Step 2: Filter cancer summary to post-HL cancers
-cancer_summary_post_hl <- cancer_summary %>%
-  left_join(first_hl_date, by = "ID") %>%
-  filter(DX_DATE >= first_hl_date)
-```
+# Define 28-day cycle window for each drug administration
+drug_events <- drug_events %>%
+  mutate(
+    cycle_start = ADMIN_DATE,
+    cycle_end = ADMIN_DATE + days(27),  # 28 days inclusive
+    cycle_interval = interval(cycle_start, cycle_end)
+  )
 
-**Why no new package needed:** Date comparison and left_join() are core dplyr operations validated across all cohort scripts.
+# Find co-administered drugs within same 28-day cycle
+regimen_cycles <- drug_events %>%
+  inner_join(drug_events,
+             by = "patient_id",
+             suffix = c("_A", "_B")) %>%
+  filter(
+    drug_name_A != drug_name_B,
+    ADMIN_DATE_B %within% cycle_interval_A  # Drug B within Drug A's 28-day cycle
+  ) %>%
+  group_by(patient_id, cycle_start_A) %>%
+  summarize(
+    drugs_in_cycle = paste(sort(unique(c(drug_name_A, drug_name_B))), collapse = " + "),
+    .groups = "drop"
+  )
 
----
-
-### Feature 4: Add Cancer Category Labels to Gantt Episodes
-
-**Requirement:** Add cancer category label to each treatment episode in Gantt data (same CancerSiteCategories mapping minus D-codes)
-
-**Stack solution:**
-| Component | Package | Version | Already Validated |
-|-----------|---------|---------|-------------------|
-| PREFIX_MAP lookup | Base R | — | ✓ Phase 53 (R/53_cancer_summary.R) |
-| Join logic | dplyr | 1.2.0+ | ✓ Phase 49 (Gantt data export) |
-| Code normalization | stringr | 1.5.1+ | ✓ Phase 2 |
-
-**Implementation approach:**
-```r
-# In R/49_gantt_data_export.R or new R/55_gantt_cancer_labels.R
-# Reuse PREFIX_MAP from R/53_cancer_summary.R (copy or source)
-# Exclude benign D-codes
-
-gantt_episodes_enhanced <- gantt_episodes %>%
-  left_join(cancer_category_lookup, by = c("patient_id" = "ID")) %>%
-  mutate(is_hodgkin = ifelse(cancer_category == "Hodgkin Lymphoma", 1, 0))
-```
-
-**Why no new package needed:** PREFIX_MAP infrastructure already exists in R/53_cancer_summary.R. Just needs to be imported/reused and joined to Gantt data.
-
-**Integration note:** Requires coordination between:
-- R/53_cancer_summary.R (cancer category classification source)
-- R/49_gantt_data_export.R (Gantt CSV export destination)
-
-Consider extracting PREFIX_MAP to R/00_config.R for DRY principle (same as AMC_PAYER_LOOKUP migration in Phase 36).
-
----
-
-### Feature 5: Add Death Date to Gantt Chart
-
-**Requirement:** Add death date from DEMOGRAPHIC/DEATH tables to Gantt chart and treat death as a treatment type for graphing
-
-**Stack solution:**
-| Component | Package | Version | Already Validated |
-|-----------|---------|---------|-------------------|
-| Table access | DuckDB via get_pcornet_table() | 1.3+ | ✓ Phase 30 (backend abstraction) |
-| Date parsing | lubridate | 1.9.3+ | ✓ Phase 1 (multi-format dates) |
-| Join logic | dplyr | 1.2.0+ | ✓ Phase 3 |
-
-**PCORnet CDM structure:**
-- **DEMOGRAPHIC table** already loaded (R/00_config.R line 115)
-- **DEATH_DATE column** is standard PCORnet CDM v7.0 field (date format: YYYY-MM-DD or YYYYMMDD)
-- **DEATH table** does NOT exist in PCORnet CDM — death data is in DEMOGRAPHIC
-
-**Implementation approach:**
-```r
-# In R/49_gantt_data_export.R or new enhancement script
-demographic <- get_pcornet_table("DEMOGRAPHIC") %>%
-  select(ID, BIRTH_DATE, DEATH_DATE) %>%
-  collect()
-
-# Join to gantt_episodes
-gantt_with_death <- gantt_episodes %>%
-  left_join(demographic %>% select(ID, DEATH_DATE),
-            by = c("patient_id" = "ID"))
-
-# Treat death as pseudo-treatment type for visualization
-death_events <- demographic %>%
-  filter(!is.na(DEATH_DATE)) %>%
-  transmute(
-    patient_id = ID,
-    treatment_type = "Death",
-    episode_start = DEATH_DATE,
-    episode_stop = DEATH_DATE,
-    episode_length_days = 0
+# Classify regimen based on drug combinations
+regimen_cycles <- regimen_cycles %>%
+  mutate(
+    regimen = case_when(
+      str_detect(drugs_in_cycle, "doxorubicin.*bleomycin.*vinblastine.*dacarbazine") ~ "ABVD",
+      str_detect(drugs_in_cycle, "brentuximab.*doxorubicin.*vinblastine.*dacarbazine") ~ "BV+AVD",
+      str_detect(drugs_in_cycle, "nivolumab.*doxorubicin.*vinblastine.*dacarbazine") ~ "Nivo+AVD",
+      TRUE ~ "Other"
+    )
   )
 ```
 
-**Why no new package needed:** DEMOGRAPHIC table already loaded via DuckDB. Date parsing via parse_pcornet_date() (R/01_load_pcornet.R) already handles DEATH_DATE format.
+**Why no new package needed:** lubridate's `interval()` and `%within%` provide exact 28-day cycle detection. Already validated for enrollment windows (Phase 1) and treatment window logic (Phase 8).
 
-**PCORnet CDM reference:**
-- DEMOGRAPHIC.DEATH_DATE is a DATE field (not DATETIME)
-- Format: YYYY-MM-DD per PCORnet CDM v7.0 specification
-- Already handled by existing parse_pcornet_date() function
+**References:**
+- [lubridate::%within% documentation](https://lubridate.tidyverse.org/reference/within-interval.html) — Interval membership testing
+- [lubridate::interval documentation](https://lubridate.tidyverse.org/reference/interval.html) — Interval creation and manipulation
+- CRAN lubridate 1.9.5 (May 2026) — Latest stable version
+
+**Clinical reference:**
+- [OncoLink Nivolumab 28-Day Cycle Calendar](https://www.oncolink.org/cancer-treatment/cancer-medications/support/regimen-calendars/regimen-calendar-nivolumab-28-day-cycle) — Standard 28-day cycle definition
+
+**Confidence:** **HIGH** — lubridate interval operations are mature (10+ years), widely used for time window detection.
+
+---
+
+### Feature 3: Drug Name Resolution via RxNorm API
+
+**Requirement:** Map RXNORM_CUI codes to granular drug names (doxorubicin, bleomycin, vinblastine, etc.) for regimen classification
+
+**Stack solution (Option A — Direct API with httr2):**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| HTTP requests | httr2 | 1.2.2 | ✓ Phase 40 (NDC lookup via RxNorm API) |
+| JSON parsing | jsonlite | 1.9.3+ | ✓ Phase 40 (API response parsing) |
+| Retry/throttle | httr2::req_retry, req_throttle | 1.2.2 | ✓ Phase 40 (rate limiting) |
+
+**Implementation approach (httr2 direct):**
+```r
+library(httr2)
+library(jsonlite)
+
+# RxNorm API endpoint for drug names
+get_rxnorm_name <- function(rxcui) {
+  req <- request("https://rxnav.nlm.nih.gov/REST/rxcui") %>%
+    req_url_path_append(rxcui, "properties.json") %>%
+    req_retry(max_tries = 3) %>%
+    req_throttle(rate = 20 / 1)  # 20 requests per second (NLM default limit)
+
+  resp <- req_perform(req)
+  result <- resp_body_json(resp)
+
+  result$properties$name %||% NA_character_
+}
+
+# Batch lookup with error handling
+drug_names <- drug_codes %>%
+  mutate(drug_name = map_chr(RXNORM_CUI, safely(get_rxnorm_name)))
+```
+
+**Why httr2 works:** Already validated in R/40_investigate_unmatched_ndc.R (Phase 40) for RxNorm API calls. Includes retry, throttle, and JSON parsing.
+
+**References:**
+- [httr2::req_retry documentation](https://httr2.r-lib.org/reference/req_retry.html) — Automatic retry on 429/503
+- [httr2::req_throttle documentation](https://httr2.r-lib.org/reference/req_throttle.html) — Rate limiting
+- CRAN httr2 1.2.2 (May 2026) — Latest stable version
+
+**Confidence:** **HIGH** — httr2 is already working in Phase 40 for identical use case (RxNorm API lookups).
+
+---
+
+**Stack solution (Option B — rxnorm package, OPTIONAL):**
+| Component | Package | Version | Source |
+|-----------|---------|---------|--------|
+| RxNorm API wrapper | rxnorm (nt-williams) | 0.2.1.9000 | GitHub only |
+| Dependencies | httr2, jsonlite | (same as above) | CRAN |
+
+**Implementation approach (rxnorm package):**
+```r
+# Install from GitHub (one-time, add to renv)
+# remotes::install_github("nt-williams/rxnorm")
+library(rxnorm)
+
+# Simplified drug name lookup
+drug_names <- drug_codes %>%
+  mutate(
+    drug_name = map_chr(RXNORM_CUI, ~get_in(.x) %||% NA_character_),  # Ingredient name
+    brand_name = map_chr(RXNORM_CUI, ~get_bn(.x) %||% NA_character_)  # Brand name
+  )
+```
+
+**Why consider rxnorm package:**
+- **Pro:** Cleaner API, handles retries/errors automatically, provides drug class lookup (ATC codes)
+- **Con:** GitHub-only (not on CRAN), adds external dependency, httr2 already works
+
+**Recommendation:** **Start with httr2 direct API** (already validated in Phase 40). Only adopt rxnorm package if:
+1. Drug class lookup (ATC codes) becomes needed for regimen classification
+2. API call volume becomes high enough that batch optimization matters
+3. Simplified code maintenance outweighs GitHub dependency risk
+
+**References:**
+- [rxnorm GitHub repository](https://github.com/nt-williams/rxnorm) — R interface to NLM RxNorm API
+- [rxnorm package documentation](https://rdrr.io/github/nt-williams/rxnorm/) — Function reference
+
+**Confidence (httr2):** **HIGH** — Already working in Phase 40
+**Confidence (rxnorm package):** **MEDIUM** — GitHub-only package, not CRAN-verified, but actively maintained (updated Apr 2025)
+
+---
+
+### Feature 4: Drop ICD Diagnosis Codes from SCT Detection
+
+**Requirement:** Remove DIAGNOSIS table ICD codes from SCT detection — use only PROCEDURES/PRESCRIBING/DISPENSING
+
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| Code filtering | dplyr::filter | 1.2.1 | ✓ Phase 1 (all cohort logic) |
+| Source table tracking | Base R | — | ✓ Phase 9 (multi-source treatment detection) |
+
+**Implementation approach:**
+```r
+# In treatment detection logic (e.g., R/09_expanded_treatment_detection.R)
+# OLD: sct_codes from DIAGNOSIS, PROCEDURES, PRESCRIBING, DISPENSING
+# NEW: sct_codes from PROCEDURES, PRESCRIBING, DISPENSING only
+
+sct_events <- bind_rows(
+  # Remove DIAGNOSIS table ICD codes entirely
+  # procedures_tbl %>% filter(...),  # Keep
+  # prescribing_tbl %>% filter(...),  # Keep
+  # dispensing_tbl %>% filter(...)   # Keep
+)
+```
+
+**Why no new package needed:** This is a logic change (removing a data source), not a new capability. dplyr filtering already handles source exclusion.
+
+**Confidence:** **HIGH** — Simplification (removing code paths), zero new functionality required.
+
+---
+
+### Feature 5: Death Date Analysis Table
+
+**Requirement:** Produce death date analysis table (count with death dates, death as last encounter, encounters after death)
+
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| DEMOGRAPHIC.DEATH_DATE | DuckDB access | 1.3+ | ✓ Phase 57 (death date validation) |
+| Date comparison | lubridate | 1.9.5 | ✓ Phase 1 (all date logic) |
+| Group-by summaries | dplyr | 1.2.1 | ✓ Phase 1 (cohort statistics) |
+| xlsx output | openxlsx2 | 1.0.0+ | ✓ Phase 54 (cancer summary table) |
+
+**Implementation approach:**
+```r
+# Death date analysis
+death_analysis <- encounter_data %>%
+  left_join(demographic %>% select(ID, DEATH_DATE), by = "ID") %>%
+  mutate(
+    has_death_date = !is.na(DEATH_DATE),
+    encounter_after_death = !is.na(DEATH_DATE) & ENCOUNTER_DATE > DEATH_DATE,
+    death_is_last_encounter = !is.na(DEATH_DATE) & ENCOUNTER_DATE == max(ENCOUNTER_DATE, na.rm = TRUE)
+  ) %>%
+  summarize(
+    n_patients_with_death_date = sum(has_death_date),
+    n_encounters_after_death = sum(encounter_after_death),
+    n_death_as_last_encounter = sum(death_is_last_encounter)
+  )
+
+# Export to xlsx
+openxlsx2::write_xlsx(death_analysis, "output/death_date_analysis.xlsx")
+```
+
+**Why no new package needed:** DEATH_DATE already validated in Phase 59 (impossible death exclusion). Date comparison and summarization are core dplyr/lubridate operations.
+
+**Confidence:** **HIGH** — DEATH_DATE column confirmed populated (Phase 59), logic is standard date comparison.
+
+---
+
+### Feature 6: New Gantt Output Files (Preserve Existing Versions)
+
+**Requirement:** Generate new Gantt CSV files with encounter-level cancer categories and first-line regimen labels, preserving existing v1.7 output
+
+**Stack solution:**
+| Component | Package | Version | Already Validated |
+|-----------|---------|---------|-------------------|
+| CSV export | readr::write_csv | 2.2.0+ | ✓ Phase 49 (Gantt CSV export) |
+| File versioning | Base R | — | ✓ Phase 33 (clone-and-filter pattern) |
+
+**Implementation approach:**
+```r
+# New file naming pattern (add _v1.8 suffix)
+write_csv(gantt_episodes_enhanced, "output/gantt_episodes_v1.8.csv")
+write_csv(gantt_full_v1.8, "output/gantt_full_v1.8.csv")
+
+# Preserve existing files
+# output/gantt_episodes.csv (v1.7)
+# output/gantt_full.csv (v1.7)
+```
+
+**Why no new package needed:** File versioning is a naming convention, not a new capability. readr::write_csv already validated.
+
+**Confidence:** **HIGH** — Trivial file naming change, zero risk.
 
 ---
 
 ## What NOT to Add
 
-### Rejected: New Date/Time Libraries
+### Rejected: data.table for Join Performance
 
-**Considered:** data.table::fread, clock (new R date/time library)
-
-**Why NOT:**
-- data.table conflicts with named predicate requirement (opaque syntax)
-- clock is redundant with lubridate (already validated)
-- No performance bottleneck identified requiring data.table
-
-### Rejected: New Visualization Libraries
-
-**Considered:** gtsummary, gt (table formatting)
+**Considered:** data.table::fread, data.table joins for ENCOUNTERID matching
 
 **Why NOT:**
-- openxlsx2 already handles styled table output (Phase 54)
-- No requirement for publication-quality tables in v1.7
-- CSV output for Gantt charts is sufficient (third-party tool consumes)
+- DuckDB backend already provides optimized join performance (Phase 29-32)
+- data.table syntax conflicts with "named predicate" requirement (opaque `DT[i, j, by]` syntax)
+- No performance bottleneck identified in current DuckDB-backed joins
+- Rolling joins with `closest()` are dplyr-native, no data.table equivalent without custom logic
 
-### Rejected: Dedicated Survival Analysis Libraries
+**Reference:** [DuckDB join performance](https://duckdb.org/docs/guides/performance/join-ops.html) — Indexed joins on ENCOUNTERID already optimized
 
-**Considered:** survival, survminer (for death date analysis)
+### Rejected: Dedicated Drug Ontology Libraries
+
+**Considered:** rWCVP (World Checklist of Vascular Plants), ontologyIndex (general ontology tools)
 
 **Why NOT:**
-- Out of scope: "Statistical modeling / regression — exploration only" (PROJECT.md line 63)
-- Death date is treated as visualization element (Gantt pseudo-treatment), not survival endpoint
-- Defer to v2 if survival analysis becomes a requirement
+- RxNorm API (via httr2) already provides drug name resolution (validated Phase 40)
+- No need for full drug ontology — only need name lookup for ~20 HL therapy drugs (ABVD, BV+AVD, Nivo+AVD)
+- Ontology packages add complexity without benefit for limited drug set
+
+### Rejected: Specialized Time Series Libraries
+
+**Considered:** zoo, xts (time series), slider (rolling windows)
+
+**Why NOT:**
+- lubridate `%within%` handles 28-day cycle detection elegantly
+- No need for sliding window aggregation (cycles are discrete, not overlapping)
+- Adding time series library for single use case is overkill
 
 ---
 
 ## Integration Points
 
-### 1. PREFIX_MAP Centralization (Recommended)
+### 1. httr2 RxNorm API Pattern Already Validated
 
-**Current state:** PREFIX_MAP duplicated in R/47_cancer_site_frequency.R, R/53_cancer_summary.R, R/54_cancer_summary_table.R
+**Current state:** R/40_investigate_unmatched_ndc.R uses httr2 for RxNorm API lookups with retry/throttle
 
-**Recommendation:** Extract to R/00_config.R (same pattern as AMC_PAYER_LOOKUP in Phase 36)
+**Reuse pattern:** Copy API request builder from R/40, adapt for drug name resolution (not NDC lookup)
 
-**Benefits:**
-- Single source of truth for cancer category mapping
-- Eliminates drift risk when categories change
-- Easier to add benign D-code exclusion logic
+**No changes needed:** httr2 already in renv.lock from Phase 40
 
-**Migration pattern:**
-```r
-# In R/00_config.R (after AMC_PAYER_LOOKUP)
-CANCER_CATEGORY_MAP <- list(
-  prefix_map = c(...),  # Full PREFIX_MAP from R/53
-  benign_prefixes = c("D10", "D11", ..., "D3A"),
-  classify_codes = function(codes) { ... }
-)
-```
+### 2. DuckDB ENCOUNTERID Indexing
 
-### 2. DEMOGRAPHIC Table Already Loaded
+**Current state:** DuckDB ingest (Phase 29) creates indexes on PATID and ENCOUNTERID
 
-**Current state:** DEMOGRAPHIC listed in CONFIG$tables (R/00_config.R line 115)
-
-**Validation needed:** Confirm DEATH_DATE column populated in HiPerGator data
+**Validation needed:** Confirm ENCOUNTERID index exists for PROCEDURES, PRESCRIBING, DISPENSING tables
 
 **Test query:**
 ```r
-demographic <- get_pcornet_table("DEMOGRAPHIC") %>%
-  select(ID, DEATH_DATE) %>%
-  filter(!is.na(DEATH_DATE)) %>%
-  collect()
-
-message(glue("Patients with death date: {nrow(demographic)}"))
+DBI::dbGetQuery(con, "PRAGMA table_info('PROCEDURES')")  # Confirm ENCOUNTERID column
+DBI::dbGetQuery(con, "SELECT COUNT(DISTINCT ENCOUNTERID) FROM PROCEDURES")  # Check coverage
 ```
 
-**Expected outcome:** Some non-zero count (VRT is death-only partner site, PROJECT.md line 140)
+**Expected outcome:** ENCOUNTERID populated in treatment tables, indexed for join performance
 
-### 3. Cohort Confirmation Pattern Reuse
+### 3. Rolling Join Fallback Strategy
 
-**Source:** R/50_cancer_site_2date.R (Phase 50 validation)
+**Pattern:** Try direct ENCOUNTERID match first, fall back to `closest()` date match for unmatched encounters
 
-**Pattern:** Group-by ID, arrange by date, calculate lead() differences, filter any() >= 7 days
+**Rationale:** ENCOUNTERID may be missing for some treatment records (DISPENSING often lacks ENCOUNTERID in PCORnet)
 
-**Reuse in:** New cohort confirmation script or enhancement to existing cohort filter chain
+**Validation:** Track proportion of episodes matched via ENCOUNTERID vs. date fallback
 
-**No changes needed:** Pattern already validated for cancer site confirmation
+### 4. openxlsx2 Already Handles Multi-Sheet Workbooks
+
+**Current state:** Phase 54 (R/54_cancer_summary_table.R) uses openxlsx2 for styled xlsx output
+
+**Reuse pattern:** Same workbook formatting for death date analysis table and regimen summary tables
+
+**No changes needed:** openxlsx2 already in renv.lock
 
 ---
 
-## Version Verification (All Current as of 2026-05-22)
+## Version Verification (All Current as of 2026-05-29)
 
-| Package | Minimum | Latest Stable | Status |
-|---------|---------|---------------|--------|
-| dplyr | 1.2.0 | 1.2.1 (Feb 2026) | Current |
-| lubridate | 1.9.3 | 1.9.4 (Jan 2026) | Current |
-| stringr | 1.5.1 | 1.5.2 (Dec 2025) | Current |
-| openxlsx2 | Latest | 1.0.0+ (2025) | Current |
-| DuckDB | 1.3.0 | 1.3.2 (Mar 2026) | Current |
+| Package | Minimum | Latest Stable | Status | Source |
+|---------|---------|---------------|--------|--------|
+| dplyr | 1.2.0 | 1.2.1 (Apr 2026) | Current | [CRAN](https://cran.r-project.org/package=dplyr) |
+| lubridate | 1.9.3 | 1.9.5 (May 2026) | Current | [CRAN](https://cran.r-project.org/package=lubridate) |
+| httr2 | 1.2.0 | 1.2.2 (May 2026) | Current | [CRAN](https://cran.r-project.org/package=httr2) |
+| jsonlite | 1.8.0 | 1.9.3 (Feb 2026) | Current | [CRAN](https://cran.r-project.org/package=jsonlite) |
+| openxlsx2 | 1.0.0 | 1.0.0+ (2025) | Current | CRAN |
+| DuckDB | 1.3.0 | 1.3.2 (Mar 2026) | Current | CRAN |
+| **rxnorm** | — | 0.2.1.9000 (Apr 2025) | **OPTIONAL** | [GitHub](https://github.com/nt-williams/rxnorm) |
 
-**Source:** CRAN package pages (accessed 2026-05-22)
+**All required packages already in renv.lock from previous phases. No version bumps required.**
 
-All packages already in renv.lock from previous phases. No version bumps required.
+**Optional rxnorm package:** GitHub-only, would need `remotes::install_github("nt-williams/rxnorm")` if adopted. **Not recommended unless httr2 direct API becomes cumbersome.**
 
 ---
 
 ## Implementation Recommendations
 
+### Stack Decision: httr2 Direct API vs. rxnorm Package
+
+**Recommendation:** **Use httr2 direct API** (already validated in Phase 40)
+
+**Rationale:**
+1. **Zero new dependencies** — httr2 already working for RxNorm API
+2. **Limited drug set** — Only need ~20 drug names for ABVD/BV+AVD/Nivo+AVD regimens
+3. **CRAN preference** — Avoid GitHub-only packages unless necessary
+4. **Proven pattern** — R/40_investigate_unmatched_ndc.R demonstrates exact use case
+
+**When to reconsider rxnorm package:**
+- If drug class lookup (ATC codes) becomes needed for regimen classification
+- If API call volume exceeds 1000+ lookups (batch optimization benefit)
+- If NLM RxNorm API changes break direct httr2 calls (wrapper insulates from API changes)
+
+**Decision deferred to implementation:** Implement with httr2 first, adopt rxnorm package only if pain points emerge.
+
 ### Phase Sequencing Suggestion
 
-1. **Phase 1:** Benign D-code filtering (modify R/53, R/54) — Lowest risk
-2. **Phase 2:** HL cohort confirmation (new cohort predicate or standalone filter) — Reuses Phase 50 pattern
-3. **Phase 3:** Temporal filtering (clone R/54, add first_hl_date join) — Independent of Phase 2
-4. **Phase 4:** PREFIX_MAP centralization (extract to R/00_config.R, update dependents) — Foundation for Phase 5
-5. **Phase 5:** Gantt cancer category labels (enhance R/49 or new script) — Requires Phase 4
-6. **Phase 6:** Death date integration (enhance R/49, add death pseudo-treatment) — Independent of Phase 5
+1. **Phase 60:** ENCOUNTERID linkage infrastructure (direct match + closest fallback) — Foundation for all other features
+2. **Phase 61:** Drug name resolution via httr2 RxNorm API — Independent of Phase 60
+3. **Phase 62:** 28-day cycle regimen detection (ABVD/BV+AVD/Nivo+AVD) — Requires Phase 61
+4. **Phase 63:** Drop ICD codes from SCT detection — Cleanup, independent of Phase 60-62
+5. **Phase 64:** Death date analysis table — Independent of Phase 60-63
+6. **Phase 65:** New Gantt output files with encounter-level cancer + regimen labels — Requires Phase 60, 62
 
-**Rationale:** D-code filtering is simplest and validates the "no new packages" assumption. HL cohort confirmation reuses proven pattern. PREFIX_MAP centralization before Gantt enhancement avoids duplication.
+**Rationale:** ENCOUNTERID linkage is foundation. Drug resolution + regimen detection are sequential. SCT cleanup and death analysis are independent. Gantt output ties everything together.
 
 ### Testing Strategy
 
-**For each feature:**
-1. Verify row count changes make sense (benign D-code filtering should reduce cancer_summary rows)
-2. Spot-check cancer category assignments against CancerSiteCategories.xlsx
-3. Validate 7-day separation logic with known HL patients (compare to Phase 50 output)
-4. Check death date join (expect matches for VRT site patients)
+**For ENCOUNTERID linkage (Phase 60):**
+1. Track proportion of episodes matched via ENCOUNTERID vs. date fallback
+2. Validate cancer category assignments against known HL episodes
+3. Spot-check fallback logic (closest diagnosis date should be within reasonable time window)
 
-**Parity testing NOT required:** These are new features, not migrations. No baseline to compare against.
+**For 28-day cycle detection (Phase 62):**
+1. Verify ABVD cycle detection against known ABVD patients (all 4 drugs within 28 days)
+2. Check for dropped drugs (ABVD→AVD should still count as first-line)
+3. Validate no extraneous drugs added (ABVD + other drug ≠ ABVD)
+
+**For drug name resolution (Phase 61):**
+1. Validate RXNORM_CUI → drug name mapping against known HL drugs
+2. Check error handling for invalid/missing RXNORM_CUI codes
+3. Verify rate limiting (httr2 throttle) prevents 429 errors from NLM API
+
+**Parity testing:** Compare new Gantt output (v1.8) vs. existing Gantt (v1.7) for unchanged fields (patient_id, episode dates, treatment types excluding new regimen labels).
 
 ---
 
 ## Sources
 
-- **R/00_config.R** — Existing stack configuration, DEMOGRAPHIC table loading
-- **R/53_cancer_summary.R** — PREFIX_MAP structure, cancer category classification
-- **R/50_cancer_site_2date.R** — 7-day separation pattern validation
+### Official Documentation
+- [dplyr::join_by documentation](https://dplyr.tidyverse.org/reference/join_by.html) — Rolling joins with `closest()`
+- [dplyr 1.1.0 blog post](https://tidyverse.org/blog/2023/01/dplyr-1-1-0-joins/) — Inequality and rolling joins introduction
+- [lubridate::%within% documentation](https://lubridate.tidyverse.org/reference/within-interval.html) — Interval membership testing
+- [lubridate::interval documentation](https://lubridate.tidyverse.org/reference/interval.html) — Interval creation and manipulation
+- [httr2::req_retry documentation](https://httr2.r-lib.org/reference/req_retry.html) — Automatic retry on failure
+- [httr2::req_throttle documentation](https://httr2.r-lib.org/reference/req_throttle.html) — Rate limiting
+- [CRAN dplyr](https://cran.r-project.org/package=dplyr) — Version 1.2.1 (May 2026)
+- [CRAN lubridate](https://cran.r-project.org/package=lubridate) — Version 1.9.5 (May 2026)
+- [CRAN httr2](https://cran.r-project.org/package=httr2) — Version 1.2.2 (May 2026)
+
+### External APIs & Packages
+- [rxnorm GitHub repository](https://github.com/nt-williams/rxnorm) — R interface to NLM RxNorm API (optional)
+- [NLM RxNorm API documentation](https://lhncbc.nlm.nih.gov/RxNav/APIs/api-RxNorm.getDrugs.html) — Drug name resolution API
+- [RxNorm official site](https://www.nlm.nih.gov/research/umls/rxnorm/index.html) — National Library of Medicine RxNorm
+
+### Clinical References
+- [OncoLink Nivolumab 28-Day Cycle Calendar](https://www.oncolink.org/cancer-treatment/cancer-medications/support/regimen-calendars/regimen-calendar-nivolumab-28-day-cycle) — Standard 28-day cycle definition
+
+### Project Files
+- **R/00_config.R** — Existing stack configuration, DuckDB backend settings
+- **R/40_investigate_unmatched_ndc.R** — httr2 RxNorm API pattern (Phase 40)
 - **R/49_gantt_data_export.R** — Gantt CSV export structure
-- **PCORnet CDM v7.0 Specification** — DEMOGRAPHIC.DEATH_DATE field definition
-- **CRAN package pages** — dplyr 1.2.1, lubridate 1.9.4, stringr 1.5.2 (verified 2026-05-22)
+- **R/54_cancer_summary_table.R** — openxlsx2 styled table output
 - **PROJECT.md** — Milestone goals, constraints, validated capabilities
 
 ---
@@ -328,25 +495,33 @@ All packages already in renv.lock from previous phases. No version bumps require
 
 | Area | Confidence | Rationale |
 |------|------------|-----------|
-| D-code filtering | **HIGH** | stringr pattern matching validated in Phase 2 |
-| HL cohort confirmation | **HIGH** | Exact pattern from Phase 50 (R/50_cancer_site_2date.R) |
-| Temporal filtering | **HIGH** | lubridate date comparison used throughout cohort pipeline |
-| Gantt cancer labels | **HIGH** | PREFIX_MAP already exists, just needs join logic |
-| Death date integration | **MEDIUM** | DEMOGRAPHIC table confirmed, DEATH_DATE column needs validation on HiPerGator data |
+| ENCOUNTERID linkage | **HIGH** | dplyr rolling joins stable since 1.1.0 (Feb 2023), DuckDB indexing validated Phase 29 |
+| 28-day cycle detection | **HIGH** | lubridate interval operations mature (10+ years), standard clinical cycle definition |
+| Drug name resolution (httr2) | **HIGH** | httr2 RxNorm API pattern validated in Phase 40 |
+| Drug name resolution (rxnorm pkg) | **MEDIUM** | GitHub-only package, not CRAN-verified, but actively maintained (Apr 2025) |
+| SCT ICD code removal | **HIGH** | Logic simplification, zero new functionality |
+| Death date analysis | **HIGH** | DEATH_DATE validated Phase 59, standard date comparison logic |
+| Gantt file versioning | **HIGH** | Trivial file naming change |
 
-**Overall confidence:** **HIGH** — All features use validated stack components. Only uncertainty is DEATH_DATE column population in HiPerGator extract (expected to be populated per VRT partner site).
+**Overall confidence:** **HIGH** — All critical features use validated stack components (dplyr rolling joins, lubridate intervals, httr2 API). Only uncertainty is whether rxnorm package adoption is worth GitHub dependency (recommendation: defer unless needed).
 
 ---
 
 ## Summary
 
-**Zero new dependencies.** All five v1.7 features are logic enhancements using:
-- Existing tidyverse packages (dplyr, lubridate, stringr)
-- Existing infrastructure (PREFIX_MAP, DuckDB backend, parse_pcornet_date)
-- Validated patterns (7-day separation from Phase 50, cancer classification from Phase 53)
+**Minimal new dependencies.** All v1.8 features use existing validated stack:
+- **ENCOUNTERID linkage:** dplyr `join_by(closest())` for rolling joins (dplyr 1.2.1, stable since 1.1.0)
+- **28-day cycle detection:** lubridate `%within%` for interval testing (lubridate 1.9.5)
+- **Drug name resolution:** httr2 direct RxNorm API (httr2 1.2.2, validated Phase 40)
+- **Death date analysis:** DuckDB DEMOGRAPHIC access + lubridate date comparison (validated Phase 59)
 
-**Key integration point:** Consider PREFIX_MAP centralization in R/00_config.R to avoid duplication across R/47, R/53, R/54, and new Gantt enhancement script.
+**Optional addition:** rxnorm package (GitHub-only) for simplified RxNorm API, but httr2 direct calls work fine. **Recommendation: Start with httr2, adopt rxnorm only if pain points emerge.**
 
-**Risk:** Minimal. No package installation, no version conflicts, no new external dependencies.
+**Key integration points:**
+1. Reuse httr2 RxNorm API pattern from R/40_investigate_unmatched_ndc.R
+2. Validate DuckDB ENCOUNTERID indexing for join performance
+3. Track ENCOUNTERID match rate vs. date fallback proportion
 
-**Next step:** Validate DEATH_DATE column population in HiPerGator DEMOGRAPHIC table, then proceed with implementation using existing stack.
+**Risk:** Minimal. No critical new dependencies, dplyr rolling joins and lubridate intervals are mature features (3-10+ years old). httr2 RxNorm API already working in Phase 40.
+
+**Next step:** Validate DuckDB ENCOUNTERID coverage in PROCEDURES/PRESCRIBING/DISPENSING tables, then proceed with dplyr rolling join implementation using existing stack.
