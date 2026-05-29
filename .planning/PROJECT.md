@@ -45,18 +45,27 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
+- [ ] Encounter-level cancer category linkage replacing patient-level join
+- [ ] HL flag on encounter, not patient
+- [ ] Death date analysis table
+- [ ] Drop ICD diagnosis codes from SCT detection
+- [ ] First-line therapy regimen labeling (ABVD, BV+AVD, Nivo+AVD) for adults 21+
+- [ ] New Gantt output files preserving existing versions
 
-## Current Milestone: v1.7 Cancer Summary Refinement & Gantt Enhancements
+## Current Milestone: v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
 
-**Goal:** Refine cancer summary table by removing benign D-codes and enforcing HL cohort confirmation, add temporal filtering relative to HL diagnosis, and enhance Gantt chart data with cancer category labels, HL flags, and death dates.
+**Goal:** Link cancer diagnoses to specific treatment episodes via encounter IDs, identify first-line HL therapy regimens (ABVD, BV+AVD, Nivo+AVD), tighten treatment source validation, and produce death date analysis.
 
 **Target features:**
-- Remove D-codes (benign neoplasms) from cancer_summary_table.xlsx
-- Filter cohort to patients with 2+ HL diagnosis codes 7 days apart, then rerun cancer summary table (column F = 100% HL)
-- Produce cancer_summary_table filtered to cancers occurring after first HL diagnosis date (both versions for comparison)
-- Add cancer category label to each treatment episode in Gantt data (same CancerSiteCategories mapping minus D-codes)
-- Add `is_hodgkin` binary column derived from the cancer category label
-- Add death date to Gantt chart and treat death as a treatment type for graphing
+- Replace patient-level cancer category with encounter-level linkage (encounter ID match, fallback to closest diagnosis in time)
+- HL flag on the encounter, not the patient
+- Second cancer confirmation with 7-day-apart rule
+- Death date analysis table (count with death dates, death as last encounter, encounters after death)
+- Drop ICD diagnosis codes from SCT detection — PROCEDURES, PRESCRIBING, DISPENSING only
+- Label treatment episodes with specific regimen names (ABVD, BV+AVD, Nivo+AVD) using granular drug names
+- First-line therapy for adults 21+: 28-day cycle matching for the 3 regimen combinations
+- Agents can be dropped (ABVD→AVD) and still count as first-line; nothing else added
+- New Gantt output files (preserve existing versions)
 
 ### Out of Scope
 
@@ -68,6 +77,17 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Publication-ready figure formatting — exploratory quality is sufficient
 
 ## Previous Milestones
+
+### v1.7 Cancer Summary Refinement & Gantt Enhancements (Shipped 2026-05-28)
+
+**Goal:** Refine cancer summary table by removing benign D-codes and enforcing HL cohort confirmation, add temporal filtering relative to HL diagnosis, and enhance Gantt chart data with cancer category labels, HL flags, and death dates.
+
+**Shipped:**
+- Refined cancer summary with D-code removal and HL cohort confirmation (Phase 55)
+- Temporal filtering relative to HL diagnosis date (Phase 56)
+- Gantt chart enhancements: cancer categories, HL flags, death dates (Phase 57)
+- Cancer summary table with pre/post HL counts (Phase 58)
+- Death date validation with impossible death exclusion, HL Diagnosis pseudo-treatment rows (Phase 59)
 
 ### v1.6 Treatment Code Validation & Cancer Site Analysis (Shipped 2026-05-22)
 
@@ -132,7 +152,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 59 phases completed across 7 milestones (v1.0-v1.7) + post-milestone work, ~59 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions and validated death dates, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output
+- **Current state**: 59 phases completed across 8 milestones (v1.0-v1.8), ~59 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions and validated death dates, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -170,6 +190,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Amy Crisp hierarchical same-day payer resolution | Medicaid > Medicare > Private priority resolves same-day multi-payer encounters deterministically | ✓ Phase 35 |
 | AMC 8-category centralized mapping in R/00_config.R | Single source of truth for payer categories, eliminates runtime xlsx dependency | ✓ Phase 36 |
 | Other govt as distinct tier (rank 4) | Government programs (VA, TRICARE) distinguished from generic "Other" for payer analysis | ✓ Phase 37 |
+| Encounter-level cancer linkage replaces patient-level | Episode-specific cancer categories are clinically meaningful; patient-level conflates unrelated diagnoses | — Pending |
+| Drop ICD DX codes from SCT detection | Diagnosis codes indicate history/status, not procedure occurrence — PROCEDURES/PRESCRIBING/DISPENSING are authoritative | — Pending |
+| New Gantt files instead of overwriting | Preserves existing v1.7 output for comparison | — Pending |
 
 ## Evolution
 
@@ -189,4 +212,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-28 — Phase 59 complete (death date validation, impossible death exclusion from Gantt, HL Diagnosis pseudo-treatment rows)*
+*Last updated: 2026-05-29 — Milestone v1.8 started (Episode-Level Cancer Linkage & First-Line Therapy Identification)*

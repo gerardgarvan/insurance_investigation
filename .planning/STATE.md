@@ -1,47 +1,46 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Phases
-status: verifying
-stopped_at: Completed 59-02-PLAN.md
-last_updated: "2026-05-28T18:57:16.712Z"
-last_activity: 2026-05-28
+milestone: v1.8
+milestone_name: Episode-Level Cancer Linkage & First-Line Therapy Identification
+status: defining_requirements
+stopped_at: Milestone started
+last_updated: "2026-05-29"
+last_activity: 2026-05-29
 progress:
-  total_phases: 58
-  completed_phases: 48
-  total_plans: 88
-  completed_plans: 82
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-22)
+See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 59 — death-date-validation-and-treatment-timeline-cleanup
+**Current focus:** Defining requirements for v1.8
 
 ## Current Position
 
-Phase: 59
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-05-28
-
-Progress: [████████████████████████████████████████████████████████████] Phase 54 complete, Phase 55 starting
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-29 — Milestone v1.8 started
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 60+ (across v1.0-v1.6)
+- Total plans completed: 82+ (across v1.0-v1.7)
 - Average duration: varies by phase complexity
-- Total execution time: ~80 hours
+- Total execution time: ~90 hours
 
 **By Milestone:**
 
+- v1.7 (Phases 55-59): 5 phases, shipped 2026-05-28
 - v1.6 (Phases 45-54): 10 phases, 13 plans, shipped 2026-05-22
 - v1.5 (Phases 34-37): 4 phases, 4 plans, shipped 2026-05-01
 - v1.4 (Phase 33): 1 phase, 2 plans, shipped 2026-04-27
@@ -49,7 +48,7 @@ Progress: [███████████████████████
 
 **Recent Trend:**
 
-- Last milestone (v1.6): Stable delivery across cancer site analysis and treatment code validation
+- Last milestone (v1.7): Cancer summary refinement, Gantt enhancements, death date validation
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -61,13 +60,10 @@ Progress: [███████████████████████
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Phase 36: AMC 8-category centralized payer mapping in R/00_config.R
-- Phase 37: 8-tier resolution hierarchy with distinct Other govt tier
-- Phase 52: All_codes_resolved.xlsx regeneration pattern established
-- Phase 53-54: Cancer summary dataset and table pattern
-- Quick 260522-i1d: R script numbering collision resolved with a/b suffix pattern
-- [Phase 55]: R/55 consolidates R/53 and R/54 into single script (D-02)
-- [Phase 55]: First HL diagnosis date uses pmin() for true minimum across DIAGNOSIS+TUMOR_REGISTRY (D-03)
+- Phase 55: R/55 consolidates R/53 and R/54 into single script; first HL diagnosis date uses pmin() for true minimum across DIAGNOSIS+TUMOR_REGISTRY
+- Phase 57: Cancer categories from cancer_summary.csv via PREFIX_MAP classification in Gantt export
+- Phase 59: Death date validation with impossible death exclusion; HL Diagnosis pseudo-treatment rows
+- v1.8: Encounter-level cancer linkage replaces patient-level; drop ICD DX from SCT detection; new Gantt files
 
 ### Pending Todos
 
@@ -75,21 +71,19 @@ None yet.
 
 ### Blockers/Concerns
 
-- PREFIX_MAP duplication across R/47, R/53, R/54 creates sync risk — consider centralizing to R/00_config.R (same pattern as AMC_PAYER_LOOKUP from Phase 36)
-- DEATH_DATE column population in HiPerGator DEMOGRAPHIC table needs validation before Phase 57 Gantt death date integration
-- Clinical decision needed on D-code granularity: remove all D-codes or keep D00-D09 (in situ) as clinically relevant
+- PREFIX_MAP duplication across R/47, R/53, R/54, R/49 creates sync risk — consider centralizing to R/00_config.R
+- Cancer category currently patient-level — v1.8 will shift to encounter-level linkage
 
 ### Roadmap Evolution
 
-- Phase 58 added: Cancer summary table pre/post HL counts — remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only)
-- Phase 59 added: Death date validation & treatment timeline cleanup — validate death dates against treatment timelines, investigate death-only patients, add treatment category date
+None yet — requirements being defined.
 
 ## Session Continuity
 
-Last session: 2026-05-28T18:52:22.266Z
-Stopped at: Completed 59-02-PLAN.md
+Last session: 2026-05-29
+Stopped at: Milestone v1.8 started — defining requirements
 Resume file: None
-Next step: `/gsd:plan-phase 55`
+Next step: Define requirements and create roadmap
 
 ---
-*Last updated: 2026-05-22 — v1.7 roadmap initialization*
+*Last updated: 2026-05-29 — Milestone v1.8 started*
