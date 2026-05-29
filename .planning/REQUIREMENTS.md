@@ -1,11 +1,50 @@
 # Requirements: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Defined:** 2026-05-22
+**Defined:** 2026-05-29
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## v1.7 Requirements
+## v1.8 Requirements
 
-Requirements for milestone v1.7 Cancer Summary Refinement & Gantt Enhancements. Each maps to roadmap phases.
+Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification. Each maps to roadmap phases.
+
+### Encounter Linkage
+
+- [ ] **LINK-01**: Cancer diagnosis linked to treatment episodes via ENCOUNTERID (direct match)
+- [ ] **LINK-02**: Temporal proximity fallback when ENCOUNTERID is NULL or missing (closest diagnosis within window)
+- [ ] **LINK-03**: HL flag derived from encounter-level diagnosis, not patient-level
+- [ ] **LINK-04**: Second cancer confirmation requires 2+ diagnoses 7 days apart (encounter-level)
+
+### Treatment Validation
+
+- [ ] **TREAT-01**: SCT source audit — quantify how many SCT detections come from ICD DX codes only vs PROCEDURES/PRESCRIBING/DISPENSING
+- [ ] **TREAT-02**: Specific drug names resolved for each chemotherapy episode via RxNorm API (RXNORM_CUI/NDC → generic drug name)
+- [ ] **TREAT-03**: Drug name lookup table produced as standalone reference artifact
+- [ ] **TREAT-04**: Drug names carried through to Gantt episode output
+
+### Regimen Identification
+
+- [ ] **REG-01**: Treatment episodes labeled with regimen name (ABVD, BV+AVD, Nivo+AVD) based on drug composition within 28-day cycle window
+- [ ] **REG-02**: Dropped-agent tolerance — ABVD with bleomycin dropped (→AVD) still classified as first-line
+- [ ] **REG-03**: Nothing added — ABVD+X is not ABVD
+- [ ] **REG-04**: Temporal availability rules — BV+AVD post-2019, Nivo+AVD post-2024
+
+### First-Line Therapy
+
+- [ ] **FLT-01**: First-line therapy identified for adults 21+ at treatment date
+- [ ] **FLT-02**: 60-day clean period (no prior chemotherapy) defines first-line
+
+### Death Analysis
+
+- [ ] **DEATH-01**: Death date analysis table — count of patients with death dates
+- [ ] **DEATH-02**: Of those with death dates, count where death is last encounter
+- [ ] **DEATH-03**: Count of patients with encounters/treatment after death date
+
+### Output
+
+- [ ] **OUT-01**: New Gantt v2 output files (preserve existing v1 files)
+- [ ] **OUT-02**: Gantt v2 includes encounter-level cancer category, HL flag, and specific drug names
+
+## v1.7 Requirements (Completed)
 
 ### Cancer Summary Refinement
 
@@ -22,11 +61,11 @@ Requirements for milestone v1.7 Cancer Summary Refinement & Gantt Enhancements. 
 
 ### Death Date Validation & Timeline
 
-- [x] **DVAL-01**: Death dates occurring before a patient's earliest treatment date are identified and excluded as impossible (death before treatment is temporally impossible for patients with treatment records)
-- [x] **DVAL-02**: Post-death clinical activity (encounters, diagnoses, treatments after death date) is flagged per patient for manual review without auto-exclusion
-- [x] **DVAL-03**: Patients with death dates but no treatment records are characterized with HL confirmation status, demographics, encounter counts, enrollment periods, and care gap classification
-- [x] **DVAL-04**: HL Diagnosis pseudo-treatment rows (treatment_type = "HL Diagnosis") appear in both gantt_episodes.csv and gantt_detail.csv as a timeline reference point for all HL patients
-- [x] **DVAL-05**: Validated death dates artifact (validated_death_dates.rds) is saved with death_valid and post_death_activity flags, plus three-sheet xlsx validation report and flat CSV export
+- [x] **DVAL-01**: Death dates occurring before a patient's earliest treatment date are identified and excluded as impossible
+- [x] **DVAL-02**: Post-death clinical activity flagged per patient for manual review without auto-exclusion
+- [x] **DVAL-03**: Patients with death dates but no treatment records are characterized
+- [x] **DVAL-04**: HL Diagnosis pseudo-treatment rows appear in both gantt_episodes.csv and gantt_detail.csv
+- [x] **DVAL-05**: Validated death dates artifact saved with death_valid and post_death_activity flags
 
 ## Future Requirements
 
@@ -38,6 +77,13 @@ Deferred to future milestone. Tracked but not in current roadmap.
 - **VIZ-02**: Produce Sankey/alluvial stratified by payer
 - **VIZ-03**: Apply HIPAA small-cell suppression in outputs
 
+### Treatment Pipeline Extensions
+
+- **EXT-01**: Treatment episode boundary formalization (45-day gap threshold)
+- **EXT-02**: Multi-line therapy sequencing (first-line → second-line → third-line)
+- **EXT-03**: Regimen expansion to other HL protocols (Stanford V, BEACOPP)
+- **EXT-04**: Pediatric protocol regimen identification (age <21)
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -47,8 +93,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | Payer x diagnosis timing analysis | v2 |
 | RMarkdown / Shiny rendering | v1 produces raw R scripts and PNG figures |
 | Publication-ready figure formatting | Exploratory quality is sufficient |
-| PREFIX_MAP centralization to R/00_config.R | Acceptable duplication for v1.7; consider in future cleanup |
-| In situ neoplasm (D00-D09) retention | All D-codes removed per user direction |
+| PREFIX_MAP centralization to R/00_config.R | Acceptable duplication; consider in future cleanup |
+| Stanford V / BEACOPP regimen identification | Only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line |
+| Pediatric protocols (age <21) | Adult protocols only for v1.8 |
+| Multi-line therapy sequencing | Requires episode boundary formalization first |
 
 ## Traceability
 
@@ -56,26 +104,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CREF-01 | Phase 55 | Complete |
-| CREF-02 | Phase 55 | Complete |
-| CREF-03 | Phase 55 | Complete |
-| CREF-04 | Phase 56 | Pending |
-| GANTT-01 | Phase 57 | Pending |
-| GANTT-02 | Phase 57 | Pending |
-| GANTT-03 | Phase 57 | Pending |
-| DVAL-01 | Phase 59 | Complete |
-| DVAL-02 | Phase 59 | Complete |
-| DVAL-03 | Phase 59 | Complete |
-| DVAL-04 | Phase 59 | Complete |
-| DVAL-05 | Phase 59 | Complete |
+| LINK-01 | TBD | Pending |
+| LINK-02 | TBD | Pending |
+| LINK-03 | TBD | Pending |
+| LINK-04 | TBD | Pending |
+| TREAT-01 | TBD | Pending |
+| TREAT-02 | TBD | Pending |
+| TREAT-03 | TBD | Pending |
+| TREAT-04 | TBD | Pending |
+| REG-01 | TBD | Pending |
+| REG-02 | TBD | Pending |
+| REG-03 | TBD | Pending |
+| REG-04 | TBD | Pending |
+| FLT-01 | TBD | Pending |
+| FLT-02 | TBD | Pending |
+| DEATH-01 | TBD | Pending |
+| DEATH-02 | TBD | Pending |
+| DEATH-03 | TBD | Pending |
+| OUT-01 | TBD | Pending |
+| OUT-02 | TBD | Pending |
 
 **Coverage:**
-- v1.7 requirements: 12 total
-- Mapped to phases: 12
-- Unmapped: 0
-
-**Coverage validation:** 100% requirement coverage achieved
+- v1.8 requirements: 19 total
+- Mapped to phases: 0
+- Unmapped: 19 (awaiting roadmap)
 
 ---
-*Requirements defined: 2026-05-22*
-*Last updated: 2026-05-28 after Phase 59 planning*
+*Requirements defined: 2026-05-29*
+*Last updated: 2026-05-29 after initial definition*
