@@ -51,13 +51,13 @@ Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therap
 - [x] **CREF-01**: Cancer summary table excludes benign neoplasm D-codes, retaining only malignant C-codes
 - [x] **CREF-02**: Cancer summary table is regenerated after filtering cohort to patients with 2+ HL diagnosis codes at least 7 days apart (column F = 100% HL)
 - [x] **CREF-03**: First HL diagnosis date is computed per patient from both DIAGNOSIS and TUMOR_REGISTRY tables (minimum date)
-- [ ] **CREF-04**: Cancer summary table is produced in two versions — all cancers and cancers occurring after first HL diagnosis date — for side-by-side comparison
+- [x] **CREF-04**: Cancer summary table is produced in two versions — all cancers and cancers occurring after first HL diagnosis date — for side-by-side comparison
 
 ### Gantt Enhancements
 
-- [ ] **GANTT-01**: Each treatment episode row in Gantt data includes cancer category label from CancerSiteCategories mapping (D-codes excluded)
-- [ ] **GANTT-02**: Each treatment episode row includes `is_hodgkin` binary column (TRUE when cancer category is Hodgkin Lymphoma)
-- [ ] **GANTT-03**: Death date from DEATH table is added to Gantt chart data as a treatment type for visualization
+- [x] **GANTT-01**: Each treatment episode row in Gantt data includes cancer category label from CancerSiteCategories mapping (D-codes excluded)
+- [x] **GANTT-02**: Each treatment episode row includes `is_hodgkin` binary column (TRUE when cancer category is Hodgkin Lymphoma)
+- [x] **GANTT-03**: Death date from DEATH table is added to Gantt chart data as a treatment type for visualization
 
 ### Death Date Validation & Timeline
 
@@ -104,31 +104,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LINK-01 | TBD | Pending |
-| LINK-02 | TBD | Pending |
-| LINK-03 | TBD | Pending |
-| LINK-04 | TBD | Pending |
-| TREAT-01 | TBD | Pending |
-| TREAT-02 | TBD | Pending |
-| TREAT-03 | TBD | Pending |
-| TREAT-04 | TBD | Pending |
-| REG-01 | TBD | Pending |
-| REG-02 | TBD | Pending |
-| REG-03 | TBD | Pending |
-| REG-04 | TBD | Pending |
-| FLT-01 | TBD | Pending |
-| FLT-02 | TBD | Pending |
-| DEATH-01 | TBD | Pending |
-| DEATH-02 | TBD | Pending |
-| DEATH-03 | TBD | Pending |
-| OUT-01 | TBD | Pending |
-| OUT-02 | TBD | Pending |
+| LINK-01 | Phase 61 | Pending |
+| LINK-02 | Phase 61 | Pending |
+| LINK-03 | Phase 61 | Pending |
+| LINK-04 | Phase 61 | Pending |
+| TREAT-01 | Phase 60 | Pending |
+| TREAT-02 | Phase 60 | Pending |
+| TREAT-03 | Phase 60 | Pending |
+| TREAT-04 | Phase 60 | Pending |
+| REG-01 | Phase 61 | Pending |
+| REG-02 | Phase 61 | Pending |
+| REG-03 | Phase 61 | Pending |
+| REG-04 | Phase 61 | Pending |
+| FLT-01 | Phase 62 | Pending |
+| FLT-02 | Phase 62 | Pending |
+| DEATH-01 | Phase 62 | Pending |
+| DEATH-02 | Phase 62 | Pending |
+| DEATH-03 | Phase 62 | Pending |
+| OUT-01 | Phase 63 | Pending |
+| OUT-02 | Phase 63 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 (awaiting roadmap)
+- Mapped to phases: 19
+- Unmapped: 0 (100% coverage)
 
 ---
 *Requirements defined: 2026-05-29*
-*Last updated: 2026-05-29 after initial definition*
+*Last updated: 2026-05-29 after roadmap creation (100% coverage achieved)*

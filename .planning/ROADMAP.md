@@ -12,15 +12,15 @@
 - **v1.4 AV+TH Subset Analysis** — Phase 33 (shipped 2026-04-27) — [archive](milestones/v1.4-ROADMAP.md)
 - **v1.5 Payer Analysis Expansion** — Phases 34-37 (shipped 2026-05-01) — [archive](milestones/v1.5-ROADMAP.md)
 - **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-54 (shipped 2026-05-22) — [archive](milestones/v1.6-ROADMAP.md)
-- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-59 (active)
+- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-59 (shipped 2026-05-28) — [archive](milestones/v1.7-ROADMAP.md)
+- **v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification** — Phases 60-63 (active)
 
-## v1.7 Phases
+## v1.8 Phases
 
-- [x] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date (completed 2026-05-22)
-- [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
-- [ ] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data
-- [ ] **Phase 58: Cancer Summary Pre/Post HL Counts** — Update cancer_summary_table.xlsx: remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only)
-- [x] **Phase 59: Death Date Validation & Treatment Timeline Cleanup** — Validate death dates against treatment timelines, exclude impossible pre-treatment deaths, investigate patients with death dates but no treatments (completed 2026-05-28)
+- [ ] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection
+- [ ] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD)
+- [ ] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables
+- [ ] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags
 
 ## Remaining Phases (Unassigned)
 
@@ -79,6 +79,14 @@
   - **Plans:** 1 plan
   - Plans:
     - [x] 46-01-PLAN.md — Episode-to-daily expansion, tier cascade (encounter > fill > enrollment), summary CSVs (executed outside GSD workflow)
+
+## v1.7 Phases
+
+- [x] **Phase 55: Cancer Summary Refinement Foundation** — Remove benign D-codes, confirm HL cohort with 2+ codes 7 days apart, compute first HL diagnosis date (completed 2026-05-22)
+- [x] **Phase 56: Temporal Filtering** — Produce post-HL cancer summary variants filtered to cancers occurring after first HL diagnosis (completed 2026-05-23)
+- [x] **Phase 57: Gantt Enhancements** — Add cancer category labels, is_hodgkin binary flag, and death dates to Gantt chart data (completed 2026-05-27)
+- [x] **Phase 58: Cancer Summary Pre/Post HL Counts** — Update cancer_summary_table.xlsx: remove D codes, add pre/post HL diagnosis count columns for confirmed 7-day cohort (counts only) (completed 2026-05-27)
+- [x] **Phase 59: Death Date Validation & Treatment Timeline Cleanup** — Validate death dates against treatment timelines, exclude impossible pre-treatment deaths, investigate patients with death dates but no treatments (completed 2026-05-28)
 
 ## v1.6 Phases
 
@@ -141,7 +149,7 @@
   - Plans:
     - [x] 52-01-PLAN.md — Create R/52_all_codes_resolved.R: config-driven code extraction, DuckDB count queries, description cascade, config comment curation, all_codes_resolved.xlsx (6 sheets) + 5 per-type xlsx files
 - [x] **Phase 53: Make dataset that produces cancer_summary_template.xlsx** — Create patient-code level cancer summary dataset (completed 2026-05-20)
-  - **Goal:** Create R/53_cancer_summary.R that produces a patient-code level dataset from the DIAGNOSIS table with date-based confirmation metrics (2+ distinct dates, 7-day gap), outputting cancer_summary.xlsx and cancer_summary.csv to output/tables/
+  - **Goal:** Create R/53_cancer_summary.R that produces a patient-level dataset from the DIAGNOSIS table with date-based confirmation metrics (2+ distinct dates, 7-day gap), outputting cancer_summary.xlsx and cancer_summary.csv to output/tables/
   - **Requirements**: CSUM-01, CSUM-02, CSUM-03, CSUM-04
   - **Depends on:** Phase 52
   - **Plans:** 1 plan
@@ -168,9 +176,80 @@
 | 34-37 | v1.5 | Complete | 2026-05-01 |
 | 38-44 | Unassigned | Complete | 2026-05-12 |
 | 45-54 | v1.6 | Complete | 2026-05-22 |
-| 55-57 | v1.7 | Not started | -- |
+| 55-59 | v1.7 | Complete | 2026-05-28 |
+| 60-63 | v1.8 | Not started | -- |
 
 ## Phase Details
+
+### Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution
+
+**Goal:** Establish infrastructure for encounter-level analysis by propagating encounter IDs through treatment episodes, resolving specific drug names for chemotherapy agents, and tightening SCT detection to procedure/prescription sources only.
+
+**Depends on:** Phase 59
+
+**Requirements:** TREAT-01, TREAT-02, TREAT-03, TREAT-04
+
+**Success Criteria** (what must be TRUE):
+1. Treatment episodes include `encounter_ids` column listing all associated ENCOUNTERID values per episode
+2. Each chemotherapy prescription/procedure has resolved drug name via RxNorm API (RXNORM_CUI → generic name)
+3. Drug name lookup table exists as standalone reference artifact (RDS + CSV)
+4. SCT detection excludes ICD diagnosis codes (C81.*, Z85.*), retaining only PROCEDURES/PRESCRIBING/DISPENSING sources
+5. Drug names propagate to treatment episode detail output
+
+**Plans:** TBD
+
+### Phase 61: Episode Classification - Cancer Linkage & Regimen Detection
+
+**Goal:** Classify treatment episodes by linking cancer diagnoses at encounter level (not patient level) and detecting specific first-line regimens through 28-day cycle matching with dropped-agent tolerance.
+
+**Depends on:** Phase 60
+
+**Requirements:** LINK-01, LINK-02, LINK-03, LINK-04, REG-01, REG-02, REG-03, REG-04
+
+**Success Criteria** (what must be TRUE):
+1. Each treatment episode has encounter-level cancer category (direct ENCOUNTERID match or closest diagnosis within 30 days)
+2. Cancer linkage method is tracked per episode (encounter_id/closest_date/none)
+3. HL flag derived from encounter-level diagnosis, not patient-level problem list
+4. Second cancer confirmation requires 2+ diagnoses at least 7 days apart at encounter level
+5. Chemotherapy episodes labeled with regimen name (ABVD, BV+AVD, Nivo+AVD) when cycle composition matches
+6. Dropped-agent tolerance applied - ABVD with bleomycin omitted (AVD) still classified as first-line ABVD
+7. Added agents disqualify - ABVD+X is not ABVD
+8. Temporal availability rules enforced - BV+AVD only post-2019, Nivo+AVD only post-2024
+
+**Plans:** TBD
+
+### Phase 62: First-Line Therapy & Death Analysis
+
+**Goal:** Identify first-line therapy for adult HL patients (21+) using 60-day clean period logic, and produce death date analysis tables quantifying data quality.
+
+**Depends on:** Phase 61
+
+**Requirements:** FLT-01, FLT-02, DEATH-01, DEATH-02, DEATH-03
+
+**Success Criteria** (what must be TRUE):
+1. First-line therapy flag exists for chemotherapy episodes in adults 21+ at treatment date
+2. First-line defined as 60-day clean period with no prior chemotherapy before regimen start
+3. Death date analysis table shows count of patients with death dates recorded
+4. Of patients with death dates, table shows count where death is the last encounter
+5. Table shows count of patients with encounters or treatment occurring after recorded death date, stratified by encounter type
+
+**Plans:** TBD
+
+### Phase 63: Enhanced Gantt Export
+
+**Goal:** Produce Gantt v2 CSV files integrating all v1.8 enhancements (encounter-level cancer categories, HL flags, specific drug names, regimen labels, first-line flags) while preserving existing v1 output files for backward compatibility.
+
+**Depends on:** Phase 62
+
+**Requirements:** OUT-01, OUT-02
+
+**Success Criteria** (what must be TRUE):
+1. gantt_episodes_v2.csv and gantt_detail_v2.csv files exist alongside v1 versions
+2. v2 files include new columns: encounter_ids, cancer_category, cancer_link_method, is_hodgkin, drug_names, regimen_label, is_first_line
+3. Original gantt_episodes.csv and gantt_detail.csv files remain unchanged (backward compatibility)
+4. v2 schema documented with column descriptions
+
+**Plans:** TBD
 
 ### Phase 55: Cancer Summary Refinement Foundation
 
@@ -226,10 +305,10 @@ Plans:
 4. Death dates undergo the same 1900 sentinel date nullification as diagnosis dates
 5. Multi-cancer episodes show all applicable cancer categories (comma-separated or primary category with flag for multiple)
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 57-01-PLAN.md -- Modify R/00_config.R + R/01_load_pcornet.R (DEATH table infrastructure) + R/49_gantt_data_export.R (cancer categories, is_hodgkin, death pseudo-treatment rows)
+- [x] 57-01-PLAN.md -- Modify R/00_config.R + R/01_load_pcornet.R (DEATH table infrastructure) + R/49_gantt_data_export.R (cancer categories, is_hodgkin, death pseudo-treatment rows)
 
 ### Phase 58: Cancer Summary Pre/Post HL Counts
 
@@ -247,10 +326,10 @@ Plans:
 5. Each cancer code row has a both column (patients who had that code both before AND after first HL diagnosis)
 6. All values are raw counts (no percentages)
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 58-01-PLAN.md -- Create R/58_cancer_summary_pre_post.R: DuckDB DIAGNOSIS query, temporal split (pre/post/both relative to first_hl_dx_date), baseline metrics merge, C81 exclusion, styled two-sheet xlsx output
+- [x] 58-01-PLAN.md -- Create R/58_cancer_summary_pre_post.R: DuckDB DIAGNOSIS query, temporal split (pre/post/both relative to first_hl_dx_date), baseline metrics merge, C81 exclusion, styled two-sheet xlsx output
 
 ### Phase 59: Death Date Validation & Treatment Timeline Cleanup
 
@@ -275,4 +354,4 @@ Plans:
 - [x] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
 
 ---
-*Last updated: 2026-05-28 -- Phase 59 planned (2 plans)*
+*Last updated: 2026-05-29 -- v1.8 phases 60-63 added (4 phases)*

@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Episode-Level Cancer Linkage & First-Line Therapy Identification
-status: defining_requirements
-stopped_at: Milestone started
+status: roadmap_created
+stopped_at: Ready to plan Phase 60
 last_updated: "2026-05-29"
 last_activity: 2026-05-29
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,15 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Defining requirements for v1.8
+**Current focus:** v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification (Phases 60-63)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-29 — Milestone v1.8 started
+Phase: 60 (Foundation - ENCOUNTERID Propagation & Drug Name Resolution)
+Plan: Not started
+Status: Roadmap created, ready to plan
+Progress: ▱▱▱▱▱▱▱▱▱▱ 0% (0/4 phases complete)
+Last activity: 2026-05-29 — Roadmap created for v1.8
 
 ## Performance Metrics
 
@@ -50,6 +51,7 @@ Last activity: 2026-05-29 — Milestone v1.8 started
 
 - Last milestone (v1.7): Cancer summary refinement, Gantt enhancements, death date validation
 - Trend: Stable
+- Current milestone (v1.8): Encounter-level cancer linkage, first-line therapy regimen identification
 
 *Updated after each plan completion*
 
@@ -63,27 +65,34 @@ Recent decisions affecting current work:
 - Phase 55: R/55 consolidates R/53 and R/54 into single script; first HL diagnosis date uses pmin() for true minimum across DIAGNOSIS+TUMOR_REGISTRY
 - Phase 57: Cancer categories from cancer_summary.csv via PREFIX_MAP classification in Gantt export
 - Phase 59: Death date validation with impossible death exclusion; HL Diagnosis pseudo-treatment rows
-- v1.8: Encounter-level cancer linkage replaces patient-level; drop ICD DX from SCT detection; new Gantt files
+- v1.8: Encounter-level cancer linkage replaces patient-level; drop ICD DX from SCT detection; new Gantt files preserve existing v1 output
 
 ### Pending Todos
 
-None yet.
+- Phase 60: Determine ENCOUNTERID population rate per table (PROCEDURES/PRESCRIBING/DISPENSING) before designing linkage strategy
+- Phase 61: Clinical validation for regimen definitions (brentuximab replaces bleomycin in BV+AVD, not additive)
+- Phase 61: Determine dropped-agent tolerance threshold (3 of 4 drugs vs 2 of 4 for ABVD→AVD)
 
 ### Blockers/Concerns
 
 - PREFIX_MAP duplication across R/47, R/53, R/54, R/49 creates sync risk — consider centralizing to R/00_config.R
-- Cancer category currently patient-level — v1.8 will shift to encounter-level linkage
+- ENCOUNTERID population rates are site-dependent (39-90% validated range) — requires data inspection before Phase 61 linkage strategy
+- Regimen fragmentation risk: ABVD requires 4 drugs across 28-day cycle; infusion centers create separate encounters per drug
 
 ### Roadmap Evolution
 
-None yet — requirements being defined.
+v1.8 roadmap created with coarse granularity (4 phases vs research-suggested 7):
+- Phase 60: Foundation (combines research Phase 60+61) - ENCOUNTERID + drug names + SCT tightening
+- Phase 61: Episode Classification (combines research Phase 62+63) - Cancer linkage + regimen detection
+- Phase 62: First-Line Therapy & Death Analysis (combines research Phase 64+66) - First-line ID + death tables
+- Phase 63: Enhanced Gantt Export (research Phase 65) - Gantt v2 with all enhancements
 
 ## Session Continuity
 
 Last session: 2026-05-29
-Stopped at: Milestone v1.8 started — defining requirements
-Resume file: None
-Next step: Define requirements and create roadmap
+Stopped at: Roadmap created for v1.8 (Phases 60-63)
+Resume file: .planning/ROADMAP.md
+Next step: `/gsd:plan-phase 60` to create implementation plans for Phase 60
 
 ---
-*Last updated: 2026-05-29 — Milestone v1.8 started*
+*Last updated: 2026-05-29 — v1.8 roadmap created (4 phases, 19 requirements)*
