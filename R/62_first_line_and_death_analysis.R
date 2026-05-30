@@ -164,12 +164,16 @@ first_line_ids <- first_line_flags %>%
 message(glue("  First-line episodes identified: {nrow(first_line_ids)} patients"))
 
 # Step 3e: Enrich treatment_episodes.rds in-place (per D-09)
-episodes <- episodes %>%
-  left_join(
-    first_line_ids %>% mutate(is_first_line = TRUE),
-    by = c("patient_id", "episode_number")
-  ) %>%
-  mutate(is_first_line = if_else(is.na(is_first_line), FALSE, is_first_line))
+if (nrow(first_line_ids) == 0) {
+  episodes$is_first_line <- FALSE
+} else {
+  episodes <- episodes %>%
+    left_join(
+      first_line_ids %>% mutate(is_first_line = TRUE),
+      by = c("patient_id", "episode_number")
+    ) %>%
+    mutate(is_first_line = if_else(is.na(is_first_line), FALSE, is_first_line))
+}
 
 # Save modified RDS
 saveRDS(episodes, OUTPUT_RDS)
