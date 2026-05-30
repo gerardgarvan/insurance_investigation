@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Phases
-status: planning
-stopped_at: Phase 60 context gathered
-last_updated: "2026-05-29T23:29:19.712Z"
-last_activity: 2026-05-29 — Roadmap created for v1.8
+status: executing
+stopped_at: Completed 60-02-PLAN.md
+last_updated: "2026-05-30T02:42:35.367Z"
+last_activity: 2026-05-30
 progress:
   total_phases: 59
   completed_phases: 48
-  total_plans: 88
-  completed_plans: 82
+  total_plans: 91
+  completed_plans: 83
   percent: 0
 ---
 
@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification (Phases 60-63)
+**Current focus:** Phase 60 — Foundation - ENCOUNTERID Propagation & Drug Name Resolution
 
 ## Current Position
 
-Phase: 60 (Foundation - ENCOUNTERID Propagation & Drug Name Resolution)
-Plan: Not started
-Status: Roadmap created, ready to plan
+Phase: 60 (Foundation - ENCOUNTERID Propagation & Drug Name Resolution) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Progress: ▱▱▱▱▱▱▱▱▱▱ 0% (0/4 phases complete)
-Last activity: 2026-05-29 — Roadmap created for v1.8
+Last activity: 2026-05-30
 
 ## Performance Metrics
 
@@ -67,6 +67,11 @@ Recent decisions affecting current work:
 - Phase 57: Cancer categories from cancer_summary.csv via PREFIX_MAP classification in Gantt export
 - Phase 59: Death date validation with impossible death exclusion; HL Diagnosis pseudo-treatment rows
 - v1.8: Encounter-level cancer linkage replaces patient-level; drop ICD DX from SCT detection; new Gantt files preserve existing v1 output
+- [Phase 60]: Drug name resolution covers chemotherapy only (D-06)
+- [Phase 60]: Both RXNORM_CUI and NDC codes resolved via R/40 functions (D-07)
+- [Phase 60]: Only codes from patient data queried, not all config codes (D-08)
+- [Phase 60]: Results cached in drug_name_lookup.rds; re-runs only query new codes (D-09)
+- [Phase 60]: Standalone script separate from episode extraction (D-10)
 
 ### Pending Todos
 
@@ -91,9 +96,9 @@ v1.8 roadmap created with coarse granularity (4 phases vs research-suggested 7):
 
 ## Session Continuity
 
-Last session: 2026-05-29T23:29:19.702Z
-Stopped at: Phase 60 context gathered
-Resume file: .planning/phases/60-foundation-encounterid-propagation-and-drug-name-resolution/60-CONTEXT.md
+Last session: 2026-05-30T02:42:35.357Z
+Stopped at: Completed 60-02-PLAN.md
+Resume file: None
 Next step: `/gsd:plan-phase 60` to create implementation plans for Phase 60
 
 ---

@@ -17,8 +17,8 @@ Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therap
 ### Treatment Validation
 
 - [ ] **TREAT-01**: SCT source audit — quantify how many SCT detections come from ICD DX codes only vs PROCEDURES/PRESCRIBING/DISPENSING
-- [ ] **TREAT-02**: Specific drug names resolved for each chemotherapy episode via RxNorm API (RXNORM_CUI/NDC → generic drug name)
-- [ ] **TREAT-03**: Drug name lookup table produced as standalone reference artifact
+- [x] **TREAT-02**: Specific drug names resolved for each chemotherapy episode via RxNorm API (RXNORM_CUI/NDC → generic drug name)
+- [x] **TREAT-03**: Drug name lookup table produced as standalone reference artifact
 - [ ] **TREAT-04**: Drug names carried through to Gantt episode output
 
 ### Regimen Identification
@@ -109,8 +109,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LINK-03 | Phase 61 | Pending |
 | LINK-04 | Phase 61 | Pending |
 | TREAT-01 | Phase 60 | Pending |
-| TREAT-02 | Phase 60 | Pending |
-| TREAT-03 | Phase 60 | Pending |
+| TREAT-02 | Phase 60 | Complete |
+| TREAT-03 | Phase 60 | Complete |
 | TREAT-04 | Phase 60 | Pending |
 | REG-01 | Phase 61 | Pending |
 | REG-02 | Phase 61 | Pending |

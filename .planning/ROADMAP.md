@@ -196,11 +196,11 @@
 4. SCT detection excludes ICD diagnosis codes (C81.*, Z85.*), retaining only PROCEDURES/PRESCRIBING/DISPENSING sources
 5. Drug names propagate to treatment episode detail output
 
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 60-01-PLAN.md — ENCOUNTERID extraction in R/43a+R/44a, SCT source audit + DX code removal from config, ENCOUNTERID population rate inspection
-- [ ] 60-02-PLAN.md — Create R/60_drug_name_resolution.R: standalone drug name lookup via RxNorm API with caching (RDS + CSV output)
+- [x] 60-02-PLAN.md — Create R/60_drug_name_resolution.R: standalone drug name lookup via RxNorm API with caching (RDS + CSV output)
 - [ ] 60-03-PLAN.md — Drug name join in R/44a, Gantt CSV propagation (encounter_ids + drug_names), Phase 60 audit xlsx
 
 ### Phase 61: Episode Classification - Cancer Linkage & Regimen Detection
