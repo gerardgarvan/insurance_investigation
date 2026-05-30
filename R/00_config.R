@@ -943,13 +943,6 @@ TREATMENT_CODES <- list(
   radiation_dx_icd9 = c(
     "V58.0"     # Encounter for radiotherapy
   ),
-  sct_dx_icd10 = c(
-    "Z94.84",   # Stem cells transplant status
-    "T86.5",    # Complications of stem cell transplant
-    "T86.09",   # Other complications of bone marrow transplant
-    "Z48.290",  # Encounter for aftercare following bone marrow transplant
-    "T86.0"     # Complications of bone marrow transplant (per D-09 in CONTEXT.md)
-  ),
 
   # MS-DRG treatment evidence (ENCOUNTER table DRG column)
   chemo_drg = c(

@@ -103,7 +103,7 @@ extract_chemo_dates <- function() {
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE) %>%
+      select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -114,7 +114,7 @@ extract_chemo_dates <- function() {
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       mutate(treatment_date = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
       filter(!is.na(treatment_date)) %>%
-      select(ID, treatment_date) %>%
+      select(ID, treatment_date, ENCOUNTERID) %>%
       collect()
   }
 
@@ -127,7 +127,7 @@ extract_chemo_dates <- function() {
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
       ) %>%
       filter(!is.na(DX_DATE)) %>%
-      select(ID, treatment_date = DX_DATE) %>%
+      select(ID, treatment_date = DX_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -137,7 +137,7 @@ extract_chemo_dates <- function() {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE) %>%
+      select(ID, treatment_date = ADMIT_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -148,7 +148,7 @@ extract_chemo_dates <- function() {
     disp_dates <- get_pcornet_table("DISPENSING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
-      select(ID, treatment_date = DISPENSE_DATE) %>%
+      select(ID, treatment_date = DISPENSE_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -159,7 +159,7 @@ extract_chemo_dates <- function() {
     ma_dates <- get_pcornet_table("MED_ADMIN") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
-      select(ID, treatment_date = MEDADMIN_START_DATE) %>%
+      select(ID, treatment_date = MEDADMIN_START_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -184,8 +184,11 @@ extract_chemo_dates <- function() {
             values_to = "treatment_date"
           ) %>%
           filter(!is.na(treatment_date)) %>%
-          mutate(treatment_date = as.Date(treatment_date)) %>%
-          select(ID, treatment_date)
+          mutate(
+            treatment_date = as.Date(treatment_date),
+            ENCOUNTERID = NA_character_
+          ) %>%
+          select(ID, treatment_date, ENCOUNTERID)
       }
     }
   }
@@ -216,7 +219,7 @@ extract_radiation_dates <- function() {
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE) %>%
+      select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -229,7 +232,7 @@ extract_radiation_dates <- function() {
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
       ) %>%
       filter(!is.na(DX_DATE)) %>%
-      select(ID, treatment_date = DX_DATE) %>%
+      select(ID, treatment_date = DX_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -239,7 +242,7 @@ extract_radiation_dates <- function() {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE) %>%
+      select(ID, treatment_date = ADMIT_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -263,8 +266,11 @@ extract_radiation_dates <- function() {
             values_to = "treatment_date"
           ) %>%
           filter(!is.na(treatment_date)) %>%
-          mutate(treatment_date = as.Date(treatment_date)) %>%
-          select(ID, treatment_date)
+          mutate(
+            treatment_date = as.Date(treatment_date),
+            ENCOUNTERID = NA_character_
+          ) %>%
+          select(ID, treatment_date, ENCOUNTERID)
       }
     }
   }
@@ -275,7 +281,7 @@ extract_radiation_dates <- function() {
   )
 }
 
-#' Extract all SCT dates from 4 sources
+#' Extract all SCT dates from 3 sources
 extract_sct_dates <- function() {
   # 1. PROCEDURES: CPT/HCPCS, ICD-9-CM, ICD-10-PCS (exact match), revenue
   px_dates <- NULL
@@ -288,31 +294,21 @@ extract_sct_dates <- function() {
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE) %>%
+      select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
       collect()
   }
 
-  # 2. DIAGNOSIS: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only)
-  dx_dates <- NULL
-  if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
-    dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
-      filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
-      filter(!is.na(DX_DATE)) %>%
-      select(ID, treatment_date = DX_DATE) %>%
-      collect()
-  }
-
-  # 3. ENCOUNTER: DRGs 014, 016, 017
+  # 2. ENCOUNTER: DRGs 014, 016, 017
   drg_dates <- NULL
   if (!is.null(get_pcornet_table("ENCOUNTER"))) {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE) %>%
+      select(ID, treatment_date = ADMIT_DATE, ENCOUNTERID) %>%
       collect()
   }
 
-  # 4. TUMOR_REGISTRY_ALL: SCT-related date columns
+  # 3. TUMOR_REGISTRY_ALL: SCT-related date columns
   tr_dates <- NULL
   if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_sct_cols <- intersect(
@@ -333,14 +329,17 @@ extract_sct_dates <- function() {
             values_to = "treatment_date"
           ) %>%
           filter(!is.na(treatment_date)) %>%
-          mutate(treatment_date = as.Date(treatment_date)) %>%
-          select(ID, treatment_date)
+          mutate(
+            treatment_date = as.Date(treatment_date),
+            ENCOUNTERID = NA_character_
+          ) %>%
+          select(ID, treatment_date, ENCOUNTERID)
       }
     }
   }
 
   stack_and_dedup(
-    sources = list(PX = px_dates, DX = dx_dates, DRG = drg_dates, TR = tr_dates),
+    sources = list(PX = px_dates, DRG = drg_dates, TR = tr_dates),
     type_name = "SCT"
   )
 }
@@ -359,7 +358,7 @@ extract_immunotherapy_dates <- function() {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(PX_TYPE == "10" & str_detect(PX, cart_icd10pcs_rx)) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE) %>%
+      select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -370,7 +369,7 @@ extract_immunotherapy_dates <- function() {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$immunotherapy_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE) %>%
+      select(ID, treatment_date = ADMIT_DATE, ENCOUNTERID) %>%
       collect()
   }
 
@@ -386,7 +385,12 @@ extract_immunotherapy_dates <- function() {
 #' records across sources (e.g., a procedure AND a diagnosis on the same day
 #' should count as one treatment date, not two).
 #'
-#' @param sources Named list of tibbles (each with ID + treatment_date), NULLs allowed
+#' Phase 60: accepts 3-column input (ID, treatment_date, ENCOUNTERID) but
+#' returns 2-column output (ID, treatment_date) for R/43a compatibility.
+#' ENCOUNTERID is extracted for consistency with R/44a but not needed in
+#' R/43a's patient-level duration summary.
+#'
+#' @param sources Named list of tibbles (each with ID + treatment_date + ENCOUNTERID), NULLs allowed
 #' @param type_name Character. Treatment type name for logging
 #' @return Tibble with columns: ID (character), treatment_date (Date)
 stack_and_dedup <- function(sources, type_name) {
@@ -418,6 +422,7 @@ stack_and_dedup <- function(sources, type_name) {
   n_before <- nrow(stacked)
 
   # CRITICAL: deduplicate same-day records across sources
+  # Drop ENCOUNTERID after stacking -- not needed for R/43a's patient-level output
   result <- stacked %>%
     distinct(ID, treatment_date) %>%
     arrange(ID, treatment_date)
@@ -546,7 +551,158 @@ log_duration_stats <- function(durations_df, type_name) {
 }
 
 
-message("=== Phase 43: Treatment Duration Analysis ===\n")
+# --- SECTION 2a: ENCOUNTERID POPULATION RATE INSPECTION (Phase 60, D-05) ---
+
+message("\n=== ENCOUNTERID Population Rate Inspection ===")
+
+# Tables to inspect: PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER, DIAGNOSIS
+inspect_tables <- c("PROCEDURES", "PRESCRIBING", "DISPENSING", "MED_ADMIN", "ENCOUNTER", "DIAGNOSIS")
+
+encounterid_profile <- map_dfr(inspect_tables, function(tbl_name) {
+  tbl <- get_pcornet_table(tbl_name)
+  if (is.null(tbl)) {
+    return(tibble(
+      table = tbl_name,
+      total_rows = 0L,
+      encounterid_populated = 0L,
+      population_rate = 0.0
+    ))
+  }
+
+  stats <- tbl %>%
+    summarise(
+      total_rows = n(),
+      encounterid_populated = sum(!is.na(ENCOUNTERID), na.rm = TRUE)
+    ) %>%
+    collect()
+
+  tibble(
+    table = tbl_name,
+    total_rows = as.integer(stats$total_rows),
+    encounterid_populated = as.integer(stats$encounterid_populated),
+    population_rate = round(100 * stats$encounterid_populated / stats$total_rows, 1)
+  )
+})
+
+# Log to console
+message("\nENCOUNTERID Population Rates by Table:")
+for (i in 1:nrow(encounterid_profile)) {
+  row <- encounterid_profile[i, ]
+  message(glue("  {row$table}: {row$encounterid_populated}/{row$total_rows} ({row$population_rate}%)"))
+}
+
+# Save for Plan 03 xlsx
+encounterid_profile_path <- file.path(CONFIG$cache$outputs_dir, "encounterid_profile.rds")
+saveRDS(encounterid_profile, encounterid_profile_path)
+message(glue("\nSaved: {encounterid_profile_path}"))
+
+
+# --- SECTION 2b: SCT SOURCE AUDIT (Phase 60, D-13, D-14, TREAT-01) ---
+
+message("\n=== SCT Source Audit: Pre/Post DX Code Removal ===")
+
+# Define temporary audit function (NO DX codes) inline
+extract_sct_dates_no_dx <- function() {
+  # 1. PROCEDURES: CPT/HCPCS, ICD-9-CM, ICD-10-PCS (exact match), revenue
+  px_dates <- NULL
+  if (!is.null(get_pcornet_table("PROCEDURES"))) {
+    px_dates <- get_pcornet_table("PROCEDURES") %>%
+      filter(
+        (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
+        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
+      ) %>%
+      filter(!is.na(PX_DATE)) %>%
+      select(ID, treatment_date = PX_DATE) %>%
+      collect()
+  }
+
+  # 2. ENCOUNTER: DRGs 014, 016, 017
+  drg_dates <- NULL
+  if (!is.null(get_pcornet_table("ENCOUNTER"))) {
+    drg_dates <- get_pcornet_table("ENCOUNTER") %>%
+      filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
+      filter(!is.na(ADMIT_DATE)) %>%
+      select(ID, treatment_date = ADMIT_DATE) %>%
+      collect()
+  }
+
+  # 3. TUMOR_REGISTRY_ALL: SCT-related date columns
+  tr_dates <- NULL
+  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
+    tr_sct_cols <- intersect(
+      c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
+      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
+    )
+    if (length(tr_sct_cols) > 0) {
+      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
+        select(ID, all_of(tr_sct_cols)) %>%
+        collect() %>%
+        filter(if_any(all_of(tr_sct_cols), ~ !is.na(.)))
+      if (nrow(tr_data) > 0) {
+        tr_dates <- tr_data %>%
+          pivot_longer(
+            cols = all_of(tr_sct_cols),
+            names_to = "date_source",
+            values_to = "treatment_date"
+          ) %>%
+          filter(!is.na(treatment_date)) %>%
+          mutate(treatment_date = as.Date(treatment_date)) %>%
+          select(ID, treatment_date)
+      }
+    }
+  }
+
+  stack_and_dedup(
+    sources = list(PX = px_dates, DRG = drg_dates, TR = tr_dates),
+    type_name = "SCT (no DX)"
+  )
+}
+
+# Run audit: WITH DX codes (current extract_sct_dates)
+sct_with_dx <- extract_sct_dates()
+
+# Run audit: WITHOUT DX codes (temporary function)
+sct_without_dx <- extract_sct_dates_no_dx()
+
+# Compute delta
+patients_with_dx <- n_distinct(sct_with_dx$ID)
+patients_without_dx <- n_distinct(sct_without_dx$ID)
+patients_lost <- setdiff(unique(sct_with_dx$ID), unique(sct_without_dx$ID))
+n_lost <- length(patients_lost)
+retention_rate <- if (patients_with_dx > 0) round(100 * patients_without_dx / patients_with_dx, 1) else 0
+
+sct_audit_result <- tibble(
+  metric = c(
+    "Patients with SCT (WITH DX codes)",
+    "Patients with SCT (WITHOUT DX codes)",
+    "Patients lost (DX-only detection)",
+    "Retention rate"
+  ),
+  value = c(
+    as.character(patients_with_dx),
+    as.character(patients_without_dx),
+    as.character(n_lost),
+    paste0(retention_rate, "%")
+  )
+)
+
+# Log to console
+message("\nSCT Source Audit Results:")
+for (i in 1:nrow(sct_audit_result)) {
+  row <- sct_audit_result[i, ]
+  message(glue("  {row$metric}: {row$value}"))
+}
+
+# Save for Plan 03 xlsx
+sct_audit_result_path <- file.path(CONFIG$cache$outputs_dir, "sct_audit_result.rds")
+saveRDS(sct_audit_result, sct_audit_result_path)
+message(glue("\nSaved: {sct_audit_result_path}"))
+
+
+message("\n=== Phase 43: Treatment Duration Analysis ===\n")
 
 # Per D-12: loop over all four treatment types
 results_list <- list()
