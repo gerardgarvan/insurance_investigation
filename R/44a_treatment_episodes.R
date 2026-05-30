@@ -627,14 +627,70 @@ all_episodes <- bind_rows(episodes_list) %>%
   select(patient_id, treatment_type, episode_number, episode_start, episode_stop,
          episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes, encounter_ids)
 
-# Save RDS artifact
-saveRDS(all_episodes, OUTPUT_RDS)
-message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_episodes)} rows)"))
-
-# Combine detail-level data and save
+# Combine detail-level data
 all_detail <- bind_rows(detail_list) %>%
   select(patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID,
          episode_number, episode_start, episode_stop, historical_flag)
+
+
+# --- SECTION 5B: JOIN DRUG NAMES TO EPISODE DETAIL ---
+
+message("\n--- Joining drug names to episode detail ---")
+DRUG_LOOKUP_RDS <- file.path(CONFIG$cache$outputs_dir, "drug_name_lookup.rds")
+
+if (file.exists(DRUG_LOOKUP_RDS)) {
+  drug_lookup <- readRDS(DRUG_LOOKUP_RDS)
+  message(glue("  Loaded {nrow(drug_lookup)} drug name lookups"))
+} else {
+  warning("drug_name_lookup.rds not found. Run R/60_drug_name_resolution.R first. Drug names will be NA.")
+  drug_lookup <- tibble(code = character(0), drug_name = character(0))
+}
+
+# Join drug name to detail level (one row per patient/date/code)
+# Per D-12: left_join on triggering_code = code
+all_detail <- all_detail %>%
+  left_join(
+    drug_lookup %>% select(code, drug_name),
+    by = c("triggering_code" = "code")
+  )
+
+n_with_names <- sum(!is.na(all_detail$drug_name))
+n_chemo_rows <- sum(all_detail$treatment_type == "Chemotherapy")
+message(glue("  Drug names joined: {n_with_names} detail rows have drug names ({n_chemo_rows} chemotherapy rows total)"))
+
+# Aggregate drug_names per episode from detail level
+# Per D-12: comma-separated unique drug names per episode
+drug_names_per_episode <- all_detail %>%
+  filter(!is.na(drug_name)) %>%
+  group_by(patient_id, treatment_type, episode_number) %>%
+  summarise(
+    drug_names = paste(sort(unique(drug_name)), collapse = ","),
+    .groups = "drop"
+  )
+
+# Join to episodes
+all_episodes <- all_episodes %>%
+  left_join(drug_names_per_episode, by = c("patient_id", "treatment_type", "episode_number")) %>%
+  mutate(drug_names = ifelse(is.na(drug_names), "", drug_names))
+
+n_with_drugs <- sum(nchar(all_episodes$drug_names) > 0)
+message(glue("  Episodes with drug names: {n_with_drugs} / {nrow(all_episodes)}"))
+
+# Update all_episodes select to include drug_names
+all_episodes <- all_episodes %>%
+  select(patient_id, treatment_type, episode_number, episode_start, episode_stop,
+         episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes,
+         encounter_ids, drug_names)
+
+# Update all_detail select to include drug_name
+all_detail <- all_detail %>%
+  select(patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID, drug_name,
+         episode_number, episode_start, episode_stop, historical_flag)
+
+# Save RDS artifacts (now with drug name columns)
+saveRDS(all_episodes, OUTPUT_RDS)
+message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_episodes)} rows)"))
+
 saveRDS(all_detail, OUTPUT_DETAIL_RDS)
 message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))
 
@@ -644,15 +700,16 @@ message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))
 message("\n--- Writing per-type CSV files ---")
 
 for (type in TREATMENT_TYPES) {
-  type_data <- episodes_list[[type]]
+  # Get updated data from all_episodes (which now has drug_names)
+  type_data <- all_episodes %>% filter(treatment_type == type)
   csv_name <- paste0(tolower(gsub(" ", "_", type)), "_episodes.csv")
   csv_path <- file.path(CONFIG$output_dir, csv_name)
 
-  # Phase 60: encounter_ids as column 9 (last column after triggering_codes)
+  # Phase 60: encounter_ids as column 9, drug_names as column 10
   write_df <- type_data %>%
     select(patient_id, episode_number, episode_start, episode_stop,
            episode_length_days, distinct_dates_in_episode, historical_flag,
-           triggering_codes, encounter_ids)
+           triggering_codes, encounter_ids, drug_names)
 
   write.csv(write_df, csv_path, row.names = FALSE)
   message(glue("  Wrote {csv_path} ({nrow(write_df)} episodes)"))
@@ -664,12 +721,13 @@ for (type in TREATMENT_TYPES) {
 message("\n--- Writing per-type detail CSV files ---")
 
 for (type in TREATMENT_TYPES) {
-  type_detail <- detail_list[[type]]
+  # Get updated data from all_detail (which now has drug_name)
+  type_detail <- all_detail %>% filter(treatment_type == type)
   csv_name <- paste0(tolower(gsub(" ", "_", type)), "_episode_detail.csv")
   csv_path <- file.path(CONFIG$output_dir, csv_name)
 
   write_df <- type_detail %>%
-    select(patient_id, treatment_date, triggering_code, ENCOUNTERID,
+    select(patient_id, treatment_date, triggering_code, ENCOUNTERID, drug_name,
            episode_number, episode_start, episode_stop, historical_flag) %>%
     arrange(patient_id, treatment_date)
 
@@ -758,31 +816,32 @@ wb$set_col_widths(sheet = "Summary", cols = 1:8, widths = c(20, 12, 12, 18, 14, 
 
 # ---------- SHEETS 2-5: PER-TYPE DETAIL SHEETS ----------
 for (type in TREATMENT_TYPES) {
-  type_data <- episodes_list[[type]]
+  # Get updated data from all_episodes (which now has drug_names)
+  type_data <- all_episodes %>% filter(treatment_type == type)
   sheet_name <- as.character(glue("{type} Episodes"))
   wb$add_worksheet(sheet_name)
 
   n_episodes <- nrow(type_data)
   n_patients <- if (n_episodes > 0) n_distinct(type_data$patient_id) else 0
 
-  # Row 1: Title — updated to span 9 columns (A1:I1) for Phase 60
+  # Row 1: Title — updated to span 10 columns (A1:J1) for Phase 60
   title_text <- as.character(glue("{type} Treatment Episodes ({n_episodes} episodes, {n_patients} patients)"))
   wb$add_data(sheet = sheet_name, x = title_text, start_row = 1, start_col = 1)
   wb$add_font(sheet = sheet_name, dims = "A1",
               name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
-  wb$merge_cells(sheet = sheet_name, dims = "A1:I1")
+  wb$merge_cells(sheet = sheet_name, dims = "A1:J1")
 
-  # Row 2: Headers — column 8 = "Triggering Codes", column 9 = "Encounter IDs" (Phase 60)
+  # Row 2: Headers — column 8 = "Triggering Codes", column 9 = "Encounter IDs", column 10 = "Drug Names"
   detail_headers <- c("Patient ID", "Episode #", "Start Date", "Stop Date",
-                      "Length (days)", "Distinct Dates", "Historical", "Triggering Codes", "Encounter IDs")
+                      "Length (days)", "Distinct Dates", "Historical", "Triggering Codes", "Encounter IDs", "Drug Names")
   for (j in seq_along(detail_headers)) {
     wb$add_data(sheet = sheet_name, x = detail_headers[j], start_row = 2, start_col = j)
   }
 
   colors <- TREATMENT_TYPE_COLORS[[type]]
-  # Updated dims from A2:H2 to A2:I2 for 9 columns
-  wb$add_fill(sheet = sheet_name, dims = "A2:I2", color = wb_color(colors$fill))
-  wb$add_font(sheet = sheet_name, dims = "A2:I2",
+  # Updated dims from A2:I2 to A2:J2 for 10 columns
+  wb$add_fill(sheet = sheet_name, dims = "A2:J2", color = wb_color(colors$fill))
+  wb$add_font(sheet = sheet_name, dims = "A2:J2",
               name = "Calibri", size = 11, bold = TRUE, color = wb_color(colors$font))
 
   # Data rows (row 3+)
@@ -797,28 +856,29 @@ for (type in TREATMENT_TYPES) {
       Historical = type_data$historical_flag,
       Triggering_Codes = type_data$triggering_codes,
       Encounter_IDs = type_data$encounter_ids,
+      Drug_Names = type_data$drug_names,
       stringsAsFactors = FALSE
     )
 
     wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
 
-    # Apply gray fill to historical rows — updated dims from A{row}:H{row} to A{row}:I{row}
+    # Apply gray fill to historical rows — updated dims from A{row}:I{row} to A{row}:J{row}
     historical_rows <- which(type_data$historical_flag)
     if (length(historical_rows) > 0) {
       for (row_idx in historical_rows) {
         row_num <- 2 + row_idx  # +2 because data starts at row 3
-        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:I{row_num}"),
+        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:J{row_num}"),
                     color = wb_color("FFE5E5E5"))
       }
     }
 
-    # Number formatting for numeric columns (E and F only; H and I are text)
+    # Number formatting for numeric columns (E and F only; H, I, J are text)
     last_row <- 2 + n_episodes
     wb$add_numfmt(sheet = sheet_name, dims = glue("E3:F{last_row}"), numfmt = "#,##0")
   }
 
-  # Column widths — column 8 (Triggering Codes) and column 9 (Encounter IDs) get width 30 for strings
-  wb$set_col_widths(sheet = sheet_name, cols = 1:9, widths = c(20, 12, 15, 15, 15, 15, 12, 30, 30))
+  # Column widths — column 8 (Triggering Codes), column 9 (Encounter IDs), column 10 (Drug Names) get width 30
+  wb$set_col_widths(sheet = sheet_name, cols = 1:10, widths = c(20, 12, 15, 15, 15, 15, 12, 30, 30, 30))
 }
 
 
@@ -895,30 +955,31 @@ wb$set_col_widths(sheet = "Historical Summary", cols = 1:5, widths = c(20, 12, 1
 
 # ---------- SHEETS 7-10: PER-TYPE DETAIL SHEETS (one row per date+code) ----------
 for (type in TREATMENT_TYPES) {
-  type_detail <- detail_list[[type]]
+  # Get updated data from all_detail (which now has drug_name)
+  type_detail <- all_detail %>% filter(treatment_type == type)
   sheet_name <- as.character(glue("{type} Detail"))
   wb$add_worksheet(sheet_name)
 
   n_rows <- nrow(type_detail)
   n_patients <- if (n_rows > 0) n_distinct(type_detail$patient_id) else 0
 
-  # Row 1: Title
+  # Row 1: Title — updated to span 9 columns (A1:I1) for Phase 60
   title_text <- as.character(glue("{type} Episode Detail ({n_rows} rows, {n_patients} patients)"))
   wb$add_data(sheet = sheet_name, x = title_text, start_row = 1, start_col = 1)
   wb$add_font(sheet = sheet_name, dims = "A1",
               name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
-  wb$merge_cells(sheet = sheet_name, dims = "A1:G1")
+  wb$merge_cells(sheet = sheet_name, dims = "A1:I1")
 
-  # Row 2: Headers
-  detail_headers <- c("Patient ID", "Treatment Date", "Triggering Code",
+  # Row 2: Headers — add ENCOUNTERID (col 4) and Drug Name (col 5)
+  detail_headers <- c("Patient ID", "Treatment Date", "Triggering Code", "ENCOUNTERID", "Drug Name",
                        "Episode #", "Episode Start", "Episode Stop", "Historical")
   for (j in seq_along(detail_headers)) {
     wb$add_data(sheet = sheet_name, x = detail_headers[j], start_row = 2, start_col = j)
   }
 
   colors <- TREATMENT_TYPE_COLORS[[type]]
-  wb$add_fill(sheet = sheet_name, dims = "A2:G2", color = wb_color(colors$fill))
-  wb$add_font(sheet = sheet_name, dims = "A2:G2",
+  wb$add_fill(sheet = sheet_name, dims = "A2:I2", color = wb_color(colors$fill))
+  wb$add_font(sheet = sheet_name, dims = "A2:I2",
               name = "Calibri", size = 11, bold = TRUE, color = wb_color(colors$font))
 
   # Data rows (row 3+)
@@ -927,6 +988,8 @@ for (type in TREATMENT_TYPES) {
       Patient_ID = type_detail$patient_id,
       Treatment_Date = as.character(type_detail$treatment_date),
       Triggering_Code = type_detail$triggering_code,
+      ENCOUNTERID = type_detail$ENCOUNTERID,
+      Drug_Name = type_detail$drug_name,
       Episode_Num = type_detail$episode_number,
       Episode_Start = as.character(type_detail$episode_start),
       Episode_Stop = as.character(type_detail$episode_stop),
@@ -936,25 +999,140 @@ for (type in TREATMENT_TYPES) {
 
     wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
 
-    # Gray fill for historical rows
+    # Gray fill for historical rows — updated dims from A{row}:G{row} to A{row}:I{row}
     historical_rows <- which(type_detail$historical_flag)
     if (length(historical_rows) > 0) {
       for (row_idx in historical_rows) {
         row_num <- 2 + row_idx
-        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:G{row_num}"),
+        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:I{row_num}"),
                     color = wb_color("FFE5E5E5"))
       }
     }
   }
 
-  # Column widths
-  wb$set_col_widths(sheet = sheet_name, cols = 1:7, widths = c(20, 15, 20, 12, 15, 15, 12))
+  # Column widths — ENCOUNTERID (col 4) and Drug Name (col 5) get width 20
+  wb$set_col_widths(sheet = sheet_name, cols = 1:9, widths = c(20, 15, 20, 20, 25, 12, 15, 15, 12))
 }
 
 
 # Save workbook
 wb$save(OUTPUT_XLSX)
 message(glue("XLSX saved: {OUTPUT_XLSX}"))
+
+
+# --- SECTION 7B: PHASE 60 AUDIT REPORT ---
+
+message("\n--- Creating Phase 60 audit report ---")
+
+AUDIT_XLSX <- file.path(CONFIG$output_dir, "phase_60_audit.xlsx")
+wb_audit <- wb_workbook()
+
+# Sheet 1: ENCOUNTERID Population Rates
+wb_audit$add_worksheet("ENCOUNTERID Rates")
+# Title row
+wb_audit$add_data(sheet = "ENCOUNTERID Rates", x = "ENCOUNTERID Population Rates by Source Table",
+                  start_row = 1, start_col = 1)
+wb_audit$add_font(sheet = "ENCOUNTERID Rates", dims = "A1",
+                  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb_audit$merge_cells(sheet = "ENCOUNTERID Rates", dims = "A1:D1")
+
+# Load profile from Plan 01
+PROFILE_RDS <- file.path(CONFIG$cache$outputs_dir, "encounterid_profile.rds")
+if (file.exists(PROFILE_RDS)) {
+  encounterid_profile <- readRDS(PROFILE_RDS)
+
+  # Headers
+  profile_headers <- c("Table", "Total Rows", "ENCOUNTERID Populated", "Population Rate (%)")
+  for (i in seq_along(profile_headers)) {
+    wb_audit$add_data(sheet = "ENCOUNTERID Rates", x = profile_headers[i], start_row = 3, start_col = i)
+  }
+  wb_audit$add_fill(sheet = "ENCOUNTERID Rates", dims = "A3:D3", color = wb_color("FF374151"))
+  wb_audit$add_font(sheet = "ENCOUNTERID Rates", dims = "A3:D3",
+                    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+
+  wb_audit$add_data(sheet = "ENCOUNTERID Rates", x = encounterid_profile, start_row = 4, col_names = FALSE)
+  wb_audit$add_numfmt(sheet = "ENCOUNTERID Rates",
+                      dims = glue("B4:C{3 + nrow(encounterid_profile)}"), numfmt = "#,##0")
+  wb_audit$add_numfmt(sheet = "ENCOUNTERID Rates",
+                      dims = glue("D4:D{3 + nrow(encounterid_profile)}"), numfmt = "#,##0.0")
+  wb_audit$set_col_widths(sheet = "ENCOUNTERID Rates", cols = 1:4, widths = c(20, 15, 25, 20))
+} else {
+  wb_audit$add_data(sheet = "ENCOUNTERID Rates", x = "encounterid_profile.rds not found", start_row = 3, start_col = 1)
+}
+
+# Sheet 2: SCT Source Audit
+wb_audit$add_worksheet("SCT Source Audit")
+wb_audit$add_data(sheet = "SCT Source Audit", x = "SCT Detection: Pre/Post ICD DX Code Removal",
+                  start_row = 1, start_col = 1)
+wb_audit$add_font(sheet = "SCT Source Audit", dims = "A1",
+                  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb_audit$merge_cells(sheet = "SCT Source Audit", dims = "A1:B1")
+
+AUDIT_RDS <- file.path(CONFIG$cache$outputs_dir, "sct_audit_result.rds")
+if (file.exists(AUDIT_RDS)) {
+  sct_audit <- readRDS(AUDIT_RDS)
+
+  audit_headers <- c("Metric", "Value")
+  for (i in seq_along(audit_headers)) {
+    wb_audit$add_data(sheet = "SCT Source Audit", x = audit_headers[i], start_row = 3, start_col = i)
+  }
+  wb_audit$add_fill(sheet = "SCT Source Audit", dims = "A3:B3", color = wb_color("FF374151"))
+  wb_audit$add_font(sheet = "SCT Source Audit", dims = "A3:B3",
+                    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+
+  wb_audit$add_data(sheet = "SCT Source Audit", x = sct_audit, start_row = 4, col_names = FALSE)
+  wb_audit$set_col_widths(sheet = "SCT Source Audit", cols = 1:2, widths = c(45, 20))
+} else {
+  wb_audit$add_data(sheet = "SCT Source Audit", x = "sct_audit_result.rds not found", start_row = 3, start_col = 1)
+}
+
+# Sheet 3: Drug Name Resolution Summary
+wb_audit$add_worksheet("Drug Name Resolution")
+wb_audit$add_data(sheet = "Drug Name Resolution", x = "Drug Name Resolution via RxNorm API",
+                  start_row = 1, start_col = 1)
+wb_audit$add_font(sheet = "Drug Name Resolution", dims = "A1",
+                  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb_audit$merge_cells(sheet = "Drug Name Resolution", dims = "A1:D1")
+
+if (file.exists(DRUG_LOOKUP_RDS)) {
+  # Summary stats
+  n_success <- sum(drug_lookup$lookup_status == "success", na.rm = TRUE)
+  n_not_found <- sum(grepl("not_found", drug_lookup$lookup_status), na.rm = TRUE)
+  n_error <- sum(grepl("error", drug_lookup$lookup_status), na.rm = TRUE)
+
+  drug_summary <- tibble(
+    metric = c("Total codes resolved", "Successful lookups", "Not found", "Errors", "Unique drug names"),
+    value = c(nrow(drug_lookup), n_success, n_not_found, n_error,
+              n_distinct(drug_lookup$drug_name[!is.na(drug_lookup$drug_name)]))
+  )
+
+  summary_headers <- c("Metric", "Value")
+  for (i in seq_along(summary_headers)) {
+    wb_audit$add_data(sheet = "Drug Name Resolution", x = summary_headers[i], start_row = 3, start_col = i)
+  }
+  wb_audit$add_fill(sheet = "Drug Name Resolution", dims = "A3:B3", color = wb_color("FF374151"))
+  wb_audit$add_font(sheet = "Drug Name Resolution", dims = "A3:B3",
+                    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb_audit$add_data(sheet = "Drug Name Resolution", x = drug_summary, start_row = 4, col_names = FALSE)
+
+  # Full lookup table below summary
+  wb_audit$add_data(sheet = "Drug Name Resolution", x = "Full Lookup Table:",
+                    start_row = 10, start_col = 1)
+  lookup_headers <- c("Code", "Code Type", "Drug Name", "Status", "Source Tables")
+  for (i in seq_along(lookup_headers)) {
+    wb_audit$add_data(sheet = "Drug Name Resolution", x = lookup_headers[i], start_row = 11, start_col = i)
+  }
+  wb_audit$add_fill(sheet = "Drug Name Resolution", dims = "A11:E11", color = wb_color("FF374151"))
+  wb_audit$add_font(sheet = "Drug Name Resolution", dims = "A11:E11",
+                    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb_audit$add_data(sheet = "Drug Name Resolution", x = drug_lookup, start_row = 12, col_names = FALSE)
+  wb_audit$set_col_widths(sheet = "Drug Name Resolution", cols = 1:5, widths = c(15, 12, 50, 15, 25))
+} else {
+  wb_audit$add_data(sheet = "Drug Name Resolution", x = "drug_name_lookup.rds not found", start_row = 3, start_col = 1)
+}
+
+wb_audit$save(AUDIT_XLSX)
+message(glue("Phase 60 audit saved: {AUDIT_XLSX}"))
 
 
 # --- SECTION 8: FINAL SUMMARY ---
