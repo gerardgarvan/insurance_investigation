@@ -19,7 +19,7 @@
 
 - [x] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection (completed 2026-05-30)
 - [ ] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD)
-- [x] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables (completed 2026-05-30)
+- [x] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables (completed 2026-05-30)
 - [ ] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags
 
 ## Remaining Phases (Unassigned)
@@ -221,7 +221,10 @@ Plans:
 7. Added agents disqualify - ABVD+X is not ABVD
 8. Temporal availability rules enforced - BV+AVD only post-2019, Nivo+AVD only post-2024
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 61-01-PLAN.md — Create R/61_episode_classification.R: encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback), regimen detection (ABVD/BV+AVD/Nivo+AVD with dropped-agent tolerance), 5-sheet audit xlsx + CSV
 
 ### Phase 62: First-Line Therapy & Death Analysis
 
@@ -362,4 +365,4 @@ Plans:
 - [x] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
 
 ---
-*Last updated: 2026-05-30 -- Phase 62 planned (1 plan, 1 wave)*
+*Last updated: 2026-05-30 -- Phase 61 planned (1 plan, 1 wave)*
