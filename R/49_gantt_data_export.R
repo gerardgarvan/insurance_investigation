@@ -29,6 +29,9 @@
 #   D-07 (Phase 59): HL Diagnosis treatment row in both CSVs (treatment_type="HL Diagnosis")
 #   D-08 (Phase 59): HL Diagnosis rows for ALL patients with HL dx, not only confirmed 7-day cohort
 #   D-09 (Phase 59): HL Diagnosis in treatment category for Gantt (date = min(DIAGNOSIS, TUMOR_REGISTRY))
+#   D-01 (Phase 60): encounter_ids column (comma-separated) from R/44a treatment_episodes.rds
+#   D-04 (Phase 60): drug_names column (comma-separated) from R/44a treatment_episodes.rds
+#   D-11 (Phase 60): ENCOUNTERID and drug_name columns from treatment_episode_detail.rds
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (episode-level)
@@ -467,15 +470,19 @@ if (!file.exists(COHORT_RDS)) {
 # --- SECTION 3: VALIDATE COLUMN STRUCTURE ---
 
 # Expected columns per D-01 (episode-level bars table)
+# Phase 60: added encounter_ids and drug_names
 expected_episode_cols <- c(
   "patient_id", "treatment_type", "episode_number",
   "episode_start", "episode_stop", "episode_length_days",
-  "distinct_dates_in_episode", "historical_flag", "triggering_codes"
+  "distinct_dates_in_episode", "historical_flag", "triggering_codes",
+  "encounter_ids", "drug_names"
 )
 
 # Expected columns per D-01 (detail-level ticks table)
+# Phase 60: added ENCOUNTERID and drug_name
 expected_detail_cols <- c(
   "patient_id", "treatment_type", "treatment_date", "triggering_code",
+  "ENCOUNTERID", "drug_name",
   "episode_number", "episode_start", "episode_stop", "historical_flag"
 )
 
@@ -523,12 +530,13 @@ map_codes_to_descriptions <- function(codes_str) {
 
 # --- SECTION 4: SELECT AND ORDER COLUMNS (per D-01) ---
 
-# Episode-level bars table: 9 original columns + triggering_code_descriptions + cancer_category + is_hodgkin
+# Episode-level bars table: 9 original columns + encounter_ids + drug_names + triggering_code_descriptions + cancer_category + is_hodgkin
 episodes_export <- episodes %>%
   select(
     patient_id, treatment_type, episode_number,
     episode_start, episode_stop, episode_length_days,
-    distinct_dates_in_episode, historical_flag, triggering_codes
+    distinct_dates_in_episode, historical_flag, triggering_codes,
+    encounter_ids, drug_names
   ) %>%
   mutate(
     triggering_code_descriptions = sapply(triggering_codes, map_codes_to_descriptions, USE.NAMES = FALSE)
@@ -539,10 +547,11 @@ episodes_export <- episodes %>%
     is_hodgkin = ifelse(is.na(is_hodgkin), FALSE, is_hodgkin)
   )
 
-# Detail-level ticks table: 8 original columns + triggering_code_description + cancer_category + is_hodgkin
+# Detail-level ticks table: 8 original columns + ENCOUNTERID + drug_name + triggering_code_description + cancer_category + is_hodgkin
 detail_export <- detail %>%
   select(
     patient_id, treatment_type, treatment_date, triggering_code,
+    ENCOUNTERID, drug_name,
     episode_number, episode_start, episode_stop, historical_flag
   ) %>%
   mutate(
@@ -580,13 +589,16 @@ if (nrow(death_data) > 0) {
       distinct_dates_in_episode = 1L,
       historical_flag = FALSE,
       triggering_codes = "",
+      encounter_ids = "",
+      drug_names = "",
       triggering_code_descriptions = ""
     ) %>%
     select(
       patient_id, treatment_type, episode_number,
       episode_start, episode_stop, episode_length_days,
       distinct_dates_in_episode, historical_flag,
-      triggering_codes, triggering_code_descriptions,
+      triggering_codes, encounter_ids, drug_names,
+      triggering_code_descriptions,
       cancer_category, is_hodgkin
     )
 
@@ -597,6 +609,8 @@ if (nrow(death_data) > 0) {
       treatment_type = "Death",
       treatment_date = DEATH_DATE,
       triggering_code = "",
+      ENCOUNTERID = NA_character_,
+      drug_name = NA_character_,
       episode_number = 1L,
       episode_start = DEATH_DATE,
       episode_stop = DEATH_DATE,
@@ -605,7 +619,8 @@ if (nrow(death_data) > 0) {
     ) %>%
     select(
       patient_id, treatment_type, treatment_date,
-      triggering_code, episode_number, episode_start,
+      triggering_code, ENCOUNTERID, drug_name,
+      episode_number, episode_start,
       episode_stop, historical_flag,
       triggering_code_description,
       cancer_category, is_hodgkin
@@ -673,13 +688,16 @@ if (nrow(hl_cohort) > 0) {
       distinct_dates_in_episode = 1L,
       historical_flag = FALSE,
       triggering_codes = "",
+      encounter_ids = "",
+      drug_names = "",
       triggering_code_descriptions = ""
     ) %>%
     select(
       patient_id, treatment_type, episode_number,
       episode_start, episode_stop, episode_length_days,
       distinct_dates_in_episode, historical_flag,
-      triggering_codes, triggering_code_descriptions,
+      triggering_codes, encounter_ids, drug_names,
+      triggering_code_descriptions,
       cancer_category, is_hodgkin
     )
 
@@ -695,6 +713,8 @@ if (nrow(hl_cohort) > 0) {
       treatment_type = "HL Diagnosis",
       treatment_date = first_hl_dx_date,
       triggering_code = "",
+      ENCOUNTERID = NA_character_,
+      drug_name = NA_character_,
       episode_number = 1L,
       episode_start = first_hl_dx_date,
       episode_stop = first_hl_dx_date,
@@ -703,7 +723,8 @@ if (nrow(hl_cohort) > 0) {
     ) %>%
     select(
       patient_id, treatment_type, treatment_date,
-      triggering_code, episode_number, episode_start,
+      triggering_code, ENCOUNTERID, drug_name,
+      episode_number, episode_start,
       episode_stop, historical_flag,
       triggering_code_description,
       cancer_category, is_hodgkin
@@ -779,6 +800,16 @@ n_death_rows <- sum(episodes_export$treatment_type == "Death", na.rm = TRUE)
 message(glue("  Death pseudo-treatment rows in episodes: {format(n_death_rows, big.mark = ',')}"))
 n_hl_dx_rows <- sum(episodes_export$treatment_type == "HL Diagnosis", na.rm = TRUE)
 message(glue("  HL Diagnosis treatment rows in episodes: {format(n_hl_dx_rows, big.mark = ',')}"))
+
+# Phase 60 drug name and encounter ID coverage stats
+detail_has_drug <- sum(!is.na(detail_export$drug_name) & detail_export$drug_name != "", na.rm = TRUE)
+message(glue("  Detail rows with drug names: {format(detail_has_drug, big.mark = ',')}"))
+
+episodes_has_drugs <- sum(episodes_export$drug_names != "", na.rm = TRUE)
+message(glue("  Episodes with drug_names: {format(episodes_has_drugs, big.mark = ',')}"))
+
+episodes_has_encounters <- sum(episodes_export$encounter_ids != "", na.rm = TRUE)
+message(glue("  Episodes with encounter_ids: {format(episodes_has_encounters, big.mark = ',')}"))
 
 message(glue("\n  Episode bars:  {OUTPUT_EPISODES}"))
 message(glue("  Detail ticks:  {OUTPUT_DETAIL}"))
