@@ -47,7 +47,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
 - [ ] Encounter-level cancer category linkage replacing patient-level join
 - [ ] HL flag on encounter, not patient
-- [ ] Death date analysis table
+- [x] Death date analysis table — v1.8 Phase 62
 - [x] Drop ICD diagnosis codes from SCT detection — v1.8 Phase 60
 - [ ] First-line therapy regimen labeling (ABVD, BV+AVD, Nivo+AVD) for adults 21+
 - [ ] New Gantt output files preserving existing versions
@@ -152,7 +152,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 60 phases completed across 8 milestones (v1.0-v1.8), ~60 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only
+- **Current state**: 62 phases completed across 8 milestones (v1.0-v1.8), ~62 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only, first-line therapy flagging infrastructure (is_first_line column in treatment_episodes.rds), death date data quality analysis (1,295 validated deaths, 253 with post-death activity)
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -212,4 +212,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-30 — Phase 60 complete (ENCOUNTERID propagation, drug name resolution, SCT DX code removal)*
+*Last updated: 2026-05-30 — Phase 62 complete (first-line therapy flagging, death date data quality analysis)*
