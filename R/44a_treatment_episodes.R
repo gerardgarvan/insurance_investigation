@@ -68,14 +68,15 @@ HISTORICAL_CUTOFF <- as.Date("2012-01-01")
 # TUMOR_REGISTRY dates are date evidence only — triggering_code = NA_character_
 # R/43a_treatment_durations.R is NOT modified; these are new functions in R/44.
 
-#' Stack sources with triggering_code, dedup on (ID, treatment_date, triggering_code)
+#' Stack sources with triggering_code and ENCOUNTERID, dedup on (ID, treatment_date, triggering_code, ENCOUNTERID)
 #'
-#' Per D-46-07: distinct(ID, treatment_date, triggering_code) — 3-column dedup —
-#' preserves multiple codes on the same date while removing exact duplicates.
+#' Phase 60: Updated to handle 4-column input (ID, treatment_date, triggering_code, ENCOUNTERID).
+#' Per D-46-07: distinct(ID, treatment_date, triggering_code, ENCOUNTERID) — 4-column dedup —
+#' preserves multiple codes on the same date and different encounter IDs while removing exact duplicates.
 #'
-#' @param sources Named list of tibbles with columns ID, treatment_date, triggering_code
+#' @param sources Named list of tibbles with columns ID, treatment_date, triggering_code, ENCOUNTERID
 #' @param type_name Character. Treatment type name for logging
-#' @return Tibble with columns: ID, treatment_date, triggering_code
+#' @return 4-column tibble: ID, treatment_date, triggering_code, ENCOUNTERID
 stack_and_dedup_with_codes <- function(sources, type_name) {
   non_null <- compact(sources)
 
@@ -83,7 +84,8 @@ stack_and_dedup_with_codes <- function(sources, type_name) {
     return(tibble(
       ID = character(0),
       treatment_date = as.Date(character(0)),
-      triggering_code = character(0)
+      triggering_code = character(0),
+      ENCOUNTERID = character(0)
     ))
   }
 
@@ -91,12 +93,12 @@ stack_and_dedup_with_codes <- function(sources, type_name) {
     mutate(treatment_date = as.Date(treatment_date)) %>%
     filter(!is.na(treatment_date))
 
-  # 3-column distinct: preserves multiple codes on same date (D-46-07)
+  # 4-column distinct: preserves multiple codes/encounters on same date (D-46-07 + Phase 60 D-01)
   result <- stacked %>%
-    distinct(ID, treatment_date, triggering_code) %>%
+    distinct(ID, treatment_date, triggering_code, ENCOUNTERID) %>%
     arrange(ID, treatment_date)
 
-  message(glue("  {type_name} with codes: {n_distinct(result$ID)} patients, {nrow(result)} distinct (ID, date, code) rows"))
+  message(glue("  {type_name} with codes: {n_distinct(result$ID)} patients, {nrow(result)} distinct (ID, date, code, ENCOUNTERID) rows"))
   result
 }
 
@@ -116,7 +118,7 @@ extract_chemo_dates_with_codes <- function() {
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE, triggering_code = PX) %>%
+      select(ID, treatment_date = PX_DATE, triggering_code = PX, ENCOUNTERID) %>%
       collect()
   }
 
@@ -127,7 +129,7 @@ extract_chemo_dates_with_codes <- function() {
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       mutate(treatment_date = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
       filter(!is.na(treatment_date)) %>%
-      select(ID, treatment_date, triggering_code = RXNORM_CUI) %>%
+      select(ID, treatment_date, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
       collect()
   }
 
@@ -140,7 +142,7 @@ extract_chemo_dates_with_codes <- function() {
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
       ) %>%
       filter(!is.na(DX_DATE)) %>%
-      select(ID, treatment_date = DX_DATE, triggering_code = DX) %>%
+      select(ID, treatment_date = DX_DATE, triggering_code = DX, ENCOUNTERID) %>%
       collect()
   }
 
@@ -150,7 +152,7 @@ extract_chemo_dates_with_codes <- function() {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG) %>%
+      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG, ENCOUNTERID) %>%
       collect()
   }
 
@@ -161,7 +163,7 @@ extract_chemo_dates_with_codes <- function() {
     disp_dates <- get_pcornet_table("DISPENSING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
-      select(ID, treatment_date = DISPENSE_DATE, triggering_code = RXNORM_CUI) %>%
+      select(ID, treatment_date = DISPENSE_DATE, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
       collect()
   }
 
@@ -172,7 +174,7 @@ extract_chemo_dates_with_codes <- function() {
     ma_dates <- get_pcornet_table("MED_ADMIN") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
-      select(ID, treatment_date = MEDADMIN_START_DATE, triggering_code = RXNORM_CUI) %>%
+      select(ID, treatment_date = MEDADMIN_START_DATE, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
       collect()
   }
 
@@ -198,9 +200,10 @@ extract_chemo_dates_with_codes <- function() {
           filter(!is.na(treatment_date)) %>%
           mutate(
             treatment_date = as.Date(treatment_date),
-            triggering_code = NA_character_
+            triggering_code = NA_character_,
+            ENCOUNTERID = NA_character_
           ) %>%
-          select(ID, treatment_date, triggering_code)
+          select(ID, treatment_date, triggering_code, ENCOUNTERID)
       }
     }
   }
@@ -230,7 +233,7 @@ extract_radiation_dates_with_codes <- function() {
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE, triggering_code = PX) %>%
+      select(ID, treatment_date = PX_DATE, triggering_code = PX, ENCOUNTERID) %>%
       collect()
   }
 
@@ -243,7 +246,7 @@ extract_radiation_dates_with_codes <- function() {
         (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
       ) %>%
       filter(!is.na(DX_DATE)) %>%
-      select(ID, treatment_date = DX_DATE, triggering_code = DX) %>%
+      select(ID, treatment_date = DX_DATE, triggering_code = DX, ENCOUNTERID) %>%
       collect()
   }
 
@@ -253,7 +256,7 @@ extract_radiation_dates_with_codes <- function() {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG) %>%
+      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG, ENCOUNTERID) %>%
       collect()
   }
 
@@ -279,9 +282,10 @@ extract_radiation_dates_with_codes <- function() {
           filter(!is.na(treatment_date)) %>%
           mutate(
             treatment_date = as.Date(treatment_date),
-            triggering_code = NA_character_
+            triggering_code = NA_character_,
+            ENCOUNTERID = NA_character_
           ) %>%
-          select(ID, treatment_date, triggering_code)
+          select(ID, treatment_date, triggering_code, ENCOUNTERID)
       }
     }
   }
@@ -292,7 +296,7 @@ extract_radiation_dates_with_codes <- function() {
   )
 }
 
-#' Extract all SCT dates with triggering codes
+#' Extract all SCT dates with triggering codes from 3 sources
 #' Mirrors extract_sct_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_sct_dates_with_codes <- function() {
   # 1. PROCEDURES: CPT/HCPCS, ICD-9-CM, ICD-10-PCS (exact match), revenue — bare code = PX
@@ -306,31 +310,21 @@ extract_sct_dates_with_codes <- function() {
         (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE, triggering_code = PX) %>%
+      select(ID, treatment_date = PX_DATE, triggering_code = PX, ENCOUNTERID) %>%
       collect()
   }
 
-  # 2. DIAGNOSIS: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only) — bare DX code
-  dx_dates <- NULL
-  if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
-    dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
-      filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
-      filter(!is.na(DX_DATE)) %>%
-      select(ID, treatment_date = DX_DATE, triggering_code = DX) %>%
-      collect()
-  }
-
-  # 3. ENCOUNTER: DRGs 014, 016, 017 — bare DRG code
+  # 2. ENCOUNTER: DRGs 014, 016, 017 — bare DRG code
   drg_dates <- NULL
   if (!is.null(get_pcornet_table("ENCOUNTER"))) {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG) %>%
+      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG, ENCOUNTERID) %>%
       collect()
   }
 
-  # 4. TUMOR_REGISTRY_ALL: SCT-related date columns — date evidence only
+  # 3. TUMOR_REGISTRY_ALL: SCT-related date columns — date evidence only
   tr_dates <- NULL
   if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_sct_cols <- intersect(
@@ -353,15 +347,16 @@ extract_sct_dates_with_codes <- function() {
           filter(!is.na(treatment_date)) %>%
           mutate(
             treatment_date = as.Date(treatment_date),
-            triggering_code = NA_character_
+            triggering_code = NA_character_,
+            ENCOUNTERID = NA_character_
           ) %>%
-          select(ID, treatment_date, triggering_code)
+          select(ID, treatment_date, triggering_code, ENCOUNTERID)
       }
     }
   }
 
   stack_and_dedup_with_codes(
-    sources = list(PX = px_dates, DX = dx_dates, DRG = drg_dates, TR = tr_dates),
+    sources = list(PX = px_dates, DRG = drg_dates, TR = tr_dates),
     type_name = "SCT"
   )
 }
@@ -377,7 +372,7 @@ extract_immunotherapy_dates_with_codes <- function() {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(PX_TYPE == "10" & str_detect(PX, cart_icd10pcs_rx)) %>%
       filter(!is.na(PX_DATE)) %>%
-      select(ID, treatment_date = PX_DATE, triggering_code = PX) %>%
+      select(ID, treatment_date = PX_DATE, triggering_code = PX, ENCOUNTERID) %>%
       collect()
   }
 
@@ -387,7 +382,7 @@ extract_immunotherapy_dates_with_codes <- function() {
     drg_dates <- get_pcornet_table("ENCOUNTER") %>%
       filter(DRG %in% TREATMENT_CODES$immunotherapy_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
-      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG) %>%
+      select(ID, treatment_date = ADMIT_DATE, triggering_code = DRG, ENCOUNTERID) %>%
       collect()
   }
 
@@ -421,23 +416,26 @@ extract_dates_with_codes <- function(type) {
 
 # assign_episode_ids() is defined in R/43a_treatment_durations.R (sourced above)
 
-#' Calculate detailed episode-level data with triggering codes
+#' Calculate detailed episode-level data with triggering codes and encounter IDs
+#'
+#' Phase 60: Updated to accept 4-column input (ID, treatment_date, triggering_code, ENCOUNTERID)
+#' and aggregate encounter IDs per episode.
 #'
 #' Adapted from Phase 44 original calculate_episodes_detailed() — now accepts
-#' dates_df with 3 columns (ID, treatment_date, triggering_code) and aggregates
-#' triggering codes per episode via paste(sort(unique(na.omit(...))), collapse=",").
+#' dates_df with 4 columns and aggregates triggering codes AND encounter IDs per episode
+#' via paste(sort(unique(na.omit(...))), collapse=",").
 #'
 #' Per D-46-07: ALL matching codes within the episode date window are included.
 #' Per D-46-08: bare codes only (no type prefix).
-#' Per D-46-05: triggering_codes is the LAST column (column 8) in output.
+#' Per Phase 60 D-03, D-04: encounter_ids aggregated per episode, NULL/missing omitted.
 #'
-#' @param dates_df Tibble with columns ID, treatment_date, and triggering_code
+#' @param dates_df Tibble with columns ID, treatment_date, triggering_code, ENCOUNTERID
 #' @param gap_threshold Integer. Max days from episode start to define cycle boundary
 #' @return Tibble with one row per patient per episode: patient_id, episode_number,
 #'   episode_start, episode_stop, episode_length_days, distinct_dates_in_episode,
-#'   historical_flag, triggering_codes
+#'   historical_flag, triggering_codes, encounter_ids
 calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD) {
-  # Empty input guard — must include triggering_codes = character(0) per D-46-05
+  # Empty input guard — must include triggering_codes and encounter_ids per Phase 60
   if (nrow(dates_df) == 0) {
     return(tibble(
       patient_id = character(0),
@@ -447,7 +445,8 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
       episode_length_days = numeric(0),
       distinct_dates_in_episode = integer(0),
       historical_flag = logical(0),
-      triggering_codes = character(0)
+      triggering_codes = character(0),
+      encounter_ids = character(0)
     ))
   }
 
@@ -467,6 +466,8 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
       distinct_dates_in_episode = n_distinct(treatment_date),
       # D-46-07: ALL matching codes in episode window; na.omit for TR/DRG/date-only sources
       triggering_codes = paste(sort(unique(na.omit(triggering_code))), collapse = ","),
+      # Phase 60 D-03, D-04: aggregate encounter IDs per episode
+      encounter_ids = paste(sort(unique(na.omit(ENCOUNTERID))), collapse = ","),
       .groups = "drop"
     ) %>%
     # Add episode_number per patient (per D-08, D-09)
@@ -477,7 +478,7 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
     # (using episode_stop < HISTORICAL_CUTOFF because if the LAST date is pre-2012,
     #  ALL dates are pre-2012)
     mutate(historical_flag = episode_stop < HISTORICAL_CUTOFF) %>%
-    # Final select — triggering_codes LAST (column 8) per D-46-05 / Pitfall 5
+    # Final select — triggering_codes, encounter_ids as last columns per Phase 60
     select(
       patient_id = ID,
       episode_number,
@@ -486,21 +487,24 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
       episode_length_days,
       distinct_dates_in_episode,
       historical_flag,
-      triggering_codes
+      triggering_codes,
+      encounter_ids
     )
 }
 
 
-#' Annotate raw date+code rows with episode context
+#' Annotate raw date+code+ENCOUNTERID rows with episode context
 #'
-#' Takes the raw 3-column data (before episode collapsing) and the episode-level
+#' Phase 60: Updated to handle 4-column input (ID, treatment_date, triggering_code, ENCOUNTERID).
+#'
+#' Takes the raw 4-column data (before episode collapsing) and the episode-level
 #' output, assigns episode IDs to each raw row, then joins episode context.
-#' Returns one row per unique (patient, date, code) — the detail-level output.
+#' Returns one row per unique (patient, date, code, ENCOUNTERID) — the detail-level output.
 #'
-#' @param dates_df Tibble with columns: ID, treatment_date, triggering_code
+#' @param dates_df Tibble with columns: ID, treatment_date, triggering_code, ENCOUNTERID
 #' @param episodes_df Tibble from calculate_episodes_detailed() with episode-level data
 #' @param gap_threshold Integer. Max days from episode start (must match episodes_df)
-#' @return Tibble with columns: patient_id, treatment_date, triggering_code,
+#' @return Tibble with columns: patient_id, treatment_date, triggering_code, ENCOUNTERID,
 #'   episode_number, episode_start, episode_stop, historical_flag
 annotate_detail_with_episodes <- function(dates_df, episodes_df, gap_threshold = GAP_THRESHOLD) {
   if (nrow(dates_df) == 0 || nrow(episodes_df) == 0) {
@@ -508,6 +512,7 @@ annotate_detail_with_episodes <- function(dates_df, episodes_df, gap_threshold =
       patient_id = character(0),
       treatment_date = as.Date(character(0)),
       triggering_code = character(0),
+      ENCOUNTERID = character(0),
       episode_number = integer(0),
       episode_start = as.Date(character(0)),
       episode_stop = as.Date(character(0)),
@@ -539,6 +544,7 @@ annotate_detail_with_episodes <- function(dates_df, episodes_df, gap_threshold =
       patient_id = ID,
       treatment_date,
       triggering_code,
+      ENCOUNTERID,
       episode_number = episode_id,
       episode_start,
       episode_stop,
@@ -570,12 +576,17 @@ log_episode_stats <- function(episodes_df, type_name) {
   n_with_codes <- sum(nchar(episodes_df$triggering_codes) > 0)
   pct_with_codes <- round(100 * n_with_codes / n_episodes, 1)
 
+  # Phase 60: Count episodes with at least one encounter ID
+  n_with_encounters <- sum(nchar(episodes_df$encounter_ids) > 0, na.rm = TRUE)
+  pct_with_encounters <- round(100 * n_with_encounters / n_episodes, 1)
+
   message(glue("\n  {type_name} Summary:"))
   message(glue("    Patients: {n_patients}"))
   message(glue("    Episodes: {n_episodes} ({n_historical} historical, {pct_historical}%)"))
   message(glue("    Episode length (days): median={median_length}"))
   message(glue("    Dates per episode: median={median_dates}"))
   message(glue("    Episodes with triggering codes: {n_with_codes} ({pct_with_codes}%)"))
+  message(glue("    Episodes with encounter IDs: {n_with_encounters} ({pct_with_encounters}%)"))
 
   invisible(NULL)
 }
@@ -611,10 +622,10 @@ for (type in TREATMENT_TYPES) {
   detail_list[[type]] <- detail_df
 }
 
-# Combine all types into single dataset — triggering_codes flows through bind_rows automatically
+# Combine all types into single dataset — triggering_codes and encounter_ids flow through bind_rows automatically
 all_episodes <- bind_rows(episodes_list) %>%
   select(patient_id, treatment_type, episode_number, episode_start, episode_stop,
-         episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes)
+         episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes, encounter_ids)
 
 # Save RDS artifact
 saveRDS(all_episodes, OUTPUT_RDS)
@@ -622,7 +633,7 @@ message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_episodes)} rows)"))
 
 # Combine detail-level data and save
 all_detail <- bind_rows(detail_list) %>%
-  select(patient_id, treatment_type, treatment_date, triggering_code,
+  select(patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID,
          episode_number, episode_start, episode_stop, historical_flag)
 saveRDS(all_detail, OUTPUT_DETAIL_RDS)
 message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))
@@ -637,11 +648,11 @@ for (type in TREATMENT_TYPES) {
   csv_name <- paste0(tolower(gsub(" ", "_", type)), "_episodes.csv")
   csv_path <- file.path(CONFIG$output_dir, csv_name)
 
-  # D-46-05: triggering_codes as column 8 (last column)
+  # Phase 60: encounter_ids as column 9 (last column after triggering_codes)
   write_df <- type_data %>%
     select(patient_id, episode_number, episode_start, episode_stop,
            episode_length_days, distinct_dates_in_episode, historical_flag,
-           triggering_codes)
+           triggering_codes, encounter_ids)
 
   write.csv(write_df, csv_path, row.names = FALSE)
   message(glue("  Wrote {csv_path} ({nrow(write_df)} episodes)"))
@@ -658,7 +669,7 @@ for (type in TREATMENT_TYPES) {
   csv_path <- file.path(CONFIG$output_dir, csv_name)
 
   write_df <- type_detail %>%
-    select(patient_id, treatment_date, triggering_code,
+    select(patient_id, treatment_date, triggering_code, ENCOUNTERID,
            episode_number, episode_start, episode_stop, historical_flag) %>%
     arrange(patient_id, treatment_date)
 
@@ -754,24 +765,24 @@ for (type in TREATMENT_TYPES) {
   n_episodes <- nrow(type_data)
   n_patients <- if (n_episodes > 0) n_distinct(type_data$patient_id) else 0
 
-  # Row 1: Title — updated to span 8 columns (A1:H1)
+  # Row 1: Title — updated to span 9 columns (A1:I1) for Phase 60
   title_text <- as.character(glue("{type} Treatment Episodes ({n_episodes} episodes, {n_patients} patients)"))
   wb$add_data(sheet = sheet_name, x = title_text, start_row = 1, start_col = 1)
   wb$add_font(sheet = sheet_name, dims = "A1",
               name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
-  wb$merge_cells(sheet = sheet_name, dims = "A1:H1")
+  wb$merge_cells(sheet = sheet_name, dims = "A1:I1")
 
-  # Row 2: Headers — column 8 = "Triggering Codes" (D-46-09)
+  # Row 2: Headers — column 8 = "Triggering Codes", column 9 = "Encounter IDs" (Phase 60)
   detail_headers <- c("Patient ID", "Episode #", "Start Date", "Stop Date",
-                      "Length (days)", "Distinct Dates", "Historical", "Triggering Codes")
+                      "Length (days)", "Distinct Dates", "Historical", "Triggering Codes", "Encounter IDs")
   for (j in seq_along(detail_headers)) {
     wb$add_data(sheet = sheet_name, x = detail_headers[j], start_row = 2, start_col = j)
   }
 
   colors <- TREATMENT_TYPE_COLORS[[type]]
-  # Updated dims from A2:G2 to A2:H2 for 8 columns
-  wb$add_fill(sheet = sheet_name, dims = "A2:H2", color = wb_color(colors$fill))
-  wb$add_font(sheet = sheet_name, dims = "A2:H2",
+  # Updated dims from A2:H2 to A2:I2 for 9 columns
+  wb$add_fill(sheet = sheet_name, dims = "A2:I2", color = wb_color(colors$fill))
+  wb$add_font(sheet = sheet_name, dims = "A2:I2",
               name = "Calibri", size = 11, bold = TRUE, color = wb_color(colors$font))
 
   # Data rows (row 3+)
@@ -785,28 +796,29 @@ for (type in TREATMENT_TYPES) {
       Distinct_Dates = type_data$distinct_dates_in_episode,
       Historical = type_data$historical_flag,
       Triggering_Codes = type_data$triggering_codes,
+      Encounter_IDs = type_data$encounter_ids,
       stringsAsFactors = FALSE
     )
 
     wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
 
-    # Apply gray fill to historical rows — updated dims from A{row}:G{row} to A{row}:H{row}
+    # Apply gray fill to historical rows — updated dims from A{row}:H{row} to A{row}:I{row}
     historical_rows <- which(type_data$historical_flag)
     if (length(historical_rows) > 0) {
       for (row_idx in historical_rows) {
         row_num <- 2 + row_idx  # +2 because data starts at row 3
-        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:H{row_num}"),
+        wb$add_fill(sheet = sheet_name, dims = glue("A{row_num}:I{row_num}"),
                     color = wb_color("FFE5E5E5"))
       }
     }
 
-    # Number formatting for numeric columns (E and F only; H is text)
+    # Number formatting for numeric columns (E and F only; H and I are text)
     last_row <- 2 + n_episodes
     wb$add_numfmt(sheet = sheet_name, dims = glue("E3:F{last_row}"), numfmt = "#,##0")
   }
 
-  # Column widths — column 8 (Triggering Codes) gets width 30 for code strings
-  wb$set_col_widths(sheet = sheet_name, cols = 1:8, widths = c(20, 12, 15, 15, 15, 15, 12, 30))
+  # Column widths — column 8 (Triggering Codes) and column 9 (Encounter IDs) get width 30 for strings
+  wb$set_col_widths(sheet = sheet_name, cols = 1:9, widths = c(20, 12, 15, 15, 15, 15, 12, 30, 30))
 }
 
 
