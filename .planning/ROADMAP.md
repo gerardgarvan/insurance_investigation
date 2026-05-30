@@ -17,7 +17,7 @@
 
 ## v1.8 Phases
 
-- [x] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection (completed 2026-05-30)
+- [x] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection (completed 2026-05-30)
 - [ ] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD)
 - [ ] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables
 - [ ] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags
@@ -238,7 +238,10 @@ Plans:
 4. Of patients with death dates, table shows count where death is the last encounter
 5. Table shows count of patients with encounters or treatment occurring after recorded death date, stratified by encounter type
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 62-01-PLAN.md — Create R/62_first_line_and_death_analysis.R: first-line therapy flagging (regimen-labeled, adults 21+, 60-day clean period) + death analysis summary tables (3-sheet xlsx + CSV)
 
 ### Phase 63: Enhanced Gantt Export
 
@@ -359,4 +362,4 @@ Plans:
 - [x] 59-02-PLAN.md -- Modify R/49_gantt_data_export.R: consume validated_death_dates.rds, add HL Diagnosis pseudo-treatment rows, exclude impossible death rows
 
 ---
-*Last updated: 2026-05-29 -- Phase 60 planned (3 plans, 2 waves)*
+*Last updated: 2026-05-30 -- Phase 62 planned (1 plan, 1 wave)*
