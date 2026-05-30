@@ -17,7 +17,7 @@
 
 ## v1.8 Phases
 
-- [ ] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection
+- [x] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection (completed 2026-05-30)
 - [ ] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD)
 - [ ] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables
 - [ ] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags
@@ -196,12 +196,12 @@
 4. SCT detection excludes ICD diagnosis codes (C81.*, Z85.*), retaining only PROCEDURES/PRESCRIBING/DISPENSING sources
 5. Drug names propagate to treatment episode detail output
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 60-01-PLAN.md — ENCOUNTERID extraction in R/43a+R/44a, SCT source audit + DX code removal from config, ENCOUNTERID population rate inspection
 - [x] 60-02-PLAN.md — Create R/60_drug_name_resolution.R: standalone drug name lookup via RxNorm API with caching (RDS + CSV output)
-- [ ] 60-03-PLAN.md — Drug name join in R/44a, Gantt CSV propagation (encounter_ids + drug_names), Phase 60 audit xlsx
+- [x] 60-03-PLAN.md — Drug name join in R/44a, Gantt CSV propagation (encounter_ids + drug_names), Phase 60 audit xlsx
 
 ### Phase 61: Episode Classification - Cancer Linkage & Regimen Detection
 

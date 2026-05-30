@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Phases
-status: executing
-stopped_at: Completed 60-01-PLAN.md
-last_updated: "2026-05-30T02:48:24.625Z"
+status: verifying
+stopped_at: Completed 60-03-PLAN.md
+last_updated: "2026-05-30T02:55:09.160Z"
 last_activity: 2026-05-30
 progress:
   total_phases: 59
-  completed_phases: 48
+  completed_phases: 49
   total_plans: 91
-  completed_plans: 84
+  completed_plans: 85
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 Phase: 60 (Foundation - ENCOUNTERID Propagation & Drug Name Resolution) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Progress: ▱▱▱▱▱▱▱▱▱▱ 0% (0/4 phases complete)
 Last activity: 2026-05-30
 
@@ -74,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 60]: Standalone script separate from episode extraction (D-10)
 - [Phase 60-01]: SCT source audit compares WITH vs WITHOUT DX codes before removal
 - [Phase 60-01]: encounter_ids aggregated per episode as comma-separated string in R/44a
+- [Phase 60]: Drug names joined via left_join on triggering_code, aggregated per episode as comma-separated unique sorted list
+- [Phase 60]: Phase 60 audit xlsx documents ENCOUNTERID rates, SCT audit, drug name resolution in single workbook
 
 ### Pending Todos
 
@@ -98,8 +100,8 @@ v1.8 roadmap created with coarse granularity (4 phases vs research-suggested 7):
 
 ## Session Continuity
 
-Last session: 2026-05-30T02:48:24.617Z
-Stopped at: Completed 60-01-PLAN.md
+Last session: 2026-05-30T02:55:09.152Z
+Stopped at: Completed 60-03-PLAN.md
 Resume file: None
 Next step: `/gsd:plan-phase 60` to create implementation plans for Phase 60
 
