@@ -177,7 +177,9 @@
 | 38-44 | Unassigned | Complete | 2026-05-12 |
 | 45-54 | v1.6 | Complete | 2026-05-22 |
 | 55-59 | v1.7 | Complete | 2026-05-28 |
-| 60-63 | v1.8 | Not started | -- |
+| 60 | v1.8 | Complete | 2026-05-30 |
+| 61 | v1.8 | Complete | 2026-05-30 |
+| 62-63 | v1.8 | Not started | -- |
 
 ## Phase Details
 
@@ -221,10 +223,10 @@ Plans:
 7. Added agents disqualify - ABVD+X is not ABVD
 8. Temporal availability rules enforced - BV+AVD only post-2019, Nivo+AVD only post-2024
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 61-01-PLAN.md — Create R/61_episode_classification.R: encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback), regimen detection (ABVD/BV+AVD/Nivo+AVD with dropped-agent tolerance), 5-sheet audit xlsx + CSV
+- [x] 61-01-PLAN.md — Create R/61_episode_classification.R: encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback), regimen detection (ABVD/BV+AVD/Nivo+AVD with dropped-agent tolerance), 5-sheet audit xlsx + CSV
 
 ### Phase 62: First-Line Therapy & Death Analysis
 

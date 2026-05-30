@@ -9,10 +9,10 @@ Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therap
 
 ### Encounter Linkage
 
-- [ ] **LINK-01**: Cancer diagnosis linked to treatment episodes via ENCOUNTERID (direct match)
-- [ ] **LINK-02**: Temporal proximity fallback when ENCOUNTERID is NULL or missing (closest diagnosis within window)
-- [ ] **LINK-03**: HL flag derived from encounter-level diagnosis, not patient-level
-- [ ] **LINK-04**: Second cancer confirmation requires 2+ diagnoses 7 days apart (encounter-level)
+- [x] **LINK-01**: Cancer diagnosis linked to treatment episodes via ENCOUNTERID (direct match)
+- [x] **LINK-02**: Temporal proximity fallback when ENCOUNTERID is NULL or missing (closest diagnosis within window)
+- [x] **LINK-03**: HL flag derived from encounter-level diagnosis, not patient-level
+- [x] **LINK-04**: Second cancer confirmation requires 2+ diagnoses 7 days apart (encounter-level)
 
 ### Treatment Validation
 
@@ -23,10 +23,10 @@ Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therap
 
 ### Regimen Identification
 
-- [ ] **REG-01**: Treatment episodes labeled with regimen name (ABVD, BV+AVD, Nivo+AVD) based on drug composition within 28-day cycle window
-- [ ] **REG-02**: Dropped-agent tolerance — ABVD with bleomycin dropped (→AVD) still classified as first-line
-- [ ] **REG-03**: Nothing added — ABVD+X is not ABVD
-- [ ] **REG-04**: Temporal availability rules — BV+AVD post-2019, Nivo+AVD post-2024
+- [x] **REG-01**: Treatment episodes labeled with regimen name (ABVD, BV+AVD, Nivo+AVD) based on drug composition within 28-day cycle window
+- [x] **REG-02**: Dropped-agent tolerance — ABVD with bleomycin dropped (→AVD) still classified as first-line
+- [x] **REG-03**: Nothing added — ABVD+X is not ABVD
+- [x] **REG-04**: Temporal availability rules — BV+AVD post-2019, Nivo+AVD post-2024
 
 ### First-Line Therapy
 
@@ -104,18 +104,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LINK-01 | Phase 61 | Pending |
-| LINK-02 | Phase 61 | Pending |
-| LINK-03 | Phase 61 | Pending |
-| LINK-04 | Phase 61 | Pending |
+| LINK-01 | Phase 61 | Complete |
+| LINK-02 | Phase 61 | Complete |
+| LINK-03 | Phase 61 | Complete |
+| LINK-04 | Phase 61 | Complete |
 | TREAT-01 | Phase 60 | Complete |
 | TREAT-02 | Phase 60 | Complete |
 | TREAT-03 | Phase 60 | Complete |
 | TREAT-04 | Phase 60 | Complete |
-| REG-01 | Phase 61 | Pending |
-| REG-02 | Phase 61 | Pending |
-| REG-03 | Phase 61 | Pending |
-| REG-04 | Phase 61 | Pending |
+| REG-01 | Phase 61 | Complete |
+| REG-02 | Phase 61 | Complete |
+| REG-03 | Phase 61 | Complete |
+| REG-04 | Phase 61 | Complete |
 | FLT-01 | Phase 62 | Pending |
 | FLT-02 | Phase 62 | Pending |
 | DEATH-01 | Phase 62 | Pending |
@@ -131,4 +131,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-29*
-*Last updated: 2026-05-29 after roadmap creation (100% coverage achieved)*
+*Last updated: 2026-05-30 — Phase 61 complete (LINK-01 through LINK-04, REG-01 through REG-04)*
