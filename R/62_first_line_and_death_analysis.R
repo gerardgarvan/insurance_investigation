@@ -75,10 +75,13 @@ if (!file.exists(DEATH_RDS)) {
 validated_deaths <- readRDS(DEATH_RDS)
 message(glue("  Loaded validated_death_dates.rds: {nrow(validated_deaths)} patients"))
 
-# Guard for missing regimen_label column (Phase 61 not yet run)
+# Guard for missing columns from Phase 61 (regimen_label, drug_names)
 if (!"regimen_label" %in% names(episodes)) {
   warning("regimen_label column not found in treatment_episodes.rds — Phase 61 not yet run. First-line detection will produce 0 results.")
   episodes <- episodes %>% mutate(regimen_label = NA_character_)
+}
+if (!"drug_names" %in% names(episodes)) {
+  episodes <- episodes %>% mutate(drug_names = NA_character_)
 }
 
 # Open DuckDB connection
