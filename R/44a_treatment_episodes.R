@@ -124,7 +124,8 @@ extract_chemo_dates_with_codes <- function() {
 
   # 2. PRESCRIBING: RXNORM_CUI — bare RxNorm CUI is a valid code per D-46-08
   rx_dates <- NULL
-  if (!is.null(get_pcornet_table("PRESCRIBING"))) {
+  if (!is.null(get_pcornet_table("PRESCRIBING")) &&
+      "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
     rx_dates <- get_pcornet_table("PRESCRIBING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       mutate(treatment_date = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%

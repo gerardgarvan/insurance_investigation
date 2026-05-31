@@ -199,7 +199,8 @@ open_pcornet_con()
 
 # RXNORM_CUI codes from PRESCRIBING
 rx_codes_prescribing <- NULL
-if (!is.null(get_pcornet_table("PRESCRIBING"))) {
+if (!is.null(get_pcornet_table("PRESCRIBING")) &&
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
   rx_codes_prescribing <- get_pcornet_table("PRESCRIBING") %>%
     filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
     filter(!is.na(RXNORM_CUI)) %>%
