@@ -18,7 +18,7 @@
 ## v1.8 Phases
 
 - [x] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection (completed 2026-05-30)
-- [ ] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD)
+- [x] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD) (completed 2026-05-31)
 - [x] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables (completed 2026-05-30)
 - [ ] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags
 
@@ -178,7 +178,7 @@
 | 45-54 | v1.6 | Complete | 2026-05-22 |
 | 55-59 | v1.7 | Complete | 2026-05-28 |
 | 60 | v1.8 | Complete | 2026-05-30 |
-| 61 | v1.8 | Complete | 2026-05-30 |
+| 61 | v1.8 | Complete    | 2026-05-31 |
 | 62-63 | v1.8 | Not started | -- |
 
 ## Phase Details
