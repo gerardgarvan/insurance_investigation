@@ -239,7 +239,8 @@ if (!is.null(get_pcornet_table("MED_ADMIN")) &&
 # NDC codes from DISPENSING (if NDC column exists)
 ndc_codes <- NULL
 if (!is.null(get_pcornet_table("DISPENSING")) &&
-    "NDC" %in% colnames(get_pcornet_table("DISPENSING"))) {
+    "NDC" %in% colnames(get_pcornet_table("DISPENSING")) &&
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
   # Get NDC codes that appear alongside chemo RXNORM_CUI codes
   # These are NDC codes for prescriptions that matched chemo_rxnorm
   ndc_codes <- get_pcornet_table("DISPENSING") %>%
