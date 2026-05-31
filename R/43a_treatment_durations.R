@@ -570,6 +570,18 @@ encounterid_profile <- map_dfr(inspect_tables, function(tbl_name) {
     ))
   }
 
+  # Guard: some tables (e.g., DISPENSING) lack ENCOUNTERID
+
+  if (!"ENCOUNTERID" %in% colnames(tbl)) {
+    stats <- tbl %>% summarise(total_rows = n()) %>% collect()
+    return(tibble(
+      table = tbl_name,
+      total_rows = as.integer(stats$total_rows),
+      encounterid_populated = NA_integer_,
+      population_rate = NA_real_
+    ))
+  }
+
   stats <- tbl %>%
     summarise(
       total_rows = n(),
