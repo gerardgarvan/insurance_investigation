@@ -50,7 +50,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Death date analysis table — v1.8 Phase 62
 - [x] Drop ICD diagnosis codes from SCT detection — v1.8 Phase 60
 - [ ] First-line therapy regimen labeling (ABVD, BV+AVD, Nivo+AVD) for adults 21+
-- [ ] New Gantt output files preserving existing versions
+- [x] New Gantt output files preserving existing versions — v1.8 Phase 63
 
 ## Current Milestone: v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
 
@@ -152,7 +152,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 63 phases completed across 8 milestones (v1.0-v1.8), ~63 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt CSVs with human-readable code descriptions, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only, encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD), first-line therapy flagging infrastructure (is_first_line column in treatment_episodes.rds), death date data quality analysis (1,295 validated deaths, 253 with post-death activity)
+- **Current state**: 63 phases completed across 8 milestones (v1.0-v1.8), ~64 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt v1 CSVs with human-readable code descriptions + Gantt v2 CSVs with encounter-level cancer categories/regimen labels/first-line flags, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only, encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD), first-line therapy flagging infrastructure (is_first_line column in treatment_episodes.rds), death date data quality analysis (1,295 validated deaths, 253 with post-death activity)
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -192,7 +192,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Other govt as distinct tier (rank 4) | Government programs (VA, TRICARE) distinguished from generic "Other" for payer analysis | ✓ Phase 37 |
 | Encounter-level cancer linkage replaces patient-level | Episode-specific cancer categories are clinically meaningful; patient-level conflates unrelated diagnoses | ✓ Phase 61 |
 | Drop ICD DX codes from SCT detection | Diagnosis codes indicate history/status, not procedure occurrence — PROCEDURES/PRESCRIBING/DISPENSING are authoritative | ✓ Phase 60 |
-| New Gantt files instead of overwriting | Preserves existing v1.7 output for comparison | — Pending |
+| New Gantt files instead of overwriting | Preserves existing v1.7 output for comparison | ✓ Phase 63 |
 
 ## Evolution
 
@@ -212,4 +212,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 — Phase 61 complete (encounter-level cancer linkage, regimen detection)*
+*Last updated: 2026-06-01 — Phase 63 complete (Gantt v2 export with encounter-level cancer, regimen labels, first-line flags)*
