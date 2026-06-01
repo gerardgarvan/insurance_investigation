@@ -1,5 +1,6 @@
 # ==============================================================================
 # Phase 63 Plan 01: Enhanced Gantt Export - v2 CSV with Encounter-Level Enrichments
+# Updated by Phase 64: Data Quality Cleanup for Tableau Import
 # ==============================================================================
 #
 # PURPOSE:
@@ -8,9 +9,14 @@
 #   specific drug names, regimen labels, first-line flags) while preserving
 #   existing v1 output files unchanged for backward compatibility.
 #
-# v2 SCHEMA DOCUMENTATION:
+#   Phase 64 additions: Data quality cleanup for direct Tableau import —
+#   semicolon-separated multi-value fields, simplified drug names, no literal NAs,
+#   filled pseudo-treatment descriptions, "Unlinked" cancer category label,
+#   and trimmed column set (14 episodes, 13 detail).
 #
-#   gantt_episodes_v2.csv (17 columns):
+# v2 SCHEMA DOCUMENTATION (Post-Phase 64 Cleanup):
+#
+#   gantt_episodes_v2.csv (14 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category (Chemotherapy, Radiation, SCT, etc.)
 #     3. episode_number (int) - Sequential episode number per patient-type
@@ -19,33 +25,31 @@
 #     6. episode_length_days (int) - Days from start to stop (0 for single-point)
 #     7. distinct_dates_in_episode (int) - Number of unique treatment dates
 #     8. historical_flag (lgl) - TRUE if episode includes historical treatment dates
-#     9. triggering_codes (chr) - Comma-separated codes triggering this episode
-#    10. encounter_ids (chr) - Comma-separated ENCOUNTERIDs (Phase 60)
-#    11. drug_names (chr) - Comma-separated drug names (Phase 60)
-#    12. triggering_code_descriptions (chr) - Comma-separated descriptions
-#    13. cancer_category (chr) - Encounter-level cancer category from Phase 61
-#    14. is_hodgkin (lgl) - TRUE if cancer_category is "Hodgkin Lymphoma"
-#    15. cancer_link_method (chr) - Linkage method: "encounterid", "temporal", "none" (Phase 61)
-#    16. regimen_label (chr) - Regimen name: "ABVD", "BV+AVD", "Nivo+AVD", or NA (Phase 61)
-#    17. is_first_line (lgl) - TRUE if episode is first-line therapy (Phase 62)
+#     9. triggering_codes (chr) - Semicolon-separated codes (Phase 64 cleanup)
+#    10. drug_names (chr) - Semicolon-separated generic drug names (Phase 64 cleanup)
+#    11. triggering_code_descriptions (chr) - Semicolon-separated descriptions (Phase 64 cleanup)
+#    12. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
+#    13. regimen_label (chr) - Regimen name: "ABVD", "BV+AVD", "Nivo+AVD", or NA (Phase 61)
+#    14. is_first_line (lgl) - TRUE if episode is first-line therapy (Phase 62)
 #
-#   gantt_detail_v2.csv (15 columns):
+#   Dropped columns from Phase 63 v2: encounter_ids, is_hodgkin, cancer_link_method
+#
+#   gantt_detail_v2.csv (13 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category
 #     3. treatment_date (date) - Single treatment date
-#     4. triggering_code (chr) - Single triggering code for this date
-#     5. ENCOUNTERID (chr) - Single encounter ID (Phase 60)
-#     6. drug_name (chr) - Single drug name (Phase 60)
-#     7. episode_number (int) - Parent episode number
-#     8. episode_start (date) - Parent episode start
-#     9. episode_stop (date) - Parent episode stop
-#    10. historical_flag (lgl) - Historical treatment flag
-#    11. triggering_code_description (chr) - Single code description
-#    12. cancer_category (chr) - Encounter-level cancer category (from parent episode)
-#    13. is_hodgkin (lgl) - HL flag (from parent episode)
-#    14. cancer_link_method (chr) - Linkage method (from parent episode, Phase 61)
-#    15. regimen_label (chr) - Regimen name (from parent episode, Phase 61)
-#    16. is_first_line (lgl) - First-line flag (from parent episode, Phase 62)
+#     4. triggering_code (chr) - Single triggering code (Phase 64 cleanup)
+#     5. drug_name (chr) - Single generic drug name (Phase 64 cleanup)
+#     6. episode_number (int) - Parent episode number
+#     7. episode_start (date) - Parent episode start
+#     8. episode_stop (date) - Parent episode stop
+#     9. historical_flag (lgl) - Historical treatment flag
+#    10. triggering_code_description (chr) - Single code description (Phase 64 cleanup)
+#    11. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
+#    12. regimen_label (chr) - Regimen name (from parent episode, Phase 61)
+#    13. is_first_line (lgl) - First-line flag (from parent episode, Phase 62)
+#
+#   Dropped columns from Phase 63 v2: ENCOUNTERID, is_hodgkin, cancer_link_method
 #
 # DECISION TRACEABILITY:
 #   D-01: v2 is a superset of v1 — all 14 existing v1 columns plus 3 new columns
@@ -67,8 +71,8 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # OUTPUTS:
-#   - output/gantt_episodes_v2.csv (17 columns)
-#   - output/gantt_detail_v2.csv (15 columns)
+#   - output/gantt_episodes_v2.csv (14 columns, Phase 64 cleaned & trimmed)
+#   - output/gantt_detail_v2.csv (13 columns, Phase 64 cleaned & trimmed)
 #
 # ==============================================================================
 
@@ -464,15 +468,150 @@ if (file.exists(COHORT_RDS)) {
 }
 
 
+# --- SECTION 4D: DATA QUALITY CLEANUP ---
+
+message("\n--- Section 4D: Data Quality Cleanup (Phase 64) ---")
+
+# Helper function: clean multi-value field (dedup, drop blanks, change separator)
+clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
+  if (is.na(field_str) || field_str == "" || field_str == "NA") return("")
+
+  values <- str_split(field_str, sep_in)[[1]]
+  values <- str_trim(values)
+  values <- values[values != "" & !is.na(values)]
+  values <- unique(values)
+
+  if (length(values) == 0) return("")
+  paste(values, collapse = sep_out)
+}
+
+# Helper function: extract generic drug name from RxNorm string
+simplify_drug_name <- function(drug_str) {
+  if (is.na(drug_str) || drug_str == "" || drug_str == "NA") return("")
+
+  drugs <- str_split(drug_str, ";")[[1]]  # Already semicolon-separated after multi-value cleanup
+  drugs <- str_trim(drugs)
+
+  simplified <- sapply(drugs, function(d) {
+    # Extract first lowercase word sequence (generic name)
+    match <- str_extract(tolower(d), "[a-z]{2,}")
+    if (is.na(match)) return(d)
+    match
+  }, USE.NAMES = FALSE)
+
+  simplified <- unique(simplified)
+  paste(simplified, collapse = ";")
+}
+
+# Step 1: Clean multi-value fields (separator + dedup + drop blanks)
+episodes_export <- episodes_export %>%
+  mutate(
+    triggering_codes = sapply(triggering_codes, clean_multi_value, USE.NAMES = FALSE),
+    drug_names = sapply(drug_names, clean_multi_value, USE.NAMES = FALSE),
+    triggering_code_descriptions = sapply(triggering_code_descriptions, clean_multi_value, USE.NAMES = FALSE)
+  )
+
+detail_export <- detail_export %>%
+  mutate(
+    triggering_code = sapply(triggering_code, clean_multi_value, USE.NAMES = FALSE),
+    triggering_code_description = sapply(triggering_code_description, clean_multi_value, USE.NAMES = FALSE)
+  )
+
+message("  Multi-value fields cleaned (separator: semicolon, deduped, blanks dropped)")
+
+# Step 2: Simplify drug names
+episodes_export <- episodes_export %>%
+  mutate(drug_names = sapply(drug_names, simplify_drug_name, USE.NAMES = FALSE))
+
+detail_export <- detail_export %>%
+  mutate(drug_name = sapply(drug_name, simplify_drug_name, USE.NAMES = FALSE))
+
+message("  Drug names simplified (generic names only)")
+
+# Step 3: Fill pseudo-treatment descriptions
+episodes_export <- episodes_export %>%
+  mutate(
+    triggering_code_descriptions = case_when(
+      treatment_type %in% c("Death", "HL Diagnosis") &
+        (triggering_code_descriptions == "" | is.na(triggering_code_descriptions)) ~ treatment_type,
+      TRUE ~ triggering_code_descriptions
+    )
+  )
+
+detail_export <- detail_export %>%
+  mutate(
+    triggering_code_description = case_when(
+      treatment_type %in% c("Death", "HL Diagnosis") &
+        (triggering_code_description == "" | is.na(triggering_code_description)) ~ treatment_type,
+      TRUE ~ triggering_code_description
+    )
+  )
+
+message("  Pseudo-treatment descriptions filled")
+
+# Step 4: Convert NA to empty strings
+episodes_export <- episodes_export %>%
+  mutate(across(where(is.character), ~ ifelse(is.na(.) | . == "NA", "", .)))
+
+detail_export <- detail_export %>%
+  mutate(across(where(is.character), ~ ifelse(is.na(.) | . == "NA", "", .)))
+
+message("  NA values converted to empty strings")
+
+# Step 5: Fill blank cancer_category with "Unlinked"
+episodes_export <- episodes_export %>%
+  mutate(cancer_category = ifelse(cancer_category == "", "Unlinked", cancer_category))
+
+detail_export <- detail_export %>%
+  mutate(cancer_category = ifelse(cancer_category == "", "Unlinked", cancer_category))
+
+message("  Blank cancer_category filled with 'Unlinked'")
+
+# Step 6: Column trimming (drop encounter_ids, is_hodgkin, cancer_link_method per D-02, D-04)
+episodes_export <- episodes_export %>%
+  select(
+    patient_id, treatment_type, episode_number,
+    episode_start, episode_stop, episode_length_days,
+    distinct_dates_in_episode, historical_flag,
+    triggering_codes, drug_names, triggering_code_descriptions,
+    cancer_category, regimen_label, is_first_line
+  )
+
+detail_export <- detail_export %>%
+  select(
+    patient_id, treatment_type, treatment_date,
+    triggering_code, drug_name, episode_number,
+    episode_start, episode_stop, historical_flag,
+    triggering_code_description, cancer_category,
+    regimen_label, is_first_line
+  )
+
+message("  Columns trimmed to Tableau-essential set")
+message(glue("  Episodes: {ncol(episodes_export)} columns, Detail: {ncol(detail_export)} columns"))
+
+# Step 7: Column count verification
+expected_ep_cols <- 14
+expected_detail_cols <- 13
+
+if (ncol(episodes_export) != expected_ep_cols) {
+  stop(glue("ERROR: episodes_export has {ncol(episodes_export)} columns, expected {expected_ep_cols}"))
+}
+if (ncol(detail_export) != expected_detail_cols) {
+  stop(glue("ERROR: detail_export has {ncol(detail_export)} columns, expected {expected_detail_cols}"))
+}
+
+message("  Column count verification: PASSED")
+
+
 # --- SECTION 5: WRITE CSV OUTPUTS ---
 
 message("\n--- Writing v2 CSV outputs ---")
 
-write.csv(episodes_export, OUTPUT_EPISODES_V2, row.names = FALSE)
+write.csv(episodes_export, OUTPUT_EPISODES_V2, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES_V2}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
 
-write.csv(detail_export, OUTPUT_DETAIL_V2, row.names = FALSE)
+write.csv(detail_export, OUTPUT_DETAIL_V2, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_DETAIL_V2}"))
 message(glue("    {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
 
@@ -490,11 +629,6 @@ message(glue("  Total episode rows: {format(nrow(episodes_export), big.mark = ',
 message(glue("  Total detail rows: {format(nrow(detail_export), big.mark = ',')}"))
 
 # v2-specific stats
-episodes_with_cancer_link <- episodes_export %>%
-  filter(cancer_link_method != "none") %>%
-  nrow()
-message(glue("  Episodes with cancer linkage: {format(episodes_with_cancer_link, big.mark = ',')} ({round(100 * episodes_with_cancer_link / nrow(episodes_export), 1)}%)"))
-
 episodes_with_regimen <- episodes_export %>%
   filter(!is.na(regimen_label)) %>%
   nrow()
@@ -517,8 +651,9 @@ hl_dx_rows <- episodes_export %>%
 message(glue("  HL Diagnosis pseudo-treatment rows: {format(hl_dx_rows, big.mark = ',')}"))
 
 # v1 vs v2 column comparison
-message("\n  v1 vs v2 column comparison:")
-message("    v1 episodes: 14 columns | v2 episodes: 17 columns (+cancer_link_method, +regimen_label, +is_first_line)")
-message("    v1 detail: 13 columns | v2 detail: 15 columns (+cancer_link_method, +regimen_label, +is_first_line)")
+message("\n  v1 vs v2 column comparison (Phase 64 cleanup):")
+message("    v1 episodes: 14 columns | v2 episodes: 14 columns (cleaned & Tableau-ready)")
+message("    v1 detail: 13 columns | v2 detail: 13 columns (cleaned & Tableau-ready)")
+message("    Phase 64 dropped: encounter_ids, is_hodgkin, cancer_link_method (internal columns)")
 
 message("\nDone.")
