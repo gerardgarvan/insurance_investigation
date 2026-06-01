@@ -208,7 +208,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
-| 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete   | 2026-06-01 |
+| 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete    | 2026-06-01 |
 | 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |
 | 70. Automated Formatting | 0/0 | Not started | - |
