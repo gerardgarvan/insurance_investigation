@@ -211,7 +211,7 @@ message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark =
 # Detail table does NOT have cancer_link_method, regimen_label, is_first_line —
 # must join from episodes
 episodes_v2_cols <- episodes %>%
-  select(patient_id, episode_number, cancer_category, is_hodgkin,
+  select(patient_id, treatment_type, episode_number, cancer_category, is_hodgkin,
          cancer_link_method, regimen_label, is_first_line)
 
 detail_export <- detail %>%
@@ -223,7 +223,7 @@ detail_export <- detail %>%
   mutate(
     triggering_code_description = sapply(triggering_code, lookup_description, USE.NAMES = FALSE)
   ) %>%
-  left_join(episodes_v2_cols, by = c("patient_id", "episode_number")) %>%
+  left_join(episodes_v2_cols, by = c("patient_id", "treatment_type", "episode_number")) %>%
   mutate(
     cancer_category = ifelse(is.na(cancer_category), "", cancer_category),
     is_hodgkin = ifelse(is.na(is_hodgkin), FALSE, is_hodgkin)
