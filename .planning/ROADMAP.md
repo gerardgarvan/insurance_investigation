@@ -56,8 +56,8 @@
 
 - [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
 - [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
-- [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
-- [ ] **Phase 68: Output & Test Reorganization** - To be repurposed (original scope absorbed by Phase 66)
+- [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
+- [ ] **Phase 68: Output & Test Reorganization (Verification Gate)** - Verify reorganization requirements, fix documentation drift, create HiPerGator validation checklist
 - [ ] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments
 - [ ] **Phase 70: Automated Formatting** - Apply styler and configure lintr
 - [ ] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally
@@ -118,17 +118,21 @@ Plans:
 - [x] 67-01-PLAN.md -- Move smoke test to 87, archive unnumbered scripts, regenerate SCRIPT_INDEX
 - [x] 67-02-PLAN.md -- Fix payer decade counts in SCRIPT_INDEX, smoke test, and ROADMAP (gap closure)
 
-#### Phase 68: Output & Test Reorganization
-**Goal**: To be repurposed -- original scope (output/test/ad-hoc renumbering) absorbed by Phase 66
+#### Phase 68: Output & Test Reorganization (Repurposed: Verification Gate)
+**Goal**: Verify reorganization requirements (REORG-01 through REORG-05) are satisfied, fix documentation drift (SCRIPT_INDEX cancer decade), create HiPerGator validation checklist, and formally close the reorganization work stream
 **Depends on**: Phase 67
 **Requirements**: REORG-01, REORG-02, REORG-04, REORG-05
 **Success Criteria** (what must be TRUE):
-  1. Visualization/report scripts renumbered to 70-77 in 70-79 decade
-  2. Test/diagnostic scripts renumbered to 80-85 in 80-89 decade
-  3. Ad-hoc exploratory scripts renumbered to 90-98 in 90-99 decade
-  4. R/archive/ folder created with 6 deprecated scripts and explanatory README
-  5. Comprehensive smoke test validates all 80 scripts have sequential numbering and resolvable source() calls
-**Plans**: TBD (may be repurposed or dropped)
+  1. Structural scan confirms 67 numbered scripts across 8 decades with correct counts per decade
+  2. SCRIPT_INDEX.md fully aligned with filesystem (zero filename discrepancies)
+  3. R/87 smoke test expected arrays match actual filenames (cancer decade corrected)
+  4. R/archive/ contains 8 deprecated scripts with README.md (REORG-04 confirmed)
+  5. HiPerGator validation checklist created for deferred REORG-05 data-dependent checks
+  6. REQUIREMENTS.md traceability updated (REORG-04 complete, REORG-05 structural done)
+**Plans:** 2 plans
+Plans:
+- [ ] 68-01-PLAN.md -- Structural verification scan + fix SCRIPT_INDEX and smoke test discrepancies
+- [ ] 68-02-PLAN.md -- HiPerGator checklist creation + documentation updates (ROADMAP, REQUIREMENTS, STATE)
 
 #### Phase 69: Script Documentation
 **Goal**: Every script has header blocks, section headers, and explanatory comments for maintainability
@@ -209,7 +213,7 @@ Plans:
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
 | 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete    | 2026-06-01 |
-| 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
+| 68. Output & Test Reorganization (Verification Gate) | 0/2 | In Progress | - |
 | 69. Script Documentation | 0/0 | Not started | - |
 | 70. Automated Formatting | 0/0 | Not started | - |
 | 71. Linting Cleanup | 0/0 | Not started | - |
@@ -218,4 +222,4 @@ Plans:
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-01 -- Phase 67 complete (gap closure plan 67-02 executed)*
+*Last updated: 2026-06-01 -- Phase 68 plans created (verification gate)*
