@@ -54,7 +54,7 @@
 
 ### Phases
 
-- [ ] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder
+- [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
 - [ ] **Phase 66: Cohort & Treatment Reorganization** - Renumber cohort (10-19) and treatment (20-39) scripts
 - [ ] **Phase 67: Cancer & Payer/QA Reorganization** - Renumber cancer (40-59) and payer/QA (60-69) scripts
 - [ ] **Phase 68: Output & Test Reorganization** - Renumber output (70-79), test (80-89), and ad-hoc (90-99) scripts
@@ -77,10 +77,10 @@
   3. Foundation scripts (DuckDB ingest, data loading, payer harmonization) renumbered to 01-03
   4. All source() calls referencing foundation scripts updated to new numbers
   5. Smoke test validates no broken cross-references for foundation scripts
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 65-01-PLAN.md -- Move utils to R/utils/, renumber 25->03, update all source() references
-- [ ] 65-02-PLAN.md -- Create smoke test, update documentation (SCRIPT_INDEX, existing smoke test)
+- [x] 65-02-PLAN.md -- Create smoke test, update documentation (SCRIPT_INDEX, existing smoke test)
 
 #### Phase 66: Cohort & Treatment Reorganization
 **Goal**: Cohort building (10-19) and treatment analysis (20-39) scripts are renumbered sequentially with updated cross-references
@@ -194,7 +194,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 65. Foundation Reorganization | 1/2 | In Progress|  |
+| 65. Foundation Reorganization | 2/2 | Complete   | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 0/0 | Not started | - |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | Not started | - |
 | 68. Output & Test Reorganization | 0/0 | Not started | - |
