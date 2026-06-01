@@ -113,10 +113,10 @@ Plans:
   3. Test decade has 8 scripts (80-87) including full-pipeline smoke test
   4. All 8 unnumbered scripts archived to R/archive/ with README.md
   5. SCRIPT_INDEX.md regenerated from filesystem (guaranteed accurate)
-**Plans:** 1/2 plans complete
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 67-01-PLAN.md -- Move smoke test to 87, archive unnumbered scripts, regenerate SCRIPT_INDEX
-- [ ] 67-02-PLAN.md -- Fix payer decade counts in SCRIPT_INDEX, smoke test, and ROADMAP (gap closure)
+- [x] 67-02-PLAN.md -- Fix payer decade counts in SCRIPT_INDEX, smoke test, and ROADMAP (gap closure)
 
 #### Phase 68: Output & Test Reorganization
 **Goal**: To be repurposed -- original scope (output/test/ad-hoc renumbering) absorbed by Phase 66
@@ -208,7 +208,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
-| 67. Post-Renumbering Inventory Cleanup | 1/2 | Gap closure   | - |
+| 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete   | 2026-06-01 |
 | 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |
 | 70. Automated Formatting | 0/0 | Not started | - |
@@ -218,4 +218,4 @@ Plans:
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-01 -- Phase 67 gap closure plan added (67-02)*
+*Last updated: 2026-06-01 -- Phase 67 complete (gap closure plan 67-02 executed)*
