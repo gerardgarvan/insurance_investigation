@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
 status: executing
-last_updated: "2026-06-01T19:35:34.476Z"
+last_updated: "2026-06-01T19:48:09Z"
 progress:
   total_phases: 10
   completed_phases: 1
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 100
 ---
 
 # State: v2.0 Codebase Cleanup & Documentation
@@ -25,16 +25,16 @@ progress:
 
 ## Current Position
 
-Phase: 66 (cohort-treatment-reorganization) — EXECUTING
-Plan: 2 of 3
+Phase: 66 (cohort-treatment-reorganization) — COMPLETE
+Plan: 3 of 3
 **Phase:** 66
-**Plan:** 66-01 complete
-**Status:** Executing Phase 66
-**Progress:** [████████░░] 80%
+**Plan:** 66-03 complete
+**Status:** Phase 66 complete - all scripts renumbered to final decade positions
+**Progress:** [██████████] 100%
 
 ### Phase Goal
 
-Cohort (10-14) and treatment (20-29) scripts renumbered and all source() cross-references updated.
+Complete v2.0 decade-based numbering scheme (REORG-01) with all scripts in final positions, comprehensive smoke test (REORG-02), and regenerated SCRIPT_INDEX.md.
 
 ## Performance Metrics
 
@@ -60,6 +60,10 @@ Cohort (10-14) and treatment (20-29) scripts renumbered and all source() cross-r
 
 - Renumber cohort helpers (10-13) BEFORE build_cohort (14) to reflect dependency order (D-03)
 - Eliminate all a/b suffixes in treatment decade for clean sequential numbering (D-07)
+- Drop number prefixes from truly one-off tools (search_C8190, treatment_cross_reference) to keep 90-99 decade size manageable
+- Outputs at 70-75 (visualizations/reports per D-04)
+- Tests at 80-86 (backend tests + treatment verification per D-06)
+- Ad-hoc at 90-99 (diagnostics, one-offs, payer overflow)
 
 ### Open Questions
 
@@ -77,20 +81,23 @@ _No todos yet._
 
 ### What Just Happened
 
-- Plan 66-01 complete: 15 scripts renumbered (cohort 10-14, treatment 20-29)
-- All a/b suffixes eliminated from treatment scripts
-- 17 downstream scripts updated with new source() references
-- Zero stale references remain (verified)
+- Phase 66 complete: All 66 numbered R scripts now in final decade positions
+- Plan 66-03 complete: Outputs (70-75), tests (80-86), ad-hoc (90-99) renumbered
+- All a/b suffixes eliminated (D-07)
+- 32 scripts renamed, 30 headers updated, 15 source() calls updated
+- R/66_smoke_test_full_pipeline.R created (283 lines, 12-section validation)
+- R/SCRIPT_INDEX.md regenerated (82 total scripts documented)
+- Zero broken references remain (verified by smoke test)
 
 ### Current Task
 
-Phase 66 Plan 01 complete, ready for Plan 02 (outputs reorganization)
+Phase 66 complete. Ready for next phase.
 
 ### Next Actions
 
-1. Continue with Plan 66-02 (outputs decade 30-39)
-2. Update source() calls in output scripts
-3. Complete Plan 66-03 (tests/scripts decade 80-99)
+1. Begin Phase 67 (archival of deprecated scripts) or Phase 68 (documentation)
+2. Run R/66_smoke_test_full_pipeline.R to validate integrity
+3. Continue with DRY-01 (consolidate PREFIX_MAP duplication) in future phase
 
 ---
 *State initialized: 2026-06-01*

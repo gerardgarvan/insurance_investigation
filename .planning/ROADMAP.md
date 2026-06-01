@@ -55,7 +55,7 @@
 ### Phases
 
 - [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
-- [ ] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades)
+- [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
 - [ ] **Phase 67: Cancer & Payer/QA Reorganization** - To be repurposed (original scope absorbed by Phase 66)
 - [ ] **Phase 68: Output & Test Reorganization** - To be repurposed (original scope absorbed by Phase 66)
 - [ ] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments
@@ -97,11 +97,11 @@ Plans:
   8. All source() cross-references updated (95+ total across codebase)
   9. Comprehensive smoke test validates all decades and source() resolution
   10. SCRIPT_INDEX.md regenerated with complete new numbering
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 66-01-PLAN.md -- Renumber cohort (10-14) and treatment (20-29) scripts with source() updates
 - [x] 66-02-PLAN.md -- Renumber cancer (40-53) and payer/QA (60-69) scripts with source() updates
-- [ ] 66-03-PLAN.md -- Renumber outputs (70-75), tests (80-86), ad-hoc (90-99), create smoke test, regenerate SCRIPT_INDEX
+- [x] 66-03-PLAN.md -- Renumber outputs (70-75), tests (80-86), ad-hoc (90-99), create smoke test, regenerate SCRIPT_INDEX
 
 #### Phase 67: Cancer & Payer/QA Reorganization
 **Goal**: To be repurposed -- original scope (cancer/payer renumbering) absorbed by Phase 66
@@ -204,7 +204,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
-| 66. Cohort & Treatment Reorganization | 2/3 | In Progress|  |
+| 66. Cohort & Treatment Reorganization | 3/3 | Complete   | 2026-06-01 |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | To be repurposed | - |
 | 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |
