@@ -103,7 +103,7 @@ pcornet_rds_backup <- pcornet
 # Open DuckDB connection
 duckdb_path <- CONFIG$cache$duckdb_path
 if (!file.exists(duckdb_path)) {
-  stop(glue("DuckDB file not found: {duckdb_path}. Run R/25_duckdb_ingest.R first."))
+  stop(glue("DuckDB file not found: {duckdb_path}. Run R/03_duckdb_ingest.R first."))
 }
 open_pcornet_con(db_path = duckdb_path, read_only = TRUE)
 
