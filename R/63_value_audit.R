@@ -1,5 +1,5 @@
 # ==============================================================================
-# 17_value_audit.R -- Comprehensive value audit for all PCORnet CDM tables
+# 63_value_audit.R -- Comprehensive value audit for all PCORnet CDM tables
 # ==============================================================================
 #
 # Produces one CSV per loaded PCORnet CDM table enumerating every distinct value
@@ -16,7 +16,7 @@
 #
 #
 # Usage:
-#   source("R/17_value_audit.R")
+#   source("R/63_value_audit.R")
 #   # Optionally source R/02_harmonize_payer.R and/or R/14_build_cohort.R first
 #   # to include derived variable audits.
 #

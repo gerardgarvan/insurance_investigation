@@ -1,5 +1,5 @@
 # ==============================================================================
-# 24_per_patient_source_detection.R -- Per-patient source detection by date
+# 69_per_patient_source_detection.R -- Per-patient source detection by date
 # ==============================================================================
 #
 # Phase 28: Per-Patient Source Detection by Date
@@ -15,7 +15,7 @@
 #   - source_combo_frequencies.csv     (PDSRC-02: combo frequency summary)
 #   - per_source_summary.csv           (PDSRC-03: per-source aggregate counts)
 #
-# Usage: source("R/24_per_patient_source_detection.R")
+# Usage: source("R/69_per_patient_source_detection.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.

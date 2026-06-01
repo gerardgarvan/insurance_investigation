@@ -154,13 +154,13 @@ required_input_files <- unlist(input_files[c(
 missing_required <- required_input_files[!file.exists(required_input_files)]
 if (length(missing_required) > 0) {
   message("Some Phase 19/20 CSVs are missing. Attempting to generate them now...")
-  try(source("R/18_uf_insurance_missingness.R"), silent = TRUE)
+  try(source("R/65_uf_insurance_missingness.R"), silent = TRUE)
   try(source("R/19_flm_duplicate_dates.R"), silent = TRUE)
 }
 
 assert_required_files(
   required_input_files,
-  missing_hint = "Run Phase 19 and 20 scripts first:\nsource(\"R/18_uf_insurance_missingness.R\")\nsource(\"R/19_flm_duplicate_dates.R\")"
+  missing_hint = "Run Phase 19 and 20 scripts first:\nsource(\"R/65_uf_insurance_missingness.R\")\nsource(\"R/19_flm_duplicate_dates.R\")"
 )
 
 # ------------------------------------------------------------------------------

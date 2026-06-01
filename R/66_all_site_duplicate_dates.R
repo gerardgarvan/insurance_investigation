@@ -1,5 +1,5 @@
 # ==============================================================================
-# 21_all_site_duplicate_dates.R -- All-site duplicate date investigation
+# 66_all_site_duplicate_dates.R -- All-site duplicate date investigation
 # ==============================================================================
 #
 # Phase 22: Generalize Phase 20 to All Sites
@@ -20,7 +20,7 @@
 #   - all_site_source_payer_completeness.csv    (ALLDUP-03)
 #   - all_site_cross_site_summary.csv           (ALLDUP-05)
 #
-# Usage: source("R/21_all_site_duplicate_dates.R")
+# Usage: source("R/66_all_site_duplicate_dates.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, PAYER_MAPPING).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.

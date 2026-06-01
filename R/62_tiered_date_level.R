@@ -1,5 +1,5 @@
 # ==============================================================================
-# 46a_tiered_date_level.R -- Tiered payer at the date level
+# 62_tiered_date_level.R -- Tiered payer at the date level
 # ==============================================================================
 #
 # Purpose: Expand treatment episodes (from Phase 44) into per-calendar-date rows
@@ -20,7 +20,7 @@
 #   - date_tier_summary.csv           (tier frequency across all dates)
 #   - date_tier_summary_by_type.csv   (tier frequency per treatment type)
 #
-# Usage: source("R/46a_tiered_date_level.R")
+# Usage: source("R/62_tiered_date_level.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING,
 #   AMC_PAYER_LOOKUP). Requires get_pcornet_table("ENCOUNTER"),

@@ -1,5 +1,5 @@
 # ==============================================================================
-# 23_overlap_classification.R -- Overlap classification and recommendations
+# 68_overlap_classification.R -- Overlap classification and recommendations
 # ==============================================================================
 #
 # Phase 26: Overlap Classification and Recommendations
@@ -17,7 +17,7 @@
 #   - per_site_overlap_profile.csv           (OVRLP-03)
 #   - overlap_source_payer_completeness.csv  (OVRLP-03)
 #
-# Usage: source("R/23_overlap_classification.R")
+# Usage: source("R/68_overlap_classification.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.

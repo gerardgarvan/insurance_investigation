@@ -1,5 +1,5 @@
 # ==============================================================================
-# 65_smoke_test_foundation.R -- Validate Phase 65 Foundation Reorganization
+# 86_smoke_test_foundation.R -- Validate Phase 65 Foundation Reorganization
 # ==============================================================================
 #
 # Validates:
@@ -11,7 +11,7 @@
 #   6. No old-style source("R/utils_*.R") paths remain in any R script
 #
 # Usage:
-#   Rscript R/65_smoke_test_foundation.R
+#   Rscript R/86_smoke_test_foundation.R
 #
 # Requirements: REORG-01, REORG-03, REORG-05
 # ==============================================================================

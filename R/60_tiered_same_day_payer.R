@@ -1,8 +1,8 @@
 # ==============================================================================
-# 36_tiered_same_day_payer.R -- Tiered same-day payer categorization
+# 60_tiered_same_day_payer.R -- Tiered same-day payer categorization
 # ==============================================================================
 #
-# Phase 36: All-encounter payer frequency and same-day categorization (AMC 8-category)
+# Phase 60: All-encounter payer frequency and same-day categorization (AMC 8-category)
 # Requirements: Per Amy Crisp framework (payer_framework.txt)
 #
 # Purpose: Produce two deliverables per Amy Crisp's framework:
@@ -31,7 +31,7 @@
 #     - payer_resolved_impact_all.csv            (CSV C: before vs after)
 #     - payer_resolved_impact_av_th.csv
 #
-# Usage: source("R/36_tiered_same_day_payer.R")
+# Usage: source("R/60_tiered_same_day_payer.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB, PAYER_MAPPING,
 #   AMC_PAYER_LOOKUP).
