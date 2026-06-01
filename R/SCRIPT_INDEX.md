@@ -78,7 +78,6 @@ Payer tiering, missingness analysis, multi-source overlap detection, and value a
 | 63_value_audit.R | Comprehensive value audit: every distinct value for every column in every PCORnet table | 01_load_pcornet |
 | 64_all_source_missingness.R | All-source payer missingness: extends Phase 19 UFH analysis to all 5 partner sites | 02_harmonize_payer |
 | 65_uf_insurance_missingness.R | UFH-specific payer data missingness diagnostic by year, encounter type | 02_harmonize_payer |
-| 66_smoke_test_full_pipeline.R | Validates Phase 66 complete reorganization (outputs, tests, ad-hoc decades) | (standalone) |
 | 67_all_site_duplicate_dates.R | All-site duplicate date investigation: extends Phase 20 FLM analysis to all sites | 00_config |
 | 68_multi_source_overlap_detection.R | Detect same-date and same-week encounter pairs from different ENCOUNTER.SOURCE values (all encounter types) | 00_config |
 | 69_per_patient_source_detection.R | Per-patient source detection by date: which SOURCE values present on each patient-date | 00_config |
@@ -96,7 +95,7 @@ Visualizations, PowerPoint presentations, and documentation generation.
 | 74_generate_documentation.R | Auto-generate variable documentation (.md + .docx) from config code lists | 00_config |
 | 75_encounter_analysis.R | Encounter analysis by payer, DX year, age group (histograms and summary tables) | 14_build_cohort |
 
-## Testing (80-86)
+## Testing (80-87)
 
 Backend parity tests, cohort benchmarks, treatment verification, and smoke tests.
 
@@ -109,6 +108,7 @@ Backend parity tests, cohort benchmarks, treatment verification, and smoke tests
 | 84_test_durations.R | Verification script: clinical plausibility checks, structural validation, anomaly detection for treatment_durations.rds | 00_config, 25_treatment_durations |
 | 85_test_episodes.R | Verification script: structural, data quality, historical flag, clinical plausibility checks for treatment_episodes.rds | 00_config, 26_treatment_episodes |
 | 86_smoke_test_foundation.R | Validates Phase 65 foundation reorganization (utils subfolder, script renumbering, source references) | 00_config |
+| 87_smoke_test_full_pipeline.R | Validates Phase 66 complete reorganization (outputs, tests, ad-hoc decades) and Phase 67 cleanup (87 in test decade, 9 payer scripts, archive created) | (standalone) |
 
 ## Ad-hoc & Diagnostics (90-99)
 
@@ -146,20 +146,21 @@ Sourced by 00_config.R (auto-loaded via list.files() from R/utils/ subfolder). T
 
 ---
 
-## Unnumbered Ad-hoc Scripts
+## Archived Scripts
 
-Standalone diagnostic or helper scripts, not part of the numbered pipeline sequence.
+**All unnumbered scripts archived to R/archive/ (Phase 67).**
 
-| Script | Purpose | Sources |
-|--------|---------|---------|
-| check_deleted_proton_code.R | Check for deleted proton CPT code 77521 in PROCEDURES table | 00_config, 01_load_pcornet |
-| date_range_check.R | Quick diagnostic for earliest DIAGNOSIS and latest TUMOR_REGISTRY dates | 00_config |
-| payer_frequency_from_resolved.R | Payer frequency table from 60_tiered_same_day_payer.R resolved detail CSV | (reads CSV directly) |
-| run_phase12_outputs.R | HiPerGator execution helper: generate all Phase 12 outputs (4 PNGs + PPTX) | (orchestration script: 75_encounter_analysis, 72_generate_pptx) |
-| sct_code_inventory.R | SCT evidence: all codes from every PCORnet source table per patient per date | 00_config, 01_load_pcornet |
-| search_C8190.R | One-off ICD code search for C8190 (unspecified Hodgkin lymphoma) | 00_config, 01_load_pcornet |
-| tiered_payer_summary.R | Tiered payer summary styled xlsx from 60_tiered_same_day_payer.R CSV outputs | 00_config |
-| treatment_cross_reference.R | Two-way gap report comparing reference document code lists against live TREATMENT_CODES config | 00_config, 01_load_pcornet |
+See `R/archive/README.md` for details on 8 archived scripts:
+- check_deleted_proton_code.R
+- date_range_check.R
+- payer_frequency_from_resolved.R
+- run_phase12_outputs.R
+- sct_code_inventory.R
+- search_C8190.R
+- tiered_payer_summary.R
+- treatment_cross_reference.R
+
+These scripts represent one-off investigations, superseded implementations, or environment-specific orchestration helpers. They are preserved for reference but are no longer part of the active pipeline.
 
 ---
 
@@ -170,13 +171,13 @@ Standalone diagnostic or helper scripts, not part of the numbered pipeline seque
   - Cohort (10-14): 5
   - Treatment (20-29): 10
   - Cancer (40-53): 14
-  - Payer/QA (60-69): 10
+  - Payer/QA (60-69): 9
   - Outputs (70-75): 6
-  - Tests (80-86): 7
+  - Tests (80-87): 8
   - Ad-hoc (90-99): 10
   - **Total numbered:** 66
 - **Utility libraries:** 8 (in R/utils/ subfolder)
-- **Unnumbered ad-hoc scripts:** 8
+- **Archived scripts:** 8 (in R/archive/ directory)
 - **Total:** 82
 
 ## Key Dependency Chains
