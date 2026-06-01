@@ -54,10 +54,10 @@
 
 ### Phases
 
-- [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
-- [ ] **Phase 66: Cohort & Treatment Reorganization** - Renumber cohort (10-19) and treatment (20-39) scripts
-- [ ] **Phase 67: Cancer & Payer/QA Reorganization** - Renumber cancer (40-59) and payer/QA (60-69) scripts
-- [ ] **Phase 68: Output & Test Reorganization** - Renumber output (70-79), test (80-89), and ad-hoc (90-99) scripts
+- [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
+- [ ] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades)
+- [ ] **Phase 67: Cancer & Payer/QA Reorganization** - To be repurposed (original scope absorbed by Phase 66)
+- [ ] **Phase 68: Output & Test Reorganization** - To be repurposed (original scope absorbed by Phase 66)
 - [ ] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments
 - [ ] **Phase 70: Automated Formatting** - Apply styler and configure lintr
 - [ ] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally
@@ -83,19 +83,28 @@ Plans:
 - [x] 65-02-PLAN.md -- Create smoke test, update documentation (SCRIPT_INDEX, existing smoke test)
 
 #### Phase 66: Cohort & Treatment Reorganization
-**Goal**: Cohort building (10-19) and treatment analysis (20-39) scripts are renumbered sequentially with updated cross-references
+**Goal**: All pipeline scripts (03-63+) renumbered into final decade positions in one comprehensive pass with all source() cross-references updated
 **Depends on**: Phase 65
 **Requirements**: REORG-01, REORG-02
 **Success Criteria** (what must be TRUE):
-  1. Cohort scripts renumbered to 10-19 decade in execution order
-  2. Treatment scripts (currently 38-44, 60-62) consolidated to 20-27 in 20-39 decade
-  3. All source() cross-references updated (95+ total across codebase)
-  4. RDS artifacts (hl_cohort.rds, treatment_episodes.rds) structure unchanged (parity test passes)
-  5. Smoke test validates all cohort and treatment source() calls resolve
-**Plans**: TBD
+  1. Cohort scripts renumbered to 10-14 (helpers before build_cohort)
+  2. Treatment scripts renumbered to 20-29 (no a/b suffixes)
+  3. Cancer scripts renumbered to 40-53 (gantt exports in cancer decade)
+  4. Payer/QA scripts renumbered to 60-69
+  5. Output scripts renumbered to 70-75
+  6. Test scripts renumbered to 80-86
+  7. Ad-hoc scripts renumbered to 90-99
+  8. All source() cross-references updated (95+ total across codebase)
+  9. Comprehensive smoke test validates all decades and source() resolution
+  10. SCRIPT_INDEX.md regenerated with complete new numbering
+**Plans:** 3 plans
+Plans:
+- [ ] 66-01-PLAN.md -- Renumber cohort (10-14) and treatment (20-29) scripts with source() updates
+- [ ] 66-02-PLAN.md -- Renumber cancer (40-53) and payer/QA (60-69) scripts with source() updates
+- [ ] 66-03-PLAN.md -- Renumber outputs (70-75), tests (80-86), ad-hoc (90-99), create smoke test, regenerate SCRIPT_INDEX
 
 #### Phase 67: Cancer & Payer/QA Reorganization
-**Goal**: Cancer diagnosis (40-59) and payer/QA (60-69) scripts are renumbered with validated dependencies
+**Goal**: To be repurposed -- original scope (cancer/payer renumbering) absorbed by Phase 66
 **Depends on**: Phase 66
 **Requirements**: REORG-01, REORG-02
 **Success Criteria** (what must be TRUE):
@@ -104,10 +113,10 @@ Plans:
   3. cancer_summary.rds and confirmed_hl_cohort.rds row counts unchanged
   4. All source() references to cancer and payer scripts updated
   5. Smoke test validates cancer and payer script dependencies
-**Plans**: TBD
+**Plans**: TBD (may be repurposed or dropped)
 
 #### Phase 68: Output & Test Reorganization
-**Goal**: Output, test, and ad-hoc scripts are renumbered to final positions with deprecated scripts archived
+**Goal**: To be repurposed -- original scope (output/test/ad-hoc renumbering) absorbed by Phase 66
 **Depends on**: Phase 67
 **Requirements**: REORG-01, REORG-02, REORG-04, REORG-05
 **Success Criteria** (what must be TRUE):
@@ -116,7 +125,7 @@ Plans:
   3. Ad-hoc exploratory scripts renumbered to 90-98 in 90-99 decade
   4. R/archive/ folder created with 6 deprecated scripts and explanatory README
   5. Comprehensive smoke test validates all 80 scripts have sequential numbering and resolvable source() calls
-**Plans**: TBD
+**Plans**: TBD (may be repurposed or dropped)
 
 #### Phase 69: Script Documentation
 **Goal**: Every script has header blocks, section headers, and explanatory comments for maintainability
@@ -195,9 +204,9 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
-| 66. Cohort & Treatment Reorganization | 0/0 | Not started | - |
-| 67. Cancer & Payer/QA Reorganization | 0/0 | Not started | - |
-| 68. Output & Test Reorganization | 0/0 | Not started | - |
+| 66. Cohort & Treatment Reorganization | 0/3 | Planned | - |
+| 67. Cancer & Payer/QA Reorganization | 0/0 | To be repurposed | - |
+| 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |
 | 70. Automated Formatting | 0/0 | Not started | - |
 | 71. Linting Cleanup | 0/0 | Not started | - |
@@ -206,4 +215,4 @@ Plans:
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-01 -- Phase 65 planned (2 plans)*
+*Last updated: 2026-06-01 -- Phase 66 planned (3 plans)*
