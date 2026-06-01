@@ -204,7 +204,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
-| 66. Cohort & Treatment Reorganization | 3/3 | Complete   | 2026-06-01 |
+| 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | To be repurposed | - |
 | 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |

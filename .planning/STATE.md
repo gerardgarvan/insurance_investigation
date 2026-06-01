@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
-status: executing
-last_updated: "2026-06-01T19:48:09Z"
+status: planning
+last_updated: "2026-06-01T19:55:39.213Z"
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
   completed_plans: 5
   percent: 100
@@ -27,9 +27,9 @@ progress:
 
 Phase: 66 (cohort-treatment-reorganization) — COMPLETE
 Plan: 3 of 3
-**Phase:** 66
-**Plan:** 66-03 complete
-**Status:** Phase 66 complete - all scripts renumbered to final decade positions
+**Phase:** 67
+**Plan:** Not started
+**Status:** Ready to plan
 **Progress:** [██████████] 100%
 
 ### Phase Goal
