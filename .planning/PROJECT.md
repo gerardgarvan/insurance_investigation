@@ -92,7 +92,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 63 phases completed across 8 milestones. ~80 R scripts. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation.
+**Pipeline status:** 64 phases completed across 9 milestones. ~80 R scripts. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 65 complete — foundation scripts reorganized to 00-09 decade, R/utils/ subfolder established with dynamic auto-sourcing.
 
 ## Previous Milestones
 
@@ -244,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after v2.0 milestone start*
+*Last updated: 2026-06-01 after Phase 65 completion*
