@@ -194,7 +194,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 65. Foundation Reorganization | 2/2 | Complete   | 2026-06-01 |
+| 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 0/0 | Not started | - |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | Not started | - |
 | 68. Output & Test Reorganization | 0/0 | Not started | - |
