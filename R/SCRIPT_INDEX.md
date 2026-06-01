@@ -11,9 +11,10 @@ Foundation scripts that load data, harmonize payer categories, define cohort pre
 
 | Script | Purpose | Sources |
 |--------|---------|---------|
-| 00_config.R | Project-wide configuration: data paths, ICD code lists, payer mapping rules, treatment codes, analysis parameters. Auto-sources all utility scripts. | utils_dates, utils_attrition, utils_icd, utils_snapshot, utils_duckdb, utils_treatment, utils_payer |
+| 00_config.R | Project-wide configuration: data paths, ICD code lists, payer mapping rules, treatment codes, analysis parameters. Auto-sources all R/utils/*.R utility modules via list.files(). | (auto-sources all 8 R/utils/ modules) |
 | 01_load_pcornet.R | Load 13 PCORnet CDM CSV tables with explicit column types into a named list (`pcornet$ENROLLMENT`, etc.) | 00_config |
 | 02_harmonize_payer.R | AMC 8-category payer mapping from raw PAYER_TYPE codes. Produces patient-level payer summary. | 01_load_pcornet |
+| 03_duckdb_ingest.R | Ingest 13 PCORnet tables from RDS cache into DuckDB with atomic write (renumbered from 25 in Phase 65) | 00_config, utils/utils_duckdb |
 | 03_cohort_predicates.R | Named filter predicates (`has_*`, `with_*`, `exclude_*`) for HL cohort building. Also defines treatment flag functions. | (loaded via 00_config dependency chain) |
 | 04_build_cohort.R | Compose predicates into sequential filter chain, add treatment flags, calculate ages, assemble final HL cohort. | 02_harmonize_payer, 03_cohort_predicates, 10_treatment_payer, 13_surveillance, 14_survivorship_encounters |
 
@@ -63,11 +64,10 @@ Foundation scripts that load data, harmonize payer categories, define cohort pre
 | 23_overlap_classification.R | Classify multi-source encounter groups as Identical/Partial/Distinct with per-site recommendations | 00_config |
 | 24_per_patient_source_detection.R | Per-patient source detection by date: which SOURCE values present on each patient-date | 00_config |
 
-## DuckDB Backend (25-29)
+## DuckDB Backend Testing (26-29)
 
 | Script | Purpose | Sources |
 |--------|---------|---------|
-| 25_duckdb_ingest.R | Ingest 13 PCORnet tables from RDS cache into DuckDB with atomic write | 00_config, utils_duckdb |
 | 26_smoke_test_backends.R | Backend parity smoke test: run 6 predicates on RDS vs DuckDB with 100-patient sample | 00_config, 01_load_pcornet, 02_harmonize_payer, 03_cohort_predicates |
 | 27_parity_test_cohort.R | Full cohort build parity verification: RDS vs DuckDB using waldo::compare() | 00_config, 01_load_pcornet, 04_build_cohort |
 | 28_benchmark_cohort.R | RDS vs DuckDB cohort build benchmark: 3 runs per backend, median comparison | 00_config, 01_load_pcornet |
@@ -139,18 +139,26 @@ Foundation scripts that load data, harmonize payer categories, define cohort pre
 
 ## Utility Libraries
 
-Sourced by 00_config.R (auto-loaded) or by specific scripts. These define reusable functions, not standalone analyses.
+Sourced by 00_config.R (auto-loaded via list.files() from R/utils/ subfolder). These define reusable functions, not standalone analyses.
 
 | Script | Purpose | Auto-sourced by |
 |--------|---------|-----------------|
-| utils_attrition.R | Attrition logging for cohort construction (init_attrition_log, log_attrition) | 00_config |
-| utils_dates.R | Multi-format date parsing for PCORnet CDM data (parse_pcornet_date) | 00_config |
-| utils_duckdb.R | DuckDB utility functions: get_pcornet_table(), connection management, materialization | 00_config |
-| utils_icd.R | ICD code normalization and HL diagnosis matching (normalize_icd, is_hl_diagnosis) | 00_config |
-| utils_payer.R | Shared payer classification and comparison helpers (is_missing_payer, etc.) | 00_config |
-| utils_pptx.R | PowerPoint styling and slide generation helpers (UF brand colors, table styling) | 11_generate_pptx, 22b_generate_phase19_20_pptx |
-| utils_snapshot.R | Snapshot helper for consistent RDS output creation (save_output_data) | 00_config |
-| utils_treatment.R | Shared treatment analysis helpers (safe_table, get_hl_patient_ids, empty_result) | 00_config |
+| utils/utils_attrition.R | Attrition logging for cohort construction (init_attrition_log, log_attrition) | 00_config |
+| utils/utils_dates.R | Multi-format date parsing for PCORnet CDM data (parse_pcornet_date) | 00_config |
+| utils/utils_duckdb.R | DuckDB utility functions: get_pcornet_table(), connection management, materialization | 00_config |
+| utils/utils_icd.R | ICD code normalization and HL diagnosis matching (normalize_icd, is_hl_diagnosis) | 00_config |
+| utils/utils_payer.R | Shared payer classification and comparison helpers (is_missing_payer, etc.) | 00_config |
+| utils/utils_pptx.R | PowerPoint styling and slide generation helpers (UF brand colors, table styling) | 11_generate_pptx, 22b_generate_phase19_20_pptx |
+| utils/utils_snapshot.R | Snapshot helper for consistent RDS output creation (save_output_data) | 00_config |
+| utils/utils_treatment.R | Shared treatment analysis helpers (safe_table, get_hl_patient_ids, empty_result) | 00_config |
+
+---
+
+## Reorganization & Smoke Tests (65+)
+
+| Script | Purpose | Sources |
+|--------|---------|---------|
+| 65_smoke_test_foundation.R | Validates Phase 65 foundation reorganization (utils subfolder, script renumbering, source references) | 00_config |
 
 ---
 
@@ -171,17 +179,18 @@ Standalone diagnostic or helper scripts, not part of the numbered pipeline seque
 
 ## Script Count
 
-- **Numbered pipeline scripts:** 58 (00-54, 99; includes a/b suffixed scripts)
-- **Utility libraries:** 8
+- **Numbered pipeline scripts:** 59 (00-54, 65, 99; includes a/b suffixed scripts)
+- **Utility libraries:** 8 (in R/utils/ subfolder)
 - **Ad-hoc scripts:** 6
-- **Total:** 72
+- **Total:** 73
 
 ## Key Dependency Chains
 
 ```
-00_config -> utils_dates, utils_attrition, utils_icd, utils_snapshot, utils_duckdb, utils_treatment, utils_payer
+00_config -> utils/*.R (auto-sourced via list.files(): 8 modules)
 01_load_pcornet -> 00_config
 02_harmonize_payer -> 01_load_pcornet
+03_duckdb_ingest -> 00_config, utils/utils_duckdb (renumbered from 25 in Phase 65)
 03_cohort_predicates -> (via 00_config)
 04_build_cohort -> 02_harmonize_payer, 03_cohort_predicates, 10_treatment_payer, 13_surveillance, 14_survivorship_encounters
 05_visualize_waterfall -> 04_build_cohort
