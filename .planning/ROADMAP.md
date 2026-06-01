@@ -97,9 +97,9 @@ Plans:
   8. All source() cross-references updated (95+ total across codebase)
   9. Comprehensive smoke test validates all decades and source() resolution
   10. SCRIPT_INDEX.md regenerated with complete new numbering
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
-- [ ] 66-01-PLAN.md -- Renumber cohort (10-14) and treatment (20-29) scripts with source() updates
+- [x] 66-01-PLAN.md -- Renumber cohort (10-14) and treatment (20-29) scripts with source() updates
 - [ ] 66-02-PLAN.md -- Renumber cancer (40-53) and payer/QA (60-69) scripts with source() updates
 - [ ] 66-03-PLAN.md -- Renumber outputs (70-75), tests (80-86), ad-hoc (90-99), create smoke test, regenerate SCRIPT_INDEX
 
@@ -204,7 +204,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
-| 66. Cohort & Treatment Reorganization | 0/3 | Planned | - |
+| 66. Cohort & Treatment Reorganization | 1/3 | In Progress|  |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | To be repurposed | - |
 | 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
-status: planning
-last_updated: "2026-06-01T18:42:50.306Z"
+status: executing
+last_updated: "2026-06-01T19:27:34.777Z"
 progress:
   total_phases: 10
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 5
+  completed_plans: 3
+  percent: 60
 ---
 
 # State: v2.0 Codebase Cleanup & Documentation
@@ -21,20 +21,20 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Phase 65 — foundation-reorganization
+**Current Focus:** Phase 66 — cohort-treatment-reorganization
 
 ## Current Position
 
-Phase: 65 (foundation-reorganization) — EXECUTING
-Plan: 2 of 2 complete
+Phase: 66 (cohort-treatment-reorganization) — EXECUTING
+Plan: 2 of 3
 **Phase:** 66
-**Plan:** Not started
-**Status:** Ready to plan
-**Progress:** [██████████] 100%
+**Plan:** 66-01 complete
+**Status:** Executing Phase 66
+**Progress:** [██████░░░░] 60%
 
 ### Phase Goal
 
-Foundation scripts (config, data loading, payer harmonization) are renumbered to 00-09 with utils/ folder structure established.
+Cohort (10-14) and treatment (20-29) scripts renumbered and all source() cross-references updated.
 
 ## Performance Metrics
 
@@ -56,7 +56,9 @@ Foundation scripts (config, data loading, payer harmonization) are renumbered to
 
 ### Key Decisions This Milestone
 
-_No decisions logged yet._
+**Phase 66:**
+- Renumber cohort helpers (10-13) BEFORE build_cohort (14) to reflect dependency order (D-03)
+- Eliminate all a/b suffixes in treatment decade for clean sequential numbering (D-07)
 
 ### Open Questions
 
@@ -74,21 +76,20 @@ _No todos yet._
 
 ### What Just Happened
 
-- Roadmap created for v2.0 milestone
-- 17 requirements mapped to 10 phases (65-74)
-- Coverage: 17/17 requirements mapped (100%)
-- Phase sequencing: REORG (65-68) → DOC (69) → SAFE (70-72) → DRY (73) → Integration (74)
+- Plan 66-01 complete: 15 scripts renumbered (cohort 10-14, treatment 20-29)
+- All a/b suffixes eliminated from treatment scripts
+- 17 downstream scripts updated with new source() references
+- Zero stale references remain (verified)
 
 ### Current Task
 
-Ready to plan Phase 65 (Foundation Reorganization)
+Phase 66 Plan 01 complete, ready for Plan 02 (outputs reorganization)
 
 ### Next Actions
 
-1. Run `/gsd:plan-phase 65` to create execution plan for foundation reorganization
-2. Begin renumbering foundation scripts (00-09) and creating utils/ folder structure
-3. Update source() calls referencing foundation scripts
-4. Create and run smoke test for foundation dependencies
+1. Continue with Plan 66-02 (outputs decade 30-39)
+2. Update source() calls in output scripts
+3. Complete Plan 66-03 (tests/scripts decade 80-99)
 
 ---
 *State initialized: 2026-06-01*
