@@ -1,621 +1,322 @@
-# Architecture Patterns for Encounter-Level Cancer Linkage & First-Line Therapy Identification
+# Architecture Research: R Analysis Pipeline Reorganization
 
-**Domain:** Episode-Level Cancer Linkage, Regimen Identification
-**Researched:** 2026-05-29
-**Confidence:** HIGH (derived from existing codebase architecture)
+**Domain:** PCORnet clinical cohort analysis pipeline (R)
+**Researched:** 2026-06-01
+**Confidence:** HIGH
 
 ## Executive Summary
 
-The existing R pipeline architecture follows a linear numbered-script pattern (R/00 through R/59) with centralized configuration, DuckDB backend abstraction, and RDS caching for intermediate artifacts. Integration of encounter-level cancer linkage and first-line therapy regimen identification requires **minimal architectural changes** — new functionality fits within established patterns:
+This architecture research defines the reorganization strategy for ~80 R analysis scripts in a PCORnet CDM cohort analysis pipeline. The existing codebase has evolved organically across 63 phases, resulting in:
 
-1. **ENCOUNTERID propagation** through treatment episode detection (modify R/44a)
-2. **Encounter-level cancer diagnosis linkage** via new join logic (extend R/49 or new R/60)
-3. **First-line regimen labeling** as a new post-processing script (new R/61)
-4. **New Gantt output files** (R/49 variant with _v2 suffix or new R/62)
-5. **SCT code tightening** (modify extraction logic in R/44a)
+- **Numbering gaps** (missing 30-32, 37, 57)
+- **Sub-lettered scripts** (22a/b, 43a/b, etc.) mixing production and test code
+- **Scattered logical groupings** (treatment scripts at 38-44 AND 60-62)
+- **Mixed utilities** (7 utils_*.R files in main R/ directory)
+- **Unnumbered ad-hoc scripts** (6 diagnostic/exploratory files)
 
-**Key principle:** Extend, don't replace. Preserve existing outputs for backward compatibility.
+**Recommended reorganization:**
+- **Decade-based numbering:** 00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc
+- **Separate utils/ folder:** Move 7 utility modules out of main directory
+- **Archive/ folder:** Deprecated scripts preserved for reference
+- **Sequential migration:** 9 phases with smoke tests after each decade
 
----
-
-## Current Architecture Overview
-
-### Script Numbering Pattern
-
-```
-R/00_config.R              # Configuration + TREATMENT_CODES lists
-R/01_load_pcornet.R        # DuckDB table loading via get_pcornet_table()
-R/44a_treatment_episodes.R # Episode detection (90-day window, triggering_codes)
-R/49_gantt_data_export.R   # Gantt CSV generation (episodes + detail)
-R/55_cancer_summary_refined.R # HL cohort confirmation, first_hl_dx_date
-```
-
-Scripts are **idempotent** (can be re-run) and **self-contained** (source dependencies explicitly).
-
-### Data Flow (Current State)
-
-```
-DuckDB pcornet.duckdb
-  ├── PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, DIAGNOSIS, ENCOUNTER
-  │   └── (via get_pcornet_table("TABLE_NAME") in R/01)
-  │
-  ├── R/44a: Extract treatment dates WITH CODES
-  │   ├─> Per-type extraction functions (extract_chemo_dates_with_codes, etc.)
-  │   ├─> Stack and dedup on (ID, treatment_date, triggering_code)
-  │   ├─> assign_episode_ids() with 90-day window from episode start
-  │   └─> Output: treatment_episodes.rds (episode-level)
-  │             treatment_episode_detail.rds (date+code level)
-  │
-  ├── R/55: Confirm HL cohort, compute first_hl_dx_date
-  │   ├─> Filter to patients with 2+ C81 codes 7+ days apart
-  │   ├─> Compute first_hl_dx_date from min(DIAGNOSIS, TUMOR_REGISTRY)
-  │   └─> Output: confirmed_hl_cohort.rds (ID, first_hl_dx_date, source)
-  │
-  └── R/49: Gantt CSV export
-      ├─> Join patient-level cancer_category from cancer_summary.csv
-      ├─> Add death rows (pseudo-treatment type)
-      ├─> Add HL Diagnosis rows (pseudo-treatment type)
-      └─> Output: gantt_episodes.csv, gantt_detail.csv
-```
-
-**Missing from current architecture:**
-- ENCOUNTERID tracking in episode detection
-- Encounter-level cancer diagnosis linkage
-- Regimen labeling logic
-- First-line therapy detection
+**Integration points:** 95+ source() calls, 25+ RDS artifacts, 50+ output files. RDS and output files use semantic naming (no changes required). Only source() paths and inline comments need updates.
 
 ---
 
-## Integration Point 1: ENCOUNTERID Propagation in Episode Detection
+## Current State Analysis
 
-### Current State (R/44a_treatment_episodes.R)
+### Inventory
 
-Treatment dates extracted from 7 source types WITHOUT ENCOUNTERID:
+**Total scripts:** 81 R files
+- **Numbered scripts (00-99):** 63 files
+  - Sequential (01-29): 29 files (gaps at 30-32, 37)
+  - Scattered (33-63): 30 files
+  - Special: 00_config.R, 99_claude_diagnostics.R
+- **Unnumbered utility scripts:** 7 files (`utils_*.R`)
+- **Unnumbered ad-hoc scripts:** 6 files
+- **Runner scripts:** 1 file (`run_phase12_outputs.R`)
 
-```r
-# Example: extract_chemo_dates_with_codes()
-px_dates <- get_pcornet_table("PROCEDURES") %>%
-  filter((PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) | ...) %>%
-  select(ID, treatment_date = PX_DATE, triggering_code = PX) %>%
-  collect()
+### Numbering Problems
+
+| Problem | Examples | Impact |
+|---------|----------|--------|
+| Missing sequence numbers | No 30-32, 37, 57 | ~15 gaps, unclear ordering |
+| Duplicate prefixes | Two scripts start with 55_ | Name collision |
+| Sub-lettered scripts | 22a/b, 43a/b, 44a/b, 45a/b, 46a/b, 48a/b | 12 files, confuses hierarchy |
+| Unnumbered ad-hoc | `date_range_check.R`, `sct_code_inventory.R` | 6 files, unclear if production |
+| Test scripts in main sequence | 43b, 44b | 2 files, mixed with production code |
+
+### Cross-Reference Patterns
+
+**Foundation chain:**
+```
+00_config.R (auto-sources 7 utils)
+  ├── 01_load_pcornet.R (28 scripts reference)
+  ├── 02_harmonize_payer.R (8 scripts reference)
+  └── 03_cohort_predicates.R (2 scripts reference)
+      └── 04_build_cohort.R (7 scripts reference)
+          ├── Inline: 10_treatment_payer.R
+          ├── Inline: 13_surveillance.R
+          └── Inline: 14_survivorship_encounters.R
 ```
 
-**Output:** (ID, treatment_date, triggering_code)
-
-### Required Change: Add ENCOUNTERID Column
-
-```r
-# Modified extraction (same tables, +1 column)
-px_dates <- get_pcornet_table("PROCEDURES") %>%
-  filter((PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) | ...) %>%
-  select(ID, ENCOUNTERID, treatment_date = PX_DATE, triggering_code = PX) %>%
-  collect()
-```
-
-**New output:** (ID, ENCOUNTERID, treatment_date, triggering_code)
-
-### Impact on Episode Calculation
-
-`calculate_episodes_detailed()` currently groups by (ID, episode_id) and aggregates:
-- `triggering_codes = paste(sort(unique(na.omit(triggering_code))), collapse = ",")`
-
-**Add parallel aggregation for ENCOUNTERID:**
-- `encounter_ids = paste(sort(unique(na.omit(ENCOUNTERID))), collapse = ",")`
-
-**Result:** Episode-level output gains `encounter_ids` column (comma-separated list).
-
-### Data Source Coverage for ENCOUNTERID
-
-| Source Table | Has ENCOUNTERID? | Fallback if NULL |
-|--------------|------------------|------------------|
-| PROCEDURES | Yes (always populated) | N/A |
-| PRESCRIBING | Yes (may be NULL) | Use treatment_date for temporal join |
-| DISPENSING | Yes (may be NULL) | Use treatment_date for temporal join |
-| MED_ADMIN | Yes (may be NULL) | Use treatment_date for temporal join |
-| DIAGNOSIS | Yes (always populated) | N/A |
-| ENCOUNTER (DRG) | Primary key (ENCOUNTERID) | N/A |
-| TUMOR_REGISTRY | No ENCOUNTERID column | Use treatment_date for temporal join |
-
-**Recommendation:** Always include ENCOUNTERID in extraction, allow NAs, aggregate with `na.omit()`.
+**Integration point categories:**
+1. **source() calls:** 95+ explicit source statements
+2. **RDS artifacts:** 25+ .rds files with semantic names (hl_cohort.rds, treatment_episodes.rds)
+3. **Output filenames:** ~50 CSV/XLSX/PNG with semantic names (gantt_episodes.csv)
+4. **Inline comments:** "Phase NN" references in docstrings
 
 ---
 
-## Integration Point 2: Encounter-Level Cancer Diagnosis Linkage
+## Recommended Project Structure
 
-### Current State (R/49_gantt_data_export.R)
+### Decade-Based Numbering Scheme
 
-Patient-level join from `cancer_summary.csv`:
-
-```r
-# Lines 390-402
-cancer_categories_per_patient <- cancer_summary %>%
-  group_by(ID) %>%
-  summarise(
-    cancer_category = paste(sort(unique(category)), collapse = ","),
-    .groups = "drop"
-  )
-
-# Lines 536-540
-episodes_export <- episodes %>%
-  left_join(cancer_categories_per_patient, by = c("patient_id" = "ID"))
+```
+R/
+├── 00-09: Foundation (config, data loading)
+├── 10-19: Cohort Building (predicates, attrition)
+├── 20-39: Treatment Analysis (episodes, regimens) — 20 slots for expansion
+├── 40-59: Cancer Diagnosis Analysis (sites, summaries) — 20 slots
+├── 60-69: Payer & Data Quality (resolution, validation)
+├── 70-79: Visualization & Reports (tables, figures, PPTX)
+├── 80-89: Testing & Diagnostics (parity, benchmarks)
+├── 90-99: Ad-Hoc & Deprecated (exploratory, one-offs)
+├── utils/ (NEW folder) — 7 utility modules
+└── archive/ (NEW folder) — 6 deprecated scripts
 ```
 
-**Problem:** Conflates all cancer diagnoses for the patient (no temporal or encounter-specific linkage).
+### Complete Reorganization Mapping
 
-### Required Change: Encounter-Level Linkage
+**00-09: Foundation**
+- 00_config.R (unchanged)
+- 01_data_ingest_duckdb.R ← 25_duckdb_ingest.R
+- 02_data_load_pcornet.R ← 01_load_pcornet.R
+- 03_data_harmonize_payer.R ← 02_harmonize_payer.R
 
-**New approach:** Join DIAGNOSIS to episodes via ENCOUNTERID (primary), fallback to closest date.
+**10-19: Cohort Building**
+- 10_cohort_predicates.R ← 03_cohort_predicates.R
+- 11_cohort_assemble.R ← 04_build_cohort.R
+- 12_treatment_payer_window.R ← 10_treatment_payer.R
+- 13_surveillance_detection.R ← 13_surveillance.R
+- 14_survivorship_encounters.R ← 14_survivorship_encounters.R
 
-```r
-# Step 1: Extract all cancer diagnoses with ENCOUNTERID and date
-cancer_dx <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C")) %>%  # All C-codes
-  select(ID, ENCOUNTERID, DX_DATE, DX_norm) %>%
-  collect()
+**20-39: Treatment Analysis**
+- 20_treatment_code_inventory.R ← 38_treatment_inventory.R
+- 21_treatment_code_resolution.R ← 39-42 merged
+- 22_treatment_durations.R ← 43a_treatment_durations.R
+- 23_treatment_episodes.R ← 44a_treatment_episodes.R
+- 24_drug_name_resolution.R ← 60_drug_name_resolution.R
+- 25_episode_cancer_linkage.R ← 61_episode_classification.R
+- 26_first_line_therapy.R ← 62_first_line_and_death_analysis.R
+- 27_treatment_cross_reference.R ← 46b_treatment_cross_reference.R
 
-# Step 2: Classify codes
-cancer_dx$category <- classify_codes(cancer_dx$DX_norm)
+**40-59: Cancer Diagnosis Analysis**
+- 40_cancer_site_frequency.R ← 47_cancer_site_frequency.R
+- 41_cancer_site_confirmation.R ← 50+51 merged
+- 42_cancer_summary_refined.R ← 55_cancer_summary_refined.R
+- 43_cancer_summary_temporal.R ← 56+58 merged
+- 44_all_codes_catalog.R ← 48a+48b+52 combined
 
-# Step 3: For each episode row, link cancer diagnoses
-#   a. Match on (ID, ENCOUNTERID) if ENCOUNTERID in episode's encounter_ids
-#   b. Fallback: match on ID, find diagnosis with min(abs(DX_DATE - episode_start))
-#   c. Aggregate categories for the episode
+**60-69: Payer & Data Quality**
+- 60_payer_code_frequency.R ← 35_payer_code_frequency_av_th.R
+- 61_payer_tiered_resolution.R ← 36_tiered_same_day_payer.R
+- 62_encounter_overlap_detection.R ← 22a+33 merged
+- 63_encounter_overlap_classification.R ← 23+34 merged
+- 64_death_date_validation.R ← 59_death_date_validation.R
+- 65_data_quality_summary.R ← 08_data_quality_summary.R
+- 66_dx_gap_analysis.R ← 09_dx_gap_analysis.R
+- 67_encounter_missingness.R ← 18+20 merged
 
-# Pseudocode:
-episodes_with_cancer <- episodes %>%
-  rowwise() %>%
-  mutate(
-    linked_cancer_dx = link_cancer_to_episode(
-      patient_id, encounter_ids, episode_start, cancer_dx
-    )
-  )
-```
+**70-79: Visualization & Reports**
+- 70_encounter_analysis.R ← 16_encounter_analysis.R
+- 71_attrition_waterfall.R ← 05_visualize_waterfall.R
+- 72_payer_sankey.R ← 06_visualize_sankey.R
+- 73_pptx_main_report.R ← 11_generate_pptx.R
+- 74_pptx_overlap_report.R ← 22b_generate_phase19_20_pptx.R
+- 75_documentation_export.R ← 15_generate_documentation.R
+- 76_gantt_v1_export.R ← 49_gantt_data_export.R
+- 77_gantt_v2_export.R ← 63_gantt_v2_export.R
 
-**New columns in episode output:**
-- `cancer_category` (episode-specific, not patient-level)
-- `cancer_link_method` ("encounter_id" | "closest_date" | "none")
-- `is_hodgkin` (TRUE if "Hodgkin Lymphoma" in episode's cancer_category)
+**80-89: Testing & Diagnostics**
+- 80_backend_smoke_test.R ← 26_smoke_test_backends.R
+- 81_cohort_parity_test.R ← 27_parity_test_cohort.R
+- 82_benchmark_cohort.R ← 28_benchmark_cohort.R
+- 83_speedup_report.R ← 29_generate_speedup_report.R
+- 84_test_durations.R ← 43b_test_durations.R
+- 85_test_episodes.R ← 44b_test_episodes.R
 
-### Implementation Pattern
+**90-99: Ad-Hoc & Deprecated**
+- 90_value_audit.R ← 17_value_audit.R
+- 91_radiation_cpt_audit.R ← 45b_radiation_cpt_audit.R
+- 92_no_treatment_medicaid.R ← 12_no_treatment_medicaid.R
+- 93_duplicate_dates_flm.R ← 19_flm_duplicate_dates.R
+- 94_duplicate_dates_all_sites.R ← 21_all_site_duplicate_dates.R
+- 95_per_patient_source_detection.R ← 24_per_patient_source_detection.R
+- 96_search_C8190.R ← 55_search_C8190.R
+- 97_date_range_check.R ← date_range_check.R
+- 98_check_deleted_proton_code.R ← check_deleted_proton_code.R
+- 99_claude_diagnostics.R (unchanged)
 
-**Option A: Extend R/49** (Gantt export script)
-- Add encounter-level linkage logic before writing CSVs
-- Replace patient-level join with episode-level join
-- Preserve backward compatibility by checking for `encounter_ids` column
+**utils/ folder (NEW)**
+- utils_attrition.R (moved from R/)
+- utils_dates.R (moved from R/)
+- utils_duckdb.R (moved from R/)
+- utils_icd.R (moved from R/)
+- utils_payer.R (moved from R/)
+- utils_pptx.R (moved from R/)
+- utils_snapshot.R (moved from R/)
+- utils_treatment.R (moved from R/)
 
-**Option B: New R/60_encounter_cancer_linkage.R**
-- Standalone script that enhances `treatment_episodes.rds`
-- Output: `treatment_episodes_with_cancer.rds`
-- R/49 consumes the enhanced RDS instead of original
-
-**Recommendation:** Option A (extend R/49) for simplicity. Use helper function `link_cancer_to_episode()` defined in-script.
+**archive/ folder (NEW)**
+- payer_frequency_from_resolved.R (deprecated)
+- tiered_payer_summary.R (deprecated)
+- sct_code_inventory.R (deprecated)
+- run_phase12_outputs.R (replaced)
+- tiered_encounter_level.R (was 45a)
+- tiered_date_level.R (was 46a)
 
 ---
 
-## Integration Point 3: First-Line Therapy Regimen Labeling
+## Integration Points
 
-### Requirements
+### 1. source() Call Updates
 
-- **Age filter:** Adults 21+ at first HL diagnosis
-- **Regimen definitions:**
-  - ABVD: doxorubicin + bleomycin + vinblastine + dacarbazine
-  - BV+AVD: brentuximab vedotin + doxorubicin + vinblastine + dacarbazine
-  - Nivo+AVD: nivolumab + doxorubicin + vinblastine + dacarbazine
-- **Cycle matching:** 28-day cycles, agents may be dropped (ABVD→AVD allowed)
-- **First-line definition:** Treatment episodes AFTER HL diagnosis, no other regimens first
+| Old Reference | New Reference | Affected Scripts |
+|---------------|---------------|------------------|
+| `source("R/01_load_pcornet.R")` | `source("R/02_data_load_pcornet.R")` | 28 scripts |
+| `source("R/02_harmonize_payer.R")` | `source("R/03_data_harmonize_payer.R")` | 8 scripts |
+| `source("R/03_cohort_predicates.R")` | `source("R/10_cohort_predicates.R")` | 2 scripts |
+| `source("R/04_build_cohort.R")` | `source("R/11_cohort_assemble.R")` | 7 scripts |
+| `source("R/43a_treatment_durations.R")` | `source("R/22_treatment_durations.R")` | 1 script |
+| `source("R/utils_*.R")` | `source("R/utils/utils_*.R")` | 7 in 00_config.R |
 
-### Data Requirements
+**Verification:** Grep `source\("R/[0-9]` after each phase, confirm zero old references remain.
 
-1. **Age at diagnosis:** Join DEMOGRAPHIC (BIRTH_DATE) with confirmed_hl_cohort (first_hl_dx_date)
-2. **Drug-level detail:** Use `treatment_episode_detail.rds` (has triggering_code per date)
-3. **RxNorm to drug name mapping:** Build from TREATMENT_CODES$chemo_rxnorm + manual curation
+### 2. RDS Artifact Paths
 
-### Architecture Pattern: New R/61_first_line_regimen_labeling.R
+**No changes required.** All RDS files use semantic naming:
+- `hl_cohort.rds`
+- `treatment_episodes.rds`
+- `confirmed_hl_cohort.rds`
+- `drug_name_lookup.rds`
+- (No files named `04_cohort.rds` or similar)
+
+### 3. Output Filenames
+
+**No changes required.** All outputs use semantic naming:
+- `gantt_episodes.csv`
+- `encounter_summary_by_payor_age.csv`
+- `encounters_per_person_by_payor.png`
+- (No files named `04_output.csv` or similar)
+
+### 4. Inline Script References
+
+**Pattern:** Comments like `# Phase 43: Treatment Duration` → `# R/22 (treatment durations)`
+
+**Regex search:** `Phase [0-9]{2}` and `R/[0-9]{2}[a-z]?_`
+
+### 5. Cross-Script Function Dependencies
+
+| Function | Defined In (OLD) | Defined In (NEW) |
+|----------|------------------|------------------|
+| `assign_episode_ids()` | 43a_treatment_durations.R | 22_treatment_durations.R |
+| `compute_payer_at_*()` | 10_treatment_payer.R | 12_treatment_payer_window.R |
+| `get_pcornet_table()` | utils_duckdb.R | utils/utils_duckdb.R |
+
+**No functional changes** — just path updates in source() calls.
+
+---
+
+## Data Flow Through Reorganized Pipeline
 
 ```
-Inputs:
-  - cache/outputs/treatment_episodes.rds
-  - cache/outputs/treatment_episode_detail.rds
-  - cache/outputs/confirmed_hl_cohort.rds
-  - DuckDB DEMOGRAPHIC (for age calculation)
-  - New: REGIMEN_DEFINITIONS in R/00_config.R (RxNorm CUI -> drug name)
-
-Process:
-  1. Filter to adults 21+ at first HL diagnosis
-  2. Filter to chemotherapy episodes AFTER first_hl_dx_date
-  3. For each episode, extract unique drug names from triggering_codes
-  4. Match against regimen definitions (allow subset matching for dropped agents)
-  5. Classify episode as ABVD | BV+AVD | Nivo+AVD | Other
-  6. Identify first-line episodes (earliest regimen post-diagnosis per patient)
-
-Output:
-  - cache/outputs/regimen_labeled_episodes.rds
-    Columns: patient_id, treatment_type, episode_number, regimen_label, is_first_line
-```
-
-**Integration with Gantt export:** R/49 can optionally join regimen_labeled_episodes.rds to add `regimen_label` column to output.
-
-### Regimen Matching Logic (Pseudocode)
-
-```r
-# In R/61
-REGIMEN_DEFINITIONS <- list(
-  ABVD = list(
-    required = c("doxorubicin", "bleomycin", "vinblastine", "dacarbazine"),
-    allow_subset = TRUE  # AVD = ABVD with bleomycin dropped
-  ),
-  BV_AVD = list(
-    required = c("brentuximab vedotin", "doxorubicin", "vinblastine", "dacarbazine"),
-    allow_subset = TRUE
-  ),
-  Nivo_AVD = list(
-    required = c("nivolumab", "doxorubicin", "vinblastine", "dacarbazine"),
-    allow_subset = TRUE
-  )
-)
-
-classify_regimen <- function(episode_drugs, definitions) {
-  for (regimen_name in names(definitions)) {
-    required <- definitions[[regimen_name]]$required
-    if (all(required %in% episode_drugs)) return(regimen_name)
-    if (definitions[[regimen_name]]$allow_subset) {
-      # At least 3 of 4 required drugs (allow 1 dropped)
-      if (sum(required %in% episode_drugs) >= length(required) - 1) {
-        return(paste0(regimen_name, " (partial)"))
-      }
-    }
-  }
-  return("Other")
-}
+00_config.R → auto-source utils/
+    ↓
+01_data_ingest_duckdb.R (CSV → DuckDB)
+    ↓
+02_data_load_pcornet.R (get_pcornet_table())
+    ↓
+03_data_harmonize_payer.R (8 AMC categories)
+    ↓
+10-14: Cohort Building → hl_cohort.rds
+    ↓
+20-27: Treatment Analysis → treatment_episodes.rds, regimen_labeled_episodes.rds
+    ↓
+40-44: Cancer Diagnosis → cancer_summary.rds, confirmed_hl_cohort.rds
+    ↓
+60-67: Payer & Data Quality → resolved encounters, quality metrics
+    ↓
+70-77: Visualization & Reports → PNG/CSV/PPTX outputs
 ```
 
 ---
 
-## Integration Point 4: New Gantt Output Files
-
-### Current State
-
-R/49 outputs:
-- `output/gantt_episodes.csv`
-- `output/gantt_detail.csv`
-
-**Problem:** Overwriting existing outputs breaks backward compatibility with external Gantt tools.
-
-### Required Change: Versioned Output Files
-
-**Option A: Version suffix**
-```r
-OUTPUT_EPISODES_V2 <- file.path(CONFIG$output_dir, "gantt_episodes_v2.csv")
-OUTPUT_DETAIL_V2   <- file.path(CONFIG$output_dir, "gantt_detail_v2.csv")
-```
-
-**Option B: Separate subdirectory**
-```r
-OUTPUT_DIR_V2 <- file.path(CONFIG$output_dir, "gantt_v2")
-dir.create(OUTPUT_DIR_V2, showWarnings = FALSE, recursive = TRUE)
-OUTPUT_EPISODES_V2 <- file.path(OUTPUT_DIR_V2, "gantt_episodes.csv")
-OUTPUT_DETAIL_V2   <- file.path(OUTPUT_DIR_V2, "gantt_detail.csv")
-```
-
-**Recommendation:** Option A (suffix) for discoverability. External tools can easily find both versions.
-
-### Implementation Pattern
-
-**New script: R/62_gantt_export_v2.R** (clone of R/49 with enhancements)
-
-Differences from R/49:
-1. Read from `regimen_labeled_episodes.rds` instead of `treatment_episodes.rds`
-2. Use encounter-level cancer linkage (not patient-level)
-3. Add `regimen_label`, `cancer_link_method` columns
-4. Output to `gantt_episodes_v2.csv`, `gantt_detail_v2.csv`
-5. Preserve R/49 unchanged (backward compatibility)
-
-**Alternative:** Add flag to R/49 for output format version:
-```r
-OUTPUT_VERSION <- 2  # Set to 1 for original format, 2 for enhanced
-```
-
-**Recommendation:** New R/62 script for clarity (follows project pattern of clone-and-enhance for variants).
-
----
-
-## Integration Point 5: SCT Code Tightening (Drop ICD Diagnosis Codes)
-
-### Current State (R/44a_treatment_episodes.R, lines 295-321)
-
-SCT extraction includes DIAGNOSIS table:
-
-```r
-# 2. DIAGNOSIS: Z94.84/T86.5/T86.09/Z48.290/T86.0 (ICD-10 only) — bare DX code
-dx_dates <- NULL
-if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
-  dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
-    filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
-    filter(!is.na(DX_DATE)) %>%
-    select(ID, treatment_date = DX_DATE, triggering_code = DX) %>%
-    collect()
-}
-```
-
-### Required Change: Comment Out DIAGNOSIS Source
-
-```r
-# 2. DIAGNOSIS: REMOVED per v1.8 (diagnosis codes indicate history/status, not procedure)
-# Diagnosis codes like Z94.84 (bone marrow transplant status) are post-SCT documentation,
-# not evidence of SCT procedure occurrence. SCT detection now uses PROCEDURES, PRESCRIBING,
-# DISPENSING only (procedural evidence sources).
-dx_dates <- NULL
-```
-
-**Impact:**
-- `extract_sct_dates_with_codes()` returns fewer dates
-- Episode detection still works (PROCEDURES, ENCOUNTER DRGs remain)
-- Triggering codes in SCT episodes will exclude Z94.84, T86.5, etc.
-
-**Validation:** Compare SCT episode counts before/after change. Document difference in script header.
-
----
-
-## Component Boundaries and Dependencies
-
-### Modified Components
-
-| Component | Type | Modification | Backward Compatible? |
-|-----------|------|--------------|----------------------|
-| R/44a (episode detection) | Modify | Add ENCOUNTERID, drop SCT DX codes | Yes (new column, existing columns unchanged) |
-| R/49 (Gantt export) | Modify OR clone | Encounter-level cancer linkage | No (output schema changes) |
-| R/00_config.R | Extend | Add REGIMEN_DEFINITIONS | Yes (new config, existing untouched) |
-
-### New Components
-
-| Component | Type | Purpose | Consumes | Produces |
-|-----------|------|---------|----------|----------|
-| R/60_encounter_cancer_linkage.R | New (optional) | Link cancer dx to episodes | treatment_episodes.rds, DIAGNOSIS | treatment_episodes_with_cancer.rds |
-| R/61_first_line_regimen_labeling.R | New | Classify first-line therapy | treatment_episode_detail.rds, confirmed_hl_cohort.rds | regimen_labeled_episodes.rds |
-| R/62_gantt_export_v2.R | New (clone of R/49) | Enhanced Gantt CSVs | regimen_labeled_episodes.rds | gantt_episodes_v2.csv, gantt_detail_v2.csv |
-
-### Dependency Graph
-
-```
-DuckDB (DIAGNOSIS, PROCEDURES, PRESCRIBING, ENCOUNTER, DEMOGRAPHIC)
-  │
-  ├─> R/44a (modified: +ENCOUNTERID, -SCT DX codes)
-  │    └─> treatment_episodes.rds, treatment_episode_detail.rds
-  │
-  ├─> R/55 (unchanged)
-  │    └─> confirmed_hl_cohort.rds
-  │
-  ├─> [NEW] R/60 (optional: encounter-level cancer linkage)
-  │    │─> Input: treatment_episodes.rds, DIAGNOSIS
-  │    └─> Output: treatment_episodes_with_cancer.rds
-  │
-  ├─> [NEW] R/61 (regimen labeling)
-  │    │─> Input: treatment_episode_detail.rds, confirmed_hl_cohort.rds, DEMOGRAPHIC
-  │    └─> Output: regimen_labeled_episodes.rds
-  │
-  ├─> R/49 (unchanged, original Gantt)
-  │    └─> gantt_episodes.csv, gantt_detail.csv
-  │
-  └─> [NEW] R/62 (enhanced Gantt)
-       │─> Input: regimen_labeled_episodes.rds, [cancer linkage data]
-       └─> Output: gantt_episodes_v2.csv, gantt_detail_v2.csv
-```
-
-**Execution order:**
-1. R/44a (episode detection with ENCOUNTERID)
-2. R/55 (HL cohort confirmation)
-3. R/60 (encounter-level cancer linkage, optional)
-4. R/61 (regimen labeling)
-5. R/49 (original Gantt, unchanged)
-6. R/62 (enhanced Gantt v2)
-
----
-
-## Data Schema Changes
-
-### treatment_episodes.rds (R/44a output, enhanced)
-
-**Current columns:**
-```
-patient_id, treatment_type, episode_number, episode_start, episode_stop,
-episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes
-```
-
-**New columns (add to end for backward compatibility):**
-```
-encounter_ids  # Comma-separated ENCOUNTERIDs (from all dates in episode)
-```
-
-**Schema version:** v2 (column added, existing columns unchanged)
-
-### regimen_labeled_episodes.rds (R/61 output, new artifact)
-
-**Columns:**
-```
-patient_id, treatment_type, episode_number, episode_start, episode_stop,
-episode_length_days, distinct_dates_in_episode, historical_flag,
-triggering_codes, encounter_ids,
-regimen_label,        # "ABVD" | "BV+AVD" | "Nivo+AVD" | "ABVD (partial)" | "Other"
-is_first_line,        # TRUE if earliest regimen post-diagnosis for this patient
-age_at_diagnosis,     # Age in years when first HL diagnosed
-drugs_in_episode      # Comma-separated drug names (for QA)
-```
-
-**Subset of treatment_episodes:** Only chemotherapy episodes for adults 21+ post-diagnosis.
-
-### gantt_episodes_v2.csv (R/62 output, enhanced Gantt)
-
-**New columns vs. gantt_episodes.csv:**
-```
-encounter_ids           # From enhanced treatment_episodes
-cancer_category         # Encounter-level (not patient-level)
-cancer_link_method      # "encounter_id" | "closest_date" | "none"
-is_hodgkin              # Episode-specific HL flag
-regimen_label           # For chemotherapy episodes only
-is_first_line           # For regimen-labeled episodes only
-```
-
-**Schema change:** Additional columns at end, existing columns preserved.
-
----
-
-## Build Order and Phasing Strategy
-
-### Phase 60: ENCOUNTERID Propagation + SCT Code Tightening
-**Scope:** Modify R/44a only
-**Output:** Enhanced treatment_episodes.rds with `encounter_ids` column
-**Validation:** Compare episode counts before/after. SCT episodes should decrease (DX codes removed).
-
-**Acceptance criteria:**
-- `encounter_ids` column populated for PROCEDURES, PRESCRIBING, ENCOUNTER sources
-- SCT episodes exclude Z94.84, T86.5, etc. triggering codes
-- Backward compatibility: existing columns unchanged
-
----
-
-### Phase 61: First-Line Therapy Regimen Labeling
-**Scope:** New R/61_first_line_regimen_labeling.R
-**Dependencies:** Phase 60 (for encounter_ids), R/55 (for confirmed_hl_cohort.rds)
-**Output:** regimen_labeled_episodes.rds
-
-**Acceptance criteria:**
-- Age filter at 21+ years at first HL diagnosis
-- Regimen classification for ABVD, BV+AVD, Nivo+AVD (with partial matching)
-- First-line flag based on chronological order post-diagnosis
-- QA table: regimen distribution, first-line vs. subsequent
-
----
-
-### Phase 62: Encounter-Level Cancer Linkage
-**Scope:** Extend R/49 OR new R/60
-**Dependencies:** Phase 60 (for encounter_ids)
-**Output:** Encounter-level cancer categories in Gantt export
-
-**Option A (recommended):** Extend R/49 with encounter-level linkage logic
-**Option B:** New R/60 produces treatment_episodes_with_cancer.rds, R/62 consumes it
-
-**Acceptance criteria:**
-- Cancer categories linked via ENCOUNTERID (primary) or closest date (fallback)
-- `cancer_link_method` column documents linkage type
-- QA: Compare patient-level vs. encounter-level HL flags (expect changes)
-
----
-
-### Phase 63: Enhanced Gantt Export (v2)
-**Scope:** New R/62_gantt_export_v2.R
-**Dependencies:** Phase 61 (regimen labels), Phase 62 (encounter cancer linkage)
-**Output:** gantt_episodes_v2.csv, gantt_detail_v2.csv
-
-**Acceptance criteria:**
-- Preserves R/49 output (gantt_episodes.csv unchanged)
-- New columns: encounter_ids, regimen_label, is_first_line, cancer_link_method
-- QA: Row counts match between v1 and v2 (same episodes, enhanced columns)
-
----
-
-## Architectural Patterns to Follow
-
-### 1. Clone-and-Enhance for Variants
-**Pattern:** When modifying existing outputs, clone the script with version suffix (R/49 → R/62) rather than modifying in place.
-**Rationale:** Preserves backward compatibility with external tools, allows side-by-side comparison.
-**Example:** R/33 (multi-source overlap baseline) → R/33_multi_source_overlap_av_th.R (AV+TH subset)
-
-### 2. RDS Artifacts for Intermediate Products
-**Pattern:** Save intermediate results as .rds files in `cache/outputs/`.
-**Rationale:** Enables downstream scripts to consume enriched data without re-running entire pipeline.
-**Example:** treatment_episodes.rds, confirmed_hl_cohort.rds, [new] regimen_labeled_episodes.rds
-
-### 3. Centralized Configuration in R/00_config.R
-**Pattern:** All code lists, thresholds, and mappings in R/00_config.R.
-**Rationale:** Single source of truth, enables global changes without script edits.
-**Example:** TREATMENT_CODES list, [new] REGIMEN_DEFINITIONS
-
-### 4. Backend Abstraction via get_pcornet_table()
-**Pattern:** Use `get_pcornet_table("TABLE_NAME")` for all data access, never direct DuckDB SQL.
-**Rationale:** Enables RDS fallback, future backend changes transparent to scripts.
-**Example:** `get_pcornet_table("DIAGNOSIS") %>% filter(...)`
-
-### 5. Semantic Versioning for Output Schemas
-**Pattern:** When adding columns, append to end. Document version in script header.
-**Rationale:** Tools expecting original schema continue working, new consumers opt into enhanced columns.
-**Example:** treatment_episodes.rds v1 (9 cols) → v2 (10 cols, +encounter_ids)
-
-### 6. In-Script Helper Functions for Complex Logic
-**Pattern:** Define reusable logic as functions within the script (not in utils files unless used by 3+ scripts).
-**Rationale:** Keeps related code together, avoids premature abstraction.
-**Example:** `classify_regimen()`, `link_cancer_to_episode()` defined in R/61, R/62 respectively
-
----
-
-## Risk Assessment
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| ENCOUNTERID missing in key sources (PRESCRIBING, DISPENSING) | Medium | Medium | Allow NAs, aggregate with na.omit(), fallback to date-based linkage |
-| Regimen drug name mapping incomplete | High | Medium | Start with known RxNorm CUIs in TREATMENT_CODES, manual curation for BV/Nivo |
-| Encounter-level linkage produces different HL cohort | High | High | QA: Compare patient-level vs. encounter-level HL flags, document differences |
-| New Gantt v2 schema breaks external tools | Low | High | Preserve v1 outputs, version new files clearly (_v2 suffix) |
-| First-line classification ambiguous for multi-regimen episodes | Medium | Medium | Require single regimen per episode, flag ambiguous cases for review |
-
----
-
-## Performance Considerations
-
-| Operation | Expected Complexity | Notes |
-|-----------|---------------------|-------|
-| ENCOUNTERID extraction | O(n) where n = treatment rows | Same as current triggering_code extraction |
-| Encounter-level cancer join | O(n*m) where n = episodes, m = diagnoses/patient | Use rowwise() + vectorized date difference |
-| Regimen classification | O(k*d) where k = chemo episodes, d = drugs/episode | Small k (adults 21+ chemo only), small d (<10 drugs/episode) |
-| Gantt CSV export | O(n) | Same as current R/49 (just more columns) |
-
-**Bottleneck risk:** LOW. All operations linear or small-set pattern matching. DuckDB backend already optimized.
-
----
-
-## Testing Strategy
-
-### Unit-Level Validation
-
-1. **ENCOUNTERID propagation:** Verify encounter_ids populated for all non-TUMOR_REGISTRY sources
-2. **SCT code tightening:** Confirm Z94.84, T86.5 absent from SCT triggering_codes
-3. **Regimen classification:** Test classify_regimen() with known drug combinations
-4. **First-line detection:** Verify chronological ordering post-diagnosis
-
-### Integration-Level Validation
-
-1. **Episode count parity:** treatment_episodes.rds row count before/after Phase 60 should match (same episodes, +1 column)
-2. **Gantt v1 vs. v2 row parity:** gantt_episodes.csv and gantt_episodes_v2.csv same row counts (same episodes, enhanced columns)
-3. **HL flag comparison:** Patient-level HL flags (current) vs. encounter-level HL flags (new) — document differences
-
-### QA Tables to Produce
-
-1. **Phase 60 QA:** Episode counts by treatment type (before/after SCT code removal)
-2. **Phase 61 QA:** Regimen distribution (ABVD, BV+AVD, Nivo+AVD, Other), first-line vs. subsequent
-3. **Phase 62 QA:** Cancer linkage method distribution (encounter_id vs. closest_date vs. none)
-4. **Phase 63 QA:** Gantt v1 vs. v2 schema comparison table
-
----
-
-## Open Questions for Implementation
-
-1. **Encounter-level cancer linkage fallback:** When ENCOUNTERID match fails, what date window for "closest diagnosis"? (Recommendation: +/- 30 days from episode_start)
-2. **Partial regimen matching threshold:** ABVD→AVD allowed (3 of 4 drugs). Should BV+AVD→BV+AD (missing vinblastine) also count? (Recommendation: Require 3 of 4, flag as "partial")
-3. **First-line classification:** If patient has ABVD episode and BV+AVD episode on same date, which is first-line? (Recommendation: Both flagged, manual review for multi-regimen same-date cases)
-4. **Death date analysis table:** Where does this fit? R/59 already produces validated_death_dates.rds. (Recommendation: New R/64_death_date_analysis.R for summary table, separate from Gantt integration)
+## Migration Strategy: Build Order
+
+### Phase 1: Foundation (00-09)
+1. Create `R/utils/` folder
+2. Move 7 `utils_*.R` → `R/utils/`
+3. Update `00_config.R` lines 1501-1507: `source("R/utils/utils_*.R")`
+4. Rename 25 → 01, 01 → 02, 02 → 03
+5. Update source() calls (28 scripts for 01→02, 8 scripts for 02→03)
+6. Run smoke test
+
+### Phase 2: Cohort Building (10-19)
+1. Rename 03 → 10, 04 → 11, 10 → 12
+2. Update source() calls (7 scripts)
+3. Run parity test (hl_cohort.rds row count matches)
+
+### Phase 3: Treatment Analysis (20-39)
+1. Rename 38 → 20, merge 39-42 → 21, 43a → 22, 44a → 23
+2. Rename 60 → 24, 61 → 25, 62 → 26, 46b → 27
+3. Update source() calls
+4. Run smoke test (treatment_episodes.rds structure unchanged)
+
+### Phase 4: Cancer Diagnosis (40-59)
+1. Rename 47 → 40, merge 50+51 → 41, 55 → 42
+2. Merge 56+58 → 43, merge 48a+48b+52 → 44
+3. Run smoke test (cancer_summary.rds row counts match)
+
+### Phase 5: Payer & Data Quality (60-69)
+1. Rename 35 → 60, 36 → 61, merge 22a+33 → 62, merge 23+34 → 63
+2. Rename 59 → 64, 08 → 65, 09 → 66, merge 18+20 → 67
+3. Run smoke test
+
+### Phase 6: Visualization & Reports (70-79)
+1. Rename 16 → 70, 05 → 71, 06 → 72, 11 → 73, 22b → 74, 15 → 75, 49 → 76, 63 → 77
+2. Update source() calls (73_pptx_main_report sources 70_encounter_analysis)
+3. Run smoke test (output file counts match)
+
+### Phase 7: Testing & Diagnostics (80-89)
+1. Rename 26 → 80, 27 → 81, 28 → 82, 29 → 83, 43b → 84, 44b → 85
+2. Run all tests in sequence
+
+### Phase 8: Ad-Hoc & Archive (90-99)
+1. Rename 17 → 90, 45b → 91, 12 → 92, 19 → 93, 21 → 94, 24 → 95, 55_search → 96
+2. Rename unnumbered: date_range_check → 97, check_deleted_proton_code → 98
+3. Create `R/archive/`, move 6 deprecated scripts
+
+### Phase 9: Documentation & Verification
+1. Update all "Phase NN" comments → "R/NEW_NUMBER"
+2. Create `docs/PIPELINE_REFERENCE.md`
+3. Run full pipeline 00 → 77
+4. Final parity check (compare output/ folder before/after)
 
 ---
 
 ## Sources
 
-**HIGH confidence** — All findings derived from existing codebase analysis:
+- [CRAN Task View: Reproducible Research](https://cran.r-project.org/view=ReproducibleResearch)
+- [Building reproducible analytical pipelines with R - targets](https://raps-with-r.dev/targets.html)
+- [Reproducible Analytical Pipelines | R-bloggers](https://www.r-bloggers.com/2026/03/reproducible-analytical-pipelines/)
+- [R for Data Science (2e) - Workflow: scripts](https://r4ds.hadley.nz/workflow-scripts.html)
+- [Tidyverse style guide - Files](https://style.tidyverse.org/files.html)
+- [Google's R Style Guide](https://web.stanford.edu/class/cs109l/unrestricted/resources/google-style.html)
+- [R Packages (2e) - R code](https://r-pkgs.org/code.html)
+- [renv: Introduction](https://rstudio.github.io/renv/articles/renv.html)
 
-- R/44a_treatment_episodes.R (lines 1-961): Episode detection architecture, triggering_codes pattern
-- R/49_gantt_data_export.R (lines 1-785): Gantt export architecture, patient-level cancer join
-- R/55_cancer_summary_refined.R (lines 1-859): HL cohort confirmation, first_hl_dx_date computation
-- R/00_config.R (lines 1-200): Configuration centralization pattern, TREATMENT_CODES structure
-- R/01_load_pcornet.R (lines 1-200): DuckDB backend abstraction, table schema specifications
-- .planning/PROJECT.md: Milestone context, feature requirements, out-of-scope boundaries
-
-**No external research required** — all patterns extracted from existing working code.
+---
+*Researched: 2026-06-01*
+*Confidence: HIGH (verified against existing codebase + industry practices)*

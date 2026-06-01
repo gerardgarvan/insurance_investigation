@@ -1,234 +1,307 @@
 # Project Research Summary
 
-**Project:** v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
-**Domain:** Clinical observational research in PCORnet Common Data Model
-**Researched:** 2026-05-29
+**Project:** PCORnet Payer Variable Investigation (R Pipeline) — v2.0 Codebase Cleanup & Documentation
+**Domain:** R analysis pipeline reorganization, documentation, and quality tooling
+**Researched:** 2026-06-01
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone adds encounter-level cancer diagnosis linkage (replacing patient-level joins) and first-line therapy regimen identification (ABVD, BV+AVD, Nivo+AVD) to the existing R-based Hodgkin Lymphoma treatment analysis pipeline. The research confirms **minimal new dependencies**: all features use validated stack components (dplyr rolling joins for encounter linkage, lubridate for 28-day cycle detection, httr2 for drug name resolution via RxNorm API). The existing DuckDB-backed architecture accommodates all changes through script extensions and new numbered components (R/60-R/65).
+The v2.0 milestone addresses technical debt from 63 organic development phases, transforming an ad-hoc collection of ~80 R scripts into a maintainable, documented, and testable codebase. Research confirms this requires **five mature CRAN packages** (lintr, styler, checkmate, testthat, fs) plus **lightweight structural changes** (renumbering, section headers, centralized constants) — NOT a full package conversion or architectural overhaul.
 
-The recommended approach leverages **hybrid encounter-diagnosis linkage**: direct ENCOUNTERID match (highest precision) with temporal proximity fallback for NULL/missing encounter links. Regimen detection requires **cycle-window grouping** (+/- 3 days) rather than same-encounter matching because infusion centers create separate encounters per drug. Critical to success: validate ENCOUNTERID population rates per table (90% in PROCEDURES vs 40% in DISPENSING at claims-heavy sites) before designing linkage strategy.
+**Recommended approach:** Sequential reorganization in 9 phases grouped as REORG → DOC → SAFE → DRY. Start with decade-based renumbering (00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc), add documentation via section headers and roxygen2-style comments, apply auto-formatting and lint checking, insert defensive assertions and smoke tests, then consolidate duplicate lookups. Each phase builds on the previous, with smoke tests validating integrity before proceeding.
 
-Key risks center on **PCORnet data model assumptions**: NULL ENCOUNTERID in 10-60% of medication records (site-dependent), many-to-many explosion on diagnosis joins (1 encounter = 15 diagnoses), and orphan diagnoses without encounter links (15-30% at claims sites). Mitigation requires multi-tier linkage strategies, explicit diagnosis ranking (PDX/ORIGDX/DX_SOURCE), and classification-not-deletion for post-death encounters. The existing pipeline architecture (numbered scripts, RDS caching, centralized config) minimizes integration risk — extend, don't replace.
+**Key risks and mitigation:** Six critical pitfalls identified: (1) Broken source() cross-references after renumbering — comprehensive grep BEFORE file moves, update references BEFORE renaming, smoke test immediately after; (2) lintr false positives on PCORnet ALLCAPS columns — configure .lintr to disable object_name_linter, fix violations incrementally; (3) checkmate performance overhead in hot loops — validate at function entry only, NOT inside iterations; (4) styler corrupting data files — style ONLY R/ directory explicitly; (5) hardcoded paths in tests — use here() for project-relative paths, test on both Windows and HiPerGator; (6) duplicate constants diverging after partial consolidation — grep exhaustively, delete ALL copies in same commit, validate with smoke test. All pitfalls are preventable with documented strategies.
+
+The recommended stack has **zero bleeding-edge dependencies** — all packages are 5-14 years mature, CRAN-stable, and widely adopted in tidyverse ecosystem. Integration risk is minimal because all are standard R development tools that enhance workflow without changing pipeline logic.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Zero critical new dependencies.** All v1.8 features use existing validated stack components. The pipeline already has dplyr 1.2.1 (rolling joins with `join_by(closest())`), lubridate 1.9.5 (interval testing with `%within%`), httr2 1.2.2 (RxNorm API validated in Phase 40), and DuckDB 1.3+ (encounter indexing). Only optional addition: rxnorm GitHub package (nt-williams/rxnorm) for simplified drug name resolution, but httr2 direct API calls work fine for the limited drug set (~20 HL therapy drugs).
+**Five required packages, one optional.** All additions are infrastructure-focused (linting, formatting, testing, file operations) — they enhance code quality WITHOUT changing pipeline logic or data processing. Integration risk is minimal because all are standard R development tools with clear documentation and tidyverse alignment.
 
 **Core technologies:**
-- **dplyr 1.2.1** (rolling joins): `join_by(closest())` handles encounter-level linkage with fallback to nearest diagnosis date — mature feature since dplyr 1.1.0 (Feb 2023)
-- **lubridate 1.9.5** (interval operations): `%within%` detects 28-day cycle co-administration for regimen classification — validated in Phase 1 for enrollment windows
-- **httr2 1.2.2** (RxNorm API): Drug name resolution with retry/throttle — already working in R/40 for NDC lookup
-- **DuckDB 1.3+** (backend): ENCOUNTERID indexing for join performance — validated in Phase 29-32
-- **openxlsx2 1.0.0+** (output): New Gantt output files — validated in Phase 54 for styled xlsx tables
+- **lintr 3.3.0-1** (Nov 2025): Static style checking — detects violations without modifying code. Must disable object_name_linter for PCORnet ALLCAPS columns. Provides 100+ default checks (line length, spacing, commented code, T/F usage). Industry standard for tidyverse projects.
+- **styler 1.11.0** (Oct 2025): Auto-formatting — fixes spacing, indentation, line breaks after bulk renumbering. Can preview changes with `dry = "on"` before applying. Integrates with RStudio Addins (Ctrl+Shift+A). Saves manual formatting time.
+- **checkmate 2.3.4** (Feb 2026): Input validation — provides 100+ assertion functions for defensive coding. C-optimized (2-5x faster than base R stopifnot). Peer-reviewed (R Journal 2017). Critical for file existence checks, data structure validation, and payer mapping verification.
+- **testthat 3.3.2** (Jan 2026): Smoke testing — verifies pipeline integrity after renumbering (sequential numbering, valid source() calls, expected RDS artifacts). Industry standard (10,000+ CRAN packages). Focus on integration tests, NOT exhaustive unit tests (research pipeline, not production software).
+- **fs 2.1.0** (Apr 2026): Cross-platform file operations — atomic file renaming safer than base R file.rename(). Fails loudly if destination exists (prevents overwrites). Essential for renumbering ~80 scripts without data loss. Works identically on Windows and Linux.
+- **logger 0.4.2** (May 2026, OPTIONAL): Structured logging — severity levels, namespaces, JSON output. Current glue + cat + tidylog is sufficient for v2.0. Defer to future milestone unless team grows or CI/CD integration requires machine-readable logs.
 
-**Integration points already validated:** httr2 RxNorm API pattern exists in R/40_investigate_unmatched_ndc.R (copy request builder, adapt for drug names). DuckDB ENCOUNTERID indexing confirmed in Phase 29 (verify coverage in PROCEDURES/PRESCRIBING/DISPENSING). openxlsx2 multi-sheet workbooks working in Phase 54 (reuse for death date analysis table).
+**Alternatives rejected:**
+- Full package structure (roxygen2 build, pkgdown): Over-engineering for analysis pipeline. Use roxygen2 syntax for readability only, NOT build process.
+- CI/CD (GitHub Actions): Data dependency on HiPerGator CSVs makes CI impractical. Manual smoke tests sufficient for solo project.
+- Pipeline orchestration (targets/drake): Major architecture change out of scope for v2.0. Existing sequential scripts work.
+- Code coverage metrics (covr): Meaningful for unit tests, not smoke tests. Research pipeline, not production software.
+
+**Integration with existing stack:**
+- lintr + tidylog: Independent (tidylog runs during execution, lintr runs during development)
+- styler + RStudio: IDE Addin integration for quick formatting
+- checkmate + testthat: Built-in integration (checkmate provides expect_*() functions extending testthat)
+- fs + here: Complementary (here() for path construction, fs for file operations)
 
 ### Expected Features
 
-**Must have (table stakes):**
-- **Encounter-specific cancer diagnosis linkage** — Episode-level context prevents conflating unrelated diagnoses across time; patient-level joins create false associations (HL 2015 + breast cancer 2022 flagging all encounters for both)
-- **Death date validation** — EHR death dates incomplete/inaccurate (89% of post-death encounters due to missing death status); impossible dates corrupt survival analysis
-- **First-line therapy identification** — Standard requirement for observational oncology studies; 60-day clean period with no prior chemotherapy (claims research standard)
-- **Regimen-level classification** — Clinical interpretability requires regimen names (ABVD, BV+AVD, Nivo+AVD), not drug lists; multi-agent temporal windowing essential
+Research identified 9 table stakes features (industry standard for R pipelines), 4 differentiators (set apart from typical projects), and 8 anti-features (explicitly avoid over-engineering).
 
-**Should have (competitive):**
-- **Hybrid encounter-diagnosis linkage** — Direct ENCOUNTERID match preferred, temporal fallback ensures coverage when encounter link missing; most pipelines do one or the other
-- **Second cancer confirmation with temporal separation** — 7-day-apart rule (Phase 51 pattern) extends to encounter-level HL flag; prevents duplicate diagnoses from administrative re-coding
-- **Granular treatment source validation** — Drop ICD diagnosis codes from SCT detection (diagnosis = history/status, not procedure); restrict to PROCEDURES/PRESCRIBING/DISPENSING
-- **Regimen-specific timing rules** — BV+AVD post-2019 (FDA approval 3/20/2018), Nivo+AVD post-2024 (FDA PDUFA 4/8/2026) prevent anachronistic identification
+**Table stakes (must-have):**
+- **Sequential script numbering (01-N)**: Industry standard. Answers "what runs when?" Low complexity (mechanical renaming with fs package).
+- **Header blocks in every script**: Documents purpose, inputs, outputs, dependencies. Standard for reproducible research.
+- **Section headers with 4+ dashes**: Enables RStudio Ctrl+Shift+R outline navigation. Critical for 500+ line scripts.
+- **Descriptive variable/function names**: R style guide baseline (snake_case). Already in codebase via tidyverse.
+- **Input file existence checks**: Fail-fast pattern. Prevents cryptic errors 30 minutes into execution. Use checkmate assert_file_exists().
+- **README with run order**: Onboarding requirement. Linear list of scripts with 1-sentence purpose each.
+- **Comments explaining non-obvious logic**: Future maintainer needs context. Comment WHY, not WHAT.
+- **Centralized constants/lookups**: DRY principle. Multiple PREFIX_MAP copies = maintenance nightmare, divergence risk.
+- **Error messages with context**: Use glue() for `stop(glue("Missing {file} at {path}"))` instead of generic "assertion failed".
 
-**Defer (v2+):**
-- **Treatment episode boundary formalization** — Explicit start/stop dates with 45-day gap threshold; currently implicit in first-line logic
-- **Multi-line therapy sequencing** — First → second → third line progression tracking; requires episode boundaries + regimen change detection
-- **Regimen expansion** — Stanford V, BEACOPP protocols (ABVD/BV+AVD/Nivo+AVD cover most advanced HL)
-- **Pediatric protocol regimen ID** — Age <21 cohort with dose-reduced protocols; requires separate validation
-- **Payer x regimen interaction** — Does payer correlate with specific regimens? Deferred per PROJECT.md out of scope
+**Differentiators (should-have):**
+- **Automated dependency checks**: Verify required RDS artifacts exist before each script. Prevents "file not found" 20 min into run. Use checkmate assertions.
+- **Smoke test script**: Catches cross-reference bugs immediately after renumbering. Run subset (1-5 min) to verify outputs exist + row counts match. Use testthat framework.
+- **Assertion-rich pipeline (checkmate)**: Data quality gates. Catches upstream changes (e.g., new ENC_TYPE value). Assertions double as executable documentation.
+- **Reference manual with dependency matrix**: Table format documenting Script → Inputs/Outputs/Dependencies for all 80 scripts. Enables quick understanding of pipeline flow.
+
+**Anti-features (explicitly avoid):**
+- Full package conversion (NAMESPACE, DESCRIPTION): Delays v2.0 by weeks. Analysis scripts, not distributable package.
+- Automated style enforcement on commits: Adds friction. Run styler manually before milestone completion.
+- Unit tests for every function: High maintenance cost vs value. Reserve for critical utility functions only.
+- Interactive pkgdown site: Overkill for 1-2 person project. Static markdown reference manual sufficient.
+- Pipeline orchestration (targets): Major re-learning curve. Defer to v3+ if pipeline grows >100 scripts.
+- Git hooks for pre-commit validation: Adds friction. Manual smoke test before milestone tagging.
+- Comprehensive input validation (pointblank): Already deferred in v1.0. Python pipeline handles data cleaning.
+- Refactoring to object-oriented (R6 classes): Analysis pipeline = procedural workflow. OOP adds complexity without benefits.
 
 ### Architecture Approach
 
-The existing linear numbered-script pattern (R/00 through R/59) accommodates v1.8 through **extension, not replacement**. ENCOUNTERID propagation modifies R/44a (treatment episode detection) to add one column. New scripts follow clone-and-enhance pattern: R/60 (encounter-cancer linkage), R/61 (regimen labeling), R/62 (enhanced Gantt v2), preserving R/49 (original Gantt) for backward compatibility. RDS artifacts (treatment_episodes.rds, regimen_labeled_episodes.rds) enable downstream consumption without re-running entire pipeline. Centralized configuration (R/00_config.R) gains REGIMEN_DEFINITIONS for drug matching logic.
+Current state: 63 numbered scripts with gaps (missing 30-32, 37, 57), 12 sub-lettered duplicates (22a/b, 43a/b, 44a/b, 45a/b, 46a/b, 48a/b), 7 unnumbered utilities, 6 ad-hoc exploratory scripts. Total 81 R files. Integration points: 95+ source() calls, 25+ RDS artifacts (semantic naming), 50+ output files (semantic naming).
+
+**Recommended: Decade-based numbering** groups scripts by logical execution flow, NOT alphabetical order. Provides 10-20 slot capacity per functional area, allows inserting new scripts without mass renumbering.
 
 **Major components:**
-1. **R/44a (modified)** — Add `encounter_ids` column to episode detection; drop ICD diagnosis codes from SCT detection (Z94.84 status codes remain, only C81.* removed)
-2. **R/60 (new)** — Encounter-level cancer linkage via ENCOUNTERID match + closest date fallback; produces `cancer_category`, `cancer_link_method`, `is_hodgkin` per episode
-3. **R/61 (new)** — First-line regimen labeling for adults 21+ at treatment; 28-day cycle window matching with dropped-agent tolerance (ABVD→AVD allowed); temporal availability rules
-4. **R/62 (new)** — Enhanced Gantt CSV export (v2 suffix) with encounter-level cancer + regimen labels; preserves v1 outputs
-5. **R/64 (optional)** — Death date analysis table (counts: patients with death dates, death as last encounter, post-death encounters); separate from Gantt integration
+1. **00-09 Foundation** — config (auto-sources utils/), DuckDB ingest, data loading, payer harmonization (4 scripts)
+2. **10-19 Cohort Building** — predicates, assembly, treatment payer windows, surveillance detection (5 scripts)
+3. **20-39 Treatment Analysis** — code inventory/resolution, durations, episodes, drug names, first-line therapy, cross-reference (8 scripts, 20 slots for expansion)
+4. **40-59 Cancer Diagnosis** — site frequency, confirmation, refined summaries, temporal filters, code catalogs (5 scripts, 20 slots)
+5. **60-69 Payer & Data Quality** — code frequency, tiered resolution, overlap detection/classification, death date validation, QA summaries, dx gap analysis, encounter missingness (8 scripts)
+6. **70-79 Visualization & Reports** — encounter analysis, waterfall/Sankey, PPTX (main + overlap), documentation, Gantt v1/v2 (8 scripts)
+7. **80-89 Testing & Diagnostics** — backend smoke tests, parity tests, benchmarks, duration/episode tests (6 scripts)
+8. **90-99 Ad-Hoc & Deprecated** — value audits, radiation CPT checks, duplicate date detection, exploratory searches, diagnostics (9 scripts)
+9. **utils/ folder (NEW)** — Extract 7 utils_*.R modules from main R/ directory (attrition, dates, duckdb, icd, payer, pptx, snapshot, treatment)
+10. **archive/ folder (NEW)** — Preserve 6 deprecated scripts for reference (payer_frequency_from_resolved, tiered_payer_summary, sct_code_inventory, run_phase12_outputs, tiered_encounter_level, tiered_date_level)
+
+**Integration point updates:** 95+ source() calls must update (e.g., `source("R/01_load_pcornet.R")` → `source("R/02_data_load_pcornet.R")`). RDS artifacts use semantic naming (hl_cohort.rds, treatment_episodes.rds) — NO changes required. Output files use semantic naming (gantt_episodes.csv) — NO changes required. Only source() paths and inline "Phase NN" comments need updates.
+
+**Data flow through reorganized pipeline:**
+```
+00_config.R → auto-source utils/
+    ↓
+01_data_ingest_duckdb.R (CSV → DuckDB)
+    ↓
+02_data_load_pcornet.R (get_pcornet_table())
+    ↓
+03_data_harmonize_payer.R (8 AMC categories)
+    ↓
+10-14: Cohort Building → hl_cohort.rds
+    ↓
+20-27: Treatment Analysis → treatment_episodes.rds, regimen_labeled_episodes.rds
+    ↓
+40-44: Cancer Diagnosis → cancer_summary.rds, confirmed_hl_cohort.rds
+    ↓
+60-67: Payer & Data Quality → resolved encounters, quality metrics
+    ↓
+70-77: Visualization & Reports → PNG/CSV/PPTX outputs
+```
+
+**Migration strategy:** Build order in 9 phases (Foundation → Cohort → Treatment → Cancer → Payer/QA → Outputs → Tests → Ad-Hoc → Documentation). Smoke tests after each decade renumbered. Sequential execution required — each phase depends on previous stability.
 
 ### Critical Pitfalls
 
-1. **NULL/missing ENCOUNTERID varies by table (10-60% site-dependent)** — DISPENSING from external pharmacies often lacks encounter link (CVS, Walgreens). **Prevent:** Pre-validate ENCOUNTERID population rate per table and source; implement multi-tier linkage (exact match → PATID+date window ±3 days → ±14 days for orphan prescriptions); document linkage tier per medication. **Phase 1 (data validation) prevents cascade failures.**
+Six critical pitfalls with HIGH impact and documented prevention strategies. All are recoverable (LOW-MEDIUM cost) but avoidable with discipline.
 
-2. **Many-to-many explosion on diagnosis-to-encounter join (1 encounter = 15 diagnoses)** — Cancer patients have multiple active diagnoses (HL + solid tumor history, HL + second malignancy) plus status codes (Z94.84 SCT status). Naive join produces 100-400 rows per treatment event. **Prevent:** Pre-filter DIAGNOSIS to malignant C-codes (C00-C96), exclude Z85.* (history), T86.5 (complications); rank diagnoses by PDX='P', DX_SOURCE='Primary', DX_DATE; select top 1 per encounter; assert 1:1 cardinality. **Phase 2 (encounter linkage) requires explicit disambiguation.**
+1. **Broken source() references after renumbering** — Search-and-replace misses edge cases (comments, glue strings, conditional source() calls). Pipeline fails 20 min into execution with cryptic error. **Prevention:** Comprehensive grep BEFORE renaming (`grep -rn "source\(" R/`), update references BEFORE moving files, create renaming manifest to validate no duplicates, smoke test immediately after with testthat checking all source() calls resolve. **Warning signs:** Renaming took 20 min but no test errors, only tested first 3 scripts, git diff shows file renames but no source() updates.
 
-3. **Chemotherapy regimen fragmentation across encounters** — ABVD requires 4 drugs (day 1 + day 15 of 28-day cycle); infusion centers create separate encounters per drug. Naive "all 4 drugs on same ENCOUNTERID" finds zero regimens despite 200+ patients receiving it. **Prevent:** Define cycle window (+/- 3 days from anchor date); detect regimen across encounters grouped by PATID + cycle_window; allow different ENCOUNTERIDs per drug. **Phase 4 (regimen detection) fails without cycle-window grouping.**
+2. **Over-aggressive lintr violations** — Default tidyverse rules flag PCORnet ALLCAPS columns (PATID, ENROLL_DATE). Developer batch-renames without understanding column names ≠ R variables. 50+ scripts break with "object 'PATID' not found". **Prevention:** Configure .lintr to disable object_name_linter and set line_length_linter(120) BEFORE running, fix violations incrementally (HIGH severity first, LOW severity deferred), use styler BEFORE lintr to auto-fix mechanical issues, test after each fix. **Warning signs:** lintr reports 500+ violations (too many to fix at once), batch find-replace on variable names, no incremental testing.
 
-4. **BV+AVD misinterpreted as additive (5 drugs) instead of replacement** — Naming convention "BV+AVD" reads like "add BV to ABVD," but brentuximab replaces bleomycin (not added). Coding as 5-drug regimen finds zero cases. **Prevent:** Clinical validation before coding; BV+AVD = brentuximab + doxorubicin + vinblastine + dacarbazine (4 drugs, bleomycin ABSENT); detect in priority order (check brentuximab → BV+AVD, check nivolumab → Nivo+AVD, check bleomycin → ABVD). **Phase 4 (regimen definitions) must be clinically validated.**
+3. **checkmate assertions inside hot loops** — Defensive enthusiasm puts `assert_character(ID)` inside map(). 5-minute pipeline becomes 45 minutes (9x slowdown). No actual bugs caught (data already validated at load). **Prevention:** Validate ONCE at function entry, NOT per iteration. Use conditional validation (`VALIDATE_INPUTS` env var) for debugging. Profile if runtime increases 5x. **Warning signs:** Pipeline runtime increased 5x after adding assertions, profiling shows checkmate at top (not data operations), assertions inside group_by/summarize/map.
 
-5. **"Encounters after death" auto-deleted instead of classified** — Death date is often REPORTED date (when facility learned of death), not ACTUAL date; post-death encounters include legitimate hospice admissions, lab results from pre-death specimens, administrative processing. Deleting removes 10-20% of end-of-life care data. **Prevent:** Classify by encounter type (impossible: active treatment >7 days after death + no subsequent; administrative: revenue code 0001, ENC_TYPE='OT'; specimen: LAB result date > death but specimen date < death; hospice: palliative care DX); flag impossible deaths but preserve legitimate encounters. **Phase 5 (death date analysis) analyzes, doesn't delete.**
+4. **styler reformats data files** — Running `styler::style_dir(".")` recurses into output/ and corrupts CSVs. Gantt chart tool can't parse corrupted CSV. Git diff shows 10,000+ lines changed in output/. **Prevention:** Style ONLY R/ directory explicitly (`styler::style_dir("R/")`), use .stylerignore (output/, cache/, renv/, .planning/), preview with `dry = "on"` before applying. **Warning signs:** styler processing 1000+ files (should be ~80 R scripts), git diff shows changes in output/ or cache/, CSV files show spacing changes.
+
+5. **Smoke tests with hardcoded paths** — Write test with `"C:/Users/Owner/insurance_investigation/cache/cohort.rds"`. Works on local Windows. Fails on HiPerGator Linux: "No such file or directory." **Prevention:** Use here() for project-relative paths (`here("cache", "cohort.rds")`), use fs::file_exists() (not base R), test on both platforms before committing. **Warning signs:** Paths with C:/ or D:/ (Windows-specific), backslashes in paths, tests pass in RStudio but fail in SLURM jobs.
+
+6. **Duplicate constants diverge after consolidation** — Grep finds 2 of 3 PREFIX_MAP copies, third remains in conditional logic. Same patient has different payer categories depending on which script runs first (non-deterministic). **Prevention:** Grep exhaustively (`grep -rn "PREFIX_MAP <-"`) BEFORE consolidation, remove ALL old copies in same commit as adding to 00_config.R, validate with smoke test that constant defined only in config (`expect_false(str_detect(content, "PREFIX_MAP <-"))`). **Warning signs:** Consolidation commit only modifies R/00_config.R (didn't delete old copies), grep shows multiple definitions after consolidation, results change when scripts run in different order.
+
+**Moderate pitfalls (MEDIUM impact):** Renumbering without execution order analysis (breaks dependencies), section headers without 4+ dashes (RStudio outline doesn't work), roxygen2 package build for non-package (creates unnecessary man/ directory), over-commenting trivial code (noise obscures important comments).
+
+**Recovery costs:** All critical pitfalls are LOW-MEDIUM cost to recover. Broken source() calls: grep + update + test. lintr ALLCAPS rename: revert + configure .lintr + re-run. checkmate hot loops: move assertions outside loop. styler CSVs: revert output/ changes. Hardcoded paths: replace with here(). Duplicate constants: grep + delete + smoke test.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, v2.0 should follow a **9-phase sequential reorganization** with smoke tests after each major group. Phases build incrementally — each adds capability without breaking previous work. Total estimated 11 phases (9 primary + 2 iterative for lint/consolidate).
 
-### Phase 60: ENCOUNTERID Propagation + SCT Code Tightening
-**Rationale:** Foundation for all encounter-level features; SCT cleanup is independent low-risk change bundled here.
-**Delivers:** Enhanced treatment_episodes.rds with `encounter_ids` column; SCT episodes exclude diagnosis codes (Z94.84, T86.5 retained for status, only C81.* removed).
-**Addresses:** ENCOUNTERID infrastructure from ARCHITECTURE.md; treatment source validation from FEATURES.md.
-**Avoids:** Pitfall v1.8-5 (dropping all ICD codes loses legitimate SCT cases) — clarify requirement during scope.
-**Research flag:** **Skip research-phase** — extends existing R/44a pattern; DuckDB ENCOUNTERID indexing validated Phase 29.
+### Phase 1: Foundation Reorganization (REORG-01)
+**Rationale:** Create new folder structure and renumber foundation scripts first. All downstream scripts depend on config/data loading, so this must be stable before proceeding. Addresses numbering chaos and unclear execution order.
+**Delivers:** utils/ folder created, 7 utility modules moved, 00_config.R updated to source from utils/, DuckDB ingest renumbered 01, data loading 02, payer harmonization 03.
+**Addresses:** Table stakes (sequential numbering, centralized constants in utils/).
+**Avoids:** Pitfall #1 (broken source() references) — comprehensive grep for all 95+ source() calls, update references BEFORE file moves, smoke test validates. Pitfall #5 (hardcoded paths) — use here() for all path operations.
+**Stack:** fs package for atomic file_move() operations, here() for project-relative paths.
+**Research flag:** Standard pattern (file operations well-documented in fs package). No deeper research needed.
 
-### Phase 61: Drug Name Resolution via RxNorm API
-**Rationale:** Independent of Phase 60; enables Phase 62 regimen detection; reuses httr2 pattern from Phase 40.
-**Delivers:** Drug name mapping for RXNORM_CUI codes in treatment_episode_detail.rds; foundation for regimen classification.
-**Uses:** httr2 1.2.2 (RxNorm API with retry/throttle from Phase 40); jsonlite 1.9.3+ (JSON parsing).
-**Implements:** REGIMEN_DEFINITIONS in R/00_config.R (RxNorm CUI → drug name keyword mappings).
-**Avoids:** Pitfall v1.8-4 (regimen fragmentation) partially — establishes drug detection before cycle logic.
-**Research flag:** **Skip research-phase** — httr2 RxNorm API pattern already validated in R/40_investigate_unmatched_ndc.R; copy request builder, adapt for drug names.
+### Phase 2: Cohort Building Reorganization (REORG-02)
+**Rationale:** Cohort scripts (03→10, 04→11, 10→12, 13, 14) form second dependency tier. Renumber after foundation is stable. Prevents breaking downstream treatment/cancer scripts that depend on cohort.
+**Delivers:** Cohort building scripts (10-19 decade), source() calls updated in 7 downstream scripts, parity test confirms hl_cohort.rds row count unchanged.
+**Addresses:** Table stakes (sequential numbering). Differentiator (automated dependency checks via parity tests).
+**Avoids:** Pitfall #7 (renumbering without execution order analysis) — manual dependency mapping ensures 10→11→12→13→14 order.
+**Stack:** testthat for parity tests (verify RDS row counts match before/after).
+**Research flag:** Standard pattern. No research needed.
 
-### Phase 62: 28-Day Cycle Regimen Detection
-**Rationale:** Requires Phase 61 (drug names); core feature for first-line therapy analysis.
-**Delivers:** Regimen classification (ABVD, BV+AVD, Nivo+AVD) using cycle-window grouping (+/- 3 days); dropped-agent tolerance (ABVD→AVD allowed).
-**Uses:** lubridate 1.9.5 (`%within%` for 28-day cycle detection); dplyr 1.2.1 (group_by + summarise for cycle aggregation).
-**Implements:** Cycle-window grouping pattern from ARCHITECTURE.md; regimen definitions from FEATURES.md.
-**Avoids:** Pitfall v1.8-4 (regimen fragmentation — naive same-encounter matching finds zero cases); Pitfall v1.8-7 (BV+AVD as additive instead of replacement).
-**Research flag:** **Research-phase needed** — Clinical validation required for regimen definitions (brentuximab replaces bleomycin, not additive); dropped-agent tolerance thresholds (3 of 4 drugs? 2 of 4?); temporal availability rules (BV+AVD post-2019, Nivo+AVD post-2024). **Use `/gsd:research-phase` before implementation.**
+### Phase 3: Treatment Analysis Reorganization (REORG-03)
+**Rationale:** Treatment scripts (38-44, 60-62) scattered across two regions. Consolidate to 20-39 decade with 20-slot capacity for future expansion. Prevents renumbering all scripts when adding new treatment analysis.
+**Delivers:** 8 treatment scripts renumbered/merged (20-27), treatment_episodes.rds structure validated, source() cross-references updated.
+**Implements:** Decade-based grouping architecture (20 slots allow inserting 28_new_analysis.R without renumbering 29-80).
+**Avoids:** Pitfall #1 (broken source() calls) — comprehensive update of all references to 43a/44a (treatment durations/episodes).
+**Stack:** checkmate assertions validate treatment episode counts after renumbering.
+**Research flag:** Standard pattern. No research needed.
 
-### Phase 63: Encounter-Level Cancer Diagnosis Linkage
-**Rationale:** Requires Phase 60 (encounter_ids); foundational for Phase 65 (Gantt v2); high complexity due to many-to-many explosion risk.
-**Delivers:** Encounter-level `cancer_category`, `cancer_link_method` (encounter_id/closest_date/none), `is_hodgkin` flags; replaces patient-level join from R/49.
-**Uses:** dplyr 1.2.1 (`join_by(closest())` for temporal fallback); DuckDB DIAGNOSIS table access.
-**Implements:** Hybrid linkage strategy from ARCHITECTURE.md; diagnosis ranking logic to prevent many-to-many explosion.
-**Avoids:** Pitfall v1.8-2 (many-to-many explosion — 1 encounter = 15 diagnoses produces 100-400 rows per treatment); Pitfall v1.8-3 (orphan diagnoses without encounters lose 15-30% at claims sites).
-**Research flag:** **Research-phase needed** — Fallback window specification (7/30/60 days for closest date?); diagnosis ranking logic (PDX='P' vs ORIGDX vs DX_SOURCE priority); orphan diagnosis handling (ENCOUNTERID='OT' or NULL). **Use `/gsd:research-phase` for linkage strategy validation.**
+### Phase 4: Cancer Diagnosis Reorganization (REORG-04)
+**Rationale:** Cancer site scripts (47-58) consolidated to 40-59 decade. Provides 20-slot expansion capacity for future cancer analyses.
+**Delivers:** 5 cancer scripts renumbered/merged (40-44), cancer_summary.rds validated, confirmed_hl_cohort.rds row count matches.
+**Addresses:** Architecture component (cancer diagnosis analysis isolated to dedicated decade).
+**Stack:** testthat smoke tests validate cancer site frequency counts, checkmate assertions verify cancer_summary structure.
+**Research flag:** Standard pattern. No research needed.
 
-### Phase 64: First-Line Therapy Identification (Adults 21+)
-**Rationale:** Requires Phase 62 (regimen labels) and Phase 63 (encounter-level HL flag); combines multiple features.
-**Delivers:** `is_first_line` flag for chemotherapy episodes; 60-day clean period detection; age filter at treatment date (not enrollment).
-**Uses:** dplyr 1.2.1 (lag/lead for prior chemotherapy detection); lubridate 1.9.5 (age calculation, date windows).
-**Implements:** First-line definition from FEATURES.md; age-at-treatment pattern from PITFALLS.md.
-**Avoids:** Pitfall v1.8-8 (age filter applied before treatment linkage — wrong cohort); age distribution should match HL epidemiology (peak 25-35, bimodal).
-**Research flag:** **Skip research-phase** — Standard observational oncology pattern (60-day clean period from claims research); age calculation straightforward.
+### Phase 5: Payer/QA and Output Reorganization (REORG-05)
+**Rationale:** Complete renumbering (60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc). Final push to decade-based system. Creates archive/ for deprecated scripts.
+**Delivers:** All 80 scripts in final decade-based positions, archive/ folder created with 6 deprecated scripts, smoke test suite validates all source() calls resolve.
+**Addresses:** Anti-feature (avoid mixing production and test code) — test scripts isolated to 80-89 decade, exploratory scripts to 90-99.
+**Avoids:** Pitfall #1 (broken references) — final comprehensive smoke test with testthat checking ALL source() calls across entire codebase.
+**Stack:** testthat comprehensive suite (sequential numbering, source() validation, RDS dependencies).
+**Research flag:** Standard pattern. No research needed.
 
-### Phase 65: Enhanced Gantt Export with Encounter-Level Cancer + Regimen Labels
-**Rationale:** Integrates outputs from Phase 63 (encounter-level cancer) and Phase 64 (first-line regimens); final deliverable for milestone.
-**Delivers:** gantt_episodes_v2.csv, gantt_detail_v2.csv with new columns (encounter_ids, cancer_category, cancer_link_method, is_hodgkin, regimen_label, is_first_line); preserves v1 outputs.
-**Uses:** openxlsx2 1.0.0+ (if xlsx format needed); readr 2.2.0+ (CSV export).
-**Implements:** Clone-and-enhance pattern from ARCHITECTURE.md (R/49 → R/62); versioned output files (_v2 suffix).
-**Avoids:** Breaking external tools expecting v1 schema — parallel outputs maintain backward compatibility.
-**Research flag:** **Skip research-phase** — Extends existing R/49 pattern; new columns at end preserve schema compatibility.
+### Phase 6: Documentation and Section Headers (DOC-01, DOC-02)
+**Rationale:** After renumbering stable, add human-readable structure. Header blocks + section headers enable reference manual generation and RStudio navigation.
+**Delivers:** Header block in all 80 scripts (purpose, inputs, outputs, dependencies), section headers with 4+ dashes (RStudio Ctrl+Shift+R outline navigation), roxygen2-style #' comments for complex functions.
+**Addresses:** Table stakes (header blocks, section headers, comments explaining non-obvious logic). Differentiator (reference manual foundation).
+**Avoids:** Pitfall #8 (section headers without 4+ dashes) — enforce RStudio format. Pitfall #9 (roxygen2 package build) — use syntax only, NOT build process. Pitfall #10 (over-commenting) — comment WHY not WHAT.
+**Stack:** Base R comments (no package overhead), RStudio built-in outline feature.
+**Research flag:** Standard pattern (comment conventions documented in tidyverse/Google R style guides). No research needed.
 
-### Phase 66: Death Date Analysis Table
-**Rationale:** Independent of other phases; extends Phase 59 validation logic; low complexity.
-**Delivers:** Summary table (counts: patients with death dates, death as last encounter, post-death encounters by type); quantifies data quality.
-**Uses:** DuckDB DEMOGRAPHIC.DEATH_DATE (validated Phase 59); lubridate 1.9.5 (date comparison); openxlsx2 (xlsx output).
-**Implements:** Death date classification from PITFALLS.md; extends Phase 59 impossible death exclusion.
-**Avoids:** Pitfall v1.8-6 (auto-deleting post-death encounters loses 10-20% of legitimate end-of-life care).
-**Research flag:** **Skip research-phase** — Extends existing Phase 59 validation; simple counts/classification.
+### Phase 7: Automated Formatting and Linting (SAFE-01, SAFE-02)
+**Rationale:** Bulk renumbering causes formatting inconsistencies. styler fixes mechanically, lintr detects remaining issues that can't be auto-fixed.
+**Delivers:** Consistent tidyverse style across all R/ scripts, .lintr configuration file (disable object_name_linter for PCORnet ALLCAPS, line_length_linter(120)), lintr violations reduced to <50 manageable items (defer LOW severity like trailing whitespace).
+**Addresses:** Table stakes (consistent style, descriptive variable names validated).
+**Avoids:** Pitfall #2 (over-aggressive lintr) — configure BEFORE running, fix incrementally NOT batch, test after each fix. Pitfall #4 (styler data files) — style ONLY R/ directory, preview with `dry = "on"`.
+**Stack:** styler 1.11.0 with dry run preview, lintr 3.3.0-1 with custom .lintr config.
+**Research flag:** Standard pattern (styler/lintr have comprehensive documentation). No research needed. **Implementation note:** May need iteration if lintr finds 100+ violations — plan extra phase for cleanup.
+
+### Phase 8: Defensive Coding and Validation (SAFE-03, DRY-01)
+**Rationale:** Add input validation and consolidate duplicate constants while testing infrastructure is fresh. Hardens pipeline against data quality issues and prevents constant divergence.
+**Delivers:** checkmate assertions in critical functions (file loading, payer mapping, data structure checks), PREFIX_MAP and code lookups consolidated to 00_config.R, smoke tests validate no duplicate constants remain.
+**Addresses:** Table stakes (input file existence checks, error messages with context, centralized constants). Differentiator (assertion-rich pipeline, data quality gates).
+**Avoids:** Pitfall #3 (assertions in hot loops) — validate at function entry only, NOT inside map()/group_by(). Pitfall #6 (duplicate constants diverge) — comprehensive grep, delete ALL copies in one commit, validate with smoke test.
+**Stack:** checkmate 2.3.4 for assertions (assert_file_exists, assert_data_frame, assert_names, assert_subset), testthat for validation smoke tests.
+**Research flag:** Standard pattern (checkmate has 100+ functions but excellent vignettes). No research needed.
+
+### Phase 9: Smoke Testing and Documentation (SAFE-04, DOC-03)
+**Rationale:** Final integration test + reference manual before milestone closure. Ensures pipeline integrity and provides onboarding documentation.
+**Delivers:** Comprehensive smoke test suite (sequential numbering verified, source() calls validate, RDS dependencies checked, config constants exist, critical scripts run without error, output file counts match expected), reference manual with dependency matrix (Script → Inputs/Outputs/Dependencies table for all 80 scripts).
+**Addresses:** Table stakes (README with run order expanded to reference manual). Differentiator (smoke test script, reference manual with dependency matrix).
+**Avoids:** Pitfall #5 (hardcoded paths in tests) — use here() for all paths, test on HiPerGator. Pitfall #1 (final validation) — smoke test catches any remaining broken references.
+**Stack:** testthat 3.3.2 with fs::file_exists() and here() for cross-platform compatibility.
+**Research flag:** Standard pattern (testthat well-documented, reference manual format synthesized from targets/pipeflow examples). No research needed.
 
 ### Phase Ordering Rationale
 
-- **Phase 60 first:** ENCOUNTERID propagation is foundation for Phase 63 (encounter-level linkage) and Phase 65 (Gantt v2). SCT code tightening bundled here as independent low-risk cleanup.
-- **Phase 61 before 62:** Drug name resolution must precede regimen detection. Independent of ENCOUNTERID work allows parallel development if needed.
-- **Phase 62 before 64:** Regimen classification required for first-line therapy identification.
-- **Phase 63 after 60:** Encounter-level cancer linkage depends on encounter_ids column from Phase 60.
-- **Phase 64 after 62+63:** First-line identification requires both regimen labels (Phase 62) and encounter-level HL flags (Phase 63).
-- **Phase 65 last:** Gantt v2 export integrates all previous enhancements (encounter-level cancer + regimen labels + first-line flags).
-- **Phase 66 independent:** Death date analysis can happen anytime after Phase 59; placed last as optional deliverable.
+**Sequential execution required** — each phase depends on previous stability:
+- **REORG (Phases 1-5):** File renumbering must complete before documentation (comments reference final numbers) and testing (smoke tests verify final structure).
+- **DOC (Phases 6, 9):** Section headers and comments enable readable reference manual, must come after renumbering stable.
+- **SAFE (Phases 7-9):** Formatting, linting, assertions, and testing build on documented code. styler preserves comments (run after DOC), smoke tests validate assertions don't break pipeline.
+- **DRY (Phase 8):** Consolidation easier after codebase clean and well-documented (easier to see duplication with good section headers).
 
-**Grouping rationale:**
-- Phases 60-61 are infrastructure (ENCOUNTERID + drug names)
-- Phases 62-63 are detection logic (regimens + cancer linkage)
-- Phases 64-65 are integration (first-line identification + Gantt output)
-- Phase 66 is standalone analysis (death date quality)
+**Smoke tests after each decade renumbered** (not after every phase) — balance safety vs overhead:
+- After REORG-01 (Foundation 00-09)
+- After REORG-02 (Cohort 10-19)
+- After REORG-03 (Treatment 20-39)
+- After REORG-04 (Cancer 40-59)
+- After REORG-05 (Payer/QA/Outputs/Tests/Ad-Hoc 60-99)
+- After SAFE-04 (Final comprehensive test)
 
-**Dependency testing:** Each phase produces RDS artifact consumed by downstream phases. Validate artifact schema after each phase before proceeding.
+**Parallelization opportunities:**
+- DOC-01 and DOC-02 can overlap (different granularity: section headers vs function comments)
+- SAFE-01 and SAFE-03 can overlap (styler and checkmate are independent)
+- Implementation note: lintr (SAFE-02) should run AFTER styler (SAFE-01) to reduce violations
+
+**Decade-based grouping enables future expansion** — 20-slot treatment decade (20-39) allows inserting 28_new_analysis.R without renumbering 29-80. Same for 20-slot cancer decade (40-59). Ad-hoc scripts (90-99) isolated — adding exploratory script doesn't pollute production decades.
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase 62 (regimen detection):** Clinical validation required for regimen definitions, dropped-agent tolerance thresholds, temporal availability rules. Complex logic needs domain expert review.
-- **Phase 63 (encounter-level linkage):** Fallback window specification, diagnosis ranking priority, orphan diagnosis handling strategy — multiple design decisions need validation against PCORnet data characteristics.
+**Phases needing deeper research during planning:** NONE for v2.0. All capabilities have clear stack solutions with mature packages. Reorganization is mechanical (not algorithmic).
 
 **Phases with standard patterns (skip research-phase):**
-- **Phase 60 (ENCOUNTERID propagation):** Extends existing R/44a extraction pattern; DuckDB indexing validated Phase 29.
-- **Phase 61 (drug name resolution):** Reuses httr2 RxNorm API pattern from R/40_investigate_unmatched_ndc.R; copy-paste-adapt.
-- **Phase 64 (first-line identification):** Standard observational oncology pattern (60-day clean period, age calculation); well-documented in claims research.
-- **Phase 65 (Gantt v2):** Clone-and-enhance R/49; new columns at end preserve compatibility.
-- **Phase 66 (death date analysis):** Extends Phase 59 validation; simple counts/classification.
+- **All REORG phases (1-5):** File renaming well-understood, fs package documentation complete, decade-based numbering pattern from tidyverse/Google R style guides.
+- **All DOC phases (6, 9):** Comment conventions documented in tidyverse/Google R style guides, reference manual format synthesized from established patterns.
+- **All SAFE phases (7-9):** lintr/styler/checkmate/testthat have comprehensive official documentation, active communities, extensive vignettes and examples.
+- **All DRY phases (8):** Base R refactoring, no special tools needed, consolidation pattern is standard software engineering.
 
-**Pre-implementation validation critical for Phase 1 (data validation):**
-- ENCOUNTERID population rate per table/source (prevents Pitfall v1.8-1)
-- Diagnosis cardinality per encounter (prevents Pitfall v1.8-2)
-- Orphan diagnosis rate per site (prevents Pitfall v1.8-3)
+**Potential implementation challenges (not research gaps, just execution complexity):**
+- **REORG-01:** Defining logical execution order requires manual pipeline understanding (can't be automated) — expect 4-8 hours manual mapping.
+- **SAFE-02:** lintr may flag 100+ violations initially — prioritize HIGH severity (commented code, T/F vs TRUE/FALSE) first, defer LOW severity (trailing whitespace) to polishing pass. May need iteration phase.
+- **SAFE-03:** Deciding WHERE to add assertions requires judgment (too many = slow, too few = insufficient validation) — prioritize file loading, payer mapping, cohort structure.
+- **DRY-02 (future):** Balancing extraction vs over-abstraction (don't create 1-line wrapper functions) — extract only if pattern appears 3+ times.
 
-Without Phase 1 data validation, Phases 2-6 inherit site-specific failure modes (regimen detection works at UFH, fails at FLM).
+**Future research needs (v3.0+, out of scope for v2.0):**
+- If team grows >3 developers: Research CI/CD integration (GitHub Actions, automated lintr on PRs, remote smoke tests)
+- If pipeline grows >100 scripts: Research targets/drake orchestration (dependency graph automation, parallel execution, automatic caching)
+- If compute time >4 hours: Research profiling tools (profvis) for bottleneck detection, query optimization strategies
+- If publishing pipeline as package: Research full roxygen2 build process, pkgdown website generation, CRAN submission
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All required packages already in renv.lock from previous phases; dplyr rolling joins stable since 1.1.0 (3+ years); httr2 RxNorm API validated in Phase 40 |
-| Features | **MEDIUM** | Table stakes features well-documented in clinical research standards; uncertainty on dropped-agent tolerance thresholds and fallback window specifications (needs Phase 62/63 research) |
-| Architecture | **HIGH** | Existing codebase patterns clear; numbered scripts, RDS caching, clone-and-enhance all established; minimal architectural changes required |
-| Pitfalls | **MEDIUM** | PCORnet CDM structure confirmed; ENCOUNTERID population variance documented (39-90% site-dependent); clinical logic pitfalls (BV+AVD replacement) validated; needs site-specific validation for NULL rates |
+| Stack | **HIGH** | All 5 required packages are CRAN-stable (5-14 years mature), widely adopted (10,000+ dependent packages for testthat), actively maintained (latest versions Nov 2025 - Apr 2026). No bleeding-edge or GitHub-only dependencies. Integration points documented (checkmate + testthat, fs + here, lintr + styler workflow). All versions verified 2026-06-01. |
+| Features | **HIGH** | Core recommendations (sequential numbering, header blocks, section headers, input validation) are R community standards documented in multiple authoritative sources (Hadley Wickham's R4DS, Google R Style Guide, tidyverse style guide). checkmate peer-reviewed (R Journal 2017). testthat is official R testing framework. Anti-features validated by over-engineering pitfalls in community forums. |
+| Architecture | **HIGH** | Decade-based numbering verified against existing codebase (81 files inventoried, 95+ source() calls mapped, 25+ RDS artifacts cataloged). Integration points explicit (RDS artifacts use semantic naming, no changes required). Data flow chain validated against Phase 0-63 history. Migration strategy builds on fs atomic operations (safer than base R). |
+| Pitfalls | **HIGH** | All 6 critical pitfalls documented from common R refactoring mistakes (source() reference updates, lintr configuration, checkmate performance, styler scope, path portability, constant consolidation). Prevention strategies tested against package documentation (grep patterns, smoke test patterns, .lintr config format). Recovery costs estimated (LOW-MEDIUM, all recoverable with git revert + targeted fixes). Warning signs observable during execution. |
 
 **Overall confidence:** **HIGH**
 
+All research areas grounded in official documentation (CRAN package pages, tidyverse guides, R Journal peer review). No speculative recommendations — stack choices verified against HiPerGator environment constraints (renv + module system), existing tidyverse pipeline style (dplyr, ggplot2), and solo-researcher workflow (no CI/CD, manual testing). Phase sequencing validated against dependency chains extracted from codebase. Pitfall prevention strategies documented with concrete examples (grep commands, test patterns, config snippets).
+
+**Source hierarchy followed:** CRAN official pages (versions, publication dates) → Official package documentation (API usage, configuration) → Peer-reviewed articles (checkmate R Journal) → Tidyverse/Google style guides (conventions) → Community resources (edge cases, troubleshooting). All version numbers verified against CRAN as of 2026-06-01.
+
 ### Gaps to Address
 
-**ENCOUNTERID population rates are site-dependent (validated range 39-90%):**
-- **Gap:** Research confirms variation exists but cannot predict OneFlorida+ specific rates without data inspection.
-- **Handle during:** Phase 1 (data validation) — run population queries per table/source before designing linkage strategy.
-- **Validation query:** `SELECT SOURCE, COUNT(*) AS total, SUM(CASE WHEN ENCOUNTERID IS NULL OR ENCOUNTERID='OT' THEN 1 ELSE 0 END) AS null_count FROM PRESCRIBING GROUP BY SOURCE`
+**Minor gaps (low risk, deferred to implementation):**
+- **logger package adoption**: Deferred to v3.0 as OPTIONAL. Current glue + cat + tidylog provides sufficient logging for solo researcher. Re-evaluate if team grows (namespaces), CI/CD integration requires machine-readable logs (JSON output), or severity filtering becomes necessary (DEBUG vs INFO vs WARN).
+- **Reference manual format**: No single authoritative standard for multi-script R pipelines. Synthesized from targets/pipeflow package documentation and general software engineering practices (dependency matrices). Will validate format during DOC-03 implementation based on what's most useful for onboarding.
+- **lintr violation scope**: Unknown until first run. May find 50 violations (quick fix) or 500 violations (needs iteration phase). Plan buffer time in SAFE-02 for cleanup iterations.
 
-**Regimen detection dropped-agent tolerance thresholds:**
-- **Gap:** Research confirms bleomycin dropped from ABVD is standard practice (RATHL trial, 27.5% of patients), but unclear if 3-of-4 drugs or 2-of-4 should count as regimen match.
-- **Handle during:** Phase 62 research-phase — clinical validation with oncology SME; cross-validate detections with TUMOR_REGISTRY chemotherapy flags.
-- **Decision point:** ABVD→AVD (missing bleomycin) definitely counts; AVD only from start (never had bleomycin) may need separate category "AVD (modified ABVD)".
-
-**Encounter-level cancer linkage fallback window:**
-- **Gap:** Research suggests 7/30/60 days as common windows, but no PCORnet-specific guidance for "closest diagnosis" temporal cutoff.
-- **Handle during:** Phase 63 research-phase — analyze distribution of days between encounter and nearest diagnosis; choose window that captures 90%+ of linkable cases without excessive false matches.
-- **Heuristic:** +/- 30 days from episode_start (typical encounter-to-coding lag in EHR systems).
-
-**Orphan diagnosis linkage strategy:**
-- **Gap:** Research confirms 15-30% of diagnoses at claims-heavy sites have ENCOUNTERID='OT' or NULL, but optimal fallback strategy (nearest encounter by date vs. pseudo-encounter creation) unclear.
-- **Handle during:** Phase 63 research-phase — compare orphan diagnosis handling approaches (nearest encounter within 30 days vs. patient-level flag); validate against HL cohort confirmation (2+ codes, 7-day gap).
-- **Likely approach:** 3-tier linkage (exact ENCOUNTERID → nearest encounter within 30 days → patient-level flag for remaining orphans).
-
-**Death date classification logic:**
-- **Gap:** Research identifies legitimate post-death encounter types (hospice, administrative, lab results) but doesn't provide classification heuristics.
-- **Handle during:** Phase 66 implementation — classify by ENC_TYPE, DRG presence, revenue codes; flag "impossible deaths" (active treatment >7 days after death + no subsequent encounters); preserve administrative/hospice/specimen encounters.
-- **Rule:** NULL out death dates flagged as impossible; retain death dates with plausible post-death encounters.
+**No blocking gaps.** All v2.0 capabilities (renumbering, documentation, linting, validation, testing, consolidation) have mature stack solutions with clear implementation paths. Execution complexity is predictable (file operations, comment additions, test writing) — no algorithmic or research challenges.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **Existing codebase** — R/44a_treatment_episodes.R, R/49_gantt_data_export.R, R/55_cancer_summary_refined.R, R/00_config.R, R/01_load_pcornet.R (architecture patterns, DuckDB backend, episode detection logic)
-- **CRAN official documentation** — dplyr 1.2.1 (May 2026), lubridate 1.9.5 (May 2026), httr2 1.2.2 (May 2026), openxlsx2 1.0.0, DuckDB 1.3.2 (Mar 2026) — version verification, feature stability
-- **PCORnet CDM v7.0 Specification** (May 2025) — ENCOUNTERID population rules, table cardinality, data model structure
-- **ECHELON-1 trial** (PMC5766843, PMC10628810) — BV+AVD regimen definition (brentuximab replaces bleomycin, not additive); 5-year follow-up data
-- **SWOG S1826 trial** (official results, ASH 2025) — Nivo+AVD regimen definition, FDA PDUFA date 4/8/2026, superiority over BV+AVD
+- **CRAN official package pages**: lintr 3.3.0-1 (Nov 2025), styler 1.11.0 (Oct 2025), checkmate 2.3.4 (Feb 2026), testthat 3.3.2 (Jan 2026), fs 2.1.0 (Apr 2026), logger 0.4.2 (May 2026) — version numbers and publication dates verified 2026-06-01
+- **Official package documentation**: lintr.r-lib.org, styler.r-lib.org, checkmate (mllg.github.io), testthat.r-lib.org, fs.r-lib.org, logger (daroczig.github.io) — API references, configuration guides, usage vignettes
+- **R Journal peer review**: Lang, M. (2017). checkmate: Fast Argument Checks for Defensive R Programming. The R Journal, 9(1), 437-445. — Performance benchmarks, design rationale, validation of checkmate approach
+- **Tidyverse Style Guide** (style.tidyverse.org) — Section headers (4+ dashes), comment conventions, file naming (sequential numbering)
+- **R for Data Science (2e)** (r4ds.hadley.nz) — Workflow scripts chapter, sequential numbering patterns, project organization
+- **Google's R Style Guide** (web.stanford.edu/class/cs109l) — Industry standard conventions, naming patterns
 
 ### Secondary (MEDIUM confidence)
-- **PCORnet prescribing/dispensing linkage study** (PMC6460498) — ENCOUNTERID population rates: 90.5% at integrated sites, 39.4% at non-integrated; 60.6% of dispensing without same-day prescriptions
-- **EHR death date validation** (PMC11521374, PMC6232402) — 89% of post-death encounters due to missing death status; death registries lag 1-2 years; EHR capture incomplete
-- **Chemotherapy regimen identification methodology** (PMC8058693) — Cycle timing analysis; algorithm identified 85 regimens with >98% PPV; temporal windowing for multi-agent detection
-- **ABVD real-world experience** (LA County Hospital, 2025) — 27.5% ABVD→AVD transition rate (bleomycin dropped mid-course); dose modification patterns
-- **OncoLink chemotherapy cycle calendars** — 28-day cycle standard for HL regimens; day 1 + day 15 administration for ABVD
-- **EHR-registry linkage best practices** (PMC8208472, PMC8246795) — Encounter-level diagnosis accuracy vs. problem list; cancer registry linkage methodology
+- **R Packages (2e)** (r-pkgs.org) — Testing basics chapter (testthat usage), function documentation (roxygen2 syntax without build), code organization
+- **CRAN Task View: Reproducible Research** — Pipeline organization patterns, reproducibility tools landscape
+- **HiPerGator documentation** (Weecology Wiki, UF HiPerGator guides) — renv integration with module system, cross-platform considerations (Windows dev, Linux HPC)
+- **Community resources**: RStudio Community forums, GitHub issue trackers (lintr, styler, checkmate, testthat) — Troubleshooting edge cases, configuration examples, performance discussions
 
-### Tertiary (LOW confidence — needs validation)
-- **rxnorm GitHub package** (nt-williams/rxnorm, v0.2.1.9000, Apr 2025) — Optional RxNorm API wrapper; GitHub-only (not CRAN); actively maintained but not production-validated for this project
+### Tertiary (validated during research)
+- **Existing codebase inventory**: 81 R files cataloged (63 numbered, 7 utilities, 6 ad-hoc, 1 runner, 4 special), 95+ source() calls mapped via grep, 25+ RDS artifacts identified (semantic naming verified), 50+ output files cataloged (semantic naming verified), integration points extracted from actual scripts
+- **PCORnet CDM v7.0 specification**: ALLCAPS column naming convention (PATID, ENROLL_DATE, DX, PROCEDURES, ENC_TYPE) — requires lintr object_name_linter configuration
+- **Phase 0-63 development history**: Organic growth patterns identified (numbering gaps, sub-lettered duplicates, scattered utilities), dependency chains validated against execution order
 
 ---
-*Research completed: 2026-05-29*
-*Supersedes: SUMMARY.md dated 2026-05-22 (v1.7 milestone research; this covers v1.8 additions)*
+*Research completed: 2026-06-01*
 *Ready for roadmap: yes*
-*Next step: Validate ENCOUNTERID population rates in HiPerGator data, clinical validation for regimen definitions, then proceed to phase planning*
+
+**Next steps:** Use this summary + detailed research files (STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md) to create v2.0 roadmap with 9 primary phases (REORG-01 through SAFE-04/DOC-03) plus potential iteration phases for lintr cleanup and DRY extraction.
