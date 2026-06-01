@@ -55,10 +55,10 @@
   - GANTT-CLEAN-06: Fill blank cancer_category with "Unlinked" label
   - GANTT-CLEAN-07: Trim to essential columns (14 episodes, 13 detail)
 **Depends on:** Phase 63
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 64-01-PLAN.md — Add Section 4D cleanup logic to R/63_gantt_v2_export.R and verify output quality
+- [x] 64-01-PLAN.md — Add Section 4D cleanup logic to R/63_gantt_v2_export.R and verify output quality
 
 ---
 *Last updated: 2026-06-01 -- Phase 64 planned*
