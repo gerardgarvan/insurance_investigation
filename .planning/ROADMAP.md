@@ -20,7 +20,7 @@
 - [x] **Phase 60: Foundation - ENCOUNTERID Propagation & Drug Name Resolution** - Add encounter IDs to treatment episodes, resolve drug names via RxNorm API, tighten SCT detection (completed 2026-05-30)
 - [x] **Phase 61: Episode Classification - Cancer Linkage & Regimen Detection** - Link cancer diagnoses to encounters, detect first-line regimens (ABVD, BV+AVD, Nivo+AVD) (completed 2026-05-31)
 - [x] **Phase 62: First-Line Therapy & Death Analysis** - Identify first-line therapy for adults 21+, produce death date analysis tables (completed 2026-05-30)
-- [ ] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags
+- [x] **Phase 63: Enhanced Gantt Export** - Gantt v2 files with encounter-level cancer, regimen labels, and first-line flags (completed 2026-06-01)
 
 ## Remaining Phases (Unassigned)
 
@@ -262,10 +262,10 @@ Plans:
 3. Original gantt_episodes.csv and gantt_detail.csv files remain unchanged (backward compatibility)
 4. v2 schema documented with column descriptions
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 63-01-PLAN.md — Create R/63_gantt_v2_export.R: standalone v2 Gantt CSV export with encounter-level cancer, regimen labels, first-line flags, and Death/HL Diagnosis pseudo-treatment rows
+- [x] 63-01-PLAN.md — Create R/63_gantt_v2_export.R: standalone v2 Gantt CSV export with encounter-level cancer, regimen labels, first-line flags, and Death/HL Diagnosis pseudo-treatment rows
 
 ### Phase 55: Cancer Summary Refinement Foundation
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Phases
-status: completed
-stopped_at: Phase 63 context gathered
-last_updated: "2026-06-01T01:39:44.245Z"
-last_activity: 2026-05-31
+status: verifying
+stopped_at: Completed 63-01-PLAN.md
+last_updated: "2026-06-01T02:23:47.180Z"
+last_activity: 2026-06-01
 progress:
   total_phases: 62
-  completed_phases: 51
-  total_plans: 93
-  completed_plans: 87
+  completed_phases: 52
+  total_plans: 94
+  completed_plans: 88
   percent: 25
 ---
 
@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 61 — episode-classification-cancer-linkage-and-regimen-detection
+**Current focus:** Phase 63 — enhanced-gantt-export
 
 ## Current Position
 
-Phase: 62
-Plan: Not started
-Status: Phase 61 complete — ready for transition to Phase 62
+Phase: 63 (enhanced-gantt-export) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Progress: ▰▱▱▱▱▱▱▱▱▱ 25% (1/4 phases complete in v1.8)
-Last activity: 2026-05-31
+Last activity: 2026-06-01
 
 ## Performance Metrics
 
@@ -83,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 61]: Regimen detection for ABVD/BV+AVD/Nivo+AVD with dropped-agent tolerance (D-09 through D-14)
 - [Phase 61]: treatment_episodes.rds enriched with cancer_category, cancer_link_method, is_hodgkin, regimen_label
 - [Phase 61]: Temporal availability constraints: BV+AVD post-2019, Nivo+AVD post-2024
+- [Phase 63]: v2 is superset of v1 — all 14 v1 columns plus cancer_link_method, regimen_label, is_first_line
+- [Phase 63]: R/63 reads enriched treatment_episodes.rds directly, avoiding PREFIX_MAP re-derivation (~400 lines simpler than R/49)
 
 ### Pending Todos
 
@@ -105,9 +107,9 @@ v1.8 roadmap created with coarse granularity (4 phases vs research-suggested 7):
 
 ## Session Continuity
 
-Last session: 2026-06-01T01:39:44.234Z
-Stopped at: Phase 63 context gathered
-Resume file: .planning/phases/63-enhanced-gantt-export/63-CONTEXT.md
+Last session: 2026-06-01T02:23:47.170Z
+Stopped at: Completed 63-01-PLAN.md
+Resume file: None
 Next step: `/gsd:transition` to move to Phase 62 (first-line-therapy-and-death-analysis)
 
 ---

@@ -41,8 +41,8 @@ Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therap
 
 ### Output
 
-- [ ] **OUT-01**: New Gantt v2 output files (preserve existing v1 files)
-- [ ] **OUT-02**: Gantt v2 includes encounter-level cancer category, HL flag, and specific drug names
+- [x] **OUT-01**: New Gantt v2 output files (preserve existing v1 files)
+- [x] **OUT-02**: Gantt v2 includes encounter-level cancer category, HL flag, and specific drug names
 
 ## v1.7 Requirements (Completed)
 
@@ -121,8 +121,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEATH-01 | Phase 62 | Pending |
 | DEATH-02 | Phase 62 | Pending |
 | DEATH-03 | Phase 62 | Pending |
-| OUT-01 | Phase 63 | Pending |
-| OUT-02 | Phase 63 | Pending |
+| OUT-01 | Phase 63 | Complete |
+| OUT-02 | Phase 63 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 19 total
