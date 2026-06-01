@@ -1,5 +1,5 @@
 # ==============================================================================
-# 66_smoke_test_full_pipeline.R -- Full-Pipeline Renumbering Validation
+# 87_smoke_test_full_pipeline.R -- Full-Pipeline Renumbering Validation
 # ==============================================================================
 #
 # Validates Phase 66 complete reorganization:
@@ -11,7 +11,7 @@
 #   - Key dependency chains intact
 #
 # Usage:
-#   Rscript R/66_smoke_test_full_pipeline.R
+#   Rscript R/87_smoke_test_full_pipeline.R
 #
 # Requirements: REORG-01, REORG-02
 # ==============================================================================
@@ -108,14 +108,14 @@ message("\n[5/12] Payer/QA decade (60-69)...")
 payer_expected <- c("60_tiered_same_day_payer.R", "61_tiered_encounter_level.R",
                     "62_tiered_date_level.R", "63_value_audit.R",
                     "64_all_source_missingness.R", "65_uf_insurance_missingness.R",
-                    "66_smoke_test_full_pipeline.R", "67_all_site_duplicate_dates.R",
+                    "67_all_site_duplicate_dates.R",
                     "68_multi_source_overlap_detection.R", "69_per_patient_source_detection.R")
 payer_found <- 0L
 for (s in payer_expected) {
   if (file.exists(file.path("R", s))) payer_found <- payer_found + 1L
 }
-check(glue("Payer/QA decade scripts: {payer_found}/10 present"),
-      payer_found >= 8)
+check(glue("Payer/QA decade scripts: {payer_found}/9 present"),
+      payer_found >= 7)
 
 # --------------------------------------------------------------------------
 # Test 6: Output decade (70-75) -- 6 scripts per D-04
@@ -144,7 +144,7 @@ message("\n[7/12] Test decade (80-86)...")
 test_scripts <- c("80_smoke_test_backends.R", "81_parity_test_cohort.R",
                   "82_benchmark_cohort.R", "83_generate_speedup_report.R",
                   "84_test_durations.R", "85_test_episodes.R",
-                  "86_smoke_test_foundation.R")
+                  "86_smoke_test_foundation.R", "87_smoke_test_full_pipeline.R")
 test_found <- 0L
 for (s in test_scripts) {
   if (file.exists(file.path("R", s))) {
@@ -154,7 +154,7 @@ for (s in test_scripts) {
     check(glue("R/{s} exists"), FALSE)
   }
 }
-check(glue("Test decade complete: 7/7 scripts"), test_found == 7)
+check(glue("Test decade complete: 8/8 scripts"), test_found == 8)
 
 # --------------------------------------------------------------------------
 # Test 8: Ad-hoc decade (90-99) -- 10 scripts
