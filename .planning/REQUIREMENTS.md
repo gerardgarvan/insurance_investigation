@@ -9,9 +9,9 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 ### Reorganization
 
-- [ ] **REORG-01**: All R scripts renumbered sequentially using decade-based scheme (00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc) with no gaps, duplicates, or sub-letter suffixes
+- [x] **REORG-01**: All R scripts renumbered sequentially using decade-based scheme (00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc) with no gaps, duplicates, or sub-letter suffixes
 - [ ] **REORG-02**: All source() cross-references (95+) updated to match new script numbers and paths
-- [ ] **REORG-03**: Utility modules (utils_*.R) moved to R/utils/ subfolder with 00_config.R auto-sourcing them
+- [x] **REORG-03**: Utility modules (utils_*.R) moved to R/utils/ subfolder with 00_config.R auto-sourcing them
 - [ ] **REORG-04**: Deprecated/superseded scripts moved to R/archive/ folder with README explaining their status
 - [ ] **REORG-05**: Smoke test validates no broken cross-references after each renumbering phase (RDS artifacts unchanged, source() calls resolve)
 
@@ -69,9 +69,9 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REORG-01 | Phase 65, 66, 67, 68 | Pending |
+| REORG-01 | Phase 65, 66, 67, 68 | Complete |
 | REORG-02 | Phase 66, 67, 68 | Pending |
-| REORG-03 | Phase 65 | Pending |
+| REORG-03 | Phase 65 | Complete |
 | REORG-04 | Phase 68 | Pending |
 | REORG-05 | Phase 68, 74 | Pending |
 | DOC-01 | Phase 69 | Pending |

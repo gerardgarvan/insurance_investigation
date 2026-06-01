@@ -77,9 +77,9 @@
   3. Foundation scripts (DuckDB ingest, data loading, payer harmonization) renumbered to 01-03
   4. All source() calls referencing foundation scripts updated to new numbers
   5. Smoke test validates no broken cross-references for foundation scripts
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 65-01-PLAN.md -- Move utils to R/utils/, renumber 25->03, update all source() references
+- [x] 65-01-PLAN.md -- Move utils to R/utils/, renumber 25->03, update all source() references
 - [ ] 65-02-PLAN.md -- Create smoke test, update documentation (SCRIPT_INDEX, existing smoke test)
 
 #### Phase 66: Cohort & Treatment Reorganization
@@ -194,7 +194,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 65. Foundation Reorganization | 0/2 | Planned | - |
+| 65. Foundation Reorganization | 1/2 | In Progress|  |
 | 66. Cohort & Treatment Reorganization | 0/0 | Not started | - |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | Not started | - |
 | 68. Output & Test Reorganization | 0/0 | Not started | - |
