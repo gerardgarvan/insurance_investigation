@@ -22,9 +22,9 @@
 #   - 00_config.R (auto-sources utils), 01_load_pcornet.R (loads pcornet$),
 #     02_harmonize_payer.R (creates payer_summary for exclude_missing_payer),
 #     03_cohort_predicates.R (defines predicates)
-#   - R/utils_duckdb.R (open/close_pcornet_con, get_pcornet_table)
+#   - R/utils/utils_duckdb.R (open/close_pcornet_con, get_pcornet_table)
 #   - DuckDB file must exist at CONFIG$cache$duckdb_path
-#     (created by R/25_duckdb_ingest.R)
+#     (created by R/03_duckdb_ingest.R)
 #
 # Requirement: DBAPI-04
 # ==============================================================================
