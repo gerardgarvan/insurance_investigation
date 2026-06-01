@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
 status: executing
-last_updated: "2026-06-01T19:27:34.777Z"
+last_updated: "2026-06-01T19:35:34.476Z"
 progress:
   total_phases: 10
   completed_phases: 1
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # State: v2.0 Codebase Cleanup & Documentation
@@ -30,7 +30,7 @@ Plan: 2 of 3
 **Phase:** 66
 **Plan:** 66-01 complete
 **Status:** Executing Phase 66
-**Progress:** [██████░░░░] 60%
+**Progress:** [████████░░] 80%
 
 ### Phase Goal
 
@@ -57,6 +57,7 @@ Cohort (10-14) and treatment (20-29) scripts renumbered and all source() cross-r
 ### Key Decisions This Milestone
 
 **Phase 66:**
+
 - Renumber cohort helpers (10-13) BEFORE build_cohort (14) to reflect dependency order (D-03)
 - Eliminate all a/b suffixes in treatment decade for clean sequential numbering (D-07)
 
