@@ -1,5 +1,5 @@
 # ==============================================================================
-# 40_investigate_unmatched_ndc.R -- Investigate Unmatched NDC/RXNORM Drug Codes
+# 22_investigate_unmatched_ndc.R -- Investigate Unmatched NDC/RXNORM Drug Codes
 # ==============================================================================
 # Purpose: Extract NDC codes and unmatched RXNORM CUIs from HL patient drug
 # records (DISPENSING, PRESCRIBING, MED_ADMIN), look up drug names via NLM
@@ -11,7 +11,7 @@
 #   - output/unmatched_ndc_classified.rds (RDS for Plan 02 consumption)
 #
 # Usage:
-#   Rscript R/40_investigate_unmatched_ndc.R
+#   Rscript R/22_investigate_unmatched_ndc.R
 #
 # Dependencies:
 #   - R/00_config.R (TREATMENT_CODES list)

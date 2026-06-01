@@ -1,5 +1,5 @@
 # ==============================================================================
-# 38_treatment_inventory.R -- Treatment Inventory by Source Table
+# 20_treatment_inventory.R -- Treatment Inventory by Source Table
 # ==============================================================================
 #
 # Queries all 7 PCORnet CDM tables for 4 treatment types (chemotherapy,
@@ -16,14 +16,14 @@
 # Output: output/treatment_inventory.xlsx (workbook with 4 styled sheets)
 #
 # Usage:
-#   Rscript R/38_treatment_inventory.R
+#   Rscript R/20_treatment_inventory.R
 #
 # Dependencies:
 #   - R/00_config.R (TREATMENT_CODES list)
 #   - R/01_load_pcornet.R (PCORnet table loading)
 #   - openxlsx2, dplyr, stringr, glue, tidyr
 #
-# Phase 38 -- chemo-treatment-inventory-by-source-table
+# Phase 20 -- chemo-treatment-inventory-by-source-table
 # ==============================================================================
 
 # ==============================================================================

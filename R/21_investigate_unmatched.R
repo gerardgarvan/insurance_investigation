@@ -1,5 +1,5 @@
 # ==============================================================================
-# 39_investigate_unmatched.R -- Investigate Unmatched CPT/HCPCS Codes
+# 21_investigate_unmatched.R -- Investigate Unmatched CPT/HCPCS Codes
 # ==============================================================================
 #
 # Extracts CPT/HCPCS codes from PROCEDURES table using widened heuristic ranges,
@@ -14,14 +14,14 @@
 #   - output/unmatched_codes_classified.rds (RDS for Plan 02 consumption)
 #
 # Usage:
-#   Rscript R/39_investigate_unmatched.R
+#   Rscript R/21_investigate_unmatched.R
 #
 # Dependencies:
 #   - R/00_config.R (TREATMENT_CODES list)
 #   - R/01_load_pcornet.R (get_pcornet_table)
 #   - httr, jsonlite, openxlsx2, dplyr, stringr, glue, tidyr
 #
-# Phase 39 Plan 01 -- investigate-unmatched-codes
+# Phase 21 Plan 01 -- investigate-unmatched-codes
 # ==============================================================================
 
 # ==============================================================================

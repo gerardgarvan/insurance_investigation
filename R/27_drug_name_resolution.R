@@ -1,5 +1,5 @@
 # =============================================================================
-# Phase 60: Drug Name Resolution via RxNorm API
+# Phase 27: Drug Name Resolution via RxNorm API
 # =============================================================================
 # Resolves RXNORM_CUI and NDC codes from chemotherapy patient data to generic
 # drug names using the NLM RxNorm REST API. Produces a cached lookup table

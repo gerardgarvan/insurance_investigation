@@ -1,5 +1,5 @@
 # =============================================================================
-# Phase 44: Treatment Episode Start/Stop Dates
+# Phase 26: Treatment Episode Start/Stop Dates
 # =============================================================================
 # Extracts per-patient, per-episode treatment start and stop dates with episode
 # length and historical date flagging. This is a NEW detail-level output
@@ -11,7 +11,7 @@
 #   D-03: episode flagged historical when ALL dates < 2012-01-01 (using episode_stop)
 #   D-04: single-date historical episodes get start=stop, length=0
 #   D-05: new script alongside Phase 43 (Phase 43 unchanged)
-#   D-06: new file R/44a_treatment_episodes.R
+#   D-06: new file R/26_treatment_episodes.R
 #   D-07: outputs RDS + styled xlsx + per-type CSVs
 #   D-08: columns: patient_id, treatment_type, episode_number, episode_start,
 #          episode_stop, episode_length_days, distinct_dates_in_episode, historical_flag
@@ -48,8 +48,8 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-# Reuse Phase 43's assign_episode_ids() and stack_and_dedup() functions
-source("R/43a_treatment_durations.R")
+# Reuse Phase 25's assign_episode_ids() and stack_and_dedup() functions
+source("R/25_treatment_durations.R")
 
 # Output paths
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
