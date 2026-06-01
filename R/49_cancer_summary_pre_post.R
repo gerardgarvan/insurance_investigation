@@ -1,5 +1,5 @@
 # ==============================================================================
-# Phase 58: Cancer Summary - Pre/Post HL Counts
+# Phase 49: Cancer Summary - Pre/Post HL Counts
 # ==============================================================================
 # Creates cancer_summary_table_pre_post.xlsx -- a two-sheet styled workbook
 # showing per-cancer-code patient counts split by timing relative to first HL
@@ -12,8 +12,8 @@
 # metrics into temporal partitions relative to each patient's first HL diagnosis date.
 #
 # Inputs:
-#   - output/confirmed_hl_cohort.rds (Phase 55 output: ID, first_hl_dx_date, first_hl_dx_source)
-#   - output/tables/cancer_summary.csv (Phase 55 output: for baseline metrics)
+#   - output/confirmed_hl_cohort.rds (Phase 47 output: ID, first_hl_dx_date, first_hl_dx_source)
+#   - output/tables/cancer_summary.csv (Phase 47 output: for baseline metrics)
 #   - DIAGNOSIS DuckDB table (for per-code pre/post/both counts)
 #
 # Outputs:
@@ -21,7 +21,7 @@
 #   - output/tables/cancer_summary_table_pre_post.csv (companion CSV)
 #
 # Usage:
-#   Rscript R/58_cancer_summary_pre_post.R
+#   Rscript R/49_cancer_summary_pre_post.R
 # ==============================================================================
 
 # ==============================================================================

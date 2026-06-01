@@ -1,22 +1,22 @@
 # ==============================================================================
-# Phase 47: Cancer Site Frequency (Rewrite)
+# Phase 44: Cancer Site Confirmation with 7-Day Separation
 # ==============================================================================
-# Bottom-up approach: classify every cancer code that appears in the data using
-# ICD-10 prefix rules defined directly in code. No external xlsx dependency.
+# Validates cancer site diagnosis codes by requiring diagnosis dates at least
+# 7 calendar days apart per code per patient before counting the code as
+# "confirmed."
 #
-# Categories based on SEER/NCI site groupings mapped to ICD-10-CM prefixes.
+# Two confirmation levels (per D-01, D-03):
+#   1. Exact Code:  C81.10 must have dates spanning 7+ days (7-day gap)
+#   2. Cancer Site Category: any code in the same cancer site category on dates spanning 7+ days confirms the category
 #
-# Inputs:
-#   - DIAGNOSIS DuckDB table (ICD-10 codes)
-#   - TUMOR_REGISTRY_ALL DuckDB table (ICD-O-3 topography codes)
+# Data: DIAGNOSIS table only, ICD-10 codes (DX_TYPE == "10"), DX_DATE (per D-03, D-04)
 #
-# Outputs:
-#   - output/tables/cancer_site_frequency.xlsx (styled workbook)
-#     Sheet 1 "By Category": patient/record counts per category per source
-#     Sheet 2 "All Codes": every code with its assigned category (verification)
+# Output: output/tables/cancer_site_confirmation_7day.xlsx
+#   Sheet 1 "Exact Code (7-Day Gap)":   per-category confirmation at exact ICD-10 code level
+#   Sheet 2 "Site Category (7-Day Gap)": per-category confirmation across all codes in the same category
 #
 # Usage:
-#   Rscript R/47_cancer_site_frequency.R
+#   Rscript R/44_cancer_site_confirmation_7day.R
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -29,22 +29,16 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "cancer_site_frequency.xlsx")
+OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "cancer_site_confirmation_7day.xlsx")
 dir.create(dirname(OUTPUT_PATH), showWarnings = FALSE, recursive = TRUE)
 
-message("=== Phase 47: Cancer Site Frequency ===")
+message("=== Phase 4: Cancer Site Confirmation with 7-Day Separation ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
-# SECTION 1: DEFINE CANCER SITE CATEGORIES
+# SECTION 1: PREFIX_MAP and CATEGORY_ORDER
 # ==============================================================================
-# Each 3-character ICD-10 prefix maps to a cancer site category.
-# Based on SEER/NCI site groupings.  Prefix matching via substr(code, 1, 3).
-#
-# Sources:
-#   - SEER Site Recode ICD-O-3/WHO 2008
-#   - ICD-10-CM Chapter 2 (C00-D49)
-# ==============================================================================
+# Copied from R/50_cancer_site_confirmation.R for script independence
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -366,13 +360,7 @@ CATEGORY_ORDER <- c(
   "Hematopoietic System (ICD-O-3)"
 )
 
-message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
-
-# ==============================================================================
-# SECTION 2: CLASSIFICATION FUNCTION
-# ==============================================================================
-
-#' Classify ICD-10 or ICD-O-3 codes into cancer site categories
+#' Classify ICD-10 codes into cancer site categories
 #' @param codes Character vector of normalized codes (uppercase, no dots)
 #' @return Character vector of category names (NA for unclassified)
 classify_codes <- function(codes) {
@@ -381,220 +369,155 @@ classify_codes <- function(codes) {
   categories
 }
 
+message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
+
 # ==============================================================================
-# SECTION 3: LOAD AND CLASSIFY ICD-10 DIAGNOSIS CODES
+# SECTION 2: LOAD AND CLASSIFY DIAGNOSIS DATA
 # ==============================================================================
 
 message("\nLoading DIAGNOSIS table (ICD-10 only, all patients)...")
 
 dx_icd10 <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
-  select(ID, DX) %>%
+  select(ID, DX, DX_DATE) %>%
   collect()
 
 message(glue("  Total ICD-10 DIAGNOSIS rows: {format(nrow(dx_icd10), big.mark=',')}"))
 
-# Normalize codes
+# Normalize codes (remove dots, uppercase)
 dx_icd10 <- dx_icd10 %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\.")))
 
-# Filter to neoplasm codes only (C00-D49)
+# Filter to neoplasm codes (C00-D49)
 dx_cancer <- dx_icd10 %>%
   filter(str_detect(DX_norm, "^[CD]"))
 
 message(glue("  Neoplasm codes (C/D): {format(nrow(dx_cancer), big.mark=',')} rows"))
 
-# Classify
+# Classify by prefix
 dx_cancer <- dx_cancer %>%
   mutate(category = classify_codes(DX_norm))
 
+# Handle unclassified codes (label for visibility, same as R/47)
 n_unclassified <- sum(is.na(dx_cancer$category))
 if (n_unclassified > 0) {
   unclass_codes <- dx_cancer %>% filter(is.na(category)) %>% pull(DX_norm) %>% unique()
   message(glue("  WARNING: {n_unclassified} rows ({length(unclass_codes)} unique codes) unclassified"))
-  message(glue("    Codes: {paste(head(unclass_codes, 20), collapse=', ')}"))
-  # Label them for visibility
   dx_cancer <- dx_cancer %>%
     mutate(category = ifelse(is.na(category), "Unclassified", category))
 }
 
-# Aggregate by category
-icd10_by_cat <- dx_cancer %>%
-  group_by(category) %>%
-  summarise(
-    patients = n_distinct(ID),
-    records  = n(),
-    .groups  = "drop"
-  ) %>%
-  mutate(source = "ICD-10")
-
-message(glue("  ICD-10 classified into {nrow(icd10_by_cat)} categories"))
-
-# Code-level detail for Sheet 2
-icd10_codes_detail <- dx_cancer %>%
-  group_by(code = DX_norm, category) %>%
-  summarise(
-    patients = n_distinct(ID),
-    records  = n(),
-    .groups  = "drop"
-  ) %>%
-  mutate(source = "ICD-10") %>%
-  arrange(category, code)
+message(glue("  ICD-10 classified into {n_distinct(dx_cancer$category)} categories"))
 
 # ==============================================================================
-# SECTION 4: LOAD AND CLASSIFY ICD-O-3 TOPOGRAPHY CODES
+# SECTION 3: EXACT CODE CONFIRMATION WITH 7-DAY GAP (per D-03, D-06)
 # ==============================================================================
 
-message("\nLoading TUMOR_REGISTRY_ALL table (topography codes)...")
+message("\n=== EXACT CODE CONFIRMATION (7-DAY GAP) ===")
 
-tr_all_lazy <- get_pcornet_table("TUMOR_REGISTRY_ALL")
-tr_cols <- colnames(tr_all_lazy)
+# Step 1: Total patients per exact code
+total_exact <- dx_cancer %>%
+  group_by(DX_norm, category) %>%
+  summarise(total_patients = n_distinct(ID), .groups = "drop")
 
-# Find topography column(s)
-site_candidates <- intersect(c("SITE_CODE", "SITE", "PRIMARY_SITE",
-                                "TOPOGRAPHY_CODE", "ICDOSITE"), tr_cols)
-message(glue("  Topography column candidates: {paste(site_candidates, collapse=', ')}"))
+message(glue("  Total unique codes: {nrow(total_exact)}"))
 
-if (length(site_candidates) == 0) {
-  message("  WARNING: No topography column found. ICD-O-3 counts will be 0.")
-  icdo3_by_cat <- tibble(category = character(), patients = integer(),
-                         records = integer(), source = character())
-  icdo3_codes_detail <- tibble(code = character(), category = character(),
-                               patients = integer(), records = integer(),
-                               source = character())
-} else {
-  coalesce_expr <- rlang::parse_expr(
-    paste0("coalesce(", paste(site_candidates, collapse = ", "), ")")
-  )
-  tr_topo <- tr_all_lazy %>%
-    mutate(topo_raw = !!coalesce_expr) %>%
-    select(ID, topo_raw) %>%
-    filter(!is.na(topo_raw)) %>%
-    collect()
+# Step 2: Confirmed patients per exact code -- patient has dates spanning 7+ days for the same exact DX_norm
+# 7-day span: max(date) - min(date) >= 7 days (per D-06)
+confirmed_exact <- dx_cancer %>%
+  filter(!is.na(DX_DATE)) %>%
+  distinct(ID, DX_norm, DX_DATE, category) %>%   # Deduplicate per Pitfall 3
+  group_by(ID, DX_norm) %>%
+  filter(as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  ungroup() %>%
+  group_by(DX_norm, category) %>%
+  summarise(confirmed_patients = n_distinct(ID), .groups = "drop")
 
-  message(glue("  Total TUMOR_REGISTRY rows with topography: {format(nrow(tr_topo), big.mark=',')}"))
-
-  # Normalize: uppercase, remove dots, prepend C if missing
-  tr_topo <- tr_topo %>%
-    mutate(
-      topo_norm = toupper(str_remove_all(topo_raw, "\\.")),
-      # Prepend "C" for bare numeric codes (e.g., "77" -> "C77")
-      topo_norm = ifelse(str_detect(topo_norm, "^[0-9]"),
-                         paste0("C", topo_norm),
-                         topo_norm)
-    )
-
-  # Classify
-  tr_topo <- tr_topo %>%
-    mutate(category = classify_codes(topo_norm))
-
-  n_unclass_tr <- sum(is.na(tr_topo$category))
-  if (n_unclass_tr > 0) {
-    unclass_tr <- tr_topo %>% filter(is.na(category)) %>% pull(topo_norm) %>% unique()
-    message(glue("  WARNING: {n_unclass_tr} rows ({length(unclass_tr)} unique codes) unclassified"))
-    message(glue("    Codes: {paste(head(unclass_tr, 20), collapse=', ')}"))
-    tr_topo <- tr_topo %>%
-      mutate(category = ifelse(is.na(category), "Unclassified", category))
-  }
-
-  # Aggregate by category
-  icdo3_by_cat <- tr_topo %>%
-    group_by(category) %>%
-    summarise(
-      patients = n_distinct(ID),
-      records  = n(),
-      .groups  = "drop"
-    ) %>%
-    mutate(source = "ICD-O-3")
-
-  message(glue("  ICD-O-3 classified into {nrow(icdo3_by_cat)} categories"))
-
-  # Code-level detail for Sheet 2
-  icdo3_codes_detail <- tr_topo %>%
-    group_by(code = topo_norm, category) %>%
-    summarise(
-      patients = n_distinct(ID),
-      records  = n(),
-      .groups  = "drop"
-    ) %>%
-    mutate(source = "ICD-O-3") %>%
-    arrange(category, code)
-}
-
-# ==============================================================================
-# SECTION 5: COMBINE RESULTS
-# ==============================================================================
-
-message("\nCombining results...")
-
-# Category-level summary: one row per category per source
-summary_long <- bind_rows(icd10_by_cat, icdo3_by_cat)
-
-# Ensure all categories that appear in either source are present in both
-all_cats <- unique(summary_long$category)
-all_sources <- c("ICD-10", "ICD-O-3")
-
-full_grid <- expand.grid(category = all_cats, source = all_sources,
-                         stringsAsFactors = FALSE) %>%
-  as_tibble()
-
-summary_long <- full_grid %>%
-  left_join(summary_long, by = c("category", "source")) %>%
+# Step 3: Join and compute derived columns
+summary_exact <- total_exact %>%
+  left_join(confirmed_exact, by = c("DX_norm", "category")) %>%
   mutate(
-    patients = ifelse(is.na(patients), 0L, as.integer(patients)),
-    records  = ifelse(is.na(records),  0L, as.integer(records))
-  )
+    confirmed_patients = ifelse(is.na(confirmed_patients), 0L, as.integer(confirmed_patients)),
+    unconfirmed_patients = total_patients - confirmed_patients,
+    confirmation_rate = confirmed_patients / total_patients
+  ) %>%
+  filter(total_patients > 0)
 
-# Sort by category order, then source
-cat_rank <- match(summary_long$category, CATEGORY_ORDER)
-# Categories not in CATEGORY_ORDER get sorted to end
-cat_rank[is.na(cat_rank)] <- 999L
-summary_long <- summary_long %>%
-  mutate(cat_rank = cat_rank) %>%
-  arrange(cat_rank, source) %>%
-  select(-cat_rank)
+# Step 4: Order by confirmation rate (highest first), then by total patients descending
+summary_exact <- summary_exact %>%
+  arrange(desc(confirmation_rate), desc(total_patients)) %>%
+  select(DX_norm, category, total_patients, confirmed_patients, unconfirmed_patients, confirmation_rate)
 
-# Totals
-total_icd10_patients <- n_distinct(dx_cancer$ID)
-total_icdo3_patients <- if (exists("tr_topo")) n_distinct(tr_topo$ID) else 0L
+total_confirmed_exact <- sum(summary_exact$confirmed_patients)
+overall_rate_exact <- total_confirmed_exact / sum(summary_exact$total_patients)
 
-totals_long <- tibble(
-  category = c("TOTAL", "TOTAL"),
-  source   = c("ICD-10", "ICD-O-3"),
-  patients = c(total_icd10_patients, total_icdo3_patients),
-  records  = c(
-    sum(filter(summary_long, source == "ICD-10")$records),
-    sum(filter(summary_long, source == "ICD-O-3")$records)
-  )
+message(glue("  Total codes with patients: {nrow(summary_exact)}"))
+message(glue("  Total confirmed patients (exact code, 7-day gap): {format(total_confirmed_exact, big.mark=',')}"))
+message(glue("  Overall confirmation rate (exact, 7-day gap): {scales::percent(overall_rate_exact, accuracy=0.1)}"))
+
+# ==============================================================================
+# SECTION 4: CANCER SITE CATEGORY CONFIRMATION WITH 7-DAY GAP (per D-03, D-06)
+# ==============================================================================
+
+message("\n=== CANCER SITE CATEGORY CONFIRMATION (7-DAY GAP) ===")
+
+# Step 1: Total patients per category
+total_category <- dx_cancer %>%
+  group_by(category) %>%
+  summarise(total_patients = n_distinct(ID), .groups = "drop")
+
+# Step 2: Confirmed patients -- patient has dates spanning 7+ days for ANY code in the same cancer site category
+# 7-day span: max(date) - min(date) >= 7 days (per D-06)
+confirmed_category <- dx_cancer %>%
+  filter(!is.na(DX_DATE)) %>%
+  distinct(ID, DX_DATE, category) %>%   # Deduplicate (collapse across codes within category)
+  group_by(ID, category) %>%
+  filter(as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  ungroup() %>%
+  group_by(category) %>%
+  summarise(confirmed_patients = n_distinct(ID), .groups = "drop")
+
+# Step 3: Join and compute
+summary_category <- total_category %>%
+  left_join(confirmed_category, by = "category") %>%
+  mutate(
+    confirmed_patients = ifelse(is.na(confirmed_patients), 0L, as.integer(confirmed_patients)),
+    unconfirmed_patients = total_patients - confirmed_patients,
+    confirmation_rate = confirmed_patients / total_patients
+  ) %>%
+  filter(total_patients > 0) %>%
+  arrange(desc(confirmation_rate), desc(total_patients))
+
+total_confirmed_category <- sum(summary_category$confirmed_patients)
+overall_rate_category <- total_confirmed_category / sum(summary_category$total_patients)
+
+message(glue("  Total categories with patients: {nrow(summary_category)}"))
+message(glue("  Total confirmed patients (category, 7-day gap): {format(total_confirmed_category, big.mark=',')}"))
+message(glue("  Overall confirmation rate (category, 7-day gap): {scales::percent(overall_rate_category, accuracy=0.1)}"))
+
+# ==============================================================================
+# SECTION 5: TOTALS ROWS
+# ==============================================================================
+
+totals_exact <- tibble(
+  DX_norm = "TOTAL",
+  category = "",
+  total_patients = sum(summary_exact$total_patients),
+  confirmed_patients = sum(summary_exact$confirmed_patients),
+  unconfirmed_patients = sum(summary_exact$unconfirmed_patients),
+  confirmation_rate = NA_real_
 )
 
-message("")
-message("=== COUNT SUMMARY ===")
-message(glue("ICD-10:  {format(total_icd10_patients, big.mark=',')} unique patients, {format(totals_long$records[1], big.mark=',')} records"))
-message(glue("ICD-O-3: {format(total_icdo3_patients, big.mark=',')} unique patients, {format(totals_long$records[2], big.mark=',')} records"))
-
-# Spot-check Hodgkin Lymphoma
-hl_rows <- summary_long %>% filter(category == "Hodgkin Lymphoma")
-if (nrow(hl_rows) > 0) {
-  for (r in seq_len(nrow(hl_rows))) {
-    message(glue("  Hodgkin Lymphoma ({hl_rows$source[r]}): {format(hl_rows$patients[r], big.mark=',')} patients, {format(hl_rows$records[r], big.mark=',')} records"))
-  }
-}
-
-# Code-level detail (both sources combined)
-all_codes_detail <- bind_rows(icd10_codes_detail, icdo3_codes_detail) %>%
-  select(code, category, source, patients, records)
-
-# Sort by category order then code
-code_rank <- match(all_codes_detail$category, CATEGORY_ORDER)
-code_rank[is.na(code_rank)] <- 999L
-all_codes_detail <- all_codes_detail %>%
-  mutate(cat_rank = code_rank) %>%
-  arrange(cat_rank, source, code) %>%
-  select(-cat_rank)
+totals_category <- tibble(
+  category = "TOTAL",
+  total_patients = sum(summary_category$total_patients),
+  confirmed_patients = sum(summary_category$confirmed_patients),
+  unconfirmed_patients = sum(summary_category$unconfirmed_patients),
+  confirmation_rate = NA_real_
+)
 
 # ==============================================================================
-# SECTION 6: WRITE STYLED XLSX
+# SECTION 6: WRITE STYLED XLSX (per D-02, D-07)
 # ==============================================================================
 
 message("")
@@ -608,26 +531,26 @@ TOTALS_FILL      <- "FFE5E7EB"
 wb <- wb_workbook()
 
 # ---------------------------------------------------------------------------
-# Sheet 1: By Category
+# Sheet 1: "Exact Code (7-Day Gap)"
 # ---------------------------------------------------------------------------
-SHEET1 <- "By Category"
+SHEET1 <- "Exact Code (7-Day Gap)"
 wb$add_worksheet(SHEET1)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET1, x = "Cancer Site Frequency - All Patients",
+wb$add_data(sheet = SHEET1, x = "Cancer Site Confirmation - Exact Code (7-Day Gap)",
             start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
-wb$merge_cells(sheet = SHEET1, dims = "A1:D1")
+wb$merge_cells(sheet = SHEET1, dims = "A1:F1")
 
 # Row 2: Headers
-headers1 <- c("Cancer Site Category", "Source", "Patients", "Records")
+headers1 <- c("ICD-10 Code", "Cancer Site Category", "Total Patients", "Confirmed Patients", "Unconfirmed Patients", "Confirmation Rate")
 for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET1, dims = "A2:D2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = "A2:D2",
+wb$add_fill(sheet = SHEET1, dims = "A2:F2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET1, dims = "A2:F2",
             name = "Calibri", size = 11, bold = TRUE,
             color = wb_color(WHITE_FONT))
 
@@ -636,57 +559,90 @@ wb$freeze_pane(sheet = SHEET1, first_active_row = 3, first_active_col = 1)
 
 # Data rows
 data_start <- 3
-n_data     <- nrow(summary_long)
+n_data     <- nrow(summary_exact)
 data_end   <- data_start + n_data - 1
 
-wb$add_data(sheet = SHEET1, x = as.data.frame(summary_long),
+wb$add_data(sheet = SHEET1, x = as.data.frame(summary_exact),
             start_row = data_start, col_names = FALSE)
-wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start}:D{data_end}"),
+wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start}:E{data_end}"),
               numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET1, dims = glue("F{data_start}:F{data_end}"),
+              numfmt = "0.0%")
 
 # Totals rows
 totals_start <- data_end + 1
-totals_end   <- totals_start + nrow(totals_long) - 1
-wb$add_data(sheet = SHEET1, x = as.data.frame(totals_long),
+wb$add_data(sheet = SHEET1, x = as.data.frame(totals_exact),
             start_row = totals_start, col_names = FALSE)
 wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_start}:D{totals_end}"),
+            dims  = glue("A{totals_start}:F{totals_start}"),
             color = wb_color(TOTALS_FILL))
 wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_start}:D{totals_end}"),
+            dims  = glue("A{totals_start}:F{totals_start}"),
             name  = "Calibri", size = 11, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
 wb$add_numfmt(sheet = SHEET1,
-              dims  = glue("C{totals_start}:D{totals_end}"),
+              dims  = glue("C{totals_start}:E{totals_start}"),
               numfmt = "#,##0")
 
 # Column widths
-wb$set_col_widths(sheet = SHEET1, cols = 1:4, widths = c(42, 12, 14, 14))
+wb$set_col_widths(sheet = SHEET1, cols = 1:6, widths = c(14, 42, 14, 16, 18, 16))
 
 # ---------------------------------------------------------------------------
-# Sheet 2: All Codes (verification)
+# Sheet 2: "Site Category (7-Day Gap)"
 # ---------------------------------------------------------------------------
-SHEET2 <- "All Codes"
+SHEET2 <- "Site Category (7-Day Gap)"
 wb$add_worksheet(SHEET2)
 
-headers2 <- c("Code", "Category", "Source", "Patients", "Records")
+# Row 1: Title
+wb$add_data(sheet = SHEET2, x = "Cancer Site Confirmation - Category Level (7-Day Gap)",
+            start_row = 1, start_col = 1)
+wb$add_font(sheet = SHEET2, dims = "A1",
+            name = "Calibri", size = 16, bold = TRUE,
+            color = wb_color(TITLE_FONT_COLOR))
+wb$merge_cells(sheet = SHEET2, dims = "A1:E1")
+
+# Row 2: Headers
+headers2 <- c("Cancer Site Category", "Total Patients", "Confirmed Patients", "Unconfirmed Patients", "Confirmation Rate")
 for (i in seq_along(headers2)) {
-  wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 1, start_col = i)
+  wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET2, dims = "A1:E1", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = "A1:E1",
+wb$add_fill(sheet = SHEET2, dims = "A2:E2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET2, dims = "A2:E2",
             name = "Calibri", size = 11, bold = TRUE,
             color = wb_color(WHITE_FONT))
 
-if (nrow(all_codes_detail) > 0) {
-  wb$add_data(sheet = SHEET2, x = as.data.frame(all_codes_detail),
-              start_row = 2, col_names = FALSE)
-  code_end <- 1 + nrow(all_codes_detail)
-  wb$add_numfmt(sheet = SHEET2, dims = glue("D2:E{code_end}"), numfmt = "#,##0")
-}
+# Freeze pane
+wb$freeze_pane(sheet = SHEET2, first_active_row = 3, first_active_col = 1)
 
-wb$freeze_pane(sheet = SHEET2, first_active_row = 2, first_active_col = 1)
-wb$set_col_widths(sheet = SHEET2, cols = 1:5, widths = c(14, 42, 12, 12, 12))
+# Data rows
+data_start2 <- 3
+n_data2     <- nrow(summary_category)
+data_end2   <- data_start2 + n_data2 - 1
+
+wb$add_data(sheet = SHEET2, x = as.data.frame(summary_category),
+            start_row = data_start2, col_names = FALSE)
+wb$add_numfmt(sheet = SHEET2, dims = glue("B{data_start2}:D{data_end2}"),
+              numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET2, dims = glue("E{data_start2}:E{data_end2}"),
+              numfmt = "0.0%")
+
+# Totals rows
+totals_start2 <- data_end2 + 1
+wb$add_data(sheet = SHEET2, x = as.data.frame(totals_category),
+            start_row = totals_start2, col_names = FALSE)
+wb$add_fill(sheet = SHEET2,
+            dims  = glue("A{totals_start2}:E{totals_start2}"),
+            color = wb_color(TOTALS_FILL))
+wb$add_font(sheet = SHEET2,
+            dims  = glue("A{totals_start2}:E{totals_start2}"),
+            name  = "Calibri", size = 11, bold = TRUE,
+            color = wb_color(TITLE_FONT_COLOR))
+wb$add_numfmt(sheet = SHEET2,
+              dims  = glue("B{totals_start2}:D{totals_start2}"),
+              numfmt = "#,##0")
+
+# Column widths
+wb$set_col_widths(sheet = SHEET2, cols = 1:5, widths = c(42, 14, 16, 18, 16))
 
 # ---------------------------------------------------------------------------
 # Save
@@ -694,8 +650,11 @@ wb$set_col_widths(sheet = SHEET2, cols = 1:5, widths = c(14, 42, 12, 12, 12))
 wb$save(OUTPUT_PATH)
 
 message(glue("Wrote {OUTPUT_PATH}"))
-message(glue("  Sheet '{SHEET1}': {n_data} data rows + {nrow(totals_long)} total rows"))
-message(glue("  Sheet '{SHEET2}': {nrow(all_codes_detail)} code-level rows"))
+message(glue("  Sheet '{SHEET1}': {n_data} data rows + 1 total row"))
+message(glue("  Sheet '{SHEET2}': {n_data2} data rows + 1 total row"))
+
+# Close DuckDB connection
+close_pcornet_con()
 
 message("")
-message("=== Phase 47 Cancer Site Frequency Complete ===")
+message("=== Phase 4 Cancer Site Confirmation (7-Day Gap) Complete ===")

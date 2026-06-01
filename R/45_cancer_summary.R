@@ -1,5 +1,5 @@
 # ==============================================================================
-# Phase 6: Cancer Summary Dataset (Patient-Code Level)
+# Phase 45: Cancer Summary Dataset (Patient-Code Level)
 # ==============================================================================
 # Produces a patient-code level dataset from the DIAGNOSIS table. Each row
 # represents one patient + one unique neoplasm code (ICD-10, C/D prefix) with
@@ -25,7 +25,7 @@
 #   - output/tables/cancer_summary.csv
 #
 # Usage:
-#   Rscript R/53_cancer_summary.R
+#   Rscript R/45_cancer_summary.R
 # ==============================================================================
 
 # ==============================================================================

@@ -1,4 +1,4 @@
-# Phase 59: Death Date Validation & Treatment Timeline Cleanup
+# Phase 53: Death Date Validation & Treatment Timeline Cleanup
 # Decision traceability: D-01 through D-12 from 59-CONTEXT.md
 # Inputs: DuckDB DEATH table, treatment_episodes.rds, confirmed_hl_cohort.rds,
 #         DuckDB ENCOUNTER table, DuckDB DIAGNOSIS table, DuckDB DEMOGRAPHIC table, DuckDB ENROLLMENT table

@@ -1,31 +1,27 @@
 # ==============================================================================
-# Phase 8: Cancer Summary Refined (D-code removal + HL cohort confirmation)
+# Phase 48: Cancer Summary - Post-HL Temporal Filtering
 # ==============================================================================
-# Creates a refined cancer summary dataset by:
-#   1. Removing benign D-codes from R/53 cancer_summary.csv (CREF-01)
-#   2. Filtering to patients with 2+ C81 diagnosis codes 7+ days apart (CREF-02)
-#   3. Computing first HL diagnosis date from both DIAGNOSIS and TUMOR_REGISTRY (CREF-03)
-#   4. Regenerating all cancer summary outputs (csv, xlsx, table xlsx)
-#   5. Saving confirmed_hl_cohort.rds for downstream phases
+# Creates post-HL cancer summary variants filtered to cancer diagnoses occurring
+# AFTER each patient's first HL diagnosis date, with EXPLORATORY labeling and
+# a side-by-side Comparison sheet.
 #
-# This script consolidates R/53 (patient-code level) and R/54 (summary table)
-# output generation into a single self-contained script. After R/55 executes,
-# R/53 and R/54 are obsolete -- R/55 is the single source of truth for cancer
-# summary outputs going forward.
+# This script queries the DuckDB DIAGNOSIS table directly for raw date rows,
+# applies temporal filtering (DX_DATE > first_hl_dx_date), and re-aggregates
+# patient-code metrics. It does NOT modify baseline R/55 outputs.
 #
 # Inputs:
-#   - output/tables/cancer_summary.csv (Phase 6 output from R/53)
-#   - DIAGNOSIS DuckDB table (for C81 cohort confirmation and record counts)
-#   - TUMOR_REGISTRY_ALL DuckDB table (for first HL diagnosis date)
+#   - output/confirmed_hl_cohort.rds (Phase 47 output: ID, first_hl_dx_date, first_hl_dx_source)
+#   - output/tables/cancer_summary.csv (Phase 47 output: description lookup only)
+#   - output/tables/cancer_summary_table.xlsx (Phase 47 output: baseline counts for Comparison)
+#   - DIAGNOSIS DuckDB table (raw DX_DATE rows for temporal filtering)
 #
 # Outputs:
-#   - output/tables/cancer_summary.csv (overwritten, D-codes removed, HL cohort only)
-#   - output/tables/cancer_summary.xlsx (overwritten, single flat sheet)
-#   - output/tables/cancer_summary_table.xlsx (overwritten, two-sheet styled workbook)
-#   - output/confirmed_hl_cohort.rds (new, for Phase 56 and Phase 57 consumption)
+#   - output/tables/cancer_summary_post_hl.csv (patient-code level, 7 columns)
+#   - output/tables/cancer_summary_post_hl.xlsx (single flat sheet, EXPLORATORY)
+#   - output/tables/cancer_summary_table_post_hl.xlsx (3-sheet styled workbook)
 #
 # Usage:
-#   Rscript R/55_cancer_summary_refined.R
+#   Rscript R/48_cancer_summary_post_hl.R
 # ==============================================================================
 
 # ==============================================================================
@@ -43,28 +39,34 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-# Define output paths
-INPUT_CSV        <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
-OUTPUT_CSV       <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
-OUTPUT_XLSX      <- file.path(CONFIG$output_dir, "tables", "cancer_summary.xlsx")
-OUTPUT_TABLE_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table.xlsx")
-OUTPUT_RDS       <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+# Define input/output paths
+INPUT_CSV          <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
+INPUT_RDS          <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+BASELINE_TABLE_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table.xlsx")
+OUTPUT_CSV         <- file.path(CONFIG$output_dir, "tables", "cancer_summary_post_hl.csv")
+OUTPUT_XLSX        <- file.path(CONFIG$output_dir, "tables", "cancer_summary_post_hl.xlsx")
+OUTPUT_TABLE_XLSX  <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_post_hl.xlsx")
 
 dir.create(dirname(OUTPUT_CSV), showWarnings = FALSE, recursive = TRUE)
 
-message("=== Phase 8: Cancer Summary Refined (D-code removal + HL cohort confirmation) ===")
-message(glue("Input CSV:  {INPUT_CSV}"))
-message(glue("Output CSV: {OUTPUT_CSV}"))
-message(glue("Output XLSX: {OUTPUT_XLSX}"))
-message(glue("Output Table XLSX: {OUTPUT_TABLE_XLSX}"))
-message(glue("Output RDS: {OUTPUT_RDS}"))
+# Sentinel date cutoff -- any DX_DATE before this is considered invalid/sentinel
+SENTINEL_CUTOFF <- as.Date("1910-01-01")
+
+message("=== Phase 56: Cancer Summary - Post-HL Temporal Filtering ===")
+message(glue("Input RDS:          {INPUT_RDS}"))
+message(glue("Input CSV:          {INPUT_CSV}"))
+message(glue("Baseline Table:     {BASELINE_TABLE_XLSX}"))
+message(glue("Output CSV:         {OUTPUT_CSV}"))
+message(glue("Output XLSX:        {OUTPUT_XLSX}"))
+message(glue("Output Table XLSX:  {OUTPUT_TABLE_XLSX}"))
+message(glue("Sentinel cutoff:    {SENTINEL_CUTOFF}"))
 
 # ==============================================================================
 # SECTION 2: PREFIX_MAP AND classify_codes()
 # ==============================================================================
-# Copied from R/54_cancer_summary_table.R (lines 51-311) for script independence.
-# All 309 entries including D-codes are needed because classify_codes() is called
-# on the input data before D-code filtering.
+# Copied from R/55 lines 69-338 for script independence.
+# All 309 entries including D-codes are retained (input data has no D-codes,
+# but full map is kept for completeness and consistency).
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -340,189 +342,196 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 3: LOAD AND FILTER INPUT DATA (CREF-01)
+# SECTION 3: LOAD INPUTS
 # ==============================================================================
 
-message(glue("\nLoading {INPUT_CSV}..."))
+message(glue("\nLoading confirmed HL cohort from {INPUT_RDS}..."))
+confirmed_hl_cohort <- readRDS(INPUT_RDS)
+n_total_confirmed <- nrow(confirmed_hl_cohort)
+message(glue("  Total confirmed HL patients: {format(n_total_confirmed, big.mark=',')}"))
 
-cancer_summary <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
-n_loaded <- nrow(cancer_summary)
-message(glue("  Loaded {format(n_loaded, big.mark=',')} patient-code rows"))
+# Count patients with valid (non-NA) first_hl_dx_date
+n_with_date <- sum(!is.na(confirmed_hl_cohort$first_hl_dx_date))
+n_excluded_na_date <- sum(is.na(confirmed_hl_cohort$first_hl_dx_date))
+message(glue("  Patients with non-NA first_hl_dx_date: {format(n_with_date, big.mark=',')}"))
+message(glue("  Patients excluded (NA first_hl_dx_date): {format(n_excluded_na_date, big.mark=',')}"))
 
-# Remove D-codes per CREF-01
-n_before_dcode_removal <- nrow(cancer_summary)
-cancer_summary <- cancer_summary %>%
-  filter(!str_detect(cancer_code, "^D"))
-n_removed_dcodes <- n_before_dcode_removal - nrow(cancer_summary)
+# D-06: Filter to only patients with valid first_hl_dx_date
+confirmed_hl_cohort <- confirmed_hl_cohort %>%
+  filter(!is.na(first_hl_dx_date))
 
-message(glue("Removed {format(n_removed_dcodes, big.mark=',')} D-code rows ({format(nrow(cancer_summary), big.mark=',')} remaining)"))
-message(glue("  Unique patients after D-code removal: {format(n_distinct(cancer_summary$ID), big.mark=',')}"))
-message(glue("  Unique codes after D-code removal: {format(n_distinct(cancer_summary$cancer_code), big.mark=',')}"))
+message(glue("  Post-filter cohort size: {format(nrow(confirmed_hl_cohort), big.mark=',')} patients"))
+
+# Load baseline cancer_summary.csv (for description lookup ONLY -- not for temporal filtering)
+message(glue("\nLoading baseline {INPUT_CSV} (for description lookup)..."))
+cancer_summary_baseline <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
+message(glue("  Baseline cancer_summary: {format(nrow(cancer_summary_baseline), big.mark=',')} rows, {format(n_distinct(cancer_summary_baseline$ID), big.mark=',')} patients"))
 
 # ==============================================================================
-# SECTION 4: COHORT CONFIRMATION -- C81 codes, 7-day gap (CREF-02)
+# SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS
 # ==============================================================================
 
-message("\nQuerying DIAGNOSIS for C81 cohort confirmation...")
+message("\nQuerying DIAGNOSIS for C-code diagnosis rows...")
 
-# Query all C81 diagnosis codes from DuckDB
-dx_c81 <- get_pcornet_table("DIAGNOSIS") %>%
+cohort_ids <- confirmed_hl_cohort$ID
+
+dx_raw <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C81")) %>%
+  filter(str_detect(DX_norm, "^C")) %>%
   select(ID, DX_norm, DX_DATE) %>%
-  collect()
+  collect() %>%
+  filter(ID %in% cohort_ids)
 
-message(glue("  Found {format(nrow(dx_c81), big.mark=',')} C81 diagnosis rows"))
+message(glue("  Retrieved {format(nrow(dx_raw), big.mark=',')} C-code diagnosis rows for cohort"))
 
-# Deduplicate before date span calculation (Pitfall 1)
-# Group by ID only (not per sub-code) -- different C81 sub-codes count toward threshold together
-confirmed_patients <- dx_c81 %>%
-  filter(!is.na(DX_DATE)) %>%
-  distinct(ID, DX_DATE) %>%
-  group_by(ID) %>%
-  filter(as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
-  ungroup() %>%
-  distinct(ID)
+# Exclude sentinel/invalid dates (DX_DATE before 1910-01-01)
+# confirmed_hl_cohort.rds already has 1900 sentinels nullified in first_hl_dx_date,
+# but the raw DIAGNOSIS table may still contain 1900-01-01 or other pre-1910 dates
+n_sentinel <- sum(!is.na(dx_raw$DX_DATE) & dx_raw$DX_DATE < SENTINEL_CUTOFF)
+message(glue("  Sentinel/invalid DX_DATE rows (before {SENTINEL_CUTOFF}): {n_sentinel} -- excluding"))
 
-message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',')} patients (2+ C81 codes, 7-day gap)"))
+dx_raw <- dx_raw %>%
+  filter(is.na(DX_DATE) | DX_DATE >= SENTINEL_CUTOFF)
+
+message(glue("  After sentinel exclusion: {format(nrow(dx_raw), big.mark=',')} rows"))
 
 # ==============================================================================
-# SECTION 5: COMPUTE FIRST HL DIAGNOSIS DATE (CREF-03)
+# SECTION 5: APPLY TEMPORAL FILTER (DX_DATE > first_hl_dx_date)
 # ==============================================================================
 
-message("\nComputing first HL diagnosis date from DIAGNOSIS and TUMOR_REGISTRY...")
+message("\nApplying temporal filter: DX_DATE > first_hl_dx_date (strict >)...")
 
-# DIAGNOSIS earliest C81 date per patient (reuse dx_c81 from Section 4)
-dx_dates <- dx_c81 %>%
-  filter(!is.na(DX_DATE)) %>%
-  group_by(ID) %>%
-  summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop")
+# Join with confirmed_hl_cohort to get first_hl_dx_date per row
+dx_with_hl_date <- dx_raw %>%
+  inner_join(confirmed_hl_cohort %>% select(ID, first_hl_dx_date), by = "ID")
 
-message(glue("  DIAGNOSIS: {format(nrow(dx_dates), big.mark=',')} patients with C81 dates"))
+n_before_filter <- nrow(dx_with_hl_date)
 
-# TUMOR_REGISTRY earliest DATE_OF_DIAGNOSIS per patient
-tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
-if (!is.null(tr_tbl) && "DATE_OF_DIAGNOSIS" %in% colnames(tr_tbl)) {
-  tr_dates <- tr_tbl %>%
-    filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
-    group_by(ID) %>%
-    summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop") %>%
-    collect()
-  message(glue("  TUMOR_REGISTRY: {format(nrow(tr_dates), big.mark=',')} patients with diagnosis dates"))
-} else {
-  tr_dates <- data.frame(ID = character(), first_dx_date_tr = as.Date(character()), stringsAsFactors = FALSE)
-  message("  TUMOR_REGISTRY: table not found or missing DATE_OF_DIAGNOSIS column")
-}
+# Filter out rows with NA DX_DATE (cannot compare NA dates)
+dx_with_hl_date <- dx_with_hl_date %>%
+  filter(!is.na(DX_DATE))
 
-# Compute TRUE minimum with source attribution (per D-05)
-first_dx <- dx_dates %>%
-  full_join(tr_dates, by = "ID") %>%
-  mutate(
-    first_hl_dx_date = pmin(first_dx_date_diagnosis, first_dx_date_tr, na.rm = TRUE),
-    first_hl_dx_source = case_when(
-      is.na(first_dx_date_diagnosis) & !is.na(first_dx_date_tr) ~ "TUMOR_REGISTRY",
-      !is.na(first_dx_date_diagnosis) & is.na(first_dx_date_tr) ~ "DIAGNOSIS",
-      !is.na(first_dx_date_diagnosis) & !is.na(first_dx_date_tr) &
-        first_dx_date_diagnosis == first_dx_date_tr ~ "Both",
-      !is.na(first_dx_date_diagnosis) & !is.na(first_dx_date_tr) &
-        first_dx_date_diagnosis < first_dx_date_tr ~ "DIAGNOSIS",
-      !is.na(first_dx_date_diagnosis) & !is.na(first_dx_date_tr) &
-        first_dx_date_tr < first_dx_date_diagnosis ~ "TUMOR_REGISTRY",
-      TRUE ~ NA_character_
-    )
+n_after_na_removal <- nrow(dx_with_hl_date)
+n_na_dx_date <- n_before_filter - n_after_na_removal
+
+# Apply strict > filter (same-day diagnoses excluded per clinical temporal precedence)
+dx_post_hl <- dx_with_hl_date %>%
+  filter(DX_DATE > first_hl_dx_date)
+
+n_after_filter <- nrow(dx_post_hl)
+n_excluded_temporal <- n_after_na_removal - n_after_filter
+n_patients_post_hl <- n_distinct(dx_post_hl$ID)
+
+message(glue("  Total rows before filter: {format(n_before_filter, big.mark=',')}"))
+message(glue("  Rows with NA DX_DATE removed: {format(n_na_dx_date, big.mark=',')}"))
+message(glue("  Rows excluded by temporal filter: {format(n_excluded_temporal, big.mark=',')}"))
+message(glue("  Post-HL rows remaining: {format(n_after_filter, big.mark=',')}"))
+message(glue("  Post-HL patients: {format(n_patients_post_hl, big.mark=',')}"))
+
+# ==============================================================================
+# SECTION 6: RE-AGGREGATE PATIENT-CODE METRICS
+# ==============================================================================
+
+message("\nRe-aggregating patient-code metrics from post-HL rows...")
+
+cancer_summary_post_hl <- dx_post_hl %>%
+  distinct(ID, DX_norm, DX_DATE) %>%
+  group_by(ID, DX_norm) %>%
+  summarise(
+    unique_dates_total = as.integer(n_distinct(DX_DATE[!is.na(DX_DATE)])),
+    two_or_more_unique_dates = as.integer(n_distinct(DX_DATE[!is.na(DX_DATE)]) >= 2),
+    two_or_more_unique_dates_gt_7 = as.integer({
+      dates <- DX_DATE[!is.na(DX_DATE)]
+      ud <- unique(dates)
+      if (length(ud) >= 2) {
+        as.numeric(max(ud) - min(ud)) >= 7
+      } else {
+        FALSE
+      }
+    }),
+    unique_dates_with_sep_gt_7 = {
+      dates <- unique(sort(DX_DATE[!is.na(DX_DATE)]))
+      if (length(dates) < 2) {
+        0L
+      } else {
+        span <- as.numeric(max(dates) - min(dates))
+        if (span < 7) {
+          0L
+        } else {
+          n <- length(dates)
+          has_7day_sep <- logical(n)
+          for (k in seq_len(n)) {
+            diffs <- abs(as.numeric(dates[k] - dates[-k]))
+            has_7day_sep[k] <- any(diffs >= 7)
+          }
+          as.integer(sum(has_7day_sep))
+        }
+      }
+    },
+    .groups = "drop"
   ) %>%
-  select(ID, first_hl_dx_date, first_hl_dx_source)
+  rename(cancer_code = DX_norm)
 
-# Nullify 1900 sentinel dates (Pitfall 3)
-n_sentinel <- sum(year(first_dx$first_hl_dx_date) == 1900L, na.rm = TRUE)
-if (n_sentinel > 0) {
-  message(glue("  Nullifying {n_sentinel} sentinel first-diagnosis dates (year 1900)"))
-  first_dx <- first_dx %>%
-    mutate(first_hl_dx_date = if_else(year(first_hl_dx_date) == 1900L, as.Date(NA), first_hl_dx_date))
-}
-
-# Log source distribution
-source_dist <- first_dx %>%
-  filter(!is.na(first_hl_dx_source)) %>%
-  count(first_hl_dx_source, name = "n_patients")
-message("  First HL diagnosis source distribution:")
-for (i in 1:nrow(source_dist)) {
-  message(glue("    {source_dist$first_hl_dx_source[i]}: {format(source_dist$n_patients[i], big.mark=',')}"))
-}
+message(glue("  Patient-code rows: {format(nrow(cancer_summary_post_hl), big.mark=',')}"))
+message(glue("  Unique patients: {format(n_distinct(cancer_summary_post_hl$ID), big.mark=',')}"))
+message(glue("  Unique codes: {format(n_distinct(cancer_summary_post_hl$cancer_code), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 6: SAVE CONFIRMED HL COHORT RDS (D-10)
+# SECTION 7: ADD DESCRIPTIONS AND CATEGORY
 # ==============================================================================
 
-# Inner join confirmed_patients with first_dx to get only confirmed patients with their dates
-confirmed_hl_cohort <- confirmed_patients %>%
-  inner_join(first_dx, by = "ID") %>%
-  select(ID, first_hl_dx_date, first_hl_dx_source)
+message("\nAdding descriptions and categories...")
 
-saveRDS(confirmed_hl_cohort, OUTPUT_RDS)
-message(glue("\nSaved confirmed HL cohort to {OUTPUT_RDS} ({nrow(confirmed_hl_cohort)} patients)"))
+# Build description lookup from baseline cancer_summary.csv
+baseline_desc <- cancer_summary_baseline %>%
+  distinct(cancer_code, description)
 
-# ==============================================================================
-# SECTION 7: FILTER CANCER SUMMARY TO CONFIRMED COHORT
-# ==============================================================================
-
-n_patients_before_cohort_filter <- n_distinct(cancer_summary$ID)
-n_rows_before_cohort_filter <- nrow(cancer_summary)
-
-# Inner join to keep only confirmed HL cohort patients
-cancer_summary <- cancer_summary %>%
-  inner_join(confirmed_patients, by = "ID")
-
-n_patients_after_cohort_filter <- n_distinct(cancer_summary$ID)
-n_rows_after_cohort_filter <- nrow(cancer_summary)
-
-message(glue("\nFiltered to confirmed HL cohort:"))
-message(glue("  Patients: {format(n_patients_before_cohort_filter, big.mark=',')} -> {format(n_patients_after_cohort_filter, big.mark=',')}"))
-message(glue("  Rows: {format(n_rows_before_cohort_filter, big.mark=',')} -> {format(n_rows_after_cohort_filter, big.mark=',')}"))
-
-# Add category column via classify_codes()
-cancer_summary$category <- classify_codes(cancer_summary$cancer_code)
+# Add category and description
+cancer_summary_post_hl <- cancer_summary_post_hl %>%
+  left_join(baseline_desc, by = "cancer_code") %>%
+  mutate(
+    category = classify_codes(cancer_code),
+    description = if_else(is.na(description), category, description)
+  )
 
 # Handle unclassified codes
-n_unclassified <- sum(is.na(cancer_summary$category))
+n_unclassified <- sum(is.na(cancer_summary_post_hl$category))
 if (n_unclassified > 0) {
-  unclass_codes <- unique(cancer_summary$cancer_code[is.na(cancer_summary$category)])
+  unclass_codes <- unique(cancer_summary_post_hl$cancer_code[is.na(cancer_summary_post_hl$category)])
   message(glue("  WARNING: {n_unclassified} rows ({length(unclass_codes)} unique codes) unclassified"))
   message(glue("    Codes: {paste(head(unclass_codes, 20), collapse=', ')}"))
-  cancer_summary$category[is.na(cancer_summary$category)] <- "Unclassified"
+  cancer_summary_post_hl$category[is.na(cancer_summary_post_hl$category)] <- "Unclassified"
 }
+
+message(glue("  Post-HL patient count: {format(n_distinct(cancer_summary_post_hl$ID), big.mark=',')}"))
+message(glue("  Post-HL code count: {format(n_distinct(cancer_summary_post_hl$cancer_code), big.mark=',')}"))
+message(glue("  Post-HL row count: {format(nrow(cancer_summary_post_hl), big.mark=',')}"))
 
 # ==============================================================================
 # SECTION 8: QUERY RECORD COUNTS FROM DIAGNOSIS (DuckDB)
 # ==============================================================================
 
-message("\nQuerying DIAGNOSIS for record counts...")
+message("\nComputing post-HL record counts...")
 
-dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C")) %>%
+# Scope record counts to post-HL rows only
+dx_post_hl_records <- dx_post_hl %>%
   group_by(DX_norm) %>%
-  summarise(record_count = n(), .groups = "drop") %>%
-  collect()
+  summarise(record_count = n(), .groups = "drop")
 
-message(glue("  Found record counts for {nrow(dx_record_counts)} unique codes"))
-
-# Left join record counts to cancer_summary
-cancer_summary <- cancer_summary %>%
-  left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
+cancer_summary_post_hl <- cancer_summary_post_hl %>%
+  left_join(dx_post_hl_records, by = c("cancer_code" = "DX_norm")) %>%
   mutate(record_count = ifelse(is.na(record_count), 0L, as.integer(record_count)))
 
-message(glue("  Total records across all codes: {format(sum(cancer_summary$record_count), big.mark=',')}"))
+message(glue("  Total post-HL records across all codes: {format(sum(cancer_summary_post_hl$record_count), big.mark=',')}"))
 
 # ==============================================================================
 # SECTION 9: CATEGORY-LEVEL AGGREGATION
 # ==============================================================================
 
-message("\nAggregating to category level...")
+message("\nAggregating to category level (post-HL)...")
 
-category_summary <- cancer_summary %>%
+category_summary_post_hl <- cancer_summary_post_hl %>%
   group_by(category) %>%
   summarise(
     total_patients        = n_distinct(ID),
@@ -539,15 +548,15 @@ category_summary <- cancer_summary %>%
   ) %>%
   arrange(desc(total_patients))
 
-message(glue("  Category summary: {nrow(category_summary)} rows"))
+message(glue("  Category summary: {nrow(category_summary_post_hl)} rows"))
 
 # ==============================================================================
 # SECTION 10: CODE-LEVEL AGGREGATION
 # ==============================================================================
 
-message("Aggregating to code level...")
+message("Aggregating to code level (post-HL)...")
 
-code_summary <- cancer_summary %>%
+code_summary_post_hl <- cancer_summary_post_hl %>%
   group_by(cancer_code, category) %>%
   summarise(
     total_patients        = n_distinct(ID),
@@ -564,36 +573,36 @@ code_summary <- cancer_summary %>%
   ) %>%
   arrange(desc(total_patients))
 
-message(glue("  Code summary: {nrow(code_summary)} rows"))
+message(glue("  Code summary: {nrow(code_summary_post_hl)} rows"))
 
-# Build totals rows
-totals_category <- tibble(
+# Build totals rows (same pattern as R/55 lines 570-597)
+totals_category_post_hl <- tibble(
   category              = "TOTAL",
-  total_patients        = sum(category_summary$total_patients),
-  confirmed_2date       = sum(category_summary$confirmed_2date),
+  total_patients        = sum(category_summary_post_hl$total_patients),
+  confirmed_2date       = sum(category_summary_post_hl$confirmed_2date),
   pct_confirmed_2date   = NA_real_,
-  confirmed_7day        = sum(category_summary$confirmed_7day),
+  confirmed_7day        = sum(category_summary_post_hl$confirmed_7day),
   pct_confirmed_7day    = NA_real_,
   mean_unique_dates     = NA_real_,
   median_unique_dates   = NA_real_,
   mean_dates_7day_sep   = NA_real_,
   median_dates_7day_sep = NA_real_,
-  total_records         = sum(category_summary$total_records)
+  total_records         = sum(category_summary_post_hl$total_records)
 )
 
-totals_code <- tibble(
+totals_code_post_hl <- tibble(
   cancer_code           = "TOTAL",
   category              = "",
-  total_patients        = sum(code_summary$total_patients),
-  confirmed_2date       = sum(code_summary$confirmed_2date),
+  total_patients        = sum(code_summary_post_hl$total_patients),
+  confirmed_2date       = sum(code_summary_post_hl$confirmed_2date),
   pct_confirmed_2date   = NA_real_,
-  confirmed_7day        = sum(code_summary$confirmed_7day),
+  confirmed_7day        = sum(code_summary_post_hl$confirmed_7day),
   pct_confirmed_7day    = NA_real_,
   mean_unique_dates     = NA_real_,
   median_unique_dates   = NA_real_,
   mean_dates_7day_sep   = NA_real_,
   median_dates_7day_sep = NA_real_,
-  total_records         = sum(code_summary$total_records)
+  total_records         = sum(code_summary_post_hl$total_records)
 )
 
 # ==============================================================================
@@ -603,9 +612,9 @@ totals_code <- tibble(
 message(glue("\nWriting outputs..."))
 
 # -----------------------------------------------
-# 11a. Write cancer_summary.csv (7-column format)
+# 11a. Write cancer_summary_post_hl.csv (7-column format)
 # -----------------------------------------------
-cancer_summary_output <- cancer_summary %>%
+cancer_summary_post_hl_output <- cancer_summary_post_hl %>%
   select(
     ID,
     cancer_code,
@@ -616,40 +625,51 @@ cancer_summary_output <- cancer_summary %>%
     unique_dates_with_sep_gt_7
   )
 
-write.csv(cancer_summary_output, OUTPUT_CSV, row.names = FALSE)
-message(glue("  Wrote {OUTPUT_CSV} ({nrow(cancer_summary_output)} rows)"))
+write.csv(cancer_summary_post_hl_output, OUTPUT_CSV, row.names = FALSE)
+message(glue("  Wrote {OUTPUT_CSV} ({nrow(cancer_summary_post_hl_output)} rows)"))
 
 # -----------------------------------------------
-# 11b. Write cancer_summary.xlsx (single flat sheet)
+# 11b. Write cancer_summary_post_hl.xlsx (single flat sheet, EXPLORATORY)
 # -----------------------------------------------
 wb_flat <- wb_workbook()
-wb_flat$add_worksheet("Cancer Summary")
+SHEET_FLAT <- "EXPLORATORY - Cancer Summary"
+wb_flat$add_worksheet(SHEET_FLAT)
 
 # Write data with headers
-wb_flat$add_data(sheet = "Cancer Summary", x = as.data.frame(cancer_summary_output),
+wb_flat$add_data(sheet = SHEET_FLAT, x = as.data.frame(cancer_summary_post_hl_output),
                  start_row = 1, col_names = TRUE)
 
 # Integer number format for columns 4-7
-if (nrow(cancer_summary_output) > 0) {
-  last_row <- 1 + nrow(cancer_summary_output)
-  wb_flat$add_numfmt(sheet = "Cancer Summary",
-                     dims = glue("D2:G{last_row}"), numfmt = "0")
+if (nrow(cancer_summary_post_hl_output) > 0) {
+  last_row_flat <- 1 + nrow(cancer_summary_post_hl_output)
+  wb_flat$add_numfmt(sheet = SHEET_FLAT,
+                     dims = glue("D2:G{last_row_flat}"), numfmt = "0")
 }
 
 # Auto column widths
-wb_flat$set_col_widths(sheet = "Cancer Summary", cols = 1:7, widths = "auto")
+wb_flat$set_col_widths(sheet = SHEET_FLAT, cols = 1:7, widths = "auto")
 
 # Freeze top row
-wb_flat$freeze_pane(sheet = "Cancer Summary", first_row = TRUE)
+wb_flat$freeze_pane(sheet = SHEET_FLAT, first_row = TRUE)
+
+# D-05: Footnote row with bias warning
+footnote_row_flat <- last_row_flat + 2
+wb_flat$add_data(sheet = SHEET_FLAT,
+                 x = "Note: Post-HL filter introduces potential immortal time bias. Use for exploratory comparison only.",
+                 start_row = footnote_row_flat, start_col = 1)
+wb_flat$add_font(sheet = SHEET_FLAT, dims = glue("A{footnote_row_flat}"),
+                 name = "Calibri", size = 10, italic = TRUE,
+                 color = wb_color("FF6B7280"))
+wb_flat$merge_cells(sheet = SHEET_FLAT, dims = glue("A{footnote_row_flat}:G{footnote_row_flat}"))
 
 wb_flat$save(OUTPUT_XLSX)
 message(glue("  Wrote {OUTPUT_XLSX}"))
 
 # -----------------------------------------------
-# 11c. Write cancer_summary_table.xlsx (two-sheet styled workbook)
+# 11c. Write cancer_summary_table_post_hl.xlsx (three-sheet styled workbook)
 # -----------------------------------------------
 
-# Styling constants (same as R/54)
+# Styling constants (same as R/55)
 DARK_HEADER_FILL <- "FF374151"
 WHITE_FONT       <- "FFFFFFFF"
 TITLE_FONT_COLOR <- "FF1F2937"
@@ -658,20 +678,20 @@ TOTALS_FILL      <- "FFE5E7EB"
 wb <- wb_workbook()
 
 # ---------------------------------------------------------------------------
-# Sheet 1: "Category Summary"
+# Sheet 1: "EXPLORATORY - Category Summary" (per D-04)
 # ---------------------------------------------------------------------------
-SHEET1 <- "Category Summary"
+SHEET1 <- "EXPLORATORY - Category Summary"
 wb$add_worksheet(SHEET1)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET1, x = "Cancer Summary Table - By Category",
+wb$add_data(sheet = SHEET1, x = "Cancer Summary Table - By Category (POST-HL DIAGNOSES ONLY)",
             start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
 wb$merge_cells(sheet = SHEET1, dims = "A1:K1")
 
-# Row 2: Headers
+# Row 2: Headers (same 11 headers as R/55 Sheet 1)
 headers1 <- c(
   "Cancer Site Category",
   "Total Patients",
@@ -698,13 +718,13 @@ wb$freeze_pane(sheet = SHEET1, first_active_row = 3, first_active_col = 1)
 
 # Data rows starting at row 3
 data_start1 <- 3
-n_data1     <- nrow(category_summary)
+n_data1     <- nrow(category_summary_post_hl)
 data_end1   <- data_start1 + n_data1 - 1
 
-wb$add_data(sheet = SHEET1, x = as.data.frame(category_summary),
+wb$add_data(sheet = SHEET1, x = as.data.frame(category_summary_post_hl),
             start_row = data_start1, col_names = FALSE)
 
-# Number formatting
+# Number formatting (same as R/55)
 # Columns B, C, E (integer counts): "#,##0"
 wb$add_numfmt(sheet = SHEET1, dims = glue("B{data_start1}:B{data_end1}"), numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start1}:C{data_end1}"), numfmt = "#,##0")
@@ -722,7 +742,7 @@ wb$add_numfmt(sheet = SHEET1, dims = glue("K{data_start1}:K{data_end1}"), numfmt
 
 # Totals row
 totals_row1 <- data_end1 + 1
-wb$add_data(sheet = SHEET1, x = as.data.frame(totals_category),
+wb$add_data(sheet = SHEET1, x = as.data.frame(totals_category_post_hl),
             start_row = totals_row1, col_names = FALSE)
 wb$add_fill(sheet = SHEET1,
             dims  = glue("A{totals_row1}:K{totals_row1}"),
@@ -744,25 +764,35 @@ wb$add_numfmt(sheet = SHEET1,
               dims  = glue("K{totals_row1}:K{totals_row1}"),
               numfmt = "#,##0")
 
+# D-05: Footnote row with bias warning
+footnote_row1 <- totals_row1 + 2
+wb$add_data(sheet = SHEET1,
+            x = "Note: Post-HL filter introduces potential immortal time bias. Use for exploratory comparison only.",
+            start_row = footnote_row1, start_col = 1)
+wb$add_font(sheet = SHEET1, dims = glue("A{footnote_row1}"),
+            name = "Calibri", size = 10, italic = TRUE,
+            color = wb_color("FF6B7280"))
+wb$merge_cells(sheet = SHEET1, dims = glue("A{footnote_row1}:K{footnote_row1}"))
+
 # Column widths
 wb$set_col_widths(sheet = SHEET1, cols = 1:11,
                   widths = c(40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 14))
 
 # ---------------------------------------------------------------------------
-# Sheet 2: "Code Summary"
+# Sheet 2: "EXPLORATORY - Code Summary" (per D-04)
 # ---------------------------------------------------------------------------
-SHEET2 <- "Code Summary"
+SHEET2 <- "EXPLORATORY - Code Summary"
 wb$add_worksheet(SHEET2)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET2, x = "Cancer Summary Table - By ICD-10 Code",
+wb$add_data(sheet = SHEET2, x = "Cancer Summary Table - By ICD-10 Code (POST-HL DIAGNOSES ONLY)",
             start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET2, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
             color = wb_color(TITLE_FONT_COLOR))
 wb$merge_cells(sheet = SHEET2, dims = "A1:L1")
 
-# Row 2: Headers
+# Row 2: Headers (same 12 headers as R/55 Sheet 2)
 headers2 <- c(
   "ICD-10 Code",
   "Cancer Site Category",
@@ -790,13 +820,13 @@ wb$freeze_pane(sheet = SHEET2, first_active_row = 3, first_active_col = 1)
 
 # Data rows starting at row 3
 data_start2 <- 3
-n_data2     <- nrow(code_summary)
+n_data2     <- nrow(code_summary_post_hl)
 data_end2   <- data_start2 + n_data2 - 1
 
-wb$add_data(sheet = SHEET2, x = as.data.frame(code_summary),
+wb$add_data(sheet = SHEET2, x = as.data.frame(code_summary_post_hl),
             start_row = data_start2, col_names = FALSE)
 
-# Number formatting
+# Number formatting (same as R/55)
 # Columns C, D, F (integer counts): "#,##0"
 wb$add_numfmt(sheet = SHEET2, dims = glue("C{data_start2}:C{data_end2}"), numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET2, dims = glue("D{data_start2}:D{data_end2}"), numfmt = "#,##0")
@@ -814,7 +844,7 @@ wb$add_numfmt(sheet = SHEET2, dims = glue("L{data_start2}:L{data_end2}"), numfmt
 
 # Totals row
 totals_row2 <- data_end2 + 1
-wb$add_data(sheet = SHEET2, x = as.data.frame(totals_code),
+wb$add_data(sheet = SHEET2, x = as.data.frame(totals_code_post_hl),
             start_row = totals_row2, col_names = FALSE)
 wb$add_fill(sheet = SHEET2,
             dims  = glue("A{totals_row2}:L{totals_row2}"),
@@ -836,9 +866,123 @@ wb$add_numfmt(sheet = SHEET2,
               dims  = glue("L{totals_row2}:L{totals_row2}"),
               numfmt = "#,##0")
 
+# D-05: Footnote row with bias warning
+footnote_row2 <- totals_row2 + 2
+wb$add_data(sheet = SHEET2,
+            x = "Note: Post-HL filter introduces potential immortal time bias. Use for exploratory comparison only.",
+            start_row = footnote_row2, start_col = 1)
+wb$add_font(sheet = SHEET2, dims = glue("A{footnote_row2}"),
+            name = "Calibri", size = 10, italic = TRUE,
+            color = wb_color("FF6B7280"))
+wb$merge_cells(sheet = SHEET2, dims = glue("A{footnote_row2}:L{footnote_row2}"))
+
 # Column widths
 wb$set_col_widths(sheet = SHEET2, cols = 1:12,
                   widths = c(14, 40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 14))
+
+# ---------------------------------------------------------------------------
+# Sheet 3: "Comparison" (per D-03)
+# ---------------------------------------------------------------------------
+SHEET3 <- "Comparison"
+wb$add_worksheet(SHEET3)
+
+# Row 1: Title
+wb$add_data(sheet = SHEET3, x = "Baseline vs Post-HL Comparison - By Cancer Site Category",
+            start_row = 1, start_col = 1)
+wb$add_font(sheet = SHEET3, dims = "A1",
+            name = "Calibri", size = 16, bold = TRUE,
+            color = wb_color(TITLE_FONT_COLOR))
+wb$merge_cells(sheet = SHEET3, dims = "A1:E1")
+
+# Row 2: Headers
+headers3 <- c(
+  "Cancer Site Category",
+  "Baseline Patients",
+  "Post-HL Patients",
+  "Delta",
+  "% Retained"
+)
+for (i in seq_along(headers3)) {
+  wb$add_data(sheet = SHEET3, x = headers3[i], start_row = 2, start_col = i)
+}
+wb$add_fill(sheet = SHEET3, dims = "A2:E2", color = wb_color(DARK_HEADER_FILL))
+wb$add_font(sheet = SHEET3, dims = "A2:E2",
+            name = "Calibri", size = 11, bold = TRUE,
+            color = wb_color(WHITE_FONT))
+
+# Freeze pane
+wb$freeze_pane(sheet = SHEET3, first_active_row = 3, first_active_col = 1)
+
+# Build comparison_df by reading baseline counts from cancer_summary_table.xlsx
+# R/55 writes: Row 1 = title (merged), Row 2 = headers, Row 3+ = data
+# Use start_row = 2 to skip title row and use row 2 (headers) as column names
+baseline_raw <- openxlsx2::read_xlsx(BASELINE_TABLE_XLSX, sheet = "Category Summary", start_row = 2)
+
+baseline_category <- baseline_raw %>%
+  filter(`Cancer Site Category` != "TOTAL" & !is.na(`Cancer Site Category`)) %>%
+  select(category = `Cancer Site Category`, baseline_patients = `Total Patients`) %>%
+  mutate(baseline_patients = as.integer(baseline_patients))
+
+comparison_df <- category_summary_post_hl %>%
+  select(category, post_hl_patients = total_patients) %>%
+  full_join(baseline_category, by = "category") %>%
+  mutate(
+    baseline_patients = ifelse(is.na(baseline_patients), 0L, baseline_patients),
+    post_hl_patients = ifelse(is.na(post_hl_patients), 0L, post_hl_patients)
+  ) %>%
+  mutate(
+    delta = post_hl_patients - baseline_patients,
+    pct_retained = if_else(baseline_patients > 0L,
+                           as.numeric(post_hl_patients) / as.numeric(baseline_patients),
+                           NA_real_)
+  ) %>%
+  arrange(desc(baseline_patients))
+
+message(glue("  Comparison: {nrow(comparison_df)} categories"))
+
+# Data rows starting at row 3
+data_start3 <- 3
+n_data3     <- nrow(comparison_df)
+data_end3   <- data_start3 + n_data3 - 1
+
+wb$add_data(sheet = SHEET3, x = as.data.frame(comparison_df),
+            start_row = data_start3, col_names = FALSE)
+
+# Number formatting
+# Columns B, C (integer counts): "#,##0"
+wb$add_numfmt(sheet = SHEET3, dims = glue("B{data_start3}:B{data_end3}"), numfmt = "#,##0")
+wb$add_numfmt(sheet = SHEET3, dims = glue("C{data_start3}:C{data_end3}"), numfmt = "#,##0")
+# Column D (delta, signed integer): "#,##0"
+wb$add_numfmt(sheet = SHEET3, dims = glue("D{data_start3}:D{data_end3}"), numfmt = "#,##0")
+# Column E (percentage): "0.0%"
+wb$add_numfmt(sheet = SHEET3, dims = glue("E{data_start3}:E{data_end3}"), numfmt = "0.0%")
+
+# Info rows below data (per D-06 and sentinel tracking)
+info_start <- data_end3 + 2
+wb$add_data(sheet = SHEET3,
+            x = glue("Patients excluded (NA first_hl_dx_date): {n_excluded_na_date}"),
+            start_row = info_start, start_col = 1)
+wb$add_font(sheet = SHEET3, dims = glue("A{info_start}"),
+            name = "Calibri", size = 10, italic = TRUE,
+            color = wb_color("FF6B7280"))
+
+wb$add_data(sheet = SHEET3,
+            x = "Temporal filter: DX_DATE > first_hl_dx_date (strict, excludes same-day)",
+            start_row = info_start + 1, start_col = 1)
+wb$add_font(sheet = SHEET3, dims = glue("A{info_start + 1}"),
+            name = "Calibri", size = 10, italic = TRUE,
+            color = wb_color("FF6B7280"))
+
+wb$add_data(sheet = SHEET3,
+            x = glue("Sentinel dates excluded (DX_DATE < {SENTINEL_CUTOFF}): {n_sentinel}"),
+            start_row = info_start + 2, start_col = 1)
+wb$add_font(sheet = SHEET3, dims = glue("A{info_start + 2}"),
+            name = "Calibri", size = 10, italic = TRUE,
+            color = wb_color("FF6B7280"))
+
+# Column widths
+wb$set_col_widths(sheet = SHEET3, cols = 1:5,
+                  widths = c(40, 18, 18, 10, 14))
 
 # ---------------------------------------------------------------------------
 # Save workbook
@@ -848,6 +992,7 @@ wb$save(OUTPUT_TABLE_XLSX)
 message(glue("  Wrote {OUTPUT_TABLE_XLSX}"))
 message(glue("    Sheet '{SHEET1}': {n_data1} data rows + 1 totals row"))
 message(glue("    Sheet '{SHEET2}': {n_data2} data rows + 1 totals row"))
+message(glue("    Sheet '{SHEET3}': {n_data3} comparison rows"))
 
 # ==============================================================================
 # SECTION 12: CLEANUP
@@ -855,4 +1000,6 @@ message(glue("    Sheet '{SHEET2}': {n_data2} data rows + 1 totals row"))
 
 close_pcornet_con()
 
-message("\n=== Phase 8 complete ===")
+message("\n=== Phase 56 complete ===")
+message(glue("  Post-HL cancer summary: {format(n_distinct(cancer_summary_post_hl$ID), big.mark=',')} patients, {format(nrow(cancer_summary_post_hl), big.mark=',')} rows"))
+message(glue("  Baseline files UNCHANGED (cancer_summary.csv, cancer_summary_table.xlsx)"))

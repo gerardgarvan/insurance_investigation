@@ -1,5 +1,5 @@
 # ==============================================================================
-# Phase 48: Extract All Unique Codes from Data
+# Phase 41: Extract All Unique Codes from Data
 # ==============================================================================
 # Bottom-up approach: pull every unique code that actually appears in the
 # patient data, with patient counts and record counts, so we can categorize
@@ -11,7 +11,7 @@
 #     Sheet 2 "ICD-O-3 Topography": every unique topography code with counts
 #
 # Usage:
-#   Rscript R/48a_extract_all_codes.R
+#   Rscript R/41_extract_all_codes.R
 # ==============================================================================
 
 suppressPackageStartupMessages({

@@ -1,22 +1,21 @@
 # ==============================================================================
-# Phase 4: Cancer Site Confirmation with 7-Day Separation
+# Phase 43: Cancer Site Confirmation by Distinct Date Count
 # ==============================================================================
-# Validates cancer site diagnosis codes by requiring diagnosis dates at least
-# 7 calendar days apart per code per patient before counting the code as
-# "confirmed."
+# Validates cancer site diagnosis codes by requiring at least 2 distinct dates
+# per code per patient before counting the code as "confirmed."
 #
-# Two confirmation levels (per D-01, D-03):
-#   1. Exact Code:  C81.10 must have dates spanning 7+ days (7-day gap)
-#   2. Cancer Site Category: any code in the same cancer site category on dates spanning 7+ days confirms the category
+# Two confirmation levels (per D-01):
+#   1. Exact Code:  C81.10 must appear on 2+ distinct dates
+#   2. Cancer Site Category: any code in the same cancer site category on 2+ distinct dates confirms the category
 #
 # Data: DIAGNOSIS table only, ICD-10 codes (DX_TYPE == "10"), DX_DATE (per D-03, D-04)
 #
-# Output: output/tables/cancer_site_confirmation_7day.xlsx
-#   Sheet 1 "Exact Code (7-Day Gap)":   per-category confirmation at exact ICD-10 code level
-#   Sheet 2 "Site Category (7-Day Gap)": per-category confirmation across all codes in the same category
+# Output: output/tables/cancer_site_confirmation.xlsx
+#   Sheet 1 "Exact Code":   per-category confirmation at exact ICD-10 code level
+#   Sheet 2 "Cancer Site Category": per-category confirmation across all codes in the same category
 #
 # Usage:
-#   Rscript R/51_cancer_site_confirmation_7day.R
+#   Rscript R/43_cancer_site_confirmation.R
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -29,16 +28,16 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "cancer_site_confirmation_7day.xlsx")
+OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "cancer_site_confirmation.xlsx")
 dir.create(dirname(OUTPUT_PATH), showWarnings = FALSE, recursive = TRUE)
 
-message("=== Phase 4: Cancer Site Confirmation with 7-Day Separation ===")
+message("=== Phase 3: Cancer Site Confirmation by Distinct Date Count ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
 # SECTION 1: PREFIX_MAP and CATEGORY_ORDER
 # ==============================================================================
-# Copied from R/50_cancer_site_confirmation.R for script independence
+# Copied from R/47_cancer_site_frequency.R for script independence
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -410,10 +409,10 @@ if (n_unclassified > 0) {
 message(glue("  ICD-10 classified into {n_distinct(dx_cancer$category)} categories"))
 
 # ==============================================================================
-# SECTION 3: EXACT CODE CONFIRMATION WITH 7-DAY GAP (per D-03, D-06)
+# SECTION 3: EXACT CODE CONFIRMATION (per D-01, level 1)
 # ==============================================================================
 
-message("\n=== EXACT CODE CONFIRMATION (7-DAY GAP) ===")
+message("\n=== EXACT CODE CONFIRMATION ===")
 
 # Step 1: Total patients per exact code
 total_exact <- dx_cancer %>%
@@ -422,13 +421,12 @@ total_exact <- dx_cancer %>%
 
 message(glue("  Total unique codes: {nrow(total_exact)}"))
 
-# Step 2: Confirmed patients per exact code -- patient has dates spanning 7+ days for the same exact DX_norm
-# 7-day span: max(date) - min(date) >= 7 days (per D-06)
+# Step 2: Confirmed patients per exact code -- patient has 2+ distinct non-NA DX_DATE for the same exact DX_norm
 confirmed_exact <- dx_cancer %>%
   filter(!is.na(DX_DATE)) %>%
   distinct(ID, DX_norm, DX_DATE, category) %>%   # Deduplicate per Pitfall 3
   group_by(ID, DX_norm) %>%
-  filter(as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  filter(n_distinct(DX_DATE) >= 2) %>%
   ungroup() %>%
   group_by(DX_norm, category) %>%
   summarise(confirmed_patients = n_distinct(ID), .groups = "drop")
@@ -452,27 +450,26 @@ total_confirmed_exact <- sum(summary_exact$confirmed_patients)
 overall_rate_exact <- total_confirmed_exact / sum(summary_exact$total_patients)
 
 message(glue("  Total codes with patients: {nrow(summary_exact)}"))
-message(glue("  Total confirmed patients (exact code, 7-day gap): {format(total_confirmed_exact, big.mark=',')}"))
-message(glue("  Overall confirmation rate (exact, 7-day gap): {scales::percent(overall_rate_exact, accuracy=0.1)}"))
+message(glue("  Total confirmed patients (exact code): {format(total_confirmed_exact, big.mark=',')}"))
+message(glue("  Overall confirmation rate (exact): {scales::percent(overall_rate_exact, accuracy=0.1)}"))
 
 # ==============================================================================
-# SECTION 4: CANCER SITE CATEGORY CONFIRMATION WITH 7-DAY GAP (per D-03, D-06)
+# SECTION 4: CANCER SITE CATEGORY CONFIRMATION (per D-01, level 2)
 # ==============================================================================
 
-message("\n=== CANCER SITE CATEGORY CONFIRMATION (7-DAY GAP) ===")
+message("\n=== CANCER SITE CATEGORY CONFIRMATION ===")
 
 # Step 1: Total patients per category
 total_category <- dx_cancer %>%
   group_by(category) %>%
   summarise(total_patients = n_distinct(ID), .groups = "drop")
 
-# Step 2: Confirmed patients -- patient has dates spanning 7+ days for ANY code in the same cancer site category
-# 7-day span: max(date) - min(date) >= 7 days (per D-06)
+# Step 2: Confirmed patients -- patient has 2+ distinct non-NA DX_DATE for ANY code in the same cancer site category
 confirmed_category <- dx_cancer %>%
   filter(!is.na(DX_DATE)) %>%
   distinct(ID, DX_DATE, category) %>%   # Deduplicate (collapse across codes within category)
   group_by(ID, category) %>%
-  filter(as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  filter(n_distinct(DX_DATE) >= 2) %>%
   ungroup() %>%
   group_by(category) %>%
   summarise(confirmed_patients = n_distinct(ID), .groups = "drop")
@@ -492,8 +489,8 @@ total_confirmed_category <- sum(summary_category$confirmed_patients)
 overall_rate_category <- total_confirmed_category / sum(summary_category$total_patients)
 
 message(glue("  Total categories with patients: {nrow(summary_category)}"))
-message(glue("  Total confirmed patients (category, 7-day gap): {format(total_confirmed_category, big.mark=',')}"))
-message(glue("  Overall confirmation rate (category, 7-day gap): {scales::percent(overall_rate_category, accuracy=0.1)}"))
+message(glue("  Total confirmed patients (category): {format(total_confirmed_category, big.mark=',')}"))
+message(glue("  Overall confirmation rate (category): {scales::percent(overall_rate_category, accuracy=0.1)}"))
 
 # ==============================================================================
 # SECTION 5: TOTALS ROWS
@@ -531,13 +528,13 @@ TOTALS_FILL      <- "FFE5E7EB"
 wb <- wb_workbook()
 
 # ---------------------------------------------------------------------------
-# Sheet 1: "Exact Code (7-Day Gap)"
+# Sheet 1: "Exact Code"
 # ---------------------------------------------------------------------------
-SHEET1 <- "Exact Code (7-Day Gap)"
+SHEET1 <- "Exact Code"
 wb$add_worksheet(SHEET1)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET1, x = "Cancer Site Confirmation - Exact Code (7-Day Gap)",
+wb$add_data(sheet = SHEET1, x = "Cancer Site Confirmation - Exact Code Level",
             start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET1, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
@@ -588,13 +585,13 @@ wb$add_numfmt(sheet = SHEET1,
 wb$set_col_widths(sheet = SHEET1, cols = 1:6, widths = c(14, 42, 14, 16, 18, 16))
 
 # ---------------------------------------------------------------------------
-# Sheet 2: "Site Category (7-Day Gap)"
+# Sheet 2: "Cancer Site Category"
 # ---------------------------------------------------------------------------
-SHEET2 <- "Site Category (7-Day Gap)"
+SHEET2 <- "Cancer Site Category"
 wb$add_worksheet(SHEET2)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET2, x = "Cancer Site Confirmation - Category Level (7-Day Gap)",
+wb$add_data(sheet = SHEET2, x = "Cancer Site Confirmation - Category Level",
             start_row = 1, start_col = 1)
 wb$add_font(sheet = SHEET2, dims = "A1",
             name = "Calibri", size = 16, bold = TRUE,
@@ -657,4 +654,4 @@ message(glue("  Sheet '{SHEET2}': {n_data2} data rows + 1 total row"))
 close_pcornet_con()
 
 message("")
-message("=== Phase 4 Cancer Site Confirmation (7-Day Gap) Complete ===")
+message("=== Phase 3 Cancer Site Confirmation Complete ===")

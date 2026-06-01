@@ -1,11 +1,11 @@
 # =============================================================================
-# Phase 02: Build Code Description Lookup
+# Phase 42: Build Code Description Lookup
 # =============================================================================
 # Creates a static named character vector mapping treatment codes to human-readable
 # descriptions. Combined from 4 sources in precedence order (last wins):
 #   1. Phase 39 RDS: unmatched_codes_classified.rds (CPT/HCPCS NLM API results)
 #   2. Phase 40 RDS: unmatched_ndc_classified.rds (NDC/RXNORM RxNorm API results)
-#   3. R/45 hardcoded_descriptions: retired radiation CPT codes (31 entries)
+#   3. R/42 hardcoded_descriptions: retired radiation CPT codes (31 entries)
 #   4. R/00_config.R inline comments: original curated codes with human descriptions
 #
 # Decision traceability:
