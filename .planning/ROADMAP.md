@@ -56,7 +56,7 @@
 
 - [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
 - [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
-- [ ] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress)
+- [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
 - [ ] **Phase 68: Output & Test Reorganization** - To be repurposed (original scope absorbed by Phase 66)
 - [ ] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments
 - [ ] **Phase 70: Automated Formatting** - Apply styler and configure lintr

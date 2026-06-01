@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
-status: executing
-last_updated: "2026-06-01T20:34:29.871Z"
+status: verifying
+last_updated: "2026-06-01T21:21:43.415Z"
 progress:
   total_phases: 10
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -21,15 +21,15 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Phase 67 complete — cancer-payer-qa-reorganization
+**Current Focus:** Phase 67 — cancer-payer-qa-reorganization
 
 ## Current Position
 
 Phase: 67 (cancer-payer-qa-reorganization) — COMPLETE
-Plan: 1 of 1 (67-01-PLAN.md complete)
+Plan: 2 of 2
 **Phase:** 67
-**Plan:** 1 of 1 complete
-**Status:** Phase 67 Complete
+**Plan:** 2 of 2 complete
+**Status:** Phase complete — ready for next phase
 **Progress:** [██████████] 100%
 
 ### Phase Goal
@@ -70,6 +70,9 @@ Post-Renumbering Inventory Cleanup: resolve 66-prefix collision by moving smoke 
 - Move smoke test from payer decade (66) to test decade (87) to resolve semantic collision
 - Archive 8 unnumbered scripts to R/archive/ with README (safe-to-delete assessment for future maintenance)
 - Regenerate SCRIPT_INDEX.md from filesystem rather than manual patch to guarantee accuracy
+- D-07: SCRIPT_INDEX payer decade must list all 10 scripts (60-69) matching filesystem exactly
+- D-08: Smoke test payer_expected array must contain all 10 script names with correct numbers
+- D-09: ROADMAP success criteria already correct (10 scripts); only plan tracking needed update
 
 ### Open Questions
 
@@ -87,24 +90,26 @@ _No todos yet._
 
 ### What Just Happened
 
-- Phase 67 complete: Post-renumbering inventory cleanup finished
-- Plan 67-01 complete: Smoke test moved to 87, 8 scripts archived, SCRIPT_INDEX regenerated
-- Smoke test moved from R/66_smoke_test_full_pipeline.R to R/87_smoke_test_full_pipeline.R
-- 8 unnumbered scripts archived to R/archive/ (git mv preserves history)
-- R/archive/README.md created with per-script documentation and safe-to-delete guidance
-- SCRIPT_INDEX.md regenerated: Payer/QA=9, Tests=8, Archived=8
+- Phase 67 complete: Post-renumbering inventory cleanup finished with gap closure
+- Plan 67-01 complete: Smoke test moved to 87, 8 scripts archived, SCRIPT_INDEX regenerated (commits: bceaa62, f60a9f1, de2b54e)
+- Plan 67-02 complete: Fixed 3 documentation gaps found by verification (commits: e626fde, 021a4b9)
+  - SCRIPT_INDEX.md payer section corrected: now lists all 10 scripts (60-69) with correct names
+  - Smoke test payer_expected array corrected: 10 scripts with correct names, count check /10 with threshold >= 8
+  - ROADMAP.md plan tracking updated: 2/2 plans complete, Phase 67 marked complete
+- Final state: All documentation aligns with filesystem reality (10 payer scripts at 60-69)
 - Zero unnumbered .R files remain in R/ root
-- 3 atomic commits: bceaa62, f60a9f1, de2b54e
+- 5 atomic commits total (3 from 67-01, 2 from 67-02)
 
 ### Current Task
 
-Phase 67 complete. Ready for next phase.
+Phase 67 complete with all gaps closed. Ready for next phase.
 
 ### Next Actions
 
-1. Run R/87_smoke_test_full_pipeline.R to validate full pipeline integrity
-2. Begin Phase 68 (documentation: section headers, key-logic comments, reference manual)
-3. Continue with DRY-01 (consolidate PREFIX_MAP duplication) in Phase 73
+1. Run R/87_smoke_test_full_pipeline.R to validate full pipeline integrity (payer decade check should now pass)
+2. Begin Phase 68 (to be repurposed — original scope absorbed by Phase 66)
+3. Or proceed to Phase 69 (script documentation: section headers, key-logic comments)
+4. Eventually: Phase 73 (DRY-01: consolidate PREFIX_MAP duplication)
 
 ---
 *State initialized: 2026-06-01*
