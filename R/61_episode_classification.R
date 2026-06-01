@@ -23,6 +23,10 @@
 #   D-12: Added-agent disqualification (ABVD + extra chemo agent → NA)
 #   D-13: BV+AVD requires episode_start >= 2019-01-01; Nivo+AVD >= 2024-01-01
 #   D-14: Non-matching chemotherapy episodes get regimen_label = NA
+#   D-19: J-code fallback: episodes without drug_names use J9xxx billing codes from
+#         triggering_codes for regimen detection (J9000=dox, J9040=bleo, J9360=vin,
+#         J9130=dac, J9042=brex, J9299=nivo). Drug_names detection takes priority.
+#   D-20: Added-agent disqualification for J-codes uses count of distinct J9xxx codes
 #   D-15: treatment_episodes.rds modified in-place (readRDS → enrich → saveRDS)
 #   D-16: Final column order: patient_id through regimen_label (15 columns total)
 #   D-17: Multi-sheet audit xlsx following R/59 pattern with openxlsx2
@@ -343,9 +347,21 @@ classify_codes <- function(codes) {
   unname(categories)
 }
 
-# has_drug: helper for regimen detection
+# has_drug: helper for regimen detection via resolved drug names
 has_drug <- function(drug_names, drug_substring) {
   str_detect(tolower(drug_names), fixed(tolower(drug_substring)))
+}
+
+# has_jcode: helper for regimen detection via J-code billing codes in triggering_codes
+# J-codes are drug-specific HCPCS codes (e.g., J9000 = doxorubicin)
+has_jcode <- function(triggering_codes, jcode) {
+  str_detect(triggering_codes, fixed(jcode))
+}
+
+# Count distinct J9xxx codes in triggering_codes (for added-agent disqualification)
+count_j9_codes <- function(triggering_codes) {
+  codes <- str_split(triggering_codes, ",")
+  sapply(codes, function(x) sum(str_detect(x, "^J9\\d")))
 }
 
 
@@ -541,20 +557,101 @@ chemo_regimens <- chemo_regimens %>%
   ) %>%
   select(-starts_with("has_"), -n_unique_drugs)
 
-# Step 5e: Merge regimen_label back to full episodes
+# Step 5e: Merge drug_names-based regimen_label back to full episodes
 regimen_assignments <- chemo_regimens %>%
   select(patient_id, treatment_type, episode_number, regimen_label)
 
 episodes <- episodes %>%
   left_join(regimen_assignments, by = c("patient_id", "treatment_type", "episode_number"))
 
+n_drug_abvd <- sum(episodes$regimen_label == "ABVD", na.rm = TRUE)
+n_drug_bv <- sum(episodes$regimen_label == "BV+AVD", na.rm = TRUE)
+n_drug_nivo <- sum(episodes$regimen_label == "Nivo+AVD", na.rm = TRUE)
+n_drug_total <- n_drug_abvd + n_drug_bv + n_drug_nivo
+
+message(glue("  Drug-name regimen detection: {n_drug_abvd} ABVD, {n_drug_bv} BV+AVD, {n_drug_nivo} Nivo+AVD ({n_drug_total} total)"))
+
+# --- Step 5f: J-code fallback for episodes still without regimen_label ---
+# J-codes are drug-specific HCPCS billing codes (J9000=doxorubicin, J9040=bleomycin, etc.)
+# These appear in triggering_codes for ~42% of chemo episodes that lack resolved drug_names.
+
+message("\n  J-code fallback for unclassified chemo episodes...")
+
+chemo_no_regimen <- episodes %>%
+  filter(treatment_type == "Chemotherapy") %>%
+  filter(is.na(regimen_label)) %>%
+  filter(!is.na(triggering_codes) & triggering_codes != "") %>%
+  filter(str_detect(triggering_codes, "J9"))
+
+message(glue("  Chemo episodes without regimen but with J9 codes: {nrow(chemo_no_regimen)}"))
+
+if (nrow(chemo_no_regimen) > 0) {
+  jcode_regimens <- chemo_no_regimen %>%
+    mutate(
+      has_dox  = has_jcode(triggering_codes, "J9000"),
+      has_bleo = has_jcode(triggering_codes, "J9040"),
+      has_vin  = has_jcode(triggering_codes, "J9360"),
+      has_dac  = has_jcode(triggering_codes, "J9130"),
+      has_brex = has_jcode(triggering_codes, "J9042"),
+      has_nivo = has_jcode(triggering_codes, "J9299"),
+      n_j9_codes = count_j9_codes(triggering_codes)
+    ) %>%
+    mutate(
+      jcode_regimen = case_when(
+        # BV+AVD via J-codes: brentuximab + dox + vin + dac, no bleomycin, post-2019
+        has_brex & has_dox & has_vin & has_dac & !has_bleo & n_j9_codes == 4L &
+          episode_start >= as.Date("2019-01-01") ~ "BV+AVD",
+
+        # Nivo+AVD via J-codes: nivolumab + dox + vin + dac, no bleomycin, post-2024
+        has_nivo & has_dox & has_vin & has_dac & !has_bleo & n_j9_codes == 4L &
+          episode_start >= as.Date("2024-01-01") ~ "Nivo+AVD",
+
+        # ABVD (full) via J-codes: all 4 ABVD drugs, no brentuximab, no nivolumab, max 4 J9 codes
+        has_dox & has_bleo & has_vin & has_dac & !has_brex & !has_nivo & n_j9_codes <= 4L ~ "ABVD",
+
+        # AVD variant via J-codes: dox + vin + dac, no bleo, no brex, no nivo, max 3 J9 codes
+        has_dox & has_vin & has_dac & !has_bleo & !has_brex & !has_nivo & n_j9_codes <= 3L ~ "ABVD",
+
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    filter(!is.na(jcode_regimen)) %>%
+    select(patient_id, treatment_type, episode_number, jcode_regimen)
+
+  n_jcode_abvd <- sum(jcode_regimens$jcode_regimen == "ABVD")
+  n_jcode_bv <- sum(jcode_regimens$jcode_regimen == "BV+AVD")
+  n_jcode_nivo <- sum(jcode_regimens$jcode_regimen == "Nivo+AVD")
+  n_jcode_total <- nrow(jcode_regimens)
+
+  message(glue("  J-code regimen detection: {n_jcode_abvd} ABVD, {n_jcode_bv} BV+AVD, {n_jcode_nivo} Nivo+AVD ({n_jcode_total} total)"))
+
+  # Merge J-code regimens into episodes (only where regimen_label is still NA)
+  if (nrow(jcode_regimens) > 0) {
+    episodes <- episodes %>%
+      left_join(jcode_regimens, by = c("patient_id", "treatment_type", "episode_number")) %>%
+      mutate(
+        regimen_label = if_else(is.na(regimen_label) & !is.na(jcode_regimen), jcode_regimen, regimen_label)
+      ) %>%
+      select(-jcode_regimen)
+  }
+} else {
+  message("  No chemo episodes with J9 codes found for fallback detection.")
+}
+
+# --- Step 5g: Final regimen summary ---
 n_abvd <- sum(episodes$regimen_label == "ABVD", na.rm = TRUE)
 n_bv <- sum(episodes$regimen_label == "BV+AVD", na.rm = TRUE)
 n_nivo <- sum(episodes$regimen_label == "Nivo+AVD", na.rm = TRUE)
+n_total_labeled <- n_abvd + n_bv + n_nivo
 n_unclassified_chemo <- sum(episodes$treatment_type == "Chemotherapy" & is.na(episodes$regimen_label))
 n_non_chemo <- sum(episodes$treatment_type != "Chemotherapy")
 
-message(glue("  Regimen detection: {n_abvd} ABVD, {n_bv} BV+AVD, {n_nivo} Nivo+AVD, {n_unclassified_chemo} unclassified chemo, {n_non_chemo} non-chemotherapy"))
+message(glue("\n  Final regimen detection (drug_names + J-code fallback):"))
+message(glue("    ABVD: {n_abvd} (drug_names: {n_drug_abvd}, J-code: {n_abvd - n_drug_abvd})"))
+message(glue("    BV+AVD: {n_bv} (drug_names: {n_drug_bv}, J-code: {n_bv - n_drug_bv})"))
+message(glue("    Nivo+AVD: {n_nivo} (drug_names: {n_drug_nivo}, J-code: {n_nivo - n_drug_nivo})"))
+message(glue("    Total labeled: {n_total_labeled} / {n_total_labeled + n_unclassified_chemo} chemo ({round(n_total_labeled / (n_total_labeled + n_unclassified_chemo) * 100, 1)}%)"))
+message(glue("    Unclassified chemo: {n_unclassified_chemo}, Non-chemo: {n_non_chemo}"))
 
 
 # --- SECTION 6: SAVE ENRICHED RDS ---
