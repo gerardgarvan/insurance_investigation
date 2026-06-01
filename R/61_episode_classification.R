@@ -465,6 +465,13 @@ message(glue("  Temporal fallback (30-day backward): {n_temporal_linked} episode
 # Step 4e: Combine and merge back to episodes
 cancer_linkage <- bind_rows(encounter_linked, temporal_linked)
 
+# Drop columns from prior run to avoid .x/.y suffixes on re-run
+cols_from_linkage <- intersect(names(cancer_linkage), names(episodes))
+cols_from_linkage <- setdiff(cols_from_linkage, c("patient_id", "treatment_type", "episode_number"))
+if (length(cols_from_linkage) > 0) {
+  episodes <- episodes %>% select(-all_of(cols_from_linkage))
+}
+
 episodes <- episodes %>%
   left_join(cancer_linkage, by = c("patient_id", "treatment_type", "episode_number")) %>%
   mutate(
@@ -560,6 +567,11 @@ chemo_regimens <- chemo_regimens %>%
 # Step 5e: Merge drug_names-based regimen_label back to full episodes
 regimen_assignments <- chemo_regimens %>%
   select(patient_id, treatment_type, episode_number, regimen_label)
+
+# Drop regimen_label from prior run to avoid .x/.y suffixes on re-run
+if ("regimen_label" %in% names(episodes)) {
+  episodes <- episodes %>% select(-regimen_label)
+}
 
 episodes <- episodes %>%
   left_join(regimen_assignments, by = c("patient_id", "treatment_type", "episode_number"))
