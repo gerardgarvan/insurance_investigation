@@ -69,29 +69,29 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REORG-01 | TBD | Pending |
-| REORG-02 | TBD | Pending |
-| REORG-03 | TBD | Pending |
-| REORG-04 | TBD | Pending |
-| REORG-05 | TBD | Pending |
-| DOC-01 | TBD | Pending |
-| DOC-02 | TBD | Pending |
-| DOC-03 | TBD | Pending |
-| DOC-04 | TBD | Pending |
-| SAFE-01 | TBD | Pending |
-| SAFE-02 | TBD | Pending |
-| SAFE-03 | TBD | Pending |
-| SAFE-04 | TBD | Pending |
-| SAFE-05 | TBD | Pending |
-| SAFE-06 | TBD | Pending |
-| DRY-01 | TBD | Pending |
-| DRY-02 | TBD | Pending |
+| REORG-01 | Phase 65, 66, 67, 68 | Pending |
+| REORG-02 | Phase 66, 67, 68 | Pending |
+| REORG-03 | Phase 65 | Pending |
+| REORG-04 | Phase 68 | Pending |
+| REORG-05 | Phase 68, 74 | Pending |
+| DOC-01 | Phase 69 | Pending |
+| DOC-02 | Phase 69 | Pending |
+| DOC-03 | Phase 69 | Pending |
+| DOC-04 | Phase 74 | Pending |
+| SAFE-01 | Phase 72 | Pending |
+| SAFE-02 | Phase 72 | Pending |
+| SAFE-03 | Phase 72 | Pending |
+| SAFE-04 | Phase 70 | Pending |
+| SAFE-05 | Phase 70, 71 | Pending |
+| SAFE-06 | Phase 74 | Pending |
+| DRY-01 | Phase 73 | Pending |
+| DRY-02 | Phase 73 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 17 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 17
+- Mapped to phases: 17 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-01*
-*Last updated: 2026-06-01 after initial definition*
+*Last updated: 2026-06-01 after roadmap creation*

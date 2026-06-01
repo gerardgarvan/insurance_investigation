@@ -1,77 +1,72 @@
----
-gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Codebase Cleanup & Documentation
-status: planning
-stopped_at: Defining requirements
-last_updated: "2026-06-01"
-last_activity: 2026-06-01
-progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
----
+# State: v2.0 Codebase Cleanup & Documentation
 
-# Project State
+**Last Updated:** 2026-06-01
+**Current Milestone:** v2.0 Codebase Cleanup & Documentation
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-01)
+**Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-
-**Current focus:** Defining requirements for v2.0
+**Current Focus:** Reorganize, harden, and document the entire R pipeline for maintainability and onboarding.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Progress: 8 milestones shipped (v1.0-v1.8), starting v2.0
-Last activity: 2026-06-01 — Milestone v2.0 started
+**Phase:** 65 — Foundation Reorganization
+**Plan:** Not started
+**Status:** Ready to plan
+**Progress:** █░░░░░░░░░ 0% (Phase 65 of 74)
+
+### Phase Goal
+Foundation scripts (config, data loading, payer harmonization) are renumbered to 00-09 with utils/ folder structure established.
 
 ## Performance Metrics
 
+**Milestone Progress:**
+- Phases: 0/10 complete (0%)
+- Plans: 0/0 complete (N/A)
+- Tasks: 0/0 complete (N/A)
+
 **Velocity:**
+- Total plans completed (all milestones): 94
+- v1.8 velocity: 4 phases, 6 plans (2026-05-29 to 2026-06-01)
+- Average execution time: varies by phase complexity
 
-- Total plans completed: 94 (across v1.0-v1.8)
-- Average duration: varies by phase complexity
-- Total execution time: ~90 hours
-
-**By Milestone:**
-
-- v1.8 (Phases 60-63): 4 phases, 6 plans, shipped 2026-06-01
-- v1.7 (Phases 55-59): 5 phases, shipped 2026-05-28
-- v1.6 (Phases 45-54): 10 phases, 13 plans, shipped 2026-05-22
-- v1.5 (Phases 34-37): 4 phases, 4 plans, shipped 2026-05-01
-- v1.4 (Phase 33): 1 phase, 2 plans, shipped 2026-04-27
-- v1.3 (Phases 29-32): 4 phases, 4 plans, shipped 2026-04-23
+**Active Milestone Started:** 2026-06-01
 
 ## Accumulated Context
 
-### Decisions
+### Key Decisions This Milestone
 
-Decisions are logged in PROJECT.md Key Decisions table.
+_No decisions logged yet._
 
-### Pending Todos
+### Open Questions
 
-None — starting fresh milestone.
+_No open questions yet._
 
-### Roadmap Evolution
+### Active Todos
 
-v2.0 milestone initialized — Codebase Cleanup & Documentation
+_No todos yet._
 
-### Blockers/Concerns
+### Known Blockers
 
-- PREFIX_MAP duplication across R/47, R/53, R/54, R/49 — targeted for consolidation in v2.0 (DRY-01)
+- PREFIX_MAP duplication across R/47, R/53, R/54, R/49 — targeted for consolidation in Phase 73 (DRY-01)
 
 ## Session Continuity
 
-Last session: 2026-06-01
-Stopped at: Defining requirements for v2.0
-Resume file: None
-Next step: Complete requirements definition and roadmap creation
+### What Just Happened
+- Roadmap created for v2.0 milestone
+- 17 requirements mapped to 10 phases (65-74)
+- Coverage: 17/17 requirements mapped (100%)
+- Phase sequencing: REORG (65-68) → DOC (69) → SAFE (70-72) → DRY (73) → Integration (74)
+
+### Current Task
+Ready to plan Phase 65 (Foundation Reorganization)
+
+### Next Actions
+1. Run `/gsd:plan-phase 65` to create execution plan for foundation reorganization
+2. Begin renumbering foundation scripts (00-09) and creating utils/ folder structure
+3. Update source() calls referencing foundation scripts
+4. Create and run smoke test for foundation dependencies
 
 ---
-*Last updated: 2026-06-01 — v2.0 milestone started*
+*State initialized: 2026-06-01*
