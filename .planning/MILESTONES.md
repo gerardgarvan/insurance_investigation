@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification (Shipped: 2026-06-01)
+
+**Phases completed:** 4 phases (Phases 60-63), 6 plans
+
+**Delivered:** Encounter-level cancer linkage, first-line HL regimen identification (ABVD, BV+AVD, Nivo+AVD), first-line therapy flagging for adults 21+, death date analysis tables, and Gantt v2 CSV export with all enhancements.
+
+**Key accomplishments:**
+
+- ENCOUNTERID propagation through treatment episodes + drug name resolution via RxNorm API with standalone lookup table (Phase 60)
+- Encounter-level cancer linkage replacing patient-level joins, using ENCOUNTERID direct match + 30-day temporal fallback (Phase 61)
+- First-line HL regimen detection (ABVD, BV+AVD, Nivo+AVD) with dropped-agent tolerance, added-agent disqualification, and temporal availability rules (Phase 61)
+- First-line therapy flagging for adults 21+ with 60-day clean period + death date data quality analysis (1,295 validated deaths, 253 with post-death activity) (Phase 62)
+- Gantt v2 CSV export with encounter-level cancer categories, regimen labels, first-line flags, and Death/HL Diagnosis pseudo-treatment rows (Phase 63)
+
+**Git range:** `57e505a..31bab97` (21 commits, 2026-05-29 to 2026-06-01)
+**Code:** 2,153 LOC R (4 scripts: R/60, R/61, R/62, R/63) + modifications to R/43a, R/44a, R/00_config.R, R/49
+
+---
+
 ## v1.5 Payer Analysis Expansion (Shipped: 2026-05-01)
 
 **Phases completed:** 4 phases (Phases 34-37), 4 plans, 5 tasks

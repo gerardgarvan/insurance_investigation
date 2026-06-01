@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files for a Hodgkin Lymphoma cohort (OneFlorida+), builds a filtered cohort using human-readable named predicates, and produces attrition waterfall and Sankey/alluvial visualizations stratified by payer type. Runs on RStudio on HiPerGator.
+A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files for a Hodgkin Lymphoma cohort (OneFlorida+), builds a filtered cohort using human-readable named predicates, extracts treatment episodes with encounter-level cancer linkage and regimen identification, and produces payer-stratified analyses. Runs on RStudio on HiPerGator.
 
 ## Core Value
 
@@ -39,33 +39,18 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Tiered same-day payer resolution with Amy Crisp hierarchy (R/36) — v1.5 Phase 35
 - [x] AMC 8-category centralized payer mapping in R/00_config.R — v1.5 Phase 36
 - [x] 8-tier resolution hierarchy with distinct Other govt tier — v1.5 Phase 37
+- [x] Encounter-level cancer category linkage replacing patient-level join — v1.8 Phase 61
+- [x] HL flag on encounter, not patient — v1.8 Phase 61
+- [x] Drop ICD diagnosis codes from SCT detection — v1.8 Phase 60
+- [x] First-line therapy regimen labeling (ABVD, BV+AVD, Nivo+AVD) for adults 21+ — v1.8 Phase 61/62
+- [x] Death date analysis table — v1.8 Phase 62
+- [x] New Gantt output files preserving existing versions — v1.8 Phase 63
 
 ### Active
 
 - [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
-- [x] Encounter-level cancer category linkage replacing patient-level join — v1.8 Phase 61
-- [x] HL flag on encounter, not patient — v1.8 Phase 61
-- [x] Death date analysis table — v1.8 Phase 62
-- [x] Drop ICD diagnosis codes from SCT detection — v1.8 Phase 60
-- [ ] First-line therapy regimen labeling (ABVD, BV+AVD, Nivo+AVD) for adults 21+
-- [x] New Gantt output files preserving existing versions — v1.8 Phase 63
-
-## Current Milestone: v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification
-
-**Goal:** Link cancer diagnoses to specific treatment episodes via encounter IDs, identify first-line HL therapy regimens (ABVD, BV+AVD, Nivo+AVD), tighten treatment source validation, and produce death date analysis.
-
-**Target features:**
-- Replace patient-level cancer category with encounter-level linkage (encounter ID match, fallback to closest diagnosis in time)
-- HL flag on the encounter, not the patient
-- Second cancer confirmation with 7-day-apart rule
-- Death date analysis table (count with death dates, death as last encounter, encounters after death)
-- Drop ICD diagnosis codes from SCT detection — PROCEDURES, PRESCRIBING, DISPENSING only
-- Label treatment episodes with specific regimen names (ABVD, BV+AVD, Nivo+AVD) using granular drug names
-- First-line therapy for adults 21+: 28-day cycle matching for the 3 regimen combinations
-- Agents can be dropped (ABVD→AVD) and still count as first-line; nothing else added
-- New Gantt output files (preserve existing versions)
 
 ### Out of Scope
 
@@ -75,8 +60,29 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - RMarkdown / Shiny rendering — v1 produces raw R scripts and PNG figures
 - Replicating Python pipeline's data cleaning — R pipeline applies its own filter chain
 - Publication-ready figure formatting — exploratory quality is sufficient
+- PREFIX_MAP centralization to R/00_config.R — acceptable duplication; consider in future cleanup
+- Stanford V / BEACOPP regimen identification — only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line
+- Pediatric protocols (age <21) — adult protocols only for v1.x
+- Multi-line therapy sequencing — requires episode boundary formalization first
+
+## Current State
+
+**Shipped:** v1.8 (2026-06-01)
+
+**Pipeline status:** 63 phases completed across 8 milestones. ~64 R scripts. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. No active milestone — next milestone TBD.
 
 ## Previous Milestones
+
+### v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification (Shipped 2026-06-01)
+
+**Goal:** Link cancer diagnoses to specific treatment episodes via encounter IDs, identify first-line HL therapy regimens, tighten treatment source validation, and produce death date analysis.
+
+**Shipped:**
+- ENCOUNTERID propagation through treatment episodes + drug name resolution via RxNorm API (Phase 60)
+- Encounter-level cancer linkage replacing patient-level joins (Phase 61)
+- First-line HL regimen detection (ABVD, BV+AVD, Nivo+AVD) with dropped-agent tolerance (Phase 61)
+- First-line therapy flagging for adults 21+ + death date analysis tables (Phase 62)
+- Gantt v2 CSV export with encounter-level cancer, regimen labels, first-line flags (Phase 63)
 
 ### v1.7 Cancer Summary Refinement & Gantt Enhancements (Shipped 2026-05-28)
 
@@ -110,7 +116,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - R/35_payer_code_frequency_av_th.R — payer code frequency with xlsx cross-reference (Phase 34)
 - R/36_tiered_same_day_payer.R — dual-scope frequency + hierarchical same-day payer resolution (Phase 35)
 - AMC_PAYER_LOOKUP centralized in R/00_config.R, eliminating xlsx runtime dependency (Phase 36)
-- 8-tier hierarchy with distinct "Other govt" tier (Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing) (Phase 37)
+- 8-tier hierarchy with distinct "Other govt" tier (Phase 37)
 
 ### v1.4 AV+TH Subset Analysis (Shipped 2026-04-27)
 
@@ -152,7 +158,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 63 phases completed across 8 milestones (v1.0-v1.8), ~64 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt v1 CSVs with human-readable code descriptions + Gantt v2 CSVs with encounter-level cancer categories/regimen labels/first-line flags, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows in Gantt output, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only, encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD), first-line therapy flagging infrastructure (is_first_line column in treatment_episodes.rds), death date data quality analysis (1,295 validated deaths, 253 with post-death activity)
+- **Current state**: 63 phases completed across 8 milestones (v1.0-v1.8), ~64 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt v1 CSVs with human-readable code descriptions + Gantt v2 CSVs with encounter-level cancer categories/regimen labels/first-line flags, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only, encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD), first-line therapy flagging (is_first_line column in treatment_episodes.rds), death date data quality analysis (1,295 validated deaths, 253 with post-death activity)
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -173,9 +179,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Standalone R (not consuming Python output) | Enables independent exploration without Python pipeline dependency | — Pending |
+| Standalone R (not consuming Python output) | Enables independent exploration without Python pipeline dependency | ✓ Good |
 | Replicate exact payer logic from Python pipeline | Ensures results are comparable across both pipelines | ✓ Phase 2 |
-| Cohort + viz only for v1 | Focus on getting the filter chain and visualizations working before adding analysis tables | — Pending |
 | Named predicate functions for filtering | Readability — code should read like a clinical protocol | ✓ Phase 3 |
 | Treatment flag detection from multiple sources | TUMOR_REGISTRY dates (primary) + PROCEDURES/PRESCRIBING codes (supplemental) for maximum coverage | ✓ Phase 3 |
 | Primary site strategy for multi-site patients | Inner join on SOURCE to keep enrollment from patient's primary site | ✓ Phase 3 |
@@ -193,6 +198,10 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Encounter-level cancer linkage replaces patient-level | Episode-specific cancer categories are clinically meaningful; patient-level conflates unrelated diagnoses | ✓ Phase 61 |
 | Drop ICD DX codes from SCT detection | Diagnosis codes indicate history/status, not procedure occurrence — PROCEDURES/PRESCRIBING/DISPENSING are authoritative | ✓ Phase 60 |
 | New Gantt files instead of overwriting | Preserves existing v1.7 output for comparison | ✓ Phase 63 |
+| Drug name resolution for chemotherapy only | Other treatment types identified adequately by code; chemotherapy requires specific drug names for regimen matching | ✓ Phase 60 |
+| Regimen detection via 28-day cycle composition | ABVD/BV+AVD/Nivo+AVD have distinct drug fingerprints; dropped-agent tolerance handles real-world practice variation | ✓ Phase 61 |
+| First-line therapy: 60-day clean period | Standard oncology definition; no prior chemotherapy in 60 days before regimen start | ✓ Phase 62 |
+| Gantt v2 as superset of v1 schema | All 14 v1 columns preserved plus 3 new columns; downstream tools can consume either version | ✓ Phase 63 |
 
 ## Evolution
 
@@ -212,4 +221,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 — Phase 63 complete (Gantt v2 export with encounter-level cancer, regimen labels, first-line flags)*
+*Last updated: 2026-06-01 after v1.8 milestone*
