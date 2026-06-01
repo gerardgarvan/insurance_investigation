@@ -78,8 +78,9 @@ Payer tiering, missingness analysis, multi-source overlap detection, and value a
 | 63_value_audit.R | Comprehensive value audit: every distinct value for every column in every PCORnet table | 01_load_pcornet |
 | 64_all_source_missingness.R | All-source payer missingness: extends Phase 19 UFH analysis to all 5 partner sites | 02_harmonize_payer |
 | 65_uf_insurance_missingness.R | UFH-specific payer data missingness diagnostic by year, encounter type | 02_harmonize_payer |
-| 67_all_site_duplicate_dates.R | All-site duplicate date investigation: extends Phase 20 FLM analysis to all sites | 00_config |
-| 68_multi_source_overlap_detection.R | Detect same-date and same-week encounter pairs from different ENCOUNTER.SOURCE values (all encounter types) | 00_config |
+| 66_all_site_duplicate_dates.R | All-site duplicate date investigation: extends Phase 20 FLM analysis to all sites | 00_config |
+| 67_multi_source_overlap_detection.R | Detect same-date and same-week encounter pairs from different ENCOUNTER.SOURCE values (all encounter types) | 00_config |
+| 68_overlap_classification.R | Classify multi-source encounter groups (same-date/same-week) as Identical, Partial, or Distinct with per-site recommendations | 00_config |
 | 69_per_patient_source_detection.R | Per-patient source detection by date: which SOURCE values present on each patient-date | 00_config |
 
 ## Output & Visualization (70-75)
@@ -108,7 +109,7 @@ Backend parity tests, cohort benchmarks, treatment verification, and smoke tests
 | 84_test_durations.R | Verification script: clinical plausibility checks, structural validation, anomaly detection for treatment_durations.rds | 00_config, 25_treatment_durations |
 | 85_test_episodes.R | Verification script: structural, data quality, historical flag, clinical plausibility checks for treatment_episodes.rds | 00_config, 26_treatment_episodes |
 | 86_smoke_test_foundation.R | Validates Phase 65 foundation reorganization (utils subfolder, script renumbering, source references) | 00_config |
-| 87_smoke_test_full_pipeline.R | Validates Phase 66 complete reorganization (outputs, tests, ad-hoc decades) and Phase 67 cleanup (87 in test decade, 9 payer scripts, archive created) | (standalone) |
+| 87_smoke_test_full_pipeline.R | Validates Phase 66 complete reorganization (outputs, tests, ad-hoc decades) and Phase 67 cleanup (87 in test decade, 10 payer scripts, archive created) | (standalone) |
 
 ## Ad-hoc & Diagnostics (90-99)
 
@@ -171,14 +172,14 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Cohort (10-14): 5
   - Treatment (20-29): 10
   - Cancer (40-53): 14
-  - Payer/QA (60-69): 9
+  - Payer/QA (60-69): 10
   - Outputs (70-75): 6
   - Tests (80-87): 8
   - Ad-hoc (90-99): 10
-  - **Total numbered:** 66
+  - **Total numbered:** 67
 - **Utility libraries:** 8 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 82
+- **Total:** 83
 
 ## Key Dependency Chains
 

@@ -108,14 +108,15 @@ message("\n[5/12] Payer/QA decade (60-69)...")
 payer_expected <- c("60_tiered_same_day_payer.R", "61_tiered_encounter_level.R",
                     "62_tiered_date_level.R", "63_value_audit.R",
                     "64_all_source_missingness.R", "65_uf_insurance_missingness.R",
-                    "67_all_site_duplicate_dates.R",
-                    "68_multi_source_overlap_detection.R", "69_per_patient_source_detection.R")
+                    "66_all_site_duplicate_dates.R",
+                    "67_multi_source_overlap_detection.R",
+                    "68_overlap_classification.R", "69_per_patient_source_detection.R")
 payer_found <- 0L
 for (s in payer_expected) {
   if (file.exists(file.path("R", s))) payer_found <- payer_found + 1L
 }
-check(glue("Payer/QA decade scripts: {payer_found}/9 present"),
-      payer_found >= 7)
+check(glue("Payer/QA decade scripts: {payer_found}/10 present"),
+      payer_found >= 8)
 
 # --------------------------------------------------------------------------
 # Test 6: Output decade (70-75) -- 6 scripts per D-04
