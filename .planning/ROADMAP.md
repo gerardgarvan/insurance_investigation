@@ -46,7 +46,14 @@
 ### Phase 64: Clean up Gantt 2 output for coherent chart generation
 
 **Goal:** Clean the Gantt v2 CSV outputs (gantt_episodes_v2.csv, gantt_detail_v2.csv) for direct Tableau import by fixing multi-value separators, simplifying drug names, removing literal NA text, filling blank descriptions and cancer categories, and trimming to essential columns.
-**Requirements**: GANTT-CLEAN-01 through GANTT-CLEAN-07
+**Requirements**:
+  - GANTT-CLEAN-01: Replace comma separators with semicolons in multi-value fields
+  - GANTT-CLEAN-02: Deduplicate and remove blank entries from multi-value fields
+  - GANTT-CLEAN-03: Simplify drug names to generic names only
+  - GANTT-CLEAN-04: Convert NA values to true empty strings in CSV output
+  - GANTT-CLEAN-05: Fill pseudo-treatment descriptions with treatment_type value
+  - GANTT-CLEAN-06: Fill blank cancer_category with "Unlinked" label
+  - GANTT-CLEAN-07: Trim to essential columns (14 episodes, 13 detail)
 **Depends on:** Phase 63
 **Plans:** 1 plan
 
