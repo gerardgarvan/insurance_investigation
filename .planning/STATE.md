@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Phases
 status: completed
-stopped_at: Completed 61-01-PLAN.md
-last_updated: "2026-05-31T21:50:59.196Z"
+stopped_at: Phase 63 context gathered
+last_updated: "2026-06-01T01:39:44.245Z"
 last_activity: 2026-05-31
 progress:
-  total_phases: 61
+  total_phases: 62
   completed_phases: 51
   total_plans: 93
   completed_plans: 87
@@ -105,9 +105,9 @@ v1.8 roadmap created with coarse granularity (4 phases vs research-suggested 7):
 
 ## Session Continuity
 
-Last session: 2026-05-30T22:36:42Z
-Stopped at: Completed 61-01-PLAN.md
-Resume file: .planning/phases/61-episode-classification-cancer-linkage-and-regimen-detection/61-01-SUMMARY.md
+Last session: 2026-06-01T01:39:44.234Z
+Stopped at: Phase 63 context gathered
+Resume file: .planning/phases/63-enhanced-gantt-export/63-CONTEXT.md
 Next step: `/gsd:transition` to move to Phase 62 (first-line-therapy-and-death-analysis)
 
 ---
