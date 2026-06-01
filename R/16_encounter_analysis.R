@@ -14,7 +14,7 @@
 #
 # ==============================================================================
 
-source("R/04_build_cohort.R")
+source("R/14_build_cohort.R")
 
 library(ggplot2)
 library(dplyr)

@@ -11,10 +11,10 @@
 # Dependencies:
 #   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
 #     encounters, payer_summary in the global environment)
-#   - 10_treatment_payer.R sourced via 04_build_cohort.R
+#   - 11_treatment_payer.R sourced via 14_build_cohort.R
 #
 # Usage:
-#   source("R/04_build_cohort.R")
+#   source("R/14_build_cohort.R")
 #   source("R/12_no_treatment_medicaid.R")
 #
 # ==============================================================================

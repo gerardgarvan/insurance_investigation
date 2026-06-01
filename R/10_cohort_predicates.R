@@ -1,5 +1,5 @@
 # ==============================================================================
-# 03_cohort_predicates.R -- Named filter predicates for HL cohort building
+# 10_cohort_predicates.R -- Named filter predicates for HL cohort building
 # ==============================================================================
 #
 # Defines tibble-in/tibble-out filter functions following the project's named
@@ -23,7 +23,7 @@
 #
 # Usage:
 #   source("R/02_harmonize_payer.R")  # Loads everything upstream
-#   source("R/03_cohort_predicates.R")
+#   source("R/10_cohort_predicates.R")
 #   cohort <- get_pcornet_table("DEMOGRAPHIC") %>%
 #     select(ID, SOURCE) %>%
 #     has_hodgkin_diagnosis() %>%

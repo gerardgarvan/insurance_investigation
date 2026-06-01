@@ -54,7 +54,7 @@ time_cohort_build <- function(backend, run_number) {
 
   # Time the cohort build only (D-10)
   start_time <- proc.time()
-  source("R/04_build_cohort.R", local = FALSE)
+  source("R/14_build_cohort.R", local = FALSE)
   elapsed <- proc.time() - start_time
 
   # Capture result dimensions for verification

@@ -346,12 +346,12 @@ tryCatch({
   cat("\nERROR in 02_harmonize_payer.R:", conditionMessage(e), "\n")
 })
 
-cat("\n\nRunning 04_build_cohort.R...\n\n")
+cat("\n\nRunning 14_build_cohort.R...\n\n")
 tryCatch({
-  source("R/04_build_cohort.R")
+  source("R/14_build_cohort.R")
   cat("\nCohort build complete.\n")
 }, error = function(e) {
-  cat("\nERROR in 04_build_cohort.R:", conditionMessage(e), "\n")
+  cat("\nERROR in 14_build_cohort.R:", conditionMessage(e), "\n")
 })
 
 # ==============================================================================

@@ -40,7 +40,7 @@ source("R/00_config.R")
 source("R/01_load_pcornet.R")  # Loads pcornet$ list
 
 # Now run the cohort build pipeline
-source("R/04_build_cohort.R")
+source("R/14_build_cohort.R")
 
 cohort_rds <- hl_cohort
 attrition_rds <- attrition_log
@@ -65,7 +65,7 @@ if (exists("hl_cohort")) rm(hl_cohort)
 if (exists("attrition_log")) rm(attrition_log)
 
 # Run the cohort build pipeline under DuckDB backend
-source("R/04_build_cohort.R")
+source("R/14_build_cohort.R")
 
 cohort_ddb <- hl_cohort
 attrition_ddb <- attrition_log

@@ -46,7 +46,7 @@ excl_path <- file.path(CONFIG$output_dir, "cohort", "excluded_no_hl_evidence.csv
 
 # Check file exists
 if (!file.exists(excl_path)) {
-  stop("No excluded patients found. Run the full pipeline first (source R/04_build_cohort.R).")
+  stop("No excluded patients found. Run the full pipeline first (source R/14_build_cohort.R).")
 }
 
 excluded_patients <- read_csv(excl_path, show_col_types = FALSE)

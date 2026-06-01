@@ -6,7 +6,7 @@
 # Requirements: VIZ-01
 # ==============================================================================
 
-source("R/04_build_cohort.R")  # Loads attrition_log, hl_cohort, all upstream
+source("R/14_build_cohort.R")  # Loads attrition_log, hl_cohort, all upstream
 
 library(ggplot2)
 library(dplyr)

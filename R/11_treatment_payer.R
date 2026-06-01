@@ -1,5 +1,5 @@
 # ==============================================================================
-# 10_treatment_payer.R -- Treatment-anchored payer mode computation
+# 11_treatment_payer.R -- Treatment-anchored payer mode computation
 # ==============================================================================
 #
 # For each of three treatment types (chemo, radiation, stem cell transplant),
@@ -31,7 +31,7 @@
 #   - PAYER_MAPPING$sentinel_values (via 00_config.R)
 #
 # Usage:
-#   source("R/10_treatment_payer.R")  # After 02_harmonize_payer.R has run
+#   source("R/11_treatment_payer.R")  # After 02_harmonize_payer.R has run
 #   chemo_result <- compute_payer_at_chemo()
 #   rad_result <- compute_payer_at_radiation()
 #   sct_result <- compute_payer_at_sct()

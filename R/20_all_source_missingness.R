@@ -57,7 +57,7 @@ message(strrep("=", 70))
 message("\n--- SECTION 1: Identify HL Cohort Patients ---")
 
 # Source cohort builder if hl_cohort not already in environment
-if (!exists("hl_cohort")) source("R/04_build_cohort.R")
+if (!exists("hl_cohort")) source("R/14_build_cohort.R")
 
 hl_patients <- hl_cohort %>%
   select(ID) %>%

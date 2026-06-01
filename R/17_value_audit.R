@@ -17,7 +17,7 @@
 #
 # Usage:
 #   source("R/17_value_audit.R")
-#   # Optionally source R/02_harmonize_payer.R and/or R/04_build_cohort.R first
+#   # Optionally source R/02_harmonize_payer.R and/or R/14_build_cohort.R first
 #   # to include derived variable audits.
 #
 # ==============================================================================
@@ -238,9 +238,9 @@ if (exists("payer_summary", envir = .GlobalEnv)) {
   }
 }
 
-# Check for hl_cohort from 04_build_cohort.R
+# Check for hl_cohort from 14_build_cohort.R
 if (exists("hl_cohort", envir = .GlobalEnv)) {
-  message("  Found: hl_cohort (from 04_build_cohort.R)")
+  message("  Found: hl_cohort (from 14_build_cohort.R)")
   cols_to_audit <- intersect(
     c("HL_SOURCE", "HAD_CHEMO", "HAD_RADIATION", "HAD_SCT",
       "PAYER_CATEGORY_PRIMARY", "PAYER_AT_CHEMO", "PAYER_AT_RADIATION", "PAYER_AT_SCT"),
@@ -266,7 +266,7 @@ if (length(derived_audits) > 0) {
   }
 } else {
   message("  No derived variables found in environment.")
-  message("  To include them, source R/02_harmonize_payer.R and/or R/04_build_cohort.R before running this script.")
+  message("  To include them, source R/02_harmonize_payer.R and/or R/14_build_cohort.R before running this script.")
 }
 
 # ==============================================================================

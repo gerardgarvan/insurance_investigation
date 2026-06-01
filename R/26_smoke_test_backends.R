@@ -34,7 +34,7 @@ USE_DUCKDB <<- FALSE
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 source("R/02_harmonize_payer.R")
-source("R/03_cohort_predicates.R")
+source("R/10_cohort_predicates.R")
 
 library(dplyr)
 library(glue)

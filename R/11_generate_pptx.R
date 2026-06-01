@@ -70,7 +70,7 @@
 #   - Packages: officer, flextable, dplyr, glue, lubridate, purrr, scales
 #
 # Usage:
-#   source("R/04_build_cohort.R")  # Build cohort first
+#   source("R/14_build_cohort.R")  # Build cohort first
 #   source("R/11_generate_pptx.R") # Generate PPTX
 #
 # ==============================================================================

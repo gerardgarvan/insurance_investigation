@@ -1,5 +1,5 @@
 # ==============================================================================
-# 04_build_cohort.R -- Build HL cohort with attrition logging
+# 14_build_cohort.R -- Build HL cohort with attrition logging
 # ==============================================================================
 #
 # Composes named filter predicates into a sequential filter chain, adds treatment
@@ -19,12 +19,12 @@
 #   - attrition_log data frame in R environment (consumed by Phase 4 waterfall)
 #
 # Usage:
-#   source("R/04_build_cohort.R")
+#   source("R/14_build_cohort.R")
 #
 # ==============================================================================
 
 source("R/02_harmonize_payer.R")  # Loads 01_load_pcornet.R -> 00_config.R -> utils
-source("R/03_cohort_predicates.R")  # Named predicates + treatment flag functions
+source("R/10_cohort_predicates.R")  # Named predicates + treatment flag functions
 
 library(dplyr)
 library(lubridate)
@@ -274,7 +274,7 @@ message(glue("  HAD_SCT = 1: {sum(cohort$HAD_SCT == 1)} patients ({round(100 * m
 # ==============================================================================
 
 message("\n--- Treatment-Anchored Payer Mode ---")
-source("R/10_treatment_payer.R")
+source("R/11_treatment_payer.R")
 
 # Compute payer mode at first treatment for each type
 chemo_payer <- compute_payer_at_chemo()
@@ -380,7 +380,7 @@ for (i in seq_len(nrow(age_grp_dist))) {
 # ==============================================================================
 
 message("\n--- Surveillance Modality Detection ---")
-source("R/13_surveillance.R")
+source("R/12_surveillance.R")
 
 post_dx_date_map <- cohort %>% select(ID, first_hl_dx_date)
 surveillance_flags <- assemble_surveillance_flags(post_dx_date_map)
@@ -393,7 +393,7 @@ cohort <- cohort %>%
 # ==============================================================================
 
 message("\n--- Survivorship Encounter Classification ---")
-source("R/14_survivorship_encounters.R")
+source("R/13_survivorship_encounters.R")
 
 survivorship_flags <- classify_survivorship_encounters(post_dx_date_map)
 

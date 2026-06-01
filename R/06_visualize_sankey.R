@@ -6,7 +6,7 @@
 # Requirements: VIZ-02
 # ==============================================================================
 
-source("R/04_build_cohort.R")  # Loads hl_cohort, all upstream
+source("R/14_build_cohort.R")  # Loads hl_cohort, all upstream
 
 library(ggplot2)
 library(ggalluvial)
