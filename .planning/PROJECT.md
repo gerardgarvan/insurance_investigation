@@ -48,13 +48,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
-- [ ] Renumber all R scripts sequentially in logical execution order (REORG-01)
-- [ ] Update all cross-references (source() calls, comments, docs) to match new numbering (REORG-02)
+- [x] Renumber all R scripts sequentially in logical execution order (REORG-01) — v2.0 Phase 66
+- [x] Update all cross-references (source() calls, comments, docs) to match new numbering (REORG-02) — v2.0 Phase 66
 - [ ] Add section header comments and key-logic comments to every script (DOC-01)
 - [ ] Create full reference manual for the pipeline (DOC-02)
 - [ ] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01)
 - [ ] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02)
-- [ ] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03)
+- [x] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03) — v2.0 Phase 66
 - [ ] Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R (DRY-01)
 - [ ] Extract repeated code patterns into shared utility functions (DRY-02)
 - [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
@@ -92,7 +92,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 64 phases completed across 9 milestones. ~80 R scripts. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 65 complete — foundation scripts reorganized to 00-09 decade, R/utils/ subfolder established with dynamic auto-sourcing.
+**Pipeline status:** 66 phases completed across 9 milestones. 82 R scripts in decade-based organization. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 66 complete — all scripts renumbered to decade-based scheme (00-03 foundation, 10-14 cohort, 20-29 treatment, 40-53 cancer, 60-69 payer/QA, 70-75 outputs, 80-86 tests, 90-99 ad-hoc), comprehensive smoke test created, SCRIPT_INDEX.md regenerated.
 
 ## Previous Milestones
 
@@ -244,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after Phase 65 completion*
+*Last updated: 2026-06-01 after Phase 66 completion*
