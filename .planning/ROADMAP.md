@@ -77,7 +77,10 @@
   3. Foundation scripts (DuckDB ingest, data loading, payer harmonization) renumbered to 01-03
   4. All source() calls referencing foundation scripts updated to new numbers
   5. Smoke test validates no broken cross-references for foundation scripts
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 65-01-PLAN.md -- Move utils to R/utils/, renumber 25->03, update all source() references
+- [ ] 65-02-PLAN.md -- Create smoke test, update documentation (SCRIPT_INDEX, existing smoke test)
 
 #### Phase 66: Cohort & Treatment Reorganization
 **Goal**: Cohort building (10-19) and treatment analysis (20-39) scripts are renumbered sequentially with updated cross-references
@@ -182,7 +185,7 @@
 **Success Criteria** (what must be TRUE):
   1. Comprehensive testthat smoke test suite validates sequential numbering, source() resolution, RDS dependencies
   2. Smoke tests verify config constants exist and critical scripts run without error
-  3. Reference manual created with dependency matrix (Script → Inputs/Outputs/Dependencies for all 80 scripts)
+  3. Reference manual created with dependency matrix (Script -> Inputs/Outputs/Dependencies for all 80 scripts)
   4. Reference manual includes run-order guide and onboarding instructions
   5. All tests pass on both Windows (local) and HiPerGator (Linux)
 **Plans**: TBD
@@ -191,7 +194,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 65. Foundation Reorganization | 0/0 | Not started | - |
+| 65. Foundation Reorganization | 0/2 | Planned | - |
 | 66. Cohort & Treatment Reorganization | 0/0 | Not started | - |
 | 67. Cancer & Payer/QA Reorganization | 0/0 | Not started | - |
 | 68. Output & Test Reorganization | 0/0 | Not started | - |
@@ -203,4 +206,4 @@
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-01 — v2.0 roadmap created*
+*Last updated: 2026-06-01 -- Phase 65 planned (2 plans)*
