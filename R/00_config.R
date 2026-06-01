@@ -1495,16 +1495,22 @@ PROVIDER_SPECIALTIES <- list(
 # ------------------------------------------------------------------------------
 # 6. AUTO-SOURCE UTILITY FUNCTIONS
 # ------------------------------------------------------------------------------
+#
+# Load all utility modules from R/utils/ subfolder.
+# New utils files added in future phases are auto-discovered (D-04).
 
-# Load date parsing and attrition logging utilities
-# These are sourced automatically when 00_config.R is loaded
-source("R/utils_dates.R")
-source("R/utils_attrition.R")
-source("R/utils_icd.R")
-source("R/utils_snapshot.R")  # Phase 16: snapshot helper
-source("R/utils_duckdb.R")    # Phase 30: backend abstraction helpers
-source("R/utils_treatment.R")  # Phase quick: shared treatment helpers
-source("R/utils_payer.R")      # Quick 260518-i3w: shared payer helpers
+utils_files <- list.files(
+  path = "R/utils",
+  pattern = "\\.R$",
+  full.names = TRUE
+)
+
+if (length(utils_files) == 0) {
+  warning("No utility files found in R/utils/ -- expected at least 8 modules")
+} else {
+  invisible(lapply(utils_files, source))
+  message(sprintf("Loaded %d utility modules from R/utils/", length(utils_files)))
+}
 
 # ==============================================================================
 # End of configuration
