@@ -1,5 +1,5 @@
 # ==============================================================================
-# 09_dx_gap_analysis.R -- Diagnosis gap analysis for excluded "Neither" patients
+# 92_dx_gap_analysis.R -- Diagnosis gap analysis for excluded "Neither" patients
 # ==============================================================================
 #
 # Purpose: Investigate the ~19 patients excluded as "Neither" (no HL evidence
@@ -18,7 +18,7 @@
 #   D-09: Recommendation based on findings (expand codes OR report only)
 #   D-10: Read excluded_no_hl_evidence.csv as input (depends on full pipeline)
 #
-# Usage: source("R/09_dx_gap_analysis.R")
+# Usage: source("R/92_dx_gap_analysis.R")
 #
 # Dependencies: Requires full pipeline run first (reads excluded_no_hl_evidence.csv)
 #

@@ -1,5 +1,5 @@
 # ==============================================================================
-# 11_generate_pptx.R -- Generate insurance tables PowerPoint
+# 72_generate_pptx.R -- Generate insurance tables PowerPoint
 # ==============================================================================
 #
 # Produces insurance_tables_YYYY-MM-DD.pptx matching the Python pipeline's
@@ -63,15 +63,15 @@
 #  52. Multi-Source Dates: Payer Missingness by Source [heatmap]
 #
 # Dependencies:
-#   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
+#   - 14_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
 #     encounters, payer_summary in the global environment)
-#   - 16_encounter_analysis.R is sourced automatically to regenerate PNG figures
+#   - 75_encounter_analysis.R is sourced automatically to regenerate PNG figures
 #     in output/figures/ (slides 17-20, 22-25 will be skipped if PNGs are absent)
 #   - Packages: officer, flextable, dplyr, glue, lubridate, purrr, scales
 #
 # Usage:
 #   source("R/14_build_cohort.R")  # Build cohort first
-#   source("R/11_generate_pptx.R") # Generate PPTX
+#   source("R/72_generate_pptx.R") # Generate PPTX
 #
 # ==============================================================================
 
@@ -503,7 +503,7 @@ cohort_full <- hl_cohort %>%
   left_join(post_sct_payer, by = "ID")
 
 # Filter 1900 sentinel dates from FIRST treatment dates shown in PPTX (per VIZP-01)
-# Note: first_hl_dx_date is already nullified in 04_build_cohort.R and should NOT be touched here
+# Note: first_hl_dx_date is already nullified in 14_build_cohort.R and should NOT be touched here
 cohort_full <- cohort_full %>%
   mutate(
     across(
@@ -1278,7 +1278,7 @@ pptx <- add_table_slide(pptx,
 # Regenerate encounter analysis PNGs to ensure they reflect current cohort data.
 # Without this, stale PNGs from a previous run get embedded in the pptx.
 message("\n--- Regenerating encounter analysis figures ---")
-source("R/16_encounter_analysis.R")
+source("R/75_encounter_analysis.R")
 
 message("\n--- Encounter Analysis Slides ---")
 
@@ -1347,7 +1347,7 @@ pptx <- add_table_slide(pptx,
 
 # Count patients with missing DX_YEAR (includes nullified 1900 sentinels) for footnote
 # VIZP-01: DX_YEAR filtering already handled correctly via is.na() since DX_YEAR derives from
-# the already-nullified first_hl_dx_date (nullified in 04_build_cohort.R lines 176-183)
+# the already-nullified first_hl_dx_date (nullified in 14_build_cohort.R lines 176-183)
 n_missing_dx_year <- sum(is.na(cohort_full$DX_YEAR))
 masked_footnote <- if (n_missing_dx_year > 0) {
   glue("{n_missing_dx_year} patients with missing diagnosis date excluded from this analysis.")
@@ -2695,5 +2695,5 @@ message("PowerPoint generation complete")
 message(strrep("=", 60))
 
 # ==============================================================================
-# End of 11_generate_pptx.R
+# End of 72_generate_pptx.R
 # ==============================================================================

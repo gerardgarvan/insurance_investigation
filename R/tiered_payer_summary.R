@@ -6,7 +6,7 @@
 # the tiered same-day resolution hierarchy:
 #   Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing
 #
-# Reads pre-computed CSVs from R/36_tiered_same_day_payer.R instead of
+# Reads pre-computed CSVs from R/60_tiered_same_day_payer.R instead of
 # materializing the full ENCOUNTER table.
 #
 # Sheets:
@@ -60,12 +60,12 @@ PAYER_COLORS <- list(
 )
 
 # ==============================================================================
-# SECTION 2: READ PRE-COMPUTED CSVs FROM 36_tiered_same_day_payer.R
+# SECTION 2: READ PRE-COMPUTED CSVs FROM 60_tiered_same_day_payer.R
 # ==============================================================================
 
 message("=== Tiered Payer Summary ===")
 message("")
-message("Reading pre-computed CSVs from R/36_tiered_same_day_payer.R...")
+message("Reading pre-computed CSVs from R/60_tiered_same_day_payer.R...")
 
 tables_dir <- file.path(CONFIG$output_dir, "tables")
 

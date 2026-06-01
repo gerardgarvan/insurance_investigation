@@ -1,5 +1,5 @@
 # ==============================================================================
-# 34_overlap_classification_av_th.R -- Overlap classification and recommendations (AV+TH only)
+# 96_overlap_classification_av_th.R -- Overlap classification and recommendations (AV+TH only)
 # ==============================================================================
 #
 # Phase 33: Overlap Classification and Recommendations for AV+TH encounters only
@@ -18,7 +18,7 @@
 #   - per_site_overlap_profile_av_th.csv           (AVTH-CLS-03)
 #   - overlap_source_payer_completeness_av_th.csv  (AVTH-CLS-03)
 #
-# Usage: source("R/34_overlap_classification_av_th.R")
+# Usage: source("R/96_overlap_classification_av_th.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.

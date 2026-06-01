@@ -1,5 +1,5 @@
 # ==============================================================================
-# 29_generate_speedup_report.R -- DuckDB vs RDS speedup report generator
+# 83_generate_speedup_report.R -- DuckDB vs RDS speedup report generator
 # ==============================================================================
 #
 # Phase 32: DBDIAG-03
@@ -8,11 +8,11 @@
 # markdown report to output/reports/duckdb_speedup_report.md.
 #
 # The benchmark CSV is produced by:
-#   - R/28_benchmark_cohort.R (Phase 31: cohort build benchmarks)
+#   - R/82_benchmark_cohort.R (Phase 31: cohort build benchmarks)
 #   - Per-script diagnostic benchmarks (Phase 32: run on HiPerGator)
 #
 # Expected CSV columns:
-#   - script:           Name of the benchmarked script (e.g., "04_build_cohort")
+#   - script:           Name of the benchmarked script (e.g., "14_build_cohort")
 #   - backend:          "RDS" or "DuckDB"
 #   - run:              Run number (1, 2, 3)
 #   - elapsed_seconds:  Wall-clock time
@@ -22,12 +22,12 @@
 #   - timestamp:        When the benchmark was run
 #
 # If the CSV lacks a "script" column (legacy format from R/28_benchmark_cohort.R),
-# all rows are treated as the "04_build_cohort" script.
+# all rows are treated as the "14_build_cohort" script.
 #
 # Output: output/reports/duckdb_speedup_report.md
 #
 # Usage:
-#   source("R/29_generate_speedup_report.R")
+#   source("R/83_generate_speedup_report.R")
 #
 # ==============================================================================
 
@@ -58,8 +58,8 @@ message(glue("[Report] Read {nrow(benchmarks)} benchmark rows from {benchmark_pa
 
 # Handle legacy format: if no "script" column, assume all rows are cohort build
 if (!"script" %in% colnames(benchmarks)) {
-  message("[Report] No 'script' column found -- treating all rows as '04_build_cohort'")
-  benchmarks <- benchmarks %>% mutate(script = "04_build_cohort")
+  message("[Report] No 'script' column found -- treating all rows as '14_build_cohort'")
+  benchmarks <- benchmarks %>% mutate(script = "14_build_cohort")
 }
 
 # Validate required columns

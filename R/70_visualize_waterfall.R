@@ -1,5 +1,5 @@
 # ==============================================================================
-# 05_visualize_waterfall.R -- Attrition waterfall chart
+# 70_visualize_waterfall.R -- Attrition waterfall chart
 # ==============================================================================
 # Produces vertical bar chart showing cohort reduction through filter steps.
 # Each bar shows patients remaining, annotated with N and % excluded.

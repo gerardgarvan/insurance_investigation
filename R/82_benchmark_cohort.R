@@ -1,8 +1,8 @@
 # ==============================================================================
-# 28_benchmark_cohort.R -- RDS vs DuckDB cohort build benchmark
+# 82_benchmark_cohort.R -- RDS vs DuckDB cohort build benchmark
 # ==============================================================================
 # Phase 31: DBCOH-03
-# Times the cohort build pipeline (04_build_cohort.R) under both backends.
+# Times the cohort build pipeline (14_build_cohort.R) under both backends.
 # 3 runs per backend with median comparison (D-12).
 #
 # Per D-10: Times cohort build ONLY, not config/data loading.
@@ -12,7 +12,7 @@
 # Output: output/logs/duckdb_benchmark.csv
 #
 # Usage:
-#   source("R/28_benchmark_cohort.R")  # Run interactively on HiPerGator
+#   source("R/82_benchmark_cohort.R")  # Run interactively on HiPerGator
 # ==============================================================================
 
 library(dplyr)

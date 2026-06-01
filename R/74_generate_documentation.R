@@ -1,6 +1,6 @@
 # ==============================================================================
 # PCORnet Payer Variable Investigation (R Pipeline)
-# Script: 15_generate_documentation.R
+# Script: 74_generate_documentation.R
 # Purpose: Auto-generate comprehensive variable documentation (D-15, D-16, D-17, D-18)
 # ==============================================================================
 #
@@ -12,7 +12,7 @@
 #        All numeric values reflect code list counts, not patient counts.
 #
 # Usage:
-#   source("R/15_generate_documentation.R")
+#   source("R/74_generate_documentation.R")
 #   # Outputs written to output/docs/Treatment_Variable_Documentation.md
 #   #                   and output/docs/Treatment_Variable_Documentation.docx
 #

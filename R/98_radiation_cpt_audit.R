@@ -23,7 +23,7 @@
 #     Sheet 2: "Codes in Data" — all 7xxxx + G60xx codes found in PROCEDURES
 #
 # Usage:
-#   Rscript R/45b_radiation_cpt_audit.R
+#   Rscript R/98_radiation_cpt_audit.R
 #
 # Requirements: RADCPT-01, RADCPT-02, RADCPT-03
 # Phase 45 Plan 01 -- radiation-cpt-audit

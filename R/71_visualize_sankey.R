@@ -1,5 +1,5 @@
 # ==============================================================================
-# 06_visualize_sankey.R -- Payer-stratified Sankey/alluvial diagram
+# 71_visualize_sankey.R -- Payer-stratified Sankey/alluvial diagram
 # ==============================================================================
 # Produces two-axis alluvial diagram: Payer Category -> Treatment Type
 # Flows colored by payer category using colorblind-safe viridis palette.

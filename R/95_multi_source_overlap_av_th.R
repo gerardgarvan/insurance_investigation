@@ -1,5 +1,5 @@
 # ==============================================================================
-# 33_multi_source_overlap_av_th.R -- Multi-source overlap detection (AV+TH only)
+# 95_multi_source_overlap_av_th.R -- Multi-source overlap detection (AV+TH only)
 # ==============================================================================
 #
 # Phase 33: Multi-Source Overlap Detection for AV+TH encounters only
@@ -8,7 +8,7 @@
 # Purpose: Detect same-date and same-week (within +/-7 days) encounter pairs
 #          from different ENCOUNTER.SOURCE values across ALL patients in ENCOUNTER.
 #          (AV=Ambulatory Visit, TH=Telehealth only)
-#          Outputs feed Phase 34 (R/34_overlap_classification_av_th.R) for field-by-field
+#          Outputs feed Phase 34 (R/96_overlap_classification_av_th.R) for field-by-field
 #          comparison of overlapping encounters.
 #
 #          Note: Uses ENCOUNTER.SOURCE directly. No DEMOGRAPHIC join needed.
@@ -20,7 +20,7 @@
 #   - multi_source_combo_frequencies_av_th.csv    (AVTH-DET-03)
 #   - multi_source_per_source_summary_av_th.csv   (AVTH-DET-02)
 #
-# Usage: source("R/33_multi_source_overlap_av_th.R")
+# Usage: source("R/95_multi_source_overlap_av_th.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
@@ -594,7 +594,7 @@ message("  - multi_source_combo_frequencies_av_th.csv")
 message("  - multi_source_per_source_summary_av_th.csv")
 message("  - multi_source_encounter_payer_av_th.csv")
 
-message(glue("\nPhase 26 note: These outputs feed R/34_overlap_classification_av_th.R for field-by-field comparison"))
+message(glue("\nPhase 26 note: These outputs feed R/96_overlap_classification_av_th.R for field-by-field comparison"))
 
 message(glue("\n{strrep('=', 70)}"))
 message("END OF MULTI-SOURCE OVERLAP DETECTION (AV+TH ONLY)")

@@ -1,5 +1,5 @@
 # ==============================================================================
-# 27_parity_test_cohort.R -- RDS vs DuckDB cohort parity verification
+# 81_parity_test_cohort.R -- RDS vs DuckDB cohort parity verification
 # ==============================================================================
 # Phase 31: DBCOH-02
 # Runs the cohort build pipeline under both backends in the same R session
@@ -10,7 +10,7 @@
 # Per D-09: Three-level check (row count, PATID set, structural equality)
 #
 # Usage:
-#   source("R/27_parity_test_cohort.R")  # Run interactively on HiPerGator
+#   source("R/81_parity_test_cohort.R")  # Run interactively on HiPerGator
 # ==============================================================================
 
 library(dplyr)

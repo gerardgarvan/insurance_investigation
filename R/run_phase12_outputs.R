@@ -25,8 +25,8 @@ message("\n", strrep("=", 80))
 message("Phase 12 Output Generation -- HiPerGator Execution Helper")
 message(strrep("=", 80))
 message("\nThis script generates all Phase 12 outputs:")
-message("  1. Four encounter analysis PNG figures (16_encounter_analysis.R)")
-message("  2. Final insurance tables PowerPoint (11_generate_pptx.R)")
+message("  1. Four encounter analysis PNG figures (75_encounter_analysis.R)")
+message("  2. Final insurance tables PowerPoint (72_generate_pptx.R)")
 message("\nClosing verification gaps:")
 message("  - PPTX2-04: Histogram with 6+Missing payer facets and overflow bin")
 message("  - PPTX2-07: Age group bar chart with no label clipping at top")
@@ -65,19 +65,19 @@ if (!dir.exists("output/figures")) {
 # SECTION 2: GENERATE ENCOUNTER ANALYSIS PNGS
 # ==============================================================================
 
-message("\n--- Generating encounter analysis PNGs (16_encounter_analysis.R) ---")
-message("This script sources R/04_build_cohort.R (may take several minutes to load data)...")
+message("\n--- Generating encounter analysis PNGs (75_encounter_analysis.R) ---")
+message("This script sources R/14_build_cohort.R (may take several minutes to load data)...")
 
 # Wrap source() in tryCatch for clear error reporting
 tryCatch({
-  source("R/16_encounter_analysis.R")
-  message("  \u2713 16_encounter_analysis.R completed successfully")
+  source("R/75_encounter_analysis.R")
+  message("  \u2713 75_encounter_analysis.R completed successfully")
 }, error = function(e) {
-  stop("\nERROR: 16_encounter_analysis.R failed with error:\n  ", e$message, "\n\n",
+  stop("\nERROR: 75_encounter_analysis.R failed with error:\n  ", e$message, "\n\n",
        "Check that:\n",
        "  1. Data files are accessible (paths in R/00_config.R)\n",
        "  2. All required packages are installed (ggplot2, dplyr, scales, etc.)\n",
-       "  3. R/04_build_cohort.R and dependencies are present\n")
+       "  3. R/14_build_cohort.R and dependencies are present\n")
 })
 
 # ==============================================================================
@@ -106,7 +106,7 @@ for (png_path in expected_pngs) {
 
 if (!all_present) {
   stop("\nERROR: One or more expected PNG files were not generated.\n",
-       "Check the console output above for error messages from 16_encounter_analysis.R.")
+       "Check the console output above for error messages from 75_encounter_analysis.R.")
 }
 
 message("  \u2713 All 4 PNG files successfully generated")
@@ -115,16 +115,16 @@ message("  \u2713 All 4 PNG files successfully generated")
 # SECTION 4: GENERATE PPTX
 # ==============================================================================
 
-message("\n--- Generating insurance tables PowerPoint (11_generate_pptx.R) ---")
+message("\n--- Generating insurance tables PowerPoint (72_generate_pptx.R) ---")
 
 tryCatch({
-  source("R/11_generate_pptx.R")
-  message("  \u2713 11_generate_pptx.R completed successfully")
+  source("R/72_generate_pptx.R")
+  message("  \u2713 72_generate_pptx.R completed successfully")
 }, error = function(e) {
-  stop("\nERROR: 11_generate_pptx.R failed with error:\n  ", e$message, "\n\n",
+  stop("\nERROR: 72_generate_pptx.R failed with error:\n  ", e$message, "\n\n",
        "Check that:\n",
        "  1. officer and flextable packages are installed\n",
-       "  2. R/04_build_cohort.R has been sourced (cohort data in environment)\n",
+       "  2. R/14_build_cohort.R has been sourced (cohort data in environment)\n",
        "  3. PNG files exist in output/figures/\n")
 })
 

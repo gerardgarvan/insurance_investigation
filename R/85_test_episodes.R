@@ -4,7 +4,7 @@
 # Loads the treatment_episodes.rds artifact and runs structural, data quality,
 # historical flag, and clinical plausibility checks.
 #
-# Run after R/44a_treatment_episodes.R to verify outputs.
+# Run after R/26_treatment_episodes.R to verify outputs.
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -17,7 +17,7 @@ source("R/00_config.R")
 RDS_PATH <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 
 if (!file.exists(RDS_PATH)) {
-  stop(glue("RDS not found: {RDS_PATH}\nRun R/44a_treatment_episodes.R first."))
+  stop(glue("RDS not found: {RDS_PATH}\nRun R/26_treatment_episodes.R first."))
 }
 
 d <- readRDS(RDS_PATH)

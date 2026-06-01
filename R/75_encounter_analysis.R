@@ -1,5 +1,5 @@
 # ==============================================================================
-# 16_encounter_analysis.R -- Encounter analysis by payor, DX year, age group
+# 75_encounter_analysis.R -- Encounter analysis by payor, DX year, age group
 # ==============================================================================
 #
 # Produces:
@@ -10,7 +10,7 @@
 #   5. Post-treatment encounter breakdown by age group
 #
 # Usage:
-#   source("R/16_encounter_analysis.R")
+#   source("R/75_encounter_analysis.R")
 #
 # ==============================================================================
 

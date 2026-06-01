@@ -1,5 +1,5 @@
 # ==============================================================================
-# 26_smoke_test_backends.R -- Backend parity smoke test (Phase 30)
+# 80_smoke_test_backends.R -- Backend parity smoke test (Phase 30)
 # ==============================================================================
 #
 # Tests all 6 named predicates from 03_cohort_predicates.R on both RDS and
@@ -15,13 +15,13 @@
 # docs/DUCKDB_TRANSLATION_NOTES.md.
 #
 # Usage:
-#   source("R/26_smoke_test_backends.R")
+#   source("R/80_smoke_test_backends.R")
 #   # Or run interactively on HiPerGator after sourcing pipeline
 #
 # Dependencies:
 #   - 00_config.R (auto-sources utils), 01_load_pcornet.R (loads pcornet$),
 #     02_harmonize_payer.R (creates payer_summary for exclude_missing_payer),
-#     03_cohort_predicates.R (defines predicates)
+#     10_cohort_predicates.R (defines predicates)
 #   - R/utils/utils_duckdb.R (open/close_pcornet_con, get_pcornet_table)
 #   - DuckDB file must exist at CONFIG$cache$duckdb_path
 #     (created by R/03_duckdb_ingest.R)

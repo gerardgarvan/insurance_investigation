@@ -1,5 +1,5 @@
 # ==============================================================================
-# 07_diagnostics.R -- Reusable data quality diagnostic script
+# 90_diagnostics.R -- Reusable data quality diagnostic script
 # ==============================================================================
 #
 # Permanent diagnostic tool (per D-11) for auditing PCORnet CDM data quality.
@@ -15,8 +15,8 @@
 #   6. Numeric Range Checks (D-18)
 #
 # Usage:
-#   source("R/07_diagnostics.R")  # Runs all diagnostics
-#   # Or: Rscript R/07_diagnostics.R
+#   source("R/90_diagnostics.R")  # Runs all diagnostics
+#   # Or: Rscript R/90_diagnostics.R
 #
 # Dependencies: Loads 01_load_pcornet.R (which loads 00_config.R + utils)
 # ==============================================================================

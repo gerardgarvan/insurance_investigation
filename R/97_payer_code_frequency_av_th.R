@@ -1,5 +1,5 @@
 # ==============================================================================
-# 35_payer_code_frequency_av_th.R -- Payer code frequency summary (AV+TH only)
+# 97_payer_code_frequency_av_th.R -- Payer code frequency summary (AV+TH only)
 # ==============================================================================
 #
 # Phase 34: Insurance Code Frequency Summary of ENCOUNTER table
@@ -20,7 +20,7 @@
 #   - payer_secondary_code_freq_av_th.csv  (PAYFREQ-01, PAYFREQ-02)
 #   - payer_category_summary_av_th.csv     (PAYFREQ-06)
 #
-# Usage: source("R/35_payer_code_frequency_av_th.R")
+# Usage: source("R/97_payer_code_frequency_av_th.R")
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.

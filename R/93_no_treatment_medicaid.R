@@ -1,5 +1,5 @@
 # ==============================================================================
-# 12_no_treatment_medicaid.R -- Profile patients with Medicaid + no treatment
+# 93_no_treatment_medicaid.R -- Profile patients with Medicaid + no treatment
 # ==============================================================================
 #
 # Investigates patients who have Medicaid as primary payer but no evidence of
@@ -9,13 +9,13 @@
 # cell size.
 #
 # Dependencies:
-#   - 04_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
+#   - 14_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
 #     encounters, payer_summary in the global environment)
 #   - 11_treatment_payer.R sourced via 14_build_cohort.R
 #
 # Usage:
 #   source("R/14_build_cohort.R")
-#   source("R/12_no_treatment_medicaid.R")
+#   source("R/93_no_treatment_medicaid.R")
 #
 # ==============================================================================
 
