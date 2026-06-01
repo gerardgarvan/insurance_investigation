@@ -43,5 +43,15 @@
 | 55-59 | v1.7 | Complete | 2026-05-28 |
 | 60-63 | v1.8 | Complete | 2026-06-01 |
 
+### Phase 64: Clean up Gantt 2 output for coherent chart generation
+
+**Goal:** Clean the Gantt v2 CSV outputs (gantt_episodes_v2.csv, gantt_detail_v2.csv) for direct Tableau import by fixing multi-value separators, simplifying drug names, removing literal NA text, filling blank descriptions and cancer categories, and trimming to essential columns.
+**Requirements**: GANTT-CLEAN-01 through GANTT-CLEAN-07
+**Depends on:** Phase 63
+**Plans:** 1 plan
+
+Plans:
+- [ ] 64-01-PLAN.md — Add Section 4D cleanup logic to R/63_gantt_v2_export.R and verify output quality
+
 ---
-*Last updated: 2026-06-01 -- v1.8 milestone archived*
+*Last updated: 2026-06-01 -- Phase 64 planned*
