@@ -147,30 +147,25 @@ if (!"is_first_line" %in% names(episodes)) {
 code_descriptions <- NULL
 if (file.exists(DESCRIPTIONS_RDS)) {
   code_descriptions <- readRDS(DESCRIPTIONS_RDS)
-  message(glue("  Loaded {format(nrow(code_descriptions), big.mark = ',')} code descriptions"))
+  message(glue("  Loaded {format(length(code_descriptions), big.mark = ',')} code descriptions"))
 } else {
   message("  WARNING: code_descriptions.rds not found. Description columns will be empty.")
 }
 
-# Helper function: lookup single code description
+# Helper: map a single code to its description (empty string if missing)
+# code_descriptions is a named character vector (from R/48b), not a dataframe
 lookup_description <- function(code) {
-  if (is.null(code_descriptions) || is.na(code) || code == "") {
-    return("")
-  }
-  desc <- code_descriptions %>%
-    filter(triggering_code == code) %>%
-    pull(description) %>%
-    head(1)
-  if (length(desc) == 0) return("")
-  return(desc)
+  if (is.null(code_descriptions) || is.na(code) || code == "") return("")
+  if (code %in% names(code_descriptions)) return(code_descriptions[[code]])
+  return("")
 }
 
-# Helper function: map comma-separated codes to comma-separated descriptions
+# Helper: map comma-separated codes to comma-separated descriptions
 map_codes_to_descriptions <- function(codes_str) {
   if (is.na(codes_str) || codes_str == "") return("")
-  codes <- str_split(codes_str, ",\\s*")[[1]]
+  codes <- str_split(codes_str, ",")[[1]]
   descriptions <- sapply(codes, lookup_description, USE.NAMES = FALSE)
-  paste(descriptions, collapse = ", ")
+  paste(descriptions, collapse = ",")
 }
 
 
