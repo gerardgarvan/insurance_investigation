@@ -48,6 +48,15 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
+- [ ] Renumber all R scripts sequentially in logical execution order (REORG-01)
+- [ ] Update all cross-references (source() calls, comments, docs) to match new numbering (REORG-02)
+- [ ] Add section header comments and key-logic comments to every script (DOC-01)
+- [ ] Create full reference manual for the pipeline (DOC-02)
+- [ ] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01)
+- [ ] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02)
+- [ ] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03)
+- [ ] Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R (DRY-01)
+- [ ] Extract repeated code patterns into shared utility functions (DRY-02)
 - [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
@@ -60,16 +69,30 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - RMarkdown / Shiny rendering — v1 produces raw R scripts and PNG figures
 - Replicating Python pipeline's data cleaning — R pipeline applies its own filter chain
 - Publication-ready figure formatting — exploratory quality is sufficient
-- PREFIX_MAP centralization to R/00_config.R — acceptable duplication; consider in future cleanup
+- PREFIX_MAP centralization to R/00_config.R — moved to Active for v2.0 (DRY-01)
 - Stanford V / BEACOPP regimen identification — only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
+
+## Current Milestone: v2.0 Codebase Cleanup & Documentation
+
+**Goal:** Reorganize, harden, and document the entire R pipeline for maintainability and onboarding.
+
+**Target features:**
+- Renumber all ~80 R scripts sequentially (01-N) in logical execution order
+- Update all cross-references (source() calls, comments, documentation) to match new numbering
+- Add section header comments and key-logic comments to every script
+- Create a full reference manual: run order, purpose, parameters, outputs, dependencies
+- Add input validation and defensive checks (type/structure, row-count assertions, error recovery)
+- Create smoke test script to verify pipeline integrity after renumbering
+- Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R
+- Extract repeated code patterns into shared utility functions
 
 ## Current State
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 63 phases completed across 8 milestones. ~64 R scripts. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. No active milestone — next milestone TBD.
+**Pipeline status:** 63 phases completed across 8 milestones. ~80 R scripts. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation.
 
 ## Previous Milestones
 
@@ -221,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after v1.8 milestone*
+*Last updated: 2026-06-01 after v2.0 milestone start*

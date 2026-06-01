@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: verifying
-stopped_at: Completed 64-01-PLAN.md
-last_updated: "2026-06-01T16:44:50.042Z"
+milestone: v2.0
+milestone_name: Codebase Cleanup & Documentation
+status: planning
+stopped_at: Defining requirements
+last_updated: "2026-06-01"
 last_activity: 2026-06-01
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -21,15 +21,15 @@ See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 64 — clean-up-gantt-2-output-for-coherent-chart-generation
+**Current focus:** Defining requirements for v2.0
 
 ## Current Position
 
-Phase: 64
-Plan: Not started
-Status: Phase complete — ready for verification
-Progress: 8 milestones shipped (v1.0-v1.8)
-Last activity: 2026-06-01
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Progress: 8 milestones shipped (v1.0-v1.8), starting v2.0
+Last activity: 2026-06-01 — Milestone v2.0 started
 
 ## Performance Metrics
 
@@ -54,28 +54,24 @@ Last activity: 2026-06-01
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-- [Phase 64]: Overwrite existing v2 CSV files directly — no separate _clean versions created
-- [Phase 64]: Simplest drug name extraction: first lowercase word sequence (2+ chars) via regex
-- [Phase 64]: Semicolon separator for multi-value fields (Tableau SPLIT compatibility)
-
 ### Pending Todos
 
-None — v1.8 milestone complete.
+None — starting fresh milestone.
 
 ### Roadmap Evolution
 
-- Phase 64 added: Clean up Gantt 2 output for coherent chart generation
+v2.0 milestone initialized — Codebase Cleanup & Documentation
 
 ### Blockers/Concerns
 
-- PREFIX_MAP duplication across R/47, R/53, R/54, R/49 creates sync risk — consider centralizing to R/00_config.R in future milestone
+- PREFIX_MAP duplication across R/47, R/53, R/54, R/49 — targeted for consolidation in v2.0 (DRY-01)
 
 ## Session Continuity
 
-Last session: 2026-06-01T16:38:47.311Z
-Stopped at: Completed 64-01-PLAN.md
+Last session: 2026-06-01
+Stopped at: Defining requirements for v2.0
 Resume file: None
-Next step: `/gsd:new-milestone` to start next milestone
+Next step: Complete requirements definition and roadmap creation
 
 ---
-*Last updated: 2026-06-01 — v1.8 milestone archived*
+*Last updated: 2026-06-01 — v2.0 milestone started*
