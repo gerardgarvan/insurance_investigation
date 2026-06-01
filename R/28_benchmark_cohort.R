@@ -32,7 +32,7 @@ source("R/01_load_pcornet.R")
 
 # Ensure DuckDB connection is open for DuckDB runs
 if (!exists("pcornet_con", envir = .GlobalEnv)) {
-  source("R/utils_duckdb.R")
+  source("R/utils/utils_duckdb.R")
   open_pcornet_con()
 }
 

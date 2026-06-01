@@ -87,7 +87,7 @@ library(readr)
 library(tidyr)
 
 # Load shared pptx styling utilities
-source("R/utils_pptx.R")
+source("R/utils/utils_pptx.R")
 
 message("\n", strrep("=", 60))
 message("Generating Insurance Tables PowerPoint")

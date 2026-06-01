@@ -1,5 +1,5 @@
 # ==============================================================================
-# 25_duckdb_ingest.R -- Ingest PCORnet CDM tables from RDS cache into DuckDB
+# 03_duckdb_ingest.R -- Ingest PCORnet CDM tables from RDS cache into DuckDB
 # ==============================================================================
 #
 # Reads all 14 PCORnet tables from RDS cache (Phase 15) and writes them
@@ -7,7 +7,7 @@
 #
 # Usage:
 #   source("R/00_config.R")
-#   source("R/25_duckdb_ingest.R")
+#   source("R/03_duckdb_ingest.R")
 #
 # Output:
 #   - DuckDB file at CONFIG$cache$duckdb_path (per D-01)
@@ -23,7 +23,7 @@
 # ==============================================================================
 
 source("R/00_config.R")
-source("R/utils_duckdb.R")
+source("R/utils/utils_duckdb.R")
 
 library(duckdb)
 library(DBI)

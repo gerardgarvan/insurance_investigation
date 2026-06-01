@@ -57,8 +57,8 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-source("R/utils_duckdb.R")
-source("R/utils_dates.R")
+source("R/utils/utils_duckdb.R")
+source("R/utils/utils_dates.R")
 
 # Input paths: existing RDS artifacts from R/44a_treatment_episodes.R
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")

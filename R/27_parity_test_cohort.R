@@ -56,7 +56,7 @@ USE_DUCKDB <<- TRUE
 
 # Open DuckDB connection
 if (!exists("pcornet_con", envir = .GlobalEnv)) {
-  source("R/utils_duckdb.R")  # Load DuckDB utilities
+  source("R/utils/utils_duckdb.R")  # Load DuckDB utilities
   open_pcornet_con()
 }
 

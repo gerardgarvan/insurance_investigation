@@ -26,7 +26,7 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-source("R/utils_duckdb.R")
+source("R/utils/utils_duckdb.R")
 
 # =============================================================================
 # API Lookup Functions (Copied from R/40_investigate_unmatched_ndc.R)

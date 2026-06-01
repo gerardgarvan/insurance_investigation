@@ -28,8 +28,8 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-source("R/utils_duckdb.R")
-source("R/utils_dates.R")
+source("R/utils/utils_duckdb.R")
+source("R/utils/utils_dates.R")
 
 # Output paths
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")

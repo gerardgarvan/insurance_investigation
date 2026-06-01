@@ -23,7 +23,7 @@
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir).
 #   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Optionally sources R/utils_dates.R if date parse rate < 50%.
+#   Optionally sources R/utils/utils_dates.R if date parse rate < 50%.
 #   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ADMIT_DATE, SOURCE, etc.)
 #
 # DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
@@ -82,8 +82,8 @@ admit_parse_rate <- if (n_admit_raw > 0) round(100 * n_admit_parsed / n_admit_ra
 
 if (n_admit_raw > 0 && admit_parse_rate < 50) {
   message(glue("  Standard date parse rate only {admit_parse_rate}% -- trying parse_pcornet_date()"))
-  if (file.exists("R/utils_dates.R")) {
-    source("R/utils_dates.R")
+  if (file.exists("R/utils/utils_dates.R")) {
+    source("R/utils/utils_dates.R")
     enc <- enc %>%
       mutate(admit_date_parsed = parse_pcornet_date(ADMIT_DATE))
     n_admit_parsed <- sum(!is.na(enc$admit_date_parsed))

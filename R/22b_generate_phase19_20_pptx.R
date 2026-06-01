@@ -40,7 +40,7 @@ library(stringr)
 library(tidyr)
 
 # Load shared pptx styling utilities
-source("R/utils_pptx.R")
+source("R/utils/utils_pptx.R")
 
 message("\n", strrep("=", 70))
 message("Generating focused Phase 19/20 PowerPoint")

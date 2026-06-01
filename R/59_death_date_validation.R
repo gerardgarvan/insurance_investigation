@@ -17,8 +17,8 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-source("R/utils_duckdb.R")
-source("R/utils_dates.R")
+source("R/utils/utils_duckdb.R")
+source("R/utils/utils_dates.R")
 
 message("=== Phase 59: Death Date Validation & Treatment Timeline Cleanup ===\n")
 
