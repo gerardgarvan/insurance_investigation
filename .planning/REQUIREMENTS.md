@@ -30,14 +30,14 @@ Requirements for milestone v1.8 Episode-Level Cancer Linkage & First-Line Therap
 
 ### First-Line Therapy
 
-- [ ] **FLT-01**: First-line therapy identified for adults 21+ at treatment date
-- [ ] **FLT-02**: 60-day clean period (no prior chemotherapy) defines first-line
+- [x] **FLT-01**: First-line therapy identified for adults 21+ at treatment date
+- [x] **FLT-02**: 60-day clean period (no prior chemotherapy) defines first-line
 
 ### Death Analysis
 
-- [ ] **DEATH-01**: Death date analysis table — count of patients with death dates
-- [ ] **DEATH-02**: Of those with death dates, count where death is last encounter
-- [ ] **DEATH-03**: Count of patients with encounters/treatment after death date
+- [x] **DEATH-01**: Death date analysis table — count of patients with death dates
+- [x] **DEATH-02**: Of those with death dates, count where death is last encounter
+- [x] **DEATH-03**: Count of patients with encounters/treatment after death date
 
 ### Output
 
@@ -116,11 +116,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REG-02 | Phase 61 | Complete |
 | REG-03 | Phase 61 | Complete |
 | REG-04 | Phase 61 | Complete |
-| FLT-01 | Phase 62 | Pending |
-| FLT-02 | Phase 62 | Pending |
-| DEATH-01 | Phase 62 | Pending |
-| DEATH-02 | Phase 62 | Pending |
-| DEATH-03 | Phase 62 | Pending |
+| FLT-01 | Phase 62 | Complete |
+| FLT-02 | Phase 62 | Complete |
+| DEATH-01 | Phase 62 | Complete |
+| DEATH-02 | Phase 62 | Complete |
+| DEATH-03 | Phase 62 | Complete |
 | OUT-01 | Phase 63 | Complete |
 | OUT-02 | Phase 63 | Complete |
 
