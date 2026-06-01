@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
-status: planning
-last_updated: "2026-06-01T19:55:39.213Z"
+status: executing
+last_updated: "2026-06-01T20:34:29.871Z"
 progress:
   total_phases: 10
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -21,20 +21,20 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Phase 66 — cohort-treatment-reorganization
+**Current Focus:** Phase 67 complete — cancer-payer-qa-reorganization
 
 ## Current Position
 
-Phase: 66 (cohort-treatment-reorganization) — COMPLETE
-Plan: 3 of 3
+Phase: 67 (cancer-payer-qa-reorganization) — COMPLETE
+Plan: 1 of 1 (67-01-PLAN.md complete)
 **Phase:** 67
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** 1 of 1 complete
+**Status:** Phase 67 Complete
 **Progress:** [██████████] 100%
 
 ### Phase Goal
 
-Complete v2.0 decade-based numbering scheme (REORG-01) with all scripts in final positions, comprehensive smoke test (REORG-02), and regenerated SCRIPT_INDEX.md.
+Post-Renumbering Inventory Cleanup: resolve 66-prefix collision by moving smoke test to test decade (87), archive 8 unnumbered scripts to R/archive/ with README, and regenerate SCRIPT_INDEX.md from filesystem.
 
 ## Performance Metrics
 
@@ -65,6 +65,12 @@ Complete v2.0 decade-based numbering scheme (REORG-01) with all scripts in final
 - Tests at 80-86 (backend tests + treatment verification per D-06)
 - Ad-hoc at 90-99 (diagnostics, one-offs, payer overflow)
 
+**Phase 67:**
+
+- Move smoke test from payer decade (66) to test decade (87) to resolve semantic collision
+- Archive 8 unnumbered scripts to R/archive/ with README (safe-to-delete assessment for future maintenance)
+- Regenerate SCRIPT_INDEX.md from filesystem rather than manual patch to guarantee accuracy
+
 ### Open Questions
 
 _No open questions yet._
@@ -81,23 +87,24 @@ _No todos yet._
 
 ### What Just Happened
 
-- Phase 66 complete: All 66 numbered R scripts now in final decade positions
-- Plan 66-03 complete: Outputs (70-75), tests (80-86), ad-hoc (90-99) renumbered
-- All a/b suffixes eliminated (D-07)
-- 32 scripts renamed, 30 headers updated, 15 source() calls updated
-- R/66_smoke_test_full_pipeline.R created (283 lines, 12-section validation)
-- R/SCRIPT_INDEX.md regenerated (82 total scripts documented)
-- Zero broken references remain (verified by smoke test)
+- Phase 67 complete: Post-renumbering inventory cleanup finished
+- Plan 67-01 complete: Smoke test moved to 87, 8 scripts archived, SCRIPT_INDEX regenerated
+- Smoke test moved from R/66_smoke_test_full_pipeline.R to R/87_smoke_test_full_pipeline.R
+- 8 unnumbered scripts archived to R/archive/ (git mv preserves history)
+- R/archive/README.md created with per-script documentation and safe-to-delete guidance
+- SCRIPT_INDEX.md regenerated: Payer/QA=9, Tests=8, Archived=8
+- Zero unnumbered .R files remain in R/ root
+- 3 atomic commits: bceaa62, f60a9f1, de2b54e
 
 ### Current Task
 
-Phase 66 complete. Ready for next phase.
+Phase 67 complete. Ready for next phase.
 
 ### Next Actions
 
-1. Begin Phase 67 (archival of deprecated scripts) or Phase 68 (documentation)
-2. Run R/66_smoke_test_full_pipeline.R to validate integrity
-3. Continue with DRY-01 (consolidate PREFIX_MAP duplication) in future phase
+1. Run R/87_smoke_test_full_pipeline.R to validate full pipeline integrity
+2. Begin Phase 68 (documentation: section headers, key-logic comments, reference manual)
+3. Continue with DRY-01 (consolidate PREFIX_MAP duplication) in Phase 73
 
 ---
 *State initialized: 2026-06-01*

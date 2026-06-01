@@ -56,7 +56,7 @@
 
 - [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
 - [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
-- [ ] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope)
+- [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (completed 2026-06-01)
 - [ ] **Phase 68: Output & Test Reorganization** - To be repurposed (original scope absorbed by Phase 66)
 - [ ] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments
 - [ ] **Phase 70: Automated Formatting** - Apply styler and configure lintr
@@ -113,9 +113,9 @@ Plans:
   3. Test decade has 8 scripts (80-87) including full-pipeline smoke test
   4. All 8 unnumbered scripts archived to R/archive/ with README.md
   5. SCRIPT_INDEX.md regenerated from filesystem (guaranteed accurate)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 67-01-PLAN.md -- Move smoke test to 87, archive unnumbered scripts, regenerate SCRIPT_INDEX
+- [x] 67-01-PLAN.md -- Move smoke test to 87, archive unnumbered scripts, regenerate SCRIPT_INDEX
 
 #### Phase 68: Output & Test Reorganization
 **Goal**: To be repurposed -- original scope (output/test/ad-hoc renumbering) absorbed by Phase 66
@@ -207,7 +207,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
-| 67. Post-Renumbering Inventory Cleanup | 0/1 | Planned | - |
+| 67. Post-Renumbering Inventory Cleanup | 1/1 | Complete   | 2026-06-01 |
 | 68. Output & Test Reorganization | 0/0 | To be repurposed | - |
 | 69. Script Documentation | 0/0 | Not started | - |
 | 70. Automated Formatting | 0/0 | Not started | - |
