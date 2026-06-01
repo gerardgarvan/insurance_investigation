@@ -61,14 +61,44 @@
 
 ---
 
+## Gap-Fix Discussion (2026-06-01, post-verification)
+
+**Trigger:** Verification found 3 gaps (5/7 truths verified). `--gaps` flag.
+
+### SCRIPT_INDEX Regeneration (Plan 02)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Full regen (Recommended) | Re-scan R/*.R filesystem and rebuild entire SCRIPT_INDEX.md from scratch — catches any other drift | ✓ |
+| Patch 3 lines | Fix only lines 81-83: rename 67->66, 68->67, add missing 68_overlap_classification.R | |
+| You decide | Claude picks the approach based on codebase patterns | |
+
+**User's choice:** Full regen (Recommended)
+**Notes:** Same approach as D-06, but plan 01's execution produced wrong numbers. Full regen ensures accuracy.
+
+### Smoke Test Fix (Plan 02)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Fix array + count | Update payer_expected to list all 10 correct scripts (60-69), change count from 9 to 10 | ✓ |
+| Regen all arrays | Rebuild ALL decade arrays from filesystem (not just payer) to catch any other drift | |
+| You decide | Claude picks based on verification report findings | |
+
+**User's choice:** Fix array + count
+**Notes:** Targeted fix (payer array only). Other decades were not flagged in verification.
+
+---
+
 ## Claude's Discretion
 
 - Archive README format and detail level
 - Whether to update source() references inside archived scripts
 - Smoke test internal self-references after rename
 - Order of operations during execution
+- ROADMAP success criteria update (9→10 scripts) — mechanical bookkeeping
 
 ## Deferred Ideas
 
 - Phase 68 repurposing — could become script documentation prep or additional cleanup
 - Cancer decade description accuracy — full regeneration will catch any remaining issues
+- Rebuild ALL smoke test decade arrays (not just payer) in a future phase to catch any other drift
