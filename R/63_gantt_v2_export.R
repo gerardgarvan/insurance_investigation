@@ -485,6 +485,44 @@ clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
   paste(values, collapse = sep_out)
 }
 
+# Non-drug stopwords common in RxNorm descriptions (units, dosage forms, salts)
+DRUG_STOPWORDS <- c(
+  # Units
+  "ml", "mg", "gm", "mcg", "ug", "meq", "mmol", "hr",
+  # Dosage forms
+  "injection", "solution", "tablet", "capsule", "oral", "topical",
+  "pack", "kit", "vial", "actuation", "inhalation", "spray",
+  "cream", "ointment", "gel", "patch", "suspension", "powder",
+  "concentrate", "prefilled", "syringe", "pen", "autoinjector",
+  "extended", "release", "delayed", "ophthalmic", "nasal",
+  "rectal", "vaginal", "sublingual", "transdermal", "infusion",
+  # Salt forms
+  "hydrochloride", "sulfate", "sodium", "acetate", "citrate",
+  "fumarate", "maleate", "succinate", "tartrate", "mesylate",
+  "phosphate", "chloride", "bromide", "vedotin", "pegol",
+  "disodium", "potassium", "calcium", "oxide", "bitartrate",
+  # Filler words
+  "in", "of", "and", "per", "for", "with", "the"
+)
+
+# Brand-to-generic mapping for drugs in Hodgkin Lymphoma regimens
+BRAND_TO_GENERIC <- c(
+  "adcetris"    = "Brentuximab",
+  "opdivo"      = "Nivolumab",
+  "keytruda"    = "Pembrolizumab",
+  "vincasar"    = "Vincristine",
+  "oncovin"     = "Vincristine",
+  "adriamycin"  = "Doxorubicin",
+  "platinol"    = "Cisplatin",
+  "paraplatin"  = "Carboplatin",
+  "blenoxane"   = "Bleomycin",
+  "mustargen"   = "Mechlorethamine",
+  "matulane"    = "Procarbazine",
+  "velban"      = "Vinblastine",
+  "neosar"      = "Cyclophosphamide",
+  "cytoxan"     = "Cyclophosphamide"
+)
+
 # Helper function: extract generic drug name from RxNorm string
 simplify_drug_name <- function(drug_str) {
   if (is.na(drug_str) || drug_str == "" || drug_str == "NA") return("")
@@ -493,10 +531,26 @@ simplify_drug_name <- function(drug_str) {
   drugs <- str_trim(drugs)
 
   simplified <- sapply(drugs, function(d) {
-    # Extract first lowercase word sequence (generic name)
-    match <- str_extract(tolower(d), "[a-z]{2,}")
-    if (is.na(match)) return(d)
-    match
+    if (d == "" || is.na(d)) return("")
+    d_lower <- tolower(d)
+
+    # Extract all 2+ letter words
+    words <- str_extract_all(d_lower, "[a-z]{2,}")[[1]]
+    if (length(words) == 0) return(d)
+
+    # Filter out non-drug stopwords
+    drug_words <- words[!words %in% DRUG_STOPWORDS]
+    if (length(drug_words) == 0) return(d)
+
+    name <- drug_words[1]
+
+    # Apply brand-to-generic mapping (already title-cased in the map)
+    if (name %in% names(BRAND_TO_GENERIC)) {
+      return(BRAND_TO_GENERIC[[name]])
+    }
+
+    # Title case: first letter uppercase
+    paste0(toupper(substr(name, 1, 1)), substr(name, 2, nchar(name)))
   }, USE.NAMES = FALSE)
 
   simplified <- unique(simplified)
