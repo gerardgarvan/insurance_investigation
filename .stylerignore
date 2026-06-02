@@ -1,0 +1,7 @@
+# Directories excluded from styler auto-formatting
+# Phase 70: Automated Formatting (SAFE-04)
+
+R/archive/
+output/
+cache/
+renv/

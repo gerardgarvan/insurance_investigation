@@ -1,0 +1,5 @@
+# Formatting commits to ignore in git blame
+# See: https://git-scm.com/docs/git-blame
+
+# Phase 70: styler auto-formatting (SAFE-04) - 2026-06-01
+# Commit hash will be added after the formatting commit is created
