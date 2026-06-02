@@ -106,6 +106,20 @@ compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analy
 #'
 #' @return Tibble with columns: ID, FIRST_CHEMO_DATE, PAYER_AT_CHEMO
 compute_payer_at_chemo <- function() {
+  # SAFE-02: Validate required tables exist
+  procedures_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
+  if (!is.null(procedures_tbl)) {
+    # Materialize for assertion check
+    procedures_check <- procedures_tbl %>% head(1) %>% materialize()
+    assert_df_valid(
+      procedures_check,
+      "PROCEDURES",
+      required_cols = c("ID", "PX", "PX_TYPE", "PX_DATE"),
+      script_name = "R/11"
+    )
+    rm(procedures_check)
+  }
+
   # Build chemo ICD-10-PCS prefix regex once (config defines these as prefixes, not exact codes)
   chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
 

@@ -386,18 +386,24 @@ count_j9_codes <- function(triggering_codes) {
 
 message("\n--- Loading treatment episodes and detail ---")
 
-if (!file.exists(OUTPUT_RDS)) {
-  stop(glue("Input file not found: {OUTPUT_RDS}. Run R/44a and R/60 first."))
-}
-if (!file.exists(DETAIL_RDS)) {
-  stop(glue("Input file not found: {DETAIL_RDS}. Run R/44a and R/60 first."))
-}
+# SAFE-01: Validate input RDS artifacts
+assert_rds_exists(OUTPUT_RDS, script_name = "R/28")
+assert_rds_exists(DETAIL_RDS, script_name = "R/28")
 
 episodes <- readRDS(OUTPUT_RDS)
 message(glue("  Loaded treatment_episodes.rds: {nrow(episodes)} episodes"))
 
 episode_detail <- readRDS(DETAIL_RDS)
 message(glue("  Loaded treatment_episode_detail.rds: {nrow(episode_detail)} detail rows"))
+
+# SAFE-02: Validate data frame structure
+assert_df_valid(episodes, "treatment_episodes",
+                required_cols = c("ID", "treatment_type", "episode_number",
+                                  "episode_start", "episode_stop"),
+                script_name = "R/28")
+assert_df_valid(episode_detail, "treatment_episode_detail",
+                required_cols = c("ID", "treatment_type", "treatment_date"),
+                script_name = "R/28")
 
 USE_DUCKDB <- TRUE
 open_pcornet_con()

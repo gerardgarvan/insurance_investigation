@@ -61,10 +61,19 @@ library(glue)
 #'   NULL-safe for get_pcornet_table("PROVIDER"): if the PROVIDER table is unavailable,
 #'   Level 3 and Level 4 are set to 0 for all patients and a warning is logged.
 classify_survivorship_encounters <- function(post_dx_date_map) {
+  # NOTE: Existing stopifnot at line 64 preserved per D-05
   stopifnot(
     is.data.frame(post_dx_date_map),
     "ID" %in% names(post_dx_date_map),
     "first_hl_dx_date" %in% names(post_dx_date_map)
+  )
+
+  # SAFE-02: Validate cohort input for survivorship classification
+  assert_df_valid(
+    post_dx_date_map,
+    "cohort for survivorship",
+    required_cols = c("ID"),
+    script_name = "R/13"
   )
 
   n_cohort <- nrow(post_dx_date_map)

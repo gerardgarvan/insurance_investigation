@@ -431,6 +431,27 @@ detect_fobt <- function(post_dx_date_map) {
 #' @return Wide tibble (nrow = nrow(post_dx_date_map)) with all HAD_*/FIRST_*_DATE/N_*
 #'   columns. Safe to left_join onto hl_cohort by ID.
 assemble_surveillance_flags <- function(post_dx_date_map) {
+  # SAFE-02: Validate input cohort data
+  assert_df_valid(
+    post_dx_date_map,
+    "post_dx_date_map for surveillance",
+    required_cols = c("ID"),
+    script_name = "R/12"
+  )
+
+  # SAFE-02: Validate PROCEDURES table if present
+  procedures_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
+  if (!is.null(procedures_tbl)) {
+    procedures_check <- procedures_tbl %>% head(1) %>% materialize()
+    assert_df_valid(
+      procedures_check,
+      "PROCEDURES",
+      required_cols = c("ID", "PX", "PX_TYPE", "PX_DATE"),
+      script_name = "R/12"
+    )
+    rm(procedures_check)
+  }
+
   message("\n--- Surveillance Modality Detection ---")
 
   result <- post_dx_date_map %>% select(ID)
@@ -466,6 +487,15 @@ assemble_surveillance_flags <- function(post_dx_date_map) {
     "[Surveillance] assemble_surveillance_flags: {n_cols} surveillance columns",
     " for {nrow(result)} patients"
   ))
+
+  # SAFE-02: Validate surveillance flags output
+  assert_df_valid(
+    result,
+    "surveillance_flags",
+    required_cols = c("ID"),
+    script_name = "R/12"
+  )
+
   result
 }
 

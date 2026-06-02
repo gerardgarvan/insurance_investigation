@@ -50,6 +50,58 @@ message("HL Cohort Building Pipeline")
 message(strrep("=", 60))
 
 # ==============================================================================
+# SECTION 0: INPUT VALIDATION ----
+# ==============================================================================
+
+# SAFE-01: Validate critical input tables
+enrollment_tbl <- tryCatch(get_pcornet_table("ENROLLMENT"), error = function(e) NULL)
+if (!is.null(enrollment_tbl)) {
+  enrollment_check <- enrollment_tbl %>% head(1) %>% materialize()
+  assert_df_valid(
+    enrollment_check,
+    "ENROLLMENT",
+    required_cols = c("ID", "ENR_START_DATE", "ENR_END_DATE"),
+    script_name = "R/14"
+  )
+  rm(enrollment_check)
+}
+
+diagnosis_tbl <- tryCatch(get_pcornet_table("DIAGNOSIS"), error = function(e) NULL)
+if (!is.null(diagnosis_tbl)) {
+  diagnosis_check <- diagnosis_tbl %>% head(1) %>% materialize()
+  assert_df_valid(
+    diagnosis_check,
+    "DIAGNOSIS",
+    required_cols = c("ID", "DX", "DX_DATE"),
+    script_name = "R/14"
+  )
+  rm(diagnosis_check)
+}
+
+encounter_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
+if (!is.null(encounter_tbl)) {
+  encounter_check <- encounter_tbl %>% head(1) %>% materialize()
+  assert_df_valid(
+    encounter_check,
+    "ENCOUNTER",
+    required_cols = c("ID", "ENCOUNTERID", "ADMIT_DATE", "ENC_TYPE"),
+    script_name = "R/14"
+  )
+  rm(encounter_check)
+}
+
+demographic_tbl <- tryCatch(get_pcornet_table("DEMOGRAPHIC"), error = function(e) NULL)
+if (!is.null(demographic_tbl)) {
+  demographic_check <- demographic_tbl %>% head(1) %>% materialize()
+  assert_col_types(
+    demographic_check,
+    type_spec = list(ID = "character"),
+    script_name = "R/14"
+  )
+  rm(demographic_check)
+}
+
+# ==============================================================================
 # SECTION 2: SEQUENTIAL FILTER CHAIN ----
 # ==============================================================================
 #
@@ -154,8 +206,17 @@ n_unverified <- sum(hl_source_map$HL_VERIFIED == 0L)
 message(glue("  HL_VERIFIED=0 (Neither): {n_unverified} patients retained with flag"))
 
 # Join HL flag to cohort
+n_before_hl <- nrow(cohort)
 cohort <- cohort %>%
   left_join(hl_source_map, by = "ID")
+
+warn_row_count(
+  cohort,
+  "cohort after HL flag join",
+  min_expected = n_before_hl,
+  max_expected = as.integer(n_before_hl * 1.05),
+  script_name = "R/14"
+)
 
 attrition_log <- log_attrition(attrition_log, "HL flag applied (all retained)", n_distinct(cohort$ID))
 
@@ -259,6 +320,7 @@ message(glue("  Patients missing first_hl_dx_date: {sum(is.na(cohort$first_hl_dx
 
 message("\n--- Payer Summary ---")
 
+n_before_payer <- nrow(cohort)
 cohort <- cohort %>%
   left_join(
     payer_summary %>%
@@ -268,6 +330,14 @@ cohort <- cohort %>%
       ),
     by = "ID"
   )
+
+warn_row_count(
+  cohort,
+  "cohort after payer join",
+  min_expected = n_before_payer,
+  max_expected = as.integer(n_before_payer * 1.05),
+  script_name = "R/14"
+)
 
 n_missing_payer <- sum(is.na(cohort$PAYER_CATEGORY_PRIMARY))
 if (n_missing_payer > 0) {
@@ -516,6 +586,19 @@ hl_cohort <- cohort %>%
     starts_with("FIRST_ENC_"),
     HAS_POST_TX_ENCOUNTERS
   )
+
+# SAFE-02: Validate final cohort output
+assert_df_valid(
+  hl_cohort,
+  "final HL cohort",
+  required_cols = c("ID", "PAYER_CATEGORY_PRIMARY"),
+  script_name = "R/14"
+)
+assert_col_types(
+  hl_cohort,
+  type_spec = list(ID = "character"),
+  script_name = "R/14"
+)
 
 # Snapshot: Final cohort (per SNAP-02)
 saveRDS(hl_cohort, file.path(CONFIG$cache$cohort_dir, "cohort_final.rds"), compress = TRUE)

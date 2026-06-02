@@ -54,6 +54,19 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate critical PCORnet tables for treatment date extraction
+assert_df_valid(
+  pcornet$PROCEDURES, "PROCEDURES",
+  required_cols = c("ID", "PX", "PX_TYPE", "PX_DATE"),
+  script_name = "R/25"
+)
+assert_col_types(
+  pcornet$PROCEDURES,
+  type_spec = list(ID = "character"),
+  script_name = "R/25"
+)
+
 # GAP_THRESHOLD: defined in R/00_config.R
 # TREATMENT_TYPES: defined in R/00_config.R
 
@@ -762,6 +775,16 @@ all_durations <- bind_rows(results_list) %>%
     ID, treatment_type, first_treatment_date, last_treatment_date,
     overall_span_days, distinct_treatment_dates, episode_count
   )
+
+# SAFE-02: Validate treatment_durations output
+assert_df_valid(
+  all_durations, "treatment_durations",
+  required_cols = c("ID", "treatment_type", "first_treatment_date", "last_treatment_date"),
+  script_name = "R/25"
+)
+warn_date_range(all_durations, "first_treatment_date",
+                as.Date("1990-01-01"), as.Date("2030-12-31"),
+                script_name = "R/25")
 
 # Save RDS artifact
 saveRDS(all_durations, OUTPUT_RDS)

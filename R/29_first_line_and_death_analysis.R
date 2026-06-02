@@ -61,26 +61,33 @@ message(glue("  death_analysis.csv: {OUTPUT_CSV}\n"))
 
 message("--- Loading data ---")
 
+# SAFE-01: Validate all 3 input RDS files exist before loading
+assert_rds_exists(OUTPUT_RDS, script_name = "R/29")
+assert_rds_exists(DETAIL_RDS, script_name = "R/29")
+assert_rds_exists(DEATH_RDS, script_name = "R/29")
+
 # Load treatment episodes
-if (!file.exists(OUTPUT_RDS)) {
-  stop(glue("treatment_episodes.rds not found: {OUTPUT_RDS}"))
-}
 episodes <- readRDS(OUTPUT_RDS)
 message(glue("  Loaded treatment_episodes.rds: {nrow(episodes)} episodes"))
 
 # Load treatment episode detail (for individual chemo dates)
-if (!file.exists(DETAIL_RDS)) {
-  stop(glue("treatment_episode_detail.rds not found: {DETAIL_RDS}"))
-}
 episode_detail <- readRDS(DETAIL_RDS)
 message(glue("  Loaded treatment_episode_detail.rds: {nrow(episode_detail)} rows"))
 
 # Load validated death dates (Phase 59 artifact)
-if (!file.exists(DEATH_RDS)) {
-  stop(glue("validated_death_dates.rds not found: {DEATH_RDS}"))
-}
 validated_deaths <- readRDS(DEATH_RDS)
 message(glue("  Loaded validated_death_dates.rds: {nrow(validated_deaths)} patients"))
+
+# SAFE-02: Validate data frame structure
+assert_df_valid(episodes, "treatment_episodes",
+                required_cols = c("ID", "treatment_type", "episode_number"),
+                script_name = "R/29")
+assert_df_valid(episode_detail, "treatment_episode_detail",
+                required_cols = c("ID", "treatment_type"),
+                script_name = "R/29")
+assert_df_valid(validated_deaths, "validated_deaths",
+                required_cols = c("ID"),
+                script_name = "R/29", allow_empty = TRUE)
 
 # Guard for missing columns from Phase 61 (regimen_label, drug_names)
 if (!"regimen_label" %in% names(episodes)) {

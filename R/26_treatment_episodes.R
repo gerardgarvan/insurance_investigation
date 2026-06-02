@@ -658,6 +658,7 @@ all_detail <- bind_rows(detail_list) %>%
 message("\n--- Joining drug names to episode detail ---")
 DRUG_LOOKUP_RDS <- file.path(CONFIG$cache$outputs_dir, "drug_name_lookup.rds")
 
+# SAFE-01: File existence validated by existing file.exists() guard
 if (file.exists(DRUG_LOOKUP_RDS)) {
   drug_lookup <- readRDS(DRUG_LOOKUP_RDS)
   message(glue("  Loaded {nrow(drug_lookup)} drug name lookups"))
@@ -710,6 +711,14 @@ all_detail <- all_detail %>%
     patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID, drug_name,
     episode_number, episode_start, episode_stop, historical_flag
   )
+
+# SAFE-02: Validate episode date ranges
+warn_date_range(all_detail, "episode_start",
+                as.Date("1990-01-01"), as.Date("2030-12-31"),
+                script_name = "R/26")
+warn_date_range(all_detail, "episode_stop",
+                as.Date("1990-01-01"), as.Date("2030-12-31"),
+                script_name = "R/26")
 
 # Save RDS artifacts (now with drug name columns)
 saveRDS(all_episodes, OUTPUT_RDS)
@@ -1126,6 +1135,7 @@ wb_audit$merge_cells(sheet = "ENCOUNTERID Rates", dims = "A1:D1")
 
 # Load profile from Plan 01
 PROFILE_RDS <- file.path(CONFIG$cache$outputs_dir, "encounterid_profile.rds")
+# SAFE-01: File existence validated by existing file.exists() guard
 if (file.exists(PROFILE_RDS)) {
   encounterid_profile <- readRDS(PROFILE_RDS)
 
@@ -1167,6 +1177,7 @@ wb_audit$add_font(
 wb_audit$merge_cells(sheet = "SCT Source Audit", dims = "A1:B1")
 
 AUDIT_RDS <- file.path(CONFIG$cache$outputs_dir, "sct_audit_result.rds")
+# SAFE-01: File existence validated by existing file.exists() guard
 if (file.exists(AUDIT_RDS)) {
   sct_audit <- readRDS(AUDIT_RDS)
 

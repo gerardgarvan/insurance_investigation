@@ -41,6 +41,13 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-01: Validate DuckDB connection available
+checkmate::assert_class(
+  pcornet_con, "duckdb_connection",
+  .var.name = "[R/27 ERROR] DuckDB connection"
+)
+
 # =============================================================================
 # SECTION 1: API Lookup Functions ----
 # =============================================================================
@@ -299,6 +306,7 @@ message(glue("    NDC: {sum(unique_codes$code_type == 'NDC')}"))
 CACHE_FILE <- file.path(CONFIG$cache$outputs_dir, "drug_name_lookup.rds")
 OUTPUT_CSV <- file.path(CONFIG$output_dir, "drug_name_lookup.csv")
 
+# SAFE-01: File existence validated by existing file.exists() guard
 if (file.exists(CACHE_FILE)) {
   cached_lookups <- readRDS(CACHE_FILE)
   message(glue("  Loaded {nrow(cached_lookups)} cached drug name lookups"))

@@ -25,6 +25,10 @@
 #
 # ==============================================================================
 
+# NOTE: Input validation for cohort data handled in R/14_build_cohort.R
+# which sources this file and validates pcornet tables before applying predicates.
+# Existing tryCatch patterns (18+) for DuckDB NULL-guards preserved per D-05.
+
 library(dplyr)
 library(lubridate)
 library(glue)
