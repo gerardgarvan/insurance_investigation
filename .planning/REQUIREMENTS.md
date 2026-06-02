@@ -24,9 +24,9 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 ### Safety
 
-- [ ] **SAFE-01**: Input file existence validation (checkmate assert_file_exists) at the start of every script that loads data
-- [ ] **SAFE-02**: Data structure validation after critical loads and joins (checkmate assertions for expected columns, types, and row-count sanity checks)
-- [ ] **SAFE-03**: Error messages include context using glue() — file paths, expected vs actual values, script name
+- [x] **SAFE-01**: Input file existence validation (checkmate assert_file_exists) at the start of every script that loads data
+- [x] **SAFE-02**: Data structure validation after critical loads and joins (checkmate assertions for expected columns, types, and row-count sanity checks)
+- [x] **SAFE-03**: Error messages include context using glue() — file paths, expected vs actual values, script name
 - [ ] **SAFE-04**: All scripts auto-formatted with styler (tidyverse style), with .stylerignore protecting non-R directories
 - [x] **SAFE-05**: lintr configured with project .lintr file (object_name_linter disabled for PCORnet ALLCAPS columns, line_length_linter(150), pipe_consistency_linter, object_usage_linter disabled)
 - [ ] **SAFE-06**: Comprehensive smoke test suite (testthat) verifying pipeline integrity — sequential numbering, source() resolution, RDS dependency checks, critical script execution without error
@@ -78,9 +78,9 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 | DOC-02 | Phase 69 | Complete |
 | DOC-03 | Phase 69 | Complete |
 | DOC-04 | Phase 74 | Pending |
-| SAFE-01 | Phase 72 | Pending |
-| SAFE-02 | Phase 72 | Pending |
-| SAFE-03 | Phase 72 | Pending |
+| SAFE-01 | Phase 72 | Complete |
+| SAFE-02 | Phase 72 | Complete |
+| SAFE-03 | Phase 72 | Complete |
 | SAFE-04 | Phase 70 | Pending |
 | SAFE-05 | Phase 70, 71 | Complete |
 | SAFE-06 | Phase 74 | Pending |
