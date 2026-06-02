@@ -59,7 +59,7 @@
 - [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
 - [x] **Phase 68: Output & Test Reorganization (Verification Gate)** - Verify reorganization requirements, fix documentation drift, create HiPerGator validation checklist (completed 2026-06-02)
 - [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
-- [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
+- [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
 - [ ] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally
 - [ ] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation
 - [ ] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions
@@ -180,7 +180,10 @@ Plans:
   3. LOW-severity violations documented and deferred (trailing whitespace)
   4. lintr violation count reduced to <50 manageable items
   5. All fixes validated via smoke test (pipeline still runs)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 71-01-PLAN.md -- Update .lintr configuration: pipe standard, disable false-positive rules, bump line length (D-01, D-02, D-06, D-07, D-08)
+- [ ] 71-02-PLAN.md -- Fix code-level violations: remove commented code, fix seq patterns, fix indentation/pipe continuation, wrap long lines (D-03, D-04, D-05, D-06)
 
 #### Phase 72: Defensive Coding
 **Goal**: Critical functions have input validation and error handling with informative messages
@@ -228,10 +231,10 @@ Plans:
 | 68. Output & Test Reorganization (Verification Gate) | 2/2 | Complete    | 2026-06-02 |
 | 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
-| 71. Linting Cleanup | 0/0 | Not started | - |
+| 71. Linting Cleanup | 0/2 | Planning complete | - |
 | 72. Defensive Coding | 0/0 | Not started | - |
 | 73. DRY Consolidation | 0/0 | Not started | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 70 plans created (2 plans in 2 waves)*
+*Last updated: 2026-06-02 -- Phase 71 plans created (2 plans in 2 waves)*
