@@ -1,20 +1,35 @@
 # ==============================================================================
-# 01_load_pcornet.R -- Load PCORnet CDM CSV tables with explicit column types
+# 01_load_pcornet.R -- Load 15 PCORnet CDM CSV tables with explicit column types into named list
 # ==============================================================================
 #
-# Loads 14 primary tables into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.)
-# All date columns are parsed via parse_pcornet_date() (multi-format fallback)
-# All ID columns are loaded as character (prevents leading-zero truncation)
-# Missing files produce a warning and NULL entry (per D-10)
+# Purpose:
+#   Loads 15 primary PCORnet CDM tables from CSV files on HiPerGator /orange
+#   storage into a named list (pcornet$ENROLLMENT, pcornet$DIAGNOSIS, etc.).
+#   Handles multi-format date parsing, RDS caching for fast reloads, and
+#   DuckDB connection initialization when USE_DUCKDB is TRUE. After loading,
+#   scripts can access tables via pcornet$TABLE_NAME (RDS mode) or
+#   get_pcornet_table("TABLE_NAME") (DuckDB mode).
 #
-# Usage:
-#   source("R/00_config.R")  # Auto-loads utils
-#   source("R/01_load_pcornet.R")
-#   pcornet$ENROLLMENT  # Access loaded table
+# Inputs:
+#   - 15 CSV files from CONFIG$data_dir (/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915/)
+#     - ENROLLMENT, DIAGNOSIS, CONDITION, PROCEDURES, PRESCRIBING, ENCOUNTER,
+#       DEMOGRAPHIC, TUMOR_REGISTRY1/2/3, DISPENSING, MED_ADMIN, LAB_RESULT_CM,
+#       PROVIDER, DEATH
 #
-# Requirement: LOAD-01 (load 22 CDM tables with explicit col_types)
-# Phase 1 loads 9 primary tables; Phase 9 adds DISPENSING and MED_ADMIN;
-# Phase 10 adds LAB_RESULT_CM and PROVIDER
+# Outputs:
+#   - pcornet: Named list of 15 tibbles (RDS mode) or empty list (DuckDB mode)
+#   - pcornet_con: DuckDB connection object (DuckDB mode only, NULL in RDS mode)
+#   - Cached RDS files: /blue/erin.mobley-hl.bcu/clean/rds/raw/{TABLE}.rds (if cache enabled)
+#
+# Dependencies:
+#   - source("R/00_config.R"): CONFIG, PCORNET_TABLES, PCORNET_PATHS, USE_DUCKDB
+#   - utils/utils_dates.R: parse_pcornet_date() (auto-sourced by 00_config)
+#   - utils/utils_duckdb.R: open_pcornet_con() (auto-sourced by 00_config)
+#   - vroom: Multi-threaded CSV parsing
+#   - dplyr: mutate_at() for date column parsing
+#
+# Requirements: LOAD-01 (load PCORnet CDM tables with explicit col_types)
+#
 # ==============================================================================
 
 source("R/00_config.R")
@@ -26,8 +41,14 @@ library(purrr)
 library(glue)
 
 # ==============================================================================
-# COLUMN TYPE SPECIFICATIONS
+# SECTION 1: COLUMN TYPE SPECIFICATIONS ----
 # ==============================================================================
+# WHY explicit column types:
+# - IDs as character: Prevents leading-zero truncation (PATID "00123" becomes "123"
+#   if read as numeric) and integer overflow for large ID values
+# - Dates as character: Enables multi-format parsing via parse_pcornet_date()
+#   which handles YYYY-MM-DD, MM/DD/YYYY, and Unix epoch formats in a single pass
+# - All other columns: Let vroom guess types (works well for standard PCORnet CDM)
 
 # ------------------------------------------------------------------------------
 # 1. ENROLLMENT (6 columns)
@@ -358,7 +379,7 @@ PROVIDER_SPEC <- cols(
 )
 
 # ==============================================================================
-# TABLE SPECS LOOKUP
+# SECTION 2: TABLE SPECS LOOKUP ----
 # ==============================================================================
 
 TABLE_SPECS <- list(
@@ -380,7 +401,7 @@ TABLE_SPECS <- list(
 )
 
 # ==============================================================================
-# LOAD FUNCTION
+# SECTION 3: LOAD FUNCTION ----
 # ==============================================================================
 
 #' Load a single PCORnet CDM table with explicit column types
@@ -588,8 +609,11 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
 }
 
 # ==============================================================================
-# MAIN LOADING BLOCK
+# SECTION 4: MAIN LOADING BLOCK ----
 # ==============================================================================
+# WHY skip-if-loaded guard: When multiple scripts source 01_load_pcornet.R in
+# the same R session, this prevents redundant CSV parsing. First source() loads
+# the data; subsequent source() calls skip loading and return immediately.
 
 if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
   message("PCORnet tables already loaded — skipping reload. (rm(pcornet) to force reload)")

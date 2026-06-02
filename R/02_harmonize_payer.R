@@ -1,21 +1,30 @@
 # ==============================================================================
-# 02_harmonize_payer.R -- Payer harmonization pipeline
+# 02_harmonize_payer.R -- AMC 8-category payer harmonization from raw PAYER_TYPE codes
 # ==============================================================================
 #
-# Implements AMC 8-category payer mapping using direct code-to-category lookup
-# from payer_primary_codes_frequency_AMC.xlsx. Produces patient-level payer
-# summary and per-partner enrollment completeness report.
+# Purpose:
+#   Harmonizes raw PAYER_TYPE_PRIMARY and PAYER_TYPE_SECONDARY codes from ENROLLMENT
+#   table into standardized AMC 8 categories (Medicaid, Medicare, Private, Other govt,
+#   Other, Self-pay, Uninsured, Missing). Produces patient-level payer summary with
+#   mode payer category, dual-eligible flags, and enrollment completeness metrics.
+#   The payer_summary tibble is the foundation for all downstream payer analyses.
 #
-# Categories: Medicaid, Medicare, Private, Other govt, Other, Self-pay,
-#             Uninsured, Missing
+# Inputs:
+#   - pcornet$ENROLLMENT: PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY, ENR_START_DATE, ENR_END_DATE, SOURCE, ID
+#   - pcornet$DIAGNOSIS: DX, DX_DATE, ID (for first HL diagnosis date calculation)
+#   - PAYER_MAPPING$categories, AMC_PAYER_LOOKUP (from R/00_config.R)
 #
-# Requirements: PAYR-01, PAYR-02, PAYR-03
+# Outputs:
+#   - payer_summary: Tibble with patient-level payer mode, dual-eligible flag, enrollment metrics
+#   - output/tables/payer_summary.csv: Patient-level payer summary CSV export
+#   - Console output: Enrollment completeness by partner, payer distribution table, validation summary
 #
-# Usage:
-#   source("R/02_harmonize_payer.R")
-#   # Produces: payer_summary tibble (patient-level)
-#   # Prints: enrollment completeness by partner, payer distribution, validation summary
-#   # Saves: output/tables/payer_summary.csv
+# Dependencies:
+#   - source("R/01_load_pcornet.R"): Loads pcornet$ENROLLMENT, pcornet$DIAGNOSIS
+#   - utils/utils_payer.R: is_missing_payer() (auto-sourced by 00_config)
+#   - dplyr, lubridate, stringr, glue (tidyverse ecosystem)
+#
+# Requirements: PAYR-01 (harmonize payer), PAYR-02 (dual-eligible), PAYR-03 (enrollment completeness)
 #
 # ==============================================================================
 
@@ -32,7 +41,7 @@ message("Payer Harmonization Pipeline")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: NAMED PAYER FUNCTIONS
+# SECTION 1: NAMED PAYER FUNCTIONS ----
 # ==============================================================================
 
 #' Compute effective payer per encounter
@@ -129,8 +138,11 @@ map_payer_category <- function(effective_payer) {
 }
 
 # ==============================================================================
-# SECTION 2: ENCOUNTER-LEVEL PROCESSING
+# SECTION 2: ENCOUNTER-LEVEL PROCESSING ----
 # ==============================================================================
+# WHY encounter-level first: Each enrollment record represents a time window with
+# a payer assignment. Processing at encounter level captures payer changes over time,
+# then patient-level summary aggregates to mode payer (most common category per patient).
 
 # Guard: ENCOUNTER table is required for payer harmonization
 enc_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
@@ -180,8 +192,10 @@ message(glue("  Encounters with valid effective payer: {format(n_with_valid_paye
 message(glue("  Dual-eligible encounters: {format(n_dual_eligible_enc, big.mark=',')} ({round(100*n_dual_eligible_enc/n_total_encounters, 1)}%)"))
 
 # ==============================================================================
-# SECTION 3: FIRST HL DIAGNOSIS DATE
+# SECTION 3: FIRST HL DIAGNOSIS DATE ----
 # ==============================================================================
+# WHY first HL diagnosis date: Used for temporal payer analysis (payer at diagnosis,
+# payer changes post-diagnosis). Calculated here to avoid recomputing in every downstream script.
 
 # Get earliest HL diagnosis from DIAGNOSIS table
 # Translation gap workaround: replace is_hl_diagnosis() with inline %in% matching
@@ -229,8 +243,12 @@ message(glue("\nFirst HL diagnosis:"))
 message(glue("  Patients with HL diagnosis found: {format(nrow(first_dx), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 4: PATIENT-LEVEL SUMMARY
+# SECTION 4: PATIENT-LEVEL SUMMARY ----
 # ==============================================================================
+# WHY mode payer: Patients can have multiple enrollment periods with different
+# payers. Mode (most frequent category) provides a single patient-level payer
+# assignment for stratified analyses while preserving encounter-level variation
+# in the enrollment table.
 
 # 4a. N_ENCOUNTERS and N_ENCOUNTERS_WITH_PAYER per patient
 encounter_counts <- encounters %>%
@@ -312,8 +330,9 @@ message(glue("\nPatient-level summary:"))
 message(glue("  Total patients in payer_summary: {format(nrow(payer_summary), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 5: ENROLLMENT COMPLETENESS REPORT (PAYR-03)
+# SECTION 5: ENROLLMENT COMPLETENESS REPORT ----
 # ==============================================================================
+# Requirement PAYR-03: Per-partner enrollment completeness metrics
 
 # 5a. Total patients per partner
 patients_per_partner <- get_pcornet_table("DEMOGRAPHIC") %>%
@@ -385,7 +404,7 @@ for (src in unique(payer_by_partner$SOURCE)) {
 }
 
 # ==============================================================================
-# SECTION 6: VALIDATION SUMMARY
+# SECTION 6: VALIDATION SUMMARY ----
 # ==============================================================================
 
 message("\n=== Payer Harmonization Validation (AMC 8-category) ===")
@@ -404,7 +423,7 @@ message(glue("\nDual-eligible patients (informational flag): {n_dual}"))
 message("NOTE: Dual-eligible is an informational flag only; category is determined by AMC lookup")
 
 # ==============================================================================
-# SECTION 7: CSV OUTPUT
+# SECTION 7: CSV OUTPUT ----
 # ==============================================================================
 
 output_path <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")

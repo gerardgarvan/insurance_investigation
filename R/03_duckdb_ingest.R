@@ -1,25 +1,34 @@
 # ==============================================================================
-# 03_duckdb_ingest.R -- Ingest PCORnet CDM tables from RDS cache into DuckDB
+# 03_duckdb_ingest.R -- Ingest 13 PCORnet CDM tables from RDS cache into DuckDB with atomic write
 # ==============================================================================
 #
-# Reads all 14 PCORnet tables from RDS cache (Phase 15) and writes them
-# into a single DuckDB file with atomic write guarantee.
+# Purpose:
+#   Reads all 13 PCORnet tables from RDS cache (/blue/erin.mobley-hl.bcu/clean/rds/raw/)
+#   and writes them into a single DuckDB file with atomic write guarantee. Creates
+#   primary indexes on PATID (ID column) and secondary indexes on ENCOUNTERID where
+#   present. Always rebuilds from scratch to ensure database integrity - does NOT
+#   perform incremental updates. The atomic write pattern (.tmp rename) prevents
+#   partial ingests from corrupting the database.
 #
-# Usage:
-#   source("R/00_config.R")
-#   source("R/03_duckdb_ingest.R")
+# Inputs:
+#   - 13 RDS files from CONFIG$cache$raw_dir: ENROLLMENT.rds, DIAGNOSIS.rds,
+#     CONDITION.rds, PROCEDURES.rds, PRESCRIBING.rds, ENCOUNTER.rds, DEMOGRAPHIC.rds,
+#     TUMOR_REGISTRY1.rds, TUMOR_REGISTRY2.rds, TUMOR_REGISTRY3.rds, DISPENSING.rds,
+#     MED_ADMIN.rds, LAB_RESULT_CM.rds, PROVIDER.rds, DEATH.rds
+#   - CONFIG$cache$duckdb_path from R/00_config.R
 #
-# Output:
-#   - DuckDB file at CONFIG$cache$duckdb_path (per D-01)
-#   - Ingest log CSV at output/logs/duckdb_ingest_<EXTRACT_DATE>.csv
+# Outputs:
+#   - DuckDB file: /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb
+#   - Ingest log CSV: output/logs/duckdb_ingest_<EXTRACT_DATE>.csv (row counts, durations)
 #
-# Behavior:
-#   - Always rebuilds from scratch (per D-02: no cache-check)
-#   - Aborts on any table failure (per D-03: .tmp not swapped)
-#   - Sequential table ingestion with gc() between tables
-#   - Note: TUMOR_REGISTRY_ALL is NOT ingested -- it is a derived table (TR1+TR2+TR3)
+# Dependencies:
+#   - source("R/00_config.R"): CONFIG, PCORNET_TABLES, EXTRACT_DATE
+#   - utils/utils_duckdb.R (auto-sourced by 00_config)
+#   - duckdb, DBI: Database operations
+#   - dplyr, readr, glue: Data manipulation and logging
 #
-# Requirements: DBING-01, DBING-02, DBING-03
+# Requirements: DBING-01 (ingest to DuckDB), DBING-02 (atomic write), DBING-03 (full rebuild)
+#
 # ==============================================================================
 
 source("R/00_config.R")
@@ -32,7 +41,7 @@ library(readr)
 library(glue)
 
 # ==============================================================================
-# CONSTANTS
+# SECTION 1: CONSTANTS ----
 # ==============================================================================
 
 # Tables to ingest (same as PCORNET_TABLES from 00_config.R, 13 tables)
@@ -51,7 +60,7 @@ DUCKDB_DIR  <- CONFIG$cache$duckdb_dir
 TMP_PATH    <- paste0(DUCKDB_PATH, ".tmp")
 
 # ==============================================================================
-# CREATE OUTPUT DIRECTORIES
+# SECTION 2: CREATE OUTPUT DIRECTORIES ----
 # ==============================================================================
 
 if (!dir.exists(DUCKDB_DIR)) {
@@ -63,7 +72,7 @@ if (!dir.exists("output/logs")) {
 }
 
 # ==============================================================================
-# CLEAN UP STALE .TMP FROM PRIOR INTERRUPTED RUN
+# SECTION 3: CLEAN UP STALE .TMP FROM PRIOR INTERRUPTED RUN ----
 # ==============================================================================
 
 if (file.exists(TMP_PATH)) {
@@ -72,8 +81,12 @@ if (file.exists(TMP_PATH)) {
 }
 
 # ==============================================================================
-# OPEN DUCKDB CONNECTION TO .TMP PATH
+# SECTION 4: OPEN DUCKDB CONNECTION TO .TMP PATH ----
 # ==============================================================================
+# WHY atomic write pattern: Building at .tmp path first, then renaming to canonical
+# path only after ALL tables successfully ingest prevents partial database corruption.
+# If any table fails, the .tmp file is deleted and the canonical database (if it exists)
+# remains untouched.
 
 message(strrep("=", 60))
 message(glue("DuckDB Ingest: {length(TABLES_TO_INGEST)} tables from RDS cache"))
@@ -88,7 +101,7 @@ con <- DBI::dbConnect(duckdb::duckdb(), dbdir = TMP_PATH)
 # (no stable function frame). Cleanup handled explicitly via tryCatch below.
 
 # ==============================================================================
-# INITIALIZE INGEST LOG
+# SECTION 5: INITIALIZE INGEST LOG ----
 # ==============================================================================
 
 ingest_log <- tibble(
@@ -99,8 +112,12 @@ ingest_log <- tibble(
 )
 
 # ==============================================================================
-# SEQUENTIAL TABLE INGESTION + INDEXING + VERIFICATION (wrapped in tryCatch)
+# SECTION 6: SEQUENTIAL TABLE INGESTION + INDEXING + VERIFICATION ----
 # ==============================================================================
+# WHY sequential with gc(): Large tables (ENCOUNTER 10M+ rows, DIAGNOSIS 20M+ rows)
+# can cause memory pressure. Sequential ingestion with gc() between tables prevents
+# OOM errors on HiPerGator. tryCatch ensures that ANY failure (missing RDS, write error,
+# index creation failure) aborts the entire ingest without swapping .tmp to canonical.
 # Explicit error handling instead of on.exit() — more reliable in source()'d scripts
 
 tables_ingested <- character(0)
@@ -255,8 +272,10 @@ ingest_ok <- tryCatch({
 })
 
 # ==============================================================================
-# ATOMIC SWAP: DISCONNECT AND RENAME .TMP TO CANONICAL PATH
+# SECTION 7: ATOMIC SWAP ----
 # ==============================================================================
+# Disconnect from .tmp database and rename to canonical path. This is the final
+# commit point - only reached if ALL 13 tables ingested successfully.
 
 # Disconnect cleanly before file operations
 DBI::dbDisconnect(con, shutdown = TRUE)
@@ -272,14 +291,14 @@ build_duration <- as.numeric(difftime(Sys.time(), build_start, units = "secs"))
 file_size_mb <- round(file.info(DUCKDB_PATH)$size / 1024^2, 1)
 
 # ==============================================================================
-# WRITE INGEST LOG CSV
+# SECTION 8: WRITE INGEST LOG CSV ----
 # ==============================================================================
 
 log_path <- file.path("output", "logs", glue("duckdb_ingest_{EXTRACT_DATE}.csv"))
 readr::write_csv(ingest_log, log_path)
 
 # ==============================================================================
-# PRINT SUMMARY
+# SECTION 9: PRINT SUMMARY ----
 # ==============================================================================
 
 message(strrep("=", 60))

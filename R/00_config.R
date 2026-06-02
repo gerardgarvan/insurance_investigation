@@ -1,26 +1,38 @@
 # ==============================================================================
-# PCORnet Payer Variable Investigation (R Pipeline)
-# Configuration File
+# 00_config.R -- Project-wide configuration: data paths, ICD code lists, payer mapping rules, treatment codes, analysis parameters
 # ==============================================================================
 #
-# This file defines all project-wide configuration including:
-#   - Data paths (HiPerGator /orange and /blue directories)
-#   - PCORnet CDM table paths (9 primary tables for loading)
-#   - ICD code lists (150 Hodgkin Lymphoma diagnosis codes)
-#   - Payer mapping rules (9-category system matching Python pipeline)
-#   - Analysis parameters (thresholds for cohort filtering)
+# Purpose:
+#   Defines all project-wide configuration objects for the PCORnet Payer Variable
+#   Investigation pipeline. Auto-sources all 8 utility modules from R/utils/ at
+#   the end to provide shared functions (date parsing, attrition logging, DuckDB
+#   access, ICD normalization, payer helpers, PPTX styling, snapshots, treatment
+#   helpers) to every downstream script that sources this file.
 #
-# Source this file at the start of any analysis script:
-#   source("R/00_config.R")
+# Inputs:
+#   - None (configuration only)
 #
-# Utility functions (parse_pcornet_date, attrition logging) are auto-sourced
-# at the end of this file.
+# Outputs:
+#   - None (defines configuration objects in memory)
+#     - CONFIG: List with data_dir, cache paths, DuckDB paths, performance tuning
+#     - PCORNET_TABLES: Vector of 14 table names to load
+#     - PCORNET_PATHS: Named vector of full CSV file paths
+#     - ICD_CODES: List of HL diagnosis codes (77 ICD-10 + 73 ICD-9 = 150 total)
+#     - PAYER_MAPPING: AMC 8-category lookup table (direct code-to-category mapping)
+#     - TREATMENT_CODES: Lists of CPT/HCPCS/NDC codes for 4 treatment types
+#     - ANALYSIS_PARAMS: Thresholds for cohort filtering and HL diagnosis matching
+#
+# Dependencies:
+#   - None (root configuration)
+#   - Auto-sources R/utils/*.R at end: 8 utility modules loaded via list.files()
+#
+# Requirements: N/A (foundational configuration script)
 #
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# 1. DATA PATHS
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 1: DATA PATHS ----
+# ==============================================================================
 
 # Extract date for current PCORnet CDM data pull (Mailhot_V1_20250915)
 # Update this when a new extract arrives. Used for ingest log filenames.
@@ -74,9 +86,10 @@ CONFIG <- list(
   )
 )
 
-# ------------------------------------------------------------------------------
-# 1.5 BACKEND SELECTION (Phase 30, default flipped Phase 32)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 2: BACKEND SELECTION ----
+# ==============================================================================
+# Phase 30 introduced DuckDB mode; default flipped to DuckDB in Phase 32
 # Toggle between RDS in-memory tibbles and DuckDB lazy SQL queries.
 # FALSE = RDS mode: tables loaded via pcornet$TABLE_NAME list
 # TRUE  = DuckDB mode (default): tables accessed via get_pcornet_table() returning tbl_dbi
@@ -91,9 +104,9 @@ CONFIG <- list(
 #   See docs/DUCKDB_MIGRATION_GUIDE.md for the migration pattern.
 USE_DUCKDB <- TRUE
 
-# ------------------------------------------------------------------------------
-# 2. PCORNET CDM TABLE PATHS
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 3: PCORNET CDM TABLE PATHS ----
+# ==============================================================================
 
 # Primary load set: 14 tables
 # - 7 standard CDM tables: ENROLLMENT, DIAGNOSIS, CONDITION, PROCEDURES,
@@ -136,9 +149,17 @@ PCORNET_PATHS[["LAB_RESULT_CM"]] <- file.path(CONFIG$data_dir, "LAB_RESULT_Mailh
 # NOTE: Patient ID column is "ID" (not "PATID") across all tables
 # NOTE: SOURCE column = partner/site identifier (AMS, UMI, FLM, VRT)
 
-# ------------------------------------------------------------------------------
-# 3. ICD CODE LISTS (150 Hodgkin Lymphoma diagnosis codes)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 4: ICD CODE LISTS ----
+# ==============================================================================
+# 150 Hodgkin Lymphoma diagnosis codes: 77 ICD-10-CM + 73 ICD-9-CM
+#
+# WHY these specific codes:
+# - C81.xx (ICD-10): Official Hodgkin lymphoma code range per ICD-10-CM 2025
+# - 201.xx (ICD-9): Legacy HL codes from pre-2015 diagnoses in the cohort
+# - C81.xA remission codes added in Phase 18 after 15 patients were missed
+# - Bare "201" parent code added in Phase 18 for 1 LNK patient with unspecified coding
+# - 4-digit 201.x parent codes added for 3 patients from FLM/TMA sites using short codes
 
 ICD_CODES <- list(
   # ICD-10-CM: C81.xx (77 codes total)
@@ -240,9 +261,17 @@ ICD_CODES <- list(
   )
 )
 
-# ------------------------------------------------------------------------------
-# 4. PAYER MAPPING RULES (AMC 8-category system)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 5: PAYER MAPPING RULES ----
+# ==============================================================================
+# AMC 8-category system: Medicaid, Medicare, Private, Other govt, Other,
+# Self-pay, Uninsured, Missing
+#
+# WHY this hierarchy (Medicaid > Medicare > Private > Other govt):
+# - Dual-eligible patients (Medicare+Medicaid) mapped to Medicaid per Amy Crisp's
+#   clinical prioritization: Medicaid coverage determines treatment access/barriers
+# - "Other govt" tier (rank 4) separates VA/TRICARE from generic "Other" for analysis
+# - Direct code-to-category lookup table eliminates runtime xlsx dependency (Phase 36)
 #
 # Category assignment uses a direct code-to-category lookup table derived from
 # payer_primary_codes_frequency_AMC.xlsx (Amy Crisp framework).
@@ -366,9 +395,9 @@ PAYER_MAPPING <- list(
   )
 )
 
-# ------------------------------------------------------------------------------
-# 5. ANALYSIS PARAMETERS
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 6: ANALYSIS PARAMETERS ----
+# ==============================================================================
 
 CONFIG$analysis <- list(
   # Minimum enrollment days for cohort inclusion
@@ -387,24 +416,30 @@ CONFIG$analysis <- list(
   date_range_max = as.Date("2025-03-31")
 )
 
-# ------------------------------------------------------------------------------
-# 5.5 TREATMENT CODE LISTS (for treatment flag detection)
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 7: TREATMENT CODE LISTS ----
+# ==============================================================================
+# For treatment flag detection: chemotherapy, radiation, SCT, immunotherapy, supportive care
 #
-# Used by 03_cohort_predicates.R to identify chemotherapy, radiation, and SCT
-# evidence in PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue codes),
-# PRESCRIBING (RXNORM), DISPENSING (RXNORM), MED_ADMIN (RXNORM),
-# DIAGNOSIS (Z/V codes), and ENCOUNTER (DRG codes) tables.
+# WHY these specific code sets:
+# - Chemotherapy: ABVD is first-line HL standard-of-care; J9000-J9999 range covers
+#   all injectable chemo drugs including BV+AVD and Nivo+AVD regimens
+# - Radiation: Narrow CPT range (77385-77427) based on Phase 45 audit of 70010-79999
+#   full radiology range; excludes diagnostic imaging (77065-77084), nuclear medicine
+#   (78012-79999), and irrelevant modalities
+# - SCT: 38240-38243 per ASBMT coding guidelines; covers both autologous and
+#   allogeneic (single HAD_SCT flag per D-07)
+# - ICD-9/ICD-10 procedure codes added Phase 8 to catch procedural coding from
+#   pre-2015 records (ICD-9) and recent records (ICD-10-PCS)
+#
+# Used by 10_cohort_predicates.R to identify treatment evidence in 7 tables:
+# PROCEDURES (CPT/HCPCS, ICD-9-CM, ICD-10-PCS, revenue codes), PRESCRIBING (RXNORM),
+# DISPENSING (RXNORM), MED_ADMIN (RXNORM), DIAGNOSIS (Z/V codes), ENCOUNTER (DRG codes)
 #
 # Primary treatment evidence comes from TUMOR_REGISTRY date columns:
 #   - TR1: CHEMO_START_DATE_SUMMARY (chemo), no DT_RAD column
 #   - TR2/TR3: DT_CHEMO, DT_RAD, DT_HTE (hematologic transplant/endocrine)
 # Supplemental evidence comes from PROCEDURES and PRESCRIBING codes below.
-#
-# ICD procedure codes (PX_TYPE "09" for ICD-9-CM Volume 3, "10" for ICD-10-PCS)
-# for all three treatment types added in Phase 8 Plan 01.
-#
-# Per D-07: HAD_SCT covers both autologous and allogeneic (single flag).
 #
 # Sources:
 #   - Radiation CPT: CMS 2026 complexity-based codes (77385/77386 deleted 2026-01-01)
@@ -1492,12 +1527,17 @@ PROVIDER_SPECIALTIES <- list(
   )
 )
 
-# ------------------------------------------------------------------------------
-# 6. AUTO-SOURCE UTILITY FUNCTIONS
-# ------------------------------------------------------------------------------
-#
+# ==============================================================================
+# SECTION 8: AUTO-SOURCE UTILITY FUNCTIONS ----
+# ==============================================================================
 # Load all utility modules from R/utils/ subfolder.
 # New utils files added in future phases are auto-discovered (D-04).
+#
+# WHY auto-sourcing: Every downstream script sources R/00_config.R to get access
+# to config constants. Auto-sourcing utils here ensures that shared functions
+# (date parsing, attrition logging, DuckDB access, ICD normalization, payer helpers,
+# PPTX styling, snapshots, treatment helpers) are available in every script
+# without requiring 8 individual source() calls.
 
 utils_files <- list.files(
   path = "R/utils",
