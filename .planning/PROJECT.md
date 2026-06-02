@@ -54,8 +54,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Create full reference manual for the pipeline (DOC-02) — v2.0 Phase 69
 - [x] Auto-format all R scripts with styler tidyverse style (SAFE-04) — v2.0 Phase 70
 - [x] Configure lintr with project .lintr file and fix violations (SAFE-05) — v2.0 Phase 70-71
-- [ ] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01)
-- [ ] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02)
+- [x] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01) — v2.0 Phase 72
+- [x] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02) — v2.0 Phase 72
 - [x] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03) — v2.0 Phase 66
 - [ ] Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R (DRY-01)
 - [ ] Extract repeated code patterns into shared utility functions (DRY-02)
@@ -94,7 +94,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 71 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 71 complete — linting cleanup: .lintr configured with project standards (magrittr pipe, disabled false-positive rules, 150-char line length), seq_linter violations fixed across 4 files, violations reduced from 6,187 to 246 (96% reduction, all remaining are line_length_linter accepted as baseline).
+**Pipeline status:** 72 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 72 complete — defensive coding: checkmate-based assertions added to 43 production scripts (decades 00-69), utils_assertions.R with 5 helper functions (assert_rds_exists, assert_df_valid, assert_col_types, warn_date_range, warn_row_count), all error messages use [R/XX ACTION] format with glue() interpolation.
 
 ## Previous Milestones
 
@@ -246,4 +246,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after Phase 71 completion*
+*Last updated: 2026-06-02 after Phase 72 completion*
