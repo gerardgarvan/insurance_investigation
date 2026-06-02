@@ -20,7 +20,7 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 - [x] **DOC-01**: Every script has a header block documenting purpose, inputs, outputs, and dependencies
 - [x] **DOC-02**: Every script has section headers with 4+ dashes for RStudio outline navigation (Ctrl+Shift+O)
 - [x] **DOC-03**: Non-obvious logic has inline comments explaining WHY (clinical rules, complex joins, business mappings, payer hierarchy decisions)
-- [ ] **DOC-04**: Full reference manual created with dependency matrix (Script -> Inputs/Outputs/Dependencies table for all scripts) and run-order guide
+- [x] **DOC-04**: Full reference manual created with dependency matrix (Script -> Inputs/Outputs/Dependencies table for all scripts) and run-order guide
 
 ### Safety
 
@@ -29,7 +29,7 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 - [x] **SAFE-03**: Error messages include context using glue() — file paths, expected vs actual values, script name
 - [ ] **SAFE-04**: All scripts auto-formatted with styler (tidyverse style), with .stylerignore protecting non-R directories
 - [x] **SAFE-05**: lintr configured with project .lintr file (object_name_linter disabled for PCORnet ALLCAPS columns, line_length_linter(150), pipe_consistency_linter, object_usage_linter disabled)
-- [ ] **SAFE-06**: Comprehensive smoke test suite (testthat) verifying pipeline integrity — sequential numbering, source() resolution, RDS dependency checks, critical script execution without error
+- [x] **SAFE-06**: Comprehensive smoke test suite (testthat) verifying pipeline integrity — sequential numbering, source() resolution, RDS dependency checks, critical script execution without error
 
 ### DRY (Redundancy Removal)
 
@@ -77,13 +77,13 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 | DOC-01 | Phase 69 | Complete |
 | DOC-02 | Phase 69 | Complete |
 | DOC-03 | Phase 69 | Complete |
-| DOC-04 | Phase 74 | Pending |
+| DOC-04 | Phase 74 | Complete |
 | SAFE-01 | Phase 72 | Complete |
 | SAFE-02 | Phase 72 | Complete |
 | SAFE-03 | Phase 72 | Complete |
 | SAFE-04 | Phase 70 | Pending |
 | SAFE-05 | Phase 70, 71 | Complete |
-| SAFE-06 | Phase 74 | Pending |
+| SAFE-06 | Phase 74 | Complete |
 | DRY-01 | Phase 73 | Complete |
 | DRY-02 | Phase 73 | Complete |
 

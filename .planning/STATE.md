@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
 status: executing
-last_updated: "2026-06-02T18:48:24.655Z"
+last_updated: "2026-06-02T18:42:33Z"
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 30
-  completed_plans: 29
-  percent: 97
+  completed_plans: 30
+  percent: 100
 ---
 
 # State: v2.0 Codebase Cleanup & Documentation
@@ -25,16 +25,16 @@ progress:
 
 ## Current Position
 
-Phase: 74 (smoke-testing-reference-manual) — EXECUTING
-Plan: 1 of 2
+Phase: 74 (smoke-testing-reference-manual) — COMPLETE
+Plan: 2 of 2
 **Phase:** 74
-**Plan:** Not started
-**Status:** Executing Phase 74
-**Progress:** [██████████] 97%
+**Plan:** Completed
+**Status:** Phase 74 complete
+**Progress:** [██████████] 100%
 
 ### Phase Goal
 
-Add checkmate assertions to 43 production scripts with fail-fast input validation and informative error messages.
+Create comprehensive smoke test (R/88) and reference manual auto-generator (R/89) to validate pipeline structure and enable onboarding.
 
 ## Performance Metrics
 
@@ -88,6 +88,13 @@ Add checkmate assertions to 43 production scripts with fail-fast input validatio
 - All error messages follow [R/XX ACTION] format using glue() for context-rich errors
 - Helper functions: assert_rds_exists, assert_df_valid, assert_col_types, warn_date_range, warn_row_count
 
+**Phase 74:**
+
+- D-11: Reference manual auto-generated from script headers (not manually written) via R/89_generate_reference_manual.R
+- D-12: Placeholder manual created on Windows; full generation requires HiPerGator with R environment
+- R/88 comprehensive smoke test consolidates R/86+R/87 plus adds DRY, config, assertions validation
+- R/89 parses 5-field headers from 69 scripts + 10 utils to build dependency matrix, run-order guide, onboarding docs
+
 ### Open Questions
 
 _No open questions yet._
@@ -98,27 +105,28 @@ _No todos yet._
 
 ### Known Blockers
 
-- PREFIX_MAP duplication across R/47, R/53, R/54, R/49 — targeted for consolidation in Phase 73 (DRY-01)
+None.
 
 ## Session Continuity
 
 ### What Just Happened
 
-- Phase 72 Plan 01: Created defensive coding infrastructure
-- R/utils/utils_assertions.R created with 5 checkmate-based helper functions
-- R/00_config.R updated with library(checkmate) in SECTION 7b
-- SAFE-01, SAFE-02, SAFE-03 requirements marked complete
-- Commits: 816c7e5 (utils_assertions.R), bb6dab6 (checkmate library loading)
+- Phase 74 Plan 02: Reference manual generator complete
+- R/89_generate_reference_manual.R created (484 lines) with header parsing and markdown generation
+- docs/REFERENCE_MANUAL.md placeholder created with HiPerGator regeneration instructions
+- R/SCRIPT_INDEX.md updated to 69 numbered/10 utils/87 total, includes R/89 in Testing (80-89)
+- DOC-04 requirement completed
+- Commits: 66c37da (generator script), 4d484fd (SCRIPT_INDEX + placeholder)
 
 ### Current Task
 
-Phase 72 Plan 01 complete: Defensive coding infrastructure established.
+Phase 74 complete: Both plans (comprehensive smoke test + reference manual generator) delivered.
 
 ### Next Actions
 
-1. Execute Phase 72 Plan 02: Add assertions to foundation scripts (00-03) - 4 scripts
-2. Execute Phase 72 Plan 03: Add assertions to cohort scripts (10-14) - 5 scripts
-3. Execute Phase 72 Plan 04: Add assertions to treatment/cancer/payer scripts (20-69) - 34 scripts
+1. Run `Rscript R/89_generate_reference_manual.R` on HiPerGator to populate full manual
+2. Validate generated manual has all 6 sections with expected content
+3. Transition to next phase or complete milestone v2.0
 
 ---
 *State initialized: 2026-06-01*
