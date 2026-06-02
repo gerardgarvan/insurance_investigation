@@ -60,6 +60,14 @@ message("--- SECTION 1: Load and Prepare Encounters ---")
 # Phase 32: Use get_pcornet_table() and materialize for in-memory operations
 enc <- get_pcornet_table("ENCOUNTER") %>% materialize()
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate ENCOUNTER table
+assert_df_valid(
+  enc, "ENCOUNTER",
+  required_cols = c("ID", "ENCOUNTERID", "ADMIT_DATE", "SOURCE"),
+  script_name = "R/67"
+)
+
 total_encounters <- nrow(enc)
 total_patients <- n_distinct(enc$ID)
 message(glue("Total encounters loaded: {format(total_encounters, big.mark=',')}"))

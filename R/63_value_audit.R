@@ -36,6 +36,11 @@ library(glue)
 library(readr)
 library(tidyr)
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate pcornet list is populated
+checkmate::assert_list(pcornet, min.len = 1,
+  .var.name = "[R/63 ERROR] pcornet table list")
+
 # Output directory
 output_dir <- file.path(CONFIG$output_dir, "tables", "value_audit")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)

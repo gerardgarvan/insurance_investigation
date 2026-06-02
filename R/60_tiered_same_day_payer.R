@@ -98,6 +98,15 @@ enc_raw <- get_pcornet_table("ENCOUNTER") %>% materialize()
 
 message(glue("Total encounters loaded: {format(nrow(enc_raw), big.mark=',')}"))
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate ENCOUNTER table is available and has required columns
+assert_df_valid(
+  enc_raw, "ENCOUNTER",
+  required_cols = c("ID", "ENCOUNTERID", "ADMIT_DATE", "ENC_TYPE",
+                    "PAYER_TYPE_PRIMARY"),
+  script_name = "R/60"
+)
+
 # Ensure columns are character, parse ADMIT_DATE
 enc <- enc_raw %>%
   mutate(

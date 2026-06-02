@@ -32,6 +32,14 @@ library(readr)
 library(stringr)
 library(tidyr)
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate pcornet tables are available
+assert_df_valid(
+  pcornet$ENROLLMENT, "ENROLLMENT",
+  required_cols = c("ID", "PAYER_TYPE_PRIMARY", "SOURCE"),
+  script_name = "R/64"
+)
+
 message("\n", strrep("=", 70))
 message("ALL-SOURCE PAYER MISSINGNESS DIAGNOSTIC")
 message("Phase 21: Generalize Phase 19 to All Sources")

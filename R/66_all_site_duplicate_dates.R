@@ -67,6 +67,14 @@ message("--- SECTION 1: Identify All Patients per Site from DEMOGRAPHIC ---")
 # Phase 32: Use get_pcornet_table() and materialize for in-memory operations
 demographic_tbl <- get_pcornet_table("DEMOGRAPHIC") %>% materialize()
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate DEMOGRAPHIC and ENCOUNTER tables after loading
+assert_df_valid(
+  demographic_tbl, "DEMOGRAPHIC",
+  required_cols = c("ID", "SOURCE"),
+  script_name = "R/66"
+)
+
 all_sites <- sort(unique(demographic_tbl$SOURCE))
 message(glue("Sites found in DEMOGRAPHIC.SOURCE: {paste(all_sites, collapse=', ')}"))
 message(glue("Total unique sites: {length(all_sites)}"))
@@ -92,11 +100,19 @@ message(glue("\nTotal patients across all sites: {format(total_patients, big.mar
 message(glue("\n--- SECTION 2: Build All-Site Encounter Dataset ---"))
 
 # Phase 32: Use get_pcornet_table() and materialize after join
-all_encounters <- get_pcornet_table("ENCOUNTER") %>%
+encounters_raw <- get_pcornet_table("ENCOUNTER") %>% materialize()
+
+# SAFE-02: Validate ENCOUNTER table
+assert_df_valid(
+  encounters_raw, "ENCOUNTER",
+  required_cols = c("ID", "ENCOUNTERID", "ADMIT_DATE", "SOURCE"),
+  script_name = "R/66"
+)
+
+all_encounters <- encounters_raw %>%
   rename(ENCOUNTER_SOURCE = SOURCE) %>%
   left_join(demographic_tbl %>% select(ID, SOURCE), by = "ID") %>%
-  rename(SITE = SOURCE) %>%
-  materialize()
+  rename(SITE = SOURCE)
 
 # Handle encounters with no DEMOGRAPHIC record
 n_no_site <- sum(is.na(all_encounters$SITE))

@@ -57,6 +57,14 @@ message("--- SECTION 2: Load and Prepare Encounters ---")
 # Phase 32: Use get_pcornet_table() then materialize before data.table conversion
 enc <- get_pcornet_table("ENCOUNTER") %>% materialize()
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate ENCOUNTER table
+assert_df_valid(
+  enc, "ENCOUNTER",
+  required_cols = c("ID", "ENCOUNTERID", "ADMIT_DATE", "SOURCE"),
+  script_name = "R/69"
+)
+
 # Convert to data.table (data.table retained as documented exception -- see header)
 enc_dt <- as.data.table(enc)
 

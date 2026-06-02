@@ -82,12 +82,17 @@ TIER_MAPPING <- list(
 message("--- Loading treatment episodes (Phase 44) ---")
 
 episodes_path <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
-if (!file.exists(episodes_path)) {
-  stop(glue("Missing required file: {episodes_path}\nRun R/44a_treatment_episodes.R first."))
-}
+
+# SAFE-01: Validate episodes RDS exists
+assert_rds_exists(episodes_path, script_name = "R/62")
 
 episodes <- readRDS(episodes_path)
 message(glue("Episodes loaded: {format(nrow(episodes), big.mark=',')} episodes across {n_distinct(episodes$patient_id)} patients"))
+
+# SAFE-02: Validate structure after loading
+assert_df_valid(episodes, "treatment_episodes",
+  required_cols = c("patient_id", "treatment_type", "episode_start", "episode_stop"),
+  script_name = "R/62")
 
 # ==============================================================================
 # SECTION 3: Expand Episodes to Calendar Days ----

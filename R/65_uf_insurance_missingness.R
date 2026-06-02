@@ -32,6 +32,14 @@ library(readr)
 library(stringr)
 library(tidyr)
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate pcornet tables are available
+assert_df_valid(
+  pcornet$ENROLLMENT, "ENROLLMENT",
+  required_cols = c("ID", "PAYER_TYPE_PRIMARY", "SOURCE"),
+  script_name = "R/65"
+)
+
 message("\n", strrep("=", 70))
 message("UFH PAYER MISSINGNESS DIAGNOSTIC")
 message("Phase 19: Investigate Insurance Missingness Source UF Specifically")

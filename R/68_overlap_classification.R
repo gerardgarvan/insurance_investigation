@@ -71,9 +71,22 @@ message("--- SECTION 1: Load Phase 25 CSVs and Prepare ENCOUNTER Data ---")
 
 output_dir <- file.path(CONFIG$output_dir, "tables")
 
+# SAFE-01: Validate input CSV files from R/67
+same_date_csv_path <- file.path(output_dir, "multi_source_same_date_detail.csv")
+same_week_csv_path <- file.path(output_dir, "multi_source_same_week_detail.csv")
+
+checkmate::assert_file_exists(
+  same_date_csv_path, access = "r",
+  .var.name = glue("[R/68 ERROR] Same-date detail CSV -- run R/67 first")
+)
+checkmate::assert_file_exists(
+  same_week_csv_path, access = "r",
+  .var.name = glue("[R/68 ERROR] Same-week detail CSV -- run R/67 first")
+)
+
 # Read Phase 25 same-date detail
 same_date_detail <- read_csv(
-  file.path(output_dir, "multi_source_same_date_detail.csv"),
+  same_date_csv_path,
   col_types = cols(
     ID = col_character(),
     ADMIT_DATE = col_date(format = "%Y-%m-%d"),
@@ -88,7 +101,7 @@ message(glue("Loaded multi_source_same_date_detail.csv: {format(nrow(same_date_d
 
 # Read Phase 25 same-week detail
 same_week_detail <- read_csv(
-  file.path(output_dir, "multi_source_same_week_detail.csv"),
+  same_week_csv_path,
   col_types = cols(
     ID = col_character(),
     admit_date_1 = col_date(format = "%Y-%m-%d"),
