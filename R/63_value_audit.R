@@ -52,8 +52,6 @@ dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 #     format inconsistencies
 #   - Frequency tables enable rapid identification of dominant codes vs rare outliers
 
-}
-
 #' Audit a single character/factor column
 #'
 #' @param df Data frame
