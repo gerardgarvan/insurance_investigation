@@ -129,9 +129,9 @@ Plans:
   4. R/archive/ contains 8 deprecated scripts with README.md (REORG-04 confirmed)
   5. HiPerGator validation checklist created for deferred REORG-05 data-dependent checks
   6. REQUIREMENTS.md traceability updated (REORG-04 complete, REORG-05 structural done)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 68-01-PLAN.md -- Structural verification scan + fix SCRIPT_INDEX and smoke test discrepancies
+- [x] 68-01-PLAN.md -- Structural verification scan + fix SCRIPT_INDEX and smoke test discrepancies
 - [ ] 68-02-PLAN.md -- HiPerGator checklist creation + documentation updates (ROADMAP, REQUIREMENTS, STATE)
 
 #### Phase 69: Script Documentation
@@ -213,7 +213,7 @@ Plans:
 | 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
 | 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
 | 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete    | 2026-06-01 |
-| 68. Output & Test Reorganization (Verification Gate) | 0/2 | In Progress | - |
+| 68. Output & Test Reorganization (Verification Gate) | 1/2 | In Progress|  |
 | 69. Script Documentation | 0/0 | Not started | - |
 | 70. Automated Formatting | 0/0 | Not started | - |
 | 71. Linting Cleanup | 0/0 | Not started | - |
