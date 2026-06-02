@@ -63,8 +63,8 @@ check("R/03_duckdb_ingest.R exists", file.exists("R/03_duckdb_ingest.R"))
 
 utils_count <- length(list.files("R/utils", pattern = "\\.R$"))
 check(
-  glue("R/utils/ contains 8 modules (found {utils_count})"),
-  utils_count == 8
+  glue("R/utils/ contains 10 modules (found {utils_count})"),
+  utils_count == 10
 )
 
 # --------------------------------------------------------------------------
@@ -172,15 +172,16 @@ for (s in output_scripts) {
 check(glue("Output decade complete: 6/6 scripts"), output_found == 6)
 
 # --------------------------------------------------------------------------
-# Test 7: Test decade (80-86) -- 7 scripts per D-06
+# Test 7: Test decade (80-88) -- 9 scripts
 # --------------------------------------------------------------------------
-message("\n[7/12] Test decade (80-86)...")
+message("\n[7/12] Test decade (80-88)...")
 
 test_scripts <- c(
   "80_smoke_test_backends.R", "81_parity_test_cohort.R",
   "82_benchmark_cohort.R", "83_generate_speedup_report.R",
   "84_test_durations.R", "85_test_episodes.R",
-  "86_smoke_test_foundation.R", "87_smoke_test_full_pipeline.R"
+  "86_smoke_test_foundation.R", "87_smoke_test_full_pipeline.R",
+  "88_smoke_test_comprehensive.R"
 )
 test_found <- 0L
 for (s in test_scripts) {
@@ -191,7 +192,7 @@ for (s in test_scripts) {
     check(glue("R/{s} exists"), FALSE)
   }
 }
-check(glue("Test decade complete: 8/8 scripts"), test_found == 8)
+check(glue("Test decade complete: 9/9 scripts"), test_found == 9)
 
 # --------------------------------------------------------------------------
 # Test 8: Ad-hoc decade (90-99) -- 10 scripts
@@ -333,7 +334,7 @@ if (failed == 0) {
 message(strrep("=", 70))
 message("\nValidated:")
 message("  * Output scripts renumbered to 70-75 (D-04)")
-message("  * Test scripts renumbered to 80-86 (D-06)")
+message("  * Test scripts renumbered to 80-88 (D-06)")
 message("  * Ad-hoc scripts renumbered to 90-99")
 message("  * Zero a/b suffixes remain (D-07)")
 message("  * Zero broken source() references (REORG-02)")

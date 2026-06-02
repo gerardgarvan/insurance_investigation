@@ -61,14 +61,15 @@ check("R/utils/ directory exists", dir.exists("R/utils"))
 
 utils_files <- list.files("R/utils", pattern = "\\.R$")
 check(
-  glue("R/utils/ contains 8 files (found {length(utils_files)})"),
-  length(utils_files) == 8
+  glue("R/utils/ contains 10 files (found {length(utils_files)})"),
+  length(utils_files) == 10
 )
 
 expected_utils <- c(
-  "utils_attrition.R", "utils_dates.R", "utils_duckdb.R",
-  "utils_icd.R", "utils_payer.R", "utils_pptx.R",
-  "utils_snapshot.R", "utils_treatment.R"
+  "utils_assertions.R", "utils_attrition.R", "utils_cancer.R",
+  "utils_dates.R", "utils_duckdb.R", "utils_icd.R",
+  "utils_payer.R", "utils_pptx.R", "utils_snapshot.R",
+  "utils_treatment.R"
 )
 missing_utils <- setdiff(expected_utils, utils_files)
 check(

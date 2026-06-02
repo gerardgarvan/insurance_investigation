@@ -1,7 +1,7 @@
 # R Script Index
 
-> **Documentation Status (Phase 69):** All 75 scripts (67 numbered + 8 utils) have standardized
-> 5-field headers (Purpose, Inputs, Outputs, Dependencies, Requirements) per DOC-01. All 67
+> **Documentation Status (Phase 69):** All 87 scripts (69 numbered + 10 utils + 8 archived) have standardized
+> 5-field headers (Purpose, Inputs, Outputs, Dependencies, Requirements) per DOC-01. All 69
 > numbered scripts have RStudio-compatible section headers (DOC-02). WHY comments added for
 > clinical and business logic (DOC-03). Completed 2026-06-01.
 
@@ -16,7 +16,7 @@ Foundation scripts that load data, harmonize payer categories, and provide DuckD
 
 | Script | Purpose | Sources |
 |--------|---------|---------|
-| 00_config.R | Project-wide configuration: data paths, ICD code lists, payer mapping rules, treatment codes, analysis parameters. Auto-sources all R/utils/*.R utility modules via list.files(). | (auto-sources all 8 R/utils/ modules) |
+| 00_config.R | Project-wide configuration: data paths, ICD code lists, payer mapping rules, treatment codes, analysis parameters. Auto-sources all R/utils/*.R utility modules via list.files(). | (auto-sources all 10 R/utils/ modules) |
 | 01_load_pcornet.R | Load 13 PCORnet CDM CSV tables with explicit column types into a named list (`pcornet$ENROLLMENT`, etc.) | 00_config |
 | 02_harmonize_payer.R | AMC 8-category payer mapping from raw PAYER_TYPE codes. Produces patient-level payer summary. | 01_load_pcornet |
 | 03_duckdb_ingest.R | Ingest 13 PCORnet tables from RDS cache into DuckDB with atomic write (renumbered from 25 in Phase 65) | 00_config, utils/utils_duckdb |
@@ -101,7 +101,7 @@ Visualizations, PowerPoint presentations, and documentation generation.
 | 74_generate_documentation.R | Auto-generate variable documentation (.md + .docx) from config code lists | 00_config |
 | 75_encounter_analysis.R | Encounter analysis by payer, DX year, age group (histograms and summary tables) | 14_build_cohort |
 
-## Testing (80-87)
+## Testing (80-89)
 
 Backend parity tests, cohort benchmarks, treatment verification, and smoke tests.
 
@@ -115,6 +115,8 @@ Backend parity tests, cohort benchmarks, treatment verification, and smoke tests
 | 85_test_episodes.R | Verification script: structural, data quality, historical flag, clinical plausibility checks for treatment_episodes.rds | 00_config, 26_treatment_episodes |
 | 86_smoke_test_foundation.R | Validates Phase 65 foundation reorganization (utils subfolder, script renumbering, source references) | 00_config |
 | 87_smoke_test_full_pipeline.R | Validates Phase 66 complete reorganization (outputs, tests, ad-hoc decades) and Phase 67 cleanup (87 in test decade, 10 payer scripts, archive created) | (standalone) |
+| 88_smoke_test_comprehensive.R | Comprehensive structural smoke test: consolidates R/86+R/87 checks plus DRY validation, config constants, defensive coding infrastructure, cross-platform data gating | 00_config |
+| 89_generate_reference_manual.R | Auto-generate docs/REFERENCE_MANUAL.md by parsing script headers into dependency matrix | (standalone) |
 
 ## Ad-hoc & Diagnostics (90-99)
 
@@ -141,13 +143,15 @@ Sourced by 00_config.R (auto-loaded via list.files() from R/utils/ subfolder). T
 
 | Script | Purpose | Auto-sourced by |
 |--------|---------|-----------------|
+| utils/utils_assertions.R | Checkmate-based defensive coding helpers (assert_rds_exists, assert_df_valid, assert_col_types, warn_date_range, warn_row_count) | 00_config |
 | utils/utils_attrition.R | Attrition logging for cohort construction (init_attrition_log, log_attrition) | 00_config |
+| utils/utils_cancer.R | Cancer site classification using CANCER_SITE_MAP (classify_codes) | 00_config |
 | utils/utils_dates.R | Multi-format date parsing for PCORnet CDM data (parse_pcornet_date) | 00_config |
 | utils/utils_duckdb.R | DuckDB utility functions: get_pcornet_table(), connection management, materialization | 00_config |
 | utils/utils_icd.R | ICD code normalization and HL diagnosis matching (normalize_icd, is_hl_diagnosis) | 00_config |
-| utils/utils_payer.R | Shared payer classification and comparison helpers (is_missing_payer, etc.) | 00_config |
+| utils/utils_payer.R | Shared payer classification and comparison helpers (is_missing_payer, classify_payer_tier) | 00_config |
 | utils/utils_pptx.R | PowerPoint styling and slide generation helpers (UF brand colors, table styling) | 72_generate_pptx, 73_generate_phase19_20_pptx |
-| utils/utils_snapshot.R | Snapshot helper for consistent RDS output creation (save_output_data) | 00_config |
+| utils/utils_snapshot.R | Snapshot helper for consistent RDS output creation (save_output_data, build_output_path) | 00_config |
 | utils/utils_treatment.R | Shared treatment analysis helpers (safe_table, get_hl_patient_ids, empty_result) | 00_config |
 
 ---
@@ -179,17 +183,17 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Cancer (40-53): 14
   - Payer/QA (60-69): 10
   - Outputs (70-75): 6
-  - Tests (80-87): 8
+  - Tests (80-89): 10
   - Ad-hoc (90-99): 10
-  - **Total numbered:** 67
-- **Utility libraries:** 8 (in R/utils/ subfolder)
+  - **Total numbered:** 69
+- **Utility libraries:** 10 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 83
+- **Total:** 87
 
 ## Key Dependency Chains
 
 ```
-00_config -> utils/*.R (auto-sourced via list.files(): 8 modules)
+00_config -> utils/*.R (auto-sourced via list.files(): 10 modules)
 01_load_pcornet -> 00_config
 02_harmonize_payer -> 01_load_pcornet
 03_duckdb_ingest -> 00_config, utils/utils_duckdb
