@@ -1,16 +1,26 @@
 # ==============================================================================
 # 91_data_quality_summary.R -- Data quality resolution tracker
 # ==============================================================================
-# Generates output/diagnostics/data_quality_summary.csv (D-17)
-# Run AFTER all fixes are applied and full pipeline is rebuilt.
-# Sources 01_load_pcornet.R to get current data state.
 #
-# Columns: issue_type, count_before, count_after, status, notes
-# Status values: fixed, accepted, documented
+# Purpose: Data quality resolution tracker: before/after counts for each issue
+#          type, showing how data quality improved through pipeline processing.
+#          Demonstrates pipeline effectiveness for data quality reporting to PI.
 #
-# "count_before" values come from the original diagnostic output (Phase 6
-# Plan 02 Task 1 -- user-provided HiPerGator results).
-# "count_after" values are computed from the current data state post-fix.
+# Inputs: PCORnet tables via 01_load_pcornet.R
+#
+# Outputs: output/diagnostics/data_quality_summary.csv
+#          Console output (before/after comparison table)
+#
+# Dependencies: 01_load_pcornet.R, tibble, readr, dplyr, stringr, glue
+#
+# Requirements: D-17 (Phase 6 data quality summary)
+#
+# WHY: Before/after tracking demonstrates pipeline effectiveness for data quality
+#      reporting to PI. Shows which issues were fixed (date parsing), documented
+#      with validation flags (age sentinels), or accepted as CDM limitations
+#      (high missing rates on optional fields). Run AFTER all fixes applied and
+#      full pipeline rebuilt to capture post-fix state.
+#
 # ==============================================================================
 
 source("R/01_load_pcornet.R")
@@ -26,8 +36,12 @@ message("Data Quality Summary Generation")
 message(strrep("=", 60))
 
 # ==============================================================================
-# COLLECT CURRENT (POST-FIX) COUNTS
+# SECTION 1: Collect Current (Post-Fix) Counts ----
 # ==============================================================================
+# WHY: Hardcoded "count_before" values come from Phase 6 HiPerGator diagnostics.
+#      "count_after" values are computed from current loaded data to show how
+#      pipeline fixes (date parsing, _VALID columns, HL_SOURCE tracking) resolved
+#      each issue type. This before/after comparison quantifies improvement.
 
 # --- 1. Date parsing failures: count character-type date columns ---
 date_regex <- "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)"
@@ -109,11 +123,13 @@ for (tbl_name in names(pcornet)) {
 message(glue("  Non-ASCII characters: {n_encoding_after}"))
 
 # ==============================================================================
-# BUILD SUMMARY TRIBBLE
+# SECTION 2: Build Summary Tribble ----
 # ==============================================================================
 # NOTE: count_before values come from diagnostic CSV files shared by user in
 # Phase 6 Plan 02 Task 1 (HiPerGator diagnostic output). These are hardcoded
 # based on actual findings.
+# WHY: Tribble format makes the summary table readable and easy to update as
+#      new issue types are discovered or resolved.
 
 data_quality_summary <- tribble(
   ~issue_type, ~count_before, ~count_after, ~status, ~notes,
@@ -193,7 +209,7 @@ data_quality_summary <- tribble(
 )
 
 # ==============================================================================
-# WRITE OUTPUT
+# SECTION 3: Write Output ----
 # ==============================================================================
 
 dir.create(file.path(CONFIG$output_dir, "diagnostics"), showWarnings = FALSE, recursive = TRUE)

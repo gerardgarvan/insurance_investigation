@@ -1,15 +1,29 @@
 # ==============================================================================
-# FLM Duplicate Date Investigation (Phase 20)
+# 94_flm_duplicate_dates.R -- FLM duplicate date investigation
 # ==============================================================================
-# Standalone diagnostic script -- not part of the main pipeline sequence.
-# Investigates whether FLM-sourced patients have duplicate ENCOUNTER rows on
-# the same date from multiple data sources. Quantifies duplication, compares
-# payer completeness across sources, and recommends preferred source.
 #
-# Decisions: D-01 to D-18 from 20-CONTEXT.md
-# Requirements: FLMDUP-01, FLMDUP-02, FLMDUP-03, FLMDUP-04
+# Purpose: FLM (Florida Medicaid) duplicate date investigation: identifies
+#          same-date duplicate encounters, analyzes payer completeness patterns.
 #
-# Usage: source("R/94_flm_duplicate_dates.R")
+# Inputs: PCORnet ENCOUNTER table
+#
+# Outputs: output/flm_duplicate_dates.xlsx (4 CSVs):
+#          - flm_patient_duplicate_summary.csv
+#          - flm_date_level_duplicate_detail.csv
+#          - flm_duplicate_aggregate_summary.csv
+#          - flm_source_payer_completeness.csv
+#
+# Dependencies: 00_config.R, 01_load_pcornet.R
+#               dplyr, lubridate, glue, readr, stringr, janitor, tidyr
+#
+# Requirements: FLMDUP-01 through FLMDUP-04 (Phase 20)
+#
+# WHY: Florida Medicaid had the highest duplicate rate across partner sites.
+#      Duplicates inflate encounter counts and can assign incorrect payer when
+#      different encounters on same date have different payers. This audit
+#      quantifies the problem and recommends preferred source based on payer
+#      completeness.
+#
 # ==============================================================================
 
 source("R/00_config.R")
@@ -30,8 +44,11 @@ if (!exists("pcornet")) source("R/01_load_pcornet.R")
 # is_missing_payer() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 1: Identify FLM patients (D-05, D-06)
+# SECTION 1: Identify FLM Patients ----
 # ==============================================================================
+# WHY: FLM (Florida Medicaid) patients span multiple ENCOUNTER.SOURCE values
+#      (claims data from different reporting systems). Same-date duplicates
+#      occur when the same visit is reported by multiple sources.
 # D-06: ALL FLM patients from DEMOGRAPHIC, not just HL cohort members
 
 message(glue("\n{strrep('=', 60)}"))
@@ -46,7 +63,7 @@ flm_patient_ids <- pcornet$DEMOGRAPHIC %>%
 message(glue("FLM patients in DEMOGRAPHIC: {format(length(flm_patient_ids), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 2: Filter ENCOUNTER to FLM patients (D-07, D-09, D-10)
+# SECTION 2: Filter ENCOUNTER to FLM Patients ----
 # ==============================================================================
 # D-07: ENCOUNTER table only -- do not touch DIAGNOSIS, PROCEDURES, etc.
 
@@ -71,8 +88,11 @@ enc_sources <- sort(unique(na.omit(flm_encounters$SOURCE)))
 message(glue("ENCOUNTER.SOURCE values: {paste(enc_sources, collapse=', ')}"))
 
 # ==============================================================================
-# SECTION 3: Detect same-date duplicates on ADMIT_DATE (D-01, D-03, FLMDUP-01)
+# SECTION 3: Same-Date Duplicate Detection ----
 # ==============================================================================
+# WHY: Same-date duplicates (same patient, same ADMIT_DATE, different SOURCE)
+#      indicate the same encounter reported by multiple systems. Need to identify
+#      these to avoid double-counting encounters and to choose preferred source.
 # D-01: Group by ID + date only (not ENC_TYPE)
 # D-03: Check ADMIT_DATE (primary) and DISCHARGE_DATE (secondary)
 

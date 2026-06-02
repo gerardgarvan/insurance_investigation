@@ -2,25 +2,27 @@
 # 92_dx_gap_analysis.R -- Diagnosis gap analysis for excluded "Neither" patients
 # ==============================================================================
 #
-# Purpose: Investigate the ~19 patients excluded as "Neither" (no HL evidence
-#          in DIAGNOSIS or TUMOR_REGISTRY tables) to characterize the data gap
-#          and determine whether pipeline changes are warranted.
+# Purpose: Diagnosis gap analysis for excluded "Neither" patients (those with no
+#          HL evidence in any detection source) -- investigates why some patients
+#          lack expected diagnoses to validate exclusion criteria.
 #
-# Decisions referenced: D-01 through D-10 from Phase 7 Context
-#   D-01: Pull all DIAGNOSIS records for Neither patients, filter to lymphoma/cancer codes
-#   D-02: Cross-reference ENROLLMENT and TUMOR_REGISTRY for each patient
-#   D-03: Site-level stratification of gap patterns
-#   D-04: Not used (reserved)
-#   D-05: Per-patient gap classification (phantom, coding gap, non-HL codes, etc.)
-#   D-06: Not used (reserved)
-#   D-07: Three CSV outputs (all dx, lymphoma subset, patient summary)
-#   D-08: Console summary with site stratification
-#   D-09: Recommendation based on findings (expand codes OR report only)
-#   D-10: Read excluded_no_hl_evidence.csv as input (depends on full pipeline)
+# Inputs: PCORnet DIAGNOSIS table via 01_load_pcornet.R
+#         excluded_no_hl_evidence.csv from 14_build_cohort.R
 #
-# Usage: source("R/92_dx_gap_analysis.R")
+# Outputs: output/dx_gap_analysis.xlsx (3 sheets):
+#          - neither_all_diagnoses.csv
+#          - neither_lymphoma_codes.csv
+#          - neither_patient_summary.csv
 #
-# Dependencies: Requires full pipeline run first (reads excluded_no_hl_evidence.csv)
+# Dependencies: 01_load_pcornet.R, dplyr, readr, stringr, janitor, glue
+#               Requires full pipeline run first (reads excluded_no_hl_evidence.csv)
+#
+# Requirements: D-01 through D-10 (Phase 7 diagnostic gap investigation)
+#
+# WHY: "Neither" patients were excluded from cohort -- understanding why helps
+#      validate the exclusion criteria. If lymphoma/cancer codes are found, code
+#      list expansion may be warranted. If no codes found, gap is a data quality
+#      limitation (not a code list issue).
 #
 # ==============================================================================
 
@@ -37,8 +39,11 @@ message("NEITHER PATIENTS GAP ANALYSIS")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: Load excluded patients (per D-10)
+# SECTION 1: Load Excluded Patients ----
 # ==============================================================================
+# WHY: excluded_no_hl_evidence.csv contains patients with HL_SOURCE="Neither"
+#      (no HL evidence in DIAGNOSIS or TUMOR_REGISTRY). These are the focus of
+#      the gap analysis -- we need to understand WHY they lack HL codes.
 
 message("\n--- Loading Excluded Patients ---")
 
@@ -63,8 +68,11 @@ sites_str <- paste(sort(unique(excluded_patients$SOURCE)), collapse = ", ")
 message(glue("Sites ({n_sites}): {sites_str}"))
 
 # ==============================================================================
-# SECTION 2: DIAGNOSIS table exploration (per D-01)
+# SECTION 2: DIAGNOSIS Table Exploration ----
 # ==============================================================================
+# WHY: Patients excluded as "Neither" may still have OTHER cancer/lymphoma codes
+#      (just not HL-specific). If we find related codes, code list expansion may
+#      be warranted. If NO diagnosis codes at all, it's a data completeness gap.
 
 message("\n--- DIAGNOSIS Table Exploration ---")
 
@@ -123,8 +131,11 @@ if (n_hl_codes > 0) {
 }
 
 # ==============================================================================
-# SECTION 3: ENROLLMENT cross-reference (per D-02, D-05)
+# SECTION 3: ENROLLMENT Cross-Reference ----
 # ==============================================================================
+# WHY: Patients without enrollment records may be "phantom" IDs (extracted but
+#      never actually enrolled). Patients with enrollment but no diagnoses have
+#      a coding gap (enrolled but no documented care).
 
 message("\n--- ENROLLMENT Cross-Reference ---")
 
@@ -158,8 +169,11 @@ message(glue("Patients WITH enrollment: {n_with_enr}"))
 message(glue("Patients WITHOUT enrollment: {n_without_enr}"))
 
 # ==============================================================================
-# SECTION 4: TUMOR_REGISTRY exploration (per D-02)
+# SECTION 4: TUMOR_REGISTRY Exploration ----
 # ==============================================================================
+# WHY: Check if "Neither" patients have ANY TR records (even if not HL histology).
+#      Presence of TR records indicates cancer diagnosis; absence suggests they
+#      may have been misclassified or extracted incorrectly.
 
 message("\n--- TUMOR_REGISTRY Exploration ---")
 
@@ -225,8 +239,11 @@ message(glue("Total patients WITH TR records: {n_with_tr}"))
 message(glue("Total patients WITHOUT TR records: {n_without_tr}"))
 
 # ==============================================================================
-# SECTION 5: Gap classification (per D-05)
+# SECTION 5: Gap Classification ----
 # ==============================================================================
+# WHY: Classify each "Neither" patient into categories (phantom, coding gap, non-HL
+#      codes, etc.) to identify patterns. This classification guides whether to
+#      expand code lists, report data quality gaps, or exclude patients.
 
 message("\n--- Gap Classification ---")
 
@@ -281,7 +298,7 @@ patient_summary <- excluded_patients %>%
   )
 
 # ==============================================================================
-# SECTION 6: Console summary (per D-08)
+# SECTION 6: Console Summary ----
 # ==============================================================================
 
 message("\n", strrep("=", 60))
@@ -349,7 +366,7 @@ if (nrow(neither_lymphoma) == 0) {
 message("\n", strrep("=", 60))
 
 # ==============================================================================
-# SECTION 7: CSV outputs (per D-07)
+# SECTION 7: CSV Outputs ----
 # ==============================================================================
 
 message("\n--- Writing CSV Outputs ---")

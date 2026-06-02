@@ -2,9 +2,35 @@
 # 90_diagnostics.R -- Reusable data quality diagnostic script
 # ==============================================================================
 #
-# Permanent diagnostic tool (per D-11) for auditing PCORnet CDM data quality.
-# Produces BOTH console summaries (via message()) AND detailed CSVs in
-# output/diagnostics/ (per D-12).
+# Purpose: Reusable data quality diagnostic tool for auditing PCORnet CDM data
+#          quality. Produces BOTH console summaries (via message()) AND detailed
+#          CSVs in output/diagnostics/ for systematic data quality assessment.
+#
+# Inputs: PCORnet tables via 01_load_pcornet.R (loads config and all data)
+#
+# Outputs: Multiple CSV files in output/diagnostics/:
+#          - date_parsing_failures.csv
+#          - date_range_issues.csv
+#          - date_column_regex_audit.csv
+#          - column_discrepancies.csv
+#          - missing_values_audit.csv
+#          - encoding_issues.csv
+#          - tr_type_audit.csv
+#          - hl_identification_venn.csv
+#          - hl_identification_detail.csv
+#          - payer_mapping_audit.csv
+#          - payer_raw_codes.csv
+#          - numeric_range_issues.csv
+#          - validation_column_summary.csv
+#
+# Dependencies: 01_load_pcornet.R (loads 00_config.R + utils)
+#               dplyr, readr, stringr, janitor, glue, here
+#
+# Requirements: D-01 through D-20 (Phase 6 diagnostic coverage)
+#
+# Usage:
+#   source("R/90_diagnostics.R")  # Runs all diagnostics
+#   # Or: Rscript R/90_diagnostics.R
 #
 # Sections:
 #   1. Date Parsing Failures Audit (D-01, D-02, D-03)
@@ -14,11 +40,6 @@
 #   5. Payer Mapping Audit (D-20)
 #   6. Numeric Range Checks (D-18)
 #
-# Usage:
-#   source("R/90_diagnostics.R")  # Runs all diagnostics
-#   # Or: Rscript R/90_diagnostics.R
-#
-# Dependencies: Loads 01_load_pcornet.R (which loads 00_config.R + utils)
 # ==============================================================================
 
 source("R/01_load_pcornet.R")  # Loads data and config
@@ -39,8 +60,12 @@ message(strrep("=", 60))
 dir.create(file.path(CONFIG$output_dir, "diagnostics"), showWarnings = FALSE, recursive = TRUE)
 
 # ==============================================================================
-# SECTION 1: Date Parsing Failures Audit (D-01, D-02)
+# SECTION 1: Date Parsing Failures Audit ----
 # ==============================================================================
+# WHY: Date parsing failures indicate data format mismatches that could cause
+#      incorrect temporal analyses. The multi-format parser in 01_load_pcornet.R
+#      handles 4 formats; any remaining NAs are genuine missing data (not parse
+#      failures). This audit confirms all date columns parse correctly.
 
 message("\n", strrep("-", 60))
 message("SECTION 1: Date Parsing Failures Audit")
@@ -156,8 +181,12 @@ if (nrow(date_range_df) > 0) {
 }
 
 # ==============================================================================
-# SECTION 2: Column Detection Regex Audit (D-03)
+# SECTION 2: Column Detection Regex Audit ----
 # ==============================================================================
+# WHY: The date column detection regex in 01_load_pcornet.R must catch all
+#      PCORnet date columns to apply multi-format parsing. This audit cross-
+#      references all 22 table columns against the regex to confirm no date
+#      columns are missed (which would cause them to remain unparsed character).
 
 message("\n", strrep("-", 60))
 message("SECTION 2: Column Detection Regex Audit")
@@ -231,8 +260,12 @@ if (file.exists(csv_columns_path)) {
 }
 
 # ==============================================================================
-# SECTION 3: Column Type and Missing Value Audit (D-15, D-16, D-17, D-19)
+# SECTION 3: Column Type and Missing Value Audit ----
 # ==============================================================================
+# WHY: PCORnet CDM spec defines expected column types for each table. Type
+#      mismatches (e.g., numeric-looking character columns) can cause downstream
+#      errors or performance issues. High missing rates (>10%) on required fields
+#      indicate data quality gaps that may affect cohort selection.
 
 message("\n", strrep("-", 60))
 message("SECTION 3: Column Type and Missing Value Audit")
@@ -401,8 +434,13 @@ if (length(tr_type_audit_results) > 0) {
 }
 
 # ==============================================================================
-# SECTION 4: HL Identification Source Comparison -- Venn Breakdown (D-04, D-07, D-08, D-09)
+# SECTION 4: HL Identification Source Comparison ----
 # ==============================================================================
+# WHY: HL cohort identification uses two independent sources: DIAGNOSIS (ICD
+#      codes) and TUMOR_REGISTRY (histology codes). Comparing these sources
+#      reveals data completeness patterns and identifies patients with evidence
+#      in only one source (potential data quality gaps) or Neither source
+#      (extract scope issues requiring investigation).
 
 message("\n", strrep("-", 60))
 message("SECTION 4: HL Identification Source Comparison")
@@ -544,8 +582,13 @@ if (file.exists(excl_path)) {
 }
 
 # ==============================================================================
-# SECTION 5: Payer Mapping Audit (D-20)
+# SECTION 5: Payer Mapping Audit ----
 # ==============================================================================
+# WHY: Payer harmonization maps raw PAYER_TYPE codes to 9 standardized categories
+#      (Medicare, Medicaid, etc.). This audit validates: (1) all expected
+#      categories are represented, (2) dual-eligible detection rate is within
+#      expected 10-20% range, (3) no unmapped codes slip through (which would
+#      default to "Other" and hide potential classification errors).
 
 message("\n", strrep("-", 60))
 message("SECTION 5: Payer Mapping Audit")
@@ -665,8 +708,13 @@ if (!is.null(payer_summary)) {
 }
 
 # ==============================================================================
-# SECTION 6: Numeric Range Checks (D-18)
+# SECTION 6: Numeric Range Checks ----
 # ==============================================================================
+# WHY: Numeric fields (age, tumor size) can contain sentinel values (200=unknown,
+#      999=missing, negative=data errors) that are technically valid numbers but
+#      clinically invalid. Detecting these sentinel patterns allows flagging via
+#      _VALID columns (added in Phase 6) so downstream analyses can filter them
+#      without corrupting the original data.
 
 message("\n", strrep("-", 60))
 message("SECTION 6: Numeric Range Checks")

@@ -2,20 +2,23 @@
 # 93_no_treatment_medicaid.R -- Profile patients with Medicaid + no treatment
 # ==============================================================================
 #
-# Investigates patients who have Medicaid as primary payer but no evidence of
-# chemotherapy, radiation, or stem cell transplant across all detection sources.
+# Purpose: Profile patients with Medicaid primary payer + no treatment evidence
+#          across all detection sources. Per user request: NO HIPAA suppression
+#          (exact counts printed).
 #
-# Per user request: NO HIPAA suppression — exact counts printed regardless of
-# cell size.
+# Inputs: hl_cohort, pcornet, payer_summary from 14_build_cohort.R environment
 #
-# Dependencies:
-#   - 14_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
-#     encounters, payer_summary in the global environment)
-#   - 11_treatment_payer.R sourced via 14_build_cohort.R
+# Outputs: Console output (profile statistics)
+#          output/investigation/no_treatment_medicaid_patients.csv
+#          output/investigation/no_treatment_medicaid_dx_dates.csv
 #
-# Usage:
-#   source("R/14_build_cohort.R")
-#   source("R/93_no_treatment_medicaid.R")
+# Dependencies: 14_build_cohort.R must be sourced first
+#               dplyr, glue, lubridate, stringr, readr
+#
+# WHY: Clinical interest in understanding barriers to treatment for publicly
+#      insured patients. No HIPAA suppression per user request (normally would
+#      suppress cells < 11) -- this is a diagnostic script for internal
+#      investigation, not publication.
 #
 # ==============================================================================
 
@@ -30,8 +33,12 @@ message("No-Treatment Medicaid Patient Investigation")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: IDENTIFY NO-TREATMENT MEDICAID PATIENTS
+# SECTION 1: Identify No-Treatment Medicaid Patients ----
 # ==============================================================================
+# WHY: Medicaid patients with no treatment evidence may face access barriers
+#      (insurance restrictions, provider availability, patient choice). Profiling
+#      this subgroup helps identify whether lack of treatment is systematic or
+#      patient-specific. No HIPAA suppression per user request.
 
 # No HIPAA suppression — print exact counts
 fmt <- function(n, total) {
@@ -66,7 +73,7 @@ message(glue("  % of Medicaid with no treatment: {round(100 * n_target / n_medic
 message(glue("  % of no-treatment that are Medicaid: {round(100 * n_target / n_no_tx, 1)}%"))
 
 # ==============================================================================
-# SECTION 2: HL VERIFICATION SOURCE
+# SECTION 2: HL Verification Source ----
 # ==============================================================================
 
 message(glue("\n--- HL Verification Source ---"))
@@ -83,7 +90,7 @@ hl_verified_dist <- no_tx_medicaid %>%
 message(glue("  HL_VERIFIED=1: {sum(no_tx_medicaid$HL_VERIFIED == 1)} | HL_VERIFIED=0: {sum(no_tx_medicaid$HL_VERIFIED == 0)}"))
 
 # ==============================================================================
-# SECTION 3: DIAGNOSIS DATE ANALYSIS
+# SECTION 3: Diagnosis Date Analysis ----
 # ==============================================================================
 
 message(glue("\n--- Diagnosis Date Analysis ---"))
