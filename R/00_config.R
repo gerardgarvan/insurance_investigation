@@ -262,6 +262,26 @@ ICD_CODES <- list(
 )
 
 # ==============================================================================
+# SECTION 4b: ICD-9 NLPHL CODE LIST ----
+# ==============================================================================
+# ICD-9 codes specific to Nodular Lymphocyte Predominant Hodgkin Lymphoma.
+# Used by classify_codes() in R/utils/utils_cancer.R for exact-match ICD-9
+# classification. WHY separate from ICD_CODES: These are a SUBSET of
+# ICD_CODES$hl_icd9 used for NLPHL vs classical HL discrimination, not for
+# cohort inclusion. ICD-10 NLPHL detection uses prefix matching (C810);
+# ICD-9 requires exact matching because dotted format (201.40) doesn't
+# support clean prefix extraction.
+#
+# Codes: 201.4 (parent) + 201.40-201.48 (site-specific) = 10 codes total
+# Reference: ICD-9-CM Chapter 2, 201.4x Lymphocytic-histiocytic predominance
+
+ICD9_NLPHL_CODES <- c(
+  "201.4",                                              # Parent code (no site digit)
+  "201.40", "201.41", "201.42", "201.43", "201.44",     # Site-specific codes
+  "201.45", "201.46", "201.47", "201.48"                 # Site-specific codes
+)
+
+# ==============================================================================
 # SECTION 5: PAYER MAPPING RULES ----
 # ==============================================================================
 # AMC 8-category system: Medicaid, Medicare, Private, Other govt, Other,
@@ -578,8 +598,11 @@ CANCER_SITE_MAP <- c(
 
   # --- Hematologic malignancies ---
 
-  # 42. Hodgkin Lymphoma (C81)
-  "C81" = "Hodgkin Lymphoma",
+  # 42. Hodgkin Lymphoma -- NLPHL breakout (C81.0 vs C81.1-C81.9)
+  # NOTE: C810 (4-char) MUST be checked BEFORE C81 (3-char) in classify_codes()
+  # per D-01/D-02. The function in R/utils/utils_cancer.R handles priority.
+  "C810" = "NLPHL",                             # Nodular lymphocyte predominant HL (C81.0x)
+  "C81" = "Hodgkin Lymphoma (non-NLPHL)",        # All other C81.xx (classical HL subtypes)
 
   # 43. Non-Hodgkin Lymphoma (C82-C86, C88)
   "C82" = "Non-Hodgkin Lymphoma",
@@ -701,6 +724,413 @@ TIER_MAPPING <- list(
   "Self-pay"   = 6L,
   Uninsured    = 7L,
   Missing      = 8L
+)
+
+# ==============================================================================
+# SECTION 5d: DEATH CAUSE CLASSIFICATION MAP ----
+# ==============================================================================
+# Maps 3-character ICD-10 prefixes to standardized cause-of-death categories.
+# Based on WHO Mortality Database and CDC NCHS 113 Selected Causes groupings.
+# Used by Phase 78 death data profiling and Gantt output generation.
+#
+# WHY 3-char prefixes: Matches CANCER_SITE_MAP pattern (D-06); balances
+# specificity (too granular = 50+ cancer subcategories) with utility
+# (too broad = "all cancer"). ~100 entries covering 30-40 categories.
+#
+# WHY separate constant: Follows AMC_PAYER_LOOKUP / CANCER_SITE_MAP pattern
+# of top-level named vectors in R/00_config.R (D-07).
+#
+# WHY "Unknown or Unspecified": Makes missingness visible in output tables
+# rather than silent NA (D-05). Applied when code is empty, invalid, or
+# has no mapping in this vector.
+#
+# Sources:
+# - WHO Mortality Database: https://platform.who.int/mortality
+# - CDC NCHS 113 Selected Causes: https://ibis.doh.nm.gov/resource/ICDCodes.html
+
+DEATH_CAUSE_MAP <- c(
+  # === INFECTIOUS AND PARASITIC DISEASES (A00-B99) ===
+  "A00" = "Cholera",
+  "A01" = "Typhoid and Paratyphoid Fevers",
+  "A15" = "Tuberculosis (Respiratory)",
+  "A16" = "Tuberculosis (Respiratory)",
+  "A17" = "Tuberculosis (Nervous System)",
+  "A18" = "Tuberculosis (Other Organs)",
+  "A19" = "Miliary Tuberculosis",
+  "A40" = "Septicemia",
+  "A41" = "Septicemia",
+  "B15" = "Viral Hepatitis",
+  "B16" = "Viral Hepatitis",
+  "B17" = "Viral Hepatitis",
+  "B18" = "Viral Hepatitis",
+  "B19" = "Viral Hepatitis",
+  "B20" = "HIV Disease",
+  "B21" = "HIV Disease",
+  "B22" = "HIV Disease",
+  "B23" = "HIV Disease",
+  "B24" = "HIV Disease",
+
+  # === NEOPLASMS (C00-D48) ===
+  # Digestive organs
+  "C15" = "Esophageal Cancer",
+  "C16" = "Stomach Cancer",
+  "C17" = "Small Intestine Cancer",
+  "C18" = "Colon Cancer",
+  "C19" = "Colon Cancer",
+  "C20" = "Rectal Cancer",
+  "C21" = "Anal Cancer",
+  "C22" = "Liver Cancer",
+  "C23" = "Gallbladder Cancer",
+  "C24" = "Biliary Tract Cancer",
+  "C25" = "Pancreatic Cancer",
+
+  # Respiratory
+  "C33" = "Tracheal Cancer",
+  "C34" = "Lung Cancer",
+
+  # Bone and soft tissue
+  "C40" = "Bone Cancer",
+  "C41" = "Bone Cancer",
+  "C45" = "Mesothelioma",
+  "C46" = "Kaposi Sarcoma",
+  "C47" = "Peripheral Nerve and Autonomic Nervous System Cancer",
+  "C48" = "Retroperitoneal Cancer",
+  "C49" = "Soft Tissue Cancer",
+
+  # Skin
+  "C43" = "Melanoma",
+  "C44" = "Non-Melanoma Skin Cancer",
+
+  # Breast and reproductive
+  "C50" = "Breast Cancer",
+  "C53" = "Cervical Cancer",
+  "C54" = "Uterine Cancer",
+  "C55" = "Uterine Cancer",
+  "C56" = "Ovarian Cancer",
+  "C57" = "Other Female Genital Cancer",
+  "C61" = "Prostate Cancer",
+  "C62" = "Testicular Cancer",
+
+  # Urinary
+  "C64" = "Kidney Cancer",
+  "C65" = "Renal Pelvis Cancer",
+  "C66" = "Ureter Cancer",
+  "C67" = "Bladder Cancer",
+
+  # CNS
+  "C70" = "Meningeal Cancer",
+  "C71" = "Brain Cancer",
+  "C72" = "Spinal Cord Cancer",
+
+  # Endocrine
+  "C73" = "Thyroid Cancer",
+  "C74" = "Adrenal Cancer",
+
+  # Hematologic (matching CANCER_SITE_MAP categories)
+  "C81" = "Hodgkin Lymphoma",
+  "C82" = "Non-Hodgkin Lymphoma",
+  "C83" = "Non-Hodgkin Lymphoma",
+  "C84" = "Non-Hodgkin Lymphoma",
+  "C85" = "Non-Hodgkin Lymphoma",
+  "C86" = "Non-Hodgkin Lymphoma",
+  "C88" = "Non-Hodgkin Lymphoma",
+  "C90" = "Multiple Myeloma",
+  "C91" = "Leukemia",
+  "C92" = "Leukemia",
+  "C93" = "Leukemia",
+  "C94" = "Leukemia",
+  "C95" = "Leukemia",
+  "C96" = "Other Hematopoietic Cancer",
+
+  # Other/unspecified neoplasms
+  "D00" = "In Situ Neoplasms",
+  "D01" = "In Situ Neoplasms",
+  "D02" = "In Situ Neoplasms",
+  "D03" = "In Situ Neoplasms",
+  "D04" = "In Situ Neoplasms",
+  "D05" = "In Situ Neoplasms",
+  "D06" = "In Situ Neoplasms",
+  "D07" = "In Situ Neoplasms",
+  "D09" = "In Situ Neoplasms",
+
+  # === BLOOD AND IMMUNE DISORDERS (D50-D89) ===
+  "D50" = "Anemias",
+  "D51" = "Anemias",
+  "D52" = "Anemias",
+  "D53" = "Anemias",
+  "D60" = "Anemias",
+  "D61" = "Anemias",
+  "D62" = "Anemias",
+  "D63" = "Anemias",
+  "D64" = "Anemias",
+
+  # === ENDOCRINE, NUTRITIONAL AND METABOLIC (E00-E88) ===
+  "E10" = "Type 1 Diabetes Mellitus",
+  "E11" = "Type 2 Diabetes Mellitus",
+  "E13" = "Other Diabetes Mellitus",
+  "E14" = "Diabetes Mellitus (Unspecified)",
+  "E40" = "Malnutrition",
+  "E41" = "Malnutrition",
+  "E42" = "Malnutrition",
+  "E43" = "Malnutrition",
+  "E44" = "Malnutrition",
+  "E46" = "Malnutrition",
+  "E66" = "Obesity",
+
+  # === MENTAL AND BEHAVIORAL DISORDERS (F00-F99) ===
+  "F01" = "Dementia",
+  "F02" = "Dementia",
+  "F03" = "Dementia",
+  "F10" = "Alcohol-Related Disorders",
+  "F11" = "Opioid-Related Disorders",
+  "F12" = "Cannabis-Related Disorders",
+  "F14" = "Cocaine-Related Disorders",
+  "F15" = "Stimulant-Related Disorders",
+  "F19" = "Drug-Related Disorders",
+
+  # === NERVOUS SYSTEM (G00-G98) ===
+  "G20" = "Parkinson Disease",
+  "G30" = "Alzheimer Disease",
+  "G35" = "Multiple Sclerosis",
+  "G40" = "Epilepsy",
+  "G70" = "Myasthenia Gravis",
+
+  # === CIRCULATORY DISEASES (I00-I99) ===
+  "I10" = "Essential Hypertension",
+  "I11" = "Hypertensive Heart Disease",
+  "I12" = "Hypertensive Kidney Disease",
+  "I13" = "Hypertensive Heart and Kidney Disease",
+  "I20" = "Angina Pectoris",
+  "I21" = "Acute Myocardial Infarction",
+  "I22" = "Acute Myocardial Infarction",
+  "I23" = "Acute Myocardial Infarction Complications",
+  "I24" = "Acute Ischemic Heart Disease",
+  "I25" = "Chronic Ischemic Heart Disease",
+  "I26" = "Pulmonary Embolism",
+  "I27" = "Pulmonary Heart Disease",
+  "I42" = "Cardiomyopathy",
+  "I44" = "Atrioventricular Block",
+  "I45" = "Conduction Disorders",
+  "I46" = "Cardiac Arrest",
+  "I47" = "Paroxysmal Tachycardia",
+  "I48" = "Atrial Fibrillation and Flutter",
+  "I49" = "Other Cardiac Arrhythmias",
+  "I50" = "Heart Failure",
+  "I60" = "Hemorrhagic Stroke",
+  "I61" = "Hemorrhagic Stroke",
+  "I62" = "Hemorrhagic Stroke",
+  "I63" = "Ischemic Stroke",
+  "I64" = "Stroke (Unspecified)",
+  "I67" = "Cerebrovascular Disease",
+  "I70" = "Atherosclerosis",
+  "I71" = "Aortic Aneurysm and Dissection",
+
+  # === RESPIRATORY DISEASES (J00-J98) ===
+  "J09" = "Influenza (Identified Virus)",
+  "J10" = "Influenza (Identified Virus)",
+  "J11" = "Influenza (Unidentified Virus)",
+  "J12" = "Viral Pneumonia",
+  "J13" = "Pneumococcal Pneumonia",
+  "J14" = "Pneumonia (H. Influenzae)",
+  "J15" = "Bacterial Pneumonia",
+  "J16" = "Pneumonia (Other Organisms)",
+  "J17" = "Pneumonia (Other Diseases)",
+  "J18" = "Pneumonia (Unspecified)",
+  "J40" = "Chronic Bronchitis",
+  "J41" = "Chronic Bronchitis",
+  "J42" = "Chronic Bronchitis",
+  "J43" = "Emphysema",
+  "J44" = "Chronic Obstructive Pulmonary Disease",
+  "J45" = "Asthma",
+  "J84" = "Interstitial Lung Disease",
+  "J96" = "Respiratory Failure",
+
+  # === DIGESTIVE DISEASES (K00-K93) ===
+  "K25" = "Gastric Ulcer",
+  "K26" = "Duodenal Ulcer",
+  "K27" = "Peptic Ulcer",
+  "K35" = "Acute Appendicitis",
+  "K40" = "Inguinal Hernia",
+  "K56" = "Intestinal Obstruction",
+  "K70" = "Alcoholic Liver Disease",
+  "K72" = "Hepatic Failure",
+  "K73" = "Chronic Hepatitis",
+  "K74" = "Liver Fibrosis and Cirrhosis",
+  "K80" = "Cholelithiasis",
+  "K85" = "Acute Pancreatitis",
+  "K86" = "Chronic Pancreatitis",
+
+  # === MUSCULOSKELETAL (M00-M99) ===
+  "M80" = "Osteoporosis with Fracture",
+  "M81" = "Osteoporosis without Fracture",
+
+  # === GENITOURINARY DISEASES (N00-N99) ===
+  "N17" = "Acute Kidney Failure",
+  "N18" = "Chronic Kidney Disease",
+  "N19" = "Kidney Failure (Unspecified)",
+  "N40" = "Benign Prostatic Hyperplasia",
+
+  # === PREGNANCY COMPLICATIONS (O00-O99) ===
+  "O00" = "Pregnancy Complications",
+  "O95" = "Obstetric Death",
+  "O96" = "Obstetric Death",
+  "O97" = "Obstetric Death",
+
+  # === PERINATAL CONDITIONS (P00-P96) ===
+  "P00" = "Perinatal Conditions",
+  "P01" = "Perinatal Conditions",
+  "P02" = "Perinatal Conditions",
+  "P07" = "Prematurity",
+  "P20" = "Perinatal Respiratory Disorders",
+  "P21" = "Perinatal Respiratory Disorders",
+  "P22" = "Perinatal Respiratory Disorders",
+  "P36" = "Neonatal Sepsis",
+
+  # === CONGENITAL MALFORMATIONS (Q00-Q99) ===
+  "Q20" = "Congenital Heart Malformations",
+  "Q21" = "Congenital Heart Malformations",
+  "Q22" = "Congenital Heart Malformations",
+  "Q23" = "Congenital Heart Malformations",
+  "Q24" = "Congenital Heart Malformations",
+  "Q25" = "Congenital Heart Malformations",
+
+  # === SYMPTOMS AND ILL-DEFINED (R00-R99) ===
+  "R54" = "Senility",
+  "R99" = "Ill-Defined and Unknown Cause of Mortality",
+
+  # === EXTERNAL CAUSES OF MORBIDITY (V01-Y89) ===
+  # Transport accidents
+  "V01" = "Transport Accident",
+  "V02" = "Transport Accident",
+  "V03" = "Transport Accident",
+  "V04" = "Transport Accident",
+  "V09" = "Transport Accident",
+  "V12" = "Transport Accident",
+  "V13" = "Transport Accident",
+  "V19" = "Transport Accident",
+  "V40" = "Transport Accident",
+  "V41" = "Transport Accident",
+  "V42" = "Transport Accident",
+  "V43" = "Transport Accident",
+  "V44" = "Transport Accident",
+  "V45" = "Transport Accident",
+  "V46" = "Transport Accident",
+  "V47" = "Transport Accident",
+  "V48" = "Transport Accident",
+  "V49" = "Transport Accident",
+  "V80" = "Transport Accident",
+  "V87" = "Transport Accident",
+  "V89" = "Transport Accident",
+
+  # Falls
+  "W00" = "Falls",
+  "W01" = "Falls",
+  "W06" = "Falls",
+  "W07" = "Falls",
+  "W08" = "Falls",
+  "W09" = "Falls",
+  "W10" = "Falls",
+  "W11" = "Falls",
+  "W12" = "Falls",
+  "W13" = "Falls",
+  "W14" = "Falls",
+  "W15" = "Falls",
+  "W16" = "Falls",
+  "W17" = "Falls",
+  "W18" = "Falls",
+  "W19" = "Falls",
+
+  # Accidental poisoning
+  "X40" = "Accidental Poisoning",
+  "X41" = "Accidental Poisoning",
+  "X42" = "Accidental Poisoning",
+  "X43" = "Accidental Poisoning",
+  "X44" = "Accidental Poisoning",
+  "X45" = "Accidental Poisoning",
+  "X49" = "Accidental Poisoning",
+
+  # Intentional self-harm
+  "X60" = "Intentional Self-Harm",
+  "X61" = "Intentional Self-Harm",
+  "X62" = "Intentional Self-Harm",
+  "X63" = "Intentional Self-Harm",
+  "X64" = "Intentional Self-Harm",
+  "X65" = "Intentional Self-Harm",
+  "X66" = "Intentional Self-Harm",
+  "X67" = "Intentional Self-Harm",
+  "X68" = "Intentional Self-Harm",
+  "X69" = "Intentional Self-Harm",
+  "X70" = "Intentional Self-Harm",
+  "X71" = "Intentional Self-Harm",
+  "X72" = "Intentional Self-Harm",
+  "X73" = "Intentional Self-Harm",
+  "X74" = "Intentional Self-Harm",
+  "X75" = "Intentional Self-Harm",
+  "X76" = "Intentional Self-Harm",
+  "X77" = "Intentional Self-Harm",
+  "X78" = "Intentional Self-Harm",
+  "X79" = "Intentional Self-Harm",
+  "X80" = "Intentional Self-Harm",
+  "X81" = "Intentional Self-Harm",
+  "X82" = "Intentional Self-Harm",
+  "X83" = "Intentional Self-Harm",
+  "X84" = "Intentional Self-Harm",
+
+  # Assault
+  "X85" = "Assault",
+  "X86" = "Assault",
+  "X87" = "Assault",
+  "X88" = "Assault",
+  "X89" = "Assault",
+  "X90" = "Assault",
+  "X91" = "Assault",
+  "X92" = "Assault",
+  "X93" = "Assault",
+  "X94" = "Assault",
+  "X95" = "Assault",
+  "X96" = "Assault",
+  "X97" = "Assault",
+  "X98" = "Assault",
+  "X99" = "Assault",
+  "Y00" = "Assault",
+  "Y01" = "Assault",
+  "Y02" = "Assault",
+  "Y03" = "Assault",
+  "Y04" = "Assault",
+  "Y05" = "Assault",
+  "Y06" = "Assault",
+  "Y07" = "Assault",
+  "Y08" = "Assault",
+  "Y09" = "Assault",
+  "Y87" = "Assault",
+
+  # Other external causes
+  "Y10" = "Event of Undetermined Intent",
+  "Y11" = "Event of Undetermined Intent",
+  "Y12" = "Event of Undetermined Intent",
+  "Y13" = "Event of Undetermined Intent",
+  "Y14" = "Event of Undetermined Intent",
+  "Y15" = "Event of Undetermined Intent",
+  "Y16" = "Event of Undetermined Intent",
+  "Y17" = "Event of Undetermined Intent",
+  "Y18" = "Event of Undetermined Intent",
+  "Y19" = "Event of Undetermined Intent",
+  "Y20" = "Event of Undetermined Intent",
+  "Y21" = "Event of Undetermined Intent",
+  "Y33" = "Event of Undetermined Intent",
+  "Y34" = "Event of Undetermined Intent",
+
+  # Complications of medical/surgical care
+  "Y40" = "Complications of Medical Care",
+  "Y41" = "Complications of Medical Care",
+  "Y42" = "Complications of Medical Care",
+  "Y43" = "Complications of Medical Care",
+  "Y44" = "Complications of Medical Care",
+  "Y83" = "Complications of Medical Care",
+  "Y84" = "Complications of Medical Care",
+
+  # === DEFAULT for unmapped codes ===
+  "UNK" = "Unknown or Unspecified"
 )
 
 # ==============================================================================
