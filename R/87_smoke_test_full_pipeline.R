@@ -87,12 +87,12 @@ check(glue("Treatment decade complete: 10/10 scripts (found {treatment_found})")
 message("\n[4/12] Cancer decade (40-53)...")
 
 cancer_expected <- c("40_cancer_site_frequency.R", "41_extract_all_codes.R",
-                     "42_build_code_descriptions.R", "43_gantt_data_export.R",
-                     "44_cancer_site_confirmation.R", "45_cancer_site_confirmation_7day.R",
-                     "46_all_codes_resolved.R", "47_cancer_summary.R",
-                     "48_cancer_summary_table.R", "49_gantt_v2_data_export.R",
-                     "50_temporal_filtering.R", "51_gantt_data_export.R",
-                     "52_radiation_vs_imaging.R", "53_death_date_validation.R")
+                     "42_build_code_descriptions.R", "43_cancer_site_confirmation.R",
+                     "44_cancer_site_confirmation_7day.R", "45_cancer_summary.R",
+                     "46_cancer_summary_table.R", "47_cancer_summary_refined.R",
+                     "48_cancer_summary_post_hl.R", "49_cancer_summary_pre_post.R",
+                     "50_all_codes_resolved.R", "51_gantt_data_export.R",
+                     "52_gantt_v2_export.R", "53_death_date_validation.R")
 cancer_found <- 0L
 for (s in cancer_expected) {
   if (file.exists(file.path("R", s))) cancer_found <- cancer_found + 1L
