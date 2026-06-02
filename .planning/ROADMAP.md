@@ -60,7 +60,7 @@
 - [x] **Phase 68: Output & Test Reorganization (Verification Gate)** - Verify reorganization requirements, fix documentation drift, create HiPerGator validation checklist (completed 2026-06-02)
 - [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
 - [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
-- [x] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally (completed 2026-06-02)
+- [x] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally (completed 2026-06-02)
 - [ ] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation
 - [ ] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions
 - [ ] **Phase 74: Smoke Testing & Reference Manual** - Create comprehensive smoke tests and dependency documentation
@@ -195,7 +195,12 @@ Plans:
   3. Error messages use glue() with context (file paths, expected vs actual, script name)
   4. Assertions validate at function entry (NOT inside hot loops)
   5. Smoke test confirms assertions catch invalid inputs without false positives
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 72-01-PLAN.md -- Create utils_assertions.R with 5 helper functions, add library(checkmate) to 00_config.R
+- [ ] 72-02-PLAN.md -- Add assertions to foundation (00-03) and cohort (10-14) scripts
+- [ ] 72-03-PLAN.md -- Add assertions to treatment (20-29) scripts
+- [ ] 72-04-PLAN.md -- Add assertions to cancer (40-53) and payer/QA (60-69) scripts
 
 #### Phase 73: DRY Consolidation
 **Goal**: Duplicate lookups consolidated to R/00_config.R and repeated patterns extracted to utilities
@@ -232,9 +237,9 @@ Plans:
 | 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
-| 72. Defensive Coding | 0/0 | Not started | - |
+| 72. Defensive Coding | 0/4 | Planning    | - |
 | 73. DRY Consolidation | 0/0 | Not started | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 71 Plan 01 complete (.lintr config changes)*
+*Last updated: 2026-06-02 -- Phase 72 planning complete (4 plans in 2 waves)*
