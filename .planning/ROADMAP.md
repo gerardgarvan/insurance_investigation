@@ -180,9 +180,9 @@ Plans:
   3. LOW-severity violations documented and deferred (trailing whitespace)
   4. lintr violation count reduced to <50 manageable items
   5. All fixes validated via smoke test (pipeline still runs)
-**Plans:** 2 plans
+**Plans:** 1/2 plans complete
 Plans:
-- [ ] 71-01-PLAN.md -- Update .lintr configuration: pipe standard, disable false-positive rules, bump line length (D-01, D-02, D-06, D-07, D-08)
+- [x] 71-01-PLAN.md -- Update .lintr configuration: pipe standard, disable false-positive rules, bump line length (D-01, D-02, D-06, D-07, D-08)
 - [ ] 71-02-PLAN.md -- Fix code-level violations: remove commented code, fix seq patterns, fix indentation/pipe continuation, wrap long lines (D-03, D-04, D-05, D-06)
 
 #### Phase 72: Defensive Coding
@@ -231,10 +231,10 @@ Plans:
 | 68. Output & Test Reorganization (Verification Gate) | 2/2 | Complete    | 2026-06-02 |
 | 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
-| 71. Linting Cleanup | 0/2 | Planning complete | - |
+| 71. Linting Cleanup | 1/2 | In progress | - |
 | 72. Defensive Coding | 0/0 | Not started | - |
 | 73. DRY Consolidation | 0/0 | Not started | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 71 plans created (2 plans in 2 waves)*
+*Last updated: 2026-06-02 -- Phase 71 Plan 01 complete (.lintr config changes)*

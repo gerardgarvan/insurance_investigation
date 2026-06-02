@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Codebase Cleanup & Documentation
-status: planning
-last_updated: "2026-06-02T14:48:02.570Z"
+status: executing
+last_updated: "2026-06-02T15:22:00Z"
 progress:
   total_phases: 10
   completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 21
+  completed_plans: 20
   percent: 100
 ---
 
@@ -21,20 +21,20 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Phase 70 — automated-formatting
+**Current Focus:** Phase 71 — linting-cleanup
 
 ## Current Position
 
-Phase: 70 (automated-formatting) — EXECUTING
-Plan: 1 of 2
+Phase: 71 (linting-cleanup) — EXECUTING
+Plan: 2 of 2
 **Phase:** 71
-**Plan:** Not started
-**Status:** Ready to plan
+**Plan:** 71-01 complete, 71-02 ready
+**Status:** Executing Phase 71
 **Progress:** [██████████] 100%
 
 ### Phase Goal
 
-Post-Renumbering Inventory Cleanup: resolve 66-prefix collision by moving smoke test to test decade (87), archive 8 unnumbered scripts to R/archive/ with README, and regenerate SCRIPT_INDEX.md from filesystem.
+Reduce lintr violations from 6,187 baseline to <50 manageable items through configuration changes and targeted code fixes.
 
 ## Performance Metrics
 
@@ -74,6 +74,13 @@ Post-Renumbering Inventory Cleanup: resolve 66-prefix collision by moving smoke 
 - D-08: Smoke test payer_expected array must contain all 10 script names with correct numbers
 - D-09: ROADMAP success criteria already correct (10 scripts); only plan tracking needed update
 
+**Phase 71:**
+
+- Declared magrittr pipe (%>%) as project standard via pipe_consistency_linter configuration (eliminates 3,622 violations)
+- Disabled object_usage_linter to eliminate 2,104 false positives from dplyr NSE (PATID, ENCOUNTERID, etc.)
+- Raised line_length_linter threshold from 120 to 150 characters for R pipeline readability
+- Config-first lint cleanup: modify .lintr to eliminate systematic false positives before fixing individual violations
+
 ### Open Questions
 
 _No open questions yet._
@@ -90,20 +97,20 @@ _No todos yet._
 
 ### What Just Happened
 
-- Phase 68 Plan 01: Structural verification scan completed, SCRIPT_INDEX.md and R/87 smoke test fixed (cancer decade alignment)
-- Phase 68 Plan 02: HiPerGator checklist created, ROADMAP/REQUIREMENTS/STATE updated
-- REORG-04 marked complete (8 archived scripts verified)
-- REORG-05 marked partial (structural validation done, HiPerGator execution deferred to Phase 74)
-- Commits: 68-01 (cancer decade fixes), 68-02 (checklist + documentation updates)
+- Phase 71 Plan 01: Updated .lintr configuration with 5 rule changes
+- Config eliminates ~5,726 violations (92%) via policy changes alone
+- Expected reduction: 6,187 → ~461 violations
+- Magrittr pipe (%>%) declared as standard, object_usage_linter disabled, line_length raised to 150
+- Commit: 1938d1b (lintr config changes)
 
 ### Current Task
 
-Phase 69 Plan 06 complete: documented 14 output and test scripts with 5-field headers.
+Phase 71 Plan 01 complete: .lintr configuration updated with 5 rule changes.
 
 ### Next Actions
 
-1. Run R/87_smoke_test_full_pipeline.R on HiPerGator to validate full pipeline (see 68-HIPERGATOR-CHECKLIST.md)
-2. Begin Phase 69 (Script Documentation: header blocks, section headers, inline comments)
+1. Transfer updated .lintr to HiPerGator and re-run lintr::lint_package() to verify violation count reduced to ~461
+2. Execute Phase 71 Plan 02 (Wave 2 code fixes: commented code removal, seq fixes, indentation)
 3. Eventually: Phase 73 (DRY-01: consolidate PREFIX_MAP duplication)
 
 ---
