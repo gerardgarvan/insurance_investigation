@@ -1,48 +1,45 @@
-# Requirements: PCORnet Payer Variable Investigation — v2.0 Codebase Cleanup & Documentation
+# Requirements: PCORnet Payer Variable Investigation — v2.1 Clinical Data Refinements & NLPHL Breakout
 
-**Defined:** 2026-06-01
+**Defined:** 2026-06-02
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## v2.0 Requirements
+## v2.1 Requirements
 
-Requirements for codebase reorganization, documentation, hardening, and redundancy removal.
+Requirements for clinical data refinements, NLPHL breakout, treatment pipeline changes, death data integration, code verification, and visualization.
 
-### Reorganization
+### Cancer Classification
 
-- [x] **REORG-01**: All R scripts renumbered sequentially using decade-based scheme (00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc) with no gaps, duplicates, or sub-letter suffixes
-- [x] **REORG-02**: All source() cross-references (95+) updated to match new script numbers and paths
-- [x] **REORG-03**: Utility modules (utils_*.R) moved to R/utils/ subfolder with 00_config.R auto-sourcing them
-- [x] **REORG-04**: Deprecated/superseded scripts moved to R/archive/ folder with README explaining their status
-- [x] **REORG-05**: Smoke test validates no broken cross-references after each renumbering phase (RDS artifacts unchanged, source() calls resolve)
+- [ ] **CANCER-01**: NLPHL (C81.0 / 201.4x) broken out from Hodgkin Lymphoma as distinct cancer category in CANCER_SITE_MAP, classify_codes(), and all downstream outputs including Gantt
+- [ ] **CANCER-02**: Pre/post cancer summary table requires 7-day unique day gap for ALL cancer categories (not just HL), with total population = 6,347
+- [ ] **CANCER-03**: Cancer_category and triggering code description populated per episode using drug groupings from all_codes_resolved_next_tables.xlsx
 
-### Documentation
+### Treatment Pipeline
 
-- [x] **DOC-01**: Every script has a header block documenting purpose, inputs, outputs, and dependencies
-- [x] **DOC-02**: Every script has section headers with 4+ dashes for RStudio outline navigation (Ctrl+Shift+O)
-- [x] **DOC-03**: Non-obvious logic has inline comments explaining WHY (clinical rules, complex joins, business mappings, payer hierarchy decisions)
-- [x] **DOC-04**: Full reference manual created with dependency matrix (Script -> Inputs/Outputs/Dependencies table for all scripts) and run-order guide
+- [ ] **TREAT-01**: All treatment data sourced from tumor registry dropped from treatment episode pipeline
+- [ ] **TREAT-02**: Drug groupings loaded from all_codes_resolved_next_tables.xlsx and centralized in R/00_config.R
+- [ ] **TREAT-03**: Two new summary tables created using template and groupings from all_codes_resolved_next_tables.xlsx
 
-### Safety
+### Death Data
 
-- [x] **SAFE-01**: Input file existence validation (checkmate assert_file_exists) at the start of every script that loads data
-- [x] **SAFE-02**: Data structure validation after critical loads and joins (checkmate assertions for expected columns, types, and row-count sanity checks)
-- [x] **SAFE-03**: Error messages include context using glue() — file paths, expected vs actual values, script name
-- [ ] **SAFE-04**: All scripts auto-formatted with styler (tidyverse style), with .stylerignore protecting non-R directories
-- [x] **SAFE-05**: lintr configured with project .lintr file (object_name_linter disabled for PCORnet ALLCAPS columns, line_length_linter(150), pipe_consistency_linter, object_usage_linter disabled)
-- [x] **SAFE-06**: Comprehensive smoke test suite (testthat) verifying pipeline integrity — sequential numbering, source() resolution, RDS dependency checks, critical script execution without error
+- [ ] **DEATH-01**: Cause of death data quality profiled (completeness, coding, payer stratification) before integration
+- [ ] **DEATH-02**: Cause of death included in outputs (conditional on DEATH-01 showing acceptable data quality)
 
-### DRY (Redundancy Removal)
+### Code Verification
 
-- [x] **DRY-01**: All duplicated lookup tables (PREFIX_MAP, code mappings, category constants) consolidated to R/00_config.R with old copies deleted
-- [x] **DRY-02**: Repeated code patterns (3+ occurrences) extracted into shared utility functions in R/utils/ files
+- [ ] **CODE-01**: "Replaced by" codes from all_codes_resolved_next_tables.xlsx verified against existing code mappings
+- [ ] **CODE-02**: 90 patients with SCT code 0362 investigated for other related SCT codes during same encounters
+
+### Quality Standards
+
+- [ ] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
+
+### Visualization
+
+- [ ] **VIZ-01**: Attrition waterfall chart produced from filter log
+- [ ] **VIZ-02**: Sankey/alluvial diagram stratified by payer
+- [ ] **VIZ-03**: HIPAA small-cell suppression applied in all outputs
 
 ## Future Requirements
-
-### Carried from v1.0 (deferred, not in v2.0 scope)
-
-- **VIZ-01**: Produce attrition waterfall chart from filter log
-- **VIZ-02**: Produce Sankey/alluvial stratified by payer
-- **VIZ-03**: Apply HIPAA small-cell suppression in outputs
 
 ### v3.0+ Considerations
 
@@ -55,43 +52,42 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 | Feature | Reason |
 |---------|--------|
-| Full R package conversion (NAMESPACE, DESCRIPTION) | Over-engineering for analysis pipeline; package overhead not justified |
-| Automated style enforcement on every commit (git hooks) | Adds friction; HiPerGator workflow doesn't use git heavily |
-| Unit tests for every function | Analysis scripts, not production software; high maintenance cost vs value |
-| Interactive documentation (pkgdown site) | Overkill for 1-2 person project; static markdown sufficient |
-| Pipeline orchestration (targets/drake) | Major architecture change; existing sequential scripts work; defer to v3+ |
-| Comprehensive input validation (pointblank) | Python pipeline handles data cleaning; R pipeline validates cohort logic only |
-| Refactoring to object-oriented (R6 classes) | Analysis pipeline = procedural workflow; OOP adds complexity without benefits |
-| Statistical modeling / regression | Exploration only; not in scope for any current milestone |
+| Stanford V / BEACOPP regimen identification | Only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line |
+| Pediatric protocols (age <21) | Adult protocols only for v1.x-v2.x |
+| Multi-line therapy sequencing | Requires episode boundary formalization first |
+| Statistical modeling / regression | Exploration only; not in scope |
 | Publication-ready figure formatting | Exploratory quality sufficient |
+| RMarkdown / Shiny rendering | Raw R scripts and PNG figures |
+| Full R package conversion | Over-engineering for analysis pipeline |
+| Pipeline orchestration (targets/drake) | Major architecture change; defer to v3+ |
+| Treatment source coverage analysis before TR removal | User chose direct removal without pre-analysis |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REORG-01 | Phase 65, 66, 67, 68 | Complete |
-| REORG-02 | Phase 66, 67, 68 | Complete |
-| REORG-03 | Phase 65 | Complete |
-| REORG-04 | Phase 67, 68 | Complete |
-| REORG-05 | Phase 68, 74 | Partial (structural done; HiPerGator deferred to Phase 74) |
-| DOC-01 | Phase 69 | Complete |
-| DOC-02 | Phase 69 | Complete |
-| DOC-03 | Phase 69 | Complete |
-| DOC-04 | Phase 74 | Complete |
-| SAFE-01 | Phase 72 | Complete |
-| SAFE-02 | Phase 72 | Complete |
-| SAFE-03 | Phase 72 | Complete |
-| SAFE-04 | Phase 70 | Pending |
-| SAFE-05 | Phase 70, 71 | Complete |
-| SAFE-06 | Phase 74 | Complete |
-| DRY-01 | Phase 73 | Complete |
-| DRY-02 | Phase 73 | Complete |
+| CANCER-01 | TBD | Pending |
+| CANCER-02 | TBD | Pending |
+| CANCER-03 | TBD | Pending |
+| TREAT-01 | TBD | Pending |
+| TREAT-02 | TBD | Pending |
+| TREAT-03 | TBD | Pending |
+| DEATH-01 | TBD | Pending |
+| DEATH-02 | TBD | Pending |
+| CODE-01 | TBD | Pending |
+| CODE-02 | TBD | Pending |
+| QUAL-01 | TBD | Pending |
+| VIZ-01 | TBD | Pending |
+| VIZ-02 | TBD | Pending |
+| VIZ-03 | TBD | Pending |
 
 **Coverage:**
-- v2.0 requirements: 17 total
-- Mapped to phases: 17 (100%)
-- Unmapped: 0
+- v2.1 requirements: 14 total
+- Mapped to phases: 0
+- Unmapped: 14
 
 ---
-*Requirements defined: 2026-06-01*
-*Last updated: 2026-06-01 after roadmap creation*
+*Requirements defined: 2026-06-02*
+*Last updated: 2026-06-02 after initial definition*
