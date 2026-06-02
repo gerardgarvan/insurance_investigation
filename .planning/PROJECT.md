@@ -52,6 +52,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Update all cross-references (source() calls, comments, docs) to match new numbering (REORG-02) — v2.0 Phase 66
 - [x] Add section header comments and key-logic comments to every script (DOC-01) — v2.0 Phase 69
 - [x] Create full reference manual for the pipeline (DOC-02) — v2.0 Phase 69
+- [x] Auto-format all R scripts with styler tidyverse style (SAFE-04) — v2.0 Phase 70
+- [x] Configure lintr with project .lintr file and record baseline (SAFE-05) — v2.0 Phase 70
 - [ ] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01)
 - [ ] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02)
 - [x] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03) — v2.0 Phase 66
@@ -92,7 +94,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 69 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 69 complete — script documentation: all 75 scripts (67 numbered + 8 utils) have standardized 5-field headers (Purpose, Inputs, Outputs, Dependencies, Requirements), RStudio-compatible section headers, and 104 WHY comments explaining clinical/business logic. SCRIPT_INDEX.md verified with accurate source() dependencies.
+**Pipeline status:** 70 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 70 complete — automated formatting: all 70 R scripts formatted with styler tidyverse style, lintr configured (object_name_linter disabled, line_length_linter(120)), baseline recorded (6,187 violations across 9 rules for Phase 71 cleanup).
 
 ## Previous Milestones
 
@@ -244,4 +246,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after Phase 69 completion*
+*Last updated: 2026-06-02 after Phase 70 completion*
