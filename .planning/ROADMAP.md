@@ -212,11 +212,11 @@ Plans:
   3. Repeated code patterns (3+ occurrences) extracted to shared utility functions in R/utils/
   4. Old lookup copies deleted in same commit as consolidation
   5. Smoke test validates constants defined only once and utilities work correctly
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 Plans:
 - [x] 73-01-PLAN.md -- Add CANCER_SITE_MAP + TIER_MAPPING to config, create utils_cancer.R, add classify_payer_tier() and build_output_path() to utils
 - [ ] 73-02-PLAN.md -- Remove PREFIX_MAP + classify_codes() from 10 cancer/treatment scripts
-- [ ] 73-03-PLAN.md -- Remove TIER_MAPPING + classification chain from R/60-62, apply build_output_path() across scripts
+- [x] 73-03-PLAN.md -- Remove TIER_MAPPING + classification chain from R/60-62, apply build_output_path() across scripts
 
 #### Phase 74: Smoke Testing & Reference Manual
 **Goal**: Comprehensive smoke test suite and reference manual document pipeline for maintainability
@@ -242,7 +242,7 @@ Plans:
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
 | 72. Defensive Coding | 4/4 | Complete    | 2026-06-02 |
-| 73. DRY Consolidation | 1/3 | In Progress|  |
+| 73. DRY Consolidation | 2/3 | In Progress|  |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
