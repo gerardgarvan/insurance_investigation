@@ -58,7 +58,7 @@
 - [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
 - [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
 - [x] **Phase 68: Output & Test Reorganization (Verification Gate)** - Verify reorganization requirements, fix documentation drift, create HiPerGator validation checklist (completed 2026-06-02)
-- [ ] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments
+- [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
 - [ ] **Phase 70: Automated Formatting** - Apply styler and configure lintr
 - [ ] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally
 - [ ] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation
@@ -144,7 +144,7 @@ Plans:
   3. Non-obvious logic has inline comments explaining WHY (clinical rules, payer hierarchy, complex joins)
   4. Comments use roxygen2-style #' syntax for complex utility functions
   5. Documentation validation confirms no missing headers or sections
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 Plans:
 - [x] 69-01-PLAN.md -- Foundation (00-03) + Utils (8 files) header/section/WHY documentation
 - [x] 69-02-PLAN.md -- Cohort (10-14) header/section/WHY documentation
@@ -153,7 +153,7 @@ Plans:
 - [x] 69-05-PLAN.md -- Payer/QA (60-69) header/section/WHY documentation
 - [x] 69-06-PLAN.md -- Outputs (70-75) + Tests (80-87) header/section/WHY documentation
 - [x] 69-07-PLAN.md -- Ad-hoc (90-99) header/section/WHY documentation
-- [ ] 69-08-PLAN.md -- Cross-codebase validation scan + gap fixes
+- [x] 69-08-PLAN.md -- Cross-codebase validation scan + gap fixes
 
 #### Phase 70: Automated Formatting
 **Goal**: Codebase is consistently formatted via styler with lintr configured for project
@@ -223,7 +223,7 @@ Plans:
 | 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
 | 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete    | 2026-06-01 |
 | 68. Output & Test Reorganization (Verification Gate) | 2/2 | Complete    | 2026-06-02 |
-| 69. Script Documentation | 7/8 | In Progress|  |
+| 69. Script Documentation | 8/8 | Complete   | 2026-06-02 |
 | 70. Automated Formatting | 0/0 | Not started | - |
 | 71. Linting Cleanup | 0/0 | Not started | - |
 | 72. Defensive Coding | 0/0 | Not started | - |
