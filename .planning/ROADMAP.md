@@ -62,7 +62,7 @@
 - [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
 - [x] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally (completed 2026-06-02)
 - [x] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation (completed 2026-06-02)
-- [ ] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions
+- [x] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions (completed 2026-06-02)
 - [ ] **Phase 74: Smoke Testing & Reference Manual** - Create comprehensive smoke tests and dependency documentation
 
 ### Phase Details
@@ -212,10 +212,10 @@ Plans:
   3. Repeated code patterns (3+ occurrences) extracted to shared utility functions in R/utils/
   4. Old lookup copies deleted in same commit as consolidation
   5. Smoke test validates constants defined only once and utilities work correctly
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 73-01-PLAN.md -- Add CANCER_SITE_MAP + TIER_MAPPING to config, create utils_cancer.R, add classify_payer_tier() and build_output_path() to utils
-- [ ] 73-02-PLAN.md -- Remove PREFIX_MAP + classify_codes() from 10 cancer/treatment scripts
+- [x] 73-02-PLAN.md -- Remove PREFIX_MAP + classify_codes() from 10 cancer/treatment scripts
 - [x] 73-03-PLAN.md -- Remove TIER_MAPPING + classification chain from R/60-62, apply build_output_path() across scripts
 
 #### Phase 74: Smoke Testing & Reference Manual
@@ -242,7 +242,7 @@ Plans:
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
 | 72. Defensive Coding | 4/4 | Complete    | 2026-06-02 |
-| 73. DRY Consolidation | 2/3 | In Progress|  |
+| 73. DRY Consolidation | 3/3 | Complete   | 2026-06-02 |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
