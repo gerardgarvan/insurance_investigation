@@ -614,7 +614,7 @@ encounterid_profile <- map_dfr(inspect_tables, function(tbl_name) {
 
 # Log to console
 message("\nENCOUNTERID Population Rates by Table:")
-for (i in 1:nrow(encounterid_profile)) {
+for (i in seq_len(nrow(encounterid_profile))) {
   row <- encounterid_profile[i, ]
   message(glue("  {row$table}: {row$encounterid_populated}/{row$total_rows} ({row$population_rate}%)"))
 }
@@ -721,7 +721,7 @@ sct_audit_result <- tibble(
 
 # Log to console
 message("\nSCT Source Audit Results:")
-for (i in 1:nrow(sct_audit_result)) {
+for (i in seq_len(nrow(sct_audit_result))) {
   row <- sct_audit_result[i, ]
   message(glue("  {row$metric}: {row$value}"))
 }

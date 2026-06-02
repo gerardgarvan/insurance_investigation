@@ -451,7 +451,7 @@ source_dist <- first_dx %>%
   filter(!is.na(first_hl_dx_source)) %>%
   count(first_hl_dx_source, name = "n_patients")
 message("  First HL diagnosis source distribution:")
-for (i in 1:nrow(source_dist)) {
+for (i in seq_len(nrow(source_dist))) {
   message(glue("    {source_dist$first_hl_dx_source[i]}: {format(source_dist$n_patients[i], big.mark=',')}"))
 }
 

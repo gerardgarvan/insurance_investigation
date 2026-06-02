@@ -413,7 +413,7 @@ if (length(missing_value_results) > 0) {
   # Show top 5 most problematic columns
   top5 <- head(missing_value_df, 5)
   message("  Top 5 columns by missing rate:")
-  for (i in 1:nrow(top5)) {
+  for (i in seq_len(nrow(top5))) {
     message(glue("    {top5$table[i]}.{top5$column[i]}: {top5$pct_missing[i]}%"))
   }
 }
@@ -547,13 +547,13 @@ message(glue("\nWrote HL identification breakdown to hl_identification_venn.csv 
 message("\n=== HL Identification Method Breakdown ===")
 dx_method <- dx_patients %>% count(dx_icd_type, name = "n")
 message("DIAGNOSIS source by ICD type:")
-for (i in 1:nrow(dx_method)) {
+for (i in seq_len(nrow(dx_method))) {
   message(glue("  {dx_method$dx_icd_type[i]}: {dx_method$n[i]}"))
 }
 
 tr_method <- tr_patients %>% count(tr_table, name = "n")
 message("\nTUMOR_REGISTRY source by table:")
-for (i in 1:nrow(tr_method)) {
+for (i in seq_len(nrow(tr_method))) {
   message(glue("  {tr_method$tr_table[i]}: {tr_method$n[i]}"))
 }
 
@@ -614,7 +614,7 @@ if (!is.null(payer_summary)) {
     arrange(desc(n_patients))
 
   message("\n=== Payer Category Distribution ===")
-  for (i in 1:nrow(category_dist)) {
+  for (i in seq_len(nrow(category_dist))) {
     message(glue("  {category_dist$PAYER_CATEGORY_PRIMARY[i]}: {category_dist$n_patients[i]} ({category_dist$pct_of_total[i]}%)"))
   }
 
@@ -789,7 +789,7 @@ for (table_name in c("TUMOR_REGISTRY1", "TUMOR_REGISTRY2", "TUMOR_REGISTRY3")) {
 # 2. Date sanity (already covered in Section 1, but add explicit check summary)
 # Re-use date_range_results from Section 1
 if (length(date_range_results) > 0) {
-  for (i in 1:length(date_range_results)) {
+  for (i in seq_along(date_range_results)) {
     dr <- date_range_results[[i]]
     if (dr$n_before_1900 > 0) {
       numeric_range_issues[[length(numeric_range_issues) + 1]] <- tibble(
@@ -891,7 +891,7 @@ if (length(numeric_range_issues) > 0) {
     count(issue_type, name = "n_occurrences") %>%
     arrange(desc(n_occurrences))
 
-  for (i in 1:nrow(issue_summary)) {
+  for (i in seq_len(nrow(issue_summary))) {
     message(glue("  {issue_summary$issue_type[i]}: {issue_summary$n_occurrences[i]} occurrences"))
   }
 

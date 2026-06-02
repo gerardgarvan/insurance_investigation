@@ -163,7 +163,7 @@ multi_combos <- combo_freq[grepl("\\+", source_combo), ]
 message(glue("\nMulti-source combinations: {nrow(multi_combos)} total"))
 if (nrow(multi_combos) > 0) {
   message("Multi-source combination list:")
-  for (i in 1:nrow(multi_combos)) {
+  for (i in seq_len(nrow(multi_combos))) {
     row <- multi_combos[i, ]
     message(glue("  {row$source_combo}: {format(row$n_patient_dates, big.mark=',')} patient-dates"))
   }
@@ -185,7 +185,7 @@ per_source_summary <- enc_dt[, .(
 ]
 
 message("\nPer-source summary:")
-for (i in 1:nrow(per_source_summary)) {
+for (i in seq_len(nrow(per_source_summary))) {
   row <- per_source_summary[i, ]
   message(glue("  {row$SOURCE}: {format(row$total_encounters, big.mark=',')} encounters | {format(row$n_patient_dates, big.mark=',')} patient-dates | {format(row$n_patients, big.mark=',')} patients"))
 }
@@ -232,7 +232,7 @@ message(glue("Multi-source dates: {format(n_multi, big.mark=',')} ({pct_multi}%)
 message(glue("Patients with at least one multi-source date: {format(n_patients_with_multi, big.mark=',')}"))
 
 message("\nPer-source breakdown:")
-for (i in 1:nrow(per_source_summary)) {
+for (i in seq_len(nrow(per_source_summary))) {
   row <- per_source_summary[i, ]
   message(glue("  {row$SOURCE}: {format(row$total_encounters, big.mark=',')} encounters | {format(row$n_patient_dates, big.mark=',')} patient-dates | {format(row$n_patients, big.mark=',')} patients"))
 }
