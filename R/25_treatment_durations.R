@@ -1,16 +1,26 @@
-# =============================================================================
-# Phase 25: Treatment Duration Analysis
-# =============================================================================
-# Extracts ALL treatment dates from 7 PCORnet tables for Chemotherapy, Radiation,
-# SCT, and Immunotherapy. Calculates per-patient duration metrics:
-#   - First-to-last span (days)
-#   - Distinct treatment date count
-#   - Episode count (90-day gap threshold)
+# ==============================================================================
+# 25_treatment_durations.R -- Treatment Duration Analysis
+# ==============================================================================
+# Purpose:     Extract treatment dates from 7 PCORnet tables, calculate per-patient
+#              duration metrics (span, date count, episodes) with 90-day gap threshold.
 #
-# Outputs:
-#   - RDS artifact: one row per patient per treatment type
-#   - Styled xlsx: Summary sheet + per-type detail sheets
-#   - Distribution PNG: boxplot of duration distributions by type
+# Inputs:      PCORnet CDM tables (7 tables via extract_all_dates: PROCEDURES,
+#              PRESCRIBING, MED_ADMIN, DIAGNOSIS, ENCOUNTER, DISPENSING, TUMOR_REGISTRY)
+#
+# Outputs:     cache/outputs/treatment_durations.rds, output/treatment_durations.xlsx,
+#              output/treatment_duration_distributions.png
+#
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
+#
+# Requirements: Phase 43 treatment duration (D-05 90-day window from episode start)
+#
+# WHY 90-day gap threshold: Clinical standard for oncology treatment cycles. Gaps >90
+# days between treatment dates indicate separate episodes (relapse, new line of therapy)
+# vs continuation of same regimen. Window-based splitting (90 days from episode start)
+# prevents episodes >threshold.
+#
+# WHY all 7 PCORnet tables: Treatment evidence distributed across multiple tables
+# (see R/20 for table-specific rationale). Comprehensive search maximizes detection.
 #
 # Decision traceability:
 #   D-01: first-to-last span as overall_span_days
@@ -28,7 +38,7 @@
 # =============================================================================
 
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -59,7 +69,7 @@ OUTPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 # nrow_or_0(): provided by R/utils_treatment.R
 
 
-# --- SECTION 2: MULTI-SOURCE DATE EXTRACTION FUNCTIONS ---
+# SECTION 2: MULTI-SOURCE DATE EXTRACTION FUNCTIONS ----
 
 #' Extract all treatment dates for a given type from 7 PCORnet tables
 #'

@@ -1,9 +1,17 @@
-# =============================================================================
-# Phase 26: Treatment Episode Start/Stop Dates
-# =============================================================================
-# Extracts per-patient, per-episode treatment start and stop dates with episode
-# length and historical date flagging. This is a NEW detail-level output
-# alongside Phase 43's existing per-patient summary.
+# ==============================================================================
+# 26_treatment_episodes.R -- Treatment Episode Start/Stop Dates
+# ==============================================================================
+# Purpose:     Per-episode start/stop dates with episode length, historical date
+#              flagging, and triggering codes for each treatment episode.
+#
+# Inputs:      PCORnet treatment tables + treatment_durations.rds from R/25
+#
+# Outputs:     cache/outputs/treatment_episodes.rds, output/treatment_episodes.xlsx,
+#              per-type CSVs (chemotherapy_episodes.csv, etc.)
+#
+# Dependencies: R/00_config.R, R/01_load_pcornet.R, R/25_treatment_durations.R
+#
+# Requirements: Phase 46 episode-level detail with triggering codes
 #
 # Decision traceability:
 #   D-01: historical episodes included with historical_flag boolean column
@@ -35,7 +43,12 @@
 # =============================================================================
 
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# SECTION 1: SETUP AND CONFIGURATION ----
+
+# WHY historical date flagging: Dates before 2012-01-01 may indicate data quality
+# issues (backloaded tumor registry data, retrospective coding errors). Historical
+# flag enables filtering for contemporary treatment pattern analysis without
+# discarding old data entirely.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -60,7 +73,7 @@ OUTPUT_XLSX <- file.path(CONFIG$output_dir, "treatment_episodes.xlsx")
 HISTORICAL_CUTOFF <- as.Date("2012-01-01")
 
 
-# --- SECTION 2: EXTRACTION FUNCTIONS WITH TRIGGERING CODES ---
+# SECTION 2: EXTRACTION FUNCTIONS WITH TRIGGERING CODES ---
 
 # These functions mirror the logic in R/43a_treatment_durations.R but return
 # a 3-column tibble: ID, treatment_date, triggering_code.

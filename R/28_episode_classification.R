@@ -1,12 +1,29 @@
 # ==============================================================================
-# Phase 28 Plan 01: Episode Classification - Cancer Linkage and Regimen Detection
+# 28_episode_classification.R -- Episode-Level Cancer Linkage and Regimen Detection
 # ==============================================================================
+# Purpose:     Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback)
+#              with regimen detection (ABVD, BV+AVD, Nivo+AVD) for chemotherapy episodes.
 #
-# PURPOSE:
-#   Replace patient-level cancer linkage (R/49) with encounter-level precision for
-#   RDS artifacts. Link cancer diagnoses to specific treatment episodes via
-#   ENCOUNTERID with temporal fallback. Label chemotherapy episodes with regimen
-#   names (ABVD, BV+AVD, Nivo+AVD) using drug composition matching.
+# Inputs:      treatment_episodes.rds, treatment_episode_detail.rds, PCORnet DIAGNOSIS
+#
+# Outputs:     cache/outputs/treatment_episodes.rds (modified with cancer linkage),
+#              output/episode_classification_audit.xlsx, output/episode_classification_audit.csv
+#
+# Dependencies: R/00_config.R, R/utils/utils_duckdb.R
+#
+# Requirements: Phase 61 encounter-level cancer linkage + regimen detection
+#
+# WHY ENCOUNTERID linkage first: Most reliable connection between treatment and
+# cancer diagnosis. Encounter context (same admission, same visit) provides
+# clinical certainty vs date-only proximity.
+#
+# WHY 30-day temporal fallback: When ENCOUNTERID missing/unreliable, clinical
+# proximity (diagnosis within 30 days before treatment) provides reasonable linkage.
+# Backward-only window prevents future diagnoses linking to past treatments.
+#
+# WHY specific drug combinations for regimens: ABVD/BV+AVD/Nivo+AVD have distinct
+# drug fingerprints (4-drug combos). Dropped-agent tolerance (AVD without bleomycin)
+# handles real-world practice variation (RATHL trial standard).
 #
 # DECISION TRACEABILITY:
 #   D-01: Primary linkage via direct ENCOUNTERID match (treatment episode ENCOUNTERID → DIAGNOSIS.ENCOUNTERID)
@@ -44,7 +61,7 @@
 #
 # ==============================================================================
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)

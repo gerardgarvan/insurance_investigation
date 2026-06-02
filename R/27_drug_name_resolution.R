@@ -1,9 +1,22 @@
-# =============================================================================
-# Phase 27: Drug Name Resolution via RxNorm API
-# =============================================================================
-# Resolves RXNORM_CUI and NDC codes from chemotherapy patient data to generic
-# drug names using the NLM RxNorm REST API. Produces a cached lookup table
-# for downstream use in R/44a treatment episode detail.
+# ==============================================================================
+# 27_drug_name_resolution.R -- Drug Name Resolution via RxNorm API
+# ==============================================================================
+# Purpose:     Drug name resolution for chemotherapy via RxNorm API (chemotherapy
+#              only). Maps NDC/RXNORM codes to human-readable drug names for regimen
+#              detection.
+#
+# Inputs:      PCORnet PRESCRIBING and MED_ADMIN tables
+#
+# Outputs:     cache/outputs/drug_name_lookup.rds, output/drug_name_lookup.csv
+#
+# Dependencies: R/00_config.R, R/utils/utils_duckdb.R
+#
+# Requirements: Phase 60 drug name lookup for regimen detection
+#
+# WHY chemotherapy only: Other treatment types (radiation, SCT, immunotherapy)
+# identified adequately by procedure codes. Chemotherapy requires specific drug
+# names for regimen matching (ABVD = doxorubicin+bleomycin+vinblastine+dacarbazine).
+# NDC/RXNORM codes are not clinically meaningful without drug name resolution.
 #
 # Decision traceability:
 #   D-06: Drug name resolution covers chemotherapy only

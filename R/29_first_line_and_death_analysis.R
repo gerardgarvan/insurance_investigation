@@ -1,24 +1,31 @@
-# R/29_first_line_and_death_analysis.R
-# Phase 29: First-Line Therapy Identification & Death Analysis
+# ==============================================================================
+# 29_first_line_and_death_analysis.R -- First-Line Therapy Flagging and Death Validation
+# ==============================================================================
+# Purpose:     First-line therapy flagging (60-day clean period before first treatment)
+#              and death date validation cross-referenced against treatment timeline.
 #
-# Part 1: Identify first-line chemotherapy for adults 21+ at treatment date
-#   - Only episodes with regimen_label (ABVD, BV+AVD, Nivo+AVD) qualify (D-01)
-#   - Age 21+ calculated at episode_start using DEMOGRAPHIC.BIRTH_DATE (D-02)
-#   - 60-day clean period: no chemotherapy dates in 60 days before episode_start (D-03)
-#   - Only FIRST qualifying episode per patient gets is_first_line=TRUE (D-04)
-#   - is_first_line column added to treatment_episodes.rds in-place (D-09)
+# Inputs:      treatment_episodes.rds, treatment_episode_detail.rds,
+#              PCORnet DEATH table
 #
-# Part 2: Death date data quality analysis
-#   - Uses validated_death_dates.rds (D-05, D-12) — does NOT re-query DEATH table
-#   - DEATH-01: Count of patients with validated death dates
-#   - DEATH-02: Count where death is last encounter (DEATH_DATE >= max(ADMIT_DATE)) (D-06)
-#   - DEATH-03: Count with post-death encounters, stratified by ENC_TYPE (D-07, D-08)
+# Outputs:     cache/outputs/treatment_episodes.rds (modified with is_first_line),
+#              cache/outputs/first_line_therapy.rds, output/death_analysis.xlsx
 #
-# Outputs: modified treatment_episodes.rds, death_analysis.xlsx, death_analysis.csv
+# Dependencies: R/00_config.R, R/utils/utils_duckdb.R, R/utils/utils_dates.R
+#
+# Requirements: Phase 62 first-line flagging + death date analysis
+#
+# WHY 60-day clean period: Standard oncology definition of first-line therapy. No
+# prior chemotherapy in 60 days before regimen start means this is the first course
+# of treatment (not continuation or relapse therapy).
+#
+# WHY death date validation cross-reference: Impossible deaths (death date before last
+# treatment date) indicate data quality issues. Post-death activity stratified by
+# ENC_TYPE reveals administrative vs clinical encounter patterns.
+#
+# Part 1: First-line therapy flagging (adults 21+, 60-day clean period)
+# Part 2: Death date data quality analysis (validated deaths, impossible deaths)
 
-# ==============================================================================
-# SECTION 1: SETUP AND CONFIGURATION
-# ==============================================================================
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)
