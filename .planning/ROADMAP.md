@@ -58,7 +58,7 @@
 - [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
 - [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
 - [x] **Phase 68: Output & Test Reorganization (Verification Gate)** - Verify reorganization requirements, fix documentation drift, create HiPerGator validation checklist (completed 2026-06-02)
-- [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
+- [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
 - [ ] **Phase 70: Automated Formatting** - Apply styler and configure lintr
 - [ ] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally
 - [ ] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation
@@ -165,7 +165,10 @@ Plans:
   3. .lintr configuration file disables object_name_linter (ALLCAPS PCORnet columns)
   4. .lintr line_length_linter set to 120 characters
   5. lintr baseline run identifies violations for next phase (count recorded)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 70-01-PLAN.md -- Create config files (.stylerignore, .lintr, .git-blame-ignore-revs), run styler with dry-run safety check, apply formatting, single atomic commit
+- [ ] 70-02-PLAN.md -- Run lintr baseline scan and record violation report for Phase 71
 
 #### Phase 71: Linting Cleanup
 **Goal**: lintr violations are reduced to manageable baseline with high-severity issues fixed
@@ -224,11 +227,11 @@ Plans:
 | 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete    | 2026-06-01 |
 | 68. Output & Test Reorganization (Verification Gate) | 2/2 | Complete    | 2026-06-02 |
 | 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
-| 70. Automated Formatting | 0/0 | Not started | - |
+| 70. Automated Formatting | 0/2 | Planning    | - |
 | 71. Linting Cleanup | 0/0 | Not started | - |
 | 72. Defensive Coding | 0/0 | Not started | - |
 | 73. DRY Consolidation | 0/0 | Not started | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 69 plans created (8 plans in 2 waves)*
+*Last updated: 2026-06-02 -- Phase 70 plans created (2 plans in 2 waves)*
