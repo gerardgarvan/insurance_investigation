@@ -2,24 +2,29 @@
 # 63_value_audit.R -- Comprehensive value audit for all PCORnet CDM tables
 # ==============================================================================
 #
-# Produces one CSV per loaded PCORnet CDM table enumerating every distinct value
-# for every column with frequency counts and summary statistics. Designed to be
-# fed to Claude for interactive review of coding inconsistencies.
+# Purpose: Comprehensive value audit: every distinct value for every column in
+#   every PCORnet table, with frequencies and sample values for data quality review.
 #
-# Output: output/tables/value_audit/<TABLE_NAME>_values.csv (13+ files)
+# Inputs:
+#   - All 13 PCORnet tables via 01_load_pcornet.R
+#   - Optionally: payer_summary (from 02_harmonize_payer.R), hl_cohort (from 14_build_cohort.R)
 #
-# Column types handled:
+# Outputs: output/tables/value_audit/<TABLE_NAME>_values.csv (13+ files)
 #   - Character/factor: value + count + percentage frequency table
 #   - Numeric/integer: min, max, mean, median, n_missing, n_valid, n_distinct
 #   - Date: min, max, n_missing, n_valid
 #   - Logical (_VALID flags): converted to character frequency table
 #
+# Dependencies: Sources 01_load_pcornet.R. Optionally sources 02_harmonize_payer.R and/or 14_build_cohort.R.
+#
+# Requirements: PCORnet CDM data quality investigation.
 #
 # Usage:
 #   source("R/63_value_audit.R")
 #   # Optionally source R/02_harmonize_payer.R and/or R/14_build_cohort.R first
 #   # to include derived variable audits.
 #
+# Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 source("R/01_load_pcornet.R")
@@ -36,8 +41,16 @@ output_dir <- file.path(CONFIG$output_dir, "tables", "value_audit")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
 # ==============================================================================
-# HELPER FUNCTIONS
+# SECTION 1: Helper Functions ----
 # ==============================================================================
+# WHY comprehensive value audit:
+#   - PCORnet CDM data from 5 partner sites (AMS, UMI, FLM, VRT, UFH) has inconsistent
+#     coding practices -- same field may use different code sets at different sites
+#   - Audit reveals site-specific patterns (e.g., UFH uses code "51" for Private,
+#     FLM uses "52" for same category)
+#   - Data quality issues: unexpected sentinel values, missing data patterns, date
+#     format inconsistencies
+#   - Frequency tables enable rapid identification of dominant codes vs rare outliers
 
 }
 
@@ -184,7 +197,7 @@ audit_table <- function(df, table_name) {
 }
 
 # ==============================================================================
-# MAIN AUDIT LOOP
+# SECTION 2: Main Audit Loop ----
 # ==============================================================================
 
 message("\n", strrep("=", 60))
@@ -212,7 +225,7 @@ for (tbl_name in names(pcornet)) {
 }
 
 # ==============================================================================
-# DERIVED VARIABLE AUDIT
+# SECTION 3: Derived Variable Audit ----
 # ==============================================================================
 
 message("\n", strrep("=", 60))
@@ -270,7 +283,7 @@ if (length(derived_audits) > 0) {
 }
 
 # ==============================================================================
-# CONSOLE SUMMARY
+# SECTION 4: Console Summary ----
 # ==============================================================================
 
 message("\n", strrep("=", 60))

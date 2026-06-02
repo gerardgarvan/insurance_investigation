@@ -2,28 +2,37 @@
 # 61_tiered_encounter_level.R -- Tiered payer at the encounter level
 # ==============================================================================
 #
-# Purpose: Assign AMC 8-category payer tiers to every individual encounter
-#   WITHOUT same-day collapsing. Each ENCOUNTERID gets its own tier.
-#   Produces encounter-level detail and tier frequency summaries for both
-#   all-encounter and AV+TH scopes.
+# Purpose: Assign AMC 8-category payer tiers to every individual encounter without
+#   same-day collapsing -- preserves encounter-level granularity for downstream
+#   analysis. Each ENCOUNTERID gets its own tier.
 #
-# Output: 4 CSV files in output/tables/:
-#   - encounter_tier_detail_all.csv         (every encounter with tier)
-#   - encounter_tier_detail_av_th.csv
-#   - encounter_tier_summary_all.csv        (tier frequency counts)
-#   - encounter_tier_summary_av_th.csv
+# Inputs:
+#   - get_pcornet_table("ENCOUNTER"): ID, ENCOUNTERID, ENC_TYPE, ADMIT_DATE,
+#     SOURCE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY
+#   - AMC_PAYER_LOOKUP from R/00_config.R
 #
-# Usage: source("R/61_tiered_encounter_level.R")
+# Outputs: 4 CSV files in output/tables/:
+#   - encounter_tier_detail_all.csv, encounter_tier_detail_av_th.csv (every encounter with tier)
+#   - encounter_tier_summary_all.csv, encounter_tier_summary_av_th.csv (tier frequency counts)
 #
-# Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING,
-#   AMC_PAYER_LOOKUP). Requires get_pcornet_table("ENCOUNTER").
+# Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING, AMC_PAYER_LOOKUP, CODE_TO_TIER).
+#
+# Requirements: AMC 8-category payer mapping with encounter-level granularity.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 0: Setup and Tier Configuration
+# SECTION 1: Setup and Tier Configuration ----
 # ==============================================================================
+# WHY encounter-level (no collapsing) differs from same-day approach (R/60):
+#   - Same-day collapsing (R/60): collapses multiple encounters on same date to one payer
+#     per patient-date, useful for daily-level analysis
+#   - Encounter-level (this script): preserves granularity -- each encounter keeps its
+#     own payer assignment, enabling analysis that needs individual encounter payer
+#     information (e.g., per-encounter cost analysis, provider-level payer mix)
+#   - Both approaches needed: same-day for temporal trends, encounter-level for granular
+#     encounter-specific analysis
 
 source("R/00_config.R")
 library(dplyr)
@@ -60,7 +69,7 @@ TIER_MAPPING <- list(
 # CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 1: Load ENCOUNTER table and assign tiers per encounter
+# SECTION 2: Load ENCOUNTER table and assign tiers per encounter ----
 # ==============================================================================
 
 message("--- Loading ENCOUNTER table ---")
@@ -126,7 +135,7 @@ enc <- enc_raw %>%
   )
 
 # ==============================================================================
-# SECTION 2: Build encounter-level detail for both scopes
+# SECTION 3: Build encounter-level detail for both scopes ----
 # ==============================================================================
 
 output_dir <- file.path(CONFIG$output_dir, "tables")
@@ -193,7 +202,7 @@ enc_av_th <- enc %>% filter(ENC_TYPE %in% c("AV", "TH"))
 build_encounter_tier(enc_av_th, "_av_th", output_dir)
 
 # ==============================================================================
-# SECTION 3: Console Summary
+# SECTION 4: Console Summary ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))

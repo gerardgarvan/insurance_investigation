@@ -2,36 +2,23 @@
 # 64_all_source_missingness.R -- All-source payer data missingness diagnostic
 # ==============================================================================
 #
-# Phase 21: Generalize Phase 19 to All Sources
-# Requirements: ALLMISS-01, ALLMISS-02, ALLMISS-03, ALLMISS-04, ALLMISS-05
+# Purpose: All-source payer missingness analysis: extends original UFH-only analysis
+#   (R/65) to all 5 OneFlorida+ partner sites (AMS, UMI, FLM, VRT, UFH).
 #
-# Purpose: Characterize payer data missingness across ALL partner sites
-#          (AMS, UMI, FLM, VRT, UFH) in the OneFlorida+ HL cohort. Extends
-#          Phase 19's UFH-specific investigation to a cross-site comparison.
-#          Profiles both raw ENCOUNTER PAYER_TYPE fields and derived harmonized
-#          categories, with breakdowns by year, encounter type, and their
-#          combination, grouped by SOURCE.
-#
-# Output: 6 CSV files in output/tables/:
-#   - all_source_payer_raw_value_distribution.csv   (ALLMISS-01)
-#   - all_source_payer_missingness_by_year.csv       (ALLMISS-02)
-#   - all_source_payer_missingness_by_enc_type.csv   (ALLMISS-02)
-#   - all_source_payer_missingness_year_x_enc_type.csv (ALLMISS-02)
-#   - all_source_payer_raw_vs_harmonized.csv         (ALLMISS-03)
-#   - all_source_cross_site_summary.csv              (ALLMISS-04)
-#
-# Usage: source("R/64_all_source_missingness.R")
-#
-# Dependencies: Sources 02_harmonize_payer.R which loads the full chain
-#   (02 -> 01 -> 00 + utils). Provides:
-#   - get_pcornet_table("ENCOUNTER") (raw PAYER_TYPE fields)
-#   - get_pcornet_table("DEMOGRAPHIC") (SOURCE column for site identification)
-#   - encounters tibble (with payer_category from harmonization)
+# Inputs:
+#   - get_pcornet_table("ENCOUNTER"): raw PAYER_TYPE fields
+#   - get_pcornet_table("DEMOGRAPHIC"): SOURCE column for site identification
+#   - encounters tibble (with payer_category from 02_harmonize_payer.R)
 #   - PAYER_MAPPING config (sentinel_values, unavailable_codes)
 #
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes early because downstream logic uses nrow(), sum(), and
-#   iterative loops that require in-memory data.
+# Outputs: 6 CSV files in output/tables/:
+#   - all_source_payer_raw_value_distribution.csv, all_source_payer_missingness_by_year.csv
+#   - all_source_payer_missingness_by_enc_type.csv, all_source_payer_missingness_year_x_enc_type.csv
+#   - all_source_payer_raw_vs_harmonized.csv, all_source_cross_site_summary.csv
+#
+# Dependencies: Sources 02_harmonize_payer.R which loads full chain (02 -> 01 -> 00 + utils).
+#
+# Requirements: ALLMISS-01 through ALLMISS-05 (Phase 21).
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -51,8 +38,13 @@ message("Phase 21: Generalize Phase 19 to All Sources")
 message(strrep("=", 70))
 
 # ==============================================================================
-# SECTION 1: Identify HL cohort patients (D-05: HL cohort only)
+# SECTION 1: Identify HL cohort patients (D-05: HL cohort only) ----
 # ==============================================================================
+# WHY all-site extension:
+#   - Original UFH-only analysis (R/65) revealed high payer missingness at UF Health
+#   - Need to determine if this is UFH-specific or system-wide issue
+#   - Cross-site comparison enables identification of site-specific vs universal patterns
+#   - Per-site SOURCE column grouping preserves site identity for targeted remediation
 
 message("\n--- SECTION 1: Identify HL Cohort Patients ---")
 
@@ -79,7 +71,7 @@ for (i in seq_len(nrow(hl_patients_by_source))) {
 }
 
 # ==============================================================================
-# SECTION 2: Build all-source encounter dataset with missingness flags (D-07, D-08)
+# SECTION 2: Build all-source encounter dataset with missingness flags (D-07, D-08) ----
 # ==============================================================================
 
 message("\n--- SECTION 2: Build All-Source Encounter Dataset with Missingness Flags ---")
@@ -137,7 +129,7 @@ for (i in seq_len(nrow(enc_by_source))) {
 }
 
 # ==============================================================================
-# SECTION 3: Raw PAYER_TYPE value distribution (D-01, D-04, D-09 -- ALLMISS-01)
+# SECTION 3: Raw PAYER_TYPE value distribution (D-01, D-04, D-09 -- ALLMISS-01) ----
 # ==============================================================================
 
 message("\n--- SECTION 3: Raw PAYER_TYPE Value Distribution (ALLMISS-01) ---")
@@ -193,7 +185,7 @@ for (src in sort(unique(all_encounters$SOURCE))) {
 }
 
 # ==============================================================================
-# SECTION 4: Temporal breakdown by year (D-04, D-09 -- ALLMISS-02)
+# SECTION 4: Temporal breakdown by year (D-04, D-09 -- ALLMISS-02) ----
 # ==============================================================================
 
 message("\n--- SECTION 4: Temporal Breakdown by Year (ALLMISS-02) ---")
@@ -241,7 +233,7 @@ for (src in sort(unique(missingness_by_year$SOURCE))) {
 }
 
 # ==============================================================================
-# SECTION 5: Encounter type breakdown (D-04, D-09 -- ALLMISS-02)
+# SECTION 5: Encounter type breakdown (D-04, D-09 -- ALLMISS-02) ----
 # ==============================================================================
 
 message("\n--- SECTION 5: Encounter Type Breakdown (ALLMISS-02) ---")
@@ -282,7 +274,7 @@ for (src in sort(unique(missingness_by_enc_type$SOURCE))) {
 }
 
 # ==============================================================================
-# SECTION 6: Year x Encounter type crosstab (D-04, D-09 -- ALLMISS-02)
+# SECTION 6: Year x Encounter type crosstab (D-04, D-09 -- ALLMISS-02) ----
 # ==============================================================================
 
 message("\n--- SECTION 6: Year x Encounter Type Crosstab (ALLMISS-02) ---")
@@ -313,7 +305,7 @@ for (i in seq_len(nrow(top_missing_combos))) {
 }
 
 # ==============================================================================
-# SECTION 7: Raw vs harmonized comparison (D-04, D-09 -- ALLMISS-03)
+# SECTION 7: Raw vs harmonized comparison (D-04, D-09 -- ALLMISS-03) ----
 # ==============================================================================
 
 message("\n--- SECTION 7: Raw vs Harmonized Comparison (ALLMISS-03) ---")
@@ -384,7 +376,7 @@ for (i in seq_len(nrow(overall_comparison))) {
 }
 
 # ==============================================================================
-# SECTION 8: Cross-site summary (D-02, D-03, D-10 -- ALLMISS-04)
+# SECTION 8: Cross-site summary (D-02, D-03, D-10 -- ALLMISS-04) ----
 # ==============================================================================
 
 message("\n--- SECTION 8: Cross-Site Summary (ALLMISS-04) ---")
@@ -439,7 +431,7 @@ for (i in seq_len(nrow(cross_site_summary))) {
 }
 
 # ==============================================================================
-# SECTION 9: Console summary (D-10 -- ALLMISS-05)
+# SECTION 9: Console summary (D-10 -- ALLMISS-05) ----
 # ==============================================================================
 
 message("\n", strrep("=", 70))

@@ -2,52 +2,37 @@
 # 60_tiered_same_day_payer.R -- Tiered same-day payer categorization
 # ==============================================================================
 #
-# Phase 60: All-encounter payer frequency and same-day categorization (AMC 8-category)
-# Requirements: Per Amy Crisp framework (payer_framework.txt)
+# Purpose: Tiered same-day payer categorization with AMC 8-category hierarchy for
+#   both all-encounter and AV+TH scopes. Produces 12 CSV deliverables (6 frequency
+#   + 6 resolution). Implements Amy Crisp payer framework with hierarchical
+#   same-day resolution to resolve conflicts when patients have multiple encounters
+#   on the same date with different payer codes.
 #
-# Purpose: Produce two deliverables per Amy Crisp's framework:
+# Inputs:
+#   - get_pcornet_table("ENCOUNTER"): ID, ENCOUNTERID, ENC_TYPE, ADMIT_DATE,
+#     SOURCE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY
+#   - AMC_PAYER_LOOKUP from R/00_config.R (centralized 8-category mapping)
+#   - TIER_MAPPING hierarchy (Medicaid=1 > Medicare=2 > Private=3 > ...)
 #
-# 1. Raw payer frequency tables using AMC_PAYER_LOOKUP from R/00_config.R for BOTH
-#    all-encounter and AV+TH scopes (6 frequency CSVs)
-# 2. Hierarchical same-day payer resolution using the priority hierarchy:
-#    Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing
-#    for BOTH scopes (6 resolution CSVs)
-#
-# Output: 12 CSV files in output/tables/:
+# Outputs: 12 CSV files in output/tables/:
 #   Frequency tables (6):
-#     columns: code, amc_category, n, pct
-#     - payer_primary_code_freq_all.csv
-#     - payer_secondary_code_freq_all.csv
-#     - payer_category_summary_all.csv
-#     - payer_primary_code_freq_av_th_v2.csv
-#     - payer_secondary_code_freq_av_th_v2.csv
-#     - payer_category_summary_av_th_v2.csv
-#
+#     - payer_primary_code_freq_all.csv, payer_secondary_code_freq_all.csv, payer_category_summary_all.csv
+#     - payer_primary_code_freq_av_th_v2.csv, payer_secondary_code_freq_av_th_v2.csv, payer_category_summary_av_th_v2.csv
 #   Resolution tables (6):
-#     - payer_resolved_detail_all.csv            (CSV A: per-patient-per-date)
-#     - payer_resolved_detail_av_th.csv
-#     - payer_resolved_patient_summary_all.csv   (CSV B: patient-level modal)
-#     - payer_resolved_patient_summary_av_th.csv
-#     - payer_resolved_impact_all.csv            (CSV C: before vs after)
-#     - payer_resolved_impact_av_th.csv
-#
-# Usage: source("R/60_tiered_same_day_payer.R")
+#     - payer_resolved_detail_all.csv, payer_resolved_detail_av_th.csv (per-patient-per-date)
+#     - payer_resolved_patient_summary_all.csv, payer_resolved_patient_summary_av_th.csv (patient-level modal)
+#     - payer_resolved_impact_all.csv, payer_resolved_impact_av_th.csv (before vs after)
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB, PAYER_MAPPING,
-#   AMC_PAYER_LOOKUP).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ENC_TYPE,
-#     ADMIT_DATE, SOURCE, PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY)
+#   AMC_PAYER_LOOKUP, CODE_TO_TIER utility). Conditionally sources R/01_load_pcornet.R.
 #
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes immediately after loading because all downstream logic
-#   (count, left_join, group_by, date arithmetic) requires in-memory data.
+# Requirements: Implements Amy Crisp payer framework (payer_framework.txt). Phase 60.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 0: Setup and Tier Configuration
+# SECTION 1: Setup and Tier Configuration ----
 # ==============================================================================
 
 source("R/00_config.R")
@@ -71,6 +56,17 @@ message(glue("{strrep('=', 70)}\n"))
 # ==========================================================================
 # TIER HIERARCHY CONFIGURATION (per Amy Crisp framework)
 # Lower rank = higher priority. PIs can edit this with one-line changes.
+#
+# WHY this hierarchy order:
+#   Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing
+#   - Medicaid has the most restrictive eligibility requirements (income/asset limits)
+#     so it is the strongest signal of coverage status
+#   - Medicare indicates age 65+ or disability eligibility
+#   - Private insurance is purchased coverage (employer or individual)
+#   - Hierarchy resolves same-day conflicts by prioritizing the most-informative payer
+#   - When a patient has multiple encounters on the same date with different payers,
+#     we select the tier with the lowest rank (highest priority) as the "true" payer
+#     for that date
 # ==========================================================================
 TIER_MAPPING <- list(
   Medicaid     = 1L,  # Highest priority (includes dual-eligible, codes 93/14, FLM source)
@@ -86,8 +82,15 @@ TIER_MAPPING <- list(
 # CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 2: Load ENCOUNTER table and prepare both scopes
+# SECTION 2: Load ENCOUNTER table and prepare both scopes ----
 # ==============================================================================
+# WHY both all-encounter and AV+TH scopes:
+#   - All-encounter scope: complete patient encounter history across all care settings
+#   - AV+TH scope: Ambulatory (AV) + Hospital (TH) encounters are the clinically
+#     relevant types for treatment analysis -- filters out ancillary encounters
+#     (lab-only visits, telehealth, etc.) that may not represent meaningful care episodes
+#   - Both scopes needed for comparison: all-encounter shows complete picture,
+#     AV+TH shows treatment-focused subset
 
 message(glue("\n--- SECTION 2: Load ENCOUNTER Table (All + AV+TH Scopes) ---"))
 
@@ -164,7 +167,7 @@ message(glue("Total patients (all scope): {format(n_distinct(enc_all$ID), big.ma
 message(glue("Total patients (AV+TH scope): {format(n_distinct(enc_av_th$ID), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 3: Frequency Tables (dual scope)
+# SECTION 3: Frequency Tables (dual scope) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 3: Building Frequency Tables (Dual Scope) ---"))
@@ -279,8 +282,15 @@ message("\n=== AV+TH Encounters Scope ===")
 build_frequency_tables(enc_av_th, "_av_th_v2", output_dir)
 
 # ==============================================================================
-# SECTION 4: Same-Day Payer Resolution (dual scope)
+# SECTION 4: Same-Day Payer Resolution (dual scope) ----
 # ==============================================================================
+# WHY same-day collapsing is needed:
+#   - Patients may have multiple encounters on the same date with different payer codes
+#     (e.g., lab visit coded as Private, same-day clinic visit coded as Medicaid)
+#   - These represent the same patient on the same date but with conflicting payer info
+#   - Resolution logic uses tier hierarchy to deterministically select one payer per
+#     patient-date, enabling downstream daily-level payer analysis without duplicates
+#   - Without collapsing, daily counts would be inflated and payer assignment ambiguous
 
 message(glue("\n--- SECTION 4: Same-Day Payer Resolution (Dual Scope) ---"))
 
@@ -384,7 +394,7 @@ message("\n=== AV+TH Encounters Scope ===")
 resolve_same_day_payer(enc_av_th, "_av_th", output_dir)
 
 # ==============================================================================
-# SECTION 5: Console Summary
+# SECTION 5: Console Summary ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))

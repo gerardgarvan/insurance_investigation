@@ -2,36 +2,43 @@
 # 62_tiered_date_level.R -- Tiered payer at the date level
 # ==============================================================================
 #
-# Purpose: Expand treatment episodes (from Phase 44) into per-calendar-date rows
-#   and assign an AMC 8-category payer tier to each patient+date. Produces
-#   frequency tables of tier counts across all patient-dates.
+# Purpose: Expand treatment episodes to daily rows and assign payer tier per
+#   patient+date using 3-tier fill cascade (encounter match, date match, modal fill).
 #
-# Approach:
-#   1. Load treatment_episodes.rds (Phase 44)
-#   2. Expand each episode to daily rows (episode_start:episode_stop)
-#   3. Tier every ENCOUNTER by patient+date (same logic as Phase 45)
-#   4. Left-join encounter tiers to the expanded date grid
-#   5. Forward/backward fill within episode scope for dates without encounters
-#   6. Enrollment FLM fallback for episodes with zero encounters
-#   7. Write detail + summary CSVs
+# Inputs:
+#   - treatment_episodes.rds (episode_start, episode_stop per patient+type)
+#   - get_pcornet_table("ENCOUNTER"): payer fields for tiering
+#   - get_pcornet_table("ENROLLMENT"): FLM enrollment spans for fallback
+#   - AMC_PAYER_LOOKUP from R/00_config.R
 #
-# Output: 3 CSV files in output/tables/:
-#   - date_tier_detail.csv            (one row per patient per calendar date)
-#   - date_tier_summary.csv           (tier frequency across all dates)
-#   - date_tier_summary_by_type.csv   (tier frequency per treatment type)
+# Outputs: 3 CSV files in output/tables/:
+#   - date_tier_detail.csv (one row per patient per calendar date with fill_method)
+#   - date_tier_summary.csv (tier frequency across all dates)
+#   - date_tier_summary_by_type.csv (tier frequency per treatment type)
 #
-# Usage: source("R/62_tiered_date_level.R")
+# Dependencies: Sources R/00_config.R. Requires treatment_episodes.rds from R/26.
 #
-# Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING,
-#   AMC_PAYER_LOOKUP). Requires get_pcornet_table("ENCOUNTER"),
-#   get_pcornet_table("ENROLLMENT"), and treatment_episodes.rds.
+# Requirements: Daily-level payer assignment for treatment episode analysis.
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 0: Setup and Tier Configuration
+# SECTION 1: Setup and Tier Configuration ----
 # ==============================================================================
+# WHY 3-tier fill cascade:
+#   - Direct encounter match (fill_method="encounter"): most reliable -- patient had
+#     an encounter on that date with a known payer tier
+#   - Same-date match (fill_method="filled"): forward/backward fill from nearby
+#     encounters within the same treatment episode -- assumes payer continuity
+#   - Modal fill (fill_method="enrollment_flm"): for dates with zero encounters,
+#     use FLM enrollment spans as fallback (FLM = Florida Medicaid claims)
+#   - Cascade ensures every patient-date gets a payer assignment, with explicit
+#     fill_method tracking data quality
+# WHY daily expansion:
+#   - Treatment episodes span multiple days (e.g., 2024-01-01 to 2024-01-31)
+#   - Payer may change during the episode (loss of coverage, plan switch, etc.)
+#   - Daily granularity enables per-day payer analysis and detects mid-episode transitions
 
 source("R/00_config.R")
 library(dplyr)
@@ -69,7 +76,7 @@ TIER_MAPPING <- list(
 # CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 1: Load Episode Data (Phase 44)
+# SECTION 2: Load Episode Data (Phase 44) ----
 # ==============================================================================
 
 message("--- Loading treatment episodes (Phase 44) ---")
@@ -83,7 +90,7 @@ episodes <- readRDS(episodes_path)
 message(glue("Episodes loaded: {format(nrow(episodes), big.mark=',')} episodes across {n_distinct(episodes$patient_id)} patients"))
 
 # ==============================================================================
-# SECTION 2: Expand Episodes to Calendar Days
+# SECTION 3: Expand Episodes to Calendar Days ----
 # ==============================================================================
 
 message("\n--- Expanding episodes to calendar days ---")
@@ -108,7 +115,7 @@ if (nrow(date_grid) != expected_days) {
 }
 
 # ==============================================================================
-# SECTION 3: Tier ENCOUNTER Table (reuse Phase 45 logic verbatim)
+# SECTION 4: Tier ENCOUNTER Table (reuse Phase 45 logic verbatim) ----
 # ==============================================================================
 
 message("\n--- Loading and tiering ENCOUNTER table ---")
@@ -176,7 +183,7 @@ enc_date_tier <- enc %>%
 message(glue("Encounter-date tiers: {format(nrow(enc_date_tier), big.mark=',')} unique patient-dates"))
 
 # ==============================================================================
-# SECTION 4: Left-Join Encounter Tiers to Expanded Dates
+# SECTION 5: Left-Join Encounter Tiers to Expanded Dates ----
 # ==============================================================================
 
 message("\n--- Joining encounter tiers to date grid ---")
@@ -198,7 +205,7 @@ date_joined <- date_joined %>%
   select(-enc_tier, -enc_tier_rank)
 
 # ==============================================================================
-# SECTION 5: Forward/Backward Fill Within Episodes
+# SECTION 6: Forward/Backward Fill Within Episodes ----
 # ==============================================================================
 
 message("\n--- Forward/backward fill within episodes ---")
@@ -225,7 +232,7 @@ message(glue("After fill: {format(n_filled, big.mark=',')} dates filled from nea
 message(glue("Remaining gaps: {format(n_no_data, big.mark=',')} dates with no encounter data in episode"))
 
 # ==============================================================================
-# SECTION 6: Enrollment FLM Fallback for Remaining NAs
+# SECTION 7: Enrollment FLM Fallback for Remaining NAs ----
 # ==============================================================================
 
 if (n_no_data > 0) {
@@ -297,7 +304,7 @@ if (n_no_data > 0) {
 }
 
 # ==============================================================================
-# SECTION 7: Write Outputs
+# SECTION 8: Write Outputs ----
 # ==============================================================================
 
 output_dir <- file.path(CONFIG$output_dir, "tables")
@@ -337,7 +344,7 @@ write_csv(summary_by_type, summary_type_path)
 message(glue("Written: date_tier_summary_by_type.csv ({nrow(summary_by_type)} rows)"))
 
 # ==============================================================================
-# SECTION 8: Console Summary
+# SECTION 9: Console Summary ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))
