@@ -63,6 +63,13 @@ TMP_PATH <- paste0(DUCKDB_PATH, ".tmp")
 # SECTION 2: CREATE OUTPUT DIRECTORIES ----
 # ==============================================================================
 
+# SAFE-01: Validate RDS source directory exists
+checkmate::assert_directory_exists(
+  CONFIG$cache$raw_dir,
+  access = "r",
+  .var.name = "[R/03 ERROR] RDS cache directory"
+)
+
 if (!dir.exists(DUCKDB_DIR)) {
   dir.create(DUCKDB_DIR, recursive = TRUE, showWarnings = FALSE)
   message(glue("Created DuckDB directory: {DUCKDB_DIR}"))
@@ -137,9 +144,16 @@ ingest_ok <- tryCatch(
 
       tbl_ok <- tryCatch(
         {
+          # SAFE-01: Validate RDS file exists before loading
+          assert_rds_exists(rds_path, script_name = "R/03")
+
           # Load from RDS cache
           df <- readRDS(rds_path)
           message(glue("  Loaded RDS: {format(nrow(df), big.mark=',')} rows x {ncol(df)} cols"))
+
+          # SAFE-02: Validate data frame structure
+          assert_df_valid(df, tbl_name, required_cols = c("ID"),
+                          script_name = "R/03", allow_empty = TRUE)
 
           # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
           DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)

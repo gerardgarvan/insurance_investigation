@@ -41,6 +41,32 @@ message("Payer Harmonization Pipeline")
 message(strrep("=", 60))
 
 # ==============================================================================
+# SECTION 0: INPUT VALIDATION ----
+# ==============================================================================
+
+# SAFE-02: Validate critical input tables exist and have required columns
+# Guard: ENCOUNTER table is required for payer harmonization (checked later in script)
+# Validate ENROLLMENT immediately since it's the primary data source
+
+enrollment_tbl <- tryCatch(get_pcornet_table("ENROLLMENT"), error = function(e) NULL)
+if (!is.null(enrollment_tbl)) {
+  # Materialize for assertion check
+  enrollment_check <- enrollment_tbl %>% materialize()
+  assert_df_valid(
+    enrollment_check,
+    "ENROLLMENT",
+    required_cols = c("ID", "PAYER_TYPE_PRIMARY", "ENR_START_DATE"),
+    script_name = "R/02"
+  )
+  assert_col_types(
+    enrollment_check,
+    type_spec = list(ID = "character", PAYER_TYPE_PRIMARY = "character"),
+    script_name = "R/02"
+  )
+  rm(enrollment_check)
+}
+
+# ==============================================================================
 # SECTION 1: NAMED PAYER FUNCTIONS ----
 # ==============================================================================
 
@@ -326,6 +352,19 @@ payer_summary <- patient_source %>%
     DUAL_ELIGIBLE = coalesce(DUAL_ELIGIBLE, 0L),
     PAYER_TRANSITION = coalesce(PAYER_TRANSITION, 0L)
   )
+
+# SAFE-02: Validate payer_summary output
+assert_df_valid(
+  payer_summary,
+  "payer_summary",
+  required_cols = c("ID", "PAYER_CATEGORY_PRIMARY"),
+  script_name = "R/02"
+)
+assert_col_types(
+  payer_summary,
+  type_spec = list(ID = "character"),
+  script_name = "R/02"
+)
 
 message(glue("\nPatient-level summary:"))
 message(glue("  Total patients in payer_summary: {format(nrow(payer_summary), big.mark=',')}"))

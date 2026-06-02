@@ -425,11 +425,12 @@ TABLE_SPECS <- list(
 #' - Warns if any parse problems occurred
 load_pcornet_table <- function(table_name, file_path, col_spec,
                                cache_dir = NULL, force_reload = FALSE) {
-  # Check file exists (per D-10: warn and skip)
-  if (!file.exists(file_path)) {
-    message(glue("WARNING: {table_name} not found at {file_path}. Skipping."))
-    return(NULL)
-  }
+  # SAFE-01: Validate CSV file exists before attempting load
+  checkmate::assert_file_exists(
+    file_path,
+    access = "r",
+    .var.name = glue("[R/01 ERROR] CSV file for {table_name}")
+  )
 
   # ---------------------------------------------------------------------------
   # RDS Cache Check (Phase 15: CACHE-01, CACHE-02, CACHE-04)
@@ -443,6 +444,9 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
       cache_start <- Sys.time()
       df <- readRDS(cache_path)
       cache_seconds <- as.numeric(difftime(Sys.time(), cache_start, units = "secs"))
+
+      # SAFE-02: Validate cached RDS loaded correctly
+      assert_df_valid(df, table_name, c("ID"), script_name = "R/01", allow_empty = TRUE)
 
       original_parse_seconds <- attr(df, "csv_parse_seconds")
       if (!is.null(original_parse_seconds)) {
@@ -649,6 +653,13 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
     message(glue("Skipped: {paste(skipped_tables, collapse = ', ')}"))
   }
   message(strrep("=", 60))
+
+  # SAFE-02: Validate pcornet list has expected critical tables
+  checkmate::assert_names(
+    names(pcornet),
+    must.include = c("ENROLLMENT", "DIAGNOSIS", "ENCOUNTER", "PROCEDURES"),
+    .var.name = "[R/01 ERROR] pcornet list tables"
+  )
 
   # --------------------------------------------------------------------------
   # COMBINED TUMOR REGISTRY (Phase 14: consolidate repeated bind_rows)
