@@ -45,6 +45,10 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# NOTE: RDS files are optional for this script (checks with file.exists), so no
+# assert_rds_exists needed. Script will proceed with empty description lookup if missing.
+
 message("=== Phase 5: All Codes Resolved XLSX Update ===")
 message(glue("Config source: R/00_config.R"))
 message(glue("Backend: ", if (USE_DUCKDB) "DuckDB" else "RDS"))

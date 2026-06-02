@@ -28,6 +28,14 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate DIAGNOSIS table is available
+assert_df_valid(
+  pcornet$DIAGNOSIS, "DIAGNOSIS",
+  required_cols = c("ID", "DX", "DX_TYPE", "DX_DATE"),
+  script_name = "R/44"
+)
+
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "cancer_site_confirmation_7day.xlsx")
 dir.create(dirname(OUTPUT_PATH), showWarnings = FALSE, recursive = TRUE)
 

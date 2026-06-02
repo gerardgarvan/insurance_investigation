@@ -41,6 +41,14 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate DIAGNOSIS table is available
+assert_df_valid(
+  pcornet$DIAGNOSIS, "DIAGNOSIS",
+  required_cols = c("ID", "DX", "DX_TYPE", "DX_DATE"),
+  script_name = "R/48"
+)
+
 # Define input/output paths
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 INPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
@@ -347,6 +355,9 @@ message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories coveri
 # SECTION 3: LOAD INPUTS ----
 # ==============================================================================
 
+# SAFE-01: Validate input RDS exists
+assert_rds_exists(INPUT_RDS, script_name = "R/48")
+
 message(glue("\nLoading confirmed HL cohort from {INPUT_RDS}..."))
 confirmed_hl_cohort <- readRDS(INPUT_RDS)
 n_total_confirmed <- nrow(confirmed_hl_cohort)
@@ -365,6 +376,10 @@ confirmed_hl_cohort <- confirmed_hl_cohort %>%
 message(glue("  Post-filter cohort size: {format(nrow(confirmed_hl_cohort), big.mark=',')} patients"))
 
 # Load baseline cancer_summary.csv (for description lookup ONLY -- not for temporal filtering)
+# SAFE-01: Validate input CSV exists
+checkmate::assert_file_exists(INPUT_CSV, access = "r",
+  .var.name = glue("[R/48 ERROR] Cancer summary CSV -- run R/47 first"))
+
 message(glue("\nLoading baseline {INPUT_CSV} (for description lookup)..."))
 cancer_summary_baseline <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
 message(glue("  Baseline cancer_summary: {format(nrow(cancer_summary_baseline), big.mark=',')} rows, {format(n_distinct(cancer_summary_baseline$ID), big.mark=',')} patients"))

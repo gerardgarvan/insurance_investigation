@@ -120,26 +120,33 @@ COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 OUTPUT_EPISODES_V2 <- file.path(CONFIG$output_dir, "gantt_episodes_v2.csv")
 OUTPUT_DETAIL_V2 <- file.path(CONFIG$output_dir, "gantt_detail_v2.csv")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-01: Validate all input artifacts exist (fail-fast before any loading)
+assert_rds_exists(EPISODES_RDS, script_name = "R/52")
+assert_rds_exists(DETAIL_RDS, script_name = "R/52")
+
 
 # --- SECTION 2: LOAD INPUT DATA ----
 
 message("=== Phase 63: Enhanced Gantt Export - v2 CSV ===\n")
 
-# Verify RDS artifacts exist before attempting to load
-if (!file.exists(EPISODES_RDS)) {
-  stop(glue("ERROR: {EPISODES_RDS} not found. Run R/44a_treatment_episodes.R first."))
-}
-if (!file.exists(DETAIL_RDS)) {
-  stop(glue("ERROR: {DETAIL_RDS} not found. Run R/44a_treatment_episodes.R first."))
-}
-
 # Load episode-level data (bars: one row per patient/type/episode)
 episodes <- readRDS(EPISODES_RDS)
 message(glue("  Loaded {format(nrow(episodes), big.mark = ',')} episode rows"))
 
+# SAFE-02: Validate structure after loading
+assert_df_valid(episodes, "treatment_episodes",
+  required_cols = c("patient_id", "treatment_type", "episode_start", "episode_stop"),
+  script_name = "R/52")
+
 # Load detail-level data (ticks: one row per patient/date/code)
 detail <- readRDS(DETAIL_RDS)
 message(glue("  Loaded {format(nrow(detail), big.mark = ',')} detail rows"))
+
+# SAFE-02: Validate structure after loading
+assert_df_valid(detail, "treatment_episode_detail",
+  required_cols = c("patient_id", "treatment_type", "treatment_date", "code"),
+  script_name = "R/52")
 
 # Guard clauses for missing Phase 61/62 columns (per R/62 pattern, lines 79-85)
 if (!"cancer_category" %in% names(episodes)) {
@@ -169,6 +176,8 @@ if (!"is_first_line" %in% names(episodes)) {
 # Load code descriptions (Phase 48b) — non-fatal if missing
 code_descriptions <- NULL
 if (file.exists(DESCRIPTIONS_RDS)) {
+  # SAFE-01: Validate RDS exists before loading
+  assert_rds_exists(DESCRIPTIONS_RDS, script_name = "R/52")
   code_descriptions <- readRDS(DESCRIPTIONS_RDS)
   message(glue("  Loaded {format(length(code_descriptions), big.mark = ',')} code descriptions"))
 } else {
@@ -277,6 +286,8 @@ message(glue("  Built detail_export: {format(nrow(detail_export), big.mark = ','
 if (file.exists(VALIDATED_DEATHS_RDS)) {
   message("\n--- Building Death pseudo-treatment rows ---")
 
+  # SAFE-01: Validate RDS exists before loading
+  assert_rds_exists(VALIDATED_DEATHS_RDS, script_name = "R/52")
   validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
 
   death_data <- validated_deaths %>%
@@ -389,6 +400,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
 if (file.exists(COHORT_RDS)) {
   message("\n--- Building HL Diagnosis pseudo-treatment rows ---")
 
+  # SAFE-01: Validate RDS exists before loading
+  assert_rds_exists(COHORT_RDS, script_name = "R/52")
   hl_cohort <- readRDS(COHORT_RDS)
 
   # Filter for valid first_hl_dx_date

@@ -38,6 +38,11 @@ NDC_RDS <- file.path(CONFIG$output_dir, "unmatched_ndc_classified.rds")
 # Output path
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-01: Validate classified code RDS files exist
+assert_rds_exists(HCPCS_RDS, script_name = "R/42")
+assert_rds_exists(NDC_RDS, script_name = "R/42")
+
 message("=== Phase 02: Build Code Description Lookup ===\n")
 
 

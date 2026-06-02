@@ -62,26 +62,33 @@ VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dat
 # Confirmed HL cohort (built by R/55_cancer_summary_refined.R, Phase 55)
 COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-01: Validate all input artifacts exist (fail-fast before any loading)
+assert_rds_exists(EPISODES_RDS, script_name = "R/51")
+assert_rds_exists(DETAIL_RDS, script_name = "R/51")
+
 
 # --- SECTION 2: LOAD INPUT DATA ----
 
 message("=== Phase 01: Gantt Chart Data Export ===\n")
 
-# Verify RDS artifacts exist before attempting to load
-if (!file.exists(EPISODES_RDS)) {
-  stop(glue("ERROR: {EPISODES_RDS} not found. Run R/44a_treatment_episodes.R first."))
-}
-if (!file.exists(DETAIL_RDS)) {
-  stop(glue("ERROR: {DETAIL_RDS} not found. Run R/44a_treatment_episodes.R first."))
-}
-
 # Load episode-level data (bars: one row per patient/type/episode)
 episodes <- readRDS(EPISODES_RDS)
 message(glue("  Loaded {format(nrow(episodes), big.mark = ',')} episode rows"))
 
+# SAFE-02: Validate structure after loading
+assert_df_valid(episodes, "treatment_episodes",
+  required_cols = c("patient_id", "treatment_type", "episode_start", "episode_stop"),
+  script_name = "R/51")
+
 # Load detail-level data (ticks: one row per patient/date/code)
 detail <- readRDS(DETAIL_RDS)
 message(glue("  Loaded {format(nrow(detail), big.mark = ',')} detail rows"))
+
+# SAFE-02: Validate structure after loading
+assert_df_valid(detail, "treatment_episode_detail",
+  required_cols = c("patient_id", "treatment_type", "treatment_date", "code"),
+  script_name = "R/51")
 
 
 # --- SECTION 2B: LOAD AND AGGREGATE CANCER CATEGORIES (per D-01, D-02, D-03) ---
@@ -90,9 +97,8 @@ message("\n--- Loading cancer categories ---")
 
 # Cancer summary CSV has columns: ID, cancer_code, description, ...
 # It does NOT have a "category" column -- we must derive it via PREFIX_MAP
-if (!file.exists(CANCER_SUMMARY_CSV)) {
-  stop(glue("ERROR: {CANCER_SUMMARY_CSV} not found. Run R/55_cancer_summary_refined.R first."))
-}
+checkmate::assert_file_exists(CANCER_SUMMARY_CSV, access = "r",
+  .var.name = glue("[R/51 ERROR] Cancer summary CSV -- run R/47 first"))
 
 cancer_summary <- read.csv(CANCER_SUMMARY_CSV, stringsAsFactors = FALSE)
 message(glue("  Loaded {format(nrow(cancer_summary), big.mark = ',')} cancer summary rows"))
@@ -415,6 +421,8 @@ if (!file.exists(VALIDATED_DEATHS_RDS)) {
   }
   close_pcornet_con()
 } else {
+  # SAFE-01: Validate RDS exists before loading
+  assert_rds_exists(VALIDATED_DEATHS_RDS, script_name = "R/51")
   validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
   # Keep all patients but only use non-NA death dates (impossible deaths have DEATH_DATE = NA)
   death_data <- validated_deaths %>%
@@ -440,6 +448,8 @@ if (!file.exists(COHORT_RDS)) {
     first_hl_dx_source = character()
   )
 } else {
+  # SAFE-01: Validate RDS exists before loading
+  assert_rds_exists(COHORT_RDS, script_name = "R/51")
   hl_cohort <- readRDS(COHORT_RDS)
   # Apply 1900 sentinel filtering to HL diagnosis dates (same pattern as death dates)
   hl_cohort <- hl_cohort %>%
@@ -485,9 +495,8 @@ message("  Column validation passed")
 
 # --- SECTION 3B: LOAD CODE DESCRIPTIONS (Phase 02) ----
 
-if (!file.exists(DESCRIPTIONS_RDS)) {
-  stop(glue("ERROR: {DESCRIPTIONS_RDS} not found. Run R/48b_build_code_descriptions.R first."))
-}
+# SAFE-01: Validate RDS exists before loading
+assert_rds_exists(DESCRIPTIONS_RDS, script_name = "R/51")
 
 code_descriptions <- readRDS(DESCRIPTIONS_RDS)
 message(glue("  Loaded {format(length(code_descriptions), big.mark = ',')} code descriptions"))

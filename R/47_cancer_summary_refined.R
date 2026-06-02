@@ -47,6 +47,14 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate DIAGNOSIS table is available
+assert_df_valid(
+  pcornet$DIAGNOSIS, "DIAGNOSIS",
+  required_cols = c("ID", "DX", "DX_TYPE", "DX_DATE"),
+  script_name = "R/47"
+)
+
 # Define output paths
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 OUTPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
@@ -346,6 +354,10 @@ message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories coveri
 # ==============================================================================
 # SECTION 3: LOAD AND FILTER INPUT DATA (CREF-01)
 # ==============================================================================
+
+# SAFE-01: Validate input CSV exists
+checkmate::assert_file_exists(INPUT_CSV, access = "r",
+  .var.name = glue("[R/47 ERROR] Cancer summary CSV -- run R/45 first"))
 
 message(glue("\nLoading {INPUT_CSV}..."))
 

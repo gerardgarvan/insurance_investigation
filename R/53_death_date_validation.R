@@ -39,6 +39,9 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# Note: DEATH table validation happens after DuckDB connection is opened
+
 message("=== Phase 59: Death Date Validation & Treatment Timeline Cleanup ===\n")
 
 # Define output paths
@@ -98,12 +101,19 @@ message(glue("  Patients with valid death dates: {nrow(death_data)}"))
 
 message("\n--- Loading treatment episodes ---")
 
-if (!file.exists(EPISODES_RDS)) {
-  stop(glue("Treatment episodes RDS not found: {EPISODES_RDS}"))
-}
+# SAFE-01: Validate RDS exists
+assert_rds_exists(EPISODES_RDS, script_name = "R/53")
 
 treatment_episodes <- readRDS(EPISODES_RDS)
 message(glue("  Loaded treatment episodes: {nrow(treatment_episodes)} rows"))
+
+# SAFE-02: Validate structure and add date range warning
+assert_df_valid(treatment_episodes, "treatment_episodes",
+  required_cols = c("patient_id", "treatment_type", "episode_start"),
+  script_name = "R/53")
+warn_date_range(treatment_episodes, "episode_start",
+  as.Date("1990-01-01"), as.Date("2030-12-31"),
+  script_name = "R/53")
 
 # Compute earliest treatment date per patient across ALL treatment types
 # (no type filtering -- per RESEARCH anti-pattern 2)
@@ -152,6 +162,8 @@ message("\n--- Identifying impossible death dates (death before HL Diagnosis) --
 if (!file.exists(COHORT_RDS)) {
   warning("confirmed_hl_cohort.rds not found. Skipping death-before-HL-diagnosis check.")
 } else {
+  # SAFE-01: Validate RDS exists
+  assert_rds_exists(COHORT_RDS, script_name = "R/53")
   hl_cohort_for_death_check <- readRDS(COHORT_RDS) %>%
     filter(!is.na(first_hl_dx_date), year(first_hl_dx_date) != 1900L)
 
@@ -255,9 +267,8 @@ death_only_patients <- death_data %>%
 message(glue("  Patients with death dates but no treatment records: {nrow(death_only_patients)}"))
 
 # Load confirmed_hl_cohort.rds and check HL status
-if (!file.exists(COHORT_RDS)) {
-  stop(glue("Confirmed HL cohort RDS not found: {COHORT_RDS}"))
-}
+# SAFE-01: Validate RDS exists
+assert_rds_exists(COHORT_RDS, script_name = "R/53")
 
 confirmed_hl_cohort <- readRDS(COHORT_RDS)
 message(glue("  Loaded confirmed HL cohort: {nrow(confirmed_hl_cohort)} patients"))

@@ -32,6 +32,14 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
+# SECTION 0: INPUT VALIDATION ----
+# SAFE-02: Validate DIAGNOSIS table is available
+assert_df_valid(
+  pcornet$DIAGNOSIS, "DIAGNOSIS",
+  required_cols = c("ID", "DX", "DX_TYPE", "DX_DATE"),
+  script_name = "R/45"
+)
+
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary.xlsx")
 OUTPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 dir.create(dirname(OUTPUT_XLSX), showWarnings = FALSE, recursive = TRUE)
