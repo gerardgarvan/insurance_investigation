@@ -246,7 +246,7 @@ Plans:
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
 | 72. Defensive Coding | 4/4 | Complete    | 2026-06-02 |
 | 73. DRY Consolidation | 3/3 | Complete    | 2026-06-02 |
-| 74. Smoke Testing & Reference Manual | 2/2 | Complete   | 2026-06-02 |
+| 74. Smoke Testing & Reference Manual | 2/2 | Complete    | 2026-06-02 |
 
 ---
 *Last updated: 2026-06-02 -- Phase 74 planning complete (2 plans in 1 wave)*
