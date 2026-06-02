@@ -12,6 +12,8 @@
 #
 # Dependencies: 00_config.R, 01_load_pcornet.R, 02_harmonize_payer.R, 14_build_cohort.R
 #
+# Requirements: N/A (diagnostic script)
+#
 # WHY: Provides structured data context that fits within Claude's context window,
 #      enabling AI-assisted analysis without needing direct data access. Text
 #      file format with counts, types, cardinality -- the minimum information

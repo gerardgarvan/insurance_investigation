@@ -15,6 +15,8 @@
 # Dependencies: 14_build_cohort.R must be sourced first
 #               dplyr, glue, lubridate, stringr, readr
 #
+# Requirements: N/A (diagnostic script)
+#
 # WHY: Clinical interest in understanding barriers to treatment for publicly
 #      insured patients. No HIPAA suppression per user request (normally would
 #      suppress cells < 11) -- this is a diagnostic script for internal

@@ -1,5 +1,10 @@
 # R Script Index
 
+> **Documentation Status (Phase 69):** All 75 scripts (67 numbered + 8 utils) have standardized
+> 5-field headers (Purpose, Inputs, Outputs, Dependencies, Requirements) per DOC-01. All 67
+> numbered scripts have RStudio-compatible section headers (DOC-02). WHY comments added for
+> clinical and business logic (DOC-03). Completed 2026-06-01.
+
 Quick-reference map of all R scripts in this directory, grouped by functional area.
 **Sources** column shows which scripts are loaded via `source()` at runtime.
 
