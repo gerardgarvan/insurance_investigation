@@ -1,9 +1,25 @@
 # ==============================================================================
-# utils_snapshot.R -- Snapshot helper for output data frames
+# utils/utils_snapshot.R -- Snapshot helper for consistent RDS output creation
 # ==============================================================================
-# Phase 16: Dataset Snapshots
-# Provides save_output_data() for consistent RDS snapshot creation with
-# automatic path construction, directory creation, and logging.
+#
+# Purpose:
+#   Snapshot helper for consistent RDS output creation. Provides save_output_data()
+#   with timestamped filenames and metadata. Standardizes RDS output path construction,
+#   automatic directory creation (cohort/ or outputs/ subdirs), and console logging
+#   with row/column counts. Used for cohort filter step snapshots (14_build_cohort.R)
+#   and figure/table backing datasets (70-75 output scripts).
+#
+# Inputs:
+#   - None (utility function library, not a standalone script)
+#
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - glue: String formatting for paths and log messages
+#
+# Requirements: N/A (utility module)
+#
 # ==============================================================================
 
 #' Save output data snapshot

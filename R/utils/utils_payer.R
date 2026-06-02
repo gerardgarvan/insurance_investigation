@@ -1,8 +1,25 @@
 # ==============================================================================
-# utils_payer.R -- Shared payer classification and comparison helpers
+# utils/utils_payer.R -- Shared payer classification and comparison helpers
 # ==============================================================================
-# Provides utility functions used across payer analysis and overlap
-# classification scripts. Auto-sourced by 00_config.R.
+#
+# Purpose:
+#   Shared payer classification and comparison helpers. Provides is_missing_payer()
+#   and payer category validation functions. Used across payer harmonization,
+#   overlap classification, and tiered payer resolution scripts. Detects missing
+#   payer values (NA, empty string, PCORnet sentinels NI/UN/OT), maps AMC 8
+#   categories to resolution tiers, and provides validation helpers for payer logic.
+#
+# Inputs:
+#   - None (utility function library, not a standalone script)
+#
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - dplyr: case_when() for tier mapping logic
+#
+# Requirements: N/A (utility module)
+#
 # ==============================================================================
 
 #' Check if payer value represents missing data

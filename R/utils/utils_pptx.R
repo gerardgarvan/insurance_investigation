@@ -1,8 +1,26 @@
 # ==============================================================================
-# utils_pptx.R -- Shared PowerPoint styling and slide generation helpers
+# utils/utils_pptx.R -- PowerPoint styling and slide generation helpers using officer package
 # ==============================================================================
-# Provides color constants, table styling, and slide helpers for PowerPoint
-# report generation. Manually sourced by R/11 and R/22 pptx generation scripts.
+#
+# Purpose:
+#   PowerPoint styling and slide generation helpers using officer package. Provides
+#   UF brand colors, table styling, and slide layout functions. Used by R/72 and
+#   R/73 PPTX generation scripts. style_table() applies UF Health blue/orange brand
+#   colors to flextables with parameterized fonts, padding, and alternating row colors.
+#   add_title_slide() and add_section_divider() create branded title and section slides.
+#
+# Inputs:
+#   - None (utility function library, not a standalone script)
+#
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - officer: PowerPoint document creation and slide manipulation
+#   - flextable: Table styling and formatting
+#
+# Requirements: N/A (utility module)
+#
 # ==============================================================================
 
 # ------------------------------------------------------------------------------

@@ -1,8 +1,28 @@
 # ==============================================================================
-# utils_treatment.R -- Shared treatment analysis helpers
+# utils/utils_treatment.R -- Shared treatment analysis helpers
 # ==============================================================================
-# Provides utility functions used across treatment inventory, investigation,
-# duration, and episode scripts. Auto-sourced by 00_config.R.
+#
+# Purpose:
+#   Shared treatment analysis helpers. Provides safe_table(), get_hl_patient_ids(),
+#   and empty_result() for treatment pipeline scripts. safe_table() wraps
+#   get_pcornet_table() with null-guard for missing tables (returns NULL instead
+#   of error). get_hl_patient_ids() queries DIAGNOSIS for HL cohort. empty_result()
+#   returns zero-row tibble matching code inventory schema for graceful handling
+#   of missing data sources.
+#
+# Inputs:
+#   - None (utility function library, not a standalone script)
+#
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - dplyr: Data manipulation for HL patient ID query
+#   - tibble: empty_result() tibble creation
+#   - glue: String formatting for messages
+#
+# Requirements: N/A (utility module)
+#
 # ==============================================================================
 
 #' Safely access a PCORnet table with null-guard

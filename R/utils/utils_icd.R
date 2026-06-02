@@ -1,18 +1,25 @@
 # ==============================================================================
-# ICD code normalization and HL diagnosis matching
+# utils/utils_icd.R -- ICD code normalization and HL diagnosis matching
 # ==============================================================================
 #
-# This utility provides functions for working with ICD diagnosis codes
-# in the context of Hodgkin Lymphoma (HL) cohort identification.
+# Purpose:
+#   ICD code normalization and HL diagnosis matching. Provides normalize_icd() and
+#   is_hl_diagnosis() for dotted/undotted format handling. PCORnet sites export
+#   ICD codes in both formats (C81.00 vs C8100, 201.90 vs 20190). normalize_icd()
+#   removes dots for consistent matching against ICD_CODES list from 00_config.R.
+#   is_hl_diagnosis() checks if a code matches the 150-code HL diagnosis list
+#   (77 ICD-10 + 73 ICD-9), accounting for both ICD-9 and ICD-10 type codes.
 #
-# Functions:
-#   - normalize_icd(icd_code): Remove dots from ICD codes for consistent matching
-#   - is_hl_diagnosis(icd_code, icd_type): Check if ICD code is HL diagnosis
+# Inputs:
+#   - None (utility function library, not a standalone script)
 #
-# Usage:
-#   source("R/00_config.R")  # Auto-loads this file
-#   dx_clean <- normalize_icd(c("C81.00", "C8100", "201.90"))
-#   is_hl <- is_hl_diagnosis(dx$DX, dx$DX_TYPE)
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - stringr: str_remove_all() for dot removal
+#
+# Requirements: N/A (utility module)
 #
 # ==============================================================================
 

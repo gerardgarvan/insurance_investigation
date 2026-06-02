@@ -1,12 +1,27 @@
 # ==============================================================================
-# utils_duckdb.R -- DuckDB utility functions
+# utils/utils_duckdb.R -- DuckDB utility functions for backend-agnostic data access
 # ==============================================================================
 #
-# Phase 29: verify_duckdb_roundtrip() for ingest validation
-# Phase 30: Backend abstraction layer
-#   - get_pcornet_table(): RDS/DuckDB dispatcher
-#   - open_pcornet_con(), close_pcornet_con(): connection management
-#   - materialize(): lazy query materialization
+# Purpose:
+#   DuckDB utility functions for backend-agnostic data access. Provides
+#   get_pcornet_table(), connection management, and lazy-to-eager materialization.
+#   The get_pcornet_table() dispatcher transparently switches between RDS in-memory
+#   tibbles (pcornet$TABLE_NAME) and DuckDB lazy queries (tbl(con, "TABLE_NAME"))
+#   based on USE_DUCKDB flag. Also provides verify_duckdb_roundtrip() for ingest
+#   validation (dimension and column name checks, not value comparison).
+#
+# Inputs:
+#   - None (utility function library, not a standalone script)
+#
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - DBI, duckdb: Database connection and query execution
+#   - dplyr: tbl(), collect() for lazy query handling
+#   - glue: String formatting for messages
+#
+# Requirements: N/A (utility module)
 #
 # ==============================================================================
 

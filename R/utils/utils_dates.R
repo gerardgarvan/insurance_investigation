@@ -1,19 +1,29 @@
 # ==============================================================================
-# Multi-format date parsing for PCORnet CDM data
+# utils/utils_dates.R -- Multi-format date parsing for PCORnet CDM data
 # ==============================================================================
 #
-# PCORnet sites export dates in different formats depending on SAS configuration:
-#   - YYYY-MM-DD (ISO format, most common in recent exports)
-#   - MM/DD/YYYY (US format, common in some site exports)
-#   - DDMMMYYYY / DD-MMM-YYYY (SAS DATE9 format, e.g., 15JAN2020)
-#   - YYYYMMDD (compact format, no separators)
-#   - Excel serial numbers (rare, from Excel-origin exports)
+# Purpose:
+#   Multi-format date parsing for PCORnet CDM data. Provides parse_pcornet_date()
+#   handling YYYY-MM-DD, MM/DD/YYYY, and Unix epoch formats in a single pass.
+#   PCORnet sites export dates in different formats depending on SAS configuration.
+#   This parser tries each format in sequence (ISO, US mdy, SAS DATE9, compact,
+#   Excel serial) and keeps the first successful parse. Attempt order matters for
+#   ambiguous dates (01/02/2020): US format wins over European since this is US data.
 #
-# This parser tries each format in sequence and keeps the first successful parse.
-# Attempt order matters for ambiguous dates (e.g., 01/02/2020):
-#   US format (mdy) wins over European (dmy) since this is US health data.
+# Inputs:
+#   - None (utility function library, not a standalone script)
 #
-# Requirement: LOAD-02 (< 5% NA rate for date parsing)
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - lubridate: ymd(), mdy(), dmy(), parse_date_time() for multi-format parsing
+#   - janitor: clean_names() (used indirectly)
+#   - stringr: str_detect(), str_remove_all() for format detection
+#   - glue: String formatting for warning messages
+#
+# Requirements: N/A (utility module)
+#
 # ==============================================================================
 
 library(lubridate)

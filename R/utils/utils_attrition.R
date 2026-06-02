@@ -1,17 +1,24 @@
 # ==============================================================================
-# Attrition logging for cohort construction
+# utils/utils_attrition.R -- Attrition logging for cohort construction
 # ==============================================================================
 #
-# Tracks patient counts (unique IDs) through sequential filter steps.
-# Produces a data frame ready for waterfall chart visualization.
+# Purpose:
+#   Attrition logging for cohort construction. Provides init_attrition_log() and
+#   log_attrition() for tracking patient counts through filter steps. Tracks unique
+#   patient IDs (not row counts) through sequential filter operations, calculating
+#   exclusion counts and percentages. Produces a data frame ready for waterfall
+#   chart visualization (R/70_visualize_waterfall.R).
 #
-# Usage:
-#   source("R/00_config.R")  # Auto-loads this file
-#   attrition_log <- init_attrition_log()
-#   attrition_log <- log_attrition(attrition_log, "Initial cohort", n_distinct(df$ID))
-#   attrition_log <- log_attrition(attrition_log, "Has HL diagnosis", n_distinct(filtered$ID))
+# Inputs:
+#   - None (utility function library, not a standalone script)
 #
-# Note: Pass PATIENT counts (unique IDs), not row counts (per D-17)
+# Outputs:
+#   - None (defines functions loaded into calling scripts' environment)
+#
+# Dependencies:
+#   - glue: String formatting for log messages
+#
+# Requirements: N/A (utility module)
 #
 # ==============================================================================
 
