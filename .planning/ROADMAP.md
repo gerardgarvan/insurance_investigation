@@ -56,7 +56,7 @@
 
 ### Phases
 
-- [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
+- [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
 - [ ] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline
 - [ ] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings
 - [ ] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death
@@ -81,7 +81,7 @@ Plans:
 - [x] 75-02-PLAN.md — Smoke test NLPHL mutual exclusivity and DEATH_CAUSE_MAP validation
 
 #### Phase 76: Treatment Source Analysis & Removal
-**Goal**: Quantify tumor registry treatment coverage and remove TR from treatment episode pipeline to improve data source reliability
+**Goal**: Remove tumor registry treatment data from treatment episode pipeline to improve data source reliability
 **Depends on**: Phase 75
 **Requirements**: TREAT-01, QUAL-01
 **Success Criteria** (what must be TRUE):
@@ -90,7 +90,9 @@ Plans:
   3. Validation report documents episode count delta and confirms count reduction matches coverage analysis prediction
   4. Assertion added: if treatment episode count drops >20%, pipeline halts with explicit warning
   5. All modified scripts follow v2.0 standards (styler, lintr, checkmate, headers)
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 76-01-PLAN.md — Remove TR source blocks from R/26 extraction functions, add episode count assertion, update smoke test
 
 #### Phase 77: Cancer Classification Refinements
 **Goal**: Extend 7-day gap requirement to all cancer categories, implement NLPHL breakout in classification logic, and centralize drug groupings
@@ -148,11 +150,11 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
-| 76. Treatment Source Analysis & Removal | 0/? | Not started | - |
+| 76. Treatment Source Analysis & Removal | 0/1 | Not started | - |
 | 77. Cancer Classification Refinements | 0/? | Not started | - |
 | 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 75 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-02 -- Phase 76 planned (1 plan, 1 wave)*
