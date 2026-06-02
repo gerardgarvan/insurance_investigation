@@ -28,6 +28,14 @@ library(stringr)
 library(glue)
 library(tidyr)
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate critical PCORnet tables for unmatched investigation
+assert_df_valid(
+  pcornet$PROCEDURES, "PROCEDURES",
+  required_cols = c("ID", "PX", "PX_TYPE"),
+  script_name = "R/21"
+)
+
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "unmatched_codes_report.xlsx")
 
 # WHY NLM HCPCS API: Provides official CMS code descriptions for CPT/HCPCS codes
@@ -545,6 +553,7 @@ write_unmatched_report <- function(df, output_path) {
 #' @param classified_codes_path Character. Path to unmatched_codes_classified.rds
 update_config_treatment_codes <- function(classified_codes_path) {
   # 1. Load classified codes
+  # SAFE-01: File existence validated by existing file.exists() guard
   if (!file.exists(classified_codes_path)) {
     stop(glue("Classified codes file not found: {classified_codes_path}"))
   }

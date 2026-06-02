@@ -24,6 +24,14 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate TREATMENT_CODES config structure
+checkmate::assert_list(
+  TREATMENT_CODES,
+  min.len = 1,
+  .var.name = "[R/24 ERROR] TREATMENT_CODES config"
+)
+
 # Paths to source files
 COMBINED_REPORT <- file.path(CONFIG$output_dir, "combined_unmatched_report.xlsx")
 CHEMO_RESOLVED <- "chemotherapy_codes_resolved.xlsx"

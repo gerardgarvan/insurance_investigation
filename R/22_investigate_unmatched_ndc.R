@@ -28,6 +28,14 @@ library(stringr)
 library(glue)
 library(tidyr)
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate critical PCORnet tables for NDC investigation
+assert_df_valid(
+  pcornet$PRESCRIBING, "PRESCRIBING",
+  required_cols = c("ID", "RXNORM_CUI"),
+  script_name = "R/22"
+)
+
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "unmatched_ndc_report.xlsx")
 RDS_PATH <- file.path(CONFIG$output_dir, "unmatched_ndc_classified.rds")
 
@@ -778,6 +786,7 @@ save_classified_rds <- function(classified_df, rds_path) {
 #' @param classified_codes_path Character. Path to unmatched_ndc_classified.rds
 update_config_ndc_codes <- function(classified_codes_path) {
   # 1. Load classified codes
+  # SAFE-01: File existence validated by existing file.exists() guard
   if (!file.exists(classified_codes_path)) {
     stop(glue("Classified codes file not found: {classified_codes_path}"))
   }

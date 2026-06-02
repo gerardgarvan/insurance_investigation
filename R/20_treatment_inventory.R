@@ -28,6 +28,19 @@ library(stringr)
 library(glue)
 library(tidyr)
 
+# SECTION 1b: INPUT VALIDATION ----
+# SAFE-02: Validate critical PCORnet tables for treatment inventory
+assert_df_valid(
+  pcornet$PROCEDURES, "PROCEDURES",
+  required_cols = c("ID", "PX", "PX_TYPE", "PX_DATE"),
+  script_name = "R/20"
+)
+assert_df_valid(
+  pcornet$PRESCRIBING, "PRESCRIBING",
+  required_cols = c("ID", "RXNORM_CUI"),
+  script_name = "R/20"
+)
+
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "treatment_inventory.xlsx")
 
 # WHY 7 PCORnet tables: Treatment evidence is scattered across multiple tables.

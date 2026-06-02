@@ -45,24 +45,21 @@ category_order <- c(
 # SECTION 2: LOAD AND HARMONIZE RDS ARTIFACTS ----
 
 load_and_harmonize <- function() {
-  # Guard: check both RDS files exist
-
-  if (!file.exists(HCPCS_RDS)) {
-    stop(glue(
-      "Phase 39 RDS not found: {HCPCS_RDS}\n",
-      "Run R/39_investigate_unmatched.R first to generate it."
-    ))
-  }
-  if (!file.exists(NDC_RDS)) {
-    stop(glue(
-      "Phase 40 RDS not found: {NDC_RDS}\n",
-      "Run R/40_investigate_unmatched_ndc.R first to generate it."
-    ))
-  }
+  # SAFE-01: Validate input RDS files exist
+  assert_rds_exists(HCPCS_RDS, script_name = "R/23")
+  assert_rds_exists(NDC_RDS, script_name = "R/23")
 
   # Load RDS artifacts
   hcpcs_classified <- readRDS(HCPCS_RDS)
   ndc_classified <- readRDS(NDC_RDS)
+
+  # SAFE-02: Validate data frame structure
+  assert_df_valid(hcpcs_classified, "hcpcs_classified",
+                  required_cols = c("code", "classification"),
+                  script_name = "R/23")
+  assert_df_valid(ndc_classified, "ndc_classified",
+                  required_cols = c("code", "classification"),
+                  script_name = "R/23")
 
   message(glue("  Loaded Phase 39 (CPT/HCPCS): {nrow(hcpcs_classified)} codes"))
   message(glue("  Loaded Phase 40 (NDC/RXNORM): {nrow(ndc_classified)} codes"))
