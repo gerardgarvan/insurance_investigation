@@ -53,14 +53,14 @@ check <- function(description, condition) {
 }
 
 message(strrep("=", 70))
-message("SMOKE TEST: Comprehensive Pipeline Validation (v2.0)")
+message("SMOKE TEST: Comprehensive Pipeline Validation (v2.1)")
 message(strrep("=", 70))
 
 # ==============================================================================
 # SECTION 2: UTILS MODULE COMPLETENESS ----
 # ==============================================================================
 
-message("\n[1/17] Utils module completeness...")
+message("\n[1/18] Utils module completeness...")
 
 check("R/utils/ directory exists", dir.exists("R/utils"))
 
@@ -94,7 +94,7 @@ check(
 # SECTION 3: CONFIG LOADING AND AUTO-SOURCING ----
 # ==============================================================================
 
-message("\n[2/17] Config loading and auto-sourcing...")
+message("\n[2/18] Config loading and auto-sourcing...")
 
 tryCatch(
   {
@@ -163,7 +163,7 @@ for (module in names(key_functions)) {
 # SECTION 4: FOUNDATION CHAIN ----
 # ==============================================================================
 
-message("\n[3/17] Foundation script chain...")
+message("\n[3/18] Foundation script chain...")
 
 check("R/00_config.R exists", file.exists("R/00_config.R"))
 check("R/01_load_pcornet.R exists", file.exists("R/01_load_pcornet.R"))
@@ -181,7 +181,7 @@ check(
 # --------------------------------------------------------------------------
 # Cohort decade (10-14)
 # --------------------------------------------------------------------------
-message("\n[4/17] Cohort decade (10-14)...")
+message("\n[4/18] Cohort decade (10-14)...")
 
 cohort_scripts <- c(
   "10_cohort_predicates.R", "11_treatment_payer.R",
@@ -200,7 +200,7 @@ check(
 # --------------------------------------------------------------------------
 # Treatment decade (20-29)
 # --------------------------------------------------------------------------
-message("\n[5/17] Treatment decade (20-29)...")
+message("\n[5/18] Treatment decade (20-29)...")
 
 treatment_expected <- c(
   "20_treatment_inventory.R", "21_investigate_unmatched.R",
@@ -221,7 +221,7 @@ check(
 # --------------------------------------------------------------------------
 # Cancer decade (40-53)
 # --------------------------------------------------------------------------
-message("\n[6/17] Cancer decade (40-53)...")
+message("\n[6/18] Cancer decade (40-53)...")
 
 cancer_expected <- c(
   "40_cancer_site_frequency.R", "41_extract_all_codes.R",
@@ -244,7 +244,7 @@ check(
 # --------------------------------------------------------------------------
 # Payer/QA decade (60-69)
 # --------------------------------------------------------------------------
-message("\n[7/17] Payer/QA decade (60-69)...")
+message("\n[7/18] Payer/QA decade (60-69)...")
 
 payer_expected <- c(
   "60_tiered_same_day_payer.R", "61_tiered_encounter_level.R",
@@ -266,7 +266,7 @@ check(
 # --------------------------------------------------------------------------
 # Output decade (70-75)
 # --------------------------------------------------------------------------
-message("\n[8/17] Output decade (70-75)...")
+message("\n[8/18] Output decade (70-75)...")
 
 output_scripts <- c(
   "70_visualize_waterfall.R", "71_visualize_sankey.R",
@@ -285,7 +285,7 @@ check(
 # --------------------------------------------------------------------------
 # Test decade (80-88)
 # --------------------------------------------------------------------------
-message("\n[9/17] Test decade (80-88)...")
+message("\n[9/18] Test decade (80-88)...")
 
 test_scripts <- c(
   "80_smoke_test_backends.R", "81_parity_test_cohort.R",
@@ -306,7 +306,7 @@ check(
 # --------------------------------------------------------------------------
 # Ad-hoc decade (90-99)
 # --------------------------------------------------------------------------
-message("\n[10/17] Ad-hoc decade (90-99)...")
+message("\n[10/18] Ad-hoc decade (90-99)...")
 
 adhoc_scripts <- c(
   "90_diagnostics.R", "91_data_quality_summary.R",
@@ -328,7 +328,7 @@ check(
 # SECTION 6: NO STALE FILES ----
 # ==============================================================================
 
-message("\n[11/17] No stale files...")
+message("\n[11/18] No stale files...")
 
 # Check for specific old numbers that should have been renamed
 old_numbers <- c(
@@ -361,7 +361,7 @@ check(
 # SECTION 7: SOURCE() REFERENCE VALIDATION ----
 # ==============================================================================
 
-message("\n[12/17] Source() reference validation...")
+message("\n[12/18] Source() reference validation...")
 
 r_files_full <- list.files("R", pattern = "\\.R$", full.names = TRUE)
 broken_refs <- character(0)
@@ -412,7 +412,7 @@ check(
 # SECTION 8: KEY DEPENDENCY CHAINS ----
 # ==============================================================================
 
-message("\n[13/17] Key dependency chains...")
+message("\n[13/18] Key dependency chains...")
 
 # Check critical source() patterns
 check_source <- function(file, pattern, description) {
@@ -448,7 +448,7 @@ check(
 # SECTION 9: DRY CONSOLIDATION VALIDATION ----
 # ==============================================================================
 
-message("\n[14/17] DRY consolidation validation...")
+message("\n[14/18] DRY consolidation validation...")
 
 # Check no PREFIX_MAP definitions outside R/00_config.R
 scripts_to_check_prefix <- c(
@@ -520,7 +520,7 @@ check(
 # SECTION 10: DEFENSIVE CODING INFRASTRUCTURE ----
 # ==============================================================================
 
-message("\n[15/17] Defensive coding infrastructure...")
+message("\n[15/18] Defensive coding infrastructure...")
 
 # Check library(checkmate) appears in R/00_config.R
 config_lines <- readLines("R/00_config.R", warn = FALSE)
@@ -542,7 +542,7 @@ for (func in assertion_functions) {
 # SECTION 11: ARCHIVE VALIDATION ----
 # ==============================================================================
 
-message("\n[16/17] Archive validation...")
+message("\n[16/18] Archive validation...")
 
 check("R/archive/ directory exists", dir.exists("R/archive"))
 check("R/archive/README.md exists", file.exists("R/archive/README.md"))
@@ -563,7 +563,7 @@ check(
 # SECTION 12: CROSS-PLATFORM DATA AVAILABILITY ----
 # ==============================================================================
 
-message("\n[17/17] Cross-platform data availability...")
+message("\n[17/18] Cross-platform data availability...")
 
 # Detect data availability
 if (exists("CONFIG")) {
@@ -594,7 +594,108 @@ if (exists("CONFIG")) {
 }
 
 # ==============================================================================
-# SECTION 13: SUMMARY ----
+# SECTION 13: NLPHL CLASSIFICATION & DEATH CAUSE VALIDATION ----
+# ==============================================================================
+# Phase 75 (CANCER-01): Validates NLPHL breakout mutual exclusivity.
+# Phase 75 (DEATH-01/DEATH-02): Validates DEATH_CAUSE_MAP structure.
+
+message("\n[18/18] NLPHL classification & death cause validation...")
+
+# --- NLPHL ICD-10 mutual exclusivity ---
+
+# Test data: codes that MUST classify as NLPHL
+nlphl_icd10 <- c("C810", "C8100", "C8105", "C8109")
+nlphl_icd9 <- c("201.4", "201.40", "201.45", "201.48")
+
+# Test data: codes that MUST classify as classical HL (non-NLPHL)
+classical_icd10 <- c("C811", "C8110", "C812", "C8120", "C819", "C8190")
+classical_icd9 <- c("201.0", "201.00", "201.5", "201.50", "201.9", "201.90")
+
+# Classify all test codes
+nlphl_10_results <- classify_codes(nlphl_icd10)
+nlphl_9_results <- classify_codes(nlphl_icd9)
+classical_10_results <- classify_codes(classical_icd10)
+classical_9_results <- classify_codes(classical_icd9)
+
+# Check 1: NLPHL ICD-10 codes -> "NLPHL"
+check(
+  "ICD-10 C81.0x codes classify as 'NLPHL'",
+  all(nlphl_10_results == "NLPHL", na.rm = TRUE)
+)
+
+# Check 2: NLPHL ICD-9 codes -> "NLPHL"
+check(
+  "ICD-9 201.4x codes classify as 'NLPHL'",
+  all(nlphl_9_results == "NLPHL", na.rm = TRUE)
+)
+
+# Check 3: Classical HL ICD-10 codes -> "Hodgkin Lymphoma (non-NLPHL)"
+check(
+  "ICD-10 C81.1-C81.9 codes classify as 'Hodgkin Lymphoma (non-NLPHL)'",
+  all(classical_10_results == "Hodgkin Lymphoma (non-NLPHL)", na.rm = TRUE)
+)
+
+# Check 4: Classical HL ICD-9 codes -> "Hodgkin Lymphoma (non-NLPHL)"
+check(
+  "ICD-9 201.0-201.9 (except 201.4x) classify as 'Hodgkin Lymphoma (non-NLPHL)'",
+  all(classical_9_results == "Hodgkin Lymphoma (non-NLPHL)", na.rm = TRUE)
+)
+
+# Check 5: Mutual exclusivity — NLPHL count + classical count = total
+all_hl_codes <- c(nlphl_icd10, nlphl_icd9, classical_icd10, classical_icd9)
+all_hl_results <- classify_codes(all_hl_codes)
+nlphl_count <- sum(all_hl_results == "NLPHL", na.rm = TRUE)
+classical_count <- sum(all_hl_results == "Hodgkin Lymphoma (non-NLPHL)", na.rm = TRUE)
+total_hl <- length(all_hl_codes)
+
+check(
+  glue("Mutual exclusivity: NLPHL ({nlphl_count}) + classical ({classical_count}) = total ({total_hl})"),
+  (nlphl_count + classical_count) == total_hl
+)
+
+# Check 6: CANCER_SITE_MAP contains C810 entry
+check(
+  "CANCER_SITE_MAP has 'C810' = 'NLPHL'",
+  "C810" %in% names(CANCER_SITE_MAP) && CANCER_SITE_MAP["C810"] == "NLPHL"
+)
+
+# Check 7: CANCER_SITE_MAP contains C81 entry with updated name
+check(
+  "CANCER_SITE_MAP has 'C81' = 'Hodgkin Lymphoma (non-NLPHL)'",
+  "C81" %in% names(CANCER_SITE_MAP) && CANCER_SITE_MAP["C81"] == "Hodgkin Lymphoma (non-NLPHL)"
+)
+
+# Check 8: ICD9_NLPHL_CODES has expected count
+check(
+  glue("ICD9_NLPHL_CODES contains 10 codes (found {length(ICD9_NLPHL_CODES)})"),
+  length(ICD9_NLPHL_CODES) == 10
+)
+
+# --- DEATH_CAUSE_MAP validation ---
+
+# Check 9: DEATH_CAUSE_MAP exists and has sufficient coverage
+check(
+  glue("DEATH_CAUSE_MAP has >= 30 entries (found {length(DEATH_CAUSE_MAP)})"),
+  exists("DEATH_CAUSE_MAP") && length(DEATH_CAUSE_MAP) >= 30
+)
+
+# Check 10: DEATH_CAUSE_MAP has UNK fallback
+check(
+  "DEATH_CAUSE_MAP has 'UNK' = 'Unknown or Unspecified'",
+  "UNK" %in% names(DEATH_CAUSE_MAP) &&
+    DEATH_CAUSE_MAP["UNK"] == "Unknown or Unspecified"
+)
+
+# Check 11: DEATH_CAUSE_MAP covers major ICD-10 chapters
+major_chapters <- c("C81", "I25", "J44", "E11", "G30")
+chapter_hits <- sum(major_chapters %in% names(DEATH_CAUSE_MAP))
+check(
+  glue("DEATH_CAUSE_MAP covers major ICD-10 chapters ({chapter_hits}/5 present)"),
+  chapter_hits == 5
+)
+
+# ==============================================================================
+# SECTION 14: SUMMARY ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))
@@ -617,6 +718,8 @@ message("  * DRY-01: No duplicate PREFIX_MAP/TIER_MAPPING/classify_codes")
 message("  * SAFE-01: assert_rds_exists() infrastructure")
 message("  * SAFE-02: assert_df_valid() infrastructure")
 message("  * SAFE-03: Error messages with context (glue)")
+message("  * CANCER-01: NLPHL mutual exclusivity (classify_codes)")
+message("  * DEATH-01/02: DEATH_CAUSE_MAP structure and coverage")
 
 if (failed > 0) {
   quit(status = 1)
