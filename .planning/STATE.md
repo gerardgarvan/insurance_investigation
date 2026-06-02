@@ -21,12 +21,12 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Phase 68 — output-test-reorganization
+**Current Focus:** Phase 68 — output-test-reorganization (verification gate)
 
 ## Current Position
 
-Phase: 68 (output-test-reorganization) — EXECUTING
-Plan: 1 of 2
+Phase: 68 (output-test-reorganization, verification gate) — IN PROGRESS
+Plan: 2 of 2
 **Phase:** 68
 **Plan:** Not started
 **Status:** Executing Phase 68
@@ -90,15 +90,11 @@ _No todos yet._
 
 ### What Just Happened
 
-- Phase 67 complete: Post-renumbering inventory cleanup finished with gap closure
-- Plan 67-01 complete: Smoke test moved to 87, 8 scripts archived, SCRIPT_INDEX regenerated (commits: bceaa62, f60a9f1, de2b54e)
-- Plan 67-02 complete: Fixed 3 documentation gaps found by verification (commits: e626fde, 021a4b9)
-  - SCRIPT_INDEX.md payer section corrected: now lists all 10 scripts (60-69) with correct names
-  - Smoke test payer_expected array corrected: 10 scripts with correct names, count check /10 with threshold >= 8
-  - ROADMAP.md plan tracking updated: 2/2 plans complete, Phase 67 marked complete
-- Final state: All documentation aligns with filesystem reality (10 payer scripts at 60-69)
-- Zero unnumbered .R files remain in R/ root
-- 5 atomic commits total (3 from 67-01, 2 from 67-02)
+- Phase 68 Plan 01: Structural verification scan completed, SCRIPT_INDEX.md and R/87 smoke test fixed (cancer decade alignment)
+- Phase 68 Plan 02: HiPerGator checklist created, ROADMAP/REQUIREMENTS/STATE updated
+- REORG-04 marked complete (8 archived scripts verified)
+- REORG-05 marked partial (structural validation done, HiPerGator execution deferred to Phase 74)
+- Commits: 68-01 (cancer decade fixes), 68-02 (checklist + documentation updates)
 
 ### Current Task
 
@@ -106,10 +102,9 @@ Phase 67 complete with all gaps closed. Ready for next phase.
 
 ### Next Actions
 
-1. Run R/87_smoke_test_full_pipeline.R to validate full pipeline integrity (payer decade check should now pass)
-2. Begin Phase 68 (to be repurposed — original scope absorbed by Phase 66)
-3. Or proceed to Phase 69 (script documentation: section headers, key-logic comments)
-4. Eventually: Phase 73 (DRY-01: consolidate PREFIX_MAP duplication)
+1. Run R/87_smoke_test_full_pipeline.R on HiPerGator to validate full pipeline (see 68-HIPERGATOR-CHECKLIST.md)
+2. Begin Phase 69 (Script Documentation: header blocks, section headers, inline comments)
+3. Eventually: Phase 73 (DRY-01: consolidate PREFIX_MAP duplication)
 
 ---
 *State initialized: 2026-06-01*

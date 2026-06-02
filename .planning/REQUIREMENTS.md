@@ -72,8 +72,8 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 | REORG-01 | Phase 65, 66, 67, 68 | Complete |
 | REORG-02 | Phase 66, 67, 68 | Complete |
 | REORG-03 | Phase 65 | Complete |
-| REORG-04 | Phase 68 | Complete |
-| REORG-05 | Phase 68, 74 | Complete |
+| REORG-04 | Phase 67, 68 | Complete |
+| REORG-05 | Phase 68, 74 | Partial (structural done; HiPerGator deferred to Phase 74) |
 | DOC-01 | Phase 69 | Pending |
 | DOC-02 | Phase 69 | Pending |
 | DOC-03 | Phase 69 | Pending |
