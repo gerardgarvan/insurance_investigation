@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Clinical Data Refinements & NLPHL Breakout
 status: verifying
-last_updated: "2026-06-02T23:19:03.339Z"
+last_updated: "2026-06-02T23:24:23.994Z"
 last_activity: 2026-06-02
 progress:
   total_phases: 6
@@ -26,8 +26,8 @@ progress:
 
 ## Current Position
 
-Phase: 75 (configuration-extensions-nlphl-death-cause) — EXECUTING
-Plan: 2 of 2
+Phase: 76
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-06-02
 
