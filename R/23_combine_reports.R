@@ -1,17 +1,20 @@
-# =============================================================================
-# Phase 23: Combine Unmatched Code Reports
-# =============================================================================
-# Merges Phase 39 (CPT/HCPCS) and Phase 40 (NDC/RXNORM) unmatched code
-# investigation RDS artifacts into a single consolidated xlsx report with
-# unified classification, cross-source summary statistics, and per-category
-# detail sheets.
+# ==============================================================================
+# 23_combine_reports.R -- Combine Unmatched Code Reports
+# ==============================================================================
+# Purpose:     Merge CPT/HCPCS (Phase 39) and NDC/RXNORM (Phase 40) unmatched
+#              code reports into consolidated xlsx with cross-source summary.
 #
-# Input:  output/unmatched_codes_classified.rds   (Phase 39)
-#         output/unmatched_ndc_classified.rds     (Phase 40)
-# Output: output/combined_unmatched_report.xlsx
-# =============================================================================
+# Inputs:      cache/outputs/unmatched_codes_classified.rds (Phase 39),
+#              cache/outputs/unmatched_ndc_classified.rds (Phase 40)
+#
+# Outputs:     output/combined_unmatched_report.xlsx
+#
+# Dependencies: R/00_config.R
+#
+# Requirements: Phase 41 report consolidation
+# ==============================================================================
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -26,6 +29,10 @@ OUTPUT_PATH <- file.path(CONFIG$output_dir, "combined_unmatched_report.xlsx")
 HCPCS_RDS  <- file.path(CONFIG$output_dir, "unmatched_codes_classified.rds")
 NDC_RDS    <- file.path(CONFIG$output_dir, "unmatched_ndc_classified.rds")
 
+# WHY combine reports: Single deliverable for clinical review vs two separate reports.
+# Unified schema (code, description, classification, source) enables cross-code-type
+# analysis. Summary sheet provides aggregate statistics across both investigations.
+
 # TREATMENT_TYPE_COLORS: defined in R/00_config.R
 # Unified color scheme uses "SCT" (not "SCT-related")
 
@@ -33,7 +40,7 @@ category_order <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy",
                     "Supportive Care", "Unrelated")
 
 
-# --- SECTION 2: LOAD AND HARMONIZE RDS ARTIFACTS ---
+# SECTION 2: LOAD AND HARMONIZE RDS ARTIFACTS ----
 
 load_and_harmonize <- function() {
   # Guard: check both RDS files exist

@@ -1,34 +1,23 @@
 # ==============================================================================
 # 20_treatment_inventory.R -- Treatment Inventory by Source Table
 # ==============================================================================
+# Purpose:     Treatment inventory by source table: counts code frequencies
+#              across 7 PCORnet tables for Chemotherapy, Radiation, SCT, and
+#              Immunotherapy. Detects unknown treatment-adjacent codes via
+#              CPT/HCPCS range heuristics.
 #
-# Queries all 7 PCORnet CDM tables for 4 treatment types (chemotherapy,
-# radiation, SCT, immunotherapy), aggregates code frequencies by source table,
-# detects unknown treatment-adjacent codes via CPT/HCPCS range heuristics, and
-# outputs a styled xlsx workbook with one sheet per treatment type matching
-# the csv_to_xlsx.py visual pattern.
+# Inputs:      PCORnet CDM tables (PROCEDURES, PRESCRIBING, MED_ADMIN, DIAGNOSIS,
+#              LAB_RESULT_CM, CONDITION, OBS_CLIN via get_pcornet_table),
+#              TREATMENT_CODES from R/00_config.R
 #
-# Purpose: Internal exploratory inventory of all treatment-related records
-# across PCORnet tables, revealing which codes appear, in which tables, and
-# at what frequency -- including potentially missed codes not in the curated
-# TREATMENT_CODES lists.
+# Outputs:     output/treatment_inventory.xlsx (workbook with 4 styled sheets)
 #
-# Output: output/treatment_inventory.xlsx (workbook with 4 styled sheets)
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/20_treatment_inventory.R
-#
-# Dependencies:
-#   - R/00_config.R (TREATMENT_CODES list)
-#   - R/01_load_pcornet.R (PCORnet table loading)
-#   - openxlsx2, dplyr, stringr, glue, tidyr
-#
-# Phase 20 -- chemo-treatment-inventory-by-source-table
+# Requirements: Phase 20 exploratory inventory (D-08 heuristic detection)
 # ==============================================================================
 
-# ==============================================================================
-# SECTION 1: SETUP AND CONFIGURATION
-# ==============================================================================
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
@@ -41,15 +30,22 @@ library(tidyr)
 
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "treatment_inventory.xlsx")
 
-# ==============================================================================
-# SECTION 2: TREATMENT TYPE CONFIGURATION
-# ==============================================================================
+# WHY 7 PCORnet tables: Treatment evidence is scattered across multiple tables.
+# PROCEDURES captures procedure codes (CPT/HCPCS/ICD-10-PCS). PRESCRIBING,
+# DISPENSING, MED_ADMIN capture drug records (RXNORM/NDC). DIAGNOSIS captures
+# Z/V codes for chemotherapy encounters. ENCOUNTER captures DRG codes.
+# TUMOR_REGISTRY captures date-only evidence (no codes). Searching all 7 sources
+# maximizes treatment detection sensitivity.
+
+# SECTION 2: TREATMENT TYPE CONFIGURATION ----
 
 # Treatment type colors and constants: see R/00_config.R
 # TREATMENT_TYPE_COLORS, TREATMENT_TYPES provided via config
 
-# CPT/HCPCS range heuristics for unknown code detection (D-08)
-# Targeted ranges to catch treatment-adjacent codes NOT in TREATMENT_CODES.
+# WHY CPT/HCPCS range heuristics: Detects codes matching treatment code families
+# (J9000-J9999 chemo, 77400-77499 radiation delivery, etc.) but NOT in curated
+# TREATMENT_CODES lists. Identifies potentially missed codes for manual review and
+# config update. Range-based detection reduces manual exploration burden.
 # Phase 39: Widened ranges to include J0-J8 supportive care and 773xx radiation planning.
 CPT_HCPCS_RANGES <- list(
   Chemotherapy = list(
@@ -71,16 +67,12 @@ CPT_HCPCS_RANGES <- list(
 # Treatment sheet order uses centralized TREATMENT_TYPES from config
 TREATMENT_SHEET_ORDER <- TREATMENT_TYPES
 
-# ==============================================================================
-# SECTION 3: SAFE TABLE ACCESS AND HELPER FUNCTIONS
-# ==============================================================================
+# SECTION 3: SAFE TABLE ACCESS AND HELPER FUNCTIONS ----
 
 # safe_table(), empty_result(), get_hl_patient_ids() now provided by
 # R/utils_treatment.R (auto-sourced via R/00_config.R)
 
-# ==============================================================================
-# SECTION 4: CODE EXTRACTION FUNCTIONS -- one per treatment type
-# ==============================================================================
+# SECTION 4: CODE EXTRACTION FUNCTIONS ----
 
 # ------------------------------------------------------------------------------
 # extract_chemo_codes()
@@ -612,9 +604,7 @@ extract_immunotherapy_codes <- function() {
     mutate(treatment_type = "Immunotherapy")
 }
 
-# ==============================================================================
-# SECTION 5: UNKNOWN CODE DETECTION
-# ==============================================================================
+# SECTION 5: UNKNOWN CODE DETECTION ----
 
 #' Detect unknown treatment-adjacent codes not in TREATMENT_CODES lists
 #'
@@ -690,9 +680,7 @@ detect_unknown_codes <- function(treatment_type) {
   })
 }
 
-# ==============================================================================
-# SECTION 6: XLSX WRITING FUNCTIONS
-# ==============================================================================
+# SECTION 6: XLSX WRITING FUNCTIONS ----
 
 #' Write a styled treatment type sheet to the workbook
 #'
@@ -915,9 +903,7 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
   invisible(wb)
 }
 
-# ==============================================================================
-# SECTION 7: MAIN EXECUTION
-# ==============================================================================
+# SECTION 7: MAIN EXECUTION ----
 
 message("=== Treatment Inventory by Source Table ===")
 message("")

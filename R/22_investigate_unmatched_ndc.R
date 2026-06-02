@@ -1,29 +1,21 @@
 # ==============================================================================
 # 22_investigate_unmatched_ndc.R -- Investigate Unmatched NDC/RXNORM Drug Codes
 # ==============================================================================
-# Purpose: Extract NDC codes and unmatched RXNORM CUIs from HL patient drug
-# records (DISPENSING, PRESCRIBING, MED_ADMIN), look up drug names via NLM
-# RxNorm API, auto-classify into treatment categories, produce styled xlsx
-# report and RDS artifact for config update.
+# Purpose:     Investigate unmatched NDC/RXNORM drug codes via RxNorm API to
+#              auto-classify as chemotherapy/non-chemo. Resolves NDC to drug names
+#              via 2-step NDC→RxCUI→Name lookup.
 #
-# Output:
-#   - output/unmatched_ndc_report.xlsx (styled workbook with classification)
-#   - output/unmatched_ndc_classified.rds (RDS for Plan 02 consumption)
+# Inputs:      Treatment inventory, RxNorm API (external web service)
 #
-# Usage:
-#   Rscript R/22_investigate_unmatched_ndc.R
+# Outputs:     cache/outputs/unmatched_ndc_classified.rds,
+#              output/unmatched_ndc_report.xlsx
 #
-# Dependencies:
-#   - R/00_config.R (TREATMENT_CODES list)
-#   - R/01_load_pcornet.R (get_pcornet_table)
-#   - httr2, jsonlite, openxlsx2, dplyr, stringr, glue, tidyr
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Phase 40 Plan 01 -- investigate-unmatched-ndc-codes
+# Requirements: Phase 40 NDC drug investigation (D-05 RxNorm API)
 # ==============================================================================
 
-# ==============================================================================
-# SECTION 1: SETUP AND CONFIGURATION
-# ==============================================================================
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
@@ -39,12 +31,15 @@ library(tidyr)
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "unmatched_ndc_report.xlsx")
 RDS_PATH <- file.path(CONFIG$output_dir, "unmatched_ndc_classified.rds")
 
+# WHY RxNorm API for NDC resolution: NDC codes are manufacturer-specific product
+# identifiers, not clinically meaningful. RxNorm API normalizes NDC→RxCUI→ingredient
+# level, enabling classification by drug name (e.g., "doxorubicin" = chemotherapy).
+# 2-step lookup (NDC→RxCUI, then RxCUI→properties) required per NLM API design.
+
 # TREATMENT_TYPE_COLORS: defined in R/00_config.R (uses "SCT" not "SCT-related")
 # safe_table(), get_hl_patient_ids() now provided by R/utils_treatment.R
 
-# ==============================================================================
-# SECTION 2: EXTRACT UNMATCHED DRUG CODES (per D-01, D-02, D-03)
-# ==============================================================================
+# SECTION 2: EXTRACT UNMATCHED DRUG CODES ----
 
 #' Extract unmatched drug codes from DISPENSING, PRESCRIBING, MED_ADMIN
 #'

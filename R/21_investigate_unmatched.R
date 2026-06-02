@@ -1,32 +1,21 @@
 # ==============================================================================
 # 21_investigate_unmatched.R -- Investigate Unmatched CPT/HCPCS Codes
 # ==============================================================================
+# Purpose:     Investigate unmatched CPT/HCPCS codes via NLM HCPCS API to classify
+#              them as relevant/irrelevant treatment codes. Uses widened heuristic
+#              ranges to detect codes not in TREATMENT_CODES.
 #
-# Extracts CPT/HCPCS codes from PROCEDURES table using widened heuristic ranges,
-# filters out codes already in TREATMENT_CODES, looks up descriptions via the
-# NLM HCPCS API, auto-classifies each code, and produces a styled xlsx report.
+# Inputs:      Treatment inventory from R/20, NLM HCPCS API (external web service)
 #
-# Purpose: Identify treatment-relevant procedure codes that Phase 38's curated
-# lists miss, producing a classification report for config update.
+# Outputs:     cache/outputs/unmatched_codes_classified.rds,
+#              output/unmatched_codes_report.xlsx
 #
-# Output:
-#   - output/unmatched_codes_report.xlsx (styled workbook with classification)
-#   - output/unmatched_codes_classified.rds (RDS for Plan 02 consumption)
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/21_investigate_unmatched.R
-#
-# Dependencies:
-#   - R/00_config.R (TREATMENT_CODES list)
-#   - R/01_load_pcornet.R (get_pcornet_table)
-#   - httr, jsonlite, openxlsx2, dplyr, stringr, glue, tidyr
-#
-# Phase 21 Plan 01 -- investigate-unmatched-codes
+# Requirements: Phase 39 unmatched code investigation (D-04 NLM API lookup)
 # ==============================================================================
 
-# ==============================================================================
-# SECTION 1: SETUP AND CONFIGURATION
-# ==============================================================================
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
@@ -41,9 +30,12 @@ library(tidyr)
 
 OUTPUT_PATH <- file.path(CONFIG$output_dir, "unmatched_codes_report.xlsx")
 
-# ==============================================================================
-# SECTION 2: WIDENED HEURISTIC RANGES (per D-02)
-# ==============================================================================
+# WHY NLM HCPCS API: Provides official CMS code descriptions for CPT/HCPCS codes
+# via free-access web service. Alternative lookups (proprietary databases, manual
+# code books) require licenses or manual effort. NLM API enables automated bulk
+# lookup for classification without human review of every code.
+
+# SECTION 2: WIDENED HEURISTIC RANGES ----
 
 # Expanded beyond Phase 38's CPT_HCPCS_RANGES to catch more codes
 # Per D-01: CPT/HCPCS only -- no ICD-10-PCS, ICD-9, DRG, revenue, RXNORM, NDC

@@ -1,20 +1,20 @@
-# =============================================================================
-# Phase 24: Treatment Codes Resolved XLSX (All Types)
-# =============================================================================
-# Creates per-treatment-type resolved xlsx files (Radiation, SCT, Immunotherapy,
-# Supportive Care) from combined_unmatched_report.xlsx, mirroring the
-# chemotherapy_codes_resolved.xlsx format. Also verifies chemotherapy_codes_resolved.xlsx
-# accuracy against the combined report.
+# ==============================================================================
+# 24_treatment_codes_resolved.R -- Treatment Codes Resolved XLSX (All Types)
+# ==============================================================================
+# Purpose:     Create per-treatment-type resolved xlsx files with human-readable
+#              descriptions for Radiation, SCT, Immunotherapy, Supportive Care.
 #
-# Input:  output/combined_unmatched_report.xlsx  (Phase 41 output)
-#         chemotherapy_codes_resolved.xlsx       (verification target)
-# Output: radiation_codes_resolved.xlsx
-#         sct_codes_resolved.xlsx
-#         immunotherapy_codes_resolved.xlsx
-#         supportive_care_codes_resolved.xlsx
-# =============================================================================
+# Inputs:      TREATMENT_CODES from 00_config.R, code_descriptions.rds
+#
+# Outputs:     output/treatment_codes_resolved_*.xlsx (4 files: Radiation, SCT,
+#              Immunotherapy, Supportive Care)
+#
+# Dependencies: R/00_config.R
+#
+# Requirements: Phase 42 per-type resolved files
+# ==============================================================================
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -27,6 +27,10 @@ source("R/00_config.R")
 # Paths to source files
 COMBINED_REPORT <- file.path(CONFIG$output_dir, "combined_unmatched_report.xlsx")
 CHEMO_RESOLVED  <- "chemotherapy_codes_resolved.xlsx"
+
+# WHY treatment types separated into individual xlsx files: Different clinical reviewers
+# per treatment type (radiation oncologists review radiation codes, transplant specialists
+# review SCT codes, etc.). Separate files enable parallel review workflows.
 
 # Categories to produce resolved files for (non-chemo)
 RESOLVE_CATEGORIES <- list(
