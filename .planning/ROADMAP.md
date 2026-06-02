@@ -14,7 +14,8 @@
 - **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-54 (shipped 2026-05-22) — [archive](milestones/v1.6-ROADMAP.md)
 - **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-59 (shipped 2026-05-28) — [archive](milestones/v1.7-ROADMAP.md)
 - **v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification** — Phases 60-63 (shipped 2026-06-01) — [archive](milestones/v1.8-ROADMAP.md)
-- **v2.0 Codebase Cleanup & Documentation** — Phases 65-74 (active) — see below
+- **v2.0 Codebase Cleanup & Documentation** — Phases 65-74 (shipped 2026-06-02) — [archive](milestones/v2.0-ROADMAP.md)
+- **v2.1 Clinical Data Refinements & NLPHL Breakout** — Phases 75-80 (active) — see below
 
 ## Remaining Phases (Unassigned)
 
@@ -44,209 +45,109 @@
 | 55-59 | v1.7 | Complete | 2026-05-28 |
 | 60-63 | v1.8 | Complete | 2026-06-01 |
 | 64 | v1.8 | Complete | 2026-06-01 |
+| 65-74 | v2.0 | Complete | 2026-06-02 |
 
-## v2.0 Codebase Cleanup & Documentation (Active Milestone)
+## v2.1 Clinical Data Refinements & NLPHL Breakout (Active Milestone)
 
-**Milestone Goal:** Reorganize, harden, and document the entire R pipeline for maintainability and onboarding.
+**Milestone Goal:** Refine cancer summary tables, break out NLPHL as a distinct category, investigate SCT code 0362, remove tumor registry treatment data, verify replaced-by codes, create new tables, and add cause of death and per-episode cancer categorization to outputs — maintaining v2.0 code quality standards throughout.
 
 **Granularity:** Coarse
-**Requirements Coverage:** 17/17 mapped (100%)
+**Requirements Coverage:** 11/11 mapped (100%)
 
 ### Phases
 
-- [x] **Phase 65: Foundation Reorganization** - Renumber foundation scripts (00-09) and create utils/ folder (completed 2026-06-01)
-- [x] **Phase 66: Cohort & Treatment Reorganization** - Comprehensive renumbering of ALL scripts into final decade positions (scope expanded from original cohort+treatment to include all decades) (completed 2026-06-01)
-- [x] **Phase 67: Post-Renumbering Inventory Cleanup** - Resolve 66-prefix collision, archive unnumbered scripts, regenerate SCRIPT_INDEX.md (repurposed from original cancer/payer scope) (gap closure in progress) (completed 2026-06-01)
-- [x] **Phase 68: Output & Test Reorganization (Verification Gate)** - Verify reorganization requirements, fix documentation drift, create HiPerGator validation checklist (completed 2026-06-02)
-- [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
-- [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
-- [x] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally (completed 2026-06-02)
-- [x] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation (completed 2026-06-02)
-- [x] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions (completed 2026-06-02)
-- [x] **Phase 74: Smoke Testing & Reference Manual** - Create comprehensive smoke tests and dependency documentation (completed 2026-06-02)
+- [ ] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping
+- [ ] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline
+- [ ] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings
+- [ ] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death
+- [ ] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables
+- [ ] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes
 
 ### Phase Details
 
-#### Phase 65: Foundation Reorganization
-**Goal**: Foundation scripts (config, data loading, payer harmonization) are renumbered to 00-09 with utils/ folder structure established
-**Depends on**: Phase 64
-**Requirements**: REORG-01, REORG-03, REORG-04
+#### Phase 75: Configuration Extensions (NLPHL & Death Cause)
+**Goal**: Extend configuration layer with NLPHL classification logic and death cause mapping to support all downstream cancer and mortality features
+**Depends on**: Phase 74
+**Requirements**: CANCER-01, DEATH-01, DEATH-02, QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. All 7 utils_*.R modules moved to R/utils/ subfolder
-  2. R/00_config.R auto-sources all utils/ files on load
-  3. Foundation scripts (DuckDB ingest, data loading, payer harmonization) renumbered to 01-03
-  4. All source() calls referencing foundation scripts updated to new numbers
-  5. Smoke test validates no broken cross-references for foundation scripts
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 65-01-PLAN.md -- Move utils to R/utils/, renumber 25->03, update all source() references
-- [x] 65-02-PLAN.md -- Create smoke test, update documentation (SCRIPT_INDEX, existing smoke test)
+  1. CANCER_SITE_MAP in R/00_config.R contains C810 = "NLPHL" and C81 = "Hodgkin Lymphoma (non-NLPHL)" with mutually exclusive logic
+  2. ICD9_NLPHL_CODES list in R/00_config.R contains 201.4x series codes
+  3. classify_codes() in R/utils/utils_cancer.R supports 4-char prefix matching (C810) before 3-char fallback (C81)
+  4. DEATH_CAUSE_MAP in R/00_config.R contains ICD-10 cause categories (50+ entries covering major categories)
+  5. Unit tests validate NLPHL mutual exclusivity: no patient classified as both NLPHL and classical HL
+**Plans**: TBD
 
-#### Phase 66: Cohort & Treatment Reorganization
-**Goal**: All pipeline scripts (03-63+) renumbered into final decade positions in one comprehensive pass with all source() cross-references updated
-**Depends on**: Phase 65
-**Requirements**: REORG-01, REORG-02
+#### Phase 76: Treatment Source Analysis & Removal
+**Goal**: Quantify tumor registry treatment coverage and remove TR from treatment episode pipeline to improve data source reliability
+**Depends on**: Phase 75
+**Requirements**: TREAT-01, QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. Cohort scripts renumbered to 10-14 (helpers before build_cohort)
-  2. Treatment scripts renumbered to 20-29 (no a/b suffixes)
-  3. Cancer scripts renumbered to 40-53 (gantt exports in cancer decade)
-  4. Payer/QA scripts renumbered to 60-69
-  5. Output scripts renumbered to 70-75
-  6. Test scripts renumbered to 80-86
-  7. Ad-hoc scripts renumbered to 90-99
-  8. All source() cross-references updated (95+ total across codebase)
-  9. Comprehensive smoke test validates all decades and source() resolution
-  10. SCRIPT_INDEX.md regenerated with complete new numbering
-**Plans:** 3/3 plans complete
-Plans:
-- [x] 66-01-PLAN.md -- Renumber cohort (10-14) and treatment (20-29) scripts with source() updates
-- [x] 66-02-PLAN.md -- Renumber cancer (40-53) and payer/QA (60-69) scripts with source() updates
-- [x] 66-03-PLAN.md -- Renumber outputs (70-75), tests (80-86), ad-hoc (90-99), create smoke test, regenerate SCRIPT_INDEX
+  1. Coverage analysis script produces source_coverage_analysis.csv showing episode counts by source combinations (TR-only, claims-only, both)
+  2. Treatment episode pipeline (R/26-29) removes tumor registry as source, reducing from 7 to 6 sources
+  3. Validation report documents episode count delta and confirms count reduction matches coverage analysis prediction
+  4. Assertion added: if treatment episode count drops >20%, pipeline halts with explicit warning
+  5. All modified scripts follow v2.0 standards (styler, lintr, checkmate, headers)
+**Plans**: TBD
 
-#### Phase 67: Post-Renumbering Inventory Cleanup
-**Goal**: Resolve 66-prefix smoke test collision, archive 8 unnumbered scripts to R/archive/, and regenerate SCRIPT_INDEX.md from filesystem
-**Depends on**: Phase 66
-**Requirements**: REORG-01, REORG-02
+#### Phase 77: Cancer Classification Refinements
+**Goal**: Extend 7-day gap requirement to all cancer categories, implement NLPHL breakout in classification logic, and centralize drug groupings
+**Depends on**: Phase 76
+**Requirements**: CANCER-01, CANCER-02, TREAT-02, QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. 66_smoke_test_full_pipeline.R moved to 87_smoke_test_full_pipeline.R (test decade)
-  2. Payer/QA decade has 10 scripts (60-69) with no collision
-  3. Test decade has 8 scripts (80-87) including full-pipeline smoke test
-  4. All 8 unnumbered scripts archived to R/archive/ with README.md
-  5. SCRIPT_INDEX.md regenerated from filesystem (guaranteed accurate)
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 67-01-PLAN.md -- Move smoke test to 87, archive unnumbered scripts, regenerate SCRIPT_INDEX
-- [x] 67-02-PLAN.md -- Fix payer decade counts in SCRIPT_INDEX, smoke test, and ROADMAP (gap closure)
+  1. Cancer summary table (R/49) applies 7-day unique day gap to ALL cancer categories, reaching total population = 6,347
+  2. Output versioned as cancer_summary_table_pre_post_v2_7day.rds with comparison table showing v1 vs v2 deltas
+  3. classify_codes() correctly routes C81.0 / 201.4x codes to NLPHL category, all other C81.x to classical HL
+  4. DRUG_GROUPINGS in R/00_config.R contains mappings from all_codes_resolved_next_tables.xlsx with versioned xlsx snapshot in git
+  5. Validation confirms no patient double-counted in NLPHL and classical HL categories
+**Plans**: TBD
 
-#### Phase 68: Output & Test Reorganization (Repurposed: Verification Gate)
-**Goal**: Verify reorganization requirements (REORG-01 through REORG-05) are satisfied, fix documentation drift (SCRIPT_INDEX cancer decade), create HiPerGator validation checklist, and formally close the reorganization work stream
-**Depends on**: Phase 67
-**Requirements**: REORG-01, REORG-02, REORG-04, REORG-05
+#### Phase 78: Episode Enhancement & Death Integration
+**Goal**: Add triggering code descriptions to treatment episodes and integrate cause of death into outputs after quality profiling
+**Depends on**: Phase 77
+**Requirements**: CANCER-03, DEATH-01, DEATH-02, QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. Structural scan confirms 67 numbered scripts across 8 decades with correct counts per decade
-  2. SCRIPT_INDEX.md fully aligned with filesystem (zero filename discrepancies)
-  3. R/87 smoke test expected arrays match actual filenames (cancer decade corrected)
-  4. R/archive/ contains 8 deprecated scripts with README.md (REORG-04 confirmed)
-  5. HiPerGator validation checklist created for deferred REORG-05 data-dependent checks
-  6. REQUIREMENTS.md traceability updated (REORG-04 complete, REORG-05 structural done)
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 68-01-PLAN.md -- Structural verification scan + fix SCRIPT_INDEX and smoke test discrepancies
-- [x] 68-02-PLAN.md -- HiPerGator checklist creation + documentation updates (ROADMAP, REQUIREMENTS, STATE)
+  1. Cause of death quality report documents completeness (% with cause coded) stratified by payer and site
+  2. Episode classification (R/28) includes triggering_code_description column using DRUG_GROUPINGS from R/00_config.R
+  3. Gantt v2 output (R/52) includes cause_of_death column (14 to 15 columns) mapped via DEATH_CAUSE_MAP
+  4. Missingness documented in output footnotes if cause of death >40% missing
+  5. Per-episode cancer category and triggering code description populated for all episodes using drug groupings
+**Plans**: TBD
 
-#### Phase 69: Script Documentation
-**Goal**: Every script has header blocks, section headers, and explanatory comments for maintainability
-**Depends on**: Phase 68
-**Requirements**: DOC-01, DOC-02, DOC-03
+#### Phase 79: Code Investigations & New Tables
+**Goal**: Investigate SCT code 0362 data quality, verify replaced-by code mappings, and generate two new drug grouping summary tables
+**Depends on**: Phase 78
+**Requirements**: CODE-01, CODE-02, TREAT-03, QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. All 80 production scripts have header blocks (purpose, inputs, outputs, dependencies)
-  2. All scripts have section headers with 4+ dashes (RStudio Ctrl+Shift+O outline works)
-  3. Non-obvious logic has inline comments explaining WHY (clinical rules, payer hierarchy, complex joins)
-  4. Comments use roxygen2-style #' syntax for complex utility functions
-  5. Documentation validation confirms no missing headers or sections
-**Plans:** 8/8 plans complete
-Plans:
-- [x] 69-01-PLAN.md -- Foundation (00-03) + Utils (8 files) header/section/WHY documentation
-- [x] 69-02-PLAN.md -- Cohort (10-14) header/section/WHY documentation
-- [x] 69-03-PLAN.md -- Treatment (20-29) header/section/WHY documentation
-- [x] 69-04-PLAN.md -- Cancer (40-53) header/section/WHY documentation
-- [x] 69-05-PLAN.md -- Payer/QA (60-69) header/section/WHY documentation
-- [x] 69-06-PLAN.md -- Outputs (70-75) + Tests (80-87) header/section/WHY documentation
-- [x] 69-07-PLAN.md -- Ad-hoc (90-99) header/section/WHY documentation
-- [x] 69-08-PLAN.md -- Cross-codebase validation scan + gap fixes
+  1. R/92_investigate_sct_0362.R produces encounter-level summary distinguishing true transplants from coding errors
+  2. R/93_verify_replaced_by_codes.R validates replaced-by mappings with cycle detection and flags replacement chains >3 steps
+  3. R/76_new_tables_from_groupings.R generates multi-sheet xlsx with drug group frequency by payer and by cancer category
+  4. All new diagnostic scripts follow decade-based numbering convention and include documentation headers
+  5. Verification cross-references replaced-by codes against SEER ICD-9 to ICD-10 conversion tables
+**Plans**: TBD
+**UI hint**: yes
 
-#### Phase 70: Automated Formatting
-**Goal**: Codebase is consistently formatted via styler with lintr configured for project
-**Depends on**: Phase 69
-**Requirements**: SAFE-04, SAFE-05
+#### Phase 80: Smoke Test Updates
+**Goal**: Update comprehensive smoke test (R/88) to validate all v2.1 changes including NLPHL category, 7-day gap, Gantt schema, and new scripts
+**Depends on**: Phase 79
+**Requirements**: QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. styler applied to R/ directory only (output/, cache/, renv/ excluded via .stylerignore)
-  2. All R scripts follow tidyverse style (spacing, indentation, line breaks)
-  3. .lintr configuration file disables object_name_linter (ALLCAPS PCORnet columns)
-  4. .lintr line_length_linter set to 120 characters
-  5. lintr baseline run identifies violations for next phase (count recorded)
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 70-01-PLAN.md -- Create config files (.stylerignore, .lintr, .git-blame-ignore-revs), run styler with dry-run safety check, apply formatting, single atomic commit
-- [x] 70-02-PLAN.md -- Run lintr baseline scan and record violation report for Phase 71
+  1. Smoke test (R/88) validates NLPHL category exists in CANCER_SITE_MAP and is mutually exclusive with classical HL
+  2. Smoke test validates 7-day gap extension applied to all cancer categories
+  3. Smoke test validates Gantt v2 15-column schema (cause_of_death added)
+  4. Smoke test validates new scripts (R/76, R/92, R/93) exist with correct headers and dependencies
+  5. All smoke test additions follow existing testthat patterns from Phase 74
+**Plans**: TBD
 
-#### Phase 71: Linting Cleanup
-**Goal**: lintr violations are reduced to manageable baseline with high-severity issues fixed
-**Depends on**: Phase 70
-**Requirements**: SAFE-05
-**Success Criteria** (what must be TRUE):
-  1. HIGH-severity lintr violations fixed (seq_linter patterns replaced with seq_along/seq_len)
-  2. .lintr configured with project standards (pipe, line length, disabled false-positive rules)
-  3. 246 remaining violations are all line_length_linter (accepted as project baseline)
-  4. lintr violation count reduced from 6,187 to 246 (96% reduction)
-  5. All fixes validated via HiPerGator lintr scan and smoke test
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 71-01-PLAN.md -- Update .lintr configuration: pipe standard, disable false-positive rules, bump line length (D-01, D-02, D-06, D-07, D-08)
-- [x] 71-02-PLAN.md -- Fix code-level violations: remove commented code, fix seq patterns, fix indentation/pipe continuation, wrap long lines (D-03, D-04, D-05, D-06)
-
-#### Phase 72: Defensive Coding
-**Goal**: Critical functions have input validation and error handling with informative messages
-**Depends on**: Phase 71
-**Requirements**: SAFE-01, SAFE-02, SAFE-03
-**Success Criteria** (what must be TRUE):
-  1. File existence checks (checkmate assert_file_exists) at start of all data-loading scripts
-  2. Data structure validation after critical loads/joins (assert_data_frame, assert_names, assert_subset)
-  3. Error messages use glue() with context (file paths, expected vs actual, script name)
-  4. Assertions validate at function entry (NOT inside hot loops)
-  5. Smoke test confirms assertions catch invalid inputs without false positives
-**Plans:** 4/4 plans complete
-Plans:
-- [x] 72-01-PLAN.md -- Create utils_assertions.R with 5 helper functions, add library(checkmate) to 00_config.R
-- [x] 72-02-PLAN.md -- Add assertions to foundation (00-03) and cohort (10-14) scripts
-- [x] 72-03-PLAN.md -- Add assertions to treatment (20-29) scripts
-- [x] 72-04-PLAN.md -- Add assertions to cancer (40-53) and payer/QA (60-69) scripts
-
-#### Phase 73: DRY Consolidation
-**Goal**: Duplicate lookups consolidated to R/00_config.R and repeated patterns extracted to utilities
-**Depends on**: Phase 72
-**Requirements**: DRY-01, DRY-02
-**Success Criteria** (what must be TRUE):
-  1. All PREFIX_MAP and code mapping duplicates consolidated to R/00_config.R
-  2. grep confirms no duplicate constant definitions remain in codebase
-  3. Repeated code patterns (3+ occurrences) extracted to shared utility functions in R/utils/
-  4. Old lookup copies deleted in same commit as consolidation
-  5. Smoke test validates constants defined only once and utilities work correctly
-**Plans:** 3/3 plans complete
-Plans:
-- [x] 73-01-PLAN.md -- Add CANCER_SITE_MAP + TIER_MAPPING to config, create utils_cancer.R, add classify_payer_tier() and build_output_path() to utils
-- [x] 73-02-PLAN.md -- Remove PREFIX_MAP + classify_codes() from 10 cancer/treatment scripts
-- [x] 73-03-PLAN.md -- Remove TIER_MAPPING + classification chain from R/60-62, apply build_output_path() across scripts
-
-#### Phase 74: Smoke Testing & Reference Manual
-**Goal**: Comprehensive smoke test suite and reference manual document pipeline for maintainability
-**Depends on**: Phase 73
-**Requirements**: REORG-05, SAFE-06, DOC-04
-**Success Criteria** (what must be TRUE):
-  1. Comprehensive standalone smoke test validates sequential numbering, source() resolution, RDS dependencies
-  2. Smoke tests verify config constants exist and critical scripts run without error
-  3. Reference manual created with dependency matrix (Script -> Inputs/Outputs/Dependencies for all scripts)
-  4. Reference manual includes run-order guide and onboarding instructions
-  5. All tests pass on both Windows (local) and HiPerGator (Linux)
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 74-01-PLAN.md -- Comprehensive smoke test (R/88) consolidating R/86+R/87 checks plus DRY, config, defensive coding validation; fix SCRIPT_INDEX utils count
-- [x] 74-02-PLAN.md -- Reference manual generator (R/89) and auto-generated docs/REFERENCE_MANUAL.md with dependency matrix and onboarding guide
-
-### v2.0 Progress
+### v2.1 Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 65. Foundation Reorganization | 2/2 | Complete    | 2026-06-01 |
-| 66. Cohort & Treatment Reorganization | 3/3 | Complete    | 2026-06-01 |
-| 67. Post-Renumbering Inventory Cleanup | 2/2 | Complete    | 2026-06-01 |
-| 68. Output & Test Reorganization (Verification Gate) | 2/2 | Complete    | 2026-06-02 |
-| 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
-| 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
-| 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
-| 72. Defensive Coding | 4/4 | Complete    | 2026-06-02 |
-| 73. DRY Consolidation | 3/3 | Complete    | 2026-06-02 |
-| 74. Smoke Testing & Reference Manual | 2/2 | Complete    | 2026-06-02 |
+| 75. Configuration Extensions | 0/? | Not started | - |
+| 76. Treatment Source Analysis & Removal | 0/? | Not started | - |
+| 77. Cancer Classification Refinements | 0/? | Not started | - |
+| 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
+| 79. Code Investigations & New Tables | 0/? | Not started | - |
+| 80. Visualization & Documentation | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 74 planning complete (2 plans in 1 wave)*
+*Last updated: 2026-06-02 -- v2.1 roadmap created (6 phases, coarse granularity, VIZ deferred)*

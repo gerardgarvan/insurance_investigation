@@ -33,13 +33,13 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 
 - [ ] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
 
-### Visualization
-
-- [ ] **VIZ-01**: Attrition waterfall chart produced from filter log
-- [ ] **VIZ-02**: Sankey/alluvial diagram stratified by payer
-- [ ] **VIZ-03**: HIPAA small-cell suppression applied in all outputs
-
 ## Future Requirements
+
+### Visualization (deferred from v2.1)
+
+- **VIZ-01**: Attrition waterfall chart produced from filter log
+- **VIZ-02**: Sankey/alluvial diagram stratified by payer
+- **VIZ-03**: HIPAA small-cell suppression applied in all outputs
 
 ### v3.0+ Considerations
 
@@ -68,26 +68,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CANCER-01 | TBD | Pending |
-| CANCER-02 | TBD | Pending |
-| CANCER-03 | TBD | Pending |
-| TREAT-01 | TBD | Pending |
-| TREAT-02 | TBD | Pending |
-| TREAT-03 | TBD | Pending |
-| DEATH-01 | TBD | Pending |
-| DEATH-02 | TBD | Pending |
-| CODE-01 | TBD | Pending |
-| CODE-02 | TBD | Pending |
-| QUAL-01 | TBD | Pending |
-| VIZ-01 | TBD | Pending |
-| VIZ-02 | TBD | Pending |
-| VIZ-03 | TBD | Pending |
+| CANCER-01 | Phase 75, 77 | Pending |
+| CANCER-02 | Phase 77 | Pending |
+| CANCER-03 | Phase 78 | Pending |
+| TREAT-01 | Phase 76 | Pending |
+| TREAT-02 | Phase 77 | Pending |
+| TREAT-03 | Phase 79 | Pending |
+| DEATH-01 | Phase 75, 78 | Pending |
+| DEATH-02 | Phase 75, 78 | Pending |
+| CODE-01 | Phase 79 | Pending |
+| CODE-02 | Phase 79 | Pending |
+| QUAL-01 | Phases 75-80 (all) | Pending |
 
 **Coverage:**
-- v2.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- v2.1 requirements: 11 total
+- Mapped to phases: 11 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-02*
-*Last updated: 2026-06-02 after initial definition*
+*Last updated: 2026-06-02 after roadmap creation*

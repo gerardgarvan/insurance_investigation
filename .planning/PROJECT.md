@@ -68,9 +68,6 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Include cause of death in outputs
 - [ ] Cancer_category and triggering code description per episode (using drug groupings from all_codes_resolved_next_tables.xlsx)
 - [ ] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates)
-- [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
-- [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
-- [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
 
 ### Out of Scope
 
