@@ -17,9 +17,9 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 ### Documentation
 
-- [ ] **DOC-01**: Every script has a header block documenting purpose, inputs, outputs, and dependencies
-- [ ] **DOC-02**: Every script has section headers with 4+ dashes for RStudio outline navigation (Ctrl+Shift+O)
-- [ ] **DOC-03**: Non-obvious logic has inline comments explaining WHY (clinical rules, complex joins, business mappings, payer hierarchy decisions)
+- [x] **DOC-01**: Every script has a header block documenting purpose, inputs, outputs, and dependencies
+- [x] **DOC-02**: Every script has section headers with 4+ dashes for RStudio outline navigation (Ctrl+Shift+O)
+- [x] **DOC-03**: Non-obvious logic has inline comments explaining WHY (clinical rules, complex joins, business mappings, payer hierarchy decisions)
 - [ ] **DOC-04**: Full reference manual created with dependency matrix (Script -> Inputs/Outputs/Dependencies table for all scripts) and run-order guide
 
 ### Safety
@@ -74,9 +74,9 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 | REORG-03 | Phase 65 | Complete |
 | REORG-04 | Phase 67, 68 | Complete |
 | REORG-05 | Phase 68, 74 | Partial (structural done; HiPerGator deferred to Phase 74) |
-| DOC-01 | Phase 69 | Pending |
-| DOC-02 | Phase 69 | Pending |
-| DOC-03 | Phase 69 | Pending |
+| DOC-01 | Phase 69 | Complete |
+| DOC-02 | Phase 69 | Complete |
+| DOC-03 | Phase 69 | Complete |
 | DOC-04 | Phase 74 | Pending |
 | SAFE-01 | Phase 72 | Pending |
 | SAFE-02 | Phase 72 | Pending |
