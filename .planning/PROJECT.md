@@ -60,12 +60,12 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 ### Active
 
 - [ ] Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories, total population = 6,347
-- [ ] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category in groupings and Gantt
+- [x] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category — config layer complete, Phase 75
 - [ ] Investigate SCT code 0362 patients — do the 90 patients have other SCT codes during those encounters?
 - [ ] Drop all treatment data sourced from tumor registry
 - [ ] Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
 - [ ] Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
-- [ ] Include cause of death in outputs
+- [ ] Include cause of death in outputs (DEATH_CAUSE_MAP ready — Phase 75; integration pending Phase 78)
 - [ ] Cancer_category and triggering code description per episode (using drug groupings from all_codes_resolved_next_tables.xlsx)
 - [ ] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates)
 
@@ -265,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after milestone v2.1 initialization*
+*Last updated: 2026-06-02 after Phase 75 completion (NLPHL config + death cause mapping)*
