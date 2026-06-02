@@ -72,3 +72,27 @@ save_output_data <- function(df, name, subdir = "outputs") {
 
   invisible(NULL)
 }
+
+#' Build output path with automatic directory creation
+#'
+#' Constructs a full file path under CONFIG$output_dir/{subdir}/{filename}
+#' and creates the parent directory if it does not exist. Replaces the
+#' repeated two-line pattern: file.path() + dir.create(dirname(), ...).
+#'
+#' @param subdir Character. Subdirectory under output_dir (e.g., "tables",
+#'   "figures", "diagnostics", "logs", "cohort")
+#' @param filename Character. Filename including extension (e.g., "report.csv")
+#' @return Character. Full file path (directory guaranteed to exist)
+#'
+#' @examples
+#' path <- build_output_path("tables", "cancer_summary.xlsx")
+#' # Returns "output/tables/cancer_summary.xlsx" with output/tables/ created
+#'
+build_output_path <- function(subdir, filename) {
+  full_path <- file.path(CONFIG$output_dir, subdir, filename)
+  parent_dir <- dirname(full_path)
+  if (!dir.exists(parent_dir)) {
+    dir.create(parent_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  full_path
+}
