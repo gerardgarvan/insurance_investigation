@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Clinical Data Refinements & NLPHL Breakout
-status: executing
-last_updated: "2026-06-02T23:15:22.519Z"
+status: verifying
+last_updated: "2026-06-02T23:19:03.339Z"
 last_activity: 2026-06-02
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # State: v2.1 Clinical Data Refinements & NLPHL Breakout
@@ -28,12 +28,12 @@ progress:
 
 Phase: 75 (configuration-extensions-nlphl-death-cause) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-02
 
 **Progress:**
 
-[█████░░░░░] 50%
+[██████████] 100%
 v2.1 Milestone: [......] 0% (0/6 phases)
   Phase 75: [......] 0%
 
@@ -77,6 +77,7 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 | Centralize drug groupings in R/00_config.R | Follows AMC_PAYER_LOOKUP pattern from Phase 36, avoids runtime xlsx dependency | Pending |
 | Profile cause of death quality first | Guard against misleading mortality analyses (>40% missingness common) | Pending |
 | Phase 75 P01 | 185 | 2 tasks | 2 files |
+| Phase 75 P02 | 103 | 1 tasks | 1 files |
 
 ### Open Questions
 
