@@ -61,7 +61,7 @@
 - [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
 - [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
 - [x] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally (completed 2026-06-02)
-- [ ] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation
+- [x] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation (completed 2026-06-02)
 - [ ] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions
 - [ ] **Phase 74: Smoke Testing & Reference Manual** - Create comprehensive smoke tests and dependency documentation
 
@@ -195,12 +195,12 @@ Plans:
   3. Error messages use glue() with context (file paths, expected vs actual, script name)
   4. Assertions validate at function entry (NOT inside hot loops)
   5. Smoke test confirms assertions catch invalid inputs without false positives
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 - [x] 72-01-PLAN.md -- Create utils_assertions.R with 5 helper functions, add library(checkmate) to 00_config.R
 - [x] 72-02-PLAN.md -- Add assertions to foundation (00-03) and cohort (10-14) scripts
 - [x] 72-03-PLAN.md -- Add assertions to treatment (20-29) scripts
-- [ ] 72-04-PLAN.md -- Add assertions to cancer (40-53) and payer/QA (60-69) scripts
+- [x] 72-04-PLAN.md -- Add assertions to cancer (40-53) and payer/QA (60-69) scripts
 
 #### Phase 73: DRY Consolidation
 **Goal**: Duplicate lookups consolidated to R/00_config.R and repeated patterns extracted to utilities
@@ -237,7 +237,7 @@ Plans:
 | 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
-| 72. Defensive Coding | 3/4 | In Progress|  |
+| 72. Defensive Coding | 4/4 | Complete   | 2026-06-02 |
 | 73. DRY Consolidation | 0/0 | Not started | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
