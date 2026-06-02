@@ -33,8 +33,8 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 
 ### DRY (Redundancy Removal)
 
-- [ ] **DRY-01**: All duplicated lookup tables (PREFIX_MAP, code mappings, category constants) consolidated to R/00_config.R with old copies deleted
-- [ ] **DRY-02**: Repeated code patterns (3+ occurrences) extracted into shared utility functions in R/utils/ files
+- [x] **DRY-01**: All duplicated lookup tables (PREFIX_MAP, code mappings, category constants) consolidated to R/00_config.R with old copies deleted
+- [x] **DRY-02**: Repeated code patterns (3+ occurrences) extracted into shared utility functions in R/utils/ files
 
 ## Future Requirements
 
@@ -84,8 +84,8 @@ Requirements for codebase reorganization, documentation, hardening, and redundan
 | SAFE-04 | Phase 70 | Pending |
 | SAFE-05 | Phase 70, 71 | Complete |
 | SAFE-06 | Phase 74 | Pending |
-| DRY-01 | Phase 73 | Pending |
-| DRY-02 | Phase 73 | Pending |
+| DRY-01 | Phase 73 | Complete |
+| DRY-02 | Phase 73 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 17 total
