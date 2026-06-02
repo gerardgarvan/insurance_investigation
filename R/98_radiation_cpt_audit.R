@@ -51,18 +51,18 @@ message(glue("Output: {OUTPUT_PATH}"))
 # Source: AMA CPT Manual chapter organization (publicly documented range boundaries).
 # Citation: AMA CPT chapter structure; CMS LCD L34652 RAD014; CMS Article A57669
 classification_table <- tibble::tribble(
-  ~range_start, ~range_end, ~ama_category,           ~classification,       ~rationale,
-  70010L,       76499L,     "Diagnostic Radiology",   "Diagnostic Imaging",  "X-ray, CT, MRI, fluoroscopy, angiography — produces images for diagnosis, not therapeutic radiation",
-  76506L,       76999L,     "Diagnostic Ultrasound",  "Diagnostic Imaging",  "Ultrasound for obstetric, abdominal, and vascular diagnosis — no ionizing radiation delivered",
-  77001L,       77032L,     "Radiological Guidance",  "Diagnostic Imaging",  "Fluoroscopic/CT guidance during interventional procedures — imaging component billed separately from treatment",
-  77046L,       77067L,     "Mammography",            "Diagnostic Imaging",  "Breast screening and diagnostic imaging — not therapeutic radiation",
-  77261L,       77299L,     "Treatment Planning",     "Radiation Treatment", "Clinical simulation, target volume definition, beam arrangement — essential precursor to treatment delivery",
-  77295L,       77370L,     "Physics & Dosimetry",    "Radiation Treatment", "Medical physicist services, dose calculations, treatment device fabrication — integral to safe treatment delivery",
-  77371L,       77499L,     "Treatment Delivery",     "Radiation Treatment", "External beam radiation delivery (EBRT, IMRT, VMAT, SRS, SBRT, proton, neutron) — actual therapeutic radiation",
-  77520L,       77525L,     "Proton Beam Delivery",   "Radiation Treatment", "Proton beam treatment delivery (particle therapy subset within 77371-77499) — higher precision than photon",
-  77600L,       77620L,     "Hyperthermia",           "Radiation Treatment", "Thermal adjunct applied concurrent with radiation — enhances tumor response",
-  77750L,       77799L,     "Brachytherapy",          "Radiation Treatment", "Internal radiation source placement (seeds, catheters, HDR) — high/low dose rate, interstitial/intracavitary",
-  78000L,       78999L,     "Nuclear Medicine",       "Mixed",               "Mostly diagnostic (PET, thyroid scan, bone scan); therapeutic codes 78800-78816 exist for radionuclide therapy"
+  ~range_start, ~range_end, ~ama_category, ~classification, ~rationale,
+  70010L, 76499L, "Diagnostic Radiology", "Diagnostic Imaging", "X-ray, CT, MRI, fluoroscopy, angiography — produces images for diagnosis, not therapeutic radiation",
+  76506L, 76999L, "Diagnostic Ultrasound", "Diagnostic Imaging", "Ultrasound for obstetric, abdominal, and vascular diagnosis — no ionizing radiation delivered",
+  77001L, 77032L, "Radiological Guidance", "Diagnostic Imaging", "Fluoroscopic/CT guidance during interventional procedures — imaging component billed separately from treatment",
+  77046L, 77067L, "Mammography", "Diagnostic Imaging", "Breast screening and diagnostic imaging — not therapeutic radiation",
+  77261L, 77299L, "Treatment Planning", "Radiation Treatment", "Clinical simulation, target volume definition, beam arrangement — essential precursor to treatment delivery",
+  77295L, 77370L, "Physics & Dosimetry", "Radiation Treatment", "Medical physicist services, dose calculations, treatment device fabrication — integral to safe treatment delivery",
+  77371L, 77499L, "Treatment Delivery", "Radiation Treatment", "External beam radiation delivery (EBRT, IMRT, VMAT, SRS, SBRT, proton, neutron) — actual therapeutic radiation",
+  77520L, 77525L, "Proton Beam Delivery", "Radiation Treatment", "Proton beam treatment delivery (particle therapy subset within 77371-77499) — higher precision than photon",
+  77600L, 77620L, "Hyperthermia", "Radiation Treatment", "Thermal adjunct applied concurrent with radiation — enhances tumor response",
+  77750L, 77799L, "Brachytherapy", "Radiation Treatment", "Internal radiation source placement (seeds, catheters, HDR) — high/low dose rate, interstitial/intracavitary",
+  78000L, 78999L, "Nuclear Medicine", "Mixed", "Mostly diagnostic (PET, thyroid scan, bone scan); therapeutic codes 78800-78816 exist for radionuclide therapy"
 )
 
 # Add display range column
@@ -204,7 +204,7 @@ codes_in_data <- bind_rows(codes_7x, codes_gx) %>%
   group_by(code = PX, px_type = PX_TYPE) %>%
   summarise(
     encounter_count = n(),
-    patient_count   = n_distinct(ID),
+    patient_count = n_distinct(ID),
     .groups = "drop"
   ) %>%
   arrange(code, px_type)
@@ -221,8 +221,10 @@ message("Classifying codes by AMA sub-range...")
 classify_code_str <- function(code_str, table) {
   if (str_detect(code_str, "^G60(0[3-9]|1[0-6])$")) {
     # G-codes are Medicare radiation delivery codes (deleted 2026)
-    return(list(classification = "Radiation Treatment",
-                ama_category   = "G-Code Radiation Delivery (CMS)"))
+    return(list(
+      classification = "Radiation Treatment",
+      ama_category = "G-Code Radiation Delivery (CMS)"
+    ))
   }
   cn <- suppressWarnings(as.integer(code_str))
   if (is.na(cn)) {
@@ -240,11 +242,13 @@ codes_classified <- codes_in_data %>%
       res <- classify_code_str(c, classification_table)$ama_category
       if (is.null(res) || is.na(res)) NA_character_ else res
     }),
-    in_config   = code %in% TREATMENT_CODES$radiation_cpt,
+    in_config = code %in% TREATMENT_CODES$radiation_cpt,
     description = purrr::map_chr(code, get_description)
   ) %>%
-  select(code, px_type, description, ama_category, classification,
-         in_config, patient_count, encounter_count) %>%
+  select(
+    code, px_type, description, ama_category, classification,
+    in_config, patient_count, encounter_count
+  ) %>%
   arrange(code, px_type)
 
 message(glue("  Classified {format(nrow(codes_classified), big.mark = ',')} code-PX_TYPE combinations"))
@@ -330,20 +334,20 @@ if (length(new_treatment_codes) > 0) {
 codes_unique <- codes_classified %>%
   group_by(code, description, ama_category, classification, in_config) %>%
   summarise(
-    patient_count   = max(patient_count),
+    patient_count = max(patient_count),
     encounter_count = sum(encounter_count),
-    px_types        = paste(sort(unique(px_type)), collapse = ", "),
+    px_types = paste(sort(unique(px_type)), collapse = ", "),
     .groups = "drop"
   ) %>%
   arrange(code)
 
-n_total       <- nrow(codes_unique)
-n_diag        <- sum(codes_unique$classification == "Diagnostic Imaging")
-n_treatment   <- sum(codes_unique$classification == "Radiation Treatment")
-n_mixed       <- sum(codes_unique$classification == "Mixed")
-n_other       <- n_total - n_diag - n_treatment - n_mixed
-n_in_config   <- sum(codes_unique$in_config)
-n_not_config  <- n_total - n_in_config
+n_total <- nrow(codes_unique)
+n_diag <- sum(codes_unique$classification == "Diagnostic Imaging")
+n_treatment <- sum(codes_unique$classification == "Radiation Treatment")
+n_mixed <- sum(codes_unique$classification == "Mixed")
+n_other <- n_total - n_diag - n_treatment - n_mixed
+n_in_config <- sum(codes_unique$in_config)
+n_not_config <- n_total - n_in_config
 
 message("")
 message("=== AUDIT SUMMARY ===")
@@ -368,11 +372,11 @@ message("")
 message(glue("Writing xlsx to {OUTPUT_PATH}..."))
 
 # Color scheme consistent with project (dark header, classification-based row colors)
-DARK_HEADER_FILL  <- "FF374151"
-WHITE_FONT        <- "FFFFFFFF"
-TITLE_FONT_COLOR  <- "FF1F2937"
-GREEN_FILL        <- "FFDDF4E1"   # Radiation Treatment
-YELLOW_FILL       <- "FFFFF4D6"   # Mixed
+DARK_HEADER_FILL <- "FF374151"
+WHITE_FONT <- "FFFFFFFF"
+TITLE_FONT_COLOR <- "FF1F2937"
+GREEN_FILL <- "FFDDF4E1" # Radiation Treatment
+YELLOW_FILL <- "FFFFF4D6" # Mixed
 # No fill for Diagnostic Imaging (default white)
 
 wb <- wb_workbook()
@@ -386,22 +390,30 @@ wb$add_worksheet(SHEET1)
 
 # Row 1: Title
 title1 <- "AMA CPT 70010-79999 Range Classification"
-n_cols1 <- 7L  # code_range, ama_category, classification, rationale, citation, range_start, range_end
+n_cols1 <- 7L # code_range, ama_category, classification, rationale, citation, range_start, range_end
 wb$add_data(sheet = SHEET1, x = title1, start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET1, dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color(TITLE_FONT_COLOR))
+wb$add_font(
+  sheet = SHEET1, dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET1, dims = glue("A1:{int2col(n_cols1)}1"))
 
 # Row 2: Headers
-headers1 <- c("CPT Range", "Range Start", "Range End", "AMA Category",
-               "Classification", "Rationale", "Citation")
+headers1 <- c(
+  "CPT Range", "Range Start", "Range End", "AMA Category",
+  "Classification", "Rationale", "Citation"
+)
 for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET1, dims = glue("A2:{int2col(n_cols1)}2"),
-            color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = glue("A2:{int2col(n_cols1)}2"),
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT))
+wb$add_fill(
+  sheet = SHEET1, dims = glue("A2:{int2col(n_cols1)}2"),
+  color = wb_color(DARK_HEADER_FILL)
+)
+wb$add_font(
+  sheet = SHEET1, dims = glue("A2:{int2col(n_cols1)}2"),
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT)
+)
 
 # Rows 3+: Classification data
 write_df1 <- classification_table %>%
@@ -433,14 +445,20 @@ rec_text <- paste0(
 )
 wb$add_data(sheet = SHEET1, x = rec_text, start_row = rec_row, start_col = 1)
 wb$merge_cells(sheet = SHEET1, dims = glue("A{rec_row}:{int2col(n_cols1)}{rec_row}"))
-wb$add_font(sheet = SHEET1, dims = glue("A{rec_row}"),
-            name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF1B5E20"))
-wb$add_fill(sheet = SHEET1, dims = glue("A{rec_row}:{int2col(n_cols1)}{rec_row}"),
-            color = wb_color("FFE8F5E9"))
+wb$add_font(
+  sheet = SHEET1, dims = glue("A{rec_row}"),
+  name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF1B5E20")
+)
+wb$add_fill(
+  sheet = SHEET1, dims = glue("A{rec_row}:{int2col(n_cols1)}{rec_row}"),
+  color = wb_color("FFE8F5E9")
+)
 
 # Column widths
-wb$set_col_widths(sheet = SHEET1, cols = 1:n_cols1,
-                  widths = c(15, 13, 11, 25, 22, 70, 30))
+wb$set_col_widths(
+  sheet = SHEET1, cols = 1:n_cols1,
+  widths = c(15, 13, 11, 25, 22, 70, 30)
+)
 
 # ---------------------------------------------------------------------------
 # SHEET 2: Codes in Data (RADCPT-02)
@@ -453,26 +471,36 @@ wb$add_worksheet(SHEET2)
 title2 <- glue("CPT 70010-79999 Codes Found in Patient PROCEDURES Data ({n_total} unique codes, all patients, all PX_TYPEs)")
 n_cols2 <- 8L
 wb$add_data(sheet = SHEET2, x = as.character(title2), start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET2, dims = "A1",
-            name = "Calibri", size = 14, bold = TRUE, color = wb_color(TITLE_FONT_COLOR))
+wb$add_font(
+  sheet = SHEET2, dims = "A1",
+  name = "Calibri", size = 14, bold = TRUE, color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET2, dims = glue("A1:{int2col(n_cols2)}1"))
 
 # Row 2: Headers
-headers2 <- c("Code", "PX Type(s)", "Description", "AMA Category",
-               "Classification", "In Pipeline Config?", "Patient Count", "Encounter Count")
+headers2 <- c(
+  "Code", "PX Type(s)", "Description", "AMA Category",
+  "Classification", "In Pipeline Config?", "Patient Count", "Encounter Count"
+)
 for (i in seq_along(headers2)) {
   wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 2, start_col = i)
 }
-wb$add_fill(sheet = SHEET2, dims = glue("A2:{int2col(n_cols2)}2"),
-            color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = glue("A2:{int2col(n_cols2)}2"),
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT))
+wb$add_fill(
+  sheet = SHEET2, dims = glue("A2:{int2col(n_cols2)}2"),
+  color = wb_color(DARK_HEADER_FILL)
+)
+wb$add_font(
+  sheet = SHEET2, dims = glue("A2:{int2col(n_cols2)}2"),
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT)
+)
 
 # Rows 3+: Codes data
 write_df2 <- codes_unique %>%
   mutate(in_config_label = if_else(in_config, "YES", "NO")) %>%
-  select(code, px_types, description, ama_category, classification,
-         in_config_label, patient_count, encounter_count) %>%
+  select(
+    code, px_types, description, ama_category, classification,
+    in_config_label, patient_count, encounter_count
+  ) %>%
   as.data.frame()
 
 wb$add_data(sheet = SHEET2, x = write_df2, start_row = 3, col_names = FALSE)
@@ -497,8 +525,10 @@ if (nrow(write_df2) > 0) {
 }
 
 # Column widths
-wb$set_col_widths(sheet = SHEET2, cols = 1:n_cols2,
-                  widths = c(10, 12, 65, 30, 22, 20, 14, 17))
+wb$set_col_widths(
+  sheet = SHEET2, cols = 1:n_cols2,
+  widths = c(10, 12, 65, 30, 22, 20, 14, 17)
+)
 
 # ---------------------------------------------------------------------------
 # Save workbook

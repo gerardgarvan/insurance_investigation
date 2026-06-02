@@ -125,9 +125,9 @@ message(glue("Total encounters loaded: {format(nrow(enc_raw), big.mark=',')}"))
 
 enc <- enc_raw %>%
   mutate(
-    PAYER_TYPE_PRIMARY   = as.character(PAYER_TYPE_PRIMARY),
+    PAYER_TYPE_PRIMARY = as.character(PAYER_TYPE_PRIMARY),
     PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE               = as.character(SOURCE),
+    SOURCE = as.character(SOURCE),
     # Effective payer: primary if valid, else secondary, else NA
     effective_payer = case_when(
       !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
@@ -220,9 +220,9 @@ date_filled <- date_joined %>%
 
   mutate(
     fill_method = case_when(
-      !is.na(fill_method)           ~ fill_method,    # already "encounter"
-      !is.na(tier)                  ~ "filled",        # was filled by tidyr::fill
-      TRUE                          ~ "no_data"        # still NA after fill
+      !is.na(fill_method) ~ fill_method, # already "encounter"
+      !is.na(tier) ~ "filled", # was filled by tidyr::fill
+      TRUE ~ "no_data" # still NA after fill
     )
   )
 
@@ -270,19 +270,19 @@ if (n_no_data > 0) {
     left_join(flm_matches, by = c("patient_id", "treatment_type", "episode_number", "date")) %>%
     mutate(
       tier = case_when(
-        fill_method != "no_data"         ~ tier,
+        fill_method != "no_data" ~ tier,
         flm_covered & !is.na(flm_covered) ~ "Medicaid",
-        TRUE                             ~ "Missing"
+        TRUE ~ "Missing"
       ),
       tier_rank = case_when(
-        fill_method != "no_data"         ~ tier_rank,
+        fill_method != "no_data" ~ tier_rank,
         flm_covered & !is.na(flm_covered) ~ 1L,
-        TRUE                             ~ 8L
+        TRUE ~ 8L
       ),
       fill_method = case_when(
-        fill_method != "no_data"         ~ fill_method,
+        fill_method != "no_data" ~ fill_method,
         flm_covered & !is.na(flm_covered) ~ "enrollment_flm",
-        TRUE                             ~ "no_data"
+        TRUE ~ "no_data"
       )
     ) %>%
     select(-flm_covered)

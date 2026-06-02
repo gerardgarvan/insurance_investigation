@@ -236,8 +236,10 @@ derived_audits <- list()
 if (exists("payer_summary", envir = .GlobalEnv)) {
   message("  Found: payer_summary (from 02_harmonize_payer.R)")
   cols_to_audit <- intersect(
-    c("PAYER_CATEGORY_PRIMARY", "PAYER_CATEGORY_AT_FIRST_DX",
-      "DUAL_ELIGIBLE", "PAYER_TRANSITION", "SOURCE"),
+    c(
+      "PAYER_CATEGORY_PRIMARY", "PAYER_CATEGORY_AT_FIRST_DX",
+      "DUAL_ELIGIBLE", "PAYER_TRANSITION", "SOURCE"
+    ),
     names(payer_summary)
   )
   if (length(cols_to_audit) > 0) {
@@ -253,8 +255,10 @@ if (exists("payer_summary", envir = .GlobalEnv)) {
 if (exists("hl_cohort", envir = .GlobalEnv)) {
   message("  Found: hl_cohort (from 14_build_cohort.R)")
   cols_to_audit <- intersect(
-    c("HL_SOURCE", "HAD_CHEMO", "HAD_RADIATION", "HAD_SCT",
-      "PAYER_CATEGORY_PRIMARY", "PAYER_AT_CHEMO", "PAYER_AT_RADIATION", "PAYER_AT_SCT"),
+    c(
+      "HL_SOURCE", "HAD_CHEMO", "HAD_RADIATION", "HAD_SCT",
+      "PAYER_CATEGORY_PRIMARY", "PAYER_AT_CHEMO", "PAYER_AT_RADIATION", "PAYER_AT_SCT"
+    ),
     names(hl_cohort)
   )
   if (length(cols_to_audit) > 0) {

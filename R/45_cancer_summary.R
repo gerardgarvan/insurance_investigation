@@ -33,7 +33,7 @@ source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary.xlsx")
-OUTPUT_CSV  <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
+OUTPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 dir.create(dirname(OUTPUT_XLSX), showWarnings = FALSE, recursive = TRUE)
 
 message("=== Phase 6: Cancer Summary Dataset ===")
@@ -357,7 +357,10 @@ dx_cancer <- dx_cancer %>%
 # Handle unclassified codes (label for visibility, same as R/47)
 n_unclassified <- sum(is.na(dx_cancer$category))
 if (n_unclassified > 0) {
-  unclass_codes <- dx_cancer %>% filter(is.na(category)) %>% pull(DX_norm) %>% unique()
+  unclass_codes <- dx_cancer %>%
+    filter(is.na(category)) %>%
+    pull(DX_norm) %>%
+    unique()
   message(glue("  WARNING: {n_unclassified} rows ({length(unclass_codes)} unique codes) unclassified"))
   message(glue("    Codes: {paste(head(unclass_codes, 20), collapse=', ')}"))
   dx_cancer <- dx_cancer %>%
@@ -631,14 +634,18 @@ wb <- wb_workbook()
 wb$add_worksheet("Cancer Summary")
 
 # Write data with headers (col_names = TRUE writes headers automatically)
-wb$add_data(sheet = "Cancer Summary", x = as.data.frame(cancer_summary),
-            start_row = 1, col_names = TRUE)
+wb$add_data(
+  sheet = "Cancer Summary", x = as.data.frame(cancer_summary),
+  start_row = 1, col_names = TRUE
+)
 
 # Integer number format for columns 4-7 (the metric columns)
 if (nrow(cancer_summary) > 0) {
   last_row <- 1 + nrow(cancer_summary)
-  wb$add_numfmt(sheet = "Cancer Summary",
-                dims = glue("D2:G{last_row}"), numfmt = "0")
+  wb$add_numfmt(
+    sheet = "Cancer Summary",
+    dims = glue("D2:G{last_row}"), numfmt = "0"
+  )
 }
 
 # Auto column widths

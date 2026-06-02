@@ -28,7 +28,7 @@
 #
 # ==============================================================================
 
-source("R/01_load_pcornet.R")  # Loads data and config (auto-sources utils)
+source("R/01_load_pcornet.R") # Loads data and config (auto-sources utils)
 
 library(dplyr)
 library(stringr)
@@ -54,17 +54,17 @@ message(strrep("=", 60))
 #' @return Character vector of effective payer codes
 #'
 compute_effective_payer <- function(primary, secondary) {
-  sentinel_values <- PAYER_MAPPING$sentinel_values  # c("NI", "UN", "OT")
+  sentinel_values <- PAYER_MAPPING$sentinel_values # c("NI", "UN", "OT")
 
   # Primary is valid if non-NA, non-empty, and not sentinel
   primary_valid <- !is.na(primary) &
-                   nchar(trimws(primary)) > 0 &
-                   !primary %in% sentinel_values
+    nchar(trimws(primary)) > 0 &
+    !primary %in% sentinel_values
 
   # Secondary is valid if non-NA, non-empty, and not sentinel
   secondary_valid <- !is.na(secondary) &
-                     nchar(trimws(secondary)) > 0 &
-                     !secondary %in% sentinel_values
+    nchar(trimws(secondary)) > 0 &
+    !secondary %in% sentinel_values
 
   # Return primary if valid, else secondary if valid, else NA
   case_when(
@@ -85,7 +85,7 @@ compute_effective_payer <- function(primary, secondary) {
 #' @return Integer vector (0 or 1) indicating dual-eligible status
 #'
 detect_dual_eligible <- function(primary, secondary) {
-  dual_codes <- PAYER_MAPPING$dual_eligible_codes  # c("14", "141", "142")
+  dual_codes <- PAYER_MAPPING$dual_eligible_codes # c("14", "141", "142")
 
   # Check if secondary is missing/empty
   secondary_missing <- is.na(secondary) | nchar(trimws(secondary)) == 0
@@ -95,7 +95,7 @@ detect_dual_eligible <- function(primary, secondary) {
 
   # Check cross-payer: Medicare+Medicaid or Medicaid+Medicare
   cross_payer <- (str_starts(primary, "1") & str_starts(secondary, "2")) |
-                 (str_starts(primary, "2") & str_starts(secondary, "1"))
+    (str_starts(primary, "2") & str_starts(secondary, "1"))
 
   # Return 0 if secondary missing, else check dual conditions
   case_when(
@@ -168,7 +168,7 @@ encounters <- encounters_raw %>%
     dual_eligible_encounter = detect_dual_eligible(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
     payer_category = map_payer_category(effective_payer)
   ) %>%
-  materialize()  # Materialize at section boundary (D-04)
+  materialize() # Materialize at section boundary (D-04)
 
 # Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
 # Filter 1900 sentinel dates from encounters (SAS/Excel epoch sentinels)
@@ -182,8 +182,8 @@ if (n_sentinel_enc > 0) {
 # Log encounter processing stats
 n_total_encounters <- nrow(encounters)
 n_with_valid_payer <- sum(!is.na(encounters$effective_payer) &
-                          nchar(trimws(encounters$effective_payer)) > 0 &
-                          !encounters$effective_payer %in% PAYER_MAPPING$sentinel_values)
+  nchar(trimws(encounters$effective_payer)) > 0 &
+  !encounters$effective_payer %in% PAYER_MAPPING$sentinel_values)
 n_dual_eligible_enc <- sum(encounters$dual_eligible_encounter == 1, na.rm = TRUE)
 
 message(glue("\nEncounter processing:"))
@@ -205,7 +205,7 @@ hl_icd9_undotted <- ICD_CODES$hl_icd9
 dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
   filter(
     (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
-    (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+      (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
   ) %>%
   group_by(ID) %>%
   summarise(first_dx_date_diagnosis = if (all(is.na(DX_DATE))) as.Date(NA) else min(DX_DATE, na.rm = TRUE), .groups = "drop")
@@ -213,7 +213,7 @@ dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
 # Get earliest from TUMOR_REGISTRY_ALL (consolidated in 01_load_pcornet.R)
 tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
 if (!is.null(tr_tbl) &&
-    "DATE_OF_DIAGNOSIS" %in% colnames(tr_tbl)) {
+  "DATE_OF_DIAGNOSIS" %in% colnames(tr_tbl)) {
   tr_dates <- tr_tbl %>%
     filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
     group_by(ID) %>%
@@ -226,8 +226,9 @@ if (!is.null(tr_tbl) &&
 first_dx <- dx_dates %>%
   full_join(tr_dates, by = "ID") %>%
   mutate(first_hl_dx_date = if_else(!is.na(first_dx_date_tr),
-                                     first_dx_date_tr,
-                                     first_dx_date_diagnosis)) %>%
+    first_dx_date_tr,
+    first_dx_date_diagnosis
+  )) %>%
   select(ID, first_hl_dx_date)
 
 # Nullify 1900 sentinel dates at the source (SAS/Excel epoch sentinels)
@@ -256,16 +257,16 @@ encounter_counts <- encounters %>%
   summarise(
     N_ENCOUNTERS = n(),
     N_ENCOUNTERS_WITH_PAYER = sum(!is.na(effective_payer) &
-                                   nchar(trimws(effective_payer)) > 0 &
-                                   !effective_payer %in% PAYER_MAPPING$sentinel_values),
+      nchar(trimws(effective_payer)) > 0 &
+      !effective_payer %in% PAYER_MAPPING$sentinel_values),
     .groups = "drop"
   )
 
 # 4b. PAYER_CATEGORY_PRIMARY -- mode of payer_category across ALL valid encounters
 payer_primary <- encounters %>%
   filter(!is.na(effective_payer) &
-         nchar(trimws(effective_payer)) > 0 &
-         !effective_payer %in% PAYER_MAPPING$sentinel_values) %>%
+    nchar(trimws(effective_payer)) > 0 &
+    !effective_payer %in% PAYER_MAPPING$sentinel_values) %>%
   group_by(ID, payer_category) %>%
   summarise(n = n(), .groups = "drop") %>%
   arrange(ID, desc(n), payer_category) %>%
@@ -275,12 +276,12 @@ payer_primary <- encounters %>%
   select(ID, PAYER_CATEGORY_PRIMARY = payer_category)
 
 # 4c. PAYER_CATEGORY_AT_FIRST_DX -- mode within +/-30 days of first HL DX
-dx_window <- CONFIG$analysis$dx_window_days  # 30
+dx_window <- CONFIG$analysis$dx_window_days # 30
 
 payer_at_dx <- encounters %>%
   filter(!is.na(effective_payer) &
-         nchar(trimws(effective_payer)) > 0 &
-         !effective_payer %in% PAYER_MAPPING$sentinel_values) %>%
+    nchar(trimws(effective_payer)) > 0 &
+    !effective_payer %in% PAYER_MAPPING$sentinel_values) %>%
   inner_join(first_dx, by = "ID") %>%
   mutate(days_from_dx = as.numeric(ADMIT_DATE - first_hl_dx_date)) %>%
   filter(!is.na(days_from_dx) & abs(days_from_dx) <= dx_window) %>%
@@ -300,8 +301,8 @@ patient_dual <- encounters %>%
 # 4e. PAYER_TRANSITION -- 1 if >1 distinct payer category across valid encounters
 payer_transition <- encounters %>%
   filter(!is.na(effective_payer) &
-         nchar(trimws(effective_payer)) > 0 &
-         !effective_payer %in% PAYER_MAPPING$sentinel_values) %>%
+    nchar(trimws(effective_payer)) > 0 &
+    !effective_payer %in% PAYER_MAPPING$sentinel_values) %>%
   group_by(ID) %>%
   summarise(n_distinct_categories = n_distinct(payer_category), .groups = "drop") %>%
   mutate(PAYER_TRANSITION = as.integer(n_distinct_categories > 1)) %>%

@@ -26,7 +26,7 @@ source("R/00_config.R")
 
 # Paths to source files
 COMBINED_REPORT <- file.path(CONFIG$output_dir, "combined_unmatched_report.xlsx")
-CHEMO_RESOLVED  <- "chemotherapy_codes_resolved.xlsx"
+CHEMO_RESOLVED <- "chemotherapy_codes_resolved.xlsx"
 
 # WHY treatment types separated into individual xlsx files: Different clinical reviewers
 # per treatment type (radiation oncologists review radiation codes, transplant specialists
@@ -34,9 +34,9 @@ CHEMO_RESOLVED  <- "chemotherapy_codes_resolved.xlsx"
 
 # Categories to produce resolved files for (non-chemo)
 RESOLVE_CATEGORIES <- list(
-  list(category = "Radiation",       sheet = "Radiation",       output = "radiation_codes_resolved.xlsx"),
-  list(category = "SCT",             sheet = "SCT",             output = "sct_codes_resolved.xlsx"),
-  list(category = "Immunotherapy",   sheet = "Immunotherapy",   output = "immunotherapy_codes_resolved.xlsx"),
+  list(category = "Radiation", sheet = "Radiation", output = "radiation_codes_resolved.xlsx"),
+  list(category = "SCT", sheet = "SCT", output = "sct_codes_resolved.xlsx"),
+  list(category = "Immunotherapy", sheet = "Immunotherapy", output = "immunotherapy_codes_resolved.xlsx"),
   list(category = "Supportive Care", sheet = "Supportive Care", output = "supportive_care_codes_resolved.xlsx")
 )
 
@@ -69,31 +69,39 @@ write_resolved_xlsx <- function(df, category, output_path) {
   wb$add_worksheet(sheet_name)
 
   # Row 1: Title with code count
-  wb$add_data(sheet = sheet_name,
-              x = glue("{category} Codes ({n_codes} codes)"),
-              start_row = 1, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = "A1",
-              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = sheet_name,
+    x = glue("{category} Codes ({n_codes} codes)"),
+    start_row = 1, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = "A1",
+    name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+  )
   wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
 
   # Row 2: Column headers
   headers <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
   for (i in seq_along(headers)) {
-    wb$add_data(sheet = sheet_name, x = headers[i],
-                start_row = 2, start_col = i)
+    wb$add_data(
+      sheet = sheet_name, x = headers[i],
+      start_row = 2, start_col = i
+    )
   }
   wb$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
-  wb$add_font(sheet = sheet_name, dims = "A2:F2",
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = sheet_name, dims = "A2:F2",
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
 
   # Row 3+: Bulk data write
   write_df <- data.frame(
-    Code         = df$code,
-    Meaning      = ifelse(is.na(df$description), "", df$description),
-    Code_Type    = df$code_type,
+    Code = df$code,
+    Meaning = ifelse(is.na(df$description), "", df$description),
+    Code_Type = df$code_type,
     Source_Table = df$source_table,
-    Records      = df$records,
-    Patients     = df$patients,
+    Records = df$records,
+    Patients = df$patients,
     stringsAsFactors = FALSE
   )
   wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
@@ -102,8 +110,10 @@ write_resolved_xlsx <- function(df, category, output_path) {
   last_row <- 2 + n_codes
   code_dims <- glue("A3:A{last_row}")
   wb$add_fill(sheet = sheet_name, dims = code_dims, color = wb_color(fill_color))
-  wb$add_font(sheet = sheet_name, dims = code_dims,
-              name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color))
+  wb$add_font(
+    sheet = sheet_name, dims = code_dims,
+    name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
+  )
 
   # Number formatting: columns E-F (Records, Patients)
   num_dims <- glue("E3:F{last_row}")
@@ -121,8 +131,10 @@ write_resolved_xlsx <- function(df, category, output_path) {
     glue("Classification: {category} codes")
   )
   for (i in seq_along(notes_lines)) {
-    wb$add_data(sheet = "Notes", x = as.character(notes_lines[i]),
-                start_row = i, start_col = 1)
+    wb$add_data(
+      sheet = "Notes", x = as.character(notes_lines[i]),
+      start_row = i, start_col = 1
+    )
   }
 
   # Save workbook
@@ -185,8 +197,10 @@ verify_chemotherapy <- function() {
     message("  FAIL: Cannot find 'Code' column in resolved file")
     message(glue("  Available columns: {paste(names(chemo_resolved), collapse = ', ')}"))
     all_pass <- FALSE
-    return(list(pass = FALSE, n_source = nrow(chemo_source),
-                n_resolved = nrow(chemo_resolved), mismatches = NULL))
+    return(list(
+      pass = FALSE, n_source = nrow(chemo_source),
+      n_resolved = nrow(chemo_resolved), mismatches = NULL
+    ))
   }
   resolved_codes <- sort(as.character(chemo_resolved[[code_col_idx]]))
 
@@ -307,9 +321,9 @@ for (item in RESOLVE_CATEGORIES) {
 # Step 2: Verify chemotherapy file
 message("Step 2: Verifying chemotherapy_codes_resolved.xlsx...\n")
 if (file.exists(CHEMO_RESOLVED)) {
-# ==============================================================================
-# SECTION 2: OUTPUT ----
-# ==============================================================================
+  # ==============================================================================
+  # SECTION 2: OUTPUT ----
+  # ==============================================================================
 
   result <- verify_chemotherapy()
   if (result$pass) {

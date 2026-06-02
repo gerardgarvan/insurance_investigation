@@ -61,9 +61,9 @@ source("R/01_load_pcornet.R")
 # Per D-08: styled xlsx output
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "treatment_durations.xlsx")
 # Per D-09: distribution visualization
-OUTPUT_PNG  <- file.path(CONFIG$output_dir, "treatment_duration_distributions.png")
+OUTPUT_PNG <- file.path(CONFIG$output_dir, "treatment_duration_distributions.png")
 # Per D-07: RDS artifact for downstream use
-OUTPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
+OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 
 # TREATMENT_TYPE_COLORS: defined in R/00_config.R
 # nrow_or_0(): provided by R/utils_treatment.R
@@ -80,7 +80,6 @@ OUTPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 #' @param type Character. One of "Chemotherapy", "Radiation", "SCT", "Immunotherapy"
 #' @return Tibble with columns: ID (character), treatment_date (Date)
 extract_all_dates <- function(type) {
-
   message(glue("\n--- Extracting {type} dates ---"))
 
   if (type == "Chemotherapy") {
@@ -108,9 +107,9 @@ extract_chemo_dates <- function() {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-        (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
-        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
+          (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
@@ -120,7 +119,7 @@ extract_chemo_dates <- function() {
   # 2. PRESCRIBING: RXNORM_CUI matching
   rx_dates <- NULL
   if (!is.null(get_pcornet_table("PRESCRIBING")) &&
-      "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
     rx_dates <- get_pcornet_table("PRESCRIBING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       mutate(treatment_date = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
@@ -135,7 +134,7 @@ extract_chemo_dates <- function() {
     dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
-        (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
       ) %>%
       filter(!is.na(DX_DATE)) %>%
       select(ID, treatment_date = DX_DATE, ENCOUNTERID) %>%
@@ -155,7 +154,7 @@ extract_chemo_dates <- function() {
   # 5. DISPENSING: RXNORM_CUI matching
   disp_dates <- NULL
   if (!is.null(get_pcornet_table("DISPENSING")) &&
-      "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
     disp_dates <- get_pcornet_table("DISPENSING") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
@@ -166,7 +165,7 @@ extract_chemo_dates <- function() {
   # 6. MED_ADMIN: RXNORM_CUI matching
   ma_dates <- NULL
   if (!is.null(get_pcornet_table("MED_ADMIN")) &&
-      "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
     ma_dates <- get_pcornet_table("MED_ADMIN") %>%
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
@@ -225,9 +224,9 @@ extract_radiation_dates <- function() {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-        (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
-        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
+          (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
@@ -240,7 +239,7 @@ extract_radiation_dates <- function() {
     dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
-        (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
       ) %>%
       filter(!is.na(DX_DATE)) %>%
       select(ID, treatment_date = DX_DATE, ENCOUNTERID) %>%
@@ -300,9 +299,9 @@ extract_sct_dates <- function() {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
-        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
@@ -323,8 +322,10 @@ extract_sct_dates <- function() {
   tr_dates <- NULL
   if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_sct_cols <- intersect(
-      c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
+      c(
+        "DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"
+      ),
       colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_sct_cols) > 0) {
@@ -460,7 +461,9 @@ stack_and_dedup <- function(sources, type_name) {
 #' @return Integer vector of episode IDs (1-based)
 assign_episode_ids <- function(dates, gap_threshold) {
   n <- length(dates)
-  if (n == 0) return(integer(0))
+  if (n == 0) {
+    return(integer(0))
+  }
 
   episode_ids <- integer(n)
   episode_ids[1] <- 1L
@@ -520,11 +523,11 @@ calculate_durations_and_episodes <- function(dates_df, gap_threshold = GAP_THRES
     ) %>%
     # Per D-07: per-patient summary output shape (one row per patient per type)
     summarise(
-      first_treatment_date = min(episode_first_date),     # Per D-01: first date
-      last_treatment_date = max(episode_last_date),        # Per D-01: last date
+      first_treatment_date = min(episode_first_date), # Per D-01: first date
+      last_treatment_date = max(episode_last_date), # Per D-01: last date
       overall_span_days = as.numeric(max(episode_last_date) - min(episode_first_date)),
-      distinct_treatment_dates = sum(episode_distinct_dates),  # Per D-02: count
-      episode_count = n(),                                      # Per D-04: episodes
+      distinct_treatment_dates = sum(episode_distinct_dates), # Per D-02: count
+      episode_count = n(), # Per D-04: episodes
       .groups = "drop"
     )
 }
@@ -583,7 +586,9 @@ encounterid_profile <- map_dfr(inspect_tables, function(tbl_name) {
   # Guard: some tables (e.g., DISPENSING) lack ENCOUNTERID
 
   if (!"ENCOUNTERID" %in% colnames(tbl)) {
-    stats <- tbl %>% summarise(total_rows = n()) %>% collect()
+    stats <- tbl %>%
+      summarise(total_rows = n()) %>%
+      collect()
     return(tibble(
       table = tbl_name,
       total_rows = as.integer(stats$total_rows),
@@ -632,9 +637,9 @@ extract_sct_dates_no_dx <- function() {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
       filter(
         (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
-        (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       select(ID, treatment_date = PX_DATE) %>%
@@ -655,8 +660,10 @@ extract_sct_dates_no_dx <- function() {
   tr_dates <- NULL
   if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
     tr_sct_cols <- intersect(
-      c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
+      c(
+        "DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"
+      ),
       colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
     )
     if (length(tr_sct_cols) > 0) {
@@ -751,8 +758,10 @@ for (type in TREATMENT_TYPES) {
 # Column order: ID, treatment_type, first_treatment_date, last_treatment_date,
 #   overall_span_days, distinct_treatment_dates, episode_count
 all_durations <- bind_rows(results_list) %>%
-  select(ID, treatment_type, first_treatment_date, last_treatment_date,
-         overall_span_days, distinct_treatment_dates, episode_count)
+  select(
+    ID, treatment_type, first_treatment_date, last_treatment_date,
+    overall_span_days, distinct_treatment_dates, episode_count
+  )
 
 # Save RDS artifact
 saveRDS(all_durations, OUTPUT_RDS)
@@ -773,8 +782,10 @@ for (type in TREATMENT_TYPES) {
   # Clean column names: snake_case, no spaces or parens
   write_df <- type_data %>%
     rename(patient_id = ID) %>%
-    select(patient_id, first_treatment_date, last_treatment_date,
-           overall_span_days, distinct_treatment_dates, episode_count)
+    select(
+      patient_id, first_treatment_date, last_treatment_date,
+      overall_span_days, distinct_treatment_dates, episode_count
+    )
 
   write.csv(write_df, csv_path, row.names = FALSE)
   message(glue("  Wrote {csv_path} ({nrow(write_df)} rows)"))
@@ -794,30 +805,44 @@ wb <- wb_workbook()
 wb$add_worksheet("Summary")
 
 # Row 1: Title
-wb$add_data(sheet = "Summary", x = "Treatment Duration Analysis",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Summary", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Summary", x = "Treatment Duration Analysis",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Summary", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Summary", dims = "A1:F1")
 
 # Row 2: Subtitle with date
-wb$add_data(sheet = "Summary",
-            x = as.character(glue("Generated: {Sys.Date()} | Gap threshold: {GAP_THRESHOLD} days")),
-            start_row = 2, start_col = 1)
-wb$add_font(sheet = "Summary", dims = "A2",
-            name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+wb$add_data(
+  sheet = "Summary",
+  x = as.character(glue("Generated: {Sys.Date()} | Gap threshold: {GAP_THRESHOLD} days")),
+  start_row = 2, start_col = 1
+)
+wb$add_font(
+  sheet = "Summary", dims = "A2",
+  name = "Calibri", size = 10, color = wb_color("FF6B7280")
+)
 wb$merge_cells(sheet = "Summary", dims = "A2:F2")
 
 # Row 4: Headers
-summary_headers <- c("Treatment Type", "Patients", "Median Span (days)",
-                      "IQR", "Median Distinct Dates", "Median Episodes")
+summary_headers <- c(
+  "Treatment Type", "Patients", "Median Span (days)",
+  "IQR", "Median Distinct Dates", "Median Episodes"
+)
 for (i in seq_along(summary_headers)) {
-  wb$add_data(sheet = "Summary", x = summary_headers[i],
-              start_row = 4, start_col = i)
+  wb$add_data(
+    sheet = "Summary", x = summary_headers[i],
+    start_row = 4, start_col = i
+  )
 }
 wb$add_fill(sheet = "Summary", dims = "A4:F4", color = wb_color("FF374151"))
-wb$add_font(sheet = "Summary", dims = "A4:F4",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb$add_font(
+  sheet = "Summary", dims = "A4:F4",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 
 # Row 5+: One row per treatment type
 for (i in seq_along(TREATMENT_TYPES)) {
@@ -856,11 +881,15 @@ for (i in seq_along(TREATMENT_TYPES)) {
 
   # Apply type-specific fill color to the type name cell
   type_dims <- glue("A{row_num}")
-  wb$add_fill(sheet = "Summary", dims = type_dims,
-              color = wb_color(TREATMENT_TYPE_COLORS[[type]]$fill))
-  wb$add_font(sheet = "Summary", dims = type_dims,
-              name = "Calibri", size = 11, bold = TRUE,
-              color = wb_color(TREATMENT_TYPE_COLORS[[type]]$font))
+  wb$add_fill(
+    sheet = "Summary", dims = type_dims,
+    color = wb_color(TREATMENT_TYPE_COLORS[[type]]$fill)
+  )
+  wb$add_font(
+    sheet = "Summary", dims = type_dims,
+    name = "Calibri", size = 11, bold = TRUE,
+    color = wb_color(TREATMENT_TYPE_COLORS[[type]]$font)
+  )
 }
 
 # Number formatting on summary
@@ -887,23 +916,33 @@ for (type in TREATMENT_TYPES) {
 
   # Row 1: Title
   title_text <- glue("{type} Treatment Durations ({n_patients} patients)")
-  wb$add_data(sheet = sheet_name, x = as.character(title_text),
-              start_row = 1, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = "A1",
-              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = sheet_name, x = as.character(title_text),
+    start_row = 1, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = "A1",
+    name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+  )
   wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
 
   # Row 2: Headers
-  detail_headers <- c("Patient ID", "First Date", "Last Date",
-                       "Span (days)", "Distinct Dates", "Episodes")
+  detail_headers <- c(
+    "Patient ID", "First Date", "Last Date",
+    "Span (days)", "Distinct Dates", "Episodes"
+  )
   for (j in seq_along(detail_headers)) {
-    wb$add_data(sheet = sheet_name, x = detail_headers[j],
-                start_row = 2, start_col = j)
+    wb$add_data(
+      sheet = sheet_name, x = detail_headers[j],
+      start_row = 2, start_col = j
+    )
   }
   # Header styling: TREATMENT_TYPE_COLORS fill + font
   wb$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color(fill_color))
-  wb$add_font(sheet = sheet_name, dims = "A2:F2",
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color(font_color))
+  wb$add_font(
+    sheet = sheet_name, dims = "A2:F2",
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color(font_color)
+  )
 
   # Row 3+: Data (bulk write)
   if (n_patients > 0) {
@@ -940,8 +979,10 @@ message("\n--- Creating distribution visualization ---")
 
 if (nrow(all_durations) > 0) {
   # Single boxplot with jittered points (cleanest for comparing types)
-  p <- ggplot(all_durations,
-              aes(x = treatment_type, y = overall_span_days, fill = treatment_type)) +
+  p <- ggplot(
+    all_durations,
+    aes(x = treatment_type, y = overall_span_days, fill = treatment_type)
+  ) +
     geom_boxplot(outlier.alpha = 0.3) +
     geom_jitter(width = 0.2, alpha = 0.1, size = 0.5) +
     labs(

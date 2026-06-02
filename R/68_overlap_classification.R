@@ -223,8 +223,8 @@ message(glue("\n--- SECTION 3: Same-Date Classification (OVRLP-02) ---"))
 sd_pairs <- sd_pairs %>%
   mutate(
     match_count = as.integer(enc_type_match) + as.integer(payer_pri_match) +
-                  as.integer(payer_sec_match) + as.integer(providerid_match) +
-                  as.integer(discharge_match),
+      as.integer(payer_sec_match) + as.integer(providerid_match) +
+      as.integer(discharge_match),
     n_fields = 5L
   )
 
@@ -276,8 +276,10 @@ message(glue("Representative encounters for same-week matching: {format(nrow(enc
 # Join same_week_detail to enc_for_week twice: once for encounter 1, once for encounter 2
 sw_pairs <- same_week_detail %>%
   left_join(
-    enc_for_week %>% select(ID, admit_date_parsed, ENCOUNTER_SOURCE, SITE, ENC_TYPE,
-                            payer_primary_norm, payer_secondary_norm, PROVIDERID),
+    enc_for_week %>% select(
+      ID, admit_date_parsed, ENCOUNTER_SOURCE, SITE, ENC_TYPE,
+      payer_primary_norm, payer_secondary_norm, PROVIDERID
+    ),
     by = c("ID", "admit_date_1" = "admit_date_parsed", "source_1" = "ENCOUNTER_SOURCE"),
     suffix = c("", "_1")
   ) %>%
@@ -289,8 +291,10 @@ sw_pairs <- same_week_detail %>%
     PROVIDERID_1 = PROVIDERID
   ) %>%
   left_join(
-    enc_for_week %>% select(ID, admit_date_parsed, ENCOUNTER_SOURCE, SITE, ENC_TYPE,
-                            payer_primary_norm, payer_secondary_norm, PROVIDERID),
+    enc_for_week %>% select(
+      ID, admit_date_parsed, ENCOUNTER_SOURCE, SITE, ENC_TYPE,
+      payer_primary_norm, payer_secondary_norm, PROVIDERID
+    ),
     by = c("ID", "admit_date_2" = "admit_date_parsed", "source_2" = "ENCOUNTER_SOURCE"),
     suffix = c("", "_2")
   ) %>%
@@ -316,7 +320,7 @@ sw_pairs <- sw_pairs %>%
     payer_sec_match = field_match(payer_secondary_norm_1, payer_secondary_norm_2),
     providerid_match = field_match(PROVIDERID_1, PROVIDERID_2),
     match_count = as.integer(enc_type_match) + as.integer(payer_pri_match) +
-                  as.integer(payer_sec_match) + as.integer(providerid_match),
+      as.integer(payer_sec_match) + as.integer(providerid_match),
     n_fields = 4L
   )
 
@@ -443,9 +447,11 @@ preferred_by_combo <- sd_site_profile %>%
     src_2 = str_extract(source_combo, "[^+]+$")
   ) %>%
   left_join(source_completeness %>% select(ENCOUNTER_SOURCE, pct_1 = pct_primary_present),
-            by = c("src_1" = "ENCOUNTER_SOURCE")) %>%
+    by = c("src_1" = "ENCOUNTER_SOURCE")
+  ) %>%
   left_join(source_completeness %>% select(ENCOUNTER_SOURCE, pct_2 = pct_primary_present),
-            by = c("src_2" = "ENCOUNTER_SOURCE")) %>%
+    by = c("src_2" = "ENCOUNTER_SOURCE")
+  ) %>%
   mutate(
     preferred_source = if_else(coalesce(pct_1, 0) >= coalesce(pct_2, 0), src_1, src_2),
     preferred_source_pct = pmax(coalesce(pct_1, 0), coalesce(pct_2, 0))
@@ -593,7 +599,8 @@ for (i in seq_len(nrow(sd_site_profile))) {
   r <- sd_site_profile[i, ]
   if (r$n_pairs > 0) {
     rec_short <- if_else(r$pct_identical >= 70, "Safe to dedup",
-                 if_else(r$pct_identical >= 30, "Mixed", "Retain all"))
+      if_else(r$pct_identical >= 30, "Mixed", "Retain all")
+    )
     message(glue(
       "  {r$source_combo}: {format(r$n_pairs, big.mark=',')} pairs | ",
       "{r$pct_identical}% Identical | {r$pct_partial}% Partial | {r$pct_distinct}% Distinct | ",

@@ -417,7 +417,10 @@ dx_cancer <- dx_cancer %>%
 
 n_unclassified <- sum(is.na(dx_cancer$category))
 if (n_unclassified > 0) {
-  unclass_codes <- dx_cancer %>% filter(is.na(category)) %>% pull(DX_norm) %>% unique()
+  unclass_codes <- dx_cancer %>%
+    filter(is.na(category)) %>%
+    pull(DX_norm) %>%
+    unique()
   message(glue("  WARNING: {n_unclassified} rows ({length(unclass_codes)} unique codes) unclassified"))
   message(glue("    Codes: {paste(head(unclass_codes, 20), collapse=', ')}"))
   # Label them for visibility
@@ -462,17 +465,23 @@ tr_all_lazy <- get_pcornet_table("TUMOR_REGISTRY_ALL")
 tr_cols <- colnames(tr_all_lazy)
 
 # Find topography column(s)
-site_candidates <- intersect(c("SITE_CODE", "SITE", "PRIMARY_SITE",
-                                "TOPOGRAPHY_CODE", "ICDOSITE"), tr_cols)
+site_candidates <- intersect(c(
+  "SITE_CODE", "SITE", "PRIMARY_SITE",
+  "TOPOGRAPHY_CODE", "ICDOSITE"
+), tr_cols)
 message(glue("  Topography column candidates: {paste(site_candidates, collapse=', ')}"))
 
 if (length(site_candidates) == 0) {
   message("  WARNING: No topography column found. ICD-O-3 counts will be 0.")
-  icdo3_by_cat <- tibble(category = character(), patients = integer(),
-                         records = integer(), source = character())
-  icdo3_codes_detail <- tibble(code = character(), category = character(),
-                               patients = integer(), records = integer(),
-                               source = character())
+  icdo3_by_cat <- tibble(
+    category = character(), patients = integer(),
+    records = integer(), source = character()
+  )
+  icdo3_codes_detail <- tibble(
+    code = character(), category = character(),
+    patients = integer(), records = integer(),
+    source = character()
+  )
 } else {
   coalesce_expr <- rlang::parse_expr(
     paste0("coalesce(", paste(site_candidates, collapse = ", "), ")")
@@ -491,8 +500,9 @@ if (length(site_candidates) == 0) {
       topo_norm = toupper(str_remove_all(topo_raw, "\\.")),
       # Prepend "C" for bare numeric codes (e.g., "77" -> "C77")
       topo_norm = ifelse(str_detect(topo_norm, "^[0-9]"),
-                         paste0("C", topo_norm),
-                         topo_norm)
+        paste0("C", topo_norm),
+        topo_norm
+      )
     )
 
   # Classify
@@ -501,7 +511,10 @@ if (length(site_candidates) == 0) {
 
   n_unclass_tr <- sum(is.na(tr_topo$category))
   if (n_unclass_tr > 0) {
-    unclass_tr <- tr_topo %>% filter(is.na(category)) %>% pull(topo_norm) %>% unique()
+    unclass_tr <- tr_topo %>%
+      filter(is.na(category)) %>%
+      pull(topo_norm) %>%
+      unique()
     message(glue("  WARNING: {n_unclass_tr} rows ({length(unclass_tr)} unique codes) unclassified"))
     message(glue("    Codes: {paste(head(unclass_tr, 20), collapse=', ')}"))
     tr_topo <- tr_topo %>%
@@ -545,15 +558,17 @@ summary_long <- bind_rows(icd10_by_cat, icdo3_by_cat)
 all_cats <- unique(summary_long$category)
 all_sources <- c("ICD-10", "ICD-O-3")
 
-full_grid <- expand.grid(category = all_cats, source = all_sources,
-                         stringsAsFactors = FALSE) %>%
+full_grid <- expand.grid(
+  category = all_cats, source = all_sources,
+  stringsAsFactors = FALSE
+) %>%
   as_tibble()
 
 summary_long <- full_grid %>%
   left_join(summary_long, by = c("category", "source")) %>%
   mutate(
     patients = ifelse(is.na(patients), 0L, as.integer(patients)),
-    records  = ifelse(is.na(records),  0L, as.integer(records))
+    records  = ifelse(is.na(records), 0L, as.integer(records))
   )
 
 # Sort by category order, then source
@@ -571,9 +586,9 @@ total_icdo3_patients <- if (exists("tr_topo")) n_distinct(tr_topo$ID) else 0L
 
 totals_long <- tibble(
   category = c("TOTAL", "TOTAL"),
-  source   = c("ICD-10", "ICD-O-3"),
+  source = c("ICD-10", "ICD-O-3"),
   patients = c(total_icd10_patients, total_icdo3_patients),
-  records  = c(
+  records = c(
     sum(filter(summary_long, source == "ICD-10")$records),
     sum(filter(summary_long, source == "ICD-O-3")$records)
   )
@@ -612,9 +627,9 @@ message("")
 message(glue("Writing styled xlsx to {OUTPUT_PATH}..."))
 
 DARK_HEADER_FILL <- "FF374151"
-WHITE_FONT       <- "FFFFFFFF"
+WHITE_FONT <- "FFFFFFFF"
 TITLE_FONT_COLOR <- "FF1F2937"
-TOTALS_FILL      <- "FFE5E7EB"
+TOTALS_FILL <- "FFE5E7EB"
 
 wb <- wb_workbook()
 
@@ -625,11 +640,15 @@ SHEET1 <- "By Category"
 wb$add_worksheet(SHEET1)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET1, x = "Cancer Site Frequency - All Patients",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET1, dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET1, x = "Cancer Site Frequency - All Patients",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET1, dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET1, dims = "A1:D1")
 
 # Row 2: Headers
@@ -638,38 +657,52 @@ for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
 wb$add_fill(sheet = SHEET1, dims = "A2:D2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = "A2:D2",
-            name = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = SHEET1, dims = "A2:D2",
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(WHITE_FONT)
+)
 
 # Freeze pane
 wb$freeze_pane(sheet = SHEET1, first_active_row = 3, first_active_col = 1)
 
 # Data rows
 data_start <- 3
-n_data     <- nrow(summary_long)
-data_end   <- data_start + n_data - 1
+n_data <- nrow(summary_long)
+data_end <- data_start + n_data - 1
 
-wb$add_data(sheet = SHEET1, x = as.data.frame(summary_long),
-            start_row = data_start, col_names = FALSE)
-wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start}:D{data_end}"),
-              numfmt = "#,##0")
+wb$add_data(
+  sheet = SHEET1, x = as.data.frame(summary_long),
+  start_row = data_start, col_names = FALSE
+)
+wb$add_numfmt(
+  sheet = SHEET1, dims = glue("C{data_start}:D{data_end}"),
+  numfmt = "#,##0"
+)
 
 # Totals rows
 totals_start <- data_end + 1
-totals_end   <- totals_start + nrow(totals_long) - 1
-wb$add_data(sheet = SHEET1, x = as.data.frame(totals_long),
-            start_row = totals_start, col_names = FALSE)
-wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_start}:D{totals_end}"),
-            color = wb_color(TOTALS_FILL))
-wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_start}:D{totals_end}"),
-            name  = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
-wb$add_numfmt(sheet = SHEET1,
-              dims  = glue("C{totals_start}:D{totals_end}"),
-              numfmt = "#,##0")
+totals_end <- totals_start + nrow(totals_long) - 1
+wb$add_data(
+  sheet = SHEET1, x = as.data.frame(totals_long),
+  start_row = totals_start, col_names = FALSE
+)
+wb$add_fill(
+  sheet = SHEET1,
+  dims = glue("A{totals_start}:D{totals_end}"),
+  color = wb_color(TOTALS_FILL)
+)
+wb$add_font(
+  sheet = SHEET1,
+  dims = glue("A{totals_start}:D{totals_end}"),
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
+wb$add_numfmt(
+  sheet = SHEET1,
+  dims = glue("C{totals_start}:D{totals_end}"),
+  numfmt = "#,##0"
+)
 
 # Column widths
 wb$set_col_widths(sheet = SHEET1, cols = 1:4, widths = c(42, 12, 14, 14))
@@ -685,13 +718,17 @@ for (i in seq_along(headers2)) {
   wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 1, start_col = i)
 }
 wb$add_fill(sheet = SHEET2, dims = "A1:E1", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = "A1:E1",
-            name = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = SHEET2, dims = "A1:E1",
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(WHITE_FONT)
+)
 
 if (nrow(all_codes_detail) > 0) {
-  wb$add_data(sheet = SHEET2, x = as.data.frame(all_codes_detail),
-              start_row = 2, col_names = FALSE)
+  wb$add_data(
+    sheet = SHEET2, x = as.data.frame(all_codes_detail),
+    start_row = 2, col_names = FALSE
+  )
   code_end <- 1 + nrow(all_codes_detail)
   wb$add_numfmt(sheet = SHEET2, dims = glue("D2:E{code_end}"), numfmt = "#,##0")
 }

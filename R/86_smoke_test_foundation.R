@@ -60,15 +60,21 @@ message("\n[1/6] Utils subfolder structure...")
 check("R/utils/ directory exists", dir.exists("R/utils"))
 
 utils_files <- list.files("R/utils", pattern = "\\.R$")
-check(glue("R/utils/ contains 8 files (found {length(utils_files)})"),
-      length(utils_files) == 8)
+check(
+  glue("R/utils/ contains 8 files (found {length(utils_files)})"),
+  length(utils_files) == 8
+)
 
-expected_utils <- c("utils_attrition.R", "utils_dates.R", "utils_duckdb.R",
-                    "utils_icd.R", "utils_payer.R", "utils_pptx.R",
-                    "utils_snapshot.R", "utils_treatment.R")
+expected_utils <- c(
+  "utils_attrition.R", "utils_dates.R", "utils_duckdb.R",
+  "utils_icd.R", "utils_payer.R", "utils_pptx.R",
+  "utils_snapshot.R", "utils_treatment.R"
+)
 missing_utils <- setdiff(expected_utils, utils_files)
-check(glue("All expected utils present (missing: {paste(missing_utils, collapse=', ') %||% 'none'})"),
-      length(missing_utils) == 0)
+check(
+  glue("All expected utils present (missing: {paste(missing_utils, collapse=', ') %||% 'none'})"),
+  length(missing_utils) == 0
+)
 
 # --------------------------------------------------------------------------
 # Test 2: No utils files remain in R/ root
@@ -76,8 +82,10 @@ check(glue("All expected utils present (missing: {paste(missing_utils, collapse=
 message("\n[2/6] No utils files in R/ root...")
 
 stale_utils <- list.files("R", pattern = "^utils_.*\\.R$")
-check(glue("No utils_*.R in R/ root (found: {paste(stale_utils, collapse=', ') %||% 'none'})"),
-      length(stale_utils) == 0)
+check(
+  glue("No utils_*.R in R/ root (found: {paste(stale_utils, collapse=', ') %||% 'none'})"),
+  length(stale_utils) == 0
+)
 
 # --------------------------------------------------------------------------
 # Test 3: 00_config.R loads and auto-sources utils
@@ -88,12 +96,15 @@ check(glue("No utils_*.R in R/ root (found: {paste(stale_utils, collapse=', ') %
 
 message("\n[3/6] Config loading and auto-sourcing...")
 
-tryCatch({
-  source("R/00_config.R")
-  check("00_config.R loads without error", TRUE)
-}, error = function(e) {
-  check(glue("00_config.R loads without error -- {e$message}"), FALSE)
-})
+tryCatch(
+  {
+    source("R/00_config.R")
+    check("00_config.R loads without error", TRUE)
+  },
+  error = function(e) {
+    check(glue("00_config.R loads without error -- {e$message}"), FALSE)
+  }
+)
 
 # Verify key function from each utils module is available
 key_functions <- list(
@@ -126,10 +137,14 @@ check("R/02_harmonize_payer.R exists", file.exists("R/02_harmonize_payer.R"))
 # --------------------------------------------------------------------------
 message("\n[5/6] DuckDB script renumbering...")
 
-check("R/03_duckdb_ingest.R exists (renumbered from 25)",
-      file.exists("R/03_duckdb_ingest.R"))
-check("R/25_duckdb_ingest.R removed (old location)",
-      !file.exists("R/25_duckdb_ingest.R"))
+check(
+  "R/03_duckdb_ingest.R exists (renumbered from 25)",
+  file.exists("R/03_duckdb_ingest.R")
+)
+check(
+  "R/25_duckdb_ingest.R removed (old location)",
+  !file.exists("R/25_duckdb_ingest.R")
+)
 
 # --------------------------------------------------------------------------
 # Test 6: No old-style utils source paths remain
@@ -146,8 +161,10 @@ for (f in r_files) {
     stale_refs <- c(stale_refs, glue("{basename(f)}:{hits}"))
   }
 }
-check(glue("No old-style source() paths (found: {paste(stale_refs, collapse=', ') %||% 'none'})"),
-      length(stale_refs) == 0)
+check(
+  glue("No old-style source() paths (found: {paste(stale_refs, collapse=', ') %||% 'none'})"),
+  length(stale_refs) == 0
+)
 
 # --------------------------------------------------------------------------
 # Summary

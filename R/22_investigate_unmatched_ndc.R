@@ -55,9 +55,11 @@ extract_unmatched_drug_codes <- function() {
 
   if (length(hl_ids) == 0) {
     message("  No HL patients found, returning empty result")
-    return(tibble(code = character(), code_type = character(),
-                  source_table = character(), n_records = integer(),
-                  n_patients = integer(), raw_drug_name = character()))
+    return(tibble(
+      code = character(), code_type = character(),
+      source_table = character(), n_records = integer(),
+      n_patients = integer(), raw_drug_name = character()
+    ))
   }
 
   # Get known RXNORM codes to exclude
@@ -79,25 +81,30 @@ extract_unmatched_drug_codes <- function() {
   dispensing_tbl <- safe_table("DISPENSING")
   if (!is.null(dispensing_tbl)) {
     message("  Extracting DISPENSING RXNORM codes...")
-    dispensing_rxnorm <- tryCatch({
-      dispensing_tbl %>%
-        filter(ID %in% hl_ids) %>%
-        filter(!is.na(RXNORM_CUI), RXNORM_CUI != "") %>%
-        filter(!RXNORM_CUI %in% known_rxnorm) %>%
-        group_by(code = RXNORM_CUI) %>%
-        summarise(
-          n_records = n(),
-          n_patients = n_distinct(ID),
-          raw_drug_name = first(RAW_DISPENSE_MED_NAME[!is.na(RAW_DISPENSE_MED_NAME)]),
-          .groups = "drop"
-        ) %>%
-        collect() %>%
-        mutate(source_table = "DISPENSING", code_type = "RXNORM")
-    }, error = function(e) {
-      message(glue("    Warning: DISPENSING RXNORM extraction failed: {e$message}"))
-      tibble(code = character(), code_type = character(), source_table = character(),
-             n_records = integer(), n_patients = integer(), raw_drug_name = character())
-    })
+    dispensing_rxnorm <- tryCatch(
+      {
+        dispensing_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(RXNORM_CUI), RXNORM_CUI != "") %>%
+          filter(!RXNORM_CUI %in% known_rxnorm) %>%
+          group_by(code = RXNORM_CUI) %>%
+          summarise(
+            n_records = n(),
+            n_patients = n_distinct(ID),
+            raw_drug_name = first(RAW_DISPENSE_MED_NAME[!is.na(RAW_DISPENSE_MED_NAME)]),
+            .groups = "drop"
+          ) %>%
+          collect() %>%
+          mutate(source_table = "DISPENSING", code_type = "RXNORM")
+      },
+      error = function(e) {
+        message(glue("    Warning: DISPENSING RXNORM extraction failed: {e$message}"))
+        tibble(
+          code = character(), code_type = character(), source_table = character(),
+          n_records = integer(), n_patients = integer(), raw_drug_name = character()
+        )
+      }
+    )
 
     if (nrow(dispensing_rxnorm) > 0) {
       message(glue("    Found {nrow(dispensing_rxnorm)} unmatched RXNORM codes"))
@@ -108,24 +115,29 @@ extract_unmatched_drug_codes <- function() {
   # --- 2. DISPENSING NDC ---
   if (!is.null(dispensing_tbl)) {
     message("  Extracting DISPENSING NDC codes...")
-    dispensing_ndc <- tryCatch({
-      dispensing_tbl %>%
-        filter(ID %in% hl_ids) %>%
-        filter(!is.na(NDC), NDC != "") %>%
-        group_by(code = NDC) %>%
-        summarise(
-          n_records = n(),
-          n_patients = n_distinct(ID),
-          raw_drug_name = first(RAW_DISPENSE_MED_NAME[!is.na(RAW_DISPENSE_MED_NAME)]),
-          .groups = "drop"
-        ) %>%
-        collect() %>%
-        mutate(source_table = "DISPENSING", code_type = "NDC")
-    }, error = function(e) {
-      message(glue("    Warning: DISPENSING NDC extraction failed: {e$message}"))
-      tibble(code = character(), code_type = character(), source_table = character(),
-             n_records = integer(), n_patients = integer(), raw_drug_name = character())
-    })
+    dispensing_ndc <- tryCatch(
+      {
+        dispensing_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(NDC), NDC != "") %>%
+          group_by(code = NDC) %>%
+          summarise(
+            n_records = n(),
+            n_patients = n_distinct(ID),
+            raw_drug_name = first(RAW_DISPENSE_MED_NAME[!is.na(RAW_DISPENSE_MED_NAME)]),
+            .groups = "drop"
+          ) %>%
+          collect() %>%
+          mutate(source_table = "DISPENSING", code_type = "NDC")
+      },
+      error = function(e) {
+        message(glue("    Warning: DISPENSING NDC extraction failed: {e$message}"))
+        tibble(
+          code = character(), code_type = character(), source_table = character(),
+          n_records = integer(), n_patients = integer(), raw_drug_name = character()
+        )
+      }
+    )
 
     if (nrow(dispensing_ndc) > 0) {
       message(glue("    Found {nrow(dispensing_ndc)} NDC codes"))
@@ -137,25 +149,30 @@ extract_unmatched_drug_codes <- function() {
   prescribing_tbl <- safe_table("PRESCRIBING")
   if (!is.null(prescribing_tbl)) {
     message("  Extracting PRESCRIBING RXNORM codes...")
-    prescribing_rxnorm <- tryCatch({
-      prescribing_tbl %>%
-        filter(ID %in% hl_ids) %>%
-        filter(!is.na(RXNORM_CUI), RXNORM_CUI != "") %>%
-        filter(!RXNORM_CUI %in% known_rxnorm) %>%
-        group_by(code = RXNORM_CUI) %>%
-        summarise(
-          n_records = n(),
-          n_patients = n_distinct(ID),
-          raw_drug_name = first(RAW_RX_MED_NAME[!is.na(RAW_RX_MED_NAME)]),
-          .groups = "drop"
-        ) %>%
-        collect() %>%
-        mutate(source_table = "PRESCRIBING", code_type = "RXNORM")
-    }, error = function(e) {
-      message(glue("    Warning: PRESCRIBING RXNORM extraction failed: {e$message}"))
-      tibble(code = character(), code_type = character(), source_table = character(),
-             n_records = integer(), n_patients = integer(), raw_drug_name = character())
-    })
+    prescribing_rxnorm <- tryCatch(
+      {
+        prescribing_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(RXNORM_CUI), RXNORM_CUI != "") %>%
+          filter(!RXNORM_CUI %in% known_rxnorm) %>%
+          group_by(code = RXNORM_CUI) %>%
+          summarise(
+            n_records = n(),
+            n_patients = n_distinct(ID),
+            raw_drug_name = first(RAW_RX_MED_NAME[!is.na(RAW_RX_MED_NAME)]),
+            .groups = "drop"
+          ) %>%
+          collect() %>%
+          mutate(source_table = "PRESCRIBING", code_type = "RXNORM")
+      },
+      error = function(e) {
+        message(glue("    Warning: PRESCRIBING RXNORM extraction failed: {e$message}"))
+        tibble(
+          code = character(), code_type = character(), source_table = character(),
+          n_records = integer(), n_patients = integer(), raw_drug_name = character()
+        )
+      }
+    )
 
     if (nrow(prescribing_rxnorm) > 0) {
       message(glue("    Found {nrow(prescribing_rxnorm)} unmatched RXNORM codes"))
@@ -167,25 +184,30 @@ extract_unmatched_drug_codes <- function() {
   medadmin_tbl <- safe_table("MED_ADMIN")
   if (!is.null(medadmin_tbl)) {
     message("  Extracting MED_ADMIN RXNORM codes...")
-    medadmin_rxnorm <- tryCatch({
-      medadmin_tbl %>%
-        filter(ID %in% hl_ids) %>%
-        filter(!is.na(RXNORM_CUI), RXNORM_CUI != "") %>%
-        filter(!RXNORM_CUI %in% known_rxnorm) %>%
-        group_by(code = RXNORM_CUI) %>%
-        summarise(
-          n_records = n(),
-          n_patients = n_distinct(ID),
-          raw_drug_name = first(RAW_MEDADMIN_MED_NAME[!is.na(RAW_MEDADMIN_MED_NAME)]),
-          .groups = "drop"
-        ) %>%
-        collect() %>%
-        mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
-    }, error = function(e) {
-      message(glue("    Warning: MED_ADMIN RXNORM extraction failed: {e$message}"))
-      tibble(code = character(), code_type = character(), source_table = character(),
-             n_records = integer(), n_patients = integer(), raw_drug_name = character())
-    })
+    medadmin_rxnorm <- tryCatch(
+      {
+        medadmin_tbl %>%
+          filter(ID %in% hl_ids) %>%
+          filter(!is.na(RXNORM_CUI), RXNORM_CUI != "") %>%
+          filter(!RXNORM_CUI %in% known_rxnorm) %>%
+          group_by(code = RXNORM_CUI) %>%
+          summarise(
+            n_records = n(),
+            n_patients = n_distinct(ID),
+            raw_drug_name = first(RAW_MEDADMIN_MED_NAME[!is.na(RAW_MEDADMIN_MED_NAME)]),
+            .groups = "drop"
+          ) %>%
+          collect() %>%
+          mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
+      },
+      error = function(e) {
+        message(glue("    Warning: MED_ADMIN RXNORM extraction failed: {e$message}"))
+        tibble(
+          code = character(), code_type = character(), source_table = character(),
+          n_records = integer(), n_patients = integer(), raw_drug_name = character()
+        )
+      }
+    )
 
     if (nrow(medadmin_rxnorm) > 0) {
       message(glue("    Found {nrow(medadmin_rxnorm)} unmatched RXNORM codes"))
@@ -196,9 +218,11 @@ extract_unmatched_drug_codes <- function() {
   # Combine all results
   if (length(results) == 0) {
     message("  No unmatched codes found across all drug tables")
-    return(tibble(code = character(), code_type = character(),
-                  source_table = character(), n_records = integer(),
-                  n_patients = integer(), raw_drug_name = character()))
+    return(tibble(
+      code = character(), code_type = character(),
+      source_table = character(), n_records = integer(),
+      n_patients = integer(), raw_drug_name = character()
+    ))
   }
 
   all_results <- bind_rows(results)
@@ -220,40 +244,43 @@ extract_unmatched_drug_codes <- function() {
 #' @param sleep_sec Numeric. Seconds to sleep after request (default 0.1 = ~10 req/sec)
 #' @return Tibble with columns: code, drug_name, lookup_status
 lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
-  result <- tryCatch({
-    url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui/{rxcui}/properties.json")
+  result <- tryCatch(
+    {
+      url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui/{rxcui}/properties.json")
 
-    resp <- request(url) %>%
-      req_timeout(10) %>%
-      req_retry(
-        max_tries = 3,
-        is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
-      ) %>%
-      req_perform()
+      resp <- request(url) %>%
+        req_timeout(10) %>%
+        req_retry(
+          max_tries = 3,
+          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+        ) %>%
+        req_perform()
 
-    # Success - extract drug name
-    data <- resp_body_json(resp)
+      # Success - extract drug name
+      data <- resp_body_json(resp)
 
-    if (!is.null(data$properties) && !is.null(data$properties$name)) {
-      tibble(
-        code = rxcui,
-        drug_name = data$properties$name,
-        lookup_status = "success"
-      )
-    } else {
+      if (!is.null(data$properties) && !is.null(data$properties$name)) {
+        tibble(
+          code = rxcui,
+          drug_name = data$properties$name,
+          lookup_status = "success"
+        )
+      } else {
+        tibble(
+          code = rxcui,
+          drug_name = NA_character_,
+          lookup_status = "not_found"
+        )
+      }
+    },
+    error = function(e) {
       tibble(
         code = rxcui,
         drug_name = NA_character_,
-        lookup_status = "not_found"
+        lookup_status = glue("error: {e$message}")
       )
     }
-  }, error = function(e) {
-    tibble(
-      code = rxcui,
-      drug_name = NA_character_,
-      lookup_status = glue("error: {e$message}")
-    )
-  })
+  )
 
   Sys.sleep(sleep_sec)
   result
@@ -269,29 +296,32 @@ lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
 #' @return Tibble with columns: code, drug_name, lookup_status
 lookup_ndc_to_name <- function(ndc, sleep_sec = 0.1) {
   # Step 1: NDC -> RxCUI
-  rxcui_result <- tryCatch({
-    url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id={ndc}")
+  rxcui_result <- tryCatch(
+    {
+      url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id={ndc}")
 
-    resp <- request(url) %>%
-      req_timeout(10) %>%
-      req_retry(
-        max_tries = 3,
-        is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
-      ) %>%
-      req_perform()
+      resp <- request(url) %>%
+        req_timeout(10) %>%
+        req_retry(
+          max_tries = 3,
+          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+        ) %>%
+        req_perform()
 
-    data <- resp_body_json(resp)
+      data <- resp_body_json(resp)
 
-    if (!is.null(data$idGroup) && !is.null(data$idGroup$rxnormId) &&
+      if (!is.null(data$idGroup) && !is.null(data$idGroup$rxnormId) &&
         length(data$idGroup$rxnormId) > 0) {
-      # Take first RxCUI if multiple returned
-      data$idGroup$rxnormId[[1]]
-    } else {
+        # Take first RxCUI if multiple returned
+        data$idGroup$rxnormId[[1]]
+      } else {
+        NA_character_
+      }
+    },
+    error = function(e) {
       NA_character_
     }
-  }, error = function(e) {
-    NA_character_
-  })
+  )
 
   if (is.na(rxcui_result)) {
     return(tibble(
@@ -331,7 +361,9 @@ lookup_drug_codes_batch <- function(codes_df) {
   results <- list()
 
   # Lookup RXNORM codes
-  rxnorm_codes <- unique_codes %>% filter(code_type == "RXNORM") %>% pull(code)
+  rxnorm_codes <- unique_codes %>%
+    filter(code_type == "RXNORM") %>%
+    pull(code)
   if (length(rxnorm_codes) > 0) {
     message(glue("    Processing {length(rxnorm_codes)} RXNORM CUIs..."))
     for (i in seq_along(rxnorm_codes)) {
@@ -343,7 +375,9 @@ lookup_drug_codes_batch <- function(codes_df) {
   }
 
   # Lookup NDC codes
-  ndc_codes <- unique_codes %>% filter(code_type == "NDC") %>% pull(code)
+  ndc_codes <- unique_codes %>%
+    filter(code_type == "NDC") %>%
+    pull(code)
   if (length(ndc_codes) > 0) {
     message(glue("    Processing {length(ndc_codes)} NDC codes..."))
     for (i in seq_along(ndc_codes)) {
@@ -384,27 +418,32 @@ classify_drug <- function(drug_name) {
 
   case_when(
     # 1. Supportive Care FIRST (per D-09) - G-CSF, antiemetics, EPO
-    str_detect(name_lower,
+    str_detect(
+      name_lower,
       "filgrastim|pegfilgrastim|neulasta|neupogen|zarxio|granix|udenyca|nyvepria|ziextenzo|stimufend|fylnetra|releuko|ondansetron|zofran|granisetron|kytril|palonosetron|aloxi|fosaprepitant|emend|aprepitant|dexamethasone|colony.stimulating|growth factor|antiemetic|epoetin|procrit|darbepoetin|aranesp|lenograstim|tbo-filgrastim|lipegfilgrastim"
     ) ~ "Supportive Care",
 
     # 2. Chemotherapy - ABVD drugs, other chemo agents, and immunoconjugates
-    str_detect(name_lower,
+    str_detect(
+      name_lower,
       "doxorubicin|adriamycin|bleomycin|vinblastine|dacarbazine|dtic|brentuximab|adcetris|nivolumab|opdivo|pembrolizumab|keytruda|etoposide|cisplatin|carboplatin|vincristine|cyclophosphamide|cytoxan|bendamustine|gemcitabine|ifosfamide|methotrexate|procarbazine|mechlorethamine|lomustine|carmustine|chemotherapy|antineoplastic|cytotoxic"
     ) ~ "Chemotherapy",
 
     # 3. Immunotherapy - checkpoint inhibitors, CAR-T
-    str_detect(name_lower,
+    str_detect(
+      name_lower,
       "nivolumab|pembrolizumab|atezolizumab|durvalumab|avelumab|ipilimumab|cemiplimab|dostarlimab|retifanlimab|toripalimab|tislelizumab|checkpoint inhibitor|anti-pd-1|anti-pd-l1|anti-ctla-4|car.t|chimeric antigen|axicabtagene|tisagenlecleucel|brexucabtagene|lisocabtagene"
     ) ~ "Immunotherapy",
 
     # 4. SCT - transplant, conditioning regimens (consistent naming with canonical types)
-    str_detect(name_lower,
+    str_detect(
+      name_lower,
       "stem cell|bone marrow|hematopoietic|transplant|conditioning|busulfan|melphalan|thiotepa|fludarabine"
     ) ~ "SCT",
 
     # 5. Radiation - radiolabeled drugs
-    str_detect(name_lower,
+    str_detect(
+      name_lower,
       "radiation|radiotherapy|radiolabeled"
     ) ~ "Radiation",
 
@@ -430,42 +469,60 @@ write_unmatched_ndc_report <- function(df, output_path) {
   wb <- wb_workbook()
 
   # Category order (SCT not SCT-related now)
-  category_order <- c("Chemotherapy", "Immunotherapy", "SCT",
-                      "Supportive Care", "Radiation", "Unrelated")
+  category_order <- c(
+    "Chemotherapy", "Immunotherapy", "SCT",
+    "Supportive Care", "Radiation", "Unrelated"
+  )
 
   # --- SUMMARY SHEET ---
   message("  Writing Summary sheet...")
   wb$add_worksheet("Summary")
 
   # Row 1: Title
-  wb$add_data(sheet = "Summary", x = "Unmatched NDC/RXNORM Investigation Summary",
-              start_row = 1, start_col = 1)
-  wb$add_font(sheet = "Summary", dims = "A1",
-              name = "Calibri", size = 14, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = "Summary", x = "Unmatched NDC/RXNORM Investigation Summary",
+    start_row = 1, start_col = 1
+  )
+  wb$add_font(
+    sheet = "Summary", dims = "A1",
+    name = "Calibri", size = 14, bold = TRUE, color = wb_color("FF1F2937")
+  )
   wb$merge_cells(sheet = "Summary", dims = "A1:D1")
 
   # Row 2: Subtitle
-  wb$add_data(sheet = "Summary", x = "Phase 40 — Drug codes in HL patient data not in TREATMENT_CODES",
-              start_row = 2, start_col = 1)
-  wb$add_font(sheet = "Summary", dims = "A2",
-              name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+  wb$add_data(
+    sheet = "Summary", x = "Phase 40 — Drug codes in HL patient data not in TREATMENT_CODES",
+    start_row = 2, start_col = 1
+  )
+  wb$add_font(
+    sheet = "Summary", dims = "A2",
+    name = "Calibri", size = 10, color = wb_color("FF6B7280")
+  )
   wb$merge_cells(sheet = "Summary", dims = "A2:D2")
 
   # Row 3: Date
-  wb$add_data(sheet = "Summary", x = as.character(Sys.Date()),
-              start_row = 3, start_col = 1)
-  wb$add_font(sheet = "Summary", dims = "A3",
-              name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+  wb$add_data(
+    sheet = "Summary", x = as.character(Sys.Date()),
+    start_row = 3, start_col = 1
+  )
+  wb$add_font(
+    sheet = "Summary", dims = "A3",
+    name = "Calibri", size = 10, color = wb_color("FF6B7280")
+  )
 
   # Row 5: Classification counts header
   headers <- c("Classification", "Codes", "Records", "Patients")
   for (i in seq_along(headers)) {
-    wb$add_data(sheet = "Summary", x = headers[i],
-                start_row = 5, start_col = i)
+    wb$add_data(
+      sheet = "Summary", x = headers[i],
+      start_row = 5, start_col = i
+    )
   }
   wb$add_fill(sheet = "Summary", dims = "A5:D5", color = wb_color("FF374151"))
-  wb$add_font(sheet = "Summary", dims = "A5:D5",
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = "Summary", dims = "A5:D5",
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
 
   # Classification counts data
   summary_df <- df %>%
@@ -480,39 +537,63 @@ write_unmatched_ndc_report <- function(df, output_path) {
 
   for (i in seq_len(nrow(summary_df))) {
     row_num <- 5 + i
-    wb$add_data(sheet = "Summary", x = summary_df$classification[i],
-                start_row = row_num, start_col = 1)
-    wb$add_data(sheet = "Summary", x = summary_df$n_codes[i],
-                start_row = row_num, start_col = 2)
-    wb$add_data(sheet = "Summary", x = summary_df$n_records[i],
-                start_row = row_num, start_col = 3)
-    wb$add_data(sheet = "Summary", x = summary_df$n_patients[i],
-                start_row = row_num, start_col = 4)
+    wb$add_data(
+      sheet = "Summary", x = summary_df$classification[i],
+      start_row = row_num, start_col = 1
+    )
+    wb$add_data(
+      sheet = "Summary", x = summary_df$n_codes[i],
+      start_row = row_num, start_col = 2
+    )
+    wb$add_data(
+      sheet = "Summary", x = summary_df$n_records[i],
+      start_row = row_num, start_col = 3
+    )
+    wb$add_data(
+      sheet = "Summary", x = summary_df$n_patients[i],
+      start_row = row_num, start_col = 4
+    )
     wb$add_numfmt(sheet = "Summary", dims = glue("B{row_num}:D{row_num}"), numfmt = "#,##0")
   }
 
   # Total row
   total_row <- 5 + nrow(summary_df) + 1
-  wb$add_data(sheet = "Summary", x = "Total",
-              start_row = total_row, start_col = 1)
-  wb$add_data(sheet = "Summary", x = sum(summary_df$n_codes),
-              start_row = total_row, start_col = 2)
-  wb$add_data(sheet = "Summary", x = sum(summary_df$n_records),
-              start_row = total_row, start_col = 3)
-  wb$add_data(sheet = "Summary", x = sum(summary_df$n_patients),
-              start_row = total_row, start_col = 4)
-  wb$add_fill(sheet = "Summary", dims = glue("A{total_row}:D{total_row}"),
-              color = wb_color("FF374151"))
-  wb$add_font(sheet = "Summary", dims = glue("A{total_row}:D{total_row}"),
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_data(
+    sheet = "Summary", x = "Total",
+    start_row = total_row, start_col = 1
+  )
+  wb$add_data(
+    sheet = "Summary", x = sum(summary_df$n_codes),
+    start_row = total_row, start_col = 2
+  )
+  wb$add_data(
+    sheet = "Summary", x = sum(summary_df$n_records),
+    start_row = total_row, start_col = 3
+  )
+  wb$add_data(
+    sheet = "Summary", x = sum(summary_df$n_patients),
+    start_row = total_row, start_col = 4
+  )
+  wb$add_fill(
+    sheet = "Summary", dims = glue("A{total_row}:D{total_row}"),
+    color = wb_color("FF374151")
+  )
+  wb$add_font(
+    sheet = "Summary", dims = glue("A{total_row}:D{total_row}"),
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
   wb$add_numfmt(sheet = "Summary", dims = glue("B{total_row}:D{total_row}"), numfmt = "#,##0")
 
   # Code type breakdown section
   code_type_row <- total_row + 2
-  wb$add_data(sheet = "Summary", x = "By Code Type:",
-              start_row = code_type_row, start_col = 1)
-  wb$add_font(sheet = "Summary", dims = glue("A{code_type_row}"),
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = "Summary", x = "By Code Type:",
+    start_row = code_type_row, start_col = 1
+  )
+  wb$add_font(
+    sheet = "Summary", dims = glue("A{code_type_row}"),
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FF1F2937")
+  )
 
   code_type_summary <- df %>%
     group_by(code_type) %>%
@@ -520,19 +601,27 @@ write_unmatched_ndc_report <- function(df, output_path) {
 
   for (i in seq_len(nrow(code_type_summary))) {
     row_num <- code_type_row + i
-    wb$add_data(sheet = "Summary", x = code_type_summary$code_type[i],
-                start_row = row_num, start_col = 1)
-    wb$add_data(sheet = "Summary", x = code_type_summary$n_codes[i],
-                start_row = row_num, start_col = 2)
+    wb$add_data(
+      sheet = "Summary", x = code_type_summary$code_type[i],
+      start_row = row_num, start_col = 1
+    )
+    wb$add_data(
+      sheet = "Summary", x = code_type_summary$n_codes[i],
+      start_row = row_num, start_col = 2
+    )
     wb$add_numfmt(sheet = "Summary", dims = glue("B{row_num}"), numfmt = "#,##0")
   }
 
   # Source table breakdown section
   source_row <- code_type_row + nrow(code_type_summary) + 2
-  wb$add_data(sheet = "Summary", x = "By Source Table:",
-              start_row = source_row, start_col = 1)
-  wb$add_font(sheet = "Summary", dims = glue("A{source_row}"),
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = "Summary", x = "By Source Table:",
+    start_row = source_row, start_col = 1
+  )
+  wb$add_font(
+    sheet = "Summary", dims = glue("A{source_row}"),
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FF1F2937")
+  )
 
   source_summary <- df %>%
     group_by(source_table) %>%
@@ -540,10 +629,14 @@ write_unmatched_ndc_report <- function(df, output_path) {
 
   for (i in seq_len(nrow(source_summary))) {
     row_num <- source_row + i
-    wb$add_data(sheet = "Summary", x = source_summary$source_table[i],
-                start_row = row_num, start_col = 1)
-    wb$add_data(sheet = "Summary", x = source_summary$n_codes[i],
-                start_row = row_num, start_col = 2)
+    wb$add_data(
+      sheet = "Summary", x = source_summary$source_table[i],
+      start_row = row_num, start_col = 1
+    )
+    wb$add_data(
+      sheet = "Summary", x = source_summary$n_codes[i],
+      start_row = row_num, start_col = 2
+    )
     wb$add_numfmt(sheet = "Summary", dims = glue("B{row_num}"), numfmt = "#,##0")
   }
 
@@ -557,7 +650,7 @@ write_unmatched_ndc_report <- function(df, output_path) {
       arrange(desc(n_patients))
 
     if (nrow(df_cat) == 0) {
-      next  # Skip empty categories
+      next # Skip empty categories
     }
 
     message(glue("  Writing {category} sheet ({nrow(df_cat)} codes)..."))
@@ -569,18 +662,26 @@ write_unmatched_ndc_report <- function(df, output_path) {
     font_color <- TREATMENT_TYPE_COLORS[[category]]$font
 
     # Row 1: Title
-    wb$add_data(sheet = sheet_name, x = "Unmatched NDC/RXNORM Drug Codes Investigation",
-                start_row = 1, start_col = 1)
-    wb$add_font(sheet = sheet_name, dims = "A1",
-                name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+    wb$add_data(
+      sheet = sheet_name, x = "Unmatched NDC/RXNORM Drug Codes Investigation",
+      start_row = 1, start_col = 1
+    )
+    wb$add_font(
+      sheet = sheet_name, dims = "A1",
+      name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+    )
     wb$merge_cells(sheet = sheet_name, dims = "A1:G1")
 
     # Row 2: Subtitle
     subtitle <- glue("{category}: {nrow(df_cat)} unmatched codes")
-    wb$add_data(sheet = sheet_name, x = as.character(subtitle),
-                start_row = 2, start_col = 1)
-    wb$add_font(sheet = sheet_name, dims = "A2",
-                name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+    wb$add_data(
+      sheet = sheet_name, x = as.character(subtitle),
+      start_row = 2, start_col = 1
+    )
+    wb$add_font(
+      sheet = sheet_name, dims = "A2",
+      name = "Calibri", size = 10, color = wb_color("FF6B7280")
+    )
     wb$merge_cells(sheet = sheet_name, dims = "A2:G2")
 
     # Row 3: blank
@@ -588,12 +689,16 @@ write_unmatched_ndc_report <- function(df, output_path) {
     # Row 4: Column headers
     headers <- c("Code", "Drug Name", "Code Type", "Source Table", "Records", "Patients", "Lookup Status")
     for (i in seq_along(headers)) {
-      wb$add_data(sheet = sheet_name, x = headers[i],
-                  start_row = 4, start_col = i)
+      wb$add_data(
+        sheet = sheet_name, x = headers[i],
+        start_row = 4, start_col = i
+      )
     }
     wb$add_fill(sheet = sheet_name, dims = "A4:G4", color = wb_color("FF374151"))
-    wb$add_font(sheet = sheet_name, dims = "A4:G4",
-                name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+    wb$add_font(
+      sheet = sheet_name, dims = "A4:G4",
+      name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+    )
 
     # Write all data rows at once (bulk write instead of cell-by-cell)
     write_df <- data.frame(
@@ -617,12 +722,16 @@ write_unmatched_ndc_report <- function(df, output_path) {
 
     # Code column: colored pill
     wb$add_fill(sheet = sheet_name, dims = code_dims, color = wb_color(fill_color))
-    wb$add_font(sheet = sheet_name, dims = code_dims,
-                name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color))
+    wb$add_font(
+      sheet = sheet_name, dims = code_dims,
+      name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
+    )
 
     # Text columns: standard font
-    wb$add_font(sheet = sheet_name, dims = text_dims,
-                name = "Calibri", size = 10, color = wb_color("FF111827"))
+    wb$add_font(
+      sheet = sheet_name, dims = text_dims,
+      name = "Calibri", size = 10, color = wb_color("FF111827")
+    )
 
     # Numeric columns: comma formatting
     wb$add_numfmt(sheet = sheet_name, dims = num_dims, numfmt = "#,##0")
@@ -631,8 +740,10 @@ write_unmatched_ndc_report <- function(df, output_path) {
     wb$freeze_pane(sheet = sheet_name, first_active_row = 5)
 
     # Column widths
-    wb$set_col_widths(sheet = sheet_name, cols = 1:7,
-                      widths = c(15, 45, 10, 15, 10, 10, 15))
+    wb$set_col_widths(
+      sheet = sheet_name, cols = 1:7,
+      widths = c(15, 45, 10, 15, 10, 10, 15)
+    )
   }
 
   # Save workbook
@@ -728,7 +839,7 @@ update_config_ndc_codes <- function(classified_codes_path) {
         filter(classification == cat_name, code_type == !!code_type)
 
       if (nrow(new_codes_for_cat) == 0) {
-        next  # Skip if no codes for this combination
+        next # Skip if no codes for this combination
       }
 
       message(glue("  Processing {cat_name} {code_type}: {nrow(new_codes_for_cat)} codes"))
@@ -763,7 +874,8 @@ update_config_ndc_codes <- function(classified_codes_path) {
           code <- new_codes_for_cat$code[i]
           drug_name <- new_codes_for_cat$drug_name[i]
           drug_trunc <- ifelse(is.na(drug_name) || nchar(drug_name) == 0, "no name",
-                               substr(drug_name, 1, 40))
+            substr(drug_name, 1, 40)
+          )
 
           # Last code has no trailing comma
           if (i == nrow(new_codes_for_cat)) {
@@ -787,7 +899,6 @@ update_config_ndc_codes <- function(classified_codes_path) {
         } else {
           rxnorm_vectors_added <- c(rxnorm_vectors_added, vec_name)
         }
-
       } else {
         # Vector exists (chemo_rxnorm case) - expand it
         message(glue("    Expanding existing {vec_name} vector"))
@@ -833,7 +944,7 @@ update_config_ndc_codes <- function(classified_codes_path) {
         # Ensure last data line has trailing comma
         last_data_idx <- close_paren_idx - 1
         if (!grepl('"[^"]*"\\s*,', config_lines[last_data_idx])) {
-          config_lines[last_data_idx] <- sub('(.*")', '\\1,', config_lines[last_data_idx])
+          config_lines[last_data_idx] <- sub('(.*")', "\\1,", config_lines[last_data_idx])
         }
 
         # Build insert lines
@@ -842,15 +953,20 @@ update_config_ndc_codes <- function(classified_codes_path) {
           code <- new_codes_to_add$code[i]
           drug_name <- new_codes_to_add$drug_name[i]
           drug_trunc <- ifelse(is.na(drug_name) || nchar(drug_name) == 0, "no name",
-                               substr(drug_name, 1, 40))
+            substr(drug_name, 1, 40)
+          )
 
           # Last line omits trailing comma
           if (i == nrow(new_codes_to_add)) {
-            insert_lines <- c(insert_lines,
-                             glue("    \"{code}\"    # Phase 40: {drug_trunc}"))
+            insert_lines <- c(
+              insert_lines,
+              glue("    \"{code}\"    # Phase 40: {drug_trunc}")
+            )
           } else {
-            insert_lines <- c(insert_lines,
-                             glue("    \"{code}\",   # Phase 40: {drug_trunc}"))
+            insert_lines <- c(
+              insert_lines,
+              glue("    \"{code}\",   # Phase 40: {drug_trunc}")
+            )
           }
         }
 
@@ -872,30 +988,33 @@ update_config_ndc_codes <- function(classified_codes_path) {
   writeLines(config_lines, config_path)
   message("  Validating updated config...")
 
-  validation_error <- tryCatch({
-    # Parse check
-    parse(config_path)
+  validation_error <- tryCatch(
+    {
+      # Parse check
+      parse(config_path)
 
-    # Source check
-    env <- new.env()
-    source(config_path, local = env)
+      # Source check
+      env <- new.env()
+      source(config_path, local = env)
 
-    # Verify TREATMENT_CODES exists
-    if (is.null(env$TREATMENT_CODES)) {
-      stop("TREATMENT_CODES is NULL after sourcing")
-    }
-
-    # Verify each new vector exists
-    for (vec_name in c(ndc_vectors_added, rxnorm_vectors_added)) {
-      if (is.null(env$TREATMENT_CODES[[vec_name]])) {
-        warning(glue("Vector {vec_name} is NULL after update"))
+      # Verify TREATMENT_CODES exists
+      if (is.null(env$TREATMENT_CODES)) {
+        stop("TREATMENT_CODES is NULL after sourcing")
       }
-    }
 
-    NULL  # No error
-  }, error = function(e) {
-    e$message
-  })
+      # Verify each new vector exists
+      for (vec_name in c(ndc_vectors_added, rxnorm_vectors_added)) {
+        if (is.null(env$TREATMENT_CODES[[vec_name]])) {
+          warning(glue("Vector {vec_name} is NULL after update"))
+        }
+      }
+
+      NULL # No error
+    },
+    error = function(e) {
+      e$message
+    }
+  )
 
   # 7. Rollback on failure
   if (!is.null(validation_error)) {
@@ -958,7 +1077,7 @@ lookups <- lookup_drug_codes_batch(unique_codes)
 # Join back to all_unmatched
 all_unmatched <- all_unmatched %>%
   left_join(lookups, by = "code") %>%
-  mutate(drug_name = coalesce(drug_name, raw_drug_name))  # Fallback to raw name
+  mutate(drug_name = coalesce(drug_name, raw_drug_name)) # Fallback to raw name
 
 message("")
 

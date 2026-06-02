@@ -69,14 +69,14 @@ message(glue("{strrep('=', 70)}\n"))
 #     for that date
 # ==========================================================================
 TIER_MAPPING <- list(
-  Medicaid     = 1L,  # Highest priority (includes dual-eligible, codes 93/14, FLM source)
+  Medicaid     = 1L, # Highest priority (includes dual-eligible, codes 93/14, FLM source)
   Medicare     = 2L,
   Private      = 3L,
-  "Other govt" = 4L,  # VA, TRICARE, state agencies, corrections
-  Other        = 5L,  # Generic other (worker's comp, auto insurance, etc.)
+  "Other govt" = 4L, # VA, TRICARE, state agencies, corrections
+  Other        = 5L, # Generic other (worker's comp, auto insurance, etc.)
   "Self-pay"   = 6L,
   Uninsured    = 7L,
-  Missing      = 8L   # Lowest priority
+  Missing      = 8L # Lowest priority
 )
 
 # CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
@@ -101,10 +101,10 @@ message(glue("Total encounters loaded: {format(nrow(enc_raw), big.mark=',')}"))
 # Ensure columns are character, parse ADMIT_DATE
 enc <- enc_raw %>%
   mutate(
-    PAYER_TYPE_PRIMARY   = as.character(PAYER_TYPE_PRIMARY),
+    PAYER_TYPE_PRIMARY = as.character(PAYER_TYPE_PRIMARY),
     PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE               = as.character(SOURCE),
-    admit_date_parsed    = as.Date(ADMIT_DATE, format = "%Y-%m-%d"),
+    SOURCE = as.character(SOURCE),
+    admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"),
     # Compute effective payer: primary if valid, else secondary, else NA
     effective_payer = case_when(
       !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
@@ -119,7 +119,7 @@ enc <- enc_raw %>%
       sec_missing <- is.na(PAYER_TYPE_SECONDARY) | nchar(trimws(PAYER_TYPE_SECONDARY)) == 0
       has_dual <- PAYER_TYPE_PRIMARY %in% dual_codes | PAYER_TYPE_SECONDARY %in% dual_codes
       cross_payer <- (startsWith(PAYER_TYPE_PRIMARY, "1") & startsWith(PAYER_TYPE_SECONDARY, "2")) |
-                     (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
+        (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
       case_when(sec_missing ~ 0L, has_dual ~ 1L, cross_payer ~ 1L, TRUE ~ 0L)
     },
     # Map to AMC 8-category: direct lookup + prefix fallback
@@ -262,9 +262,9 @@ build_frequency_tables <- function(enc_scope, suffix, output_dir) {
   message(glue("  Written: payer_category_summary{suffix}.csv ({nrow(category_summary)} rows)"))
 
   n_fallback_primary <- sum(is.na(AMC_PAYER_LOOKUP[primary_freq$code]) &
-                            !primary_freq$code %in% c("<NA>", "<EMPTY>"), na.rm = TRUE)
+    !primary_freq$code %in% c("<NA>", "<EMPTY>"), na.rm = TRUE)
   n_fallback_secondary <- sum(is.na(AMC_PAYER_LOOKUP[secondary_freq$code]) &
-                              !secondary_freq$code %in% c("<NA>", "<EMPTY>"), na.rm = TRUE)
+    !secondary_freq$code %in% c("<NA>", "<EMPTY>"), na.rm = TRUE)
 
   message(glue("  Distinct PRIMARY codes: {nrow(primary_freq)} ({n_fallback_primary} via prefix fallback)"))
   message(glue("  Distinct SECONDARY codes: {nrow(secondary_freq)} ({n_fallback_secondary} via prefix fallback)"))
@@ -310,21 +310,21 @@ resolve_same_day_payer <- function(enc_scope, suffix, output_dir) {
       n_distinct_tiers = n_distinct(tier),
       has_flm = any(SOURCE == "FLM", na.rm = TRUE),
       has_special_code = any(PAYER_TYPE_PRIMARY %in% c("93", "14") |
-                             PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE),
+        PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE),
       original_tiers = paste(sort(unique(tier)), collapse = "+"),
       original_codes_primary = paste(sort(unique(na.omit(PAYER_TYPE_PRIMARY))), collapse = ","),
       # Resolution logic: FLM override > special code override > tier hierarchy
       resolved_payer = case_when(
-        any(SOURCE == "FLM", na.rm = TRUE) ~ "Medicaid",           # FLM override
+        any(SOURCE == "FLM", na.rm = TRUE) ~ "Medicaid", # FLM override
         any(PAYER_TYPE_PRIMARY %in% c("93", "14") |
-            PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE) ~ "Medicaid",  # Code override
-        TRUE ~ tier[which.min(tier_rank)]                            # Tier hierarchy
+          PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE) ~ "Medicaid", # Code override
+        TRUE ~ tier[which.min(tier_rank)] # Tier hierarchy
       ),
       resolution_reason = case_when(
         n() == 1 ~ "single encounter",
         any(SOURCE == "FLM", na.rm = TRUE) ~ "FLM source override",
         any(PAYER_TYPE_PRIMARY %in% c("93", "14") |
-            PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE) ~ "special code override (93/14)",
+          PAYER_TYPE_SECONDARY %in% c("93", "14"), na.rm = TRUE) ~ "special code override (93/14)",
         n_distinct(tier) == 1 ~ "all encounters same tier",
         TRUE ~ paste0("tier hierarchy (", n_distinct(tier), " tiers)")
       ),

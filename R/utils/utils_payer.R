@@ -44,15 +44,15 @@ is_missing_payer <- function(payer_value) {
 #' @return Character. Tier name for hierarchical resolution
 CODE_TO_TIER <- function(payer_category) {
   case_when(
-    payer_category == "Medicaid"  ~ "Medicaid",
-    payer_category == "Medicare"  ~ "Medicare",
-    payer_category == "Private"   ~ "Private",
+    payer_category == "Medicaid" ~ "Medicaid",
+    payer_category == "Medicare" ~ "Medicare",
+    payer_category == "Private" ~ "Private",
     payer_category == "Other govt" ~ "Other govt",
-    payer_category == "Other"     ~ "Other",
-    payer_category == "Self-pay"  ~ "Self-pay",
+    payer_category == "Other" ~ "Other",
+    payer_category == "Self-pay" ~ "Self-pay",
     payer_category == "Uninsured" ~ "Uninsured",
-    payer_category == "Missing"   ~ "Missing",
-    is.na(payer_category)         ~ "Missing",
+    payer_category == "Missing" ~ "Missing",
+    is.na(payer_category) ~ "Missing",
     TRUE ~ "Missing"
   )
 }
@@ -67,6 +67,6 @@ CODE_TO_TIER <- function(payer_category) {
 #' @return Logical. TRUE if fields match (including both-NA case)
 field_match <- function(val1, val2) {
   both_na <- is.na(val1) & is.na(val2)
-  one_na  <- xor(is.na(val1), is.na(val2))
+  one_na <- xor(is.na(val1), is.na(val2))
   both_na | (!one_na & !is.na(val1) & (val1 == val2))
 }

@@ -49,10 +49,10 @@ if (exists("attrition_log")) rm(attrition_log)
 
 # Source config first to ensure pcornet list is loaded
 source("R/00_config.R")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 1: SETUP ----
 # ==============================================================================
-source("R/01_load_pcornet.R")  # Loads pcornet$ list
+source("R/01_load_pcornet.R") # Loads pcornet$ list
 
 # Now run the cohort build pipeline
 source("R/14_build_cohort.R")
@@ -71,7 +71,7 @@ USE_DUCKDB <<- TRUE
 
 # Open DuckDB connection
 if (!exists("pcornet_con", envir = .GlobalEnv)) {
-  source("R/utils/utils_duckdb.R")  # Load DuckDB utilities
+  source("R/utils/utils_duckdb.R") # Load DuckDB utilities
   open_pcornet_con()
 }
 
@@ -207,7 +207,7 @@ message("USE_DUCKDB = FALSE: pipeline executes without error (verified by comple
 if (exists("pcornet_con", envir = .GlobalEnv)) {
   close_pcornet_con()
 }
-USE_DUCKDB <<- FALSE  # Restore default
+USE_DUCKDB <<- FALSE # Restore default
 
 # ==============================================================================
 # SUMMARY
@@ -239,9 +239,9 @@ message(strrep("=", 70))
 # Return result invisibly for programmatic use
 invisible(list(
   all_pass = all_pass,
-# ==============================================================================
-# SECTION 2: OUTPUT ----
-# ==============================================================================
+  # ==============================================================================
+  # SECTION 2: OUTPUT ----
+  # ==============================================================================
 
   check_1_cohort = check_1_cohort,
   check_1_attrition = check_1_attrition,

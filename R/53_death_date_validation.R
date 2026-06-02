@@ -331,10 +331,10 @@ death_only_investigation <- death_only_with_hl %>%
     hl_diagnosis_codes = if_else(is.na(hl_diagnosis_codes), 0L, hl_diagnosis_codes),
     care_gap_category = case_when(
       !confirmed_hl & hl_diagnosis_codes == 0 ~ "No HL diagnosis codes in data",
-      !confirmed_hl & hl_diagnosis_codes > 0  ~ "Has HL codes but not confirmed (< 2 codes or < 7 days)",
-      confirmed_hl & died_before_first_hl_dx  ~ "Confirmed HL but died before first HL diagnosis date",
-      confirmed_hl & total_encounters == 0     ~ "Confirmed HL, no encounter records",
-      confirmed_hl & total_encounters > 0      ~ "Confirmed HL with encounters but no treatment records",
+      !confirmed_hl & hl_diagnosis_codes > 0 ~ "Has HL codes but not confirmed (< 2 codes or < 7 days)",
+      confirmed_hl & died_before_first_hl_dx ~ "Confirmed HL but died before first HL diagnosis date",
+      confirmed_hl & total_encounters == 0 ~ "Confirmed HL, no encounter records",
+      confirmed_hl & total_encounters > 0 ~ "Confirmed HL with encounters but no treatment records",
       TRUE ~ "Other / Unknown"
     )
   ) %>%
@@ -349,7 +349,9 @@ message("\n  Death-only patients by care gap category:")
 death_only_investigation %>%
   count(care_gap_category) %>%
   arrange(desc(n)) %>%
-  {walk2(.$care_gap_category, .$n, ~message(glue("    {.x}: {.y}")))}
+  {
+    walk2(.$care_gap_category, .$n, ~ message(glue("    {.x}: {.y}")))
+  }
 
 
 # ==============================================================================
@@ -361,8 +363,10 @@ message("\n--- Building combined validation dataset ---")
 # Combine impossible_deaths + valid_deaths into full validation dataset
 all_validated <- bind_rows(
   impossible_deaths %>% select(ID, DEATH_DATE, DEATH_SOURCE, death_valid, validation_reason, earliest_treatment_date),
-  valid_deaths %>% select(ID, DEATH_DATE, DEATH_SOURCE, death_valid, validation_reason, post_death_activity,
-                          post_death_encounters, post_death_diagnoses, post_death_treatments)
+  valid_deaths %>% select(
+    ID, DEATH_DATE, DEATH_SOURCE, death_valid, validation_reason, post_death_activity,
+    post_death_encounters, post_death_diagnoses, post_death_treatments
+  )
 )
 
 message(glue("  Total validated death records: {nrow(all_validated)}"))
@@ -397,17 +401,23 @@ wb <- wb_workbook()
 wb$add_worksheet("Validation Summary")
 
 # Title row (A1)
-wb$add_data(sheet = "Validation Summary", x = "Death Date Validation Report",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Validation Summary", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Validation Summary", x = "Death Date Validation Report",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Validation Summary", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Validation Summary", dims = "A1:D1")
 
 # Subtitle row (A2)
 subtitle <- glue("Generated: {Sys.Date()} | Population: All patients with death dates (per D-11)")
 wb$add_data(sheet = "Validation Summary", x = subtitle, start_row = 2, start_col = 1)
-wb$add_font(sheet = "Validation Summary", dims = "A2",
-            name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+wb$add_font(
+  sheet = "Validation Summary", dims = "A2",
+  name = "Calibri", size = 10, color = wb_color("FF6B7280")
+)
 wb$merge_cells(sheet = "Validation Summary", dims = "A2:D2")
 
 # Summary statistics table starting row 4
@@ -449,8 +459,10 @@ wb$add_data(sheet = "Validation Summary", x = summary_stats, start_row = 4, star
 
 # Header row styling
 wb$add_fill(sheet = "Validation Summary", dims = "A4:B4", color = wb_color("FF374151"))
-wb$add_font(sheet = "Validation Summary", dims = "A4:B4",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb$add_font(
+  sheet = "Validation Summary", dims = "A4:B4",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 
 # Number formatting
 data_rows <- glue("B5:B{4 + nrow(summary_stats)}")
@@ -479,16 +491,20 @@ flagged_detail <- bind_rows(
     filter(post_death_activity) %>%
     left_join(earliest_treatment, by = c("ID" = "patient_id")) %>%
     mutate(flag_type = "Post-death clinical activity") %>%
-    select(ID, DEATH_DATE, DEATH_SOURCE, earliest_treatment_date, flag_type,
-           post_death_encounters, post_death_diagnoses, post_death_treatments) %>%
+    select(
+      ID, DEATH_DATE, DEATH_SOURCE, earliest_treatment_date, flag_type,
+      post_death_encounters, post_death_diagnoses, post_death_treatments
+    ) %>%
     mutate(validation_reason = glue("{post_death_encounters} encounters, {post_death_diagnoses} diagnoses, {post_death_treatments} treatments after death"))
 )
 
 # Write with standard header styling
 wb$add_data(sheet = "Flagged Patients", x = flagged_detail, start_row = 1, start_col = 1)
 wb$add_fill(sheet = "Flagged Patients", dims = "A1:F1", color = wb_color("FF374151"))
-wb$add_font(sheet = "Flagged Patients", dims = "A1:F1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb$add_font(
+  sheet = "Flagged Patients", dims = "A1:F1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 wb$set_col_widths(sheet = "Flagged Patients", cols = 1:6, widths = c(15, 15, 15, 20, 35, 50))
 
 # Freeze pane on first row
@@ -502,10 +518,14 @@ wb$add_worksheet("Death Only Patients")
 # Write death_only_investigation with standard header styling
 wb$add_data(sheet = "Death Only Patients", x = death_only_investigation, start_row = 1, start_col = 1)
 wb$add_fill(sheet = "Death Only Patients", dims = "A1:O1", color = wb_color("FF374151"))
-wb$add_font(sheet = "Death Only Patients", dims = "A1:O1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-wb$set_col_widths(sheet = "Death Only Patients", cols = 1:15,
-                  widths = c(15, 15, 15, 12, 15, 15, 12, 8, 15, 15, 15, 15, 15, 15, 50))
+wb$add_font(
+  sheet = "Death Only Patients", dims = "A1:O1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
+wb$set_col_widths(
+  sheet = "Death Only Patients", cols = 1:15,
+  widths = c(15, 15, 15, 12, 15, 15, 12, 8, 15, 15, 15, 15, 15, 15, 50)
+)
 
 # Freeze pane on first row
 wb$freeze_pane(sheet = "Death Only Patients", firstActiveRow = 2)

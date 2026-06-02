@@ -37,7 +37,7 @@ message("BENCHMARK SETUP: Loading infrastructure")
 message(strrep("=", 60))
 
 source("R/00_config.R")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 1: SETUP ----
 # ==============================================================================
 source("R/01_load_pcornet.R")
@@ -125,8 +125,12 @@ benchmark_summary <- benchmark_results %>%
   )
 
 # Compute speedup ratio
-rds_median <- benchmark_summary %>% filter(backend == "RDS") %>% pull(median_seconds)
-ddb_median <- benchmark_summary %>% filter(backend == "DuckDB") %>% pull(median_seconds)
+rds_median <- benchmark_summary %>%
+  filter(backend == "RDS") %>%
+  pull(median_seconds)
+ddb_median <- benchmark_summary %>%
+  filter(backend == "DuckDB") %>%
+  pull(median_seconds)
 speedup <- rds_median / ddb_median
 
 # Extract min/max/sd for console summary
@@ -169,7 +173,7 @@ message(glue("\nVariance: RDS sd={round(sd_rds, 3)}s, DuckDB sd={round(sd_ddb, 3
 # CLEANUP
 # ==============================================================================
 
-USE_DUCKDB <<- FALSE  # Restore default
+USE_DUCKDB <<- FALSE # Restore default
 message(strrep("=", 60))
 # ==============================================================================
 # SECTION 2: OUTPUT ----

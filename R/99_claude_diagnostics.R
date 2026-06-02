@@ -42,7 +42,9 @@ sink(sink_con, type = "message")
 
 # Helper: format count with commas
 safe_count <- function(n) {
-  if (is.na(n)) return("NA")
+  if (is.na(n)) {
+    return("NA")
+  }
   format(n, big.mark = ",")
 }
 
@@ -90,8 +92,10 @@ cat("\nTotal load time:", format(load_end - load_start, digits = 3), "\n")
 
 section("2. TABLE DIMENSIONS AND MEMORY")
 
-cat(sprintf("%-25s %12s %8s %12s %15s\n",
-            "Table", "Rows", "Cols", "Patients", "Memory (MB)"))
+cat(sprintf(
+  "%-25s %12s %8s %12s %15s\n",
+  "Table", "Rows", "Cols", "Patients", "Memory (MB)"
+))
 cat(strrep("-", 75), "\n")
 
 total_rows <- 0
@@ -116,20 +120,24 @@ for (tbl_name in names(pcornet)) {
     patients_str <- "no ID col"
   }
 
-  cat(sprintf("%-25s %12s %8d %12s %12.1f MB\n",
-              tbl_name,
-              format(n_rows, big.mark = ","),
-              n_cols,
-              patients_str,
-              mem_mb))
+  cat(sprintf(
+    "%-25s %12s %8d %12s %12.1f MB\n",
+    tbl_name,
+    format(n_rows, big.mark = ","),
+    n_cols,
+    patients_str,
+    mem_mb
+  ))
 
   total_rows <- total_rows + n_rows
   total_mem <- total_mem + mem_mb
 }
 
 cat(strrep("-", 75), "\n")
-cat(sprintf("%-25s %12s %8s %12s %12.1f MB\n",
-            "TOTAL", format(total_rows, big.mark = ","), "", "", total_mem))
+cat(sprintf(
+  "%-25s %12s %8s %12s %12.1f MB\n",
+  "TOTAL", format(total_rows, big.mark = ","), "", "", total_mem
+))
 
 # ==============================================================================
 # SECTION 3: Fan-out ratios (rows per patient)
@@ -138,8 +146,10 @@ cat(sprintf("%-25s %12s %8s %12s %12.1f MB\n",
 section("3. FAN-OUT RATIOS (rows per patient)")
 
 cat("How many rows per patient in each table (affects join strategy):\n\n")
-cat(sprintf("%-25s %12s %12s %12s %12s\n",
-            "Table", "Patients", "Rows", "Mean", "Max"))
+cat(sprintf(
+  "%-25s %12s %12s %12s %12s\n",
+  "Table", "Patients", "Rows", "Mean", "Max"
+))
 cat(strrep("-", 75), "\n")
 
 for (tbl_name in names(pcornet)) {
@@ -152,12 +162,14 @@ for (tbl_name in names(pcornet)) {
     dplyr::count(ID) %>%
     dplyr::pull(n)
 
-  cat(sprintf("%-25s %12s %12s %12.1f %12s\n",
-              tbl_name,
-              safe_count(n_patients),
-              format(n_rows, big.mark = ","),
-              mean(rows_per_patient),
-              format(max(rows_per_patient), big.mark = ",")))
+  cat(sprintf(
+    "%-25s %12s %12s %12.1f %12s\n",
+    tbl_name,
+    safe_count(n_patients),
+    format(n_rows, big.mark = ","),
+    mean(rows_per_patient),
+    format(max(rows_per_patient), big.mark = ",")
+  ))
 }
 
 # ==============================================================================
@@ -184,8 +196,10 @@ for (tbl_name in names(pcornet)) {
 
 section("5. GLIMPSE OF KEY TABLES")
 
-key_tables <- c("ENCOUNTER", "DIAGNOSIS", "ENROLLMENT", "DEMOGRAPHIC",
-                "PROCEDURES", "TUMOR_REGISTRY_ALL")
+key_tables <- c(
+  "ENCOUNTER", "DIAGNOSIS", "ENROLLMENT", "DEMOGRAPHIC",
+  "PROCEDURES", "TUMOR_REGISTRY_ALL"
+)
 
 for (tbl_name in key_tables) {
   df <- pcornet[[tbl_name]]
@@ -206,9 +220,11 @@ section("6. KEY COLUMN CARDINALITY (for join planning)")
 cat("Distinct values in columns commonly used for joins/filters:\n\n")
 
 cardinality_checks <- list(
-  list(tbl = "ENCOUNTER",  cols = c("ID", "ENCOUNTERID", "ENC_TYPE", "PAYER_TYPE_PRIMARY",
-                                     "PAYER_TYPE_SECONDARY", "SOURCE")),
-  list(tbl = "DIAGNOSIS",  cols = c("ID", "ENCOUNTERID", "DX_TYPE", "ENC_TYPE", "SOURCE")),
+  list(tbl = "ENCOUNTER", cols = c(
+    "ID", "ENCOUNTERID", "ENC_TYPE", "PAYER_TYPE_PRIMARY",
+    "PAYER_TYPE_SECONDARY", "SOURCE"
+  )),
+  list(tbl = "DIAGNOSIS", cols = c("ID", "ENCOUNTERID", "DX_TYPE", "ENC_TYPE", "SOURCE")),
   list(tbl = "ENROLLMENT", cols = c("ID", "ENR_BASIS", "SOURCE")),
   list(tbl = "PROCEDURES", cols = c("ID", "ENCOUNTERID", "PX_TYPE", "SOURCE")),
   list(tbl = "PRESCRIBING", cols = c("ID", "ENCOUNTERID", "SOURCE")),
@@ -225,10 +241,12 @@ for (check in cardinality_checks) {
     if (!col %in% names(df)) next
     n_distinct_val <- dplyr::n_distinct(df[[col]], na.rm = FALSE)
     n_na <- sum(is.na(df[[col]]))
-    cat(sprintf("  %-30s %10s distinct  (%s NA)\n",
-                col,
-                safe_count(n_distinct_val),
-                safe_count(n_na)))
+    cat(sprintf(
+      "  %-30s %10s distinct  (%s NA)\n",
+      col,
+      safe_count(n_distinct_val),
+      safe_count(n_na)
+    ))
   }
 }
 
@@ -262,11 +280,13 @@ for (ref in ref_tables) {
     if (tbl_name == ref) next
     overlap <- length(intersect(ref_ids, id_sets[[tbl_name]]))
     only_ref <- length(setdiff(ref_ids, id_sets[[tbl_name]]))
-    cat(sprintf("  + %-24s overlap: %10s  |  in %s only: %s\n",
-                tbl_name,
-                safe_count(overlap),
-                ref,
-                safe_count(only_ref)))
+    cat(sprintf(
+      "  + %-24s overlap: %10s  |  in %s only: %s\n",
+      tbl_name,
+      safe_count(overlap),
+      ref,
+      safe_count(only_ref)
+    ))
   }
   cat("\n")
 }
@@ -286,11 +306,14 @@ if (!is.null(pcornet$ENCOUNTER)) {
     head(30)
   for (i in seq_len(nrow(primary_freq))) {
     val <- ifelse(is.na(primary_freq$PAYER_TYPE_PRIMARY[i]), "[NA]",
-                  primary_freq$PAYER_TYPE_PRIMARY[i])
-    cat(sprintf("  %-15s %s (%4.1f%%)\n",
-                val,
-                safe_count(primary_freq$n[i]),
-                100 * primary_freq$n[i] / nrow(enc)))
+      primary_freq$PAYER_TYPE_PRIMARY[i]
+    )
+    cat(sprintf(
+      "  %-15s %s (%4.1f%%)\n",
+      val,
+      safe_count(primary_freq$n[i]),
+      100 * primary_freq$n[i] / nrow(enc)
+    ))
   }
 
   subsection("PAYER_TYPE_SECONDARY (top 30)")
@@ -299,11 +322,14 @@ if (!is.null(pcornet$ENCOUNTER)) {
     head(30)
   for (i in seq_len(nrow(secondary_freq))) {
     val <- ifelse(is.na(secondary_freq$PAYER_TYPE_SECONDARY[i]), "[NA]",
-                  secondary_freq$PAYER_TYPE_SECONDARY[i])
-    cat(sprintf("  %-15s %s (%4.1f%%)\n",
-                val,
-                safe_count(secondary_freq$n[i]),
-                100 * secondary_freq$n[i] / nrow(enc)))
+      secondary_freq$PAYER_TYPE_SECONDARY[i]
+    )
+    cat(sprintf(
+      "  %-15s %s (%4.1f%%)\n",
+      val,
+      safe_count(secondary_freq$n[i]),
+      100 * secondary_freq$n[i] / nrow(enc)
+    ))
   }
 }
 
@@ -314,8 +340,10 @@ if (!is.null(pcornet$ENCOUNTER)) {
 section("9. DATE PARSING SUCCESS RATES")
 
 cat("For each date column: how many parsed as Date vs remained NA:\n\n")
-cat(sprintf("%-25s %-30s %10s %10s %8s\n",
-            "Table", "Column", "Parsed", "NA", "NA%"))
+cat(sprintf(
+  "%-25s %-30s %10s %10s %8s\n",
+  "Table", "Column", "Parsed", "NA", "NA%"
+))
 cat(strrep("-", 85), "\n")
 
 for (tbl_name in names(pcornet)) {
@@ -332,11 +360,13 @@ for (tbl_name in names(pcornet)) {
     n_na <- sum(is.na(df[[col]]))
     n_parsed <- n_total - n_na
     pct_na <- round(100 * n_na / n_total, 1)
-    cat(sprintf("%-25s %-30s %10s %10s %7.1f%%\n",
-                tbl_name, col,
-                safe_count(n_parsed),
-                safe_count(n_na),
-                pct_na))
+    cat(sprintf(
+      "%-25s %-30s %10s %10s %7.1f%%\n",
+      tbl_name, col,
+      safe_count(n_parsed),
+      safe_count(n_na),
+      pct_na
+    ))
   }
 }
 
@@ -347,20 +377,26 @@ for (tbl_name in names(pcornet)) {
 section("10. PIPELINE EXECUTION (payer harmonization + cohort build)")
 
 cat("Running 02_harmonize_payer.R...\n\n")
-tryCatch({
-  source("R/02_harmonize_payer.R")
-  cat("\nPayer harmonization complete.\n")
-}, error = function(e) {
-  cat("\nERROR in 02_harmonize_payer.R:", conditionMessage(e), "\n")
-})
+tryCatch(
+  {
+    source("R/02_harmonize_payer.R")
+    cat("\nPayer harmonization complete.\n")
+  },
+  error = function(e) {
+    cat("\nERROR in 02_harmonize_payer.R:", conditionMessage(e), "\n")
+  }
+)
 
 cat("\n\nRunning 14_build_cohort.R...\n\n")
-tryCatch({
-  source("R/14_build_cohort.R")
-  cat("\nCohort build complete.\n")
-}, error = function(e) {
-  cat("\nERROR in 14_build_cohort.R:", conditionMessage(e), "\n")
-})
+tryCatch(
+  {
+    source("R/14_build_cohort.R")
+    cat("\nCohort build complete.\n")
+  },
+  error = function(e) {
+    cat("\nERROR in 14_build_cohort.R:", conditionMessage(e), "\n")
+  }
+)
 
 # ==============================================================================
 # SECTION 11: Cohort summary (if built)
@@ -393,8 +429,10 @@ if (exists("hl_cohort", envir = .GlobalEnv)) {
   }
 
   # Payer distribution
-  payer_cols <- c("PAYER_CATEGORY_PRIMARY", "PAYER_AT_FIRST_DX",
-                  "PAYER_AT_CHEMO", "PAYER_AT_RADIATION", "PAYER_AT_SCT")
+  payer_cols <- c(
+    "PAYER_CATEGORY_PRIMARY", "PAYER_AT_FIRST_DX",
+    "PAYER_AT_CHEMO", "PAYER_AT_RADIATION", "PAYER_AT_SCT"
+  )
   available_payer <- intersect(payer_cols, names(hl_cohort))
   if (length(available_payer) > 0) {
     subsection("Payer category distribution")
@@ -419,17 +457,21 @@ if (exists("hl_cohort", envir = .GlobalEnv)) {
 section("12. ATTRITION LOG")
 
 if (exists("attrition_log", envir = .GlobalEnv) && nrow(attrition_log) > 0) {
-  cat(sprintf("%-45s %10s %10s %10s %8s\n",
-              "Step", "Before", "After", "Excluded", "Excl%"))
+  cat(sprintf(
+    "%-45s %10s %10s %10s %8s\n",
+    "Step", "Before", "After", "Excluded", "Excl%"
+  ))
   cat(strrep("-", 85), "\n")
   for (i in seq_len(nrow(attrition_log))) {
     row <- attrition_log[i, ]
-    cat(sprintf("%-45s %10s %10s %10s %7.1f%%\n",
-                row$step,
-                safe_count(row$n_before),
-                safe_count(row$n_after),
-                safe_count(row$n_excluded),
-                row$pct_excluded))
+    cat(sprintf(
+      "%-45s %10s %10s %10s %7.1f%%\n",
+      row$step,
+      safe_count(row$n_before),
+      safe_count(row$n_after),
+      safe_count(row$n_excluded),
+      row$pct_excluded
+    ))
   }
 } else {
   cat("No attrition log found.\n")

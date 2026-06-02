@@ -40,10 +40,10 @@ source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
 # Define paths
-INPUT_RDS        <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
-INPUT_CSV        <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
+INPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 OUTPUT_TABLE_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_pre_post.xlsx")
-OUTPUT_CSV       <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_pre_post.csv")
+OUTPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_pre_post.csv")
 
 dir.create(dirname(OUTPUT_TABLE_XLSX), showWarnings = FALSE, recursive = TRUE)
 
@@ -367,14 +367,14 @@ hl_c81_dx <- get_pcornet_table("DIAGNOSIS") %>%
   filter(str_detect(DX_norm, "^C81")) %>%
   filter(ID %in% confirmed_hl_cohort$ID)
 
-n_with_c81_dx   <- n_distinct(hl_c81_dx$ID)
-n_no_c81_dx     <- n_total_confirmed - n_with_c81_dx
+n_with_c81_dx <- n_distinct(hl_c81_dx$ID)
+n_no_c81_dx <- n_total_confirmed - n_with_c81_dx
 message(glue("  Cohort patients with any C81 dx row:   {format(n_with_c81_dx, big.mark=',')}"))
 message(glue("  Cohort patients with NO C81 dx row:    {format(n_no_c81_dx, big.mark=',')}"))
 
 hl_c81_with_date <- hl_c81_dx %>% filter(!is.na(DX_DATE))
 n_valid_c81_date <- n_distinct(hl_c81_with_date$ID)
-n_no_c81_date    <- n_with_c81_dx - n_valid_c81_date
+n_no_c81_date <- n_with_c81_dx - n_valid_c81_date
 message(glue("  With valid C81 DX_DATE:                {format(n_valid_c81_date, big.mark=',')}"))
 message(glue("  With NO valid C81 DX_DATE:             {format(n_no_c81_date, big.mark=',')}"))
 
@@ -510,14 +510,14 @@ message("\nComputing baseline metrics from cancer_summary...")
 code_baseline <- cancer_summary %>%
   group_by(cancer_code) %>%
   summarise(
-    total_patients        = n_distinct(ID),
-    confirmed_2date       = n_distinct(ID[two_or_more_unique_dates == 1]),
-    pct_confirmed_2date   = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
-    confirmed_7day        = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
-    pct_confirmed_7day    = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
-    mean_unique_dates     = mean(unique_dates_total, na.rm = TRUE),
-    median_unique_dates   = median(unique_dates_total, na.rm = TRUE),
-    mean_dates_7day_sep   = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
+    total_patients = n_distinct(ID),
+    confirmed_2date = n_distinct(ID[two_or_more_unique_dates == 1]),
+    pct_confirmed_2date = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
+    confirmed_7day = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    pct_confirmed_7day = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
+    mean_unique_dates = mean(unique_dates_total, na.rm = TRUE),
+    median_unique_dates = median(unique_dates_total, na.rm = TRUE),
+    mean_dates_7day_sep = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
     median_dates_7day_sep = median(unique_dates_with_sep_gt_7, na.rm = TRUE),
     .groups = "drop"
   )
@@ -573,10 +573,12 @@ code_summary <- code_baseline %>%
 
 # Select columns: R/55 baseline stats + pre/post/both + total records
 code_summary <- code_summary %>%
-  select(cancer_code, category, total_patients, confirmed_2date, pct_confirmed_2date,
-         confirmed_7day, pct_confirmed_7day, mean_unique_dates, median_unique_dates,
-         mean_dates_7day_sep, median_dates_7day_sep, pre_hl_count, post_hl_count,
-         both_count, total_records) %>%
+  select(
+    cancer_code, category, total_patients, confirmed_2date, pct_confirmed_2date,
+    confirmed_7day, pct_confirmed_7day, mean_unique_dates, median_unique_dates,
+    mean_dates_7day_sep, median_dates_7day_sep, pre_hl_count, post_hl_count,
+    both_count, total_records
+  ) %>%
   arrange(desc(total_patients))
 
 message(glue("  Code summary: {nrow(code_summary)} rows"))
@@ -592,14 +594,14 @@ category_summary <- cancer_summary %>%
   mutate(category = classify_codes(cancer_code)) %>%
   group_by(category) %>%
   summarise(
-    total_patients        = n_distinct(ID),
-    confirmed_2date       = n_distinct(ID[two_or_more_unique_dates == 1]),
-    pct_confirmed_2date   = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
-    confirmed_7day        = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
-    pct_confirmed_7day    = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
-    mean_unique_dates     = mean(unique_dates_total, na.rm = TRUE),
-    median_unique_dates   = median(unique_dates_total, na.rm = TRUE),
-    mean_dates_7day_sep   = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
+    total_patients = n_distinct(ID),
+    confirmed_2date = n_distinct(ID[two_or_more_unique_dates == 1]),
+    pct_confirmed_2date = n_distinct(ID[two_or_more_unique_dates == 1]) / n_distinct(ID),
+    confirmed_7day = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]),
+    pct_confirmed_7day = n_distinct(ID[two_or_more_unique_dates_gt_7 == 1]) / n_distinct(ID),
+    mean_unique_dates = mean(unique_dates_total, na.rm = TRUE),
+    median_unique_dates = median(unique_dates_total, na.rm = TRUE),
+    mean_dates_7day_sep = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
     median_dates_7day_sep = median(unique_dates_with_sep_gt_7, na.rm = TRUE),
     .groups = "drop"
   )
@@ -688,9 +690,9 @@ message(glue("\nWriting {OUTPUT_TABLE_XLSX}..."))
 
 # Styling constants (same as R/55 per D-16)
 DARK_HEADER_FILL <- "FF374151"
-WHITE_FONT       <- "FFFFFFFF"
+WHITE_FONT <- "FFFFFFFF"
 TITLE_FONT_COLOR <- "FF1F2937"
-TOTALS_FILL      <- "FFE5E7EB"
+TOTALS_FILL <- "FFE5E7EB"
 
 wb <- wb_workbook()
 
@@ -701,11 +703,15 @@ SHEET1 <- "Category Summary"
 wb$add_worksheet(SHEET1)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET1, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By Category)",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET1, dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET1, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By Category)",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET1, dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET1, dims = "A1:N1")
 
 # Row 2: Headers
@@ -729,20 +735,24 @@ for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
 wb$add_fill(sheet = SHEET1, dims = "A2:N2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = "A2:N2",
-            name = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = SHEET1, dims = "A2:N2",
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(WHITE_FONT)
+)
 
 # Freeze pane
 wb$freeze_pane(sheet = SHEET1, first_active_row = 3, first_active_col = 1)
 
 # Data rows starting at row 3
 data_start1 <- 3
-n_data1     <- nrow(category_summary)
-data_end1   <- data_start1 + n_data1 - 1
+n_data1 <- nrow(category_summary)
+data_end1 <- data_start1 + n_data1 - 1
 
-wb$add_data(sheet = SHEET1, x = as.data.frame(category_summary),
-            start_row = data_start1, col_names = FALSE)
+wb$add_data(
+  sheet = SHEET1, x = as.data.frame(category_summary),
+  start_row = data_start1, col_names = FALSE
+)
 
 # Number formatting (matching R/55 pattern + pre/post/both)
 # B, C, E (integer counts): "#,##0"
@@ -766,15 +776,21 @@ wb$add_numfmt(sheet = SHEET1, dims = glue("N{data_start1}:N{data_end1}"), numfmt
 
 # Totals row
 totals_row1 <- data_end1 + 1
-wb$add_data(sheet = SHEET1, x = as.data.frame(totals_category),
-            start_row = totals_row1, col_names = FALSE)
-wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_row1}:N{totals_row1}"),
-            color = wb_color(TOTALS_FILL))
-wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_row1}:N{totals_row1}"),
-            name  = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET1, x = as.data.frame(totals_category),
+  start_row = totals_row1, col_names = FALSE
+)
+wb$add_fill(
+  sheet = SHEET1,
+  dims = glue("A{totals_row1}:N{totals_row1}"),
+  color = wb_color(TOTALS_FILL)
+)
+wb$add_font(
+  sheet = SHEET1,
+  dims = glue("A{totals_row1}:N{totals_row1}"),
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$add_numfmt(sheet = SHEET1, dims = glue("B{totals_row1}:B{totals_row1}"), numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET1, dims = glue("C{totals_row1}:C{totals_row1}"), numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET1, dims = glue("E{totals_row1}:E{totals_row1}"), numfmt = "#,##0")
@@ -786,17 +802,23 @@ wb$add_numfmt(sheet = SHEET1, dims = glue("N{totals_row1}:N{totals_row1}"), numf
 # Footnote row
 footnote_row1 <- totals_row1 + 2
 footnote_text1 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
-wb$add_data(sheet = SHEET1,
-            x = footnote_text1,
-            start_row = footnote_row1, start_col = 1)
-wb$add_font(sheet = SHEET1, dims = glue("A{footnote_row1}"),
-            name = "Calibri", size = 10, italic = TRUE,
-            color = wb_color("FF6B7280"))
+wb$add_data(
+  sheet = SHEET1,
+  x = footnote_text1,
+  start_row = footnote_row1, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET1, dims = glue("A{footnote_row1}"),
+  name = "Calibri", size = 10, italic = TRUE,
+  color = wb_color("FF6B7280")
+)
 wb$merge_cells(sheet = SHEET1, dims = glue("A{footnote_row1}:N{footnote_row1}"))
 
 # Column widths
-wb$set_col_widths(sheet = SHEET1, cols = 1:14,
-                  widths = c(40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 10, 10, 10, 14))
+wb$set_col_widths(
+  sheet = SHEET1, cols = 1:14,
+  widths = c(40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 10, 10, 10, 14)
+)
 
 # ---------------------------------------------------------------------------
 # Sheet 2: "Code Summary" (15 columns A-O)
@@ -805,11 +827,15 @@ SHEET2 <- "Code Summary"
 wb$add_worksheet(SHEET2)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By ICD-10 Code)",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET2, dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By ICD-10 Code)",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET2, dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET2, dims = "A1:O1")
 
 # Row 2: Headers
@@ -834,20 +860,24 @@ for (i in seq_along(headers2)) {
   wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 2, start_col = i)
 }
 wb$add_fill(sheet = SHEET2, dims = "A2:O2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = "A2:O2",
-            name = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = SHEET2, dims = "A2:O2",
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(WHITE_FONT)
+)
 
 # Freeze pane
 wb$freeze_pane(sheet = SHEET2, first_active_row = 3, first_active_col = 1)
 
 # Data rows starting at row 3
 data_start2 <- 3
-n_data2     <- nrow(code_summary)
-data_end2   <- data_start2 + n_data2 - 1
+n_data2 <- nrow(code_summary)
+data_end2 <- data_start2 + n_data2 - 1
 
-wb$add_data(sheet = SHEET2, x = as.data.frame(code_summary),
-            start_row = data_start2, col_names = FALSE)
+wb$add_data(
+  sheet = SHEET2, x = as.data.frame(code_summary),
+  start_row = data_start2, col_names = FALSE
+)
 
 # Number formatting (matching R/55 pattern + pre/post/both)
 # C, D, F (integer counts): "#,##0"
@@ -871,15 +901,21 @@ wb$add_numfmt(sheet = SHEET2, dims = glue("O{data_start2}:O{data_end2}"), numfmt
 
 # Totals row
 totals_row2 <- data_end2 + 1
-wb$add_data(sheet = SHEET2, x = as.data.frame(totals_code),
-            start_row = totals_row2, col_names = FALSE)
-wb$add_fill(sheet = SHEET2,
-            dims  = glue("A{totals_row2}:O{totals_row2}"),
-            color = wb_color(TOTALS_FILL))
-wb$add_font(sheet = SHEET2,
-            dims  = glue("A{totals_row2}:O{totals_row2}"),
-            name  = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET2, x = as.data.frame(totals_code),
+  start_row = totals_row2, col_names = FALSE
+)
+wb$add_fill(
+  sheet = SHEET2,
+  dims = glue("A{totals_row2}:O{totals_row2}"),
+  color = wb_color(TOTALS_FILL)
+)
+wb$add_font(
+  sheet = SHEET2,
+  dims = glue("A{totals_row2}:O{totals_row2}"),
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$add_numfmt(sheet = SHEET2, dims = glue("C{totals_row2}:C{totals_row2}"), numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET2, dims = glue("D{totals_row2}:D{totals_row2}"), numfmt = "#,##0")
 wb$add_numfmt(sheet = SHEET2, dims = glue("F{totals_row2}:F{totals_row2}"), numfmt = "#,##0")
@@ -891,17 +927,23 @@ wb$add_numfmt(sheet = SHEET2, dims = glue("O{totals_row2}:O{totals_row2}"), numf
 # Footnote row
 footnote_row2 <- totals_row2 + 2
 footnote_text2 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
-wb$add_data(sheet = SHEET2,
-            x = footnote_text2,
-            start_row = footnote_row2, start_col = 1)
-wb$add_font(sheet = SHEET2, dims = glue("A{footnote_row2}"),
-            name = "Calibri", size = 10, italic = TRUE,
-            color = wb_color("FF6B7280"))
+wb$add_data(
+  sheet = SHEET2,
+  x = footnote_text2,
+  start_row = footnote_row2, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET2, dims = glue("A{footnote_row2}"),
+  name = "Calibri", size = 10, italic = TRUE,
+  color = wb_color("FF6B7280")
+)
 wb$merge_cells(sheet = SHEET2, dims = glue("A{footnote_row2}:O{footnote_row2}"))
 
 # Column widths
-wb$set_col_widths(sheet = SHEET2, cols = 1:15,
-                  widths = c(14, 40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 10, 10, 10, 14))
+wb$set_col_widths(
+  sheet = SHEET2, cols = 1:15,
+  widths = c(14, 40, 14, 18, 14, 18, 14, 16, 16, 18, 18, 10, 10, 10, 14)
+)
 
 # ---------------------------------------------------------------------------
 # Save workbook

@@ -72,8 +72,14 @@ for (i in seq_len(nrow(enc_type_dist))) {
 }
 
 # Warn about sites with zero AV or TH encounters
-sites_with_av <- enc %>% filter(ENC_TYPE == "AV") %>% pull(SOURCE) %>% unique()
-sites_with_th <- enc %>% filter(ENC_TYPE == "TH") %>% pull(SOURCE) %>% unique()
+sites_with_av <- enc %>%
+  filter(ENC_TYPE == "AV") %>%
+  pull(SOURCE) %>%
+  unique()
+sites_with_th <- enc %>%
+  filter(ENC_TYPE == "TH") %>%
+  pull(SOURCE) %>%
+  unique()
 all_sites <- unique(enc$SOURCE)
 
 if (length(sites_with_av) < length(all_sites)) {
@@ -140,7 +146,7 @@ message(glue("\n--- SECTION 2: Same-Date Multi-Source Detection (SAMEDT-01) ---"
 same_date_groups <- enc_valid %>%
   group_by(ID, admit_date_parsed) %>%
   summarise(
-    n_sources    = n_distinct(SOURCE),
+    n_sources = n_distinct(SOURCE),
     n_encounters = n(),
     source_combo = paste(sort(unique(SOURCE)), collapse = "+"),
     sources_list = paste(sort(unique(SOURCE)), collapse = ", "),
@@ -177,8 +183,8 @@ per_source_overlap_counts <- enc_on_multi_dates %>%
   group_by(SOURCE) %>%
   summarise(
     n_encounters_on_multi_dates = n(),
-    n_multi_source_dates        = n_distinct(paste(ID, ADMIT_DATE)),
-    n_patients_affected         = n_distinct(ID),
+    n_multi_source_dates = n_distinct(paste(ID, ADMIT_DATE)),
+    n_patients_affected = n_distinct(ID),
     .groups = "drop"
   )
 
@@ -208,7 +214,7 @@ message(glue("\n--- SECTION 4: Source Combination Frequencies for Same-Date (SAM
 same_date_combo_freq <- same_date_detail %>%
   group_by(source_combo) %>%
   summarise(
-    n_patient_dates    = n(),
+    n_patient_dates = n(),
     n_total_encounters = sum(n_encounters),
     .groups = "drop"
   ) %>%
@@ -245,8 +251,10 @@ multi_source_ids <- enc_for_join %>%
   filter(n_src > 1) %>%
   pull(ID)
 
-message(glue("Patients with 2+ sources: {format(length(multi_source_ids), big.mark=',')} ",
-             "(skipping {format(n_distinct(enc_for_join$ID) - length(multi_source_ids), big.mark=',')} single-source patients)"))
+message(glue(
+  "Patients with 2+ sources: {format(length(multi_source_ids), big.mark=',')} ",
+  "(skipping {format(n_distinct(enc_for_join$ID) - length(multi_source_ids), big.mark=',')} single-source patients)"
+))
 
 enc_multi <- enc_for_join %>% filter(ID %in% multi_source_ids)
 
@@ -266,7 +274,7 @@ message(glue("Date range: {min(all_dates)} to {max(all_dates)} ({n_dates} unique
 # For each date D: get encounters on D, get encounters on D+1..D+7, find cross-source same-patient pairs
 same_week_list <- vector("list", n_dates)
 total_pairs <- 0L
-progress_interval <- max(1L, n_dates %/% 50)  # update ~50 times
+progress_interval <- max(1L, n_dates %/% 50) # update ~50 times
 
 message(glue("\nProcessing {n_dates} dates:"))
 message(strrep("-", 52))
@@ -294,8 +302,8 @@ for (idx in seq_along(all_dates)) {
     filter(source_1 != source_2) %>%
     mutate(
       day_gap = as.integer(admit_date_2 - admit_date_1),
-      src_lo  = pmin(source_1, source_2),
-      src_hi  = pmax(source_1, source_2),
+      src_lo = pmin(source_1, source_2),
+      src_hi = pmax(source_1, source_2),
       source_combo = paste(src_lo, src_hi, sep = "+"),
       source_1 = src_lo,
       source_2 = src_hi
@@ -346,7 +354,7 @@ sw_as_source1 <- same_week_detail %>%
   group_by(SOURCE = source_1) %>%
   summarise(
     n_near_dup_pairs_as_src1 = n(),
-    n_patients_as_src1       = n_distinct(ID),
+    n_patients_as_src1 = n_distinct(ID),
     .groups = "drop"
   )
 
@@ -354,7 +362,7 @@ sw_as_source2 <- same_week_detail %>%
   group_by(SOURCE = source_2) %>%
   summarise(
     n_near_dup_pairs_as_src2 = n(),
-    n_patients_as_src2       = n_distinct(ID),
+    n_patients_as_src2 = n_distinct(ID),
     .groups = "drop"
   )
 
@@ -368,7 +376,7 @@ per_source_same_week <- total_per_source %>%
     n_patients_as_src2       = coalesce(n_patients_as_src2, 0L),
     n_near_duplicate_pairs   = n_near_dup_pairs_as_src1 + n_near_dup_pairs_as_src2,
     # Patients affected: union across both roles (recount from detail)
-    n_patients_affected      = NA_integer_  # filled below
+    n_patients_affected      = NA_integer_ # filled below
   ) %>%
   select(SOURCE, total_encounters, n_near_duplicate_pairs)
 
@@ -395,7 +403,7 @@ for (i in seq_len(nrow(per_source_same_week))) {
 same_week_combo_freq <- same_week_detail %>%
   group_by(source_combo) %>%
   summarise(
-    n_pairs            = n(),
+    n_pairs = n(),
     n_total_encounters = n_distinct(paste(ID, admit_date_1)) + n_distinct(paste(ID, admit_date_2)),
     .groups = "drop"
   ) %>%
@@ -464,7 +472,7 @@ csv3_same_date <- same_date_combo_freq %>%
 csv3_same_week <- same_week_combo_freq %>%
   mutate(
     match_type      = "same_week",
-    n_patient_dates = n_pairs  # reuse column name for consistency
+    n_patient_dates = n_pairs # reuse column name for consistency
   ) %>%
   select(match_type, source_combo, n_patient_dates, n_total_encounters, rank)
 
@@ -487,8 +495,9 @@ csv4 <- per_source_same_date %>%
   left_join(
     per_source_same_week %>%
       select(SOURCE,
-             n_same_week_near_dup_pairs = n_near_duplicate_pairs,
-             n_same_week_patients_affected = n_patients_affected_sw),
+        n_same_week_near_dup_pairs = n_near_duplicate_pairs,
+        n_same_week_patients_affected = n_patients_affected_sw
+      ),
     by = "SOURCE"
   ) %>%
   mutate(
@@ -508,15 +517,15 @@ decode_payer <- function(code) {
   # Use AMC_PAYER_LOOKUP for direct lookup, with prefix fallback
   looked_up <- AMC_PAYER_LOOKUP[code]
   prefix_cat <- case_when(
-    is.na(code) | code == ""                       ~ NA_character_,
-    str_starts(code, "1")                          ~ "Medicare",
-    str_starts(code, "2")                          ~ "Medicaid",
-    str_starts(code, "5") | str_starts(code, "6")  ~ "Private",
-    str_starts(code, "3") | str_starts(code, "4")  ~ "Other govt",
-    str_starts(code, "7")                          ~ "Private",
-    str_starts(code, "8")                          ~ "Uninsured",
-    str_starts(code, "9")                          ~ "Other",
-    TRUE                                           ~ "Other"
+    is.na(code) | code == "" ~ NA_character_,
+    str_starts(code, "1") ~ "Medicare",
+    str_starts(code, "2") ~ "Medicaid",
+    str_starts(code, "5") | str_starts(code, "6") ~ "Private",
+    str_starts(code, "3") | str_starts(code, "4") ~ "Other govt",
+    str_starts(code, "7") ~ "Private",
+    str_starts(code, "8") ~ "Uninsured",
+    str_starts(code, "9") ~ "Other",
+    TRUE ~ "Other"
   )
   result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
   result <- if_else(is.na(code) | code == "", NA_character_, result)
@@ -533,9 +542,11 @@ csv5 <- same_date_detail %>%
     PAYER_PRIMARY_DECODED   = decode_payer(PAYER_TYPE_PRIMARY),
     PAYER_SECONDARY_DECODED = decode_payer(PAYER_TYPE_SECONDARY)
   ) %>%
-  select(ID, ADMIT_DATE, n_sources, source_combo, SOURCE,
-         PAYER_TYPE_PRIMARY, PAYER_PRIMARY_DECODED,
-         PAYER_TYPE_SECONDARY, PAYER_SECONDARY_DECODED) %>%
+  select(
+    ID, ADMIT_DATE, n_sources, source_combo, SOURCE,
+    PAYER_TYPE_PRIMARY, PAYER_PRIMARY_DECODED,
+    PAYER_TYPE_SECONDARY, PAYER_SECONDARY_DECODED
+  ) %>%
   arrange(desc(n_sources), ID, ADMIT_DATE, SOURCE)
 
 write_csv(csv5, file.path(output_dir, "multi_source_encounter_payer_av_th.csv"))

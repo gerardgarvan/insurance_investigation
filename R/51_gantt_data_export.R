@@ -44,11 +44,11 @@ source("R/utils/utils_dates.R")
 
 # Input paths: existing RDS artifacts from R/44a_treatment_episodes.R
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
-DETAIL_RDS   <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
+DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 
 # Output paths: CSV files for third-party Gantt chart consumption
 OUTPUT_EPISODES <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
-OUTPUT_DETAIL   <- file.path(CONFIG$output_dir, "gantt_detail.csv")
+OUTPUT_DETAIL <- file.path(CONFIG$output_dir, "gantt_detail.csv")
 
 # Code description lookup (built by R/48b_build_code_descriptions.R)
 DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
@@ -381,7 +381,7 @@ cancer_categories_per_patient <- cancer_summary %>%
     .groups = "drop"
   ) %>%
   mutate(
-    is_hodgkin = str_detect(cancer_category, "Hodgkin Lymphoma")  # per D-03
+    is_hodgkin = str_detect(cancer_category, "Hodgkin Lymphoma") # per D-03
   )
 
 message(glue("  Cancer categories aggregated for {format(nrow(cancer_categories_per_patient), big.mark = ',')} patients"))
@@ -495,15 +495,21 @@ message(glue("  Loaded {format(length(code_descriptions), big.mark = ',')} code 
 
 # Helper: map a single code to its description (empty string if missing, per D-05)
 lookup_description <- function(code) {
-  if (is.na(code) || code == "") return("")
-  if (code %in% names(code_descriptions)) return(code_descriptions[[code]])
+  if (is.na(code) || code == "") {
+    return("")
+  }
+  if (code %in% names(code_descriptions)) {
+    return(code_descriptions[[code]])
+  }
   return("")
 }
 
 # Helper: map comma-separated codes to comma-separated descriptions (per D-04)
 # Preserves input order — does NOT sort. Per RESEARCH.md Pitfall 1.
 map_codes_to_descriptions <- function(codes_str) {
-  if (is.na(codes_str) || codes_str == "") return("")
+  if (is.na(codes_str) || codes_str == "") {
+    return("")
+  }
   codes <- str_split(codes_str, ",")[[1]]
   descriptions <- sapply(codes, lookup_description, USE.NAMES = FALSE)
   paste(descriptions, collapse = ",")
@@ -642,7 +648,6 @@ if (nrow(death_data) > 0) {
 
   message(glue("  Added {nrow(death_episodes)} death episode rows"))
   message(glue("  Added {nrow(death_detail)} death detail rows"))
-
 } else {
   message("\n--- No valid death dates found; skipping death rows ---")
 }
@@ -746,7 +751,6 @@ if (nrow(hl_cohort) > 0) {
 
   message(glue("  Added {nrow(hl_dx_episodes)} HL Diagnosis episode rows"))
   message(glue("  Added {nrow(hl_dx_detail)} HL Diagnosis detail rows"))
-
 } else {
   message("\n--- No valid HL diagnosis dates found; skipping HL Diagnosis treatment rows ---")
 }

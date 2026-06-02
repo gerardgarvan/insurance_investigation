@@ -56,8 +56,11 @@ hist_data <- hl_cohort %>%
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Private",
-                 "Self-pay", "Uninsured", "Missing"))
+      levels = c(
+        "Medicare", "Medicaid", "Private",
+        "Self-pay", "Uninsured", "Missing"
+      )
+    )
   )
 
 # Cap x-axis at 500 to show bulk of distribution (median ~93, Q3 ~243)
@@ -79,13 +82,17 @@ n_beyond <- sum(hist_data$N_ENCOUNTERS > x_cap)
 
 p1 <- ggplot(hist_data, aes(x = N_ENC_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
   geom_histogram(binwidth = 20, color = "white", linewidth = 0.2) +
-  geom_text(data = overflow_counts %>% filter(n_overflow > 0),
-            aes(x = x_cap + 10, y = Inf, label = paste0(">", x_cap, ": ", n_overflow)),
-            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
-  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  geom_text(
+    data = overflow_counts %>% filter(n_overflow > 0),
+    aes(x = x_cap + 10, y = Inf, label = paste0(">", x_cap, ": ", n_overflow)),
+    vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE
+  ) +
+  facet_wrap(~PAYER_CATEGORY_PRIMARY, scales = "free_y") +
   coord_cartesian(xlim = c(0, x_cap + 40)) +
-  scale_x_continuous(breaks = seq(0, x_cap, by = 100),
-                     labels = c(seq(0, x_cap - 100, by = 100), paste0(x_cap, "+"))) +
+  scale_x_continuous(
+    breaks = seq(0, x_cap, by = 100),
+    labels = c(seq(0, x_cap - 100, by = 100), paste0(x_cap, "+"))
+  ) +
   labs(
     title = "Number of Encounters per Person by Payor Category",
     subtitle = glue("{n_beyond} patients with >{x_cap} encounters shown in overflow bin"),
@@ -93,12 +100,15 @@ p1 <- ggplot(hist_data, aes(x = N_ENC_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
     y = "Number of Patients"
   ) +
   theme_minimal(base_size = 11) +
-  theme(legend.position = "none",
-        strip.text = element_text(face = "bold")) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold")
+  ) +
   scale_fill_viridis_d()
 
 ggsave("output/figures/encounters_per_person_by_payor.png", p1,
-       width = 12, height = 8, dpi = 300)
+  width = 12, height = 8, dpi = 300
+)
 message("  Saved: output/figures/encounters_per_person_by_payor.png")
 
 # ==============================================================================
@@ -142,7 +152,8 @@ p2 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_post_tx_enc)) +
   theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/post_tx_encounters_by_dx_year.png", p2,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/post_tx_encounters_by_dx_year.png")
 
 # ==============================================================================
@@ -169,7 +180,8 @@ p3 <- ggplot(enc_by_year, aes(x = DX_YEAR, y = mean_total_enc)) +
   theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/total_encounters_by_dx_year.png", p3,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/total_encounters_by_dx_year.png")
 
 # ==============================================================================
@@ -247,7 +259,8 @@ max_y_p4 <- max(age_post_tx$n, na.rm = TRUE)
 p4 <- ggplot(age_post_tx, aes(x = AGE_GROUP, y = n, fill = HAS_POST_TX_ENCOUNTERS)) +
   geom_col(position = "dodge") +
   geom_text(aes(label = paste0(n, "\n(", pct, "%)")),
-            position = position_dodge(width = 0.9), vjust = -0.3, size = 3) +
+    position = position_dodge(width = 0.9), vjust = -0.3, size = 3
+  ) +
   coord_cartesian(clip = "off", ylim = c(0, max_y_p4 * 1.2)) +
   labs(
     title = "Post-Treatment Encounter Presence by Age Group at Diagnosis",
@@ -261,7 +274,8 @@ p4 <- ggplot(age_post_tx, aes(x = AGE_GROUP, y = n, fill = HAS_POST_TX_ENCOUNTER
   scale_fill_manual(values = c("Yes" = "#2c7fb8", "No" = "#d95f02"))
 
 ggsave("output/figures/post_tx_by_age_group.png", p4,
-       width = 8, height = 6, dpi = 300)
+  width = 8, height = 6, dpi = 300
+)
 message("  Saved: output/figures/post_tx_by_age_group.png")
 
 # Print summary to console
@@ -318,8 +332,11 @@ hist_data_ud <- cohort_ud %>%
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Private",
-                 "Self-pay", "Uninsured", "Missing"))
+      levels = c(
+        "Medicare", "Medicaid", "Private",
+        "Self-pay", "Uninsured", "Missing"
+      )
+    )
   )
 
 x_cap_ud <- 300
@@ -338,13 +355,17 @@ n_beyond_ud <- sum(cohort_ud$N_UNIQUE_DATES > x_cap_ud, na.rm = TRUE)
 
 p_ud1 <- ggplot(hist_data_ud, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
   geom_histogram(binwidth = 15, color = "white", linewidth = 0.2) +
-  geom_text(data = overflow_counts_ud %>% filter(n_overflow > 0),
-            aes(x = x_cap_ud + 10, y = Inf, label = paste0(">", x_cap_ud, ": ", n_overflow)),
-            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
-  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  geom_text(
+    data = overflow_counts_ud %>% filter(n_overflow > 0),
+    aes(x = x_cap_ud + 10, y = Inf, label = paste0(">", x_cap_ud, ": ", n_overflow)),
+    vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE
+  ) +
+  facet_wrap(~PAYER_CATEGORY_PRIMARY, scales = "free_y") +
   coord_cartesian(xlim = c(0, x_cap_ud + 30)) +
-  scale_x_continuous(breaks = seq(0, x_cap_ud, by = 50),
-                     labels = c(seq(0, x_cap_ud - 50, by = 50), paste0(x_cap_ud, "+"))) +
+  scale_x_continuous(
+    breaks = seq(0, x_cap_ud, by = 50),
+    labels = c(seq(0, x_cap_ud - 50, by = 50), paste0(x_cap_ud, "+"))
+  ) +
   labs(
     title = "Unique Encounter Dates per Person by Payer Category",
     subtitle = glue("{n_beyond_ud} patients with >{x_cap_ud} unique dates shown in overflow bin"),
@@ -352,12 +373,15 @@ p_ud1 <- ggplot(hist_data_ud, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_PRIMARY
     y = "Number of Patients"
   ) +
   theme_minimal(base_size = 11) +
-  theme(legend.position = "none",
-        strip.text = element_text(face = "bold")) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold")
+  ) +
   scale_fill_viridis_d()
 
 ggsave("output/figures/unique_dates_per_person_by_payor.png", p_ud1,
-       width = 12, height = 8, dpi = 300)
+  width = 12, height = 8, dpi = 300
+)
 message("  Saved: output/figures/unique_dates_per_person_by_payor.png")
 
 # 6d. Post-treatment unique dates by DX year
@@ -391,7 +415,8 @@ p_ud2 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_post_tx_ud)) +
   theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/post_tx_unique_dates_by_dx_year.png", p_ud2,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/post_tx_unique_dates_by_dx_year.png")
 
 # 6e. Total unique dates by DX year
@@ -413,7 +438,8 @@ p_ud3 <- ggplot(enc_ud_by_year, aes(x = DX_YEAR, y = mean_total_ud)) +
   theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/total_unique_dates_by_dx_year.png", p_ud3,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/total_unique_dates_by_dx_year.png")
 
 # ==============================================================================
@@ -439,9 +465,9 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
-          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-          (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
-          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
+            (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx)) |
+            (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue)
         ) %>%
         filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>%
@@ -462,7 +488,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
       sources$dx <- pcornet$DIAGNOSIS %>%
         filter(
           (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
-          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+            (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
         ) %>%
         filter(!is.na(DX_DATE)) %>%
         group_by(ID) %>%
@@ -520,9 +546,9 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
-          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-          (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
-          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
+            (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx)) |
+            (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue)
         ) %>%
         filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>%
@@ -532,7 +558,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
       sources$dx <- pcornet$DIAGNOSIS %>%
         filter(
           (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
-          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+            (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
         ) %>%
         filter(!is.na(DX_DATE)) %>%
         group_by(ID) %>%
@@ -573,9 +599,9 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
           (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
-          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
-          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
-          (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+            (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) |
+            (PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue)
         ) %>%
         filter(!is.na(PX_DATE)) %>%
         group_by(ID) %>%
@@ -598,8 +624,10 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
     # TUMOR_REGISTRY: SCT dates (DT_HTE, DT_SCT, SCT_DATE, BMT_DATE, etc.)
     if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
       tr_sct_cols <- intersect(
-        c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-          "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
+        c(
+          "DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+          "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"
+        ),
         names(pcornet$TUMOR_REGISTRY_ALL)
       )
       if (length(tr_sct_cols) > 0) {
@@ -654,7 +682,7 @@ message(glue("  {n_treated_for_stacked} patients with treatment dates for stacke
 
 # 7b. Split encounters into pre/post treatment (per D-07)
 stacked_enc <- encounters %>%
-  inner_join(tx_dates_for_stacked, by = "ID") %>%  # Only treated patients (per D-10)
+  inner_join(tx_dates_for_stacked, by = "ID") %>% # Only treated patients (per D-10)
   filter(!is.na(ADMIT_DATE)) %>%
   mutate(
     ENCOUNTER_PERIOD = if_else(
@@ -667,7 +695,7 @@ stacked_enc <- encounters %>%
 # 7c. Count per patient per period (per D-09: use raw N_ENCOUNTERS count basis)
 stacked_counts <- stacked_enc %>%
   count(ID, ENCOUNTER_PERIOD, name = "n_enc") %>%
-  complete(ID, ENCOUNTER_PERIOD, fill = list(n_enc = 0))  # Ensure all patients have both periods
+  complete(ID, ENCOUNTER_PERIOD, fill = list(n_enc = 0)) # Ensure all patients have both periods
 
 # 7d. Compute total encounters per patient for histogram x-axis
 patient_totals_stacked <- stacked_counts %>%
@@ -688,11 +716,15 @@ stacked_plot_data <- stacked_counts %>%
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Private",
-                 "Self-pay", "Uninsured", "Missing")),
+      levels = c(
+        "Medicare", "Medicaid", "Private",
+        "Self-pay", "Uninsured", "Missing"
+      )
+    ),
     # Post-treatment on bottom (first level = bottom in stacked histogram) per D-07
     ENCOUNTER_PERIOD = factor(ENCOUNTER_PERIOD,
-      levels = c("Post-treatment", "Pre-treatment"))
+      levels = c("Post-treatment", "Pre-treatment")
+    )
   )
 
 # 7f. Overflow bin at >500 (matching Section 1 pattern)
@@ -723,13 +755,17 @@ save_output_data(stacked_plot_data, "encounters_stacked_pre_post_data")
 # 7g. Create stacked histogram
 p_stacked <- ggplot(stacked_plot_data, aes(x = N_TOTAL_CAPPED, weight = n_enc, fill = ENCOUNTER_PERIOD)) +
   geom_histogram(position = "stack", binwidth = 20, color = "white", linewidth = 0.2) +
-  geom_text(data = overflow_stk %>% filter(n_overflow > 0),
-            aes(x = x_cap_stk + 10, y = Inf, label = paste0(">", x_cap_stk, ": ", n_overflow)),
-            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
-  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  geom_text(
+    data = overflow_stk %>% filter(n_overflow > 0),
+    aes(x = x_cap_stk + 10, y = Inf, label = paste0(">", x_cap_stk, ": ", n_overflow)),
+    vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE
+  ) +
+  facet_wrap(~PAYER_CATEGORY_PRIMARY, scales = "free_y") +
   coord_cartesian(xlim = c(0, x_cap_stk + 40)) +
-  scale_x_continuous(breaks = seq(0, x_cap_stk, by = 100),
-                     labels = c(seq(0, x_cap_stk - 100, by = 100), paste0(x_cap_stk, "+"))) +
+  scale_x_continuous(
+    breaks = seq(0, x_cap_stk, by = 100),
+    labels = c(seq(0, x_cap_stk - 100, by = 100), paste0(x_cap_stk, "+"))
+  ) +
   scale_fill_manual(values = c("Post-treatment" = "#2c7fb8", "Pre-treatment" = "#ff7f0e")) +
   labs(
     title = "Encounters per Person by Payor (Pre/Post-Treatment Split)",
@@ -739,11 +775,14 @@ p_stacked <- ggplot(stacked_plot_data, aes(x = N_TOTAL_CAPPED, weight = n_enc, f
     fill = "Period"
   ) +
   theme_minimal(base_size = 11) +
-  theme(strip.text = element_text(face = "bold"),
-        legend.position = "bottom")
+  theme(
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
 
 ggsave("output/figures/encounters_stacked_pre_post_by_payor.png", p_stacked,
-       width = 12, height = 8, dpi = 300)
+  width = 12, height = 8, dpi = 300
+)
 message("  Saved: output/figures/encounters_stacked_pre_post_by_payor.png")
 
 # ==============================================================================
@@ -788,10 +827,14 @@ stacked_ud_plot <- stacked_ud %>%
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Private",
-                 "Self-pay", "Uninsured", "Missing")),
+      levels = c(
+        "Medicare", "Medicaid", "Private",
+        "Self-pay", "Uninsured", "Missing"
+      )
+    ),
     ENCOUNTER_PERIOD = factor(ENCOUNTER_PERIOD,
-      levels = c("Post-treatment", "Pre-treatment"))
+      levels = c("Post-treatment", "Pre-treatment")
+    )
   )
 
 # 8d. Overflow bin at >300 (matching Section 6c unique dates pattern)
@@ -820,13 +863,17 @@ save_output_data(stacked_ud_plot, "unique_dates_stacked_pre_post_data")
 # 8e. Create stacked histogram
 p_ud_stacked <- ggplot(stacked_ud_plot, aes(x = N_TOTAL_UD_CAPPED, weight = n_unique_dates, fill = ENCOUNTER_PERIOD)) +
   geom_histogram(position = "stack", binwidth = 15, color = "white", linewidth = 0.2) +
-  geom_text(data = overflow_ud_stk %>% filter(n_overflow > 0),
-            aes(x = x_cap_ud_stk + 10, y = Inf, label = paste0(">", x_cap_ud_stk, ": ", n_overflow)),
-            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
-  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  geom_text(
+    data = overflow_ud_stk %>% filter(n_overflow > 0),
+    aes(x = x_cap_ud_stk + 10, y = Inf, label = paste0(">", x_cap_ud_stk, ": ", n_overflow)),
+    vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE
+  ) +
+  facet_wrap(~PAYER_CATEGORY_PRIMARY, scales = "free_y") +
   coord_cartesian(xlim = c(0, x_cap_ud_stk + 30)) +
-  scale_x_continuous(breaks = seq(0, x_cap_ud_stk, by = 50),
-                     labels = c(seq(0, x_cap_ud_stk - 50, by = 50), paste0(x_cap_ud_stk, "+"))) +
+  scale_x_continuous(
+    breaks = seq(0, x_cap_ud_stk, by = 50),
+    labels = c(seq(0, x_cap_ud_stk - 50, by = 50), paste0(x_cap_ud_stk, "+"))
+  ) +
   scale_fill_manual(values = c("Post-treatment" = "#2c7fb8", "Pre-treatment" = "#ff7f0e")) +
   labs(
     title = "Unique Encounter Dates per Person by Payor (Pre/Post-Treatment Split)",
@@ -836,11 +883,14 @@ p_ud_stacked <- ggplot(stacked_ud_plot, aes(x = N_TOTAL_UD_CAPPED, weight = n_un
     fill = "Period"
   ) +
   theme_minimal(base_size = 11) +
-  theme(strip.text = element_text(face = "bold"),
-        legend.position = "bottom")
+  theme(
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
 
 ggsave("output/figures/unique_dates_stacked_pre_post_by_payor.png", p_ud_stacked,
-       width = 12, height = 8, dpi = 300)
+  width = 12, height = 8, dpi = 300
+)
 message("  Saved: output/figures/unique_dates_stacked_pre_post_by_payor.png")
 
 # ==============================================================================
@@ -876,8 +926,11 @@ hist_data_ud_tx <- cohort_ud_treated %>%
       TRUE ~ PAYER_CATEGORY_PRIMARY
     ),
     PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY,
-      levels = c("Medicare", "Medicaid", "Private",
-                 "Self-pay", "Uninsured", "Missing"))
+      levels = c(
+        "Medicare", "Medicaid", "Private",
+        "Self-pay", "Uninsured", "Missing"
+      )
+    )
   )
 
 x_cap_ud_tx <- 300
@@ -895,13 +948,17 @@ n_beyond_ud_tx <- sum(cohort_ud_treated$N_UNIQUE_DATES > x_cap_ud_tx, na.rm = TR
 
 p_ud_tx1 <- ggplot(hist_data_ud_tx, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_PRIMARY)) +
   geom_histogram(binwidth = 15, color = "white", linewidth = 0.2) +
-  geom_text(data = overflow_counts_ud_tx %>% filter(n_overflow > 0),
-            aes(x = x_cap_ud_tx + 10, y = Inf, label = paste0(">", x_cap_ud_tx, ": ", n_overflow)),
-            vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE) +
-  facet_wrap(~ PAYER_CATEGORY_PRIMARY, scales = "free_y") +
+  geom_text(
+    data = overflow_counts_ud_tx %>% filter(n_overflow > 0),
+    aes(x = x_cap_ud_tx + 10, y = Inf, label = paste0(">", x_cap_ud_tx, ": ", n_overflow)),
+    vjust = 1.5, hjust = 0, size = 2.8, inherit.aes = FALSE
+  ) +
+  facet_wrap(~PAYER_CATEGORY_PRIMARY, scales = "free_y") +
   coord_cartesian(xlim = c(0, x_cap_ud_tx + 30)) +
-  scale_x_continuous(breaks = seq(0, x_cap_ud_tx, by = 50),
-                     labels = c(seq(0, x_cap_ud_tx - 50, by = 50), paste0(x_cap_ud_tx, "+"))) +
+  scale_x_continuous(
+    breaks = seq(0, x_cap_ud_tx, by = 50),
+    labels = c(seq(0, x_cap_ud_tx - 50, by = 50), paste0(x_cap_ud_tx, "+"))
+  ) +
   labs(
     title = "Unique Encounter Dates per Person by Payer (Treated Only)",
     subtitle = glue("Treated patients only (N = {format(n_treated_ud, big.mark = ',')}) | {n_beyond_ud_tx} with >{x_cap_ud_tx} unique dates in overflow bin"),
@@ -909,12 +966,15 @@ p_ud_tx1 <- ggplot(hist_data_ud_tx, aes(x = N_UD_CAPPED, fill = PAYER_CATEGORY_P
     y = "Number of Patients"
   ) +
   theme_minimal(base_size = 11) +
-  theme(legend.position = "none",
-        strip.text = element_text(face = "bold")) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(face = "bold")
+  ) +
   scale_fill_viridis_d()
 
 ggsave("output/figures/unique_dates_per_person_by_payor_treated.png", p_ud_tx1,
-       width = 12, height = 8, dpi = 300)
+  width = 12, height = 8, dpi = 300
+)
 message("  Saved: output/figures/unique_dates_per_person_by_payor_treated.png")
 
 # 9b. Median post-last-treatment unique dates by DX year (treated only)
@@ -947,7 +1007,8 @@ p_ud_tx2 <- ggplot(enc_ud_by_year_tx, aes(x = DX_YEAR, y = median_post_tx_ud)) +
   theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/post_tx_unique_dates_by_dx_year_treated_median.png", p_ud_tx2,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/post_tx_unique_dates_by_dx_year_treated_median.png")
 
 # 9c. Median total unique dates by DX year (treated only)
@@ -968,7 +1029,8 @@ p_ud_tx3 <- ggplot(enc_ud_by_year_tx, aes(x = DX_YEAR, y = median_total_ud)) +
   theme(plot.margin = margin(t = 10, r = 5, b = 5, l = 5))
 
 ggsave("output/figures/total_unique_dates_by_dx_year_treated_median.png", p_ud_tx3,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/total_unique_dates_by_dx_year_treated_median.png")
 
 message("\n", strrep("=", 60))

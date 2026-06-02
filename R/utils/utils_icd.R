@@ -71,7 +71,6 @@ normalize_icd <- function(icd_code) {
 #' # Returns: c(FALSE, TRUE, FALSE)
 #'
 is_hl_diagnosis <- function(icd_code, icd_type) {
-
   # Handle edge cases: if icd_code or icd_type is NA, return FALSE
   if (length(icd_code) == 0) {
     return(logical(0))
@@ -99,7 +98,7 @@ is_hl_diagnosis <- function(icd_code, icd_type) {
   # DX_TYPE: "09" for ICD-9, "10" for ICD-10
   result[valid] <- (
     (icd_type[valid] == "10" & icd_clean[valid] %in% icd10_clean) |
-    (icd_type[valid] == "09" & icd_clean[valid] %in% icd9_clean)
+      (icd_type[valid] == "09" & icd_clean[valid] %in% icd9_clean)
   )
 
   return(result)

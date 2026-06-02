@@ -55,40 +55,43 @@ source("R/utils/utils_duckdb.R")
 #' @param sleep_sec Numeric. Seconds to sleep after request (default 0.1 = ~10 req/sec)
 #' @return Tibble with columns: code, drug_name, lookup_status
 lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
-  result <- tryCatch({
-    url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui/{rxcui}/properties.json")
+  result <- tryCatch(
+    {
+      url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui/{rxcui}/properties.json")
 
-    resp <- request(url) %>%
-      req_timeout(10) %>%
-      req_retry(
-        max_tries = 3,
-        is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
-      ) %>%
-      req_perform()
+      resp <- request(url) %>%
+        req_timeout(10) %>%
+        req_retry(
+          max_tries = 3,
+          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+        ) %>%
+        req_perform()
 
-    # Success - extract drug name
-    data <- resp_body_json(resp)
+      # Success - extract drug name
+      data <- resp_body_json(resp)
 
-    if (!is.null(data$properties) && !is.null(data$properties$name)) {
-      tibble(
-        code = rxcui,
-        drug_name = data$properties$name,
-        lookup_status = "success"
-      )
-    } else {
+      if (!is.null(data$properties) && !is.null(data$properties$name)) {
+        tibble(
+          code = rxcui,
+          drug_name = data$properties$name,
+          lookup_status = "success"
+        )
+      } else {
+        tibble(
+          code = rxcui,
+          drug_name = NA_character_,
+          lookup_status = "not_found"
+        )
+      }
+    },
+    error = function(e) {
       tibble(
         code = rxcui,
         drug_name = NA_character_,
-        lookup_status = "not_found"
+        lookup_status = glue("error: {e$message}")
       )
     }
-  }, error = function(e) {
-    tibble(
-      code = rxcui,
-      drug_name = NA_character_,
-      lookup_status = glue("error: {e$message}")
-    )
-  })
+  )
 
   Sys.sleep(sleep_sec)
   result
@@ -104,29 +107,32 @@ lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
 #' @return Tibble with columns: code, drug_name, lookup_status
 lookup_ndc_to_name <- function(ndc, sleep_sec = 0.1) {
   # Step 1: NDC -> RxCUI
-  rxcui_result <- tryCatch({
-    url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id={ndc}")
+  rxcui_result <- tryCatch(
+    {
+      url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id={ndc}")
 
-    resp <- request(url) %>%
-      req_timeout(10) %>%
-      req_retry(
-        max_tries = 3,
-        is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
-      ) %>%
-      req_perform()
+      resp <- request(url) %>%
+        req_timeout(10) %>%
+        req_retry(
+          max_tries = 3,
+          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+        ) %>%
+        req_perform()
 
-    data <- resp_body_json(resp)
+      data <- resp_body_json(resp)
 
-    if (!is.null(data$idGroup) && !is.null(data$idGroup$rxnormId) &&
+      if (!is.null(data$idGroup) && !is.null(data$idGroup$rxnormId) &&
         length(data$idGroup$rxnormId) > 0) {
-      # Take first RxCUI if multiple returned
-      data$idGroup$rxnormId[[1]]
-    } else {
+        # Take first RxCUI if multiple returned
+        data$idGroup$rxnormId[[1]]
+      } else {
+        NA_character_
+      }
+    },
+    error = function(e) {
       NA_character_
     }
-  }, error = function(e) {
-    NA_character_
-  })
+  )
 
   if (is.na(rxcui_result)) {
     return(tibble(
@@ -166,7 +172,9 @@ lookup_drug_codes_batch <- function(codes_df) {
   results <- list()
 
   # Lookup RXNORM codes
-  rxnorm_codes <- unique_codes %>% filter(code_type == "RXNORM") %>% pull(code)
+  rxnorm_codes <- unique_codes %>%
+    filter(code_type == "RXNORM") %>%
+    pull(code)
   if (length(rxnorm_codes) > 0) {
     message(glue("    Processing {length(rxnorm_codes)} RXNORM CUIs..."))
     for (i in seq_along(rxnorm_codes)) {
@@ -178,7 +186,9 @@ lookup_drug_codes_batch <- function(codes_df) {
   }
 
   # Lookup NDC codes
-  ndc_codes <- unique_codes %>% filter(code_type == "NDC") %>% pull(code)
+  ndc_codes <- unique_codes %>%
+    filter(code_type == "NDC") %>%
+    pull(code)
   if (length(ndc_codes) > 0) {
     message(glue("    Processing {length(ndc_codes)} NDC codes..."))
     for (i in seq_along(ndc_codes)) {
@@ -213,7 +223,7 @@ open_pcornet_con()
 # RXNORM_CUI codes from PRESCRIBING
 rx_codes_prescribing <- NULL
 if (!is.null(get_pcornet_table("PRESCRIBING")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
+  "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
   rx_codes_prescribing <- get_pcornet_table("PRESCRIBING") %>%
     filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
     filter(!is.na(RXNORM_CUI)) %>%
@@ -226,7 +236,7 @@ if (!is.null(get_pcornet_table("PRESCRIBING")) &&
 # RXNORM_CUI codes from DISPENSING
 rx_codes_dispensing <- NULL
 if (!is.null(get_pcornet_table("DISPENSING")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
+  "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
   rx_codes_dispensing <- get_pcornet_table("DISPENSING") %>%
     filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
     filter(!is.na(RXNORM_CUI)) %>%
@@ -239,7 +249,7 @@ if (!is.null(get_pcornet_table("DISPENSING")) &&
 # RXNORM_CUI codes from MED_ADMIN
 rx_codes_medadmin <- NULL
 if (!is.null(get_pcornet_table("MED_ADMIN")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
+  "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
   rx_codes_medadmin <- get_pcornet_table("MED_ADMIN") %>%
     filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
     filter(!is.na(RXNORM_CUI)) %>%
@@ -252,8 +262,8 @@ if (!is.null(get_pcornet_table("MED_ADMIN")) &&
 # NDC codes from DISPENSING (if NDC column exists)
 ndc_codes <- NULL
 if (!is.null(get_pcornet_table("DISPENSING")) &&
-    "NDC" %in% colnames(get_pcornet_table("DISPENSING")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
+  "NDC" %in% colnames(get_pcornet_table("DISPENSING")) &&
+  "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
   # Get NDC codes that appear alongside chemo RXNORM_CUI codes
   # These are NDC codes for prescriptions that matched chemo_rxnorm
   ndc_codes <- get_pcornet_table("DISPENSING") %>%

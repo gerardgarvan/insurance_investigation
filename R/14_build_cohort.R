@@ -37,8 +37,8 @@
 # SECTION 1: SETUP AND DEPENDENCY LOADING ----
 # ==============================================================================
 
-source("R/02_harmonize_payer.R")  # Loads 01_load_pcornet.R -> 00_config.R -> utils
-source("R/10_cohort_predicates.R")  # Named predicates + treatment flag functions
+source("R/02_harmonize_payer.R") # Loads 01_load_pcornet.R -> 00_config.R -> utils
+source("R/10_cohort_predicates.R") # Named predicates + treatment flag functions
 
 library(dplyr)
 library(lubridate)
@@ -91,7 +91,7 @@ hl_icd9_undotted <- ICD_CODES$hl_icd9
 dx_hl <- get_pcornet_table("DIAGNOSIS") %>%
   filter(
     (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
-    (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+      (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
   ) %>%
   distinct(ID) %>%
   mutate(has_dx = TRUE)
@@ -262,8 +262,10 @@ message("\n--- Payer Summary ---")
 cohort <- cohort %>%
   left_join(
     payer_summary %>%
-      select(ID, PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
-             DUAL_ELIGIBLE, PAYER_TRANSITION, N_ENCOUNTERS, N_ENCOUNTERS_WITH_PAYER),
+      select(
+        ID, PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
+        DUAL_ELIGIBLE, PAYER_TRANSITION, N_ENCOUNTERS, N_ENCOUNTERS_WITH_PAYER
+      ),
     by = "ID"
   )
 
@@ -380,11 +382,11 @@ cohort <- cohort %>%
       NA_integer_
     ),
     AGE_GROUP = case_when(
-      age_at_dx >= 0  & age_at_dx <= 17 ~ "0-17",
+      age_at_dx >= 0 & age_at_dx <= 17 ~ "0-17",
       age_at_dx >= 18 & age_at_dx <= 39 ~ "18-39",
       age_at_dx >= 40 & age_at_dx <= 64 ~ "40-64",
-      age_at_dx >= 65                    ~ "65+",
-      TRUE                               ~ NA_character_
+      age_at_dx >= 65 ~ "65+",
+      TRUE ~ NA_character_
     ),
     DX_YEAR = year(first_hl_dx_date)
   )
@@ -401,7 +403,9 @@ if (n_invalid_age > 0) {
 cohort <- cohort %>% select(-age_at_dx_raw)
 
 message(glue("  Age at diagnosis: median {median(cohort$age_at_dx, na.rm = TRUE)}, range [{min(cohort$age_at_dx, na.rm = TRUE)}, {max(cohort$age_at_dx, na.rm = TRUE)}]"))
-age_grp_dist <- cohort %>% filter(!is.na(AGE_GROUP)) %>% count(AGE_GROUP)
+age_grp_dist <- cohort %>%
+  filter(!is.na(AGE_GROUP)) %>%
+  count(AGE_GROUP)
 for (i in seq_len(nrow(age_grp_dist))) {
   message(glue("  {age_grp_dist$AGE_GROUP[i]}: {age_grp_dist$n[i]}"))
 }
@@ -447,9 +451,9 @@ cohort <- cohort %>%
   left_join(last_tx_for_cohort, by = "ID") %>%
   mutate(
     HAS_POST_TX_ENCOUNTERS = case_when(
-      is.na(LAST_ANY_TX_DATE) ~ NA_character_,    # No treatment = not applicable
-      ID %in% post_tx_encounter_ids ~ "Yes",       # Has encounters after last tx
-      TRUE ~ "No"                                   # Treatment but no post-tx encounters
+      is.na(LAST_ANY_TX_DATE) ~ NA_character_, # No treatment = not applicable
+      ID %in% post_tx_encounter_ids ~ "Yes", # Has encounters after last tx
+      TRUE ~ "No" # Treatment but no post-tx encounters
     )
   )
 

@@ -617,10 +617,10 @@ message(glue("  Chemo episodes without regimen but with J9 codes: {nrow(chemo_no
 if (nrow(chemo_no_regimen) > 0) {
   jcode_regimens <- chemo_no_regimen %>%
     mutate(
-      has_dox  = has_jcode(triggering_codes, "J9000"),
+      has_dox = has_jcode(triggering_codes, "J9000"),
       has_bleo = has_jcode(triggering_codes, "J9040"),
-      has_vin  = has_jcode(triggering_codes, "J9360"),
-      has_dac  = has_jcode(triggering_codes, "J9130"),
+      has_vin = has_jcode(triggering_codes, "J9360"),
+      has_dac = has_jcode(triggering_codes, "J9130"),
       has_brex = has_jcode(triggering_codes, "J9042"),
       has_nivo = has_jcode(triggering_codes, "J9299"),
       n_j9_codes = count_j9_codes(triggering_codes)
@@ -640,7 +640,6 @@ if (nrow(chemo_no_regimen) > 0) {
 
         # AVD variant via J-codes: dox + vin + dac, no bleo, no brex, no nivo, max 3 J9 codes
         has_dox & has_vin & has_dac & !has_bleo & !has_brex & !has_nivo & n_j9_codes <= 3L ~ "ABVD",
-
         TRUE ~ NA_character_
       )
     ) %>%
@@ -714,17 +713,23 @@ wb <- wb_workbook()
 wb$add_worksheet("Linkage Summary")
 
 # Title row (A1)
-wb$add_data(sheet = "Linkage Summary", x = "Episode Classification Audit",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Linkage Summary", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Linkage Summary", x = "Episode Classification Audit",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Linkage Summary", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Linkage Summary", dims = "A1:C1")
 
 # Subtitle row (A2)
 subtitle <- glue("Generated: {Sys.Date()} | Total episodes: {nrow(episodes)}")
 wb$add_data(sheet = "Linkage Summary", x = subtitle, start_row = 2, start_col = 1)
-wb$add_font(sheet = "Linkage Summary", dims = "A2",
-            name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+wb$add_font(
+  sheet = "Linkage Summary", dims = "A2",
+  name = "Calibri", size = 10, color = wb_color("FF6B7280")
+)
 wb$merge_cells(sheet = "Linkage Summary", dims = "A2:C2")
 
 # Summary table starting row 4
@@ -752,10 +757,14 @@ linkage_summary <- tibble(
 wb$add_data(sheet = "Linkage Summary", x = linkage_summary, start_row = 4, start_col = 1)
 
 # Header styling
-wb$add_font(sheet = "Linkage Summary", dims = "A4:C4",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-wb$add_fill(sheet = "Linkage Summary", dims = "A4:C4",
-            color = wb_color("FF1F2937"))
+wb$add_font(
+  sheet = "Linkage Summary", dims = "A4:C4",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
+wb$add_fill(
+  sheet = "Linkage Summary", dims = "A4:C4",
+  color = wb_color("FF1F2937")
+)
 
 # Freeze and autofit
 wb$freeze_pane(sheet = "Linkage Summary", first_active_row = 5)
@@ -780,20 +789,28 @@ cancer_category_freq <- episodes %>%
   arrange(desc(n_episodes))
 
 # Title
-wb$add_data(sheet = "Cancer Categories", x = "Cancer Category Distribution",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Cancer Categories", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Cancer Categories", x = "Cancer Category Distribution",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Cancer Categories", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Cancer Categories", dims = "A1:E1")
 
 # Data
 wb$add_data(sheet = "Cancer Categories", x = cancer_category_freq, start_row = 3, start_col = 1)
 
 # Header styling
-wb$add_font(sheet = "Cancer Categories", dims = "A3:E3",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-wb$add_fill(sheet = "Cancer Categories", dims = "A3:E3",
-            color = wb_color("FF1F2937"))
+wb$add_font(
+  sheet = "Cancer Categories", dims = "A3:E3",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
+wb$add_fill(
+  sheet = "Cancer Categories", dims = "A3:E3",
+  color = wb_color("FF1F2937")
+)
 
 wb$freeze_pane(sheet = "Cancer Categories", first_active_row = 4)
 wb$set_col_widths(sheet = "Cancer Categories", cols = 1:5, widths = "auto")
@@ -817,20 +834,28 @@ regimen_freq <- episodes %>%
   arrange(desc(n_episodes))
 
 # Title
-wb$add_data(sheet = "Regimen Distribution", x = "Chemotherapy Regimen Distribution",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Regimen Distribution", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Regimen Distribution", x = "Chemotherapy Regimen Distribution",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Regimen Distribution", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Regimen Distribution", dims = "A1:D1")
 
 # Data
 wb$add_data(sheet = "Regimen Distribution", x = regimen_freq, start_row = 3, start_col = 1)
 
 # Header styling
-wb$add_font(sheet = "Regimen Distribution", dims = "A3:D3",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-wb$add_fill(sheet = "Regimen Distribution", dims = "A3:D3",
-            color = wb_color("FF1F2937"))
+wb$add_font(
+  sheet = "Regimen Distribution", dims = "A3:D3",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
+wb$add_fill(
+  sheet = "Regimen Distribution", dims = "A3:D3",
+  color = wb_color("FF1F2937")
+)
 
 wb$freeze_pane(sheet = "Regimen Distribution", first_active_row = 4)
 wb$set_col_widths(sheet = "Regimen Distribution", cols = 1:4, widths = "auto")
@@ -841,10 +866,14 @@ wb$set_col_widths(sheet = "Regimen Distribution", cols = 1:4, widths = "auto")
 wb$add_worksheet("Second Cancer Confirmation")
 
 # Title
-wb$add_data(sheet = "Second Cancer Confirmation", x = "Second Cancer Confirmation (7-day separation)",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Second Cancer Confirmation", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Second Cancer Confirmation", x = "Second Cancer Confirmation (7-day separation)",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Second Cancer Confirmation", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Second Cancer Confirmation", dims = "A1:F1")
 
 # Data
@@ -855,10 +884,14 @@ second_cancer_export <- confirmed_second_cancers %>%
 wb$add_data(sheet = "Second Cancer Confirmation", x = second_cancer_export, start_row = 3, start_col = 1)
 
 # Header styling
-wb$add_font(sheet = "Second Cancer Confirmation", dims = "A3:F3",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-wb$add_fill(sheet = "Second Cancer Confirmation", dims = "A3:F3",
-            color = wb_color("FF1F2937"))
+wb$add_font(
+  sheet = "Second Cancer Confirmation", dims = "A3:F3",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
+wb$add_fill(
+  sheet = "Second Cancer Confirmation", dims = "A3:F3",
+  color = wb_color("FF1F2937")
+)
 
 wb$freeze_pane(sheet = "Second Cancer Confirmation", first_active_row = 4)
 wb$set_col_widths(sheet = "Second Cancer Confirmation", cols = 1:6, widths = "auto")
@@ -873,20 +906,28 @@ unlinked_export <- episodes %>%
   select(patient_id, treatment_type, episode_number, episode_start, encounter_ids, drug_names)
 
 # Title
-wb$add_data(sheet = "Unlinked Episodes", x = "Episodes Without Cancer Diagnosis Linkage",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = "Unlinked Episodes", dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb$add_data(
+  sheet = "Unlinked Episodes", x = "Episodes Without Cancer Diagnosis Linkage",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = "Unlinked Episodes", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb$merge_cells(sheet = "Unlinked Episodes", dims = "A1:F1")
 
 # Data
 wb$add_data(sheet = "Unlinked Episodes", x = unlinked_export, start_row = 3, start_col = 1)
 
 # Header styling
-wb$add_font(sheet = "Unlinked Episodes", dims = "A3:F3",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
-wb$add_fill(sheet = "Unlinked Episodes", dims = "A3:F3",
-            color = wb_color("FF1F2937"))
+wb$add_font(
+  sheet = "Unlinked Episodes", dims = "A3:F3",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
+wb$add_fill(
+  sheet = "Unlinked Episodes", dims = "A3:F3",
+  color = wb_color("FF1F2937")
+)
 
 wb$freeze_pane(sheet = "Unlinked Episodes", first_active_row = 4)
 wb$set_col_widths(sheet = "Unlinked Episodes", cols = 1:6, widths = "auto")

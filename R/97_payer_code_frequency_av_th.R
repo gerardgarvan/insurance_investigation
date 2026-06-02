@@ -64,7 +64,7 @@ names(payer_lookup) <- c("code", "description", "category")
 
 # Trim whitespace and convert all to character
 payer_lookup <- payer_lookup %>%
-  mutate(across(everything(), ~trimws(as.character(.))))
+  mutate(across(everything(), ~ trimws(as.character(.))))
 
 message(glue("Loaded {nrow(payer_lookup)} rows from PayerVariable.xlsx (Sheet2)"))
 message(glue("Unique categories in xlsx: {paste(sort(unique(payer_lookup$category)), collapse = ', ')}"))
@@ -105,7 +105,7 @@ enc <- enc %>%
   )
 
 # Quick peek at non-NA payer values
-n_primary_non_na   <- sum(!is.na(enc$PAYER_TYPE_PRIMARY) & enc$PAYER_TYPE_PRIMARY != "")
+n_primary_non_na <- sum(!is.na(enc$PAYER_TYPE_PRIMARY) & enc$PAYER_TYPE_PRIMARY != "")
 n_secondary_non_na <- sum(!is.na(enc$PAYER_TYPE_SECONDARY) & enc$PAYER_TYPE_SECONDARY != "")
 message(glue("PRIMARY non-NA/non-empty:   {format(n_primary_non_na, big.mark = ',')} ({round(100 * n_primary_non_na / total_enc, 1)}%)"))
 message(glue("SECONDARY non-NA/non-empty: {format(n_secondary_non_na, big.mark = ',')} ({round(100 * n_secondary_non_na / total_enc, 1)}%)"))
@@ -120,9 +120,9 @@ message(glue("\n--- SECTION 3: PAYER_TYPE_PRIMARY Frequency Table ---"))
 primary_freq <- enc %>%
   mutate(
     code = case_when(
-      is.na(PAYER_TYPE_PRIMARY)           ~ "<NA>",
-      PAYER_TYPE_PRIMARY == ""            ~ "<EMPTY>",
-      TRUE                                ~ PAYER_TYPE_PRIMARY
+      is.na(PAYER_TYPE_PRIMARY) ~ "<NA>",
+      PAYER_TYPE_PRIMARY == "" ~ "<EMPTY>",
+      TRUE ~ PAYER_TYPE_PRIMARY
     )
   ) %>%
   count(code, name = "n") %>%
@@ -133,9 +133,11 @@ primary_freq <- primary_freq %>%
   left_join(payer_lookup, by = "code") %>%
   mutate(
     description = ifelse(is.na(description) & !code %in% c("<NA>", "<EMPTY>"),
-                         "NOT IN XLSX", description),
-    category    = ifelse(is.na(category) & !code %in% c("<NA>", "<EMPTY>"),
-                         "NOT IN XLSX", category),
+      "NOT IN XLSX", description
+    ),
+    category = ifelse(is.na(category) & !code %in% c("<NA>", "<EMPTY>"),
+      "NOT IN XLSX", category
+    ),
     pct = round(100 * n / total_enc, 2)
   ) %>%
   select(code, description, category, n, pct) %>%
@@ -154,9 +156,9 @@ message(glue("\n--- SECTION 4: PAYER_TYPE_SECONDARY Frequency Table ---"))
 secondary_freq <- enc %>%
   mutate(
     code = case_when(
-      is.na(PAYER_TYPE_SECONDARY)           ~ "<NA>",
-      PAYER_TYPE_SECONDARY == ""            ~ "<EMPTY>",
-      TRUE                                ~ PAYER_TYPE_SECONDARY
+      is.na(PAYER_TYPE_SECONDARY) ~ "<NA>",
+      PAYER_TYPE_SECONDARY == "" ~ "<EMPTY>",
+      TRUE ~ PAYER_TYPE_SECONDARY
     )
   ) %>%
   count(code, name = "n") %>%
@@ -167,9 +169,11 @@ secondary_freq <- secondary_freq %>%
   left_join(payer_lookup, by = "code") %>%
   mutate(
     description = ifelse(is.na(description) & !code %in% c("<NA>", "<EMPTY>"),
-                         "NOT IN XLSX", description),
-    category    = ifelse(is.na(category) & !code %in% c("<NA>", "<EMPTY>"),
-                         "NOT IN XLSX", category),
+      "NOT IN XLSX", description
+    ),
+    category = ifelse(is.na(category) & !code %in% c("<NA>", "<EMPTY>"),
+      "NOT IN XLSX", category
+    ),
     pct = round(100 * n / total_enc, 2)
   ) %>%
   select(code, description, category, n, pct) %>%
@@ -268,14 +272,18 @@ message(sprintf("  %-10s %-40s %-15s %12s %6s", strrep("-", 10), strrep("-", 40)
 for (i in seq_len(nrow(top10_primary))) {
   r <- top10_primary[i, ]
   desc_trunc <- ifelse(nchar(as.character(r$description)) > 40,
-                       paste0(substr(as.character(r$description), 1, 37), "..."),
-                       as.character(r$description))
-  cat_trunc  <- ifelse(nchar(as.character(r$category)) > 15,
-                       paste0(substr(as.character(r$category), 1, 12), "..."),
-                       as.character(r$category))
-  message(sprintf("  %-10s %-40s %-15s %12s %5.2f%%",
-                  r$code, desc_trunc, cat_trunc,
-                  format(r$n, big.mark = ","), r$pct))
+    paste0(substr(as.character(r$description), 1, 37), "..."),
+    as.character(r$description)
+  )
+  cat_trunc <- ifelse(nchar(as.character(r$category)) > 15,
+    paste0(substr(as.character(r$category), 1, 12), "..."),
+    as.character(r$category)
+  )
+  message(sprintf(
+    "  %-10s %-40s %-15s %12s %5.2f%%",
+    r$code, desc_trunc, cat_trunc,
+    format(r$n, big.mark = ","), r$pct
+  ))
 }
 
 message("\nPRIMARY category breakdown:")
@@ -308,14 +316,18 @@ message(sprintf("  %-10s %-40s %-15s %12s %6s", strrep("-", 10), strrep("-", 40)
 for (i in seq_len(nrow(top10_secondary))) {
   r <- top10_secondary[i, ]
   desc_trunc <- ifelse(nchar(as.character(r$description)) > 40,
-                       paste0(substr(as.character(r$description), 1, 37), "..."),
-                       as.character(r$description))
-  cat_trunc  <- ifelse(nchar(as.character(r$category)) > 15,
-                       paste0(substr(as.character(r$category), 1, 12), "..."),
-                       as.character(r$category))
-  message(sprintf("  %-10s %-40s %-15s %12s %5.2f%%",
-                  r$code, desc_trunc, cat_trunc,
-                  format(r$n, big.mark = ","), r$pct))
+    paste0(substr(as.character(r$description), 1, 37), "..."),
+    as.character(r$description)
+  )
+  cat_trunc <- ifelse(nchar(as.character(r$category)) > 15,
+    paste0(substr(as.character(r$category), 1, 12), "..."),
+    as.character(r$category)
+  )
+  message(sprintf(
+    "  %-10s %-40s %-15s %12s %5.2f%%",
+    r$code, desc_trunc, cat_trunc,
+    format(r$n, big.mark = ","), r$pct
+  ))
 }
 
 message("\nSECONDARY category breakdown:")

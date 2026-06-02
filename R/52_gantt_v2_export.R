@@ -111,14 +111,14 @@ source("R/utils/utils_dates.R")
 
 # Input paths: existing RDS artifacts
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
-DETAIL_RDS   <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
+DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
 # Output paths: v2 CSV files for third-party Gantt chart consumption
 OUTPUT_EPISODES_V2 <- file.path(CONFIG$output_dir, "gantt_episodes_v2.csv")
-OUTPUT_DETAIL_V2   <- file.path(CONFIG$output_dir, "gantt_detail_v2.csv")
+OUTPUT_DETAIL_V2 <- file.path(CONFIG$output_dir, "gantt_detail_v2.csv")
 
 
 # --- SECTION 2: LOAD INPUT DATA ----
@@ -178,14 +178,20 @@ if (file.exists(DESCRIPTIONS_RDS)) {
 # Helper: map a single code to its description (empty string if missing)
 # code_descriptions is a named character vector (from R/48b), not a dataframe
 lookup_description <- function(code) {
-  if (is.null(code_descriptions) || is.na(code) || code == "") return("")
-  if (code %in% names(code_descriptions)) return(code_descriptions[[code]])
+  if (is.null(code_descriptions) || is.na(code) || code == "") {
+    return("")
+  }
+  if (code %in% names(code_descriptions)) {
+    return(code_descriptions[[code]])
+  }
   return("")
 }
 
 # Helper: map comma-separated codes to comma-separated descriptions
 map_codes_to_descriptions <- function(codes_str) {
-  if (is.na(codes_str) || codes_str == "") return("")
+  if (is.na(codes_str) || codes_str == "") {
+    return("")
+  }
   codes <- str_split(codes_str, ",")[[1]]
   descriptions <- sapply(codes, lookup_description, USE.NAMES = FALSE)
   paste(descriptions, collapse = ",")
@@ -211,9 +217,11 @@ episodes_export <- episodes %>%
   ) %>%
   # Re-join the base columns that were selected, plus add enriched columns from episodes
   left_join(
-    episodes %>% select(patient_id, episode_number, treatment_type,
-                        cancer_category, is_hodgkin, cancer_link_method,
-                        regimen_label, is_first_line),
+    episodes %>% select(
+      patient_id, episode_number, treatment_type,
+      cancer_category, is_hodgkin, cancer_link_method,
+      regimen_label, is_first_line
+    ),
     by = c("patient_id", "episode_number", "treatment_type")
   ) %>%
   mutate(
@@ -234,8 +242,10 @@ message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark =
 # Detail table does NOT have cancer_link_method, regimen_label, is_first_line —
 # must join from episodes
 episodes_v2_cols <- episodes %>%
-  select(patient_id, treatment_type, episode_number, cancer_category, is_hodgkin,
-         cancer_link_method, regimen_label, is_first_line)
+  select(
+    patient_id, treatment_type, episode_number, cancer_category, is_hodgkin,
+    cancer_link_method, regimen_label, is_first_line
+  )
 
 detail_export <- detail %>%
   select(
@@ -291,9 +301,9 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         triggering_code_descriptions = "",
         cancer_category = "",
         is_hodgkin = FALSE,
-        cancer_link_method = "none",      # v2 default per D-10
-        regimen_label = NA_character_,    # v2 default per D-10
-        is_first_line = FALSE             # v2 default per D-10
+        cancer_link_method = "none", # v2 default per D-10
+        regimen_label = NA_character_, # v2 default per D-10
+        is_first_line = FALSE # v2 default per D-10
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -332,9 +342,9 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         triggering_code_description = "",
         cancer_category = "",
         is_hodgkin = FALSE,
-        cancer_link_method = "none",      # v2 default per D-10
-        regimen_label = NA_character_,    # v2 default per D-10
-        is_first_line = FALSE             # v2 default per D-10
+        cancer_link_method = "none", # v2 default per D-10
+        regimen_label = NA_character_, # v2 default per D-10
+        is_first_line = FALSE # v2 default per D-10
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
@@ -404,9 +414,9 @@ if (file.exists(COHORT_RDS)) {
         triggering_code_descriptions = "",
         cancer_category = "Hodgkin Lymphoma",
         is_hodgkin = TRUE,
-        cancer_link_method = "none",      # v2 default per D-10
-        regimen_label = NA_character_,    # v2 default per D-10
-        is_first_line = FALSE             # v2 default per D-10
+        cancer_link_method = "none", # v2 default per D-10
+        regimen_label = NA_character_, # v2 default per D-10
+        is_first_line = FALSE # v2 default per D-10
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -445,9 +455,9 @@ if (file.exists(COHORT_RDS)) {
         triggering_code_description = "",
         cancer_category = "Hodgkin Lymphoma",
         is_hodgkin = TRUE,
-        cancer_link_method = "none",      # v2 default per D-10
-        regimen_label = NA_character_,    # v2 default per D-10
-        is_first_line = FALSE             # v2 default per D-10
+        cancer_link_method = "none", # v2 default per D-10
+        regimen_label = NA_character_, # v2 default per D-10
+        is_first_line = FALSE # v2 default per D-10
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
@@ -493,14 +503,18 @@ message("\n--- Section 4D: Data Quality Cleanup (Phase 64) ---")
 
 # Helper function: clean multi-value field (dedup, drop blanks, change separator)
 clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
-  if (is.na(field_str) || field_str == "" || field_str == "NA") return("")
+  if (is.na(field_str) || field_str == "" || field_str == "NA") {
+    return("")
+  }
 
   values <- str_split(field_str, sep_in)[[1]]
   values <- str_trim(values)
   values <- values[values != "" & !is.na(values)]
   values <- unique(values)
 
-  if (length(values) == 0) return("")
+  if (length(values) == 0) {
+    return("")
+  }
   paste(values, collapse = sep_out)
 }
 
@@ -544,22 +558,30 @@ BRAND_TO_GENERIC <- c(
 
 # Helper function: extract generic drug name from RxNorm string
 simplify_drug_name <- function(drug_str) {
-  if (is.na(drug_str) || drug_str == "" || drug_str == "NA") return("")
+  if (is.na(drug_str) || drug_str == "" || drug_str == "NA") {
+    return("")
+  }
 
-  drugs <- str_split(drug_str, ";")[[1]]  # Already semicolon-separated after multi-value cleanup
+  drugs <- str_split(drug_str, ";")[[1]] # Already semicolon-separated after multi-value cleanup
   drugs <- str_trim(drugs)
 
   simplified <- sapply(drugs, function(d) {
-    if (d == "" || is.na(d)) return("")
+    if (d == "" || is.na(d)) {
+      return("")
+    }
     d_lower <- tolower(d)
 
     # Extract all 2+ letter words
     words <- str_extract_all(d_lower, "[a-z]{2,}")[[1]]
-    if (length(words) == 0) return(d)
+    if (length(words) == 0) {
+      return(d)
+    }
 
     # Filter out non-drug stopwords
     drug_words <- words[!words %in% DRUG_STOPWORDS]
-    if (length(drug_words) == 0) return(d)
+    if (length(drug_words) == 0) {
+      return(d)
+    }
 
     name <- drug_words[1]
 

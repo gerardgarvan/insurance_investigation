@@ -42,7 +42,7 @@
 #
 # ==============================================================================
 
-source("R/01_load_pcornet.R")  # Loads data and config
+source("R/01_load_pcornet.R") # Loads data and config
 
 library(dplyr)
 library(readr)
@@ -81,7 +81,7 @@ date_range_results <- list()
 # Process each loaded table
 for (table_name in names(pcornet)) {
   if (is.null(pcornet[[table_name]])) {
-    next  # Skip NULL tables (missing files)
+    next # Skip NULL tables (missing files)
   }
 
   df <- pcornet[[table_name]]
@@ -137,7 +137,6 @@ for (table_name in names(pcornet)) {
       }
 
       message(glue("  {col}: Date type, {n_na} NAs ({na_pct}%)"))
-
     } else if (is.character(col_data)) {
       # Still character = parse failure
       n_na <- sum(is.na(col_data) | nchar(trimws(col_data)) == 0)
@@ -375,7 +374,7 @@ for (table_name in names(pcornet)) {
 
         # Check if date-like (YYYY-MM-DD or DDMMMYYYY or YYYYMMDD or numeric >1000)
         date_like <- sum(str_detect(sample, "\\d{4}-\\d{2}-\\d{2}|\\d{2}[A-Z]{3}\\d{4}|^\\d{8}$") |
-                         (str_detect(sample, "^\\d+$") & as.numeric(sample) > 1000 & as.numeric(sample) < 100000))
+          (str_detect(sample, "^\\d+$") & as.numeric(sample) > 1000 & as.numeric(sample) < 100000))
         pct_datelike <- round(100 * date_like / sample_size, 1)
 
         # Flag if >80% numeric or date-like
@@ -453,7 +452,7 @@ dx_patients <- pcornet$DIAGNOSIS %>%
   group_by(ID) %>%
   summarise(
     has_dx_code = 1L,
-    dx_icd_type = first(dx_icd_type),  # Take first match if multiple
+    dx_icd_type = first(dx_icd_type), # Take first match if multiple
     .groups = "drop"
   )
 
@@ -498,7 +497,7 @@ if (length(tr_patients_list) > 0) {
     group_by(ID) %>%
     summarise(
       has_tr_code = 1L,
-      tr_table = paste(unique(tr_table), collapse = "+"),  # Show which TR tables
+      tr_table = paste(unique(tr_table), collapse = "+"), # Show which TR tables
       .groups = "drop"
     )
 } else {
@@ -673,15 +672,15 @@ if (!is.null(payer_summary)) {
     filter(!is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0) %>%
     filter(
       !str_starts(PAYER_TYPE_PRIMARY, "1") &
-      !str_starts(PAYER_TYPE_PRIMARY, "2") &
-      !str_starts(PAYER_TYPE_PRIMARY, "3") &
-      !str_starts(PAYER_TYPE_PRIMARY, "4") &
-      !str_starts(PAYER_TYPE_PRIMARY, "5") &
-      !str_starts(PAYER_TYPE_PRIMARY, "6") &
-      !str_starts(PAYER_TYPE_PRIMARY, "7") &
-      !str_starts(PAYER_TYPE_PRIMARY, "8") &
-      !str_starts(PAYER_TYPE_PRIMARY, "9") &
-      !PAYER_TYPE_PRIMARY %in% names(AMC_PAYER_LOOKUP)
+        !str_starts(PAYER_TYPE_PRIMARY, "2") &
+        !str_starts(PAYER_TYPE_PRIMARY, "3") &
+        !str_starts(PAYER_TYPE_PRIMARY, "4") &
+        !str_starts(PAYER_TYPE_PRIMARY, "5") &
+        !str_starts(PAYER_TYPE_PRIMARY, "6") &
+        !str_starts(PAYER_TYPE_PRIMARY, "7") &
+        !str_starts(PAYER_TYPE_PRIMARY, "8") &
+        !str_starts(PAYER_TYPE_PRIMARY, "9") &
+        !PAYER_TYPE_PRIMARY %in% names(AMC_PAYER_LOOKUP)
     ) %>%
     count(PAYER_TYPE_PRIMARY, name = "n_encounters") %>%
     arrange(desc(n_encounters))

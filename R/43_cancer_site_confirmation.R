@@ -400,7 +400,10 @@ dx_cancer <- dx_cancer %>%
 # Handle unclassified codes (label for visibility, same as R/47)
 n_unclassified <- sum(is.na(dx_cancer$category))
 if (n_unclassified > 0) {
-  unclass_codes <- dx_cancer %>% filter(is.na(category)) %>% pull(DX_norm) %>% unique()
+  unclass_codes <- dx_cancer %>%
+    filter(is.na(category)) %>%
+    pull(DX_norm) %>%
+    unique()
   message(glue("  WARNING: {n_unclassified} rows ({length(unclass_codes)} unique codes) unclassified"))
   dx_cancer <- dx_cancer %>%
     mutate(category = ifelse(is.na(category), "Unclassified", category))
@@ -432,7 +435,7 @@ message(glue("  Total unique codes: {nrow(total_exact)}"))
 # Step 2: Confirmed patients per exact code -- patient has 2+ distinct non-NA DX_DATE for the same exact DX_norm
 confirmed_exact <- dx_cancer %>%
   filter(!is.na(DX_DATE)) %>%
-  distinct(ID, DX_norm, DX_DATE, category) %>%   # Deduplicate per Pitfall 3
+  distinct(ID, DX_norm, DX_DATE, category) %>% # Deduplicate per Pitfall 3
   group_by(ID, DX_norm) %>%
   filter(n_distinct(DX_DATE) >= 2) %>%
   ungroup() %>%
@@ -475,7 +478,7 @@ total_category <- dx_cancer %>%
 # Step 2: Confirmed patients -- patient has 2+ distinct non-NA DX_DATE for ANY code in the same cancer site category
 confirmed_category <- dx_cancer %>%
   filter(!is.na(DX_DATE)) %>%
-  distinct(ID, DX_DATE, category) %>%   # Deduplicate (collapse across codes within category)
+  distinct(ID, DX_DATE, category) %>% # Deduplicate (collapse across codes within category)
   group_by(ID, category) %>%
   filter(n_distinct(DX_DATE) >= 2) %>%
   ungroup() %>%
@@ -529,9 +532,9 @@ message("")
 message(glue("Writing styled xlsx to {OUTPUT_PATH}..."))
 
 DARK_HEADER_FILL <- "FF374151"
-WHITE_FONT       <- "FFFFFFFF"
+WHITE_FONT <- "FFFFFFFF"
 TITLE_FONT_COLOR <- "FF1F2937"
-TOTALS_FILL      <- "FFE5E7EB"
+TOTALS_FILL <- "FFE5E7EB"
 
 wb <- wb_workbook()
 
@@ -542,11 +545,15 @@ SHEET1 <- "Exact Code"
 wb$add_worksheet(SHEET1)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET1, x = "Cancer Site Confirmation - Exact Code Level",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET1, dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET1, x = "Cancer Site Confirmation - Exact Code Level",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET1, dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET1, dims = "A1:F1")
 
 # Row 2: Headers
@@ -555,39 +562,55 @@ for (i in seq_along(headers1)) {
   wb$add_data(sheet = SHEET1, x = headers1[i], start_row = 2, start_col = i)
 }
 wb$add_fill(sheet = SHEET1, dims = "A2:F2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET1, dims = "A2:F2",
-            name = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = SHEET1, dims = "A2:F2",
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(WHITE_FONT)
+)
 
 # Freeze pane
 wb$freeze_pane(sheet = SHEET1, first_active_row = 3, first_active_col = 1)
 
 # Data rows
 data_start <- 3
-n_data     <- nrow(summary_exact)
-data_end   <- data_start + n_data - 1
+n_data <- nrow(summary_exact)
+data_end <- data_start + n_data - 1
 
-wb$add_data(sheet = SHEET1, x = as.data.frame(summary_exact),
-            start_row = data_start, col_names = FALSE)
-wb$add_numfmt(sheet = SHEET1, dims = glue("C{data_start}:E{data_end}"),
-              numfmt = "#,##0")
-wb$add_numfmt(sheet = SHEET1, dims = glue("F{data_start}:F{data_end}"),
-              numfmt = "0.0%")
+wb$add_data(
+  sheet = SHEET1, x = as.data.frame(summary_exact),
+  start_row = data_start, col_names = FALSE
+)
+wb$add_numfmt(
+  sheet = SHEET1, dims = glue("C{data_start}:E{data_end}"),
+  numfmt = "#,##0"
+)
+wb$add_numfmt(
+  sheet = SHEET1, dims = glue("F{data_start}:F{data_end}"),
+  numfmt = "0.0%"
+)
 
 # Totals rows
 totals_start <- data_end + 1
-wb$add_data(sheet = SHEET1, x = as.data.frame(totals_exact),
-            start_row = totals_start, col_names = FALSE)
-wb$add_fill(sheet = SHEET1,
-            dims  = glue("A{totals_start}:F{totals_start}"),
-            color = wb_color(TOTALS_FILL))
-wb$add_font(sheet = SHEET1,
-            dims  = glue("A{totals_start}:F{totals_start}"),
-            name  = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
-wb$add_numfmt(sheet = SHEET1,
-              dims  = glue("C{totals_start}:E{totals_start}"),
-              numfmt = "#,##0")
+wb$add_data(
+  sheet = SHEET1, x = as.data.frame(totals_exact),
+  start_row = totals_start, col_names = FALSE
+)
+wb$add_fill(
+  sheet = SHEET1,
+  dims = glue("A{totals_start}:F{totals_start}"),
+  color = wb_color(TOTALS_FILL)
+)
+wb$add_font(
+  sheet = SHEET1,
+  dims = glue("A{totals_start}:F{totals_start}"),
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
+wb$add_numfmt(
+  sheet = SHEET1,
+  dims = glue("C{totals_start}:E{totals_start}"),
+  numfmt = "#,##0"
+)
 
 # Column widths
 wb$set_col_widths(sheet = SHEET1, cols = 1:6, widths = c(14, 42, 14, 16, 18, 16))
@@ -599,11 +622,15 @@ SHEET2 <- "Cancer Site Category"
 wb$add_worksheet(SHEET2)
 
 # Row 1: Title
-wb$add_data(sheet = SHEET2, x = "Cancer Site Confirmation - Category Level",
-            start_row = 1, start_col = 1)
-wb$add_font(sheet = SHEET2, dims = "A1",
-            name = "Calibri", size = 16, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
+wb$add_data(
+  sheet = SHEET2, x = "Cancer Site Confirmation - Category Level",
+  start_row = 1, start_col = 1
+)
+wb$add_font(
+  sheet = SHEET2, dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
 wb$merge_cells(sheet = SHEET2, dims = "A1:E1")
 
 # Row 2: Headers
@@ -612,39 +639,55 @@ for (i in seq_along(headers2)) {
   wb$add_data(sheet = SHEET2, x = headers2[i], start_row = 2, start_col = i)
 }
 wb$add_fill(sheet = SHEET2, dims = "A2:E2", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = SHEET2, dims = "A2:E2",
-            name = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = SHEET2, dims = "A2:E2",
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(WHITE_FONT)
+)
 
 # Freeze pane
 wb$freeze_pane(sheet = SHEET2, first_active_row = 3, first_active_col = 1)
 
 # Data rows
 data_start2 <- 3
-n_data2     <- nrow(summary_category)
-data_end2   <- data_start2 + n_data2 - 1
+n_data2 <- nrow(summary_category)
+data_end2 <- data_start2 + n_data2 - 1
 
-wb$add_data(sheet = SHEET2, x = as.data.frame(summary_category),
-            start_row = data_start2, col_names = FALSE)
-wb$add_numfmt(sheet = SHEET2, dims = glue("B{data_start2}:D{data_end2}"),
-              numfmt = "#,##0")
-wb$add_numfmt(sheet = SHEET2, dims = glue("E{data_start2}:E{data_end2}"),
-              numfmt = "0.0%")
+wb$add_data(
+  sheet = SHEET2, x = as.data.frame(summary_category),
+  start_row = data_start2, col_names = FALSE
+)
+wb$add_numfmt(
+  sheet = SHEET2, dims = glue("B{data_start2}:D{data_end2}"),
+  numfmt = "#,##0"
+)
+wb$add_numfmt(
+  sheet = SHEET2, dims = glue("E{data_start2}:E{data_end2}"),
+  numfmt = "0.0%"
+)
 
 # Totals rows
 totals_start2 <- data_end2 + 1
-wb$add_data(sheet = SHEET2, x = as.data.frame(totals_category),
-            start_row = totals_start2, col_names = FALSE)
-wb$add_fill(sheet = SHEET2,
-            dims  = glue("A{totals_start2}:E{totals_start2}"),
-            color = wb_color(TOTALS_FILL))
-wb$add_font(sheet = SHEET2,
-            dims  = glue("A{totals_start2}:E{totals_start2}"),
-            name  = "Calibri", size = 11, bold = TRUE,
-            color = wb_color(TITLE_FONT_COLOR))
-wb$add_numfmt(sheet = SHEET2,
-              dims  = glue("B{totals_start2}:D{totals_start2}"),
-              numfmt = "#,##0")
+wb$add_data(
+  sheet = SHEET2, x = as.data.frame(totals_category),
+  start_row = totals_start2, col_names = FALSE
+)
+wb$add_fill(
+  sheet = SHEET2,
+  dims = glue("A{totals_start2}:E{totals_start2}"),
+  color = wb_color(TOTALS_FILL)
+)
+wb$add_font(
+  sheet = SHEET2,
+  dims = glue("A{totals_start2}:E{totals_start2}"),
+  name = "Calibri", size = 11, bold = TRUE,
+  color = wb_color(TITLE_FONT_COLOR)
+)
+wb$add_numfmt(
+  sheet = SHEET2,
+  dims = glue("B{totals_start2}:D{totals_start2}"),
+  numfmt = "#,##0"
+)
 
 # Column widths
 wb$set_col_widths(sheet = SHEET2, cols = 1:5, widths = c(42, 14, 16, 18, 16))

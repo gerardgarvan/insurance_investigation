@@ -79,9 +79,9 @@ message(glue("Total encounters loaded: {format(nrow(enc_raw), big.mark=',')}"))
 
 enc <- enc_raw %>%
   mutate(
-    PAYER_TYPE_PRIMARY   = as.character(PAYER_TYPE_PRIMARY),
+    PAYER_TYPE_PRIMARY = as.character(PAYER_TYPE_PRIMARY),
     PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE               = as.character(SOURCE),
+    SOURCE = as.character(SOURCE),
     # Effective payer: primary if valid, else secondary, else NA
     effective_payer = case_when(
       !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
@@ -96,7 +96,7 @@ enc <- enc_raw %>%
       sec_missing <- is.na(PAYER_TYPE_SECONDARY) | nchar(trimws(PAYER_TYPE_SECONDARY)) == 0
       has_dual <- PAYER_TYPE_PRIMARY %in% dual_codes | PAYER_TYPE_SECONDARY %in% dual_codes
       cross_payer <- (startsWith(PAYER_TYPE_PRIMARY, "1") & startsWith(PAYER_TYPE_SECONDARY, "2")) |
-                     (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
+        (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
       case_when(sec_missing ~ 0L, has_dual ~ 1L, cross_payer ~ 1L, TRUE ~ 0L)
     },
     # Map to AMC 8-category: direct lookup + prefix fallback

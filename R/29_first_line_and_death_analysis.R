@@ -189,8 +189,10 @@ message(glue("  Saved treatment_episodes.rds with is_first_line column ({sum(epi
 # Step 3f: Build first-line summary for xlsx (Claude's discretion — add as Sheet 3)
 first_line_summary <- episodes %>%
   filter(is_first_line) %>%
-  select(patient_id, treatment_type, episode_number, episode_start,
-         episode_stop, regimen_label, drug_names, is_first_line)
+  select(
+    patient_id, treatment_type, episode_number, episode_start,
+    episode_stop, regimen_label, drug_names, is_first_line
+  )
 
 # Regimen distribution summary
 regimen_dist <- first_line_summary %>%
@@ -231,7 +233,7 @@ death_vs_encounter <- valid_deaths %>%
   mutate(
     has_encounters = !is.na(last_encounter_date),
     death_is_last = case_when(
-      is.na(last_encounter_date) ~ TRUE,  # No encounters → death is "last" by default
+      is.na(last_encounter_date) ~ TRUE, # No encounters → death is "last" by default
       DEATH_DATE >= last_encounter_date ~ TRUE,
       TRUE ~ FALSE
     )
@@ -314,8 +316,10 @@ wb$add_data(sheet = "Death Analysis Summary", x = summary_stats, start_row = 1, 
 
 # Style header row
 wb$add_fill(sheet = "Death Analysis Summary", dims = "A1:B1", color = wb_color("FF374151"))
-wb$add_font(sheet = "Death Analysis Summary", dims = "A1:B1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb$add_font(
+  sheet = "Death Analysis Summary", dims = "A1:B1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 wb$set_col_widths(sheet = "Death Analysis Summary", cols = 1:2, widths = c(60, 15))
 wb$freeze_pane(sheet = "Death Analysis Summary", firstActiveRow = 2)
 
@@ -326,8 +330,10 @@ wb$add_data(sheet = "Post-Death Encounters by Type", x = enc_type_detail, start_
 
 # Style header row
 wb$add_fill(sheet = "Post-Death Encounters by Type", dims = "A1:C1", color = wb_color("FF374151"))
-wb$add_font(sheet = "Post-Death Encounters by Type", dims = "A1:C1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb$add_font(
+  sheet = "Post-Death Encounters by Type", dims = "A1:C1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 wb$set_col_widths(sheet = "Post-Death Encounters by Type", cols = 1:3, widths = c(15, 20, 20))
 wb$freeze_pane(sheet = "Post-Death Encounters by Type", firstActiveRow = 2)
 
@@ -338,8 +344,10 @@ wb$add_data(sheet = "First-Line Patient Detail", x = first_line_summary, start_r
 
 # Style header row
 wb$add_fill(sheet = "First-Line Patient Detail", dims = "A1:H1", color = wb_color("FF374151"))
-wb$add_font(sheet = "First-Line Patient Detail", dims = "A1:H1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb$add_font(
+  sheet = "First-Line Patient Detail", dims = "A1:H1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 wb$freeze_pane(sheet = "First-Line Patient Detail", firstActiveRow = 2)
 
 # Save workbook
@@ -353,8 +361,10 @@ message(glue("  Saved death_analysis.xlsx: {OUTPUT_XLSX}"))
 message("\n--- Creating CSV export ---")
 
 death_csv <- death_vs_encounter %>%
-  select(ID, DEATH_DATE, DEATH_SOURCE, death_valid, post_death_activity,
-         has_encounters, last_encounter_date, death_is_last)
+  select(
+    ID, DEATH_DATE, DEATH_SOURCE, death_valid, post_death_activity,
+    has_encounters, last_encounter_date, death_is_last
+  )
 
 write.csv(death_csv, OUTPUT_CSV, row.names = FALSE)
 message(glue("  Saved death_analysis.csv: {OUTPUT_CSV}"))

@@ -49,18 +49,18 @@ OUTPUT_PATH <- file.path(CONFIG$output_dir, "treatment_inventory.xlsx")
 # Phase 39: Widened ranges to include J0-J8 supportive care and 773xx radiation planning.
 CPT_HCPCS_RANGES <- list(
   Chemotherapy = list(
-    j9_codes = "^J9[0-9]{3}$",           # J9000-J9999 injectable chemo drugs
-    j0_j8_drugs = "^J[0-8][0-9]{3}$"     # J0000-J8999 for supportive care detection (Phase 39)
+    j9_codes = "^J9[0-9]{3}$", # J9000-J9999 injectable chemo drugs
+    j0_j8_drugs = "^J[0-8][0-9]{3}$" # J0000-J8999 for supportive care detection (Phase 39)
   ),
   Radiation = list(
-    delivery = "^774[0-9]{2}$",           # 77400-77499 radiation treatment delivery
-    planning = "^773[0-9]{2}$"            # 77300-77399 treatment planning (Phase 39)
+    delivery = "^774[0-9]{2}$", # 77400-77499 radiation treatment delivery
+    planning = "^773[0-9]{2}$" # 77300-77399 treatment planning (Phase 39)
   ),
   SCT = list(
-    transplant = "^382[3-4][0-9]$"        # 38230-38249 HPC/bone marrow transplant
+    transplant = "^382[3-4][0-9]$" # 38230-38249 HPC/bone marrow transplant
   ),
   Immunotherapy = list(
-    car_t_admin = "^XW0[34]3[A-Z][0-9]$"  # CAR T-cell administration ICD-10-PCS pattern
+    car_t_admin = "^XW0[34]3[A-Z][0-9]$" # CAR T-cell administration ICD-10-PCS pattern
   )
 )
 
@@ -95,53 +95,65 @@ extract_chemo_codes <- function() {
   proc_tbl <- safe_table("PROCEDURES")
   if (!is.null(proc_tbl)) {
     # CPT/HCPCS exact match
-    px_ch <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_ch <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_ch))
 
     # ICD-9 exact match
-    px_09 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_09 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_09))
 
     # ICD-10-PCS PREFIX match (str_detect, NOT %in%)
     chemo_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
-    px_10 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "10") %>%
-        materialize() %>%
-        filter(str_detect(PX, chemo_icd10pcs_rx)) %>%
-        mutate(code_type = "10") %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_10 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "10") %>%
+          materialize() %>%
+          filter(str_detect(PX, chemo_icd10pcs_rx)) %>%
+          mutate(code_type = "10") %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_10))
 
     # Revenue codes exact match
-    px_re <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_re <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_re))
   }
 
@@ -155,15 +167,18 @@ extract_chemo_codes <- function() {
     # --- PRESCRIBING (all drugs for HL patients) ---
     rx_tbl <- safe_table("PRESCRIBING")
     if (!is.null(rx_tbl)) {
-      rx_codes <- tryCatch({
-        rx_tbl %>%
-          filter(ID %in% hl_ids) %>%
-          filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-          group_by(code = RXNORM_CUI, drug_name = RAW_RX_MED_NAME) %>%
-          summarise(n = n(), .groups = "drop") %>%
-          collect() %>%
-          mutate(source_table = "PRESCRIBING", code_type = "RXNORM")
-      }, error = function(e) empty_result())
+      rx_codes <- tryCatch(
+        {
+          rx_tbl %>%
+            filter(ID %in% hl_ids) %>%
+            filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
+            group_by(code = RXNORM_CUI, drug_name = RAW_RX_MED_NAME) %>%
+            summarise(n = n(), .groups = "drop") %>%
+            collect() %>%
+            mutate(source_table = "PRESCRIBING", code_type = "RXNORM")
+        },
+        error = function(e) empty_result()
+      )
       results <- c(results, list(rx_codes))
     }
 
@@ -171,42 +186,51 @@ extract_chemo_codes <- function() {
     disp_tbl <- safe_table("DISPENSING")
     if (!is.null(disp_tbl)) {
       # RXNORM records with drug name
-      disp_rxnorm <- tryCatch({
-        disp_tbl %>%
-          filter(ID %in% hl_ids) %>%
-          filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-          group_by(code = RXNORM_CUI, drug_name = RAW_DISPENSE_MED_NAME) %>%
-          summarise(n = n(), .groups = "drop") %>%
-          collect() %>%
-          mutate(source_table = "DISPENSING", code_type = "RXNORM")
-      }, error = function(e) empty_result())
+      disp_rxnorm <- tryCatch(
+        {
+          disp_tbl %>%
+            filter(ID %in% hl_ids) %>%
+            filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
+            group_by(code = RXNORM_CUI, drug_name = RAW_DISPENSE_MED_NAME) %>%
+            summarise(n = n(), .groups = "drop") %>%
+            collect() %>%
+            mutate(source_table = "DISPENSING", code_type = "RXNORM")
+        },
+        error = function(e) empty_result()
+      )
       results <- c(results, list(disp_rxnorm))
 
       # NDC codes with drug name
-      disp_ndc <- tryCatch({
-        disp_tbl %>%
-          filter(ID %in% hl_ids) %>%
-          filter(!is.na(NDC) & NDC != "") %>%
-          group_by(code = NDC, drug_name = RAW_DISPENSE_MED_NAME) %>%
-          summarise(n = n(), .groups = "drop") %>%
-          collect() %>%
-          mutate(source_table = "DISPENSING", code_type = "NDC")
-      }, error = function(e) empty_result())
+      disp_ndc <- tryCatch(
+        {
+          disp_tbl %>%
+            filter(ID %in% hl_ids) %>%
+            filter(!is.na(NDC) & NDC != "") %>%
+            group_by(code = NDC, drug_name = RAW_DISPENSE_MED_NAME) %>%
+            summarise(n = n(), .groups = "drop") %>%
+            collect() %>%
+            mutate(source_table = "DISPENSING", code_type = "NDC")
+        },
+        error = function(e) empty_result()
+      )
       results <- c(results, list(disp_ndc))
     }
 
     # --- MED_ADMIN (all drugs for HL patients) ---
     ma_tbl <- safe_table("MED_ADMIN")
     if (!is.null(ma_tbl)) {
-      ma_codes <- tryCatch({
-        ma_tbl %>%
-          filter(ID %in% hl_ids) %>%
-          filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-          group_by(code = RXNORM_CUI, drug_name = RAW_MEDADMIN_MED_NAME) %>%
-          summarise(n = n(), .groups = "drop") %>%
-          collect() %>%
-          mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
-      }, error = function(e) empty_result())
+      ma_codes <- tryCatch(
+        {
+          ma_tbl %>%
+            filter(ID %in% hl_ids) %>%
+            filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
+            group_by(code = RXNORM_CUI, drug_name = RAW_MEDADMIN_MED_NAME) %>%
+            summarise(n = n(), .groups = "drop") %>%
+            collect() %>%
+            mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
+        },
+        error = function(e) empty_result()
+      )
       results <- c(results, list(ma_codes))
     }
   }
@@ -214,75 +238,84 @@ extract_chemo_codes <- function() {
   # --- DIAGNOSIS ---
   dx_tbl <- safe_table("DIAGNOSIS")
   if (!is.null(dx_tbl)) {
-    dx_codes <- tryCatch({
-      dx_tbl %>%
-        filter(
-          (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
-          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
-        ) %>%
-        mutate(code_type = DX_TYPE) %>%
-        group_by(code = DX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "DIAGNOSIS", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    dx_codes <- tryCatch(
+      {
+        dx_tbl %>%
+          filter(
+            (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
+              (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+          ) %>%
+          mutate(code_type = DX_TYPE) %>%
+          group_by(code = DX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "DIAGNOSIS", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(dx_codes))
   }
 
   # --- ENCOUNTER (DRG) ---
   enc_tbl <- safe_table("ENCOUNTER")
   if (!is.null(enc_tbl)) {
-    enc_codes <- tryCatch({
-      enc_tbl %>%
-        filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
-        group_by(code = DRG) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    enc_codes <- tryCatch(
+      {
+        enc_tbl %>%
+          filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
+          group_by(code = DRG) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(enc_codes))
   }
 
   # --- TUMOR_REGISTRY (date evidence only, NOT codes) ---
   tr_tbl <- safe_table("TUMOR_REGISTRY_ALL")
   if (!is.null(tr_tbl)) {
-    tr_codes <- tryCatch({
-      # Check which chemo date columns exist
-      tr_cols <- colnames(tr_tbl)
-      has_dt_chemo <- "DT_CHEMO" %in% tr_cols
-      has_chemo_summary <- "CHEMO_START_DATE_SUMMARY" %in% tr_cols
+    tr_codes <- tryCatch(
+      {
+        # Check which chemo date columns exist
+        tr_cols <- colnames(tr_tbl)
+        has_dt_chemo <- "DT_CHEMO" %in% tr_cols
+        has_chemo_summary <- "CHEMO_START_DATE_SUMMARY" %in% tr_cols
 
-      if (has_dt_chemo && has_chemo_summary) {
-        tr_count <- tr_tbl %>%
-          filter(!is.na(DT_CHEMO) | !is.na(CHEMO_START_DATE_SUMMARY)) %>%
-          summarise(n = n()) %>%
-          collect()
-      } else if (has_dt_chemo) {
-        tr_count <- tr_tbl %>%
-          filter(!is.na(DT_CHEMO)) %>%
-          summarise(n = n()) %>%
-          collect()
-      } else if (has_chemo_summary) {
-        tr_count <- tr_tbl %>%
-          filter(!is.na(CHEMO_START_DATE_SUMMARY)) %>%
-          summarise(n = n()) %>%
-          collect()
-      } else {
-        tr_count <- tibble(n = 0L)
-      }
+        if (has_dt_chemo && has_chemo_summary) {
+          tr_count <- tr_tbl %>%
+            filter(!is.na(DT_CHEMO) | !is.na(CHEMO_START_DATE_SUMMARY)) %>%
+            summarise(n = n()) %>%
+            collect()
+        } else if (has_dt_chemo) {
+          tr_count <- tr_tbl %>%
+            filter(!is.na(DT_CHEMO)) %>%
+            summarise(n = n()) %>%
+            collect()
+        } else if (has_chemo_summary) {
+          tr_count <- tr_tbl %>%
+            filter(!is.na(CHEMO_START_DATE_SUMMARY)) %>%
+            summarise(n = n()) %>%
+            collect()
+        } else {
+          tr_count <- tibble(n = 0L)
+        }
 
-      if (tr_count$n[1] > 0) {
-        tibble(
-          code = "DATE_EVIDENCE",
-          code_type = "DATE",
-          source_table = "TUMOR_REGISTRY",
-          n = as.integer(tr_count$n[1]),
-          drug_name = NA_character_
-        )
-      } else {
-        empty_result()
-      }
-    }, error = function(e) empty_result())
+        if (tr_count$n[1] > 0) {
+          tibble(
+            code = "DATE_EVIDENCE",
+            code_type = "DATE",
+            source_table = "TUMOR_REGISTRY",
+            n = as.integer(tr_count$n[1]),
+            drug_name = NA_character_
+          )
+        } else {
+          empty_result()
+        }
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(tr_codes))
   }
 
@@ -307,110 +340,131 @@ extract_radiation_codes <- function() {
   # --- PROCEDURES ---
   proc_tbl <- safe_table("PROCEDURES")
   if (!is.null(proc_tbl)) {
-    px_cpt <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_cpt <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_cpt))
 
-    px_09 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_09 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_09))
 
     radiation_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
-    px_10 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "10") %>%
-        materialize() %>%
-        filter(str_detect(PX, radiation_icd10pcs_rx)) %>%
-        mutate(code_type = "10") %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_10 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "10") %>%
+          materialize() %>%
+          filter(str_detect(PX, radiation_icd10pcs_rx)) %>%
+          mutate(code_type = "10") %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_10))
 
-    px_re <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_re <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_re))
   }
 
   # --- DIAGNOSIS ---
   dx_tbl <- safe_table("DIAGNOSIS")
   if (!is.null(dx_tbl)) {
-    dx_codes <- tryCatch({
-      dx_tbl %>%
-        filter(
-          (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
-          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
-        ) %>%
-        mutate(code_type = DX_TYPE) %>%
-        group_by(code = DX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "DIAGNOSIS", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    dx_codes <- tryCatch(
+      {
+        dx_tbl %>%
+          filter(
+            (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
+              (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+          ) %>%
+          mutate(code_type = DX_TYPE) %>%
+          group_by(code = DX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "DIAGNOSIS", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(dx_codes))
   }
 
   # --- ENCOUNTER (DRG) ---
   enc_tbl <- safe_table("ENCOUNTER")
   if (!is.null(enc_tbl)) {
-    enc_codes <- tryCatch({
-      enc_tbl %>%
-        filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
-        group_by(code = DRG) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    enc_codes <- tryCatch(
+      {
+        enc_tbl %>%
+          filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
+          group_by(code = DRG) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(enc_codes))
   }
 
   # --- TUMOR_REGISTRY (date evidence only) ---
   tr_tbl <- safe_table("TUMOR_REGISTRY_ALL")
   if (!is.null(tr_tbl)) {
-    tr_codes <- tryCatch({
-      tr_cols <- colnames(tr_tbl)
-      if ("DT_RAD" %in% tr_cols) {
-        tr_count <- tr_tbl %>%
-          filter(!is.na(DT_RAD)) %>%
-          summarise(n = n()) %>%
-          collect()
-        if (tr_count$n[1] > 0) {
-          tibble(
-            code = "DATE_EVIDENCE",
-            code_type = "DATE",
-            source_table = "TUMOR_REGISTRY",
-            n = as.integer(tr_count$n[1]),
-            drug_name = NA_character_
-          )
+    tr_codes <- tryCatch(
+      {
+        tr_cols <- colnames(tr_tbl)
+        if ("DT_RAD" %in% tr_cols) {
+          tr_count <- tr_tbl %>%
+            filter(!is.na(DT_RAD)) %>%
+            summarise(n = n()) %>%
+            collect()
+          if (tr_count$n[1] > 0) {
+            tibble(
+              code = "DATE_EVIDENCE",
+              code_type = "DATE",
+              source_table = "TUMOR_REGISTRY",
+              n = as.integer(tr_count$n[1]),
+              drug_name = NA_character_
+            )
+          } else {
+            empty_result()
+          }
         } else {
           empty_result()
         }
-      } else {
-        empty_result()
-      }
-    }, error = function(e) empty_result())
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(tr_codes))
   }
 
@@ -437,116 +491,140 @@ extract_sct_codes <- function() {
   # --- PROCEDURES ---
   proc_tbl <- safe_table("PROCEDURES")
   if (!is.null(proc_tbl)) {
-    px_cpt <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_cpt <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_cpt) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_cpt))
 
-    px_hcpcs <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_hcpcs) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_hcpcs <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$sct_hcpcs) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_hcpcs))
 
-    px_09 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_09 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_09))
 
-    px_10 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_10 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_10))
 
-    px_re <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
-        mutate(code_type = PX_TYPE) %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_re <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
+          mutate(code_type = PX_TYPE) %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_re))
   }
 
   # --- DIAGNOSIS ---
   dx_tbl <- safe_table("DIAGNOSIS")
   if (!is.null(dx_tbl)) {
-    dx_codes <- tryCatch({
-      dx_tbl %>%
-        filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
-        mutate(code_type = DX_TYPE) %>%
-        group_by(code = DX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "DIAGNOSIS", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    dx_codes <- tryCatch(
+      {
+        dx_tbl %>%
+          filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
+          mutate(code_type = DX_TYPE) %>%
+          group_by(code = DX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "DIAGNOSIS", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(dx_codes))
   }
 
   # --- ENCOUNTER (DRG) ---
   enc_tbl <- safe_table("ENCOUNTER")
   if (!is.null(enc_tbl)) {
-    enc_codes <- tryCatch({
-      enc_tbl %>%
-        filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
-        group_by(code = DRG) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    enc_codes <- tryCatch(
+      {
+        enc_tbl %>%
+          filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
+          group_by(code = DRG) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(enc_codes))
   }
 
   # --- TUMOR_REGISTRY (date evidence only) ---
   tr_tbl <- safe_table("TUMOR_REGISTRY_ALL")
   if (!is.null(tr_tbl)) {
-    tr_codes <- tryCatch({
-      tr_cols <- colnames(tr_tbl)
-      if ("DT_HTE" %in% tr_cols) {
-        tr_count <- tr_tbl %>%
-          filter(!is.na(DT_HTE)) %>%
-          summarise(n = n()) %>%
-          collect()
-        if (tr_count$n[1] > 0) {
-          tibble(
-            code = "DATE_EVIDENCE",
-            code_type = "DATE",
-            source_table = "TUMOR_REGISTRY",
-            n = as.integer(tr_count$n[1]),
-            drug_name = NA_character_
-          )
+    tr_codes <- tryCatch(
+      {
+        tr_cols <- colnames(tr_tbl)
+        if ("DT_HTE" %in% tr_cols) {
+          tr_count <- tr_tbl %>%
+            filter(!is.na(DT_HTE)) %>%
+            summarise(n = n()) %>%
+            collect()
+          if (tr_count$n[1] > 0) {
+            tibble(
+              code = "DATE_EVIDENCE",
+              code_type = "DATE",
+              source_table = "TUMOR_REGISTRY",
+              n = as.integer(tr_count$n[1]),
+              drug_name = NA_character_
+            )
+          } else {
+            empty_result()
+          }
         } else {
           empty_result()
         }
-      } else {
-        empty_result()
-      }
-    }, error = function(e) empty_result())
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(tr_codes))
   }
 
@@ -573,30 +651,36 @@ extract_immunotherapy_codes <- function() {
   proc_tbl <- safe_table("PROCEDURES")
   if (!is.null(proc_tbl)) {
     cart_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$cart_icd10pcs_prefixes, collapse = "|"), ")")
-    px_10 <- tryCatch({
-      proc_tbl %>%
-        filter(PX_TYPE == "10") %>%
-        materialize() %>%
-        filter(str_detect(PX, cart_icd10pcs_rx)) %>%
-        mutate(code_type = "10") %>%
-        group_by(code = PX, code_type) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        mutate(source_table = "PROCEDURES", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    px_10 <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "10") %>%
+          materialize() %>%
+          filter(str_detect(PX, cart_icd10pcs_rx)) %>%
+          mutate(code_type = "10") %>%
+          group_by(code = PX, code_type) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          mutate(source_table = "PROCEDURES", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(px_10))
   }
 
   # --- ENCOUNTER (DRG 018 = BMT with CAR T-cell) ---
   enc_tbl <- safe_table("ENCOUNTER")
   if (!is.null(enc_tbl)) {
-    enc_codes <- tryCatch({
-      enc_tbl %>%
-        filter(DRG %in% c("018")) %>%
-        group_by(code = DRG) %>%
-        summarise(n = n(), .groups = "drop") %>%
-        collect() %>%
-        mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
-    }, error = function(e) empty_result())
+    enc_codes <- tryCatch(
+      {
+        enc_tbl %>%
+          filter(DRG %in% c("018")) %>%
+          group_by(code = DRG) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          mutate(source_table = "ENCOUNTER", code_type = "DRG", drug_name = NA_character_)
+      },
+      error = function(e) empty_result()
+    )
     results <- c(results, list(enc_codes))
   }
 
@@ -617,9 +701,11 @@ extract_immunotherapy_codes <- function() {
 detect_unknown_codes <- function(treatment_type) {
   range_patterns <- CPT_HCPCS_RANGES[[treatment_type]]
   if (is.null(range_patterns)) {
-    return(tibble(code = character(), code_type = character(),
-                  source_table = character(), n = integer(),
-                  drug_name = character(), treatment_type = character()))
+    return(tibble(
+      code = character(), code_type = character(),
+      source_table = character(), n = integer(),
+      drug_name = character(), treatment_type = character()
+    ))
   }
 
   combined_regex <- paste(unlist(range_patterns), collapse = "|")
@@ -627,24 +713,30 @@ detect_unknown_codes <- function(treatment_type) {
   # Build list of ALL known codes for this treatment type and determine PX_TYPE
   code_info <- switch(treatment_type,
     "Chemotherapy" = list(
-      codes = c(TREATMENT_CODES$chemo_hcpcs, TREATMENT_CODES$chemo_icd9,
-                TREATMENT_CODES$chemo_revenue,
-                if (!is.null(TREATMENT_CODES$supportive_care_hcpcs)) TREATMENT_CODES$supportive_care_hcpcs),
+      codes = c(
+        TREATMENT_CODES$chemo_hcpcs, TREATMENT_CODES$chemo_icd9,
+        TREATMENT_CODES$chemo_revenue,
+        if (!is.null(TREATMENT_CODES$supportive_care_hcpcs)) TREATMENT_CODES$supportive_care_hcpcs
+      ),
       px_type = "CH"
     ),
     "Radiation" = list(
-      codes = c(TREATMENT_CODES$radiation_cpt, TREATMENT_CODES$radiation_icd9,
-                TREATMENT_CODES$radiation_revenue),
+      codes = c(
+        TREATMENT_CODES$radiation_cpt, TREATMENT_CODES$radiation_icd9,
+        TREATMENT_CODES$radiation_revenue
+      ),
       px_type = "CH"
     ),
     "SCT" = list(
-      codes = c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs,
-                TREATMENT_CODES$sct_icd9, TREATMENT_CODES$sct_revenue),
+      codes = c(
+        TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs,
+        TREATMENT_CODES$sct_icd9, TREATMENT_CODES$sct_revenue
+      ),
       px_type = "CH"
     ),
     "Immunotherapy" = list(
       codes = unlist(TREATMENT_CODES$cart_icd10pcs_prefixes),
-      px_type = "10"  # CAR T uses ICD-10-PCS, not CPT/HCPCS
+      px_type = "10" # CAR T uses ICD-10-PCS, not CPT/HCPCS
     )
   )
 
@@ -653,31 +745,38 @@ detect_unknown_codes <- function(treatment_type) {
 
   proc_tbl <- safe_table("PROCEDURES")
   if (is.null(proc_tbl)) {
-    return(tibble(code = character(), code_type = character(),
-                  source_table = character(), n = integer(),
-                  drug_name = character(), treatment_type = character()))
+    return(tibble(
+      code = character(), code_type = character(),
+      source_table = character(), n = integer(),
+      drug_name = character(), treatment_type = character()
+    ))
   }
 
-  tryCatch({
-    proc_tbl %>%
-      filter(PX_TYPE == px_type_filter) %>%
-      materialize() %>%
-      filter(str_detect(PX, combined_regex)) %>%
-      filter(!PX %in% known_codes) %>%
-      group_by(code = PX) %>%
-      summarise(n = n(), .groups = "drop") %>%
-      mutate(
-        source_table = "PROCEDURES (unmatched)",
-        code_type = px_type_filter,
-        drug_name = NA_character_,
-        treatment_type = treatment_type
+  tryCatch(
+    {
+      proc_tbl %>%
+        filter(PX_TYPE == px_type_filter) %>%
+        materialize() %>%
+        filter(str_detect(PX, combined_regex)) %>%
+        filter(!PX %in% known_codes) %>%
+        group_by(code = PX) %>%
+        summarise(n = n(), .groups = "drop") %>%
+        mutate(
+          source_table = "PROCEDURES (unmatched)",
+          code_type = px_type_filter,
+          drug_name = NA_character_,
+          treatment_type = treatment_type
+        )
+    },
+    error = function(e) {
+      message(glue("  Warning: Unknown code detection failed for {treatment_type}: {e$message}"))
+      tibble(
+        code = character(), code_type = character(),
+        source_table = character(), n = integer(),
+        drug_name = character(), treatment_type = character()
       )
-  }, error = function(e) {
-    message(glue("  Warning: Unknown code detection failed for {treatment_type}: {e$message}"))
-    tibble(code = character(), code_type = character(),
-           source_table = character(), n = integer(),
-           drug_name = character(), treatment_type = character())
-  })
+    }
+  )
 }
 
 # SECTION 6: XLSX WRITING FUNCTIONS ----
@@ -701,10 +800,14 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
   font_color <- TREATMENT_TYPE_COLORS[[treatment_type]]$font
 
   # --- Row 1: Title ---
-  wb$add_data(sheet = sheet_name, x = "Treatment Inventory by Source Table",
-              start_row = 1, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = "A1",
-              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = sheet_name, x = "Treatment Inventory by Source Table",
+    start_row = 1, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = "A1",
+    name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+  )
   wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
 
   # --- Row 2: Subtitle ---
@@ -713,29 +816,41 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
   } else {
     glue("Counts and percentages of {treatment_type} codes by PCORnet table.")
   }
-  wb$add_data(sheet = sheet_name, x = as.character(subtitle),
-              start_row = 2, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = "A2",
-              name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+  wb$add_data(
+    sheet = sheet_name, x = as.character(subtitle),
+    start_row = 2, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = "A2",
+    name = "Calibri", size = 10, color = wb_color("FF6B7280")
+  )
   wb$merge_cells(sheet = sheet_name, dims = "A2:F2")
 
   # --- Row 3: blank ---
 
   # --- Row 4: Section header "By Source Table" ---
-  wb$add_data(sheet = sheet_name, x = "By Source Table",
-              start_row = 4, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = "A4",
-              name = "Calibri", size = 12, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = sheet_name, x = "By Source Table",
+    start_row = 4, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = "A4",
+    name = "Calibri", size = 12, bold = TRUE, color = wb_color("FF1F2937")
+  )
 
   # --- Row 5: Summary column headers ---
   summary_headers <- c("Source Table", "Code Type", "Count", "% of Total")
   for (i in seq_along(summary_headers)) {
-    wb$add_data(sheet = sheet_name, x = summary_headers[i],
-                start_row = 5, start_col = i)
+    wb$add_data(
+      sheet = sheet_name, x = summary_headers[i],
+      start_row = 5, start_col = i
+    )
   }
   wb$add_fill(sheet = sheet_name, dims = "A5:D5", color = wb_color("FF374151"))
-  wb$add_font(sheet = sheet_name, dims = "A5:D5",
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = sheet_name, dims = "A5:D5",
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
 
   # --- Rows 6+: Summary data (bulk write) ---
   current_row <- 6
@@ -747,15 +862,19 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
       Pct = df_summary$pct,
       stringsAsFactors = FALSE
     )
-    wb$add_data(sheet = sheet_name, x = summary_df,
-                start_row = current_row, col_names = FALSE)
+    wb$add_data(
+      sheet = sheet_name, x = summary_df,
+      start_row = current_row, col_names = FALSE
+    )
 
     last_summary_row <- current_row + nrow(df_summary) - 1
     # Source Table column: treatment-type colored pills (range-based)
     pill_dims <- glue("A{current_row}:A{last_summary_row}")
     wb$add_fill(sheet = sheet_name, dims = pill_dims, color = wb_color(fill_color))
-    wb$add_font(sheet = sheet_name, dims = pill_dims,
-                name = "Calibri", size = 11, bold = TRUE, color = wb_color(font_color))
+    wb$add_font(
+      sheet = sheet_name, dims = pill_dims,
+      name = "Calibri", size = 11, bold = TRUE, color = wb_color(font_color)
+    )
     # Number formats (range-based)
     wb$add_numfmt(sheet = sheet_name, dims = glue("C{current_row}:C{last_summary_row}"), numfmt = "#,##0")
     wb$add_numfmt(sheet = sheet_name, dims = glue("D{current_row}:D{last_summary_row}"), numfmt = "0.00%")
@@ -765,41 +884,57 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
 
   # --- Summary total row ---
   total_n <- sum(df_summary$n, na.rm = TRUE)
-  wb$add_data(sheet = sheet_name, x = "Total",
-              start_row = current_row, start_col = 1)
-  wb$add_data(sheet = sheet_name, x = total_n,
-              start_row = current_row, start_col = 3)
-  wb$add_data(sheet = sheet_name, x = 1.0,
-              start_row = current_row, start_col = 4)
+  wb$add_data(
+    sheet = sheet_name, x = "Total",
+    start_row = current_row, start_col = 1
+  )
+  wb$add_data(
+    sheet = sheet_name, x = total_n,
+    start_row = current_row, start_col = 3
+  )
+  wb$add_data(
+    sheet = sheet_name, x = 1.0,
+    start_row = current_row, start_col = 4
+  )
 
   total_dims <- glue("A{current_row}:D{current_row}")
   wb$add_fill(sheet = sheet_name, dims = total_dims, color = wb_color("FF374151"))
-  wb$add_font(sheet = sheet_name, dims = total_dims,
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = sheet_name, dims = total_dims,
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
   wb$add_numfmt(sheet = sheet_name, dims = glue("C{current_row}"), numfmt = "#,##0")
   wb$add_numfmt(sheet = sheet_name, dims = glue("D{current_row}"), numfmt = "0.00%")
 
-  current_row <- current_row + 1  # blank row
+  current_row <- current_row + 1 # blank row
   current_row <- current_row + 1
 
   # --- Section header "Detailed Codes" ---
-  wb$add_data(sheet = sheet_name, x = "Detailed Codes",
-              start_row = current_row, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = glue("A{current_row}"),
-              name = "Calibri", size = 12, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = sheet_name, x = "Detailed Codes",
+    start_row = current_row, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = glue("A{current_row}"),
+    name = "Calibri", size = 12, bold = TRUE, color = wb_color("FF1F2937")
+  )
   current_row <- current_row + 1
 
   # --- Detail header row ---
   detail_header_row <- current_row
   detail_headers <- c("Code", "Code Type", "Drug Name", "Source Table", "Count", "% of Total")
   for (i in seq_along(detail_headers)) {
-    wb$add_data(sheet = sheet_name, x = detail_headers[i],
-                start_row = detail_header_row, start_col = i)
+    wb$add_data(
+      sheet = sheet_name, x = detail_headers[i],
+      start_row = detail_header_row, start_col = i
+    )
   }
   detail_header_dims <- glue("A{detail_header_row}:F{detail_header_row}")
   wb$add_fill(sheet = sheet_name, dims = detail_header_dims, color = wb_color("FF374151"))
-  wb$add_font(sheet = sheet_name, dims = detail_header_dims,
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = sheet_name, dims = detail_header_dims,
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
   current_row <- current_row + 1
 
   # --- Detail data rows (bulk write for performance) ---
@@ -814,17 +949,23 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
       Pct = if (detail_total > 0) df_codes$n / detail_total else rep(0, nrow(df_codes)),
       stringsAsFactors = FALSE
     )
-    wb$add_data(sheet = sheet_name, x = detail_df,
-                start_row = current_row, col_names = FALSE)
+    wb$add_data(
+      sheet = sheet_name, x = detail_df,
+      start_row = current_row, col_names = FALSE
+    )
 
     last_detail_row <- current_row + nrow(df_codes) - 1
     # Range-based formatting (not per-row)
     code_dims <- glue("A{current_row}:A{last_detail_row}")
-    wb$add_font(sheet = sheet_name, dims = code_dims,
-                name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151"))
+    wb$add_font(
+      sheet = sheet_name, dims = code_dims,
+      name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151")
+    )
     body_dims <- glue("B{current_row}:D{last_detail_row}")
-    wb$add_font(sheet = sheet_name, dims = body_dims,
-                name = "Calibri", size = 10, color = wb_color("FF111827"))
+    wb$add_font(
+      sheet = sheet_name, dims = body_dims,
+      name = "Calibri", size = 10, color = wb_color("FF111827")
+    )
     wb$add_numfmt(sheet = sheet_name, dims = glue("E{current_row}:E{last_detail_row}"), numfmt = "#,##0")
     wb$add_numfmt(sheet = sheet_name, dims = glue("F{current_row}:F{last_detail_row}"), numfmt = "0.00%")
 
@@ -833,24 +974,32 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
 
   # --- Unmatched codes section (if any) ---
   if (nrow(df_unmatched) > 0) {
-    current_row <- current_row + 1  # blank row
+    current_row <- current_row + 1 # blank row
 
     # Section header: "Unmatched Codes (Heuristic Detection)"
-    wb$add_data(sheet = sheet_name, x = "Unmatched Codes (Heuristic Detection)",
-                start_row = current_row, start_col = 1)
-    wb$add_font(sheet = sheet_name, dims = glue("A{current_row}"),
-                name = "Calibri", size = 12, bold = TRUE, color = wb_color("FF1F2937"))
+    wb$add_data(
+      sheet = sheet_name, x = "Unmatched Codes (Heuristic Detection)",
+      start_row = current_row, start_col = 1
+    )
+    wb$add_font(
+      sheet = sheet_name, dims = glue("A{current_row}"),
+      name = "Calibri", size = 12, bold = TRUE, color = wb_color("FF1F2937")
+    )
     current_row <- current_row + 1
 
     # Unmatched header row
     for (i in seq_along(detail_headers)) {
-      wb$add_data(sheet = sheet_name, x = detail_headers[i],
-                  start_row = current_row, start_col = i)
+      wb$add_data(
+        sheet = sheet_name, x = detail_headers[i],
+        start_row = current_row, start_col = i
+      )
     }
     unmatched_header_dims <- glue("A{current_row}:F{current_row}")
     wb$add_fill(sheet = sheet_name, dims = unmatched_header_dims, color = wb_color("FF374151"))
-    wb$add_font(sheet = sheet_name, dims = unmatched_header_dims,
-                name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+    wb$add_font(
+      sheet = sheet_name, dims = unmatched_header_dims,
+      name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+    )
     current_row <- current_row + 1
 
     # Unmatched data rows (bulk write)
@@ -864,14 +1013,20 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
       Pct = if (unmatched_total > 0) df_unmatched$n / unmatched_total else rep(0, nrow(df_unmatched)),
       stringsAsFactors = FALSE
     )
-    wb$add_data(sheet = sheet_name, x = unmatched_df,
-                start_row = current_row, col_names = FALSE)
+    wb$add_data(
+      sheet = sheet_name, x = unmatched_df,
+      start_row = current_row, col_names = FALSE
+    )
 
     last_unmatched_row <- current_row + nrow(df_unmatched) - 1
-    wb$add_font(sheet = sheet_name, dims = glue("A{current_row}:A{last_unmatched_row}"),
-                name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151"))
-    wb$add_font(sheet = sheet_name, dims = glue("B{current_row}:D{last_unmatched_row}"),
-                name = "Calibri", size = 10, color = wb_color("FF111827"))
+    wb$add_font(
+      sheet = sheet_name, dims = glue("A{current_row}:A{last_unmatched_row}"),
+      name = "Calibri", size = 10, bold = TRUE, color = wb_color("FF374151")
+    )
+    wb$add_font(
+      sheet = sheet_name, dims = glue("B{current_row}:D{last_unmatched_row}"),
+      name = "Calibri", size = 10, color = wb_color("FF111827")
+    )
     wb$add_numfmt(sheet = sheet_name, dims = glue("E{current_row}:E{last_unmatched_row}"), numfmt = "#,##0")
     wb$add_numfmt(sheet = sheet_name, dims = glue("F{current_row}:F{last_unmatched_row}"), numfmt = "0.00%")
     current_row <- current_row + nrow(df_unmatched)
@@ -879,17 +1034,25 @@ write_treatment_sheet <- function(wb, sheet_name, df_summary, df_codes, df_unmat
 
   # --- Final total row (TOTAL_FILL) ---
   grand_total <- sum(df_codes$n, na.rm = TRUE) + sum(df_unmatched$n, na.rm = TRUE)
-  wb$add_data(sheet = sheet_name, x = "TOTAL",
-              start_row = current_row, start_col = 1)
-  wb$add_data(sheet = sheet_name, x = grand_total,
-              start_row = current_row, start_col = 5)
-  wb$add_data(sheet = sheet_name, x = 1.0,
-              start_row = current_row, start_col = 6)
+  wb$add_data(
+    sheet = sheet_name, x = "TOTAL",
+    start_row = current_row, start_col = 1
+  )
+  wb$add_data(
+    sheet = sheet_name, x = grand_total,
+    start_row = current_row, start_col = 5
+  )
+  wb$add_data(
+    sheet = sheet_name, x = 1.0,
+    start_row = current_row, start_col = 6
+  )
 
   total_dims <- glue("A{current_row}:F{current_row}")
   wb$add_fill(sheet = sheet_name, dims = total_dims, color = wb_color("FF1F2937"))
-  wb$add_font(sheet = sheet_name, dims = total_dims,
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = sheet_name, dims = total_dims,
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
   wb$add_numfmt(sheet = sheet_name, dims = glue("E{current_row}"), numfmt = "#,##0")
   wb$add_numfmt(sheet = sheet_name, dims = glue("F{current_row}"), numfmt = "0.00%")
 

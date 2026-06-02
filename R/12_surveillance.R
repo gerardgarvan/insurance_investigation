@@ -65,16 +65,16 @@ library(glue)
 #'   N_{modality_name}. One row per patient in post_dx_date_map. Patients with
 #'   no matching post-dx procedures receive 0 / NA / 0.
 detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vectors) {
-  had_col   <- paste0("HAD_", modality_name)
-  date_col  <- paste0("FIRST_", modality_name, "_DATE")
+  had_col <- paste0("HAD_", modality_name)
+  date_col <- paste0("FIRST_", modality_name, "_DATE")
   count_col <- paste0("N_", modality_name)
 
   # Default all-zero result (graceful handling for missing PROCEDURES table)
   result <- post_dx_date_map %>%
     select(ID) %>%
     mutate(
-      !!had_col   := 0L,
-      !!date_col  := as.Date(NA),
+      !!had_col := 0L,
+      !!date_col := as.Date(NA),
       !!count_col := 0L
     )
 
@@ -109,7 +109,7 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
     filter(!is.na(PX_DATE), PX_DATE > first_hl_dx_date) %>%
     group_by(ID) %>%
     summarise(
-      !!date_col  := min(PX_DATE, na.rm = TRUE),
+      !!date_col := min(PX_DATE, na.rm = TRUE),
       !!count_col := n(),
       .groups = "drop"
     )
@@ -118,7 +118,7 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
     select(ID) %>%
     left_join(px_summary, by = "ID") %>%
     mutate(
-      !!had_col   := as.integer(!is.na(!!sym(date_col))),
+      !!had_col := as.integer(!is.na(!!sym(date_col))),
       !!count_col := coalesce(!!sym(count_col), 0L)
     )
 
@@ -149,16 +149,16 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
 #'   N_{lab_name}. One row per patient in post_dx_date_map. Patients with
 #'   no matching post-dx labs receive 0 / NA / 0.
 detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
-  had_col   <- paste0("HAD_", lab_name)
-  date_col  <- paste0("FIRST_", lab_name, "_DATE")
+  had_col <- paste0("HAD_", lab_name)
+  date_col <- paste0("FIRST_", lab_name, "_DATE")
   count_col <- paste0("N_", lab_name)
 
   # Default all-zero result (graceful handling for missing LAB_RESULT_CM table)
   result <- post_dx_date_map %>%
     select(ID) %>%
     mutate(
-      !!had_col   := 0L,
-      !!date_col  := as.Date(NA),
+      !!had_col := 0L,
+      !!date_col := as.Date(NA),
       !!count_col := 0L
     )
 
@@ -180,7 +180,7 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
     filter(!is.na(lab_date), lab_date > first_hl_dx_date) %>%
     group_by(ID) %>%
     summarise(
-      !!date_col  := min(lab_date, na.rm = TRUE),
+      !!date_col := min(lab_date, na.rm = TRUE),
       !!count_col := n(),
       .groups = "drop"
     )
@@ -189,7 +189,7 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
     select(ID) %>%
     left_join(lab_hits, by = "ID") %>%
     mutate(
-      !!had_col   := as.integer(!is.na(!!sym(date_col))),
+      !!had_col := as.integer(!is.na(!!sym(date_col))),
       !!count_col := coalesce(!!sym(count_col), 0L)
     )
 
@@ -201,7 +201,7 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
 #' Mammogram detection (CPT + ICD-10-PCS)
 detect_mammogram <- function(post_dx_date_map) {
   codes <- list()
-  if (length(SURVEILLANCE_CODES$mammogram_cpt) > 0)     codes$cpt     <- SURVEILLANCE_CODES$mammogram_cpt
+  if (length(SURVEILLANCE_CODES$mammogram_cpt) > 0) codes$cpt <- SURVEILLANCE_CODES$mammogram_cpt
   if (length(SURVEILLANCE_CODES$mammogram_icd10pcs) > 0) codes$icd10pcs <- SURVEILLANCE_CODES$mammogram_icd10pcs
   detect_procedure_modality(post_dx_date_map, "MAMMOGRAM", codes)
 }
@@ -209,8 +209,8 @@ detect_mammogram <- function(post_dx_date_map) {
 #' Breast MRI detection (CPT + HCPCS + ICD-10-PCS)
 detect_breast_mri <- function(post_dx_date_map) {
   codes <- list()
-  if (length(SURVEILLANCE_CODES$breast_mri_cpt) > 0)     codes$cpt     <- SURVEILLANCE_CODES$breast_mri_cpt
-  if (length(SURVEILLANCE_CODES$breast_mri_hcpcs) > 0)   codes$hcpcs   <- SURVEILLANCE_CODES$breast_mri_hcpcs
+  if (length(SURVEILLANCE_CODES$breast_mri_cpt) > 0) codes$cpt <- SURVEILLANCE_CODES$breast_mri_cpt
+  if (length(SURVEILLANCE_CODES$breast_mri_hcpcs) > 0) codes$hcpcs <- SURVEILLANCE_CODES$breast_mri_hcpcs
   if (length(SURVEILLANCE_CODES$breast_mri_icd10pcs) > 0) codes$icd10pcs <- SURVEILLANCE_CODES$breast_mri_icd10pcs
   detect_procedure_modality(post_dx_date_map, "BREAST_MRI", codes)
 }
@@ -220,7 +220,7 @@ detect_breast_mri <- function(post_dx_date_map) {
 #' it cannot be matched via PROCEDURES PX_TYPE and is omitted here.
 detect_echo <- function(post_dx_date_map) {
   codes <- list()
-  if (length(SURVEILLANCE_CODES$echo_cpt) > 0)     codes$cpt     <- SURVEILLANCE_CODES$echo_cpt
+  if (length(SURVEILLANCE_CODES$echo_cpt) > 0) codes$cpt <- SURVEILLANCE_CODES$echo_cpt
   if (length(SURVEILLANCE_CODES$echo_icd10pcs) > 0) codes$icd10pcs <- SURVEILLANCE_CODES$echo_icd10pcs
   detect_procedure_modality(post_dx_date_map, "ECHO", codes)
 }
@@ -244,7 +244,7 @@ detect_ecg <- function(post_dx_date_map) {
 #' MUGA scan detection (CPT + ICD-10-PCS)
 detect_muga <- function(post_dx_date_map) {
   codes <- list()
-  if (length(SURVEILLANCE_CODES$muga_cpt) > 0)     codes$cpt     <- SURVEILLANCE_CODES$muga_cpt
+  if (length(SURVEILLANCE_CODES$muga_cpt) > 0) codes$cpt <- SURVEILLANCE_CODES$muga_cpt
   if (length(SURVEILLANCE_CODES$muga_icd10pcs) > 0) codes$icd10pcs <- SURVEILLANCE_CODES$muga_icd10pcs
   detect_procedure_modality(post_dx_date_map, "MUGA", codes)
 }
@@ -262,7 +262,7 @@ detect_pft <- function(post_dx_date_map) {
 #' TSH procedure sub-function (CPT + HCPCS)
 detect_tsh_procedure <- function(post_dx_date_map) {
   codes <- list()
-  if (length(SURVEILLANCE_CODES$tsh_cpt) > 0)   codes$cpt   <- SURVEILLANCE_CODES$tsh_cpt
+  if (length(SURVEILLANCE_CODES$tsh_cpt) > 0) codes$cpt <- SURVEILLANCE_CODES$tsh_cpt
   if (length(SURVEILLANCE_CODES$tsh_hcpcs) > 0) codes$hcpcs <- SURVEILLANCE_CODES$tsh_hcpcs
   detect_procedure_modality(post_dx_date_map, "TSH", codes)
 }
@@ -280,31 +280,33 @@ detect_tsh_lab <- function(post_dx_date_map) {
 #' Patients who had TSH via either PROCEDURES (CPT/HCPCS) or LAB_RESULT_CM (LOINC)
 #' are counted. Date is the earliest event across both sources. Count is summed.
 detect_tsh <- function(post_dx_date_map) {
-  px_result  <- detect_tsh_procedure(post_dx_date_map)
+  px_result <- detect_tsh_procedure(post_dx_date_map)
   lab_result <- detect_tsh_lab(post_dx_date_map)
 
   combined <- post_dx_date_map %>%
     select(ID) %>%
     left_join(
-      px_result  %>% select(ID,
-                            HAD_TSH_PX    = HAD_TSH,
-                            FIRST_TSH_PX_DATE  = FIRST_TSH_DATE,
-                            N_TSH_PX      = N_TSH),
+      px_result %>% select(ID,
+        HAD_TSH_PX = HAD_TSH,
+        FIRST_TSH_PX_DATE = FIRST_TSH_DATE,
+        N_TSH_PX = N_TSH
+      ),
       by = "ID"
     ) %>%
     left_join(
       lab_result %>% select(ID,
-                            HAD_TSH_LAB   = HAD_TSH,
-                            FIRST_TSH_LAB_DATE = FIRST_TSH_DATE,
-                            N_TSH_LAB     = N_TSH),
+        HAD_TSH_LAB = HAD_TSH,
+        FIRST_TSH_LAB_DATE = FIRST_TSH_DATE,
+        N_TSH_LAB = N_TSH
+      ),
       by = "ID"
     ) %>%
     mutate(
-      HAD_TSH        = as.integer(
+      HAD_TSH = as.integer(
         coalesce(HAD_TSH_PX, 0L) == 1L | coalesce(HAD_TSH_LAB, 0L) == 1L
       ),
       FIRST_TSH_DATE = pmin(FIRST_TSH_PX_DATE, FIRST_TSH_LAB_DATE, na.rm = TRUE),
-      N_TSH          = coalesce(N_TSH_PX, 0L) + coalesce(N_TSH_LAB, 0L)
+      N_TSH = coalesce(N_TSH_PX, 0L) + coalesce(N_TSH_LAB, 0L)
     ) %>%
     select(ID, HAD_TSH, FIRST_TSH_DATE, N_TSH)
 
@@ -316,7 +318,7 @@ detect_tsh <- function(post_dx_date_map) {
 #' CBC procedure sub-function (CPT + HCPCS)
 detect_cbc_procedure <- function(post_dx_date_map) {
   codes <- list()
-  if (length(SURVEILLANCE_CODES$cbc_cpt) > 0)   codes$cpt   <- SURVEILLANCE_CODES$cbc_cpt
+  if (length(SURVEILLANCE_CODES$cbc_cpt) > 0) codes$cpt <- SURVEILLANCE_CODES$cbc_cpt
   if (length(SURVEILLANCE_CODES$cbc_hcpcs) > 0) codes$hcpcs <- SURVEILLANCE_CODES$cbc_hcpcs
   detect_procedure_modality(post_dx_date_map, "CBC", codes)
 }
@@ -333,31 +335,33 @@ detect_cbc_lab <- function(post_dx_date_map) {
 #' Combined CBC detection (procedure OR lab)
 #' Same merge logic as detect_tsh().
 detect_cbc <- function(post_dx_date_map) {
-  px_result  <- detect_cbc_procedure(post_dx_date_map)
+  px_result <- detect_cbc_procedure(post_dx_date_map)
   lab_result <- detect_cbc_lab(post_dx_date_map)
 
   combined <- post_dx_date_map %>%
     select(ID) %>%
     left_join(
-      px_result  %>% select(ID,
-                            HAD_CBC_PX    = HAD_CBC,
-                            FIRST_CBC_PX_DATE  = FIRST_CBC_DATE,
-                            N_CBC_PX      = N_CBC),
+      px_result %>% select(ID,
+        HAD_CBC_PX = HAD_CBC,
+        FIRST_CBC_PX_DATE = FIRST_CBC_DATE,
+        N_CBC_PX = N_CBC
+      ),
       by = "ID"
     ) %>%
     left_join(
       lab_result %>% select(ID,
-                            HAD_CBC_LAB   = HAD_CBC,
-                            FIRST_CBC_LAB_DATE = FIRST_CBC_DATE,
-                            N_CBC_LAB     = N_CBC),
+        HAD_CBC_LAB = HAD_CBC,
+        FIRST_CBC_LAB_DATE = FIRST_CBC_DATE,
+        N_CBC_LAB = N_CBC
+      ),
       by = "ID"
     ) %>%
     mutate(
-      HAD_CBC        = as.integer(
+      HAD_CBC = as.integer(
         coalesce(HAD_CBC_PX, 0L) == 1L | coalesce(HAD_CBC_LAB, 0L) == 1L
       ),
       FIRST_CBC_DATE = pmin(FIRST_CBC_PX_DATE, FIRST_CBC_LAB_DATE, na.rm = TRUE),
-      N_CBC          = coalesce(N_CBC_PX, 0L) + coalesce(N_CBC_LAB, 0L)
+      N_CBC = coalesce(N_CBC_PX, 0L) + coalesce(N_CBC_LAB, 0L)
     ) %>%
     select(ID, HAD_CBC, FIRST_CBC_DATE, N_CBC)
 
@@ -433,13 +437,13 @@ assemble_surveillance_flags <- function(post_dx_date_map) {
 
   # 7 procedure-only modalities
   result <- result %>%
-    left_join(detect_mammogram(post_dx_date_map),   by = "ID") %>%
-    left_join(detect_breast_mri(post_dx_date_map),  by = "ID") %>%
-    left_join(detect_echo(post_dx_date_map),         by = "ID") %>%
+    left_join(detect_mammogram(post_dx_date_map), by = "ID") %>%
+    left_join(detect_breast_mri(post_dx_date_map), by = "ID") %>%
+    left_join(detect_echo(post_dx_date_map), by = "ID") %>%
     left_join(detect_stress_test(post_dx_date_map), by = "ID") %>%
-    left_join(detect_ecg(post_dx_date_map),          by = "ID") %>%
-    left_join(detect_muga(post_dx_date_map),         by = "ID") %>%
-    left_join(detect_pft(post_dx_date_map),          by = "ID")
+    left_join(detect_ecg(post_dx_date_map), by = "ID") %>%
+    left_join(detect_muga(post_dx_date_map), by = "ID") %>%
+    left_join(detect_pft(post_dx_date_map), by = "ID")
 
   # 2 combined (procedure + lab) modalities
   result <- result %>%
@@ -448,16 +452,16 @@ assemble_surveillance_flags <- function(post_dx_date_map) {
 
   # 8 lab-only modalities
   result <- result %>%
-    left_join(detect_crp(post_dx_date_map),       by = "ID") %>%
-    left_join(detect_alt(post_dx_date_map),       by = "ID") %>%
-    left_join(detect_ast(post_dx_date_map),       by = "ID") %>%
-    left_join(detect_alp(post_dx_date_map),       by = "ID") %>%
-    left_join(detect_ggt(post_dx_date_map),       by = "ID") %>%
+    left_join(detect_crp(post_dx_date_map), by = "ID") %>%
+    left_join(detect_alt(post_dx_date_map), by = "ID") %>%
+    left_join(detect_ast(post_dx_date_map), by = "ID") %>%
+    left_join(detect_alp(post_dx_date_map), by = "ID") %>%
+    left_join(detect_ggt(post_dx_date_map), by = "ID") %>%
     left_join(detect_bilirubin(post_dx_date_map), by = "ID") %>%
     left_join(detect_platelets(post_dx_date_map), by = "ID") %>%
-    left_join(detect_fobt(post_dx_date_map),      by = "ID")
+    left_join(detect_fobt(post_dx_date_map), by = "ID")
 
-  n_cols <- ncol(result) - 1L  # exclude ID
+  n_cols <- ncol(result) - 1L # exclude ID
   message(glue(
     "[Surveillance] assemble_surveillance_flags: {n_cols} surveillance columns",
     " for {nrow(result)} patients"

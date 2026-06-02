@@ -137,75 +137,69 @@ data_quality_summary <- tribble(
   # Date parsing -- diagnostics confirmed 0 failures
 
   "Date parsing failures",
-    0L, n_char_date_cols_after,
-    "fixed",
-    "All date formats handled by 4-format parser; all NAs are genuine missing data",
-
+  0L, n_char_date_cols_after,
+  "fixed",
+  "All date formats handled by 4-format parser; all NAs are genuine missing data",
   "Missed date columns (regex)",
-    0L, 0L,
-    "fixed",
-    "date_column_regex_audit.csv confirmed all date columns matched by regex",
+  0L, 0L,
+  "fixed",
+  "date_column_regex_audit.csv confirmed all date columns matched by regex",
 
   # Column types -- TR coded columns confirmed correct as character
   "TR column type mismatches",
-    0L, 0L,
-    "fixed",
-    "tr_type_audit flagged columns are ICD-O-3/NAACCR codes; correctly typed as character",
+  0L, 0L,
+  "fixed",
+  "tr_type_audit flagged columns are ICD-O-3/NAACCR codes; correctly typed as character",
 
   # Age sentinels
   "Age sentinels (AGE_AT_DIAGNOSIS=200)",
-    3L, 3L,
-    "documented",
-    "TR1 AGE_AT_DIAGNOSIS: 3 values of 200 (sentinel for unknown age). Flagged by _VALID column",
-
+  3L, 3L,
+  "documented",
+  "TR1 AGE_AT_DIAGNOSIS: 3 values of 200 (sentinel for unknown age). Flagged by _VALID column",
   "Age sentinels (DXAGE negative, TR2)",
-    2L, 2L,
-    "documented",
-    "TR2 DXAGE: 2 negative values (-84, -76). Flagged by DXAGE_VALID column",
-
+  2L, 2L,
+  "documented",
+  "TR2 DXAGE: 2 negative values (-84, -76). Flagged by DXAGE_VALID column",
   "Age sentinels (DXAGE=200, TR2)",
-    2L, 2L,
-    "documented",
-    "TR2 DXAGE: 2 sentinel values of 200. Flagged by DXAGE_VALID column",
-
+  2L, 2L,
+  "documented",
+  "TR2 DXAGE: 2 sentinel values of 200. Flagged by DXAGE_VALID column",
   "Age sentinels (DXAGE=999, TR3)",
-    13L, 13L,
-    "documented",
-    "TR3 DXAGE: 13 sentinel values of 999 (unknown age). Flagged by DXAGE_VALID column",
+  13L, 13L,
+  "documented",
+  "TR3 DXAGE: 13 sentinel values of 999 (unknown age). Flagged by DXAGE_VALID column",
 
   # Date range issues
   "Future enrollment dates",
-    279L, n_future_dates_after,
-    "documented",
-    "ENR_END_DATE future dates. Flagged by _VALID columns with 5-year tolerance window",
-
+  279L, n_future_dates_after,
+  "documented",
+  "ENR_END_DATE future dates. Flagged by _VALID columns with 5-year tolerance window",
   "Future prescribing dates",
-    50L, as.integer(n_future_dates_after > 0),
-    "documented",
-    "RX_END_DATE future dates (max 2037-08-08). Flagged by _VALID column",
-
+  50L, as.integer(n_future_dates_after > 0),
+  "documented",
+  "RX_END_DATE future dates (max 2037-08-08). Flagged by _VALID column",
   "Pre-1900 diagnosis dates",
-    8L, n_pre1900_dates_after,
-    "documented",
-    "DIAGNOSIS.DX_DATE: 8 pre-1900 dates (SAS epoch sentinels). Flagged by _VALID column",
+  8L, n_pre1900_dates_after,
+  "documented",
+  "DIAGNOSIS.DX_DATE: 8 pre-1900 dates (SAS epoch sentinels). Flagged by _VALID column",
 
   # HL identification
   "Neither patients (no HL evidence)",
-    19L, 0L,
-    "fixed",
-    "19 patients with no HL evidence in DIAGNOSIS or TR. Excluded by Plan 01 HL_SOURCE tracking",
+  19L, 0L,
+  "fixed",
+  "19 patients with no HL evidence in DIAGNOSIS or TR. Excluded by Plan 01 HL_SOURCE tracking",
 
   # Encoding
   "Non-ASCII characters (TR1)",
-    8L, as.integer(n_encoding_after),
-    "accepted",
-    "TR1.HISTOLOGICAL_TYPE_DESCRIPTION: cosmetic only, does not affect coded values or analysis",
+  8L, as.integer(n_encoding_after),
+  "accepted",
+  "TR1.HISTOLOGICAL_TYPE_DESCRIPTION: cosmetic only, does not affect coded values or analysis",
 
   # Missing values -- all explained by optional PCORnet CDM fields
   "High missing values (>50%)",
-    0L, 0L,
-    "accepted",
-    "ENCOUNTER.DISCHARGE_DATE (70.87%), PRESCRIBING.RX_DAYS_SUPPLY (92.89%), TR1 dates (100%) -- all optional CDM fields"
+  0L, 0L,
+  "accepted",
+  "ENCOUNTER.DISCHARGE_DATE (70.87%), PRESCRIBING.RX_DAYS_SUPPLY (92.89%), TR1 dates (100%) -- all optional CDM fields"
 )
 
 # ==============================================================================

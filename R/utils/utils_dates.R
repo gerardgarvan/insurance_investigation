@@ -41,7 +41,6 @@ library(glue)
 #' parse_pcornet_date(c(NA, "", "2020-01-15"))
 #'
 parse_pcornet_date <- function(date_char) {
-
   # Handle edge cases
   if (length(date_char) == 0) {
     return(as.Date(character(0)))

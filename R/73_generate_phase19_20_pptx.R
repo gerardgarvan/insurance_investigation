@@ -122,8 +122,12 @@ assert_required_files <- function(paths, missing_hint = NULL) {
 fmt_pct <- function(x) paste0(x, "%")
 
 as_logical_flag <- function(x) {
-  if (is.logical(x)) return(x)
-  if (is.numeric(x)) return(x != 0)
+  if (is.logical(x)) {
+    return(x)
+  }
+  if (is.numeric(x)) {
+    return(x != 0)
+  }
   x_chr <- tolower(trimws(as.character(x)))
   ifelse(
     x_chr %in% c("true", "t", "1", "yes", "y"),

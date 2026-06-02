@@ -23,7 +23,7 @@
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
-source("R/02_harmonize_payer.R")  # Loads 01 -> 00 chain; provides encounters tibble with payer_category
+source("R/02_harmonize_payer.R") # Loads 01 -> 00 chain; provides encounters tibble with payer_category
 
 library(dplyr)
 library(lubridate)
@@ -93,11 +93,11 @@ all_encounters <- get_pcornet_table("ENCOUNTER") %>%
   materialize() %>%
   mutate(
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |
-                      PAYER_TYPE_PRIMARY == "" |
-                      PAYER_TYPE_PRIMARY %in% missing_indicators,
+      PAYER_TYPE_PRIMARY == "" |
+      PAYER_TYPE_PRIMARY %in% missing_indicators,
     secondary_missing = is.na(PAYER_TYPE_SECONDARY) |
-                        PAYER_TYPE_SECONDARY == "" |
-                        PAYER_TYPE_SECONDARY %in% missing_indicators,
+      PAYER_TYPE_SECONDARY == "" |
+      PAYER_TYPE_SECONDARY %in% missing_indicators,
     both_missing = primary_missing & secondary_missing
   )
 
@@ -323,12 +323,12 @@ all_encounters_harmonized <- encounters %>%
     admit_year = year(ADMIT_DATE),
     # Harmonized missingness: payer_category is NA or "Missing"
     harmonized_missing = is.na(payer_category) |
-                         payer_category == "Missing",
+      payer_category == "Missing",
     # Raw primary missingness (same logic as Section 2)
     # Phase 32: nchar(trimws()) replaced with direct empty-string check (translation gap #7)
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |
-                      PAYER_TYPE_PRIMARY == "" |
-                      PAYER_TYPE_PRIMARY %in% missing_indicators
+      PAYER_TYPE_PRIMARY == "" |
+      PAYER_TYPE_PRIMARY %in% missing_indicators
   )
 
 # Per-SOURCE overall comparison

@@ -23,7 +23,7 @@
 #
 # ==============================================================================
 
-source("R/14_build_cohort.R")  # Loads hl_cohort, all upstream
+source("R/14_build_cohort.R") # Loads hl_cohort, all upstream
 
 library(ggplot2)
 library(ggalluvial)
@@ -46,11 +46,11 @@ message("\n--- Deriving Treatment Categories ---")
 sankey_data <- hl_cohort %>%
   mutate(
     TREATMENT_CATEGORY = case_when(
-      HAD_SCT == 1                           ~ "SCT (any combination)",
-      HAD_CHEMO == 1 & HAD_RADIATION == 1    ~ "Chemo + Radiation",
-      HAD_CHEMO == 1                         ~ "Chemo only",
-      HAD_RADIATION == 1                     ~ "Radiation only",
-      TRUE                                   ~ "No treatment evidence"
+      HAD_SCT == 1 ~ "SCT (any combination)",
+      HAD_CHEMO == 1 & HAD_RADIATION == 1 ~ "Chemo + Radiation",
+      HAD_CHEMO == 1 ~ "Chemo only",
+      HAD_RADIATION == 1 ~ "Radiation only",
+      TRUE ~ "No treatment evidence"
     )
   )
 
@@ -180,9 +180,9 @@ p_sankey <- ggplot(
     aes(fill = PAYER_LABEL),
     curve_type = "xspline",
     alpha = 0.7,
-    width = 1/12
+    width = 1 / 12
   ) +
-  geom_stratum(width = 1/12, fill = "gray90", color = "gray50") +
+  geom_stratum(width = 1 / 12, fill = "gray90", color = "gray50") +
   geom_text(
     stat = "stratum",
     aes(label = after_stat(stratum)),

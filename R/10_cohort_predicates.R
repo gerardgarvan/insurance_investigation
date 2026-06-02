@@ -48,7 +48,6 @@ library(stringr)
 #' @return Filtered tibble containing only patients with HL diagnosis
 #'
 has_hodgkin_diagnosis <- function(patient_df) {
-
   # Source 1: DIAGNOSIS table (ICD-9/10)
   # Translation gap workaround: replace is_hl_diagnosis() with inline %in% matching
   # Build both dotted and undotted ICD code lists for robust matching
@@ -62,7 +61,7 @@ has_hodgkin_diagnosis <- function(patient_df) {
   dx_hl_patients <- get_pcornet_table("DIAGNOSIS") %>%
     filter(
       (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
-      (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+        (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
     ) %>%
     distinct(ID)
 
@@ -191,7 +190,7 @@ exclude_missing_payer <- function(patient_df, payer_summary) {
   valid_payer_patients <- payer_summary %>%
     filter(
       !is.na(PAYER_CATEGORY_PRIMARY) &
-      !PAYER_CATEGORY_PRIMARY %in% c("Missing")
+        !PAYER_CATEGORY_PRIMARY %in% c("Missing")
     ) %>%
     distinct(ID)
 
@@ -255,7 +254,8 @@ has_chemo <- function() {
       }
       tr_chemo <- tr_tbl %>%
         filter(!!rlang::parse_expr(filter_expr)) %>%
-        pull(ID) %>% unique()
+        pull(ID) %>%
+        unique()
       chemo_ids <- c(chemo_ids, tr_chemo)
       n_tr <- length(unique(tr_chemo))
     }
@@ -277,7 +277,7 @@ has_chemo <- function() {
     px_other_chemo <- proc_tbl %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9)
       ) %>%
       distinct(ID) %>%
       pull(ID)
@@ -308,7 +308,7 @@ has_chemo <- function() {
     dx_chemo <- dx_tbl %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
-        (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
       ) %>%
       distinct(ID) %>%
       pull(ID)
@@ -408,7 +408,8 @@ has_radiation <- function() {
       }
       tr_rad <- tr_tbl %>%
         filter(!!rlang::parse_expr(filter_expr)) %>%
-        pull(ID) %>% unique()
+        pull(ID) %>%
+        unique()
       rad_ids <- c(rad_ids, tr_rad)
       n_tr <- length(unique(tr_rad))
     }
@@ -429,7 +430,7 @@ has_radiation <- function() {
     px_other_rad <- proc_tbl %>%
       filter(
         (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9)
       ) %>%
       distinct(ID) %>%
       pull(ID)
@@ -447,7 +448,7 @@ has_radiation <- function() {
     dx_rad <- dx_tbl %>%
       filter(
         (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
-        (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
       ) %>%
       distinct(ID) %>%
       pull(ID)
@@ -523,15 +524,17 @@ has_sct <- function() {
     if ("HEMATOLOGIC_TRANSPLANT_AND_ENDOC" %in% tr_cols) {
       tr1_sct <- tr_tbl %>%
         filter(!is.na(HEMATOLOGIC_TRANSPLANT_AND_ENDOC) &
-               HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "" &
-               HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "00") %>%
+          HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "" &
+          HEMATOLOGIC_TRANSPLANT_AND_ENDOC != "00") %>%
         pull(ID)
       sct_ids <- c(sct_ids, tr1_sct)
     }
 
     # Check for TR2/TR3 date columns (DT_HTE, DT_SCT, etc.)
-    sct_date_cols <- c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-                       "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT")
+    sct_date_cols <- c(
+      "DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+      "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"
+    )
     tr_sct_date_cols <- intersect(sct_date_cols, tr_cols)
     if (length(tr_sct_date_cols) > 0) {
       # Translation gap workaround: replace if_any with explicit OR
@@ -547,7 +550,9 @@ has_sct <- function() {
     }
 
     # Aggregate TR source count (check against materialized TR IDs)
-    tr_all_ids <- tr_tbl %>% pull(ID) %>% unique()
+    tr_all_ids <- tr_tbl %>%
+      pull(ID) %>%
+      unique()
     n_tr <- length(unique(sct_ids[sct_ids %in% tr_all_ids]))
   }
 
@@ -558,8 +563,8 @@ has_sct <- function() {
     px_sct <- proc_tbl %>%
       filter(
         (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
-        (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
-        (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
+          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
       ) %>%
       distinct(ID) %>%
       pull(ID)

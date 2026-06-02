@@ -61,13 +61,12 @@ init_attrition_log <- function() {
 #' attrition_log <- log_attrition(attrition_log, "Has enrollment", 4800)
 #'
 log_attrition <- function(log_df, step_name, n_after) {
-
   # Infer n_before from previous step's n_after
   # If this is the first step, n_before = n_after (no exclusions yet)
   if (nrow(log_df) > 0) {
     n_before <- tail(log_df$n_after, 1)
   } else {
-    n_before <- n_after  # First step: initial population size
+    n_before <- n_after # First step: initial population size
   }
 
   # Calculate exclusions

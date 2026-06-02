@@ -26,11 +26,11 @@
 # ------------------------------------------------------------------------------
 # UF Health brand colors (matches Python pipeline)
 # ------------------------------------------------------------------------------
-UF_BLUE      <- "#003087"
-UF_ORANGE    <- "#FA4616"
-LIGHT_BLUE   <- "#CCD5EA"   # Alternating row color (odd rows)
-LIGHT_ORANGE <- "#FDD9CC"   # Alternating row color (even rows)
-DARK_TEXT    <- "#333333"
+UF_BLUE <- "#003087"
+UF_ORANGE <- "#FA4616"
+LIGHT_BLUE <- "#CCD5EA" # Alternating row color (odd rows)
+LIGHT_ORANGE <- "#FDD9CC" # Alternating row color (even rows)
+DARK_TEXT <- "#333333"
 FOOTNOTE_TEXT <- "#666666"
 
 #' Apply UF Health brand styling to a flextable
@@ -64,8 +64,10 @@ style_table <- function(ft, total_row = integer(0), body_font_size = 12,
     align(j = 1, align = "left", part = "body") %>%
     align(j = -1, align = "center", part = "body") %>%
     border_remove() %>%
-    padding(padding.left = padding, padding.right = padding,
-            padding.top = ceiling(padding/2), padding.bottom = ceiling(padding/2), part = "all")
+    padding(
+      padding.left = padding, padding.right = padding,
+      padding.top = ceiling(padding / 2), padding.bottom = ceiling(padding / 2), part = "all"
+    )
 
   # Conditionally bold first column (R/11 uses this; R/22 does not)
   if (bold_first_col) {
@@ -104,8 +106,10 @@ add_table_slide <- function(pptx, title, subtitle, tbl_data, footnote = NULL, bo
   total_row_idx <- which(tbl_data[[1]] == "Total")
   # Use R/22 styling: body=11, header=12, no bold first col, padding=5
   ft <- flextable(tbl_data) %>%
-    style_table(total_row = total_row_idx, body_font_size = body_font_size,
-                header_font_size = 12, bold_first_col = FALSE, padding = 5)
+    style_table(
+      total_row = total_row_idx, body_font_size = body_font_size,
+      header_font_size = 12, bold_first_col = FALSE, padding = 5
+    )
 
   n_cols <- ncol(tbl_data)
   if (n_cols > 1) {

@@ -31,7 +31,7 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 1: SETUP ----
 # ==============================================================================
 
@@ -44,15 +44,17 @@ if (!file.exists(RDS_PATH)) {
 d <- readRDS(RDS_PATH)
 
 message("=== Phase 44 Verification: Treatment Episode Checks ===\n")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 2: EXECUTION ----
 # ==============================================================================
 
 # --- 1. STRUCTURE CHECK ---
 message("--- 1. Structure ---")
-expected_cols <- c("patient_id", "treatment_type", "episode_number",
-                   "episode_start", "episode_stop", "episode_length_days",
-                   "distinct_dates_in_episode", "historical_flag")
+expected_cols <- c(
+  "patient_id", "treatment_type", "episode_number",
+  "episode_start", "episode_stop", "episode_length_days",
+  "distinct_dates_in_episode", "historical_flag"
+)
 missing_cols <- setdiff(expected_cols, colnames(d))
 if (length(missing_cols) > 0) {
   message(glue("  FAIL: Missing columns: {paste(missing_cols, collapse=', ')}"))
@@ -164,7 +166,9 @@ if (nrow(contiguity) > 0) {
 }
 
 # Duplicate patient-type-episode combos
-dupes <- d %>% count(patient_id, treatment_type, episode_number) %>% filter(n > 1)
+dupes <- d %>%
+  count(patient_id, treatment_type, episode_number) %>%
+  filter(n > 1)
 if (nrow(dupes) > 0) {
   message(glue("  FAIL: {nrow(dupes)} duplicate patient-type-episode combinations"))
   print(head(dupes))
@@ -312,6 +316,6 @@ for (csv_path in csv_paths) {
 
 
 message("\n=== Phase 44 Verification Complete ===")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 2: EXECUTION ----
 # ==============================================================================

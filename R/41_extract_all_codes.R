@@ -67,7 +67,9 @@ icd10_summary <- dx_icd10 %>%
 
 message(glue("  Unique ICD-10 codes: {format(nrow(icd10_summary), big.mark=',')}"))
 message(glue("  Top 10 by patients:"))
-top10_dx <- icd10_summary %>% arrange(desc(patients)) %>% head(10)
+top10_dx <- icd10_summary %>%
+  arrange(desc(patients)) %>%
+  head(10)
 for (r in seq_len(nrow(top10_dx))) {
   message(glue("    {top10_dx$code[r]}: {top10_dx$patients[r]} patients, {top10_dx$records[r]} records"))
 }
@@ -82,8 +84,10 @@ tr_all_lazy <- get_pcornet_table("TUMOR_REGISTRY_ALL")
 tr_cols <- colnames(tr_all_lazy)
 
 # Find topography column(s)
-site_candidates <- intersect(c("SITE_CODE", "SITE", "PRIMARY_SITE",
-                                "TOPOGRAPHY_CODE", "ICDOSITE"), tr_cols)
+site_candidates <- intersect(c(
+  "SITE_CODE", "SITE", "PRIMARY_SITE",
+  "TOPOGRAPHY_CODE", "ICDOSITE"
+), tr_cols)
 message(glue("  Topography column candidates: {paste(site_candidates, collapse=', ')}"))
 
 if (length(site_candidates) == 0) {
@@ -114,7 +118,9 @@ if (length(site_candidates) == 0) {
 
   message(glue("  Unique ICD-O-3 topography codes: {format(nrow(icdo3_summary), big.mark=',')}"))
   message(glue("  Top 10 by patients:"))
-  top10_tr <- icdo3_summary %>% arrange(desc(patients)) %>% head(10)
+  top10_tr <- icdo3_summary %>%
+    arrange(desc(patients)) %>%
+    head(10)
   for (r in seq_len(nrow(top10_tr))) {
     message(glue("    {top10_tr$code[r]}: {top10_tr$patients[r]} patients, {top10_tr$records[r]} records"))
   }
@@ -127,7 +133,7 @@ if (length(site_candidates) == 0) {
 message(glue("\nWriting {OUTPUT_PATH}..."))
 
 DARK_HEADER_FILL <- "FF374151"
-WHITE_FONT       <- "FFFFFFFF"
+WHITE_FONT <- "FFFFFFFF"
 
 wb <- wb_workbook()
 
@@ -138,12 +144,16 @@ for (i in seq_along(headers_dx)) {
   wb$add_data(sheet = "ICD-10 Diagnosis", x = headers_dx[i], start_row = 1, start_col = i)
 }
 wb$add_fill(sheet = "ICD-10 Diagnosis", dims = "A1:C1", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = "ICD-10 Diagnosis", dims = "A1:C1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = "ICD-10 Diagnosis", dims = "A1:C1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT)
+)
 
 if (nrow(icd10_summary) > 0) {
-  wb$add_data(sheet = "ICD-10 Diagnosis", x = as.data.frame(icd10_summary),
-              start_row = 2, col_names = FALSE)
+  wb$add_data(
+    sheet = "ICD-10 Diagnosis", x = as.data.frame(icd10_summary),
+    start_row = 2, col_names = FALSE
+  )
   end_row <- 1 + nrow(icd10_summary)
   wb$add_numfmt(sheet = "ICD-10 Diagnosis", dims = glue("B2:C{end_row}"), numfmt = "#,##0")
 }
@@ -158,12 +168,16 @@ for (i in seq_along(headers_tr)) {
   wb$add_data(sheet = "ICD-O-3 Topography", x = headers_tr[i], start_row = 1, start_col = i)
 }
 wb$add_fill(sheet = "ICD-O-3 Topography", dims = "A1:C1", color = wb_color(DARK_HEADER_FILL))
-wb$add_font(sheet = "ICD-O-3 Topography", dims = "A1:C1",
-            name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT))
+wb$add_font(
+  sheet = "ICD-O-3 Topography", dims = "A1:C1",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color(WHITE_FONT)
+)
 
 if (nrow(icdo3_summary) > 0) {
-  wb$add_data(sheet = "ICD-O-3 Topography", x = as.data.frame(icdo3_summary),
-              start_row = 2, col_names = FALSE)
+  wb$add_data(
+    sheet = "ICD-O-3 Topography", x = as.data.frame(icdo3_summary),
+    start_row = 2, col_names = FALSE
+  )
   end_row <- 1 + nrow(icdo3_summary)
   wb$add_numfmt(sheet = "ICD-O-3 Topography", dims = glue("B2:C{end_row}"), numfmt = "#,##0")
 }

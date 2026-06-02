@@ -33,7 +33,7 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 1: SETUP ----
 # ==============================================================================
 
@@ -46,15 +46,17 @@ if (!file.exists(RDS_PATH)) {
 d <- readRDS(RDS_PATH)
 
 message("=== Phase 43 Verification: Treatment Duration Checks ===\n")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 2: EXECUTION ----
 # ==============================================================================
 
 # --- 1. Structure check ---
 message("--- 1. Structure ---")
-expected_cols <- c("ID", "treatment_type", "first_treatment_date",
-                   "last_treatment_date", "overall_span_days",
-                   "distinct_treatment_dates", "episode_count")
+expected_cols <- c(
+  "ID", "treatment_type", "first_treatment_date",
+  "last_treatment_date", "overall_span_days",
+  "distinct_treatment_dates", "episode_count"
+)
 missing_cols <- setdiff(expected_cols, colnames(d))
 if (length(missing_cols) > 0) {
   message(glue("  FAIL: Missing columns: {paste(missing_cols, collapse=', ')}"))
@@ -75,17 +77,17 @@ message("\n--- 2. Per-Type Summary ---")
 type_summary <- d %>%
   group_by(treatment_type) %>%
   summarise(
-    n_patients      = n(),
-    median_span     = median(overall_span_days),
-    q1_span         = quantile(overall_span_days, 0.25),
-    q3_span         = quantile(overall_span_days, 0.75),
-    min_span        = min(overall_span_days),
-    max_span        = max(overall_span_days),
+    n_patients = n(),
+    median_span = median(overall_span_days),
+    q1_span = quantile(overall_span_days, 0.25),
+    q3_span = quantile(overall_span_days, 0.75),
+    min_span = min(overall_span_days),
+    max_span = max(overall_span_days),
     pct_single_date = round(100 * mean(distinct_treatment_dates == 1), 1),
-    median_dates    = median(distinct_treatment_dates),
-    max_dates       = max(distinct_treatment_dates),
+    median_dates = median(distinct_treatment_dates),
+    max_dates = max(distinct_treatment_dates),
     median_episodes = median(episode_count),
-    max_episodes    = max(episode_count),
+    max_episodes = max(episode_count),
     .groups = "drop"
   )
 
@@ -105,8 +107,10 @@ message("\n\n--- 3. Data Quality Checks ---")
 neg_span <- d %>% filter(overall_span_days < 0)
 if (nrow(neg_span) > 0) {
   message(glue("  FAIL: {nrow(neg_span)} rows with negative span"))
-  print(neg_span %>% select(ID, treatment_type, first_treatment_date,
-                            last_treatment_date, overall_span_days))
+  print(neg_span %>% select(
+    ID, treatment_type, first_treatment_date,
+    last_treatment_date, overall_span_days
+  ))
 } else {
   message("  OK: No negative spans")
 }
@@ -137,7 +141,9 @@ if (nrow(ep_gt_dates) > 0) {
 }
 
 # Duplicate patient-type combos
-dupes <- d %>% count(ID, treatment_type) %>% filter(n > 1)
+dupes <- d %>%
+  count(ID, treatment_type) %>%
+  filter(n > 1)
 if (nrow(dupes) > 0) {
   message(glue("  FAIL: {nrow(dupes)} duplicate patient-type combinations"))
 } else {
@@ -228,11 +234,11 @@ if (nrow(old_rows) > 0) {
   # Impact on summary stats: what do stats look like WITHOUT pre-2000 dates?
   message("\n  Impact: stats WITH vs WITHOUT pre-2000 patients:")
   for (type in intersect(TREATMENT_TYPES, unique(old_rows$treatment_type))) {
-    all_type  <- d %>% filter(treatment_type == type)
+    all_type <- d %>% filter(treatment_type == type)
     clean_type <- all_type %>% filter(first_treatment_date >= as.Date("2000-01-01"))
     n_removed <- nrow(all_type) - nrow(clean_type)
 
-    s_all   <- all_type %>% summarise(med = median(overall_span_days), mx = max(overall_span_days))
+    s_all <- all_type %>% summarise(med = median(overall_span_days), mx = max(overall_span_days))
     s_clean <- clean_type %>% summarise(med = median(overall_span_days), mx = max(overall_span_days))
 
     message(glue("    {type} ({n_removed} removed):"))
@@ -303,7 +309,7 @@ if (nrow(multi_type) > 0) {
 # --- 6. Output file checks ---
 message("\n--- 6. Output Files ---")
 xlsx_path <- file.path(CONFIG$output_dir, "treatment_durations.xlsx")
-png_path  <- file.path(CONFIG$output_dir, "treatment_duration_distributions.png")
+png_path <- file.path(CONFIG$output_dir, "treatment_duration_distributions.png")
 
 # check_file() provided by R/utils_treatment.R (via R/00_config.R)
 check_file(RDS_PATH, "RDS artifact")
@@ -311,6 +317,6 @@ check_file(xlsx_path, "XLSX report")
 check_file(png_path, "Distribution PNG")
 
 message("\n=== Verification Complete ===")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 2: EXECUTION ----
 # ==============================================================================

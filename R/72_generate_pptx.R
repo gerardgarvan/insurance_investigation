@@ -121,7 +121,7 @@ PAYER_ORDER <- c(
 rename_payer <- function(x) {
   case_when(
     x %in% c("Other", "Other govt") ~ "Missing",
-    is.na(x)                         ~ "Missing",
+    is.na(x) ~ "Missing",
     TRUE ~ x
   )
 }
@@ -134,7 +134,7 @@ format_count_pct <- function(n, total) {
 }
 
 # Treatment window (days)
-WINDOW_DAYS <- CONFIG$analysis$treatment_window_days  # 30
+WINDOW_DAYS <- CONFIG$analysis$treatment_window_days # 30
 
 # PPTX color constants provided by R/utils_pptx.R
 
@@ -161,10 +161,12 @@ compute_last_dates <- function(treatment_type) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$chemo_hcpcs) |
-          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
-          (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx))
-        ) %>% filter(!is.na(PX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$chemo_icd9) |
+            (PX_TYPE == "10" & str_detect(PX, chemo_icd10pcs_rx))
+        ) %>%
+        filter(!is.na(PX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$PRESCRIBING)) {
       sources$rx <- pcornet$PRESCRIBING %>%
@@ -172,39 +174,46 @@ compute_last_dates <- function(treatment_type) {
         filter(!is.na(RX_ORDER_DATE) | !is.na(RX_START_DATE)) %>%
         mutate(d = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
         filter(!is.na(d)) %>%
-        group_by(ID) %>% summarise(d = max(d, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(d, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$DIAGNOSIS)) {
       sources$dx <- pcornet$DIAGNOSIS %>%
         filter(
           (DX_TYPE == "10" & DX %in% TREATMENT_CODES$chemo_dx_icd10) |
-          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
-        ) %>% filter(!is.na(DX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+            (DX_TYPE == "09" & DX %in% TREATMENT_CODES$chemo_dx_icd9)
+        ) %>%
+        filter(!is.na(DX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(d = max(DX_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$ENCOUNTER)) {
       sources$drg <- pcornet$ENCOUNTER %>%
         filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
         filter(!is.na(ADMIT_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$DISPENSING) && "RXNORM_CUI" %in% names(pcornet$DISPENSING)) {
       sources$disp <- pcornet$DISPENSING %>%
         filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
         filter(!is.na(DISPENSE_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(DISPENSE_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$MED_ADMIN) && "RXNORM_CUI" %in% names(pcornet$MED_ADMIN)) {
       sources$ma <- pcornet$MED_ADMIN %>%
         filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
         filter(!is.na(MEDADMIN_START_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$PROCEDURES)) {
       sources$rev <- pcornet$PROCEDURES %>%
         filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$chemo_revenue) %>%
         filter(!is.na(PX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
     # TUMOR_REGISTRY: chemo dates (CHEMO_START_DATE_SUMMARY, DT_CHEMO)
     if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
@@ -229,37 +238,42 @@ compute_last_dates <- function(treatment_type) {
         }
       }
     }
-
   } else if (treatment_type == "radiation") {
     sources <- list()
     if (!is.null(pcornet$PROCEDURES)) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
           (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$radiation_cpt) |
-          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
-          (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx))
-        ) %>% filter(!is.na(PX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$radiation_icd9) |
+            (PX_TYPE == "10" & str_detect(PX, rad_icd10pcs_rx))
+        ) %>%
+        filter(!is.na(PX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$DIAGNOSIS)) {
       sources$dx <- pcornet$DIAGNOSIS %>%
         filter(
           (DX_TYPE == "10" & DX %in% TREATMENT_CODES$radiation_dx_icd10) |
-          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
-        ) %>% filter(!is.na(DX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+            (DX_TYPE == "09" & DX %in% TREATMENT_CODES$radiation_dx_icd9)
+        ) %>%
+        filter(!is.na(DX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(d = max(DX_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$ENCOUNTER)) {
       sources$drg <- pcornet$ENCOUNTER %>%
         filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
         filter(!is.na(ADMIT_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$PROCEDURES)) {
       sources$rev <- pcornet$PROCEDURES %>%
         filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$radiation_revenue) %>%
         filter(!is.na(PX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
     # TUMOR_REGISTRY: radiation dates (RAD_START_DATE_SUMMARY, DT_RAD)
     if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
@@ -284,41 +298,47 @@ compute_last_dates <- function(treatment_type) {
         }
       }
     }
-
   } else if (treatment_type == "sct") {
     sources <- list()
     if (!is.null(pcornet$PROCEDURES)) {
       sources$px <- pcornet$PROCEDURES %>%
         filter(
           (PX_TYPE == "CH" & PX %in% c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)) |
-          (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
-          (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
-        ) %>% filter(!is.na(PX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+            (PX_TYPE == "09" & PX %in% TREATMENT_CODES$sct_icd9) |
+            (PX_TYPE == "10" & PX %in% TREATMENT_CODES$sct_icd10pcs)
+        ) %>%
+        filter(!is.na(PX_DATE)) %>%
+        group_by(ID) %>%
+        summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$DIAGNOSIS)) {
       sources$dx <- pcornet$DIAGNOSIS %>%
         filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
         filter(!is.na(DX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(DX_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$ENCOUNTER)) {
       sources$drg <- pcornet$ENCOUNTER %>%
         filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
         filter(!is.na(ADMIT_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(ADMIT_DATE, na.rm = TRUE), .groups = "drop")
     }
     if (!is.null(pcornet$PROCEDURES)) {
       sources$rev <- pcornet$PROCEDURES %>%
         filter(PX_TYPE == "RE" & PX %in% TREATMENT_CODES$sct_revenue) %>%
         filter(!is.na(PX_DATE)) %>%
-        group_by(ID) %>% summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
+        group_by(ID) %>%
+        summarise(d = max(PX_DATE, na.rm = TRUE), .groups = "drop")
     }
     # TUMOR_REGISTRY: SCT dates (DT_HTE, DT_SCT, SCT_DATE, BMT_DATE, etc.)
     if (!is.null(pcornet$TUMOR_REGISTRY_ALL)) {
       tr_sct_cols <- intersect(
-        c("DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-          "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"),
+        c(
+          "DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
+          "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"
+        ),
         names(pcornet$TUMOR_REGISTRY_ALL)
       )
       if (length(tr_sct_cols) > 0) {
@@ -341,7 +361,9 @@ compute_last_dates <- function(treatment_type) {
   }
 
   non_null <- compact(sources)
-  if (length(non_null) == 0) return(tibble(ID = character(0), last_date = as.Date(character(0))))
+  if (length(non_null) == 0) {
+    return(tibble(ID = character(0), last_date = as.Date(character(0))))
+  }
 
   bind_rows(non_null) %>%
     group_by(ID) %>%
@@ -437,8 +459,8 @@ compute_post_tx_payer <- function(patient_dates, date_col, payer_col_name) {
     inner_join(
       encounters %>%
         filter(!is.na(effective_payer) &
-               nchar(trimws(effective_payer)) > 0 &
-               !effective_payer %in% PAYER_MAPPING$sentinel_values),
+          nchar(trimws(effective_payer)) > 0 &
+          !effective_payer %in% PAYER_MAPPING$sentinel_values),
       by = "ID"
     ) %>%
     filter(ADMIT_DATE > !!sym(date_col)) %>%
@@ -531,17 +553,19 @@ cohort_full <- cohort_full %>%
 cohort_full <- cohort_full %>%
   mutate(
     across(
-      c(PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
+      c(
+        PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
         PAYER_AT_CHEMO, PAYER_AT_RADIATION, PAYER_AT_SCT,
-        PAYER_AT_LAST_CHEMO, PAYER_AT_LAST_RADIATION, PAYER_AT_LAST_SCT),
+        PAYER_AT_LAST_CHEMO, PAYER_AT_LAST_RADIATION, PAYER_AT_LAST_SCT
+      ),
       rename_payer
     ),
     across(
       c(POST_TREATMENT_PAYER, POST_CHEMO_PAYER, POST_RAD_PAYER, POST_SCT_PAYER),
       ~ case_when(
-          .x %in% c("Other", "Other govt") ~ "Missing",
-          TRUE ~ .x  # preserves NA as NA, preserves all other values
-        )
+        .x %in% c("Other", "Other govt") ~ "Missing",
+        TRUE ~ .x # preserves NA as NA, preserves all other values
+      )
     )
   )
 
@@ -640,8 +664,8 @@ build_enr_coverage_table <- function(data, payer_col, enr_covers_col, total_n = 
 
 # Build treatment enrollment coverage table (first + last, covers + gap)
 build_treatment_enr_table <- function(data, first_payer_col, last_payer_col,
-                                       first_enr_col, last_enr_col,
-                                       first_label, last_label) {
+                                      first_enr_col, last_enr_col,
+                                      first_label, last_label) {
   fc <- data %>% filter(!!sym(first_enr_col) == TRUE)
   fg <- data %>% filter(!!sym(first_enr_col) == FALSE)
   lc <- data %>% filter(!!sym(last_enr_col) == TRUE)
@@ -704,15 +728,18 @@ message("\n--- Building PowerPoint slides ---")
 pptx <- read_pptx()
 
 # Set 16:9 widescreen slide dimensions (matching Python pipeline: 10" x 5.625")
-tryCatch({
-  pres_node <- pptx$doc_obj$get()
-  sld_sz <- xml2::xml_find_first(pres_node, "//p:sldSz", xml2::xml_ns(pres_node))
-  xml2::xml_attr(sld_sz, "cx") <- "9144000"   # 10 inches * 914400 EMU/inch
-  xml2::xml_attr(sld_sz, "cy") <- "5143500"    # 5.625 inches * 914400 EMU/inch
-  message("  Set slide dimensions to 16:9 widescreen (10\" x 5.625\")")
-}, error = function(e) {
-  message(glue("  Note: Using default slide dimensions ({e$message})"))
-})
+tryCatch(
+  {
+    pres_node <- pptx$doc_obj$get()
+    sld_sz <- xml2::xml_find_first(pres_node, "//p:sldSz", xml2::xml_ns(pres_node))
+    xml2::xml_attr(sld_sz, "cx") <- "9144000" # 10 inches * 914400 EMU/inch
+    xml2::xml_attr(sld_sz, "cy") <- "5143500" # 5.625 inches * 914400 EMU/inch
+    message("  Set slide dimensions to 16:9 widescreen (10\" x 5.625\")")
+  },
+  error = function(e) {
+    message(glue("  Note: Using default slide dimensions ({e$message})"))
+  }
+)
 
 # Helper to add a slide with title, subtitle, and table
 add_table_slide <- function(pptx, title, subtitle, tbl_data) {
@@ -733,15 +760,19 @@ add_table_slide <- function(pptx, title, subtitle, tbl_data) {
   pptx <- pptx %>%
     add_slide(layout = "Blank") %>%
     ph_with(
-      value = fpar(ftext(title, prop = fp_text(font.size = 26, bold = TRUE,
-                                                font.family = "Calibri",
-                                                color = UF_BLUE))),
+      value = fpar(ftext(title, prop = fp_text(
+        font.size = 26, bold = TRUE,
+        font.family = "Calibri",
+        color = UF_BLUE
+      ))),
       location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
     ) %>%
     ph_with(
-      value = fpar(ftext(subtitle, prop = fp_text(font.size = 14, italic = TRUE,
-                                                   font.family = "Calibri",
-                                                   color = DARK_TEXT))),
+      value = fpar(ftext(subtitle, prop = fp_text(
+        font.size = 14, italic = TRUE,
+        font.family = "Calibri",
+        color = DARK_TEXT
+      ))),
       location = ph_location(left = 0.5, top = 0.85, width = 9, height = 0.4)
     ) %>%
     ph_with(
@@ -754,7 +785,7 @@ add_table_slide <- function(pptx, title, subtitle, tbl_data) {
 
 # Helper to add a slide with title, subtitle, and a centered PNG figure
 add_image_slide <- function(pptx, title, subtitle, img_path,
-                             img_width = 8.5, img_height = 5.0) {
+                            img_width = 8.5, img_height = 5.0) {
   if (!file.exists(img_path)) {
     message(glue("  SKIPPED: {title} -- {img_path} not found. Run 16_encounter_analysis.R first."))
     return(pptx)
@@ -762,19 +793,25 @@ add_image_slide <- function(pptx, title, subtitle, img_path,
   pptx %>%
     add_slide(layout = "Blank") %>%
     ph_with(
-      value = fpar(ftext(title, prop = fp_text(font.size = 26, bold = TRUE,
-                                               font.family = "Calibri", color = UF_BLUE))),
+      value = fpar(ftext(title, prop = fp_text(
+        font.size = 26, bold = TRUE,
+        font.family = "Calibri", color = UF_BLUE
+      ))),
       location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
     ) %>%
     ph_with(
-      value = fpar(ftext(subtitle, prop = fp_text(font.size = 14, italic = TRUE,
-                                                  font.family = "Calibri", color = DARK_TEXT))),
+      value = fpar(ftext(subtitle, prop = fp_text(
+        font.size = 14, italic = TRUE,
+        font.family = "Calibri", color = DARK_TEXT
+      ))),
       location = ph_location(left = 0.5, top = 0.85, width = 9, height = 0.4)
     ) %>%
     ph_with(
       value = external_img(img_path, width = img_width, height = img_height),
-      location = ph_location(left = (10 - img_width) / 2, top = 1.4,
-                              width = img_width, height = img_height)
+      location = ph_location(
+        left = (10 - img_width) / 2, top = 1.4,
+        width = img_width, height = img_height
+      )
     )
 }
 
@@ -804,43 +841,71 @@ pptx <- pptx %>%
   add_slide(layout = "Blank") %>%
   ph_with(
     value = fpar(ftext("Definitions and Glossary",
-                       prop = fp_text(font.size = 28, bold = TRUE,
-                                      font.family = "Calibri", color = UF_BLUE))),
+      prop = fp_text(
+        font.size = 28, bold = TRUE,
+        font.family = "Calibri", color = UF_BLUE
+      )
+    )),
     location = ph_location(left = 0.5, top = 0.2, width = 9, height = 0.6)
   ) %>%
   ph_with(
     value = block_list(
-      fpar(ftext("Primary Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Most prevalent payer across all encounters for the patient.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("First Diagnosis: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Payer mode within \u00b130 days of first HL diagnosis date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("First Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Payer mode within \u00b130 day window of first treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("Last Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Payer mode within \u00b130 day window of last treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("Post-Treatment Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Mode of payer from encounters after last treatment date of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(
+        ftext("Primary Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Most prevalent payer across all encounters for the patient.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("First Diagnosis: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Payer mode within \u00b130 days of first HL diagnosis date.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("First Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Payer mode within \u00b130 day window of first treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("Last Chemo / Radiation / SCT: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Payer mode within \u00b130 day window of last treatment date for that treatment type.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("Post-Treatment Insurance: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Mode of payer from encounters after last treatment date of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
       fpar(ftext(" ", prop = fp_text(font.size = 10))),
-      fpar(ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Consolidation of Other and Other govt payer categories.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("No encounters after the patient's last treatment date in the dataset.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("N/A (No Treatment): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Patient had no recorded treatment of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
+      fpar(
+        ftext("Missing: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Consolidation of Other and Other govt payer categories.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("No Payer Assigned: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("No encounter with valid payer data found in the \u00b130 day window around the relevant date.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("N/A (No Follow-up): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("No encounters after the patient's last treatment date in the dataset.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("N/A (No Treatment): ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Patient had no recorded treatment of that type.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
       fpar(ftext(" ", prop = fp_text(font.size = 10))),
-      fpar(ftext("ENR Covers Window: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Patient has enrollment records spanning the full \u00b130 day window around the event date.", prop = fp_text(font.size = 14, font.family = "Calibri"))),
-      fpar(ftext("ENR Does Not Cover: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
-           ftext("Patient's enrollment records do not fully cover the \u00b130 day window.", prop = fp_text(font.size = 14, font.family = "Calibri")))
+      fpar(
+        ftext("ENR Covers Window: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Patient has enrollment records spanning the full \u00b130 day window around the event date.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      ),
+      fpar(
+        ftext("ENR Does Not Cover: ", prop = fp_text(bold = TRUE, font.size = 14, font.family = "Calibri")),
+        ftext("Patient's enrollment records do not fully cover the \u00b130 day window.", prop = fp_text(font.size = 14, font.family = "Calibri"))
+      )
     ),
     location = ph_location(left = 0.5, top = 1.1, width = 9, height = 5.5)
   ) %>%
   ph_with(
     value = fpar(ftext(glue("Hodgkin Lymphoma Cohort -- N = {format(N_TOTAL, big.mark = ',')} | Chemo: {format(N_CHEMO, big.mark = ',')} | Radiation: {format(N_RAD, big.mark = ',')} | SCT: {format(N_SCT, big.mark = ',')}"),
-                       prop = fp_text(font.size = 11, italic = TRUE,
-                                      font.family = "Calibri", color = "#666666"))),
+      prop = fp_text(
+        font.size = 11, italic = TRUE,
+        font.family = "Calibri", color = "#666666"
+      )
+    )),
     location = ph_location(left = 0.5, top = 6.9, width = 9, height = 0.5)
   )
 
@@ -850,10 +915,12 @@ tbl2 <- build_payer_table(cohort_full, list(
   list(col = "PAYER_CATEGORY_PRIMARY", label = "Primary Insurance"),
   list(col = "PAYER_CATEGORY_AT_FIRST_DX", label = "First Diagnosis")
 ))
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Insurance Coverage Overview",
   glue("All enrolled patients \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
-  tbl2) %>%
+  tbl2
+) %>%
   add_footnote("Primary Insurance = most prevalent payer across all encounters. First Diagnosis = payer mode within \u00b130 days of first HL diagnosis date.")
 
 # ---- Slide 3: Post-Treatment Insurance (all patients) ----
@@ -863,19 +930,27 @@ tbl3_base <- build_payer_table(cohort_full, list(
 ), total_n = N_TOTAL)
 # Split N/A into two sub-rows: no treatment evidence vs no encounters after treatment
 n_no_treatment <- sum(is.na(cohort_full$LAST_ANY_TREATMENT_DATE))
-n_no_post_enc  <- sum(!is.na(cohort_full$LAST_ANY_TREATMENT_DATE) & is.na(cohort_full$POST_TREATMENT_PAYER))
+n_no_post_enc <- sum(!is.na(cohort_full$LAST_ANY_TREATMENT_DATE) & is.na(cohort_full$POST_TREATMENT_PAYER))
 message(glue("    N/A breakdown: {n_no_treatment} no treatment evidence, {n_no_post_enc} no encounters after last treatment"))
-na_row1 <- tibble(`Payer Category` = "N/A: No evidence of treatment",
-                   `Post-Treatment Insurance` = format_count_pct(n_no_treatment, N_TOTAL))
-na_row2 <- tibble(`Payer Category` = "N/A: No encounters after last treatment",
-                   `Post-Treatment Insurance` = format_count_pct(n_no_post_enc, N_TOTAL))
-total_row3 <- tibble(`Payer Category` = "Total",
-                      `Post-Treatment Insurance` = format_count_pct(N_TOTAL, N_TOTAL))
+na_row1 <- tibble(
+  `Payer Category` = "N/A: No evidence of treatment",
+  `Post-Treatment Insurance` = format_count_pct(n_no_treatment, N_TOTAL)
+)
+na_row2 <- tibble(
+  `Payer Category` = "N/A: No encounters after last treatment",
+  `Post-Treatment Insurance` = format_count_pct(n_no_post_enc, N_TOTAL)
+)
+total_row3 <- tibble(
+  `Payer Category` = "Total",
+  `Post-Treatment Insurance` = format_count_pct(N_TOTAL, N_TOTAL)
+)
 tbl3 <- bind_rows(tbl3_base[1:(nrow(tbl3_base) - 1), ], na_row1, na_row2, total_row3)
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Post-Treatment Insurance \u2014 All Patients",
   glue("Most prevalent payer after last treatment \u2014 N = {format(N_TOTAL, big.mark = ',')}"),
-  tbl3) %>%
+  tbl3
+) %>%
   add_footnote("Post-Treatment Insurance = mode of payer from encounters after last treatment of any type. N/A rows: 'No evidence of treatment' = no chemo/radiation/SCT found; 'No encounters after last treatment' = treatment found but no subsequent encounters.")
 
 # ---- Slide 4: Chemotherapy Insurance ----
@@ -886,10 +961,12 @@ tbl4 <- build_payer_table(chemo_patients, list(
   list(col = "PAYER_AT_CHEMO", label = "First Chemo"),
   list(col = "PAYER_AT_LAST_CHEMO", label = "Last Chemo")
 ))
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Chemotherapy Insurance",
   glue("Insurance at primary, first, and last chemotherapy \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
-  tbl4) %>%
+  tbl4
+) %>%
   add_footnote("Primary Insurance = most prevalent payer across all encounters. First/Last Chemo = payer mode within \u00b130 days of first/last chemotherapy date.")
 
 # ---- Slide 5: Chemotherapy Post-Treatment Insurance ----
@@ -897,10 +974,12 @@ message("  Slide 5: Chemo Post-Treatment Insurance")
 tbl5 <- build_payer_table_with_na(chemo_patients, list(
   list(col = "POST_CHEMO_PAYER", label = "Post-Treatment Insurance")
 ), na_label = "N/A (No Follow-up)")
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Chemotherapy Post-Treatment Insurance",
   glue("Most prevalent payer after last chemotherapy \u2014 N = {format(N_CHEMO, big.mark = ',')}"),
-  tbl5) %>%
+  tbl5
+) %>%
   add_footnote("Post-Treatment Insurance = mode of payer from encounters after last chemotherapy date. N/A (No Follow-up) = no encounters after last chemotherapy date.")
 
 # ---- Slide 6: Radiation Insurance ----
@@ -911,10 +990,12 @@ tbl6 <- build_payer_table(rad_patients, list(
   list(col = "PAYER_AT_RADIATION", label = "First Radiation"),
   list(col = "PAYER_AT_LAST_RADIATION", label = "Last Radiation")
 ))
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Radiation Insurance",
   glue("Insurance at primary, first, and last radiation \u2014 N = {format(N_RAD, big.mark = ',')}"),
-  tbl6) %>%
+  tbl6
+) %>%
   add_footnote("Primary Insurance = most prevalent payer across all encounters. First/Last Radiation = payer mode within \u00b130 days of first/last radiation date.")
 
 # ---- Slide 7: Radiation Post-Treatment Insurance ----
@@ -922,10 +1003,12 @@ message("  Slide 7: Radiation Post-Treatment Insurance")
 tbl7 <- build_payer_table_with_na(rad_patients, list(
   list(col = "POST_RAD_PAYER", label = "Post-Treatment Insurance")
 ), na_label = "N/A (No Follow-up)")
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Radiation Post-Treatment Insurance",
   glue("Most prevalent payer after last radiation \u2014 N = {format(N_RAD, big.mark = ',')}"),
-  tbl7) %>%
+  tbl7
+) %>%
   add_footnote("Post-Treatment Insurance = mode of payer from encounters after last radiation date. N/A (No Follow-up) = no encounters after last radiation date.")
 
 # ---- Slide 8: SCT Insurance ----
@@ -936,10 +1019,12 @@ tbl8 <- build_payer_table(sct_patients, list(
   list(col = "PAYER_AT_SCT", label = "First SCT"),
   list(col = "PAYER_AT_LAST_SCT", label = "Last SCT")
 ))
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Stem Cell Transplant Insurance",
   glue("Insurance at primary, first, and last SCT \u2014 N = {format(N_SCT, big.mark = ',')}"),
-  tbl8) %>%
+  tbl8
+) %>%
   add_footnote("Primary Insurance = most prevalent payer across all encounters. First/Last SCT = payer mode within \u00b130 days of first/last stem cell transplant date.")
 
 # ---- Slide 9: SCT Post-Treatment Insurance ----
@@ -947,10 +1032,12 @@ message("  Slide 9: SCT Post-Treatment Insurance")
 tbl9 <- build_payer_table_with_na(sct_patients, list(
   list(col = "POST_SCT_PAYER", label = "Post-Treatment Insurance")
 ), na_label = "N/A (No Follow-up)")
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "SCT Post-Treatment Insurance",
   glue("Most prevalent payer after last SCT \u2014 N = {format(N_SCT, big.mark = ',')}"),
-  tbl9) %>%
+  tbl9
+) %>%
   add_footnote("Post-Treatment Insurance = mode of payer from encounters after last SCT date. N/A (No Follow-up) = no encounters after last SCT date.")
 
 # ---- Slide 10: Diagnosis - Enrollment Coverage ----
@@ -964,10 +1051,12 @@ cohort_dx_enr <- cohort_full %>%
   mutate(dx_enr_covers = coalesce(dx_enr_covers, FALSE))
 
 tbl10 <- build_enr_coverage_table(cohort_dx_enr, "PAYER_CATEGORY_AT_FIRST_DX", "dx_enr_covers")
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Diagnosis \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first HL diagnosis: patients with vs without enrollment covering \u00b130 day window"),
-  tbl10) %>%
+  tbl10
+) %>%
   add_footnote("ENR Covers Window = enrollment records span the full \u00b130 day window around first HL diagnosis. ENR Does Not Cover = enrollment gap in that window.")
 
 # ---- Slide 11: Chemo - Enrollment Coverage ----
@@ -996,10 +1085,12 @@ tbl11 <- build_treatment_enr_table(
   chemo_enr, "PAYER_AT_CHEMO", "PAYER_AT_LAST_CHEMO",
   "chemo_first_enr", "chemo_last_enr", "Chemo", "Chemo"
 )
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Chemotherapy \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first/last chemo: patients with vs without enrollment covering \u00b130 day window"),
-  tbl11) %>%
+  tbl11
+) %>%
   add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last chemotherapy. ENR Gap = enrollment gap in that window.")
 
 # ---- Slide 12: Radiation - Enrollment Coverage ----
@@ -1028,10 +1119,12 @@ tbl12 <- build_treatment_enr_table(
   rad_enr, "PAYER_AT_RADIATION", "PAYER_AT_LAST_RADIATION",
   "rad_first_enr", "rad_last_enr", "Radiation", "Radiation"
 )
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Radiation \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first/last radiation: patients with vs without enrollment covering \u00b130 day window"),
-  tbl12) %>%
+  tbl12
+) %>%
   add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last radiation. ENR Gap = enrollment gap in that window.")
 
 # ---- Slide 13: SCT - Enrollment Coverage ----
@@ -1060,10 +1153,12 @@ tbl13 <- build_treatment_enr_table(
   sct_enr, "PAYER_AT_SCT", "PAYER_AT_LAST_SCT",
   "sct_first_enr", "sct_last_enr", "SCT", "SCT"
 )
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "SCT \u2014 Insurance by Enrollment Coverage",
   glue("Payer at first/last SCT: patients with vs without enrollment covering \u00b130 day window"),
-  tbl13) %>%
+  tbl13
+) %>%
   add_footnote("ENR Covers = enrollment records span the full \u00b130 day window around first/last SCT. ENR Gap = enrollment gap in that window.")
 
 # ---- Slide 14: Last Treatment = Last Encounter ----
@@ -1136,10 +1231,12 @@ tbl14 <- tibble(
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(tbl14, "last_tx_equals_last_encounter_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Last Treatment = Last Encounter",
   glue("Patients whose last treatment date equals their last encounter date (no follow-up)"),
-  tbl14) %>%
+  tbl14
+) %>%
   add_footnote("Last Tx = Last Encounter: patient's last treatment date is the same as their last encounter date in the dataset.")
 
 # ---- Slide 15: Missing Post-Treatment Payer - Encounter Breakdown ----
@@ -1189,10 +1286,12 @@ tbl15 <- unknown_post_counts %>%
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(tbl15, "missing_post_tx_payer_breakdown_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Missing Post-Treatment Payer \u2014 Encounter Breakdown",
   glue("Patients with Missing post-treatment payer: how many encounters exist after last treatment?"),
-  tbl15) %>%
+  tbl15
+) %>%
   add_footnote("Shows how many post-treatment encounters exist for patients whose post-treatment payer is Missing or unassigned.")
 
 # ---- Slide 16: Insurance After Last Treatment & Dataset Retention ----
@@ -1279,10 +1378,12 @@ pct_missing <- if (n_treated > 0) round(100 * n_missing / n_treated, 1) else 0
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(tbl16, "insurance_after_last_tx_retention_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Insurance After Last Treatment \u2014 Dataset Retention",
   glue("{format(n_treated, big.mark=',')} treated patients: {format(n_still_in, big.mark=',')} ({pct_still}%) still in dataset, {format(n_missing, big.mark=',')} ({pct_missing}%) no longer in dataset"),
-  tbl16) %>%
+  tbl16
+) %>%
   add_footnote("Still in Dataset = patient has encounters after last treatment. No Longer in Dataset = last treatment date was the last encounter date. Payer shown is post-treatment (still) or at last treatment (no longer).")
 
 # ==============================================================================
@@ -1299,7 +1400,8 @@ message("\n--- Encounter Analysis Slides ---")
 # ---- Slide 17: Encounter histogram by payor ----
 message("  Slide 17: Encounters per Person by Payer Category")
 enc_hist_path <- "output/figures/encounters_per_person_by_payor.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Encounters per Person by Payer Category",
   glue("Distribution of total encounter counts by primary payer -- N = {format(N_TOTAL, big.mark=',')}"),
   enc_hist_path
@@ -1353,10 +1455,12 @@ summary_stats <- summary_stats %>%
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(summary_stats, "encounter_summary_stats_by_payer_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Summary Statistics: Encounters per Person by Payer Category",
   glue("Distribution of total encounter counts by primary insurance category -- N = {format(N_TOTAL, big.mark = ',')}"),
-  summary_stats) %>%
+  summary_stats
+) %>%
   add_footnote("Primary Insurance = most prevalent payer across all encounters. 500+ = patients with more than 500 total encounters.")
 
 # Count patients with missing DX_YEAR (includes nullified 1900 sentinels) for footnote
@@ -1372,7 +1476,8 @@ masked_footnote <- if (n_missing_dx_year > 0) {
 # ---- Slide 19: Post-treatment encounters by DX year ----
 message("  Slide 19: Post-Treatment Encounters by DX Year")
 post_tx_dx_path <- "output/figures/post_tx_encounters_by_dx_year.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Mean Post-Treatment Encounters by Year of Diagnosis",
   "Non-acute care encounters per person after last treatment, stratified by HL diagnosis year",
   post_tx_dx_path
@@ -1384,7 +1489,8 @@ if (file.exists(post_tx_dx_path) && nchar(masked_footnote) > 0) {
 # ---- Slide 20: Total encounters by DX year ----
 message("  Slide 20: Total Encounters by DX Year")
 total_enc_dx_path <- "output/figures/total_encounters_by_dx_year.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Mean Total Encounters by Year of Diagnosis",
   "All encounters per person across the full observation window, stratified by HL diagnosis year",
   total_enc_dx_path
@@ -1396,7 +1502,8 @@ if (file.exists(total_enc_dx_path) && nchar(masked_footnote) > 0) {
 # ---- Slide 21: Post-treatment encounters by age group ----
 message("  Slide 21: Post-Treatment Encounters by Age Group")
 age_group_path <- "output/figures/post_tx_by_age_group.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Post-Treatment Encounter Presence by Age Group at Diagnosis",
   "Among treated patients: proportion with any encounter after last treatment, by age group (0-17, 18-39, 40-64, 65+)",
   age_group_path
@@ -1440,7 +1547,8 @@ cohort_ud <- cohort_full %>%
 # ---- Slide 22: Unique dates histogram by payor ----
 message("  Slide 22: Unique Dates per Person by Payer Category")
 ud_hist_path <- "output/figures/unique_dates_per_person_by_payor.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Unique Encounter Dates per Person by Payer Category",
   glue("Distribution of distinct encounter dates by primary payer -- N = {format(N_TOTAL, big.mark=',')}"),
   ud_hist_path
@@ -1490,16 +1598,19 @@ ud_summary_stats <- bind_rows(ud_summary_stats, ud_summary_totals) %>%
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(ud_summary_stats, "unique_dates_summary_stats_by_payer_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Summary Statistics: Unique Dates per Person by Payer Category",
   glue("Distribution of distinct encounter dates by primary insurance category -- N = {format(N_TOTAL, big.mark = ',')}"),
-  ud_summary_stats) %>%
+  ud_summary_stats
+) %>%
   add_footnote("Unique dates = distinct ADMIT_DATEs per patient. 300+ = patients with more than 300 unique encounter dates.")
 
 # ---- Slide 24: Post-treatment unique dates by DX year ----
 message("  Slide 24: Post-Treatment Unique Dates by DX Year")
 post_tx_ud_path <- "output/figures/post_tx_unique_dates_by_dx_year.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Mean Post-Treatment Unique Dates by Year of Diagnosis",
   "Distinct encounter dates per person after last treatment, stratified by HL diagnosis year",
   post_tx_ud_path
@@ -1511,7 +1622,8 @@ if (file.exists(post_tx_ud_path) && nchar(masked_footnote) > 0) {
 # ---- Slide 25: Total unique dates by DX year ----
 message("  Slide 25: Total Unique Dates by DX Year")
 total_ud_dx_path <- "output/figures/total_unique_dates_by_dx_year.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Mean Total Unique Dates by Year of Diagnosis",
   "Distinct encounter dates per person across the full observation window, stratified by HL diagnosis year",
   total_ud_dx_path
@@ -1530,9 +1642,9 @@ message("  Slide 26: Post-Last-Treatment Unique Encounter Dates by Payer")
 post_last_tx_dates <- encounters %>%
   inner_join(all_last_dates, by = "ID") %>%
   filter(
-    !is.na(LAST_ANY_TREATMENT_DATE),       # Only patients with treatment (per D-04)
+    !is.na(LAST_ANY_TREATMENT_DATE), # Only patients with treatment (per D-04)
     !is.na(ADMIT_DATE),
-    ADMIT_DATE > LAST_ANY_TREATMENT_DATE    # Post-last-treatment encounters only (1900 sentinels filtered at source in 02_harmonize_payer.R)
+    ADMIT_DATE > LAST_ANY_TREATMENT_DATE # Post-last-treatment encounters only (1900 sentinels filtered at source in 02_harmonize_payer.R)
   ) %>%
   group_by(ID) %>%
   summarise(N_UNIQUE_DATES_POST_LAST_TX = n_distinct(ADMIT_DATE), .groups = "drop")
@@ -1582,10 +1694,12 @@ n_treated_for_slide <- nrow(treated_cohort_ids)
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(post_last_tx_summary, "post_last_tx_unique_dates_summary_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Unique Encounter Dates per Person (Post-Last Treatment)",
   glue("Distinct encounter dates after last treatment (any type) -- Treated patients only, N = {format(n_treated_for_slide, big.mark = ',')}"),
-  post_last_tx_summary) %>%
+  post_last_tx_summary
+) %>%
   add_footnote("Post-Last Treatment = encounters after max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE). Patients with no treatment excluded. Unique dates = distinct ADMIT_DATEs per patient.")
 
 # ---- Slide 27: Stacked Encounter Histogram (Pre/Post-Treatment) ----
@@ -1639,9 +1753,11 @@ stacked_stats <- stacked_long %>%
     names_glue = "{PERIOD} {.value}"
   ) %>%
   rename(`Payer Category` = PAYER_DISPLAY) %>%
-  select(`Payer Category`,
-         `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
-         `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`) %>%
+  select(
+    `Payer Category`,
+    `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
+    `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`
+  ) %>%
   arrange(`Payer Category`) %>%
   mutate(
     `Pre-treatment N` = format(`Pre-treatment N`, big.mark = ","),
@@ -1651,10 +1767,12 @@ stacked_stats <- stacked_long %>%
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(stacked_stats, "stacked_encounter_stats_by_payer_period_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Summary Statistics: Pre/Post-Treatment Encounters by Payer",
   glue("Encounter count statistics by primary payer and treatment period -- Treated patients only"),
-  stacked_stats) %>%
+  stacked_stats
+) %>%
   add_footnote("Post-treatment = encounters after last treatment date. Pre-treatment = encounters on or before last treatment date.")
 
 # ---- Slide 29: Stacked Unique Dates Histogram (Pre/Post-Treatment) ----
@@ -1707,9 +1825,11 @@ stacked_ud_stats <- stacked_ud_long %>%
     names_glue = "{PERIOD} {.value}"
   ) %>%
   rename(`Payer Category` = PAYER_DISPLAY) %>%
-  select(`Payer Category`,
-         `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
-         `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`) %>%
+  select(
+    `Payer Category`,
+    `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
+    `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`
+  ) %>%
   arrange(`Payer Category`) %>%
   mutate(
     `Pre-treatment N` = format(`Pre-treatment N`, big.mark = ","),
@@ -1719,10 +1839,12 @@ stacked_ud_stats <- stacked_ud_long %>%
 # Snapshot: table backing data (per SNAP-04)
 save_output_data(stacked_ud_stats, "stacked_unique_dates_stats_by_payer_period_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Summary Statistics: Pre/Post-Treatment Unique Dates by Payer",
   glue("Unique encounter date statistics by primary payer and treatment period -- Treated patients only"),
-  stacked_ud_stats) %>%
+  stacked_ud_stats
+) %>%
   add_footnote("Post-treatment = unique dates after last treatment date. Pre-treatment = unique dates on or before last treatment date. Unique dates = distinct ADMIT_DATEs per patient (multiple encounters on same day count as one).")
 
 # ==============================================================================
@@ -1766,7 +1888,8 @@ cohort_ud_treated <- cohort_ud_treated %>%
 # Versions of slides 17 & 22 — treated patients only, unique encounter dates
 message("  Slide 31: Unique Dates per Person by Payer (Treated Only)")
 ud_hist_treated_path <- "output/figures/unique_dates_per_person_by_payor_treated.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Unique Encounter Dates per Person by Payer (Treated Only)",
   glue("Distribution of distinct encounter dates by primary payer -- Treated patients only, N = {format(N_TREATED, big.mark=',')}"),
   ud_hist_treated_path
@@ -1816,10 +1939,12 @@ ud_summary_treated <- bind_rows(ud_summary_treated, ud_summary_treated_totals) %
 
 save_output_data(ud_summary_treated, "unique_dates_summary_stats_by_payer_treated_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Summary Statistics: Unique Dates per Person by Payer (Treated Only)",
   glue("Distribution of distinct encounter dates by primary insurance -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
-  ud_summary_treated) %>%
+  ud_summary_treated
+) %>%
   add_footnote("Treated Only = patients with chemo, radiation, or SCT records. Unique dates = distinct ADMIT_DATEs per patient. 300+ = patients with more than 300 unique encounter dates.")
 
 # Count treated patients with missing DX_YEAR for footnotes
@@ -1834,7 +1959,8 @@ masked_footnote_treated <- if (n_missing_dx_year_treated > 0) {
 # Versions of slides 19 & 24 — treated only, unique dates, median
 message("  Slide 33: Median Post-Treatment Unique Dates by DX Year (Treated Only)")
 post_tx_ud_treated_path <- "output/figures/post_tx_unique_dates_by_dx_year_treated_median.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Median Post-Treatment Unique Dates by Year of Diagnosis (Treated Only)",
   "Distinct encounter dates per person after last treatment, stratified by HL diagnosis year (treated patients only)",
   post_tx_ud_treated_path
@@ -1847,7 +1973,8 @@ if (file.exists(post_tx_ud_treated_path) && nchar(masked_footnote_treated) > 0) 
 # Versions of slides 20 & 25 — treated only, unique dates, median
 message("  Slide 34: Median Total Unique Dates by DX Year (Treated Only)")
 total_ud_treated_path <- "output/figures/total_unique_dates_by_dx_year_treated_median.png"
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Median Total Unique Dates by Year of Diagnosis (Treated Only)",
   "Distinct encounter dates per person across the full observation window, stratified by HL diagnosis year (treated patients only)",
   total_ud_treated_path
@@ -1859,7 +1986,8 @@ if (file.exists(total_ud_treated_path) && nchar(masked_footnote_treated) > 0) {
 # ---- Slide 35: Post-Treatment Encounter Presence by Age Group (Treated Only) ----
 # Version of slide 21 — already treated only; binary presence unchanged by unique dates
 message("  Slide 35: Post-Treatment Encounter Presence by Age Group (Treated Only)")
-pptx <- add_image_slide(pptx,
+pptx <- add_image_slide(
+  pptx,
   "Post-Treatment Encounter Presence by Age Group (Treated Only)",
   "Among treated patients: proportion with any encounter after last treatment, by age group (0-17, 18-39, 40-64, 65+)",
   age_group_path
@@ -1904,10 +2032,12 @@ post_last_tx_summary_treated <- bind_rows(post_last_tx_summary_treated, post_las
 
 save_output_data(post_last_tx_summary_treated, "post_last_tx_unique_dates_summary_treated_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Unique Encounter Dates per Person — Post-Last Treatment (Treated Only)",
   glue("Distinct encounter dates after last treatment (any type) -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
-  post_last_tx_summary_treated) %>%
+  post_last_tx_summary_treated
+) %>%
   add_footnote("Post-Last Treatment = encounters after max(LAST_CHEMO_DATE, LAST_RADIATION_DATE, LAST_SCT_DATE). Unique dates = distinct ADMIT_DATEs per patient.")
 
 # ---- Slide 37: Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only) ----
@@ -1961,9 +2091,11 @@ stacked_ud_stats_treated <- stacked_ud_long_treated %>%
     names_glue = "{PERIOD} {.value}"
   ) %>%
   rename(`Payer Category` = PAYER_DISPLAY) %>%
-  select(`Payer Category`,
-         `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
-         `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`) %>%
+  select(
+    `Payer Category`,
+    `Pre-treatment N`, `Pre-treatment Mean`, `Pre-treatment Median`,
+    `Post-treatment N`, `Post-treatment Mean`, `Post-treatment Median`
+  ) %>%
   arrange(`Payer Category`) %>%
   mutate(
     `Pre-treatment N` = format(`Pre-treatment N`, big.mark = ","),
@@ -1972,10 +2104,12 @@ stacked_ud_stats_treated <- stacked_ud_long_treated %>%
 
 save_output_data(stacked_ud_stats_treated, "stacked_unique_dates_stats_treated_data")
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Summary Statistics: Pre/Post-Treatment Unique Dates by Payer (Treated Only)",
   glue("Unique encounter date statistics by primary payer and treatment period -- Treated patients only, N = {format(N_TREATED, big.mark = ',')}"),
-  stacked_ud_stats_treated) %>%
+  stacked_ud_stats_treated
+) %>%
   add_footnote("Post-treatment = unique dates after last treatment date. Pre-treatment = unique dates on or before last treatment date. Unique dates = distinct ADMIT_DATEs per patient.")
 
 # ==============================================================================
@@ -1989,7 +2123,8 @@ dir.create("output/figures", showWarnings = FALSE, recursive = TRUE)
 
 # ---- Chart 1: Primary payer missingness % by site (D-05) ----
 p21_cross_site <- read_csv("output/tables/all_source_cross_site_summary.csv",
-                            show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart1_data <- p21_cross_site %>%
   filter(SOURCE != "ALL") %>%
@@ -1999,11 +2134,14 @@ chart1_data <- p21_cross_site %>%
 p1 <- ggplot(chart1_data, aes(x = SOURCE, y = pct_primary_missing)) +
   geom_col(fill = UF_BLUE) +
   coord_flip() +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     limits = c(0, NA),
-                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
   geom_text(aes(label = paste0(pct_primary_missing, "%")),
-            hjust = -0.1, size = 3.5, color = DARK_TEXT) +
+    hjust = -0.1, size = 3.5, color = DARK_TEXT
+  ) +
   labs(
     title = "Primary Payer Missingness by Partner Site",
     x = "Partner Site",
@@ -2016,12 +2154,14 @@ p1 <- ggplot(chart1_data, aes(x = SOURCE, y = pct_primary_missing)) +
   )
 
 ggsave("output/figures/phase21_missingness_by_site.png", p1,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/phase21_missingness_by_site.png")
 
 # ---- Chart 2: Duplicate date rate % by site (D-05) ----
 p22_cross_site <- read_csv("output/tables/all_site_cross_site_summary.csv",
-                            show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart2_data <- p22_cross_site %>%
   filter(SITE != "ALL") %>%
@@ -2031,11 +2171,14 @@ chart2_data <- p22_cross_site %>%
 p2 <- ggplot(chart2_data, aes(x = SITE, y = pct_duplicate_rate)) +
   geom_col(fill = UF_ORANGE) +
   coord_flip() +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     limits = c(0, NA),
-                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
   geom_text(aes(label = paste0(pct_duplicate_rate, "%")),
-            hjust = -0.1, size = 3.5, color = DARK_TEXT) +
+    hjust = -0.1, size = 3.5, color = DARK_TEXT
+  ) +
   labs(
     title = "Duplicate Date Rate by Partner Site",
     x = "Partner Site",
@@ -2048,12 +2191,14 @@ p2 <- ggplot(chart2_data, aes(x = SITE, y = pct_duplicate_rate)) +
   )
 
 ggsave("output/figures/phase22_duplication_by_site.png", p2,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/phase22_duplication_by_site.png")
 
 # ---- Chart 3: Simplified aggregate missingness by encounter type (Slide 44) ----
 p21_by_enc_type <- read_csv("output/tables/all_source_payer_missingness_by_enc_type.csv",
-                             show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart3_data <- p21_by_enc_type %>%
   filter(SOURCE != "ALL") %>%
@@ -2070,11 +2215,14 @@ chart3_data <- p21_by_enc_type %>%
 p3 <- ggplot(chart3_data, aes(x = ENC_TYPE_LABEL, y = pct_missing)) +
   geom_col(fill = UF_BLUE, width = 0.7) +
   coord_flip() +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     limits = c(0, NA),
-                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
   geom_text(aes(label = paste0(pct_missing, "%")),
-            hjust = -0.1, size = 3.5, color = DARK_TEXT) +
+    hjust = -0.1, size = 3.5, color = DARK_TEXT
+  ) +
   labs(
     title = "Primary Payer Missingness by Encounter Type (All Sites)",
     x = "Encounter Type",
@@ -2087,7 +2235,8 @@ p3 <- ggplot(chart3_data, aes(x = ENC_TYPE_LABEL, y = pct_missing)) +
   )
 
 ggsave("output/figures/phase21_missingness_by_enc_type.png", p3,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/phase21_missingness_by_enc_type.png")
 
 # ---- Chart 4: Cross-Site Payer Missingness grouped bar (Slide 39) ----
@@ -2115,12 +2264,15 @@ p4 <- ggplot(chart4_data, aes(x = SOURCE, y = pct, fill = field)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
   coord_flip() +
   scale_fill_manual(values = c("Primary" = UF_BLUE, "Secondary" = UF_ORANGE, "Both" = "#666666")) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     limits = c(0, NA),
-                     expand = expansion(mult = c(0, 0.08))) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
   geom_text(aes(label = paste0(pct, "%")),
-            position = position_dodge(width = 0.8),
-            hjust = -0.1, size = 2.8, color = DARK_TEXT) +
+    position = position_dodge(width = 0.8),
+    hjust = -0.1, size = 2.8, color = DARK_TEXT
+  ) +
   labs(
     title = "Payer Missingness by Partner Site",
     subtitle = "Primary, Secondary, and Both fields missing",
@@ -2136,12 +2288,14 @@ p4 <- ggplot(chart4_data, aes(x = SOURCE, y = pct, fill = field)) +
   )
 
 ggsave("output/figures/phase21_cross_site_missingness.png", p4,
-       width = 10, height = 7, dpi = 300)
+  width = 10, height = 7, dpi = 300
+)
 message("  Saved: output/figures/phase21_cross_site_missingness.png")
 
 # ---- Chart 5: Raw PAYER_TYPE_PRIMARY top values faceted bar (Slide 41) ----
 p21_raw_values <- read_csv("output/tables/all_source_payer_raw_value_distribution.csv",
-                            show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart5_data <- p21_raw_values %>%
   filter(field == "PRIMARY") %>%
@@ -2157,12 +2311,15 @@ chart5_data <- p21_raw_values %>%
 p5 <- ggplot(chart5_data, aes(x = value_id, y = pct)) +
   geom_col(fill = UF_BLUE, width = 0.7) +
   coord_flip() +
-  facet_wrap(~ SOURCE, scales = "free_y", ncol = 3) +
+  facet_wrap(~SOURCE, scales = "free_y", ncol = 3) +
   scale_x_discrete(labels = function(x) gsub("___.*$", "", x)) +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     expand = expansion(mult = c(0, 0.12))) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    expand = expansion(mult = c(0, 0.12))
+  ) +
   geom_text(aes(label = paste0(pct, "%")),
-            hjust = -0.1, size = 2.5, color = DARK_TEXT) +
+    hjust = -0.1, size = 2.5, color = DARK_TEXT
+  ) +
   labs(
     title = "Raw PAYER_TYPE_PRIMARY: Top 5 Values per Site",
     x = NULL,
@@ -2176,7 +2333,8 @@ p5 <- ggplot(chart5_data, aes(x = value_id, y = pct)) +
   )
 
 ggsave("output/figures/phase21_raw_payer_values.png", p5,
-       width = 12, height = 8, dpi = 300)
+  width = 12, height = 8, dpi = 300
+)
 message("  Saved: output/figures/phase21_raw_payer_values.png")
 
 # ---- Chart 6: Enc Type x Site heatmap (Slides 42-43 collapsed) ----
@@ -2187,9 +2345,11 @@ chart6_data <- p21_by_enc_type %>%
 p6 <- ggplot(chart6_data, aes(x = SOURCE, y = ENC_TYPE_LABEL, fill = pct_primary_missing)) +
   geom_tile(color = "white", linewidth = 0.5) +
   geom_text(aes(label = paste0(pct_primary_missing, "%")), size = 3, color = DARK_TEXT) +
-  scale_fill_gradient(low = "#FFFFFF", high = UF_ORANGE,
-                      labels = scales::percent_format(scale = 1),
-                      name = "% Primary\nMissing") +
+  scale_fill_gradient(
+    low = "#FFFFFF", high = UF_ORANGE,
+    labels = scales::percent_format(scale = 1),
+    name = "% Primary\nMissing"
+  ) +
   labs(
     title = "Primary Payer Missingness by Encounter Type and Site",
     x = "Partner Site",
@@ -2203,12 +2363,14 @@ p6 <- ggplot(chart6_data, aes(x = SOURCE, y = ENC_TYPE_LABEL, fill = pct_primary
   )
 
 ggsave("output/figures/phase21_enc_type_heatmap.png", p6,
-       width = 11, height = 7, dpi = 300)
+  width = 11, height = 7, dpi = 300
+)
 message("  Saved: output/figures/phase21_enc_type_heatmap.png")
 
 # ---- Chart 7: Raw vs Harmonized dumbbell chart (Slide 45) ----
 p21_raw_harm <- read_csv("output/tables/all_source_payer_raw_vs_harmonized.csv",
-                          show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart7_data <- p21_raw_harm %>%
   filter(year == "OVERALL") %>%
@@ -2219,17 +2381,27 @@ chart7_data <- p21_raw_harm %>%
   )
 
 p7 <- ggplot(chart7_data) +
-  geom_segment(aes(x = SOURCE, xend = SOURCE,
-                   y = pct_raw_primary, yend = pct_harmonized),
-               color = "#999999", linewidth = 1.2) +
+  geom_segment(
+    aes(
+      x = SOURCE, xend = SOURCE,
+      y = pct_raw_primary, yend = pct_harmonized
+    ),
+    color = "#999999", linewidth = 1.2
+  ) +
   geom_point(aes(x = SOURCE, y = pct_raw_primary, color = "Raw"), size = 4) +
   geom_point(aes(x = SOURCE, y = pct_harmonized, color = "Harmonized"), size = 4) +
-  geom_text(aes(x = SOURCE, y = (pct_raw_primary + pct_harmonized) / 2,
-                label = paste0(ifelse(delta >= 0, "+", ""), delta, " pp")),
-            hjust = -0.3, size = 3, color = DARK_TEXT) +
+  geom_text(
+    aes(
+      x = SOURCE, y = (pct_raw_primary + pct_harmonized) / 2,
+      label = paste0(ifelse(delta >= 0, "+", ""), delta, " pp")
+    ),
+    hjust = -0.3, size = 3, color = DARK_TEXT
+  ) +
   coord_flip() +
-  scale_color_manual(values = c("Raw" = UF_BLUE, "Harmonized" = UF_ORANGE),
-                     name = "Missingness Type") +
+  scale_color_manual(
+    values = c("Raw" = UF_BLUE, "Harmonized" = UF_ORANGE),
+    name = "Missingness Type"
+  ) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
   labs(
     title = "Raw vs Harmonized Payer Missingness by Site",
@@ -2244,12 +2416,14 @@ p7 <- ggplot(chart7_data) +
   )
 
 ggsave("output/figures/phase21_raw_vs_harmonized.png", p7,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/phase21_raw_vs_harmonized.png")
 
 # ---- Chart 8: Temporal missingness faceted line chart (Slide 47) ----
 p21_by_year <- read_csv("output/tables/all_source_payer_missingness_by_year.csv",
-                         show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart8_data <- p21_by_year %>%
   group_by(SOURCE) %>%
@@ -2260,10 +2434,13 @@ p8 <- ggplot(chart8_data, aes(x = admit_year, y = pct_primary_missing)) +
   geom_line(color = UF_BLUE, linewidth = 1) +
   geom_point(color = UF_BLUE, size = 2.5) +
   geom_text(aes(label = paste0(pct_primary_missing, "%")),
-            vjust = -0.8, size = 2.5, color = DARK_TEXT) +
-  facet_wrap(~ SOURCE, ncol = 3, scales = "free_x") +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     limits = c(0, NA)) +
+    vjust = -0.8, size = 2.5, color = DARK_TEXT
+  ) +
+  facet_wrap(~SOURCE, ncol = 3, scales = "free_x") +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA)
+  ) +
   labs(
     title = "Primary Payer Missingness by Year (Recent 5 Years)",
     x = "Admission Year",
@@ -2277,7 +2454,8 @@ p8 <- ggplot(chart8_data, aes(x = admit_year, y = pct_primary_missing)) +
   )
 
 ggsave("output/figures/phase21_temporal_missingness.png", p8,
-       width = 12, height = 7, dpi = 300)
+  width = 12, height = 7, dpi = 300
+)
 message("  Saved: output/figures/phase21_temporal_missingness.png")
 
 # ---- Chart 9: Cross-site duplicate rate bar chart colored by rec source (Slide 48) ----
@@ -2293,11 +2471,14 @@ p9 <- ggplot(chart9_data, aes(x = SITE, y = pct_duplicate_rate, fill = rec_sourc
   geom_col(width = 0.7) +
   coord_flip() +
   scale_fill_brewer(palette = "Set2", name = "Recommended\nSource") +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     limits = c(0, NA),
-                     expand = expansion(mult = c(0, 0.08))) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
   geom_text(aes(label = paste0(pct_duplicate_rate, "%")),
-            hjust = -0.1, size = 3.5, color = DARK_TEXT) +
+    hjust = -0.1, size = 3.5, color = DARK_TEXT
+  ) +
   labs(
     title = "Duplicate Date Rate by Partner Site",
     subtitle = "Color = recommended ENCOUNTER_SOURCE for payer data",
@@ -2312,7 +2493,8 @@ p9 <- ggplot(chart9_data, aes(x = SITE, y = pct_duplicate_rate, fill = rec_sourc
   )
 
 ggsave("output/figures/phase22_cross_site_duplicates.png", p9,
-       width = 10, height = 7, dpi = 300)
+  width = 10, height = 7, dpi = 300
+)
 message("  Saved: output/figures/phase22_cross_site_duplicates.png")
 
 # ---- Chart 10: Dup rate scatter plot (Slide 49) ----
@@ -2324,8 +2506,10 @@ p10 <- ggplot(chart10_data, aes(x = n_patients, y = pct_duplicate_rate)) +
   geom_text(aes(label = SITE), vjust = -1, size = 3.5, color = DARK_TEXT) +
   scale_x_continuous(labels = scales::comma) +
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +
-  scale_size_continuous(labels = scales::comma, name = "Total\nEncounters",
-                        range = c(3, 12)) +
+  scale_size_continuous(
+    labels = scales::comma, name = "Total\nEncounters",
+    range = c(3, 12)
+  ) +
   labs(
     title = "Duplicate Rate vs Cohort Size by Site",
     x = "Number of Patients",
@@ -2338,7 +2522,8 @@ p10 <- ggplot(chart10_data, aes(x = n_patients, y = pct_duplicate_rate)) +
   )
 
 ggsave("output/figures/phase22_dup_rate_scatter.png", p10,
-       width = 10, height = 7, dpi = 300)
+  width = 10, height = 7, dpi = 300
+)
 message("  Saved: output/figures/phase22_dup_rate_scatter.png")
 
 # ---- Chart 11: Per-site key rate metrics grouped bar (Slide 50) ----
@@ -2364,15 +2549,22 @@ chart11_data <- p22_cross_site %>%
 p11 <- ggplot(chart11_data, aes(x = SITE, y = pct, fill = metric)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
   coord_flip() +
-  scale_fill_manual(values = c("Duplicate Rate" = UF_BLUE,
-                                "Multi-Source %" = UF_ORANGE,
-                                "Near-Exact Dup %" = "#666666"),
-                    name = "Metric") +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     expand = expansion(mult = c(0, 0.08))) +
+  scale_fill_manual(
+    values = c(
+      "Duplicate Rate" = UF_BLUE,
+      "Multi-Source %" = UF_ORANGE,
+      "Near-Exact Dup %" = "#666666"
+    ),
+    name = "Metric"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
   geom_text(aes(label = paste0(pct, "%")),
-            position = position_dodge(width = 0.8),
-            hjust = -0.1, size = 2.8, color = DARK_TEXT) +
+    position = position_dodge(width = 0.8),
+    hjust = -0.1, size = 2.8, color = DARK_TEXT
+  ) +
   labs(
     title = "Key Duplication Metrics by Partner Site",
     x = "Partner Site",
@@ -2386,21 +2578,27 @@ p11 <- ggplot(chart11_data, aes(x = SITE, y = pct, fill = metric)) +
   )
 
 ggsave("output/figures/phase22_per_site_metrics.png", p11,
-       width = 10, height = 7, dpi = 300)
+  width = 10, height = 7, dpi = 300
+)
 message("  Saved: output/figures/phase22_per_site_metrics.png")
 
 # ---- Chart 12: Source payer completeness heatmap (Slide 54) ----
 p22_source_comp <- read_csv("output/tables/all_site_source_payer_completeness.csv",
-                             show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 if (nrow(p22_source_comp) > 0) {
-  p12 <- ggplot(p22_source_comp, aes(x = ENCOUNTER_SOURCE, y = SITE,
-                                      fill = pct_primary_present)) +
+  p12 <- ggplot(p22_source_comp, aes(
+    x = ENCOUNTER_SOURCE, y = SITE,
+    fill = pct_primary_present
+  )) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = paste0(pct_primary_present, "%")), size = 3, color = DARK_TEXT) +
-    scale_fill_gradient(low = UF_ORANGE, high = "#4CAF50",
-                        labels = scales::percent_format(scale = 1),
-                        name = "% Primary\nPresent") +
+    scale_fill_gradient(
+      low = UF_ORANGE, high = "#4CAF50",
+      labels = scales::percent_format(scale = 1),
+      name = "% Primary\nPresent"
+    ) +
     labs(
       title = "Source Payer Completeness for Multi-Source Dates",
       x = "ENCOUNTER_SOURCE",
@@ -2414,13 +2612,15 @@ if (nrow(p22_source_comp) > 0) {
     )
 
   ggsave("output/figures/phase22_source_completeness_heatmap.png", p12,
-         width = 12, height = 7, dpi = 300)
+    width = 12, height = 7, dpi = 300
+  )
   message("  Saved: output/figures/phase22_source_completeness_heatmap.png")
 }
 
 # ---- Chart 13: Patient duplicate summary grouped bar (Slide 55) ----
 p22_patient_summary <- read_csv("output/tables/all_site_patient_duplicate_summary.csv",
-                                 show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 chart13_data <- p22_patient_summary %>%
   group_by(SITE) %>%
@@ -2447,14 +2647,21 @@ chart13_data <- p22_patient_summary %>%
 p13 <- ggplot(chart13_data, aes(x = SITE, y = pct, fill = metric)) +
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
   coord_flip() +
-  scale_fill_manual(values = c("% With Duplicates" = UF_BLUE,
-                                "% Multi-Source Dates" = UF_ORANGE),
-                    name = "Metric") +
-  scale_y_continuous(labels = scales::percent_format(scale = 1),
-                     expand = expansion(mult = c(0, 0.08))) +
+  scale_fill_manual(
+    values = c(
+      "% With Duplicates" = UF_BLUE,
+      "% Multi-Source Dates" = UF_ORANGE
+    ),
+    name = "Metric"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
   geom_text(aes(label = paste0(pct, "%")),
-            position = position_dodge(width = 0.7),
-            hjust = -0.1, size = 3, color = DARK_TEXT) +
+    position = position_dodge(width = 0.7),
+    hjust = -0.1, size = 3, color = DARK_TEXT
+  ) +
   labs(
     title = "Patient Duplicate Summary by Site",
     x = "Partner Site",
@@ -2468,12 +2675,14 @@ p13 <- ggplot(chart13_data, aes(x = SITE, y = pct, fill = metric)) +
   )
 
 ggsave("output/figures/phase22_patient_dup_summary.png", p13,
-       width = 10, height = 6, dpi = 300)
+  width = 10, height = 6, dpi = 300
+)
 message("  Saved: output/figures/phase22_patient_dup_summary.png")
 
 # ---- Chart 14: Date-level duplicate detail heatmap (Slide 56) ----
 p22_date_detail <- read_csv("output/tables/all_site_date_level_duplicate_detail.csv",
-                             show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 if (nrow(p22_date_detail) > 0) {
   chart14_data <- p22_date_detail %>%
@@ -2484,13 +2693,17 @@ if (nrow(p22_date_detail) > 0) {
       .groups = "drop"
     )
 
-  p14 <- ggplot(chart14_data, aes(x = ENCOUNTER_SOURCE, y = SITE,
-                                    fill = pct_primary_missing)) +
+  p14 <- ggplot(chart14_data, aes(
+    x = ENCOUNTER_SOURCE, y = SITE,
+    fill = pct_primary_missing
+  )) +
     geom_tile(color = "white", linewidth = 0.5) +
     geom_text(aes(label = paste0(pct_primary_missing, "%")), size = 3, color = DARK_TEXT) +
-    scale_fill_gradient(low = "#FFFFFF", high = UF_ORANGE,
-                        labels = scales::percent_format(scale = 1),
-                        name = "% Primary\nMissing") +
+    scale_fill_gradient(
+      low = "#FFFFFF", high = UF_ORANGE,
+      labels = scales::percent_format(scale = 1),
+      name = "% Primary\nMissing"
+    ) +
     labs(
       title = "Multi-Source Dates: Payer Missingness by Source",
       x = "ENCOUNTER_SOURCE",
@@ -2504,7 +2717,8 @@ if (nrow(p22_date_detail) > 0) {
     )
 
   ggsave("output/figures/phase22_date_detail_heatmap.png", p14,
-         width = 12, height = 7, dpi = 300)
+    width = 12, height = 7, dpi = 300
+  )
   message("  Saved: output/figures/phase22_date_detail_heatmap.png")
 }
 
@@ -2522,7 +2736,8 @@ pptx <- add_image_slide(pptx,
   "Payer Missingness: Cross-Site Comparison",
   "Primary, secondary, and both payer fields missing by partner site (HL cohort encounters)",
   "output/figures/phase21_cross_site_missingness.png",
-  img_width = 9, img_height = 5.5) %>%
+  img_width = 9, img_height = 5.5
+) %>%
   add_footnote("Missing = NA, empty, NI, UN, OT, 99, 9999. Sorted by primary missingness rate.")
 
 # ---- Slide 40: Bar chart -- Primary Missingness by Site (D-05) ----
@@ -2532,7 +2747,8 @@ pptx <- add_image_slide(pptx,
   "Primary Payer Missingness by Partner Site",
   "Percentage of HL cohort encounters with missing primary payer data, sorted descending",
   "output/figures/phase21_missingness_by_site.png",
-  img_width = 9, img_height = 5.0) %>%
+  img_width = 9, img_height = 5.0
+) %>%
   add_footnote("Missing = NA, empty, NI, UN, OT, 99, 9999. Excludes ALL aggregate row.")
 
 # ---- Slide 41: Raw Value Distribution -- faceted bar chart ----
@@ -2542,7 +2758,8 @@ pptx <- add_image_slide(pptx,
   "Raw PAYER_TYPE_PRIMARY: Top 5 Values per Site",
   "Most frequent raw primary payer values in HL cohort encounters, by partner site",
   "output/figures/phase21_raw_payer_values.png",
-  img_width = 9.5, img_height = 5.5) %>%
+  img_width = 9.5, img_height = 5.5
+) %>%
   add_footnote("Shows top 5 values per site. Full distribution in all_source_payer_raw_value_distribution.csv.")
 
 # ---- Slide 42: Missingness by Encounter Type heatmap (replaces 2 table slides) ----
@@ -2552,7 +2769,8 @@ pptx <- add_image_slide(pptx,
   "Primary Payer Missingness by Encounter Type and Site",
   "Heatmap of % primary payer missing across encounter types and partner sites",
   "output/figures/phase21_enc_type_heatmap.png",
-  img_width = 9.5, img_height = 5.5) %>%
+  img_width = 9.5, img_height = 5.5
+) %>%
   add_footnote("ENC_TYPE codes: AV=Ambulatory, IP=Inpatient, ED=Emergency, EI=ED-to-Inpatient, IS=Non-acute Institutional, OS=Observation, TH=Telehealth, OT=Other.")
 
 # ---- Slide 43: Aggregate missingness by encounter type (simplified bar chart) ----
@@ -2562,7 +2780,8 @@ pptx <- add_image_slide(pptx,
   "Primary Payer Missingness by Encounter Type (All Sites)",
   "Aggregate primary payer missingness across all partner sites, sorted descending",
   "output/figures/phase21_missingness_by_enc_type.png",
-  img_width = 9, img_height = 5.0) %>%
+  img_width = 9, img_height = 5.0
+) %>%
   add_footnote("Aggregated across all sites. Bars show % of encounters with missing primary payer data.")
 
 # ---- Slide 44: Raw vs Harmonized Comparison (dumbbell chart) ----
@@ -2572,14 +2791,16 @@ pptx <- add_image_slide(pptx,
   "Raw vs Harmonized Payer Missingness by Site",
   "Comparison of raw field missingness vs harmonized category missingness (OVERALL)",
   "output/figures/phase21_raw_vs_harmonized.png",
-  img_width = 9, img_height = 5.0) %>%
+  img_width = 9, img_height = 5.0
+) %>%
   add_footnote("Raw = PAYER_TYPE_PRIMARY is NA/empty/sentinel. Harmonized = payer_category is NA/Missing. Delta in percentage points shown between dots.")
 
 # ---- Slide 45: Year x Enc Type -- summary only (all_source_payer_missingness_year_x_enc_type.csv is 1015 rows) ----
 message("  Slide 45: Year x Enc Type Missingness (top combinations)")
 
 p21_year_enc <- read_csv("output/tables/all_source_payer_missingness_year_x_enc_type.csv",
-                          show_col_types = FALSE)
+  show_col_types = FALSE
+)
 
 # Show top 20 combinations by primary missingness % (min 50 encounters)
 year_enc_top20 <- p21_year_enc %>%
@@ -2600,10 +2821,12 @@ year_enc_top20 <- p21_year_enc %>%
     `% Missing` = pct_primary_missing
   )
 
-pptx <- add_table_slide(pptx,
+pptx <- add_table_slide(
+  pptx,
   "Highest Missingness: Year x Encounter Type Combinations",
   "Top 20 site-year-encounter type combinations by primary payer missingness (min 50 encounters)",
-  year_enc_top20) %>%
+  year_enc_top20
+) %>%
   add_footnote("Full crosstab (1,015 rows) in all_source_payer_missingness_year_x_enc_type.csv. Filtered to combinations with >= 50 encounters.")
 
 # ---- Slide 46: Temporal Missingness by Year (faceted line chart) ----
@@ -2613,7 +2836,8 @@ pptx <- add_image_slide(pptx,
   "Payer Missingness by Year (Recent 5 Years per Site)",
   "Primary payer missingness trend by admission year, most recent 5 years per partner site",
   "output/figures/phase21_temporal_missingness.png",
-  img_width = 9.5, img_height = 5.5) %>%
+  img_width = 9.5, img_height = 5.5
+) %>%
   add_footnote("Full temporal breakdown in all_source_payer_missingness_by_year.csv. 1900 sentinel dates excluded.")
 
 # ==============================================================================
@@ -2629,7 +2853,8 @@ pptx <- add_image_slide(pptx,
   "Duplicate Dates: Cross-Site Comparison",
   "Same-date duplicate encounter rate by partner site, colored by recommended ENCOUNTER_SOURCE",
   "output/figures/phase22_cross_site_duplicates.png",
-  img_width = 9, img_height = 5.5) %>%
+  img_width = 9, img_height = 5.5
+) %>%
   add_footnote("Duplicate = >1 encounter on same ADMIT_DATE for same patient. Color = ENCOUNTER.SOURCE with highest primary payer completeness.")
 
 # ---- Slide: Duplicate Rate Scatter Plot ----
@@ -2639,7 +2864,8 @@ pptx <- add_image_slide(pptx,
   "Duplicate Rate vs Cohort Size by Site",
   "Relationship between number of patients and duplicate date rate; point size = total encounters",
   "output/figures/phase22_dup_rate_scatter.png",
-  img_width = 9, img_height = 5.5) %>%
+  img_width = 9, img_height = 5.5
+) %>%
   add_footnote("Each point = one partner site. Size proportional to total encounter count. Excludes ALL aggregate row.")
 
 # ---- Slide: Per-Site Key Duplication Metrics (grouped bar chart) ----
@@ -2649,7 +2875,8 @@ pptx <- add_image_slide(pptx,
   "Key Duplication Metrics by Partner Site",
   "Duplicate rate, multi-source %, and near-exact duplicate rate per site",
   "output/figures/phase22_per_site_metrics.png",
-  img_width = 9, img_height = 5.5) %>%
+  img_width = 9, img_height = 5.5
+) %>%
   add_footnote("Duplicate Rate = % patient-dates with >1 encounter. Multi-Source = % of duplicates from different ENCOUNTER.SOURCE. Near-Exact = normalized near-exact dup rate.")
 
 # ---- Slide: Source Payer Completeness (heatmap) ----
@@ -2660,7 +2887,8 @@ if (file.exists("output/figures/phase22_source_completeness_heatmap.png")) {
     "Source Payer Completeness for Multi-Source Dates",
     "Primary payer completeness by ENCOUNTER_SOURCE and partner site for multi-source duplicate dates",
     "output/figures/phase22_source_completeness_heatmap.png",
-    img_width = 9.5, img_height = 5.5) %>%
+    img_width = 9.5, img_height = 5.5
+  ) %>%
     add_footnote("Shows only encounters on dates where >1 ENCOUNTER.SOURCE contributed. Higher % (green) = more payer data available from that source.")
 } else {
   message("  SKIPPED: Source payer completeness -- no multi-source encounters found.")
@@ -2673,7 +2901,8 @@ pptx <- add_image_slide(pptx,
   "Patient Duplicate Summary by Site",
   "Percentage of patients with duplicate dates and multi-source dates, by partner site",
   "output/figures/phase22_patient_dup_summary.png",
-  img_width = 9, img_height = 5.0) %>%
+  img_width = 9, img_height = 5.0
+) %>%
   add_footnote("Duplicates = patient has >1 encounter on same date. Multi-Source = encounters from different ENCOUNTER.SOURCE values. Full detail in all_site_patient_duplicate_summary.csv.")
 
 # ---- Slide: Date-Level Detail -- payer missingness heatmap ----
@@ -2684,7 +2913,8 @@ if (file.exists("output/figures/phase22_date_detail_heatmap.png")) {
     "Multi-Source Dates: Payer Missingness by Source",
     "Primary payer missingness by ENCOUNTER_SOURCE and partner site for multi-source duplicate dates",
     "output/figures/phase22_date_detail_heatmap.png",
-    img_width = 9.5, img_height = 5.5) %>%
+    img_width = 9.5, img_height = 5.5
+  ) %>%
     add_footnote("Shows encounters on multi-source dates. Higher % (darker) = more missing payer data from that source. Full detail in all_site_date_level_duplicate_detail.csv.")
 } else {
   message("  SKIPPED: Date-level detail -- no multi-source encounters found.")

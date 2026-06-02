@@ -66,22 +66,25 @@ get_hl_patient_ids <- function() {
     return(character(0))
   }
 
-  tryCatch({
-    hl_ids <- dx_tbl %>%
-      dplyr::filter(
-        (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
-        (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
-      ) %>%
-      dplyr::select(ID) %>%
-      dplyr::distinct() %>%
-      dplyr::collect() %>%
-      dplyr::pull(ID)
-    message(glue::glue("  Found {format(length(hl_ids), big.mark = ',')} patients with HL diagnosis"))
-    hl_ids
-  }, error = function(e) {
-    message(glue::glue("  Warning: HL patient lookup failed: {e$message}"))
-    character(0)
-  })
+  tryCatch(
+    {
+      hl_ids <- dx_tbl %>%
+        dplyr::filter(
+          (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
+            (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
+        ) %>%
+        dplyr::select(ID) %>%
+        dplyr::distinct() %>%
+        dplyr::collect() %>%
+        dplyr::pull(ID)
+      message(glue::glue("  Found {format(length(hl_ids), big.mark = ',')} patients with HL diagnosis"))
+      hl_ids
+    },
+    error = function(e) {
+      message(glue::glue("  Warning: HL patient lookup failed: {e$message}"))
+      character(0)
+    }
+  )
 }
 
 #' Helper: return nrow or 0 for NULL tibbles (for logging)

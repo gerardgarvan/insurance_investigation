@@ -31,7 +31,7 @@
 # ------------------------------------------------------------------------------
 
 source("R/00_config.R")
-n# ==============================================================================
+n # ==============================================================================
 # SECTION 1: SETUP ----
 # ==============================================================================
 
@@ -57,7 +57,9 @@ dir.create(docs_dir, showWarnings = FALSE, recursive = TRUE)
 # ------------------------------------------------------------------------------
 
 fmt_codes <- function(codes, max_show = 8) {
-  if (is.null(codes) || length(codes) == 0) return("(none)")
+  if (is.null(codes) || length(codes) == 0) {
+    return("(none)")
+  }
   n <- length(codes)
   if (n <= max_show) {
     paste0(paste(codes, collapse = ", "), glue(" ({n} total)"))
@@ -68,7 +70,9 @@ fmt_codes <- function(codes, max_show = 8) {
 }
 
 fmt_codes_bullet <- function(codes, max_show = 8) {
-  if (is.null(codes) || length(codes) == 0) return("  - (none)")
+  if (is.null(codes) || length(codes) == 0) {
+    return("  - (none)")
+  }
   n <- length(codes)
   if (n <= max_show) {
     paste(paste0("  - ", codes), collapse = "\n")
@@ -85,7 +89,8 @@ fmt_codes_bullet <- function(codes, max_show = 8) {
 md <- character(0)
 
 # ---- YAML front matter (required for rmarkdown::render to produce .docx) -----
-md <- c(md,
+md <- c(
+  md,
   "---",
   'title: "PCORnet Hodgkin Lymphoma Pipeline -- Variable Documentation"',
   'date: "`r Sys.Date()`"',
@@ -98,7 +103,8 @@ md <- c(md,
 # Section 1: Title and metadata
 # ==============================================================================
 
-md <- c(md,
+md <- c(
+  md,
   "# PCORnet Hodgkin Lymphoma Pipeline -- Variable Documentation",
   "",
   glue("**Generated:** {Sys.Date()}"),
@@ -114,10 +120,11 @@ md <- c(md,
 # ==============================================================================
 
 n_icd10 <- length(ICD_CODES$hl_icd10)
-n_icd9  <- length(ICD_CODES$hl_icd9)
+n_icd9 <- length(ICD_CODES$hl_icd9)
 n_histology <- length(ICD_CODES$hl_histology)
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 2: Cohort Definition",
@@ -165,7 +172,8 @@ md <- c(md,
 # Section 3: Demographics and Enrollment
 # ==============================================================================
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 3: Demographics and Enrollment",
@@ -193,7 +201,8 @@ md <- c(md,
 # Section 4: Payer Variables
 # ==============================================================================
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 4: Payer Variables",
@@ -232,33 +241,34 @@ md <- c(md,
 # ==============================================================================
 
 # Code counts
-n_chemo_hcpcs         <- length(TREATMENT_CODES$chemo_hcpcs)
-n_chemo_rxnorm        <- length(TREATMENT_CODES$chemo_rxnorm)
-n_chemo_icd9          <- length(TREATMENT_CODES$chemo_icd9)
-n_chemo_icd10pcs      <- length(TREATMENT_CODES$chemo_icd10pcs_prefixes)
-n_chemo_dx_icd10      <- length(TREATMENT_CODES$chemo_dx_icd10)
-n_chemo_dx_icd9       <- length(TREATMENT_CODES$chemo_dx_icd9)
-n_chemo_drg           <- length(TREATMENT_CODES$chemo_drg)
-n_chemo_revenue       <- length(TREATMENT_CODES$chemo_revenue)
+n_chemo_hcpcs <- length(TREATMENT_CODES$chemo_hcpcs)
+n_chemo_rxnorm <- length(TREATMENT_CODES$chemo_rxnorm)
+n_chemo_icd9 <- length(TREATMENT_CODES$chemo_icd9)
+n_chemo_icd10pcs <- length(TREATMENT_CODES$chemo_icd10pcs_prefixes)
+n_chemo_dx_icd10 <- length(TREATMENT_CODES$chemo_dx_icd10)
+n_chemo_dx_icd9 <- length(TREATMENT_CODES$chemo_dx_icd9)
+n_chemo_drg <- length(TREATMENT_CODES$chemo_drg)
+n_chemo_revenue <- length(TREATMENT_CODES$chemo_revenue)
 
-n_rad_cpt             <- length(TREATMENT_CODES$radiation_cpt)
-n_rad_icd9            <- length(TREATMENT_CODES$radiation_icd9)
-n_rad_icd10pcs        <- length(TREATMENT_CODES$radiation_icd10pcs_prefixes)
-n_rad_dx_icd10        <- length(TREATMENT_CODES$radiation_dx_icd10)
-n_rad_dx_icd9         <- length(TREATMENT_CODES$radiation_dx_icd9)
-n_rad_drg             <- length(TREATMENT_CODES$radiation_drg)
-n_rad_revenue         <- length(TREATMENT_CODES$radiation_revenue)
+n_rad_cpt <- length(TREATMENT_CODES$radiation_cpt)
+n_rad_icd9 <- length(TREATMENT_CODES$radiation_icd9)
+n_rad_icd10pcs <- length(TREATMENT_CODES$radiation_icd10pcs_prefixes)
+n_rad_dx_icd10 <- length(TREATMENT_CODES$radiation_dx_icd10)
+n_rad_dx_icd9 <- length(TREATMENT_CODES$radiation_dx_icd9)
+n_rad_drg <- length(TREATMENT_CODES$radiation_drg)
+n_rad_revenue <- length(TREATMENT_CODES$radiation_revenue)
 
-n_sct_cpt             <- length(TREATMENT_CODES$sct_cpt)
-n_sct_hcpcs           <- length(TREATMENT_CODES$sct_hcpcs)
-n_sct_icd9            <- length(TREATMENT_CODES$sct_icd9)
-n_sct_icd10pcs        <- length(TREATMENT_CODES$sct_icd10pcs)
-n_sct_dx_icd10        <- length(TREATMENT_CODES$sct_dx_icd10)
-n_sct_drg             <- length(TREATMENT_CODES$sct_drg)
-n_sct_revenue         <- length(TREATMENT_CODES$sct_revenue)
-n_cart_icd10pcs       <- length(TREATMENT_CODES$cart_icd10pcs_prefixes)
+n_sct_cpt <- length(TREATMENT_CODES$sct_cpt)
+n_sct_hcpcs <- length(TREATMENT_CODES$sct_hcpcs)
+n_sct_icd9 <- length(TREATMENT_CODES$sct_icd9)
+n_sct_icd10pcs <- length(TREATMENT_CODES$sct_icd10pcs)
+n_sct_dx_icd10 <- length(TREATMENT_CODES$sct_dx_icd10)
+n_sct_drg <- length(TREATMENT_CODES$sct_drg)
+n_sct_revenue <- length(TREATMENT_CODES$sct_revenue)
+n_cart_icd10pcs <- length(TREATMENT_CODES$cart_icd10pcs_prefixes)
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 5: Treatment Variables",
@@ -341,7 +351,8 @@ md <- c(md,
 # Section 6: Treatment-Anchored Payer Variables
 # ==============================================================================
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 6: Treatment-Anchored Payer Variables",
@@ -366,7 +377,8 @@ md <- c(md,
 # Section 7: Timing Variables
 # ==============================================================================
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 7: Timing Variables (D-12)",
@@ -394,7 +406,8 @@ md <- c(md,
 surv_names <- names(SURVEILLANCE_CODES)
 modality_groups <- unique(sub("_(cpt|hcpcs|icd10pcs|icd10_dx|loinc)$", "", surv_names))
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 8: Surveillance Modalities (D-01, D-03, D-04)",
@@ -413,15 +426,15 @@ md <- c(md,
 
 # Document each modality
 modality_info <- list(
-  mammogram       = list(label = "Mammogram",          table = "PROCEDURES",                   systems = c("CPT/HCPCS", "ICD-10-PCS")),
-  breast_mri      = list(label = "Breast MRI",         table = "PROCEDURES",                   systems = c("CPT", "HCPCS", "ICD-10-PCS")),
-  echo            = list(label = "Echocardiogram",     table = "PROCEDURES / DIAGNOSIS",        systems = c("CPT", "ICD-10-PCS", "ICD-10-CM screening Z code")),
-  stress_test     = list(label = "Stress Test",        table = "PROCEDURES",                   systems = c("CPT (nuclear cardiology)")),
-  ecg             = list(label = "Electrocardiogram",  table = "PROCEDURES / DIAGNOSIS",        systems = c("CPT", "ICD-10-CM screening Z code")),
-  muga            = list(label = "MUGA",               table = "PROCEDURES",                   systems = c("CPT", "ICD-10-PCS")),
-  pft             = list(label = "Pulmonary Function Test", table = "PROCEDURES / DIAGNOSIS",  systems = c("CPT", "ICD-10-CM screening Z code")),
-  tsh             = list(label = "TSH",                table = "PROCEDURES / LAB_RESULT_CM",   systems = c("CPT", "HCPCS", "LOINC")),
-  cbc             = list(label = "CBC",                table = "PROCEDURES / LAB_RESULT_CM",   systems = c("CPT", "HCPCS", "LOINC"))
+  mammogram       = list(label = "Mammogram", table = "PROCEDURES", systems = c("CPT/HCPCS", "ICD-10-PCS")),
+  breast_mri      = list(label = "Breast MRI", table = "PROCEDURES", systems = c("CPT", "HCPCS", "ICD-10-PCS")),
+  echo            = list(label = "Echocardiogram", table = "PROCEDURES / DIAGNOSIS", systems = c("CPT", "ICD-10-PCS", "ICD-10-CM screening Z code")),
+  stress_test     = list(label = "Stress Test", table = "PROCEDURES", systems = c("CPT (nuclear cardiology)")),
+  ecg             = list(label = "Electrocardiogram", table = "PROCEDURES / DIAGNOSIS", systems = c("CPT", "ICD-10-CM screening Z code")),
+  muga            = list(label = "MUGA", table = "PROCEDURES", systems = c("CPT", "ICD-10-PCS")),
+  pft             = list(label = "Pulmonary Function Test", table = "PROCEDURES / DIAGNOSIS", systems = c("CPT", "ICD-10-CM screening Z code")),
+  tsh             = list(label = "TSH", table = "PROCEDURES / LAB_RESULT_CM", systems = c("CPT", "HCPCS", "LOINC")),
+  cbc             = list(label = "CBC", table = "PROCEDURES / LAB_RESULT_CM", systems = c("CPT", "HCPCS", "LOINC"))
 )
 
 for (mod_key in names(modality_info)) {
@@ -429,7 +442,8 @@ for (mod_key in names(modality_info)) {
   # Gather all code sub-lists for this modality
   mod_lists <- SURVEILLANCE_CODES[grepl(paste0("^", mod_key, "_"), names(SURVEILLANCE_CODES))]
 
-  md <- c(md,
+  md <- c(
+    md,
     glue("### 8.{which(names(modality_info) == mod_key)} {info$label}"),
     "",
     glue("**Source table(s):** {info$table}"),
@@ -437,8 +451,10 @@ for (mod_key in names(modality_info)) {
     ""
   )
 
-  md <- c(md, "| Code System | Count | Sample Codes |",
-              "|-------------|-------|--------------|")
+  md <- c(
+    md, "| Code System | Count | Sample Codes |",
+    "|-------------|-------|--------------|"
+  )
   for (list_name in names(mod_lists)) {
     sys_suffix <- sub(paste0("^", mod_key, "_"), "", list_name)
     sys_label <- toupper(gsub("_", "-", sys_suffix))
@@ -455,7 +471,8 @@ for (mod_key in names(modality_info)) {
 lab_names <- names(LAB_CODES)
 lab_groups <- unique(sub("_(cpt|loinc)$", "", lab_names))
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 9: Lab Results (D-02)",
@@ -490,15 +507,16 @@ lab_display <- list(
 
 for (lab_key in names(lab_display)) {
   loinc_codes <- LAB_CODES[[paste0(lab_key, "_loinc")]]
-  cpt_codes   <- LAB_CODES[[paste0(lab_key, "_cpt")]]
+  cpt_codes <- LAB_CODES[[paste0(lab_key, "_cpt")]]
   n_loinc <- if (is.null(loinc_codes)) 0 else length(loinc_codes)
-  n_cpt   <- if (is.null(cpt_codes))   0 else length(cpt_codes)
-  sample  <- if (n_loinc > 0) fmt_codes(loinc_codes, max_show = 3) else "(none)"
+  n_cpt <- if (is.null(cpt_codes)) 0 else length(cpt_codes)
+  sample <- if (n_loinc > 0) fmt_codes(loinc_codes, max_show = 3) else "(none)"
   systems <- c(
     if (n_loinc > 0) "LOINC",
-    if (n_cpt > 0)   "CPT"
+    if (n_cpt > 0) "CPT"
   )
-  md <- c(md,
+  md <- c(
+    md,
     glue("| {lab_display[[lab_key]]} | {paste(systems, collapse = '/')} | {n_loinc} | {n_cpt} | {sample} |")
   )
 }
@@ -509,11 +527,12 @@ md <- c(md, "")
 # Section 10: Survivorship Encounter Classification
 # ==============================================================================
 
-n_oncology_nucc   <- length(PROVIDER_SPECIALTIES$cancer_oncology)
-n_hist_icd9       <- length(SURVIVORSHIP_CODES$personal_history_icd9)
-n_hist_icd10      <- length(SURVIVORSHIP_CODES$personal_history_icd10)
+n_oncology_nucc <- length(PROVIDER_SPECIALTIES$cancer_oncology)
+n_hist_icd9 <- length(SURVIVORSHIP_CODES$personal_history_icd9)
+n_hist_icd10 <- length(SURVIVORSHIP_CODES$personal_history_icd10)
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 10: Survivorship Encounter Classification (D-05 through D-10)",
@@ -556,7 +575,8 @@ for (code in PROVIDER_SPECIALTIES$cancer_oncology) {
   md <- c(md, glue("- `{code}`"))
 }
 
-md <- c(md,
+md <- c(
+  md,
   "",
   "| Variable | Description |",
   "|----------|-------------|",
@@ -577,7 +597,8 @@ for (code in SURVIVORSHIP_CODES$personal_history_icd9) {
   md <- c(md, glue("- `{code}`"))
 }
 
-md <- c(md,
+md <- c(
+  md,
   "",
   glue("**Personal history ICD-10-CM codes ({n_hist_icd10} codes):**"),
   ""
@@ -587,7 +608,8 @@ for (code in SURVIVORSHIP_CODES$personal_history_icd10) {
   md <- c(md, glue("- `{code}`"))
 }
 
-md <- c(md,
+md <- c(
+  md,
   "",
   "**Note (D-09 / DX_TYPE filter):** ICD-9 personal history codes (V87.4x) are validated",
   "using DX_TYPE = '09' to prevent ICD-10 era false matches. ICD-10 codes validated with",
@@ -605,7 +627,8 @@ md <- c(md,
 # Section 11: Pending / Deferred Variables
 # ==============================================================================
 
-md <- c(md,
+md <- c(
+  md,
   "---",
   "",
   "## Section 11: Pending / Deferred Variables",
@@ -667,20 +690,23 @@ message(glue("Total lines: {length(md)}"))
 
 docx_path <- file.path(docs_dir, "Treatment_Variable_Documentation.docx")
 
-tryCatch({
-  rmarkdown::render(
-    input         = md_path,
-    output_format = rmarkdown::word_document(),
-    output_file   = "Treatment_Variable_Documentation.docx",
-    output_dir    = docs_dir,
-    quiet         = TRUE
-  )
-  message(glue("Word documentation written to: {docx_path}"))
-}, error = function(e) {
-  message(glue("WARNING: Could not render .docx -- {conditionMessage(e)}"))
-  message("The .md file is the source of truth and was written successfully.")
-  message("To render manually: rmarkdown::render('", md_path, "')")
-})
+tryCatch(
+  {
+    rmarkdown::render(
+      input         = md_path,
+      output_format = rmarkdown::word_document(),
+      output_file   = "Treatment_Variable_Documentation.docx",
+      output_dir    = docs_dir,
+      quiet         = TRUE
+    )
+    message(glue("Word documentation written to: {docx_path}"))
+  },
+  error = function(e) {
+    message(glue("WARNING: Could not render .docx -- {conditionMessage(e)}"))
+    message("The .md file is the source of truth and was written successfully.")
+    message("To render manually: rmarkdown::render('", md_path, "')")
+  }
+)
 
 # ==============================================================================
 # SECTION 2: OUTPUT ----

@@ -51,29 +51,29 @@ message(glue("Backend: ", if (USE_DUCKDB) "DuckDB" else "RDS"))
 
 # Define code_type_map: mapping from TREATMENT_CODES vector names to metadata
 code_type_map <- tribble(
-  ~vector_name,                  ~category,         ~code_type,    ~source_table,          ~px_type, ~match_type,
-  "chemo_hcpcs",                 "Chemotherapy",    "CPT/HCPCS",   "PROCEDURES",           "CH",     "exact",
-  "chemo_rxnorm",                "Chemotherapy",    "RXNORM",      "PRESCRIBING|MED_ADMIN", NA_character_, "exact",
-  "chemo_icd9",                  "Chemotherapy",    "ICD-9",       "PROCEDURES",           "09",     "exact",
-  "chemo_icd10pcs_prefixes",     "Chemotherapy",    "ICD-10-PCS",  "PROCEDURES",           "10",     "prefix",
-  "chemo_drg",                   "Chemotherapy",    "DRG",         "ENCOUNTER",            NA_character_, "exact",
-  "chemo_revenue",               "Chemotherapy",    "Revenue",     "PROCEDURES",           "RE",     "exact",
-  "radiation_cpt",               "Radiation",       "CPT/HCPCS",   "PROCEDURES",           "CH",     "exact",
-  "radiation_icd9",              "Radiation",       "ICD-9",       "PROCEDURES",           "09",     "exact",
-  "radiation_icd10pcs_prefixes", "Radiation",       "ICD-10-PCS",  "PROCEDURES",           "10",     "prefix",
-  "radiation_drg",               "Radiation",       "DRG",         "ENCOUNTER",            NA_character_, "exact",
-  "radiation_revenue",           "Radiation",       "Revenue",     "PROCEDURES",           "RE",     "exact",
-  "sct_cpt",                     "SCT",            "CPT/HCPCS",   "PROCEDURES",           "CH",     "exact",
-  "sct_hcpcs",                   "SCT",            "CPT/HCPCS",   "PROCEDURES",           "CH",     "exact",
-  "sct_icd9",                    "SCT",            "ICD-9",       "PROCEDURES",           "09",     "exact",
-  "sct_icd10pcs",                "SCT",            "ICD-10-PCS",  "PROCEDURES",           "10",     "exact",
-  "sct_drg",                     "SCT",            "DRG",         "ENCOUNTER",            NA_character_, "exact",
-  "sct_revenue",                 "SCT",            "Revenue",     "PROCEDURES",           "RE",     "exact",
-  "sct_rxnorm",                  "SCT",            "RXNORM",      "PRESCRIBING|MED_ADMIN", NA_character_, "exact",
-  "cart_icd10pcs_prefixes",      "Immunotherapy",  "ICD-10-PCS",  "PROCEDURES",           "10",     "prefix",
-  "immunotherapy_drg",           "Immunotherapy",  "DRG",         "ENCOUNTER",            NA_character_, "exact",
-  "immunotherapy_rxnorm",        "Immunotherapy",  "RXNORM",      "PRESCRIBING|MED_ADMIN", NA_character_, "exact",
-  "supportive_care_rxnorm",      "Supportive Care","RXNORM",      "PRESCRIBING|MED_ADMIN", NA_character_, "exact"
+  ~vector_name, ~category, ~code_type, ~source_table, ~px_type, ~match_type,
+  "chemo_hcpcs", "Chemotherapy", "CPT/HCPCS", "PROCEDURES", "CH", "exact",
+  "chemo_rxnorm", "Chemotherapy", "RXNORM", "PRESCRIBING|MED_ADMIN", NA_character_, "exact",
+  "chemo_icd9", "Chemotherapy", "ICD-9", "PROCEDURES", "09", "exact",
+  "chemo_icd10pcs_prefixes", "Chemotherapy", "ICD-10-PCS", "PROCEDURES", "10", "prefix",
+  "chemo_drg", "Chemotherapy", "DRG", "ENCOUNTER", NA_character_, "exact",
+  "chemo_revenue", "Chemotherapy", "Revenue", "PROCEDURES", "RE", "exact",
+  "radiation_cpt", "Radiation", "CPT/HCPCS", "PROCEDURES", "CH", "exact",
+  "radiation_icd9", "Radiation", "ICD-9", "PROCEDURES", "09", "exact",
+  "radiation_icd10pcs_prefixes", "Radiation", "ICD-10-PCS", "PROCEDURES", "10", "prefix",
+  "radiation_drg", "Radiation", "DRG", "ENCOUNTER", NA_character_, "exact",
+  "radiation_revenue", "Radiation", "Revenue", "PROCEDURES", "RE", "exact",
+  "sct_cpt", "SCT", "CPT/HCPCS", "PROCEDURES", "CH", "exact",
+  "sct_hcpcs", "SCT", "CPT/HCPCS", "PROCEDURES", "CH", "exact",
+  "sct_icd9", "SCT", "ICD-9", "PROCEDURES", "09", "exact",
+  "sct_icd10pcs", "SCT", "ICD-10-PCS", "PROCEDURES", "10", "exact",
+  "sct_drg", "SCT", "DRG", "ENCOUNTER", NA_character_, "exact",
+  "sct_revenue", "SCT", "Revenue", "PROCEDURES", "RE", "exact",
+  "sct_rxnorm", "SCT", "RXNORM", "PRESCRIBING|MED_ADMIN", NA_character_, "exact",
+  "cart_icd10pcs_prefixes", "Immunotherapy", "ICD-10-PCS", "PROCEDURES", "10", "prefix",
+  "immunotherapy_drg", "Immunotherapy", "DRG", "ENCOUNTER", NA_character_, "exact",
+  "immunotherapy_rxnorm", "Immunotherapy", "RXNORM", "PRESCRIBING|MED_ADMIN", NA_character_, "exact",
+  "supportive_care_rxnorm", "Supportive Care", "RXNORM", "PRESCRIBING|MED_ADMIN", NA_character_, "exact"
 )
 
 message(glue("Code type map: {nrow(code_type_map)} treatment vector names"))
@@ -239,46 +239,55 @@ if (!is.null(proc_tbl)) {
 
     if (match_type == "exact") {
       # Exact match
-      counts <- tryCatch({
-        proc_tbl %>%
-          filter(PX_TYPE == px_type, PX %in% codes) %>%
-          group_by(code = PX) %>%
-          summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
-          collect() %>%
-          mutate(vector_name = vec_name)
-      }, error = function(e) {
-        message(glue("      Error: {e$message}"))
-        tibble(code = character(), records = integer(), patients = integer(), vector_name = character())
-      })
-      count_results <- bind_rows(count_results, counts)
-    } else if (match_type == "prefix") {
-      # Prefix match: check if codes are full 7-char codes or actual prefixes
-      # For ICD-10-PCS, config codes are full 7-char codes, use exact match
-      if (all(str_length(codes) == 7)) {
-        counts <- tryCatch({
+      counts <- tryCatch(
+        {
           proc_tbl %>%
             filter(PX_TYPE == px_type, PX %in% codes) %>%
             group_by(code = PX) %>%
             summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
             collect() %>%
             mutate(vector_name = vec_name)
-        }, error = function(e) {
+        },
+        error = function(e) {
           message(glue("      Error: {e$message}"))
           tibble(code = character(), records = integer(), patients = integer(), vector_name = character())
-        })
+        }
+      )
+      count_results <- bind_rows(count_results, counts)
+    } else if (match_type == "prefix") {
+      # Prefix match: check if codes are full 7-char codes or actual prefixes
+      # For ICD-10-PCS, config codes are full 7-char codes, use exact match
+      if (all(str_length(codes) == 7)) {
+        counts <- tryCatch(
+          {
+            proc_tbl %>%
+              filter(PX_TYPE == px_type, PX %in% codes) %>%
+              group_by(code = PX) %>%
+              summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
+              collect() %>%
+              mutate(vector_name = vec_name)
+          },
+          error = function(e) {
+            message(glue("      Error: {e$message}"))
+            tibble(code = character(), records = integer(), patients = integer(), vector_name = character())
+          }
+        )
         count_results <- bind_rows(count_results, counts)
       } else {
         # True prefix match: materialize and use str_starts_with
         # (This path is unlikely for current config, but handled for completeness)
-        all_proc <- tryCatch({
-          proc_tbl %>%
-            filter(PX_TYPE == px_type) %>%
-            select(ID, PX) %>%
-            collect()
-        }, error = function(e) {
-          message(glue("      Error: {e$message}"))
-          tibble(ID = character(), PX = character())
-        })
+        all_proc <- tryCatch(
+          {
+            proc_tbl %>%
+              filter(PX_TYPE == px_type) %>%
+              select(ID, PX) %>%
+              collect()
+          },
+          error = function(e) {
+            message(glue("      Error: {e$message}"))
+            tibble(ID = character(), PX = character())
+          }
+        )
 
         if (nrow(all_proc) > 0) {
           for (prefix in codes) {
@@ -315,30 +324,36 @@ for (i in seq_len(nrow(rxnorm_vectors))) {
   presc_tbl <- safe_table("PRESCRIBING")
   presc_matches <- tibble(ID = character(), code = character())
   if (!is.null(presc_tbl)) {
-    presc_matches <- tryCatch({
-      presc_tbl %>%
-        filter(RXNORM_CUI %in% codes) %>%
-        select(ID, code = RXNORM_CUI) %>%
-        collect()
-    }, error = function(e) {
-      message(glue("    PRESCRIBING error: {e$message}"))
-      tibble(ID = character(), code = character())
-    })
+    presc_matches <- tryCatch(
+      {
+        presc_tbl %>%
+          filter(RXNORM_CUI %in% codes) %>%
+          select(ID, code = RXNORM_CUI) %>%
+          collect()
+      },
+      error = function(e) {
+        message(glue("    PRESCRIBING error: {e$message}"))
+        tibble(ID = character(), code = character())
+      }
+    )
   }
 
   # Query MED_ADMIN
   medadmin_tbl <- safe_table("MED_ADMIN")
   medadmin_matches <- tibble(ID = character(), code = character())
   if (!is.null(medadmin_tbl)) {
-    medadmin_matches <- tryCatch({
-      medadmin_tbl %>%
-        filter(MEDADMIN_CODE %in% codes, MEDADMIN_TYPE == "RX") %>%
-        select(ID, code = MEDADMIN_CODE) %>%
-        collect()
-    }, error = function(e) {
-      message(glue("    MED_ADMIN error: {e$message}"))
-      tibble(ID = character(), code = character())
-    })
+    medadmin_matches <- tryCatch(
+      {
+        medadmin_tbl %>%
+          filter(MEDADMIN_CODE %in% codes, MEDADMIN_TYPE == "RX") %>%
+          select(ID, code = MEDADMIN_CODE) %>%
+          collect()
+      },
+      error = function(e) {
+        message(glue("    MED_ADMIN error: {e$message}"))
+        tibble(ID = character(), code = character())
+      }
+    )
   }
 
   # Combine and group
@@ -367,17 +382,20 @@ if (!is.null(enc_tbl)) {
 
     message(glue("    {vec_name} ({length(codes)} codes, DRG)..."))
 
-    counts <- tryCatch({
-      enc_tbl %>%
-        filter(DRG %in% codes) %>%
-        group_by(code = DRG) %>%
-        summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
-        collect() %>%
-        mutate(vector_name = vec_name)
-    }, error = function(e) {
-      message(glue("      Error: {e$message}"))
-      tibble(code = character(), records = integer(), patients = integer(), vector_name = character())
-    })
+    counts <- tryCatch(
+      {
+        enc_tbl %>%
+          filter(DRG %in% codes) %>%
+          group_by(code = DRG) %>%
+          summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
+          collect() %>%
+          mutate(vector_name = vec_name)
+      },
+      error = function(e) {
+        message(glue("      Error: {e$message}"))
+        tibble(code = character(), records = integer(), patients = integer(), vector_name = character())
+      }
+    )
     count_results <- bind_rows(count_results, counts)
   }
 } else {
@@ -522,18 +540,21 @@ if (nrow(codes_to_update) > 0) {
   writeLines(config_lines, config_path)
 
   # Validate
-  validation_ok <- tryCatch({
-    parse(config_path)
-    env <- new.env()
-    source(config_path, local = env)
-    if (is.null(env$TREATMENT_CODES)) {
-      stop("TREATMENT_CODES is NULL after sourcing")
+  validation_ok <- tryCatch(
+    {
+      parse(config_path)
+      env <- new.env()
+      source(config_path, local = env)
+      if (is.null(env$TREATMENT_CODES)) {
+        stop("TREATMENT_CODES is NULL after sourcing")
+      }
+      TRUE
+    },
+    error = function(e) {
+      message(glue("  Validation failed: {e$message}"))
+      FALSE
     }
-    TRUE
-  }, error = function(e) {
-    message(glue("  Validation failed: {e$message}"))
-    FALSE
-  })
+  )
 
   if (validation_ok) {
     message(glue("  Updated {n_updated} config comments successfully"))
@@ -563,31 +584,39 @@ write_resolved_xlsx <- function(df, category, output_path) {
   wb$add_worksheet(sheet_name)
 
   # Row 1: Title
-  wb$add_data(sheet = sheet_name,
-              x = glue("{category} Codes ({n_codes} codes)"),
-              start_row = 1, start_col = 1)
-  wb$add_font(sheet = sheet_name, dims = "A1",
-              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$add_data(
+    sheet = sheet_name,
+    x = glue("{category} Codes ({n_codes} codes)"),
+    start_row = 1, start_col = 1
+  )
+  wb$add_font(
+    sheet = sheet_name, dims = "A1",
+    name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+  )
   wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
 
   # Row 2: Column headers
   headers <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
   for (i in seq_along(headers)) {
-    wb$add_data(sheet = sheet_name, x = headers[i],
-                start_row = 2, start_col = i)
+    wb$add_data(
+      sheet = sheet_name, x = headers[i],
+      start_row = 2, start_col = i
+    )
   }
   wb$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
-  wb$add_font(sheet = sheet_name, dims = "A2:F2",
-              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb$add_font(
+    sheet = sheet_name, dims = "A2:F2",
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
 
   # Row 3+: Data
   write_df <- data.frame(
-    Code         = df$code,
-    Meaning      = ifelse(is.na(df$description), "", df$description),
-    Code_Type    = df$code_type,
+    Code = df$code,
+    Meaning = ifelse(is.na(df$description), "", df$description),
+    Code_Type = df$code_type,
     Source_Table = df$source_table,
-    Records      = df$records,
-    Patients     = df$patients,
+    Records = df$records,
+    Patients = df$patients,
     stringsAsFactors = FALSE
   )
   wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
@@ -596,8 +625,10 @@ write_resolved_xlsx <- function(df, category, output_path) {
   last_row <- 2 + n_codes
   code_dims <- glue("A3:A{last_row}")
   wb$add_fill(sheet = sheet_name, dims = code_dims, color = wb_color(fill_color))
-  wb$add_font(sheet = sheet_name, dims = code_dims,
-              name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color))
+  wb$add_font(
+    sheet = sheet_name, dims = code_dims,
+    name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
+  )
 
   # Number formatting
   if (n_codes > 0) {
@@ -618,8 +649,10 @@ write_resolved_xlsx <- function(df, category, output_path) {
     glue("Classification: {category} codes")
   )
   for (i in seq_along(notes_lines)) {
-    wb$add_data(sheet = "Notes", x = as.character(notes_lines[i]),
-                start_row = i, start_col = 1)
+    wb$add_data(
+      sheet = "Notes", x = as.character(notes_lines[i]),
+      start_row = i, start_col = 1
+    )
   }
 
   # Save
@@ -663,33 +696,49 @@ wb_all <- wb_workbook()
 wb_all$add_worksheet("Summary")
 
 # Row 1: Title
-wb_all$add_data(sheet = "Summary", x = "All Treatment Codes Summary",
-                start_row = 1, start_col = 1)
-wb_all$add_font(sheet = "Summary", dims = "A1",
-                name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+wb_all$add_data(
+  sheet = "Summary", x = "All Treatment Codes Summary",
+  start_row = 1, start_col = 1
+)
+wb_all$add_font(
+  sheet = "Summary", dims = "A1",
+  name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
+)
 wb_all$merge_cells(sheet = "Summary", dims = "A1:D1")
 
 # Row 3: Headers
 headers_summary <- c("Treatment Type", "Codes", "Records", "Patients")
 for (i in seq_along(headers_summary)) {
-  wb_all$add_data(sheet = "Summary", x = headers_summary[i],
-                  start_row = 3, start_col = i)
+  wb_all$add_data(
+    sheet = "Summary", x = headers_summary[i],
+    start_row = 3, start_col = i
+  )
 }
 wb_all$add_fill(sheet = "Summary", dims = "A3:D3", color = wb_color("FF374151"))
-wb_all$add_font(sheet = "Summary", dims = "A3:D3",
-                name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb_all$add_font(
+  sheet = "Summary", dims = "A3:D3",
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 
 # Data rows
 for (i in seq_len(nrow(summary_by_category))) {
   row_num <- 3 + i
-  wb_all$add_data(sheet = "Summary", x = summary_by_category$category[i],
-                  start_row = row_num, start_col = 1)
-  wb_all$add_data(sheet = "Summary", x = summary_by_category$n_codes[i],
-                  start_row = row_num, start_col = 2)
-  wb_all$add_data(sheet = "Summary", x = summary_by_category$total_records[i],
-                  start_row = row_num, start_col = 3)
-  wb_all$add_data(sheet = "Summary", x = summary_by_category$total_patients[i],
-                  start_row = row_num, start_col = 4)
+  wb_all$add_data(
+    sheet = "Summary", x = summary_by_category$category[i],
+    start_row = row_num, start_col = 1
+  )
+  wb_all$add_data(
+    sheet = "Summary", x = summary_by_category$n_codes[i],
+    start_row = row_num, start_col = 2
+  )
+  wb_all$add_data(
+    sheet = "Summary", x = summary_by_category$total_records[i],
+    start_row = row_num, start_col = 3
+  )
+  wb_all$add_data(
+    sheet = "Summary", x = summary_by_category$total_patients[i],
+    start_row = row_num, start_col = 4
+  )
   wb_all$add_numfmt(sheet = "Summary", dims = glue("B{row_num}:D{row_num}"), numfmt = "#,##0")
 }
 
@@ -700,8 +749,10 @@ wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$n_codes), start_r
 wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$total_records), start_row = totals_row, start_col = 3)
 wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$total_patients), start_row = totals_row, start_col = 4)
 wb_all$add_fill(sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"), color = wb_color("FF374151"))
-wb_all$add_font(sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"),
-                name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+wb_all$add_font(
+  sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"),
+  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+)
 wb_all$add_numfmt(sheet = "Summary", dims = glue("B{totals_row}:D{totals_row}"), numfmt = "#,##0")
 
 # Column widths
@@ -715,38 +766,46 @@ for (category in categories) {
 
   if (nrow(df_cat) == 0) next
 
-  sheet_name <- category  # Use category name directly (not "{Category} Codes")
+  sheet_name <- category # Use category name directly (not "{Category} Codes")
   wb_all$add_worksheet(sheet_name)
 
   fill_color <- TREATMENT_TYPE_COLORS[[category]]$fill
   font_color <- TREATMENT_TYPE_COLORS[[category]]$font
 
   # Row 1: Title
-  wb_all$add_data(sheet = sheet_name,
-                  x = glue("{category} Codes ({nrow(df_cat)} codes)"),
-                  start_row = 1, start_col = 1)
-  wb_all$add_font(sheet = sheet_name, dims = "A1",
-                  name = "Calibri", size = 14, bold = TRUE, color = wb_color("FF1F2937"))
+  wb_all$add_data(
+    sheet = sheet_name,
+    x = glue("{category} Codes ({nrow(df_cat)} codes)"),
+    start_row = 1, start_col = 1
+  )
+  wb_all$add_font(
+    sheet = sheet_name, dims = "A1",
+    name = "Calibri", size = 14, bold = TRUE, color = wb_color("FF1F2937")
+  )
   wb_all$merge_cells(sheet = sheet_name, dims = "A1:F1")
 
   # Row 2: Headers
   headers_cat <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
   for (i in seq_along(headers_cat)) {
-    wb_all$add_data(sheet = sheet_name, x = headers_cat[i],
-                    start_row = 2, start_col = i)
+    wb_all$add_data(
+      sheet = sheet_name, x = headers_cat[i],
+      start_row = 2, start_col = i
+    )
   }
   wb_all$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
-  wb_all$add_font(sheet = sheet_name, dims = "A2:F2",
-                  name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+  wb_all$add_font(
+    sheet = sheet_name, dims = "A2:F2",
+    name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
+  )
 
   # Row 3+: Data
   write_df_cat <- data.frame(
-    Code         = df_cat$code,
-    Meaning      = ifelse(is.na(df_cat$description), "", df_cat$description),
-    Code_Type    = df_cat$code_type,
+    Code = df_cat$code,
+    Meaning = ifelse(is.na(df_cat$description), "", df_cat$description),
+    Code_Type = df_cat$code_type,
     Source_Table = df_cat$source_table,
-    Records      = df_cat$records,
-    Patients     = df_cat$patients,
+    Records = df_cat$records,
+    Patients = df_cat$patients,
     stringsAsFactors = FALSE
   )
   wb_all$add_data(sheet = sheet_name, x = write_df_cat, start_row = 3, col_names = FALSE)
@@ -755,8 +814,10 @@ for (category in categories) {
   last_row_cat <- 2 + nrow(df_cat)
   code_dims_cat <- glue("A3:A{last_row_cat}")
   wb_all$add_fill(sheet = sheet_name, dims = code_dims_cat, color = wb_color(fill_color))
-  wb_all$add_font(sheet = sheet_name, dims = code_dims_cat,
-                  name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color))
+  wb_all$add_font(
+    sheet = sheet_name, dims = code_dims_cat,
+    name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
+  )
 
   # Number formatting
   if (nrow(df_cat) > 0) {

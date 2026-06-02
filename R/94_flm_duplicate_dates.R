@@ -325,7 +325,9 @@ if (nrow(multi_source_encounters) == 0) {
 
   message(glue("\nENC_TYPE distribution by SOURCE (multi-source encounters):"))
   for (src in unique(enc_type_dist$SOURCE)) {
-    src_rows <- enc_type_dist %>% filter(SOURCE == src) %>% arrange(desc(n))
+    src_rows <- enc_type_dist %>%
+      filter(SOURCE == src) %>%
+      arrange(desc(n))
     types_str <- paste(glue("{src_rows$ENC_TYPE}({src_rows$pct}%)"), collapse = ", ")
     message(glue("  {src}: {types_str}"))
   }
@@ -395,9 +397,11 @@ message(glue("  Written: flm_patient_duplicate_summary.csv ({format(nrow(patient
 # --- CSV 2: Date-level detail for multi-source encounters ---
 if (nrow(multi_source_encounters) > 0) {
   date_detail <- multi_source_encounters %>%
-    select(ID, admit_date_parsed, SOURCE, ENC_TYPE, ENCOUNTERID,
-           ADMIT_TIME, DISCHARGE_DATE, DISCHARGE_TIME,
-           PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY) %>%
+    select(
+      ID, admit_date_parsed, SOURCE, ENC_TYPE, ENCOUNTERID,
+      ADMIT_TIME, DISCHARGE_DATE, DISCHARGE_TIME,
+      PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY
+    ) %>%
     mutate(
       primary_missing = is_missing_payer(PAYER_TYPE_PRIMARY),
       secondary_missing = is_missing_payer(PAYER_TYPE_SECONDARY)

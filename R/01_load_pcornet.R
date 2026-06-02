@@ -294,15 +294,15 @@ DISPENSING_SPEC <- cols(
   DISPENSINGID = col_character(),
   PRESCRIBINGID = col_character(),
   ID = col_character(),
-  DISPENSE_DATE = col_character(),       # Parsed by parse_pcornet_date()
+  DISPENSE_DATE = col_character(), # Parsed by parse_pcornet_date()
   NDC = col_character(),
-  DISPENSE_SUP = col_integer(),          # Days supply
-  DISPENSE_AMT = col_double(),           # Quantity dispensed
+  DISPENSE_SUP = col_integer(), # Days supply
+  DISPENSE_AMT = col_double(), # Quantity dispensed
   DISPENSE_DOSE_DISP = col_double(),
   DISPENSE_DOSE_DISP_UNIT = col_character(),
   DISPENSE_ROUTE = col_character(),
   RAW_NDC = col_character(),
-  RXNORM_CUI = col_character(),          # KEY: chemo matching per D-12
+  RXNORM_CUI = col_character(), # KEY: chemo matching per D-12
   DISPENSE_SOURCE = col_character(),
   RAW_DISPENSE_MED_NAME = col_character(),
   SOURCE = col_character()
@@ -322,10 +322,10 @@ MED_ADMIN_SPEC <- cols(
   PRESCRIBINGID = col_character(),
   MEDADMIN_CODE = col_character(),
   MEDADMIN_TYPE = col_character(),
-  MEDADMIN_START_DATE = col_character(),  # Parsed by parse_pcornet_date()
-  MEDADMIN_STOP_DATE = col_character(),   # Parsed by parse_pcornet_date()
+  MEDADMIN_START_DATE = col_character(), # Parsed by parse_pcornet_date()
+  MEDADMIN_STOP_DATE = col_character(), # Parsed by parse_pcornet_date()
   MEDADMIN_ROUTE = col_character(),
-  RXNORM_CUI = col_character(),          # KEY: chemo matching per D-12
+  RXNORM_CUI = col_character(), # KEY: chemo matching per D-12
   RAW_MEDADMIN_MED_NAME = col_character(),
   SOURCE = col_character()
 )
@@ -343,14 +343,14 @@ LAB_RESULT_CM_SPEC <- cols(
   LAB_RESULTID = col_character(),
   ID = col_character(),
   ENCOUNTERID = col_character(),
-  LAB_ORDER_DATE = col_character(),     # Parsed by parse_pcornet_date()
-  RESULT_DATE = col_character(),        # Parsed by parse_pcornet_date()
-  SPECIMEN_DATE = col_character(),      # Parsed by parse_pcornet_date()
-  LAB_LOINC = col_character(),          # KEY: LOINC-based lab matching
+  LAB_ORDER_DATE = col_character(), # Parsed by parse_pcornet_date()
+  RESULT_DATE = col_character(), # Parsed by parse_pcornet_date()
+  SPECIMEN_DATE = col_character(), # Parsed by parse_pcornet_date()
+  LAB_LOINC = col_character(), # KEY: LOINC-based lab matching
   LAB_LOINC_SOURCE = col_character(),
-  LAB_PX = col_character(),             # CPT fallback matching
+  LAB_PX = col_character(), # CPT fallback matching
   LAB_PX_TYPE = col_character(),
-  RESULT_NUM = col_double(),            # Numeric result value
+  RESULT_NUM = col_double(), # Numeric result value
   RESULT_UNIT = col_character(),
   RESULT_QUAL = col_character(),
   RESULT_MODIFIER = col_character(),
@@ -374,7 +374,7 @@ LAB_RESULT_CM_SPEC <- cols(
 PROVIDER_SPEC <- cols(
   PROVIDERID = col_character(),
   PROVIDER_SEX = col_character(),
-  PROVIDER_SPECIALTY_PRIMARY = col_character(),  # KEY: NUCC taxonomy code matching
+  PROVIDER_SPECIALTY_PRIMARY = col_character(), # KEY: NUCC taxonomy code matching
   SOURCE = col_character()
 )
 
@@ -393,11 +393,11 @@ TABLE_SPECS <- list(
   TUMOR_REGISTRY1 = TUMOR_REGISTRY1_SPEC,
   TUMOR_REGISTRY2 = TUMOR_REGISTRY2_SPEC,
   TUMOR_REGISTRY3 = TUMOR_REGISTRY3_SPEC,
-  DISPENSING = DISPENSING_SPEC,          # Phase 9
-  MED_ADMIN = MED_ADMIN_SPEC,            # Phase 9
-  LAB_RESULT_CM = LAB_RESULT_CM_SPEC,   # Phase 10: surveillance lab values
-  PROVIDER = PROVIDER_SPEC,             # Phase 10: oncology provider specialty
-  DEATH = DEATH_SPEC                    # Phase 57: death dates for Gantt endpoints
+  DISPENSING = DISPENSING_SPEC, # Phase 9
+  MED_ADMIN = MED_ADMIN_SPEC, # Phase 9
+  LAB_RESULT_CM = LAB_RESULT_CM_SPEC, # Phase 10: surveillance lab values
+  PROVIDER = PROVIDER_SPEC, # Phase 10: oncology provider specialty
+  DEATH = DEATH_SPEC # Phase 57: death dates for Gantt endpoints
 )
 
 # ==============================================================================
@@ -424,7 +424,7 @@ TABLE_SPECS <- list(
 #' - Prints [CACHE HIT] or [CSV PARSE] status per table
 #' - Warns if any parse problems occurred
 load_pcornet_table <- function(table_name, file_path, col_spec,
-                                cache_dir = NULL, force_reload = FALSE) {
+                               cache_dir = NULL, force_reload = FALSE) {
   # Check file exists (per D-10: warn and skip)
   if (!file.exists(file_path)) {
     message(glue("WARNING: {table_name} not found at {file_path}. Skipping."))
@@ -468,9 +468,11 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
   parse_start <- Sys.time()
 
   # Load with explicit col_types (per D-08)
-  df <- vroom(file_path, col_types = col_spec, show_col_types = FALSE,
-              .name_repair = "check_unique",
-              num_threads = CONFIG$performance$num_threads)
+  df <- vroom(file_path,
+    col_types = col_spec, show_col_types = FALSE,
+    .name_repair = "check_unique",
+    num_threads = CONFIG$performance$num_threads
+  )
   n_parse_problems <- nrow(problems(df))
 
   # Parse all date columns with multi-format parser
@@ -541,7 +543,7 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
         df[[valid_col_name]] <- case_when(
           is.na(df[[ts_col]]) ~ NA,
           df[[ts_col]] < 0 ~ FALSE,
-          df[[ts_col]] >= 990 ~ FALSE,   # 990-999 are NAACCR sentinel codes
+          df[[ts_col]] >= 990 ~ FALSE, # 990-999 are NAACCR sentinel codes
           TRUE ~ TRUE
         )
         n_invalid <- sum(!df[[valid_col_name]], na.rm = TRUE)
@@ -561,8 +563,8 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
       valid_col_name <- paste0(dcol, "_VALID")
       df[[valid_col_name]] <- case_when(
         is.na(df[[dcol]]) ~ NA,
-        df[[dcol]] < date_range_min ~ FALSE,   # Pre-1901 (SAS/Excel epoch sentinels)
-        df[[dcol]] > date_range_max ~ FALSE,    # Extreme future dates
+        df[[dcol]] < date_range_min ~ FALSE, # Pre-1901 (SAS/Excel epoch sentinels)
+        df[[dcol]] > date_range_max ~ FALSE, # Extreme future dates
         TRUE ~ TRUE
       )
       n_invalid <- sum(!df[[valid_col_name]], na.rm = TRUE)
@@ -623,7 +625,7 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
   message(strrep("=", 60))
 
   # Read cache settings from CONFIG (Plan 01 added CONFIG$cache)
-  cache_dir    <- CONFIG$cache$raw_dir
+  cache_dir <- CONFIG$cache$raw_dir
   force_reload <- CONFIG$cache$force_reload
 
   pcornet <- imap(PCORNET_PATHS, function(path, table_name) {
@@ -633,7 +635,8 @@ if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet)
       spec <- cols(.default = col_character())
     }
     load_pcornet_table(table_name, path, spec,
-                       cache_dir = cache_dir, force_reload = force_reload)
+      cache_dir = cache_dir, force_reload = force_reload
+    )
   })
 
   # Summary

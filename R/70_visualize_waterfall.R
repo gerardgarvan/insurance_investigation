@@ -23,7 +23,7 @@
 #
 # ==============================================================================
 
-source("R/14_build_cohort.R")  # Loads attrition_log, hl_cohort, all upstream
+source("R/14_build_cohort.R") # Loads attrition_log, hl_cohort, all upstream
 
 library(ggplot2)
 library(dplyr)
@@ -72,7 +72,7 @@ p_waterfall <- ggplot(attrition_plot_data, aes(x = step, y = n_after)) +
   ) +
   scale_y_continuous(
     labels = comma,
-    expand = expansion(mult = c(0, 0.15))  # Extra space above for labels
+    expand = expansion(mult = c(0, 0.15)) # Extra space above for labels
   ) +
   labs(
     title = "Cohort Attrition Through Filter Steps",

@@ -198,7 +198,9 @@ message(glue("\nADMIT_DATE same-date duplicates per SITE:"))
 for (site in sort(unique(all_encounters$SITE))) {
   site_dupes <- admit_date_dupes %>% filter(SITE == site)
   n_dupe_rows <- nrow(site_dupes)
-  n_dupe_patient_dates <- site_dupes %>% distinct(ID, admit_date_parsed) %>% nrow()
+  n_dupe_patient_dates <- site_dupes %>%
+    distinct(ID, admit_date_parsed) %>%
+    nrow()
   n_dupe_patients <- n_distinct(site_dupes$ID)
   message(glue("  {site}: {format(n_dupe_rows, big.mark=',')} dupe rows, {format(n_dupe_patient_dates, big.mark=',')} patient-dates, {format(n_dupe_patients, big.mark=',')} patients"))
 }
@@ -212,7 +214,9 @@ discharge_date_dupes <- all_encounters %>%
 message(glue("\nDISCHARGE_DATE same-date duplicates per SITE:"))
 for (site in sort(unique(all_encounters$SITE))) {
   site_discharge_dupes <- discharge_date_dupes %>% filter(SITE == site)
-  n_discharge_patient_dates <- site_discharge_dupes %>% distinct(ID, discharge_date_parsed) %>% nrow()
+  n_discharge_patient_dates <- site_discharge_dupes %>%
+    distinct(ID, discharge_date_parsed) %>%
+    nrow()
   message(glue("  {site}: {format(n_discharge_patient_dates, big.mark=',')} patient-dates"))
 }
 
@@ -241,7 +245,9 @@ if (nrow(exact_dupes) > 0) {
 
   message(glue("Exact row duplicates total: {format(nrow(exact_dupes), big.mark=',')} rows"))
   for (site in sort(unique(exact_dupes_with_site$SITE))) {
-    n <- exact_dupes_with_site %>% filter(SITE == site) %>% nrow()
+    n <- exact_dupes_with_site %>%
+      filter(SITE == site) %>%
+      nrow()
     message(glue("  {site}: {format(n, big.mark=',')} rows"))
   }
 } else {
@@ -257,7 +263,9 @@ if (nrow(near_exact_dupes) > 0) {
 
   message(glue("\nNear-exact duplicates (excl. ENCOUNTERID) total: {format(nrow(near_exact_dupes), big.mark=',')} rows"))
   for (site in sort(unique(near_exact_dupes_with_site$SITE))) {
-    n <- near_exact_dupes_with_site %>% filter(SITE == site) %>% nrow()
+    n <- near_exact_dupes_with_site %>%
+      filter(SITE == site) %>%
+      nrow()
     message(glue("  {site}: {format(n, big.mark=',')} rows"))
   }
 } else {
@@ -293,15 +301,23 @@ message(glue("Patient-dates with multiple ENCOUNTER_SOURCEs: {format(nrow(multi_
 message(glue("\nBreakdown per SITE (same-source vs multi-source duplicates):"))
 for (site in sort(unique(patient_date_summary$SITE))) {
   site_summary <- patient_date_summary %>% filter(SITE == site)
-  n_same <- site_summary %>% filter(n_sources <= 1) %>% nrow()
-  n_multi <- site_summary %>% filter(n_sources > 1) %>% nrow()
+  n_same <- site_summary %>%
+    filter(n_sources <= 1) %>%
+    nrow()
+  n_multi <- site_summary %>%
+    filter(n_sources > 1) %>%
+    nrow()
   message(glue("  {site}: {format(nrow(site_summary), big.mark=',')} dupe patient-dates | same-source: {format(n_same, big.mark=',')} | multi-source: {format(n_multi, big.mark=',')}"))
 
   # Within same-source: same ENC_TYPE vs different ENC_TYPE
   same_source <- site_summary %>% filter(n_sources <= 1)
   if (nrow(same_source) > 0) {
-    same_enc <- same_source %>% filter(n_enc_types == 1) %>% nrow()
-    diff_enc <- same_source %>% filter(n_enc_types > 1) %>% nrow()
+    same_enc <- same_source %>%
+      filter(n_enc_types == 1) %>%
+      nrow()
+    diff_enc <- same_source %>%
+      filter(n_enc_types > 1) %>%
+      nrow()
     message(glue("    Same-source, same ENC_TYPE (potential true duplication): {format(same_enc, big.mark=',')}"))
     message(glue("    Same-source, different ENC_TYPE (clinically valid): {format(diff_enc, big.mark=',')}"))
   }
@@ -457,9 +473,11 @@ message(glue("  Written: all_site_patient_duplicate_summary.csv ({format(nrow(pa
 # --- CSV 2: Date-level detail for multi-source encounters (all_site_date_level_duplicate_detail.csv) ---
 if (nrow(multi_source_encounters) > 0) {
   date_detail <- multi_source_encounters %>%
-    select(SITE, ID, admit_date_parsed, ENCOUNTER_SOURCE, ENC_TYPE, ENCOUNTERID,
-           ADMIT_TIME, DISCHARGE_DATE, DISCHARGE_TIME,
-           PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY) %>%
+    select(
+      SITE, ID, admit_date_parsed, ENCOUNTER_SOURCE, ENC_TYPE, ENCOUNTERID,
+      ADMIT_TIME, DISCHARGE_DATE, DISCHARGE_TIME,
+      PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY
+    ) %>%
     mutate(
       primary_missing = is_missing_payer(PAYER_TYPE_PRIMARY),
       secondary_missing = is_missing_payer(PAYER_TYPE_SECONDARY)
@@ -494,15 +512,25 @@ aggregate_rows <- list()
 for (site in sort(unique(all_encounters$SITE))) {
   site_enc <- all_encounters %>% filter(SITE == site)
   site_pds <- patient_date_stats %>% filter(SITE == site)
-  n_site_patients <- demographic_tbl %>% filter(SOURCE == site) %>% n_distinct(.$ID)
+  n_site_patients <- demographic_tbl %>%
+    filter(SOURCE == site) %>%
+    n_distinct(.$ID)
 
   # Exact/near-exact counts for this site
   n_exact_site <- if (nrow(exact_dupes_with_site) > 0) {
-    exact_dupes_with_site %>% filter(SITE == site) %>% nrow()
-  } else { 0 }
+    exact_dupes_with_site %>%
+      filter(SITE == site) %>%
+      nrow()
+  } else {
+    0
+  }
   n_near_exact_site <- if (nrow(near_exact_dupes_with_site) > 0) {
-    near_exact_dupes_with_site %>% filter(SITE == site) %>% nrow()
-  } else { 0 }
+    near_exact_dupes_with_site %>%
+      filter(SITE == site) %>%
+      nrow()
+  } else {
+    0
+  }
 
   # Discharge date duplicate count for this site
   n_discharge_dupe_site <- discharge_date_dupes %>%
@@ -511,7 +539,9 @@ for (site in sort(unique(all_encounters$SITE))) {
     nrow()
 
   # Multi-source dates for this site
-  n_multi_source_site <- multi_source_dates %>% filter(SITE == site) %>% nrow()
+  n_multi_source_site <- multi_source_dates %>%
+    filter(SITE == site) %>%
+    nrow()
 
   # NA ENCOUNTER_SOURCE for this site
   n_na_enc_source_site <- na_enc_source_per_site %>%
@@ -572,9 +602,11 @@ message(glue("  Written: all_site_duplicate_aggregate_summary.csv ({nrow(aggrega
 # --- CSV 4: Source payer completeness per SITE (all_site_source_payer_completeness.csv) ---
 if (nrow(source_completeness) > 0) {
   source_completeness_out <- source_completeness %>%
-    select(SITE, ENCOUNTER_SOURCE, n_encounters, n_primary_present, pct_primary_present,
-           n_secondary_present, pct_secondary_present, n_both_present, pct_both_present,
-           n_either_present, pct_either_present) %>%
+    select(
+      SITE, ENCOUNTER_SOURCE, n_encounters, n_primary_present, pct_primary_present,
+      n_secondary_present, pct_secondary_present, n_both_present, pct_both_present,
+      n_either_present, pct_either_present
+    ) %>%
     arrange(SITE, desc(pct_primary_present))
   write_csv(source_completeness_out, file.path(output_dir, "all_site_source_payer_completeness.csv"))
   message(glue("  Written: all_site_source_payer_completeness.csv ({nrow(source_completeness_out)} rows)"))
@@ -597,20 +629,32 @@ cross_site_rows <- list()
 for (site in sort(unique(all_encounters$SITE))) {
   site_enc <- all_encounters %>% filter(SITE == site)
   site_pds <- patient_date_stats %>% filter(SITE == site)
-  n_site_patients <- demographic_tbl %>% filter(SOURCE == site) %>% n_distinct(.$ID)
+  n_site_patients <- demographic_tbl %>%
+    filter(SOURCE == site) %>%
+    n_distinct(.$ID)
 
   n_unique_dates <- nrow(site_pds)
   n_dupe_pd <- sum(site_pds$n_enc_this_date > 1)
   pct_dup_rate <- if (n_unique_dates > 0) round(100 * n_dupe_pd / n_unique_dates, 2) else 0
-  n_multi_src <- multi_source_dates %>% filter(SITE == site) %>% nrow()
+  n_multi_src <- multi_source_dates %>%
+    filter(SITE == site) %>%
+    nrow()
   pct_multi_of_dupes <- if (n_dupe_pd > 0) round(100 * n_multi_src / n_dupe_pd, 2) else 0
 
   n_exact_site <- if (nrow(exact_dupes_with_site) > 0) {
-    exact_dupes_with_site %>% filter(SITE == site) %>% nrow()
-  } else { 0 }
+    exact_dupes_with_site %>%
+      filter(SITE == site) %>%
+      nrow()
+  } else {
+    0
+  }
   n_near_exact_site <- if (nrow(near_exact_dupes_with_site) > 0) {
-    near_exact_dupes_with_site %>% filter(SITE == site) %>% nrow()
-  } else { 0 }
+    near_exact_dupes_with_site %>%
+      filter(SITE == site) %>%
+      nrow()
+  } else {
+    0
+  }
 
   # Get recommendation for this site
   site_rec <- site_recommendations %>% filter(SITE == site)

@@ -249,8 +249,10 @@ enr_bin_dist <- no_tx_medicaid %>%
     enrollment_duration_days < 1825 ~ "2-5 years",
     TRUE ~ "5+ years"
   )) %>%
-  mutate(enr_bin = factor(enr_bin, levels = c("<30 days", "30-179 days", "180-364 days",
-                                                "1-2 years", "2-5 years", "5+ years"))) %>%
+  mutate(enr_bin = factor(enr_bin, levels = c(
+    "<30 days", "30-179 days", "180-364 days",
+    "1-2 years", "2-5 years", "5+ years"
+  ))) %>%
   count(enr_bin, name = "n")
 message("  Enrollment duration groups:")
 for (i in seq_len(nrow(enr_bin_dist))) {
@@ -460,10 +462,12 @@ message(glue("  Rows: {nrow(no_tx_medicaid)}, Columns: {ncol(no_tx_medicaid)}"))
 
 # Diagnosis date detail
 dx_detail_out <- no_tx_medicaid %>%
-  select(ID, SOURCE, HL_SOURCE, HL_VERIFIED, first_hl_dx_date,
-         PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
-         age_at_enr_start, enrollment_duration_days,
-         N_ENCOUNTERS, N_ENCOUNTERS_WITH_PAYER) %>%
+  select(
+    ID, SOURCE, HL_SOURCE, HL_VERIFIED, first_hl_dx_date,
+    PAYER_CATEGORY_PRIMARY, PAYER_CATEGORY_AT_FIRST_DX,
+    age_at_enr_start, enrollment_duration_days,
+    N_ENCOUNTERS, N_ENCOUNTERS_WITH_PAYER
+  ) %>%
   arrange(first_hl_dx_date)
 
 output_path2 <- file.path(output_dir, "no_treatment_medicaid_dx_dates.csv")

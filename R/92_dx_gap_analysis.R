@@ -26,7 +26,7 @@
 #
 # ==============================================================================
 
-source("R/01_load_pcornet.R")  # Loads config, utils, and all PCORnet tables
+source("R/01_load_pcornet.R") # Loads config, utils, and all PCORnet tables
 
 library(dplyr)
 library(readr)
@@ -107,7 +107,7 @@ lymphoma_icd9_pattern <- "^20[0-8]"
 neither_lymphoma <- neither_dx %>%
   filter(
     (DX_TYPE == "10" & str_detect(DX_normalized, lymphoma_icd10_pattern)) |
-    (DX_TYPE == "09" & str_detect(DX_normalized, lymphoma_icd9_pattern))
+      (DX_TYPE == "09" & str_detect(DX_normalized, lymphoma_icd9_pattern))
   )
 
 n_lymphoma_patients <- n_distinct(neither_lymphoma$ID)
