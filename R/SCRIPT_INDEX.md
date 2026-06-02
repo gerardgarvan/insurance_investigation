@@ -41,9 +41,9 @@ Treatment inventory, duration, episodes, drug resolution, and first-line therapy
 | 24_treatment_codes_resolved.R | Create per-treatment-type resolved xlsx files (Radiation, SCT, Immunotherapy, Supportive Care) | 00_config |
 | 25_treatment_durations.R | Extract treatment dates from 7 PCORnet tables, calculate per-patient duration metrics (span, date count, episodes) | 00_config, 01_load_pcornet |
 | 26_treatment_episodes.R | Per-episode start/stop dates with episode length, historical date flagging, triggering codes | 00_config, 01_load_pcornet, 25_treatment_durations |
-| 27_drug_name_resolution.R | Drug name resolution for chemotherapy via RxNorm API (chemotherapy only) | 00_config, 01_load_pcornet |
-| 28_episode_classification.R | Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD) | 00_config, 01_load_pcornet |
-| 29_first_line_and_death_analysis.R | First-line therapy flagging (60-day clean period) and death date validation | 00_config, 01_load_pcornet |
+| 27_drug_name_resolution.R | Drug name resolution for chemotherapy via RxNorm API (chemotherapy only) | 00_config, utils/utils_duckdb |
+| 28_episode_classification.R | Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD) | 00_config, utils/utils_duckdb, utils/utils_dates |
+| 29_first_line_and_death_analysis.R | First-line therapy flagging (60-day clean period) and death date validation | 00_config, utils/utils_duckdb, utils/utils_dates |
 
 ## Cancer Site Analysis (40-53)
 
@@ -62,9 +62,9 @@ Cancer code classification, site confirmation, Gantt export, and death date vali
 | 48_cancer_summary_post_hl.R | Cancer summary filtered to diagnoses after first HL diagnosis (exploratory temporal analysis) | 00_config, 01_load_pcornet |
 | 49_cancer_summary_pre_post.R | Cancer summary with pre/post HL diagnosis counts per code (temporal partition analysis) | 00_config, 01_load_pcornet |
 | 50_all_codes_resolved.R | Regenerate all_codes_resolved.xlsx with current TREATMENT_CODES, patient counts, and multi-source descriptions | 00_config |
-| 51_gantt_data_export.R | Gantt chart CSV export with human-readable code descriptions (v1 schema) | 00_config |
-| 52_gantt_v2_export.R | Gantt v2 CSV export with encounter-level cancer categories, regimen labels, first-line flags | 00_config |
-| 53_death_date_validation.R | Death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows | 00_config, 01_load_pcornet |
+| 51_gantt_data_export.R | Gantt chart CSV export with human-readable code descriptions (v1 schema) | 00_config, utils/utils_duckdb, utils/utils_dates |
+| 52_gantt_v2_export.R | Gantt v2 CSV export with encounter-level cancer categories, regimen labels, first-line flags | 00_config, utils/utils_duckdb, utils/utils_dates |
+| 53_death_date_validation.R | Death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows | 00_config, utils/utils_duckdb, utils/utils_dates |
 
 ## Payer & QA (60-69)
 
@@ -104,7 +104,7 @@ Backend parity tests, cohort benchmarks, treatment verification, and smoke tests
 |--------|---------|---------|
 | 80_smoke_test_backends.R | Backend parity smoke test: run 6 predicates on RDS vs DuckDB with 100-patient sample | 00_config, 01_load_pcornet, 02_harmonize_payer, 10_cohort_predicates |
 | 81_parity_test_cohort.R | Full cohort build parity verification: RDS vs DuckDB using waldo::compare() | 00_config, 01_load_pcornet, 14_build_cohort |
-| 82_benchmark_cohort.R | RDS vs DuckDB cohort build benchmark: 3 runs per backend, median comparison | 00_config, 01_load_pcornet, 14_build_cohort |
+| 82_benchmark_cohort.R | RDS vs DuckDB cohort build benchmark: 3 runs per backend, median comparison | 00_config, 01_load_pcornet |
 | 83_generate_speedup_report.R | Generate DuckDB vs RDS speedup report from benchmark CSV | 00_config |
 | 84_test_durations.R | Verification script: clinical plausibility checks, structural validation, anomaly detection for treatment_durations.rds | 00_config, 25_treatment_durations |
 | 85_test_episodes.R | Verification script: structural, data quality, historical flag, clinical plausibility checks for treatment_episodes.rds | 00_config, 26_treatment_episodes |
