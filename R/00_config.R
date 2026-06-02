@@ -1527,6 +1527,15 @@ PROVIDER_SPECIALTIES <- list(
 )
 
 # ==============================================================================
+# SECTION 7b: DEFENSIVE CODING LIBRARY ----
+# ==============================================================================
+# WHY load checkmate here: Per D-04, checkmate is loaded once in 00_config.R.
+# Since every production script sources 00_config.R (directly or via chain),
+# checkmate assertions are available everywhere without per-script library() calls.
+# The 5 assertion helpers in R/utils/utils_assertions.R use checkmate functions.
+library(checkmate)
+
+# ==============================================================================
 # SECTION 8: AUTO-SOURCE UTILITY FUNCTIONS ----
 # ==============================================================================
 # Load all utility modules from R/utils/ subfolder.
