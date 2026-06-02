@@ -33,6 +33,9 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
+n# ==============================================================================
+# SECTION 1: SETUP ----
+# ==============================================================================
 
 RDS_PATH <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 
@@ -43,6 +46,9 @@ if (!file.exists(RDS_PATH)) {
 d <- readRDS(RDS_PATH)
 
 message("=== Phase 43 Verification: Treatment Duration Checks ===\n")
+n# ==============================================================================
+# SECTION 2: EXECUTION ----
+# ==============================================================================
 
 # --- 1. Structure check ---
 message("--- 1. Structure ---")
@@ -305,3 +311,6 @@ check_file(xlsx_path, "XLSX report")
 check_file(png_path, "Distribution PNG")
 
 message("\n=== Verification Complete ===")
+n# ==============================================================================
+# SECTION 2: EXECUTION ----
+# ==============================================================================

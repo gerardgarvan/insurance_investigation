@@ -1,11 +1,30 @@
 # Phase 53: Death Date Validation & Treatment Timeline Cleanup
-# Decision traceability: D-01 through D-12 from 59-CONTEXT.md
-# Inputs: DuckDB DEATH table, treatment_episodes.rds, confirmed_hl_cohort.rds,
-#         DuckDB ENCOUNTER table, DuckDB DIAGNOSIS table, DuckDB DEMOGRAPHIC table, DuckDB ENROLLMENT table
-# Outputs: death_date_validation.xlsx, death_date_validation.csv, validated_death_dates.rds
+#
+# Purpose:
+#   Validate death dates against treatment timelines and identify impossible
+#   deaths (death before earliest treatment) for exclusion from Gantt charts
+#
+# Inputs:
+#   - DuckDB DEATH table
+#   - cache/outputs/treatment_episodes.rds
+#   - output/confirmed_hl_cohort.rds
+#   - DuckDB ENCOUNTER, DIAGNOSIS, DEMOGRAPHIC, ENROLLMENT tables
+#
+# Outputs:
+#   - output/death_date_validation.xlsx
+#   - output/death_date_validation.csv
+#   - cache/outputs/validated_death_dates.rds
+#
+# Dependencies:
+#   - 00_config (CONFIG paths)
+#   - utils_duckdb (get_pcornet_table, connection management)
+#   - utils_dates (parse_pcornet_date)
+#
+# Requirements:
+#   DOC-01, DOC-02, DOC-03
 
 # ==============================================================================
-# SECTION 1: SETUP AND CONFIGURATION
+# SECTION 1: SETUP AND CONFIGURATION ----
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -38,7 +57,7 @@ message(glue("  RDS:  {OUTPUT_RDS}\n"))
 
 
 # ==============================================================================
-# SECTION 2: LOAD DEATH DATA (per D-04, D-11)
+# SECTION 2: LOAD DEATH DATA (per D-04, D-11) ----
 # ==============================================================================
 
 message("--- Loading DEATH table ---")
@@ -74,7 +93,7 @@ message(glue("  Patients with valid death dates: {nrow(death_data)}"))
 
 
 # ==============================================================================
-# SECTION 3: LOAD TREATMENT EPISODES AND COMPUTE EARLIEST TREATMENT DATE (per D-01)
+# SECTION 3: LOAD TREATMENT EPISODES AND COMPUTE EARLIEST TREATMENT DATE (per D-01) ----
 # ==============================================================================
 
 message("\n--- Loading treatment episodes ---")
@@ -97,7 +116,7 @@ message(glue("  Patients with treatment records: {nrow(earliest_treatment)}"))
 
 
 # ==============================================================================
-# SECTION 4: IDENTIFY IMPOSSIBLE DEATH DATES (per D-01, D-02)
+# SECTION 4: IDENTIFY IMPOSSIBLE DEATH DATES (per D-01, D-02) ----
 # ==============================================================================
 
 message("\n--- Identifying impossible death dates ---")
@@ -164,7 +183,7 @@ if (!file.exists(COHORT_RDS)) {
 
 
 # ==============================================================================
-# SECTION 5: DETECT POST-DEATH CLINICAL ACTIVITY (per D-03)
+# SECTION 5: DETECT POST-DEATH CLINICAL ACTIVITY (per D-03) ----
 # ==============================================================================
 
 message("\n--- Detecting post-death clinical activity ---")
@@ -224,7 +243,7 @@ message(glue("  Total patients with ANY post-death activity: {sum(valid_deaths$p
 
 
 # ==============================================================================
-# SECTION 6: DEATH-ONLY PATIENT INVESTIGATION (per D-05, D-06)
+# SECTION 6: DEATH-ONLY PATIENT INVESTIGATION (per D-05, D-06) ----
 # ==============================================================================
 
 message("\n--- Investigating death-only patients ---")
@@ -334,7 +353,7 @@ death_only_investigation %>%
 
 
 # ==============================================================================
-# SECTION 7: BUILD COMBINED VALIDATION DATASET AND SAVE RDS (per D-12)
+# SECTION 7: BUILD COMBINED VALIDATION DATASET AND SAVE RDS (per D-12) ----
 # ==============================================================================
 
 message("\n--- Building combined validation dataset ---")
@@ -366,7 +385,7 @@ message(glue("Saved CSV export: {OUTPUT_CSV}"))
 
 
 # ==============================================================================
-# SECTION 8: BUILD THREE-SHEET XLSX REPORT (per D-10)
+# SECTION 8: BUILD THREE-SHEET XLSX REPORT (per D-10) ----
 # ==============================================================================
 
 message("\n--- Building three-sheet XLSX report ---")
@@ -497,7 +516,7 @@ message(glue("Saved XLSX report: {OUTPUT_XLSX}"))
 
 
 # ==============================================================================
-# SECTION 9: FINAL SUMMARY
+# SECTION 9: FINAL SUMMARY ----
 # ==============================================================================
 
 message("\n=== Death Date Validation Complete ===\n")

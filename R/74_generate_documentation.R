@@ -31,6 +31,9 @@
 # ------------------------------------------------------------------------------
 
 source("R/00_config.R")
+n# ==============================================================================
+# SECTION 1: SETUP ----
+# ==============================================================================
 
 if (!requireNamespace("glue", quietly = TRUE)) {
   stop("Package 'glue' is required. Install with: install.packages('glue')")
@@ -678,5 +681,9 @@ tryCatch({
   message("The .md file is the source of truth and was written successfully.")
   message("To render manually: rmarkdown::render('", md_path, "')")
 })
+
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
 
 message("Documentation generation complete.")

@@ -3,11 +3,30 @@
 # Updated by Phase 64: Data Quality Cleanup for Tableau Import
 # ==============================================================================
 #
-# PURPOSE:
+# Purpose:
 #   Produce Gantt v2 CSV files (gantt_episodes_v2.csv, gantt_detail_v2.csv)
 #   integrating all v1.8 enhancements (encounter-level cancer categories, HL flags,
 #   specific drug names, regimen labels, first-line flags) while preserving
 #   existing v1 output files unchanged for backward compatibility.
+#
+# Inputs:
+#   - cache/outputs/treatment_episodes.rds (enriched by Phases 60-62)
+#   - cache/outputs/treatment_episode_detail.rds (enriched by Phase 60)
+#   - cache/outputs/code_descriptions.rds (Phase 48b: code -> description lookup)
+#   - cache/outputs/validated_death_dates.rds (Phase 59: pre-validated death dates)
+#   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
+#
+# Outputs:
+#   - output/gantt_episodes_v2.csv (14 columns, Phase 64 cleaned & trimmed)
+#   - output/gantt_detail_v2.csv (13 columns, Phase 64 cleaned & trimmed)
+#
+# Dependencies:
+#   - 00_config (CONFIG paths, TREATMENT_TYPE_COLORS)
+#   - utils_duckdb (DuckDB connection helpers)
+#   - utils_dates (date parsing utilities)
+#
+# Requirements:
+#   DOC-01, DOC-02, DOC-03
 #
 #   Phase 64 additions: Data quality cleanup for direct Tableau import —
 #   semicolon-separated multi-value fields, simplified drug names, no literal NAs,
@@ -77,7 +96,7 @@
 # ==============================================================================
 
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# --- SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -102,7 +121,7 @@ OUTPUT_EPISODES_V2 <- file.path(CONFIG$output_dir, "gantt_episodes_v2.csv")
 OUTPUT_DETAIL_V2   <- file.path(CONFIG$output_dir, "gantt_detail_v2.csv")
 
 
-# --- SECTION 2: LOAD INPUT DATA ---
+# --- SECTION 2: LOAD INPUT DATA ----
 
 message("=== Phase 63: Enhanced Gantt Export - v2 CSV ===\n")
 
@@ -145,7 +164,7 @@ if (!"is_first_line" %in% names(episodes)) {
 }
 
 
-# --- SECTION 3: CODE DESCRIPTION LOOKUP ---
+# --- SECTION 3: CODE DESCRIPTION LOOKUP ----
 
 # Load code descriptions (Phase 48b) — non-fatal if missing
 code_descriptions <- NULL
@@ -173,7 +192,7 @@ map_codes_to_descriptions <- function(codes_str) {
 }
 
 
-# --- SECTION 4: SELECT AND ORDER COLUMNS ---
+# --- SECTION 4: SELECT AND ORDER COLUMNS ----
 
 message("\n--- Building v2 export tables ---")
 
@@ -468,7 +487,7 @@ if (file.exists(COHORT_RDS)) {
 }
 
 
-# --- SECTION 4D: DATA QUALITY CLEANUP ---
+# --- SECTION 4D: DATA QUALITY CLEANUP ----
 
 message("\n--- Section 4D: Data Quality Cleanup (Phase 64) ---")
 
@@ -657,7 +676,7 @@ if (ncol(detail_export) != expected_detail_cols) {
 message("  Column count verification: PASSED")
 
 
-# --- SECTION 5: WRITE CSV OUTPUTS ---
+# --- SECTION 5: WRITE CSV OUTPUTS ----
 
 message("\n--- Writing v2 CSV outputs ---")
 
@@ -670,7 +689,7 @@ message(glue("  Wrote {OUTPUT_DETAIL_V2}"))
 message(glue("    {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
 
 
-# --- SECTION 6: FINAL SUMMARY ---
+# --- SECTION 6: FINAL SUMMARY ----
 
 message("\n=== v2 Gantt Export Complete ===\n")
 

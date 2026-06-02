@@ -1,30 +1,38 @@
 # =============================================================================
 # Phase 50: All Codes Resolved XLSX Update
 # =============================================================================
-# Regenerates all_codes_resolved.xlsx and 5 per-type resolved xlsx files from
-# the current TREATMENT_CODES in R/00_config.R, with patient/record counts
-# queried from PCORnet data via DuckDB and descriptions from a multi-source
-# cascade (Phase 39-41 RDS artifacts, Phase 45 hardcoded descriptions, config
-# inline comments).
 #
-# Also curates R/00_config.R inline comments where better descriptions are
-# available from API sources.
+# Purpose:
+#   Regenerate all_codes_resolved.xlsx from current TREATMENT_CODES with
+#   patient/record counts from DuckDB and multi-source description cascade
 #
-# Input:  R/00_config.R (TREATMENT_CODES source of truth)
-#         PCORnet data via DuckDB (PROCEDURES, PRESCRIBING, MED_ADMIN, ENCOUNTER)
-#         output/unmatched_codes_classified.rds (Phase 39, optional)
-#         output/unmatched_ndc_classified.rds (Phase 40, optional)
-# Output: all_codes_resolved.xlsx (6 sheets: 5 types + Summary)
-#         chemotherapy_codes_resolved.xlsx
-#         radiation_codes_resolved.xlsx
-#         sct_codes_resolved.xlsx
-#         immunotherapy_codes_resolved.xlsx
-#         supportive_care_codes_resolved.xlsx
-#         R/00_config.R (inline comment updates)
+# Inputs:
+#   - R/00_config.R (TREATMENT_CODES source of truth)
+#   - PCORnet data via DuckDB (PROCEDURES, PRESCRIBING, MED_ADMIN, ENCOUNTER)
+#   - output/unmatched_codes_classified.rds (Phase 39, optional)
+#   - output/unmatched_ndc_classified.rds (Phase 40, optional)
+#
+# Outputs:
+#   - all_codes_resolved.xlsx (6 sheets: 5 types + Summary)
+#   - chemotherapy_codes_resolved.xlsx
+#   - radiation_codes_resolved.xlsx
+#   - sct_codes_resolved.xlsx
+#   - immunotherapy_codes_resolved.xlsx
+#   - supportive_care_codes_resolved.xlsx
+#   - R/00_config.R (inline comment updates)
+#
+# Dependencies:
+#   - 00_config (TREATMENT_CODES, CONFIG paths)
+#   - utils_duckdb (get_pcornet_table)
+#   - utils_treatment (safe_table helper)
+#
+# Requirements:
+#   DOC-01, DOC-02, DOC-03
+#
 # =============================================================================
 
 # =============================================================================
-# SECTION 1: SETUP AND CONFIGURATION
+# SECTION 1: SETUP AND CONFIGURATION ----
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -71,7 +79,7 @@ code_type_map <- tribble(
 message(glue("Code type map: {nrow(code_type_map)} treatment vector names"))
 
 # =============================================================================
-# SECTION 2: DESCRIPTION CASCADE
+# SECTION 2: DESCRIPTION CASCADE ----
 # =============================================================================
 
 message("\nBuilding description lookup from multi-source cascade...")
@@ -186,7 +194,7 @@ config_comments <- extract_config_comments()
 message(glue("  Config inline comments: {nrow(config_comments)} codes"))
 
 # =============================================================================
-# SECTION 3: DUCKDB COUNT QUERIES
+# SECTION 3: DUCKDB COUNT QUERIES ----
 # =============================================================================
 
 message("\nQuerying PCORnet tables for patient/record counts...")
@@ -379,7 +387,7 @@ if (!is.null(enc_tbl)) {
 message(glue("  Count results: {nrow(count_results)} code-vector combinations"))
 
 # =============================================================================
-# SECTION 4: ASSEMBLE MASTER DATA FRAME
+# SECTION 4: ASSEMBLE MASTER DATA FRAME ----
 # =============================================================================
 
 message("\nAssembling master data frame with descriptions...")
@@ -447,7 +455,7 @@ message("\nSummary by category:")
 print(summary_by_category, n = Inf)
 
 # =============================================================================
-# SECTION 5: CONFIG COMMENT CURATION
+# SECTION 5: CONFIG COMMENT CURATION ----
 # =============================================================================
 
 message("\nCurating R/00_config.R inline comments...")
@@ -540,7 +548,7 @@ if (nrow(codes_to_update) > 0) {
 }
 
 # =============================================================================
-# SECTION 6: XLSX GENERATION
+# SECTION 6: XLSX GENERATION ----
 # =============================================================================
 
 # 6a. write_resolved_xlsx function (adapted from R/42)
@@ -768,7 +776,7 @@ wb_all$save("all_codes_resolved.xlsx")
 message("  Wrote all_codes_resolved.xlsx")
 
 # =============================================================================
-# SECTION 7: FINAL SUMMARY
+# SECTION 7: FINAL SUMMARY ----
 # =============================================================================
 
 message("\n=== Phase 5 Complete ===")

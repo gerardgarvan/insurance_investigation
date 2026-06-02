@@ -307,6 +307,10 @@ for (item in RESOLVE_CATEGORIES) {
 # Step 2: Verify chemotherapy file
 message("Step 2: Verifying chemotherapy_codes_resolved.xlsx...\n")
 if (file.exists(CHEMO_RESOLVED)) {
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
+
   result <- verify_chemotherapy()
   if (result$pass) {
     message("\nChemotherapy verification: ALL CHECKS PASSED")

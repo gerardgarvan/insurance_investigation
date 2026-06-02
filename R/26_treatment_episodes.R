@@ -1151,6 +1151,10 @@ message(glue("Phase 60 audit saved: {AUDIT_XLSX}"))
 
 # --- SECTION 8: FINAL SUMMARY ---
 
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
+
 message("\n=== Phase 44 Complete ===")
 message(glue("Total episodes: {nrow(all_episodes)}"))
 message(glue("Unique patients: {n_distinct(all_episodes$patient_id)}"))

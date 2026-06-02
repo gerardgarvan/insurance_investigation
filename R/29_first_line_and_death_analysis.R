@@ -378,4 +378,8 @@ message(glue("  DEATH-03 (post-death activity): {n_post_death}"))
 message("\nFirst-line regimen distribution:")
 print(regimen_dist)
 
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
+
 message("\n=== Analysis complete ===\n")

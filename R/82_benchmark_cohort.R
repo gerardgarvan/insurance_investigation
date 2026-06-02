@@ -37,6 +37,9 @@ message("BENCHMARK SETUP: Loading infrastructure")
 message(strrep("=", 60))
 
 source("R/00_config.R")
+n# ==============================================================================
+# SECTION 1: SETUP ----
+# ==============================================================================
 source("R/01_load_pcornet.R")
 
 # Ensure DuckDB connection is open for DuckDB runs
@@ -168,5 +171,9 @@ message(glue("\nVariance: RDS sd={round(sd_rds, 3)}s, DuckDB sd={round(sd_ddb, 3
 
 USE_DUCKDB <<- FALSE  # Restore default
 message(strrep("=", 60))
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
+
 message("Benchmark complete")
 message(strrep("=", 60))

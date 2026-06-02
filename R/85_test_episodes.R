@@ -31,6 +31,9 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
+n# ==============================================================================
+# SECTION 1: SETUP ----
+# ==============================================================================
 
 RDS_PATH <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 
@@ -41,6 +44,9 @@ if (!file.exists(RDS_PATH)) {
 d <- readRDS(RDS_PATH)
 
 message("=== Phase 44 Verification: Treatment Episode Checks ===\n")
+n# ==============================================================================
+# SECTION 2: EXECUTION ----
+# ==============================================================================
 
 # --- 1. STRUCTURE CHECK ---
 message("--- 1. Structure ---")
@@ -306,3 +312,6 @@ for (csv_path in csv_paths) {
 
 
 message("\n=== Phase 44 Verification Complete ===")
+n# ==============================================================================
+# SECTION 2: EXECUTION ----
+# ==============================================================================

@@ -1,13 +1,10 @@
 # ==============================================================================
 # Phase 48: Cancer Summary - Post-HL Temporal Filtering
 # ==============================================================================
-# Creates post-HL cancer summary variants filtered to cancer diagnoses occurring
-# AFTER each patient's first HL diagnosis date, with EXPLORATORY labeling and
-# a side-by-side Comparison sheet.
 #
-# This script queries the DuckDB DIAGNOSIS table directly for raw date rows,
-# applies temporal filtering (DX_DATE > first_hl_dx_date), and re-aggregates
-# patient-code metrics. It does NOT modify baseline R/55 outputs.
+# Purpose:
+#   Create post-HL cancer summary variants filtered to diagnoses occurring
+#   AFTER each patient's first HL diagnosis date for exploratory comparison
 #
 # Inputs:
 #   - output/confirmed_hl_cohort.rds (Phase 47 output: ID, first_hl_dx_date, first_hl_dx_source)
@@ -20,12 +17,17 @@
 #   - output/tables/cancer_summary_post_hl.xlsx (single flat sheet, EXPLORATORY)
 #   - output/tables/cancer_summary_table_post_hl.xlsx (3-sheet styled workbook)
 #
-# Usage:
-#   Rscript R/48_cancer_summary_post_hl.R
+# Dependencies:
+#   - 00_config (CONFIG paths, PREFIX_MAP for classification)
+#   - 01_load_pcornet (DuckDB connection, get_pcornet_table)
+#
+# Requirements:
+#   DOC-01, DOC-02, DOC-03
+#
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 1: SETUP
+# SECTION 1: SETUP ----
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -62,7 +64,7 @@ message(glue("Output Table XLSX:  {OUTPUT_TABLE_XLSX}"))
 message(glue("Sentinel cutoff:    {SENTINEL_CUTOFF}"))
 
 # ==============================================================================
-# SECTION 2: PREFIX_MAP AND classify_codes()
+# SECTION 2: PREFIX_MAP AND classify_codes() ----
 # ==============================================================================
 # Copied from R/55 lines 69-338 for script independence.
 # All 309 entries including D-codes are retained (input data has no D-codes,
@@ -342,7 +344,7 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 3: LOAD INPUTS
+# SECTION 3: LOAD INPUTS ----
 # ==============================================================================
 
 message(glue("\nLoading confirmed HL cohort from {INPUT_RDS}..."))
@@ -368,7 +370,7 @@ cancer_summary_baseline <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
 message(glue("  Baseline cancer_summary: {format(nrow(cancer_summary_baseline), big.mark=',')} rows, {format(n_distinct(cancer_summary_baseline$ID), big.mark=',')} patients"))
 
 # ==============================================================================
-# SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS
+# SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----
 # ==============================================================================
 
 message("\nQuerying DIAGNOSIS for C-code diagnosis rows...")
@@ -397,7 +399,7 @@ dx_raw <- dx_raw %>%
 message(glue("  After sentinel exclusion: {format(nrow(dx_raw), big.mark=',')} rows"))
 
 # ==============================================================================
-# SECTION 5: APPLY TEMPORAL FILTER (DX_DATE > first_hl_dx_date)
+# SECTION 5: APPLY TEMPORAL FILTER (DX_DATE > first_hl_dx_date) ----
 # ==============================================================================
 
 message("\nApplying temporal filter: DX_DATE > first_hl_dx_date (strict >)...")
@@ -430,7 +432,7 @@ message(glue("  Post-HL rows remaining: {format(n_after_filter, big.mark=',')}")
 message(glue("  Post-HL patients: {format(n_patients_post_hl, big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 6: RE-AGGREGATE PATIENT-CODE METRICS
+# SECTION 6: RE-AGGREGATE PATIENT-CODE METRICS ----
 # ==============================================================================
 
 message("\nRe-aggregating patient-code metrics from post-HL rows...")
@@ -478,7 +480,7 @@ message(glue("  Unique patients: {format(n_distinct(cancer_summary_post_hl$ID), 
 message(glue("  Unique codes: {format(n_distinct(cancer_summary_post_hl$cancer_code), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 7: ADD DESCRIPTIONS AND CATEGORY
+# SECTION 7: ADD DESCRIPTIONS AND CATEGORY ----
 # ==============================================================================
 
 message("\nAdding descriptions and categories...")
@@ -509,7 +511,7 @@ message(glue("  Post-HL code count: {format(n_distinct(cancer_summary_post_hl$ca
 message(glue("  Post-HL row count: {format(nrow(cancer_summary_post_hl), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 8: QUERY RECORD COUNTS FROM DIAGNOSIS (DuckDB)
+# SECTION 8: QUERY RECORD COUNTS FROM DIAGNOSIS (DuckDB) ----
 # ==============================================================================
 
 message("\nComputing post-HL record counts...")
@@ -526,7 +528,7 @@ cancer_summary_post_hl <- cancer_summary_post_hl %>%
 message(glue("  Total post-HL records across all codes: {format(sum(cancer_summary_post_hl$record_count), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 9: CATEGORY-LEVEL AGGREGATION
+# SECTION 9: CATEGORY-LEVEL AGGREGATION ----
 # ==============================================================================
 
 message("\nAggregating to category level (post-HL)...")
@@ -551,7 +553,7 @@ category_summary_post_hl <- cancer_summary_post_hl %>%
 message(glue("  Category summary: {nrow(category_summary_post_hl)} rows"))
 
 # ==============================================================================
-# SECTION 10: CODE-LEVEL AGGREGATION
+# SECTION 10: CODE-LEVEL AGGREGATION ----
 # ==============================================================================
 
 message("Aggregating to code level (post-HL)...")
@@ -606,7 +608,7 @@ totals_code_post_hl <- tibble(
 )
 
 # ==============================================================================
-# SECTION 11: WRITE OUTPUTS
+# SECTION 11: WRITE OUTPUTS ----
 # ==============================================================================
 
 message(glue("\nWriting outputs..."))
@@ -995,7 +997,7 @@ message(glue("    Sheet '{SHEET2}': {n_data2} data rows + 1 totals row"))
 message(glue("    Sheet '{SHEET3}': {n_data3} comparison rows"))
 
 # ==============================================================================
-# SECTION 12: CLEANUP
+# SECTION 12: CLEANUP ----
 # ==============================================================================
 
 close_pcornet_con()

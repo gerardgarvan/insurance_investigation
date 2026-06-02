@@ -49,6 +49,9 @@ if (exists("attrition_log")) rm(attrition_log)
 
 # Source config first to ensure pcornet list is loaded
 source("R/00_config.R")
+n# ==============================================================================
+# SECTION 1: SETUP ----
+# ==============================================================================
 source("R/01_load_pcornet.R")  # Loads pcornet$ list
 
 # Now run the cohort build pipeline
@@ -236,6 +239,10 @@ message(strrep("=", 70))
 # Return result invisibly for programmatic use
 invisible(list(
   all_pass = all_pass,
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
+
   check_1_cohort = check_1_cohort,
   check_1_attrition = check_1_attrition,
   check_2_patid_set = check_2,

@@ -1,37 +1,10 @@
 # =============================================================================
 # Phase 51: Gantt Chart Data Export
 # =============================================================================
-# Combines treatment episode and episode detail RDS artifacts into two CSV files
-# for third-party Gantt chart visualization.
 #
-# Decision traceability:
-#   D-01: Two-table output (bars + ticks) with exact column specs
-#   D-02: Detail table preserves one-row-per-code granularity
-#   D-03: Separate rows by treatment type (concurrent as separate rows)
-#   D-04: Full cohort (no filtering)
-#   D-05: No payer tier data
-#   D-06: CSV output only
-#   D-07: Load from existing RDS artifacts
-#   D-03 (Phase 02): triggering_code_description column in detail CSV
-#   D-04 (Phase 02): triggering_code_descriptions column in episodes CSV (comma-separated, same order)
-#   D-05 (Phase 02): Empty string for missing descriptions
-#   D-06 (Phase 02): Description columns in CSVs only
-#   D-01 (Phase 57): Cancer categories from cancer_summary.csv via PREFIX_MAP classification
-#   D-02 (Phase 57): Comma-separated cancer_category column (matches triggering_codes pattern)
-#   D-03 (Phase 57): is_hodgkin = TRUE when "Hodgkin Lymphoma" in cancer_category
-#   D-04 (Phase 57): Death dates from DEATH table (DEATH_Mailhot_V1.csv)
-#   D-05 (Phase 57): Full pipeline integration for DEATH (config + load spec + DuckDB)
-#   D-06 (Phase 57): Death rows: treatment_type="Death", single-point, episode_length_days=0
-#   D-07 (Phase 57): Death rows in BOTH gantt_episodes.csv and gantt_detail.csv
-#   D-08 (Phase 57): 1900 sentinel date nullification on DEATH_DATE
-#   D-01 (Phase 59): Impossible death dates excluded (death before earliest treatment)
-#   D-02 (Phase 59): Impossible deaths REMOVED from Gantt CSVs (patient keeps treatment rows)
-#   D-07 (Phase 59): HL Diagnosis treatment row in both CSVs (treatment_type="HL Diagnosis")
-#   D-08 (Phase 59): HL Diagnosis rows for ALL patients with HL dx, not only confirmed 7-day cohort
-#   D-09 (Phase 59): HL Diagnosis in treatment category for Gantt (date = min(DIAGNOSIS, TUMOR_REGISTRY))
-#   D-01 (Phase 60): encounter_ids column (comma-separated) from R/44a treatment_episodes.rds
-#   D-04 (Phase 60): drug_names column (comma-separated) from R/44a treatment_episodes.rds
-#   D-11 (Phase 60): ENCOUNTERID and drug_name columns from treatment_episode_detail.rds
+# Purpose:
+#   Combine treatment episode and detail RDS artifacts into two CSV files
+#   for third-party Gantt chart visualization (v1 schema with cancer categories)
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (episode-level)
@@ -44,10 +17,19 @@
 # Outputs:
 #   - output/gantt_episodes.csv (bars: one row per patient/type/episode)
 #   - output/gantt_detail.csv (ticks: one row per patient/date/code)
+#
+# Dependencies:
+#   - 00_config (CONFIG paths, PREFIX_MAP for cancer classification)
+#   - utils_duckdb (get_pcornet_table, connection management)
+#   - utils_dates (parse_pcornet_date)
+#
+# Requirements:
+#   DOC-01, DOC-02, DOC-03
+#
 # =============================================================================
 
 
-# --- SECTION 1: SETUP AND CONFIGURATION ---
+# --- SECTION 1: SETUP AND CONFIGURATION ----
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -81,7 +63,7 @@ VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dat
 COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
 
-# --- SECTION 2: LOAD INPUT DATA ---
+# --- SECTION 2: LOAD INPUT DATA ----
 
 message("=== Phase 01: Gantt Chart Data Export ===\n")
 
@@ -467,7 +449,7 @@ if (!file.exists(COHORT_RDS)) {
 }
 
 
-# --- SECTION 3: VALIDATE COLUMN STRUCTURE ---
+# --- SECTION 3: VALIDATE COLUMN STRUCTURE ----
 
 # Expected columns per D-01 (episode-level bars table)
 # Phase 60: added encounter_ids and drug_names
@@ -501,7 +483,7 @@ if (length(missing_detail_cols) > 0) {
 message("  Column validation passed")
 
 
-# --- SECTION 3B: LOAD CODE DESCRIPTIONS (Phase 02) ---
+# --- SECTION 3B: LOAD CODE DESCRIPTIONS (Phase 02) ----
 
 if (!file.exists(DESCRIPTIONS_RDS)) {
   stop(glue("ERROR: {DESCRIPTIONS_RDS} not found. Run R/48b_build_code_descriptions.R first."))
@@ -770,7 +752,7 @@ if (nrow(hl_cohort) > 0) {
 }
 
 
-# --- SECTION 5: WRITE CSV OUTPUTS ---
+# --- SECTION 5: WRITE CSV OUTPUTS ----
 
 message("\n--- Writing CSV outputs ---")
 
@@ -781,7 +763,7 @@ write.csv(detail_export, OUTPUT_DETAIL, row.names = FALSE)
 message(glue("  Wrote {OUTPUT_DETAIL} ({format(nrow(detail_export), big.mark = ',')} rows)"))
 
 
-# --- SECTION 6: FINAL SUMMARY ---
+# --- SECTION 6: FINAL SUMMARY ----
 
 message("\n=== Phase 01 Complete ===")
 message(glue("  Unique patients in episodes: {format(n_distinct(episodes_export$patient_id), big.mark = ',')}"))

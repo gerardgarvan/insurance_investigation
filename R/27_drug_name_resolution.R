@@ -42,7 +42,7 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 
 # =============================================================================
-# API Lookup Functions (Copied from R/40_investigate_unmatched_ndc.R)
+# SECTION 1: API Lookup Functions ----
 # =============================================================================
 # Copied from R/40_investigate_unmatched_ndc.R for script independence (per Claude's discretion)
 
@@ -202,7 +202,7 @@ lookup_drug_codes_batch <- function(codes_df) {
 }
 
 # =============================================================================
-# Extract Unique Chemotherapy Drug Codes from Patient Data (per D-08)
+# SECTION 2: Extract Unique Chemotherapy Drug Codes ----
 # =============================================================================
 
 message("=== Phase 60: Drug Name Resolution ===\n")

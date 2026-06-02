@@ -902,6 +902,10 @@ message(glue("  Saved audit workbook: {OUTPUT_XLSX}"))
 message("\n--- Creating flat CSV export ---")
 
 write.csv(episodes, OUTPUT_CSV, row.names = FALSE)
+# ==============================================================================
+# SECTION 2: OUTPUT ----
+# ==============================================================================
+
 message(glue("  Saved CSV: {OUTPUT_CSV}"))
 
 

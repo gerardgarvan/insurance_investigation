@@ -1,15 +1,10 @@
 # ==============================================================================
 # Phase 49: Cancer Summary - Pre/Post HL Counts
 # ==============================================================================
-# Creates cancer_summary_table_pre_post.xlsx -- a two-sheet styled workbook
-# showing per-cancer-code patient counts split by timing relative to first HL
-# diagnosis date (pre-HL, post-HL, both). Population is the confirmed 7-day HL
-# cohort. Includes all R/55 baseline stats plus pre/post/both columns.
-# C81 rows included for baseline stats but pre/post/both left blank (anchor diagnosis).
 #
-# This script answers the clinical question "what other cancers did HL patients
-# have before vs after their HL diagnosis?" by splitting baseline cancer summary
-# metrics into temporal partitions relative to each patient's first HL diagnosis date.
+# Purpose:
+#   Create pre/post HL cancer summary showing patient counts split by timing
+#   relative to first HL diagnosis date (before vs after vs both)
 #
 # Inputs:
 #   - output/confirmed_hl_cohort.rds (Phase 47 output: ID, first_hl_dx_date, first_hl_dx_source)
@@ -20,12 +15,17 @@
 #   - output/tables/cancer_summary_table_pre_post.xlsx (two-sheet styled workbook)
 #   - output/tables/cancer_summary_table_pre_post.csv (companion CSV)
 #
-# Usage:
-#   Rscript R/49_cancer_summary_pre_post.R
+# Dependencies:
+#   - 00_config (CONFIG paths, PREFIX_MAP for classification)
+#   - 01_load_pcornet (DuckDB connection, get_pcornet_table)
+#
+# Requirements:
+#   DOC-01, DOC-02, DOC-03
+#
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 1: SETUP
+# SECTION 1: SETUP ----
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -58,7 +58,7 @@ message(glue("Output CSV:         {OUTPUT_CSV}"))
 message(glue("Sentinel cutoff:    {SENTINEL_CUTOFF}"))
 
 # ==============================================================================
-# SECTION 2: PREFIX_MAP AND classify_codes()
+# SECTION 2: PREFIX_MAP AND classify_codes() ----
 # ==============================================================================
 # Copied from R/55 lines 69-338 for script independence (all 309 entries)
 
@@ -336,7 +336,7 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 3: LOAD INPUTS
+# SECTION 3: LOAD INPUTS ----
 # ==============================================================================
 
 message(glue("\nLoading confirmed HL cohort from {INPUT_RDS}..."))
@@ -408,7 +408,7 @@ message(glue("  Unique patients: {format(n_distinct(cancer_summary$ID), big.mark
 message(glue("  Unique codes: {format(n_distinct(cancer_summary$cancer_code), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS
+# SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----
 # ==============================================================================
 
 message("\nQuerying DIAGNOSIS for C-code diagnosis rows...")
@@ -444,7 +444,7 @@ n_removed_c81 <- n_before_c81_removal - nrow(dx_raw)
 message(glue("  C81 rows excluded: {format(n_removed_c81, big.mark=',')} ({format(nrow(dx_raw), big.mark=',')} remaining)"))
 
 # ==============================================================================
-# SECTION 5: COMPUTE PRE/POST/BOTH SETS
+# SECTION 5: COMPUTE PRE/POST/BOTH SETS ----
 # ==============================================================================
 
 message("\nComputing pre/post/both patient-code sets...")
@@ -501,7 +501,7 @@ message(glue("  Post-HL codes: {nrow(post_counts)}"))
 message(glue("  Both codes: {nrow(both_counts)}"))
 
 # ==============================================================================
-# SECTION 6: COMPUTE BASELINE METRICS
+# SECTION 6: COMPUTE BASELINE METRICS ----
 # ==============================================================================
 
 message("\nComputing baseline metrics from cancer_summary...")
@@ -553,7 +553,7 @@ if (n_unclassified > 0) {
 }
 
 # ==============================================================================
-# SECTION 7: MERGE AND BUILD CODE-LEVEL TABLE
+# SECTION 7: MERGE AND BUILD CODE-LEVEL TABLE ----
 # ==============================================================================
 
 message("\nBuilding code-level summary table...")
@@ -582,7 +582,7 @@ code_summary <- code_summary %>%
 message(glue("  Code summary: {nrow(code_summary)} rows"))
 
 # ==============================================================================
-# SECTION 8: BUILD CATEGORY-LEVEL TABLE
+# SECTION 8: BUILD CATEGORY-LEVEL TABLE ----
 # ==============================================================================
 
 message("\nAggregating to category level...")
@@ -681,7 +681,7 @@ totals_code <- tibble(
 )
 
 # ==============================================================================
-# SECTION 9: WRITE XLSX OUTPUT
+# SECTION 9: WRITE XLSX OUTPUT ----
 # ==============================================================================
 
 message(glue("\nWriting {OUTPUT_TABLE_XLSX}..."))
@@ -913,7 +913,7 @@ message(glue("    Sheet '{SHEET1}': {n_data1} data rows + 1 totals row"))
 message(glue("    Sheet '{SHEET2}': {n_data2} data rows + 1 totals row"))
 
 # ==============================================================================
-# SECTION 10: WRITE COMPANION CSV
+# SECTION 10: WRITE COMPANION CSV ----
 # ==============================================================================
 
 message(glue("\nWriting companion CSV to {OUTPUT_CSV}..."))
@@ -922,7 +922,7 @@ write.csv(code_summary, OUTPUT_CSV, row.names = FALSE)
 message(glue("  Wrote {OUTPUT_CSV} ({nrow(code_summary)} rows)"))
 
 # ==============================================================================
-# SECTION 11: CLEANUP
+# SECTION 11: CLEANUP ----
 # ==============================================================================
 
 close_pcornet_con()
