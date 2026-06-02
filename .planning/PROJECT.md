@@ -45,20 +45,29 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] First-line therapy regimen labeling (ABVD, BV+AVD, Nivo+AVD) for adults 21+ — v1.8 Phase 61/62
 - [x] Death date analysis table — v1.8 Phase 62
 - [x] New Gantt output files preserving existing versions — v1.8 Phase 63
+- [x] Renumber all R scripts sequentially in logical execution order — v2.0 Phase 66
+- [x] Update all cross-references (source() calls, comments, docs) to match new numbering — v2.0 Phase 66
+- [x] Add section header comments and key-logic comments to every script — v2.0 Phase 69
+- [x] Create full reference manual for the pipeline — v2.0 Phase 74
+- [x] Auto-format all R scripts with styler tidyverse style — v2.0 Phase 70
+- [x] Configure lintr with project .lintr file and fix violations — v2.0 Phases 70-71
+- [x] Add input validation (checkmate assert_file_exists) before each script — v2.0 Phase 72
+- [x] Add defensive checks (type/structure, row-count assertions) — v2.0 Phase 72
+- [x] Create smoke test script to verify pipeline integrity — v2.0 Phases 66-74
+- [x] Consolidate duplicated lookup tables to R/00_config.R — v2.0 Phase 73
+- [x] Extract repeated code patterns into shared utility functions — v2.0 Phase 73
 
 ### Active
 
-- [x] Renumber all R scripts sequentially in logical execution order (REORG-01) — v2.0 Phase 66
-- [x] Update all cross-references (source() calls, comments, docs) to match new numbering (REORG-02) — v2.0 Phase 66
-- [x] Add section header comments and key-logic comments to every script (DOC-01) — v2.0 Phase 69
-- [x] Create full reference manual for the pipeline (DOC-02) — v2.0 Phase 69
-- [x] Auto-format all R scripts with styler tidyverse style (SAFE-04) — v2.0 Phase 70
-- [x] Configure lintr with project .lintr file and fix violations (SAFE-05) — v2.0 Phase 70-71
-- [x] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01) — v2.0 Phase 72
-- [x] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02) — v2.0 Phase 72
-- [x] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03) — v2.0 Phase 66
-- [x] Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R (DRY-01) — v2.0 Phase 73
-- [x] Extract repeated code patterns into shared utility functions (DRY-02) — v2.0 Phase 73
+- [ ] Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories, total population = 6,347
+- [ ] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category in groupings and Gantt
+- [ ] Investigate SCT code 0362 patients — do the 90 patients have other SCT codes during those encounters?
+- [ ] Drop all treatment data sourced from tumor registry
+- [ ] Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
+- [ ] Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
+- [ ] Include cause of death in outputs
+- [ ] Cancer_category and triggering code description per episode (using drug groupings from all_codes_resolved_next_tables.xlsx)
+- [ ] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates)
 - [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
@@ -76,27 +85,40 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
 
-## Current Milestone: v2.0 Codebase Cleanup & Documentation
+## Current Milestone: v2.1 Clinical Data Refinements & NLPHL Breakout
 
-**Goal:** Reorganize, harden, and document the entire R pipeline for maintainability and onboarding.
+**Goal:** Refine cancer summary tables, break out NLPHL as a distinct category, investigate SCT code 0362, remove tumor registry treatment data, verify replaced-by codes, create new tables, and add cause of death and per-episode cancer categorization to outputs — maintaining v2.0 code quality standards throughout.
 
 **Target features:**
-- Renumber all ~80 R scripts sequentially (01-N) in logical execution order
-- Update all cross-references (source() calls, comments, documentation) to match new numbering
-- Add section header comments and key-logic comments to every script
-- Create a full reference manual: run order, purpose, parameters, outputs, dependencies
-- Add input validation and defensive checks (type/structure, row-count assertions, error recovery)
-- Create smoke test script to verify pipeline integrity after renumbering
-- Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R
-- Extract repeated code patterns into shared utility functions
+- Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories (not just HL), total population = 6,347
+- Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as its own cancer category in groupings and Gantt chart
+- Investigate 90 patients with SCT code 0362 — do they have other SCT codes during those encounters?
+- Drop all treatment data sourced from tumor registry
+- Double-check "replaced by" codes from all_codes_resolved_next_tables.xlsx
+- Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
+- Include cause of death in outputs
+- Cancer_category and triggering code description per episode (using drug groupings from all_codes_resolved_next_tables.xlsx)
+- All new/modified scripts follow v2.0 standards: styler, lintr, checkmate, documentation headers, smoke test updates
 
 ## Current State
 
-**Shipped:** v1.8 (2026-06-01)
+**Shipped:** v2.0 (2026-06-02)
 
-**Pipeline status:** 73 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 73 complete — DRY consolidation: CANCER_SITE_MAP (142 ICD-10 prefixes) and TIER_MAPPING (8 payer tiers) centralized in R/00_config.R, classify_codes()/classify_payer_tier()/build_output_path() extracted to R/utils/ modules, ~5,400 lines of duplicated code eliminated across 20+ scripts.
+**Pipeline status:** 74 phases completed across 10 milestones. 69 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Codebase fully reorganized, documented, hardened, and DRY-consolidated in v2.0. Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
 
 ## Previous Milestones
+
+### v2.0 Codebase Cleanup & Documentation (Shipped 2026-06-02)
+
+**Goal:** Reorganize, harden, and document the entire R pipeline for maintainability and onboarding.
+
+**Shipped:**
+- Full renumbering of 69 scripts into decade-based scheme (Phases 65-68)
+- Script documentation: headers, section headers, inline WHY comments (Phase 69)
+- styler formatting + lintr configuration and cleanup (Phases 70-71)
+- Checkmate assertions and input validation across all scripts (Phase 72)
+- DRY consolidation: CANCER_SITE_MAP, TIER_MAPPING centralized, utility functions extracted (Phase 73)
+- Comprehensive smoke test (R/88) and reference manual generator (R/89) (Phase 74)
 
 ### v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification (Shipped 2026-06-01)
 
@@ -246,4 +268,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after Phase 73 completion*
+*Last updated: 2026-06-02 after milestone v2.1 initialization*
