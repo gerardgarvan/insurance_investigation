@@ -61,7 +61,7 @@
 - [x] **Phase 69: Script Documentation** - Add header blocks, section headers, and inline comments (completed 2026-06-02)
 - [x] **Phase 70: Automated Formatting** - Apply styler and configure lintr (completed 2026-06-02)
 - [x] **Phase 71: Linting Cleanup** - Fix lintr violations incrementally (completed 2026-06-02)
-- [x] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation (completed 2026-06-02)
+- [x] **Phase 72: Defensive Coding** - Add checkmate assertions and input validation (completed 2026-06-02)
 - [ ] **Phase 73: DRY Consolidation** - Consolidate duplicate lookups and extract utility functions
 - [ ] **Phase 74: Smoke Testing & Reference Manual** - Create comprehensive smoke tests and dependency documentation
 
@@ -212,7 +212,11 @@ Plans:
   3. Repeated code patterns (3+ occurrences) extracted to shared utility functions in R/utils/
   4. Old lookup copies deleted in same commit as consolidation
   5. Smoke test validates constants defined only once and utilities work correctly
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 73-01-PLAN.md -- Add CANCER_SITE_MAP + TIER_MAPPING to config, create utils_cancer.R, add classify_payer_tier() and build_output_path() to utils
+- [ ] 73-02-PLAN.md -- Remove PREFIX_MAP + classify_codes() from 10 cancer/treatment scripts
+- [ ] 73-03-PLAN.md -- Remove TIER_MAPPING + classification chain from R/60-62, apply build_output_path() across scripts
 
 #### Phase 74: Smoke Testing & Reference Manual
 **Goal**: Comprehensive smoke test suite and reference manual document pipeline for maintainability
@@ -238,8 +242,8 @@ Plans:
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
 | 72. Defensive Coding | 4/4 | Complete    | 2026-06-02 |
-| 73. DRY Consolidation | 0/0 | Not started | - |
+| 73. DRY Consolidation | 0/3 | Planning complete | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 72 planning complete (4 plans in 2 waves)*
+*Last updated: 2026-06-02 -- Phase 73 planning complete (3 plans in 2 waves)*
