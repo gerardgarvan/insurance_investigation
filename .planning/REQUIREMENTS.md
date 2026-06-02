@@ -60,7 +60,6 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 | RMarkdown / Shiny rendering | Raw R scripts and PNG figures |
 | Full R package conversion | Over-engineering for analysis pipeline |
 | Pipeline orchestration (targets/drake) | Major architecture change; defer to v3+ |
-| Treatment source coverage analysis before TR removal | User chose direct removal without pre-analysis |
 
 ## Traceability
 
@@ -87,4 +86,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-06-02*
-*Last updated: 2026-06-02 after roadmap creation*
+*Last updated: 2026-06-02 after plan revision (coverage analysis added to Phase 76)*
