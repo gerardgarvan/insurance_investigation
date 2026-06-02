@@ -2,33 +2,23 @@
 # 68_overlap_classification.R -- Overlap classification and recommendations
 # ==============================================================================
 #
-# Phase 26: Overlap Classification and Recommendations
-# Requirements: OVRLP-01, OVRLP-02, OVRLP-03, OVRLP-04, OUTPT-01, OUTPT-02, OUTPT-03
+# Purpose: Classify multi-source encounter groups (same-date/same-week) as Identical,
+#   Partial, or Distinct based on shared column values, with per-site deduplication
+#   recommendations.
 #
-# Purpose: Classify each multi-source encounter group (same-date and same-week)
-#          from Phase 25 output as Identical, Partial, or Distinct via field-by-field
-#          comparison. Outputs CSV files with classified detail, per-site overlap
-#          profiles, console summary, and per-site actionable recommendations with
-#          preferred source suggestions.
+# Inputs:
+#   - multi_source_same_date_detail.csv, multi_source_same_week_detail.csv (from R/67)
+#   - get_pcornet_table("ENCOUNTER"), get_pcornet_table("DEMOGRAPHIC")
 #
-# Output: 4 CSV files in output/tables/:
-#   - classified_same_date_detail.csv        (OVRLP-01, OVRLP-02)
-#   - classified_same_week_detail.csv        (OVRLP-04)
-#   - per_site_overlap_profile.csv           (OVRLP-03)
-#   - overlap_source_payer_completeness.csv  (OVRLP-03)
+# Outputs: 4 CSV files in output/tables/:
+#   - classified_same_date_detail.csv (field-by-field comparison + classification)
+#   - classified_same_week_detail.csv (4-field comparison for near-duplicates)
+#   - per_site_overlap_profile.csv (Identical/Partial/Distinct percentages per combo)
+#   - overlap_source_payer_completeness.csv (payer completeness per ENCOUNTER_SOURCE)
 #
-# Usage: source("R/68_overlap_classification.R")
+# Dependencies: Sources R/00_config.R. Requires Phase 25 (R/67) CSV outputs.
 #
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: get_pcornet_table("ENCOUNTER"), get_pcornet_table("DEMOGRAPHIC")
-#   Requires: Phase 25 CSVs in output/tables/:
-#             multi_source_same_date_detail.csv
-#             multi_source_same_week_detail.csv
-#
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes early because downstream logic uses self-joins, nrow(),
-#   field_match() comparisons, and iterative loops requiring in-memory data.
+# Requirements: OVRLP-01 through OUTPT-03 (Phase 26).
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -49,14 +39,27 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 }
 
 # ==============================================================================
-# SECTION 0: Helper functions
+# SECTION 1: Helper functions ----
 # ==============================================================================
+# WHY Identical/Partial/Distinct classification:
+#   - Identical overlaps (5/5 or 4/4 fields match): should be deduplicated --
+#     same patient, same date, same payer, same provider, same ENC_TYPE likely
+#     represents the same clinical encounter recorded twice
+#   - Partial overlaps (1-4 fields match for same-date, 1-3 for same-week): need
+#     clinical review -- may be distinct encounters (e.g., lab + clinic on same day)
+#     or may be duplicates with minor coding differences
+#   - Distinct overlaps (0 fields match): retain all -- different encounter types,
+#     different payers, different providers strongly suggest separate clinical events
+# WHY per-site recommendations:
+#   - Different sites have different data quality patterns (UFH vs FLM vs AMS)
+#   - Site-specific Identical percentages determine whether deduplication is safe
+#   - Preferred source recommendation based on payer completeness per ENCOUNTER.SOURCE
 
 # is_missing_payer() provided by R/utils_payer.R (via R/00_config.R)
 # field_match() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 1: Load Phase 25 CSVs and prepare ENCOUNTER data
+# SECTION 1: Load Phase 25 CSVs and prepare ENCOUNTER data ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))
@@ -174,7 +177,7 @@ if (n_no_site > 0) {
 message(glue("ENCOUNTER data prepared: {format(nrow(enc_prepared), big.mark=',')} encounters"))
 
 # ==============================================================================
-# SECTION 2: Same-date field comparison (OVRLP-01, D-04)
+# SECTION 2: Same-date field comparison (OVRLP-01, D-04) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 2: Same-Date Field Comparison (OVRLP-01) ---"))
@@ -211,7 +214,7 @@ sd_pairs <- sd_pairs %>%
   )
 
 # ==============================================================================
-# SECTION 3: Same-date classification (OVRLP-02, D-05, D-06)
+# SECTION 3: Same-date classification (OVRLP-02, D-05, D-06) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 3: Same-Date Classification (OVRLP-02) ---"))
@@ -256,7 +259,7 @@ for (i in seq_len(nrow(classification_counts))) {
 }
 
 # ==============================================================================
-# SECTION 4: Same-week field comparison and classification (OVRLP-04, D-09, D-10)
+# SECTION 4: Same-week field comparison and classification (OVRLP-04, D-09, D-10) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 4: Same-Week Field Comparison and Classification (OVRLP-04) ---"))
@@ -341,7 +344,7 @@ for (i in seq_len(nrow(sw_classification_counts))) {
 }
 
 # ==============================================================================
-# SECTION 5: Per-site overlap profiles (OVRLP-03, D-07)
+# SECTION 5: Per-site overlap profiles (OVRLP-03, D-07) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 5: Per-Site Overlap Profiles (OVRLP-03) ---"))
@@ -410,7 +413,7 @@ message(glue("Same-week per-source-combo profiles computed for {nrow(sw_site_pro
 # (no need to fill missing combos -- absence means no overlap detected)
 
 # ==============================================================================
-# SECTION 6: Preferred source from payer completeness (D-08)
+# SECTION 6: Preferred source from payer completeness (D-08) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 6: Preferred Source from Payer Completeness (D-08) ---"))
@@ -477,7 +480,7 @@ sw_site_profile <- sw_site_profile %>%
   )
 
 # ==============================================================================
-# SECTION 7: Write CSV outputs (OUTPT-01)
+# SECTION 7: Write CSV outputs (OUTPT-01) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 7: Writing CSV Outputs ---"))
@@ -562,7 +565,7 @@ write_csv(csv4, file.path(output_dir, "overlap_source_payer_completeness.csv"))
 message(glue("  Written: overlap_source_payer_completeness.csv ({nrow(csv4)} rows)"))
 
 # ==============================================================================
-# SECTION 8: Console summary (OUTPT-02, OUTPT-03)
+# SECTION 8: Console summary (OUTPT-02, OUTPT-03) ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))

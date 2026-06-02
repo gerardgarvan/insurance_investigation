@@ -2,33 +2,21 @@
 # 66_all_site_duplicate_dates.R -- All-site duplicate date investigation
 # ==============================================================================
 #
-# Phase 22: Generalize Phase 20 to All Sites
-# Requirements: ALLDUP-01, ALLDUP-02, ALLDUP-03, ALLDUP-04, ALLDUP-05
-# Decisions: D-01 to D-12 from 22-CONTEXT.md
+# Purpose: All-site duplicate date investigation: extends original FLM-only analysis
+#   to all 5 sites, identifying same-date duplicate encounters.
 #
-# Purpose: Extend Phase 20's FLM-specific duplicate date investigation
-#          (R/19_flm_duplicate_dates.R) to ALL 5 partner sites (AMS, UMI, FLM,
-#          VRT, UFH). Detects same-date duplicate encounters, exact row
-#          duplicates, multi-source date collisions, and payer data completeness
-#          per ENCOUNTER.SOURCE at each site. Generates per-site source-preference
-#          recommendations and a cross-site summary for head-to-head comparison.
+# Inputs:
+#   - get_pcornet_table("DEMOGRAPHIC"): SOURCE column for site identification
+#   - get_pcornet_table("ENCOUNTER"): all encounter records
 #
-# Output: 5 CSV files in output/tables/:
-#   - all_site_patient_duplicate_summary.csv   (ALLDUP-01)
-#   - all_site_date_level_duplicate_detail.csv  (ALLDUP-02)
-#   - all_site_duplicate_aggregate_summary.csv  (ALLDUP-04)
-#   - all_site_source_payer_completeness.csv    (ALLDUP-03)
-#   - all_site_cross_site_summary.csv           (ALLDUP-05)
+# Outputs: 5 CSV files in output/tables/:
+#   - all_site_patient_duplicate_summary.csv, all_site_date_level_duplicate_detail.csv
+#   - all_site_duplicate_aggregate_summary.csv, all_site_source_payer_completeness.csv
+#   - all_site_cross_site_summary.csv
 #
-# Usage: source("R/66_all_site_duplicate_dates.R")
+# Dependencies: Sources R/00_config.R (CONFIG, PAYER_MAPPING, is_missing_payer utility).
 #
-# Dependencies: Sources R/00_config.R (CONFIG, PAYER_MAPPING).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: get_pcornet_table("DEMOGRAPHIC"), get_pcornet_table("ENCOUNTER").
-#
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes early because downstream logic uses nrow(), get_dupes(),
-#   iterative loops, and add_count() which require in-memory data.
+# Requirements: ALLDUP-01 through ALLDUP-05 (Phase 22).
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -55,10 +43,19 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 # is_missing_payer() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 1: Identify all patients per site from DEMOGRAPHIC (D-01, D-02)
+# SECTION 1: Identify all patients per site from DEMOGRAPHIC (D-01, D-02) ---- ----
 # ==============================================================================
 # D-01: Analyze ALL patients per site from DEMOGRAPHIC (not just HL cohort)
 # D-02: Patients assigned to sites via DEMOGRAPHIC.SOURCE
+# WHY duplicate dates matter:
+#   - Same-date encounters from different sources may represent the same clinical
+#     event recorded twice (true duplicates), inflating encounter counts
+#   - Or they may represent distinct legitimate encounters on the same date
+#     (e.g., lab visit + clinic visit)
+#   - Investigation needed to determine which pattern dominates at each site
+# WHY FLM was original focus:
+#   - Florida Medicaid (FLM) had the highest duplicate rate in initial analysis
+#   - FLM is claims-only data source (not EHR), prone to billing duplicates
 
 message(glue("\n{strrep('=', 70)}"))
 message("ALL-SITE DUPLICATE DATE INVESTIGATION")
@@ -86,7 +83,7 @@ total_patients <- n_distinct(demographic_tbl$ID)
 message(glue("\nTotal patients across all sites: {format(total_patients, big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 2: Build all-site encounter dataset (D-02, D-03)
+# SECTION 2: Build all-site encounter dataset (D-02, D-03) ----
 # ==============================================================================
 # D-02: Examine ENCOUNTER.SOURCE within each patient's encounters
 # CRITICAL: Handle SOURCE column collision (ENCOUNTER.SOURCE vs DEMOGRAPHIC.SOURCE)
@@ -150,7 +147,7 @@ for (site in sort(unique(all_encounters$SITE))) {
 }
 
 # ==============================================================================
-# SECTION 3: Same-date duplicate detection (D-03, ALLDUP-01)
+# SECTION 3: Same-date duplicate detection (D-03, ALLDUP-01) ----
 # ==============================================================================
 # D-03: Same duplicate definitions as Phase 20 -- group by ID + date only
 #        (not ENC_TYPE), check ADMIT_DATE primary + DISCHARGE_DATE secondary
@@ -220,7 +217,7 @@ for (site in sort(unique(all_encounters$SITE))) {
 }
 
 # ==============================================================================
-# SECTION 4: Exact row duplicates (D-03, ALLDUP-01)
+# SECTION 4: Exact row duplicates (D-03, ALLDUP-01) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 4: Exact Row Duplicate Detection ---"))
@@ -269,7 +266,7 @@ if (nrow(near_exact_dupes) > 0) {
 }
 
 # ==============================================================================
-# SECTION 5: Multi-source date identification (D-02, ALLDUP-02)
+# SECTION 5: Multi-source date identification (D-02, ALLDUP-02) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 5: Multi-Source Date Identification ---"))
@@ -328,7 +325,7 @@ for (site in sort(unique(multi_source_dates$SITE))) {
 }
 
 # ==============================================================================
-# SECTION 6: Payer completeness comparison (D-08, D-09, ALLDUP-03)
+# SECTION 6: Payer completeness comparison (D-08, D-09, ALLDUP-03) ----
 # ==============================================================================
 # D-08: Per-site source-preference recommendations
 # D-09: Each site gets its own recommendation based on its own payer completeness rates
@@ -407,7 +404,7 @@ for (site in sort(unique(all_encounters$SITE))) {
 source_completeness <- bind_rows(source_completeness_list)
 
 # ==============================================================================
-# SECTION 7: Build and write CSV outputs (D-05, D-06, D-07, ALLDUP-04, ALLDUP-05)
+# SECTION 7: Build and write CSV outputs (D-05, D-06, D-07, ALLDUP-04, ALLDUP-05) ----
 # ==============================================================================
 # D-05: 5 CSV files with SITE column + cross-site summary
 # D-06: all_site_ prefix
@@ -670,7 +667,7 @@ write_csv(cross_site_summary, file.path(output_dir, "all_site_cross_site_summary
 message(glue("  Written: all_site_cross_site_summary.csv ({nrow(cross_site_summary)} rows incl. ALL aggregate)"))
 
 # ==============================================================================
-# SECTION 8: Console summary (ALLDUP-05)
+# SECTION 8: Console summary (ALLDUP-05) ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))

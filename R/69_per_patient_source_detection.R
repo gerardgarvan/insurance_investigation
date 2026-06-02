@@ -2,38 +2,33 @@
 # 69_per_patient_source_detection.R -- Per-patient source detection by date
 # ==============================================================================
 #
-# Phase 28: Per-Patient Source Detection by Date
-# Requirements: PDSRC-01, PDSRC-02, PDSRC-03, PDSRC-04, PDSRC-05
+# Purpose: Per-patient source detection by date: identifies which ENCOUNTER.SOURCE
+#   values are present for each patient on each date.
 #
-# Purpose: For each patient on each date, detect which ENCOUNTER.SOURCE values
-#          are present and how many encounters each source contributes. Replaces
-#          Phase 25-26 pairwise overlap approach with simpler per-date enumeration.
-#          Uses data.table for speed (D-05).
+# Inputs:
+#   - get_pcornet_table("ENCOUNTER"): ID, ENCOUNTERID, ADMIT_DATE, SOURCE
 #
-# Output: 3 CSV files in output/tables/:
-#   - patient_date_source_detail.csv   (PDSRC-01: all patient-dates)
-#   - source_combo_frequencies.csv     (PDSRC-02: combo frequency summary)
-#   - per_source_summary.csv           (PDSRC-03: per-source aggregate counts)
+# Outputs: 3 CSV files in output/tables/:
+#   - patient_date_source_detail.csv (one row per patient-date with source_combo)
+#   - source_combo_frequencies.csv (combo frequency summary)
+#   - per_source_summary.csv (per-source encounter/patient counts)
 #
-# Usage: source("R/69_per_patient_source_detection.R")
+# Dependencies: Sources R/00_config.R. Uses data.table for performance.
 #
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Optionally sources R/utils/utils_dates.R if date parse rate < 50%.
-#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ADMIT_DATE, SOURCE)
-#
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   data loading. data.table is RETAINED as a documented exception -- this script
-#   converts to data.table immediately after loading for its grouping/aggregation
-#   performance. DuckDB serves only as the data source; all processing is in-memory
-#   via data.table. See plan 32-01 for rationale.
+# Requirements: PDSRC-01 through PDSRC-05 (Phase 28).
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 0: Setup
+# SECTION 1: Setup ----
 # ==============================================================================
+# WHY per-patient-per-date granularity:
+#   - Enables downstream analysis to identify patients seen at multiple facilities
+#     on the same date (multi-source dates)
+#   - Relevant for payer assignment when sources disagree on same date
+#   - Simpler than pairwise overlap approach (R/67-68) -- just enumerate sources per date
+#   - data.table used for performance (large ENCOUNTER table grouping operations)
 
 source("R/00_config.R")
 library(data.table)
@@ -48,7 +43,7 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 }
 
 # ==============================================================================
-# SECTION 2: Load and Prepare Encounters
+# SECTION 2: Load and Prepare Encounters ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))
@@ -107,7 +102,7 @@ enc_dt <- enc_dt[!is.na(ADMIT_DATE) & !is.na(SOURCE)]
 message(glue("Encounters with valid ADMIT_DATE and SOURCE: {format(nrow(enc_dt), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 3: Per-Patient-Date Source Enumeration (PDSRC-01)
+# SECTION 3: Per-Patient-Date Source Enumeration (PDSRC-01) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 3: Per-Patient-Date Source Enumeration (PDSRC-01) ---"))
@@ -138,7 +133,7 @@ message(glue("Patients with at least one multi-source date: {format(n_patients_w
 setorder(patient_date_detail, source_combo, ID, ADMIT_DATE)
 
 # ==============================================================================
-# SECTION 4: Source Combination Frequencies (PDSRC-02)
+# SECTION 4: Source Combination Frequencies (PDSRC-02) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 4: Source Combination Frequencies (PDSRC-02) ---"))
@@ -175,7 +170,7 @@ if (nrow(multi_combos) > 0) {
 }
 
 # ==============================================================================
-# SECTION 5: Per-Source Summary Counts (PDSRC-03)
+# SECTION 5: Per-Source Summary Counts (PDSRC-03) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 5: Per-Source Summary Counts (PDSRC-03) ---"))
@@ -196,7 +191,7 @@ for (i in 1:nrow(per_source_summary)) {
 }
 
 # ==============================================================================
-# SECTION 6: CSV Output (PDSRC-04)
+# SECTION 6: CSV Output (PDSRC-04) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 6: CSV Output (PDSRC-04) ---"))
@@ -220,7 +215,7 @@ write_csv(per_source_summary, csv3_path)
 message(glue("Wrote {format(nrow(per_source_summary), big.mark=',')} rows to {csv3_path}"))
 
 # ==============================================================================
-# SECTION 7: Final Console Summary (PDSRC-05)
+# SECTION 7: Final Console Summary (PDSRC-05) ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))

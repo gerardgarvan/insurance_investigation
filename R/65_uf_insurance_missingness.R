@@ -2,32 +2,23 @@
 # 65_uf_insurance_missingness.R -- UFH payer data missingness diagnostic
 # ==============================================================================
 #
-# Phase 19: Investigate Insurance Missingness Source UF Specifically
-# Requirements: UFMISS-01, UFMISS-02, UFMISS-03, UFMISS-04
+# Purpose: UFH-specific payer data missingness diagnostic by year and encounter type
+#   -- identifies patterns in UF Health's payer data completeness.
 #
-# Purpose: Characterize why insurance/payer data is missing for University of
-#          Florida (UFH) patients in the OneFlorida+ HL cohort. Profiles both
-#          raw ENCOUNTER PAYER_TYPE fields and derived harmonized categories,
-#          with breakdowns by year, encounter type, and their combination.
-#
-# Hypothesis: Data submission gap -- certain encounter types or time periods
-#             may systematically lack payer information from UF.
-#
-# Output: 5 CSV files in output/tables/:
-#   - uf_payer_raw_value_distribution.csv
-#   - uf_payer_missingness_by_year.csv
-#   - uf_payer_missingness_by_enc_type.csv
-#   - uf_payer_missingness_year_x_enc_type.csv
-#   - uf_payer_raw_vs_harmonized.csv
-#
-# Usage: source("R/65_uf_insurance_missingness.R")
-#
-# Dependencies: Sources 02_harmonize_payer.R which loads the full chain
-#   (02 -> 01 -> 00 + utils). Provides:
-#   - pcornet$ENCOUNTER (raw PAYER_TYPE fields)
-#   - pcornet$DEMOGRAPHIC (SOURCE column for UFH identification)
+# Inputs:
+#   - payer_summary from 02_harmonize_payer.R
+#   - pcornet$ENCOUNTER, pcornet$DEMOGRAPHIC (via 02_harmonize_payer.R chain)
 #   - encounters tibble (with payer_category from harmonization)
 #   - PAYER_MAPPING config (sentinel_values, unavailable_codes)
+#
+# Outputs: 5 CSV files in output/tables/:
+#   - uf_payer_raw_value_distribution.csv, uf_payer_missingness_by_year.csv
+#   - uf_payer_missingness_by_enc_type.csv, uf_payer_missingness_year_x_enc_type.csv
+#   - uf_payer_raw_vs_harmonized.csv
+#
+# Dependencies: Sources 02_harmonize_payer.R (loads 02 -> 01 -> 00 + utils chain).
+#
+# Requirements: UFMISS-01 through UFMISS-04 (Phase 19).
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -47,8 +38,16 @@ message("Phase 19: Investigate Insurance Missingness Source UF Specifically")
 message(strrep("=", 70))
 
 # ==============================================================================
-# SECTION 1: Identify UFH patients
+# SECTION 1: Identify UFH patients ----
 # ==============================================================================
+# WHY UFH-specific analysis:
+#   - UF Health (UFH) was the primary partner site with known payer missingness issues
+#   - Targeted investigation before broadening to all sites in R/64
+#   - Enables identification of UFH-specific data quality patterns vs system-wide issues
+# WHY by year and encounter type:
+#   - Missingness patterns may vary temporally (data submission changes over time)
+#   - Missingness patterns may vary by care setting (ambulatory vs inpatient vs ED)
+#   - Crosstab enables pinpointing specific year x encounter-type combinations with gaps
 
 message("\n--- SECTION 1: Identify UFH Patients ---")
 
@@ -60,7 +59,7 @@ ufh_patients <- pcornet$DEMOGRAPHIC %>%
 message(glue("UFH patients in dataset: {format(nrow(ufh_patients), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 2: Build UFH encounter dataset with missingness flags
+# SECTION 2: Build UFH encounter dataset with missingness flags ----
 # ==============================================================================
 
 message("\n--- SECTION 2: Build UFH Encounter Dataset with Missingness Flags ---")
@@ -94,7 +93,7 @@ message(glue("  SECONDARY missing: {format(n_secondary_miss, big.mark=',')} ({ro
 message(glue("  BOTH missing:      {format(n_both_miss, big.mark=',')} ({round(100 * n_both_miss / n_ufh_encounters, 1)}%)"))
 
 # ==============================================================================
-# SECTION 3: Raw PAYER_TYPE_PRIMARY value distribution (UFMISS-01)
+# SECTION 3: Raw PAYER_TYPE_PRIMARY value distribution (UFMISS-01) ----
 # ==============================================================================
 
 message("\n--- SECTION 3: Raw PAYER_TYPE Value Distribution (UFMISS-01) ---")
@@ -138,7 +137,7 @@ for (i in seq_len(nrow(top5_primary))) {
 }
 
 # ==============================================================================
-# SECTION 4: Temporal breakdown by year (UFMISS-02, D-07)
+# SECTION 4: Temporal breakdown by year (UFMISS-02, D-07) ----
 # ==============================================================================
 
 message("\n--- SECTION 4: Temporal Breakdown by Year (UFMISS-02) ---")
@@ -183,7 +182,7 @@ for (i in seq_len(nrow(missingness_by_year))) {
 }
 
 # ==============================================================================
-# SECTION 5: Encounter type breakdown (UFMISS-02, D-07)
+# SECTION 5: Encounter type breakdown (UFMISS-02, D-07) ----
 # ==============================================================================
 
 message("\n--- SECTION 5: Encounter Type Breakdown (UFMISS-02) ---")
@@ -217,7 +216,7 @@ for (i in seq_len(nrow(missingness_by_enc_type))) {
 }
 
 # ==============================================================================
-# SECTION 6: Year x Encounter Type crosstab (UFMISS-02, D-07)
+# SECTION 6: Year x Encounter Type crosstab (UFMISS-02, D-07) ----
 # ==============================================================================
 
 message("\n--- SECTION 6: Year x Encounter Type Crosstab (UFMISS-02) ---")
@@ -248,7 +247,7 @@ for (i in seq_len(nrow(top_missing_combos))) {
 }
 
 # ==============================================================================
-# SECTION 7: Raw vs Harmonized comparison (UFMISS-03, D-08)
+# SECTION 7: Raw vs Harmonized comparison (UFMISS-03, D-08) ----
 # ==============================================================================
 
 message("\n--- SECTION 7: Raw vs Harmonized Comparison (UFMISS-03) ---")
@@ -321,7 +320,7 @@ if (abs(delta) < 0.5) {
 }
 
 # ==============================================================================
-# SECTION 8: Console summary (D-14, exploratory)
+# SECTION 8: Console summary (D-14, exploratory) ----
 # ==============================================================================
 
 message("\n", strrep("=", 70))

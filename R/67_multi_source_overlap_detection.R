@@ -2,33 +2,21 @@
 # 67_multi_source_overlap_detection.R -- Multi-source overlap detection
 # ==============================================================================
 #
-# Phase 25: Multi-Source Overlap Detection
-# Requirements: SAMEDT-01, SAMEDT-02, SAMEDT-03, SAMEWK-01, SAMEWK-02, SAMEWK-03
+# Purpose: Detect same-date and same-week encounter pairs from different
+#   ENCOUNTER.SOURCE values across all encounter types (not just AV+TH).
 #
-# Purpose: Detect same-date and same-week (within +/-7 days) encounter pairs
-#          from different ENCOUNTER.SOURCE values across ALL patients in ENCOUNTER.
-#          Outputs feed Phase 26 (R/23_overlap_classification.R) for field-by-field
-#          comparison of overlapping encounters.
+# Inputs:
+#   - get_pcornet_table("ENCOUNTER"): ID, ENCOUNTERID, ADMIT_DATE, SOURCE
 #
-#          Note: Uses ENCOUNTER.SOURCE directly. No DEMOGRAPHIC join needed.
-#          Analyzes all patients in ENCOUNTER, not just HL cohort.
+# Outputs: 4 CSV files in output/tables/:
+#   - multi_source_same_date_detail.csv (same-date patient-dates with multiple sources)
+#   - multi_source_same_week_detail.csv (1-7 day apart pairs from different sources)
+#   - multi_source_combo_frequencies.csv (source combination frequency summary)
+#   - multi_source_per_source_summary.csv (per-source overlap counts)
 #
-# Output: 4 CSV files in output/tables/:
-#   - multi_source_same_date_detail.csv     (SAMEDT-01)
-#   - multi_source_same_week_detail.csv     (SAMEWK-01)
-#   - multi_source_combo_frequencies.csv    (SAMEDT-03, SAMEWK-03)
-#   - multi_source_per_source_summary.csv   (SAMEDT-02, SAMEWK-02)
+# Dependencies: Sources R/00_config.R. Optionally sources R/utils/utils_dates.R.
 #
-# Usage: source("R/67_multi_source_overlap_detection.R")
-#
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Optionally sources R/utils/utils_dates.R if date parse rate < 50%.
-#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ADMIT_DATE, SOURCE, etc.)
-#
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes immediately after loading because all downstream logic
-#   (split, self-join in loop, nrow, n_distinct) requires in-memory data.
+# Requirements: SAMEDT-01 through SAMEWK-03 (Phase 25).
 #
 # Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
@@ -49,8 +37,18 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 }
 
 # ==============================================================================
-# SECTION 1: Load and prepare encounters
+# SECTION 1: Load and prepare encounters ----
 # ==============================================================================
+# WHY same-date AND same-week:
+#   - Same-date (exact match): catches encounters on identical dates from different
+#     sources -- may be true duplicates or legitimate same-day encounters
+#   - Same-week (1-7 days apart): catches encounters that may be the same clinical
+#     event reported on slightly different dates due to billing/coding timing differences
+#   - Both needed: same-date for exact duplicates, same-week for near-duplicates
+# WHY all encounter types (not just AV+TH):
+#   - Duplicates occur across all encounter types (ED, IP, AV, TH, etc.)
+#   - Restricting to AV+TH would miss duplicates in other types
+#   - Comprehensive analysis needed for data quality assessment
 
 message(glue("\n{strrep('=', 70)}"))
 message("MULTI-SOURCE OVERLAP DETECTION")
@@ -104,7 +102,7 @@ enc_valid <- enc %>%
 message(glue("Encounters with valid ADMIT_DATE and SOURCE: {format(nrow(enc_valid), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 2: Same-date multi-source detection (SAMEDT-01)
+# SECTION 2: Same-date multi-source detection (SAMEDT-01) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 2: Same-Date Multi-Source Detection (SAMEDT-01) ---"))
@@ -129,7 +127,7 @@ message(glue("Total same-date multi-source patient-date pairs: {format(nrow(same
 message(glue("Patients with at least one same-date multi-source event: {format(n_distinct(same_date_detail$ID), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 3: Per-ENCOUNTER.SOURCE summary for same-date (SAMEDT-02)
+# SECTION 3: Per-ENCOUNTER.SOURCE summary for same-date (SAMEDT-02) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 3: Per-Source Summary for Same-Date (SAMEDT-02) ---"))
@@ -172,7 +170,7 @@ for (i in seq_len(nrow(per_source_same_date))) {
 }
 
 # ==============================================================================
-# SECTION 4: Source combination frequencies for same-date (SAMEDT-03)
+# SECTION 4: Source combination frequencies for same-date (SAMEDT-03) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 4: Source Combination Frequencies for Same-Date (SAMEDT-03) ---"))
@@ -197,7 +195,7 @@ for (i in seq_len(nrow(top10_sd))) {
 }
 
 # ==============================================================================
-# SECTION 5: Same-week near-duplicate detection (SAMEWK-01, SAMEWK-02)
+# SECTION 5: Same-week near-duplicate detection (SAMEWK-01, SAMEWK-02) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 5: Same-Week Near-Duplicate Detection (SAMEWK-01) ---"))
@@ -305,7 +303,7 @@ if (nrow(same_week_detail) > 0) {
 }
 
 # ==============================================================================
-# SECTION 6: Per-source summary and combo frequencies for same-week (SAMEWK-02, SAMEWK-03)
+# SECTION 6: Per-source summary and combo frequencies for same-week (SAMEWK-02, SAMEWK-03) ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 6: Per-Source Summary for Same-Week (SAMEWK-02, SAMEWK-03) ---"))
@@ -400,7 +398,7 @@ for (i in seq_len(nrow(combined_src))) {
 }
 
 # ==============================================================================
-# SECTION 7: Write CSV outputs and console summary
+# SECTION 7: Write CSV outputs and console summary ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 7: Writing CSV Outputs ---"))
