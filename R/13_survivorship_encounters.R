@@ -1,64 +1,48 @@
 # ==============================================================================
-# 13_survivorship_encounters.R -- 4-Level Survivorship Encounter Classification
+# 13_survivorship_encounters.R
 # ==============================================================================
 #
-# Implements D-05 through D-10 from VariableDetails.xlsx:
-# Classifies post-diagnosis encounters into 4 progressively restrictive levels.
+# Purpose:
+#   4-level survivorship encounter classification: non-acute, cancer-related,
+#   cancer provider, survivorship provider. Each level is a strict subset of
+#   the previous level, creating a hierarchical funnel from general post-diagnosis
+#   encounters to highly specific survivorship care visits.
 #
-# HIERARCHY (each level is a strict subset of the previous):
+# Inputs:
+#   - PCORnet ENCOUNTER and PROVIDER tables via get_pcornet_table()
+#   - post_dx_date_map tibble: ID, first_hl_dx_date (one row per cohort patient)
+#   - ICD_CODES, SURVIVORSHIP_CODES, PROVIDER_SPECIALTIES from 00_config.R
 #
-#   Level 1: ENC_NONACUTE_CARE
-#     AV + TH encounters that occurred AFTER the HL diagnosis date (D-03)
-#     "Non-acute care" per PCORnet CDM: Ambulatory Visit + Telehealth
+# Outputs:
+#   - survivorship_encounters tibble added to environment: 12 columns (4 levels × 3)
+#     HAD_ENC_*, N_ENC_*, FIRST_ENC_*_DATE for NONACUTE_CARE, CANCER_RELATED,
+#     CANCER_PROVIDER, SURVIVORSHIP
 #
-#   Level 2: ENC_CANCER_RELATED  (D-07)
-#     Level 1 encounters where the SAME encounter also has an HL diagnosis code
-#     (C81.xx ICD-10-CM, 201.xx ICD-9-CM) -- NOT all cancer codes
+# Dependencies:
+#   - Sourced by 14_build_cohort.R
+#   - NULL-safe for missing PROVIDER table (Levels 3-4 set to 0 with warning)
 #
-#   Level 3: ENC_CANCER_PROVIDER  (D-10)
-#     Level 2 encounters where the visit PROVIDER has oncology NUCC taxonomy code
-#     PROVIDER_SPECIALTIES$cancer_oncology (Hematology, Hematology/Oncology, etc.)
-#     NULL-safe: if get_pcornet_table("PROVIDER") is NULL, Level 3 and 4 are forced to 0
+# Requirements: SVENC-02, SVENC-03
 #
-#   Level 4: ENC_SURVIVORSHIP  (D-09)
-#     Level 3 encounters where the SAME encounter also has a personal history
-#     ICD code (V87.4x/V15.3 ICD-9, Z92.2x/Z92.3 ICD-10) per SURVIVORSHIP_CODES
-#
-# KEY DECISIONS:
-#   D-07: Cancer-related check uses HL-SPECIFIC codes ONLY (C81/201), not all cancer
-#   D-09: Personal history codes span ICD-9 and ICD-10; DX_TYPE filter is required
-#   D-10: NUCC taxonomy code matching is exact %in% (not regex/prefix)
-#   Pitfall 2: PROVIDERID may be NULL on many ENCOUNTER rows -- left_join, not inner_join
-#   Pitfall 4: Personal history codes cross ICD eras; DX_TYPE filter is mandatory
-#
-# INPUT:
-#   post_dx_date_map  -- tibble(ID, first_hl_dx_date)  -- one row per cohort patient
-#   get_pcornet_table("ENCOUNTER") -- ENCOUNTERID, ID, ENC_TYPE, ADMIT_DATE, PROVIDERID
-#   get_pcornet_table("DIAGNOSIS") -- ENCOUNTERID, ID, DX, DX_TYPE
-#   get_pcornet_table("PROVIDER")  -- PROVIDERID, PROVIDER_SPECIALTY_PRIMARY (may be NULL if file missing)
-#
-# OUTPUT:
-#   tibble with columns (3 per level x 4 levels = 12 columns):
-#     HAD_ENC_NONACUTE_CARE, N_ENC_NONACUTE_CARE, FIRST_ENC_NONACUTE_CARE_DATE
-#     HAD_ENC_CANCER_RELATED, N_ENC_CANCER_RELATED, FIRST_ENC_CANCER_RELATED_DATE
-#     HAD_ENC_CANCER_PROVIDER, N_ENC_CANCER_PROVIDER, FIRST_ENC_CANCER_PROVIDER_DATE
-#     HAD_ENC_SURVIVORSHIP, N_ENC_SURVIVORSHIP, FIRST_ENC_SURVIVORSHIP_DATE
-#
-# USAGE (from 04_build_cohort.R):
-#   post_dx_date_map <- cohort %>% select(ID, first_hl_dx_date)
-#   surv_flags <- classify_survivorship_encounters(post_dx_date_map)
-#   cohort <- cohort %>% left_join(surv_flags, by = "ID")
-#
-# Requirement: SVENC-02, SVENC-03
-# Phase: 10, Plan: 03
+# ==============================================================================
+
+# ==============================================================================
+# SECTION 1: SETUP ----
 # ==============================================================================
 
 library(dplyr)
 library(glue)
 
 # ==============================================================================
-# MAIN CLASSIFICATION FUNCTION
+# SECTION 2: ENCOUNTER CLASSIFICATION ----
 # ==============================================================================
+#
+# WHY 4 levels structured hierarchically: Each level adds clinical specificity.
+# Level 1 (non-acute) is broadest: all ambulatory/telehealth post-diagnosis visits.
+# Level 2 adds HL diagnosis on encounter: visit is cancer-related, not just any
+# post-diagnosis visit. Level 3 adds oncology provider: visit was with cancer
+# specialist. Level 4 (most specific) adds personal history codes: visit explicitly
+# coded as survivorship care per ICD definitions.
 
 #' Classify post-diagnosis encounters into 4 survivorship encounter levels
 #'
@@ -140,6 +124,16 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
   n2 <- nrow(level2_per_patient)
   message(glue("[Survivorship] Level 2 (Cancer-related, HL DX on encounter): {n2} patients"))
 
+# ==============================================================================
+# SECTION 3: PROVIDER CLASSIFICATION ----
+# ==============================================================================
+#
+# WHY specific provider specialties indicate survivorship care: NUCC taxonomy
+# codes 207RH0000X (Hematology), 207RH0003X (Hematology/Oncology), etc. identify
+# oncology specialists. Cancer survivors require ongoing monitoring by cancer
+# specialists even after treatment completion. These specialty codes distinguish
+# survivorship care (oncologist follow-up) from general primary care.
+
   # ----------------------------------------------------------------------------
   # LEVEL 3: Cancer provider visits (ENC_CANCER_PROVIDER)
   # Level 2 encounters seen by an oncology provider (D-10: NUCC taxonomy codes)
@@ -202,6 +196,10 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
 
     n3 <- nrow(level3_per_patient)
     message(glue("[Survivorship] Level 3 (Cancer provider, NUCC oncology): {n3} patients"))
+
+# ==============================================================================
+# SECTION 4: SURVIVORSHIP LEVEL ASSIGNMENT ----
+# ==============================================================================
 
     # --------------------------------------------------------------------------
     # LEVEL 4: Survivorship visits (ENC_SURVIVORSHIP)

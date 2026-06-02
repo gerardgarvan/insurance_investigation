@@ -1,41 +1,33 @@
 # ==============================================================================
-# 11_treatment_payer.R -- Treatment-anchored payer mode computation
+# 11_treatment_payer.R
 # ==============================================================================
 #
-# For each of three treatment types (chemo, radiation, stem cell transplant),
-# computes the payer mode within a +/-30 day window around the first treatment
-# procedure date. Mirrors the PAYER_CATEGORY_AT_FIRST_DX pattern from
-# 02_harmonize_payer.R Section 4c but anchors on treatment dates.
+# Purpose:
+#   Treatment-anchored payer mode: assigns primary payer within +/-30 day window
+#   around first treatment date. Mirrors PAYER_CATEGORY_AT_FIRST_DX pattern from
+#   02_harmonize_payer.R but anchors on treatment rather than diagnosis.
 #
-# Phase 9 expansion: Extracts dates from DIAGNOSIS (Z/V codes), ENCOUNTER (DRG),
-# DISPENSING (RXNORM), MED_ADMIN (RXNORM), and PROCEDURES revenue codes in
-# addition to existing PROCEDURES CPT/ICD and PRESCRIBING sources.
+# Inputs:
+#   - hl_cohort environment from 14_build_cohort (contains payer_summary, encounters)
+#   - PCORnet tables via get_pcornet_table(): PROCEDURES, PRESCRIBING, DIAGNOSIS,
+#     ENCOUNTER, DISPENSING, MED_ADMIN, TUMOR_REGISTRY_ALL
+#   - TREATMENT_CODES and CONFIG from 00_config.R
 #
-# Per D-01: Anchors on PX_DATE from PROCEDURES table (not TUMOR_REGISTRY)
-# Per D-02: Includes PX_TYPE "CH" (CPT/HCPCS), "09" (ICD-9-CM), "10" (ICD-10-PCS)
-# Per D-03: Chemo also uses RX_ORDER_DATE from PRESCRIBING for RXNORM matches
-# Per D-05: Uses FIRST treatment date per patient per treatment type
-# Per D-07: Uses CONFIG$analysis$treatment_window_days (= 30) for +/-30 day window
-# Per D-09: DIAGNOSIS DX_DATE for Z51.*/V58.*/Z94.*/T86.* treatment codes
-# Per D-10: ENCOUNTER ADMIT_DATE for MS-DRG 837-839, 846-849, 014-017
-# Per D-11: Sets payer to NA when no encounters in window (left_join)
-# Per D-11 (new): PROCEDURES PX_TYPE="RE" revenue code detection
-# Per D-12: Logs match counts per treatment type; DISPENSING/MED_ADMIN RXNORM_CUI
+# Outputs:
+#   - treatment_payer tibble added to environment: ID, FIRST_*_DATE, PAYER_AT_*
+#     for each treatment type (chemo, radiation, SCT)
 #
 # Dependencies:
-#   - get_pcornet_table("PROCEDURES") (via 01_load_pcornet.R) -- PX, PX_TYPE, PX_DATE, ID
-#   - get_pcornet_table("PRESCRIBING") (via 01_load_pcornet.R) -- RXNORM_CUI, RX_ORDER_DATE, ID
-#   - encounters (via 02_harmonize_payer.R) -- ID, ADMIT_DATE, effective_payer, payer_category
-#   - TREATMENT_CODES (via 00_config.R) -- all code lists
-#   - CONFIG$analysis$treatment_window_days (via 00_config.R)
-#   - PAYER_MAPPING$sentinel_values (via 00_config.R)
+#   - Sourced by 14_build_cohort.R
+#   - Requires payer_summary and hl_cohort in environment
+#   - Uses encounters tibble (from 02_harmonize_payer.R)
 #
-# Usage:
-#   source("R/11_treatment_payer.R")  # After 02_harmonize_payer.R has run
-#   chemo_result <- compute_payer_at_chemo()
-#   rad_result <- compute_payer_at_radiation()
-#   sct_result <- compute_payer_at_sct()
+# Requirements: Implements Phase 8 treatment-anchored payer mode
 #
+# ==============================================================================
+
+# ==============================================================================
+# SECTION 1: SETUP ----
 # ==============================================================================
 
 library(dplyr)
@@ -44,6 +36,19 @@ library(glue)
 library(purrr)  # For compact() in multi-source date combination
 
 # nrow_or_0() now provided by R/utils_treatment.R (auto-sourced via R/00_config.R)
+
+# ==============================================================================
+# SECTION 2: PAYER MODE CALCULATION WITHIN TEMPORAL WINDOW ----
+# ==============================================================================
+#
+# WHY +/-30 day window: Clinically relevant window for capturing payer information
+# at time of treatment. Treatment dates often fall between insurance billing cycles;
+# a 30-day window before and after the procedure date captures the most likely
+# active payer. Mirrors the diagnosis window pattern from 02_harmonize_payer.R.
+#
+# WHY modal payer (most frequent): When multiple payers exist in the window,
+# select the one with the most encounters. This represents the patient's dominant
+# insurance coverage during the treatment episode.
 
 #' Compute payer mode within a temporal window around anchor dates
 #'
@@ -69,6 +74,10 @@ compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analy
     filter(!is.na(days_from_treatment) & abs(days_from_treatment) <= window_days) %>%
     group_by(ID, payer_category) %>%
     summarise(n = n(), .groups = "drop") %>%
+    # WHY arrange with desc(n) then payer_category: When ties occur (two payers
+    # with same encounter count), alphabetical order provides deterministic tie-breaking.
+    # The Amy Crisp hierarchy (Medicaid > Medicare > Private) is enforced at the
+    # same-day level in 60_tiered_same_day_payer.R; this is encounter-count mode.
     arrange(ID, desc(n), payer_category) %>%
     group_by(ID) %>%
     slice(1) %>%
@@ -77,6 +86,10 @@ compute_payer_mode_in_window <- function(first_dates, window_days = CONFIG$analy
 
   result
 }
+
+# ==============================================================================
+# SECTION 3: CHEMOTHERAPY PAYER AT FIRST TREATMENT ----
+# ==============================================================================
 
 #' Compute payer mode at first chemotherapy procedure
 #'
@@ -244,6 +257,10 @@ compute_payer_at_chemo <- function() {
   result
 }
 
+# ==============================================================================
+# SECTION 4: RADIATION THERAPY PAYER AT FIRST TREATMENT ----
+# ==============================================================================
+
 #' Compute payer mode at first radiation therapy procedure
 #'
 #' Extracts first radiation dates from 3 source queries:
@@ -374,6 +391,10 @@ compute_payer_at_radiation <- function() {
   result
 }
 
+# ==============================================================================
+# SECTION 5: STEM CELL TRANSPLANT PAYER AT FIRST TREATMENT ----
+# ==============================================================================
+
 #' Compute payer mode at first stem cell transplant procedure
 #'
 #' Extracts first SCT dates from 3 source queries:
@@ -498,6 +519,10 @@ compute_payer_at_sct <- function() {
 
   result
 }
+
+# ==============================================================================
+# SECTION 6: LAST TREATMENT DATE COMPUTATION ----
+# ==============================================================================
 
 #' Compute last treatment date across all treatment types per patient
 #'

@@ -1,34 +1,27 @@
 # ==============================================================================
-# 10_cohort_predicates.R -- Named filter predicates for HL cohort building
+# 10_cohort_predicates.R
 # ==============================================================================
 #
-# Defines tibble-in/tibble-out filter functions following the project's named
-# predicate convention (has_*, with_*, exclude_*). Each function:
-#   - Accepts a patient-level tibble (one row per patient with at least ID column)
-#   - Returns a filtered tibble (same structure, fewer rows)
-#   - Uses semi_join/inner_join for set-based filtering (not row-level filter())
+# Purpose:
+#   Named filter predicates (has_*, with_*, exclude_*) for HL cohort building.
+#   Each function accepts a patient-level tibble and returns a filtered subset.
+#   Also defines treatment flag identification functions (has_chemo, has_radiation,
+#   has_sct) that detect treatment evidence across multiple PCORnet source tables.
 #
-# Also defines treatment flag identification functions (has_chemo, has_radiation,
-# has_sct) that return tibbles of patient IDs with evidence of treatment.
+# Inputs:
+#   - PCORnet tables via get_pcornet_table(): DIAGNOSIS, ENROLLMENT, DEMOGRAPHIC,
+#     PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER, TUMOR_REGISTRY_ALL
+#   - ICD_CODES and TREATMENT_CODES from 00_config.R
 #
-# Requirements: CHRT-01 (named predicates), CHRT-02 (attrition visibility via
-#   message() logging in each predicate), CHRT-03 (ICD format matching)
+# Outputs:
+#   None (defines functions loaded by 14_build_cohort.R)
 #
-# Dependencies (loaded via 00_config.R auto-source):
-#   - is_hl_diagnosis() from utils_icd.R
-#   - normalize_icd() from utils_icd.R
-#   - TREATMENT_CODES from 00_config.R
-#   - get_pcornet_table() from utils_duckdb.R
-#   - materialize() from utils_duckdb.R
+# Dependencies:
+#   - 00_config.R (auto-sources utils): provides ICD_CODES, TREATMENT_CODES,
+#     get_pcornet_table(), materialize(), is_hl_diagnosis(), normalize_icd()
+#   - All predicate functions log attrition via message() (CHRT-02)
 #
-# Usage:
-#   source("R/02_harmonize_payer.R")  # Loads everything upstream
-#   source("R/10_cohort_predicates.R")
-#   cohort <- get_pcornet_table("DEMOGRAPHIC") %>%
-#     select(ID, SOURCE) %>%
-#     has_hodgkin_diagnosis() %>%
-#     with_enrollment_period() %>%
-#     exclude_missing_payer(payer_summary)
+# Requirements: CHRT-01, CHRT-02, CHRT-03
 #
 # ==============================================================================
 
@@ -39,7 +32,7 @@ library(readr)
 library(stringr)
 
 # ==============================================================================
-# SECTION 1: FILTER PREDICATES (tibble-in, tibble-out)
+# SECTION 1: DIAGNOSIS AND ENROLLMENT PREDICATES ----
 # ==============================================================================
 
 #' Filter to patients with Hodgkin Lymphoma diagnosis (DIAGNOSIS or TUMOR_REGISTRY)
@@ -59,6 +52,10 @@ has_hodgkin_diagnosis <- function(patient_df) {
   # Source 1: DIAGNOSIS table (ICD-9/10)
   # Translation gap workaround: replace is_hl_diagnosis() with inline %in% matching
   # Build both dotted and undotted ICD code lists for robust matching
+  #
+  # WHY match both dotted and undotted formats: PCORnet data quality varies by site.
+  # Some sites store ICD-10 codes as "C81.00" (dotted), others as "C8100" (undotted).
+  # Checking both formats ensures we don't miss HL patients due to formatting variance.
   hl_icd10_undotted <- ICD_CODES$hl_icd10
   hl_icd9_undotted <- ICD_CODES$hl_icd9
 
@@ -205,8 +202,12 @@ exclude_missing_payer <- function(patient_df, payer_summary) {
 }
 
 # ==============================================================================
-# SECTION 2: TREATMENT FLAG FUNCTIONS (returns tibble of IDs with evidence)
+# SECTION 2: TREATMENT FLAG FUNCTIONS ----
 # ==============================================================================
+#
+# WHY use semi_join for set-based filtering: semi_join is more efficient than
+# filter() for large patient sets. It performs a hash-based membership test
+# rather than row-by-row comparisons, and works cleanly with lazy DuckDB queries.
 
 #' Identify patients with chemotherapy evidence
 #'

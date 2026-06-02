@@ -1,47 +1,54 @@
 # ==============================================================================
 # 12_surveillance.R
-# Surveillance Modality Detection -- Phase 10
+# ==============================================================================
 #
 # Purpose:
-#   Implements D-01 through D-04 from Phase 10 CONTEXT.md.
-#   Detects post-diagnosis surveillance events for 9 modalities (procedure-based
-#   from PROCEDURES table) and 10 lab types (LOINC-based from LAB_RESULT_CM).
+#   Surveillance modality detection: identifies 9 procedure-based and 10 lab-based
+#   post-diagnosis events for each patient. All detection restricted to events
+#   AFTER first HL diagnosis date. Produces HAD_*, FIRST_*_DATE, N_* flags per
+#   modality for cohort integration.
 #
-#   All detection is restricted to events AFTER the patient's first HL diagnosis
-#   date (D-03). Missing tables (LAB_RESULT_CM, PROCEDURES) are handled gracefully
-#   with zero-valued flags (D-04).
+# Inputs:
+#   - PCORnet PROCEDURES and LAB_RESULT_CM tables via get_pcornet_table()
+#   - post_dx_date_map tibble: ID, first_hl_dx_date (one row per cohort patient)
+#   - SURVEILLANCE_CODES and LAB_CODES from 00_config.R
 #
-# Output columns per modality/lab (D-04):
-#   HAD_{NAME}          -- integer 0/1 flag
-#   FIRST_{NAME}_DATE   -- date of first post-diagnosis event
-#   N_{NAME}            -- count of post-diagnosis events
-#
-# Modalities (9, procedure-based):
-#   MAMMOGRAM, BREAST_MRI, ECHO, STRESS_TEST, ECG, MUGA, PFT
-#   + combined TSH (procedure + lab) and CBC (procedure + lab)
-#
-# Labs (8 LOINC-only):
-#   CRP, ALT, AST, ALP, GGT, BILIRUBIN, PLATELETS, FOBT
-#   + TSH_LAB and CBC_LAB (also used in combined TSH/CBC above)
-#
-# Entry point:
-#   assemble_surveillance_flags(post_dx_date_map)
-#   post_dx_date_map <- cohort %>% select(ID, first_hl_dx_date)
+# Outputs:
+#   - surveillance_flags tibble added to environment: 51 columns (17 modalities × 3)
+#     HAD_{NAME}, FIRST_{NAME}_DATE, N_{NAME} for MAMMOGRAM, BREAST_MRI, ECHO,
+#     STRESS_TEST, ECG, MUGA, PFT, TSH, CBC, CRP, ALT, AST, ALP, GGT, BILIRUBIN,
+#     PLATELETS, FOBT
 #
 # Dependencies:
-#   - pcornet environment (list with $PROCEDURES and $LAB_RESULT_CM)
-#   - SURVEILLANCE_CODES from 00_config.R
-#   - LAB_CODES from 00_config.R
-#   - dplyr (loaded via source chain)
-#   - glue (loaded via source chain)
+#   - Sourced by 14_build_cohort.R
+#   - Missing tables (LAB_RESULT_CM, PROCEDURES) handled gracefully with zero flags
+#
+# Requirements: Implements Phase 10 D-01 through D-04
+#
 # ==============================================================================
 
 library(dplyr)
 library(glue)
 
 # ==============================================================================
-# SECTION 1: Generic procedure-based modality detection helper
+# SECTION 1: SETUP AND DEPENDENCIES ----
 # ==============================================================================
+
+library(dplyr)
+library(glue)
+
+# ==============================================================================
+# SECTION 2: PROCEDURE-BASED SURVEILLANCE DETECTION ----
+# ==============================================================================
+#
+# WHY 9 specific procedure codes indicate surveillance: These CPT/ICD-10-PCS codes
+# represent standard post-treatment monitoring modalities for cancer survivorship.
+# Mammogram and breast MRI for secondary breast cancer risk (anthracycline exposure),
+# ECHO/MUGA/stress test/ECG for cardiotoxicity monitoring (doxorubicin), and PFT
+# for pulmonary toxicity (bleomycin). TSH and CBC overlap with lab detection.
+#
+# WHY post-diagnosis temporal filter: Surveillance by definition occurs AFTER
+# cancer diagnosis. Pre-diagnosis events are diagnostic workup, not survivorship care.
 
 #' Detect a surveillance modality from the PROCEDURES table
 #'
@@ -121,8 +128,14 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
 }
 
 # ==============================================================================
-# SECTION 2: Generic lab-based modality detection helper
+# SECTION 3: LAB-BASED SURVEILLANCE DETECTION ----
 # ==============================================================================
+#
+# WHY 10 specific lab codes indicate surveillance: LOINC codes for liver function
+# (ALT, AST, ALP, GGT, bilirubin) monitor hepatotoxicity from chemotherapy. CRP
+# tracks inflammation. Platelets monitor bone marrow function. TSH detects thyroid
+# dysfunction (radiation to neck/mediastinum). CBC monitors hematologic recovery.
+# FOBT screens for secondary GI malignancies.
 
 #' Detect a surveillance lab type from the LAB_RESULT_CM table
 #'
@@ -185,10 +198,6 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
   result
 }
 
-# ==============================================================================
-# SECTION 3: Procedure-based wrapper functions (7 modalities -- no LOINC overlap)
-# ==============================================================================
-
 #' Mammogram detection (CPT + ICD-10-PCS)
 detect_mammogram <- function(post_dx_date_map) {
   codes <- list()
@@ -249,10 +258,6 @@ detect_pft <- function(post_dx_date_map) {
   detect_procedure_modality(post_dx_date_map, "PFT", codes)
 }
 
-# ==============================================================================
-# SECTION 4: TSH and CBC -- separate procedure and lab sub-functions, then
-#            combined functions that merge both sources
-# ==============================================================================
 
 #' TSH procedure sub-function (CPT + HCPCS)
 detect_tsh_procedure <- function(post_dx_date_map) {
@@ -361,9 +366,6 @@ detect_cbc <- function(post_dx_date_map) {
   combined
 }
 
-# ==============================================================================
-# SECTION 5: Lab-only wrapper functions (no procedure-based counterpart)
-# ==============================================================================
 
 #' C-reactive protein (LOINC)
 detect_crp <- function(post_dx_date_map) {
@@ -406,7 +408,7 @@ detect_fobt <- function(post_dx_date_map) {
 }
 
 # ==============================================================================
-# SECTION 6: Assembly function -- combine all modalities into one wide tibble
+# SECTION 4: SURVEILLANCE FLAG ASSEMBLY ----
 # ==============================================================================
 
 #' Assemble all surveillance flags into a single wide tibble
