@@ -1,29 +1,29 @@
 # ==============================================================================
-# Phase 46: Cancer Summary Table (Category + Code Level Aggregation)
+# 46_cancer_summary_table.R
 # ==============================================================================
-# Reads the Phase 6 cancer_summary patient-code level dataset, queries DuckDB
-# for record counts, aggregates to category-level and code-level summaries, and
-# writes a styled two-sheet cancer_summary_table.xlsx to output/tables/.
+# Purpose: Category-level and code-level cancer summary aggregation with styled
+#          xlsx output for clinical review. High-level companion to cancer_summary.xlsx
+#          providing aggregate picture without patient-level detail.
 #
-# Purpose: High-level companion to cancer_summary.xlsx -- someone can open this
-# to get the aggregate picture (patient counts, confirmation rates, date
-# distribution, encounter volume) without needing the patient-level detail.
+# Inputs:  output/tables/cancer_summary.csv (Phase 45 patient-code level dataset)
+#          DIAGNOSIS DuckDB table (for record counts)
 #
-# Inputs:
-#   - output/tables/cancer_summary.csv (Phase 6 patient-code level dataset)
-#   - DIAGNOSIS DuckDB table (for record counts)
+# Outputs: output/tables/cancer_summary_table.xlsx (two-sheet styled workbook)
+#          - Sheet 1 "Category Summary": one row per cancer site category
+#          - Sheet 2 "Code Summary": one row per unique ICD-10 code
 #
-# Outputs:
-#   - output/tables/cancer_summary_table.xlsx (two-sheet styled workbook)
-#     Sheet 1 "Category Summary": one row per cancer site category
-#     Sheet 2 "Code Summary": one row per unique ICD-10 code
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/46_cancer_summary_table.R
+# Requirements: Aggregate patient counts, confirmation rates, date distribution,
+#               encounter volume at both category and code levels
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 1: SETUP
+# SECTION 1: SETUP ----
+# ==============================================================================
+# WHY both category-level and code-level aggregation: Category gives broad overview
+#   of cancer burden by site (e.g., all lung cancers), code-level gives clinical
+#   specificity for review (e.g., NSCLC vs SCLC subtypes).
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -43,10 +43,10 @@ message("=== Phase 7: Cancer Summary Table ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
-# SECTION 2: PREFIX_MAP AND classify_codes()
+# SECTION 2: PREFIX_MAP AND CLASSIFY_CODES() ----
 # ==============================================================================
-# Copied from R/53_cancer_summary.R for script independence.
-# Keep in sync with R/53 and R/47 if categories change.
+# Copied from R/45_cancer_summary.R for script independence.
+# Keep in sync with R/45 and R/40 if categories change.
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -322,7 +322,7 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 3: LOAD SOURCE DATA
+# SECTION 3: LOAD SOURCE DATA ----
 # ==============================================================================
 # Read Phase 6 output (patient-code level dataset)
 
@@ -349,7 +349,7 @@ message(glue("  Unique codes: {format(n_distinct(cancer_summary$cancer_code), bi
 message(glue("  Categories: {n_distinct(cancer_summary$category)}"))
 
 # ==============================================================================
-# SECTION 4: QUERY RECORD COUNTS FROM DIAGNOSIS (DuckDB)
+# SECTION 4: QUERY RECORD COUNTS FROM DIAGNOSIS (DUCKDB) ----
 # ==============================================================================
 # Per D-07: record counts are total DIAGNOSIS rows, not unique dates.
 
@@ -373,7 +373,7 @@ cancer_summary <- cancer_summary %>%
 message(glue("  Total records across all codes: {format(sum(cancer_summary$record_count), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 5: CATEGORY-LEVEL AGGREGATION
+# SECTION 5: CATEGORY-LEVEL AGGREGATION ----
 # ==============================================================================
 # Per D-01, D-02, D-04, D-05, D-06, D-07, D-14
 
@@ -399,7 +399,7 @@ category_summary <- cancer_summary %>%
 message(glue("  Category summary: {nrow(category_summary)} rows"))
 
 # ==============================================================================
-# SECTION 6: CODE-LEVEL AGGREGATION
+# SECTION 6: CODE-LEVEL AGGREGATION ----
 # ==============================================================================
 # Per D-01, D-03: same metrics grouped by cancer_code + category
 
@@ -425,7 +425,7 @@ code_summary <- cancer_summary %>%
 message(glue("  Code summary: {nrow(code_summary)} rows"))
 
 # ==============================================================================
-# SECTION 7: BUILD TOTALS ROWS
+# SECTION 7: BUILD TOTALS ROWS ----
 # ==============================================================================
 # Follow R/50 pattern: sum counts, NA for rates/means
 
@@ -459,9 +459,9 @@ totals_code <- tibble(
 )
 
 # ==============================================================================
-# SECTION 8: WRITE STYLED XLSX
+# SECTION 8: WRITE STYLED XLSX ----
 # ==============================================================================
-# Per D-08, D-09: two-sheet xlsx with dark header styling matching R/47, R/50
+# Per D-08, D-09: two-sheet xlsx with dark header styling matching R/40, R/43
 
 message(glue("\nWriting styled xlsx to {OUTPUT_PATH}..."))
 
@@ -666,7 +666,7 @@ message(glue("  Sheet '{SHEET1}': {n_data1} data rows + 1 totals row"))
 message(glue("  Sheet '{SHEET2}': {n_data2} data rows + 1 totals row"))
 
 # ==============================================================================
-# SECTION 9: CLEANUP
+# SECTION 9: CLEANUP ----
 # ==============================================================================
 
 close_pcornet_con()

@@ -1,35 +1,25 @@
 # ==============================================================================
-# Phase 45: Cancer Summary Dataset (Patient-Code Level)
+# 45_cancer_summary.R
 # ==============================================================================
-# Produces a patient-code level dataset from the DIAGNOSIS table. Each row
-# represents one patient + one unique neoplasm code (ICD-10, C/D prefix) with
-# date-based confirmation metrics.
+# Purpose: Patient-code level cancer summary dataset with date-based confirmation
+#          metrics (date count, date span, first/last dates). All patients in
+#          DIAGNOSIS with neoplasm codes included (not restricted to HL cohort).
 #
-# All patients in DIAGNOSIS with neoplasm codes are included (not restricted
-# to the HL cohort).
+# Inputs:  DIAGNOSIS DuckDB table (ICD-10 codes only, DX_TYPE == "10")
 #
-# Columns:
-#   ID                            - Patient identifier
-#   cancer_code                   - Normalized ICD-10 code (uppercase, no dots)
-#   description                   - Cancer site category | code-level description
-#   two_or_more_unique_dates      - 1 if 2+ distinct non-NA DX_DATEs, else 0
-#   two_or_more_unique_dates_gt_7 - 1 if 2+ distinct dates AND span >= 7 days, else 0
-#   unique_dates_total            - Count of distinct non-NA DX_DATEs
-#   unique_dates_with_sep_gt_7    - Count of dates >= 7 days from at least one other date
+# Outputs: output/tables/cancer_summary.xlsx (single "Cancer Summary" sheet)
+#          output/tables/cancer_summary.csv
 #
-# Inputs:
-#   - DIAGNOSIS DuckDB table (ICD-10 codes only, DX_TYPE == "10")
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Outputs:
-#   - output/tables/cancer_summary.xlsx (single "Cancer Summary" sheet)
-#   - output/tables/cancer_summary.csv
-#
-# Usage:
-#   Rscript R/45_cancer_summary.R
+# Requirements: Per-patient per-code summary with columns:
+#               - ID, cancer_code, description
+#               - two_or_more_unique_dates, two_or_more_unique_dates_gt_7
+#               - unique_dates_total, unique_dates_with_sep_gt_7
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 1: SETUP
+# SECTION 1: SETUP ----
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -51,10 +41,15 @@ message(glue("Output XLSX: {OUTPUT_XLSX}"))
 message(glue("Output CSV:  {OUTPUT_CSV}"))
 
 # ==============================================================================
-# SECTION 2: PREFIX_MAP AND classify_codes()
+# SECTION 2: PREFIX_MAP AND CLASSIFY_CODES() ----
 # ==============================================================================
-# PREFIX_MAP and classify_codes() copied from R/47_cancer_site_frequency.R
-# Keep in sync with R/47 if categories change.
+# PREFIX_MAP and classify_codes() copied from R/40_cancer_site_frequency.R
+# Keep in sync with R/40 if categories change.
+#
+# WHY date-based metrics are computed: Span between first and last diagnosis
+#   indicates whether cancer was a single workup (short span) or ongoing condition
+#   (long span). Date count shows diagnostic certainty (more dates = more confidence).
+# ==============================================================================
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -330,7 +325,7 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 3: LOAD AND CLASSIFY DIAGNOSIS DATA
+# SECTION 3: LOAD AND CLASSIFY DIAGNOSIS DATA ----
 # ==============================================================================
 # Per D-09: DIAGNOSIS table only, DX_TYPE == "10" for ICD-10
 # Per D-14: All patients in DIAGNOSIS (not restricted to HL cohort)
@@ -374,7 +369,7 @@ message(glue("  Unique patients: {format(n_distinct(dx_cancer$ID), big.mark=',')
 message(glue("  Unique codes: {format(n_distinct(dx_cancer$DX_norm), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 4: BUILD DESCRIPTION LOOKUP
+# SECTION 4: BUILD DESCRIPTION LOOKUP ----
 # ==============================================================================
 # Per D-10: Description column includes both cancer site category name (from
 # PREFIX_MAP) and code-level description where available.
@@ -508,7 +503,7 @@ desc_lookup <- bind_rows(
 message(glue("  Total description lookup: {nrow(desc_lookup)} unique codes"))
 
 # ==============================================================================
-# SECTION 5: PATIENT-CODE AGGREGATION
+# SECTION 5: PATIENT-CODE AGGREGATION ----
 # ==============================================================================
 # Per D-01: One row per patient per unique cancer code
 # Per D-02: 7 columns in exact order
@@ -584,7 +579,7 @@ cancer_summary <- cancer_summary %>%
   )
 
 # ==============================================================================
-# SECTION 6: ADD DESCRIPTION AND FINALIZE COLUMNS
+# SECTION 6: ADD DESCRIPTION AND FINALIZE COLUMNS ----
 # ==============================================================================
 # Per D-10: Description = "{category} | {code_description}" or "{category}" alone
 # Per D-02: Final column order: ID, cancer_code, description,
@@ -624,7 +619,7 @@ message(glue("  Rows with 2+ dates confirmed: {format(sum(cancer_summary$two_or_
 message(glue("  Rows with 7-day gap confirmed: {format(sum(cancer_summary$two_or_more_unique_dates_gt_7), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 7: WRITE XLSX
+# SECTION 7: WRITE XLSX ----
 # ==============================================================================
 # Per D-11: Generate from scratch using openxlsx2
 # Per D-12: Single flat sheet
@@ -656,7 +651,7 @@ wb$save(OUTPUT_XLSX)
 message(glue("Wrote {OUTPUT_XLSX} ({format(nrow(cancer_summary), big.mark=',')} data rows)"))
 
 # ==============================================================================
-# SECTION 8: WRITE CSV
+# SECTION 8: WRITE CSV ----
 # ==============================================================================
 # Per D-13, D-16: Output CSV with same data
 
@@ -664,7 +659,7 @@ write.csv(cancer_summary, OUTPUT_CSV, row.names = FALSE)
 message(glue("Wrote {OUTPUT_CSV}"))
 
 # ==============================================================================
-# SECTION 9: CLEANUP
+# SECTION 9: CLEANUP ----
 # ==============================================================================
 
 close_pcornet_con()

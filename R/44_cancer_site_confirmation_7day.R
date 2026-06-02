@@ -1,22 +1,21 @@
 # ==============================================================================
-# Phase 44: Cancer Site Confirmation with 7-Day Separation
+# 44_cancer_site_confirmation_7day.R
 # ==============================================================================
-# Validates cancer site diagnosis codes by requiring diagnosis dates at least
-# 7 calendar days apart per code per patient before counting the code as
-# "confirmed."
+# Purpose: Confirm cancer site codes requiring diagnosis dates at least 7 calendar
+#          days apart -- stricter than R/43 to exclude same-week administrative
+#          duplicates. Two confirmation levels: exact code and site category.
 #
-# Two confirmation levels (per D-01, D-03):
-#   1. Exact Code:  C81.10 must have dates spanning 7+ days (7-day gap)
-#   2. Cancer Site Category: any code in the same cancer site category on dates spanning 7+ days confirms the category
+# Inputs:  DIAGNOSIS DuckDB table (ICD-10 codes, DX_TYPE == "10", DX_DATE)
 #
-# Data: DIAGNOSIS table only, ICD-10 codes (DX_TYPE == "10"), DX_DATE (per D-03, D-04)
+# Outputs: output/tables/cancer_site_confirmation_7day.xlsx
+#          - Sheet 1 "Exact Code (7-Day Gap)": code-level confirmation with 7+ day span
+#          - Sheet 2 "Site Category (7-Day Gap)": category-level confirmation with 7+ day span
 #
-# Output: output/tables/cancer_site_confirmation_7day.xlsx
-#   Sheet 1 "Exact Code (7-Day Gap)":   per-category confirmation at exact ICD-10 code level
-#   Sheet 2 "Site Category (7-Day Gap)": per-category confirmation across all codes in the same category
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/44_cancer_site_confirmation_7day.R
+# Requirements: Two confirmation levels (per D-01, D-03):
+#               1. Exact Code: dates spanning 7+ days (7-day gap)
+#               2. Site Category: any code in category on dates spanning 7+ days
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -36,9 +35,9 @@ message("=== Phase 4: Cancer Site Confirmation with 7-Day Separation ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
-# SECTION 1: PREFIX_MAP and CATEGORY_ORDER
+# SECTION 1: PREFIX_MAP AND CATEGORY_ORDER ----
 # ==============================================================================
-# Copied from R/50_cancer_site_confirmation.R for script independence
+# Copied from R/43_cancer_site_confirmation.R for script independence
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -372,7 +371,7 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 2: LOAD AND CLASSIFY DIAGNOSIS DATA
+# SECTION 2: LOAD AND CLASSIFY DIAGNOSIS DATA ----
 # ==============================================================================
 
 message("\nLoading DIAGNOSIS table (ICD-10 only, all patients)...")
@@ -410,7 +409,12 @@ if (n_unclassified > 0) {
 message(glue("  ICD-10 classified into {n_distinct(dx_cancer$category)} categories"))
 
 # ==============================================================================
-# SECTION 3: EXACT CODE CONFIRMATION WITH 7-DAY GAP (per D-03, D-06)
+# SECTION 3: EXACT CODE CONFIRMATION WITH 7-DAY GAP (PER D-03, D-06) ----
+# ==============================================================================
+# WHY 7-day gap required: Same-week diagnoses often reflect administrative
+#   processing of the same clinical event, not independent confirmation. A 7-day
+#   minimum span ensures temporal separation between diagnosis encounters. This is
+#   stricter than R/43's any-date criterion -- filters out same-week duplicates.
 # ==============================================================================
 
 message("\n=== EXACT CODE CONFIRMATION (7-DAY GAP) ===")
@@ -456,7 +460,7 @@ message(glue("  Total confirmed patients (exact code, 7-day gap): {format(total_
 message(glue("  Overall confirmation rate (exact, 7-day gap): {scales::percent(overall_rate_exact, accuracy=0.1)}"))
 
 # ==============================================================================
-# SECTION 4: CANCER SITE CATEGORY CONFIRMATION WITH 7-DAY GAP (per D-03, D-06)
+# SECTION 4: CANCER SITE CATEGORY CONFIRMATION WITH 7-DAY GAP (PER D-03, D-06) ----
 # ==============================================================================
 
 message("\n=== CANCER SITE CATEGORY CONFIRMATION (7-DAY GAP) ===")
@@ -496,7 +500,7 @@ message(glue("  Total confirmed patients (category, 7-day gap): {format(total_co
 message(glue("  Overall confirmation rate (category, 7-day gap): {scales::percent(overall_rate_category, accuracy=0.1)}"))
 
 # ==============================================================================
-# SECTION 5: TOTALS ROWS
+# SECTION 5: TOTALS ROWS ----
 # ==============================================================================
 
 totals_exact <- tibble(
@@ -517,7 +521,7 @@ totals_category <- tibble(
 )
 
 # ==============================================================================
-# SECTION 6: WRITE STYLED XLSX (per D-02, D-07)
+# SECTION 6: WRITE STYLED XLSX (PER D-02, D-07) ----
 # ==============================================================================
 
 message("")

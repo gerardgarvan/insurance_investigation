@@ -1,30 +1,27 @@
 # =============================================================================
-# Phase 42: Build Code Description Lookup
+# 42_build_code_descriptions.R
 # =============================================================================
-# Creates a static named character vector mapping treatment codes to human-readable
-# descriptions. Combined from 4 sources in precedence order (last wins):
-#   1. Phase 39 RDS: unmatched_codes_classified.rds (CPT/HCPCS NLM API results)
-#   2. Phase 40 RDS: unmatched_ndc_classified.rds (NDC/RXNORM RxNorm API results)
-#   3. R/42 hardcoded_descriptions: retired radiation CPT codes (31 entries)
-#   4. R/00_config.R inline comments: original curated codes with human descriptions
+# Purpose: Build static named character vector mapping treatment codes to
+#          human-readable descriptions. Combines 4 sources in precedence order
+#          (last source wins on duplicates).
 #
-# Decision traceability:
-#   D-01: Static lookup from existing sources, no NLM API at runtime
-#   D-02: Output as code_descriptions.rds named character vector
-#   D-05: Missing descriptions handled downstream (empty string)
+# Inputs:  cache/outputs/unmatched_codes_classified.rds (Phase 39 CPT/HCPCS NLM API)
+#          cache/outputs/unmatched_ndc_classified.rds (Phase 40 NDC/RXNORM RxNorm API)
+#          Hardcoded radiation CPT descriptions (retired codes, 31 entries)
+#          R/00_config.R inline comments (original curated codes)
 #
-# Inputs:
-#   - cache/outputs/unmatched_codes_classified.rds (Phase 39)
-#   - cache/outputs/unmatched_ndc_classified.rds (Phase 40)
-#   - R/45b_radiation_cpt_audit.R hardcoded_descriptions (sourced inline)
-#   - Manual transcription from R/00_config.R inline comments
+# Outputs: cache/outputs/code_descriptions.rds (named character vector)
 #
-# Output:
-#   - cache/outputs/code_descriptions.rds (named character vector)
+# Dependencies: R/00_config.R
+#
+# Requirements: Decision traceability maintained:
+#               D-01: Static lookup from existing sources, no NLM API at runtime
+#               D-02: Output as code_descriptions.rds named character vector
+#               D-05: Missing descriptions handled downstream (empty string)
 # =============================================================================
 
 
-# --- SECTION 1: SETUP ---
+# --- SECTION 1: SETUP ----
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -44,7 +41,7 @@ OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 message("=== Phase 02: Build Code Description Lookup ===\n")
 
 
-# --- SECTION 2: SOURCE 1: Phase 39 RDS (CPT/HCPCS codes) ---
+# --- SECTION 2: SOURCE 1 (PHASE 39 RDS - CPT/HCPCS CODES) ----
 
 hcpcs_classified <- readRDS(HCPCS_RDS)
 hcpcs_classified <- hcpcs_classified %>%
@@ -54,7 +51,7 @@ hcpcs_lookup <- setNames(hcpcs_classified$description, hcpcs_classified$code)
 message(glue("  Source 1 (Phase 39 CPT/HCPCS): {length(hcpcs_lookup)} descriptions"))
 
 
-# --- SECTION 3: SOURCE 2: Phase 40 RDS (NDC/RXNORM codes) ---
+# --- SECTION 3: SOURCE 2 (PHASE 40 RDS - NDC/RXNORM CODES) ----
 
 ndc_classified <- readRDS(NDC_RDS)
 ndc_classified <- ndc_classified %>%
@@ -64,7 +61,7 @@ ndc_lookup <- setNames(ndc_classified$drug_name, ndc_classified$code)
 message(glue("  Source 2 (Phase 40 NDC/RXNORM): {length(ndc_lookup)} descriptions"))
 
 
-# --- SECTION 4: SOURCE 3: R/45 hardcoded descriptions (retired radiation CPT) ---
+# --- SECTION 4: SOURCE 3 (HARDCODED RADIATION CPT - RETIRED CODES) ----
 
 radiation_hardcoded <- c(
   "77401" = "External beam radiation delivery, surface/orthovoltage (DELETED 2026; historical claims only)",
@@ -107,7 +104,12 @@ radiation_hardcoded <- c(
 message(glue("  Source 3 (R/45 radiation hardcoded): {length(radiation_hardcoded)} descriptions"))
 
 
-# --- SECTION 5: SOURCE 4: R/00_config.R inline comments (curated codes) ---
+# --- SECTION 5: SOURCE 4 (R/00_CONFIG.R CURATED CODES) ----
+# WHY 4-source precedence order: API results provide broad coverage but lower
+#   accuracy; hardcoded descriptions target specific gaps (retired codes); manual
+#   config comments are most accurate but fewest -- later sources override earlier
+#   to ensure highest-quality descriptions win. Per D-01, D-02.
+# ---
 
 config_descriptions <- c(
   # Chemo HCPCS (ABVD regimen, lines 417-422)
@@ -341,7 +343,7 @@ config_descriptions <- c(
 message(glue("  Source 4 (R/00_config.R curated): {length(config_descriptions)} descriptions"))
 
 
-# --- SECTION 6: COMBINE ALL SOURCES ---
+# --- SECTION 6: COMBINE ALL SOURCES ----
 
 # Precedence order: API results (lowest) -> hardcoded (medium) -> config (highest)
 # Later sources overwrite earlier for duplicate keys
@@ -354,13 +356,13 @@ message(glue("  Unique codes: {length(unique(names(all_descriptions)))} (duplica
 all_descriptions <- all_descriptions[!duplicated(names(all_descriptions), fromLast = TRUE)]
 
 
-# --- SECTION 7: SAVE RDS ---
+# --- SECTION 7: SAVE RDS ----
 
 saveRDS(all_descriptions, OUTPUT_RDS)
 message(glue("\n  Saved {length(all_descriptions)} code descriptions to {OUTPUT_RDS}"))
 
 
-# --- SECTION 8: SUMMARY ---
+# --- SECTION 8: SUMMARY ----
 
 message("\n=== Phase 02 Lookup Build Complete ===")
 message(glue("  Phase 39 CPT/HCPCS: {length(hcpcs_lookup)}"))

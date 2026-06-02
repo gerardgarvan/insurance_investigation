@@ -1,17 +1,21 @@
 # ==============================================================================
-# Phase 41: Extract All Unique Codes from Data
+# 41_extract_all_codes.R
 # ==============================================================================
-# Bottom-up approach: pull every unique code that actually appears in the
-# patient data, with patient counts and record counts, so we can categorize
-# each code manually.
+# Purpose: Extract all unique ICD-10 diagnosis and ICD-O-3 topography codes
+#          from data with patient and record counts. Bottom-up inventory for
+#          manual code categorization review.
 #
-# Outputs:
-#   - output/tables/all_codes_inventory.xlsx
-#     Sheet 1 "ICD-10 Diagnosis": every unique DX code (ICD-10) with counts
-#     Sheet 2 "ICD-O-3 Topography": every unique topography code with counts
+# Inputs:  DIAGNOSIS DuckDB table (ICD-10 codes, DX_TYPE == "10")
+#          TUMOR_REGISTRY_ALL DuckDB table (ICD-O-3 topography codes)
 #
-# Usage:
-#   Rscript R/41_extract_all_codes.R
+# Outputs: output/tables/all_codes_inventory.xlsx
+#          - Sheet 1 "ICD-10 Diagnosis": every unique DX code with counts
+#          - Sheet 2 "ICD-O-3 Topography": every unique topography code with counts
+#
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
+#
+# Requirements: Complete code inventory for clinical review and manual
+#               categorization verification
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -30,7 +34,11 @@ dir.create(dirname(OUTPUT_PATH), showWarnings = FALSE, recursive = TRUE)
 message("=== Phase 48: Extract All Unique Codes ===")
 
 # ==============================================================================
-# 1. ICD-10 codes from DIAGNOSIS
+# SECTION 1: ICD-10 CODES FROM DIAGNOSIS ----
+# ==============================================================================
+# WHY both ICD-10 and ICD-O-3: PCORnet stores tumor registry data with ICD-O-3
+#   topography codes separate from diagnosis codes. Extracting both ensures
+#   complete coverage of all cancer codes in the system.
 # ==============================================================================
 
 message("Loading DIAGNOSIS table (ICD-10 only)...")
@@ -65,7 +73,7 @@ for (r in seq_len(nrow(top10_dx))) {
 }
 
 # ==============================================================================
-# 2. ICD-O-3 topography codes from TUMOR_REGISTRY_ALL
+# SECTION 2: ICD-O-3 TOPOGRAPHY CODES FROM TUMOR_REGISTRY_ALL ----
 # ==============================================================================
 
 message("\nLoading TUMOR_REGISTRY_ALL table (topography codes)...")
@@ -113,7 +121,7 @@ if (length(site_candidates) == 0) {
 }
 
 # ==============================================================================
-# 3. Write xlsx with two sheets
+# SECTION 3: WRITE STYLED XLSX ----
 # ==============================================================================
 
 message(glue("\nWriting {OUTPUT_PATH}..."))

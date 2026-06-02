@@ -1,22 +1,21 @@
 # ==============================================================================
-# Phase 40: Cancer Site Frequency (Rewrite)
+# 40_cancer_site_frequency.R
 # ==============================================================================
-# Bottom-up approach: classify every cancer code that appears in the data using
-# ICD-10 prefix rules defined directly in code. No external xlsx dependency.
+# Purpose: Classify every cancer code in the data using ICD-10 prefix rules
+#          (C00-C96, D00-D48) and count patient/record frequencies per category.
+#          Bottom-up approach with no external xlsx dependency.
 #
-# Categories based on SEER/NCI site groupings mapped to ICD-10-CM prefixes.
+# Inputs:  DIAGNOSIS DuckDB table (ICD-10 codes, DX_TYPE == "10")
+#          TUMOR_REGISTRY_ALL DuckDB table (ICD-O-3 topography codes)
 #
-# Inputs:
-#   - DIAGNOSIS DuckDB table (ICD-10 codes)
-#   - TUMOR_REGISTRY_ALL DuckDB table (ICD-O-3 topography codes)
+# Outputs: output/tables/cancer_site_frequency.xlsx (styled workbook)
+#          - Sheet 1 "By Category": patient/record counts per category per source
+#          - Sheet 2 "All Codes": every code with its assigned category (verification)
 #
-# Outputs:
-#   - output/tables/cancer_site_frequency.xlsx (styled workbook)
-#     Sheet 1 "By Category": patient/record counts per category per source
-#     Sheet 2 "All Codes": every code with its assigned category (verification)
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/40_cancer_site_frequency.R
+# Requirements: Cancer site classification using SEER/NCI site groupings
+#               mapped to ICD-10-CM 3-character prefixes
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -36,10 +35,18 @@ message("=== Phase 40: Cancer Site Frequency ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
-# SECTION 1: DEFINE CANCER SITE CATEGORIES
+# SECTION 1: DEFINE CANCER SITE CATEGORIES ----
 # ==============================================================================
 # Each 3-character ICD-10 prefix maps to a cancer site category.
-# Based on SEER/NCI site groupings.  Prefix matching via substr(code, 1, 3).
+# Based on SEER/NCI site groupings. Prefix matching via substr(code, 1, 3).
+#
+# WHY ICD-10 prefix rules: ICD-10-CM Chapter 2 organizes neoplasms anatomically
+#   by 3-character prefix (e.g., C81 = Hodgkin lymphoma, C50 = Breast). This
+#   structure allows deterministic classification without manual code-by-code mapping.
+#
+# WHY both C and D codes: D-codes (D00-D48) represent in-situ, benign, and
+#   uncertain-behavior neoplasms -- clinically relevant for differential diagnosis
+#   and completeness (e.g., D05 = ductal carcinoma in situ of breast).
 #
 # Sources:
 #   - SEER Site Recode ICD-O-3/WHO 2008
@@ -369,7 +376,7 @@ CATEGORY_ORDER <- c(
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 2: CLASSIFICATION FUNCTION
+# SECTION 2: CLASSIFICATION FUNCTION ----
 # ==============================================================================
 
 #' Classify ICD-10 or ICD-O-3 codes into cancer site categories
@@ -382,7 +389,7 @@ classify_codes <- function(codes) {
 }
 
 # ==============================================================================
-# SECTION 3: LOAD AND CLASSIFY ICD-10 DIAGNOSIS CODES
+# SECTION 3: LOAD AND CLASSIFY ICD-10 DIAGNOSIS CODES ----
 # ==============================================================================
 
 message("\nLoading DIAGNOSIS table (ICD-10 only, all patients)...")
@@ -442,7 +449,11 @@ icd10_codes_detail <- dx_cancer %>%
   arrange(category, code)
 
 # ==============================================================================
-# SECTION 4: LOAD AND CLASSIFY ICD-O-3 TOPOGRAPHY CODES
+# SECTION 4: LOAD AND CLASSIFY ICD-O-3 TOPOGRAPHY CODES ----
+# ==============================================================================
+# WHY both ICD-10 and ICD-O-3: PCORnet stores tumor registry data using ICD-O-3
+#   topography codes separate from diagnosis codes. Combining both sources gives
+#   complete cancer site coverage.
 # ==============================================================================
 
 message("\nLoading TUMOR_REGISTRY_ALL table (topography codes)...")
@@ -522,7 +533,7 @@ if (length(site_candidates) == 0) {
 }
 
 # ==============================================================================
-# SECTION 5: COMBINE RESULTS
+# SECTION 5: COMBINE RESULTS ----
 # ==============================================================================
 
 message("\nCombining results...")
@@ -594,7 +605,7 @@ all_codes_detail <- all_codes_detail %>%
   select(-cat_rank)
 
 # ==============================================================================
-# SECTION 6: WRITE STYLED XLSX
+# SECTION 6: WRITE STYLED XLSX ----
 # ==============================================================================
 
 message("")

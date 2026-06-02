@@ -1,21 +1,21 @@
 # ==============================================================================
-# Phase 43: Cancer Site Confirmation by Distinct Date Count
+# 43_cancer_site_confirmation.R
 # ==============================================================================
-# Validates cancer site diagnosis codes by requiring at least 2 distinct dates
-# per code per patient before counting the code as "confirmed."
+# Purpose: Confirm cancer site codes by requiring 2+ distinct diagnosis dates per
+#          code per patient -- filters out single-encounter incidental findings.
+#          Two confirmation levels: exact code and cancer site category.
 #
-# Two confirmation levels (per D-01):
-#   1. Exact Code:  C81.10 must appear on 2+ distinct dates
-#   2. Cancer Site Category: any code in the same cancer site category on 2+ distinct dates confirms the category
+# Inputs:  DIAGNOSIS DuckDB table (ICD-10 codes, DX_TYPE == "10", DX_DATE)
 #
-# Data: DIAGNOSIS table only, ICD-10 codes (DX_TYPE == "10"), DX_DATE (per D-03, D-04)
+# Outputs: output/tables/cancer_site_confirmation.xlsx
+#          - Sheet 1 "Exact Code": per-category confirmation at exact ICD-10 code level
+#          - Sheet 2 "Cancer Site Category": per-category confirmation across all codes in category
 #
-# Output: output/tables/cancer_site_confirmation.xlsx
-#   Sheet 1 "Exact Code":   per-category confirmation at exact ICD-10 code level
-#   Sheet 2 "Cancer Site Category": per-category confirmation across all codes in the same category
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/43_cancer_site_confirmation.R
+# Requirements: Two confirmation levels (per D-01):
+#               1. Exact Code: C81.10 must appear on 2+ distinct dates
+#               2. Site Category: any code in same category on 2+ distinct dates
 # ==============================================================================
 
 suppressPackageStartupMessages({
@@ -35,9 +35,9 @@ message("=== Phase 3: Cancer Site Confirmation by Distinct Date Count ===")
 message(glue("Output: {OUTPUT_PATH}"))
 
 # ==============================================================================
-# SECTION 1: PREFIX_MAP and CATEGORY_ORDER
+# SECTION 1: PREFIX_MAP AND CATEGORY_ORDER ----
 # ==============================================================================
-# Copied from R/47_cancer_site_frequency.R for script independence
+# Copied from R/40_cancer_site_frequency.R for script independence
 
 PREFIX_MAP <- c(
   # --- Solid tumors by anatomical site ---
@@ -371,7 +371,7 @@ classify_codes <- function(codes) {
 message(glue("Defined {length(unique(PREFIX_MAP))} cancer site categories covering {length(PREFIX_MAP)} prefixes"))
 
 # ==============================================================================
-# SECTION 2: LOAD AND CLASSIFY DIAGNOSIS DATA
+# SECTION 2: LOAD AND CLASSIFY DIAGNOSIS DATA ----
 # ==============================================================================
 
 message("\nLoading DIAGNOSIS table (ICD-10 only, all patients)...")
@@ -409,7 +409,15 @@ if (n_unclassified > 0) {
 message(glue("  ICD-10 classified into {n_distinct(dx_cancer$category)} categories"))
 
 # ==============================================================================
-# SECTION 3: EXACT CODE CONFIRMATION (per D-01, level 1)
+# SECTION 3: EXACT CODE CONFIRMATION (PER D-01, LEVEL 1) ----
+# ==============================================================================
+# WHY 2+ distinct dates required: A single diagnosis date may represent an
+#   incidental finding, rule-out diagnosis, or data entry error. Two distinct
+#   dates indicate persistent clinical concern and independent confirmation.
+#
+# WHY distinct dates not distinct encounters: Same-day encounters at different
+#   sites (e.g., clinic visit + lab) still count as one temporal confirmation
+#   point. Only date separation provides meaningful temporal independence.
 # ==============================================================================
 
 message("\n=== EXACT CODE CONFIRMATION ===")
@@ -454,7 +462,7 @@ message(glue("  Total confirmed patients (exact code): {format(total_confirmed_e
 message(glue("  Overall confirmation rate (exact): {scales::percent(overall_rate_exact, accuracy=0.1)}"))
 
 # ==============================================================================
-# SECTION 4: CANCER SITE CATEGORY CONFIRMATION (per D-01, level 2)
+# SECTION 4: CANCER SITE CATEGORY CONFIRMATION (PER D-01, LEVEL 2) ----
 # ==============================================================================
 
 message("\n=== CANCER SITE CATEGORY CONFIRMATION ===")
@@ -493,7 +501,7 @@ message(glue("  Total confirmed patients (category): {format(total_confirmed_cat
 message(glue("  Overall confirmation rate (category): {scales::percent(overall_rate_category, accuracy=0.1)}"))
 
 # ==============================================================================
-# SECTION 5: TOTALS ROWS
+# SECTION 5: TOTALS ROWS ----
 # ==============================================================================
 
 totals_exact <- tibble(
@@ -514,7 +522,7 @@ totals_category <- tibble(
 )
 
 # ==============================================================================
-# SECTION 6: WRITE STYLED XLSX (per D-02, D-07)
+# SECTION 6: WRITE STYLED XLSX (PER D-02, D-07) ----
 # ==============================================================================
 
 message("")
