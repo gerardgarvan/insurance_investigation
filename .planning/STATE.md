@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Clinical Data Refinements & NLPHL Breakout
-status: active
-last_updated: "2026-06-02"
+status: executing
+last_updated: "2026-06-02T23:15:22.519Z"
+last_activity: 2026-06-02
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
 ---
 
 # State: v2.1 Clinical Data Refinements & NLPHL Breakout
@@ -21,19 +22,21 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Refine cancer summary tables, break out NLPHL as a distinct category, investigate SCT code 0362, remove tumor registry treatment data, verify replaced-by codes, create new tables, and add cause of death and per-episode cancer categorization to outputs — maintaining v2.0 code quality standards throughout.
+**Current Focus:** Phase 75 — configuration-extensions-nlphl-death-cause
 
 ## Current Position
 
-Phase: Not started (roadmap phase)
-Plan: N/A
-Status: Awaiting `/gsd:plan-phase 75`
-Last activity: 2026-06-02 — v2.1 roadmap created
+Phase: 75 (configuration-extensions-nlphl-death-cause) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-06-02
 
 **Progress:**
-```
+
+[█████░░░░░] 50%
 v2.1 Milestone: [......] 0% (0/6 phases)
   Phase 75: [......] 0%
+
 ```
 
 **Velocity:** N/A (no phases completed yet)
@@ -52,6 +55,7 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 - Average execution time: varies by phase complexity
 
 **Historical (v1.0-v2.0):**
+
 - Total phases: 74
 - Total plans: ~180
 - Overall success rate: 99.4% (4 false failures in Phase 74)
@@ -72,6 +76,7 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 | Output versioning for breaking changes | Maintain baseline comparability (v1 vs v2_7day) | Pending |
 | Centralize drug groupings in R/00_config.R | Follows AMC_PAYER_LOOKUP pattern from Phase 36, avoids runtime xlsx dependency | Pending |
 | Profile cause of death quality first | Guard against misleading mortality analyses (>40% missingness common) | Pending |
+| Phase 75 P01 | 185 | 2 tasks | 2 files |
 
 ### Open Questions
 
@@ -102,9 +107,11 @@ None. Roadmap complete, ready for phase planning.
 ### Technical Debt
 
 **Carried from v2.0:**
+
 - None identified — v2.0 cleanup addressed all major debt items
 
 **Anticipated in v2.1:**
+
 - Output versioning strategy (v1 vs v2_7day files) needs clear naming convention
 - Drug grouping centralization follows Phase 36 pattern but adds ~100 LOC to R/00_config.R
 - Potential igraph dependency for graph cycle detection (lightweight but needs approval)
@@ -129,11 +136,13 @@ Roadmap creation complete. Ready for phase planning.
 3. Continue sequential phase execution through Phase 80
 
 **Key context for next session:**
+
 - Milestone v2.1 roadmap complete: 6 phases (75-80), 14 requirements
 - Critical pitfalls identified: NLPHL double-counting, TR removal silent loss, 7-day gap baseline breakage, xlsx runtime dependencies, cause of death missingness
 - Visualization phase (Phase 80) includes UI work for ggalluvial Sankey diagrams
 
 **Files created:**
+
 - .planning/ROADMAP.md (6 phases, success criteria, dependencies)
 - .planning/STATE.md (this file)
 - .planning/REQUIREMENTS.md (traceability updated)

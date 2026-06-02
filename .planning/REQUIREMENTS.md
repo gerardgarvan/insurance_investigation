@@ -9,7 +9,7 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 
 ### Cancer Classification
 
-- [ ] **CANCER-01**: NLPHL (C81.0 / 201.4x) broken out from Hodgkin Lymphoma as distinct cancer category in CANCER_SITE_MAP, classify_codes(), and all downstream outputs including Gantt
+- [x] **CANCER-01**: NLPHL (C81.0 / 201.4x) broken out from Hodgkin Lymphoma as distinct cancer category in CANCER_SITE_MAP, classify_codes(), and all downstream outputs including Gantt
 - [ ] **CANCER-02**: Pre/post cancer summary table requires 7-day unique day gap for ALL cancer categories (not just HL), with total population = 6,347
 - [ ] **CANCER-03**: Cancer_category and triggering code description populated per episode using drug groupings from all_codes_resolved_next_tables.xlsx
 
@@ -21,8 +21,8 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 
 ### Death Data
 
-- [ ] **DEATH-01**: Cause of death data quality profiled (completeness, coding, payer stratification) before integration
-- [ ] **DEATH-02**: Cause of death included in outputs (conditional on DEATH-01 showing acceptable data quality)
+- [x] **DEATH-01**: Cause of death data quality profiled (completeness, coding, payer stratification) before integration
+- [x] **DEATH-02**: Cause of death included in outputs (conditional on DEATH-01 showing acceptable data quality)
 
 ### Code Verification
 
@@ -31,7 +31,7 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 
 ### Quality Standards
 
-- [ ] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
+- [x] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
 
 ## Future Requirements
 
@@ -68,17 +68,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CANCER-01 | Phase 75, 77 | Pending |
+| CANCER-01 | Phase 75, 77 | Complete |
 | CANCER-02 | Phase 77 | Pending |
 | CANCER-03 | Phase 78 | Pending |
 | TREAT-01 | Phase 76 | Pending |
 | TREAT-02 | Phase 77 | Pending |
 | TREAT-03 | Phase 79 | Pending |
-| DEATH-01 | Phase 75, 78 | Pending |
-| DEATH-02 | Phase 75, 78 | Pending |
+| DEATH-01 | Phase 75, 78 | Complete |
+| DEATH-02 | Phase 75, 78 | Complete |
 | CODE-01 | Phase 79 | Pending |
 | CODE-02 | Phase 79 | Pending |
-| QUAL-01 | Phases 75-80 (all) | Pending |
+| QUAL-01 | Phases 75-80 (all) | Complete |
 
 **Coverage:**
 - v2.1 requirements: 11 total

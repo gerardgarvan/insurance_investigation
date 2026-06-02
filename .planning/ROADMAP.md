@@ -75,9 +75,9 @@
   3. classify_codes() in R/utils/utils_cancer.R supports 4-char prefix matching (C810) before 3-char fallback (C81)
   4. DEATH_CAUSE_MAP in R/00_config.R contains ICD-10 cause categories (50+ entries covering major categories)
   5. Unit tests validate NLPHL mutual exclusivity: no patient classified as both NLPHL and classical HL
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 75-01-PLAN.md — Config constants (ICD9_NLPHL_CODES, CANCER_SITE_MAP NLPHL entries, DEATH_CAUSE_MAP) and classify_codes() update
+- [x] 75-01-PLAN.md — Config constants (ICD9_NLPHL_CODES, CANCER_SITE_MAP NLPHL entries, DEATH_CAUSE_MAP) and classify_codes() update
 - [ ] 75-02-PLAN.md — Smoke test NLPHL mutual exclusivity and DEATH_CAUSE_MAP validation
 
 #### Phase 76: Treatment Source Analysis & Removal
@@ -147,7 +147,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 75. Configuration Extensions | 0/2 | Planned | - |
+| 75. Configuration Extensions | 1/2 | In Progress|  |
 | 76. Treatment Source Analysis & Removal | 0/? | Not started | - |
 | 77. Cancer Classification Refinements | 0/? | Not started | - |
 | 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
