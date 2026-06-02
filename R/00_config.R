@@ -396,6 +396,314 @@ PAYER_MAPPING <- list(
 )
 
 # ==============================================================================
+# SECTION 5b: CANCER SITE CLASSIFICATION MAP ----
+# ==============================================================================
+# 324-entry ICD-10/ICD-O-3 prefix-to-category mapping for cancer site
+# classification. Based on SEER/NCI site groupings. Each 3-character prefix
+# maps to a cancer category.
+# Used by classify_codes() in R/utils/utils_cancer.R across 10+ scripts.
+#
+# WHY centralized here: Previously duplicated in 11 scripts (~2,860 lines of
+# copies). Single definition eliminates drift risk and simplifies future
+# category additions.
+#
+# Sources: SEER Site Recode ICD-O-3/WHO 2008, ICD-10-CM Chapter 2 (C00-D49)
+# ==============================================================================
+
+CANCER_SITE_MAP <- c(
+  # --- Solid tumors by anatomical site ---
+
+  # 1. Lip, Oral Cavity and Pharynx (C00-C14)
+  "C00" = "Lip, Oral Cavity and Pharynx",
+  "C01" = "Lip, Oral Cavity and Pharynx",
+  "C02" = "Lip, Oral Cavity and Pharynx",
+  "C03" = "Lip, Oral Cavity and Pharynx",
+  "C04" = "Lip, Oral Cavity and Pharynx",
+  "C05" = "Lip, Oral Cavity and Pharynx",
+  "C06" = "Lip, Oral Cavity and Pharynx",
+  "C07" = "Lip, Oral Cavity and Pharynx",
+  "C08" = "Lip, Oral Cavity and Pharynx",
+  "C09" = "Lip, Oral Cavity and Pharynx",
+  "C10" = "Lip, Oral Cavity and Pharynx",
+  "C11" = "Lip, Oral Cavity and Pharynx",
+  "C12" = "Lip, Oral Cavity and Pharynx",
+  "C13" = "Lip, Oral Cavity and Pharynx",
+  "C14" = "Lip, Oral Cavity and Pharynx",
+
+  # 2. Esophagus (C15)
+  "C15" = "Esophagus",
+
+  # 3. Stomach (C16)
+  "C16" = "Stomach",
+
+  # 4. Small Intestine (C17)
+  "C17" = "Small Intestine",
+
+  # 5. Colon incl. rectosigmoid junction (C18-C19)
+  "C18" = "Colon",
+  "C19" = "Colon",
+
+  # 6. Rectum (C20)
+  "C20" = "Rectum",
+
+  # 7. Anus (C21)
+  "C21" = "Anus",
+
+  # 8. Liver (C22)
+  "C22" = "Liver",
+
+  # 9. Pancreas (C25)
+  "C25" = "Pancreas",
+
+  # 10. Other Digestive (gallbladder, biliary, other) (C23-C24, C26)
+  "C23" = "Other Digestive",
+  "C24" = "Other Digestive",
+  "C26" = "Other Digestive",
+
+  # 11. Nasal Cavity, Middle Ear, Sinuses (C30-C31)
+  "C30" = "Nasal Cavity, Middle Ear, Sinuses",
+  "C31" = "Nasal Cavity, Middle Ear, Sinuses",
+
+  # 12. Larynx (C32)
+  "C32" = "Larynx",
+
+  # 13. Lung and Bronchus (C33-C34)
+  "C33" = "Lung and Bronchus",
+  "C34" = "Lung and Bronchus",
+
+  # 14. Other Respiratory/Intrathoracic (C37-C39)
+  "C37" = "Other Respiratory/Intrathoracic",
+  "C38" = "Other Respiratory/Intrathoracic",
+  "C39" = "Other Respiratory/Intrathoracic",
+
+  # 15. Bone (C40-C41)
+  "C40" = "Bone",
+  "C41" = "Bone",
+
+  # 16. Melanoma of Skin (C43)
+  "C43" = "Melanoma of Skin",
+
+  # 17. Other Skin incl. Merkel cell (C44, C4A)
+  "C44" = "Other Skin",
+  "C4A" = "Other Skin",
+
+  # 18. Mesothelioma (C45)
+  "C45" = "Mesothelioma",
+
+  # 19. Kaposi Sarcoma (C46)
+  "C46" = "Kaposi Sarcoma",
+
+  # 20. Soft Tissue / Peripheral Nerves (C47-C49)
+  "C47" = "Soft Tissue",
+  "C48" = "Soft Tissue",
+  "C49" = "Soft Tissue",
+
+  # 21. Breast (C50)
+  "C50" = "Breast",
+
+  # 22. Cervix Uteri (C53)
+  "C53" = "Cervix Uteri",
+
+  # 23. Corpus Uteri (C54-C55)
+  "C54" = "Corpus Uteri",
+  "C55" = "Corpus Uteri",
+
+  # 24. Ovary (C56)
+  "C56" = "Ovary",
+
+  # 25. Other Female Genital (C51-C52, C57-C58)
+  "C51" = "Other Female Genital",
+  "C52" = "Other Female Genital",
+  "C57" = "Other Female Genital",
+  "C58" = "Other Female Genital",
+
+  # 26. Prostate (C61)
+  "C61" = "Prostate",
+
+  # 27. Testis (C62)
+  "C62" = "Testis",
+
+  # 28. Other Male Genital (C60, C63)
+  "C60" = "Other Male Genital",
+  "C63" = "Other Male Genital",
+
+  # 29. Kidney and Renal Pelvis (C64-C65)
+  "C64" = "Kidney and Renal Pelvis",
+  "C65" = "Kidney and Renal Pelvis",
+
+  # 30. Bladder (C67)
+  "C67" = "Bladder",
+
+  # 31. Other Urinary (C66, C68)
+  "C66" = "Other Urinary",
+  "C68" = "Other Urinary",
+
+  # 32. Eye and Orbit (C69)
+  "C69" = "Eye and Orbit",
+
+  # 33. Brain and CNS (C70-C72)
+  "C70" = "Brain and CNS",
+  "C71" = "Brain and CNS",
+  "C72" = "Brain and CNS",
+
+  # 34. Thyroid (C73)
+  "C73" = "Thyroid",
+
+  # 35. Other Endocrine (C74-C75)
+  "C74" = "Other Endocrine",
+  "C75" = "Other Endocrine",
+
+  # 36. Ill-Defined Sites (C76)
+  "C76" = "Ill-Defined Sites",
+
+  # 37. Unknown Primary Site (C80)
+  "C80" = "Unknown Primary Site",
+
+  # --- Secondary/metastatic ---
+
+  # 38. Lymph Nodes (secondary) (C77)
+  "C77" = "Lymph Nodes (Secondary)",
+
+  # 39. Secondary - Respiratory/Digestive (C78)
+  "C78" = "Secondary - Respiratory/Digestive",
+
+  # 40. Secondary - Other Sites (C79)
+  "C79" = "Secondary - Other Sites",
+
+  # --- Neuroendocrine ---
+
+  # 41. Neuroendocrine Tumors (C7A, C7B)
+  "C7A" = "Neuroendocrine Tumors",
+  "C7B" = "Neuroendocrine Tumors",
+
+  # --- Hematologic malignancies ---
+
+  # 42. Hodgkin Lymphoma (C81)
+  "C81" = "Hodgkin Lymphoma",
+
+  # 43. Non-Hodgkin Lymphoma (C82-C86, C88)
+  "C82" = "Non-Hodgkin Lymphoma",
+  "C83" = "Non-Hodgkin Lymphoma",
+  "C84" = "Non-Hodgkin Lymphoma",
+  "C85" = "Non-Hodgkin Lymphoma",
+  "C86" = "Non-Hodgkin Lymphoma",
+  "C88" = "Non-Hodgkin Lymphoma",
+
+  # 44. Multiple Myeloma / Plasma Cell (C90)
+  "C90" = "Multiple Myeloma",
+
+  # 45. Lymphoid Leukemia (C91)
+  "C91" = "Lymphoid Leukemia",
+
+  # 46. Myeloid and Monocytic Leukemia (C92-C93)
+  "C92" = "Myeloid and Monocytic Leukemia",
+  "C93" = "Myeloid and Monocytic Leukemia",
+
+  # 47. Other Leukemia (C94-C95)
+  "C94" = "Other Leukemia",
+  "C95" = "Other Leukemia",
+
+  # 48. Other Hematopoietic (C96)
+  "C96" = "Other Hematopoietic",
+
+  # --- D-codes: neoplasm-related ---
+
+  # 49. In Situ Neoplasms (D00-D09)
+  "D00" = "In Situ Neoplasms",
+  "D01" = "In Situ Neoplasms",
+  "D02" = "In Situ Neoplasms",
+  "D03" = "In Situ Neoplasms",
+  "D04" = "In Situ Neoplasms",
+  "D05" = "In Situ Neoplasms",
+  "D06" = "In Situ Neoplasms",
+  "D07" = "In Situ Neoplasms",
+  "D09" = "In Situ Neoplasms",
+
+  # 50. Benign Neoplasms (D10-D36, D3A)
+  "D10" = "Benign Neoplasms",
+  "D11" = "Benign Neoplasms",
+  "D12" = "Benign Neoplasms",
+  "D13" = "Benign Neoplasms",
+  "D14" = "Benign Neoplasms",
+  "D15" = "Benign Neoplasms",
+  "D16" = "Benign Neoplasms",
+  "D17" = "Benign Neoplasms",
+  "D18" = "Benign Neoplasms",
+  "D19" = "Benign Neoplasms",
+  "D20" = "Benign Neoplasms",
+  "D21" = "Benign Neoplasms",
+  "D22" = "Benign Neoplasms",
+  "D23" = "Benign Neoplasms",
+  "D24" = "Benign Neoplasms",
+  "D25" = "Benign Neoplasms",
+  "D26" = "Benign Neoplasms",
+  "D27" = "Benign Neoplasms",
+  "D28" = "Benign Neoplasms",
+  "D29" = "Benign Neoplasms",
+  "D30" = "Benign Neoplasms",
+  "D31" = "Benign Neoplasms",
+  "D32" = "Benign Neoplasms",
+  "D33" = "Benign Neoplasms",
+  "D34" = "Benign Neoplasms",
+  "D35" = "Benign Neoplasms",
+  "D36" = "Benign Neoplasms",
+  "D3A" = "Benign Neoplasms",
+
+  # 51. Uncertain Behavior Neoplasms (D37-D44, D48)
+  "D37" = "Uncertain Behavior Neoplasms",
+  "D38" = "Uncertain Behavior Neoplasms",
+  "D39" = "Uncertain Behavior Neoplasms",
+  "D40" = "Uncertain Behavior Neoplasms",
+  "D41" = "Uncertain Behavior Neoplasms",
+  "D42" = "Uncertain Behavior Neoplasms",
+  "D43" = "Uncertain Behavior Neoplasms",
+  "D44" = "Uncertain Behavior Neoplasms",
+  "D48" = "Uncertain Behavior Neoplasms",
+
+  # 52. MDS / Myeloproliferative (D45-D47) -- clinically important
+  "D45" = "MDS / Myeloproliferative",
+  "D46" = "MDS / Myeloproliferative",
+  "D47" = "MDS / Myeloproliferative",
+
+  # 53. Unspecified Behavior Neoplasms (D49)
+  "D49" = "Unspecified Behavior Neoplasms",
+
+  # --- ICD-O-3 only: hematopoietic site (not in ICD-10) ---
+  "C42" = "Hematopoietic System (ICD-O-3)"
+)
+
+# ==============================================================================
+# SECTION 5c: TIER HIERARCHY CONFIGURATION ----
+# ==============================================================================
+# Payer tier resolution hierarchy (per Amy Crisp framework).
+# Lower rank = higher priority. Used for same-day, encounter-level, and
+# date-level payer resolution in R/60-R/62.
+#
+# WHY this hierarchy order:
+#   Medicaid > Medicare > Private > Other govt > Other > Self-pay >
+#   Uninsured > Missing
+#   - Medicaid has the most restrictive eligibility (strongest signal of
+#     coverage status)
+#   - Medicare indicates age 65+ or disability eligibility
+#   - When a patient has multiple encounters on the same date with different
+#     payers, we select the tier with the lowest rank (highest priority) as
+#     the "true" payer
+#
+# WHY centralized here: Previously duplicated in R/60, R/61, R/62 identically.
+# ==============================================================================
+
+TIER_MAPPING <- list(
+  Medicaid     = 1L,
+  Medicare     = 2L,
+  Private      = 3L,
+  "Other govt" = 4L,
+  Other        = 5L,
+  "Self-pay"   = 6L,
+  Uninsured    = 7L,
+  Missing      = 8L
+)
+
+# ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----
 # ==============================================================================
 
