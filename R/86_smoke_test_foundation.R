@@ -154,7 +154,11 @@ message("\n[6/6] No stale source() references...")
 
 r_files <- list.files("R", pattern = "\\.R$", full.names = TRUE)
 stale_refs <- character(0)
+# Exclude smoke test files which contain the pattern in grep strings
+smoke_test_files <- c("86_smoke_test_foundation.R", "87_smoke_test_full_pipeline.R",
+                       "88_smoke_test_comprehensive.R")
 for (f in r_files) {
+  if (basename(f) %in% smoke_test_files) next
   lines <- readLines(f, warn = FALSE)
   # Match source("R/utils_ but NOT source("R/utils/utils_
   hits <- grep('source\\("R/utils_', lines)
