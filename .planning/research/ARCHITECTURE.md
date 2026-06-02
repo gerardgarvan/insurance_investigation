@@ -1,322 +1,545 @@
-# Architecture Research: R Analysis Pipeline Reorganization
+# Architecture Integration: v2.1 Clinical Data Refinements & NLPHL Breakout
 
-**Domain:** PCORnet clinical cohort analysis pipeline (R)
-**Researched:** 2026-06-01
-**Confidence:** HIGH
+**Project:** PCORnet Payer Variable Investigation (R Pipeline)
+**Milestone:** v2.1 Clinical Data Refinements & NLPHL Breakout
+**Researched:** 2026-06-02
 
 ## Executive Summary
 
-This architecture research defines the reorganization strategy for ~80 R analysis scripts in a PCORnet CDM cohort analysis pipeline. The existing codebase has evolved organically across 63 phases, resulting in:
+v2.1 adds **8 clinical data refinement features** to the existing v2.0 R pipeline. The architecture is mature (69 numbered scripts, DuckDB backend, encounter-level cancer linkage, first-line regimen detection) with well-defined integration points. All v2.1 features integrate cleanly without breaking changes.
 
-- **Numbering gaps** (missing 30-32, 37, 57)
-- **Sub-lettered scripts** (22a/b, 43a/b, etc.) mixing production and test code
-- **Scattered logical groupings** (treatment scripts at 38-44 AND 60-62)
-- **Mixed utilities** (7 utils_*.R files in main R/ directory)
-- **Unnumbered ad-hoc scripts** (6 diagnostic/exploratory files)
+**Integration strategy:** Modify existing scripts where logical (cancer summary, episode classification), add new scripts for investigations (SCT 0362, replaced-by codes), extend configuration for NLPHL breakout.
 
-**Recommended reorganization:**
-- **Decade-based numbering:** 00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc
-- **Separate utils/ folder:** Move 7 utility modules out of main directory
-- **Archive/ folder:** Deprecated scripts preserved for reference
-- **Sequential migration:** 9 phases with smoke tests after each decade
+**Build order:** 3 waves — (1) config extensions (NLPHL, cause of death), (2) core modifications (cancer summary, episode classification, treatment filtering), (3) investigations and new tables.
 
-**Integration points:** 95+ source() calls, 25+ RDS artifacts, 50+ output files. RDS and output files use semantic naming (no changes required). Only source() paths and inline comments need updates.
+**Critical integration points:** R/00_config.R (CANCER_SITE_MAP), R/utils/utils_cancer.R (classify_codes), R/49_cancer_summary_pre_post.R (7-day gap logic), R/28_episode_classification.R (cancer_category per episode), treatment episode pipeline (tumor registry removal).
+
+**Risk assessment:** LOW. Most features are additive (new columns, new outputs). Only breaking change is tumor registry treatment removal (affects 7 scripts, well-isolated via source filtering).
 
 ---
 
-## Current State Analysis
+## v2.1 Feature Mapping to Architecture
 
-### Inventory
+| Feature | Type | Integration Point | New vs Modified | Complexity |
+|---------|------|-------------------|-----------------|------------|
+| **1. NLPHL breakout** | Category addition | R/00_config.R CANCER_SITE_MAP, utils_cancer.R | MODIFY existing | Medium |
+| **2. 7-day gap for ALL cancers** | Logic change | R/49 cancer_summary_pre_post.R | MODIFY existing | Low |
+| **3. Drop tumor registry treatment** | Source filtering | R/26-29 treatment episode pipeline | MODIFY existing (7 scripts) | Medium |
+| **4. SCT 0362 investigation** | Diagnostic | NEW R/9x_investigate_sct_0362.R | NEW script | Low |
+| **5. Replaced-by codes verification** | Validation | NEW R/9x_verify_replaced_by_codes.R | NEW script | Low |
+| **6. New tables from xlsx** | Output generation | NEW R/7x_new_tables_from_groupings.R | NEW script | Medium |
+| **7. Cause of death in outputs** | Column addition | R/52_gantt_v2_export.R, death integration | MODIFY existing | Low |
+| **8. Per-episode cancer_category** | Column addition | R/28_episode_classification.R, Gantt outputs | MODIFY existing | Low |
 
-**Total scripts:** 81 R files
-- **Numbered scripts (00-99):** 63 files
-  - Sequential (01-29): 29 files (gaps at 30-32, 37)
-  - Scattered (33-63): 30 files
-  - Special: 00_config.R, 99_claude_diagnostics.R
-- **Unnumbered utility scripts:** 7 files (`utils_*.R`)
-- **Unnumbered ad-hoc scripts:** 6 files
-- **Runner scripts:** 1 file (`run_phase12_outputs.R`)
-
-### Numbering Problems
-
-| Problem | Examples | Impact |
-|---------|----------|--------|
-| Missing sequence numbers | No 30-32, 37, 57 | ~15 gaps, unclear ordering |
-| Duplicate prefixes | Two scripts start with 55_ | Name collision |
-| Sub-lettered scripts | 22a/b, 43a/b, 44a/b, 45a/b, 46a/b, 48a/b | 12 files, confuses hierarchy |
-| Unnumbered ad-hoc | `date_range_check.R`, `sct_code_inventory.R` | 6 files, unclear if production |
-| Test scripts in main sequence | 43b, 44b | 2 files, mixed with production code |
-
-### Cross-Reference Patterns
-
-**Foundation chain:**
-```
-00_config.R (auto-sources 7 utils)
-  ├── 01_load_pcornet.R (28 scripts reference)
-  ├── 02_harmonize_payer.R (8 scripts reference)
-  └── 03_cohort_predicates.R (2 scripts reference)
-      └── 04_build_cohort.R (7 scripts reference)
-          ├── Inline: 10_treatment_payer.R
-          ├── Inline: 13_surveillance.R
-          └── Inline: 14_survivorship_encounters.R
-```
-
-**Integration point categories:**
-1. **source() calls:** 95+ explicit source statements
-2. **RDS artifacts:** 25+ .rds files with semantic names (hl_cohort.rds, treatment_episodes.rds)
-3. **Output filenames:** ~50 CSV/XLSX/PNG with semantic names (gantt_episodes.csv)
-4. **Inline comments:** "Phase NN" references in docstrings
+**Summary:** 3 new scripts, 9+ modified scripts, 2 configuration extensions.
 
 ---
 
-## Recommended Project Structure
+## Data Flow Changes
 
-### Decade-Based Numbering Scheme
+### Current v2.0 Data Flow
 
 ```
-R/
-├── 00-09: Foundation (config, data loading)
-├── 10-19: Cohort Building (predicates, attrition)
-├── 20-39: Treatment Analysis (episodes, regimens) — 20 slots for expansion
-├── 40-59: Cancer Diagnosis Analysis (sites, summaries) — 20 slots
-├── 60-69: Payer & Data Quality (resolution, validation)
-├── 70-79: Visualization & Reports (tables, figures, PPTX)
-├── 80-89: Testing & Diagnostics (parity, benchmarks)
-├── 90-99: Ad-Hoc & Deprecated (exploratory, one-offs)
-├── utils/ (NEW folder) — 7 utility modules
-└── archive/ (NEW folder) — 6 deprecated scripts
+R/00_config.R (CANCER_SITE_MAP: 324 prefixes → 15 categories including "Hodgkin Lymphoma")
+    ↓
+R/01_load_pcornet.R (DuckDB connection, get_pcornet_table dispatcher)
+    ↓
+R/26_treatment_episodes.R (7 sources: PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER DRG, DIAGNOSIS, TUMOR_REGISTRY)
+    ↓
+R/28_episode_classification.R (encounter-level cancer linkage → cancer_category per episode)
+    ↓
+R/49_cancer_summary_pre_post.R (7-day gap for HL only, total = 6,347)
+    ↓
+R/52_gantt_v2_export.R (14 columns including cancer_category, regimen_label, is_first_line)
 ```
 
-### Complete Reorganization Mapping
+### v2.1 Data Flow Changes
 
-**00-09: Foundation**
-- 00_config.R (unchanged)
-- 01_data_ingest_duckdb.R ← 25_duckdb_ingest.R
-- 02_data_load_pcornet.R ← 01_load_pcornet.R
-- 03_data_harmonize_payer.R ← 02_harmonize_payer.R
+```
+R/00_config.R (CANCER_SITE_MAP: C81.0 → "NLPHL", C81.1-C81.9 → "Hodgkin Lymphoma (non-NLPHL)")
+    ↓
+    NEW: DEATH_CAUSE_MAP (ICD-10 cause of death categories)
+    ↓
+R/01_load_pcornet.R (unchanged, DuckDB still primary backend)
+    ↓
+R/26_treatment_episodes.R (6 sources: TUMOR_REGISTRY REMOVED, only PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER DRG, DIAGNOSIS)
+    ↓
+    MODIFIED: extract_*_dates_with_codes() functions — filter out TUMOR_REGISTRY sources
+    ↓
+R/28_episode_classification.R (unchanged linkage logic, NEW: triggering_code_description via drug groupings xlsx)
+    ↓
+    NEW OUTPUT COLUMNS: triggering_code_description (human-readable)
+    ↓
+R/49_cancer_summary_pre_post.R (7-day gap for ALL cancer categories, total = 6,347)
+    ↓
+    MODIFIED: Remove HL-only filter, apply 7-day separation to C81, C82, C50, etc.
+    ↓
+R/52_gantt_v2_export.R (15 columns: +cause_of_death)
+    ↓
+    NEW: Left join DEATH table for DEATH_CAUSE, map via DEATH_CAUSE_MAP
+    ↓
+NEW R/9x_investigate_sct_0362.R (diagnostic: 90 patients with code 0362 → do they have other SCT codes?)
+NEW R/9x_verify_replaced_by_codes.R (validation: check all_codes_resolved_next_tables.xlsx "replaced by" mappings)
+NEW R/7x_new_tables_from_groupings.R (generate 2 new tables using drug groupings from xlsx)
+```
 
-**10-19: Cohort Building**
-- 10_cohort_predicates.R ← 03_cohort_predicates.R
-- 11_cohort_assemble.R ← 04_build_cohort.R
-- 12_treatment_payer_window.R ← 10_treatment_payer.R
-- 13_surveillance_detection.R ← 13_surveillance.R
-- 14_survivorship_encounters.R ← 14_survivorship_encounters.R
-
-**20-39: Treatment Analysis**
-- 20_treatment_code_inventory.R ← 38_treatment_inventory.R
-- 21_treatment_code_resolution.R ← 39-42 merged
-- 22_treatment_durations.R ← 43a_treatment_durations.R
-- 23_treatment_episodes.R ← 44a_treatment_episodes.R
-- 24_drug_name_resolution.R ← 60_drug_name_resolution.R
-- 25_episode_cancer_linkage.R ← 61_episode_classification.R
-- 26_first_line_therapy.R ← 62_first_line_and_death_analysis.R
-- 27_treatment_cross_reference.R ← 46b_treatment_cross_reference.R
-
-**40-59: Cancer Diagnosis Analysis**
-- 40_cancer_site_frequency.R ← 47_cancer_site_frequency.R
-- 41_cancer_site_confirmation.R ← 50+51 merged
-- 42_cancer_summary_refined.R ← 55_cancer_summary_refined.R
-- 43_cancer_summary_temporal.R ← 56+58 merged
-- 44_all_codes_catalog.R ← 48a+48b+52 combined
-
-**60-69: Payer & Data Quality**
-- 60_payer_code_frequency.R ← 35_payer_code_frequency_av_th.R
-- 61_payer_tiered_resolution.R ← 36_tiered_same_day_payer.R
-- 62_encounter_overlap_detection.R ← 22a+33 merged
-- 63_encounter_overlap_classification.R ← 23+34 merged
-- 64_death_date_validation.R ← 59_death_date_validation.R
-- 65_data_quality_summary.R ← 08_data_quality_summary.R
-- 66_dx_gap_analysis.R ← 09_dx_gap_analysis.R
-- 67_encounter_missingness.R ← 18+20 merged
-
-**70-79: Visualization & Reports**
-- 70_encounter_analysis.R ← 16_encounter_analysis.R
-- 71_attrition_waterfall.R ← 05_visualize_waterfall.R
-- 72_payer_sankey.R ← 06_visualize_sankey.R
-- 73_pptx_main_report.R ← 11_generate_pptx.R
-- 74_pptx_overlap_report.R ← 22b_generate_phase19_20_pptx.R
-- 75_documentation_export.R ← 15_generate_documentation.R
-- 76_gantt_v1_export.R ← 49_gantt_data_export.R
-- 77_gantt_v2_export.R ← 63_gantt_v2_export.R
-
-**80-89: Testing & Diagnostics**
-- 80_backend_smoke_test.R ← 26_smoke_test_backends.R
-- 81_cohort_parity_test.R ← 27_parity_test_cohort.R
-- 82_benchmark_cohort.R ← 28_benchmark_cohort.R
-- 83_speedup_report.R ← 29_generate_speedup_report.R
-- 84_test_durations.R ← 43b_test_durations.R
-- 85_test_episodes.R ← 44b_test_episodes.R
-
-**90-99: Ad-Hoc & Deprecated**
-- 90_value_audit.R ← 17_value_audit.R
-- 91_radiation_cpt_audit.R ← 45b_radiation_cpt_audit.R
-- 92_no_treatment_medicaid.R ← 12_no_treatment_medicaid.R
-- 93_duplicate_dates_flm.R ← 19_flm_duplicate_dates.R
-- 94_duplicate_dates_all_sites.R ← 21_all_site_duplicate_dates.R
-- 95_per_patient_source_detection.R ← 24_per_patient_source_detection.R
-- 96_search_C8190.R ← 55_search_C8190.R
-- 97_date_range_check.R ← date_range_check.R
-- 98_check_deleted_proton_code.R ← check_deleted_proton_code.R
-- 99_claude_diagnostics.R (unchanged)
-
-**utils/ folder (NEW)**
-- utils_attrition.R (moved from R/)
-- utils_dates.R (moved from R/)
-- utils_duckdb.R (moved from R/)
-- utils_icd.R (moved from R/)
-- utils_payer.R (moved from R/)
-- utils_pptx.R (moved from R/)
-- utils_snapshot.R (moved from R/)
-- utils_treatment.R (moved from R/)
-
-**archive/ folder (NEW)**
-- payer_frequency_from_resolved.R (deprecated)
-- tiered_payer_summary.R (deprecated)
-- sct_code_inventory.R (deprecated)
-- run_phase12_outputs.R (replaced)
-- tiered_encounter_level.R (was 45a)
-- tiered_date_level.R (was 46a)
+**Key changes:**
+1. CANCER_SITE_MAP gains NLPHL as 16th category
+2. Treatment episode sources reduced from 7 to 6
+3. Cancer summary 7-day logic generalized from HL-only to all cancers
+4. Gantt v2 gains cause_of_death column (17 total)
+5. Episode classification gains triggering_code_description
 
 ---
 
-## Integration Points
+## Integration Points by Component
 
-### 1. source() Call Updates
+### 1. Configuration Layer (R/00_config.R)
 
-| Old Reference | New Reference | Affected Scripts |
-|---------------|---------------|------------------|
-| `source("R/01_load_pcornet.R")` | `source("R/02_data_load_pcornet.R")` | 28 scripts |
-| `source("R/02_harmonize_payer.R")` | `source("R/03_data_harmonize_payer.R")` | 8 scripts |
-| `source("R/03_cohort_predicates.R")` | `source("R/10_cohort_predicates.R")` | 2 scripts |
-| `source("R/04_build_cohort.R")` | `source("R/11_cohort_assemble.R")` | 7 scripts |
-| `source("R/43a_treatment_durations.R")` | `source("R/22_treatment_durations.R")` | 1 script |
-| `source("R/utils_*.R")` | `source("R/utils/utils_*.R")` | 7 in 00_config.R |
+**Current state:**
+```r
+CANCER_SITE_MAP <- c(
+  "C81" = "Hodgkin Lymphoma",  # 324 prefixes total
+  "C82" = "Non-Hodgkin Lymphoma",
+  # ... 322 more entries
+)
 
-**Verification:** Grep `source\("R/[0-9]` after each phase, confirm zero old references remain.
+ICD_CODES <- list(
+  hl_icd10 = c("C81.00", "C81.01", ..., "C81.9A"),  # 77 codes
+  hl_icd9 = c("201", "201.0", ..., "201.98")        # 81 codes
+)
+```
 
-### 2. RDS Artifact Paths
+**v2.1 modifications:**
+```r
+# NLPHL BREAKOUT (Feature 1)
+CANCER_SITE_MAP <- c(
+  "C810" = "NLPHL",                         # NEW: Nodular lymphocyte predominant HL
+  "C81" = "Hodgkin Lymphoma (non-NLPHL)",   # MODIFIED: Renamed, still catches C81.1-C81.9
+  # ... rest unchanged
+)
 
-**No changes required.** All RDS files use semantic naming:
-- `hl_cohort.rds`
-- `treatment_episodes.rds`
-- `confirmed_hl_cohort.rds`
-- `drug_name_lookup.rds`
-- (No files named `04_cohort.rds` or similar)
+# ICD-9 NLPHL mapping (201.4x series)
+ICD9_NLPHL_CODES <- c("201.4", "201.40", "201.41", ..., "201.48")  # NEW constant
 
-### 3. Output Filenames
+# CAUSE OF DEATH (Feature 7)
+DEATH_CAUSE_MAP <- c(
+  "C81" = "Hodgkin Lymphoma",
+  "C82" = "Non-Hodgkin Lymphoma",
+  "C50" = "Breast cancer",
+  "I21" = "Acute myocardial infarction",
+  "J44" = "Chronic obstructive pulmonary disease",
+  # ... comprehensive ICD-10 cause mapping from all_codes_resolved_next_tables.xlsx
+)
+```
 
-**No changes required.** All outputs use semantic naming:
-- `gantt_episodes.csv`
-- `encounter_summary_by_payor_age.csv`
-- `encounters_per_person_by_payor.png`
-- (No files named `04_output.csv` or similar)
+**Impact:**
+- `classify_codes()` automatically returns "NLPHL" for C81.0x codes
+- Downstream scripts (R/28, R/40-R/53) inherit new category via CANCER_SITE_MAP
+- DEATH_CAUSE_MAP enables human-readable cause of death in Gantt outputs
 
-### 4. Inline Script References
+**Files modified:** R/00_config.R (add NLPHL mapping, add DEATH_CAUSE_MAP, add ICD9_NLPHL_CODES)
 
-**Pattern:** Comments like `# Phase 43: Treatment Duration` → `# R/22 (treatment durations)`
-
-**Regex search:** `Phase [0-9]{2}` and `R/[0-9]{2}[a-z]?_`
-
-### 5. Cross-Script Function Dependencies
-
-| Function | Defined In (OLD) | Defined In (NEW) |
-|----------|------------------|------------------|
-| `assign_episode_ids()` | 43a_treatment_durations.R | 22_treatment_durations.R |
-| `compute_payer_at_*()` | 10_treatment_payer.R | 12_treatment_payer_window.R |
-| `get_pcornet_table()` | utils_duckdb.R | utils/utils_duckdb.R |
-
-**No functional changes** — just path updates in source() calls.
+**Dependencies:** R/utils/utils_cancer.R (no code change needed — classify_codes uses CANCER_SITE_MAP dynamically)
 
 ---
 
-## Data Flow Through Reorganized Pipeline
+### 2. Cancer Classification (R/utils/utils_cancer.R)
 
+**Current state:**
+```r
+classify_codes <- function(codes) {
+  prefix3 <- substr(codes, 1, 3)  # "C810" → "C81"
+  categories <- unname(CANCER_SITE_MAP[prefix3])
+  categories
+}
 ```
-00_config.R → auto-source utils/
-    ↓
-01_data_ingest_duckdb.R (CSV → DuckDB)
-    ↓
-02_data_load_pcornet.R (get_pcornet_table())
-    ↓
-03_data_harmonize_payer.R (8 AMC categories)
-    ↓
-10-14: Cohort Building → hl_cohort.rds
-    ↓
-20-27: Treatment Analysis → treatment_episodes.rds, regimen_labeled_episodes.rds
-    ↓
-40-44: Cancer Diagnosis → cancer_summary.rds, confirmed_hl_cohort.rds
-    ↓
-60-67: Payer & Data Quality → resolved encounters, quality metrics
-    ↓
-70-77: Visualization & Reports → PNG/CSV/PPTX outputs
+
+**v2.1 modification:**
+```r
+classify_codes <- function(codes) {
+  # NLPHL requires 4-char match (C810), others use 3-char prefix
+  prefix4 <- substr(codes, 1, 4)
+  prefix3 <- substr(codes, 1, 3)
+
+  # Try 4-char first (NLPHL: C810), fallback to 3-char
+  categories <- unname(CANCER_SITE_MAP[prefix4])
+  idx_na <- is.na(categories)
+  if (any(idx_na)) {
+    categories[idx_na] <- unname(CANCER_SITE_MAP[prefix3[idx_na]])
+  }
+  categories
+}
 ```
+
+**Files modified:** R/utils/utils_cancer.R (modify classify_codes for 4-char prefix support)
+
+**Testing:** Verify C81.00 → "NLPHL", C81.10 → "Hodgkin Lymphoma (non-NLPHL)"
 
 ---
 
-## Migration Strategy: Build Order
+### 3. Cancer Summary 7-Day Logic (R/49_cancer_summary_pre_post.R)
 
-### Phase 1: Foundation (00-09)
-1. Create `R/utils/` folder
-2. Move 7 `utils_*.R` → `R/utils/`
-3. Update `00_config.R` lines 1501-1507: `source("R/utils/utils_*.R")`
-4. Rename 25 → 01, 01 → 02, 02 → 03
-5. Update source() calls (28 scripts for 01→02, 8 scripts for 02→03)
-6. Run smoke test
+**Current state (HL-only 7-day filter):**
+```r
+# Lines 116-127 (excerpt)
+n_c81_7day <- hl_c81_with_date %>%
+  distinct(ID, DX_DATE) %>%
+  group_by(ID) %>%
+  filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  ungroup() %>%
+  pull(ID) %>%
+  n_distinct()
 
-### Phase 2: Cohort Building (10-19)
-1. Rename 03 → 10, 04 → 11, 10 → 12
-2. Update source() calls (7 scripts)
-3. Run parity test (hl_cohort.rds row count matches)
+message(glue("  With 2+ unique dates, 7-day span:      {format(n_c81_7day, big.mark=',')}"))
+```
 
-### Phase 3: Treatment Analysis (20-39)
-1. Rename 38 → 20, merge 39-42 → 21, 43a → 22, 44a → 23
-2. Rename 60 → 24, 61 → 25, 62 → 26, 46b → 27
-3. Update source() calls
-4. Run smoke test (treatment_episodes.rds structure unchanged)
+**v2.1 modification (ALL cancers 7-day filter):**
+```r
+# Generalize to all cancer categories (C81, C82, C50, etc.)
+cancer_7day_per_category <- dx_raw %>%
+  filter(!is.na(DX_DATE)) %>%
+  mutate(category = classify_codes(DX_norm)) %>%
+  filter(!is.na(category)) %>%
+  distinct(ID, category, DX_DATE) %>%
+  group_by(ID, category) %>%
+  filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
+  ungroup()
 
-### Phase 4: Cancer Diagnosis (40-59)
-1. Rename 47 → 40, merge 50+51 → 41, 55 → 42
-2. Merge 56+58 → 43, merge 48a+48b+52 → 44
-3. Run smoke test (cancer_summary.rds row counts match)
+n_patients_any_7day <- cancer_7day_per_category %>%
+  distinct(ID) %>%
+  nrow()
 
-### Phase 5: Payer & Data Quality (60-69)
-1. Rename 35 → 60, 36 → 61, merge 22a+33 → 62, merge 23+34 → 63
-2. Rename 59 → 64, 08 → 65, 09 → 66, merge 18+20 → 67
-3. Run smoke test
+message(glue("  Patients with 7-day separation (any cancer): {format(n_patients_any_7day, big.mark=',')}"))
+message(glue("  Expected total: 6,347 (per requirement)"))
 
-### Phase 6: Visualization & Reports (70-79)
-1. Rename 16 → 70, 05 → 71, 06 → 72, 11 → 73, 22b → 74, 15 → 75, 49 → 76, 63 → 77
-2. Update source() calls (73_pptx_main_report sources 70_encounter_analysis)
-3. Run smoke test (output file counts match)
+# Per-category breakdown
+cancer_7day_summary <- cancer_7day_per_category %>%
+  group_by(category) %>%
+  summarize(
+    n_patients = n_distinct(ID),
+    n_date_pairs = n()
+  ) %>%
+  arrange(desc(n_patients))
 
-### Phase 7: Testing & Diagnostics (80-89)
-1. Rename 26 → 80, 27 → 81, 28 → 82, 29 → 83, 43b → 84, 44b → 85
-2. Run all tests in sequence
+message("\n7-day separation by category:")
+print(cancer_7day_summary, n = Inf)
+```
 
-### Phase 8: Ad-Hoc & Archive (90-99)
-1. Rename 17 → 90, 45b → 91, 12 → 92, 19 → 93, 21 → 94, 24 → 95, 55_search → 96
-2. Rename unnumbered: date_range_check → 97, check_deleted_proton_code → 98
-3. Create `R/archive/`, move 6 deprecated scripts
+**Impact:**
+- Total population changes from HL-only subset to all confirmed cohort
+- Expected total = 6,347 (requirement states this explicitly)
+- Output table gains per-category 7-day confirmation metrics
 
-### Phase 9: Documentation & Verification
-1. Update all "Phase NN" comments → "R/NEW_NUMBER"
-2. Create `docs/PIPELINE_REFERENCE.md`
-3. Run full pipeline 00 → 77
-4. Final parity check (compare output/ folder before/after)
+**Files modified:** R/49_cancer_summary_pre_post.R (generalize 7-day logic, update total population filter)
+
+**Testing:** Verify total = 6,347, verify NLPHL appears as separate category in output
+
+---
+
+### 4. Treatment Episode Pipeline — Tumor Registry Removal (R/26-R/29)
+
+**Current state (7 sources):**
+```r
+# R/26_treatment_episodes.R lines 118-149
+extract_chemo_dates_with_codes <- function() {
+  # 1. PROCEDURES
+  # 2. PRESCRIBING
+  # 3. DIAGNOSIS (Z51.11/Z51.12)
+  # 4. DISPENSING
+  # 5. MED_ADMIN
+  # 6. ENCOUNTER (DRG codes)
+  # 7. TUMOR_REGISTRY (DT_CHEMO, DT_RAD, etc.)  <-- REMOVE THIS
+
+  stack_and_dedup_with_codes(sources, "Chemotherapy")
+}
+```
+
+**v2.1 modification (6 sources):**
+```r
+extract_chemo_dates_with_codes <- function() {
+  # 1-6 unchanged
+
+  # 7. TUMOR_REGISTRY — REMOVED per v2.1 requirement
+  # Tumor registry dates are unreliable for treatment episode detection
+  # (documented in v2.1 milestone requirements)
+
+  # tr_dates <- NULL  # Commented out or deleted
+
+  sources <- list(
+    procedures = px_dates,
+    prescribing = rx_dates,
+    diagnosis = dx_dates,
+    dispensing = disp_dates,
+    med_admin = ma_dates,
+    encounter_drg = enc_dates
+    # tumor_registry = tr_dates  # REMOVED
+  )
+
+  stack_and_dedup_with_codes(sources, "Chemotherapy")
+}
+```
+
+**Affected scripts:**
+1. **R/26_treatment_episodes.R** — extract_chemo_dates_with_codes, extract_radiation_dates_with_codes, extract_sct_dates_with_codes (3 functions)
+2. **R/27_drug_name_resolution.R** — May reference treatment_episodes.rds (no change needed if episodes.rds format unchanged)
+3. **R/28_episode_classification.R** — Uses treatment_episodes.rds (no change needed)
+4. **R/29_first_line_and_death_analysis.R** — Uses treatment_episodes.rds (no change needed)
+
+**Impact:**
+- Episode counts will decrease (tumor registry was supplemental source)
+- No schema change to treatment_episodes.rds
+- Backward compatible (existing outputs still valid, just fewer episodes)
+
+**Files modified:** R/26_treatment_episodes.R (remove tumor registry extraction for chemo, radiation, SCT)
+
+**Testing:**
+- Count episodes before/after tumor registry removal
+- Verify no episodes with `source_table = "TUMOR_REGISTRY"` in triggering_codes
+- Verify episode start/stop dates still valid (no NA episodes)
+
+---
+
+### 5. Episode-Level Cancer Category & Triggering Code Description (R/28_episode_classification.R)
+
+**Current state:**
+```r
+# Output columns (14 total)
+episodes_enriched <- episodes %>%
+  # ... cancer linkage logic ...
+  select(
+    patient_id, treatment_type, episode_number, episode_start, episode_stop,
+    episode_length_days, distinct_dates_in_episode, historical_flag,
+    triggering_codes, ENCOUNTERID, cancer_category, cancer_link_method,
+    is_hodgkin, regimen_label
+  )
+```
+
+**v2.1 modification (add triggering_code_description):**
+```r
+# NEW: Load drug groupings from all_codes_resolved_next_tables.xlsx
+drug_groupings <- readxl::read_excel(
+  file.path(CONFIG$data_dir, "all_codes_resolved_next_tables.xlsx"),
+  sheet = "Drug Groupings"
+) %>%
+  select(code, description = drug_grouping)
+
+# Join triggering codes with descriptions
+episodes_enriched <- episodes %>%
+  # ... existing cancer linkage ...
+  mutate(
+    # Extract first code from comma-separated triggering_codes
+    primary_triggering_code = str_extract(triggering_codes, "^[^,]+")
+  ) %>%
+  left_join(drug_groupings, by = c("primary_triggering_code" = "code")) %>%
+  rename(triggering_code_description = description) %>%
+  select(
+    patient_id, treatment_type, episode_number, episode_start, episode_stop,
+    episode_length_days, distinct_dates_in_episode, historical_flag,
+    triggering_codes, triggering_code_description,  # NEW COLUMN
+    ENCOUNTERID, cancer_category, cancer_link_method,
+    is_hodgkin, regimen_label
+  )
+```
+
+**Files modified:** R/28_episode_classification.R (add drug groupings join, new column)
+
+**New dependency:** `all_codes_resolved_next_tables.xlsx` must exist in data directory
+
+**Testing:**
+- Verify triggering_code_description not NA for common chemo codes (J9000, J9360, etc.)
+- Verify NLPHL episodes have correct cancer_category
+
+---
+
+### 6. Cause of Death in Gantt Outputs (R/52_gantt_v2_export.R)
+
+**Current state (14 columns):**
+```r
+gantt_v2 <- treatment_episodes %>%
+  select(
+    patient_id, treatment_type, episode_number, episode_start, episode_stop,
+    episode_length_days, distinct_dates_in_episode, historical_flag,
+    triggering_codes, ENCOUNTERID, cancer_category, regimen_label,
+    is_first_line, death_date
+  )
+```
+
+**v2.1 modification (15 columns with cause_of_death):**
+```r
+# Load DEATH table (has ID, DEATH_DATE, DEATH_CAUSE)
+death_tbl <- get_pcornet_table("DEATH") %>%
+  select(ID, DEATH_DATE, DEATH_CAUSE) %>%
+  collect()
+
+# Map DEATH_CAUSE (ICD-10) to human-readable category
+death_with_category <- death_tbl %>%
+  mutate(
+    cause_prefix3 = substr(DEATH_CAUSE, 1, 3),
+    cause_of_death = unname(DEATH_CAUSE_MAP[cause_prefix3])
+  ) %>%
+  select(ID, death_date = DEATH_DATE, cause_of_death)
+
+# Join to Gantt data
+gantt_v2 <- treatment_episodes %>%
+  left_join(death_with_category, by = c("patient_id" = "ID")) %>%
+  select(
+    patient_id, treatment_type, episode_number, episode_start, episode_stop,
+    episode_length_days, distinct_dates_in_episode, historical_flag,
+    triggering_codes, ENCOUNTERID, cancer_category, regimen_label,
+    is_first_line, death_date, cause_of_death  # NEW COLUMN
+  )
+```
+
+**Files modified:** R/52_gantt_v2_export.R (join DEATH table, add cause_of_death column)
+
+**New dependency:** R/00_config.R must define DEATH_CAUSE_MAP
+
+**Testing:**
+- Verify cause_of_death populated for known deaths
+- Verify NA for patients without death records
+- Verify "Hodgkin Lymphoma" appears for C81.x death causes
+
+---
+
+## Suggested Build Order
+
+### Wave 1: Configuration & Utilities (Foundation)
+**Goal:** Extend configuration for NLPHL and cause of death, update classification logic
+
+1. **R/00_config.R**
+   - Add NLPHL to CANCER_SITE_MAP (C810 = "NLPHL", C81 = "Hodgkin Lymphoma (non-NLPHL)")
+   - Add ICD9_NLPHL_CODES (201.4x series)
+   - Add DEATH_CAUSE_MAP (ICD-10 cause categories)
+
+2. **R/utils/utils_cancer.R**
+   - Modify `classify_codes()` for 4-char prefix support (C810 before C81)
+   - Add unit tests (optional): verify C81.00 → "NLPHL", C81.10 → "Hodgkin Lymphoma (non-NLPHL)"
+
+**Success criteria:**
+- `classify_codes(c("C8100", "C8110"))` returns `c("NLPHL", "Hodgkin Lymphoma (non-NLPHL)")`
+- DEATH_CAUSE_MAP has 50+ entries covering major ICD-10 categories
+
+**Estimated effort:** 1-2 hours
+
+---
+
+### Wave 2: Core Modifications (Data Processing)
+**Goal:** Modify existing scripts for 7-day gap generalization, tumor registry removal, episode enrichment
+
+3. **R/49_cancer_summary_pre_post.R**
+   - Generalize 7-day logic from HL-only to all cancer categories
+   - Verify total population = 6,347
+   - Add per-category 7-day breakdown to output
+
+4. **R/26_treatment_episodes.R**
+   - Remove tumor registry extraction from `extract_chemo_dates_with_codes()`
+   - Remove tumor registry extraction from `extract_radiation_dates_with_codes()`
+   - Remove tumor registry extraction from `extract_sct_dates_with_codes()`
+   - Update source count in script header (7 → 6 sources)
+
+5. **R/28_episode_classification.R**
+   - Load `all_codes_resolved_next_tables.xlsx` (Drug Groupings sheet)
+   - Join triggering_codes with drug_groupings for `triggering_code_description`
+   - Add column to output schema (14 → 15 columns)
+
+6. **R/52_gantt_v2_export.R**
+   - Load DEATH table via get_pcornet_table("DEATH")
+   - Join DEATH_CAUSE and map via DEATH_CAUSE_MAP
+   - Add `cause_of_death` column to Gantt v2 CSV/xlsx (14 → 15 columns)
+
+**Success criteria:**
+- R/49 output shows 7-day separation for NLPHL, HL (non-NLPHL), NHL, Breast, etc.
+- R/26 output has no episodes with `source_table = "TUMOR_REGISTRY"`
+- R/28 output has triggering_code_description populated for common codes
+- R/52 output has cause_of_death for patients with death records
+
+**Estimated effort:** 4-6 hours
+
+---
+
+### Wave 3: Investigations & New Tables (Additive)
+**Goal:** Create new diagnostic and output scripts
+
+7. **NEW R/92_investigate_sct_0362.R**
+   - Query PROCEDURES for 90 patients with code 0362
+   - Find all SCT codes on same encounters
+   - Output CSV with encounter-level summary
+
+8. **NEW R/93_verify_replaced_by_codes.R**
+   - Load `all_codes_resolved_next_tables.xlsx` (Replaced By sheet)
+   - Verify replaced_by_code in TREATMENT_CODES
+   - Query PROCEDURES for actual usage
+   - Output verification CSV
+
+9. **NEW R/76_new_tables_from_groupings.R**
+   - Load `all_codes_resolved_next_tables.xlsx` (Drug Groupings, Table Template sheets)
+   - Generate 2 tables (structure TBD based on xlsx)
+   - Output multi-sheet xlsx
+
+**Success criteria:**
+- R/92 output identifies other SCT codes for 0362 patients
+- R/93 output confirms replaced-by codes are valid
+- R/76 output has 2 tables matching template structure
+
+**Estimated effort:** 3-4 hours
+
+---
+
+### Wave 4: Smoke Test & Documentation Updates
+**Goal:** Verify integration, update documentation
+
+10. **R/88_smoke_test_comprehensive.R**
+    - Add tests for new scripts (R/76, R/92, R/93)
+    - Verify NLPHL category appears in cancer outputs
+    - Verify Gantt v2 has 15 columns (not 14)
+
+11. **Documentation updates**
+    - Update SCRIPT_INDEX.md with new scripts
+    - Update PROJECT.md requirements (mark v2.1 features as Validated)
+    - Update ROADMAP.md with v2.1 phase completion
+
+**Success criteria:**
+- Smoke test passes for all new/modified scripts
+- Documentation reflects v2.1 architecture changes
+
+**Estimated effort:** 1-2 hours
+
+---
+
+## Total Estimated Effort: 10-15 hours
+
+---
+
+## Risk Assessment & Mitigation
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| **NLPHL 4-char prefix breaks other classifications** | Low | High | Test classify_codes extensively; 4-char tries before 3-char fallback |
+| **Tumor registry removal reduces episode counts to zero** | Low | Medium | Verify 6 sources (PROCEDURES, PRESCRIBING, etc.) still produce episodes |
+| **7-day gap for all cancers excludes too many patients** | Medium | Medium | Validate total = 6,347 matches requirement exactly |
+| **all_codes_resolved_next_tables.xlsx missing required sheets** | Medium | High | Check xlsx structure before coding; create fallback logic |
+| **Cause of death ICD-10 mapping incomplete** | Medium | Low | Start with top 20 causes, expand iteratively |
+| **Gantt v2 schema change breaks downstream tools** | Low | Medium | Version Gantt files (gantt_v2.csv → gantt_v2.1.csv) if schema change |
+
+**Overall risk: LOW** — Most changes are additive. Only breaking change is tumor registry removal (well-isolated).
 
 ---
 
 ## Sources
 
-- [CRAN Task View: Reproducible Research](https://cran.r-project.org/view=ReproducibleResearch)
-- [Building reproducible analytical pipelines with R - targets](https://raps-with-r.dev/targets.html)
-- [Reproducible Analytical Pipelines | R-bloggers](https://www.r-bloggers.com/2026/03/reproducible-analytical-pipelines/)
-- [R for Data Science (2e) - Workflow: scripts](https://r4ds.hadley.nz/workflow-scripts.html)
-- [Tidyverse style guide - Files](https://style.tidyverse.org/files.html)
-- [Google's R Style Guide](https://web.stanford.edu/class/cs109l/unrestricted/resources/google-style.html)
-- [R Packages (2e) - R code](https://r-pkgs.org/code.html)
-- [renv: Introduction](https://rstudio.github.io/renv/articles/renv.html)
+### Internal Documentation
+- PROJECT.md (v2.1 requirements)
+- R/00_config.R (CANCER_SITE_MAP structure)
+- R/utils/utils_cancer.R (classify_codes implementation)
+- R/26_treatment_episodes.R (treatment source extraction)
+- R/28_episode_classification.R (episode enrichment)
+- R/49_cancer_summary_pre_post.R (7-day logic)
+- R/52_gantt_v2_export.R (output schema)
 
----
-*Researched: 2026-06-01*
-*Confidence: HIGH (verified against existing codebase + industry practices)*
+### External References
+- ICD-10-CM 2025: C81.0 = Nodular lymphocyte predominant Hodgkin lymphoma (NLPHL)
+- ICD-9-CM: 201.4x = Lymphocytic-histiocytic predominance (NLPHL historical code)
+- WHO ICD-O-3: Histology 9659 = Nodular lymphocyte predominant Hodgkin lymphoma
+
+**Confidence:** **HIGH** — All integration points identified from existing codebase. NLPHL breakout verified against ICD-10-CM official classification. Build order considers dependencies (config before classification before outputs).

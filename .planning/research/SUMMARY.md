@@ -1,307 +1,293 @@
 # Project Research Summary
 
-**Project:** PCORnet Payer Variable Investigation (R Pipeline) — v2.0 Codebase Cleanup & Documentation
-**Domain:** R analysis pipeline reorganization, documentation, and quality tooling
-**Researched:** 2026-06-01
+**Project:** v2.1 Clinical Data Refinements & NLPHL Breakout
+**Domain:** PCORnet cancer registry cohort analysis — clinical data refinements
+**Researched:** 2026-06-02
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v2.0 milestone addresses technical debt from 63 organic development phases, transforming an ad-hoc collection of ~80 R scripts into a maintainable, documented, and testable codebase. Research confirms this requires **five mature CRAN packages** (lintr, styler, checkmate, testthat, fs) plus **lightweight structural changes** (renumbering, section headers, centralized constants) — NOT a full package conversion or architectural overhaul.
+The v2.1 milestone adds 8 clinical data refinement features to the mature v2.0 PCORnet R pipeline without requiring any new package dependencies. Research confirms that the existing validated stack (tidyverse, openxlsx2, lubridate, stringr, DuckDB backend) is sufficient for all features. The most significant finding is that **zero new technologies are needed** — all capabilities map to existing validated patterns from the 74-phase v1.0-v2.0 baseline.
 
-**Recommended approach:** Sequential reorganization in 9 phases grouped as REORG → DOC → SAFE → DRY. Start with decade-based renumbering (00-09 foundation, 10-19 cohort, 20-39 treatment, 40-59 cancer, 60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc), add documentation via section headers and roxygen2-style comments, apply auto-formatting and lint checking, insert defensive assertions and smoke tests, then consolidate duplicate lookups. Each phase builds on the previous, with smoke tests validating integrity before proceeding.
+The recommended approach follows a 3-wave implementation: (1) configuration extensions for NLPHL breakout and cause of death categories, (2) core modifications to cancer summary logic, treatment sources, and episode classification, and (3) additive investigations and new table generation. This sequence minimizes integration risk by establishing foundational changes before building dependent features. The architecture provides well-defined integration points (R/00_config.R for classifications, R/26-29 for treatment episodes, R/49 for cancer summary, R/28 for episode-level cancer linkage), making modifications isolated and testable.
 
-**Key risks and mitigation:** Six critical pitfalls identified: (1) Broken source() cross-references after renumbering — comprehensive grep BEFORE file moves, update references BEFORE renaming, smoke test immediately after; (2) lintr false positives on PCORnet ALLCAPS columns — configure .lintr to disable object_name_linter, fix violations incrementally; (3) checkmate performance overhead in hot loops — validate at function entry only, NOT inside iterations; (4) styler corrupting data files — style ONLY R/ directory explicitly; (5) hardcoded paths in tests — use here() for project-relative paths, test on both Windows and HiPerGator; (6) duplicate constants diverging after partial consolidation — grep exhaustively, delete ALL copies in same commit, validate with smoke test. All pitfalls are preventable with documented strategies.
-
-The recommended stack has **zero bleeding-edge dependencies** — all packages are 5-14 years mature, CRAN-stable, and widely adopted in tidyverse ecosystem. Integration risk is minimal because all are standard R development tools that enhance workflow without changing pipeline logic.
+The key risks center on data classification correctness rather than technical integration: NLPHL breakout must use mutually exclusive logic to avoid double-counting patients in both NLPHL and classical HL categories; tumor registry removal requires pre-implementation coverage analysis to quantify impact; and 7-day gap extension must be applied with output versioning to maintain comparability with baseline. These are data quality and validation challenges, not stack or architecture limitations. With proper validation infrastructure (smoke tests, baseline comparisons, domain expert review), all risks are mitigatable using existing project patterns.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**Five required packages, one optional.** All additions are infrastructure-focused (linting, formatting, testing, file operations) — they enhance code quality WITHOUT changing pipeline logic or data processing. Integration risk is minimal because all are standard R development tools with clear documentation and tidyverse alignment.
+**NO NEW PACKAGES REQUIRED.** All v2.1 features use the existing validated stack from v2.0. The research thoroughly evaluated specialized packages (icd, readxl, narcan, icdpicr, comorbidity packages) and found them unnecessary or unsuitable.
 
 **Core technologies:**
-- **lintr 3.3.0-1** (Nov 2025): Static style checking — detects violations without modifying code. Must disable object_name_linter for PCORnet ALLCAPS columns. Provides 100+ default checks (line length, spacing, commented code, T/F usage). Industry standard for tidyverse projects.
-- **styler 1.11.0** (Oct 2025): Auto-formatting — fixes spacing, indentation, line breaks after bulk renumbering. Can preview changes with `dry = "on"` before applying. Integrates with RStudio Addins (Ctrl+Shift+A). Saves manual formatting time.
-- **checkmate 2.3.4** (Feb 2026): Input validation — provides 100+ assertion functions for defensive coding. C-optimized (2-5x faster than base R stopifnot). Peer-reviewed (R Journal 2017). Critical for file existence checks, data structure validation, and payer mapping verification.
-- **testthat 3.3.2** (Jan 2026): Smoke testing — verifies pipeline integrity after renumbering (sequential numbering, valid source() calls, expected RDS artifacts). Industry standard (10,000+ CRAN packages). Focus on integration tests, NOT exhaustive unit tests (research pipeline, not production software).
-- **fs 2.1.0** (Apr 2026): Cross-platform file operations — atomic file renaming safer than base R file.rename(). Fails loudly if destination exists (prevents overwrites). Essential for renumbering ~80 scripts without data loss. Works identically on Windows and Linux.
-- **logger 0.4.2** (May 2026, OPTIONAL): Structured logging — severity levels, namespaces, JSON output. Current glue + cat + tidylog is sufficient for v2.0. Defer to future milestone unless team grows or CI/CD integration requires machine-readable logs.
+- **stringr + dplyr (tidyverse)**: ICD code pattern matching for NLPHL breakout (C81.0x / 201.4x simple prefix matching, no complex hierarchy traversal needed)
+- **lubridate (tidyverse)**: 7-day gap calculation for cancer diagnosis temporal separation (extending existing validated logic from R/43)
+- **openxlsx2 (v1.27)**: Reading xlsx templates AND writing formatted output tables (replaces need for separate readxl package, follows DRY consolidation from v2.0)
+- **Base R + checkmate**: Code verification logic, input validation, data quality assertions
+- **DuckDB backend (Phases 29-32)**: Table access via get_pcornet_table() for cause of death integration
 
-**Alternatives rejected:**
-- Full package structure (roxygen2 build, pkgdown): Over-engineering for analysis pipeline. Use roxygen2 syntax for readability only, NOT build process.
-- CI/CD (GitHub Actions): Data dependency on HiPerGator CSVs makes CI impractical. Manual smoke tests sufficient for solo project.
-- Pipeline orchestration (targets/drake): Major architecture change out of scope for v2.0. Existing sequential scripts work.
-- Code coverage metrics (covr): Meaningful for unit tests, not smoke tests. Research pipeline, not production software.
+**Key decision:** The icd package (ARCHIVED on CRAN since 2020-10-06) was evaluated for NLPHL classification but rejected because NLPHL codes are already in R/00_config.R (lines 173-174, 225-226) and simple string pattern matching is sufficient. This avoids adding unmaintained dependencies for functionality already achievable with validated tools.
 
-**Integration with existing stack:**
-- lintr + tidylog: Independent (tidylog runs during execution, lintr runs during development)
-- styler + RStudio: IDE Addin integration for quick formatting
-- checkmate + testthat: Built-in integration (checkmate provides expect_*() functions extending testthat)
-- fs + here: Complementary (here() for path construction, fs for file operations)
+**Integration risk:** ZERO — No new dependencies, no version updates needed, no compatibility concerns. All 8 features use patterns validated across 69 numbered scripts in v1.0-v2.0.
 
 ### Expected Features
 
-Research identified 9 table stakes features (industry standard for R pipelines), 4 differentiators (set apart from typical projects), and 8 anti-features (explicitly avoid over-engineering).
+**Must have (table stakes):**
+- **Temporal separation for ALL cancer categories (7-day gap)** — SEER and IARC standards require clear temporal thresholds; currently only applied to HL, must extend to all categories to reach total population = 6,347
+- **NLPHL separate classification** — C81.0 is biologically and clinically distinct from other Hodgkin Lymphomas with different treatment and better prognosis (5-year survival >90% vs 85-90%)
+- **Treatment source validation (drop tumor registry)** — Tumor registry treatment data has known reliability issues (8-32% capture) vs EHR sources (95-100% accuracy); critical for research validity
+- **Cause of death in outputs** — NAACCR standard field, vital for survival analysis and competing risks models; table stakes for cancer registries
+- **Per-episode cancer categorization** — Treatment episodes must be linked to specific cancer diagnoses to avoid conflating unrelated treatments; already implemented at encounter level in Phase 61, extension to include triggering code descriptions is incremental
 
-**Table stakes (must-have):**
-- **Sequential script numbering (01-N)**: Industry standard. Answers "what runs when?" Low complexity (mechanical renaming with fs package).
-- **Header blocks in every script**: Documents purpose, inputs, outputs, dependencies. Standard for reproducible research.
-- **Section headers with 4+ dashes**: Enables RStudio Ctrl+Shift+R outline navigation. Critical for 500+ line scripts.
-- **Descriptive variable/function names**: R style guide baseline (snake_case). Already in codebase via tidyverse.
-- **Input file existence checks**: Fail-fast pattern. Prevents cryptic errors 30 minutes into execution. Use checkmate assert_file_exists().
-- **README with run order**: Onboarding requirement. Linear list of scripts with 1-sentence purpose each.
-- **Comments explaining non-obvious logic**: Future maintainer needs context. Comment WHY, not WHAT.
-- **Centralized constants/lookups**: DRY principle. Multiple PREFIX_MAP copies = maintenance nightmare, divergence risk.
-- **Error messages with context**: Use glue() for `stop(glue("Missing {file} at {path}"))` instead of generic "assertion failed".
+**Should have (competitive):**
+- **SCT code 0362 investigation** — Data quality audit feature distinguishing true transplants from coding errors; adds research credibility
+- **Drug grouping tables from resolved codes** — Enables regimen-agnostic treatment pattern analysis beyond pre-specified regimens (ABVD, BV+AVD, Nivo+AVD)
+- **Per-episode triggering code descriptions** — Human-readable treatment rationale (e.g., "Doxorubicin 50mg IV" vs "J9000") improves clinical interpretability and stakeholder review
 
-**Differentiators (should-have):**
-- **Automated dependency checks**: Verify required RDS artifacts exist before each script. Prevents "file not found" 20 min into run. Use checkmate assertions.
-- **Smoke test script**: Catches cross-reference bugs immediately after renumbering. Run subset (1-5 min) to verify outputs exist + row counts match. Use testthat framework.
-- **Assertion-rich pipeline (checkmate)**: Data quality gates. Catches upstream changes (e.g., new ENC_TYPE value). Assertions double as executable documentation.
-- **Reference manual with dependency matrix**: Table format documenting Script → Inputs/Outputs/Dependencies for all 80 scripts. Enables quick understanding of pipeline flow.
-
-**Anti-features (explicitly avoid):**
-- Full package conversion (NAMESPACE, DESCRIPTION): Delays v2.0 by weeks. Analysis scripts, not distributable package.
-- Automated style enforcement on commits: Adds friction. Run styler manually before milestone completion.
-- Unit tests for every function: High maintenance cost vs value. Reserve for critical utility functions only.
-- Interactive pkgdown site: Overkill for 1-2 person project. Static markdown reference manual sufficient.
-- Pipeline orchestration (targets): Major re-learning curve. Defer to v3+ if pipeline grows >100 scripts.
-- Git hooks for pre-commit validation: Adds friction. Manual smoke test before milestone tagging.
-- Comprehensive input validation (pointblank): Already deferred in v1.0. Python pipeline handles data cleaning.
-- Refactoring to object-oriented (R6 classes): Analysis pipeline = procedural workflow. OOP adds complexity without benefits.
+**Defer (v2.2+):**
+- **Waterfall chart visualization (VIZ-01)** — Attrition logging infrastructure exists; visualization is separate effort
+- **Payer-stratified Sankey (VIZ-02)** — Requires ggalluvial integration; separate visualization milestone
+- **HIPAA suppression (VIZ-03)** — Apply when outputs move from exploratory to publication phase
 
 ### Architecture Approach
 
-Current state: 63 numbered scripts with gaps (missing 30-32, 37, 57), 12 sub-lettered duplicates (22a/b, 43a/b, 44a/b, 45a/b, 46a/b, 48a/b), 7 unnumbered utilities, 6 ad-hoc exploratory scripts. Total 81 R files. Integration points: 95+ source() calls, 25+ RDS artifacts (semantic naming), 50+ output files (semantic naming).
+v2.1 integrates cleanly into the mature v2.0 architecture (69 numbered scripts, DuckDB backend, encounter-level cancer linkage, first-line regimen detection) through well-defined extension points. Most features are additive (new columns, new outputs) with one isolated breaking change (tumor registry removal affects 7 scripts via source filtering).
 
-**Recommended: Decade-based numbering** groups scripts by logical execution flow, NOT alphabetical order. Provides 10-20 slot capacity per functional area, allows inserting new scripts without mass renumbering.
+**Major components modified:**
+1. **Configuration Layer (R/00_config.R)** — Extend CANCER_SITE_MAP to separate NLPHL (C81.0) from classical HL (C81.1-C81.9); add DEATH_CAUSE_MAP for ICD-10 cause of death categorization; add ICD9_NLPHL_CODES (201.4x series)
+2. **Cancer Classification (R/utils/utils_cancer.R)** — Modify classify_codes() to support 4-char prefix matching (C810 for NLPHL) before 3-char fallback (C81 for HL), enabling mutually exclusive categorization
+3. **Cancer Summary Logic (R/49_cancer_summary_pre_post.R)** — Generalize 7-day gap requirement from HL-only to all cancer categories; verify total population = 6,347; add per-category breakdown
+4. **Treatment Episode Pipeline (R/26-R/29)** — Remove tumor registry as treatment source (7 sources → 6 sources); affects extract_chemo_dates_with_codes(), extract_radiation_dates_with_codes(), extract_sct_dates_with_codes()
+5. **Episode Classification (R/28_episode_classification.R)** — Join drug groupings from all_codes_resolved_next_tables.xlsx to add triggering_code_description column; builds on existing encounter-level cancer linkage from Phase 61
+6. **Gantt Outputs (R/52_gantt_v2_export.R)** — Join DEATH table to add cause_of_death column (14 → 15 columns); map DEATH_CAUSE via DEATH_CAUSE_MAP from config
 
-**Major components:**
-1. **00-09 Foundation** — config (auto-sources utils/), DuckDB ingest, data loading, payer harmonization (4 scripts)
-2. **10-19 Cohort Building** — predicates, assembly, treatment payer windows, surveillance detection (5 scripts)
-3. **20-39 Treatment Analysis** — code inventory/resolution, durations, episodes, drug names, first-line therapy, cross-reference (8 scripts, 20 slots for expansion)
-4. **40-59 Cancer Diagnosis** — site frequency, confirmation, refined summaries, temporal filters, code catalogs (5 scripts, 20 slots)
-5. **60-69 Payer & Data Quality** — code frequency, tiered resolution, overlap detection/classification, death date validation, QA summaries, dx gap analysis, encounter missingness (8 scripts)
-6. **70-79 Visualization & Reports** — encounter analysis, waterfall/Sankey, PPTX (main + overlap), documentation, Gantt v1/v2 (8 scripts)
-7. **80-89 Testing & Diagnostics** — backend smoke tests, parity tests, benchmarks, duration/episode tests (6 scripts)
-8. **90-99 Ad-Hoc & Deprecated** — value audits, radiation CPT checks, duplicate date detection, exploratory searches, diagnostics (9 scripts)
-9. **utils/ folder (NEW)** — Extract 7 utils_*.R modules from main R/ directory (attrition, dates, duckdb, icd, payer, pptx, snapshot, treatment)
-10. **archive/ folder (NEW)** — Preserve 6 deprecated scripts for reference (payer_frequency_from_resolved, tiered_payer_summary, sct_code_inventory, run_phase12_outputs, tiered_encounter_level, tiered_date_level)
-
-**Integration point updates:** 95+ source() calls must update (e.g., `source("R/01_load_pcornet.R")` → `source("R/02_data_load_pcornet.R")`). RDS artifacts use semantic naming (hl_cohort.rds, treatment_episodes.rds) — NO changes required. Output files use semantic naming (gantt_episodes.csv) — NO changes required. Only source() paths and inline "Phase NN" comments need updates.
-
-**Data flow through reorganized pipeline:**
-```
-00_config.R → auto-source utils/
-    ↓
-01_data_ingest_duckdb.R (CSV → DuckDB)
-    ↓
-02_data_load_pcornet.R (get_pcornet_table())
-    ↓
-03_data_harmonize_payer.R (8 AMC categories)
-    ↓
-10-14: Cohort Building → hl_cohort.rds
-    ↓
-20-27: Treatment Analysis → treatment_episodes.rds, regimen_labeled_episodes.rds
-    ↓
-40-44: Cancer Diagnosis → cancer_summary.rds, confirmed_hl_cohort.rds
-    ↓
-60-67: Payer & Data Quality → resolved encounters, quality metrics
-    ↓
-70-77: Visualization & Reports → PNG/CSV/PPTX outputs
-```
-
-**Migration strategy:** Build order in 9 phases (Foundation → Cohort → Treatment → Cancer → Payer/QA → Outputs → Tests → Ad-Hoc → Documentation). Smoke tests after each decade renumbered. Sequential execution required — each phase depends on previous stability.
+**Build order rationale:** Configuration extensions establish NLPHL/cause mappings before core modifications use them. Core modifications to cancer summary, treatment sources, and episode classification must complete before investigations and new tables that depend on refined data. Wave 3 features are fully additive and can run in parallel.
 
 ### Critical Pitfalls
 
-Six critical pitfalls with HIGH impact and documented prevention strategies. All are recoverable (LOW-MEDIUM cost) but avoidable with discipline.
+1. **NLPHL Breakout Double-Counting or Loss** — Breaking out NLPHL from parent Hodgkin Lymphoma creates counting errors if classification logic is additive (patients in both categories) rather than mutually exclusive. Create NLPHL category FIRST, then define HL as "C81.* EXCLUDING C81.0". Add validation: `nrow(nlphl) + nrow(hl_excluding_nlphl) == nrow(original_hl_cohort)`. Warning signs: HL cohort size changes unexpectedly, total cancer counts don't match sum of subcategories. Address in Phase 1 with unit tests.
 
-1. **Broken source() references after renumbering** — Search-and-replace misses edge cases (comments, glue strings, conditional source() calls). Pipeline fails 20 min into execution with cryptic error. **Prevention:** Comprehensive grep BEFORE renaming (`grep -rn "source\(" R/`), update references BEFORE moving files, create renaming manifest to validate no duplicates, smoke test immediately after with testthat checking all source() calls resolve. **Warning signs:** Renaming took 20 min but no test errors, only tested first 3 scripts, git diff shows file renames but no source() updates.
+2. **Tumor Registry Removal Silently Drops Treatment Episodes** — Dropping tumor registry treatment data causes massive undercounting without visible error. Tumor registry may be ONLY source for certain treatments (external facilities, bundled procedures). BEFORE dropping: quantify overlap via source_coverage_analysis showing episode counts by source combinations (TR-only, claims-only, both). Add assertion: if treatment episode count drops >20%, halt with explicit warning. Alternative: flag TR-sourced episodes as "lower_confidence" rather than dropping entirely. Address in Phase 2 (coverage analysis) before Phase 3 (conditional removal).
 
-2. **Over-aggressive lintr violations** — Default tidyverse rules flag PCORnet ALLCAPS columns (PATID, ENROLL_DATE). Developer batch-renames without understanding column names ≠ R variables. 50+ scripts break with "object 'PATID' not found". **Prevention:** Configure .lintr to disable object_name_linter and set line_length_linter(120) BEFORE running, fix violations incrementally (HIGH severity first, LOW severity deferred), use styler BEFORE lintr to auto-fix mechanical issues, test after each fix. **Warning signs:** lintr reports 500+ violations (too many to fix at once), batch find-replace on variable names, no incremental testing.
+3. **7-Day Gap Applied Retrospectively Breaks Pre/Post Counts** — Extending 7-day gap to all cancers retrospectively invalidates existing baselines. Gap requirements improve specificity but decrease sensitivity, creating fundamentally different populations. Version output files (cancer_summary_table_pre_post_v1.rds vs. v2_7day.rds), create before/after comparison table, add pipeline metadata documenting which validation rules were applied, regenerate ENTIRE pipeline from cohort selection (not just cancer summary scripts). Address in Phase 4 with output versioning.
 
-3. **checkmate assertions inside hot loops** — Defensive enthusiasm puts `assert_character(ID)` inside map(). 5-minute pipeline becomes 45 minutes (9x slowdown). No actual bugs caught (data already validated at load). **Prevention:** Validate ONCE at function entry, NOT per iteration. Use conditional validation (`VALIDATE_INPUTS` env var) for debugging. Profile if runtime increases 5x. **Warning signs:** Pipeline runtime increased 5x after adding assertions, profiling shows checkmate at top (not data operations), assertions inside group_by/summarize/map.
+4. **External Classification File (XLSX) Creates Runtime Dependencies** — Reading all_codes_resolved_next_tables.xlsx at runtime creates fragile pipeline with hidden dependencies. If xlsx moves or updates, pipeline fails or produces non-reproducible results. Follow AMC_PAYER_LOOKUP pattern from Phase 36: centralize mappings in R/00_config.R as named lists. Create conversion script: read xlsx → generate R code → commit R code. Snapshot xlsx in version control with date stamp. Add checkmate assertions verifying expected columns/types. Address in Phase 7 with dependency management strategy.
 
-4. **styler reformats data files** — Running `styler::style_dir(".")` recurses into output/ and corrupts CSVs. Gantt chart tool can't parse corrupted CSV. Git diff shows 10,000+ lines changed in output/. **Prevention:** Style ONLY R/ directory explicitly (`styler::style_dir("R/")`), use .stylerignore (output/, cache/, renv/, .planning/), preview with `dry = "on"` before applying. **Warning signs:** styler processing 1000+ files (should be ~80 R scripts), git diff shows changes in output/ or cache/, CSV files show spacing changes.
-
-5. **Smoke tests with hardcoded paths** — Write test with `"C:/Users/Owner/insurance_investigation/cache/cohort.rds"`. Works on local Windows. Fails on HiPerGator Linux: "No such file or directory." **Prevention:** Use here() for project-relative paths (`here("cache", "cohort.rds")`), use fs::file_exists() (not base R), test on both platforms before committing. **Warning signs:** Paths with C:/ or D:/ (Windows-specific), backslashes in paths, tests pass in RStudio but fail in SLURM jobs.
-
-6. **Duplicate constants diverge after consolidation** — Grep finds 2 of 3 PREFIX_MAP copies, third remains in conditional logic. Same patient has different payer categories depending on which script runs first (non-deterministic). **Prevention:** Grep exhaustively (`grep -rn "PREFIX_MAP <-"`) BEFORE consolidation, remove ALL old copies in same commit as adding to 00_config.R, validate with smoke test that constant defined only in config (`expect_false(str_detect(content, "PREFIX_MAP <-"))`). **Warning signs:** Consolidation commit only modifies R/00_config.R (didn't delete old copies), grep shows multiple definitions after consolidation, results change when scripts run in different order.
-
-**Moderate pitfalls (MEDIUM impact):** Renumbering without execution order analysis (breaks dependencies), section headers without 4+ dashes (RStudio outline doesn't work), roxygen2 package build for non-package (creates unnecessary man/ directory), over-commenting trivial code (noise obscures important comments).
-
-**Recovery costs:** All critical pitfalls are LOW-MEDIUM cost to recover. Broken source() calls: grep + update + test. lintr ALLCAPS rename: revert + configure .lintr + re-run. checkmate hot loops: move assertions outside loop. styler CSVs: revert output/ changes. Hardcoded paths: replace with here(). Duplicate constants: grep + delete + smoke test.
+5. **Cause of Death Integration Without Data Quality Validation** — Adding cause of death without validating data quality creates misleading mortality analyses. Cause of death may be missing (>40%), miscoded, inconsistent across sources, or temporally misaligned. Profile data quality FIRST: what % of deaths have cause coded? Cross-reference against existing death date validation from Phase 59 (1,295 validated deaths). Create missingness analysis stratified by payer. Document limitations in outputs. Consider external linkage (NDI, state vital statistics) or predictive models (literature shows 86% accuracy). Address in Phase 8 with data quality profiling.
 
 ## Implications for Roadmap
 
-Based on research, v2.0 should follow a **9-phase sequential reorganization** with smoke tests after each major group. Phases build incrementally — each adds capability without breaking previous work. Total estimated 11 phases (9 primary + 2 iterative for lint/consolidate).
+Based on research, suggested phase structure follows 3-wave implementation to minimize integration risk:
 
-### Phase 1: Foundation Reorganization (REORG-01)
-**Rationale:** Create new folder structure and renumber foundation scripts first. All downstream scripts depend on config/data loading, so this must be stable before proceeding. Addresses numbering chaos and unclear execution order.
-**Delivers:** utils/ folder created, 7 utility modules moved, 00_config.R updated to source from utils/, DuckDB ingest renumbered 01, data loading 02, payer harmonization 03.
-**Addresses:** Table stakes (sequential numbering, centralized constants in utils/).
-**Avoids:** Pitfall #1 (broken source() references) — comprehensive grep for all 95+ source() calls, update references BEFORE file moves, smoke test validates. Pitfall #5 (hardcoded paths) — use here() for all path operations.
-**Stack:** fs package for atomic file_move() operations, here() for project-relative paths.
-**Research flag:** Standard pattern (file operations well-documented in fs package). No deeper research needed.
+### Wave 1: Configuration & Utilities (Foundation)
 
-### Phase 2: Cohort Building Reorganization (REORG-02)
-**Rationale:** Cohort scripts (03→10, 04→11, 10→12, 13, 14) form second dependency tier. Renumber after foundation is stable. Prevents breaking downstream treatment/cancer scripts that depend on cohort.
-**Delivers:** Cohort building scripts (10-19 decade), source() calls updated in 7 downstream scripts, parity test confirms hl_cohort.rds row count unchanged.
-**Addresses:** Table stakes (sequential numbering). Differentiator (automated dependency checks via parity tests).
-**Avoids:** Pitfall #7 (renumbering without execution order analysis) — manual dependency mapping ensures 10→11→12→13→14 order.
-**Stack:** testthat for parity tests (verify RDS row counts match before/after).
-**Research flag:** Standard pattern. No research needed.
+#### Phase v2.1-01: NLPHL Configuration Extension
+**Rationale:** NLPHL breakout requires mutually exclusive classification logic established BEFORE any data processing. Modifying R/00_config.R and R/utils/utils_cancer.R creates foundation for all downstream cancer category changes.
+**Delivers:** CANCER_SITE_MAP with C810 = "NLPHL" and C81 = "Hodgkin Lymphoma (non-NLPHL)"; ICD9_NLPHL_CODES (201.4x series); classify_codes() supporting 4-char prefix matching
+**Addresses:** NLPHL separate classification (table stakes feature); creates distinct category for biologically different subtype
+**Avoids:** Double-counting pitfall by implementing 4-char match (C810) before 3-char fallback (C81), ensuring mutual exclusivity
+**Research flag:** Standard pattern (no deeper research needed) — ICD code mapping well-documented, config extension follows existing CANCER_SITE_MAP pattern
 
-### Phase 3: Treatment Analysis Reorganization (REORG-03)
-**Rationale:** Treatment scripts (38-44, 60-62) scattered across two regions. Consolidate to 20-39 decade with 20-slot capacity for future expansion. Prevents renumbering all scripts when adding new treatment analysis.
-**Delivers:** 8 treatment scripts renumbered/merged (20-27), treatment_episodes.rds structure validated, source() cross-references updated.
-**Implements:** Decade-based grouping architecture (20 slots allow inserting 28_new_analysis.R without renumbering 29-80).
-**Avoids:** Pitfall #1 (broken source() calls) — comprehensive update of all references to 43a/44a (treatment durations/episodes).
-**Stack:** checkmate assertions validate treatment episode counts after renumbering.
-**Research flag:** Standard pattern. No research needed.
+#### Phase v2.1-02: Cause of Death Configuration
+**Rationale:** DEATH_CAUSE_MAP in R/00_config.R enables downstream Gantt integration without adding runtime xlsx dependencies
+**Delivers:** DEATH_CAUSE_MAP with ICD-10 cause categories (50+ entries covering major categories)
+**Addresses:** Cause of death integration (table stakes for cancer registries)
+**Avoids:** Runtime xlsx dependency pitfall by centralizing in config following AMC_PAYER_LOOKUP pattern from Phase 36
+**Research flag:** Standard pattern — ICD-10 chapter structure well-documented, config centralization validated in Phase 36
 
-### Phase 4: Cancer Diagnosis Reorganization (REORG-04)
-**Rationale:** Cancer site scripts (47-58) consolidated to 40-59 decade. Provides 20-slot expansion capacity for future cancer analyses.
-**Delivers:** 5 cancer scripts renumbered/merged (40-44), cancer_summary.rds validated, confirmed_hl_cohort.rds row count matches.
-**Addresses:** Architecture component (cancer diagnosis analysis isolated to dedicated decade).
-**Stack:** testthat smoke tests validate cancer site frequency counts, checkmate assertions verify cancer_summary structure.
-**Research flag:** Standard pattern. No research needed.
+### Wave 2: Core Modifications (Data Processing)
 
-### Phase 5: Payer/QA and Output Reorganization (REORG-05)
-**Rationale:** Complete renumbering (60-69 payer/QA, 70-79 outputs, 80-89 tests, 90-99 ad-hoc). Final push to decade-based system. Creates archive/ for deprecated scripts.
-**Delivers:** All 80 scripts in final decade-based positions, archive/ folder created with 6 deprecated scripts, smoke test suite validates all source() calls resolve.
-**Addresses:** Anti-feature (avoid mixing production and test code) — test scripts isolated to 80-89 decade, exploratory scripts to 90-99.
-**Avoids:** Pitfall #1 (broken references) — final comprehensive smoke test with testthat checking ALL source() calls across entire codebase.
-**Stack:** testthat comprehensive suite (sequential numbering, source() validation, RDS dependencies).
-**Research flag:** Standard pattern. No research needed.
+#### Phase v2.1-03: Treatment Source Coverage Analysis
+**Rationale:** BEFORE removing tumor registry, quantify impact to avoid silent episode loss. Coverage analysis creates evidence base for informed decision.
+**Delivers:** source_coverage_analysis.R showing episode counts by source combinations (TR-only, claims-only, both); overlap percentages; expected count reduction
+**Addresses:** Treatment source validation (table stakes); prepares for tumor registry removal
+**Avoids:** Silent treatment episode loss pitfall by quantifying TR-only episodes and establishing expected count reduction
+**Research flag:** Needs light research — No standard pattern for coverage analysis in existing codebase, but straightforward dplyr group_by logic
 
-### Phase 6: Documentation and Section Headers (DOC-01, DOC-02)
-**Rationale:** After renumbering stable, add human-readable structure. Header blocks + section headers enable reference manual generation and RStudio navigation.
-**Delivers:** Header block in all 80 scripts (purpose, inputs, outputs, dependencies), section headers with 4+ dashes (RStudio Ctrl+Shift+R outline navigation), roxygen2-style #' comments for complex functions.
-**Addresses:** Table stakes (header blocks, section headers, comments explaining non-obvious logic). Differentiator (reference manual foundation).
-**Avoids:** Pitfall #8 (section headers without 4+ dashes) — enforce RStudio format. Pitfall #9 (roxygen2 package build) — use syntax only, NOT build process. Pitfall #10 (over-commenting) — comment WHY not WHAT.
-**Stack:** Base R comments (no package overhead), RStudio built-in outline feature.
-**Research flag:** Standard pattern (comment conventions documented in tidyverse/Google R style guides). No research needed.
+#### Phase v2.1-04: Drop Tumor Registry Treatment Data (Conditional)
+**Rationale:** Remove tumor registry sources from R/26 treatment episode pipeline ONLY IF coverage analysis shows <5% unique TR episodes, otherwise implement confidence flagging
+**Delivers:** Treatment episodes from 6 sources (PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER DRG, DIAGNOSIS); validation report showing episode count delta
+**Addresses:** Treatment source validation (critical for research validity per literature: TR captures 8-32% vs EHR 95-100%)
+**Avoids:** Silent episode loss by implementing assertion: if count drops >20%, halt with explicit warning
+**Dependencies:** Requires Phase v2.1-03 coverage analysis completion
+**Research flag:** Standard pattern — Source filtering follows existing Phase 9 pattern, well-isolated change
 
-### Phase 7: Automated Formatting and Linting (SAFE-01, SAFE-02)
-**Rationale:** Bulk renumbering causes formatting inconsistencies. styler fixes mechanically, lintr detects remaining issues that can't be auto-fixed.
-**Delivers:** Consistent tidyverse style across all R/ scripts, .lintr configuration file (disable object_name_linter for PCORnet ALLCAPS, line_length_linter(120)), lintr violations reduced to <50 manageable items (defer LOW severity like trailing whitespace).
-**Addresses:** Table stakes (consistent style, descriptive variable names validated).
-**Avoids:** Pitfall #2 (over-aggressive lintr) — configure BEFORE running, fix incrementally NOT batch, test after each fix. Pitfall #4 (styler data files) — style ONLY R/ directory, preview with `dry = "on"`.
-**Stack:** styler 1.11.0 with dry run preview, lintr 3.3.0-1 with custom .lintr config.
-**Research flag:** Standard pattern (styler/lintr have comprehensive documentation). No research needed. **Implementation note:** May need iteration if lintr finds 100+ violations — plan extra phase for cleanup.
+#### Phase v2.1-05: Extend 7-Day Gap to All Cancer Categories
+**Rationale:** Generalize existing validated HL 7-day logic (R/43) to all categories to reach total population = 6,347
+**Delivers:** cancer_summary_table_pre_post_v2_7day.rds with per-category 7-day confirmation; validation confirming total = 6,347; comparison table showing v1 vs v2 deltas
+**Addresses:** Temporal separation for all cancer categories (table stakes per SEER/IARC standards)
+**Avoids:** Retrospective baseline breakage by versioning outputs (v1 vs v2_7day) and regenerating full pipeline from cohort selection
+**Research flag:** Standard pattern — Extending existing R/43 logic, lubridate date arithmetic validated throughout pipeline
 
-### Phase 8: Defensive Coding and Validation (SAFE-03, DRY-01)
-**Rationale:** Add input validation and consolidate duplicate constants while testing infrastructure is fresh. Hardens pipeline against data quality issues and prevents constant divergence.
-**Delivers:** checkmate assertions in critical functions (file loading, payer mapping, data structure checks), PREFIX_MAP and code lookups consolidated to 00_config.R, smoke tests validate no duplicate constants remain.
-**Addresses:** Table stakes (input file existence checks, error messages with context, centralized constants). Differentiator (assertion-rich pipeline, data quality gates).
-**Avoids:** Pitfall #3 (assertions in hot loops) — validate at function entry only, NOT inside map()/group_by(). Pitfall #6 (duplicate constants diverge) — comprehensive grep, delete ALL copies in one commit, validate with smoke test.
-**Stack:** checkmate 2.3.4 for assertions (assert_file_exists, assert_data_frame, assert_names, assert_subset), testthat for validation smoke tests.
-**Research flag:** Standard pattern (checkmate has 100+ functions but excellent vignettes). No research needed.
+#### Phase v2.1-06: Load Drug Groupings from XLSX
+**Rationale:** Centralize drug groupings in R/00_config.R following AMC_PAYER_LOOKUP pattern to avoid runtime dependencies
+**Delivers:** Conversion script reading all_codes_resolved_next_tables.xlsx → generating DRUG_GROUPINGS named list in R/00_config.R; snapshot versioned xlsx in git with date stamp
+**Addresses:** Prerequisite for per-episode triggering code descriptions and drug grouping tables
+**Avoids:** Runtime xlsx dependency pitfall by generating R code from xlsx template, centralizing in config
+**Research flag:** Standard pattern — Follows Phase 36 AMC_PAYER_LOOKUP centralization pattern, openxlsx2 reading validated in 11 scripts
 
-### Phase 9: Smoke Testing and Documentation (SAFE-04, DOC-03)
-**Rationale:** Final integration test + reference manual before milestone closure. Ensures pipeline integrity and provides onboarding documentation.
-**Delivers:** Comprehensive smoke test suite (sequential numbering verified, source() calls validate, RDS dependencies checked, config constants exist, critical scripts run without error, output file counts match expected), reference manual with dependency matrix (Script → Inputs/Outputs/Dependencies table for all 80 scripts).
-**Addresses:** Table stakes (README with run order expanded to reference manual). Differentiator (smoke test script, reference manual with dependency matrix).
-**Avoids:** Pitfall #5 (hardcoded paths in tests) — use here() for all paths, test on HiPerGator. Pitfall #1 (final validation) — smoke test catches any remaining broken references.
-**Stack:** testthat 3.3.2 with fs::file_exists() and here() for cross-platform compatibility.
-**Research flag:** Standard pattern (testthat well-documented, reference manual format synthesized from targets/pipeflow examples). No research needed.
+#### Phase v2.1-07: Enhance Episode Classification with Triggering Code Descriptions
+**Rationale:** Builds on existing Phase 61 encounter-level cancer linkage by adding human-readable drug descriptions from DRUG_GROUPINGS
+**Delivers:** R/28 episode classification with triggering_code_description column (14 → 15 columns); validation confirming descriptions populated for common codes
+**Addresses:** Per-episode cancer categorization with human-readable treatment rationale (competitive feature for stakeholder review)
+**Avoids:** No major pitfall (additive change), but validates against drug grouping contradicting cancer categories
+**Dependencies:** Requires Phase v2.1-06 drug groupings
+**Research flag:** Standard pattern — Extends existing Phase 61/Phase 46 infrastructure, straightforward lookup join
+
+#### Phase v2.1-08: Cause of Death Data Quality Profiling
+**Rationale:** Profile cause of death completeness and quality BEFORE integration to detect missingness and source bias
+**Delivers:** Cause of death quality report: % deaths with cause coded by payer/site; ICD-10 code distribution; temporal alignment validation
+**Addresses:** Prerequisite for cause of death integration; guards against misleading mortality analyses
+**Avoids:** Data quality pitfall by profiling missingness (literature suggests >40% is common), documenting limitations, deciding whether to proceed or defer pending external linkage
+**Research flag:** Needs light research — Data profiling pattern exists (Phase 59 death dates), but cause-specific validation is new
+
+#### Phase v2.1-09: Integrate Cause of Death in Gantt Outputs (Conditional)
+**Rationale:** Add cause of death to R/52 Gantt v2 IF profiling shows <40% missingness, otherwise document deferral
+**Delivers:** Gantt v2 with cause_of_death column (14 → 15 columns); DEATH_CAUSE mapped via DEATH_CAUSE_MAP; missingness documented in output footnotes
+**Addresses:** Cause of death in outputs (NAACCR standard field, table stakes for survival analysis)
+**Avoids:** Misleading analysis by documenting limitations and suppressing if missingness too high
+**Dependencies:** Requires Phase v2.1-02 (DEATH_CAUSE_MAP) and Phase v2.1-08 (quality profiling)
+**Research flag:** Standard pattern — DEATH table join follows existing death date integration from Phase 62
+
+### Wave 3: Investigations & New Tables (Additive)
+
+#### Phase v2.1-10: SCT Code 0362 Investigation
+**Rationale:** Audit data quality by investigating whether 90 patients with code 0362 have other SCT codes during same encounters; non-blocking, additive feature
+**Delivers:** R/92_investigate_sct_0362.R producing encounter-level summary CSV; findings report distinguishing true transplants from coding errors
+**Addresses:** SCT code validation investigation (competitive feature for data quality credibility)
+**Avoids:** Wrong granularity pitfall by defining scope explicitly (same ENCOUNTERID) and validating with manual chart review of 10 patients
+**Research flag:** Needs light research — Encounter-level grouping pattern exists (Phase 61), but code 0362 is non-standard (not in CPT databases), requires internal documentation review
+
+#### Phase v2.1-11: Verify Replaced-By Codes
+**Rationale:** Validate "replaced by" mappings from all_codes_resolved_next_tables.xlsx to guard against circular references and mapping errors
+**Delivers:** R/93_verify_replaced_by_codes.R producing verification CSV; graph cycle detection report; cross-reference against SEER ICD-9 to ICD-10 conversion tables
+**Addresses:** ICD code replacement/deprecation tracking (table stakes data quality check)
+**Avoids:** Circular mapping pitfall by using igraph::is_dag() to detect cycles and flagging replacement chains >3 steps
+**Research flag:** Needs light research — Graph cycle detection requires igraph package (not currently in stack, but lightweight addition), pattern is new to codebase
+
+#### Phase v2.1-12: Generate New Tables from Drug Groupings
+**Rationale:** Create 2 new summary tables using drug groupings and template structure from all_codes_resolved_next_tables.xlsx; enables regimen-agnostic treatment pattern analysis
+**Delivers:** R/76_new_tables_from_groupings.R producing multi-sheet xlsx with drug group frequency by payer and by cancer category
+**Addresses:** Drug grouping tables (competitive feature for treatment pattern discovery)
+**Avoids:** Runtime xlsx dependency by using DRUG_GROUPINGS from R/00_config.R (loaded in Phase v2.1-06)
+**Dependencies:** Requires Phase v2.1-06 (drug groupings) and Phase v2.1-07 (episode classification)
+**Research flag:** Standard pattern — Table generation follows existing R/29 styled xlsx output pattern, openxlsx2 formatting validated in Phase 62
+
+### Wave 4: Quality Assurance
+
+#### Phase v2.1-13: Update Smoke Tests
+**Rationale:** Validate all new/modified scripts and update baseline expectations for breaking changes (7-day gap, NLPHL breakout, Gantt schema)
+**Delivers:** R/88_smoke_test_comprehensive.R with tests for R/76, R/92, R/93; NLPHL category validation; Gantt v2 15-column schema validation
+**Addresses:** v2.0 quality standards enforcement (competitive differentiator for maintainability)
+**Avoids:** Stale baseline expectations by updating smoke test expectations with each breaking change and documenting expected deltas
+**Research flag:** Standard pattern — Smoke test infrastructure exists (Phase 74), extension follows established pattern
+
+#### Phase v2.1-14: Documentation and Reference Manual Updates
+**Rationale:** Document all v2.1 changes in SCRIPT_INDEX.md, PROJECT.md, and R/89 reference manual
+**Delivers:** Updated documentation reflecting NLPHL breakout, 7-day gap extension, tumor registry removal, new scripts
+**Addresses:** Onboarding ease and long-term maintainability
+**Avoids:** Undocumented breaking changes by explicitly noting v1 vs v2 differences
+**Research flag:** Standard pattern — Documentation follows existing Phase 74 reference manual pattern
 
 ### Phase Ordering Rationale
 
-**Sequential execution required** — each phase depends on previous stability:
-- **REORG (Phases 1-5):** File renumbering must complete before documentation (comments reference final numbers) and testing (smoke tests verify final structure).
-- **DOC (Phases 6, 9):** Section headers and comments enable readable reference manual, must come after renumbering stable.
-- **SAFE (Phases 7-9):** Formatting, linting, assertions, and testing build on documented code. styler preserves comments (run after DOC), smoke tests validate assertions don't break pipeline.
-- **DRY (Phase 8):** Consolidation easier after codebase clean and well-documented (easier to see duplication with good section headers).
-
-**Smoke tests after each decade renumbered** (not after every phase) — balance safety vs overhead:
-- After REORG-01 (Foundation 00-09)
-- After REORG-02 (Cohort 10-19)
-- After REORG-03 (Treatment 20-39)
-- After REORG-04 (Cancer 40-59)
-- After REORG-05 (Payer/QA/Outputs/Tests/Ad-Hoc 60-99)
-- After SAFE-04 (Final comprehensive test)
-
-**Parallelization opportunities:**
-- DOC-01 and DOC-02 can overlap (different granularity: section headers vs function comments)
-- SAFE-01 and SAFE-03 can overlap (styler and checkmate are independent)
-- Implementation note: lintr (SAFE-02) should run AFTER styler (SAFE-01) to reduce violations
-
-**Decade-based grouping enables future expansion** — 20-slot treatment decade (20-39) allows inserting 28_new_analysis.R without renumbering 29-80. Same for 20-slot cancer decade (40-59). Ad-hoc scripts (90-99) isolated — adding exploratory script doesn't pollute production decades.
+- **Configuration first (Phases 01-02):** NLPHL and cause of death mappings must exist before data processing references them
+- **Coverage analysis before removal (Phases 03-04):** Quantify tumor registry impact before dropping to avoid silent episode loss
+- **7-day gap with versioning (Phase 05):** Extends existing logic but requires output versioning to maintain baseline comparability
+- **Drug groupings centralized (Phase 06):** Avoids runtime xlsx dependencies for all downstream features (Phases 07, 12)
+- **Episode enhancement builds on linkage (Phase 07):** Depends on Phase 61 encounter-level cancer linkage infrastructure and Phase 06 drug groupings
+- **Cause of death profiled before integration (Phases 08-09):** Data quality check prevents integration of incomplete data
+- **Investigations in parallel (Phases 10-12):** Non-blocking additive features can run concurrently after core modifications complete
+- **Quality assurance last (Phases 13-14):** Validates entire wave of changes with updated expectations
 
 ### Research Flags
 
-**Phases needing deeper research during planning:** NONE for v2.0. All capabilities have clear stack solutions with mature packages. Reorganization is mechanical (not algorithmic).
+**Phases needing deeper research during planning:**
+- **Phase v2.1-10 (SCT code investigation):** Code 0362 not in standard CPT databases; requires internal documentation or data dictionary review to understand provenance
+- **Phase v2.1-11 (Replaced-by verification):** Graph cycle detection may require igraph package addition (lightweight but new dependency); validation pattern is new to codebase
 
 **Phases with standard patterns (skip research-phase):**
-- **All REORG phases (1-5):** File renaming well-understood, fs package documentation complete, decade-based numbering pattern from tidyverse/Google R style guides.
-- **All DOC phases (6, 9):** Comment conventions documented in tidyverse/Google R style guides, reference manual format synthesized from established patterns.
-- **All SAFE phases (7-9):** lintr/styler/checkmate/testthat have comprehensive official documentation, active communities, extensive vignettes and examples.
-- **All DRY phases (8):** Base R refactoring, no special tools needed, consolidation pattern is standard software engineering.
-
-**Potential implementation challenges (not research gaps, just execution complexity):**
-- **REORG-01:** Defining logical execution order requires manual pipeline understanding (can't be automated) — expect 4-8 hours manual mapping.
-- **SAFE-02:** lintr may flag 100+ violations initially — prioritize HIGH severity (commented code, T/F vs TRUE/FALSE) first, defer LOW severity (trailing whitespace) to polishing pass. May need iteration phase.
-- **SAFE-03:** Deciding WHERE to add assertions requires judgment (too many = slow, too few = insufficient validation) — prioritize file loading, payer mapping, cohort structure.
-- **DRY-02 (future):** Balancing extraction vs over-abstraction (don't create 1-line wrapper functions) — extract only if pattern appears 3+ times.
-
-**Future research needs (v3.0+, out of scope for v2.0):**
-- If team grows >3 developers: Research CI/CD integration (GitHub Actions, automated lintr on PRs, remote smoke tests)
-- If pipeline grows >100 scripts: Research targets/drake orchestration (dependency graph automation, parallel execution, automatic caching)
-- If compute time >4 hours: Research profiling tools (profvis) for bottleneck detection, query optimization strategies
-- If publishing pipeline as package: Research full roxygen2 build process, pkgdown website generation, CRAN submission
+- **Phase v2.1-01 (NLPHL config):** ICD code mapping follows existing CANCER_SITE_MAP pattern
+- **Phase v2.1-02 (Cause of death config):** Centralization follows AMC_PAYER_LOOKUP pattern from Phase 36
+- **Phase v2.1-04 (Drop tumor registry):** Source filtering follows Phase 9 pattern
+- **Phase v2.1-05 (7-day gap):** Extends existing R/43 logic
+- **Phase v2.1-06 (Drug groupings):** openxlsx2 reading validated in 11 scripts
+- **Phase v2.1-07 (Episode enhancement):** Extends Phase 61/46 infrastructure
+- **Phase v2.1-09 (Cause of death Gantt):** DEATH table join follows Phase 62 pattern
+- **Phase v2.1-12 (New tables):** Styled xlsx output validated in Phase 62 (R/29)
+- **Phase v2.1-13 (Smoke tests):** Extension of Phase 74 infrastructure
+- **Phase v2.1-14 (Documentation):** Follows Phase 74 reference manual pattern
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All 5 required packages are CRAN-stable (5-14 years mature), widely adopted (10,000+ dependent packages for testthat), actively maintained (latest versions Nov 2025 - Apr 2026). No bleeding-edge or GitHub-only dependencies. Integration points documented (checkmate + testthat, fs + here, lintr + styler workflow). All versions verified 2026-06-01. |
-| Features | **HIGH** | Core recommendations (sequential numbering, header blocks, section headers, input validation) are R community standards documented in multiple authoritative sources (Hadley Wickham's R4DS, Google R Style Guide, tidyverse style guide). checkmate peer-reviewed (R Journal 2017). testthat is official R testing framework. Anti-features validated by over-engineering pitfalls in community forums. |
-| Architecture | **HIGH** | Decade-based numbering verified against existing codebase (81 files inventoried, 95+ source() calls mapped, 25+ RDS artifacts cataloged). Integration points explicit (RDS artifacts use semantic naming, no changes required). Data flow chain validated against Phase 0-63 history. Migration strategy builds on fs atomic operations (safer than base R). |
-| Pitfalls | **HIGH** | All 6 critical pitfalls documented from common R refactoring mistakes (source() reference updates, lintr configuration, checkmate performance, styler scope, path portability, constant consolidation). Prevention strategies tested against package documentation (grep patterns, smoke test patterns, .lintr config format). Recovery costs estimated (LOW-MEDIUM, all recoverable with git revert + targeted fixes). Warning signs observable during execution. |
+| **Stack** | HIGH | All 8 features map to existing validated packages; no new dependencies needed. NLPHL codes already in R/00_config.R (lines 173-174, 225-226). icd package (ARCHIVED) evaluated and rejected. openxlsx2 read/write capabilities validated in 11 scripts. |
+| **Features** | HIGH | Table stakes vs competitive features clearly distinguished based on SEER/IARC/NAACCR standards and tumor registry literature. 7-day gap, NLPHL breakout, cause of death, treatment source validation all have strong clinical justification. SCT investigation and drug groupings are value-add audits. |
+| **Architecture** | HIGH | Integration points well-defined from existing codebase review. Configuration layer (R/00_config.R), classification utilities (R/utils/utils_cancer.R), treatment pipeline (R/26-29), cancer summary (R/49), episode classification (R/28), Gantt outputs (R/52) all identified with specific modification requirements. Wave structure minimizes risk. |
+| **Pitfalls** | MEDIUM-HIGH | Top 5 critical pitfalls identified from literature (tumor registry reliability 8-32%, cause of death missingness >40%, ICD-9 to ICD-10 mapping complexity) and existing pipeline patterns (encounter-level linkage from Phase 61, DRY consolidation from Phase 73). Mitigation strategies specific and actionable. Some project-specific risks (0362 code provenance, xlsx schema) require validation during execution. |
 
-**Overall confidence:** **HIGH**
-
-All research areas grounded in official documentation (CRAN package pages, tidyverse guides, R Journal peer review). No speculative recommendations — stack choices verified against HiPerGator environment constraints (renv + module system), existing tidyverse pipeline style (dplyr, ggplot2), and solo-researcher workflow (no CI/CD, manual testing). Phase sequencing validated against dependency chains extracted from codebase. Pitfall prevention strategies documented with concrete examples (grep commands, test patterns, config snippets).
-
-**Source hierarchy followed:** CRAN official pages (versions, publication dates) → Official package documentation (API usage, configuration) → Peer-reviewed articles (checkmate R Journal) → Tidyverse/Google style guides (conventions) → Community resources (edge cases, troubleshooting). All version numbers verified against CRAN as of 2026-06-01.
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-**Minor gaps (low risk, deferred to implementation):**
-- **logger package adoption**: Deferred to v3.0 as OPTIONAL. Current glue + cat + tidylog provides sufficient logging for solo researcher. Re-evaluate if team grows (namespaces), CI/CD integration requires machine-readable logs (JSON output), or severity filtering becomes necessary (DEBUG vs INFO vs WARN).
-- **Reference manual format**: No single authoritative standard for multi-script R pipelines. Synthesized from targets/pipeflow package documentation and general software engineering practices (dependency matrices). Will validate format during DOC-03 implementation based on what's most useful for onboarding.
-- **lintr violation scope**: Unknown until first run. May find 50 violations (quick fix) or 500 violations (needs iteration phase). Plan buffer time in SAFE-02 for cleanup iterations.
+- **SCT code 0362 provenance:** Code "0362" not found in standard CPT databases (38204-38241 are standard SCT codes). Likely internal/proprietary code or data entry artifact. Requires project-specific code documentation or data dictionary review during Phase v2.1-10. If documentation unavailable, manual chart review of sample patients will resolve.
 
-**No blocking gaps.** All v2.0 capabilities (renumbering, documentation, linting, validation, testing, consolidation) have mature stack solutions with clear implementation paths. Execution complexity is predictable (file operations, comment additions, test writing) — no algorithmic or research challenges.
+- **all_codes_resolved_next_tables.xlsx schema:** Drug grouping tables and template structure referenced but not verified. Will need to read xlsx during Phase v2.1-06 to confirm: (a) sheet names (Drug Groupings, Replaced By, Template), (b) column structure (code, code_type, drug_group, description), (c) template formatting requirements for 2 new tables. If schema differs from assumptions, adjust conversion logic accordingly.
+
+- **Cause of death field name/format:** Vital status linkage provides death dates (Phase 59/62 validation: 1,295 deaths), but cause-of-death field name and coding system not verified. PCORnet CDM DEATH table may use DEATH_CAUSE (ICD-10), CAUSE_OF_DEATH (text), or external linkage required. Phase v2.1-08 profiling will identify available fields; if unavailable, document deferral pending external linkage (NDI, state vital statistics).
+
+- **Drug grouping table purpose:** "2 new tables" referenced but specific research questions not documented. Likely drug group frequency by payer (addresses payer analysis objective) and drug group by cancer category (addresses treatment pattern objective), but confirm with domain expert during Phase v2.1-12 planning to ensure correct structure.
+
+- **Total population = 6,347 validation:** Current cohort size referenced as validation target for 7-day gap extension (Phase v2.1-05). Confirm this is correct baseline by checking existing cancer_summary_table_pre_post.rds row count before implementing changes.
+
+- **igraph package for graph cycle detection:** Phase v2.1-11 replaced-by code verification may require igraph package (not currently in renv.lock) for is_dag() function. igraph is lightweight CRAN package (1.6.0, stable) but represents new dependency. Alternative: implement custom cycle detection with base R (more complex). Decide during phase planning whether graph analysis justifies adding igraph.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **CRAN official package pages**: lintr 3.3.0-1 (Nov 2025), styler 1.11.0 (Oct 2025), checkmate 2.3.4 (Feb 2026), testthat 3.3.2 (Jan 2026), fs 2.1.0 (Apr 2026), logger 0.4.2 (May 2026) — version numbers and publication dates verified 2026-06-01
-- **Official package documentation**: lintr.r-lib.org, styler.r-lib.org, checkmate (mllg.github.io), testthat.r-lib.org, fs.r-lib.org, logger (daroczig.github.io) — API references, configuration guides, usage vignettes
-- **R Journal peer review**: Lang, M. (2017). checkmate: Fast Argument Checks for Defensive R Programming. The R Journal, 9(1), 437-445. — Performance benchmarks, design rationale, validation of checkmate approach
-- **Tidyverse Style Guide** (style.tidyverse.org) — Section headers (4+ dashes), comment conventions, file naming (sequential numbering)
-- **R for Data Science (2e)** (r4ds.hadley.nz) — Workflow scripts chapter, sequential numbering patterns, project organization
-- **Google's R Style Guide** (web.stanford.edu/class/cs109l) — Industry standard conventions, naming patterns
+
+**Stack research:**
+- CRAN official package pages: tidyverse 2.0.0, dplyr 1.2.0, stringr 1.5.1, lubridate 1.9.3, openxlsx2 1.27, checkmate 2.3.4 — all versions verified as current (published within 1-12 months of 2026-06-02)
+- CRAN icd package status (https://cran.r-project.org/package=icd) — ARCHIVED 2020-10-06, not recommended for new dependencies
+- openxlsx2 documentation (https://janmarvin.github.io/openxlsx2/) — read/write xlsx with formatting, validated in 11 existing scripts
+- Project codebase: R/00_config.R (ICD_CODES with NLPHL codes lines 173-174, 225-226), R/26-29 treatment episode pipeline, R/43 7-day gap logic
+
+**Features research:**
+- PMC3651576: Tumor registry treatment capture 12-32% radiation, 8-29% chemo vs EHR 95-100% accuracy
+- PMC11178108: EHR linkage adds only 5% surgery, 1% radiation, 7% chemo updates (registry incompleteness)
+- PMC12303076: Real-time EHR extraction achieves 100% diagnosis accuracy, 95%+ treatment accuracy
+- ICD-10-CM 2026 official codes: C81.0 = Nodular lymphocyte predominant Hodgkin lymphoma (NLPHL)
+- ICD-9-CM: 201.4x = Lymphocytic-histiocytic predominance (NLPHL historical code)
+- PMC4005906: Multiple primary cancer definitions (SEER 2-month, Warren/Gates 6-month, 60-day exclusion)
+- PMC12798275: NAACCR standards for death reporting (cause of death table stakes)
+
+**Architecture research:**
+- Project internal documentation: R/00_config.R (CANCER_SITE_MAP 324 prefixes → 15 categories), R/utils/utils_cancer.R (classify_codes implementation), R/26_treatment_episodes.R (7 sources), R/28_episode_classification.R (Phase 61 encounter-level cancer linkage), R/49_cancer_summary_pre_post.R (7-day logic), R/52_gantt_v2_export.R (14-column schema)
+- WHO ICD-O-3: Histology 9659 = Nodular lymphocyte predominant Hodgkin lymphoma (clinical validation)
+
+**Pitfalls research:**
+- PMC7512330: ICD code mapping validation (86% accuracy, 57% increased uncertainty Shannon entropy analysis)
+- Academic JAMIA: Cause of death ML models 86% accuracy with multimodal data
+- Wiley Health Services Research: EHR + external mortality database integration best practices
+- SEER ICD-9 to ICD-10 conversion tables: Official 201.4 → {C81.0, C81.4} mapping (disambiguation required)
+- LinkedIn data pipeline framework: Schema evolution and backward compatibility versioning strategies
+- Project Phase 36: AMC_PAYER_LOOKUP centralization pattern for xlsx → R config conversion
 
 ### Secondary (MEDIUM confidence)
-- **R Packages (2e)** (r-pkgs.org) — Testing basics chapter (testthat usage), function documentation (roxygen2 syntax without build), code organization
-- **CRAN Task View: Reproducible Research** — Pipeline organization patterns, reproducibility tools landscape
-- **HiPerGator documentation** (Weecology Wiki, UF HiPerGator guides) — renv integration with module system, cross-platform considerations (Windows dev, Linux HPC)
-- **Community resources**: RStudio Community forums, GitHub issue trackers (lintr, styler, checkmate, testthat) — Troubleshooting edge cases, configuration examples, performance discussions
 
-### Tertiary (validated during research)
-- **Existing codebase inventory**: 81 R files cataloged (63 numbered, 7 utilities, 6 ad-hoc, 1 runner, 4 special), 95+ source() calls mapped via grep, 25+ RDS artifacts identified (semantic naming verified), 50+ output files cataloged (semantic naming verified), integration points extracted from actual scripts
-- **PCORnet CDM v7.0 specification**: ALLCAPS column naming convention (PATID, ENROLL_DATE, DX, PROCEDURES, ENC_TYPE) — requires lintr object_name_linter configuration
-- **Phase 0-63 development history**: Organic growth patterns identified (numbering gaps, sub-lettered duplicates, scattered utilities), dependency chains validated against execution order
+- PMC5519797: Multiple primary tumors temporal thresholds (2-month SEER, 6-month Warren/Gates documented but less authoritative than SEER official)
+- PMC3879655: Cause of death accuracy validation in cancer registries (older study, 2013, but methodology relevant)
+- PMC5898735: Treatment episode definition (≥45-day gap) documented but for cost analysis context, not clinical
+- AAPC CPT codes: 38240, 38241, 38204-38208, 38230 standard SCT codes (community resource, not official AMA)
+- ArXiv 2308.04478: Multi-sheet XLSX handling in R (technical resource for openxlsx2 patterns)
+
+### Tertiary (LOW confidence, needs validation)
+
+- libmaneducation.com: SCT code classification (educational resource, not authoritative coding reference)
+- LinkedIn Blackcoffer: Centralized analytics platform lookup table management (general best practice, not domain-specific)
+- thelinuxcode.com: dplyr 2026 common mistakes (community blog, practical tips but not research-backed)
 
 ---
-*Research completed: 2026-06-01*
+*Research completed: 2026-06-02*
 *Ready for roadmap: yes*
-
-**Next steps:** Use this summary + detailed research files (STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md) to create v2.0 roadmap with 9 primary phases (REORG-01 through SAFE-04/DOC-03) plus potential iteration phases for lintr cleanup and DRY extraction.
