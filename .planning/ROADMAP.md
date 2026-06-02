@@ -195,10 +195,10 @@ Plans:
   3. Error messages use glue() with context (file paths, expected vs actual, script name)
   4. Assertions validate at function entry (NOT inside hot loops)
   5. Smoke test confirms assertions catch invalid inputs without false positives
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 Plans:
 - [x] 72-01-PLAN.md -- Create utils_assertions.R with 5 helper functions, add library(checkmate) to 00_config.R
-- [ ] 72-02-PLAN.md -- Add assertions to foundation (00-03) and cohort (10-14) scripts
+- [x] 72-02-PLAN.md -- Add assertions to foundation (00-03) and cohort (10-14) scripts
 - [ ] 72-03-PLAN.md -- Add assertions to treatment (20-29) scripts
 - [ ] 72-04-PLAN.md -- Add assertions to cancer (40-53) and payer/QA (60-69) scripts
 
@@ -237,7 +237,7 @@ Plans:
 | 69. Script Documentation | 8/8 | Complete    | 2026-06-02 |
 | 70. Automated Formatting | 2/2 | Complete    | 2026-06-02 |
 | 71. Linting Cleanup | 2/2 | Complete    | 2026-06-02 |
-| 72. Defensive Coding | 1/4 | In Progress|  |
+| 72. Defensive Coding | 2/4 | In Progress|  |
 | 73. DRY Consolidation | 0/0 | Not started | - |
 | 74. Smoke Testing & Reference Manual | 0/0 | Not started | - |
 
