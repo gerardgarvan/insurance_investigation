@@ -57,8 +57,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Add input validation — check required files/RDS artifacts exist before each script (SAFE-01) — v2.0 Phase 72
 - [x] Add defensive checks — type/structure checks, row-count assertions, error recovery (SAFE-02) — v2.0 Phase 72
 - [x] Create smoke test script to verify pipeline integrity after renumbering (SAFE-03) — v2.0 Phase 66
-- [ ] Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R (DRY-01)
-- [ ] Extract repeated code patterns into shared utility functions (DRY-02)
+- [x] Consolidate duplicated lookup tables (PREFIX_MAP, code mappings) to R/00_config.R (DRY-01) — v2.0 Phase 73
+- [x] Extract repeated code patterns into shared utility functions (DRY-02) — v2.0 Phase 73
 - [ ] Produce attrition waterfall chart from filter log (VIZ-01, carried from v1.0)
 - [ ] Produce Sankey/alluvial stratified by payer (VIZ-02, carried from v1.0)
 - [ ] Apply HIPAA small-cell suppression in outputs (VIZ-03, carried from v1.0)
@@ -94,7 +94,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 72 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 72 complete — defensive coding: checkmate-based assertions added to 43 production scripts (decades 00-69), utils_assertions.R with 5 helper functions (assert_rds_exists, assert_df_valid, assert_col_types, warn_date_range, warn_row_count), all error messages use [R/XX ACTION] format with glue() interpolation.
+**Pipeline status:** 73 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 73 complete — DRY consolidation: CANCER_SITE_MAP (142 ICD-10 prefixes) and TIER_MAPPING (8 payer tiers) centralized in R/00_config.R, classify_codes()/classify_payer_tier()/build_output_path() extracted to R/utils/ modules, ~5,400 lines of duplicated code eliminated across 20+ scripts.
 
 ## Previous Milestones
 
@@ -246,4 +246,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-02 after Phase 72 completion*
+*Last updated: 2026-06-02 after Phase 73 completion*
