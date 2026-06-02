@@ -92,7 +92,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v1.8 (2026-06-01)
 
-**Pipeline status:** 67 phases completed across 9 milestones. 83 R scripts in decade-based organization. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 67 complete — post-renumbering cleanup: smoke test moved to test decade (87), 8 unnumbered scripts archived to R/archive/, SCRIPT_INDEX.md regenerated and verified accurate (10 payer scripts at 60-69, 8 test scripts at 80-87).
+**Pipeline status:** 68 phases completed across 9 milestones. 67 numbered R scripts in decade-based organization + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Active milestone: v2.0 Codebase Cleanup & Documentation. Phase 68 complete — verification gate confirming reorganization integrity: 8-point structural scan passed (67 scripts, zero broken source() refs, zero orphan outputs), SCRIPT_INDEX.md and smoke test cancer decade drift fixed (9 entries), HiPerGator validation checklist created for deferred data-dependent checks, REORG-04 complete, REORG-05 partial (structural done, runtime deferred to Phase 74).
 
 ## Previous Milestones
 
@@ -244,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after Phase 67 completion*
+*Last updated: 2026-06-02 after Phase 68 completion*
