@@ -1,9 +1,26 @@
 # ==============================================================================
 # 70_visualize_waterfall.R -- Attrition waterfall chart
 # ==============================================================================
-# Produces vertical bar chart showing cohort reduction through filter steps.
-# Each bar shows patients remaining, annotated with N and % excluded.
-# Requirements: VIZ-01
+#
+# Purpose:
+#   Attrition waterfall chart showing cohort reduction through sequential filter
+#   steps (VIZ-01). Produces a bar chart where each bar represents a filter step,
+#   showing patients remaining and excluded. WHY waterfall (not table): Visual
+#   impact shows where most patients are lost. WHY bars show both remaining and
+#   excluded counts: Clinical reviewers need both absolute numbers and proportions.
+#
+# Inputs:
+#   - attrition_log from 14_build_cohort.R (in-memory tibble)
+#
+# Outputs:
+#   - output/figures/waterfall_attrition.png
+#
+# Dependencies:
+#   - R/14_build_cohort.R (sources all upstream: config, data loading, cohort)
+#
+# Requirements:
+#   - VIZ-01: Attrition waterfall chart
+#
 # ==============================================================================
 
 source("R/14_build_cohort.R")  # Loads attrition_log, hl_cohort, all upstream
@@ -18,7 +35,7 @@ message("Attrition Waterfall Chart")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: DATA PREPARATION
+# SECTION 1: Data Preparation ----
 # ==============================================================================
 
 # Prepare data for visualization
@@ -42,7 +59,7 @@ message(glue("Prepared {nrow(attrition_plot_data)} attrition steps for visualiza
 message(glue("Range: {comma(max(attrition_plot_data$n_before))} -> {comma(min(attrition_plot_data$n_after))} patients"))
 
 # ==============================================================================
-# SECTION 2: BUILD WATERFALL CHART
+# SECTION 2: Build Waterfall Chart ----
 # ==============================================================================
 
 p_waterfall <- ggplot(attrition_plot_data, aes(x = step, y = n_after)) +
@@ -74,7 +91,7 @@ p_waterfall <- ggplot(attrition_plot_data, aes(x = step, y = n_after)) +
   )
 
 # ==============================================================================
-# SECTION 3: OUTPUT
+# SECTION 3: Output ----
 # ==============================================================================
 
 # Display in RStudio viewer

@@ -1,13 +1,27 @@
 # ==============================================================================
-# 75_encounter_analysis.R -- Encounter analysis by payor, DX year, age group
+# 75_encounter_analysis.R -- Encounter analysis by payer, DX year, age group
 # ==============================================================================
 #
-# Produces:
-#   1. Histogram of encounters per person by payor category
-#   2. Post-treatment encounters per person by year of diagnosis
-#   3. Total encounters per person by year of diagnosis
-#   4. Summary table with column sums
-#   5. Post-treatment encounter breakdown by age group
+# Purpose:
+#   Encounter analysis by payer category, diagnosis year, and age group --
+#   produces histograms and summary tables consumed by PowerPoint generator.
+#   WHY age groups and diagnosis year stratification: Standard epidemiological
+#   analysis dimensions for cancer cohorts. WHY this is a separate script from
+#   R/72: Separation of data computation from slide generation.
+#
+# Inputs:
+#   - hl_cohort from 14_build_cohort.R
+#
+# Outputs:
+#   - encounter_analysis objects in memory (consumed by R/72)
+#   - output/figures/*.png (histograms and charts)
+#   - output/tables/*.csv (summary tables)
+#
+# Dependencies:
+#   - R/14_build_cohort.R (sources all upstream: config, data loading, cohort)
+#
+# Requirements:
+#   - (No specific requirement IDs; supports PPTX generation)
 #
 # Usage:
 #   source("R/75_encounter_analysis.R")
@@ -28,7 +42,7 @@ message("Encounter Analysis")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: HISTOGRAM -- Encounters per person by payor category
+# SECTION 1: Histogram - Encounters per Person by Payer Category ----
 # ==============================================================================
 # PPTX2-04: Verified -- 6+Missing payer, >500 overflow bin with per-facet annotation (Phase 12)
 
@@ -88,7 +102,7 @@ ggsave("output/figures/encounters_per_person_by_payor.png", p1,
 message("  Saved: output/figures/encounters_per_person_by_payor.png")
 
 # ==============================================================================
-# SECTION 2: POST-TREATMENT ENCOUNTERS per person by year of diagnosis
+# SECTION 2: Post-Treatment Encounters by Year of Diagnosis ----
 # ==============================================================================
 
 message("\n--- Post-treatment encounters by DX year ---")
@@ -132,7 +146,7 @@ ggsave("output/figures/post_tx_encounters_by_dx_year.png", p2,
 message("  Saved: output/figures/post_tx_encounters_by_dx_year.png")
 
 # ==============================================================================
-# SECTION 3: TOTAL ENCOUNTERS per person by year of diagnosis
+# SECTION 3: Total Encounters by Year of Diagnosis ----
 # ==============================================================================
 
 message("\n--- Total encounters by DX year ---")
@@ -159,7 +173,7 @@ ggsave("output/figures/total_encounters_by_dx_year.png", p3,
 message("  Saved: output/figures/total_encounters_by_dx_year.png")
 
 # ==============================================================================
-# SECTION 4: SUMMARY TABLE with column sums
+# SECTION 4: Summary Table with Column Sums ----
 # ==============================================================================
 
 message("\n--- Summary table: Encounters by payor and age group ---")
@@ -208,7 +222,7 @@ write_csv(summary_with_sums, "output/tables/encounter_summary_by_payor_age.csv")
 message("  Saved: output/tables/encounter_summary_by_payor_age.csv")
 
 # ==============================================================================
-# SECTION 5: POST-TREATMENT ENCOUNTERS by age group (Yes/No breakdown)
+# SECTION 5: Post-Treatment Encounters by Age Group ----
 # ==============================================================================
 
 message("\n--- Post-treatment encounters by age group ---")
@@ -260,7 +274,7 @@ write_csv(age_post_tx, "output/tables/post_tx_encounters_by_age_group.csv")
 message("  Saved: output/tables/post_tx_encounters_by_age_group.csv")
 
 # ==============================================================================
-# SECTION 6: UNIQUE DATES -- Same analyses using distinct encounter dates per ID
+# SECTION 6: Unique Dates Analysis ----
 # ==============================================================================
 
 message("\n--- Unique Dates Analysis (distinct dates per patient) ---")
@@ -403,7 +417,7 @@ ggsave("output/figures/total_unique_dates_by_dx_year.png", p_ud3,
 message("  Saved: output/figures/total_unique_dates_by_dx_year.png")
 
 # ==============================================================================
-# SECTION 7: STACKED HISTOGRAM -- Pre/Post-Treatment Encounters by Payer (VIZP-03)
+# SECTION 7: Stacked Histogram - Pre/Post-Treatment Encounters by Payer ----
 # ==============================================================================
 
 message("\n--- Stacked Histogram: Pre/Post-Treatment Encounters by Payer ---")
@@ -733,7 +747,7 @@ ggsave("output/figures/encounters_stacked_pre_post_by_payor.png", p_stacked,
 message("  Saved: output/figures/encounters_stacked_pre_post_by_payor.png")
 
 # ==============================================================================
-# SECTION 8: STACKED HISTOGRAM -- Pre/Post-Treatment UNIQUE DATES by Payer
+# SECTION 8: Stacked Histogram - Pre/Post-Treatment Unique Dates by Payer ----
 # ==============================================================================
 
 message("\n--- Stacked Histogram: Pre/Post-Treatment Unique Dates by Payer ---")
@@ -830,7 +844,7 @@ ggsave("output/figures/unique_dates_stacked_pre_post_by_payor.png", p_ud_stacked
 message("  Saved: output/figures/unique_dates_stacked_pre_post_by_payor.png")
 
 # ==============================================================================
-# SECTION 9: TREATED PATIENTS ONLY -- UNIQUE DATES ANALYSIS
+# SECTION 9: Treated Patients Only - Unique Dates Analysis ----
 # ==============================================================================
 
 message("\n--- Treated Patients Only: Unique Dates Analysis ---")

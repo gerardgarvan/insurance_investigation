@@ -2,27 +2,26 @@
 # 73_generate_phase19_20_pptx.R -- Focused PPTX for phases 19 and 20
 # ==============================================================================
 #
-# Phase 24: Make Presentation of Just Phases 19 and 20
-# Requirements: PPTX4-01, PPTX4-02, PPTX4-03, PPTX4-04
-#
 # Purpose:
-#   Build a standalone PowerPoint deck containing only:
-#   - Phase 19 (UF payer missingness), and
-#   - Phase 20 (FLM duplicate encounter dates)
+#   Standalone PowerPoint deck for Phase 19 (UF missingness) and Phase 20 (FLM
+#   duplicates) analysis results. WHY standalone deck: Phase 19/20 results needed
+#   as separate deliverable for site-specific review, not bundled in main deck.
 #
-# Inputs (output/tables):
-#   - uf_payer_raw_value_distribution.csv
-#   - uf_payer_missingness_by_year.csv
-#   - uf_payer_missingness_by_enc_type.csv
-#   - uf_payer_missingness_year_x_enc_type.csv
-#   - uf_payer_raw_vs_harmonized.csv
-#   - flm_patient_duplicate_summary.csv
-#   - flm_date_level_duplicate_detail.csv
-#   - flm_duplicate_aggregate_summary.csv
-#   - flm_source_payer_completeness.csv
+# Inputs:
+#   - FLM duplicate data from 94_flm_duplicate_dates.R
+#   - UF missingness tables from 65_uf_insurance_missingness.R
+#     (output/tables/*.csv files)
 #
-# Output:
-#   - insurance_tables_phase19_20_YYYY-MM-DD.pptx
+# Outputs:
+#   - output/insurance_tables_phase19_20_YYYY-MM-DD.pptx
+#
+# Dependencies:
+#   - R/utils/utils_pptx.R (shared styling utilities)
+#   - R/94_flm_duplicate_dates.R (FLM duplicate analysis)
+#   - R/65_uf_insurance_missingness.R (UF payer missingness analysis)
+#
+# Requirements:
+#   - PPTX4-01, PPTX4-02, PPTX4-03, PPTX4-04
 #
 # Usage:
 #   source("R/73_generate_phase19_20_pptx.R")

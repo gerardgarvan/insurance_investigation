@@ -2,72 +2,85 @@
 # 72_generate_pptx.R -- Generate insurance tables PowerPoint
 # ==============================================================================
 #
-# Produces insurance_tables_YYYY-MM-DD.pptx matching the Python pipeline's
-# 15-slide output, computed entirely from R pipeline data.
+# Purpose:
+#   Generate insurance tables PowerPoint deck using officer package. Produces
+#   52 slides covering cohort definitions, payer summaries, encounter analysis,
+#   and site-specific diagnostics. WHY officer package for PowerPoint: Programmatic
+#   slide generation ensures reproducibility; manual PowerPoint creation is
+#   error-prone with 52 slides. WHY specific slide ordering: Matches Python
+#   pipeline output for comparison.
 #
-# Slides:
-#   1. Definitions & Glossary
-#   2. Insurance Coverage Overview (Primary + First Dx, all patients)
-#   3. Post-Treatment Insurance (all patients)
-#   4. Chemotherapy Insurance (Primary + First + Last Chemo)
-#   5. Chemotherapy Post-Treatment Insurance
-#   6. Radiation Insurance (Primary + First + Last Radiation)
-#   7. Radiation Post-Treatment Insurance
-#   8. SCT Insurance (Primary + First + Last SCT)
-#   9. SCT Post-Treatment Insurance
-#  10. Diagnosis - Insurance by Enrollment Coverage
-#  11. Chemotherapy - Insurance by Enrollment Coverage
-#  12. Radiation - Insurance by Enrollment Coverage
-#  13. SCT - Insurance by Enrollment Coverage
-#  14. Last Treatment = Last Encounter
-#  15. Missing Post-Treatment Payer - Encounter Breakdown
-#  16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
-#  17. Encounters per Person by Payer Category (histogram)
-#  18. Summary Statistics: Encounters per Payer Category (table)
-#  19. Mean Post-Treatment Encounters by Year of Diagnosis
-#  20. Mean Total Encounters by Year of Diagnosis
-#  21. Post-Treatment Encounter Presence by Age Group
-#  22. Unique Encounter Dates per Person by Payer Category (histogram)
-#  23. Summary Statistics: Unique Dates per Payer Category (table)
-#  24. Mean Post-Treatment Unique Dates by Year of Diagnosis
-#  25. Mean Total Unique Dates by Year of Diagnosis
-#  26. Unique Encounter Dates per Person by Payer (Post-Last Treatment) [VIZP-02]
-#  27. Stacked Encounters Pre/Post-Treatment by Payer [VIZP-03]
-#  28. Summary Statistics: Pre/Post-Treatment Encounters by Payer [VIZP-03]
-#  29. Stacked Unique Dates Pre/Post-Treatment by Payer
-#  30. Summary Statistics: Pre/Post-Treatment Unique Dates by Payer
-#  --- Treated Only / Unique Dates Section (versions of 17-30) ---
-#  31. Unique Encounter Dates per Person by Payer (Treated Only) [histogram]
-#  32. Summary Statistics: Unique Dates per Payer (Treated Only) [table]
-#  33. Median Post-Treatment Unique Dates by Year of Diagnosis (Treated Only)
-#  34. Median Total Unique Dates by Year of Diagnosis (Treated Only)
-#  35. Post-Treatment Encounter Presence by Age Group (Treated Only)
-#  36. Unique Encounter Dates Post-Last Treatment (Treated Only) [table]
-#  37. Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only)
-#  38. Summary Statistics: Pre/Post Unique Dates by Payer (Treated Only) [table]
-#  --- Phase 21: Payer Missingness Slides (Section 8) ---
-#  39. Payer Missingness: Cross-Site Comparison [grouped bar chart]
-#  40. Primary Payer Missingness by Site [bar chart]
-#  41. Raw PAYER_TYPE_PRIMARY: Top 5 Values per Site [faceted bar chart]
-#  42. Payer Missingness by Encounter Type and Site [heatmap]
-#  43. Primary Payer Missingness by Encounter Type (All Sites) [bar chart]
-#  44. Raw vs Harmonized Payer Missingness by Site [dumbbell chart]
-#  45. Highest Missingness: Year x Enc Type Combinations [table]
-#  46. Payer Missingness by Year (Recent 5 Years per Site) [line chart]
-#  --- Phase 22: Duplicate Date Slides (Section 9) ---
-#  47. Duplicate Dates: Cross-Site Comparison [bar chart]
-#  48. Duplicate Rate vs Cohort Size [scatter plot]
-#  49. Key Duplication Metrics by Partner Site [grouped bar chart]
-#  50. Source Payer Completeness for Multi-Source Dates [heatmap]
-#  51. Patient Duplicate Summary by Site [grouped bar chart]
-#  52. Multi-Source Dates: Payer Missingness by Source [heatmap]
+#   Slide inventory (52 slides):
+#     1. Definitions & Glossary
+#     2. Insurance Coverage Overview (Primary + First Dx, all patients)
+#     3. Post-Treatment Insurance (all patients)
+#     4. Chemotherapy Insurance (Primary + First + Last Chemo)
+#     5. Chemotherapy Post-Treatment Insurance
+#     6. Radiation Insurance (Primary + First + Last Radiation)
+#     7. Radiation Post-Treatment Insurance
+#     8. SCT Insurance (Primary + First + Last SCT)
+#     9. SCT Post-Treatment Insurance
+#    10. Diagnosis - Insurance by Enrollment Coverage
+#    11. Chemotherapy - Insurance by Enrollment Coverage
+#    12. Radiation - Insurance by Enrollment Coverage
+#    13. SCT - Insurance by Enrollment Coverage
+#    14. Last Treatment = Last Encounter
+#    15. Missing Post-Treatment Payer - Encounter Breakdown
+#    16. Insurance After Last Treatment - Dataset Retention (still in dataset vs missing)
+#    17. Encounters per Person by Payer Category (histogram)
+#    18. Summary Statistics: Encounters per Payer Category (table)
+#    19. Mean Post-Treatment Encounters by Year of Diagnosis
+#    20. Mean Total Encounters by Year of Diagnosis
+#    21. Post-Treatment Encounter Presence by Age Group
+#    22. Unique Encounter Dates per Person by Payer Category (histogram)
+#    23. Summary Statistics: Unique Dates per Payer Category (table)
+#    24. Mean Post-Treatment Unique Dates by Year of Diagnosis
+#    25. Mean Total Unique Dates by Year of Diagnosis
+#    26. Unique Encounter Dates per Person by Payer (Post-Last Treatment) [VIZP-02]
+#    27. Stacked Encounters Pre/Post-Treatment by Payer [VIZP-03]
+#    28. Summary Statistics: Pre/Post-Treatment Encounters by Payer [VIZP-03]
+#    29. Stacked Unique Dates Pre/Post-Treatment by Payer
+#    30. Summary Statistics: Pre/Post-Treatment Unique Dates by Payer
+#    --- Treated Only / Unique Dates Section (versions of 17-30) ---
+#    31. Unique Encounter Dates per Person by Payer (Treated Only) [histogram]
+#    32. Summary Statistics: Unique Dates per Payer (Treated Only) [table]
+#    33. Median Post-Treatment Unique Dates by Year of Diagnosis (Treated Only)
+#    34. Median Total Unique Dates by Year of Diagnosis (Treated Only)
+#    35. Post-Treatment Encounter Presence by Age Group (Treated Only)
+#    36. Unique Encounter Dates Post-Last Treatment (Treated Only) [table]
+#    37. Stacked Unique Dates Pre/Post-Treatment by Payer (Treated Only)
+#    38. Summary Statistics: Pre/Post Unique Dates by Payer (Treated Only) [table]
+#    --- Phase 21: Payer Missingness Slides (Section 8) ---
+#    39. Payer Missingness: Cross-Site Comparison [grouped bar chart]
+#    40. Primary Payer Missingness by Site [bar chart]
+#    41. Raw PAYER_TYPE_PRIMARY: Top 5 Values per Site [faceted bar chart]
+#    42. Payer Missingness by Encounter Type and Site [heatmap]
+#    43. Primary Payer Missingness by Encounter Type (All Sites) [bar chart]
+#    44. Raw vs Harmonized Payer Missingness by Site [dumbbell chart]
+#    45. Highest Missingness: Year x Enc Type Combinations [table]
+#    46. Payer Missingness by Year (Recent 5 Years per Site) [line chart]
+#    --- Phase 22: Duplicate Date Slides (Section 9) ---
+#    47. Duplicate Dates: Cross-Site Comparison [bar chart]
+#    48. Duplicate Rate vs Cohort Size [scatter plot]
+#    49. Key Duplication Metrics by Partner Site [grouped bar chart]
+#    50. Source Payer Completeness for Multi-Source Dates [heatmap]
+#    51. Patient Duplicate Summary by Site [grouped bar chart]
+#    52. Multi-Source Dates: Payer Missingness by Source [heatmap]
+#
+# Inputs:
+#   - encounter_analysis from 75_encounter_analysis.R
+#   - hl_cohort from 14_build_cohort.R
+#
+# Outputs:
+#   - output/insurance_tables_YYYY-MM-DD.pptx
 #
 # Dependencies:
-#   - 14_build_cohort.R must be sourced first (produces hl_cohort, pcornet,
-#     encounters, payer_summary in the global environment)
-#   - 75_encounter_analysis.R is sourced automatically to regenerate PNG figures
-#     in output/figures/ (slides 17-20, 22-25 will be skipped if PNGs are absent)
-#   - Packages: officer, flextable, dplyr, glue, lubridate, purrr, scales
+#   - R/14_build_cohort.R (sources all upstream: config, data loading, cohort)
+#   - R/75_encounter_analysis.R (produces PNG figures for slides 17-25)
+#   - R/utils/utils_pptx.R (shared styling utilities)
+#
+# Requirements:
+#   - (No specific requirement IDs; supports overall deliverable production)
 #
 # Usage:
 #   source("R/14_build_cohort.R")  # Build cohort first
@@ -94,7 +107,7 @@ message("Generating Insurance Tables PowerPoint")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: CONFIGURATION
+# SECTION 1: Configuration ----
 # ==============================================================================
 
 # Payer category display order (AMC 8-category; Other/Other govt collapse to Missing for display)
@@ -126,8 +139,9 @@ WINDOW_DAYS <- CONFIG$analysis$treatment_window_days  # 30
 # PPTX color constants provided by R/utils_pptx.R
 
 # ==============================================================================
-# SECTION 2: COMPUTE ADDITIONAL DATA (last treatment, post-treatment, enrollment)
+# SECTION 2: Compute Additional Data ----
 # ==============================================================================
+# Compute last treatment dates, post-treatment payer, enrollment period payer
 
 message("\n--- Computing additional payer data for PPTX ---")
 

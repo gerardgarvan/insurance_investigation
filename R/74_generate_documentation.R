@@ -1,20 +1,28 @@
 # ==============================================================================
-# PCORnet Payer Variable Investigation (R Pipeline)
-# Script: 74_generate_documentation.R
-# Purpose: Auto-generate comprehensive variable documentation (D-15, D-16, D-17, D-18)
+# 74_generate_documentation.R -- Auto-generate variable documentation
 # ==============================================================================
 #
-# D-15: Produces both .md (source of truth) and .docx (sharing copy) outputs
-# D-16: Covers all pipeline variables: treatment, surveillance, labs, survivorship,
-#        payer, cohort definition, and timing
-# D-17: Reads code lists programmatically from 00_config.R (stays in sync with code)
-# D-18: Methodology only -- no patient counts, run statistics, or data-specific results.
-#        All numeric values reflect code list counts, not patient counts.
+# Purpose:
+#   Auto-generate variable documentation (.md + .docx) from config code lists --
+#   creates human-readable documentation of all lookup tables and code mappings.
+#   WHY auto-generation from config: Ensures documentation stays in sync with
+#   actual code lists; manual documentation drifts.
+#
+# Inputs:
+#   - 00_config.R code lists and lookup tables
+#
+# Outputs:
+#   - output/docs/variable_documentation.md
+#   - output/docs/variable_documentation.docx
+#
+# Dependencies:
+#   - R/00_config.R (code list definitions)
+#
+# Requirements:
+#   - D-15, D-16, D-17, D-18 (variable documentation requirements)
 #
 # Usage:
 #   source("R/74_generate_documentation.R")
-#   # Outputs written to output/docs/Treatment_Variable_Documentation.md
-#   #                   and output/docs/Treatment_Variable_Documentation.docx
 #
 # ==============================================================================
 

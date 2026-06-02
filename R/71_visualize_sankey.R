@@ -1,9 +1,26 @@
 # ==============================================================================
 # 71_visualize_sankey.R -- Payer-stratified Sankey/alluvial diagram
 # ==============================================================================
-# Produces two-axis alluvial diagram: Payer Category -> Treatment Type
-# Flows colored by payer category using colorblind-safe viridis palette.
-# Requirements: VIZ-02
+#
+# Purpose:
+#   Payer-stratified Sankey/alluvial diagram showing patient flow from Payer
+#   Category to Treatment Type (VIZ-02). Uses ggalluvial for alluvial plot.
+#   WHY Sankey/alluvial: Shows flow relationships between categorical variables
+#   that tables cannot. WHY ggalluvial over alternatives: Established standard,
+#   ggplot2-compatible.
+#
+# Inputs:
+#   - hl_cohort from 14_build_cohort.R
+#
+# Outputs:
+#   - output/figures/sankey_patient_flow.png
+#
+# Dependencies:
+#   - R/14_build_cohort.R (sources all upstream: config, data loading, cohort)
+#
+# Requirements:
+#   - VIZ-02: Payer-stratified Sankey diagram
+#
 # ==============================================================================
 
 source("R/14_build_cohort.R")  # Loads hl_cohort, all upstream
@@ -20,7 +37,7 @@ message("Payer-Stratified Sankey Diagram")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 1: DERIVE MUTUALLY EXCLUSIVE TREATMENT CATEGORIES
+# SECTION 1: Derive Mutually Exclusive Treatment Categories ----
 # ==============================================================================
 
 message("\n--- Deriving Treatment Categories ---")
@@ -48,7 +65,7 @@ for (i in seq_len(nrow(tx_dist))) {
 }
 
 # ==============================================================================
-# SECTION 2: COLLAPSE RARE TREATMENT COMBINATIONS (D-10)
+# SECTION 2: Collapse Rare Treatment Combinations ----
 # ==============================================================================
 
 message("\n--- Collapsing Rare Treatment Combinations ---")
@@ -82,7 +99,7 @@ stopifnot(nrow(sankey_data) == nrow(hl_cohort))
 message(glue("Verified: Row count unchanged ({nrow(sankey_data)} patients)"))
 
 # ==============================================================================
-# SECTION 3: COLLAPSE SMALL PAYER CATEGORIES (D-08)
+# SECTION 3: Collapse Small Payer Categories ----
 # ==============================================================================
 
 message("\n--- Collapsing Small Payer Categories ---")
@@ -118,7 +135,7 @@ for (i in seq_len(nrow(payer_dist_after))) {
 }
 
 # ==============================================================================
-# SECTION 4: CREATE STRATUM LABELS WITH N COUNTS (D-09)
+# SECTION 4: Create Stratum Labels with N Counts ----
 # ==============================================================================
 
 message("\n--- Creating Stratum Labels ---")
@@ -150,7 +167,7 @@ message(glue("Created stratum labels with N counts for {n_distinct(sankey_data$T
 save_output_data(sankey_data, "sankey_patient_flow_data")
 
 # ==============================================================================
-# SECTION 5: BUILD GGALLUVIAL PLOT (D-05, D-07)
+# SECTION 5: Build ggalluvial Plot ----
 # ==============================================================================
 
 message("\n--- Building Sankey Diagram ---")
@@ -199,7 +216,7 @@ p_sankey <- ggplot(
   )
 
 # ==============================================================================
-# SECTION 6: OUTPUT
+# SECTION 6: Output ----
 # ==============================================================================
 
 # Display in RStudio viewer
