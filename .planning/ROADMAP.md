@@ -120,7 +120,9 @@
 **Success Criteria** (what must be TRUE):
   1. R/92_investigate_sct_0362.R produces encounter-level summary distinguishing true transplants from coding errors
   2. R/93_verify_replaced_by_codes.R validates replaced-by mappings with cycle detection and flags replacement chains >3 steps
-  3. R/76_new_tables_from_groupings.R generates multi-sheet xlsx with drug group frequency by payer and by cancer category
+  3. R/76_new_tables_from_groupings.R generates xlsx with two tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates:
+     - Table 1: treatment-type-level summary (Chemo, Radiation, SCT, Immunotherapy rows) with columns: treatment type | cancer code(s) for the encounter | count of encounters
+     - Table 2: drug-level summary (individual drugs/treatments per row) with columns: all drugs/treatments in an encounter | cancer code(s) for the encounter | count of encounters
   4. All new diagnostic scripts follow decade-based numbering convention and include documentation headers
   5. Verification cross-references replaced-by codes against SEER ICD-9 to ICD-10 conversion tables
 **Plans**: TBD

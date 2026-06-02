@@ -17,7 +17,7 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 
 - [ ] **TREAT-01**: All treatment data sourced from tumor registry dropped from treatment episode pipeline
 - [ ] **TREAT-02**: Drug groupings loaded from all_codes_resolved_next_tables.xlsx and centralized in R/00_config.R
-- [ ] **TREAT-03**: Two new summary tables created using template and groupings from all_codes_resolved_next_tables.xlsx
+- [ ] **TREAT-03**: Two new summary tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates: (1) treatment-type-level summary (Chemo, Radiation, SCT, Immunotherapy) with cancer codes and encounter counts, (2) drug-level summary (individual drugs/treatments) with cancer codes and encounter counts
 
 ### Death Data
 
