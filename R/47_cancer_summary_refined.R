@@ -1,35 +1,39 @@
 # ==============================================================================
-# Phase 47: Cancer Summary Refined (D-code removal + HL cohort confirmation)
+# 47_cancer_summary_refined.R
 # ==============================================================================
-# Creates a refined cancer summary dataset by:
-#   1. Removing benign D-codes from R/45 cancer_summary.csv (CREF-01)
-#   2. Filtering to patients with 2+ C81 diagnosis codes 7+ days apart (CREF-02)
-#   3. Computing first HL diagnosis date from both DIAGNOSIS and TUMOR_REGISTRY (CREF-03)
-#   4. Regenerating all cancer summary outputs (csv, xlsx, table xlsx)
-#   5. Saving confirmed_hl_cohort.rds for downstream phases
+# Purpose: Refined cancer summary: removes D-codes (in-situ/benign), enforces HL
+#          cohort confirmation status, computes first HL diagnosis date per patient.
+#          Consolidates R/45+R/46 output generation into single source of truth.
 #
-# This script consolidates R/45 (patient-code level) and R/46 (summary table)
-# output generation into a single self-contained script. After R/47 executes,
-# R/45 and R/46 are obsolete -- R/47 is the single source of truth for cancer
-# summary outputs going forward.
+# Inputs:  output/tables/cancer_summary.csv (Phase 45 output from R/45)
+#          DIAGNOSIS DuckDB table (C81 cohort confirmation, record counts)
+#          TUMOR_REGISTRY_ALL DuckDB table (first HL diagnosis date)
 #
-# Inputs:
-#   - output/tables/cancer_summary.csv (Phase 45 output from R/45)
-#   - DIAGNOSIS DuckDB table (for C81 cohort confirmation and record counts)
-#   - TUMOR_REGISTRY_ALL DuckDB table (for first HL diagnosis date)
+# Outputs: output/tables/cancer_summary.csv (overwritten: D-codes removed, HL cohort only)
+#          output/tables/cancer_summary.xlsx (overwritten: single flat sheet)
+#          output/tables/cancer_summary_table.xlsx (overwritten: two-sheet styled workbook)
+#          output/confirmed_hl_cohort.rds (for Phase 56, 57 consumption)
 #
-# Outputs:
-#   - output/tables/cancer_summary.csv (overwritten, D-codes removed, HL cohort only)
-#   - output/tables/cancer_summary.xlsx (overwritten, single flat sheet)
-#   - output/tables/cancer_summary_table.xlsx (overwritten, two-sheet styled workbook)
-#   - output/confirmed_hl_cohort.rds (new, for Phase 56 and Phase 57 consumption)
+# Dependencies: R/00_config.R, R/01_load_pcornet.R
 #
-# Usage:
-#   Rscript R/47_cancer_summary_refined.R
+# Requirements: CREF-01: Remove D-codes (in-situ/benign neoplasms)
+#               CREF-02: Filter to patients with 2+ C81 codes 7+ days apart
+#               CREF-03: Compute first HL diagnosis date (DIAGNOSIS + TUMOR_REGISTRY)
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 1: SETUP
+# SECTION 1: SETUP ----
+# ==============================================================================
+# WHY D-codes are removed: D-codes (D00-D48) represent in-situ, benign, and
+#   uncertain-behavior neoplasms -- clinically distinct from invasive cancer (C-codes).
+#   Removing D-codes focuses the summary on malignant neoplasms only.
+#
+# WHY HL cohort confirmation is enforced: Ensures only patients meeting cohort
+#   criteria (2+ C81 codes 7+ days apart) are included in refined summary, eliminating
+#   incidental or rule-out HL diagnoses.
+#
+# WHY first HL diagnosis date is computed: Anchor point for temporal analysis in
+#   downstream scripts (R/48 post-HL, R/49 pre/post partitioning).
 # ==============================================================================
 
 suppressPackageStartupMessages({
