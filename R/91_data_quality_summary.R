@@ -206,11 +206,11 @@ data_quality_summary <- tribble(
 # SECTION 3: Write Output ----
 # ==============================================================================
 
-dir.create(file.path(CONFIG$output_dir, "diagnostics"), showWarnings = FALSE, recursive = TRUE)
-write_csv(data_quality_summary, file.path(CONFIG$output_dir, "diagnostics", "data_quality_summary.csv"))
+output_path <- build_output_path("diagnostics", "data_quality_summary.csv")
+write_csv(data_quality_summary, output_path)
 
 message(glue("\n{strrep('=', 60)}"))
-message(glue("Data quality summary written to: {file.path(CONFIG$output_dir, 'diagnostics', 'data_quality_summary.csv')}"))
+message(glue("Data quality summary written to: {output_path}"))
 message(glue("{strrep('=', 60)}"))
 
 message(glue("\nData quality summary:"))

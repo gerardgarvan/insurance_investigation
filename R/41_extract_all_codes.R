@@ -36,8 +36,7 @@ assert_df_valid(
   script_name = "R/41"
 )
 
-OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "all_codes_inventory.xlsx")
-dir.create(dirname(OUTPUT_PATH), showWarnings = FALSE, recursive = TRUE)
+OUTPUT_PATH <- build_output_path("tables", "all_codes_inventory.xlsx")
 
 message("=== Phase 48: Extract All Unique Codes ===")
 

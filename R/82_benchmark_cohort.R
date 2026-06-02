@@ -147,8 +147,7 @@ sd_ddb <- ddb_summary$sd_seconds
 # WRITE CSV OUTPUT
 # ==============================================================================
 
-dir.create(file.path(CONFIG$output_dir, "logs"), showWarnings = FALSE, recursive = TRUE)
-output_path <- file.path(CONFIG$output_dir, "logs", "duckdb_benchmark.csv")
+output_path <- build_output_path("logs", "duckdb_benchmark.csv")
 write_csv(benchmark_results, output_path)
 message(glue("\nBenchmark results saved to: {output_path}"))
 

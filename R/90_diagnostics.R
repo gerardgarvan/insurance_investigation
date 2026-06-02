@@ -56,8 +56,8 @@ message("PCORnet Data Quality Diagnostics")
 message(glue("Run date: {Sys.Date()}"))
 message(strrep("=", 60))
 
-# Create diagnostics output directory
-dir.create(file.path(CONFIG$output_dir, "diagnostics"), showWarnings = FALSE, recursive = TRUE)
+# Ensure diagnostics output directory exists (build_output_path creates it automatically)
+diagnostics_dir <- dirname(build_output_path("diagnostics", "date_parsing_audit.csv"))
 
 # ==============================================================================
 # SECTION 1: Date Parsing Failures Audit ----

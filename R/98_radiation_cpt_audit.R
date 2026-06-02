@@ -41,8 +41,7 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-OUTPUT_PATH <- file.path(CONFIG$output_dir, "tables", "radiation_cpt_audit.xlsx")
-dir.create(dirname(OUTPUT_PATH), showWarnings = FALSE, recursive = TRUE)
+OUTPUT_PATH <- build_output_path("tables", "radiation_cpt_audit.xlsx")
 
 message("=== Phase 45: Radiation CPT Audit ===")
 message(glue("Output: {OUTPUT_PATH}"))

@@ -688,9 +688,7 @@ saveRDS(attrition_log, file.path(CONFIG$cache$cohort_dir, "attrition_log.rds"), 
 message(glue("  Snapshot: attrition_log.rds ({nrow(attrition_log)} rows, {ncol(attrition_log)} cols)"))
 
 # Create output directory
-dir.create(file.path(CONFIG$output_dir, "cohort"), showWarnings = FALSE, recursive = TRUE)
-
-output_path <- file.path(CONFIG$output_dir, "cohort", "hl_cohort.csv")
+output_path <- build_output_path("cohort", "hl_cohort.csv")
 write_csv(hl_cohort, output_path)
 message(glue("\nCohort saved to: {output_path}"))
 message(glue("Rows: {nrow(hl_cohort)}, Columns: {ncol(hl_cohort)}"))

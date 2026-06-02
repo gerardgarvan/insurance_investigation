@@ -224,11 +224,9 @@ print(p_sankey)
 message("Sankey diagram displayed in RStudio viewer")
 
 # Create output directory
-dir.create(file.path(CONFIG$output_dir, "figures"), showWarnings = FALSE, recursive = TRUE)
-
 # Save PNG
 ggsave(
-  filename = file.path(CONFIG$output_dir, "figures", "sankey_patient_flow.png"),
+  filename = build_output_path("figures", "sankey_patient_flow.png"),
   plot = p_sankey,
   width = 10,
   height = 7,

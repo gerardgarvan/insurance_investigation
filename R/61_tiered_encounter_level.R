@@ -82,8 +82,8 @@ enc <- enc_raw %>%
 # SECTION 3: Build encounter-level detail for both scopes ----
 # ==============================================================================
 
-output_dir <- file.path(CONFIG$output_dir, "tables")
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+# Build output directory path and ensure it exists
+output_dir <- dirname(build_output_path("tables", "encounter_tier_detail_all.csv"))
 
 build_encounter_tier <- function(enc_scope, suffix, output_dir) {
   total_enc <- nrow(enc_scope)

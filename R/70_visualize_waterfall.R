@@ -98,12 +98,9 @@ p_waterfall <- ggplot(attrition_plot_data, aes(x = step, y = n_after)) +
 print(p_waterfall)
 message("Waterfall chart displayed in RStudio viewer")
 
-# Create output directory
-dir.create(file.path(CONFIG$output_dir, "figures"), showWarnings = FALSE, recursive = TRUE)
-
 # Save PNG
 ggsave(
-  filename = file.path(CONFIG$output_dir, "figures", "waterfall_attrition.png"),
+  filename = build_output_path("figures", "waterfall_attrition.png"),
   plot = p_waterfall,
   width = 10,
   height = 7,
