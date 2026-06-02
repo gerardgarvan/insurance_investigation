@@ -1,18 +1,27 @@
 # ==============================================================================
 # 82_benchmark_cohort.R -- RDS vs DuckDB cohort build benchmark
 # ==============================================================================
-# Phase 31: DBCOH-03
-# Times the cohort build pipeline (14_build_cohort.R) under both backends.
-# 3 runs per backend with median comparison (D-12).
 #
-# Per D-10: Times cohort build ONLY, not config/data loading.
-# Per D-11: Standalone script, separate from production code.
-# Per D-12: 3 runs per backend, median comparison.
+# Purpose:
+#   RDS vs DuckDB cohort build benchmark: 3 runs per backend, reports median
+#   execution time for performance comparison. WHY 3 runs per backend: Reduces
+#   variance from system load; median is more robust than mean for timing.
 #
-# Output: output/logs/duckdb_benchmark.csv
+# Inputs:
+#   - Full PCORnet CDM data
+#
+# Outputs:
+#   - output/benchmark_results.csv
+#
+# Dependencies:
+#   - R/00_config.R, R/01_load_pcornet.R, R/14_build_cohort.R
+#
+# Requirements:
+#   - DBCOH-03
 #
 # Usage:
-#   source("R/82_benchmark_cohort.R")  # Run interactively on HiPerGator
+#   source("R/82_benchmark_cohort.R")
+#
 # ==============================================================================
 
 library(dplyr)

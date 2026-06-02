@@ -1,26 +1,40 @@
 # ==============================================================================
-# 14_build_cohort.R -- Build HL cohort with attrition logging
+# 14_build_cohort.R
 # ==============================================================================
 #
-# Composes named filter predicates into a sequential filter chain, adds treatment
-# flags, calculates ages, and assembles the final patient-level HL cohort dataset.
+# Purpose:
+#   Compose named predicates into sequential filter chain, add treatment flags,
+#   calculate patient ages, and assemble the final HL cohort. This is the main
+#   pipeline entry point that sources all cohort helpers and produces the cohort
+#   used by all downstream analysis scripts.
 #
-# Requirements: CHRT-01 (named predicates), CHRT-02 (attrition logging), CHRT-03 (ICD matching)
+# Inputs:
+#   - PCORnet CDM tables via 01_load_pcornet.R: DEMOGRAPHIC, DIAGNOSIS, ENROLLMENT,
+#     PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER, LAB_RESULT_CM,
+#     PROVIDER, TUMOR_REGISTRY_ALL
+#   - Payer summary via 02_harmonize_payer.R: patient-level AMC 8-category payer
+#     assignments with PAYER_CATEGORY_PRIMARY, DUAL_ELIGIBLE flags
 #
-# Filter chain order (per D-01):
-#   1. has_hodgkin_diagnosis() -- identify HL patients from DIAGNOSIS table
-#   2. with_enrollment_period() -- require at least one enrollment record
-#   3. exclude_missing_payer() -- remove NA/Missing payer categories
-#   4. Tag treatment flags (HAD_CHEMO, HAD_RADIATION, HAD_SCT) -- identification only, not exclusion
+# Outputs:
+#   - hl_cohort (in-memory tibble): Final filtered cohort with treatment flags,
+#     demographics, payer info, surveillance modalities, survivorship encounters
+#   - attrition_log (in-memory tibble): Step-by-step patient count through filter chain
+#   - output/hl_cohort.rds: Cached cohort for downstream scripts
+#   - output/cohort/hl_cohort.csv: CSV export for external analysis
 #
-# Output:
-#   - hl_cohort tibble in R environment
-#   - output/cohort/hl_cohort.csv
-#   - attrition_log data frame in R environment (consumed by Phase 4 waterfall)
+# Dependencies:
+#   - source("R/02_harmonize_payer.R"): Loads full upstream chain (config, data, payer)
+#   - source("R/10_cohort_predicates.R"): Named filter functions (has_*, with_*, exclude_*)
+#   - source("R/11_treatment_payer.R"): Treatment-anchored payer assignment
+#   - source("R/12_surveillance.R"): Surveillance modality detection
+#   - source("R/13_survivorship_encounters.R"): Survivorship encounter classification
 #
-# Usage:
-#   source("R/14_build_cohort.R")
+# Requirements: CHRT-01, CHRT-02
 #
+# ==============================================================================
+
+# ==============================================================================
+# SECTION 1: SETUP AND DEPENDENCY LOADING ----
 # ==============================================================================
 
 source("R/02_harmonize_payer.R")  # Loads 01_load_pcornet.R -> 00_config.R -> utils
@@ -36,8 +50,15 @@ message("HL Cohort Building Pipeline")
 message(strrep("=", 60))
 
 # ==============================================================================
-# SECTION 2: COHORT SELECTION (matches Python pipeline logic)
+# SECTION 2: SEQUENTIAL FILTER CHAIN ----
 # ==============================================================================
+#
+# WHY predicates applied in this order: Enrollment filtering before diagnosis
+# reduces join size (smaller patient set to check against DIAGNOSIS table).
+# HL verification happens first to tag all patients with HL_SOURCE flag, then
+# enrollment filtering removes patients without insurance records. This order
+# preserves HL status information for excluded patients (written to CSV) while
+# optimizing query performance.
 #
 # Python's encounter_payer_summary assumes all patients in the extract are HL
 # and filters only by enrollment. We match that logic here but add an HL_VERIFIED
@@ -151,8 +172,18 @@ saveRDS(cohort, file.path(CONFIG$cache$cohort_dir, "cohort_02_has_enrollment.rds
 message(glue("  Snapshot: cohort_02_has_enrollment.rds ({nrow(cohort)} rows, {ncol(cohort)} cols)"))
 
 # ==============================================================================
-# SECTION 3: ENROLLMENT AGGREGATION (D-10 age calculation)
+# SECTION 3: TREATMENT FLAGS AND AGE CALCULATION ----
 # ==============================================================================
+#
+# WHY treatment flags added after filtering: Computing treatment evidence for
+# excluded patients wastes resources. Filter first to the final cohort, then
+# add treatment flags only for included patients. This also ensures treatment
+# flags align with the cohort that will be used in downstream analyses.
+#
+# WHY age calculated as current year minus birth year: PCORnet CDM does not
+# provide precise date of birth (only birth year) due to HIPAA de-identification.
+# Age at diagnosis uses lubridate::interval() for year-difference calculation
+# between BIRTH_DATE and first_hl_dx_date, which handles leap years correctly.
 
 message("\n--- Enrollment Aggregation ---")
 
@@ -426,8 +457,14 @@ n_treated <- sum(!is.na(cohort$LAST_ANY_TX_DATE))
 message(glue("\n  Post-treatment encounters (among {n_treated} treated): {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'Yes', na.rm = TRUE)} Yes, {sum(cohort$HAS_POST_TX_ENCOUNTERS == 'No', na.rm = TRUE)} No, {sum(is.na(cohort$HAS_POST_TX_ENCOUNTERS))} N/A (untreated)"))
 
 # ==============================================================================
-# SECTION 7: FINAL COHORT ASSEMBLY (D-09 column order)
+# SECTION 4: COHORT ASSEMBLY AND CACHE ----
 # ==============================================================================
+#
+# WHY attrition log tracks unique patient IDs not row counts: Some predicates
+# filter at the patient level (one row per patient), while others work with
+# encounter-level data (multiple rows per patient). Tracking n_distinct(ID)
+# ensures consistent patient-level attrition reporting regardless of data
+# structure at each step.
 
 message("\n--- Final Cohort Assembly ---")
 
@@ -481,7 +518,7 @@ saveRDS(hl_cohort, file.path(CONFIG$cache$cohort_dir, "cohort_final.rds"), compr
 message(glue("  Snapshot: cohort_final.rds ({nrow(hl_cohort)} rows, {ncol(hl_cohort)} cols)"))
 
 # ==============================================================================
-# SECTION 8: COHORT SUMMARY (console output)
+# SECTION 5: ATTRITION SUMMARY ----
 # ==============================================================================
 
 message("\n", strrep("=", 60))
@@ -562,10 +599,6 @@ print(attrition_log)
 # Snapshot: Attrition log (per SNAP-02)
 saveRDS(attrition_log, file.path(CONFIG$cache$cohort_dir, "attrition_log.rds"), compress = TRUE)
 message(glue("  Snapshot: attrition_log.rds ({nrow(attrition_log)} rows, {ncol(attrition_log)} cols)"))
-
-# ==============================================================================
-# SECTION 10: CSV OUTPUT (D-11)
-# ==============================================================================
 
 # Create output directory
 dir.create(file.path(CONFIG$output_dir, "cohort"), showWarnings = FALSE, recursive = TRUE)

@@ -2,18 +2,28 @@
 # 86_smoke_test_foundation.R -- Validate Phase 65 Foundation Reorganization
 # ==============================================================================
 #
-# Validates:
-#   1. R/utils/ subfolder exists with 8 utility modules
-#   2. 00_config.R loads and auto-sources all utils via list.files()
-#   3. All 8 utils modules' key functions are available after sourcing config
-#   4. Foundation script chain resolves (00 -> 01 -> 02)
-#   5. 03_duckdb_ingest.R exists at new location, 25_duckdb_ingest.R is gone
-#   6. No old-style source("R/utils_*.R") paths remain in any R script
+# Purpose:
+#   Validates Phase 65 foundation reorganization: utils subfolder structure,
+#   script renumbering, source() reference resolution. WHY filesystem structure
+#   validation: After reorganization, source() calls must resolve to actual files.
+#   WHY utils subfolder check: Phase 65 moved utils to R/utils/, verifying they
+#   were all moved.
+#
+# Inputs:
+#   - R/ directory filesystem structure
+#
+# Outputs:
+#   - Console output (PASS/FAIL per validation)
+#
+# Dependencies:
+#   - (standalone verification script)
+#
+# Requirements:
+#   - REORG-01, REORG-03, REORG-05
 #
 # Usage:
 #   Rscript R/86_smoke_test_foundation.R
 #
-# Requirements: REORG-01, REORG-03, REORG-05
 # ==============================================================================
 
 # Clear workspace to avoid stale references

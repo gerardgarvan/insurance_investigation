@@ -2,29 +2,22 @@
 # 83_generate_speedup_report.R -- DuckDB vs RDS speedup report generator
 # ==============================================================================
 #
-# Phase 32: DBDIAG-03
-# Reads benchmark CSV (output/logs/duckdb_benchmark.csv) collected on HiPerGator,
-# computes per-script median duration and speedup ratios, and writes a formatted
-# markdown report to output/reports/duckdb_speedup_report.md.
+# Purpose:
+#   Generate human-readable DuckDB vs RDS speedup report from benchmark CSV.
+#   WHY separate report generator from benchmark: Benchmark produces raw data,
+#   report is human-readable interpretation.
 #
-# The benchmark CSV is produced by:
-#   - R/82_benchmark_cohort.R (Phase 31: cohort build benchmarks)
-#   - Per-script diagnostic benchmarks (Phase 32: run on HiPerGator)
+# Inputs:
+#   - output/benchmark_results.csv from R/82
 #
-# Expected CSV columns:
-#   - script:           Name of the benchmarked script (e.g., "14_build_cohort")
-#   - backend:          "RDS" or "DuckDB"
-#   - run:              Run number (1, 2, 3)
-#   - elapsed_seconds:  Wall-clock time
-#   - user_seconds:     CPU user time (optional)
-#   - system_seconds:   CPU system time (optional)
-#   - peak_memory_mb:   Peak memory usage in MB (optional)
-#   - timestamp:        When the benchmark was run
+# Outputs:
+#   - output/speedup_report.txt
 #
-# If the CSV lacks a "script" column (legacy format from R/28_benchmark_cohort.R),
-# all rows are treated as the "14_build_cohort" script.
+# Dependencies:
+#   - R/00_config.R
 #
-# Output: output/reports/duckdb_speedup_report.md
+# Requirements:
+#   - DBDIAG-03
 #
 # Usage:
 #   source("R/83_generate_speedup_report.R")

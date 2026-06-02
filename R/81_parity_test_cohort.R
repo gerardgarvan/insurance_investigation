@@ -1,16 +1,28 @@
 # ==============================================================================
 # 81_parity_test_cohort.R -- RDS vs DuckDB cohort parity verification
 # ==============================================================================
-# Phase 31: DBCOH-02
-# Runs the cohort build pipeline under both backends in the same R session
-# and compares outputs using waldo::compare().
 #
-# Per D-07: Fresh RDS rebuild as baseline (same data, same code version)
-# Per D-08: Type coercion before comparison (integer/double, Date/POSIXct)
-# Per D-09: Three-level check (row count, PATID set, structural equality)
+# Purpose:
+#   Full cohort build parity verification: builds complete HL cohort using RDS
+#   backend and DuckDB backend, compares results via waldo::compare(). WHY
+#   waldo::compare over identical(): waldo shows detailed diffs, not just TRUE/FALSE
+#   -- critical for debugging parity failures.
+#
+# Inputs:
+#   - Full PCORnet CDM data
+#
+# Outputs:
+#   - Console output (PASS/FAIL with diff details)
+#
+# Dependencies:
+#   - R/00_config.R, R/01_load_pcornet.R, R/14_build_cohort.R
+#
+# Requirements:
+#   - DBCOH-02
 #
 # Usage:
-#   source("R/81_parity_test_cohort.R")  # Run interactively on HiPerGator
+#   source("R/81_parity_test_cohort.R")
+#
 # ==============================================================================
 
 library(dplyr)

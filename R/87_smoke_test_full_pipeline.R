@@ -2,18 +2,27 @@
 # 87_smoke_test_full_pipeline.R -- Full-Pipeline Renumbering Validation
 # ==============================================================================
 #
-# Validates Phase 66 complete reorganization:
-#   - Output decade (70-75): 6 scripts
-#   - Test decade (80-86): 7 scripts
-#   - Ad-hoc decade (90-99): 10 scripts
-#   - No a/b suffixes remain (D-07)
-#   - No broken source() references
-#   - Key dependency chains intact
+# Purpose:
+#   Validates Phase 66-67 complete reorganization: all decade counts, source()
+#   resolution, archive structure, smoke test placement in test decade. WHY
+#   per-decade validation: Ensures reorganization didn't miss scripts or create
+#   gaps in numbering.
+#
+# Inputs:
+#   - R/ directory filesystem structure
+#
+# Outputs:
+#   - Console output (PASS/FAIL per decade)
+#
+# Dependencies:
+#   - (standalone verification script)
+#
+# Requirements:
+#   - REORG-01, REORG-02
 #
 # Usage:
 #   Rscript R/87_smoke_test_full_pipeline.R
 #
-# Requirements: REORG-01, REORG-02
 # ==============================================================================
 
 # Clear workspace to avoid stale references

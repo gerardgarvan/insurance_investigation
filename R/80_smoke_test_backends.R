@@ -1,32 +1,30 @@
 # ==============================================================================
-# 80_smoke_test_backends.R -- Backend parity smoke test (Phase 30)
+# 80_smoke_test_backends.R -- Backend parity smoke test
 # ==============================================================================
 #
-# Tests all 6 named predicates from 03_cohort_predicates.R on both RDS and
-# DuckDB backends using a 100-patient sample (D-06, D-07).
+# Purpose:
+#   Backend parity smoke test: runs 6 named predicates on both RDS and DuckDB
+#   backends with 100-patient sample, comparing results via waldo::compare().
+#   WHY 100-patient sample: Full cohort takes too long for quick smoke test;
+#   100 patients sufficient to catch most parity issues. WHY 6 specific predicates:
+#   Covers the core filter chain -- enrollment, diagnosis, payer, treatment flags.
 #
-# For each predicate:
-#   1. Run on RDS backend (pcornet$ tibbles) -> collect PATID set
-#   2. Run on DuckDB backend -> collect PATID set
-#   3. Compare via setequal() -> log pass/fail
+# Inputs:
+#   - PCORnet tables via both backends
 #
-# Produces console output with per-predicate results and overall summary.
-# Translation gaps are logged to console for documentation in
-# docs/DUCKDB_TRANSLATION_NOTES.md.
+# Outputs:
+#   - Console output (PASS/FAIL per predicate)
+#
+# Dependencies:
+#   - R/00_config.R, R/01_load_pcornet.R, R/02_harmonize_payer.R, R/10_cohort_predicates.R
+#   - DuckDB file at CONFIG$cache$duckdb_path (created by R/03_duckdb_ingest.R)
+#
+# Requirements:
+#   - DBAPI-04
 #
 # Usage:
 #   source("R/80_smoke_test_backends.R")
-#   # Or run interactively on HiPerGator after sourcing pipeline
 #
-# Dependencies:
-#   - 00_config.R (auto-sources utils), 01_load_pcornet.R (loads pcornet$),
-#     02_harmonize_payer.R (creates payer_summary for exclude_missing_payer),
-#     10_cohort_predicates.R (defines predicates)
-#   - R/utils/utils_duckdb.R (open/close_pcornet_con, get_pcornet_table)
-#   - DuckDB file must exist at CONFIG$cache$duckdb_path
-#     (created by R/03_duckdb_ingest.R)
-#
-# Requirement: DBAPI-04
 # ==============================================================================
 
 # Load pipeline (RDS mode first -- this is the baseline)
@@ -43,9 +41,9 @@ message(strrep("=", 70))
 message("SMOKE TEST: Backend Parity (RDS vs DuckDB)")
 message(strrep("=", 70))
 
-# --------------------------------------------------------------------------
-# 1. Sample 100 random patients from DEMOGRAPHIC (D-07)
-# --------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 1: Sample 100 Random Patients ----
+# ==============================================================================
 SAMPLE_SIZE <- 100
 SEED <- 20260423
 
@@ -59,9 +57,9 @@ sample_df <- tibble(ID = sample_ids)
 message(glue("\nSample: {SAMPLE_SIZE} patients (seed={SEED})"))
 message(glue("Sample IDs (first 5): {paste(head(sample_ids, 5), collapse=', ')}"))
 
-# --------------------------------------------------------------------------
-# 2. RDS Baseline: Run all 6 predicates
-# --------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 2: RDS Baseline - Run All 6 Predicates ----
+# ==============================================================================
 message(glue("\n{strrep('-', 50)}"))
 message("Phase 1: Running predicates on RDS backend...")
 message(strrep("-", 50))
@@ -90,9 +88,9 @@ for (nm in names(rds_results)) {
   message(glue("  {nm}: {length(rds_results[[nm]])} patients"))
 }
 
-# --------------------------------------------------------------------------
-# 3. DuckDB: Open connection, swap pcornet$ entries, run predicates
-# --------------------------------------------------------------------------
+# ==============================================================================
+# SECTION 3: DuckDB - Open Connection and Run Predicates ----
+# ==============================================================================
 message(glue("\n{strrep('-', 50)}"))
 message("Phase 2: Running predicates on DuckDB backend...")
 message(strrep("-", 50))

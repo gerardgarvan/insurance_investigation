@@ -1,11 +1,29 @@
-# =============================================================================
-# Phase 44 Verification: Treatment Episode Checks
-# =============================================================================
-# Loads the treatment_episodes.rds artifact and runs structural, data quality,
-# historical flag, and clinical plausibility checks.
+# ==============================================================================
+# 85_test_episodes.R -- Treatment episode verification
+# ==============================================================================
 #
-# Run after R/26_treatment_episodes.R to verify outputs.
-# =============================================================================
+# Purpose:
+#   Verification script: structural, data quality, historical flag, and clinical
+#   plausibility checks for treatment_episodes.rds output. WHY historical flag
+#   validation: Dates before 2000 are flagged as potentially erroneous -- PCORnet
+#   data starts around 2010 for most sites.
+#
+# Inputs:
+#   - cache/outputs/treatment_episodes.rds from R/26
+#
+# Outputs:
+#   - Console output (PASS/FAIL per check)
+#
+# Dependencies:
+#   - R/00_config.R, R/26_treatment_episodes.R
+#
+# Requirements:
+#   - (verification script; no specific requirements)
+#
+# Usage:
+#   source("R/85_test_episodes.R")
+#
+# ==============================================================================
 
 suppressPackageStartupMessages({
   library(dplyr)

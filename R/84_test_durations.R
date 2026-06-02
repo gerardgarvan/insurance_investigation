@@ -1,11 +1,30 @@
-# =============================================================================
-# Phase 43 Verification: Treatment Duration Sanity Checks
-# =============================================================================
-# Loads the treatment_durations.rds artifact and runs clinical plausibility
-# checks, structural validation, and anomaly detection.
+# ==============================================================================
+# 84_test_durations.R -- Treatment duration verification
+# ==============================================================================
 #
-# Run after R/25_treatment_durations.R to verify outputs.
-# =============================================================================
+# Purpose:
+#   Verification script: clinical plausibility checks, structural validation,
+#   and anomaly detection for treatment_durations.rds output. WHY clinical
+#   plausibility checks: Treatment durations > 10 years or < 0 days indicate
+#   data issues, not clinical reality. WHY anomaly detection: Outliers may
+#   indicate data quality problems or legitimate edge cases.
+#
+# Inputs:
+#   - cache/outputs/treatment_durations.rds from R/25
+#
+# Outputs:
+#   - Console output (PASS/FAIL per check)
+#
+# Dependencies:
+#   - R/00_config.R, R/25_treatment_durations.R
+#
+# Requirements:
+#   - (verification script; no specific requirements)
+#
+# Usage:
+#   source("R/84_test_durations.R")
+#
+# ==============================================================================
 
 suppressPackageStartupMessages({
   library(dplyr)
