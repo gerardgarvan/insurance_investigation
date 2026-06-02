@@ -2,36 +2,29 @@
 # 95_multi_source_overlap_av_th.R -- Multi-source overlap detection (AV+TH only)
 # ==============================================================================
 #
-# Phase 33: Multi-Source Overlap Detection for AV+TH encounters only
-# Requirements: AVTH-DET-01, AVTH-DET-02, AVTH-DET-03, AVTH-DET-04, AVTH-DET-05, AVTH-DET-06
+# Purpose: Multi-source overlap detection for AV+TH (ambulatory + hospital)
+#          encounters only -- scoped subset of R/67's all-encounter-type analysis.
 #
-# Purpose: Detect same-date and same-week (within +/-7 days) encounter pairs
-#          from different ENCOUNTER.SOURCE values across ALL patients in ENCOUNTER.
-#          (AV=Ambulatory Visit, TH=Telehealth only)
-#          Outputs feed Phase 34 (R/96_overlap_classification_av_th.R) for field-by-field
-#          comparison of overlapping encounters.
+# Inputs: PCORnet ENCOUNTER table filtered to ENC_TYPE in ('AV','TH')
 #
-#          Note: Uses ENCOUNTER.SOURCE directly. No DEMOGRAPHIC join needed.
-#          Analyzes all patients in ENCOUNTER, not just HL cohort.
+# Outputs: output/multi_source_overlap_av_th.xlsx (5 CSV files):
+#          - multi_source_same_date_detail_av_th.csv
+#          - multi_source_same_week_detail_av_th.csv
+#          - multi_source_combo_frequencies_av_th.csv
+#          - multi_source_per_source_summary_av_th.csv
+#          - multi_source_encounter_payer_av_th.csv
 #
-# Output: 4 CSV files in output/tables/:
-#   - multi_source_same_date_detail_av_th.csv     (AVTH-DET-01)
-#   - multi_source_same_week_detail_av_th.csv     (AVTH-DET-01)
-#   - multi_source_combo_frequencies_av_th.csv    (AVTH-DET-03)
-#   - multi_source_per_source_summary_av_th.csv   (AVTH-DET-02)
+# Dependencies: 00_config.R, 01_load_pcornet.R (or DuckDB connection)
+#               dplyr, lubridate, glue, readr, stringr, tidyr
 #
-# Usage: source("R/95_multi_source_overlap_av_th.R")
+# Requirements: AVTH-DET-01 through AVTH-DET-06 (Phase 33)
 #
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Optionally sources R/utils/utils_dates.R if date parse rate < 50%.
-#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ADMIT_DATE, SOURCE, ENC_TYPE, etc.)
+# WHY: Ambulatory and hospital encounters are the clinically relevant encounter
+#      types for treatment analysis; EE=emergency, OA=other don't typically carry
+#      treatment data. This provides focused analysis for clinical team reviewing
+#      only treatment-related encounters. Separate from R/67 to enable targeted
+#      deduplication recommendations for encounter types that matter most.
 #
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes immediately after loading because all downstream logic
-#   (split, self-join in loop, nrow, n_distinct) requires in-memory data.
-#
-# Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 source("R/00_config.R")
@@ -50,8 +43,10 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 }
 
 # ==============================================================================
-# SECTION 1: Load and prepare encounters
+# SECTION 1: Load and Prepare Encounters ----
 # ==============================================================================
+# WHY: Filter to AV+TH encounter types early to reduce data volume and focus
+#      analysis on clinically relevant encounters for treatment tracking.
 
 message(glue("\n{strrep('=', 70)}"))
 message("MULTI-SOURCE OVERLAP DETECTION (AV+TH ONLY)")
@@ -136,7 +131,7 @@ enc_valid <- enc %>%
 message(glue("Encounters with valid ADMIT_DATE and SOURCE: {format(nrow(enc_valid), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 2: Same-date multi-source detection (SAMEDT-01)
+# SECTION 2: Same-Date Multi-Source Detection ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 2: Same-Date Multi-Source Detection (SAMEDT-01) ---"))
@@ -229,8 +224,11 @@ for (i in seq_len(nrow(top10_sd))) {
 }
 
 # ==============================================================================
-# SECTION 5: Same-week near-duplicate detection (SAMEWK-01, SAMEWK-02)
+# SECTION 5: Same-Week Near-Duplicate Detection ----
 # ==============================================================================
+# WHY: Same-week (1-7 day gap) pairs may represent delayed reporting or closely-
+#      spaced visits that could be consolidated for analysis. The day-by-day scan
+#      strategy avoids O(n^2) patient-level self-joins by indexing on date.
 
 message(glue("\n--- SECTION 5: Same-Week Near-Duplicate Detection (SAMEWK-01) ---"))
 message("Finding encounter pairs from different sources within 1-7 calendar days...")

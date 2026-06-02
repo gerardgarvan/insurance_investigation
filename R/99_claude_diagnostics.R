@@ -2,28 +2,32 @@
 # 99_claude_diagnostics.R -- Generate comprehensive data profile for Claude
 # ==============================================================================
 #
-# Produces a single text file (output/claude_diagnostics.txt) containing all
-# the metadata Claude needs to write correct, performant R code:
+# Purpose: Generate comprehensive data profile text file for Claude AI: row
+#          counts, column types, cardinality, payer distribution -- serves as
+#          context document for AI-assisted analysis.
 #
-#   1. Row counts and memory footprint per table
-#   2. Distinct patient counts and fan-out ratios per table
-#   3. Column types as actually loaded (post-parsing)
-#   4. glimpse() of key tables (ENCOUNTER, DIAGNOSIS, TUMOR_REGISTRY_ALL)
-#   5. Key column cardinality (join planning)
-#   6. Payer code distribution (ENCOUNTER)
-#   7. Date parsing success summary
-#   8. Full pipeline console output capture (load + harmonize + cohort build)
+# Inputs: Full PCORnet CDM data via pipeline chain (config + data + cohort)
 #
+# Outputs: output/claude_data_profile.txt
+#
+# Dependencies: 00_config.R, 01_load_pcornet.R, 02_harmonize_payer.R, 14_build_cohort.R
+#
+# WHY: Provides structured data context that fits within Claude's context window,
+#      enabling AI-assisted analysis without needing direct data access. Text
+#      file format with counts, types, cardinality -- the minimum information
+#      Claude needs to understand data structure and write correct queries.
 #
 # Usage (on HiPerGator):
 #   source("R/99_claude_diagnostics.R")
-#   # Then download output/claude_diagnostics.txt and paste to Claude
+#   # Then download output/claude_data_profile.txt and paste to Claude
 #
 # ==============================================================================
 
 # ==============================================================================
-# SETUP: Redirect all output to text file
+# SECTION 1: Setup ----
 # ==============================================================================
+# WHY: Redirect all output (stdout + messages) to text file for comprehensive
+#      capture of pipeline execution, including load messages, warnings, summaries.
 
 output_dir <- "output"
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -60,8 +64,10 @@ cat("Working directory:", getwd(), "\n")
 cat(strrep("=", 70), "\n")
 
 # ==============================================================================
-# SECTION 1: Load data (captures all load messages)
+# SECTION 2: Load Data ----
 # ==============================================================================
+# WHY: Capturing load messages shows parse rates, memory usage, warnings --
+#      essential context for understanding data quality and performance.
 
 section("1. DATA LOADING (console output captured)")
 
@@ -77,7 +83,7 @@ load_end <- Sys.time()
 cat("\nTotal load time:", format(load_end - load_start, digits = 3), "\n")
 
 # ==============================================================================
-# SECTION 2: Table dimensions and memory
+# SECTION 3: Table Dimensions and Memory ----
 # ==============================================================================
 
 section("2. TABLE DIMENSIONS AND MEMORY")

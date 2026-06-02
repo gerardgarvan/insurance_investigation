@@ -2,42 +2,33 @@
 # 97_payer_code_frequency_av_th.R -- Payer code frequency summary (AV+TH only)
 # ==============================================================================
 #
-# Phase 34: Insurance Code Frequency Summary of ENCOUNTER table
-# Requirements: PAYFREQ-01, PAYFREQ-02, PAYFREQ-03, PAYFREQ-04, PAYFREQ-05, PAYFREQ-06
+# Purpose: Payer code frequency summary for AV+TH encounters only, cross-
+#          referenced against Amy Crisp's PayerVariable.xlsx mapping.
 #
-# Purpose: Produce frequency tables of raw PAYER_TYPE_PRIMARY and
-#          PAYER_TYPE_SECONDARY codes in AV+TH encounters, cross-referenced
-#          against PayerVariable.xlsx to show each code's description (col B:
-#          "What old value means") and mapped category (col C: "New Value").
+# Inputs: PCORnet ENCOUNTER table, PayerVariable.xlsx reference
 #
-#          Codes present in the encounter data but absent from the xlsx are
-#          flagged as "NOT IN XLSX". This uses the xlsx's own category scheme
-#          (Medicare, Medicaid, Other govt, Private, Uninsured, Other, Impute),
-#          NOT the R pipeline's PAYER_MAPPING.
+# Outputs: output/payer_code_frequency_av_th.xlsx (3 CSV files):
+#          - payer_primary_code_freq_av_th.csv
+#          - payer_secondary_code_freq_av_th.csv
+#          - payer_category_summary_av_th.csv
 #
-# Output: 3 CSV files in output/tables/:
-#   - payer_primary_code_freq_av_th.csv    (PAYFREQ-01, PAYFREQ-02)
-#   - payer_secondary_code_freq_av_th.csv  (PAYFREQ-01, PAYFREQ-02)
-#   - payer_category_summary_av_th.csv     (PAYFREQ-06)
+# Dependencies: 00_config.R, 01_load_pcornet.R (or DuckDB connection)
+#               dplyr, glue, readr, readxl
 #
-# Usage: source("R/97_payer_code_frequency_av_th.R")
+# Requirements: PAYFREQ-01 through PAYFREQ-06 (Phase 34)
 #
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: get_pcornet_table("ENCOUNTER") (ID, ENCOUNTERID, ENC_TYPE,
-#     PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY)
-#   Requires: readxl package for reading PayerVariable.xlsx
+# WHY: Amy Crisp's PayerVariable.xlsx mapping is the gold standard for AMC
+#      8-category system. Cross-referencing validates pipeline's payer
+#      classification matches clinical team's expectations. AV+TH only because
+#      treatment encounters are the primary interest for payer analysis.
 #
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes immediately after loading because all downstream logic
-#   (count, left_join, group_by) requires in-memory data.
-#
-# Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 0: Setup
+# SECTION 1: Setup ----
 # ==============================================================================
+# WHY: Cross-reference requires both ENCOUNTER data and PayerVariable.xlsx.
+#      xlsx provides independent validation of pipeline's payer mapping.
 
 source("R/00_config.R")
 library(dplyr)
@@ -61,7 +52,7 @@ message("Phase 34: Cross-reference encounter payer codes against PayerVariable.x
 message(glue("{strrep('=', 70)}\n"))
 
 # ==============================================================================
-# SECTION 1: Load PayerVariable.xlsx
+# SECTION 2: Load PayerVariable.xlsx ----
 # ==============================================================================
 
 message("--- SECTION 1: Load PayerVariable.xlsx ---")

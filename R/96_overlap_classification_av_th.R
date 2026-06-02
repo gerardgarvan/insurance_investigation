@@ -2,36 +2,29 @@
 # 96_overlap_classification_av_th.R -- Overlap classification and recommendations (AV+TH only)
 # ==============================================================================
 #
-# Phase 33: Overlap Classification and Recommendations for AV+TH encounters only
-# Requirements: AVTH-CLS-01, AVTH-CLS-02, AVTH-CLS-03, AVTH-CLS-04, AVTH-CLS-05, AVTH-CLS-06, AVTH-CLS-07
+# Purpose: Overlap classification and deduplication recommendations for AV+TH
+#          encounters -- scoped subset of R/68's all-encounter-type classification.
 #
-# Purpose: Classify each multi-source encounter group (same-date and same-week)
-#          from Phase 33 Plan 01 output as Identical, Partial, or Distinct via field-by-field
-#          comparison. (AV=Ambulatory Visit, TH=Telehealth only)
-#          Outputs CSV files with classified detail, per-site overlap
-#          profiles, console summary, and per-site actionable recommendations with
-#          preferred source suggestions.
+# Inputs: overlap data from R/95 (multi_source_same_date_detail_av_th.csv,
+#         multi_source_same_week_detail_av_th.csv)
 #
-# Output: 4 CSV files in output/tables/:
-#   - classified_same_date_detail_av_th.csv        (AVTH-CLS-01, AVTH-CLS-02)
-#   - classified_same_week_detail_av_th.csv        (AVTH-CLS-04)
-#   - per_site_overlap_profile_av_th.csv           (AVTH-CLS-03)
-#   - overlap_source_payer_completeness_av_th.csv  (AVTH-CLS-03)
+# Outputs: output/overlap_classification_av_th.xlsx (4 CSV files):
+#          - classified_same_date_detail_av_th.csv
+#          - classified_same_week_detail_av_th.csv
+#          - per_site_overlap_profile_av_th.csv
+#          - overlap_source_payer_completeness_av_th.csv
 #
-# Usage: source("R/96_overlap_classification_av_th.R")
+# Dependencies: 95_multi_source_overlap_av_th.R (must run first)
+#               00_config.R, 01_load_pcornet.R (or DuckDB connection)
+#               dplyr, lubridate, glue, readr, stringr, tidyr
 #
-# Dependencies: Sources R/00_config.R (CONFIG, output_dir).
-#   Conditionally sources R/01_load_pcornet.R for pcornet tables.
-#   Requires: get_pcornet_table("ENCOUNTER"), get_pcornet_table("DEMOGRAPHIC")
-#   Requires: Phase 33 Plan 01 CSVs in output/tables/:
-#             multi_source_same_date_detail_av_th.csv
-#             multi_source_same_week_detail_av_th.csv
+# Requirements: AVTH-CLS-01 through AVTH-CLS-07 (Phase 33)
 #
-# DuckDB migration (Phase 32): Uses get_pcornet_table() for backend-transparent
-#   access. Materializes early because downstream logic uses self-joins, nrow(),
-#   field_match() comparisons, and iterative loops requiring in-memory data.
+# WHY: Same logic as R/68 but scoped subset allows targeted deduplication
+#      recommendations for AV+TH encounter types that matter most for payer
+#      analysis. Provides actionable guidance on which source to prefer when
+#      duplicates are detected.
 #
-# Standalone script -- NOT part of the main pipeline sequence.
 # ==============================================================================
 
 source("R/00_config.R")
@@ -57,15 +50,17 @@ if (USE_DUCKDB && !exists("pcornet_con", envir = .GlobalEnv)) {
 # field_match() provided by R/utils_payer.R (via R/00_config.R)
 
 # ==============================================================================
-# SECTION 1: Load Phase 25 CSVs and prepare ENCOUNTER data
+# SECTION 1: Load Phase 33 CSVs and Prepare ENCOUNTER Data ----
 # ==============================================================================
+# WHY: Field-by-field comparison requires loading overlap pairs from R/95 and
+#      joining back to ENCOUNTER to get full field values for classification.
 
 message(glue("\n{strrep('=', 70)}"))
 message("OVERLAP CLASSIFICATION AND RECOMMENDATIONS (AV+TH ONLY)")
 message("Phase 33: Classify AV+TH multi-source encounters as Identical/Partial/Distinct")
 message(glue("{strrep('=', 70)}\n"))
 
-message("--- SECTION 1: Load Phase 25 CSVs and Prepare ENCOUNTER Data ---")
+message("--- SECTION 1: Load Phase 33 CSVs and Prepare ENCOUNTER Data ---")
 
 output_dir <- file.path(CONFIG$output_dir, "tables")
 
@@ -187,7 +182,7 @@ if (n_no_site > 0) {
 message(glue("ENCOUNTER data prepared: {format(nrow(enc_prepared), big.mark=',')} encounters"))
 
 # ==============================================================================
-# SECTION 2: Same-date field comparison (OVRLP-01, D-04)
+# SECTION 2: Same-Date Field Comparison ----
 # ==============================================================================
 
 message(glue("\n--- SECTION 2: Same-Date Field Comparison (OVRLP-01) ---"))
@@ -423,8 +418,11 @@ message(glue("Same-week per-source-combo profiles computed for {nrow(sw_site_pro
 # (no need to fill missing combos -- absence means no overlap detected)
 
 # ==============================================================================
-# SECTION 6: Preferred source from payer completeness (D-08)
+# SECTION 6: Preferred Source from Payer Completeness ----
 # ==============================================================================
+# WHY: When duplicates exist, prefer the source with highest payer completeness.
+#      Payer data is critical for this study; source with better payer coverage
+#      should be retained when deduplicating.
 
 message(glue("\n--- SECTION 6: Preferred Source from Payer Completeness (D-08) ---"))
 

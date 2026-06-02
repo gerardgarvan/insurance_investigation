@@ -1,37 +1,35 @@
 # ==============================================================================
-# Phase 45: Radiation CPT Audit
+# 98_radiation_cpt_audit.R -- Radiation CPT audit
 # ==============================================================================
 #
-# Audits the full CPT 70010-79999 radiology range to explain why the pipeline
-# uses a narrow set of radiation treatment codes rather than the full range
-# specified in TreatmentVariables.docx.
+# Purpose: Audit full CPT 70010-79999 radiology range to justify pipeline's narrow
+#          radiation code set -- confirms that most radiology codes in data are
+#          diagnostic imaging, not therapeutic radiation.
 #
-# Purpose:
-#   - Provide collaborators (Amy Crisp / team) a self-explanatory document
-#     justifying the pipeline's narrow radiation code set.
-#   - Show which 7-prefix codes actually appear in PROCEDURES data.
-#   - Classify each code as Diagnostic Imaging / Radiation Treatment / Mixed.
-#   - Auto-add any confirmed treatment codes found in data but not in config.
+# Inputs: PCORnet PROCEDURES table
 #
-# Inputs:
-#   - R/00_config.R (TREATMENT_CODES$radiation_cpt)
-#   - PROCEDURES DuckDB table (all patients, all PX_TYPEs)
+# Outputs: output/radiation_cpt_audit.xlsx (2-sheet workbook):
+#          Sheet 1: CPT Classification (AMA chapter structure)
+#          Sheet 2: Codes in Data (7xxxx + G60xx codes found)
 #
-# Outputs:
-#   - output/tables/radiation_cpt_audit.xlsx (2-sheet styled workbook)
-#     Sheet 1: "CPT Classification" — AMA chapter structure table
-#     Sheet 2: "Codes in Data" — all 7xxxx + G60xx codes found in PROCEDURES
+# Dependencies: 00_config.R, 01_load_pcornet.R
+#               dplyr, stringr, glue, openxlsx2
 #
-# Usage:
-#   Rscript R/98_radiation_cpt_audit.R
+# Requirements: RADCPT-01 through RADCPT-03 (Phase 45)
 #
-# Requirements: RADCPT-01, RADCPT-02, RADCPT-03
-# Phase 45 Plan 01 -- radiation-cpt-audit
+# WHY: Pipeline only uses a narrow set of radiation treatment codes (77261-77799).
+#      Audit confirms that excluded codes (70010-77260, 77800-79999) are truly
+#      diagnostic imaging, not missed therapeutic radiation. Clinical reviewers
+#      may question why "radiology" codes are excluded from radiation treatment
+#      detection -- this audit provides justification.
+#
 # ==============================================================================
 
 # ==============================================================================
-# SECTION 1: SETUP AND CLASSIFICATION TABLE (RADCPT-01)
+# SECTION 1: Setup and Classification Table ----
 # ==============================================================================
+# WHY: AMA CPT chapter structure defines which codes are treatment vs diagnostic.
+#      Hardcoded table avoids API dependency and provides authoritative reference.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -166,8 +164,10 @@ classify_code <- function(code_numeric, table) {
 }
 
 # ==============================================================================
-# SECTION 4: QUERY PROCEDURES FOR 70010-79999 CODES (RADCPT-02)
+# SECTION 4: Query PROCEDURES for 70010-79999 Codes ----
 # ==============================================================================
+# WHY: Query all patients and all PX_TYPEs to ensure comprehensive audit. Any
+#      treatment codes found in data but not in config are auto-added.
 
 message("Querying PROCEDURES table for 7xxxxx CPT codes (all patients, all PX_TYPEs)...")
 
