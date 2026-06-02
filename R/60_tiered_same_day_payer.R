@@ -24,7 +24,8 @@
 #     - payer_resolved_impact_all.csv, payer_resolved_impact_av_th.csv (before vs after)
 #
 # Dependencies: Sources R/00_config.R (CONFIG, output_dir, USE_DUCKDB, PAYER_MAPPING,
-#   AMC_PAYER_LOOKUP, CODE_TO_TIER utility). Conditionally sources R/01_load_pcornet.R.
+#   AMC_PAYER_LOOKUP, TIER_MAPPING, classify_payer_tier() from R/utils/utils_payer.R).
+#   Conditionally sources R/01_load_pcornet.R.
 #
 # Requirements: Implements Amy Crisp payer framework (payer_framework.txt). Phase 60.
 #
@@ -53,33 +54,8 @@ message("TIERED SAME-DAY PAYER CATEGORIZATION")
 message("Phase 36: AMC 8-category payer frequency + same-day resolution")
 message(glue("{strrep('=', 70)}\n"))
 
-# ==========================================================================
-# TIER HIERARCHY CONFIGURATION (per Amy Crisp framework)
-# Lower rank = higher priority. PIs can edit this with one-line changes.
-#
-# WHY this hierarchy order:
-#   Medicaid > Medicare > Private > Other govt > Other > Self-pay > Uninsured > Missing
-#   - Medicaid has the most restrictive eligibility requirements (income/asset limits)
-#     so it is the strongest signal of coverage status
-#   - Medicare indicates age 65+ or disability eligibility
-#   - Private insurance is purchased coverage (employer or individual)
-#   - Hierarchy resolves same-day conflicts by prioritizing the most-informative payer
-#   - When a patient has multiple encounters on the same date with different payers,
-#     we select the tier with the lowest rank (highest priority) as the "true" payer
-#     for that date
-# ==========================================================================
-TIER_MAPPING <- list(
-  Medicaid     = 1L, # Highest priority (includes dual-eligible, codes 93/14, FLM source)
-  Medicare     = 2L,
-  Private      = 3L,
-  "Other govt" = 4L, # VA, TRICARE, state agencies, corrections
-  Other        = 5L, # Generic other (worker's comp, auto insurance, etc.)
-  "Self-pay"   = 6L,
-  Uninsured    = 7L,
-  Missing      = 8L # Lowest priority
-)
-
-# CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
+# classify_payer_tier(), CODE_TO_TIER() provided by R/utils/utils_payer.R
+# TIER_MAPPING provided by R/00_config.R (centralized, not defined here)
 
 # ==============================================================================
 # SECTION 2: Load ENCOUNTER table and prepare both scopes ----
@@ -107,64 +83,12 @@ assert_df_valid(
   script_name = "R/60"
 )
 
-# Ensure columns are character, parse ADMIT_DATE
+# Classify payer tier for each encounter row
+# classify_payer_tier() provided by R/utils/utils_payer.R (via R/00_config.R)
+# TIER_MAPPING and AMC_PAYER_LOOKUP provided by R/00_config.R
 enc <- enc_raw %>%
-  mutate(
-    PAYER_TYPE_PRIMARY = as.character(PAYER_TYPE_PRIMARY),
-    PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE = as.character(SOURCE),
-    admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"),
-    # Compute effective payer: primary if valid, else secondary, else NA
-    effective_payer = case_when(
-      !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
-        !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_PRIMARY,
-      !is.na(PAYER_TYPE_SECONDARY) & nchar(trimws(PAYER_TYPE_SECONDARY)) > 0 &
-        !PAYER_TYPE_SECONDARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_SECONDARY,
-      TRUE ~ NA_character_
-    ),
-    # Dual-eligible flag (informational only, does not override category)
-    dual_eligible = {
-      dual_codes <- PAYER_MAPPING$dual_eligible_codes
-      sec_missing <- is.na(PAYER_TYPE_SECONDARY) | nchar(trimws(PAYER_TYPE_SECONDARY)) == 0
-      has_dual <- PAYER_TYPE_PRIMARY %in% dual_codes | PAYER_TYPE_SECONDARY %in% dual_codes
-      cross_payer <- (startsWith(PAYER_TYPE_PRIMARY, "1") & startsWith(PAYER_TYPE_SECONDARY, "2")) |
-        (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
-      case_when(sec_missing ~ 0L, has_dual ~ 1L, cross_payer ~ 1L, TRUE ~ 0L)
-    },
-    # Map to AMC 8-category: direct lookup + prefix fallback
-    payer_category = {
-      looked_up <- AMC_PAYER_LOOKUP[effective_payer]
-      prefix_cat <- case_when(
-        startsWith(effective_payer, "1") ~ "Medicare",
-        startsWith(effective_payer, "2") ~ "Medicaid",
-        startsWith(effective_payer, "5") | startsWith(effective_payer, "6") ~ "Private",
-        startsWith(effective_payer, "3") | startsWith(effective_payer, "4") ~ "Other govt",
-        startsWith(effective_payer, "7") ~ "Private",
-        startsWith(effective_payer, "8") ~ "Uninsured",
-        startsWith(effective_payer, "9") ~ "Other",
-        TRUE ~ "Other"
-      )
-      result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
-      if_else(is.na(effective_payer), "Missing", result)
-    },
-    # Map to tier
-    tier = CODE_TO_TIER(payer_category),
-    # Override with special codes 93/14 (check raw codes, not effective)
-    tier = coalesce(
-      case_when(
-        PAYER_TYPE_PRIMARY %in% c("93", "14") ~ "Medicaid",
-        PAYER_TYPE_SECONDARY %in% c("93", "14") ~ "Medicaid",
-        TRUE ~ NA_character_
-      ),
-      tier
-    ),
-    # Safety net: ensure tier is never NA (maps to Missing)
-    tier = if_else(is.na(tier), "Missing", tier),
-    # Assign tier rank
-    tier_rank = unlist(TIER_MAPPING[tier]),
-    # Safety net: ensure tier_rank is never NA
-    tier_rank = if_else(is.na(tier_rank), 8L, tier_rank)
-  )
+  classify_payer_tier(include_dual = TRUE, flm_override = FALSE) %>%
+  mutate(admit_date_parsed = as.Date(ADMIT_DATE, format = "%Y-%m-%d"))
 
 # Create two scoped datasets
 enc_all <- enc

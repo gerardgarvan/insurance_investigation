@@ -15,7 +15,8 @@
 #   - encounter_tier_detail_all.csv, encounter_tier_detail_av_th.csv (every encounter with tier)
 #   - encounter_tier_summary_all.csv, encounter_tier_summary_av_th.csv (tier frequency counts)
 #
-# Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING, AMC_PAYER_LOOKUP, CODE_TO_TIER).
+# Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING,
+#   AMC_PAYER_LOOKUP, TIER_MAPPING, classify_payer_tier() from R/utils/utils_payer.R).
 #
 # Requirements: AMC 8-category payer mapping with encounter-level granularity.
 #
@@ -51,22 +52,8 @@ message("TIERED PAYER -- ENCOUNTER LEVEL")
 message("Each encounter gets its own tier (no same-day collapsing)")
 message(glue("{strrep('=', 70)}\n"))
 
-# ==========================================================================
-# TIER HIERARCHY (same as script 36, per Amy Crisp framework)
-# Lower rank = higher priority.
-# ==========================================================================
-TIER_MAPPING <- list(
-  Medicaid     = 1L,
-  Medicare     = 2L,
-  Private      = 3L,
-  "Other govt" = 4L,
-  Other        = 5L,
-  "Self-pay"   = 6L,
-  Uninsured    = 7L,
-  Missing      = 8L
-)
-
-# CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
+# classify_payer_tier(), CODE_TO_TIER() provided by R/utils/utils_payer.R
+# TIER_MAPPING provided by R/00_config.R (centralized, not defined here)
 
 # ==============================================================================
 # SECTION 2: Load ENCOUNTER table and assign tiers per encounter ----
@@ -86,62 +73,10 @@ assert_df_valid(
   script_name = "R/61"
 )
 
+# Classify payer tier for each encounter row
+# classify_payer_tier() provided by R/utils/utils_payer.R
 enc <- enc_raw %>%
-  mutate(
-    PAYER_TYPE_PRIMARY = as.character(PAYER_TYPE_PRIMARY),
-    PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE = as.character(SOURCE),
-    # Effective payer: primary if valid, else secondary, else NA
-    effective_payer = case_when(
-      !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
-        !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_PRIMARY,
-      !is.na(PAYER_TYPE_SECONDARY) & nchar(trimws(PAYER_TYPE_SECONDARY)) > 0 &
-        !PAYER_TYPE_SECONDARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_SECONDARY,
-      TRUE ~ NA_character_
-    ),
-    # Dual-eligible flag (informational)
-    dual_eligible = {
-      dual_codes <- PAYER_MAPPING$dual_eligible_codes
-      sec_missing <- is.na(PAYER_TYPE_SECONDARY) | nchar(trimws(PAYER_TYPE_SECONDARY)) == 0
-      has_dual <- PAYER_TYPE_PRIMARY %in% dual_codes | PAYER_TYPE_SECONDARY %in% dual_codes
-      cross_payer <- (startsWith(PAYER_TYPE_PRIMARY, "1") & startsWith(PAYER_TYPE_SECONDARY, "2")) |
-        (startsWith(PAYER_TYPE_PRIMARY, "2") & startsWith(PAYER_TYPE_SECONDARY, "1"))
-      case_when(sec_missing ~ 0L, has_dual ~ 1L, cross_payer ~ 1L, TRUE ~ 0L)
-    },
-    # Map to AMC 8-category: direct lookup + prefix fallback
-    payer_category = {
-      looked_up <- AMC_PAYER_LOOKUP[effective_payer]
-      prefix_cat <- case_when(
-        startsWith(effective_payer, "1") ~ "Medicare",
-        startsWith(effective_payer, "2") ~ "Medicaid",
-        startsWith(effective_payer, "5") | startsWith(effective_payer, "6") ~ "Private",
-        startsWith(effective_payer, "3") | startsWith(effective_payer, "4") ~ "Other govt",
-        startsWith(effective_payer, "7") ~ "Private",
-        startsWith(effective_payer, "8") ~ "Uninsured",
-        startsWith(effective_payer, "9") ~ "Other",
-        TRUE ~ "Other"
-      )
-      result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
-      if_else(is.na(effective_payer), "Missing", result)
-    },
-    # Map to tier
-    tier = CODE_TO_TIER(payer_category),
-    # Override with special codes 93/14
-    tier = coalesce(
-      case_when(
-        PAYER_TYPE_PRIMARY %in% c("93", "14") ~ "Medicaid",
-        PAYER_TYPE_SECONDARY %in% c("93", "14") ~ "Medicaid",
-        TRUE ~ NA_character_
-      ),
-      tier
-    ),
-    # FLM source override
-    tier = if_else(SOURCE == "FLM" & !is.na(SOURCE), "Medicaid", tier),
-    # Safety net
-    tier = if_else(is.na(tier), "Missing", tier),
-    tier_rank = unlist(TIER_MAPPING[tier]),
-    tier_rank = if_else(is.na(tier_rank), 8L, tier_rank)
-  )
+  classify_payer_tier(include_dual = TRUE, flm_override = TRUE)
 
 # ==============================================================================
 # SECTION 3: Build encounter-level detail for both scopes ----

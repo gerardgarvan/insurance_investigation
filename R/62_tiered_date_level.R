@@ -16,7 +16,9 @@
 #   - date_tier_summary.csv (tier frequency across all dates)
 #   - date_tier_summary_by_type.csv (tier frequency per treatment type)
 #
-# Dependencies: Sources R/00_config.R. Requires treatment_episodes.rds from R/26.
+# Dependencies: Sources R/00_config.R (CONFIG, USE_DUCKDB, PAYER_MAPPING,
+#   AMC_PAYER_LOOKUP, TIER_MAPPING, classify_payer_tier() from R/utils/utils_payer.R).
+#   Requires treatment_episodes.rds from R/26.
 #
 # Requirements: Daily-level payer assignment for treatment episode analysis.
 #
@@ -58,22 +60,8 @@ message("TIERED PAYER -- DATE LEVEL")
 message("Per-calendar-date tier assignment within treatment episodes")
 message(glue("{strrep('=', 70)}\n"))
 
-# ==========================================================================
-# TIER HIERARCHY (same as Phase 45 / script 36, per Amy Crisp framework)
-# Lower rank = higher priority.
-# ==========================================================================
-TIER_MAPPING <- list(
-  Medicaid     = 1L,
-  Medicare     = 2L,
-  Private      = 3L,
-  "Other govt" = 4L,
-  Other        = 5L,
-  "Self-pay"   = 6L,
-  Uninsured    = 7L,
-  Missing      = 8L
-)
-
-# CODE_TO_TIER() provided by R/utils_payer.R (via R/00_config.R)
+# classify_payer_tier(), CODE_TO_TIER() provided by R/utils/utils_payer.R
+# TIER_MAPPING provided by R/00_config.R (centralized, not defined here)
 
 # ==============================================================================
 # SECTION 2: Load Episode Data (Phase 44) ----
@@ -128,53 +116,10 @@ message("\n--- Loading and tiering ENCOUNTER table ---")
 enc_raw <- get_pcornet_table("ENCOUNTER") %>% materialize()
 message(glue("Total encounters loaded: {format(nrow(enc_raw), big.mark=',')}"))
 
+# Classify payer tier for each encounter row
+# classify_payer_tier() provided by R/utils/utils_payer.R
 enc <- enc_raw %>%
-  mutate(
-    PAYER_TYPE_PRIMARY = as.character(PAYER_TYPE_PRIMARY),
-    PAYER_TYPE_SECONDARY = as.character(PAYER_TYPE_SECONDARY),
-    SOURCE = as.character(SOURCE),
-    # Effective payer: primary if valid, else secondary, else NA
-    effective_payer = case_when(
-      !is.na(PAYER_TYPE_PRIMARY) & nchar(trimws(PAYER_TYPE_PRIMARY)) > 0 &
-        !PAYER_TYPE_PRIMARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_PRIMARY,
-      !is.na(PAYER_TYPE_SECONDARY) & nchar(trimws(PAYER_TYPE_SECONDARY)) > 0 &
-        !PAYER_TYPE_SECONDARY %in% PAYER_MAPPING$sentinel_values ~ PAYER_TYPE_SECONDARY,
-      TRUE ~ NA_character_
-    ),
-    # Map to AMC 8-category: direct lookup + prefix fallback
-    payer_category = {
-      looked_up <- AMC_PAYER_LOOKUP[effective_payer]
-      prefix_cat <- case_when(
-        startsWith(effective_payer, "1") ~ "Medicare",
-        startsWith(effective_payer, "2") ~ "Medicaid",
-        startsWith(effective_payer, "5") | startsWith(effective_payer, "6") ~ "Private",
-        startsWith(effective_payer, "3") | startsWith(effective_payer, "4") ~ "Other govt",
-        startsWith(effective_payer, "7") ~ "Private",
-        startsWith(effective_payer, "8") ~ "Uninsured",
-        startsWith(effective_payer, "9") ~ "Other",
-        TRUE ~ "Other"
-      )
-      result <- if_else(!is.na(looked_up), looked_up, prefix_cat)
-      if_else(is.na(effective_payer), "Missing", result)
-    },
-    # Map to tier
-    tier = CODE_TO_TIER(payer_category),
-    # Override with special codes 93/14
-    tier = coalesce(
-      case_when(
-        PAYER_TYPE_PRIMARY %in% c("93", "14") ~ "Medicaid",
-        PAYER_TYPE_SECONDARY %in% c("93", "14") ~ "Medicaid",
-        TRUE ~ NA_character_
-      ),
-      tier
-    ),
-    # FLM source override
-    tier = if_else(SOURCE == "FLM" & !is.na(SOURCE), "Medicaid", tier),
-    # Safety net
-    tier = if_else(is.na(tier), "Missing", tier),
-    tier_rank = unlist(TIER_MAPPING[tier]),
-    tier_rank = if_else(is.na(tier_rank), 8L, tier_rank)
-  )
+  classify_payer_tier(include_dual = FALSE, flm_override = TRUE)
 
 # Dedup to best tier per patient+date (lowest tier_rank wins)
 enc_date_tier <- enc %>%
