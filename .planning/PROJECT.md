@@ -65,8 +65,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Drop all treatment data sourced from tumor registry — v2.1 Phase 76
 - [ ] Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
 - [ ] Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
-- [ ] Include cause of death in outputs (DEATH_CAUSE_MAP ready — Phase 75; integration pending Phase 78)
-- [ ] Cancer_category and triggering code description per episode (using drug groupings from all_codes_resolved_next_tables.xlsx)
+- [x] Include cause of death in outputs (DEATH_CAUSE_MAP ready — Phase 75; integrated in Phase 78 via R/35 quality profiling + R/52 Gantt export)
+- [x] Cancer_category and triggering code description per episode — v2.1 Phase 78 (R/28 enrichment with code_descriptions.rds + DRUG_GROUPINGS)
 - [ ] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates)
 
 ### Out of Scope
@@ -101,7 +101,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.0 (2026-06-02)
 
-**Pipeline status:** 77 phases completed across 10 milestones. 70 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Tumor registry sources removed from treatment pipeline (Phase 76). Phase 77: drug groupings centralized (454 codes in DRUG_GROUPINGS), R/49 dual v1/v2 output with 7-day gap filter for all cancer categories, NLPHL diagnostic breakout. Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
+**Pipeline status:** 78 phases completed across 10 milestones. 71 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. Tumor registry sources removed from treatment pipeline (Phase 76). Phase 77: drug groupings centralized (454 codes in DRUG_GROUPINGS), R/49 dual v1/v2 output with 7-day gap filter for all cancer categories, NLPHL diagnostic breakout. Phase 78: death cause quality profiling (R/35), episode enrichment with code descriptions + drug groups (R/28), cause of death + drug group in Gantt v2 exports (R/52). Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
 
 ## Previous Milestones
 
@@ -265,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after Phase 77 completion (drug groupings centralized, 7-day gap v2 output, NLPHL diagnostics)*
+*Last updated: 2026-06-03 after Phase 78 completion (death cause quality profiling, episode enrichment with code descriptions + drug groups, cause of death in Gantt v2)*
