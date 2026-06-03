@@ -1145,7 +1145,7 @@ DEATH_CAUSE_MAP <- c(
 #
 # Source: data/reference/all_codes_resolved_next_tables_v2.1.xlsx
 # Extracted: Phase 77 (2026-06-02)
-# Categories: Chemotherapy (203 codes), Radiation (12 codes), SCT (41 codes),
+# Categories: Chemotherapy (203 codes), Radiation (15 codes), SCT (41 codes),
 #            Immunotherapy (27 codes), Supportive Care (171 codes)
 # Total: 454 treatment code mappings
 # ==============================================================================
@@ -1356,7 +1356,7 @@ DRUG_GROUPINGS <- c(
   "J9371" = "Chemotherapy",
   "J9390" = "Chemotherapy",
 
-  # Radiation (12 codes)
+  # Radiation (15 codes)
   "77417" = "Radiation",
   "77470" = "Radiation",
   "77421" = "Radiation",
@@ -1369,6 +1369,9 @@ DRUG_GROUPINGS <- c(
   "77432" = "Radiation",
   "77408" = "Radiation",
   "77404" = "Radiation",
+  "77387" = "Radiation", # Replaces 77421
+  "77385" = "Radiation", # Replaces 77418
+  "77412" = "Radiation", # Replaces 77413, 77414, 77416
 
   # SCT (41 codes)
   "Z94.84" = "SCT",
