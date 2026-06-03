@@ -237,23 +237,88 @@ episode_codes <- episode_dx %>%
   filter(!is.na(code_list), code_list != "") %>%
   rename(treatment_code = code_list)
 
+# Build code-type lookup vectors from TREATMENT_CODES for sub-category fallback
+chemo_dx_codes <- c(TREATMENT_CODES$chemo_dx_icd10, TREATMENT_CODES$chemo_dx_icd9)
+chemo_proc_icd9 <- TREATMENT_CODES$chemo_icd9
+chemo_proc_icd10pcs <- TREATMENT_CODES$chemo_icd10pcs_prefixes
+chemo_drg_codes <- TREATMENT_CODES$chemo_drg
+chemo_rev_codes <- TREATMENT_CODES$chemo_revenue
+chemo_hcpcs_codes <- TREATMENT_CODES$chemo_hcpcs
+chemo_rxnorm_codes <- TREATMENT_CODES$chemo_rxnorm
+
+rad_dx_codes <- c(TREATMENT_CODES$radiation_dx_icd10, TREATMENT_CODES$radiation_dx_icd9)
+rad_proc_icd9 <- TREATMENT_CODES$radiation_icd9
+rad_icd10pcs_pattern <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
+rad_drg_codes <- TREATMENT_CODES$radiation_drg
+rad_rev_codes <- TREATMENT_CODES$radiation_revenue
+rad_cpt_codes <- TREATMENT_CODES$radiation_cpt
+
+sct_proc_icd9 <- TREATMENT_CODES$sct_icd9
+sct_proc_icd10pcs <- TREATMENT_CODES$sct_icd10pcs
+sct_drg_codes <- TREATMENT_CODES$sct_drg
+sct_rev_codes <- TREATMENT_CODES$sct_revenue
+sct_cpt_hcpcs_codes <- c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)
+sct_rxnorm_codes <- TREATMENT_CODES$sct_rxnorm
+
+immuno_rxnorm_codes <- TREATMENT_CODES$immunotherapy_rxnorm
+immuno_drg_codes <- TREATMENT_CODES$immunotherapy_drg
+cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
+
 # Assign sub-category based on treatment type and code
 episode_codes <- episode_codes %>%
   mutate(
     sub_category = case_when(
-      treatment_type == "Immunotherapy" ~ "Any Immunotherapy",
+      # xlsx-mapped sub-categories (medication name, radiation type, SCT type)
       treatment_code %in% names(code_to_subcategory) ~ code_to_subcategory[treatment_code],
+
+      # Immunotherapy
+      treatment_type == "Immunotherapy" & treatment_code %in% immuno_rxnorm_codes ~ "Immunotherapy RxNorm",
+      treatment_type == "Immunotherapy" & treatment_code %in% immuno_drg_codes ~ "Immunotherapy DRG",
+      treatment_type == "Immunotherapy" & treatment_code %in% cart_icd10pcs ~ "CAR-T Procedure (ICD-10-PCS)",
+      treatment_type == "Immunotherapy" ~ "Immunotherapy (other)",
+
+      # Chemotherapy by code type
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_hcpcs_codes ~ "Chemo HCPCS (no xlsx mapping)",
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_rxnorm_codes ~ "Chemo RxNorm",
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_dx_codes ~ "Chemo Encounter Dx Code",
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_proc_icd9 ~ "Chemo Procedure (ICD-9)",
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_proc_icd10pcs ~ "Chemo Procedure (ICD-10-PCS)",
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_drg_codes ~ "Chemo DRG",
+      treatment_type == "Chemotherapy" & treatment_code %in% chemo_rev_codes ~ "Chemo Revenue Code",
       treatment_type == "Chemotherapy" ~ "Chemotherapy (unmapped)",
+
+      # Radiation by code type
+      treatment_type == "Radiation" & treatment_code %in% rad_dx_codes ~ "Radiation Encounter Dx Code",
+      treatment_type == "Radiation" & treatment_code %in% rad_proc_icd9 ~ "Radiation Procedure (ICD-9)",
+      treatment_type == "Radiation" & str_detect(treatment_code, rad_icd10pcs_pattern) ~ "Radiation Procedure (ICD-10-PCS)",
+      treatment_type == "Radiation" & treatment_code %in% rad_drg_codes ~ "Radiation DRG",
+      treatment_type == "Radiation" & treatment_code %in% rad_rev_codes ~ "Radiation Revenue Code",
+      treatment_type == "Radiation" & treatment_code %in% rad_cpt_codes ~ "Radiation CPT (no xlsx mapping)",
       treatment_type == "Radiation" ~ "Radiation (unmapped)",
+
+      # SCT by code type
+      treatment_type == "SCT" & treatment_code %in% sct_cpt_hcpcs_codes ~ "SCT CPT/HCPCS (no xlsx mapping)",
+      treatment_type == "SCT" & treatment_code %in% sct_rxnorm_codes ~ "SCT RxNorm",
+      treatment_type == "SCT" & treatment_code %in% sct_proc_icd9 ~ "SCT Procedure (ICD-9)",
+      treatment_type == "SCT" & treatment_code %in% sct_proc_icd10pcs ~ "SCT Procedure (ICD-10-PCS)",
+      treatment_type == "SCT" & treatment_code %in% sct_drg_codes ~ "SCT DRG",
+      treatment_type == "SCT" & treatment_code %in% sct_rev_codes ~ "SCT Revenue Code",
       treatment_type == "SCT" ~ "SCT (unmapped)",
+
       TRUE ~ treatment_type
     )
   )
 
-# Log unmapped codes
+# Log codes classified by code type (not in xlsx but identified from TREATMENT_CODES)
+n_code_typed <- sum(str_detect(episode_codes$sub_category, "HCPCS|RxNorm|Encounter Dx|Procedure|DRG|Revenue|CPT|CAR-T"))
+if (n_code_typed > 0) {
+  message(glue("  Classified {n_code_typed} code instances by code type (not in reference xlsx)"))
+}
+
+# Log truly unmapped codes (not in xlsx AND not in TREATMENT_CODES)
 n_unmapped <- sum(str_detect(episode_codes$sub_category, "unmapped"))
 if (n_unmapped > 0) {
-  message(glue("  NOTE: {n_unmapped} code instances not in reference xlsx sub-category mappings"))
+  message(glue("  WARNING: {n_unmapped} code instances not in xlsx or TREATMENT_CODES"))
   unmapped_codes <- episode_codes %>%
     filter(str_detect(sub_category, "unmapped")) %>%
     distinct(treatment_type, treatment_code) %>%
