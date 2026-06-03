@@ -62,6 +62,19 @@ EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
 
+# --- Log console output to file ---
+LOG_FILE <- file.path(CONFIG$output_dir, "56_new_tables_from_groupings.log")
+.log_con <- file(LOG_FILE, open = "wt")
+
+globalCallingHandlers(
+  message = function(m) {
+    cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
+        conditionMessage(m),
+        file = .log_con, sep = "")
+    flush(.log_con)
+  }
+)
+
 message("=== Phase 79: Drug Grouping Summary Tables ===\n")
 message(glue("  Episodes: {EPISODES_RDS}"))
 message(glue("  Reference: {REFERENCE_XLSX}"))
@@ -324,3 +337,5 @@ message(glue("\n  Table 2 (Encounter Treatment Summary):"))
 message(glue("    Total rows: {nrow(table2)}"))
 message(glue("    Unique treatment sets: {n_distinct(table2$all_treatments)}"))
 message("\nDone.")
+
+close(.log_con)
