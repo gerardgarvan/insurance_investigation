@@ -128,16 +128,16 @@ cancer_prefixes_icd9 <- as.character(140:239)
 
 message(glue("  Cancer prefixes: {length(cancer_prefixes_icd10)} ICD-10, {length(cancer_prefixes_icd9)} ICD-9"))
 
-# Helper: check if a diagnosis code is a cancer/neoplasm code
+# Helper: check if diagnosis codes are cancer/neoplasm codes (vectorized)
 is_cancer_code <- function(dx) {
   dx_clean <- str_remove(dx, "\\.")  # Remove dots for prefix matching
-  # ICD-10: check 3-char or 4-char prefix against CANCER_SITE_MAP keys
-  icd10_match <- sapply(cancer_prefixes_icd10, function(p) str_starts(dx_clean, fixed(p)))
-  # ICD-9: check 3-char prefix against 140-239
-  icd9_prefix <- substr(dx_clean, 1, 3)
-  icd9_match <- icd9_prefix %in% cancer_prefixes_icd9
+  # ICD-10: single regex from all prefixes
+  icd10_pattern <- paste0("^(", paste(cancer_prefixes_icd10, collapse = "|"), ")")
+  icd10_match <- str_detect(dx_clean, icd10_pattern)
+  # ICD-9: 3-char prefix lookup (already vectorized)
+  icd9_match <- substr(dx_clean, 1, 3) %in% cancer_prefixes_icd9
 
-  any(icd10_match) | icd9_match
+  icd10_match | icd9_match
 }
 
 # Split encounter_ids into individual rows
@@ -164,7 +164,7 @@ message(glue("  Loaded {nrow(dx_data)} total diagnosis records"))
 
 # Filter to cancer/neoplasm codes only
 dx_cancer <- dx_data %>%
-  filter(sapply(DX, is_cancer_code))
+  filter(is_cancer_code(DX))
 
 message(glue("  Filtered to {nrow(dx_cancer)} cancer diagnosis records ({round(100 * nrow(dx_cancer) / nrow(dx_data), 1)}% of total)"))
 message(glue("  Unique cancer codes: {n_distinct(dx_cancer$DX)}"))
