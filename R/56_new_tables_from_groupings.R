@@ -45,6 +45,10 @@
 
 # SECTION 1: SETUP AND CONFIGURATION ----
 
+# Clear stale log handler from previous source() in same session
+if (exists(".log_con") && inherits(.log_con, "connection") && isOpen(.log_con)) close(.log_con)
+globalCallingHandlers(message = NULL)
+
 suppressPackageStartupMessages({
   library(dplyr)
   library(tidyr)
@@ -64,8 +68,6 @@ OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
 
 # --- Log console output to file ---
 LOG_FILE <- file.path(CONFIG$output_dir, "56_new_tables_from_groupings.log")
-if (exists(".log_con") && inherits(.log_con, "connection") && isOpen(.log_con)) close(.log_con)
-globalCallingHandlers(message = NULL)
 .log_con <- file(LOG_FILE, open = "wt")
 
 globalCallingHandlers(
