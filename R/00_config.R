@@ -1396,7 +1396,7 @@ DRUG_GROUPINGS <- c(
   "30243X0" = "SCT",
   "41.06" = "SCT",
 
-  # Immunotherapy (49 codes)
+  # Immunotherapy (51 codes)
   # Checkpoint inhibitors and ADCs (moved from Chemotherapy)
   "J9022" = "Immunotherapy",   # Atezolizumab (anti-PD-L1)
   "J9119" = "Immunotherapy",   # Cemiplimab (anti-PD-1)
@@ -1448,6 +1448,9 @@ DRUG_GROUPINGS <- c(
   "2479140" = "Immunotherapy",
   "1792780" = "Immunotherapy",
   "891793" = "Immunotherapy",
+  # Immunotherapy encounter diagnosis codes
+  "Z51.12" = "Immunotherapy", # Encounter for antineoplastic immunotherapy (ICD-10)
+  "V58.12" = "Immunotherapy", # Encounter for antineoplastic immunotherapy (ICD-9)
 
   # Supportive Care (171 codes)
   "283504" = "Supportive Care",
@@ -2542,11 +2545,15 @@ TREATMENT_CODES <- list(
 
   # Diagnosis-based treatment evidence (ICD-10-CM Z/T codes, ICD-9-CM V codes)
   chemo_dx_icd10 = c(
-    "Z51.11", # Encounter for antineoplastic chemotherapy
-    "Z51.12" # Encounter for antineoplastic immunotherapy
+    "Z51.11" # Encounter for antineoplastic chemotherapy
   ),
   chemo_dx_icd9 = c(
-    "V58.11", # Encounter for antineoplastic chemotherapy
+    "V58.11" # Encounter for antineoplastic chemotherapy
+  ),
+  immunotherapy_dx_icd10 = c(
+    "Z51.12" # Encounter for antineoplastic immunotherapy
+  ),
+  immunotherapy_dx_icd9 = c(
     "V58.12" # Encounter for antineoplastic immunotherapy
   ),
   radiation_dx_icd10 = c(

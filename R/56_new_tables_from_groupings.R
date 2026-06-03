@@ -38,7 +38,7 @@
 #   - D-05: Sort Table 1 by category, then desc(encounter_count) (Phase 81)
 #   - D-09: 3-tier lookup: xlsx -> CODE_SUBCATEGORY_MAP -> code-type fallback (Phase 81)
 #   - D-12: Single xlsx output with 2 sheets matching templates
-#   - D-13: Table 1: sub_category | cancer_codes | encounter_count
+#   - D-13: Table 1: category | sub_category | treatment_code | code_type | cancer_codes | encounter_count
 #     Chemo by medication (xlsx col C), Radiation by type (xlsx col G),
 #     SCT by type (xlsx col G), Immunotherapy as one group
 #   - D-14: Table 2: all_treatments | cancer_codes | encounter_count
@@ -282,6 +282,7 @@ sct_rxnorm_codes <- TREATMENT_CODES$sct_rxnorm
 immuno_rxnorm_codes <- TREATMENT_CODES$immunotherapy_rxnorm
 immuno_hcpcs_codes <- TREATMENT_CODES$immunotherapy_hcpcs
 immuno_drg_codes <- TREATMENT_CODES$immunotherapy_drg
+immuno_dx_codes <- c(TREATMENT_CODES$immunotherapy_dx_icd10, TREATMENT_CODES$immunotherapy_dx_icd9)
 cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
 
 # Assign sub-category based on treatment type and code
@@ -299,6 +300,7 @@ episode_codes <- episode_codes %>%
       category == "Immunotherapy" & treatment_code %in% immuno_hcpcs_codes ~ "Immunotherapy HCPCS",
       category == "Immunotherapy" & treatment_code %in% immuno_rxnorm_codes ~ "Immunotherapy RxNorm",
       category == "Immunotherapy" & treatment_code %in% immuno_drg_codes ~ "Immunotherapy DRG",
+      category == "Immunotherapy" & treatment_code %in% immuno_dx_codes ~ "Immunotherapy Encounter Dx Code",
       category == "Immunotherapy" & treatment_code %in% cart_icd10pcs ~ "CAR-T Procedure (ICD-10-PCS)",
       category == "Immunotherapy" ~ "Immunotherapy (other)",
 
@@ -331,6 +333,45 @@ episode_codes <- episode_codes %>%
       category == "SCT" ~ "SCT (unmapped)",
 
       TRUE ~ category
+    )
+  )
+
+# Derive code_type: what kind of code is each treatment_code?
+# Build combined vectors across all treatment categories for code-type classification
+all_hcpcs <- c(TREATMENT_CODES$chemo_hcpcs, TREATMENT_CODES$immunotherapy_hcpcs,
+               TREATMENT_CODES$sct_hcpcs)
+all_cpt <- c(TREATMENT_CODES$radiation_cpt, TREATMENT_CODES$sct_cpt)
+all_rxnorm <- c(TREATMENT_CODES$chemo_rxnorm, TREATMENT_CODES$immunotherapy_rxnorm,
+                TREATMENT_CODES$sct_rxnorm)
+all_drg <- c(TREATMENT_CODES$chemo_drg, TREATMENT_CODES$radiation_drg,
+             TREATMENT_CODES$immunotherapy_drg, TREATMENT_CODES$sct_drg)
+all_revenue <- c(TREATMENT_CODES$chemo_revenue, TREATMENT_CODES$radiation_revenue,
+                 TREATMENT_CODES$sct_revenue)
+all_icd10pcs <- c(TREATMENT_CODES$chemo_icd10pcs_prefixes, TREATMENT_CODES$sct_icd10pcs,
+                  TREATMENT_CODES$cart_icd10pcs_prefixes)
+all_icd9_proc <- c(TREATMENT_CODES$chemo_icd9, TREATMENT_CODES$radiation_icd9,
+                   TREATMENT_CODES$sct_icd9)
+all_dx_icd10 <- c(TREATMENT_CODES$chemo_dx_icd10, TREATMENT_CODES$radiation_dx_icd10,
+                  TREATMENT_CODES$immunotherapy_dx_icd10)
+all_dx_icd9 <- c(TREATMENT_CODES$chemo_dx_icd9, TREATMENT_CODES$radiation_dx_icd9,
+                 TREATMENT_CODES$immunotherapy_dx_icd9)
+# Radiation ICD-10-PCS uses prefix pattern matching
+all_rad_icd10pcs_pattern <- paste0("^(", paste(TREATMENT_CODES$radiation_icd10pcs_prefixes, collapse = "|"), ")")
+
+episode_codes <- episode_codes %>%
+  mutate(
+    code_type = case_when(
+      treatment_code %in% all_dx_icd10 ~ "ICD-10-CM",
+      treatment_code %in% all_dx_icd9 ~ "ICD-9-CM",
+      treatment_code %in% all_hcpcs ~ "HCPCS",
+      treatment_code %in% all_cpt ~ "CPT",
+      treatment_code %in% all_rxnorm ~ "RxNorm",
+      treatment_code %in% all_icd10pcs ~ "ICD-10-PCS",
+      str_detect(treatment_code, all_rad_icd10pcs_pattern) ~ "ICD-10-PCS",
+      treatment_code %in% all_icd9_proc ~ "ICD-9 Procedure",
+      treatment_code %in% all_drg ~ "DRG",
+      treatment_code %in% all_revenue ~ "Revenue",
+      TRUE ~ "Unknown"
     )
   )
 
@@ -369,7 +410,7 @@ category_order <- c("Chemotherapy", "Immunotherapy", "Radiation", "SCT")
 table1 <- episode_codes %>%
   filter(!is.na(cancer_codes)) %>%  # Per D-01: exclude rows without cancer diagnosis codes
   mutate(category = factor(category, levels = category_order)) %>%  # Per D-05: custom sort order
-  group_by(category, sub_category, cancer_codes) %>%  # Per D-03: include category in grouping
+  group_by(category, sub_category, treatment_code, code_type, cancer_codes) %>%
   summarise(encounter_count = n(), .groups = "drop") %>%
   arrange(category, desc(encounter_count)) %>%  # Per D-05: category first, then desc count
   mutate(category = as.character(category))  # Convert back from factor for xlsx output

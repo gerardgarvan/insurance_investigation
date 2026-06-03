@@ -156,7 +156,7 @@ extract_chemo_dates_with_codes <- function() {
       collect()
   }
 
-  # 3. DIAGNOSIS: Z51.11/Z51.12 (ICD-10), V58.11/V58.12 (ICD-9) — bare DX code
+  # 3. DIAGNOSIS: Z51.11 (ICD-10), V58.11 (ICD-9) — bare DX code
   dx_dates <- NULL
   if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
     dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
@@ -367,9 +367,22 @@ extract_immunotherapy_dates_with_codes <- function() {
       collect()
   }
 
+  # 6. DIAGNOSIS: Z51.12 (ICD-10), V58.12 (ICD-9) — bare DX code
+  dx_dates <- NULL
+  if (!is.null(get_pcornet_table("DIAGNOSIS"))) {
+    dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
+      filter(
+        (DX_TYPE == "10" & DX %in% TREATMENT_CODES$immunotherapy_dx_icd10) |
+          (DX_TYPE == "09" & DX %in% TREATMENT_CODES$immunotherapy_dx_icd9)
+      ) %>%
+      filter(!is.na(DX_DATE)) %>%
+      select(ID, treatment_date = DX_DATE, triggering_code = DX, ENCOUNTERID) %>%
+      collect()
+  }
+
   stack_and_dedup_with_codes(
     sources = list(PX = px_dates, DRG = drg_dates, RX = rx_dates,
-                   DISP = disp_dates, MA = ma_dates),
+                   DISP = disp_dates, MA = ma_dates, DX = dx_dates),
     type_name = "Immunotherapy"
   )
 }
