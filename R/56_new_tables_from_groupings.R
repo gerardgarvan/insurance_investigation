@@ -4,45 +4,42 @@
 #
 # Purpose:
 #   Generate two drug grouping summary tables matching all_codes_resolved_next_tables.xlsx
-#   Sheet1 templates: (1) treatment-type-level summary stratified by cancer codes,
-#   (2) drug-level summary stratified by cancer codes. Provides encounter counts
-#   by treatment type and individual drug/treatment code crossed with raw diagnosis codes.
+#   Sheet1 template. Table 1 breaks down by sub-category (Chemo by medication name,
+#   Radiation by type, SCT by type, Immunotherapy as one group) with cancer-only
+#   diagnosis codes and encounter counts. Table 2 shows all treatments per encounter.
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (from R/28, 17 columns including
 #     triggering_codes, cancer_category, drug_group, encounter_ids)
+#   - data/reference/all_codes_resolved_next_tables_v2.1.xlsx (sub-category mappings:
+#     Chemo column C = medication, Radiation column G = type, SCT column G = type)
 #   - DuckDB DIAGNOSIS table (for raw ICD cancer codes per encounter)
-#   - R/00_config.R (DRUG_GROUPINGS named vector, CONFIG paths)
+#   - R/00_config.R (DRUG_GROUPINGS, CANCER_SITE_MAP, CONFIG paths)
 #
 # Outputs:
 #   - output/drug_grouping_tables.xlsx (2-sheet workbook:
-#     Sheet 1 = "Treatment Type Summary", Sheet 2 = "Drug Level Summary")
+#     Sheet 1 = "Treatment Sub-Category Summary", Sheet 2 = "Encounter Treatment Summary")
 #
 # Dependencies:
-#   - R/00_config.R (DRUG_GROUPINGS, CONFIG paths)
+#   - R/00_config.R (DRUG_GROUPINGS, CANCER_SITE_MAP, CONFIG paths)
 #   - R/utils/utils_assertions.R (assert_rds_exists, assert_df_valid, warn_row_count)
 #   - R/utils/utils_duckdb.R (open_pcornet_con, get_pcornet_table)
 #   - openxlsx2 (multi-sheet xlsx output)
 #
 # Requirements:
 #   - TREAT-03: Two new summary tables matching all_codes_resolved_next_tables.xlsx
-#     Sheet1 templates with treatment-type-level and drug-level summaries
+#     Sheet1 templates with sub-category-level and encounter-level summaries
 #   - QUAL-01: v2.0 script standards (documentation, assertions, section structure)
 #
 # Decision Traceability:
 #   - D-12: Single xlsx output with 2 sheets matching templates
-#   - D-13: Table 1 (treatment-type-level): treatment_type | cancer_codes | encounter_count
-#   - D-14: Table 2 (drug-level): treatment_code | cancer_codes | encounter_count
-#   - D-15: Cancer codes = raw ICD codes (semicolon-separated), not category labels
+#   - D-13: Table 1: sub_category | cancer_codes | encounter_count
+#     Chemo by medication (xlsx col C), Radiation by type (xlsx col G),
+#     SCT by type (xlsx col G), Immunotherapy as one group
+#   - D-14: Table 2: all_treatments | cancer_codes | encounter_count
+#   - D-15: Cancer codes = cancer/neoplasm ICD codes only (not all diagnoses),
+#     semicolon-separated
 #   - D-16: Data source = treatment_episodes.rds + DuckDB DIAGNOSIS join via encounter_ids
-#
-# WHY semicolon-separated cancer codes: Matches all_codes_resolved_next_tables.xlsx
-# template format (D-15). Distinguishes cancer codes (semicolons) from treatment
-# codes (commas in triggering_codes field).
-#
-# WHY encounter-level cancer linkage: treatment_episodes.rds contains encounter_ids
-# (comma-separated) from R/26. R/28 uses these for cancer linkage. Most reliable
-# connection between treatment and diagnosis codes (same admission/visit context).
 #
 # ==============================================================================
 
@@ -62,10 +59,12 @@ source("R/utils/utils_assertions.R")
 source("R/utils/utils_duckdb.R")
 
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
+REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
 
 message("=== Phase 79: Drug Grouping Summary Tables ===\n")
-message(glue("  Input:  {EPISODES_RDS}"))
+message(glue("  Episodes: {EPISODES_RDS}"))
+message(glue("  Reference: {REFERENCE_XLSX}"))
 message(glue("  Output: {OUTPUT_XLSX}\n"))
 
 
@@ -87,15 +86,61 @@ message(glue("  Loaded {nrow(episodes)} treatment episodes"))
 message(glue("  Treatment types: {paste(unique(episodes$treatment_type), collapse = ', ')}"))
 
 
-# SECTION 3: PREPARE CANCER CODES FROM ENCOUNTER-LEVEL LINKAGE ----
+# SECTION 3: BUILD SUB-CATEGORY MAPPINGS FROM REFERENCE XLSX ----
 
-message("\n--- Extracting raw cancer ICD codes from encounter linkage ---")
+message("\n--- Building sub-category mappings from reference xlsx ---")
 
-# treatment_episodes.rds has encounter_ids as a comma-separated string.
-# Split into individual ENCOUNTERID values, query DuckDB DIAGNOSIS for raw ICD
-# codes, then aggregate back to episode level.
+assert_file_exists(REFERENCE_XLSX, .var.name = "[R/56 ERROR] Reference XLSX")
+ref_wb <- wb_load(REFERENCE_XLSX)
 
-# Split encounter_ids into individual rows (mirrors R/28 Section 4a approach)
+# Chemo: code -> medication name (column C, "Medication")
+chemo_sheet <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
+chemo_map <- setNames(as.character(chemo_sheet[[3]]), as.character(chemo_sheet[[1]]))
+chemo_map <- chemo_map[!is.na(names(chemo_map)) & !is.na(chemo_map)]
+message(glue("  Chemo sub-categories: {length(unique(chemo_map))} medications from {length(chemo_map)} codes"))
+
+# Radiation: code -> type (column G: IMRT, Other radiation, Proton Therapy)
+rad_sheet <- wb_to_df(ref_wb, sheet = "Radiation", start_row = 2)
+rad_map <- setNames(as.character(rad_sheet[[7]]), as.character(rad_sheet[[1]]))
+rad_map <- rad_map[!is.na(names(rad_map)) & !is.na(rad_map)]
+message(glue("  Radiation sub-categories: {paste(unique(rad_map), collapse = ', ')}"))
+
+# SCT: code -> type (column G: Allogeneic, Autologous, etc.)
+sct_sheet <- wb_to_df(ref_wb, sheet = "SCT", start_row = 2)
+sct_map <- setNames(as.character(sct_sheet[[7]]), as.character(sct_sheet[[1]]))
+sct_map <- sct_map[!is.na(names(sct_map)) & !is.na(sct_map)]
+message(glue("  SCT sub-categories: {paste(unique(sct_map), collapse = ', ')}"))
+
+# Combined lookup: code -> sub-category label
+code_to_subcategory <- c(chemo_map, rad_map, sct_map)
+message(glue("  Total codes with sub-categories: {length(code_to_subcategory)}"))
+
+
+# SECTION 4: PREPARE CANCER-ONLY CODES FROM ENCOUNTER LINKAGE ----
+
+message("\n--- Extracting cancer-only ICD codes from encounter linkage ---")
+
+# Build cancer code prefix set from CANCER_SITE_MAP (ICD-10: C00-C96, D00-D49)
+# plus ICD-9 neoplasm range (140-239)
+cancer_prefixes_icd10 <- names(CANCER_SITE_MAP)
+# ICD-9 neoplasm prefixes (140.x-239.x)
+cancer_prefixes_icd9 <- as.character(140:239)
+
+message(glue("  Cancer prefixes: {length(cancer_prefixes_icd10)} ICD-10, {length(cancer_prefixes_icd9)} ICD-9"))
+
+# Helper: check if a diagnosis code is a cancer/neoplasm code
+is_cancer_code <- function(dx) {
+  dx_clean <- str_remove(dx, "\\.")  # Remove dots for prefix matching
+  # ICD-10: check 3-char or 4-char prefix against CANCER_SITE_MAP keys
+  icd10_match <- sapply(cancer_prefixes_icd10, function(p) str_starts(dx_clean, fixed(p)))
+  # ICD-9: check 3-char prefix against 140-239
+  icd9_prefix <- substr(dx_clean, 1, 3)
+  icd9_match <- icd9_prefix %in% cancer_prefixes_icd9
+
+  any(icd10_match) | icd9_match
+}
+
+# Split encounter_ids into individual rows
 episode_encounters <- episodes %>%
   mutate(episode_row = row_number()) %>%
   filter(!is.na(encounter_ids) & encounter_ids != "") %>%
@@ -115,18 +160,24 @@ dx_data <- get_pcornet_table("DIAGNOSIS") %>%
   select(ENCOUNTERID, DX, DX_TYPE) %>%
   collect()
 
-message(glue("  Loaded {nrow(dx_data)} diagnosis records"))
-message(glue("  Unique encounters with diagnoses: {n_distinct(dx_data$ENCOUNTERID)}"))
+message(glue("  Loaded {nrow(dx_data)} total diagnosis records"))
 
-# Aggregate diagnosis codes per encounter (semicolon-separated per D-15)
-encounter_dx <- dx_data %>%
+# Filter to cancer/neoplasm codes only
+dx_cancer <- dx_data %>%
+  filter(sapply(DX, is_cancer_code))
+
+message(glue("  Filtered to {nrow(dx_cancer)} cancer diagnosis records ({round(100 * nrow(dx_cancer) / nrow(dx_data), 1)}% of total)"))
+message(glue("  Unique cancer codes: {n_distinct(dx_cancer$DX)}"))
+
+# Aggregate cancer codes per encounter (semicolon-separated per D-15)
+encounter_dx <- dx_cancer %>%
   group_by(ENCOUNTERID) %>%
   summarise(
     cancer_codes = paste(sort(unique(DX)), collapse = ";"),
     .groups = "drop"
   )
 
-message(glue("  Created cancer code sets for {nrow(encounter_dx)} encounters"))
+message(glue("  Encounters with cancer codes: {nrow(encounter_dx)}"))
 
 # Join cancer codes to split encounters, then aggregate back to episode level
 episode_cancer <- episode_encounters %>%
@@ -146,7 +197,6 @@ episode_dx <- episodes %>%
   left_join(episode_cancer, by = "episode_row") %>%
   select(-episode_row)
 
-# Cartesian product guard (Pitfall 3 from RESEARCH.md)
 warn_row_count(
   episode_dx,
   name = "episode_dx_joined",
@@ -157,91 +207,120 @@ warn_row_count(
 
 message(glue("  Joined cancer codes to episodes: {nrow(episode_dx)} rows (expected {pre_join_rows})"))
 
-# Handle episodes without encounter_ids match
 n_missing_cancer <- sum(is.na(episode_dx$cancer_codes))
 if (n_missing_cancer > 0) {
-  message(glue("  WARNING: {n_missing_cancer} episodes without cancer codes (no encounter_ids match)"))
+  message(glue("  NOTE: {n_missing_cancer} episodes without cancer diagnosis codes"))
 }
 
 
-# SECTION 4: TABLE 1 -- TREATMENT-TYPE-LEVEL SUMMARY (per D-13) ----
+# SECTION 5: TABLE 1 -- SUB-CATEGORY SUMMARY ----
 
-message("\n--- Building Table 1: Treatment-Type-Level Summary ---")
+message("\n--- Building Table 1: Sub-Category Summary ---")
 
-# One row per unique treatment-type + cancer-code-set combination
-table1 <- episode_dx %>%
-  mutate(cancer_codes = if_else(is.na(cancer_codes), "Unknown", cancer_codes)) %>%
-  group_by(treatment_type, cancer_codes) %>%
-  summarise(encounter_count = n(), .groups = "drop") %>%
-  arrange(treatment_type, desc(encounter_count))
-
-message(glue("  Table 1: {nrow(table1)} unique treatment-type x cancer-code combinations"))
-
-# Log per-type totals
-type_summary <- episode_dx %>%
-  group_by(treatment_type) %>%
-  summarise(total_episodes = n(), .groups = "drop")
-
-for (i in seq_len(nrow(type_summary))) {
-  message(glue("    {type_summary$treatment_type[i]}: {type_summary$total_episodes[i]} episodes"))
-}
-
-
-# SECTION 5: TABLE 2 -- DRUG-LEVEL SUMMARY (per D-14) ----
-
-message("\n--- Building Table 2: Drug-Level Summary ---")
-
-# Split triggering_codes (comma-separated) into individual codes per episode
+# Split triggering_codes into individual codes and map to sub-categories
 episode_codes <- episode_dx %>%
   mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
   unnest(code_list) %>%
   filter(!is.na(code_list), code_list != "") %>%
   rename(treatment_code = code_list)
 
-message(glue("  Expanded to {nrow(episode_codes)} treatment code instances"))
+# Assign sub-category based on treatment type and code
+episode_codes <- episode_codes %>%
+  mutate(
+    sub_category = case_when(
+      treatment_type == "Immunotherapy" ~ "Any Immunotherapy",
+      treatment_code %in% names(code_to_subcategory) ~ code_to_subcategory[treatment_code],
+      treatment_type == "Chemotherapy" ~ "Chemotherapy (unmapped)",
+      treatment_type == "Radiation" ~ "Radiation (unmapped)",
+      treatment_type == "SCT" ~ "SCT (unmapped)",
+      TRUE ~ treatment_type
+    )
+  )
 
-# Aggregate by treatment code x cancer code combination
-table2 <- episode_codes %>%
+# Log unmapped codes
+n_unmapped <- sum(str_detect(episode_codes$sub_category, "unmapped"))
+if (n_unmapped > 0) {
+  message(glue("  NOTE: {n_unmapped} code instances not in reference xlsx sub-category mappings"))
+  unmapped_codes <- episode_codes %>%
+    filter(str_detect(sub_category, "unmapped")) %>%
+    distinct(treatment_type, treatment_code) %>%
+    head(20)
+  for (i in seq_len(nrow(unmapped_codes))) {
+    message(glue("    {unmapped_codes$treatment_type[i]}: {unmapped_codes$treatment_code[i]}"))
+  }
+}
+
+# Aggregate: one row per sub_category + cancer_codes combination
+table1 <- episode_codes %>%
   mutate(cancer_codes = if_else(is.na(cancer_codes), "Unknown", cancer_codes)) %>%
-  group_by(treatment_code, cancer_codes) %>%
+  group_by(sub_category, cancer_codes) %>%
   summarise(encounter_count = n(), .groups = "drop") %>%
-  arrange(treatment_code, desc(encounter_count))
+  arrange(sub_category, desc(encounter_count))
 
-message(glue("  Table 2: {nrow(table2)} unique treatment-code x cancer-code combinations"))
-message(glue("  Unique treatment codes: {n_distinct(table2$treatment_code)}"))
+message(glue("  Table 1: {nrow(table1)} rows across {n_distinct(table1$sub_category)} sub-categories"))
+
+# Log per sub-category totals
+subcat_summary <- table1 %>%
+  group_by(sub_category) %>%
+  summarise(total = sum(encounter_count), rows = n(), .groups = "drop") %>%
+  arrange(desc(total))
+
+for (i in seq_len(min(nrow(subcat_summary), 20))) {
+  message(glue("    {subcat_summary$sub_category[i]}: {subcat_summary$total[i]} encounters, {subcat_summary$rows[i]} rows"))
+}
+if (nrow(subcat_summary) > 20) {
+  message(glue("    ... and {nrow(subcat_summary) - 20} more sub-categories"))
+}
 
 
-# SECTION 6: WRITE XLSX OUTPUT (per D-12) ----
+# SECTION 6: TABLE 2 -- ENCOUNTER TREATMENT SUMMARY ----
+
+message("\n--- Building Table 2: Encounter Treatment Summary ---")
+
+# For each episode: combine all triggering_codes into "all treatments in encounter"
+table2 <- episode_dx %>%
+  mutate(
+    all_treatments = triggering_codes,
+    cancer_codes = if_else(is.na(cancer_codes), "Unknown", cancer_codes)
+  ) %>%
+  group_by(all_treatments, cancer_codes) %>%
+  summarise(encounter_count = n(), .groups = "drop") %>%
+  arrange(desc(encounter_count))
+
+message(glue("  Table 2: {nrow(table2)} unique treatment-set x cancer-code combinations"))
+message(glue("  Unique treatment sets: {n_distinct(table2$all_treatments)}"))
+
+
+# SECTION 7: WRITE XLSX OUTPUT (per D-12) ----
 
 message("\n--- Writing multi-sheet XLSX output ---")
 
 wb <- wb_workbook()
 
-# Sheet 1: Treatment Type Summary
-wb$add_worksheet("Treatment Type Summary")
-wb$add_data("Treatment Type Summary", table1, start_row = 1, col_names = TRUE)
+# Sheet 1: Sub-Category Summary
+wb$add_worksheet("Treatment Sub-Category Summary")
+wb$add_data("Treatment Sub-Category Summary", table1, start_row = 1, col_names = TRUE)
 
-# Sheet 2: Drug Level Summary
-wb$add_worksheet("Drug Level Summary")
-wb$add_data("Drug Level Summary", table2, start_row = 1, col_names = TRUE)
+# Sheet 2: Encounter Treatment Summary
+wb$add_worksheet("Encounter Treatment Summary")
+wb$add_data("Encounter Treatment Summary", table2, start_row = 1, col_names = TRUE)
 
 wb$save(OUTPUT_XLSX)
 message(glue("\nSaved: {OUTPUT_XLSX}"))
 
 
-# SECTION 7: CONSOLE SUMMARY ----
+# SECTION 8: CONSOLE SUMMARY ----
 
 message("\n=== Summary ===")
 message(glue("  Total episodes processed: {nrow(episodes)}"))
 message(glue("  Episodes with cancer codes: {sum(!is.na(episode_dx$cancer_codes))}"))
-message(glue("  Episodes without cancer codes: {sum(is.na(episode_dx$cancer_codes))}"))
-message(glue("\n  Table 1 (Treatment Type Summary):"))
+message(glue("  Episodes without cancer codes: {n_missing_cancer}"))
+message(glue("  Total diagnosis records: {nrow(dx_data)}"))
+message(glue("  Cancer diagnosis records: {nrow(dx_cancer)}"))
+message(glue("\n  Table 1 (Sub-Category Summary):"))
 message(glue("    Total rows: {nrow(table1)}"))
-for (i in seq_len(nrow(type_summary))) {
-  type_rows <- table1 %>% filter(treatment_type == type_summary$treatment_type[i]) %>% nrow()
-  message(glue("    {type_summary$treatment_type[i]}: {type_rows} unique cancer-code combinations"))
-}
-message(glue("\n  Table 2 (Drug Level Summary):"))
+message(glue("    Sub-categories: {n_distinct(table1$sub_category)}"))
+message(glue("\n  Table 2 (Encounter Treatment Summary):"))
 message(glue("    Total rows: {nrow(table2)}"))
-message(glue("    Unique treatment codes: {n_distinct(table2$treatment_code)}"))
+message(glue("    Unique treatment sets: {n_distinct(table2$all_treatments)}"))
 message("\nDone.")
