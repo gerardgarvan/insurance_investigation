@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Clinical Data Refinements & NLPHL Breakout
-status: verifying
-last_updated: "2026-06-03T05:35:31.677Z"
+status: executing
+last_updated: "2026-06-03T13:06:29.009Z"
 last_activity: 2026-06-03
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_plans: 10
+  completed_plans: 9
+  percent: 90
 ---
 
 # State: v2.1 Clinical Data Refinements & NLPHL Breakout
@@ -22,18 +22,18 @@ progress:
 
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current Focus:** Phase 78 — episode-enhancement-death-integration
+**Current Focus:** Phase 79 — code-investigations-new-tables
 
 ## Current Position
 
-Phase: 79
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 79 (code-investigations-new-tables) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-06-03
 
 **Progress:**
 
-[██████████] 100%
+[█████████░] 90%
 v2.1 Milestone: [......] 0% (0/6 phases)
   Phase 75: [......] 0%
 
@@ -84,6 +84,7 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 | Phase 77 P02 | 299 | 2 tasks | 2 files |
 | Phase 78 P01 | 3 | 2 tasks | 2 files |
 | Phase 78 P02 | 6 | 2 tasks | 2 files |
+| Phase 79 P02 | 111 | 1 tasks | 1 files |
 
 ### Open Questions
 

@@ -137,10 +137,10 @@ Plans:
      - Table 2: drug-level summary (individual drugs/treatments per row) with columns: all drugs/treatments in an encounter | cancer code(s) for the encounter | count of encounters
   4. All new diagnostic scripts follow decade-based numbering convention and include documentation headers
   5. Verification cross-references replaced-by codes against SEER ICD-9 to ICD-10 conversion tables
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 79-01-PLAN.md — R/54 SCT 0362 investigation + R/55 replaced-by code verification with igraph cycle detection
-- [ ] 79-02-PLAN.md — R/56 drug grouping summary tables (treatment-type-level + drug-level)
+- [x] 79-02-PLAN.md — R/56 drug grouping summary tables (treatment-type-level + drug-level)
 
 #### Phase 80: Smoke Test Updates
 **Goal**: Update comprehensive smoke test (R/88) to validate all v2.1 changes including NLPHL category, 7-day gap, Gantt schema, and new scripts
@@ -162,7 +162,7 @@ Plans:
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
 | 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
-| 79. Code Investigations & New Tables | 0/2 | Planned | - |
+| 79. Code Investigations & New Tables | 1/2 | In Progress|  |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
 ---
