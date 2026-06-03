@@ -59,7 +59,7 @@
 - [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
 - [x] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline (completed 2026-06-03)
 - [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
-- [x] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death (completed 2026-06-03)
+- [x] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death (completed 2026-06-03)
 - [ ] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables
 - [ ] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes
 
@@ -130,15 +130,17 @@ Plans:
 **Depends on**: Phase 78
 **Requirements**: CODE-01, CODE-02, TREAT-03, QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. R/92_investigate_sct_0362.R produces encounter-level summary distinguishing true transplants from coding errors
-  2. R/93_verify_replaced_by_codes.R validates replaced-by mappings with cycle detection and flags replacement chains >3 steps
-  3. R/76_new_tables_from_groupings.R generates xlsx with two tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates:
+  1. R/54_investigate_sct_0362.R produces encounter-level summary distinguishing true transplants from coding errors
+  2. R/55_verify_replaced_by_codes.R validates replaced-by mappings with cycle detection and flags replacement chains >3 steps
+  3. R/56_new_tables_from_groupings.R generates xlsx with two tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates:
      - Table 1: treatment-type-level summary (Chemo, Radiation, SCT, Immunotherapy rows) with columns: treatment type | cancer code(s) for the encounter | count of encounters
      - Table 2: drug-level summary (individual drugs/treatments per row) with columns: all drugs/treatments in an encounter | cancer code(s) for the encounter | count of encounters
   4. All new diagnostic scripts follow decade-based numbering convention and include documentation headers
   5. Verification cross-references replaced-by codes against SEER ICD-9 to ICD-10 conversion tables
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 2 plans
+Plans:
+- [ ] 79-01-PLAN.md — R/54 SCT 0362 investigation + R/55 replaced-by code verification with igraph cycle detection
+- [ ] 79-02-PLAN.md — R/56 drug grouping summary tables (treatment-type-level + drug-level)
 
 #### Phase 80: Smoke Test Updates
 **Goal**: Update comprehensive smoke test (R/88) to validate all v2.1 changes including NLPHL category, 7-day gap, Gantt schema, and new scripts
@@ -160,8 +162,8 @@ Plans:
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
 | 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
-| 79. Code Investigations & New Tables | 0/? | Not started | - |
+| 79. Code Investigations & New Tables | 0/2 | Planned | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-06-03 -- Phase 78 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-03 -- Phase 79 planned (2 plans, 1 wave)*
