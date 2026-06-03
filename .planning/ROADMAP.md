@@ -120,9 +120,9 @@ Plans:
   3. Gantt v2 output (R/52) includes cause_of_death column (14 to 16 columns) mapped via DEATH_CAUSE_MAP
   4. Missingness documented in output footnotes if cause of death >40% missing
   5. Per-episode cancer category and triggering code description populated for all episodes using drug groupings
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 78-01-PLAN.md — Death quality profiling (R/35) and R/28 episode enrichment with triggering_code_description and drug_group columns
+- [x] 78-01-PLAN.md — Death quality profiling (R/35) and R/28 episode enrichment with triggering_code_description and drug_group columns
 - [ ] 78-02-PLAN.md — R/52 Gantt v2 cause_of_death and drug_group integration, R/88 smoke test updates
 
 #### Phase 79: Code Investigations & New Tables
@@ -159,7 +159,7 @@ Plans:
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
-| 78. Episode Enhancement & Death Integration | 0/2 | Planned | - |
+| 78. Episode Enhancement & Death Integration | 1/2 | In Progress|  |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
