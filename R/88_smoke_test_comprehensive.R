@@ -62,7 +62,7 @@ message(strrep("=", 70))
 # SECTION 2: UTILS MODULE COMPLETENESS ----
 # ==============================================================================
 
-message("\n[1/22] Utils module completeness...")
+message("\n[1/27] Utils module completeness...")
 
 check("R/utils/ directory exists", dir.exists("R/utils"))
 
@@ -96,7 +96,7 @@ check(
 # SECTION 3: CONFIG LOADING AND AUTO-SOURCING ----
 # ==============================================================================
 
-message("\n[2/22] Config loading and auto-sourcing...")
+message("\n[2/27] Config loading and auto-sourcing...")
 
 tryCatch(
   {
@@ -165,7 +165,7 @@ for (module in names(key_functions)) {
 # SECTION 4: FOUNDATION CHAIN ----
 # ==============================================================================
 
-message("\n[3/22] Foundation script chain...")
+message("\n[3/27] Foundation script chain...")
 
 check("R/00_config.R exists", file.exists("R/00_config.R"))
 check("R/01_load_pcornet.R exists", file.exists("R/01_load_pcornet.R"))
@@ -183,7 +183,7 @@ check(
 # --------------------------------------------------------------------------
 # Cohort decade (10-14)
 # --------------------------------------------------------------------------
-message("\n[4/22] Cohort decade (10-14)...")
+message("\n[4/27] Cohort decade (10-14)...")
 
 cohort_scripts <- c(
   "10_cohort_predicates.R", "11_treatment_payer.R",
@@ -202,7 +202,7 @@ check(
 # --------------------------------------------------------------------------
 # Treatment decade (20-29)
 # --------------------------------------------------------------------------
-message("\n[5/22] Treatment decade (20-29)...")
+message("\n[5/27] Treatment decade (20-29)...")
 
 treatment_expected <- c(
   "20_treatment_inventory.R", "21_investigate_unmatched.R",
@@ -223,7 +223,7 @@ check(
 # --------------------------------------------------------------------------
 # Quality/Investigations decade (30-39)
 # --------------------------------------------------------------------------
-message("\n[PLACEHOLDER] Quality/Investigations decade (30-39)...")
+message("\n[6/27] Quality/Investigations decade (30-39)...")
 
 quality_expected <- c("35_death_cause_quality.R")
 quality_found <- 0L
@@ -238,7 +238,7 @@ check(
 # --------------------------------------------------------------------------
 # Cancer decade (40-56)
 # --------------------------------------------------------------------------
-message("\n[6/22] Cancer decade (40-56)...")
+message("\n[7/27] Cancer decade (40-56)...")
 
 cancer_expected <- c(
   "40_cancer_site_frequency.R", "41_extract_all_codes.R",
@@ -263,7 +263,7 @@ check(
 # --------------------------------------------------------------------------
 # Payer/QA decade (60-69)
 # --------------------------------------------------------------------------
-message("\n[7/22] Payer/QA decade (60-69)...")
+message("\n[8/27] Payer/QA decade (60-69)...")
 
 payer_expected <- c(
   "60_tiered_same_day_payer.R", "61_tiered_encounter_level.R",
@@ -285,7 +285,7 @@ check(
 # --------------------------------------------------------------------------
 # Output decade (70-76)
 # --------------------------------------------------------------------------
-message("\n[8/22] Output decade (70-76)...")
+message("\n[9/27] Output decade (70-76)...")
 
 output_scripts <- c(
   "70_visualize_waterfall.R", "71_visualize_sankey.R",
@@ -305,7 +305,7 @@ check(
 # --------------------------------------------------------------------------
 # Test decade (80-88)
 # --------------------------------------------------------------------------
-message("\n[9/22] Test decade (80-88)...")
+message("\n[10/27] Test decade (80-88)...")
 
 test_scripts <- c(
   "80_smoke_test_backends.R", "81_parity_test_cohort.R",
@@ -326,7 +326,7 @@ check(
 # --------------------------------------------------------------------------
 # Ad-hoc decade (90-99)
 # --------------------------------------------------------------------------
-message("\n[10/22] Ad-hoc decade (90-99)...")
+message("\n[11/27] Ad-hoc decade (90-99)...")
 
 adhoc_scripts <- c(
   "90_diagnostics.R", "91_data_quality_summary.R",
@@ -348,7 +348,7 @@ check(
 # SECTION 6: NO STALE FILES ----
 # ==============================================================================
 
-message("\n[11/22] No stale files...")
+message("\n[12/27] No stale files...")
 
 # Check for specific old numbers that should have been renamed
 old_numbers <- c(
@@ -381,7 +381,7 @@ check(
 # SECTION 7: SOURCE() REFERENCE VALIDATION ----
 # ==============================================================================
 
-message("\n[12/22] Source() reference validation...")
+message("\n[13/27] Source() reference validation...")
 
 r_files_full <- list.files("R", pattern = "\\.R$", full.names = TRUE)
 broken_refs <- character(0)
@@ -432,7 +432,7 @@ check(
 # SECTION 8: KEY DEPENDENCY CHAINS ----
 # ==============================================================================
 
-message("\n[13/22] Key dependency chains...")
+message("\n[14/27] Key dependency chains...")
 
 # Check critical source() patterns
 check_source <- function(file, pattern, description) {
@@ -468,7 +468,7 @@ check(
 # SECTION 9: DRY CONSOLIDATION VALIDATION ----
 # ==============================================================================
 
-message("\n[14/22] DRY consolidation validation...")
+message("\n[15/27] DRY consolidation validation...")
 
 # Check no PREFIX_MAP definitions outside R/00_config.R
 scripts_to_check_prefix <- c(
@@ -540,7 +540,7 @@ check(
 # SECTION 10: DEFENSIVE CODING INFRASTRUCTURE ----
 # ==============================================================================
 
-message("\n[15/22] Defensive coding infrastructure...")
+message("\n[16/27] Defensive coding infrastructure...")
 
 # Check library(checkmate) appears in R/00_config.R
 config_lines <- readLines("R/00_config.R", warn = FALSE)
@@ -562,7 +562,7 @@ for (func in assertion_functions) {
 # SECTION 11: ARCHIVE VALIDATION ----
 # ==============================================================================
 
-message("\n[16/22] Archive validation...")
+message("\n[17/27] Archive validation...")
 
 check("R/archive/ directory exists", dir.exists("R/archive"))
 check("R/archive/README.md exists", file.exists("R/archive/README.md"))
@@ -583,7 +583,7 @@ check(
 # SECTION 12: CROSS-PLATFORM DATA AVAILABILITY ----
 # ==============================================================================
 
-message("\n[17/22] Cross-platform data availability...")
+message("\n[18/27] Cross-platform data availability...")
 
 # Detect data availability
 if (exists("CONFIG")) {
@@ -619,7 +619,7 @@ if (exists("CONFIG")) {
 # Phase 75 (CANCER-01): Validates NLPHL breakout mutual exclusivity.
 # Phase 75 (DEATH-01/DEATH-02): Validates DEATH_CAUSE_MAP structure.
 
-message("\n[18/22] NLPHL classification & death cause validation...")
+message("\n[19/27] NLPHL classification & death cause validation...")
 
 # --- NLPHL ICD-10 mutual exclusivity ---
 
@@ -719,7 +719,7 @@ check(
 # ==============================================================================
 # Phase 76 (TREAT-01): Validates tumor registry source removed from R/26.
 
-message("\n[19/22] TR removal validation...")
+message("\n[20/27] TR removal validation...")
 
 # Read R/26 source code for static analysis
 r26_lines <- readLines("R/26_treatment_episodes.R")
@@ -804,7 +804,7 @@ check(
 # ==============================================================================
 # Phase 77 (TREAT-02): Validates DRUG_GROUPINGS centralization from xlsx.
 
-message("\n[20/22] Drug groupings validation...")
+message("\n[21/27] Drug groupings validation...")
 
 # Check 1: DRUG_GROUPINGS exists and has sufficient entries
 check(
@@ -843,7 +843,7 @@ check(
 # ==============================================================================
 # Phase 77 (CANCER-01, CANCER-02): Validates 7-day gap extension and R/49 dual output.
 
-message("\n[21/22] 7-day gap extension & R/49 v2 validation...")
+message("\n[22/27] 7-day gap extension & R/49 v2 validation...")
 
 # Check 1: R/49 contains v2 output path definitions
 r49_lines <- readLines("R/49_cancer_summary_pre_post.R")
@@ -896,7 +896,7 @@ check(
 # ==============================================================================
 # Phase 79 (CODE-02): Validates R/54 SCT code 0362 investigation script.
 
-message("\n[PLACEHOLDER] Phase 79: SCT 0362 investigation (CODE-02)...")
+message("\n[23/27] Phase 79: SCT 0362 investigation (CODE-02)...")
 
 check("R/54_investigate_sct_0362.R exists", file.exists("R/54_investigate_sct_0362.R"))
 
@@ -931,7 +931,7 @@ if (file.exists("R/54_investigate_sct_0362.R")) {
 # ==============================================================================
 # Phase 79 (CODE-01): Validates R/55 replaced-by code verification with igraph.
 
-message("\n[PLACEHOLDER] Phase 79: Replaced-by code verification (CODE-01)...")
+message("\n[24/27] Phase 79: Replaced-by code verification (CODE-01)...")
 
 check("R/55_verify_replaced_by_codes.R exists", file.exists("R/55_verify_replaced_by_codes.R"))
 
@@ -968,7 +968,7 @@ if (file.exists("R/55_verify_replaced_by_codes.R")) {
 # ==============================================================================
 # Phase 79 (TREAT-03): Validates R/56 drug grouping summary tables.
 
-message("\n[PLACEHOLDER] Phase 79: Drug grouping summary tables (TREAT-03)...")
+message("\n[25/27] Phase 79: Drug grouping summary tables (TREAT-03)...")
 
 check("R/56_new_tables_from_groupings.R exists", file.exists("R/56_new_tables_from_groupings.R"))
 
@@ -1003,7 +1003,7 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
 # SECTION 14: DEATH QUALITY PROFILING VALIDATION (DEATH-01) ----
 # ==============================================================================
 
-message("\n[14/16] Death quality profiling validation (DEATH-01)...")
+message("\n[26/27] Death quality profiling validation (DEATH-01)...")
 
 # Check 1: R/35_death_cause_quality.R exists
 check(
@@ -1058,7 +1058,7 @@ if (file.exists("R/35_death_cause_quality.R")) {
 # SECTION 15: EPISODE ENRICHMENT AND GANTT INTEGRATION (CANCER-03, DEATH-02) ----
 # ==============================================================================
 
-message("\n[15/16] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
+message("\n[27/27] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
 
 # Check 1: R/28 has triggering_code_description column in final select
 r28_lines <- readLines("R/28_episode_classification.R", warn = FALSE)
