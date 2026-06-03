@@ -308,13 +308,20 @@ message(glue("  Patient CSV: {patient_path}"))
 message("\n", strrep("-", 70))
 message("REGION SUMMARY (for Venn diagram input)")
 message(strrep("-", 70))
-message(glue("{'Region',-22} {'N',>8} {'7d NLPHL',>10} {'7d CHL',>8} {'7d NHL',>8} {'7d All',>8}"))
+message(sprintf("%-22s %8s %10s %8s %8s %8s", "Region", "N", "7d NLPHL", "7d CHL", "7d NHL", "7d All"))
 message(strrep("-", 70))
 
 for (i in seq_len(nrow(summary_df))) {
   row <- summary_df[i, ]
-  fmt <- function(x) if (is.na(x)) "   --" else format(x, big.mark = ",", width = 8)
-  message(glue("{row$region,-22} {format(row$n_patients, big.mark=',', width=8)} {fmt(row$n_7day_nlphl),>10} {fmt(row$n_7day_classical),>8} {fmt(row$n_7day_nhl),>8} {fmt(row$n_7day_all_applicable),>8}"))
+  fmt <- function(x) if (is.na(x)) sprintf("%8s", "--") else sprintf("%8s", format(x, big.mark = ","))
+  message(sprintf("%-22s %8s %10s %8s %8s %8s",
+    row$region,
+    format(row$n_patients, big.mark = ","),
+    fmt(row$n_7day_nlphl),
+    fmt(row$n_7day_classical),
+    fmt(row$n_7day_nhl),
+    fmt(row$n_7day_all_applicable)
+  ))
 }
 
 message(strrep("-", 70))
