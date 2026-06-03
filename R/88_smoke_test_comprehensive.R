@@ -874,7 +874,132 @@ check(
 )
 
 # ==============================================================================
-# SECTION 14: SUMMARY ----
+# SECTION 14: DEATH QUALITY PROFILING VALIDATION (DEATH-01) ----
+# ==============================================================================
+
+message("\n[14/16] Death quality profiling validation (DEATH-01)...")
+
+# Check 1: R/35_death_cause_quality.R exists
+check(
+  "R/35_death_cause_quality.R exists",
+  file.exists("R/35_death_cause_quality.R")
+)
+
+# Check 2-7: R/35 detailed checks (only if file exists)
+if (file.exists("R/35_death_cause_quality.R")) {
+  r35_lines <- readLines("R/35_death_cause_quality.R", warn = FALSE)
+
+  check(
+    "R/35 sources R/00_config.R",
+    any(grepl('source\\("R/00_config.R"\\)', r35_lines))
+  )
+
+  # Check 3: R/35 references DEATH_CAUSE_MAP
+  check(
+    "R/35 references DEATH_CAUSE_MAP for cause mapping",
+    any(grepl("DEATH_CAUSE_MAP", r35_lines))
+  )
+
+  # Check 4: R/35 has DEATH_CAUSE field availability guard
+  check(
+    "R/35 has DEATH_CAUSE field availability check",
+    any(grepl("death_cause_available|DEATH_CAUSE.*names", r35_lines))
+  )
+
+  # Check 5: R/35 outputs death_cause_quality.xlsx
+  check(
+    "R/35 outputs death_cause_quality.xlsx",
+    any(grepl("death_cause_quality\\.xlsx", r35_lines))
+  )
+
+  # Check 6: R/35 saves quality decision artifact
+  check(
+    "R/35 saves death_cause_quality_result.rds",
+    any(grepl("death_cause_quality_result\\.rds", r35_lines))
+  )
+
+  # Check 7: R/35 has proper section headers
+  n_sections_r35 <- sum(grepl("^# SECTION.*----", r35_lines) | grepl("^# ---.*SECTION.*----", r35_lines))
+  check(
+    glue("R/35 has >= 6 section headers (found: {n_sections_r35})"),
+    n_sections_r35 >= 6
+  )
+} else {
+  message("  SKIP: R/35_death_cause_quality.R not found -- skipping detail checks")
+}
+
+# ==============================================================================
+# SECTION 15: EPISODE ENRICHMENT AND GANTT INTEGRATION (CANCER-03, DEATH-02) ----
+# ==============================================================================
+
+message("\n[15/16] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
+
+# Check 1: R/28 has triggering_code_description column in final select
+r28_lines <- readLines("R/28_episode_classification.R", warn = FALSE)
+
+check(
+  "R/28 final select includes triggering_code_description",
+  any(grepl("triggering_code_description", r28_lines))
+)
+
+# Check 2: R/28 has drug_group column in final select
+check(
+  "R/28 final select includes drug_group",
+  any(grepl("drug_group", r28_lines))
+)
+
+# Check 3: R/28 references DRUG_GROUPINGS
+check(
+  "R/28 references DRUG_GROUPINGS for drug group mapping",
+  any(grepl("DRUG_GROUPINGS", r28_lines))
+)
+
+# Check 4: R/28 references code_descriptions.rds
+check(
+  "R/28 references code_descriptions.rds for description lookup",
+  any(grepl("code_descriptions\\.rds", r28_lines))
+)
+
+# Check 5: R/52 has cause_of_death in episodes export
+r52_lines <- readLines("R/52_gantt_v2_export.R", warn = FALSE)
+
+check(
+  "R/52 episodes export includes cause_of_death",
+  any(grepl("cause_of_death", r52_lines))
+)
+
+# Check 6: R/52 has drug_group in episodes export
+check(
+  "R/52 episodes export includes drug_group",
+  any(grepl("drug_group", r52_lines))
+)
+
+# Check 7: R/52 has DEATH_CAUSE_MAP reference
+check(
+  "R/52 references DEATH_CAUSE_MAP for cause mapping",
+  any(grepl("DEATH_CAUSE_MAP", r52_lines))
+)
+
+# Check 8: R/52 expected episodes column count is 16
+check(
+  "R/52 expected_ep_cols is 16 (was 14)",
+  any(grepl("expected_ep_cols\\s*<-\\s*16", r52_lines))
+)
+
+# Check 9: R/52 expected detail column count is 14
+check(
+  "R/52 expected_detail_cols is 14 (was 13)",
+  any(grepl("expected_detail_cols\\s*<-\\s*14", r52_lines))
+)
+
+# Check 10: R/52 has missingness warning threshold
+check(
+  "R/52 has cause_of_death missingness warning (>40% threshold)",
+  any(grepl("40", r52_lines) & grepl("missing|WARNING", r52_lines, ignore.case = TRUE))
+)
+
+# ==============================================================================
+# SECTION 16: SUMMARY ----
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))
@@ -900,6 +1025,9 @@ message("  * SAFE-03: Error messages with context (glue)")
 message("  * CANCER-01: NLPHL mutual exclusivity (classify_codes)")
 message("  * CANCER-01: NLPHL diagnostic split in R/49 console output")
 message("  * CANCER-02: 7-day gap extension applied to all cancer categories in R/49 v2 output")
+message("  * CANCER-03: Per-episode triggering_code_description and drug_group columns (R/28)")
+message("  * DEATH-01: Death cause quality profiling (R/35)")
+message("  * DEATH-02: Cause of death in Gantt v2 exports (R/52)")
 message("  * DEATH-01/02: DEATH_CAUSE_MAP structure and coverage")
 message("  * TREAT-01: Tumor registry source removed from treatment pipeline")
 message("  * TREAT-01: Coverage analysis output validates removal impact")
