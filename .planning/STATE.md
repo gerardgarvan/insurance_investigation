@@ -115,6 +115,7 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 ### Roadmap Evolution
 
 - Phase 81 added: Filter Unknown from cancer_codes in treatment summary, add category column to sub-category summary, map unmapped sub-categories
+- Phase 82 added: non_informative_subcategories explore this and see if unhelpful codes are in the same encounter as a helpful code and from there just count the helpful code
 
 ### Known Blockers
 
