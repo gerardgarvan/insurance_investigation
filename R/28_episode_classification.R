@@ -179,7 +179,7 @@ dx_with_encounter <- dx_data %>%
   filter(!is.na(ENCOUNTERID) & ENCOUNTERID != "")
 
 encounter_linked <- episode_encounters %>%
-  inner_join(dx_with_encounter, by = "ENCOUNTERID") %>%
+  inner_join(dx_with_encounter, by = "ENCOUNTERID", relationship = "many-to-many") %>%
   mutate(
     prefix = str_sub(DX, 1, 3),
     cancer_category = classify_codes(DX)
@@ -207,7 +207,7 @@ dx_for_unlinked <- dx_data %>%
 
 # Temporal matching
 temporal_linked <- unlinked_episodes %>%
-  left_join(dx_for_unlinked, by = c("patient_id" = "ID")) %>%
+  left_join(dx_for_unlinked, by = c("patient_id" = "ID"), relationship = "many-to-many") %>%
   filter(!is.na(DX_DATE)) %>%
   filter(DX_DATE <= episode_start) %>%
   mutate(days_before = as.numeric(episode_start - DX_DATE)) %>%
