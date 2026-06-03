@@ -195,11 +195,11 @@ Plans:
   3. R/56 Table 1 preserves orphan dx-only rows with `dx_only` flag column (not deleted)
   4. Deduplication uses `str_detect(sub_category, "Encounter Dx")` pattern matching (not hardcoded list)
   5. Smoke test (R/88) validates Phase 82 changes including dx_only flag, encounter-level join, pattern matching
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 82-01-PLAN.md — Create R/57 exploration script for encounter-level dx co-occurrence analysis
-- [ ] 82-02-PLAN.md — Integrate deduplication into R/56 Table 1 and update R/88 smoke test
+- [x] 82-02-PLAN.md — Integrate deduplication into R/56 Table 1 and update R/88 smoke test
 
 ---
 *Last updated: 2026-06-03 -- Phase 82 planned (2 plans, 2 waves)*
