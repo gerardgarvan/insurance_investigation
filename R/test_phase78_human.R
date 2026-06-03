@@ -412,7 +412,7 @@ if (grepl("DEATH-02", validated_reqs)) {
 # SUMMARY
 # ==============================================================================
 
-message(glue("\n{'='|strrep(70)}"))
+message(glue("\n{strrep('=', 70)}"))
 message("PHASE 78 HUMAN UAT RESULTS")
 message(strrep("=", 70))
 total <- test_passed + test_failed
