@@ -57,7 +57,7 @@
 ### Phases
 
 - [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
-- [ ] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline
+- [x] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline (completed 2026-06-03)
 - [ ] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings
 - [ ] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death
 - [ ] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables
@@ -90,10 +90,10 @@ Plans:
   3. Validation report documents episode count delta and confirms count reduction matches coverage analysis prediction
   4. Assertion added: if treatment episode count drops >20%, pipeline halts with explicit warning
   5. All modified scripts follow v2.0 standards (styler, lintr, checkmate, headers)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 76-01-PLAN.md — Coverage analysis script (R/76_treatment_source_coverage.R) producing source_coverage_analysis.csv/xlsx
-- [ ] 76-02-PLAN.md — Remove TR source blocks from R/26 extraction functions, add episode count assertion, update smoke test
+- [x] 76-02-PLAN.md — Remove TR source blocks from R/26 extraction functions, add episode count assertion, update smoke test
 
 #### Phase 77: Cancer Classification Refinements
 **Goal**: Extend 7-day gap requirement to all cancer categories, implement NLPHL breakout in classification logic, and centralize drug groupings
@@ -151,7 +151,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
-| 76. Treatment Source Analysis & Removal | 1/2 | In Progress|  |
+| 76. Treatment Source Analysis & Removal | 2/2 | Complete   | 2026-06-03 |
 | 77. Cancer Classification Refinements | 0/? | Not started | - |
 | 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
