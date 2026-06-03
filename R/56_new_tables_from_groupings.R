@@ -10,7 +10,7 @@
 #
 # Inputs:
 #   - cache/outputs/treatment_episodes.rds (from R/28, 17 columns including
-#     triggering_codes, cancer_category, drug_group, ENCOUNTERID)
+#     triggering_codes, cancer_category, drug_group, encounter_ids)
 #   - DuckDB DIAGNOSIS table (for raw ICD cancer codes per encounter)
 #   - R/00_config.R (DRUG_GROUPINGS named vector, CONFIG paths)
 #
@@ -34,15 +34,15 @@
 #   - D-13: Table 1 (treatment-type-level): treatment_type | cancer_codes | encounter_count
 #   - D-14: Table 2 (drug-level): treatment_code | cancer_codes | encounter_count
 #   - D-15: Cancer codes = raw ICD codes (semicolon-separated), not category labels
-#   - D-16: Data source = treatment_episodes.rds + DuckDB DIAGNOSIS join via ENCOUNTERID
+#   - D-16: Data source = treatment_episodes.rds + DuckDB DIAGNOSIS join via encounter_ids
 #
 # WHY semicolon-separated cancer codes: Matches all_codes_resolved_next_tables.xlsx
 # template format (D-15). Distinguishes cancer codes (semicolons) from treatment
 # codes (commas in triggering_codes field).
 #
-# WHY encounter-level cancer linkage: treatment_episodes.rds contains ENCOUNTERID
-# from R/28 Phase 61 encounter-level cancer linkage. Most reliable connection
-# between treatment and diagnosis codes (same admission/visit context).
+# WHY encounter-level cancer linkage: treatment_episodes.rds contains encounter_ids
+# (comma-separated) from R/26. R/28 uses these for cancer linkage. Most reliable
+# connection between treatment and diagnosis codes (same admission/visit context).
 #
 # ==============================================================================
 
@@ -79,7 +79,7 @@ episodes <- readRDS(EPISODES_RDS)
 assert_df_valid(
   episodes,
   name = "treatment_episodes",
-  required_cols = c("patient_id", "treatment_type", "triggering_codes", "cancer_category", "ENCOUNTERID"),
+  required_cols = c("patient_id", "treatment_type", "triggering_codes", "cancer_category", "encounter_ids"),
   script_name = "R/56"
 )
 
@@ -91,15 +91,27 @@ message(glue("  Treatment types: {paste(unique(episodes$treatment_type), collaps
 
 message("\n--- Extracting raw cancer ICD codes from encounter linkage ---")
 
-# Treatment episodes have ENCOUNTERID from Phase 61 encounter-level cancer linkage.
-# Query DuckDB DIAGNOSIS table to get raw ICD codes for each encounter.
+# treatment_episodes.rds has encounter_ids as a comma-separated string.
+# Split into individual ENCOUNTERID values, query DuckDB DIAGNOSIS for raw ICD
+# codes, then aggregate back to episode level.
+
+# Split encounter_ids into individual rows (mirrors R/28 Section 4a approach)
+episode_encounters <- episodes %>%
+  mutate(episode_row = row_number()) %>%
+  filter(!is.na(encounter_ids) & encounter_ids != "") %>%
+  mutate(ENCOUNTERID = str_split(encounter_ids, ",\\s*")) %>%
+  unnest(ENCOUNTERID) %>%
+  filter(!is.na(ENCOUNTERID) & ENCOUNTERID != "")
+
+all_encounter_ids <- unique(episode_encounters$ENCOUNTERID)
+message(glue("  Unique encounter IDs from episodes: {length(all_encounter_ids)}"))
 
 USE_DUCKDB <- TRUE
 open_pcornet_con()
 
 # Get all diagnosis codes for encounters in treatment_episodes
 dx_data <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(ENCOUNTERID %in% !!unique(na.omit(episodes$ENCOUNTERID))) %>%
+  filter(ENCOUNTERID %in% !!all_encounter_ids) %>%
   select(ENCOUNTERID, DX, DX_TYPE) %>%
   collect()
 
@@ -116,11 +128,23 @@ encounter_dx <- dx_data %>%
 
 message(glue("  Created cancer code sets for {nrow(encounter_dx)} encounters"))
 
-# Join cancer codes to episodes
+# Join cancer codes to split encounters, then aggregate back to episode level
+episode_cancer <- episode_encounters %>%
+  left_join(encounter_dx, by = "ENCOUNTERID") %>%
+  filter(!is.na(cancer_codes)) %>%
+  group_by(episode_row) %>%
+  summarise(
+    cancer_codes = paste(sort(unique(unlist(str_split(cancer_codes, ";")))), collapse = ";"),
+    .groups = "drop"
+  )
+
+# Join aggregated cancer codes back to original episodes
 pre_join_rows <- nrow(episodes)
 
 episode_dx <- episodes %>%
-  left_join(encounter_dx, by = "ENCOUNTERID")
+  mutate(episode_row = row_number()) %>%
+  left_join(episode_cancer, by = "episode_row") %>%
+  select(-episode_row)
 
 # Cartesian product guard (Pitfall 3 from RESEARCH.md)
 warn_row_count(
@@ -133,10 +157,10 @@ warn_row_count(
 
 message(glue("  Joined cancer codes to episodes: {nrow(episode_dx)} rows (expected {pre_join_rows})"))
 
-# Handle episodes without ENCOUNTERID match
+# Handle episodes without encounter_ids match
 n_missing_cancer <- sum(is.na(episode_dx$cancer_codes))
 if (n_missing_cancer > 0) {
-  message(glue("  WARNING: {n_missing_cancer} episodes without cancer codes (no ENCOUNTERID match)"))
+  message(glue("  WARNING: {n_missing_cancer} episodes without cancer codes (no encounter_ids match)"))
 }
 
 
