@@ -150,8 +150,8 @@ episode_dx <- episodes %>%
 warn_row_count(
   episode_dx,
   name = "episode_dx_joined",
-  expected_min = pre_join_rows,
-  expected_max = pre_join_rows * 1.1,
+  min_expected = pre_join_rows,
+  max_expected = pre_join_rows * 1.1,
   script_name = "R/56"
 )
 
