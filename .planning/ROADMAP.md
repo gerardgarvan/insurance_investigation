@@ -58,7 +58,7 @@
 
 - [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
 - [x] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline (completed 2026-06-03)
-- [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
+- [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
 - [ ] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death
 - [ ] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables
 - [ ] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes
@@ -117,10 +117,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Cause of death quality report documents completeness (% with cause coded) stratified by payer and site
   2. Episode classification (R/28) includes triggering_code_description column using DRUG_GROUPINGS from R/00_config.R
-  3. Gantt v2 output (R/52) includes cause_of_death column (14 to 15 columns) mapped via DEATH_CAUSE_MAP
+  3. Gantt v2 output (R/52) includes cause_of_death column (14 to 16 columns) mapped via DEATH_CAUSE_MAP
   4. Missingness documented in output footnotes if cause of death >40% missing
   5. Per-episode cancer category and triggering code description populated for all episodes using drug groupings
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 78-01-PLAN.md — Death quality profiling (R/35) and R/28 episode enrichment with triggering_code_description and drug_group columns
+- [ ] 78-02-PLAN.md — R/52 Gantt v2 cause_of_death and drug_group integration, R/88 smoke test updates
 
 #### Phase 79: Code Investigations & New Tables
 **Goal**: Investigate SCT code 0362 data quality, verify replaced-by code mappings, and generate two new drug grouping summary tables
@@ -144,7 +147,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Smoke test (R/88) validates NLPHL category exists in CANCER_SITE_MAP and is mutually exclusive with classical HL
   2. Smoke test validates 7-day gap extension applied to all cancer categories
-  3. Smoke test validates Gantt v2 15-column schema (cause_of_death added)
+  3. Smoke test validates Gantt v2 16-column schema (cause_of_death and drug_group added)
   4. Smoke test validates new scripts (R/76, R/92, R/93) exist with correct headers and dependencies
   5. All smoke test additions follow existing testthat patterns from Phase 74
 **Plans**: TBD
@@ -156,9 +159,9 @@ Plans:
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
-| 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
+| 78. Episode Enhancement & Death Integration | 0/2 | Planned | - |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-06-02 -- Phase 77 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-03 -- Phase 78 planned (2 plans, 2 waves)*
