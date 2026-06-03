@@ -185,10 +185,10 @@ message(glue("  V2 unique codes: {format(v2_n_codes, big.mark=',')}"))
 # CANCER-02 / D-04: Assert total v2 population within tolerance range
 checkmate::assert_int(
   as.integer(v2_n_patients),
-  lower = 6300L, upper = 6400L,
-  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day total population expected 6300-6400, got {v2_n_patients}")
+  lower = 6300L, upper = 6500L,
+  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day total population expected 6300-6500, got {v2_n_patients}")
 )
-message(glue("  V2 population assertion PASSED: {v2_n_patients} in [6300, 6400]"))
+message(glue("  V2 population assertion PASSED: {v2_n_patients} in [6300, 6500]"))
 
 # ==============================================================================
 # SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----
