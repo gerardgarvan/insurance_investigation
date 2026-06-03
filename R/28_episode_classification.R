@@ -3,16 +3,19 @@
 # ==============================================================================
 # Purpose:     Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback)
 #              with regimen detection (ABVD, BV+AVD, Nivo+AVD) for chemotherapy episodes.
+#              Phase 78: Added triggering_code_description and drug_group columns.
 #
-# Inputs:      treatment_episodes.rds, treatment_episode_detail.rds, PCORnet DIAGNOSIS
+# Inputs:      treatment_episodes.rds, treatment_episode_detail.rds, PCORnet DIAGNOSIS,
+#              code_descriptions.rds (Phase 48b), DRUG_GROUPINGS (R/00_config.R)
 #
-# Outputs:     cache/outputs/treatment_episodes.rds (modified with cancer linkage),
+# Outputs:     cache/outputs/treatment_episodes.rds (modified with cancer linkage + code enrichments),
 #              output/episode_classification_audit.xlsx, output/episode_classification_audit.csv
 #
 # Dependencies: R/00_config.R, R/utils/utils_duckdb.R, CANCER_SITE_MAP (R/00_config.R),
-#               classify_codes() (R/utils/utils_cancer.R)
+#               classify_codes() (R/utils/utils_cancer.R), DRUG_GROUPINGS (R/00_config.R)
 #
-# Requirements: Phase 61 encounter-level cancer linkage + regimen detection
+# Requirements: Phase 61 encounter-level cancer linkage + regimen detection,
+#               CANCER-03 (Phase 78): per-episode code descriptions and drug groups
 #
 # WHY ENCOUNTERID linkage first: Most reliable connection between treatment and
 # cancer diagnosis. Encounter context (same admission, same visit) provides
@@ -46,17 +49,22 @@
 #         J9130=dac, J9042=brex, J9299=nivo). Drug_names detection takes priority.
 #   D-20: Added-agent disqualification for J-codes uses count of distinct J9xxx codes
 #   D-15: treatment_episodes.rds modified in-place (readRDS → enrich → saveRDS)
-#   D-16: Final column order: patient_id through regimen_label (15 columns total)
+#   D-16: Final column order: patient_id through regimen_label (was 15 columns, now 17 per Phase 78)
 #   D-17: Multi-sheet audit xlsx following R/59 pattern with openxlsx2
 #   D-18: Flat CSV export for episode classification results
+#   D-78-05: triggering_code_description via code_descriptions.rds lookup (Phase 48b)
+#   D-78-06: drug_group via DRUG_GROUPINGS named vector lookup (Phase 77)
+#   D-78-07: Comma-separated parallel mapping (triggering_codes at R/28 uses commas pre-Phase 64)
+#   D-78-08: Unmapped codes get NA per-code position in both new columns
 #
 # INPUTS:
 #   - cache/outputs/treatment_episodes.rds (from R/44a + R/60)
 #   - cache/outputs/treatment_episode_detail.rds (from R/44a + R/60)
 #   - DuckDB DIAGNOSIS table (via get_pcornet_table)
+#   - cache/outputs/code_descriptions.rds (Phase 48b: code -> description lookup)
 #
 # OUTPUTS:
-#   - cache/outputs/treatment_episodes.rds (modified with 4 new columns)
+#   - cache/outputs/treatment_episodes.rds (modified with 6 new columns: 4 Phase 61-62 + 2 Phase 78)
 #   - output/episode_classification_audit.xlsx (5 sheets)
 #   - output/episode_classification_audit.csv (flat export)
 #
@@ -421,24 +429,87 @@ message(glue("    Total labeled: {n_total_labeled} / {n_total_labeled + n_unclas
 message(glue("    Unclassified chemo: {n_unclassified_chemo}, Non-chemo: {n_non_chemo}"))
 
 
+# --- SECTION 5B: CODE DESCRIPTION AND DRUG GROUP MAPPING ----
+
+message("\n--- Adding triggering code descriptions and drug groups ---")
+
+# Step 5B-1: Load code_descriptions.rds
+DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
+code_descriptions <- NULL
+if (file.exists(DESCRIPTIONS_RDS)) {
+  code_descriptions <- readRDS(DESCRIPTIONS_RDS)
+  message(glue("  Loaded {length(code_descriptions)} code descriptions"))
+} else {
+  message("  WARNING: code_descriptions.rds not found. triggering_code_description will be NA.")
+}
+
+# Step 5B-2: Define mapping helpers (D-78-05, D-78-06, D-78-07, D-78-08)
+
+# lookup_description: map single code to human-readable name from code_descriptions.rds
+lookup_description <- function(code) {
+  if (is.null(code_descriptions) || is.na(code) || code == "") return(NA_character_)
+  if (code %in% names(code_descriptions)) return(code_descriptions[[code]])
+  return(NA_character_)  # D-78-08: unmapped codes get NA
+}
+
+# lookup_drug_group: map single code to category from DRUG_GROUPINGS
+lookup_drug_group <- function(code) {
+  if (is.na(code) || code == "") return(NA_character_)
+  if (code %in% names(DRUG_GROUPINGS)) return(DRUG_GROUPINGS[[code]])
+  return(NA_character_)  # D-78-08: unmapped codes get NA
+}
+
+# map_codes_to_descriptions: map comma-separated codes to comma-separated descriptions (D-78-07)
+# NOTE: triggering_codes at R/28 stage uses commas (pre-Phase 64 cleanup to semicolons)
+map_codes_to_descriptions <- function(codes_str) {
+  if (is.na(codes_str) || codes_str == "") return(NA_character_)
+  codes <- str_split(codes_str, ",")[[1]]
+  descriptions <- sapply(codes, lookup_description, USE.NAMES = FALSE)
+  paste(descriptions, collapse = ",")
+}
+
+# map_codes_to_drug_groups: map comma-separated codes to comma-separated groups (D-78-07)
+map_codes_to_drug_groups <- function(codes_str) {
+  if (is.na(codes_str) || codes_str == "") return(NA_character_)
+  codes <- str_split(codes_str, ",")[[1]]
+  groups <- sapply(codes, lookup_drug_group, USE.NAMES = FALSE)
+  paste(groups, collapse = ",")
+}
+
+# Step 5B-3: Apply mapping to episodes
+episodes <- episodes %>%
+  mutate(
+    triggering_code_description = sapply(triggering_codes, map_codes_to_descriptions, USE.NAMES = FALSE),
+    drug_group = sapply(triggering_codes, map_codes_to_drug_groups, USE.NAMES = FALSE)
+  )
+
+# Step 5B-4: Log mapping results
+n_with_desc <- sum(!is.na(episodes$triggering_code_description) & episodes$triggering_code_description != "", na.rm = TRUE)
+n_with_group <- sum(!is.na(episodes$drug_group) & episodes$drug_group != "", na.rm = TRUE)
+message(glue("  triggering_code_description populated: {n_with_desc}/{nrow(episodes)} episodes"))
+message(glue("  drug_group populated: {n_with_group}/{nrow(episodes)} episodes"))
+
+
 # --- SECTION 6: SAVE ENRICHED RDS ---
 
 message("\n--- Saving enriched treatment_episodes.rds ---")
 
-# Final column order (D-16)
+# Final column order (D-16: was 15 columns, now 17 columns per Phase 78)
 episodes <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
     episode_length_days, distinct_dates_in_episode, historical_flag,
     triggering_codes, encounter_ids, drug_names,
-    cancer_category, cancer_link_method, is_hodgkin, regimen_label
+    cancer_category, cancer_link_method, is_hodgkin, regimen_label,
+    triggering_code_description, drug_group
   )
 
 saveRDS(episodes, OUTPUT_RDS)
 message(glue("  Saved enriched treatment_episodes.rds: {nrow(episodes)} episodes, {ncol(episodes)} columns"))
 
 # Verify column presence
-stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label") %in% names(episodes)))
+stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
+                "triggering_code_description", "drug_group") %in% names(episodes)))
 
 
 # --- SECTION 7: AUDIT OUTPUT ---
