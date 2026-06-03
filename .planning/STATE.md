@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Clinical Data Refinements & NLPHL Breakout
-status: executing
-last_updated: "2026-06-03T20:53:57.828Z"
+status: verifying
+last_updated: "2026-06-03T20:59:21.414Z"
 last_activity: 2026-06-03
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 13
-  completed_plans: 12
-  percent: 92
+  completed_plans: 13
+  percent: 100
 ---
 
 # State: v2.1 Clinical Data Refinements & NLPHL Breakout
@@ -28,12 +28,12 @@ progress:
 
 Phase: 81 (filter-unknown-from-cancer-codes-in-treatment-summary-add-category-column-to-sub-category-summary-map-unmapped-sub-categories) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-03
 
 **Progress:**
 
-[█████████░] 92%
+[██████████] 100%
 v2.1 Milestone: [......] 0% (0/6 phases)
   Phase 75: [......] 0%
 
@@ -88,6 +88,7 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 | Phase 79 P01 | 180 | 2 tasks | 2 files |
 | Phase 80 P01 | 268 | 2 tasks | 1 files |
 | Phase 81 P01 | 234 | 1 tasks | 1 files |
+| Phase 81 P02 | 154 | 2 tasks | 2 files |
 
 ### Open Questions
 
