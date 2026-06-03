@@ -1034,10 +1034,79 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
 }
 
 # ==============================================================================
+# SECTION 13H: ENCOUNTER DX DEDUPLICATION (Phase 82) ----
+# ==============================================================================
+
+message("\n[26/28] Phase 82: Encounter Dx deduplication in R/56...")
+
+# Check 1: R/57 exploration script exists
+check(
+  "R/57_explore_dx_deduplication.R exists",
+  file.exists("R/57_explore_dx_deduplication.R")
+)
+
+# Check 2-9: R/56 Phase 82 integration checks (only if R/56 exists, which it does from Section 13G)
+check(
+  "R/56 has Section 5B header for encounter-level deduplication",
+  any(grepl("SECTION 5B.*ENCOUNTER.*DEDUPLICATION", r56_lines, ignore.case = TRUE))
+)
+
+check(
+  "R/56 uses str_detect pattern matching for Encounter Dx (not hardcoded list, per D-10)",
+  any(grepl('str_detect\\(sub_category.*Encounter Dx', r56_lines))
+)
+
+check(
+  "R/56 has is_non_informative flag variable",
+  any(grepl("is_non_informative", r56_lines))
+)
+
+check(
+  "R/56 joins episode_codes to episode_encounters for encounter-level analysis",
+  any(grepl("inner_join.*episode_encounters", r56_lines) |
+      grepl("episode_encounters.*inner_join", r56_lines))
+)
+
+check(
+  "R/56 checks per-encounter helpful code co-occurrence (group_by ENCOUNTERID)",
+  any(grepl("group_by\\(ENCOUNTERID\\)", r56_lines))
+)
+
+check(
+  "R/56 has dx_only flag column (per D-05: preserve orphan encounters)",
+  any(grepl("dx_only", r56_lines))
+)
+
+check(
+  "R/56 Table 1 uses episode_codes_dedup (deduplicated source)",
+  any(grepl("episode_codes_dedup", r56_lines))
+)
+
+check(
+  "R/56 Table 1 group_by includes dx_only column",
+  any(grepl("group_by.*dx_only", r56_lines))
+)
+
+# R/57 checks (if file exists)
+if (file.exists("R/57_explore_dx_deduplication.R")) {
+  r57_lines <- readLines("R/57_explore_dx_deduplication.R", warn = FALSE)
+
+  check("R/57 sources R/00_config.R",
+        any(grepl('source\\("R/00_config.R"\\)', r57_lines)))
+
+  check("R/57 uses str_detect for Encounter Dx pattern matching",
+        any(grepl('str_detect.*Encounter Dx', r57_lines)))
+
+  check("R/57 has diagnostic output comparing before/after Table 1",
+        any(grepl("table1_before", r57_lines)) &&
+        any(grepl("table1_after", r57_lines)))
+}
+
+# ==============================================================================
 # SECTION 14: DEATH QUALITY PROFILING VALIDATION (DEATH-01) ----
 # ==============================================================================
 
-message("\n[26/27] Death quality profiling validation (DEATH-01)...")
+message("\n[27/28] Death quality profiling validation (DEATH-01)...")
 
 # Check 1: R/35_death_cause_quality.R exists
 check(
@@ -1092,7 +1161,7 @@ if (file.exists("R/35_death_cause_quality.R")) {
 # SECTION 15: EPISODE ENRICHMENT AND GANTT INTEGRATION (CANCER-03, DEATH-02) ----
 # ==============================================================================
 
-message("\n[27/27] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
+message("\n[28/28] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
 
 # Check 1: R/28 has triggering_code_description column in final select
 r28_lines <- readLines("R/28_episode_classification.R", warn = FALSE)
@@ -1195,6 +1264,8 @@ message("  * TREAT-02: DRUG_GROUPINGS centralization from xlsx")
 message("  * CODE-01: Replaced-by code verification (R/55)")
 message("  * CODE-02: SCT 0362 investigation (R/54)")
 message("  * TREAT-03: Drug grouping summary tables (R/56)")
+message("  * P82-INTEGRATE: Encounter-level dx deduplication in R/56 Table 1")
+message("  * P82-FLAG: dx_only flag column for orphan encounter preservation")
 
 if (failed > 0) {
   quit(status = 1)
