@@ -35,6 +35,13 @@
 #   D-46-08: bare codes only — no PX_TYPE prefix
 #   D-46-09: triggering_codes appears in both CSV and xlsx output
 #
+# Phase 76 additions:
+#   D-76-01: Tumor registry (TR) source removed from chemo, radiation, SCT extraction
+#   D-76-02: TR data accuracy 8-32% vs 95-100% claims (SEER literature)
+#   D-76-03: Episode count assertion with >20% drop threshold
+#   D-76-04: EPISODE_COUNT_BASELINE = NULL until first post-removal run
+#   D-76-05: Pre-removal coverage analysis in output/source_coverage_analysis.xlsx
+#
 # Outputs:
 #   - RDS artifact: one row per patient per treatment type per episode
 #   - Styled xlsx: Summary sheet + per-type detail sheets + Historical Summary
@@ -78,7 +85,9 @@ HISTORICAL_CUTOFF <- as.Date("2012-01-01")
 # These functions mirror the logic in R/43a_treatment_durations.R but return
 # a 3-column tibble: ID, treatment_date, triggering_code.
 # Per D-46-08: bare codes only (PX column for PROCEDURES, DX for DIAGNOSIS, etc.)
-# TUMOR_REGISTRY dates are date evidence only — triggering_code = NA_character_
+# Phase 76: Tumor registry (TR) sources removed from chemo, radiation, SCT extraction.
+# Claims-based sources provide 95-100% accuracy vs TR's 8-32% (SEER literature).
+# Pre-removal coverage analysis documented in output/source_coverage_analysis.xlsx.
 # R/43a_treatment_durations.R is NOT modified; these are new functions in R/44.
 
 #' Stack sources with triggering_code and ENCOUNTERID, dedup on (ID, treatment_date, triggering_code, ENCOUNTERID)
@@ -192,40 +201,14 @@ extract_chemo_dates_with_codes <- function() {
       collect()
   }
 
-  # 7. TUMOR_REGISTRY_ALL: date evidence only — no individual code (triggering_code = NA)
-  tr_dates <- NULL
-  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
-    tr_chemo_cols <- intersect(
-      c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO"),
-      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
-    )
-    if (length(tr_chemo_cols) > 0) {
-      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
-        select(ID, all_of(tr_chemo_cols)) %>%
-        collect() %>%
-        filter(if_any(all_of(tr_chemo_cols), ~ !is.na(.)))
-      if (nrow(tr_data) > 0) {
-        tr_dates <- tr_data %>%
-          tidyr::pivot_longer(
-            cols = all_of(tr_chemo_cols),
-            names_to = "date_source",
-            values_to = "treatment_date"
-          ) %>%
-          filter(!is.na(treatment_date)) %>%
-          mutate(
-            treatment_date = as.Date(treatment_date),
-            triggering_code = NA_character_,
-            ENCOUNTERID = NA_character_
-          ) %>%
-          select(ID, treatment_date, triggering_code, ENCOUNTERID)
-      }
-    }
-  }
+  # Phase 76: Tumor registry source removed — claims-based sources only
+  # TR data accuracy 8-32% per SEER literature vs 95-100% for EHR claims
+  # Coverage analysis documented in output/source_coverage_analysis.xlsx
 
   stack_and_dedup_with_codes(
     sources = list(
       PX = px_dates, RX = rx_dates, DX = dx_dates,
-      DRG = drg_dates, DISP = disp_dates, MA = ma_dates, TR = tr_dates
+      DRG = drg_dates, DISP = disp_dates, MA = ma_dates
     ),
     type_name = "Chemotherapy"
   )
@@ -274,43 +257,17 @@ extract_radiation_dates_with_codes <- function() {
       collect()
   }
 
-  # 4. TUMOR_REGISTRY_ALL: date evidence only — no individual code
-  tr_dates <- NULL
-  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
-    tr_rad_cols <- intersect(
-      c("RAD_START_DATE_SUMMARY", "DT_RAD"),
-      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
-    )
-    if (length(tr_rad_cols) > 0) {
-      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
-        select(ID, all_of(tr_rad_cols)) %>%
-        collect() %>%
-        filter(if_any(all_of(tr_rad_cols), ~ !is.na(.)))
-      if (nrow(tr_data) > 0) {
-        tr_dates <- tr_data %>%
-          tidyr::pivot_longer(
-            cols = all_of(tr_rad_cols),
-            names_to = "date_source",
-            values_to = "treatment_date"
-          ) %>%
-          filter(!is.na(treatment_date)) %>%
-          mutate(
-            treatment_date = as.Date(treatment_date),
-            triggering_code = NA_character_,
-            ENCOUNTERID = NA_character_
-          ) %>%
-          select(ID, treatment_date, triggering_code, ENCOUNTERID)
-      }
-    }
-  }
+  # Phase 76: Tumor registry source removed — claims-based sources only
+  # TR data accuracy 8-32% per SEER literature vs 95-100% for EHR claims
+  # Coverage analysis documented in output/source_coverage_analysis.xlsx
 
   stack_and_dedup_with_codes(
-    sources = list(PX = px_dates, DX = dx_dates, DRG = drg_dates, TR = tr_dates),
+    sources = list(PX = px_dates, DX = dx_dates, DRG = drg_dates),
     type_name = "Radiation"
   )
 }
 
-#' Extract all SCT dates with triggering codes from 3 sources
+#' Extract all SCT dates with triggering codes from 2 sources (PX, DRG)
 #' Mirrors extract_sct_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_sct_dates_with_codes <- function() {
   # 1. PROCEDURES: CPT/HCPCS, ICD-9-CM, ICD-10-PCS (exact match), revenue — bare code = PX
@@ -338,41 +295,12 @@ extract_sct_dates_with_codes <- function() {
       collect()
   }
 
-  # 3. TUMOR_REGISTRY_ALL: SCT-related date columns — date evidence only
-  tr_dates <- NULL
-  if (!is.null(get_pcornet_table("TUMOR_REGISTRY_ALL"))) {
-    tr_sct_cols <- intersect(
-      c(
-        "DT_HTE", "DT_SCT", "SCT_DATE", "BMT_DATE",
-        "TRANSPLANT_DATE", "HCT_DATE", "DT_TRANSPLANT"
-      ),
-      colnames(get_pcornet_table("TUMOR_REGISTRY_ALL"))
-    )
-    if (length(tr_sct_cols) > 0) {
-      tr_data <- get_pcornet_table("TUMOR_REGISTRY_ALL") %>%
-        select(ID, all_of(tr_sct_cols)) %>%
-        collect() %>%
-        filter(if_any(all_of(tr_sct_cols), ~ !is.na(.)))
-      if (nrow(tr_data) > 0) {
-        tr_dates <- tr_data %>%
-          tidyr::pivot_longer(
-            cols = all_of(tr_sct_cols),
-            names_to = "date_source",
-            values_to = "treatment_date"
-          ) %>%
-          filter(!is.na(treatment_date)) %>%
-          mutate(
-            treatment_date = as.Date(treatment_date),
-            triggering_code = NA_character_,
-            ENCOUNTERID = NA_character_
-          ) %>%
-          select(ID, treatment_date, triggering_code, ENCOUNTERID)
-      }
-    }
-  }
+  # Phase 76: Tumor registry source removed — claims-based sources only
+  # TR data accuracy 8-32% per SEER literature vs 95-100% for EHR claims
+  # Coverage analysis documented in output/source_coverage_analysis.xlsx
 
   stack_and_dedup_with_codes(
-    sources = list(PX = px_dates, DRG = drg_dates, TR = tr_dates),
+    sources = list(PX = px_dates, DRG = drg_dates),
     type_name = "SCT"
   )
 }
@@ -612,6 +540,11 @@ log_episode_stats <- function(episodes_df, type_name) {
 
 message("=== Phase 44: Treatment Episode Start/Stop Dates ===\n")
 
+# Phase 76: Episode count baseline for >20% drop detection after TR source removal
+# Update these values after first successful post-TR-removal pipeline run.
+# Set to NULL to skip assertion (e.g., during initial calibration run).
+EPISODE_COUNT_BASELINE <- NULL
+
 episodes_list <- list()
 detail_list <- list()
 
@@ -622,6 +555,24 @@ for (type in TREATMENT_TYPES) {
 
   # Calculate per-episode detail (now includes triggering_codes aggregation)
   episodes_df <- calculate_episodes_detailed(dates_df)
+
+  # Phase 76: Guard against unexpected episode count drop after TR removal
+  # Percentage-based threshold (>20%) prevents silent data loss from source changes.
+  # Baseline will be populated after first post-TR-removal run.
+  # If assertion fires, investigate whether upstream cohort changes or source
+  # modifications caused the drop — do NOT simply increase the threshold.
+  if (exists("EPISODE_COUNT_BASELINE") && !is.null(EPISODE_COUNT_BASELINE[[type]])) {
+    expected <- EPISODE_COUNT_BASELINE[[type]]
+    actual <- nrow(episodes_df)
+    pct_delta <- abs(actual - expected) / expected * 100
+    checkmate::assert_true(
+      pct_delta <= 20,
+      .var.name = glue(
+        "[R/26] {type} episode count delta {round(pct_delta, 1)}% exceeds 20% threshold ",
+        "(expected ~{expected}, got {actual})"
+      )
+    )
+  }
 
   # Add treatment type column
   episodes_df <- episodes_df %>%
