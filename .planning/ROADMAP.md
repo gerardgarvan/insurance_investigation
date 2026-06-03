@@ -159,7 +159,7 @@ Plans:
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
-| 78. Episode Enhancement & Death Integration | 2/2 | Complete   | 2026-06-03 |
+| 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
