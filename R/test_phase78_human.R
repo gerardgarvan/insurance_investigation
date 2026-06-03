@@ -52,7 +52,7 @@ fail <- function(msg, detail = NULL) {
 }
 
 section <- function(num, title) {
-  message(glue("\n{'='|strrep(70)}"))
+  message(glue("\n{strrep('=', 70)}"))
   message(glue("UAT TEST {num}: {title}"))
   message(strrep("=", 70))
 }
