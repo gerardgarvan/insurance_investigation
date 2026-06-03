@@ -58,7 +58,7 @@
 
 - [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
 - [x] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline (completed 2026-06-03)
-- [ ] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings
+- [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
 - [ ] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death
 - [ ] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables
 - [ ] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes
@@ -105,10 +105,10 @@ Plans:
   3. classify_codes() correctly routes C81.0 / 201.4x codes to NLPHL category, all other C81.x to classical HL
   4. DRUG_GROUPINGS in R/00_config.R contains mappings from all_codes_resolved_next_tables.xlsx with versioned xlsx snapshot in git
   5. Validation confirms no patient double-counted in NLPHL and classical HL categories
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 77-01-PLAN.md — Centralize drug groupings from xlsx into DRUG_GROUPINGS named vector in R/00_config.R, copy versioned xlsx snapshot, add smoke test
-- [ ] 77-02-PLAN.md — Extend R/49 with 7-day v2 filtered output, NLPHL diagnostic breakout, dual output strategy, population validation, smoke test
+- [x] 77-02-PLAN.md — Extend R/49 with 7-day v2 filtered output, NLPHL diagnostic breakout, dual output strategy, population validation, smoke test
 
 #### Phase 78: Episode Enhancement & Death Integration
 **Goal**: Add triggering code descriptions to treatment episodes and integrate cause of death into outputs after quality profiling
@@ -155,7 +155,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
-| 77. Cancer Classification Refinements | 1/2 | In Progress|  |
+| 77. Cancer Classification Refinements | 2/2 | Complete   | 2026-06-03 |
 | 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |

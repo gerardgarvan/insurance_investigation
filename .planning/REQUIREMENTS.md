@@ -10,7 +10,7 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 ### Cancer Classification
 
 - [x] **CANCER-01**: NLPHL (C81.0 / 201.4x) broken out from Hodgkin Lymphoma as distinct cancer category in CANCER_SITE_MAP, classify_codes(), and all downstream outputs including Gantt
-- [ ] **CANCER-02**: Pre/post cancer summary table requires 7-day unique day gap for ALL cancer categories (not just HL), with total population = 6,347
+- [x] **CANCER-02**: Pre/post cancer summary table requires 7-day unique day gap for ALL cancer categories (not just HL), with total population = 6,347
 - [ ] **CANCER-03**: Cancer_category and triggering code description populated per episode using drug groupings from all_codes_resolved_next_tables.xlsx
 
 ### Treatment Pipeline
@@ -68,7 +68,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CANCER-01 | Phase 75, 77 | Complete |
-| CANCER-02 | Phase 77 | Pending |
+| CANCER-02 | Phase 77 | Complete |
 | CANCER-03 | Phase 78 | Pending |
 | TREAT-01 | Phase 76 | Complete |
 | TREAT-02 | Phase 77 | Complete |
