@@ -165,7 +165,7 @@ Plans:
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
 | 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
 | 79. Code Investigations & New Tables | 2/2 | Complete    | 2026-06-03 |
-| 80. Smoke Test Updates | 1/1 | Complete   | 2026-06-03 |
+| 80. Smoke Test Updates | 1/1 | Complete    | 2026-06-03 |
 
 ---
 *Last updated: 2026-06-03 -- Phase 80 planned (1 plan, 1 wave)*
