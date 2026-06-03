@@ -178,10 +178,10 @@ Plans:
   3. Both Table 1 and Table 2 exclude rows with NA cancer_codes (no "Unknown" replacement)
   4. R/56 uses 3-tier sub-category lookup: xlsx reference -> CODE_SUBCATEGORY_MAP -> code-type fallback
   5. Smoke test (R/88) validates Phase 81 changes including CODE_SUBCATEGORY_MAP usage and column structure
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 81-01-PLAN.md — Add CODE_SUBCATEGORY_MAP to R/00_config.R with 200+ treatment code-to-name mappings
+- [x] 81-01-PLAN.md — Add CODE_SUBCATEGORY_MAP to R/00_config.R with 200+ treatment code-to-name mappings
 - [ ] 81-02-PLAN.md — Modify R/56 (NA filtering, category column, 3-tier lookup) and update R/88 smoke test
 
 ---
