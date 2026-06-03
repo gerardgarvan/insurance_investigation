@@ -59,8 +59,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
-- [ ] Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories, total population = 6,347
-- [x] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category — config layer complete, Phase 75
+- [x] Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories — v2.1 Phase 77 (dual v1/v2 output, population validated 6300-6400)
+- [x] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category — config layer Phase 75, diagnostics Phase 77
 - [ ] Investigate SCT code 0362 patients — do the 90 patients have other SCT codes during those encounters?
 - [x] Drop all treatment data sourced from tumor registry — v2.1 Phase 76
 - [ ] Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
@@ -101,7 +101,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.0 (2026-06-02)
 
-**Pipeline status:** 76 phases completed across 10 milestones. 70 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Tumor registry sources removed from treatment pipeline (Phase 76 — coverage analysis confirmed acceptable data loss). Codebase fully reorganized, documented, hardened, and DRY-consolidated in v2.0. Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
+**Pipeline status:** 77 phases completed across 10 milestones. 70 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, and Gantt v2 CSV export. Tumor registry sources removed from treatment pipeline (Phase 76). Phase 77: drug groupings centralized (454 codes in DRUG_GROUPINGS), R/49 dual v1/v2 output with 7-day gap filter for all cancer categories, NLPHL diagnostic breakout. Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
 
 ## Previous Milestones
 
@@ -265,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after Phase 76 completion (TR source removal from treatment pipeline)*
+*Last updated: 2026-06-03 after Phase 77 completion (drug groupings centralized, 7-day gap v2 output, NLPHL diagnostics)*
