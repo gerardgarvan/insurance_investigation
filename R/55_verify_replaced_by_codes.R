@@ -70,49 +70,58 @@ sheet_names <- wb_get_sheet_names(wb)
 
 message(glue("  Sheets found: {paste(sheet_names, collapse=', ')}"))
 
-# Read each sheet to find replaced-by mappings
-# Common column names: "code", "old_code", "replaced_by", "next_code", "new_code"
+# Read each category sheet to find "replaced by" mappings embedded in descriptions.
+# The xlsx has row 1 = merged title, row 2 = column headers (Code, Meaning, ...),
+# row 3+ = data. "Replaced by XXXXX" appears in the Meaning/description text.
 replaced_by_pairs <- NULL
 
-for (sheet_name in sheet_names) {
-  sheet_data <- wb_to_df(wb, sheet = sheet_name)
+# Category sheets with Code + Meaning columns (skip Index, Sheet1)
+category_sheets <- intersect(
+  sheet_names,
+  c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care", "Unrelated")
+)
 
-  # Check for replaced-by pattern columns (drop NAs from unnamed columns)
-  cols <- tolower(names(sheet_data))
-  cols <- cols[!is.na(cols)]
+for (sheet_name in category_sheets) {
+  # Read with start_row = 2 to skip merged title row and use actual headers
+  sheet_data <- wb_to_df(wb, sheet = sheet_name, start_row = 2)
 
-  # Look for old->new code pair patterns
-  has_replaced_by <- any(str_detect(cols, "replaced|next"), na.rm = TRUE)
-  has_code_col <- any(str_detect(cols, "^code$|old_code"), na.rm = TRUE)
+  # Normalize column names — first column is Code, second is Meaning
+  col_names <- names(sheet_data)
+  code_col <- col_names[str_detect(tolower(col_names), "code")][1]
+  meaning_col <- col_names[str_detect(tolower(col_names), "meaning")][1]
 
-  if (has_replaced_by && has_code_col) {
-    message(glue("  Found replaced-by mappings in sheet: {sheet_name}"))
+  if (is.na(code_col) || is.na(meaning_col)) {
+    message(glue("  Skipping {sheet_name}: no Code or Meaning column found"))
+    next
+  }
 
-    # Identify old_code and new_code columns
-    old_col <- names(sheet_data)[str_detect(tolower(names(sheet_data)), "^code$|old_code")][1]
-    new_col <- names(sheet_data)[str_detect(tolower(names(sheet_data)), "replaced|next")][1]
+  # Find rows where the description contains "replaced by XXXXX"
+  sheet_codes <- sheet_data %>%
+    select(old_code = all_of(code_col), description = all_of(meaning_col)) %>%
+    filter(!is.na(description)) %>%
+    mutate(old_code = as.character(old_code)) %>%
+    filter(str_detect(description, regex("replaced by\\s+", ignore_case = TRUE)))
 
-    if (!is.na(old_col) && !is.na(new_col)) {
-      message(glue("    Old code column: {old_col}"))
-      message(glue("    New code column: {new_col}"))
+  if (nrow(sheet_codes) == 0) next
 
-      pairs <- sheet_data %>%
-        select(old_code = all_of(old_col), new_code = all_of(new_col)) %>%
-        filter(!is.na(old_code), !is.na(new_code), old_code != "", new_code != "") %>%
-        mutate(
-          old_code = as.character(old_code),
-          new_code = as.character(new_code),
-          sheet_source = sheet_name
-        )
+  # Extract the replacement code(s) from the description text
+  # Pattern: "replaced by XXXXX" where XXXXX is an alphanumeric code
+  pairs <- sheet_codes %>%
+    mutate(
+      new_code = str_extract(description, regex("replaced by\\s+([A-Za-z0-9.]+)", ignore_case = TRUE)),
+      new_code = str_remove(new_code, regex("replaced by\\s+", ignore_case = TRUE)),
+      sheet_source = sheet_name
+    ) %>%
+    filter(!is.na(new_code), new_code != "") %>%
+    select(old_code, new_code, sheet_source)
 
-      if (is.null(replaced_by_pairs)) {
-        replaced_by_pairs <- pairs
-      } else {
-        replaced_by_pairs <- bind_rows(replaced_by_pairs, pairs)
-      }
-
-      message(glue("    Found {nrow(pairs)} code pairs"))
+  if (nrow(pairs) > 0) {
+    message(glue("  Found {nrow(pairs)} replaced-by pairs in {sheet_name}"))
+    for (i in seq_len(nrow(pairs))) {
+      message(glue("    {pairs$old_code[i]} -> {pairs$new_code[i]}"))
     }
+
+    replaced_by_pairs <- if (is.null(replaced_by_pairs)) pairs else bind_rows(replaced_by_pairs, pairs)
   }
 }
 
