@@ -1,0 +1,5 @@
+treatment_type,tr_total_dates,claims_total_dates,tr_only_dates,claims_only_dates,both_sources_dates,pct_tr_only,pct_redundant,tr_only_patients,both_patients
+Chemotherapy,844,58928,589,58673,255,69.8,30.2,577,252
+Radiation,85,20431,81,20427,4,95.3,4.7,77,4
+SCT,0,1575,0,1575,0,0,0,0,0
+Immunotherapy,0,NA,0,NA,0,0,0,0,0
