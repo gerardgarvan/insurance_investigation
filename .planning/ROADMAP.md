@@ -90,9 +90,9 @@ Plans:
   3. Validation report documents episode count delta and confirms count reduction matches coverage analysis prediction
   4. Assertion added: if treatment episode count drops >20%, pipeline halts with explicit warning
   5. All modified scripts follow v2.0 standards (styler, lintr, checkmate, headers)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 76-01-PLAN.md — Coverage analysis script (R/76_treatment_source_coverage.R) producing source_coverage_analysis.csv/xlsx
+- [x] 76-01-PLAN.md — Coverage analysis script (R/76_treatment_source_coverage.R) producing source_coverage_analysis.csv/xlsx
 - [ ] 76-02-PLAN.md — Remove TR source blocks from R/26 extraction functions, add episode count assertion, update smoke test
 
 #### Phase 77: Cancer Classification Refinements
@@ -151,7 +151,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
-| 76. Treatment Source Analysis & Removal | 0/2 | Not started | - |
+| 76. Treatment Source Analysis & Removal | 1/2 | In Progress|  |
 | 77. Cancer Classification Refinements | 0/? | Not started | - |
 | 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
