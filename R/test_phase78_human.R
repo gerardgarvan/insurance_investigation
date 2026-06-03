@@ -312,6 +312,8 @@ if (file.exists(gantt_ep_path)) {
     pct <- round(100 * n_with_cause / nrow(death_rows), 1)
     if (n_with_cause > 0) {
       pass(glue("Death rows have cause_of_death: {n_with_cause}/{nrow(death_rows)} ({pct}%)"))
+    } else if (exists("qr") && is.list(qr) && grepl("SKIP", qr$recommendation, ignore.case = TRUE)) {
+      pass("cause_of_death empty as expected (R/35 recommended SKIP due to 100% missingness)")
     } else {
       fail("No death rows have cause_of_death populated")
     }
