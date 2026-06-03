@@ -18,6 +18,8 @@ output/tables/*.csv
 output/tables/*.xlsx
 output/cohort/*.csv
 output/cohort/*.rds
+output/*.csv
+output/*.xlsx
 
 # Root-level diagnostic/output artifacts
 /*.csv
