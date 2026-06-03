@@ -701,7 +701,7 @@ check(
 # ==============================================================================
 # Phase 76 (TREAT-01): Validates tumor registry source removed from R/26.
 
-message("\n[19/19] TR removal validation...")
+message("\n[19/21] TR removal validation...")
 
 # Read R/26 source code for static analysis
 r26_lines <- readLines("R/26_treatment_episodes.R")
@@ -782,6 +782,45 @@ check(
 )
 
 # ==============================================================================
+# SECTION 13C: DRUG GROUPINGS VALIDATION ----
+# ==============================================================================
+# Phase 77 (TREAT-02): Validates DRUG_GROUPINGS centralization from xlsx.
+
+message("\n[20/21] Drug groupings validation...")
+
+# Check 1: DRUG_GROUPINGS exists and has sufficient entries
+check(
+  glue("DRUG_GROUPINGS has >= 200 entries (found {length(DRUG_GROUPINGS)})"),
+  exists("DRUG_GROUPINGS") && length(DRUG_GROUPINGS) >= 200
+)
+
+# Check 2: All 5 core categories present
+core_categories <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care")
+found_categories <- intersect(core_categories, unique(DRUG_GROUPINGS))
+check(
+  glue("DRUG_GROUPINGS covers 5 core categories ({length(found_categories)}/5 found)"),
+  length(found_categories) == 5
+)
+
+# Check 3: No NA keys (all codes are valid strings)
+check(
+  "DRUG_GROUPINGS has no NA keys",
+  !any(is.na(names(DRUG_GROUPINGS)))
+)
+
+# Check 4: No NA values (all categories are valid strings)
+check(
+  "DRUG_GROUPINGS has no NA values",
+  !any(is.na(DRUG_GROUPINGS))
+)
+
+# Check 5: Versioned xlsx snapshot exists
+check(
+  "data/reference/all_codes_resolved_next_tables_v2.1.xlsx exists",
+  file.exists("data/reference/all_codes_resolved_next_tables_v2.1.xlsx")
+)
+
+# ==============================================================================
 # SECTION 14: SUMMARY ----
 # ==============================================================================
 
@@ -809,6 +848,7 @@ message("  * CANCER-01: NLPHL mutual exclusivity (classify_codes)")
 message("  * DEATH-01/02: DEATH_CAUSE_MAP structure and coverage")
 message("  * TREAT-01: Tumor registry source removed from treatment pipeline")
 message("  * TREAT-01: Coverage analysis output validates removal impact")
+message("  * TREAT-02: DRUG_GROUPINGS centralization from xlsx")
 
 if (failed > 0) {
   quit(status = 1)
