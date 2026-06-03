@@ -1145,13 +1145,13 @@ DEATH_CAUSE_MAP <- c(
 #
 # Source: data/reference/all_codes_resolved_next_tables_v2.1.xlsx
 # Extracted: Phase 77 (2026-06-02)
-# Categories: Chemotherapy (203 codes), Radiation (15 codes), SCT (41 codes),
+# Categories: Chemotherapy (205 codes), Radiation (15 codes), SCT (41 codes),
 #            Immunotherapy (27 codes), Supportive Care (171 codes)
 # Total: 454 treatment code mappings
 # ==============================================================================
 
 DRUG_GROUPINGS <- c(
-  # Chemotherapy (203 codes)
+  # Chemotherapy (205 codes)
   "1147324" = "Chemotherapy",
   "J9354" = "Chemotherapy",
   "2001102" = "Chemotherapy",
@@ -1336,11 +1336,13 @@ DRUG_GROUPINGS <- c(
   "J9311" = "Chemotherapy",
   "J9312" = "Chemotherapy",
   "J9315" = "Chemotherapy",
+  "J9318" = "Chemotherapy", # Replaces J9315 (romidepsin, non-lyophilized)
   "J9319" = "Chemotherapy",
   "J9317" = "Chemotherapy",
   "J9349" = "Chemotherapy",
   "J9330" = "Chemotherapy",
   "J9340" = "Chemotherapy",
+  "J9341" = "Chemotherapy", # Replaces J9340 (thiotepa/Tepylute)
   "J9351" = "Chemotherapy",
   "J9355" = "Chemotherapy",
   "11198" = "Chemotherapy",
