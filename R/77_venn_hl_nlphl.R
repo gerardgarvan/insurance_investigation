@@ -158,25 +158,14 @@ pct_nlphl_only <- n_nlphl_only / n_total * 100
 pct_both <- n_both / n_total * 100
 pct_classical_only <- n_classical_only / n_total * 100
 
-# Main count labels (upper portion of each region)
+# Combined labels: total + 7-day confirmed in one block per region
 labels_df <- data.frame(
   x = c(-offset - 0.5, 0, offset + 0.5),
-  y = c(0.25, 0.25, 0.25),
+  y = c(0, 0, 0),
   label = c(
-    glue("{comma(n_nlphl_only)}\n({round(pct_nlphl_only, 1)}%)"),
-    glue("{comma(n_both)}\n({round(pct_both, 1)}%)"),
-    glue("{comma(n_classical_only)}\n({round(pct_classical_only, 1)}%)")
-  )
-)
-
-# 7-day confirmed sub-labels (below main counts)
-sub_labels_df <- data.frame(
-  x = c(-offset - 0.5, 0, offset + 0.5),
-  y = c(-0.55, -0.55, -0.55),
-  label = c(
-    glue("7-day confirmed:\n{comma(n_nlphl_only_7day)} ({round(n_nlphl_only_7day / n_nlphl_only * 100, 1)}%)"),
-    glue("7-day confirmed:\n{comma(n_both_7day)} in \u22651 cat\n{comma(n_both_7day_both_cat)} in both"),
-    glue("7-day confirmed:\n{comma(n_classical_only_7day)} ({round(n_classical_only_7day / n_classical_only * 100, 1)}%)")
+    glue("All: {comma(n_nlphl_only)}\n({round(pct_nlphl_only, 1)}%)\n\n7-day: {comma(n_nlphl_only_7day)}\n({round(n_nlphl_only_7day / n_nlphl_only * 100, 1)}% of region)"),
+    glue("All: {comma(n_both)}\n({round(pct_both, 1)}%)\n\n7-day: {comma(n_both_7day)} in \u22651 cat\n{comma(n_both_7day_both_cat)} in both"),
+    glue("All: {comma(n_classical_only)}\n({round(pct_classical_only, 1)}%)\n\n7-day: {comma(n_classical_only_7day)}\n({round(n_classical_only_7day / n_classical_only * 100, 1)}% of region)")
   )
 )
 
@@ -206,17 +195,11 @@ p_venn <- ggplot() +
     aes(x = x, y = y),
     fill = fill_classical, alpha = 0.35, color = fill_classical, linewidth = 1
   ) +
-  # Count labels inside regions
+  # Count labels inside regions (total + 7-day combined)
   geom_text(
     data = labels_df,
     aes(x = x, y = y, label = label),
-    size = 5, fontface = "bold", lineheight = 0.9
-  ) +
-  # 7-day confirmed sub-labels
-  geom_text(
-    data = sub_labels_df,
-    aes(x = x, y = y, label = label),
-    size = 3.2, lineheight = 0.85, color = "gray25"
+    size = 4.5, fontface = "bold", lineheight = 0.9
   ) +
   # Group titles above circles
   geom_text(
