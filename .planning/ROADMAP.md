@@ -184,5 +184,22 @@ Plans:
 - [x] 81-01-PLAN.md — Add CODE_SUBCATEGORY_MAP to R/00_config.R with 200+ treatment code-to-name mappings
 - [x] 81-02-PLAN.md — Modify R/56 (NA filtering, category column, 3-tier lookup) and update R/88 smoke test
 
+### Phase 82: Non-Informative Sub-Categories -- Encounter-Level Dx Code Deduplication
+
+**Goal:** Identify non-informative encounter diagnosis codes in R/56 Table 1, check whether a helpful treatment code exists in the same encounter, and deduplicate by counting only the helpful code. Orphan dx-only encounters preserved with flag column.
+**Requirements**: P82-EXPLORE, P82-COOCCUR, P82-INTEGRATE, P82-FLAG, P82-SMOKE, P82-QUAL
+**Depends on:** Phase 81
+**Success Criteria** (what must be TRUE):
+  1. R/57 exploration script produces diagnostic output: dx code partner rate, orphan count, Table 1 before/after impact
+  2. R/56 Table 1 removes non-informative Encounter Dx codes when helpful code exists in same encounter
+  3. R/56 Table 1 preserves orphan dx-only rows with `dx_only` flag column (not deleted)
+  4. Deduplication uses `str_detect(sub_category, "Encounter Dx")` pattern matching (not hardcoded list)
+  5. Smoke test (R/88) validates Phase 82 changes including dx_only flag, encounter-level join, pattern matching
+**Plans:** 2 plans
+
+Plans:
+- [ ] 82-01-PLAN.md — Create R/57 exploration script for encounter-level dx co-occurrence analysis
+- [ ] 82-02-PLAN.md — Integrate deduplication into R/56 Table 1 and update R/88 smoke test
+
 ---
-*Last updated: 2026-06-03 -- Phase 81 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-03 -- Phase 82 planned (2 plans, 2 waves)*
