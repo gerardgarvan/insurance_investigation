@@ -487,6 +487,8 @@ totals_code <- tibble(
 # SECTION 8b: V2 (7-DAY FILTERED) TABLES ----
 # ==============================================================================
 # Phase 77 CANCER-02: Same aggregation logic applied to filtered dataset
+# IMPORTANT: Pre/post/both counts are ALSO filtered to 7-day confirmed
+# patient-code pairs, so counts are consistent with total_patients.
 
 message("\n--- V2 (7-day filtered) Tables ---")
 
@@ -500,13 +502,45 @@ if (n_unclassified_v2 > 0) {
   code_baseline_v2$category[is.na(code_baseline_v2$category)] <- "Unclassified"
 }
 
-# V2 code summary: join with pre/post/both counts and records
-# Pre/post/both come from dx_raw temporal analysis (same as v1 -- temporal
-# split is NOT affected by 7-day filter per Pitfall 1 in RESEARCH.md)
+# --- V2 pre/post/both: filter to 7-day confirmed patient-code pairs ---
+# Only count a patient as pre/post/both for a code if they meet the 7-day
+# gap threshold for that code (i.e., appear in cancer_summary_v2).
+v2_valid_pairs <- cancer_summary_v2 %>%
+  distinct(ID, cancer_code)
+
+message(glue("  V2 valid patient-code pairs: {format(nrow(v2_valid_pairs), big.mark=',')}"))
+
+patients_pre_v2 <- patients_pre %>%
+  semi_join(v2_valid_pairs, by = c("ID", "cancer_code"))
+
+patients_post_v2 <- patients_post %>%
+  semi_join(v2_valid_pairs, by = c("ID", "cancer_code"))
+
+patients_both_v2 <- patients_both %>%
+  semi_join(v2_valid_pairs, by = c("ID", "cancer_code"))
+
+message(glue("  V2 pre-HL patient-code pairs: {format(nrow(patients_pre_v2), big.mark=',')} ({format(n_distinct(patients_pre_v2$ID), big.mark=',')} patients)"))
+message(glue("  V2 post-HL patient-code pairs: {format(nrow(patients_post_v2), big.mark=',')} ({format(n_distinct(patients_post_v2$ID), big.mark=',')} patients)"))
+message(glue("  V2 both (intersection): {format(nrow(patients_both_v2), big.mark=',')} patient-code pairs ({format(n_distinct(patients_both_v2$ID), big.mark=',')} patients)"))
+
+# Code-level pre/post/both counts (V2 filtered)
+pre_counts_v2 <- patients_pre_v2 %>%
+  group_by(cancer_code) %>%
+  summarise(pre_hl_count = n_distinct(ID), .groups = "drop")
+
+post_counts_v2 <- patients_post_v2 %>%
+  group_by(cancer_code) %>%
+  summarise(post_hl_count = n_distinct(ID), .groups = "drop")
+
+both_counts_v2 <- patients_both_v2 %>%
+  group_by(cancer_code) %>%
+  summarise(both_count = n_distinct(ID), .groups = "drop")
+
+# V2 code summary: join with V2-filtered pre/post/both counts
 code_summary_v2 <- code_baseline_v2 %>%
-  left_join(pre_counts, by = "cancer_code") %>%
-  left_join(post_counts, by = "cancer_code") %>%
-  left_join(both_counts, by = "cancer_code") %>%
+  left_join(pre_counts_v2, by = "cancer_code") %>%
+  left_join(post_counts_v2, by = "cancer_code") %>%
+  left_join(both_counts_v2, by = "cancer_code") %>%
   left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
   mutate(
     total_records = coalesce(total_records, 0L),
@@ -525,12 +559,31 @@ code_summary_v2 <- code_baseline_v2 %>%
 # V2 category summary
 category_summary_v2 <- compute_category_summary(cancer_summary_v2, "V2 7-day filtered")
 
-# V2 category pre/post/both (same source as v1 -- patients_pre/post/both unchanged)
+# Category-level pre/post/both using V2-filtered patient sets (unique patients per category)
+cat_pre_by_category_v2 <- patients_pre_v2 %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  group_by(category) %>%
+  summarise(pre_hl_count = n_distinct(ID), .groups = "drop")
+
+cat_post_by_category_v2 <- patients_post_v2 %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  group_by(category) %>%
+  summarise(post_hl_count = n_distinct(ID), .groups = "drop")
+
+cat_both_by_category_v2 <- patients_both_v2 %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  group_by(category) %>%
+  summarise(both_count = n_distinct(ID), .groups = "drop")
+
+cat_records_v2 <- code_summary_v2 %>%
+  group_by(category) %>%
+  summarise(total_records = sum(total_records), .groups = "drop")
+
 category_summary_v2 <- category_summary_v2 %>%
-  left_join(cat_pre_by_category, by = "category") %>%
-  left_join(cat_post_by_category, by = "category") %>%
-  left_join(cat_both_by_category, by = "category") %>%
-  left_join(cat_records, by = "category") %>%
+  left_join(cat_pre_by_category_v2, by = "category") %>%
+  left_join(cat_post_by_category_v2, by = "category") %>%
+  left_join(cat_both_by_category_v2, by = "category") %>%
+  left_join(cat_records_v2, by = "category") %>%
   mutate(
     pre_hl_count  = if_else(category %in% c("Hodgkin Lymphoma (non-NLPHL)", "NLPHL"), NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
     post_hl_count = if_else(category %in% c("Hodgkin Lymphoma (non-NLPHL)", "NLPHL"), NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
@@ -538,7 +591,7 @@ category_summary_v2 <- category_summary_v2 %>%
   ) %>%
   arrange(desc(total_patients))
 
-# V2 totals
+# V2 totals (using V2-filtered patient sets)
 totals_category_v2 <- tibble(
   category              = "TOTAL",
   total_patients        = n_distinct(cancer_summary_v2$ID),
@@ -550,9 +603,9 @@ totals_category_v2 <- tibble(
   median_unique_dates   = NA_real_,
   mean_dates_7day_sep   = NA_real_,
   median_dates_7day_sep = NA_real_,
-  pre_hl_count          = as.integer(n_distinct(patients_pre$ID)),
-  post_hl_count         = as.integer(n_distinct(patients_post$ID)),
-  both_count            = as.integer(n_distinct(patients_both$ID)),
+  pre_hl_count          = as.integer(n_distinct(patients_pre_v2$ID)),
+  post_hl_count         = as.integer(n_distinct(patients_post_v2$ID)),
+  both_count            = as.integer(n_distinct(patients_both_v2$ID)),
   total_records         = sum(category_summary_v2$total_records)
 )
 
@@ -568,9 +621,9 @@ totals_code_v2 <- tibble(
   median_unique_dates   = NA_real_,
   mean_dates_7day_sep   = NA_real_,
   median_dates_7day_sep = NA_real_,
-  pre_hl_count          = as.integer(n_distinct(patients_pre$ID)),
-  post_hl_count         = as.integer(n_distinct(patients_post$ID)),
-  both_count            = as.integer(n_distinct(patients_both$ID)),
+  pre_hl_count          = as.integer(n_distinct(patients_pre_v2$ID)),
+  post_hl_count         = as.integer(n_distinct(patients_post_v2$ID)),
+  both_count            = as.integer(n_distinct(patients_both_v2$ID)),
   total_records         = sum(code_summary_v2$total_records)
 )
 
