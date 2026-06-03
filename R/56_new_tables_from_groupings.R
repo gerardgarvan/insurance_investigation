@@ -30,6 +30,8 @@
 #   - TREAT-03: Two new summary tables matching all_codes_resolved_next_tables.xlsx
 #     Sheet1 templates with sub-category-level and encounter-level summaries
 #   - QUAL-01: v2.0 script standards (documentation, assertions, section structure)
+#   - P82-INTEGRATE: Encounter-level dx deduplication integrated into R/56 Table 1
+#   - P82-FLAG: dx_only flag column added to Table 1 for orphan encounter preservation
 #
 # Decision Traceability:
 #   - D-01: Filter out NA cancer_codes rows from both tables (Phase 81)
@@ -45,6 +47,11 @@
 #   - D-15: Cancer codes = cancer/neoplasm ICD codes only (not all diagnoses),
 #     semicolon-separated
 #   - D-16: Data source = treatment_episodes.rds + DuckDB DIAGNOSIS join via encounter_ids
+#   - D-01 (P82): Non-informative = sub_categories matching "Encounter Dx" pattern
+#   - D-03 (P82): Co-occurrence checked within same encounter_id, not episode
+#   - D-05 (P82): Orphan dx-only encounters preserved with dx_only flag column
+#   - D-08 (P82): Deduplication applied to Table 1 only (not Table 2)
+#   - D-10 (P82): Pattern matching via str_detect, not hardcoded lists
 #
 # ==============================================================================
 
@@ -220,8 +227,8 @@ pre_join_rows <- nrow(episodes)
 
 episode_dx <- episodes %>%
   mutate(episode_row = row_number()) %>%
-  left_join(episode_cancer, by = "episode_row") %>%
-  select(-episode_row)
+  left_join(episode_cancer, by = "episode_row")
+# NOTE: episode_row kept for encounter-level join in Section 5B (Phase 82)
 
 warn_row_count(
   episode_dx,
@@ -403,14 +410,78 @@ n_tier2 <- sum(
 n_remaining_fallback <- sum(str_detect(episode_codes$sub_category, "no xlsx mapping|no mapping|unmapped|other|RxNorm|DRG|Revenue|Encounter Dx|Procedure|CAR-T"))
 message(glue("  Sub-category resolution: {n_tier1} xlsx, {n_tier2} CODE_SUBCATEGORY_MAP, {n_remaining_fallback} code-type fallback"))
 
+
+# SECTION 5B: ENCOUNTER-LEVEL DX CODE DEDUPLICATION (Phase 82) ----
+
+message()
+message("--- Encounter-level Dx code deduplication (Table 1 only, per D-08) ---")
+
+# Step 1: Flag non-informative Encounter Dx codes via pattern matching (D-01, D-10)
+episode_codes <- episode_codes %>%
+  mutate(is_non_informative = str_detect(sub_category, "Encounter Dx"))
+
+n_non_informative <- sum(episode_codes$is_non_informative, na.rm = TRUE)
+n_helpful <- sum(!episode_codes$is_non_informative, na.rm = TRUE)
+message(glue("  Non-informative (Encounter Dx) code instances: {n_non_informative}"))
+message(glue("  Helpful (specific treatment) code instances: {n_helpful}"))
+
+# Step 2: Connect treatment codes to encounters for co-occurrence check (D-03, D-04)
+# episode_codes has episode_row (kept from Section 4 modification)
+# episode_encounters has (episode_row, ENCOUNTERID) from Section 4
+# Join: every treatment code in an episode maps to every encounter in that episode
+episode_codes_enc <- episode_codes %>%
+  inner_join(
+    episode_encounters %>% select(episode_row, ENCOUNTERID),
+    by = "episode_row",
+    relationship = "many-to-many"
+  )
+
+message(glue("  Encounter-level code instances: {nrow(episode_codes_enc)}"))
+
+# Step 3: Per encounter, check if ANY helpful code exists (D-03)
+encounter_has_helpful <- episode_codes_enc %>%
+  group_by(ENCOUNTERID) %>%
+  summarise(has_helpful = any(!is_non_informative), .groups = "drop")
+
+# Step 4: Join back and compute dx_only flag (D-05)
+episode_codes_enc <- episode_codes_enc %>%
+  left_join(encounter_has_helpful, by = "ENCOUNTERID") %>%
+  mutate(dx_only = is_non_informative & !has_helpful)
+
+n_with_partner <- sum(episode_codes_enc$is_non_informative & episode_codes_enc$has_helpful, na.rm = TRUE)
+n_orphan <- sum(episode_codes_enc$dx_only, na.rm = TRUE)
+pct_partner <- if (n_non_informative > 0) round(100 * n_with_partner / (n_with_partner + n_orphan), 1) else 0
+message(glue("  Encounter Dx codes with helpful partner: {n_with_partner} ({pct_partner}%)"))
+message(glue("  Encounter Dx codes orphaned (dx_only): {n_orphan} ({100 - pct_partner}%)"))
+
+# Step 5: Deduplicate back to episode level for Table 1
+# Remove dx codes that have a helpful partner in ANY of their encounters
+# Keep orphan dx codes with dx_only=TRUE flag (D-05)
+episode_codes_dedup <- episode_codes_enc %>%
+  group_by(episode_row, treatment_code, sub_category, category, code_type, cancer_codes, is_non_informative) %>%
+  summarise(
+    removable = any(has_helpful) & first(is_non_informative),
+    dx_only = all(dx_only),
+    .groups = "drop"
+  ) %>%
+  filter(!removable) %>%
+  select(-removable, -is_non_informative)
+
+n_before <- nrow(episode_codes %>% filter(!is.na(cancer_codes)))
+n_after <- nrow(episode_codes_dedup %>% filter(!is.na(cancer_codes)))
+message(glue("  Table 1 code instances before dedup: {n_before}"))
+message(glue("  Table 1 code instances after dedup: {n_after}"))
+message(glue("  Removed: {n_before - n_after} ({round(100 * (n_before - n_after) / max(n_before, 1), 1)}%)"))
+
+
 # Custom category sort order (logical treatment sequence, not alphabetical)
 category_order <- c("Chemotherapy", "Immunotherapy", "Radiation", "SCT")
 
-# Aggregate: one row per sub_category + cancer_codes combination
-table1 <- episode_codes %>%
+# Use deduplicated episode_codes for Table 1 (Phase 82: encounter-level dx dedup)
+table1 <- episode_codes_dedup %>%
   filter(!is.na(cancer_codes)) %>%  # Per D-01: exclude rows without cancer diagnosis codes
   mutate(category = factor(category, levels = category_order)) %>%  # Per D-05: custom sort order
-  group_by(category, sub_category, treatment_code, code_type, cancer_codes) %>%
+  group_by(category, sub_category, treatment_code, code_type, cancer_codes, dx_only) %>%
   summarise(encounter_count = n(), .groups = "drop") %>%
   arrange(category, desc(encounter_count)) %>%  # Per D-05: category first, then desc count
   mutate(category = as.character(category))  # Convert back from factor for xlsx output
@@ -432,6 +503,9 @@ if (nrow(subcat_summary) > 20) {
 
 
 # SECTION 6: TABLE 2 -- ENCOUNTER TREATMENT SUMMARY ----
+
+# Clean up episode_row before Table 2 (not needed downstream)
+episode_dx <- episode_dx %>% select(-episode_row)
 
 message()
 message("--- Building Table 2: Encounter Treatment Summary ---")
@@ -482,6 +556,8 @@ message(glue("  Table 1 (Sub-Category Summary):"))
 message(glue("    Total rows: {nrow(table1)}"))
 message(glue("    Categories: {paste(unique(table1$category), collapse = ', ')}"))
 message(glue("    Sub-categories: {n_distinct(table1$sub_category)}"))
+message(glue("    Dx codes deduplicated: {n_before - n_after} instances removed"))
+message(glue("    Orphan dx-only rows preserved: {sum(table1$dx_only, na.rm = TRUE)}"))
 message()
 message(glue("  Table 2 (Encounter Treatment Summary):"))
 message(glue("    Total rows: {nrow(table2)}"))
