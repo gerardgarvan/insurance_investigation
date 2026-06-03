@@ -77,12 +77,13 @@ replaced_by_pairs <- NULL
 for (sheet_name in sheet_names) {
   sheet_data <- wb_to_df(wb, sheet = sheet_name)
 
-  # Check for replaced-by pattern columns
+  # Check for replaced-by pattern columns (drop NAs from unnamed columns)
   cols <- tolower(names(sheet_data))
+  cols <- cols[!is.na(cols)]
 
   # Look for old->new code pair patterns
-  has_replaced_by <- any(str_detect(cols, "replaced|next"))
-  has_code_col <- any(str_detect(cols, "^code$|old_code"))
+  has_replaced_by <- any(str_detect(cols, "replaced|next"), na.rm = TRUE)
+  has_code_col <- any(str_detect(cols, "^code$|old_code"), na.rm = TRUE)
 
   if (has_replaced_by && has_code_col) {
     message(glue("  Found replaced-by mappings in sheet: {sheet_name}"))
