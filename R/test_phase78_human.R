@@ -358,7 +358,7 @@ message("Running R/88_smoke_test_comprehensive.R...")
 # Capture smoke test output to check for failures
 smoke_output <- capture.output({
   smoke_result <- tryCatch({
-    source("R/88_smoke_test_comprehensive.R")
+    source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
     "success"
   }, error = function(e) {
     conditionMessage(e)
