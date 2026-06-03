@@ -446,7 +446,9 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
       cache_seconds <- as.numeric(difftime(Sys.time(), cache_start, units = "secs"))
 
       # SAFE-02: Validate cached RDS loaded correctly
-      assert_df_valid(df, table_name, c("ID"), script_name = "R/01", allow_empty = TRUE)
+      # PROVIDER table uses PROVIDERID instead of ID (PCORnet CDM v7.0 schema)
+      required_cols <- if (table_name == "PROVIDER") character(0) else c("ID")
+      assert_df_valid(df, table_name, required_cols, script_name = "R/01", allow_empty = TRUE)
 
       original_parse_seconds <- attr(df, "csv_parse_seconds")
       if (!is.null(original_parse_seconds)) {
