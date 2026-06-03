@@ -101,7 +101,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.0 (2026-06-02)
 
-**Pipeline status:** 79 phases completed across 10 milestones. 74 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. Tumor registry sources removed from treatment pipeline (Phase 76). Phase 77: drug groupings centralized (454 codes in DRUG_GROUPINGS), R/49 dual v1/v2 output with 7-day gap filter for all cancer categories, NLPHL diagnostic breakout. Phase 78: death cause quality profiling (R/35), episode enrichment with code descriptions + drug groups (R/28), cause of death + drug group in Gantt v2 exports (R/52). Phase 79: SCT code 0362 investigation (R/54), replaced-by code verification with igraph cycle detection (R/55), drug grouping summary tables (R/56). Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
+**Pipeline status:** 80 phases completed across 10 milestones. 74 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. Tumor registry sources removed from treatment pipeline (Phase 76). Phase 77: drug groupings centralized (454 codes in DRUG_GROUPINGS), R/49 dual v1/v2 output with 7-day gap filter for all cancer categories, NLPHL diagnostic breakout. Phase 78: death cause quality profiling (R/35), episode enrichment with code descriptions + drug groups (R/28), cause of death + drug group in Gantt v2 exports (R/52). Phase 79: SCT code 0362 investigation (R/54), replaced-by code verification with igraph cycle detection (R/55), drug grouping summary tables (R/56). Phase 80: comprehensive smoke test updated to validate all v2.1 changes (27 sections, 3 new Phase 79 validation sections, decade lists expanded). Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
 
 ## Previous Milestones
 
@@ -265,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after Phase 79 completion (SCT 0362 investigation, replaced-by code verification, drug grouping summary tables)*
+*Last updated: 2026-06-03 after Phase 80 completion (smoke test updates for all v2.1 changes)*
