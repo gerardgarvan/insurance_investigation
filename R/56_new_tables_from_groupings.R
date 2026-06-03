@@ -34,7 +34,7 @@
 # Decision Traceability:
 #   - D-01: Filter out NA cancer_codes rows from both tables (Phase 81)
 #   - D-03: Add category column as first column in Table 1 (Phase 81)
-#   - D-04: Category derived from treatment_type directly (Phase 81)
+#   - D-04: Category derived from DRUG_GROUPINGS per-code lookup, fallback to treatment_type
 #   - D-05: Sort Table 1 by category, then desc(encounter_count) (Phase 81)
 #   - D-09: 3-tier lookup: xlsx -> CODE_SUBCATEGORY_MAP -> code-type fallback (Phase 81)
 #   - D-12: Single xlsx output with 2 sheets matching templates
@@ -246,11 +246,15 @@ message("--- Building Table 1: Sub-Category Summary ---")
 
 # Split triggering_codes into individual codes and map to sub-categories
 episode_codes <- episode_dx %>%
-  mutate(category = treatment_type) %>%  # Per D-03, D-04: derive from treatment_type
   mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
   unnest(code_list) %>%
   filter(!is.na(code_list), code_list != "") %>%
-  rename(treatment_code = code_list)
+  rename(treatment_code = code_list) %>%
+  mutate(category = ifelse(
+    treatment_code %in% names(DRUG_GROUPINGS),
+    DRUG_GROUPINGS[treatment_code],
+    treatment_type  # fallback for codes not in DRUG_GROUPINGS
+  ))
 
 # Build code-type lookup vectors from TREATMENT_CODES for sub-category fallback
 chemo_dx_codes <- c(TREATMENT_CODES$chemo_dx_icd10, TREATMENT_CODES$chemo_dx_icd9)
@@ -276,6 +280,7 @@ sct_cpt_hcpcs_codes <- c(TREATMENT_CODES$sct_cpt, TREATMENT_CODES$sct_hcpcs)
 sct_rxnorm_codes <- TREATMENT_CODES$sct_rxnorm
 
 immuno_rxnorm_codes <- TREATMENT_CODES$immunotherapy_rxnorm
+immuno_hcpcs_codes <- TREATMENT_CODES$immunotherapy_hcpcs
 immuno_drg_codes <- TREATMENT_CODES$immunotherapy_drg
 cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
 
@@ -290,41 +295,42 @@ episode_codes <- episode_codes %>%
       treatment_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[treatment_code],
 
       # Tier 3: Code-type fallback labels (only for codes in neither lookup)
-      # Immunotherapy
-      treatment_type == "Immunotherapy" & treatment_code %in% immuno_rxnorm_codes ~ "Immunotherapy RxNorm",
-      treatment_type == "Immunotherapy" & treatment_code %in% immuno_drg_codes ~ "Immunotherapy DRG",
-      treatment_type == "Immunotherapy" & treatment_code %in% cart_icd10pcs ~ "CAR-T Procedure (ICD-10-PCS)",
-      treatment_type == "Immunotherapy" ~ "Immunotherapy (other)",
+      # Immunotherapy (use category from DRUG_GROUPINGS, not treatment_type)
+      category == "Immunotherapy" & treatment_code %in% immuno_hcpcs_codes ~ "Immunotherapy HCPCS",
+      category == "Immunotherapy" & treatment_code %in% immuno_rxnorm_codes ~ "Immunotherapy RxNorm",
+      category == "Immunotherapy" & treatment_code %in% immuno_drg_codes ~ "Immunotherapy DRG",
+      category == "Immunotherapy" & treatment_code %in% cart_icd10pcs ~ "CAR-T Procedure (ICD-10-PCS)",
+      category == "Immunotherapy" ~ "Immunotherapy (other)",
 
       # Chemotherapy by code type
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_hcpcs_codes ~ "Chemo HCPCS (no xlsx mapping)",
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_rxnorm_codes ~ "Chemo RxNorm",
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_dx_codes ~ "Chemo Encounter Dx Code",
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_proc_icd9 ~ "Chemo Procedure (ICD-9)",
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_proc_icd10pcs ~ "Chemo Procedure (ICD-10-PCS)",
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_drg_codes ~ "Chemo DRG",
-      treatment_type == "Chemotherapy" & treatment_code %in% chemo_rev_codes ~ "Chemo Revenue Code",
-      treatment_type == "Chemotherapy" ~ "Chemotherapy (unmapped)",
+      category == "Chemotherapy" & treatment_code %in% chemo_hcpcs_codes ~ "Chemo HCPCS (no xlsx mapping)",
+      category == "Chemotherapy" & treatment_code %in% chemo_rxnorm_codes ~ "Chemo RxNorm",
+      category == "Chemotherapy" & treatment_code %in% chemo_dx_codes ~ "Chemo Encounter Dx Code",
+      category == "Chemotherapy" & treatment_code %in% chemo_proc_icd9 ~ "Chemo Procedure (ICD-9)",
+      category == "Chemotherapy" & treatment_code %in% chemo_proc_icd10pcs ~ "Chemo Procedure (ICD-10-PCS)",
+      category == "Chemotherapy" & treatment_code %in% chemo_drg_codes ~ "Chemo DRG",
+      category == "Chemotherapy" & treatment_code %in% chemo_rev_codes ~ "Chemo Revenue Code",
+      category == "Chemotherapy" ~ "Chemotherapy (unmapped)",
 
       # Radiation by code type
-      treatment_type == "Radiation" & treatment_code %in% rad_dx_codes ~ "Radiation Encounter Dx Code",
-      treatment_type == "Radiation" & treatment_code %in% rad_proc_icd9 ~ "Radiation Procedure (ICD-9)",
-      treatment_type == "Radiation" & str_detect(treatment_code, rad_icd10pcs_pattern) ~ "Radiation Procedure (ICD-10-PCS)",
-      treatment_type == "Radiation" & treatment_code %in% rad_drg_codes ~ "Radiation DRG",
-      treatment_type == "Radiation" & treatment_code %in% rad_rev_codes ~ "Radiation Revenue Code",
-      treatment_type == "Radiation" & treatment_code %in% rad_cpt_codes ~ "Radiation CPT (no xlsx mapping)",
-      treatment_type == "Radiation" ~ "Radiation (unmapped)",
+      category == "Radiation" & treatment_code %in% rad_dx_codes ~ "Radiation Encounter Dx Code",
+      category == "Radiation" & treatment_code %in% rad_proc_icd9 ~ "Radiation Procedure (ICD-9)",
+      category == "Radiation" & str_detect(treatment_code, rad_icd10pcs_pattern) ~ "Radiation Procedure (ICD-10-PCS)",
+      category == "Radiation" & treatment_code %in% rad_drg_codes ~ "Radiation DRG",
+      category == "Radiation" & treatment_code %in% rad_rev_codes ~ "Radiation Revenue Code",
+      category == "Radiation" & treatment_code %in% rad_cpt_codes ~ "Radiation CPT (no xlsx mapping)",
+      category == "Radiation" ~ "Radiation (unmapped)",
 
       # SCT by code type
-      treatment_type == "SCT" & treatment_code %in% sct_cpt_hcpcs_codes ~ "SCT CPT/HCPCS (no xlsx mapping)",
-      treatment_type == "SCT" & treatment_code %in% sct_rxnorm_codes ~ "SCT RxNorm",
-      treatment_type == "SCT" & treatment_code %in% sct_proc_icd9 ~ "SCT Procedure (ICD-9)",
-      treatment_type == "SCT" & treatment_code %in% sct_proc_icd10pcs ~ "SCT Procedure (ICD-10-PCS)",
-      treatment_type == "SCT" & treatment_code %in% sct_drg_codes ~ "SCT DRG",
-      treatment_type == "SCT" & treatment_code %in% sct_rev_codes ~ "SCT Revenue Code",
-      treatment_type == "SCT" ~ "SCT (unmapped)",
+      category == "SCT" & treatment_code %in% sct_cpt_hcpcs_codes ~ "SCT CPT/HCPCS (no xlsx mapping)",
+      category == "SCT" & treatment_code %in% sct_rxnorm_codes ~ "SCT RxNorm",
+      category == "SCT" & treatment_code %in% sct_proc_icd9 ~ "SCT Procedure (ICD-9)",
+      category == "SCT" & treatment_code %in% sct_proc_icd10pcs ~ "SCT Procedure (ICD-10-PCS)",
+      category == "SCT" & treatment_code %in% sct_drg_codes ~ "SCT DRG",
+      category == "SCT" & treatment_code %in% sct_rev_codes ~ "SCT Revenue Code",
+      category == "SCT" ~ "SCT (unmapped)",
 
-      TRUE ~ treatment_type
+      TRUE ~ category
     )
   )
 

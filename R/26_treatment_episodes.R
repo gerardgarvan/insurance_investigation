@@ -310,11 +310,14 @@ extract_sct_dates_with_codes <- function() {
 extract_immunotherapy_dates_with_codes <- function() {
   cart_icd10pcs_rx <- paste0("^(", paste(TREATMENT_CODES$cart_icd10pcs_prefixes, collapse = "|"), ")")
 
-  # 1. PROCEDURES: ICD-10-PCS CAR T-cell codes (prefix match) — bare code = PX
+  # 1. PROCEDURES: HCPCS J-codes + ICD-10-PCS CAR T-cell codes — bare code = PX
   px_dates <- NULL
   if (!is.null(get_pcornet_table("PROCEDURES"))) {
     px_dates <- get_pcornet_table("PROCEDURES") %>%
-      filter(PX_TYPE == "10" & str_detect(PX, cart_icd10pcs_rx)) %>%
+      filter(
+        (PX_TYPE == "CH" & PX %in% TREATMENT_CODES$immunotherapy_hcpcs) |
+          (PX_TYPE == "10" & str_detect(PX, cart_icd10pcs_rx))
+      ) %>%
       filter(!is.na(PX_DATE)) %>%
       select(ID, treatment_date = PX_DATE, triggering_code = PX, ENCOUNTERID) %>%
       collect()
@@ -330,8 +333,43 @@ extract_immunotherapy_dates_with_codes <- function() {
       collect()
   }
 
+  # 3. PRESCRIBING: RXNORM_CUI — bare RxNorm CUI
+  rx_dates <- NULL
+  if (!is.null(get_pcornet_table("PRESCRIBING")) &&
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("PRESCRIBING"))) {
+    rx_dates <- get_pcornet_table("PRESCRIBING") %>%
+      filter(RXNORM_CUI %in% TREATMENT_CODES$immunotherapy_rxnorm) %>%
+      mutate(treatment_date = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
+      filter(!is.na(treatment_date)) %>%
+      select(ID, treatment_date, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
+      collect()
+  }
+
+  # 4. DISPENSING: RXNORM_CUI — bare RxNorm CUI
+  disp_dates <- NULL
+  if (!is.null(get_pcornet_table("DISPENSING")) &&
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
+    disp_dates <- get_pcornet_table("DISPENSING") %>%
+      filter(RXNORM_CUI %in% TREATMENT_CODES$immunotherapy_rxnorm) %>%
+      filter(!is.na(DISPENSE_DATE)) %>%
+      select(ID, treatment_date = DISPENSE_DATE, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
+      collect()
+  }
+
+  # 5. MED_ADMIN: RXNORM_CUI — bare RxNorm CUI
+  ma_dates <- NULL
+  if (!is.null(get_pcornet_table("MED_ADMIN")) &&
+    "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
+    ma_dates <- get_pcornet_table("MED_ADMIN") %>%
+      filter(RXNORM_CUI %in% TREATMENT_CODES$immunotherapy_rxnorm) %>%
+      filter(!is.na(MEDADMIN_START_DATE)) %>%
+      select(ID, treatment_date = MEDADMIN_START_DATE, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
+      collect()
+  }
+
   stack_and_dedup_with_codes(
-    sources = list(PX = px_dates, DRG = drg_dates),
+    sources = list(PX = px_dates, DRG = drg_dates, RX = rx_dates,
+                   DISP = disp_dates, MA = ma_dates),
     type_name = "Immunotherapy"
   )
 }

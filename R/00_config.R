@@ -1145,20 +1145,18 @@ DEATH_CAUSE_MAP <- c(
 #
 # Source: data/reference/all_codes_resolved_next_tables_v2.1.xlsx
 # Extracted: Phase 77 (2026-06-02)
-# Categories: Chemotherapy (205 codes), Radiation (15 codes), SCT (41 codes),
-#            Immunotherapy (27 codes), Supportive Care (171 codes)
+# Categories: Chemotherapy (183 codes), Radiation (15 codes), SCT (41 codes),
+#            Immunotherapy (49 codes), Supportive Care (171 codes)
 # Total: 454 treatment code mappings
 # ==============================================================================
 
 DRUG_GROUPINGS <- c(
-  # Chemotherapy (205 codes)
-  "1147324" = "Chemotherapy",
+  # Chemotherapy (183 codes)
   "J9354" = "Chemotherapy",
   "2001102" = "Chemotherapy",
   "J9017" = "Chemotherapy",
   "J9019" = "Chemotherapy",
   "J9021" = "Chemotherapy",
-  "J9022" = "Chemotherapy",
   "J9025" = "Chemotherapy",
   "J9030" = "Chemotherapy",
   "134547" = "Chemotherapy",
@@ -1178,9 +1176,6 @@ DRUG_GROUPINGS <- c(
   "308771" = "Chemotherapy",
   "J9039" = "Chemotherapy",
   "J9041" = "Chemotherapy",
-  "1147320" = "Chemotherapy",
-  "1147323" = "Chemotherapy",
-  "1147327" = "Chemotherapy",
   "J9043" = "Chemotherapy",
   "J9118" = "Chemotherapy",
   "597195" = "Chemotherapy",
@@ -1190,7 +1185,6 @@ DRUG_GROUPINGS <- c(
   "2105" = "Chemotherapy",
   "309012" = "Chemotherapy",
   "J9050" = "Chemotherapy",
-  "J9119" = "Chemotherapy",
   "J9055" = "Chemotherapy",
   "205821" = "Chemotherapy",
   "2555" = "Chemotherapy",
@@ -1230,7 +1224,6 @@ DRUG_GROUPINGS <- c(
   "1790129" = "Chemotherapy",
   "1799305" = "Chemotherapy",
   "1799307" = "Chemotherapy",
-  "J9173" = "Chemotherapy",
   "J9321" = "Chemotherapy",
   "J9178" = "Chemotherapy",
   "J9179" = "Chemotherapy",
@@ -1263,7 +1256,6 @@ DRUG_GROUPINGS <- c(
   "310973" = "Chemotherapy",
   "5657" = "Chemotherapy",
   "J9208" = "Chemotherapy",
-  "J9228" = "Chemotherapy",
   "J9206" = "Chemotherapy",
   "J9207" = "Chemotherapy",
   "J9217" = "Chemotherapy",
@@ -1299,16 +1291,7 @@ DRUG_GROUPINGS <- c(
   "J9260" = "Chemotherapy",
   "J9280" = "Chemotherapy",
   "J9293" = "Chemotherapy",
-  "J9204" = "Chemotherapy",
   "J9261" = "Chemotherapy",
-  "1597876" = "Chemotherapy",
-  "1657190" = "Chemotherapy",
-  "1657192" = "Chemotherapy",
-  "1657193" = "Chemotherapy",
-  "1657195" = "Chemotherapy",
-  "1657196" = "Chemotherapy",
-  "1991412" = "Chemotherapy",
-  "1991413" = "Chemotherapy",
   "J9999" = "Chemotherapy",
   "J9301" = "Chemotherapy",
   "J9302" = "Chemotherapy",
@@ -1317,13 +1300,8 @@ DRUG_GROUPINGS <- c(
   "J9265" = "Chemotherapy",
   "J9267" = "Chemotherapy",
   "J9266" = "Chemotherapy",
-  "1657749" = "Chemotherapy",
-  "1657750" = "Chemotherapy",
-  "1657751" = "Chemotherapy",
-  "J9271" = "Chemotherapy",
   "J9304" = "Chemotherapy",
   "J9305" = "Chemotherapy",
-  "J9268" = "Chemotherapy",
   "J9306" = "Chemotherapy",
   "J9309" = "Chemotherapy",
   "J9307" = "Chemotherapy",
@@ -1418,7 +1396,31 @@ DRUG_GROUPINGS <- c(
   "30243X0" = "SCT",
   "41.06" = "SCT",
 
-  # Immunotherapy (27 codes)
+  # Immunotherapy (49 codes)
+  # Checkpoint inhibitors and ADCs (moved from Chemotherapy)
+  "J9022" = "Immunotherapy",   # Atezolizumab (anti-PD-L1)
+  "J9119" = "Immunotherapy",   # Cemiplimab (anti-PD-1)
+  "J9173" = "Immunotherapy",   # Durvalumab (anti-PD-L1)
+  "J9204" = "Immunotherapy",   # Mogamulizumab (anti-CCR4)
+  "J9228" = "Immunotherapy",   # Ipilimumab (anti-CTLA-4)
+  "J9268" = "Immunotherapy",   # Pembrolizumab (anti-PD-1)
+  "J9271" = "Immunotherapy",   # Pembrolizumab IV (anti-PD-1)
+  "1147324" = "Immunotherapy", # Brentuximab Vedotin (anti-CD30 ADC)
+  "1147320" = "Immunotherapy", # Brentuximab Vedotin (anti-CD30 ADC)
+  "1147323" = "Immunotherapy", # Brentuximab Vedotin (anti-CD30 ADC)
+  "1147327" = "Immunotherapy", # Brentuximab Vedotin (anti-CD30 ADC)
+  "1597876" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1657190" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1657192" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1657193" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1657195" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1657196" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1991412" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1991413" = "Immunotherapy", # Nivolumab (anti-PD-1)
+  "1657749" = "Immunotherapy", # Pembrolizumab (anti-PD-1)
+  "1657750" = "Immunotherapy", # Pembrolizumab (anti-PD-1)
+  "1657751" = "Immunotherapy", # Pembrolizumab (anti-PD-1)
+  # Original Immunotherapy codes
   "1090823" = "Immunotherapy",
   "XW033E5" = "Immunotherapy",
   "1248142" = "Immunotherapy",
@@ -2057,12 +2059,9 @@ TREATMENT_CODES <- list(
     "J9040", # Bleomycin sulfate
     "J9360", # Vinblastine sulfate
     "J9130", # Dacarbazine (DTIC)
-    "J9042", # Brentuximab vedotin (Adcetris)
-    "J9299", # Nivolumab (Opdivo)
     "J9017", # Phase 39: J9017
     "J9019", # Phase 39: J9019
     "J9021", # Phase 39: J9021
-    "J9022", # Phase 39: J9022
     "J9025", # Phase 39: J9025
     "J9030", # Phase 39: J9030
     "J9033", # Phase 39: J9033
@@ -2087,11 +2086,9 @@ TREATMENT_CODES <- list(
     "J9098", # Phase 39: J9098
     "J9100", # Phase 39: J9100
     "J9118", # Phase 39: J9118
-    "J9119", # Phase 39: J9119
     "J9145", # Phase 39: J9145
     "J9150", # Phase 39: J9150
     "J9171", # Phase 39: J9171
-    "J9173", # Phase 39: J9173
     "J9178", # Phase 39: J9178
     "J9179", # Phase 39: J9179
     "J9181", # Phase 39: J9181
@@ -2101,7 +2098,6 @@ TREATMENT_CODES <- list(
     "J9200", # Phase 39: J9200
     "J9201", # Phase 39: J9201
     "J9202", # Phase 39: J9202
-    "J9204", # Phase 39: J9204
     "J9206", # Phase 39: J9206
     "J9207", # Phase 39: J9207
     "J9208", # Phase 39: J9208
@@ -2109,7 +2105,6 @@ TREATMENT_CODES <- list(
     "J9217", # Phase 39: J9217
     "J9218", # Phase 39: J9218
     "J9223", # Phase 39: J9223
-    "J9228", # Phase 39: J9228
     "J9230", # Phase 39: J9230
     "J9245", # Phase 39: J9245
     "J9246", # Phase 39: J9246
@@ -2121,8 +2116,6 @@ TREATMENT_CODES <- list(
     "J9265", # Phase 39: J9265
     "J9266", # Phase 39: J9266
     "J9267", # Phase 39: J9267
-    "J9268", # Phase 39: J9268
-    "J9271", # Phase 39: J9271
     "J9280", # Phase 39: J9280
     "J9286", # Phase 39: J9286
     "J9293", # Phase 39: J9293
@@ -2164,14 +2157,10 @@ TREATMENT_CODES <- list(
     "67228", # Vinblastine
     "3946", # Dacarbazine
     "239178", # Phase 40: vinblastine sulfate 1 MG/ML Injectable S
-    "1657195", # Phase 40: 10 ML nivolumab 10 MG/ML Injection
     "1791591", # Phase 40: ifosfamide 3000 MG Injection [Ifex]
     "207588", # Phase 40: procarbazine 50 MG Oral Capsule [Matulan
-    "1991412", # Phase 40: 24 ML nivolumab 10 MG/ML Injection
     "134547", # Phase 40: bendamustine
     "1799305", # Phase 40: DOXOrubicin  IV infusion,
-    "1147327", # Phase 40: brentuximab vedotin 50 MG Injection [Adc
-    "1657750", # Phase 40: 4 ML pembrolizumab 25 MG/ML Injection
     "105585", # Phase 40: methotrexate 2.5 MG Oral Tablet
     "1863354", # Phase 40: 2 ML vincristine sulfate 1 MG/ML Injecti
     "1790115", # Phase 40: 10 ML doxorubicin hydrochloride liposome
@@ -2179,7 +2168,6 @@ TREATMENT_CODES <- list(
     "1791598", # Phase 40: ifosfamide IV infusion
     "1946772", # Phase 40: methotrexate 25 MG/ML Injectable Solutio
     "3098", # Phase 40: dacarbazine
-    "1147324", # Phase 40: Adcetris
     "311627", # Phase 40: METHOTREXATE SODIUM (PF) 25 MG/ML  CUSTO
     "1734921", # Phase 40: cyclophosphamide 2000 MG Injection
     "2105", # Phase 40: carmustine
@@ -2187,14 +2175,11 @@ TREATMENT_CODES <- list(
     "1114693", # Phase 40: bendamustine hydrochloride
     "105587", # Phase 40: methotrexate 2.5 MG Oral Tablet [Maxtrex
     "1544390", # Phase 40: 0.35 ML methotrexate 50 MG/ML Auto-Injec
-    "1657196", # Phase 40: 10 ML nivolumab 10 MG/ML Injection [Opdi
-    "1657751", # Phase 40: 4 ML pembrolizumab 25 MG/ML Injection [K
     "1726673", # Phase 40: bleomycin 15 UNT Injection
     "1790099", # Phase 40: 10 ML doxorubicin hydrochloride 2 MG/ML
     "1734919", # Phase 40: cyclophosphamide 1000 MG Injection
     "894900", # Phase 40: VINCRISTINE SULFATE 1 MG/ML IV CUSTOM CO
     "637543", # Phase 40: CYCLOPHOSPHAMIDE  CUSTOM COMPONENT IJ SO
-    "1597876", # Phase 40: nivolumab
     "314167", # Phase 40: procarbazine 50 MG Oral Capsule
     "1734340", # Phase 40: etoposide 100 MG Injection
     "1863349", # Phase 40: vinCRIStine
@@ -2206,7 +2191,6 @@ TREATMENT_CODES <- list(
     "1790097", # Phase 40: 5 ML doxorubicin hydrochloride 2 MG/ML I
     "1805001", # Phase 40: bendamustine hydrochloride 100 MG Inject
     "1790127", # Phase 40: 25 ML doxorubicin hydrochloride liposome
-    "1991413", # Phase 40: 24 ML nivolumab 10 MG/ML Injection [Opdi
     "1191138", # Phase 40: doxorubicin hydrochloride 2 MG/ML Inject
     "1731338", # Phase 40: dacarbazine 200 MG Injection
     "1791597", # Phase 40: 60 ML ifosfamide 50 MG/ML Injection
@@ -2220,7 +2204,6 @@ TREATMENT_CODES <- list(
     "6851", # Phase 40: methotrexate
     "1655968", # Phase 40: 8 ML methotrexate 25 MG/ML Injection
     "1544398", # Phase 40: 0.5 ML methotrexate 50 MG/ML Auto-Inject
-    "1147320", # Phase 40: brentuximab vedotin
     "309311", # Phase 40: cisplatin 1 MG/ML Injectable Solution
     "1734917", # Phase 40: cyclophosphamide 500 MG Injection
     "310973", # Phase 40: IFOSFAMIDE 3 G IV SOLR CUSTOM COMPONENT
@@ -2235,15 +2218,12 @@ TREATMENT_CODES <- list(
     "4179", # Phase 40: etoposide
     "309638", # Phase 40: DACARBAZINE 200 MG IV CUSTOM COMPONENT
     "1720975", # Phase 40: 52.6 ML gemcitabine 38 MG/ML Injection
-    "1657193", # Phase 40: Nivolumab
     "1719013", # Phase 40: gemcitabine IV infusion
     "205821", # Phase 40: CISplatin IV infusion
-    "1147323", # Phase 40: brentuximab vedotin 50 MG Injection
     "1790100", # Phase 40: 25 ML doxorubicin hydrochloride 2 MG/ML
     "686161", # Phase 40: carboplatin 10 MG/ML Injectable Solution
     "1863347", # Phase 40: 1 ML vincristine sulfate 1 MG/ML Injecti
     "1731340", # Phase 40: dacarbazine 100 MG Injection
-    "1657749", # Phase 40: pembrolizumab 50 MG Injection [Keytruda]
     "1655959", # Phase 40: 10 ML methotrexate 25 MG/ML Injection
     "1437969", # Phase 40: cyclophosphamide 50 MG Oral Capsule
     "1622", # Phase 40: bleomycin
@@ -2252,7 +2232,6 @@ TREATMENT_CODES <- list(
     "1863343", # Phase 40: 1 ML vincristine sulfate 1 MG/ML Injecti
     "226719", # Phase 40: etoposide 100 MG Injection [Etopophos]
     "1998783", # Phase 40: gemcitabine 100 MG/ML Injectable Solutio
-    "1657192", # Phase 40: 4 ML nivolumab 10 MG/ML Injection [Opdiv
     "1790098", # Phase 40: DOXOrubicin  IV infusion,
     "2555", # Phase 40: cisplatin
     "105586", # Phase 40: methotrexate 10 MG Oral Tablet
@@ -2264,7 +2243,6 @@ TREATMENT_CODES <- list(
     "8702", # Phase 40: procarbazine
     "3002", # Phase 40: cyclophosphamide
     "311625", # Phase 40: methotrexate 1000 MG Injection
-    "1657190", # Phase 40: 4 ML nivolumab 10 MG/ML Injection
     "1790129", # Phase 40: doxorubicin hydrochloride liposome 2 MG/
     "308771", # Phase 40: Bleomycin Sulfate For Inj 30 Unit
     "1726676", # Phase 40: bleomycin 30 UNT Injection
@@ -2778,7 +2756,20 @@ TREATMENT_CODES <- list(
   ),
 
 
-  # Immunotherapy RXNORM codes (Phase 40: drug investigation)
+  # Immunotherapy HCPCS J-codes (moved from chemo_hcpcs)
+  immunotherapy_hcpcs = c(
+    "J9022", # Atezolizumab (anti-PD-L1)
+    "J9042", # Brentuximab vedotin (anti-CD30 ADC)
+    "J9119", # Cemiplimab (anti-PD-1)
+    "J9173", # Durvalumab (anti-PD-L1)
+    "J9204", # Mogamulizumab (anti-CCR4)
+    "J9228", # Ipilimumab (anti-CTLA-4)
+    "J9268", # Pembrolizumab (anti-PD-1)
+    "J9271", # Pembrolizumab IV (anti-PD-1)
+    "J9299"  # Nivolumab (anti-PD-1)
+  ),
+
+  # Immunotherapy RXNORM codes (Phase 40: drug investigation + moved from chemo_rxnorm)
   immunotherapy_rxnorm = c(
     "1094836", # Phase 40: ipilimumab 5 MG/ML Injectable Solution
     "891815", # Phase 40: ascorbic acid 113 MG / beta carotene 716
@@ -2791,7 +2782,23 @@ TREATMENT_CODES <- list(
     "2479140", # Phase 40: 4.6 ML lisocabtagene maraleucel 70000000
     "1792780", # Phase 40: 20 ML atezolizumab 60 MG/ML Injection
     "1090824", # Phase 40: ascorbic acid 60 MG / beta carotene 5000
-    "891793" # Phase 40: ascorbic acid 226 MG / beta carotene 143
+    "891793", # Phase 40: ascorbic acid 226 MG / beta carotene 143
+    # Moved from chemo_rxnorm (checkpoint inhibitors + ADCs)
+    "1147320", # Brentuximab vedotin (anti-CD30 ADC)
+    "1147323", # Brentuximab vedotin 50 MG Injection
+    "1147324", # Brentuximab vedotin (Adcetris)
+    "1147327", # Brentuximab vedotin 50 MG Injection [Adcetris]
+    "1597876", # Nivolumab (anti-PD-1)
+    "1657190", # Nivolumab 10 MG/ML Injection
+    "1657192", # Nivolumab 10 MG/ML Injection [Opdivo]
+    "1657193", # Nivolumab
+    "1657195", # Nivolumab 10 MG/ML Injection
+    "1657196", # Nivolumab 10 MG/ML Injection [Opdivo]
+    "1657749", # Pembrolizumab 50 MG Injection [Keytruda]
+    "1657750", # Pembrolizumab 25 MG/ML Injection
+    "1657751", # Pembrolizumab 25 MG/ML Injection [Keytruda]
+    "1991412", # Nivolumab 10 MG/ML Injection
+    "1991413"  # Nivolumab 10 MG/ML Injection [Opdivo]
   ),
 
 
