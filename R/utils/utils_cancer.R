@@ -26,7 +26,7 @@
 #' Maps codes to cancer site categories using hierarchical prefix matching:
 #' 1. Try 4-character prefix lookup (subcategory, e.g., C810 -> NLPHL)
 #' 2. Fall back to 3-character prefix lookup (category, e.g., C81 -> classical HL)
-#' 3. Check ICD-9 codes against ICD9_NLPHL_CODES for exact NLPHL matching
+#' 3. ICD-9 201.xx codes: classify as classical HL, then override NLPHL via exact match
 #'
 #' Both lookups use the 324-entry CANCER_SITE_MAP defined in R/00_config.R.
 #' Returns NA for codes whose prefix has no mapping in CANCER_SITE_MAP.
@@ -68,10 +68,13 @@ classify_codes <- function(codes) {
   # Step 4: Use 4-char result if available, else 3-char
   categories <- ifelse(!is.na(match4), match4, match3)
 
-  # Step 5: ICD-9 NLPHL override (exact match, dotted format)
+  # Step 5: ICD-9 Hodgkin lymphoma classification (exact match, dotted format)
   # WHY separate check: ICD-9 codes use dotted format (201.40) where substr()
   # produces "201." not "2014", so prefix matching doesn't work cleanly.
+  # ICD-9 201.xx codes need explicit handling for both NLPHL and classical HL.
+  is_icd9_hl <- grepl("^201(\\..*)?$", codes)
   is_icd9_nlphl <- codes %in% ICD9_NLPHL_CODES
+  categories[is_icd9_hl & !is_icd9_nlphl] <- "Hodgkin Lymphoma (non-NLPHL)"
   categories[is_icd9_nlphl] <- "NLPHL"
 
   # Remove names from vector indexing to return clean character vector
