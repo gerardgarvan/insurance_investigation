@@ -36,6 +36,10 @@
 # SECTION 1: SETUP ----
 # ==============================================================================
 
+# Clear stale log handler from previous source() in same session
+try(close(.log_con), silent = TRUE)
+globalCallingHandlers(NULL)
+
 # Clear workspace to avoid stale references
 rm(list = ls())
 
