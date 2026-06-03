@@ -60,7 +60,7 @@
 - [x] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline (completed 2026-06-03)
 - [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
 - [x] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death (completed 2026-06-03)
-- [ ] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables
+- [x] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables (completed 2026-06-03)
 - [ ] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes
 
 ### Phase Details
@@ -137,9 +137,9 @@ Plans:
      - Table 2: drug-level summary (individual drugs/treatments per row) with columns: all drugs/treatments in an encounter | cancer code(s) for the encounter | count of encounters
   4. All new diagnostic scripts follow decade-based numbering convention and include documentation headers
   5. Verification cross-references replaced-by codes against SEER ICD-9 to ICD-10 conversion tables
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 79-01-PLAN.md — R/54 SCT 0362 investigation + R/55 replaced-by code verification with igraph cycle detection
+- [x] 79-01-PLAN.md — R/54 SCT 0362 investigation + R/55 replaced-by code verification with igraph cycle detection
 - [x] 79-02-PLAN.md — R/56 drug grouping summary tables (treatment-type-level + drug-level)
 
 #### Phase 80: Smoke Test Updates
@@ -162,7 +162,7 @@ Plans:
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
 | 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
-| 79. Code Investigations & New Tables | 1/2 | In Progress|  |
+| 79. Code Investigations & New Tables | 2/2 | Complete   | 2026-06-03 |
 | 80. Visualization & Documentation | 0/? | Not started | - |
 
 ---

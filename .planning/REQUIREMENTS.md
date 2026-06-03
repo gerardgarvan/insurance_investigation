@@ -26,8 +26,8 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 
 ### Code Verification
 
-- [ ] **CODE-01**: "Replaced by" codes from all_codes_resolved_next_tables.xlsx verified against existing code mappings
-- [ ] **CODE-02**: 90 patients with SCT code 0362 investigated for other related SCT codes during same encounters
+- [x] **CODE-01**: "Replaced by" codes from all_codes_resolved_next_tables.xlsx verified against existing code mappings
+- [x] **CODE-02**: 90 patients with SCT code 0362 investigated for other related SCT codes during same encounters
 
 ### Quality Standards
 
@@ -75,8 +75,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TREAT-03 | Phase 79 | Complete |
 | DEATH-01 | Phase 75, 78 | Complete |
 | DEATH-02 | Phase 75, 78 | Complete |
-| CODE-01 | Phase 79 | Pending |
-| CODE-02 | Phase 79 | Pending |
+| CODE-01 | Phase 79 | Complete |
+| CODE-02 | Phase 79 | Complete |
 | QUAL-01 | Phases 75-80 (all) | Complete |
 
 **Coverage:**
