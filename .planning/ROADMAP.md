@@ -61,7 +61,7 @@
 - [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
 - [x] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death (completed 2026-06-03)
 - [x] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables (completed 2026-06-03)
-- [ ] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes
+- [x] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes (completed 2026-06-03)
 
 ### Phase Details
 
@@ -152,9 +152,9 @@ Plans:
   3. Smoke test validates Gantt v2 16-column schema (cause_of_death and drug_group added)
   4. Smoke test validates new scripts (R/54, R/55, R/56) exist with correct headers and dependencies
   5. All smoke test additions follow existing check() patterns from Phase 74
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 80-01-PLAN.md — Add Phase 79 validation sections, expand decade lists, fix section numbering, update requirements summary
+- [x] 80-01-PLAN.md — Add Phase 79 validation sections, expand decade lists, fix section numbering, update requirements summary
 
 ### v2.1 Progress
 
@@ -165,7 +165,7 @@ Plans:
 | 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
 | 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
 | 79. Code Investigations & New Tables | 2/2 | Complete    | 2026-06-03 |
-| 80. Smoke Test Updates | 0/1 | Not started | - |
+| 80. Smoke Test Updates | 1/1 | Complete   | 2026-06-03 |
 
 ---
 *Last updated: 2026-06-03 -- Phase 80 planned (1 plan, 1 wave)*
