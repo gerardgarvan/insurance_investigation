@@ -812,6 +812,17 @@ check(
   exists("DRUG_GROUPINGS") && length(DRUG_GROUPINGS) >= 200
 )
 
+# Check 2: CODE_SUBCATEGORY_MAP exists and has sufficient entries (Phase 81)
+check(
+  "CODE_SUBCATEGORY_MAP defined with >= 200 entries",
+  exists("CODE_SUBCATEGORY_MAP") && length(CODE_SUBCATEGORY_MAP) >= 200
+)
+
+check(
+  "CODE_SUBCATEGORY_MAP contains J9035 (Bevacizumab)",
+  exists("CODE_SUBCATEGORY_MAP") && "J9035" %in% names(CODE_SUBCATEGORY_MAP)
+)
+
 # Check 2: All 5 core categories present
 core_categories <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care")
 found_categories <- intersect(core_categories, unique(DRUG_GROUPINGS))
@@ -990,13 +1001,32 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
   check("R/56 outputs drug_grouping_tables.xlsx",
         any(grepl("drug_grouping_tables\\.xlsx", r56_lines)))
 
-  check("R/56 has 2-sheet workbook (Treatment Type Summary + Drug Level Summary)",
-        any(grepl("Treatment Type Summary", r56_lines)) &&
-        any(grepl("Drug Level Summary", r56_lines)))
+  check("R/56 has 2-sheet workbook (Sub-Category Summary + Encounter Treatment Summary)",
+        any(grepl("Treatment Sub-Category Summary", r56_lines)) &&
+        any(grepl("Encounter Treatment Summary", r56_lines)))
 
   n_sections_r56 <- sum(grepl("^# SECTION.*----", r56_lines))
   check(glue("R/56 has >= 6 section headers (found: {n_sections_r56})"),
         n_sections_r56 >= 6)
+
+  # Phase 81 additions
+  check("R/56 references CODE_SUBCATEGORY_MAP for Tier 2 sub-category resolution",
+        any(grepl("CODE_SUBCATEGORY_MAP", r56_lines)))
+
+  check("R/56 filters NA cancer_codes instead of replacing with Unknown",
+        any(grepl("filter\\(!is\\.na\\(cancer_codes\\)\\)", r56_lines)) &&
+        !any(grepl('if_else\\(is\\.na\\(cancer_codes\\).*Unknown', r56_lines)))
+
+  check("R/56 adds category column derived from treatment_type",
+        any(grepl("category = treatment_type", r56_lines)))
+
+  check("R/56 includes category in Table 1 group_by",
+        any(grepl("group_by\\(category.*sub_category.*cancer_codes\\)", r56_lines)))
+
+  check("R/56 has 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)",
+        any(grepl("Tier 1", r56_lines)) &&
+        any(grepl("Tier 2", r56_lines)) &&
+        any(grepl("Tier 3", r56_lines)))
 }
 
 # ==============================================================================
