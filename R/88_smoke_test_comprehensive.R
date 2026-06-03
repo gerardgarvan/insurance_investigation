@@ -221,9 +221,24 @@ check(
 )
 
 # --------------------------------------------------------------------------
-# Cancer decade (40-53)
+# Quality/Investigations decade (30-39)
 # --------------------------------------------------------------------------
-message("\n[6/22] Cancer decade (40-53)...")
+message("\n[PLACEHOLDER] Quality/Investigations decade (30-39)...")
+
+quality_expected <- c("35_death_cause_quality.R")
+quality_found <- 0L
+for (s in quality_expected) {
+  if (file.exists(file.path("R", s))) quality_found <- quality_found + 1L
+}
+check(
+  glue("Quality/Investigations decade: 1/1 scripts (found {quality_found})"),
+  quality_found == 1
+)
+
+# --------------------------------------------------------------------------
+# Cancer decade (40-56)
+# --------------------------------------------------------------------------
+message("\n[6/22] Cancer decade (40-56)...")
 
 cancer_expected <- c(
   "40_cancer_site_frequency.R", "41_extract_all_codes.R",
@@ -232,15 +247,17 @@ cancer_expected <- c(
   "46_cancer_summary_table.R", "47_cancer_summary_refined.R",
   "48_cancer_summary_post_hl.R", "49_cancer_summary_pre_post.R",
   "50_all_codes_resolved.R", "51_gantt_data_export.R",
-  "52_gantt_v2_export.R", "53_death_date_validation.R"
+  "52_gantt_v2_export.R", "53_death_date_validation.R",
+  "54_investigate_sct_0362.R", "55_verify_replaced_by_codes.R",
+  "56_new_tables_from_groupings.R"
 )
 cancer_found <- 0L
 for (s in cancer_expected) {
   if (file.exists(file.path("R", s))) cancer_found <- cancer_found + 1L
 }
 check(
-  glue("Cancer decade: 14/14 scripts (found {cancer_found})"),
-  cancer_found == 14
+  glue("Cancer decade: 17/17 scripts (found {cancer_found})"),
+  cancer_found == 17
 )
 
 # --------------------------------------------------------------------------
@@ -266,22 +283,23 @@ check(
 )
 
 # --------------------------------------------------------------------------
-# Output decade (70-75)
+# Output decade (70-76)
 # --------------------------------------------------------------------------
-message("\n[8/22] Output decade (70-75)...")
+message("\n[8/22] Output decade (70-76)...")
 
 output_scripts <- c(
   "70_visualize_waterfall.R", "71_visualize_sankey.R",
   "72_generate_pptx.R", "73_generate_phase19_20_pptx.R",
-  "74_generate_documentation.R", "75_encounter_analysis.R"
+  "74_generate_documentation.R", "75_encounter_analysis.R",
+  "76_treatment_source_coverage.R"
 )
 output_found <- 0L
 for (s in output_scripts) {
   if (file.exists(file.path("R", s))) output_found <- output_found + 1L
 }
 check(
-  glue("Output decade: 6/6 scripts (found {output_found})"),
-  output_found == 6
+  glue("Output decade: 7/7 scripts (found {output_found})"),
+  output_found == 7
 )
 
 # --------------------------------------------------------------------------
@@ -874,6 +892,114 @@ check(
 )
 
 # ==============================================================================
+# SECTION 13E: SCT 0362 INVESTIGATION (CODE-02) ----
+# ==============================================================================
+# Phase 79 (CODE-02): Validates R/54 SCT code 0362 investigation script.
+
+message("\n[PLACEHOLDER] Phase 79: SCT 0362 investigation (CODE-02)...")
+
+check("R/54_investigate_sct_0362.R exists", file.exists("R/54_investigate_sct_0362.R"))
+
+if (file.exists("R/54_investigate_sct_0362.R")) {
+  r54_lines <- readLines("R/54_investigate_sct_0362.R", warn = FALSE)
+
+  check("R/54 sources R/00_config.R",
+        any(grepl('source\\("R/00_config.R"\\)', r54_lines)))
+
+  check("R/54 sources R/utils/utils_duckdb.R",
+        any(grepl('source\\("R/utils/utils_duckdb.R"\\)', r54_lines)))
+
+  check("R/54 references TREATMENT_CODES for SCT code lookup",
+        any(grepl("TREATMENT_CODES", r54_lines)))
+
+  check("R/54 outputs sct_0362_investigation.xlsx",
+        any(grepl("sct_0362_investigation\\.xlsx", r54_lines)))
+
+  check("R/54 uses openxlsx2 for multi-sheet workbook",
+        any(grepl("library\\(openxlsx2\\)", r54_lines)))
+
+  n_sections_r54 <- sum(grepl("^# --- SECTION.*----", r54_lines))
+  check(glue("R/54 has >= 6 section headers (found: {n_sections_r54})"),
+        n_sections_r54 >= 6)
+
+  check("R/54 has automated recommendation logic",
+        any(grepl("recommendation.*case_when|case_when.*recommendation", r54_lines)))
+}
+
+# ==============================================================================
+# SECTION 13F: REPLACED-BY CODE VERIFICATION (CODE-01) ----
+# ==============================================================================
+# Phase 79 (CODE-01): Validates R/55 replaced-by code verification with igraph.
+
+message("\n[PLACEHOLDER] Phase 79: Replaced-by code verification (CODE-01)...")
+
+check("R/55_verify_replaced_by_codes.R exists", file.exists("R/55_verify_replaced_by_codes.R"))
+
+if (file.exists("R/55_verify_replaced_by_codes.R")) {
+  r55_lines <- readLines("R/55_verify_replaced_by_codes.R", warn = FALSE)
+
+  check("R/55 sources R/00_config.R",
+        any(grepl('source\\("R/00_config.R"\\)', r55_lines)))
+
+  check("R/55 uses igraph for graph analysis",
+        any(grepl("library\\(igraph\\)", r55_lines)))
+
+  check("R/55 calls is_dag() for cycle detection",
+        any(grepl("is_dag", r55_lines)))
+
+  check("R/55 references DRUG_GROUPINGS for code verification",
+        any(grepl("DRUG_GROUPINGS", r55_lines)))
+
+  check("R/55 outputs replaced_by_verification.xlsx",
+        any(grepl("replaced_by_verification\\.xlsx", r55_lines)))
+
+  check("R/55 has 3-sheet workbook structure",
+        any(grepl("Pairwise Verification", r55_lines)) &&
+        any(grepl("Chain Analysis", r55_lines)) &&
+        any(grepl("Summary Statistics", r55_lines)))
+
+  n_sections_r55 <- sum(grepl("^# --- SECTION.*----", r55_lines))
+  check(glue("R/55 has >= 6 section headers (found: {n_sections_r55})"),
+        n_sections_r55 >= 6)
+}
+
+# ==============================================================================
+# SECTION 13G: DRUG GROUPING SUMMARY TABLES (TREAT-03) ----
+# ==============================================================================
+# Phase 79 (TREAT-03): Validates R/56 drug grouping summary tables.
+
+message("\n[PLACEHOLDER] Phase 79: Drug grouping summary tables (TREAT-03)...")
+
+check("R/56_new_tables_from_groupings.R exists", file.exists("R/56_new_tables_from_groupings.R"))
+
+if (file.exists("R/56_new_tables_from_groupings.R")) {
+  r56_lines <- readLines("R/56_new_tables_from_groupings.R", warn = FALSE)
+
+  check("R/56 sources R/00_config.R",
+        any(grepl('source\\("R/00_config.R"\\)', r56_lines)))
+
+  check("R/56 sources R/utils/utils_assertions.R",
+        any(grepl('source\\("R/utils/utils_assertions.R"\\)', r56_lines)))
+
+  check("R/56 references DRUG_GROUPINGS for treatment groupings",
+        any(grepl("DRUG_GROUPINGS", r56_lines)))
+
+  check("R/56 reads treatment_episodes.rds input",
+        any(grepl("treatment_episodes\\.rds", r56_lines)))
+
+  check("R/56 outputs drug_grouping_tables.xlsx",
+        any(grepl("drug_grouping_tables\\.xlsx", r56_lines)))
+
+  check("R/56 has 2-sheet workbook (Treatment Type Summary + Drug Level Summary)",
+        any(grepl("Treatment Type Summary", r56_lines)) &&
+        any(grepl("Drug Level Summary", r56_lines)))
+
+  n_sections_r56 <- sum(grepl("^# SECTION.*----", r56_lines))
+  check(glue("R/56 has >= 6 section headers (found: {n_sections_r56})"),
+        n_sections_r56 >= 6)
+}
+
+# ==============================================================================
 # SECTION 14: DEATH QUALITY PROFILING VALIDATION (DEATH-01) ----
 # ==============================================================================
 
@@ -1032,6 +1158,9 @@ message("  * DEATH-01/02: DEATH_CAUSE_MAP structure and coverage")
 message("  * TREAT-01: Tumor registry source removed from treatment pipeline")
 message("  * TREAT-01: Coverage analysis output validates removal impact")
 message("  * TREAT-02: DRUG_GROUPINGS centralization from xlsx")
+message("  * CODE-01: Replaced-by code verification (R/55)")
+message("  * CODE-02: SCT 0362 investigation (R/54)")
+message("  * TREAT-03: Drug grouping summary tables (R/56)")
 
 if (failed > 0) {
   quit(status = 1)
