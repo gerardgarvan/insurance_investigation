@@ -110,6 +110,10 @@ v2.1 Milestone: [......] 0% (0/6 phases)
 - [ ] Review SCT code 0362 documentation before Phase 79
 - [ ] Decide on igraph package addition for Phase 79 cycle detection
 
+### Roadmap Evolution
+
+- Phase 81 added: Filter Unknown from cancer_codes in treatment summary, add category column to sub-category summary, map unmapped sub-categories
+
 ### Known Blockers
 
 None. Roadmap complete, ready for phase planning.
