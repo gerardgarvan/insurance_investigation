@@ -61,7 +61,7 @@
 - [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
 - [x] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death (completed 2026-06-03)
 - [x] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables (completed 2026-06-03)
-- [x] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes (completed 2026-06-03)
+- [x] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes (completed 2026-06-03)
 
 ### Phase Details
 
@@ -167,5 +167,22 @@ Plans:
 | 79. Code Investigations & New Tables | 2/2 | Complete    | 2026-06-03 |
 | 80. Smoke Test Updates | 1/1 | Complete    | 2026-06-03 |
 
+### Phase 81: Filter Unknown from cancer_codes in treatment summary, add category column to sub-category summary, map unmapped sub-categories
+
+**Goal:** Refine R/56 drug grouping summary table outputs: filter out rows without cancer diagnosis codes, add parent treatment category column to Table 1, and resolve all unmapped sub-category labels to readable names via centralized CODE_SUBCATEGORY_MAP config
+**Requirements**: P81-CONFIG, P81-FILTER, P81-CATEGORY, P81-RESOLVE, P81-SMOKE
+**Depends on:** Phase 80
+**Success Criteria** (what must be TRUE):
+  1. CODE_SUBCATEGORY_MAP in R/00_config.R contains 200+ treatment code-to-name mappings covering all TREATMENT_CODES vectors
+  2. Table 1 has 4 columns: category | sub_category | cancer_codes | encounter_count (category derived from treatment_type)
+  3. Both Table 1 and Table 2 exclude rows with NA cancer_codes (no "Unknown" replacement)
+  4. R/56 uses 3-tier sub-category lookup: xlsx reference -> CODE_SUBCATEGORY_MAP -> code-type fallback
+  5. Smoke test (R/88) validates Phase 81 changes including CODE_SUBCATEGORY_MAP usage and column structure
+**Plans:** 2 plans
+
+Plans:
+- [ ] 81-01-PLAN.md — Add CODE_SUBCATEGORY_MAP to R/00_config.R with 200+ treatment code-to-name mappings
+- [ ] 81-02-PLAN.md — Modify R/56 (NA filtering, category column, 3-tier lookup) and update R/88 smoke test
+
 ---
-*Last updated: 2026-06-03 -- Phase 80 planned (1 plan, 1 wave)*
+*Last updated: 2026-06-03 -- Phase 81 planned (2 plans, 2 waves)*
