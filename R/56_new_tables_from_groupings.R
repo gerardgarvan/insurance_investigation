@@ -46,7 +46,7 @@
 # SECTION 1: SETUP AND CONFIGURATION ----
 
 # Clear stale log handler from previous source() in same session
-if (exists(".log_con") && inherits(.log_con, "connection") && isOpen(.log_con)) close(.log_con)
+try(close(.log_con), silent = TRUE)
 globalCallingHandlers(message = NULL)
 
 suppressPackageStartupMessages({
