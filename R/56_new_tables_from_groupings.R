@@ -32,6 +32,11 @@
 #   - QUAL-01: v2.0 script standards (documentation, assertions, section structure)
 #
 # Decision Traceability:
+#   - D-01: Filter out NA cancer_codes rows from both tables (Phase 81)
+#   - D-03: Add category column as first column in Table 1 (Phase 81)
+#   - D-04: Category derived from treatment_type directly (Phase 81)
+#   - D-05: Sort Table 1 by category, then desc(encounter_count) (Phase 81)
+#   - D-09: 3-tier lookup: xlsx -> CODE_SUBCATEGORY_MAP -> code-type fallback (Phase 81)
 #   - D-12: Single xlsx output with 2 sheets matching templates
 #   - D-13: Table 1: sub_category | cancer_codes | encounter_count
 #     Chemo by medication (xlsx col C), Radiation by type (xlsx col G),
@@ -79,10 +84,12 @@ globalCallingHandlers(
   }
 )
 
-message("=== Phase 79: Drug Grouping Summary Tables ===\n")
+message("=== Phase 79: Drug Grouping Summary Tables ===")
+message()
 message(glue("  Episodes: {EPISODES_RDS}"))
 message(glue("  Reference: {REFERENCE_XLSX}"))
-message(glue("  Output: {OUTPUT_XLSX}\n"))
+message(glue("  Output: {OUTPUT_XLSX}"))
+message()
 
 
 # SECTION 2: LOAD AND VALIDATE INPUT DATA ----
@@ -105,7 +112,8 @@ message(glue("  Treatment types: {paste(unique(episodes$treatment_type), collaps
 
 # SECTION 3: BUILD SUB-CATEGORY MAPPINGS FROM REFERENCE XLSX ----
 
-message("\n--- Building sub-category mappings from reference xlsx ---")
+message()
+message("--- Building sub-category mappings from reference xlsx ---")
 
 assert_file_exists(REFERENCE_XLSX, .var.name = "[R/56 ERROR] Reference XLSX")
 ref_wb <- wb_load(REFERENCE_XLSX)
@@ -135,7 +143,8 @@ message(glue("  Total codes with sub-categories: {length(code_to_subcategory)}")
 
 # SECTION 4: PREPARE CANCER-ONLY CODES FROM ENCOUNTER LINKAGE ----
 
-message("\n--- Extracting cancer-only ICD codes from encounter linkage ---")
+message()
+message("--- Extracting cancer-only ICD codes from encounter linkage ---")
 
 # Build cancer code prefix set from CANCER_SITE_MAP (ICD-10: C00-C96, D00-D49)
 # plus ICD-9 neoplasm range (140-239)
@@ -232,10 +241,12 @@ if (n_missing_cancer > 0) {
 
 # SECTION 5: TABLE 1 -- SUB-CATEGORY SUMMARY ----
 
-message("\n--- Building Table 1: Sub-Category Summary ---")
+message()
+message("--- Building Table 1: Sub-Category Summary ---")
 
 # Split triggering_codes into individual codes and map to sub-categories
 episode_codes <- episode_dx %>%
+  mutate(category = treatment_type) %>%  # Per D-03, D-04: derive from treatment_type
   mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
   unnest(code_list) %>%
   filter(!is.na(code_list), code_list != "") %>%
@@ -272,9 +283,13 @@ cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
 episode_codes <- episode_codes %>%
   mutate(
     sub_category = case_when(
-      # xlsx-mapped sub-categories (medication name, radiation type, SCT type)
+      # Tier 1: xlsx reference sub-categories (most authoritative)
       treatment_code %in% names(code_to_subcategory) ~ code_to_subcategory[treatment_code],
 
+      # Tier 2: CODE_SUBCATEGORY_MAP supplement (per D-09)
+      treatment_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[treatment_code],
+
+      # Tier 3: Code-type fallback labels (only for codes in neither lookup)
       # Immunotherapy
       treatment_type == "Immunotherapy" & treatment_code %in% immuno_rxnorm_codes ~ "Immunotherapy RxNorm",
       treatment_type == "Immunotherapy" & treatment_code %in% immuno_drg_codes ~ "Immunotherapy DRG",
@@ -332,12 +347,26 @@ if (n_unmapped > 0) {
   }
 }
 
+# Log CODE_SUBCATEGORY_MAP resolution stats
+n_tier1 <- sum(episode_codes$treatment_code %in% names(code_to_subcategory))
+n_tier2 <- sum(
+  !episode_codes$treatment_code %in% names(code_to_subcategory) &
+  episode_codes$treatment_code %in% names(CODE_SUBCATEGORY_MAP)
+)
+n_remaining_fallback <- sum(str_detect(episode_codes$sub_category, "no xlsx mapping|no mapping|unmapped|other|RxNorm|DRG|Revenue|Encounter Dx|Procedure|CAR-T"))
+message(glue("  Sub-category resolution: {n_tier1} xlsx, {n_tier2} CODE_SUBCATEGORY_MAP, {n_remaining_fallback} code-type fallback"))
+
+# Custom category sort order (logical treatment sequence, not alphabetical)
+category_order <- c("Chemotherapy", "Immunotherapy", "Radiation", "SCT")
+
 # Aggregate: one row per sub_category + cancer_codes combination
 table1 <- episode_codes %>%
-  mutate(cancer_codes = if_else(is.na(cancer_codes), "Unknown", cancer_codes)) %>%
-  group_by(sub_category, cancer_codes) %>%
+  filter(!is.na(cancer_codes)) %>%  # Per D-01: exclude rows without cancer diagnosis codes
+  mutate(category = factor(category, levels = category_order)) %>%  # Per D-05: custom sort order
+  group_by(category, sub_category, cancer_codes) %>%  # Per D-03: include category in grouping
   summarise(encounter_count = n(), .groups = "drop") %>%
-  arrange(sub_category, desc(encounter_count))
+  arrange(category, desc(encounter_count)) %>%  # Per D-05: category first, then desc count
+  mutate(category = as.character(category))  # Convert back from factor for xlsx output
 
 message(glue("  Table 1: {nrow(table1)} rows across {n_distinct(table1$sub_category)} sub-categories"))
 
@@ -357,14 +386,13 @@ if (nrow(subcat_summary) > 20) {
 
 # SECTION 6: TABLE 2 -- ENCOUNTER TREATMENT SUMMARY ----
 
-message("\n--- Building Table 2: Encounter Treatment Summary ---")
+message()
+message("--- Building Table 2: Encounter Treatment Summary ---")
 
 # For each episode: combine all triggering_codes into "all treatments in encounter"
 table2 <- episode_dx %>%
-  mutate(
-    all_treatments = triggering_codes,
-    cancer_codes = if_else(is.na(cancer_codes), "Unknown", cancer_codes)
-  ) %>%
+  filter(!is.na(cancer_codes)) %>%  # Per D-01: exclude rows without cancer diagnosis codes
+  mutate(all_treatments = triggering_codes) %>%
   group_by(all_treatments, cancer_codes) %>%
   summarise(encounter_count = n(), .groups = "drop") %>%
   arrange(desc(encounter_count))
@@ -375,7 +403,8 @@ message(glue("  Unique treatment sets: {n_distinct(table2$all_treatments)}"))
 
 # SECTION 7: WRITE XLSX OUTPUT (per D-12) ----
 
-message("\n--- Writing multi-sheet XLSX output ---")
+message()
+message("--- Writing multi-sheet XLSX output ---")
 
 wb <- wb_workbook()
 
@@ -388,23 +417,29 @@ wb$add_worksheet("Encounter Treatment Summary")
 wb$add_data("Encounter Treatment Summary", table2, start_row = 1, col_names = TRUE)
 
 wb$save(OUTPUT_XLSX)
-message(glue("\nSaved: {OUTPUT_XLSX}"))
+message()
+message(glue("Saved: {OUTPUT_XLSX}"))
 
 
 # SECTION 8: CONSOLE SUMMARY ----
 
-message("\n=== Summary ===")
+message()
+message("=== Summary ===")
 message(glue("  Total episodes processed: {nrow(episodes)}"))
 message(glue("  Episodes with cancer codes: {sum(!is.na(episode_dx$cancer_codes))}"))
 message(glue("  Episodes without cancer codes: {n_missing_cancer}"))
 message(glue("  Total diagnosis records: {nrow(dx_data)}"))
 message(glue("  Cancer diagnosis records: {nrow(dx_cancer)}"))
-message(glue("\n  Table 1 (Sub-Category Summary):"))
+message()
+message(glue("  Table 1 (Sub-Category Summary):"))
 message(glue("    Total rows: {nrow(table1)}"))
+message(glue("    Categories: {paste(unique(table1$category), collapse = ', ')}"))
 message(glue("    Sub-categories: {n_distinct(table1$sub_category)}"))
-message(glue("\n  Table 2 (Encounter Treatment Summary):"))
+message()
+message(glue("  Table 2 (Encounter Treatment Summary):"))
 message(glue("    Total rows: {nrow(table2)}"))
 message(glue("    Unique treatment sets: {n_distinct(table2$all_treatments)}"))
-message("\nDone.")
+message()
+message("Done.")
 
 close(.log_con)
