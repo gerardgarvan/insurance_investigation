@@ -153,7 +153,7 @@ message(glue("  Loaded {format(nrow(detail), big.mark = ',')} detail rows"))
 
 # SAFE-02: Validate structure after loading
 assert_df_valid(detail, "treatment_episode_detail",
-  required_cols = c("patient_id", "treatment_type", "treatment_date", "code"),
+  required_cols = c("patient_id", "treatment_type", "treatment_date", "triggering_code"),
   script_name = "R/52")
 
 # Guard clauses for missing Phase 61/62 columns (per R/62 pattern, lines 79-85)

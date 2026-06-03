@@ -139,11 +139,11 @@ message(glue("  Loaded treatment_episode_detail.rds: {nrow(episode_detail)} deta
 
 # SAFE-02: Validate data frame structure
 assert_df_valid(episodes, "treatment_episodes",
-                required_cols = c("ID", "treatment_type", "episode_number",
+                required_cols = c("patient_id", "treatment_type", "episode_number",
                                   "episode_start", "episode_stop"),
                 script_name = "R/28")
 assert_df_valid(episode_detail, "treatment_episode_detail",
-                required_cols = c("ID", "treatment_type", "treatment_date"),
+                required_cols = c("patient_id", "treatment_type", "treatment_date"),
                 script_name = "R/28")
 
 USE_DUCKDB <- TRUE

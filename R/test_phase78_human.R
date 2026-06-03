@@ -317,12 +317,16 @@ if (file.exists(gantt_ep_path)) {
     }
 
     # Show cause_of_death value distribution for death rows
-    cause_dist <- death_rows %>%
-      count(cause_of_death, sort = TRUE) %>%
-      head(5)
-    message("  INFO: Top cause_of_death values in death rows:")
-    for (i in 1:nrow(cause_dist)) {
-      message(glue("    {cause_dist$cause_of_death[i]}: {cause_dist$n[i]}"))
+    if ("cause_of_death" %in% names(death_rows)) {
+      cause_dist <- death_rows %>%
+        count(cause_of_death, sort = TRUE) %>%
+        head(5)
+      message("  INFO: Top cause_of_death values in death rows:")
+      for (i in 1:nrow(cause_dist)) {
+        message(glue("    {cause_dist$cause_of_death[i]}: {cause_dist$n[i]}"))
+      }
+    } else {
+      message("  INFO: cause_of_death column not present in episodes — skipping distribution")
     }
   } else {
     message("  INFO: No death rows found in gantt_episodes_v2.csv")
