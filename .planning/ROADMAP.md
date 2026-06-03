@@ -105,9 +105,9 @@ Plans:
   3. classify_codes() correctly routes C81.0 / 201.4x codes to NLPHL category, all other C81.x to classical HL
   4. DRUG_GROUPINGS in R/00_config.R contains mappings from all_codes_resolved_next_tables.xlsx with versioned xlsx snapshot in git
   5. Validation confirms no patient double-counted in NLPHL and classical HL categories
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 77-01-PLAN.md — Centralize drug groupings from xlsx into DRUG_GROUPINGS named vector in R/00_config.R, copy versioned xlsx snapshot, add smoke test
+- [x] 77-01-PLAN.md — Centralize drug groupings from xlsx into DRUG_GROUPINGS named vector in R/00_config.R, copy versioned xlsx snapshot, add smoke test
 - [ ] 77-02-PLAN.md — Extend R/49 with 7-day v2 filtered output, NLPHL diagnostic breakout, dual output strategy, population validation, smoke test
 
 #### Phase 78: Episode Enhancement & Death Integration
@@ -155,7 +155,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
 | 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
-| 77. Cancer Classification Refinements | 0/2 | Planning complete | - |
+| 77. Cancer Classification Refinements | 1/2 | In Progress|  |
 | 78. Episode Enhancement & Death Integration | 0/? | Not started | - |
 | 79. Code Investigations & New Tables | 0/? | Not started | - |
 | 80. Visualization & Documentation | 0/? | Not started | - |

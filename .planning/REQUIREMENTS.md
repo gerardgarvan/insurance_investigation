@@ -16,7 +16,7 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 ### Treatment Pipeline
 
 - [x] **TREAT-01**: All treatment data sourced from tumor registry dropped from treatment episode pipeline
-- [ ] **TREAT-02**: Drug groupings loaded from all_codes_resolved_next_tables.xlsx and centralized in R/00_config.R
+- [x] **TREAT-02**: Drug groupings loaded from all_codes_resolved_next_tables.xlsx and centralized in R/00_config.R
 - [ ] **TREAT-03**: Two new summary tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates: (1) treatment-type-level summary (Chemo, Radiation, SCT, Immunotherapy) with cancer codes and encounter counts, (2) drug-level summary (individual drugs/treatments) with cancer codes and encounter counts
 
 ### Death Data
@@ -71,7 +71,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CANCER-02 | Phase 77 | Pending |
 | CANCER-03 | Phase 78 | Pending |
 | TREAT-01 | Phase 76 | Complete |
-| TREAT-02 | Phase 77 | Pending |
+| TREAT-02 | Phase 77 | Complete |
 | TREAT-03 | Phase 79 | Pending |
 | DEATH-01 | Phase 75, 78 | Complete |
 | DEATH-02 | Phase 75, 78 | Complete |
