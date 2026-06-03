@@ -47,7 +47,7 @@
 
 # Clear stale log handler from previous source() in same session
 try(close(.log_con), silent = TRUE)
-globalCallingHandlers(message = NULL)
+globalCallingHandlers(NULL)
 
 suppressPackageStartupMessages({
   library(dplyr)
