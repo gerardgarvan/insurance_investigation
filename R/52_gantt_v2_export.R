@@ -17,8 +17,8 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # Outputs:
-#   - output/gantt_episodes_v2.csv (14 columns, Phase 64 cleaned & trimmed)
-#   - output/gantt_detail_v2.csv (13 columns, Phase 64 cleaned & trimmed)
+#   - output/gantt_episodes_v2.csv (16 columns, Phase 64 cleaned & Phase 78 enriched)
+#   - output/gantt_detail_v2.csv (14 columns, Phase 64 cleaned & Phase 78 enriched)
 #
 # Dependencies:
 #   - 00_config (CONFIG paths, TREATMENT_TYPE_COLORS)
@@ -33,9 +33,9 @@
 #   filled pseudo-treatment descriptions, "Unlinked" cancer category label,
 #   and trimmed column set (14 episodes, 13 detail).
 #
-# v2 SCHEMA DOCUMENTATION (Post-Phase 64 Cleanup):
+# v2 SCHEMA DOCUMENTATION (Post-Phase 64 Cleanup, Phase 78 Enhancements):
 #
-#   gantt_episodes_v2.csv (14 columns):
+#   gantt_episodes_v2.csv (16 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category (Chemotherapy, Radiation, SCT, etc.)
 #     3. episode_number (int) - Sequential episode number per patient-type
@@ -50,10 +50,12 @@
 #    12. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
 #    13. regimen_label (chr) - Regimen name: "ABVD", "BV+AVD", "Nivo+AVD", or NA (Phase 61)
 #    14. is_first_line (lgl) - TRUE if episode is first-line therapy (Phase 62)
+#    15. drug_group (chr) - Semicolon-separated drug category labels (Phase 78)
+#    16. cause_of_death (chr) - Mapped cause of death category or NA (Phase 78)
 #
 #   Dropped columns from Phase 63 v2: encounter_ids, is_hodgkin, cancer_link_method
 #
-#   gantt_detail_v2.csv (13 columns):
+#   gantt_detail_v2.csv (14 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category
 #     3. treatment_date (date) - Single treatment date
@@ -67,6 +69,7 @@
 #    11. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
 #    12. regimen_label (chr) - Regimen name (from parent episode, Phase 61)
 #    13. is_first_line (lgl) - First-line flag (from parent episode, Phase 62)
+#    14. cause_of_death (chr) - Mapped cause of death category or NA (Phase 78)
 #
 #   Dropped columns from Phase 63 v2: ENCOUNTERID, is_hodgkin, cancer_link_method
 #
@@ -81,6 +84,11 @@
 #   D-08: v2 schema documented in R/63's header comment block
 #   D-09: v2 includes Death and HL Diagnosis pseudo-treatment rows (same as v1)
 #   D-10: New v2 columns on pseudo-treatment rows: cancer_link_method="none", regimen_label=NA, is_first_line=FALSE
+#   D-78-09: cause_of_death appended as last column (non-breaking)
+#   D-78-10: Missing/unmapped ICD-10 -> "Unknown or Unspecified"
+#   D-78-11: >40% missingness triggers console warning
+#   D-78-12: Both gantt_episodes_v2.csv and gantt_detail_v2.csv get cause_of_death
+#   D-78-14: drug_group propagated from treatment_episodes.rds to episodes CSV
 #
 # INPUTS:
 #   - cache/outputs/treatment_episodes.rds (enriched by Phases 60-62)
@@ -90,8 +98,8 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # OUTPUTS:
-#   - output/gantt_episodes_v2.csv (14 columns, Phase 64 cleaned & trimmed)
-#   - output/gantt_detail_v2.csv (13 columns, Phase 64 cleaned & trimmed)
+#   - output/gantt_episodes_v2.csv (16 columns, Phase 64 cleaned & Phase 78 enriched)
+#   - output/gantt_detail_v2.csv (14 columns, Phase 64 cleaned & Phase 78 enriched)
 #
 # ==============================================================================
 
@@ -169,6 +177,14 @@ if (!"is_first_line" %in% names(episodes)) {
   warning("is_first_line column not found in treatment_episodes.rds — Phase 62 not yet run. Using default FALSE.")
   episodes <- episodes %>% mutate(is_first_line = FALSE)
 }
+if (!"drug_group" %in% names(episodes)) {
+  warning("drug_group column not found in treatment_episodes.rds — Phase 78 R/28 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(drug_group = NA_character_)
+}
+if (!"triggering_code_description" %in% names(episodes)) {
+  warning("triggering_code_description column not found in treatment_episodes.rds — Phase 78 R/28 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(triggering_code_description = NA_character_)
+}
 
 
 # --- SECTION 3: CODE DESCRIPTION LOOKUP ----
@@ -207,6 +223,34 @@ map_codes_to_descriptions <- function(codes_str) {
 }
 
 
+# --- SECTION 3B: DEATH CAUSE MAPPING ----
+
+# Helper: map single ICD-10 code to cause of death category via DEATH_CAUSE_MAP
+# D-78-10: Missing/unmapped -> "Unknown or Unspecified"
+map_death_cause <- function(death_cause_code) {
+  if (is.na(death_cause_code) || death_cause_code == "") return("Unknown or Unspecified")
+  prefix_3char <- str_sub(death_cause_code, 1, 3)
+  if (prefix_3char %in% names(DEATH_CAUSE_MAP)) return(DEATH_CAUSE_MAP[[prefix_3char]])
+  return("Unknown or Unspecified")
+}
+
+# Load quality decision artifact from Plan 01
+QUALITY_RESULT_RDS <- file.path(CONFIG$cache$outputs_dir, "death_cause_quality_result.rds")
+death_quality <- NULL
+cause_of_death_available <- TRUE  # default: proceed with integration
+if (file.exists(QUALITY_RESULT_RDS)) {
+  death_quality <- readRDS(QUALITY_RESULT_RDS)
+  if (!death_quality$death_cause_available) {
+    message("  WARNING: DEATH_CAUSE field not available per quality profiling (R/35)")
+    cause_of_death_available <- FALSE
+  } else if (death_quality$missingness_rate > 60) {
+    message(glue("  WARNING: Cause of death {death_quality$missingness_rate}% missing -- column will contain mostly 'Unknown or Unspecified'"))
+  }
+} else {
+  message("  WARNING: death_cause_quality_result.rds not found -- proceeding with cause_of_death integration")
+}
+
+
 # --- SECTION 4: SELECT AND ORDER COLUMNS ----
 
 message("\n--- Building v2 export tables ---")
@@ -219,10 +263,11 @@ episodes_export <- episodes %>%
     patient_id, treatment_type, episode_number,
     episode_start, episode_stop, episode_length_days,
     distinct_dates_in_episode, historical_flag, triggering_codes,
-    encounter_ids, drug_names
+    encounter_ids, drug_names, drug_group
   ) %>%
   mutate(
-    triggering_code_descriptions = sapply(triggering_codes, map_codes_to_descriptions, USE.NAMES = FALSE)
+    triggering_code_descriptions = sapply(triggering_codes, map_codes_to_descriptions, USE.NAMES = FALSE),
+    cause_of_death = NA_character_  # Treatment rows get NA per D-78-10
   ) %>%
   # Re-join the base columns that were selected, plus add enriched columns from episodes
   left_join(
@@ -242,7 +287,8 @@ episodes_export <- episodes %>%
     episode_start, episode_stop, episode_length_days,
     distinct_dates_in_episode, historical_flag, triggering_codes,
     encounter_ids, drug_names, triggering_code_descriptions,
-    cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line
+    cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
+    drug_group, cause_of_death
   )
 
 message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -263,7 +309,8 @@ detail_export <- detail %>%
     episode_number, episode_start, episode_stop, historical_flag
   ) %>%
   mutate(
-    triggering_code_description = sapply(triggering_code, lookup_description, USE.NAMES = FALSE)
+    triggering_code_description = sapply(triggering_code, lookup_description, USE.NAMES = FALSE),
+    cause_of_death = NA_character_  # Treatment detail rows get NA per D-78-10
   ) %>%
   left_join(episodes_v2_cols, by = c("patient_id", "treatment_type", "episode_number")) %>%
   mutate(
@@ -275,7 +322,8 @@ detail_export <- detail %>%
     ENCOUNTERID, drug_name,
     episode_number, episode_start, episode_stop, historical_flag,
     triggering_code_description,
-    cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line
+    cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
+    cause_of_death
   )
 
 message(glue("  Built detail_export: {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
@@ -291,11 +339,46 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
   validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
 
   death_data <- validated_deaths %>%
-    filter(!is.na(DEATH_DATE)) %>%
-    select(ID, DEATH_DATE)
+    filter(!is.na(DEATH_DATE))
+
+  # Check if DEATH_CAUSE is available and map to cause_of_death
+  if ("DEATH_CAUSE" %in% names(death_data) && cause_of_death_available) {
+    death_data <- death_data %>%
+      mutate(cause_of_death = sapply(DEATH_CAUSE, map_death_cause, USE.NAMES = FALSE)) %>%
+      select(ID, DEATH_DATE, cause_of_death)
+  } else if (!"DEATH_CAUSE" %in% names(validated_deaths) && cause_of_death_available) {
+    # DEATH_CAUSE not in validated_death_dates.rds -- query DEATH table directly
+    message("  DEATH_CAUSE not in validated_death_dates.rds -- querying DEATH table directly")
+    USE_DUCKDB <- TRUE
+    open_pcornet_con()
+    death_cause_data <- get_pcornet_table("DEATH") %>% collect()
+    close_pcornet_con()
+
+    if ("DEATH_CAUSE" %in% names(death_cause_data)) {
+      death_cause_lookup <- death_cause_data %>%
+        select(ID, DEATH_CAUSE) %>%
+        filter(!is.na(DEATH_CAUSE) & DEATH_CAUSE != "") %>%
+        group_by(ID) %>%
+        summarise(DEATH_CAUSE = first(DEATH_CAUSE), .groups = "drop")
+
+      death_data <- death_data %>%
+        left_join(death_cause_lookup, by = "ID") %>%
+        mutate(cause_of_death = sapply(DEATH_CAUSE, map_death_cause, USE.NAMES = FALSE)) %>%
+        select(ID, DEATH_DATE, cause_of_death)
+    } else {
+      message("  DEATH_CAUSE column not available in DEATH table")
+      death_data <- death_data %>%
+        mutate(cause_of_death = "Unknown or Unspecified") %>%
+        select(ID, DEATH_DATE, cause_of_death)
+    }
+  } else {
+    death_data <- death_data %>%
+      mutate(cause_of_death = NA_character_) %>%
+      select(ID, DEATH_DATE, cause_of_death)
+  }
 
   if (nrow(death_data) > 0) {
-    # Build death_episodes with all 17 v2 columns
+    # Build death_episodes with all 19 v2 columns (Phase 78: +drug_group, +cause_of_death)
     death_episodes <- death_data %>%
       mutate(
         patient_id = ID,
@@ -314,14 +397,17 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         is_hodgkin = FALSE,
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
-        is_first_line = FALSE # v2 default per D-10
+        is_first_line = FALSE, # v2 default per D-10
+        drug_group = NA_character_  # Death rows have no drug group (Phase 78)
+        # cause_of_death already in death_data from mapping above
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
         episode_start, episode_stop, episode_length_days,
         distinct_dates_in_episode, historical_flag, triggering_codes,
         encounter_ids, drug_names, triggering_code_descriptions,
-        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line
+        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
+        drug_group, cause_of_death
       )
 
     # Verify column alignment before binding (R/49 pattern, lines 734-756)
@@ -337,7 +423,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
       warning(glue("Death episodes has extra columns: {paste(extra_in_death_ep, collapse = ', ')}"))
     }
 
-    # Build death_detail with all 15 v2 detail columns
+    # Build death_detail with all 16 v2 detail columns (Phase 78: +cause_of_death)
     death_detail <- death_data %>%
       mutate(
         patient_id = ID,
@@ -355,14 +441,16 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         is_hodgkin = FALSE,
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
-        is_first_line = FALSE # v2 default per D-10
+        is_first_line = FALSE  # v2 default per D-10
+        # cause_of_death already in death_data from mapping above
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
         ENCOUNTERID, drug_name,
         episode_number, episode_start, episode_stop, historical_flag,
         triggering_code_description,
-        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line
+        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
+        cause_of_death
       )
 
     # Verify column alignment for detail
@@ -410,7 +498,7 @@ if (file.exists(COHORT_RDS)) {
     select(ID, first_hl_dx_date)
 
   if (nrow(hl_dx_data) > 0) {
-    # Build hl_dx_episodes with all 17 v2 columns
+    # Build hl_dx_episodes with all 19 v2 columns (Phase 78: +drug_group, +cause_of_death)
     hl_dx_episodes <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -429,14 +517,17 @@ if (file.exists(COHORT_RDS)) {
         is_hodgkin = TRUE,
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
-        is_first_line = FALSE # v2 default per D-10
+        is_first_line = FALSE, # v2 default per D-10
+        drug_group = NA_character_, # HL Diagnosis rows have no drug group (Phase 78)
+        cause_of_death = NA_character_  # HL Diagnosis rows are not death events (Phase 78)
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
         episode_start, episode_stop, episode_length_days,
         distinct_dates_in_episode, historical_flag, triggering_codes,
         encounter_ids, drug_names, triggering_code_descriptions,
-        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line
+        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
+        drug_group, cause_of_death
       )
 
     # Verify column alignment before binding
@@ -452,7 +543,7 @@ if (file.exists(COHORT_RDS)) {
       warning(glue("HL Diagnosis episodes has extra columns: {paste(extra_in_hl_dx_ep, collapse = ', ')}"))
     }
 
-    # Build hl_dx_detail with all 15 v2 detail columns
+    # Build hl_dx_detail with all 16 v2 detail columns (Phase 78: +cause_of_death)
     hl_dx_detail <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -470,14 +561,16 @@ if (file.exists(COHORT_RDS)) {
         is_hodgkin = TRUE,
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
-        is_first_line = FALSE # v2 default per D-10
+        is_first_line = FALSE, # v2 default per D-10
+        cause_of_death = NA_character_  # HL Diagnosis rows are not death events (Phase 78)
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
         ENCOUNTERID, drug_name,
         episode_number, episode_start, episode_stop, historical_flag,
         triggering_code_description,
-        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line
+        cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
+        cause_of_death
       )
 
     # Verify column alignment for detail
@@ -507,6 +600,23 @@ if (file.exists(COHORT_RDS)) {
   }
 } else {
   message("  WARNING: confirmed_hl_cohort.rds not found — skipping HL Diagnosis rows")
+}
+
+
+# --- SECTION 4C2: CAUSE OF DEATH MISSINGNESS WARNING (D-78-11) ----
+
+# Check cause_of_death missingness for Death rows
+if (cause_of_death_available && any(!is.na(episodes_export$cause_of_death))) {
+  death_rows_export <- episodes_export %>% filter(treatment_type == "Death")
+  if (nrow(death_rows_export) > 0) {
+    n_unknown <- sum(death_rows_export$cause_of_death == "Unknown or Unspecified" | is.na(death_rows_export$cause_of_death), na.rm = TRUE)
+    pct_missing <- round(100 * n_unknown / nrow(death_rows_export), 1)
+    if (pct_missing > 40) {
+      message(glue("  WARNING: Cause of death missing/unmapped for {pct_missing}% of death rows (D-78-11)"))
+    } else {
+      message(glue("  Cause of death completeness: {100 - pct_missing}% of death rows have mapped cause"))
+    }
+  }
 }
 
 
@@ -682,7 +792,8 @@ episodes_export <- episodes_export %>%
     episode_start, episode_stop, episode_length_days,
     distinct_dates_in_episode, historical_flag,
     triggering_codes, drug_names, triggering_code_descriptions,
-    cancer_category, regimen_label, is_first_line
+    cancer_category, regimen_label, is_first_line,
+    drug_group, cause_of_death
   )
 
 detail_export <- detail_export %>%
@@ -691,15 +802,16 @@ detail_export <- detail_export %>%
     triggering_code, drug_name, episode_number,
     episode_start, episode_stop, historical_flag,
     triggering_code_description, cancer_category,
-    regimen_label, is_first_line
+    regimen_label, is_first_line,
+    cause_of_death
   )
 
 message("  Columns trimmed to Tableau-essential set")
 message(glue("  Episodes: {ncol(episodes_export)} columns, Detail: {ncol(detail_export)} columns"))
 
 # Step 7: Column count verification
-expected_ep_cols <- 14
-expected_detail_cols <- 13
+expected_ep_cols <- 16  # was 14, Phase 78: +drug_group, +cause_of_death
+expected_detail_cols <- 14  # was 13, Phase 78: +cause_of_death
 
 if (ncol(episodes_export) != expected_ep_cols) {
   stop(glue("ERROR: episodes_export has {ncol(episodes_export)} columns, expected {expected_ep_cols}"))
@@ -759,9 +871,15 @@ hl_dx_rows <- episodes_export %>%
 message(glue("  HL Diagnosis pseudo-treatment rows: {format(hl_dx_rows, big.mark = ',')}"))
 
 # v1 vs v2 column comparison
-message("\n  v1 vs v2 column comparison (Phase 64 cleanup):")
-message("    v1 episodes: 14 columns | v2 episodes: 14 columns (cleaned & Tableau-ready)")
-message("    v1 detail: 13 columns | v2 detail: 13 columns (cleaned & Tableau-ready)")
+message("\n  v1 vs v2 column comparison (Phase 64 cleanup, Phase 78 enhancements):")
+message("    v1 episodes: 14 columns | v2 episodes: 16 columns (Phase 78: +drug_group, +cause_of_death)")
+message("    v1 detail: 13 columns | v2 detail: 14 columns (Phase 78: +cause_of_death)")
 message("    Phase 64 dropped: encounter_ids, is_hodgkin, cancer_link_method (internal columns)")
+
+# Cause of death stats
+deaths_with_cause <- episodes_export %>%
+  filter(treatment_type == "Death" & !is.na(cause_of_death) & cause_of_death != "" & cause_of_death != "Unknown or Unspecified") %>%
+  nrow()
+message(glue("  Deaths with mapped cause: {format(deaths_with_cause, big.mark = ',')}"))
 
 message("\nDone.")
