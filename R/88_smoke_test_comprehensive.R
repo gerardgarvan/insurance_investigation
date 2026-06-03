@@ -7,8 +7,10 @@
 #   codebase cleanup. Consolidates R/86 + R/87 checks and adds DRY consolidation,
 #   defensive coding, and config constant validation. WHY comprehensive: Final
 #   validation layer superseding R/86 and R/87 by including all their checks plus
-#   Phase 72-73 work (assertions, DRY compliance). WHY standalone: Runs via Rscript
-#   with zero external dependencies on data availability.
+#   Phase 72-73 work (assertions, DRY compliance).
+#   Phase 76 TR removal (TREAT-01) validation.
+#   WHY standalone: Runs via Rscript with zero external dependencies on data
+#   availability.
 #
 # Inputs:
 #   - R/ directory filesystem structure
@@ -60,7 +62,7 @@ message(strrep("=", 70))
 # SECTION 2: UTILS MODULE COMPLETENESS ----
 # ==============================================================================
 
-message("\n[1/18] Utils module completeness...")
+message("\n[1/19] Utils module completeness...")
 
 check("R/utils/ directory exists", dir.exists("R/utils"))
 
@@ -94,7 +96,7 @@ check(
 # SECTION 3: CONFIG LOADING AND AUTO-SOURCING ----
 # ==============================================================================
 
-message("\n[2/18] Config loading and auto-sourcing...")
+message("\n[2/19] Config loading and auto-sourcing...")
 
 tryCatch(
   {
@@ -163,7 +165,7 @@ for (module in names(key_functions)) {
 # SECTION 4: FOUNDATION CHAIN ----
 # ==============================================================================
 
-message("\n[3/18] Foundation script chain...")
+message("\n[3/19] Foundation script chain...")
 
 check("R/00_config.R exists", file.exists("R/00_config.R"))
 check("R/01_load_pcornet.R exists", file.exists("R/01_load_pcornet.R"))
@@ -181,7 +183,7 @@ check(
 # --------------------------------------------------------------------------
 # Cohort decade (10-14)
 # --------------------------------------------------------------------------
-message("\n[4/18] Cohort decade (10-14)...")
+message("\n[4/19] Cohort decade (10-14)...")
 
 cohort_scripts <- c(
   "10_cohort_predicates.R", "11_treatment_payer.R",
@@ -200,7 +202,7 @@ check(
 # --------------------------------------------------------------------------
 # Treatment decade (20-29)
 # --------------------------------------------------------------------------
-message("\n[5/18] Treatment decade (20-29)...")
+message("\n[5/19] Treatment decade (20-29)...")
 
 treatment_expected <- c(
   "20_treatment_inventory.R", "21_investigate_unmatched.R",
@@ -221,7 +223,7 @@ check(
 # --------------------------------------------------------------------------
 # Cancer decade (40-53)
 # --------------------------------------------------------------------------
-message("\n[6/18] Cancer decade (40-53)...")
+message("\n[6/19] Cancer decade (40-53)...")
 
 cancer_expected <- c(
   "40_cancer_site_frequency.R", "41_extract_all_codes.R",
@@ -244,7 +246,7 @@ check(
 # --------------------------------------------------------------------------
 # Payer/QA decade (60-69)
 # --------------------------------------------------------------------------
-message("\n[7/18] Payer/QA decade (60-69)...")
+message("\n[7/19] Payer/QA decade (60-69)...")
 
 payer_expected <- c(
   "60_tiered_same_day_payer.R", "61_tiered_encounter_level.R",
@@ -266,7 +268,7 @@ check(
 # --------------------------------------------------------------------------
 # Output decade (70-75)
 # --------------------------------------------------------------------------
-message("\n[8/18] Output decade (70-75)...")
+message("\n[8/19] Output decade (70-75)...")
 
 output_scripts <- c(
   "70_visualize_waterfall.R", "71_visualize_sankey.R",
@@ -285,7 +287,7 @@ check(
 # --------------------------------------------------------------------------
 # Test decade (80-88)
 # --------------------------------------------------------------------------
-message("\n[9/18] Test decade (80-88)...")
+message("\n[9/19] Test decade (80-88)...")
 
 test_scripts <- c(
   "80_smoke_test_backends.R", "81_parity_test_cohort.R",
@@ -306,7 +308,7 @@ check(
 # --------------------------------------------------------------------------
 # Ad-hoc decade (90-99)
 # --------------------------------------------------------------------------
-message("\n[10/18] Ad-hoc decade (90-99)...")
+message("\n[10/19] Ad-hoc decade (90-99)...")
 
 adhoc_scripts <- c(
   "90_diagnostics.R", "91_data_quality_summary.R",
@@ -328,7 +330,7 @@ check(
 # SECTION 6: NO STALE FILES ----
 # ==============================================================================
 
-message("\n[11/18] No stale files...")
+message("\n[11/19] No stale files...")
 
 # Check for specific old numbers that should have been renamed
 old_numbers <- c(
@@ -361,7 +363,7 @@ check(
 # SECTION 7: SOURCE() REFERENCE VALIDATION ----
 # ==============================================================================
 
-message("\n[12/18] Source() reference validation...")
+message("\n[12/19] Source() reference validation...")
 
 r_files_full <- list.files("R", pattern = "\\.R$", full.names = TRUE)
 broken_refs <- character(0)
@@ -412,7 +414,7 @@ check(
 # SECTION 8: KEY DEPENDENCY CHAINS ----
 # ==============================================================================
 
-message("\n[13/18] Key dependency chains...")
+message("\n[13/19] Key dependency chains...")
 
 # Check critical source() patterns
 check_source <- function(file, pattern, description) {
@@ -448,7 +450,7 @@ check(
 # SECTION 9: DRY CONSOLIDATION VALIDATION ----
 # ==============================================================================
 
-message("\n[14/18] DRY consolidation validation...")
+message("\n[14/19] DRY consolidation validation...")
 
 # Check no PREFIX_MAP definitions outside R/00_config.R
 scripts_to_check_prefix <- c(
@@ -520,7 +522,7 @@ check(
 # SECTION 10: DEFENSIVE CODING INFRASTRUCTURE ----
 # ==============================================================================
 
-message("\n[15/18] Defensive coding infrastructure...")
+message("\n[15/19] Defensive coding infrastructure...")
 
 # Check library(checkmate) appears in R/00_config.R
 config_lines <- readLines("R/00_config.R", warn = FALSE)
@@ -542,7 +544,7 @@ for (func in assertion_functions) {
 # SECTION 11: ARCHIVE VALIDATION ----
 # ==============================================================================
 
-message("\n[16/18] Archive validation...")
+message("\n[16/19] Archive validation...")
 
 check("R/archive/ directory exists", dir.exists("R/archive"))
 check("R/archive/README.md exists", file.exists("R/archive/README.md"))
@@ -563,7 +565,7 @@ check(
 # SECTION 12: CROSS-PLATFORM DATA AVAILABILITY ----
 # ==============================================================================
 
-message("\n[17/18] Cross-platform data availability...")
+message("\n[17/19] Cross-platform data availability...")
 
 # Detect data availability
 if (exists("CONFIG")) {
@@ -599,7 +601,7 @@ if (exists("CONFIG")) {
 # Phase 75 (CANCER-01): Validates NLPHL breakout mutual exclusivity.
 # Phase 75 (DEATH-01/DEATH-02): Validates DEATH_CAUSE_MAP structure.
 
-message("\n[18/18] NLPHL classification & death cause validation...")
+message("\n[18/19] NLPHL classification & death cause validation...")
 
 # --- NLPHL ICD-10 mutual exclusivity ---
 
@@ -695,6 +697,91 @@ check(
 )
 
 # ==============================================================================
+# SECTION 13B: TR REMOVAL VALIDATION ----
+# ==============================================================================
+# Phase 76 (TREAT-01): Validates tumor registry source removed from R/26.
+
+message("\n[19/19] TR removal validation...")
+
+# Read R/26 source code for static analysis
+r26_lines <- readLines("R/26_treatment_episodes.R")
+r26_text <- paste(r26_lines, collapse = "\n")
+
+# Check 1: No live tr_dates assignments (blocks should be deleted)
+tr_dates_assignments <- sum(grepl("tr_dates <- NULL", r26_lines, fixed = TRUE))
+check(
+  glue("R/26 has no tr_dates <- NULL assignments (found {tr_dates_assignments})"),
+  tr_dates_assignments == 0
+)
+
+# Check 2: No TR in any sources list
+tr_source_refs <- sum(grepl("TR = tr_dates", r26_lines, fixed = TRUE))
+check(
+  glue("R/26 has no TR = tr_dates in sources lists (found {tr_source_refs})"),
+  tr_source_refs == 0
+)
+
+# Check 3: No live TUMOR_REGISTRY_ALL calls (only in comments)
+# Lines that call get_pcornet_table("TUMOR_REGISTRY_ALL") should not exist
+# Comments (lines starting with #) are acceptable
+live_tr_lines <- r26_lines[!grepl("^\\s*#", r26_lines)]
+live_tr_refs <- sum(grepl("TUMOR_REGISTRY_ALL", live_tr_lines, fixed = TRUE))
+check(
+  glue("R/26 has no live TUMOR_REGISTRY_ALL references (found {live_tr_refs})"),
+  live_tr_refs == 0
+)
+
+# Check 4: Phase 76 removal comments present (one per extraction function)
+removal_comments <- sum(grepl("Phase 76: Tumor registry source removed", r26_lines, fixed = TRUE))
+check(
+  glue("R/26 has 3 Phase 76 removal comments (found {removal_comments})"),
+  removal_comments == 3
+)
+
+# Check 5: EPISODE_COUNT_BASELINE defined
+baseline_def <- sum(grepl("EPISODE_COUNT_BASELINE", r26_lines, fixed = TRUE))
+check(
+  glue("R/26 defines EPISODE_COUNT_BASELINE (found {baseline_def} refs)"),
+  baseline_def >= 2
+)
+
+# Check 6: Chemo sources list has 6 entries (no TR)
+# Find the chemo stack_and_dedup_with_codes call and verify source count
+chemo_section <- r26_text
+chemo_has_6 <- grepl(
+  "PX = px_dates.*RX = rx_dates.*DX = dx_dates.*DRG = drg_dates.*DISP = disp_dates.*MA = ma_dates",
+  chemo_section
+) && !grepl("TR = tr_dates.*type_name = .Chemotherapy", chemo_section)
+check("Chemotherapy uses 6 sources (PX, RX, DX, DRG, DISP, MA)", chemo_has_6)
+
+# Check 7: Radiation sources list has 3 entries (no TR)
+rad_has_3 <- grepl(
+  'sources = list\\(PX = px_dates, DX = dx_dates, DRG = drg_dates\\)',
+  r26_text
+)
+check("Radiation uses 3 sources (PX, DX, DRG)", rad_has_3)
+
+# Check 8: SCT sources list has 2 entries (no TR)
+sct_has_2 <- grepl(
+  'sources = list\\(PX = px_dates, DRG = drg_dates\\)',
+  r26_text
+)
+check("SCT uses 2 sources (PX, DRG)", sct_has_2)
+
+# Check 9: Coverage analysis output exists (from 76-01)
+coverage_csv <- file.path(CONFIG$output_dir, "source_coverage_analysis.csv")
+check(
+  glue("Coverage analysis output exists: {coverage_csv}"),
+  file.exists(coverage_csv)
+)
+
+# Check 10: R/76 coverage script exists
+check(
+  "R/76_treatment_source_coverage.R exists",
+  file.exists("R/76_treatment_source_coverage.R")
+)
+
+# ==============================================================================
 # SECTION 14: SUMMARY ----
 # ==============================================================================
 
@@ -720,6 +807,8 @@ message("  * SAFE-02: assert_df_valid() infrastructure")
 message("  * SAFE-03: Error messages with context (glue)")
 message("  * CANCER-01: NLPHL mutual exclusivity (classify_codes)")
 message("  * DEATH-01/02: DEATH_CAUSE_MAP structure and coverage")
+message("  * TREAT-01: Tumor registry source removed from treatment pipeline")
+message("  * TREAT-01: Coverage analysis output validates removal impact")
 
 if (failed > 0) {
   quit(status = 1)
