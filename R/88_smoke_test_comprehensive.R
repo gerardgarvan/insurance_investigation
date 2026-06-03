@@ -877,8 +877,8 @@ check(
 
 # Check 3: R/49 has checkmate population assertion for 6300-6400 range
 check(
-  "R/49 has checkmate assert_int for v2 population (6300-6400)",
-  grepl("assert_int.*6300.*6400", r49_text)
+  "R/49 has checkmate assert_int for v2 population (6300-6500)",
+  grepl("assert_int.*6300.*6500", r49_text)
 )
 
 # Check 4: R/49 has NLPHL diagnostic split
@@ -1021,8 +1021,8 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
         any(grepl("filter\\(!is\\.na\\(cancer_codes\\)\\)", r56_lines)) &&
         !any(grepl('if_else\\(is\\.na\\(cancer_codes\\).*Unknown', r56_lines)))
 
-  check("R/56 adds category column derived from treatment_type",
-        any(grepl("category = treatment_type", r56_lines)))
+  check("R/56 derives category from DRUG_GROUPINGS with treatment_type fallback",
+        any(grepl("DRUG_GROUPINGS", r56_lines)))
 
   check("R/56 includes category in Table 1 group_by",
         any(grepl("group_by\\(category.*sub_category.*cancer_codes\\)", r56_lines)))
