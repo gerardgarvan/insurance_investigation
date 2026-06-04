@@ -81,7 +81,7 @@ Plans:
 - [x] 83-02-PLAN.md — Infrastructure files (.gitignore, .Renviron.example) and smoke test validation
 
 #### Phase 84: Test Fixture Design & Creation
-**Goal**: Hand-crafted test fixture CSVs exist covering 18+ clinical edge cases (dual-eligible, NLPHL, orphan dx, SCT, death dates, multiple cancers) in a documented, reproducible, git-tracked format
+**Goal**: Hand-crafted test fixture CSVs exist covering 11 clinical edge cases (dual-eligible, NLPHL, orphan dx, SCT, death dates, multiple cancers, same-day multi-payer, 1900 sentinel dates, ICD-9/ICD-10 cross-system, missing payer, ABVD regimen) in a documented, reproducible, git-tracked format
 **Depends on**: Phase 83 (environment detection must work before fixtures can be placed in correct directory)
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
 **Success Criteria** (what must be TRUE):
@@ -90,8 +90,10 @@ Plans:
   3. Developer reads any fixture CSV and sees obviously synthetic data (unrealistic dates 2010-2015, generic site codes, fake patient IDs) preventing HIPAA re-identification
   4. Developer queries fixture CSVs for known edge cases and finds patients PT001-PT002 with dual-eligible records, PT003 with NLPHL diagnosis, PT008 with orphan dx codes
   5. Developer runs git diff after fixture creation and sees all CSVs tracked in version control with total size under 1MB
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 2 plans
+Plans:
+- [ ] 84-01-PLAN.md — Fixture design document and R generation script with all 15 table generators
+- [ ] 84-02-PLAN.md — Write 15 fixture CSV files and verify git tracking
 
 #### Phase 85: Testing Integration & Validation
 **Goal**: Existing DuckDB ingest (R/03) and smoke test (R/88) run successfully against local test fixtures, validating environment detection and fixture schema with end-to-end pipeline completing in under 2 minutes
@@ -122,7 +124,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 83. Environment Detection & Infrastructure | 2/2 | Complete    | 2026-06-04 |
-| 84. Test Fixture Design & Creation | 0/? | Not started | - |
+| 84. Test Fixture Design & Creation | 0/2 | Not started | - |
 | 85. Testing Integration & Validation | 0/? | Not started | - |
 | 86. Documentation & Cleanup | 0/? | Not started | - |
 
@@ -139,4 +141,4 @@ Plans:
 - [x] 87-03-PLAN.md — R/56 shared utility linkage, R/50 verification, R/88 smoke test validation
 
 ---
-*Last updated: 2026-06-04 -- Phase 87 planned (3 plans, 2 waves)*
+*Last updated: 2026-06-04 -- Phase 84 planned (2 plans, 2 waves)*
