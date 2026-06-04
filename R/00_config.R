@@ -863,6 +863,7 @@ ICD9_CANCER_SITE_MAP <- c(
   "163" = "Other Respiratory/Intrathoracic",  # Pleura
   "164" = "Other Respiratory/Intrathoracic",  # Thymus, heart, mediastinum
   "165" = "Other Respiratory/Intrathoracic",  # Other respiratory/intrathoracic
+  # NOTE: ICD-9-CM codes 166-169 were never assigned (reserved gaps)
 
   # --- Bone, Connective Tissue, Skin, Breast (170-176) ---
   "170" = "Bone",

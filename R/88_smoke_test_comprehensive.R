@@ -875,10 +875,10 @@ check(
   any(grepl("two_or_more_unique_dates_gt_7 == 1", r49_lines, fixed = TRUE))
 )
 
-# Check 3: R/49 has checkmate population assertion for 6300-6400 range
+# Check 3: R/49 has checkmate population assertion for v2 range (widened for ICD-9 cohort expansion)
 check(
-  "R/49 has checkmate assert_int for v2 population (6300-6500)",
-  grepl("assert_int.*6300.*6500", r49_text)
+  "R/49 has checkmate assert_int for v2 population (6300-7500)",
+  grepl("assert_int.*6300.*7500", r49_text)
 )
 
 # Check 4: R/49 has NLPHL diagnostic split
@@ -1323,11 +1323,13 @@ if (exists("ICD9_CANCER_SITE_MAP") && length(ICD9_CANCER_SITE_MAP) >= 70) {
   failed <- failed + 1L
 }
 
-# Check 2: All malignant ICD-9 prefixes (140-209) present
-icd9_prefixes_expected <- as.character(140:209)
+# Check 2: All assigned malignant ICD-9 prefixes (140-209, excluding unassigned gaps) present
+# ICD-9-CM codes 166-169 and 177-178 were never assigned (reserved gaps in classification)
+icd9_unassigned <- c("166", "167", "168", "169", "177", "178")
+icd9_prefixes_expected <- setdiff(as.character(140:209), icd9_unassigned)
 icd9_prefixes_present <- intersect(names(ICD9_CANCER_SITE_MAP), icd9_prefixes_expected)
-if (length(icd9_prefixes_present) == 70) {
-  message(glue("  PASS: All 70 malignant ICD-9 prefixes (140-209) mapped"))
+if (length(icd9_prefixes_present) == length(icd9_prefixes_expected)) {
+  message(glue("  PASS: All {length(icd9_prefixes_expected)} assigned malignant ICD-9 prefixes mapped (6 unassigned gaps excluded)"))
   passed <- passed + 1L
 } else {
   missing_pfx <- setdiff(icd9_prefixes_expected, names(ICD9_CANCER_SITE_MAP))
