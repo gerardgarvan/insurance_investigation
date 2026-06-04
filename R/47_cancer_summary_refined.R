@@ -17,8 +17,8 @@
 # Dependencies: R/00_config.R, R/01_load_pcornet.R, CANCER_SITE_MAP (R/00_config.R),
 #               classify_codes() (R/utils/utils_cancer.R)
 #
-# Requirements: CREF-01: Remove D-codes (in-situ/benign neoplasms)
-#               CREF-02: Filter to patients with 2+ C81 codes 7+ days apart
+# Requirements: CREF-01: Remove D-codes (in-situ/benign neoplasms) and ICD-9 210-239
+#               CREF-02: Filter to patients with 2+ HL codes (C81 + 201.x) 7+ days apart
 #               CREF-03: Compute first HL diagnosis date (DIAGNOSIS + TUMOR_REGISTRY)
 # ==============================================================================
 
@@ -47,6 +47,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
+source("R/utils/utils_cancer.R")
 
 # SECTION 0: INPUT VALIDATION ----
 # SAFE-02: Validate DIAGNOSIS table is available
@@ -90,10 +91,12 @@ cancer_summary <- read.csv(INPUT_CSV, stringsAsFactors = FALSE)
 n_loaded <- nrow(cancer_summary)
 message(glue("  Loaded {format(n_loaded, big.mark=',')} patient-code rows"))
 
-# Remove D-codes per CREF-01
+# Remove ICD-10 D-codes (per CREF-01) and ICD-9 benign/uncertain/in-situ (210-239, per D-02)
+# is_cancer_code() upstream already excludes these, but defense-in-depth prevents data leaks
 n_before_dcode_removal <- nrow(cancer_summary)
 cancer_summary <- cancer_summary %>%
-  filter(!str_detect(cancer_code, "^D"))
+  filter(!str_detect(cancer_code, "^D")) %>%
+  filter(!substr(cancer_code, 1, 3) %in% as.character(210:239))
 n_removed_dcodes <- n_before_dcode_removal - nrow(cancer_summary)
 
 message(glue("Removed {format(n_removed_dcodes, big.mark=',')} D-code rows ({format(nrow(cancer_summary), big.mark=',')} remaining)"))
@@ -104,21 +107,20 @@ message(glue("  Unique codes after D-code removal: {format(n_distinct(cancer_sum
 # SECTION 4: COHORT CONFIRMATION -- C81 codes, 7-day gap (CREF-02)
 # ==============================================================================
 
-message("\nQuerying DIAGNOSIS for C81 cohort confirmation...")
+message("\nQuerying DIAGNOSIS for HL cohort confirmation (C81 + 201.x)...")
 
-# Query all C81 diagnosis codes from DuckDB
-dx_c81 <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
+# Query all HL diagnosis codes: ICD-10 C81 + ICD-9 201.x (per D-09)
+dx_hl <- get_pcornet_table("DIAGNOSIS") %>%
+  select(ID, DX, DX_TYPE, DX_DATE) %>%
+  collect() %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C81")) %>%
-  select(ID, DX_norm, DX_DATE) %>%
-  collect()
+  filter(str_detect(DX_norm, "^C81") | str_detect(DX_norm, "^201"))
 
-message(glue("  Found {format(nrow(dx_c81), big.mark=',')} C81 diagnosis rows"))
+message(glue("  Found {format(nrow(dx_hl), big.mark=',')} HL diagnosis rows (C81 + 201.x)"))
 
 # Deduplicate before date span calculation (Pitfall 1)
-# Group by ID only (not per sub-code) -- different C81 sub-codes count toward threshold together
-confirmed_patients <- dx_c81 %>%
+# Group by ID only (not per sub-code) -- different HL sub-codes (C81.x + 201.x) count toward threshold together (per D-10)
+confirmed_patients <- dx_hl %>%
   filter(!is.na(DX_DATE)) %>%
   distinct(ID, DX_DATE) %>%
   group_by(ID) %>%
@@ -126,7 +128,7 @@ confirmed_patients <- dx_c81 %>%
   ungroup() %>%
   distinct(ID)
 
-message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',')} patients (2+ C81 codes, 7-day gap)"))
+message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',')} patients (2+ C81/201.x codes, 7-day gap)"))
 
 # ==============================================================================
 # SECTION 5: COMPUTE FIRST HL DIAGNOSIS DATE (CREF-03)
@@ -134,13 +136,13 @@ message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',
 
 message("\nComputing first HL diagnosis date from DIAGNOSIS and TUMOR_REGISTRY...")
 
-# DIAGNOSIS earliest C81 date per patient (reuse dx_c81 from Section 4)
-dx_dates <- dx_c81 %>%
+# DIAGNOSIS earliest HL date per patient (C81 + 201.x, reuse dx_hl from Section 4)
+dx_dates <- dx_hl %>%
   filter(!is.na(DX_DATE)) %>%
   group_by(ID) %>%
   summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop")
 
-message(glue("  DIAGNOSIS: {format(nrow(dx_dates), big.mark=',')} patients with C81 dates"))
+message(glue("  DIAGNOSIS: {format(nrow(dx_dates), big.mark=',')} patients with HL dates (C81 + 201.x)"))
 
 # TUMOR_REGISTRY earliest DATE_OF_DIAGNOSIS per patient
 tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
@@ -240,13 +242,16 @@ if (n_unclassified > 0) {
 
 message("\nQuerying DIAGNOSIS for record counts...")
 
+# Record counts query: all cancer codes (ICD-9 + ICD-10)
 dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
+  select(ID, DX, DX_TYPE) %>%
+  collect() %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C")) %>%
+  filter(is_cancer_code(DX)) %>%
+  filter(!str_detect(DX_norm, "^D")) %>%
+  filter(!substr(DX_norm, 1, 3) %in% as.character(210:239)) %>%
   group_by(DX_norm) %>%
-  summarise(record_count = n(), .groups = "drop") %>%
-  collect()
+  summarise(record_count = n(), .groups = "drop")
 
 message(glue("  Found record counts for {nrow(dx_record_counts)} unique codes"))
 

@@ -5,7 +5,7 @@
 #          metrics (date count, date span, first/last dates). All patients in
 #          DIAGNOSIS with neoplasm codes included (not restricted to HL cohort).
 #
-# Inputs:  DIAGNOSIS DuckDB table (ICD-10 codes only, DX_TYPE == "10")
+# Inputs:  DIAGNOSIS DuckDB table (all coding systems via is_cancer_code())
 #
 # Outputs: output/tables/cancer_summary.xlsx (single "Cancer Summary" sheet)
 #          output/tables/cancer_summary.csv
@@ -32,6 +32,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
+source("R/utils/utils_cancer.R")
 
 # SECTION 0: INPUT VALIDATION ----
 # SAFE-02: Validate DIAGNOSIS table is available
@@ -59,28 +60,27 @@ message(glue("Defined {length(unique(CANCER_SITE_MAP))} cancer site categories c
 # ==============================================================================
 # SECTION 3: LOAD AND CLASSIFY DIAGNOSIS DATA ----
 # ==============================================================================
-# Per D-09: DIAGNOSIS table only, DX_TYPE == "10" for ICD-10
+# Per D-01: All coding systems (ICD-9 + ICD-10), filtered to cancer codes via is_cancer_code()
 # Per D-14: All patients in DIAGNOSIS (not restricted to HL cohort)
-# Per D-08: All neoplasm codes with C or D prefix
+# Per D-08: All malignant cancer codes (ICD-10 C-codes + ICD-9 140-209)
 
-message("\nLoading DIAGNOSIS table (ICD-10 only, all patients)...")
+message("\nLoading DIAGNOSIS table (all coding systems, all patients)...")
 
-dx_icd10 <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  select(ID, DX, DX_DATE) %>%
+dx_all <- get_pcornet_table("DIAGNOSIS") %>%
+  select(ID, DX, DX_TYPE, DX_DATE) %>%
   collect()
 
-message(glue("  Total ICD-10 DIAGNOSIS rows: {format(nrow(dx_icd10), big.mark=',')}"))
+message(glue("  Total DIAGNOSIS rows: {format(nrow(dx_all), big.mark=',')}"))
 
 # Normalize codes (remove dots, uppercase)
-dx_icd10 <- dx_icd10 %>%
+dx_all <- dx_all %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\.")))
 
-# Filter to neoplasm codes (C00-D49)
-dx_cancer <- dx_icd10 %>%
-  filter(str_detect(DX_norm, "^[CD]"))
+# Filter to cancer codes using map-based detection (ICD-9 malignant 140-209 + ICD-10 C/D)
+dx_cancer <- dx_all %>%
+  filter(is_cancer_code(DX))
 
-message(glue("  Neoplasm codes (C/D): {format(nrow(dx_cancer), big.mark=',')} rows"))
+message(glue("  Cancer codes (ICD-9 + ICD-10): {format(nrow(dx_cancer), big.mark=',')} rows"))
 
 # Classify by prefix
 dx_cancer <- dx_cancer %>%
