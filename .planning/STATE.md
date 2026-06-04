@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
-status: executing
-stopped_at: Completed 87-03-PLAN.md
-last_updated: "2026-06-04T04:30:51.194Z"
+status: verifying
+stopped_at: Completed 87-02-PLAN.md
+last_updated: "2026-06-04T04:33:36.208Z"
 last_activity: 2026-06-04
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 5
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-03)
 
 Phase: 87 (fix-cancer-summary-pre-post-to-include-icd9-but-be-still-filtered-on-icd10-81-and-all-codes-resolved-next-tables-and-drug-grouping-tables-should-all-be-linked-in-the-codes-they-use) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-04
 
 Progress: [████████████████████████████████████████████████░] 95.5% (82/86 phases complete)
@@ -57,6 +57,7 @@ Progress: [███████████████████████
 | Phase 83 P02 | 192 | 3 tasks | 3 files |
 | Phase 87 P01 | 3 | 2 tasks | 2 files |
 | Phase 87 P03 | 3 | 2 tasks | 2 files |
+| Phase 87 P02 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting v2.2 work:
 - [Phase 83]: tempdir() for all local cache paths instead of repo-local temp/ to avoid gitignore conflicts and enable automatic cleanup
 - [Phase 87]: Map-based cancer code detection over range-based to ensure gap-free coverage (no 210-239 benign codes detected)
 - [Phase 87]: Unified 4-tier classification cascade replaces old ICD-9 201.x exact-match logic with map lookup
+- [Phase 87-02]: Map-based cancer code detection over DX_TYPE filtering for gap-free coverage
+- [Phase 87-02]: HL cohort confirmation expanded to C81+201.x with cross-system 7-day gap allowed
+- [Phase 87-02]: Defense-in-depth filtering (is_cancer_code + D-code + 210-239 exclusion)
 
 ### Pending Todos
 
@@ -97,8 +101,8 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-04T04:30:51.189Z
-Stopped at: Completed 87-03-PLAN.md
+Last session: 2026-06-04T04:33:22.074Z
+Stopped at: Completed 87-02-PLAN.md
 Resume file: None
 
 ---

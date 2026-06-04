@@ -131,11 +131,11 @@ Plans:
 **Goal:** Unify cancer diagnosis code handling across the cancer summary pipeline (R/45-R/49) and drug grouping tables (R/56) so all scripts use both ICD-9 and ICD-10 cancer codes via shared centralized maps, expand HL cohort confirmation to include ICD-9 201.x, and ensure consistent cross-system aggregation rules.
 **Requirements**: ICD-01, ICD-02, ICD-03, ICD-04, ICD-05, ICD-06, ICD-07, ICD-08, ICD-09, ICD-10, ICD-11, ICD-12
 **Depends on:** Phase 82 (v2.1 cancer classification work)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 87-01-PLAN.md — ICD9_CANCER_SITE_MAP config, shared is_cancer_code(), classify_codes() extension
-- [ ] 87-02-PLAN.md — Cancer summary pipeline (R/45, R/47, R/48, R/49) DX_TYPE removal and cohort expansion
+- [x] 87-02-PLAN.md — Cancer summary pipeline (R/45, R/47, R/48, R/49) DX_TYPE removal and cohort expansion
 - [x] 87-03-PLAN.md — R/56 shared utility linkage, R/50 verification, R/88 smoke test validation
 
 ---
