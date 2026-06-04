@@ -510,18 +510,19 @@ table1 <- episode_codes_dedup %>%
   group_by(category, sub_category, treatment_code, code_type, cancer_codes, dx_only) %>%
   summarise(encounter_count = n(), .groups = "drop") %>%
   arrange(category, desc(encounter_count)) %>%  # Per D-05: category first, then desc count
-  mutate(category = as.character(category))  # Convert back from factor for xlsx output
+  mutate(category = as.character(category)) %>%  # Convert back from factor for xlsx output
+  uncount(encounter_count, .remove = FALSE)  # Expand: repeat each row encounter_count times
 
-message(glue("  Table 1: {nrow(table1)} rows across {n_distinct(table1$sub_category)} sub-categories"))
+message(glue("  Table 1: {nrow(table1)} rows ({n_distinct(table1$sub_category)} sub-categories, weighted by encounter_count)"))
 
-# Log per sub-category totals
+# Log per sub-category totals (rows = weighted count after uncount expansion)
 subcat_summary <- table1 %>%
   group_by(sub_category) %>%
-  summarise(total = sum(encounter_count), rows = n(), .groups = "drop") %>%
-  arrange(desc(total))
+  summarise(rows = n(), .groups = "drop") %>%
+  arrange(desc(rows))
 
 for (i in seq_len(min(nrow(subcat_summary), 20))) {
-  message(glue("    {subcat_summary$sub_category[i]}: {subcat_summary$total[i]} encounters, {subcat_summary$rows[i]} rows"))
+  message(glue("    {subcat_summary$sub_category[i]}: {subcat_summary$rows[i]} rows"))
 }
 if (nrow(subcat_summary) > 20) {
   message(glue("    ... and {nrow(subcat_summary) - 20} more sub-categories"))
