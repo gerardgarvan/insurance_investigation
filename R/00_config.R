@@ -800,6 +800,132 @@ CANCER_SITE_MAP <- c(
 )
 
 # ==============================================================================
+# SECTION 5b2: ICD-9 CANCER SITE CLASSIFICATION MAP ----
+# ==============================================================================
+# ICD-9 equivalent of CANCER_SITE_MAP for pre-Oct-2015 diagnosis codes.
+# 78-entry mapping from ICD-9-CM malignant neoplasm codes (140-209) to the same
+# cancer site categories used in CANCER_SITE_MAP for ICD-10 codes. Enables
+# cross-system cancer summary merging and consistent category assignment.
+#
+# Scope: Malignant neoplasms ONLY (140-209). Benign/in-situ/uncertain behavior
+# codes (210-239) are deliberately EXCLUDED per D-02 decision -- these ICD-9
+# codes mirror the D-code exclusion logic applied to ICD-10 data.
+#
+# Pattern: 3-digit prefix keys (e.g., "140", "162") for broad categories, plus
+# 4-digit prefix keys (e.g., "2014") for Hodgkin lymphoma subcategory
+# discrimination (NLPHL vs classical HL). Mirrors the C810/C81 4-char-before-3-char
+# pattern in CANCER_SITE_MAP.
+#
+# Categories: Category strings match CANCER_SITE_MAP exactly to enable merging
+# ICD-9 and ICD-10 summaries at the category level. Example: "Breast" (not
+# "breast"), "Hodgkin Lymphoma (non-NLPHL)" (not "Classical HL").
+#
+# Source: ICD-9-CM Chapter 2 (Neoplasms) official structure from CMS.
+#
+# Entry count: 70 3-char entries (140-209) + 8 4-char entries (201.x subcategories)
+# = 78 total entries
+#
+# WHY separate from CANCER_SITE_MAP: ICD-9 and ICD-10 use different code
+# structures and granularities. Separate maps keep classification logic clean.
+# classify_codes() in R/utils/utils_cancer.R checks both maps with proper
+# priority cascade.
+# ==============================================================================
+
+ICD9_CANCER_SITE_MAP <- c(
+  # --- Lip, Oral Cavity and Pharynx (140-149) ---
+  "140" = "Lip, Oral Cavity and Pharynx",
+  "141" = "Lip, Oral Cavity and Pharynx",
+  "142" = "Lip, Oral Cavity and Pharynx",
+  "143" = "Lip, Oral Cavity and Pharynx",
+  "144" = "Lip, Oral Cavity and Pharynx",
+  "145" = "Lip, Oral Cavity and Pharynx",
+  "146" = "Lip, Oral Cavity and Pharynx",
+  "147" = "Lip, Oral Cavity and Pharynx",
+  "148" = "Lip, Oral Cavity and Pharynx",
+  "149" = "Lip, Oral Cavity and Pharynx",
+
+  # --- Digestive Organs (150-159) ---
+  "150" = "Esophagus",
+  "151" = "Stomach",
+  "152" = "Small Intestine",
+  "153" = "Colon",           # Colon
+  "154" = "Rectum",          # Rectum/rectosigmoid/anus
+  "155" = "Liver",           # Liver and intrahepatic bile ducts
+  "156" = "Other Digestive", # Gallbladder and extrahepatic bile ducts
+  "157" = "Pancreas",
+  "158" = "Other Digestive", # Retroperitoneum and peritoneum
+  "159" = "Other Digestive", # Other digestive, ill-defined
+
+  # --- Respiratory and Intrathoracic (160-165) ---
+  "160" = "Nasal Cavity, Middle Ear, Sinuses",
+  "161" = "Larynx",
+  "162" = "Lung and Bronchus",
+  "163" = "Other Respiratory/Intrathoracic",  # Pleura
+  "164" = "Other Respiratory/Intrathoracic",  # Thymus, heart, mediastinum
+  "165" = "Other Respiratory/Intrathoracic",  # Other respiratory/intrathoracic
+
+  # --- Bone, Connective Tissue, Skin, Breast (170-176) ---
+  "170" = "Bone",
+  "171" = "Soft Tissue",                      # Connective and other soft tissue
+  "172" = "Melanoma of Skin",
+  "173" = "Other Skin",                       # Other malignant neoplasm of skin
+  "174" = "Breast",                           # Female breast
+  "175" = "Breast",                           # Male breast
+  "176" = "Kaposi Sarcoma",
+
+  # --- Genitourinary Organs (179-189) ---
+  "179" = "Corpus Uteri",                     # Uterus, unspecified
+  "180" = "Cervix Uteri",
+  "181" = "Other Female Genital",             # Placenta
+  "182" = "Corpus Uteri",                     # Body of uterus
+  "183" = "Ovary",                            # Ovary and other uterine adnexa
+  "184" = "Other Female Genital",             # Other female genital
+  "185" = "Prostate",
+  "186" = "Testis",
+  "187" = "Other Male Genital",               # Penis and other male genital
+  "188" = "Bladder",
+  "189" = "Kidney and Renal Pelvis",          # Kidney and other urinary
+
+  # --- Other and Unspecified Sites (190-199) ---
+  "190" = "Eye and Orbit",
+  "191" = "Brain and CNS",
+  "192" = "Brain and CNS",                    # Other nervous system
+  "193" = "Thyroid",
+  "194" = "Other Endocrine",                  # Other endocrine glands
+  "195" = "Ill-Defined Sites",                # Other ill-defined sites
+  "196" = "Lymph Nodes (Secondary)",          # Secondary/unspecified lymph nodes
+  "197" = "Secondary - Respiratory/Digestive", # Secondary respiratory/digestive
+  "198" = "Secondary - Other Sites",          # Secondary other sites
+  "199" = "Unknown Primary Site",             # Unknown primary / disseminated
+
+  # --- Lymphatic and Hematopoietic (200-209) ---
+  "200" = "Non-Hodgkin Lymphoma",             # Lymphosarcoma and reticulosarcoma
+  "202" = "Non-Hodgkin Lymphoma",             # Other lymphoid neoplasms
+
+  # Hodgkin Lymphoma (201.x) with 4-char subcategory discrimination:
+  # NOTE: 4-char keys (e.g., "2014") MUST be checked BEFORE 3-char key ("201")
+  # in classify_codes() to enable NLPHL breakout. The function in
+  # R/utils/utils_cancer.R handles priority via 4-tier cascade.
+  "2014" = "NLPHL",                           # 201.4x lymphocytic-histiocytic predominance
+  "2010" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.0x paragranuloma (obsolete)
+  "2011" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.1x granuloma (obsolete)
+  "2012" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.2x sarcoma (obsolete)
+  "2015" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.5x nodular sclerosis
+  "2016" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.6x mixed cellularity
+  "2017" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.7x lymphocytic depletion
+  "2019" = "Hodgkin Lymphoma (non-NLPHL)",    # 201.9x unspecified
+  "201" = "Hodgkin Lymphoma (non-NLPHL)",     # 3-char fallback for any missed subcategory
+
+  "203" = "Multiple Myeloma",                 # Multiple myeloma and immunoproliferative
+  "204" = "Lymphoid Leukemia",
+  "205" = "Myeloid and Monocytic Leukemia",   # Myeloid leukemia
+  "206" = "Myeloid and Monocytic Leukemia",   # Monocytic leukemia
+  "207" = "Other Leukemia",                   # Other specified leukemia
+  "208" = "Other Leukemia",                   # Leukemia, unspecified cell type
+  "209" = "Neuroendocrine Tumors"             # Neuroendocrine tumors
+)
+
+# ==============================================================================
 # SECTION 5c: TIER HIERARCHY CONFIGURATION ----
 # ==============================================================================
 # Payer tier resolution hierarchy (per Amy Crisp framework).
