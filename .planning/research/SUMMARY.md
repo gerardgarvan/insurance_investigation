@@ -1,293 +1,235 @@
 # Project Research Summary
 
-**Project:** v2.1 Clinical Data Refinements & NLPHL Breakout
-**Domain:** PCORnet cancer registry cohort analysis — clinical data refinements
-**Researched:** 2026-06-02
+**Project:** PCORnet Payer Variable Investigation (R Pipeline) — v2.2 Local Testing Infrastructure
+**Domain:** Clinical data pipeline testing infrastructure
+**Researched:** 2026-06-03
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v2.1 milestone adds 8 clinical data refinement features to the mature v2.0 PCORnet R pipeline without requiring any new package dependencies. Research confirms that the existing validated stack (tidyverse, openxlsx2, lubridate, stringr, DuckDB backend) is sufficient for all features. The most significant finding is that **zero new technologies are needed** — all capabilities map to existing validated patterns from the 74-phase v1.0-v2.0 baseline.
+Local testing infrastructure for R clinical data pipelines requires minimal new dependencies and leverages base R capabilities. The v2.2 milestone adds environment auto-detection using `Sys.info()["sysname"]` and `.Renviron` overrides (zero new packages), hand-crafted test fixtures covering 20 synthetic patients with clinical edge cases (base R data.frame + write.csv), and structured testing via testthat 3.3.2 (the ONLY new dependency). The existing architecture is already well-suited for this addition — R/00_config.R centralizes path configuration, R/01 handles CSV loading, R/03 manages DuckDB ingest, and R/88 provides comprehensive validation.
 
-The recommended approach follows a 3-wave implementation: (1) configuration extensions for NLPHL breakout and cause of death categories, (2) core modifications to cancer summary logic, treatment sources, and episode classification, and (3) additive investigations and new table generation. This sequence minimizes integration risk by establishing foundational changes before building dependent features. The architecture provides well-defined integration points (R/00_config.R for classifications, R/26-29 for treatment episodes, R/49 for cancer summary, R/28 for episode-level cancer linkage), making modifications isolated and testable.
+The recommended approach is environment-aware configuration with fail-safe production defaults. Windows OS detection auto-enables local mode (fixtures in tests/fixtures/, DuckDB in tempdir()), while Linux defaults to HiPerGator production paths (/blue/ and /orange/). Test fixtures should deliberately encode clinical edge cases (dual-eligible, NLPHL, orphan diagnosis codes, SCT patients, post-death activity) rather than realistic distributions, preventing both HIPAA re-identification risk and fixture blindness to pipeline failure modes.
 
-The key risks center on data classification correctness rather than technical integration: NLPHL breakout must use mutually exclusive logic to avoid double-counting patients in both NLPHL and classical HL categories; tumor registry removal requires pre-implementation coverage analysis to quantify impact; and 7-day gap extension must be applied with output versioning to maintain comparability with baseline. These are data quality and validation challenges, not stack or architecture limitations. With proper validation infrastructure (smoke tests, baseline comparisons, domain expert review), all risks are mitigatable using existing project patterns.
+Key risks center on cross-platform path handling (Windows backslash vs Linux forward slash), DuckDB file locking across OS boundaries, and fixture schema staleness as the pipeline evolves. Mitigation requires strict adherence to `file.path()` for all path construction, separate DuckDB files for local vs production, and schema validation tests that fail when fixtures drift from expected PCORnet CDM structure. All risks have well-documented prevention strategies from both R testing literature and HPC best practices.
 
 ## Key Findings
 
 ### Recommended Stack
 
-**NO NEW PACKAGES REQUIRED.** All v2.1 features use the existing validated stack from v2.0. The research thoroughly evaluated specialized packages (icd, readxl, narcan, icdpicr, comorbidity packages) and found them unnecessary or unsuitable.
+The v2.2 milestone requires **one new package: testthat 3.3.2** (Jan 2026 release). All other features use base R or existing validated dependencies. Environment detection relies on `Sys.info()` (built into R since v1.0), fixture generation uses base R `data.frame()` + `write.csv()`, and path management uses the existing `here` package (validated in v1.0). The testthat dependency automatically includes withr 3.0.2 for scoped environment variable management.
 
 **Core technologies:**
-- **stringr + dplyr (tidyverse)**: ICD code pattern matching for NLPHL breakout (C81.0x / 201.4x simple prefix matching, no complex hierarchy traversal needed)
-- **lubridate (tidyverse)**: 7-day gap calculation for cancer diagnosis temporal separation (extending existing validated logic from R/43)
-- **openxlsx2 (v1.27)**: Reading xlsx templates AND writing formatted output tables (replaces need for separate readxl package, follows DRY consolidation from v2.0)
-- **Base R + checkmate**: Code verification logic, input validation, data quality assertions
-- **DuckDB backend (Phases 29-32)**: Table access via get_pcornet_table() for cause of death integration
+- **testthat 3.3.2**: Structured testing with fixtures and snapshots — industry standard (10K+ CRAN packages), part of tidyverse ecosystem, maintained by Posit
+- **Base R Sys.info()**: OS and hostname detection — zero dependencies, stable API, cross-platform
+- **Base R .Renviron**: Environment variable configuration — R-native, project-level overrides without code changes
+- **here 1.0.2**: Project-relative path management — already in stack, works seamlessly with environment detection
+- **DuckDB (existing)**: In-memory or file-based test database — reuses Phase 29-32 ingest infrastructure without modification
 
-**Key decision:** The icd package (ARCHIVED on CRAN since 2020-10-06) was evaluated for NLPHL classification but rejected because NLPHL codes are already in R/00_config.R (lines 173-174, 225-226) and simple string pattern matching is sufficient. This avoids adding unmaintained dependencies for functionality already achievable with validated tools.
-
-**Integration risk:** ZERO — No new dependencies, no version updates needed, no compatibility concerns. All 8 features use patterns validated across 69 numbered scripts in v1.0-v2.0.
+**Packages explicitly NOT needed:**
+- config, dotenv: Binary local/HPC detection doesn't need YAML/env file parsing overhead
+- charlatan, fabricatr, wakefield: Generic faker libraries don't understand PCORnet CDM edge cases; manual construction gives better control
+- data.table: 10-50x faster than vroom but opaque syntax conflicts with "named predicate" requirement (existing architectural constraint)
 
 ### Expected Features
 
+Local testing infrastructure has clear table stakes features (users expect these), differentiators (valuable but not expected), and anti-features (explicitly avoid).
+
 **Must have (table stakes):**
-- **Temporal separation for ALL cancer categories (7-day gap)** — SEER and IARC standards require clear temporal thresholds; currently only applied to HL, must extend to all categories to reach total population = 6,347
-- **NLPHL separate classification** — C81.0 is biologically and clinically distinct from other Hodgkin Lymphomas with different treatment and better prognosis (5-year survival >90% vs 85-90%)
-- **Treatment source validation (drop tumor registry)** — Tumor registry treatment data has known reliability issues (8-32% capture) vs EHR sources (95-100% accuracy); critical for research validity
-- **Cause of death in outputs** — NAACCR standard field, vital for survival analysis and competing risks models; table stakes for cancer registries
-- **Per-episode cancer categorization** — Treatment episodes must be linked to specific cancer diagnoses to avoid conflating unrelated treatments; already implemented at encounter level in Phase 61, extension to include triggering code descriptions is incremental
+- Environment auto-detection — can't manually configure every script; detection must be automatic and reliable
+- Path abstraction layer — hard-coded paths break immediately on different systems
+- Minimal test fixtures (~20 patients) — can't test clinical edge cases without data; production data too large/sensitive
+- DuckDB ingest works with fixtures — existing R/03 ingest script must handle fixture CSVs without modification
+- Existing smoke test (R/88) runs locally — 28-section structural validation must work against fixtures
+- Local output directory — can't write to HiPerGator `/blue/` paths from Windows
 
-**Should have (competitive):**
-- **SCT code 0362 investigation** — Data quality audit feature distinguishing true transplants from coding errors; adds research credibility
-- **Drug grouping tables from resolved codes** — Enables regimen-agnostic treatment pattern analysis beyond pre-specified regimens (ABVD, BV+AVD, Nivo+AVD)
-- **Per-episode triggering code descriptions** — Human-readable treatment rationale (e.g., "Doxorubicin 50mg IV" vs "J9000") improves clinical interpretability and stakeholder review
+**Should have (differentiators):**
+- Fixture generation script — reproducible fixture creation with documented clinical edge cases
+- Clinical edge case coverage matrix — explicit documentation mapping patients to edge case scenarios
+- Fast feedback loop (<2 min end-to-end) — instant validation vs 10+ min production HPC run
+- Git-tracked fixture CSVs — version control for test data; fixture evolution visible in diffs
+- Environment-specific tuning — local = 1 thread (small fixtures), HiPerGator = 16 threads (production scale)
 
-**Defer (v2.2+):**
-- **Waterfall chart visualization (VIZ-01)** — Attrition logging infrastructure exists; visualization is separate effort
-- **Payer-stratified Sankey (VIZ-02)** — Requires ggalluvial integration; separate visualization milestone
-- **HIPAA suppression (VIZ-03)** — Apply when outputs move from exploratory to publication phase
+**Defer (v2+):**
+- Full synthetic data generation (Synthea) — over-engineered for v1; hard to guarantee edge cases appear
+- Formal testthat unit test suite — pipeline is exploratory analysis, not package; smoke test pattern already works
+- Docker/containerization — adds complexity without proportional value; R + DuckDB install easily on Windows
+- Automatic fixture refresh from production — HIPAA risk (PHI leakage), complexity outweighs benefit
+- Multi-environment CI/CD testing — not shipping software; exploratory pipeline for single research team
 
 ### Architecture Approach
 
-v2.1 integrates cleanly into the mature v2.0 architecture (69 numbered scripts, DuckDB backend, encounter-level cancer linkage, first-line regimen detection) through well-defined extension points. Most features are additive (new columns, new outputs) with one isolated breaking change (tumor registry removal affects 7 scripts via source filtering).
+Local testing infrastructure adds three layers to the existing pipeline: (1) environment detection in R/00_config.R using base R with .Renviron override capability, (2) test fixture CSVs in tests/fixtures/ matching PCORnet CDM schema, and (3) modified R/88 smoke test with environment-aware validation. **Zero changes to data loading or processing logic** — only configuration (R/00_config.R) and validation (R/88) modified.
 
-**Major components modified:**
-1. **Configuration Layer (R/00_config.R)** — Extend CANCER_SITE_MAP to separate NLPHL (C81.0) from classical HL (C81.1-C81.9); add DEATH_CAUSE_MAP for ICD-10 cause of death categorization; add ICD9_NLPHL_CODES (201.4x series)
-2. **Cancer Classification (R/utils/utils_cancer.R)** — Modify classify_codes() to support 4-char prefix matching (C810 for NLPHL) before 3-char fallback (C81 for HL), enabling mutually exclusive categorization
-3. **Cancer Summary Logic (R/49_cancer_summary_pre_post.R)** — Generalize 7-day gap requirement from HL-only to all cancer categories; verify total population = 6,347; add per-category breakdown
-4. **Treatment Episode Pipeline (R/26-R/29)** — Remove tumor registry as treatment source (7 sources → 6 sources); affects extract_chemo_dates_with_codes(), extract_radiation_dates_with_codes(), extract_sct_dates_with_codes()
-5. **Episode Classification (R/28_episode_classification.R)** — Join drug groupings from all_codes_resolved_next_tables.xlsx to add triggering_code_description column; builds on existing encounter-level cancer linkage from Phase 61
-6. **Gantt Outputs (R/52_gantt_v2_export.R)** — Join DEATH table to add cause_of_death column (14 → 15 columns); map DEATH_CAUSE via DEATH_CAUSE_MAP from config
+**Major components:**
+1. **Environment Detection (R/00_config.R SECTION 1A)** — Auto-detect Windows vs Linux, set IS_LOCAL flag, configure conditional paths; hierarchy: (1) R_TESTING_ENV env var override, (2) Sys.info()["sysname"] OS detection, (3) fallback to production mode (safe default)
+2. **Path Configuration (R/00_config.R CONFIG list)** — Conditional path switching based on IS_LOCAL; local = tests/fixtures/ + tempdir(), HiPerGator = /orange/ + /blue/; existing scripts already use CONFIG paths (no changes needed)
+3. **Test Fixtures (tests/fixtures/)** — 20 synthetic patients covering 18+ clinical edge cases; hand-crafted CSVs matching PCORnet CDM schema; documented in README.md with patient-to-edge-case mapping
+4. **Smoke Test Validation (R/88)** — New sections for environment detection validation (Windows → IS_LOCAL=TRUE) and fixture schema validation (required CSVs present, columns match expected); conditional assertions for fixture vs production mode
+5. **DuckDB Integration (unchanged)** — R/03 ingest works transparently with fixtures; local = tempdir()/pcornet.duckdb, HiPerGator = /blue/.../pcornet.duckdb; separate DB files prevent cross-OS file locking issues
 
-**Build order rationale:** Configuration extensions establish NLPHL/cause mappings before core modifications use them. Core modifications to cancer summary, treatment sources, and episode classification must complete before investigations and new tables that depend on refined data. Wave 3 features are fully additive and can run in parallel.
+**Build order:** Environment detection (foundation) → Fixtures (data layer) → Smoke test validation (testing layer) → End-to-end integration → Documentation. No circular dependencies; each phase validates previous phase.
 
 ### Critical Pitfalls
 
-1. **NLPHL Breakout Double-Counting or Loss** — Breaking out NLPHL from parent Hodgkin Lymphoma creates counting errors if classification logic is additive (patients in both categories) rather than mutually exclusive. Create NLPHL category FIRST, then define HL as "C81.* EXCLUDING C81.0". Add validation: `nrow(nlphl) + nrow(hl_excluding_nlphl) == nrow(original_hl_cohort)`. Warning signs: HL cohort size changes unexpectedly, total cancer counts don't match sum of subcategories. Address in Phase 1 with unit tests.
+Top 5 pitfalls identified from R HPC testing literature and PCORnet clinical data domain:
 
-2. **Tumor Registry Removal Silently Drops Treatment Episodes** — Dropping tumor registry treatment data causes massive undercounting without visible error. Tumor registry may be ONLY source for certain treatments (external facilities, bundled procedures). BEFORE dropping: quantify overlap via source_coverage_analysis showing episode counts by source combinations (TR-only, claims-only, both). Add assertion: if treatment episode count drops >20%, halt with explicit warning. Alternative: flag TR-sourced episodes as "lower_confidence" rather than dropping entirely. Address in Phase 2 (coverage analysis) before Phase 3 (conditional removal).
+1. **Path Separator Silent Failures (Windows \ vs Linux /)** — Code works locally with `paste0("data\\file.csv")` backslashes, silently fails on HiPerGator Linux. **Avoid:** Always use `file.path()` for path construction (platform-independent, faster than paste). Add lintr rule to detect paste() with path-like strings. Never use raw string concatenation for paths.
 
-3. **7-Day Gap Applied Retrospectively Breaks Pre/Post Counts** — Extending 7-day gap to all cancers retrospectively invalidates existing baselines. Gap requirements improve specificity but decrease sensitivity, creating fundamentally different populations. Version output files (cancer_summary_table_pre_post_v1.rds vs. v2_7day.rds), create before/after comparison table, add pipeline metadata documenting which validation rules were applied, regenerate ENTIRE pipeline from cohort selection (not just cancer summary scripts). Address in Phase 4 with output versioning.
+2. **.Renviron Project vs User Scope Conflicts** — Project-level `.Renviron` overrides user-level `~/.Renviron` (R stops at first match), blocking production paths on HiPerGator when local test paths committed. **Avoid:** Use environment variable override pattern (`Sys.getenv("DATA_DIR", default = "/blue/...")`), not project `.Renviron`. Add `.Renviron` to .gitignore. Document: local users set paths in user `~/.Renviron`, never commit project `.Renviron`.
 
-4. **External Classification File (XLSX) Creates Runtime Dependencies** — Reading all_codes_resolved_next_tables.xlsx at runtime creates fragile pipeline with hidden dependencies. If xlsx moves or updates, pipeline fails or produces non-reproducible results. Follow AMC_PAYER_LOOKUP pattern from Phase 36: centralize mappings in R/00_config.R as named lists. Create conversion script: read xlsx → generate R code → commit R code. Snapshot xlsx in version control with date stamp. Add checkmate assertions verifying expected columns/types. Address in Phase 7 with dependency management strategy.
+3. **DuckDB File Locking Across Windows/Linux Sessions** — DuckDB uses OS-level file locks (single-writer design); stale lock from crashed Windows session prevents HiPerGator access. Network-mounted storage (/blue/ via OneDemand) compounds this. **Avoid:** Separate DuckDB files for local vs HiPerGator (test.duckdb vs pcornet.duckdb). Store local DB in tempdir(), never network mount. Add `.duckdb*` to .gitignore. Document: never access HiPerGator DuckDB from Windows.
 
-5. **Cause of Death Integration Without Data Quality Validation** — Adding cause of death without validating data quality creates misleading mortality analyses. Cause of death may be missing (>40%), miscoded, inconsistent across sources, or temporally misaligned. Profile data quality FIRST: what % of deaths have cause coded? Cross-reference against existing death date validation from Phase 59 (1,295 validated deaths). Create missingness analysis stratified by payer. Document limitations in outputs. Consider external linkage (NDI, state vital statistics) or predictive models (literature shows 86% accuracy). Address in Phase 8 with data quality profiling.
+4. **Test Fixtures with Missing Clinical Edge Cases** — Hand-crafted fixtures pass all tests locally, production breaks on edge cases not represented: orphan diagnosis codes, dual-eligible payer switching, NLPHL vs classical HL conflicts, 1900 sentinel dates, post-death activity. **Avoid:** Design fixtures by documented failure modes, not idealized scenarios. Create `FIXTURE_DESIGN.md` documenting which patient represents which edge case. Include patients with KNOWN problematic patterns (dual-eligible, NLPHL, orphan dx, death dates, SCT, multiple cancers, same-day multi-payer).
+
+5. **Config Changes That Silently Break HiPerGator Production** — Adding IS_LOCAL detection inadvertently changes production behavior through cascading defaults or brittle hostname matching. **Avoid:** Require explicit opt-in for local mode via env var, not auto-detection as default. Pattern: `IS_LOCAL <- as.logical(Sys.getenv("PCORNET_LOCAL_MODE", "FALSE"))`. HiPerGator never sets env var, defaults to production. Add assertion: if HiPerGator detected (check for /blue/ mount), error if conflicting local settings.
+
+**Also significant:** testthat state leakage (options()/Sys.setenv() without withr:: wrapper persists across test files), HIPAA violations (realistic fixture distributions enable re-identification via quasi-identifiers), committed production paths (hardcoded /blue/ paths pushed to GitHub), HPC detectCores() misuse (detects node CPUs, ignores SLURM allocation), fixture schema staleness (new columns added to pipeline but not to fixtures).
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure follows 3-wave implementation to minimize integration risk:
+Based on research, suggested phase structure follows dependency order: environment detection (foundation) → fixtures (data) → validation (testing) → integration (end-to-end) → documentation.
 
-### Wave 1: Configuration & Utilities (Foundation)
+### Phase v2.2-01: Environment Detection
+**Rationale:** Foundation for all other features; path switching must work before fixtures can be created or tests run.
+**Delivers:** R/00_config.R with IS_LOCAL flag, conditional CONFIG paths, environment detection logging.
+**Addresses:** Table stakes (environment auto-detection, path abstraction layer, local output directory).
+**Avoids:** Pitfall #2 (.Renviron conflicts — uses env var override, adds .Renviron to .gitignore), Pitfall #5 (production breakage — production defaults unchanged, env var opt-in only).
+**Implementation:** Add SECTION 1A to R/00_config.R with Sys.info() detection, convert CONFIG paths to conditional (if IS_LOCAL), add .Renviron to .gitignore, document env var strategy in README.
+**Validation:** Source R/00_config.R on Windows → IS_LOCAL=TRUE + data_dir="tests/fixtures"; on Linux → IS_LOCAL=FALSE + data_dir="/orange/..."; R_TESTING_ENV override works.
 
-#### Phase v2.1-01: NLPHL Configuration Extension
-**Rationale:** NLPHL breakout requires mutually exclusive classification logic established BEFORE any data processing. Modifying R/00_config.R and R/utils/utils_cancer.R creates foundation for all downstream cancer category changes.
-**Delivers:** CANCER_SITE_MAP with C810 = "NLPHL" and C81 = "Hodgkin Lymphoma (non-NLPHL)"; ICD9_NLPHL_CODES (201.4x series); classify_codes() supporting 4-char prefix matching
-**Addresses:** NLPHL separate classification (table stakes feature); creates distinct category for biologically different subtype
-**Avoids:** Double-counting pitfall by implementing 4-char match (C810) before 3-char fallback (C81), ensuring mutual exclusivity
-**Research flag:** Standard pattern (no deeper research needed) — ICD code mapping well-documented, config extension follows existing CANCER_SITE_MAP pattern
+### Phase v2.2-02: Install testthat
+**Rationale:** Only new dependency for v2.2; install before fixture creation to enable test-driven fixture design.
+**Delivers:** testthat 3.3.2 + withr 3.0.2 installed on both HiPerGator and local Windows, renv snapshot updated.
+**Addresses:** Table stakes (structured testing framework).
+**Uses:** testthat 3.3.2 (STACK.md recommendation), renv for package management (existing).
+**Implementation:** On HiPerGator: `module load R/4.4.2`, `install.packages("testthat")`, `renv::snapshot()`. On local Windows: same. Verify `packageVersion("testthat")` returns 3.3.2.
+**Validation:** testthat loads without errors, withr available as dependency, renv.lock updated with testthat 3.3.2.
 
-#### Phase v2.1-02: Cause of Death Configuration
-**Rationale:** DEATH_CAUSE_MAP in R/00_config.R enables downstream Gantt integration without adding runtime xlsx dependencies
-**Delivers:** DEATH_CAUSE_MAP with ICD-10 cause categories (50+ entries covering major categories)
-**Addresses:** Cause of death integration (table stakes for cancer registries)
-**Avoids:** Runtime xlsx dependency pitfall by centralizing in config following AMC_PAYER_LOOKUP pattern from Phase 36
-**Research flag:** Standard pattern — ICD-10 chapter structure well-documented, config centralization validated in Phase 36
+### Phase v2.2-03: Test Fixture Design
+**Rationale:** Before creating CSVs, design which patients represent which edge cases to ensure comprehensive coverage.
+**Delivers:** tests/fixtures/FIXTURE_DESIGN.md documenting 20 patients mapped to 18+ clinical edge cases.
+**Addresses:** Table stakes (minimal test fixtures), differentiator (clinical edge case coverage matrix).
+**Avoids:** Pitfall #4 (missing edge cases — deliberate design by failure modes), Pitfall #7 (HIPAA violations — unrealistic dates/sites/combos documented).
+**Implementation:** Create FIXTURE_DESIGN.md table: Patient ID → Edge Case → Tables → Why Critical. Cover: dual-eligible (P001-P002), NLPHL (P003), multiple cancers (P004), SCT (P005), death+post-death (P006), same-day multi-payer (P007), orphan dx (P008), first-line regimens ABVD/BV+AVD/Nivo+AVD (P009-P011), payer sentinels NI/UN (P012), tumor registry (P013), multi-site (P014), 7-day gap (P015), 1900 dates (P016), remission codes (P017), bare ICD-9 201 (P018), multi-source overlap (P019), minimal valid patients (P020-P025).
+**Validation:** FIXTURE_DESIGN.md reviewed by clinical domain expert (or person who wrote filter predicates), all Phase 82 edge cases represented, dates/sites obviously unrealistic (2010-2015, SITE_A/SITE_B).
 
-### Wave 2: Core Modifications (Data Processing)
+### Phase v2.2-04: Create Test Fixture CSVs
+**Rationale:** Implement fixture design as actual CSVs matching PCORnet CDM schema.
+**Delivers:** 15 CSV files in tests/fixtures/ (ENROLLMENT, DIAGNOSIS, ENCOUNTER, PROCEDURES, PRESCRIBING, DEMOGRAPHIC, DEATH, TUMOR_REGISTRY1, 7 minimal tables), tests/fixtures/README.md summarizing edge cases.
+**Addresses:** Table stakes (minimal test fixtures, DuckDB ingest compatibility).
+**Uses:** Base R data.frame() + write.csv() (STACK.md — no new packages needed), PCORnet CDM v7.0 schema.
+**Implementation:** Hand-craft CSVs following FIXTURE_DESIGN.md. Use base R: `enrollment <- data.frame(PATID=sprintf("PT%03d", 1:25), ...)`, `write.csv(enrollment, here::here("tests/fixtures/ENROLLMENT_Mailhot_V1.csv"), row.names=FALSE)`. Verify column names match PCORNET_PATHS from R/01, dates in YYYY-MM-DD format (compatible with parse_pcornet_date()), ID columns present.
+**Validation:** All 15 CSVs exist, schema matches expected (PATID, ENCOUNTERID, etc.), no PHI (obviously fake IDs), dates unrealistic (2010-2015), total size <1MB (git-trackable), vroom() can read without errors.
 
-#### Phase v2.1-03: Treatment Source Coverage Analysis
-**Rationale:** BEFORE removing tumor registry, quantify impact to avoid silent episode loss. Coverage analysis creates evidence base for informed decision.
-**Delivers:** source_coverage_analysis.R showing episode counts by source combinations (TR-only, claims-only, both); overlap percentages; expected count reduction
-**Addresses:** Treatment source validation (table stakes); prepares for tumor registry removal
-**Avoids:** Silent treatment episode loss pitfall by quantifying TR-only episodes and establishing expected count reduction
-**Research flag:** Needs light research — No standard pattern for coverage analysis in existing codebase, but straightforward dplyr group_by logic
+### Phase v2.2-05: DuckDB Ingest with Fixtures
+**Rationale:** Verify existing R/03 ingest script works with fixture CSVs without code changes.
+**Delivers:** Successful DuckDB ingest from tests/fixtures/ → tempdir()/duckdb/pcornet.duckdb on local Windows.
+**Addresses:** Table stakes (DuckDB ingest works with fixtures).
+**Avoids:** Pitfall #3 (DuckDB file locking — separate test DB path in tempdir(), not /blue/).
+**Implementation:** On Windows: source("R/00_config.R") (detects IS_LOCAL=TRUE), source("R/01_load_pcornet.R") (loads fixtures → tempdir()/rds/), source("R/03_duckdb_ingest.R") (ingests RDS → tempdir()/pcornet.duckdb). Verify: RDS cache created, DuckDB file created, get_pcornet_table("ENROLLMENT") returns 20-25 rows, no errors.
+**Validation:** DuckDB file exists in tempdir(), all 15 tables present (SELECT name FROM sqlite_master WHERE type='table'), patient count matches fixtures (20-25), key edge case patients queryable (PT001 has dual-eligible records).
 
-#### Phase v2.1-04: Drop Tumor Registry Treatment Data (Conditional)
-**Rationale:** Remove tumor registry sources from R/26 treatment episode pipeline ONLY IF coverage analysis shows <5% unique TR episodes, otherwise implement confidence flagging
-**Delivers:** Treatment episodes from 6 sources (PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER DRG, DIAGNOSIS); validation report showing episode count delta
-**Addresses:** Treatment source validation (critical for research validity per literature: TR captures 8-32% vs EHR 95-100%)
-**Avoids:** Silent episode loss by implementing assertion: if count drops >20%, halt with explicit warning
-**Dependencies:** Requires Phase v2.1-03 coverage analysis completion
-**Research flag:** Standard pattern — Source filtering follows existing Phase 9 pattern, well-isolated change
+### Phase v2.2-06: Smoke Test Adaptation
+**Rationale:** Add environment detection validation and fixture schema checks to R/88 for local testing confidence.
+**Delivers:** R/88_smoke_test_comprehensive.R with new SECTION 3B (environment detection validation) and SECTION 3C (fixture schema validation).
+**Addresses:** Table stakes (smoke test runs locally), differentiator (fast feedback loop).
+**Avoids:** Pitfall #6 (testthat state leakage — document withr:: best practices for future unit tests).
+**Implementation:** Add after existing SECTION 3: (3B) validate IS_LOCAL flag exists, Windows→IS_LOCAL=TRUE, Linux→IS_LOCAL=FALSE (unless override), data_dir matches environment; (3C) if IS_LOCAL, check fixture directory exists, required CSVs present (ENROLLMENT, DIAGNOSIS, ENCOUNTER, DEMOGRAPHIC), README.md exists. Conditional assertions: if IS_LOCAL expect 20-25 patients, else expect >50K.
+**Validation:** Run R/88 on Windows → passes all checks including 3B/3C, fixture count correct. Run R/88 on HiPerGator → passes 3B, skips 3C (not IS_LOCAL). Run with R_TESTING_ENV=local on Linux → passes both.
 
-#### Phase v2.1-05: Extend 7-Day Gap to All Cancer Categories
-**Rationale:** Generalize existing validated HL 7-day logic (R/43) to all categories to reach total population = 6,347
-**Delivers:** cancer_summary_table_pre_post_v2_7day.rds with per-category 7-day confirmation; validation confirming total = 6,347; comparison table showing v1 vs v2 deltas
-**Addresses:** Temporal separation for all cancer categories (table stakes per SEER/IARC standards)
-**Avoids:** Retrospective baseline breakage by versioning outputs (v1 vs v2_7day) and regenerating full pipeline from cohort selection
-**Research flag:** Standard pattern — Extending existing R/43 logic, lubridate date arithmetic validated throughout pipeline
+### Phase v2.2-07: End-to-End Local Pipeline Test
+**Rationale:** Validate full pipeline (00→01→03→88) runs locally without errors, produces expected outputs.
+**Delivers:** Confirmed working local pipeline on Windows with test fixtures, documented in tests/testthat/README.md (future location).
+**Addresses:** Differentiator (fast feedback loop <2 min).
+**Avoids:** Pitfall #1 (path separators — verify file.path() used throughout), Pitfall #10 (fixture staleness — establish schema validation baseline).
+**Implementation:** On Windows: clear tempdir(), source all scripts sequentially (R/00, R/01, R/03, R/88), time execution. Verify: pipeline completes <2 min, DuckDB contains 15 tables, get_pcornet_table() queries work, no path errors, smoke test passes all checks, tempdir() cleanup on R session exit.
+**Validation:** Full pipeline runs <2 min (vs 6+ min HiPerGator), patient count correct (20-25), no errors in smoke test, DuckDB queries return expected edge case patients (PT001 dual-eligible, PT003 NLPHL, PT008 orphan dx).
 
-#### Phase v2.1-06: Load Drug Groupings from XLSX
-**Rationale:** Centralize drug groupings in R/00_config.R following AMC_PAYER_LOOKUP pattern to avoid runtime dependencies
-**Delivers:** Conversion script reading all_codes_resolved_next_tables.xlsx → generating DRUG_GROUPINGS named list in R/00_config.R; snapshot versioned xlsx in git with date stamp
-**Addresses:** Prerequisite for per-episode triggering code descriptions and drug grouping tables
-**Avoids:** Runtime xlsx dependency pitfall by generating R code from xlsx template, centralizing in config
-**Research flag:** Standard pattern — Follows Phase 36 AMC_PAYER_LOOKUP centralization pattern, openxlsx2 reading validated in 11 scripts
-
-#### Phase v2.1-07: Enhance Episode Classification with Triggering Code Descriptions
-**Rationale:** Builds on existing Phase 61 encounter-level cancer linkage by adding human-readable drug descriptions from DRUG_GROUPINGS
-**Delivers:** R/28 episode classification with triggering_code_description column (14 → 15 columns); validation confirming descriptions populated for common codes
-**Addresses:** Per-episode cancer categorization with human-readable treatment rationale (competitive feature for stakeholder review)
-**Avoids:** No major pitfall (additive change), but validates against drug grouping contradicting cancer categories
-**Dependencies:** Requires Phase v2.1-06 drug groupings
-**Research flag:** Standard pattern — Extends existing Phase 61/Phase 46 infrastructure, straightforward lookup join
-
-#### Phase v2.1-08: Cause of Death Data Quality Profiling
-**Rationale:** Profile cause of death completeness and quality BEFORE integration to detect missingness and source bias
-**Delivers:** Cause of death quality report: % deaths with cause coded by payer/site; ICD-10 code distribution; temporal alignment validation
-**Addresses:** Prerequisite for cause of death integration; guards against misleading mortality analyses
-**Avoids:** Data quality pitfall by profiling missingness (literature suggests >40% is common), documenting limitations, deciding whether to proceed or defer pending external linkage
-**Research flag:** Needs light research — Data profiling pattern exists (Phase 59 death dates), but cause-specific validation is new
-
-#### Phase v2.1-09: Integrate Cause of Death in Gantt Outputs (Conditional)
-**Rationale:** Add cause of death to R/52 Gantt v2 IF profiling shows <40% missingness, otherwise document deferral
-**Delivers:** Gantt v2 with cause_of_death column (14 → 15 columns); DEATH_CAUSE mapped via DEATH_CAUSE_MAP; missingness documented in output footnotes
-**Addresses:** Cause of death in outputs (NAACCR standard field, table stakes for survival analysis)
-**Avoids:** Misleading analysis by documenting limitations and suppressing if missingness too high
-**Dependencies:** Requires Phase v2.1-02 (DEATH_CAUSE_MAP) and Phase v2.1-08 (quality profiling)
-**Research flag:** Standard pattern — DEATH table join follows existing death date integration from Phase 62
-
-### Wave 3: Investigations & New Tables (Additive)
-
-#### Phase v2.1-10: SCT Code 0362 Investigation
-**Rationale:** Audit data quality by investigating whether 90 patients with code 0362 have other SCT codes during same encounters; non-blocking, additive feature
-**Delivers:** R/92_investigate_sct_0362.R producing encounter-level summary CSV; findings report distinguishing true transplants from coding errors
-**Addresses:** SCT code validation investigation (competitive feature for data quality credibility)
-**Avoids:** Wrong granularity pitfall by defining scope explicitly (same ENCOUNTERID) and validating with manual chart review of 10 patients
-**Research flag:** Needs light research — Encounter-level grouping pattern exists (Phase 61), but code 0362 is non-standard (not in CPT databases), requires internal documentation review
-
-#### Phase v2.1-11: Verify Replaced-By Codes
-**Rationale:** Validate "replaced by" mappings from all_codes_resolved_next_tables.xlsx to guard against circular references and mapping errors
-**Delivers:** R/93_verify_replaced_by_codes.R producing verification CSV; graph cycle detection report; cross-reference against SEER ICD-9 to ICD-10 conversion tables
-**Addresses:** ICD code replacement/deprecation tracking (table stakes data quality check)
-**Avoids:** Circular mapping pitfall by using igraph::is_dag() to detect cycles and flagging replacement chains >3 steps
-**Research flag:** Needs light research — Graph cycle detection requires igraph package (not currently in stack, but lightweight addition), pattern is new to codebase
-
-#### Phase v2.1-12: Generate New Tables from Drug Groupings
-**Rationale:** Create 2 new summary tables using drug groupings and template structure from all_codes_resolved_next_tables.xlsx; enables regimen-agnostic treatment pattern analysis
-**Delivers:** R/76_new_tables_from_groupings.R producing multi-sheet xlsx with drug group frequency by payer and by cancer category
-**Addresses:** Drug grouping tables (competitive feature for treatment pattern discovery)
-**Avoids:** Runtime xlsx dependency by using DRUG_GROUPINGS from R/00_config.R (loaded in Phase v2.1-06)
-**Dependencies:** Requires Phase v2.1-06 (drug groupings) and Phase v2.1-07 (episode classification)
-**Research flag:** Standard pattern — Table generation follows existing R/29 styled xlsx output pattern, openxlsx2 formatting validated in Phase 62
-
-### Wave 4: Quality Assurance
-
-#### Phase v2.1-13: Update Smoke Tests
-**Rationale:** Validate all new/modified scripts and update baseline expectations for breaking changes (7-day gap, NLPHL breakout, Gantt schema)
-**Delivers:** R/88_smoke_test_comprehensive.R with tests for R/76, R/92, R/93; NLPHL category validation; Gantt v2 15-column schema validation
-**Addresses:** v2.0 quality standards enforcement (competitive differentiator for maintainability)
-**Avoids:** Stale baseline expectations by updating smoke test expectations with each breaking change and documenting expected deltas
-**Research flag:** Standard pattern — Smoke test infrastructure exists (Phase 74), extension follows established pattern
-
-#### Phase v2.1-14: Documentation and Reference Manual Updates
-**Rationale:** Document all v2.1 changes in SCRIPT_INDEX.md, PROJECT.md, and R/89 reference manual
-**Delivers:** Updated documentation reflecting NLPHL breakout, 7-day gap extension, tumor registry removal, new scripts
-**Addresses:** Onboarding ease and long-term maintainability
-**Avoids:** Undocumented breaking changes by explicitly noting v1 vs v2 differences
-**Research flag:** Standard pattern — Documentation follows existing Phase 74 reference manual pattern
+### Phase v2.2-08: Documentation & Cleanup
+**Rationale:** Document local testing workflow for team, update PROJECT.md, finalize .gitignore.
+**Delivers:** Updated .planning/PROJECT.md (v2.2 moved to "Shipped"), .gitignore with test paths, optional .Renviron.example.
+**Addresses:** Knowledge transfer, prevent future pitfalls (committed paths, .Renviron conflicts).
+**Avoids:** Pitfall #8 (committed production paths — .gitignore updated), Pitfall #2 (.Renviron conflicts — .Renviron.example shows pattern without committing actual file).
+**Implementation:** Update PROJECT.md: move v2.2 to Shipped Milestones, add key decisions (environment detection strategy, fixture design approach, testthat 3.3.2 only new dependency), update constraints (add "local testing capability"). Add to .gitignore: `.Renviron`, `.Rprofile`, `*_local.R`, `*.duckdb*`, `tests/fixtures/*.csv` (optional, see note). Create .Renviron.example: `# R_TESTING_ENV=local` (commented). Document in README: local testing workflow, env var override pattern, never commit .Renviron.
+**Validation:** PROJECT.md reflects v2.2 completion, .gitignore blocks accidental commits (test with `git add .Renviron`), .Renviron.example provides clear example without credentials.
 
 ### Phase Ordering Rationale
 
-- **Configuration first (Phases 01-02):** NLPHL and cause of death mappings must exist before data processing references them
-- **Coverage analysis before removal (Phases 03-04):** Quantify tumor registry impact before dropping to avoid silent episode loss
-- **7-day gap with versioning (Phase 05):** Extends existing logic but requires output versioning to maintain baseline comparability
-- **Drug groupings centralized (Phase 06):** Avoids runtime xlsx dependencies for all downstream features (Phases 07, 12)
-- **Episode enhancement builds on linkage (Phase 07):** Depends on Phase 61 encounter-level cancer linkage infrastructure and Phase 06 drug groupings
-- **Cause of death profiled before integration (Phases 08-09):** Data quality check prevents integration of incomplete data
-- **Investigations in parallel (Phases 10-12):** Non-blocking additive features can run concurrently after core modifications complete
-- **Quality assurance last (Phases 13-14):** Validates entire wave of changes with updated expectations
+- **Environment detection first:** All other features depend on IS_LOCAL flag and CONFIG paths; must work before fixtures or tests can be created.
+- **testthat install before fixtures:** Test-driven fixture design benefits from test framework; minimal overhead to install early.
+- **Fixture design before fixture creation:** Deliberate edge case planning prevents fixture blindness to production failures (Pitfall #4).
+- **DuckDB ingest before smoke test:** Smoke test validates loaded data; DuckDB must be populated first.
+- **End-to-end test before documentation:** Validate workflow works before documenting it.
+- **Architecture-driven grouping:** Foundation (Phases 1-2) → Data (Phases 3-4) → Testing (Phases 5-6) → Integration (Phase 7) → Documentation (Phase 8).
+- **Pitfall avoidance:** Each phase explicitly addresses 1-2 critical pitfalls; prevention strategies implemented, not deferred.
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-- **Phase v2.1-10 (SCT code investigation):** Code 0362 not in standard CPT databases; requires internal documentation or data dictionary review to understand provenance
-- **Phase v2.1-11 (Replaced-by verification):** Graph cycle detection may require igraph package addition (lightweight but new dependency); validation pattern is new to codebase
+Phases with **standard patterns** (skip /gsd:research-phase):
+- **Phase v2.2-01 (Environment Detection):** Well-documented base R Sys.info() pattern, official R documentation, HPC community consensus.
+- **Phase v2.2-02 (Install testthat):** Standard R package installation, testthat is industry-standard, renv workflow established.
+- **Phase v2.2-04 (Create Fixtures):** Base R data.frame() + write.csv(), no new technologies, CSV format straightforward.
+- **Phase v2.2-05 (DuckDB Ingest):** Reuses existing R/03 infrastructure, no new integration patterns.
+- **Phase v2.2-08 (Documentation):** Standard PROJECT.md updates, .gitignore patterns well-known.
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase v2.1-01 (NLPHL config):** ICD code mapping follows existing CANCER_SITE_MAP pattern
-- **Phase v2.1-02 (Cause of death config):** Centralization follows AMC_PAYER_LOOKUP pattern from Phase 36
-- **Phase v2.1-04 (Drop tumor registry):** Source filtering follows Phase 9 pattern
-- **Phase v2.1-05 (7-day gap):** Extends existing R/43 logic
-- **Phase v2.1-06 (Drug groupings):** openxlsx2 reading validated in 11 scripts
-- **Phase v2.1-07 (Episode enhancement):** Extends Phase 61/46 infrastructure
-- **Phase v2.1-09 (Cause of death Gantt):** DEATH table join follows Phase 62 pattern
-- **Phase v2.1-12 (New tables):** Styled xlsx output validated in Phase 62 (R/29)
-- **Phase v2.1-13 (Smoke tests):** Extension of Phase 74 infrastructure
-- **Phase v2.1-14 (Documentation):** Follows Phase 74 reference manual pattern
+Phases likely needing **deeper research** during planning:
+- **Phase v2.2-03 (Fixture Design):** Clinical domain knowledge required to identify all edge cases; may need consultation with person who wrote filter predicates or clinical SME. Research: review all filter predicate functions (has_*, with_*, exclude_*) to enumerate edge cases.
+- **Phase v2.2-06 (Smoke Test Adaptation):** Conditional test assertions based on environment; may need testthat best practices research for fixture-aware checks. Research: testthat conditional testing patterns, environment-specific expectations.
+- **Phase v2.2-07 (End-to-End Test):** Performance troubleshooting if >2 min; may need DuckDB optimization research. Research: DuckDB in-memory mode vs file-based (if speed becomes issue), vroom threading on Windows.
+
+**Overall assessment:** Most phases use well-established patterns; only clinical edge case enumeration (Phase 3) and conditional testing (Phase 6) may benefit from additional research during planning. All technology choices (testthat, base R, DuckDB) have high-confidence documentation.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | HIGH | All 8 features map to existing validated packages; no new dependencies needed. NLPHL codes already in R/00_config.R (lines 173-174, 225-226). icd package (ARCHIVED) evaluated and rejected. openxlsx2 read/write capabilities validated in 11 scripts. |
-| **Features** | HIGH | Table stakes vs competitive features clearly distinguished based on SEER/IARC/NAACCR standards and tumor registry literature. 7-day gap, NLPHL breakout, cause of death, treatment source validation all have strong clinical justification. SCT investigation and drug groupings are value-add audits. |
-| **Architecture** | HIGH | Integration points well-defined from existing codebase review. Configuration layer (R/00_config.R), classification utilities (R/utils/utils_cancer.R), treatment pipeline (R/26-29), cancer summary (R/49), episode classification (R/28), Gantt outputs (R/52) all identified with specific modification requirements. Wave structure minimizes risk. |
-| **Pitfalls** | MEDIUM-HIGH | Top 5 critical pitfalls identified from literature (tumor registry reliability 8-32%, cause of death missingness >40%, ICD-9 to ICD-10 mapping complexity) and existing pipeline patterns (encounter-level linkage from Phase 61, DRY consolidation from Phase 73). Mitigation strategies specific and actionable. Some project-specific risks (0362 code provenance, xlsx schema) require validation during execution. |
+| **Stack** | **HIGH** | testthat 3.3.2 verified from CRAN (Jan 2026 release), base R Sys.info() documented since R v1.0, here package already validated in v1.0. All version numbers verified against official sources. |
+| **Features** | **HIGH** | Table stakes clearly identified from R testing literature (testthat fixtures, environment detection). Differentiators match community best practices (git-tracked fixtures, edge case documentation). Anti-features supported by HPC community (no Docker overhead, no synthetic data generators). |
+| **Architecture** | **HIGH** | Existing pipeline architecture (R/00 config, R/01 CSV load, R/03 DuckDB ingest, R/88 smoke test) well-suited for extension. Zero changes to data processing logic. Only 110 LOC changes across 2 files (R/00_config.R, R/88). |
+| **Pitfalls** | **MEDIUM-HIGH** | Top 5 pitfalls verified from official R documentation (file.path(), .Renviron scope, DuckDB concurrency), HPC best practices (detectCores() warning), HIPAA compliance literature (re-identification via quasi-identifiers). Some pitfalls domain-specific (clinical edge cases) rely on inference from project history (Phase 82 orphan dx). |
 
-**Overall confidence:** HIGH
+**Overall confidence:** **HIGH**
+
+Research sources include official R documentation (Sys.info(), .Renviron, file.path()), CRAN package pages (testthat 3.3.2, withr 3.0.2), DuckDB official concurrency docs, testthat fixture patterns (r-pkgs.org), HPC best practices (multiple university HPC guides), HIPAA compliance literature (NCBI, clinical trial data management). All core technology decisions verified from primary sources.
 
 ### Gaps to Address
 
-- **SCT code 0362 provenance:** Code "0362" not found in standard CPT databases (38204-38241 are standard SCT codes). Likely internal/proprietary code or data entry artifact. Requires project-specific code documentation or data dictionary review during Phase v2.1-10. If documentation unavailable, manual chart review of sample patients will resolve.
+**Clinical edge case completeness:** Fixture design (Phase v2.2-03) requires domain expertise to enumerate all failure modes. **Resolution:** Review all filter predicate functions (R/10_cohort_predicates.R, R/11_payer_harmonization.R, etc.) to extract edge cases from code comments and conditional logic. Consult with person who wrote Phase 82 orphan diagnosis investigation for recent edge cases.
 
-- **all_codes_resolved_next_tables.xlsx schema:** Drug grouping tables and template structure referenced but not verified. Will need to read xlsx during Phase v2.1-06 to confirm: (a) sheet names (Drug Groupings, Replaced By, Template), (b) column structure (code, code_type, drug_group, description), (c) template formatting requirements for 2 new tables. If schema differs from assumptions, adjust conversion logic accordingly.
+**Performance threshold for "fast feedback":** <2 min target for end-to-end local pipeline is estimated, not validated. **Resolution:** Measure during Phase v2.2-07; if >2 min, reduce fixture size (20→10 patients) or explore DuckDB in-memory mode (:memory:) instead of file-based. Not blocking — acceptable range is 30s-5min for local testing.
 
-- **Cause of death field name/format:** Vital status linkage provides death dates (Phase 59/62 validation: 1,295 deaths), but cause-of-death field name and coding system not verified. PCORnet CDM DEATH table may use DEATH_CAUSE (ICD-10), CAUSE_OF_DEATH (text), or external linkage required. Phase v2.1-08 profiling will identify available fields; if unavailable, document deferral pending external linkage (NDI, state vital statistics).
+**HIPAA compliance sign-off:** Synthetic fixture strategy (unrealistic dates, generic sites, incompatible code combos) should be reviewed by IRB or compliance officer before fixture creation. **Resolution:** During Phase v2.2-03, document anti-reidentification strategy in FIXTURE_DESIGN.md, share with compliance contact for confirmation. If IRB review required, pause Phase v2.2-04 until approval.
 
-- **Drug grouping table purpose:** "2 new tables" referenced but specific research questions not documented. Likely drug group frequency by payer (addresses payer analysis objective) and drug group by cancer category (addresses treatment pattern objective), but confirm with domain expert during Phase v2.1-12 planning to ensure correct structure.
+**Fixture schema validation specifics:** What columns to validate, how to handle optional vs required PCORnet tables, whether to validate data types or just column names. **Resolution:** During Phase v2.2-06 (smoke test), implement minimal schema check (required CSVs exist, core columns present: PATID, ENCOUNTERID, DX, etc.). Defer comprehensive schema validation (data types, foreign keys) to v2.3+ if needed.
 
-- **Total population = 6,347 validation:** Current cohort size referenced as validation target for 7-day gap extension (Phase v2.1-05). Confirm this is correct baseline by checking existing cancer_summary_table_pre_post.rds row count before implementing changes.
-
-- **igraph package for graph cycle detection:** Phase v2.1-11 replaced-by code verification may require igraph package (not currently in renv.lock) for is_dag() function. igraph is lightweight CRAN package (1.6.0, stable) but represents new dependency. Alternative: implement custom cycle detection with base R (more complex). Decide during phase planning whether graph analysis justifies adding igraph.
+**Git tracking fixture CSVs:** Decision whether to commit ~500 rows of CSV data or generate fixtures programmatically. **Resolution:** Commit CSVs for v2.2 (text files, small size <50KB likely, easy to review diffs). If size grows >1MB or fixtures become burdensome to maintain, refactor to programmatic generation in v2.3. Add `tests/fixtures/*.csv` to .gitignore only if size becomes problematic.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-**Stack research:**
-- CRAN official package pages: tidyverse 2.0.0, dplyr 1.2.0, stringr 1.5.1, lubridate 1.9.3, openxlsx2 1.27, checkmate 2.3.4 — all versions verified as current (published within 1-12 months of 2026-06-02)
-- CRAN icd package status (https://cran.r-project.org/package=icd) — ARCHIVED 2020-10-06, not recommended for new dependencies
-- openxlsx2 documentation (https://janmarvin.github.io/openxlsx2/) — read/write xlsx with formatting, validated in 11 existing scripts
-- Project codebase: R/00_config.R (ICD_CODES with NLPHL codes lines 173-174, 225-226), R/26-29 treatment episode pipeline, R/43 7-day gap logic
-
-**Features research:**
-- PMC3651576: Tumor registry treatment capture 12-32% radiation, 8-29% chemo vs EHR 95-100% accuracy
-- PMC11178108: EHR linkage adds only 5% surgery, 1% radiation, 7% chemo updates (registry incompleteness)
-- PMC12303076: Real-time EHR extraction achieves 100% diagnosis accuracy, 95%+ treatment accuracy
-- ICD-10-CM 2026 official codes: C81.0 = Nodular lymphocyte predominant Hodgkin lymphoma (NLPHL)
-- ICD-9-CM: 201.4x = Lymphocytic-histiocytic predominance (NLPHL historical code)
-- PMC4005906: Multiple primary cancer definitions (SEER 2-month, Warren/Gates 6-month, 60-day exclusion)
-- PMC12798275: NAACCR standards for death reporting (cause of death table stakes)
-
-**Architecture research:**
-- Project internal documentation: R/00_config.R (CANCER_SITE_MAP 324 prefixes → 15 categories), R/utils/utils_cancer.R (classify_codes implementation), R/26_treatment_episodes.R (7 sources), R/28_episode_classification.R (Phase 61 encounter-level cancer linkage), R/49_cancer_summary_pre_post.R (7-day logic), R/52_gantt_v2_export.R (14-column schema)
-- WHO ICD-O-3: Histology 9659 = Nodular lymphocyte predominant Hodgkin lymphoma (clinical validation)
-
-**Pitfalls research:**
-- PMC7512330: ICD code mapping validation (86% accuracy, 57% increased uncertainty Shannon entropy analysis)
-- Academic JAMIA: Cause of death ML models 86% accuracy with multimodal data
-- Wiley Health Services Research: EHR + external mortality database integration best practices
-- SEER ICD-9 to ICD-10 conversion tables: Official 201.4 → {C81.0, C81.4} mapping (disambiguation required)
-- LinkedIn data pipeline framework: Schema evolution and backward compatibility versioning strategies
-- Project Phase 36: AMC_PAYER_LOOKUP centralization pattern for xlsx → R config conversion
+- **CRAN testthat 3.3.2** (https://cran.r-project.org/package=testthat) — Current version verification, Jan 2026 release
+- **testthat fixtures documentation** (https://testthat.r-lib.org/articles/test-fixtures.html) — Official fixture patterns
+- **R Sys.info() manual** (https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.info.html) — Base R environment detection
+- **R Startup documentation** (https://stat.ethz.ch/R-manual/R-devel/library/base/html/Startup.html) — .Renviron scope hierarchy
+- **DuckDB concurrency docs** (https://duckdb.org/docs/current/connect/concurrency) — Single-writer pattern, file locking behavior
+- **R Packages: Testing Design** (https://r-pkgs.org/testing-design.html) — testthat best practices, withr usage
+- **file.path() documentation** (https://stat.ethz.ch/R-manual/R-devel/library/base/html/file.path.html) — Official R path construction
 
 ### Secondary (MEDIUM confidence)
+- **HIPAA test data management** (https://www.accountablehq.com/post/hipaa-compliant-healthcare-test-data-management-best-practices-and-practical-steps) — Synthetic data compliance
+- **HPC R Guide** (https://hpcwiki.pmacs.upenn.edu/wiki/index.php/HPC:R) — detectCores() warning for SLURM environments
+- **DuckDB in Production** (https://www.dench.com/blog/duckdb-in-production) — Concurrency patterns, MVCC isolation
+- **Test Automation Maintenance 2026** (https://bugbug.io/blog/software-testing/test-automation-maintenance/) — Fixture staleness patterns
+- **R-bloggers path separators** (https://www.r-bloggers.com/2015/06/identifying-the-os-from-r/) — Cross-platform development
+- **PCORnet Data Resources** (https://pcornet.org/news/category/domain/data/) — CDM schema expectations
+- **Git credential security** (https://usethis.r-lib.org/articles/git-credentials.html) — .Renviron gitignore best practices
 
-- PMC5519797: Multiple primary tumors temporal thresholds (2-month SEER, 6-month Warren/Gates documented but less authoritative than SEER official)
-- PMC3879655: Cause of death accuracy validation in cancer registries (older study, 2013, but methodology relevant)
-- PMC5898735: Treatment episode definition (≥45-day gap) documented but for cost analysis context, not clinical
-- AAPC CPT codes: 38240, 38241, 38204-38208, 38230 standard SCT codes (community resource, not official AMA)
-- ArXiv 2308.04478: Multi-sheet XLSX handling in R (technical resource for openxlsx2 patterns)
-
-### Tertiary (LOW confidence, needs validation)
-
-- libmaneducation.com: SCT code classification (educational resource, not authoritative coding reference)
-- LinkedIn Blackcoffer: Centralized analytics platform lookup table management (general best practice, not domain-specific)
-- thelinuxcode.com: dplyr 2026 common mistakes (community blog, practical tips but not research-backed)
+### Tertiary (MEDIUM-LOW confidence)
+- **Clinical edge case strategies** — Inferred from PCORnet CDM v7.0 research and synthetic data literature (no direct R+PCORnet testing guide found)
+- **Fixture size estimates** (~20 patients sufficient) — Community consensus from data pipeline testing guides, not R-specific validation
+- **2 min performance target** — Estimated from DuckDB benchmarks and small dataset assumptions, not validated for this specific pipeline
 
 ---
-*Research completed: 2026-06-02*
+*Research completed: 2026-06-03*
 *Ready for roadmap: yes*

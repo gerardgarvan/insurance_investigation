@@ -1,545 +1,804 @@
-# Architecture Integration: v2.1 Clinical Data Refinements & NLPHL Breakout
+# Architecture Patterns: Local Testing Infrastructure for R Pipeline
 
-**Project:** PCORnet Payer Variable Investigation (R Pipeline)
-**Milestone:** v2.1 Clinical Data Refinements & NLPHL Breakout
-**Researched:** 2026-06-02
+**Domain:** Clinical data pipeline testing
+**Researched:** 2026-06-03
+**Confidence:** HIGH
 
 ## Executive Summary
 
-v2.1 adds **8 clinical data refinement features** to the existing v2.0 R pipeline. The architecture is mature (69 numbered scripts, DuckDB backend, encounter-level cancer linkage, first-line regimen detection) with well-defined integration points. All v2.1 features integrate cleanly without breaking changes.
+Local testing infrastructure for the PCORnet R pipeline requires three architectural layers: (1) environment auto-detection in R/00_config.R using `Sys.info()["sysname"]` with `.Renviron` override capability, (2) test fixture CSVs in `tests/fixtures/` matching PCORnet CDM schema with ~20 synthetic patients covering clinical edge cases, and (3) modified DuckDB ingest path (R/03) that accepts custom data sources. The existing architecture is well-suited for this addition — R/00_config.R already centralizes all paths, R/01_load_pcornet.R handles CSV-to-RDS conversion, and R/88_smoke_test_comprehensive.R validates pipeline integrity. No structural changes needed; only conditional path switching and fixture creation.
 
-**Integration strategy:** Modify existing scripts where logical (cancer summary, episode classification), add new scripts for investigations (SCT 0362, replaced-by codes), extend configuration for NLPHL breakout.
-
-**Build order:** 3 waves — (1) config extensions (NLPHL, cause of death), (2) core modifications (cancer summary, episode classification, treatment filtering), (3) investigations and new tables.
-
-**Critical integration points:** R/00_config.R (CANCER_SITE_MAP), R/utils/utils_cancer.R (classify_codes), R/49_cancer_summary_pre_post.R (7-day gap logic), R/28_episode_classification.R (cancer_category per episode), treatment episode pipeline (tumor registry removal).
-
-**Risk assessment:** LOW. Most features are additive (new columns, new outputs). Only breaking change is tumor registry treatment removal (affects 7 scripts, well-isolated via source filtering).
-
----
-
-## v2.1 Feature Mapping to Architecture
-
-| Feature | Type | Integration Point | New vs Modified | Complexity |
-|---------|------|-------------------|-----------------|------------|
-| **1. NLPHL breakout** | Category addition | R/00_config.R CANCER_SITE_MAP, utils_cancer.R | MODIFY existing | Medium |
-| **2. 7-day gap for ALL cancers** | Logic change | R/49 cancer_summary_pre_post.R | MODIFY existing | Low |
-| **3. Drop tumor registry treatment** | Source filtering | R/26-29 treatment episode pipeline | MODIFY existing (7 scripts) | Medium |
-| **4. SCT 0362 investigation** | Diagnostic | NEW R/9x_investigate_sct_0362.R | NEW script | Low |
-| **5. Replaced-by codes verification** | Validation | NEW R/9x_verify_replaced_by_codes.R | NEW script | Low |
-| **6. New tables from xlsx** | Output generation | NEW R/7x_new_tables_from_groupings.R | NEW script | Medium |
-| **7. Cause of death in outputs** | Column addition | R/52_gantt_v2_export.R, death integration | MODIFY existing | Low |
-| **8. Per-episode cancer_category** | Column addition | R/28_episode_classification.R, Gantt outputs | MODIFY existing | Low |
-
-**Summary:** 3 new scripts, 9+ modified scripts, 2 configuration extensions.
-
----
-
-## Data Flow Changes
-
-### Current v2.0 Data Flow
+## Recommended Architecture
 
 ```
-R/00_config.R (CANCER_SITE_MAP: 324 prefixes → 15 categories including "Hodgkin Lymphoma")
-    ↓
-R/01_load_pcornet.R (DuckDB connection, get_pcornet_table dispatcher)
-    ↓
-R/26_treatment_episodes.R (7 sources: PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER DRG, DIAGNOSIS, TUMOR_REGISTRY)
-    ↓
-R/28_episode_classification.R (encounter-level cancer linkage → cancer_category per episode)
-    ↓
-R/49_cancer_summary_pre_post.R (7-day gap for HL only, total = 6,347)
-    ↓
-R/52_gantt_v2_export.R (14 columns including cancer_category, regimen_label, is_first_line)
+┌─────────────────────────────────────────────────────────────────┐
+│ Environment Detection (R/00_config.R SECTION 1)                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ 1. Check Sys.getenv("R_TESTING_ENV")  [explicit override]   │ │
+│ │ 2. Check Sys.info()["sysname"]         [Windows vs Linux]   │ │
+│ │ 3. Check existence of test fixtures   [tests/fixtures/]    │ │
+│ │ 4. Set IS_LOCAL flag + conditional paths                    │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Path Configuration (R/00_config.R CONFIG list)                  │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ IF IS_LOCAL:                                                 │ │
+│ │   data_dir    = "tests/fixtures"                             │ │
+│ │   cache_dir   = tempdir() / "rds"                            │ │
+│ │   duckdb_path = tempdir() / "pcornet.duckdb"                 │ │
+│ │ ELSE (HiPerGator):                                           │ │
+│ │   data_dir    = "/orange/erin.mobley-hl.bcu/Mailhot_V1..."  │ │
+│ │   cache_dir   = "/blue/erin.mobley-hl.bcu/clean/rds"         │ │
+│ │   duckdb_path = "/blue/.../clean/duckdb/pcornet.duckdb"      │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Data Loading Pipeline (UNCHANGED FLOW)                          │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ R/01_load_pcornet.R                                          │ │
+│ │   - Reads CSVs from CONFIG$data_dir (auto-resolves)         │ │
+│ │   - Writes RDS cache to CONFIG$cache$raw_dir (auto-resolves)│ │
+│ │   - NO CODE CHANGES (paths already configurable)            │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ R/03_duckdb_ingest.R                                         │ │
+│ │   - Reads RDS from CONFIG$cache$raw_dir                      │ │
+│ │   - Writes DuckDB to CONFIG$cache$duckdb_path                │ │
+│ │   - NO CODE CHANGES (paths already configurable)            │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Testing/Validation                                               │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ R/88_smoke_test_comprehensive.R                              │ │
+│ │   - Add: Environment detection validation                    │ │
+│ │   - Add: Test fixture schema validation                      │ │
+│ │   - Add: DuckDB ingest success on fixtures                   │ │
+│ │   - Existing: 27 structural checks (unchanged)               │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### v2.1 Data Flow Changes
+## Component Boundaries
+
+| Component | Responsibility | Modified? | Communicates With |
+|-----------|---------------|-----------|-------------------|
+| **R/00_config.R SECTION 1** | Environment detection, path switching | **YES** (new detection logic) | None (reads OS/env vars) |
+| **R/00_config.R CONFIG list** | Path configuration based on IS_LOCAL | **YES** (conditional paths) | R/01, R/03, all scripts |
+| **tests/fixtures/** | Hand-crafted PCORnet CSVs (~20 patients) | **NEW** | R/01_load_pcornet.R |
+| **tests/fixtures/README.md** | Documentation of fixture edge cases | **NEW** | Human readers |
+| **R/01_load_pcornet.R** | CSV → RDS conversion | NO (already uses CONFIG paths) | R/00_config.R, tests/fixtures/ |
+| **R/03_duckdb_ingest.R** | RDS → DuckDB conversion | NO (already uses CONFIG paths) | R/00_config.R, RDS cache |
+| **R/88_smoke_test_comprehensive.R** | Pipeline integrity validation | **YES** (add env + fixture checks) | R/00_config.R, tests/fixtures/ |
+| **get_pcornet_table() dispatcher** | Backend-agnostic table access | NO (transparent to env) | DuckDB or RDS (unchanged) |
+| **.Renviron (project-level, optional)** | Explicit environment override | **NEW** (optional) | R/00_config.R via Sys.getenv() |
+
+## Data Flow
+
+### Local Development Flow (Windows)
 
 ```
-R/00_config.R (CANCER_SITE_MAP: C81.0 → "NLPHL", C81.1-C81.9 → "Hodgkin Lymphoma (non-NLPHL)")
-    ↓
-    NEW: DEATH_CAUSE_MAP (ICD-10 cause of death categories)
-    ↓
-R/01_load_pcornet.R (unchanged, DuckDB still primary backend)
-    ↓
-R/26_treatment_episodes.R (6 sources: TUMOR_REGISTRY REMOVED, only PROCEDURES, PRESCRIBING, DISPENSING, MED_ADMIN, ENCOUNTER DRG, DIAGNOSIS)
-    ↓
-    MODIFIED: extract_*_dates_with_codes() functions — filter out TUMOR_REGISTRY sources
-    ↓
-R/28_episode_classification.R (unchanged linkage logic, NEW: triggering_code_description via drug groupings xlsx)
-    ↓
-    NEW OUTPUT COLUMNS: triggering_code_description (human-readable)
-    ↓
-R/49_cancer_summary_pre_post.R (7-day gap for ALL cancer categories, total = 6,347)
-    ↓
-    MODIFIED: Remove HL-only filter, apply 7-day separation to C81, C82, C50, etc.
-    ↓
-R/52_gantt_v2_export.R (15 columns: +cause_of_death)
-    ↓
-    NEW: Left join DEATH table for DEATH_CAUSE, map via DEATH_CAUSE_MAP
-    ↓
-NEW R/9x_investigate_sct_0362.R (diagnostic: 90 patients with code 0362 → do they have other SCT codes?)
-NEW R/9x_verify_replaced_by_codes.R (validation: check all_codes_resolved_next_tables.xlsx "replaced by" mappings)
-NEW R/7x_new_tables_from_groupings.R (generate 2 new tables using drug groupings from xlsx)
+┌──────────────────┐
+│ Developer laptop │
+│ (Windows 10/11)  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ R/00_config.R:                                        │
+│   Sys.info()["sysname"] == "Windows"                 │
+│   → IS_LOCAL = TRUE                                   │
+│   → data_dir = "tests/fixtures"                       │
+│   → cache_dir = tempdir() / "rds"                     │
+│   → duckdb_path = tempdir() / "pcornet.duckdb"        │
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ tests/fixtures/                                       │
+│   ENROLLMENT_Mailhot_V1.csv     (~20 patients)       │
+│   DIAGNOSIS_Mailhot_V1.csv      (HL dx codes)        │
+│   ENCOUNTER_Mailhot_V1.csv      (multi-payer)        │
+│   PROCEDURES_Mailhot_V1.csv     (treatment codes)    │
+│   PRESCRIBING_Mailhot_V1.csv    (chemo RxNorm CUI)   │
+│   DEMOGRAPHIC_Mailhot_V1.csv    (birth dates, race)  │
+│   DEATH_Mailhot_V1.csv          (death dates)        │
+│   + 8 more tables (minimal required rows)            │
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ R/01_load_pcornet.R:                                  │
+│   vroom(tests/fixtures/*.csv)                         │
+│   → parse dates with parse_pcornet_date()            │
+│   → saveRDS(tempdir()/rds/TABLE.rds)                 │
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ R/03_duckdb_ingest.R:                                 │
+│   readRDS(tempdir()/rds/*.rds)                        │
+│   → DBI::dbWriteTable(tempdir()/pcornet.duckdb)      │
+│   → CREATE INDEX on ID, ENCOUNTERID                   │
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ R/88_smoke_test_comprehensive.R:                      │
+│   ✓ Environment detected as local                     │
+│   ✓ All 15 fixture CSVs present                       │
+│   ✓ Schema matches PCORnet CDM                        │
+│   ✓ DuckDB ingest successful                          │
+│   ✓ get_pcornet_table() returns data                  │
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ Developer validates key logic:                        │
+│   - Payer harmonization (dual-eligible detection)    │
+│   - ICD code normalization (NLPHL vs classical HL)   │
+│   - Treatment episode grouping (28-day cycles)        │
+│   - Cancer category linkage (encounter-level)        │
+└───────────────────────────────────────────────────────┘
 ```
 
-**Key changes:**
-1. CANCER_SITE_MAP gains NLPHL as 16th category
-2. Treatment episode sources reduced from 7 to 6
-3. Cancer summary 7-day logic generalized from HL-only to all cancers
-4. Gantt v2 gains cause_of_death column (17 total)
-5. Episode classification gains triggering_code_description
+### HiPerGator Production Flow (UNCHANGED)
 
----
+```
+┌──────────────────┐
+│ HiPerGator SLURM │
+│ (Linux, RStudio) │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ R/00_config.R:                                        │
+│   Sys.info()["sysname"] == "Linux"                   │
+│   → IS_LOCAL = FALSE                                  │
+│   → data_dir = "/orange/erin.mobley-hl.bcu/..."      │
+│   → cache_dir = "/blue/.../clean/rds"                 │
+│   → duckdb_path = "/blue/.../clean/duckdb/pcornet..."│
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────┐
+│ Production PCORnet CSVs (22 tables, 6300+ patients)  │
+│   /orange/erin.mobley-hl.bcu/Mailhot_V1_20250915/    │
+└────────┬─────────────────────────────────────────────┘
+         │
+         ▼
+         (existing pipeline flow — no changes)
+```
 
-## Integration Points by Component
+## New Components Detail
 
-### 1. Configuration Layer (R/00_config.R)
+### 1. Environment Detection Code (R/00_config.R SECTION 1)
 
-**Current state:**
+**Location:** R/00_config.R, immediately after SECTION 1 header (before CONFIG list)
+
+**Purpose:** Auto-detect local vs HiPerGator and set IS_LOCAL flag
+
+**Implementation:**
 ```r
-CANCER_SITE_MAP <- c(
-  "C81" = "Hodgkin Lymphoma",  # 324 prefixes total
-  "C82" = "Non-Hodgkin Lymphoma",
-  # ... 322 more entries
-)
+# ==============================================================================
+# SECTION 1A: ENVIRONMENT DETECTION ----
+# ==============================================================================
+# Auto-detect local development (Windows) vs HiPerGator production (Linux).
+# Override via .Renviron: R_TESTING_ENV=local or R_TESTING_ENV=production
+#
+# Detection hierarchy:
+#   1. R_TESTING_ENV environment variable (explicit override)
+#   2. Sys.info()["sysname"] (Windows = local, Linux = HiPerGator)
+#   3. Fallback to production mode if ambiguous
 
-ICD_CODES <- list(
-  hl_icd10 = c("C81.00", "C81.01", ..., "C81.9A"),  # 77 codes
-  hl_icd9 = c("201", "201.0", ..., "201.98")        # 81 codes
-)
-```
+IS_LOCAL <- FALSE  # Default to production (safe fallback)
 
-**v2.1 modifications:**
-```r
-# NLPHL BREAKOUT (Feature 1)
-CANCER_SITE_MAP <- c(
-  "C810" = "NLPHL",                         # NEW: Nodular lymphocyte predominant HL
-  "C81" = "Hodgkin Lymphoma (non-NLPHL)",   # MODIFIED: Renamed, still catches C81.1-C81.9
-  # ... rest unchanged
-)
-
-# ICD-9 NLPHL mapping (201.4x series)
-ICD9_NLPHL_CODES <- c("201.4", "201.40", "201.41", ..., "201.48")  # NEW constant
-
-# CAUSE OF DEATH (Feature 7)
-DEATH_CAUSE_MAP <- c(
-  "C81" = "Hodgkin Lymphoma",
-  "C82" = "Non-Hodgkin Lymphoma",
-  "C50" = "Breast cancer",
-  "I21" = "Acute myocardial infarction",
-  "J44" = "Chronic obstructive pulmonary disease",
-  # ... comprehensive ICD-10 cause mapping from all_codes_resolved_next_tables.xlsx
-)
-```
-
-**Impact:**
-- `classify_codes()` automatically returns "NLPHL" for C81.0x codes
-- Downstream scripts (R/28, R/40-R/53) inherit new category via CANCER_SITE_MAP
-- DEATH_CAUSE_MAP enables human-readable cause of death in Gantt outputs
-
-**Files modified:** R/00_config.R (add NLPHL mapping, add DEATH_CAUSE_MAP, add ICD9_NLPHL_CODES)
-
-**Dependencies:** R/utils/utils_cancer.R (no code change needed — classify_codes uses CANCER_SITE_MAP dynamically)
-
----
-
-### 2. Cancer Classification (R/utils/utils_cancer.R)
-
-**Current state:**
-```r
-classify_codes <- function(codes) {
-  prefix3 <- substr(codes, 1, 3)  # "C810" → "C81"
-  categories <- unname(CANCER_SITE_MAP[prefix3])
-  categories
-}
-```
-
-**v2.1 modification:**
-```r
-classify_codes <- function(codes) {
-  # NLPHL requires 4-char match (C810), others use 3-char prefix
-  prefix4 <- substr(codes, 1, 4)
-  prefix3 <- substr(codes, 1, 3)
-
-  # Try 4-char first (NLPHL: C810), fallback to 3-char
-  categories <- unname(CANCER_SITE_MAP[prefix4])
-  idx_na <- is.na(categories)
-  if (any(idx_na)) {
-    categories[idx_na] <- unname(CANCER_SITE_MAP[prefix3[idx_na]])
+# Check for explicit override
+env_override <- Sys.getenv("R_TESTING_ENV", unset = "")
+if (env_override == "local") {
+  IS_LOCAL <- TRUE
+  message("[00_config] Environment: LOCAL (R_TESTING_ENV override)")
+} else if (env_override == "production") {
+  IS_LOCAL <- FALSE
+  message("[00_config] Environment: PRODUCTION (R_TESTING_ENV override)")
+} else {
+  # Auto-detect based on OS
+  os_type <- Sys.info()["sysname"]
+  if (os_type == "Windows") {
+    IS_LOCAL <- TRUE
+    message("[00_config] Environment: LOCAL (Windows detected)")
+  } else if (os_type == "Linux") {
+    IS_LOCAL <- FALSE
+    message("[00_config] Environment: PRODUCTION (Linux/HiPerGator detected)")
+  } else {
+    # Darwin (macOS) or other Unix-alike → assume local
+    IS_LOCAL <- TRUE
+    message(glue::glue("[00_config] Environment: LOCAL ({os_type} detected, assuming dev)"))
   }
-  categories
 }
 ```
 
-**Files modified:** R/utils/utils_cancer.R (modify classify_codes for 4-char prefix support)
+**Why this approach:**
+- **Sys.info()["sysname"]** is R's standard environment detection ([R manual](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.info.html))
+- **R_TESTING_ENV override** enables CI/CD or edge cases where OS detection is wrong
+- **Safe fallback to production** prevents accidental fixture use on HiPerGator
+- **Message logging** makes detection transparent in logs
 
-**Testing:** Verify C81.00 → "NLPHL", C81.10 → "Hodgkin Lymphoma (non-NLPHL)"
+### 2. Conditional Path Configuration (R/00_config.R CONFIG list)
 
----
+**Location:** R/00_config.R, modify existing CONFIG list definition
 
-### 3. Cancer Summary 7-Day Logic (R/49_cancer_summary_pre_post.R)
-
-**Current state (HL-only 7-day filter):**
+**Changes:**
 ```r
-# Lines 116-127 (excerpt)
-n_c81_7day <- hl_c81_with_date %>%
-  distinct(ID, DX_DATE) %>%
-  group_by(ID) %>%
-  filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
-  ungroup() %>%
-  pull(ID) %>%
-  n_distinct()
+CONFIG <- list(
+  # Data directory: Raw PCORnet CDM CSV files
+  # LOCAL: tests/fixtures/ (hand-crafted synthetic patients)
+  # PRODUCTION: /orange/erin.mobley-hl.bcu/Mailhot_V1_20250915 (real cohort)
+  data_dir = if (IS_LOCAL) {
+    "tests/fixtures"
+  } else {
+    "/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915"
+  },
 
-message(glue("  With 2+ unique dates, 7-day span:      {format(n_c81_7day, big.mark=',')}"))
+  # Project directory: R scripts and workspace (unchanged)
+  project_dir = if (IS_LOCAL) {
+    getwd()  # Use current working directory on local
+  } else {
+    "/blue/erin.mobley-hl.bcu/R"
+  },
+
+  # Output directory: Figures, tables, cohort files (unchanged)
+  output_dir = "output",
+
+  # Performance tuning (vroom multi-threaded CSV loading)
+  # LOCAL: Single-threaded (small fixtures load instantly)
+  # PRODUCTION: Match SLURM --cpus-per-task allocation
+  performance = list(
+    num_threads = if (IS_LOCAL) 1 else 16
+  ),
+
+  # RDS Cache Settings
+  cache = list(
+    # LOCAL: Use R's temp directory (auto-cleaned on session end)
+    # PRODUCTION: Persistent blue storage
+    cache_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "rds_cache")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds"
+    },
+
+    force_reload = FALSE,
+
+    raw_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "rds_cache", "raw")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds/raw"
+    },
+
+    cohort_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "rds_cache", "cohort")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds/cohort"
+    },
+
+    outputs_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "rds_cache", "outputs")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds/outputs"
+    },
+
+    duckdb_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "duckdb")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/duckdb"
+    },
+
+    duckdb_path = if (IS_LOCAL) {
+      file.path(tempdir(), "duckdb", "pcornet.duckdb")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb"
+    }
+  )
+)
 ```
 
-**v2.1 modification (ALL cancers 7-day filter):**
-```r
-# Generalize to all cancer categories (C81, C82, C50, etc.)
-cancer_7day_per_category <- dx_raw %>%
-  filter(!is.na(DX_DATE)) %>%
-  mutate(category = classify_codes(DX_norm)) %>%
-  filter(!is.na(category)) %>%
-  distinct(ID, category, DX_DATE) %>%
-  group_by(ID, category) %>%
-  filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
-  ungroup()
+**Why tempdir() for local:**
+- Auto-cleaned on R session exit (no manual cleanup needed)
+- Cross-platform (Windows/macOS/Linux)
+- No gitignore pollution (not in repo)
+- Matches R testing best practices ([testthat fixtures](https://testthat.r-lib.org/articles/test-fixtures.html))
 
-n_patients_any_7day <- cancer_7day_per_category %>%
-  distinct(ID) %>%
-  nrow()
+### 3. Test Fixture Directory Structure (NEW)
 
-message(glue("  Patients with 7-day separation (any cancer): {format(n_patients_any_7day, big.mark=',')}"))
-message(glue("  Expected total: 6,347 (per requirement)"))
-
-# Per-category breakdown
-cancer_7day_summary <- cancer_7day_per_category %>%
-  group_by(category) %>%
-  summarize(
-    n_patients = n_distinct(ID),
-    n_date_pairs = n()
-  ) %>%
-  arrange(desc(n_patients))
-
-message("\n7-day separation by category:")
-print(cancer_7day_summary, n = Inf)
+```
+tests/
+├── fixtures/                               # NEW
+│   ├── README.md                           # Edge case documentation
+│   ├── ENROLLMENT_Mailhot_V1.csv          # 20 patients, multi-site
+│   ├── DIAGNOSIS_Mailhot_V1.csv           # HL + NLPHL + other cancers
+│   ├── ENCOUNTER_Mailhot_V1.csv           # Multi-payer, dual-eligible, same-day
+│   ├── PROCEDURES_Mailhot_V1.csv          # Treatment codes (CPT/HCPCS)
+│   ├── PRESCRIBING_Mailhot_V1.csv         # Chemo RxNorm CUIs (ABVD, BV+AVD, Nivo+AVD)
+│   ├── DEMOGRAPHIC_Mailhot_V1.csv         # Birth dates, race, sex
+│   ├── DEATH_Mailhot_V1.csv               # Death dates (5 patients)
+│   ├── CONDITION_Mailhot_V1.csv           # Minimal (0 rows OK)
+│   ├── DISPENSING_Mailhot_V1.csv          # Minimal (0 rows OK)
+│   ├── MED_ADMIN_Mailhot_V1.csv           # Minimal (0 rows OK)
+│   ├── LAB_RESULT_Mailhot_V1.csv          # Minimal (0 rows OK)
+│   ├── PROVIDER_Mailhot_V1.csv            # Oncology specialty (5 providers)
+│   ├── TUMOR_REGISTRY1_Mailhot_V1.csv     # HL morphology codes
+│   ├── TUMOR_REGISTRY2_Mailhot_V1.csv     # Minimal (0 rows OK)
+│   └── TUMOR_REGISTRY3_Mailhot_V1.csv     # Minimal (0 rows OK)
+└── testthat/                               # FUTURE (out of scope for v2.2)
+    └── (reserved for unit tests)
 ```
 
-**Impact:**
-- Total population changes from HL-only subset to all confirmed cohort
-- Expected total = 6,347 (requirement states this explicitly)
-- Output table gains per-category 7-day confirmation metrics
+**Why this structure:**
+- Matches testthat conventions ([test fixtures](https://testthat.r-lib.org/articles/test-fixtures.html))
+- `tests/fixtures/` is discoverable (standard R pattern)
+- `README.md` documents edge cases inline with data
+- Filename pattern matches production (`{TABLE}_Mailhot_V1.csv`)
 
-**Files modified:** R/49_cancer_summary_pre_post.R (generalize 7-day logic, update total population filter)
+### 4. Test Fixture Content Strategy
 
-**Testing:** Verify total = 6,347, verify NLPHL appears as separate category in output
+**20 synthetic patients covering:**
 
----
+| Edge Case | Patient IDs | Tables | Why Critical |
+|-----------|-------------|--------|--------------|
+| **Dual-eligible (Medicare+Medicaid)** | P001, P002 | ENCOUNTER | Tests hierarchical payer resolution (Medicaid priority) |
+| **NLPHL vs classical HL** | P003 (NLPHL), P004 (classical) | DIAGNOSIS | Tests C81.0 breakout logic (Phase 75) |
+| **Multiple cancers (HL + other)** | P005 | DIAGNOSIS | Tests encounter-level cancer linkage (Phase 61) |
+| **SCT patient (code 0362)** | P006 | PROCEDURES | Tests SCT detection tightening (Phase 60) |
+| **Death with post-death activity** | P007 | DEATH, ENCOUNTER | Tests death date validation (Phase 59) |
+| **Same-day multi-payer encounters** | P008 | ENCOUNTER | Tests tiered same-day resolution (Phase 37) |
+| **Orphan diagnosis code (no encounter)** | P009 | DIAGNOSIS | Tests orphan dx preservation (Phase 82) |
+| **First-line regimen (ABVD)** | P010 | PRESCRIBING | Tests regimen detection (Phase 61) |
+| **First-line regimen (BV+AVD)** | P011 | PRESCRIBING | Tests dropped-agent tolerance |
+| **First-line regimen (Nivo+AVD)** | P012 | PRESCRIBING | Tests novel regimen detection |
+| **Missing payer codes (NI, UN)** | P013 | ENCOUNTER | Tests payer sentinel value fallback |
+| **Tumor registry dates only** | P014 | TUMOR_REGISTRY1 | Tests TR-sourced HL diagnosis |
+| **Multi-site patient (AMS + UMI)** | P015 | ENROLLMENT | Tests primary site filtering |
+| **7-day gap cancer confirmation** | P016 | DIAGNOSIS | Tests cancer summary refinement (Phase 77) |
+| **1900 sentinel date** | P017 | DIAGNOSIS | Tests 1900 date filtering (Phase 17) |
+| **HL in remission (C81.9A)** | P018 | DIAGNOSIS | Tests remission code coverage |
+| **Bare 201 ICD-9 code** | P019 | DIAGNOSIS | Tests parent code matching |
+| **Multi-source overlap (AV+TH)** | P020 | ENCOUNTER | Tests overlap classification (Phase 33-34) |
+| **Minimal patients (valid, no edge)** | P021-P025 | ALL | Ensure pipeline runs without errors |
 
-### 4. Treatment Episode Pipeline — Tumor Registry Removal (R/26-R/29)
+**CSV size estimates:**
+- ENROLLMENT: 25 rows (20 patients + 5 duplicates for multi-site)
+- DIAGNOSIS: 80 rows (~4 dx per patient average)
+- ENCOUNTER: 150 rows (~7.5 encounters per patient)
+- PRESCRIBING: 60 rows (chemo patients only)
+- PROCEDURES: 40 rows (treatment codes)
+- DEMOGRAPHIC: 20 rows (1 per patient)
+- DEATH: 5 rows (P007, P017, P018, P019, P020)
+- Others: 0-10 rows (minimal schema compliance)
 
-**Current state (7 sources):**
+**Total fixture size:** ~500 rows across 15 tables, <50KB total (trivial to version control)
+
+### 5. Smoke Test Enhancements (R/88_smoke_test_comprehensive.R)
+
+**New checks (add after SECTION 3):**
+
 ```r
-# R/26_treatment_episodes.R lines 118-149
-extract_chemo_dates_with_codes <- function() {
-  # 1. PROCEDURES
-  # 2. PRESCRIBING
-  # 3. DIAGNOSIS (Z51.11/Z51.12)
-  # 4. DISPENSING
-  # 5. MED_ADMIN
-  # 6. ENCOUNTER (DRG codes)
-  # 7. TUMOR_REGISTRY (DT_CHEMO, DT_RAD, etc.)  <-- REMOVE THIS
+# ==============================================================================
+# SECTION 3B: ENVIRONMENT DETECTION VALIDATION ----
+# ==============================================================================
 
-  stack_and_dedup_with_codes(sources, "Chemotherapy")
+message("\n[3B/30] Environment detection validation...")
+
+check("IS_LOCAL flag exists in config", exists("IS_LOCAL"))
+
+if (exists("IS_LOCAL")) {
+  os_type <- Sys.info()["sysname"]
+
+  # Validate Windows → IS_LOCAL = TRUE
+  if (os_type == "Windows") {
+    check("Windows detected → IS_LOCAL = TRUE", IS_LOCAL == TRUE)
+  }
+
+  # Validate Linux → IS_LOCAL = FALSE (unless overridden)
+  if (os_type == "Linux") {
+    env_override <- Sys.getenv("R_TESTING_ENV", unset = "")
+    if (env_override == "local") {
+      check("Linux + R_TESTING_ENV=local → IS_LOCAL = TRUE", IS_LOCAL == TRUE)
+    } else {
+      check("Linux → IS_LOCAL = FALSE", IS_LOCAL == FALSE)
+    }
+  }
+
+  # Validate data_dir matches environment
+  if (IS_LOCAL) {
+    check(
+      "IS_LOCAL → data_dir points to tests/fixtures",
+      grepl("tests/fixtures", CONFIG$data_dir, fixed = TRUE)
+    )
+    check(
+      "IS_LOCAL → cache_dir points to tempdir",
+      grepl(tempdir(), CONFIG$cache$cache_dir, fixed = TRUE)
+    )
+  } else {
+    check(
+      "Production → data_dir points to /orange",
+      grepl("/orange/erin.mobley", CONFIG$data_dir, fixed = TRUE)
+    )
+    check(
+      "Production → cache_dir points to /blue",
+      grepl("/blue/erin.mobley", CONFIG$cache$cache_dir, fixed = TRUE)
+    )
+  }
+}
+
+# ==============================================================================
+# SECTION 3C: TEST FIXTURE SCHEMA VALIDATION ----
+# ==============================================================================
+
+message("\n[3C/30] Test fixture schema validation...")
+
+if (exists("IS_LOCAL") && IS_LOCAL) {
+  fixture_dir <- CONFIG$data_dir
+
+  check(
+    glue("Fixture directory exists: {fixture_dir}"),
+    dir.exists(fixture_dir)
+  )
+
+  if (dir.exists(fixture_dir)) {
+    # Check for required fixture CSVs (core tables only)
+    required_fixtures <- c(
+      "ENROLLMENT_Mailhot_V1.csv",
+      "DIAGNOSIS_Mailhot_V1.csv",
+      "ENCOUNTER_Mailhot_V1.csv",
+      "DEMOGRAPHIC_Mailhot_V1.csv"
+    )
+
+    for (csv_name in required_fixtures) {
+      csv_path <- file.path(fixture_dir, csv_name)
+      check(glue("Fixture exists: {csv_name}"), file.exists(csv_path))
+    }
+
+    # Check README.md documents edge cases
+    readme_path <- file.path(fixture_dir, "README.md")
+    check("Fixture README.md exists", file.exists(readme_path))
+  }
 }
 ```
 
-**v2.1 modification (6 sources):**
-```r
-extract_chemo_dates_with_codes <- function() {
-  # 1-6 unchanged
+## Modified vs New Components Summary
 
-  # 7. TUMOR_REGISTRY — REMOVED per v2.1 requirement
-  # Tumor registry dates are unreliable for treatment episode detection
-  # (documented in v2.1 milestone requirements)
+| Component | Status | LOC Change | Risk |
+|-----------|--------|------------|------|
+| **R/00_config.R** | MODIFIED | +60 lines (env detection + conditional paths) | LOW (isolated, early exit on error) |
+| **tests/fixtures/*.csv** | NEW | N/A (data files) | NONE (read-only) |
+| **tests/fixtures/README.md** | NEW | ~100 lines (documentation) | NONE |
+| **R/88_smoke_test_comprehensive.R** | MODIFIED | +50 lines (env + fixture checks) | NONE (test-only) |
+| **R/01_load_pcornet.R** | UNCHANGED | 0 | NONE |
+| **R/03_duckdb_ingest.R** | UNCHANGED | 0 | NONE |
+| **All other R scripts** | UNCHANGED | 0 | NONE |
 
-  # tr_dates <- NULL  # Commented out or deleted
+**Total code changes:** ~110 lines across 2 files (R/00_config.R, R/88_smoke_test_comprehensive.R)
 
-  sources <- list(
-    procedures = px_dates,
-    prescribing = rx_dates,
-    diagnosis = dx_dates,
-    dispensing = disp_dates,
-    med_admin = ma_dates,
-    encounter_drg = enc_dates
-    # tumor_registry = tr_dates  # REMOVED
-  )
+**Zero changes to data loading or processing logic** — only configuration and validation
 
-  stack_and_dedup_with_codes(sources, "Chemotherapy")
-}
+## Integration Points
+
+### Entry Points to Modified Code
+
+1. **R/00_config.R source()'d by all scripts**
+   - Every script calls `source("R/00_config.R")`
+   - Environment detection runs ONCE per R session
+   - IS_LOCAL flag + CONFIG paths available globally
+
+2. **R/01_load_pcornet.R reads CONFIG$data_dir**
+   - Already uses `PCORNET_PATHS <- setNames(file.path(CONFIG$data_dir, ...))`
+   - NO CODE CHANGE — data_dir auto-resolves to fixtures or production
+
+3. **R/03_duckdb_ingest.R reads CONFIG$cache paths**
+   - Already uses `CONFIG$cache$raw_dir`, `CONFIG$cache$duckdb_path`
+   - NO CODE CHANGE — paths auto-resolve
+
+4. **R/88_smoke_test_comprehensive.R validates config**
+   - New sections 3B-3C validate environment detection and fixtures
+   - Fails fast if environment misconfigured
+
+### Data Dependencies
+
+```
+Fixture CSVs → R/01 → RDS cache → R/03 → DuckDB → get_pcornet_table() → Pipeline
+     ↑                    ↑                  ↑
+     │                    │                  │
+  Hand-crafted      tempdir() on local   Single-writer
+  (~20 patients)    /blue on HiPerGator  Read-only queries
 ```
 
-**Affected scripts:**
-1. **R/26_treatment_episodes.R** — extract_chemo_dates_with_codes, extract_radiation_dates_with_codes, extract_sct_dates_with_codes (3 functions)
-2. **R/27_drug_name_resolution.R** — May reference treatment_episodes.rds (no change needed if episodes.rds format unchanged)
-3. **R/28_episode_classification.R** — Uses treatment_episodes.rds (no change needed)
-4. **R/29_first_line_and_death_analysis.R** — Uses treatment_episodes.rds (no change needed)
+**No circular dependencies** — linear data flow matches production
 
-**Impact:**
-- Episode counts will decrease (tumor registry was supplemental source)
-- No schema change to treatment_episodes.rds
-- Backward compatible (existing outputs still valid, just fewer episodes)
+### Shared State
 
-**Files modified:** R/26_treatment_episodes.R (remove tumor registry extraction for chemo, radiation, SCT)
+| Object | Scope | Mutated By | Read By |
+|--------|-------|------------|---------|
+| IS_LOCAL | Global (via 00_config.R) | 00_config.R SECTION 1A (once) | All scripts (conditional logic) |
+| CONFIG | Global (via 00_config.R) | 00_config.R (once) | All scripts (path resolution) |
+| pcornet_con | Global (via 01_load_pcornet.R) | 01_load_pcornet.R, 03_duckdb_ingest.R | get_pcornet_table() |
+| pcornet (RDS mode) | Global (via 01_load_pcornet.R) | 01_load_pcornet.R | get_pcornet_table() (if USE_DUCKDB=FALSE) |
 
-**Testing:**
-- Count episodes before/after tumor registry removal
-- Verify no episodes with `source_table = "TUMOR_REGISTRY"` in triggering_codes
-- Verify episode start/stop dates still valid (no NA episodes)
+**No new shared state** — IS_LOCAL and CONFIG follow existing pattern
+
+## Build Order
+
+### Phase 1: Environment Detection (Foundation)
+
+**Goal:** R/00_config.R detects environment, sets IS_LOCAL, configures paths
+
+**Files:**
+1. Modify R/00_config.R:
+   - Add SECTION 1A (environment detection)
+   - Convert CONFIG paths to conditional (if IS_LOCAL)
+
+**Validation:**
+- Source R/00_config.R on Windows → IS_LOCAL = TRUE, data_dir = "tests/fixtures"
+- Source R/00_config.R on Linux → IS_LOCAL = FALSE, data_dir = "/orange/..."
+- R_TESTING_ENV=local override works
+
+**Deliverable:** R/00_config.R with environment-aware paths
+
+**Risk:** LOW (single-file change, early in pipeline)
 
 ---
 
-### 5. Episode-Level Cancer Category & Triggering Code Description (R/28_episode_classification.R)
+### Phase 2: Test Fixtures (Data Layer)
 
-**Current state:**
-```r
-# Output columns (14 total)
-episodes_enriched <- episodes %>%
-  # ... cancer linkage logic ...
-  select(
-    patient_id, treatment_type, episode_number, episode_start, episode_stop,
-    episode_length_days, distinct_dates_in_episode, historical_flag,
-    triggering_codes, ENCOUNTERID, cancer_category, cancer_link_method,
-    is_hodgkin, regimen_label
-  )
+**Goal:** Create minimal PCORnet CSVs with clinical edge cases
+
+**Files:**
+1. Create tests/fixtures/ directory
+2. Create tests/fixtures/README.md (edge case documentation)
+3. Create 15 CSV files:
+   - Start with ENROLLMENT.csv (20 patients)
+   - Add DEMOGRAPHIC.csv (birth dates, race, sex)
+   - Add DIAGNOSIS.csv (HL + NLPHL + other cancers)
+   - Add ENCOUNTER.csv (multi-payer, dual-eligible, same-day)
+   - Add 11 minimal tables (schema compliance)
+
+**Validation:**
+- All CSVs have correct column names (match PCORNET_PATHS)
+- ID column present in all tables
+- Date columns use YYYY-MM-DD format (compatible with parse_pcornet_date())
+- Edge cases documented in README.md
+
+**Deliverable:** tests/fixtures/ with 15 CSVs + README.md
+
+**Risk:** LOW (data-only, no code)
+
+---
+
+### Phase 3: Smoke Test Validation (Testing Layer)
+
+**Goal:** R/88 validates environment detection and fixture schema
+
+**Files:**
+1. Modify R/88_smoke_test_comprehensive.R:
+   - Add SECTION 3B (environment detection validation)
+   - Add SECTION 3C (test fixture schema validation)
+   - Renumber subsequent sections (3→4, 4→5, etc.)
+
+**Validation:**
+- Run R/88 on Windows → passes env detection checks, fixture schema checks
+- Run R/88 on Linux → passes env detection checks, skips fixture checks
+- Run R/88 with R_TESTING_ENV=local on Linux → passes both
+
+**Deliverable:** R/88_smoke_test_comprehensive.R with env + fixture validation
+
+**Risk:** NONE (test-only, doesn't affect pipeline)
+
+---
+
+### Phase 4: End-to-End Local Pipeline Test (Integration)
+
+**Goal:** Run full pipeline (01→03→88) on local fixtures
+
+**Steps:**
+1. On Windows developer laptop:
+   ```r
+   source("R/00_config.R")     # Detects Windows → IS_LOCAL = TRUE
+   source("R/01_load_pcornet.R") # Loads tests/fixtures/*.csv → tempdir()/rds/
+   source("R/03_duckdb_ingest.R") # Ingests RDS → tempdir()/pcornet.duckdb
+   source("R/88_smoke_test_comprehensive.R") # Validates all
+   ```
+
+2. Verify outputs:
+   - RDS cache created in tempdir()
+   - DuckDB file created in tempdir()
+   - get_pcornet_table("ENROLLMENT") returns 20 patients
+   - No errors in smoke test
+
+**Validation:**
+- Full pipeline runs without errors
+- DuckDB contains 15 tables
+- Patient count matches fixtures (20)
+- Key edge cases testable (dual-eligible, NLPHL, etc.)
+
+**Deliverable:** Working local pipeline on test fixtures
+
+**Risk:** LOW (no production impact, local-only)
+
+---
+
+### Phase 5: Documentation + Transition (Cleanup)
+
+**Goal:** Document local testing workflow, update PROJECT.md
+
+**Files:**
+1. Update .planning/PROJECT.md:
+   - Move v2.2 milestone to "Shipped"
+   - Add key decisions (environment detection, fixture strategy)
+   - Update constraints (add local testing capability)
+
+2. Optional: Create .Renviron.example:
+   ```
+   # Local testing override (optional)
+   # R_TESTING_ENV=local
+   ```
+
+**Deliverable:** PROJECT.md updated, optional .Renviron.example
+
+**Risk:** NONE (documentation-only)
+
+---
+
+## Dependency Graph
+
+```
+Phase 1 (R/00_config.R env detection)
+  └──> Phase 2 (tests/fixtures/ creation)
+         └──> Phase 3 (R/88 validation)
+                └──> Phase 4 (end-to-end test)
+                       └──> Phase 5 (documentation)
+
+No circular dependencies
+Each phase validates previous phase
+Can pause after Phase 1 and resume later
 ```
 
-**v2.1 modification (add triggering_code_description):**
-```r
-# NEW: Load drug groupings from all_codes_resolved_next_tables.xlsx
-drug_groupings <- readxl::read_excel(
-  file.path(CONFIG$data_dir, "all_codes_resolved_next_tables.xlsx"),
-  sheet = "Drug Groupings"
-) %>%
-  select(code, description = drug_grouping)
+## Alternatives Considered
 
-# Join triggering codes with descriptions
-episodes_enriched <- episodes %>%
-  # ... existing cancer linkage ...
-  mutate(
-    # Extract first code from comma-separated triggering_codes
-    primary_triggering_code = str_extract(triggering_codes, "^[^,]+")
-  ) %>%
-  left_join(drug_groupings, by = c("primary_triggering_code" = "code")) %>%
-  rename(triggering_code_description = description) %>%
-  select(
-    patient_id, treatment_type, episode_number, episode_start, episode_stop,
-    episode_length_days, distinct_dates_in_episode, historical_flag,
-    triggering_codes, triggering_code_description,  # NEW COLUMN
-    ENCOUNTERID, cancer_category, cancer_link_method,
-    is_hodgkin, regimen_label
-  )
+### Alternative 1: R_PROFILE_USER Instead of Sys.info()
+
+**Approach:** Use `.Rprofile` to set IS_LOCAL flag instead of auto-detection
+
+**Rejected because:**
+- Requires manual `.Rprofile` creation (extra setup step)
+- `.Rprofile` can be overridden by user-level `~/.Rprofile` ([R startup](https://cran.r-project.org/web/packages/startup/vignettes/startup-intro.html))
+- Auto-detection via `Sys.info()` is zero-config
+
+**Retained:** R_TESTING_ENV override via `.Renviron` for edge cases
+
+### Alternative 2: Separate config_local.R File
+
+**Approach:** Create `R/00_config_local.R` that sources `R/00_config.R` and overrides paths
+
+**Rejected because:**
+- Requires all scripts to source("R/00_config_local.R") instead of R/00_config.R
+- 75+ scripts would need modification
+- Breaks existing source() pattern
+
+**Retained:** Single R/00_config.R with conditional logic
+
+### Alternative 3: Full testthat Suite
+
+**Approach:** Create `tests/testthat/` with unit tests for all functions
+
+**Deferred because:**
+- Out of scope for v2.2 (milestone goal is "local testing infrastructure")
+- Existing R/88_smoke_test_comprehensive.R provides structural validation
+- testthat requires refactoring scripts into functions (major effort)
+
+**Retained for future:** tests/testthat/ directory reserved, Phase 4 can add unit tests later
+
+### Alternative 4: DuckDB Memory Mode Instead of Temp File
+
+**Approach:** Use `dbConnect(duckdb(), dbdir = ":memory:")` for local testing
+
+**Rejected because:**
+- Doesn't test DuckDB file I/O (atomic write, index creation)
+- Phase 29 ingest logic assumes file-based DuckDB
+- R/03_duckdb_ingest.R would need separate code path
+
+**Retained:** tempdir() file-based DuckDB (matches production pattern)
+
+## Concurrency and Safety
+
+### DuckDB Single-Writer Pattern (UNCHANGED)
+
+Per [DuckDB production guide](https://www.dench.com/blog/duckdb-in-production):
+- **Single writer at a time** (local pipeline runs sequentially, no issue)
+- **Multiple concurrent readers** (pipeline reads via get_pcornet_table(), safe)
+- **MVCC for read isolation** (readers don't block during writes)
+
+**Local testing impact:** NONE (sequential execution, no parallelism)
+
+### Tempdir() Cleanup
+
+**Automatic cleanup:**
+- R's `tempdir()` is auto-deleted on R session exit (per OS)
+- Windows: C:\Users\{USER}\AppData\Local\Temp\RtmpXXXXXX
+- Linux: /tmp/RtmpXXXXXX
+
+**Manual cleanup (optional):**
+```r
+# Clear all temp files
+unlink(tempdir(), recursive = TRUE)
+
+# Or just DuckDB
+unlink(CONFIG$cache$duckdb_path)
 ```
 
-**Files modified:** R/28_episode_classification.R (add drug groupings join, new column)
+### Production Safety Guarantees
 
-**New dependency:** `all_codes_resolved_next_tables.xlsx` must exist in data directory
+**No production impact:**
+- IS_LOCAL detection prevents fixture use on HiPerGator (Linux → IS_LOCAL = FALSE)
+- R/88 smoke test validates data_dir points to /orange on Linux
+- Explicit R_TESTING_ENV override required to use fixtures on Linux
 
-**Testing:**
-- Verify triggering_code_description not NA for common chemo codes (J9000, J9360, etc.)
-- Verify NLPHL episodes have correct cancer_category
+**Fail-safe hierarchy:**
+1. Production is default (IS_LOCAL = FALSE fallback)
+2. Linux auto-detected as production
+3. R_TESTING_ENV must explicitly set "local" to override
 
----
+## Performance Considerations
 
-### 6. Cause of Death in Gantt Outputs (R/52_gantt_v2_export.R)
+### Local vs HiPerGator Speed
 
-**Current state (14 columns):**
-```r
-gantt_v2 <- treatment_episodes %>%
-  select(
-    patient_id, treatment_type, episode_number, episode_start, episode_stop,
-    episode_length_days, distinct_dates_in_episode, historical_flag,
-    triggering_codes, ENCOUNTERID, cancer_category, regimen_label,
-    is_first_line, death_date
-  )
-```
+| Operation | Local (Windows) | HiPerGator (Linux) | Factor |
+|-----------|-----------------|---------------------|--------|
+| CSV load (vroom) | ~0.1s (20 patients) | ~60s (6300 patients) | 600x |
+| DuckDB ingest | ~0.5s (15 tables) | ~300s (15 tables) | 600x |
+| Full pipeline (01→03) | ~1s | ~6min | 360x |
 
-**v2.1 modification (15 columns with cause_of_death):**
-```r
-# Load DEATH table (has ID, DEATH_DATE, DEATH_CAUSE)
-death_tbl <- get_pcornet_table("DEATH") %>%
-  select(ID, DEATH_DATE, DEATH_CAUSE) %>%
-  collect()
+**Why acceptable:**
+- Local fixtures are 1/300th size of production data (20 vs 6300 patients)
+- Purpose is logic validation, not performance testing
+- HiPerGator performance unchanged (no code changes to data loading)
 
-# Map DEATH_CAUSE (ICD-10) to human-readable category
-death_with_category <- death_tbl %>%
-  mutate(
-    cause_prefix3 = substr(DEATH_CAUSE, 1, 3),
-    cause_of_death = unname(DEATH_CAUSE_MAP[cause_prefix3])
-  ) %>%
-  select(ID, death_date = DEATH_DATE, cause_of_death)
+### Memory Usage
 
-# Join to Gantt data
-gantt_v2 <- treatment_episodes %>%
-  left_join(death_with_category, by = c("patient_id" = "ID")) %>%
-  select(
-    patient_id, treatment_type, episode_number, episode_start, episode_stop,
-    episode_length_days, distinct_dates_in_episode, historical_flag,
-    triggering_codes, ENCOUNTERID, cancer_category, regimen_label,
-    is_first_line, death_date, cause_of_death  # NEW COLUMN
-  )
-```
+| Environment | RDS Cache | DuckDB File | Total |
+|-------------|-----------|-------------|-------|
+| Local (fixtures) | ~5MB (tempdir) | ~10MB (tempdir) | ~15MB |
+| HiPerGator (production) | ~2GB (/blue) | ~1.5GB (/blue) | ~3.5GB |
 
-**Files modified:** R/52_gantt_v2_export.R (join DEATH table, add cause_of_death column)
-
-**New dependency:** R/00_config.R must define DEATH_CAUSE_MAP
-
-**Testing:**
-- Verify cause_of_death populated for known deaths
-- Verify NA for patients without death records
-- Verify "Hodgkin Lymphoma" appears for C81.x death causes
-
----
-
-## Suggested Build Order
-
-### Wave 1: Configuration & Utilities (Foundation)
-**Goal:** Extend configuration for NLPHL and cause of death, update classification logic
-
-1. **R/00_config.R**
-   - Add NLPHL to CANCER_SITE_MAP (C810 = "NLPHL", C81 = "Hodgkin Lymphoma (non-NLPHL)")
-   - Add ICD9_NLPHL_CODES (201.4x series)
-   - Add DEATH_CAUSE_MAP (ICD-10 cause categories)
-
-2. **R/utils/utils_cancer.R**
-   - Modify `classify_codes()` for 4-char prefix support (C810 before C81)
-   - Add unit tests (optional): verify C81.00 → "NLPHL", C81.10 → "Hodgkin Lymphoma (non-NLPHL)"
-
-**Success criteria:**
-- `classify_codes(c("C8100", "C8110"))` returns `c("NLPHL", "Hodgkin Lymphoma (non-NLPHL)")`
-- DEATH_CAUSE_MAP has 50+ entries covering major ICD-10 categories
-
-**Estimated effort:** 1-2 hours
-
----
-
-### Wave 2: Core Modifications (Data Processing)
-**Goal:** Modify existing scripts for 7-day gap generalization, tumor registry removal, episode enrichment
-
-3. **R/49_cancer_summary_pre_post.R**
-   - Generalize 7-day logic from HL-only to all cancer categories
-   - Verify total population = 6,347
-   - Add per-category 7-day breakdown to output
-
-4. **R/26_treatment_episodes.R**
-   - Remove tumor registry extraction from `extract_chemo_dates_with_codes()`
-   - Remove tumor registry extraction from `extract_radiation_dates_with_codes()`
-   - Remove tumor registry extraction from `extract_sct_dates_with_codes()`
-   - Update source count in script header (7 → 6 sources)
-
-5. **R/28_episode_classification.R**
-   - Load `all_codes_resolved_next_tables.xlsx` (Drug Groupings sheet)
-   - Join triggering_codes with drug_groupings for `triggering_code_description`
-   - Add column to output schema (14 → 15 columns)
-
-6. **R/52_gantt_v2_export.R**
-   - Load DEATH table via get_pcornet_table("DEATH")
-   - Join DEATH_CAUSE and map via DEATH_CAUSE_MAP
-   - Add `cause_of_death` column to Gantt v2 CSV/xlsx (14 → 15 columns)
-
-**Success criteria:**
-- R/49 output shows 7-day separation for NLPHL, HL (non-NLPHL), NHL, Breast, etc.
-- R/26 output has no episodes with `source_table = "TUMOR_REGISTRY"`
-- R/28 output has triggering_code_description populated for common codes
-- R/52 output has cause_of_death for patients with death records
-
-**Estimated effort:** 4-6 hours
-
----
-
-### Wave 3: Investigations & New Tables (Additive)
-**Goal:** Create new diagnostic and output scripts
-
-7. **NEW R/92_investigate_sct_0362.R**
-   - Query PROCEDURES for 90 patients with code 0362
-   - Find all SCT codes on same encounters
-   - Output CSV with encounter-level summary
-
-8. **NEW R/93_verify_replaced_by_codes.R**
-   - Load `all_codes_resolved_next_tables.xlsx` (Replaced By sheet)
-   - Verify replaced_by_code in TREATMENT_CODES
-   - Query PROCEDURES for actual usage
-   - Output verification CSV
-
-9. **NEW R/76_new_tables_from_groupings.R**
-   - Load `all_codes_resolved_next_tables.xlsx` (Drug Groupings, Table Template sheets)
-   - Generate 2 tables (structure TBD based on xlsx)
-   - Output multi-sheet xlsx
-
-**Success criteria:**
-- R/92 output identifies other SCT codes for 0362 patients
-- R/93 output confirms replaced-by codes are valid
-- R/76 output has 2 tables matching template structure
-
-**Estimated effort:** 3-4 hours
-
----
-
-### Wave 4: Smoke Test & Documentation Updates
-**Goal:** Verify integration, update documentation
-
-10. **R/88_smoke_test_comprehensive.R**
-    - Add tests for new scripts (R/76, R/92, R/93)
-    - Verify NLPHL category appears in cancer outputs
-    - Verify Gantt v2 has 15 columns (not 14)
-
-11. **Documentation updates**
-    - Update SCRIPT_INDEX.md with new scripts
-    - Update PROJECT.md requirements (mark v2.1 features as Validated)
-    - Update ROADMAP.md with v2.1 phase completion
-
-**Success criteria:**
-- Smoke test passes for all new/modified scripts
-- Documentation reflects v2.1 architecture changes
-
-**Estimated effort:** 1-2 hours
-
----
-
-## Total Estimated Effort: 10-15 hours
-
----
-
-## Risk Assessment & Mitigation
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| **NLPHL 4-char prefix breaks other classifications** | Low | High | Test classify_codes extensively; 4-char tries before 3-char fallback |
-| **Tumor registry removal reduces episode counts to zero** | Low | Medium | Verify 6 sources (PROCEDURES, PRESCRIBING, etc.) still produce episodes |
-| **7-day gap for all cancers excludes too many patients** | Medium | Medium | Validate total = 6,347 matches requirement exactly |
-| **all_codes_resolved_next_tables.xlsx missing required sheets** | Medium | High | Check xlsx structure before coding; create fallback logic |
-| **Cause of death ICD-10 mapping incomplete** | Medium | Low | Start with top 20 causes, expand iteratively |
-| **Gantt v2 schema change breaks downstream tools** | Low | Medium | Version Gantt files (gantt_v2.csv → gantt_v2.1.csv) if schema change |
-
-**Overall risk: LOW** — Most changes are additive. Only breaking change is tumor registry removal (well-isolated).
-
----
+**Local impact:** Negligible (15MB fits in L3 cache of modern CPUs)
 
 ## Sources
 
-### Internal Documentation
-- PROJECT.md (v2.1 requirements)
-- R/00_config.R (CANCER_SITE_MAP structure)
-- R/utils/utils_cancer.R (classify_codes implementation)
-- R/26_treatment_episodes.R (treatment source extraction)
-- R/28_episode_classification.R (episode enrichment)
-- R/49_cancer_summary_pre_post.R (7-day logic)
-- R/52_gantt_v2_export.R (output schema)
+**Environment Detection:**
+- [R Sys.info() documentation](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.info.html) — Official R manual for system information extraction
+- [Identifying the OS from R](https://www.r-bloggers.com/2015/06/identifying-the-os-from-r/) — Practical guide to OS detection in R
+- [R config: Environment-Specific Configuration](https://www.appsilon.com/post/r-config) — Best practices for environment management
 
-### External References
-- ICD-10-CM 2025: C81.0 = Nodular lymphocyte predominant Hodgkin lymphoma (NLPHL)
-- ICD-9-CM: 201.4x = Lymphocytic-histiocytic predominance (NLPHL historical code)
-- WHO ICD-O-3: Histology 9659 = Nodular lymphocyte predominant Hodgkin lymphoma
+**R Environment Variables:**
+- [Managing R Environments (RStudio)](https://docs.posit.co/ide/user/ide/guide/environments/r/managing-r.html) — .Renviron and .Rprofile hierarchy
+- [R Configuration Best Practices](https://space-lab-msu.github.io/r_guide/configuration.html) — .Renviron vs .Rprofile usage patterns
+- [startup package](https://cran.r-project.org/web/packages/startup/vignettes/startup-intro.html) — R startup sequence and override hierarchy
 
-**Confidence:** **HIGH** — All integration points identified from existing codebase. NLPHL breakout verified against ICD-10-CM official classification. Build order considers dependencies (config before classification before outputs).
+**Test Fixtures:**
+- [testthat: Test fixtures](https://testthat.r-lib.org/articles/test-fixtures.html) — Official testthat fixture patterns
+- [testthat: Special files](https://testthat.r-lib.org/articles/special-files.html) — tests/testthat/ directory structure
+- [R Packages: Designing your test suite](https://r-pkgs.org/testing-design.html) — Test data organization best practices
+
+**DuckDB Patterns:**
+- [DuckDB in Production](https://www.dench.com/blog/duckdb-in-production) — Single-writer pattern, concurrency model
+- [DuckDB R package](https://github.com/duckdb/duckdb-r) — Official R bindings and patterns
+- [DuckDB Environment Performance](https://duckdb.org/docs/current/guides/performance/environment) — Configuration for local vs production
+
+**Synthetic Clinical Data:**
+- [Synthetic Data in Healthcare (2026)](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9951365/) — Medical research testing patterns
+- [Clinical Trial Data Analysis 2026](https://lifebit.ai/blog/clinical-trial-data-analysis-2026/) — Synthetic data acceptance criteria
+- [HIPAA-Compliant Synthetic Data](https://www.seedlessdata.com/industries/healthcare-life-sciences) — Privacy validation for test data
+
+**Confidence:** HIGH (official R documentation, established testthat patterns, DuckDB production guides)
