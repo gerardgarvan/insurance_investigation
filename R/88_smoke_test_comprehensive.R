@@ -1307,7 +1307,7 @@ check(".Renviron.example template exists", file.exists(".Renviron.example"))
 # Validates ICD9_CANCER_SITE_MAP, shared is_cancer_code(), and updated
 # classify_codes() for ICD-9/ICD-10 harmonization (Phase 87).
 
-message("\n[30/30] Phase 87: ICD-9 cancer code infrastructure...")
+message("\n[30/31] Phase 87: ICD-9 cancer code infrastructure...")
 
 # Check 1: ICD9_CANCER_SITE_MAP exists with expected entries
 if (exists("ICD9_CANCER_SITE_MAP") && length(ICD9_CANCER_SITE_MAP) >= 70) {
@@ -1408,6 +1408,79 @@ if (length(novel_icd9_categories) == 0) {
 }
 
 # ==============================================================================
+# SECTION 31: PHASE 88 -- INSTANCE-LEVEL DRUG GROUPING TABLES ----
+# ==============================================================================
+# Validates R/57 drug grouping instance-level tables (Phase 88).
+
+message("\n[31/31] Phase 88: Instance-level drug grouping tables...")
+
+check("R/57_drug_grouping_instances.R exists", file.exists("R/57_drug_grouping_instances.R"))
+
+if (file.exists("R/57_drug_grouping_instances.R")) {
+  r57_lines <- readLines("R/57_drug_grouping_instances.R", warn = FALSE)
+
+  check("R/57 sources R/00_config.R",
+        any(grepl('source\\("R/00_config.R"\\)', r57_lines)))
+
+  check("R/57 sources R/utils/utils_assertions.R",
+        any(grepl('source\\("R/utils/utils_assertions.R"\\)', r57_lines)))
+
+  check("R/57 sources R/utils/utils_duckdb.R",
+        any(grepl('source\\("R/utils/utils_duckdb.R"\\)', r57_lines)))
+
+  check("R/57 sources R/utils/utils_cancer.R",
+        any(grepl('source\\("R/utils/utils_cancer.R"\\)', r57_lines)))
+
+  check("R/57 reads treatment_episodes.rds input",
+        any(grepl("treatment_episodes\\.rds", r57_lines)))
+
+  check("R/57 outputs drug_grouping_instances.xlsx (not drug_grouping_tables.xlsx)",
+        any(grepl("drug_grouping_instances\\.xlsx", r57_lines)) &&
+        !any(grepl("drug_grouping_tables\\.xlsx", r57_lines)))
+
+  check("R/57 has 2-sheet workbook (Treatment Sub-Category Detail + Encounter Treatment Detail)",
+        any(grepl("Treatment Sub-Category Detail", r57_lines)) &&
+        any(grepl("Encounter Treatment Detail", r57_lines)))
+
+  check("R/57 defines map_cancer_codes_to_categories helper function",
+        any(grepl("map_cancer_codes_to_categories", r57_lines)))
+
+  check("R/57 uses both CANCER_SITE_MAP and ICD9_CANCER_SITE_MAP for code-to-category mapping",
+        any(grepl("CANCER_SITE_MAP", r57_lines)) &&
+        any(grepl("ICD9_CANCER_SITE_MAP", r57_lines)))
+
+  check("R/57 sorts cancer categories descending (per D-04)",
+        any(grepl("decreasing\\s*=\\s*TRUE", r57_lines)))
+
+  check("R/57 uses 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)",
+        any(grepl("code_to_subcategory", r57_lines)) &&
+        any(grepl("CODE_SUBCATEGORY_MAP", r57_lines)))
+
+  n_sections_r57 <- sum(grepl("^# SECTION.*----", r57_lines))
+  check(glue("R/57 has >= 7 section headers (found: {n_sections_r57})"),
+        n_sections_r57 >= 7)
+
+  check("R/57 does NOT aggregate with encounter_count (instance-level output)",
+        !any(grepl("encounter_count", r57_lines)))
+
+  check("R/57 uses is_cancer_code() from shared utility",
+        any(grepl("is_cancer_code", r57_lines)) &&
+        !any(grepl("is_cancer_code <- function", r57_lines)))
+
+  # Per D-08: Validate Table 2 maintains per-episode grain without aggregation
+  # Table 2 section should NOT contain group_by/summarise patterns
+  table2_start <- grep("SECTION 6.*TABLE 2|Table 2.*ENCOUNTER", r57_lines, ignore.case = TRUE)
+  table2_end <- grep("SECTION 7", r57_lines)
+  if (length(table2_start) > 0 && length(table2_end) > 0) {
+    table2_lines <- r57_lines[table2_start[1]:table2_end[1]]
+    check("R/57 Table 2 does NOT use group_by/summarise (per D-08: per-episode grain preserved)",
+          !any(grepl("group_by|summarise|summarize", table2_lines)))
+    check("R/57 Table 2 references D-08 for per-episode grain",
+          any(grepl("D-08", table2_lines)))
+  }
+}
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -1462,6 +1535,11 @@ message("  * ICD-09: ICD9_CANCER_SITE_MAP completeness (70 malignant prefixes)")
 message("  * ICD-10: No benign/uncertain codes (210-239) in ICD9_CANCER_SITE_MAP")
 message("  * ICD-11: ICD-9 HL subcategory discrimination (2014=NLPHL, 201=classical)")
 message("  * ICD-12: Category string consistency across ICD-9/ICD-10 maps")
+message("  * P88-D01/D02: Instance-level tables in separate xlsx (R/57)")
+message("  * P88-D03: Sub-category names via 3-tier resolution")
+message("  * P88-D04: Cancer site category names from CANCER_SITE_MAP + ICD9_CANCER_SITE_MAP")
+message("  * P88-D05/D06: Per-episode rows with patient_id, dates, treatment_category")
+message("  * P88-D07/D08: New drug_grouping_instances.xlsx with 2 sheets, per-episode grain")
 
 if (failed > 0) {
   quit(status = 1)
