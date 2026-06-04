@@ -90,9 +90,9 @@ Plans:
   3. Developer reads any fixture CSV and sees obviously synthetic data (unrealistic dates 2010-2015, generic site codes, fake patient IDs) preventing HIPAA re-identification
   4. Developer queries fixture CSVs for known edge cases and finds patients PT001-PT002 with dual-eligible records, PT003 with NLPHL diagnosis, PT008 with orphan dx codes
   5. Developer runs git diff after fixture creation and sees all CSVs tracked in version control with total size under 1MB
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 84-01-PLAN.md — Fixture design document and R generation script with all 15 table generators
+- [x] 84-01-PLAN.md — Fixture design document and R generation script with all 15 table generators
 - [ ] 84-02-PLAN.md — Write 15 fixture CSV files and verify git tracking
 
 #### Phase 85: Testing Integration & Validation
@@ -124,7 +124,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 83. Environment Detection & Infrastructure | 2/2 | Complete    | 2026-06-04 |
-| 84. Test Fixture Design & Creation | 0/2 | Not started | - |
+| 84. Test Fixture Design & Creation | 1/2 | In Progress|  |
 | 85. Testing Integration & Validation | 0/? | Not started | - |
 | 86. Documentation & Cleanup | 0/? | Not started | - |
 

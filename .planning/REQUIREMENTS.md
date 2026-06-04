@@ -18,11 +18,11 @@ Requirements for local testing infrastructure: environment detection, test fixtu
 
 ### Test Fixtures
 
-- [ ] **FIX-01**: Hand-crafted fixture CSVs (~20 patients) covering all 13 PCORnet CDM tables in tests/fixtures/
-- [ ] **FIX-02**: Fixtures include all clinical edge cases: dual-eligible, NLPHL, SCT, multiple cancers, death dates, orphan dx, same-day multi-payer, 1900 sentinel dates
-- [ ] **FIX-03**: Fixture design documented in FIXTURE_DESIGN.md with patient-to-edge-case mapping
-- [ ] **FIX-04**: Fixture generation R script creates CSVs reproducibly from documented design
-- [ ] **FIX-05**: Fixture CSVs git-tracked for version control and diff visibility
+- [x] **FIX-01**: Hand-crafted fixture CSVs (~20 patients) covering all 13 PCORnet CDM tables in tests/fixtures/
+- [x] **FIX-02**: Fixtures include all clinical edge cases: dual-eligible, NLPHL, SCT, multiple cancers, death dates, orphan dx, same-day multi-payer, 1900 sentinel dates
+- [x] **FIX-03**: Fixture design documented in FIXTURE_DESIGN.md with patient-to-edge-case mapping
+- [x] **FIX-04**: Fixture generation R script creates CSVs reproducibly from documented design
+- [x] **FIX-05**: Fixture CSVs git-tracked for version control and diff visibility
 
 ### Testing & Validation
 
@@ -113,11 +113,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENV-04 | Phase 83 | Complete |
 | ENV-05 | Phase 83 | Complete |
 | ENV-06 | Phase 83 | Complete |
-| FIX-01 | Phase 84 | Pending |
-| FIX-02 | Phase 84 | Pending |
-| FIX-03 | Phase 84 | Pending |
-| FIX-04 | Phase 84 | Pending |
-| FIX-05 | Phase 84 | Pending |
+| FIX-01 | Phase 84 | Complete |
+| FIX-02 | Phase 84 | Complete |
+| FIX-03 | Phase 84 | Complete |
+| FIX-04 | Phase 84 | Complete |
+| FIX-05 | Phase 84 | Complete |
 | TEST-01 | Phase 85 | Pending |
 | TEST-02 | Phase 85 | Pending |
 | TEST-03 | Phase 85 | Pending |
