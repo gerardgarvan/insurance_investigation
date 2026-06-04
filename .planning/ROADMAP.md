@@ -15,7 +15,8 @@
 - **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-59 (shipped 2026-05-28) — [archive](milestones/v1.7-ROADMAP.md)
 - **v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification** — Phases 60-63 (shipped 2026-06-01) — [archive](milestones/v1.8-ROADMAP.md)
 - **v2.0 Codebase Cleanup & Documentation** — Phases 65-74 (shipped 2026-06-02) — [archive](milestones/v2.0-ROADMAP.md)
-- **v2.1 Clinical Data Refinements & NLPHL Breakout** — Phases 75-80 (active) — see below
+- **v2.1 Clinical Data Refinements & NLPHL Breakout** — Phases 75-82 (shipped 2026-06-03) — [archive](milestones/v2.1-ROADMAP.md)
+- **v2.2 Local Testing Infrastructure** — Phases 83-86 (active) — see below
 
 ## Remaining Phases (Unassigned)
 
@@ -46,160 +47,81 @@
 | 60-63 | v1.8 | Complete | 2026-06-01 |
 | 64 | v1.8 | Complete | 2026-06-01 |
 | 65-74 | v2.0 | Complete | 2026-06-02 |
+| 75-82 | v2.1 | Complete | 2026-06-03 |
 
-## v2.1 Clinical Data Refinements & NLPHL Breakout (Active Milestone)
+## v2.2 Local Testing Infrastructure (Active Milestone)
 
-**Milestone Goal:** Refine cancer summary tables, break out NLPHL as a distinct category, investigate SCT code 0362, remove tumor registry treatment data, verify replaced-by codes, create new tables, and add cause of death and per-episode cancer categorization to outputs — maintaining v2.0 code quality standards throughout.
+**Milestone Goal:** Add environment auto-detection to R/00_config.R and create targeted test fixtures with clinical edge cases so key pipeline logic can be verified locally on Windows before deploying to HiPerGator.
 
 **Granularity:** Coarse
-**Requirements Coverage:** 11/11 mapped (100%)
+**Requirements Coverage:** 21/21 mapped (100%)
 
 ### Phases
 
-- [x] **Phase 75: Configuration Extensions (NLPHL & Death Cause)** - Extend R/00_config.R with NLPHL classification and death cause mapping (completed 2026-06-02)
-- [x] **Phase 76: Treatment Source Analysis & Removal** - Analyze tumor registry coverage and remove TR from treatment pipeline (completed 2026-06-03)
-- [x] **Phase 77: Cancer Classification Refinements** - Extend 7-day gap to all categories, implement NLPHL breakout, load drug groupings (completed 2026-06-03)
-- [x] **Phase 78: Episode Enhancement & Death Integration** - Add triggering code descriptions, profile and integrate cause of death (completed 2026-06-03)
-- [x] **Phase 79: Code Investigations & New Tables** - SCT 0362 investigation, replaced-by verification, generate new drug grouping tables (completed 2026-06-03)
-- [x] **Phase 80: Smoke Test Updates** - Update comprehensive smoke test for all v2.1 changes (completed 2026-06-03)
+- [ ] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure
+- [ ] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases
+- [ ] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end
+- [ ] **Phase 86: Documentation & Cleanup** - Document workflow, update PROJECT.md, finalize .gitignore and quality standards
 
 ### Phase Details
 
-#### Phase 75: Configuration Extensions (NLPHL & Death Cause)
-**Goal**: Extend configuration layer with NLPHL classification logic and death cause mapping to support all downstream cancer and mortality features
-**Depends on**: Phase 74
-**Requirements**: CANCER-01, DEATH-01, DEATH-02, QUAL-01
+#### Phase 83: Environment Detection & Infrastructure
+**Goal**: Pipeline auto-detects local Windows vs HiPerGator Linux and configures appropriate paths for data, cache, and database files
+**Depends on**: Nothing (first phase of v2.2)
+**Requirements**: ENV-01, ENV-02, ENV-03, ENV-04, ENV-05, ENV-06, INFRA-01, INFRA-02, INFRA-03, INFRA-04
 **Success Criteria** (what must be TRUE):
-  1. CANCER_SITE_MAP in R/00_config.R contains C810 = "NLPHL" and C81 = "Hodgkin Lymphoma (non-NLPHL)" with mutually exclusive logic
-  2. ICD9_NLPHL_CODES list in R/00_config.R contains 201.4x series codes
-  3. classify_codes() in R/utils/utils_cancer.R supports 4-char prefix matching (C810) before 3-char fallback (C81)
-  4. DEATH_CAUSE_MAP in R/00_config.R contains ICD-10 cause categories (50+ entries covering major categories)
-  5. Unit tests validate NLPHL mutual exclusivity: no patient classified as both NLPHL and classical HL
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 75-01-PLAN.md — Config constants (ICD9_NLPHL_CODES, CANCER_SITE_MAP NLPHL entries, DEATH_CAUSE_MAP) and classify_codes() update
-- [x] 75-02-PLAN.md — Smoke test NLPHL mutual exclusivity and DEATH_CAUSE_MAP validation
+  1. Developer sources R/00_config.R on Windows and IS_LOCAL flag auto-sets to TRUE with data_dir pointing to tests/fixtures/
+  2. Developer sources R/00_config.R on HiPerGator Linux and IS_LOCAL flag defaults to FALSE with data_dir pointing to /orange/ production path
+  3. Developer sets R_TESTING_ENV=local environment variable and pipeline switches to local mode regardless of OS
+  4. Pipeline logs which environment mode is active at startup (Local Testing Mode or Production HiPerGator Mode)
+  5. All path construction throughout pipeline uses file.path() with no hardcoded backslashes or forward slashes
+**Plans**: TBD
 
-#### Phase 76: Treatment Source Analysis & Removal
-**Goal**: Analyze tumor registry coverage then remove TR treatment data from treatment episode pipeline to improve data source reliability
-**Depends on**: Phase 75
-**Requirements**: TREAT-01, QUAL-01
+#### Phase 84: Test Fixture Design & Creation
+**Goal**: Hand-crafted test fixture CSVs exist covering 18+ clinical edge cases (dual-eligible, NLPHL, orphan dx, SCT, death dates, multiple cancers) in a documented, reproducible, git-tracked format
+**Depends on**: Phase 83 (environment detection must work before fixtures can be placed in correct directory)
+**Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05
 **Success Criteria** (what must be TRUE):
-  1. Coverage analysis script produces source_coverage_analysis.csv showing episode counts by source combinations (TR-only, claims-only, both)
-  2. Treatment episode pipeline (R/26-29) removes tumor registry as source, reducing from 7 to 6 sources
-  3. Validation report documents episode count delta and confirms count reduction matches coverage analysis prediction
-  4. Assertion added: if treatment episode count drops >20%, pipeline halts with explicit warning
-  5. All modified scripts follow v2.0 standards (styler, lintr, checkmate, headers)
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 76-01-PLAN.md — Coverage analysis script (R/76_treatment_source_coverage.R) producing source_coverage_analysis.csv/xlsx
-- [x] 76-02-PLAN.md — Remove TR source blocks from R/26 extraction functions, add episode count assertion, update smoke test
+  1. Developer opens tests/fixtures/FIXTURE_DESIGN.md and sees a table mapping 20 synthetic patients to specific clinical edge cases with rationale
+  2. Developer runs dir("tests/fixtures/") and sees 15 CSV files matching PCORnet CDM table names (ENROLLMENT, DIAGNOSIS, ENCOUNTER, etc.)
+  3. Developer reads any fixture CSV and sees obviously synthetic data (unrealistic dates 2010-2015, generic site codes, fake patient IDs) preventing HIPAA re-identification
+  4. Developer queries fixture CSVs for known edge cases and finds patients PT001-PT002 with dual-eligible records, PT003 with NLPHL diagnosis, PT008 with orphan dx codes
+  5. Developer runs git diff after fixture creation and sees all CSVs tracked in version control with total size under 1MB
+**Plans**: TBD
+**UI hint**: yes
 
-#### Phase 77: Cancer Classification Refinements
-**Goal**: Extend 7-day gap requirement to all cancer categories, implement NLPHL breakout in classification logic, and centralize drug groupings
-**Depends on**: Phase 76
-**Requirements**: CANCER-01, CANCER-02, TREAT-02, QUAL-01
+#### Phase 85: Testing Integration & Validation
+**Goal**: Existing DuckDB ingest (R/03) and smoke test (R/88) run successfully against local test fixtures, validating environment detection and fixture schema with end-to-end pipeline completing in under 2 minutes
+**Depends on**: Phase 84 (fixtures must exist before ingest/testing can proceed)
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
 **Success Criteria** (what must be TRUE):
-  1. Cancer summary table (R/49) applies 7-day unique day gap to ALL cancer categories, reaching total population = 6,347
-  2. Output versioned as cancer_summary_table_pre_post_v2_7day.rds with comparison table showing v1 vs v2 deltas
-  3. classify_codes() correctly routes C81.0 / 201.4x codes to NLPHL category, all other C81.x to classical HL
-  4. DRUG_GROUPINGS in R/00_config.R contains mappings from all_codes_resolved_next_tables.xlsx with versioned xlsx snapshot in git
-  5. Validation confirms no patient double-counted in NLPHL and classical HL categories
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 77-01-PLAN.md — Centralize drug groupings from xlsx into DRUG_GROUPINGS named vector in R/00_config.R, copy versioned xlsx snapshot, add smoke test
-- [x] 77-02-PLAN.md — Extend R/49 with 7-day v2 filtered output, NLPHL diagnostic breakout, dual output strategy, population validation, smoke test
+  1. Developer sources R/00_config.R, R/01, R/03 on Windows and DuckDB file appears in tempdir() containing 15 tables with 20-25 patient records from fixtures
+  2. Developer sources R/88 smoke test locally and all sections pass including new environment detection validation (Section 3B) and fixture schema validation (Section 3C)
+  3. Developer runs R/88 on HiPerGator production and smoke test passes Section 3B (environment check) but skips Section 3C (fixture schema check only runs in local mode)
+  4. Developer times full local pipeline (R/00 through R/88) and execution completes in under 2 minutes with no path errors or DuckDB locking issues
+  5. Developer queries DuckDB for edge case patients and confirms PT001 shows dual-eligible payer records, PT003 shows NLPHL diagnosis code, PT008 shows orphan dx without cancer linkage
+**Plans**: TBD
 
-#### Phase 78: Episode Enhancement & Death Integration
-**Goal**: Add triggering code descriptions to treatment episodes and integrate cause of death into outputs after quality profiling
-**Depends on**: Phase 77
-**Requirements**: CANCER-03, DEATH-01, DEATH-02, QUAL-01
-**Success Criteria** (what must be TRUE):
-  1. Cause of death quality report documents completeness (% with cause coded) stratified by payer and site
-  2. Episode classification (R/28) includes triggering_code_description column using DRUG_GROUPINGS from R/00_config.R
-  3. Gantt v2 output (R/52) includes cause_of_death column (14 to 16 columns) mapped via DEATH_CAUSE_MAP
-  4. Missingness documented in output footnotes if cause of death >40% missing
-  5. Per-episode cancer category and triggering code description populated for all episodes using drug groupings
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 78-01-PLAN.md — Death quality profiling (R/35) and R/28 episode enrichment with triggering_code_description and drug_group columns
-- [x] 78-02-PLAN.md — R/52 Gantt v2 cause_of_death and drug_group integration, R/88 smoke test updates
-
-#### Phase 79: Code Investigations & New Tables
-**Goal**: Investigate SCT code 0362 data quality, verify replaced-by code mappings, and generate two new drug grouping summary tables
-**Depends on**: Phase 78
-**Requirements**: CODE-01, CODE-02, TREAT-03, QUAL-01
-**Success Criteria** (what must be TRUE):
-  1. R/54_investigate_sct_0362.R produces encounter-level summary distinguishing true transplants from coding errors
-  2. R/55_verify_replaced_by_codes.R validates replaced-by mappings with cycle detection and flags replacement chains >3 steps
-  3. R/56_new_tables_from_groupings.R generates xlsx with two tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates:
-     - Table 1: treatment-type-level summary (Chemo, Radiation, SCT, Immunotherapy rows) with columns: treatment type | cancer code(s) for the encounter | count of encounters
-     - Table 2: drug-level summary (individual drugs/treatments per row) with columns: all drugs/treatments in an encounter | cancer code(s) for the encounter | count of encounters
-  4. All new diagnostic scripts follow decade-based numbering convention and include documentation headers
-  5. Verification cross-references replaced-by codes against SEER ICD-9 to ICD-10 conversion tables
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 79-01-PLAN.md — R/54 SCT 0362 investigation + R/55 replaced-by code verification with igraph cycle detection
-- [x] 79-02-PLAN.md — R/56 drug grouping summary tables (treatment-type-level + drug-level)
-
-#### Phase 80: Smoke Test Updates
-**Goal**: Update comprehensive smoke test (R/88) to validate all v2.1 changes including NLPHL category, 7-day gap, Gantt schema, and new scripts
-**Depends on**: Phase 79
+#### Phase 86: Documentation & Cleanup
+**Goal**: Local testing workflow is documented, PROJECT.md updated to reflect v2.2 completion, .gitignore prevents accidental commits of environment files, and all new scripts meet v2.0 quality standards
+**Depends on**: Phase 85 (workflow must work before documenting it)
 **Requirements**: QUAL-01
 **Success Criteria** (what must be TRUE):
-  1. Smoke test (R/88) validates NLPHL category exists in CANCER_SITE_MAP and is mutually exclusive with classical HL
-  2. Smoke test validates 7-day gap extension applied to all cancer categories
-  3. Smoke test validates Gantt v2 16-column schema (cause_of_death and drug_group added)
-  4. Smoke test validates new scripts (R/54, R/55, R/56) exist with correct headers and dependencies
-  5. All smoke test additions follow existing check() patterns from Phase 74
-**Plans:** 1/1 plans complete
-Plans:
-- [x] 80-01-PLAN.md — Add Phase 79 validation sections, expand decade lists, fix section numbering, update requirements summary
+  1. Developer opens .planning/PROJECT.md and sees v2.2 milestone moved to "Shipped" section with key decisions about environment detection strategy and fixture design documented
+  2. Developer attempts to git add .Renviron and git blocks the commit due to .gitignore rules
+  3. Developer opens .Renviron.example and sees commented example showing R_TESTING_ENV override pattern without exposing real credentials or paths
+  4. Developer runs styler on all modified scripts and sees no formatting changes (already compliant with tidyverse style)
+  5. Developer runs lintr on all modified scripts and sees no violations, all scripts have documentation headers and inline comments explaining WHY
+**Plans**: TBD
 
-### v2.1 Progress
+### v2.2 Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 75. Configuration Extensions | 2/2 | Complete    | 2026-06-02 |
-| 76. Treatment Source Analysis & Removal | 2/2 | Complete    | 2026-06-03 |
-| 77. Cancer Classification Refinements | 2/2 | Complete    | 2026-06-03 |
-| 78. Episode Enhancement & Death Integration | 2/2 | Complete    | 2026-06-03 |
-| 79. Code Investigations & New Tables | 2/2 | Complete    | 2026-06-03 |
-| 80. Smoke Test Updates | 1/1 | Complete    | 2026-06-03 |
-
-### Phase 81: Filter Unknown from cancer_codes in treatment summary, add category column to sub-category summary, map unmapped sub-categories
-
-**Goal:** Refine R/56 drug grouping summary table outputs: filter out rows without cancer diagnosis codes, add parent treatment category column to Table 1, and resolve all unmapped sub-category labels to readable names via centralized CODE_SUBCATEGORY_MAP config
-**Requirements**: P81-CONFIG, P81-FILTER, P81-CATEGORY, P81-RESOLVE, P81-SMOKE
-**Depends on:** Phase 80
-**Success Criteria** (what must be TRUE):
-  1. CODE_SUBCATEGORY_MAP in R/00_config.R contains 200+ treatment code-to-name mappings covering all TREATMENT_CODES vectors
-  2. Table 1 has 4 columns: category | sub_category | cancer_codes | encounter_count (category derived from treatment_type)
-  3. Both Table 1 and Table 2 exclude rows with NA cancer_codes (no "Unknown" replacement)
-  4. R/56 uses 3-tier sub-category lookup: xlsx reference -> CODE_SUBCATEGORY_MAP -> code-type fallback
-  5. Smoke test (R/88) validates Phase 81 changes including CODE_SUBCATEGORY_MAP usage and column structure
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 81-01-PLAN.md — Add CODE_SUBCATEGORY_MAP to R/00_config.R with 200+ treatment code-to-name mappings
-- [x] 81-02-PLAN.md — Modify R/56 (NA filtering, category column, 3-tier lookup) and update R/88 smoke test
-
-### Phase 82: Non-Informative Sub-Categories -- Encounter-Level Dx Code Deduplication
-
-**Goal:** Identify non-informative encounter diagnosis codes in R/56 Table 1, check whether a helpful treatment code exists in the same encounter, and deduplicate by counting only the helpful code. Orphan dx-only encounters preserved with flag column.
-**Requirements**: P82-EXPLORE, P82-COOCCUR, P82-INTEGRATE, P82-FLAG, P82-SMOKE, P82-QUAL
-**Depends on:** Phase 81
-**Success Criteria** (what must be TRUE):
-  1. R/57 exploration script produces diagnostic output: dx code partner rate, orphan count, Table 1 before/after impact
-  2. R/56 Table 1 removes non-informative Encounter Dx codes when helpful code exists in same encounter
-  3. R/56 Table 1 preserves orphan dx-only rows with `dx_only` flag column (not deleted)
-  4. Deduplication uses `str_detect(sub_category, "Encounter Dx")` pattern matching (not hardcoded list)
-  5. Smoke test (R/88) validates Phase 82 changes including dx_only flag, encounter-level join, pattern matching
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 82-01-PLAN.md — Create R/57 exploration script for encounter-level dx co-occurrence analysis
-- [x] 82-02-PLAN.md — Integrate deduplication into R/56 Table 1 and update R/88 smoke test
+| 83. Environment Detection & Infrastructure | 0/? | Not started | - |
+| 84. Test Fixture Design & Creation | 0/? | Not started | - |
+| 85. Testing Integration & Validation | 0/? | Not started | - |
+| 86. Documentation & Cleanup | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-06-03 -- Phase 82 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-03 -- v2.2 roadmap created*

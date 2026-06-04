@@ -107,33 +107,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 | TBD | Pending |
-| ENV-02 | TBD | Pending |
-| ENV-03 | TBD | Pending |
-| ENV-04 | TBD | Pending |
-| ENV-05 | TBD | Pending |
-| ENV-06 | TBD | Pending |
-| FIX-01 | TBD | Pending |
-| FIX-02 | TBD | Pending |
-| FIX-03 | TBD | Pending |
-| FIX-04 | TBD | Pending |
-| FIX-05 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| TEST-04 | TBD | Pending |
-| TEST-05 | TBD | Pending |
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
-| QUAL-01 | All phases | Pending |
+| ENV-01 | Phase 83 | Pending |
+| ENV-02 | Phase 83 | Pending |
+| ENV-03 | Phase 83 | Pending |
+| ENV-04 | Phase 83 | Pending |
+| ENV-05 | Phase 83 | Pending |
+| ENV-06 | Phase 83 | Pending |
+| FIX-01 | Phase 84 | Pending |
+| FIX-02 | Phase 84 | Pending |
+| FIX-03 | Phase 84 | Pending |
+| FIX-04 | Phase 84 | Pending |
+| FIX-05 | Phase 84 | Pending |
+| TEST-01 | Phase 85 | Pending |
+| TEST-02 | Phase 85 | Pending |
+| TEST-03 | Phase 85 | Pending |
+| TEST-04 | Phase 85 | Pending |
+| TEST-05 | Phase 85 | Pending |
+| INFRA-01 | Phase 83 | Pending |
+| INFRA-02 | Phase 83 | Pending |
+| INFRA-03 | Phase 83 | Pending |
+| INFRA-04 | Phase 83 | Pending |
+| QUAL-01 | Phase 86 | Pending |
 
 **Coverage:**
-- v2.2 requirements: 21 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 21
+- v2.2 requirements: 21 total (20 specific + 1 cross-cutting)
+- Mapped to phases: 21/21 (100%)
+- Unmapped: 0
+
+**Coverage verification:**
+- Environment Detection (ENV-01 through ENV-06): 6 requirements → Phase 83
+- Infrastructure (INFRA-01 through INFRA-04): 4 requirements → Phase 83
+- Test Fixtures (FIX-01 through FIX-05): 5 requirements → Phase 84
+- Testing & Validation (TEST-01 through TEST-05): 5 requirements → Phase 85
+- Quality Standards (QUAL-01): 1 requirement → Phase 86
+
+**Total mapped:** 21/21 requirements (100% coverage)
 
 ---
 *Requirements defined: 2026-06-03*
-*Last updated: 2026-06-03 after initial definition*
+*Last updated: 2026-06-03 after roadmap creation*
