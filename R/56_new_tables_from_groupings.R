@@ -24,6 +24,7 @@
 #   - R/00_config.R (DRUG_GROUPINGS, CANCER_SITE_MAP, CONFIG paths)
 #   - R/utils/utils_assertions.R (assert_rds_exists, assert_df_valid, warn_row_count)
 #   - R/utils/utils_duckdb.R (open_pcornet_con, get_pcornet_table)
+#   - R/utils/utils_cancer.R (is_cancer_code shared utility)
 #   - openxlsx2 (multi-sheet xlsx output)
 #
 # Requirements:
@@ -73,6 +74,7 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/utils/utils_assertions.R")
 source("R/utils/utils_duckdb.R")
+source("R/utils/utils_cancer.R")  # is_cancer_code(), classify_codes()
 
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
@@ -153,25 +155,9 @@ message(glue("  Total codes with sub-categories: {length(code_to_subcategory)}")
 message()
 message("--- Extracting cancer-only ICD codes from encounter linkage ---")
 
-# Build cancer code prefix set from CANCER_SITE_MAP (ICD-10: C00-C96, D00-D49)
-# plus ICD-9 neoplasm range (140-239)
-cancer_prefixes_icd10 <- names(CANCER_SITE_MAP)
-# ICD-9 neoplasm prefixes (140.x-239.x)
-cancer_prefixes_icd9 <- as.character(140:239)
-
-message(glue("  Cancer prefixes: {length(cancer_prefixes_icd10)} ICD-10, {length(cancer_prefixes_icd9)} ICD-9"))
-
-# Helper: check if diagnosis codes are cancer/neoplasm codes (vectorized)
-is_cancer_code <- function(dx) {
-  dx_clean <- str_remove(dx, "\\.")  # Remove dots for prefix matching
-  # ICD-10: single regex from all prefixes
-  icd10_pattern <- paste0("^(", paste(cancer_prefixes_icd10, collapse = "|"), ")")
-  icd10_match <- str_detect(dx_clean, icd10_pattern)
-  # ICD-9: 3-char prefix lookup (already vectorized)
-  icd9_match <- substr(dx_clean, 1, 3) %in% cancer_prefixes_icd9
-
-  icd10_match | icd9_match
-}
+# Cancer code detection uses shared is_cancer_code() from R/utils/utils_cancer.R (per D-07)
+# Detection is map-based: CANCER_SITE_MAP (ICD-10) + ICD9_CANCER_SITE_MAP (ICD-9 malignant 140-209)
+message(glue("  Using shared is_cancer_code() -- ICD-10: {length(names(CANCER_SITE_MAP))} prefixes, ICD-9: {length(names(ICD9_CANCER_SITE_MAP))} prefixes"))
 
 # Split encounter_ids into individual rows
 episode_encounters <- episodes %>%
