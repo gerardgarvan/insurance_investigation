@@ -1,0 +1,18 @@
+# ==============================================================================
+# .Renviron -- R Environment Configuration (project-level)
+# ==============================================================================
+#
+# Copy this file to .Renviron in the project root (it is gitignored).
+# Restart your R session after changes (Session > Restart R in RStudio).
+#
+# This file is read by R on startup BEFORE any scripts run.
+# Values set here override auto-detection in R/00_config.R.
+#
+# IMPORTANT: Create .Renviron in THIS directory (project root), NOT in ~/
+# A user-level ~/.Renviron would affect ALL R projects on your machine.
+# ==============================================================================
+
+# Force local testing mode (overrides OS auto-detection in R/00_config.R)
+# Default behavior: Windows = local testing, Linux = HiPerGator production
+# Uncomment the line below to force local mode on any OS (e.g., Linux VM):
+# R_TESTING_ENV=local
