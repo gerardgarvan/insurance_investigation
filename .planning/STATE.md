@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
 status: verifying
-stopped_at: Phase 88 context gathered
-last_updated: "2026-06-04T21:13:49.568Z"
+stopped_at: Completed 88-01-PLAN.md
+last_updated: "2026-06-04T21:47:54.301Z"
 last_activity: 2026-06-04
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
   percent: 5
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Current focus:** Phase 84 — test-fixture-design-creation
+**Current focus:** Phase 88 — re-do-tables-from-grouping-by-using-descriptives-from-codes-instead-of-counts-and-instead-of-counts-just-list-each-instance
 
 ## Current Position
 
-Phase: 87
-Plan: Not started
+Phase: 88 (re-do-tables-from-grouping-by-using-descriptives-from-codes-instead-of-counts-and-instead-of-counts-just-list-each-instance) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-06-04
 
@@ -60,6 +60,7 @@ Progress: [███████████████████████
 | Phase 87 P02 | 5 | 2 tasks | 4 files |
 | Phase 84 P01 | 4 | 2 tasks | 2 files |
 | Phase 84 P02 | 5 | 2 tasks | 15 files |
+| Phase 88 P01 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,7 @@ Recent decisions affecting v2.2 work:
 - [Phase 87-02]: Map-based cancer code detection over DX_TYPE filtering for gap-free coverage
 - [Phase 87-02]: HL cohort confirmation expanded to C81+201.x with cross-system 7-day gap allowed
 - [Phase 87-02]: Defense-in-depth filtering (is_cancer_code + D-code + 210-239 exclusion)
+- [Phase 88]: Instance-level drug grouping tables with descriptive names and cancer category names replace raw codes for patient-traceable analysis
 
 ### Pending Todos
 
@@ -104,9 +106,9 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-04T21:13:49.561Z
-Stopped at: Phase 88 context gathered
-Resume file: .planning/phases/88-re-do-tables-from-grouping-by-using-descriptives-from-codes-instead-of-counts-and-instead-of-counts-just-list-each-instance/88-CONTEXT.md
+Last session: 2026-06-04T21:47:54.296Z
+Stopped at: Completed 88-01-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-06-03 for v2.2 Local Testing Infrastructure*
