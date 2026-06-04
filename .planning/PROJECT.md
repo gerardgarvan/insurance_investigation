@@ -97,7 +97,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.1 (2026-06-03)
 
-**Pipeline status:** 84 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). v2.2 in progress: Phase 83 complete — environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override, conditional paths, startup logging, smoke test validation). Phase 87 complete — unified ICD-9/ICD-10 cancer code handling (ICD9_CANCER_SITE_MAP, shared is_cancer_code(), classify_codes() 4-tier cascade, 201.x HL cohort confirmation). Active milestone: v2.2 Local Testing Infrastructure.
+**Pipeline status:** 84 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). v2.2 in progress: Phase 83 complete — environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override, conditional paths, startup logging, smoke test validation). Phase 84 complete — test fixture design and creation (FIXTURE_DESIGN.md mapping 20 patients to 11 edge cases, generate_fixtures.R with 15 table generators, 15 committed fixture CSVs). Phase 87 complete — unified ICD-9/ICD-10 cancer code handling (ICD9_CANCER_SITE_MAP, shared is_cancer_code(), classify_codes() 4-tier cascade, 201.x HL cohort confirmation). Active milestone: v2.2 Local Testing Infrastructure.
 
 ## Previous Milestones
 
@@ -277,4 +277,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-04 after Phase 87 complete (Unify ICD-9/ICD-10 Cancer Code Usage)*
+*Last updated: 2026-06-04 after Phase 84 complete (Test Fixture Design & Creation)*
