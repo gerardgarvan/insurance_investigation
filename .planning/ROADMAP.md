@@ -75,7 +75,10 @@
   3. Developer sets R_TESTING_ENV=local environment variable and pipeline switches to local mode regardless of OS
   4. Pipeline logs which environment mode is active at startup (Local Testing Mode or Production HiPerGator Mode)
   5. All path construction throughout pipeline uses file.path() with no hardcoded backslashes or forward slashes
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 83-01-PLAN.md — Environment detection block and conditional CONFIG paths in R/00_config.R
+- [ ] 83-02-PLAN.md — Infrastructure files (.gitignore, .Renviron.example) and smoke test validation
 
 #### Phase 84: Test Fixture Design & Creation
 **Goal**: Hand-crafted test fixture CSVs exist covering 18+ clinical edge cases (dual-eligible, NLPHL, orphan dx, SCT, death dates, multiple cancers) in a documented, reproducible, git-tracked format
@@ -118,10 +121,10 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 83. Environment Detection & Infrastructure | 0/? | Not started | - |
+| 83. Environment Detection & Infrastructure | 0/2 | Planning complete | - |
 | 84. Test Fixture Design & Creation | 0/? | Not started | - |
 | 85. Testing Integration & Validation | 0/? | Not started | - |
 | 86. Documentation & Cleanup | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-06-03 -- v2.2 roadmap created*
+*Last updated: 2026-06-03 -- Phase 83 planned (2 plans, 2 waves)*
