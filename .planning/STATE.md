@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
 status: verifying
-stopped_at: Completed 83-02-PLAN.md
-last_updated: "2026-06-04T03:34:14.554Z"
+stopped_at: Phase 87 context gathered
+last_updated: "2026-06-04T03:58:30.753Z"
 last_activity: 2026-06-04
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 1
   total_plans: 2
   completed_plans: 2
@@ -75,6 +75,10 @@ Recent decisions affecting v2.2 work:
 
 None yet. (v2.2 milestone starting fresh)
 
+### Roadmap Evolution
+
+- Phase 87 added: fix cancer_summary_pre_post to include icd9 but be still filtered on icd10 81 and all_codes_resolved_next_tables and drug_grouping_tables should all be linked in the codes they use
+
 ### Blockers/Concerns
 
 None yet. v2.2 is a greenfield milestone with well-researched foundation (testthat 3.3.2, base R Sys.info(), existing DuckDB infrastructure).
@@ -89,9 +93,9 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-04T03:30:08.612Z
-Stopped at: Completed 83-02-PLAN.md
-Resume file: None
+Last session: 2026-06-04T03:58:30.748Z
+Stopped at: Phase 87 context gathered
+Resume file: .planning/phases/87-fix-cancer-summary-pre-post-to-include-icd9-but-be-still-filtered-on-icd10-81-and-all-codes-resolved-next-tables-and-drug-grouping-tables-should-all-be-linked-in-the-codes-they-use/87-CONTEXT.md
 
 ---
 *State initialized: 2026-06-03 for v2.2 Local Testing Infrastructure*
