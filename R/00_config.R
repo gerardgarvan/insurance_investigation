@@ -31,6 +31,51 @@
 # ==============================================================================
 
 # ==============================================================================
+# SECTION 0: ENVIRONMENT DETECTION ----
+# ==============================================================================
+# Auto-detect local testing (Windows) vs production HiPerGator (Linux).
+# Override: Set R_TESTING_ENV=local in project-root .Renviron to force local mode.
+# WHY env var first: Enables Linux VM testing without OS misdetection.
+# WHY Windows default: Only Windows machines in the project are local dev boxes.
+# Production safety: IS_LOCAL defaults to FALSE on Linux when env var is unset.
+
+IS_LOCAL <- if (Sys.getenv("R_TESTING_ENV") != "") {
+  # Explicit override from .Renviron or shell environment
+  Sys.getenv("R_TESTING_ENV") == "local"
+} else {
+  # Auto-detect: Windows = local testing, Linux = HiPerGator production
+  Sys.info()["sysname"] == "Windows"
+}
+
+# Log environment mode at startup (visible in RStudio console and SLURM logs)
+if (IS_LOCAL) {
+  message("================================================================================")
+  message("LOCAL TESTING MODE")
+  message("  OS: ", Sys.info()["sysname"])
+  message("  Override: ", if (Sys.getenv("R_TESTING_ENV") != "") "R_TESTING_ENV=local" else "(auto-detected)")
+  message("  Data: tests/fixtures/")
+  message("  DuckDB: tempdir()/insurance_investigation_duckdb/pcornet_test.duckdb")
+  message("  Threads: 1")
+  message("================================================================================")
+} else {
+  message("================================================================================")
+  message("PRODUCTION MODE (HiPerGator)")
+  message("  OS: ", Sys.info()["sysname"])
+  message("  Data: /orange/erin.mobley-hl.bcu/Mailhot_V1_20250915")
+  message("  DuckDB: /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb")
+  message("  Threads: ", Sys.getenv("SLURM_CPUS_PER_TASK", unset = "16"), " (SLURM allocation)")
+  message("================================================================================")
+}
+
+# Thread count: 1 core locally (avoid contention), SLURM allocation on HPC
+THREAD_COUNT <- if (IS_LOCAL) {
+  1L
+} else {
+  # Read SLURM allocation, fallback to 16 (Open OnDemand RStudio default)
+  as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", unset = "16"))
+}
+
+# ==============================================================================
 # SECTION 1: DATA PATHS ----
 # ==============================================================================
 
@@ -39,19 +84,26 @@
 EXTRACT_DATE <- "2025-09-15"
 
 CONFIG <- list(
-  # Data directory: Raw PCORnet CDM CSV files (Mailhot HL cohort extract 2025-09-15)
-  data_dir = "/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915",
+  # Data directory: tests/fixtures/ locally, /orange/ production path on HPC
+  data_dir = if (IS_LOCAL) {
+    file.path("tests", "fixtures")
+  } else {
+    "/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915"
+  },
 
-  # Project directory: R scripts and workspace
-  project_dir = "/blue/erin.mobley-hl.bcu/R",
+  # Project directory
+  project_dir = if (IS_LOCAL) {
+    getwd()  # Local testing uses current working directory
+  } else {
+    "/blue/erin.mobley-hl.bcu/R"
+  },
 
-  # Output directory: Figures, tables, cohort files
+  # Output directory (same for both — local relative path)
   output_dir = "output",
 
   # Performance tuning (vroom multi-threaded CSV loading)
-  # Match to SLURM --cpus-per-task allocation (Open OnDemand RStudio: 16 cores)
   performance = list(
-    num_threads = 16
+    num_threads = THREAD_COUNT
   ),
 
   # ---------------------------------------------------------------------------
@@ -61,30 +113,82 @@ CONFIG <- list(
   # tables are serialized to .rds files. Subsequent runs load from cache
   # if the .rds file is newer than the source CSV (file.mtime() comparison).
   #
-  # IMPORTANT: cache_dir is GITIGNORED and must NOT be a repo-internal path.
-  # See .gitignore: /blue/erin.mobley-hl.bcu/clean/ is excluded from git.
-  # RDS files are 100MB-2GB each; committing them would break the repository.
+  # Local mode: Uses tempdir() for ephemeral cache (cleaned on R session exit).
+  # Production: Uses /blue/ persistent storage (gitignored, 100MB-2GB per file).
   cache = list(
-    # Base RDS cache directory (gitignored: /blue/erin.mobley-hl.bcu/clean/)
-    # IMPORTANT: cache_dir is GITIGNORED and must NOT be a repo-internal path.
-    # RDS files are 100MB-2GB each; committing them would break the repository.
-    cache_dir    = "/blue/erin.mobley-hl.bcu/clean/rds",
+    cache_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "insurance_investigation_cache")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds"
+    },
+
     force_reload = FALSE, # Set to TRUE to bypass cache and re-parse all CSVs
 
     # Phase 15: Raw PCORnet table cache
-    raw_dir      = "/blue/erin.mobley-hl.bcu/clean/rds/raw",
+    raw_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "insurance_investigation_cache", "raw")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds/raw"
+    },
 
     # Phase 16: Cohort filter step snapshots
-    cohort_dir   = "/blue/erin.mobley-hl.bcu/clean/rds/cohort",
+    cohort_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "insurance_investigation_cache", "cohort")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds/cohort"
+    },
 
     # Phase 16: Figure/table backing data snapshots
-    outputs_dir  = "/blue/erin.mobley-hl.bcu/clean/rds/outputs",
+    outputs_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "insurance_investigation_cache", "outputs")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/rds/outputs"
+    },
 
-    # Phase 29: DuckDB file storage (gitignored via /blue/erin.mobley-hl.bcu/clean/)
-    duckdb_dir   = "/blue/erin.mobley-hl.bcu/clean/duckdb",
-    duckdb_path  = "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb"
+    # Phase 29: DuckDB file storage
+    # Local: separate test database in tempdir() to avoid file locking conflicts
+    # Production: /blue/ persistent storage (gitignored)
+    duckdb_dir = if (IS_LOCAL) {
+      file.path(tempdir(), "insurance_investigation_duckdb")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/duckdb"
+    },
+
+    duckdb_path = if (IS_LOCAL) {
+      file.path(tempdir(), "insurance_investigation_duckdb", "pcornet_test.duckdb")
+    } else {
+      "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb"
+    }
   )
 )
+
+# ==============================================================================
+# SECTION 1b: AUTOMATIC DIRECTORY CREATION ----
+# ==============================================================================
+# Create output and cache directories at startup if they don't exist.
+# WHY automatic: Avoids "cannot open file" errors on first run, especially
+# in local mode where tempdir() paths don't pre-exist as subdirectories.
+# WHY showWarnings = FALSE: Suppresses "directory already exists" noise.
+
+required_dirs <- c(
+  CONFIG$output_dir,
+  file.path(CONFIG$output_dir, "figures"),
+  file.path(CONFIG$output_dir, "tables"),
+  file.path(CONFIG$output_dir, "cohort"),
+  file.path(CONFIG$output_dir, "diagnostics"),
+  file.path(CONFIG$output_dir, "logs"),
+  CONFIG$cache$cache_dir,
+  CONFIG$cache$raw_dir,
+  CONFIG$cache$cohort_dir,
+  CONFIG$cache$outputs_dir,
+  CONFIG$cache$duckdb_dir
+)
+
+for (dir_path in required_dirs) {
+  if (!dir.exists(dir_path)) {
+    dir.create(dir_path, recursive = TRUE, showWarnings = FALSE)
+  }
+}
 
 # ==============================================================================
 # SECTION 2: BACKEND SELECTION ----
