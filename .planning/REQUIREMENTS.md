@@ -35,9 +35,9 @@ Requirements for local testing infrastructure: environment detection, test fixtu
 ### Infrastructure
 
 - [x] **INFRA-01**: All path construction uses file.path() — no paste0 with path separators
-- [ ] **INFRA-02**: .gitignore updated for .Renviron, .duckdb files, local output artifacts
+- [x] **INFRA-02**: .gitignore updated for .Renviron, .duckdb files, local output artifacts
 - [x] **INFRA-03**: Local output directories created automatically when missing
-- [ ] **INFRA-04**: .Renviron.example documents the override pattern
+- [x] **INFRA-04**: .Renviron.example documents the override pattern
 
 ### Quality Standards
 
@@ -124,9 +124,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-04 | Phase 85 | Pending |
 | TEST-05 | Phase 85 | Pending |
 | INFRA-01 | Phase 83 | Complete |
-| INFRA-02 | Phase 83 | Pending |
+| INFRA-02 | Phase 83 | Complete |
 | INFRA-03 | Phase 83 | Complete |
-| INFRA-04 | Phase 83 | Pending |
+| INFRA-04 | Phase 83 | Complete |
 | QUAL-01 | Phase 86 | Pending |
 
 **Coverage:**
