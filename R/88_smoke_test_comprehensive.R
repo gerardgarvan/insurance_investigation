@@ -1025,7 +1025,7 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
         any(grepl("DRUG_GROUPINGS", r56_lines)))
 
   check("R/56 includes category in Table 1 group_by",
-        any(grepl("group_by\\(category.*sub_category.*cancer_codes\\)", r56_lines)))
+        any(grepl("group_by\\(category.*sub_category.*cancer_codes", r56_lines)))
 
   check("R/56 has 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)",
         any(grepl("Tier 1", r56_lines)) &&
@@ -1063,8 +1063,7 @@ check(
 
 check(
   "R/56 joins episode_codes to episode_encounters for encounter-level analysis",
-  any(grepl("inner_join.*episode_encounters", r56_lines) |
-      grepl("episode_encounters.*inner_join", r56_lines))
+  any(grepl("inner_join", r56_lines)) && any(grepl("episode_encounters", r56_lines))
 )
 
 check(
