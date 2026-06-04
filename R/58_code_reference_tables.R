@@ -332,6 +332,13 @@ cancer_codes <- cancer_raw %>%
       str_detect(cancer_code, "^[CD]") ~ "ICD-10-CM",
       str_detect(cancer_code, "^[12]")  ~ "ICD-9-CM",
       TRUE ~ "Unknown"
+    ),
+    # Reinsert decimal after 3rd character (standard ICD format: XXX.XX)
+    # R/49 strips dots for matching; restore them for human-readable reference
+    cancer_code = if_else(
+      nchar(cancer_code) > 3L,
+      paste0(substr(cancer_code, 1, 3), ".", substr(cancer_code, 4, nchar(cancer_code))),
+      cancer_code
     )
   ) %>%
   select(code = cancer_code, code_type, description = category) %>%
