@@ -59,7 +59,7 @@ check <- function(description, condition) {
 }
 
 message(strrep("=", 70))
-message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2)")
+message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87)")
 message(strrep("=", 70))
 
 # ==============================================================================
@@ -1307,6 +1307,110 @@ check("DuckDB directory exists", dir.exists(CONFIG$cache$duckdb_dir))
 check(".Renviron.example template exists", file.exists(".Renviron.example"))
 
 # ==============================================================================
+# SECTION 30: PHASE 87 -- ICD-9 CANCER CODE INFRASTRUCTURE ----
+# ==============================================================================
+# Validates ICD9_CANCER_SITE_MAP, shared is_cancer_code(), and updated
+# classify_codes() for ICD-9/ICD-10 harmonization (Phase 87).
+
+message("\n[30/30] Phase 87: ICD-9 cancer code infrastructure...")
+
+# Check 1: ICD9_CANCER_SITE_MAP exists with expected entries
+if (exists("ICD9_CANCER_SITE_MAP") && length(ICD9_CANCER_SITE_MAP) >= 70) {
+  message(glue("  PASS: ICD9_CANCER_SITE_MAP exists ({length(ICD9_CANCER_SITE_MAP)} entries)"))
+  passed <- passed + 1L
+} else {
+  message("  FAIL: ICD9_CANCER_SITE_MAP missing or insufficient entries")
+  failed <- failed + 1L
+}
+
+# Check 2: All malignant ICD-9 prefixes (140-209) present
+icd9_prefixes_expected <- as.character(140:209)
+icd9_prefixes_present <- intersect(names(ICD9_CANCER_SITE_MAP), icd9_prefixes_expected)
+if (length(icd9_prefixes_present) == 70) {
+  message(glue("  PASS: All 70 malignant ICD-9 prefixes (140-209) mapped"))
+  passed <- passed + 1L
+} else {
+  missing_pfx <- setdiff(icd9_prefixes_expected, names(ICD9_CANCER_SITE_MAP))
+  message(glue("  FAIL: Missing {length(missing_pfx)} ICD-9 prefixes: {paste(head(missing_pfx, 10), collapse=', ')}"))
+  failed <- failed + 1L
+}
+
+# Check 3: No benign/uncertain ICD-9 codes (210-239) in map (per D-02)
+benign_in_map <- intersect(names(ICD9_CANCER_SITE_MAP), as.character(210:239))
+if (length(benign_in_map) == 0) {
+  message("  PASS: No benign/uncertain ICD-9 codes (210-239) in ICD9_CANCER_SITE_MAP")
+  passed <- passed + 1L
+} else {
+  message(glue("  FAIL: Benign codes found in map: {paste(benign_in_map, collapse=', ')}"))
+  failed <- failed + 1L
+}
+
+# Check 4: ICD-9 HL subcategory discrimination (2014=NLPHL, 201=classical)
+if (exists("ICD9_CANCER_SITE_MAP")) {
+  nlphl_ok <- identical(unname(ICD9_CANCER_SITE_MAP["2014"]), "NLPHL")
+  classical_ok <- identical(unname(ICD9_CANCER_SITE_MAP["201"]), "Hodgkin Lymphoma (non-NLPHL)")
+  if (nlphl_ok && classical_ok) {
+    message("  PASS: ICD-9 HL subcategory discrimination correct (2014=NLPHL, 201=classical)")
+    passed <- passed + 1L
+  } else {
+    message(glue("  FAIL: ICD-9 HL mapping -- 2014={ICD9_CANCER_SITE_MAP['2014']}, 201={ICD9_CANCER_SITE_MAP['201']}"))
+    failed <- failed + 1L
+  }
+}
+
+# Check 5: Shared is_cancer_code() function available
+utils_cancer_lines <- readLines("R/utils/utils_cancer.R")
+if (any(grepl("is_cancer_code <- function", utils_cancer_lines))) {
+  message("  PASS: is_cancer_code() defined in R/utils/utils_cancer.R")
+  passed <- passed + 1L
+} else {
+  message("  FAIL: is_cancer_code() not found in R/utils/utils_cancer.R")
+  failed <- failed + 1L
+}
+
+# Check 6: R/56 uses shared utility (no local is_cancer_code definition)
+r56_lines <- readLines("R/56_new_tables_from_groupings.R")
+if (!any(grepl("is_cancer_code <- function", r56_lines))) {
+  message("  PASS: R/56 uses shared is_cancer_code() (no local definition)")
+  passed <- passed + 1L
+} else {
+  message("  FAIL: R/56 still has local is_cancer_code() definition")
+  failed <- failed + 1L
+}
+
+# Check 7: No DX_TYPE == "10" hard-filters in cancer summary pipeline (per D-01)
+dx_type_scripts <- c("R/45_cancer_summary.R", "R/47_cancer_summary_refined.R",
+                      "R/48_cancer_summary_post_hl.R", "R/49_cancer_summary_pre_post.R")
+dx_type_violations <- character()
+for (script in dx_type_scripts) {
+  if (file.exists(script)) {
+    script_lines <- readLines(script)
+    if (any(grepl('filter.*DX_TYPE.*==.*"10"', script_lines))) {
+      dx_type_violations <- c(dx_type_violations, script)
+    }
+  }
+}
+if (length(dx_type_violations) == 0) {
+  message("  PASS: No DX_TYPE==\"10\" hard-filters in cancer summary pipeline")
+  passed <- passed + 1L
+} else {
+  message(glue("  FAIL: DX_TYPE==\"10\" still in: {paste(dx_type_violations, collapse=', ')}"))
+  failed <- failed + 1L
+}
+
+# Check 8: Category string consistency between ICD-9 and ICD-10 maps
+icd9_categories <- unique(unname(ICD9_CANCER_SITE_MAP))
+icd10_categories <- unique(unname(CANCER_SITE_MAP))
+novel_icd9_categories <- setdiff(icd9_categories, icd10_categories)
+if (length(novel_icd9_categories) == 0) {
+  message(glue("  PASS: All {length(icd9_categories)} ICD-9 categories match ICD-10 category strings"))
+  passed <- passed + 1L
+} else {
+  message(glue("  FAIL: ICD-9 categories not in ICD-10: {paste(novel_icd9_categories, collapse=', ')}"))
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -1354,6 +1458,13 @@ message("  * ENV-06: THREAD_COUNT configuration")
 message("  * INFRA-01: file.path() usage (no hardcoded separators)")
 message("  * INFRA-03: Automatic directory creation")
 message("  * INFRA-04: .Renviron.example template exists")
+message("  * ICD-06: Shared is_cancer_code() utility in R/utils/utils_cancer.R")
+message("  * ICD-07: R/56 uses shared utility (no local is_cancer_code)")
+message("  * ICD-08: No DX_TYPE=='10' hard-filters in R/45, R/47, R/48, R/49")
+message("  * ICD-09: ICD9_CANCER_SITE_MAP completeness (70 malignant prefixes)")
+message("  * ICD-10: No benign/uncertain codes (210-239) in ICD9_CANCER_SITE_MAP")
+message("  * ICD-11: ICD-9 HL subcategory discrimination (2014=NLPHL, 201=classical)")
+message("  * ICD-12: Category string consistency across ICD-9/ICD-10 maps")
 
 if (failed > 0) {
   quit(status = 1)
