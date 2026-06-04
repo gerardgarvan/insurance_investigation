@@ -9,12 +9,12 @@ Requirements for local testing infrastructure: environment detection, test fixtu
 
 ### Environment Detection
 
-- [ ] **ENV-01**: Pipeline auto-detects local Windows vs HiPerGator Linux using Sys.info()
-- [ ] **ENV-02**: Environment overridable via R_TESTING_ENV environment variable
-- [ ] **ENV-03**: Local mode configures tests/fixtures/ for data, tempdir() for DuckDB and RDS cache
-- [ ] **ENV-04**: HiPerGator production mode is the safe default — no behavior change when env var unset
-- [ ] **ENV-05**: Environment detection logs which mode is active at startup
-- [ ] **ENV-06**: Local mode uses 1 thread; HiPerGator uses SLURM-allocated cores
+- [x] **ENV-01**: Pipeline auto-detects local Windows vs HiPerGator Linux using Sys.info()
+- [x] **ENV-02**: Environment overridable via R_TESTING_ENV environment variable
+- [x] **ENV-03**: Local mode configures tests/fixtures/ for data, tempdir() for DuckDB and RDS cache
+- [x] **ENV-04**: HiPerGator production mode is the safe default — no behavior change when env var unset
+- [x] **ENV-05**: Environment detection logs which mode is active at startup
+- [x] **ENV-06**: Local mode uses 1 thread; HiPerGator uses SLURM-allocated cores
 
 ### Test Fixtures
 
@@ -34,9 +34,9 @@ Requirements for local testing infrastructure: environment detection, test fixtu
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: All path construction uses file.path() — no paste0 with path separators
+- [x] **INFRA-01**: All path construction uses file.path() — no paste0 with path separators
 - [ ] **INFRA-02**: .gitignore updated for .Renviron, .duckdb files, local output artifacts
-- [ ] **INFRA-03**: Local output directories created automatically when missing
+- [x] **INFRA-03**: Local output directories created automatically when missing
 - [ ] **INFRA-04**: .Renviron.example documents the override pattern
 
 ### Quality Standards
@@ -107,12 +107,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENV-01 | Phase 83 | Pending |
-| ENV-02 | Phase 83 | Pending |
-| ENV-03 | Phase 83 | Pending |
-| ENV-04 | Phase 83 | Pending |
-| ENV-05 | Phase 83 | Pending |
-| ENV-06 | Phase 83 | Pending |
+| ENV-01 | Phase 83 | Complete |
+| ENV-02 | Phase 83 | Complete |
+| ENV-03 | Phase 83 | Complete |
+| ENV-04 | Phase 83 | Complete |
+| ENV-05 | Phase 83 | Complete |
+| ENV-06 | Phase 83 | Complete |
 | FIX-01 | Phase 84 | Pending |
 | FIX-02 | Phase 84 | Pending |
 | FIX-03 | Phase 84 | Pending |
@@ -123,9 +123,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-03 | Phase 85 | Pending |
 | TEST-04 | Phase 85 | Pending |
 | TEST-05 | Phase 85 | Pending |
-| INFRA-01 | Phase 83 | Pending |
+| INFRA-01 | Phase 83 | Complete |
 | INFRA-02 | Phase 83 | Pending |
-| INFRA-03 | Phase 83 | Pending |
+| INFRA-03 | Phase 83 | Complete |
 | INFRA-04 | Phase 83 | Pending |
 | QUAL-01 | Phase 86 | Pending |
 
