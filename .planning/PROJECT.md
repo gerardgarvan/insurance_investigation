@@ -97,7 +97,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.1 (2026-06-03)
 
-**Pipeline status:** 83 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). v2.2 in progress: Phase 83 complete — environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override, conditional paths, startup logging, smoke test validation). Active milestone: v2.2 Local Testing Infrastructure.
+**Pipeline status:** 84 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). v2.2 in progress: Phase 83 complete — environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override, conditional paths, startup logging, smoke test validation). Phase 87 complete — unified ICD-9/ICD-10 cancer code handling (ICD9_CANCER_SITE_MAP, shared is_cancer_code(), classify_codes() 4-tier cascade, 201.x HL cohort confirmation). Active milestone: v2.2 Local Testing Infrastructure.
 
 ## Previous Milestones
 
@@ -256,6 +256,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Regimen detection via 28-day cycle composition | ABVD/BV+AVD/Nivo+AVD have distinct drug fingerprints; dropped-agent tolerance handles real-world practice variation | ✓ Phase 61 |
 | First-line therapy: 60-day clean period | Standard oncology definition; no prior chemotherapy in 60 days before regimen start | ✓ Phase 62 |
 | Gantt v2 as superset of v1 schema | All 14 v1 columns preserved plus 3 new columns; downstream tools can consume either version | ✓ Phase 63 |
+| ICD-9 + ICD-10 unified cancer code detection | Map-based is_cancer_code() from shared utility ensures gap-free coverage; classify_codes() 4-tier cascade (ICD-10 4/3-char → ICD-9 4/3-char) | ✓ Phase 87 |
+| ICD-9 201.x in HL cohort confirmation | Cross-system category-level confirmation allowed (1x 201.x + 1x C81 with 7-day gap); code-level summaries keep systems separate | ✓ Phase 87 |
 
 ## Evolution
 
@@ -275,4 +277,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after Phase 83 complete (Environment Detection & Infrastructure)*
+*Last updated: 2026-06-04 after Phase 87 complete (Unify ICD-9/ICD-10 Cancer Code Usage)*
