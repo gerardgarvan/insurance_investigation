@@ -97,7 +97,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.1 (2026-06-03)
 
-**Pipeline status:** 82 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). Active milestone: v2.2 Local Testing Infrastructure.
+**Pipeline status:** 83 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). v2.2 in progress: Phase 83 complete — environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override, conditional paths, startup logging, smoke test validation). Active milestone: v2.2 Local Testing Infrastructure.
 
 ## Previous Milestones
 
@@ -275,4 +275,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after milestone v2.2 started (Local Testing Infrastructure)*
+*Last updated: 2026-06-03 after Phase 83 complete (Environment Detection & Infrastructure)*
