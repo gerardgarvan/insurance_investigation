@@ -59,7 +59,7 @@
 ### Phases
 
 - [x] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure (completed 2026-06-04)
-- [x] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases (completed 2026-06-04)
+- [x] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases (completed 2026-06-04)
 - [ ] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end
 - [ ] **Phase 86: Documentation & Cleanup** - Document workflow, update PROJECT.md, finalize .gitignore and quality standards
 
@@ -140,5 +140,15 @@ Plans:
 - [x] 87-02-PLAN.md — Cancer summary pipeline (R/45, R/47, R/48, R/49) DX_TYPE removal and cohort expansion
 - [x] 87-03-PLAN.md — R/56 shared utility linkage, R/50 verification, R/88 smoke test validation
 
+### Phase 88: Instance-Level Drug Grouping Tables with Descriptive Names
+
+**Goal:** Create a new R/57 script that produces an instance-level xlsx file (drug_grouping_instances.xlsx) showing one row per patient+treatment type+episode with human-readable sub-category names and cancer site category names instead of raw codes and aggregated counts, leaving the existing R/56 drug_grouping_tables.xlsx unchanged.
+**Requirements**: P88-D01, P88-D02, P88-D03, P88-D04, P88-D05, P88-D06, P88-D07, P88-D08, P88-SMOKE
+**Depends on:** Phase 87
+**Plans:** 1 plan
+
+Plans:
+- [ ] 88-01-PLAN.md — R/57 instance-level tables script + R/88 smoke test Section 31
+
 ---
-*Last updated: 2026-06-04 -- Phase 84 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-04 -- Phase 88 planned (1 plan, 1 wave)*
