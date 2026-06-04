@@ -1024,8 +1024,8 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
   check("R/56 derives category from DRUG_GROUPINGS with treatment_type fallback",
         any(grepl("DRUG_GROUPINGS", r56_lines)))
 
-  check("R/56 includes category in Table 1 group_by",
-        any(grepl("group_by\\(category.*sub_category.*cancer_codes", r56_lines)))
+  check("R/56 Table 1 selects category, sub_category, treatment_code, code_type, cancer_codes",
+        any(grepl("select\\(category.*sub_category.*treatment_code.*code_type.*cancer_codes", r56_lines)))
 
   check("R/56 has 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)",
         any(grepl("Tier 1", r56_lines)) &&
