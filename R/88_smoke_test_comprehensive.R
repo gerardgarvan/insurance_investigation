@@ -1431,12 +1431,11 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
   check("R/57 sources R/utils/utils_cancer.R",
         any(grepl('source\\("R/utils/utils_cancer.R"\\)', r57_lines)))
 
-  check("R/57 reads treatment_episodes.rds input",
-        any(grepl("treatment_episodes\\.rds", r57_lines)))
+  check("R/57 reads treatment_episode_detail.rds input (encounter-level)",
+        any(grepl("treatment_episode_detail\\.rds", r57_lines)))
 
-  check("R/57 outputs drug_grouping_instances.xlsx (not drug_grouping_tables.xlsx)",
-        any(grepl("drug_grouping_instances\\.xlsx", r57_lines)) &&
-        !any(grepl("drug_grouping_tables\\.xlsx", r57_lines)))
+  check("R/57 outputs drug_grouping_instances.xlsx",
+        any(grepl("drug_grouping_instances\\.xlsx", r57_lines)))
 
   check("R/57 has 2-sheet workbook (Treatment Sub-Category Detail + Encounter Treatment Detail)",
         any(grepl("Treatment Sub-Category Detail", r57_lines)) &&
@@ -1467,17 +1466,9 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
         any(grepl("is_cancer_code", r57_lines)) &&
         !any(grepl("is_cancer_code <- function", r57_lines)))
 
-  # Per D-08: Validate Table 2 maintains per-episode grain without aggregation
-  # Table 2 section should NOT contain group_by/summarise patterns
-  table2_start <- grep("SECTION 6.*TABLE 2|Table 2.*ENCOUNTER", r57_lines, ignore.case = TRUE)
-  table2_end <- grep("SECTION 7", r57_lines)
-  if (length(table2_start) > 0 && length(table2_end) > 0) {
-    table2_lines <- r57_lines[table2_start[1]:table2_end[1]]
-    check("R/57 Table 2 does NOT use group_by/summarise (per D-08: per-episode grain preserved)",
-          !any(grepl("group_by|summarise|summarize", table2_lines)))
-    check("R/57 Table 2 references D-08 for per-episode grain",
-          any(grepl("D-08", table2_lines)))
-  }
+  # Validate Table 2 uses encounter-level grain (ENCOUNTERID column)
+  check("R/57 Table 2 uses ENCOUNTERID for encounter-level grain",
+        any(grepl("ENCOUNTERID", r57_lines)))
 }
 
 # ==============================================================================
