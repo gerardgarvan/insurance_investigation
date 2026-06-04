@@ -63,3 +63,14 @@ __pycache__/
 
 # RDS cache on blue storage (Phase 15 -- large binary files, 100MB-2GB each)
 /blue/erin.mobley-hl.bcu/clean/
+
+# Environment override (per-developer, never committed) -- Phase 83
+.Renviron
+
+# DuckDB database files (binary, large, environment-specific) -- Phase 83
+*.duckdb
+*.duckdb.wal
+
+# Local test output artifacts (tempdir cache, not repo content) -- Phase 83
+tests/fixtures/*.rds
+tests/fixtures/*.duckdb
