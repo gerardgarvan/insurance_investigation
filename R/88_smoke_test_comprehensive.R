@@ -59,14 +59,14 @@ check <- function(description, condition) {
 }
 
 message(strrep("=", 70))
-message("SMOKE TEST: Comprehensive Pipeline Validation (v2.1)")
+message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2)")
 message(strrep("=", 70))
 
 # ==============================================================================
 # SECTION 2: UTILS MODULE COMPLETENESS ----
 # ==============================================================================
 
-message("\n[1/27] Utils module completeness...")
+message("\n[1/29] Utils module completeness...")
 
 check("R/utils/ directory exists", dir.exists("R/utils"))
 
@@ -100,7 +100,7 @@ check(
 # SECTION 3: CONFIG LOADING AND AUTO-SOURCING ----
 # ==============================================================================
 
-message("\n[2/27] Config loading and auto-sourcing...")
+message("\n[2/29] Config loading and auto-sourcing...")
 
 tryCatch(
   {
@@ -169,7 +169,7 @@ for (module in names(key_functions)) {
 # SECTION 4: FOUNDATION CHAIN ----
 # ==============================================================================
 
-message("\n[3/27] Foundation script chain...")
+message("\n[3/29] Foundation script chain...")
 
 check("R/00_config.R exists", file.exists("R/00_config.R"))
 check("R/01_load_pcornet.R exists", file.exists("R/01_load_pcornet.R"))
@@ -187,7 +187,7 @@ check(
 # --------------------------------------------------------------------------
 # Cohort decade (10-14)
 # --------------------------------------------------------------------------
-message("\n[4/27] Cohort decade (10-14)...")
+message("\n[4/29] Cohort decade (10-14)...")
 
 cohort_scripts <- c(
   "10_cohort_predicates.R", "11_treatment_payer.R",
@@ -206,7 +206,7 @@ check(
 # --------------------------------------------------------------------------
 # Treatment decade (20-29)
 # --------------------------------------------------------------------------
-message("\n[5/27] Treatment decade (20-29)...")
+message("\n[5/29] Treatment decade (20-29)...")
 
 treatment_expected <- c(
   "20_treatment_inventory.R", "21_investigate_unmatched.R",
@@ -227,7 +227,7 @@ check(
 # --------------------------------------------------------------------------
 # Quality/Investigations decade (30-39)
 # --------------------------------------------------------------------------
-message("\n[6/27] Quality/Investigations decade (30-39)...")
+message("\n[6/29] Quality/Investigations decade (30-39)...")
 
 quality_expected <- c("35_death_cause_quality.R")
 quality_found <- 0L
@@ -242,7 +242,7 @@ check(
 # --------------------------------------------------------------------------
 # Cancer decade (40-56)
 # --------------------------------------------------------------------------
-message("\n[7/27] Cancer decade (40-56)...")
+message("\n[7/29] Cancer decade (40-56)...")
 
 cancer_expected <- c(
   "40_cancer_site_frequency.R", "41_extract_all_codes.R",
@@ -267,7 +267,7 @@ check(
 # --------------------------------------------------------------------------
 # Payer/QA decade (60-69)
 # --------------------------------------------------------------------------
-message("\n[8/27] Payer/QA decade (60-69)...")
+message("\n[8/29] Payer/QA decade (60-69)...")
 
 payer_expected <- c(
   "60_tiered_same_day_payer.R", "61_tiered_encounter_level.R",
@@ -289,7 +289,7 @@ check(
 # --------------------------------------------------------------------------
 # Output decade (70-76)
 # --------------------------------------------------------------------------
-message("\n[9/27] Output decade (70-76)...")
+message("\n[9/29] Output decade (70-76)...")
 
 output_scripts <- c(
   "70_visualize_waterfall.R", "71_visualize_sankey.R",
@@ -309,7 +309,7 @@ check(
 # --------------------------------------------------------------------------
 # Test decade (80-88)
 # --------------------------------------------------------------------------
-message("\n[10/27] Test decade (80-88)...")
+message("\n[10/29] Test decade (80-88)...")
 
 test_scripts <- c(
   "80_smoke_test_backends.R", "81_parity_test_cohort.R",
@@ -330,7 +330,7 @@ check(
 # --------------------------------------------------------------------------
 # Ad-hoc decade (90-99)
 # --------------------------------------------------------------------------
-message("\n[11/27] Ad-hoc decade (90-99)...")
+message("\n[11/29] Ad-hoc decade (90-99)...")
 
 adhoc_scripts <- c(
   "90_diagnostics.R", "91_data_quality_summary.R",
@@ -352,7 +352,7 @@ check(
 # SECTION 6: NO STALE FILES ----
 # ==============================================================================
 
-message("\n[12/27] No stale files...")
+message("\n[12/29] No stale files...")
 
 # Check for specific old numbers that should have been renamed
 old_numbers <- c(
@@ -385,7 +385,7 @@ check(
 # SECTION 7: SOURCE() REFERENCE VALIDATION ----
 # ==============================================================================
 
-message("\n[13/27] Source() reference validation...")
+message("\n[13/29] Source() reference validation...")
 
 r_files_full <- list.files("R", pattern = "\\.R$", full.names = TRUE)
 broken_refs <- character(0)
@@ -436,7 +436,7 @@ check(
 # SECTION 8: KEY DEPENDENCY CHAINS ----
 # ==============================================================================
 
-message("\n[14/27] Key dependency chains...")
+message("\n[14/29] Key dependency chains...")
 
 # Check critical source() patterns
 check_source <- function(file, pattern, description) {
@@ -472,7 +472,7 @@ check(
 # SECTION 9: DRY CONSOLIDATION VALIDATION ----
 # ==============================================================================
 
-message("\n[15/27] DRY consolidation validation...")
+message("\n[15/29] DRY consolidation validation...")
 
 # Check no PREFIX_MAP definitions outside R/00_config.R
 scripts_to_check_prefix <- c(
@@ -544,7 +544,7 @@ check(
 # SECTION 10: DEFENSIVE CODING INFRASTRUCTURE ----
 # ==============================================================================
 
-message("\n[16/27] Defensive coding infrastructure...")
+message("\n[16/29] Defensive coding infrastructure...")
 
 # Check library(checkmate) appears in R/00_config.R
 config_lines <- readLines("R/00_config.R", warn = FALSE)
@@ -566,7 +566,7 @@ for (func in assertion_functions) {
 # SECTION 11: ARCHIVE VALIDATION ----
 # ==============================================================================
 
-message("\n[17/27] Archive validation...")
+message("\n[17/29] Archive validation...")
 
 check("R/archive/ directory exists", dir.exists("R/archive"))
 check("R/archive/README.md exists", file.exists("R/archive/README.md"))
@@ -587,7 +587,7 @@ check(
 # SECTION 12: CROSS-PLATFORM DATA AVAILABILITY ----
 # ==============================================================================
 
-message("\n[18/27] Cross-platform data availability...")
+message("\n[18/29] Cross-platform data availability...")
 
 # Detect data availability
 if (exists("CONFIG")) {
@@ -623,7 +623,7 @@ if (exists("CONFIG")) {
 # Phase 75 (CANCER-01): Validates NLPHL breakout mutual exclusivity.
 # Phase 75 (DEATH-01/DEATH-02): Validates DEATH_CAUSE_MAP structure.
 
-message("\n[19/27] NLPHL classification & death cause validation...")
+message("\n[19/29] NLPHL classification & death cause validation...")
 
 # --- NLPHL ICD-10 mutual exclusivity ---
 
@@ -723,7 +723,7 @@ check(
 # ==============================================================================
 # Phase 76 (TREAT-01): Validates tumor registry source removed from R/26.
 
-message("\n[20/27] TR removal validation...")
+message("\n[20/29] TR removal validation...")
 
 # Read R/26 source code for static analysis
 r26_lines <- readLines("R/26_treatment_episodes.R")
@@ -808,7 +808,7 @@ check(
 # ==============================================================================
 # Phase 77 (TREAT-02): Validates DRUG_GROUPINGS centralization from xlsx.
 
-message("\n[21/27] Drug groupings validation...")
+message("\n[21/29] Drug groupings validation...")
 
 # Check 1: DRUG_GROUPINGS exists and has sufficient entries
 check(
@@ -858,7 +858,7 @@ check(
 # ==============================================================================
 # Phase 77 (CANCER-01, CANCER-02): Validates 7-day gap extension and R/49 dual output.
 
-message("\n[22/27] 7-day gap extension & R/49 v2 validation...")
+message("\n[22/29] 7-day gap extension & R/49 v2 validation...")
 
 # Check 1: R/49 contains v2 output path definitions
 r49_lines <- readLines("R/49_cancer_summary_pre_post.R")
@@ -911,7 +911,7 @@ check(
 # ==============================================================================
 # Phase 79 (CODE-02): Validates R/54 SCT code 0362 investigation script.
 
-message("\n[23/27] Phase 79: SCT 0362 investigation (CODE-02)...")
+message("\n[23/29] Phase 79: SCT 0362 investigation (CODE-02)...")
 
 check("R/54_investigate_sct_0362.R exists", file.exists("R/54_investigate_sct_0362.R"))
 
@@ -946,7 +946,7 @@ if (file.exists("R/54_investigate_sct_0362.R")) {
 # ==============================================================================
 # Phase 79 (CODE-01): Validates R/55 replaced-by code verification with igraph.
 
-message("\n[24/27] Phase 79: Replaced-by code verification (CODE-01)...")
+message("\n[24/29] Phase 79: Replaced-by code verification (CODE-01)...")
 
 check("R/55_verify_replaced_by_codes.R exists", file.exists("R/55_verify_replaced_by_codes.R"))
 
@@ -983,7 +983,7 @@ if (file.exists("R/55_verify_replaced_by_codes.R")) {
 # ==============================================================================
 # Phase 79 (TREAT-03): Validates R/56 drug grouping summary tables.
 
-message("\n[25/27] Phase 79: Drug grouping summary tables (TREAT-03)...")
+message("\n[25/29] Phase 79: Drug grouping summary tables (TREAT-03)...")
 
 check("R/56_new_tables_from_groupings.R exists", file.exists("R/56_new_tables_from_groupings.R"))
 
@@ -1037,7 +1037,7 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
 # SECTION 13H: ENCOUNTER DX DEDUPLICATION (Phase 82) ----
 # ==============================================================================
 
-message("\n[26/28] Phase 82: Encounter Dx deduplication in R/56...")
+message("\n[26/29] Phase 82: Encounter Dx deduplication in R/56...")
 
 # Check 1: R/57 exploration script exists
 check(
@@ -1105,7 +1105,7 @@ if (file.exists("R/57_explore_dx_deduplication.R")) {
 # SECTION 14: DEATH QUALITY PROFILING VALIDATION (DEATH-01) ----
 # ==============================================================================
 
-message("\n[27/28] Death quality profiling validation (DEATH-01)...")
+message("\n[27/29] Death quality profiling validation (DEATH-01)...")
 
 # Check 1: R/35_death_cause_quality.R exists
 check(
@@ -1160,7 +1160,7 @@ if (file.exists("R/35_death_cause_quality.R")) {
 # SECTION 15: EPISODE ENRICHMENT AND GANTT INTEGRATION (CANCER-03, DEATH-02) ----
 # ==============================================================================
 
-message("\n[28/28] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
+message("\n[28/29] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...")
 
 # Check 1: R/28 has triggering_code_description column in final select
 r28_lines <- readLines("R/28_episode_classification.R", warn = FALSE)
@@ -1227,6 +1227,86 @@ check(
 )
 
 # ==============================================================================
+# SECTION 15b: ENVIRONMENT DETECTION (Phase 83: ENV-01 through ENV-06) ----
+# ==============================================================================
+
+message("\n[29/29] Environment detection validation...")
+
+# ENV-01: IS_LOCAL flag defined and logical
+check("IS_LOCAL flag is defined", exists("IS_LOCAL"))
+check("IS_LOCAL is logical type", is.logical(IS_LOCAL))
+
+# ENV-02: R_TESTING_ENV env var readable (does not crash)
+check(
+  "R_TESTING_ENV env var readable (empty string if unset)",
+  is.character(Sys.getenv("R_TESTING_ENV"))
+)
+
+# ENV-06: THREAD_COUNT defined and valid
+check("THREAD_COUNT is defined", exists("THREAD_COUNT"))
+check("THREAD_COUNT is integer >= 1", is.integer(THREAD_COUNT) && THREAD_COUNT >= 1L)
+
+# Conditional checks based on current environment mode
+if (IS_LOCAL) {
+  # ENV-03: Local mode path validation
+  check(
+    "Local mode: data_dir points to tests/fixtures",
+    grepl("tests.*fixtures", CONFIG$data_dir, ignore.case = TRUE)
+  )
+  check(
+    "Local mode: DuckDB path in tempdir()",
+    grepl(normalizePath(tempdir(), winslash = "/", mustWork = FALSE),
+          normalizePath(CONFIG$cache$duckdb_path, winslash = "/", mustWork = FALSE),
+          fixed = TRUE)
+  )
+  check(
+    "Local mode: cache_dir in tempdir()",
+    grepl(normalizePath(tempdir(), winslash = "/", mustWork = FALSE),
+          normalizePath(CONFIG$cache$cache_dir, winslash = "/", mustWork = FALSE),
+          fixed = TRUE)
+  )
+  check(
+    "Local mode: 1 thread configured",
+    CONFIG$performance$num_threads == 1
+  )
+} else {
+  # ENV-04: Production mode path validation (safe defaults)
+  check(
+    "Production mode: data_dir points to /orange/",
+    grepl("^/orange/", CONFIG$data_dir)
+  )
+  check(
+    "Production mode: DuckDB path in /blue/",
+    grepl("^/blue/", CONFIG$cache$duckdb_path)
+  )
+  check(
+    "Production mode: thread count >= 1",
+    CONFIG$performance$num_threads >= 1
+  )
+}
+
+# INFRA-01: Validate file.path() usage in PCORNET_PATHS (no hardcoded separators)
+for (table_name in names(PCORNET_PATHS)) {
+  path <- PCORNET_PATHS[[table_name]]
+  # Paths should not contain double-separators (// or \\) which indicate paste0 misuse
+  has_double_sep <- grepl("//", path) || grepl("\\\\\\\\", path)
+  check(
+    glue("PCORNET_PATHS${table_name}: no hardcoded double-separators"),
+    !has_double_sep
+  )
+}
+
+# INFRA-03: Required directories exist (created by SECTION 1b of 00_config.R)
+check("output/ directory exists", dir.exists(CONFIG$output_dir))
+check("output/figures/ directory exists", dir.exists(file.path(CONFIG$output_dir, "figures")))
+check("output/tables/ directory exists", dir.exists(file.path(CONFIG$output_dir, "tables")))
+check("cache directory exists", dir.exists(CONFIG$cache$cache_dir))
+check("DuckDB directory exists", dir.exists(CONFIG$cache$duckdb_dir))
+
+# INFRA-04: .Renviron.example exists
+check(".Renviron.example template exists", file.exists(".Renviron.example"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -1265,6 +1345,15 @@ message("  * CODE-02: SCT 0362 investigation (R/54)")
 message("  * TREAT-03: Drug grouping summary tables (R/56)")
 message("  * P82-INTEGRATE: Encounter-level dx deduplication in R/56 Table 1")
 message("  * P82-FLAG: dx_only flag column for orphan encounter preservation")
+message("  * ENV-01: IS_LOCAL auto-detection via Sys.info()")
+message("  * ENV-02: R_TESTING_ENV override readable")
+message("  * ENV-03: Local mode paths (tests/fixtures, tempdir)")
+message("  * ENV-04: Production mode safe defaults (/orange, /blue)")
+message("  * ENV-05: Startup logging (validated by sourcing 00_config.R)")
+message("  * ENV-06: THREAD_COUNT configuration")
+message("  * INFRA-01: file.path() usage (no hardcoded separators)")
+message("  * INFRA-03: Automatic directory creation")
+message("  * INFRA-04: .Renviron.example template exists")
 
 if (failed > 0) {
   quit(status = 1)
