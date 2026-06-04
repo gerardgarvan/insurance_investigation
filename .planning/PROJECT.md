@@ -82,28 +82,38 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
 
-## Current Milestone: v2.1 Clinical Data Refinements & NLPHL Breakout
+## Current Milestone: v2.2 Local Testing Infrastructure
 
-**Goal:** Refine cancer summary tables, break out NLPHL as a distinct category, investigate SCT code 0362, remove tumor registry treatment data, verify replaced-by codes, create new tables, and add cause of death and per-episode cancer categorization to outputs — maintaining v2.0 code quality standards throughout.
+**Goal:** Add environment auto-detection to R/00_config.R and create targeted test fixtures with clinical edge cases so key pipeline logic can be verified locally on Windows before deploying to HiPerGator.
 
 **Target features:**
-- Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories (not just HL), total population = 6,347
-- Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as its own cancer category in groupings and Gantt chart
-- Investigate 90 patients with SCT code 0362 — do they have other SCT codes during those encounters?
-- Drop all treatment data sourced from tumor registry
-- Double-check "replaced by" codes from all_codes_resolved_next_tables.xlsx
-- Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
-- Include cause of death in outputs
-- Cancer_category and triggering code description per episode (using drug groupings from all_codes_resolved_next_tables.xlsx)
-- All new/modified scripts follow v2.0 standards: styler, lintr, checkmate, documentation headers, smoke test updates
+- Auto-detect local vs HiPerGator environment (OS/hostname + env var override) in R/00_config.R
+- Local path defaults for data directory, RDS cache, and DuckDB file
+- Hand-crafted test fixture CSVs (~20 patients) covering known clinical edge cases (dual-eligible, NLPHL, SCT, multiple cancers, death dates, orphan dx codes)
+- DuckDB ingest of test fixtures via existing R/01 path
+- R/88 smoke test runnable locally against fixtures
 
 ## Current State
 
-**Shipped:** v2.0 (2026-06-02)
+**Shipped:** v2.1 (2026-06-03)
 
-**Pipeline status:** 82 phases completed across 10 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. Tumor registry sources removed from treatment pipeline (Phase 76). Phase 77: drug groupings centralized (454 codes in DRUG_GROUPINGS), R/49 dual v1/v2 output with 7-day gap filter for all cancer categories, NLPHL diagnostic breakout. Phase 78: death cause quality profiling (R/35), episode enrichment with code descriptions + drug groups (R/28), cause of death + drug group in Gantt v2 exports (R/52). Phase 79: SCT code 0362 investigation (R/54), replaced-by code verification with igraph cycle detection (R/55), drug grouping summary tables (R/56). Phase 80: comprehensive smoke test updated to validate all v2.1 changes (27 sections, 3 new Phase 79 validation sections, decade lists expanded). Phase 81: CODE_SUBCATEGORY_MAP (326 entries) added to config, R/56 drug grouping tables refined with category column, NA cancer_codes filtering, and 3-tier sub-category lookup. Phase 82: encounter-level dx code deduplication — R/57 exploration script validates co-occurrence logic, R/56 Table 1 removes non-informative dx codes when helpful partner exists in same encounter, orphans preserved with dx_only flag, R/88 smoke test updated (28 sections). Active milestone: v2.1 Clinical Data Refinements & NLPHL Breakout.
+**Pipeline status:** 82 phases completed across 11 milestones. 75 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). Active milestone: v2.2 Local Testing Infrastructure.
 
 ## Previous Milestones
+
+### v2.1 Clinical Data Refinements & NLPHL Breakout (Shipped 2026-06-03)
+
+**Goal:** Refine cancer summary tables, break out NLPHL as a distinct category, remove tumor registry treatment data, and add cause of death and per-episode cancer categorization to outputs.
+
+**Shipped:**
+- NLPHL breakout as distinct cancer category with 4-char prefix matching (Phase 75)
+- Tumor registry treatment data removal with coverage analysis (Phase 76)
+- 7-day gap filter for all cancer categories, drug groupings centralization (Phase 77)
+- Episode enrichment with code descriptions + drug groups, cause of death integration (Phase 78)
+- SCT 0362 investigation, replaced-by code verification, drug grouping summary tables (Phase 79)
+- Comprehensive smoke test updates for all v2.1 changes (Phase 80)
+- CODE_SUBCATEGORY_MAP, category column, NA filtering in drug grouping tables (Phase 81)
+- Encounter-level dx code deduplication with orphan preservation (Phase 82)
 
 ### v2.0 Codebase Cleanup & Documentation (Shipped 2026-06-02)
 
@@ -265,4 +275,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-03 after Phase 81 completion (CODE_SUBCATEGORY_MAP, category column, NA filtering, 3-tier lookup in R/56)*
+*Last updated: 2026-06-03 after milestone v2.2 started (Local Testing Infrastructure)*
