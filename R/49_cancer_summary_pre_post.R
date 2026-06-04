@@ -778,7 +778,7 @@ wb$add_numfmt(sheet = SHEET1, dims = glue("N{totals_row1}:N{totals_row1}"), numf
 
 # Footnote row
 footnote_row1 <- totals_row1 + 2
-footnote_text1 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
+footnote_text1 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x (ICD-9) pre/post/both left blank (anchor diagnosis).")
 wb$add_data(
   sheet = SHEET1,
   x = footnote_text1,
@@ -903,7 +903,7 @@ wb$add_numfmt(sheet = SHEET2, dims = glue("O{totals_row2}:O{totals_row2}"), numf
 
 # Footnote row
 footnote_row2 <- totals_row2 + 2
-footnote_text2 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
+footnote_text2 <- glue("Baseline stats: full confirmed 7-day HL cohort ({n_total_confirmed} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x (ICD-9) pre/post/both left blank (anchor diagnosis).")
 wb$add_data(
   sheet = SHEET2,
   x = footnote_text2,
@@ -1023,7 +1023,7 @@ wb_v2$add_numfmt(sheet = SHEET1_V2, dims = glue("N{totals_row1_v2}:N{totals_row1
 
 # Footnote row
 footnote_row1_v2 <- totals_row1_v2 + 2
-footnote_text1_v2 <- glue("V2: Filtered to patients with two_or_more_unique_dates_gt_7 == 1. Baseline stats: 7-day confirmed cohort ({v2_n_patients} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
+footnote_text1_v2 <- glue("V2: Filtered to patients with two_or_more_unique_dates_gt_7 == 1. Baseline stats: 7-day confirmed cohort ({v2_n_patients} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x (ICD-9) pre/post/both left blank (anchor diagnosis).")
 wb_v2$add_data(
   sheet = SHEET1_V2,
   x = footnote_text1_v2,
@@ -1126,7 +1126,7 @@ wb_v2$add_numfmt(sheet = SHEET2_V2, dims = glue("O{totals_row2_v2}:O{totals_row2
 
 # Footnote row
 footnote_row2_v2 <- totals_row2_v2 + 2
-footnote_text2_v2 <- glue("V2: Filtered to patients with two_or_more_unique_dates_gt_7 == 1. Baseline stats: 7-day confirmed cohort ({v2_n_patients} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 pre/post/both left blank (anchor diagnosis).")
+footnote_text2_v2 <- glue("V2: Filtered to patients with two_or_more_unique_dates_gt_7 == 1. Baseline stats: 7-day confirmed cohort ({v2_n_patients} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x (ICD-9) pre/post/both left blank (anchor diagnosis).")
 wb_v2$add_data(
   sheet = SHEET2_V2,
   x = footnote_text2_v2,
