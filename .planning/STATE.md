@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
 status: verifying
-stopped_at: Completed 84-02-PLAN.md
-last_updated: "2026-06-04T16:39:56.169Z"
+stopped_at: Phase 88 context gathered
+last_updated: "2026-06-04T21:13:49.568Z"
 last_activity: 2026-06-04
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 3
   total_plans: 7
   completed_plans: 7
@@ -88,6 +88,7 @@ None yet. (v2.2 milestone starting fresh)
 ### Roadmap Evolution
 
 - Phase 87 added: fix cancer_summary_pre_post to include icd9 but be still filtered on icd10 81 and all_codes_resolved_next_tables and drug_grouping_tables should all be linked in the codes they use
+- Phase 88 added: re-do tables from grouping by using descriptives from codes instead of counts, and instead of counts just list each instance
 
 ### Blockers/Concerns
 
@@ -103,9 +104,9 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-04T16:00:29.821Z
-Stopped at: Completed 84-02-PLAN.md
-Resume file: None
+Last session: 2026-06-04T21:13:49.561Z
+Stopped at: Phase 88 context gathered
+Resume file: .planning/phases/88-re-do-tables-from-grouping-by-using-descriptives-from-codes-instead-of-counts-and-instead-of-counts-just-list-each-instance/88-CONTEXT.md
 
 ---
 *State initialized: 2026-06-03 for v2.2 Local Testing Infrastructure*
