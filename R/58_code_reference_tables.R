@@ -307,22 +307,24 @@ message()
 message("--- Building cancer codes reference ---")
 
 cancer_wb <- wb_load(CANCER_XLSX)
-# Row 1 = merged title, Row 2 = headers, Row 3+ = data
-cancer_raw <- wb_to_df(cancer_wb, sheet = "Code Summary", start_row = 2)
+# Row 1 = merged title, Row 2 = headers, Row 3+ = data; use positional indexing
+# Column A (1) = Cancer Code, Column B (2) = Category (per R/49 headers)
+cancer_raw <- wb_to_df(cancer_wb, sheet = "Code Summary", start_row = 3, col_names = FALSE)
 
 # Extract unique cancer codes (exclude TOTAL row)
-# Header names from R/49: "Cancer Code", "Category", ...
 cancer_codes <- cancer_raw %>%
-  filter(!is.na(`Cancer Code`), `Cancer Code` != "TOTAL") %>%
-  distinct(`Cancer Code`, Category) %>%
+  rename(cancer_code = 1, category = 2) %>%
+  filter(!is.na(cancer_code), cancer_code != "TOTAL") %>%
+  mutate(cancer_code = as.character(cancer_code), category = as.character(category)) %>%
+  distinct(cancer_code, category) %>%
   mutate(
     code_type = case_when(
-      str_detect(`Cancer Code`, "^[CD]") ~ "ICD-10-CM",
-      str_detect(`Cancer Code`, "^[12]")  ~ "ICD-9-CM",
+      str_detect(cancer_code, "^[CD]") ~ "ICD-10-CM",
+      str_detect(cancer_code, "^[12]")  ~ "ICD-9-CM",
       TRUE ~ "Unknown"
     )
   ) %>%
-  select(code = `Cancer Code`, code_type, description = Category) %>%
+  select(code = cancer_code, code_type, description = category) %>%
   arrange(code_type, code)
 
 message(glue("  Unique cancer codes: {nrow(cancer_codes)}"))
