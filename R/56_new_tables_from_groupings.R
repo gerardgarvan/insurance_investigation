@@ -32,7 +32,7 @@
 #     Sheet1 templates with sub-category-level and encounter-level summaries
 #   - QUAL-01: v2.0 script standards (documentation, assertions, section structure)
 #   - P82-INTEGRATE: Encounter-level dx deduplication integrated into R/56 Table 1
-#   - P82-FLAG: dx_only flag column added to Table 1 for orphan encounter preservation
+#   - P82-FLAG: dx_only used internally for dedup; not included in Table 1 output
 #
 # Decision Traceability:
 #   - D-01: Filter out NA cancer_codes rows from both tables (Phase 81)
@@ -41,16 +41,16 @@
 #   - D-05: Sort Table 1 by category, then desc(encounter_count) (Phase 81)
 #   - D-09: 3-tier lookup: xlsx -> CODE_SUBCATEGORY_MAP -> code-type fallback (Phase 81)
 #   - D-12: Single xlsx output with 2 sheets matching templates
-#   - D-13: Table 1: category | sub_category | treatment_code | code_type | cancer_codes | encounter_count
-#     Chemo by medication (xlsx col C), Radiation by type (xlsx col G),
-#     SCT by type (xlsx col G), Immunotherapy as one group
+#   - D-13: Table 1: category | sub_category | treatment_code | code_type | cancer_codes
+#     Rows repeated per encounter (no aggregation). Chemo by medication (xlsx col C),
+#     Radiation by type (xlsx col G), SCT by type (xlsx col G), Immunotherapy as one group
 #   - D-14: Table 2: all_treatments | cancer_codes | encounter_count
 #   - D-15: Cancer codes = cancer/neoplasm ICD codes only (not all diagnoses),
 #     semicolon-separated
 #   - D-16: Data source = treatment_episodes.rds + DuckDB DIAGNOSIS join via encounter_ids
 #   - D-01 (P82): Non-informative = sub_categories matching "Encounter Dx" pattern
 #   - D-03 (P82): Co-occurrence checked within same encounter_id, not episode
-#   - D-05 (P82): Orphan dx-only encounters preserved with dx_only flag column
+#   - D-05 (P82): Orphan dx-only encounters preserved (dx_only used internally for dedup)
 #   - D-08 (P82): Deduplication applied to Table 1 only (not Table 2)
 #   - D-10 (P82): Pattern matching via str_detect, not hardcoded lists
 #
@@ -504,18 +504,17 @@ message(glue("  Removed: {n_before - n_after} ({round(100 * (n_before - n_after)
 category_order <- c("Chemotherapy", "Immunotherapy", "Radiation", "SCT")
 
 # Use deduplicated episode_codes for Table 1 (Phase 82: encounter-level dx dedup)
+# Output one row per code instance (no aggregation) -- encounter frequency = row count
 table1 <- episode_codes_dedup %>%
   filter(!is.na(cancer_codes)) %>%  # Per D-01: exclude rows without cancer diagnosis codes
   mutate(category = factor(category, levels = category_order)) %>%  # Per D-05: custom sort order
-  group_by(category, sub_category, treatment_code, code_type, cancer_codes, dx_only) %>%
-  summarise(encounter_count = n(), .groups = "drop") %>%
-  arrange(category, desc(encounter_count)) %>%  # Per D-05: category first, then desc count
+  arrange(category, sub_category, treatment_code) %>%
   mutate(category = as.character(category)) %>%  # Convert back from factor for xlsx output
-  uncount(encounter_count, .remove = FALSE)  # Expand: repeat each row encounter_count times
+  select(category, sub_category, treatment_code, code_type, cancer_codes)
 
-message(glue("  Table 1: {nrow(table1)} rows ({n_distinct(table1$sub_category)} sub-categories, weighted by encounter_count)"))
+message(glue("  Table 1: {nrow(table1)} rows across {n_distinct(table1$sub_category)} sub-categories"))
 
-# Log per sub-category totals (rows = weighted count after uncount expansion)
+# Log per sub-category totals
 subcat_summary <- table1 %>%
   group_by(sub_category) %>%
   summarise(rows = n(), .groups = "drop") %>%
@@ -609,7 +608,7 @@ message(glue("    Total rows: {nrow(table1)}"))
 message(glue("    Categories: {paste(unique(table1$category), collapse = ', ')}"))
 message(glue("    Sub-categories: {n_distinct(table1$sub_category)}"))
 message(glue("    Dx codes deduplicated: {n_before - n_after} instances removed"))
-message(glue("    Orphan dx-only rows preserved: {sum(table1$dx_only, na.rm = TRUE)}"))
+message(glue("    Orphan dx-only rows preserved: {sum(episode_codes_dedup$dx_only & !is.na(episode_codes_dedup$cancer_codes), na.rm = TRUE)}"))
 message()
 message(glue("  Table 2 (Encounter Treatment Summary):"))
 message(glue("    Total rows: {nrow(table2)}"))

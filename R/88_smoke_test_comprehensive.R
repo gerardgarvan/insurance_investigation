@@ -1072,18 +1072,13 @@ check(
 )
 
 check(
-  "R/56 has dx_only flag column (per D-05: preserve orphan encounters)",
+  "R/56 uses dx_only internally for dedup logic (per D-05: preserve orphan encounters)",
   any(grepl("dx_only", r56_lines))
 )
 
 check(
   "R/56 Table 1 uses episode_codes_dedup (deduplicated source)",
   any(grepl("episode_codes_dedup", r56_lines))
-)
-
-check(
-  "R/56 Table 1 group_by includes dx_only column",
-  any(grepl("group_by.*dx_only", r56_lines))
 )
 
 # R/57 checks (if file exists)
@@ -1450,7 +1445,7 @@ message("  * CODE-01: Replaced-by code verification (R/55)")
 message("  * CODE-02: SCT 0362 investigation (R/54)")
 message("  * TREAT-03: Drug grouping summary tables (R/56)")
 message("  * P82-INTEGRATE: Encounter-level dx deduplication in R/56 Table 1")
-message("  * P82-FLAG: dx_only flag column for orphan encounter preservation")
+message("  * P82-FLAG: dx_only used internally for dedup (not in Table 1 output)")
 message("  * ENV-01: IS_LOCAL auto-detection via Sys.info()")
 message("  * ENV-02: R_TESTING_ENV override readable")
 message("  * ENV-03: Local mode paths (tests/fixtures, tempdir)")
