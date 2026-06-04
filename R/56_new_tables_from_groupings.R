@@ -149,6 +149,16 @@ message(glue("  SCT sub-categories: {paste(unique(sct_map), collapse = ', ')}"))
 code_to_subcategory <- c(chemo_map, rad_map, sct_map)
 message(glue("  Total codes with sub-categories: {length(code_to_subcategory)}"))
 
+# Build valid reference code set from column A of all 3 sheets (Phase 87)
+# Only codes appearing in these sheets (or categorized as Immunotherapy) will survive filtering
+valid_reference_codes <- unique(c(
+  as.character(chemo_sheet[[1]]),
+  as.character(rad_sheet[[1]]),
+  as.character(sct_sheet[[1]])
+))
+valid_reference_codes <- valid_reference_codes[!is.na(valid_reference_codes) & valid_reference_codes != ""]
+message(glue("  Valid reference codes (Chemo+Radiation+SCT): {length(valid_reference_codes)}"))
+
 
 # SECTION 4: PREPARE CANCER-ONLY CODES FROM ENCOUNTER LINKAGE ----
 
@@ -248,6 +258,36 @@ episode_codes <- episode_dx %>%
     DRUG_GROUPINGS[treatment_code],
     treatment_type  # fallback for codes not in DRUG_GROUPINGS
   ))
+
+# Filter to only codes in reference xlsx OR Immunotherapy (Phase 87)
+# Supportive Care and unmapped codes not in reference are removed
+n_before_ref_filter <- nrow(episode_codes)
+episode_codes <- episode_codes %>%
+  filter(treatment_code %in% valid_reference_codes | category == "Immunotherapy")
+n_after_ref_filter <- nrow(episode_codes)
+n_removed_ref <- n_before_ref_filter - n_after_ref_filter
+
+message(glue("  Reference filter: {n_before_ref_filter} -> {n_after_ref_filter} code instances ({n_removed_ref} removed)"))
+
+# Log which categories lost codes
+if (n_removed_ref > 0) {
+  removed_codes <- episode_dx %>%
+    mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
+    unnest(code_list) %>%
+    filter(!is.na(code_list), code_list != "") %>%
+    rename(treatment_code = code_list) %>%
+    mutate(category = ifelse(
+      treatment_code %in% names(DRUG_GROUPINGS),
+      DRUG_GROUPINGS[treatment_code],
+      treatment_type
+    )) %>%
+    filter(!treatment_code %in% valid_reference_codes, category != "Immunotherapy") %>%
+    count(category, name = "n_removed") %>%
+    arrange(desc(n_removed))
+  for (i in seq_len(nrow(removed_codes))) {
+    message(glue("    {removed_codes$category[i]}: {removed_codes$n_removed[i]} code instances removed"))
+  }
+}
 
 # Build code-type lookup vectors from TREATMENT_CODES for sub-category fallback
 chemo_dx_codes <- c(TREATMENT_CODES$chemo_dx_icd10, TREATMENT_CODES$chemo_dx_icd9)
@@ -496,9 +536,29 @@ episode_dx <- episode_dx %>% select(-episode_row)
 message()
 message("--- Building Table 2: Encounter Treatment Summary ---")
 
+# Filter triggering_codes to only valid reference codes or Immunotherapy codes (Phase 87)
+# Build set of Immunotherapy codes from DRUG_GROUPINGS for string-level filtering
+immuno_code_set <- names(DRUG_GROUPINGS)[DRUG_GROUPINGS == "Immunotherapy"]
+
+n_t2_before <- nrow(episode_dx %>% filter(!is.na(cancer_codes)))
+
+episode_dx <- episode_dx %>%
+  mutate(
+    triggering_codes = sapply(triggering_codes, function(tc) {
+      if (is.na(tc) || tc == "") return(tc)
+      codes <- str_trim(unlist(str_split(tc, ",")))
+      kept <- codes[codes %in% valid_reference_codes | codes %in% immuno_code_set]
+      if (length(kept) == 0) return(NA_character_)
+      paste(kept, collapse = ", ")
+    }, USE.NAMES = FALSE)
+  )
+
+n_t2_after <- nrow(episode_dx %>% filter(!is.na(cancer_codes) & !is.na(triggering_codes)))
+message(glue("  Reference filter on triggering_codes: {n_t2_before} -> {n_t2_after} rows ({n_t2_before - n_t2_after} dropped)"))
+
 # For each episode: combine all triggering_codes into "all treatments in encounter"
 table2 <- episode_dx %>%
-  filter(!is.na(cancer_codes)) %>%  # Per D-01: exclude rows without cancer diagnosis codes
+  filter(!is.na(cancer_codes), !is.na(triggering_codes)) %>%  # Per D-01 + Phase 87: exclude empty
   mutate(all_treatments = triggering_codes) %>%
   group_by(all_treatments, cancer_codes) %>%
   summarise(encounter_count = n(), .groups = "drop") %>%
@@ -537,6 +597,11 @@ message(glue("  Episodes with cancer codes: {sum(!is.na(episode_dx$cancer_codes)
 message(glue("  Episodes without cancer codes: {n_missing_cancer}"))
 message(glue("  Total diagnosis records: {nrow(dx_data)}"))
 message(glue("  Cancer diagnosis records: {nrow(dx_cancer)}"))
+message()
+message(glue("  Reference code filter (Phase 87):"))
+message(glue("    Valid reference codes: {length(valid_reference_codes)}"))
+message(glue("    Table 1: {n_before_ref_filter} -> {n_after_ref_filter} code instances ({n_removed_ref} removed)"))
+message(glue("    Table 2: {n_t2_before} -> {n_t2_after} rows ({n_t2_before - n_t2_after} dropped)"))
 message()
 message(glue("  Table 1 (Sub-Category Summary):"))
 message(glue("    Total rows: {nrow(table1)}"))
