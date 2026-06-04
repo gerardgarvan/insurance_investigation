@@ -1,41 +1,79 @@
-# Requirements: PCORnet Payer Variable Investigation — v2.1 Clinical Data Refinements & NLPHL Breakout
+# Requirements: PCORnet Payer Variable Investigation — v2.2 Local Testing Infrastructure
 
-**Defined:** 2026-06-02
+**Defined:** 2026-06-03
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## v2.1 Requirements
+## v2.2 Requirements
 
-Requirements for clinical data refinements, NLPHL breakout, treatment pipeline changes, death data integration, code verification, and visualization.
+Requirements for local testing infrastructure: environment detection, test fixtures, validation, and supporting infrastructure.
 
-### Cancer Classification
+### Environment Detection
 
-- [x] **CANCER-01**: NLPHL (C81.0 / 201.4x) broken out from Hodgkin Lymphoma as distinct cancer category in CANCER_SITE_MAP, classify_codes(), and all downstream outputs including Gantt
-- [x] **CANCER-02**: Pre/post cancer summary table requires 7-day unique day gap for ALL cancer categories (not just HL), with total population = 6,347
-- [x] **CANCER-03**: Cancer_category and triggering code description populated per episode using drug groupings from all_codes_resolved_next_tables.xlsx
+- [ ] **ENV-01**: Pipeline auto-detects local Windows vs HiPerGator Linux using Sys.info()
+- [ ] **ENV-02**: Environment overridable via R_TESTING_ENV environment variable
+- [ ] **ENV-03**: Local mode configures tests/fixtures/ for data, tempdir() for DuckDB and RDS cache
+- [ ] **ENV-04**: HiPerGator production mode is the safe default — no behavior change when env var unset
+- [ ] **ENV-05**: Environment detection logs which mode is active at startup
+- [ ] **ENV-06**: Local mode uses 1 thread; HiPerGator uses SLURM-allocated cores
 
-### Treatment Pipeline
+### Test Fixtures
 
-- [x] **TREAT-01**: All treatment data sourced from tumor registry dropped from treatment episode pipeline
-- [x] **TREAT-02**: Drug groupings loaded from all_codes_resolved_next_tables.xlsx and centralized in R/00_config.R
-- [x] **TREAT-03**: Two new summary tables matching all_codes_resolved_next_tables.xlsx Sheet1 templates: (1) treatment-type-level summary (Chemo, Radiation, SCT, Immunotherapy) with cancer codes and encounter counts, (2) drug-level summary (individual drugs/treatments) with cancer codes and encounter counts
+- [ ] **FIX-01**: Hand-crafted fixture CSVs (~20 patients) covering all 13 PCORnet CDM tables in tests/fixtures/
+- [ ] **FIX-02**: Fixtures include all clinical edge cases: dual-eligible, NLPHL, SCT, multiple cancers, death dates, orphan dx, same-day multi-payer, 1900 sentinel dates
+- [ ] **FIX-03**: Fixture design documented in FIXTURE_DESIGN.md with patient-to-edge-case mapping
+- [ ] **FIX-04**: Fixture generation R script creates CSVs reproducibly from documented design
+- [ ] **FIX-05**: Fixture CSVs git-tracked for version control and diff visibility
 
-### Death Data
+### Testing & Validation
 
-- [x] **DEATH-01**: Cause of death data quality profiled (completeness, coding, payer stratification) before integration
-- [x] **DEATH-02**: Cause of death included in outputs (conditional on DEATH-01 showing acceptable data quality)
+- [ ] **TEST-01**: DuckDB ingest (R/03) works with fixture CSVs without code changes
+- [ ] **TEST-02**: R/88 smoke test passes locally against fixtures
+- [ ] **TEST-03**: Smoke test validates environment detection flag and fixture schema
+- [ ] **TEST-04**: Full pipeline end-to-end runnable locally
+- [ ] **TEST-05**: Conditional assertions in smoke test (fixture counts vs production counts)
 
-### Code Verification
+### Infrastructure
 
-- [x] **CODE-01**: "Replaced by" codes from all_codes_resolved_next_tables.xlsx verified against existing code mappings
-- [x] **CODE-02**: 90 patients with SCT code 0362 investigated for other related SCT codes during same encounters
+- [ ] **INFRA-01**: All path construction uses file.path() — no paste0 with path separators
+- [ ] **INFRA-02**: .gitignore updated for .Renviron, .duckdb files, local output artifacts
+- [ ] **INFRA-03**: Local output directories created automatically when missing
+- [ ] **INFRA-04**: .Renviron.example documents the override pattern
 
 ### Quality Standards
 
-- [x] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
+- [ ] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
+
+## Previous Milestone Requirements (v2.1 — Complete)
+
+### Cancer Classification
+
+- [x] **CANCER-01**: NLPHL (C81.0 / 201.4x) broken out from Hodgkin Lymphoma as distinct cancer category
+- [x] **CANCER-02**: Pre/post cancer summary table requires 7-day unique day gap for ALL cancer categories
+- [x] **CANCER-03**: Cancer_category and triggering code description populated per episode
+
+### Treatment Pipeline
+
+- [x] **TREAT-01**: All treatment data sourced from tumor registry dropped
+- [x] **TREAT-02**: Drug groupings centralized in R/00_config.R
+- [x] **TREAT-03**: Two new summary tables (treatment-type-level + drug-level)
+
+### Death Data
+
+- [x] **DEATH-01**: Cause of death data quality profiled before integration
+- [x] **DEATH-02**: Cause of death included in outputs
+
+### Code Verification
+
+- [x] **CODE-01**: "Replaced by" codes verified
+- [x] **CODE-02**: SCT code 0362 patients investigated
+
+### Quality Standards
+
+- [x] **QUAL-01**: All v2.1 scripts follow v2.0 standards
 
 ## Future Requirements
 
-### Visualization (deferred from v2.1)
+### Visualization (deferred)
 
 - **VIZ-01**: Attrition waterfall chart produced from filter log
 - **VIZ-02**: Sankey/alluvial diagram stratified by payer
@@ -47,19 +85,21 @@ Requirements for clinical data refinements, NLPHL breakout, treatment pipeline c
 - **CI-01**: CI/CD integration with automated lintr on PRs (if team grows >3 developers)
 - **LOG-01**: Structured logging via logger package (if machine-readable logs needed)
 - **PKG-01**: Full R package conversion with NAMESPACE/DESCRIPTION (if distributing pipeline)
+- **SYNTH-01**: Full synthetic data generator with realistic distributions (if targeted fixtures prove insufficient)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Stanford V / BEACOPP regimen identification | Only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line |
+| Full synthetic data generator | Targeted fixtures catch logic errors; real data testing stays on HiPerGator |
+| Making all 75 scripts pass locally | Many scripts tightly coupled to real data shape; diminishing ROI |
+| Large-scale synthetic datasets (100-1000 patients) | 20 patients sufficient for edge case testing |
+| Docker/containerization | R + DuckDB install easily on Windows; container adds complexity |
+| Automatic fixture refresh from production | HIPAA risk, complexity outweighs benefit |
+| Multi-environment CI/CD | Not shipping software; single research team |
+| Stanford V / BEACOPP regimen identification | Only 3 regimens cover ~95% of adult first-line |
 | Pediatric protocols (age <21) | Adult protocols only for v1.x-v2.x |
-| Multi-line therapy sequencing | Requires episode boundary formalization first |
-| Statistical modeling / regression | Exploration only; not in scope |
-| Publication-ready figure formatting | Exploratory quality sufficient |
-| RMarkdown / Shiny rendering | Raw R scripts and PNG figures |
-| Full R package conversion | Over-engineering for analysis pipeline |
-| Pipeline orchestration (targets/drake) | Major architecture change; defer to v3+ |
+| Statistical modeling / regression | Exploration only |
 
 ## Traceability
 
@@ -67,23 +107,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CANCER-01 | Phase 75, 77 | Complete |
-| CANCER-02 | Phase 77 | Complete |
-| CANCER-03 | Phase 78 | Complete |
-| TREAT-01 | Phase 76 | Complete |
-| TREAT-02 | Phase 77 | Complete |
-| TREAT-03 | Phase 79 | Complete |
-| DEATH-01 | Phase 75, 78 | Complete |
-| DEATH-02 | Phase 75, 78 | Complete |
-| CODE-01 | Phase 79 | Complete |
-| CODE-02 | Phase 79 | Complete |
-| QUAL-01 | Phases 75-80 (all) | Complete |
+| ENV-01 | TBD | Pending |
+| ENV-02 | TBD | Pending |
+| ENV-03 | TBD | Pending |
+| ENV-04 | TBD | Pending |
+| ENV-05 | TBD | Pending |
+| ENV-06 | TBD | Pending |
+| FIX-01 | TBD | Pending |
+| FIX-02 | TBD | Pending |
+| FIX-03 | TBD | Pending |
+| FIX-04 | TBD | Pending |
+| FIX-05 | TBD | Pending |
+| TEST-01 | TBD | Pending |
+| TEST-02 | TBD | Pending |
+| TEST-03 | TBD | Pending |
+| TEST-04 | TBD | Pending |
+| TEST-05 | TBD | Pending |
+| INFRA-01 | TBD | Pending |
+| INFRA-02 | TBD | Pending |
+| INFRA-03 | TBD | Pending |
+| INFRA-04 | TBD | Pending |
+| QUAL-01 | All phases | Pending |
 
 **Coverage:**
-- v2.1 requirements: 11 total
-- Mapped to phases: 11 (100%)
-- Unmapped: 0
+- v2.2 requirements: 21 total
+- Mapped to phases: 0 (roadmap pending)
+- Unmapped: 21
 
 ---
-*Requirements defined: 2026-06-02*
-*Last updated: 2026-06-02 after plan revision (coverage analysis added to Phase 76)*
+*Requirements defined: 2026-06-03*
+*Last updated: 2026-06-03 after initial definition*
