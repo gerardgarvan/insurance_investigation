@@ -59,7 +59,7 @@
 ### Phases
 
 - [x] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure (completed 2026-06-04)
-- [ ] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases
+- [x] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases (completed 2026-06-04)
 - [ ] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end
 - [ ] **Phase 86: Documentation & Cleanup** - Document workflow, update PROJECT.md, finalize .gitignore and quality standards
 
@@ -90,10 +90,10 @@ Plans:
   3. Developer reads any fixture CSV and sees obviously synthetic data (unrealistic dates 2010-2015, generic site codes, fake patient IDs) preventing HIPAA re-identification
   4. Developer queries fixture CSVs for known edge cases and finds patients PT001-PT002 with dual-eligible records, PT003 with NLPHL diagnosis, PT008 with orphan dx codes
   5. Developer runs git diff after fixture creation and sees all CSVs tracked in version control with total size under 1MB
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 84-01-PLAN.md — Fixture design document and R generation script with all 15 table generators
-- [ ] 84-02-PLAN.md — Write 15 fixture CSV files and verify git tracking
+- [x] 84-02-PLAN.md — Write 15 fixture CSV files and verify git tracking
 
 #### Phase 85: Testing Integration & Validation
 **Goal**: Existing DuckDB ingest (R/03) and smoke test (R/88) run successfully against local test fixtures, validating environment detection and fixture schema with end-to-end pipeline completing in under 2 minutes
@@ -124,7 +124,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 83. Environment Detection & Infrastructure | 2/2 | Complete    | 2026-06-04 |
-| 84. Test Fixture Design & Creation | 1/2 | In Progress|  |
+| 84. Test Fixture Design & Creation | 2/2 | Complete   | 2026-06-04 |
 | 85. Testing Integration & Validation | 0/? | Not started | - |
 | 86. Documentation & Cleanup | 0/? | Not started | - |
 
