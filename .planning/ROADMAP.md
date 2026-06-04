@@ -58,7 +58,7 @@
 
 ### Phases
 
-- [x] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure (completed 2026-06-04)
+- [x] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure (completed 2026-06-04)
 - [ ] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases
 - [ ] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end
 - [ ] **Phase 86: Documentation & Cleanup** - Document workflow, update PROJECT.md, finalize .gitignore and quality standards
@@ -126,5 +126,17 @@ Plans:
 | 85. Testing Integration & Validation | 0/? | Not started | - |
 | 86. Documentation & Cleanup | 0/? | Not started | - |
 
+### Phase 87: Unify ICD-9/ICD-10 Cancer Code Usage
+
+**Goal:** Unify cancer diagnosis code handling across the cancer summary pipeline (R/45-R/49) and drug grouping tables (R/56) so all scripts use both ICD-9 and ICD-10 cancer codes via shared centralized maps, expand HL cohort confirmation to include ICD-9 201.x, and ensure consistent cross-system aggregation rules.
+**Requirements**: ICD-01, ICD-02, ICD-03, ICD-04, ICD-05, ICD-06, ICD-07, ICD-08, ICD-09, ICD-10, ICD-11, ICD-12
+**Depends on:** Phase 82 (v2.1 cancer classification work)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 87-01-PLAN.md — ICD9_CANCER_SITE_MAP config, shared is_cancer_code(), classify_codes() extension
+- [ ] 87-02-PLAN.md — Cancer summary pipeline (R/45, R/47, R/48, R/49) DX_TYPE removal and cohort expansion
+- [ ] 87-03-PLAN.md — R/56 shared utility linkage, R/50 verification, R/88 smoke test validation
+
 ---
-*Last updated: 2026-06-03 -- Phase 83 planned (2 plans, 2 waves)*
+*Last updated: 2026-06-04 -- Phase 87 planned (3 plans, 2 waves)*
