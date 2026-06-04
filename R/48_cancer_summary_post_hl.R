@@ -40,6 +40,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
+source("R/utils/utils_cancer.R")
 
 # SECTION 0: INPUT VALIDATION ----
 # SAFE-02: Validate DIAGNOSIS table is available
@@ -111,19 +112,22 @@ message(glue("  Baseline cancer_summary: {format(nrow(cancer_summary_baseline), 
 # SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----
 # ==============================================================================
 
-message("\nQuerying DIAGNOSIS for C-code diagnosis rows...")
+message("\nQuerying DIAGNOSIS for cancer diagnosis rows (ICD-9 + ICD-10)...")
 
 cohort_ids <- confirmed_hl_cohort$ID
 
+# Load all cancer diagnosis codes (ICD-9 + ICD-10, per D-01)
 dx_raw <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C")) %>%
-  select(ID, DX_norm, DX_DATE) %>%
+  select(ID, DX, DX_TYPE, DX_DATE) %>%
   collect() %>%
-  filter(ID %in% cohort_ids)
+  filter(ID %in% cohort_ids) %>%
+  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
+  filter(is_cancer_code(DX)) %>%
+  # Exclude D-codes (ICD-10) and ICD-9 benign/uncertain (210-239) per D-02
+  filter(!str_detect(DX_norm, "^D")) %>%
+  filter(!substr(DX_norm, 1, 3) %in% as.character(210:239))
 
-message(glue("  Retrieved {format(nrow(dx_raw), big.mark=',')} C-code diagnosis rows for cohort"))
+message(glue("  Retrieved {format(nrow(dx_raw), big.mark=',')} cancer diagnosis rows (C-codes + ICD-9 malignant)"))
 
 # Exclude sentinel/invalid dates (DX_DATE before 1910-01-01)
 # confirmed_hl_cohort.rds already has 1900 sentinels nullified in first_hl_dx_date,

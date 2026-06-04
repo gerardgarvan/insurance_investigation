@@ -38,6 +38,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
+source("R/utils/utils_cancer.R")
 
 # SECTION 0: INPUT VALIDATION ----
 # SAFE-02: Validate DIAGNOSIS table is available
@@ -99,29 +100,29 @@ cohort_with_dates <- confirmed_hl_cohort %>%
 message(glue("  Full cohort (baseline stats): {format(n_total_confirmed, big.mark=',')} patients"))
 message(glue("  Date subset (pre/post/both): {format(nrow(cohort_with_dates), big.mark=',')} patients"))
 
-# --- HL diagnosis date diagnostics (C81 rows for confirmed cohort) ---
-message("\nHL Diagnosis Date Check (C81 rows for confirmed cohort):")
+# --- HL diagnosis date diagnostics (HL rows: ICD-10 C81 + ICD-9 201.x, per D-09) ---
+message("\nHL Diagnosis Date Check (HL rows for confirmed cohort):")
 
-hl_c81_dx <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  select(ID, DX, DX_DATE) %>%
+# HL diagnosis rows: ICD-10 C81 + ICD-9 201.x (per D-09)
+hl_dx <- get_pcornet_table("DIAGNOSIS") %>%
+  select(ID, DX, DX_TYPE, DX_DATE) %>%
   collect() %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C81")) %>%
+  filter(str_detect(DX_norm, "^C81") | str_detect(DX_norm, "^201")) %>%
   filter(ID %in% confirmed_hl_cohort$ID)
 
-n_with_c81_dx <- n_distinct(hl_c81_dx$ID)
-n_no_c81_dx <- n_total_confirmed - n_with_c81_dx
-message(glue("  Cohort patients with any C81 dx row:   {format(n_with_c81_dx, big.mark=',')}"))
-message(glue("  Cohort patients with NO C81 dx row:    {format(n_no_c81_dx, big.mark=',')}"))
+n_with_hl_dx <- n_distinct(hl_dx$ID)
+n_no_hl_dx <- n_total_confirmed - n_with_hl_dx
+message(glue("  Cohort patients with any HL dx row (C81 + 201.x):  {format(n_with_hl_dx, big.mark=',')}"))
+message(glue("  Cohort patients with NO HL dx row:                 {format(n_no_hl_dx, big.mark=',')}"))
 
-hl_c81_with_date <- hl_c81_dx %>% filter(!is.na(DX_DATE))
-n_valid_c81_date <- n_distinct(hl_c81_with_date$ID)
-n_no_c81_date <- n_with_c81_dx - n_valid_c81_date
-message(glue("  With valid C81 DX_DATE:                {format(n_valid_c81_date, big.mark=',')}"))
-message(glue("  With NO valid C81 DX_DATE:             {format(n_no_c81_date, big.mark=',')}"))
+hl_with_date <- hl_dx %>% filter(!is.na(DX_DATE))
+n_valid_hl_date <- n_distinct(hl_with_date$ID)
+n_no_hl_date <- n_with_hl_dx - n_valid_hl_date
+message(glue("  With valid HL DX_DATE:                             {format(n_valid_hl_date, big.mark=',')}"))
+message(glue("  With NO valid HL DX_DATE:                          {format(n_no_hl_date, big.mark=',')}"))
 
-n_c81_7day <- hl_c81_with_date %>%
+n_hl_7day <- hl_with_date %>%
   distinct(ID, DX_DATE) %>%
   group_by(ID) %>%
   filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
@@ -129,13 +130,14 @@ n_c81_7day <- hl_c81_with_date %>%
   pull(ID) %>%
   n_distinct()
 
-message(glue("  With 2+ unique dates, 7-day span:      {format(n_c81_7day, big.mark=',')}"))
-message(glue("  Rate (of cohort):                      {scales::percent(n_c81_7day / n_total_confirmed, accuracy=0.1)}"))
-message(glue("  Rate (of those with date):             {scales::percent(n_c81_7day / n_valid_c81_date, accuracy=0.1)}"))
+message(glue("  With 2+ unique dates, 7-day span:                  {format(n_hl_7day, big.mark=',')}"))
+message(glue("  Rate (of cohort):                                  {scales::percent(n_hl_7day / n_total_confirmed, accuracy=0.1)}"))
+message(glue("  Rate (of those with date):                         {scales::percent(n_hl_7day / n_valid_hl_date, accuracy=0.1)}"))
 
 # --- Phase 77 CANCER-01: NLPHL vs Classical HL diagnostic split ---
-hl_nlphl <- hl_c81_dx %>% filter(str_detect(DX_norm, "^C810"))
-hl_classical <- hl_c81_dx %>% filter(!str_detect(DX_norm, "^C810"))
+# ICD-10 C81.0x OR ICD-9 201.4x = NLPHL
+hl_nlphl <- hl_dx %>% filter(str_detect(DX_norm, "^C810") | str_detect(DX_norm, "^2014"))
+hl_classical <- hl_dx %>% filter(!str_detect(DX_norm, "^C810") & !str_detect(DX_norm, "^2014"))
 
 n_with_nlphl <- n_distinct(hl_nlphl$ID)
 n_with_classical <- n_distinct(hl_classical$ID)
@@ -149,7 +151,7 @@ if (n_with_both > 0) {
   warning(glue("[R/49 WARNING] {n_with_both} patients have both NLPHL and classical HL codes -- clinically valid but flagged for review"))
 }
 
-rm(hl_nlphl, hl_classical, hl_c81_dx, hl_c81_with_date)
+rm(hl_nlphl, hl_classical, hl_dx, hl_with_date)
 
 # Load baseline cancer_summary.csv (for baseline metrics per D-01)
 # SAFE-01: Validate input CSV exists
@@ -183,31 +185,37 @@ message(glue("  V2 unique patients: {format(v2_n_patients, big.mark=',')}"))
 message(glue("  V2 unique codes: {format(v2_n_codes, big.mark=',')}"))
 
 # CANCER-02 / D-04: Assert total v2 population within tolerance range
+# NOTE: Phase 87 expanded cohort to include ICD-9 201.x confirmed patients.
+# Assertion bounds may need adjustment when first run with real data.
+# Expected increase: 5-15% based on OneFlorida+ 2011-2025 date range.
 checkmate::assert_int(
   as.integer(v2_n_patients),
-  lower = 6300L, upper = 6500L,
-  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day total population expected 6300-6500, got {v2_n_patients}")
+  lower = 6300L, upper = 7500L,  # Widened upper bound for ICD-9 cohort expansion
+  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day total population expected 6300-7500, got {v2_n_patients}")
 )
-message(glue("  V2 population assertion PASSED: {v2_n_patients} in [6300, 6500]"))
+message(glue("  V2 population assertion PASSED: {v2_n_patients} in [6300, 7500]"))
 
 # ==============================================================================
 # SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----
 # ==============================================================================
 
-message("\nQuerying DIAGNOSIS for C-code diagnosis rows...")
+message("\nQuerying DIAGNOSIS for cancer diagnosis rows (ICD-9 + ICD-10)...")
 
 # Use full cohort for DuckDB query; pre/post filtering happens in Section 5
 cohort_ids <- confirmed_hl_cohort$ID
 
+# Load all cancer diagnosis codes (ICD-9 + ICD-10, per D-01)
 dx_raw <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C")) %>%
-  select(ID, DX_norm, DX_DATE) %>%
+  select(ID, DX, DX_TYPE, DX_DATE) %>%
   collect() %>%
-  filter(ID %in% cohort_ids)
+  filter(ID %in% cohort_ids) %>%
+  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
+  filter(is_cancer_code(DX)) %>%
+  # Exclude D-codes and ICD-9 benign/uncertain (210-239) per D-02
+  filter(!str_detect(DX_norm, "^D")) %>%
+  filter(!substr(DX_norm, 1, 3) %in% as.character(210:239))
 
-message(glue("  Retrieved {format(nrow(dx_raw), big.mark=',')} C-code diagnosis rows for cohort"))
+message(glue("  Retrieved {format(nrow(dx_raw), big.mark=',')} cancer diagnosis rows (C-codes + ICD-9 malignant)"))
 
 # Exclude sentinel dates (per D-11)
 n_sentinel <- sum(!is.na(dx_raw$DX_DATE) & dx_raw$DX_DATE < SENTINEL_CUTOFF)
@@ -218,13 +226,13 @@ dx_raw <- dx_raw %>%
 
 message(glue("  After sentinel exclusion: {format(nrow(dx_raw), big.mark=',')} rows"))
 
-# Exclude C81 rows from dx_raw (per D-09)
-n_before_c81_removal <- nrow(dx_raw)
+# Exclude HL anchor codes from pre/post analysis (C81 + 201.x per D-11)
+n_before_hl_removal <- nrow(dx_raw)
 dx_raw <- dx_raw %>%
-  filter(!str_detect(DX_norm, "^C81"))
-n_removed_c81 <- n_before_c81_removal - nrow(dx_raw)
+  filter(!str_detect(DX_norm, "^C81") & !str_detect(DX_norm, "^201"))
+n_removed_hl <- n_before_hl_removal - nrow(dx_raw)
 
-message(glue("  C81 rows excluded: {format(n_removed_c81, big.mark=',')} ({format(nrow(dx_raw), big.mark=',')} remaining)"))
+message(glue("  HL anchor rows excluded (C81 + 201.x): {format(n_removed_hl, big.mark=',')} ({format(nrow(dx_raw), big.mark=',')} remaining)"))
 
 # ==============================================================================
 # SECTION 5: COMPUTE PRE/POST/BOTH SETS ----
@@ -339,16 +347,18 @@ message("\nComputing baseline metrics from cancer_summary...")
 # Code-level baseline metrics (already filtered to confirmed cohort, no D-codes; C81 included)
 code_baseline <- compute_code_baseline(cancer_summary, "V1 unfiltered")
 
-# Query DuckDB record counts per code (including C81)
+# Query DuckDB record counts per code (including HL codes: C81 + 201.x)
 message("\nQuerying DIAGNOSIS for record counts...")
 
+# Record counts query: all cancer codes (ICD-9 + ICD-10)
 dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
-  filter(DX_TYPE == "10") %>%
-  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^C")) %>%
-  select(ID, DX_norm) %>%
+  select(ID, DX, DX_TYPE) %>%
   collect() %>%
   filter(ID %in% cohort_ids) %>%
+  mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
+  filter(is_cancer_code(DX)) %>%
+  filter(!str_detect(DX_norm, "^D")) %>%
+  filter(!substr(DX_norm, 1, 3) %in% as.character(210:239)) %>%
   group_by(DX_norm) %>%
   summarise(total_records = n(), .groups = "drop")
 
@@ -380,10 +390,10 @@ code_summary <- code_baseline %>%
   left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
   mutate(
     total_records = coalesce(total_records, 0L),
-    # C81 codes keep NA for pre/post/both (anchor diagnosis); others get 0
-    pre_hl_count  = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
-    post_hl_count = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
-    both_count    = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(both_count), 0L))
+    # C81 + 201.x = HL anchor codes, NA for pre/post (per D-11)
+    pre_hl_count  = if_else(str_detect(cancer_code, "^C81") | str_detect(cancer_code, "^201"), NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
+    post_hl_count = if_else(str_detect(cancer_code, "^C81") | str_detect(cancer_code, "^201"), NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
+    both_count    = if_else(str_detect(cancer_code, "^C81") | str_detect(cancer_code, "^201"), NA_integer_, coalesce(as.integer(both_count), 0L))
   )
 
 # Select columns: R/55 baseline stats + pre/post/both + total records
@@ -544,9 +554,10 @@ code_summary_v2 <- code_baseline_v2 %>%
   left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
   mutate(
     total_records = coalesce(total_records, 0L),
-    pre_hl_count  = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
-    post_hl_count = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
-    both_count    = if_else(str_detect(cancer_code, "^C81"), NA_integer_, coalesce(as.integer(both_count), 0L))
+    # C81 + 201.x = HL anchor codes, NA for pre/post (per D-11)
+    pre_hl_count  = if_else(str_detect(cancer_code, "^C81") | str_detect(cancer_code, "^201"), NA_integer_, coalesce(as.integer(pre_hl_count), 0L)),
+    post_hl_count = if_else(str_detect(cancer_code, "^C81") | str_detect(cancer_code, "^201"), NA_integer_, coalesce(as.integer(post_hl_count), 0L)),
+    both_count    = if_else(str_detect(cancer_code, "^C81") | str_detect(cancer_code, "^201"), NA_integer_, coalesce(as.integer(both_count), 0L))
   ) %>%
   select(
     cancer_code, category, total_patients, confirmed_2date, pct_confirmed_2date,
