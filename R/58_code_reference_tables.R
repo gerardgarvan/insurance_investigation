@@ -36,10 +36,11 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/utils/utils_cancer.R")  # classify_codes()
 
-CANCER_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_pre_post.xlsx")
-DRUG_XLSX   <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
-DESC_RDS    <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
-OUTPUT_XLSX <- file.path(CONFIG$output_dir, "tables", "code_reference.xlsx")
+CANCER_XLSX    <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_pre_post.xlsx")
+DRUG_XLSX      <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
+REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
+DESC_RDS       <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
+OUTPUT_XLSX    <- file.path(CONFIG$output_dir, "tables", "code_reference.xlsx")
 
 message("=== Code Reference Tables ===")
 message()
@@ -300,6 +301,15 @@ all_desc <- c(code_desc, radiation_hardcoded, config_descriptions)
 all_desc <- all_desc[!duplicated(names(all_desc), fromLast = TRUE)]
 message(glue("  Total description entries: {length(all_desc)}"))
 
+# Load chemo medication names from reference xlsx (column A = code, column C = Medication)
+message()
+message("--- Loading chemo medication names from reference xlsx ---")
+ref_wb <- wb_load(REFERENCE_XLSX)
+chemo_sheet <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
+chemo_med_map <- setNames(as.character(chemo_sheet[[3]]), as.character(chemo_sheet[[1]]))
+chemo_med_map <- chemo_med_map[!is.na(names(chemo_med_map)) & !is.na(chemo_med_map)]
+message(glue("  Chemo medication descriptions: {length(chemo_med_map)} codes"))
+
 
 # SECTION 3: CANCER CODES SHEET ----
 
@@ -345,8 +355,10 @@ treatment_codes <- drug_raw %>%
   filter(!is.na(treatment_code)) %>%
   distinct(treatment_code, code_type, category, sub_category) %>%
   mutate(
-    # Look up description: all_desc > CODE_SUBCATEGORY_MAP > sub_category fallback
+    # Chemo: use medication name from reference xlsx (highest priority)
+    # Non-chemo: all_desc > CODE_SUBCATEGORY_MAP > sub_category fallback
     description = case_when(
+      category == "Chemotherapy" & treatment_code %in% names(chemo_med_map) ~ chemo_med_map[treatment_code],
       treatment_code %in% names(all_desc) ~ all_desc[treatment_code],
       treatment_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[treatment_code],
       TRUE ~ sub_category
