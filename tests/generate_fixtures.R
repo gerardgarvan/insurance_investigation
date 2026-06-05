@@ -7,6 +7,18 @@
 #   covering 11 clinical edge cases, then writes 15 PCORnet CDM table CSVs to
 #   tests/fixtures/ directory.
 #
+# Inputs:
+#   - R/00_config.R (PCORNET_TABLES, PCORNET_PATHS, ICD_CODES, TREATMENT_CODES)
+#
+# Outputs:
+#   - 15 CSV files in tests/fixtures/ (one per PCORnet CDM table)
+#
+# Dependencies:
+#   - tibble, dplyr, readr, glue, purrr
+#   - R/00_config.R (must be sourced first)
+#
+# Requirements: FIX-01, FIX-02, FIX-03, FIX-04
+#
 # Usage:
 #   source("tests/generate_fixtures.R")
 #   # Writes 15 CSVs to tests/fixtures/

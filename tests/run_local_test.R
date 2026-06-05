@@ -7,6 +7,20 @@
 #   environment detection, CSV loading, DuckDB ingest, and smoke test pass.
 #   Measures total execution time against 2-minute target (TEST-04).
 #
+# Inputs:
+#   - R/00_config.R, R/01_load_pcornet.R, R/03_duckdb_ingest.R, R/88_smoke_test_comprehensive.R
+#   - tests/fixtures/ directory with 15 PCORnet CDM CSVs
+#
+# Outputs:
+#   - Console output: per-step timing, validation results, PASS/FAIL summary
+#   - Exit code 0 (success) or 1 (failure) for Rscript compatibility
+#
+# Dependencies:
+#   - tidyverse, duckdb, DBI, vroom, glue
+#   - IS_LOCAL must be TRUE (aborts otherwise)
+#
+# Requirements: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+#
 # Usage:
 #   From project root in RStudio:
 #     source("tests/run_local_test.R")
@@ -18,8 +32,6 @@
 #   - R with tidyverse, duckdb, DBI, vroom, glue packages installed
 #   - tests/fixtures/ directory populated with 15 PCORnet CDM CSVs (Phase 84)
 #   - Must be run from the project root directory (where R/ and tests/ are)
-#
-# Requirements: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
 #
 # ==============================================================================
 
