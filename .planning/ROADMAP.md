@@ -60,7 +60,7 @@
 
 - [x] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure (completed 2026-06-04)
 - [x] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases (completed 2026-06-04)
-- [x] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end (completed 2026-06-05)
+- [x] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end (completed 2026-06-05)
 - [ ] **Phase 86: Documentation & Cleanup** - Document workflow, update PROJECT.md, finalize .gitignore and quality standards
 
 ### Phase Details
@@ -119,7 +119,9 @@ Plans:
   3. Developer opens .Renviron.example and sees commented example showing R_TESTING_ENV override pattern without exposing real credentials or paths
   4. Developer runs styler on all modified scripts and sees no formatting changes (already compliant with tidyverse style)
   5. Developer runs lintr on all modified scripts and sees no violations, all scripts have documentation headers and inline comments explaining WHY
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 86-01-PLAN.md — PROJECT.md v2.2 milestone shipping + quality standards compliance for v2.2 scripts
 
 ### v2.2 Progress
 
@@ -128,7 +130,7 @@ Plans:
 | 83. Environment Detection & Infrastructure | 2/2 | Complete    | 2026-06-04 |
 | 84. Test Fixture Design & Creation | 2/2 | Complete    | 2026-06-04 |
 | 85. Testing Integration & Validation | 1/1 | Complete    | 2026-06-05 |
-| 86. Documentation & Cleanup | 0/? | Not started | - |
+| 86. Documentation & Cleanup | 0/1 | Not started | - |
 
 ### Phase 87: Unify ICD-9/ICD-10 Cancer Code Usage
 
@@ -163,4 +165,4 @@ Plans:
 - [x] 89-01-PLAN.md — R/56 + R/57 grain-labeled filenames and sheet names, R/58 + R/88 downstream updates
 
 ---
-*Last updated: 2026-06-05 -- Phase 85 planned (1 plan, 1 wave)*
+*Last updated: 2026-06-05 -- Phase 86 planned (1 plan, 1 wave)*
