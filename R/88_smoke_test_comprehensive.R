@@ -1002,12 +1002,13 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
   check("R/56 reads treatment_episodes.rds input",
         any(grepl("treatment_episodes\\.rds", r56_lines)))
 
-  check("R/56 outputs drug_grouping_tables.xlsx",
+  check("R/56 outputs episode_level_drug_grouping_tables.xlsx (new) and drug_grouping_tables.xlsx (compat)",
+        any(grepl("episode_level_drug_grouping_tables\\.xlsx", r56_lines)) &&
         any(grepl("drug_grouping_tables\\.xlsx", r56_lines)))
 
-  check("R/56 has 2-sheet workbook (Sub-Category Summary + Encounter Treatment Summary)",
-        any(grepl("Treatment Sub-Category Summary", r56_lines)) &&
-        any(grepl("Encounter Treatment Summary", r56_lines)))
+  check("R/56 has grain-prefixed sheets (Ep: Sub-Category Summary + Ep: Encounter Treatment)",
+        any(grepl("Ep: Sub-Category Summary", r56_lines)) &&
+        any(grepl("Ep: Encounter Treatment", r56_lines)))
 
   n_sections_r56 <- sum(grepl("^# SECTION.*----", r56_lines))
   check(glue("R/56 has >= 6 section headers (found: {n_sections_r56})"),
@@ -1434,12 +1435,13 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
   check("R/57 reads treatment_episode_detail.rds input (encounter-level)",
         any(grepl("treatment_episode_detail\\.rds", r57_lines)))
 
-  check("R/57 outputs drug_grouping_instances.xlsx",
+  check("R/57 outputs encounter_level_drug_grouping_instances.xlsx (new) and drug_grouping_instances.xlsx (compat)",
+        any(grepl("encounter_level_drug_grouping_instances\\.xlsx", r57_lines)) &&
         any(grepl("drug_grouping_instances\\.xlsx", r57_lines)))
 
-  check("R/57 has 2-sheet workbook (Treatment Sub-Category Detail + Encounter Treatment Detail)",
-        any(grepl("Treatment Sub-Category Detail", r57_lines)) &&
-        any(grepl("Encounter Treatment Detail", r57_lines)))
+  check("R/57 has grain-prefixed sheets (Enc: Sub-Category Detail + Enc: Treatment Detail)",
+        any(grepl("Enc: Sub-Category Detail", r57_lines)) &&
+        any(grepl("Enc: Treatment Detail", r57_lines)))
 
   check("R/57 defines map_cancer_codes_to_categories helper function",
         any(grepl("map_cancer_codes_to_categories", r57_lines)))
@@ -1530,7 +1532,7 @@ message("  * P88-D01/D02: Instance-level tables in separate xlsx (R/57)")
 message("  * P88-D03: Sub-category names via 3-tier resolution")
 message("  * P88-D04: Cancer site category names from CANCER_SITE_MAP + ICD9_CANCER_SITE_MAP")
 message("  * P88-D05/D06: Per-episode rows with patient_id, dates, treatment_category")
-message("  * P88-D07/D08: New drug_grouping_instances.xlsx with 2 sheets, per-episode grain")
+message("  * P88-D07/D08: New encounter_level_drug_grouping_instances.xlsx with 2 sheets, per-encounter grain")
 
 if (failed > 0) {
   quit(status = 1)

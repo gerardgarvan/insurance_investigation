@@ -10,7 +10,7 @@
 #
 # Inputs:
 #   - output/tables/cancer_summary_table_pre_post.xlsx ("Code Summary" sheet)
-#   - output/drug_grouping_tables.xlsx ("Treatment Sub-Category Summary" sheet)
+#   - output/episode_level_drug_grouping_tables.xlsx ("Ep: Sub-Category Summary" sheet)
 #   - cache/outputs/code_descriptions.rds (optional; built by R/42)
 #   - R/00_config.R (CANCER_SITE_MAP, ICD9_CANCER_SITE_MAP, CODE_SUBCATEGORY_MAP)
 #   - R/utils/utils_cancer.R (classify_codes)
@@ -37,7 +37,7 @@ source("R/00_config.R")
 source("R/utils/utils_cancer.R")  # classify_codes()
 
 CANCER_XLSX    <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table_pre_post.xlsx")
-DRUG_XLSX      <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
+DRUG_XLSX      <- file.path(CONFIG$output_dir, "episode_level_drug_grouping_tables.xlsx")
 REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
 DESC_RDS       <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 OUTPUT_XLSX    <- file.path(CONFIG$output_dir, "tables", "code_reference.xlsx")
@@ -355,7 +355,7 @@ message()
 message("--- Building treatment codes reference ---")
 
 drug_wb <- wb_load(DRUG_XLSX)
-drug_raw <- wb_to_df(drug_wb, sheet = "Treatment Sub-Category Summary")
+drug_raw <- wb_to_df(drug_wb, sheet = "Ep: Sub-Category Summary")
 
 # Extract unique treatment codes with their code_type and category
 treatment_codes <- drug_raw %>%

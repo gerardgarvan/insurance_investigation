@@ -20,9 +20,10 @@
 #     DRUG_GROUPINGS)
 #
 # Outputs:
-#   - output/drug_grouping_instances.xlsx (2-sheet workbook:
-#     Sheet 1 = "Treatment Sub-Category Detail" (encounter-level),
-#     Sheet 2 = "Encounter Treatment Detail" (encounter-level))
+#   - output/encounter_level_drug_grouping_instances.xlsx (2-sheet workbook:
+#     Sheet 1 = "Enc: Sub-Category Detail" (encounter-level),
+#     Sheet 2 = "Enc: Treatment Detail" (encounter-level))
+#   - output/drug_grouping_instances.xlsx (backward compat copy, identical content)
 #
 # Dependencies:
 #   - R/00_config.R (DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP,
@@ -56,7 +57,9 @@ source("R/utils/utils_cancer.R")  # is_cancer_code(), classify_codes()
 
 DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
-OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_instances.xlsx")
+# Phase 89: Dual-output file paths (encounter-level grain)
+NEW_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "encounter_level_drug_grouping_instances.xlsx")
+OLD_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_instances.xlsx")  # Backward compat
 
 # --- Log console output to file ---
 LOG_FILE <- file.path(CONFIG$output_dir, "57_drug_grouping_instances.log")
@@ -75,7 +78,8 @@ message("=== Phase 88: Drug Grouping Instance-Level Tables (Encounter Grain) ===
 message()
 message(glue("  Detail RDS: {DETAIL_RDS}"))
 message(glue("  Reference: {REFERENCE_XLSX}"))
-message(glue("  Output: {OUTPUT_XLSX}"))
+message(glue("  Output (new): {NEW_OUTPUT_XLSX}"))
+message(glue("  Output (compat): {OLD_OUTPUT_XLSX}"))
 message()
 
 
@@ -400,24 +404,28 @@ message(glue("  Unique patients: {n_distinct(table2$patient_id)}"))
 message(glue("  Unique encounters: {n_distinct(table2$ENCOUNTERID)}"))
 
 
-# SECTION 7: WRITE XLSX OUTPUT ----
+# SECTION 7: WRITE XLSX OUTPUT (Phase 89: grain-labeled) ----
 
 message()
-message("--- Writing multi-sheet XLSX output ---")
+message("--- Writing multi-sheet XLSX output (encounter-level grain) ---")
 
 wb <- wb_workbook()
 
-# Sheet 1: Treatment Sub-Category Detail (encounter-level)
-wb$add_worksheet("Treatment Sub-Category Detail")
-wb$add_data("Treatment Sub-Category Detail", table1, start_row = 1, col_names = TRUE)
+# Sheet 1: Encounter-Level Sub-Category Detail (abbreviated for 31-char Excel limit)
+wb$add_worksheet("Enc: Sub-Category Detail")
+wb$add_data("Enc: Sub-Category Detail", table1, start_row = 1, col_names = TRUE)
 
-# Sheet 2: Encounter Treatment Detail (encounter-level)
-wb$add_worksheet("Encounter Treatment Detail")
-wb$add_data("Encounter Treatment Detail", table2, start_row = 1, col_names = TRUE)
+# Sheet 2: Encounter-Level Treatment Detail (abbreviated for 31-char Excel limit)
+wb$add_worksheet("Enc: Treatment Detail")
+wb$add_data("Enc: Treatment Detail", table2, start_row = 1, col_names = TRUE)
 
-wb$save(OUTPUT_XLSX)
-message()
-message(glue("Saved: {OUTPUT_XLSX}"))
+# Save to new self-documenting filename (per D-02)
+wb$save(NEW_OUTPUT_XLSX)
+message(glue("Saved (new): {NEW_OUTPUT_XLSX}"))
+
+# Save to old filename for backward compatibility (per D-03)
+wb$save(OLD_OUTPUT_XLSX)
+message(glue("Saved (backward compat): {OLD_OUTPUT_XLSX}"))
 
 
 # SECTION 8: CONSOLE SUMMARY ----
@@ -428,26 +436,30 @@ message(glue("  Total detail rows loaded: {nrow(detail)}"))
 message(glue("  Rows with cancer category names: {n_with_categories}"))
 message(glue("  Rows without cancer category names: {n_without_categories}"))
 message()
-message(glue("  Table 1 (Sub-Category Encounter Detail):"))
+message(glue("  Table 1 (Enc: Sub-Category Detail):"))
 message(glue("    Total rows: {nrow(table1)}"))
 message(glue("    Unique sub-categories: {n_distinct(unlist(str_split(table1$sub_category_names, ';')))}"))
 message(glue("    Unique patients: {n_distinct(table1$patient_id)}"))
 message(glue("    Unique encounters: {n_distinct(table1$ENCOUNTERID)}"))
 message()
-message(glue("  Table 2 (Encounter Treatment Code Detail):"))
+message(glue("  Table 2 (Enc: Treatment Detail):"))
 message(glue("    Total rows: {nrow(table2)}"))
 message(glue("    Unique patients: {n_distinct(table2$patient_id)}"))
 message(glue("    Unique encounters: {n_distinct(table2$ENCOUNTERID)}"))
 message()
 
-# Verify drug_grouping_tables.xlsx was NOT modified
-old_file <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
-if (file.exists(old_file)) {
+# Verify drug_grouping_tables.xlsx was NOT modified by this script
+old_r56_file <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
+if (file.exists(old_r56_file)) {
   message(glue("  Verified: drug_grouping_tables.xlsx exists and was NOT modified by this script"))
 } else {
   message(glue("  NOTE: drug_grouping_tables.xlsx not found (expected if R/56 not yet run)"))
 }
 
+message()
+message(glue("  Output files:"))
+message(glue("    {NEW_OUTPUT_XLSX} (primary)"))
+message(glue("    {OLD_OUTPUT_XLSX} (backward compatibility)"))
 message()
 message("Done.")
 
