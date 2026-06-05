@@ -41,7 +41,7 @@ Requirements for local testing infrastructure: environment detection, test fixtu
 
 ### Quality Standards
 
-- [ ] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
+- [x] **QUAL-01**: All new/modified scripts follow v2.0 standards (styler formatting, lintr compliance, checkmate assertions, documentation headers, smoke test updates)
 
 ## Previous Milestone Requirements (v2.1 — Complete)
 
@@ -127,7 +127,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-02 | Phase 83 | Complete |
 | INFRA-03 | Phase 83 | Complete |
 | INFRA-04 | Phase 83 | Complete |
-| QUAL-01 | Phase 86 | Pending |
+| QUAL-01 | Phase 86 | Complete |
 
 **Coverage:**
 - v2.2 requirements: 21 total (20 specific + 1 cross-cutting)
