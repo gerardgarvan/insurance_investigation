@@ -17,8 +17,9 @@
 #   - R/00_config.R (DRUG_GROUPINGS, CANCER_SITE_MAP, CONFIG paths)
 #
 # Outputs:
-#   - output/drug_grouping_tables.xlsx (2-sheet workbook:
-#     Sheet 1 = "Treatment Sub-Category Summary", Sheet 2 = "Encounter Treatment Summary")
+#   - output/episode_level_drug_grouping_tables.xlsx (2-sheet workbook:
+#     Sheet 1 = "Ep: Sub-Category Summary", Sheet 2 = "Ep: Encounter Treatment")
+#   - output/drug_grouping_tables.xlsx (backward compat copy, identical content)
 #
 # Dependencies:
 #   - R/00_config.R (DRUG_GROUPINGS, CANCER_SITE_MAP, CONFIG paths)
@@ -78,7 +79,9 @@ source("R/utils/utils_cancer.R")  # is_cancer_code(), classify_codes()
 
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
-OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")
+# Phase 89: Dual-output file paths (episode-level grain)
+NEW_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "episode_level_drug_grouping_tables.xlsx")
+OLD_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")  # Backward compat
 
 # --- Log console output to file ---
 LOG_FILE <- file.path(CONFIG$output_dir, "56_new_tables_from_groupings.log")
@@ -97,7 +100,8 @@ message("=== Phase 79: Drug Grouping Summary Tables ===")
 message()
 message(glue("  Episodes: {EPISODES_RDS}"))
 message(glue("  Reference: {REFERENCE_XLSX}"))
-message(glue("  Output: {OUTPUT_XLSX}"))
+message(glue("  Output (new): {NEW_OUTPUT_XLSX}"))
+message(glue("  Output (compat): {OLD_OUTPUT_XLSX}"))
 message()
 
 
@@ -568,24 +572,28 @@ message(glue("  Table 2: {nrow(table2)} unique treatment-set x cancer-code combi
 message(glue("  Unique treatment sets: {n_distinct(table2$all_treatments)}"))
 
 
-# SECTION 7: WRITE XLSX OUTPUT (per D-12) ----
+# SECTION 7: WRITE XLSX OUTPUT (per D-12, Phase 89: grain-labeled) ----
 
 message()
-message("--- Writing multi-sheet XLSX output ---")
+message("--- Writing multi-sheet XLSX output (episode-level grain) ---")
 
 wb <- wb_workbook()
 
-# Sheet 1: Sub-Category Summary
-wb$add_worksheet("Treatment Sub-Category Summary")
-wb$add_data("Treatment Sub-Category Summary", table1, start_row = 1, col_names = TRUE)
+# Sheet 1: Episode-Level Sub-Category Summary (abbreviated for 31-char Excel limit)
+wb$add_worksheet("Ep: Sub-Category Summary")
+wb$add_data("Ep: Sub-Category Summary", table1, start_row = 1, col_names = TRUE)
 
-# Sheet 2: Encounter Treatment Summary
-wb$add_worksheet("Encounter Treatment Summary")
-wb$add_data("Encounter Treatment Summary", table2, start_row = 1, col_names = TRUE)
+# Sheet 2: Episode-Level Encounter Treatment (abbreviated for 31-char Excel limit)
+wb$add_worksheet("Ep: Encounter Treatment")
+wb$add_data("Ep: Encounter Treatment", table2, start_row = 1, col_names = TRUE)
 
-wb$save(OUTPUT_XLSX)
-message()
-message(glue("Saved: {OUTPUT_XLSX}"))
+# Save to new self-documenting filename (per D-01)
+wb$save(NEW_OUTPUT_XLSX)
+message(glue("Saved (new): {NEW_OUTPUT_XLSX}"))
+
+# Save to old filename for backward compatibility (per D-03)
+wb$save(OLD_OUTPUT_XLSX)
+message(glue("Saved (backward compat): {OLD_OUTPUT_XLSX}"))
 
 
 # SECTION 8: CONSOLE SUMMARY ----
@@ -603,16 +611,20 @@ message(glue("    Valid reference codes: {length(valid_reference_codes)}"))
 message(glue("    Table 1: {n_before_ref_filter} -> {n_after_ref_filter} code instances ({n_removed_ref} removed)"))
 message(glue("    Table 2: {n_t2_before} -> {n_t2_after} rows ({n_t2_before - n_t2_after} dropped)"))
 message()
-message(glue("  Table 1 (Sub-Category Summary):"))
+message(glue("  Table 1 (Ep: Sub-Category Summary):"))
 message(glue("    Total rows: {nrow(table1)}"))
 message(glue("    Categories: {paste(unique(table1$category), collapse = ', ')}"))
 message(glue("    Sub-categories: {n_distinct(table1$sub_category)}"))
 message(glue("    Dx codes deduplicated: {n_before - n_after} instances removed"))
 message(glue("    Orphan dx-only rows preserved: {sum(episode_codes_dedup$dx_only & !is.na(episode_codes_dedup$cancer_codes), na.rm = TRUE)}"))
 message()
-message(glue("  Table 2 (Encounter Treatment Summary):"))
+message(glue("  Table 2 (Ep: Encounter Treatment):"))
 message(glue("    Total rows: {nrow(table2)}"))
 message(glue("    Unique treatment sets: {n_distinct(table2$all_treatments)}"))
+message()
+message(glue("  Output files:"))
+message(glue("    {NEW_OUTPUT_XLSX} (primary)"))
+message(glue("    {OLD_OUTPUT_XLSX} (backward compatibility)"))
 message()
 message("Done.")
 
