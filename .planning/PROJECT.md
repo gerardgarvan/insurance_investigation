@@ -67,7 +67,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
 - [x] Include cause of death in outputs (DEATH_CAUSE_MAP ready — Phase 75; integrated in Phase 78 via R/35 quality profiling + R/52 Gantt export)
 - [x] Cancer_category and triggering code description per episode — v2.1 Phase 78 (R/28 enrichment with code_descriptions.rds + DRUG_GROUPINGS)
-- [ ] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates)
+- [x] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates) -- v2.2 Phase 86
 
 ### Out of Scope
 
@@ -82,24 +82,25 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
 
-## Current Milestone: v2.2 Local Testing Infrastructure
+## Current State
+
+**Shipped:** v2.2 (2026-06-05)
+
+**Pipeline status:** 86 phases completed across 12 milestones. 76 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.2 complete: Environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override), 20-patient test fixtures with 11 edge cases, DuckDB integration validation, end-to-end local test runner (tests/run_local_test.R).
+
+## Previous Milestones
+
+### v2.2 Local Testing Infrastructure (Shipped 2026-06-05)
 
 **Goal:** Add environment auto-detection to R/00_config.R and create targeted test fixtures with clinical edge cases so key pipeline logic can be verified locally on Windows before deploying to HiPerGator.
 
-**Target features:**
-- Auto-detect local vs HiPerGator environment (OS/hostname + env var override) in R/00_config.R
-- Local path defaults for data directory, RDS cache, and DuckDB file
-- Hand-crafted test fixture CSVs (~20 patients) covering known clinical edge cases (dual-eligible, NLPHL, SCT, multiple cancers, death dates, orphan dx codes)
-- DuckDB ingest of test fixtures via existing R/01 path
-- R/88 smoke test runnable locally against fixtures
-
-## Current State
-
-**Shipped:** v2.1 (2026-06-03)
-
-**Pipeline status:** 87 phases completed across 11 milestones. 76 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.1 additions: tumor registry sources removed, NLPHL breakout, 7-day gap for all cancer categories, drug grouping summary tables with encounter-level dx deduplication, CODE_SUBCATEGORY_MAP (326 entries). v2.2 in progress: Phase 83 complete — environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override, conditional paths, startup logging, smoke test validation). Phase 84 complete — test fixture design and creation (FIXTURE_DESIGN.md mapping 20 patients to 11 edge cases, generate_fixtures.R with 15 table generators, 15 committed fixture CSVs). Phase 85 complete — testing integration and validation (R/88 Sections 32-33 for DuckDB integration + fixture schema edge cases, tests/run_local_test.R end-to-end pipeline runner with 2-minute timing target). Phase 87 complete — unified ICD-9/ICD-10 cancer code handling (ICD9_CANCER_SITE_MAP, shared is_cancer_code(), classify_codes() 4-tier cascade, 201.x HL cohort confirmation). Phase 88 complete — instance-level drug grouping tables (R/57 drug_grouping_instances.xlsx with per-episode rows, human-readable sub-category names, cancer site category names sorted descending). Phase 89 complete — episode vs encounter grain labeling (R/56 and R/57 dual-output with "Ep:" and "Enc:" sheet prefixes, R/58 and R/88 updated). Active milestone: v2.2 Local Testing Infrastructure.
-
-## Previous Milestones
+**Shipped:**
+- Environment auto-detection: IS_LOCAL flag via Sys.info() with R_TESTING_ENV env var override, conditional paths for data/cache/DuckDB, 1-thread local / SLURM-allocated production (Phase 83)
+- Infrastructure files: .gitignore for .Renviron and .duckdb, .Renviron.example template, smoke test environment validation Section 15b (Phase 83)
+- Test fixture design: FIXTURE_DESIGN.md mapping 20 patients to 11 clinical edge cases, generate_fixtures.R with 15 tribble()-based table generators (Phase 84)
+- Fixture CSV materialization: 15 PCORnet CDM fixture CSVs (8.45 KB total), all edge cases verified, git-tracked (Phase 84)
+- DuckDB integration validation: R/88 Sections 32-33 for local DuckDB table/row verification and fixture edge case assertions (Phase 85)
+- End-to-end test runner: tests/run_local_test.R with 5-step pipeline validation and 2-minute performance target (Phase 85)
 
 ### v2.1 Clinical Data Refinements & NLPHL Breakout (Shipped 2026-06-03)
 
@@ -258,6 +259,10 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Gantt v2 as superset of v1 schema | All 14 v1 columns preserved plus 3 new columns; downstream tools can consume either version | ✓ Phase 63 |
 | ICD-9 + ICD-10 unified cancer code detection | Map-based is_cancer_code() from shared utility ensures gap-free coverage; classify_codes() 4-tier cascade (ICD-10 4/3-char → ICD-9 4/3-char) | ✓ Phase 87 |
 | ICD-9 201.x in HL cohort confirmation | Cross-system category-level confirmation allowed (1x 201.x + 1x C81 with 7-day gap); code-level summaries keep systems separate | ✓ Phase 87 |
+| IS_LOCAL via OS detection with env var override | Windows-only local dev in project; env var enables Linux VM testing without OS misdetection | Phase 83 |
+| tempdir() for all local cache paths | Avoids gitignore conflicts, R session cleanup automatically removes cache | Phase 83 |
+| Hand-crafted 20-patient fixtures over synthetic generator | Targeted edge case coverage (11 cases) beats statistical realism for logic testing | Phase 84 |
+| Fully-qualified DBI::/dplyr:: calls in R/88 Sections 32-33 | Avoids namespace pollution; smoke test only loads glue at top | Phase 85 |
 
 ## Evolution
 
@@ -277,4 +282,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 after Phase 85 complete (Testing Integration & Validation)*
+*Last updated: 2026-06-05 after Phase 86 complete (Documentation and Cleanup -- v2.2 milestone shipped)*
