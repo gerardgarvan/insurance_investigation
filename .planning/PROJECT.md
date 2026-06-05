@@ -86,7 +86,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.2 (2026-06-05)
 
-**Pipeline status:** 86 phases completed across 12 milestones. 76 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.2 complete: Environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override), 20-patient test fixtures with 11 edge cases, DuckDB integration validation, end-to-end local test runner (tests/run_local_test.R).
+**Pipeline status:** 87 phases completed across 12 milestones. 76 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.2 complete: Environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override), 20-patient test fixtures with 11 edge cases, DuckDB integration validation, end-to-end local test runner (tests/run_local_test.R). Phase 87 complete: Unified ICD-9/ICD-10 cancer code handling across cancer summary pipeline (R/45-R/49) and drug grouping tables (R/56) via shared utils_cancer.R, ICD9_CANCER_SITE_MAP config, expanded HL cohort to include 201.x.
 
 ## Previous Milestones
 
@@ -282,4 +282,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 after Phase 86 complete (Documentation and Cleanup -- v2.2 milestone shipped)*
+*Last updated: 2026-06-05 after Phase 87 complete (Unify ICD-9/ICD-10 Cancer Code Usage)*
