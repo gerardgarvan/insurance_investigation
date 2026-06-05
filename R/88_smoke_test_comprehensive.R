@@ -59,7 +59,7 @@ check <- function(description, condition) {
 }
 
 message(strrep("=", 70))
-message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87)")
+message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-89)")
 message(strrep("=", 70))
 
 # ==============================================================================
@@ -1308,7 +1308,7 @@ check(".Renviron.example template exists", file.exists(".Renviron.example"))
 # Validates ICD9_CANCER_SITE_MAP, shared is_cancer_code(), and updated
 # classify_codes() for ICD-9/ICD-10 harmonization (Phase 87).
 
-message("\n[30/31] Phase 87: ICD-9 cancer code infrastructure...")
+message("\n[30/33] Phase 87: ICD-9 cancer code infrastructure...")
 
 # Check 1: ICD9_CANCER_SITE_MAP exists with expected entries
 if (exists("ICD9_CANCER_SITE_MAP") && length(ICD9_CANCER_SITE_MAP) >= 70) {
@@ -1413,7 +1413,7 @@ if (length(novel_icd9_categories) == 0) {
 # ==============================================================================
 # Validates R/57 drug grouping instance-level tables (Phase 88).
 
-message("\n[31/31] Phase 88: Instance-level drug grouping tables...")
+message("\n[31/33] Phase 88: Instance-level drug grouping tables...")
 
 check("R/57_drug_grouping_instances.R exists", file.exists("R/57_drug_grouping_instances.R"))
 
@@ -1471,6 +1471,210 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
   # Validate Table 2 uses encounter-level grain (ENCOUNTERID column)
   check("R/57 Table 2 uses ENCOUNTERID for encounter-level grain",
         any(grepl("ENCOUNTERID", r57_lines)))
+}
+
+# ==============================================================================
+# SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
+# ==============================================================================
+# Validates that DuckDB ingest succeeds in current environment mode.
+# Local mode: checks fixture-based DuckDB file in tempdir().
+# Production mode: checks production DuckDB file on /blue/.
+
+message("\n[32/33] DuckDB integration validation...")
+
+if (file.exists(CONFIG$cache$duckdb_path)) {
+  con <- tryCatch(
+    DBI::dbConnect(duckdb::duckdb(), CONFIG$cache$duckdb_path, read_only = TRUE),
+    error = function(e) NULL
+  )
+
+  if (!is.null(con)) {
+    tables_found <- DBI::dbListTables(con)
+
+    check(
+      glue("DuckDB file accessible at CONFIG path ({basename(CONFIG$cache$duckdb_path)})"),
+      TRUE
+    )
+
+    if (IS_LOCAL) {
+      # TEST-01: Fixture-specific table count (15 tables from fixture CSVs)
+      check(
+        glue("DuckDB contains 15 tables from fixtures (found {length(tables_found)})"),
+        length(tables_found) == 15
+      )
+
+      # Validate critical tables exist
+      critical_tables <- c("ENROLLMENT", "DIAGNOSIS", "ENCOUNTER", "DEMOGRAPHIC",
+                           "PROCEDURES", "PRESCRIBING", "DEATH")
+      missing_critical <- setdiff(critical_tables, tables_found)
+      check(
+        glue("All 7 critical tables present (missing: {if (length(missing_critical) == 0) 'none' else paste(missing_critical, collapse=', ')})"),
+        length(missing_critical) == 0
+      )
+
+      # TEST-05: Conditional fixture row count assertions
+      enrollment_count <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM ENROLLMENT")$n
+      check(
+        glue("ENROLLMENT has 20 fixture patients (found {enrollment_count})"),
+        enrollment_count == 20
+      )
+
+      diagnosis_count <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM DIAGNOSIS")$n
+      check(
+        glue("DIAGNOSIS has 18 fixture rows (found {diagnosis_count})"),
+        diagnosis_count == 18
+      )
+
+      encounter_count <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM ENCOUNTER")$n
+      check(
+        glue("ENCOUNTER has 19 fixture rows (found {encounter_count})"),
+        encounter_count == 19
+      )
+
+      prescribing_count <- DBI::dbGetQuery(con, "SELECT COUNT(*) AS n FROM PRESCRIBING")$n
+      check(
+        glue("PRESCRIBING has 4 fixture rows (found {prescribing_count})"),
+        prescribing_count == 4
+      )
+
+    } else {
+      # Production: just check tables exist (counts are data-dependent)
+      check(
+        glue("DuckDB contains >= 13 tables (found {length(tables_found)})"),
+        length(tables_found) >= 13
+      )
+    }
+
+    DBI::dbDisconnect(con, shutdown = TRUE)
+  } else {
+    check("DuckDB file accessible (connection failed)", FALSE)
+  }
+} else {
+  message("  SKIP: DuckDB file not found at CONFIG path (run R/01 + R/03 first)")
+}
+
+# ==============================================================================
+# SECTION 33: FIXTURE SCHEMA & EDGE CASE VALIDATION (TEST-03, TEST-05) ----
+# ==============================================================================
+# Validates fixture-specific edge case data when running in local mode.
+# Requires pcornet list from R/01_load_pcornet.R in global environment.
+# Production mode: skipped entirely (fixture data not present).
+
+if (IS_LOCAL) {
+  message("\n[33/33] Fixture schema validation (local mode only)...")
+
+  if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
+
+    # TEST-03: Fixture row counts match FIXTURE_DESIGN.md specifications
+    check(
+      glue("Fixture ENROLLMENT has 20 patients (found {nrow(pcornet$ENROLLMENT)})"),
+      nrow(pcornet$ENROLLMENT) == 20
+    )
+
+    check(
+      glue("Fixture DIAGNOSIS has 18 rows (found {nrow(pcornet$DIAGNOSIS)})"),
+      nrow(pcornet$DIAGNOSIS) == 18
+    )
+
+    check(
+      glue("Fixture DEMOGRAPHIC has 20 rows (found {nrow(pcornet$DEMOGRAPHIC)})"),
+      nrow(pcornet$DEMOGRAPHIC) == 20
+    )
+
+    check(
+      glue("Fixture ENCOUNTER has 19 rows (found {nrow(pcornet$ENCOUNTER)})"),
+      nrow(pcornet$ENCOUNTER) == 19
+    )
+
+    check(
+      glue("Fixture PRESCRIBING has 4 rows (found {nrow(pcornet$PRESCRIBING)})"),
+      nrow(pcornet$PRESCRIBING) == 4
+    )
+
+    check(
+      glue("Fixture PROCEDURES has 1 row (found {nrow(pcornet$PROCEDURES)})"),
+      nrow(pcornet$PROCEDURES) == 1
+    )
+
+    check(
+      glue("Fixture DEATH has 1 row (found {nrow(pcornet$DEATH)})"),
+      nrow(pcornet$DEATH) == 1
+    )
+
+    # TEST-05: Edge case patient validation
+    # Edge case 1: PT002 dual-eligible (payer code "14")
+    pt002_dual <- pcornet$ENCOUNTER %>%
+      dplyr::filter(ID == "PT002")
+    check(
+      "PT002 (dual-eligible) exists in ENCOUNTER",
+      nrow(pt002_dual) > 0
+    )
+
+    # Edge case 2: PT003 NLPHL (C81.00)
+    pt003_nlphl <- pcornet$DIAGNOSIS %>%
+      dplyr::filter(ID == "PT003", DX == "C81.00")
+    check(
+      "PT003 has NLPHL diagnosis (C81.00)",
+      nrow(pt003_nlphl) > 0
+    )
+
+    # Edge case 3: PT004 SCT (CPT 38241)
+    pt004_sct <- pcornet$PROCEDURES %>%
+      dplyr::filter(ID == "PT004", PX == "38241")
+    check(
+      "PT004 has SCT procedure (CPT 38241)",
+      nrow(pt004_sct) > 0
+    )
+
+    # Edge case 4: PT007 orphan dx (Z51.11)
+    pt007_orphan <- pcornet$DIAGNOSIS %>%
+      dplyr::filter(ID == "PT007", DX == "Z51.11")
+    check(
+      "PT007 has orphan dx code (Z51.11)",
+      nrow(pt007_orphan) > 0
+    )
+
+    # Edge case 5: PT009 sentinel date (1900-01-01)
+    pt009_sentinel <- pcornet$ENROLLMENT %>%
+      dplyr::filter(ID == "PT009")
+    check(
+      "PT009 exists in ENROLLMENT (1900 sentinel date patient)",
+      nrow(pt009_sentinel) > 0
+    )
+
+    # Edge case 6: PT010 ICD-9/ICD-10 cross-system
+    pt010_dx <- pcornet$DIAGNOSIS %>%
+      dplyr::filter(ID == "PT010")
+    check(
+      glue("PT010 has 2 diagnoses for cross-system HL (found {nrow(pt010_dx)})"),
+      nrow(pt010_dx) == 2
+    )
+
+    # Edge case 7: PT012 ABVD regimen (4 RXNORM_CUIs)
+    pt012_abvd <- pcornet$PRESCRIBING %>%
+      dplyr::filter(ID == "PT012")
+    expected_cuis <- c("3639", "11213", "67228", "3946")
+    found_cuis <- pt012_abvd$RXNORM_CUI
+    check(
+      glue("PT012 has 4 ABVD drugs (found {length(found_cuis)}: {paste(found_cuis, collapse=', ')})"),
+      length(found_cuis) == 4 && all(expected_cuis %in% found_cuis)
+    )
+
+    # Edge case 8: PT006 death record
+    pt006_death <- pcornet$DEATH %>%
+      dplyr::filter(ID == "PT006")
+    check(
+      "PT006 has death record",
+      nrow(pt006_death) == 1
+    )
+
+  } else {
+    message("  SKIP: pcornet list not loaded (run R/01_load_pcornet.R first)")
+    message("  To run full validation: source R/01 before R/88")
+  }
+
+} else {
+  message("\n[33/33] Fixture schema validation -- SKIPPED (production mode)")
 }
 
 # ==============================================================================
@@ -1533,6 +1737,10 @@ message("  * P88-D03: Sub-category names via 3-tier resolution")
 message("  * P88-D04: Cancer site category names from CANCER_SITE_MAP + ICD9_CANCER_SITE_MAP")
 message("  * P88-D05/D06: Per-episode rows with patient_id, dates, treatment_category")
 message("  * P88-D07/D08: New encounter_level_drug_grouping_instances.xlsx with 2 sheets, per-encounter grain")
+message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
+message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
+message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
+message("  * TEST-05: Conditional fixture count assertions (Sections 32+33)")
 
 if (failed > 0) {
   quit(status = 1)
