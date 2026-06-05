@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
 status: verifying
-stopped_at: Phase 89 context gathered
-last_updated: "2026-06-05T13:37:36.134Z"
-last_activity: 2026-06-04
+stopped_at: Completed 89-01-PLAN.md
+last_updated: "2026-06-05T14:06:40.969Z"
+last_activity: 2026-06-05
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 5
+  total_plans: 9
+  completed_plans: 9
   percent: 5
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Current focus:** Phase 88 — re-do-tables-from-grouping-by-using-descriptives-from-codes-instead-of-counts-and-instead-of-counts-just-list-each-instance
+**Current focus:** Phase 89 — clear-up-episode-vs-encounter-distinction
 
 ## Current Position
 
-Phase: 88
-Plan: Not started
+Phase: 89 (clear-up-episode-vs-encounter-distinction) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
-Last activity: 2026-06-04
+Last activity: 2026-06-05
 
 Progress: [████████████████████████████████████████████████░] 95.5% (82/86 phases complete)
 
@@ -61,6 +61,7 @@ Progress: [███████████████████████
 | Phase 84 P01 | 4 | 2 tasks | 2 files |
 | Phase 84 P02 | 5 | 2 tasks | 15 files |
 | Phase 88 P01 | 3 | 2 tasks | 2 files |
+| Phase 89 P01 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,7 @@ Recent decisions affecting v2.2 work:
 - [Phase 87-02]: HL cohort confirmation expanded to C81+201.x with cross-system 7-day gap allowed
 - [Phase 87-02]: Defense-in-depth filtering (is_cancer_code + D-code + 210-239 exclusion)
 - [Phase 88]: Instance-level drug grouping tables with descriptive names and cancer category names replace raw codes for patient-traceable analysis
+- [Phase 89]: Dual wb$save() for backward compat (not file.copy), abbreviated Ep:/Enc: sheet name prefixes within Excel 31-char limit
 
 ### Pending Todos
 
@@ -107,9 +109,9 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-05T13:37:36.128Z
-Stopped at: Phase 89 context gathered
-Resume file: .planning/phases/89-clear-up-episode-vs-encounter-distinction-for-r-56-export-both-versions-as-labeled-excel-files/89-CONTEXT.md
+Last session: 2026-06-05T14:06:40.963Z
+Stopped at: Completed 89-01-PLAN.md
+Resume file: None
 
 ---
 *State initialized: 2026-06-03 for v2.2 Local Testing Infrastructure*

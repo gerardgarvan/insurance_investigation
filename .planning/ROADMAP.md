@@ -155,10 +155,10 @@ Plans:
 **Goal:** Rename R/56 and R/57 output filenames to self-document their data grain (episode_level_drug_grouping_tables.xlsx and encounter_level_drug_grouping_instances.xlsx), add grain-prefixed sheet names ("Ep:" and "Enc:"), produce backward-compatible copies under old filenames, and update downstream consumers (R/58, R/88).
 **Requirements**: P89-D01, P89-D02, P89-D03, P89-D04, P89-D05, P89-D06
 **Depends on:** Phase 88
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 89-01-PLAN.md — R/56 + R/57 grain-labeled filenames and sheet names, R/58 + R/88 downstream updates
+- [x] 89-01-PLAN.md — R/56 + R/57 grain-labeled filenames and sheet names, R/58 + R/88 downstream updates
 
 ---
 *Last updated: 2026-06-05 -- Phase 89 planned (1 plan, 1 wave)*
