@@ -86,6 +86,54 @@
 
 ---
 
+## Milestone: v2.2 -- Local Testing Infrastructure & Clinical Refinements
+
+**Shipped:** 2026-06-05
+**Phases:** 7 | **Plans:** 11
+
+### What Was Built
+- Environment auto-detection (IS_LOCAL flag via Sys.info() with R_TESTING_ENV override) in R/00_config.R (Phase 83)
+- 20-patient hand-crafted test fixtures covering 11 clinical edge cases across 15 PCORnet CDM tables (Phase 84)
+- DuckDB integration validation (R/88 Sections 32-33) and end-to-end local test runner (tests/run_local_test.R) (Phase 85)
+- Quality standards validation and v2.2 milestone documentation (Phase 86)
+- Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R with is_cancer_code() and 4-tier classify_codes() cascade (Phase 87)
+- Instance-level drug grouping tables (R/57) with human-readable sub-category and cancer site names (Phase 88)
+- Episode vs encounter grain labeling with self-documenting filenames and backward-compatible old filenames (Phase 89)
+
+### What Worked
+- Milestone audit (`/gsd:audit-milestone`) caught that Phases 85-86 were not yet started, preventing premature completion
+- Gap closure phases (85-86) were quick to plan and execute once infrastructure (83-84) was solid
+- Phases 87-89 formed a self-contained chain (ICD-9 foundation -> instance tables -> grain labels) that could be planned and executed independently of the testing infrastructure phases
+- Shared utility extraction pattern (utils_cancer.R) worked cleanly — single source of truth for cancer code detection consumed by 10+ downstream scripts
+- tribble()-based fixture generators provided self-documenting test data with clear patient-to-edge-case mapping
+
+### What Was Inefficient
+- Phases 87-89 were added ad-hoc during v2.2 execution without formal milestone scope expansion — milestone audit only covered Phases 83-86
+- The v2.2 milestone audit was stale by the time of completion (gaps closed by Phases 85-86 after audit)
+- Phase 87 requirements (ICD-01 through ICD-12) were never added to REQUIREMENTS.md since they weren't part of original v2.2 scope — requirement tracking gap for ad-hoc phases
+- Phase 88-89 requirements (P88-D01+, P89-D01+) also tracked only in ROADMAP.md, not REQUIREMENTS.md
+
+### Patterns Established
+- Environment detection pattern: OS-based flag with env var override for transparent cross-platform support
+- Fixture design pattern: FIXTURE_DESIGN.md as human-readable test matrix, generate_fixtures.R as single source of truth, CSVs as materialized artifacts
+- Shared utility extraction: utils_cancer.R with is_cancer_code() and classify_codes() consumed by all cancer-related scripts
+- Grain-labeled outputs: filenames self-document their aggregation level (episode_level_*, encounter_level_*)
+- Dual wb$save() for backward compatibility: new grain-labeled filenames plus old filenames from same workbook object
+
+### Key Lessons
+1. Ad-hoc phases added during milestone execution should be formally scoped into the milestone before completion — either expand milestone scope or defer to next milestone
+2. Milestone audits are snapshots in time and become stale — re-audit or note staleness when closing gaps after the audit
+3. Shared utility extraction (utils_cancer.R pattern) is the right approach when 3+ scripts need the same logic — the refactoring cost pays for itself immediately
+4. Fixture-based local testing infrastructure is achievable without heavyweight test frameworks — tribble() + run_local_test.R with conditional smoke test sections is sufficient
+5. When adding grain labels to outputs, backward compatibility via dual save avoids breaking downstream consumers
+
+### Cost Observations
+- Sessions: ~7 (Phases 83, 84, 85, 86, 87, 88, 89 each had dedicated sessions, some combined)
+- Timeline: 3 days (2026-06-03 to 2026-06-05)
+- Notable: Phase 87 required 3 plans (most complex in v2.2) due to 10+ script modifications; Phases 88-89 each completed in single-plan sessions
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -94,6 +142,7 @@
 |-----------|--------|------------|
 | v1.5 | 4 | Centralized payer config; dual-scope diagnostic pattern established |
 | v1.8 | 4 | Encounter-level linkage pattern; RDS artifact pipeline for cross-phase contracts; coarse phase granularity |
+| v2.2 | 7 | Dual-environment support; shared utility extraction (utils_cancer.R); fixture-based testing; grain-labeled outputs |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -102,3 +151,5 @@
 3. Standalone diagnostic scripts with explicit dependencies (source R/00_config.R only) are more maintainable than scripts that source the full pipeline
 4. Downstream scripts should consume upstream RDS artifacts directly rather than re-deriving data (v1.8: R/63 vs R/49 approach)
 5. Guard clauses for optional cross-phase columns prevent execution ordering failures (v1.8: drug_names, is_first_line)
+6. Shared utility extraction pays for itself immediately when 3+ scripts need the same logic (v2.2: utils_cancer.R)
+7. Ad-hoc phases added during milestone execution need formal scope expansion to keep requirement tracking consistent (v2.2: Phases 87-89)

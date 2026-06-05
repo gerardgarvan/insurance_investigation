@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files for a Hodgkin Lymphoma cohort (OneFlorida+), builds a filtered cohort using human-readable named predicates, extracts treatment episodes with encounter-level cancer linkage and regimen identification, and produces payer-stratified analyses. Runs on RStudio on HiPerGator.
+A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files for a Hodgkin Lymphoma cohort (OneFlorida+), builds a filtered cohort using human-readable named predicates, extracts treatment episodes with encounter-level cancer linkage and regimen identification, and produces payer-stratified analyses. Runs on RStudio on HiPerGator (production) and locally on Windows (testing with synthetic fixtures).
 
 ## Core Value
 
@@ -56,18 +56,24 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Create smoke test script to verify pipeline integrity — v2.0 Phases 66-74
 - [x] Consolidate duplicated lookup tables to R/00_config.R — v2.0 Phase 73
 - [x] Extract repeated code patterns into shared utility functions — v2.0 Phase 73
+- [x] Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories — v2.1 Phase 77
+- [x] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category — v2.1 Phase 75/77
+- [x] Drop all treatment data sourced from tumor registry — v2.1 Phase 76
+- [x] Include cause of death in outputs — v2.1 Phase 75/78
+- [x] Cancer_category and triggering code description per episode — v2.1 Phase 78
+- [x] Environment auto-detection (local Windows vs HiPerGator Linux) — v2.2 Phase 83
+- [x] Hand-crafted test fixtures (20 patients, 11 edge cases, 15 CDM tables) — v2.2 Phase 84
+- [x] DuckDB integration validation and end-to-end local test runner — v2.2 Phase 85
+- [x] All new/modified scripts follow v2.0 quality standards — v2.2 Phase 86
+- [x] Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R — v2.2 Phase 87
+- [x] Instance-level drug grouping tables with human-readable names (R/57) — v2.2 Phase 88
+- [x] Episode vs encounter grain labeling for drug grouping outputs — v2.2 Phase 89
 
 ### Active
 
-- [x] Fix cancer_summary_table_pre_post to require 7-day gap for ALL cancer categories — v2.1 Phase 77 (dual v1/v2 output, population validated 6300-6400)
-- [x] Break out NLPHL (C81.0 / 201.4x) from Hodgkin Lymphoma as distinct cancer category — config layer Phase 75, diagnostics Phase 77
 - [ ] Investigate SCT code 0362 patients — do the 90 patients have other SCT codes during those encounters?
-- [x] Drop all treatment data sourced from tumor registry — v2.1 Phase 76
 - [ ] Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
 - [ ] Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
-- [x] Include cause of death in outputs (DEATH_CAUSE_MAP ready — Phase 75; integrated in Phase 78 via R/35 quality profiling + R/52 Gantt export)
-- [x] Cancer_category and triggering code description per episode — v2.1 Phase 78 (R/28 enrichment with code_descriptions.rds + DRUG_GROUPINGS)
-- [x] All new/modified scripts follow v2.0 quality standards (styler, lintr, checkmate, headers, smoke test updates) -- v2.2 Phase 86
 
 ### Out of Scope
 
@@ -86,21 +92,22 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.2 (2026-06-05)
 
-**Pipeline status:** 89 phases completed across 12 milestones. 77 numbered R scripts in decade-based organization + 10 utils + 8 archived. DuckDB backend. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, triggering code descriptions, drug group labels, and Gantt v2 CSV export with cause of death. v2.2 complete: Environment auto-detection (IS_LOCAL flag, R_TESTING_ENV override), 20-patient test fixtures with 11 edge cases, DuckDB integration validation, end-to-end local test runner (tests/run_local_test.R). Phase 87: Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R. Phase 88: Instance-level drug grouping tables (R/57) with human-readable descriptive names. Phase 89: Episode vs encounter grain labeling for R/56 and R/57 output filenames and sheet names.
+**Pipeline status:** 89 phases completed across 13 milestones (v1.0-v2.2). 98 R scripts total (77 numbered in decade-based organization + 10 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, and comprehensive smoke test with 33 validation sections.
 
 ## Previous Milestones
 
-### v2.2 Local Testing Infrastructure (Shipped 2026-06-05)
+### v2.2 Local Testing Infrastructure & Clinical Refinements (Shipped 2026-06-05)
 
-**Goal:** Add environment auto-detection to R/00_config.R and create targeted test fixtures with clinical edge cases so key pipeline logic can be verified locally on Windows before deploying to HiPerGator.
+**Goal:** Add environment auto-detection and local test fixtures, unify ICD-9/ICD-10 cancer code handling, create instance-level drug grouping tables, and label output grain.
 
 **Shipped:**
-- Environment auto-detection: IS_LOCAL flag via Sys.info() with R_TESTING_ENV env var override, conditional paths for data/cache/DuckDB, 1-thread local / SLURM-allocated production (Phase 83)
-- Infrastructure files: .gitignore for .Renviron and .duckdb, .Renviron.example template, smoke test environment validation Section 15b (Phase 83)
-- Test fixture design: FIXTURE_DESIGN.md mapping 20 patients to 11 clinical edge cases, generate_fixtures.R with 15 tribble()-based table generators (Phase 84)
-- Fixture CSV materialization: 15 PCORnet CDM fixture CSVs (8.45 KB total), all edge cases verified, git-tracked (Phase 84)
-- DuckDB integration validation: R/88 Sections 32-33 for local DuckDB table/row verification and fixture edge case assertions (Phase 85)
-- End-to-end test runner: tests/run_local_test.R with 5-step pipeline validation and 2-minute performance target (Phase 85)
+- Environment auto-detection: IS_LOCAL flag via Sys.info() with R_TESTING_ENV env var override, conditional paths for data/cache/DuckDB (Phase 83)
+- Test fixtures: FIXTURE_DESIGN.md mapping 20 patients to 11 clinical edge cases, 15 PCORnet CDM fixture CSVs (Phase 84)
+- DuckDB integration validation and end-to-end test runner (tests/run_local_test.R) (Phase 85)
+- Quality standards validation and milestone documentation (Phase 86)
+- Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R with is_cancer_code() and 4-tier classify_codes() cascade (Phase 87)
+- Instance-level drug grouping tables (R/57) with human-readable sub-category and cancer site names (Phase 88)
+- Episode vs encounter grain labeling: self-documenting filenames, grain-prefixed sheet names, backward-compatible old filenames (Phase 89)
 
 ### v2.1 Clinical Data Refinements & NLPHL Breakout (Shipped 2026-06-03)
 
@@ -213,7 +220,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 63 phases completed across 8 milestones (v1.0-v1.8), ~64 R scripts, DuckDB as default backend, AMC 8-category payer system, per-type treatment code resolved xlsx files, refined cancer summary (D-codes removed, HL cohort confirmed), Gantt v1 CSVs with human-readable code descriptions + Gantt v2 CSVs with encounter-level cancer categories/regimen labels/first-line flags, validated death dates, encounter IDs, and drug names, confirmed_hl_cohort.rds artifact for temporal filtering, death date validation with impossible death exclusion and HL Diagnosis pseudo-treatment rows, ENCOUNTERID propagation through treatment episodes, drug name resolution via RxNorm API (drug_name_lookup.rds), SCT detection tightened to procedure/prescription sources only, encounter-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD), first-line therapy flagging (is_first_line column in treatment_episodes.rds), death date data quality analysis (1,295 validated deaths, 253 with post-death activity)
+- **Current state**: 89 phases completed across 13 milestones (v1.0-v2.2), 98 R scripts total, DuckDB backend with dual-environment support, AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled xlsx outputs, 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 33 validation sections
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -223,7 +230,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Constraints
 
-- **Runtime environment**: RStudio on UF HiPerGator — scripts must work in that environment
+- **Runtime environment**: RStudio on UF HiPerGator (production) and local Windows (testing via IS_LOCAL flag)
 - **R packages**: tidyverse ecosystem (dplyr, ggplot2, stringr, lubridate), ggalluvial for Sankey, scales, janitor, glue
 - **Data access**: Raw CSVs on HiPerGator filesystem — paths configured in `R/00_config.R`
 - **HIPAA compliance**: All patient counts 1-10 must be suppressed in any output
@@ -259,10 +266,12 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Gantt v2 as superset of v1 schema | All 14 v1 columns preserved plus 3 new columns; downstream tools can consume either version | ✓ Phase 63 |
 | ICD-9 + ICD-10 unified cancer code detection | Map-based is_cancer_code() from shared utility ensures gap-free coverage; classify_codes() 4-tier cascade (ICD-10 4/3-char → ICD-9 4/3-char) | ✓ Phase 87 |
 | ICD-9 201.x in HL cohort confirmation | Cross-system category-level confirmation allowed (1x 201.x + 1x C81 with 7-day gap); code-level summaries keep systems separate | ✓ Phase 87 |
-| IS_LOCAL via OS detection with env var override | Windows-only local dev in project; env var enables Linux VM testing without OS misdetection | Phase 83 |
-| tempdir() for all local cache paths | Avoids gitignore conflicts, R session cleanup automatically removes cache | Phase 83 |
-| Hand-crafted 20-patient fixtures over synthetic generator | Targeted edge case coverage (11 cases) beats statistical realism for logic testing | Phase 84 |
-| Fully-qualified DBI::/dplyr:: calls in R/88 Sections 32-33 | Avoids namespace pollution; smoke test only loads glue at top | Phase 85 |
+| IS_LOCAL via OS detection with env var override | Windows-only local dev in project; env var enables Linux VM testing without OS misdetection | ✓ Phase 83 |
+| tempdir() for all local cache paths | Avoids gitignore conflicts, R session cleanup automatically removes cache | ✓ Phase 83 |
+| Hand-crafted 20-patient fixtures over synthetic generator | Targeted edge case coverage (11 cases) beats statistical realism for logic testing | ✓ Phase 84 |
+| Fully-qualified DBI::/dplyr:: calls in R/88 Sections 32-33 | Avoids namespace pollution; smoke test only loads glue at top | ✓ Phase 85 |
+| Instance-level tables with descriptive names (R/57) | Patient-traceable rows with human-readable names enable clinical review | ✓ Phase 88 |
+| Dual wb$save() for backward compatibility | Old filenames preserved alongside new grain-labeled filenames | ✓ Phase 89 |
 
 ## Evolution
 
@@ -282,4 +291,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 after Phase 89 complete (Episode vs Encounter Grain Labeling — all current milestone phases complete)*
+*Last updated: 2026-06-05 after v2.2 milestone*

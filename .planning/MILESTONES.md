@@ -1,5 +1,26 @@
 # Milestones
 
+## v2.2 Local Testing Infrastructure & Clinical Refinements (Shipped: 2026-06-05)
+
+**Phases completed:** 7 phases (Phases 83-89), 11 plans
+
+**Delivered:** Environment auto-detection for local Windows vs HiPerGator Linux, 20-patient hand-crafted test fixtures, DuckDB integration validation, end-to-end local test runner, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, and episode vs encounter grain labeling for output files.
+
+**Key accomplishments:**
+
+- Environment auto-detection (IS_LOCAL flag via Sys.info() with R_TESTING_ENV override), conditional paths for data/cache/DuckDB, 1-thread local vs SLURM-allocated production (Phase 83)
+- 20-patient hand-crafted test fixtures covering 11 clinical edge cases across 15 PCORnet CDM tables with documented FIXTURE_DESIGN.md (Phase 84)
+- DuckDB integration validation (R/88 Sections 32-33) and end-to-end local test runner (tests/run_local_test.R) with fixture schema assertions (Phase 85)
+- v2.2 quality standards validation and milestone documentation (Phase 86)
+- Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R with is_cancer_code() and 4-tier classify_codes() cascade, HL cohort expanded to C81 + 201.x (Phase 87)
+- Instance-level drug grouping tables (R/57) with human-readable sub-category and cancer site category names (Phase 88)
+- Episode vs encounter grain labeling with self-documenting filenames, grain-prefixed sheet names, and backward-compatible old filenames (Phase 89)
+
+**Git range:** `840fee1..2e442b1` (92 commits, 2026-06-03 to 2026-06-05)
+**Code:** 86 files changed, +17,865 / -2,424 lines
+
+---
+
 ## v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification (Shipped: 2026-06-01)
 
 **Phases completed:** 4 phases (Phases 60-63), 6 plans
