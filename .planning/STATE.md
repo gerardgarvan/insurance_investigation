@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
 status: verifying
-stopped_at: Completed 89-01-PLAN.md
-last_updated: "2026-06-05T14:10:51.648Z"
+stopped_at: Completed 85-01-PLAN.md
+last_updated: "2026-06-05T15:08:41.258Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 6
+  total_plans: 10
+  completed_plans: 10
   percent: 5
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Current focus:** Phase 89 — clear-up-episode-vs-encounter-distinction
+**Current focus:** Phase 85 — testing-integration-validation
 
 ## Current Position
 
-Phase: 89
-Plan: Not started
+Phase: 85 (testing-integration-validation) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-06-05
 
@@ -62,6 +62,7 @@ Progress: [███████████████████████
 | Phase 84 P02 | 5 | 2 tasks | 15 files |
 | Phase 88 P01 | 3 | 2 tasks | 2 files |
 | Phase 89 P01 | 4 | 2 tasks | 4 files |
+| Phase 85 P01 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -109,8 +110,8 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-05T14:06:40.963Z
-Stopped at: Completed 89-01-PLAN.md
+Last session: 2026-06-05T15:08:41.251Z
+Stopped at: Completed 85-01-PLAN.md
 Resume file: None
 
 ---

@@ -60,7 +60,7 @@
 
 - [x] **Phase 83: Environment Detection & Infrastructure** - Auto-detect local vs HiPerGator, configure conditional paths, set up testing infrastructure (completed 2026-06-04)
 - [x] **Phase 84: Test Fixture Design & Creation** - Design and create hand-crafted CSVs covering clinical edge cases (completed 2026-06-04)
-- [ ] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end
+- [x] **Phase 85: Testing Integration & Validation** - Integrate fixtures with DuckDB ingest and smoke test, validate end-to-end (completed 2026-06-05)
 - [ ] **Phase 86: Documentation & Cleanup** - Document workflow, update PROJECT.md, finalize .gitignore and quality standards
 
 ### Phase Details
@@ -105,9 +105,9 @@ Plans:
   3. Developer runs R/88 on HiPerGator production and smoke test passes Section 3B (environment check) but skips Section 3C (fixture schema check only runs in local mode)
   4. Developer times full local pipeline (R/00 through R/88) and execution completes in under 2 minutes with no path errors or DuckDB locking issues
   5. Developer queries DuckDB for edge case patients and confirms PT001 shows dual-eligible payer records, PT003 shows NLPHL diagnosis code, PT008 shows orphan dx without cancer linkage
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 85-01-PLAN.md — DuckDB integration + fixture schema validation in R/88, local integration test runner
+- [x] 85-01-PLAN.md — DuckDB integration + fixture schema validation in R/88, local integration test runner
 
 #### Phase 86: Documentation & Cleanup
 **Goal**: Local testing workflow is documented, PROJECT.md updated to reflect v2.2 completion, .gitignore prevents accidental commits of environment files, and all new scripts meet v2.0 quality standards
@@ -127,7 +127,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 83. Environment Detection & Infrastructure | 2/2 | Complete    | 2026-06-04 |
 | 84. Test Fixture Design & Creation | 2/2 | Complete    | 2026-06-04 |
-| 85. Testing Integration & Validation | 0/1 | Planned | - |
+| 85. Testing Integration & Validation | 1/1 | Complete   | 2026-06-05 |
 | 86. Documentation & Cleanup | 0/? | Not started | - |
 
 ### Phase 87: Unify ICD-9/ICD-10 Cancer Code Usage

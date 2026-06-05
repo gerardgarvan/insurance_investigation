@@ -26,11 +26,11 @@ Requirements for local testing infrastructure: environment detection, test fixtu
 
 ### Testing & Validation
 
-- [ ] **TEST-01**: DuckDB ingest (R/03) works with fixture CSVs without code changes
-- [ ] **TEST-02**: R/88 smoke test passes locally against fixtures
-- [ ] **TEST-03**: Smoke test validates environment detection flag and fixture schema
-- [ ] **TEST-04**: Full pipeline end-to-end runnable locally
-- [ ] **TEST-05**: Conditional assertions in smoke test (fixture counts vs production counts)
+- [x] **TEST-01**: DuckDB ingest (R/03) works with fixture CSVs without code changes
+- [x] **TEST-02**: R/88 smoke test passes locally against fixtures
+- [x] **TEST-03**: Smoke test validates environment detection flag and fixture schema
+- [x] **TEST-04**: Full pipeline end-to-end runnable locally
+- [x] **TEST-05**: Conditional assertions in smoke test (fixture counts vs production counts)
 
 ### Infrastructure
 
@@ -118,11 +118,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FIX-03 | Phase 84 | Complete |
 | FIX-04 | Phase 84 | Complete |
 | FIX-05 | Phase 84 | Complete |
-| TEST-01 | Phase 85 | Pending |
-| TEST-02 | Phase 85 | Pending |
-| TEST-03 | Phase 85 | Pending |
-| TEST-04 | Phase 85 | Pending |
-| TEST-05 | Phase 85 | Pending |
+| TEST-01 | Phase 85 | Complete |
+| TEST-02 | Phase 85 | Complete |
+| TEST-03 | Phase 85 | Complete |
+| TEST-04 | Phase 85 | Complete |
+| TEST-05 | Phase 85 | Complete |
 | INFRA-01 | Phase 83 | Complete |
 | INFRA-02 | Phase 83 | Complete |
 | INFRA-03 | Phase 83 | Complete |
