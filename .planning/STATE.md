@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
 status: verifying
-stopped_at: Completed 88-01-PLAN.md
-last_updated: "2026-06-04T21:53:23.276Z"
+stopped_at: Phase 89 context gathered
+last_updated: "2026-06-05T13:37:36.134Z"
 last_activity: 2026-06-04
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 4
   total_plans: 8
   completed_plans: 8
@@ -91,6 +91,7 @@ None yet. (v2.2 milestone starting fresh)
 
 - Phase 87 added: fix cancer_summary_pre_post to include icd9 but be still filtered on icd10 81 and all_codes_resolved_next_tables and drug_grouping_tables should all be linked in the codes they use
 - Phase 88 added: re-do tables from grouping by using descriptives from codes instead of counts, and instead of counts just list each instance
+- Phase 89 added: clear up episode vs encounter distinction for R/56 - export both versions as labeled Excel files
 
 ### Blockers/Concerns
 
@@ -106,9 +107,9 @@ None yet. v2.2 is a greenfield milestone with well-researched foundation (testth
 
 ## Session Continuity
 
-Last session: 2026-06-04T21:47:54.296Z
-Stopped at: Completed 88-01-PLAN.md
-Resume file: None
+Last session: 2026-06-05T13:37:36.128Z
+Stopped at: Phase 89 context gathered
+Resume file: .planning/phases/89-clear-up-episode-vs-encounter-distinction-for-r-56-export-both-versions-as-labeled-excel-files/89-CONTEXT.md
 
 ---
 *State initialized: 2026-06-03 for v2.2 Local Testing Infrastructure*
