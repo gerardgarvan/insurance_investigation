@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Local Testing Infrastructure
-status: verifying
+status: executing
 stopped_at: Completed 86-01-PLAN.md
-last_updated: "2026-06-05T16:11:53.094Z"
+last_updated: "2026-06-05T16:17:26.554Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 7
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-03)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Current focus:** Phase 86 — documentation-cleanup
+**Current focus:** Phase 87 — fix-cancer-summary-pre-post-to-include-icd9-but-be-still-filtered-on-icd10-81-and-all-codes-resolved-next-tables-and-drug-grouping-tables-should-all-be-linked-in-the-codes-they-use
 
 ## Current Position
 
-Phase: 87
+Phase: 88
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Executing Phase 87
 Last activity: 2026-06-05
 
 Progress: [████████████████████████████████████████████████░] 95.5% (82/86 phases complete)
