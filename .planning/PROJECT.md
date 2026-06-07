@@ -74,7 +74,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
-(None — all requirements validated through v2.2)
+- [ ] F/S/E/N treatment line labels per code in Gantt output
+- [ ] Medication names (human-readable) in Gantt output
+- [ ] Code Type column (RXNORM, CPT/HCPCS, ICD-10-CM) in Gantt output
+- [ ] Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS) in Gantt output
+- [ ] SCT conditioning / immunotherapy cross-use flags in Gantt output
+- [ ] Remove 5 false-positive SCT codes from treatment detection
+- [ ] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification)
 
 ### Out of Scope
 
@@ -88,6 +94,19 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Stanford V / BEACOPP regimen identification — only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
+
+## Current Milestone: v2.3 Gantt Data Enrichment
+
+**Goal:** Enrich Gantt export data with per-code treatment line labels, medication names, code metadata, and cross-use flags from all_codes_resolved2.xlsx, while fixing false-positive SCT codes.
+
+**Target features:**
+- F/S/E/N treatment line labels per code (alongside existing regimen-level `is_first_line`)
+- Medication names (human-readable from xlsx column C)
+- Code Type column (RXNORM, CPT/HCPCS, ICD-10-CM)
+- Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS)
+- SCT conditioning / immunotherapy cross-use flags (column 9)
+- Remove 5 false-positive SCT codes from treatment detection (status/complication codes, not procedures)
+- Flag questionable immunotherapy codes (8 vitamin combos, 2 CAR-T classification TBD)
 
 ## Current State
 
@@ -292,4 +311,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-07 after stale Active items cleanup*
+*Last updated: 2026-06-07 after v2.3 milestone start*
