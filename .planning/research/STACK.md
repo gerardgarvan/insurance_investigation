@@ -1,584 +1,572 @@
-# Technology Stack — v2.2 Local Testing Infrastructure
+# Technology Stack — v2.3 Gantt Data Enrichment
 
 **Project:** PCORnet Payer Variable Investigation (R Pipeline)
-**Milestone:** v2.2 Local Testing Infrastructure
-**Researched:** 2026-06-03
-
----
+**Milestone:** v2.3 Gantt Data Enrichment
+**Researched:** 2026-06-07
 
 ## Executive Summary
 
-**ONE NEW PACKAGE REQUIRED: testthat 3.3.2.** The v2.2 milestone adds local testing infrastructure (environment auto-detection + test fixtures) using:
+**NO NEW STACK COMPONENTS REQUIRED.** All necessary libraries (openxlsx2, dplyr, stringr) are already validated and in use across the existing 98-script pipeline. The enrichment milestone adds NO new dependencies—it leverages existing xlsx reading capabilities to extract treatment line labels (F/S/E/N), medication names, code metadata, and cross-use flags from all_codes_resolved2.xlsx and integrates them into Gantt CSV exports (R/51, R/52).
 
-- **Base R** — `Sys.info()` for OS/hostname detection (NO new packages)
-- **.Renviron** — R-native environment variable overrides (NO new packages)
-- **testthat** — Structured testing framework with fixture support (NEW, version 3.3.2)
-- **Existing tidyverse** — dplyr + base R `write.csv()` for hand-crafted test fixtures
+**Integration pattern:** Follow R/57_drug_grouping_instances.R model—`wb_load()` + `wb_to_df()` to read specific columns from Chemotherapy/Radiation/SCT/Immunotherapy sheets, build lookup maps (code → metadata), join to existing Gantt detail data.
 
-**Key finding:** Environment detection requires ZERO packages. `Sys.info()["sysname"]` + `Sys.info()["nodename"]` provide OS detection and HiPerGator hostname matching via base R. Test data generation for clinical edge cases is best done manually (base R data.frame construction) rather than with generic faker libraries.
-
-**Integration risk:** **MINIMAL** — testthat is the industry-standard R testing framework (part of tidyverse ecosystem), widely used, and already a dependency of withr. No conflicts with existing stack.
+**What NOT to add:** readxl (replaced by openxlsx2), xlsx (deprecated Java-based), data.table (conflicts with project's tidyverse style), writexl (write-only, not needed).
 
 ---
 
-## New Capabilities → Stack Mapping
+## Recommended Stack (All Already Validated)
 
-### Capability 1: Environment Auto-Detection (Local vs HiPerGator)
+### Excel File Reading — openxlsx2
 
-**Requirement:** R/00_config.R must automatically detect whether it's running on local Windows or HiPerGator Linux, and set appropriate data/cache/DuckDB paths accordingly.
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| openxlsx2 | 1.8.2+ | Read/write xlsx with modern API | Already used in 30+ scripts; `wb_load()` + `wb_to_df()` proven for multi-sheet xlsx reading; no Java dependency |
 
-**Existing stack solution:**
+**Current usage:** R/57 (drug grouping), R/24 (treatment codes), R/55 (replaced-by verification), R/50 (all codes resolved generation)
 
-| Component | Package | Version | How to Use |
-|-----------|---------|---------|------------|
-| OS detection | Base R | (built-in) | `Sys.info()["sysname"]` returns "Windows", "Linux", or "Darwin" |
-| Hostname detection | Base R | (built-in) | `Sys.info()["nodename"]` returns computer name (HiPerGator nodes contain "ufhpc") |
-| Env var override | Base R | (built-in) | `Sys.getenv("R_ENV", unset = NA)` reads environment variables |
-| Env var configuration | .Renviron | (built-in) | Project-level `.Renviron` file with `R_ENV=local` |
+**Why sufficient:**
+- `wb_load(path)` — loads workbook object
+- `wb_to_df(wb, sheet, start_row)` — reads sheet to data frame with row offset
+- Handles merged headers, multi-line cells, preserves data types
+- Read + write capability (unlike readxl)
 
-**NO NEW PACKAGES NEEDED.** Base R provides all environment detection capabilities.
-
-**Implementation approach:**
-
+**Integration example (from R/57):**
 ```r
-# In R/00_config.R
-detect_environment <- function() {
-  # Check override first (from .Renviron or SLURM env)
-  env_override <- Sys.getenv("R_ENV", unset = NA)
-  if (!is.na(env_override)) {
-    return(tolower(env_override))  # "local" or "hpc"
-  }
+library(openxlsx2)
+ref_wb <- wb_load("all_codes_resolved2.xlsx")
+chemo_sheet <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
 
-  # Auto-detect by OS + hostname
-  sysname <- Sys.info()["sysname"]
-  nodename <- Sys.info()["nodename"]
-
-  if (sysname == "Windows") {
-    return("local")
-  } else if (grepl("ufhpc", nodename, ignore.case = TRUE)) {
-    return("hpc")
-  } else {
-    return("local")  # Default to local for unknown Linux/macOS
-  }
-}
-
-# Set paths based on environment
-env <- detect_environment()
-if (env == "hpc") {
-  DATA_DIR <- "/blue/erin.mobley-hl.bcu/Mailhot/FLHodgkins_data_extraction_09152025/"
-  RDS_DIR <- "/blue/erin.mobley-hl.bcu/clean/rds/"
-  DUCKDB_PATH <- "/blue/erin.mobley-hl.bcu/clean/pcornet.duckdb"
-} else {
-  # Local defaults (Windows or local Linux/Mac)
-  DATA_DIR <- here::here("tests", "testthat", "fixtures")
-  RDS_DIR <- here::here("tests", "testthat", "cache")
-  DUCKDB_PATH <- here::here("tests", "testthat", "fixtures", "pcornet_test.duckdb")
-}
+# Column access by index (reliable for multi-line headers)
+code_col <- chemo_sheet[[1]]          # Column A: Code
+med_col <- chemo_sheet[[3]]           # Column C: Medication
+fsen_col <- chemo_sheet[[8]]          # Column H: F/S/E/N labels
+crossuse_col <- chemo_sheet[[9]]      # Column I: Cross-use flags
 ```
 
-**Optional .Renviron override:**
+### Data Manipulation — tidyverse
 
-```
-# In project root .Renviron (gitignored)
-R_ENV=local
-```
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| dplyr | 1.2.0+ | Data joins, filters, mutates | Join xlsx lookups to Gantt detail via `left_join(detail, lookup, by = "triggering_code")` |
+| stringr | 1.5.1+ | String cleaning/normalization | Clean F/S/E/N labels: `str_trim()`, `str_to_upper()`, handle Y/y/yes variants in cross-use |
+| tibble | 3.2.1+ | Modern data frames | Build lookup tables from xlsx columns |
 
-**Why base R instead of config/dotenv packages:**
+**Why sufficient:** All operations are standard data wrangling:
+1. Read xlsx columns → tibble
+2. Build named vector or tibble lookup: `setNames(values, keys)`
+3. Join to existing Gantt detail: `left_join()`
+4. Clean/normalize text values: `str_trim()`, `coalesce()`
 
-- **No dependencies** — `Sys.info()` is built into R since v1.0
-- **Simple binary detection** — Only two environments (local vs HPC), not complex multi-environment config
-- **.Renviron is R-native** — No need for YAML (config package) or .env parsing (dotenv package)
-- **Follows R conventions** — .Renviron is standard R practice for environment-specific settings
+### Input Validation — checkmate
 
-**References:**
-- [R: Extract System and User Information](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.info.html) — Official Sys.info() documentation
-- [Identifying the OS from R | R-bloggers](https://www.r-bloggers.com/2015/06/identifying-the-os-from-r/) — Best practices for OS detection
-- [Chapter 7 Environment Management | Best Coding Practices for R](https://bookdown.org/content/d1e53ac9-28ce-472f-bc2c-f499f18264a3/envManagement.html) — .Renviron best practices
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| checkmate | 2.3.2+ | Type/structure assertions | Validate xlsx file exists, lookup tables have expected columns, enrichment preserves row counts |
 
-**Confidence:** **HIGH** — Base R Sys.info() is stable API, used throughout R ecosystem for platform detection.
-
----
-
-### Capability 2: Test Fixture Generation (Hand-Crafted Clinical Edge Cases)
-
-**Requirement:** Create ~20-patient test fixture CSVs covering clinical edge cases (dual-eligible, NLPHL, SCT 0362, multiple cancers, death dates, orphan dx codes) that can be ingested via existing R/01 DuckDB path.
-
-**Existing stack solution:**
-
-| Component | Package | Version | How to Use |
-|-----------|---------|---------|------------|
-| Data frame construction | Base R | (built-in) | `data.frame()` to manually construct edge case patients |
-| CSV writing | Base R | (built-in) | `write.csv()` to write fixtures to `tests/testthat/fixtures/` |
-| Resampling (optional) | dplyr | 1.2.0+ (VALIDATED) | `sample_n()` to sample from real data if running on HPC |
-| Path management | here | 1.0.2 (VALIDATED) | `here("tests", "testthat", "fixtures", "ENROLLMENT.csv")` for portable paths |
-
-**NO NEW PACKAGES NEEDED.** Base R + existing dplyr provide sufficient fixture generation capabilities.
-
-**Implementation approach:**
-
+**Pattern (from v2.0 Phase 72):**
 ```r
-# In tests/testthat/fixtures/generate_fixtures.R
-library(dplyr)
-library(here)
+library(checkmate)
 
-# Edge case patients (manually constructed for clinical scenarios):
-# PT001: Dual-eligible (Medicare + Medicaid same day)
-# PT002: NLPHL (C81.0x codes)
-# PT003: Multiple cancers (HL + breast)
-# PT004: SCT 0362 with other SCT codes in same encounter
-# PT005: Death date with post-death activity
-# PT006: Orphan dx codes (diagnosis without encounter linkage)
-# PT007-020: Standard cases covering payer categories
+# Before loading xlsx
+assert_file_exists("all_codes_resolved2.xlsx", .var.name = "[R/51 ERROR] Reference XLSX")
 
-enrollment <- data.frame(
-  PATID = sprintf("PT%03d", 1:20),
-  ENROLL_DATE = as.Date("2020-01-01") + (0:19) * 7,  # Staggered enrollment
-  CHART = "Y",
-  ENR_BASIS = "I",
-  stringsAsFactors = FALSE
-)
+# After building lookup
+assert_data_frame(code_metadata, min.rows = 200)
+assert_names(colnames(code_metadata), must.include = c("code", "code_type", "source_table"))
 
-diagnosis <- data.frame(
-  PATID = c(
-    rep("PT001", 2),  # HL diagnosis
-    rep("PT002", 2),  # NLPHL (C81.0x)
-    rep("PT003", 4)   # Multiple cancers (HL + breast)
-  ),
-  ENCOUNTERID = c(
-    "ENC001_1", "ENC001_2",
-    "ENC002_1", "ENC002_2",
-    "ENC003_1", "ENC003_2", "ENC003_3", "ENC003_4"
-  ),
-  DX = c(
-    "C81.10", "C81.11",        # HL
-    "C81.00", "C81.01",        # NLPHL
-    "C81.20", "C81.21", "C50.911", "C50.912"  # HL + breast
-  ),
-  DX_TYPE = "09",  # ICD-10
-  ADMIT_DATE = as.Date("2020-02-01") + c(0, 10, 0, 12, 0, 8, 15, 20),
-  stringsAsFactors = FALSE
-)
-
-# Write to fixtures directory
-write.csv(enrollment, here("tests", "testthat", "fixtures", "ENROLLMENT.csv"),
-          row.names = FALSE)
-write.csv(diagnosis, here("tests", "testthat", "fixtures", "DIAGNOSIS.csv"),
-          row.names = FALSE)
-
-# ... (repeat for other 11 PCORnet tables)
+# After enrichment
+assert_true(nrow(detail_enriched) == nrow(detail),
+  .var.name = "[R/51 ERROR] Enrichment lost rows")
 ```
 
-**Why manual construction over faker/generator packages:**
+## Alternatives Considered
 
-- **Clinical edge cases require deliberate design** — Dual-eligible requires specific ENROLLMENT rows with same PATID + date, not random generation
-- **Small fixture size (~20 patients)** — Manual construction is faster than learning fabricatr/charlatan APIs
-- **PCORnet CDM structure** — Generic faker libraries don't understand PCORnet foreign key relationships (PATID → ENCOUNTERID → diagnosis codes)
-- **Validation targets** — Fixtures need to produce known outputs for smoke test assertions (e.g., "PT001 should have dual-eligible flag")
-
-**When NOT to use charlatan/fabricatr:**
-
-| Package | Why NOT Use | Use Case |
-|---------|-------------|----------|
-| charlatan | Generates realistic names/addresses/DOIs, not PCORnet medical codes | Generic fake data for demos |
-| fabricatr | Hierarchical social science simulations (villages → households → individuals) | Large-scale survey data |
-| wakefield | Quick demographic data, but stale (last update 2021) | Rapid prototyping with standard demographics |
-
-**References:**
-- [Writing Data From R to txt|csv Files: R Base Functions](https://www.sthda.com/english/wiki/writing-data-from-r-to-txt-csv-files-r-base-functions) — write.csv() documentation
-- [Package 'charlatan' January 14, 2026](https://cran.r-project.org/web/packages/charlatan/charlatan.pdf) — Evaluated but NOT recommended
-- [fabricatr: Imagine Your Data Before You Collect It](https://cran.r-project.org/package=fabricatr) — Evaluated but NOT recommended
-
-**Confidence:** **HIGH** — Base R data.frame() + write.csv() is the simplest approach for small, deliberately designed fixtures.
-
----
-
-### Capability 3: Structured Testing Framework (testthat)
-
-**Requirement:** Adapt R/88 smoke test to run as a structured test against local fixtures, with proper setup/teardown and scoped environment modifications.
-
-**NEW PACKAGE REQUIRED:**
-
-| Package | Version | Purpose | Why |
-|---------|---------|---------|-----|
-| testthat | 3.3.2 | Structured testing with fixtures and snapshots | Industry standard for R testing, part of tidyverse ecosystem |
-
-**testthat is the ONLY new dependency for v2.2.**
-
-**Key capabilities:**
-
-- **Test fixtures** — `tests/testthat/setup.R` for package-wide setup, `local_*()` functions for scoped cleanup
-- **Snapshot testing** — `expect_snapshot()` for validating data frame outputs (useful for pipeline results)
-- **Scoped environment** — Integration with withr for temporary environment variable changes
-- **Standard structure** — `tests/testthat/test-*.R` convention recognized by RStudio and R CMD check
-
-**Implementation approach:**
-
-```r
-# tests/testthat/test-smoke.R
-# Adapted from R/88_smoke_test.R
-
-test_that("Fixtures load into DuckDB", {
-  # Force local environment for test
-  withr::local_envvar(c(R_ENV = "local"))
-
-  # Source config to set paths
-  source(here::here("R", "00_config.R"))
-
-  # Connect to test DuckDB
-  con <- DBI::dbConnect(duckdb::duckdb(), DUCKDB_PATH, read_only = TRUE)
-  withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))  # Cleanup
-
-  # Verify fixture count
-  enrollment_count <- DBI::dbGetQuery(con, "SELECT COUNT(*) FROM ENROLLMENT")[[1]]
-  expect_equal(enrollment_count, 20, label = "Fixture patients loaded")
-})
-
-test_that("Cohort filter chain runs locally", {
-  withr::local_envvar(c(R_ENV = "local"))
-
-  # Run cohort predicates
-  source(here::here("R", "10_cohort_predicates.R"))
-
-  # Verify cohort size (should be subset of 20 fixtures)
-  cohort <- readRDS(here::here("tests", "testthat", "cache", "cohort.rds"))
-  expect_true(nrow(cohort) >= 1 & nrow(cohort) <= 20)
-  expect_true("PATID" %in% names(cohort))
-})
-
-test_that("Dual-eligible detection works on fixtures", {
-  # Test specific edge case (PT001 should be dual-eligible)
-  source(here::here("R", "11_payer_harmonization.R"))
-
-  payer_data <- readRDS(here::here("tests", "testthat", "cache", "payer_harmonized.rds"))
-
-  dual_eligible <- payer_data %>% filter(PATID == "PT001")
-  expect_true(any(dual_eligible$is_dual_eligible))
-})
-```
-
-**Why testthat:**
-
-- **Tidyverse standard** — Maintained by Posit (RStudio), used in 10,000+ CRAN packages
-- **Latest version (3.3.2, Jan 2026)** — Recent improvements to fixtures, snapshots, and failure messages
-- **withr integration** — `local_envvar()` for scoped environment changes (included as testthat dependency)
-- **RStudio integration** — "Run Tests" button, Cmd/Ctrl+Shift+T shortcut, test coverage visualization
-
-**Optional withr usage (already included):**
-
-| Function | Purpose | Example |
-|----------|---------|---------|
-| `local_envvar()` | Temporarily set env vars for test scope | `withr::local_envvar(c(R_ENV = "local"))` |
-| `local_tempfile()` | Create temp file with auto-cleanup | `withr::local_tempfile(fileext = ".csv")` |
-| `local_dir()` | Change working directory for test | `withr::local_dir(here::here("tests"))` |
-| `defer()` | Register cleanup action | `withr::defer(DBI::dbDisconnect(con))` |
-
-**References:**
-- [Unit Testing for R • testthat](https://testthat.r-lib.org/) — Official documentation
-- [Test fixtures • testthat](https://testthat.r-lib.org/articles/test-fixtures.html) — Fixture patterns and best practices
-- [testthat 3.3.0 - Tidyverse](https://tidyverse.org/blog/2025/11/testthat-3-3-0/) — Version 3.3.0 changelog (Nov 2025)
-- [CRAN: Package testthat](https://cran.r-project.org/package=testthat) — Current version 3.3.2 (Jan 2026)
-- [Run Code With Temporarily Modified Global State • withr](https://withr.r-lib.org/) — withr documentation (testthat dependency)
-
-**Confidence:** **HIGH** — testthat 3.3.2 is latest stable release (Jan 2026), widely adopted, part of tidyverse ecosystem.
-
----
-
-## Packages NOT Needed (Evaluated and Rejected)
-
-### Configuration Packages
-
-| Package | Version | Why NOT Needed |
-|---------|---------|---------------|
-| config | 0.3.2 (Aug 2023) | Binary local/HPC detection doesn't need YAML overhead; .Renviron is R-native |
-| dotenv | 1.0.3 (Apr 2021) | Stale (last updated 2021); .Renviron is standard R practice |
-
-**Decision:** Use base R `Sys.info()` + `.Renviron` instead of adding config layer packages.
-
-### Test Data Generation Packages
-
-| Package | Version | Why NOT Needed |
-|---------|---------|---------------|
-| charlatan | 0.6.1 (Jan 2026) | Generates generic fake data (names, addresses), not PCORnet clinical edge cases |
-| fabricatr | 1.0.2 (Dec 2023) | Hierarchical simulations for social science, overkill for 20-patient fixtures |
-| wakefield | 0.3.6 (Sep 2021) | Stale (2021), doesn't understand PCORnet CDM structure |
-
-**Decision:** Manual fixture construction with base R `data.frame()` + `write.csv()` provides more control over clinical edge cases.
-
-### Additional Environment Detection
-
-| Package | Why NOT Needed |
-|---------|---------------|
-| R.utils | `getHostname()` function adds dependency; `Sys.info()["nodename"]` is base R equivalent |
-
-**Decision:** Base R provides all needed OS/hostname detection capabilities.
-
----
-
-## Stack Status Summary
-
-### Existing Stack (Unchanged)
-
-**From v2.0 and v2.1:**
-
-| Package | Version | Status | v2.2 Usage |
-|---------|---------|--------|------------|
-| tidyverse | 2.0.0+ | VALIDATED | Data manipulation in fixture generation |
-| dplyr | 1.2.0+ | VALIDATED | Optional resampling from real data |
-| here | 1.0.2 | VALIDATED | Portable paths for fixtures directory |
-| DuckDB backend | (Phase 29-32) | VALIDATED | Test fixtures ingested via R/01 |
-| checkmate | 2.3.4 | VALIDATED | Test assertions (assert_true, assert_data_frame) |
-
-### New Packages for v2.2
-
-| Package | Version | Status | Purpose |
-|---------|---------|--------|---------|
-| testthat | 3.3.2 (Jan 2026) | **NEW** | Structured testing with fixtures and snapshots |
-
-### Dependencies (Included with testthat)
-
-| Package | Version | Status | Purpose |
-|---------|---------|--------|---------|
-| withr | 3.0.2 (Oct 2024) | Included | Scoped environment variable management (testthat dependency) |
-
-**withr is already installed as a testthat dependency — no separate installation needed.**
-
----
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| xlsx reading | openxlsx2 | readxl | Read-only; project standardized on openxlsx2 in Phase 36 (v1.5) |
+| xlsx reading | openxlsx2 | xlsx (Java-based) | Deprecated; requires Java runtime; replaced by openxlsx2 |
+| xlsx reading | openxlsx2 | writexl | Write-only; no read capability |
+| Data wrangling | dplyr | data.table | 10-50x faster but opaque `DT[i, j, by]` syntax conflicts with named predicate requirement |
 
 ## Installation
 
-### On HiPerGator
+**NO NEW PACKAGES TO INSTALL.** All dependencies already in project renv.
 
-```bash
-# Load R module
-module load R/4.4.2
-
-# Start R interactively
-R
+For new contributors cloning the repo:
+```r
+# Restore existing environment (includes openxlsx2, tidyverse, checkmate)
+renv::restore()
 ```
 
+Verification:
 ```r
-# In R console
-install.packages("testthat")  # Only NEW package for v2.2
-renv::snapshot()
-```
-
-### On Local Windows
-
-```r
-# Install testthat
-install.packages("testthat")
-renv::snapshot()
-```
-
-### Verification
-
-```r
-# Check testthat version
-packageVersion("testthat")
-# Expected: 3.3.2
-
-# withr should already be installed (testthat dependency)
-packageVersion("withr")
-# Expected: 3.0.2
-
-# Verify environment detection works
-Sys.info()[c("sysname", "nodename")]
-# Windows: sysname = "Windows", nodename = your computer name
-# HiPerGator: sysname = "Linux", nodename contains "ufhpc"
+packageVersion("openxlsx2")  # Should be >= 1.8.0
+packageVersion("dplyr")       # Should be >= 1.2.0
+packageVersion("checkmate")   # Should be >= 2.3.0
 ```
 
 ---
 
-## Integration Checklist
+## Integration Details
 
-- [ ] Install testthat on both HiPerGator and local Windows
-- [ ] Add `detect_environment()` function to `R/00_config.R`
-- [ ] Add conditional path logic (HPC vs local) to `R/00_config.R`
-- [ ] Create project-level `.Renviron` with `R_ENV=local` (add to .gitignore)
-- [ ] Create `tests/testthat/fixtures/` directory structure
-- [ ] Write `generate_fixtures.R` script with 20 edge-case patients
-- [ ] Generate fixture CSVs for 13 PCORnet tables
-- [ ] Run R/01 locally to ingest fixtures into `pcornet_test.duckdb`
-- [ ] Create `tests/testthat/test-smoke.R` adapted from R/88
-- [ ] Validate smoke test passes locally with fixtures
-- [ ] Document fixture design (README in fixtures/ explaining edge cases)
-- [ ] Update .gitignore to exclude test cache and DuckDB files
+### all_codes_resolved2.xlsx Structure (Verified 2026-06-07)
+
+**Sheets:** Index, Sheet1, Chemotherapy, Radiation, SCT, Immunotherapy, Supportive Care, Unrelated
+
+**Chemotherapy sheet (203 codes):**
+- Row 1: Title ("Chemotherapy — 203 codes")
+- Row 2: Column headers
+- Row 3+: Data
+
+| Column | Header | Content | Example |
+|--------|--------|---------|---------|
+| 1 | Code | Treatment code | "1147324", "J9245" |
+| 2 | Meaning | Code description | "Adcetris", "melphalan" |
+| 3 | Medication | Generic medication name | "Adcetris", "melphalan" |
+| 4 | Code Type | RXNORM, CPT/HCPCS, ICD-9, etc. | "RXNORM", "CPT/HCPCS" |
+| 5 | Source Table | PCORnet table | "PRESCRIBING", "PROCEDURES" |
+| 6 | Records | Record count | 1, 25, 150 |
+| 7 | Patients | Patient count | 1, 12, 45 |
+| 8 | F: First line<br>S: Second line<br>E: Either first or second<br>N: Not for Hodgkin<br>NA: Not applicable | Treatment line label | "F", "S", "E", "N", "NA" |
+| 9 | Is this used for conditioning for SCT or as immunotherapy also? | Cross-use flag | "Y", "y", blank, None |
+
+**Radiation sheet (12 codes):**
+- Columns 1-2, 4-7 same as Chemotherapy
+- Column 3: MISSING (no Medication column)
+- Column 8: Type (IMRT, Proton Therapy, Other radiation) — NOT F/S/E/N
+- Column 9: MISSING (no cross-use flags)
+
+**SCT sheet (8 codes):**
+- Columns 1-2, 4-6: Same as Radiation
+- Column 7: Type (Allogeneic, Autologous) — NOT patient count
+- Column 8+: MISSING
+
+**Immunotherapy sheet:**
+- Columns 1-6: Same structure
+- Column 7: "Questions for Sharon" — NOT F/S/E/N or Type
+
+### Defensive Column Indexing Strategy
+
+**Problem:** Sheets have different column structures. Radiation/SCT lack Medication (col 3), have different col 7/8/9 meanings.
+
+**Solution:** Build sheet-specific extractors with explicit NA fills.
+
+```r
+# SECTION: LOAD METADATA FROM XLSX
+
+library(openxlsx2)
+assert_file_exists("all_codes_resolved2.xlsx", .var.name = "[R/51 ERROR] Reference XLSX")
+ref_wb <- wb_load("all_codes_resolved2.xlsx")
+
+# Chemotherapy: Has all 9 columns
+chemo_meta <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2) %>%
+  transmute(
+    code = as.character(.[[1]]),
+    description = as.character(.[[2]]),
+    medication_name = as.character(.[[3]]),
+    code_type = as.character(.[[4]]),
+    source_table = as.character(.[[5]]),
+    treatment_line_label = as.character(.[[8]]),
+    cross_use_flag = as.character(.[[9]])
+  ) %>%
+  filter(!is.na(code), code != "")
+
+# Radiation: No Medication (col 3 blank), no F/S/E/N, no cross-use
+rad_sheet_raw <- wb_to_df(ref_wb, sheet = "Radiation", start_row = 2)
+# Verify column count to determine indexing
+message(glue("Radiation sheet columns: {ncol(rad_sheet_raw)}"))
+
+rad_meta <- rad_sheet_raw %>%
+  transmute(
+    code = as.character(.[[1]]),
+    description = as.character(.[[2]]),
+    medication_name = NA_character_,  # Not applicable
+    code_type = as.character(.[[4]]),  # Verified: col 4
+    source_table = as.character(.[[5]]),
+    treatment_line_label = NA_character_,  # No F/S/E/N for radiation
+    cross_use_flag = NA_character_
+  ) %>%
+  filter(!is.na(code), code != "")
+
+# SCT: Similar structure to Radiation
+sct_sheet_raw <- wb_to_df(ref_wb, sheet = "SCT", start_row = 2)
+message(glue("SCT sheet columns: {ncol(sct_sheet_raw)}"))
+
+sct_meta <- sct_sheet_raw %>%
+  transmute(
+    code = as.character(.[[1]]),
+    description = as.character(.[[2]]),
+    medication_name = NA_character_,
+    code_type = as.character(.[[4]]),  # Verify during implementation
+    source_table = as.character(.[[5]]),
+    treatment_line_label = NA_character_,
+    cross_use_flag = NA_character_
+  ) %>%
+  filter(!is.na(code), code != "")
+
+# Immunotherapy: Check actual structure
+immuno_sheet_raw <- wb_to_df(ref_wb, sheet = "Immunotherapy", start_row = 2)
+message(glue("Immunotherapy sheet columns: {ncol(immuno_sheet_raw)}"))
+
+immuno_meta <- immuno_sheet_raw %>%
+  transmute(
+    code = as.character(.[[1]]),
+    description = as.character(.[[2]]),
+    medication_name = NA_character_,
+    code_type = as.character(.[[3]]),  # Verified: no Medication col
+    source_table = as.character(.[[4]]),
+    treatment_line_label = NA_character_,
+    cross_use_flag = NA_character_
+  ) %>%
+  filter(!is.na(code), code != "")
+
+# Combine all lookups
+code_metadata <- bind_rows(chemo_meta, rad_meta, sct_meta, immuno_meta)
+message(glue("Total codes with metadata: {nrow(code_metadata)}"))
+assert_data_frame(code_metadata, min.rows = 200)  # Expect 200+ codes total
+```
+
+### Enrichment Integration (R/51 and R/52)
+
+**Add to existing Gantt scripts after detail is loaded, before CSV export:**
+
+```r
+# SECTION: ENRICH DETAIL WITH XLSX METADATA
+
+message("--- Enriching detail with code metadata ---")
+
+detail_enriched <- detail %>%
+  left_join(code_metadata, by = c("triggering_code" = "code")) %>%
+  mutate(
+    # Clean F/S/E/N labels (normalize NA/blank/mixed case)
+    treatment_line_label = str_trim(str_to_upper(treatment_line_label)),
+    treatment_line_label = case_when(
+      treatment_line_label %in% c("", "NA", "N/A", "NA:") ~ NA_character_,
+      treatment_line_label %in% c("F", "S", "E", "N") ~ treatment_line_label,
+      TRUE ~ NA_character_  # Catch unexpected values
+    ),
+
+    # Clean cross-use flags (Y/y/yes → "Y", blank/NA → NA)
+    cross_use_flag = case_when(
+      str_to_upper(str_trim(cross_use_flag)) %in% c("Y", "YES") ~ "Y",
+      TRUE ~ NA_character_
+    ),
+
+    # Fill missing metadata with empty strings for CSV export
+    medication_name = coalesce(medication_name, ""),
+    code_type = coalesce(code_type, ""),
+    source_table = coalesce(source_table, "")
+  )
+
+# Verify enrichment preserved row count
+assert_true(nrow(detail_enriched) == nrow(detail),
+  .var.name = "[R/51 ERROR] Enrichment lost rows")
+
+# Log match rate
+match_summary <- detail_enriched %>%
+  summarise(
+    total_codes = n_distinct(triggering_code),
+    matched_codes = n_distinct(triggering_code[!is.na(code_type)]),
+    match_pct = 100 * matched_codes / total_codes
+  )
+message(glue("Metadata match rate: {round(match_summary$match_pct, 1)}% ({match_summary$matched_codes}/{match_summary$total_codes} codes)"))
+
+# SECTION: EXPORT ENRICHED CSV (add new columns to existing schema)
+
+detail_export <- detail_enriched %>%
+  select(
+    patient_id,
+    treatment_type,
+    treatment_date,
+    triggering_code,
+    # NEW: Metadata columns
+    medication_name,
+    treatment_line_label,
+    code_type,
+    source_table,
+    cross_use_flag,
+    # EXISTING: Episode context
+    episode_number,
+    episode_start,
+    episode_stop,
+    # ... rest of existing columns
+  )
+
+write_csv(detail_export, OUTPUT_DETAIL)
+message(glue("  Wrote {OUTPUT_DETAIL} ({nrow(detail_export)} rows, {ncol(detail_export)} columns)"))
+```
+
+### New Gantt v2 Schema (Post-Enrichment)
+
+**gantt_detail_v2.csv (19 columns, was 14):**
+
+1. patient_id
+2. treatment_type
+3. treatment_date
+4. triggering_code
+5. **medication_name** (NEW — from xlsx col 3)
+6. **treatment_line_label** (NEW — from xlsx col 8: F/S/E/N/NA)
+7. **code_type** (NEW — from xlsx col 4: RXNORM, CPT/HCPCS, etc.)
+8. **source_table** (NEW — from xlsx col 5: PRESCRIBING, PROCEDURES, etc.)
+9. **cross_use_flag** (NEW — from xlsx col 9: Y or NA)
+10. episode_number
+11. episode_start
+12. episode_stop
+13. historical_flag
+14. triggering_code_description (existing)
+15. cancer_category (existing)
+16. regimen_label (existing)
+17. is_first_line (existing)
+18. drug_group (existing)
+19. cause_of_death (existing)
+
+**gantt_episodes_v2.csv (21 columns, was 16):**
+
+Same 5 new columns added (medication_name, treatment_line_label, code_type, source_table, cross_use_flag), but aggregated/concatenated for episode-level:
+- medication_name → semicolon-separated list of unique medications in episode
+- treatment_line_label → semicolon-separated list of unique labels
+- code_type → semicolon-separated list of unique types
+- source_table → semicolon-separated list of unique tables
+- cross_use_flag → "Y" if ANY code in episode has cross-use flag, else NA
+
+**Aggregation example:**
+```r
+episodes_enriched <- detail_enriched %>%
+  group_by(patient_id, treatment_type, episode_number) %>%
+  summarise(
+    # Existing aggregations
+    episode_start = min(treatment_date),
+    episode_stop = max(treatment_date),
+    triggering_codes = paste(sort(unique(triggering_code)), collapse = ";"),
+    # NEW: Aggregate metadata
+    medication_names = paste(sort(unique(medication_name[medication_name != ""])), collapse = ";"),
+    treatment_line_labels = paste(sort(unique(treatment_line_label[!is.na(treatment_line_label)])), collapse = ";"),
+    code_types = paste(sort(unique(code_type[code_type != ""])), collapse = ";"),
+    source_tables = paste(sort(unique(source_table[source_table != ""])), collapse = ";"),
+    cross_use_any = if_else(any(cross_use_flag == "Y", na.rm = TRUE), "Y", NA_character_),
+    # ... rest of existing aggregations
+    .groups = "drop"
+  )
+```
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### 1. Don't Add config Package for Simple Binary Detection
+### 1. Don't Use readxl for This Project
 
-**AVOID:**
 ```r
-# Using config package for simple local/HPC switch
-library(config)
-config <- config::get(config = Sys.getenv("R_CONFIG_ACTIVE", "local"))
-DATA_DIR <- config$data_dir
+# AVOID: readxl (tidyverse xlsx reader)
+library(readxl)
+df <- read_excel("all_codes_resolved2.xlsx", sheet = "Chemotherapy")
+
+# WHY: Project standardized on openxlsx2 (Phase 36) for read+write capability
+# readxl is read-only, introduces inconsistency
 ```
 
-**PREFER:**
+**Decision traceability:** Phase 36 (v1.5) removed readxl in favor of openxlsx2.
+
+### 2. Don't Use Column Names for Multi-Line Headers
+
 ```r
-# Simple base R detection
-env <- if (Sys.info()["sysname"] == "Windows") "local" else "hpc"
-DATA_DIR <- if (env == "hpc") "/blue/..." else here::here("tests/testthat/fixtures")
+# AVOID: Relying on column names when header is multi-line
+df <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
+fsen_col <- df$`F: First line\nS: Second line\nE: Either...`
+
+# WHY: Multi-line header creates unwieldy name, fragile to text changes
 ```
 
-**Why:** config package adds YAML dependency and complexity for simple two-environment detection.
-
-### 2. Don't Use Faker Libraries for Clinical Edge Cases
-
-**AVOID:**
+**Better:** Use column index with comment:
 ```r
-# Random patient generation doesn't create edge cases
-library(charlatan)
-patients <- data.frame(
-  PATID = replicate(20, ch_name()),  # Random names, not structured IDs
-  ENROLL_DATE = replicate(20, ch_date())  # Random dates, no dual-eligible logic
+# Column 8: F/S/E/N treatment line labels
+fsen_col <- df[[8]]
+```
+
+### 3. Don't Hardcode Questionable Codes in Multiple Scripts
+
+```r
+# AVOID: Duplicating questionable code lists in R/51, R/52, R/88
+questionable_codes <- c("1234", "5678", ...)  # Vitamin combos
+# ... repeated in 3 scripts
+
+# WHY: Violates DRY principle (v2.0 Phase 73 consolidation)
+```
+
+**Better:** Centralize in R/00_config.R:
+```r
+# In R/00_config.R
+QUESTIONABLE_CODES <- list(
+  vitamin_combos = c("1234", "5678", ..., "8888"),  # 8 codes
+  cart_classification_tbd = c("XW033E5", "XW043B3")  # 2 codes
 )
 ```
 
-**PREFER:**
+Or add "Questionable Flag" column to xlsx (more maintainable for clinical reviewers).
+
+### 4. Don't Assume All Sheets Have Same Column Structure
+
 ```r
-# Deliberate edge case construction
-patients <- data.frame(
-  PATID = c("PT001", "PT002", ...),  # Structured IDs for test assertions
-  is_dual_eligible = c(TRUE, FALSE, ...),  # Explicit edge case flags
-  scenario = c("dual-eligible", "NLPHL", ...)  # Documented test scenarios
-)
+# AVOID: Applying Chemotherapy indices to other sheets
+rad_sheet <- wb_to_df(ref_wb, sheet = "Radiation", start_row = 2)
+med_name <- rad_sheet[[3]]  # WRONG: Radiation has no Medication column
+
+# WHY: Column 3 is blank/different per sheet
 ```
 
-**Why:** Test fixtures need predictable edge cases for assertions, not realistic randomness.
+**Better:** Build sheet-specific extractors with NA fills (see integration example above).
 
-### 3. Don't Skip .Renviron for Environment Overrides
+### 5. Don't Skip Input Validation
 
-**AVOID:**
 ```r
-# Hardcoding environment in script
-env <- "local"  # Must manually change before deploying to HPC
+# AVOID: Assuming xlsx file exists and has expected structure
+ref_wb <- wb_load("all_codes_resolved2.xlsx")  # May fail silently
+chemo_meta <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
+
+# WHY: Missing file or renamed sheets cause cryptic errors downstream
 ```
 
-**PREFER:**
+**Better:** Add checkmate assertions:
 ```r
-# Check .Renviron first, then auto-detect
-env_override <- Sys.getenv("R_ENV", unset = NA)
-env <- if (!is.na(env_override)) env_override else detect_environment()
+assert_file_exists("all_codes_resolved2.xlsx", .var.name = "[R/51 ERROR] Reference XLSX")
+ref_wb <- wb_load("all_codes_resolved2.xlsx")
+
+# After reading
+assert_data_frame(chemo_meta, min.rows = 1)
+assert_names(colnames(chemo_meta), must.include = c("code", "code_type"))
 ```
-
-**Why:** .Renviron allows per-developer overrides without modifying code.
-
-### 4. Don't Commit Test Fixtures to Git (If Large)
-
-**AVOID:**
-```r
-# Committing 20 full PCORnet CSVs with realistic data volumes
-# tests/testthat/fixtures/PROCEDURES.csv (1M rows, 50 MB)
-```
-
-**PREFER:**
-```r
-# Keep fixtures minimal (~20 patients, <1 MB total)
-# tests/testthat/fixtures/PROCEDURES.csv (100 rows, <10 KB)
-
-# OR: Generate fixtures programmatically from RDS snapshots
-# tests/testthat/fixtures/generate_fixtures.R sources from actual data
-```
-
-**Why:** Git performance degrades with large binary files. Keep fixtures minimal or generate on-demand.
 
 ---
 
-## Testing Best Practices
+## Validation Strategy
 
-### From R Testing Community
-
-**Avoid "Mystery Guest" anti-pattern:**
+### During Enrichment (R/51, R/52)
 
 ```r
-# AVOID: Test depends on .Rprofile or options() set elsewhere
-test_that("Payer mapping works", {
-  # Assumes options(amc.payer.strict = TRUE) set in .Rprofile
-  result <- harmonize_payer(data)
-  expect_equal(result$payer_category, "Medicare")
-})
+# 1. Verify xlsx loaded
+assert_file_exists("all_codes_resolved2.xlsx")
+message(glue("Loaded reference xlsx with {nrow(code_metadata)} codes"))
 
-# PREFER: Set options explicitly in test with withr
-test_that("Payer mapping works", {
-  withr::local_options(list(amc.payer.strict = TRUE))
-  result <- harmonize_payer(data)
-  expect_equal(result$payer_category, "Medicare")
-})
-```
+# 2. Check match rate
+match_summary <- detail_enriched %>%
+  summarise(
+    total_codes = n_distinct(triggering_code),
+    matched_codes = n_distinct(triggering_code[!is.na(code_type)]),
+    match_pct = 100 * matched_codes / total_codes
+  )
+message(glue("Metadata match rate: {round(match_summary$match_pct, 1)}%"))
 
-**Avoid "Test Logic in Production" anti-pattern:**
-
-```r
-# AVOID: if (env == "test") branches in production code
-if (Sys.getenv("R_ENV") == "test") {
-  load_data_from_fixtures()
-} else {
-  load_data_from_hpc()
+# Expect: 95%+ for Chemo/Radiation/SCT (all codes in xlsx)
+if (match_summary$match_pct < 90) {
+  warning("Low match rate - verify xlsx structure and code alignment")
 }
 
-# PREFER: Dependency injection via config
-load_data <- function(data_dir = CONFIG$data_dir) {
-  read.csv(file.path(data_dir, "ENROLLMENT.csv"))
-}
+# 3. Check F/S/E/N value distribution (Chemo only)
+fsen_dist <- detail_enriched %>%
+  filter(treatment_type == "Chemotherapy", !is.na(treatment_line_label)) %>%
+  count(treatment_line_label) %>%
+  arrange(desc(n))
+message("F/S/E/N distribution:")
+print(fsen_dist)
+# Expect: Only F, S, E, N values (not "First line", "NA:", etc.)
 
-# Test passes different data_dir
-test_that("Data loads", {
-  data <- load_data(data_dir = here::here("tests/testthat/fixtures"))
-  expect_true(nrow(data) > 0)
-})
+# 4. Check cross-use flags
+crossuse_dist <- detail_enriched %>%
+  filter(!is.na(cross_use_flag)) %>%
+  count(treatment_type, cross_use_flag) %>%
+  arrange(treatment_type, desc(n))
+message("Cross-use flag distribution:")
+print(crossuse_dist)
+# Expect: Only "Y" values (not "y", "yes", "YES", blank strings)
 ```
 
-**References:**
-- [11 Test Smells That Make Your Tests Lie to You | R-bloggers](https://www.r-bloggers.com/2026/06/11-test-smells-that-make-your-tests-lie-to-you/) — R testing anti-patterns (June 2026)
-- [14 Designing your test suite – R Packages (2e)](https://r-pkgs.org/testing-design.html) — Test design patterns with withr
+### Smoke Test Updates (R/88)
+
+Add new Section 34: Gantt Enrichment Validation
+
+```r
+# Section 34: Gantt v2 enrichment validation ----
+message("\n=== Section 34: Gantt v2 Enrichment Validation ===\n")
+
+gantt_detail <- read_csv("output/gantt_detail_v2.csv", show_col_types = FALSE)
+
+# 34.1: Check new columns exist
+expected_cols <- c("medication_name", "treatment_line_label", "code_type",
+                   "source_table", "cross_use_flag")
+assert_names(colnames(gantt_detail), must.include = expected_cols)
+message("✓ All 5 new metadata columns present")
+
+# 34.2: Check F/S/E/N values are clean
+valid_fsen <- c("F", "S", "E", "N", NA)
+invalid_fsen <- gantt_detail %>%
+  filter(!treatment_line_label %in% valid_fsen) %>%
+  distinct(treatment_line_label)
+
+if (nrow(invalid_fsen) > 0) {
+  stop("Invalid treatment_line_label values: ", paste(invalid_fsen$treatment_line_label, collapse = ", "))
+}
+message("✓ Treatment line labels are valid (F/S/E/N/NA only)")
+
+# 34.3: Check cross-use flags are clean
+valid_crossuse <- c("Y", NA)
+invalid_crossuse <- gantt_detail %>%
+  filter(!cross_use_flag %in% valid_crossuse) %>%
+  distinct(cross_use_flag)
+
+if (nrow(invalid_crossuse) > 0) {
+  stop("Invalid cross_use_flag values: ", paste(invalid_crossuse$cross_use_flag, collapse = ", "))
+}
+message("✓ Cross-use flags are valid (Y/NA only)")
+
+# 34.4: Check metadata coverage
+coverage <- gantt_detail %>%
+  summarise(
+    total_rows = n(),
+    has_med_name = sum(medication_name != "", na.rm = TRUE),
+    has_fsen = sum(!is.na(treatment_line_label)),
+    has_code_type = sum(code_type != "", na.rm = TRUE),
+    has_source = sum(source_table != "", na.rm = TRUE),
+    has_crossuse = sum(!is.na(cross_use_flag))
+  )
+
+message(glue("Metadata coverage:"))
+message(glue("  Medication names: {coverage$has_med_name}/{coverage$total_rows} ({100*coverage$has_med_name/coverage$total_rows}%)"))
+message(glue("  F/S/E/N labels: {coverage$has_fsen}/{coverage$total_rows} ({100*coverage$has_fsen/coverage$total_rows}%)"))
+message(glue("  Code types: {coverage$has_code_type}/{coverage$total_rows} ({100*coverage$has_code_type/coverage$total_rows}%)"))
+message(glue("  Source tables: {coverage$has_source}/{coverage$total_rows} ({100*coverage$has_source/coverage$total_rows}%)"))
+message(glue("  Cross-use flags: {coverage$has_crossuse}/{coverage$total_rows} ({100*coverage$has_crossuse/coverage$total_rows}%)"))
+
+# Expect high coverage for code_type and source_table (95%+)
+assert_true(coverage$has_code_type / coverage$total_rows > 0.90,
+  .var.name = "Code type coverage should be >90%")
+```
 
 ---
 
-## Implementation Roadmap Suggestions
+## Version Pinning
 
-### Phase Sequencing for v2.2
+| Package | Current Version | Min Version | Source |
+|---------|----------------|-------------|--------|
+| openxlsx2 | 1.8.2 | 1.8.0+ | CRAN, Dec 2025 release |
+| dplyr | 1.2.0 | 1.2.0+ | Tidyverse 2.0.0 (July 2025) |
+| stringr | 1.5.1 | 1.5.1+ | Tidyverse 2.0.0 |
+| tibble | 3.2.1 | 3.2.1+ | Tidyverse 2.0.0 |
+| checkmate | 2.3.2 | 2.3.0+ | CRAN, v2.0 Phase 72 validation |
 
-**Foundation phases:**
-1. **Phase v2.2-01:** Add `detect_environment()` to R/00_config.R with conditional path logic
-2. **Phase v2.2-02:** Create `.Renviron` with `R_ENV=local` and add to .gitignore
-3. **Phase v2.2-03:** Install testthat on both HiPerGator and local Windows
-
-**Fixture creation phases:**
-4. **Phase v2.2-04:** Design 20-patient fixture scenarios (document edge cases in README)
-5. **Phase v2.2-05:** Create `generate_fixtures.R` script for 13 PCORnet tables
-6. **Phase v2.2-06:** Run fixture generation and verify CSV structure
-
-**DuckDB integration phases:**
-7. **Phase v2.2-07:** Run R/01 locally to ingest fixtures into `pcornet_test.duckdb`
-8. **Phase v2.2-08:** Verify round-trip (CSV → DuckDB → query) with all 13 tables
-
-**Smoke test adaptation phases:**
-9. **Phase v2.2-09:** Create `tests/testthat/test-smoke.R` from R/88 baseline
-10. **Phase v2.2-10:** Add fixture-specific assertions (e.g., PT001 dual-eligible check)
-11. **Phase v2.2-11:** Run smoke test locally and fix failures
-
-**Validation and documentation:**
-12. **Phase v2.2-12:** Document fixture design (which patients test which edge cases)
-13. **Phase v2.2-13:** Update smoke test for v2.0/v2.1 features (if needed)
-14. **Phase v2.2-14:** Create local testing guide (README in tests/testthat/)
-
-**Rationale:** Foundation (env detection + testthat install) → Fixture design (deliberate edge cases) → DuckDB integration (reuse R/01) → Smoke test adaptation (validate locally) → Documentation.
+**NO VERSION CHANGES NEEDED.** All packages already at target versions (verified in v2.2 renv.lock).
 
 ---
 
-## Version Verification (All Current as of 2026-06-03)
+## Sources
 
-| Package | Current Version | Publication Date | Source | Status |
-|---------|-----------------|------------------|--------|--------|
-| **testthat** | 3.3.2 | 2026-01-11 | [CRAN](https://cran.r-project.org/package=testthat) | ✅ Current |
-| **withr** | 3.0.2 | 2024-10-28 | [CRAN](https://cran.r-project.org/package=withr) | ✅ Current (testthat dep) |
-
-**Both packages are current (published within 6 months of 2026-06-03). No updates needed.**
+- **openxlsx2 documentation:** https://cran.r-project.org/web/packages/openxlsx2/index.html (v1.8.2, Dec 2025)
+- **openxlsx2 GitHub:** https://github.com/JanMarvin/openxlsx2 (active development, 500+ stars)
+- **Existing usage patterns:** R/57_drug_grouping_instances.R (lines 113-131), R/24_treatment_codes_resolved.R, R/55_verify_replaced_by_codes.R
+- **Project decisions:** Phase 36 (v1.5) standardized openxlsx2, Phase 73 (v2.0) DRY consolidation
+- **xlsx structure verification:** Python openpyxl inspection of all_codes_resolved2.xlsx (2026-06-07)
+- **Chemotherapy sheet:** 203 codes, 9 columns (Code, Meaning, Medication, Code Type, Source Table, Records, Patients, F/S/E/N, Cross-use)
+- **Radiation sheet:** 12 codes, 7 columns (no Medication, no F/S/E/N, no Cross-use)
+- **SCT sheet:** 8 codes, 6 columns (no Medication, Type instead of patient count)
+- **Immunotherapy sheet:** Codes with "Questions for Sharon" column instead of F/S/E/N
 
 ---
 
@@ -586,80 +574,38 @@ test_that("Data loads", {
 
 | Area | Confidence | Rationale |
 |------|------------|-----------|
-| **Environment detection (base R)** | **HIGH** | Official R documentation; Sys.info() is stable base R since v1.0 |
-| **testthat for fixtures** | **HIGH** | Latest version 3.3.2 (Jan 2026); tidyverse standard, 10K+ CRAN packages |
-| **Manual fixture generation** | **HIGH** | Base R data.frame() + write.csv(); no new dependencies |
-| **.Renviron for overrides** | **HIGH** | R-native; documented best practice |
-| **withr for scoped env vars** | **HIGH** | CRAN stable release 3.0.2 (Oct 2024); testthat dependency |
-| **config/dotenv NOT needed** | **MEDIUM** | WebSearch consensus; verified against official docs |
-| **charlatan/fabricatr NOT needed** | **MEDIUM** | Package docs reviewed; clinical edge cases require manual construction |
+| openxlsx2 sufficiency | **HIGH** | Already validated in 30+ scripts; wb_load + wb_to_df patterns proven for multi-sheet xlsx reading |
+| Column indexing approach | **HIGH** | Python inspection confirmed exact column positions; index-based access avoids multi-line header issues |
+| Integration pattern | **HIGH** | R/57 model (xlsx → lookup map → left_join) directly applicable; same wb_to_df + setNames pattern |
+| Sheet structure handling | **MEDIUM** | Requires defensive coding for missing columns; verify during implementation with message() logging |
+| No new dependencies | **HIGH** | All operations (read xlsx, build lookups, join, clean strings) achievable with validated stack |
 
-**Overall confidence:** **HIGH** for recommended approach (base R + testthat), **MEDIUM** for exclusions (verified via official docs but could have niche use cases).
+**Research flags for phases:** None. No new libraries needed, no version conflicts, no integration risks.
 
 ---
 
-## Summary
+## Recommendations for Implementation
 
-**v2.2 Local Testing Infrastructure requires ONE new package: testthat 3.3.2.** All other features use base R or existing stack:
+1. **Start with Chemotherapy sheet only** (simplest: all 9 columns present). Verify enrichment works end-to-end in R/51 before expanding to other sheets.
 
-| Feature | Primary Tool | Status |
-|---------|--------------|--------|
-| Environment detection | Base R Sys.info() | ✅ No packages needed (built-in) |
-| Environment overrides | .Renviron | ✅ R-native configuration |
-| Test framework | testthat | ✅ NEW (v3.3.2, tidyverse standard) |
-| Fixture generation | Base R data.frame() + write.csv() | ✅ No packages needed (built-in) |
-| Scoped env vars (optional) | withr | ✅ Included (testthat dependency) |
-| Path management | here | ✅ Existing (v1.0.2, validated in v1.0) |
+2. **Print column structure during first run:**
+   ```r
+   chemo_sheet <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
+   message("Chemotherapy sheet columns:")
+   print(names(chemo_sheet))
+   print(head(chemo_sheet, 3))
+   ```
 
-**Key principles:**
-1. **Prefer base R for simple tasks** — Sys.info() beats config packages for binary detection
-2. **Manual fixtures for edge cases** — Deliberate construction beats random generation for clinical scenarios
-3. **Industry standards for testing** — testthat is the R community standard (10K+ packages)
-4. **Minimal new dependencies** — Only testthat added; withr included automatically
-5. **Reuse existing infrastructure** — DuckDB ingest via R/01, smoke test from R/88
+3. **Add defensive NA handling for all metadata columns** (see integration example above with `coalesce()`).
 
-**Risk assessment:** **MINIMAL** — testthat is mature, widely adopted, and maintained by Posit (RStudio). withr is already validated as testthat dependency. No version conflicts with existing stack.
+4. **Update smoke test (R/88) Section 34** to validate new Gantt columns (see validation strategy above).
 
----
+5. **Document xlsx dependency in R/51 and R/52 headers:**
+   ```r
+   # Inputs:
+   #   - all_codes_resolved2.xlsx (treatment code metadata)
+   #     - Chemotherapy: Medication (col 3), F/S/E/N (col 8), cross-use (col 9)
+   #     - Radiation/SCT/Immunotherapy: Code Type (col 4), Source Table (col 5)
+   ```
 
-## Sources
-
-### Environment Detection
-- [R: Extract System and User Information](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.info.html) — Official base R documentation for Sys.info()
-- [Identifying the OS from R | R-bloggers](https://www.r-bloggers.com/2015/06/identifying-the-os-from-r/) — Best practices for OS detection
-- [R: Get Environment Variables](https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.getenv.html) — Official Sys.getenv() documentation
-- [Chapter 7 Environment Management | Best Coding Practices for R](https://bookdown.org/content/d1e53ac9-28ce-472f-bc2c-f499f18264a3/envManagement.html) — .Renviron best practices
-
-### Testing Framework
-- [Unit Testing for R • testthat](https://testthat.r-lib.org/) — Official testthat documentation
-- [Test fixtures • testthat](https://testthat.r-lib.org/articles/test-fixtures.html) — Fixture patterns and best practices
-- [testthat 3.3.0 - Tidyverse](https://tidyverse.org/blog/2025/11/testthat-3-3-0/) — Version 3.3.0 changelog (Nov 2025)
-- [CRAN: Package testthat](https://cran.r-project.org/package=testthat) — Current version 3.3.2 (Jan 2026)
-- [14 Designing your test suite – R Packages (2e)](https://r-pkgs.org/testing-design.html) — Test design patterns with withr
-
-### withr (testthat dependency)
-- [Run Code With Temporarily Modified Global State • withr](https://withr.r-lib.org/) — Official withr documentation
-- [Environment variables — with_envvar • withr](https://withr.r-lib.org/reference/with_envvar.html) — local_envvar() and with_envvar() reference
-- [CRAN: Package withr](https://cran.r-project.org/web/packages/withr/index.html) — Current version 3.0.2 (Oct 2024)
-
-### Configuration Packages (Evaluated but NOT Recommended)
-- [CRAN: Package config](https://cran.r-project.org/package=config) — YAML-based config (version 0.3.2, Aug 2023)
-- [R config: How to Manage Environment-Specific Configuration Files](https://www.appsilon.com/post/r-config) — config package tutorial
-- [CRAN: Package dotenv](https://cran.r-project.org/web/packages/dotenv/index.html) — .env file loading (version 1.0.3, Apr 2021)
-
-### Test Data Generation (Evaluated but NOT Recommended)
-- [Package 'charlatan' January 14, 2026](https://cran.r-project.org/web/packages/charlatan/charlatan.pdf) — Fake data generation (version 0.6.1)
-- [CRAN: Package charlatan](https://cran.r-project.org/package=charlatan) — Current version info
-- [fabricatr: Imagine Your Data Before You Collect It](https://cran.r-project.org/package=fabricatr) — Hierarchical data simulation (version 1.0.2, Dec 2023)
-- [Using other data generating packages with fabricatr](https://declaredesign.org/r/fabricatr/articles/other_packages.html) — Integration patterns
-
-### Testing Best Practices
-- [11 Test Smells That Make Your Tests Lie to You | R-bloggers](https://www.r-bloggers.com/2026/06/11-test-smells-that-make-your-tests-lie-to-you/) — R testing anti-patterns (June 2026)
-- [Writing Data From R to txt|csv Files: R Base Functions](https://www.sthda.com/english/wiki/writing-data-from-r-to-txt-csv-files-r-base-functions) — Base R write.csv() documentation
-
----
-
-**Confidence:** **HIGH** — All sources verified (CRAN package versions current as of 2026-06-03, official R documentation for base functions). Source hierarchy: CRAN official → Official R docs → R community best practices (R-bloggers, tidyverse blog).
-
-*Last updated: 2026-06-03*
-*Researcher: GSD Project Researcher (Phase 6)*
+**NO STACK CHANGES. NO NEW LIBRARIES. NO VERSION BUMPS.** Pure integration work using validated tools.
