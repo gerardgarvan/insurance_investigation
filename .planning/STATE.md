@@ -61,9 +61,7 @@ All v2.2 decisions archived — see milestones/v2.2-ROADMAP.md for details.
 
 ### Pending Todos
 
-- Investigate SCT code 0362 patients
-- Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
-- Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
+None — all carried-forward todos validated (shipped v2.1 Phase 79, refined v2.1 Phases 81-82, v2.2 Phases 87-89).
 
 ### Blockers/Concerns
 

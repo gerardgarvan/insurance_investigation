@@ -68,12 +68,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R — v2.2 Phase 87
 - [x] Instance-level drug grouping tables with human-readable names (R/57) — v2.2 Phase 88
 - [x] Episode vs encounter grain labeling for drug grouping outputs — v2.2 Phase 89
+- [x] SCT code 0362 investigation (overlap rate with standard SCT codes) — v2.1 Phase 79
+- [x] Replaced-by code verification (pairwise + chain analysis) — v2.1 Phase 79
+- [x] Drug grouping summary tables (sub-category + encounter treatment) — v2.1 Phases 79/81/82
 
 ### Active
 
-- [ ] Investigate SCT code 0362 patients — do the 90 patients have other SCT codes during those encounters?
-- [ ] Verify "replaced by" codes from all_codes_resolved_next_tables.xlsx
-- [ ] Create 2 new tables using template and groupings from all_codes_resolved_next_tables.xlsx
+(None — all requirements validated through v2.2)
 
 ### Out of Scope
 
@@ -291,4 +292,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-05 after v2.2 milestone*
+*Last updated: 2026-06-07 after stale Active items cleanup*
