@@ -19,8 +19,8 @@ Requirements for Gantt Data Enrichment milestone. Each maps to roadmap phases.
 - [x] **GANTT-03**: Gantt v2 episodes CSV includes source_table column (PRESCRIBING, PROCEDURES, DIAGNOSIS)
 - [x] **GANTT-04**: Gantt v2 episodes CSV includes treatment_line column (F/S/E/N per triggering code)
 - [x] **GANTT-05**: Gantt v2 episodes CSV includes cross_use_flag column (SCT conditioning / immunotherapy cross-use)
-- [ ] **GANTT-06**: Gantt v2 detail CSV includes same 5 new columns at per-date level
-- [ ] **GANTT-07**: Existing v1 Gantt exports unchanged (backward compatible)
+- [x] **GANTT-06**: Gantt v2 detail CSV includes same 5 new columns at per-date level
+- [x] **GANTT-07**: Existing v1 Gantt exports unchanged (backward compatible)
 
 ### Immunotherapy Flagging
 
@@ -62,8 +62,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GANTT-03 | Phase 91 | Complete |
 | GANTT-04 | Phase 91 | Complete |
 | GANTT-05 | Phase 91 | Complete |
-| GANTT-06 | Phase 92 | Pending |
-| GANTT-07 | Phase 92 | Pending |
+| GANTT-06 | Phase 92 | Complete |
+| GANTT-07 | Phase 92 | Complete |
 | IMMU-01 | Phase 93 | Pending |
 | IMMU-02 | Phase 93 | Pending |
 

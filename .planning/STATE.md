@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Gantt Data Enrichment
-current_plan: Not started
-status: planning
-last_updated: "2026-06-08T16:49:44.478Z"
+current_plan: 1
+status: verifying
+last_updated: "2026-06-08T17:18:29.699Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Current focus:** Phase 91 — reference-data-loader-metadata-enrichment
+**Current focus:** Phase 92 — gantt-v2-schema-extension
 
 ## Current Position
 
-Phase: 91 (reference-data-loader-metadata-enrichment) — EXECUTING
-Plan: 1 of 1
+Phase: 92 (gantt-v2-schema-extension) — COMPLETE
+Plan: 1 of 1 (all complete)
 **Milestone:** v2.3 Gantt Data Enrichment
 **Phase:** 92
-**Status:** Ready to plan
-**Current Plan:** Not started
+**Status:** Phase 92 complete — all plans executed
+**Current Plan:** 1 (done)
 **Last activity:** 2026-06-08
 
 **Progress:**
@@ -70,13 +70,14 @@ v2.3: [----] 0/4 phases complete (0%)
 
 ### Recent Decisions
 
-**Milestone v2.3 decisions (pending):**
+**Milestone v2.3 decisions:**
 
 - Phase numbering starts at 90 (continuing from v2.2)
 - Code removal before enrichment to prevent propagating false-positive classifications
 - Backward compatibility preserved via dual export (v1 unchanged, v2 extended)
 - all_codes_resolved2.xlsx is canonical reference for treatment metadata
 - 4 phases with coarse granularity (cleanup → enrichment → export → cross-use flags)
+- D-92-01: 5 Phase 91 metadata columns appended at end of both Gantt v2 CSV schemas (non-breaking)
 
 **From v2.2:**
 
@@ -103,12 +104,12 @@ v2.3: [----] 0/4 phases complete (0%)
 - [ ] Modify R/28 episode classification to derive 5 new columns
 - [ ] Export unresolved classifications separately for SME review
 
-**Phase 92 (Gantt v2 Schema Extension):**
+**Phase 92 (Gantt v2 Schema Extension):** COMPLETE
 
-- [ ] Modify R/52 to select 5 new columns from enriched treatment_episodes.rds
-- [ ] Extend episodes schema from 16 to 21 columns (append at end)
-- [ ] Extend detail schema from 14 to 19 columns (append at end)
-- [ ] Update smoke test Section 52 to validate 21-column schema
+- [x] Modify R/52 to select 5 new columns from enriched treatment_episodes.rds
+- [x] Extend episodes schema from 16 to 21 columns (append at end)
+- [x] Extend detail schema from 14 to 19 columns (append at end)
+- [x] Update smoke test Section 15e to validate 21/19-column schema
 
 **Phase 93 (Cross-Use Flag Implementation):**
 
@@ -137,16 +138,14 @@ None currently identified.
 
 **Next Session Should:**
 
-1. Start Phase 90 via `/gsd:execute-phase 90`
-2. Run impact analysis on 5 deprecated SCT codes
-3. Create code-removal-impact.md documentation
-4. Update R/00_config.R and smoke test Section 15
+1. Continue to Phase 93 (Cross-Use Flag Implementation) if planned
+2. Or run `/gsd:transition` to advance milestone
+3. Verify Gantt v2 exports on HiPerGator with actual data
 
 **Context Needed:**
 
-- Access to C:\Users\Owner\Documents\insurance_investigation\R\00_config.R (CODE_SUBCATEGORY_MAP and TREATMENT_CODES)
-- Access to existing treatment_episodes.rds output for impact quantification
-- Smoke test pattern from R/88_smoke_test_comprehensive.R Section 15
+- Phase 93 plan for cross-use flag implementation
+- Access to treatment_episodes.rds output for runtime validation
 
 ---
-*State updated: 2026-06-07 during v2.3 roadmap creation*
+*State updated: 2026-06-08 after Phase 92 completion*
