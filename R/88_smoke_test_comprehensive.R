@@ -1419,6 +1419,60 @@ check(
 )
 
 # ==============================================================================
+# SECTION 15e: GANTT V2 SCHEMA EXTENSION VALIDATION (GANTT-06, GANTT-07) ----
+# ==============================================================================
+
+message("\n[GANTT] Gantt v2 schema extension validation (GANTT-06, GANTT-07)...")
+
+r52_lines <- readLines("R/52_gantt_v2_export.R", warn = FALSE)
+
+# GANTT-06: Check 1-5: R/52 select() includes all 5 new Phase 92 columns
+phase92_cols <- c("medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag")
+for (col in phase92_cols) {
+  check(
+    glue("R/52 select() includes {col} (GANTT-06)"),
+    any(grepl(col, r52_lines, fixed = TRUE))
+  )
+}
+
+# GANTT-06: Check 6: R/52 episodes expected column count is 21
+check(
+  "R/52 episodes expected column count is 21",
+  any(grepl("expected_ep_cols <- 21", r52_lines, fixed = TRUE))
+)
+
+# GANTT-06: Check 7: R/52 detail expected column count is 19
+check(
+  "R/52 detail expected column count is 19",
+  any(grepl("expected_detail_cols <- 19", r52_lines, fixed = TRUE))
+)
+
+# GANTT-06: Check 8: R/52 has guard clauses for Phase 91 columns
+check(
+  "R/52 has guard clause for medication_name",
+  any(grepl('!"medication_name" %in% names', r52_lines, fixed = TRUE))
+)
+
+# GANTT-06: Check 9: Death pseudo-rows include new columns with NA
+check(
+  "R/52 death_episodes has medication_name = NA_character_",
+  any(grepl("medication_name = NA_character_", r52_lines, fixed = TRUE))
+)
+
+# GANTT-06: Check 10: Multi-value cleanup applied to medication_name
+check(
+  "R/52 applies clean_multi_value to medication_name",
+  any(grepl("medication_name = sapply.*clean_multi_value", r52_lines))
+)
+
+# GANTT-07: Check 11: R/51 v1 export unchanged (no Phase 92 columns)
+r51_lines <- readLines("R/51_gantt_data_export.R", warn = FALSE)
+check(
+  "R/51 v1 export has NO medication_name (GANTT-07 backward compat)",
+  !any(grepl("medication_name", r51_lines, fixed = TRUE))
+)
+
+# ==============================================================================
 # SECTION 30: PHASE 87 -- ICD-9 CANCER CODE INFRASTRUCTURE ----
 # ==============================================================================
 # Validates ICD9_CANCER_SITE_MAP, shared is_cancer_code(), and updated
@@ -1864,6 +1918,8 @@ message("  * GANTT-02: code_type column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-03: source_table column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-04: treatment_line column with F>S>E>N priority (Phase 91)")
 message("  * GANTT-05: sct_cross_use_flag column in treatment_episodes.rds (Phase 91)")
+message("  * GANTT-06: 5 metadata columns in gantt_detail_v2.csv at per-date level (Phase 92)")
+message("  * GANTT-07: v1 Gantt exports unchanged -- R/51 has no Phase 92 columns")
 
 if (failed > 0) {
   quit(status = 1)
