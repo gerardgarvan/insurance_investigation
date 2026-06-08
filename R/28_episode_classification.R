@@ -4,18 +4,24 @@
 # Purpose:     Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback)
 #              with regimen detection (ABVD, BV+AVD, Nivo+AVD) for chemotherapy episodes.
 #              Phase 78: Added triggering_code_description and drug_group columns.
+#              Phase 91: Added 5 xlsx metadata columns (medication_name, code_type,
+#              source_table, treatment_line, sct_cross_use_flag) for Gantt v2 export.
 #
 # Inputs:      treatment_episodes.rds, treatment_episode_detail.rds, PCORnet DIAGNOSIS,
-#              code_descriptions.rds (Phase 48b), DRUG_GROUPINGS (R/00_config.R)
+#              code_descriptions.rds (Phase 48b), DRUG_GROUPINGS (R/00_config.R),
+#              all_codes_resolved2.xlsx (Phase 91: treatment metadata)
 #
-# Outputs:     cache/outputs/treatment_episodes.rds (modified with cancer linkage + code enrichments),
-#              output/episode_classification_audit.xlsx, output/episode_classification_audit.csv
+# Outputs:     cache/outputs/treatment_episodes.rds (modified with cancer linkage + code enrichments + xlsx metadata),
+#              output/episode_classification_audit.xlsx, output/episode_classification_audit.csv,
+#              output/unresolved_codes_for_review.xlsx (Phase 91: TBD codes for SME review)
 #
 # Dependencies: R/00_config.R, R/utils/utils_duckdb.R, CANCER_SITE_MAP (R/00_config.R),
-#               classify_codes() (R/utils/utils_cancer.R), DRUG_GROUPINGS (R/00_config.R)
+#               classify_codes() (R/utils/utils_cancer.R), DRUG_GROUPINGS (R/00_config.R),
+#               load_xlsx_lookups() (R/utils/utils_xlsx_lookups.R, Phase 91)
 #
 # Requirements: Phase 61 encounter-level cancer linkage + regimen detection,
-#               CANCER-03 (Phase 78): per-episode code descriptions and drug groups
+#               CANCER-03 (Phase 78): per-episode code descriptions and drug groups,
+#               GANTT-01 through GANTT-05 (Phase 91): xlsx metadata enrichment
 #
 # WHY ENCOUNTERID linkage first: Most reliable connection between treatment and
 # cancer diagnosis. Encounter context (same admission, same visit) provides
@@ -49,7 +55,7 @@
 #         J9130=dac, J9042=brex, J9299=nivo). Drug_names detection takes priority.
 #   D-20: Added-agent disqualification for J-codes uses count of distinct J9xxx codes
 #   D-15: treatment_episodes.rds modified in-place (readRDS → enrich → saveRDS)
-#   D-16: Final column order: patient_id through regimen_label (was 15 columns, now 17 per Phase 78)
+#   D-16: Final column order: patient_id through regimen_label (was 15 columns, now 22 per Phase 91)
 #   D-17: Multi-sheet audit xlsx following R/59 pattern with openxlsx2
 #   D-18: Flat CSV export for episode classification results
 #   D-78-05: triggering_code_description via code_descriptions.rds lookup (Phase 48b)
@@ -64,9 +70,10 @@
 #   - cache/outputs/code_descriptions.rds (Phase 48b: code -> description lookup)
 #
 # OUTPUTS:
-#   - cache/outputs/treatment_episodes.rds (modified with 6 new columns: 4 Phase 61-62 + 2 Phase 78)
+#   - cache/outputs/treatment_episodes.rds (modified with 11 new columns: 4 Phase 61-62 + 2 Phase 78 + 5 Phase 91)
 #   - output/episode_classification_audit.xlsx (5 sheets)
 #   - output/episode_classification_audit.csv (flat export)
+#   - output/unresolved_codes_for_review.xlsx (Phase 91: TBD codes for SME review)
 #
 # ==============================================================================
 
@@ -83,6 +90,7 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
+source("R/utils/utils_xlsx_lookups.R")  # Phase 91: xlsx metadata lookups
 
 # Output paths
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
@@ -99,6 +107,10 @@ message("\nOutputs:")
 message(glue("  - {OUTPUT_RDS} (enriched with 4 columns)"))
 message(glue("  - {OUTPUT_XLSX}"))
 message(glue("  - {OUTPUT_CSV}"))
+
+# --- Phase 91: Load reference xlsx lookups for metadata enrichment ---
+REFERENCE_XLSX <- "all_codes_resolved2.xlsx"
+xlsx_lookups <- load_xlsx_lookups(REFERENCE_XLSX)
 
 
 # --- SECTION 2: CANCER SITE CLASSIFICATION ---
@@ -490,18 +502,112 @@ message(glue("  triggering_code_description populated: {n_with_desc}/{nrow(episo
 message(glue("  drug_group populated: {n_with_group}/{nrow(episodes)} episodes"))
 
 
+# --- SECTION 5C: XLSX METADATA ENRICHMENT (Phase 91, GANTT-01 through GANTT-05) ---
+
+message("\n--- Adding xlsx metadata (medication names, code types, source tables, treatment line, cross-use flags) ---")
+
+# Step 5C-1: Define helper functions for metadata mapping
+
+# map_codes_to_xlsx_metadata: map comma-separated triggering_codes to comma-separated metadata
+# Matches triggering_codes positional order (per D-04)
+map_codes_to_xlsx_metadata <- function(codes_str, lookup_vec) {
+  if (is.na(codes_str) || codes_str == "") return(NA_character_)
+  codes <- str_split(codes_str, ",")[[1]]
+  values <- sapply(codes, function(c) {
+    val <- lookup_vec[c]
+    if (is.null(val) || is.na(val)) NA_character_ else val
+  }, USE.NAMES = FALSE)
+  paste(values, collapse = ",")
+}
+
+# aggregate_treatment_line: aggregate F/S/E/N labels with priority F > S > E > N (per D-03)
+# Returns single value per episode, NOT a parallel list (per D-05)
+aggregate_treatment_line <- function(codes_str, lookup_vec) {
+  if (is.na(codes_str) || codes_str == "") return(NA_character_)
+  codes <- str_split(codes_str, ",")[[1]]
+  labels <- sapply(codes, function(c) {
+    val <- lookup_vec[c]
+    if (is.null(val) || is.na(val)) NA_character_ else val
+  }, USE.NAMES = FALSE)
+  labels <- labels[!is.na(labels)]
+  if (length(labels) == 0) return(NA_character_)
+  # Priority: F > S > E > N (per D-03)
+  if ("F" %in% labels) return("F")
+  if ("S" %in% labels) return("S")
+  if ("E" %in% labels) return("E")
+  if ("N" %in% labels) return("N")
+  return(NA_character_)
+}
+
+# aggregate_cross_use_flag: any-positive flag logic (per D-09)
+# Most specific non-NA flag wins
+aggregate_cross_use_flag <- function(codes_str, lookup_vec) {
+  if (is.na(codes_str) || codes_str == "") return(NA_character_)
+  codes <- str_split(codes_str, ",")[[1]]
+  flags <- sapply(codes, function(c) {
+    val <- lookup_vec[c]
+    if (is.null(val) || is.na(val)) NA_character_ else val
+  }, USE.NAMES = FALSE)
+  flags <- flags[!is.na(flags) & flags != ""]
+  if (length(flags) > 0) return(flags[1])
+  return(NA_character_)
+}
+
+# Step 5C-2: Record pre-enrichment row count for validation
+pre_enrichment_count <- nrow(episodes)
+
+# Step 5C-3: Apply 5 new columns via mutate (per D-04 and D-05)
+episodes <- episodes %>%
+  mutate(
+    # GANTT-01: Medication names (parallel comma list per D-04)
+    medication_name = sapply(triggering_codes, map_codes_to_xlsx_metadata,
+                             lookup_vec = xlsx_lookups$medications, USE.NAMES = FALSE),
+
+    # GANTT-02: Code types (parallel comma list per D-04)
+    code_type = sapply(triggering_codes, map_codes_to_xlsx_metadata,
+                       lookup_vec = xlsx_lookups$code_types, USE.NAMES = FALSE),
+
+    # GANTT-03: Source tables (parallel comma list per D-04)
+    source_table = sapply(triggering_codes, map_codes_to_xlsx_metadata,
+                          lookup_vec = xlsx_lookups$source_tables, USE.NAMES = FALSE),
+
+    # GANTT-04: Treatment line (single aggregated value per D-03, D-05)
+    treatment_line = sapply(triggering_codes, aggregate_treatment_line,
+                            lookup_vec = xlsx_lookups$line_labels, USE.NAMES = FALSE),
+
+    # GANTT-05: Cross-use flag (any-positive aggregation per D-09)
+    sct_cross_use_flag = sapply(triggering_codes, aggregate_cross_use_flag,
+                                lookup_vec = xlsx_lookups$cross_use_flags, USE.NAMES = FALSE)
+  )
+
+# Step 5C-4: Validate row count preserved (Pitfall 1 prevention)
+assert_true(nrow(episodes) == pre_enrichment_count,
+            .var.name = glue("[R/28 ERROR] Enrichment changed row count: {pre_enrichment_count} -> {nrow(episodes)}"))
+
+# Step 5C-5: Log enrichment results
+n_with_med <- sum(!is.na(episodes$medication_name) & episodes$medication_name != "", na.rm = TRUE)
+n_with_line <- sum(!is.na(episodes$treatment_line) & episodes$treatment_line != "", na.rm = TRUE)
+n_with_cross <- sum(!is.na(episodes$sct_cross_use_flag) & episodes$sct_cross_use_flag != "", na.rm = TRUE)
+message(glue("  medication_name populated: {n_with_med}/{nrow(episodes)} episodes"))
+message(glue("  code_type populated: {sum(!is.na(episodes$code_type))}/{nrow(episodes)} episodes"))
+message(glue("  source_table populated: {sum(!is.na(episodes$source_table))}/{nrow(episodes)} episodes"))
+message(glue("  treatment_line populated: {n_with_line}/{nrow(episodes)} episodes"))
+message(glue("  sct_cross_use_flag populated: {n_with_cross}/{nrow(episodes)} episodes"))
+
+
 # --- SECTION 6: SAVE ENRICHED RDS ---
 
 message("\n--- Saving enriched treatment_episodes.rds ---")
 
-# Final column order (D-16: was 15 columns, now 17 columns per Phase 78)
+# Final column order (D-16: was 15 columns, now 22 columns per Phase 91)
 episodes <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
     episode_length_days, distinct_dates_in_episode, historical_flag,
     triggering_codes, encounter_ids, drug_names,
     cancer_category, cancer_link_method, is_hodgkin, regimen_label,
-    triggering_code_description, drug_group
+    triggering_code_description, drug_group,
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
   )
 
 saveRDS(episodes, OUTPUT_RDS)
@@ -509,7 +615,66 @@ message(glue("  Saved enriched treatment_episodes.rds: {nrow(episodes)} episodes
 
 # Verify column presence
 stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
-                "triggering_code_description", "drug_group") %in% names(episodes)))
+                "triggering_code_description", "drug_group",
+                "medication_name", "code_type", "source_table", "treatment_line",
+                "sct_cross_use_flag") %in% names(episodes)))
+
+
+# --- SECTION 6B: TBD CODE EXPORT FOR SME REVIEW (Phase 91, D-07) ---
+
+message("\n--- Exporting unresolved TBD codes for SME review ---")
+
+# Identify codes with TBD/questionable classification
+# These are codes in xlsx where treatment_line or cross_use_flag suggest unresolved status
+unresolved_codes <- tibble(
+  code = character(),
+  current_category = character(),
+  medication_name = character(),
+  classification_question = character()
+)
+
+# Check for any codes where xlsx metadata suggests TBD status
+all_xlsx_codes <- names(xlsx_lookups$medications)
+for (code in all_xlsx_codes) {
+  line_val <- xlsx_lookups$line_labels[code]
+  cross_val <- xlsx_lookups$cross_use_flags[code]
+  med_name <- xlsx_lookups$medications[code]
+  category <- if (code %in% names(DRUG_GROUPINGS)) DRUG_GROUPINGS[code] else NA_character_
+
+  is_tbd <- FALSE
+  question <- ""
+
+  if (!is.na(line_val) && str_detect(line_val, regex("TBD|\\?", ignore_case = TRUE))) {
+    is_tbd <- TRUE
+    question <- paste0(question, "Treatment line unresolved (current: ", line_val, "). ")
+  }
+  if (!is.na(cross_val) && str_detect(cross_val, regex("TBD|\\?", ignore_case = TRUE))) {
+    is_tbd <- TRUE
+    question <- paste0(question, "Cross-use classification unresolved (current: ", cross_val, "). ")
+  }
+
+  if (is_tbd) {
+    unresolved_codes <- bind_rows(unresolved_codes, tibble(
+      code = code,
+      current_category = as.character(category),
+      medication_name = as.character(med_name),
+      classification_question = str_trim(question)
+    ))
+  }
+}
+
+if (nrow(unresolved_codes) > 0) {
+  tbd_wb <- wb_workbook()
+  tbd_wb$add_worksheet("Unresolved Codes")
+  tbd_wb$add_data(sheet = "Unresolved Codes", x = unresolved_codes, start_row = 1)
+  tbd_wb$set_col_widths(sheet = "Unresolved Codes", cols = 1:4, widths = "auto")
+
+  tbd_output <- file.path(CONFIG$output_dir, "unresolved_codes_for_review.xlsx")
+  tbd_wb$save(tbd_output)
+  message(glue("  Exported {nrow(unresolved_codes)} unresolved codes to {tbd_output}"))
+} else {
+  message("  No unresolved TBD codes found in xlsx lookups")
+}
 
 
 # --- SECTION 7: AUDIT OUTPUT ---
