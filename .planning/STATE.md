@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Gantt Data Enrichment
-current_plan: 1
-status: verifying
-last_updated: "2026-06-08T03:42:52.416Z"
+current_plan: Not started
+status: planning
+last_updated: "2026-06-08T03:46:36.725Z"
 last_activity: 2026-06-08
 progress:
   total_phases: 4
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 Phase: 90 (false-positive-sct-code-removal) — EXECUTING
 Plan: 1 of 1
 **Milestone:** v2.3 Gantt Data Enrichment
-**Phase:** 90 - False-Positive SCT Code Removal
-**Status:** Phase complete — ready for verification
-**Current Plan:** 1
+**Phase:** 91
+**Status:** Ready to plan
+**Current Plan:** Not started
 **Last activity:** 2026-06-08
 
 **Progress:**

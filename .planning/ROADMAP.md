@@ -84,7 +84,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 90. False-Positive SCT Code Removal | 1/1 | Complete   | 2026-06-08 |
+| 90. False-Positive SCT Code Removal | 1/1 | Complete    | 2026-06-08 |
 | 91. Reference Data Loader & Metadata Enrichment | 0/0 | Not started | - |
 | 92. Gantt v2 Schema Extension | 0/0 | Not started | - |
 | 93. Cross-Use Flag Implementation | 0/0 | Not started | - |
