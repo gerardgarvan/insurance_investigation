@@ -1,6 +1,7 @@
 # ==============================================================================
 # Phase 52: Enhanced Gantt Export - v2 CSV with Encounter-Level Enrichments
 # Updated by Phase 64: Data Quality Cleanup for Tableau Import
+# Updated by Phase 92: 5 Phase 91 metadata columns appended at end (non-breaking)
 # ==============================================================================
 #
 # Purpose:
@@ -10,15 +11,15 @@
 #   existing v1 output files unchanged for backward compatibility.
 #
 # Inputs:
-#   - cache/outputs/treatment_episodes.rds (enriched by Phases 60-62)
+#   - cache/outputs/treatment_episodes.rds (enriched by Phases 60-62, 91)
 #   - cache/outputs/treatment_episode_detail.rds (enriched by Phase 60)
 #   - cache/outputs/code_descriptions.rds (Phase 48b: code -> description lookup)
 #   - cache/outputs/validated_death_dates.rds (Phase 59: pre-validated death dates)
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # Outputs:
-#   - output/gantt_episodes_v2.csv (16 columns, Phase 64 cleaned & Phase 78 enriched)
-#   - output/gantt_detail_v2.csv (14 columns, Phase 64 cleaned & Phase 78 enriched)
+#   - output/gantt_episodes_v2.csv (21 columns, Phase 64 cleaned & Phase 78/92 enriched)
+#   - output/gantt_detail_v2.csv (19 columns, Phase 64 cleaned & Phase 78/92 enriched)
 #
 # Dependencies:
 #   - 00_config (CONFIG paths, TREATMENT_TYPE_COLORS)
@@ -26,16 +27,16 @@
 #   - utils_dates (date parsing utilities)
 #
 # Requirements:
-#   DOC-01, DOC-02, DOC-03
+#   DOC-01, DOC-02, DOC-03, GANTT-06, GANTT-07
 #
 #   Phase 64 additions: Data quality cleanup for direct Tableau import —
 #   semicolon-separated multi-value fields, simplified drug names, no literal NAs,
 #   filled pseudo-treatment descriptions, "Unlinked" cancer category label,
 #   and trimmed column set (14 episodes, 13 detail).
 #
-# v2 SCHEMA DOCUMENTATION (Post-Phase 64 Cleanup, Phase 78 Enhancements):
+# v2 SCHEMA DOCUMENTATION (Post-Phase 64 Cleanup, Phase 78/92 Enhancements):
 #
-#   gantt_episodes_v2.csv (16 columns):
+#   gantt_episodes_v2.csv (21 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category (Chemotherapy, Radiation, SCT, etc.)
 #     3. episode_number (int) - Sequential episode number per patient-type
@@ -52,10 +53,15 @@
 #    14. is_first_line (lgl) - TRUE if episode is first-line therapy (Phase 62)
 #    15. drug_group (chr) - Semicolon-separated drug category labels (Phase 78)
 #    16. cause_of_death (chr) - Mapped cause of death category or NA (Phase 78)
+#    17. medication_name (chr) - Semicolon-separated medication names from xlsx (Phase 92)
+#    18. code_type (chr) - Semicolon-separated code types: RXNORM, CPT/HCPCS, ICD-10-CM (Phase 92)
+#    19. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
+#    20. treatment_line (chr) - Treatment line label: F (first), S (second), E (extension), N (neither), or empty (Phase 92)
+#    21. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
 #
 #   Dropped columns from Phase 63 v2: encounter_ids, is_hodgkin, cancer_link_method
 #
-#   gantt_detail_v2.csv (14 columns):
+#   gantt_detail_v2.csv (19 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category
 #     3. treatment_date (date) - Single treatment date
@@ -70,6 +76,11 @@
 #    12. regimen_label (chr) - Regimen name (from parent episode, Phase 61)
 #    13. is_first_line (lgl) - First-line flag (from parent episode, Phase 62)
 #    14. cause_of_death (chr) - Mapped cause of death category or NA (Phase 78)
+#    15. medication_name (chr) - Semicolon-separated medication names from xlsx (Phase 92)
+#    16. code_type (chr) - Semicolon-separated code types: RXNORM, CPT/HCPCS, ICD-10-CM (Phase 92)
+#    17. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
+#    18. treatment_line (chr) - Treatment line label: F/S/E/N or empty (Phase 92)
+#    19. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
 #
 #   Dropped columns from Phase 63 v2: ENCOUNTERID, is_hodgkin, cancer_link_method
 #
@@ -89,17 +100,18 @@
 #   D-78-11: >40% missingness triggers console warning
 #   D-78-12: Both gantt_episodes_v2.csv and gantt_detail_v2.csv get cause_of_death
 #   D-78-14: drug_group propagated from treatment_episodes.rds to episodes CSV
+#   D-92-01: 5 Phase 91 metadata columns appended at end (non-breaking)
 #
 # INPUTS:
-#   - cache/outputs/treatment_episodes.rds (enriched by Phases 60-62)
+#   - cache/outputs/treatment_episodes.rds (enriched by Phases 60-62, 91)
 #   - cache/outputs/treatment_episode_detail.rds (enriched by Phase 60)
 #   - cache/outputs/code_descriptions.rds (Phase 48b: code -> description lookup)
 #   - cache/outputs/validated_death_dates.rds (Phase 59: pre-validated death dates)
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # OUTPUTS:
-#   - output/gantt_episodes_v2.csv (16 columns, Phase 64 cleaned & Phase 78 enriched)
-#   - output/gantt_detail_v2.csv (14 columns, Phase 64 cleaned & Phase 78 enriched)
+#   - output/gantt_episodes_v2.csv (21 columns, Phase 64 cleaned & Phase 78/92 enriched)
+#   - output/gantt_detail_v2.csv (19 columns, Phase 64 cleaned & Phase 78/92 enriched)
 #
 # ==============================================================================
 
@@ -184,6 +196,26 @@ if (!"drug_group" %in% names(episodes)) {
 if (!"triggering_code_description" %in% names(episodes)) {
   warning("triggering_code_description column not found in treatment_episodes.rds — Phase 78 R/28 not yet run. Using default NA.")
   episodes <- episodes %>% mutate(triggering_code_description = NA_character_)
+}
+if (!"medication_name" %in% names(episodes)) {
+  warning("medication_name column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(medication_name = NA_character_)
+}
+if (!"code_type" %in% names(episodes)) {
+  warning("code_type column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(code_type = NA_character_)
+}
+if (!"source_table" %in% names(episodes)) {
+  warning("source_table column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(source_table = NA_character_)
+}
+if (!"treatment_line" %in% names(episodes)) {
+  warning("treatment_line column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(treatment_line = NA_character_)
+}
+if (!"sct_cross_use_flag" %in% names(episodes)) {
+  warning("sct_cross_use_flag column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(sct_cross_use_flag = NA_character_)
 }
 
 
@@ -274,7 +306,9 @@ episodes_export <- episodes %>%
     episodes %>% select(
       patient_id, episode_number, treatment_type,
       cancer_category, is_hodgkin, cancer_link_method,
-      regimen_label, is_first_line
+      regimen_label, is_first_line,
+      # --- Phase 92: 5 new metadata columns (GANTT-06) ---
+      medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
     ),
     by = c("patient_id", "episode_number", "treatment_type")
   ) %>%
@@ -288,7 +322,9 @@ episodes_export <- episodes %>%
     distinct_dates_in_episode, historical_flag, triggering_codes,
     encounter_ids, drug_names, triggering_code_descriptions,
     cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
-    drug_group, cause_of_death
+    drug_group, cause_of_death,
+    # --- Phase 92: 5 new metadata columns (GANTT-06) ---
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
   )
 
 message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -299,7 +335,9 @@ message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark =
 episodes_v2_cols <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, cancer_category, is_hodgkin,
-    cancer_link_method, regimen_label, is_first_line
+    cancer_link_method, regimen_label, is_first_line,
+    # --- Phase 92: 5 new metadata columns (GANTT-06) ---
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
   )
 
 detail_export <- detail %>%
@@ -323,7 +361,9 @@ detail_export <- detail %>%
     episode_number, episode_start, episode_stop, historical_flag,
     triggering_code_description,
     cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
-    cause_of_death
+    cause_of_death,
+    # --- Phase 92: 5 new metadata columns (GANTT-06) ---
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
   )
 
 message(glue("  Built detail_export: {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
@@ -378,7 +418,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
   }
 
   if (nrow(death_data) > 0) {
-    # Build death_episodes with all 19 v2 columns (Phase 78: +drug_group, +cause_of_death)
+    # Build death_episodes with all 24 v2 columns (Phase 78: +drug_group, +cause_of_death; Phase 92: +5 metadata)
     death_episodes <- death_data %>%
       mutate(
         patient_id = ID,
@@ -398,8 +438,13 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
         is_first_line = FALSE, # v2 default per D-10
-        drug_group = NA_character_  # Death rows have no drug group (Phase 78)
+        drug_group = NA_character_,  # Death rows have no drug group (Phase 78)
         # cause_of_death already in death_data from mapping above
+        medication_name = NA_character_,    # Phase 92: Death rows have no treatment codes
+        code_type = NA_character_,
+        source_table = NA_character_,
+        treatment_line = NA_character_,
+        sct_cross_use_flag = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -407,7 +452,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         distinct_dates_in_episode, historical_flag, triggering_codes,
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
-        drug_group, cause_of_death
+        drug_group, cause_of_death,
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
       )
 
     # Verify column alignment before binding (R/49 pattern, lines 734-756)
@@ -423,7 +469,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
       warning(glue("Death episodes has extra columns: {paste(extra_in_death_ep, collapse = ', ')}"))
     }
 
-    # Build death_detail with all 16 v2 detail columns (Phase 78: +cause_of_death)
+    # Build death_detail with all 22 v2 detail columns (Phase 78: +cause_of_death; Phase 92: +5 metadata)
     death_detail <- death_data %>%
       mutate(
         patient_id = ID,
@@ -441,8 +487,13 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         is_hodgkin = FALSE,
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
-        is_first_line = FALSE  # v2 default per D-10
+        is_first_line = FALSE,  # v2 default per D-10
         # cause_of_death already in death_data from mapping above
+        medication_name = NA_character_,    # Phase 92: Death rows have no treatment codes
+        code_type = NA_character_,
+        source_table = NA_character_,
+        treatment_line = NA_character_,
+        sct_cross_use_flag = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
@@ -450,7 +501,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         episode_number, episode_start, episode_stop, historical_flag,
         triggering_code_description,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
-        cause_of_death
+        cause_of_death,
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
       )
 
     # Verify column alignment for detail
@@ -498,7 +550,7 @@ if (file.exists(COHORT_RDS)) {
     select(ID, first_hl_dx_date)
 
   if (nrow(hl_dx_data) > 0) {
-    # Build hl_dx_episodes with all 19 v2 columns (Phase 78: +drug_group, +cause_of_death)
+    # Build hl_dx_episodes with all 24 v2 columns (Phase 78: +drug_group, +cause_of_death; Phase 92: +5 metadata)
     hl_dx_episodes <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -519,7 +571,12 @@ if (file.exists(COHORT_RDS)) {
         regimen_label = NA_character_, # v2 default per D-10
         is_first_line = FALSE, # v2 default per D-10
         drug_group = NA_character_, # HL Diagnosis rows have no drug group (Phase 78)
-        cause_of_death = NA_character_  # HL Diagnosis rows are not death events (Phase 78)
+        cause_of_death = NA_character_,  # HL Diagnosis rows are not death events (Phase 78)
+        medication_name = NA_character_,    # Phase 92: HL Diagnosis rows have no treatment codes
+        code_type = NA_character_,
+        source_table = NA_character_,
+        treatment_line = NA_character_,
+        sct_cross_use_flag = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -527,7 +584,8 @@ if (file.exists(COHORT_RDS)) {
         distinct_dates_in_episode, historical_flag, triggering_codes,
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
-        drug_group, cause_of_death
+        drug_group, cause_of_death,
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
       )
 
     # Verify column alignment before binding
@@ -543,7 +601,7 @@ if (file.exists(COHORT_RDS)) {
       warning(glue("HL Diagnosis episodes has extra columns: {paste(extra_in_hl_dx_ep, collapse = ', ')}"))
     }
 
-    # Build hl_dx_detail with all 16 v2 detail columns (Phase 78: +cause_of_death)
+    # Build hl_dx_detail with all 22 v2 detail columns (Phase 78: +cause_of_death; Phase 92: +5 metadata)
     hl_dx_detail <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -562,7 +620,12 @@ if (file.exists(COHORT_RDS)) {
         cancer_link_method = "none", # v2 default per D-10
         regimen_label = NA_character_, # v2 default per D-10
         is_first_line = FALSE, # v2 default per D-10
-        cause_of_death = NA_character_  # HL Diagnosis rows are not death events (Phase 78)
+        cause_of_death = NA_character_,  # HL Diagnosis rows are not death events (Phase 78)
+        medication_name = NA_character_,    # Phase 92: HL Diagnosis rows have no treatment codes
+        code_type = NA_character_,
+        source_table = NA_character_,
+        treatment_line = NA_character_,
+        sct_cross_use_flag = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
@@ -570,7 +633,8 @@ if (file.exists(COHORT_RDS)) {
         episode_number, episode_start, episode_stop, historical_flag,
         triggering_code_description,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
-        cause_of_death
+        cause_of_death,
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
       )
 
     # Verify column alignment for detail
@@ -726,13 +790,22 @@ episodes_export <- episodes_export %>%
   mutate(
     triggering_codes = sapply(triggering_codes, clean_multi_value, USE.NAMES = FALSE),
     drug_names = sapply(drug_names, clean_multi_value, USE.NAMES = FALSE),
-    triggering_code_descriptions = sapply(triggering_code_descriptions, clean_multi_value, USE.NAMES = FALSE)
+    triggering_code_descriptions = sapply(triggering_code_descriptions, clean_multi_value, USE.NAMES = FALSE),
+    # Phase 92: 3 multi-value columns (medication_name, code_type, source_table)
+    # NOTE: treatment_line and sct_cross_use_flag are single-value — skip cleanup
+    medication_name = sapply(medication_name, clean_multi_value, USE.NAMES = FALSE),
+    code_type = sapply(code_type, clean_multi_value, USE.NAMES = FALSE),
+    source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE)
   )
 
 detail_export <- detail_export %>%
   mutate(
     triggering_code = sapply(triggering_code, clean_multi_value, USE.NAMES = FALSE),
-    triggering_code_description = sapply(triggering_code_description, clean_multi_value, USE.NAMES = FALSE)
+    triggering_code_description = sapply(triggering_code_description, clean_multi_value, USE.NAMES = FALSE),
+    # Phase 92: 3 multi-value columns (same pattern)
+    medication_name = sapply(medication_name, clean_multi_value, USE.NAMES = FALSE),
+    code_type = sapply(code_type, clean_multi_value, USE.NAMES = FALSE),
+    source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE)
   )
 
 message("  Multi-value fields cleaned (separator: semicolon, deduped, blanks dropped)")
@@ -793,7 +866,9 @@ episodes_export <- episodes_export %>%
     distinct_dates_in_episode, historical_flag,
     triggering_codes, drug_names, triggering_code_descriptions,
     cancer_category, regimen_label, is_first_line,
-    drug_group, cause_of_death
+    drug_group, cause_of_death,
+    # --- Phase 92: 5 new metadata columns (GANTT-06) ---
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
   )
 
 detail_export <- detail_export %>%
@@ -803,15 +878,17 @@ detail_export <- detail_export %>%
     episode_start, episode_stop, historical_flag,
     triggering_code_description, cancer_category,
     regimen_label, is_first_line,
-    cause_of_death
+    cause_of_death,
+    # --- Phase 92: 5 new metadata columns (GANTT-06) ---
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
   )
 
 message("  Columns trimmed to Tableau-essential set")
 message(glue("  Episodes: {ncol(episodes_export)} columns, Detail: {ncol(detail_export)} columns"))
 
 # Step 7: Column count verification
-expected_ep_cols <- 16  # was 14, Phase 78: +drug_group, +cause_of_death
-expected_detail_cols <- 14  # was 13, Phase 78: +cause_of_death
+expected_ep_cols <- 21  # was 16, Phase 92: +5 metadata columns (medication_name, code_type, source_table, treatment_line, sct_cross_use_flag)
+expected_detail_cols <- 19  # was 14, Phase 92: +5 metadata columns
 
 if (ncol(episodes_export) != expected_ep_cols) {
   stop(glue("ERROR: episodes_export has {ncol(episodes_export)} columns, expected {expected_ep_cols}"))
@@ -871,9 +948,9 @@ hl_dx_rows <- episodes_export %>%
 message(glue("  HL Diagnosis pseudo-treatment rows: {format(hl_dx_rows, big.mark = ',')}"))
 
 # v1 vs v2 column comparison
-message("\n  v1 vs v2 column comparison (Phase 64 cleanup, Phase 78 enhancements):")
-message("    v1 episodes: 14 columns | v2 episodes: 16 columns (Phase 78: +drug_group, +cause_of_death)")
-message("    v1 detail: 13 columns | v2 detail: 14 columns (Phase 78: +cause_of_death)")
+message("\n  v1 vs v2 column comparison (Phase 64 cleanup, Phase 78/92 enhancements):")
+message("    v1 episodes: 14 columns | v2 episodes: 21 columns (Phase 92: +medication_name, code_type, source_table, treatment_line, sct_cross_use_flag)")
+message("    v1 detail: 13 columns | v2 detail: 19 columns (Phase 92: +5 metadata columns)")
 message("    Phase 64 dropped: encounter_ids, is_hodgkin, cancer_link_method (internal columns)")
 
 # Cause of death stats
@@ -881,5 +958,14 @@ deaths_with_cause <- episodes_export %>%
   filter(treatment_type == "Death" & !is.na(cause_of_death) & cause_of_death != "" & cause_of_death != "Unknown or Unspecified") %>%
   nrow()
 message(glue("  Deaths with mapped cause: {format(deaths_with_cause, big.mark = ',')}"))
+
+# Phase 92: medication_name coverage stat
+episodes_with_medication <- episodes_export %>%
+  filter(medication_name != "" & !is.na(medication_name) & !treatment_type %in% c("Death", "HL Diagnosis")) %>%
+  nrow()
+treatment_episodes_count <- episodes_export %>%
+  filter(!treatment_type %in% c("Death", "HL Diagnosis")) %>%
+  nrow()
+message(glue("  Episodes with medication_name: {format(episodes_with_medication, big.mark = ',')} / {format(treatment_episodes_count, big.mark = ',')} treatment episodes ({round(100 * episodes_with_medication / max(treatment_episodes_count, 1), 1)}%)"))
 
 message("\nDone.")
