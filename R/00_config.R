@@ -1862,6 +1862,28 @@ DRUG_GROUPINGS <- c(
 message(glue("Defined {length(DRUG_GROUPINGS)} treatment code mappings across {length(unique(DRUG_GROUPINGS))} categories"))
 
 # ==============================================================================
+# SECTION 5c: QUESTIONABLE IMMUNOTHERAPY CODES (Phase 93) ----
+# ==============================================================================
+# Phase 93: Questionable immunotherapy codes (IMMU-01, IMMU-02)
+# Maps code to confidence flag reason. 8 vitamin combos + 3 CAR-T = 11 total (D-08)
+# Used by aggregate_immuno_confidence() in R/28 for any-positive episode aggregation
+QUESTIONABLE_IMMUNO_CODES <- c(
+  # Multivitamin codes misclassified as immunotherapy (D-06)
+  "891815" = "questionable-vitamin",
+  "891790" = "questionable-vitamin",
+  "1090823" = "questionable-vitamin",
+  "1313925" = "questionable-vitamin",
+  "1248142" = "questionable-vitamin",
+  "891716" = "questionable-vitamin",
+  "1090824" = "questionable-vitamin",
+  "891793" = "questionable-vitamin",
+  # CAR-T codes with classification ambiguity (D-07)
+  "2479140" = "questionable-CAR-T vs immunotherapy",
+  "XW033C3" = "questionable-CAR-T vs immunotherapy",
+  "XW043C3" = "questionable-CAR-T vs immunotherapy"
+)
+
+# ==============================================================================
 # SECTION 5d: TREATMENT CODE SUB-CATEGORY MAP ----
 # ==============================================================================
 # Maps treatment codes to readable sub-category names (medication/procedure).

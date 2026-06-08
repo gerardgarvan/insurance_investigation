@@ -553,6 +553,20 @@ aggregate_cross_use_flag <- function(codes_str, lookup_vec) {
   return(NA_character_)
 }
 
+# aggregate_immuno_confidence: any-questionable flag logic (per D-12, Phase 93)
+# If ANY triggering code in the episode is questionable, the episode gets the flag
+aggregate_immuno_confidence <- function(codes_str, lookup_vec) {
+  if (is.na(codes_str) || codes_str == "") return(NA_character_)
+  codes <- str_split(codes_str, ",")[[1]]
+  flags <- sapply(codes, function(c) {
+    val <- lookup_vec[c]
+    if (is.null(val) || is.na(val)) NA_character_ else val
+  }, USE.NAMES = FALSE)
+  flags <- flags[!is.na(flags) & flags != ""]
+  if (length(flags) > 0) return(flags[1])
+  return(NA_character_)
+}
+
 # Step 5C-2: Record pre-enrichment row count for validation
 pre_enrichment_count <- nrow(episodes)
 
@@ -595,11 +609,98 @@ message(glue("  treatment_line populated: {n_with_line}/{nrow(episodes)} episode
 message(glue("  sct_cross_use_flag populated: {n_with_cross}/{nrow(episodes)} episodes"))
 
 
+# --- Step 5D: Phase 93 -- Temporal context + confidence flags (IMMU-01, IMMU-02) ---
+# These are annotations only -- treatment_type stays unchanged (D-13)
+# Aggregation rules: is_sct_conditioning_context = boolean annotation on Chemotherapy only
+# immuno_confidence = any-positive categorical flag from QUESTIONABLE_IMMUNO_CODES
+
+message("\n--- Phase 93: Temporal context and confidence flag enrichment ---")
+
+# Step 5D-1: Compute SCT conditioning temporal context (D-01, D-02, D-03, D-04)
+# For each patient, find SCT episode start dates
+sct_dates <- episodes %>%
+  filter(treatment_type == "Stem Cell Transplant") %>%
+  select(patient_id, sct_start = episode_start)
+
+n_sct_patients <- n_distinct(sct_dates$patient_id)
+message(glue("  Found {nrow(sct_dates)} SCT episodes across {n_sct_patients} patients"))
+
+# For chemotherapy episodes, check if any start within 30 days before an SCT episode (D-01)
+if (nrow(sct_dates) > 0) {
+  chemo_context <- episodes %>%
+    filter(treatment_type == "Chemotherapy") %>%
+    select(patient_id, episode_number, episode_start) %>%
+    left_join(sct_dates, by = "patient_id", relationship = "many-to-many") %>%
+    mutate(
+      days_to_sct = as.numeric(sct_start - episode_start),
+      is_within_window = !is.na(days_to_sct) & days_to_sct >= 0 & days_to_sct <= 30
+    ) %>%
+    group_by(patient_id, episode_number) %>%
+    summarise(
+      is_sct_conditioning_context = any(is_within_window, na.rm = TRUE),
+      days_to_nearest_sct = if_else(
+        any(!is.na(days_to_sct) & days_to_sct >= 0),
+        as.integer(min(days_to_sct[days_to_sct >= 0], na.rm = TRUE)),
+        NA_integer_
+      ),
+      .groups = "drop"
+    )
+} else {
+  # No SCT episodes in cohort -- all chemotherapy episodes get FALSE
+  chemo_context <- episodes %>%
+    filter(treatment_type == "Chemotherapy") %>%
+    select(patient_id, episode_number) %>%
+    mutate(
+      is_sct_conditioning_context = FALSE,
+      days_to_nearest_sct = NA_integer_
+    )
+}
+
+# Step 5D-2: Join temporal context back to episodes
+# Pre-join row count for validation
+pre_phase93_count <- nrow(episodes)
+
+episodes <- episodes %>%
+  left_join(chemo_context, by = c("patient_id", "episode_number")) %>%
+  mutate(
+    # D-04: NA for non-chemotherapy episodes; FALSE if chemo but no nearby SCT
+    is_sct_conditioning_context = case_when(
+      treatment_type != "Chemotherapy" ~ NA,
+      is.na(is_sct_conditioning_context) ~ FALSE,
+      TRUE ~ is_sct_conditioning_context
+    ),
+    # D-03: days_to_nearest_sct is RDS-only (not exported to Gantt CSVs)
+    days_to_nearest_sct = case_when(
+      treatment_type != "Chemotherapy" ~ NA_integer_,
+      TRUE ~ days_to_nearest_sct
+    )
+  )
+
+# Validate row count preserved (Pitfall 2 prevention)
+assert_true(nrow(episodes) == pre_phase93_count,
+            .var.name = glue("[R/28 ERROR] Phase 93 temporal join changed row count: {pre_phase93_count} -> {nrow(episodes)}"))
+
+# Step 5D-3: Compute immuno_confidence from QUESTIONABLE_IMMUNO_CODES (D-09, D-10, D-12)
+episodes <- episodes %>%
+  mutate(
+    immuno_confidence = sapply(triggering_codes, aggregate_immuno_confidence,
+                               lookup_vec = QUESTIONABLE_IMMUNO_CODES, USE.NAMES = FALSE)
+  )
+
+# Step 5D-4: Log Phase 93 enrichment results
+n_conditioning <- sum(episodes$is_sct_conditioning_context == TRUE, na.rm = TRUE)
+n_confidence <- sum(!is.na(episodes$immuno_confidence), na.rm = TRUE)
+n_vitamin <- sum(episodes$immuno_confidence == "questionable-vitamin", na.rm = TRUE)
+n_cart <- sum(episodes$immuno_confidence == "questionable-CAR-T vs immunotherapy", na.rm = TRUE)
+message(glue("  Conditioning context: {n_conditioning} chemo episodes within 30d before SCT"))
+message(glue("  Confidence flags: {n_confidence} episodes ({n_vitamin} vitamin, {n_cart} CAR-T)"))
+
+
 # --- SECTION 6: SAVE ENRICHED RDS ---
 
 message("\n--- Saving enriched treatment_episodes.rds ---")
 
-# Final column order (D-16: was 15 columns, now 22 columns per Phase 91)
+# Final column order (was 22 columns Phase 91, now 25 columns per Phase 93)
 episodes <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
@@ -607,7 +708,9 @@ episodes <- episodes %>%
     triggering_codes, encounter_ids, drug_names,
     cancer_category, cancer_link_method, is_hodgkin, regimen_label,
     triggering_code_description, drug_group,
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 93: Temporal context + confidence flags (IMMU-01, IMMU-02) ---
+    is_sct_conditioning_context, days_to_nearest_sct, immuno_confidence
   )
 
 saveRDS(episodes, OUTPUT_RDS)
@@ -617,7 +720,8 @@ message(glue("  Saved enriched treatment_episodes.rds: {nrow(episodes)} episodes
 stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
                 "triggering_code_description", "drug_group",
                 "medication_name", "code_type", "source_table", "treatment_line",
-                "sct_cross_use_flag") %in% names(episodes)))
+                "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",
+                "immuno_confidence") %in% names(episodes)))
 
 
 # --- SECTION 6B: TBD CODE EXPORT FOR SME REVIEW (Phase 91, D-07) ---
