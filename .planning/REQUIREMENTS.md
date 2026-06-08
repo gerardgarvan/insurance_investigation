@@ -14,11 +14,11 @@ Requirements for Gantt Data Enrichment milestone. Each maps to roadmap phases.
 
 ### Gantt Enrichment
 
-- [ ] **GANTT-01**: Gantt v2 episodes CSV includes medication_name column (human-readable from xlsx column C)
-- [ ] **GANTT-02**: Gantt v2 episodes CSV includes code_type column (RXNORM, CPT/HCPCS, ICD-10-CM)
-- [ ] **GANTT-03**: Gantt v2 episodes CSV includes source_table column (PRESCRIBING, PROCEDURES, DIAGNOSIS)
-- [ ] **GANTT-04**: Gantt v2 episodes CSV includes treatment_line column (F/S/E/N per triggering code)
-- [ ] **GANTT-05**: Gantt v2 episodes CSV includes cross_use_flag column (SCT conditioning / immunotherapy cross-use)
+- [x] **GANTT-01**: Gantt v2 episodes CSV includes medication_name column (human-readable from xlsx column C)
+- [x] **GANTT-02**: Gantt v2 episodes CSV includes code_type column (RXNORM, CPT/HCPCS, ICD-10-CM)
+- [x] **GANTT-03**: Gantt v2 episodes CSV includes source_table column (PRESCRIBING, PROCEDURES, DIAGNOSIS)
+- [x] **GANTT-04**: Gantt v2 episodes CSV includes treatment_line column (F/S/E/N per triggering code)
+- [x] **GANTT-05**: Gantt v2 episodes CSV includes cross_use_flag column (SCT conditioning / immunotherapy cross-use)
 - [ ] **GANTT-06**: Gantt v2 detail CSV includes same 5 new columns at per-date level
 - [ ] **GANTT-07**: Existing v1 Gantt exports unchanged (backward compatible)
 
@@ -57,11 +57,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CLEAN-01 | Phase 90 | Complete |
 | CLEAN-02 | Phase 90 | Complete |
-| GANTT-01 | Phase 91 | Pending |
-| GANTT-02 | Phase 91 | Pending |
-| GANTT-03 | Phase 91 | Pending |
-| GANTT-04 | Phase 91 | Pending |
-| GANTT-05 | Phase 91 | Pending |
+| GANTT-01 | Phase 91 | Complete |
+| GANTT-02 | Phase 91 | Complete |
+| GANTT-03 | Phase 91 | Complete |
+| GANTT-04 | Phase 91 | Complete |
+| GANTT-05 | Phase 91 | Complete |
 | GANTT-06 | Phase 92 | Pending |
 | GANTT-07 | Phase 92 | Pending |
 | IMMU-01 | Phase 93 | Pending |
