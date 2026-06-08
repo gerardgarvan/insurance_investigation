@@ -74,13 +74,13 @@ expected_utils <- c(
   "utils_assertions.R", "utils_attrition.R", "utils_cancer.R",
   "utils_dates.R", "utils_duckdb.R", "utils_icd.R",
   "utils_payer.R", "utils_pptx.R", "utils_snapshot.R",
-  "utils_treatment.R"
+  "utils_treatment.R", "utils_xlsx_lookups.R"
 )
 
 utils_files <- list.files("R/utils", pattern = "\\.R$")
 check(
-  glue("R/utils/ contains 10 files (found {length(utils_files)})"),
-  length(utils_files) == 10
+  glue("R/utils/ contains 11 files (found {length(utils_files)})"),
+  length(utils_files) == 11
 )
 
 missing_utils <- setdiff(expected_utils, utils_files)
@@ -1346,6 +1346,79 @@ check(
 )
 
 # ==============================================================================
+# SECTION 15d: XLSX METADATA ENRICHMENT VALIDATION (GANTT-01 through GANTT-05) ----
+# ==============================================================================
+
+message("\n[GANTT] XLSX metadata enrichment validation (GANTT-01 through GANTT-05)...")
+
+# Check 1: utils_xlsx_lookups.R exists
+check(
+  "R/utils/utils_xlsx_lookups.R exists",
+  file.exists("R/utils/utils_xlsx_lookups.R")
+)
+
+# Check 2: utils_xlsx_lookups.R exports load_xlsx_lookups function
+if (file.exists("R/utils/utils_xlsx_lookups.R")) {
+  xlsx_lookup_lines <- readLines("R/utils/utils_xlsx_lookups.R", warn = FALSE)
+  check(
+    "utils_xlsx_lookups.R contains load_xlsx_lookups function",
+    any(grepl("load_xlsx_lookups <- function", xlsx_lookup_lines, fixed = TRUE))
+  )
+
+  # Check 3: utils_xlsx_lookups.R has deduplication validation
+  check(
+    "utils_xlsx_lookups.R validates no duplicate codes",
+    any(grepl("duplicated|Duplicate codes", xlsx_lookup_lines))
+  )
+}
+
+# Check 4: R/28 sources utils_xlsx_lookups.R
+check(
+  "R/28 sources utils_xlsx_lookups.R",
+  any(grepl('source.*utils_xlsx_lookups', r28_lines))
+)
+
+# Check 5-9: R/28 select() includes all 5 new columns
+new_cols <- c("medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag")
+for (col in new_cols) {
+  check(
+    glue("R/28 select() includes {col}"),
+    any(grepl(col, r28_lines, fixed = TRUE))
+  )
+}
+
+# Check 10: R/28 comment references 22 columns (Phase 91)
+check(
+  "R/28 comment updated to 22 columns",
+  any(grepl("22 columns", r28_lines))
+)
+
+# Check 11: R/28 has row count validation after enrichment
+check(
+  "R/28 validates row count preserved after enrichment",
+  any(grepl("pre_enrichment_count", r28_lines))
+)
+
+# Check 12: R/28 stopifnot includes medication_name
+check(
+  "R/28 stopifnot includes medication_name",
+  any(grepl('"medication_name"', r28_lines, fixed = TRUE))
+)
+
+# Check 13: aggregate_treatment_line implements F > S > E > N priority (per D-03)
+check(
+  "R/28 aggregate_treatment_line has F > S > E > N priority",
+  any(grepl('if.*"F".*%in%.*labels.*return.*"F"', r28_lines)) ||
+  any(grepl('"F" %in% labels', r28_lines, fixed = TRUE))
+)
+
+# Check 14: R/28 has TBD code export section (per D-07)
+check(
+  "R/28 has TBD code export section for SME review",
+  any(grepl("unresolved_codes_for_review", r28_lines))
+)
+
+# ==============================================================================
 # SECTION 30: PHASE 87 -- ICD-9 CANCER CODE INFRASTRUCTURE ----
 # ==============================================================================
 # Validates ICD9_CANCER_SITE_MAP, shared is_cancer_code(), and updated
@@ -1786,6 +1859,11 @@ message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
 message("  * TEST-05: Conditional fixture count assertions (Sections 32+33)")
 message("  * CLEAN-01: False-positive SCT codes removed from DRUG_GROUPINGS (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC)")
 message("  * CLEAN-02: Smoke test validates deprecated codes absent and descriptions preserved")
+message("  * GANTT-01: medication_name column in treatment_episodes.rds (Phase 91)")
+message("  * GANTT-02: code_type column in treatment_episodes.rds (Phase 91)")
+message("  * GANTT-03: source_table column in treatment_episodes.rds (Phase 91)")
+message("  * GANTT-04: treatment_line column with F>S>E>N priority (Phase 91)")
+message("  * GANTT-05: sct_cross_use_flag column in treatment_episodes.rds (Phase 91)")
 
 if (failed > 0) {
   quit(status = 1)
