@@ -71,16 +71,17 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] SCT code 0362 investigation (overlap rate with standard SCT codes) — v2.1 Phase 79
 - [x] Replaced-by code verification (pairwise + chain analysis) — v2.1 Phase 79
 - [x] Drug grouping summary tables (sub-category + encounter treatment) — v2.1 Phases 79/81/82
-
-### Active
-
+- [x] Remove 5 false-positive SCT codes from treatment detection — v2.3 Phase 90
 - [x] F/S/E/N treatment line labels per code in Gantt output — v2.3 Phase 91
 - [x] Medication names (human-readable) in Gantt output — v2.3 Phase 91
 - [x] Code Type column (RXNORM, CPT/HCPCS, ICD-10-CM) in Gantt output — v2.3 Phase 91
 - [x] Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS) in Gantt output — v2.3 Phase 91
 - [x] SCT conditioning / immunotherapy cross-use flags in Gantt output — v2.3 Phase 91
-- [x] Remove 5 false-positive SCT codes from treatment detection — v2.3 Phase 90
 - [x] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification) — v2.3 Phase 93
+
+### Active
+
+(No active requirements — next milestone not yet defined)
 
 ### Out of Scope
 
@@ -95,26 +96,23 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
 
-## Current Milestone: v2.3 Gantt Data Enrichment
-
-**Goal:** Enrich Gantt export data with per-code treatment line labels, medication names, code metadata, and cross-use flags from all_codes_resolved2.xlsx, while fixing false-positive SCT codes.
-
-**Target features:**
-- F/S/E/N treatment line labels per code (alongside existing regimen-level `is_first_line`)
-- Medication names (human-readable from xlsx column C)
-- Code Type column (RXNORM, CPT/HCPCS, ICD-10-CM)
-- Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS)
-- SCT conditioning / immunotherapy cross-use flags (column 9)
-- Remove 5 false-positive SCT codes from treatment detection (status/complication codes, not procedures)
-- Flag questionable immunotherapy codes (8 vitamin combos, 2 CAR-T classification TBD)
-
 ## Current State
 
-**Shipped:** v2.2 (2026-06-05)
+**Shipped:** v2.3 (2026-06-08)
 
 **Pipeline status:** 93 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), SCT conditioning temporal context flags (is_sct_conditioning_context) and immunotherapy confidence column (immuno_confidence for 11 questionable codes), Gantt v2 CSV exports with 22-column episodes and 20-column detail schemas (Phase 93 cross-use flags), and comprehensive smoke test with 35 validation sections plus Section 15f.
 
 ## Previous Milestones
+
+### v2.3 Gantt Data Enrichment (Shipped 2026-06-08)
+
+**Goal:** Enrich Gantt export data with per-code treatment line labels, medication names, code metadata, and cross-use flags from all_codes_resolved2.xlsx, while fixing false-positive SCT codes.
+
+**Shipped:**
+- False-positive SCT code removal: 5 status/complication codes removed from DRUG_GROUPINGS, smoke test Section 15c validates absence (Phase 90)
+- Reference data loader: R/utils/utils_xlsx_lookups.R parses all_codes_resolved2.xlsx, enriches R/28 with 5 metadata columns (medication_name, code_type, source_table, treatment_line, sct_cross_use_flag) (Phase 91)
+- Gantt v2 schema extension: Episodes 16→22 columns, detail 14→20 columns with defensive fallbacks, backward-compatible v1 exports (Phase 92)
+- Cross-use flag implementation: SCT conditioning temporal context (30-day window), immunotherapy confidence column for 11 questionable codes (8 vitamin, 3 CAR-T), smoke test Section 15f with 16 checks (Phase 93)
 
 ### v2.2 Local Testing Infrastructure & Clinical Refinements (Shipped 2026-06-05)
 
@@ -311,4 +309,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-08 after Phase 93 completion*
+*Last updated: 2026-06-08 after v2.3 milestone*

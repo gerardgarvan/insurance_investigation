@@ -1,5 +1,15 @@
 # Milestones
 
+## v2.3 Gantt Data Enrichment (Shipped: 2026-06-08)
+
+**Phases completed:** 4 phases, 4 plans, 4 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v2.2 Local Testing Infrastructure & Clinical Refinements (Shipped: 2026-06-05)
 
 **Phases completed:** 7 phases (Phases 83-89), 11 plans
