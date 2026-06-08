@@ -79,7 +79,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Code Type column (RXNORM, CPT/HCPCS, ICD-10-CM) in Gantt output
 - [ ] Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS) in Gantt output
 - [ ] SCT conditioning / immunotherapy cross-use flags in Gantt output
-- [ ] Remove 5 false-positive SCT codes from treatment detection
+- [x] Remove 5 false-positive SCT codes from treatment detection — v2.3 Phase 90
 - [ ] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification)
 
 ### Out of Scope
@@ -112,7 +112,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.2 (2026-06-05)
 
-**Pipeline status:** 89 phases completed across 13 milestones (v1.0-v2.2). 98 R scripts total (77 numbered in decade-based organization + 10 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, and comprehensive smoke test with 33 validation sections.
+**Pipeline status:** 90 phases completed across 14 milestones (v1.0-v2.3). 98 R scripts total (77 numbered in decade-based organization + 10 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, and comprehensive smoke test with 34 validation sections.
 
 ## Previous Milestones
 
@@ -240,7 +240,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 89 phases completed across 13 milestones (v1.0-v2.2), 98 R scripts total, DuckDB backend with dual-environment support, AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled xlsx outputs, 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 33 validation sections
+- **Current state**: 90 phases completed across 14 milestones (v1.0-v2.3), 98 R scripts total, DuckDB backend with dual-environment support, AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled xlsx outputs, 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 34 validation sections, false-positive SCT code removal (5 status/complication codes)
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -311,4 +311,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-07 after v2.3 milestone start*
+*Last updated: 2026-06-08 after Phase 90 completion*
