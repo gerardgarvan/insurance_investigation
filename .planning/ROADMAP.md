@@ -17,6 +17,74 @@
 - **v2.0 Codebase Cleanup & Documentation** — Phases 65-74 (shipped 2026-06-02) — [archive](milestones/v2.0-ROADMAP.md)
 - **v2.1 Clinical Data Refinements & NLPHL Breakout** — Phases 75-82 (shipped 2026-06-03) — [archive](milestones/v2.1-ROADMAP.md)
 - **v2.2 Local Testing Infrastructure & Clinical Refinements** — Phases 83-89 (shipped 2026-06-05) — [archive](milestones/v2.2-ROADMAP.md)
+- **v2.3 Gantt Data Enrichment** — Phases 90-93 (active)
+
+## v2.3 Gantt Data Enrichment
+
+### Phases
+
+- [ ] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact
+- [ ] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata
+- [ ] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility
+- [ ] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags
+
+### Phase Details
+
+#### Phase 90: False-Positive SCT Code Removal
+**Goal**: Remove 5 false-positive SCT codes (status/complication codes) from treatment detection
+**Depends on**: Nothing (prerequisite for enrichment)
+**Requirements**: CLEAN-01, CLEAN-02
+**Success Criteria** (what must be TRUE):
+  1. Five codes (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC) removed from R/00_config.R with documented rationale
+  2. Impact analysis documented showing affected episode counts before removal
+  3. Smoke test Section 15 validates deprecated codes absent from new treatment_episodes output
+  4. No SCT episodes triggered solely by status/complication codes in cohort pipeline
+**Plans**: TBD
+
+#### Phase 91: Reference Data Loader & Metadata Enrichment
+**Goal**: Integrate all_codes_resolved2.xlsx metadata into treatment episode pipeline
+**Depends on**: Phase 90 (clean code list before enrichment)
+**Requirements**: GANTT-01, GANTT-02, GANTT-03, GANTT-04, GANTT-05
+**Success Criteria** (what must be TRUE):
+  1. R/utils/utils_xlsx_lookups.R extracts medication names, code types, source tables, F/S/E/N labels, and cross-use flags from 8 xlsx sheets
+  2. Pre-join validation prevents many-to-many row explosion (deduplication enforced)
+  3. R/28 episode classification enriched with 5 new columns via left_join with relationship assertion
+  4. Unresolved classifications (TBD codes) exported separately for clinical SME review rather than propagating NA values
+  5. treatment_episodes.rds contains medication_name, code_type, source_table, treatment_line, and sct_cross_use_flag columns
+**Plans**: TBD
+**UI hint**: yes
+
+#### Phase 92: Gantt v2 Schema Extension
+**Goal**: Extend Gantt CSV exports with enriched metadata columns while maintaining v1 compatibility
+**Depends on**: Phase 91 (enriched episode data available)
+**Requirements**: GANTT-06, GANTT-07
+**Success Criteria** (what must be TRUE):
+  1. gantt_episodes_v2.csv extends from 16 to 21 columns (5 new columns appended at end)
+  2. gantt_detail_v2.csv extends from 14 to 19 columns (5 new columns appended at end)
+  3. Existing v1 Gantt exports (R/51 output) unchanged and functional (backward compatible)
+  4. Smoke test Section 52 validates 21-column schema with correct column order and non-null distributions
+  5. Death/HL Diagnosis pseudo-rows populate new columns with NA appropriately
+**Plans**: TBD
+
+#### Phase 93: Cross-Use Flag Implementation
+**Goal**: Add temporal context logic for drugs with dual treatment intent (SCT conditioning vs standalone chemotherapy/immunotherapy)
+**Depends on**: Phase 92 (basic enrichment working)
+**Requirements**: IMMU-01, IMMU-02
+**Success Criteria** (what must be TRUE):
+  1. Temporal context flags identify codes used within 30 days before SCT episode start (is_sct_conditioning_context)
+  2. Questionable immunotherapy codes flagged with confidence column distinguishing vitamin combos from CAR-T classification ambiguity
+  3. Category aggregation rules documented to prevent cross-use flags from causing treatment sums exceeding 100%
+  4. Smoke test validates primary category sum equals total episode count (mutual exclusivity)
+**Plans**: TBD
+
+### Progress Table
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 90. False-Positive SCT Code Removal | 0/0 | Not started | - |
+| 91. Reference Data Loader & Metadata Enrichment | 0/0 | Not started | - |
+| 92. Gantt v2 Schema Extension | 0/0 | Not started | - |
+| 93. Cross-Use Flag Implementation | 0/0 | Not started | - |
 
 ## Remaining Phases (Unassigned)
 
@@ -49,6 +117,7 @@
 | 65-74 | v2.0 | Complete | 2026-06-02 |
 | 75-82 | v2.1 | Complete | 2026-06-03 |
 | 83-89 | v2.2 | Complete | 2026-06-05 |
+| 90-93 | v2.3 | Active | - |
 
 ---
-*Last updated: 2026-06-05 -- v2.2 milestone archived*
+*Last updated: 2026-06-07 -- v2.3 milestone started*
