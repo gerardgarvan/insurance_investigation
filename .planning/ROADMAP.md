@@ -24,7 +24,7 @@
 ### Phases
 
 - [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
-- [x] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata (completed 2026-06-08)
+- [x] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata (completed 2026-06-08)
 - [ ] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility
 - [ ] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags
 
@@ -67,9 +67,12 @@ Plans:
   1. gantt_episodes_v2.csv extends from 16 to 21 columns (5 new columns appended at end)
   2. gantt_detail_v2.csv extends from 14 to 19 columns (5 new columns appended at end)
   3. Existing v1 Gantt exports (R/51 output) unchanged and functional (backward compatible)
-  4. Smoke test Section 52 validates 21-column schema with correct column order and non-null distributions
+  4. Smoke test Section 15e validates 21-column schema with correct column order
   5. Death/HL Diagnosis pseudo-rows populate new columns with NA appropriately
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 92-01-PLAN.md — Extend R/52 column selection with 5 metadata columns, add smoke test Section 15e
 
 #### Phase 93: Cross-Use Flag Implementation
 **Goal**: Add temporal context logic for drugs with dual treatment intent (SCT conditioning vs standalone chemotherapy/immunotherapy)
@@ -88,7 +91,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 90. False-Positive SCT Code Removal | 1/1 | Complete    | 2026-06-08 |
 | 91. Reference Data Loader & Metadata Enrichment | 1/1 | Complete    | 2026-06-08 |
-| 92. Gantt v2 Schema Extension | 0/0 | Not started | - |
+| 92. Gantt v2 Schema Extension | 0/1 | Planning    | - |
 | 93. Cross-Use Flag Implementation | 0/0 | Not started | - |
 
 ## Remaining Phases (Unassigned)
@@ -125,4 +128,4 @@ Plans:
 | 90-93 | v2.3 | Active | - |
 
 ---
-*Last updated: 2026-06-08 -- Phase 91 planned (1 plan)*
+*Last updated: 2026-06-08 -- Phase 92 planned (1 plan)*
