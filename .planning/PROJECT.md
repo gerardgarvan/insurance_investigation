@@ -80,7 +80,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS) in Gantt output — v2.3 Phase 91
 - [x] SCT conditioning / immunotherapy cross-use flags in Gantt output — v2.3 Phase 91
 - [x] Remove 5 false-positive SCT codes from treatment detection — v2.3 Phase 90
-- [ ] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification)
+- [x] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification) — v2.3 Phase 93
 
 ### Out of Scope
 
@@ -112,7 +112,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.2 (2026-06-05)
 
-**Pipeline status:** 92 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), Gantt v2 CSV exports with 21-column episodes and 19-column detail schemas (5 metadata columns from Phase 91), and comprehensive smoke test with 35 validation sections.
+**Pipeline status:** 93 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), SCT conditioning temporal context flags (is_sct_conditioning_context) and immunotherapy confidence column (immuno_confidence for 11 questionable codes), Gantt v2 CSV exports with 22-column episodes and 20-column detail schemas (Phase 93 cross-use flags), and comprehensive smoke test with 35 validation sections plus Section 15f.
 
 ## Previous Milestones
 
@@ -240,7 +240,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 91 phases completed across 14 milestones (v1.0-v2.3), 99 R scripts total, DuckDB backend with dual-environment support, AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled xlsx outputs, xlsx metadata enrichment (5 new columns from all_codes_resolved2.xlsx), 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 35 validation sections, false-positive SCT code removal (5 status/complication codes)
+- **Current state**: 93 phases completed across 14 milestones (v1.0-v2.3), 99 R scripts total, DuckDB backend with dual-environment support, AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled xlsx outputs, xlsx metadata enrichment (5 new columns from all_codes_resolved2.xlsx), SCT conditioning temporal context and immunotherapy confidence flags (Phase 93), 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 35 validation sections plus Section 15f, false-positive SCT code removal (5 status/complication codes)
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -311,4 +311,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-08 after Phase 92 completion*
+*Last updated: 2026-06-08 after Phase 93 completion*
