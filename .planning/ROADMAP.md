@@ -23,7 +23,7 @@
 
 ### Phases
 
-- [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
+- [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
 - [ ] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata
 - [ ] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility
 - [ ] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags
@@ -54,8 +54,10 @@ Plans:
   3. R/28 episode classification enriched with 5 new columns via left_join with relationship assertion
   4. Unresolved classifications (TBD codes) exported separately for clinical SME review rather than propagating NA values
   5. treatment_episodes.rds contains medication_name, code_type, source_table, treatment_line, and sct_cross_use_flag columns
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 1 plan
+
+Plans:
+- [ ] 91-01-PLAN.md — Create xlsx lookup utility, enrich R/28 with 5 metadata columns, add smoke test Section 15d
 
 #### Phase 92: Gantt v2 Schema Extension
 **Goal**: Extend Gantt CSV exports with enriched metadata columns while maintaining v1 compatibility
@@ -85,7 +87,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 90. False-Positive SCT Code Removal | 1/1 | Complete    | 2026-06-08 |
-| 91. Reference Data Loader & Metadata Enrichment | 0/0 | Not started | - |
+| 91. Reference Data Loader & Metadata Enrichment | 0/1 | Planning complete | - |
 | 92. Gantt v2 Schema Extension | 0/0 | Not started | - |
 | 93. Cross-Use Flag Implementation | 0/0 | Not started | - |
 
@@ -123,4 +125,4 @@ Plans:
 | 90-93 | v2.3 | Active | - |
 
 ---
-*Last updated: 2026-06-07 -- Phase 90 planned (1 plan)*
+*Last updated: 2026-06-08 -- Phase 91 planned (1 plan)*
