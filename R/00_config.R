@@ -1584,21 +1584,22 @@ DRUG_GROUPINGS <- c(
   "77385" = "Radiation", # Replaces 77418
   "77412" = "Radiation", # Replaces 77413, 77414, 77416
 
-  # SCT (41 codes)
-  "Z94.84" = "SCT",
-  "HEMATOLOGIC_TRANSPLANT_AND_ENDOC" = "SCT",
+  # NOTE: 5 false-positive codes removed (v2.3 Phase 90, CLEAN-01):
+  #   Z94.84 (transplant status), T86.5/T86.09 (transplant complications),
+  #   Z48.290 (aftercare), HEMATOLOGIC_TRANSPLANT_AND_ENDOC (tumor registry flag)
+  #   These are status/complication/aftercare codes, not procedures.
+  #   Still used for cohort inclusion in R/10 has_sct() -- just no longer trigger episodes.
+
+  # SCT (36 codes)
   "38241" = "SCT",
   "016" = "SCT",
   "30243Y0" = "SCT",
-  "T86.5" = "SCT",
   "38240" = "SCT",
   "41.04" = "SCT",
   "0362" = "SCT",
   "30233Y0" = "SCT",
   "014" = "SCT",
-  "T86.09" = "SCT",
   "41.05" = "SCT",
-  "Z48.290" = "SCT",
   "30243Y2" = "SCT",
   "0815" = "SCT",
   "30243Y3" = "SCT",
