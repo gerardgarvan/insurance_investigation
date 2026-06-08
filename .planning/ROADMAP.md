@@ -26,7 +26,7 @@
 - [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
 - [x] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata (completed 2026-06-08)
 - [x] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility (completed 2026-06-08)
-- [ ] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags
+- [x] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags (completed 2026-06-08)
 
 ### Phase Details
 
@@ -83,10 +83,10 @@ Plans:
   2. Questionable immunotherapy codes flagged with confidence column distinguishing vitamin combos from CAR-T classification ambiguity
   3. Category aggregation rules documented to prevent cross-use flags from causing treatment sums exceeding 100%
   4. Smoke test validates primary category sum equals total episode count (mutual exclusivity)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 93-01-PLAN.md — Add QUESTIONABLE_IMMUNO_CODES config, enrich R/28 with temporal context + confidence columns, extend R/52 Gantt v2 schema to 22/20, add smoke test Section 15f
+- [x] 93-01-PLAN.md — Add QUESTIONABLE_IMMUNO_CODES config, enrich R/28 with temporal context + confidence columns, extend R/52 Gantt v2 schema to 22/20, add smoke test Section 15f
 
 ### Progress Table
 
@@ -95,7 +95,7 @@ Plans:
 | 90. False-Positive SCT Code Removal | 1/1 | Complete    | 2026-06-08 |
 | 91. Reference Data Loader & Metadata Enrichment | 1/1 | Complete    | 2026-06-08 |
 | 92. Gantt v2 Schema Extension | 1/1 | Complete    | 2026-06-08 |
-| 93. Cross-Use Flag Implementation | 0/1 | Planning complete | - |
+| 93. Cross-Use Flag Implementation | 1/1 | Complete   | 2026-06-08 |
 
 ## Remaining Phases (Unassigned)
 

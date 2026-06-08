@@ -24,8 +24,8 @@ Requirements for Gantt Data Enrichment milestone. Each maps to roadmap phases.
 
 ### Immunotherapy Flagging
 
-- [ ] **IMMU-01**: Questionable immunotherapy codes (8 vitamin combos, 2 CAR-T) flagged with confidence column in Gantt output
-- [ ] **IMMU-02**: Flag values distinguish vitamin combos ("questionable—vitamin") from CAR-T ambiguity ("questionable—CAR-T vs immunotherapy")
+- [x] **IMMU-01**: Questionable immunotherapy codes (8 vitamin combos, 2 CAR-T) flagged with confidence column in Gantt output
+- [x] **IMMU-02**: Flag values distinguish vitamin combos ("questionable—vitamin") from CAR-T ambiguity ("questionable—CAR-T vs immunotherapy")
 
 ## Future Requirements
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GANTT-05 | Phase 91 | Complete |
 | GANTT-06 | Phase 92 | Complete |
 | GANTT-07 | Phase 92 | Complete |
-| IMMU-01 | Phase 93 | Pending |
-| IMMU-02 | Phase 93 | Pending |
+| IMMU-01 | Phase 93 | Complete |
+| IMMU-02 | Phase 93 | Complete |
 
 **Coverage:**
 - v2.3 requirements: 11 total
