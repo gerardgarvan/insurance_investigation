@@ -39,7 +39,10 @@
   2. Impact analysis documented showing affected episode counts before removal
   3. Smoke test Section 15 validates deprecated codes absent from new treatment_episodes output
   4. No SCT episodes triggered solely by status/complication codes in cohort pipeline
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 90-01-PLAN.md — Remove 5 codes from DRUG_GROUPINGS and add smoke test Section 15c
 
 #### Phase 91: Reference Data Loader & Metadata Enrichment
 **Goal**: Integrate all_codes_resolved2.xlsx metadata into treatment episode pipeline
@@ -81,7 +84,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 90. False-Positive SCT Code Removal | 0/0 | Not started | - |
+| 90. False-Positive SCT Code Removal | 0/1 | Planning complete | - |
 | 91. Reference Data Loader & Metadata Enrichment | 0/0 | Not started | - |
 | 92. Gantt v2 Schema Extension | 0/0 | Not started | - |
 | 93. Cross-Use Flag Implementation | 0/0 | Not started | - |
@@ -120,4 +123,4 @@
 | 90-93 | v2.3 | Active | - |
 
 ---
-*Last updated: 2026-06-07 -- v2.3 milestone started*
+*Last updated: 2026-06-07 -- Phase 90 planned (1 plan)*
