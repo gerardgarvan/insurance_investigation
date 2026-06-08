@@ -9,8 +9,8 @@ Requirements for Gantt Data Enrichment milestone. Each maps to roadmap phases.
 
 ### Code Cleanup
 
-- [ ] **CLEAN-01**: Remove 5 false-positive SCT codes (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC) from treatment detection pipeline
-- [ ] **CLEAN-02**: Smoke test updated to verify removed codes no longer produce SCT episodes
+- [x] **CLEAN-01**: Remove 5 false-positive SCT codes (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC) from treatment detection pipeline
+- [x] **CLEAN-02**: Smoke test updated to verify removed codes no longer produce SCT episodes
 
 ### Gantt Enrichment
 
@@ -55,8 +55,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLEAN-01 | Phase 90 | Pending |
-| CLEAN-02 | Phase 90 | Pending |
+| CLEAN-01 | Phase 90 | Complete |
+| CLEAN-02 | Phase 90 | Complete |
 | GANTT-01 | Phase 91 | Pending |
 | GANTT-02 | Phase 91 | Pending |
 | GANTT-03 | Phase 91 | Pending |

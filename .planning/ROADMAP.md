@@ -23,7 +23,7 @@
 
 ### Phases
 
-- [ ] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact
+- [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
 - [ ] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata
 - [ ] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility
 - [ ] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags
@@ -39,10 +39,10 @@
   2. Impact analysis documented showing affected episode counts before removal
   3. Smoke test Section 15 validates deprecated codes absent from new treatment_episodes output
   4. No SCT episodes triggered solely by status/complication codes in cohort pipeline
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 90-01-PLAN.md — Remove 5 codes from DRUG_GROUPINGS and add smoke test Section 15c
+- [x] 90-01-PLAN.md — Remove 5 codes from DRUG_GROUPINGS and add smoke test Section 15c
 
 #### Phase 91: Reference Data Loader & Metadata Enrichment
 **Goal**: Integrate all_codes_resolved2.xlsx metadata into treatment episode pipeline
@@ -84,7 +84,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 90. False-Positive SCT Code Removal | 0/1 | Planning complete | - |
+| 90. False-Positive SCT Code Removal | 1/1 | Complete   | 2026-06-08 |
 | 91. Reference Data Loader & Metadata Enrichment | 0/0 | Not started | - |
 | 92. Gantt v2 Schema Extension | 0/0 | Not started | - |
 | 93. Cross-Use Flag Implementation | 0/0 | Not started | - |
