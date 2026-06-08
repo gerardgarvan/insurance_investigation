@@ -218,6 +218,17 @@ if (!"sct_cross_use_flag" %in% names(episodes)) {
   episodes <- episodes %>% mutate(sct_cross_use_flag = NA_character_)
 }
 
+# --- Phase 93: Temporal context + confidence flags (IMMU-01, IMMU-02) ---
+if (!"is_sct_conditioning_context" %in% names(episodes)) {
+  warning("is_sct_conditioning_context column not found in treatment_episodes.rds — Phase 93 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(is_sct_conditioning_context = NA)
+}
+if (!"immuno_confidence" %in% names(episodes)) {
+  warning("immuno_confidence column not found in treatment_episodes.rds — Phase 93 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(immuno_confidence = NA_character_)
+}
+# NOTE: days_to_nearest_sct is RDS-only (D-03) — NOT exported to Gantt CSVs
+
 
 # --- SECTION 3: CODE DESCRIPTION LOOKUP ----
 
@@ -308,7 +319,9 @@ episodes_export <- episodes %>%
       cancer_category, is_hodgkin, cancer_link_method,
       regimen_label, is_first_line,
       # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-      medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+      medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+      # --- Phase 93: 2 new context columns (IMMU-01, IMMU-02) ---
+      is_sct_conditioning_context, immuno_confidence
     ),
     by = c("patient_id", "episode_number", "treatment_type")
   ) %>%
@@ -324,7 +337,9 @@ episodes_export <- episodes %>%
     cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
     drug_group, cause_of_death,
     # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 93: 2 new context columns (IMMU-01, IMMU-02) ---
+    is_sct_conditioning_context, immuno_confidence
   )
 
 message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -337,7 +352,9 @@ episodes_v2_cols <- episodes %>%
     patient_id, treatment_type, episode_number, cancer_category, is_hodgkin,
     cancer_link_method, regimen_label, is_first_line,
     # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 93: 2 new context columns (IMMU-01, IMMU-02) ---
+    is_sct_conditioning_context, immuno_confidence
   )
 
 detail_export <- detail %>%
@@ -363,7 +380,9 @@ detail_export <- detail %>%
     cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
     cause_of_death,
     # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 93: 2 new context columns (IMMU-01, IMMU-02) ---
+    is_sct_conditioning_context, immuno_confidence
   )
 
 message(glue("  Built detail_export: {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
@@ -418,7 +437,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
   }
 
   if (nrow(death_data) > 0) {
-    # Build death_episodes with all 24 v2 columns (Phase 78: +drug_group, +cause_of_death; Phase 92: +5 metadata)
+    # Build death_episodes with all 26 v2 columns (Phase 93: +2)
     death_episodes <- death_data %>%
       mutate(
         patient_id = ID,
@@ -444,7 +463,9 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         code_type = NA_character_,
         source_table = NA_character_,
         treatment_line = NA_character_,
-        sct_cross_use_flag = NA_character_
+        sct_cross_use_flag = NA_character_,
+        is_sct_conditioning_context = NA,           # Phase 93: Death rows are not treatment episodes
+        immuno_confidence = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -453,7 +474,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
         drug_group, cause_of_death,
-        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+        is_sct_conditioning_context, immuno_confidence
       )
 
     # Verify column alignment before binding (R/49 pattern, lines 734-756)
@@ -469,7 +491,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
       warning(glue("Death episodes has extra columns: {paste(extra_in_death_ep, collapse = ', ')}"))
     }
 
-    # Build death_detail with all 22 v2 detail columns (Phase 78: +cause_of_death; Phase 92: +5 metadata)
+    # Build death_detail with all 24 v2 detail columns (Phase 93: +2)
     death_detail <- death_data %>%
       mutate(
         patient_id = ID,
@@ -493,7 +515,9 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         code_type = NA_character_,
         source_table = NA_character_,
         treatment_line = NA_character_,
-        sct_cross_use_flag = NA_character_
+        sct_cross_use_flag = NA_character_,
+        is_sct_conditioning_context = NA,           # Phase 93: Death rows are not treatment episodes
+        immuno_confidence = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
@@ -502,7 +526,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         triggering_code_description,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
         cause_of_death,
-        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+        is_sct_conditioning_context, immuno_confidence
       )
 
     # Verify column alignment for detail
@@ -550,7 +575,7 @@ if (file.exists(COHORT_RDS)) {
     select(ID, first_hl_dx_date)
 
   if (nrow(hl_dx_data) > 0) {
-    # Build hl_dx_episodes with all 24 v2 columns (Phase 78: +drug_group, +cause_of_death; Phase 92: +5 metadata)
+    # Build hl_dx_episodes with all 26 v2 columns (Phase 93: +2)
     hl_dx_episodes <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -576,7 +601,9 @@ if (file.exists(COHORT_RDS)) {
         code_type = NA_character_,
         source_table = NA_character_,
         treatment_line = NA_character_,
-        sct_cross_use_flag = NA_character_
+        sct_cross_use_flag = NA_character_,
+        is_sct_conditioning_context = NA,           # Phase 93: HL Diagnosis rows are not treatment episodes
+        immuno_confidence = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -585,7 +612,8 @@ if (file.exists(COHORT_RDS)) {
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
         drug_group, cause_of_death,
-        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+        is_sct_conditioning_context, immuno_confidence
       )
 
     # Verify column alignment before binding
@@ -601,7 +629,7 @@ if (file.exists(COHORT_RDS)) {
       warning(glue("HL Diagnosis episodes has extra columns: {paste(extra_in_hl_dx_ep, collapse = ', ')}"))
     }
 
-    # Build hl_dx_detail with all 22 v2 detail columns (Phase 78: +cause_of_death; Phase 92: +5 metadata)
+    # Build hl_dx_detail with all 24 v2 detail columns (Phase 93: +2)
     hl_dx_detail <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -625,7 +653,9 @@ if (file.exists(COHORT_RDS)) {
         code_type = NA_character_,
         source_table = NA_character_,
         treatment_line = NA_character_,
-        sct_cross_use_flag = NA_character_
+        sct_cross_use_flag = NA_character_,
+        is_sct_conditioning_context = NA,           # Phase 93: HL Diagnosis rows are not treatment episodes
+        immuno_confidence = NA_character_
       ) %>%
       select(
         patient_id, treatment_type, treatment_date, triggering_code,
@@ -634,7 +664,8 @@ if (file.exists(COHORT_RDS)) {
         triggering_code_description,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
         cause_of_death,
-        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+        is_sct_conditioning_context, immuno_confidence
       )
 
     # Verify column alignment for detail
@@ -868,7 +899,9 @@ episodes_export <- episodes_export %>%
     cancer_category, regimen_label, is_first_line,
     drug_group, cause_of_death,
     # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 93: 2 new context columns (IMMU-01, IMMU-02) ---
+    is_sct_conditioning_context, immuno_confidence
   )
 
 detail_export <- detail_export %>%
@@ -880,15 +913,17 @@ detail_export <- detail_export %>%
     regimen_label, is_first_line,
     cause_of_death,
     # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 93: 2 new context columns (IMMU-01, IMMU-02) ---
+    is_sct_conditioning_context, immuno_confidence
   )
 
 message("  Columns trimmed to Tableau-essential set")
 message(glue("  Episodes: {ncol(episodes_export)} columns, Detail: {ncol(detail_export)} columns"))
 
 # Step 7: Column count verification
-expected_ep_cols <- 21  # was 16, Phase 92: +5 metadata columns (medication_name, code_type, source_table, treatment_line, sct_cross_use_flag)
-expected_detail_cols <- 19  # was 14, Phase 92: +5 metadata columns
+expected_ep_cols <- 22  # was 21, Phase 93: +is_sct_conditioning_context, +immuno_confidence
+expected_detail_cols <- 20  # was 19, Phase 93: +is_sct_conditioning_context, +immuno_confidence
 
 if (ncol(episodes_export) != expected_ep_cols) {
   stop(glue("ERROR: episodes_export has {ncol(episodes_export)} columns, expected {expected_ep_cols}"))

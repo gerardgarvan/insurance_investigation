@@ -1435,16 +1435,16 @@ for (col in phase92_cols) {
   )
 }
 
-# GANTT-06: Check 6: R/52 episodes expected column count is 21
+# GANTT-06: Check 6: R/52 episodes expected column count is 22 (Phase 93)
 check(
-  "R/52 episodes expected column count is 21",
-  any(grepl("expected_ep_cols <- 21", r52_lines, fixed = TRUE))
+  "R/52 episodes expected column count is 22 (Phase 93)",
+  any(grepl("expected_ep_cols <- 22", r52_lines, fixed = TRUE))
 )
 
-# GANTT-06: Check 7: R/52 detail expected column count is 19
+# GANTT-06: Check 7: R/52 detail expected column count is 20 (Phase 93)
 check(
-  "R/52 detail expected column count is 19",
-  any(grepl("expected_detail_cols <- 19", r52_lines, fixed = TRUE))
+  "R/52 detail expected column count is 20 (Phase 93)",
+  any(grepl("expected_detail_cols <- 20", r52_lines, fixed = TRUE))
 )
 
 # GANTT-06: Check 8: R/52 has guard clauses for Phase 91 columns
@@ -1471,6 +1471,128 @@ check(
   "R/51 v1 export has NO medication_name (GANTT-07 backward compat)",
   !any(grepl("medication_name", r51_lines, fixed = TRUE))
 )
+
+# ==============================================================================
+# SECTION 15f: PHASE 93 CROSS-USE FLAG VALIDATION (IMMU-01, IMMU-02) ----
+# ==============================================================================
+
+message("\n[IMMU] Phase 93: Cross-use flag implementation validation (IMMU-01, IMMU-02)...")
+
+r28_lines <- readLines("R/28_episode_classification.R", warn = FALSE)
+r52_lines_93 <- readLines("R/52_gantt_v2_export.R", warn = FALSE)
+config_lines_93 <- readLines("R/00_config.R", warn = FALSE)
+
+# Check 1: QUESTIONABLE_IMMUNO_CODES exists in R/00_config.R (D-05)
+check(
+  "R/00_config.R defines QUESTIONABLE_IMMUNO_CODES (D-05)",
+  any(grepl("QUESTIONABLE_IMMUNO_CODES", config_lines_93, fixed = TRUE))
+)
+
+# Check 2: QUESTIONABLE_IMMUNO_CODES has 11 entries (D-08)
+check(
+  "QUESTIONABLE_IMMUNO_CODES has 11 entries (8 vitamin + 3 CAR-T)",
+  length(QUESTIONABLE_IMMUNO_CODES) == 11
+)
+
+# Check 3: R/28 includes aggregate_immuno_confidence function
+check(
+  "R/28 defines aggregate_immuno_confidence function",
+  any(grepl("aggregate_immuno_confidence", r28_lines, fixed = TRUE))
+)
+
+# Check 4: R/28 includes is_sct_conditioning_context computation
+check(
+  "R/28 computes is_sct_conditioning_context",
+  any(grepl("is_sct_conditioning_context", r28_lines, fixed = TRUE))
+)
+
+# Check 5: R/28 includes immuno_confidence computation
+check(
+  "R/28 computes immuno_confidence",
+  any(grepl("immuno_confidence", r28_lines, fixed = TRUE))
+)
+
+# Check 6: R/28 comment updated to 25 columns (Phase 93)
+check(
+  "R/28 comment updated to 25 columns (Phase 93)",
+  any(grepl("25 columns", r28_lines))
+)
+
+# Check 7: R/52 includes is_sct_conditioning_context in select
+check(
+  "R/52 select() includes is_sct_conditioning_context (IMMU-01)",
+  any(grepl("is_sct_conditioning_context", r52_lines_93, fixed = TRUE))
+)
+
+# Check 8: R/52 includes immuno_confidence in select
+check(
+  "R/52 select() includes immuno_confidence (IMMU-02)",
+  any(grepl("immuno_confidence", r52_lines_93, fixed = TRUE))
+)
+
+# Check 9: R/52 episodes expected column count is 22 (Phase 93)
+check(
+  "R/52 episodes expected column count is 22 (Phase 93)",
+  any(grepl("expected_ep_cols <- 22", r52_lines_93, fixed = TRUE))
+)
+
+# Check 10: R/52 detail expected column count is 20 (Phase 93)
+check(
+  "R/52 detail expected column count is 20 (Phase 93)",
+  any(grepl("expected_detail_cols <- 20", r52_lines_93, fixed = TRUE))
+)
+
+# Check 11: R/52 has defensive fallback for is_sct_conditioning_context
+check(
+  "R/52 has guard clause for is_sct_conditioning_context",
+  any(grepl('!"is_sct_conditioning_context" %in% names', r52_lines_93, fixed = TRUE))
+)
+
+# Check 12: R/52 has defensive fallback for immuno_confidence
+check(
+  "R/52 has guard clause for immuno_confidence",
+  any(grepl('!"immuno_confidence" %in% names', r52_lines_93, fixed = TRUE))
+)
+
+# Runtime validation (if treatment_episodes.rds exists)
+if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) {
+  episodes_93 <- readRDS(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))
+
+  # Check 13: is_sct_conditioning_context only appears on Chemotherapy episodes (D-02, D-13)
+  non_chemo_with_flag <- episodes_93 %>%
+    filter(treatment_type != "Chemotherapy" & is_sct_conditioning_context == TRUE)
+  check(
+    "is_sct_conditioning_context flag only on Chemotherapy episodes (D-02)",
+    nrow(non_chemo_with_flag) == 0
+  )
+
+  # Check 14: Non-chemotherapy episodes have NA for conditioning flag (D-04)
+  non_chemo <- episodes_93 %>% filter(treatment_type != "Chemotherapy")
+  check(
+    "Non-chemotherapy episodes have NA for is_sct_conditioning_context (D-04)",
+    all(is.na(non_chemo$is_sct_conditioning_context))
+  )
+
+  # Check 15: immuno_confidence has only expected values (D-10)
+  valid_confidence_values <- c("questionable-vitamin", "questionable-CAR-T vs immunotherapy")
+  check(
+    "immuno_confidence contains only valid values (D-10)",
+    all(episodes_93$immuno_confidence %in% valid_confidence_values | is.na(episodes_93$immuno_confidence))
+  )
+
+  # Check 16: Mutual exclusivity preserved -- each (patient_id, episode_number) pair is unique (D-13)
+  dup_episodes <- episodes_93 %>%
+    count(patient_id, episode_number) %>%
+    filter(n > 1)
+  check(
+    "Each episode has exactly one row (mutual exclusivity preserved, D-13)",
+    nrow(dup_episodes) == 0
+  )
+
+  rm(episodes_93)
+} else {
+  message("  SKIP: treatment_episodes.rds not available -- runtime checks skipped")
+}
 
 # ==============================================================================
 # SECTION 30: PHASE 87 -- ICD-9 CANCER CODE INFRASTRUCTURE ----
@@ -1920,6 +2042,8 @@ message("  * GANTT-04: treatment_line column with F>S>E>N priority (Phase 91)")
 message("  * GANTT-05: sct_cross_use_flag column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-06: 5 metadata columns in gantt_detail_v2.csv at per-date level (Phase 92)")
 message("  * GANTT-07: v1 Gantt exports unchanged -- R/51 has no Phase 92 columns")
+message("  * IMMU-01: immuno_confidence column flags questionable immunotherapy codes (Phase 93)")
+message("  * IMMU-02: Distinct flag values for vitamin combos vs CAR-T ambiguity (Phase 93)")
 
 if (failed > 0) {
   quit(status = 1)
