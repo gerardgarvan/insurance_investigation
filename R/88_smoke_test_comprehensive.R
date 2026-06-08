@@ -1204,16 +1204,16 @@ check(
   any(grepl("DEATH_CAUSE_MAP", r52_lines))
 )
 
-# Check 8: R/52 expected episodes column count is 16
+# Check 8: R/52 expected episodes column count is 21 (Phase 92: was 16)
 check(
-  "R/52 expected_ep_cols is 16 (was 14)",
-  any(grepl("expected_ep_cols\\s*<-\\s*16", r52_lines))
+  "R/52 expected_ep_cols is 21 (Phase 92: +5 metadata columns)",
+  any(grepl("expected_ep_cols\\s*<-\\s*21", r52_lines))
 )
 
-# Check 9: R/52 expected detail column count is 14
+# Check 9: R/52 expected detail column count is 19 (Phase 92: was 14)
 check(
-  "R/52 expected_detail_cols is 14 (was 13)",
-  any(grepl("expected_detail_cols\\s*<-\\s*14", r52_lines))
+  "R/52 expected_detail_cols is 19 (Phase 92: +5 metadata columns)",
+  any(grepl("expected_detail_cols\\s*<-\\s*19", r52_lines))
 )
 
 # Check 10: R/52 has missingness warning threshold
