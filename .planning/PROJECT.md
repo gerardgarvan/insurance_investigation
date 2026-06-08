@@ -112,7 +112,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 **Shipped:** v2.2 (2026-06-05)
 
-**Pipeline status:** 91 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), and comprehensive smoke test with 35 validation sections.
+**Pipeline status:** 92 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), Gantt v2 CSV exports with 21-column episodes and 19-column detail schemas (5 metadata columns from Phase 91), and comprehensive smoke test with 35 validation sections.
 
 ## Previous Milestones
 
@@ -311,4 +311,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-08 after Phase 91 completion*
+*Last updated: 2026-06-08 after Phase 92 completion*
