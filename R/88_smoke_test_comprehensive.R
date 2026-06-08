@@ -1303,6 +1303,49 @@ check("DuckDB directory exists", dir.exists(CONFIG$cache$duckdb_dir))
 check(".Renviron.example template exists", file.exists(".Renviron.example"))
 
 # ==============================================================================
+# SECTION 15c: FALSE-POSITIVE SCT CODE REMOVAL (CLEAN-01, CLEAN-02) ----
+# ==============================================================================
+
+message("\n[CLEAN] False-positive SCT code removal validation (CLEAN-01, CLEAN-02)...")
+
+# Read R/00_config.R and find DRUG_GROUPINGS section boundaries
+config_lines <- readLines("R/00_config.R", warn = FALSE)
+drug_groupings_start <- which(grepl("^DRUG_GROUPINGS <- c\\(", config_lines))
+drug_groupings_end <- which(grepl("^\\)$", config_lines) &
+                            seq_along(config_lines) > drug_groupings_start)[1]
+drug_groupings_section <- config_lines[drug_groupings_start:drug_groupings_end]
+
+# CLEAN-01: Each deprecated code is absent from DRUG_GROUPINGS
+deprecated_codes <- c("Z94.84", "T86.5", "T86.09", "Z48.290",
+                      "HEMATOLOGIC_TRANSPLANT_AND_ENDOC")
+
+for (code in deprecated_codes) {
+  check(
+    glue("DRUG_GROUPINGS does not contain deprecated code {code}"),
+    !any(grepl(paste0('"', code, '"'), drug_groupings_section, fixed = TRUE))
+  )
+}
+
+# CLEAN-01: SCT section comment updated to reflect 36 codes
+check(
+  "SCT section comment updated to 36 codes (was 41)",
+  any(grepl("# SCT \\(36 codes\\)", drug_groupings_section))
+)
+
+# CLEAN-02: Code descriptions still preserved (not accidentally removed from R/42)
+check(
+  "R/42 still has Z94.84 code description (not accidentally removed)",
+  any(grepl("Z94\\.84", readLines("R/42_build_code_descriptions.R", warn = FALSE)))
+)
+
+# CLEAN-02: Cohort predicates still reference these codes (not accidentally removed from R/10)
+r10_lines <- readLines("R/10_cohort_predicates.R", warn = FALSE)
+check(
+  "R/10 has_sct() still references Z94.84 for cohort inclusion",
+  any(grepl("Z94\\.84", r10_lines))
+)
+
+# ==============================================================================
 # SECTION 30: PHASE 87 -- ICD-9 CANCER CODE INFRASTRUCTURE ----
 # ==============================================================================
 # Validates ICD9_CANCER_SITE_MAP, shared is_cancer_code(), and updated
@@ -1741,6 +1784,8 @@ message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
 message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
 message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
 message("  * TEST-05: Conditional fixture count assertions (Sections 32+33)")
+message("  * CLEAN-01: False-positive SCT codes removed from DRUG_GROUPINGS (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC)")
+message("  * CLEAN-02: Smoke test validates deprecated codes absent and descriptions preserved")
 
 if (failed > 0) {
   quit(status = 1)
