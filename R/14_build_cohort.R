@@ -146,6 +146,7 @@ dx_hl <- get_pcornet_table("DIAGNOSIS") %>%
       (DX_TYPE == "09" & DX %in% hl_icd9_codes)
   ) %>%
   distinct(ID) %>%
+  collect() %>%
   mutate(has_dx = TRUE)
 
 # TUMOR_REGISTRY: same pattern as 03_cohort_predicates.R
