@@ -341,7 +341,8 @@ payer_transition <- encounters %>%
 # 4f. Get SOURCE from DEMOGRAPHIC (one row per patient)
 patient_source <- get_pcornet_table("DEMOGRAPHIC") %>%
   select(ID, SOURCE) %>%
-  distinct()
+  distinct() %>%
+  collect()
 
 # 4g. Assemble payer_summary
 payer_summary <- patient_source %>%
@@ -381,12 +382,14 @@ message(glue("  Total patients in payer_summary: {format(nrow(payer_summary), bi
 # 5a. Total patients per partner
 patients_per_partner <- get_pcornet_table("DEMOGRAPHIC") %>%
   group_by(SOURCE) %>%
-  summarise(n_patients = n_distinct(ID), .groups = "drop")
+  summarise(n_patients = n_distinct(ID), .groups = "drop") %>%
+  collect()
 
 # 5b. Patients with enrollment per partner
 patients_with_enrollment <- get_pcornet_table("ENROLLMENT") %>%
   group_by(SOURCE) %>%
-  summarise(n_with_enrollment = n_distinct(ID), .groups = "drop")
+  summarise(n_with_enrollment = n_distinct(ID), .groups = "drop") %>%
+  collect()
 
 # 5c. Mean covered days per partner
 covered_days <- get_pcornet_table("ENROLLMENT") %>%
@@ -395,11 +398,13 @@ covered_days <- get_pcornet_table("ENROLLMENT") %>%
   group_by(SOURCE, ID) %>%
   summarise(total_covered_days = sum(period_days, na.rm = TRUE), .groups = "drop") %>%
   group_by(SOURCE) %>%
-  summarise(mean_covered_days = mean(total_covered_days, na.rm = TRUE), .groups = "drop")
+  summarise(mean_covered_days = mean(total_covered_days, na.rm = TRUE), .groups = "drop") %>%
+  collect()
 
 # 5d. Gap detection (gap = >30 days between consecutive enrollment periods)
 enrollment_gaps <- get_pcornet_table("ENROLLMENT") %>%
   filter(!is.na(ENR_START_DATE) & !is.na(ENR_END_DATE)) %>%
+  collect() %>%
   arrange(ID, SOURCE, ENR_START_DATE) %>%
   group_by(ID, SOURCE) %>%
   mutate(

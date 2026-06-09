@@ -96,9 +96,9 @@ message(glue("Missing indicators: {paste(missing_indicators, collapse=', ')}"))
 # nchar(trimws(...)) replaced with direct empty-string check (DuckDB translation gap #7).
 all_encounters <- get_pcornet_table("ENCOUNTER") %>%
   select(-SOURCE) %>%
-  inner_join(hl_patients, by = "ID") %>%
   left_join(get_pcornet_table("DEMOGRAPHIC") %>% select(ID, SOURCE), by = "ID") %>%
   materialize() %>%
+  inner_join(hl_patients, by = "ID") %>%
   mutate(
     primary_missing = is.na(PAYER_TYPE_PRIMARY) |
       PAYER_TYPE_PRIMARY == "" |
