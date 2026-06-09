@@ -59,13 +59,13 @@ has_hodgkin_diagnosis <- function(patient_df) {
   # WHY match both dotted and undotted formats: PCORnet data quality varies by site.
   # Some sites store ICD-10 codes as "C81.00" (dotted), others as "C8100" (undotted).
   # Checking both formats ensures we don't miss HL patients due to formatting variance.
-  hl_icd10_undotted <- ICD_CODES$hl_icd10
-  hl_icd9_undotted <- ICD_CODES$hl_icd9
+  hl_icd10_codes <- unique(c(ICD_CODES$hl_icd10, gsub("\\.", "", ICD_CODES$hl_icd10)))
+  hl_icd9_codes  <- unique(c(ICD_CODES$hl_icd9,  gsub("\\.", "", ICD_CODES$hl_icd9)))
 
   dx_hl_patients <- get_pcornet_table("DIAGNOSIS") %>%
     filter(
-      (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
-        (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+      (DX_TYPE == "10" & DX %in% hl_icd10_codes) |
+        (DX_TYPE == "09" & DX %in% hl_icd9_codes)
     ) %>%
     distinct(ID)
 

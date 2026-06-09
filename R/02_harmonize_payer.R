@@ -226,16 +226,16 @@ message(glue("  Dual-eligible encounters: {format(n_dual_eligible_enc, big.mark=
 
 # Get earliest HL diagnosis from DIAGNOSIS table
 # Translation gap workaround: replace is_hl_diagnosis() with inline %in% matching
-hl_icd10_undotted <- ICD_CODES$hl_icd10
-hl_icd9_undotted <- ICD_CODES$hl_icd9
+hl_icd10_codes <- unique(c(ICD_CODES$hl_icd10, gsub("\\.", "", ICD_CODES$hl_icd10)))
+hl_icd9_codes  <- unique(c(ICD_CODES$hl_icd9,  gsub("\\.", "", ICD_CODES$hl_icd9)))
 
 dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
   filter(
-    (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
-      (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+    (DX_TYPE == "10" & DX %in% hl_icd10_codes) |
+      (DX_TYPE == "09" & DX %in% hl_icd9_codes)
   ) %>%
   group_by(ID) %>%
-  summarise(first_dx_date_diagnosis = if (all(is.na(DX_DATE))) as.Date(NA) else min(DX_DATE, na.rm = TRUE), .groups = "drop")
+  summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop")
 
 # Get earliest from TUMOR_REGISTRY_ALL (consolidated in 01_load_pcornet.R)
 tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)

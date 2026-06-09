@@ -137,13 +137,13 @@ message(glue("  Snapshot: cohort_00_initial_population.rds ({nrow(cohort)} rows,
 # Step 1: Build HL_SOURCE and HL_VERIFIED flag (but do NOT filter)
 # Runs the same HL identification logic to tag patients, then retains all
 # Translation gap workaround: inline ICD matching (same pattern as 03_cohort_predicates.R)
-hl_icd10_undotted <- ICD_CODES$hl_icd10
-hl_icd9_undotted <- ICD_CODES$hl_icd9
+hl_icd10_codes <- unique(c(ICD_CODES$hl_icd10, gsub("\\.", "", ICD_CODES$hl_icd10)))
+hl_icd9_codes  <- unique(c(ICD_CODES$hl_icd9,  gsub("\\.", "", ICD_CODES$hl_icd9)))
 
 dx_hl <- get_pcornet_table("DIAGNOSIS") %>%
   filter(
-    (DX_TYPE == "10" & (DX %in% hl_icd10_undotted | gsub("\\.", "", DX) %in% hl_icd10_undotted)) |
-      (DX_TYPE == "09" & (DX %in% hl_icd9_undotted | gsub("\\.", "", DX) %in% hl_icd9_undotted))
+    (DX_TYPE == "10" & DX %in% hl_icd10_codes) |
+      (DX_TYPE == "09" & DX %in% hl_icd9_codes)
   ) %>%
   distinct(ID) %>%
   mutate(has_dx = TRUE)
