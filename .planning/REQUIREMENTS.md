@@ -25,7 +25,20 @@ Requirements for Gantt Data Enrichment milestone. Each maps to roadmap phases.
 ### Immunotherapy Flagging
 
 - [x] **IMMU-01**: Questionable immunotherapy codes (8 vitamin combos, 2 CAR-T) flagged with confidence column in Gantt output
-- [x] **IMMU-02**: Flag values distinguish vitamin combos ("questionable—vitamin") from CAR-T ambiguity ("questionable—CAR-T vs immunotherapy")
+- [x] **IMMU-02**: Flag values distinguish vitamin combos ("questionable--vitamin") from CAR-T ambiguity ("questionable--CAR-T vs immunotherapy")
+
+## Phase 94 Requirements
+
+Requirements for Proton Therapy category split. Maps to Phase 94.
+
+### Proton Therapy Category Split
+
+- [ ] **PROTON-01**: 4 proton CPT codes (77520, 77522, 77523, 77525) mapped to "Proton Therapy" in DRUG_GROUPINGS (removed from "Radiation")
+- [ ] **PROTON-02**: TREATMENT_TYPES expanded to 5 elements with "Proton Therapy" as distinct category
+- [ ] **PROTON-03**: has_proton() predicate detects proton therapy evidence; HAD_PROTON flag in cohort
+- [ ] **PROTON-04**: Episode detection (R/26) and duration analysis (R/25) dispatch "Proton Therapy" to dedicated extraction functions
+- [ ] **PROTON-05**: Treatment inventory (R/20) has extract_proton_codes() for proton-specific code frequency reporting
+- [ ] **PROTON-06**: Smoke test validates proton category split: config vectors, code mappings, no double-counting, all new functions exist
 
 ## Future Requirements
 
@@ -45,7 +58,7 @@ Explicitly excluded. Documented to prevent scope creep.
 |---------|--------|
 | Supportive Care codes in Gantt | User chose treatment codes only (Chemo, Rad, SCT, Immuno) |
 | Unrelated codes in Gantt | Not clinically meaningful for treatment timeline visualization |
-| Resolving immunotherapy classification | Collaborators haven't weighed in yet — flag only |
+| Resolving immunotherapy classification | Collaborators haven't weighed in yet -- flag only |
 | Gantt v1 schema changes | Backward compatibility required; enrichment goes to v2 only |
 | Impact analysis before SCT code removal | User chose direct removal without formal impact report |
 
@@ -66,12 +79,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GANTT-07 | Phase 92 | Complete |
 | IMMU-01 | Phase 93 | Complete |
 | IMMU-02 | Phase 93 | Complete |
+| PROTON-01 | Phase 94 | Planned |
+| PROTON-02 | Phase 94 | Planned |
+| PROTON-03 | Phase 94 | Planned |
+| PROTON-04 | Phase 94 | Planned |
+| PROTON-05 | Phase 94 | Planned |
+| PROTON-06 | Phase 94 | Planned |
 
 **Coverage:**
-- v2.3 requirements: 11 total
-- Mapped to phases: 11
-- Unmapped: 0 ✓
+- v2.3 requirements: 11 total (complete)
+- Phase 94 requirements: 6 total
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-07*
-*Last updated: 2026-06-07 after roadmap creation (100% coverage)*
+*Last updated: 2026-06-09 after Phase 94 planning (6 new requirements)*

@@ -26,7 +26,7 @@
 - [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
 - [x] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata (completed 2026-06-08)
 - [x] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility (completed 2026-06-08)
-- [x] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags (completed 2026-06-08)
+- [x] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags (completed 2026-06-08)
 
 ### Phase Details
 
@@ -130,5 +130,23 @@ Plans:
 | 83-89 | v2.2 | Complete | 2026-06-05 |
 | 90-93 | v2.3 | Active | - |
 
+### Phase 94: Make proton therapy a distinct category from radiation
+
+**Goal:** Separate proton beam therapy (CPT 77520, 77522, 77523, 77525) from the general "Radiation" category into a distinct "Proton Therapy" treatment category across the entire pipeline
+**Depends on:** Phase 93
+**Requirements**: PROTON-01, PROTON-02, PROTON-03, PROTON-04, PROTON-05, PROTON-06
+**Success Criteria** (what must be TRUE):
+  1. TREATMENT_TYPES has 5 elements with "Proton Therapy" as distinct category
+  2. DRUG_GROUPINGS maps 77520/77522/77523/77525 to "Proton Therapy" (not "Radiation")
+  3. has_proton() predicate in R/10 detects proton evidence; HAD_PROTON flag in cohort
+  4. R/25 and R/26 dispatch "Proton Therapy" to dedicated extraction functions
+  5. R/20 has extract_proton_codes() for treatment inventory
+  6. Smoke test validates category split with no double-counting
+**Plans:** 2 plans
+
+Plans:
+- [ ] 94-01-PLAN.md — Split proton codes from Radiation config, add has_proton() predicate, cohort integration, episode/duration dispatch
+- [ ] 94-02-PLAN.md — Add extract_proton_codes() to treatment inventory, smoke test Section 15g for category split validation
+
 ---
-*Last updated: 2026-06-08 -- Phase 93 planned (1 plan)*
+*Last updated: 2026-06-09 -- Phase 94 planned (2 plans)*
