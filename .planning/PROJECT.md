@@ -78,6 +78,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Source Table column (PRESCRIBING, PROCEDURES, DIAGNOSIS) in Gantt output — v2.3 Phase 91
 - [x] SCT conditioning / immunotherapy cross-use flags in Gantt output — v2.3 Phase 91
 - [x] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification) — v2.3 Phase 93
+- [x] Proton Therapy as distinct treatment category from Radiation (4 CPT codes split) — v2.3 Phase 94
 
 ### Active
 
@@ -98,9 +99,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v2.3 (2026-06-08)
+**Shipped:** v2.3 (2026-06-09)
 
-**Pipeline status:** 93 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), SCT conditioning temporal context flags (is_sct_conditioning_context) and immunotherapy confidence column (immuno_confidence for 11 questionable codes), Gantt v2 CSV exports with 22-column episodes and 20-column detail schemas (Phase 93 cross-use flags), and comprehensive smoke test with 35 validation sections plus Section 15f.
+**Pipeline status:** 94 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), SCT conditioning temporal context flags (is_sct_conditioning_context) and immunotherapy confidence column (immuno_confidence for 11 questionable codes), Gantt v2 CSV exports with 22-column episodes and 20-column detail schemas, 5 treatment categories (Chemotherapy, Radiation, SCT, Immunotherapy, Proton Therapy) with proton beam therapy split from Radiation (Phase 94), and comprehensive smoke test with 35 validation sections plus Sections 15f-15g.
 
 ## Previous Milestones
 
