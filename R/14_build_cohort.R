@@ -355,21 +355,25 @@ message("\n--- Treatment Flags ---")
 # Get treatment evidence (D-05: multi-source, D-06: integer 0/1)
 chemo_flags <- has_chemo()
 rad_flags <- has_radiation()
+proton_flags <- has_proton()
 sct_flags <- has_sct()
 
 # Join treatment flags to cohort (D-02: flags only, not exclusion)
 cohort <- cohort %>%
   left_join(chemo_flags, by = "ID") %>%
   left_join(rad_flags, by = "ID") %>%
+  left_join(proton_flags, by = "ID") %>%
   left_join(sct_flags, by = "ID") %>%
   mutate(
     HAD_CHEMO = coalesce(HAD_CHEMO, 0L),
     HAD_RADIATION = coalesce(HAD_RADIATION, 0L),
+    HAD_PROTON = coalesce(HAD_PROTON, 0L),
     HAD_SCT = coalesce(HAD_SCT, 0L)
   )
 
 message(glue("  HAD_CHEMO = 1: {sum(cohort$HAD_CHEMO == 1)} patients ({round(100 * mean(cohort$HAD_CHEMO), 1)}%)"))
 message(glue("  HAD_RADIATION = 1: {sum(cohort$HAD_RADIATION == 1)} patients ({round(100 * mean(cohort$HAD_RADIATION), 1)}%)"))
+message(glue("  HAD_PROTON = 1: {sum(cohort$HAD_PROTON == 1)} patients ({round(100 * mean(cohort$HAD_PROTON), 1)}%)"))
 message(glue("  HAD_SCT = 1: {sum(cohort$HAD_SCT == 1)} patients ({round(100 * mean(cohort$HAD_SCT), 1)}%)"))
 
 # ==============================================================================

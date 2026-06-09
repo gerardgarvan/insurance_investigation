@@ -267,6 +267,26 @@ extract_radiation_dates_with_codes <- function() {
   )
 }
 
+#' Extract proton therapy dates with triggering codes from 1 source (PX)
+#' Simpler than radiation -- only PROCEDURES CPT codes (no DX, DRG, TR, Revenue)
+#' @return Tibble with columns: ID, treatment_date, triggering_code, ENCOUNTERID
+extract_proton_dates_with_codes <- function() {
+  # PROCEDURES: CPT codes only
+  px_dates <- NULL
+  if (!is.null(get_pcornet_table("PROCEDURES"))) {
+    px_dates <- get_pcornet_table("PROCEDURES") %>%
+      filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$proton_cpt) %>%
+      filter(!is.na(PX_DATE)) %>%
+      select(ID, treatment_date = PX_DATE, triggering_code = PX, ENCOUNTERID) %>%
+      collect()
+  }
+
+  stack_and_dedup_with_codes(
+    sources = list(PX = px_dates),
+    type_name = "Proton Therapy"
+  )
+}
+
 #' Extract all SCT dates with triggering codes from 2 sources (PX, DRG)
 #' Mirrors extract_sct_dates() from R/43a_treatment_durations.R but adds triggering_code
 extract_sct_dates_with_codes <- function() {
@@ -388,7 +408,7 @@ extract_immunotherapy_dates_with_codes <- function() {
 }
 
 #' Dispatch to the appropriate type-specific extraction function with triggering codes
-#' @param type Character. One of "Chemotherapy", "Radiation", "SCT", "Immunotherapy"
+#' @param type Character. One of "Chemotherapy", "Radiation", "Proton Therapy", "SCT", "Immunotherapy"
 #' @return Tibble with columns: ID, treatment_date, triggering_code
 extract_dates_with_codes <- function(type) {
   message(glue("\n--- Extracting {type} dates (with triggering codes) ---"))
@@ -397,6 +417,8 @@ extract_dates_with_codes <- function(type) {
     return(extract_chemo_dates_with_codes())
   } else if (type == "Radiation") {
     return(extract_radiation_dates_with_codes())
+  } else if (type == "Proton Therapy") {
+    return(extract_proton_dates_with_codes())
   } else if (type == "SCT") {
     return(extract_sct_dates_with_codes())
   } else if (type == "Immunotherapy") {

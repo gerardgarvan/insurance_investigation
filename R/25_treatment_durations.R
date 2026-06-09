@@ -90,7 +90,7 @@ OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_durations.rds")
 #' distinct treatment dates (not min/max). Each source is queried separately,
 #' then stacked and deduplicated.
 #'
-#' @param type Character. One of "Chemotherapy", "Radiation", "SCT", "Immunotherapy"
+#' @param type Character. One of "Chemotherapy", "Radiation", "Proton Therapy", "SCT", "Immunotherapy"
 #' @return Tibble with columns: ID (character), treatment_date (Date)
 extract_all_dates <- function(type) {
   message(glue("\n--- Extracting {type} dates ---"))
@@ -99,6 +99,8 @@ extract_all_dates <- function(type) {
     return(extract_chemo_dates())
   } else if (type == "Radiation") {
     return(extract_radiation_dates())
+  } else if (type == "Proton Therapy") {
+    return(extract_proton_dates())
   } else if (type == "SCT") {
     return(extract_sct_dates())
   } else if (type == "Immunotherapy") {
@@ -301,6 +303,26 @@ extract_radiation_dates <- function() {
   stack_and_dedup(
     sources = list(PX = px_dates, DX = dx_dates, DRG = drg_dates, TR = tr_dates),
     type_name = "Radiation"
+  )
+}
+
+#' Extract all proton therapy dates from 1 source
+#' Simpler than radiation -- only PROCEDURES CPT codes (no DX, DRG, TR, Revenue)
+#' Uses default 90-day gap threshold (same as radiation); validate with clinical SME
+extract_proton_dates <- function() {
+  # 1. PROCEDURES: CPT codes only
+  px_dates <- NULL
+  if (!is.null(get_pcornet_table("PROCEDURES"))) {
+    px_dates <- get_pcornet_table("PROCEDURES") %>%
+      filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$proton_cpt) %>%
+      filter(!is.na(PX_DATE)) %>%
+      select(ID, treatment_date = PX_DATE, ENCOUNTERID) %>%
+      collect()
+  }
+
+  stack_and_dedup(
+    sources = list(PX = px_dates),
+    type_name = "Proton Therapy"
   )
 }
 

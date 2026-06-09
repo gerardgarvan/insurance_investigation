@@ -6,7 +6,7 @@
 #   Named filter predicates (has_*, with_*, exclude_*) for HL cohort building.
 #   Each function accepts a patient-level tibble and returns a filtered subset.
 #   Also defines treatment flag identification functions (has_chemo, has_radiation,
-#   has_sct) that detect treatment evidence across multiple PCORnet source tables.
+#   has_proton, has_sct) that detect treatment evidence across multiple PCORnet source tables.
 #
 # Inputs:
 #   - PCORnet tables via get_pcornet_table(): DIAGNOSIS, ENROLLMENT, DEMOGRAPHIC,
@@ -484,6 +484,40 @@ has_radiation <- function() {
   result <- tibble(ID = unique(rad_ids), HAD_RADIATION = 1L)
   message(glue("[Treatment] has_radiation: {nrow(result)} patients total"))
   message(glue("  Sources: TR={n_tr}, PX={n_px}, DX={n_dx}, DRG={n_drg}, REV={n_rev}"))
+  result
+}
+
+#' Identify patients with proton therapy evidence
+#'
+#' Combines evidence from:
+#'   - PROCEDURES: PX_TYPE == "CH" and PX in TREATMENT_CODES$proton_cpt
+#'
+#' Note: Proton therapy does NOT use TUMOR_REGISTRY (no proton-specific date columns),
+#' DIAGNOSIS (no proton-specific ICD codes), DRG, or Revenue codes.
+#' Only detection source is CPT codes in PROCEDURES.
+#'
+#' @return Tibble with columns: ID, HAD_PROTON (integer 1 for all rows)
+#'
+has_proton <- function() {
+  proton_ids <- character(0)
+
+  # Initialize source counter for aggregate logging
+  n_px <- 0L
+
+  # PROCEDURES: CPT codes only
+  proc_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
+  if (!is.null(proc_tbl)) {
+    proton_px <- proc_tbl %>%
+      filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$proton_cpt) %>%
+      distinct(ID) %>%
+      pull(ID)
+    proton_ids <- c(proton_ids, proton_px)
+    n_px <- length(proton_px)
+  }
+
+  result <- tibble(ID = unique(proton_ids), HAD_PROTON = 1L)
+  message(glue("[Treatment] has_proton: {nrow(result)} patients total"))
+  message(glue("  Sources: PX={n_px}"))
   result
 }
 
