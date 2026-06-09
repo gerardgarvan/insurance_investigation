@@ -108,9 +108,8 @@ message(glue("  - {OUTPUT_RDS} (enriched with 4 columns)"))
 message(glue("  - {OUTPUT_XLSX}"))
 message(glue("  - {OUTPUT_CSV}"))
 
-# --- Phase 91: Load reference xlsx lookups for metadata enrichment ---
-REFERENCE_XLSX <- "all_codes_resolved2.xlsx"
-xlsx_lookups <- load_xlsx_lookups(REFERENCE_XLSX)
+# --- Phase 91: Load reference lookups for metadata enrichment ---
+xlsx_lookups <- load_xlsx_lookups()
 
 
 # --- SECTION 2: CANCER SITE CLASSIFICATION ---

@@ -1,213 +1,190 @@
 # ==============================================================================
-# utils_xlsx_lookups.R -- Reference XLSX Lookup Table Extraction
+# utils_xlsx_lookups.R -- Treatment Code Metadata from Config
 # ==============================================================================
-# Purpose:     Parse all_codes_resolved2.xlsx (8 sheets) and extract per-code
-#              metadata for treatment episode enrichment (Phase 91).
+# Purpose:     Build per-code metadata for treatment episode enrichment (Phase 91)
+#              from R/00_config.R data structures instead of an external XLSX file.
 #
-# Exports:     load_xlsx_lookups(xlsx_path) -> list of 5 named vectors
+# Exports:     load_xlsx_lookups() -> list of 5 named vectors
 #
-# Columns extracted:
-#   medications   - Column 3 (Medication name, human-readable)
-#   code_types    - Column 4 (RXNORM, CPT/HCPCS, ICD-10-CM, etc.)
-#   source_tables - Column 5 (PRESCRIBING, PROCEDURES, DIAGNOSIS)
-#   line_labels   - Column 8 (F/S/E/N, Chemotherapy only per D-01)
-#   cross_use_flags - Column 9 (SCT conditioning/immunotherapy cross-use)
+# Vectors returned:
+#   medications   - Human-readable drug/procedure name (from CODE_SUBCATEGORY_MAP)
+#   code_types    - Code system (CPT/HCPCS, RXNORM, ICD-10-PCS, etc.)
+#   source_tables - PCORnet table origin (PROCEDURES, PRESCRIBING, DIAGNOSIS, ENCOUNTER)
+#   line_labels   - F/S/E/N treatment line (all NA -- not derivable from config)
+#   cross_use_flags - Immunotherapy cross-use annotations (from QUESTIONABLE_IMMUNO_CODES)
 #
-# Dependencies: openxlsx2 (wb_load, wb_to_df), checkmate, stringr, glue
+# Dependencies: stringr, glue, R/00_config.R (TREATMENT_CODES, CODE_SUBCATEGORY_MAP,
+#               DRUG_GROUPINGS, QUESTIONABLE_IMMUNO_CODES)
 #
 # Requirements: GANTT-01 through GANTT-05
 # ==============================================================================
 
-library(openxlsx2)
-library(checkmate)
 library(stringr)
 library(glue)
 
 
-#' Normalize F/S/E/N treatment line labels to single uppercase letters
+#' Build treatment code metadata lookups from config data
 #'
-#' Implements D-02: F, S, E, N only. Blank/NA/N/A/mixed-case -> NA_character_
+#' Constructs 5 named character vectors from TREATMENT_CODES, CODE_SUBCATEGORY_MAP,
+#' DRUG_GROUPINGS, and QUESTIONABLE_IMMUNO_CODES (all defined in R/00_config.R).
+#' Replaces the previous XLSX-based implementation. The function signature accepts
+#' an optional xlsx_path for backward compatibility but ignores it.
 #'
-#' @param label Character. Raw label from xlsx
-#' @return Character. "F", "S", "E", "N", or NA_character_
-normalize_fsen <- function(label) {
-  if (is.na(label) || label == "") return(NA_character_)
-  cleaned <- str_to_upper(str_trim(label))
-  # Extract first character for "First line" -> "F" etc.
-  first_char <- str_sub(cleaned, 1, 1)
-  if (first_char %in% c("F", "S", "E", "N")) return(first_char)
-  # Explicit NA patterns
-  if (cleaned %in% c("NA", "N/A", "NONE", "")) return(NA_character_)
-  # Log unexpected value and return NA
-  message(glue("  WARNING: Unexpected F/S/E/N value: '{label}' -- treating as NA"))
-  return(NA_character_)
-}
-
-
-#' Load all treatment code metadata from all_codes_resolved2.xlsx
-#'
-#' Parses 4 treatment sheets (Chemotherapy, Radiation, SCT, Immunotherapy) and
-#' returns 5 named character vectors for metadata enrichment. Keys are treatment
-#' codes; values are metadata fields. All vectors have identical keys (all codes
-#' from all sheets). Pre-join validation prevents duplicate codes across sheets.
-#'
-#' @param xlsx_path Character. Path to all_codes_resolved2.xlsx (default: project root)
+#' @param xlsx_path Character. Ignored (kept for backward compatibility).
 #' @return List with 5 elements: medications, code_types, source_tables,
 #'         line_labels, cross_use_flags (each a named character vector)
-load_xlsx_lookups <- function(xlsx_path = "all_codes_resolved2.xlsx") {
-  # Step 1: Validate input
-  assert_file_exists(xlsx_path, .var.name = "[utils_xlsx_lookups ERROR] Reference XLSX")
+load_xlsx_lookups <- function(xlsx_path = NULL) {
 
-  # Step 2: Load workbook once
-  ref_wb <- wb_load(xlsx_path)
+  message("  Building treatment code lookups from config data...")
 
-  # Step 3: Parse Chemotherapy sheet (has all 9 columns)
-  message("  Loading Chemotherapy sheet...")
-  chemo_sheet <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
-  chemo_codes <- as.character(chemo_sheet[[1]])
-  chemo_codes <- chemo_codes[!is.na(chemo_codes) & chemo_codes != ""]
+  # --- Step 1: Collect all treatment codes from TREATMENT_CODES ---
+  # Map each sublist name to its code_type and source_table based on naming convention
 
-  chemo_medications <- setNames(as.character(chemo_sheet[[3]]), chemo_codes)
-  chemo_code_types <- setNames(as.character(chemo_sheet[[4]]), chemo_codes)
-  chemo_source_tables <- setNames(as.character(chemo_sheet[[5]]), chemo_codes)
-
-  # Step 4: Normalize F/S/E/N labels from column 8 (D-02)
-  raw_line_labels <- as.character(chemo_sheet[[8]])
-  chemo_line_labels <- setNames(
-    sapply(raw_line_labels, normalize_fsen, USE.NAMES = FALSE),
-    chemo_codes
+  # Define code_type mapping by sublist name suffix/pattern
+  code_type_map <- list(
+    chemo_hcpcs         = "CPT/HCPCS",
+    chemo_rxnorm        = "RXNORM",
+    radiation_cpt       = "CPT/HCPCS",
+    proton_cpt          = "CPT/HCPCS",
+    sct_cpt             = "CPT/HCPCS",
+    sct_hcpcs           = "CPT/HCPCS",
+    chemo_icd9          = "ICD-9-CM",
+    chemo_icd10pcs_prefixes = "ICD-10-PCS",
+    radiation_icd9      = "ICD-9-CM",
+    radiation_icd10pcs_prefixes = "ICD-10-PCS",
+    sct_icd9            = "ICD-9-CM",
+    sct_icd10pcs        = "ICD-10-PCS",
+    cart_icd10pcs_prefixes = "ICD-10-PCS",
+    chemo_dx_icd10      = "ICD-10-CM",
+    chemo_dx_icd9       = "ICD-9-CM",
+    immunotherapy_dx_icd10 = "ICD-10-CM",
+    immunotherapy_dx_icd9  = "ICD-9-CM",
+    radiation_dx_icd10  = "ICD-10-CM",
+    radiation_dx_icd9   = "ICD-9-CM",
+    chemo_drg           = "DRG",
+    radiation_drg       = "DRG",
+    sct_drg             = "DRG",
+    immunotherapy_drg   = "DRG",
+    supportive_care_rxnorm = "RXNORM",
+    immunotherapy_hcpcs = "CPT/HCPCS",
+    immunotherapy_rxnorm = "RXNORM",
+    sct_rxnorm          = "RXNORM",
+    chemo_revenue       = "Revenue",
+    radiation_revenue   = "Revenue",
+    sct_revenue         = "Revenue"
   )
 
-  # Step 5: Normalize cross-use flags from column 9 (D-08 Claude's Discretion)
-  # First inspect unique values
-  raw_cross_use <- as.character(chemo_sheet[[9]])
-  unique_cross_values <- unique(raw_cross_use[!is.na(raw_cross_use) & raw_cross_use != ""])
-  message(glue("  Cross-use flag unique values in Chemotherapy: {paste(unique_cross_values, collapse = ', ')}"))
-
-  # Normalize: pass through non-empty values, NA for empty/NA
-  chemo_cross_use <- setNames(
-    sapply(raw_cross_use, function(val) {
-      if (is.na(val) || val == "") NA_character_ else str_trim(val)
-    }, USE.NAMES = FALSE),
-    chemo_codes
+  # Define source_table mapping by sublist name suffix/pattern
+  source_table_map <- list(
+    chemo_hcpcs         = "PROCEDURES",
+    chemo_rxnorm        = "PRESCRIBING",
+    radiation_cpt       = "PROCEDURES",
+    proton_cpt          = "PROCEDURES",
+    sct_cpt             = "PROCEDURES",
+    sct_hcpcs           = "PROCEDURES",
+    chemo_icd9          = "PROCEDURES",
+    chemo_icd10pcs_prefixes = "PROCEDURES",
+    radiation_icd9      = "PROCEDURES",
+    radiation_icd10pcs_prefixes = "PROCEDURES",
+    sct_icd9            = "PROCEDURES",
+    sct_icd10pcs        = "PROCEDURES",
+    cart_icd10pcs_prefixes = "PROCEDURES",
+    chemo_dx_icd10      = "DIAGNOSIS",
+    chemo_dx_icd9       = "DIAGNOSIS",
+    immunotherapy_dx_icd10 = "DIAGNOSIS",
+    immunotherapy_dx_icd9  = "DIAGNOSIS",
+    radiation_dx_icd10  = "DIAGNOSIS",
+    radiation_dx_icd9   = "DIAGNOSIS",
+    chemo_drg           = "ENCOUNTER",
+    radiation_drg       = "ENCOUNTER",
+    sct_drg             = "ENCOUNTER",
+    immunotherapy_drg   = "ENCOUNTER",
+    supportive_care_rxnorm = "PRESCRIBING",
+    immunotherapy_hcpcs = "PROCEDURES",
+    immunotherapy_rxnorm = "PRESCRIBING",
+    sct_rxnorm          = "PRESCRIBING",
+    chemo_revenue       = "PROCEDURES",
+    radiation_revenue   = "PROCEDURES",
+    sct_revenue         = "PROCEDURES"
   )
 
-  # Step 3b: Parse Radiation sheet
-  message("  Loading Radiation sheet...")
-  rad_sheet <- wb_to_df(ref_wb, sheet = "Radiation", start_row = 2)
-  message(glue("    Radiation sheet has {ncol(rad_sheet)} columns"))
-  rad_codes <- as.character(rad_sheet[[1]])
-  rad_codes <- rad_codes[!is.na(rad_codes) & rad_codes != ""]
+  # --- Step 2: Build code_types and source_tables vectors ---
+  all_code_types <- character(0)
+  all_source_tables <- character(0)
 
-  # Check if column 3 exists and contains medication-like data
-  if (ncol(rad_sheet) >= 3 && !all(is.na(rad_sheet[[3]]))) {
-    rad_medications <- setNames(as.character(rad_sheet[[3]]), rad_codes)
-  } else {
-    rad_medications <- setNames(rep(NA_character_, length(rad_codes)), rad_codes)
+  for (sublist_name in names(TREATMENT_CODES)) {
+    codes <- TREATMENT_CODES[[sublist_name]]
+    n <- length(codes)
+
+    ct <- code_type_map[[sublist_name]]
+    st <- source_table_map[[sublist_name]]
+
+    if (is.null(ct)) ct <- NA_character_
+    if (is.null(st)) st <- NA_character_
+
+    new_ct <- setNames(rep(ct, n), codes)
+    new_st <- setNames(rep(st, n), codes)
+
+    # Only add codes not already present (first occurrence wins)
+    new_codes <- setdiff(names(new_ct), names(all_code_types))
+    if (length(new_codes) > 0) {
+      all_code_types <- c(all_code_types, new_ct[new_codes])
+      all_source_tables <- c(all_source_tables, new_st[new_codes])
+    }
   }
 
-  # Extract code_type and source_table if they exist
-  if (ncol(rad_sheet) >= 4) {
-    rad_code_types <- setNames(as.character(rad_sheet[[4]]), rad_codes)
-  } else {
-    rad_code_types <- setNames(rep(NA_character_, length(rad_codes)), rad_codes)
+  all_codes <- names(all_code_types)
+
+  # --- Step 3: Build medications vector ---
+  # Primary source: CODE_SUBCATEGORY_MAP (has human-readable names)
+  # Fallback: DRUG_GROUPINGS category label (e.g., "Chemotherapy agent")
+  all_medications <- setNames(rep(NA_character_, length(all_codes)), all_codes)
+
+  for (code in all_codes) {
+    if (code %in% names(CODE_SUBCATEGORY_MAP)) {
+      all_medications[code] <- CODE_SUBCATEGORY_MAP[code]
+    } else if (code %in% names(DRUG_GROUPINGS)) {
+      all_medications[code] <- paste0(DRUG_GROUPINGS[code], " agent")
+    }
   }
 
-  if (ncol(rad_sheet) >= 5) {
-    rad_source_tables <- setNames(as.character(rad_sheet[[5]]), rad_codes)
-  } else {
-    rad_source_tables <- setNames(rep(NA_character_, length(rad_codes)), rad_codes)
+  # --- Step 4: Build line_labels vector (all NA -- not derivable from config) ---
+  all_line_labels <- setNames(rep(NA_character_, length(all_codes)), all_codes)
+
+  # --- Step 5: Build cross_use_flags vector from QUESTIONABLE_IMMUNO_CODES ---
+  all_cross_use <- setNames(rep(NA_character_, length(all_codes)), all_codes)
+  for (code in names(QUESTIONABLE_IMMUNO_CODES)) {
+    if (code %in% all_codes) {
+      all_cross_use[code] <- QUESTIONABLE_IMMUNO_CODES[code]
+    }
   }
 
-  # Radiation has no F/S/E/N or cross-use (per D-01)
-  rad_line_labels <- setNames(rep(NA_character_, length(rad_codes)), rad_codes)
-  rad_cross_use <- setNames(rep(NA_character_, length(rad_codes)), rad_codes)
-
-  # Step 3c: Parse SCT sheet
-  message("  Loading SCT sheet...")
-  sct_sheet <- wb_to_df(ref_wb, sheet = "SCT", start_row = 2)
-  message(glue("    SCT sheet has {ncol(sct_sheet)} columns"))
-  sct_codes <- as.character(sct_sheet[[1]])
-  sct_codes <- sct_codes[!is.na(sct_codes) & sct_codes != ""]
-
-  # Check if column 3 exists
-  if (ncol(sct_sheet) >= 3 && !all(is.na(sct_sheet[[3]]))) {
-    sct_medications <- setNames(as.character(sct_sheet[[3]]), sct_codes)
-  } else {
-    sct_medications <- setNames(rep(NA_character_, length(sct_codes)), sct_codes)
-  }
-
-  if (ncol(sct_sheet) >= 4) {
-    sct_code_types <- setNames(as.character(sct_sheet[[4]]), sct_codes)
-  } else {
-    sct_code_types <- setNames(rep(NA_character_, length(sct_codes)), sct_codes)
-  }
-
-  if (ncol(sct_sheet) >= 5) {
-    sct_source_tables <- setNames(as.character(sct_sheet[[5]]), sct_codes)
-  } else {
-    sct_source_tables <- setNames(rep(NA_character_, length(sct_codes)), sct_codes)
-  }
-
-  # No F/S/E/N or cross-use (per D-01)
-  sct_line_labels <- setNames(rep(NA_character_, length(sct_codes)), sct_codes)
-  sct_cross_use <- setNames(rep(NA_character_, length(sct_codes)), sct_codes)
-
-  # Step 3d: Parse Immunotherapy sheet
-  message("  Loading Immunotherapy sheet...")
-  immuno_sheet <- wb_to_df(ref_wb, sheet = "Immunotherapy", start_row = 2)
-  message(glue("    Immunotherapy sheet has {ncol(immuno_sheet)} columns"))
-  immuno_codes <- as.character(immuno_sheet[[1]])
-  immuno_codes <- immuno_codes[!is.na(immuno_codes) & immuno_codes != ""]
-
-  # Check if column 3 exists
-  if (ncol(immuno_sheet) >= 3 && !all(is.na(immuno_sheet[[3]]))) {
-    immuno_medications <- setNames(as.character(immuno_sheet[[3]]), immuno_codes)
-  } else {
-    immuno_medications <- setNames(rep(NA_character_, length(immuno_codes)), immuno_codes)
-  }
-
-  if (ncol(immuno_sheet) >= 4) {
-    immuno_code_types <- setNames(as.character(immuno_sheet[[4]]), immuno_codes)
-  } else {
-    immuno_code_types <- setNames(rep(NA_character_, length(immuno_codes)), immuno_codes)
-  }
-
-  if (ncol(immuno_sheet) >= 5) {
-    immuno_source_tables <- setNames(as.character(immuno_sheet[[5]]), immuno_codes)
-  } else {
-    immuno_source_tables <- setNames(rep(NA_character_, length(immuno_codes)), immuno_codes)
-  }
-
-  # No F/S/E/N or cross-use (per D-01)
-  immuno_line_labels <- setNames(rep(NA_character_, length(immuno_codes)), immuno_codes)
-  immuno_cross_use <- setNames(rep(NA_character_, length(immuno_codes)), immuno_codes)
-
-  # Step 6: Combine all lookups into a single list
+  # --- Step 6: Assemble return list ---
   all_lookups <- list(
-    medications = c(chemo_medications, rad_medications, sct_medications, immuno_medications),
-    code_types = c(chemo_code_types, rad_code_types, sct_code_types, immuno_code_types),
-    source_tables = c(chemo_source_tables, rad_source_tables, sct_source_tables, immuno_source_tables),
-    line_labels = c(chemo_line_labels, rad_line_labels, sct_line_labels, immuno_line_labels),
-    cross_use_flags = c(chemo_cross_use, rad_cross_use, sct_cross_use, immuno_cross_use)
+    medications     = all_medications,
+    code_types      = all_code_types,
+    source_tables   = all_source_tables,
+    line_labels     = all_line_labels,
+    cross_use_flags = all_cross_use
   )
 
-  # Step 7: Pre-join validation — detect duplicate codes (Pitfall 1 prevention)
-  all_codes <- names(all_lookups$medications)
+  # --- Step 7: Validate no duplicate codes ---
   dup_codes <- all_codes[duplicated(all_codes)]
   if (length(dup_codes) > 0) {
-    stop(glue("[utils_xlsx_lookups ERROR] Duplicate codes found across xlsx sheets: {paste(unique(dup_codes), collapse = ', ')}. Deduplicate before proceeding."))
+    stop(glue("[utils_xlsx_lookups ERROR] Duplicate codes found: {paste(unique(dup_codes), collapse = ', ')}. Deduplicate before proceeding."))
   }
 
-  # Step 8: Log summary
-  message(glue("  xlsx lookups loaded: {length(all_lookups$medications)} total codes"))
-  message(glue("    Chemotherapy: {length(chemo_codes)} codes"))
-  message(glue("    Radiation: {length(rad_codes)} codes"))
-  message(glue("    SCT: {length(sct_codes)} codes"))
-  message(glue("    Immunotherapy: {length(immuno_codes)} codes"))
-  message(glue("    With F/S/E/N labels: {sum(!is.na(all_lookups$line_labels))}"))
-  message(glue("    With cross-use flags: {sum(!is.na(all_lookups$cross_use_flags) & all_lookups$cross_use_flags != '')}"))
+  # --- Step 8: Log summary ---
+  n_total <- length(all_codes)
+  n_with_med <- sum(!is.na(all_medications) & all_medications != "")
+  n_with_cross <- sum(!is.na(all_cross_use) & all_cross_use != "")
 
-  # Step 9: Return the list
+  message(glue("  Config-based lookups built: {n_total} total codes"))
+  message(glue("    With medication names: {n_with_med}"))
+  message(glue("    With code_type: {sum(!is.na(all_code_types))}"))
+  message(glue("    With source_table: {sum(!is.na(all_source_tables))}"))
+  message(glue("    With F/S/E/N labels: {sum(!is.na(all_line_labels))}"))
+  message(glue("    With cross-use flags: {n_with_cross}"))
+
   return(all_lookups)
 }

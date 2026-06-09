@@ -1349,7 +1349,7 @@ check(
 # SECTION 15d: XLSX METADATA ENRICHMENT VALIDATION (GANTT-01 through GANTT-05) ----
 # ==============================================================================
 
-message("\n[GANTT] XLSX metadata enrichment validation (GANTT-01 through GANTT-05)...")
+message("\n[GANTT] Treatment metadata enrichment validation (GANTT-01 through GANTT-05)...")
 
 # Check 1: utils_xlsx_lookups.R exists
 check(
@@ -1369,6 +1369,12 @@ if (file.exists("R/utils/utils_xlsx_lookups.R")) {
   check(
     "utils_xlsx_lookups.R validates no duplicate codes",
     any(grepl("duplicated|Duplicate codes", xlsx_lookup_lines))
+  )
+
+  # Check 3b: utils_xlsx_lookups.R builds from config (no openxlsx2 dependency)
+  check(
+    "utils_xlsx_lookups.R builds lookups from config (no XLSX dependency)",
+    !any(grepl("openxlsx2|wb_load|wb_to_df", xlsx_lookup_lines))
   )
 }
 
