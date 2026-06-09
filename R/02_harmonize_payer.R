@@ -245,7 +245,8 @@ if (!is.null(tr_tbl) &&
   tr_dates <- tr_tbl %>%
     filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
     group_by(ID) %>%
-    summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop")
+    summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop") %>%
+    collect()
 } else {
   tr_dates <- data.frame(ID = character(), first_dx_date_tr = as.Date(character()), stringsAsFactors = FALSE)
 }
