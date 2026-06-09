@@ -69,6 +69,9 @@ CPT_HCPCS_RANGES <- list(
     delivery = "^774[0-9]{2}$", # 77400-77499 radiation treatment delivery
     planning = "^773[0-9]{2}$" # 77300-77399 treatment planning (Phase 39)
   ),
+  `Proton Therapy` = list(
+    proton_delivery = "^7752[0-9]$" # 77520-77529 proton beam delivery
+  ),
   SCT = list(
     transplant = "^382[3-4][0-9]$" # 38230-38249 HPC/bone marrow transplant
   ),
@@ -486,6 +489,48 @@ extract_radiation_codes <- function() {
 }
 
 # ------------------------------------------------------------------------------
+# extract_proton_codes()
+# ------------------------------------------------------------------------------
+#' Extract proton therapy code frequencies from PROCEDURES
+#'
+#' Queries: PROCEDURES (CPT only -- proton has no ICD-9, ICD-10-PCS, DX, DRG, or Revenue codes)
+#'
+#' @return Tibble with columns: code, code_type, source_table, n, drug_name, treatment_type
+extract_proton_codes <- function() {
+  message("  Extracting proton therapy codes...")
+  results <- list()
+
+  # --- PROCEDURES ---
+  proc_tbl <- safe_table("PROCEDURES")
+  if (!is.null(proc_tbl)) {
+    px_cpt <- tryCatch(
+      {
+        proc_tbl %>%
+          filter(PX_TYPE == "CH" & PX %in% TREATMENT_CODES$proton_cpt) %>%
+          group_by(PX) %>%
+          summarise(n = n(), .groups = "drop") %>%
+          collect() %>%
+          transmute(
+            code = PX,
+            code_type = "CPT",
+            source_table = "PROCEDURES",
+            n = n,
+            drug_name = sapply(PX, function(x) {
+              if (x %in% names(CODE_DESCRIPTIONS)) CODE_DESCRIPTIONS[[x]]
+              else NA_character_
+            })
+          )
+      },
+      error = function(e) empty_result()
+    )
+    results <- c(results, list(px_cpt))
+  }
+
+  bind_rows(results) %>%
+    mutate(treatment_type = "Proton Therapy")
+}
+
+# ------------------------------------------------------------------------------
 # extract_sct_codes()
 # ------------------------------------------------------------------------------
 #' Extract stem cell transplant code frequencies from relevant PCORnet tables
@@ -738,6 +783,10 @@ detect_unknown_codes <- function(treatment_type) {
         TREATMENT_CODES$radiation_cpt, TREATMENT_CODES$radiation_icd9,
         TREATMENT_CODES$radiation_revenue
       ),
+      px_type = "CH"
+    ),
+    "Proton Therapy" = list(
+      codes = TREATMENT_CODES$proton_cpt,
       px_type = "CH"
     ),
     "SCT" = list(
@@ -1089,6 +1138,7 @@ message("Extracting treatment codes from PCORnet tables...")
 all_codes <- bind_rows(
   extract_chemo_codes(),
   extract_radiation_codes(),
+  extract_proton_codes(),
   extract_sct_codes(),
   extract_immunotherapy_codes()
 )
