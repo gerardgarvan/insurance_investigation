@@ -48,22 +48,22 @@ message(strrep("=", 60))
 # Guard: ENCOUNTER table is required for payer harmonization (checked later in script)
 # Validate ENROLLMENT immediately since it's the primary data source
 
-enrollment_tbl <- tryCatch(get_pcornet_table("ENROLLMENT"), error = function(e) NULL)
-if (!is.null(enrollment_tbl)) {
-  # Materialize for assertion check
-  enrollment_check <- enrollment_tbl %>% materialize()
+# Validate ENCOUNTER table has payer columns (PAYER_TYPE_PRIMARY lives in ENCOUNTER, not ENROLLMENT)
+encounter_check_tbl <- tryCatch(get_pcornet_table("ENCOUNTER"), error = function(e) NULL)
+if (!is.null(encounter_check_tbl)) {
+  encounter_check <- encounter_check_tbl %>% materialize()
   assert_df_valid(
-    enrollment_check,
-    "ENROLLMENT",
-    required_cols = c("ID", "PAYER_TYPE_PRIMARY", "ENR_START_DATE"),
+    encounter_check,
+    "ENCOUNTER",
+    required_cols = c("ID", "PAYER_TYPE_PRIMARY", "ADMIT_DATE"),
     script_name = "R/02"
   )
   assert_col_types(
-    enrollment_check,
+    encounter_check,
     type_spec = list(ID = "character", PAYER_TYPE_PRIMARY = "character"),
     script_name = "R/02"
   )
-  rm(enrollment_check)
+  rm(encounter_check, encounter_check_tbl)
 }
 
 # ==============================================================================
