@@ -188,13 +188,14 @@ if (!"PAYER_TYPE_SECONDARY" %in% enc_cols) {
 }
 
 # Process all encounters
+# Materialize BEFORE custom R functions — DuckDB can't translate these to SQL
 encounters <- encounters_raw %>%
+  materialize() %>%
   mutate(
     effective_payer = compute_effective_payer(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
     dual_eligible_encounter = detect_dual_eligible(PAYER_TYPE_PRIMARY, PAYER_TYPE_SECONDARY),
     payer_category = map_payer_category(effective_payer)
-  ) %>%
-  materialize() # Materialize at section boundary (D-04)
+  )
 
 # Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
 # Filter 1900 sentinel dates from encounters (SAS/Excel epoch sentinels)
