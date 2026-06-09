@@ -827,12 +827,12 @@ check(
   exists("CODE_SUBCATEGORY_MAP") && "J9035" %in% names(CODE_SUBCATEGORY_MAP)
 )
 
-# Check 2: All 5 core categories present
-core_categories <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care")
+# Check 2: All 6 core categories present
+core_categories <- c("Chemotherapy", "Radiation", "Proton Therapy", "SCT", "Immunotherapy", "Supportive Care")
 found_categories <- intersect(core_categories, unique(DRUG_GROUPINGS))
 check(
-  glue("DRUG_GROUPINGS covers 5 core categories ({length(found_categories)}/5 found)"),
-  length(found_categories) == 5
+  glue("DRUG_GROUPINGS covers 6 core categories ({length(found_categories)}/6 found)"),
+  length(found_categories) == 6
 )
 
 # Check 3: No NA keys (all codes are valid strings)
@@ -1593,6 +1593,97 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) 
 } else {
   message("  SKIP: treatment_episodes.rds not available -- runtime checks skipped")
 }
+
+# ==============================================================================
+# SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
+# ==============================================================================
+
+message("\n[PROTON] Proton therapy category split validation (Phase 94)...")
+
+# Check 1: TREATMENT_TYPES has 5 elements
+check(
+  "TREATMENT_TYPES has 5 elements (was 4 before Phase 94)",
+  length(TREATMENT_TYPES) == 5
+)
+
+# Check 2: "Proton Therapy" is in TREATMENT_TYPES
+check(
+  "TREATMENT_TYPES contains 'Proton Therapy'",
+  "Proton Therapy" %in% TREATMENT_TYPES
+)
+
+# Check 3: 4 proton codes map to "Proton Therapy" in DRUG_GROUPINGS
+proton_codes <- c("77520", "77522", "77523", "77525")
+proton_mappings <- DRUG_GROUPINGS[proton_codes]
+check(
+  "All 4 proton codes (77520, 77522, 77523, 77525) map to 'Proton Therapy' in DRUG_GROUPINGS",
+  all(!is.na(proton_mappings)) && all(proton_mappings == "Proton Therapy")
+)
+
+# Check 4: Proton codes are NOT in radiation_cpt (no double-counting)
+check(
+  "Proton codes (77520, 77522, 77523, 77525) are NOT in TREATMENT_CODES$radiation_cpt",
+  !any(proton_codes %in% TREATMENT_CODES$radiation_cpt)
+)
+
+# Check 5: proton_cpt list exists in TREATMENT_CODES
+check(
+  "TREATMENT_CODES$proton_cpt exists with 4 codes",
+  !is.null(TREATMENT_CODES$proton_cpt) && length(TREATMENT_CODES$proton_cpt) == 4
+)
+
+# Check 6: Proton Therapy has color in TREATMENT_TYPE_COLORS
+check(
+  "TREATMENT_TYPE_COLORS has 'Proton Therapy' entry",
+  "Proton Therapy" %in% names(TREATMENT_TYPE_COLORS)
+)
+
+# Check 7: has_proton() function exists in R/10
+r10_lines <- readLines("R/10_cohort_predicates.R", warn = FALSE)
+check(
+  "R/10 defines has_proton() function",
+  any(grepl("has_proton <- function", r10_lines, fixed = TRUE))
+)
+
+# Check 8: R/14 calls has_proton() and joins HAD_PROTON
+r14_lines <- readLines("R/14_build_cohort.R", warn = FALSE)
+check(
+  "R/14 calls has_proton()",
+  any(grepl("has_proton()", r14_lines, fixed = TRUE))
+)
+
+check(
+  "R/14 joins HAD_PROTON to cohort",
+  any(grepl("HAD_PROTON", r14_lines))
+)
+
+# Check 9: R/26 has extract_proton_dates_with_codes() function
+r26_lines <- readLines("R/26_treatment_episodes.R", warn = FALSE)
+check(
+  "R/26 defines extract_proton_dates_with_codes()",
+  any(grepl("extract_proton_dates_with_codes <- function", r26_lines, fixed = TRUE))
+)
+
+# Check 10: R/25 has extract_proton_dates() function
+r25_lines <- readLines("R/25_treatment_durations.R", warn = FALSE)
+check(
+  "R/25 defines extract_proton_dates()",
+  any(grepl("extract_proton_dates <- function", r25_lines, fixed = TRUE))
+)
+
+# Check 11: R/20 has extract_proton_codes() function
+r20_lines <- readLines("R/20_treatment_inventory.R", warn = FALSE)
+check(
+  "R/20 defines extract_proton_codes()",
+  any(grepl("extract_proton_codes <- function", r20_lines, fixed = TRUE))
+)
+
+# Check 12: Radiation section updated to 11 codes
+config_lines_dg <- config_lines[drug_groupings_start:drug_groupings_end]
+check(
+  "DRUG_GROUPINGS Radiation section updated to 11 codes (was 15)",
+  any(grepl("# Radiation \\(11 codes\\)", config_lines_dg))
+)
 
 # ==============================================================================
 # SECTION 30: PHASE 87 -- ICD-9 CANCER CODE INFRASTRUCTURE ----
