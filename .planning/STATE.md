@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Gantt Data Enrichment
-current_plan: Not started
-status: completed
-last_updated: "2026-06-08T19:39:21.672Z"
-last_activity: 2026-06-08
+current_plan: 1
+status: executing
+last_updated: "2026-06-09T16:42:10.927Z"
+last_activity: 2026-06-09
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_plans: 6
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -21,21 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Current focus:** Phase 93 — cross-use-flag-implementation
+**Current focus:** Phase 94 — make-proton-therapy-a-distinct-category-from-radiation
 
 ## Current Position
 
-Phase: 93 (cross-use-flag-implementation) — EXECUTING
-Plan: 1 of 1
+Phase: 94 (make-proton-therapy-a-distinct-category-from-radiation) — EXECUTING
+Plan: 2 of 2
 **Milestone:** v2.3 Gantt Data Enrichment
 **Phase:** 93
-**Status:** v2.3 milestone complete
-**Current Plan:** Not started
-**Last activity:** 2026-06-08
+**Status:** Ready to execute
+**Current Plan:** 1
+**Last activity:** 2026-06-09
 
 **Progress:**
 
-[██████████] 100%
+[████████░░] 83%
 v2.3: [----] 0/4 phases complete (0%)
   Phase 90: [ ] False-Positive SCT Code Removal
   Phase 91: [ ] Reference Data Loader & Metadata Enrichment
@@ -67,6 +67,10 @@ v2.3: [----] 0/4 phases complete (0%)
 - Total execution time: ~105 hours (across 13 milestones)
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 94 added: Make proton therapy a distinct category from radiation
 
 ### Recent Decisions
 
