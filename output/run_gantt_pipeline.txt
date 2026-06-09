@@ -1,0 +1,85 @@
+================================================================================
+GANTT PIPELINE EXECUTION ORDER
+================================================================================
+
+Run these in RStudio on HiPerGator in this order.
+Scripts 1-4 are the foundation. Scripts 5-17 build treatment data.
+Scripts 18-19 produce the Gantt v1 and v2 CSVs for comparison.
+
+================================================================================
+FOUNDATION (required — loads data and builds DuckDB)
+================================================================================
+
+1.  source("R/00_config.R")
+2.  source("R/01_load_pcornet.R")
+3.  source("R/02_harmonize_payer.R")
+4.  source("R/03_duckdb_ingest.R")
+
+================================================================================
+COHORT BUILDING (required — builds the HL cohort)
+================================================================================
+
+5.  source("R/14_build_cohort.R")        # sources R/10, R/11, R/12, R/13 internally
+
+================================================================================
+TREATMENT ANALYSIS (required — builds treatment episodes)
+================================================================================
+
+6.  source("R/25_treatment_durations.R")
+7.  source("R/26_treatment_episodes.R")
+8.  source("R/27_drug_name_resolution.R")
+9.  source("R/28_episode_classification.R")
+10. source("R/29_first_line_and_death_analysis.R")
+
+================================================================================
+CANCER ANALYSIS (required — cancer site categorization)
+================================================================================
+
+11. source("R/42_build_code_descriptions.R")
+12. source("R/47_cancer_summary_refined.R")
+13. source("R/53_death_date_validation.R")
+
+================================================================================
+ENRICHMENT (enhances Gantt v2 output with metadata)
+================================================================================
+
+14. source("R/35_death_cause_quality.R")
+15. source("R/60_tiered_same_day_payer.R")
+16. source("R/61_tiered_encounter_level.R")
+17. source("R/62_tiered_date_level.R")
+
+================================================================================
+GANTT EXPORT (produces the output CSVs)
+================================================================================
+
+18. source("R/51_gantt_data_export.R")   # v1: gantt_episodes.csv, gantt_detail.csv
+19. source("R/52_gantt_v2_export.R")     # v2: gantt_episodes_v2.csv, gantt_detail_v2.csv
+
+================================================================================
+OUTPUT FILES (all written to output/)
+================================================================================
+
+V1 (14/13 columns):
+  output/gantt_episodes.csv
+  output/gantt_detail.csv
+
+V2 (22/20 columns — includes proton therapy as distinct category):
+  output/gantt_episodes_v2.csv
+  output/gantt_detail_v2.csv
+
+================================================================================
+QUICK RUN (if RDS cache is already built from a previous full run)
+================================================================================
+
+Just run these two — they read cached RDS files:
+
+  source("R/51_gantt_data_export.R")
+  source("R/52_gantt_v2_export.R")
+
+================================================================================
+SMOKE TEST (optional — validates everything)
+================================================================================
+
+  source("R/88_smoke_test_comprehensive.R")
+
+================================================================================
