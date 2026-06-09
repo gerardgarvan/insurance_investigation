@@ -142,11 +142,11 @@ Plans:
   4. R/25 and R/26 dispatch "Proton Therapy" to dedicated extraction functions
   5. R/20 has extract_proton_codes() for treatment inventory
   6. Smoke test validates category split with no double-counting
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 94-01-PLAN.md — Split proton codes from Radiation config, add has_proton() predicate, cohort integration, episode/duration dispatch
-- [ ] 94-02-PLAN.md — Add extract_proton_codes() to treatment inventory, smoke test Section 15g for category split validation
+- [x] 94-02-PLAN.md — Add extract_proton_codes() to treatment inventory, smoke test Section 15g for category split validation
 
 ---
 *Last updated: 2026-06-09 -- Phase 94 planned (2 plans)*

@@ -37,8 +37,8 @@ Requirements for Proton Therapy category split. Maps to Phase 94.
 - [x] **PROTON-02**: TREATMENT_TYPES expanded to 5 elements with "Proton Therapy" as distinct category
 - [x] **PROTON-03**: has_proton() predicate detects proton therapy evidence; HAD_PROTON flag in cohort
 - [x] **PROTON-04**: Episode detection (R/26) and duration analysis (R/25) dispatch "Proton Therapy" to dedicated extraction functions
-- [ ] **PROTON-05**: Treatment inventory (R/20) has extract_proton_codes() for proton-specific code frequency reporting
-- [ ] **PROTON-06**: Smoke test validates proton category split: config vectors, code mappings, no double-counting, all new functions exist
+- [x] **PROTON-05**: Treatment inventory (R/20) has extract_proton_codes() for proton-specific code frequency reporting
+- [x] **PROTON-06**: Smoke test validates proton category split: config vectors, code mappings, no double-counting, all new functions exist
 
 ## Future Requirements
 
