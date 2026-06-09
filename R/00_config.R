@@ -1865,7 +1865,7 @@ DRUG_GROUPINGS <- c(
 )
 
 # Quick sanity check
-message(glue("Defined {length(DRUG_GROUPINGS)} treatment code mappings across {length(unique(DRUG_GROUPINGS))} categories"))
+message(paste0("Defined ", length(DRUG_GROUPINGS), " treatment code mappings across ", length(unique(DRUG_GROUPINGS)), " categories"))
 
 # ==============================================================================
 # SECTION 5c: QUESTIONABLE IMMUNOTHERAPY CODES (Phase 93) ----
@@ -2257,7 +2257,7 @@ CODE_SUBCATEGORY_MAP <- c(
 )
 
 # Quick sanity check
-message(glue("Defined {length(CODE_SUBCATEGORY_MAP)} code-to-subcategory mappings"))
+message(paste0("Defined ", length(CODE_SUBCATEGORY_MAP), " code-to-subcategory mappings"))
 
 # ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----
