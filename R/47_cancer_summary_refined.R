@@ -175,7 +175,8 @@ first_dx <- dx_dates %>%
       TRUE ~ NA_character_
     )
   ) %>%
-  select(ID, first_hl_dx_date, first_hl_dx_source)
+  select(ID, first_hl_dx_date, first_hl_dx_source) %>%
+  collect()
 
 # Nullify 1900 sentinel dates (Pitfall 3)
 n_sentinel <- sum(year(first_dx$first_hl_dx_date) == 1900L, na.rm = TRUE)

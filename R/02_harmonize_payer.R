@@ -256,7 +256,8 @@ first_dx <- dx_dates %>%
     first_dx_date_tr,
     first_dx_date_diagnosis
   )) %>%
-  select(ID, first_hl_dx_date)
+  select(ID, first_hl_dx_date) %>%
+  collect()
 
 # Nullify 1900 sentinel dates at the source (SAS/Excel epoch sentinels)
 # These are missing dates, not real diagnoses -- must be NA before any downstream use
