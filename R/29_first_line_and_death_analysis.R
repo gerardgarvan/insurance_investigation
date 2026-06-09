@@ -80,10 +80,10 @@ message(glue("  Loaded validated_death_dates.rds: {nrow(validated_deaths)} patie
 
 # SAFE-02: Validate data frame structure
 assert_df_valid(episodes, "treatment_episodes",
-                required_cols = c("ID", "treatment_type", "episode_number"),
+                required_cols = c("patient_id", "treatment_type", "episode_number"),
                 script_name = "R/29")
 assert_df_valid(episode_detail, "treatment_episode_detail",
-                required_cols = c("ID", "treatment_type"),
+                required_cols = c("patient_id", "treatment_type"),
                 script_name = "R/29")
 assert_df_valid(validated_deaths, "validated_deaths",
                 required_cols = c("ID"),
