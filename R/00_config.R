@@ -1567,7 +1567,7 @@ DRUG_GROUPINGS <- c(
   "J9371" = "Chemotherapy",
   "J9390" = "Chemotherapy",
 
-  # Radiation (15 codes)
+  # Radiation (11 codes)
   "77417" = "Radiation",
   "77470" = "Radiation",
   "77421" = "Radiation",
@@ -1583,6 +1583,12 @@ DRUG_GROUPINGS <- c(
   "77387" = "Radiation", # Replaces 77421
   "77385" = "Radiation", # Replaces 77418
   "77412" = "Radiation", # Replaces 77413, 77414, 77416
+
+  # Proton Therapy (4 codes) -- Phase 94: split from Radiation (D-07)
+  "77520" = "Proton Therapy",
+  "77522" = "Proton Therapy",
+  "77523" = "Proton Therapy",
+  "77525" = "Proton Therapy",
 
   # NOTE: 5 false-positive codes removed (v2.3 Phase 90, CLEAN-01):
   #   Z94.84 (transplant status), T86.5/T86.09 (transplant complications),
@@ -2580,11 +2586,7 @@ TREATMENT_CODES <- list(
     "77435", # Stereotactic body radiation therapy (SBRT) management
     "77470", # Special treatment procedure (total body irradiation, hemibody irradiation)
 
-    # --- Proton Beam Treatment Delivery (77520-77525) ---
-    "77520", # Proton treatment delivery; simple, without compensation
-    "77522", # Proton treatment delivery; simple, with compensation
-    "77523", # Proton treatment delivery; intermediate
-    "77525", # Proton treatment delivery; complex
+    # Proton codes moved to proton_cpt (Phase 94, D-03)
 
     # --- Hyperthermia (77600-77620) ---
     "77605", # Hyperthermia, externally generated; deep (DELETED)
@@ -2602,6 +2604,14 @@ TREATMENT_CODES <- list(
     "G6012", # Radiation treatment delivery, 3D conformal, intermediate (DELETED 2026)
     "G6013", # Radiation treatment delivery, 3D conformal, complex (DELETED 2026)
     "G6015" # Radiation treatment delivery, IMRT, complex (DELETED 2026)
+  ),
+
+  # Proton therapy CPT codes (split from radiation_cpt, Phase 94, D-03)
+  proton_cpt = c(
+    "77520",  # Proton treatment delivery; simple, without compensation
+    "77522",  # Proton treatment delivery; simple, with compensation
+    "77523",  # Proton treatment delivery; intermediate
+    "77525"   # Proton treatment delivery; complex
   ),
 
   # Stem cell transplant CPT codes (autologous + allogeneic per D-07)
@@ -3350,13 +3360,14 @@ SURVIVORSHIP_CODES <- list(
 # ------------------------------------------------------------------------------
 
 # Standard treatment types for analysis (used across treatment inventory, duration, episode scripts)
-TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy")
+TREATMENT_TYPES <- c("Chemotherapy", "Radiation", "Proton Therapy", "SCT", "Immunotherapy")
 
 # Treatment type colors for xlsx styling (8-char hex with FF alpha prefix)
 # Canonical palette covering all treatment analysis and Gantt visualization needs
 TREATMENT_TYPE_COLORS <- list(
   Chemotherapy      = list(fill = "FFDCEEFB", font = "FF0B5394"), # light blue / dark blue
   Radiation         = list(fill = "FFDDF4E1", font = "FF274E13"), # light green / dark green
+  `Proton Therapy`  = list(fill = "FFFDE7CC", font = "FF8B4513"), # light orange / saddle brown
   SCT               = list(fill = "FFFFF4D6", font = "FF7F6000"), # light yellow / dark olive
   Immunotherapy     = list(fill = "FFE8DCF4", font = "FF4C1D7A"), # light purple / dark purple
   `HL Diagnosis`    = list(fill = "FFFFF0D6", font = "FF8B6914"), # light gold / dark gold
