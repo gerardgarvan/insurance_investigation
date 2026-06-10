@@ -52,6 +52,11 @@ ensure_dt <- function(df, name = "input", script_name = "unknown") {
     stop(glue::glue("[{script_name} ERROR] {name} is NULL"))
   }
 
+  # Lazy table check: collect DuckDB/dbplyr tbl_lazy objects before conversion
+  if (inherits(df, "tbl_lazy")) {
+    df <- dplyr::collect(df)
+  }
+
   # Empty check: warning, then return empty data.table preserving structure
   if (nrow(df) == 0) {
     warning(glue::glue("[{script_name} WARNING] {name} is empty (0 rows)"))
