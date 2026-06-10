@@ -3414,6 +3414,124 @@ PROVIDER_SPECIALTIES <- list(
 library(checkmate)
 
 # ==============================================================================
+# SECTION 7c: DATA.TABLE LIBRARY (Phase 95, v3.0) ----
+# ==============================================================================
+# WHY load globally: Per D-01, data.table is loaded once in R/00_config.R so it's
+# available to all scripts. Phase 96+ functions use data.table for keyed joins
+# and fast aggregation. Coexists with dplyr -- conflict-prone functions (between,
+# first, last, transpose) use explicit package::function() per D-02.
+library(data.table)
+
+# ==============================================================================
+# SECTION 7d: KEYED DATA.TABLE LOOKUP TABLES (Phase 95, v3.0) ----
+# ==============================================================================
+# Converts existing named vectors/lists to keyed data.tables for fast binary-search
+# joins in Phases 96-98. Original named vectors are preserved (no behavior change).
+# Each data.table is setkey()-ed on its lookup column for O(log n) joins.
+#
+# Column naming follows D-03: semantic, table-specific names that self-document
+# in join syntax. Example: LOOKUP_TABLES_DT$AMC_PAYER_LOOKUP[.("219"), payer_category]
+#
+# WHY a list: Single access point for all keyed lookups; get_lookup_dt() retrieves
+# by name. Downstream code: LOOKUP_TABLES_DT$AMC_PAYER_LOOKUP[.(code), payer_category]
+
+LOOKUP_TABLES_DT <- list(
+
+  # --- AMC_PAYER_LOOKUP: code -> payer_category (per D-03) ---
+  AMC_PAYER_LOOKUP = {
+    dt <- data.table(
+      code = names(AMC_PAYER_LOOKUP),
+      payer_category = unname(AMC_PAYER_LOOKUP)
+    )
+    setkey(dt, code)
+    dt
+  },
+
+  # --- DRUG_GROUPINGS: code -> drug_group (per D-03) ---
+  DRUG_GROUPINGS = {
+    dt <- data.table(
+      code = names(DRUG_GROUPINGS),
+      drug_group = unname(DRUG_GROUPINGS)
+    )
+    setkey(dt, code)
+    dt
+  },
+
+  # --- CODE_SUBCATEGORY_MAP: code -> subcategory (per D-03) ---
+  CODE_SUBCATEGORY_MAP = {
+    dt <- data.table(
+      code = names(CODE_SUBCATEGORY_MAP),
+      subcategory = unname(CODE_SUBCATEGORY_MAP)
+    )
+    setkey(dt, code)
+    dt
+  },
+
+  # --- CANCER_SITE_MAP: prefix -> cancer_site (per D-03) ---
+  CANCER_SITE_MAP = {
+    dt <- data.table(
+      prefix = names(CANCER_SITE_MAP),
+      cancer_site = unname(CANCER_SITE_MAP)
+    )
+    setkey(dt, prefix)
+    dt
+  },
+
+  # --- TIER_MAPPING: payer_category -> tier (per D-03) ---
+  # Source is a list (not named vector), so conversion differs slightly
+  TIER_MAPPING = {
+    dt <- data.table(
+      payer_category = names(TIER_MAPPING),
+      tier = as.integer(unlist(TIER_MAPPING))
+    )
+    setkey(dt, payer_category)
+    dt
+  },
+
+  # --- TREATMENT_CODES: code / code_system / treatment_type (per D-04) ---
+  # Flattened from nested list. Each element name is "treatmenttype_codesystem"
+  # (e.g., "chemo_hcpcs", "radiation_cpt", "sct_icd10pcs").
+  # Parse name to extract treatment_type and code_system.
+  TREATMENT_CODES = {
+    rows <- vector("list", length(TREATMENT_CODES))
+    for (i in seq_along(TREATMENT_CODES)) {
+      element_name <- names(TREATMENT_CODES)[i]
+      codes <- TREATMENT_CODES[[i]]
+
+      # Split name on first underscore to get treatment_type and code_system
+      # e.g., "chemo_hcpcs" -> treatment_type="chemo", code_system="hcpcs"
+      # e.g., "chemo_icd10pcs_prefixes" -> treatment_type="chemo", code_system="icd10pcs_prefixes"
+      # e.g., "immunotherapy_dx_icd10" -> treatment_type="immunotherapy", code_system="dx_icd10"
+      first_underscore <- regexpr("_", element_name)
+      treatment_type <- substr(element_name, 1, first_underscore - 1)
+      code_system <- substr(element_name, first_underscore + 1, nchar(element_name))
+
+      rows[[i]] <- data.table(
+        code = codes,
+        code_system = code_system,
+        treatment_type = treatment_type
+      )
+    }
+    dt <- rbindlist(rows)
+    setkey(dt, code)
+    dt
+  }
+)
+
+# Sanity check: verify all 6 lookup tables are present and keyed
+stopifnot(
+  length(LOOKUP_TABLES_DT) == 6,
+  all(c("AMC_PAYER_LOOKUP", "DRUG_GROUPINGS", "CODE_SUBCATEGORY_MAP",
+        "CANCER_SITE_MAP", "TIER_MAPPING", "TREATMENT_CODES") %in% names(LOOKUP_TABLES_DT))
+)
+
+message(sprintf(
+  "Built %d keyed data.table lookups: %s",
+  length(LOOKUP_TABLES_DT),
+  paste(names(LOOKUP_TABLES_DT), collapse = ", ")
+))
+
+# ==============================================================================
 # SECTION 8: AUTO-SOURCE UTILITY FUNCTIONS ----
 # ==============================================================================
 # Load all utility modules from R/utils/ subfolder.
