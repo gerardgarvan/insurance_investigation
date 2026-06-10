@@ -8,7 +8,7 @@
 ## Phases
 
 - [x] **Phase 95: Infrastructure Setup** - Add data.table infrastructure without changing behavior (completed 2026-06-10)
-- [x] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function (completed 2026-06-10)
+- [x] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function (completed 2026-06-10)
 - [ ] **Phase 97: R/60 Hot-Path Migration** - Migrate same-day payer resolution to data.table
 - [ ] **Phase 98: R/28 + Remaining Lookup Optimization** - Replace named vector lookups with keyed joins
 
@@ -50,7 +50,9 @@ Plans:
   2. User can inspect script header and see runtime benchmark log showing before/after execution times
   3. User can run smoke test R/88 Section 15f and see same-day payer resolution validation pass
   4. User can trace group_by PATID+ADMIT_DATE operations and see data.table [, by=] syntax with setkey() before aggregation
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 97-01-PLAN.md -- Migrate R/60 to data.table (all 3 sections) and create R/97 benchmark + parity validation script
 
 ### Phase 98: R/28 + Remaining Lookup Optimization
 **Goal**: Episode classification and remaining lookup-heavy scripts migrated to keyed joins with correctness validation
@@ -70,11 +72,11 @@ Plans:
 |-------|----------------|--------|-----------|
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
 | 96. classify_payer_tier_dt() Implementation | 1/1 | Complete    | 2026-06-10 |
-| 97. R/60 Hot-Path Migration | 0/0 | Not started | - |
+| 97. R/60 Hot-Path Migration | 0/1 | Planning complete | - |
 | 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
 
 ## Next Steps
 
-1. Run `/gsd:execute-phase 96` to implement classify_payer_tier_dt()
-2. Wave 1: Plan 96-01 (function implementation + validation + human checkpoint)
-3. After Phase 96: Plan Phase 97 (R/60 hot-path migration)
+1. Run `/gsd:execute-phase 97` to migrate R/60 to data.table
+2. Wave 1: Plan 97-01 (R/60 migration + R/97 benchmark/validation + human checkpoint)
+3. After Phase 97: Plan Phase 98 (R/28 + remaining lookup optimization)
