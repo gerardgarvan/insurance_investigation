@@ -7,7 +7,7 @@
 
 ## Phases
 
-- [x] **Phase 95: Infrastructure Setup** - Add data.table infrastructure without changing behavior (completed 2026-06-10)
+- [x] **Phase 95: Infrastructure Setup** - Add data.table infrastructure without changing behavior (completed 2026-06-10)
 - [ ] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function
 - [ ] **Phase 97: R/60 Hot-Path Migration** - Migrate same-day payer resolution to data.table
 - [ ] **Phase 98: R/28 + Remaining Lookup Optimization** - Replace named vector lookups with keyed joins
@@ -37,7 +37,9 @@ Plans:
   2. User can run smoke test Section 15 and see parity assertion pass between classify_payer_tier() and classify_payer_tier_dt()
   3. User can inspect function header and see reference semantics documented with copy() usage at entry point
   4. User can call classify_payer_tier_dt() on factor-column input and see explicit as.character() coercion without NA matches
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 96-01-PLAN.md -- Implement classify_payer_tier_dt() function and parity validation script
 
 ### Phase 97: R/60 Hot-Path Migration
 **Goal**: Same-day payer resolution script migrated to data.table with 5-20x speedup and output parity
@@ -67,12 +69,12 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
-| 96. classify_payer_tier_dt() Implementation | 0/0 | Not started | - |
+| 96. classify_payer_tier_dt() Implementation | 0/1 | Planned | - |
 | 97. R/60 Hot-Path Migration | 0/0 | Not started | - |
 | 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
 
 ## Next Steps
 
-1. Run `/gsd:execute-phase 95` to start implementation
-2. Wave 1: Plan 95-01 (utils_dt.R + LOOKUP_TABLES_DT) runs autonomously
-3. Wave 2: Plan 95-02 (validation + checkpoint) runs after Plan 01 completes
+1. Run `/gsd:execute-phase 96` to implement classify_payer_tier_dt()
+2. Wave 1: Plan 96-01 (function implementation + validation + human checkpoint)
+3. After Phase 96: Plan Phase 97 (R/60 hot-path migration)
