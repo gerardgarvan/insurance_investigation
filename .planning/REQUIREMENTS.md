@@ -16,8 +16,8 @@ Requirements for performance optimization milestone. Each maps to roadmap phases
 
 ### Payer Classification
 
-- [ ] **PAYER-01**: classify_payer_tier_dt() function using keyed joins and fcase() logic alongside existing dplyr version
-- [ ] **PAYER-02**: Output parity between classify_payer_tier() and classify_payer_tier_dt() validated on fixture data
+- [x] **PAYER-01**: classify_payer_tier_dt() function using keyed joins and fcase() logic alongside existing dplyr version
+- [x] **PAYER-02**: Output parity between classify_payer_tier() and classify_payer_tier_dt() validated on fixture data
 
 ### Hot-Path Optimization
 
@@ -60,8 +60,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-02 | Phase 95 | Complete |
 | INFRA-03 | Phase 95 | Complete |
 | INFRA-04 | Phase 95 | Complete |
-| PAYER-01 | Phase 96 | Pending |
-| PAYER-02 | Phase 96 | Pending |
+| PAYER-01 | Phase 96 | Complete |
+| PAYER-02 | Phase 96 | Complete |
 | PERF-01 | Phase 97 | Pending |
 | PERF-02 | Phase 97 | Pending |
 | PERF-03 | Phase 98 | Pending |

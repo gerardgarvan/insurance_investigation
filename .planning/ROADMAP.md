@@ -8,7 +8,7 @@
 ## Phases
 
 - [x] **Phase 95: Infrastructure Setup** - Add data.table infrastructure without changing behavior (completed 2026-06-10)
-- [ ] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function
+- [x] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function (completed 2026-06-10)
 - [ ] **Phase 97: R/60 Hot-Path Migration** - Migrate same-day payer resolution to data.table
 - [ ] **Phase 98: R/28 + Remaining Lookup Optimization** - Replace named vector lookups with keyed joins
 
@@ -37,9 +37,9 @@ Plans:
   2. User can run smoke test Section 15 and see parity assertion pass between classify_payer_tier() and classify_payer_tier_dt()
   3. User can inspect function header and see reference semantics documented with copy() usage at entry point
   4. User can call classify_payer_tier_dt() on factor-column input and see explicit as.character() coercion without NA matches
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 96-01-PLAN.md -- Implement classify_payer_tier_dt() function and parity validation script
+- [x] 96-01-PLAN.md -- Implement classify_payer_tier_dt() function and parity validation script
 
 ### Phase 97: R/60 Hot-Path Migration
 **Goal**: Same-day payer resolution script migrated to data.table with 5-20x speedup and output parity
@@ -69,7 +69,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
-| 96. classify_payer_tier_dt() Implementation | 0/1 | Planned | - |
+| 96. classify_payer_tier_dt() Implementation | 1/1 | Complete   | 2026-06-10 |
 | 97. R/60 Hot-Path Migration | 0/0 | Not started | - |
 | 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
 
