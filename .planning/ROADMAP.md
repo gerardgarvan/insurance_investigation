@@ -69,7 +69,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
-| 96. classify_payer_tier_dt() Implementation | 1/1 | Complete   | 2026-06-10 |
+| 96. classify_payer_tier_dt() Implementation | 1/1 | Complete    | 2026-06-10 |
 | 97. R/60 Hot-Path Migration | 0/0 | Not started | - |
 | 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
 
