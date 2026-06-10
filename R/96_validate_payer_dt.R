@@ -151,12 +151,15 @@ for (col in cols_to_compare) {
     dplyr_col <- result_dplyr[[col]]
     dt_col <- result_dt[[col]]
     # identical() handles NA comparison correctly (NA == NA -> TRUE)
-    is_match <- identical(dplyr_col, dt_col)
+    # unname() strips vector name attributes (dplyr's named-vector lookups produce
+    # named columns; data.table keyed joins produce unnamed columns -- values are
+    # identical but names differ, causing identical() to fail)
+    is_match <- identical(unname(dplyr_col), unname(dt_col))
     check(sprintf("Column '%s' matches row-by-row (default params)", col), is_match)
     if (!is_match) {
       # Log which rows differ for debugging
       for (i in seq_along(dplyr_col)) {
-        if (!identical(dplyr_col[i], dt_col[i])) {
+        if (!identical(unname(dplyr_col[i]), unname(dt_col[i]))) {
           message(sprintf("  Row %d mismatch: dplyr='%s', dt='%s'",
                           i, as.character(dplyr_col[i]), as.character(dt_col[i])))
         }
@@ -192,11 +195,11 @@ check("FLM row (row 19) has tier='Medicaid' in dt output",
 cols_flm <- c("effective_payer", "payer_category", "tier", "tier_rank", "dual_eligible")
 for (col in cols_flm) {
   if (col %in% names(result_dplyr_flm) && col %in% names(result_dt_flm)) {
-    is_match <- identical(result_dplyr_flm[[col]], result_dt_flm[[col]])
+    is_match <- identical(unname(result_dplyr_flm[[col]]), unname(result_dt_flm[[col]]))
     check(sprintf("Column '%s' matches row-by-row (flm_override=TRUE)", col), is_match)
     if (!is_match) {
       for (i in seq_along(result_dplyr_flm[[col]])) {
-        if (!identical(result_dplyr_flm[[col]][i], result_dt_flm[[col]][i])) {
+        if (!identical(unname(result_dplyr_flm[[col]][i]), unname(result_dt_flm[[col]][i]))) {
           message(sprintf("  Row %d mismatch: dplyr='%s', dt='%s'",
                           i,
                           as.character(result_dplyr_flm[[col]][i]),
@@ -230,11 +233,11 @@ check("dual_eligible column absent in dt output (include_dual=FALSE)",
 cols_nodual <- c("effective_payer", "payer_category", "tier", "tier_rank")
 for (col in cols_nodual) {
   if (col %in% names(result_dplyr_nodual) && col %in% names(result_dt_nodual)) {
-    is_match <- identical(result_dplyr_nodual[[col]], result_dt_nodual[[col]])
+    is_match <- identical(unname(result_dplyr_nodual[[col]]), unname(result_dt_nodual[[col]]))
     check(sprintf("Column '%s' matches row-by-row (include_dual=FALSE)", col), is_match)
     if (!is_match) {
       for (i in seq_along(result_dplyr_nodual[[col]])) {
-        if (!identical(result_dplyr_nodual[[col]][i], result_dt_nodual[[col]][i])) {
+        if (!identical(unname(result_dplyr_nodual[[col]][i]), unname(result_dt_nodual[[col]][i]))) {
           message(sprintf("  Row %d mismatch: dplyr='%s', dt='%s'",
                           i,
                           as.character(result_dplyr_nodual[[col]][i]),
