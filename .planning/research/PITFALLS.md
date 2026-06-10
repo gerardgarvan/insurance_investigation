@@ -1,379 +1,443 @@
-# Pitfalls Research
+# Domain Pitfalls: Adding data.table to Existing Tidyverse R Pipeline
 
-**Domain:** Treatment Metadata Enrichment for Oncology Data Pipelines
-**Researched:** 2026-06-07
-**Confidence:** MEDIUM-HIGH
+**Domain:** PCORnet R pipeline performance optimization with data.table
+**Researched:** 2026-06-10
 
 ## Critical Pitfalls
 
-### Pitfall 1: Removing Active Codes Without Downstream Impact Analysis
+Mistakes that cause incorrect results, data corruption, or major architectural issues.
 
-**What goes wrong:**
-Codes marked "Remove" in reference data (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC) are currently active in CODE_SUBCATEGORY_MAP and actively triggering treatment episode creation. Removing them without tracking downstream dependencies causes:
-- Silent data loss (treatment episodes disappear from output)
-- Attrition count mismatches (prior cohorts no longer reproducible)
-- Broken backward compatibility (RDS cache files contain episodes for removed codes)
-- Ambiguous documentation ("Why did patient X lose their SCT episode?")
+### Pitfall 1: Reference Semantics Silent Mutation
 
-**Why it happens:**
-These codes were initially included based on keyword matching ("transplant" → SCT category) without clinical validation. Upon review, they represent post-transplant complications/status codes (Z94.84 = bone marrow transplant status, T86.x = transplant complications, Z48.290 = aftercare following transplant), not the transplant procedure itself. The reference xlsx marks them "Remove" but doesn't specify impact on existing data.
+**What goes wrong:** Functions that use `:=` to modify a data.table parameter silently mutate the original object in the caller's scope. Named vector lookups converted to data.table joins can unexpectedly modify lookup tables if you use `:=` instead of creating new columns.
 
-**How to avoid:**
-1. **Before removal:** Run `treatment_episodes |> filter(code %in% c("Z94.84", "T86.5", "T86.09", "Z48.290", "HEMATOLOGIC_TRANSPLANT_AND_ENDOC")) |> count()` to quantify affected episodes
-2. **Document impact:** Create `.planning/code-removal-impact.md` with counts, affected patients, and date ranges
-3. **Version the mapping:** Add `CODE_SUBCATEGORY_MAP_V2` with removed codes excluded, keep V1 for reproducibility
-4. **Archive flag approach:** Instead of removing, add `is_deprecated = TRUE` column, filter in treatment detection but preserve in metadata joins
-5. **Update smoke test:** Add Section validating that deprecated codes don't appear in new treatment_episodes but do appear in archived outputs
+**Example scenario:**
+```r
+# BEFORE: Named vector lookup (safe, copy-on-modify)
+cohort$payer_category <- AMC_PAYER_LOOKUP[cohort$RAW_PAYER_TYPE]
 
-**Warning signs:**
-- Reference data has "Remove" annotation but codes still exist in active lookup tables
-- No impact analysis script exists
-- Smoke test doesn't validate deprecated code handling
-- No versioning strategy for CODE_SUBCATEGORY_MAP
+# AFTER: data.table join attempt (DANGER if using :=)
+payer_dt <- as.data.table(AMC_PAYER_LOOKUP)
+setkey(payer_dt, raw_code)
+cohort_dt <- as.data.table(cohort)
+cohort_dt[payer_dt, payer_category := i.category]  # Modifies cohort_dt in place!
 
-**Phase to address:**
-Phase 1 (Code Removal Impact Analysis) — Must precede Phase 2 (Metadata Enrichment)
+# If cohort was originally a tibble passed to a function, the caller's
+# tibble is now unexpectedly a data.table with new columns
+```
 
----
+**Why it happens:** data.table uses reference semantics for the `:=` operator. Modifications propagate to all R variables pointing to the same object in memory. The tidyverse ecosystem assumes copy-on-modify semantics — functions don't mutate inputs.
 
-### Pitfall 2: Many-to-Many Join Explosion from Reference Data
+**Consequences:**
+- Smoke test (R/88) may pass locally but fail on HiPerGator if objects are reused across scripts
+- Lookup tables (AMC_PAYER_LOOKUP, CODE_SUBCATEGORY_MAP) could gain extra columns
+- Pipeline outputs differ between runs if intermediate objects persist in .GlobalEnv
+- RDS cache invalidation logic breaks if objects mutate after mtime comparison
 
-**What goes wrong:**
-Joining `treatment_episodes` (one row per code instance) to `all_codes_resolved2.xlsx` (one row per code definition) appears safe (one-to-one), but hidden duplicates in reference data cause row explosion:
-- If xlsx has duplicate entries for a code (e.g., two rows for "Melphalan" with conflicting classifications), join produces 2x rows
-- If xlsx has both exact code and wildcard pattern match, both rows join
-- Result: 14-column Gantt suddenly has 50,000 rows instead of 25,000
-- Downstream: Aggregations double-count episodes, patient timelines show phantom duplicates
-
-Per dplyr documentation: "If both x and y have multiple matches for a key, the result is the cross product... if x has 100 rows for id=1 and y has 5 rows for id=1, it returns 500 rows for id=1" ([R for Data Science - Joins](https://r4ds.hadley.nz/joins.html)).
-
-**Why it happens:**
-all_codes_resolved2.xlsx is a working document with unresolved questions (8 vitamin combos, 2 CAR-T codes TBD). Excel allows duplicate entries during exploratory work. No uniqueness constraint on code columns.
-
-**How to avoid:**
-1. **Pre-join validation:** Run `xlsx_data |> count(code_with_type) |> filter(n > 1)` and error if duplicates exist
-2. **Assert relationship:** Use `left_join(..., relationship = "many-to-one")` (dplyr 1.1+) to error on many-to-many ([dplyr mutate-joins reference](https://dplyr.tidyverse.org/reference/mutate-joins.html))
-3. **Deduplicate reference data:** Filter xlsx to `distinct(code_with_type, .keep_all = TRUE)` with precedence rules (e.g., prioritize rows with non-NA medication_name)
-4. **Unit test join:** `expect_equal(nrow(episodes_enriched), nrow(treatment_episodes))`
-
-**Warning signs:**
-- Reference xlsx has "TBD" or "?" in classification columns
-- No uniqueness check before join
-- Row count increases after join
-- Smoke test doesn't validate pre/post join row counts
-
-**Phase to address:**
-Phase 2 (Reference Data Validation & Deduplication) — First sub-task before enrichment join
-
----
-
-### Pitfall 3: Unresolved Classifications Propagating to Production Output
-
-**What goes wrong:**
-8 vitamin combo codes flagged as questionable immunotherapy and 2 CAR-T codes with TBD classification (immunotherapy vs CAR-T category) exist in all_codes_resolved2.xlsx. If joined as-is:
-- Gantt CSV exports with `immunotherapy_flag = NA` or `treatment_line = "?"`
-- Downstream analysts filter `!is.na(immunotherapy_flag)`, silently excluding questionable codes
-- Published figures show incomplete treatment timelines
-- Clinical reviewers question data quality: "Why is this vitamin supplement labeled immunotherapy?"
-
-Research shows this is a known oncology data quality issue: "Varying definitions of cancer therapies (such as what constitutes chemotherapy vs immunotherapy and modes of administration)... have made comparisons and evaluation of treatment across studies challenging, with varying therapy definitions affecting study design, misclassification, and results" ([Development and Utility of Cancer Medications Enquiry Database](https://pmc.ncbi.nlm.nih.gov/articles/PMC7868035/)).
-
-**Why it happens:**
-Clinical domain expertise required for classification exceeds data engineering scope. Codes fall into gray areas:
-- Vitamin combos: Supportive care or immunomodulatory agents?
-- CAR-T: Technically cellular immunotherapy, but often tracked separately due to distinct workflow/toxicity profile
-
-Per 2026 literature: "CAR-T cell therapies are advanced therapy medicinal products (ATMPs) that represent a new generation of personalized cancer immunotherapy" ([Engineering Immunity: CAR-T Cell Therapy](https://www.mdpi.com/1422-0067/27/2/909)), but also "Within the broader immunotherapy landscape, engineered tumor-specific T cell receptors (TCR) and chimeric antigen receptors (CAR) comprise one category of cellular immunotherapy approaches" ([Editorial: Cellular immunotherapy](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12605324/)). Both classifications are valid depending on analytical context.
-
-**How to avoid:**
-1. **Flag mechanism:** Add `classification_confidence` column (`HIGH/MEDIUM/LOW/UNRESOLVED`)
-2. **Defer to output:** Export questionable codes with `classification_confidence = "UNRESOLVED"` rather than blocking on resolution
-3. **Document rationale:** Add `classification_notes` column with clinical reasoning or "TBD - requires oncology SME review"
-4. **Staged rollout:** Phase 1 exports confident classifications only (HIGH/MEDIUM), Phase 2 adds UNRESOLVED with documented caveats
-5. **Clinical review checkpoint:** Schedule SME review session before production deployment, not before development
-
-**Warning signs:**
-- Reference data has "TBD", "?", or blank classification cells
-- No confidence/quality column exists
-- Enrichment logic treats all classifications equally (no filtering by confidence)
-- No clinical SME review scheduled
-
-**Phase to address:**
-Phase 2 (Metadata Enrichment) with explicit confidence filtering + Phase 4 (Clinical SME Review) for resolution
-
----
-
-### Pitfall 4: Cross-Use Flag Logic Without Mutual Exclusivity Validation
-
-**What goes wrong:**
-5 chemotherapy codes flagged as SCT conditioning agents (Melphalan, Carmustine, Temsirolimus) and 2 CAR-T codes flagged for potential dual classification (immunotherapy vs CAR-T). If cross-use flags implemented naively:
-- Melphalan episode counted in both "chemotherapy" and "SCT conditioning" groups
-- Summing counts across categories produces >100% totals
-- Payer stratification logic breaks: "Patient has chemo but no SCT? Check: Conditioning flag = TRUE... wait, is this SCT or not?"
-
-Research confirms conditioning regimens use standard chemotherapy agents: "Total-body irradiation and cyclophosphamide or busulfan and cyclophosphamide are the commonly used myeloablative therapies" and "BCNU (carmustine), etoposide, ara-C (cytarabine), and melphalan (BEAM regimen)" ([Stem Cell Transplant Conditioning Regimens](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12293537/)). These drugs appear in both chemotherapy and SCT contexts — context is temporal (within 30 days before SCT) not code-based.
-
-**Why it happens:**
-Same drug code appears in multiple clinical contexts. CODE_SUBCATEGORY_MAP assigns single category per code, but reality is multi-modal:
-- Melphalan alone = multiple myeloma chemotherapy
-- Melphalan + Carmustine + Etoposide within 14 days of SCT = BEAM conditioning regimen
-
-**How to avoid:**
-1. **Temporal context flags:** Add `is_sct_conditioning_context = TRUE` when (code in conditioning_drugs) AND (within 30 days before SCT episode)
-2. **Primary + secondary categories:** `primary_category = "chemotherapy"`, `secondary_category = "SCT_conditioning"` (mutually exclusive at primary level)
-3. **Explicit aggregation rules:** Document that category sums should use `primary_category` only; `secondary_category` for subgroup analysis
-4. **Unit test mutual exclusivity:** `expect_true(sum(category_counts$n) == nrow(treatment_episodes))`
-
-**Warning signs:**
-- Cross-use flags implemented as boolean columns without aggregation guidance
-- No temporal context logic (dates relative to SCT)
-- Smoke test sums don't validate to total episode count
-- Category definitions document doesn't specify mutual exclusivity rules
-
-**Phase to address:**
-Phase 3 (Cross-Use Flag Implementation) with temporal context logic
-
----
-
-### Pitfall 5: Schema Extension Breaking Backward Compatibility
-
-**What goes wrong:**
-Gantt v1 has 14 columns, v2 has 16 columns. Adding 5+ new columns (treatment_line, medication_name, code_type, source_table, cross_use_flags) without schema versioning:
-- Existing R scripts that read Gantt CSV with `col_types = cols(...)` fail with "7 columns expected, 19 found"
-- Excel macros with hardcoded column positions (column P = payer) break when new columns inserted at column C
-- Downstream Python pipeline assumes column 15 = is_first_line, gets medication_name instead
-- Published Tableau dashboards break (calculated fields reference column index not name)
-
-Schema evolution research confirms: "Adding a field, removing a column, or altering nullability may seem harmless upstream, but can trigger downstream failures in production" and "unexpected additions or removals of columns can break downstream views" ([Data Lineage & Impact Analysis](https://atlan.com/know/data-lineage-impact-analysis/)).
-
-**Why it happens:**
-No formal schema versioning strategy. Outputs named `gantt_export.csv` get silently overwritten with new schema. Consumers assume stable schema.
-
-**How to avoid:**
-1. **Append-only schema:** New columns added at end (columns 17-21), not inserted mid-schema
-2. **Versioned filenames:** `gantt_export_v3.csv` (new schema) alongside `gantt_export_v2.csv` (legacy, frozen)
-3. **Schema documentation:** `docs/gantt_schema_v3.md` with migration guide from v2
-4. **Nullable new columns:** All new columns have sensible defaults (NA, empty string, FALSE) so old rows don't break
-5. **Smoke test schema contract:** `expect_named(gantt_v3, c("patid", "start_date", ..., "medication_name", "cross_use_flag"))` in fixed order
-
-Per best practices: "One of the safest ways to ensure backward compatible database changes is through additive changes—adding new columns or tables without altering existing ones—ensuring that older applications continue to function correctly while new features are introduced" ([Backward Compatible Database Changes](https://planetscale.com/blog/backward-compatible-databases-changes)).
-
-**Warning signs:**
-- No schema version number in filename or header
-- Columns inserted mid-schema (breaking column index references)
-- No migration guide for downstream consumers
-- Smoke test doesn't validate column order and names
-
-**Phase to address:**
-Phase 2 (Gantt Schema v3 Design) — Must define append-only schema before implementation
-
----
-
-### Pitfall 6: False-Positive Treatment Episodes from Status/Complication Codes
-
-**What goes wrong:**
-Z94.84 (bone marrow transplant status), T86.x (transplant complications), Z48.290 (aftercare following transplant) currently trigger SCT episode creation. Result:
-- Patient with 2015 SCT shows phantom "SCT episodes" every time they have a follow-up visit in 2020-2025
-- Attrition logic filters "patients with SCT" → includes patients who only have status codes, not actual procedures
-- Treatment timeline shows SCT spanning 10 years (diagnosis codes, not treatment events)
-- Episode counts inflated 2-3x (one actual PROCEDURES code + dozens of DIAGNOSIS status codes)
-
-This is a PCORnet CDM-specific pitfall. Per research: "Treatment and test procedures have been identified using Current Procedural Terminology (CPT) and Healthcare Common Procedure Coding System (HCPCS) codes within PCORnet CDM tables" ([PCORnet Data Resources](https://ascopubs.org/doi/10.1200/CCI.19.00142)). Status codes (ICD-10-CM) are diagnosis codes, not procedure codes — mixing them causes category confusion.
-
-Project decision already addresses this partially: "Drop ICD DX codes from SCT detection — Diagnosis codes indicate history/status, not procedure occurrence — PROCEDURES/PRESCRIBING/DISPENSING are authoritative" (PROJECT.md, Phase 60). But implementation incomplete — codes still in CODE_SUBCATEGORY_MAP.
-
-**Why it happens:**
-Initial code mapping used keyword search ("transplant" → SCT category) without filtering by code system (CPT/HCPCS vs ICD-10-CM) or table source (PROCEDURES vs DIAGNOSIS). ICD-10-CM Z-codes and T-codes are valid in DIAGNOSIS table but don't represent treatment events.
-
-**How to avoid:**
-1. **Table source restriction:** SCT detection from PROCEDURES/DISPENSING/MED_ADMIN only, exclude DIAGNOSIS table
-2. **Code system validation:** ICD-10-CM codes (Zxx.xx, Txx.xx pattern) automatically excluded from treatment detection
-3. **Audit existing episodes:** `treatment_episodes |> filter(source_table == "DIAGNOSIS", sub_category == "SCT") |> count()` to quantify false positives
-4. **Reclassify vs remove:** Z94.84 et al. move to "SCT_history" category (not treatment), or remove entirely
-5. **Document distinction:** Add comments in CODE_SUBCATEGORY_MAP: `# Z94.84: Status code, not procedure — excluded from treatment detection`
-
-**Warning signs:**
-- ICD-10-CM codes in treatment detection logic
-- DIAGNOSIS table included in SCT/chemotherapy source tables
-- Episode counts orders of magnitude higher than expected
-- Treatment durations spanning years (status codes have ongoing dates)
-
-**Phase to address:**
-Phase 1 (Code Removal Impact Analysis) — Quantify false positives before schema changes
-
----
-
-## Technical Debt Patterns
-
-Shortcuts that seem reasonable but create long-term problems.
-
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Join all xlsx columns even if some have NAs | "Future-proof" — new metadata available when filled | NA propagation breaks downstream filters; unclear which NAs are "missing data" vs "not applicable" | Never — filter to complete/confident rows only |
-| Use Excel row numbers as join keys | Fast xlsx iteration during development | Inserting rows breaks joins; no stable identifier for code definitions | Never — use code+type composite key |
-| Overwrite existing Gantt CSV with new schema | Avoids filename proliferation | Silent breaking changes for downstream consumers | Only in pre-release development; never post-v1.0 |
-| Hard-code column positions in aggregation logic | Faster than referencing by name | Schema reordering breaks logic silently | Never — use `select(medication_name, ...)` not `.[, 15]` |
-| Defer clinical SME review until "output looks wrong" | Unblocks development without scheduling meetings | Waste time building features for misclassified codes; rework after SME corrections | Only for LOW confidence codes explicitly flagged as "pending review" |
-| Implement cross-use flags as simple boolean (no context) | Easiest to implement | Category summaries produce >100% totals; no way to determine primary category | Only for non-overlapping categories (e.g., oral vs IV route) |
-
-## Integration Gotchas
-
-Common mistakes when connecting to external reference data.
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| Excel xlsx reference data | Assume first row is always header, no validation | Use `read_excel(..., skip = 0)` and validate expected column names with `assert_names()` |
-| Excel xlsx reference data | Assume no hidden rows/columns with metadata | Filter `!is.na(code)` after read to drop blank/comment rows |
-| Excel xlsx reference data | Trust Excel dates (serial numbers vs formatted strings) | Specify `col_types = c(..., medication_name = "text", ...)` to prevent date autoconversion |
-| F/S/E/N treatment line labels | Join on exact string match ("First line" vs "first line" vs "F") | Normalize to single-char codes before join: `str_to_upper(str_sub(treatment_line, 1, 1))` |
-| RxNorm medication names | Assume one name per code | Codes have generic name + brand names; pick canonical with precedence (generic > brand > ingredient) |
-| Code type classification | Infer from code pattern (5-digit = CPT, J-code = HCPCS) | Use source_table explicitly: PROCEDURES = CPT/HCPCS, PRESCRIBING = RXNORM, DIAGNOSIS = ICD-10-CM |
-
-## Performance Traps
-
-Patterns that work at small scale but fail as usage grows.
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Full xlsx re-join on every run (no caching) | Slow runs (10-20 sec overhead) | Cache enriched lookup table as RDS: `cache/code_metadata_lookup.rds` | >5000 unique codes (~3 sec xlsx read + 2 sec join) |
-| String matching for code type inference | `case_when(str_detect(code, "^J") ~ "HCPCS", ...)` on 50k rows | Join to pre-classified lookup table or use source_table column directly | >50k rows (~5 sec regex overhead) |
-| Repeated left_join for each metadata column | 5 separate joins (one per new column) | Single wide join: `left_join(treatment_episodes, code_lookup, by = "code")` | >3 joins (~linear slowdown) |
-| Excel formulas in reference xlsx (VLOOKUP chains) | Excel recalculates on open, blocking file access | Export xlsx to CSV before R read, or use `read_excel(..., .name_repair = "unique")` to skip formula eval | >1000 rows with complex formulas (~10 sec Excel overhead) |
-
-## Data Quality Traps
-
-Domain-specific data quality issues in oncology treatment metadata.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Assuming RxNorm codes are standardized medication names | RxNorm includes non-drug entities (device codes, procedure codes); joining blindly adds "TRANSPLANT KIT" as medication | Filter RxNorm to `TTY IN ('SCD', 'SBD', 'GPCK', 'BPCK')` (clinical drugs only) |
-| Mixing ICD-9-CM and ICD-10-CM in same lookup table without system flag | Z94.84 (ICD-10) and V42.81 (ICD-9) both = "transplant status" but different eras; joining on description causes duplication | Add `code_system` column, validate no ICD-9 codes in post-2015 data |
-| Trusting "first-line" labels without clean-period validation | Excel marks regimen as "first-line" but patient had prior chemo 45 days ago (not 60-day clean) | Cross-validate F/S/E/N labels against calculated `is_first_line` flag; flag discrepancies |
-| Accepting incomplete medication names ("Doxorubicin" without route/dose form) | "Doxorubicin" matches both liposomal (Doxil) and conventional; affects regimen matching | Require full RxNorm SCD (Semantic Clinical Drug) level: "Doxorubicin 50 MG Injection" |
-| Ignoring vitamin/supplement codes in immunotherapy category | Vitamin combos flagged as immunomodulatory but clinical significance unclear; inflates immunotherapy counts | Create separate "Supportive_care_immunomodulatory" category, exclude from primary immunotherapy analysis |
-
-## "Looks Done But Isn't" Checklist
-
-Things that appear complete but are missing critical pieces.
-
-- [ ] **Metadata join implemented:** Verify join relationship is many-to-one (use `relationship = "many-to-one"` argument)
-- [ ] **New columns added to Gantt:** Verify all new columns documented in schema file with data type, nullability, example values
-- [ ] **Treatment line labels (F/S/E/N):** Verify cross-validated against existing `is_first_line` calculated flag; discrepancies documented
-- [ ] **Medication names populated:** Verify non-NA rate >95% for chemotherapy codes (acceptable to be NA for radiation/surgery)
-- [ ] **Cross-use flags implemented:** Verify aggregation logic documented (primary category only vs secondary for subgroups)
-- [ ] **Deprecated codes removed:** Verify `CODE_SUBCATEGORY_MAP` no longer contains Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC
-- [ ] **Smoke test updated:** Verify Section 34 validates new columns, Section 35 validates join row counts unchanged, Section 36 validates schema version
-- [ ] **Backward compatibility preserved:** Verify old Gantt v2 file still generated alongside new v3 file
-- [ ] **Reference data versioned:** Verify all_codes_resolved2.xlsx copied to `data/reference/code_metadata_v2.3.xlsx` with date stamp
-- [ ] **Unresolved classifications handled:** Verify TBD codes either resolved or excluded from production output (not silently included with NA)
-
-## Recovery Strategies
-
-When pitfalls occur despite prevention, how to recover.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Many-to-many join explosion discovered in QA | LOW | 1. Revert enrichment script to pre-join commit. 2. Add `distinct(code, .keep_all = TRUE)` to xlsx read. 3. Re-run with `relationship = "many-to-one"` assertion. 4. Smoke test validates row counts. |
-| Removed codes cause 20% episode loss | MEDIUM | 1. Restore CODE_SUBCATEGORY_MAP from git history. 2. Implement deprecation flag instead of removal. 3. Add `filter(!is_deprecated)` to treatment detection. 4. Regenerate all outputs. 5. Update docs with "deprecated but preserved for reproducibility". |
-| Downstream consumer breaks from schema change | MEDIUM | 1. Restore old Gantt v2 file alongside v3. 2. Create `R/80_gantt_export_v2_legacy.R` frozen at old schema. 3. Document migration guide. 4. Email consumers with deprecation timeline. 5. Maintain dual export for 2 milestone cycles. |
-| False-positive SCT episodes from status codes | HIGH | 1. Audit: `treatment_episodes \|> filter(source_table == "DIAGNOSIS", sub_category == "SCT")`. 2. Quantify: 250 episodes, 45 patients affected. 3. Reclassify: Move Z/T codes to new category "SCT_history_not_treatment". 4. Regenerate cohort from `01_build_cohort.R` forward. 5. Compare attrition logs (expect ~8% reduction in "Has SCT" step). 6. Update all downstream analyses. 7. Archive old RDS cache. 8. Document in v2.3 release notes. **Note: Requires full pipeline re-run (~30 min HiPerGator time).** |
-| Unresolved classifications in production output | LOW | 1. Hotfix: Add `filter(classification_confidence %in% c("HIGH", "MEDIUM"))` to enrichment join. 2. Create `unresolved_codes_pending_review.csv` for clinical SME. 3. Schedule review meeting. 4. Redeploy with resolved classifications in v2.3.1 patch. |
-| Cross-use flag sums exceed 100% | MEDIUM | 1. Add `primary_category` and `secondary_category` columns. 2. Update aggregation scripts to `group_by(primary_category)` only. 3. Document secondary_category as "Additional context, not for summation". 4. Re-run all category summary outputs. 5. Update smoke test to validate sum(primary_category) == nrow(episodes). |
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Removing active codes without impact analysis | Phase 1: Code Removal Impact Analysis | Script `analysis/code_removal_impact.R` exists, outputs row counts to console |
-| Many-to-many join explosion | Phase 2: Reference Data Validation | `expect_equal(nrow(episodes_enriched), nrow(treatment_episodes))` in smoke test Section 35 |
-| Unresolved classifications propagating | Phase 2: Metadata Enrichment (with confidence filtering) | Gantt v3 output has zero rows with `classification_confidence = "UNRESOLVED"` |
-| Cross-use flag logic without mutual exclusivity | Phase 3: Cross-Use Flag Implementation | Smoke test Section 36: `sum(category_counts$n) == nrow(treatment_episodes)` |
-| Schema extension breaking backward compatibility | Phase 2: Gantt Schema v3 Design | Both `gantt_export_v2.csv` (14 cols) and `gantt_export_v3.csv` (19 cols) exist in output/ |
-| False-positive treatment episodes from status codes | Phase 1: Code Removal Impact Analysis | `treatment_episodes \|> filter(code %in% deprecated_codes) \|> nrow()` returns 0 |
-
-## Validation Workflow for Reference Data
-
-Best practices for managing working documents (all_codes_resolved2.xlsx) in production pipeline:
-
-**Stage 1: Exploratory (Current State)**
-- Excel allows duplicates, TBDs, unresolved questions
-- Multiple annotators can add rows/flags
-- No enforcement of uniqueness or completeness
-
-**Stage 2: Pre-Production Validation (Phase 2)**
-1. Export xlsx to versioned CSV: `data/reference/code_metadata_YYYYMMDD.csv`
-2. Run validation script:
+**Prevention:**
+1. **Defensive copying at function boundaries**: Use `copy()` at the start of any function that receives a data.table and uses `:=`
    ```r
-   # Check uniqueness
-   duplicates <- code_metadata |> count(code, code_type) |> filter(n > 1)
-   assert_that(nrow(duplicates) == 0, msg = "Duplicate codes found")
-
-   # Check completeness for confident rows
-   confident <- code_metadata |> filter(classification_confidence %in% c("HIGH", "MEDIUM"))
-   incomplete <- confident |> filter(is.na(medication_name) | is.na(treatment_line))
-   assert_that(nrow(incomplete) == 0, msg = "Confident rows missing metadata")
-
-   # Flag unresolved
-   unresolved <- code_metadata |> filter(classification_confidence == "UNRESOLVED")
-   message(glue("{nrow(unresolved)} codes flagged as UNRESOLVED - exported for SME review"))
-   write_csv(unresolved, "output/unresolved_codes_for_review.csv")
-   ```
-3. Filter to production-ready subset:
-   ```r
-   production_metadata <- code_metadata |>
-     filter(classification_confidence %in% c("HIGH", "MEDIUM")) |>
-     distinct(code, code_type, .keep_all = TRUE)
+   optimize_payer_join <- function(cohort) {
+     dt <- copy(cohort)  # Deep copy to avoid mutating caller's data
+     # Safe to use := now
+     dt[, new_col := transformation]
+     return(dt)
+   }
    ```
 
-**Stage 3: Production Use (Phase 3+)**
-- Pipeline reads versioned CSV (not live xlsx)
-- Smoke test validates no duplicates, no NAs in critical columns
-- Unresolved codes tracked separately for future resolution
+2. **Prefer returning new objects over in-place modification**: Follow tidyverse convention of `result <- function(input)` rather than modifying inputs
+   ```r
+   # SAFE: Return new object
+   cohort_enriched <- add_payer_categories(cohort)
 
-**Stage 4: Iterative Updates (Post-v2.3)**
-- SME resolves TBD codes → update xlsx → re-export CSV with new date → increment version
-- Old versions preserved: `code_metadata_20260607.csv`, `code_metadata_20260614.csv`
-- Pipeline config points to active version: `CODE_METADATA_VERSION <- "20260614"`
+   # UNSAFE: Mutation hidden in function
+   add_payer_categories(cohort)  # cohort now modified
+   ```
+
+3. **Never pass original config objects to data.table operations**: Convert to data.table inside optimization functions, not at config load time
+   ```r
+   # BAD: Config object becomes mutable data.table
+   AMC_PAYER_LOOKUP_DT <- as.data.table(AMC_PAYER_LOOKUP)
+
+   # GOOD: Convert fresh copy in each function
+   payer_join <- function(cohort) {
+     lookup_dt <- as.data.table(AMC_PAYER_LOOKUP, keep.rownames = "raw_code")
+     # ...
+   }
+   ```
+
+**Detection:**
+- Before-and-after testing: `waldo::compare(input_original, input_after_function)` should show no differences if function shouldn't mutate
+- Check object addresses: `data.table::address(x)` before and after — identical addresses with different content = mutation occurred
+- Smoke test validation: Add Section 36 to R/88 checking `length(names(AMC_PAYER_LOOKUP))` hasn't increased
+
+### Pitfall 2: Factor vs Character Join Mismatches
+
+**What goes wrong:** data.table joins between factor columns (from PCORnet CSVs with vroom type inference) and character lookup keys produce `NA` matches or silent type coercion with incorrect mappings.
+
+**Example scenario:**
+```r
+# PCORnet ENROLLMENT table loaded by vroom
+enrollment <- vroom("ENROLLMENT.csv")  # RAW_PAYER_TYPE becomes factor
+
+# AMC_PAYER_LOOKUP is a named character vector
+payer_dt <- data.table(
+  raw_code = names(AMC_PAYER_LOOKUP),    # character
+  category = unname(AMC_PAYER_LOOKUP)    # character
+)
+
+# Join between factor (enrollment) and character (payer_dt)
+setDT(enrollment)
+enrollment[payer_dt, on = .(RAW_PAYER_TYPE = raw_code), payer_category := i.category]
+# Result: Rows with factor levels missing from character keys get NA
+```
+
+**Why it happens:**
+- vroom automatically converts low-cardinality character columns to factors (performance optimization)
+- data.table versions prior to 1.18.2 had bugs sorting factor-to-character joins when factor levels aren't `sort()`-ed
+- Version 1.18.4 (May 2026) fixed UTF-8 factor matching, but coercion behavior still differs from dplyr's character-only approach
+
+**Consequences:**
+- **Data loss**: Payer categories become `NA` for valid codes not in factor levels
+- **Silent failures**: join succeeds but produces wrong results (e.g., mapping to incorrect category if factor integer codes align accidentally)
+- **Inconsistent results across environments**: Local Windows (different locale) vs HiPerGator Linux may sort factor levels differently
+
+**Prevention:**
+1. **Explicit character coercion before joins**:
+   ```r
+   enrollment[, RAW_PAYER_TYPE := as.character(RAW_PAYER_TYPE)]
+   ```
+
+2. **Specify vroom column types to prevent factor inference**:
+   ```r
+   # In utils_duckdb.R get_pcornet_table() for non-DuckDB path
+   vroom::vroom(
+     path,
+     col_types = cols(
+       RAW_PAYER_TYPE = col_character(),
+       RAW_PAYER_SOURCE = col_character(),
+       .default = col_guess()
+     )
+   )
+   ```
+
+3. **Use data.table's type-safe join syntax**:
+   ```r
+   # Ensure both sides are character before join
+   payer_dt[, raw_code := as.character(raw_code)]
+   enrollment[payer_dt, on = .(RAW_PAYER_TYPE = raw_code), nomatch = NA]
+   ```
+
+4. **Validate join coverage post-optimization**:
+   ```r
+   # Add to smoke test or within optimization function
+   missing_payers <- enrollment[is.na(payer_category), unique(RAW_PAYER_TYPE)]
+   if (length(missing_payers) > 0) {
+     warning("Unmapped payer codes: ", paste(missing_payers, collapse = ", "))
+   }
+   ```
+
+**Detection:**
+- Compare `sum(is.na(payer_category))` before and after optimization
+- Check factor levels: `levels(enrollment$RAW_PAYER_TYPE)` vs `unique(names(AMC_PAYER_LOOKUP))`
+- Smoke test Section: Validate no new NAs introduced in key payer/treatment columns
+- Run on both Windows and Linux to catch locale-dependent sorting issues
+
+### Pitfall 3: Downstream Tool Incompatibility (openxlsx2, ggplot2)
+
+**What goes wrong:** Functions expecting tibbles or data.frames fail with data.tables, or produce degraded output with missing attributes (e.g., grouped tibble metadata, column labels).
+
+**Example scenario:**
+```r
+# Optimized treatment episodes with data.table
+episodes_dt <- data.table(...)  # Fast aggregation
+episodes_dt[, treatment_line := classify_line(...)]
+
+# openxlsx2 export (expects tibble or data.frame)
+wb <- wb_workbook()
+wb$add_worksheet("Episodes")
+wb$add_data("Episodes", episodes_dt)
+# Result: May work but lose tibble print formatting, grouped metadata
+# write.xlsx() wrapper may call methods expecting data.frame attributes
+
+# ggplot2 with data.table (usually works but edge cases exist)
+ggplot(episodes_dt, aes(x = start_date, y = PATID)) + geom_point()
+# Result: Works in most cases
+# BUT: If episodes_dt has keys set, some geoms may sort unexpectedly
+# AND: facet_wrap() may not recognize grouped_dt() metadata
+```
+
+**Why it happens:**
+- data.table inherits from data.frame but has additional attributes (keys, indices, `.internal.selfref`)
+- openxlsx2's `write_xlsx()` accepts "everything that can be converted into a data frame with `as.data.frame()`" but may not preserve data.table's reference semantics intent
+- ggplot2 primarily uses data.frame methods; data.table's key-based ordering can interfere with geom expectations
+- The pipeline's grain-labeled outputs (Phase 89) rely on `as_tibble()` for consistent sheet naming
+
+**Consequences:**
+- **Incorrect grain labels**: Phase 89's `wb$add_worksheet("episode_grain_...")` may fail if data.table print methods override expected behavior
+- **Lost metadata**: Grouped tibbles (e.g., `group_by(PATID)`) lose grouping when converted to data.table, breaking downstream summarise() calls
+- **Subtle visual bugs**: ggalluvial flows may render in unexpected order if data.table keys override factor levels
+- **Test fixture failures**: Local testing with synthetic data (Phase 84) may pass, but HiPerGator production outputs differ
+
+**Prevention:**
+1. **Explicit conversion at I/O boundaries**:
+   ```r
+   # Before openxlsx2 export
+   episodes_for_export <- as_tibble(episodes_dt)
+   wb$add_data("Episodes", episodes_for_export)
+
+   # Before ggplot2 (usually not needed, but defensive)
+   ggplot(as.data.frame(episodes_dt), aes(...))
+   ```
+
+2. **Preserve conversion checkpoints in optimization workflow**:
+   ```r
+   # Pattern: Optimize with data.table, convert before return
+   optimize_treatment_summary <- function(episodes_tbl) {
+     dt <- as.data.table(episodes_tbl)
+     # ... fast data.table operations ...
+     result_dt[, summary_col := compute(...)]
+
+     # Convert back to tibble before returning
+     as_tibble(result_dt)
+   }
+   ```
+
+3. **Test both tibble and data.table outputs**:
+   ```r
+   # In smoke test R/88 Section 36: Data.table Optimization Parity
+   check("Treatment episodes tibble-compatible", inherits(episodes, "tbl_df"))
+   check("No unexpected keys set", is.null(attr(episodes, "sorted")))
+   ```
+
+4. **Document conversion points in migration plan**:
+   ```markdown
+   Phase X script optimization map:
+   - R/60: Optimize drug grouping (data.table internally, return tibble)
+   - R/28: Optimize episode assembly (data.table internally, return tibble)
+   - R/11: Keep as tibble (already fast, openxlsx2 dependency)
+   ```
+
+**Detection:**
+- Run full pipeline end-to-end and compare `output/*.xlsx` file sizes and sheet counts
+- Check for new warnings like `"Coercing data.table to data.frame"` in logs
+- Validate ggplot2 outputs visually: save PNGs before/after optimization and diff
+- Smoke test: `waldo::compare()` on critical output structures (columns, row counts, data types)
+
+## Moderate Pitfalls
+
+### Pitfall 4: NSE Variable Name Collisions in Programmatic Code
+
+**What goes wrong:** data.table's non-standard evaluation (NSE) treats bare names inside `DT[...]` as column references, conflicting with programmatic column name construction via variables.
+
+**Example scenario:**
+```r
+# Dynamic column creation in utils functions
+add_category_column <- function(dt, lookup_map, key_col, output_col) {
+  # FAILS: output_col is interpreted as literal column name "output_col"
+  dt[, output_col := lookup_map[get(key_col)]]
+
+  # CORRECT: Use parentheses for variable evaluation
+  dt[, (output_col) := lookup_map[get(key_col)]]
+}
+
+# Multiple column operations with character vectors
+treatment_cols <- c("chemo_flag", "radiation_flag", "sct_flag")
+# FAILS: Tries to find column named "treatment_cols"
+episodes_dt[, treatment_cols := lapply(.SD, as.integer), .SDcols = treatment_cols]
+
+# CORRECT: Wrap in parentheses
+episodes_dt[, (treatment_cols) := lapply(.SD, as.integer), .SDcols = treatment_cols]
+```
+
+**Why it happens:** data.table's NSE design optimizes for interactive use ("inside `DT[...]`, column names are variables") but requires special syntax for programmatic access. The pipeline's named predicate functions (`has_*`, `with_*`) and DRY utility functions (Phase 73) use programmatic column references.
+
+**Prevention:**
+- Use `(variable_name)` on LHS of `:=` for programmatic column names
+- Use `get("col_name")` or `.SD` for RHS column references
+- Test utility functions with multiple column name variations
+- Document NSE requirements in function headers
+
+**Detection:**
+- Error messages: `"object 'col_var' not found"` or `"column 'col_var' not found"`
+- Unit tests for utility functions with various column name inputs
+- Code review: grep for `:=` without parentheses in functions with parameters
+
+### Pitfall 5: DuckDB collect() Interactions with data.table
+
+**What goes wrong:** Mixing DuckDB's lazy evaluation (collect()) with data.table's reference semantics creates inconsistent behavior depending on backend (USE_DUCKDB flag).
+
+**Example scenario:**
+```r
+# R/28 treatment episode assembly (Phase 31 DuckDB migration)
+if (USE_DUCKDB) {
+  # DuckDB path: Returns tibble after collect()
+  encounters <- get_pcornet_table("ENCOUNTER")  # lazy tbl_duckdb
+  episodes <- encounters %>%
+    filter(condition) %>%
+    collect()  # Now a tibble
+} else {
+  # RDS path: Returns data.frame
+  encounters <- readRDS("ENCOUNTER.rds")
+}
+
+# Later optimization converts to data.table
+setDT(episodes)  # Works if tibble, works if data.frame
+episodes[, new_col := compute()]  # Mutates in place
+
+# PROBLEM: If USE_DUCKDB=TRUE, episodes is a local tibble (mutation OK)
+#          If USE_DUCKDB=FALSE and encounters cached in .GlobalEnv, mutation propagates!
+```
+
+**Why it happens:**
+- DuckDB `collect()` always returns a new tibble (no reference to source)
+- RDS backend may reuse cached data.frames across scripts if not carefully scoped
+- Backend abstraction (get_pcornet_table dispatcher, Phase 30) hides this difference
+- Optimization changes copy behavior depending on backend
+
+**Prevention:**
+1. **Explicit copy in backend abstraction**:
+   ```r
+   # In utils_duckdb.R get_pcornet_table()
+   if (USE_DUCKDB) {
+     dplyr::collect(tbl(db_connection, table_name))
+   } else {
+     data.table::copy(readRDS(rds_path))  # Ensure fresh copy
+   }
+   ```
+
+2. **Document mutation assumptions in optimization**:
+   ```r
+   # Function header comment
+   # MUTATES: Input `cohort` is modified in place (data.table reference semantics)
+   # REQUIRES: Caller must pass copy() if original should be preserved
+   ```
+
+3. **Parity testing between backends**:
+   ```r
+   # Smoke test Section 37: Backend Parity
+   # Run same script with USE_DUCKDB=TRUE vs FALSE, compare outputs
+   ```
+
+**Detection:**
+- Run pipeline with `USE_DUCKDB=TRUE` vs `FALSE`, diff outputs
+- Check object addresses with `data.table::address()` before and after optimization
+- Validate RDS cache doesn't contain mutated objects (reload from disk, compare to memory version)
+
+### Pitfall 6: Group-by Memory Explosion with Unoptimized Aggregations
+
+**What goes wrong:** Converting tidyverse `group_by() %>% summarise()` to data.table `[, by = ]` naively can trigger Cartesian products or n² memory allocation if join conditions are missed.
+
+**Example scenario:**
+```r
+# BEFORE: dplyr same-day payer resolution (R/36)
+same_day_encounters %>%
+  group_by(PATID, ADMIT_DATE) %>%
+  summarise(
+    payer_modes = paste(unique(payer_category), collapse = ", "),
+    .groups = "drop"
+  )
+
+# AFTER: data.table (NAIVE, DANGEROUS)
+same_day_dt[, .(payer_modes = paste(unique(payer_category), collapse = ", ")),
+            by = .(PATID, ADMIT_DATE)]
+# Looks equivalent BUT...
+
+# If same_day_dt has millions of rows and ADMIT_DATE isn't keyed/indexed,
+# data.table may build full Cartesian product internally before grouping
+```
+
+**Why it happens:**
+- data.table's `by` without keys/indices scans full table
+- Pipeline's ENCOUNTER table on HiPerGator has 5M+ rows (per PROJECT.md context: "large PCORnet datasets")
+- Phase 35's same-day payer resolution iterates over duplicate PATID+ADMIT_DATE combinations
+- Missing secondary indices cause vector scans instead of binary search
+
+**Prevention:**
+1. **Set keys before group-by operations**:
+   ```r
+   setkey(same_day_dt, PATID, ADMIT_DATE)
+   same_day_dt[, .(payer_modes = paste(unique(payer_category), collapse = ", ")),
+               by = .(PATID, ADMIT_DATE)]
+   ```
+
+2. **Use secondary indices for multi-column groups**:
+   ```r
+   setindex(same_day_dt, PATID, ADMIT_DATE)
+   # Subsequent grouping operations use index automatically
+   ```
+
+3. **Benchmark before production deployment**:
+   ```r
+   # Test on subset
+   microbenchmark::microbenchmark(
+     dplyr_version = old_summarise_logic(test_data),
+     dt_version = new_dt_logic(test_data),
+     times = 10
+   )
+   ```
+
+**Detection:**
+- Monitor memory usage with `bench::mark(memory = TRUE)`
+- Log execution time for group-by operations (utils_attrition.R already logs timing)
+- Compare row counts: output rows should ≤ input rows (Cartesian product produces more)
+
+## Minor Pitfalls
+
+### Pitfall 7: renv Snapshot with data.table Development Version
+
+**What goes wrong:** data.table's development version (1.18.99 from GitLab) may be in renv.lock if installed during development, breaking `renv::restore()` on HiPerGator.
+
+**Prevention:** Pin to CRAN version 1.18.4 (May 2026 stable release) in renv.lock before milestone deployment.
+
+**Detection:** Check `renv.lock` for data.table version ≥ 1.19 or non-CRAN source before deployment.
+
+### Pitfall 8: Named Vector Row Order Differs from Join Order
+
+**What goes wrong:** Named vector lookups preserve input row order; data.table joins may reorder rows if keys are set.
+
+**Prevention:** Use `setorder()` after joins to restore original PATID order for output consistency.
+
+**Detection:** Compare `head(output$PATID, 100)` before and after optimization.
+
+### Pitfall 9: Lost Tidylog Automatic Logging
+
+**What goes wrong:** tidylog (Phase 15) wraps dplyr verbs to log row counts. data.table operations bypass this, losing automatic attrition logging.
+
+**Prevention:**
+- Keep utils_attrition.R manual logging for data.table operations
+- Wrap data.table operations in `log_attrition_step()` calls
+
+**Detection:** Check output logs for missing attrition step counts after optimization.
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Named vector → join migration | Pitfall 1 (reference semantics), Pitfall 2 (factor/character) | Use `copy()`, coerce to character, validate join coverage |
+| Hot-path script optimization (R/60, R/28, R/36) | Pitfall 6 (group-by memory), Pitfall 5 (DuckDB interaction) | Set keys/indices, test both backends, benchmark subsets |
+| Lookup table joins (AMC_PAYER_LOOKUP, CODE_SUBCATEGORY_MAP) | Pitfall 1 (mutation), Pitfall 8 (row reordering) | Never convert config to data.table globally, use `setorder()` post-join |
+| Output generation (openxlsx2, ggplot2) | Pitfall 3 (downstream compatibility) | Convert to tibble before `wb$add_data()`, test visual outputs |
+| Utility function refactoring (utils_payer.R, utils_treatment.R) | Pitfall 4 (NSE collisions) | Use `(var)` for programmatic `:=`, test with multiple column names |
+| Smoke test validation (R/88 expansion) | All pitfalls need detection | Add Section 36-37 for optimization parity and backend consistency |
 
 ## Sources
 
-**Oncology Coding & Treatment Classification:**
-- [Oncology 2026 CPT Codes + Modifiers](https://questns.com/oncology-cpt-codes-for-2026-modifiers/) — Radiation delivery code restructuring (77402/77407/77412), deleted codes (77385/77386/77014)
-- [Coding Changes Threaten Cancer Care](https://www.oncologynewscentral.com/oncology/coding-changes-threaten-cancer-care) — Financial impact of code changes (30-40% revenue decline)
-- [Development and Utility of Cancer Medications Enquiry Database](https://pmc.ncbi.nlm.nih.gov/articles/PMC7868035/) — Medication code misclassification, varying therapy definitions across studies
+**HIGH Confidence:**
+- [data.table Reference Semantics (CRAN Vignette)](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reference-semantics.html) — Official documentation on copy() usage and mutation behavior
+- [data.table Joins (CRAN Vignette)](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-joins.html) — Official guide to key-based joins, NA handling, Cartesian product warnings
+- [data.table NEWS.md](https://github.com/Rdatatable/data.table/blob/master/NEWS.md) — Version 1.18.2-1.18.4 bug fixes for factor joins and UTF-8 matching
+- [data.table Package Documentation (CRAN, May 2026)](https://cran.r-project.org/web/packages/data.table/data.table.pdf) — Version 1.18.4 official reference
+- [openxlsx2 Package Documentation (May 2026)](https://cran.r-project.org/web/packages/openxlsx2/openxlsx2.pdf) — Compatibility with data.frame variants
 
-**Clinical Data Pipeline & Metadata Enrichment:**
-- [9 Common Data Quality Problems 2026](https://www.ovaledge.com/blog/data-quality-problems) — Duplicate records without unique IDs
-- [Data Pipeline Quality Validation Tool](https://pmc.ncbi.nlm.nih.gov/articles/PMC12878310/) — Low quality data capture barriers, validation strategies
-- [How to Audit Data Enrichment Workflows in 2026](https://versium.com/blog/how-to-audit-data-enrichment-workflows-in-2026/) — Pre-enrichment validation, post-enrichment match review
-- [Healthcare Data Cleansing & Enrichment](https://www.symmetrichealthsolutions.com/data-cleansing-enrichment-attribution) — Enriching dirty data embeds inaccuracies
+**MEDIUM Confidence:**
+- [dtplyr: Data Table Backend for dplyr](https://dtplyr.tidyverse.org/) — Lazy evaluation patterns for mixing dplyr and data.table
+- [Column Assignment and Reference Semantics (rdatatable-community)](https://rdatatable-community.github.io/The-Raft/posts/2024-02-18-dt_particularities-toby_hocking/) — Common gotchas from data.table maintainers
+- [Data science: data.table and tidyverse (Hause Tutorials)](https://hausetutorials.netlify.app/0002_tidyverse_datatable) — Anti-patterns when mixing approaches
+- [Waldo Package](https://waldo.r-lib.org/) — Testing verification for comparing pre/post optimization results
+- [renv on HPC (NYU HPC Guide)](https://sites.google.com/nyu.edu/nyu-hpc/hpc-systems/greene/software/r-packages-with-renv) — Package management best practices
 
-**R dplyr Joins & Data Integration:**
-- [R for Data Science (2e) - Joins](https://r4ds.hadley.nz/joins.html) — Many-to-many join pitfalls, row duplication from cross products
-- [dplyr mutate-joins reference](https://dplyr.tidyverse.org/reference/mutate-joins.html) — relationship = "many-to-one" assertion (dplyr 1.1+)
-- [Data Analysis in R - Joining with dplyr](https://medium.com/@imanjokko/data-analysis-in-r-series-vi-joining-data-using-dplyr-fc0a83f0f064) — NA handling in key columns (na_matches parameter)
-
-**Schema Evolution & Backward Compatibility:**
-- [Backward Compatibility in Schema Evolution Guide](https://www.dataexpert.io/blog/backward-compatibility-schema-evolution-guide) — Providing default values for new fields
-- [Backward Compatible Database Changes](https://planetscale.com/blog/backward-compatible-databases-changes) — Additive changes (new columns) vs breaking changes
-- [Data Lineage & Impact Analysis](https://atlan.com/know/data-lineage-impact-analysis/) — Downstream failures from column additions/removals
-- [Schema Evolution Tools That Don't Break Downstream](https://medium.com/@reliabledataengineering/15-schema-evolution-tools-that-dont-break-downstream-d81e3be1dda8) — Null values for missing columns in old data
-
-**CAR-T & Treatment Classification:**
-- [Engineering Immunity: CAR-T Cell Therapy](https://www.mdpi.com/1422-0067/27/2/909) — CAR-T as transformative immunotherapy, advanced therapy medicinal products (ATMPs)
-- [Editorial: Cellular Immunotherapy](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12605324/) — CAR-T within broader immunotherapy landscape, TCR and CAR categories
-- [Stem Cell Transplant Conditioning Regimens](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12293537/) — Chemotherapy agents in conditioning (cyclophosphamide, busulfan, carmustine/BCNU, melphalan/BEAM)
-
-**PCORnet CDM & Data Quality:**
-- [Exploration of PCORnet Data Resources](https://ascopubs.org/doi/10.1200/CCI.19.00142) — Treatment procedures identified via CPT/HCPCS codes
-- [Evaluating Foundational Data Quality in PCORnet](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5983028/) — Data validation processing, quality remediation
-
-**Oncology Real-World Data Quality:**
-- [Strengthening Oncology Real-World Data Quality](https://www.pharmacytimes.com/view/q-a-strengthening-oncology-real-world-data-quality-through-clinically-relevant-edit-checks) — Edit checks for resectability, staging, treatment line definitions, biomarker testing gaps
-
----
-*Pitfalls research for: Treatment Metadata Enrichment for Oncology Data Pipelines*
-*Researched: 2026-06-07*
-*Focus: Adding F/S/E/N labels, medication names, code metadata, cross-use flags to existing Gantt exports while removing false-positive SCT codes*
+**Project-Specific Context (LOCAL):**
+- `.planning/PROJECT.md` — Pipeline structure, backend abstraction, DuckDB integration, output requirements
+- `R/00_config.R` — Named vector lookups (AMC_PAYER_LOOKUP, CODE_SUBCATEGORY_MAP, TREATMENT_CODES)
+- `R/88_smoke_test_comprehensive.R` — Existing validation patterns to extend for optimization parity
