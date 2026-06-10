@@ -82,7 +82,12 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
-(No active requirements — next milestone not yet defined)
+#### v3.0 Performance Optimization with data.table
+
+- [ ] Replace all named vector lookups with data.table keyed joins
+- [ ] Migrate hot-path scripts to data.table syntax
+- [ ] Optimize heavy group_by/summarise operations
+- [ ] Verify output correctness matches pre-optimization results
 
 ### Out of Scope
 
@@ -96,6 +101,17 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Stanford V / BEACOPP regimen identification — only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
+
+## Current Milestone: v3.0 Performance Optimization with data.table
+
+**Goal:** Replace named vector lookups and slow dplyr patterns with data.table joins and optimized operations across the full pipeline for significant speed gains on large PCORnet datasets.
+
+**Target features:**
+- Replace all named vector lookups (AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, TREATMENT_CODES, CANCER_SITE_MAP, TIER_MAPPING) with data.table keyed joins
+- Migrate hot-path scripts (R/60, R/28, classify_payer_tier, etc.) to data.table syntax
+- Optimize heavy group_by() %>% summarise() operations (e.g., R/60 same-day resolution)
+- Add data.table as a full project dependency
+- Preserve existing output correctness (results must match pre-optimization)
 
 ## Current State
 
@@ -250,7 +266,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 ## Constraints
 
 - **Runtime environment**: RStudio on UF HiPerGator (production) and local Windows (testing via IS_LOCAL flag)
-- **R packages**: tidyverse ecosystem (dplyr, ggplot2, stringr, lubridate), ggalluvial for Sankey, scales, janitor, glue
+- **R packages**: tidyverse ecosystem (dplyr, ggplot2, stringr, lubridate), data.table for performance-critical joins and aggregations, ggalluvial for Sankey, scales, janitor, glue
 - **Data access**: Raw CSVs on HiPerGator filesystem — paths configured in `R/00_config.R`
 - **HIPAA compliance**: All patient counts 1-10 must be suppressed in any output
 - **Code style**: Filtering logic uses named predicate functions (`has_*`, `with_*`, `exclude_*`) — no opaque one-liners
@@ -291,6 +307,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Fully-qualified DBI::/dplyr:: calls in R/88 Sections 32-33 | Avoids namespace pollution; smoke test only loads glue at top | ✓ Phase 85 |
 | Instance-level tables with descriptive names (R/57) | Patient-traceable rows with human-readable names enable clinical review | ✓ Phase 88 |
 | Dual wb$save() for backward compatibility | Old filenames preserved alongside new grain-labeled filenames | ✓ Phase 89 |
+| Adopt data.table for performance | Named vector lookups and dplyr group_by are bottlenecks at scale on ENCOUNTER table (millions of rows); data.table keyed joins are 10-50x faster | -- v3.0 |
 
 ## Evolution
 
@@ -310,4 +327,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-08 after v2.3 milestone*
+*Last updated: 2026-06-09 after v3.0 milestone start*
