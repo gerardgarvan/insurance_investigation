@@ -1,152 +1,75 @@
-# Roadmap: PCORnet Payer Variable Investigation (R Pipeline)
+# Roadmap: v3.0 Performance Optimization with data.table
 
-**Project:** PCORnet CDM Payer Analysis Pipeline (R)
-**Created:** 2026-03-24
+**Milestone:** v3.0 Performance Optimization with data.table
+**Goal:** Replace named vector lookups and slow dplyr patterns with data.table joins and optimized operations across the full pipeline for significant speed gains on large PCORnet datasets.
+**Created:** 2026-06-10
+**Status:** Not started
 
-## Milestones
+## Phases
 
-- **v1.0 MVP** — Phases 1-14 (shipped 2026-04-01)
-- **v1.1 RDS Cache & Viz Polish** — Phases 15-17 (shipped 2026-04-03)
-- **v1.2 Multi-Source Overlap** — Phases 18-23, 25 (shipped 2026-04-21; Phases 24/26/27/28 dropped)
-- **v1.3 DuckDB Backend Migration** — Phases 29-32 (shipped 2026-04-23)
-- **v1.4 AV+TH Subset Analysis** — Phase 33 (shipped 2026-04-27) — [archive](milestones/v1.4-ROADMAP.md)
-- **v1.5 Payer Analysis Expansion** — Phases 34-37 (shipped 2026-05-01) — [archive](milestones/v1.5-ROADMAP.md)
-- **v1.6 Treatment Code Validation & Cancer Site Analysis** — Phases 45-54 (shipped 2026-05-22) — [archive](milestones/v1.6-ROADMAP.md)
-- **v1.7 Cancer Summary Refinement & Gantt Enhancements** — Phases 55-59 (shipped 2026-05-28) — [archive](milestones/v1.7-ROADMAP.md)
-- **v1.8 Episode-Level Cancer Linkage & First-Line Therapy Identification** — Phases 60-63 (shipped 2026-06-01) — [archive](milestones/v1.8-ROADMAP.md)
-- **v2.0 Codebase Cleanup & Documentation** — Phases 65-74 (shipped 2026-06-02) — [archive](milestones/v2.0-ROADMAP.md)
-- **v2.1 Clinical Data Refinements & NLPHL Breakout** — Phases 75-82 (shipped 2026-06-03) — [archive](milestones/v2.1-ROADMAP.md)
-- **v2.2 Local Testing Infrastructure & Clinical Refinements** — Phases 83-89 (shipped 2026-06-05) — [archive](milestones/v2.2-ROADMAP.md)
-- **v2.3 Gantt Data Enrichment** — Phases 90-93 (active)
+- [ ] **Phase 95: Infrastructure Setup** - Add data.table infrastructure without changing behavior
+- [ ] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function
+- [ ] **Phase 97: R/60 Hot-Path Migration** - Migrate same-day payer resolution to data.table
+- [ ] **Phase 98: R/28 + Remaining Lookup Optimization** - Replace named vector lookups with keyed joins
 
-## v2.3 Gantt Data Enrichment
+## Phase Details
 
-### Phases
-
-- [x] **Phase 90: False-Positive SCT Code Removal** - Remove status/complication codes from treatment detection and validate impact (completed 2026-06-08)
-- [x] **Phase 91: Reference Data Loader & Metadata Enrichment** - Build xlsx lookup utility and enrich treatment episodes with per-code metadata (completed 2026-06-08)
-- [x] **Phase 92: Gantt v2 Schema Extension** - Extend Gantt exports with 5 new columns while preserving backward compatibility (completed 2026-06-08)
-- [x] **Phase 93: Cross-Use Flag Implementation** - Add temporal context logic for SCT conditioning and immunotherapy dual-purpose flags (completed 2026-06-08)
-
-### Phase Details
-
-#### Phase 90: False-Positive SCT Code Removal
-**Goal**: Remove 5 false-positive SCT codes (status/complication codes) from treatment detection
-**Depends on**: Nothing (prerequisite for enrichment)
-**Requirements**: CLEAN-01, CLEAN-02
+### Phase 95: Infrastructure Setup
+**Goal**: Data.table infrastructure added with zero behavior changes to existing pipeline
+**Depends on**: Nothing (first phase)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
 **Success Criteria** (what must be TRUE):
-  1. Five codes (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC) removed from R/00_config.R with documented rationale
-  2. Impact analysis documented showing affected episode counts before removal
-  3. Smoke test Section 15 validates deprecated codes absent from new treatment_episodes output
-  4. No SCT episodes triggered solely by status/complication codes in cohort pipeline
-**Plans:** 1/1 plans complete
+  1. User can run `renv::status()` and see data.table 1.18.4+ installed
+  2. User can source R/utils/utils_dt.R and call ensure_dt(), to_tibble_safe(), get_lookup_dt() without errors
+  3. User can run existing R/60_tiered_same_day_payer.R unchanged and outputs match pre-Phase-95 baseline
+  4. User can access LOOKUP_TABLES_DT$AMC_PAYER_LOOKUP in R console and see keyed data.table with 234 rows
+**Plans**: TBD
 
-Plans:
-- [x] 90-01-PLAN.md — Remove 5 codes from DRUG_GROUPINGS and add smoke test Section 15c
-
-#### Phase 91: Reference Data Loader & Metadata Enrichment
-**Goal**: Integrate all_codes_resolved2.xlsx metadata into treatment episode pipeline
-**Depends on**: Phase 90 (clean code list before enrichment)
-**Requirements**: GANTT-01, GANTT-02, GANTT-03, GANTT-04, GANTT-05
+### Phase 96: classify_payer_tier_dt() Implementation
+**Goal**: Data.table variant of classify_payer_tier() function validated with output parity
+**Depends on**: Phase 95 (LOOKUP_TABLES_DT infrastructure)
+**Requirements**: PAYER-01, PAYER-02
 **Success Criteria** (what must be TRUE):
-  1. R/utils/utils_xlsx_lookups.R extracts medication names, code types, source tables, F/S/E/N labels, and cross-use flags from 8 xlsx sheets
-  2. Pre-join validation prevents many-to-many row explosion (deduplication enforced)
-  3. R/28 episode classification enriched with 5 new columns via left_join with relationship assertion
-  4. Unresolved classifications (TBD codes) exported separately for clinical SME review rather than propagating NA values
-  5. treatment_episodes.rds contains medication_name, code_type, source_table, treatment_line, and sct_cross_use_flag columns
-**Plans:** 1/1 plans complete
+  1. User can call classify_payer_tier_dt() on 1000-row fixture data and receive tibble with payer_category column matching classify_payer_tier() output
+  2. User can run smoke test Section 15 and see parity assertion pass between classify_payer_tier() and classify_payer_tier_dt()
+  3. User can inspect function header and see reference semantics documented with copy() usage at entry point
+  4. User can call classify_payer_tier_dt() on factor-column input and see explicit as.character() coercion without NA matches
+**Plans**: TBD
 
-Plans:
-- [x] 91-01-PLAN.md — Create xlsx lookup utility, enrich R/28 with 5 metadata columns, add smoke test Section 15d
-
-#### Phase 92: Gantt v2 Schema Extension
-**Goal**: Extend Gantt CSV exports with enriched metadata columns while maintaining v1 compatibility
-**Depends on**: Phase 91 (enriched episode data available)
-**Requirements**: GANTT-06, GANTT-07
+### Phase 97: R/60 Hot-Path Migration
+**Goal**: Same-day payer resolution script migrated to data.table with 5-20x speedup and output parity
+**Depends on**: Phase 96 (classify_payer_tier_dt function)
+**Requirements**: PERF-01, PERF-02, VALID-02
 **Success Criteria** (what must be TRUE):
-  1. gantt_episodes_v2.csv extends from 16 to 21 columns (5 new columns appended at end)
-  2. gantt_detail_v2.csv extends from 14 to 19 columns (5 new columns appended at end)
-  3. Existing v1 Gantt exports (R/51 output) unchanged and functional (backward compatible)
-  4. Smoke test Section 15e validates 21-column schema with correct column order
-  5. Death/HL Diagnosis pseudo-rows populate new columns with NA appropriately
-**Plans:** 1/1 plans complete
+  1. User can run R/60_tiered_same_day_payer.R on production HiPerGator data and see CSV outputs identical to pre-optimization (diff shows no changes)
+  2. User can inspect script header and see runtime benchmark log showing before/after execution times
+  3. User can run smoke test R/88 Section 15f and see same-day payer resolution validation pass
+  4. User can trace group_by PATID+ADMIT_DATE operations and see data.table [, by=] syntax with setkey() before aggregation
+**Plans**: TBD
 
-Plans:
-- [x] 92-01-PLAN.md — Extend R/52 column selection with 5 metadata columns, add smoke test Section 15e
-
-#### Phase 93: Cross-Use Flag Implementation
-**Goal**: Add temporal context logic for drugs with dual treatment intent (SCT conditioning vs standalone chemotherapy/immunotherapy)
-**Depends on**: Phase 92 (basic enrichment working)
-**Requirements**: IMMU-01, IMMU-02
+### Phase 98: R/28 + Remaining Lookup Optimization
+**Goal**: Episode classification and remaining lookup-heavy scripts migrated to keyed joins with correctness validation
+**Depends on**: Phase 97 (hot-path migration pattern validated)
+**Requirements**: PERF-03, PERF-04, VALID-01
 **Success Criteria** (what must be TRUE):
-  1. Temporal context flags identify codes used within 30 days before SCT episode start (is_sct_conditioning_context)
-  2. Questionable immunotherapy codes flagged with confidence column distinguishing vitamin combos from CAR-T classification ambiguity
-  3. Category aggregation rules documented to prevent cross-use flags from causing treatment sums exceeding 100%
-  4. Smoke test validates primary category sum equals total episode count (mutual exclusivity)
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 93-01-PLAN.md — Add QUESTIONABLE_IMMUNO_CODES config, enrich R/28 with temporal context + confidence columns, extend R/52 Gantt v2 schema to 22/20, add smoke test Section 15f
-
-### Progress Table
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 90. False-Positive SCT Code Removal | 1/1 | Complete    | 2026-06-08 |
-| 91. Reference Data Loader & Metadata Enrichment | 1/1 | Complete    | 2026-06-08 |
-| 92. Gantt v2 Schema Extension | 1/1 | Complete    | 2026-06-08 |
-| 93. Cross-Use Flag Implementation | 1/1 | Complete    | 2026-06-08 |
-
-## Remaining Phases (Unassigned)
-
-- [x] **Phase 38: Chemo Treatment Inventory by Source Table** (completed 2026-05-05)
-- [x] **Phase 39: Investigate Unmatched Codes** (completed 2026-05-04)
-- [x] **Phase 40: Investigate Unmatched NDC Codes** (completed 2026-05-05)
-- [x] **Phase 41: Combine NDC and HCPCS Reports** (completed 2026-05-05)
-- [x] **Phase 42: Treatment Codes Resolved XLSX (All Types)** (completed 2026-05-05)
-- [x] **Phase 43: Establish Treatment Lengths for SCT, Chemo, and Radiation** (completed 2026-05-05)
-- [x] **Phase 44: Treatment Episode Start/Stop Dates** (completed 2026-05-11)
-- [x] **Phase 45: Tiered Encounter-Level Payer Assignment** (completed 2026-05-12)
-- [x] **Phase 46: Tiered Date-Level Payer Assignment** (completed 2026-05-12)
+  1. User can run R/28_episode_classification.R and see treatment_episodes.rds structure unchanged (22 columns, same order, same row count)
+  2. User can grep for "DRUG_GROUPINGS\[" and see zero matches (all named vector lookups replaced with keyed joins)
+  3. User can run full smoke test R/88 and see all 35 sections pass
+  4. User can inspect R/28 and see DRUG_GROUPINGS keyed join syntax with on= parameter instead of named vector indexing
+**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
-| Phase | Milestone | Status | Completed |
-|-------|-----------|--------|-----------|
-| 1-14 | v1.0 | Complete | 2026-04-01 |
-| 15-17 | v1.1 | Complete | 2026-04-03 |
-| 18-23, 25 | v1.2 | Complete | 2026-04-21 |
-| 24, 26-28 | v1.2 (deferred) | Dropped | 2026-05-05 |
-| 29-32 | v1.3 | Complete | 2026-04-23 |
-| 33 | v1.4 | Complete | 2026-04-24 |
-| 34-37 | v1.5 | Complete | 2026-05-01 |
-| 38-44 | Unassigned | Complete | 2026-05-12 |
-| 45-54 | v1.6 | Complete | 2026-05-22 |
-| 55-59 | v1.7 | Complete | 2026-05-28 |
-| 60-63 | v1.8 | Complete | 2026-06-01 |
-| 64 | v1.8 | Complete | 2026-06-01 |
-| 65-74 | v2.0 | Complete | 2026-06-02 |
-| 75-82 | v2.1 | Complete | 2026-06-03 |
-| 83-89 | v2.2 | Complete | 2026-06-05 |
-| 90-93 | v2.3 | Active | - |
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 95. Infrastructure Setup | 0/0 | Not started | - |
+| 96. classify_payer_tier_dt() Implementation | 0/0 | Not started | - |
+| 97. R/60 Hot-Path Migration | 0/0 | Not started | - |
+| 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
 
-### Phase 94: Make proton therapy a distinct category from radiation
+## Next Steps
 
-**Goal:** Separate proton beam therapy (CPT 77520, 77522, 77523, 77525) from the general "Radiation" category into a distinct "Proton Therapy" treatment category across the entire pipeline
-**Depends on:** Phase 93
-**Requirements**: PROTON-01, PROTON-02, PROTON-03, PROTON-04, PROTON-05, PROTON-06
-**Success Criteria** (what must be TRUE):
-  1. TREATMENT_TYPES has 5 elements with "Proton Therapy" as distinct category
-  2. DRUG_GROUPINGS maps 77520/77522/77523/77525 to "Proton Therapy" (not "Radiation")
-  3. has_proton() predicate in R/10 detects proton evidence; HAD_PROTON flag in cohort
-  4. R/25 and R/26 dispatch "Proton Therapy" to dedicated extraction functions
-  5. R/20 has extract_proton_codes() for treatment inventory
-  6. Smoke test validates category split with no double-counting
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 94-01-PLAN.md — Split proton codes from Radiation config, add has_proton() predicate, cohort integration, episode/duration dispatch
-- [x] 94-02-PLAN.md — Add extract_proton_codes() to treatment inventory, smoke test Section 15g for category split validation
-
----
-*Last updated: 2026-06-09 -- Phase 94 planned (2 plans)*
+1. Review roadmap for accuracy and completeness
+2. Run `/gsd:plan-phase 95` to create execution plan for Infrastructure Setup
+3. After plan approval, run `/gsd:execute-phase 95` to start implementation
