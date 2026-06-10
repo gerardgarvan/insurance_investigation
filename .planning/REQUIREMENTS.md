@@ -1,66 +1,54 @@
 # Requirements: PCORnet Payer Variable Investigation (R Pipeline)
 
-**Defined:** 2026-06-07
-**Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
+**Defined:** 2026-06-09
+**Core Value:** A working cohort filter chain that reads like a clinical protocol -- with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## v2.3 Requirements
+## v3.0 Requirements
 
-Requirements for Gantt Data Enrichment milestone. Each maps to roadmap phases.
+Requirements for performance optimization milestone. Each maps to roadmap phases.
 
-### Code Cleanup
+### Infrastructure
 
-- [x] **CLEAN-01**: Remove 5 false-positive SCT codes (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC) from treatment detection pipeline
-- [x] **CLEAN-02**: Smoke test updated to verify removed codes no longer produce SCT episodes
+- [ ] **INFRA-01**: data.table 1.18.4+ added as project dependency in renv.lock
+- [ ] **INFRA-02**: R/utils/utils_dt.R created with conversion helpers (ensure_dt, to_tibble_safe, get_lookup_dt)
+- [ ] **INFRA-03**: LOOKUP_TABLES_DT list in R/00_config.R with 6 keyed data.tables (AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP, TIER_MAPPING, TREATMENT_CODES)
+- [ ] **INFRA-04**: All existing scripts run unchanged after infrastructure addition (zero behavior change)
 
-### Gantt Enrichment
+### Payer Classification
 
-- [x] **GANTT-01**: Gantt v2 episodes CSV includes medication_name column (human-readable from xlsx column C)
-- [x] **GANTT-02**: Gantt v2 episodes CSV includes code_type column (RXNORM, CPT/HCPCS, ICD-10-CM)
-- [x] **GANTT-03**: Gantt v2 episodes CSV includes source_table column (PRESCRIBING, PROCEDURES, DIAGNOSIS)
-- [x] **GANTT-04**: Gantt v2 episodes CSV includes treatment_line column (F/S/E/N per triggering code)
-- [x] **GANTT-05**: Gantt v2 episodes CSV includes cross_use_flag column (SCT conditioning / immunotherapy cross-use)
-- [x] **GANTT-06**: Gantt v2 detail CSV includes same 5 new columns at per-date level
-- [x] **GANTT-07**: Existing v1 Gantt exports unchanged (backward compatible)
+- [ ] **PAYER-01**: classify_payer_tier_dt() function using keyed joins and fcase() logic alongside existing dplyr version
+- [ ] **PAYER-02**: Output parity between classify_payer_tier() and classify_payer_tier_dt() validated on fixture data
 
-### Immunotherapy Flagging
+### Hot-Path Optimization
 
-- [x] **IMMU-01**: Questionable immunotherapy codes (8 vitamin combos, 2 CAR-T) flagged with confidence column in Gantt output
-- [x] **IMMU-02**: Flag values distinguish vitamin combos ("questionable--vitamin") from CAR-T ambiguity ("questionable--CAR-T vs immunotherapy")
+- [ ] **PERF-01**: R/60 same-day payer resolution migrated to data.table by= aggregation
+- [ ] **PERF-02**: R/60 CSV outputs identical pre/post optimization (diff validation)
+- [ ] **PERF-03**: R/28 episode classification lookups replaced with keyed joins
+- [ ] **PERF-04**: R/28 treatment_episodes.rds structure unchanged (same columns, same order)
 
-## Phase 94 Requirements
+### Validation
 
-Requirements for Proton Therapy category split. Maps to Phase 94.
-
-### Proton Therapy Category Split
-
-- [x] **PROTON-01**: 4 proton CPT codes (77520, 77522, 77523, 77525) mapped to "Proton Therapy" in DRUG_GROUPINGS (removed from "Radiation")
-- [x] **PROTON-02**: TREATMENT_TYPES expanded to 5 elements with "Proton Therapy" as distinct category
-- [x] **PROTON-03**: has_proton() predicate detects proton therapy evidence; HAD_PROTON flag in cohort
-- [x] **PROTON-04**: Episode detection (R/26) and duration analysis (R/25) dispatch "Proton Therapy" to dedicated extraction functions
-- [x] **PROTON-05**: Treatment inventory (R/20) has extract_proton_codes() for proton-specific code frequency reporting
-- [x] **PROTON-06**: Smoke test validates proton category split: config vectors, code mappings, no double-counting, all new functions exist
+- [ ] **VALID-01**: Smoke test R/88 passes with all existing sections after optimization
+- [ ] **VALID-02**: Runtime benchmark logged (before/after timings for optimized scripts)
 
 ## Future Requirements
 
-Deferred to future release. Tracked but not in current roadmap.
+### Extended Optimization (v3.1+)
 
-### Treatment Line Refinement
-
-- **TREAT-01**: Resolve immunotherapy classification questions with collaborators (vitamin combos, CAR-T)
-- **TREAT-02**: SCT conditioning temporal window validation (30-day vs 14-day with clinical SME)
-- **TREAT-03**: Multi-line therapy sequencing (requires episode boundary formalization)
+- **PERF-05**: R/02 payer harmonization case_when replacement with fcase()
+- **PERF-06**: R/11 treatment payer lookup optimization
+- **PERF-07**: dtplyr fallback path for scripts not worth full data.table migration
+- **PERF-08**: Rolling joins for temporal payer lookups (treatment date +/-30 days)
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
-| Supportive Care codes in Gantt | User chose treatment codes only (Chemo, Rad, SCT, Immuno) |
-| Unrelated codes in Gantt | Not clinically meaningful for treatment timeline visualization |
-| Resolving immunotherapy classification | Collaborators haven't weighed in yet -- flag only |
-| Gantt v1 schema changes | Backward compatibility required; enrichment goes to v2 only |
-| Impact analysis before SCT code removal | User chose direct removal without formal impact report |
+| Complete dplyr removal | Conflicts with named predicate readability requirement (has_*, with_*, exclude_*) |
+| collapse package adoption | Unnecessary third syntax paradigm; data.table covers all project use cases |
+| DuckDB replacement | data.table is in-memory only; DuckDB provides disk-backed lazy queries for 1-5GB CSVs |
+| Factor-level encoding for payer categories | 8-category system sees negligible memory savings, added join complexity |
+| Native data.table in all 77 scripts | Over-optimization; 90% process <100K rows where dplyr is adequate |
 
 ## Traceability
 
@@ -68,30 +56,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLEAN-01 | Phase 90 | Complete |
-| CLEAN-02 | Phase 90 | Complete |
-| GANTT-01 | Phase 91 | Complete |
-| GANTT-02 | Phase 91 | Complete |
-| GANTT-03 | Phase 91 | Complete |
-| GANTT-04 | Phase 91 | Complete |
-| GANTT-05 | Phase 91 | Complete |
-| GANTT-06 | Phase 92 | Complete |
-| GANTT-07 | Phase 92 | Complete |
-| IMMU-01 | Phase 93 | Complete |
-| IMMU-02 | Phase 93 | Complete |
-| PROTON-01 | Phase 94 | Planned |
-| PROTON-02 | Phase 94 | Planned |
-| PROTON-03 | Phase 94 | Planned |
-| PROTON-04 | Phase 94 | Planned |
-| PROTON-05 | Phase 94 | Planned |
-| PROTON-06 | Phase 94 | Planned |
+| INFRA-01 | Phase 95 | Pending |
+| INFRA-02 | Phase 95 | Pending |
+| INFRA-03 | Phase 95 | Pending |
+| INFRA-04 | Phase 95 | Pending |
+| PAYER-01 | Phase 96 | Pending |
+| PAYER-02 | Phase 96 | Pending |
+| PERF-01 | Phase 97 | Pending |
+| PERF-02 | Phase 97 | Pending |
+| PERF-03 | Phase 98 | Pending |
+| PERF-04 | Phase 98 | Pending |
+| VALID-01 | Phase 98 | Pending |
+| VALID-02 | Phase 97 | Pending |
 
 **Coverage:**
-- v2.3 requirements: 11 total (complete)
-- Phase 94 requirements: 6 total
-- Mapped to phases: 17
+- v3.0 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0
 
 ---
-*Requirements defined: 2026-06-07*
-*Last updated: 2026-06-09 after Phase 94 planning (6 new requirements)*
+*Requirements defined: 2026-06-09*
+*Last updated: 2026-06-09 after initial definition*
