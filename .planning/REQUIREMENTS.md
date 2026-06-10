@@ -10,8 +10,8 @@ Requirements for performance optimization milestone. Each maps to roadmap phases
 ### Infrastructure
 
 - [ ] **INFRA-01**: data.table 1.18.4+ added as project dependency in renv.lock
-- [ ] **INFRA-02**: R/utils/utils_dt.R created with conversion helpers (ensure_dt, to_tibble_safe, get_lookup_dt)
-- [ ] **INFRA-03**: LOOKUP_TABLES_DT list in R/00_config.R with 6 keyed data.tables (AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP, TIER_MAPPING, TREATMENT_CODES)
+- [x] **INFRA-02**: R/utils/utils_dt.R created with conversion helpers (ensure_dt, to_tibble_safe, get_lookup_dt)
+- [x] **INFRA-03**: LOOKUP_TABLES_DT list in R/00_config.R with 6 keyed data.tables (AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP, TIER_MAPPING, TREATMENT_CODES)
 - [ ] **INFRA-04**: All existing scripts run unchanged after infrastructure addition (zero behavior change)
 
 ### Payer Classification
@@ -57,8 +57,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 95 | Pending |
-| INFRA-02 | Phase 95 | Pending |
-| INFRA-03 | Phase 95 | Pending |
+| INFRA-02 | Phase 95 | Complete |
+| INFRA-03 | Phase 95 | Complete |
 | INFRA-04 | Phase 95 | Pending |
 | PAYER-01 | Phase 96 | Pending |
 | PAYER-02 | Phase 96 | Pending |

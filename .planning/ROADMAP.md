@@ -23,9 +23,9 @@
   2. User can source R/utils/utils_dt.R and call ensure_dt(), to_tibble_safe(), get_lookup_dt() without errors
   3. User can run existing R/60_tiered_same_day_payer.R unchanged and outputs match pre-Phase-95 baseline
   4. User can access LOOKUP_TABLES_DT$AMC_PAYER_LOOKUP in R console and see keyed data.table with 234 rows
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 95-01-PLAN.md -- Create utils_dt.R conversion helpers and LOOKUP_TABLES_DT keyed data.tables in R/00_config.R
+- [x] 95-01-PLAN.md -- Create utils_dt.R conversion helpers and LOOKUP_TABLES_DT keyed data.tables in R/00_config.R
 - [ ] 95-02-PLAN.md -- Validation script and human verification of zero behavior change
 
 ### Phase 96: classify_payer_tier_dt() Implementation
@@ -66,7 +66,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 95. Infrastructure Setup | 0/2 | Planned | - |
+| 95. Infrastructure Setup | 1/2 | In Progress|  |
 | 96. classify_payer_tier_dt() Implementation | 0/0 | Not started | - |
 | 97. R/60 Hot-Path Migration | 0/0 | Not started | - |
 | 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
