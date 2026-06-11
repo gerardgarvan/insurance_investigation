@@ -49,7 +49,7 @@
 #    10. drug_names (chr) - Semicolon-separated generic drug names (Phase 64 cleanup)
 #    11. triggering_code_descriptions (chr) - Semicolon-separated descriptions (Phase 64 cleanup)
 #    12. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
-#    13. is_hodgkin (lgl) - TRUE if cancer_category contains "Hodgkin Lymphoma" (Phase 99)
+#    13. is_hodgkin (lgl) - TRUE if cancer_category contains "Hodgkin" but not "Non-Hodgkin" (Phase 99)
 #    14. regimen_label (chr) - Regimen name: "ABVD", "BV+AVD", "Nivo+AVD", or empty (Phase 61)
 #    15. is_first_line (lgl) - TRUE if episode is first-line therapy, NA for non-treatments (Phase 62)
 #    16. drug_group (chr) - Semicolon-separated drug category labels (Phase 78)
@@ -74,7 +74,7 @@
 #     9. historical_flag (lgl) - Historical treatment flag
 #    10. triggering_code_description (chr) - Single code description (Phase 64 cleanup)
 #    11. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
-#    12. is_hodgkin (lgl) - TRUE if cancer_category contains "Hodgkin Lymphoma" (Phase 99)
+#    12. is_hodgkin (lgl) - TRUE if cancer_category contains "Hodgkin" but not "Non-Hodgkin" (Phase 99)
 #    13. regimen_label (chr) - Regimen name (from parent episode, Phase 61)
 #    14. is_first_line (lgl) - First-line flag (from parent episode, Phase 62)
 #    15. cause_of_death (chr) - Mapped cause of death category or empty (Phase 78)
@@ -885,10 +885,10 @@ message("  Blank cancer_category filled with 'Unlinked'")
 
 # Phase 99: Derive is_hodgkin from cancer_category (D-07)
 episodes_export <- episodes_export %>%
-  mutate(is_hodgkin = str_detect(cancer_category, "Hodgkin Lymphoma"))
+  mutate(is_hodgkin = str_detect(cancer_category, "Hodgkin") & !str_detect(cancer_category, "Non-Hodgkin"))
 
 detail_export <- detail_export %>%
-  mutate(is_hodgkin = str_detect(cancer_category, "Hodgkin Lymphoma"))
+  mutate(is_hodgkin = str_detect(cancer_category, "Hodgkin") & !str_detect(cancer_category, "Non-Hodgkin"))
 
 message("  is_hodgkin derived from cancer_category")
 

@@ -1546,8 +1546,9 @@ check(
 
 # Check 10: R/52 derives is_hodgkin from cancer_category (Phase 99, D-07)
 check(
-  "R/52 derives is_hodgkin via str_detect(cancer_category, 'Hodgkin Lymphoma')",
-  any(grepl("is_hodgkin.*str_detect.*cancer_category.*Hodgkin", r52_lines_93))
+  "R/52 derives is_hodgkin via str_detect with Non-Hodgkin exclusion",
+  any(grepl("is_hodgkin.*str_detect.*cancer_category.*Hodgkin", r52_lines_93)) &&
+    any(grepl("Non-Hodgkin", r52_lines_93))
 )
 
 # Check 11: R/52 has defensive fallback for is_sct_conditioning_context

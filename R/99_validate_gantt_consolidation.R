@@ -204,15 +204,15 @@ if (nrow(death_rows) > 0) {
         TRUE)
 }
 
-# Rows with cancer_category containing "Hodgkin Lymphoma" should have is_hodgkin = TRUE
-hodgkin_rows <- episodes_full %>% filter(str_detect(cancer_category, "Hodgkin Lymphoma"))
+# Rows with Hodgkin cancer_category (but NOT Non-Hodgkin) should have is_hodgkin = TRUE
+hodgkin_rows <- episodes_full %>% filter(str_detect(cancer_category, "Hodgkin") & !str_detect(cancer_category, "Non-Hodgkin"))
 if (nrow(hodgkin_rows) > 0) {
-  check("5.3 All 'Hodgkin Lymphoma' cancer_category rows have is_hodgkin = TRUE",
+  check("5.3 All Hodgkin (non-NHL) cancer_category rows have is_hodgkin = TRUE",
         all(hodgkin_rows$is_hodgkin == TRUE))
 }
 
-# Rows with cancer_category NOT containing "Hodgkin Lymphoma" should have is_hodgkin = FALSE
-non_hodgkin_rows <- episodes_full %>% filter(!str_detect(cancer_category, "Hodgkin Lymphoma"))
+# Rows with Non-Hodgkin or non-Hodgkin cancer_category should have is_hodgkin = FALSE
+non_hodgkin_rows <- episodes_full %>% filter(!str_detect(cancer_category, "Hodgkin") | str_detect(cancer_category, "Non-Hodgkin"))
 if (nrow(non_hodgkin_rows) > 0) {
   check("5.4 All non-Hodgkin cancer_category rows have is_hodgkin = FALSE",
         all(non_hodgkin_rows$is_hodgkin == FALSE))
