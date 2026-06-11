@@ -668,6 +668,14 @@ if (nrow(sct_dates) > 0) {
 # Pre-join row count for validation
 pre_phase93_count <- nrow(episodes)
 
+# Drop columns from prior run to avoid .x/.y suffixes on re-run
+# (treatment_episodes.rds already has these columns from previous R/28 execution)
+cols_from_chemo <- intersect(names(chemo_context), names(episodes))
+cols_from_chemo <- setdiff(cols_from_chemo, c("patient_id", "episode_number"))
+if (length(cols_from_chemo) > 0) {
+  episodes <- episodes %>% select(-all_of(cols_from_chemo))
+}
+
 episodes <- episodes %>%
   left_join(chemo_context, by = c("patient_id", "episode_number")) %>%
   mutate(
