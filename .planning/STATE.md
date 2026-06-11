@@ -64,6 +64,10 @@ Plan: 1 of 2
 - Add tbl_lazy handling in ensure_dt() to support DuckDB lazy table inputs (nrow() returns NA on lazy tables)
 - Adjusted fixture codes: replaced 119/523 (not in AMC_PAYER_LOOKUP) with 11/511 (actual direct lookup codes)
 
+### Roadmap Evolution
+
+- Phase 99 added: fix gantt_v2 vs gantt_v1 disagreements and bugs, extraneous columns etc.
+
 ### Open Questions
 
 None currently identified.
