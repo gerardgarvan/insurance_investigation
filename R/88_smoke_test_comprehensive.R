@@ -250,7 +250,7 @@ cancer_expected <- c(
   "44_cancer_site_confirmation_7day.R", "45_cancer_summary.R",
   "46_cancer_summary_table.R", "47_cancer_summary_refined.R",
   "48_cancer_summary_post_hl.R", "49_cancer_summary_pre_post.R",
-  "50_all_codes_resolved.R", "51_gantt_data_export.R",
+  "50_all_codes_resolved.R",
   "52_gantt_v2_export.R", "53_death_date_validation.R",
   "54_investigate_sct_0362.R", "55_verify_replaced_by_codes.R",
   "56_new_tables_from_groupings.R"
@@ -482,7 +482,7 @@ scripts_to_check_prefix <- c(
   "R/45_cancer_summary.R", "R/46_cancer_summary_table.R",
   "R/47_cancer_summary_refined.R", "R/48_cancer_summary_post_hl.R",
   "R/49_cancer_summary_pre_post.R",
-  "R/51_gantt_data_export.R", "R/52_gantt_v2_export.R"
+  "R/52_gantt_v2_export.R"
 )
 
 duplicate_prefix_map <- character(0)
@@ -1204,16 +1204,16 @@ check(
   any(grepl("DEATH_CAUSE_MAP", r52_lines))
 )
 
-# Check 8: R/52 expected episodes column count is 22 (Phase 93: +2 cross-use columns)
+# Check 8: R/52 uses EPISODES_SCHEMA for dynamic verification (Phase 99, D-13)
 check(
-  "R/52 expected_ep_cols is 22 (Phase 93: +is_sct_conditioning_context, +immuno_confidence)",
-  any(grepl("expected_ep_cols\\s*<-\\s*22", r52_lines))
+  "R/52 defines EPISODES_SCHEMA vector (Phase 99: dynamic schema verification)",
+  any(grepl("EPISODES_SCHEMA\\s*<-\\s*c\\(", r52_lines))
 )
 
-# Check 9: R/52 expected detail column count is 20 (Phase 93: +2 cross-use columns)
+# Check 9: R/52 uses DETAIL_SCHEMA for dynamic verification (Phase 99, D-13)
 check(
-  "R/52 expected_detail_cols is 20 (Phase 93: +is_sct_conditioning_context, +immuno_confidence)",
-  any(grepl("expected_detail_cols\\s*<-\\s*20", r52_lines))
+  "R/52 defines DETAIL_SCHEMA vector (Phase 99: dynamic schema verification)",
+  any(grepl("DETAIL_SCHEMA\\s*<-\\s*c\\(", r52_lines))
 )
 
 # Check 10: R/52 has missingness warning threshold
@@ -1441,16 +1441,16 @@ for (col in phase92_cols) {
   )
 }
 
-# GANTT-06: Check 6: R/52 episodes expected column count is 22 (Phase 93)
+# GANTT-06: Check 6: R/52 uses EPISODES_SCHEMA for verification (Phase 99)
 check(
-  "R/52 episodes expected column count is 22 (Phase 93)",
-  any(grepl("expected_ep_cols <- 22", r52_lines, fixed = TRUE))
+  "R/52 episodes schema verification uses EPISODES_SCHEMA (Phase 99)",
+  any(grepl("identical.*colnames.*episodes_export.*EPISODES_SCHEMA", r52_lines))
 )
 
-# GANTT-06: Check 7: R/52 detail expected column count is 20 (Phase 93)
+# GANTT-06: Check 7: R/52 uses DETAIL_SCHEMA for verification (Phase 99)
 check(
-  "R/52 detail expected column count is 20 (Phase 93)",
-  any(grepl("expected_detail_cols <- 20", r52_lines, fixed = TRUE))
+  "R/52 detail schema verification uses DETAIL_SCHEMA (Phase 99)",
+  any(grepl("identical.*colnames.*detail_export.*DETAIL_SCHEMA", r52_lines))
 )
 
 # GANTT-06: Check 8: R/52 has guard clauses for Phase 91 columns
@@ -1471,11 +1471,10 @@ check(
   any(grepl("medication_name = sapply.*clean_multi_value", r52_lines))
 )
 
-# GANTT-07: Check 11: R/51 v1 export unchanged (no Phase 92 columns)
-r51_lines <- readLines("R/51_gantt_data_export.R", warn = FALSE)
+# GANTT-07: Check 11: R/51 v1 export deprecated (Phase 99, D-01)
 check(
-  "R/51 v1 export has NO medication_name (GANTT-07 backward compat)",
-  !any(grepl("medication_name", r51_lines, fixed = TRUE))
+  "R/51 v1 export deleted (Phase 99: v2 is canonical)",
+  !file.exists("R/51_gantt_data_export.R")
 )
 
 # ==============================================================================
@@ -1525,28 +1524,30 @@ check(
   any(grepl("25 columns", r28_lines))
 )
 
-# Check 7: R/52 includes is_sct_conditioning_context in select
+# Check 7: is_sct_conditioning_context removed from R/52 Gantt export (Phase 99, D-11)
+episodes_schema_start <- grep("EPISODES_SCHEMA\\s*<-", r52_lines_93)[1]
+episodes_schema_end <- episodes_schema_start + 12
 check(
-  "R/52 select() includes is_sct_conditioning_context (IMMU-01)",
-  any(grepl("is_sct_conditioning_context", r52_lines_93, fixed = TRUE))
+  "R/52 does NOT include is_sct_conditioning_context in EPISODES_SCHEMA (Phase 99, D-11)",
+  !any(grepl("is_sct_conditioning_context", r52_lines_93[episodes_schema_start:episodes_schema_end]))
 )
 
-# Check 8: R/52 includes immuno_confidence in select
+# Check 8: immuno_confidence removed from R/52 Gantt export (Phase 99, D-11)
 check(
-  "R/52 select() includes immuno_confidence (IMMU-02)",
-  any(grepl("immuno_confidence", r52_lines_93, fixed = TRUE))
+  "R/52 does NOT include immuno_confidence in EPISODES_SCHEMA (Phase 99, D-11)",
+  !any(grepl("immuno_confidence", r52_lines_93[episodes_schema_start:episodes_schema_end]))
 )
 
-# Check 9: R/52 episodes expected column count is 22 (Phase 93)
+# Check 9: R/52 includes is_hodgkin in EPISODES_SCHEMA (Phase 99, D-07)
 check(
-  "R/52 episodes expected column count is 22 (Phase 93)",
-  any(grepl("expected_ep_cols <- 22", r52_lines_93, fixed = TRUE))
+  "R/52 EPISODES_SCHEMA includes is_hodgkin (Phase 99, D-07)",
+  any(grepl('"is_hodgkin"', r52_lines_93, fixed = TRUE))
 )
 
-# Check 10: R/52 detail expected column count is 20 (Phase 93)
+# Check 10: R/52 derives is_hodgkin from cancer_category (Phase 99, D-07)
 check(
-  "R/52 detail expected column count is 20 (Phase 93)",
-  any(grepl("expected_detail_cols <- 20", r52_lines_93, fixed = TRUE))
+  "R/52 derives is_hodgkin via str_detect(cancer_category, 'Hodgkin Lymphoma')",
+  any(grepl("is_hodgkin.*str_detect.*cancer_category.*Hodgkin", r52_lines_93))
 )
 
 # Check 11: R/52 has defensive fallback for is_sct_conditioning_context
@@ -2141,8 +2142,11 @@ message("  * GANTT-02: code_type column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-03: source_table column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-04: treatment_line column with F>S>E>N priority (Phase 91)")
 message("  * GANTT-05: sct_cross_use_flag column in treatment_episodes.rds (Phase 91)")
-message("  * GANTT-06: 5 metadata columns in gantt_detail_v2.csv at per-date level (Phase 92)")
-message("  * GANTT-07: v1 Gantt exports unchanged -- R/51 has no Phase 92 columns")
+message("  * GANTT-06: 5 metadata columns in gantt_detail.csv at per-date level (Phase 92)")
+message("  * GANTT-07: v1 Gantt export (R/51) deprecated -- R/52 is canonical (Phase 99)")
+message("  * D-07: is_hodgkin column added to Gantt export (Phase 99)")
+message("  * D-11: is_sct_conditioning_context and immuno_confidence removed from Gantt export (Phase 99)")
+message("  * D-13: Dynamic schema verification replaces hardcoded column counts (Phase 99)")
 message("  * IMMU-01: immuno_confidence column flags questionable immunotherapy codes (Phase 93)")
 message("  * IMMU-02: Distinct flag values for vitamin combos vs CAR-T ambiguity (Phase 93)")
 
