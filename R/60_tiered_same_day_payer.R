@@ -135,7 +135,7 @@ build_frequency_tables <- function(enc_scope, suffix, output_dir) {
     default = "Other"
   )]
   primary_freq_dt[, pct := round(100 * n / total_enc, 2)]
-  setorder(primary_freq_dt, -n)
+  setorder(primary_freq_dt, -n, code)
   primary_freq_dt <- primary_freq_dt[, .(code, amc_category, n, pct)]
   primary_freq <- to_tibble_safe(primary_freq_dt, name = "primary_freq", script_name = "R/60")
 
@@ -160,7 +160,7 @@ build_frequency_tables <- function(enc_scope, suffix, output_dir) {
     default = "Other"
   )]
   secondary_freq_dt[, pct := round(100 * n / total_enc, 2)]
-  setorder(secondary_freq_dt, -n)
+  setorder(secondary_freq_dt, -n, code)
   secondary_freq_dt <- secondary_freq_dt[, .(code, amc_category, n, pct)]
   secondary_freq <- to_tibble_safe(secondary_freq_dt, name = "secondary_freq", script_name = "R/60")
 
@@ -305,6 +305,10 @@ resolve_same_day_payer <- function(enc_scope, suffix, output_dir) {
 
   # Full join equivalent in data.table: merge with all=TRUE
   impact_dt <- merge(before_dt, after_dt, by.x = "tier", by.y = "resolved_payer", all = TRUE)
+  # Re-sort by TIER_MAPPING order (merge sorts alphabetically, losing pre-merge order)
+  impact_dt[, tier_ord := match(tier, tier_order)]
+  setorder(impact_dt, tier_ord)
+  impact_dt[, tier_ord := NULL]
   impact_dt[is.na(n_encounters_before), n_encounters_before := 0L]
   impact_dt[is.na(n_patient_dates_after), n_patient_dates_after := 0L]
   total_before <- sum(impact_dt$n_encounters_before)

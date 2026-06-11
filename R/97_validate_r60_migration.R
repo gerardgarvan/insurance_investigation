@@ -116,7 +116,7 @@ time_old <- system.time({
         pct = round(100 * n / total_enc, 2)
       ) %>%
       select(code, amc_category, n, pct) %>%
-      arrange(desc(n))
+      arrange(desc(n), code)
 
     # SECONDARY frequency table
     secondary_freq <- enc_scope %>%
@@ -143,7 +143,7 @@ time_old <- system.time({
         pct = round(100 * n / total_enc, 2)
       ) %>%
       select(code, amc_category, n, pct) %>%
-      arrange(desc(n))
+      arrange(desc(n), code)
 
     # Category-level summary
     primary_cat <- primary_freq %>%
@@ -292,7 +292,7 @@ time_new <- system.time({
       default = "Other"
     )]
     primary_freq_dt[, pct := round(100 * n / total_enc, 2)]
-    setorder(primary_freq_dt, -n)
+    setorder(primary_freq_dt, -n, code)
     primary_freq_dt <- primary_freq_dt[, .(code, amc_category, n, pct)]
     primary_freq <- to_tibble_safe(primary_freq_dt, name = "primary_freq", script_name = "R/97")
 
@@ -316,7 +316,7 @@ time_new <- system.time({
       default = "Other"
     )]
     secondary_freq_dt[, pct := round(100 * n / total_enc, 2)]
-    setorder(secondary_freq_dt, -n)
+    setorder(secondary_freq_dt, -n, code)
     secondary_freq_dt <- secondary_freq_dt[, .(code, amc_category, n, pct)]
     secondary_freq <- to_tibble_safe(secondary_freq_dt, name = "secondary_freq", script_name = "R/97")
 
@@ -415,6 +415,10 @@ time_new <- system.time({
     after_dt[, payer_ord := NULL]
 
     impact_dt <- merge(before_dt, after_dt, by.x = "tier", by.y = "resolved_payer", all = TRUE)
+    # Re-sort by TIER_MAPPING order (merge sorts alphabetically, losing pre-merge order)
+    impact_dt[, tier_ord := match(tier, tier_order)]
+    setorder(impact_dt, tier_ord)
+    impact_dt[, tier_ord := NULL]
     impact_dt[is.na(n_encounters_before), n_encounters_before := 0L]
     impact_dt[is.na(n_patient_dates_after), n_patient_dates_after := 0L]
     total_before <- sum(impact_dt$n_encounters_before)
@@ -486,11 +490,14 @@ for (file in csv_files) {
   # Column-by-column comparison with tolerance for numeric columns
   # Per Pitfall 5: do NOT use bare identical() on whole data frame for CSVs
   # with percentage columns
+  # Sort both data frames by all columns for order-independent comparison
   if (nrow(old_df) == nrow(new_df) && identical(names(old_df), names(new_df))) {
+    old_sorted <- old_df %>% arrange(across(everything()))
+    new_sorted <- new_df %>% arrange(across(everything()))
     all_cols_match <- TRUE
-    for (col in names(old_df)) {
-      old_col <- old_df[[col]]
-      new_col <- new_df[[col]]
+    for (col in names(old_sorted)) {
+      old_col <- old_sorted[[col]]
+      new_col <- new_sorted[[col]]
 
       if (is.numeric(old_col) && is.numeric(new_col)) {
         # Numeric comparison with tolerance for floating-point rounding
