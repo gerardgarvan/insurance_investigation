@@ -1587,9 +1587,10 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) 
     all(episodes_93$immuno_confidence %in% valid_confidence_values | is.na(episodes_93$immuno_confidence))
   )
 
-  # Check 16: Mutual exclusivity preserved -- each (patient_id, episode_number) pair is unique (D-13)
+  # Check 16: Mutual exclusivity preserved -- each (patient_id, treatment_type, episode_number) triple is unique (D-13)
+  # episode_number is scoped per patient per treatment_type in R/26 build_episodes()
   dup_episodes <- episodes_93 %>%
-    count(patient_id, episode_number) %>%
+    count(patient_id, treatment_type, episode_number) %>%
     filter(n > 1)
   check(
     "Each episode has exactly one row (mutual exclusivity preserved, D-13)",
