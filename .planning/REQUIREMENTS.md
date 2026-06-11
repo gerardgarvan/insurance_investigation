@@ -23,8 +23,8 @@ Requirements for performance optimization milestone. Each maps to roadmap phases
 
 - [ ] **PERF-01**: R/60 same-day payer resolution migrated to data.table by= aggregation
 - [ ] **PERF-02**: R/60 CSV outputs identical pre/post optimization (diff validation)
-- [ ] **PERF-03**: R/28 episode classification lookups replaced with keyed joins
-- [ ] **PERF-04**: R/28 treatment_episodes.rds structure unchanged (same columns, same order)
+- [x] **PERF-03**: R/28 episode classification lookups replaced with keyed joins
+- [x] **PERF-04**: R/28 treatment_episodes.rds structure unchanged (same columns, same order)
 
 ### Validation
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAYER-02 | Phase 96 | Complete |
 | PERF-01 | Phase 97 | Pending |
 | PERF-02 | Phase 97 | Pending |
-| PERF-03 | Phase 98 | Pending |
-| PERF-04 | Phase 98 | Pending |
+| PERF-03 | Phase 98 | Complete |
+| PERF-04 | Phase 98 | Complete |
 | VALID-01 | Phase 98 | Pending |
 | VALID-02 | Phase 97 | Pending |
 

@@ -63,9 +63,9 @@ Plans:
   2. User can grep for "DRUG_GROUPINGS\[" and see zero matches (all named vector lookups replaced with keyed joins)
   3. User can run full smoke test R/88 and see all 35 sections pass
   4. User can inspect R/28 and see DRUG_GROUPINGS keyed join syntax with on= parameter instead of named vector indexing
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 98-01-PLAN.md -- Migrate R/28 to explode-join-collapse and sweep 7 files for named vector elimination
+- [x] 98-01-PLAN.md -- Migrate R/28 to explode-join-collapse and sweep 7 files for named vector elimination
 - [ ] 98-02-PLAN.md -- Create R/98 parity validation script and human verification (v3.0 gate)
 
 ## Progress
@@ -75,7 +75,7 @@ Plans:
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
 | 96. classify_payer_tier_dt() Implementation | 1/1 | Complete    | 2026-06-10 |
 | 97. R/60 Hot-Path Migration | 1/1 | Complete    | 2026-06-11 |
-| 98. R/28 + Remaining Lookup Optimization | 0/2 | Planning complete | - |
+| 98. R/28 + Remaining Lookup Optimization | 1/2 | In Progress|  |
 
 ## Next Steps
 
