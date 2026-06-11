@@ -274,16 +274,25 @@ cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
 
 # Split triggering_codes into individual codes and map to sub-categories
 # episode_dx already has episode_row from Section 4 -- propagate to episode_codes
-episode_codes <- episode_dx %>%
+episode_codes_pre <- episode_dx %>%
   mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
   unnest(code_list) %>%
   filter(!is.na(code_list), code_list != "") %>%
-  rename(treatment_code = code_list) %>%
-  mutate(category = ifelse(
-    treatment_code %in% names(DRUG_GROUPINGS),
-    DRUG_GROUPINGS[treatment_code],
-    treatment_type  # fallback for codes not in DRUG_GROUPINGS
-  ))
+  rename(treatment_code = code_list)
+
+# Phase 98: Replace DRUG_GROUPINGS named vector with keyed join (D-01)
+episode_codes_dt <- copy(ensure_dt(episode_codes_pre, name = "episode_codes", script_name = "R/57_explore"))
+drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+episode_codes_dt[drug_lookup, on = .(treatment_code = code), dg_category := i.drug_group]
+episode_codes_dt[, category := fifelse(!is.na(dg_category), dg_category, treatment_type)]
+episode_codes_dt[, dg_category := NULL]
+episode_codes <- to_tibble_safe(episode_codes_dt, name = "episode_codes", script_name = "R/57_explore")
+
+# Phase 98: Pre-join CODE_SUBCATEGORY_MAP for Tier 2 lookup (D-02)
+subcat_lookup <- get_lookup_dt("CODE_SUBCATEGORY_MAP")
+episode_codes_dt <- copy(ensure_dt(episode_codes, name = "episode_codes", script_name = "R/57_explore"))
+episode_codes_dt[subcat_lookup, on = .(treatment_code = code), subcat_map := i.subcategory]
+episode_codes <- to_tibble_safe(episode_codes_dt, name = "episode_codes", script_name = "R/57_explore")
 
 # Assign sub-category based on treatment type and code (same 3-tier cascade as R/56)
 episode_codes <- episode_codes %>%
@@ -292,8 +301,8 @@ episode_codes <- episode_codes %>%
       # Tier 1: xlsx reference sub-categories (most authoritative)
       treatment_code %in% names(code_to_subcategory) ~ code_to_subcategory[treatment_code],
 
-      # Tier 2: CODE_SUBCATEGORY_MAP supplement
-      treatment_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[treatment_code],
+      # Tier 2: CODE_SUBCATEGORY_MAP supplement (Phase 98: pre-joined)
+      !is.na(subcat_map) ~ subcat_map,
 
       # Tier 3: Code-type fallback labels (only for codes in neither lookup)
       # Immunotherapy (use category from DRUG_GROUPINGS, not treatment_type)

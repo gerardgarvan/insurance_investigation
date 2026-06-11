@@ -172,25 +172,27 @@ if (!skip_graph_analysis) {
 
   message(glue("  All known codes: {length(all_known_codes)} unique codes"))
 
-  # Verify each old->new pair
-  verification <- replaced_by_pairs %>%
-    mutate(
-      old_in_codes = old_code %in% all_known_codes,
-      new_in_codes = new_code %in% all_known_codes,
-      old_group = DRUG_GROUPINGS[old_code],
-      new_group = DRUG_GROUPINGS[new_code],
-      category_match = case_when(
-        is.na(old_group) | is.na(new_group) ~ NA,
-        TRUE ~ old_group == new_group
-      ),
-      status = case_when(
-        !old_in_codes & !new_in_codes ~ "MISSING: both codes not in code lists",
-        !old_in_codes ~ "MISSING: old code not in code lists",
-        !new_in_codes ~ "MISSING: new code not in code lists",
-        !is.na(category_match) & !category_match ~ "FAIL: category mismatch",
-        TRUE ~ "PASS"
-      )
-    )
+  # Phase 98: Replace named vector lookups with keyed joins (D-01)
+  verification_dt <- copy(ensure_dt(replaced_by_pairs, name = "verification", script_name = "R/55"))
+  verification_dt[, old_in_codes := old_code %in% all_known_codes]
+  verification_dt[, new_in_codes := new_code %in% all_known_codes]
+
+  drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+  verification_dt[drug_lookup, on = .(old_code = code), old_group := i.drug_group]
+  verification_dt[drug_lookup, on = .(new_code = code), new_group := i.drug_group]
+
+  verification_dt[, category_match := fcase(
+    is.na(old_group) | is.na(new_group), NA,
+    default = old_group == new_group
+  )]
+  verification_dt[, status := fcase(
+    !old_in_codes & !new_in_codes, "MISSING: both codes not in code lists",
+    !old_in_codes, "MISSING: old code not in code lists",
+    !new_in_codes, "MISSING: new code not in code lists",
+    !is.na(category_match) & !category_match, "FAIL: category mismatch",
+    default = "PASS"
+  )]
+  verification <- to_tibble_safe(verification_dt, name = "verification", script_name = "R/55")
 
   # Console summary
   status_counts <- verification %>%

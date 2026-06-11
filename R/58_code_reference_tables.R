@@ -357,17 +357,25 @@ message("--- Building treatment codes reference ---")
 drug_wb <- wb_load(DRUG_XLSX)
 drug_raw <- wb_to_df(drug_wb, sheet = "Ep: Sub-Category Summary")
 
-# Extract unique treatment codes with their code_type and category
-treatment_codes <- drug_raw %>%
+# Phase 98: Pre-join CODE_SUBCATEGORY_MAP for lookup (D-02)
+treatment_codes_pre <- drug_raw %>%
   filter(!is.na(treatment_code)) %>%
-  distinct(treatment_code, code_type, category, sub_category) %>%
+  distinct(treatment_code, code_type, category, sub_category)
+
+subcat_lookup <- get_lookup_dt("CODE_SUBCATEGORY_MAP")
+treatment_codes_dt <- copy(ensure_dt(treatment_codes_pre, name = "treatment_codes", script_name = "R/58"))
+treatment_codes_dt[subcat_lookup, on = .(treatment_code = code), subcat_map := i.subcategory]
+treatment_codes <- to_tibble_safe(treatment_codes_dt, name = "treatment_codes", script_name = "R/58")
+
+# Extract unique treatment codes with their code_type and category
+treatment_codes <- treatment_codes %>%
   mutate(
     # Chemo: use medication name from reference xlsx (highest priority)
     # Non-chemo: all_desc > CODE_SUBCATEGORY_MAP > sub_category fallback
     description = case_when(
       category == "Chemotherapy" & treatment_code %in% names(chemo_med_map) ~ chemo_med_map[treatment_code],
       treatment_code %in% names(all_desc) ~ all_desc[treatment_code],
-      treatment_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[treatment_code],
+      !is.na(subcat_map) ~ subcat_map,  # Phase 98: pre-joined
       TRUE ~ sub_category
     )
   ) %>%

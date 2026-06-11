@@ -252,16 +252,19 @@ message()
 message("--- Building Table 1: Sub-Category Summary ---")
 
 # Split triggering_codes into individual codes and map to sub-categories
-episode_codes <- episode_dx %>%
+episode_codes_pre <- episode_dx %>%
   mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
   unnest(code_list) %>%
   filter(!is.na(code_list), code_list != "") %>%
-  rename(treatment_code = code_list) %>%
-  mutate(category = ifelse(
-    treatment_code %in% names(DRUG_GROUPINGS),
-    DRUG_GROUPINGS[treatment_code],
-    treatment_type  # fallback for codes not in DRUG_GROUPINGS
-  ))
+  rename(treatment_code = code_list)
+
+# Phase 98: Replace DRUG_GROUPINGS named vector with keyed join (D-01)
+episode_codes_dt <- copy(ensure_dt(episode_codes_pre, name = "episode_codes", script_name = "R/56"))
+drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+episode_codes_dt[drug_lookup, on = .(treatment_code = code), dg_category := i.drug_group]
+episode_codes_dt[, category := fifelse(!is.na(dg_category), dg_category, treatment_type)]
+episode_codes_dt[, dg_category := NULL]
+episode_codes <- to_tibble_safe(episode_codes_dt, name = "episode_codes", script_name = "R/56")
 
 # Filter to only codes in reference xlsx OR Immunotherapy (Phase 87)
 # Supportive Care and unmapped codes not in reference are removed
@@ -275,16 +278,18 @@ message(glue("  Reference filter: {n_before_ref_filter} -> {n_after_ref_filter} 
 
 # Log which categories lost codes
 if (n_removed_ref > 0) {
-  removed_codes <- episode_dx %>%
+  removed_codes_pre <- episode_dx %>%
     mutate(code_list = str_split(triggering_codes, ",\\s*")) %>%
     unnest(code_list) %>%
     filter(!is.na(code_list), code_list != "") %>%
-    rename(treatment_code = code_list) %>%
-    mutate(category = ifelse(
-      treatment_code %in% names(DRUG_GROUPINGS),
-      DRUG_GROUPINGS[treatment_code],
-      treatment_type
-    )) %>%
+    rename(treatment_code = code_list)
+
+  # Phase 98: Replace DRUG_GROUPINGS named vector with keyed join (D-01)
+  removed_codes_dt <- copy(ensure_dt(removed_codes_pre, name = "removed_codes", script_name = "R/56"))
+  removed_codes_dt[drug_lookup, on = .(treatment_code = code), dg_category := i.drug_group]
+  removed_codes_dt[, category := fifelse(!is.na(dg_category), dg_category, treatment_type)]
+  removed_codes_dt[, dg_category := NULL]
+  removed_codes <- to_tibble_safe(removed_codes_dt, name = "removed_codes", script_name = "R/56") %>%
     filter(!treatment_code %in% valid_reference_codes, category != "Immunotherapy") %>%
     count(category, name = "n_removed") %>%
     arrange(desc(n_removed))
@@ -322,6 +327,12 @@ immuno_drg_codes <- TREATMENT_CODES$immunotherapy_drg
 immuno_dx_codes <- c(TREATMENT_CODES$immunotherapy_dx_icd10, TREATMENT_CODES$immunotherapy_dx_icd9)
 cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
 
+# Phase 98: Pre-join CODE_SUBCATEGORY_MAP for Tier 2 lookup (D-02)
+subcat_lookup <- get_lookup_dt("CODE_SUBCATEGORY_MAP")
+episode_codes_dt <- copy(ensure_dt(episode_codes, name = "episode_codes", script_name = "R/56"))
+episode_codes_dt[subcat_lookup, on = .(treatment_code = code), subcat_map := i.subcategory]
+episode_codes <- to_tibble_safe(episode_codes_dt, name = "episode_codes", script_name = "R/56")
+
 # Assign sub-category based on treatment type and code
 episode_codes <- episode_codes %>%
   mutate(
@@ -329,8 +340,8 @@ episode_codes <- episode_codes %>%
       # Tier 1: xlsx reference sub-categories (most authoritative)
       treatment_code %in% names(code_to_subcategory) ~ code_to_subcategory[treatment_code],
 
-      # Tier 2: CODE_SUBCATEGORY_MAP supplement (per D-09)
-      treatment_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[treatment_code],
+      # Tier 2: CODE_SUBCATEGORY_MAP supplement (per D-09, Phase 98: pre-joined)
+      !is.na(subcat_map) ~ subcat_map,
 
       # Tier 3: Code-type fallback labels (only for codes in neither lookup)
       # Immunotherapy (use category from DRUG_GROUPINGS, not treatment_type)

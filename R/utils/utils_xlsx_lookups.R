@@ -136,17 +136,15 @@ load_xlsx_lookups <- function(xlsx_path = NULL) {
   all_codes <- names(all_code_types)
 
   # --- Step 3: Build medications vector ---
-  # Primary source: CODE_SUBCATEGORY_MAP (has human-readable names)
-  # Fallback: DRUG_GROUPINGS category label (e.g., "Chemotherapy agent")
-  all_medications <- setNames(rep(NA_character_, length(all_codes)), all_codes)
+  # Phase 98: Replace named vector loop with keyed joins (D-01, D-02)
+  subcat_lookup <- get_lookup_dt("CODE_SUBCATEGORY_MAP")
+  drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
 
-  for (code in all_codes) {
-    if (code %in% names(CODE_SUBCATEGORY_MAP)) {
-      all_medications[code] <- CODE_SUBCATEGORY_MAP[code]
-    } else if (code %in% names(DRUG_GROUPINGS)) {
-      all_medications[code] <- paste0(DRUG_GROUPINGS[code], " agent")
-    }
-  }
+  med_dt <- data.table(code = all_codes)
+  med_dt[subcat_lookup, on = .(code), subcat_name := i.subcategory]
+  med_dt[drug_lookup, on = .(code), drug_group_name := paste0(i.drug_group, " agent")]
+  med_dt[, medication_name := fifelse(!is.na(subcat_name), subcat_name, drug_group_name)]
+  all_medications <- setNames(med_dt$medication_name, med_dt$code)
 
   # --- Step 4: Build line_labels vector (all NA -- not derivable from config) ---
   all_line_labels <- setNames(rep(NA_character_, length(all_codes)), all_codes)

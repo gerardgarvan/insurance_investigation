@@ -1618,12 +1618,14 @@ check(
   "Proton Therapy" %in% TREATMENT_TYPES
 )
 
-# Check 3: 4 proton codes map to "Proton Therapy" in DRUG_GROUPINGS
+# Check 3: 4 proton codes map to "Proton Therapy" via LOOKUP_TABLES_DT keyed join (Phase 98)
 proton_codes <- c("77520", "77522", "77523", "77525")
-proton_mappings <- DRUG_GROUPINGS[proton_codes]
+drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+proton_dt <- data.table(code = proton_codes)
+proton_dt[drug_lookup, on = .(code), drug_group := i.drug_group]
 check(
-  "All 4 proton codes (77520, 77522, 77523, 77525) map to 'Proton Therapy' in DRUG_GROUPINGS",
-  all(!is.na(proton_mappings)) && all(proton_mappings == "Proton Therapy")
+  "All 4 proton codes (77520, 77522, 77523, 77525) map to 'Proton Therapy' via LOOKUP_TABLES_DT keyed join",
+  all(!is.na(proton_dt$drug_group)) && all(proton_dt$drug_group == "Proton Therapy")
 )
 
 # Check 4: Proton codes are NOT in radiation_cpt (no double-counting)

@@ -265,13 +265,16 @@ message()
 message("--- Building Table 1: Sub-Category Encounter Detail ---")
 
 # Each detail row already has a single triggering_code — resolve directly
-detail_codes <- detail_dx %>%
-  filter(!is.na(triggering_code), triggering_code != "") %>%
-  mutate(category = ifelse(
-    triggering_code %in% names(DRUG_GROUPINGS),
-    DRUG_GROUPINGS[triggering_code],
-    treatment_type
-  ))
+detail_codes_pre <- detail_dx %>%
+  filter(!is.na(triggering_code), triggering_code != "")
+
+# Phase 98: Replace DRUG_GROUPINGS named vector with keyed join (D-01)
+detail_codes_dt <- copy(ensure_dt(detail_codes_pre, name = "detail_codes", script_name = "R/57"))
+drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+detail_codes_dt[drug_lookup, on = .(triggering_code = code), dg_category := i.drug_group]
+detail_codes_dt[, category := fifelse(!is.na(dg_category), dg_category, treatment_type)]
+detail_codes_dt[, dg_category := NULL]
+detail_codes <- to_tibble_safe(detail_codes_dt, name = "detail_codes", script_name = "R/57")
 
 # Filter to valid reference codes OR Immunotherapy category
 n_before_filter <- nrow(detail_codes)
@@ -309,6 +312,12 @@ immuno_drg_codes <- TREATMENT_CODES$immunotherapy_drg
 immuno_dx_codes <- c(TREATMENT_CODES$immunotherapy_dx_icd10, TREATMENT_CODES$immunotherapy_dx_icd9)
 cart_icd10pcs <- TREATMENT_CODES$cart_icd10pcs_prefixes
 
+# Phase 98: Pre-join CODE_SUBCATEGORY_MAP for Tier 2 lookup (D-02)
+subcat_lookup <- get_lookup_dt("CODE_SUBCATEGORY_MAP")
+detail_codes_dt <- copy(ensure_dt(detail_codes, name = "detail_codes", script_name = "R/57"))
+detail_codes_dt[subcat_lookup, on = .(triggering_code = code), subcat_map := i.subcategory]
+detail_codes <- to_tibble_safe(detail_codes_dt, name = "detail_codes", script_name = "R/57")
+
 # Apply 3-tier sub-category resolution per code
 detail_codes <- detail_codes %>%
   mutate(
@@ -316,8 +325,8 @@ detail_codes <- detail_codes %>%
       # Tier 1: xlsx reference sub-categories (most authoritative)
       triggering_code %in% names(code_to_subcategory) ~ code_to_subcategory[triggering_code],
 
-      # Tier 2: CODE_SUBCATEGORY_MAP supplement
-      triggering_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[triggering_code],
+      # Tier 2: CODE_SUBCATEGORY_MAP supplement (Phase 98: pre-joined)
+      !is.na(subcat_map) ~ subcat_map,
 
       # Tier 3: Code-type fallback labels
       # Immunotherapy
