@@ -82,3 +82,14 @@ Plans:
 1. Run `/gsd:execute-phase 98` to replace all named vector lookups with keyed joins
 2. Wave 1: Plan 98-01 (R/28 migration + 7-file sweep)
 3. Wave 2: Plan 98-02 (R/98 validation script + R/88 smoke test v3.0 gate)
+
+### Phase 99: Fix Gantt v2 vs v1 Disagreements and Schema Consolidation
+
+**Goal:** Consolidate R/51 (v1) and R/52 (v2) into single canonical Gantt export: delete v1, clean v2 schema (add is_hodgkin, remove immunotherapy columns, fix pseudo-treatment metadata), replace hardcoded column counts with dynamic schema verification, rename output files to drop _v2 suffix, update all downstream references.
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15
+**Depends on:** Phase 98
+**Plans:** 2 plans
+
+Plans:
+- [ ] 99-01-PLAN.md -- Modify R/52 schema (add is_hodgkin, remove extraneous columns, fix pseudo-treatment metadata, dynamic schema verification) and delete R/51
+- [ ] 99-02-PLAN.md -- Update R/88 smoke tests for Phase 99 changes and create R/99 validation script
