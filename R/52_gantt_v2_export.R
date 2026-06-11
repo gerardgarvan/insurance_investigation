@@ -922,8 +922,8 @@ message("  Columns trimmed to Tableau-essential set")
 message(glue("  Episodes: {ncol(episodes_export)} columns, Detail: {ncol(detail_export)} columns"))
 
 # Step 7: Column count verification
-expected_ep_cols <- 22  # was 21, Phase 93: +is_sct_conditioning_context, +immuno_confidence
-expected_detail_cols <- 20  # was 19, Phase 93: +is_sct_conditioning_context, +immuno_confidence
+expected_ep_cols <- 23  # was 21, Phase 92: +5 metadata, Phase 93: +2 context = 23
+expected_detail_cols <- 21  # was 14, Phase 92: +5 metadata, Phase 93: +2 context = 21
 
 if (ncol(episodes_export) != expected_ep_cols) {
   stop(glue("ERROR: episodes_export has {ncol(episodes_export)} columns, expected {expected_ep_cols}"))
