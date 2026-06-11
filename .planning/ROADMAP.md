@@ -9,7 +9,7 @@
 
 - [x] **Phase 95: Infrastructure Setup** - Add data.table infrastructure without changing behavior (completed 2026-06-10)
 - [x] **Phase 96: classify_payer_tier_dt() Implementation** - Create data.table variant of most-called utility function (completed 2026-06-10)
-- [x] **Phase 97: R/60 Hot-Path Migration** - Migrate same-day payer resolution to data.table (completed 2026-06-11)
+- [x] **Phase 97: R/60 Hot-Path Migration** - Migrate same-day payer resolution to data.table (completed 2026-06-11)
 - [ ] **Phase 98: R/28 + Remaining Lookup Optimization** - Replace named vector lookups with keyed joins
 
 ## Phase Details
@@ -52,19 +52,21 @@ Plans:
   4. User can trace group_by PATID+ADMIT_DATE operations and see data.table [, by=] syntax with setkey() before aggregation
 **Plans:** 1/1 plans complete
 Plans:
-- [ ] 97-01-PLAN.md -- Migrate R/60 to data.table (all 3 sections) and create R/97 benchmark + parity validation script
+- [x] 97-01-PLAN.md -- Migrate R/60 to data.table (all 3 sections) and create R/97 benchmark + parity validation script
 
 ### Phase 98: R/28 + Remaining Lookup Optimization
 **Goal**: Episode classification and remaining lookup-heavy scripts migrated to keyed joins with correctness validation
 **Depends on**: Phase 97 (hot-path migration pattern validated)
 **Requirements**: PERF-03, PERF-04, VALID-01
 **Success Criteria** (what must be TRUE):
-  1. User can run R/28_episode_classification.R and see treatment_episodes.rds structure unchanged (22 columns, same order, same row count)
+  1. User can run R/28_episode_classification.R and see treatment_episodes.rds structure unchanged (25 columns, same order, same row count)
   2. User can grep for "DRUG_GROUPINGS\[" and see zero matches (all named vector lookups replaced with keyed joins)
   3. User can run full smoke test R/88 and see all 35 sections pass
   4. User can inspect R/28 and see DRUG_GROUPINGS keyed join syntax with on= parameter instead of named vector indexing
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 2 plans
+Plans:
+- [ ] 98-01-PLAN.md -- Migrate R/28 to explode-join-collapse and sweep 7 files for named vector elimination
+- [ ] 98-02-PLAN.md -- Create R/98 parity validation script and human verification (v3.0 gate)
 
 ## Progress
 
@@ -72,11 +74,11 @@ Plans:
 |-------|----------------|--------|-----------|
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
 | 96. classify_payer_tier_dt() Implementation | 1/1 | Complete    | 2026-06-10 |
-| 97. R/60 Hot-Path Migration | 0/1 | Complete    | 2026-06-11 |
-| 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
+| 97. R/60 Hot-Path Migration | 1/1 | Complete    | 2026-06-11 |
+| 98. R/28 + Remaining Lookup Optimization | 0/2 | Planning complete | - |
 
 ## Next Steps
 
-1. Run `/gsd:execute-phase 97` to migrate R/60 to data.table
-2. Wave 1: Plan 97-01 (R/60 migration + R/97 benchmark/validation + human checkpoint)
-3. After Phase 97: Plan Phase 98 (R/28 + remaining lookup optimization)
+1. Run `/gsd:execute-phase 98` to replace all named vector lookups with keyed joins
+2. Wave 1: Plan 98-01 (R/28 migration + 7-file sweep)
+3. Wave 2: Plan 98-02 (R/98 validation script + R/88 smoke test v3.0 gate)
