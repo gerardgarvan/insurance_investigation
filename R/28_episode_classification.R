@@ -454,45 +454,46 @@ if (file.exists(DESCRIPTIONS_RDS)) {
   message("  WARNING: code_descriptions.rds not found. triggering_code_description will be NA.")
 }
 
-# Step 5B-2: Define mapping helpers (D-78-05, D-78-06, D-78-07, D-78-08)
+# Step 5B-2: Explode-join-collapse for triggering_code_description and drug_group (Phase 98, D-03)
+episodes_dt <- copy(ensure_dt(episodes, name = "episodes", script_name = "R/28"))
+episodes_dt[, episode_row := .I]  # Temporary ID for re-aggregation
 
-# lookup_description: map single code to human-readable name from code_descriptions.rds
-lookup_description <- function(code) {
-  if (is.null(code_descriptions) || is.na(code) || code == "") return(NA_character_)
-  if (code %in% names(code_descriptions)) return(code_descriptions[[code]])
-  return(NA_character_)  # D-78-08: unmapped codes get NA
+# Explode: one row per code
+codes_long <- episodes_dt[!is.na(triggering_codes) & triggering_codes != "",
+                          .(code = unlist(strsplit(triggering_codes, ",", fixed = TRUE))),
+                          by = episode_row]
+codes_long <- codes_long[!is.na(code) & code != ""]
+
+# Join: keyed lookup against DRUG_GROUPINGS for drug_group
+drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+codes_long[drug_lookup, on = .(code), drug_group := i.drug_group]
+
+# Join: code_descriptions named vector for triggering_code_description
+# (code_descriptions stays as named vector per research decision -- RDS-loaded, not config)
+if (!is.null(code_descriptions)) {
+  codes_long[, description := code_descriptions[code]]
+} else {
+  codes_long[, description := NA_character_]
 }
 
-# lookup_drug_group: map single code to category from DRUG_GROUPINGS
-lookup_drug_group <- function(code) {
-  if (is.na(code) || code == "") return(NA_character_)
-  if (code %in% names(DRUG_GROUPINGS)) return(DRUG_GROUPINGS[[code]])
-  return(NA_character_)  # D-78-08: unmapped codes get NA
-}
+# Collapse: re-aggregate by episode_row (parallel comma lists per D-78-07)
+desc_agg <- codes_long[, .(
+  triggering_code_description = paste(ifelse(is.na(description), NA_character_, description), collapse = ","),
+  drug_group = paste(ifelse(is.na(drug_group), NA_character_, drug_group), collapse = ",")
+), by = episode_row]
 
-# map_codes_to_descriptions: map comma-separated codes to comma-separated descriptions (D-78-07)
-# NOTE: triggering_codes at R/28 stage uses commas (pre-Phase 64 cleanup to semicolons)
-map_codes_to_descriptions <- function(codes_str) {
-  if (is.na(codes_str) || codes_str == "") return(NA_character_)
-  codes <- str_split(codes_str, ",")[[1]]
-  descriptions <- sapply(codes, lookup_description, USE.NAMES = FALSE)
-  paste(descriptions, collapse = ",")
-}
+# Merge back
+episodes_dt[desc_agg, on = .(episode_row),
+            `:=`(triggering_code_description = i.triggering_code_description,
+                 drug_group = i.drug_group)]
 
-# map_codes_to_drug_groups: map comma-separated codes to comma-separated groups (D-78-07)
-map_codes_to_drug_groups <- function(codes_str) {
-  if (is.na(codes_str) || codes_str == "") return(NA_character_)
-  codes <- str_split(codes_str, ",")[[1]]
-  groups <- sapply(codes, lookup_drug_group, USE.NAMES = FALSE)
-  paste(groups, collapse = ",")
-}
+# Handle episodes with NA/empty triggering_codes (no rows in codes_long)
+episodes_dt[is.na(triggering_codes) | triggering_codes == "",
+            `:=`(triggering_code_description = NA_character_,
+                 drug_group = NA_character_)]
 
-# Step 5B-3: Apply mapping to episodes
-episodes <- episodes %>%
-  mutate(
-    triggering_code_description = sapply(triggering_codes, map_codes_to_descriptions, USE.NAMES = FALSE),
-    drug_group = sapply(triggering_codes, map_codes_to_drug_groups, USE.NAMES = FALSE)
-  )
+episodes_dt[, episode_row := NULL]
+episodes <- to_tibble_safe(episodes_dt, name = "episodes", script_name = "R/28")
 
 # Step 5B-4: Log mapping results
 n_with_desc <- sum(!is.na(episodes$triggering_code_description) & episodes$triggering_code_description != "", na.rm = TRUE)
@@ -505,93 +506,101 @@ message(glue("  drug_group populated: {n_with_group}/{nrow(episodes)} episodes")
 
 message("\n--- Adding xlsx metadata (medication names, code types, source tables, treatment line, cross-use flags) ---")
 
-# Step 5C-1: Define helper functions for metadata mapping
-
-# map_codes_to_xlsx_metadata: map comma-separated triggering_codes to comma-separated metadata
-# Matches triggering_codes positional order (per D-04)
-map_codes_to_xlsx_metadata <- function(codes_str, lookup_vec) {
-  if (is.na(codes_str) || codes_str == "") return(NA_character_)
-  codes <- str_split(codes_str, ",")[[1]]
-  values <- sapply(codes, function(c) {
-    val <- lookup_vec[c]
-    if (is.null(val) || is.na(val)) NA_character_ else val
-  }, USE.NAMES = FALSE)
-  paste(values, collapse = ",")
-}
-
-# aggregate_treatment_line: aggregate F/S/E/N labels with priority F > S > E > N (per D-03)
-# Returns single value per episode, NOT a parallel list (per D-05)
-aggregate_treatment_line <- function(codes_str, lookup_vec) {
-  if (is.na(codes_str) || codes_str == "") return(NA_character_)
-  codes <- str_split(codes_str, ",")[[1]]
-  labels <- sapply(codes, function(c) {
-    val <- lookup_vec[c]
-    if (is.null(val) || is.na(val)) NA_character_ else val
-  }, USE.NAMES = FALSE)
-  labels <- labels[!is.na(labels)]
-  if (length(labels) == 0) return(NA_character_)
-  # Priority: F > S > E > N (per D-03)
-  if ("F" %in% labels) return("F")
-  if ("S" %in% labels) return("S")
-  if ("E" %in% labels) return("E")
-  if ("N" %in% labels) return("N")
-  return(NA_character_)
-}
-
-# aggregate_cross_use_flag: any-positive flag logic (per D-09)
-# Most specific non-NA flag wins
-aggregate_cross_use_flag <- function(codes_str, lookup_vec) {
-  if (is.na(codes_str) || codes_str == "") return(NA_character_)
-  codes <- str_split(codes_str, ",")[[1]]
-  flags <- sapply(codes, function(c) {
-    val <- lookup_vec[c]
-    if (is.null(val) || is.na(val)) NA_character_ else val
-  }, USE.NAMES = FALSE)
-  flags <- flags[!is.na(flags) & flags != ""]
-  if (length(flags) > 0) return(flags[1])
-  return(NA_character_)
-}
-
-# aggregate_immuno_confidence: any-questionable flag logic (per D-12, Phase 93)
-# If ANY triggering code in the episode is questionable, the episode gets the flag
-aggregate_immuno_confidence <- function(codes_str, lookup_vec) {
-  if (is.na(codes_str) || codes_str == "") return(NA_character_)
-  codes <- str_split(codes_str, ",")[[1]]
-  flags <- sapply(codes, function(c) {
-    val <- lookup_vec[c]
-    if (is.null(val) || is.na(val)) NA_character_ else val
-  }, USE.NAMES = FALSE)
-  flags <- flags[!is.na(flags) & flags != ""]
-  if (length(flags) > 0) return(flags[1])
-  return(NA_character_)
-}
+# Step 5C-1: Convert xlsx_lookups named vectors to keyed data.tables (Phase 98)
+xlsx_lookups_dt <- list(
+  medications = {
+    dt <- data.table(code = names(xlsx_lookups$medications),
+                     medication_name = unname(xlsx_lookups$medications))
+    setkey(dt, code); dt
+  },
+  code_types = {
+    dt <- data.table(code = names(xlsx_lookups$code_types),
+                     code_type = unname(xlsx_lookups$code_types))
+    setkey(dt, code); dt
+  },
+  source_tables = {
+    dt <- data.table(code = names(xlsx_lookups$source_tables),
+                     source_table = unname(xlsx_lookups$source_tables))
+    setkey(dt, code); dt
+  },
+  line_labels = {
+    dt <- data.table(code = names(xlsx_lookups$line_labels),
+                     treatment_line = unname(xlsx_lookups$line_labels))
+    setkey(dt, code); dt
+  },
+  cross_use_flags = {
+    dt <- data.table(code = names(xlsx_lookups$cross_use_flags),
+                     sct_cross_use_flag = unname(xlsx_lookups$cross_use_flags))
+    setkey(dt, code); dt
+  }
+)
 
 # Step 5C-2: Record pre-enrichment row count for validation
 pre_enrichment_count <- nrow(episodes)
 
-# Step 5C-3: Apply 5 new columns via mutate (per D-04 and D-05)
-episodes <- episodes %>%
-  mutate(
-    # GANTT-01: Medication names (parallel comma list per D-04)
-    medication_name = sapply(triggering_codes, map_codes_to_xlsx_metadata,
-                             lookup_vec = xlsx_lookups$medications, USE.NAMES = FALSE),
+# Step 5C-3: Explode-join-collapse for xlsx metadata (Phase 98, D-03, D-04)
+episodes_dt <- copy(ensure_dt(episodes, name = "episodes", script_name = "R/28"))
+episodes_dt[, episode_row := .I]
 
-    # GANTT-02: Code types (parallel comma list per D-04)
-    code_type = sapply(triggering_codes, map_codes_to_xlsx_metadata,
-                       lookup_vec = xlsx_lookups$code_types, USE.NAMES = FALSE),
+# Explode
+codes_long <- episodes_dt[!is.na(triggering_codes) & triggering_codes != "",
+                          .(code = unlist(strsplit(triggering_codes, ",", fixed = TRUE))),
+                          by = episode_row]
+codes_long <- codes_long[!is.na(code) & code != ""]
 
-    # GANTT-03: Source tables (parallel comma list per D-04)
-    source_table = sapply(triggering_codes, map_codes_to_xlsx_metadata,
-                          lookup_vec = xlsx_lookups$source_tables, USE.NAMES = FALSE),
+# Join all 5 xlsx_lookups
+codes_long[xlsx_lookups_dt$medications, on = .(code), medication_name := i.medication_name]
+codes_long[xlsx_lookups_dt$code_types, on = .(code), code_type := i.code_type]
+codes_long[xlsx_lookups_dt$source_tables, on = .(code), source_table := i.source_table]
+codes_long[xlsx_lookups_dt$line_labels, on = .(code), treatment_line := i.treatment_line]
+codes_long[xlsx_lookups_dt$cross_use_flags, on = .(code), sct_cross_use_flag := i.sct_cross_use_flag]
 
-    # GANTT-04: Treatment line (single aggregated value per D-03, D-05)
-    treatment_line = sapply(triggering_codes, aggregate_treatment_line,
-                            lookup_vec = xlsx_lookups$line_labels, USE.NAMES = FALSE),
+# Collapse with column-specific aggregation (per D-04, D-05):
+# medication_name, code_type, source_table: parallel comma lists
+# treatment_line: priority F > S > E > N (single value per D-05)
+# sct_cross_use_flag: first non-NA (any-positive per D-09)
+metadata_agg <- codes_long[, .(
+  # GANTT-01: parallel comma list
+  medication_name = paste(ifelse(is.na(medication_name), NA_character_, medication_name), collapse = ","),
+  # GANTT-02: parallel comma list
+  code_type = paste(ifelse(is.na(code_type), NA_character_, code_type), collapse = ","),
+  # GANTT-03: parallel comma list
+  source_table = paste(ifelse(is.na(source_table), NA_character_, source_table), collapse = ","),
+  # GANTT-04: priority selection F > S > E > N (single value)
+  treatment_line = {
+    labels <- treatment_line[!is.na(treatment_line)]
+    if (length(labels) == 0L) NA_character_
+    else if ("F" %in% labels) "F"
+    else if ("S" %in% labels) "S"
+    else if ("E" %in% labels) "E"
+    else if ("N" %in% labels) "N"
+    else NA_character_
+  },
+  # GANTT-05: first non-NA (any-positive)
+  sct_cross_use_flag = {
+    flags <- sct_cross_use_flag[!is.na(sct_cross_use_flag) & sct_cross_use_flag != ""]
+    if (length(flags) > 0L) flags[1L] else NA_character_
+  }
+), by = episode_row]
 
-    # GANTT-05: Cross-use flag (any-positive aggregation per D-09)
-    sct_cross_use_flag = sapply(triggering_codes, aggregate_cross_use_flag,
-                                lookup_vec = xlsx_lookups$cross_use_flags, USE.NAMES = FALSE)
-  )
+# Merge back
+episodes_dt[metadata_agg, on = .(episode_row),
+            `:=`(medication_name = i.medication_name,
+                 code_type = i.code_type,
+                 source_table = i.source_table,
+                 treatment_line = i.treatment_line,
+                 sct_cross_use_flag = i.sct_cross_use_flag)]
+
+# Handle NA/empty triggering_codes episodes
+episodes_dt[is.na(triggering_codes) | triggering_codes == "",
+            `:=`(medication_name = NA_character_,
+                 code_type = NA_character_,
+                 source_table = NA_character_,
+                 treatment_line = NA_character_,
+                 sct_cross_use_flag = NA_character_)]
+
+episodes_dt[, episode_row := NULL]
+episodes <- to_tibble_safe(episodes_dt, name = "episodes", script_name = "R/28")
 
 # Step 5C-4: Validate row count preserved (Pitfall 1 prevention)
 assert_true(nrow(episodes) == pre_enrichment_count,
@@ -680,11 +689,33 @@ assert_true(nrow(episodes) == pre_phase93_count,
             .var.name = glue("[R/28 ERROR] Phase 93 temporal join changed row count: {pre_phase93_count} -> {nrow(episodes)}"))
 
 # Step 5D-3: Compute immuno_confidence from QUESTIONABLE_IMMUNO_CODES (D-09, D-10, D-12)
-episodes <- episodes %>%
-  mutate(
-    immuno_confidence = sapply(triggering_codes, aggregate_immuno_confidence,
-                               lookup_vec = QUESTIONABLE_IMMUNO_CODES, USE.NAMES = FALSE)
-  )
+# Convert QUESTIONABLE_IMMUNO_CODES named vector to temporary keyed data.table
+immuno_codes_dt <- data.table(code = names(QUESTIONABLE_IMMUNO_CODES),
+                              immuno_confidence = unname(QUESTIONABLE_IMMUNO_CODES))
+setkey(immuno_codes_dt, code)
+
+episodes_dt <- copy(ensure_dt(episodes, name = "episodes", script_name = "R/28"))
+episodes_dt[, episode_row := .I]
+
+codes_long <- episodes_dt[!is.na(triggering_codes) & triggering_codes != "",
+                          .(code = unlist(strsplit(triggering_codes, ",", fixed = TRUE))),
+                          by = episode_row]
+codes_long <- codes_long[!is.na(code) & code != ""]
+codes_long[immuno_codes_dt, on = .(code), immuno_confidence := i.immuno_confidence]
+
+# Any-positive aggregation: first non-NA confidence flag
+immuno_agg <- codes_long[, .(
+  immuno_confidence = {
+    flags <- immuno_confidence[!is.na(immuno_confidence) & immuno_confidence != ""]
+    if (length(flags) > 0L) flags[1L] else NA_character_
+  }
+), by = episode_row]
+
+episodes_dt[immuno_agg, on = .(episode_row), immuno_confidence := i.immuno_confidence]
+episodes_dt[is.na(triggering_codes) | triggering_codes == "",
+            immuno_confidence := NA_character_]
+episodes_dt[, episode_row := NULL]
+episodes <- to_tibble_safe(episodes_dt, name = "episodes", script_name = "R/28")
 
 # Step 5D-4: Log Phase 93 enrichment results
 n_conditioning <- sum(episodes$is_sct_conditioning_context == TRUE, na.rm = TRUE)
@@ -727,44 +758,34 @@ stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_
 
 message("\n--- Exporting unresolved TBD codes for SME review ---")
 
-# Identify codes with TBD/questionable classification
-# These are codes in xlsx where treatment_line or cross_use_flag suggest unresolved status
-unresolved_codes <- tibble(
-  code = character(),
-  current_category = character(),
-  medication_name = character(),
-  classification_question = character()
+# Section 6B: TBD code export (Phase 98: replace named vector loop with vectorized join)
+all_xlsx_codes_dt <- data.table(code = names(xlsx_lookups$medications))
+drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
+all_xlsx_codes_dt[drug_lookup, on = .(code), current_category := i.drug_group]
+all_xlsx_codes_dt[xlsx_lookups_dt$medications, on = .(code), med_name := i.medication_name]
+all_xlsx_codes_dt[xlsx_lookups_dt$line_labels, on = .(code), line_val := i.treatment_line]
+all_xlsx_codes_dt[xlsx_lookups_dt$cross_use_flags, on = .(code), cross_val := i.sct_cross_use_flag]
+
+# Filter to TBD/questionable entries
+unresolved_codes_dt <- all_xlsx_codes_dt[
+  (!is.na(line_val) & grepl("TBD|\\?", line_val, ignore.case = TRUE)) |
+  (!is.na(cross_val) & grepl("TBD|\\?", cross_val, ignore.case = TRUE))
+]
+
+# Build classification question
+unresolved_codes_dt[, classification_question := ""]
+unresolved_codes_dt[!is.na(line_val) & grepl("TBD|\\?", line_val, ignore.case = TRUE),
+                 classification_question := paste0(classification_question,
+                   "Treatment line unresolved (current: ", line_val, "). ")]
+unresolved_codes_dt[!is.na(cross_val) & grepl("TBD|\\?", cross_val, ignore.case = TRUE),
+                 classification_question := paste0(classification_question,
+                   "Cross-use classification unresolved (current: ", cross_val, "). ")]
+unresolved_codes_dt[, classification_question := trimws(classification_question)]
+
+unresolved_codes <- to_tibble_safe(
+  unresolved_codes_dt[, .(code, current_category, medication_name = med_name, classification_question)],
+  name = "unresolved_codes", script_name = "R/28"
 )
-
-# Check for any codes where xlsx metadata suggests TBD status
-all_xlsx_codes <- names(xlsx_lookups$medications)
-for (code in all_xlsx_codes) {
-  line_val <- xlsx_lookups$line_labels[code]
-  cross_val <- xlsx_lookups$cross_use_flags[code]
-  med_name <- xlsx_lookups$medications[code]
-  category <- if (code %in% names(DRUG_GROUPINGS)) DRUG_GROUPINGS[code] else NA_character_
-
-  is_tbd <- FALSE
-  question <- ""
-
-  if (!is.na(line_val) && str_detect(line_val, regex("TBD|\\?", ignore_case = TRUE))) {
-    is_tbd <- TRUE
-    question <- paste0(question, "Treatment line unresolved (current: ", line_val, "). ")
-  }
-  if (!is.na(cross_val) && str_detect(cross_val, regex("TBD|\\?", ignore_case = TRUE))) {
-    is_tbd <- TRUE
-    question <- paste0(question, "Cross-use classification unresolved (current: ", cross_val, "). ")
-  }
-
-  if (is_tbd) {
-    unresolved_codes <- bind_rows(unresolved_codes, tibble(
-      code = code,
-      current_category = as.character(category),
-      medication_name = as.character(med_name),
-      classification_question = str_trim(question)
-    ))
-  }
-}
 
 if (nrow(unresolved_codes) > 0) {
   tbd_wb <- wb_workbook()
