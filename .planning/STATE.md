@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-06-11T03:31:09.475Z"
+last_updated: "2026-06-11T18:52:54.315Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 5
-  percent: 83
+  total_plans: 8
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -20,17 +20,17 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 98 — r-28-remaining-lookup-optimization
+**Current focus:** Phase 99 — fix-gantt-v2-vs-gantt-v1-disagreements-and-bugs-extraneous-columns-etc
 
 ## Current Position
 
-Phase: 98 (r-28-remaining-lookup-optimization) — EXECUTING
-Plan: 1 of 2
+Phase: 99 (fix-gantt-v2-vs-gantt-v1-disagreements-and-bugs-extraneous-columns-etc) — EXECUTING
+Plan: 2 of 2
 **Milestone:** v3.0 Performance Optimization with data.table
 **Phase:** 98
 **Plan:** Not started
-**Status:** Executing Phase 98
-**Progress:** [████████░░] 83%
+**Status:** Executing Phase 99
+**Progress:** [████████░░] 75%
 
 ## Accumulated Context
 
@@ -64,6 +64,12 @@ Plan: 1 of 2
 - Add tbl_lazy handling in ensure_dt() to support DuckDB lazy table inputs (nrow() returns NA on lazy tables)
 - Adjusted fixture codes: replaced 119/523 (not in AMC_PAYER_LOOKUP) with 11/511 (actual direct lookup codes)
 
+**Phase 99-01 decisions:**
+
+- Use str_detect for is_hodgkin derivation instead of CANCER_SITE_MAP re-query (simpler, preserves upstream Phase 61 logic)
+- Empty strings for pseudo-treatment character enrichment columns, NA for logical is_first_line (Tableau filter clarity)
+- Keep R/52_gantt_v2_export.R filename unchanged (v2 suffix remains for Git history continuity)
+
 ### Roadmap Evolution
 
 - Phase 99 added: fix gantt_v2 vs gantt_v1 disagreements and bugs, extraneous columns etc.
@@ -87,8 +93,8 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 96` (completed 96-01-PLAN.md, Phase 96 complete)
-**What's next:** Plan Phase 97 to migrate R/60 hot-path to data.table using classify_payer_tier_dt()
+**Last command:** `/gsd:execute-phase 99` (completed 99-01-PLAN.md)
+**What's next:** Execute 99-02-PLAN.md (update R/88 smoke tests for Gantt filename changes)
 
 ### Recent Changes
 
@@ -96,8 +102,14 @@ None identified.
 - 2026-06-10: Roadmap created with 4 phases (95-98) covering 12 requirements
 - 2026-06-10: Completed Phase 95 (data.table infrastructure setup and validation)
 - 2026-06-10: Completed Phase 96 (classify_payer_tier_dt implementation and 41-check parity validation)
+- 2026-06-11: Completed Phase 99 Plan 01 (Gantt export consolidation: schema cleanup, R/51 deletion)
 
 ### Key Files Modified
+
+**Phase 99:**
+
+- Modified: R/52_gantt_v2_export.R (schema consolidation: 22 episodes / 20 detail columns, dynamic verification)
+- Deleted: R/51_gantt_data_export.R (v1 export deprecated)
 
 **Phase 96:**
 
@@ -125,4 +137,4 @@ Granularity setting: coarse (3-5 phases target, delivered 4 phases matching rese
 Coverage: 12/12 v3.0 requirements mapped (100%).
 
 ---
-*State updated: 2026-06-10 after completing Phase 96 (96-01-PLAN.md)*
+*State updated: 2026-06-11 after completing Phase 99 Plan 01 (99-01-PLAN.md)*
