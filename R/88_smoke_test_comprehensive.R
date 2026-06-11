@@ -1500,10 +1500,11 @@ check(
   length(QUESTIONABLE_IMMUNO_CODES) == 11
 )
 
-# Check 3: R/28 includes aggregate_immuno_confidence function
+# Check 3: R/28 includes immuno_confidence computation via data.table keyed join (Phase 98)
 check(
-  "R/28 defines aggregate_immuno_confidence function",
-  any(grepl("aggregate_immuno_confidence", r28_lines, fixed = TRUE))
+  "R/28 computes immuno_confidence via data.table keyed join",
+  any(grepl("immuno_codes_dt", r28_lines, fixed = TRUE)) &&
+  any(grepl("immuno_agg", r28_lines, fixed = TRUE))
 )
 
 # Check 4: R/28 includes is_sct_conditioning_context computation
