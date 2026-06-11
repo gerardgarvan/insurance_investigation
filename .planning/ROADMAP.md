@@ -50,7 +50,7 @@ Plans:
   2. User can inspect script header and see runtime benchmark log showing before/after execution times
   3. User can run smoke test R/88 Section 15f and see same-day payer resolution validation pass
   4. User can trace group_by PATID+ADMIT_DATE operations and see data.table [, by=] syntax with setkey() before aggregation
-**Plans:** 1 plan
+**Plans:** 0/1 plans executed
 Plans:
 - [ ] 97-01-PLAN.md -- Migrate R/60 to data.table (all 3 sections) and create R/97 benchmark + parity validation script
 
@@ -72,7 +72,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 95. Infrastructure Setup | 2/2 | Complete   | 2026-06-10 |
 | 96. classify_payer_tier_dt() Implementation | 1/1 | Complete    | 2026-06-10 |
-| 97. R/60 Hot-Path Migration | 0/1 | Planning complete | - |
+| 97. R/60 Hot-Path Migration | 0/1 | Planned    |  |
 | 98. R/28 + Remaining Lookup Optimization | 0/0 | Not started | - |
 
 ## Next Steps
