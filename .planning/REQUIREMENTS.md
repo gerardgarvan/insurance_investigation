@@ -15,8 +15,8 @@ Requirements for meeting gap closure milestone. Each maps to roadmap phases.
 
 ### Co-Administration Analysis
 
-- [ ] **COADMIN-01**: Detail table showing each single-agent chemo encounter with all co-administered chemotherapies found within ±30 days
-- [ ] **COADMIN-02**: Pattern summary table showing most common co-administration pairings and their frequencies
+- [x] **COADMIN-01**: Detail table showing each single-agent chemo encounter with all co-administered chemotherapies found within ±30 days
+- [x] **COADMIN-02**: Pattern summary table showing most common co-administration pairings and their frequencies
 
 ### Death Date Summary
 
@@ -58,8 +58,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRUG-01 | Phase 101 | Complete |
 | DRUG-02 | Phase 101 | Complete |
 | DRUG-03 | Phase 101 | Complete |
-| COADMIN-01 | Phase 102 | Pending |
-| COADMIN-02 | Phase 102 | Pending |
+| COADMIN-01 | Phase 102 | Complete |
+| COADMIN-02 | Phase 102 | Complete |
 | DEATH-01 | Phase 103 | Pending |
 
 **Coverage:**
