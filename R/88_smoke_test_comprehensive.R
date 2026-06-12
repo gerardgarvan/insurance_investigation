@@ -1978,7 +1978,7 @@ if (file.exists("R/30_condition_linkage_investigation.R")) {
 # ==============================================================================
 # Validates R/57 broadened drug grouping with cancer_linked flag and dual-output.
 
-message("\n[31/34] Phase 101: Broadened drug grouping output validation...")
+message("\n[31/35] Phase 101: Broadened drug grouping output validation...")
 
 if (file.exists("R/57_drug_grouping_instances.R")) {
   r57_lines_101 <- readLines("R/57_drug_grouping_instances.R", warn = FALSE)
@@ -2094,7 +2094,7 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
 # ==============================================================================
 # Validates R/58 co-administration analysis structural integrity.
 
-message("\n[32/34] Phase 102: Co-administration analysis validation...")
+message("\n[32/35] Phase 102: Co-administration analysis validation...")
 
 if (file.exists("R/58_co_administration_analysis.R")) {
   r58_lines <- readLines("R/58_co_administration_analysis.R", warn = FALSE)
@@ -2216,13 +2216,115 @@ if (file.exists("R/58_co_administration_analysis.R")) {
 }
 
 # ==============================================================================
+# SECTION 31C: PHASE 103 -- DEATH DATE CROSS-TAB SUMMARY (DEATH-01) ----
+# ==============================================================================
+# Validates R/59 death date summary structural integrity.
+
+message("\n[33/35] Phase 103: Death date cross-tab summary validation...")
+
+if (file.exists("R/59_death_date_summary.R")) {
+  r59_lines <- readLines("R/59_death_date_summary.R", warn = FALSE)
+
+  # D-01: Standalone investigation script sourcing R/00_config.R
+  check("R/59 sources R/00_config.R (D-01)",
+        any(grepl('source.*R/00_config', r59_lines)))
+
+  # D-01: Investigation script (no saveRDS)
+  check("R/59 does NOT contain saveRDS (D-01: investigation only)",
+        !any(grepl("saveRDS[(]", r59_lines)))
+
+  # D-02: Reads validated_death_dates.rds
+  check("R/59 reads validated_death_dates.rds (D-02)",
+        any(grepl("validated_death_dates\\.rds", r59_lines)))
+
+  # D-02: Reads confirmed_hl_cohort.rds for denominator
+  check("R/59 reads confirmed_hl_cohort.rds for cohort denominator (D-02, D-04)",
+        any(grepl("confirmed_hl_cohort\\.rds", r59_lines)))
+
+  # D-02: Queries DuckDB ENCOUNTER table
+  check("R/59 queries ENCOUNTER table via get_pcornet_table (D-02)",
+        any(grepl('get_pcornet_table.*ENCOUNTER', r59_lines)))
+
+  # D-03: Cascading summary structure
+  check("R/59 builds cascading summary with death_is_last metric (D-03)",
+        any(grepl("death_is_last", r59_lines)))
+
+  # Pitfall 2: Must filter death_valid == TRUE
+  check("R/59 filters death_valid == TRUE (Pitfall 2 avoidance)",
+        any(grepl("death_valid.*==.*TRUE", r59_lines)))
+
+  # D-04: Uses DEATH_DATE >= last_encounter_date (R/29 parity)
+  check("R/59 uses DEATH_DATE >= last_encounter_date comparison (R/29 parity)",
+        any(grepl("DEATH_DATE.*>=.*last_encounter_date", r59_lines)))
+
+  # D-04: Uses post_death_activity flag from Phase 59
+  check("R/59 uses post_death_activity flag (Phase 59)",
+        any(grepl("post_death_activity", r59_lines)))
+
+  # D-05: Verification logging against R/29
+  check("R/59 logs DEATH-01 verification label (D-05)",
+        any(grepl("DEATH-01", r59_lines)))
+
+  # D-07: xlsx output with Death Date Summary sheet
+  check("R/59 creates 'Death Date Summary' worksheet (D-07)",
+        any(grepl("Death Date Summary", r59_lines)))
+
+  # D-08: Styled header with project-standard dark gray
+  check("R/59 uses FF374151 header fill color (D-08)",
+        any(grepl("FF374151", r59_lines)))
+
+  # Input validation
+  check("R/59 uses assert_rds_exists for input validation",
+        any(grepl("assert_rds_exists", r59_lines)))
+
+  # D-06: No HIPAA suppression
+  check("R/59 does NOT apply automatic HIPAA suppression (D-06)",
+        !any(grepl("<11|hipaa_suppress|suppress_small", r59_lines, ignore.case = TRUE)))
+
+  # Optional: output file validation (only if death_date_summary.xlsx exists)
+  DEATH_XLSX_PATH <- file.path(CONFIG$output_dir, "death_date_summary.xlsx")
+  if (file.exists(DEATH_XLSX_PATH)) {
+    tryCatch({
+      wb_d <- openxlsx2::wb_load(DEATH_XLSX_PATH)
+      sheet_names_d <- wb_d$sheet_names
+
+      check("death_date_summary.xlsx has 1 sheet",
+            length(sheet_names_d) == 1)
+
+      check("Sheet 1 is 'Death Date Summary'",
+            sheet_names_d[1] == "Death Date Summary")
+
+      # Check column structure
+      summary_data <- openxlsx2::wb_to_df(wb_d, sheet = "Death Date Summary", start_row = 4)
+      check("Summary table has Metric column",
+            "Metric" %in% colnames(summary_data))
+
+      check("Summary table has Count column",
+            "Count" %in% colnames(summary_data))
+
+      check("Summary table has 4 data rows (cascading structure per D-03)",
+            nrow(summary_data) == 4)
+
+    }, error = function(e) {
+      message(glue("  SKIP: Could not read death_date_summary xlsx ({e$message})"))
+    })
+  } else {
+    message("  SKIP: death_date_summary.xlsx not found (run R/59 first)")
+  }
+
+} else {
+  message("  FAIL: R/59_death_date_summary.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[33/34] DuckDB integration validation...")
+message("\n[34/35] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2303,7 +2405,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
 # Production mode: skipped entirely (fixture data not present).
 
 if (IS_LOCAL) {
-  message("\n[34/34] Fixture schema validation (local mode only)...")
+  message("\n[35/35] Fixture schema validation (local mode only)...")
 
   if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
 
@@ -2484,6 +2586,7 @@ message("  * DRUG-02: cancer_linked TRUE/FALSE flag column on broadened output (
 message("  * DRUG-03: Linked-only output preserved with _linked_only suffix (R/57 Phase 101)")
 message("  * COADMIN-01: Co-administration detail table with +/-30-day window (R/58 Phase 102)")
 message("  * COADMIN-02: Pattern summary with symmetric pair deduplication (R/58 Phase 102)")
+message("  * DEATH-01: Death date cross-tab summary with cascading metrics (R/59 Phase 103)")
 message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
 message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
 message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
