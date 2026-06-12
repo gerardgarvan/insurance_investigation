@@ -229,14 +229,14 @@ check(
 # --------------------------------------------------------------------------
 message("\n[6/29] Quality/Investigations decade (30-39)...")
 
-quality_expected <- c("35_death_cause_quality.R")
+quality_expected <- c("30_condition_linkage_investigation.R", "35_death_cause_quality.R")
 quality_found <- 0L
 for (s in quality_expected) {
   if (file.exists(file.path("R", s))) quality_found <- quality_found + 1L
 }
 check(
-  glue("Quality/Investigations decade: 1/1 scripts (found {quality_found})"),
-  quality_found == 1
+  glue("Quality/Investigations decade: 2/2 scripts (found {quality_found})"),
+  quality_found == 2
 )
 
 # --------------------------------------------------------------------------
@@ -1226,7 +1226,7 @@ check(
 # SECTION 15b: ENVIRONMENT DETECTION (Phase 83: ENV-01 through ENV-06) ----
 # ==============================================================================
 
-message("\n[29/29] Environment detection validation...")
+message("\n[29/31] Environment detection validation...")
 
 # ENV-01: IS_LOCAL flag defined and logical
 check("IS_LOCAL flag is defined", exists("IS_LOCAL"))
@@ -1869,13 +1869,118 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
 }
 
 # ==============================================================================
+# SECTION 30: R/30 CONDITION LINKAGE INVESTIGATION (COND-01, COND-02, COND-03) ----
+# ==============================================================================
+
+message("\n[30/31] R/30 CONDITION linkage investigation validation...")
+
+# --- Script existence ---
+check("R/30_condition_linkage_investigation.R exists",
+      file.exists("R/30_condition_linkage_investigation.R"))
+
+if (file.exists("R/30_condition_linkage_investigation.R")) {
+  r30_lines <- readLines("R/30_condition_linkage_investigation.R", warn = FALSE)
+
+  # --- Structural checks (static analysis) ---
+
+  # COND-01: CONDITION table query
+  check("R/30 queries CONDITION table via get_pcornet_table()",
+        any(grepl('get_pcornet_table\\("CONDITION"\\)', r30_lines)))
+
+  # D-01: ICD-9/10 filtering
+  check("R/30 filters CONDITION_TYPE to ICD-9 ('09') and ICD-10 ('10')",
+        any(grepl('CONDITION_TYPE.*%in%.*c\\("09", "10"\\)', r30_lines)))
+
+  # D-03: Link method labels
+  check("R/30 uses 'condition_encounter' link method label",
+        any(grepl('condition_link_method.*=.*"condition_encounter"', r30_lines)))
+
+  check("R/30 uses 'condition_date' link method label",
+        any(grepl('condition_link_method.*=.*"condition_date"', r30_lines)))
+
+  # COND-03: classify_codes for cancer category assignment
+  check("R/30 uses classify_codes() for cancer category assignment",
+        any(grepl("classify_codes\\(CONDITION\\)", r30_lines)))
+
+  # D-04: ONSET_DATE (not REPORT_DATE) for temporal matching
+  check("R/30 uses ONSET_DATE for temporal matching",
+        any(grepl("ONSET_DATE", r30_lines)))
+
+  check("R/30 does NOT use REPORT_DATE for temporal matching",
+        !any(grepl("REPORT_DATE.*episode_start|days_before.*REPORT_DATE", r30_lines)))
+
+  # D-05: Only unlinked episodes (cancer_link_method == "none")
+  check("R/30 filters to unlinked episodes (cancer_link_method == 'none')",
+        any(grepl('cancer_link_method.*==.*"none"', r30_lines)))
+
+  # D-06: Non-destructive constraint (no saveRDS to treatment_episodes)
+  check("R/30 does NOT call saveRDS on treatment_episodes.rds (read-only investigation)",
+        !any(grepl("saveRDS.*treatment_episodes", r30_lines)))
+
+  # D-09: Report as new sheet in episode_classification_audit.xlsx
+  check("R/30 loads existing workbook via wb_load()",
+        any(grepl("wb_load", r30_lines)))
+
+  check("R/30 creates 'Linkage Improvement' sheet",
+        any(grepl('"Linkage Improvement"', r30_lines)))
+
+  # D-10: Treatment type breakdown
+  check("R/30 produces treatment type breakdown",
+        any(grepl("treatment_type_breakdown", r30_lines)) &&
+          any(grepl("group_by\\(treatment_type\\)", r30_lines)))
+
+  # DuckDB cleanup
+  check("R/30 closes DuckDB connection via close_pcornet_con()",
+        any(grepl("close_pcornet_con\\(\\)", r30_lines)))
+
+  # Decision traceability
+  check("R/30 header contains decision traceability (D-01 through D-10)",
+        any(grepl("D-01:", r30_lines)) && any(grepl("D-10:", r30_lines)))
+
+  # --- Output validation (optional, only if xlsx exists) ---
+  AUDIT_XLSX_PATH <- file.path(CONFIG$output_dir, "episode_classification_audit.xlsx")
+
+  if (file.exists(AUDIT_XLSX_PATH)) {
+    tryCatch({
+      wb <- openxlsx2::wb_load(AUDIT_XLSX_PATH)
+      sheet_names <- wb$get_sheet_names()
+
+      check("episode_classification_audit.xlsx contains 'Linkage Improvement' sheet",
+            "Linkage Improvement" %in% sheet_names)
+
+      if ("Linkage Improvement" %in% sheet_names) {
+        sheet_data <- openxlsx2::wb_to_df(wb, sheet = "Linkage Improvement", start_row = 4)
+
+        check("'Linkage Improvement' sheet has expected columns (Metric, Count, Percent)",
+              all(c("Metric", "Count", "Percent") %in% colnames(sheet_data)))
+
+        if ("Metric" %in% colnames(sheet_data)) {
+          check("'Linkage Improvement' sheet contains 'Total episodes' row",
+                any(grepl("Total episodes", sheet_data$Metric)))
+
+          check("'Linkage Improvement' sheet contains 'Improvement' row",
+                any(grepl("Improvement", sheet_data$Metric)))
+        }
+      }
+    }, error = function(e) {
+      message(glue("  SKIP: Could not read xlsx ({e$message})"))
+    })
+  } else {
+    message("  SKIP: episode_classification_audit.xlsx not found (run R/28 first)")
+  }
+} else {
+  message("  FAIL: R/30 script not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[32/33] DuckDB integration validation...")
+message("\n[31/31] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2069,7 +2174,7 @@ if (IS_LOCAL) {
   }
 
 } else {
-  message("\n[33/33] Fixture schema validation -- SKIPPED (production mode)")
+  message("\n[FIXTURE] Fixture schema validation -- SKIPPED (production mode)")
 }
 
 # ==============================================================================
