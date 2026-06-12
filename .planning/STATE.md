@@ -1,36 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: milestone
-status: executing
-last_updated: "2026-06-11T19:00:02.574Z"
+milestone: v3.1
+milestone_name: Meeting Gap Closure — Clinical Data Coverage
+status: defining_requirements
+last_updated: "2026-06-12"
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 7
-  percent: 88
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-09)
+See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 99 — fix-gantt-v2-vs-gantt-v1-disagreements-and-bugs-extraneous-columns-etc
+**Current focus:** Defining requirements for v3.1
 
 ## Current Position
 
-Phase: 99 (fix-gantt-v2-vs-gantt-v1-disagreements-and-bugs-extraneous-columns-etc) — EXECUTING
-Plan: 2 of 2
-**Milestone:** v3.0 Performance Optimization with data.table
-**Phase:** 98
-**Plan:** Not started
-**Status:** Executing Phase 99
-**Progress:** [█████████░] 88%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-12 — Milestone v3.1 started
 
 ## Accumulated Context
 

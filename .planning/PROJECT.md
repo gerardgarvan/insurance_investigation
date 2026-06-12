@@ -79,15 +79,24 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] SCT conditioning / immunotherapy cross-use flags in Gantt output — v2.3 Phase 91
 - [x] Flag questionable immunotherapy codes (vitamin combos, CAR-T classification) — v2.3 Phase 93
 - [x] Proton Therapy as distinct treatment category from Radiation (4 CPT codes split) — v2.3 Phase 94
+- [x] data.table infrastructure with conversion helpers and 6 keyed lookup tables — v3.0 Phase 95
+- [x] classify_payer_tier_dt() data.table variant with output parity — v3.0 Phase 96
+- [x] R/60 same-day payer resolution migrated to data.table — v3.0 Phase 97
+- [x] R/28 episode classification lookups replaced with keyed joins — v3.0 Phase 98
+- [x] Gantt v1/v2 consolidation with dynamic schema verification — v3.0 Phase 99
 
 ### Active
 
-#### v3.0 Performance Optimization with data.table
+#### v3.1 Meeting Gap Closure — Clinical Data Coverage
 
-- [ ] Replace all named vector lookups with data.table keyed joins
-- [ ] Migrate hot-path scripts to data.table syntax
-- [ ] Optimize heavy group_by/summarise operations
-- [ ] Verify output correctness matches pre-optimization results
+- [ ] Unlinked treatment quantification summary tables (linked vs unlinked by treatment type)
+- [ ] Single-agent 30-day co-administration analysis for fragmented regimen detection
+- [ ] Death date cross-tab summary (death date presence, last encounter, post-death activity)
+- [ ] CONDITION table cancer linkage to reduce unlinked episode rate
+
+#### v3.0 Remaining
+
+- [ ] Smoke test R/88 passes with all existing sections after v3.0 optimization (VALID-01)
 
 ### Out of Scope
 
@@ -102,22 +111,21 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
 
-## Current Milestone: v3.0 Performance Optimization with data.table
+## Current Milestone: v3.1 Meeting Gap Closure — Clinical Data Coverage
 
-**Goal:** Replace named vector lookups and slow dplyr patterns with data.table joins and optimized operations across the full pipeline for significant speed gains on large PCORnet datasets.
+**Goal:** Close analytical gaps identified in team meetings by quantifying unlinked treatments, analyzing single-agent co-administration patterns, producing death date cross-tabs, and improving cancer linkage rates via the CONDITION table.
 
 **Target features:**
-- Replace all named vector lookups (AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, TREATMENT_CODES, CANCER_SITE_MAP, TIER_MAPPING) with data.table keyed joins
-- Migrate hot-path scripts (R/60, R/28, classify_payer_tier, etc.) to data.table syntax
-- Optimize heavy group_by() %>% summarise() operations (e.g., R/60 same-day resolution)
-- Add data.table as a full project dependency
-- Preserve existing output correctness (results must match pre-optimization)
+- Unlinked treatment quantification — summary tables comparing linked vs unlinked treatment counts by type (Chemo, RT, SCT, Immuno, Proton)
+- Single-agent 30-day co-administration — for isolated single-agent chemo encounters, find other chemotherapies given within ±30 days to surface fragmented regimen patterns
+- Death date cross-tab summary — clean presentable table answering: how many have a death date, how many have death as last encounter, how many have encounters after death
+- CONDITION table cancer linkage — supplement DIAGNOSIS-based encounter-level cancer linkage with CONDITION table to reduce ~30% unlinked episode rate
 
 ## Current State
 
-**Shipped:** v2.3 (2026-06-09)
+**Shipped:** v2.3 (2026-06-09). v3.0 near-complete (88%, Phase 98-02 pending).
 
-**Pipeline status:** 94 phases completed across 14 milestones (v1.0-v2.3). 99 R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + 3 test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment (medication names, code types, source tables, treatment lines, cross-use flags), SCT conditioning temporal context flags (is_sct_conditioning_context) and immunotherapy confidence column (immuno_confidence for 11 questionable codes), Gantt v2 CSV exports with 22-column episodes and 20-column detail schemas, 5 treatment categories (Chemotherapy, Radiation, SCT, Immunotherapy, Proton Therapy) with proton beam therapy split from Radiation (Phase 94), and comprehensive smoke test with 35 validation sections plus Sections 15f-15g.
+**Pipeline status:** 99 phases completed across 15 milestones (v1.0-v3.0). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification, R/60 and R/28 migrated to data.table. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment, SCT conditioning temporal context flags, 5 treatment categories (Chemotherapy, Radiation, SCT, Immunotherapy, Proton Therapy), consolidated Gantt export with dynamic schema verification (Phase 99), and comprehensive smoke test with 35+ validation sections.
 
 ## Previous Milestones
 
@@ -255,7 +263,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 93 phases completed across 14 milestones (v1.0-v2.3), 99 R scripts total, DuckDB backend with dual-environment support, AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled xlsx outputs, xlsx metadata enrichment (5 new columns from all_codes_resolved2.xlsx), SCT conditioning temporal context and immunotherapy confidence flags (Phase 93), 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 35 validation sections plus Section 15f, false-positive SCT code removal (5 status/complication codes)
+- **Current state**: 99 phases completed across 15 milestones (v1.0-v3.0), 99+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure (6 keyed lookup tables, classify_payer_tier_dt, R/60 and R/28 migrated), AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables, episode/encounter grain-labeled xlsx outputs, xlsx metadata enrichment (5 columns from all_codes_resolved2.xlsx), SCT conditioning temporal context and immunotherapy confidence flags, consolidated Gantt export with dynamic schema verification (Phase 99), 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 35+ validation sections
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -327,4 +335,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-09 after v3.0 milestone start*
+*Last updated: 2026-06-12 after v3.1 milestone start*
