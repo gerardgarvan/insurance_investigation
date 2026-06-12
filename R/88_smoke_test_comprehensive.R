@@ -1872,7 +1872,7 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
 # SECTION 30: R/30 CONDITION LINKAGE INVESTIGATION (COND-01, COND-02, COND-03) ----
 # ==============================================================================
 
-message("\n[30/31] R/30 CONDITION linkage investigation validation...")
+message("\n[30/32] R/30 CONDITION linkage investigation validation...")
 
 # --- Script existence ---
 check("R/30_condition_linkage_investigation.R exists",
@@ -1974,13 +1974,129 @@ if (file.exists("R/30_condition_linkage_investigation.R")) {
 }
 
 # ==============================================================================
+# SECTION 31A: PHASE 101 -- BROADENED DRUG GROUPING OUTPUT (DRUG-01, DRUG-02, DRUG-03) ----
+# ==============================================================================
+# Validates R/57 broadened drug grouping with cancer_linked flag and dual-output.
+
+message("\n[31/32] Phase 101: Broadened drug grouping output validation...")
+
+if (file.exists("R/57_drug_grouping_instances.R")) {
+  r57_lines_101 <- readLines("R/57_drug_grouping_instances.R", warn = FALSE)
+
+  # DRUG-01: Broadened output includes ALL encounters (table1_all, table2_all)
+  check("R/57 creates table1_all (broadened, all encounters)",
+        any(grepl("table1_all", r57_lines_101)))
+
+  check("R/57 creates table2_all (broadened, all encounters)",
+        any(grepl("table2_all", r57_lines_101)))
+
+  # DRUG-02: cancer_linked flag derived from cancer_codes
+  check("R/57 derives cancer_linked from !is.na(cancer_codes)",
+        any(grepl("cancer_linked.*!is\\.na\\(cancer_codes\\)", r57_lines_101)) ||
+        any(grepl("cancer_linked.*!is\\.na\\(cancer_category_names\\)", r57_lines_101)))
+
+  # DRUG-03: Linked-only output preserved
+  check("R/57 creates table1_linked (cancer-linked-only backward compat)",
+        any(grepl("table1_linked", r57_lines_101)))
+
+  check("R/57 creates table2_linked (cancer-linked-only backward compat)",
+        any(grepl("table2_linked", r57_lines_101)))
+
+  # D-02: Reference code filter still present
+  check("R/57 retains reference code filter (valid_reference_codes OR Immunotherapy)",
+        any(grepl("valid_reference_codes.*Immunotherapy", r57_lines_101)) ||
+        any(grepl("triggering_code.*valid_reference_codes", r57_lines_101)))
+
+  # Linked-only strips cancer_linked column (Pitfall 1)
+  check("R/57 removes cancer_linked from linked-only export (select(-cancer_linked))",
+        sum(grepl("select\\(-cancer_linked\\)", r57_lines_101)) >= 2)
+
+  # D-06: Cross-tab summary sheet
+  check("R/57 creates cross-tab summary (crosstab_summary)",
+        any(grepl("crosstab_summary", r57_lines_101)))
+
+  check("R/57 has 'Linked vs Unlinked' sheet in broadened workbook",
+        any(grepl("Linked vs Unlinked", r57_lines_101)))
+
+  # D-07/D-08: Dual-output file paths
+  check("R/57 defines linked-only output paths (_linked_only suffix)",
+        any(grepl("_linked_only\\.xlsx", r57_lines_101)))
+
+  # D-09: Broadened has 3 sheets (wb_broad with 3 add_worksheet calls)
+  check("R/57 creates separate broadened workbook (wb_broad)",
+        any(grepl("wb_broad.*wb_workbook", r57_lines_101)))
+
+  check("R/57 creates separate linked-only workbook (wb_linked)",
+        any(grepl("wb_linked.*wb_workbook", r57_lines_101)))
+
+  # Section 6B cross-tab exists
+  check("R/57 has Section 6B for cross-tab summary",
+        any(grepl("SECTION 6B.*CROSS-TAB", r57_lines_101)))
+
+  # Decision traceability
+  check("R/57 header contains Phase 101 decision traceability (D-01 through D-09)",
+        any(grepl("D-01:", r57_lines_101)) && any(grepl("D-09:", r57_lines_101)))
+
+  # Optional: output file validation (only if broadened xlsx exists)
+  BROADENED_XLSX_PATH <- file.path(CONFIG$output_dir, "encounter_level_drug_grouping_instances.xlsx")
+  LINKED_ONLY_XLSX_PATH <- file.path(CONFIG$output_dir, "encounter_level_drug_grouping_instances_linked_only.xlsx")
+
+  if (file.exists(BROADENED_XLSX_PATH) && file.exists(LINKED_ONLY_XLSX_PATH)) {
+    tryCatch({
+      wb_b <- openxlsx2::wb_load(BROADENED_XLSX_PATH)
+      wb_l <- openxlsx2::wb_load(LINKED_ONLY_XLSX_PATH)
+
+      b_sheets <- wb_b$get_sheet_names()
+      l_sheets <- wb_l$get_sheet_names()
+
+      check("Broadened xlsx has 3 sheets",
+            length(b_sheets) == 3)
+
+      check("Linked-only xlsx has 2 sheets",
+            length(l_sheets) == 2)
+
+      check("Broadened xlsx contains 'Linked vs Unlinked' sheet",
+            "Linked vs Unlinked" %in% b_sheets)
+
+      # Check cancer_linked column in broadened
+      b_data <- openxlsx2::wb_to_df(wb_b, sheet = "Enc: Sub-Category Detail", start_row = 1)
+      check("Broadened Sheet 1 contains cancer_linked column",
+            "cancer_linked" %in% colnames(b_data))
+
+      # Check cancer_linked column NOT in linked-only
+      l_data <- openxlsx2::wb_to_df(wb_l, sheet = "Enc: Sub-Category Detail", start_row = 1)
+      check("Linked-only Sheet 1 does NOT contain cancer_linked column",
+            !("cancer_linked" %in% colnames(l_data)))
+
+      # Broadened should have >= rows than linked-only
+      check("Broadened has >= rows than linked-only (broadened is superset)",
+            nrow(b_data) >= nrow(l_data))
+
+      # Cross-tab sheet structure
+      ct_data <- openxlsx2::wb_to_df(wb_b, sheet = "Linked vs Unlinked", start_row = 1)
+      check("Cross-tab has treatment_type, linked_count, unlinked_count columns",
+            all(c("treatment_type", "linked_count", "unlinked_count") %in% colnames(ct_data)))
+
+    }, error = function(e) {
+      message(glue("  SKIP: Could not read xlsx files ({e$message})"))
+    })
+  } else {
+    message("  SKIP: Broadened/linked-only xlsx not found (run R/57 first)")
+  }
+
+} else {
+  message("  FAIL: R/57_drug_grouping_instances.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[31/31] DuckDB integration validation...")
+message("\n[32/32] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2237,6 +2353,9 @@ message("  * P88-D03: Sub-category names via 3-tier resolution")
 message("  * P88-D04: Cancer site category names from CANCER_SITE_MAP + ICD9_CANCER_SITE_MAP")
 message("  * P88-D05/D06: Per-episode rows with patient_id, dates, treatment_category")
 message("  * P88-D07/D08: New encounter_level_drug_grouping_instances.xlsx with 2 sheets, per-encounter grain")
+message("  * DRUG-01: Broadened output includes ALL treatment encounters (R/57 Phase 101)")
+message("  * DRUG-02: cancer_linked TRUE/FALSE flag column on broadened output (R/57 Phase 101)")
+message("  * DRUG-03: Linked-only output preserved with _linked_only suffix (R/57 Phase 101)")
 message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
 message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
 message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
