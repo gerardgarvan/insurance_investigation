@@ -11,7 +11,7 @@
 
 - [x] **Phase 100: CONDITION Table Cancer Linkage** - Supplement DIAGNOSIS-based linkage with CONDITION table to reduce unlinked episode rate (completed 2026-06-12)
 - [x] **Phase 101: Broadened Drug Grouping Output** - Expand drug grouping to all treatment encounters regardless of cancer linkage (completed 2026-06-12)
-- [x] **Phase 102: Single-Agent Co-Administration Analysis** - Detect fragmented regimen patterns via 30-day co-administration windows (completed 2026-06-12)
+- [x] **Phase 102: Single-Agent Co-Administration Analysis** - Detect fragmented regimen patterns via 30-day co-administration windows (completed 2026-06-12)
 - [ ] **Phase 103: Death Date Cross-Tab Summary** - Produce death date presence and post-death encounter cross-tabs
 
 ## Phase Details
@@ -59,12 +59,14 @@ Plans:
 **Goal**: Clean presentable death date cross-tab table answering team questions about death date coverage and post-death activity
 **Depends on**: Nothing (independent analysis)
 **Requirements**: DEATH-01
+**Plans:** 1 plan
+Plans:
+- [ ] 103-01-PLAN.md — R/59 death date summary script + R/88 smoke test validation
 **Success Criteria** (what must be TRUE):
   1. User can open death_date_summary.xlsx and see unstratified cross-tab with three counts: (i) patients with death date, (ii) of those, how many have death as last encounter, (iii) how many have encounters after death
   2. User can verify counts match existing death date data quality analysis from Phase 62
   3. User can present table in team meeting without additional formatting (clean, labeled, HIPAA-compliant with <11 suppression)
   4. User can trace logic back to DEATH table and verify death date presence vs ENCOUNTER timing alignment
-**Plans**: TBD
 
 ## Progress
 
@@ -73,12 +75,11 @@ Plans:
 | 100. CONDITION Table Cancer Linkage | 1/1 | Complete    | 2026-06-12 |
 | 101. Broadened Drug Grouping Output | 1/1 | Complete    | 2026-06-12 |
 | 102. Single-Agent Co-Administration Analysis | 1/1 | Complete    | 2026-06-12 |
-| 103. Death Date Cross-Tab Summary | 0/? | Not started | - |
+| 103. Death Date Cross-Tab Summary | 0/1 | Planned | - |
 
 ## Next Steps
 
-1. Execute Phase 102: `/gsd:execute-phase 102`
-2. Plan Phase 103 (independent, can execute anytime)
+1. Execute Phase 103: `/gsd:execute-phase 103`
 
 ## Coverage
 
