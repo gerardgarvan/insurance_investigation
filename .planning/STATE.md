@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: milestone
-status: verifying
-last_updated: "2026-06-12T16:21:18.802Z"
-last_activity: 2026-06-12
+status: executing
+last_updated: "2026-06-12T17:27:00Z"
+last_activity: 2026-06-12 -- Phase 101 Plan 01 complete
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 0
 ---
 
@@ -21,16 +21,16 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 100 — condition-table-cancer-linkage
+**Current focus:** Phase 101 — broadened-drug-grouping-output
 
 ## Current Position
 
-Phase: 101
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-12
+Phase: 101 (broadened-drug-grouping-output) — COMPLETE
+Plan: 1 of 1 (all plans complete)
+Status: Phase 101 complete -- ready for transition
+Last activity: 2026-06-12 -- Phase 101 Plan 01 executed (2 tasks, 2 commits)
 
-Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0%
+Progress: [██████████████████████████████████████████] 100%
 
 ## Performance Metrics
 
@@ -78,6 +78,14 @@ Progress: ░░░░░░░░░░░░░░░░░░░░░░░�
 - Treatment type breakdown (D-10) enables targeted improvement analysis per treatment category
 - Decision traceability in script header (D-01 through D-10) documents all investigation design choices
 
+**Phase 101 decisions:**
+
+- cancer_linked derived from !is.na(cancer_codes) for encounter-level DX presence flag (D-03)
+- Broadened output = primary files; linked-only with _linked_only suffix (D-07, D-08)
+- Cross-tab summary as 3rd sheet "Linked vs Unlinked" in broadened workbook (D-06)
+- select(-cancer_linked) strips flag from linked-only exports for backward compatibility
+- 4 separate output paths prevent file overwriting (NEW/OLD broadened + NEW/OLD linked-only)
+
 ### Roadmap Evolution
 
 **v3.1 Structure:**
@@ -107,11 +115,12 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:roadmap` (v3.1 roadmap creation)
-**What's next:** Run `/gsd:plan-phase 100` to create execution plans for CONDITION table cancer linkage
+**Last command:** `/gsd:execute-phase 101` (Phase 101 execution)
+**What's next:** Run `/gsd:plan-phase 102` to create execution plans for single-agent co-administration analysis
 
 ### Recent Changes
 
+- 2026-06-12: Phase 101 Plan 01 complete (broadened drug grouping output, 2 tasks, 2 commits)
 - 2026-06-12: v3.1 milestone started after defining requirements
 - 2026-06-12: Roadmap created with 4 phases (100-103) covering 9 requirements
 - 2026-06-11: v3.0 Phase 99 completed (Gantt consolidation with dynamic schema verification)
@@ -119,6 +128,12 @@ None identified.
 - 2026-06-10: v3.0 Phase 95-96 completed (data.table infrastructure and classify_payer_tier_dt)
 
 ### Key Files Modified
+
+**Phase 101 (Broadened Drug Grouping Output):**
+
+- Modified: R/57_drug_grouping_instances.R (dual-output with cancer_linked flag, cross-tab summary)
+- Modified: R/88_smoke_test_comprehensive.R (Phase 101 validation section)
+- Created: .planning/phases/101-broadened-drug-grouping-output/101-01-SUMMARY.md
 
 **v3.1 Roadmap Creation:**
 
@@ -137,7 +152,7 @@ None identified.
 **Immediate (v3.1):**
 
 - Phase 100: CONDITION table cancer linkage (3 requirements)
-- Phase 101: Broadened drug grouping output (3 requirements)
+- ~~Phase 101: Broadened drug grouping output (3 requirements)~~ COMPLETE
 - Phase 102: Single-agent co-administration analysis (2 requirements)
 - Phase 103: Death date cross-tab summary (1 requirement)
 
@@ -146,4 +161,4 @@ None identified.
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
-*State updated: 2026-06-12 after v3.1 roadmap creation*
+*State updated: 2026-06-12 after Phase 101 Plan 01 completion*

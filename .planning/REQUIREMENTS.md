@@ -9,9 +9,9 @@ Requirements for meeting gap closure milestone. Each maps to roadmap phases.
 
 ### Broadened Drug Grouping
 
-- [ ] **DRUG-01**: drug_grouping_instances output includes ALL treatment encounters regardless of cancer diagnosis linkage (broadened from cancer-linked-only)
-- [ ] **DRUG-02**: Flag column indicating whether each encounter has a linked cancer diagnosis (cancer_linked = TRUE/FALSE)
-- [ ] **DRUG-03**: Existing cancer-linked-only output preserved alongside broadened version (no breaking change)
+- [x] **DRUG-01**: drug_grouping_instances output includes ALL treatment encounters regardless of cancer diagnosis linkage (broadened from cancer-linked-only)
+- [x] **DRUG-02**: Flag column indicating whether each encounter has a linked cancer diagnosis (cancer_linked = TRUE/FALSE)
+- [x] **DRUG-03**: Existing cancer-linked-only output preserved alongside broadened version (no breaking change)
 
 ### Co-Administration Analysis
 
@@ -55,9 +55,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COND-01 | Phase 100 | Complete |
 | COND-02 | Phase 100 | Complete |
 | COND-03 | Phase 100 | Complete |
-| DRUG-01 | Phase 101 | Pending |
-| DRUG-02 | Phase 101 | Pending |
-| DRUG-03 | Phase 101 | Pending |
+| DRUG-01 | Phase 101 | Complete |
+| DRUG-02 | Phase 101 | Complete |
+| DRUG-03 | Phase 101 | Complete |
 | COADMIN-01 | Phase 102 | Pending |
 | COADMIN-02 | Phase 102 | Pending |
 | DEATH-01 | Phase 103 | Pending |

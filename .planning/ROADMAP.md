@@ -10,7 +10,7 @@
 ## Phases
 
 - [x] **Phase 100: CONDITION Table Cancer Linkage** - Supplement DIAGNOSIS-based linkage with CONDITION table to reduce unlinked episode rate (completed 2026-06-12)
-- [ ] **Phase 101: Broadened Drug Grouping Output** - Expand drug grouping to all treatment encounters regardless of cancer linkage
+- [x] **Phase 101: Broadened Drug Grouping Output** - Expand drug grouping to all treatment encounters regardless of cancer linkage (completed 2026-06-12)
 - [ ] **Phase 102: Single-Agent Co-Administration Analysis** - Detect fragmented regimen patterns via 30-day co-administration windows
 - [ ] **Phase 103: Death Date Cross-Tab Summary** - Produce death date presence and post-death encounter cross-tabs
 
@@ -33,9 +33,9 @@ Plans:
 **Goal**: Drug grouping instances output includes ALL treatment encounters with cancer_linked flag, preserving existing cancer-linked-only output
 **Depends on**: Phase 100 (improved linkage means better cancer_linked flag accuracy)
 **Requirements**: DRUG-01, DRUG-02, DRUG-03
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 101-01-PLAN.md — R/57 dual-output (broadened + linked-only) with cancer_linked flag, cross-tab summary, and R/88 validation
+- [x] 101-01-PLAN.md — R/57 dual-output (broadened + linked-only) with cancer_linked flag, cross-tab summary, and R/88 validation
 **Success Criteria** (what must be TRUE):
   1. User can open drug_grouping_instances.xlsx and see ALL treatment encounters (not just cancer-linked) with new cancer_linked TRUE/FALSE flag column
   2. User can verify existing cancer-linked-only output preserved as separate file with _linked_only suffix
@@ -69,7 +69,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 100. CONDITION Table Cancer Linkage | 1/1 | Complete    | 2026-06-12 |
-| 101. Broadened Drug Grouping Output | 0/1 | Planned | - |
+| 101. Broadened Drug Grouping Output | 1/1 | Complete   | 2026-06-12 |
 | 102. Single-Agent Co-Administration Analysis | 0/? | Not started | - |
 | 103. Death Date Cross-Tab Summary | 0/? | Not started | - |
 
