@@ -20,7 +20,7 @@ Requirements for meeting gap closure milestone. Each maps to roadmap phases.
 
 ### Death Date Summary
 
-- [ ] **DEATH-01**: Unstratified cross-tab table answering: (i) how many patients have a death date, (ii) of those how many have death as their last encounter, (iii) how many have encounters after their death date
+- [x] **DEATH-01**: Unstratified cross-tab table answering: (i) how many patients have a death date, (ii) of those how many have death as their last encounter, (iii) how many have encounters after their death date
 
 ### CONDITION Table Linkage
 
@@ -60,7 +60,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRUG-03 | Phase 101 | Complete |
 | COADMIN-01 | Phase 102 | Complete |
 | COADMIN-02 | Phase 102 | Complete |
-| DEATH-01 | Phase 103 | Pending |
+| DEATH-01 | Phase 103 | Complete |
 
 **Coverage:**
 - v3.1 requirements: 9 total
