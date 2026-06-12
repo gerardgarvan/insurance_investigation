@@ -68,6 +68,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R — v2.2 Phase 87
 - [x] Instance-level drug grouping tables with human-readable names (R/57) — v2.2 Phase 88
 - [x] Episode vs encounter grain labeling for drug grouping outputs — v2.2 Phase 89
+- [x] Broadened drug grouping output with cancer_linked flag and dual-output (all encounters + linked-only) — v3.1 Phase 101
 - [x] SCT code 0362 investigation (overlap rate with standard SCT codes) — v2.1 Phase 79
 - [x] Replaced-by code verification (pairwise + chain analysis) — v2.1 Phase 79
 - [x] Drug grouping summary tables (sub-category + encounter treatment) — v2.1 Phases 79/81/82
@@ -89,7 +90,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 #### v3.1 Meeting Gap Closure — Clinical Data Coverage
 
-- [ ] Unlinked treatment quantification summary tables (linked vs unlinked by treatment type)
+- [x] Unlinked treatment quantification summary tables (linked vs unlinked by treatment type) — Validated in Phase 101
 - [ ] Single-agent 30-day co-administration analysis for fragmented regimen detection
 - [ ] Death date cross-tab summary (death date presence, last encounter, post-death activity)
 - [x] CONDITION table cancer linkage investigation report — Validated in Phase 100
@@ -123,7 +124,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v2.3 (2026-06-09). v3.0 near-complete (88%, Phase 98-02 pending). Phase 100 complete — CONDITION table cancer linkage investigation delivered (R/30 standalone script, "Linkage Improvement" xlsx sheet).
+**Shipped:** v2.3 (2026-06-09). v3.0 near-complete (88%, Phase 98-02 pending). Phase 101 complete — broadened drug grouping output with cancer_linked flag, dual-output (all encounters + linked-only), cross-tab summary sheet, R/88 validation. Phase 100 complete — CONDITION table cancer linkage investigation delivered.
 
 **Pipeline status:** 99 phases completed across 15 milestones (v1.0-v3.0). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification, R/60 and R/28 migrated to data.table. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment, SCT conditioning temporal context flags, 5 treatment categories (Chemotherapy, Radiation, SCT, Immunotherapy, Proton Therapy), consolidated Gantt export with dynamic schema verification (Phase 99), and comprehensive smoke test with 35+ validation sections.
 
@@ -315,6 +316,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Fully-qualified DBI::/dplyr:: calls in R/88 Sections 32-33 | Avoids namespace pollution; smoke test only loads glue at top | ✓ Phase 85 |
 | Instance-level tables with descriptive names (R/57) | Patient-traceable rows with human-readable names enable clinical review | ✓ Phase 88 |
 | Dual wb$save() for backward compatibility | Old filenames preserved alongside new grain-labeled filenames | ✓ Phase 89 |
+| Broadened output as primary, linked-only as _linked_only suffix | Broadened (all encounters) is the default; linked-only preserved for backward compatibility | ✓ Phase 101 |
+| cancer_linked derived from encounter-level DX presence | !is.na(cancer_codes) at encounter level — self-contained within R/57, no R/28 dependency | ✓ Phase 101 |
 | Adopt data.table for performance | Named vector lookups and dplyr group_by are bottlenecks at scale on ENCOUNTER table (millions of rows); data.table keyed joins are 10-50x faster | -- v3.0 |
 
 ## Evolution
@@ -335,4 +338,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-12 after Phase 100 completion*
+*Last updated: 2026-06-12 after Phase 101 completion*
