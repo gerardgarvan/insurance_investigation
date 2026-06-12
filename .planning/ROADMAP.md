@@ -75,7 +75,7 @@ Plans:
 | 100. CONDITION Table Cancer Linkage | 1/1 | Complete    | 2026-06-12 |
 | 101. Broadened Drug Grouping Output | 1/1 | Complete    | 2026-06-12 |
 | 102. Single-Agent Co-Administration Analysis | 1/1 | Complete    | 2026-06-12 |
-| 103. Death Date Cross-Tab Summary | 1/1 | Complete   | 2026-06-12 |
+| 103. Death Date Cross-Tab Summary | 1/1 | Complete    | 2026-06-12 |
 
 ## Next Steps
 
