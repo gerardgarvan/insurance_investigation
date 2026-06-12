@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 100: CONDITION Table Cancer Linkage** - Supplement DIAGNOSIS-based linkage with CONDITION table to reduce unlinked episode rate
+- [x] **Phase 100: CONDITION Table Cancer Linkage** - Supplement DIAGNOSIS-based linkage with CONDITION table to reduce unlinked episode rate (completed 2026-06-12)
 - [ ] **Phase 101: Broadened Drug Grouping Output** - Expand drug grouping to all treatment encounters regardless of cancer linkage
 - [ ] **Phase 102: Single-Agent Co-Administration Analysis** - Detect fragmented regimen patterns via 30-day co-administration windows
 - [ ] **Phase 103: Death Date Cross-Tab Summary** - Produce death date presence and post-death encounter cross-tabs
@@ -20,9 +20,9 @@
 **Goal**: Investigate CONDITION table as 3rd-tier cancer linkage supplement (read-only investigation producing improvement report)
 **Depends on**: Nothing (first phase in v3.1)
 **Requirements**: COND-01, COND-02, COND-03
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 100-01-PLAN.md — CONDITION linkage investigation script + smoke test validation
+- [x] 100-01-PLAN.md — CONDITION linkage investigation script + smoke test validation
 **Success Criteria** (what must be TRUE):
   1. User can run R/30_condition_linkage_investigation.R and see CONDITION table queried as 3rd-tier supplement showing what COULD be linked
   2. User can open episode_classification_audit.xlsx "Linkage Improvement" sheet and see before/after unlinked episode rates with treatment type breakdown
@@ -66,7 +66,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 100. CONDITION Table Cancer Linkage | 0/1 | Planned | - |
+| 100. CONDITION Table Cancer Linkage | 1/1 | Complete   | 2026-06-12 |
 | 101. Broadened Drug Grouping Output | 0/? | Not started | - |
 | 102. Single-Agent Co-Administration Analysis | 0/? | Not started | - |
 | 103. Death Date Cross-Tab Summary | 0/? | Not started | - |

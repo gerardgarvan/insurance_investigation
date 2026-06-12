@@ -24,9 +24,9 @@ Requirements for meeting gap closure milestone. Each maps to roadmap phases.
 
 ### CONDITION Table Linkage
 
-- [ ] **COND-01**: CONDITION table added as 3rd tier in cancer linkage cascade (DIAGNOSIS direct → temporal fallback → CONDITION supplement)
-- [ ] **COND-02**: Linkage improvement report showing before/after unlinked episode rates
-- [ ] **COND-03**: Previously unlinked episodes re-classified to linked cancer categories via CONDITION data
+- [x] **COND-01**: CONDITION table added as 3rd tier in cancer linkage cascade (DIAGNOSIS direct → temporal fallback → CONDITION supplement)
+- [x] **COND-02**: Linkage improvement report showing before/after unlinked episode rates
+- [x] **COND-03**: Previously unlinked episodes re-classified to linked cancer categories via CONDITION data
 
 ## Future Requirements
 
@@ -52,9 +52,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COND-01 | Phase 100 | Pending |
-| COND-02 | Phase 100 | Pending |
-| COND-03 | Phase 100 | Pending |
+| COND-01 | Phase 100 | Complete |
+| COND-02 | Phase 100 | Complete |
+| COND-03 | Phase 100 | Complete |
 | DRUG-01 | Phase 101 | Pending |
 | DRUG-02 | Phase 101 | Pending |
 | DRUG-03 | Phase 101 | Pending |

@@ -1,14 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.1
-milestone_name: Meeting Gap Closure — Clinical Data Coverage
-status: roadmap_created
-last_updated: "2026-06-12"
+milestone_name: milestone
+status: verifying
+last_updated: "2026-06-12T16:15:34.757Z"
+last_activity: 2026-06-12
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -20,25 +21,27 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.1 Meeting Gap Closure — Clinical Data Coverage (4 phases: CONDITION linkage, broadened drug grouping, co-administration analysis, death date cross-tabs)
+**Current focus:** Phase 100 — condition-table-cancer-linkage
 
 ## Current Position
 
-Phase: Phase 100 (CONDITION Table Cancer Linkage)
-Plan: —
-Status: Roadmap created, awaiting Phase 100 planning
-Last activity: 2026-06-12 — v3.1 roadmap created (4 phases, 9 requirements)
+Phase: 100 (condition-table-cancer-linkage) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-06-12
 
 Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0%
 
 ## Performance Metrics
 
 **Milestone velocity:**
+
 - v3.0: 5 phases (95-99) completed in 3 days (2026-06-09 to 2026-06-11)
 - v2.3: 4 phases completed in 2 days
 - v2.2: 7 phases completed in 3 days
 
 **Planning efficiency:**
+
 - Average plans per phase: 1.5
 - Average tasks per plan: 3-5
 
@@ -67,9 +70,18 @@ Progress: ░░░░░░░░░░░░░░░░░░░░░░░�
 - Dynamic schema verification checks replace hardcoded column count checks in R/88
 - R/51 deletion verified via !file.exists() check
 
+**Phase 100 decisions:**
+
+- CONDITION table as 3rd-tier cancer linkage supplement using read-only investigation pattern (D-06, D-07, D-08)
+- ONSET_DATE (not REPORT_DATE) for temporal matching - clinical onset aligns better with treatment timing (D-04)
+- Link method labels "condition_encounter" and "condition_date" parallel to R/28 DIAGNOSIS labels for comparison clarity (D-03)
+- Treatment type breakdown (D-10) enables targeted improvement analysis per treatment category
+- Decision traceability in script header (D-01 through D-10) documents all investigation design choices
+
 ### Roadmap Evolution
 
 **v3.1 Structure:**
+
 - Phase 100: CONDITION Table Cancer Linkage (COND-01, COND-02, COND-03)
 - Phase 101: Broadened Drug Grouping Output (DRUG-01, DRUG-02, DRUG-03)
 - Phase 102: Single-Agent Co-Administration Analysis (COADMIN-01, COADMIN-02)
@@ -123,12 +135,14 @@ None identified.
 ### Outstanding Work
 
 **Immediate (v3.1):**
+
 - Phase 100: CONDITION table cancer linkage (3 requirements)
 - Phase 101: Broadened drug grouping output (3 requirements)
 - Phase 102: Single-agent co-administration analysis (2 requirements)
 - Phase 103: Death date cross-tab summary (1 requirement)
 
 **Deferred from v3.0:**
+
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
