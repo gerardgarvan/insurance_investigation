@@ -52,21 +52,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DRUG-01 | TBD | Pending |
-| DRUG-02 | TBD | Pending |
-| DRUG-03 | TBD | Pending |
-| COADMIN-01 | TBD | Pending |
-| COADMIN-02 | TBD | Pending |
-| DEATH-01 | TBD | Pending |
-| COND-01 | TBD | Pending |
-| COND-02 | TBD | Pending |
-| COND-03 | TBD | Pending |
+| COND-01 | Phase 100 | Pending |
+| COND-02 | Phase 100 | Pending |
+| COND-03 | Phase 100 | Pending |
+| DRUG-01 | Phase 101 | Pending |
+| DRUG-02 | Phase 101 | Pending |
+| DRUG-03 | Phase 101 | Pending |
+| COADMIN-01 | Phase 102 | Pending |
+| COADMIN-02 | Phase 102 | Pending |
+| DEATH-01 | Phase 103 | Pending |
 
 **Coverage:**
 - v3.1 requirements: 9 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 9
+- Mapped to phases: 9 (100% coverage)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-12 after initial definition*
+*Last updated: 2026-06-12 after v3.1 roadmap creation*
