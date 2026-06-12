@@ -20,10 +20,26 @@
 #     DRUG_GROUPINGS)
 #
 # Outputs:
-#   - output/encounter_level_drug_grouping_instances.xlsx (2-sheet workbook:
-#     Sheet 1 = "Enc: Sub-Category Detail" (encounter-level),
-#     Sheet 2 = "Enc: Treatment Detail" (encounter-level))
-#   - output/drug_grouping_instances.xlsx (backward compat copy, identical content)
+#   - output/encounter_level_drug_grouping_instances.xlsx (3-sheet workbook:
+#     Sheet 1 = "Enc: Sub-Category Detail" (all encounters, with cancer_linked flag),
+#     Sheet 2 = "Enc: Treatment Detail" (all encounters, with cancer_linked flag),
+#     Sheet 3 = "Linked vs Unlinked" (cross-tab summary by treatment type))
+#   - output/drug_grouping_instances.xlsx (backward compat copy of broadened output)
+#   - output/encounter_level_drug_grouping_instances_linked_only.xlsx (2-sheet workbook:
+#     Sheet 1 = "Enc: Sub-Category Detail" (cancer-linked only),
+#     Sheet 2 = "Enc: Treatment Detail" (cancer-linked only))
+#   - output/drug_grouping_instances_linked_only.xlsx (backward compat copy of linked-only)
+#
+# Phase 101 Decisions (Broadened Drug Grouping Output):
+#   D-01: R/57 only; R/56 stays unchanged (cancer-linked-only)
+#   D-02: Only filter(!is.na(cancer_category_names)) removed; reference code filter stays
+#   D-03: cancer_linked derived from encounter-level DX presence (!is.na(cancer_codes))
+#   D-04: Self-contained within R/57, no dependency on R/28 cancer_category
+#   D-05: Cross-tab: treatment_type | linked_count | unlinked_count
+#   D-06: Cross-tab as 3rd sheet in broadened xlsx ("Linked vs Unlinked")
+#   D-07: Broadened = primary files (both naming patterns)
+#   D-08: Linked-only with _linked_only suffix (both naming patterns)
+#   D-09: Broadened has 3 sheets; linked-only keeps exact 2-sheet structure
 #
 # Dependencies:
 #   - R/00_config.R (DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP,
@@ -60,6 +76,9 @@ REFERENCE_XLSX <- "data/reference/all_codes_resolved_next_tables_v2.1.xlsx"
 # Phase 89: Dual-output file paths (encounter-level grain)
 NEW_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "encounter_level_drug_grouping_instances.xlsx")
 OLD_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_instances.xlsx")  # Backward compat
+# Phase 101: Linked-only output paths (backward compat for cancer-linked-only consumers)
+NEW_OUTPUT_LINKED_XLSX <- file.path(CONFIG$output_dir, "encounter_level_drug_grouping_instances_linked_only.xlsx")
+OLD_OUTPUT_LINKED_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_instances_linked_only.xlsx")
 
 # --- Log console output to file ---
 LOG_FILE <- file.path(CONFIG$output_dir, "57_drug_grouping_instances.log")
@@ -74,12 +93,14 @@ globalCallingHandlers(
   }
 )
 
-message("=== Phase 88: Drug Grouping Instance-Level Tables (Encounter Grain) ===")
+message("=== Phase 88/101: Drug Grouping Instance-Level Tables (Encounter Grain, Broadened) ===")
 message()
 message(glue("  Detail RDS: {DETAIL_RDS}"))
 message(glue("  Reference: {REFERENCE_XLSX}"))
-message(glue("  Output (new): {NEW_OUTPUT_XLSX}"))
-message(glue("  Output (compat): {OLD_OUTPUT_XLSX}"))
+message(glue("  Output (broadened, new): {NEW_OUTPUT_XLSX}"))
+message(glue("  Output (broadened, compat): {OLD_OUTPUT_XLSX}"))
+message(glue("  Output (linked-only, new): {NEW_OUTPUT_LINKED_XLSX}"))
+message(glue("  Output (linked-only, compat): {OLD_OUTPUT_LINKED_XLSX}"))
 message()
 
 
@@ -371,21 +392,30 @@ detail_codes <- detail_codes %>%
 
 # Aggregate to encounter level: one row per (patient, encounter, treatment_type)
 # with semicolon-separated sub_category names for that encounter
-table1 <- detail_codes %>%
-  filter(!is.na(cancer_category_names)) %>%
-  group_by(patient_id, ENCOUNTERID, treatment_date, treatment_type, cancer_category_names) %>%
+
+# Table 1: Sub-Category Encounter Detail (ALL encounters, per DRUG-01)
+table1_all <- detail_codes %>%
+  group_by(patient_id, ENCOUNTERID, treatment_date, treatment_type,
+           cancer_codes, cancer_category_names) %>%
   summarise(
     sub_category_names = paste(sort(unique(sub_category)), collapse = ";"),
     .groups = "drop"
   ) %>%
+  mutate(cancer_linked = !is.na(cancer_codes)) %>%
   select(patient_id, ENCOUNTERID, treatment_date, treatment_category = treatment_type,
-         sub_category_names, cancer_category_names) %>%
+         sub_category_names, cancer_category_names, cancer_linked) %>%
   arrange(patient_id, treatment_date, treatment_category)
 
-message(glue("  Table 1 rows: {nrow(table1)}"))
-message(glue("  Unique patients: {n_distinct(table1$patient_id)}"))
-message(glue("  Unique encounters: {n_distinct(table1$ENCOUNTERID)}"))
-message(glue("  Unique sub-categories: {n_distinct(unlist(str_split(table1$sub_category_names, ';')))}"))
+# Table 1: Linked-only (backward compatibility per DRUG-03)
+table1_linked <- table1_all %>%
+  filter(!is.na(cancer_category_names)) %>%
+  select(-cancer_linked)
+
+message(glue("  Table 1 (all): {nrow(table1_all)} rows"))
+message(glue("  Table 1 (linked-only): {nrow(table1_linked)} rows"))
+message(glue("  Unique patients (all): {n_distinct(table1_all$patient_id)}"))
+message(glue("  Unique encounters (all): {n_distinct(table1_all$ENCOUNTERID)}"))
+message(glue("  Unique sub-categories: {n_distinct(unlist(str_split(table1_all$sub_category_names, ';')))}"))
 
 
 # SECTION 6: TABLE 2 -- ENCOUNTER TREATMENT CODE DETAIL ----
@@ -395,46 +425,102 @@ message("--- Building Table 2: Encounter Treatment Code Detail ---")
 
 # One row per (patient, encounter, treatment_type) with all triggering codes
 # for that encounter listed
-table2 <- detail_dx %>%
-  filter(!is.na(cancer_category_names),
-         !is.na(triggering_code), triggering_code != "",
+
+# Table 2: Encounter Treatment Code Detail (ALL encounters, per DRUG-01)
+table2_all <- detail_dx %>%
+  filter(!is.na(triggering_code), triggering_code != "",
          triggering_code %in% valid_reference_codes | treatment_type == "Immunotherapy") %>%
-  group_by(patient_id, ENCOUNTERID, treatment_date, treatment_type, cancer_category_names) %>%
+  group_by(patient_id, ENCOUNTERID, treatment_date, treatment_type,
+           cancer_codes, cancer_category_names) %>%
   summarise(
     all_treatments = paste(sort(unique(triggering_code)), collapse = ";"),
     .groups = "drop"
   ) %>%
+  mutate(cancer_linked = !is.na(cancer_codes)) %>%
   select(patient_id, ENCOUNTERID, treatment_date, treatment_category = treatment_type,
-         all_treatments, cancer_category_names) %>%
+         all_treatments, cancer_category_names, cancer_linked) %>%
   arrange(patient_id, treatment_date, treatment_category)
 
-message(glue("  Table 2 rows: {nrow(table2)}"))
-message(glue("  Unique patients: {n_distinct(table2$patient_id)}"))
-message(glue("  Unique encounters: {n_distinct(table2$ENCOUNTERID)}"))
+# Table 2: Linked-only (backward compatibility per DRUG-03)
+table2_linked <- table2_all %>%
+  filter(!is.na(cancer_category_names)) %>%
+  select(-cancer_linked)
+
+message(glue("  Table 2 (all): {nrow(table2_all)} rows"))
+message(glue("  Table 2 (linked-only): {nrow(table2_linked)} rows"))
+message(glue("  Unique patients (all): {n_distinct(table2_all$patient_id)}"))
+message(glue("  Unique encounters (all): {n_distinct(table2_all$ENCOUNTERID)}"))
 
 
-# SECTION 7: WRITE XLSX OUTPUT (Phase 89: grain-labeled) ----
+# SECTION 6B: CROSS-TAB SUMMARY (Phase 101: DRUG-01, D-05, D-06) ----
 
 message()
-message("--- Writing multi-sheet XLSX output (encounter-level grain) ---")
+message("--- Building Cross-Tab: Linked vs Unlinked by Treatment Type ---")
 
-wb <- wb_workbook()
+crosstab_summary <- table1_all %>%
+  group_by(treatment_category, cancer_linked) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(
+    names_from = cancer_linked,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  rename(
+    treatment_type = treatment_category,
+    linked_count = `TRUE`,
+    unlinked_count = `FALSE`
+  ) %>%
+  select(treatment_type, linked_count, unlinked_count) %>%
+  arrange(desc(linked_count))
 
-# Sheet 1: Encounter-Level Sub-Category Detail (abbreviated for 31-char Excel limit)
-wb$add_worksheet("Enc: Sub-Category Detail")
-wb$add_data("Enc: Sub-Category Detail", table1, start_row = 1, col_names = TRUE)
+message(glue("  Cross-tab summary: {nrow(crosstab_summary)} treatment types"))
+for (i in seq_len(nrow(crosstab_summary))) {
+  message(glue("    {crosstab_summary$treatment_type[i]}: {crosstab_summary$linked_count[i]} linked, {crosstab_summary$unlinked_count[i]} unlinked"))
+}
 
-# Sheet 2: Encounter-Level Treatment Detail (abbreviated for 31-char Excel limit)
-wb$add_worksheet("Enc: Treatment Detail")
-wb$add_data("Enc: Treatment Detail", table2, start_row = 1, col_names = TRUE)
 
-# Save to new self-documenting filename (per D-02)
-wb$save(NEW_OUTPUT_XLSX)
-message(glue("Saved (new): {NEW_OUTPUT_XLSX}"))
+# SECTION 7: WRITE XLSX OUTPUT (Phase 89 grain-labeled + Phase 101 dual-output) ----
 
-# Save to old filename for backward compatibility (per D-03)
-wb$save(OLD_OUTPUT_XLSX)
-message(glue("Saved (backward compat): {OLD_OUTPUT_XLSX}"))
+message()
+message("--- Writing multi-sheet XLSX output (dual: broadened + linked-only) ---")
+
+# --- Broadened output (3 sheets per D-09) ---
+wb_broad <- wb_workbook()
+
+# Sheet 1: Sub-Category Detail (all encounters)
+wb_broad$add_worksheet("Enc: Sub-Category Detail")
+wb_broad$add_data("Enc: Sub-Category Detail", table1_all, start_row = 1, col_names = TRUE)
+
+# Sheet 2: Treatment Detail (all encounters)
+wb_broad$add_worksheet("Enc: Treatment Detail")
+wb_broad$add_data("Enc: Treatment Detail", table2_all, start_row = 1, col_names = TRUE)
+
+# Sheet 3: Linked vs Unlinked Summary (per D-06)
+wb_broad$add_worksheet("Linked vs Unlinked")
+wb_broad$add_data("Linked vs Unlinked", crosstab_summary, start_row = 1, col_names = TRUE)
+
+# Save broadened output (grain-labeled + backward compat per D-07)
+wb_broad$save(NEW_OUTPUT_XLSX)
+message(glue("Saved broadened (3 sheets): {NEW_OUTPUT_XLSX}"))
+wb_broad$save(OLD_OUTPUT_XLSX)
+message(glue("Saved broadened (3 sheets, compat): {OLD_OUTPUT_XLSX}"))
+
+# --- Linked-only output (2 sheets, exact current structure per D-08, DRUG-03) ---
+wb_linked <- wb_workbook()
+
+# Sheet 1: Sub-Category Detail (cancer-linked only, NO cancer_linked column)
+wb_linked$add_worksheet("Enc: Sub-Category Detail")
+wb_linked$add_data("Enc: Sub-Category Detail", table1_linked, start_row = 1, col_names = TRUE)
+
+# Sheet 2: Treatment Detail (cancer-linked only, NO cancer_linked column)
+wb_linked$add_worksheet("Enc: Treatment Detail")
+wb_linked$add_data("Enc: Treatment Detail", table2_linked, start_row = 1, col_names = TRUE)
+
+# Save linked-only output with _linked_only suffix (per D-08)
+wb_linked$save(NEW_OUTPUT_LINKED_XLSX)
+message(glue("Saved linked-only (2 sheets): {NEW_OUTPUT_LINKED_XLSX}"))
+wb_linked$save(OLD_OUTPUT_LINKED_XLSX)
+message(glue("Saved linked-only (2 sheets, compat): {OLD_OUTPUT_LINKED_XLSX}"))
 
 
 # SECTION 8: CONSOLE SUMMARY ----
@@ -446,15 +532,24 @@ message(glue("  Rows with cancer category names: {n_with_categories}"))
 message(glue("  Rows without cancer category names: {n_without_categories}"))
 message()
 message(glue("  Table 1 (Enc: Sub-Category Detail):"))
-message(glue("    Total rows: {nrow(table1)}"))
-message(glue("    Unique sub-categories: {n_distinct(unlist(str_split(table1$sub_category_names, ';')))}"))
-message(glue("    Unique patients: {n_distinct(table1$patient_id)}"))
-message(glue("    Unique encounters: {n_distinct(table1$ENCOUNTERID)}"))
+message(glue("    All encounters: {nrow(table1_all)} rows"))
+message(glue("    Linked-only: {nrow(table1_linked)} rows"))
+message(glue("    Unlinked: {nrow(table1_all) - nrow(table1_linked)} rows"))
+message(glue("    Unique sub-categories: {n_distinct(unlist(str_split(table1_all$sub_category_names, ';')))}"))
+message(glue("    Unique patients (all): {n_distinct(table1_all$patient_id)}"))
+message(glue("    Unique encounters (all): {n_distinct(table1_all$ENCOUNTERID)}"))
 message()
 message(glue("  Table 2 (Enc: Treatment Detail):"))
-message(glue("    Total rows: {nrow(table2)}"))
-message(glue("    Unique patients: {n_distinct(table2$patient_id)}"))
-message(glue("    Unique encounters: {n_distinct(table2$ENCOUNTERID)}"))
+message(glue("    All encounters: {nrow(table2_all)} rows"))
+message(glue("    Linked-only: {nrow(table2_linked)} rows"))
+message(glue("    Unlinked: {nrow(table2_all) - nrow(table2_linked)} rows"))
+message(glue("    Unique patients (all): {n_distinct(table2_all$patient_id)}"))
+message(glue("    Unique encounters (all): {n_distinct(table2_all$ENCOUNTERID)}"))
+message()
+message(glue("  Cross-tab summary ({nrow(crosstab_summary)} treatment types):"))
+for (i in seq_len(nrow(crosstab_summary))) {
+  message(glue("    {crosstab_summary$treatment_type[i]}: {crosstab_summary$linked_count[i]} linked, {crosstab_summary$unlinked_count[i]} unlinked"))
+}
 message()
 
 # Verify drug_grouping_tables.xlsx was NOT modified by this script
@@ -466,9 +561,12 @@ if (file.exists(old_r56_file)) {
 }
 
 message()
-message(glue("  Output files:"))
+message(glue("  Output files (broadened, 3 sheets):"))
 message(glue("    {NEW_OUTPUT_XLSX} (primary)"))
 message(glue("    {OLD_OUTPUT_XLSX} (backward compatibility)"))
+message(glue("  Output files (linked-only, 2 sheets):"))
+message(glue("    {NEW_OUTPUT_LINKED_XLSX} (primary)"))
+message(glue("    {OLD_OUTPUT_LINKED_XLSX} (backward compatibility)"))
 message()
 message("Done.")
 
