@@ -1978,7 +1978,7 @@ if (file.exists("R/30_condition_linkage_investigation.R")) {
 # ==============================================================================
 # Validates R/57 broadened drug grouping with cancer_linked flag and dual-output.
 
-message("\n[31/32] Phase 101: Broadened drug grouping output validation...")
+message("\n[31/34] Phase 101: Broadened drug grouping output validation...")
 
 if (file.exists("R/57_drug_grouping_instances.R")) {
   r57_lines_101 <- readLines("R/57_drug_grouping_instances.R", warn = FALSE)
@@ -2090,13 +2090,139 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
 }
 
 # ==============================================================================
+# SECTION 31B: PHASE 102 -- CO-ADMINISTRATION ANALYSIS (COADMIN-01, COADMIN-02) ----
+# ==============================================================================
+# Validates R/58 co-administration analysis structural integrity.
+
+message("\n[32/34] Phase 102: Co-administration analysis validation...")
+
+if (file.exists("R/58_co_administration_analysis.R")) {
+  r58_lines <- readLines("R/58_co_administration_analysis.R", warn = FALSE)
+
+  # D-04: Chemotherapy-only filter
+  check("R/58 filters to Chemotherapy treatment_type (D-04)",
+        any(grepl('treatment_type.*==.*"Chemotherapy"', r58_lines)))
+
+  # D-05: Regimen exclusion via anti_join
+  check("R/58 excludes regimen-classified encounters via anti_join (D-05)",
+        any(grepl("anti_join.*regimen", r58_lines, ignore.case = TRUE)))
+
+  # D-01: Single-agent identification by patient_id + treatment_date grouping
+  check("R/58 groups by patient_id and treatment_date for single-agent ID (D-01)",
+        any(grepl("group_by.*patient_id.*treatment_date", r58_lines)))
+
+  # D-01: n_distinct(triggering_code) for single-agent definition
+  check("R/58 uses n_distinct(triggering_code) for single-agent count (D-01)",
+        any(grepl("n_distinct.*triggering_code", r58_lines)))
+
+  # D-03: 30-day window
+  check("R/58 uses 30-day window for co-administration (D-03)",
+        any(grepl("<= 30", r58_lines)) || any(grepl("<=\\s*30", r58_lines)))
+
+  # D-03: Self-match exclusion
+  check("R/58 excludes self-matches (ENCOUNTERID != i.ENCOUNTERID)",
+        any(grepl("ENCOUNTERID.*!=.*i\\.ENCOUNTERID", r58_lines)))
+
+  # D-07: days_apart column in detail table
+  check("R/58 calculates days_apart for temporal analysis (D-07)",
+        any(grepl("days_apart", r58_lines)))
+
+  # D-08: Both triggering_code and sub_category/drug_name shown
+  check("R/58 includes index_drug_name and coadmin_drug_name (D-08)",
+        any(grepl("index_drug_name", r58_lines)) && any(grepl("coadmin_drug_name", r58_lines)))
+
+  check("R/58 includes index_triggering_code and coadmin_triggering_code (D-08)",
+        any(grepl("index_triggering_code", r58_lines)) && any(grepl("coadmin_triggering_code", r58_lines)))
+
+  # D-06: Two-sheet xlsx output
+  check("R/58 creates 'Co-Administration Detail' sheet (D-06, COADMIN-01)",
+        any(grepl("Co-Administration Detail", r58_lines)))
+
+  check("R/58 creates 'Pattern Summary' sheet (D-06, COADMIN-02)",
+        any(grepl("Pattern Summary", r58_lines)))
+
+  # COADMIN-02: Symmetric pair deduplication (pmin/pmax)
+  check("R/58 uses pmin/pmax for symmetric pair deduplication (COADMIN-02)",
+        any(grepl("pmin", r58_lines)) && any(grepl("pmax", r58_lines)))
+
+  # D-09: Script placement in drug grouping decade
+  check("R/58 sources R/00_config.R (D-09)",
+        any(grepl('source.*R/00_config', r58_lines)))
+
+  # D-10: Investigation script (no saveRDS)
+  check("R/58 does NOT contain saveRDS (D-10: investigation only)",
+        !any(grepl("saveRDS[(]", r58_lines)))
+
+  # D-10: Uses assert_rds_exists for input validation
+  check("R/58 uses assert_rds_exists for input validation",
+        any(grepl("assert_rds_exists", r58_lines)))
+
+  # data.table temporal join
+  check("R/58 uses data.table cartesian join (allow.cartesian)",
+        any(grepl("allow\\.cartesian", r58_lines)))
+
+  # Decision traceability
+  check("R/58 header contains decision traceability (D-01 through D-10)",
+        any(grepl("D-01", r58_lines)) && any(grepl("D-10", r58_lines)))
+
+  # Optional: output file validation (only if co_administration_analysis.xlsx exists)
+  COADMIN_XLSX_PATH <- file.path(CONFIG$output_dir, "co_administration_analysis.xlsx")
+  if (file.exists(COADMIN_XLSX_PATH)) {
+    tryCatch({
+      wb_ca <- openxlsx2::wb_load(COADMIN_XLSX_PATH)
+      sheet_names_ca <- wb_ca$sheet_names
+
+      check("co_administration_analysis.xlsx has 2 sheets",
+            length(sheet_names_ca) == 2)
+
+      check("Sheet 1 is 'Co-Administration Detail'",
+            sheet_names_ca[1] == "Co-Administration Detail")
+
+      check("Sheet 2 is 'Pattern Summary'",
+            sheet_names_ca[2] == "Pattern Summary")
+
+      # Check detail table columns
+      detail_data <- openxlsx2::wb_to_df(wb_ca, sheet = "Co-Administration Detail", start_row = 1)
+      check("Detail table contains days_apart column",
+            "days_apart" %in% colnames(detail_data))
+
+      check("Detail table contains index_drug_name column",
+            "index_drug_name" %in% colnames(detail_data))
+
+      check("Detail table contains coadmin_drug_name column",
+            "coadmin_drug_name" %in% colnames(detail_data))
+
+      # Check pattern summary columns
+      summary_data <- openxlsx2::wb_to_df(wb_ca, sheet = "Pattern Summary", start_row = 1)
+      check("Pattern Summary contains n_instances column",
+            "n_instances" %in% colnames(summary_data))
+
+      check("Pattern Summary contains n_patients column",
+            "n_patients" %in% colnames(summary_data))
+
+      check("Pattern Summary is sorted descending by n_instances",
+            all(diff(summary_data$n_instances) <= 0))
+
+    }, error = function(e) {
+      message(glue("  SKIP: Could not read co_administration xlsx ({e$message})"))
+    })
+  } else {
+    message("  SKIP: co_administration_analysis.xlsx not found (run R/58 first)")
+  }
+
+} else {
+  message("  FAIL: R/58_co_administration_analysis.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[32/32] DuckDB integration validation...")
+message("\n[33/34] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2177,7 +2303,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
 # Production mode: skipped entirely (fixture data not present).
 
 if (IS_LOCAL) {
-  message("\n[33/33] Fixture schema validation (local mode only)...")
+  message("\n[34/34] Fixture schema validation (local mode only)...")
 
   if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
 
@@ -2356,6 +2482,8 @@ message("  * P88-D07/D08: New encounter_level_drug_grouping_instances.xlsx with 
 message("  * DRUG-01: Broadened output includes ALL treatment encounters (R/57 Phase 101)")
 message("  * DRUG-02: cancer_linked TRUE/FALSE flag column on broadened output (R/57 Phase 101)")
 message("  * DRUG-03: Linked-only output preserved with _linked_only suffix (R/57 Phase 101)")
+message("  * COADMIN-01: Co-administration detail table with +/-30-day window (R/58 Phase 102)")
+message("  * COADMIN-02: Pattern summary with symmetric pair deduplication (R/58 Phase 102)")
 message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
 message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
 message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
