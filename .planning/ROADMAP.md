@@ -69,7 +69,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 100. CONDITION Table Cancer Linkage | 1/1 | Complete    | 2026-06-12 |
-| 101. Broadened Drug Grouping Output | 1/1 | Complete   | 2026-06-12 |
+| 101. Broadened Drug Grouping Output | 1/1 | Complete    | 2026-06-12 |
 | 102. Single-Agent Co-Administration Analysis | 0/? | Not started | - |
 | 103. Death Date Cross-Tab Summary | 0/? | Not started | - |
 
