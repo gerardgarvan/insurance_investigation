@@ -17,15 +17,17 @@
 ## Phase Details
 
 ### Phase 100: CONDITION Table Cancer Linkage
-**Goal**: Cancer linkage cascade extended with CONDITION table supplement, reducing unlinked episode rate from ~30% to target <20%
+**Goal**: Investigate CONDITION table as 3rd-tier cancer linkage supplement (read-only investigation producing improvement report)
 **Depends on**: Nothing (first phase in v3.1)
 **Requirements**: COND-01, COND-02, COND-03
+**Plans:** 1 plan
+Plans:
+- [ ] 100-01-PLAN.md — CONDITION linkage investigation script + smoke test validation
 **Success Criteria** (what must be TRUE):
-  1. User can run R/28_episode_classification.R and see CONDITION table loaded as 3rd tier in cancer linkage cascade (DIAGNOSIS direct → temporal fallback → CONDITION supplement)
-  2. User can inspect treatment_episodes.rds and see previously unlinked episodes now classified to cancer categories via CONDITION data
-  3. User can open linkage improvement report and see before/after unlinked episode rates with percent change calculation
-  4. User can run smoke test R/88 and see updated cancer linkage validation passing with new CONDITION tier logic
-**Plans**: TBD
+  1. User can run R/30_condition_linkage_investigation.R and see CONDITION table queried as 3rd-tier supplement showing what COULD be linked
+  2. User can open episode_classification_audit.xlsx "Linkage Improvement" sheet and see before/after unlinked episode rates with treatment type breakdown
+  3. User can run smoke test R/88 and see R/30 structural validation passing
+  4. No existing RDS files, xlsx sheets, or outputs are modified by R/30 (investigation only)
 
 ### Phase 101: Broadened Drug Grouping Output
 **Goal**: Drug grouping instances output includes ALL treatment encounters with cancer_linked flag, preserving existing cancer-linked-only output
@@ -64,25 +66,24 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 100. CONDITION Table Cancer Linkage | 0/? | Not started | - |
+| 100. CONDITION Table Cancer Linkage | 0/1 | Planned | - |
 | 101. Broadened Drug Grouping Output | 0/? | Not started | - |
 | 102. Single-Agent Co-Administration Analysis | 0/? | Not started | - |
 | 103. Death Date Cross-Tab Summary | 0/? | Not started | - |
 
 ## Next Steps
 
-1. Run `/gsd:plan-phase 100` to create execution plans for CONDITION table cancer linkage
-2. Execute Phase 100 to improve cancer linkage rates via CONDITION supplement
-3. Execute Phase 101 to broaden drug grouping output with cancer_linked flag
-4. Execute Phase 102 to analyze single-agent co-administration patterns
-5. Execute Phase 103 to produce death date cross-tab summary
+1. Execute Phase 100: `/gsd:execute-phase 100`
+2. Plan Phase 101 after Phase 100 completes
+3. Plan Phase 102 after Phase 101 completes
+4. Plan Phase 103 (independent, can execute anytime)
 
 ## Coverage
 
 **v3.1 Requirements:** 9 total
-- DRUG: 3 requirements → Phase 101
-- COADMIN: 2 requirements → Phase 102
-- DEATH: 1 requirement → Phase 103
-- COND: 3 requirements → Phase 100
+- DRUG: 3 requirements -> Phase 101
+- COADMIN: 2 requirements -> Phase 102
+- DEATH: 1 requirement -> Phase 103
+- COND: 3 requirements -> Phase 100
 
 **Coverage:** 9/9 requirements mapped (100%)
