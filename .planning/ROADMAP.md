@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [x] **Phase 100: CONDITION Table Cancer Linkage** - Supplement DIAGNOSIS-based linkage with CONDITION table to reduce unlinked episode rate (completed 2026-06-12)
+- [x] **Phase 100: CONDITION Table Cancer Linkage** - Supplement DIAGNOSIS-based linkage with CONDITION table to reduce unlinked episode rate (completed 2026-06-12)
 - [ ] **Phase 101: Broadened Drug Grouping Output** - Expand drug grouping to all treatment encounters regardless of cancer linkage
 - [ ] **Phase 102: Single-Agent Co-Administration Analysis** - Detect fragmented regimen patterns via 30-day co-administration windows
 - [ ] **Phase 103: Death Date Cross-Tab Summary** - Produce death date presence and post-death encounter cross-tabs
@@ -33,12 +33,14 @@ Plans:
 **Goal**: Drug grouping instances output includes ALL treatment encounters with cancer_linked flag, preserving existing cancer-linked-only output
 **Depends on**: Phase 100 (improved linkage means better cancer_linked flag accuracy)
 **Requirements**: DRUG-01, DRUG-02, DRUG-03
+**Plans:** 1 plan
+Plans:
+- [ ] 101-01-PLAN.md — R/57 dual-output (broadened + linked-only) with cancer_linked flag, cross-tab summary, and R/88 validation
 **Success Criteria** (what must be TRUE):
   1. User can open drug_grouping_instances.xlsx and see ALL treatment encounters (not just cancer-linked) with new cancer_linked TRUE/FALSE flag column
   2. User can verify existing cancer-linked-only output preserved as separate file with _linked_only suffix
   3. User can run cross-tab summary and see unlinked vs linked treatment counts by type (Chemo, RT, SCT, Immuno, Proton)
   4. User can inspect broadened output and see identical row structure to existing output plus cancer_linked column
-**Plans**: TBD
 
 ### Phase 102: Single-Agent Co-Administration Analysis
 **Goal**: Fragmented regimen patterns surfaced via 30-day co-administration window for single-agent chemotherapy encounters
@@ -67,16 +69,15 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 100. CONDITION Table Cancer Linkage | 1/1 | Complete    | 2026-06-12 |
-| 101. Broadened Drug Grouping Output | 0/? | Not started | - |
+| 101. Broadened Drug Grouping Output | 0/1 | Planned | - |
 | 102. Single-Agent Co-Administration Analysis | 0/? | Not started | - |
 | 103. Death Date Cross-Tab Summary | 0/? | Not started | - |
 
 ## Next Steps
 
-1. Execute Phase 100: `/gsd:execute-phase 100`
-2. Plan Phase 101 after Phase 100 completes
-3. Plan Phase 102 after Phase 101 completes
-4. Plan Phase 103 (independent, can execute anytime)
+1. Execute Phase 101: `/gsd:execute-phase 101`
+2. Plan Phase 102 after Phase 101 completes
+3. Plan Phase 103 (independent, can execute anytime)
 
 ## Coverage
 
