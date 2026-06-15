@@ -2674,13 +2674,132 @@ if (file.exists("R/36_tableau_ready_tables.R")) {
 }
 
 # ==============================================================================
+# SECTION 31I: PHASE 107 R/37 -- GAP RESOLUTION REPORT (REPORT-01) ----
+# ==============================================================================
+# Validates R/37 RMarkdown report structural integrity for gap resolution
+# compilation from v3.1+v3.2 investigation outputs.
+
+message("\n[40/43] Phase 107 R/37: Gap resolution report validation...")
+
+if (file.exists("R/37_gap_resolution_report.Rmd")) {
+  r37_lines <- readLines("R/37_gap_resolution_report.Rmd", warn = FALSE)
+  r37_text <- paste(r37_lines, collapse = "\n")
+
+  # File and output format
+  check("R/37 Rmd file exists", TRUE)
+
+  check("R/37 specifies html_document output",
+        any(str_detect(r37_lines, "html_document")))
+
+  check("R/37 specifies self_contained: true",
+        any(str_detect(r37_lines, "self_contained:\\s*true")))
+
+  check("R/37 specifies floating TOC",
+        any(str_detect(r37_lines, "toc_float")))
+
+  # Library dependencies
+  check("R/37 loads readxl library",
+        any(str_detect(r37_lines, "library\\(readxl\\)")))
+
+  check("R/37 loads kableExtra library",
+        any(str_detect(r37_lines, "library\\(kableExtra\\)")))
+
+  # Data sourcing (xlsx files from Phases 100-106)
+  check("R/37 reads G1 condition_linkage xlsx",
+        any(str_detect(r37_lines, "condition_linkage_investigation")))
+
+  check("R/37 reads G5 pre_diagnosis_treatments xlsx",
+        any(str_detect(r37_lines, "pre_diagnosis_treatments")))
+
+  check("R/37 reads G8/G10/G11 code_verification xlsx",
+        any(str_detect(r37_lines, "code_verification")))
+
+  check("R/37 reads G4 hl_nhl_overlap xlsx",
+        any(str_detect(r37_lines, "hl_nhl_overlap")))
+
+  check("R/37 reads G15 death_date_summary xlsx",
+        any(str_detect(r37_lines, "death_date_summary")))
+
+  # Table rendering
+  check("R/37 uses kbl() for table rendering",
+        any(str_detect(r37_lines, "kbl\\(")))
+
+  check("R/37 uses kable_styling()",
+        any(str_detect(r37_lines, "kable_styling")))
+
+  check("R/37 does NOT use JavaScript table libraries",
+        !any(str_detect(r37_lines, "DT::datatable|reactable")))
+
+} else {
+  message("  FAIL: R/37_gap_resolution_report.Rmd not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
+# SECTION 31J: PHASE 107 R/38 -- DELIVERY MANIFEST (REPORT-02) ----
+# ==============================================================================
+# Validates R/38 delivery manifest generator structural integrity for v3.1+v3.2
+# output file inventory with validation.
+
+message("\n[41/43] Phase 107 R/38: Delivery manifest validation...")
+
+if (file.exists("R/38_delivery_manifest.R")) {
+  r38_lines <- readLines("R/38_delivery_manifest.R", warn = FALSE)
+  r38_text <- paste(r38_lines, collapse = "\n")
+
+  # File exists
+  check("R/38 script exists", TRUE)
+
+  # Library dependencies
+  check("R/38 loads openxlsx2 library",
+        any(str_detect(r38_lines, "library\\(openxlsx2\\)")))
+
+  check("R/38 loads dplyr library",
+        any(str_detect(r38_lines, "library\\(dplyr\\)")))
+
+  # File validation
+  check("R/38 uses file.exists() for validation",
+        any(str_detect(r38_lines, "file\\.exists")))
+
+  check("R/38 uses file.info() for metadata",
+        any(str_detect(r38_lines, "file\\.info")))
+
+  # XLSX output
+  check("R/38 creates wb_workbook for xlsx output",
+        any(str_detect(r38_lines, "wb_workbook")))
+
+  check("R/38 uses FF374151 header styling",
+        any(str_detect(r38_lines, "FF374151")))
+
+  check("R/38 uses freeze_panes",
+        any(str_detect(r38_lines, "freeze_panes")))
+
+  check("R/38 outputs delivery_manifest.xlsx",
+        any(str_detect(r38_lines, "delivery_manifest\\.xlsx")))
+
+  # References expected Phase 100-106 outputs
+  check("R/38 references condition_linkage_investigation.xlsx (v3.1)",
+        any(str_detect(r38_lines, "condition_linkage_investigation")))
+
+  check("R/38 references pre_diagnosis_treatments.xlsx (v3.2)",
+        any(str_detect(r38_lines, "pre_diagnosis_treatments")))
+
+  check("R/38 does NOT contain saveRDS (export script)",
+        !any(str_detect(r38_lines, "saveRDS")))
+
+} else {
+  message("  FAIL: R/38_delivery_manifest.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[39/41] DuckDB integration validation...")
+message("\n[42/43] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2761,7 +2880,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
 # Production mode: skipped entirely (fixture data not present).
 
 if (IS_LOCAL) {
-  message("\n[40/41] Fixture schema validation (local mode only)...")
+  message("\n[43/43] Fixture schema validation (local mode only)...")
 
   if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
 
@@ -2949,6 +3068,8 @@ message("  * COADMIN-02: Pattern summary with symmetric pair deduplication (R/58
 message("  * DEATH-01: Death date cross-tab summary with cascading metrics (R/59 Phase 103)")
 message("  * TIMING-01: Pre-diagnosis treatment flagging with 5 treatment types (R/31 Phase 104)")
 message("  * TIMING-02: Secondary malignancy table with 7-day gap criterion and pre/post HL split (R/32 Phase 104)")
+message("  * REPORT-01: Gap resolution RMarkdown report with per-gap sections (R/37 Phase 107)")
+message("  * REPORT-02: Delivery manifest with file validation (R/38 Phase 107)")
 message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
 message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
 message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
