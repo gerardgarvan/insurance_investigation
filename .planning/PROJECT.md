@@ -88,12 +88,18 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
-#### v3.1 Meeting Gap Closure — Clinical Data Coverage
+#### v3.2 Meeting Gap Resolution Report
 
-- [x] Unlinked treatment quantification summary tables (linked vs unlinked by treatment type) — Validated in Phase 101
-- [x] Single-agent 30-day co-administration analysis for fragmented regimen detection — Validated in Phase 102
-- [x] Death date cross-tab summary (death date presence, last encounter, post-death activity) — Validated in Phase 103
-- [x] CONDITION table cancer linkage investigation report — Validated in Phase 100
+- [ ] Radiation before HL diagnosis investigation — flag/quantify treatments occurring before first HL dx date
+- [ ] HL+NHL code overlap validation report — focused analysis of ~4,000/8,000 dual-code patients
+- [ ] "Ethna" immunotherapy code investigation — verify/correct classification
+- [ ] Organ transplant code verification — cross-check line 11 inclusion
+- [ ] SCT codes above line 22 verification — validate patient data and appropriateness
+- [ ] Secondary malignancy table — 7-day gap criterion, population-based columns
+- [ ] TABLE 1: Encounter ID → all cancer diagnosis codes (Tableau-ready)
+- [ ] TABLE 2: Chemo drugs by class/category + cancer codes (Tableau-ready)
+- [ ] RMarkdown gap resolution report compiling all investigation findings
+- [ ] Update meeting notes to mark resolved gaps and remove stale items
 
 #### v3.0 Remaining
 
@@ -104,31 +110,46 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Statistical modeling / regression — exploration only
 - Payer x treatment initiation timing analysis — v2
 - Payer x diagnosis timing analysis — v2
-- RMarkdown / Shiny rendering — v1 produces raw R scripts and PNG figures
 - Replicating Python pipeline's data cleaning — R pipeline applies its own filter chain
 - Publication-ready figure formatting — exploratory quality is sufficient
 - PREFIX_MAP centralization to R/00_config.R — moved to Active for v2.0 (DRY-01)
 - Stanford V / BEACOPP regimen identification — only 3 regimens (ABVD, BV+AVD, Nivo+AVD) cover ~95% of adult first-line
 - Pediatric protocols (age <21) — adult protocols only for v1.x
 - Multi-line therapy sequencing — requires episode boundary formalization first
+- Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.1 Meeting Gap Closure — Clinical Data Coverage
+## Current Milestone: v3.2 Meeting Gap Resolution Report
 
-**Goal:** Close analytical gaps identified in team meetings by quantifying unlinked treatments, analyzing single-agent co-administration patterns, producing death date cross-tabs, and improving cancer linkage rates via the CONDITION table.
+**Goal:** Create investigation scripts for all remaining meeting note gaps (G4, G5, G8, G10, G11, secondary malignancy, TABLE 1/2) and compile findings into an RMarkdown report for team presentation.
 
 **Target features:**
-- Unlinked treatment quantification — summary tables comparing linked vs unlinked treatment counts by type (Chemo, RT, SCT, Immuno, Proton)
-- Single-agent 30-day co-administration — for isolated single-agent chemo encounters, find other chemotherapies given within ±30 days to surface fragmented regimen patterns
-- Death date cross-tab summary — clean presentable table answering: how many have a death date, how many have death as last encounter, how many have encounters after death
-- CONDITION table cancer linkage — supplement DIAGNOSIS-based encounter-level cancer linkage with CONDITION table to reduce ~30% unlinked episode rate
+- Radiation before HL diagnosis — flag and quantify treatments occurring before first HL dx date
+- HL+NHL overlap validation — focused report on ~4,000/8,000 dual-code patient concern
+- "Ethna" immunotherapy — verify/correct in code mappings
+- Organ transplant code (line 11) — cross-check inclusion appropriateness
+- SCT codes above line 22 — verify patient data
+- Secondary malignancy table — 7-day gap criterion, population-based columns
+- TABLE 1: Encounter ID → all cancer diagnosis codes (Tableau-ready)
+- TABLE 2: Chemo drugs by class/category + associated cancer codes (Tableau-ready)
+- RMarkdown report compiling all investigation findings with tables and summaries
 
 ## Current State
 
-**Shipped:** v2.3 (2026-06-09). v3.0 near-complete (88%, Phase 98-02 pending). Phase 103 complete — death date cross-tab summary with cascading 4-row metrics (total cohort, validated deaths, death-is-last, post-death activity), standalone R/59 investigation script, styled xlsx output, R/88 Section 31C validation. Phase 102 complete — single-agent co-administration analysis with +/-30 day temporal window, data.table cartesian join, two-sheet xlsx output (detail + pattern summary), R/88 validation. Phase 101 complete — broadened drug grouping output with cancer_linked flag, dual-output (all encounters + linked-only), cross-tab summary sheet. Phase 100 complete — CONDITION table cancer linkage investigation delivered.
+**Shipped:** v3.1 (2026-06-12). 103 phases completed across 16 milestones (v1.0-v3.1). Phase 103 complete — death date cross-tab summary. Phase 102 — co-administration analysis. Phase 101 — broadened drug grouping. Phase 100 — CONDITION table linkage.
 
-**Pipeline status:** 99 phases completed across 15 milestones (v1.0-v3.0). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification, R/60 and R/28 migrated to data.table. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables with descriptive names, episode/encounter grain-labeled outputs, xlsx metadata enrichment, SCT conditioning temporal context flags, 5 treatment categories (Chemotherapy, Radiation, SCT, Immunotherapy, Proton Therapy), consolidated Gantt export with dynamic schema verification (Phase 99), and comprehensive smoke test with 35+ validation sections.
+**Pipeline status:** 103 phases completed across 16 milestones (v1.0-v3.1). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
 
 ## Previous Milestones
+
+### v3.1 Meeting Gap Closure — Clinical Data Coverage (Shipped 2026-06-12)
+
+**Goal:** Close analytical gaps identified in team meetings by quantifying unlinked treatments, analyzing single-agent co-administration patterns, producing death date cross-tabs, and improving cancer linkage rates via the CONDITION table.
+
+**Shipped:**
+- CONDITION table cancer linkage investigation as 3rd-tier supplement to DIAGNOSIS-based linkage (Phase 100)
+- Broadened drug grouping output with cancer_linked flag and dual-output (all encounters + linked-only) (Phase 101)
+- Single-agent co-administration analysis with +/-30 day temporal window and pattern summary (Phase 102)
+- Death date cross-tab summary with cascading 4-row metrics and styled xlsx (Phase 103)
 
 ### v2.3 Gantt Data Enrichment (Shipped 2026-06-08)
 
@@ -338,4 +359,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-12 after Phase 103 completion*
+*Last updated: 2026-06-12 — Milestone v3.2 started*
