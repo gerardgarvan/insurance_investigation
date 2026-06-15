@@ -31,7 +31,7 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 - [x] **REPORT-01**: User can render an RMarkdown report to self-contained HTML that compiles all investigation findings (G4, G5, G8, G10, G11, secondary malignancy) with tables and summaries
 - [x] **REPORT-02**: User can run a data delivery manifest script that identifies all output files created/updated in v3.1 and v3.2, lists them with descriptions, and generates a file listing for packaging to Amy
-- [ ] **REPORT-03**: User can review updated pecan_lymphoma_meeting_notes_combined.md with resolved gaps marked and stale items removed
+- [x] **REPORT-03**: User can review updated pecan_lymphoma_meeting_notes_combined.md with resolved gaps marked and stale items removed
 
 ## v3.1 Requirements (Complete)
 
@@ -100,7 +100,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TABLE-02 | Phase 106 | Complete |
 | REPORT-01 | Phase 107 | Complete |
 | REPORT-02 | Phase 107 | Complete |
-| REPORT-03 | Phase 107 | Pending |
+| REPORT-03 | Phase 107 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total
