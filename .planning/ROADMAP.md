@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [x] **Phase 104: Treatment Timing Investigations** - Flag pre-diagnosis treatments and build secondary malignancy table with 7-day gap criterion (completed 2026-06-15)
+- [x] **Phase 104: Treatment Timing Investigations** - Flag pre-diagnosis treatments and build secondary malignancy table with 7-day gap criterion (completed 2026-06-15)
 - [ ] **Phase 105: Code & Overlap Verification** - Verify Ethna/transplant/SCT code classifications and validate HL+NHL dual-code patients
 - [ ] **Phase 106: Tableau-Ready Data Tables** - Produce encounter-level cancer codes and chemo drug class tables for Tableau import
 - [ ] **Phase 107: Gap Resolution Report & Delivery** - Compile all findings into RMarkdown report, generate delivery manifest, update meeting notes
@@ -40,7 +40,10 @@ Plans:
   3. User can run a script and see SCT codes above line 22 validated against actual patient data, with zero-usage and suspicious-usage codes flagged
   4. User can run a script and see a focused HL+NHL dual-code validation report showing patient-level detail for the ~4,000/8,000 dual-code patients with data quality assessment
   5. User can run R/88 smoke test and see structural validation passing for all four investigation scripts
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 105-01-PLAN.md -- Code verification (R/33: CODE-01/02/03), HL+NHL overlap validation (R/34: OVERLAP-01), R/88 smoke test updates
 
 ### Phase 106: Tableau-Ready Data Tables
 **Goal**: Amy can import two xlsx tables into Tableau for interactive exploration of cancer codes and chemo drug classifications per encounter
@@ -68,14 +71,14 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 104. Treatment Timing Investigations | 1/1 | Complete    | 2026-06-15 |
-| 105. Code & Overlap Verification | 0/? | Not started | - |
+| 105. Code & Overlap Verification | 0/1 | Planning complete | - |
 | 106. Tableau-Ready Data Tables | 0/? | Not started | - |
 | 107. Gap Resolution Report & Delivery | 0/? | Not started | - |
 
 ## Next Steps
 
-1. Execute Phase 104: `/gsd:execute-phase 104`
-2. Phase 105 and 106 are independent of 104 and can be planned/executed in any order
+1. Execute Phase 105: `/gsd:execute-phase 105`
+2. Phase 106 is independent and can be planned/executed in any order
 3. Phase 107 must wait until 104-106 are complete
 
 ## Coverage
