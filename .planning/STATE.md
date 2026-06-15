@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: verifying
-last_updated: "2026-06-15T15:32:26.713Z"
-last_activity: 2026-06-15
+status: executing
+last_updated: "2026-06-15T12:55:49Z"
+last_activity: 2026-06-15 -- Phase 105 Plan 01 complete
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -20,14 +20,14 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 104 — treatment-timing-investigations
+**Current focus:** Phase 105 — code-overlap-verification
 
 ## Current Position
 
-Phase: 105
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-15
+Phase: 105 (code-overlap-verification) — COMPLETE
+Plan: 1 of 1 (COMPLETE)
+Status: Phase 105 complete, Phase 106 ready
+Last activity: 2026-06-15 -- Phase 105 Plan 01 complete
 
 ## Performance Metrics
 
@@ -39,8 +39,10 @@ Last activity: 2026-06-15
 
 **Planning efficiency:**
 
-- Average plans per phase: 1.5
-- Average tasks per plan: 3-5
+- Average plans per phase: 1.0
+- Average tasks per plan: 3.0
+- Phase 104: 6 minutes (2 tasks)
+- Phase 105: 6 minutes (3 tasks)
 
 ## Accumulated Context
 
@@ -81,8 +83,8 @@ None currently identified.
 
 ### Active TODOs
 
-- [ ] Plan Phase 104 (Treatment Timing Investigations) - radiation before HL dx + secondary malignancy table
-- [ ] Plan Phase 105 (Code & Overlap Verification) - Ethna/transplant/SCT codes + HL+NHL overlap
+- [x] Plan Phase 104 (Treatment Timing Investigations) - radiation before HL dx + secondary malignancy table
+- [x] Plan Phase 105 (Code & Overlap Verification) - Ethna/transplant/SCT codes + HL+NHL overlap
 - [ ] Plan Phase 106 (Tableau-Ready Data Tables) - encounter-level cancer codes and chemo drugs
 - [ ] Plan Phase 107 (Gap Resolution Report) - RMarkdown report + manifest + meeting notes update
 
@@ -92,11 +94,13 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:roadmap` (v3.2 roadmap creation)
-**What's next:** Plan Phase 104 via `/gsd:plan-phase 104`
+**Last command:** `/gsd:execute-phase 105` (Phase 105 execution)
+**What's next:** Plan Phase 106 via `/gsd:plan-phase 106`
 
 ### Recent Changes
 
+- 2026-06-15: Phase 105 complete (Code & Overlap Verification - CODE-01/02/03, OVERLAP-01)
+- 2026-06-15: Phase 104 complete (Treatment Timing Investigations - TIMING-01/02)
 - 2026-06-15: v3.2 roadmap created with 4 phases (104-107) covering 11 requirements
 - 2026-06-12: v3.1 milestone completed (Phases 100-103, 4 phases, 9 requirements)
 - 2026-06-12: Phase 103 complete (death date cross-tab summary)
@@ -116,8 +120,8 @@ None identified.
 
 **Immediate (v3.2):**
 
-- Phase 104: Treatment timing investigations (2 requirements)
-- Phase 105: Code & overlap verification (4 requirements)
+- Phase 104: Treatment timing investigations (2 requirements) — COMPLETE
+- Phase 105: Code & overlap verification (4 requirements) — COMPLETE
 - Phase 106: Tableau-ready data tables (2 requirements)
 - Phase 107: Gap resolution report & delivery (3 requirements)
 
@@ -126,4 +130,4 @@ None identified.
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
-*State updated: 2026-06-15 after v3.2 roadmap creation*
+*State updated: 2026-06-15 after Phase 105 completion*
