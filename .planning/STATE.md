@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: completed
-last_updated: "2026-06-15T17:03:02.155Z"
+status: verifying
+last_updated: "2026-06-15T17:50:16.444Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # Project State
@@ -20,14 +20,14 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 105 — code-overlap-verification
+**Current focus:** Phase 106 — tableau-ready-data-tables
 
 ## Current Position
 
-Phase: 106
-Plan: Not started
-Status: Phase 105 complete, Phase 106 ready
-Last activity: 2026-06-15
+Phase: 106 (tableau-ready-data-tables) — COMPLETE
+Plan: 1 of 1 (complete)
+Status: Phase 106 complete — ready for Phase 107
+Last activity: 2026-06-15 -- Phase 106 execution complete
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Last activity: 2026-06-15
 - Average tasks per plan: 3.0
 - Phase 104: 6 minutes (2 tasks)
 - Phase 105: 6 minutes (3 tasks)
+- Phase 106: 5 minutes (2 tasks)
 
 ## Accumulated Context
 
@@ -58,6 +59,12 @@ Last activity: 2026-06-15
 - REPORT-01/02/03 must be last phase (Phase 107) since it compiles findings from all investigations
 - Phases 104, 105, 106 are independent and can be executed in any order
 - Phase 107 depends on all three preceding phases
+
+**Phase 106 decisions:**
+
+- Comma separator for cancer codes (meeting notes line 75, not semicolons like R/57)
+- Separate xlsx per table (not combined workbook) for clearer Tableau import purpose
+- One row per encounter+medication in TABLE-2 (no aggregation) for Tableau pivot flexibility
 
 **v3.1 decisions (carried forward):**
 
@@ -85,7 +92,7 @@ None currently identified.
 
 - [x] Plan Phase 104 (Treatment Timing Investigations) - radiation before HL dx + secondary malignancy table
 - [x] Plan Phase 105 (Code & Overlap Verification) - Ethna/transplant/SCT codes + HL+NHL overlap
-- [ ] Plan Phase 106 (Tableau-Ready Data Tables) - encounter-level cancer codes and chemo drugs
+- [x] Plan Phase 106 (Tableau-Ready Data Tables) - encounter-level cancer codes and chemo drugs
 - [ ] Plan Phase 107 (Gap Resolution Report) - RMarkdown report + manifest + meeting notes update
 
 ### Known Blockers
@@ -94,11 +101,12 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 105` (Phase 105 execution)
-**What's next:** Plan Phase 106 via `/gsd:plan-phase 106`
+**Last command:** `/gsd:execute-phase 106` (Phase 106 execution)
+**What's next:** Plan Phase 107 via `/gsd:plan-phase 107`
 
 ### Recent Changes
 
+- 2026-06-15: Phase 106 complete (Tableau-Ready Data Tables - TABLE-01/TABLE-02)
 - 2026-06-15: Phase 105 complete (Code & Overlap Verification - CODE-01/02/03, OVERLAP-01)
 - 2026-06-15: Phase 104 complete (Treatment Timing Investigations - TIMING-01/02)
 - 2026-06-15: v3.2 roadmap created with 4 phases (104-107) covering 11 requirements
@@ -122,7 +130,7 @@ None identified.
 
 - Phase 104: Treatment timing investigations (2 requirements) — COMPLETE
 - Phase 105: Code & overlap verification (4 requirements) — COMPLETE
-- Phase 106: Tableau-ready data tables (2 requirements)
+- Phase 106: Tableau-ready data tables (2 requirements) — COMPLETE
 - Phase 107: Gap resolution report & delivery (3 requirements)
 
 **Deferred from v3.0:**
@@ -130,4 +138,4 @@ None identified.
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
-*State updated: 2026-06-15 after Phase 105 completion*
+*State updated: 2026-06-15 after Phase 106 completion*

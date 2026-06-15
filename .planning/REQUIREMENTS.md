@@ -24,8 +24,8 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### Tableau-Ready Tables
 
-- [ ] **TABLE-01**: User can open xlsx with TABLE 1: each encounter ID mapped to all associated cancer diagnosis codes (comma-separated), suitable for Tableau import
-- [ ] **TABLE-02**: User can open xlsx with TABLE 2: chemotherapy drugs by class/category with associated cancer codes per encounter, suitable for Tableau import
+- [x] **TABLE-01**: User can open xlsx with TABLE 1: each encounter ID mapped to all associated cancer diagnosis codes (comma-separated), suitable for Tableau import
+- [x] **TABLE-02**: User can open xlsx with TABLE 2: chemotherapy drugs by class/category with associated cancer codes per encounter, suitable for Tableau import
 
 ### Reporting & Delivery
 
@@ -96,8 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CODE-02 | Phase 105 | Pending |
 | CODE-03 | Phase 105 | Pending |
 | OVERLAP-01 | Phase 105 | Pending |
-| TABLE-01 | Phase 106 | Pending |
-| TABLE-02 | Phase 106 | Pending |
+| TABLE-01 | Phase 106 | Complete |
+| TABLE-02 | Phase 106 | Complete |
 | REPORT-01 | Phase 107 | Pending |
 | REPORT-02 | Phase 107 | Pending |
 | REPORT-03 | Phase 107 | Pending |
