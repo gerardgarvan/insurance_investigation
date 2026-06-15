@@ -2460,13 +2460,155 @@ if (file.exists("R/32_secondary_malignancy_table.R")) {
 }
 
 # ==============================================================================
+# SECTION 31F: PHASE 105 R/33 -- CODE VERIFICATION (CODE-01, CODE-02, CODE-03) ----
+# ==============================================================================
+# Validates R/33 code verification script structural integrity.
+
+message("\n[36/39] Phase 105 R/33: Code verification validation...")
+
+if (file.exists("R/33_code_verification.R")) {
+  r33 <- readLines("R/33_code_verification.R", warn = FALSE)
+  r33_text <- paste(r33, collapse = "\n")
+
+  # Structural checks for R/33
+  check("R/33 sources R/00_config.R",
+        any(grepl("source.*R/00_config\\.R", r33)))
+
+  check("R/33 sources utils_duckdb.R",
+        any(grepl("source.*utils_duckdb", r33)))
+
+  check("R/33 sources utils_assertions.R",
+        any(grepl("source.*utils_assertions", r33)))
+
+  check("R/33 queries PRESCRIBING table (CODE-01)",
+        any(grepl("get_pcornet_table.*PRESCRIBING", r33)))
+
+  check("R/33 includes etanercept RxNorm codes",
+        any(grepl("1653225.*809158|809158.*1653225", r33_text)))
+
+  check("R/33 queries revenue code 0362 (CODE-02)",
+        any(grepl("REVENUE_CODE.*0362|0362.*REVENUE_CODE", r33_text)))
+
+  check("R/33 checks Z94.84 SCT status code (CODE-03)",
+        any(grepl("Z9484|Z94\\.84", r33_text)))
+
+  check("R/33 checks T86.5 SCT complications code",
+        any(grepl("T865|T86\\.5", r33_text)))
+
+  check("R/33 checks T86.09 BMT complications code",
+        any(grepl("T8609|T86\\.09", r33_text)))
+
+  check("R/33 outputs code_verification.xlsx",
+        any(grepl("code_verification\\.xlsx", r33_text)))
+
+  check("R/33 creates openxlsx2 workbook",
+        any(grepl("wb_workbook", r33)))
+
+  check("R/33 has Summary sheet",
+        any(grepl("Summary", r33_text)))
+
+  check("R/33 has CODE-01 Detail sheet",
+        any(grepl("CODE-01 Detail", r33_text)))
+
+  check("R/33 has CODE-02 Detail sheet",
+        any(grepl("CODE-02 Detail", r33_text)))
+
+  check("R/33 has CODE-03 Detail sheet",
+        any(grepl("CODE-03 Detail", r33_text)))
+
+  check("R/33 does NOT saveRDS (investigation script)",
+        !any(grepl("saveRDS", r33)))
+
+  check("R/33 uses styled header fill (FF374151)",
+        any(grepl("FF374151", r33_text)))
+
+  check("R/33 has 7+ SECTION markers",
+        sum(grepl("SECTION.*----", r33)) >= 7)
+
+} else {
+  message("  FAIL: R/33_code_verification.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
+# SECTION 31G: PHASE 105 R/34 -- HL+NHL OVERLAP VALIDATION (OVERLAP-01) ----
+# ==============================================================================
+# Validates R/34 HL+NHL overlap validation script structural integrity.
+
+message("\n[37/39] Phase 105 R/34: HL+NHL overlap validation...")
+
+if (file.exists("R/34_hl_nhl_overlap_validation.R")) {
+  r34 <- readLines("R/34_hl_nhl_overlap_validation.R", warn = FALSE)
+  r34_text <- paste(r34, collapse = "\n")
+
+  # Structural checks for R/34
+  check("R/34 sources R/00_config.R",
+        any(grepl("source.*R/00_config\\.R", r34)))
+
+  check("R/34 sources utils_duckdb.R",
+        any(grepl("source.*utils_duckdb", r34)))
+
+  check("R/34 queries DIAGNOSIS table",
+        any(grepl("get_pcornet_table.*DIAGNOSIS", r34)))
+
+  check("R/34 detects NHL ICD-10 codes (C82-C86)",
+        any(grepl("C8\\[2-6\\]|C8.2-6.", r34_text)))
+
+  check("R/34 detects HL ICD-9 codes (201)",
+        any(grepl("\\^201|201.*ICD.9|ICD.9.*201", r34_text)))
+
+  check("R/34 detects HL ICD-10 codes (C81)",
+        any(grepl("\\^C81|C81.*ICD.10|ICD.10.*C81", r34_text)))
+
+  check("R/34 computes days_between for temporal analysis",
+        any(grepl("days_between", r34_text)))
+
+  check("R/34 identifies same-day diagnoses",
+        any(grepl("same_day", r34_text)))
+
+  check("R/34 assigns temporal categories",
+        any(grepl("temporal_category", r34_text)))
+
+  check("R/34 loads confirmed HL cohort as denominator",
+        any(grepl("confirmed_hl_cohort", r34_text)))
+
+  check("R/34 outputs hl_nhl_overlap_validation.xlsx",
+        any(grepl("hl_nhl_overlap_validation\\.xlsx", r34_text)))
+
+  check("R/34 creates openxlsx2 workbook",
+        any(grepl("wb_workbook", r34)))
+
+  check("R/34 has Summary sheet",
+        any(grepl("Summary", r34_text)))
+
+  check("R/34 has Patient Detail sheet",
+        any(grepl("Patient Detail", r34_text)))
+
+  check("R/34 has Pattern Analysis sheet",
+        any(grepl("Pattern Analysis", r34_text)))
+
+  check("R/34 does NOT saveRDS (investigation script)",
+        !any(grepl("saveRDS", r34)))
+
+  check("R/34 uses styled header fill (FF374151)",
+        any(grepl("FF374151", r34_text)))
+
+  check("R/34 has 7+ SECTION markers",
+        sum(grepl("SECTION.*----", r34)) >= 7)
+
+} else {
+  message("  FAIL: R/34_hl_nhl_overlap_validation.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[36/37] DuckDB integration validation...")
+message("\n[38/39] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2547,7 +2689,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
 # Production mode: skipped entirely (fixture data not present).
 
 if (IS_LOCAL) {
-  message("\n[37/37] Fixture schema validation (local mode only)...")
+  message("\n[39/39] Fixture schema validation (local mode only)...")
 
   if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
 
@@ -2702,6 +2844,10 @@ message("  * CODE-02: SCT 0362 investigation (R/54)")
 message("  * TREAT-03: Drug grouping summary tables (R/56)")
 message("  * P82-INTEGRATE: Encounter-level dx deduplication in R/56 Table 1")
 message("  * P82-FLAG: dx_only used internally for dedup (not in Table 1 output)")
+message("  * CODE-01: Etanercept immunotherapy classification verification (R/33 Phase 105)")
+message("  * CODE-02: Organ transplant code 0362 cross-check (R/33 Phase 105)")
+message("  * CODE-03: SCT diagnosis codes above line 22 validation (R/33 Phase 105)")
+message("  * OVERLAP-01: HL+NHL dual-code temporal validation report (R/34 Phase 105)")
 message("  * ENV-01: IS_LOCAL auto-detection via Sys.info()")
 message("  * ENV-02: R_TESTING_ENV override readable")
 message("  * ENV-03: Local mode paths (tests/fixtures, tempdir)")
