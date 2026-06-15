@@ -2464,7 +2464,7 @@ if (file.exists("R/32_secondary_malignancy_table.R")) {
 # ==============================================================================
 # Validates R/33 code verification script structural integrity.
 
-message("\n[36/39] Phase 105 R/33: Code verification validation...")
+message("\n[36/41] Phase 105 R/33: Code verification validation...")
 
 if (file.exists("R/33_code_verification.R")) {
   r33 <- readLines("R/33_code_verification.R", warn = FALSE)
@@ -2535,7 +2535,7 @@ if (file.exists("R/33_code_verification.R")) {
 # ==============================================================================
 # Validates R/34 HL+NHL overlap validation script structural integrity.
 
-message("\n[37/39] Phase 105 R/34: HL+NHL overlap validation...")
+message("\n[37/41] Phase 105 R/34: HL+NHL overlap validation...")
 
 if (file.exists("R/34_hl_nhl_overlap_validation.R")) {
   r34 <- readLines("R/34_hl_nhl_overlap_validation.R", warn = FALSE)
@@ -2602,13 +2602,85 @@ if (file.exists("R/34_hl_nhl_overlap_validation.R")) {
 }
 
 # ==============================================================================
+# SECTION 31H: PHASE 106 R/36 -- TABLEAU-READY TABLES (TABLE-01, TABLE-02) ----
+# ==============================================================================
+# Validates R/36 Tableau-ready table generation script structural integrity.
+
+message("\n[38/41] Phase 106 R/36: Tableau-ready tables validation...")
+
+if (file.exists("R/36_tableau_ready_tables.R")) {
+  r36 <- readLines("R/36_tableau_ready_tables.R", warn = FALSE)
+  r36_text <- paste(r36, collapse = "\n")
+
+  # Source dependencies
+  check("R/36 sources R/00_config.R",
+        any(grepl("source.*R/00_config\\.R", r36)))
+
+  check("R/36 sources utils_duckdb.R",
+        any(grepl("source.*utils_duckdb", r36)))
+
+  check("R/36 sources utils_assertions.R",
+        any(grepl("source.*utils_assertions", r36)))
+
+  check("R/36 sources utils_cancer.R",
+        any(grepl("source.*utils_cancer", r36)))
+
+  # Data loading
+  check("R/36 loads treatment_episode_detail.rds",
+        any(grepl("treatment_episode_detail\\.rds", r36_text)))
+
+  check("R/36 queries DuckDB DIAGNOSIS table",
+        any(grepl("get_pcornet_table.*DIAGNOSIS", r36)))
+
+  check("R/36 uses is_cancer_code() filter",
+        any(grepl("is_cancer_code", r36)))
+
+  # TABLE-1 specific
+  check("R/36 uses COMMA separator for cancer_codes (not semicolon)",
+        any(grepl('collapse\\s*=\\s*","', r36_text)))
+
+  check("R/36 outputs tableau_table1_encounter_cancer_codes.xlsx",
+        any(grepl("tableau_table1_encounter_cancer_codes\\.xlsx", r36_text)))
+
+  # TABLE-2 specific
+  check("R/36 filters to Chemotherapy for TABLE-2",
+        any(grepl('treatment_type.*==.*"Chemotherapy"', r36_text)))
+
+  check("R/36 resolves medication_name",
+        any(grepl("medication_name", r36_text)))
+
+  check("R/36 loads reference xlsx for drug mappings",
+        any(grepl("all_codes_resolved_next_tables", r36_text)))
+
+  check("R/36 outputs tableau_table2_chemo_drugs_by_class.xlsx",
+        any(grepl("tableau_table2_chemo_drugs_by_class\\.xlsx", r36_text)))
+
+  # Output format
+  check("R/36 creates openxlsx2 workbook",
+        any(grepl("wb_workbook", r36)))
+
+  check("R/36 uses col_names = TRUE for Tableau compatibility",
+        any(grepl("col_names.*=.*TRUE", r36_text)))
+
+  check("R/36 does NOT saveRDS (export script)",
+        !any(grepl("saveRDS", r36)))
+
+  check("R/36 has 7+ SECTION markers",
+        sum(grepl("SECTION.*----", r36)) >= 7)
+
+} else {
+  message("  FAIL: R/36_tableau_ready_tables.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[38/39] DuckDB integration validation...")
+message("\n[39/41] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2689,7 +2761,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
 # Production mode: skipped entirely (fixture data not present).
 
 if (IS_LOCAL) {
-  message("\n[39/39] Fixture schema validation (local mode only)...")
+  message("\n[40/41] Fixture schema validation (local mode only)...")
 
   if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
 
@@ -2895,6 +2967,8 @@ message("  * D-11: is_sct_conditioning_context and immuno_confidence removed fro
 message("  * D-13: Dynamic schema verification replaces hardcoded column counts (Phase 99)")
 message("  * IMMU-01: immuno_confidence column flags questionable immunotherapy codes (Phase 93)")
 message("  * IMMU-02: Distinct flag values for vitamin combos vs CAR-T ambiguity (Phase 93)")
+message("  * TABLE-01: Encounter cancer codes Tableau table with comma separators (R/36 Phase 106)")
+message("  * TABLE-02: Chemo drugs by class Tableau table with medication names (R/36 Phase 106)")
 
 if (failed > 0) {
   quit(status = 1)
