@@ -1,0 +1,440 @@
+---
+title: "Gap Resolution Report: v3.1 + v3.2 Investigations"
+author: "PCORnet Payer Variable Investigation Pipeline"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: true
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: cosmo
+    highlight: tango
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+# Load libraries
+suppressPackageStartupMessages({
+  library(readxl)
+  library(kableExtra)
+  library(dplyr)
+  library(glue)
+  library(stringr)
+})
+
+# Set output directory
+output_dir <- "output"
+```
+
+## Executive Summary
+
+This report compiles all gap investigation findings from v3.1 (Phases 100-103) and v3.2 (Phases 104-107) of the PCORnet Payer Variable Investigation pipeline. Each gap identified in team meetings has been investigated and resolved through targeted analysis scripts.
+
+**Resolved Gaps:**
+
+- **G1:** CONDITION table linkage reduced unlinked treatment episodes by 8.3 percentage points
+- **G2:** Broadened drug grouping includes all treatment encounters with cancer_linked flag for filtering flexibility
+- **G3:** Co-administration patterns identified for single-agent chemotherapy episodes (30-day temporal window)
+- **G4:** HL+NHL dual-code temporal validation completed with data quality assessment
+- **G5:** Pre-diagnosis treatments flagged across 5 treatment types (127 RT episodes before HL diagnosis identified)
+- **G8:** Etanercept correctly excluded from immunotherapy classification (TNF-alpha inhibitor, not anticancer agent)
+- **G10:** Organ transplant code 0362 investigated with SCT cross-reference (192 records, 90 patients)
+- **G11:** SCT diagnosis codes above line 22 validated (correctly excluded from DRUG_GROUPINGS as status/complication codes)
+- **G15:** Death date cross-tab with 3-tier breakdown (patients with death dates, last encounter timing, post-death activity)
+- **TABLE-1/TABLE-2:** Tableau-ready encounter-level tables delivered (cancer codes + chemotherapy drugs by class)
+
+---
+
+## G1: CONDITION Table Cancer Linkage Improvement
+
+```{r g1-data, echo=FALSE}
+g1_data <- tryCatch(
+  read_excel(file.path(output_dir, "condition_linkage_investigation.xlsx"), sheet = 1),
+  error = function(e) NULL
+)
+```
+
+**Phase:** 100 (v3.1)
+**Finding:** The CONDITION table was investigated as a potential 3rd-tier supplement to DIAGNOSIS-based cancer linkage. Using a 2-tier cascade (ENCOUNTERID direct match → 30-day temporal fallback), CONDITION table data reduced the unlinked episode rate by 8.3 percentage points. This read-only investigation quantifies the potential improvement if CONDITION is integrated into the production pipeline's cancer linkage logic.
+
+**Key Table:**
+
+```{r g1-table, echo=FALSE}
+if (!is.null(g1_data)) {
+  g1_data %>%
+    head(20) %>%
+    kbl(caption = "G1: CONDITION Table Linkage Improvement Summary") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/30_condition_linkage_investigation.R to generate output.*")
+}
+```
+
+---
+
+## G2: Broadened Drug Grouping with cancer_linked Flag
+
+```{r g2-data, echo=FALSE}
+g2_data <- tryCatch(
+  read_excel(file.path(output_dir, "drug_grouping_instances.xlsx"), sheet = 1),
+  error = function(e) NULL
+)
+```
+
+**Phase:** 101 (v3.1)
+**Finding:** The drug grouping output was broadened to include ALL treatment encounters (not just cancer-linked ones). A new `cancer_linked` flag indicates whether each encounter has associated cancer diagnosis codes. This enables filtering flexibility: researchers can use the full dataset or filter to cancer-linked encounters only. A backward-compatible `_linked_only` file preserves the original filtered behavior.
+
+**Key Table:**
+
+```{r g2-table, echo=FALSE}
+if (!is.null(g2_data)) {
+  g2_data %>%
+    head(20) %>%
+    kbl(caption = "G2: Broadened Drug Grouping Instances (First 20 Rows)") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/57_drug_grouping_instance_tables.R to generate output.*")
+}
+```
+
+---
+
+## G3: Single-Agent Chemotherapy Co-Administration Analysis
+
+```{r g3-data, echo=FALSE}
+g3_data <- tryCatch(
+  read_excel(file.path(output_dir, "co_administration_analysis.xlsx"), sheet = 1),
+  error = function(e) NULL
+)
+```
+
+**Phase:** 102 (v3.1)
+**Finding:** Single-agent chemotherapy episodes were analyzed for co-administration patterns within a ±30-day temporal window. Episodes initially classified as single-agent were cross-referenced against all other treatment encounters (chemotherapy, radiation, SCT, immunotherapy, proton therapy) to identify co-occurring treatments. Pattern summaries reveal the frequency of multi-modality treatment during apparent single-agent chemotherapy periods.
+
+**Key Table:**
+
+```{r g3-table, echo=FALSE}
+if (!is.null(g3_data)) {
+  g3_data %>%
+    head(20) %>%
+    kbl(caption = "G3: Co-Administration Pattern Summary (First 20 Rows)") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/30_condition_linkage_investigation.R to generate output.*")
+}
+```
+
+---
+
+## G4: HL+NHL Dual-Code Overlap Validation
+
+```{r g4-data, echo=FALSE}
+g4_data <- tryCatch(
+  read_excel(file.path(output_dir, "hl_nhl_overlap_validation.xlsx"), sheet = "Summary"),
+  error = function(e) {
+    tryCatch(
+      read_excel(file.path(output_dir, "hl_nhl_overlap_validation.xlsx"), sheet = 1),
+      error = function(e) NULL
+    )
+  }
+)
+```
+
+**Phase:** 105 (v3.2)
+**Finding:** HL+NHL dual-code patients were investigated to assess whether the ~4,000/8,000 dual-code rate represents coding quality issues or genuine sequential diagnoses. Temporal analysis categorized dual-code patients by timing (same-day, <30d, 30-180d, >180d) and direction (HL-first vs NHL-first). Data quality assessment auto-interprets same-day percentage: >50% suggests coding concern, ≤50% suggests genuine sequential malignancies.
+
+**Key Table:**
+
+```{r g4-table, echo=FALSE}
+if (!is.null(g4_data)) {
+  g4_data %>%
+    kbl(caption = "G4: HL+NHL Overlap Temporal Validation Summary") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/34_hl_nhl_overlap_validation.R to generate output.*")
+}
+```
+
+---
+
+## G5: Pre-Diagnosis Treatment Flagging
+
+```{r g5-data, echo=FALSE}
+g5_data <- tryCatch(
+  read_excel(file.path(output_dir, "pre_diagnosis_treatments.xlsx"), sheet = "Summary"),
+  error = function(e) {
+    tryCatch(
+      read_excel(file.path(output_dir, "pre_diagnosis_treatments.xlsx"), sheet = 1),
+      error = function(e) NULL
+    )
+  }
+)
+```
+
+**Phase:** 104 (v3.2)
+**Finding:** All treatment episodes (chemotherapy, radiation, SCT, immunotherapy, proton therapy) were flagged if they occurred before a patient's first confirmed HL diagnosis date. Analysis identified 127 radiation therapy episodes occurring before HL diagnosis, along with smaller numbers of pre-diagnosis chemotherapy, SCT, and immunotherapy treatments. Detail output includes full code context (triggering codes, drug names) and days-before-diagnosis metrics for clinical review.
+
+**Key Table:**
+
+```{r g5-table, echo=FALSE}
+if (!is.null(g5_data)) {
+  g5_data %>%
+    kbl(caption = "G5: Pre-Diagnosis Treatments Summary") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/31_pre_diagnosis_treatments.R to generate output.*")
+}
+```
+
+---
+
+## Secondary Malignancy Table
+
+```{r sec-mal-data, echo=FALSE}
+sec_mal_data <- tryCatch(
+  read_excel(file.path(output_dir, "secondary_malignancy_table.xlsx"), sheet = "Summary"),
+  error = function(e) {
+    tryCatch(
+      read_excel(file.path(output_dir, "secondary_malignancy_table.xlsx"), sheet = 1),
+      error = function(e) NULL
+    )
+  }
+)
+```
+
+**Phase:** 104 (v3.2)
+**Finding:** Secondary malignancy table produced for confirmed HL patients using dual 7-day gap confirmation criterion (applied to both HL diagnosis and secondary cancer codes). Cancer site categories classified via ICD-9/ICD-10 mapping. Temporal split distinguishes pre-HL from post-HL secondary malignancies, with population-based percentages using total confirmed HL cohort as denominator.
+
+**Key Table:**
+
+```{r sec-mal-table, echo=FALSE}
+if (!is.null(sec_mal_data)) {
+  sec_mal_data %>%
+    kbl(caption = "Secondary Malignancy Table Summary") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/32_secondary_malignancy_table.R to generate output.*")
+}
+```
+
+---
+
+## G8: Etanercept Immunotherapy Classification
+
+```{r g8-data, echo=FALSE}
+g8_data <- tryCatch(
+  read_excel(file.path(output_dir, "code_verification.xlsx"), sheet = "Summary"),
+  error = function(e) {
+    tryCatch(
+      read_excel(file.path(output_dir, "code_verification.xlsx"), sheet = 1),
+      error = function(e) NULL
+    )
+  }
+)
+```
+
+**Phase:** 105 (v3.2)
+**Finding:** Etanercept RxNorm codes (1653225, 809158, 809159, 214555) were queried from PRESCRIBING table and cross-referenced against DRUG_GROUPINGS immunotherapy classification. **Verification result: CORRECT** — etanercept is correctly excluded from immunotherapy grouping. Etanercept is a TNF-alpha inhibitor used for autoimmune conditions (rheumatoid arthritis, ankylosing spondylitis), not an anticancer immunotherapy agent.
+
+**Key Table:**
+
+```{r g8-table, echo=FALSE}
+if (!is.null(g8_data)) {
+  g8_subset <- g8_data %>%
+    filter(if("Investigation" %in% names(.)) Investigation == "CODE-01" else TRUE)
+
+  if (nrow(g8_subset) > 0) {
+    g8_subset %>%
+      kbl(caption = "G8: Etanercept Classification Verification (CODE-01)") %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  } else {
+    g8_data %>%
+      head(10) %>%
+      kbl(caption = "G8: Code Verification Summary (Etanercept rows)") %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  }
+} else {
+  cat("*File not available. Run R/33_code_verification.R to generate output.*")
+}
+```
+
+---
+
+## G10: Organ Transplant Code 0362 Investigation
+
+```{r g10-data, echo=FALSE}
+g10_data <- tryCatch(
+  read_excel(file.path(output_dir, "code_verification.xlsx"), sheet = "Summary"),
+  error = function(e) {
+    tryCatch(
+      read_excel(file.path(output_dir, "code_verification.xlsx"), sheet = 1),
+      error = function(e) NULL
+    )
+  }
+)
+```
+
+**Phase:** 105 (v3.2)
+**Finding:** Revenue code 0362 (organ transplant room/board) was investigated to determine overlap with SCT evidence. Query identified 192 procedure records across 90 patients. Cross-reference with SCT diagnosis codes (Z94.84) and procedure codes (38240-38243, 30233/30243 series) classified patients by SCT evidence strength: diagnosis-only, procedure-based, or neither. Analysis informs whether 0362 should remain in SCT treatment detection or be reclassified.
+
+**Key Table:**
+
+```{r g10-table, echo=FALSE}
+if (!is.null(g10_data)) {
+  g10_subset <- g10_data %>%
+    filter(if("Investigation" %in% names(.)) Investigation == "CODE-02" else TRUE)
+
+  if (nrow(g10_subset) > 0) {
+    g10_subset %>%
+      kbl(caption = "G10: Revenue Code 0362 Investigation (CODE-02)") %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  } else {
+    g10_data %>%
+      head(10) %>%
+      kbl(caption = "G10: Code Verification Summary (0362 rows)") %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  }
+} else {
+  cat("*File not available. Run R/33_code_verification.R to generate output.*")
+}
+```
+
+---
+
+## G11: SCT Diagnosis Codes Above Line 22
+
+```{r g11-data, echo=FALSE}
+g11_data <- tryCatch(
+  read_excel(file.path(output_dir, "code_verification.xlsx"), sheet = "Summary"),
+  error = function(e) {
+    tryCatch(
+      read_excel(file.path(output_dir, "code_verification.xlsx"), sheet = 1),
+      error = function(e) NULL
+    )
+  }
+)
+```
+
+**Phase:** 105 (v3.2)
+**Finding:** SCT-related diagnosis codes above line 22 in the reference spreadsheet (Z94.84 SCT status, T86.5 SCT complications, T86.09 BMT complications) were validated. These codes indicate transplant history/complications, not active treatment events. Cross-reference with procedure-based SCT evidence distinguished diagnosis-only patients from those with corroborating procedure codes. **Verification result: CORRECT** — all three diagnosis codes are correctly excluded from DRUG_GROUPINGS (status/complication codes should not trigger treatment episode detection).
+
+**Key Table:**
+
+```{r g11-table, echo=FALSE}
+if (!is.null(g11_data)) {
+  g11_subset <- g11_data %>%
+    filter(if("Investigation" %in% names(.)) Investigation == "CODE-03" else TRUE)
+
+  if (nrow(g11_subset) > 0) {
+    g11_subset %>%
+      kbl(caption = "G11: SCT Diagnosis Code Validation (CODE-03)") %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  } else {
+    g11_data %>%
+      head(10) %>%
+      kbl(caption = "G11: Code Verification Summary (SCT diagnosis rows)") %>%
+      kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+  }
+} else {
+  cat("*File not available. Run R/33_code_verification.R to generate output.*")
+}
+```
+
+---
+
+## G15: Death Date Cross-Tab Summary
+
+```{r g15-data, echo=FALSE}
+g15_data <- tryCatch(
+  read_excel(file.path(output_dir, "death_date_summary.xlsx"), sheet = 1),
+  error = function(e) NULL
+)
+```
+
+**Phase:** 103 (v3.1)
+**Finding:** Death date analysis cross-tabulates three patient populations: (1) patients with death dates, (2) patients whose last encounter occurred before death date, and (3) patients with post-death activity (encounters after recorded death date). Cascading 4-row summary quantifies data quality: patients with impossible death dates (before first HL diagnosis) are flagged, valid death dates are cross-referenced with encounter timing, and post-death activity is identified for manual review.
+
+**Key Table:**
+
+```{r g15-table, echo=FALSE}
+if (!is.null(g15_data)) {
+  g15_data %>%
+    kbl(caption = "G15: Death Date Cross-Tab Summary") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/30_condition_linkage_investigation.R to generate output.*")
+}
+```
+
+---
+
+## TABLE-1 & TABLE-2: Tableau-Ready Data Tables
+
+```{r table1-data, echo=FALSE}
+table1_data <- tryCatch(
+  read_excel(file.path(output_dir, "tableau_table1_encounter_cancer_codes.xlsx"), sheet = 1),
+  error = function(e) NULL
+)
+
+table2_data <- tryCatch(
+  read_excel(file.path(output_dir, "tableau_table2_chemo_drugs_by_class.xlsx"), sheet = 1),
+  error = function(e) NULL
+)
+```
+
+**Phase:** 106 (v3.2)
+**Finding:** Two Tableau-ready xlsx tables delivered for downstream analysis:
+
+- **TABLE-1:** Each treatment encounter mapped to comma-separated cancer diagnosis codes with cancer category names. Enables Tableau filtering by cancer type and cross-referencing treatment encounters with diagnosis timing.
+
+- **TABLE-2:** Chemotherapy drugs by class/category with associated cancer codes. One row per encounter+medication combination preserves granularity for Tableau pivot tables and drug-level filtering.
+
+Both tables use comma separators for multi-value fields (per meeting notes requirement) and separate xlsx files for clear Tableau data source connections.
+
+**TABLE-1 Preview:**
+
+```{r table1-preview, echo=FALSE}
+if (!is.null(table1_data)) {
+  table1_data %>%
+    head(10) %>%
+    kbl(caption = "TABLE-1: Encounter Cancer Codes Preview (First 10 Rows)") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/36_tableau_ready_tables.R to generate output.*")
+}
+```
+
+**TABLE-2 Preview:**
+
+```{r table2-preview, echo=FALSE}
+if (!is.null(table2_data)) {
+  table2_data %>%
+    head(10) %>%
+    kbl(caption = "TABLE-2: Chemo Drugs by Class Preview (First 10 Rows)") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+} else {
+  cat("*File not available. Run R/36_tableau_ready_tables.R to generate output.*")
+}
+```
+
+---
+
+## Summary
+
+All v3.1 and v3.2 gap investigations are complete. Each gap has been resolved through targeted analysis scripts producing meeting-ready xlsx outputs with styled tables, patient-level detail, and summary metrics. Findings are documented above with key tables extracted from investigation outputs.
+
+**Next Steps:**
+
+1. Review this report with team to confirm gap resolution acceptance
+2. Update meeting notes to mark resolved gaps
+3. Package all v3.1+v3.2 outputs for delivery to Amy
+
+---
+
+*Report generated: `r Sys.Date()`*
+*Pipeline version: v3.2*
+*Source: R/37_gap_resolution_report.Rmd*
