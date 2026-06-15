@@ -21,13 +21,13 @@
 #
 # Outputs:
 #   - output/encounter_level_drug_grouping_instances.xlsx (3-sheet workbook:
-#     Sheet 1 = "Enc: Sub-Category Detail" (all encounters, with cancer_linked flag),
-#     Sheet 2 = "Enc: Treatment Detail" (all encounters, with cancer_linked flag),
+#     Sheet 1 = "Enc Sub-Category Detail" (all encounters, with cancer_linked flag),
+#     Sheet 2 = "Enc Treatment Detail" (all encounters, with cancer_linked flag),
 #     Sheet 3 = "Linked vs Unlinked" (cross-tab summary by treatment type))
 #   - output/drug_grouping_instances.xlsx (backward compat copy of broadened output)
 #   - output/encounter_level_drug_grouping_instances_linked_only.xlsx (2-sheet workbook:
-#     Sheet 1 = "Enc: Sub-Category Detail" (cancer-linked only),
-#     Sheet 2 = "Enc: Treatment Detail" (cancer-linked only))
+#     Sheet 1 = "Enc Sub-Category Detail" (cancer-linked only),
+#     Sheet 2 = "Enc Treatment Detail" (cancer-linked only))
 #   - output/drug_grouping_instances_linked_only.xlsx (backward compat copy of linked-only)
 #
 # Phase 101 Decisions (Broadened Drug Grouping Output):
@@ -488,12 +488,12 @@ message("--- Writing multi-sheet XLSX output (dual: broadened + linked-only) ---
 wb_broad <- wb_workbook()
 
 # Sheet 1: Sub-Category Detail (all encounters)
-wb_broad$add_worksheet("Enc: Sub-Category Detail")
-wb_broad$add_data("Enc: Sub-Category Detail", table1_all, start_row = 1, col_names = TRUE)
+wb_broad$add_worksheet("Enc Sub-Category Detail")
+wb_broad$add_data("Enc Sub-Category Detail", table1_all, start_row = 1, col_names = TRUE)
 
 # Sheet 2: Treatment Detail (all encounters)
-wb_broad$add_worksheet("Enc: Treatment Detail")
-wb_broad$add_data("Enc: Treatment Detail", table2_all, start_row = 1, col_names = TRUE)
+wb_broad$add_worksheet("Enc Treatment Detail")
+wb_broad$add_data("Enc Treatment Detail", table2_all, start_row = 1, col_names = TRUE)
 
 # Sheet 3: Linked vs Unlinked Summary (per D-06)
 wb_broad$add_worksheet("Linked vs Unlinked")
@@ -509,12 +509,12 @@ message(glue("Saved broadened (3 sheets, compat): {OLD_OUTPUT_XLSX}"))
 wb_linked <- wb_workbook()
 
 # Sheet 1: Sub-Category Detail (cancer-linked only, NO cancer_linked column)
-wb_linked$add_worksheet("Enc: Sub-Category Detail")
-wb_linked$add_data("Enc: Sub-Category Detail", table1_linked, start_row = 1, col_names = TRUE)
+wb_linked$add_worksheet("Enc Sub-Category Detail")
+wb_linked$add_data("Enc Sub-Category Detail", table1_linked, start_row = 1, col_names = TRUE)
 
 # Sheet 2: Treatment Detail (cancer-linked only, NO cancer_linked column)
-wb_linked$add_worksheet("Enc: Treatment Detail")
-wb_linked$add_data("Enc: Treatment Detail", table2_linked, start_row = 1, col_names = TRUE)
+wb_linked$add_worksheet("Enc Treatment Detail")
+wb_linked$add_data("Enc Treatment Detail", table2_linked, start_row = 1, col_names = TRUE)
 
 # Save linked-only output with _linked_only suffix (per D-08)
 wb_linked$save(NEW_OUTPUT_LINKED_XLSX)
@@ -531,7 +531,7 @@ message(glue("  Total detail rows loaded: {nrow(detail)}"))
 message(glue("  Rows with cancer category names: {n_with_categories}"))
 message(glue("  Rows without cancer category names: {n_without_categories}"))
 message()
-message(glue("  Table 1 (Enc: Sub-Category Detail):"))
+message(glue("  Table 1 (Enc Sub-Category Detail):"))
 message(glue("    All encounters: {nrow(table1_all)} rows"))
 message(glue("    Linked-only: {nrow(table1_linked)} rows"))
 message(glue("    Unlinked: {nrow(table1_all) - nrow(table1_linked)} rows"))
@@ -539,7 +539,7 @@ message(glue("    Unique sub-categories: {n_distinct(unlist(str_split(table1_all
 message(glue("    Unique patients (all): {n_distinct(table1_all$patient_id)}"))
 message(glue("    Unique encounters (all): {n_distinct(table1_all$ENCOUNTERID)}"))
 message()
-message(glue("  Table 2 (Enc: Treatment Detail):"))
+message(glue("  Table 2 (Enc Treatment Detail):"))
 message(glue("    All encounters: {nrow(table2_all)} rows"))
 message(glue("    Linked-only: {nrow(table2_linked)} rows"))
 message(glue("    Unlinked: {nrow(table2_all) - nrow(table2_linked)} rows"))

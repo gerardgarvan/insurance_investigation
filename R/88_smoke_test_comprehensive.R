@@ -1834,9 +1834,9 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
         any(grepl("encounter_level_drug_grouping_instances\\.xlsx", r57_lines)) &&
         any(grepl("drug_grouping_instances\\.xlsx", r57_lines)))
 
-  check("R/57 has grain-prefixed sheets (Enc: Sub-Category Detail + Enc: Treatment Detail)",
-        any(grepl("Enc: Sub-Category Detail", r57_lines)) &&
-        any(grepl("Enc: Treatment Detail", r57_lines)))
+  check("R/57 has grain-prefixed sheets (Enc Sub-Category Detail + Enc Treatment Detail)",
+        any(grepl("Enc Sub-Category Detail", r57_lines)) &&
+        any(grepl("Enc Treatment Detail", r57_lines)))
 
   check("R/57 defines map_cancer_codes_to_categories helper function",
         any(grepl("map_cancer_codes_to_categories", r57_lines)))
@@ -2059,12 +2059,12 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
             "Linked vs Unlinked" %in% b_sheets)
 
       # Check cancer_linked column in broadened
-      b_data <- openxlsx2::wb_to_df(wb_b, sheet = "Enc: Sub-Category Detail", start_row = 1)
+      b_data <- openxlsx2::wb_to_df(wb_b, sheet = "Enc Sub-Category Detail", start_row = 1)
       check("Broadened Sheet 1 contains cancer_linked column",
             "cancer_linked" %in% colnames(b_data))
 
       # Check cancer_linked column NOT in linked-only
-      l_data <- openxlsx2::wb_to_df(wb_l, sheet = "Enc: Sub-Category Detail", start_row = 1)
+      l_data <- openxlsx2::wb_to_df(wb_l, sheet = "Enc Sub-Category Detail", start_row = 1)
       check("Linked-only Sheet 1 does NOT contain cancer_linked column",
             !("cancer_linked" %in% colnames(l_data)))
 
