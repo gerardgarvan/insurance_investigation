@@ -90,23 +90,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COADMIN-01 | Phase 102 | Complete |
 | COADMIN-02 | Phase 102 | Complete |
 | DEATH-01 | Phase 103 | Complete |
-| TIMING-01 | — | Pending |
-| TIMING-02 | — | Pending |
-| CODE-01 | — | Pending |
-| CODE-02 | — | Pending |
-| CODE-03 | — | Pending |
-| OVERLAP-01 | — | Pending |
-| TABLE-01 | — | Pending |
-| TABLE-02 | — | Pending |
-| REPORT-01 | — | Pending |
-| REPORT-02 | — | Pending |
-| REPORT-03 | — | Pending |
+| TIMING-01 | Phase 104 | Pending |
+| TIMING-02 | Phase 104 | Pending |
+| CODE-01 | Phase 105 | Pending |
+| CODE-02 | Phase 105 | Pending |
+| CODE-03 | Phase 105 | Pending |
+| OVERLAP-01 | Phase 105 | Pending |
+| TABLE-01 | Phase 106 | Pending |
+| TABLE-02 | Phase 106 | Pending |
+| REPORT-01 | Phase 107 | Pending |
+| REPORT-02 | Phase 107 | Pending |
+| REPORT-03 | Phase 107 | Pending |
 
 **Coverage:**
 - v3.2 requirements: 11 total
-- Mapped to phases: 0 (awaiting roadmap creation)
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-12 — v3.2 requirements added*
+*Last updated: 2026-06-15 — v3.2 traceability updated with phase mappings*
