@@ -25,7 +25,10 @@
   2. User can review flagged pre-diagnosis treatment episodes with patient IDs and dates for clinical plausibility review
   3. User can run a script and see a secondary malignancy table where diagnoses are separated by a 7-day gap criterion, with population-based columns (K-N) denominated on column E population (E3 per meeting notes)
   4. User can run R/88 smoke test and see structural validation passing for both new scripts
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 104-01-PLAN.md -- Pre-diagnosis treatment flagging (R/31), secondary malignancy table (R/32), R/88 smoke test updates
 
 ### Phase 105: Code & Overlap Verification
 **Goal**: User can confirm or correct three code classification concerns and assess HL+NHL dual-code data quality
@@ -64,14 +67,14 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 104. Treatment Timing Investigations | 0/? | Not started | - |
+| 104. Treatment Timing Investigations | 0/1 | Planned | - |
 | 105. Code & Overlap Verification | 0/? | Not started | - |
 | 106. Tableau-Ready Data Tables | 0/? | Not started | - |
 | 107. Gap Resolution Report & Delivery | 0/? | Not started | - |
 
 ## Next Steps
 
-1. Plan Phase 104: `/gsd:plan-phase 104`
+1. Execute Phase 104: `/gsd:execute-phase 104`
 2. Phase 105 and 106 are independent of 104 and can be planned/executed in any order
 3. Phase 107 must wait until 104-106 are complete
 
