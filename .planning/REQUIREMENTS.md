@@ -3,9 +3,37 @@
 **Defined:** 2026-06-12
 **Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## v3.1 Requirements
+## v3.2 Requirements
 
-Requirements for meeting gap closure milestone. Each maps to roadmap phases.
+Requirements for meeting gap resolution report milestone. Each maps to roadmap phases.
+
+### Treatment Timing Investigations
+
+- [ ] **TIMING-01**: User can run R script that flags and quantifies all treatment episodes (chemo, radiation, SCT, immunotherapy) occurring before the patient's first confirmed HL diagnosis date, with counts by treatment type
+- [ ] **TIMING-02**: User can run R script that produces a secondary malignancy table using 7-day gap criterion between diagnoses, with columns K-N based on population in column E (E3 per meeting notes)
+
+### Code Verification Investigations
+
+- [ ] **CODE-01**: User can run R script that investigates "Ethna" immunotherapy classification, verifying whether it appears in current code mappings and recommending correction
+- [ ] **CODE-02**: User can run R script that cross-checks organ transplant code (line 11 of all_codes_resolved spreadsheet) against current SCT code mappings and patient data
+- [ ] **CODE-03**: User can run R script that verifies SCT codes above line 22 in the codes spreadsheet against actual patient data, flagging codes with zero or suspicious usage
+
+### HL+NHL Overlap Validation
+
+- [ ] **OVERLAP-01**: User can run R script that produces a focused validation report on HL+NHL dual-code patients (~4,000 of 8,000), extending R/77-R/78 with patient-level detail and data quality assessment
+
+### Tableau-Ready Tables
+
+- [ ] **TABLE-01**: User can open xlsx with TABLE 1: each encounter ID mapped to all associated cancer diagnosis codes (comma-separated), suitable for Tableau import
+- [ ] **TABLE-02**: User can open xlsx with TABLE 2: chemotherapy drugs by class/category with associated cancer codes per encounter, suitable for Tableau import
+
+### Reporting & Delivery
+
+- [ ] **REPORT-01**: User can render an RMarkdown report to self-contained HTML that compiles all investigation findings (G4, G5, G8, G10, G11, secondary malignancy) with tables and summaries
+- [ ] **REPORT-02**: User can run a data delivery manifest script that identifies all output files created/updated in v3.1 and v3.2, lists them with descriptions, and generates a file listing for packaging to Amy
+- [ ] **REPORT-03**: User can review updated pecan_lymphoma_meeting_notes_combined.md with resolved gaps marked and stale items removed
+
+## v3.1 Requirements (Complete)
 
 ### Broadened Drug Grouping
 
@@ -30,7 +58,7 @@ Requirements for meeting gap closure milestone. Each maps to roadmap phases.
 
 ## Future Requirements
 
-### Extended Analysis (v3.2+)
+### Extended Analysis (v3.3+)
 
 - **DRUG-04**: Stratified drug grouping instances by payer category
 - **COADMIN-03**: Co-administration patterns stratified by cancer type
@@ -40,11 +68,12 @@ Requirements for meeting gap closure milestone. Each maps to roadmap phases.
 
 | Feature | Reason |
 |---------|--------|
-| Payer category consolidation (8→5) | Team decided to defer; current 8-category system retained for analytical granularity |
-| Tableau visualization | Visualization is downstream of R pipeline; Amy builds Tableau from R outputs |
+| Insurance category consolidation (8→fewer) | Superseded by AMC 8-category framework; team settled on current mapping |
+| Tableau visualization building | Visualization is downstream; Amy builds Tableau from R outputs. R pipeline provides Tableau-ready data tables. |
 | Sharon's medication review integration | Waiting on external clinical review; will incorporate when received |
-| Regimen reconstruction beyond ABVD/BV+AVD/Nivo+AVD | Current 3-regimen detection covers ~95% of adult first-line HL; additional regimens need clinical validation |
-| CONDITION table for non-cancer linkage | Scope limited to cancer diagnosis improvement; general CONDITION usage is separate concern |
+| Regimen reconstruction beyond ABVD/BV+AVD/Nivo+AVD | Current 3-regimen detection covers ~95% of adult first-line HL |
+| CONDITION table for non-cancer linkage | Scope limited to cancer diagnosis improvement |
+| PDF RMarkdown output | HTML is primary format for easy sharing; PDF can be added later if needed |
 
 ## Traceability
 
@@ -61,12 +90,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COADMIN-01 | Phase 102 | Complete |
 | COADMIN-02 | Phase 102 | Complete |
 | DEATH-01 | Phase 103 | Complete |
+| TIMING-01 | — | Pending |
+| TIMING-02 | — | Pending |
+| CODE-01 | — | Pending |
+| CODE-02 | — | Pending |
+| CODE-03 | — | Pending |
+| OVERLAP-01 | — | Pending |
+| TABLE-01 | — | Pending |
+| TABLE-02 | — | Pending |
+| REPORT-01 | — | Pending |
+| REPORT-02 | — | Pending |
+| REPORT-03 | — | Pending |
 
 **Coverage:**
-- v3.1 requirements: 9 total
-- Mapped to phases: 9 (100% coverage)
-- Unmapped: 0
+- v3.2 requirements: 11 total
+- Mapped to phases: 0 (awaiting roadmap creation)
+- Unmapped: 11
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-12 after v3.1 roadmap creation*
+*Last updated: 2026-06-12 — v3.2 requirements added*
