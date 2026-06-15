@@ -9,8 +9,8 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### Treatment Timing Investigations
 
-- [ ] **TIMING-01**: User can run R script that flags and quantifies all treatment episodes (chemo, radiation, SCT, immunotherapy) occurring before the patient's first confirmed HL diagnosis date, with counts by treatment type
-- [ ] **TIMING-02**: User can run R script that produces a secondary malignancy table using 7-day gap criterion between diagnoses, with columns K-N based on population in column E (E3 per meeting notes)
+- [x] **TIMING-01**: User can run R script that flags and quantifies all treatment episodes (chemo, radiation, SCT, immunotherapy) occurring before the patient's first confirmed HL diagnosis date, with counts by treatment type
+- [x] **TIMING-02**: User can run R script that produces a secondary malignancy table using 7-day gap criterion between diagnoses, with columns K-N based on population in column E (E3 per meeting notes)
 
 ### Code Verification Investigations
 
@@ -90,8 +90,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COADMIN-01 | Phase 102 | Complete |
 | COADMIN-02 | Phase 102 | Complete |
 | DEATH-01 | Phase 103 | Complete |
-| TIMING-01 | Phase 104 | Pending |
-| TIMING-02 | Phase 104 | Pending |
+| TIMING-01 | Phase 104 | Complete |
+| TIMING-02 | Phase 104 | Complete |
 | CODE-01 | Phase 105 | Pending |
 | CODE-02 | Phase 105 | Pending |
 | CODE-03 | Phase 105 | Pending |

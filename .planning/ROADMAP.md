@@ -9,7 +9,7 @@
 
 ## Phases
 
-- [ ] **Phase 104: Treatment Timing Investigations** - Flag pre-diagnosis treatments and build secondary malignancy table with 7-day gap criterion
+- [x] **Phase 104: Treatment Timing Investigations** - Flag pre-diagnosis treatments and build secondary malignancy table with 7-day gap criterion (completed 2026-06-15)
 - [ ] **Phase 105: Code & Overlap Verification** - Verify Ethna/transplant/SCT code classifications and validate HL+NHL dual-code patients
 - [ ] **Phase 106: Tableau-Ready Data Tables** - Produce encounter-level cancer codes and chemo drug class tables for Tableau import
 - [ ] **Phase 107: Gap Resolution Report & Delivery** - Compile all findings into RMarkdown report, generate delivery manifest, update meeting notes
@@ -25,10 +25,10 @@
   2. User can review flagged pre-diagnosis treatment episodes with patient IDs and dates for clinical plausibility review
   3. User can run a script and see a secondary malignancy table where diagnoses are separated by a 7-day gap criterion, with population-based columns (K-N) denominated on column E population (E3 per meeting notes)
   4. User can run R/88 smoke test and see structural validation passing for both new scripts
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 104-01-PLAN.md -- Pre-diagnosis treatment flagging (R/31), secondary malignancy table (R/32), R/88 smoke test updates
+- [x] 104-01-PLAN.md -- Pre-diagnosis treatment flagging (R/31), secondary malignancy table (R/32), R/88 smoke test updates
 
 ### Phase 105: Code & Overlap Verification
 **Goal**: User can confirm or correct three code classification concerns and assess HL+NHL dual-code data quality
@@ -67,7 +67,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 104. Treatment Timing Investigations | 0/1 | Planned | - |
+| 104. Treatment Timing Investigations | 1/1 | Complete   | 2026-06-15 |
 | 105. Code & Overlap Verification | 0/? | Not started | - |
 | 106. Tableau-Ready Data Tables | 0/? | Not started | - |
 | 107. Gap Resolution Report & Delivery | 0/? | Not started | - |
