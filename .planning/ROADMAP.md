@@ -75,7 +75,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 104. Treatment Timing Investigations | 1/1 | Complete    | 2026-06-15 |
 | 105. Code & Overlap Verification | 0/1 | Complete    | 2026-06-15 |
-| 106. Tableau-Ready Data Tables | 1/1 | Complete   | 2026-06-15 |
+| 106. Tableau-Ready Data Tables | 1/1 | Complete    | 2026-06-15 |
 | 107. Gap Resolution Report & Delivery | 0/? | Not started | - |
 
 ## Next Steps
