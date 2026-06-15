@@ -96,8 +96,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Organ transplant code verification — cross-check line 11 inclusion — v3.2 Phase 105
 - [x] SCT codes above line 22 verification — validate patient data and appropriateness — v3.2 Phase 105
 - [x] Secondary malignancy table — 7-day gap criterion, population-based columns — v3.2 Phase 104
-- [ ] TABLE 1: Encounter ID → all cancer diagnosis codes (Tableau-ready)
-- [ ] TABLE 2: Chemo drugs by class/category + cancer codes (Tableau-ready)
+- [x] TABLE 1: Encounter ID → all cancer diagnosis codes (Tableau-ready) — v3.2 Phase 106
+- [x] TABLE 2: Chemo drugs by class/category + cancer codes (Tableau-ready) — v3.2 Phase 106
 - [ ] RMarkdown gap resolution report compiling all investigation findings
 - [ ] Update meeting notes to mark resolved gaps and remove stale items
 
@@ -135,7 +135,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v3.1 (2026-06-12). 105 phases completed across 16 milestones (v1.0-v3.2). Phase 105 complete — code classification verification (Ethna/etanercept, organ transplant 0362, SCT diagnosis codes) and HL+NHL dual-code overlap validation. Phase 104 — pre-diagnosis treatment flagging and secondary malignancy table. Phase 103 — death date cross-tab summary. Phase 102 — co-administration analysis. Phase 101 — broadened drug grouping.
+**Shipped:** v3.1 (2026-06-12). 106 phases completed across 16 milestones (v1.0-v3.2). Phase 106 complete — Tableau-ready xlsx tables (TABLE-1 encounter cancer codes, TABLE-2 chemo drugs by class). Phase 105 — code classification verification (Ethna/etanercept, organ transplant 0362, SCT diagnosis codes) and HL+NHL dual-code overlap validation. Phase 104 — pre-diagnosis treatment flagging and secondary malignancy table.
 
 **Pipeline status:** 103 phases completed across 16 milestones (v1.0-v3.1). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
 
@@ -359,4 +359,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 — Phase 105 complete (code classification verification + HL+NHL overlap validation)*
+*Last updated: 2026-06-15 — Phase 106 complete (Tableau-ready data tables for encounter cancer codes + chemo drugs by class)*
