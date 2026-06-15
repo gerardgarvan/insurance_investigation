@@ -2318,13 +2318,155 @@ if (file.exists("R/59_death_date_summary.R")) {
 }
 
 # ==============================================================================
+# SECTION 31D: PHASE 104 R/31 -- PRE-DIAGNOSIS TREATMENT FLAGGING (TIMING-01) ----
+# ==============================================================================
+# Validates R/31 pre-diagnosis treatment investigation script structural integrity.
+
+message("\n[34/37] Phase 104 R/31: Pre-diagnosis treatment flagging validation...")
+
+if (file.exists("R/31_pre_diagnosis_treatments.R")) {
+  r31_lines <- readLines("R/31_pre_diagnosis_treatments.R", warn = FALSE)
+
+  # D-08: Standalone investigation script sourcing R/00_config.R
+  check("R/31 sources R/00_config.R",
+        any(grepl('source.*R/00_config', r31_lines)))
+
+  # D-08: Investigation script (no saveRDS)
+  check("R/31 does NOT contain saveRDS (investigation only per D-08)",
+        !any(grepl("saveRDS[(]", r31_lines)))
+
+  # TIMING-01: Reads treatment_episodes.rds
+  check("R/31 reads treatment_episodes.rds",
+        any(grepl("treatment_episodes\\.rds", r31_lines)))
+
+  # TIMING-01: Reads confirmed_hl_cohort.rds
+  check("R/31 reads confirmed_hl_cohort.rds",
+        any(grepl("confirmed_hl_cohort\\.rds", r31_lines)))
+
+  # Pitfall 1: Correct join key (patient_id = ID)
+  check("R/31 joins on patient_id = ID (correct join key)",
+        any(grepl('patient_id.*=.*ID', r31_lines)))
+
+  # TIMING-01: Pre-diagnosis filter (episode_start < first_hl_dx_date)
+  check("R/31 filters episode_start < first_hl_dx_date (pre-dx filter)",
+        any(grepl("episode_start.*<.*first_hl_dx_date", r31_lines)))
+
+  # Pitfall 5: Sentinel date guard
+  check("R/31 guards sentinel dates year > 1900 (Pitfall 5)",
+        any(grepl("1900", r31_lines)))
+
+  # TIMING-01: Computes days_before_dx
+  check("R/31 computes days_before_dx",
+        any(grepl("days_before_dx", r31_lines)))
+
+  # D-01: Creates 'Summary' worksheet
+  check("R/31 creates 'Summary' worksheet",
+        any(grepl("Summary", r31_lines)))
+
+  # D-01: Creates 'Detail' worksheet
+  check("R/31 creates 'Detail' worksheet",
+        any(grepl("Detail", r31_lines)))
+
+  # D-08: Styled header with project-standard dark gray
+  check("R/31 uses FF374151 header fill color",
+        any(grepl("FF374151", r31_lines)))
+
+  # Input validation
+  check("R/31 uses assert_rds_exists for input validation",
+        any(grepl("assert_rds_exists", r31_lines)))
+
+  # D-09: No HIPAA suppression
+  check("R/31 does NOT apply automatic HIPAA suppression (D-09)",
+        !any(grepl("<11|hipaa_suppress|suppress_small", r31_lines, ignore.case = TRUE)))
+
+} else {
+  message("  FAIL: R/31_pre_diagnosis_treatments.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
+# SECTION 31E: PHASE 104 R/32 -- SECONDARY MALIGNANCY TABLE (TIMING-02) ----
+# ==============================================================================
+# Validates R/32 secondary malignancy table structural integrity.
+
+message("\n[35/37] Phase 104 R/32: Secondary malignancy table validation...")
+
+if (file.exists("R/32_secondary_malignancy_table.R")) {
+  r32_lines <- readLines("R/32_secondary_malignancy_table.R", warn = FALSE)
+
+  # D-08: Standalone investigation script sourcing R/00_config.R
+  check("R/32 sources R/00_config.R",
+        any(grepl('source.*R/00_config', r32_lines)))
+
+  # D-06, D-07: Sources utils_cancer.R
+  check("R/32 sources utils_cancer.R",
+        any(grepl('source.*utils_cancer', r32_lines)))
+
+  # D-04: Investigation script (no saveRDS)
+  check("R/32 does NOT contain saveRDS (investigation only per D-04)",
+        !any(grepl("saveRDS[(]", r32_lines)))
+
+  # D-05: Reads confirmed_hl_cohort.rds
+  check("R/32 reads confirmed_hl_cohort.rds (D-05)",
+        any(grepl("confirmed_hl_cohort\\.rds", r32_lines)))
+
+  # TIMING-02: Queries DIAGNOSIS table via get_pcornet_table
+  check("R/32 queries DIAGNOSIS table via get_pcornet_table",
+        any(grepl('get_pcornet_table.*DIAGNOSIS', r32_lines)))
+
+  # TIMING-02: Uses is_cancer_code for cancer filtering
+  check("R/32 uses is_cancer_code for cancer filtering",
+        any(grepl("is_cancer_code", r32_lines)))
+
+  # Pitfall 2: Excludes both ICD-10 C81 and ICD-9 201 HL codes
+  check("R/32 excludes both ICD-10 C81 and ICD-9 201 HL codes (Pitfall 2)",
+        any(grepl("\\^C81\\|\\^201", r32_lines)))
+
+  # D-06: Applies 7-day gap criterion
+  check("R/32 applies 7-day gap criterion (D-06)",
+        any(grepl(">=.*7|>= 7", r32_lines)))
+
+  # TIMING-02: Uses classify_codes for cancer site classification
+  check("R/32 uses classify_codes for cancer site classification",
+        any(grepl("classify_codes", r32_lines)))
+
+  # D-07: Implements pre/post HL split
+  check("R/32 implements pre/post HL split (D-07)",
+        any(grepl("Pre-HL", r32_lines)) && any(grepl("Post-HL", r32_lines)))
+
+  # D-07, Pitfall 3: Uses total_cohort as denominator
+  check("R/32 uses total_cohort as denominator (D-07, Pitfall 3)",
+        any(grepl("total_cohort", r32_lines)))
+
+  # D-01: Creates 'Summary' worksheet
+  check("R/32 creates 'Summary' worksheet",
+        any(grepl("Summary", r32_lines)))
+
+  # D-01: Creates 'Detail' worksheet
+  check("R/32 creates 'Detail' worksheet",
+        any(grepl("Detail", r32_lines)))
+
+  # D-08: Styled header with project-standard dark gray
+  check("R/32 uses FF374151 header fill color",
+        any(grepl("FF374151", r32_lines)))
+
+  # D-09: No HIPAA suppression
+  check("R/32 does NOT apply automatic HIPAA suppression (D-09)",
+        !any(grepl("<11|hipaa_suppress|suppress_small", r32_lines, ignore.case = TRUE)))
+
+} else {
+  message("  FAIL: R/32_secondary_malignancy_table.R not found")
+  failed <- failed + 1L
+}
+
+# ==============================================================================
 # SECTION 32: DuckDB LOCAL INTEGRATION VALIDATION (TEST-01, TEST-02) ----
 # ==============================================================================
 # Validates that DuckDB ingest succeeds in current environment mode.
 # Local mode: checks fixture-based DuckDB file in tempdir().
 # Production mode: checks production DuckDB file on /blue/.
 
-message("\n[34/35] DuckDB integration validation...")
+message("\n[36/37] DuckDB integration validation...")
 
 if (file.exists(CONFIG$cache$duckdb_path)) {
   con <- tryCatch(
@@ -2405,7 +2547,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
 # Production mode: skipped entirely (fixture data not present).
 
 if (IS_LOCAL) {
-  message("\n[35/35] Fixture schema validation (local mode only)...")
+  message("\n[37/37] Fixture schema validation (local mode only)...")
 
   if (exists("pcornet", envir = .GlobalEnv) && is.list(pcornet) && length(pcornet) > 0) {
 
@@ -2587,6 +2729,8 @@ message("  * DRUG-03: Linked-only output preserved with _linked_only suffix (R/5
 message("  * COADMIN-01: Co-administration detail table with +/-30-day window (R/58 Phase 102)")
 message("  * COADMIN-02: Pattern summary with symmetric pair deduplication (R/58 Phase 102)")
 message("  * DEATH-01: Death date cross-tab summary with cascading metrics (R/59 Phase 103)")
+message("  * TIMING-01: Pre-diagnosis treatment flagging with 5 treatment types (R/31 Phase 104)")
+message("  * TIMING-02: Secondary malignancy table with 7-day gap criterion and pre/post HL split (R/32 Phase 104)")
 message("  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)")
 message("  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)")
 message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
