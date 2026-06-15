@@ -11,7 +11,7 @@
 
 - [x] **Phase 104: Treatment Timing Investigations** - Flag pre-diagnosis treatments and build secondary malignancy table with 7-day gap criterion (completed 2026-06-15)
 - [x] **Phase 105: Code & Overlap Verification** - Verify Ethna/transplant/SCT code classifications and validate HL+NHL dual-code patients (completed 2026-06-15)
-- [x] **Phase 106: Tableau-Ready Data Tables** - Produce encounter-level cancer codes and chemo drug class tables for Tableau import (completed 2026-06-15)
+- [x] **Phase 106: Tableau-Ready Data Tables** - Produce encounter-level cancer codes and chemo drug class tables for Tableau import (completed 2026-06-15)
 - [ ] **Phase 107: Gap Resolution Report & Delivery** - Compile all findings into RMarkdown report, generate delivery manifest, update meeting notes
 
 ## Phase Details
@@ -43,7 +43,7 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 105-01-PLAN.md -- Code verification (R/33: CODE-01/02/03), HL+NHL overlap validation (R/34: OVERLAP-01), R/88 smoke test updates
+- [x] 105-01-PLAN.md -- Code verification (R/33: CODE-01/02/03), HL+NHL overlap validation (R/34: OVERLAP-01), R/88 smoke test updates
 
 ### Phase 106: Tableau-Ready Data Tables
 **Goal**: Amy can import two xlsx tables into Tableau for interactive exploration of cancer codes and chemo drug classifications per encounter
@@ -67,21 +67,24 @@ Plans:
   2. User can run a manifest script and see a listing of all output files created/updated in v3.1 and v3.2 with descriptions, ready for packaging to Amy
   3. User can open pecan_lymphoma_meeting_notes_combined.md and see resolved gaps marked with resolution notes and stale items removed
   4. User can share the HTML report in a team meeting without additional preparation (self-contained, labeled, formatted)
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 107-01-PLAN.md -- RMarkdown gap resolution report (R/37) and delivery manifest script (R/38)
+- [ ] 107-02-PLAN.md -- Meeting notes update with gap resolutions and R/88 smoke test validation for Phase 107
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 104. Treatment Timing Investigations | 1/1 | Complete    | 2026-06-15 |
-| 105. Code & Overlap Verification | 0/1 | Complete    | 2026-06-15 |
+| 105. Code & Overlap Verification | 1/1 | Complete    | 2026-06-15 |
 | 106. Tableau-Ready Data Tables | 1/1 | Complete    | 2026-06-15 |
-| 107. Gap Resolution Report & Delivery | 0/? | Not started | - |
+| 107. Gap Resolution Report & Delivery | 0/2 | Not started | - |
 
 ## Next Steps
 
-1. Execute Phase 106: `/gsd:execute-phase 106`
-2. Phase 107 must wait until 104-106 are complete
+1. Execute Phase 107: `/gsd:execute-phase 107`
 
 ## Coverage
 
