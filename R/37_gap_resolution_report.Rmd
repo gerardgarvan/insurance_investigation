@@ -2,6 +2,7 @@
 title: "Gap Resolution Report: v3.1 + v3.2 Investigations"
 author: "PCORnet Payer Variable Investigation Pipeline"
 date: "`r Sys.Date()`"
+knit: (function(input, ...) rmarkdown::render(input, output_file = "gap_resolution_report.html", output_dir = "output", ...))
 output:
   html_document:
     self_contained: true
