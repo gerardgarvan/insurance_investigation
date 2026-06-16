@@ -61,6 +61,7 @@ source("R/utils/utils_dates.R")
 # Output paths
 OUTPUT_RDS_READ <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 AUDIT_XLSX <- file.path(CONFIG$output_dir, "episode_classification_audit.xlsx")
+STANDALONE_XLSX <- file.path(CONFIG$output_dir, "condition_linkage_investigation.xlsx")
 
 message("\n=== R/30: CONDITION Table Cancer Linkage Investigation ===")
 
@@ -418,6 +419,37 @@ wb_save(wb, AUDIT_XLSX, overwrite = TRUE)
 message(glue("  Added 'Linkage Improvement' sheet to {AUDIT_XLSX}"))
 
 
+# --- Standalone xlsx for delivery manifest (condition_linkage_investigation.xlsx) ---
+
+message("\n--- Creating standalone condition_linkage_investigation.xlsx ---")
+
+wb_standalone <- wb_workbook()
+
+# Sheet 1: Improvement Summary (read by R/37 gap_resolution_report.Rmd)
+wb_standalone$add_worksheet("Improvement Summary")
+wb_standalone$add_data(sheet = "Improvement Summary", x = improvement_summary, start_row = 1, start_col = 1)
+wb_standalone$add_fill(sheet = "Improvement Summary", dims = "A1:C1", color = wb_color("FF1F2937"))
+wb_standalone$add_font(sheet = "Improvement Summary", dims = "A1:C1", bold = TRUE, color = wb_color("FFFFFFFF"))
+wb_standalone$set_col_widths(sheet = "Improvement Summary", cols = 1:3, widths = "auto")
+
+# Sheet 2: Treatment Type Breakdown
+wb_standalone$add_worksheet("Treatment Type Breakdown")
+wb_standalone$add_data(sheet = "Treatment Type Breakdown", x = treatment_type_breakdown, start_row = 1, start_col = 1)
+wb_standalone$add_fill(sheet = "Treatment Type Breakdown", dims = "A1:E1", color = wb_color("FF1F2937"))
+wb_standalone$add_font(sheet = "Treatment Type Breakdown", dims = "A1:E1", bold = TRUE, color = wb_color("FFFFFFFF"))
+wb_standalone$set_col_widths(sheet = "Treatment Type Breakdown", cols = 1:5, widths = "auto")
+
+# Sheet 3: Cancer Category Distribution
+wb_standalone$add_worksheet("Cancer Category Distribution")
+wb_standalone$add_data(sheet = "Cancer Category Distribution", x = category_distribution, start_row = 1, start_col = 1)
+wb_standalone$add_fill(sheet = "Cancer Category Distribution", dims = "A1:C1", color = wb_color("FF1F2937"))
+wb_standalone$add_font(sheet = "Cancer Category Distribution", dims = "A1:C1", bold = TRUE, color = wb_color("FFFFFFFF"))
+wb_standalone$set_col_widths(sheet = "Cancer Category Distribution", cols = 1:3, widths = "auto")
+
+wb_save(wb_standalone, STANDALONE_XLSX, overwrite = TRUE)
+message(glue("  Created {STANDALONE_XLSX}"))
+
+
 # ==============================================================================
 # SECTION 6: CLEANUP AND SUMMARY ----
 # ==============================================================================
@@ -432,4 +464,5 @@ message(glue("    - Temporal fallback: {n_condition_temporal}"))
 message(glue("  Would remain unlinked: {n_unlinked - n_condition_total} ({pct_unlinked_after}%)"))
 message(glue("  Improvement: {pct_improvement} percentage points"))
 message(glue("  Report: {AUDIT_XLSX} ('Linkage Improvement' sheet)"))
+message(glue("  Standalone: {STANDALONE_XLSX}"))
 message(glue("\nNOTE: This is investigation only. No existing data was modified."))
