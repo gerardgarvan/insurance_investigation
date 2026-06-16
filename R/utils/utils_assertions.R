@@ -3,7 +3,7 @@
 # ==============================================================================
 #
 # Purpose:
-#   Provides 5 helper functions for defensive input validation using checkmate.
+#   Provides 7 helper functions for defensive input validation using checkmate.
 #   Reduces boilerplate in production scripts (decades 00-69) by wrapping checkmate
 #   assertions with glue()-based error messages following the [R/XX ACTION] format.
 #   All functions fail-fast with informative context (script name, file paths,
@@ -19,6 +19,8 @@
 #     - assert_col_types(): Key identifier type validation
 #     - warn_date_range(): Date value range warnings
 #     - warn_row_count(): Row count sanity check warnings
+#     - min_or_na(): Safe minimum that returns NA instead of Inf for all-NA input
+#     - max_or_na(): Safe maximum that returns NA instead of -Inf for all-NA input
 #
 # Dependencies:
 #   - checkmate: Fast argument validation (loaded in R/00_config.R)
@@ -244,4 +246,36 @@ warn_row_count <- function(df, name, min_expected = NULL, max_expected = NULL, s
   }
 
   invisible(df)
+}
+
+# ------------------------------------------------------------------------------
+# min_or_na() -- Phase 108
+# ------------------------------------------------------------------------------
+#' Safe minimum that returns NA instead of Inf for all-NA input
+#'
+#' Wrapper around min() that returns NA (preserving input type) when all values
+#' are NA, instead of Inf + warning. Prevents 815 warnings from min(na.rm=TRUE)
+#' in grouped summarise() calls where some groups have all-NA values.
+#'
+#' @param x Numeric or Date vector
+#' @param na.rm Logical. Remove NAs before computing? Default TRUE.
+#' @return Minimum value, or NA if all values are NA
+#'
+min_or_na <- function(x, na.rm = TRUE) {
+  if (all(is.na(x))) return(NA)
+  min(x, na.rm = na.rm)
+}
+
+# ------------------------------------------------------------------------------
+# max_or_na() -- Phase 108
+# ------------------------------------------------------------------------------
+#' Safe maximum that returns NA instead of -Inf for all-NA input
+#'
+#' @param x Numeric or Date vector
+#' @param na.rm Logical. Remove NAs before computing? Default TRUE.
+#' @return Maximum value, or NA if all values are NA
+#'
+max_or_na <- function(x, na.rm = TRUE) {
+  if (all(is.na(x))) return(NA)
+  max(x, na.rm = na.rm)
 }

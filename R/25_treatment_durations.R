@@ -805,7 +805,7 @@ assert_df_valid(
   script_name = "R/25"
 )
 warn_date_range(all_durations, "first_treatment_date",
-                as.Date("1990-01-01"), as.Date("2030-12-31"),
+                as.Date("1960-01-01"), as.Date("2030-12-31"),
                 script_name = "R/25")
 
 # Save RDS artifact

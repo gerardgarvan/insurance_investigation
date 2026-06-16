@@ -57,9 +57,8 @@ ensure_dt <- function(df, name = "input", script_name = "unknown") {
     df <- dplyr::collect(df)
   }
 
-  # Empty check: warning, then return empty data.table preserving structure
+  # Empty check: return empty data.table preserving structure
   if (nrow(df) == 0) {
-    warning(glue::glue("[{script_name} WARNING] {name} is empty (0 rows)"))
     return(data.table::as.data.table(df))
   }
 
@@ -100,9 +99,8 @@ to_tibble_safe <- function(dt, name = "output", script_name = "unknown") {
     stop(glue::glue("[{script_name} ERROR] {name} is NULL"))
   }
 
-  # Empty check: warning, then return empty tibble preserving structure
+  # Empty check: return empty tibble preserving structure
   if (nrow(dt) == 0) {
-    warning(glue::glue("[{script_name} WARNING] {name} is empty (0 rows)"))
     return(tibble::as_tibble(dt))
   }
 

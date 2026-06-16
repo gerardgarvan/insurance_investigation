@@ -126,7 +126,6 @@ verify_duckdb_roundtrip <- function(table_name, con, raw_dir = CONFIG$cache$raw_
 #'
 open_pcornet_con <- function(db_path = CONFIG$cache$duckdb_path, read_only = TRUE) {
   if (exists("pcornet_con", envir = .GlobalEnv)) {
-    warning("DuckDB connection already open. Closing and reopening.")
     close_pcornet_con()
   }
 
