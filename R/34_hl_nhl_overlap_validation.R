@@ -53,6 +53,9 @@ source("R/00_config.R")
 source("R/utils/utils_assertions.R")
 source("R/utils/utils_duckdb.R")
 
+USE_DUCKDB <- TRUE
+open_pcornet_con()
+
 # Try to source utils_dates.R for parse_pcornet_date (graceful fallback if missing)
 if (file.exists("R/utils/utils_dates.R")) {
   source("R/utils/utils_dates.R")
@@ -449,4 +452,6 @@ message()
 message(glue("Same-day percentage: {sprintf('%.1f%%', same_day_pct)} (KEY FINDING -- {if (same_day_pct > 50) 'majority' else 'minority'} of dual codes)"))
 message()
 message(glue("Output file: {OUTPUT_XLSX}"))
+
+close_pcornet_con()
 message("Done.")

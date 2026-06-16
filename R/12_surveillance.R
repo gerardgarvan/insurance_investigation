@@ -176,7 +176,7 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
   # Best available date: SPECIMEN_DATE preferred, fall back to LAB_ORDER_DATE
   lab_hits <- get_pcornet_table("LAB_RESULT_CM") %>%
     filter(LAB_LOINC %in% loinc_codes) %>%
-    inner_join(post_dx_date_map, by = "ID") %>%
+    inner_join(post_dx_date_map, by = "ID", copy = TRUE) %>%
     mutate(lab_date = coalesce(SPECIMEN_DATE, LAB_ORDER_DATE)) %>%
     filter(!is.na(lab_date), lab_date > first_hl_dx_date) %>%
     group_by(ID) %>%
@@ -184,7 +184,8 @@ detect_lab_modality <- function(post_dx_date_map, lab_name, loinc_codes) {
       !!date_col := min(lab_date, na.rm = TRUE),
       !!count_col := n(),
       .groups = "drop"
-    )
+    ) %>%
+    collect()
 
   result <- post_dx_date_map %>%
     select(ID) %>%

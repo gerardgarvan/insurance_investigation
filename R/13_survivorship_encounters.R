@@ -87,12 +87,13 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
 
   enc_av_th <- get_pcornet_table("ENCOUNTER") %>%
     filter(ENC_TYPE %in% c("AV", "TH")) %>%
-    inner_join(post_dx_date_map, by = "ID") %>%
+    inner_join(post_dx_date_map, by = "ID", copy = TRUE) %>%
     filter(
       !is.na(ADMIT_DATE), !is.na(first_hl_dx_date),
       ADMIT_DATE > first_hl_dx_date
     ) %>%
-    select(ENCOUNTERID, ID, ADMIT_DATE, PROVIDERID)
+    select(ENCOUNTERID, ID, ADMIT_DATE, PROVIDERID) %>%
+    collect()
 
   level1_per_patient <- enc_av_th %>%
     group_by(ID) %>%
@@ -117,7 +118,8 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
       (DX_TYPE == "10" & DX %in% ICD_CODES$hl_icd10) |
         (DX_TYPE == "09" & DX %in% ICD_CODES$hl_icd9)
     ) %>%
-    distinct(ENCOUNTERID)
+    distinct(ENCOUNTERID) %>%
+    collect()
 
   level2_encounters <- enc_av_th %>%
     semi_join(hl_dx_on_encounter, by = "ENCOUNTERID")
@@ -221,7 +223,8 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
         (DX_TYPE == "09" & DX %in% SURVIVORSHIP_CODES$personal_history_icd9) |
           (DX_TYPE == "10" & DX %in% SURVIVORSHIP_CODES$personal_history_icd10)
       ) %>%
-      distinct(ENCOUNTERID)
+      distinct(ENCOUNTERID) %>%
+      collect()
 
     level4_encounters <- level3_encounters %>%
       semi_join(has_personal_hx, by = "ENCOUNTERID")

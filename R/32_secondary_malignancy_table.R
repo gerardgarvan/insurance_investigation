@@ -58,6 +58,9 @@ source("R/utils/utils_cancer.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 
+USE_DUCKDB <- TRUE
+open_pcornet_con()
+
 # --- Define file paths ---
 INPUT_COHORT <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "secondary_malignancy_table.xlsx")
@@ -403,4 +406,6 @@ message(glue("    Any timing:                {n_distinct(secondary_with_dx$ID)} 
 message()
 message(glue("  Output: {OUTPUT_XLSX}"))
 message()
+
+close_pcornet_con()
 message("Done.")

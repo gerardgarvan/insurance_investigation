@@ -55,6 +55,9 @@ source("R/00_config.R")
 source("R/utils/utils_assertions.R")
 source("R/utils/utils_duckdb.R")
 
+USE_DUCKDB <- TRUE
+open_pcornet_con()
+
 # --- Define file paths ---
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "code_verification.xlsx")
 
@@ -509,4 +512,6 @@ message(glue("    - Diagnosis-only: {length(patients_diagnosis_only)}"))
 message(glue("    - Diagnosis + procedure: {length(patients_diagnosis_and_proc)}"))
 message()
 message(glue("Output file: {OUTPUT_XLSX}"))
+
+close_pcornet_con()
 message("Done.")
