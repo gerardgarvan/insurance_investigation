@@ -156,7 +156,7 @@ confirmed_secondary <- dx_cohort %>%
         FALSE
       }
     }),
-    earliest_dx = min(DX_DATE, na.rm = TRUE),
+    earliest_dx = min_or_na(DX_DATE),
     .groups = "drop"
   ) %>%
   filter(confirmed == 1L)

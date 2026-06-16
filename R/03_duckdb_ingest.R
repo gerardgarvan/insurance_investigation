@@ -170,7 +170,30 @@ ingest_ok <- tryCatch(
           }
 
           # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
-          DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)
+          # Try standard write first; if it fails with unicode error, sanitize
+          # character columns via iconv (latin1 -> UTF-8 with sub) and retry.
+          write_ok <- tryCatch(
+            { DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE); TRUE },
+            error = function(e) {
+              if (grepl("unicode|byte sequence", e$message, ignore.case = TRUE)) {
+                message(glue("  Encoding error detected -- sanitizing character columns and retrying..."))
+                char_cols <- names(df)[vapply(df, is.character, logical(1))]
+                for (cc in char_cols) {
+                  df[[cc]] <<- iconv(df[[cc]], from = "latin1", to = "UTF-8", sub = "")
+                }
+                tryCatch(
+                  { DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE); TRUE },
+                  error = function(e2) {
+                    warning(glue("INGEST SKIPPED: {tbl_name} -- encoding retry failed: {e2$message}"))
+                    FALSE
+                  }
+                )
+              } else {
+                stop(e)
+              }
+            }
+          )
+          if (!write_ok) return(FALSE)
 
           # Record metrics
           duration <- as.numeric(difftime(Sys.time(), tbl_start, units = "secs"))

@@ -267,8 +267,8 @@ all_dx_by_patient <- dx_data %>%
   group_by(ID, cancer_category) %>%
   summarise(
     n_diagnoses = n(),
-    min_dx_date = min(DX_DATE, na.rm = TRUE),
-    max_dx_date = max(DX_DATE, na.rm = TRUE),
+    min_dx_date = min_or_na(DX_DATE),
+    max_dx_date = max_or_na(DX_DATE),
     .groups = "drop"
   ) %>%
   mutate(days_span = as.numeric(max_dx_date - min_dx_date)) %>%
