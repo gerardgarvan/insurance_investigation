@@ -98,7 +98,7 @@ if (!is.null(g2_data)) {
     kbl(caption = "G2: Broadened Drug Grouping Instances (First 20 Rows)") %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
 } else {
-  cat("*File not available. Run R/57_drug_grouping_instance_tables.R to generate output.*")
+  cat("*File not available. Run R/57_drug_grouping_instances.R to generate output.*")
 }
 ```
 
@@ -125,7 +125,7 @@ if (!is.null(g3_data)) {
     kbl(caption = "G3: Co-Administration Pattern Summary (First 20 Rows)") %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
 } else {
-  cat("*File not available. Run R/30_condition_linkage_investigation.R to generate output.*")
+  cat("*File not available. Run R/58_co_administration_analysis.R to generate output.*")
 }
 ```
 
@@ -367,7 +367,7 @@ if (!is.null(g15_data)) {
     kbl(caption = "G15: Death Date Cross-Tab Summary") %>%
     kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
 } else {
-  cat("*File not available. Run R/30_condition_linkage_investigation.R to generate output.*")
+  cat("*File not available. Run R/59_death_date_summary.R to generate output.*")
 }
 ```
 
