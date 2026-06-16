@@ -358,11 +358,17 @@ message(glue("    Unique patients:     {n_distinct(table2$PATID)}"))
 message(glue("    Unique medications:  {n_distinct(table2$medication_name)}"))
 message()
 
-# Sanity check: TABLE-2 should be a subset of TABLE-1 (chemo-only)
-if (nrow(table2) >= nrow(table1)) {
-  warning("[R/36 WARNING] TABLE-2 row count >= TABLE-1 -- expected TABLE-2 (chemo-only) to be smaller")
+# Sanity check: TABLE-2 encounters should be a subset of TABLE-1 encounters
+# Note: TABLE-2 may have MORE rows than TABLE-1 because TABLE-2 grain is
+# per-encounter+medication (multiple drugs per encounter) while TABLE-1
+# grain is per-encounter+treatment_type (one row per encounter).
+t2_encounters <- unique(table2$ENCOUNTERID)
+t1_encounters <- unique(table1$ENCOUNTERID)
+t2_not_in_t1 <- setdiff(t2_encounters, t1_encounters)
+if (length(t2_not_in_t1) > 0) {
+  warning(glue("[R/36 WARNING] {length(t2_not_in_t1)} TABLE-2 encounters not found in TABLE-1 -- data consistency issue"))
 } else {
-  message(glue("  Sanity check PASSED: TABLE-2 ({nrow(table2)} rows) < TABLE-1 ({nrow(table1)} rows)"))
+  message(glue("  Sanity check PASSED: all {length(t2_encounters)} TABLE-2 encounters found in TABLE-1 ({length(t1_encounters)} total encounters)"))
 }
 
 message()
