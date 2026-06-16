@@ -152,7 +152,9 @@ ingest_ok <- tryCatch(
           message(glue("  Loaded RDS: {format(nrow(df), big.mark=',')} rows x {ncol(df)} cols"))
 
           # SAFE-02: Validate data frame structure
-          assert_df_valid(df, tbl_name, required_cols = c("ID"),
+          # PROVIDER table uses PROVIDERID instead of ID (PCORnet CDM v7.0 schema)
+          required_cols <- if (tbl_name == "PROVIDER") c("PROVIDERID") else c("ID")
+          assert_df_valid(df, tbl_name, required_cols = required_cols,
                           script_name = "R/03", allow_empty = TRUE)
 
           # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
