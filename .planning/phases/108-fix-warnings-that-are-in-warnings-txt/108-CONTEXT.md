@@ -24,8 +24,8 @@ Resolve or suppress the 14 R warnings produced during a full pipeline run (captu
 - **D-06:** `open_pcornet_con()` connection pattern — **silent close/reopen only**. Remove the `warning()` call but keep the existing close-and-reopen behavior. No connection reuse or refactoring needed.
 
 ### Data Quality Gates
-- **D-07:** LAB_RESULT_CM unicode ingest failure (warning 2) — **investigate and fix**. User suspects this is a **filename mismatch** (wrong expected filename in R/03_duckdb_ingest.R), not a unicode issue. Check the actual CSV filename on disk vs. what the ingest script expects. If filename is correct, try encoding fallback (latin1/windows-1252).
-- **D-08:** PROVIDER table unavailable (warning 1) — **investigate and fix**. User suspects this is also a **filename mismatch** (PROVIDER.csv should exist in the dataset). Check the actual filename in the data directory vs. what R/13 expects. Fix the filename reference if mismatched.
+- **D-07:** LAB_RESULT_CM unicode ingest failure (warning 2) — **filename mismatch confirmed**. The actual file on disk is `LAB_RESULT_Mailhot_V1.csv`. Update the filename mapping in `R/00_config.R` (or wherever the ingest maps table names to filenames) so R/03 finds the correct file. If encoding issues persist after the filename fix, try latin1/windows-1252 fallback.
+- **D-08:** PROVIDER table unavailable (warning 1) — **filename mismatch confirmed**. The actual file on disk is `PROVIDER_Mailhot_V1.csv`. Update the filename mapping so the pipeline finds the correct file.
 - **D-09:** TABLE-2 rows >= TABLE-1 (warning 14) — **investigate and fix the root cause**. TABLE-2 (chemo-only encounters) should be a subset of TABLE-1 (all cancer encounters). Either the TABLE-2 filter is too broad or TABLE-1 is too narrow. Fix the logic error in R/36.
 
 ### Claude's Discretion
@@ -85,7 +85,7 @@ Resolve or suppress the 14 R warnings produced during a full pipeline run (captu
 <specifics>
 ## Specific Ideas
 
-- User suspects PROVIDER and LAB_RESULT_CM warnings are **filename mismatches** — the scripts may be looking for the wrong filename compared to what's on disk. This should be investigated first before other fixes.
+- PROVIDER and LAB_RESULT_CM warnings are **confirmed filename mismatches**. Actual filenames: `PROVIDER_Mailhot_V1.csv` and `LAB_RESULT_Mailhot_V1.csv`. The pipeline's filename mappings need updating to match these.
 - The 815 min() warnings are the highest priority noise reduction — a `min_or_na()` wrapper provides a clean, reusable solution.
 
 </specifics>
