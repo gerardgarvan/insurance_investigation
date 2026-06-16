@@ -102,8 +102,8 @@ Plans:
 **Goal:** Pipeline produces zero warnings on a successful run by resolving all 14 warnings in warnings.txt -- safe wrappers for min() on all-NA groups, removal of benign connection/empty-result warnings, filename mapping fixes, sentinel date coercion, and TABLE-2 sanity check correction
 **Requirements**: WARN-01, WARN-02, WARN-03, WARN-04, WARN-05, WARN-06
 **Depends on:** Phase 107
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 108-01-PLAN.md -- Add min_or_na()/max_or_na() safe wrappers, remove benign warnings, fix filename mappings, add pre-1900 date coercion, widen date range
+- [x] 108-01-PLAN.md -- Add min_or_na()/max_or_na() safe wrappers, remove benign warnings, fix filename mappings, add pre-1900 date coercion, widen date range
 - [ ] 108-02-PLAN.md -- Replace min(na.rm=TRUE) with min_or_na() across R/02, R/11, R/13 and fix TABLE-2 vs TABLE-1 sanity check in R/36
