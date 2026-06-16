@@ -99,7 +99,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
     group_by(ID) %>%
     summarise(
       N_ENC_NONACUTE_CARE = n(),
-      FIRST_ENC_NONACUTE_CARE_DATE = min(ADMIT_DATE, na.rm = TRUE),
+      FIRST_ENC_NONACUTE_CARE_DATE = min_or_na(ADMIT_DATE),
       .groups = "drop"
     ) %>%
     mutate(HAD_ENC_NONACUTE_CARE = 1L)
@@ -128,7 +128,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
     group_by(ID) %>%
     summarise(
       N_ENC_CANCER_RELATED = n(),
-      FIRST_ENC_CANCER_RELATED_DATE = min(ADMIT_DATE, na.rm = TRUE),
+      FIRST_ENC_CANCER_RELATED_DATE = min_or_na(ADMIT_DATE),
       .groups = "drop"
     ) %>%
     mutate(HAD_ENC_CANCER_RELATED = 1L)
@@ -199,7 +199,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
       group_by(ID) %>%
       summarise(
         N_ENC_CANCER_PROVIDER = n(),
-        FIRST_ENC_CANCER_PROVIDER_DATE = min(ADMIT_DATE, na.rm = TRUE),
+        FIRST_ENC_CANCER_PROVIDER_DATE = min_or_na(ADMIT_DATE),
         .groups = "drop"
       ) %>%
       mutate(HAD_ENC_CANCER_PROVIDER = 1L)
@@ -233,7 +233,7 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
       group_by(ID) %>%
       summarise(
         N_ENC_SURVIVORSHIP = n(),
-        FIRST_ENC_SURVIVORSHIP_DATE = min(ADMIT_DATE, na.rm = TRUE),
+        FIRST_ENC_SURVIVORSHIP_DATE = min_or_na(ADMIT_DATE),
         .groups = "drop"
       ) %>%
       mutate(HAD_ENC_SURVIVORSHIP = 1L)

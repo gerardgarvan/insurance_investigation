@@ -235,7 +235,7 @@ dx_dates <- get_pcornet_table("DIAGNOSIS") %>%
       (DX_TYPE == "09" & DX %in% hl_icd9_codes)
   ) %>%
   group_by(ID) %>%
-  summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
+  summarise(first_dx_date_diagnosis = min_or_na(DX_DATE), .groups = "drop") %>%
   collect()
 
 # Get earliest from TUMOR_REGISTRY_ALL (consolidated in 01_load_pcornet.R)
@@ -245,7 +245,7 @@ if (!is.null(tr_tbl) &&
   tr_dates <- tr_tbl %>%
     filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
     group_by(ID) %>%
-    summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop") %>%
+    summarise(first_dx_date_tr = min_or_na(DATE_OF_DIAGNOSIS), .groups = "drop") %>%
     collect()
 } else {
   tr_dates <- data.frame(ID = character(), first_dx_date_tr = as.Date(character()), stringsAsFactors = FALSE)
