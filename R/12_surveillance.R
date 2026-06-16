@@ -94,7 +94,8 @@ detect_procedure_modality <- function(post_dx_date_map, modality_name, code_vect
     codes <- code_vectors[[code_type]]
     if (length(codes) == 0) next
     hits <- get_pcornet_table("PROCEDURES") %>%
-      filter(PX_TYPE == px_type, PX %in% codes)
+      filter(PX_TYPE == px_type, PX %in% codes) %>%
+      collect()
     px_hits <- bind_rows(px_hits, hits)
   }
 

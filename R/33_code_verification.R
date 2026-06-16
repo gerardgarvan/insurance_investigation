@@ -99,9 +99,8 @@ etanercept_rx <- get_pcornet_table("PRESCRIBING") %>%
 
 message(glue("  Found {nrow(etanercept_rx)} etanercept prescriptions for {n_distinct(etanercept_rx$ID)} patients"))
 
-# Cross-reference against DRUG_GROUPINGS immunotherapy_rxnorm
-# Access immunotherapy_rxnorm from DRUG_GROUPINGS
-immuno_rxnorm <- DRUG_GROUPINGS$immunotherapy_rxnorm
+# Cross-reference against TREATMENT_CODES immunotherapy_rxnorm
+immuno_rxnorm <- TREATMENT_CODES$immunotherapy_rxnorm
 
 # Check overlap
 overlap_immuno <- intersect(etanercept_codes, immuno_rxnorm)

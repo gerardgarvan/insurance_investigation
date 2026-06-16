@@ -52,7 +52,7 @@
 
 # Clear stale log handler from previous source() in same session
 try(close(.log_con), silent = TRUE)
-globalCallingHandlers(NULL)
+tryCatch(globalCallingHandlers(NULL), error = function(e) NULL)
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -76,14 +76,17 @@ OUTPUT_XLSX <- file.path(CONFIG$output_dir, "co_administration_analysis.xlsx")
 LOG_FILE <- file.path(CONFIG$output_dir, "58_co_administration_analysis.log")
 .log_con <- file(LOG_FILE, open = "wt")
 
-globalCallingHandlers(
-  message = function(m) {
-    cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
-        conditionMessage(m),
-        file = .log_con, sep = "")
-    flush(.log_con)
-  }
-)
+.log_handler_active <- tryCatch({
+  globalCallingHandlers(
+    message = function(m) {
+      cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
+          conditionMessage(m),
+          file = .log_con, sep = "")
+      flush(.log_con)
+    }
+  )
+  TRUE
+}, error = function(e) FALSE)
 
 message("=== Phase 102: Single-Agent Co-Administration Analysis ===")
 message()
@@ -372,4 +375,4 @@ message(glue("  Log file: {LOG_FILE}"))
 message()
 message("Done.")
 
-close(.log_con)
+try(close(.log_con), silent = TRUE)

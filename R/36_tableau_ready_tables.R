@@ -50,7 +50,7 @@
 
 # Clear stale log handler from previous source() in same session
 try(close(.log_con), silent = TRUE)
-globalCallingHandlers(NULL)
+tryCatch(globalCallingHandlers(NULL), error = function(e) NULL)
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -75,14 +75,17 @@ TABLE2_XLSX <- file.path(CONFIG$output_dir, "tableau_table2_chemo_drugs_by_class
 LOG_FILE <- file.path(CONFIG$output_dir, "36_tableau_ready_tables.log")
 .log_con <- file(LOG_FILE, open = "wt")
 
-globalCallingHandlers(
-  message = function(m) {
-    cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
-        conditionMessage(m),
-        file = .log_con, sep = "")
-    flush(.log_con)
-  }
-)
+.log_handler_active <- tryCatch({
+  globalCallingHandlers(
+    message = function(m) {
+      cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
+          conditionMessage(m),
+          file = .log_con, sep = "")
+      flush(.log_con)
+    }
+  )
+  TRUE
+}, error = function(e) FALSE)
 
 message("=== Phase 106: Tableau-Ready Data Tables (TABLE-1 and TABLE-2) ===")
 message()

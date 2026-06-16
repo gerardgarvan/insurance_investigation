@@ -98,15 +98,15 @@ message(glue("  Loaded confirmed_hl_cohort.rds: {nrow(cohort)} patients"))
 
 # Query DuckDB ENCOUNTER for last encounter dates per patient
 # Replicates R/29 Section 4b EXACTLY
-con <- open_pcornet_con()
-last_encounters <- get_pcornet_table("ENCOUNTER", con = con) %>%
+open_pcornet_con()
+last_encounters <- get_pcornet_table("ENCOUNTER") %>%
   select(ID, ADMIT_DATE) %>%
   collect() %>%
   mutate(ADMIT_DATE = parse_pcornet_date(ADMIT_DATE)) %>%
   filter(!is.na(ADMIT_DATE)) %>%
   group_by(ID) %>%
   summarise(last_encounter_date = max(ADMIT_DATE), .groups = "drop")
-close_pcornet_con(con)
+close_pcornet_con()
 
 message(glue("  Loaded last encounter dates for {nrow(last_encounters)} patients"))
 message()

@@ -177,7 +177,7 @@ wb$add_font(
 )
 
 # Freeze header row
-wb$freeze_panes(sheet = "File Inventory", first_row = TRUE)
+wb$freeze_pane(sheet = "File Inventory", firstActiveRow = 2)
 
 # Autofit column widths
 wb$set_col_widths(sheet = "File Inventory", cols = 1:7, widths = "auto")
