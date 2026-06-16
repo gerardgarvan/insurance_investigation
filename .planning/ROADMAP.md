@@ -12,7 +12,7 @@
 - [x] **Phase 104: Treatment Timing Investigations** - Flag pre-diagnosis treatments and build secondary malignancy table with 7-day gap criterion (completed 2026-06-15)
 - [x] **Phase 105: Code & Overlap Verification** - Verify Ethna/transplant/SCT code classifications and validate HL+NHL dual-code patients (completed 2026-06-15)
 - [x] **Phase 106: Tableau-Ready Data Tables** - Produce encounter-level cancer codes and chemo drug class tables for Tableau import (completed 2026-06-15)
-- [x] **Phase 107: Gap Resolution Report & Delivery** - Compile all findings into RMarkdown report, generate delivery manifest, update meeting notes (completed 2026-06-15)
+- [x] **Phase 107: Gap Resolution Report & Delivery** - Compile all findings into RMarkdown report, generate delivery manifest, update meeting notes (completed 2026-06-15)
 
 ## Phase Details
 
@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 107: `/gsd:execute-phase 107`
+1. Execute Phase 108: `/gsd:execute-phase 108`
 
 ## Coverage
 
@@ -96,3 +96,14 @@ Plans:
 - REPORT: 3 requirements -> Phase 107
 
 **Coverage:** 11/11 requirements mapped (100%)
+
+### Phase 108: Fix warnings that are in warnings.txt
+
+**Goal:** Pipeline produces zero warnings on a successful run by resolving all 14 warnings in warnings.txt -- safe wrappers for min() on all-NA groups, removal of benign connection/empty-result warnings, filename mapping fixes, sentinel date coercion, and TABLE-2 sanity check correction
+**Requirements**: WARN-01, WARN-02, WARN-03, WARN-04, WARN-05, WARN-06
+**Depends on:** Phase 107
+**Plans:** 2 plans
+
+Plans:
+- [ ] 108-01-PLAN.md -- Add min_or_na()/max_or_na() safe wrappers, remove benign warnings, fix filename mappings, add pre-1900 date coercion, widen date range
+- [ ] 108-02-PLAN.md -- Replace min(na.rm=TRUE) with min_or_na() across R/02, R/11, R/13 and fix TABLE-2 vs TABLE-1 sanity check in R/36
