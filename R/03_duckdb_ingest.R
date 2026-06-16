@@ -157,6 +157,18 @@ ingest_ok <- tryCatch(
           assert_df_valid(df, tbl_name, required_cols = required_cols,
                           script_name = "R/03", allow_empty = TRUE)
 
+          # Phase 108 D-04: Coerce pre-1900 dates to NA (SAS epoch sentinels)
+          # DuckDB's R client warns on pre-1900 dates during dbWriteTable.
+          # These are SAS epoch sentinels (1899-12-30), not real dates.
+          date_cols_in_df <- names(df)[sapply(df, inherits, "Date")]
+          for (dcol in date_cols_in_df) {
+            pre_1900 <- !is.na(df[[dcol]]) & df[[dcol]] < as.Date("1900-01-01")
+            if (any(pre_1900)) {
+              message(glue("  Coercing {sum(pre_1900)} pre-1900 sentinel dates to NA in {dcol}"))
+              df[[dcol]][pre_1900] <- NA
+            }
+          }
+
           # Write to DuckDB (per D-02: overwrite = TRUE for clean rebuild)
           DBI::dbWriteTable(con, tbl_name, df, overwrite = TRUE)
 

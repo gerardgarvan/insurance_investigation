@@ -249,6 +249,7 @@ PCORNET_PATHS <- setNames(
 
 # Filename overrides: actual CSV names that don't match the {TABLE}_Mailhot_V1.csv pattern
 PCORNET_PATHS[["LAB_RESULT_CM"]] <- file.path(CONFIG$data_dir, "LAB_RESULT_Mailhot_V1.csv")
+PCORNET_PATHS[["PROVIDER"]] <- file.path(CONFIG$data_dir, "PROVIDER_Mailhot_V1.csv")
 
 # NOTE: Patient ID column is "ID" (not "PATID") across all tables
 # NOTE: SOURCE column = partner/site identifier (AMS, UMI, FLM, VRT)
