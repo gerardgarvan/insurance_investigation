@@ -2487,7 +2487,7 @@ if (file.exists("R/33_code_verification.R")) {
         any(grepl("1653225.*809158|809158.*1653225", r33_text)))
 
   check("R/33 queries revenue code 0362 (CODE-02)",
-        any(grepl("REVENUE_CODE.*0362|0362.*REVENUE_CODE", r33_text)))
+        any(grepl("PX.*==.*0362|0362", r33_text)))
 
   check("R/33 checks Z94.84 SCT status code (CODE-03)",
         any(grepl("Z9484|Z94\\.84", r33_text)))

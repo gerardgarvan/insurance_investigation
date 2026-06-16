@@ -146,8 +146,8 @@ message("--- CODE-02: Revenue code 0362 investigation ---")
 
 # Query PROCEDURES for revenue code 0362 (per D-05)
 rev_0362 <- get_pcornet_table("PROCEDURES") %>%
-  filter(REVENUE_CODE == "0362") %>%
-  select(ID, ENCOUNTERID, REVENUE_CODE, PX, PX_TYPE, PX_DATE) %>%
+  filter(PX_TYPE == "RE" & PX == "0362") %>%
+  select(ID, ENCOUNTERID, PX, PX_TYPE, PX_DATE) %>%
   collect()
 
 message(glue("  Found {nrow(rev_0362)} records with revenue code 0362 for {n_distinct(rev_0362$ID)} patients"))
@@ -190,7 +190,7 @@ message(glue("  0362 patients with either SCT evidence: {length(has_either_sct)}
 
 # Build CODE-02 summary table
 code02_summary <- data.frame(
-  Revenue_Code = "0362",
+  PX_Code = "0362",
   Total_Records = nrow(rev_0362),
   Unique_Patients = length(patients_0362),
   With_SCT_Dx = length(has_sct_dx),
@@ -359,7 +359,7 @@ wb$add_data(sheet = "Summary", x = "CODE-02: Organ Transplant Revenue Code 0362"
 wb$add_font(sheet = "Summary", dims = "A8", name = "Calibri", size = 14, bold = TRUE)
 
 # Header row 9
-code02_headers <- c("Revenue Code", "Total Records", "Unique Patients", "With SCT Dx", "With SCT Proc", "With Either SCT", "Pct SCT", "Recommendation")
+code02_headers <- c("PX Code", "Total Records", "Unique Patients", "With SCT Dx", "With SCT Proc", "With Either SCT", "Pct SCT", "Recommendation")
 for (i in seq_along(code02_headers)) {
   wb$add_data(sheet = "Summary", x = code02_headers[i], start_row = 9, start_col = i)
 }
