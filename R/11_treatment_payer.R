@@ -135,7 +135,7 @@ compute_payer_at_chemo <- function() {
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       group_by(ID) %>%
-      summarise(px_date = min_or_na(PX_DATE), .groups = "drop") %>%
+      summarise(px_date = min(PX_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -150,7 +150,7 @@ compute_payer_at_chemo <- function() {
       mutate(rx_date_raw = coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
       filter(!is.na(rx_date_raw)) %>%
       group_by(ID) %>%
-      summarise(rx_date = min_or_na(rx_date_raw), .groups = "drop") %>%
+      summarise(rx_date = min(rx_date_raw, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -166,7 +166,7 @@ compute_payer_at_chemo <- function() {
       ) %>%
       filter(!is.na(DX_DATE)) %>%
       group_by(ID) %>%
-      summarise(dx_date = min_or_na(DX_DATE), .groups = "drop") %>%
+      summarise(dx_date = min(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -177,7 +177,7 @@ compute_payer_at_chemo <- function() {
       filter(DRG %in% TREATMENT_CODES$chemo_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       group_by(ID) %>%
-      summarise(drg_date = min_or_na(ADMIT_DATE), .groups = "drop") %>%
+      summarise(drg_date = min(ADMIT_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -188,7 +188,7 @@ compute_payer_at_chemo <- function() {
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(DISPENSE_DATE)) %>%
       group_by(ID) %>%
-      summarise(disp_date = min_or_na(DISPENSE_DATE), .groups = "drop") %>%
+      summarise(disp_date = min(DISPENSE_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -199,7 +199,7 @@ compute_payer_at_chemo <- function() {
       filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
       filter(!is.na(MEDADMIN_START_DATE)) %>%
       group_by(ID) %>%
-      summarise(ma_date = min_or_na(MEDADMIN_START_DATE), .groups = "drop") %>%
+      summarise(ma_date = min(MEDADMIN_START_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -311,7 +311,7 @@ compute_payer_at_radiation <- function() {
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       group_by(ID) %>%
-      summarise(px_date = min_or_na(PX_DATE), .groups = "drop") %>%
+      summarise(px_date = min(PX_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -327,7 +327,7 @@ compute_payer_at_radiation <- function() {
       ) %>%
       filter(!is.na(DX_DATE)) %>%
       group_by(ID) %>%
-      summarise(dx_date = min_or_na(DX_DATE), .groups = "drop") %>%
+      summarise(dx_date = min(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -338,7 +338,7 @@ compute_payer_at_radiation <- function() {
       filter(DRG %in% TREATMENT_CODES$radiation_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       group_by(ID) %>%
-      summarise(drg_date = min_or_na(ADMIT_DATE), .groups = "drop") %>%
+      summarise(drg_date = min(ADMIT_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -448,7 +448,7 @@ compute_payer_at_sct <- function() {
       ) %>%
       filter(!is.na(PX_DATE)) %>%
       group_by(ID) %>%
-      summarise(px_date = min_or_na(PX_DATE), .groups = "drop") %>%
+      summarise(px_date = min(PX_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -461,7 +461,7 @@ compute_payer_at_sct <- function() {
       filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
       filter(!is.na(DX_DATE)) %>%
       group_by(ID) %>%
-      summarise(dx_date = min_or_na(DX_DATE), .groups = "drop") %>%
+      summarise(dx_date = min(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
@@ -472,7 +472,7 @@ compute_payer_at_sct <- function() {
       filter(DRG %in% TREATMENT_CODES$sct_drg) %>%
       filter(!is.na(ADMIT_DATE)) %>%
       group_by(ID) %>%
-      summarise(drg_date = min_or_na(ADMIT_DATE), .groups = "drop") %>%
+      summarise(drg_date = min(ADMIT_DATE, na.rm = TRUE), .groups = "drop") %>%
       collect()
   }
 
