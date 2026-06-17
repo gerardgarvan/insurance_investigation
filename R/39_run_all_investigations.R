@@ -37,6 +37,19 @@ rm(list = ls())
 # SECTION 1: CONFIGURATION ----
 # ==============================================================================
 
+# Guard: Must run from project root (all relative paths assume it)
+if (!file.exists("R/00_config.R")) {
+  # Try to find project root and set it
+  if (file.exists(here::here("R/00_config.R"))) {
+    setwd(here::here())
+    message("  Working directory set to project root: ", getwd())
+  } else {
+    stop("R/39 must be run from the project root directory (where R/00_config.R lives).\n",
+         "  Current directory: ", getwd(), "\n",
+         "  Fix: setwd() to project root, then source this script.")
+  }
+}
+
 message("\n", paste(rep("=", 70), collapse = ""))
 message("  R/39: Full Pipeline + Investigation Scripts + Report")
 message(paste(rep("=", 70), collapse = ""), "\n")
@@ -149,7 +162,27 @@ message(paste(rep("=", 70), collapse = ""), "\n")
 
 globalCallingHandlers(NULL)
 
-message("  Rendering R/37 gap resolution report...")
+# Pre-render check: verify investigation outputs exist
+expected_xlsx <- c(
+  "condition_linkage_investigation.xlsx",
+  "drug_grouping_instances.xlsx",
+  "co_administration_analysis.xlsx",
+  "hl_nhl_overlap_validation.xlsx",
+  "pre_diagnosis_treatments.xlsx",
+  "secondary_malignancy_table.xlsx",
+  "code_verification.xlsx",
+  "death_date_summary.xlsx",
+  "tableau_table1_encounter_cancer_codes.xlsx",
+  "tableau_table2_chemo_drugs_by_class.xlsx"
+)
+found <- file.exists(file.path("output", expected_xlsx))
+message("  Report data files: ", sum(found), "/", length(expected_xlsx), " present")
+if (any(!found)) {
+  message("  Missing (will show 'File not available' in report):")
+  for (f in expected_xlsx[!found]) message("    - ", f)
+}
+
+message("\n  Rendering R/37 gap resolution report...")
 report_status <- tryCatch({
   rmarkdown::render(
     "R/37_gap_resolution_report.Rmd",

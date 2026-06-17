@@ -16,6 +16,10 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+# knitr sets working directory to the Rmd file's location (R/), so resolve
+# output_dir relative to project root one level up
+knitr::opts_knit$set(root.dir = normalizePath(file.path(getwd(), "..")))
+
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 # Load libraries
@@ -27,7 +31,7 @@ suppressPackageStartupMessages({
   library(stringr)
 })
 
-# Set output directory
+# Set output directory (relative to project root, set via root.dir above)
 output_dir <- "output"
 ```
 
