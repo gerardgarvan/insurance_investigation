@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 108: `/gsd:execute-phase 108`
+1. Execute Phase 109: `/gsd:execute-phase 109`
 
 ## Coverage
 
@@ -107,3 +107,13 @@ Plans:
 Plans:
 - [x] 108-01-PLAN.md -- Add min_or_na()/max_or_na() safe wrappers, remove benign warnings, fix filename mappings, add pre-1900 date coercion, widen date range
 - [x] 108-02-PLAN.md -- Replace min(na.rm=TRUE) with min_or_na() across R/02, R/11, R/13 and fix TABLE-2 vs TABLE-1 sanity check in R/36
+
+### Phase 109: Fix co-administration analysis: remove ICD9 codes that blur single-agent detection and switch grouping from encounter to date
+
+**Goal:** Co-administration analysis produces clean date-grain results by filtering out non-specific ICD9 procedure codes that blur single-agent detection and switching from encounter-level to date-level grouping so the analysis reflects identifiable agents on clinical dates rather than billing artifacts
+**Requirements**: COADMIN-FIX-01, COADMIN-FIX-02, COADMIN-FIX-03
+**Depends on:** Phase 108
+**Plans:** 1 plan
+
+Plans:
+- [ ] 109-01-PLAN.md -- ICD9 code filtering, date-grain single-agent detection and temporal self-join, R/88 smoke test update
