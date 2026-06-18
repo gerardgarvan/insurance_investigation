@@ -6,8 +6,8 @@
 #   Generate two Tableau-ready xlsx files for Amy's interactive exploration:
 #   TABLE-1: Each treatment encounter mapped to all associated cancer diagnosis
 #            codes (comma-separated) with human-readable category names.
-#   TABLE-2: Chemotherapy drugs by class/category with associated cancer codes
-#            per encounter, for Tableau drug classification analysis.
+#   TABLE-2: Chemotherapy agents collapsed by date per patient, with merged
+#            cancer codes per patient-date, for Tableau date-level drug analysis.
 #
 # Inputs:
 #   - cache/outputs/treatment_episode_detail.rds (from R/26, per-encounter grain:
@@ -31,8 +31,8 @@
 #          cancer_codes, cancer_category_names
 #   D-04: TABLE-2 medication names via 3-tier cascade: xlsx reference -> CODE_SUBCATEGORY_MAP -> fallback
 #   D-05: TABLE-2 includes only Chemotherapy encounters (filter treatment_type == "Chemotherapy")
-#   D-06: TABLE-2 columns: PATID, ENCOUNTERID, treatment_date, treatment_type,
-#          medication_name, drug_class, cancer_codes, cancer_category_names
+#   D-06: TABLE-2 columns: PATID, treatment_date, agents, cancer_codes,
+#          cancer_category_names (per Phase 111 D-05)
 #   D-07: Both tables self-contained with treatment context columns
 #   D-08: Separate xlsx files (not combined workbook) for clearer purpose
 #   D-09: Raw counts without HIPAA suppression (internal investigation files)
@@ -259,7 +259,7 @@ message(glue("  TABLE-1 treatment types: {paste(unique(table1$treatment_type), c
 # SECTION 5: BUILD TABLE-2 (Chemo Drugs by Class) ----
 
 message()
-message("--- Building TABLE-2: Chemo Drugs by Class (D-04, D-05, D-06) ---")
+message("--- Building TABLE-2: Chemo Agents by Date (Phase 111: D-01 through D-07) ---")
 
 # Load reference xlsx medication mappings (adapt R/57 Section 3 pattern)
 assert_file_exists(REFERENCE_XLSX, .var.name = "[R/36 ERROR] Reference XLSX")
@@ -290,32 +290,42 @@ chemo_detail <- chemo_detail %>%
     TRUE ~ paste0("Chemo code ", triggering_code)
   ))
 
-# Drug class is always "Chemotherapy" since we pre-filtered (per D-05)
-chemo_detail <- chemo_detail %>%
-  mutate(drug_class = "Chemotherapy")
-
-# Build TABLE-2: one row per encounter+medication combination (per D-06)
-# Do NOT aggregate medication_name per encounter -- keep individual drugs
-# so Amy can filter/pivot individual medications in Tableau
+# Build TABLE-2: one row per patient+date, agents collapsed (Phase 111 D-01 through D-07)
+# Drop ENCOUNTERID (D-01: meaningless at date grain), drug_class (D-02: always "Chemotherapy"),
+# treatment_type (D-02: always "Chemotherapy")
+# Collapse medication_name -> agents: alphabetically sorted, deduplicated, comma-separated (D-06, D-07)
+# Merge cancer_codes across encounters sharing same patient+date: split, union, dedup (D-03)
+# Merge cancer_category_names across encounters sharing same patient+date (D-04)
 table2 <- chemo_detail %>%
-  select(patient_id, ENCOUNTERID, treatment_date, treatment_type,
-         medication_name, drug_class, cancer_codes, cancer_category_names) %>%
-  distinct() %>%
+  group_by(patient_id, treatment_date) %>%
+  summarise(
+    agents = paste(sort(unique(na.omit(medication_name))), collapse = ","),
+    cancer_codes = {
+      all_codes <- unique(na.omit(unlist(strsplit(cancer_codes, ","))))
+      if (length(all_codes) == 0) NA_character_ else paste(sort(all_codes), collapse = ",")
+    },
+    cancer_category_names = {
+      all_cats <- unique(na.omit(unlist(strsplit(cancer_category_names, ","))))
+      if (length(all_cats) == 0) NA_character_ else paste(sort(all_cats), collapse = ",")
+    },
+    .groups = "drop"
+  ) %>%
   rename(PATID = patient_id) %>%
-  arrange(PATID, treatment_date, medication_name)
+  arrange(PATID, treatment_date)
 
-message(glue("  TABLE-2 rows: {nrow(table2)}"))
-message(glue("  TABLE-2 unique encounters: {n_distinct(table2$ENCOUNTERID)}"))
+message(glue("  TABLE-2 rows (patient-date grain): {nrow(table2)}"))
 message(glue("  TABLE-2 unique patients: {n_distinct(table2$PATID)}"))
-message(glue("  TABLE-2 unique medication names: {n_distinct(table2$medication_name)}"))
+message(glue("  TABLE-2 date range: {min(table2$treatment_date)} to {max(table2$treatment_date)}"))
+n_unique_agents <- n_distinct(unlist(strsplit(table2$agents, ",")))
+message(glue("  TABLE-2 unique agents across all rows: {n_unique_agents}"))
 
-# Show medication name sample
-med_sample <- table2 %>%
-  count(medication_name, sort = TRUE) %>%
+# Show agent combination frequency
+combo_freq <- table2 %>%
+  count(agents, sort = TRUE) %>%
   head(10)
-message("  Top 10 medication names:")
-for (i in seq_len(nrow(med_sample))) {
-  message(glue("    {med_sample$medication_name[i]}: {med_sample$n[i]} rows"))
+message("  Top 10 agent combinations:")
+for (i in seq_len(nrow(combo_freq))) {
+  message(glue("    {combo_freq$agents[i]}: {combo_freq$n[i]} patient-dates"))
 }
 
 
@@ -334,8 +344,8 @@ message(glue("    File size: {file.info(TABLE1_XLSX)$size} bytes"))
 
 # Write TABLE-2 as separate xlsx (per D-08)
 wb2 <- wb_workbook()
-wb2$add_worksheet("Chemo Drugs by Class")
-wb2$add_data("Chemo Drugs by Class", table2, start_row = 1, col_names = TRUE)
+wb2$add_worksheet("Chemo Agents by Date")
+wb2$add_data("Chemo Agents by Date", table2, start_row = 1, col_names = TRUE)
 wb2$save(TABLE2_XLSX)
 message(glue("  Saved TABLE-2: {TABLE2_XLSX}"))
 message(glue("    File size: {file.info(TABLE2_XLSX)$size} bytes"))
@@ -351,24 +361,22 @@ message(glue("    Unique encounters: {n_distinct(table1$ENCOUNTERID)}"))
 message(glue("    Unique patients:   {n_distinct(table1$PATID)}"))
 message(glue("    Treatment types:   {paste(unique(table1$treatment_type), collapse = ', ')}"))
 message()
-message(glue("  TABLE-2 (Chemo Drugs by Class):"))
-message(glue("    Rows:               {nrow(table2)}"))
-message(glue("    Unique encounters:   {n_distinct(table2$ENCOUNTERID)}"))
-message(glue("    Unique patients:     {n_distinct(table2$PATID)}"))
-message(glue("    Unique medications:  {n_distinct(table2$medication_name)}"))
+message(glue("  TABLE-2 (Chemo Agents by Date, Phase 111):"))
+message(glue("    Rows (patient-date grain): {nrow(table2)}"))
+message(glue("    Unique patients:           {n_distinct(table2$PATID)}"))
+message(glue("    Unique agents:             {n_distinct(unlist(strsplit(table2$agents, ',')))}"))
+
 message()
 
-# Sanity check: TABLE-2 encounters should be a subset of TABLE-1 encounters
-# Note: TABLE-2 may have MORE rows than TABLE-1 because TABLE-2 grain is
-# per-encounter+medication (multiple drugs per encounter) while TABLE-1
-# grain is per-encounter+treatment_type (one row per encounter).
-t2_encounters <- unique(table2$ENCOUNTERID)
-t1_encounters <- unique(table1$ENCOUNTERID)
-t2_not_in_t1 <- setdiff(t2_encounters, t1_encounters)
+# Sanity check: TABLE-2 patients should be a subset of TABLE-1 patients
+# (all chemo patients should have treatment encounters in TABLE-1)
+t2_patients <- unique(table2$PATID)
+t1_patients <- unique(table1$PATID)
+t2_not_in_t1 <- setdiff(t2_patients, t1_patients)
 if (length(t2_not_in_t1) > 0) {
-  warning(glue("[R/36 WARNING] {length(t2_not_in_t1)} TABLE-2 encounters not found in TABLE-1 -- data consistency issue"))
+  warning(glue("[R/36 WARNING] {length(t2_not_in_t1)} TABLE-2 patients not found in TABLE-1 -- data consistency issue"))
 } else {
-  message(glue("  Sanity check PASSED: all {length(t2_encounters)} TABLE-2 encounters found in TABLE-1 ({length(t1_encounters)} total encounters)"))
+  message(glue("  Sanity check PASSED: all {length(t2_patients)} TABLE-2 patients found in TABLE-1 ({length(t1_patients)} total patients)"))
 }
 
 message()
