@@ -18,7 +18,7 @@
 #
 # Outputs:
 #   - output/episode_level_drug_grouping_tables.xlsx (2-sheet workbook:
-#     Sheet 1 = "Ep: Sub-Category Summary", Sheet 2 = "Ep: Encounter Treatment")
+#     Sheet 1 = "Ep Sub-Category Summary", Sheet 2 = "Ep Encounter Treatment")
 #   - output/drug_grouping_tables.xlsx (backward compat copy, identical content)
 #
 # Dependencies:
@@ -591,12 +591,12 @@ message("--- Writing multi-sheet XLSX output (episode-level grain) ---")
 wb <- wb_workbook()
 
 # Sheet 1: Episode-Level Sub-Category Summary (abbreviated for 31-char Excel limit)
-wb$add_worksheet("Ep: Sub-Category Summary")
-wb$add_data("Ep: Sub-Category Summary", table1, start_row = 1, col_names = TRUE)
+wb$add_worksheet("Ep Sub-Category Summary")
+wb$add_data("Ep Sub-Category Summary", table1, start_row = 1, col_names = TRUE)
 
 # Sheet 2: Episode-Level Encounter Treatment (abbreviated for 31-char Excel limit)
-wb$add_worksheet("Ep: Encounter Treatment")
-wb$add_data("Ep: Encounter Treatment", table2, start_row = 1, col_names = TRUE)
+wb$add_worksheet("Ep Encounter Treatment")
+wb$add_data("Ep Encounter Treatment", table2, start_row = 1, col_names = TRUE)
 
 # Save to new self-documenting filename (per D-01)
 wb$save(NEW_OUTPUT_XLSX)
@@ -622,14 +622,14 @@ message(glue("    Valid reference codes: {length(valid_reference_codes)}"))
 message(glue("    Table 1: {n_before_ref_filter} -> {n_after_ref_filter} code instances ({n_removed_ref} removed)"))
 message(glue("    Table 2: {n_t2_before} -> {n_t2_after} rows ({n_t2_before - n_t2_after} dropped)"))
 message()
-message(glue("  Table 1 (Ep: Sub-Category Summary):"))
+message(glue("  Table 1 (Ep Sub-Category Summary):"))
 message(glue("    Total rows: {nrow(table1)}"))
 message(glue("    Categories: {paste(unique(table1$category), collapse = ', ')}"))
 message(glue("    Sub-categories: {n_distinct(table1$sub_category)}"))
 message(glue("    Dx codes deduplicated: {n_before - n_after} instances removed"))
 message(glue("    Orphan dx-only rows preserved: {sum(episode_codes_dedup$dx_only & !is.na(episode_codes_dedup$cancer_codes), na.rm = TRUE)}"))
 message()
-message(glue("  Table 2 (Ep: Encounter Treatment):"))
+message(glue("  Table 2 (Ep Encounter Treatment):"))
 message(glue("    Total rows: {nrow(table2)}"))
 message(glue("    Unique treatment sets: {n_distinct(table2$all_treatments)}"))
 message()

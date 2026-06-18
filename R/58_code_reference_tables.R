@@ -10,7 +10,7 @@
 #
 # Inputs:
 #   - output/tables/cancer_summary_table_pre_post.xlsx ("Code Summary" sheet)
-#   - output/episode_level_drug_grouping_tables.xlsx ("Ep: Sub-Category Summary" sheet)
+#   - output/episode_level_drug_grouping_tables.xlsx ("Ep Sub-Category Summary" sheet)
 #   - cache/outputs/code_descriptions.rds (optional; built by R/42)
 #   - R/00_config.R (CANCER_SITE_MAP, ICD9_CANCER_SITE_MAP, CODE_SUBCATEGORY_MAP)
 #   - R/utils/utils_cancer.R (classify_codes)
@@ -355,7 +355,7 @@ message()
 message("--- Building treatment codes reference ---")
 
 drug_wb <- wb_load(DRUG_XLSX)
-drug_raw <- wb_to_df(drug_wb, sheet = "Ep: Sub-Category Summary")
+drug_raw <- wb_to_df(drug_wb, sheet = "Ep Sub-Category Summary")
 
 # Phase 98: Pre-join CODE_SUBCATEGORY_MAP for lookup (D-02)
 treatment_codes_pre <- drug_raw %>%

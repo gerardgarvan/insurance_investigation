@@ -1006,9 +1006,9 @@ if (file.exists("R/56_new_tables_from_groupings.R")) {
         any(grepl("episode_level_drug_grouping_tables\\.xlsx", r56_lines)) &&
         any(grepl("drug_grouping_tables\\.xlsx", r56_lines)))
 
-  check("R/56 has grain-prefixed sheets (Ep: Sub-Category Summary + Ep: Encounter Treatment)",
-        any(grepl("Ep: Sub-Category Summary", r56_lines)) &&
-        any(grepl("Ep: Encounter Treatment", r56_lines)))
+  check("R/56 has grain-prefixed sheets (Ep Sub-Category Summary + Ep Encounter Treatment)",
+        any(grepl("Ep Sub-Category Summary", r56_lines)) &&
+        any(grepl("Ep Encounter Treatment", r56_lines)))
 
   n_sections_r56 <- sum(grepl("^# SECTION.*----", r56_lines))
   check(glue("R/56 has >= 6 section headers (found: {n_sections_r56})"),
