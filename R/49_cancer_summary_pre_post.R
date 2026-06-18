@@ -122,13 +122,16 @@ n_no_hl_date <- n_with_hl_dx - n_valid_hl_date
 message(glue("  With valid HL DX_DATE:                             {format(n_valid_hl_date, big.mark=',')}"))
 message(glue("  With NO valid HL DX_DATE:                          {format(n_no_hl_date, big.mark=',')}"))
 
-n_hl_7day <- hl_with_date %>%
+# Compute HL-specific 7-day confirmed IDs (Phase 110: expanded to ID vector per D-04)
+hl_7day_confirmed <- hl_with_date %>%
   distinct(ID, DX_DATE) %>%
   group_by(ID) %>%
   filter(n() >= 2, as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
   ungroup() %>%
-  pull(ID) %>%
-  n_distinct()
+  distinct(ID)
+
+n_hl_7day <- nrow(hl_7day_confirmed)
+hl_7day_confirmed_ids <- hl_7day_confirmed$ID
 
 message(glue("  With 2+ unique dates, 7-day span:                  {format(n_hl_7day, big.mark=',')}"))
 message(glue("  Rate (of cohort):                                  {scales::percent(n_hl_7day / n_total_confirmed, accuracy=0.1)}"))
@@ -151,7 +154,7 @@ if (n_with_both > 0) {
   warning(glue("[R/49 WARNING] {n_with_both} patients have both NLPHL and classical HL codes -- clinically valid but flagged for review"))
 }
 
-rm(hl_nlphl, hl_classical, hl_dx, hl_with_date)
+rm(hl_nlphl, hl_classical, hl_dx, hl_with_date, hl_7day_confirmed)
 
 # Load baseline cancer_summary.csv (for baseline metrics per D-01)
 # SAFE-01: Validate input CSV exists
@@ -172,28 +175,30 @@ message(glue("  After D-code removal and cohort filter: {format(nrow(cancer_summ
 message(glue("  Unique patients: {format(n_distinct(cancer_summary$ID), big.mark=',')}"))
 message(glue("  Unique codes: {format(n_distinct(cancer_summary$cancer_code), big.mark=',')}"))
 
-# --- Phase 77 CANCER-02: V2 7-day filtered dataset (per D-01) ---
+# --- Phase 110: V2 tightened to HL-specific 7-day confirmed population (per D-04, D-05) ---
+# Phase 110: V2 population restricted to HL-specific 7-day confirmed patients (per D-04, D-05)
+# Step 1: restrict to patients whose HL codes meet 7-day gap criterion
+# Step 2: then require each patient-code pair to also meet 7-day confirmation
 cancer_summary_v2 <- cancer_summary %>%
+  filter(ID %in% hl_7day_confirmed_ids) %>%
   filter(two_or_more_unique_dates_gt_7 == 1)
 
 v2_n_rows <- nrow(cancer_summary_v2)
 v2_n_patients <- n_distinct(cancer_summary_v2$ID)
 v2_n_codes <- n_distinct(cancer_summary_v2$cancer_code)
 
-message(glue("\n  V2 (7-day filtered): {format(v2_n_rows, big.mark=',')} rows"))
-message(glue("  V2 unique patients: {format(v2_n_patients, big.mark=',')}"))
+message(glue("\n  V2 HL-confirmed population: {format(length(hl_7day_confirmed_ids), big.mark=',')} patients with HL-specific 7-day gap"))
+message(glue("  V2 after per-code 7-day filter: {format(v2_n_patients, big.mark=',')} unique patients"))
+message(glue("  V2 (7-day filtered): {format(v2_n_rows, big.mark=',')} rows"))
 message(glue("  V2 unique codes: {format(v2_n_codes, big.mark=',')}"))
 
-# CANCER-02 / D-04: Assert total v2 population within tolerance range
-# NOTE: Phase 87 expanded cohort to include ICD-9 201.x confirmed patients.
-# Assertion bounds may need adjustment when first run with real data.
-# Expected increase: 5-15% based on OneFlorida+ 2011-2025 date range.
+# Phase 110: Bounds adjusted for HL-specific 7-day population (smaller subset than any-code)
 checkmate::assert_int(
   as.integer(v2_n_patients),
-  lower = 6300L, upper = 7500L,  # Widened upper bound for ICD-9 cohort expansion
-  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day total population expected 6300-7500, got {v2_n_patients}")
+  lower = 4000L, upper = 7000L,
+  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day HL-confirmed population expected 4000-7000, got {v2_n_patients}")
 )
-message(glue("  V2 population assertion PASSED: {v2_n_patients} in [6300, 7500]"))
+message(glue("  V2 population assertion PASSED: {v2_n_patients} in [4000, 7000]"))
 
 # ==============================================================================
 # SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----
@@ -947,7 +952,7 @@ wb_v2$add_worksheet(SHEET1_V2)
 
 # Row 1: Title
 wb_v2$add_data(
-  sheet = SHEET1_V2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By Category) - 7-Day Confirmed",
+  sheet = SHEET1_V2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By Category) - Confirmed HL 7-Day Gap Patients Only",
   start_row = 1, start_col = 1
 )
 wb_v2$add_font(
@@ -1023,7 +1028,7 @@ wb_v2$add_numfmt(sheet = SHEET1_V2, dims = glue("N{totals_row1_v2}:N{totals_row1
 
 # Footnote row
 footnote_row1_v2 <- totals_row1_v2 + 2
-footnote_text1_v2 <- glue("V2: Filtered to patients with two_or_more_unique_dates_gt_7 == 1. Baseline stats: 7-day confirmed cohort ({v2_n_patients} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x (ICD-9) pre/post/both left blank (anchor diagnosis).")
+footnote_text1_v2 <- glue("V2 (Phase 110): Restricted to patients with 7-day confirmed HL diagnosis (C81 + 201.x codes with 2+ unique dates spanning 7+ days). Secondary malignancies in Pre/Post/Both columns also require two_or_more_unique_dates_gt_7 == 1. Baseline: {v2_n_patients} HL-confirmed patients ({length(hl_7day_confirmed_ids)} had HL 7-day gap). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x pre/post/both left blank (anchor diagnosis).")
 wb_v2$add_data(
   sheet = SHEET1_V2,
   x = footnote_text1_v2,
@@ -1050,7 +1055,7 @@ wb_v2$add_worksheet(SHEET2_V2)
 
 # Row 1: Title
 wb_v2$add_data(
-  sheet = SHEET2_V2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By ICD-10 Code) - 7-Day Confirmed",
+  sheet = SHEET2_V2, x = "Cancer Summary Table - Pre/Post HL Diagnosis (By ICD-10 Code) - Confirmed HL 7-Day Gap Patients Only",
   start_row = 1, start_col = 1
 )
 wb_v2$add_font(
@@ -1126,7 +1131,7 @@ wb_v2$add_numfmt(sheet = SHEET2_V2, dims = glue("O{totals_row2_v2}:O{totals_row2
 
 # Footnote row
 footnote_row2_v2 <- totals_row2_v2 + 2
-footnote_text2_v2 <- glue("V2: Filtered to patients with two_or_more_unique_dates_gt_7 == 1. Baseline stats: 7-day confirmed cohort ({v2_n_patients} patients). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x (ICD-9) pre/post/both left blank (anchor diagnosis).")
+footnote_text2_v2 <- glue("V2 (Phase 110): Restricted to patients with 7-day confirmed HL diagnosis (C81 + 201.x codes with 2+ unique dates spanning 7+ days). Secondary malignancies in Pre/Post/Both columns also require two_or_more_unique_dates_gt_7 == 1. Baseline: {v2_n_patients} HL-confirmed patients ({length(hl_7day_confirmed_ids)} had HL 7-day gap). Pre/Post/Both: {nrow(cohort_with_dates)} patients with known first_hl_dx_date. Pre: DX_DATE <= first_hl_dx_date. Post: DX_DATE > first_hl_dx_date. Both: patient had code pre AND post. C81 + 201.x pre/post/both left blank (anchor diagnosis).")
 wb_v2$add_data(
   sheet = SHEET2_V2,
   x = footnote_text2_v2,
@@ -1179,10 +1184,11 @@ v2_output <- list(
   totals_code = totals_code_v2,
   totals_category = totals_category_v2,
   metadata = list(
-    filter = "two_or_more_unique_dates_gt_7 == 1",
+    filter = "HL-specific 7-day confirmed (ID %in% hl_7day_confirmed_ids) AND two_or_more_unique_dates_gt_7 == 1",
     total_patients = v2_n_patients,
+    hl_7day_confirmed_count = length(hl_7day_confirmed_ids),
     created = Sys.time(),
-    phase = "77"
+    phase = "110"
   )
 )
 saveRDS(v2_output, OUTPUT_RDS_V2)
