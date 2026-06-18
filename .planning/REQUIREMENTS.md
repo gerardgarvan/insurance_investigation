@@ -33,6 +33,12 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [x] **REPORT-02**: User can run a data delivery manifest script that identifies all output files created/updated in v3.1 and v3.2, lists them with descriptions, and generates a file listing for packaging to Amy
 - [x] **REPORT-03**: User can review updated pecan_lymphoma_meeting_notes_combined.md with resolved gaps marked and stale items removed
 
+### V2 Cancer Summary Table Fix (Phase 110)
+
+- [ ] **V2FIX-01**: V2 cancer summary table population restricted to patients with HL-specific 7-day gap confirmation (C81 + 201.x codes with 2+ unique dates spanning 7+ days), replacing the previous any-cancer-code 7-day filter
+- [ ] **V2FIX-02**: K-L-M columns (Pre-HL, Post-HL, Both) only count secondary malignancies that themselves meet the 7-day gap confirmation criterion for each respective code
+- [ ] **V2FIX-03**: R/88 smoke test validates the updated V2 population assertion bounds and HL-specific filtering pattern
+
 ## v3.1 Requirements (Complete)
 
 ### Broadened Drug Grouping
@@ -101,12 +107,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPORT-01 | Phase 107 | Complete |
 | REPORT-02 | Phase 107 | Complete |
 | REPORT-03 | Phase 107 | Complete |
+| V2FIX-01 | Phase 110 | Pending |
+| V2FIX-02 | Phase 110 | Pending |
+| V2FIX-03 | Phase 110 | Pending |
 
 **Coverage:**
 - v3.2 requirements: 11 total
 - Mapped to phases: 11
 - Unmapped: 0
+- Phase 108-110 requirements: 12 total (WARN x6, COADMIN-FIX x3, V2FIX x3)
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-15 — v3.2 traceability updated with phase mappings*
+*Last updated: 2026-06-18 — Phase 110 V2FIX requirements added*

@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 109: `/gsd:execute-phase 109`
+1. Execute Phase 110: `/gsd:execute-phase 110`
 
 ## Coverage
 
@@ -117,3 +117,13 @@ Plans:
 
 Plans:
 - [x] 109-01-PLAN.md -- ICD9 code filtering, date-grain single-agent detection and temporal self-join, R/88 smoke test update
+
+### Phase 110: Redo cancer_summary_table_pre_post_v2_7day.xlsx with Confirmed HL 7-Day Gap patients only
+
+**Goal:** V2 cancer summary table restricted to patients with HL-specific 7-day gap confirmation and secondary malignancies in K-L-M columns also individually 7-day confirmed, replacing the current any-code 7-day filter with stricter HL-only criteria
+**Requirements**: V2FIX-01, V2FIX-02, V2FIX-03
+**Depends on:** Phase 109
+**Plans:** 1 plan
+
+Plans:
+- [ ] 110-01-PLAN.md -- Tighten R/49 V2 population filter to HL-specific 7-day confirmed, update assertions/metadata/titles, update R/88 smoke test
