@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 110: `/gsd:execute-phase 110`
+1. Execute Phase 111: `/gsd:execute-phase 111`
 
 ## Coverage
 
@@ -127,3 +127,13 @@ Plans:
 
 Plans:
 - [x] 110-01-PLAN.md -- Tighten R/49 V2 population filter to HL-specific 7-day confirmed, update assertions/metadata/titles, update R/88 smoke test
+
+### Phase 111: For chemo_drugs_by_class.xlsx combine agents by date per ID, collapse agents into one string for each date
+
+**Goal:** TABLE-2 (chemo_drugs_by_class.xlsx) collapsed from per-encounter+medication grain to per-patient+date grain, combining all chemo agent names on each date into a single comma-separated string with merged cancer codes
+**Requirements**: T2COLLAPSE-01, T2COLLAPSE-02
+**Depends on:** Phase 110
+**Plans:** 1 plan
+
+Plans:
+- [ ] 111-01-PLAN.md -- Collapse R/36 TABLE-2 to per-patient+date grain with agents string, update R/88 smoke test for new column structure
