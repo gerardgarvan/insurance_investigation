@@ -86,6 +86,7 @@ Last activity: 2026-06-18
 
 - Phase 108 added: Fix warnings that are in warnings.txt
 - Phase 109 added: Fix co-administration analysis: remove ICD9 codes that blur single-agent detection and switch grouping from encounter to date
+- Phase 110 added: redo cancer_summary_table_pre_post_v2_7day.xlsx but have it so only Confirmed (7-Day Gap) HL pts are in it and rows k through l only have Confirmed (7-Day Gap) respective malignancies
 
 ### Open Questions
 
