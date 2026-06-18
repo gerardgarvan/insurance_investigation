@@ -133,7 +133,7 @@ Plans:
 **Goal:** TABLE-2 (chemo_drugs_by_class.xlsx) collapsed from per-encounter+medication grain to per-patient+date grain, combining all chemo agent names on each date into a single comma-separated string with merged cancer codes
 **Requirements**: T2COLLAPSE-01, T2COLLAPSE-02
 **Depends on:** Phase 110
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 111-01-PLAN.md -- Collapse R/36 TABLE-2 to per-patient+date grain with agents string, update R/88 smoke test for new column structure
+- [x] 111-01-PLAN.md -- Collapse R/36 TABLE-2 to per-patient+date grain with agents string, update R/88 smoke test for new column structure

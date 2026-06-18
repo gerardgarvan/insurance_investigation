@@ -41,8 +41,8 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### TABLE-2 Date-Grain Collapse (Phase 111)
 
-- [ ] **T2COLLAPSE-01**: TABLE-2 xlsx output collapsed from per-encounter+medication grain to per-patient+date grain with 5 columns (PATID, treatment_date, agents, cancer_codes, cancer_category_names), agents alphabetically sorted and deduplicated, cancer codes merged across encounters sharing same patient+date
-- [ ] **T2COLLAPSE-02**: R/88 smoke test validates the new TABLE-2 date-grain column structure including agents collapse pattern, cancer_codes split-union merge, and group_by patient+date grouping
+- [x] **T2COLLAPSE-01**: TABLE-2 xlsx output collapsed from per-encounter+medication grain to per-patient+date grain with 5 columns (PATID, treatment_date, agents, cancer_codes, cancer_category_names), agents alphabetically sorted and deduplicated, cancer codes merged across encounters sharing same patient+date
+- [x] **T2COLLAPSE-02**: R/88 smoke test validates the new TABLE-2 date-grain column structure including agents collapse pattern, cancer_codes split-union merge, and group_by patient+date grouping
 
 ## v3.1 Requirements (Complete)
 
@@ -115,8 +115,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | V2FIX-01 | Phase 110 | Complete |
 | V2FIX-02 | Phase 110 | Complete |
 | V2FIX-03 | Phase 110 | Complete |
-| T2COLLAPSE-01 | Phase 111 | Pending |
-| T2COLLAPSE-02 | Phase 111 | Pending |
+| T2COLLAPSE-01 | Phase 111 | Complete |
+| T2COLLAPSE-02 | Phase 111 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total
