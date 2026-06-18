@@ -2645,9 +2645,10 @@ if (file.exists("R/34_hl_nhl_overlap_validation.R")) {
 }
 
 # ==============================================================================
-# SECTION 31H: PHASE 106 R/36 -- TABLEAU-READY TABLES (TABLE-01, TABLE-02) ----
+# SECTION 31H: PHASE 106/111 R/36 -- TABLEAU-READY TABLES (TABLE-01, TABLE-02) ----
 # ==============================================================================
 # Validates R/36 Tableau-ready table generation script structural integrity.
+# Phase 111 update: TABLE-2 changed from per-encounter+medication to per-patient+date grain.
 
 message("\n[38/41] Phase 106 R/36: Tableau-ready tables validation...")
 
@@ -2697,6 +2698,19 @@ if (file.exists("R/36_tableau_ready_tables.R")) {
 
   check("R/36 outputs tableau_table2_chemo_drugs_by_class.xlsx",
         any(grepl("tableau_table2_chemo_drugs_by_class\\.xlsx", r36_text)))
+
+  # Phase 111: TABLE-2 date-grain collapse
+  check("R/36 TABLE-2 groups by patient+date (Phase 111 D-08)",
+        any(grepl("group_by.*treatment_date", r36_text)))
+
+  check("R/36 TABLE-2 collapses agents string (Phase 111 D-06)",
+        any(grepl("agents.*=.*paste.*sort.*unique.*medication_name", r36_text)))
+
+  check("R/36 TABLE-2 merges cancer_codes via strsplit (Phase 111 D-03)",
+        any(grepl("strsplit.*cancer_codes", r36_text)))
+
+  check("R/36 TABLE-2 uses .groups = 'drop' in summarise",
+        any(grepl('\\.groups.*=.*"drop"', r36_text)))
 
   # Output format
   check("R/36 creates openxlsx2 workbook",
@@ -3132,7 +3146,7 @@ message("  * D-13: Dynamic schema verification replaces hardcoded column counts 
 message("  * IMMU-01: immuno_confidence column flags questionable immunotherapy codes (Phase 93)")
 message("  * IMMU-02: Distinct flag values for vitamin combos vs CAR-T ambiguity (Phase 93)")
 message("  * TABLE-01: Encounter cancer codes Tableau table with comma separators (R/36 Phase 106)")
-message("  * TABLE-02: Chemo drugs by class Tableau table with medication names (R/36 Phase 106)")
+message("  * TABLE-02: Chemo agents by date (patient-date grain, collapsed agents) (R/36 Phase 106+111)")
 
 if (failed > 0) {
   quit(status = 1)
