@@ -2108,12 +2108,24 @@ if (file.exists("R/58_co_administration_analysis.R")) {
   check("R/58 excludes regimen-classified encounters via anti_join",
         any(grepl("anti_join.*regimen", r58_lines, ignore.case = TRUE)))
 
-  # Phase 109 D-01: Non-specific ICD9 code filtering
-  check("R/58 references TREATMENT_CODES$chemo_icd9 for ICD9 identification (D-01)",
+  # Phase 109 D-01: Non-specific code filtering (3 categories)
+  check("R/58 references TREATMENT_CODES$chemo_icd9 for ICD9 procedure codes (D-01)",
         any(grepl("chemo_icd9", r58_lines)))
 
-  check("R/58 filters out non-specific ICD9 codes from triggering_code pool (D-01)",
-        any(grepl("NON_SPECIFIC_ICD9", r58_lines)))
+  check("R/58 references TREATMENT_CODES$chemo_dx_icd9 for diagnosis encounter codes (D-01)",
+        any(grepl("chemo_dx_icd9", r58_lines)))
+
+  check("R/58 references TREATMENT_CODES$chemo_dx_icd10 for diagnosis encounter codes (D-01)",
+        any(grepl("chemo_dx_icd10", r58_lines)))
+
+  check("R/58 references TREATMENT_CODES$chemo_icd10pcs_prefixes for PCS route codes (D-01)",
+        any(grepl("chemo_icd10pcs_prefixes", r58_lines)))
+
+  check("R/58 builds NON_SPECIFIC_EXACT for exact-match non-specific codes (D-01)",
+        any(grepl("NON_SPECIFIC_EXACT", r58_lines)))
+
+  check("R/58 builds NON_SPECIFIC_PCS_RX regex for prefix-match PCS codes (D-01)",
+        any(grepl("NON_SPECIFIC_PCS_RX", r58_lines)))
 
   # Phase 109 D-03: Date-grain single-agent detection
   check("R/58 groups by patient_id and treatment_date for single-agent ID (D-03)",

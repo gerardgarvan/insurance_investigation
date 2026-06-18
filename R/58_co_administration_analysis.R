@@ -3,8 +3,9 @@
 # ==============================================================================
 #
 # Purpose:
-#   Identify single-agent chemotherapy dates (after removing non-specific ICD9
-#   codes) and find all co-administered chemotherapies within a +/-30-day window.
+#   Identify single-agent chemotherapy dates (after removing non-specific codes:
+#   ICD9 procedure, diagnosis encounter, and ICD-10-PCS route codes) and find
+#   all co-administered chemotherapies within a +/-30-day window.
 #   Detects fragmented regimen patterns where multi-drug regimens (ABVD, BV+AVD)
 #   appear as separate single-agent billing events instead of being billed together.
 #   Directly answers team questions about single-agent chemo patterns.
@@ -24,8 +25,10 @@
 #     Sheet 2 = "Pattern Summary" (COADMIN-02))
 #
 # Phase 109 Decisions (ICD9 Filtering + Date-Grain Analysis):
-#   D-01: Remove non-specific ICD9 procedure codes from triggering_code pool
-#         before single-agent detection (99.25, 99.28 from TREATMENT_CODES$chemo_icd9)
+#   D-01: Remove non-specific codes from triggering_code pool before single-agent
+#         detection: ICD9 procedure (99.25, 99.28), diagnosis encounter (V58.11,
+#         Z51.11), and ICD-10-PCS route codes (3E0...) that describe administration
+#         route without identifying which agent
 #   D-02: Encounters where ONLY triggering code is a non-specific ICD9 code are
 #         excluded entirely (patient-dates with only non-specific codes lost)
 #   D-03: Single-agent detection at date grain: deduplicate to unique (patient_id,
@@ -155,21 +158,48 @@ message(glue("  Regimen-classified encounters excluded: {n_before_regimen_excl -
 message(glue("  Chemotherapy encounters after regimen exclusion: {n_after_regimen_excl}"))
 message(glue("  Unique patients in filtered chemo detail: {n_distinct(chemo_detail$patient_id)}"))
 
-# --- Phase 109 D-01: Remove non-specific ICD9 procedure codes ---
-# ICD9-CM Vol 3 codes 99.25 and 99.28 indicate "chemo happened" but do NOT
-# identify which agent. They inflate distinct-code counts without adding
-# agent-level information, blurring single-agent detection.
-NON_SPECIFIC_ICD9 <- TREATMENT_CODES$chemo_icd9  # c("99.25", "99.28")
-n_before_icd9 <- nrow(chemo_detail)
-n_icd9_rows <- sum(chemo_detail$triggering_code %in% NON_SPECIFIC_ICD9)
-message(glue("  Rows with non-specific ICD9 codes (99.25, 99.28): {n_icd9_rows}"))
+# --- Phase 109 D-01: Remove non-specific codes that blur single-agent detection ---
+# These codes indicate "chemo happened" or describe the administration route but
+# do NOT identify which agent was used. They inflate distinct-code counts without
+# adding agent-level information, blurring single-agent detection.
+#
+# Three categories of non-specific codes:
+#   1. ICD9-CM Vol 3 procedure codes: 99.25, 99.28 (from chemo_icd9)
+#   2. ICD-9/ICD-10 diagnosis encounter codes: V58.11, Z51.11 (from chemo_dx_icd9/icd10)
+#   3. ICD-10-PCS route codes: 3E04305 etc. (from chemo_icd10pcs_prefixes)
+#      These describe route of administration (e.g. "antineoplastic into central vein")
+#      not which drug was given.
 
-# Remove non-specific ICD9 rows from the pool
+# Exact-match non-specific codes
+NON_SPECIFIC_EXACT <- c(
+  TREATMENT_CODES$chemo_icd9,       # 99.25, 99.28
+  TREATMENT_CODES$chemo_dx_icd9,    # V58.11
+  TREATMENT_CODES$chemo_dx_icd10    # Z51.11
+)
+
+# Prefix-match non-specific codes (ICD-10-PCS route codes)
+NON_SPECIFIC_PCS_RX <- paste0("^(", paste(TREATMENT_CODES$chemo_icd10pcs_prefixes, collapse = "|"), ")")
+
+# Flag rows matching either exact or prefix non-specific codes
+is_nonspecific <- chemo_detail$triggering_code %in% NON_SPECIFIC_EXACT |
+  grepl(NON_SPECIFIC_PCS_RX, chemo_detail$triggering_code)
+
+n_nonspecific_rows <- sum(is_nonspecific)
+n_icd9_rows <- sum(chemo_detail$triggering_code %in% TREATMENT_CODES$chemo_icd9)
+n_dx_rows <- sum(chemo_detail$triggering_code %in% c(TREATMENT_CODES$chemo_dx_icd9, TREATMENT_CODES$chemo_dx_icd10))
+n_pcs_rows <- sum(grepl(NON_SPECIFIC_PCS_RX, chemo_detail$triggering_code))
+
+message(glue("  Non-specific code rows breakdown:"))
+message(glue("    ICD9 procedure (99.25, 99.28): {n_icd9_rows}"))
+message(glue("    Dx encounter (V58.11, Z51.11): {n_dx_rows}"))
+message(glue("    ICD-10-PCS route (3E0...): {n_pcs_rows}"))
+message(glue("    Total non-specific rows: {n_nonspecific_rows}"))
+
+# Remove all non-specific rows from the pool
 chemo_detail_specific <- chemo_detail %>%
-  filter(!(triggering_code %in% NON_SPECIFIC_ICD9))
+  filter(!is_nonspecific)
 
-# D-02: Check how many patient-dates lose ALL codes after ICD9 removal
-# (patient-dates where the ONLY code was a non-specific ICD9)
+# D-02: Check how many patient-dates lose ALL codes after non-specific removal
 dates_before <- chemo_detail %>%
   distinct(patient_id, treatment_date) %>%
   nrow()
@@ -178,8 +208,8 @@ dates_after <- chemo_detail_specific %>%
   nrow()
 dates_lost <- dates_before - dates_after
 
-message(glue("  Rows after removing non-specific ICD9 codes: {nrow(chemo_detail_specific)}"))
-message(glue("  Patient-dates with ONLY non-specific ICD9 codes (excluded per D-02): {dates_lost}"))
+message(glue("  Rows after removing non-specific codes: {nrow(chemo_detail_specific)}"))
+message(glue("  Patient-dates with ONLY non-specific codes (excluded per D-02): {dates_lost}"))
 message(glue("  Patient-dates remaining with specific codes: {dates_after}"))
 
 
@@ -388,8 +418,8 @@ message()
 message("=== Summary ===")
 message(glue("  Total chemo encounters loaded: {nrow(detail %>% filter(treatment_type == 'Chemotherapy'))}"))
 message(glue("  Encounters excluded (regimen-classified): {n_before_regimen_excl - n_after_regimen_excl}"))
-message(glue("  Rows excluded (non-specific ICD9 codes): {n_icd9_rows}"))
-message(glue("  Patient-dates lost (only had non-specific ICD9): {dates_lost}"))
+message(glue("  Rows excluded (non-specific codes): {n_nonspecific_rows} (ICD9 proc: {n_icd9_rows}, Dx enc: {n_dx_rows}, PCS route: {n_pcs_rows})"))
+message(glue("  Patient-dates lost (only had non-specific codes): {dates_lost}"))
 message(glue("  Single-agent patient-dates identified: {nrow(single_agent_dates)}"))
 message(glue("  Patient-dates with co-administered drugs found: {n_distinct(paste(detail_table$patient_id, detail_table$index_date))}"))
 message(glue("  Total co-administration pairs in detail table: {nrow(detail_table)}"))
