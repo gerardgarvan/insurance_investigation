@@ -135,7 +135,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v3.1 (2026-06-12). 108 phases completed across 16 milestones (v1.0-v3.2). Phase 108 complete — resolved all 14 R pipeline warnings (safe arithmetic wrappers, benign warning removal, filename mappings, date coercion, TABLE-2 logic fix). Phase 107 — gap resolution report and delivery. Phase 106 — Tableau-ready xlsx tables.
+**Shipped:** v3.1 (2026-06-12). 109 phases completed across 16 milestones (v1.0-v3.2). Phase 109 complete — fixed co-administration analysis by filtering non-specific ICD9 codes (99.25, 99.28) and switching from encounter-grain to date-grain. Phase 108 — resolved all 14 R pipeline warnings. Phase 107 — gap resolution report and delivery.
 
 **Pipeline status:** 103 phases completed across 16 milestones (v1.0-v3.1). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
 
@@ -359,4 +359,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 — Phase 108 complete (resolved all 14 R pipeline warnings from warnings.txt)*
+*Last updated: 2026-06-18 — Phase 109 complete (co-administration ICD9 filtering + date-grain switch)*
