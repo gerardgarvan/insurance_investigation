@@ -3,11 +3,11 @@
 # ==============================================================================
 #
 # Purpose:
-#   Identify single-agent chemotherapy encounters and find all co-administered
-#   chemotherapies within a +/-30-day window. Detects fragmented regimen patterns
-#   where multi-drug regimens (ABVD, BV+AVD) appear as separate single-agent
-#   billing events instead of being billed together. Directly answers team
-#   questions about single-agent chemo patterns.
+#   Identify single-agent chemotherapy dates (after removing non-specific ICD9
+#   codes) and find all co-administered chemotherapies within a +/-30-day window.
+#   Detects fragmented regimen patterns where multi-drug regimens (ABVD, BV+AVD)
+#   appear as separate single-agent billing events instead of being billed together.
+#   Directly answers team questions about single-agent chemo patterns.
 #
 # Inputs:
 #   - cache/outputs/treatment_episode_detail.rds (encounter-level grain:
@@ -23,17 +23,29 @@
 #     Sheet 1 = "Co-Administration Detail" (COADMIN-01),
 #     Sheet 2 = "Pattern Summary" (COADMIN-02))
 #
-# Phase 102 Decisions (Single-Agent Co-Administration Analysis):
-#   D-01: "Single-agent" = one chemo triggering_code per patient-date
-#   D-02: Include encounters with drug_name = NA (use triggering_code)
-#   D-03: +/-30-day window; exclude self-matches (ENCOUNTERID != i.ENCOUNTERID)
-#   D-04: Chemo-to-chemo only (filter treatment_type == "Chemotherapy")
-#   D-05: Exclude regimen-classified encounters (anti_join on regimen_label)
-#   D-06: Two-sheet xlsx: "Co-Administration Detail" + "Pattern Summary"
-#   D-07: Detail table: one row per (index encounter, co-admin drug) pair
-#   D-08: Show both human-readable drug name AND triggering_code
-#   D-09: Script R/58 in drug grouping decade, reads treatment_episode_detail.rds
-#   D-10: Investigation script -- no saveRDS, no upstream modification
+# Phase 109 Decisions (ICD9 Filtering + Date-Grain Analysis):
+#   D-01: Remove non-specific ICD9 procedure codes from triggering_code pool
+#         before single-agent detection (99.25, 99.28 from TREATMENT_CODES$chemo_icd9)
+#   D-02: Encounters where ONLY triggering code is a non-specific ICD9 code are
+#         excluded entirely (patient-dates with only non-specific codes lost)
+#   D-03: Single-agent detection at date grain: deduplicate to unique (patient_id,
+#         treatment_date, specific_triggering_code), single-agent = exactly 1 unique
+#         specific code per patient-date
+#   D-04: Temporal self-join at date grain with triggering_code != i.triggering_code
+#         (different agent, not different encounter)
+#   D-05: "Single-agent" = one specific chemo triggering_code per patient-date after
+#         ICD9 filtering (updated from Phase 102 D-01)
+#   D-06: Replace existing co_administration_analysis.xlsx, same 2-sheet structure
+#   D-07: Detail columns: patient_id, index_date, index_drug_code, index_drug_name,
+#         coadmin_date, coadmin_drug_code, coadmin_drug_name, days_apart
+#
+# Phase 102 Decisions (Carried Forward, Unchanged):
+#   +/-30-day window (Phase 102 D-03)
+#   Chemo-to-chemo only (Phase 102 D-04)
+#   Exclude regimen-classified encounters (Phase 102 D-05)
+#   Two-sheet xlsx output (Phase 102 D-06)
+#   Show both drug name and triggering_code (Phase 102 D-08)
+#   Self-contained investigation script, no upstream modification (Phase 102 D-10)
 #
 # Dependencies:
 #   - R/00_config.R (CONFIG paths, CODE_SUBCATEGORY_MAP, TREATMENT_CODES,
@@ -88,7 +100,7 @@ LOG_FILE <- file.path(CONFIG$output_dir, "58_co_administration_analysis.log")
   TRUE
 }, error = function(e) FALSE)
 
-message("=== Phase 102: Single-Agent Co-Administration Analysis ===")
+message("=== Phase 109: Single-Agent Co-Administration Analysis (Date-Grain) ===")
 message()
 message(glue("  Detail RDS: {DETAIL_RDS}"))
 message(glue("  Episodes RDS: {EPISODES_RDS}"))
@@ -123,12 +135,12 @@ message(glue("  Total detail rows loaded: {nrow(detail)}"))
 episodes <- readRDS(EPISODES_RDS)
 message(glue("  Total episode rows loaded: {nrow(episodes)}"))
 
-# D-04: Filter to Chemotherapy treatment_type only
+# D-04 (carried forward): Filter to Chemotherapy treatment_type only
 chemo_detail <- detail %>%
   filter(treatment_type == "Chemotherapy")
 message(glue("  Chemotherapy-only rows: {nrow(chemo_detail)}"))
 
-# D-05: Exclude encounters already classified as part of a multi-agent regimen
+# D-05 (carried forward): Exclude encounters already classified as part of a multi-agent regimen
 # (regimen_label = ABVD, BV+AVD, or Nivo+AVD from R/28)
 regimen_encounters <- episodes %>%
   filter(!is.na(regimen_label)) %>%
@@ -142,6 +154,33 @@ n_after_regimen_excl <- nrow(chemo_detail)
 message(glue("  Regimen-classified encounters excluded: {n_before_regimen_excl - n_after_regimen_excl}"))
 message(glue("  Chemotherapy encounters after regimen exclusion: {n_after_regimen_excl}"))
 message(glue("  Unique patients in filtered chemo detail: {n_distinct(chemo_detail$patient_id)}"))
+
+# --- Phase 109 D-01: Remove non-specific ICD9 procedure codes ---
+# ICD9-CM Vol 3 codes 99.25 and 99.28 indicate "chemo happened" but do NOT
+# identify which agent. They inflate distinct-code counts without adding
+# agent-level information, blurring single-agent detection.
+NON_SPECIFIC_ICD9 <- TREATMENT_CODES$chemo_icd9  # c("99.25", "99.28")
+n_before_icd9 <- nrow(chemo_detail)
+n_icd9_rows <- sum(chemo_detail$triggering_code %in% NON_SPECIFIC_ICD9)
+message(glue("  Rows with non-specific ICD9 codes (99.25, 99.28): {n_icd9_rows}"))
+
+# Remove non-specific ICD9 rows from the pool
+chemo_detail_specific <- chemo_detail %>%
+  filter(!(triggering_code %in% NON_SPECIFIC_ICD9))
+
+# D-02: Check how many patient-dates lose ALL codes after ICD9 removal
+# (patient-dates where the ONLY code was a non-specific ICD9)
+dates_before <- chemo_detail %>%
+  distinct(patient_id, treatment_date) %>%
+  nrow()
+dates_after <- chemo_detail_specific %>%
+  distinct(patient_id, treatment_date) %>%
+  nrow()
+dates_lost <- dates_before - dates_after
+
+message(glue("  Rows after removing non-specific ICD9 codes: {nrow(chemo_detail_specific)}"))
+message(glue("  Patient-dates with ONLY non-specific ICD9 codes (excluded per D-02): {dates_lost}"))
+message(glue("  Patient-dates remaining with specific codes: {dates_after}"))
 
 
 # ==============================================================================
@@ -161,7 +200,7 @@ chemo_map <- setNames(as.character(chemo_sheet[[3]]), as.character(chemo_sheet[[
 chemo_map <- chemo_map[!is.na(names(chemo_map)) & !is.na(chemo_map)]
 message(glue("  Chemo sub-categories: {length(unique(chemo_map))} medications from {length(chemo_map)} codes"))
 
-# D-08: Multi-tier drug name resolution
+# D-08 (carried forward): Multi-tier drug name resolution
 # Tier 1: xlsx reference (chemo_map)
 # Tier 2: CODE_SUBCATEGORY_MAP from R/00_config.R
 # Tier 3: drug_name from RDS if available
@@ -179,54 +218,50 @@ resolve_drug_name <- function(code, drug_name_col) {
 
 
 # ==============================================================================
-# SECTION 4: IDENTIFY SINGLE-AGENT ENCOUNTERS (D-01, D-02) ----
+# SECTION 4: IDENTIFY SINGLE-AGENT DATES (D-03, D-05) ----
 # ==============================================================================
 
 message()
-message("--- Identifying single-agent encounters ---")
+message("--- Identifying single-agent dates (date grain) ---")
 
-# D-01: Group by (patient_id, treatment_date) to count distinct chemo codes
-# per patient-date. Single-agent = exactly 1 unique triggering_code on that date.
-single_agent_base <- chemo_detail %>%
+# D-03/D-05: Deduplicate to unique (patient_id, treatment_date, triggering_code)
+# then count distinct specific codes per patient-date.
+# Single-agent = exactly 1 unique specific chemo code on that date.
+date_code_combos <- chemo_detail_specific %>%
+  distinct(patient_id, treatment_date, triggering_code, drug_name)
+
+single_agent_dates <- date_code_combos %>%
   group_by(patient_id, treatment_date) %>%
-  mutate(n_chemo_codes_on_date = n_distinct(triggering_code)) %>%
+  mutate(n_specific_codes_on_date = n_distinct(triggering_code)) %>%
   ungroup() %>%
-  filter(n_chemo_codes_on_date == 1)
+  filter(n_specific_codes_on_date == 1) %>%
+  select(-n_specific_codes_on_date)
 
-message(glue("  Rows with single-agent chemo on date: {nrow(single_agent_base)}"))
+message(glue("  Unique (patient, date, code) combos: {nrow(date_code_combos)}"))
+message(glue("  Single-agent patient-dates identified: {nrow(single_agent_dates)}"))
+message(glue("  Unique patients with single-agent dates: {n_distinct(single_agent_dates$patient_id)}"))
 
-# D-02: Include encounters with drug_name = NA (use triggering_code as identifier)
-# Keep one representative row per (patient_id, treatment_date, triggering_code, ENCOUNTERID)
-single_agent_encounters <- single_agent_base %>%
-  distinct(patient_id, treatment_date, triggering_code, drug_name,
-           ENCOUNTERID, episode_number)
-
-message(glue("  Single-agent encounters identified: {nrow(single_agent_encounters)}"))
-message(glue("  Unique patients with single-agent encounters: {n_distinct(single_agent_encounters$patient_id)}"))
-
-n_na_drug_name <- sum(is.na(single_agent_encounters$drug_name))
-message(glue("  Encounters with NA drug_name (using triggering_code): {n_na_drug_name}"))
+n_na_drug_name <- sum(is.na(single_agent_dates$drug_name))
+message(glue("  Patient-dates with NA drug_name (using triggering_code): {n_na_drug_name}"))
 
 
 # ==============================================================================
-# SECTION 5: TEMPORAL SELF-JOIN (+/-30-DAY WINDOW) (D-03) ----
+# SECTION 5: TEMPORAL SELF-JOIN (+/-30-DAY WINDOW) (D-04) ----
 # ==============================================================================
 
 message()
-message("--- Performing temporal self-join (+/-30-day window) ---")
+message("--- Performing temporal self-join (+/-30-day window, date grain) ---")
 
 # Convert to data.table for efficient cartesian join
-single_dt <- as.data.table(single_agent_encounters)
-all_chemo_dt <- as.data.table(
-  chemo_detail %>%
-    distinct(patient_id, treatment_date, triggering_code, drug_name, ENCOUNTERID)
-)
+single_dt <- as.data.table(single_agent_dates)
+# All specific chemo data at date grain for the co-admin pool
+all_chemo_dt <- as.data.table(date_code_combos)
 
 setkey(single_dt, patient_id)
 setkey(all_chemo_dt, patient_id)
 
-message(glue("  Single-agent encounters for join: {nrow(single_dt)}"))
-message(glue("  All chemo encounters for join: {nrow(all_chemo_dt)}"))
+message(glue("  Single-agent dates for join: {nrow(single_dt)}"))
+message(glue("  All specific chemo date-code combos for join: {nrow(all_chemo_dt)}"))
 
 # Cartesian join on patient_id, then filter by date window
 coadmin_dt <- single_dt[all_chemo_dt,
@@ -237,13 +272,15 @@ coadmin_dt <- single_dt[all_chemo_dt,
 
 message(glue("  Cartesian product rows (same patient): {nrow(coadmin_dt)}"))
 
-# D-03: Filter to +/-30-day window, exclude self-matches
+# D-04: Filter to +/-30-day window, exclude same-agent matches
+# Co-administration = a DIFFERENT chemo agent within +/-30 days.
+# Same agent on different dates is repeat dosing, not co-administration.
 coadmin_dt <- coadmin_dt[
   abs(as.numeric(difftime(i.treatment_date, treatment_date, units = "days"))) <= 30 &
-  ENCOUNTERID != i.ENCOUNTERID
+  triggering_code != i.triggering_code
 ]
 
-# Signed days_apart: negative = co-admin occurred before index encounter
+# Signed days_apart: negative = co-admin occurred before index date
 coadmin_dt[, days_apart := as.integer(as.numeric(difftime(i.treatment_date, treatment_date, units = "days")))]
 
 # Convert back to tibble for dplyr pipeline
@@ -254,14 +291,13 @@ message(glue("  Unique patients with co-admin: {n_distinct(coadmin_pairs$patient
 
 
 # ==============================================================================
-# SECTION 6: BUILD DETAIL TABLE (COADMIN-01, D-07, D-08) ----
+# SECTION 6: BUILD DETAIL TABLE (COADMIN-01, D-07) ----
 # ==============================================================================
 
 message()
-message("--- Building detail table ---")
+message("--- Building detail table (date grain) ---")
 
 # Resolve human-readable drug names for both index and co-admin drugs
-# D-08: Show both drug name AND triggering_code
 coadmin_detail <- coadmin_pairs %>%
   rowwise() %>%
   mutate(
@@ -270,21 +306,19 @@ coadmin_detail <- coadmin_pairs %>%
   ) %>%
   ungroup()
 
-# D-07: Select and rename columns for the detail table
+# D-07: Date-grain detail columns -- no encounter IDs
 detail_table <- coadmin_detail %>%
   transmute(
     patient_id,
-    index_encounter_id = ENCOUNTERID,
-    index_treatment_date = treatment_date,
-    index_triggering_code = triggering_code,
+    index_date = treatment_date,
+    index_drug_code = triggering_code,
     index_drug_name,
-    coadmin_encounter_id = i.ENCOUNTERID,
-    coadmin_treatment_date = i.treatment_date,
-    coadmin_triggering_code = i.triggering_code,
+    coadmin_date = i.treatment_date,
+    coadmin_drug_code = i.triggering_code,
     coadmin_drug_name,
     days_apart
   ) %>%
-  arrange(patient_id, index_treatment_date, abs(days_apart))
+  arrange(patient_id, index_date, abs(days_apart))
 
 message(glue("  Detail table: {nrow(detail_table)} rows, {n_distinct(detail_table$patient_id)} patients"))
 
@@ -354,8 +388,10 @@ message()
 message("=== Summary ===")
 message(glue("  Total chemo encounters loaded: {nrow(detail %>% filter(treatment_type == 'Chemotherapy'))}"))
 message(glue("  Encounters excluded (regimen-classified): {n_before_regimen_excl - n_after_regimen_excl}"))
-message(glue("  Single-agent encounters identified: {nrow(single_agent_encounters)}"))
-message(glue("  Encounters with co-administered drugs found: {n_distinct(detail_table$index_encounter_id)}"))
+message(glue("  Rows excluded (non-specific ICD9 codes): {n_icd9_rows}"))
+message(glue("  Patient-dates lost (only had non-specific ICD9): {dates_lost}"))
+message(glue("  Single-agent patient-dates identified: {nrow(single_agent_dates)}"))
+message(glue("  Patient-dates with co-administered drugs found: {n_distinct(paste(detail_table$patient_id, detail_table$index_date))}"))
 message(glue("  Total co-administration pairs in detail table: {nrow(detail_table)}"))
 message(glue("  Unique drug pair patterns in summary table: {nrow(pattern_summary)}"))
 message()
