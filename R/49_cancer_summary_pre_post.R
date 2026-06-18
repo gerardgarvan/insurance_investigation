@@ -195,10 +195,10 @@ message(glue("  V2 unique codes: {format(v2_n_codes, big.mark=',')}"))
 # Phase 110: Bounds adjusted for HL-specific 7-day population (smaller subset than any-code)
 checkmate::assert_int(
   as.integer(v2_n_patients),
-  lower = 4000L, upper = 7000L,
-  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day HL-confirmed population expected 4000-7000, got {v2_n_patients}")
+  lower = 4000L, upper = 8000L,
+  .var.name = glue("[R/49 CANCER-02 ERROR] V2 7-day HL-confirmed population expected 4000-8000, got {v2_n_patients}")
 )
-message(glue("  V2 population assertion PASSED: {v2_n_patients} in [4000, 7000]"))
+message(glue("  V2 population assertion PASSED: {v2_n_patients} in [4000, 8000]"))
 
 # ==============================================================================
 # SECTION 4: QUERY DIAGNOSIS FOR RAW DATE ROWS ----

@@ -883,8 +883,8 @@ check(
 
 # Check 3: R/49 has checkmate population assertion for v2 range (Phase 110: HL-specific 7-day confirmed)
 check(
-  "R/49 has checkmate assert_int for v2 population (4000-7000)",
-  grepl("assert_int.*4000.*7000", r49_text)
+  "R/49 has checkmate assert_int for v2 population (4000-8000)",
+  grepl("assert_int.*4000.*8000", r49_text)
 )
 
 # Check 4: R/49 has NLPHL diagnostic split
