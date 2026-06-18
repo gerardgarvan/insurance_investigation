@@ -35,9 +35,9 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### V2 Cancer Summary Table Fix (Phase 110)
 
-- [ ] **V2FIX-01**: V2 cancer summary table population restricted to patients with HL-specific 7-day gap confirmation (C81 + 201.x codes with 2+ unique dates spanning 7+ days), replacing the previous any-cancer-code 7-day filter
-- [ ] **V2FIX-02**: K-L-M columns (Pre-HL, Post-HL, Both) only count secondary malignancies that themselves meet the 7-day gap confirmation criterion for each respective code
-- [ ] **V2FIX-03**: R/88 smoke test validates the updated V2 population assertion bounds and HL-specific filtering pattern
+- [x] **V2FIX-01**: V2 cancer summary table population restricted to patients with HL-specific 7-day gap confirmation (C81 + 201.x codes with 2+ unique dates spanning 7+ days), replacing the previous any-cancer-code 7-day filter
+- [x] **V2FIX-02**: K-L-M columns (Pre-HL, Post-HL, Both) only count secondary malignancies that themselves meet the 7-day gap confirmation criterion for each respective code
+- [x] **V2FIX-03**: R/88 smoke test validates the updated V2 population assertion bounds and HL-specific filtering pattern
 
 ## v3.1 Requirements (Complete)
 
@@ -107,9 +107,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPORT-01 | Phase 107 | Complete |
 | REPORT-02 | Phase 107 | Complete |
 | REPORT-03 | Phase 107 | Complete |
-| V2FIX-01 | Phase 110 | Pending |
-| V2FIX-02 | Phase 110 | Pending |
-| V2FIX-03 | Phase 110 | Pending |
+| V2FIX-01 | Phase 110 | Complete |
+| V2FIX-02 | Phase 110 | Complete |
+| V2FIX-03 | Phase 110 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total

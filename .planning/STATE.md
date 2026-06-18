@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
 status: verifying
-last_updated: "2026-06-18T15:25:25.999Z"
+last_updated: "2026-06-18T19:27:17.897Z"
 last_activity: 2026-06-18
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State
@@ -20,12 +20,12 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 109 — fix-co-administration-analysis-remove-icd9-codes-that-blur-single-agent-detection-and-switch-grouping-from-encounter-to-date
+**Current focus:** Phase 110 — redo-cancer-summary-table-pre-post-v2-7day-xlsx-but-have-it-so-only-confirmed-7-day-gap-hl-pts-are-in-it-and-rows-k-through-l-only-have-confirmed-7-day-gap-respective-malignancies
 
 ## Current Position
 
-Phase: 109
-Plan: Not started
+Phase: 110 (redo-cancer-summary-table-pre-post-v2-7day-xlsx-but-have-it-so-only-confirmed-7-day-gap-hl-pts-are-in-it-and-rows-k-through-l-only-have-confirmed-7-day-gap-respective-malignancies) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-06-18
 

@@ -123,7 +123,7 @@ Plans:
 **Goal:** V2 cancer summary table restricted to patients with HL-specific 7-day gap confirmation and secondary malignancies in K-L-M columns also individually 7-day confirmed, replacing the current any-code 7-day filter with stricter HL-only criteria
 **Requirements**: V2FIX-01, V2FIX-02, V2FIX-03
 **Depends on:** Phase 109
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 110-01-PLAN.md -- Tighten R/49 V2 population filter to HL-specific 7-day confirmed, update assertions/metadata/titles, update R/88 smoke test
+- [x] 110-01-PLAN.md -- Tighten R/49 V2 population filter to HL-specific 7-day confirmed, update assertions/metadata/titles, update R/88 smoke test
