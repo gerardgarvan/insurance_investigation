@@ -85,6 +85,7 @@ Last activity: 2026-06-16
 **Coverage:** 11/11 v3.2 requirements mapped (100%)
 
 - Phase 108 added: Fix warnings that are in warnings.txt
+- Phase 109 added: Fix co-administration analysis: remove ICD9 codes that blur single-agent detection and switch grouping from encounter to date
 
 ### Open Questions
 
