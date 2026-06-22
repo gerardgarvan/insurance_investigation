@@ -1611,6 +1611,81 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) 
 }
 
 # ==============================================================================
+# SECTION 15h: TEMPORAL DIAGNOSIS ENRICHMENT AND SORT AUDIT (Phase 112) ----
+# ==============================================================================
+
+message("\n[Phase 112] Temporal diagnosis enrichment and universal sort audit...")
+
+r28_lines <- readLines("R/28_episode_classification.R", warn = FALSE)
+r28_text <- paste(r28_lines, collapse = "\n")
+r52_lines <- readLines("R/52_gantt_v2_export.R", warn = FALSE)
+r52_text <- paste(r52_lines, collapse = "\n")
+r36_lines <- readLines("R/36_tableau_ready_tables.R", warn = FALSE)
+r36_text <- paste(r36_lines, collapse = "\n")
+r57_lines <- readLines("R/57_drug_grouping_instances.R", warn = FALSE)
+r57_text <- paste(r57_lines, collapse = "\n")
+
+# Check 1: R/28 has Section 5E for temporal diagnosis enrichment
+check("R/28 has Section 5E temporal diagnosis enrichment (Phase 112)",
+      any(grepl("SECTION 5E.*TEMPORAL DIAGNOSIS", r28_lines, ignore.case = TRUE)))
+
+# Check 2: R/28 queries DIAGNOSIS with is_cancer_code filter
+check("R/28 Section 5E uses is_cancer_code() for DX filtering",
+      any(grepl("is_cancer_code\\(DX\\)", r28_lines)))
+
+# Check 3: R/28 uses bidirectional +/-30 day buffer (not backward-only)
+check("R/28 temporal join uses episode_stop + days(30) upper bound",
+      any(grepl("episode_stop.*\\+.*days\\(30\\)", r28_lines)))
+
+# Check 4: R/28 final select includes episode_dx_codes
+check("R/28 final select includes episode_dx_codes",
+      any(grepl("episode_dx_codes", r28_lines)))
+
+# Check 5: R/28 final select includes episode_dx_categories
+check("R/28 final select includes episode_dx_categories",
+      any(grepl("episode_dx_categories", r28_lines)))
+
+# Check 6: R/28 stopifnot includes episode_dx_codes
+check("R/28 stopifnot validates episode_dx_codes column",
+      any(grepl("episode_dx_codes.*episode_dx_categories", r28_text)))
+
+# Check 7: R/28 preserves row count after temporal join
+check("R/28 validates row count preserved after temporal dx join",
+      any(grepl("stopifnot\\(nrow\\(episodes\\) == pre_join_count\\)", r28_lines)))
+
+# Check 8: R/52 EPISODES_SCHEMA includes episode_dx_codes
+check("R/52 EPISODES_SCHEMA includes episode_dx_codes (Phase 112)",
+      any(grepl("episode_dx_codes", r52_lines)))
+
+# Check 9: R/52 EPISODES_SCHEMA includes episode_dx_categories
+check("R/52 EPISODES_SCHEMA includes episode_dx_categories (Phase 112)",
+      any(grepl("episode_dx_categories", r52_lines)))
+
+# Check 10: R/52 DETAIL_SCHEMA does NOT include episode_dx_codes (episodes-only)
+check("R/52 DETAIL_SCHEMA excludes episode_dx_codes (episode-level only)",
+      !any(grepl("DETAIL_SCHEMA.*episode_dx_codes", r52_text)))
+
+# Check 11: R/52 clean_multi_value sorts values
+check("R/52 clean_multi_value includes sort() for alphabetical ordering (Phase 112 D-06)",
+      any(grepl("sort\\(unique\\(values\\)\\)", r52_lines)))
+
+# Check 12: R/52 applies clean_multi_value to episode_dx_codes
+check("R/52 applies clean_multi_value to episode_dx_codes",
+      any(grepl("episode_dx_codes.*clean_multi_value", r52_text)))
+
+# Check 13: R/36 has NO decreasing = TRUE in sort calls
+check("R/36 has no descending sort in multi-value fields (Phase 112 D-09)",
+      !any(grepl("decreasing\\s*=\\s*TRUE", r36_lines)))
+
+# Check 14: R/57 has NO decreasing = TRUE in sort calls
+check("R/57 has no descending sort in multi-value fields (Phase 112 D-08)",
+      !any(grepl("decreasing\\s*=\\s*TRUE", r57_lines)))
+
+# Check 15: R/52 clean_multi_value does NOT have decreasing = TRUE
+check("R/52 clean_multi_value has no descending sort",
+      !any(grepl("clean_multi_value.*decreasing", r52_text)))
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3147,6 +3222,10 @@ message("  * IMMU-01: immuno_confidence column flags questionable immunotherapy 
 message("  * IMMU-02: Distinct flag values for vitamin combos vs CAR-T ambiguity (Phase 93)")
 message("  * TABLE-01: Encounter cancer codes Tableau table with comma separators (R/36 Phase 106)")
 message("  * TABLE-02: Chemo agents by date (patient-date grain, collapsed agents) (R/36 Phase 106+111)")
+message("  * GANTT-DX-01: episode_dx_codes and episode_dx_categories in treatment_episodes.rds (Phase 112)")
+message("  * GANTT-DX-02: Temporal diagnosis columns in gantt_episodes.csv schema (Phase 112)")
+message("  * SORT-01: Universal ascending sort in clean_multi_value and all multi-value fields (Phase 112)")
+message("  * SORT-02: R/36 and R/57 descending sort removed (Phase 112)")
 
 if (failed > 0) {
   quit(status = 1)
