@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 111: `/gsd:execute-phase 111`
+1. Execute Phase 112: `/gsd:execute-phase 112`
 
 ## Coverage
 
@@ -137,3 +137,13 @@ Plans:
 
 Plans:
 - [x] 111-01-PLAN.md -- Collapse R/36 TABLE-2 to per-patient+date grain with agents string, update R/88 smoke test for new column structure
+
+### Phase 112: Add cancer diagnosis temporally to Gantt data, i.e., which cancer diagnoses did they have in that period. Also ensure abbreviated lists that condense multiple encounters are listed alphabetically so for example b,a,c would always be captured as a,b,c
+
+**Goal:** Gantt episode data enriched with temporal cancer diagnosis context (all diagnoses within +/-30 days of episode span) and universal ascending alphabetical sort enforced across all multi-value fields in the Gantt export pipeline and TABLE-2
+**Requirements**: GANTT-DX-01, GANTT-DX-02, SORT-01, SORT-02, SMOKE-112-01
+**Depends on:** Phase 111
+**Plans:** 1 plan
+
+Plans:
+- [ ] 112-01-PLAN.md -- Temporal diagnosis enrichment in R/28, Gantt export schema update in R/52 with sort fix, descending sort fix in R/36 and R/57, R/88 smoke test validation

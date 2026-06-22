@@ -44,6 +44,14 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [x] **T2COLLAPSE-01**: TABLE-2 xlsx output collapsed from per-encounter+medication grain to per-patient+date grain with 5 columns (PATID, treatment_date, agents, cancer_codes, cancer_category_names), agents alphabetically sorted and deduplicated, cancer codes merged across encounters sharing same patient+date
 - [x] **T2COLLAPSE-02**: R/88 smoke test validates the new TABLE-2 date-grain column structure including agents collapse pattern, cancer_codes split-union merge, and group_by patient+date grouping
 
+### Gantt Temporal Diagnosis + Sort Audit (Phase 112)
+
+- [ ] **GANTT-DX-01**: Gantt episode data enriched with two new columns (episode_dx_codes, episode_dx_categories) capturing all cancer diagnoses within +/-30 days of each episode's span, aggregated per episode with deduplication and ascending alphabetical sort
+- [ ] **GANTT-DX-02**: gantt_episodes.csv schema expanded from 22 to 24 columns with the two new temporal diagnosis columns, Gantt detail schema unchanged at 20 columns
+- [ ] **SORT-01**: All multi-value fields across the Gantt export pipeline (R/52 clean_multi_value, R/26 aggregations, R/36 TABLE-2, R/57 drug grouping) enforce ascending alphabetical sort with no exceptions
+- [ ] **SORT-02**: R/36 TABLE-2 cancer_category_names and R/57 drug grouping cancer_category_names changed from descending to ascending sort
+- [ ] **SMOKE-112-01**: R/88 smoke test validates Phase 112 temporal diagnosis columns, schema extension, sort direction fixes, and clean_multi_value sort enforcement
+
 ## v3.1 Requirements (Complete)
 
 ### Broadened Drug Grouping
@@ -117,6 +125,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | V2FIX-03 | Phase 110 | Complete |
 | T2COLLAPSE-01 | Phase 111 | Complete |
 | T2COLLAPSE-02 | Phase 111 | Complete |
+| GANTT-DX-01 | Phase 112 | Pending |
+| GANTT-DX-02 | Phase 112 | Pending |
+| SORT-01 | Phase 112 | Pending |
+| SORT-02 | Phase 112 | Pending |
+| SMOKE-112-01 | Phase 112 | Pending |
 
 **Coverage:**
 - v3.2 requirements: 11 total
@@ -124,7 +137,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Unmapped: 0
 - Phase 108-110 requirements: 12 total (WARN x6, COADMIN-FIX x3, V2FIX x3)
 - Phase 111 requirements: 2 total (T2COLLAPSE x2)
+- Phase 112 requirements: 5 total (GANTT-DX x2, SORT x2, SMOKE-112 x1)
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-18 — Phase 111 T2COLLAPSE requirements added*
+*Last updated: 2026-06-22 -- Phase 112 GANTT-DX/SORT requirements added*
