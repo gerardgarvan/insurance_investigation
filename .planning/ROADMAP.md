@@ -143,7 +143,7 @@ Plans:
 **Goal:** Gantt episode data enriched with temporal cancer diagnosis context (all diagnoses within +/-30 days of episode span) and universal ascending alphabetical sort enforced across all multi-value fields in the Gantt export pipeline and TABLE-2
 **Requirements**: GANTT-DX-01, GANTT-DX-02, SORT-01, SORT-02, SMOKE-112-01
 **Depends on:** Phase 111
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 112-01-PLAN.md -- Temporal diagnosis enrichment in R/28, Gantt export schema update in R/52 with sort fix, descending sort fix in R/36 and R/57, R/88 smoke test validation
+- [x] 112-01-PLAN.md -- Temporal diagnosis enrichment in R/28, Gantt export schema update in R/52 with sort fix, descending sort fix in R/36 and R/57, R/88 smoke test validation

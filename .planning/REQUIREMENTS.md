@@ -46,11 +46,11 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### Gantt Temporal Diagnosis + Sort Audit (Phase 112)
 
-- [ ] **GANTT-DX-01**: Gantt episode data enriched with two new columns (episode_dx_codes, episode_dx_categories) capturing all cancer diagnoses within +/-30 days of each episode's span, aggregated per episode with deduplication and ascending alphabetical sort
-- [ ] **GANTT-DX-02**: gantt_episodes.csv schema expanded from 22 to 24 columns with the two new temporal diagnosis columns, Gantt detail schema unchanged at 20 columns
-- [ ] **SORT-01**: All multi-value fields across the Gantt export pipeline (R/52 clean_multi_value, R/26 aggregations, R/36 TABLE-2, R/57 drug grouping) enforce ascending alphabetical sort with no exceptions
-- [ ] **SORT-02**: R/36 TABLE-2 cancer_category_names and R/57 drug grouping cancer_category_names changed from descending to ascending sort
-- [ ] **SMOKE-112-01**: R/88 smoke test validates Phase 112 temporal diagnosis columns, schema extension, sort direction fixes, and clean_multi_value sort enforcement
+- [x] **GANTT-DX-01**: Gantt episode data enriched with two new columns (episode_dx_codes, episode_dx_categories) capturing all cancer diagnoses within +/-30 days of each episode's span, aggregated per episode with deduplication and ascending alphabetical sort
+- [x] **GANTT-DX-02**: gantt_episodes.csv schema expanded from 22 to 24 columns with the two new temporal diagnosis columns, Gantt detail schema unchanged at 20 columns
+- [x] **SORT-01**: All multi-value fields across the Gantt export pipeline (R/52 clean_multi_value, R/26 aggregations, R/36 TABLE-2, R/57 drug grouping) enforce ascending alphabetical sort with no exceptions
+- [x] **SORT-02**: R/36 TABLE-2 cancer_category_names and R/57 drug grouping cancer_category_names changed from descending to ascending sort
+- [x] **SMOKE-112-01**: R/88 smoke test validates Phase 112 temporal diagnosis columns, schema extension, sort direction fixes, and clean_multi_value sort enforcement
 
 ## v3.1 Requirements (Complete)
 
@@ -125,11 +125,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | V2FIX-03 | Phase 110 | Complete |
 | T2COLLAPSE-01 | Phase 111 | Complete |
 | T2COLLAPSE-02 | Phase 111 | Complete |
-| GANTT-DX-01 | Phase 112 | Pending |
-| GANTT-DX-02 | Phase 112 | Pending |
-| SORT-01 | Phase 112 | Pending |
-| SORT-02 | Phase 112 | Pending |
-| SMOKE-112-01 | Phase 112 | Pending |
+| GANTT-DX-01 | Phase 112 | Complete |
+| GANTT-DX-02 | Phase 112 | Complete |
+| SORT-01 | Phase 112 | Complete |
+| SORT-02 | Phase 112 | Complete |
+| SMOKE-112-01 | Phase 112 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total
