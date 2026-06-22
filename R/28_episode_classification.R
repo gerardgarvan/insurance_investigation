@@ -744,11 +744,13 @@ message("\n--- Section 5E: Temporal Diagnosis Enrichment (Phase 112) ---")
 open_pcornet_con()
 
 # Query DIAGNOSIS table for ALL cancer codes (ICD-10 AND ICD-9) for episode patients
+# NOTE: Collect first, then filter locally — pushing 4,000+ IDs via !!
+#       into DuckDB's SQL IN clause caused silent query failure (Phase 112 UAT fix)
 episode_patients <- unique(episodes$patient_id)
 temporal_dx_data <- get_pcornet_table("DIAGNOSIS") %>%
   select(ID, DX, DX_DATE) %>%
-  filter(ID %in% !!episode_patients) %>%
   collect() %>%
+  filter(ID %in% episode_patients) %>%
   mutate(DX_DATE = parse_pcornet_date(DX_DATE)) %>%
   filter(!is.na(DX_DATE)) %>%
   filter(is_cancer_code(DX))
