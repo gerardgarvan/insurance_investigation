@@ -743,12 +743,11 @@ message("\n--- Section 5E: Temporal Diagnosis Enrichment (Phase 112) ---")
 tryCatch({
   # Re-open DuckDB connection (Section 4 closed it at line 282)
   open_pcornet_con()
-  message("  [5E-1] DuckDB connection opened")
 
   # Query DIAGNOSIS table for ALL cancer codes (ICD-10 AND ICD-9) for episode patients
-  # NOTE: Collect first, then filter locally — avoids large SQL IN clause
+  # NOTE: Collect first, then filter locally — pushing thousands of IDs via !!
+  #       into DuckDB's SQL IN clause caused silent query failure
   episode_patients <- unique(episodes$patient_id)
-  message(glue("  [5E-2] Episode patients: {length(episode_patients)}"))
 
   temporal_dx_data <- get_pcornet_table("DIAGNOSIS") %>%
     select(ID, DX, DX_DATE) %>%
@@ -758,7 +757,7 @@ tryCatch({
     filter(!is.na(DX_DATE)) %>%
     filter(is_cancer_code(DX))
 
-  message(glue("  [5E-3] Temporal DX query: {nrow(temporal_dx_data)} cancer diagnosis rows"))
+  message(glue("  Temporal DX query: {nrow(temporal_dx_data)} cancer diagnosis rows for {length(episode_patients)} episode patients"))
 
   # Temporal join with +/-30 day buffer from episode span (per D-01, D-02)
   temporal_dx_joined <- episodes %>%
@@ -770,7 +769,7 @@ tryCatch({
       DX_DATE <= (episode_stop + days(30))
     )
 
-  message(glue("  [5E-4] Temporal join: {nrow(temporal_dx_joined)} matches within +/-30 day buffer"))
+  message(glue("  Temporal join: {nrow(temporal_dx_joined)} diagnosis-episode matches within +/-30 day buffer"))
 
   # Aggregate to episode level with sort+dedup (per D-03, D-04, D-08)
   temporal_dx_agg <- temporal_dx_joined %>%
@@ -786,8 +785,10 @@ tryCatch({
       .groups = "drop"
     )
 
-  message(glue("  [5E-5] Aggregated: {nrow(temporal_dx_agg)} episodes with temporal diagnosis context"))
-  message(glue("  [5E-6] temporal_dx_agg columns: {paste(names(temporal_dx_agg), collapse=', ')}"))
+  message(glue("  Aggregated: {nrow(temporal_dx_agg)} episodes with temporal diagnosis context"))
+
+  # Drop existing Phase 112 columns before re-join (prevents .x/.y duplicates on re-run)
+  episodes <- episodes %>% select(-any_of(c("episode_dx_codes", "episode_dx_categories")))
 
   # Join back to episodes, preserving row count (per D-05)
   pre_join_count <- nrow(episodes)
@@ -795,15 +796,11 @@ tryCatch({
     left_join(temporal_dx_agg, by = c("patient_id", "treatment_type", "episode_number"))
   stopifnot(nrow(episodes) == pre_join_count)
 
-  message(glue("  [5E-7] After join, episodes columns: {ncol(episodes)}"))
-  message(glue("  [5E-7] episode_dx_codes exists: {'episode_dx_codes' %in% names(episodes)}"))
-
   n_with_dx <- sum(!is.na(episodes$episode_dx_codes))
-  message(glue("  [5E-8] Episodes with temporal diagnosis: {n_with_dx}/{nrow(episodes)} ({round(100 * n_with_dx / nrow(episodes), 1)}%)"))
+  message(glue("  Episodes with temporal diagnosis: {n_with_dx}/{nrow(episodes)} ({round(100 * n_with_dx / nrow(episodes), 1)}%)"))
 
   # Close DuckDB connection
   close_pcornet_con()
-  message("  [5E-9] Section 5E COMPLETE")
 
 }, error = function(e) {
   message(glue("  [5E-ERROR] Section 5E failed: {conditionMessage(e)}"))
