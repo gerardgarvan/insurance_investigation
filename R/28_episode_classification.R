@@ -6,6 +6,8 @@
 #              Phase 78: Added triggering_code_description and drug_group columns.
 #              Phase 91: Added 5 xlsx metadata columns (medication_name, code_type,
 #              source_table, treatment_line, sct_cross_use_flag) for Gantt v2 export.
+#              Phase 112: Added episode_dx_codes and episode_dx_categories columns
+#              (all cancer diagnoses within +/-30 days of episode span).
 #
 # Inputs:      treatment_episodes.rds, treatment_episode_detail.rds, PCORnet DIAGNOSIS,
 #              code_descriptions.rds (Phase 48b), DRUG_GROUPINGS (R/00_config.R),
@@ -734,11 +736,71 @@ message(glue("  Conditioning context: {n_conditioning} chemo episodes within 30d
 message(glue("  Confidence flags: {n_confidence} episodes ({n_vitamin} vitamin, {n_cart} CAR-T)"))
 
 
+# --- SECTION 5E: TEMPORAL DIAGNOSIS ENRICHMENT (Phase 112, GANTT-DX-01) ---
+
+message("\n--- Section 5E: Temporal Diagnosis Enrichment (Phase 112) ---")
+
+# Re-open DuckDB connection (Section 4 closed it at line 282)
+open_pcornet_con()
+
+# Query DIAGNOSIS table for ALL cancer codes (ICD-10 AND ICD-9) for episode patients
+episode_patients <- unique(episodes$patient_id)
+temporal_dx_data <- get_pcornet_table("DIAGNOSIS") %>%
+  select(ID, DX, DX_DATE) %>%
+  filter(ID %in% !!episode_patients) %>%
+  collect() %>%
+  mutate(DX_DATE = parse_pcornet_date(DX_DATE)) %>%
+  filter(!is.na(DX_DATE)) %>%
+  filter(is_cancer_code(DX))
+
+message(glue("  Temporal DX query: {nrow(temporal_dx_data)} cancer diagnosis rows for {length(episode_patients)} episode patients"))
+
+# Temporal join with +/-30 day buffer from episode span (per D-01, D-02)
+temporal_dx_joined <- episodes %>%
+  select(patient_id, treatment_type, episode_number, episode_start, episode_stop) %>%
+  left_join(temporal_dx_data, by = c("patient_id" = "ID"), relationship = "many-to-many") %>%
+  filter(!is.na(DX_DATE)) %>%
+  filter(
+    DX_DATE >= (episode_start - days(30)) &
+    DX_DATE <= (episode_stop + days(30))
+  )
+
+message(glue("  Temporal join: {nrow(temporal_dx_joined)} diagnosis-episode matches within +/-30 day buffer"))
+
+# Aggregate to episode level with sort+dedup (per D-03, D-04, D-08)
+temporal_dx_agg <- temporal_dx_joined %>%
+  group_by(patient_id, treatment_type, episode_number) %>%
+  summarise(
+    episode_dx_codes = paste(sort(unique(DX)), collapse = ","),
+    episode_dx_categories = {
+      cats <- classify_codes(DX)
+      cats <- cats[!is.na(cats)]
+      if (length(cats) == 0) NA_character_
+      else paste(sort(unique(cats)), collapse = ",")
+    },
+    .groups = "drop"
+  )
+
+message(glue("  Aggregated: {nrow(temporal_dx_agg)} episodes with temporal diagnosis context"))
+
+# Join back to episodes, preserving row count (per D-05)
+pre_join_count <- nrow(episodes)
+episodes <- episodes %>%
+  left_join(temporal_dx_agg, by = c("patient_id", "treatment_type", "episode_number"))
+stopifnot(nrow(episodes) == pre_join_count)
+
+n_with_dx <- sum(!is.na(episodes$episode_dx_codes))
+message(glue("  Episodes with temporal diagnosis: {n_with_dx}/{nrow(episodes)} ({round(100 * n_with_dx / nrow(episodes), 1)}%)"))
+
+# Close DuckDB connection
+close_pcornet_con()
+
+
 # --- SECTION 6: SAVE ENRICHED RDS ---
 
 message("\n--- Saving enriched treatment_episodes.rds ---")
 
-# Final column order (was 22 columns Phase 91, now 25 columns per Phase 93)
+# Final column order (was 22 columns Phase 91, 25 columns Phase 93, now 27 columns per Phase 112)
 episodes <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
@@ -748,7 +810,9 @@ episodes <- episodes %>%
     triggering_code_description, drug_group,
     medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
     # --- Phase 93: Temporal context + confidence flags (IMMU-01, IMMU-02) ---
-    is_sct_conditioning_context, days_to_nearest_sct, immuno_confidence
+    is_sct_conditioning_context, days_to_nearest_sct, immuno_confidence,
+    # --- Phase 112: Temporal diagnosis enrichment (GANTT-DX-01) ---
+    episode_dx_codes, episode_dx_categories
   )
 
 saveRDS(episodes, OUTPUT_RDS)
@@ -759,7 +823,7 @@ stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_
                 "triggering_code_description", "drug_group",
                 "medication_name", "code_type", "source_table", "treatment_line",
                 "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",
-                "immuno_confidence") %in% names(episodes)))
+                "immuno_confidence", "episode_dx_codes", "episode_dx_categories") %in% names(episodes)))
 
 
 # --- SECTION 6B: TBD CODE EXPORT FOR SME REVIEW (Phase 91, D-07) ---

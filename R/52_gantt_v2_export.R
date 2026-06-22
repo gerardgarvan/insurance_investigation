@@ -18,7 +18,7 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # Outputs:
-#   - output/gantt_episodes.csv (22 columns, Phase 99 consolidated)
+#   - output/gantt_episodes.csv (24 columns, Phase 112 temporal diagnosis enrichment)
 #   - output/gantt_detail.csv (20 columns, Phase 99 consolidated)
 #
 # Dependencies:
@@ -36,7 +36,7 @@
 #
 # v2 SCHEMA DOCUMENTATION (Post-Phase 99 Consolidation):
 #
-#   gantt_episodes.csv (22 columns):
+#   gantt_episodes.csv (24 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category (Chemotherapy, Radiation, SCT, etc.)
 #     3. episode_number (int) - Sequential episode number per patient-type
@@ -59,6 +59,8 @@
 #    20. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
 #    21. treatment_line (chr) - Treatment line label: F (first), S (second), E (extension), N (neither), or empty (Phase 92)
 #    22. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
+#    23. episode_dx_codes (chr) - Semicolon-separated cancer DX codes within +/-30 days of episode (Phase 112)
+#    24. episode_dx_categories (chr) - Semicolon-separated cancer category names within +/-30 days of episode (Phase 112)
 #
 #   Phase 99 removed: encounter_ids, is_sct_conditioning_context, immuno_confidence (not visualization-relevant)
 #
@@ -153,7 +155,8 @@ EPISODES_SCHEMA <- c(
   "triggering_codes", "drug_names", "triggering_code_descriptions",
   "cancer_category", "is_hodgkin", "regimen_label", "is_first_line",
   "drug_group", "cause_of_death",
-  "medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag"
+  "medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag",
+  "episode_dx_codes", "episode_dx_categories"
 )
 
 DETAIL_SCHEMA <- c(
@@ -244,6 +247,14 @@ if (!"sct_cross_use_flag" %in% names(episodes)) {
   warning("sct_cross_use_flag column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
   episodes <- episodes %>% mutate(sct_cross_use_flag = NA_character_)
 }
+if (!"episode_dx_codes" %in% names(episodes)) {
+  warning("episode_dx_codes column not found in treatment_episodes.rds — Phase 112 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(episode_dx_codes = NA_character_)
+}
+if (!"episode_dx_categories" %in% names(episodes)) {
+  warning("episode_dx_categories column not found in treatment_episodes.rds — Phase 112 not yet run. Using default NA.")
+  episodes <- episodes %>% mutate(episode_dx_categories = NA_character_)
+}
 
 
 # --- SECTION 3: CODE DESCRIPTION LOOKUP ----
@@ -314,7 +325,7 @@ if (file.exists(QUALITY_RESULT_RDS)) {
 
 message("\n--- Building export tables ---")
 
-# Episodes: 22 columns (Phase 99 schema)
+# Episodes: 24 columns (Phase 112 schema)
 episodes_export <- episodes %>%
   select(
     patient_id, treatment_type, episode_number,
@@ -333,7 +344,9 @@ episodes_export <- episodes %>%
       cancer_category, is_hodgkin, cancer_link_method,
       regimen_label, is_first_line,
       # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-      medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+      medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+      # --- Phase 112: Temporal diagnosis columns (GANTT-DX-02) ---
+      episode_dx_codes, episode_dx_categories
     ),
     by = c("patient_id", "episode_number", "treatment_type")
   ) %>%
@@ -349,7 +362,9 @@ episodes_export <- episodes %>%
     cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
     drug_group, cause_of_death,
     # --- Phase 92: 5 new metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # --- Phase 112: Temporal diagnosis columns (GANTT-DX-02) ---
+    episode_dx_codes, episode_dx_categories
   )
 
 message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -722,7 +737,7 @@ clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
   values <- str_split(field_str, sep_in)[[1]]
   values <- str_trim(values)
   values <- values[values != "" & !is.na(values)]
-  values <- unique(values)
+  values <- sort(unique(values))
 
   if (length(values) == 0) {
     return("")
@@ -820,7 +835,10 @@ episodes_export <- episodes_export %>%
     # NOTE: treatment_line and sct_cross_use_flag are single-value — skip cleanup
     medication_name = sapply(medication_name, clean_multi_value, USE.NAMES = FALSE),
     code_type = sapply(code_type, clean_multi_value, USE.NAMES = FALSE),
-    source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE)
+    source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE),
+    # Phase 112: 2 multi-value temporal diagnosis columns
+    episode_dx_codes = sapply(episode_dx_codes, clean_multi_value, USE.NAMES = FALSE),
+    episode_dx_categories = sapply(episode_dx_categories, clean_multi_value, USE.NAMES = FALSE)
   )
 
 detail_export <- detail_export %>%
@@ -989,10 +1007,10 @@ hl_dx_rows <- episodes_export %>%
   nrow()
 message(glue("  HL Diagnosis pseudo-treatment rows: {format(hl_dx_rows, big.mark = ',')}"))
 
-# Phase 99 consolidated schema summary
-message("\n  Phase 99 consolidated schema:")
-message(glue("    Episodes: {length(EPISODES_SCHEMA)} columns (added is_hodgkin, removed encounter_ids/immunotherapy flags)"))
-message(glue("    Detail: {length(DETAIL_SCHEMA)} columns (added is_hodgkin, removed ENCOUNTERID/immunotherapy flags)"))
+# Phase 99 consolidated schema summary (updated Phase 112)
+message("\n  Phase 112 schema:")
+message(glue("    Episodes: {length(EPISODES_SCHEMA)} columns (Phase 112: added episode_dx_codes, episode_dx_categories)"))
+message(glue("    Detail: {length(DETAIL_SCHEMA)} columns (unchanged from Phase 99)"))
 message("    v1 export (R/51) deprecated — this script is the canonical Gantt export")
 
 # Cause of death stats
