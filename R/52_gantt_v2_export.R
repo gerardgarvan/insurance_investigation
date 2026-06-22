@@ -484,7 +484,9 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         code_type = "",               # Phase 99 D-12: empty string
         source_table = "",            # Phase 99 D-12: empty string
         treatment_line = "",          # Phase 99 D-12: empty string
-        sct_cross_use_flag = ""       # Phase 99 D-12: empty string
+        sct_cross_use_flag = "",      # Phase 99 D-12: empty string
+        episode_dx_codes = NA_character_,      # Phase 112: NA for Death rows (no temporal dx)
+        episode_dx_categories = NA_character_   # Phase 112: NA for Death rows (no temporal dx)
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -493,7 +495,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
         drug_group, cause_of_death,
-        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+        episode_dx_codes, episode_dx_categories
       )
 
     # Verify column alignment before binding (R/49 pattern, lines 734-756)
@@ -616,7 +619,9 @@ if (file.exists(COHORT_RDS)) {
         code_type = "",              # Phase 99 D-12: empty string
         source_table = "",           # Phase 99 D-12: empty string
         treatment_line = "",         # Phase 99 D-12: empty string
-        sct_cross_use_flag = ""      # Phase 99 D-12: empty string
+        sct_cross_use_flag = "",     # Phase 99 D-12: empty string
+        episode_dx_codes = NA_character_,      # Phase 112: NA for HL Diagnosis rows (no temporal dx)
+        episode_dx_categories = NA_character_   # Phase 112: NA for HL Diagnosis rows (no temporal dx)
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -625,7 +630,8 @@ if (file.exists(COHORT_RDS)) {
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method, regimen_label, is_first_line,
         drug_group, cause_of_death,
-        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+        medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+        episode_dx_codes, episode_dx_categories
       )
 
     # Verify column alignment before binding
