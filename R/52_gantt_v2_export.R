@@ -933,7 +933,9 @@ episodes_export <- episodes_export %>%
     # Death/drug info (D-09)
     drug_group, cause_of_death,
     # Source metadata (D-10)
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag
+    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    # Phase 112: Temporal diagnosis enrichment (GANTT-DX-02)
+    episode_dx_codes, episode_dx_categories
   )
 
 detail_export <- detail_export %>%
