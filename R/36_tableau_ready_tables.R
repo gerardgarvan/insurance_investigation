@@ -195,11 +195,11 @@ map_cancer_codes_to_categories <- function(cancer_codes_str) {
     }
   }, USE.NAMES = FALSE)
 
-  # Remove NAs, keep unique, sort descending, collapse with commas
+  # Remove NAs, keep unique, sort ascending (Phase 112 D-09: universal A-Z), collapse with commas
   categories <- categories[!is.na(categories)]
   if (length(categories) == 0) return(NA_character_)
 
-  paste(sort(unique(categories), decreasing = TRUE), collapse = ",")
+  paste(sort(unique(categories)), collapse = ",")
 }
 
 message()
