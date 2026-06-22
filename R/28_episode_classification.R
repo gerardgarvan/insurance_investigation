@@ -800,6 +800,16 @@ close_pcornet_con()
 
 message("\n--- Saving enriched treatment_episodes.rds ---")
 
+# Guard: ensure Phase 112 columns exist (fallback if Section 5E DuckDB query failed)
+if (!"episode_dx_codes" %in% names(episodes)) {
+  warning("episode_dx_codes not found — Section 5E temporal enrichment may have failed. Defaulting to NA.")
+  episodes <- episodes %>% mutate(episode_dx_codes = NA_character_)
+}
+if (!"episode_dx_categories" %in% names(episodes)) {
+  warning("episode_dx_categories not found — Section 5E temporal enrichment may have failed. Defaulting to NA.")
+  episodes <- episodes %>% mutate(episode_dx_categories = NA_character_)
+}
+
 # Final column order (was 22 columns Phase 91, 25 columns Phase 93, now 27 columns per Phase 112)
 episodes <- episodes %>%
   select(
