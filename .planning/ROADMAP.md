@@ -153,10 +153,10 @@ Plans:
 **Goal:** User can run R/51 and see a meeting-ready two-sheet xlsx quantifying temporal gaps (in days) between death dates and all post-death clinical activity (encounters, diagnoses, treatments) for ~200 flagged patients, with clinically meaningful bucket distribution and per-event detail
 **Requirements**: POSTDEATH-01, POSTDEATH-02, POSTDEATH-03
 **Depends on:** Phase 112
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 113-01-PLAN.md -- Post-death encounter investigation script (R/51), R/88 smoke test section, R/39 pipeline runner entry
+- [x] 113-01-PLAN.md -- Post-death encounter investigation script (R/51), R/88 smoke test section, R/39 pipeline runner entry
 
 ### Phase 114: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
 

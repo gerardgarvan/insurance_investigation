@@ -54,9 +54,9 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### Post-Death Encounter Investigation (Phase 113)
 
-- [ ] **POSTDEATH-01**: User can run R/51 and see a two-sheet xlsx (Patient Summary + Event Detail) quantifying temporal gaps in days for all post-death encounters, diagnoses, and treatments across ~200 patients, with bucketed distribution (0-30 days, 31-90 days, 91-365 days, >1 year) and per-event source_table labels (ENCOUNTER, DIAGNOSIS, TREATMENT)
-- [ ] **POSTDEATH-02**: R/88 smoke test validates R/51 structural integrity including death_valid filtering, DuckDB queries, bucket assignment, source_table labels, and styled xlsx output
-- [ ] **POSTDEATH-03**: R/39 pipeline runner includes R/51 in the investigation scripts stage
+- [x] **POSTDEATH-01**: User can run R/51 and see a two-sheet xlsx (Patient Summary + Event Detail) quantifying temporal gaps in days for all post-death encounters, diagnoses, and treatments across ~200 patients, with bucketed distribution (0-30 days, 31-90 days, 91-365 days, >1 year) and per-event source_table labels (ENCOUNTER, DIAGNOSIS, TREATMENT)
+- [x] **POSTDEATH-02**: R/88 smoke test validates R/51 structural integrity including death_valid filtering, DuckDB queries, bucket assignment, source_table labels, and styled xlsx output
+- [x] **POSTDEATH-03**: R/39 pipeline runner includes R/51 in the investigation scripts stage
 
 ## v3.1 Requirements (Complete)
 
@@ -136,9 +136,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SORT-01 | Phase 112 | Complete |
 | SORT-02 | Phase 112 | Complete |
 | SMOKE-112-01 | Phase 112 | Complete |
-| POSTDEATH-01 | Phase 113 | Pending |
-| POSTDEATH-02 | Phase 113 | Pending |
-| POSTDEATH-03 | Phase 113 | Pending |
+| POSTDEATH-01 | Phase 113 | Complete |
+| POSTDEATH-02 | Phase 113 | Complete |
+| POSTDEATH-03 | Phase 113 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total
