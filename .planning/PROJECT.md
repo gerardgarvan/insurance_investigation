@@ -101,6 +101,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] TABLE 2 date-grain collapse: per-patient+date agents string with merged cancer codes — v3.2 Phase 111
 - [x] Temporal cancer diagnosis enrichment in Gantt episodes (+/-30 day buffer) — v3.2 Phase 112
 - [x] Universal ascending alphabetical sort on all multi-value fields — v3.2 Phase 112
+- [x] Drug name consistency remediation — MEDICATION_LOOKUP centralized, blank fills, 5-source precedence, audit xlsx — v3.2 Phase 114
 - [ ] RMarkdown gap resolution report compiling all investigation findings
 - [ ] Update meeting notes to mark resolved gaps and remove stale items
 
@@ -138,7 +139,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v3.1 (2026-06-12). 112 phases completed across 16 milestones (v1.0-v3.2). Phase 112 complete — enriched Gantt episode data with temporal cancer diagnosis columns (episode_dx_codes, episode_dx_categories) capturing all cancer diagnoses within +/-30 days of each episode; enforced universal ascending alphabetical sort on all multi-value fields across Gantt export pipeline and TABLE-2. Phase 111 — collapsed TABLE-2 from per-encounter+medication grain to per-patient+date grain with alphabetically sorted agents string.
+**Shipped:** v3.1 (2026-06-12). 114 phases completed across 16 milestones (v1.0-v3.2). Phase 114 complete — drug name consistency remediation: MEDICATION_LOOKUP (454 entries from 5 reference Excel sheets) centralized in R/00_config.R, R/26 fills blank drug_names at detail grain, R/42 uses 5-source precedence with reference Excel as highest priority, R/79 standalone audit script produces two-sheet styled xlsx.
 
 **Pipeline status:** 103 phases completed across 16 milestones (v1.0-v3.1). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
 
@@ -362,4 +363,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-22 — Phase 112 complete (Gantt temporal diagnosis enrichment + universal ascending sort)*
+*Last updated: 2026-06-24 — Phase 114 complete (drug name consistency remediation)*
