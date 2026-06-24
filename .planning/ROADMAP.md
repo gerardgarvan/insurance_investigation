@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 113: `/gsd:execute-phase 113`
+1. Execute Phase 114: `/gsd:execute-phase 114`
 
 ## Coverage
 
@@ -160,10 +160,11 @@ Plans:
 
 ### Phase 114: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Pipeline drug_names and triggering_code_descriptions use the canonical treatment reference Excel as authoritative source, with blank drug_names filled from the Medication column and inconsistent code descriptions overridden, producing a standalone audit xlsx documenting all remediation
+**Requirements**: DRUGFIX-01, DRUGFIX-02, DRUGFIX-03, DRUGFIX-04, DRUGFIX-05
 **Depends on:** Phase 113
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 114 to break down)
+- [ ] 114-01-PLAN.md -- Add MEDICATION_LOOKUP to R/00_config.R, fill blank drug_names in R/26, add reference Excel as 5th source in R/42
+- [ ] 114-02-PLAN.md -- Standalone audit script (R/79), R/88 smoke test section, R/39 pipeline runner entry
