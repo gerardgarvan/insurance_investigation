@@ -89,6 +89,8 @@ Last activity: 2026-06-22
 - Phase 110 added: redo cancer_summary_table_pre_post_v2_7day.xlsx but have it so only Confirmed (7-Day Gap) HL pts are in it and rows k through l only have Confirmed (7-Day Gap) respective malignancies
 - Phase 111 added: For chemo_drugs_by_class.xlsx combine agents by date per ID, collapse agents into one string for each date
 - Phase 112 added: Add cancer diagnosis temporally to Gantt data and enforce alphabetical ordering in abbreviated/condensed lists
+- Phase 113 added: Investigate encounters after death date — quantify how far after death the ~200 patients encounters occur
+- Phase 114 added: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
 
 ### Open Questions
 
