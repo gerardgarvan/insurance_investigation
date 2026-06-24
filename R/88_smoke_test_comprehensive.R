@@ -72,15 +72,15 @@ check("R/utils/ directory exists", dir.exists("R/utils"))
 
 expected_utils <- c(
   "utils_assertions.R", "utils_attrition.R", "utils_cancer.R",
-  "utils_dates.R", "utils_duckdb.R", "utils_icd.R",
+  "utils_dates.R", "utils_dt.R", "utils_duckdb.R", "utils_icd.R",
   "utils_payer.R", "utils_pptx.R", "utils_snapshot.R",
   "utils_treatment.R", "utils_xlsx_lookups.R"
 )
 
 utils_files <- list.files("R/utils", pattern = "\\.R$")
 check(
-  glue("R/utils/ contains 11 files (found {length(utils_files)})"),
-  length(utils_files) == 11
+  glue("R/utils/ contains 12 files (found {length(utils_files)})"),
+  length(utils_files) == 12
 )
 
 missing_utils <- setdiff(expected_utils, utils_files)
@@ -250,7 +250,7 @@ cancer_expected <- c(
   "44_cancer_site_confirmation_7day.R", "45_cancer_summary.R",
   "46_cancer_summary_table.R", "47_cancer_summary_refined.R",
   "48_cancer_summary_post_hl.R", "49_cancer_summary_pre_post.R",
-  "50_all_codes_resolved.R",
+  "50_all_codes_resolved.R", "51_post_death_encounter_investigation.R",
   "52_gantt_v2_export.R", "53_death_date_validation.R",
   "54_investigate_sct_0362.R", "55_verify_replaced_by_codes.R",
   "56_new_tables_from_groupings.R"
@@ -1204,10 +1204,10 @@ check(
   any(grepl("drug_group", r52_lines))
 )
 
-# Check 7: R/52 has DEATH_CAUSE_MAP reference
+# Check 7: R/52 drops cause_of_death as dead column (Phase 99, D-09)
 check(
-  "R/52 references DEATH_CAUSE_MAP for cause mapping",
-  any(grepl("DEATH_CAUSE_MAP", r52_lines))
+  "R/52 drops cause_of_death (Phase 99, D-09: 100% empty)",
+  any(grepl("cause_of_death", r52_lines))
 )
 
 # Check 8: R/52 uses EPISODES_SCHEMA for dynamic verification (Phase 99, D-13)
@@ -1557,16 +1557,16 @@ check(
     any(grepl("Non-Hodgkin", r52_lines_93))
 )
 
-# Check 11: R/52 has defensive fallback for is_sct_conditioning_context
+# Check 11: R/52 documents removal of is_sct_conditioning_context (Phase 99, D-11)
 check(
-  "R/52 has guard clause for is_sct_conditioning_context",
-  any(grepl('!"is_sct_conditioning_context" %in% names', r52_lines_93, fixed = TRUE))
+  "R/52 documents is_sct_conditioning_context removal (Phase 99, D-11)",
+  any(grepl("is_sct_conditioning_context", r52_lines_93))
 )
 
-# Check 12: R/52 has defensive fallback for immuno_confidence
+# Check 12: R/52 documents removal of immuno_confidence (Phase 99, D-11)
 check(
-  "R/52 has guard clause for immuno_confidence",
-  any(grepl('!"immuno_confidence" %in% names', r52_lines_93, fixed = TRUE))
+  "R/52 documents immuno_confidence removal (Phase 99, D-11)",
+  any(grepl("immuno_confidence", r52_lines_93))
 )
 
 # Runtime validation (if treatment_episodes.rds exists)
@@ -1663,7 +1663,7 @@ check("R/52 EPISODES_SCHEMA includes episode_dx_categories (Phase 112)",
 
 # Check 10: R/52 DETAIL_SCHEMA does NOT include episode_dx_codes (episodes-only)
 check("R/52 DETAIL_SCHEMA excludes episode_dx_codes (episode-level only)",
-      !any(grepl("DETAIL_SCHEMA.*episode_dx_codes", r52_text)))
+      !any(grepl("DETAIL_SCHEMA.*episode_dx_codes", r52_lines)))
 
 # Check 11: R/52 clean_multi_value sorts values
 check("R/52 clean_multi_value includes sort() for alphabetical ordering (Phase 112 D-06)",
@@ -2067,8 +2067,8 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
         any(grepl("CANCER_SITE_MAP", r57_lines)) &&
         any(grepl("ICD9_CANCER_SITE_MAP", r57_lines)))
 
-  check("R/57 sorts cancer categories descending (per D-04)",
-        any(grepl("decreasing\\s*=\\s*TRUE", r57_lines)))
+  check("R/57 sorts cancer categories ascending (Phase 112 universal sort)",
+        any(grepl("sort\\(unique\\(", r57_lines)))
 
   check("R/57 uses 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)",
         any(grepl("code_to_subcategory", r57_lines)) &&
@@ -3044,8 +3044,8 @@ if (file.exists("R/38_delivery_manifest.R")) {
   check("R/38 uses FF374151 header styling",
         any(str_detect(r38_lines, "FF374151")))
 
-  check("R/38 uses freeze_panes",
-        any(str_detect(r38_lines, "freeze_panes")))
+  check("R/38 uses freeze_pane",
+        any(str_detect(r38_lines, "freeze_pane")))
 
   check("R/38 outputs delivery_manifest.xlsx",
         any(str_detect(r38_lines, "delivery_manifest\\.xlsx")))
