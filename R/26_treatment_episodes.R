@@ -703,6 +703,39 @@ n_with_names <- sum(!is.na(all_detail$drug_name))
 n_chemo_rows <- sum(all_detail$treatment_type == "Chemotherapy")
 message(glue("  Drug names joined: {n_with_names} detail rows have drug names ({n_chemo_rows} chemotherapy rows total)"))
 
+# --- Phase 114: Fill blank drug_names from reference Excel MEDICATION_LOOKUP ---
+# Per D-01: Fill blank drug_names where triggering_codes can be mapped to reference Excel.
+# Per D-02: Use Medication column from reference Excel (not route/dosage/full description).
+# Per D-03: Map triggering_codes to reference Excel to fill blanks.
+# CRITICAL: Fill at detail grain BEFORE aggregation (Pitfall 3 avoidance).
+
+n_blank_before <- sum(is.na(all_detail$drug_name) | all_detail$drug_name == "", na.rm = TRUE)
+
+if (length(MEDICATION_LOOKUP) > 0) {
+  medication_ref <- tibble(
+    triggering_code = names(MEDICATION_LOOKUP),
+    ref_medication = unname(MEDICATION_LOOKUP)
+  )
+
+  all_detail <- all_detail %>%
+    left_join(medication_ref, by = "triggering_code") %>%
+    mutate(
+      drug_name = dplyr::coalesce(
+        if_else(is.na(drug_name) | drug_name == "", NA_character_, drug_name),
+        ref_medication
+      )
+    ) %>%
+    select(-ref_medication)
+
+  n_blank_after <- sum(is.na(all_detail$drug_name) | all_detail$drug_name == "", na.rm = TRUE)
+  n_filled <- n_blank_before - n_blank_after
+
+  message(glue("  Phase 114 reference fill: {n_filled} blank drug names filled from MEDICATION_LOOKUP"))
+  message(glue("  Still blank: {n_blank_after} detail rows (no matching triggering_code in reference)"))
+} else {
+  message("  Phase 114: MEDICATION_LOOKUP empty, skipping reference fill")
+}
+
 # Aggregate drug_names per episode from detail level
 # Per D-12: comma-separated unique drug names per episode
 drug_names_per_episode <- all_detail %>%
