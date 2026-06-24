@@ -163,8 +163,8 @@ Plans:
 **Goal:** Pipeline drug_names and triggering_code_descriptions use the canonical treatment reference Excel as authoritative source, with blank drug_names filled from the Medication column and inconsistent code descriptions overridden, producing a standalone audit xlsx documenting all remediation
 **Requirements**: DRUGFIX-01, DRUGFIX-02, DRUGFIX-03, DRUGFIX-04, DRUGFIX-05
 **Depends on:** Phase 113
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 114-01-PLAN.md -- Add MEDICATION_LOOKUP to R/00_config.R, fill blank drug_names in R/26, add reference Excel as 5th source in R/42
-- [ ] 114-02-PLAN.md -- Standalone audit script (R/79), R/88 smoke test section, R/39 pipeline runner entry
+- [x] 114-02-PLAN.md -- Standalone audit script (R/79), R/88 smoke test section, R/39 pipeline runner entry

@@ -63,8 +63,8 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [ ] **DRUGFIX-01**: R/26 fills blank drug_names at detail grain from MEDICATION_LOOKUP (reference Excel Medication column) via coalesce after RxNorm join, before episode aggregation, with fill statistics logged
 - [ ] **DRUGFIX-02**: R/42 code_descriptions.rds uses reference Excel medication names (MEDICATION_LOOKUP) as 5th and highest-priority source in the precedence chain, overriding API-sourced and hardcoded descriptions for codes present in the reference Excel
 - [ ] **DRUGFIX-03**: MEDICATION_LOOKUP named character vector centralized in R/00_config.R, built from all 5 sheets (Chemotherapy, Radiation, SCT, Immunotherapy, Supportive Care) of all_codes_resolved_next_tables_v2.1.xlsx with 400+ entries and title-case normalization
-- [ ] **DRUGFIX-04**: User can run R/79 standalone audit script and see a two-sheet styled xlsx (Summary with blank/inconsistency counts, Detail with per-code before/after values) documenting all remediation impact
-- [ ] **DRUGFIX-05**: R/88 smoke test validates Phase 114 structural integrity (MEDICATION_LOOKUP existence, R/26 fill logic, R/42 5-source precedence, R/79 audit script structure) and R/39 pipeline runner includes R/79
+- [x] **DRUGFIX-04**: User can run R/79 standalone audit script and see a two-sheet styled xlsx (Summary with blank/inconsistency counts, Detail with per-code before/after values) documenting all remediation impact
+- [x] **DRUGFIX-05**: R/88 smoke test validates Phase 114 structural integrity (MEDICATION_LOOKUP existence, R/26 fill logic, R/42 5-source precedence, R/79 audit script structure) and R/39 pipeline runner includes R/79
 
 ## v3.1 Requirements (Complete)
 
@@ -150,8 +150,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRUGFIX-01 | Phase 114 | Pending |
 | DRUGFIX-02 | Phase 114 | Pending |
 | DRUGFIX-03 | Phase 114 | Pending |
-| DRUGFIX-04 | Phase 114 | Pending |
-| DRUGFIX-05 | Phase 114 | Pending |
+| DRUGFIX-04 | Phase 114 | Complete |
+| DRUGFIX-05 | Phase 114 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total
