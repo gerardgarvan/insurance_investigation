@@ -348,11 +348,27 @@ config_descriptions <- c(
 message(glue("  Source 4 (R/00_config.R curated): {length(config_descriptions)} descriptions"))
 
 
+# --- SECTION 5B: SOURCE 5 (REFERENCE EXCEL MEDICATION NAMES - Phase 114) ----
+# Per D-04: Treatment reference Excel is authoritative source for drug names.
+# Per D-05: triggering_code_descriptions should match reference Excel.
+# Highest priority: overrides all other sources for codes present in reference Excel.
+# WHY highest priority: Reference Excel is the human-curated canonical source maintained
+# alongside the project. API results and hardcoded values may be stale or inconsistent.
+
+reference_descriptions <- MEDICATION_LOOKUP  # Built from reference Excel in R/00_config.R
+
+message(glue("  Source 5 (Reference Excel medications): {length(reference_descriptions)} descriptions"))
+
+
 # --- SECTION 6: COMBINE ALL SOURCES ----
 
-# Precedence order: API results (lowest) -> hardcoded (medium) -> config (highest)
-# Later sources overwrite earlier for duplicate keys
-all_descriptions <- c(hcpcs_lookup, ndc_lookup, radiation_hardcoded, config_descriptions)
+# Precedence order (later sources override earlier for duplicate keys):
+#   1. Phase 39 CPT/HCPCS API (lowest)
+#   2. Phase 40 NDC/RXNORM API
+#   3. Hardcoded radiation CPT
+#   4. R/00_config.R curated
+#   5. Reference Excel medications (highest -- per D-04, D-05)
+all_descriptions <- c(hcpcs_lookup, ndc_lookup, radiation_hardcoded, config_descriptions, reference_descriptions)
 
 message(glue("\n  Combined: {length(all_descriptions)} total entries"))
 message(glue("  Unique codes: {length(unique(names(all_descriptions)))} (duplicates resolved by precedence)"))
@@ -374,5 +390,6 @@ message(glue("  Phase 39 CPT/HCPCS: {length(hcpcs_lookup)}"))
 message(glue("  Phase 40 NDC/RXNORM: {length(ndc_lookup)}"))
 message(glue("  R/45 radiation:      {length(radiation_hardcoded)}"))
 message(glue("  R/00_config curated: {length(config_descriptions)}"))
+message(glue("  Reference Excel:     {length(reference_descriptions)}"))
 message(glue("  Final lookup:        {length(all_descriptions)} unique code descriptions"))
 message(glue("\n  Output: {OUTPUT_RDS}"))
