@@ -2261,6 +2261,79 @@ CODE_SUBCATEGORY_MAP <- c(
 message(paste0("Defined ", length(CODE_SUBCATEGORY_MAP), " code-to-subcategory mappings"))
 
 # ==============================================================================
+# Reference Excel Path (Phase 114)
+# ==============================================================================
+# Canonical path for the treatment reference Excel used by R/36, R/56, R/57, R/58.
+# Centralizing here per D-09 so all scripts share the same path.
+# ==============================================================================
+
+REFERENCE_XLSX <- file.path("data", "reference", "all_codes_resolved_next_tables_v2.1.xlsx")
+
+# ==============================================================================
+# MEDICATION_LOOKUP -- Reference Excel Medication Names (Phase 114)
+# ==============================================================================
+# Maps treatment codes to canonical medication names from the Medication column
+# (column 3) of all_codes_resolved_next_tables_v2.1.xlsx.
+#
+# Per D-02: Use Medication column only (not route, dosage, or full description).
+# Per D-04: This is the authoritative source for drug names.
+# Per D-06: Apply str_to_title + str_trim normalization for consistency.
+#
+# Used by:
+#   R/26 (fill blank drug_names at detail grain)
+#   R/42 (highest-priority code description source)
+#   R/79 (standalone drug name consistency audit)
+#
+# Phase 114 (2026-06-24)
+# ==============================================================================
+
+MEDICATION_LOOKUP <- local({
+  if (!file.exists(REFERENCE_XLSX)) {
+    warning(glue("[R/00_config] Reference Excel not found: {REFERENCE_XLSX}. MEDICATION_LOOKUP will be empty."))
+    return(setNames(character(0), character(0)))
+  }
+
+  ref_wb <- openxlsx2::wb_load(REFERENCE_XLSX)
+
+  # Extract code -> medication from all 5 sheets (column 1 = code, column 3 = Medication)
+  sheets <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care")
+  all_meds <- character(0)
+
+  for (sheet_name in sheets) {
+    sheet_df <- openxlsx2::wb_to_df(ref_wb, sheet = sheet_name, start_row = 2)
+    sheet_map <- setNames(as.character(sheet_df[[3]]), as.character(sheet_df[[1]]))
+    sheet_map <- sheet_map[!is.na(names(sheet_map)) & !is.na(sheet_map)]
+    all_meds <- c(all_meds, sheet_map)
+  }
+
+  # Deduplicate (first occurrence wins if same code in multiple sheets)
+  all_meds <- all_meds[!duplicated(names(all_meds))]
+
+  # Normalize per D-06: title case + trim, preserve common abbreviations
+  normalize_med <- function(name) {
+    name <- stringr::str_trim(name)
+    name <- stringr::str_to_title(name)
+    # Preserve common medical abbreviations
+    name <- stringr::str_replace_all(name, "\\bHcl\\b", "HCl")
+    name <- stringr::str_replace_all(name, "\\bIv\\b", "IV")
+    name <- stringr::str_replace_all(name, "\\bImrt\\b", "IMRT")
+    name <- stringr::str_replace_all(name, "\\bNos\\b", "NOS")
+    name <- stringr::str_replace_all(name, "\\bHpc\\b", "HPC")
+    name <- stringr::str_replace_all(name, "\\bDli\\b", "DLI")
+    name <- stringr::str_replace_all(name, "\\bSbrt\\b", "SBRT")
+    name <- stringr::str_replace_all(name, "\\bCar-t\\b", "CAR-T")
+    name <- stringr::str_replace_all(name, "\\s+", " ")
+    name
+  }
+
+  all_meds <- sapply(all_meds, normalize_med, USE.NAMES = TRUE)
+
+  return(all_meds)
+})
+
+message(glue("  MEDICATION_LOOKUP: {length(MEDICATION_LOOKUP)} medication names from reference Excel"))
+
+# ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----
 # ==============================================================================
 
