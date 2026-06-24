@@ -1686,6 +1686,77 @@ check("R/52 clean_multi_value has no descending sort",
       !any(grepl("clean_multi_value.*decreasing", r52_text)))
 
 # ==============================================================================
+# SECTION 15i: POST-DEATH ENCOUNTER INVESTIGATION (Phase 113) ----
+# ==============================================================================
+
+message("\n[Phase 113] Post-death encounter investigation...")
+
+r51_lines <- readLines("R/51_post_death_encounter_investigation.R", warn = FALSE)
+r51_text <- paste(r51_lines, collapse = "\n")
+
+# Check 1: R/51 exists and has minimum length
+check("R/51 post-death encounter investigation exists (>= 200 lines)",
+      length(r51_lines) >= 200)
+
+# Check 2: R/51 reads validated_death_dates.rds
+check("R/51 reads validated_death_dates.rds",
+      any(grepl("validated_death_dates\\.rds", r51_lines)))
+
+# Check 3: R/51 filters death_valid == TRUE
+check("R/51 filters death_valid == TRUE (Pitfall 2 avoidance)",
+      any(grepl("death_valid\\s*==\\s*TRUE", r51_lines)))
+
+# Check 4: R/51 filters post_death_activity == TRUE
+check("R/51 filters post_death_activity == TRUE",
+      any(grepl("post_death_activity\\s*==\\s*TRUE", r51_lines)))
+
+# Check 5: R/51 queries ENCOUNTER table from DuckDB
+check("R/51 queries DuckDB ENCOUNTER table (D-05)",
+      any(grepl('get_pcornet_table.*ENCOUNTER', r51_lines)))
+
+# Check 6: R/51 queries DIAGNOSIS table from DuckDB
+check("R/51 queries DuckDB DIAGNOSIS table (D-05)",
+      any(grepl('get_pcornet_table.*DIAGNOSIS', r51_lines)))
+
+# Check 7: R/51 reads treatment_episodes.rds
+check("R/51 reads treatment_episodes.rds (D-05)",
+      any(grepl("treatment_episodes\\.rds", r51_lines)))
+
+# Check 8: R/51 computes days_after_death using correct subtraction direction
+check("R/51 computes days_after_death = as.numeric(date - DEATH_DATE)",
+      any(grepl("days_after_death.*as\\.numeric.*DEATH_DATE", r51_lines)))
+
+# Check 9: R/51 has case_when bucket assignment with 4 buckets (D-03)
+check("R/51 has case_when gap_bucket with 0-30/31-90/91-365/>1 year (D-03)",
+      any(grepl("0-30 days", r51_lines)) &&
+      any(grepl("31-90 days", r51_lines)) &&
+      any(grepl("91-365 days", r51_lines)) &&
+      any(grepl(">1 year", r51_lines)))
+
+# Check 10: R/51 has source_table column with all 3 types (D-06)
+check("R/51 labels source_table as ENCOUNTER/DIAGNOSIS/TREATMENT (D-06)",
+      any(grepl('source_table.*=.*"ENCOUNTER"', r51_lines)) &&
+      any(grepl('source_table.*=.*"DIAGNOSIS"', r51_lines)) &&
+      any(grepl('source_table.*=.*"TREATMENT"', r51_lines)))
+
+# Check 11: R/51 creates Patient Summary and Event Detail sheets (D-01)
+check("R/51 creates Patient Summary and Event Detail xlsx sheets (D-01)",
+      any(grepl("Patient Summary", r51_lines)) &&
+      any(grepl("Event Detail", r51_lines)))
+
+# Check 12: R/51 uses styled headers (D-08)
+check("R/51 uses dark gray header fill FF374151 (D-08)",
+      any(grepl("FF374151", r51_lines)))
+
+# Check 13: R/51 closes DuckDB connection
+check("R/51 calls close_pcornet_con() for connection cleanup",
+      any(grepl("close_pcornet_con", r51_lines)))
+
+# Check 14: R/51 has freeze_pane for both sheets
+check("R/51 freezes panes on output sheets",
+      sum(grepl("freeze_pane", r51_lines)) >= 2)
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3226,6 +3297,9 @@ message("  * GANTT-DX-01: episode_dx_codes and episode_dx_categories in treatmen
 message("  * GANTT-DX-02: Temporal diagnosis columns in gantt_episodes.csv schema (Phase 112)")
 message("  * SORT-01: Universal ascending sort in clean_multi_value and all multi-value fields (Phase 112)")
 message("  * SORT-02: R/36 and R/57 descending sort removed (Phase 112)")
+message("  * POSTDEATH-01: Two-sheet xlsx with per-patient summary and per-event detail (R/51 Phase 113)")
+message("  * POSTDEATH-02: R/88 validates R/51 structure, bucketing, source_table labels (Phase 113)")
+message("  * POSTDEATH-03: R/39 pipeline runner includes R/51 (Phase 113)")
 
 if (failed > 0) {
   quit(status = 1)

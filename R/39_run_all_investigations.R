@@ -178,6 +178,7 @@ investigation_scripts <- c(
   "R/57_drug_grouping_instances.R",            # G2:  Broadened drug grouping
   "R/58_co_administration_analysis.R",         # G3:  Co-administration patterns
   "R/59_death_date_summary.R",                 # G15: Death date cross-tab
+  "R/51_post_death_encounter_investigation.R", # Post-death encounter drill-down (Phase 113)
   "R/31_pre_diagnosis_treatments.R",           # G5:  Pre-diagnosis treatments
   "R/32_secondary_malignancy_table.R",         # Secondary malignancy table
   "R/33_code_verification.R",                  # G8/G10/G11: Code verification
