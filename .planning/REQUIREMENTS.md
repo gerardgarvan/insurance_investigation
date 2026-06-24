@@ -52,6 +52,12 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [x] **SORT-02**: R/36 TABLE-2 cancer_category_names and R/57 drug grouping cancer_category_names changed from descending to ascending sort
 - [x] **SMOKE-112-01**: R/88 smoke test validates Phase 112 temporal diagnosis columns, schema extension, sort direction fixes, and clean_multi_value sort enforcement
 
+### Post-Death Encounter Investigation (Phase 113)
+
+- [ ] **POSTDEATH-01**: User can run R/51 and see a two-sheet xlsx (Patient Summary + Event Detail) quantifying temporal gaps in days for all post-death encounters, diagnoses, and treatments across ~200 patients, with bucketed distribution (0-30 days, 31-90 days, 91-365 days, >1 year) and per-event source_table labels (ENCOUNTER, DIAGNOSIS, TREATMENT)
+- [ ] **POSTDEATH-02**: R/88 smoke test validates R/51 structural integrity including death_valid filtering, DuckDB queries, bucket assignment, source_table labels, and styled xlsx output
+- [ ] **POSTDEATH-03**: R/39 pipeline runner includes R/51 in the investigation scripts stage
+
 ## v3.1 Requirements (Complete)
 
 ### Broadened Drug Grouping
@@ -71,7 +77,7 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### CONDITION Table Linkage
 
-- [x] **COND-01**: CONDITION table added as 3rd tier in cancer linkage cascade (DIAGNOSIS direct → temporal fallback → CONDITION supplement)
+- [x] **COND-01**: CONDITION table added as 3rd tier in cancer linkage cascade (DIAGNOSIS direct -> temporal fallback -> CONDITION supplement)
 - [x] **COND-02**: Linkage improvement report showing before/after unlinked episode rates
 - [x] **COND-03**: Previously unlinked episodes re-classified to linked cancer categories via CONDITION data
 
@@ -87,7 +93,7 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 | Feature | Reason |
 |---------|--------|
-| Insurance category consolidation (8→fewer) | Superseded by AMC 8-category framework; team settled on current mapping |
+| Insurance category consolidation (8->fewer) | Superseded by AMC 8-category framework; team settled on current mapping |
 | Tableau visualization building | Visualization is downstream; Amy builds Tableau from R outputs. R pipeline provides Tableau-ready data tables. |
 | Sharon's medication review integration | Waiting on external clinical review; will incorporate when received |
 | Regimen reconstruction beyond ABVD/BV+AVD/Nivo+AVD | Current 3-regimen detection covers ~95% of adult first-line HL |
@@ -130,6 +136,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SORT-01 | Phase 112 | Complete |
 | SORT-02 | Phase 112 | Complete |
 | SMOKE-112-01 | Phase 112 | Complete |
+| POSTDEATH-01 | Phase 113 | Pending |
+| POSTDEATH-02 | Phase 113 | Pending |
+| POSTDEATH-03 | Phase 113 | Pending |
 
 **Coverage:**
 - v3.2 requirements: 11 total
@@ -138,7 +147,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Phase 108-110 requirements: 12 total (WARN x6, COADMIN-FIX x3, V2FIX x3)
 - Phase 111 requirements: 2 total (T2COLLAPSE x2)
 - Phase 112 requirements: 5 total (GANTT-DX x2, SORT x2, SMOKE-112 x1)
+- Phase 113 requirements: 3 total (POSTDEATH x3)
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-22 -- Phase 112 GANTT-DX/SORT requirements added*
+*Last updated: 2026-06-24 -- Phase 113 POSTDEATH requirements added*

@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 112: `/gsd:execute-phase 112`
+1. Execute Phase 113: `/gsd:execute-phase 113`
 
 ## Coverage
 
@@ -147,3 +147,23 @@ Plans:
 
 Plans:
 - [x] 112-01-PLAN.md -- Temporal diagnosis enrichment in R/28, Gantt export schema update in R/52 with sort fix, descending sort fix in R/36 and R/57, R/88 smoke test validation
+
+### Phase 113: Investigate encounters after death date -- quantify how far after death the ~200 patients encounters occur
+
+**Goal:** User can run R/51 and see a meeting-ready two-sheet xlsx quantifying temporal gaps (in days) between death dates and all post-death clinical activity (encounters, diagnoses, treatments) for ~200 flagged patients, with clinically meaningful bucket distribution and per-event detail
+**Requirements**: POSTDEATH-01, POSTDEATH-02, POSTDEATH-03
+**Depends on:** Phase 112
+**Plans:** 1 plan
+
+Plans:
+- [ ] 113-01-PLAN.md -- Post-death encounter investigation script (R/51), R/88 smoke test section, R/39 pipeline runner entry
+
+### Phase 114: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 113
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 114 to break down)
