@@ -1757,6 +1757,76 @@ check("R/51 freezes panes on output sheets",
       sum(grepl("freeze_pane", r51_lines)) >= 2)
 
 # ==============================================================================
+# SECTION 15j: DRUG NAME CONSISTENCY REMEDIATION (Phase 114) ----
+# ==============================================================================
+
+message("\n[Phase 114] Drug name consistency remediation...")
+
+# Check 1: MEDICATION_LOOKUP exists and has entries
+check("MEDICATION_LOOKUP exists with 400+ entries (D-02, D-03)",
+      exists("MEDICATION_LOOKUP") && length(MEDICATION_LOOKUP) > 400)
+
+# Check 2: REFERENCE_XLSX constant exists
+check("REFERENCE_XLSX constant defined in R/00_config.R",
+      exists("REFERENCE_XLSX") && grepl("all_codes_resolved_next_tables", REFERENCE_XLSX))
+
+# Check 3: R/26 has Phase 114 reference fill with coalesce
+r26_lines <- readLines("R/26_treatment_episodes.R", warn = FALSE)
+check("R/26 fills blank drug_names from MEDICATION_LOOKUP (D-01, D-03)",
+      any(grepl("MEDICATION_LOOKUP", r26_lines)) &&
+      any(grepl("coalesce", r26_lines)))
+
+# Check 4: R/26 fill happens before aggregation
+r26_text <- paste(r26_lines, collapse = "\n")
+med_lookup_pos <- min(grep("MEDICATION_LOOKUP", r26_lines))
+aggregate_pos <- min(grep("Aggregate drug_names per episode", r26_lines))
+check("R/26 reference fill occurs BEFORE episode aggregation (Pitfall 3)",
+      med_lookup_pos < aggregate_pos)
+
+# Check 5: R/42 has 5-source precedence with reference_descriptions
+r42_lines <- readLines("R/42_build_code_descriptions.R", warn = FALSE)
+check("R/42 has reference_descriptions from MEDICATION_LOOKUP (D-04, D-05)",
+      any(grepl("reference_descriptions <- MEDICATION_LOOKUP", r42_lines)))
+
+# Check 6: R/42 combine includes reference_descriptions as last (highest priority)
+check("R/42 precedence chain ends with reference_descriptions (5th source)",
+      any(grepl("config_descriptions, reference_descriptions\\)", r42_lines)))
+
+# Check 7: R/79 audit script exists with minimum length
+r79_lines <- readLines("R/79_drug_name_consistency_audit.R", warn = FALSE)
+check("R/79 drug name consistency audit exists (>= 150 lines)",
+      length(r79_lines) >= 150)
+
+# Check 8: R/79 reads treatment_episode_detail.rds
+check("R/79 reads treatment_episode_detail.rds",
+      any(grepl("treatment_episode_detail\\.rds", r79_lines)))
+
+# Check 9: R/79 reads code_descriptions.rds
+check("R/79 reads code_descriptions.rds",
+      any(grepl("code_descriptions\\.rds", r79_lines)))
+
+# Check 10: R/79 uses MEDICATION_LOOKUP
+check("R/79 uses MEDICATION_LOOKUP for comparison",
+      any(grepl("MEDICATION_LOOKUP", r79_lines)))
+
+# Check 11: R/79 creates Summary and Detail sheets (D-07)
+check("R/79 creates Summary and Detail xlsx sheets (D-07)",
+      any(grepl("Summary", r79_lines)) &&
+      any(grepl("Detail", r79_lines)))
+
+# Check 12: R/79 uses styled headers (dark gray FF374151)
+check("R/79 uses dark gray header fill FF374151",
+      any(grepl("FF374151", r79_lines)))
+
+# Check 13: R/79 has freeze_panes for both sheets
+check("R/79 freezes panes on output sheets",
+      sum(grepl("freeze_pane", r79_lines)) >= 2)
+
+# Check 14: R/79 outputs drug_name_consistency_audit.xlsx
+check("R/79 outputs drug_name_consistency_audit.xlsx",
+      any(grepl("drug_name_consistency_audit\\.xlsx", r79_lines)))
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3300,6 +3370,11 @@ message("  * SORT-02: R/36 and R/57 descending sort removed (Phase 112)")
 message("  * POSTDEATH-01: Two-sheet xlsx with per-patient summary and per-event detail (R/51 Phase 113)")
 message("  * POSTDEATH-02: R/88 validates R/51 structure, bucketing, source_table labels (Phase 113)")
 message("  * POSTDEATH-03: R/39 pipeline runner includes R/51 (Phase 113)")
+message("  * DRUGFIX-01: Blank drug_names filled from reference Excel MEDICATION_LOOKUP (R/26 Phase 114)")
+message("  * DRUGFIX-02: Code descriptions use reference Excel as highest-priority source (R/42 Phase 114)")
+message("  * DRUGFIX-03: MEDICATION_LOOKUP centralized in R/00_config.R with 400+ entries (Phase 114)")
+message("  * DRUGFIX-04: Standalone audit xlsx with Summary + Detail sheets (R/79 Phase 114)")
+message("  * DRUGFIX-05: R/88 validates Phase 114 structural integrity (14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
