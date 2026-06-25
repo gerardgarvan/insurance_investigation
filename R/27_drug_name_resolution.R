@@ -53,9 +53,51 @@ checkmate::assert_class(
 # =============================================================================
 # Copied from R/40_investigate_unmatched_ndc.R for script independence (per Claude's discretion)
 
+#' Extract base ingredient name from full RxNorm clinical name
+#'
+#' RxNorm returns names like "Dacarbazine 10 MG/ML Injectable Solution" or
+#' "2 ML vincristine sulfate 1 MG/ML Prefilled Syringe". This function
+#' extracts just the base ingredient (e.g., "Dacarbazine", "vincristine sulfate")
+#' to match the format used in the reference Excel (MEDICATION_LOOKUP).
+#'
+#' @param name Character. Full RxNorm drug name.
+#' @return Character. Base ingredient name, title-cased.
+normalize_rxnorm_drug_name <- function(name) {
+  if (is.na(name) || name == "") return(NA_character_)
+
+  n <- name
+
+  # Strip pack wrapper: "{12 (methotrexate 2.5 MG Oral Tablet) } Pack"
+  if (str_detect(n, "^\\{")) {
+    n <- str_extract(n, "\\((.+?)\\s+\\d", group = 1)
+    if (is.na(n)) n <- name
+  }
+
+  # Strip leading quantity: "2 ML vincristine...", "25 ML doxorubicin..."
+  n <- str_remove(n, "^\\d+(\\.\\d+)?\\s+(ML|MG)\\s+")
+
+  # Extract ingredient: everything before first dosage number
+  ingredient <- str_extract(n, "^([A-Za-z][A-Za-z\\s\\-]+?)\\s+\\d", group = 1)
+  if (is.na(ingredient)) {
+    # No dosage found — strip brand bracket and trailing whitespace
+    ingredient <- str_remove(n, "\\s*\\[.*\\]$")
+  }
+
+  ingredient <- str_trim(ingredient)
+
+  # Title case for consistency with MEDICATION_LOOKUP normalization
+  ingredient <- str_to_title(ingredient)
+
+  # Preserve common abbreviations (same as MEDICATION_LOOKUP normalize_med)
+  ingredient <- str_replace_all(ingredient, "\\bHcl\\b", "HCl")
+
+  ingredient
+}
+
 #' Look up RxCUI drug name via RxNorm API
 #'
 #' Queries the NLM RxNorm API for drug name by RxCUI.
+#' Falls back to historystatus endpoint for retired/remapped codes.
 #' Uses httr2 with retry logic for transient failures.
 #'
 #' @param rxcui Character. RxCUI to look up.
@@ -64,6 +106,7 @@ checkmate::assert_class(
 lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
   result <- tryCatch(
     {
+      # Primary: /properties.json (active codes)
       url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui/{rxcui}/properties.json")
 
       resp <- request(url) %>%
@@ -74,14 +117,62 @@ lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
         ) %>%
         req_perform()
 
-      # Success - extract drug name
       data <- resp_body_json(resp)
 
       if (!is.null(data$properties) && !is.null(data$properties$name)) {
         tibble(
           code = rxcui,
-          drug_name = data$properties$name,
+          drug_name = normalize_rxnorm_drug_name(data$properties$name),
           lookup_status = "success"
+        )
+      } else {
+        # Fallback: /historystatus.json (retired/remapped codes)
+        Sys.sleep(sleep_sec)
+        lookup_rxcui_historystatus(rxcui, sleep_sec = 0)
+      }
+    },
+    error = function(e) {
+      tibble(
+        code = rxcui,
+        drug_name = NA_character_,
+        lookup_status = glue("error: {e$message}")
+      )
+    }
+  )
+
+  Sys.sleep(sleep_sec)
+  result
+}
+
+#' Look up retired/remapped RxCUI via historystatus endpoint
+#'
+#' Some RxCUI codes are retired or remapped and return empty from the
+#' properties endpoint. The historystatus endpoint preserves their names.
+#'
+#' @param rxcui Character. RxCUI to look up.
+#' @param sleep_sec Numeric. Seconds to sleep after request (default 0.1)
+#' @return Tibble with columns: code, drug_name, lookup_status
+lookup_rxcui_historystatus <- function(rxcui, sleep_sec = 0.1) {
+  result <- tryCatch(
+    {
+      url <- glue("https://rxnav.nlm.nih.gov/REST/rxcui/{rxcui}/historystatus.json")
+
+      resp <- request(url) %>%
+        req_timeout(10) %>%
+        req_retry(
+          max_tries = 3,
+          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+        ) %>%
+        req_perform()
+
+      data <- resp_body_json(resp)
+      attrs <- data$rxcuiStatusHistory$attributes
+
+      if (!is.null(attrs) && !is.null(attrs$name) && attrs$name != "") {
+        tibble(
+          code = rxcui,
+          drug_name = normalize_rxnorm_drug_name(attrs$name),
+          lookup_status = "success_historystatus"
         )
       } else {
         tibble(
@@ -95,7 +186,7 @@ lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
       tibble(
         code = rxcui,
         drug_name = NA_character_,
-        lookup_status = glue("error: {e$message}")
+        lookup_status = glue("error_historystatus: {e$message}")
       )
     }
   )
@@ -209,9 +300,9 @@ lookup_drug_codes_batch <- function(codes_df) {
   lookups <- bind_rows(results)
 
   # Summary
-  success_count <- sum(lookups$lookup_status == "success", na.rm = TRUE)
-  not_found_count <- sum(grepl("not_found", lookups$lookup_status), na.rm = TRUE)
-  error_count <- sum(grepl("error", lookups$lookup_status), na.rm = TRUE)
+  success_count <- sum(lookups$lookup_status %in% c("success", "success_historystatus"), na.rm = TRUE)
+  not_found_count <- sum(lookups$lookup_status == "not_found", na.rm = TRUE)
+  error_count <- sum(grepl("^error", lookups$lookup_status), na.rm = TRUE)
 
   message(glue("  Lookup summary: {success_count} success, {not_found_count} not found, {error_count} errors"))
 
@@ -321,11 +412,22 @@ if (file.exists(CACHE_FILE)) {
   message("  No cache found -- all codes will be queried")
 }
 
-# Only query codes not already in cache
+# Re-query codes previously cached as "not_found" (historystatus fallback may resolve them)
+retry_not_found <- cached_lookups %>%
+  filter(lookup_status == "not_found") %>%
+  semi_join(unique_codes, by = "code")
+
+if (nrow(retry_not_found) > 0) {
+  message(glue("  Retrying {nrow(retry_not_found)} previously not_found codes via historystatus fallback"))
+  cached_lookups <- cached_lookups %>%
+    anti_join(retry_not_found, by = "code")
+}
+
+# Only query codes not already in cache (includes retries)
 codes_to_query <- unique_codes %>%
   anti_join(cached_lookups, by = "code")
 
-message(glue("  {nrow(codes_to_query)} new codes to resolve via RxNorm API"))
+message(glue("  {nrow(codes_to_query)} codes to resolve via RxNorm API"))
 
 # =============================================================================
 # Query RxNorm API for Uncached Codes
@@ -365,13 +467,14 @@ message(glue("CSV reference saved: {OUTPUT_CSV}"))
 
 message("\n=== Drug Name Resolution Complete ===")
 message(glue("  Total codes resolved: {nrow(all_lookups)}"))
-message(glue("  Successful lookups: {sum(all_lookups$lookup_status == 'success', na.rm = TRUE)}"))
-message(glue("  Not found: {sum(grepl('not_found', all_lookups$lookup_status), na.rm = TRUE)}"))
-message(glue("  Errors: {sum(grepl('error', all_lookups$lookup_status), na.rm = TRUE)}"))
+message(glue("  Successful lookups (properties): {sum(all_lookups$lookup_status == 'success', na.rm = TRUE)}"))
+message(glue("  Recovered via historystatus: {sum(all_lookups$lookup_status == 'success_historystatus', na.rm = TRUE)}"))
+message(glue("  Not found: {sum(all_lookups$lookup_status == 'not_found', na.rm = TRUE)}"))
+message(glue("  Errors: {sum(grepl('^error', all_lookups$lookup_status), na.rm = TRUE)}"))
 
 # Show unique drug names found
 drug_names_found <- all_lookups %>%
-  filter(lookup_status == "success") %>%
+  filter(lookup_status %in% c("success", "success_historystatus")) %>%
   distinct(drug_name) %>%
   arrange(drug_name)
 

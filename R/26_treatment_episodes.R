@@ -1260,13 +1260,15 @@ wb_audit$merge_cells(sheet = "Drug Name Resolution", dims = "A1:D1")
 if (file.exists(DRUG_LOOKUP_RDS)) {
   # Summary stats
   n_success <- sum(drug_lookup$lookup_status == "success", na.rm = TRUE)
-  n_not_found <- sum(grepl("not_found", drug_lookup$lookup_status), na.rm = TRUE)
-  n_error <- sum(grepl("error", drug_lookup$lookup_status), na.rm = TRUE)
+  n_historystatus <- sum(drug_lookup$lookup_status == "success_historystatus", na.rm = TRUE)
+  n_not_found <- sum(drug_lookup$lookup_status == "not_found", na.rm = TRUE)
+  n_error <- sum(grepl("^error", drug_lookup$lookup_status), na.rm = TRUE)
 
   drug_summary <- tibble(
-    metric = c("Total codes resolved", "Successful lookups", "Not found", "Errors", "Unique drug names"),
+    metric = c("Total codes resolved", "Successful lookups (properties)", "Recovered via historystatus",
+               "Not found", "Errors", "Unique drug names"),
     value = c(
-      nrow(drug_lookup), n_success, n_not_found, n_error,
+      nrow(drug_lookup), n_success, n_historystatus, n_not_found, n_error,
       n_distinct(drug_lookup$drug_name[!is.na(drug_lookup$drug_name)])
     )
   )
