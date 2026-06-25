@@ -59,9 +59,8 @@
 
 # SECTION 1: SETUP AND CONFIGURATION ----
 
-# Clear stale log handler from previous source() in same session
+# Clear stale log connection from previous source() in same session
 try(close(.log_con), silent = TRUE)
-globalCallingHandlers(NULL)
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -84,17 +83,21 @@ NEW_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "episode_level_drug_grouping_tab
 OLD_OUTPUT_XLSX <- file.path(CONFIG$output_dir, "drug_grouping_tables.xlsx")  # Backward compat
 
 # --- Log console output to file ---
+# Uses message() masking instead of globalCallingHandlers() to avoid
+# "should not be called with handlers on the stack" error when source()'d
+# from pipeline runners with their own tryCatch/handler context.
 LOG_FILE <- file.path(CONFIG$output_dir, "56_new_tables_from_groupings.log")
 .log_con <- file(LOG_FILE, open = "wt")
+.original_message <- base::message
 
-globalCallingHandlers(
-  message = function(m) {
-    cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "),
-        conditionMessage(m),
-        file = .log_con, sep = "")
-    flush(.log_con)
-  }
-)
+message <- function(..., domain = NULL, appendLF = TRUE) {
+  msg <- paste0(...)
+  if (appendLF) msg <- paste0(msg, "\n")
+  .original_message(..., domain = domain, appendLF = appendLF)
+  cat(format(Sys.time(), "[%Y-%m-%d %H:%M:%S] "), msg,
+      file = .log_con, sep = "")
+  flush(.log_con)
+}
 
 message("=== Phase 79: Drug Grouping Summary Tables ===")
 message()
@@ -639,4 +642,6 @@ message(glue("    {OLD_OUTPUT_XLSX} (backward compatibility)"))
 message()
 message("Done.")
 
+# Restore original message() and close log
+message <- .original_message
 close(.log_con)
