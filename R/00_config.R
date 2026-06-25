@@ -2333,6 +2333,21 @@ MEDICATION_LOOKUP <- local({
 
 message(glue("  MEDICATION_LOOKUP: {length(MEDICATION_LOOKUP)} medication names from reference Excel"))
 
+# Supplement: J-codes not in reference Excel but identifiable via HCPCS
+MEDICATION_LOOKUP_JCODE_SUPPLEMENT <- c(
+  "J9000" = "Doxorubicin Hydrochloride",
+  "J9040" = "Bleomycin",
+  "J9042" = "Brentuximab Vedotin",
+  "J9130" = "Dacarbazine",
+  "J9299" = "Nivolumab",
+  "J9360" = "Vincristine Sulfate"
+)
+
+# Merge supplement (don't overwrite existing entries)
+new_codes <- setdiff(names(MEDICATION_LOOKUP_JCODE_SUPPLEMENT), names(MEDICATION_LOOKUP))
+MEDICATION_LOOKUP <- c(MEDICATION_LOOKUP, MEDICATION_LOOKUP_JCODE_SUPPLEMENT[new_codes])
+message(glue("  MEDICATION_LOOKUP supplement: {length(new_codes)} J-codes added ({paste(new_codes, collapse = ', ')})"))
+
 # ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----
 # ==============================================================================
