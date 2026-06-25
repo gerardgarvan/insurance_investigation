@@ -2328,6 +2328,17 @@ MEDICATION_LOOKUP <- local({
 
   all_meds <- sapply(all_meds, normalize_med, USE.NAMES = TRUE)
 
+  # Filter out entries where column 3 is a code-type label, not a drug name.
+  # Some sheets (Radiation, SCT) store code_type in column 3 instead of medication.
+  code_type_labels <- c("cpt", "cpt/hcpcs", "hcpcs", "drg", "icd-10-pcs",
+                         "icd-10-cm", "icd-9-cm", "icd-9-cm vol3", "rxnorm", "revenue")
+  is_code_type <- tolower(all_meds) %in% code_type_labels
+  if (any(is_code_type)) {
+    n_dropped <- sum(is_code_type)
+    message(glue("  MEDICATION_LOOKUP: dropped {n_dropped} entries where column 3 is a code type, not a drug name"))
+    all_meds <- all_meds[!is_code_type]
+  }
+
   return(all_meds)
 })
 
