@@ -1399,10 +1399,10 @@ for (col in new_cols) {
   )
 }
 
-# Check 10: R/28 comment references 22 columns (Phase 91)
+# Check 10: R/28 comment references 26 columns (medication_name removed)
 check(
-  "R/28 comment updated to 22 columns",
-  any(grepl("22 columns", r28_lines))
+  "R/28 comment updated to 26 columns",
+  any(grepl("26 columns", r28_lines))
 )
 
 # Check 11: R/28 has row count validation after enrichment
@@ -1518,10 +1518,10 @@ check(
   any(grepl("immuno_confidence", r28_lines, fixed = TRUE))
 )
 
-# Check 6: R/28 comment updated to 25 columns (Phase 93)
+# Check 6: R/28 comment references 26 columns (medication_name removed)
 check(
-  "R/28 comment updated to 25 columns (Phase 93)",
-  any(grepl("25 columns", r28_lines))
+  "R/28 comment references 26 columns",
+  any(grepl("26 columns", r28_lines))
 )
 
 # Check 7: is_sct_conditioning_context removed from R/52 Gantt export (Phase 99, D-11)
