@@ -506,15 +506,10 @@ message(glue("  drug_group populated: {n_with_group}/{nrow(episodes)} episodes")
 
 # --- SECTION 5C: XLSX METADATA ENRICHMENT (Phase 91, GANTT-01 through GANTT-05) ---
 
-message("\n--- Adding xlsx metadata (medication names, code types, source tables, treatment line, cross-use flags) ---")
+message("\n--- Adding xlsx metadata (code types, source tables, treatment line, cross-use flags) ---")
 
 # Step 5C-1: Convert xlsx_lookups named vectors to keyed data.tables (Phase 98)
 xlsx_lookups_dt <- list(
-  medications = {
-    dt <- data.table(code = names(xlsx_lookups$medications),
-                     medication_name = unname(xlsx_lookups$medications))
-    setkey(dt, code); dt
-  },
   code_types = {
     dt <- data.table(code = names(xlsx_lookups$code_types),
                      code_type = unname(xlsx_lookups$code_types))
@@ -550,20 +545,17 @@ codes_long <- episodes_dt[!is.na(triggering_codes) & triggering_codes != "",
                           by = episode_row]
 codes_long <- codes_long[!is.na(code) & code != ""]
 
-# Join all 5 xlsx_lookups
-codes_long[xlsx_lookups_dt$medications, on = .(code), medication_name := i.medication_name]
+# Join 4 xlsx_lookups (medication_name removed — drug_names from R/26 is canonical)
 codes_long[xlsx_lookups_dt$code_types, on = .(code), code_type := i.code_type]
 codes_long[xlsx_lookups_dt$source_tables, on = .(code), source_table := i.source_table]
 codes_long[xlsx_lookups_dt$line_labels, on = .(code), treatment_line := i.treatment_line]
 codes_long[xlsx_lookups_dt$cross_use_flags, on = .(code), sct_cross_use_flag := i.sct_cross_use_flag]
 
 # Collapse with column-specific aggregation (per D-04, D-05):
-# medication_name, code_type, source_table: parallel comma lists
+# code_type, source_table: parallel comma lists
 # treatment_line: priority F > S > E > N (single value per D-05)
 # sct_cross_use_flag: first non-NA (any-positive per D-09)
 metadata_agg <- codes_long[, .(
-  # GANTT-01: parallel comma list
-  medication_name = paste(ifelse(is.na(medication_name), NA_character_, medication_name), collapse = ","),
   # GANTT-02: parallel comma list
   code_type = paste(ifelse(is.na(code_type), NA_character_, code_type), collapse = ","),
   # GANTT-03: parallel comma list
@@ -587,16 +579,14 @@ metadata_agg <- codes_long[, .(
 
 # Merge back
 episodes_dt[metadata_agg, on = .(episode_row),
-            `:=`(medication_name = i.medication_name,
-                 code_type = i.code_type,
+            `:=`(code_type = i.code_type,
                  source_table = i.source_table,
                  treatment_line = i.treatment_line,
                  sct_cross_use_flag = i.sct_cross_use_flag)]
 
 # Handle NA/empty triggering_codes episodes
 episodes_dt[is.na(triggering_codes) | triggering_codes == "",
-            `:=`(medication_name = NA_character_,
-                 code_type = NA_character_,
+            `:=`(code_type = NA_character_,
                  source_table = NA_character_,
                  treatment_line = NA_character_,
                  sct_cross_use_flag = NA_character_)]
@@ -609,10 +599,8 @@ assert_true(nrow(episodes) == pre_enrichment_count,
             .var.name = glue("[R/28 ERROR] Enrichment changed row count: {pre_enrichment_count} -> {nrow(episodes)}"))
 
 # Step 5C-5: Log enrichment results
-n_with_med <- sum(!is.na(episodes$medication_name) & episodes$medication_name != "", na.rm = TRUE)
 n_with_line <- sum(!is.na(episodes$treatment_line) & episodes$treatment_line != "", na.rm = TRUE)
 n_with_cross <- sum(!is.na(episodes$sct_cross_use_flag) & episodes$sct_cross_use_flag != "", na.rm = TRUE)
-message(glue("  medication_name populated: {n_with_med}/{nrow(episodes)} episodes"))
 message(glue("  code_type populated: {sum(!is.na(episodes$code_type))}/{nrow(episodes)} episodes"))
 message(glue("  source_table populated: {sum(!is.na(episodes$source_table))}/{nrow(episodes)} episodes"))
 message(glue("  treatment_line populated: {n_with_line}/{nrow(episodes)} episodes"))
@@ -822,7 +810,7 @@ if (!"episode_dx_categories" %in% names(episodes)) {
   episodes <- episodes %>% mutate(episode_dx_categories = NA_character_)
 }
 
-# Final column order (was 22 columns Phase 91, 25 columns Phase 93, now 27 columns per Phase 112)
+# Final column order (26 columns: medication_name removed, drug_names from R/26 is canonical)
 episodes <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
@@ -830,7 +818,7 @@ episodes <- episodes %>%
     triggering_codes, encounter_ids, drug_names,
     cancer_category, cancer_link_method, is_hodgkin, regimen_label,
     triggering_code_description, drug_group,
-    medication_name, code_type, source_table, treatment_line, sct_cross_use_flag,
+    code_type, source_table, treatment_line, sct_cross_use_flag,
     # --- Phase 93: Temporal context + confidence flags (IMMU-01, IMMU-02) ---
     is_sct_conditioning_context, days_to_nearest_sct, immuno_confidence,
     # --- Phase 112: Temporal diagnosis enrichment (GANTT-DX-01) ---
@@ -843,7 +831,7 @@ message(glue("  Saved enriched treatment_episodes.rds: {nrow(episodes)} episodes
 # Verify column presence
 stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
                 "triggering_code_description", "drug_group",
-                "medication_name", "code_type", "source_table", "treatment_line",
+                "code_type", "source_table", "treatment_line",
                 "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",
                 "immuno_confidence", "episode_dx_codes", "episode_dx_categories") %in% names(episodes)))
 
@@ -856,7 +844,10 @@ message("\n--- Exporting unresolved TBD codes for SME review ---")
 all_xlsx_codes_dt <- data.table(code = names(xlsx_lookups$medications))
 drug_lookup <- get_lookup_dt("DRUG_GROUPINGS")
 all_xlsx_codes_dt[drug_lookup, on = .(code), current_category := i.drug_group]
-all_xlsx_codes_dt[xlsx_lookups_dt$medications, on = .(code), med_name := i.medication_name]
+medications_dt <- data.table(code = names(xlsx_lookups$medications),
+                             medication_name = unname(xlsx_lookups$medications))
+setkey(medications_dt, code)
+all_xlsx_codes_dt[medications_dt, on = .(code), med_name := i.medication_name]
 all_xlsx_codes_dt[xlsx_lookups_dt$line_labels, on = .(code), line_val := i.treatment_line]
 all_xlsx_codes_dt[xlsx_lookups_dt$cross_use_flags, on = .(code), cross_val := i.sct_cross_use_flag]
 

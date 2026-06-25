@@ -18,8 +18,8 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # Outputs:
-#   - output/gantt_episodes.csv (19 columns, dead columns dropped)
-#   - output/gantt_detail.csv (15 columns, dead columns dropped)
+#   - output/gantt_episodes.csv (18 columns, dead columns dropped)
+#   - output/gantt_detail.csv (14 columns, dead columns dropped)
 #
 # Dependencies:
 #   - 00_config (CONFIG paths, TREATMENT_TYPE_COLORS)
@@ -36,7 +36,7 @@
 #
 # v2 SCHEMA DOCUMENTATION (Post-Phase 99 Consolidation):
 #
-#   gantt_episodes.csv (19 columns):
+#   gantt_episodes.csv (18 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category (Chemotherapy, Radiation, SCT, etc.)
 #     3. episode_number (int) - Sequential episode number per patient-type
@@ -45,36 +45,34 @@
 #     6. episode_length_days (int) - Days from start to stop (0 for single-point)
 #     7. distinct_dates_in_episode (int) - Number of unique treatment dates
 #     8. triggering_codes (chr) - Semicolon-separated codes (Phase 64 cleanup)
-#     9. drug_names (chr) - Semicolon-separated generic drug names (Phase 64 cleanup)
+#     9. drug_names (chr) - Semicolon-separated canonical drug names from reference Excel
 #    10. triggering_code_descriptions (chr) - Semicolon-separated descriptions (Phase 64 cleanup)
 #    11. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
 #    12. is_hodgkin (lgl) - TRUE if cancer_category contains "Hodgkin" but not "Non-Hodgkin" (Phase 99)
 #    13. drug_group (chr) - Semicolon-separated drug category labels (Phase 78)
-#    14. medication_name (chr) - Semicolon-separated medication names from xlsx (Phase 92)
-#    15. code_type (chr) - Semicolon-separated code types: RXNORM, CPT/HCPCS, ICD-10-CM (Phase 92)
-#    16. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
-#    17. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
-#    18. episode_dx_codes (chr) - Semicolon-separated cancer DX codes within +/-30 days of episode (Phase 112)
-#    19. episode_dx_categories (chr) - Semicolon-separated cancer category names within +/-30 days of episode (Phase 112)
+#    14. code_type (chr) - Semicolon-separated code types: RXNORM, CPT/HCPCS, ICD-10-CM (Phase 92)
+#    15. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
+#    16. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
+#    17. episode_dx_codes (chr) - Semicolon-separated cancer DX codes within +/-30 days of episode (Phase 112)
+#    18. episode_dx_categories (chr) - Semicolon-separated cancer category names within +/-30 days of episode (Phase 112)
 #
 #   Phase 99 removed: encounter_ids, is_sct_conditioning_context, immuno_confidence (not visualization-relevant)
 #
-#   gantt_detail.csv (15 columns):
+#   gantt_detail.csv (14 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category
 #     3. treatment_date (date) - Single treatment date
 #     4. triggering_code (chr) - Single triggering code (Phase 64 cleanup)
-#     5. drug_name (chr) - Single generic drug name (Phase 64 cleanup)
+#     5. drug_name (chr) - Single canonical drug name from reference Excel
 #     6. episode_number (int) - Parent episode number
 #     7. episode_start (date) - Parent episode start
 #     8. episode_stop (date) - Parent episode stop
 #     9. triggering_code_description (chr) - Single code description (Phase 64 cleanup)
 #    10. cancer_category (chr) - Encounter-level cancer category or "Unlinked" (Phase 64)
 #    11. is_hodgkin (lgl) - TRUE if cancer_category contains "Hodgkin" but not "Non-Hodgkin" (Phase 99)
-#    12. medication_name (chr) - Semicolon-separated medication names from xlsx (Phase 92)
-#    13. code_type (chr) - Semicolon-separated code types: RXNORM, CPT/HCPCS, ICD-10-CM (Phase 92)
-#    14. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
-#    15. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
+#    12. code_type (chr) - Semicolon-separated code types: RXNORM, CPT/HCPCS, ICD-10-CM (Phase 92)
+#    13. source_table (chr) - Semicolon-separated source tables: PRESCRIBING, PROCEDURES, DIAGNOSIS (Phase 92)
+#    14. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
 #
 #   Phase 99 removed: ENCOUNTERID, is_sct_conditioning_context, immuno_confidence
 #
@@ -82,14 +80,14 @@
 #   D-01: v2 is the canonical export — v1 (R/51) deprecated and deleted
 #   D-02: Keep semicolons for multi-value field separators (Phase 64 standard)
 #   D-03: Keep v2 cleanup behavior: empty strings instead of NA, "Unlinked" for blank cancer_category
-#   D-04: Keep simplified drug names (Phase 64 BRAND_TO_GENERIC mapping)
+#   D-04: Drug names use canonical reference Excel names (MEDICATION_LOOKUP primary, RxNorm fallback)
 #   D-05: Rename output files from gantt_*_v2.csv to gantt_*.csv
 #   D-06: Drop encounter_ids (episodes) and ENCOUNTERID (detail) columns
 #   D-07: Add is_hodgkin back as convenience boolean derived from cancer_category
 #   D-08: (removed) regimen_label and is_first_line dropped — too sparse to be useful
 #   D-09: Keep drug_group column; cause_of_death dropped (100% empty)
-#   D-10: Keep source metadata columns: medication_name, code_type, source_table, sct_cross_use_flag
-#         treatment_line dropped (100% empty)
+#   D-10: Keep source metadata columns: code_type, source_table, sct_cross_use_flag
+#         medication_name removed (consolidated into drug_names), treatment_line dropped (100% empty)
 #   D-11: Remove immunotherapy context columns from Gantt export: is_sct_conditioning_context, immuno_confidence
 #   D-12: Clean up pseudo-treatment row metadata (empty strings for character enrichment columns)
 #   D-13: Replace hardcoded column count verification with dynamic schema vectors
@@ -108,8 +106,8 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # OUTPUTS:
-#   - output/gantt_episodes.csv (19 columns, dead columns dropped)
-#   - output/gantt_detail.csv (15 columns, dead columns dropped)
+#   - output/gantt_episodes.csv (18 columns, dead columns dropped)
+#   - output/gantt_detail.csv (14 columns, dead columns dropped)
 #
 # ==============================================================================
 
@@ -146,7 +144,7 @@ EPISODES_SCHEMA <- c(
   "triggering_codes", "drug_names", "triggering_code_descriptions",
   "cancer_category", "is_hodgkin",
   "drug_group",
-  "medication_name", "code_type", "source_table", "sct_cross_use_flag",
+  "code_type", "source_table", "sct_cross_use_flag",
   "episode_dx_codes", "episode_dx_categories"
 )
 
@@ -156,7 +154,7 @@ DETAIL_SCHEMA <- c(
   "episode_start", "episode_stop",
   "triggering_code_description",
   "cancer_category", "is_hodgkin",
-  "medication_name", "code_type", "source_table", "sct_cross_use_flag"
+  "code_type", "source_table", "sct_cross_use_flag"
 )
 
 # SECTION 0: INPUT VALIDATION ----
@@ -207,10 +205,6 @@ if (!"drug_group" %in% names(episodes)) {
 if (!"triggering_code_description" %in% names(episodes)) {
   warning("triggering_code_description column not found in treatment_episodes.rds — Phase 78 R/28 not yet run. Using default NA.")
   episodes <- episodes %>% mutate(triggering_code_description = NA_character_)
-}
-if (!"medication_name" %in% names(episodes)) {
-  warning("medication_name column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
-  episodes <- episodes %>% mutate(medication_name = NA_character_)
 }
 if (!"code_type" %in% names(episodes)) {
   warning("code_type column not found in treatment_episodes.rds — Phase 91 not yet run. Using default NA.")
@@ -291,7 +285,7 @@ episodes_export <- episodes %>%
       patient_id, episode_number, treatment_type,
       cancer_category, is_hodgkin, cancer_link_method,
       # --- Phase 92: metadata columns (GANTT-06) ---
-      medication_name, code_type, source_table, sct_cross_use_flag,
+      code_type, source_table, sct_cross_use_flag,
       # --- Phase 112: Temporal diagnosis columns (GANTT-DX-02) ---
       episode_dx_codes, episode_dx_categories
     ),
@@ -309,21 +303,21 @@ episodes_export <- episodes %>%
     cancer_category, is_hodgkin, cancer_link_method,
     drug_group,
     # --- Phase 92: metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, sct_cross_use_flag,
+    code_type, source_table, sct_cross_use_flag,
     # --- Phase 112: Temporal diagnosis columns (GANTT-DX-02) ---
     episode_dx_codes, episode_dx_categories
   )
 
 message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
 
-# Detail: 15 columns
+# Detail: 14 columns
 # Detail table joins cancer_category, is_hodgkin, metadata from episodes
 episodes_v2_cols <- episodes %>%
   select(
     patient_id, treatment_type, episode_number, cancer_category, is_hodgkin,
     cancer_link_method,
     # --- Phase 92: metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, sct_cross_use_flag
+    code_type, source_table, sct_cross_use_flag
   )
 
 detail_export <- detail %>%
@@ -347,7 +341,7 @@ detail_export <- detail %>%
     triggering_code_description,
     cancer_category, is_hodgkin, cancer_link_method,
     # --- Phase 92: metadata columns (GANTT-06) ---
-    medication_name, code_type, source_table, sct_cross_use_flag
+    code_type, source_table, sct_cross_use_flag
   )
 
 message(glue("  Built detail_export: {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
@@ -367,7 +361,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
     select(ID, DEATH_DATE)
 
   if (nrow(death_data) > 0) {
-    # Build death_episodes (19 columns after dead-column removal)
+    # Build death_episodes (18 columns after dead-column removal)
     death_episodes <- death_data %>%
       mutate(
         patient_id = ID,
@@ -385,7 +379,6 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         is_hodgkin = FALSE,
         cancer_link_method = "none",
         drug_group = "",
-        medication_name = "",
         code_type = "",
         source_table = "",
         sct_cross_use_flag = "",
@@ -399,7 +392,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method,
         drug_group,
-        medication_name, code_type, source_table, sct_cross_use_flag,
+        code_type, source_table, sct_cross_use_flag,
         episode_dx_codes, episode_dx_categories
       )
 
@@ -416,7 +409,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
       warning(glue("Death episodes has extra columns: {paste(extra_in_death_ep, collapse = ', ')}"))
     }
 
-    # Build death_detail (15 columns after dead-column removal)
+    # Build death_detail (14 columns after dead-column removal)
     death_detail <- death_data %>%
       mutate(
         patient_id = ID,
@@ -432,7 +425,6 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         cancer_category = "",
         is_hodgkin = FALSE,
         cancer_link_method = "none",
-        medication_name = "",
         code_type = "",
         source_table = "",
         sct_cross_use_flag = ""
@@ -443,7 +435,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         episode_number, episode_start, episode_stop,
         triggering_code_description,
         cancer_category, is_hodgkin, cancer_link_method,
-        medication_name, code_type, source_table, sct_cross_use_flag
+        code_type, source_table, sct_cross_use_flag
       )
 
     # Verify column alignment for detail
@@ -491,7 +483,7 @@ if (file.exists(COHORT_RDS)) {
     select(ID, first_hl_dx_date)
 
   if (nrow(hl_dx_data) > 0) {
-    # Build hl_dx_episodes (19 columns after dead-column removal)
+    # Build hl_dx_episodes (18 columns after dead-column removal)
     hl_dx_episodes <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -509,7 +501,6 @@ if (file.exists(COHORT_RDS)) {
         is_hodgkin = TRUE,
         cancer_link_method = "none",
         drug_group = "",
-        medication_name = "",
         code_type = "",
         source_table = "",
         sct_cross_use_flag = "",
@@ -523,7 +514,7 @@ if (file.exists(COHORT_RDS)) {
         encounter_ids, drug_names, triggering_code_descriptions,
         cancer_category, is_hodgkin, cancer_link_method,
         drug_group,
-        medication_name, code_type, source_table, sct_cross_use_flag,
+        code_type, source_table, sct_cross_use_flag,
         episode_dx_codes, episode_dx_categories
       )
 
@@ -540,7 +531,7 @@ if (file.exists(COHORT_RDS)) {
       warning(glue("HL Diagnosis episodes has extra columns: {paste(extra_in_hl_dx_ep, collapse = ', ')}"))
     }
 
-    # Build hl_dx_detail (15 columns after dead-column removal)
+    # Build hl_dx_detail (14 columns after dead-column removal)
     hl_dx_detail <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -556,7 +547,6 @@ if (file.exists(COHORT_RDS)) {
         cancer_category = "Hodgkin Lymphoma",
         is_hodgkin = TRUE,
         cancer_link_method = "none",
-        medication_name = "",
         code_type = "",
         source_table = "",
         sct_cross_use_flag = ""
@@ -567,7 +557,7 @@ if (file.exists(COHORT_RDS)) {
         episode_number, episode_start, episode_stop,
         triggering_code_description,
         cancer_category, is_hodgkin, cancer_link_method,
-        medication_name, code_type, source_table, sct_cross_use_flag
+        code_type, source_table, sct_cross_use_flag
       )
 
     # Verify column alignment for detail
@@ -621,95 +611,14 @@ clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
   paste(values, collapse = sep_out)
 }
 
-# Non-drug stopwords common in RxNorm descriptions (units, dosage forms, salts)
-DRUG_STOPWORDS <- c(
-  # Units
-  "ml", "mg", "gm", "mcg", "ug", "meq", "mmol", "hr",
-  # Dosage forms
-  "injection", "solution", "tablet", "capsule", "oral", "topical",
-  "pack", "kit", "vial", "actuation", "inhalation", "spray",
-  "cream", "ointment", "gel", "patch", "suspension", "powder",
-  "concentrate", "prefilled", "syringe", "pen", "autoinjector",
-  "extended", "release", "delayed", "ophthalmic", "nasal",
-  "rectal", "vaginal", "sublingual", "transdermal", "infusion",
-  # Salt forms
-  "hydrochloride", "sulfate", "sodium", "acetate", "citrate",
-  "fumarate", "maleate", "succinate", "tartrate", "mesylate",
-  "phosphate", "chloride", "bromide", "vedotin", "pegol",
-  "disodium", "potassium", "calcium", "oxide", "bitartrate",
-  # Filler words
-  "in", "of", "and", "per", "for", "with", "the"
-)
-
-# Brand-to-generic mapping for drugs in Hodgkin Lymphoma regimens
-BRAND_TO_GENERIC <- c(
-  "adcetris"    = "Brentuximab",
-  "opdivo"      = "Nivolumab",
-  "keytruda"    = "Pembrolizumab",
-  "vincasar"    = "Vincristine",
-  "oncovin"     = "Vincristine",
-  "adriamycin"  = "Doxorubicin",
-  "platinol"    = "Cisplatin",
-  "paraplatin"  = "Carboplatin",
-  "blenoxane"   = "Bleomycin",
-  "mustargen"   = "Mechlorethamine",
-  "matulane"    = "Procarbazine",
-  "velban"      = "Vinblastine",
-  "neosar"      = "Cyclophosphamide",
-  "cytoxan"     = "Cyclophosphamide"
-)
-
-# Helper function: extract generic drug name from RxNorm string
-simplify_drug_name <- function(drug_str) {
-  if (is.na(drug_str) || drug_str == "" || drug_str == "NA") {
-    return("")
-  }
-
-  drugs <- str_split(drug_str, ";")[[1]] # Already semicolon-separated after multi-value cleanup
-  drugs <- str_trim(drugs)
-
-  simplified <- sapply(drugs, function(d) {
-    if (d == "" || is.na(d)) {
-      return("")
-    }
-    d_lower <- tolower(d)
-
-    # Extract all 2+ letter words
-    words <- str_extract_all(d_lower, "[a-z]{2,}")[[1]]
-    if (length(words) == 0) {
-      return(d)
-    }
-
-    # Filter out non-drug stopwords
-    drug_words <- words[!words %in% DRUG_STOPWORDS]
-    if (length(drug_words) == 0) {
-      return(d)
-    }
-
-    name <- drug_words[1]
-
-    # Apply brand-to-generic mapping (already title-cased in the map)
-    if (name %in% names(BRAND_TO_GENERIC)) {
-      return(BRAND_TO_GENERIC[[name]])
-    }
-
-    # Title case: first letter uppercase
-    paste0(toupper(substr(name, 1, 1)), substr(name, 2, nchar(name)))
-  }, USE.NAMES = FALSE)
-
-  simplified <- unique(simplified)
-  paste(simplified, collapse = ";")
-}
-
 # Step 1: Clean multi-value fields (separator + dedup + drop blanks)
 episodes_export <- episodes_export %>%
   mutate(
     triggering_codes = sapply(triggering_codes, clean_multi_value, USE.NAMES = FALSE),
     drug_names = sapply(drug_names, clean_multi_value, USE.NAMES = FALSE),
     triggering_code_descriptions = sapply(triggering_code_descriptions, clean_multi_value, USE.NAMES = FALSE),
-    # Phase 92: 3 multi-value columns (medication_name, code_type, source_table)
+    # Phase 92: 2 multi-value columns (code_type, source_table)
     # NOTE: sct_cross_use_flag is single-value — skip cleanup
-    medication_name = sapply(medication_name, clean_multi_value, USE.NAMES = FALSE),
     code_type = sapply(code_type, clean_multi_value, USE.NAMES = FALSE),
     source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE),
     # Phase 112: 2 multi-value temporal diagnosis columns
@@ -721,22 +630,12 @@ detail_export <- detail_export %>%
   mutate(
     triggering_code = sapply(triggering_code, clean_multi_value, USE.NAMES = FALSE),
     triggering_code_description = sapply(triggering_code_description, clean_multi_value, USE.NAMES = FALSE),
-    # Phase 92: 3 multi-value columns (same pattern)
-    medication_name = sapply(medication_name, clean_multi_value, USE.NAMES = FALSE),
+    # Phase 92: 2 multi-value columns (same pattern)
     code_type = sapply(code_type, clean_multi_value, USE.NAMES = FALSE),
     source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE)
   )
 
 message("  Multi-value fields cleaned (separator: semicolon, deduped, blanks dropped)")
-
-# Step 2: Simplify drug names
-episodes_export <- episodes_export %>%
-  mutate(drug_names = sapply(drug_names, simplify_drug_name, USE.NAMES = FALSE))
-
-detail_export <- detail_export %>%
-  mutate(drug_name = sapply(drug_name, simplify_drug_name, USE.NAMES = FALSE))
-
-message("  Drug names simplified (generic names only)")
 
 # Step 3: Fill pseudo-treatment descriptions
 episodes_export <- episodes_export %>%
@@ -802,7 +701,7 @@ episodes_export <- episodes_export %>%
     # Drug info (D-09)
     drug_group,
     # Source metadata (D-10)
-    medication_name, code_type, source_table, sct_cross_use_flag,
+    code_type, source_table, sct_cross_use_flag,
     # Phase 112: Temporal diagnosis enrichment (GANTT-DX-02)
     episode_dx_codes, episode_dx_categories
   )
@@ -814,7 +713,7 @@ detail_export <- detail_export %>%
     episode_start, episode_stop,
     triggering_code_description,
     cancer_category, is_hodgkin,
-    medication_name, code_type, source_table, sct_cross_use_flag
+    code_type, source_table, sct_cross_use_flag
   )
 
 message("  Columns trimmed to Tableau-essential set")
@@ -874,13 +773,13 @@ message(glue("  HL Diagnosis pseudo-treatment rows: {format(hl_dx_rows, big.mark
 # Schema summary
 message(glue("\n  Schema: {length(EPISODES_SCHEMA)} episode columns, {length(DETAIL_SCHEMA)} detail columns"))
 
-# Phase 92: medication_name coverage stat
-episodes_with_medication <- episodes_export %>%
-  filter(medication_name != "" & !is.na(medication_name) & !treatment_type %in% c("Death", "HL Diagnosis")) %>%
+# Drug name coverage stat
+episodes_with_drugs <- episodes_export %>%
+  filter(drug_names != "" & !is.na(drug_names) & !treatment_type %in% c("Death", "HL Diagnosis")) %>%
   nrow()
 treatment_episodes_count <- episodes_export %>%
   filter(!treatment_type %in% c("Death", "HL Diagnosis")) %>%
   nrow()
-message(glue("  Episodes with medication_name: {format(episodes_with_medication, big.mark = ',')} / {format(treatment_episodes_count, big.mark = ',')} treatment episodes ({round(100 * episodes_with_medication / max(treatment_episodes_count, 1), 1)}%)"))
+message(glue("  Episodes with drug_names: {format(episodes_with_drugs, big.mark = ',')} / {format(treatment_episodes_count, big.mark = ',')} treatment episodes ({round(100 * episodes_with_drugs / max(treatment_episodes_count, 1), 1)}%)"))
 
 message("\nDone.")

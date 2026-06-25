@@ -261,15 +261,8 @@ message(glue("  TABLE-1 treatment types: {paste(unique(table1$treatment_type), c
 message()
 message("--- Building TABLE-2: Chemo Agents by Date (Phase 111: D-01 through D-07) ---")
 
-# Load reference xlsx medication mappings (adapt R/57 Section 3 pattern)
-assert_file_exists(REFERENCE_XLSX, .var.name = "[R/36 ERROR] Reference XLSX")
-ref_wb <- wb_load(REFERENCE_XLSX)
-
-# Chemo: code -> medication name (column C, "Medication")
-chemo_sheet <- wb_to_df(ref_wb, sheet = "Chemotherapy", start_row = 2)
-chemo_map <- setNames(as.character(chemo_sheet[[3]]), as.character(chemo_sheet[[1]]))
-chemo_map <- chemo_map[!is.na(names(chemo_map)) & !is.na(chemo_map)]
-message(glue("  Chemo medication mappings: {length(chemo_map)} codes"))
+# Use MEDICATION_LOOKUP from R/00_config.R (canonical reference Excel mappings)
+message(glue("  MEDICATION_LOOKUP entries: {length(MEDICATION_LOOKUP)} codes"))
 
 # Filter detail_dx to Chemotherapy only (per D-05)
 chemo_detail <- detail_dx %>%
@@ -280,12 +273,12 @@ chemo_detail <- detail_dx %>%
 message(glue("  Chemo detail rows (with triggering_code): {nrow(chemo_detail)}"))
 
 # Resolve medication names using 3-tier cascade (per D-04):
-#   Tier 1: Reference xlsx chemo_map (column C = medication name) -- most authoritative
+#   Tier 1: MEDICATION_LOOKUP from R/00_config.R (canonical reference Excel) -- most authoritative
 #   Tier 2: CODE_SUBCATEGORY_MAP from R/00_config.R (supplement)
 #   Tier 3: Fallback label with raw code
 chemo_detail <- chemo_detail %>%
   mutate(medication_name = case_when(
-    triggering_code %in% names(chemo_map) ~ chemo_map[triggering_code],
+    triggering_code %in% names(MEDICATION_LOOKUP) ~ MEDICATION_LOOKUP[triggering_code],
     triggering_code %in% names(CODE_SUBCATEGORY_MAP) ~ CODE_SUBCATEGORY_MAP[triggering_code],
     TRUE ~ paste0("Chemo code ", triggering_code)
   ))

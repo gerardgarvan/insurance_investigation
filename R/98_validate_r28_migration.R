@@ -97,20 +97,20 @@ message(sprintf("Loaded baseline: %s rows, %s columns",
 
 message("\n--- Section 4: Structure validation (PERF-04) ---")
 
-# Expected 25 columns per Phase 93
+# Expected 24 columns (medication_name removed — drug_names from R/26 is canonical)
 EXPECTED_COLS <- c(
   "patient_id", "treatment_type", "episode_number", "episode_start", "episode_stop",
   "episode_length_days", "distinct_dates_in_episode", "historical_flag",
   "triggering_codes", "encounter_ids", "drug_names",
   "cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
   "triggering_code_description", "drug_group",
-  "medication_name", "code_type", "source_table", "treatment_line",
+  "code_type", "source_table", "treatment_line",
   "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",
   "immuno_confidence"
 )
 
-check("Current output has 25 columns", ncol(current) == 25)
-check("Baseline has 25 columns", ncol(baseline) == 25)
+check("Current output has 24 columns", ncol(current) == 24)
+check("Baseline has 24 columns", ncol(baseline) == 24)
 check("Current and baseline have same column names",
       identical(names(current), names(baseline)))
 check("Column names match expected order",
@@ -168,8 +168,6 @@ check("NA count match: drug_group",
       sum(is.na(current_sorted$drug_group)) == sum(is.na(baseline_sorted$drug_group)))
 check("NA count match: triggering_code_description",
       sum(is.na(current_sorted$triggering_code_description)) == sum(is.na(baseline_sorted$triggering_code_description)))
-check("NA count match: medication_name",
-      sum(is.na(current_sorted$medication_name)) == sum(is.na(baseline_sorted$medication_name)))
 check("NA count match: treatment_line",
       sum(is.na(current_sorted$treatment_line)) == sum(is.na(baseline_sorted$treatment_line)))
 check("NA count match: sct_cross_use_flag",

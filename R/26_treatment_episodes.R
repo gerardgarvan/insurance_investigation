@@ -678,63 +678,54 @@ all_detail <- bind_rows(detail_list) %>%
 
 
 # --- SECTION 5B: JOIN DRUG NAMES TO EPISODE DETAIL ---
+# Cascade: MEDICATION_LOOKUP (reference Excel) primary, RxNorm API fallback
 
 message("\n--- Joining drug names to episode detail ---")
-DRUG_LOOKUP_RDS <- file.path(CONFIG$cache$outputs_dir, "drug_name_lookup.rds")
 
-# SAFE-01: File existence validated by existing file.exists() guard
-if (file.exists(DRUG_LOOKUP_RDS)) {
-  drug_lookup <- readRDS(DRUG_LOOKUP_RDS)
-  message(glue("  Loaded {nrow(drug_lookup)} drug name lookups"))
-} else {
-  warning("drug_name_lookup.rds not found. Run R/60_drug_name_resolution.R first. Drug names will be NA.")
-  drug_lookup <- tibble(code = character(0), drug_name = character(0))
-}
-
-# Join drug name to detail level (one row per patient/date/code)
-# Per D-12: left_join on triggering_code = code
-all_detail <- all_detail %>%
-  left_join(
-    drug_lookup %>% select(code, drug_name),
-    by = c("triggering_code" = "code")
-  )
-
-n_with_names <- sum(!is.na(all_detail$drug_name))
-n_chemo_rows <- sum(all_detail$treatment_type == "Chemotherapy")
-message(glue("  Drug names joined: {n_with_names} detail rows have drug names ({n_chemo_rows} chemotherapy rows total)"))
-
-# --- Phase 114: Fill blank drug_names from reference Excel MEDICATION_LOOKUP ---
-# Per D-01: Fill blank drug_names where triggering_codes can be mapped to reference Excel.
-# Per D-02: Use Medication column from reference Excel (not route/dosage/full description).
-# Per D-03: Map triggering_codes to reference Excel to fill blanks.
-# CRITICAL: Fill at detail grain BEFORE aggregation (Pitfall 3 avoidance).
-
-n_blank_before <- sum(is.na(all_detail$drug_name) | all_detail$drug_name == "", na.rm = TRUE)
-
+# Tier 1: MEDICATION_LOOKUP from reference Excel (canonical source)
 if (length(MEDICATION_LOOKUP) > 0) {
   medication_ref <- tibble(
     triggering_code = names(MEDICATION_LOOKUP),
-    ref_medication = unname(MEDICATION_LOOKUP)
+    ref_drug_name = unname(MEDICATION_LOOKUP)
   )
 
   all_detail <- all_detail %>%
-    left_join(medication_ref, by = "triggering_code") %>%
-    mutate(
-      drug_name = dplyr::coalesce(
-        if_else(is.na(drug_name) | drug_name == "", NA_character_, drug_name),
-        ref_medication
-      )
-    ) %>%
-    select(-ref_medication)
+    left_join(medication_ref, by = "triggering_code")
 
-  n_blank_after <- sum(is.na(all_detail$drug_name) | all_detail$drug_name == "", na.rm = TRUE)
-  n_filled <- n_blank_before - n_blank_after
-
-  message(glue("  Phase 114 reference fill: {n_filled} blank drug names filled from MEDICATION_LOOKUP"))
-  message(glue("  Still blank: {n_blank_after} detail rows (no matching triggering_code in reference)"))
+  n_ref_matched <- sum(!is.na(all_detail$ref_drug_name))
+  message(glue("  MEDICATION_LOOKUP (reference Excel): {n_ref_matched} detail rows matched"))
 } else {
-  message("  Phase 114: MEDICATION_LOOKUP empty, skipping reference fill")
+  all_detail <- all_detail %>% mutate(ref_drug_name = NA_character_)
+  message("  MEDICATION_LOOKUP empty — skipping reference Excel lookup")
 }
+
+# Tier 2: RxNorm API lookup (fallback for codes not in reference)
+DRUG_LOOKUP_RDS <- file.path(CONFIG$cache$outputs_dir, "drug_name_lookup.rds")
+
+if (file.exists(DRUG_LOOKUP_RDS)) {
+  drug_lookup <- readRDS(DRUG_LOOKUP_RDS)
+  message(glue("  Loaded {nrow(drug_lookup)} RxNorm drug name lookups"))
+
+  all_detail <- all_detail %>%
+    left_join(
+      drug_lookup %>% select(code, drug_name) %>% rename(rxnorm_drug_name = drug_name),
+      by = c("triggering_code" = "code")
+    )
+} else {
+  warning("drug_name_lookup.rds not found. Run R/60_drug_name_resolution.R first. RxNorm fallback will be NA.")
+  all_detail <- all_detail %>% mutate(rxnorm_drug_name = NA_character_)
+}
+
+# Resolve: reference Excel wins, RxNorm fills gaps
+all_detail <- all_detail %>%
+  mutate(drug_name = dplyr::coalesce(ref_drug_name, rxnorm_drug_name)) %>%
+  select(-ref_drug_name, -rxnorm_drug_name)
+
+n_with_names <- sum(!is.na(all_detail$drug_name))
+n_chemo_rows <- sum(all_detail$treatment_type == "Chemotherapy")
+n_blank <- sum(is.na(all_detail$drug_name) | all_detail$drug_name == "", na.rm = TRUE)
+message(glue("  Drug names resolved: {n_with_names} detail rows have drug names ({n_chemo_rows} chemotherapy rows total)"))
+message(glue("  Still blank: {n_blank} detail rows (no match in reference or RxNorm)"))
 
 # Aggregate drug_names per episode from detail level
 # Per D-12: comma-separated unique drug names per episode

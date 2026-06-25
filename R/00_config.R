@@ -2340,7 +2340,7 @@ MEDICATION_LOOKUP_JCODE_SUPPLEMENT <- c(
   "J9042" = "Brentuximab Vedotin",
   "J9130" = "Dacarbazine",
   "J9299" = "Nivolumab",
-  "J9360" = "Vincristine Sulfate"
+  "J9360" = "Vinblastine Sulfate"
 )
 
 # Merge supplement (don't overwrite existing entries)

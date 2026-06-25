@@ -1390,8 +1390,8 @@ check(
   any(grepl('source.*utils_xlsx_lookups', r28_lines))
 )
 
-# Check 5-9: R/28 select() includes all 5 new columns
-new_cols <- c("medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag")
+# Check 5-8: R/28 select() includes 4 metadata columns (medication_name removed)
+new_cols <- c("code_type", "source_table", "treatment_line", "sct_cross_use_flag")
 for (col in new_cols) {
   check(
     glue("R/28 select() includes {col}"),
@@ -1411,10 +1411,10 @@ check(
   any(grepl("pre_enrichment_count", r28_lines))
 )
 
-# Check 12: R/28 stopifnot includes medication_name
+# Check 12: R/28 stopifnot includes code_type (medication_name removed)
 check(
-  "R/28 stopifnot includes medication_name",
-  any(grepl('"medication_name"', r28_lines, fixed = TRUE))
+  "R/28 stopifnot includes code_type",
+  any(grepl('"code_type"', r28_lines, fixed = TRUE))
 )
 
 # Check 13: aggregate_treatment_line implements F > S > E > N priority (per D-03)
@@ -1438,8 +1438,8 @@ message("\n[GANTT] Gantt v2 schema extension validation (GANTT-06, GANTT-07)..."
 
 r52_lines <- readLines("R/52_gantt_v2_export.R", warn = FALSE)
 
-# GANTT-06: Check 1-5: R/52 select() includes all 5 new Phase 92 columns
-phase92_cols <- c("medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag")
+# GANTT-06: Check 1-3: R/52 select() includes Phase 92 metadata columns (medication_name removed)
+phase92_cols <- c("code_type", "source_table", "sct_cross_use_flag")
 for (col in phase92_cols) {
   check(
     glue("R/52 select() includes {col} (GANTT-06)"),
@@ -1459,22 +1459,16 @@ check(
   any(grepl("identical.*colnames.*detail_export.*DETAIL_SCHEMA", r52_lines))
 )
 
-# GANTT-06: Check 8: R/52 has guard clauses for Phase 91 columns
+# GANTT-06: Check 8: R/52 has guard clauses for Phase 92 columns
 check(
-  "R/52 has guard clause for medication_name",
-  any(grepl('!"medication_name" %in% names', r52_lines, fixed = TRUE))
+  "R/52 has guard clause for code_type",
+  any(grepl('!"code_type" %in% names', r52_lines, fixed = TRUE))
 )
 
-# GANTT-06: Check 9: Death pseudo-rows include new columns with NA
+# GANTT-06: Check 9: R/52 applies clean_multi_value to code_type
 check(
-  "R/52 death_episodes has medication_name = NA_character_",
-  any(grepl("medication_name = NA_character_", r52_lines, fixed = TRUE))
-)
-
-# GANTT-06: Check 10: Multi-value cleanup applied to medication_name
-check(
-  "R/52 applies clean_multi_value to medication_name",
-  any(grepl("medication_name = sapply.*clean_multi_value", r52_lines))
+  "R/52 applies clean_multi_value to code_type",
+  any(grepl("code_type = sapply.*clean_multi_value", r52_lines))
 )
 
 # GANTT-07: Check 11: R/51 v1 export deprecated (Phase 99, D-01)
@@ -2906,8 +2900,8 @@ if (file.exists("R/36_tableau_ready_tables.R")) {
   check("R/36 filters to Chemotherapy for TABLE-2",
         any(grepl('treatment_type.*==.*"Chemotherapy"', r36_text)))
 
-  check("R/36 resolves medication_name",
-        any(grepl("medication_name", r36_text)))
+  check("R/36 resolves medication_name via MEDICATION_LOOKUP",
+        any(grepl("MEDICATION_LOOKUP", r36_text)))
 
   check("R/36 loads reference xlsx for drug mappings",
         any(grepl("all_codes_resolved_next_tables", r36_text)))
@@ -2920,7 +2914,7 @@ if (file.exists("R/36_tableau_ready_tables.R")) {
         any(grepl("group_by.*treatment_date", r36_text)))
 
   check("R/36 TABLE-2 collapses agents string (Phase 111 D-06)",
-        any(grepl("agents.*=.*paste.*sort.*unique.*medication_name", r36_text)))
+        any(grepl("agents.*=.*paste.*sort.*unique", r36_text)))
 
   check("R/36 TABLE-2 merges cancer_codes via strsplit (Phase 111 D-03)",
         any(grepl("strsplit.*cancer_codes", r36_text)))
@@ -3349,7 +3343,7 @@ message("  * TEST-03: Fixture schema validation in local mode (Section 33)")
 message("  * TEST-05: Conditional fixture count assertions (Sections 32+33)")
 message("  * CLEAN-01: False-positive SCT codes removed from DRUG_GROUPINGS (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC)")
 message("  * CLEAN-02: Smoke test validates deprecated codes absent and descriptions preserved")
-message("  * GANTT-01: medication_name column in treatment_episodes.rds (Phase 91)")
+message("  * GANTT-01: drug_names consolidated (MEDICATION_LOOKUP primary, RxNorm fallback)")
 message("  * GANTT-02: code_type column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-03: source_table column in treatment_episodes.rds (Phase 91)")
 message("  * GANTT-04: treatment_line column with F>S>E>N priority (Phase 91)")

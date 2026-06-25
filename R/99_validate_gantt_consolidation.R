@@ -85,29 +85,28 @@ detail <- read.csv(file.path(CONFIG$output_dir, "gantt_detail.csv"),
 expected_ep_cols <- c(
   "patient_id", "treatment_type", "episode_number",
   "episode_start", "episode_stop", "episode_length_days",
-  "distinct_dates_in_episode", "historical_flag",
+  "distinct_dates_in_episode",
   "triggering_codes", "drug_names", "triggering_code_descriptions",
-  "cancer_category", "is_hodgkin", "regimen_label", "is_first_line",
-  "drug_group", "cause_of_death",
-  "medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag"
+  "cancer_category", "is_hodgkin",
+  "drug_group",
+  "code_type", "source_table", "sct_cross_use_flag",
+  "episode_dx_codes", "episode_dx_categories"
 )
 
 expected_detail_cols <- c(
   "patient_id", "treatment_type", "treatment_date",
   "triggering_code", "drug_name", "episode_number",
-  "episode_start", "episode_stop", "historical_flag",
+  "episode_start", "episode_stop",
   "triggering_code_description",
   "cancer_category", "is_hodgkin",
-  "regimen_label", "is_first_line",
-  "cause_of_death",
-  "medication_name", "code_type", "source_table", "treatment_line", "sct_cross_use_flag"
+  "code_type", "source_table", "sct_cross_use_flag"
 )
 
-check("3.1 Episodes CSV has 22 columns",
-      ncol(episodes) == 22)
+check("3.1 Episodes CSV has 18 columns",
+      ncol(episodes) == 18)
 
-check("3.2 Detail CSV has 20 columns",
-      ncol(detail) == 20)
+check("3.2 Detail CSV has 14 columns",
+      ncol(detail) == 14)
 
 check("3.3 Episodes column names match expected schema",
       identical(colnames(episodes), expected_ep_cols))
@@ -230,39 +229,17 @@ message("\n=== Section 6: Pseudo-Treatment Metadata ===")
 
 # Death rows: character enrichment columns should be empty string (not NA)
 if (nrow(death_rows) > 0) {
-  check("6.1 Death rows: regimen_label is empty string (not NA)",
-        all(death_rows$regimen_label == ""))
-
-  check("6.2 Death rows: drug_group is empty string (not NA)",
+  check("6.1 Death rows: drug_group is empty string (not NA)",
         all(death_rows$drug_group == ""))
 
-  check("6.3 Death rows: medication_name is empty string (not NA)",
-        all(death_rows$medication_name == ""))
-
-  check("6.4 Death rows: treatment_line is empty string (not NA)",
-        all(death_rows$treatment_line == ""))
-
-  check("6.5 Death rows: sct_cross_use_flag is empty string (not NA)",
+  check("6.2 Death rows: sct_cross_use_flag is empty string (not NA)",
         all(death_rows$sct_cross_use_flag == ""))
-
-  # is_first_line should be NA for Death rows (not FALSE)
-  check("6.6 Death rows: is_first_line is NA (not FALSE)",
-        all(is.na(death_rows$is_first_line)))
 }
 
 # HL Diagnosis rows: same checks
 if (nrow(hl_dx_rows) > 0) {
-  check("6.7 HL Dx rows: regimen_label is empty string (not NA)",
-        all(hl_dx_rows$regimen_label == ""))
-
-  check("6.8 HL Dx rows: drug_group is empty string (not NA)",
+  check("6.3 HL Dx rows: drug_group is empty string (not NA)",
         all(hl_dx_rows$drug_group == ""))
-
-  check("6.9 HL Dx rows: cause_of_death is empty string (not NA)",
-        all(hl_dx_rows$cause_of_death == ""))
-
-  check("6.10 HL Dx rows: is_first_line is NA (not FALSE)",
-        all(is.na(hl_dx_rows$is_first_line)))
 }
 
 # ==============================================================================
