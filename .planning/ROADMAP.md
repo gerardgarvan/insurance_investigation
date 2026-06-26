@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 114: `/gsd:execute-phase 114`
+1. Execute Phase 115: `/gsd:execute-phase 115`
 
 ## Coverage
 
@@ -168,3 +168,13 @@ Plans:
 Plans:
 - [x] 114-01-PLAN.md -- Add MEDICATION_LOOKUP to R/00_config.R, fill blank drug_names in R/26, add reference Excel as 5th source in R/42
 - [x] 114-02-PLAN.md -- Standalone audit script (R/79), R/88 smoke test section, R/39 pipeline runner entry
+
+### Phase 115: Add 7-day confirmed column to Gantt data which indicates if on the patient level the episode_dx_categories is also in the patients unique 7-day
+
+**Goal:** Gantt episodes CSV enriched with two new columns: (1) episode_dx_7day_confirmed showing which episode dx categories are 7-day confirmed at the patient level, and (2) age_at_episode showing integer age at episode start from DEMOGRAPHIC birth date
+**Requirements**: GANTT7DAY-01, GANTT7DAY-02, GANTAGE-01, SMOKE-115-01
+**Depends on:** Phase 114
+**Plans:** 1 plan
+
+Plans:
+- [ ] 115-01-PLAN.md -- Add episode_dx_7day_confirmed and age_at_episode to R/52 Gantt export, R/88 smoke test validation
