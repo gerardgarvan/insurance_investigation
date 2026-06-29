@@ -18,13 +18,14 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # Outputs:
-#   - output/gantt_episodes.csv (18 columns, dead columns dropped)
+#   - output/gantt_episodes.csv (20 columns, dead columns dropped)
 #   - output/gantt_detail.csv (14 columns, dead columns dropped)
 #
 # Dependencies:
 #   - 00_config (CONFIG paths, TREATMENT_TYPE_COLORS)
 #   - utils_duckdb (DuckDB connection helpers)
 #   - utils_dates (date parsing utilities)
+#   - utils_cancer (classify_codes for 7-day confirmed mapping)
 #
 # Requirements:
 #   DOC-01, DOC-02, DOC-03, GANTT-06, GANTT-07
@@ -36,7 +37,7 @@
 #
 # v2 SCHEMA DOCUMENTATION (Post-Phase 99 Consolidation):
 #
-#   gantt_episodes.csv (18 columns):
+#   gantt_episodes.csv (20 columns):
 #     1. patient_id (chr) - Patient identifier
 #     2. treatment_type (chr) - Treatment category (Chemotherapy, Radiation, SCT, etc.)
 #     3. episode_number (int) - Sequential episode number per patient-type
@@ -55,6 +56,8 @@
 #    16. sct_cross_use_flag (chr) - SCT cross-use flag or empty (Phase 92)
 #    17. episode_dx_codes (chr) - Semicolon-separated cancer DX codes within +/-30 days of episode (Phase 112)
 #    18. episode_dx_categories (chr) - Semicolon-separated cancer category names within +/-30 days of episode (Phase 112)
+#    19. episode_dx_7day_confirmed (chr) - Semicolon-separated 7-day confirmed cancer categories (subset of episode_dx_categories) (Phase 115)
+#    20. age_at_episode (int) - Patient age in integer years (floor) at episode_start (Phase 115)
 #
 #   Phase 99 removed: encounter_ids, is_sct_conditioning_context, immuno_confidence (not visualization-relevant)
 #
@@ -106,7 +109,7 @@
 #   - output/confirmed_hl_cohort.rds (Phase 55: HL diagnosis dates)
 #
 # OUTPUTS:
-#   - output/gantt_episodes.csv (18 columns, dead columns dropped)
+#   - output/gantt_episodes.csv (20 columns, dead columns dropped)
 #   - output/gantt_detail.csv (14 columns, dead columns dropped)
 #
 # ==============================================================================
@@ -124,6 +127,7 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
+source("R/utils/utils_cancer.R")  # Phase 115: classify_codes() for 7-day confirmed mapping
 
 # Input paths: existing RDS artifacts
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
@@ -131,6 +135,7 @@ DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds"
 DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+CANCER_SUMMARY_CSV <- build_output_path("tables", "cancer_summary.csv")  # Phase 115: 7-day confirmed data
 
 # Output paths: CSV files for third-party Gantt chart consumption (Phase 99: no _v2 suffix)
 OUTPUT_EPISODES <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
@@ -145,7 +150,9 @@ EPISODES_SCHEMA <- c(
   "cancer_category", "is_hodgkin",
   "drug_group",
   "code_type", "source_table", "sct_cross_use_flag",
-  "episode_dx_codes", "episode_dx_categories"
+  "episode_dx_codes", "episode_dx_categories",
+  # Phase 115: 7-day confirmed subset + age (+2 columns, now 20 total)
+  "episode_dx_7day_confirmed", "age_at_episode"
 )
 
 DETAIL_SCHEMA <- c(
@@ -228,6 +235,60 @@ if (!"episode_dx_categories" %in% names(episodes)) {
 }
 
 
+# --- SECTION 2B: 7-DAY CONFIRMED CATEGORIES LOOKUP (Phase 115, D-01 through D-05) ---
+
+message("\n--- Building patient-level 7-day confirmed categories lookup ---")
+
+patient_7day_categories <- NULL
+if (file.exists(CANCER_SUMMARY_CSV)) {
+  cancer_summary_raw <- read.csv(CANCER_SUMMARY_CSV, stringsAsFactors = FALSE)
+  message(glue("  Loaded cancer_summary.csv: {nrow(cancer_summary_raw)} patient-code rows"))
+
+  # Filter to 7-day confirmed rows only (per D-04)
+  confirmed_rows <- cancer_summary_raw %>%
+    filter(two_or_more_unique_dates_gt_7 == 1)
+
+  message(glue("  7-day confirmed rows: {nrow(confirmed_rows)}"))
+
+  # Map cancer_code to category name using classify_codes() (per D-03, D-04)
+  confirmed_rows <- confirmed_rows %>%
+    mutate(category = classify_codes(cancer_code))
+
+  # Aggregate to patient level: set of confirmed category names per patient
+  patient_7day_categories <- confirmed_rows %>%
+    filter(!is.na(category)) %>%
+    group_by(ID) %>%
+    summarise(
+      confirmed_categories = list(sort(unique(category))),
+      .groups = "drop"
+    )
+
+  message(glue("  Patients with 7-day confirmed categories: {nrow(patient_7day_categories)}"))
+} else {
+  message("  WARNING: cancer_summary.csv not found. episode_dx_7day_confirmed will be empty.")
+}
+
+
+# --- SECTION 2C: DEMOGRAPHIC BIRTH DATE LOOKUP (Phase 115, D-06, D-07) ---
+
+message("\n--- Loading DEMOGRAPHIC birth dates for age_at_episode ---")
+
+birth_dates <- NULL
+tryCatch({
+  open_pcornet_con()
+  birth_dates <- get_pcornet_table("DEMOGRAPHIC") %>%
+    select(ID, BIRTH_DATE) %>%
+    collect() %>%
+    mutate(BIRTH_DATE = parse_pcornet_date(BIRTH_DATE)) %>%
+    filter(!is.na(BIRTH_DATE))
+  close_pcornet_con()
+  message(glue("  Loaded {nrow(birth_dates)} patients with valid birth dates"))
+}, error = function(e) {
+  message(glue("  WARNING: Could not load DEMOGRAPHIC birth dates: {conditionMessage(e)}"))
+  try(close_pcornet_con(), silent = TRUE)
+})
+
+
 # --- SECTION 3: CODE DESCRIPTION LOOKUP ----
 
 # Load code descriptions (Phase 48b) — non-fatal if missing
@@ -268,7 +329,7 @@ map_codes_to_descriptions <- function(codes_str) {
 
 message("\n--- Building export tables ---")
 
-# Episodes: 24 columns (Phase 112 schema)
+# Episodes: build intermediate (trimmed to 20 columns by Step 6)
 episodes_export <- episodes %>%
   select(
     patient_id, treatment_type, episode_number,
@@ -347,6 +408,67 @@ detail_export <- detail %>%
 message(glue("  Built detail_export: {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
 
 
+# --- Phase 115: Compute episode_dx_7day_confirmed (D-01 through D-05, D-09) ---
+if (!is.null(patient_7day_categories)) {
+  # Helper: intersect episode categories with patient's confirmed categories
+  # NOTE: At this point episode_dx_categories is comma-separated (pre-clean_multi_value)
+  get_confirmed_subset <- function(patient_id_val, dx_categories_str) {
+    if (is.na(dx_categories_str) || dx_categories_str == "") return("")
+
+    # Parse episode categories (comma-separated before clean_multi_value)
+    ep_cats <- str_split(dx_categories_str, ",")[[1]]
+    ep_cats <- str_trim(ep_cats)
+    ep_cats <- ep_cats[ep_cats != ""]
+
+    if (length(ep_cats) == 0) return("")
+
+    # Look up patient's confirmed categories
+    patient_row <- patient_7day_categories %>% filter(ID == patient_id_val)
+    if (nrow(patient_row) == 0) return("")
+
+    confirmed <- patient_row$confirmed_categories[[1]]
+    matched <- intersect(ep_cats, confirmed)
+
+    if (length(matched) == 0) return("")
+    paste(sort(matched), collapse = ",")
+  }
+
+  episodes_export <- episodes_export %>%
+    mutate(
+      episode_dx_7day_confirmed = mapply(
+        get_confirmed_subset,
+        patient_id, episode_dx_categories,
+        USE.NAMES = FALSE
+      )
+    )
+  n_with_confirmed <- sum(episodes_export$episode_dx_7day_confirmed != "", na.rm = TRUE)
+  message(glue("  Phase 115: {n_with_confirmed} episodes with 7-day confirmed dx categories"))
+} else {
+  episodes_export <- episodes_export %>%
+    mutate(episode_dx_7day_confirmed = "")
+  message("  Phase 115: episode_dx_7day_confirmed defaulted to empty (no cancer_summary.csv)")
+}
+
+# --- Phase 115: Compute age_at_episode (D-06, D-07) ---
+if (!is.null(birth_dates)) {
+  episodes_export <- episodes_export %>%
+    left_join(birth_dates, by = c("patient_id" = "ID")) %>%
+    mutate(
+      age_at_episode = as.integer(floor(
+        as.numeric(difftime(episode_start, BIRTH_DATE, units = "days")) / 365.25
+      ))
+    ) %>%
+    select(-BIRTH_DATE)
+
+  n_with_age <- sum(!is.na(episodes_export$age_at_episode))
+  message(glue("  Phase 115: {n_with_age}/{nrow(episodes_export)} episodes with age_at_episode"))
+} else {
+  episodes_export <- episodes_export %>%
+    mutate(age_at_episode = NA_integer_)
+  message("  Phase 115: age_at_episode defaulted to NA (no DEMOGRAPHIC data)")
+}
+
+
 # --- SECTION 4B: DEATH PSEUDO-TREATMENT ROWS (per D-09, D-12) ---
 
 if (file.exists(VALIDATED_DEATHS_RDS)) {
@@ -361,7 +483,7 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
     select(ID, DEATH_DATE)
 
   if (nrow(death_data) > 0) {
-    # Build death_episodes (18 columns after dead-column removal)
+    # Build death_episodes (20 columns after dead-column removal)
     death_episodes <- death_data %>%
       mutate(
         patient_id = ID,
@@ -383,7 +505,10 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         source_table = "",
         sct_cross_use_flag = "",
         episode_dx_codes = NA_character_,
-        episode_dx_categories = NA_character_
+        episode_dx_categories = NA_character_,
+        # Phase 115: 7-day confirmed + age defaults for pseudo-treatment rows
+        episode_dx_7day_confirmed = "",
+        age_at_episode = NA_integer_
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -393,7 +518,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         cancer_category, is_hodgkin, cancer_link_method,
         drug_group,
         code_type, source_table, sct_cross_use_flag,
-        episode_dx_codes, episode_dx_categories
+        episode_dx_codes, episode_dx_categories,
+        episode_dx_7day_confirmed, age_at_episode
       )
 
     # Verify column alignment before binding (R/49 pattern, lines 734-756)
@@ -483,7 +609,7 @@ if (file.exists(COHORT_RDS)) {
     select(ID, first_hl_dx_date)
 
   if (nrow(hl_dx_data) > 0) {
-    # Build hl_dx_episodes (18 columns after dead-column removal)
+    # Build hl_dx_episodes (20 columns after dead-column removal)
     hl_dx_episodes <- hl_dx_data %>%
       mutate(
         patient_id = ID,
@@ -505,7 +631,10 @@ if (file.exists(COHORT_RDS)) {
         source_table = "",
         sct_cross_use_flag = "",
         episode_dx_codes = NA_character_,
-        episode_dx_categories = NA_character_
+        episode_dx_categories = NA_character_,
+        # Phase 115: 7-day confirmed + age defaults for pseudo-treatment rows
+        episode_dx_7day_confirmed = "",
+        age_at_episode = NA_integer_
       ) %>%
       select(
         patient_id, treatment_type, episode_number,
@@ -515,7 +644,8 @@ if (file.exists(COHORT_RDS)) {
         cancer_category, is_hodgkin, cancer_link_method,
         drug_group,
         code_type, source_table, sct_cross_use_flag,
-        episode_dx_codes, episode_dx_categories
+        episode_dx_codes, episode_dx_categories,
+        episode_dx_7day_confirmed, age_at_episode
       )
 
     # Verify column alignment before binding
@@ -623,7 +753,9 @@ episodes_export <- episodes_export %>%
     source_table = sapply(source_table, clean_multi_value, USE.NAMES = FALSE),
     # Phase 112: 2 multi-value temporal diagnosis columns
     episode_dx_codes = sapply(episode_dx_codes, clean_multi_value, USE.NAMES = FALSE),
-    episode_dx_categories = sapply(episode_dx_categories, clean_multi_value, USE.NAMES = FALSE)
+    episode_dx_categories = sapply(episode_dx_categories, clean_multi_value, USE.NAMES = FALSE),
+    # Phase 115: 7-day confirmed multi-value field
+    episode_dx_7day_confirmed = sapply(episode_dx_7day_confirmed, clean_multi_value, USE.NAMES = FALSE)
   )
 
 detail_export <- detail_export %>%
@@ -703,7 +835,9 @@ episodes_export <- episodes_export %>%
     # Source metadata (D-10)
     code_type, source_table, sct_cross_use_flag,
     # Phase 112: Temporal diagnosis enrichment (GANTT-DX-02)
-    episode_dx_codes, episode_dx_categories
+    episode_dx_codes, episode_dx_categories,
+    # Phase 115: 7-day confirmed subset + age (+2 columns, now 20 total)
+    episode_dx_7day_confirmed, age_at_episode
   )
 
 detail_export <- detail_export %>%
