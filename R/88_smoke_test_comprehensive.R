@@ -1892,9 +1892,9 @@ check("R/52 Death pseudo-treatment includes episode_dx_7day_confirmed (Phase 115
       any(grepl("episode_dx_7day_confirmed.*=.*\"\"", r52_text) &
           grepl("Death", r52_text)))
 
-# Check 13: Death pseudo-treatment rows include age_at_episode
-check("R/52 Death pseudo-treatment includes age_at_episode (Phase 115)",
-      any(grepl("age_at_episode.*=.*NA_integer_", r52_text)))
+# Check 13: Death pseudo-treatment rows compute age_at_episode from birth_dates
+check("R/52 Death pseudo-treatment computes age_at_episode (Phase 115)",
+      any(grepl("age_at_episode", r52_text) & grepl("birth_dates", r52_text)))
 
 # Check 14: R/52 uses classify_codes to map cancer codes to categories
 check("R/52 uses classify_codes() for 7-day code-to-category mapping (Phase 115)",

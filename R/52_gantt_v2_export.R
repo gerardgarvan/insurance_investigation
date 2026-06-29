@@ -506,10 +506,25 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         sct_cross_use_flag = "",
         episode_dx_codes = NA_character_,
         episode_dx_categories = NA_character_,
-        # Phase 115: 7-day confirmed + age defaults for pseudo-treatment rows
-        episode_dx_7day_confirmed = "",
-        age_at_episode = NA_integer_
-      ) %>%
+        episode_dx_7day_confirmed = ""
+      )
+
+    # Compute age_at_episode for Death rows using birth_dates
+    if (!is.null(birth_dates)) {
+      death_episodes <- death_episodes %>%
+        left_join(birth_dates, by = c("patient_id" = "ID")) %>%
+        mutate(
+          age_at_episode = as.integer(floor(
+            as.numeric(difftime(episode_start, BIRTH_DATE, units = "days")) / 365.25
+          ))
+        ) %>%
+        select(-BIRTH_DATE)
+    } else {
+      death_episodes <- death_episodes %>%
+        mutate(age_at_episode = NA_integer_)
+    }
+
+    death_episodes <- death_episodes %>%
       select(
         patient_id, treatment_type, episode_number,
         episode_start, episode_stop, episode_length_days,
@@ -632,10 +647,25 @@ if (file.exists(COHORT_RDS)) {
         sct_cross_use_flag = "",
         episode_dx_codes = NA_character_,
         episode_dx_categories = NA_character_,
-        # Phase 115: 7-day confirmed + age defaults for pseudo-treatment rows
-        episode_dx_7day_confirmed = "",
-        age_at_episode = NA_integer_
-      ) %>%
+        episode_dx_7day_confirmed = ""
+      )
+
+    # Compute age_at_episode for HL Diagnosis rows using birth_dates
+    if (!is.null(birth_dates)) {
+      hl_dx_episodes <- hl_dx_episodes %>%
+        left_join(birth_dates, by = c("patient_id" = "ID")) %>%
+        mutate(
+          age_at_episode = as.integer(floor(
+            as.numeric(difftime(episode_start, BIRTH_DATE, units = "days")) / 365.25
+          ))
+        ) %>%
+        select(-BIRTH_DATE)
+    } else {
+      hl_dx_episodes <- hl_dx_episodes %>%
+        mutate(age_at_episode = NA_integer_)
+    }
+
+    hl_dx_episodes <- hl_dx_episodes %>%
       select(
         patient_id, treatment_type, episode_number,
         episode_start, episode_stop, episode_length_days,
