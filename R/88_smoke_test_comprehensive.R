@@ -1821,6 +1821,80 @@ check("R/79 outputs drug_name_consistency_audit.xlsx",
       any(grepl("drug_name_consistency_audit\\.xlsx", r79_lines)))
 
 # ==============================================================================
+# SECTION 15k: GANTT 7-DAY CONFIRMED + AGE AT EPISODE (Phase 115) ----
+# ==============================================================================
+
+message("\n[Phase 115] Gantt 7-day confirmed + age at episode...")
+
+# Check 1: R/52 EPISODES_SCHEMA includes episode_dx_7day_confirmed
+check("R/52 EPISODES_SCHEMA includes episode_dx_7day_confirmed (Phase 115)",
+      any(grepl("episode_dx_7day_confirmed", r52_lines)))
+
+# Check 2: R/52 EPISODES_SCHEMA includes age_at_episode
+check("R/52 EPISODES_SCHEMA includes age_at_episode (Phase 115)",
+      any(grepl("age_at_episode", r52_lines)))
+
+# Check 3: R/52 EPISODES_SCHEMA has 20 entries (was 18 pre-Phase 115)
+r52_schema_start <- grep("^EPISODES_SCHEMA\\s*<-", r52_lines)[1]
+if (!is.na(r52_schema_start)) {
+  r52_schema_end <- r52_schema_start
+  while (r52_schema_end <= length(r52_lines) && !grepl("\\)$", r52_lines[r52_schema_end])) {
+    r52_schema_end <- r52_schema_end + 1
+  }
+  schema_text_115 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
+  schema_entries_115 <- lengths(regmatches(schema_text_115, gregexpr('"[a-z_]+"', schema_text_115)))
+  check("R/52 EPISODES_SCHEMA has 20 entries (Phase 115: +2 from 18)",
+        schema_entries_115 == 20)
+} else {
+  check("R/52 EPISODES_SCHEMA has 20 entries (Phase 115: +2 from 18)", FALSE)
+}
+
+# Check 4: R/52 sources utils_cancer.R (needed for classify_codes)
+check("R/52 sources utils_cancer.R for classify_codes (Phase 115)",
+      any(grepl('source.*utils_cancer', r52_lines)))
+
+# Check 5: R/52 reads cancer_summary.csv for 7-day confirmed data
+check("R/52 references cancer_summary.csv (Phase 115)",
+      any(grepl("cancer_summary\\.csv|cancer_summary", r52_lines)))
+
+# Check 6: R/52 filters on two_or_more_unique_dates_gt_7 for confirmation
+check("R/52 filters two_or_more_unique_dates_gt_7 == 1 for 7-day confirmed (Phase 115)",
+      any(grepl("two_or_more_unique_dates_gt_7.*==.*1", r52_lines)))
+
+# Check 7: R/52 queries DEMOGRAPHIC for birth dates
+check("R/52 queries DEMOGRAPHIC table for birth dates (Phase 115)",
+      any(grepl("DEMOGRAPHIC", r52_lines)))
+
+# Check 8: R/52 computes age as integer floor
+check("R/52 computes age_at_episode as integer floor (Phase 115)",
+      any(grepl("as\\.integer.*floor", r52_text)))
+
+# Check 9: R/52 applies clean_multi_value to episode_dx_7day_confirmed
+check("R/52 applies clean_multi_value to episode_dx_7day_confirmed (Phase 115)",
+      any(grepl("episode_dx_7day_confirmed.*clean_multi_value", r52_text)))
+
+# Check 10: R/52 DETAIL_SCHEMA does NOT include episode_dx_7day_confirmed (episodes-only)
+check("R/52 DETAIL_SCHEMA excludes episode_dx_7day_confirmed (Phase 115: episode-level only)",
+      !any(grepl("DETAIL_SCHEMA.*episode_dx_7day_confirmed", r52_text)))
+
+# Check 11: R/52 DETAIL_SCHEMA does NOT include age_at_episode (episodes-only)
+check("R/52 DETAIL_SCHEMA excludes age_at_episode (Phase 115: episode-level only)",
+      !any(grepl("DETAIL_SCHEMA.*age_at_episode", r52_text)))
+
+# Check 12: Death pseudo-treatment rows include episode_dx_7day_confirmed
+check("R/52 Death pseudo-treatment includes episode_dx_7day_confirmed (Phase 115)",
+      any(grepl("episode_dx_7day_confirmed.*=.*\"\"", r52_text) &
+          grepl("Death", r52_text)))
+
+# Check 13: Death pseudo-treatment rows include age_at_episode
+check("R/52 Death pseudo-treatment includes age_at_episode (Phase 115)",
+      any(grepl("age_at_episode.*=.*NA_integer_", r52_text)))
+
+# Check 14: R/52 uses classify_codes to map cancer codes to categories
+check("R/52 uses classify_codes() for 7-day code-to-category mapping (Phase 115)",
+      any(grepl("classify_codes", r52_lines)))
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3369,6 +3443,9 @@ message("  * DRUGFIX-02: Code descriptions use reference Excel as highest-priori
 message("  * DRUGFIX-03: MEDICATION_LOOKUP centralized in R/00_config.R with 400+ entries (Phase 114)")
 message("  * DRUGFIX-04: Standalone audit xlsx with Summary + Detail sheets (R/79 Phase 114)")
 message("  * DRUGFIX-05: R/88 validates Phase 114 structural integrity (14 checks)")
+message("  * GANTT7DAY-01: episode_dx_7day_confirmed column in gantt_episodes.csv (Phase 115)")
+message("  * GANTAGE-01: age_at_episode column in gantt_episodes.csv (Phase 115)")
+message("  * SMOKE-115-01: R/88 validates Phase 115 structural integrity (14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
