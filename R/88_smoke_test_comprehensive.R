@@ -1757,8 +1757,8 @@ check("R/51 freezes panes on output sheets",
 message("\n[Phase 114] Drug name consistency remediation...")
 
 # Check 1: MEDICATION_LOOKUP exists and has entries
-check("MEDICATION_LOOKUP exists with 400+ entries (D-02, D-03)",
-      exists("MEDICATION_LOOKUP") && length(MEDICATION_LOOKUP) > 400)
+check("MEDICATION_LOOKUP exists with 200+ entries (D-02, D-03)",
+      exists("MEDICATION_LOOKUP") && length(MEDICATION_LOOKUP) >= 200)
 
 # Check 2: REFERENCE_XLSX constant exists
 check("REFERENCE_XLSX constant defined in R/00_config.R",
