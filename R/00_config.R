@@ -3523,6 +3523,15 @@ library(checkmate)
 library(data.table)
 
 # ==============================================================================
+# SECTION 7e: GLUE LIBRARY ----
+# ==============================================================================
+# WHY load globally: Multiple utility modules in R/utils/ (utils_assertions.R,
+# utils_dt.R, utils_snapshot.R, utils_treatment.R, utils_xlsx_lookups.R) call
+# glue() or glue::glue(). Loading here before the auto-source block at the end
+# of this file ensures glue is available when those utils are sourced.
+library(glue)
+
+# ==============================================================================
 # SECTION 7d: KEYED DATA.TABLE LOOKUP TABLES (Phase 95, v3.0) ----
 # ==============================================================================
 # Converts existing named vectors/lists to keyed data.tables for fast binary-search
