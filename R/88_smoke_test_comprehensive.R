@@ -1838,7 +1838,7 @@ check("R/52 EPISODES_SCHEMA includes age_at_episode (Phase 115)",
 r52_schema_start <- grep("^EPISODES_SCHEMA\\s*<-", r52_lines)[1]
 if (!is.na(r52_schema_start)) {
   r52_schema_end <- r52_schema_start
-  while (r52_schema_end <= length(r52_lines) && !grepl("\\)$", r52_lines[r52_schema_end])) {
+  while (r52_schema_end <= length(r52_lines) && !grepl("\\)\\s*$", trimws(r52_lines[r52_schema_end]))) {
     r52_schema_end <- r52_schema_end + 1
   }
   schema_text_115 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
@@ -1876,7 +1876,7 @@ check("R/52 applies clean_multi_value to episode_dx_7day_confirmed (Phase 115)",
 # Check 10: R/52 DETAIL_SCHEMA does NOT include episode_dx_7day_confirmed (episodes-only)
 r52_detail_start <- grep("^DETAIL_SCHEMA\\s*<-", r52_lines)[1]
 r52_detail_end <- r52_detail_start
-while (r52_detail_end <= length(r52_lines) && !grepl("\\)$", r52_lines[r52_detail_end])) {
+while (r52_detail_end <= length(r52_lines) && !grepl("\\)\\s*$", trimws(r52_lines[r52_detail_end]))) {
   r52_detail_end <- r52_detail_end + 1
 }
 detail_schema_text_115 <- paste(r52_lines[r52_detail_start:r52_detail_end], collapse = "\n")
