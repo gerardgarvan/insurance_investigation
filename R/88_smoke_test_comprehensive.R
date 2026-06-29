@@ -1842,7 +1842,7 @@ if (!is.na(r52_schema_start)) {
     r52_schema_end <- r52_schema_end + 1
   }
   schema_text_115 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
-  schema_entries_115 <- lengths(regmatches(schema_text_115, gregexpr('"[a-z_]+"', schema_text_115)))
+  schema_entries_115 <- lengths(regmatches(schema_text_115, gregexpr('"[a-z0-9_]+"', schema_text_115)))
   check("R/52 EPISODES_SCHEMA has 20 entries (Phase 115: +2 from 18)",
         schema_entries_115 == 20)
 } else {
@@ -1874,12 +1874,18 @@ check("R/52 applies clean_multi_value to episode_dx_7day_confirmed (Phase 115)",
       any(grepl("episode_dx_7day_confirmed.*clean_multi_value", r52_text)))
 
 # Check 10: R/52 DETAIL_SCHEMA does NOT include episode_dx_7day_confirmed (episodes-only)
+r52_detail_start <- grep("^DETAIL_SCHEMA\\s*<-", r52_lines)[1]
+r52_detail_end <- r52_detail_start
+while (r52_detail_end <= length(r52_lines) && !grepl("\\)$", r52_lines[r52_detail_end])) {
+  r52_detail_end <- r52_detail_end + 1
+}
+detail_schema_text_115 <- paste(r52_lines[r52_detail_start:r52_detail_end], collapse = "\n")
 check("R/52 DETAIL_SCHEMA excludes episode_dx_7day_confirmed (Phase 115: episode-level only)",
-      !any(grepl("DETAIL_SCHEMA.*episode_dx_7day_confirmed", r52_text)))
+      !grepl("episode_dx_7day_confirmed", detail_schema_text_115))
 
 # Check 11: R/52 DETAIL_SCHEMA does NOT include age_at_episode (episodes-only)
 check("R/52 DETAIL_SCHEMA excludes age_at_episode (Phase 115: episode-level only)",
-      !any(grepl("DETAIL_SCHEMA.*age_at_episode", r52_text)))
+      !grepl("age_at_episode", detail_schema_text_115))
 
 # Check 12: Death pseudo-treatment rows include episode_dx_7day_confirmed
 check("R/52 Death pseudo-treatment includes episode_dx_7day_confirmed (Phase 115)",
