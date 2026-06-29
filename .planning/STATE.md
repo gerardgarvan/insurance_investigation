@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
 status: verifying
-last_updated: "2026-06-24T16:50:14.999Z"
-last_activity: 2026-06-24
+last_updated: "2026-06-29T14:13:48.228Z"
+last_activity: 2026-06-29
 progress:
-  total_phases: 11
-  completed_phases: 11
-  total_plans: 14
-  completed_plans: 14
+  total_phases: 12
+  completed_phases: 12
+  total_plans: 15
+  completed_plans: 15
 ---
 
 # Project State
@@ -20,14 +20,14 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 114 — investigate-blank-drug-names-and-make-drug-names-triggering-code-descriptions-consistent-with-treatment-reference-excel
+**Current focus:** Phase 115 — add-7-day-confirmed-column-to-gantt-data-which-indicates-if-on-the-patient-level-the-episode-dx-categories-is-also-in-the-patients-unique-7-day
 
 ## Current Position
 
-Phase: 114
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-24
+Phase: 115 (add-7-day-confirmed-column-to-gantt-data-which-indicates-if-on-the-patient-level-the-episode-dx-categories-is-also-in-the-patients-unique-7-day) — COMPLETE
+Plan: 1 of 1
+Status: Phase 115 complete
+Last activity: 2026-06-29 -- Phase 115 execution complete
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Last activity: 2026-06-24
 - Phase 104: 6 minutes (2 tasks)
 - Phase 105: 6 minutes (3 tasks)
 - Phase 106: 5 minutes (2 tasks)
+- Phase 115: 6 minutes (2 tasks)
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Last activity: 2026-06-24
 - Phase 112 added: Add cancer diagnosis temporally to Gantt data and enforce alphabetical ordering in abbreviated/condensed lists
 - Phase 113 added: Investigate encounters after death date — quantify how far after death the ~200 patients encounters occur
 - Phase 114 added: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
+- Phase 115 added: Add 7-day confirmed column to Gantt data which indicates if on the patient level the episode_dx_categories is also in the patients unique 7-day
 
 ### Open Questions
 
@@ -109,11 +111,12 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 106` (Phase 106 execution)
-**What's next:** Plan Phase 107 via `/gsd:plan-phase 107`
+**Last command:** `/gsd:execute-phase 115` (Phase 115 execution)
+**What's next:** Phase 115 complete; next ad-hoc phase or milestone transition
 
 ### Recent Changes
 
+- 2026-06-29: Phase 115 complete (7-day confirmed column + age at episode in Gantt data)
 - 2026-06-15: Phase 106 complete (Tableau-Ready Data Tables - TABLE-01/TABLE-02)
 - 2026-06-15: Phase 105 complete (Code & Overlap Verification - CODE-01/02/03, OVERLAP-01)
 - 2026-06-15: Phase 104 complete (Treatment Timing Investigations - TIMING-01/02)
@@ -146,4 +149,4 @@ None identified.
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
-*State updated: 2026-06-15 after Phase 106 completion*
+*State updated: 2026-06-29 after Phase 115 completion*

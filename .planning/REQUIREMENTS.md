@@ -68,10 +68,10 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### Gantt 7-Day Confirmed + Age at Episode (Phase 115)
 
-- [ ] **GANTT7DAY-01**: gantt_episodes.csv includes episode_dx_7day_confirmed column containing the semicolon-separated subset of episode_dx_categories that are 7-day confirmed at the patient level (2+ unique dates spanning 7+ days per category from cancer_summary.csv), alphabetically sorted per D-09
-- [ ] **GANTT7DAY-02**: 7-day confirmation matching operates at category level (not raw ICD code level) by mapping cancer_summary cancer_codes to categories via classify_codes(), then intersecting with episode's episode_dx_categories
-- [ ] **GANTAGE-01**: gantt_episodes.csv includes age_at_episode column with integer years (floor of years between DEMOGRAPHIC BIRTH_DATE and episode_start), NA for patients with missing birth date
-- [ ] **SMOKE-115-01**: R/88 smoke test validates Phase 115 structural integrity (EPISODES_SCHEMA has 20 entries, both new columns present, classify_codes sourced, cancer_summary referenced, DEMOGRAPHIC queried, integer floor age, clean_multi_value applied, DETAIL_SCHEMA unchanged)
+- [x] **GANTT7DAY-01**: gantt_episodes.csv includes episode_dx_7day_confirmed column containing the semicolon-separated subset of episode_dx_categories that are 7-day confirmed at the patient level (2+ unique dates spanning 7+ days per category from cancer_summary.csv), alphabetically sorted per D-09
+- [x] **GANTT7DAY-02**: 7-day confirmation matching operates at category level (not raw ICD code level) by mapping cancer_summary cancer_codes to categories via classify_codes(), then intersecting with episode's episode_dx_categories
+- [x] **GANTAGE-01**: gantt_episodes.csv includes age_at_episode column with integer years (floor of years between DEMOGRAPHIC BIRTH_DATE and episode_start), NA for patients with missing birth date
+- [x] **SMOKE-115-01**: R/88 smoke test validates Phase 115 structural integrity (EPISODES_SCHEMA has 20 entries, both new columns present, classify_codes sourced, cancer_summary referenced, DEMOGRAPHIC queried, integer floor age, clean_multi_value applied, DETAIL_SCHEMA unchanged)
 
 ## v3.1 Requirements (Complete)
 
@@ -159,10 +159,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DRUGFIX-03 | Phase 114 | Pending |
 | DRUGFIX-04 | Phase 114 | Complete |
 | DRUGFIX-05 | Phase 114 | Complete |
-| GANTT7DAY-01 | Phase 115 | Pending |
-| GANTT7DAY-02 | Phase 115 | Pending |
-| GANTAGE-01 | Phase 115 | Pending |
-| SMOKE-115-01 | Phase 115 | Pending |
+| GANTT7DAY-01 | Phase 115 | Complete |
+| GANTT7DAY-02 | Phase 115 | Complete |
+| GANTAGE-01 | Phase 115 | Complete |
+| SMOKE-115-01 | Phase 115 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total

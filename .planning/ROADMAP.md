@@ -174,7 +174,7 @@ Plans:
 **Goal:** Gantt episodes CSV enriched with two new columns: (1) episode_dx_7day_confirmed showing which episode dx categories are 7-day confirmed at the patient level, and (2) age_at_episode showing integer age at episode start from DEMOGRAPHIC birth date
 **Requirements**: GANTT7DAY-01, GANTT7DAY-02, GANTAGE-01, SMOKE-115-01
 **Depends on:** Phase 114
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 115-01-PLAN.md -- Add episode_dx_7day_confirmed and age_at_episode to R/52 Gantt export, R/88 smoke test validation
+- [x] 115-01-PLAN.md -- Add episode_dx_7day_confirmed and age_at_episode to R/52 Gantt export, R/88 smoke test validation
