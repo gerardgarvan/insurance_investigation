@@ -282,6 +282,14 @@ tryCatch({
     mutate(BIRTH_DATE = parse_pcornet_date(BIRTH_DATE)) %>%
     filter(!is.na(BIRTH_DATE))
   close_pcornet_con()
+  # Flag patients with placeholder 1900 birth year (PCORnet masked/unknown DOB)
+  n_masked <- sum(year(birth_dates$BIRTH_DATE) == 1900)
+  if (n_masked > 0) {
+    message(glue("  {n_masked} patients have 1900 placeholder birth date — age will be set to 90"))
+    masked_ids <- birth_dates$ID[year(birth_dates$BIRTH_DATE) == 1900]
+  } else {
+    masked_ids <- character(0)
+  }
   message(glue("  Loaded {nrow(birth_dates)} patients with valid birth dates"))
 }, error = function(e) {
   message(glue("  WARNING: Could not load DEMOGRAPHIC birth dates: {conditionMessage(e)}"))
@@ -460,6 +468,10 @@ if (!is.null(birth_dates)) {
     ) %>%
     select(-BIRTH_DATE)
 
+  # Override age to 90 for patients with masked (1900) birth dates
+  episodes_export <- episodes_export %>%
+    mutate(age_at_episode = ifelse(patient_id %in% masked_ids, 90L, age_at_episode))
+
   n_with_age <- sum(!is.na(episodes_export$age_at_episode))
   message(glue("  Phase 115: {n_with_age}/{nrow(episodes_export)} episodes with age_at_episode"))
 } else {
@@ -518,7 +530,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
             as.numeric(difftime(episode_start, BIRTH_DATE, units = "days")) / 365.25
           ))
         ) %>%
-        select(-BIRTH_DATE)
+        select(-BIRTH_DATE) %>%
+        mutate(age_at_episode = ifelse(patient_id %in% masked_ids, 90L, age_at_episode))
     } else {
       death_episodes <- death_episodes %>%
         mutate(age_at_episode = NA_integer_)
@@ -659,7 +672,8 @@ if (file.exists(COHORT_RDS)) {
             as.numeric(difftime(episode_start, BIRTH_DATE, units = "days")) / 365.25
           ))
         ) %>%
-        select(-BIRTH_DATE)
+        select(-BIRTH_DATE) %>%
+        mutate(age_at_episode = ifelse(patient_id %in% masked_ids, 90L, age_at_episode))
     } else {
       hl_dx_episodes <- hl_dx_episodes %>%
         mutate(age_at_episode = NA_integer_)
