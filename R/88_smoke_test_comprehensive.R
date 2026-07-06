@@ -1901,6 +1901,130 @@ check("R/52 uses classify_codes() for 7-day code-to-category mapping (Phase 115)
       any(grepl("classify_codes", r52_lines)))
 
 # ==============================================================================
+# SECTION 15m: RUCA RURALITY SUMMARY (Phase 116) ----
+# ==============================================================================
+
+message("\n[Phase 116] RUCA rurality summary (R/100)...")
+
+# Check 1: Bundled RUCA reference file exists
+check("data/reference/RUCA-codes-2020-zipcode.xlsx bundled (Phase 116 RUCA-01)",
+      file.exists("data/reference/RUCA-codes-2020-zipcode.xlsx"))
+
+# Check 2: R/100 script exists and has minimum length
+r100_exists <- file.exists("R/100_ruca_rurality_summary.R")
+check("R/100_ruca_rurality_summary.R exists (Phase 116)",
+      r100_exists)
+
+if (r100_exists) {
+  r100_lines <- readLines("R/100_ruca_rurality_summary.R", warn = FALSE)
+  r100_text  <- paste(r100_lines, collapse = "\n")
+
+  # Check 3: minimum line count
+  check("R/100 has 300+ lines (Phase 116)",
+        length(r100_lines) >= 300)
+
+  # Check 4: loads bundled reference file
+  check("R/100 references RUCA-codes-2020-zipcode.xlsx (RUCA-01)",
+        any(grepl("RUCA-codes-2020-zipcode\\.xlsx", r100_lines)))
+
+  # Check 5: defines ruca_tier_label() with all 4 tiers (RUCA-02)
+  check("R/100 defines ruca_tier_label() with 4 tiers Metro/Micro/Small/Rural (RUCA-02)",
+        any(grepl("ruca_tier_label", r100_lines)) &&
+        grepl("Metropolitan", r100_text) &&
+        grepl("Micropolitan", r100_text) &&
+        grepl("Small town",   r100_text) &&
+        grepl("Rural",        r100_text))
+
+  # Check 6: sources R/00_config.R
+  check("R/100 sources R/00_config.R",
+        any(grepl("source.*00_config", r100_lines)))
+
+  # Check 7: sources utils_payer.R for classify_payer_tier
+  check("R/100 sources utils_payer.R (encounter-level payer)",
+        any(grepl("utils_payer",       r100_lines)) &&
+        any(grepl("classify_payer_tier", r100_lines)))
+
+  # Check 8: sources utils_treatment.R for get_hl_patient_ids
+  check("R/100 sources utils_treatment.R + calls get_hl_patient_ids()",
+        any(grepl("utils_treatment",   r100_lines)) &&
+        any(grepl("get_hl_patient_ids", r100_lines)))
+
+  # Check 9: queries DEMOGRAPHIC for ZIP_CODE
+  check("R/100 queries DEMOGRAPHIC table for ZIP_CODE (RUCA-02)",
+        any(grepl("get_pcornet_table.*DEMOGRAPHIC", r100_lines)) &&
+        any(grepl("ZIP_CODE",                       r100_lines)))
+
+  # Check 10: normalizes ZIP to 5 digits with str_pad (RUCA-02, Pitfall 1-2 avoidance)
+  check("R/100 normalizes ZIP with str_pad(., 5, pad='0') (RUCA-02)",
+        any(grepl("str_pad.*5.*pad.*0", r100_lines)))
+
+  # Check 11: validates 5-digit numeric ZIP with str_detect
+  check("R/100 validates 5-digit numeric ZIP with str_detect (RUCA-02)",
+        any(grepl("str_detect.*\\[0-9\\]\\{5\\}", r100_lines)))
+
+  # Check 12: logs NA rurality count (RUCA-04)
+  check("R/100 logs NA rurality count (RUCA-04)",
+        (any(grepl("n_na",       r100_lines)) ||
+         any(grepl("NA.*rurality", r100_lines, ignore.case = TRUE)) ||
+         any(grepl("unmatched",   r100_lines, ignore.case = TRUE))) &&
+        any(grepl("message.*NA|message.*unmatched|message.*rurality", r100_text, ignore.case = TRUE)))
+
+  # Check 13: reads treatment_episode_detail.rds for Sheet 3
+  check("R/100 reads treatment_episode_detail.rds (Sheet 3 treatment source)",
+        any(grepl("treatment_episode_detail\\.rds", r100_lines)))
+
+  # Check 14: reads treatment_episodes.rds for Sheet 4
+  check("R/100 reads treatment_episodes.rds (Sheet 4 cancer source)",
+        any(grepl("treatment_episodes\\.rds", r100_lines)))
+
+  # Check 15: creates 4+ worksheets via add_styled_sheet or add_worksheet
+  # NOTE: R/100 uses add_styled_sheet() helper which wraps add_worksheet; helper is
+  # called 5x (4 data sheets + 1 metadata sheet). grep for either pattern. (Plan 01 deviation)
+  check("R/100 creates 4+ worksheets via add_styled_sheet/add_worksheet (RUCA-03)",
+        sum(grepl("^add_styled_sheet\\(", r100_lines)) >= 4 ||
+        sum(grepl("add_worksheet",        r100_lines)) >= 4)
+
+  # Check 16: uses dark gray header fill FF374151 (styled xlsx convention)
+  check("R/100 uses dark gray header fill FF374151",
+        any(grepl("FF374151", r100_lines)))
+
+  # Check 17: freezes panes on 4+ sheets (via helper: freeze_pane inside add_styled_sheet)
+  # add_styled_sheet() is called 5x; freeze_pane appears 1x inside the helper body.
+  # Accept either: 4+ freeze_pane lines OR 4+ add_styled_sheet calls (helper wraps freeze_pane).
+  check("R/100 freezes panes on 4+ sheets (via add_styled_sheet helper)",
+        sum(grepl("freeze_pane",      r100_lines)) >= 4 ||
+        sum(grepl("add_styled_sheet", r100_lines)) >= 4)
+
+  # Check 18: outputs ruca_rurality_summary.xlsx
+  check("R/100 saves ruca_rurality_summary.xlsx (RUCA-03)",
+        any(grepl("ruca_rurality_summary\\.xlsx", r100_lines)))
+
+  # Check 19: includes row totals + column totals (RUCA-05)
+  check("R/100 constructs row/column totals (RUCA-05)",
+        any(grepl("Total|totals_row|adorn_totals", r100_lines)) &&
+        any(grepl("rowwise|c_across|summarise.*sum", r100_text)))
+
+  # Check 20: ascending sort applied (SORT-01 pattern per RUCA-05)
+  check("R/100 sorts ascending (arrange/sort) (RUCA-05, SORT-01)",
+        any(grepl("\\barrange\\(", r100_lines)) ||
+        any(grepl("\\bsort\\(",    r100_lines)))
+
+  # Check 21: sheet titles document grain (patient-level vs encounter-level vs episode-level)
+  check("R/100 sheet titles document grain (patient-level / encounter-level / episode-level)",
+        (grepl("patient-level",   r100_text, ignore.case = TRUE) ||
+         grepl("Patient-Level",   r100_text)) &&
+        (grepl("encounter-level", r100_text, ignore.case = TRUE) ||
+         grepl("Encounter-Level", r100_text)))
+
+  # Check 22: has 7+ SECTION markers (convention -- matches R/33, R/34, R/36)
+  check("R/100 has 7+ SECTION markers",
+        sum(grepl("^# SECTION.*----$", r100_lines)) >= 7)
+} else {
+  # If script missing, register the dependent checks as fail so the total stays honest
+  for (i in 3:22) check(paste0("R/100 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3452,6 +3576,13 @@ message("  * DRUGFIX-05: R/88 validates Phase 114 structural integrity (14 check
 message("  * GANTT7DAY-01: episode_dx_7day_confirmed column in gantt_episodes.csv (Phase 115)")
 message("  * GANTAGE-01: age_at_episode column in gantt_episodes.csv (Phase 115)")
 message("  * SMOKE-115-01: R/88 validates Phase 115 structural integrity (14 checks)")
+message("  * RUCA-01: USDA 2020 ZIP RUCA reference xlsx bundled in data/reference/ (Phase 116)")
+message("  * RUCA-02: R/100 assigns rurality (raw code + 4-tier label) from DEMOGRAPHIC.ZIP_CODE (Phase 116)")
+message("  * RUCA-03: 4-sheet styled xlsx: patient frequency + encounter-level payer/treatment/cancer (R/100 Phase 116)")
+message("  * RUCA-04: NA rurality logged + preserved as Unknown row/column in cross-tabs (R/100 Phase 116)")
+message("  * RUCA-05: Row totals + column totals + ascending alpha sort on all sheets (R/100 Phase 116)")
+message("  * RUCA-06: R/39 pipeline runner includes R/100 in investigation stage (Phase 116)")
+message("  * SMOKE-116-01: R/88 validates Phase 116 structural integrity (22 checks)")
 
 if (failed > 0) {
   quit(status = 1)
