@@ -184,7 +184,7 @@ Plans:
 **Goal:** HL cohort enriched with USDA 2020 ZIP RUCA rurality classification derived from DEMOGRAPHIC.ZIP_CODE, producing a standalone 4-sheet styled xlsx (patient-level rurality frequency + encounter-level cross-tabs with AMC 8-category payer / 5-category treatment type / classify_codes cancer category), with the USDA reference file bundled in `data/reference/` for offline reproducibility
 **Requirements**: RUCA-01, RUCA-02, RUCA-03, RUCA-04, RUCA-05, RUCA-06, SMOKE-116-01
 **Depends on:** Phase 115
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 116-01-PLAN.md -- Bundle USDA 2020 ZIP RUCA reference xlsx (data/reference/) and create standalone script R/100_ruca_rurality_summary.R with 4-sheet styled xlsx output
