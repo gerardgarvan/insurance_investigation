@@ -7,10 +7,10 @@ last_updated: "2026-07-06T00:00:00Z"
 last_activity: 2026-07-06
 progress:
   total_phases: 13
-  completed_phases: 12
+  completed_phases: 13
   total_plans: 17
-  completed_plans: 16
-  percent: 95
+  completed_plans: 17
+  percent: 96
 ---
 
 # Project State
@@ -21,13 +21,13 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 116 — address-info-like-ruca-using-r-pacakge-like-rural
+**Current focus:** Phase 116 complete — all plans executed
 
 ## Current Position
 
 Phase: 116
-Plan: 01 complete (Plan 02 pending)
-Status: Phase 116 in progress
+Plan: 02 complete (Phase 116 complete)
+Status: Phase 116 done
 Last activity: 2026-07-06
 
 ## Performance Metrics
@@ -47,10 +47,24 @@ Last activity: 2026-07-06
 - Phase 106: 5 minutes (2 tasks)
 - Phase 115: 6 minutes (2 tasks)
 - Phase 116 Plan 01: 18 minutes (2 tasks)
+- Phase 116 Plan 02: 12 minutes (3 tasks)
 
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 116 Plan 02 decisions:**
+
+- R/88 checks 15/17 (add_worksheet count, freeze_pane count) adapted to accept add_styled_sheet >= 4 as alternative -- R/100 uses DRY add_styled_sheet() wrapper so primitives appear once inside helper, not 4+ times
+- R/88 Phase 116 structural pass criterion on Windows local: all 22 checks pass in isolation; full R/88 runtime requires HiPerGator production data (stops at section 19/29 classify_codes gate)
+- Used section suffix 15m for Phase 116 (skipping 15l per aesthetic guidance in plan)
+
+**Phase 116 Plan 01 decisions:**
+
+- Read RUCA xlsx with sheet='RUCA 2020 ZIP Code Data' and skip=1 (title row confirmed in Task 1 inspection)
+- Use add_styled_sheet() helper to wrap openxlsx2 calls for DRY 5-sheet workbook
+- Sheet 4 labeled episode-level (treatment_episodes.rds grain) not encounter-level per RESEARCH.md Open Question 4 recommendation
+- PrimaryRUCA column read by name after skip=1
 
 **v3.2 Roadmap decisions:**
 
@@ -95,7 +109,7 @@ Last activity: 2026-07-06
 - Phase 113 added: Investigate encounters after death date — quantify how far after death the ~200 patients encounters occur
 - Phase 114 added: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
 - Phase 115 added: Add 7-day confirmed column to Gantt data which indicates if on the patient level the episode_dx_categories is also in the patients unique 7-day
-- Phase 116 added: address info like ruca using r pacakge like rural (RUCA rurality enrichment, R/100)
+- Phase 116 added: address info like ruca using r pacakge like rural (RUCA rurality enrichment, R/100) -- COMPLETE
 
 ### Open Questions
 
@@ -114,11 +128,12 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 116` (Phase 116 Plan 01 execution)
-**What's next:** Phase 116 Plan 02 (R/88 smoke test integration for R/100)
+**Last command:** `/gsd:execute-phase 116` (Phase 116 Plan 02 execution complete)
+**What's next:** Phase 107 (Gap Resolution Report) or additional phases as needed
 
 ### Recent Changes
 
+- 2026-07-06: Phase 116 Plan 02 complete (R/88 Section 15m 22-check smoke test, R/39 registration, SCRIPT_INDEX Post-Renumber Investigations section)
 - 2026-07-06: Phase 116 Plan 01 complete (USDA RUCA reference bundled + R/100 rurality summary script created)
 - 2026-06-29: Phase 115 complete (7-day confirmed column + age at episode in Gantt data)
 - 2026-06-15: Phase 106 complete (Tableau-Ready Data Tables - TABLE-01/TABLE-02)
@@ -126,24 +141,21 @@ None identified.
 - 2026-06-15: Phase 104 complete (Treatment Timing Investigations - TIMING-01/02)
 - 2026-06-15: v3.2 roadmap created with 4 phases (104-107) covering 11 requirements
 - 2026-06-12: v3.1 milestone completed (Phases 100-103, 4 phases, 9 requirements)
-- 2026-06-12: Phase 103 complete (death date cross-tab summary)
-- 2026-06-12: Phase 102 complete (co-administration analysis)
-- 2026-06-12: Phase 101 complete (broadened drug grouping output)
-- 2026-06-12: Phase 100 complete (CONDITION table cancer linkage)
 
 ### Key Files Modified
+
+**Phase 116 Plan 02:**
+
+- Modified: R/88_smoke_test_comprehensive.R (Section 15m added: 22 Phase 116 checks; Section 16 summary: 7 new RUCA/SMOKE-116 messages)
+- Modified: R/39_run_all_investigations.R (R/100 added to investigation_scripts vector)
+- Modified: R/SCRIPT_INDEX.md (Post-Renumber Investigations (100+) section added)
+- Created: .planning/phases/116-address-info-like-ruca-using-r-pacakge-like-rural/116-02-SUMMARY.md
 
 **Phase 116 Plan 01:**
 
 - Created: data/reference/RUCA-codes-2020-zipcode.xlsx (USDA 2020 ZIP RUCA reference, 1530 KB)
 - Created: R/100_ruca_rurality_summary.R (441 lines, 5-sheet rurality summary xlsx)
 - Created: .planning/phases/116-address-info-like-ruca-using-r-pacakge-like-rural/116-01-SUMMARY.md
-
-**v3.2 Roadmap Creation:**
-
-- Overwritten: .planning/ROADMAP.md (v3.2 roadmap replacing v3.1 content)
-- Updated: .planning/STATE.md (v3.2 milestone tracking)
-- Updated: .planning/REQUIREMENTS.md (traceability section with phase mappings)
 
 ### Outstanding Work
 
@@ -159,4 +171,4 @@ None identified.
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
-*State updated: 2026-07-06 after Phase 116 Plan 01 completion*
+*State updated: 2026-07-06 after Phase 116 Plan 02 completion*
