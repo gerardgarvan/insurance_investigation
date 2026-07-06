@@ -73,6 +73,8 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [x] **RUCA-03**: R/100 produces a 4-sheet styled xlsx: Sheet 1 patient-level rurality frequency; Sheets 2-4 encounter-level (payer / treatment / cancer) cross-tabs with metadata sheet
 - [x] **RUCA-04**: Patients with blank / unmatchable / ZIP+4 / RUCA=99 ZIPs receive NA rurality; NA count is logged to console; NA appears as its own visible 'Unknown' row/column in cross-tabs (not dropped)
 - [x] **RUCA-05**: Every cross-tab includes row totals + column totals with ascending alphabetical sort on both axes
+- [x] **RUCA-06**: R/39 pipeline runner includes R/100_ruca_rurality_summary.R in the investigation scripts stage
+- [x] **SMOKE-116-01**: R/88 smoke test validates Phase 116 structural integrity (22 checks covering bundled reference file, R/100 script structure, RUCA_LOOKUP loading, ZIP normalization, NA logging, 4-sheet xlsx creation, styled headers, row/column totals, ascending sort, and section markers)
 
 ### Gantt 7-Day Confirmed + Age at Episode (Phase 115)
 
@@ -176,6 +178,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RUCA-03 | Phase 116 | Complete |
 | RUCA-04 | Phase 116 | Complete |
 | RUCA-05 | Phase 116 | Complete |
+| RUCA-06 | Phase 116 | Complete |
+| SMOKE-116-01 | Phase 116 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total
@@ -187,8 +191,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Phase 113 requirements: 3 total (POSTDEATH x3)
 - Phase 114 requirements: 5 total (DRUGFIX x5)
 - Phase 115 requirements: 4 total (GANTT7DAY x2, GANTAGE x1, SMOKE-115 x1)
-- Phase 116 requirements: 5 total (RUCA x5)
+- Phase 116 requirements: 7 total (RUCA x6, SMOKE-116 x1)
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-06-26 -- Phase 115 GANTT7DAY/GANTAGE/SMOKE-115 requirements added*
+*Last updated: 2026-07-06 -- Phase 116 RUCA-06 and SMOKE-116-01 requirements added*
