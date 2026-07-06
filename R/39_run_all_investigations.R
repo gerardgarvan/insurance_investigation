@@ -186,7 +186,8 @@ investigation_scripts <- c(
   "R/34_hl_nhl_overlap_validation.R",          # G4:  HL+NHL overlap
   "R/35_death_cause_quality.R",                # Death cause quality analysis
   "R/36_tableau_ready_tables.R",               # TABLE-1 and TABLE-2
-  "R/56_new_tables_from_groupings.R"           # Episode-level drug grouping tables
+  "R/56_new_tables_from_groupings.R",          # Episode-level drug grouping tables
+  "R/100_ruca_rurality_summary.R"              # RUCA rurality summary (Phase 116)
 )
 
 for (script in investigation_scripts) {

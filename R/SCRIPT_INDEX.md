@@ -137,6 +137,16 @@ Standalone diagnostic and analysis scripts, not part of the numbered pipeline se
 
 ---
 
+## Post-Renumber Investigations (100+)
+
+Standalone investigation scripts added after the 00-99 decade-based renumbering (Phase 66). These sit outside the decade scheme intentionally.
+
+| Script | Purpose | Phase |
+|--------|---------|-------|
+| `R/100_ruca_rurality_summary.R` | USDA 2020 ZIP RUCA rurality classification of the HL cohort. Produces a 4-sheet styled xlsx: (1) patient-level rurality frequency, (2) rurality x AMC 8-category payer (encounter-level), (3) rurality x treatment type (encounter-level), (4) rurality x cancer category (episode-level). Bundles the USDA reference xlsx in `data/reference/RUCA-codes-2020-zipcode.xlsx`. | 116 |
+
+---
+
 ## Utility Libraries
 
 Sourced by 00_config.R (auto-loaded via list.files() from R/utils/ subfolder). These define reusable functions, not standalone analyses.
@@ -186,9 +196,10 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
+- **Post-renumber investigations (100+):** 1
 - **Utility libraries:** 10 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 87
+- **Total:** 88
 
 ## Key Dependency Chains
 
