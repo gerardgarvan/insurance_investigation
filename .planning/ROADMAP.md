@@ -209,3 +209,13 @@ Plans:
 
 Plans:
 - [x] 118-01-PLAN.md -- Create R/102_death_cause_nhl_flag.R (deceased-only three-state NHL cause-of-death flag CSV) + register in R/39, R/88 Section 15o, R/SCRIPT_INDEX.md
+
+### Phase 119: fix death_cause_nhl_flag
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 118
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 119 to break down)

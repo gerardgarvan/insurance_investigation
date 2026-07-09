@@ -130,6 +130,7 @@ Last activity: 2026-07-09
 - Phase 116 added: address info like ruca using r pacakge like rural (RUCA rurality enrichment, R/100) -- COMPLETE
 - Phase 117 added: Make a lifespan Gantt that collapses across all time but still keeps treatment type etc separate -- COMPLETE
 - Phase 118 added: Create CSV outputting PATID + boolean column for whether cause of death is non-Hodgkin lymphoma
+- Phase 119 added: Fix death_cause_nhl_flag
 
 ### Open Questions
 
