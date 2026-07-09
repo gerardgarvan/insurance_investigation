@@ -189,3 +189,13 @@ Plans:
 Plans:
 - [ ] 116-01-PLAN.md -- Bundle USDA 2020 ZIP RUCA reference xlsx (data/reference/) and create standalone script R/100_ruca_rurality_summary.R with 4-sheet styled xlsx output
 - [x] 116-02-PLAN.md -- R/88 smoke test section (Phase 116 structural validation), R/39 pipeline runner entry for R/100, R/SCRIPT_INDEX.md Post-Renumber Investigations section (completed 2026-07-06)
+
+### Phase 117: make a lifespan gannt that collapses across all time but still keeps treatment type etc sepearate
+
+**Goal:** A new "lifespan" Gantt CSV (`output/gantt_lifespan.csv`) collapses the per-episode Gantt export into one row per patient_id x treatment_type, spanning each patient's earliest episode_start to latest episode_stop (calendar dates preserved, not normalized). Multi-value metadata is unioned/deduped/sorted (reusing R/52 `clean_multi_value`), Death and HL Diagnosis pseudo-rows excluded, produced by a new standalone script R/101 registered in R/39, smoke-tested in R/88, and indexed in R/SCRIPT_INDEX.md
+**Requirements**: LIFESPAN-01, LIFESPAN-02, LIFESPAN-03, LIFESPAN-04, SMOKE-117-01
+**Depends on:** Phase 116
+**Plans:** 1 plan
+
+Plans:
+- [ ] 117-01-PLAN.md -- Create R/101_gantt_lifespan_collapse.R (collapse gantt_episodes.csv to patient x treatment_type lifespan CSV) + register in R/39, R/88 Section 15n, R/SCRIPT_INDEX.md
