@@ -2025,6 +2025,78 @@ if (r100_exists) {
 }
 
 # ==============================================================================
+# SECTION 15n: LIFESPAN GANTT COLLAPSE (Phase 117) ----
+# ==============================================================================
+
+message("\n[Phase 117] Lifespan Gantt collapse (R/101)...")
+
+# Check 1: R/101 script exists
+r101_exists <- file.exists("R/101_gantt_lifespan_collapse.R")
+check("R/101_gantt_lifespan_collapse.R exists (Phase 117)",
+      r101_exists)
+
+if (r101_exists) {
+  r101_lines <- readLines("R/101_gantt_lifespan_collapse.R", warn = FALSE)
+  r101_text  <- paste(r101_lines, collapse = "\n")
+
+  # Check 2: minimum line count (>= 150)
+  check("R/101 has 150+ lines (Phase 117)",
+        length(r101_lines) >= 150)
+
+  # Check 3: sources R/00_config.R
+  check("R/101 sources R/00_config.R",
+        any(grepl("source.*00_config", r101_lines)))
+
+  # Check 4: reads gantt_episodes.csv (input)
+  check("R/101 reads gantt_episodes.csv (input) (LIFESPAN-01)",
+        any(grepl("gantt_episodes\\.csv", r101_lines)))
+
+  # Check 5: writes gantt_lifespan.csv (output)
+  check("R/101 writes gantt_lifespan.csv (LIFESPAN-01)",
+        any(grepl("gantt_lifespan\\.csv", r101_lines)))
+
+  # Check 6: collapses by patient_id x treatment_type
+  check("R/101 collapses by patient_id x treatment_type (LIFESPAN-02)",
+        any(grepl("group_by\\(patient_id, treatment_type\\)", r101_lines)))
+
+  # Check 7: excludes Death + HL Diagnosis pseudo-rows
+  check("R/101 excludes Death + HL Diagnosis pseudo-rows (LIFESPAN-03)",
+        any(grepl('filter\\(!treatment_type %in% c\\("Death", "HL Diagnosis"\\)', r101_lines)))
+
+  # Check 8: spans min(episode_start) -> max(episode_stop)
+  check("R/101 spans min(episode_start) -> max(episode_stop) (LIFESPAN-02)",
+        grepl("min\\(episode_start", r101_text) && grepl("max\\(episode_stop", r101_text))
+
+  # Check 9: unions multi-value fields via clean_multi_value
+  check("R/101 unions multi-value fields via clean_multi_value (LIFESPAN-04)",
+        any(grepl("clean_multi_value", r101_lines)))
+
+  # Check 10: re-derives is_hodgkin from cancer_category
+  check("R/101 re-derives is_hodgkin from cancer_category",
+        any(grepl('str_detect\\(cancer_category, "Hodgkin"\\)', r101_lines)))
+
+  # Check 11: defines LIFESPAN_SCHEMA + identical() schema check
+  check("R/101 defines LIFESPAN_SCHEMA + identical() schema check",
+        any(grepl("LIFESPAN_SCHEMA", r101_lines)) && grepl("identical\\(colnames", r101_text))
+
+  # Check 12: writes with row.names=FALSE, na='' (Tableau CSV convention)
+  check("R/101 writes with row.names=FALSE, na='' (Tableau CSV convention)",
+        any(grepl("row.names = FALSE", r101_lines)) && any(grepl('na = ""', r101_lines)))
+
+  # Check 13: no ggplot/ggsave/geom_ (data export only, D-01)
+  check("R/101 has NO ggplot/ggsave (data export only, D-01)",
+        !any(grepl("ggplot|ggsave|geom_", r101_lines)))
+
+  # Check 14: has 7+ SECTION markers
+  check("R/101 has 7+ SECTION markers",
+        sum(grepl("^# SECTION.*----$", r101_lines)) >= 7)
+
+} else {
+  # If script missing, register the dependent checks as FALSE so the total stays honest
+  for (i in 2:14) check(paste0("R/101 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3583,6 +3655,11 @@ message("  * RUCA-04: NA rurality logged + preserved as Unknown row/column in cr
 message("  * RUCA-05: Row totals + column totals + ascending alpha sort on all sheets (R/100 Phase 116)")
 message("  * RUCA-06: R/39 pipeline runner includes R/100 in investigation stage (Phase 116)")
 message("  * SMOKE-116-01: R/88 validates Phase 116 structural integrity (22 checks)")
+message("  * LIFESPAN-01: R/101 produces output/gantt_lifespan.csv from gantt_episodes.csv (Phase 117)")
+message("  * LIFESPAN-02: Collapse = one row per patient_id x treatment_type, min(start)->max(stop) (Phase 117)")
+message("  * LIFESPAN-03: Death + HL Diagnosis pseudo-rows excluded from lifespan CSV (Phase 117)")
+message("  * LIFESPAN-04: Multi-value fields unioned/deduped/sorted via clean_multi_value (Phase 117)")
+message("  * SMOKE-117-01: R/88 validates Phase 117 structural integrity (14 checks)")
 
 if (failed > 0) {
   quit(status = 1)

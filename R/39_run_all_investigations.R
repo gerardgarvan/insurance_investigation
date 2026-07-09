@@ -187,7 +187,8 @@ investigation_scripts <- c(
   "R/35_death_cause_quality.R",                # Death cause quality analysis
   "R/36_tableau_ready_tables.R",               # TABLE-1 and TABLE-2
   "R/56_new_tables_from_groupings.R",          # Episode-level drug grouping tables
-  "R/100_ruca_rurality_summary.R"              # RUCA rurality summary (Phase 116)
+  "R/100_ruca_rurality_summary.R",             # RUCA rurality summary (Phase 116)
+  "R/101_gantt_lifespan_collapse.R"            # Lifespan Gantt collapse (Phase 117); consumes gantt_episodes.csv (produced by R/52)
 )
 
 for (script in investigation_scripts) {
