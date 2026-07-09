@@ -41,6 +41,14 @@ suppressPackageStartupMessages({
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 
+# Self-bootstrap the DuckDB connection so R/27 runs standalone in a fresh session
+# (consistent with sibling scripts R/28-R/36). open_pcornet_con() is idempotent —
+# it closes any existing connection first — so re-opening later in SECTION 2 is safe.
+USE_DUCKDB <- TRUE
+if (!exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con()
+}
+
 # SECTION 0: INPUT VALIDATION ----
 # SAFE-01: Validate DuckDB connection available
 checkmate::assert_class(
