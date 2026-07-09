@@ -1824,6 +1824,32 @@ check("R/79 freezes panes on output sheets",
 check("R/79 outputs drug_name_consistency_audit.xlsx",
       any(grepl("drug_name_consistency_audit\\.xlsx", r79_lines)))
 
+# --- Drug-name canonicalization (quick 260709-iyh) ---
+r00_lines_iyh <- readLines("R/00_config.R", warn = FALSE)
+r27_lines_iyh <- readLines("R/27_drug_name_resolution.R", warn = FALSE)
+
+# Check 15: R/00_config defines the canonical alias map + helper
+check("R/00_config defines DRUG_NAME_ALIASES + canonicalize_drug_name (quick iyh)",
+      any(grepl("DRUG_NAME_ALIASES <- c\\(", r00_lines_iyh)) &&
+      any(grepl("canonicalize_drug_name <- function", r00_lines_iyh)))
+
+# Check 16: canonicalization applied to MEDICATION_LOOKUP
+check("R/00_config applies canonicalize_drug_name to MEDICATION_LOOKUP (quick iyh)",
+      any(grepl("MEDICATION_LOOKUP <- setNames\\(canonicalize_drug_name\\(", r00_lines_iyh)))
+
+# Check 17: liposomal doxorubicin is NOT an alias key (clinically distinct)
+alias_start <- grep("DRUG_NAME_ALIASES <- c\\(", r00_lines_iyh)[1]
+alias_end <- if (!is.na(alias_start)) {
+  alias_start + which(grepl("^\\s*\\)\\s*$", r00_lines_iyh[alias_start:length(r00_lines_iyh)]))[1] - 1
+} else NA
+alias_block <- if (!is.na(alias_start) && !is.na(alias_end)) r00_lines_iyh[alias_start:alias_end] else character(0)
+check("DRUG_NAME_ALIASES has NO liposomal key (liposomal kept distinct) (quick iyh)",
+      length(alias_block) > 0 && !any(grepl("liposomal", alias_block, ignore.case = TRUE)))
+
+# Check 18: R/27 applies canonicalize_drug_name to all_lookups before save
+check("R/27 applies canonicalize_drug_name to all_lookups$drug_name (quick iyh)",
+      any(grepl("mutate\\(drug_name = canonicalize_drug_name\\(drug_name\\)\\)", r27_lines_iyh)))
+
 # ==============================================================================
 # SECTION 15k: GANTT 7-DAY CONFIRMED + AGE AT EPISODE (Phase 115) ----
 # ==============================================================================
