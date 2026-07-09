@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 Phase: 117
 Plan: Not started
 Status: Complete
-Last activity: 2026-07-09 - Completed quick task 260709-iyh (drug-name canonicalization in R/00_config + R/27)
+Last activity: 2026-07-09 - Completed quick task 260709-jhw (R/27 self-bootstrap DuckDB connection)
 
 ## Performance Metrics
 
@@ -143,6 +143,7 @@ None identified.
 | 260709-gz2 | Fix R/88 Phase 115 Check 3 schema-count loop (comment ending in `)` stopped scan early → counted 18 not 20) | 2026-07-09 | ea5bae6 | [260709-gz2-fix-r-88-phase-115-check-3-schema-count-](./quick/260709-gz2-fix-r-88-phase-115-check-3-schema-count-/) |
 | 260709-i1a | Clean drug_group in R/52 + R/101: dedup, sort, semicolon-separated, drop literal `NA` tokens (consistent with other multi-value columns) | 2026-07-09 | 513456d | [260709-i1a-clean-drug-group-in-r-52-and-r-101-dedup](./quick/260709-i1a-clean-drug-group-in-r-52-and-r-101-dedup/) |
 | 260709-iyh | Drug-name canonicalization: DRUG_NAME_ALIASES + canonicalize_drug_name in R/00_config, applied to MEDICATION_LOOKUP + R/27; doxorubicin variants → "Doxorubicin Hydrochloride", liposomal kept separate | 2026-07-09 | 242c458 | [260709-iyh-add-drug-name-canonicalization-drug-name](./quick/260709-iyh-add-drug-name-canonicalization-drug-name/) |
+| 260709-jhw | R/27 self-bootstraps DuckDB connection (USE_DUCKDB + open_pcornet_con at top, guarded) like R/28-R/36 — fixes "object 'pcornet_con' not found" on standalone runs | 2026-07-09 | d2afeb6 | [260709-jhw-make-r-27-self-bootstrap-duckdb-connecti](./quick/260709-jhw-make-r-27-self-bootstrap-duckdb-connecti/) |
 
 ## Session Continuity
 
