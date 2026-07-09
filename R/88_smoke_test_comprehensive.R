@@ -1667,6 +1667,10 @@ check("R/52 clean_multi_value includes sort() for alphabetical ordering (Phase 1
 check("R/52 applies clean_multi_value to episode_dx_codes",
       any(grepl("episode_dx_codes.*clean_multi_value", r52_text)))
 
+# Check 12b (i1a): R/52 cleans drug_group multi-value column (dedup/sort/drop literal "NA")
+check("R/52 applies clean_multi_value to drug_group (quick i1a)",
+      any(grepl("drug_group = sapply\\(drug_group, clean_multi_value", r52_text)))
+
 # Check 13: R/36 has NO decreasing = TRUE in sort calls
 check("R/36 has no descending sort in multi-value fields (Phase 112 D-09)",
       !any(grepl("decreasing\\s*=\\s*TRUE", r36_lines)))
