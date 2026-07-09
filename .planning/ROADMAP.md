@@ -205,7 +205,7 @@ Plans:
 **Goal:** A new standalone script `R/102_death_cause_nhl_flag.R` writes `output/death_cause_nhl_flag.csv` — one row per deceased patient (valid DEATH_DATE in the DuckDB DEATH table, 1900 sentinel handled, aggregated to earliest death per patient) with `PATID` and a THREE-STATE `cause_of_death_is_nhl` column: TRUE when DEATH_CAUSE classifies as Non-Hodgkin Lymphoma via `classify_codes()` (ICD-10 C82-C86/C88, ICD-9 200/202; not C81/C91/C96), FALSE when DEATH_CAUSE is a different coded cause, and blank when DEATH_CAUSE is missing/uncoded (`write.csv(na="")`). Registered in R/39, smoke-tested in R/88 Section 15o, indexed in R/SCRIPT_INDEX.md.
 **Requirements**: NHLDEATH-01, NHLDEATH-02, NHLDEATH-03, SMOKE-118-01
 **Depends on:** Phase 117
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 118-01-PLAN.md -- Create R/102_death_cause_nhl_flag.R (deceased-only three-state NHL cause-of-death flag CSV) + register in R/39, R/88 Section 15o, R/SCRIPT_INDEX.md
+- [x] 118-01-PLAN.md -- Create R/102_death_cause_nhl_flag.R (deceased-only three-state NHL cause-of-death flag CSV) + register in R/39, R/88 Section 15o, R/SCRIPT_INDEX.md
