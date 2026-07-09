@@ -1838,7 +1838,11 @@ check("R/52 EPISODES_SCHEMA includes age_at_episode (Phase 115)",
 r52_schema_start <- grep("^EPISODES_SCHEMA\\s*<-", r52_lines)[1]
 if (!is.na(r52_schema_start)) {
   r52_schema_end <- r52_schema_start
-  while (r52_schema_end <= length(r52_lines) && !grepl("\\)\\s*$", trimws(r52_lines[r52_schema_end]))) {
+  # WHY: match ONLY a standalone ")" line as the terminator. R/52's EPISODES_SCHEMA
+  # block has a comment line ending in ")" ("...now 20 total)") one line above the real
+  # closing ")". The old "\\)\\s*$" terminator stopped on that comment and undercounted
+  # entries (18 instead of 20). "^\\s*\\)\\s*$" only matches the true closing paren line.
+  while (r52_schema_end <= length(r52_lines) && !grepl("^\\s*\\)\\s*$", r52_lines[r52_schema_end])) {
     r52_schema_end <- r52_schema_end + 1
   }
   schema_text_115 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
