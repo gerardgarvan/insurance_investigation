@@ -2360,6 +2360,39 @@ MEDICATION_LOOKUP <- c(MEDICATION_LOOKUP, MEDICATION_LOOKUP_JCODE_SUPPLEMENT[new
 message(glue("  MEDICATION_LOOKUP supplement: {length(new_codes)} J-codes added ({paste(new_codes, collapse = ', ')})"))
 
 # ==============================================================================
+# DRUG_NAME_ALIASES -- canonical drug-name collapsing (quick 260709-iyh)
+# ==============================================================================
+# WHY: the same drug can enter drug_names under different names from two sources
+# (MEDICATION_LOOKUP from the reference Excel vs the R/27 RxNorm cache), producing
+# duplicate tokens on one episode (e.g. "doxorubicin" AND "Doxorubicin Hydrochloride").
+# This map collapses same-drug variants to ONE canonical display name so the
+# drug_names union in R/26 dedups them. Keys are lowercased match forms.
+# NOTE: liposomal doxorubicin ("Doxorubicin (Liposomal)", "Liposomal Doxorubicin")
+# is a clinically distinct formulation and is deliberately NOT a key here.
+DRUG_NAME_ALIASES <- c(
+  "doxorubicin"               = "Doxorubicin Hydrochloride",
+  "doxorubicin hcl"           = "Doxorubicin Hydrochloride",
+  "doxorubicin hydrochloride" = "Doxorubicin Hydrochloride"
+)
+
+# canonicalize_drug_name(): vectorized, NA-safe, case-insensitive alias lookup.
+# Returns the canonical name when the trimmed/lowercased input matches an alias
+# key; otherwise returns the input unchanged (so non-aliased and liposomal names
+# pass through untouched).
+canonicalize_drug_name <- function(x) {
+  key <- tolower(stringr::str_trim(x))
+  hit <- DRUG_NAME_ALIASES[key]
+  out <- ifelse(!is.na(hit), unname(hit), x)
+  out[is.na(x)] <- NA_character_
+  out
+}
+
+# Apply to MEDICATION_LOOKUP (preserve code-key names) so the reference-Excel side
+# emits the same canonical form as the R/27 side.
+MEDICATION_LOOKUP <- setNames(canonicalize_drug_name(unname(MEDICATION_LOOKUP)), names(MEDICATION_LOOKUP))
+message(glue("  DRUG_NAME_ALIASES: {length(DRUG_NAME_ALIASES)} canonical aliases applied to MEDICATION_LOOKUP"))
+
+# ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----
 # ==============================================================================
 

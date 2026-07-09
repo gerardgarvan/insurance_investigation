@@ -450,6 +450,17 @@ if (nrow(codes_to_query) > 0) {
 }
 
 # =============================================================================
+# Canonicalize Drug Names (quick 260709-iyh) ----
+# =============================================================================
+# WHY: apply the shared canonical alias map to EVERY resolved name (cache + new)
+# so the RDS/CSV always store canonical forms. D-09 caches names and only queries
+# NEW codes, so this is the re-normalization point that fixes STALE cached entries
+# (e.g. lowercase "doxorubicin" from before title-casing was added). No API calls.
+# canonicalize_drug_name() / DRUG_NAME_ALIASES come from R/00_config.R (sourced above).
+all_lookups <- all_lookups %>%
+  mutate(drug_name = canonicalize_drug_name(drug_name))
+
+# =============================================================================
 # Save Outputs
 # =============================================================================
 
