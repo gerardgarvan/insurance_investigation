@@ -198,10 +198,10 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
-- **Post-renumber investigations (100+):** 1
+- **Post-renumber investigations (100+):** 3 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag)
 - **Utility libraries:** 10 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 88
+- **Total:** 90
 
 ## Key Dependency Chains
 
