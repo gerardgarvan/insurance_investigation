@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: completed
-last_updated: "2026-07-06T17:44:59.456Z"
-last_activity: 2026-07-06
+status: verifying
+last_updated: "2026-07-09T15:54:33.610Z"
+last_activity: 2026-07-09
 progress:
-  total_phases: 13
-  completed_phases: 13
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 14
+  completed_phases: 14
+  total_plans: 18
+  completed_plans: 18
 ---
 
 # Project State
@@ -20,14 +20,14 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 116 complete — all plans executed
+**Current focus:** Phase 117 — COMPLETE
 
 ## Current Position
 
-Phase: 116
-Plan: 02 complete (Phase 116 complete)
-Status: Phase 116 done
-Last activity: 2026-07-06
+Phase: 117 (make-a-lifespan-gannt-that-collapses-across-all-time-but-still-keeps-treatment-type-etc-sepearate) — COMPLETE
+Plan: 1 of 1
+Status: Complete
+Last activity: 2026-07-09
 
 ## Performance Metrics
 
@@ -47,10 +47,20 @@ Last activity: 2026-07-06
 - Phase 115: 6 minutes (2 tasks)
 - Phase 116 Plan 01: 18 minutes (2 tasks)
 - Phase 116 Plan 02: 12 minutes (3 tasks)
+- Phase 117 Plan 01: 3 minutes (2 tasks)
 
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 117 Plan 01 decisions:**
+
+- episode_length_days = span in days (max_stop - min_start), not total active days -- matches lifespan semantics (D-05)
+- distinct_dates_in_episode = SUM of per-episode counts across merged episodes
+- age_at_episode = patient age at the EARLIEST episode_start (which.min row within group)
+- is_hodgkin re-derived from unioned cancer_category string (consistent with R/52 line 857)
+- clean_multi_value() copied verbatim from R/52; union_field() helper pastes group values with ";" then calls clean_multi_value(sep_in=";") to handle already-semicolon-separated input
+- Section 15n used for Phase 117 (continuing 15m -> 15n sequence)
 
 **Phase 116 Plan 02 decisions:**
 
@@ -109,7 +119,7 @@ Last activity: 2026-07-06
 - Phase 114 added: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
 - Phase 115 added: Add 7-day confirmed column to Gantt data which indicates if on the patient level the episode_dx_categories is also in the patients unique 7-day
 - Phase 116 added: address info like ruca using r pacakge like rural (RUCA rurality enrichment, R/100) -- COMPLETE
-- Phase 117 added: Make a lifespan Gantt that collapses across all time but still keeps treatment type etc separate
+- Phase 117 added: Make a lifespan Gantt that collapses across all time but still keeps treatment type etc separate -- COMPLETE
 
 ### Open Questions
 
@@ -128,11 +138,12 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 116` (Phase 116 Plan 02 execution complete)
+**Last command:** `/gsd:execute-phase 117` (Phase 117 Plan 01 execution complete)
 **What's next:** Phase 107 (Gap Resolution Report) or additional phases as needed
 
 ### Recent Changes
 
+- 2026-07-09: Phase 117 Plan 01 complete (R/101 lifespan Gantt collapse script, R/88 Section 15n 14-check smoke test, R/39 registration, SCRIPT_INDEX row)
 - 2026-07-06: Phase 116 Plan 02 complete (R/88 Section 15m 22-check smoke test, R/39 registration, SCRIPT_INDEX Post-Renumber Investigations section)
 - 2026-07-06: Phase 116 Plan 01 complete (USDA RUCA reference bundled + R/100 rurality summary script created)
 - 2026-06-29: Phase 115 complete (7-day confirmed column + age at episode in Gantt data)
@@ -143,6 +154,14 @@ None identified.
 - 2026-06-12: v3.1 milestone completed (Phases 100-103, 4 phases, 9 requirements)
 
 ### Key Files Modified
+
+**Phase 117 Plan 01:**
+
+- Created: R/101_gantt_lifespan_collapse.R (314 lines, lifespan Gantt collapse script)
+- Modified: R/88_smoke_test_comprehensive.R (Section 15n added: 14 Phase 117 checks; summary: 5 LIFESPAN/SMOKE-117 messages)
+- Modified: R/39_run_all_investigations.R (R/101 added to investigation_scripts vector)
+- Modified: R/SCRIPT_INDEX.md (R/101 row added to Post-Renumber Investigations (100+) table)
+- Created: .planning/phases/117-make-a-lifespan-gannt-that-collapses-across-all-time-but-still-keeps-treatment-type-etc-sepearate/117-01-SUMMARY.md
 
 **Phase 116 Plan 02:**
 
@@ -171,4 +190,4 @@ None identified.
 - Phase 98 Plan 02: R/98 validation script and R/88 full smoke test (1 of 2 plans pending)
 
 ---
-*State updated: 2026-07-06 after Phase 116 Plan 02 completion*
+*State updated: 2026-07-09 after Phase 117 Plan 01 completion*

@@ -195,7 +195,7 @@ Plans:
 **Goal:** A new "lifespan" Gantt CSV (`output/gantt_lifespan.csv`) collapses the per-episode Gantt export into one row per patient_id x treatment_type, spanning each patient's earliest episode_start to latest episode_stop (calendar dates preserved, not normalized). Multi-value metadata is unioned/deduped/sorted (reusing R/52 `clean_multi_value`), Death and HL Diagnosis pseudo-rows excluded, produced by a new standalone script R/101 registered in R/39, smoke-tested in R/88, and indexed in R/SCRIPT_INDEX.md
 **Requirements**: LIFESPAN-01, LIFESPAN-02, LIFESPAN-03, LIFESPAN-04, SMOKE-117-01
 **Depends on:** Phase 116
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 117-01-PLAN.md -- Create R/101_gantt_lifespan_collapse.R (collapse gantt_episodes.csv to patient x treatment_type lifespan CSV) + register in R/39, R/88 Section 15n, R/SCRIPT_INDEX.md
+- [x] 117-01-PLAN.md -- Create R/101_gantt_lifespan_collapse.R (collapse gantt_episodes.csv to patient x treatment_type lifespan CSV) + register in R/39, R/88 Section 15n, R/SCRIPT_INDEX.md
