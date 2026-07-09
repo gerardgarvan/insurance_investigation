@@ -109,6 +109,7 @@ Last activity: 2026-07-06
 - Phase 114 added: Investigate blank drug names and make drug_names/triggering_code_descriptions consistent with treatment reference excel
 - Phase 115 added: Add 7-day confirmed column to Gantt data which indicates if on the patient level the episode_dx_categories is also in the patients unique 7-day
 - Phase 116 added: address info like ruca using r pacakge like rural (RUCA rurality enrichment, R/100) -- COMPLETE
+- Phase 117 added: Make a lifespan Gantt that collapses across all time but still keeps treatment type etc separate
 
 ### Open Questions
 
