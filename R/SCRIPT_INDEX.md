@@ -145,6 +145,7 @@ Standalone investigation scripts added after the 00-99 decade-based renumbering 
 |--------|---------|-------|
 | `R/100_ruca_rurality_summary.R` | USDA 2020 ZIP RUCA rurality classification of the HL cohort. Produces a 4-sheet styled xlsx: (1) patient-level rurality frequency, (2) rurality x AMC 8-category payer (encounter-level), (3) rurality x treatment type (encounter-level), (4) rurality x cancer category (episode-level). Bundles the USDA reference xlsx in `data/reference/RUCA-codes-2020-zipcode.xlsx`. | 116 |
 | `R/101_gantt_lifespan_collapse.R` | Collapses the per-episode Gantt export (`output/gantt_episodes.csv`) into a "lifespan" CSV: one row per patient x treatment type spanning that patient's earliest episode_start to latest episode_stop (calendar dates preserved, not normalized). Multi-value metadata is unioned/deduped/sorted (reuses R/52 `clean_multi_value`). Death and HL Diagnosis pseudo-rows excluded. Output: `output/gantt_lifespan.csv` for Tableau. | 117 |
+| `R/102_death_cause_nhl_flag.R` | Writes output/death_cause_nhl_flag.csv: one row per deceased patient (valid DEATH_DATE) with PATID and a three-state cause_of_death_is_nhl flag (TRUE = NHL cause of death, FALSE = other coded cause, blank = uncoded). NHL determined via classify_codes() == "Non-Hodgkin Lymphoma". | 118 |
 
 ---
 

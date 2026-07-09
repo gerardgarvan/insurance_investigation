@@ -2131,6 +2131,78 @@ if (r101_exists) {
 }
 
 # ==============================================================================
+# SECTION 15o: DEATH CAUSE NHL FLAG (Phase 118) ----
+# ==============================================================================
+
+message("\n[Phase 118] Death cause NHL flag (R/102)...")
+
+# Check 1: R/102 script exists
+r102_exists <- file.exists("R/102_death_cause_nhl_flag.R")
+check("R/102_death_cause_nhl_flag.R exists (Phase 118)",
+      r102_exists)
+
+if (r102_exists) {
+  r102_lines <- readLines("R/102_death_cause_nhl_flag.R", warn = FALSE)
+  r102_text  <- paste(r102_lines, collapse = "\n")
+
+  # Check 2: minimum line count (>= 100)
+  check("R/102 has 100+ lines (Phase 118)",
+        length(r102_lines) >= 100)
+
+  # Check 3: sources R/00_config.R
+  check("R/102 sources R/00_config.R",
+        any(grepl("source.*00_config", r102_lines)))
+
+  # Check 4: self-bootstraps DuckDB connection
+  check("R/102 self-bootstraps DuckDB (Phase 118)",
+        grepl("USE_DUCKDB", r102_text) && grepl("open_pcornet_con", r102_text))
+
+  # Check 5: reads DEATH table (NHLDEATH-01)
+  check("R/102 reads DEATH table (NHLDEATH-01)",
+        grepl('get_pcornet_table\\("DEATH"\\)', r102_text))
+
+  # Check 6: DEATH_CAUSE field-availability guard
+  check("R/102 has DEATH_CAUSE field-availability guard",
+        grepl("DEATH_CAUSE_CODE", r102_text) && grepl("death_cause_available", r102_text))
+
+  # Check 7: handles 1900 date sentinel + drops NA dates
+  check("R/102 handles 1900 date sentinel + drops NA dates",
+        grepl("1900", r102_text) && grepl("filter\\(!is.na\\(DEATH_DATE\\)", r102_text))
+
+  # Check 8: aggregates one death per patient (NHLDEATH-01)
+  check("R/102 aggregates one death per patient (NHLDEATH-01)",
+        grepl("group_by\\(ID\\)", r102_text) && grepl("first\\(DEATH_CAUSE", r102_text))
+
+  # Check 9: classifies NHL via classify_codes (NHLDEATH-02)
+  check("R/102 classifies NHL via classify_codes (NHLDEATH-02)",
+        grepl("classify_codes\\(", r102_text) && grepl("Non-Hodgkin Lymphoma", r102_text))
+
+  # Check 10: three-state flag: NA/TRUE/FALSE (NHLDEATH-02)
+  check("R/102 three-state flag: NA/TRUE/FALSE (NHLDEATH-02)",
+        grepl("case_when", r102_text) && grepl("cause_of_death_is_nhl", r102_text))
+
+  # Check 11: emits PATID column header (NHLDEATH-03)
+  check("R/102 emits PATID column header (NHLDEATH-03)",
+        grepl("PATID", r102_text))
+
+  # Check 12: writes death_cause_nhl_flag.csv (NHLDEATH-03)
+  check("R/102 writes death_cause_nhl_flag.csv (NHLDEATH-03)",
+        grepl("death_cause_nhl_flag\\.csv", r102_text))
+
+  # Check 13: writes row.names=FALSE, na='' (blank NA cell)
+  check("R/102 writes row.names=FALSE, na='' (blank NA cell)",
+        grepl("row.names = FALSE", r102_text) && grepl('na = ""', r102_text))
+
+  # Check 14: no ggplot/ggsave (data export only)
+  check("R/102 has NO ggplot/ggsave (data export only)",
+        !any(grepl("ggplot|ggsave|geom_", r102_lines)))
+
+} else {
+  # If script missing, register the dependent checks as FALSE so total stays honest
+  for (i in 2:14) check(paste0("R/102 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3694,6 +3766,10 @@ message("  * LIFESPAN-02: Collapse = one row per patient_id x treatment_type, mi
 message("  * LIFESPAN-03: Death + HL Diagnosis pseudo-rows excluded from lifespan CSV (Phase 117)")
 message("  * LIFESPAN-04: Multi-value fields unioned/deduped/sorted via clean_multi_value (Phase 117)")
 message("  * SMOKE-117-01: R/88 validates Phase 117 structural integrity (14 checks)")
+message("  * NHLDEATH-01: R/102 derives deceased set from DEATH table (1900 sentinel, per-patient) (Phase 118)")
+message("  * NHLDEATH-02: cause_of_death_is_nhl three-state flag via classify_codes == \"Non-Hodgkin Lymphoma\" (Phase 118)")
+message("  * NHLDEATH-03: R/102 writes output/death_cause_nhl_flag.csv (PATID + flag, na=\"\" blank) (Phase 118)")
+message("  * SMOKE-118-01: R/88 validates Phase 118 structural integrity (14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
