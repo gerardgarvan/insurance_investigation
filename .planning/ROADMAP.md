@@ -199,3 +199,13 @@ Plans:
 
 Plans:
 - [x] 117-01-PLAN.md -- Create R/101_gantt_lifespan_collapse.R (collapse gantt_episodes.csv to patient x treatment_type lifespan CSV) + register in R/39, R/88 Section 15n, R/SCRIPT_INDEX.md
+
+### Phase 118: create csv that outputs PATID and a column where cause of death is non-hodgkins lymphoma true or cause of death is non-hodgkins lymphoma false
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 117
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 118 to break down)
