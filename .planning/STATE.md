@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 Phase: 117 (make-a-lifespan-gannt-that-collapses-across-all-time-but-still-keeps-treatment-type-etc-sepearate) — COMPLETE
 Plan: 1 of 1
 Status: Complete
-Last activity: 2026-07-09
+Last activity: 2026-07-09 - Completed quick task 260709-gz2 (fix R/88 Phase 115 Check 3 schema-count loop)
 
 ## Performance Metrics
 
@@ -135,6 +135,12 @@ None currently identified.
 ### Known Blockers
 
 None identified.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260709-gz2 | Fix R/88 Phase 115 Check 3 schema-count loop (comment ending in `)` stopped scan early → counted 18 not 20) | 2026-07-09 | ea5bae6 | [260709-gz2-fix-r-88-phase-115-check-3-schema-count-](./quick/260709-gz2-fix-r-88-phase-115-check-3-schema-count-/) |
 
 ## Session Continuity
 
