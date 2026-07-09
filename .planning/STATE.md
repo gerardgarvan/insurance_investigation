@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 Phase: 117
 Plan: Not started
 Status: Complete
-Last activity: 2026-07-09
+Last activity: 2026-07-09 - Completed quick task 260709-i1a (clean drug_group in R/52 + R/101)
 
 ## Performance Metrics
 
@@ -141,6 +141,7 @@ None identified.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260709-gz2 | Fix R/88 Phase 115 Check 3 schema-count loop (comment ending in `)` stopped scan early → counted 18 not 20) | 2026-07-09 | ea5bae6 | [260709-gz2-fix-r-88-phase-115-check-3-schema-count-](./quick/260709-gz2-fix-r-88-phase-115-check-3-schema-count-/) |
+| 260709-i1a | Clean drug_group in R/52 + R/101: dedup, sort, semicolon-separated, drop literal `NA` tokens (consistent with other multi-value columns) | 2026-07-09 | 513456d | [260709-i1a-clean-drug-group-in-r-52-and-r-101-dedup](./quick/260709-i1a-clean-drug-group-in-r-52-and-r-101-dedup/) |
 
 ## Session Continuity
 
