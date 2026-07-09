@@ -776,7 +776,9 @@ clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
 
   values <- str_split(field_str, sep_in)[[1]]
   values <- str_trim(values)
-  values <- values[values != "" & !is.na(values)]
+  # DOC-03: drug_group carries literal "NA" string tokens from upstream (e.g. "Chemotherapy,NA");
+  # filter them out alongside blanks and R-NA so they never reach the output CSVs.
+  values <- values[values != "" & values != "NA" & !is.na(values)]
   values <- sort(unique(values))
 
   if (length(values) == 0) {
@@ -799,7 +801,10 @@ episodes_export <- episodes_export %>%
     episode_dx_codes = sapply(episode_dx_codes, clean_multi_value, USE.NAMES = FALSE),
     episode_dx_categories = sapply(episode_dx_categories, clean_multi_value, USE.NAMES = FALSE),
     # Phase 115: 7-day confirmed multi-value field
-    episode_dx_7day_confirmed = sapply(episode_dx_7day_confirmed, clean_multi_value, USE.NAMES = FALSE)
+    episode_dx_7day_confirmed = sapply(episode_dx_7day_confirmed, clean_multi_value, USE.NAMES = FALSE),
+    # DOC-03: drug_group is the last multi-value column added to cleanup; comma-separated internally
+    # with duplicate + literal "NA" tokens (e.g. "SCT,SCT,SCT", "Chemotherapy,NA") -> dedup/sort/;
+    drug_group = sapply(drug_group, clean_multi_value, USE.NAMES = FALSE)
   )
 
 detail_export <- detail_export %>%

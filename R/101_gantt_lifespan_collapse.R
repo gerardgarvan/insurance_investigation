@@ -110,7 +110,9 @@ clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
 
   values <- str_split(field_str, sep_in)[[1]]
   values <- str_trim(values)
-  values <- values[values != "" & !is.na(values)]
+  # DOC-03: drug_group carries literal "NA" string tokens from upstream (e.g. "Chemotherapy,NA");
+  # filter them out alongside blanks and R-NA so they never reach the output CSVs.
+  values <- values[values != "" & values != "NA" & !is.na(values)]
   values <- sort(unique(values))
 
   if (length(values) == 0) {
@@ -210,7 +212,9 @@ lifespan <- episodes %>%
     drug_names                   = union_field(drug_names),
     triggering_code_descriptions = union_field(triggering_code_descriptions),
     cancer_category              = union_field(cancer_category),
-    drug_group                   = union_field(drug_group),
+    # DOC-03: drug_group may arrive comma- OR semicolon-separated (legacy CSVs vs post-R/52-fix);
+    # normalize commas to ";" first, then dedup/sort so both cases collapse identically.
+    drug_group                   = clean_multi_value(gsub(",", ";", paste(drug_group, collapse = ";")), sep_in = ";", sep_out = ";"),
     code_type                    = union_field(code_type),
     source_table                 = union_field(source_table),
     sct_cross_use_flag           = union_field(sct_cross_use_flag),
