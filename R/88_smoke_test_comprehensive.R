@@ -2203,6 +2203,127 @@ if (r102_exists) {
 }
 
 # ==============================================================================
+# SECTION 15p: DEATH CAUSE NHL FIX (Phase 119) ----
+# ==============================================================================
+
+# Phase 119 fixed the Phase 118 all-blank output: R/102 now reads cause of death
+# from the separate DEATH_CAUSE table (wired into the loader in Plan 02) instead
+# of a non-existent DEATH.DEATH_CAUSE column, and R/103 is a read-only diagnostic
+# that inventories every candidate cause source. This section STRUCTURALLY
+# validates the fix (source switch, three-state preservation, table loading,
+# count 16, R/103 existence) with a gated HiPerGator-only runtime check.
+
+message("\n[Phase 119] Death cause NHL fix (R/102 -> DEATH_CAUSE table; R/103 diagnostic)...")
+
+# Check 1: R/103 diagnostic script exists
+r103_exists <- file.exists("R/103_death_cause_diagnostic.R")
+check("R/103_death_cause_diagnostic.R exists (Phase 119)",
+      r103_exists)
+
+r102_exists_119 <- file.exists("R/102_death_cause_nhl_flag.R")
+
+if (r102_exists_119 && r103_exists) {
+  r102_text <- paste(readLines("R/102_death_cause_nhl_flag.R", warn = FALSE),
+                     collapse = "\n")
+  r103_text <- paste(readLines("R/103_death_cause_diagnostic.R", warn = FALSE),
+                     collapse = "\n")
+
+  # Check 2: R/103 inventories DEATH_CAUSE restricted to the deceased set
+  check("R/103 inventories DEATH_CAUSE for the deceased set (Phase 119)",
+        grepl('get_pcornet_table\\("DEATH_CAUSE"\\)', r103_text) &&
+          grepl("deceased", r103_text) &&
+          grepl("intersect\\(", r103_text))
+
+  # Check 3: R/103 classifies NHL via classify_codes
+  check("R/103 classifies NHL via classify_codes (Phase 119)",
+        grepl("classify_codes\\(", r103_text) &&
+          grepl("Non-Hodgkin Lymphoma", r103_text))
+
+  # Check 4: R/102 reads the DEATH_CAUSE table (NHLFIX-03, positive)
+  check("R/102 reads DEATH_CAUSE table (NHLFIX-03)",
+        grepl('get_pcornet_table\\("DEATH_CAUSE"\\)', r102_text))
+
+  # Check 5: R/102 NO LONGER reads cause from the DEATH table (negative check)
+  check("R/102 no longer reads cause from DEATH column (NHLFIX-03, negative)",
+        !grepl('DEATH_CAUSE = all_of\\(death_cause_col\\)', r102_text))
+
+  # Check 6: R/102 prefers underlying cause (DEATH_CAUSE_TYPE == "U")
+  check("R/102 prefers underlying cause (DEATH_CAUSE_TYPE == \"U\") (Phase 119)",
+        grepl("DEATH_CAUSE_TYPE", r102_text) && grepl('"U"', r102_text))
+
+  # Check 7: R/102 joins cause codes onto the deceased set
+  check("R/102 joins cause onto deceased set via left_join (Phase 119)",
+        grepl("left_join", r102_text))
+
+  # Check 8: R/102 three-state classify preserved
+  check("R/102 three-state classify preserved (Phase 119)",
+        grepl("classify_codes\\(", r102_text) &&
+          grepl("Non-Hodgkin Lymphoma", r102_text) &&
+          grepl("cause_of_death_is_nhl", r102_text) &&
+          grepl("case_when", r102_text))
+
+  # Check 9: R/102 output contract unchanged (PATID + blank NA + filename)
+  check("R/102 output contract unchanged (PATID, na='', filename) (Phase 119)",
+        grepl("death_cause_nhl_flag\\.csv", r102_text) &&
+          grepl("row.names = FALSE", r102_text) &&
+          grepl('na = ""', r102_text) &&
+          grepl("PATID", r102_text))
+
+  # Check 10: R/102 has a labeled proxy backstop (CONTEXT D-05)
+  check("R/102 has labeled proxy backstop (D-05) (Phase 119)",
+        grepl("USED_PROXY_BACKSTOP", r102_text) && grepl("D-05", r102_text))
+
+  # Check 11: DEATH_CAUSE in PCORNET_TABLES (R/00_config.R)
+  config_text <- if (file.exists("R/00_config.R")) {
+    paste(readLines("R/00_config.R", warn = FALSE), collapse = "\n")
+  } else {
+    ""
+  }
+  check("DEATH_CAUSE registered in PCORNET_TABLES (Phase 119)",
+        grepl('"DEATH_CAUSE"', config_text))
+
+  # Check 12: DEATH_CAUSE_SPEC wired in the loader (R/01_load_pcornet.R)
+  load_text <- if (file.exists("R/01_load_pcornet.R")) {
+    paste(readLines("R/01_load_pcornet.R", warn = FALSE), collapse = "\n")
+  } else {
+    ""
+  }
+  check("DEATH_CAUSE_SPEC registered in TABLE_SPECS (Phase 119)",
+        grepl("DEATH_CAUSE_SPEC", load_text) &&
+          grepl("DEATH_CAUSE = DEATH_CAUSE_SPEC", load_text))
+
+  # Check 13: R/88 table-count assertion bumped to 16 (self-read of THIS file)
+  smoke_self_text <- paste(readLines("R/88_smoke_test_comprehensive.R", warn = FALSE),
+                           collapse = "\n")
+  check("R/88 table-count assertion bumped to 16 (Phase 119)",
+        grepl("length\\(tables_found\\) == 16", smoke_self_text))
+
+  # Check 14: RUNTIME (HiPerGator-only, gated) -- output CSV has non-zero TRUE/FALSE.
+  # Kept green locally: SKIPPED when IS_LOCAL or the output CSV is absent.
+  out_csv_119 <- file.path(CONFIG$output_dir, "death_cause_nhl_flag.csv")
+  if (!IS_LOCAL && file.exists(out_csv_119)) {
+    flag_df <- read.csv(out_csv_119, stringsAsFactors = FALSE, na.strings = "")
+    n_true  <- sum(flag_df$cause_of_death_is_nhl == "TRUE" |
+                     flag_df$cause_of_death_is_nhl == TRUE, na.rm = TRUE)
+    n_false <- sum(flag_df$cause_of_death_is_nhl == "FALSE" |
+                     flag_df$cause_of_death_is_nhl == FALSE, na.rm = TRUE)
+    check("output has non-zero TRUE or FALSE (Phase 119, HiPerGator)",
+          (n_true + n_false) > 0)
+  } else {
+    check("output has non-zero TRUE or FALSE -- SKIPPED (local / no output) (Phase 119)",
+          TRUE)
+  }
+
+} else {
+  # If either script missing, register the dependent checks as FALSE so the total
+  # stays honest (mirrors Section 15o's else-branch).
+  for (i in 2:14) {
+    check(paste0("R/102/R/103 Phase 119 dependent check #", i,
+                 " -- SKIPPED (script missing)"), FALSE)
+  }
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3771,6 +3892,9 @@ message("  * NHLDEATH-01: R/102 derives deceased set from DEATH table (1900 sent
 message("  * NHLDEATH-02: cause_of_death_is_nhl three-state flag via classify_codes == \"Non-Hodgkin Lymphoma\" (Phase 118)")
 message("  * NHLDEATH-03: R/102 writes output/death_cause_nhl_flag.csv (PATID + flag, na=\"\" blank) (Phase 118)")
 message("  * SMOKE-118-01: R/88 validates Phase 118 structural integrity (14 checks)")
+message("  * NHLFIX-03: R/102 reads cause of death from the DEATH_CAUSE table, not DEATH.DEATH_CAUSE (Phase 119)")
+message("  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_CAUSE table (Phase 119)")
+message("  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)")
 
 if (failed > 0) {
   quit(status = 1)
