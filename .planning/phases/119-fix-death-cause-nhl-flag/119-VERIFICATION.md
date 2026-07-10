@@ -1,8 +1,9 @@
 ---
 phase: 119-fix-death-cause-nhl-flag
 verified: 2026-07-09T00:00:00Z
-status: human_needed
-score: 6/6 must-have requirements structurally verified (1 runtime item gated to HiPerGator)
+status: passed
+score: 6/6 must-have requirements verified (structural + HiPerGator runtime confirmed 2026-07-10)
+human_verification_result: "PASSED on HiPerGator 2026-07-10 — R/103 recommended Source 1 (DEATH_CAUSE 62/1344; TR sources NAACCR-coded, 0 NHL); R/102 primary path fired, output tally TRUE=5 FALSE=57 NA=1282 (5+57=62 matches Source 1 coverage). See 119-HUMAN-UAT.md."
 human_verification:
   - test: "On HiPerGator, rebuild DuckDB then run R/102 and inspect output/death_cause_nhl_flag.csv"
     expected: "cause_of_death_is_nhl column has non-zero TRUE and/or FALSE values (not 100% blank); R/102 console reports non-zero TRUE/FALSE tallies"
@@ -20,7 +21,7 @@ human_verification:
 **Phase Goal:** `output/death_cause_nhl_flag.csv` carries REAL TRUE/FALSE values (not 100% blank) by sourcing cause of death from the separate PCORnet CDM `DEATH_CAUSE` table instead of the non-existent `DEATH.DEATH_CAUSE` column.
 
 **Verified:** 2026-07-09 (structural, Windows-local — no data/DuckDB per phase 116/117/118 precedent)
-**Status:** human_needed — all structural must-haves VERIFIED; the single runtime payoff (actual TRUE/FALSE tallies) is user-gated on HiPerGator.
+**Status:** passed — all structural must-haves VERIFIED; runtime payoff CONFIRMED on HiPerGator 2026-07-10 (TRUE=5, FALSE=57, NA=1282 of 1344 deceased).
 **Re-verification:** No — initial verification.
 
 ## Goal Achievement

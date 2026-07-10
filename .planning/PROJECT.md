@@ -139,7 +139,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v3.1 (2026-06-12). 114 phases completed across 16 milestones (v1.0-v3.2). Phase 114 complete — drug name consistency remediation: MEDICATION_LOOKUP (454 entries from 5 reference Excel sheets) centralized in R/00_config.R, R/26 fills blank drug_names at detail grain, R/42 uses 5-source precedence with reference Excel as highest priority, R/79 standalone audit script produces two-sheet styled xlsx.
+**Shipped:** v3.1 (2026-06-12). 119 phases completed across 16 milestones (v1.0-v3.2). Phase 119 complete — death_cause_nhl_flag fix: cause of death now sourced from the separate PCORnet CDM `DEATH_CAUSE` table (loaded as the 16th PCORNET_TABLES entry) instead of the non-existent `DEATH.DEATH_CAUSE` column. R/102 reads the underlying cause (DEATH_CAUSE_TYPE == "U" preferred) and classifies via classify_codes(); R/103 read-only diagnostic gated the source choice (DEATH_CAUSE is the only ICD-classifiable source — TR cause fields are NAACCR-coded). Runtime confirmed on HiPerGator: output/death_cause_nhl_flag.csv now carries TRUE=5, FALSE=57, NA=1282 of 1344 deceased (was 100% blank). R/35's identical stale assumption corrected.
 
 **Pipeline status:** 103 phases completed across 16 milestones (v1.0-v3.1). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
 
@@ -363,4 +363,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-24 — Phase 114 complete (drug name consistency remediation)*
+*Last updated: 2026-07-10 — Phase 119 complete (death_cause_nhl_flag fix via DEATH_CAUSE table)*
