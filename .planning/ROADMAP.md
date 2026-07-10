@@ -222,3 +222,13 @@ Plans:
 - [x] 119-02-PLAN.md -- Load DEATH_CAUSE table (PCORNET_TABLES + DEATH_CAUSE_SPEC + R/88 table count 15->16)
 - [x] 119-03-PLAN.md -- Rewrite R/102 to source cause from DEATH_CAUSE table (underlying-cause preferred) + proxy backstop; correct/annotate R/35
 - [x] 119-04-PLAN.md -- Register R/103 in R/39, R/88 Section 15p structural validation, R/SCRIPT_INDEX.md updates
+
+### Phase 120: In all_codes_resolved_next_tables_v2.1 (tab: Supportive Care) normalize meaning into a new column to disambiguate dosage/spelling variants and generic names
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 119
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 120 to break down)

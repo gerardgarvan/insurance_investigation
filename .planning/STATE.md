@@ -162,6 +162,7 @@ Last activity: 2026-07-10
 - Phase 117 added: Make a lifespan Gantt that collapses across all time but still keeps treatment type etc separate -- COMPLETE
 - Phase 118 added: Create CSV outputting PATID + boolean column for whether cause of death is non-Hodgkin lymphoma
 - Phase 119 added: Fix death_cause_nhl_flag
+- Phase 120 added: In all_codes_resolved_next_tables_v2.1 (tab: Supportive Care) normalize meaning into a new column to disambiguate dosage/spelling variants and generic names
 
 ### Open Questions
 
