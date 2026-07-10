@@ -60,8 +60,18 @@ message(glue("  RDS:  {OUTPUT_RDS}\n"))
 
 
 # --- SECTION 2: LOAD DEATH DATA ----
+#
+# Phase 119 CORRECTION: cause of death is NOT a column in the DEATH table in
+# this OneFlorida+ extract (DEATH has only ID, DEATH_DATE, DEATH_DATE_IMPUTE,
+# DEATH_SOURCE, DEATH_MATCH_CONFIDENCE, SOURCE). Cause of death lives in the
+# separate PCORnet CDM DEATH_CAUSE table (see R/102), joined by ID. The prior
+# DEATH.DEATH_CAUSE field guard reported ~100% missingness because it read a
+# column that does not exist. This section now derives the deceased set from
+# DEATH and reads real cause codes from get_pcornet_table("DEATH_CAUSE"),
+# preferring the underlying cause (DEATH_CAUSE_TYPE == "U"), so all downstream
+# completeness / payer / site profiling operates on real DEATH_CAUSE codes.
 
-message("--- Loading DEATH table from DuckDB ---")
+message("--- Loading DEATH table from DuckDB (deceased-set derivation) ---")
 
 USE_DUCKDB <- TRUE
 open_pcornet_con()
@@ -70,47 +80,46 @@ death_raw <- get_pcornet_table("DEATH") %>% collect()
 
 message(glue("  Raw DEATH table: {nrow(death_raw)} rows"))
 
-# Check if DEATH_CAUSE column exists (D-78-01 field availability guard)
-death_cause_available <- FALSE
-death_cause_col <- NULL
-
-if ("DEATH_CAUSE" %in% names(death_raw)) {
-  death_cause_col <- "DEATH_CAUSE"
-  death_cause_available <- TRUE
-  message("  Found DEATH_CAUSE column")
-} else if ("DEATH_CAUSE_CODE" %in% names(death_raw)) {
-  death_cause_col <- "DEATH_CAUSE_CODE"
-  death_cause_available <- TRUE
-  message("  Found DEATH_CAUSE_CODE column (alternative name)")
-} else {
-  message("  WARNING: DEATH_CAUSE field not available in DEATH table")
-}
-
-# Parse dates and filter sentinels
-death_data <- death_raw %>%
+# Parse dates and filter sentinels -> one row per deceased patient.
+deceased_set <- death_raw %>%
   mutate(DEATH_DATE = parse_pcornet_date(DEATH_DATE)) %>%
   mutate(DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)) %>%
-  filter(!is.na(DEATH_DATE))
-
-# Add DEATH_CAUSE column if available, otherwise set to NA
-if (death_cause_available) {
-  death_data <- death_data %>%
-    select(ID, DEATH_DATE, DEATH_SOURCE, DEATH_CAUSE = all_of(death_cause_col))
-} else {
-  death_data <- death_data %>%
-    mutate(DEATH_CAUSE = NA_character_) %>%
-    select(ID, DEATH_DATE, DEATH_SOURCE, DEATH_CAUSE)
-}
-
-# Aggregate to patient level (one death date per patient)
-death_data <- death_data %>%
+  filter(!is.na(DEATH_DATE)) %>%
   group_by(ID) %>%
   summarise(
     DEATH_DATE = min(DEATH_DATE),
     DEATH_SOURCE = first(DEATH_SOURCE),
-    DEATH_CAUSE = first(DEATH_CAUSE),
     .groups = "drop"
   )
+
+# Phase 119: read cause codes from the DEATH_CAUSE table (underlying-cause
+# preferred), mirroring R/102 Section 4b. get_pcornet_table("DEATH_CAUSE")
+# returning NULL (table not yet loaded) degrades gracefully to no coded causes.
+dc_tbl <- get_pcornet_table("DEATH_CAUSE")
+death_cause_available <- !is.null(dc_tbl)
+
+if (death_cause_available) {
+  message("  Found DEATH_CAUSE table (reading cause codes, underlying-cause preferred)")
+  death_cause_by_patient <- dc_tbl %>%
+    collect() %>%
+    mutate(type_rank = case_when(
+      DEATH_CAUSE_TYPE == "U" ~ 1L, # underlying cause preferred
+      DEATH_CAUSE_TYPE == "C" ~ 2L, # contributing
+      TRUE                    ~ 3L  # other / inferred / blank
+    )) %>%
+    filter(!is.na(DEATH_CAUSE), trimws(DEATH_CAUSE) != "") %>%
+    arrange(ID, type_rank) %>%
+    group_by(ID) %>%
+    summarise(DEATH_CAUSE = first(DEATH_CAUSE), .groups = "drop")
+} else {
+  message("  WARNING: DEATH_CAUSE table not in DuckDB -- run R/01 (force_reload) + R/03 to load it.")
+  message("           Completeness will report ~100% missing until the table is loaded.")
+  death_cause_by_patient <- tibble(ID = character(), DEATH_CAUSE = character())
+}
+
+# Join cause codes onto the deceased set (patients with no cause record -> NA).
+death_data <- deceased_set %>%
+  left_join(death_cause_by_patient, by = "ID")
 
 message(glue("  Patients with valid death dates: {nrow(death_data)}"))
 
