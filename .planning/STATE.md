@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: executing
-stopped_at: Completed 119-03-PLAN.md (R/102 reads DEATH_CAUSE table; R/35 corrected)
-last_updated: "2026-07-10T00:32:29.513Z"
+status: verifying
+stopped_at: Completed 119-04-PLAN.md (R/103 registered in R/39; R/88 Section 15p; SCRIPT_INDEX count 4)
+last_updated: "2026-07-10T00:36:48.055Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 16
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 23
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 Phase: 119 (fix-death-cause-nhl-flag) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-10
 
 ## Performance Metrics
@@ -53,6 +53,12 @@ Last activity: 2026-07-10
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 119 Plan 04 decisions:**
+
+- R/103 registered in R/39 BEFORE R/102 (diagnostic-before-fix ordering); R/102 retained as the final comma-less investigation_scripts entry so the vector parses
+- R/88 Section 15p (continuing 15m/15n/15o -> 15p): positive `get_pcornet_table("DEATH_CAUSE")` check + negative `!grepl('DEATH_CAUSE = all_of(death_cause_col)')` check prove the source switch both ways; guard requires R/102 AND R/103; else-branch registers SKIPPED FALSE for an honest total; Check 13 self-reads R/88 for `length(tables_found) == 16`; Check 14 IS_LOCAL-gated runtime (non-zero TRUE/FALSE) stays green locally
+- SCRIPT_INDEX: R/103 row added (phase 119, read-only inventory); R/102 phase column set to `118, 119` with source-correction note; post-renumber (100+) count 3 -> 4
 
 **Phase 119 Plan 03 decisions:**
 
@@ -184,11 +190,12 @@ None identified.
 | Phase 119 P01 | 8min | 1 tasks | 1 files |
 | Phase 119 P02 | 2min | 3 tasks | 3 files |
 | Phase 119 P03 | 6min | 2 tasks | 2 files |
+| Phase 119 P04 | 2min | 3 tasks | 3 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:resume-work` (2026-07-09)
-**Stopped at:** Completed 119-03-PLAN.md (R/102 reads DEATH_CAUSE table; R/35 corrected)
+**Stopped at:** Completed 119-04-PLAN.md (R/103 registered in R/39; R/88 Section 15p; SCRIPT_INDEX count 4)
 **What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
 
 ### Recent Changes
