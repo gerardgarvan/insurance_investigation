@@ -15,7 +15,7 @@
 # Outputs:
 #   - None (defines configuration objects in memory)
 #     - CONFIG: List with data_dir, cache paths, DuckDB paths, performance tuning
-#     - PCORNET_TABLES: Vector of 14 table names to load
+#     - PCORNET_TABLES: Vector of 16 table names to load
 #     - PCORNET_PATHS: Named vector of full CSV file paths
 #     - ICD_CODES: List of HL diagnosis codes (77 ICD-10 + 73 ICD-9 = 150 total)
 #     - PAYER_MAPPING: AMC 8-category lookup table (direct code-to-category mapping)
