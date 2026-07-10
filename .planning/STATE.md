@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 119-02-PLAN.md (DEATH_CAUSE wired into loader); Plan 03 gated on user R/103 HiPerGator run
-last_updated: "2026-07-10T00:27:39.941Z"
+stopped_at: Completed 119-03-PLAN.md (R/102 reads DEATH_CAUSE table; R/35 corrected)
+last_updated: "2026-07-10T00:32:29.513Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 16
   completed_phases: 15
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 ## Current Position
 
 Phase: 119 (fix-death-cause-nhl-flag) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-10
 
@@ -53,6 +53,15 @@ Last activity: 2026-07-10
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 119 Plan 03 decisions:**
+
+- R/102 sources cause of death from the DEATH_CAUSE table (underlying-cause preferred via type_rank U=1/C=2/other=3, arrange + first()) joined onto the DEATH-derived deceased set; DEATH table now used only for the deceased set (ID + earliest DEATH_DATE)
+- Three-state case_when (TRUE=NHL / FALSE=other coded / NA=uncoded) and exact PATID/flag output contract (transmute + write.csv row.names=FALSE na="") kept verbatim
+- Labeled off-by-default PROXY BACKSTOP (D-05, USED_PROXY_BACKSTOP flag) gated on n_coded==0 falls back to NHL-in-DIAGNOSIS-history (explicitly a proxy)
+- classify_codes() reads raw DEATH_CAUSE value field, not DEATH_CAUSE_CODE (coding-system indicator)
+- R/35 fully corrected (Option A): reads DEATH_CAUSE table + left_join onto deceased set; death_data shape unchanged so the 5-sheet xlsx logic is untouched
+- Rule 1 auto-fix: proxy DIAGNOSIS join keyed on ID (not PATID), matching this extract's convention (RESEARCH Pitfall 4)
 
 **Phase 119 Plan 02 decisions:**
 
@@ -174,11 +183,12 @@ None identified.
 | Phase 118 P01 | 5 | 2 tasks | 4 files |
 | Phase 119 P01 | 8min | 1 tasks | 1 files |
 | Phase 119 P02 | 2min | 3 tasks | 3 files |
+| Phase 119 P03 | 6min | 2 tasks | 2 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:resume-work` (2026-07-09)
-**Stopped at:** Completed 119-02-PLAN.md (DEATH_CAUSE wired into loader); Plan 03 gated on user R/103 HiPerGator run
+**Stopped at:** Completed 119-03-PLAN.md (R/102 reads DEATH_CAUSE table; R/35 corrected)
 **What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
 
 ### Recent Changes
