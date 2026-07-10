@@ -1,10 +1,19 @@
 # ==============================================================================
-# 102_death_cause_nhl_flag.R -- Cause-of-Death NHL Flag CSV (Phase 118)
+# 102_death_cause_nhl_flag.R -- Cause-of-Death NHL Flag CSV (Phase 118 / 119)
 # ==============================================================================
 # Purpose:     Produce a per-patient CSV flagging whether each deceased patient's
 #              cause of death classifies as Non-Hodgkin Lymphoma (NHL). The flag
 #              is a three-state logical: TRUE (NHL cause), FALSE (other coded
 #              cause), or blank/NA (cause of death uncoded or missing).
+#
+#              Phase 119 FIX: cause of death is read from the DEATH_CAUSE table
+#              (a separate PCORnet CDM table joined to DEATH by ID), NOT from a
+#              DEATH.DEATH_CAUSE column -- that column does not exist in this
+#              OneFlorida+ extract, which is why the Phase 118 output was 100%
+#              blank. The DEATH table carries only DEATH_DATE (deceased-set
+#              derivation); the ICD cause codes live in DEATH_CAUSE (wired into
+#              the loader in Plan 02). The underlying cause (DEATH_CAUSE_TYPE ==
+#              "U") is preferred; otherwise the first available cause per patient.
 #
 #              The three-state design is deliberate: DEATH_CAUSE is frequently
 #              uncoded in PCORnet data (see R/35 completeness profiling), and
@@ -15,8 +24,13 @@
 #              covering ICD-10 C82-C86, C88 and ICD-9 200, 202. Hodgkin (C81)
 #              is NOT NHL (D-05/D-06).
 #
-# Inputs:      DuckDB DEATH table (DEATH_DATE, DEATH_CAUSE / DEATH_CAUSE_CODE,
-#              ID columns)
+#              A documented PROXY BACKSTOP (CONTEXT D-05) exists but is OFF by
+#              default: it only activates if the DEATH_CAUSE table yields ZERO
+#              coded causes for the entire deceased set, in which case it falls
+#              back to NHL-in-DIAGNOSIS-history as an explicitly-labeled proxy.
+#
+# Inputs:      DuckDB DEATH table       (ID, DEATH_DATE -- deceased set)
+#              DuckDB DEATH_CAUSE table (ID, DEATH_CAUSE, DEATH_CAUSE_TYPE, ...)
 #
 # Outputs:     output/death_cause_nhl_flag.csv
 #                Columns: PATID, cause_of_death_is_nhl
@@ -31,12 +45,14 @@
 #               tidyverse ecosystem: dplyr, glue, stringr, lubridate
 #
 # Requirements: Phase 118 -- NHLDEATH-01, NHLDEATH-02, NHLDEATH-03
+#               Phase 119 -- NHLFIX-03, NHLFIX-04
 #
 # Usage:       Rscript R/102_death_cause_nhl_flag.R
 #              source("R/102_death_cause_nhl_flag.R")
 #
 # Note:        Tested structurally on Windows (no data). Full run with row
-#              counts is HiPerGator-only (requires DuckDB PCORnet data).
+#              counts is HiPerGator-only (requires DuckDB PCORnet data, including
+#              the DEATH_CAUSE table loaded via Plan 02's R/01 + R/03 rebuild).
 # ==============================================================================
 
 
@@ -55,7 +71,7 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 
-message("=== Phase 118: Cause-of-Death NHL Flag ===\n")
+message("=== Phase 118/119: Cause-of-Death NHL Flag (DEATH_CAUSE table) ===\n")
 
 
 # ==============================================================================
@@ -86,57 +102,70 @@ if (!exists("pcornet_con", envir = .GlobalEnv)) {
 # SECTION 4: LOAD AND DERIVE DECEASED SET ----
 # ==============================================================================
 
-message("--- Loading DEATH table from DuckDB ---")
+# Phase 119: the DEATH table in this extract has NO cause-of-death column
+# (columns are ID, DEATH_DATE, DEATH_DATE_IMPUTE, DEATH_SOURCE,
+# DEATH_MATCH_CONFIDENCE, SOURCE). It is used ONLY to derive the deceased set.
+# The ICD cause codes come from the separate DEATH_CAUSE table (Section 4b).
+
+message("--- Loading DEATH table from DuckDB (deceased-set derivation) ---")
 
 death_raw <- get_pcornet_table("DEATH") %>% collect()
 
 message(glue("  Raw DEATH table: {nrow(death_raw)} rows"))
 
-# Field-availability guard (D-78-01): DEATH_CAUSE column name varies by site
-death_cause_available <- FALSE
-death_cause_col       <- NULL
-
-if ("DEATH_CAUSE" %in% names(death_raw)) {
-  death_cause_col       <- "DEATH_CAUSE"
-  death_cause_available <- TRUE
-  message("  Found DEATH_CAUSE column")
-} else if ("DEATH_CAUSE_CODE" %in% names(death_raw)) {
-  death_cause_col       <- "DEATH_CAUSE_CODE"
-  death_cause_available <- TRUE
-  message("  Found DEATH_CAUSE_CODE column (alternative name)")
-} else {
-  message("  WARNING: DEATH_CAUSE field not available in DEATH table")
-  message("           cause_of_death_is_nhl will be NA (blank) for all rows")
-}
-
-# Parse dates, coerce 1900 sentinel to NA, drop patients with no valid death date
-death_data <- death_raw %>%
+# Parse dates, coerce 1900 sentinel to NA, drop patients with no valid death date.
+# Aggregate to one row per patient (earliest valid death date). No cause read here.
+deceased_set <- death_raw %>%
   mutate(DEATH_DATE = parse_pcornet_date(DEATH_DATE)) %>%
   mutate(DEATH_DATE = if_else(year(DEATH_DATE) == 1900L, as.Date(NA), DEATH_DATE)) %>%
-  filter(!is.na(DEATH_DATE))
+  filter(!is.na(DEATH_DATE)) %>%
+  group_by(ID) %>%
+  summarise(DEATH_DATE = min(DEATH_DATE), .groups = "drop")
 
-message(glue("  Patients with valid death dates: {nrow(death_data)}"))
+message(glue("  Deceased patients (valid death date, one row each): {nrow(deceased_set)}"))
 
-# Align DEATH_CAUSE column (or substitute NA_character_ if field absent)
-if (death_cause_available) {
-  death_data <- death_data %>%
-    select(ID, DEATH_DATE, DEATH_CAUSE = all_of(death_cause_col))
+
+# ==============================================================================
+# SECTION 4b: LOAD CAUSE CODES FROM THE DEATH_CAUSE TABLE ----
+# ==============================================================================
+
+# Phase 119 PRIMARY PATH (RESEARCH "Case A"): cause of death lives in the
+# separate PCORnet CDM DEATH_CAUSE table (columns ID, DEATH_CAUSE,
+# DEATH_CAUSE_CODE, DEATH_CAUSE_TYPE, DEATH_CAUSE_SOURCE, DEATH_CAUSE_CONFIDENCE,
+# SOURCE). One patient can have multiple cause records (underlying / contributing
+# / other / inferred). We PREFER the underlying cause (DEATH_CAUSE_TYPE == "U")
+# and fall back to the first available cause per patient (RESEARCH Pitfall 2 --
+# a hard "U" filter could drop everyone if the provider populated only "C"/blank).
+# DEATH_CAUSE holds the ICD cause code passed to classify_codes() (it normalizes
+# internally); DEATH_CAUSE_CODE is only the coding-system indicator (09/10/OT/UN).
+
+message("--- Loading DEATH_CAUSE table from DuckDB (underlying-cause preferred) ---")
+
+dc_tbl <- get_pcornet_table("DEATH_CAUSE")
+if (is.null(dc_tbl)) {
+  message("  WARNING: DEATH_CAUSE table not in DuckDB -- run R/01 (force_reload) + R/03 to load it.")
+  message("           cause_of_death_is_nhl will be NA (blank) for all rows until then.")
+  death_cause_by_patient <- tibble(ID = character(), DEATH_CAUSE = character())
 } else {
-  death_data <- death_data %>%
-    mutate(DEATH_CAUSE = NA_character_) %>%
-    select(ID, DEATH_DATE, DEATH_CAUSE)
+  death_cause_by_patient <- dc_tbl %>%
+    collect() %>%
+    mutate(type_rank = case_when(
+      DEATH_CAUSE_TYPE == "U" ~ 1L, # underlying cause preferred
+      DEATH_CAUSE_TYPE == "C" ~ 2L, # contributing
+      TRUE                    ~ 3L  # other / inferred / blank
+    )) %>%
+    filter(!is.na(DEATH_CAUSE), trimws(DEATH_CAUSE) != "") %>%
+    arrange(ID, type_rank) %>%
+    group_by(ID) %>%
+    summarise(DEATH_CAUSE = first(DEATH_CAUSE), .groups = "drop")
+
+  message(glue("  Patients with >=1 coded DEATH_CAUSE: {nrow(death_cause_by_patient)}"))
 }
 
-# Aggregate to one death record per patient (earliest valid death date, first cause)
-death_data <- death_data %>%
-  group_by(ID) %>%
-  summarise(
-    DEATH_DATE  = min(DEATH_DATE),
-    DEATH_CAUSE = first(DEATH_CAUSE),
-    .groups     = "drop"
-  )
-
-message(glue("  Patients after per-patient aggregation: {nrow(death_data)}"))
+# Join cause codes onto the deceased set. Deceased patients with no DEATH_CAUSE
+# record get NA (rendered blank) -- preserving the three-state contract.
+death_data <- deceased_set %>%
+  left_join(death_cause_by_patient, by = "ID")
 
 close_pcornet_con()
 
@@ -184,6 +213,57 @@ message(glue("  Uncoded/missing (blank NA): {n_blank}"))
 
 
 # ==============================================================================
+# SECTION 5b: PROXY BACKSTOP (CONTEXT D-05 -- LAST RESORT, OFF BY DEFAULT) ----
+# ==============================================================================
+
+# PROXY BACKSTOP (CONTEXT D-05): this branch only fires if NO coded cause of
+# death exists for ANY deceased patient (i.e. the real cause-of-death signal is
+# genuinely unavailable in DEATH_CAUSE). RESEARCH confirmed the DEATH_CAUSE
+# table exists, so this stays OFF by default. When it fires, it flags a deceased
+# patient TRUE when their CONFIRMED cancer DIAGNOSIS history includes NHL via
+# classify_codes() on the DIAGNOSIS table. This is a PROXY -- it means
+# "NHL in cancer diagnosis history", NOT literal cause of death -- and every log
+# line + the USED_PROXY_BACKSTOP flag make that unmistakable.
+
+n_coded             <- sum(!is.na(death_flagged$cause_of_death_is_nhl))
+USED_PROXY_BACKSTOP <- FALSE
+
+if (n_coded == 0) {
+  message("  NOTE: No coded cause of death found for ANY deceased patient.")
+  message("        Falling back to DIAGNOSIS-history PROXY (D-05, last resort).")
+  message("        PROXY MEANING: 'NHL in cancer diagnosis history', NOT literal cause of death.")
+  USED_PROXY_BACKSTOP <- TRUE
+
+  # Re-open the connection (Section 4b closed it) to read DIAGNOSIS.
+  if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
+
+  dx_tbl <- get_pcornet_table("DIAGNOSIS")
+  if (is.null(dx_tbl)) {
+    message("  WARNING: DIAGNOSIS table not in DuckDB -- proxy cannot run; leaving flags NA.")
+  } else {
+    nhl_history_ids <- dx_tbl %>%
+      select(ID, DX) %>%  # this extract keys DIAGNOSIS on ID (not PATID)
+      collect() %>%
+      filter(!is.na(DX), trimws(DX) != "") %>%
+      mutate(dx_category = classify_codes(DX)) %>%
+      filter(dx_category == NHL_CATEGORY) %>%
+      distinct(ID) %>%
+      pull(ID)
+
+    # Three-state preserved: every deceased patient gets TRUE/FALSE from the
+    # proxy (no NA), since the proxy is a full-cohort determination.
+    death_flagged <- death_flagged %>%
+      mutate(cause_of_death_is_nhl = ID %in% nhl_history_ids)
+
+    message(glue("  PROXY: deceased patients with NHL in DIAGNOSIS history (TRUE): ",
+                 "{sum(death_flagged$cause_of_death_is_nhl)}"))
+  }
+
+  close_pcornet_con()
+}
+
+
+# ==============================================================================
 # SECTION 6: BUILD AND WRITE CSV ----
 # ==============================================================================
 
@@ -222,5 +302,6 @@ message(glue("  cause_of_death_is_nhl = FALSE (other coded):  {format(n_false, b
 message(glue("  cause_of_death_is_nhl = blank (uncoded/NA):   {format(n_blank, big.mark = ',')}"))
 message(glue("\n  Output: {OUTPUT_CSV}"))
 message(glue("  Columns: PATID, cause_of_death_is_nhl"))
+message(glue("  Cause source: {if (USED_PROXY_BACKSTOP) 'DIAGNOSIS-history PROXY (D-05)' else 'DEATH_CAUSE table (underlying-cause preferred)'}"))
 
-message("\nDone. (Phase 118 -- NHLDEATH-01 through NHLDEATH-03)")
+message("\nDone. (Phase 118 -- NHLDEATH-01..03; Phase 119 fix (DEATH_CAUSE table) -- NHLFIX-03, NHLFIX-04)")
