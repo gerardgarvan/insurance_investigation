@@ -212,12 +212,13 @@ USE_DUCKDB <- TRUE
 # SECTION 3: PCORNET CDM TABLE PATHS ----
 # ==============================================================================
 
-# Primary load set: 14 tables
+# Primary load set: 16 tables
 # - 7 standard CDM tables: ENROLLMENT, DIAGNOSIS, CONDITION, PROCEDURES,
 #   PRESCRIBING, ENCOUNTER, DEMOGRAPHIC
 # - 3 TUMOR_REGISTRY tables: contain HL-specific diagnosis dates (DATE_OF_DIAGNOSIS)
 #   and treatment dates (DT_CHEMO, DT_RAD, etc.)
 # - 2 medication tables (Phase 9): DISPENSING, MED_ADMIN for expanded treatment detection
+# - DEATH (Phase 57): death dates; DEATH_CAUSE (Phase 119): cause-of-death codes
 #
 # File naming pattern: TABLE_Mailhot_V1.csv
 # Example: ENROLLMENT_Mailhot_V1.csv
@@ -237,7 +238,8 @@ PCORNET_TABLES <- c(
   "MED_ADMIN", # Phase 9: expanded treatment detection
   "LAB_RESULT_CM", # Phase 10: surveillance lab values (LOINC-based matching)
   "PROVIDER", # Phase 10: oncology provider specialty matching
-  "DEATH" # Phase 57: death dates for Gantt chart endpoint
+  "DEATH", # Phase 57: death dates for Gantt chart endpoint
+  "DEATH_CAUSE" # Phase 119: PCORnet CDM cause-of-death codes (separate table; join to DEATH by ID)
 )
 
 # Build full paths as named character vector
@@ -250,6 +252,9 @@ PCORNET_PATHS <- setNames(
 # Filename overrides: actual CSV names that don't match the {TABLE}_Mailhot_V1.csv pattern
 PCORNET_PATHS[["LAB_RESULT_CM"]] <- file.path(CONFIG$data_dir, "LAB_RESULT_Mailhot_V1.csv")
 PCORNET_PATHS[["PROVIDER"]] <- file.path(CONFIG$data_dir, "PROVIDER_Mailhot_V1.csv")
+
+# Phase 119 runtime unknown: DEATH_CAUSE expected at DEATH_CAUSE_Mailhot_V1.csv (default pattern).
+# If R/103 diagnostic reports a different filename, add an override here like the LAB_RESULT_CM line above.
 
 # NOTE: Patient ID column is "ID" (not "PATID") across all tables
 # NOTE: SOURCE column = partner/site identifier (AMS, UMI, FLM, VRT)
