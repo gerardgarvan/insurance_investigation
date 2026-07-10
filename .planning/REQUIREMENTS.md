@@ -83,6 +83,15 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [x] **GANTAGE-01**: gantt_episodes.csv includes age_at_episode column with integer years (floor of years between DEMOGRAPHIC BIRTH_DATE and episode_start), NA for patients with missing birth date
 - [x] **SMOKE-115-01**: R/88 smoke test validates Phase 115 structural integrity (EPISODES_SCHEMA has 20 entries, both new columns present, classify_codes sourced, cancer_summary referenced, DEMOGRAPHIC queried, integer floor age, clean_multi_value applied, DETAIL_SCHEMA unchanged)
 
+### Fix death_cause_nhl_flag (Phase 119)
+
+- [x] **NHLFIX-01**: User can run R/103_death_cause_diagnostic.R on HiPerGator (read-only) and see, restricted to the ~1,344 deceased patients, non-null counts + deceased-set coverage + sample values + classify_codes() NHL matches for every candidate cause-of-death source (DEATH_CAUSE table, TUMOR_REGISTRY1.CAUSE_OF_DEATH, TR2/TR3.DCAUSE), plus a single-line recommendation gating implementation; writes output/diagnostics/death_cause_source_inventory.csv
+- [ ] **NHLFIX-02**: The PCORnet CDM DEATH_CAUSE table is loaded into the pipeline via the 5-touch-point recipe — added to PCORNET_TABLES (count 15->16), DEATH_CAUSE_SPEC (7 character columns) registered in TABLE_SPECS, auto-ingested by R/03, and the R/88 IS_LOCAL table-count assertion bumped to 16
+- [ ] **NHLFIX-03**: R/102 sources cause of death from the DEATH_CAUSE table (get_pcornet_table("DEATH_CAUSE")), NOT from a DEATH.DEATH_CAUSE column, preferring the underlying cause (DEATH_CAUSE_TYPE == "U") per patient, classifying via classify_codes() == "Non-Hodgkin Lymphoma", preserving the exact three-state output contract (PATID + cause_of_death_is_nhl, write.csv row.names=FALSE na="")
+- [ ] **NHLFIX-04**: R/102 includes a labeled diagnosis-history proxy backstop (D-05, USED_PROXY_BACKSTOP flag, off by default, fires only when zero coded causes exist for the deceased set); R/35's identical stale DEATH.DEATH_CAUSE assumption is corrected or clearly annotated to point at the DEATH_CAUSE table
+- [ ] **NHLFIX-05**: R/103 is registered in the R/39 investigation_scripts pipeline runner (R/102 retained) and R/SCRIPT_INDEX.md documents R/103 + the R/102 Phase 119 source change (post-renumber investigation count 3->4)
+- [ ] **SMOKE-119-01**: R/88 smoke test adds a Phase 119 Section (15p) structurally validating the fix: R/102 reads the DEATH_CAUSE table (positive) and no longer reads DEATH.DEATH_CAUSE (negative check), underlying-cause preference, left_join, three-state classify preserved, output contract intact, proxy backstop present, DEATH_CAUSE in PCORNET_TABLES + DEATH_CAUSE_SPEC in loader, table count 16, R/103 exists, with a gated HiPerGator-only runtime check that the output CSV has non-zero TRUE/FALSE
+
 ## v3.1 Requirements (Complete)
 
 ### Broadened Drug Grouping
@@ -124,6 +133,8 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 | Regimen reconstruction beyond ABVD/BV+AVD/Nivo+AVD | Current 3-regimen detection covers ~95% of adult first-line HL |
 | CONDITION table for non-cancer linkage | Scope limited to cancer diagnosis improvement |
 | PDF RMarkdown output | HTML is primary format for easy sharing; PDF can be added later if needed |
+| Broadening NHL beyond classify_codes()=="Non-Hodgkin Lymphoma" (Phase 119) | Locked by CONTEXT D-06; keep C82-C86/C88 + ICD-9 200/202, exclude C81 |
+| Adding raw cause code / cause category columns to death_cause_nhl_flag.csv (Phase 119) | Deferred; requested contract is PATID + the NHL flag only |
 
 ## Traceability
 
@@ -180,6 +191,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RUCA-05 | Phase 116 | Complete |
 | RUCA-06 | Phase 116 | Complete |
 | SMOKE-116-01 | Phase 116 | Complete |
+| NHLDEATH-01 | Phase 118 | Complete |
+| NHLDEATH-02 | Phase 118 | Complete |
+| NHLDEATH-03 | Phase 118 | Complete |
+| SMOKE-118-01 | Phase 118 | Complete |
+| NHLFIX-01 | Phase 119 | Complete |
+| NHLFIX-02 | Phase 119 | Pending |
+| NHLFIX-03 | Phase 119 | Pending |
+| NHLFIX-04 | Phase 119 | Pending |
+| NHLFIX-05 | Phase 119 | Pending |
+| SMOKE-119-01 | Phase 119 | Pending |
 
 **Coverage:**
 - v3.2 requirements: 11 total
@@ -192,7 +213,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Phase 114 requirements: 5 total (DRUGFIX x5)
 - Phase 115 requirements: 4 total (GANTT7DAY x2, GANTAGE x1, SMOKE-115 x1)
 - Phase 116 requirements: 7 total (RUCA x6, SMOKE-116 x1)
+- Phase 119 requirements: 6 total (NHLFIX x5, SMOKE-119 x1)
 
 ---
 *Requirements defined: 2026-06-12*
-*Last updated: 2026-07-06 -- Phase 116 RUCA-06 and SMOKE-116-01 requirements added*
+*Last updated: 2026-07-09 -- Phase 119 NHLFIX-01..05 + SMOKE-119-01 requirements added*

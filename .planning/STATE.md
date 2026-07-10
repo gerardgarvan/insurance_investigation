@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: completed
-stopped_at: Completed 118-01-PLAN.md
-last_updated: "2026-07-09T19:30:24.304Z"
-last_activity: 2026-07-09
+status: executing
+stopped_at: Completed 119-01-PLAN.md (R/103 diagnostic); Plan 03 gated on user running R/103 on HiPerGator
+last_updated: "2026-07-10T00:23:59.837Z"
+last_activity: 2026-07-10
 progress:
-  total_phases: 15
+  total_phases: 16
   completed_phases: 15
-  total_plans: 19
-  completed_plans: 19
+  total_plans: 23
+  completed_plans: 20
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 118 — create-csv-that-outputs-patid-and-a-column-where-cause-of-death-is-non-hodgkins-lymphoma-true-or-cause-of-death-is-non-hodgkins-lymphoma-false
+**Current focus:** Phase 119 — fix-death-cause-nhl-flag
 
 ## Current Position
 
-Phase: 118
-Plan: Not started
-Status: Phase 118 complete
-Last activity: 2026-07-09
+Phase: 119 (fix-death-cause-nhl-flag) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-07-10
 
 ## Performance Metrics
 
@@ -53,6 +53,15 @@ Last activity: 2026-07-09
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 119 Plan 01 decisions:**
+
+- R/103 is a read-only Wave-0 gate: structurally verified locally (grep), RUN on HiPerGator by the user who pastes back which source is populated to select the R/102 rewrite source
+- Probe DEATH_CAUSE CSV directly via file.path(CONFIG$data_dir, "DEATH_CAUSE_Mailhot_V1.csv") + file.exists() — PCORNET_PATHS$DEATH_CAUSE only exists after Plan 02
+- get_pcornet_table("DEATH_CAUSE") == NULL treated as expected-before-Plan-02 (Source-1 counts = NA, no error)
+- Deceased-set derivation copied verbatim from R/102 Section 4 so diagnostic set == eventual output set
+- Underlying-cause-preferred one-per-ID (arrange DEATH_CAUSE_TYPE != "U" then first) instead of hard == "U" filter (RESEARCH Pitfall 2)
+- NAACCR sentinels (0000 alive / 7777 cert-unavailable / 7797 uncoded) filtered before classify_codes()
 
 **Phase 118 Plan 01 decisions:**
 
@@ -156,12 +165,13 @@ None identified.
 | 260709-iyh | Drug-name canonicalization: DRUG_NAME_ALIASES + canonicalize_drug_name in R/00_config, applied to MEDICATION_LOOKUP + R/27; doxorubicin variants → "Doxorubicin Hydrochloride", liposomal kept separate | 2026-07-09 | 242c458 | [260709-iyh-add-drug-name-canonicalization-drug-name](./quick/260709-iyh-add-drug-name-canonicalization-drug-name/) |
 | 260709-jhw | R/27 self-bootstraps DuckDB connection (USE_DUCKDB + open_pcornet_con at top, guarded) like R/28-R/36 — fixes "object 'pcornet_con' not found" on standalone runs | 2026-07-09 | d2afeb6 | [260709-jhw-make-r-27-self-bootstrap-duckdb-connecti](./quick/260709-jhw-make-r-27-self-bootstrap-duckdb-connecti/) |
 | Phase 118 P01 | 5 | 2 tasks | 4 files |
+| Phase 119 P01 | 8min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 118` (Phase 118 Plan 01 execution complete)
-**Stopped at:** Completed 118-01-PLAN.md
-**What's next:** Phase 107 (Gap Resolution Report) or additional phases as needed
+**Last command:** `/gsd:resume-work` (2026-07-09)
+**Stopped at:** Completed 119-01-PLAN.md (R/103 diagnostic); Plan 03 gated on user running R/103 on HiPerGator
+**What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
 
 ### Recent Changes
 

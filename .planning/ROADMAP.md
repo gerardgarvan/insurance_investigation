@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 118: `/gsd:execute-phase 118`
+1. Execute Phase 119: `/gsd:execute-phase 119`
 
 ## Coverage
 
@@ -212,10 +212,13 @@ Plans:
 
 ### Phase 119: fix death_cause_nhl_flag
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** `output/death_cause_nhl_flag.csv` carries REAL TRUE/FALSE values (not 100% blank) by sourcing cause of death from the separate PCORnet CDM `DEATH_CAUSE` table instead of the non-existent `DEATH.DEATH_CAUSE` column. Investigate-first: a read-only HiPerGator diagnostic (R/103) inventories every candidate cause-of-death source (DEATH_CAUSE table, TUMOR_REGISTRY1.CAUSE_OF_DEATH, TR2/TR3.DCAUSE) restricted to the ~1,344 deceased patients and gates implementation. Then the `DEATH_CAUSE` table is loaded via the 5-touch-point recipe (PCORNET_TABLES + col spec + DuckDB ingest + R/88 table count 15->16), R/102 is rewritten to read the underlying cause (DEATH_CAUSE_TYPE == "U" preferred) and classify via `classify_codes() == "Non-Hodgkin Lymphoma"`, preserving the exact three-state output contract (PATID + cause_of_death_is_nhl, `write.csv(row.names=FALSE, na="")`). A labeled diagnosis-history proxy backstop (D-05) is included but off by default; R/35's identical stale assumption is corrected/annotated. Registered in R/39, validated by R/88 Section 15p, indexed in R/SCRIPT_INDEX.md.
+**Requirements**: NHLFIX-01, NHLFIX-02, NHLFIX-03, NHLFIX-04, NHLFIX-05, SMOKE-119-01
 **Depends on:** Phase 118
-**Plans:** 0 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 119 to break down)
+- [x] 119-01-PLAN.md -- R/103 read-only HiPerGator diagnostic: cause-of-death signal inventory over the deceased set (gates implementation)
+- [ ] 119-02-PLAN.md -- Load DEATH_CAUSE table (PCORNET_TABLES + DEATH_CAUSE_SPEC + R/88 table count 15->16)
+- [ ] 119-03-PLAN.md -- Rewrite R/102 to source cause from DEATH_CAUSE table (underlying-cause preferred) + proxy backstop; correct/annotate R/35
+- [ ] 119-04-PLAN.md -- Register R/103 in R/39, R/88 Section 15p structural validation, R/SCRIPT_INDEX.md updates
