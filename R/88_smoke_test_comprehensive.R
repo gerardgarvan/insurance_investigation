@@ -2409,6 +2409,95 @@ if (r104_exists) {
 }
 
 # ==============================================================================
+# SECTION 15r: SUPPORTIVE CARE NORMALIZED MEANING (Phase 120) ----
+# ==============================================================================
+
+# Phase 120 added R/105_normalize_supportive_care_meaning.R: resolves each of the
+# 171 RXNORM codes on the "Supportive Care" tab of
+# data/reference/all_codes_resolved_next_tables_v2.1.xlsx to its RxNorm IN generic
+# ingredient (three-step: related.json?tty=IN -> historystatus derivedConcepts ->
+# rule-based canonicalize_drug_name fallback), caches lookups to
+# data/reference/rxnorm_ingredient_cache.csv, and appends a "Normalized Meaning"
+# column (col G) IN PLACE, keeping combination products as sorted "/"-joined labels.
+# These are STRUCTURAL greps against the R/105 file text -- no HiPerGator data or
+# internet needed (nyquist_validation is OFF); they pass LOCALLY.
+
+message("\n[Phase 120] Supportive Care Normalized Meaning (R/105)...")
+
+# Check 1: R/105 script exists
+r105_exists <- file.exists("R/105_normalize_supportive_care_meaning.R")
+check("R/105_normalize_supportive_care_meaning.R exists (Phase 120)",
+      r105_exists)
+
+if (r105_exists) {
+  r105_lines <- readLines("R/105_normalize_supportive_care_meaning.R", warn = FALSE)
+  r105_text  <- paste(r105_lines, collapse = "\n")
+
+  # Check 2: minimum line count (>= 150)
+  check("R/105 has 150+ lines (Phase 120)",
+        length(r105_lines) >= 150)
+
+  # Check 3: sources R/00_config.R
+  check("R/105 sources R/00_config.R",
+        grepl("source.*00_config", r105_text))
+
+  # Check 4: reads the Supportive Care sheet at start_row = 2
+  check("R/105 reads the Supportive Care sheet (start_row = 2)",
+        grepl("Supportive Care", r105_text) &&
+          grepl("start_row = 2|start_row=2", r105_text))
+
+  # Check 5: calls the RxNav IN endpoint (generic-ingredient resolution, D-01)
+  check("R/105 calls the RxNav IN endpoint (related.json?tty=IN)",
+        grepl("related\\.json\\?tty=IN", r105_text))
+
+  # Check 6: does NOT use the full-clinical-name properties endpoint (negative)
+  check("R/105 does NOT use properties.json (uses IN, not full clinical name)",
+        !grepl("properties\\.json", r105_text))
+
+  # Check 7: has the historystatus retired-code fallback
+  check("R/105 has the historystatus retired-code fallback",
+        grepl("historystatus", r105_text))
+
+  # Check 8: reuses the httr2 retry wrapper
+  check("R/105 reuses the httr2 req_retry wrapper",
+        grepl("req_retry", r105_text))
+
+  # Check 9: keeps combos as a sorted, unique "/"-joined label (D-05)
+  check("R/105 keeps combos as sorted-unique /-joined label (rxnav_IN_combo)",
+        grepl("sort\\(unique", r105_text) && grepl("rxnav_IN_combo", r105_text))
+
+  # Check 10: reuses canonicalize_drug_name for the rule-based fallback (D-04)
+  check("R/105 reuses canonicalize_drug_name for the rule-based fallback",
+        grepl("canonicalize_drug_name", r105_text))
+
+  # Check 11: writes the ingredient cache CSV (offline reruns)
+  check("R/105 writes the rxnorm_ingredient_cache.csv",
+        grepl("rxnorm_ingredient_cache\\.csv", r105_text))
+
+  # Check 12: appends the Normalized Meaning column at col G (header G2, data G3)
+  check("R/105 appends Normalized Meaning at col G (G2 header + G3 data)",
+        grepl("Normalized Meaning", r105_text) &&
+          grepl("G2", r105_text) && grepl("G3", r105_text))
+
+  # Check 13: round-trip verify present (2nd wb_load + 171-row + 7-col assertions).
+  #           R/105 asserts row count against the N_SUPCARE_ROWS (171L) constant and
+  #           the 7-col shape via `ncol(sc) != 7`, so match those forms (not literal
+  #           `== 171`/`== 7`) plus the second wb_load re-open.
+  check("R/105 has a round-trip verify (2nd wb_load + 171-row + 7-col asserts)",
+        grepl("N_SUPCARE_ROWS", r105_text) &&
+          grepl("ncol\\(sc\\) != 7", r105_text) &&
+          length(gregexpr("wb_load", r105_text)[[1]]) >= 2)
+
+  # Check 14: no ggplot/ggsave (data-mutation only)
+  check("R/105 has NO ggplot/ggsave (data-mutation only)",
+        !grepl("ggplot|ggsave|geom_", r105_text))
+
+} else {
+  # If script missing, register the dependent checks as FALSE so total stays honest
+  for (i in 2:14) check(paste0("R/105 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3981,6 +4070,7 @@ message("  * NHLFIX-03: R/102 reads cause of death from the DEATH_CAUSE table, n
 message("  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_CAUSE table (Phase 119)")
 message("  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)")
 message("  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural integrity (Section 15q, 14 checks)")
+message("  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized Meaning structural integrity (Section 15r, 14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
