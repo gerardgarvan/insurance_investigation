@@ -15,7 +15,7 @@
 # Inputs:       output/gantt_lifespan.csv  (produced by R/101_gantt_lifespan_collapse.R)
 #               output/gantt_episodes.csv  (produced by R/52_gantt_v2_export.R)
 #
-# Outputs:      gantt_entire_history.csv  (repo root by default; 6 columns:
+# Outputs:      output/gantt_entire_history.csv  (6 columns:
 #                 patient_id, treatment_type, treatment_start, treatment_stop,
 #                 drug_names, cancer_7day_confirmed)
 #
@@ -55,9 +55,8 @@ message("=== quick-260710-i1e: Gantt Entire History Projection ===\n")
 INPUT_LIFESPAN <- file.path(CONFIG$output_dir, "gantt_lifespan.csv")
 INPUT_EPISODES <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
 
-# OUTPUT PATH: repo root by default to match the user's existing hand-made file.
-# To relocate under output/, change to: file.path(CONFIG$output_dir, "gantt_entire_history.csv")
-OUTPUT <- "gantt_entire_history.csv"
+# OUTPUT PATH: under output/ alongside the other Gantt exports.
+OUTPUT <- file.path(CONFIG$output_dir, "gantt_entire_history.csv")
 
 # Defensive: fail fast if either upstream Gantt export is missing.
 stopifnot(file.exists(INPUT_LIFESPAN), file.exists(INPUT_EPISODES))
