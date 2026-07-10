@@ -145,7 +145,8 @@ Standalone investigation scripts added after the 00-99 decade-based renumbering 
 |--------|---------|-------|
 | `R/100_ruca_rurality_summary.R` | USDA 2020 ZIP RUCA rurality classification of the HL cohort. Produces a 4-sheet styled xlsx: (1) patient-level rurality frequency, (2) rurality x AMC 8-category payer (encounter-level), (3) rurality x treatment type (encounter-level), (4) rurality x cancer category (episode-level). Bundles the USDA reference xlsx in `data/reference/RUCA-codes-2020-zipcode.xlsx`. | 116 |
 | `R/101_gantt_lifespan_collapse.R` | Collapses the per-episode Gantt export (`output/gantt_episodes.csv`) into a "lifespan" CSV: one row per patient x treatment type spanning that patient's earliest episode_start to latest episode_stop (calendar dates preserved, not normalized). Multi-value metadata is unioned/deduped/sorted (reuses R/52 `clean_multi_value`). Death and HL Diagnosis pseudo-rows excluded. Output: `output/gantt_lifespan.csv` for Tableau. | 117 |
-| `R/102_death_cause_nhl_flag.R` | Writes output/death_cause_nhl_flag.csv: one row per deceased patient (valid DEATH_DATE) with PATID and a three-state cause_of_death_is_nhl flag (TRUE = NHL cause of death, FALSE = other coded cause, blank = uncoded). NHL determined via classify_codes() == "Non-Hodgkin Lymphoma". | 118 |
+| `R/102_death_cause_nhl_flag.R` | Writes output/death_cause_nhl_flag.csv: one row per deceased patient (valid DEATH_DATE) with PATID and a three-state cause_of_death_is_nhl flag (TRUE = NHL cause of death, FALSE = other coded cause, blank = uncoded). NHL determined via classify_codes() == "Non-Hodgkin Lymphoma". (Phase 119: source corrected to read the separate DEATH_CAUSE table instead of the empty DEATH.DEATH_CAUSE column) | 118, 119 |
+| `R/103_death_cause_diagnostic.R` | Read-only Phase 119 diagnostic: inventories every candidate cause-of-death source (DEATH_CAUSE table, TUMOR_REGISTRY1.CAUSE_OF_DEATH, TR2/TR3.DCAUSE) restricted to the deceased patient set — reports non-null counts, deceased-set coverage, sample values, and classify_codes() NHL matches, plus a recommendation. Writes output/diagnostics/death_cause_source_inventory.csv. | 119 |
 
 ---
 
@@ -198,7 +199,7 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
-- **Post-renumber investigations (100+):** 3 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag)
+- **Post-renumber investigations (100+):** 4 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic)
 - **Utility libraries:** 10 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
 - **Total:** 90
