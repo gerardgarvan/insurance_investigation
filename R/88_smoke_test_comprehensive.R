@@ -3465,10 +3465,11 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
     )
 
     if (IS_LOCAL) {
-      # TEST-01: Fixture-specific table count (15 tables from fixture CSVs)
+      # TEST-01: Fixture-specific table count (16 tables from fixture CSVs; DEATH_CAUSE added Phase 119)
+      # NOTE (Phase 119): local fixture DuckDB must be rebuilt to include DEATH_CAUSE, else this check reports 15.
       check(
-        glue("DuckDB contains 15 tables from fixtures (found {length(tables_found)})"),
-        length(tables_found) == 15
+        glue("DuckDB contains 16 tables from fixtures (found {length(tables_found)})"),
+        length(tables_found) == 16
       )
 
       # Validate critical tables exist
