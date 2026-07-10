@@ -222,6 +222,23 @@ DEATH_SPEC <- cols(
 )
 
 # ------------------------------------------------------------------------------
+# 6c. DEATH_CAUSE (7 columns)
+# ------------------------------------------------------------------------------
+# Phase 119: PCORnet CDM cause-of-death codes. Separate table from DEATH.
+# All columns character (ICD cause codes + coding-system / type / source flags).
+# Join key to DEATH is ID (not PATID) per site convention.
+# Source file: DEATH_CAUSE_Mailhot_V1.csv
+DEATH_CAUSE_SPEC <- cols(
+  ID = col_character(),
+  DEATH_CAUSE = col_character(),
+  DEATH_CAUSE_CODE = col_character(),
+  DEATH_CAUSE_TYPE = col_character(),
+  DEATH_CAUSE_SOURCE = col_character(),
+  DEATH_CAUSE_CONFIDENCE = col_character(),
+  SOURCE = col_character()
+)
+
+# ------------------------------------------------------------------------------
 # 7. TUMOR_REGISTRY1 (314 columns - use .default strategy)
 # ------------------------------------------------------------------------------
 # Strategy: Most columns are character codes/text
@@ -397,7 +414,8 @@ TABLE_SPECS <- list(
   MED_ADMIN = MED_ADMIN_SPEC, # Phase 9
   LAB_RESULT_CM = LAB_RESULT_CM_SPEC, # Phase 10: surveillance lab values
   PROVIDER = PROVIDER_SPEC, # Phase 10: oncology provider specialty
-  DEATH = DEATH_SPEC # Phase 57: death dates for Gantt endpoints
+  DEATH = DEATH_SPEC, # Phase 57: death dates for Gantt endpoints
+  DEATH_CAUSE = DEATH_CAUSE_SPEC # Phase 119: cause-of-death codes
 )
 
 # ==============================================================================
