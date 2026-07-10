@@ -228,8 +228,8 @@ Plans:
 **Goal:** A new standalone script `R/105_normalize_supportive_care_meaning.R` appends a `Normalized Meaning` column (col G) to the Supportive Care tab (171 RXNORM rows) of `data/reference/all_codes_resolved_next_tables_v2.1.xlsx` IN PLACE, holding the generic ingredient name (RxNorm IN concept). Each RXCUI is resolved via RxNav `related.json?tty=IN` (salts/biosimilars/packs collapse to base per D-01; combination products keep a sorted "/"-joined label per D-05), with a `historystatus.json` derivedConcepts fallback for retired codes and a rule-based `canonicalize_drug_name()` fallback for API misses so every row gets a non-blank value (D-04). RxNav results are cached to `data/reference/rxnorm_ingredient_cache.csv` for offline reruns (D-03). The in-place write preserves all 8 sheets, the row-1 title banner, and the other sheets' row counts (verified by an in-script round-trip reopen). Registered in R/39, validated by R/88 Section 15r, indexed in R/SCRIPT_INDEX.md.
 **Requirements**: SUPCARE-01, SUPCARE-02, SUPCARE-03, SUPCARE-04, SUPCARE-05, SMOKE-120-01
 **Depends on:** Phase 119
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 120-01-PLAN.md -- Create R/105 (RxNav IN resolution + cache + rule-based fallback + in-place xlsx append + local round-trip verify) and extend DRUG_NAME_ALIASES
+- [x] 120-01-PLAN.md -- Create R/105 (RxNav IN resolution + cache + rule-based fallback + in-place xlsx append + local round-trip verify) and extend DRUG_NAME_ALIASES
 - [ ] 120-02-PLAN.md -- Register R/105 in R/39, add R/88 Section 15r (SMOKE-120-01), update R/SCRIPT_INDEX.md (100+ count 5->6, Total 91->92)

@@ -94,11 +94,11 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 
 ### Normalize Supportive Care Meaning (Phase 120)
 
-- [ ] **SUPCARE-01**: R/105 resolves each of the 171 Supportive Care RXNORM codes to its RxNorm IN generic ingredient via the RxNav REST API (`related.json?tty=IN`, reusing R/27's httr2 retry/backoff wrapper), caching results to `data/reference/rxnorm_ingredient_cache.csv` (columns rxcui, ingredient_name, source, resolved_at) so subsequent runs are fully offline
-- [ ] **SUPCARE-02**: Salts/esters and biosimilars collapse to the base ingredient automatically via the RxNorm IN concept (dexamethasone phosphate -> dexamethasone; filgrastim-sndz -> filgrastim); retired RxCUIs (e.g. 104896/104897) returning an empty IN group are recovered via `historystatus.json` -> derivedConcepts.ingredientConcept[].ingredientName
-- [ ] **SUPCARE-03**: Combination products keep a sorted, "/"-joined combined ingredient label (e.g. ciprofloxacin/dexamethasone; dexamethasone/neomycin/polymyxin B), tagged source rxnav_IN_combo, never silently reduced to one ingredient (D-05)
-- [ ] **SUPCARE-04**: A rule-based fallback (strip dose/formulation/pack/salt tokens + brand->generic alias via an extended DRUG_NAME_ALIASES / canonicalize_drug_name) fills any row RxNav cannot resolve, so every one of the 171 rows receives a non-blank Normalized Meaning value (D-04)
-- [ ] **SUPCARE-05**: `Normalized Meaning` is appended as a trailing column (G) to the Supportive Care tab of `data/reference/all_codes_resolved_next_tables_v2.1.xlsx` IN PLACE via openxlsx2 wb_load -> wb_add_data(dims=G2/G3) -> widen autofilter to col G -> wb_save, preserving the other 7 sheets, the row-1 title banner, and every other sheet's row count (verified by an in-script fresh-reopen round-trip asserting 8 sheets in order + Supportive Care 7 cols x 171 rows + no blanks); D-02
+- [x] **SUPCARE-01**: R/105 resolves each of the 171 Supportive Care RXNORM codes to its RxNorm IN generic ingredient via the RxNav REST API (`related.json?tty=IN`, reusing R/27's httr2 retry/backoff wrapper), caching results to `data/reference/rxnorm_ingredient_cache.csv` (columns rxcui, ingredient_name, source, resolved_at) so subsequent runs are fully offline
+- [x] **SUPCARE-02**: Salts/esters and biosimilars collapse to the base ingredient automatically via the RxNorm IN concept (dexamethasone phosphate -> dexamethasone; filgrastim-sndz -> filgrastim); retired RxCUIs (e.g. 104896/104897) returning an empty IN group are recovered via `historystatus.json` -> derivedConcepts.ingredientConcept[].ingredientName
+- [x] **SUPCARE-03**: Combination products keep a sorted, "/"-joined combined ingredient label (e.g. ciprofloxacin/dexamethasone; dexamethasone/neomycin/polymyxin B), tagged source rxnav_IN_combo, never silently reduced to one ingredient (D-05)
+- [x] **SUPCARE-04**: A rule-based fallback (strip dose/formulation/pack/salt tokens + brand->generic alias via an extended DRUG_NAME_ALIASES / canonicalize_drug_name) fills any row RxNav cannot resolve, so every one of the 171 rows receives a non-blank Normalized Meaning value (D-04)
+- [x] **SUPCARE-05**: `Normalized Meaning` is appended as a trailing column (G) to the Supportive Care tab of `data/reference/all_codes_resolved_next_tables_v2.1.xlsx` IN PLACE via openxlsx2 wb_load -> wb_add_data(dims=G2/G3) -> widen autofilter to col G -> wb_save, preserving the other 7 sheets, the row-1 title banner, and every other sheet's row count (verified by an in-script fresh-reopen round-trip asserting 8 sheets in order + Supportive Care 7 cols x 171 rows + no blanks); D-02
 - [ ] **SMOKE-120-01**: R/88 smoke test adds a Phase 120 Section 15r (14 structural checks) validating R/105 exists, sources 00_config, reads the Supportive Care sheet, uses `related.json?tty=IN` (positive) and NOT `properties.json` (negative), has the historystatus fallback, reuses req_retry, keeps combos sorted "/"-joined, reuses canonicalize_drug_name, writes the cache CSV, appends Normalized Meaning at col G, has the round-trip verify, has no ggplot; plus a SMOKE-120-01 summary line. R/105 registered in R/39; SCRIPT_INDEX 100+ count 5->6, Total 91->92
 
 ## v3.1 Requirements (Complete)
@@ -210,11 +210,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NHLFIX-04 | Phase 119 | Complete |
 | NHLFIX-05 | Phase 119 | Complete |
 | SMOKE-119-01 | Phase 119 | Complete |
-| SUPCARE-01 | Phase 120 | Pending |
-| SUPCARE-02 | Phase 120 | Pending |
-| SUPCARE-03 | Phase 120 | Pending |
-| SUPCARE-04 | Phase 120 | Pending |
-| SUPCARE-05 | Phase 120 | Pending |
+| SUPCARE-01 | Phase 120 | Complete |
+| SUPCARE-02 | Phase 120 | Complete |
+| SUPCARE-03 | Phase 120 | Complete |
+| SUPCARE-04 | Phase 120 | Complete |
+| SUPCARE-05 | Phase 120 | Complete |
 | SMOKE-120-01 | Phase 120 | Pending |
 
 **Coverage:**
