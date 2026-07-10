@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 119-01-PLAN.md (R/103 diagnostic); Plan 03 gated on user running R/103 on HiPerGator
-last_updated: "2026-07-10T00:23:59.837Z"
+stopped_at: Completed 119-02-PLAN.md (DEATH_CAUSE wired into loader); Plan 03 gated on user R/103 HiPerGator run
+last_updated: "2026-07-10T00:27:39.941Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 16
   completed_phases: 15
   total_plans: 23
-  completed_plans: 20
+  completed_plans: 21
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 ## Current Position
 
 Phase: 119 (fix-death-cause-nhl-flag) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-10
 
@@ -53,6 +53,13 @@ Last activity: 2026-07-10
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 119 Plan 02 decisions:**
+
+- No PCORNET_PATHS override for DEATH_CAUSE: resolves via default {TABLE}_Mailhot_V1.csv pattern; Phase 119 comment flags the runtime unknown and points at the LAB_RESULT_CM override pattern if the HiPerGator filename differs
+- R/03_duckdb_ingest.R unchanged: TABLES_TO_INGEST <- PCORNET_TABLES auto-includes DEATH_CAUSE; no ENCOUNTERID so TABLES_WITH_ENCOUNTERID unchanged
+- DEATH_CAUSE_SPEC keys on ID (not PATID), matching the extract convention + the DEATH join key (RESEARCH Pitfall 4)
+- R/88 IS_LOCAL fixture table-count 15 -> 16 with a note that the local fixture DuckDB must be rebuilt to include DEATH_CAUSE (RESEARCH Pitfall 6)
 
 **Phase 119 Plan 01 decisions:**
 
@@ -166,11 +173,12 @@ None identified.
 | 260709-jhw | R/27 self-bootstraps DuckDB connection (USE_DUCKDB + open_pcornet_con at top, guarded) like R/28-R/36 — fixes "object 'pcornet_con' not found" on standalone runs | 2026-07-09 | d2afeb6 | [260709-jhw-make-r-27-self-bootstrap-duckdb-connecti](./quick/260709-jhw-make-r-27-self-bootstrap-duckdb-connecti/) |
 | Phase 118 P01 | 5 | 2 tasks | 4 files |
 | Phase 119 P01 | 8min | 1 tasks | 1 files |
+| Phase 119 P02 | 2min | 3 tasks | 3 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:resume-work` (2026-07-09)
-**Stopped at:** Completed 119-01-PLAN.md (R/103 diagnostic); Plan 03 gated on user running R/103 on HiPerGator
+**Stopped at:** Completed 119-02-PLAN.md (DEATH_CAUSE wired into loader); Plan 03 gated on user R/103 HiPerGator run
 **What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
 
 ### Recent Changes
