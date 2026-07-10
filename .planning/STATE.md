@@ -186,6 +186,7 @@ None identified.
 | 260709-i1a | Clean drug_group in R/52 + R/101: dedup, sort, semicolon-separated, drop literal `NA` tokens (consistent with other multi-value columns) | 2026-07-09 | 513456d | [260709-i1a-clean-drug-group-in-r-52-and-r-101-dedup](./quick/260709-i1a-clean-drug-group-in-r-52-and-r-101-dedup/) |
 | 260709-iyh | Drug-name canonicalization: DRUG_NAME_ALIASES + canonicalize_drug_name in R/00_config, applied to MEDICATION_LOOKUP + R/27; doxorubicin variants → "Doxorubicin Hydrochloride", liposomal kept separate | 2026-07-09 | 242c458 | [260709-iyh-add-drug-name-canonicalization-drug-name](./quick/260709-iyh-add-drug-name-canonicalization-drug-name/) |
 | 260709-jhw | R/27 self-bootstraps DuckDB connection (USE_DUCKDB + open_pcornet_con at top, guarded) like R/28-R/36 — fixes "object 'pcornet_con' not found" on standalone runs | 2026-07-09 | d2afeb6 | [260709-jhw-make-r-27-self-bootstrap-duckdb-connecti](./quick/260709-jhw-make-r-27-self-bootstrap-duckdb-connecti/) |
+| 260710-i1e | Create R/104_gantt_entire_history.R: 6-col projection of gantt_lifespan.csv with cancer_7day_confirmed re-derived from gantt_episodes.csv (non-fatal mismatch assertion), blank-safe read/write; registered in R/39, R/88 Section 15q (14 checks), SCRIPT_INDEX 100+ count 4->5 / Total 90->91 | 2026-07-10 | 0d48757 | [260710-i1e-create-r-104-gantt-entire-history-r-proj](./quick/260710-i1e-create-r-104-gantt-entire-history-r-proj/) |
 | Phase 118 P01 | 5 | 2 tasks | 4 files |
 | Phase 119 P01 | 8min | 1 tasks | 1 files |
 | Phase 119 P02 | 2min | 3 tasks | 3 files |
@@ -200,6 +201,7 @@ None identified.
 
 ### Recent Changes
 
+- 2026-07-10: Quick task 260710-i1e complete (R/104 gantt entire-history 6-col projection; cancer_7day_confirmed re-derived from episodes; R/39 registration; R/88 Section 15q 14-check smoke test; SCRIPT_INDEX 100+ 4->5, Total 90->91)
 - 2026-07-09: Phase 118 Plan 01 complete (R/102 death cause NHL flag CSV script, R/88 Section 15o 14-check smoke test, R/39 registration, SCRIPT_INDEX row)
 - 2026-07-09: Phase 117 Plan 01 complete (R/101 lifespan Gantt collapse script, R/88 Section 15n 14-check smoke test, R/39 registration, SCRIPT_INDEX row)
 - 2026-07-06: Phase 116 Plan 02 complete (R/88 Section 15m 22-check smoke test, R/39 registration, SCRIPT_INDEX Post-Renumber Investigations section)

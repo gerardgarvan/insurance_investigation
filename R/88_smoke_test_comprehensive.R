@@ -2324,6 +2324,91 @@ if (r102_exists_119 && r103_exists) {
 }
 
 # ==============================================================================
+# SECTION 15q: GANTT ENTIRE HISTORY (quick-260710-i1e) ----
+# ==============================================================================
+
+# quick-260710-i1e added R/104_gantt_entire_history.R: a downstream sibling of
+# R/101 that projects output/gantt_lifespan.csv into gantt_entire_history.csv
+# (6 renamed columns) and RE-DERIVES the 7-day cancer column as the union
+# directly from output/gantt_episodes.csv (source of truth), asserting equality
+# against lifespan's own column (non-fatal). This section STRUCTURALLY validates
+# R/104 (inputs, blank-safe read/write, verbatim helpers, pseudo-row exclusion,
+# union re-derivation, renames, non-fatal mismatch, left_join, no plotting).
+
+message("\n[quick-260710-i1e] Gantt entire history (R/104)...")
+
+# Check 1: R/104 script exists
+r104_exists <- file.exists("R/104_gantt_entire_history.R")
+check("R/104_gantt_entire_history.R exists (quick-260710-i1e)",
+      r104_exists)
+
+if (r104_exists) {
+  r104_lines <- readLines("R/104_gantt_entire_history.R", warn = FALSE)
+  r104_text  <- paste(r104_lines, collapse = "\n")
+
+  # Check 2: minimum line count (>= 100)
+  check("R/104 has 100+ lines (quick-260710-i1e)",
+        length(r104_lines) >= 100)
+
+  # Check 3: sources R/00_config.R
+  check("R/104 sources R/00_config.R",
+        grepl("source.*00_config", r104_text))
+
+  # Check 4: reads gantt_lifespan.csv (input)
+  check("R/104 reads gantt_lifespan.csv (input)",
+        grepl("gantt_lifespan\\.csv", r104_text))
+
+  # Check 5: reads gantt_episodes.csv (input)
+  check("R/104 reads gantt_episodes.csv (input)",
+        grepl("gantt_episodes\\.csv", r104_text))
+
+  # Check 6: reads blank-safe (na.strings="")
+  check("R/104 reads blank-safe (na.strings='')",
+        grepl('na.strings = ""', r104_text))
+
+  # Check 7: copies clean_multi_value + union_field (verbatim from R/101)
+  check("R/104 copies clean_multi_value + union_field",
+        grepl("clean_multi_value", r104_text) && grepl("union_field", r104_text))
+
+  # Check 8: excludes Death + HL Diagnosis pseudo-rows
+  check("R/104 excludes Death + HL Diagnosis pseudo-rows",
+        grepl('filter\\(!treatment_type %in% c\\("Death", "HL Diagnosis"\\)', r104_text))
+
+  # Check 9: re-derives 7-day union grouped by patient_id x treatment_type
+  check("R/104 re-derives 7-day union grouped by patient_id x treatment_type",
+        grepl("group_by\\(patient_id, treatment_type\\)", r104_text) &&
+          grepl("union_field\\(episode_dx_7day_confirmed", r104_text))
+
+  # Check 10: applies the 3 renames (treatment_start/stop, cancer_7day_confirmed)
+  check("R/104 applies the 3 renames (treatment_start/stop, cancer_7day_confirmed)",
+        grepl("treatment_start = episode_start", r104_text) &&
+          grepl("treatment_stop", r104_text) &&
+          grepl("cancer_7day_confirmed", r104_text))
+
+  # Check 11: asserts union mismatch non-fatally (n_mismatch + warning; safe form)
+  check("R/104 asserts union mismatch non-fatally (n_mismatch + warning)",
+        grepl("n_mismatch", r104_text) && grepl("warning\\(", r104_text))
+
+  # Check 12: joins episodes-derived union via left_join
+  check("R/104 joins episodes-derived union via left_join",
+        grepl("left_join", r104_text))
+
+  # Check 13: blank-safe write to gantt_entire_history.csv (na='', row.names=FALSE)
+  check("R/104 blank-safe write to gantt_entire_history.csv (na='', row.names=FALSE)",
+        grepl("gantt_entire_history\\.csv", r104_text) &&
+          grepl("row.names = FALSE", r104_text) &&
+          grepl('na = ""', r104_text))
+
+  # Check 14: no ggplot/ggsave (data export only)
+  check("R/104 has NO ggplot/ggsave (data export only)",
+        !grepl("ggplot|ggsave|geom_", r104_text))
+
+} else {
+  # If script missing, register the dependent checks as FALSE so total stays honest
+  for (i in 2:14) check(paste0("R/104 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -3895,6 +3980,7 @@ message("  * SMOKE-118-01: R/88 validates Phase 118 structural integrity (14 che
 message("  * NHLFIX-03: R/102 reads cause of death from the DEATH_CAUSE table, not DEATH.DEATH_CAUSE (Phase 119)")
 message("  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_CAUSE table (Phase 119)")
 message("  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)")
+message("  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural integrity (Section 15q, 14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
