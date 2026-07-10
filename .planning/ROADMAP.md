@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 119: `/gsd:execute-phase 119`
+1. Execute Phase 120: `/gsd:execute-phase 120`
 
 ## Coverage
 
@@ -194,7 +194,7 @@ Plans:
 
 **Goal:** A new "lifespan" Gantt CSV (`output/gantt_lifespan.csv`) collapses the per-episode Gantt export into one row per patient_id x treatment_type, spanning each patient's earliest episode_start to latest episode_stop (calendar dates preserved, not normalized). Multi-value metadata is unioned/deduped/sorted (reusing R/52 `clean_multi_value`), Death and HL Diagnosis pseudo-rows excluded, produced by a new standalone script R/101 registered in R/39, smoke-tested in R/88, and indexed in R/SCRIPT_INDEX.md
 **Requirements**: LIFESPAN-01, LIFESPAN-02, LIFESPAN-03, LIFESPAN-04, SMOKE-117-01
-**Depends on:** Phase 116
+**Depends on**: Phase 116
 **Plans:** 1/1 plans complete
 
 Plans:
@@ -225,10 +225,11 @@ Plans:
 
 ### Phase 120: In all_codes_resolved_next_tables_v2.1 (tab: Supportive Care) normalize meaning into a new column to disambiguate dosage/spelling variants and generic names
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** A new standalone script `R/105_normalize_supportive_care_meaning.R` appends a `Normalized Meaning` column (col G) to the Supportive Care tab (171 RXNORM rows) of `data/reference/all_codes_resolved_next_tables_v2.1.xlsx` IN PLACE, holding the generic ingredient name (RxNorm IN concept). Each RXCUI is resolved via RxNav `related.json?tty=IN` (salts/biosimilars/packs collapse to base per D-01; combination products keep a sorted "/"-joined label per D-05), with a `historystatus.json` derivedConcepts fallback for retired codes and a rule-based `canonicalize_drug_name()` fallback for API misses so every row gets a non-blank value (D-04). RxNav results are cached to `data/reference/rxnorm_ingredient_cache.csv` for offline reruns (D-03). The in-place write preserves all 8 sheets, the row-1 title banner, and the other sheets' row counts (verified by an in-script round-trip reopen). Registered in R/39, validated by R/88 Section 15r, indexed in R/SCRIPT_INDEX.md.
+**Requirements**: SUPCARE-01, SUPCARE-02, SUPCARE-03, SUPCARE-04, SUPCARE-05, SMOKE-120-01
 **Depends on:** Phase 119
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 120 to break down)
+- [ ] 120-01-PLAN.md -- Create R/105 (RxNav IN resolution + cache + rule-based fallback + in-place xlsx append + local round-trip verify) and extend DRUG_NAME_ALIASES
+- [ ] 120-02-PLAN.md -- Register R/105 in R/39, add R/88 Section 15r (SMOKE-120-01), update R/SCRIPT_INDEX.md (100+ count 5->6, Total 91->92)
