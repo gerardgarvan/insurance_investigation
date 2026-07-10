@@ -99,7 +99,7 @@ Requirements for meeting gap resolution report milestone. Each maps to roadmap p
 - [x] **SUPCARE-03**: Combination products keep a sorted, "/"-joined combined ingredient label (e.g. ciprofloxacin/dexamethasone; dexamethasone/neomycin/polymyxin B), tagged source rxnav_IN_combo, never silently reduced to one ingredient (D-05)
 - [x] **SUPCARE-04**: A rule-based fallback (strip dose/formulation/pack/salt tokens + brand->generic alias via an extended DRUG_NAME_ALIASES / canonicalize_drug_name) fills any row RxNav cannot resolve, so every one of the 171 rows receives a non-blank Normalized Meaning value (D-04)
 - [x] **SUPCARE-05**: `Normalized Meaning` is appended as a trailing column (G) to the Supportive Care tab of `data/reference/all_codes_resolved_next_tables_v2.1.xlsx` IN PLACE via openxlsx2 wb_load -> wb_add_data(dims=G2/G3) -> widen autofilter to col G -> wb_save, preserving the other 7 sheets, the row-1 title banner, and every other sheet's row count (verified by an in-script fresh-reopen round-trip asserting 8 sheets in order + Supportive Care 7 cols x 171 rows + no blanks); D-02
-- [ ] **SMOKE-120-01**: R/88 smoke test adds a Phase 120 Section 15r (14 structural checks) validating R/105 exists, sources 00_config, reads the Supportive Care sheet, uses `related.json?tty=IN` (positive) and NOT `properties.json` (negative), has the historystatus fallback, reuses req_retry, keeps combos sorted "/"-joined, reuses canonicalize_drug_name, writes the cache CSV, appends Normalized Meaning at col G, has the round-trip verify, has no ggplot; plus a SMOKE-120-01 summary line. R/105 registered in R/39; SCRIPT_INDEX 100+ count 5->6, Total 91->92
+- [x] **SMOKE-120-01**: R/88 smoke test adds a Phase 120 Section 15r (14 structural checks) validating R/105 exists, sources 00_config, reads the Supportive Care sheet, uses `related.json?tty=IN` (positive) and NOT `properties.json` (negative), has the historystatus fallback, reuses req_retry, keeps combos sorted "/"-joined, reuses canonicalize_drug_name, writes the cache CSV, appends Normalized Meaning at col G, has the round-trip verify, has no ggplot; plus a SMOKE-120-01 summary line. R/105 registered in R/39; SCRIPT_INDEX 100+ count 5->6, Total 91->92
 
 ## v3.1 Requirements (Complete)
 
@@ -215,7 +215,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SUPCARE-03 | Phase 120 | Complete |
 | SUPCARE-04 | Phase 120 | Complete |
 | SUPCARE-05 | Phase 120 | Complete |
-| SMOKE-120-01 | Phase 120 | Pending |
+| SMOKE-120-01 | Phase 120 | Complete |
 
 **Coverage:**
 - v3.2 requirements: 11 total

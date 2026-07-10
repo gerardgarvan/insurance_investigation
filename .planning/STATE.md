@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: executing
-stopped_at: Completed 120-01-PLAN.md
-last_updated: "2026-07-10T18:12:15.012Z"
+status: verifying
+stopped_at: Completed 120-02-PLAN.md
+last_updated: "2026-07-10T18:18:01.845Z"
 last_activity: 2026-07-10
 progress:
   total_phases: 17
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 Phase: 120 (normalize-supportive-care-meaning) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-10
 
 ## Performance Metrics
@@ -53,6 +53,18 @@ Last activity: 2026-07-10
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 120 Plan 02 decisions:**
+
+- R/105 registered as the new final comma-less R/39 investigation_scripts entry (R/104 gains a trailing comma); vector stays parse-safe (19 entries, exactly 1 comma-less)
+- R/88 Section 15r (14 structural checks, continuing 15q -> 15r) inserted after the Section 15q R/104 else-branch and before Section 15g; SMOKE-120-01 summary line added after SMOKE-i1e-01
+- SCRIPT_INDEX: R/105 row added to Post-Renumber Investigations (100+) table; 100+ count 5 -> 6, Total 91 -> 92
+- Rule 3 fix: Section 15r Check 13 grep adapted to R/105's ACTUAL assertion forms (`N_SUPCARE_ROWS` 171L constant + `ncol(sc) != 7`) instead of the plan's literal `== 171`/`== 7` (which return 0 in R/105), preserving the round-trip-verify intent (2nd wb_load + row + col asserts)
+- Runtime (Rscript parse + 15r PASS) deferred to an R-capable host (Rscript not installed on this Windows executor); verified structurally via grep + state-machine paren balance
+
+**Phase 120 Plan 01 decisions:**
+
+- R/105 three-step RxNav IN resolver (related.json?tty=IN -> historystatus -> canonicalize_drug_name fallback) appends non-blank Normalized Meaning col G to the 171-row Supportive Care tab in place; combos kept as sorted /-joined labels; 21 supportive-care brand->generic aliases added to DRUG_NAME_ALIASES
 
 **Phase 119 Plan 04 decisions:**
 
@@ -194,11 +206,12 @@ None identified.
 | Phase 119 P03 | 6min | 2 tasks | 2 files |
 | Phase 119 P04 | 2min | 3 tasks | 3 files |
 | Phase 120 P01 | 15min | 2 tasks | 2 files |
+| Phase 120 P02 | 3min | 2 tasks | 3 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:resume-work` (2026-07-09)
-**Stopped at:** Completed 120-01-PLAN.md
+**Stopped at:** Completed 120-02-PLAN.md
 **What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
 
 ### Recent Changes
