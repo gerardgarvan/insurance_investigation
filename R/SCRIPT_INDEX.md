@@ -148,6 +148,7 @@ Standalone investigation scripts added after the 00-99 decade-based renumbering 
 | `R/102_death_cause_nhl_flag.R` | Writes output/death_cause_nhl_flag.csv: one row per deceased patient (valid DEATH_DATE) with PATID and a three-state cause_of_death_is_nhl flag (TRUE = NHL cause of death, FALSE = other coded cause, blank = uncoded). NHL determined via classify_codes() == "Non-Hodgkin Lymphoma". (Phase 119: source corrected to read the separate DEATH_CAUSE table instead of the empty DEATH.DEATH_CAUSE column) | 118, 119 |
 | `R/103_death_cause_diagnostic.R` | Read-only Phase 119 diagnostic: inventories every candidate cause-of-death source (DEATH_CAUSE table, TUMOR_REGISTRY1.CAUSE_OF_DEATH, TR2/TR3.DCAUSE) restricted to the deceased patient set — reports non-null counts, deceased-set coverage, sample values, and classify_codes() NHL matches, plus a recommendation. Writes output/diagnostics/death_cause_source_inventory.csv. | 119 |
 | `R/104_gantt_entire_history.R` | Projects output/gantt_lifespan.csv into gantt_entire_history.csv (repo root) with 6 columns: patient_id, treatment_type, treatment_start (renamed from episode_start), treatment_stop (renamed from episode_stop), drug_names, and cancer_7day_confirmed. The 7-day cancer column is RE-DERIVED as the union directly from output/gantt_episodes.csv (grouped by patient_id x treatment_type after excluding Death + HL Diagnosis) and asserted (non-fatally) against lifespan's own column. Reuses R/101 clean_multi_value/union_field; blank-safe read/write (na=""). | quick-260710-i1e |
+| `R/105_normalize_supportive_care_meaning.R` | Resolves each Supportive Care RXNORM code to its RxNorm IN generic ingredient via RxNav (`related.json?tty=IN`, historystatus fallback for retired codes, rule-based canonicalize_drug_name fallback for misses), caches to `data/reference/rxnorm_ingredient_cache.csv`, and appends a `Normalized Meaning` column (col G) to the Supportive Care tab of `all_codes_resolved_next_tables_v2.1.xlsx` in place (combos kept as sorted "/"-joined labels). | 120 |
 
 ---
 
@@ -200,10 +201,10 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
-- **Post-renumber investigations (100+):** 5 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history)
+- **Post-renumber investigations (100+):** 6 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning)
 - **Utility libraries:** 10 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 91
+- **Total:** 92
 
 ## Key Dependency Chains
 

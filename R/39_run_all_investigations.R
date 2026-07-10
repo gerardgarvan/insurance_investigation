@@ -191,7 +191,8 @@ investigation_scripts <- c(
   "R/101_gantt_lifespan_collapse.R",           # Lifespan Gantt collapse (Phase 117); consumes gantt_episodes.csv (produced by R/52)
   "R/103_death_cause_diagnostic.R",           # Cause-of-death signal inventory diagnostic (Phase 119; read-only)
   "R/102_death_cause_nhl_flag.R",             # Cause-of-death NHL three-state flag CSV (Phase 118; fixed Phase 119 to read DEATH_CAUSE table)
-  "R/104_gantt_entire_history.R"              # Gantt entire-history 6-col projection (quick-260710-i1e); consumes gantt_lifespan.csv + gantt_episodes.csv
+  "R/104_gantt_entire_history.R",             # Gantt entire-history 6-col projection (quick-260710-i1e); consumes gantt_lifespan.csv + gantt_episodes.csv
+  "R/105_normalize_supportive_care_meaning.R"  # Supportive Care Normalized Meaning column (Phase 120); mutates data/reference/all_codes_resolved_next_tables_v2.1.xlsx in place
 )
 
 for (script in investigation_scripts) {
