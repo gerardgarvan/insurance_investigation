@@ -2377,7 +2377,33 @@ message(glue("  MEDICATION_LOOKUP supplement: {length(new_codes)} J-codes added 
 DRUG_NAME_ALIASES <- c(
   "doxorubicin"               = "Doxorubicin Hydrochloride",
   "doxorubicin hcl"           = "Doxorubicin Hydrochloride",
-  "doxorubicin hydrochloride" = "Doxorubicin Hydrochloride"
+  "doxorubicin hydrochloride" = "Doxorubicin Hydrochloride",
+  # Supportive-care single-agent brand -> generic aliases (Phase 120, SUPCARE-04).
+  # These feed the R/105 rule-based fallback when RxNav cannot resolve a code.
+  # Only SINGLE-INGREDIENT brands live here; combination brands (Ciprodex,
+  # Tobradex, Maxitrol, Maxidex, AK-Trol, Poly-Dex) are intentionally omitted —
+  # the RxNav IN combo path in R/105 emits their sorted "/"-joined label instead.
+  "zofran"     = "ondansetron",
+  "zuplenz"    = "ondansetron",
+  "decadron"   = "dexamethasone",
+  "dexpak"     = "dexamethasone",
+  "taperdex"   = "dexamethasone",
+  "taperpak"   = "dexamethasone",
+  "baycadron"  = "dexamethasone",
+  "emend"      = "aprepitant",
+  "cinvanti"   = "aprepitant",
+  "neulasta"   = "pegfilgrastim",
+  "fulphila"   = "pegfilgrastim",
+  "udenyca"    = "pegfilgrastim",
+  "ziextenzo"  = "pegfilgrastim",
+  "nyvepria"   = "pegfilgrastim",
+  "neupogen"   = "filgrastim",
+  "zarxio"     = "filgrastim",
+  "nivestym"   = "filgrastim",
+  "granix"     = "filgrastim",
+  "procrit"    = "epoetin alfa",
+  "retacrit"   = "epoetin alfa",
+  "aranesp"    = "darbepoetin alfa"
 )
 
 # canonicalize_drug_name(): vectorized, NA-safe, case-insensitive alias lookup.
