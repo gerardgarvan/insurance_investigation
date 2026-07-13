@@ -239,7 +239,7 @@ Plans:
 **Goal:** A new read-only standalone script `R/106_zip_change_frequency.R` probes for the PCORnet CDM `LDS_ADDRESS_HISTORY` table (the only source with a time-varying 9-digit ZIP) and, if present, quantifies how often an individual patient's ZIP changes at BOTH ZIP9 and ZIP5 granularity (D-04). It mirrors R/103's probe-first gate (`file.exists()` + `quit(status = 0)` when absent, no crash — D-02) and R/100's styled-xlsx look-and-feel, producing a 5-sheet workbook (`output/zip_change_frequency.xlsx`): (1) ZIP9/ZIP5 distinct-count distribution side-by-side, (2) change-rate summary + ZIP9-change-only count + histogram, (3) time-between-changes from `ADDRESS_PERIOD_START`, (4) most-recent-vs-modal tie-break disagreement rate without committing (D-11), (5) recommendation + metadata. Headline stats log to console first (D-09); NA ZIPs are filtered before distinct counts and HIPAA <=10 suppression is applied. Reads the CSV directly by path with patient ID column `ID` (not in PCORNET_TABLES; permanent adoption deferred). Registered in R/39 (sole comma-less final entry, 20-entry vector), validated by R/88 Section 15s (14 checks + SMOKE-121-01), indexed in R/SCRIPT_INDEX.md (100+ count 6->7, Total 92->93).
 **Requirements**: ZIP-01, ZIP-02, ZIP-03, ZIP-04, SMOKE-121-01
 **Depends on:** Phase 120
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 121-01-PLAN.md -- Create R/106_zip_change_frequency.R (probe gate + ZIP9/ZIP5 change metrics + 5-sheet styled xlsx + console summary) + register in R/39, add R/88 Section 15s, update R/SCRIPT_INDEX.md
+- [x] 121-01-PLAN.md -- Create R/106_zip_change_frequency.R (probe gate + ZIP9/ZIP5 change metrics + 5-sheet styled xlsx + console summary) + register in R/39, add R/88 Section 15s, update R/SCRIPT_INDEX.md
