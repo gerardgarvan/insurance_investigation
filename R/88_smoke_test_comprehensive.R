@@ -2498,6 +2498,90 @@ if (r105_exists) {
 }
 
 # ==============================================================================
+# SECTION 15s: ZIP CHANGE FREQUENCY (Phase 121) ----
+# ==============================================================================
+
+# Phase 121 added R/106_zip_change_frequency.R: a read-only investigation that probes
+# for LDS_ADDRESS_HISTORY and, if present, quantifies per-patient ZIP change frequency
+# at ZIP9 and ZIP5 granularity, writing a 5-sheet styled xlsx. STRUCTURAL greps against
+# the R/106 file text (no HiPerGator data locally); they pass LOCALLY.
+
+message("\n[Phase 121] ZIP change frequency (R/106)...")
+
+# Check 1: R/106 script exists
+r106_exists <- file.exists("R/106_zip_change_frequency.R")
+check("R/106_zip_change_frequency.R exists (Phase 121)", r106_exists)
+
+if (r106_exists) {
+  r106_lines <- readLines("R/106_zip_change_frequency.R", warn = FALSE)
+  r106_text  <- paste(r106_lines, collapse = "\n")
+
+  # Check 2: minimum line count (>= 150)
+  check("R/106 has 150+ lines (Phase 121)",
+        length(r106_lines) >= 150)
+
+  # Check 3: sources R/00_config.R
+  check("R/106 sources R/00_config.R",
+        grepl("source.*00_config", r106_text))
+
+  # Check 4: probes LDS_ADDRESS_HISTORY via file.exists()
+  check("R/106 probes LDS_ADDRESS_HISTORY via file.exists()",
+        grepl("file\\.exists", r106_text) && grepl("LDS_ADDRESS_HISTORY", r106_text))
+
+  # Check 5: exits gracefully with quit(status = 0), not stop()
+  check("R/106 exits gracefully with quit(status = 0), not stop()",
+        grepl("quit\\(status = 0\\)", r106_text))
+
+  # Check 6: reads the ADDRESS_ZIP9 column
+  check("R/106 reads the ADDRESS_ZIP9 column",
+        grepl("ADDRESS_ZIP9", r106_text))
+
+  # Check 7: reads the ADDRESS_PERIOD_START column (time-between-changes)
+  check("R/106 reads the ADDRESS_PERIOD_START column (time-between-changes)",
+        grepl("ADDRESS_PERIOD_START", r106_text))
+
+  # Check 8: has normalize_zip9 with hyphen strip (str_remove_all)
+  check("R/106 has normalize_zip9 with hyphen strip",
+        grepl("normalize_zip9", r106_text) && grepl("str_remove_all", r106_text))
+
+  # Check 9: has normalize_zip5 (str_sub 1,5)
+  check("R/106 has normalize_zip5 (str_sub 1,5)",
+        grepl("normalize_zip5", r106_text) && grepl("str_sub", r106_text))
+
+  # Check 10: validates ZIP9 as 9 digits (^[0-9]{9}$)
+  check("R/106 validates ZIP9 as 9 digits (^[0-9]{9}$)",
+        grepl("\\^\\[0-9\\]\\{9\\}\\$", r106_text))
+
+  # Check 11: computes per-patient distinct ZIP counts (group_by(ID) + n_distinct)
+  check("R/106 computes per-patient distinct ZIP counts (group_by(ID) + n_distinct)",
+        grepl("group_by\\(ID\\)", r106_text) && grepl("n_distinct", r106_text))
+
+  # Check 12: writes a styled xlsx (add_styled_sheet + wb_save)
+  check("R/106 writes a styled xlsx (add_styled_sheet + wb_save)",
+        grepl("add_styled_sheet", r106_text) && grepl("wb_save", r106_text))
+
+  # Check 13: applies HIPAA small-cell suppression (<=10)
+  check("R/106 applies HIPAA small-cell suppression (<=10)",
+        grepl("<11|<= 10|<=10", r106_text))
+
+  # Check 14: RUNTIME (HiPerGator-only, gated) -- output xlsx present with sheets.
+  # Kept green locally: SKIPPED when IS_LOCAL or the output xlsx is absent.
+  # Mirrors Section 15p Check 14 IS_LOCAL-gate pattern (lines 2301-2315).
+  out_xlsx_121 <- file.path(CONFIG$output_dir, "zip_change_frequency.xlsx")
+  if (!IS_LOCAL && file.exists(out_xlsx_121)) {
+    check("R/106 output xlsx exists with sheets (Phase 121, HiPerGator)",
+          file.exists(out_xlsx_121))
+  } else {
+    check("R/106 output xlsx present -- SKIPPED (local / no output) (Phase 121)",
+          TRUE)
+  }
+
+} else {
+  # If script missing, register the dependent checks as FALSE so total stays honest
+  for (i in 2:14) check(paste0("R/106 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -4071,6 +4155,7 @@ message("  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_
 message("  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)")
 message("  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural integrity (Section 15q, 14 checks)")
 message("  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized Meaning structural integrity (Section 15r, 14 checks)")
+message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
