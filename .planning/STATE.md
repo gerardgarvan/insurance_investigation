@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 121-01-PLAN.md
-last_updated: "2026-07-13T20:15:09.139Z"
-last_activity: 2026-07-13
+status: executing
+stopped_at: Completed 122-01-PLAN.md
+last_updated: "2026-07-14T15:30:50.538Z"
+last_activity: 2026-07-14
 progress:
-  total_phases: 18
+  total_phases: 19
   completed_phases: 18
-  total_plans: 26
-  completed_plans: 26
+  total_plans: 29
+  completed_plans: 27
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 121 — investigate-how-often-the-9-digit-zip-code-changes-at-the-individual-level-to-inform-the-decision-on-handling-zip-code-data-for-socioeconomic-indices
+**Current focus:** Phase 122 — med-admin-dispensing-gap-diagnostic-csv-gap-closure
 
 ## Current Position
 
-Phase: 121 (investigate-how-often-the-9-digit-zip-code-changes-at-the-individual-level-to-inform-the-decision-on-handling-zip-code-data-for-socioeconomic-indices) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
-Last activity: 2026-07-13
+Phase: 122 (med-admin-dispensing-gap-diagnostic-csv-gap-closure) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-07-14
 
 ## Performance Metrics
 
@@ -53,6 +53,12 @@ Last activity: 2026-07-13
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 122 Plan 01 decisions:**
+
+- get_chemo_hits() ENCOUNTERID omitted from return; callers add it if source has it (Open Question 1 from RESEARCH.md resolved by omission; DISPENSING may lack ENCOUNTERID in this extract)
+- ndc_rxnorm_crosswalk.rds deferred to HiPerGator (no R binary on Windows executor); synthetic mapping: NDC 00069306030 -> CUI 3639 (Doxorubicin); create with saveRDS(setNames("3639","00069306030"), here::here("data","reference","ndc_rxnorm_crosswalk.rds"))
+- Synthetic NDC 00069306030 used in both MED_ADMIN ND fixture row and DISPENSING fixture hit row — single consistent synthetic crosswalk entry covers both NDC paths locally
 
 **Phase 120 Plan 02 decisions:**
 
@@ -211,11 +217,12 @@ None identified.
 | Phase 120 P01 | 15min | 2 tasks | 2 files |
 | Phase 120 P02 | 3min | 2 tasks | 3 files |
 | Phase 121 P01 | 15 | 3 tasks | 4 files |
+| Phase 122 P01 | 3 | 3 tasks | 4 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:resume-work` (2026-07-09)
-**Stopped at:** Completed 121-01-PLAN.md
+**Stopped at:** Completed 122-01-PLAN.md
 **What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
 
 ### Recent Changes

@@ -249,9 +249,9 @@ Plans:
 **Goal:** DISPENSING and MED_ADMIN stop silently contributing zero chemo detection. The root-cause phantom `RXNORM_CUI` col_spec declarations are removed from `R/01` (vroom no longer injects an all-NA column), a shared `get_chemo_hits()` helper (+ `load_ndc_crosswalk()`) in `R/utils/utils_treatment.R` implements PRESCRIBING via RXNORM_CUI, MED_ADMIN via `MEDADMIN_TYPE=='RX'` (direct RxCUI) plus `'ND'` crosswalked NDCs, and DISPENSING via crosswalked NDCs, with genuine graceful-skip on absent tables/columns. All 7 consumers (R/10, R/26 chemo-only, R/25, R/11, R/27, R/20, R/76) are patched to the helper (immuno branches left untouched), fixtures are corrected to the real extract layout (no phantom RXNORM_CUI; MED_ADMIN uses MEDADMIN_CODE+MEDADMIN_TYPE; DISPENSING uses NDC) exercising both RX-direct and NDC-crosswalk paths, and a new `R/108_build_ndc_rxnorm_crosswalk.R` (HiPerGator-run, RxNav `rxcui.json?idtype=NDC`, cached RDS) populates the crosswalk. D-12 revised. Validated by R/88 Section 15t (14 checks + SMOKE-122-01) and SCRIPT_INDEX (100+ 8->9, Total 94->95).
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07 (locked CONTEXT decisions; no ROADMAP requirement IDs mapped)
 **Depends on:** Phase 121
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 122-01-PLAN.md -- Foundation: remove phantom col_spec from R/01, add get_chemo_hits/load_ndc_crosswalk/normalize_ndc to utils_treatment.R, correct MED_ADMIN+DISPENSING fixtures + synthetic crosswalk RDS (Wave 1)
+- [x] 122-01-PLAN.md -- Foundation: remove phantom col_spec from R/01, add get_chemo_hits/load_ndc_crosswalk/normalize_ndc to utils_treatment.R, correct MED_ADMIN+DISPENSING fixtures + synthetic crosswalk RDS (Wave 1)
 - [ ] 122-02-PLAN.md -- Patch all 7 chemo consumers to the helper (immuno untouched), add R/88 Section 15t + SMOKE-122-01, update SCRIPT_INDEX for R/108 (Wave 1)
 - [ ] 122-03-PLAN.md -- Create R/108 NDC->RxNorm crosswalk builder (RxNav, cached RDS) + HiPerGator runtime-confirmation checkpoint (Wave 2)
