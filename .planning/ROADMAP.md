@@ -84,7 +84,7 @@ Plans:
 
 ## Next Steps
 
-1. Execute Phase 121: `/gsd:execute-phase 121`
+1. Execute Phase 123: `/gsd:execute-phase 123`
 
 ## Coverage
 
@@ -236,7 +236,7 @@ Plans:
 
 ### Phase 121: Investigate how often the 9-digit ZIP code changes at the individual level, to inform the decision on handling ZIP code data for socioeconomic indices.
 
-**Goal:** A new read-only standalone script `R/106_zip_change_frequency.R` probes for the PCORnet CDM `LDS_ADDRESS_HISTORY` table (the only source with a time-varying 9-digit ZIP) and, if present, quantifies how often an individual patient's ZIP changes at BOTH ZIP9 and ZIP5 granularity (D-04). It mirrors R/103's probe-first gate (`file.exists()` + `quit(status = 0)` when absent, no crash — D-02) and R/100's styled-xlsx look-and-feel, producing a 5-sheet workbook (`output/zip_change_frequency.xlsx`): (1) ZIP9/ZIP5 distinct-count distribution side-by-side, (2) change-rate summary + ZIP9-change-only count + histogram, (3) time-between-changes from `ADDRESS_PERIOD_START`, (4) most-recent-vs-modal tie-break disagreement rate without committing (D-11), (5) recommendation + metadata. Headline stats log to console first (D-09); NA ZIPs are filtered before distinct counts and HIPAA <=10 suppression is applied. Reads the CSV directly by path with patient ID column `ID` (not in PCORNET_TABLES; permanent adoption deferred). Registered in R/39 (sole comma-less final entry, 20-entry vector), validated by R/88 Section 15s (14 checks + SMOKE-121-01), indexed in R/SCRIPT_INDEX.md (100+ count 6->7, Total 92->93).
+**Goal:** A new read-only standalone script `R/106_zip_change_frequency.R` probes for the PCORnet CDM `LDS_ADDRESS_HISTORY` table (the only source with a time-varying 9-digit ZIP) and, if present, quantifies how often an individual patient's ZIP changes at BOTH ZIP9 and ZIP5 granularity (D-04). It mirrors R/103's probe-first gate (`file.exists()` + `quit(status = 0)` when absent, no crash — D-02) and R/100's styled-xlsx look-and-feel, producing a 5-sheet workbook (`output/zip_change_frequency.xlsx`): (1) ZIP9/ZIP5 distinct-count distribution side-by-side, (2) change-rate summary + ZIP9-change-only count + histogram, (3) time-between-changes from `ADDRESS_PERIOD_START`, (4) most-recent-vs-modal tie-break disagreement rate without committing (D-11), (5) recommendation + metadata. Headline stats log to console first (D-09); NA ZIPs are filtered before distinct counts and HIPAA <=10 suppression is applied. Reads the CSV directly by path with patient ID column `ID` (not in PCORNET_TABLES; permanent adoption deferred). Registered in R/39, validated by R/88 Section 15s (14 checks + SMOKE-121-01), indexed in R/SCRIPT_INDEX.md (100+ count 6->7, Total 92->93).
 **Requirements**: ZIP-01, ZIP-02, ZIP-03, ZIP-04, SMOKE-121-01
 **Depends on:** Phase 120
 **Plans:** 1/1 plans complete
@@ -258,10 +258,12 @@ Plans:
 
 ### Phase 123: Quantify how much the MED_ADMIN/DISPENSING chemo-detection fix changes treatment outputs (before/after diff) and investigate whether unmatched NDCs are missing real chemo
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** A new read-only sibling diagnostic `R/109_med_admin_dispensing_fix_impact_audit.R` (SCRIPT_INDEX-only, NOT wired into R/39 — mirrors R/107/R/108) quantifies the Phase 122 fix impact and audits unmatched NDCs, producing a single Amy-ready multi-sheet styled xlsx (`output/med_admin_dispensing_fix_impact.xlsx`). It computes a deterministic source-level before/after chemo-detection diff using the production `get_chemo_hits()` path — `before` = PRESCRIBING-only, `after` = PRESCRIBING + MED_ADMIN (RX + ND) + DISPENSING (D-01/D-02) — reporting patient & date counts by source (D-03), first-chemo timing-shift distribution (D-04), per-ingredient delta via MEDICATION_LOOKUP (D-05), and an explicit UPPER-BOUND regimen-label impact from a `treatment_episodes.rds` join guarded by `file.exists()` with NO R/25/26/28 re-run (D-06). It then audits the ~24,327 crosswalk NDCs from `ndc_rxnorm_crosswalk_audit.csv` four ways: MED_ADMIN-ND drug-name string match (D-07), top-50 frequency rank (D-08), an IS_LOCAL-gated RxNav `ndcproperties`/`ndcstatus` re-query writing a NEW `ndc_rxnorm_crosswalk_requery.csv` (D-09), and a resolved-non-chemo `chemo_rxnorm` gap flag (D-10). HIPAA suppression throughout (D-11); quantification only, no downstream regeneration and no `chemo_rxnorm` list edits (D-12). Validated by R/88 Section 15u (14 checks + SMOKE-123-01) and indexed in R/SCRIPT_INDEX.md (100+ count 9->10). Full runtime confirmed on HiPerGator via a checkpoint.
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12 (locked CONTEXT decisions; no ROADMAP requirement IDs mapped)
 **Depends on:** Phase 122
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 123 to break down)
+- [ ] 123-01-PLAN.md -- Create R/109 Sections 1-9: setup + DuckDB bootstrap + cohort scope + before/after diff (D-01..D-05) + regimen upper-bound impact (D-06) (Wave 1)
+- [ ] 123-02-PLAN.md -- Add R/109 Sections 10-16: four-method unmatched-NDC audit (D-07..D-10) + single multi-sheet styled xlsx (D-11) (Wave 2)
+- [ ] 123-03-PLAN.md -- Register R/109 in R/SCRIPT_INDEX.md (100+ 9->10), add R/88 Section 15u + SMOKE-123-01, HiPerGator runtime-confirmation checkpoint (Wave 3)
