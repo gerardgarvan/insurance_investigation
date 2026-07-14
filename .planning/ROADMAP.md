@@ -261,9 +261,9 @@ Plans:
 **Goal:** A new read-only sibling diagnostic `R/109_med_admin_dispensing_fix_impact_audit.R` (SCRIPT_INDEX-only, NOT wired into R/39 — mirrors R/107/R/108) quantifies the Phase 122 fix impact and audits unmatched NDCs, producing a single Amy-ready multi-sheet styled xlsx (`output/med_admin_dispensing_fix_impact.xlsx`). It computes a deterministic source-level before/after chemo-detection diff using the production `get_chemo_hits()` path — `before` = PRESCRIBING-only, `after` = PRESCRIBING + MED_ADMIN (RX + ND) + DISPENSING (D-01/D-02) — reporting patient & date counts by source (D-03), first-chemo timing-shift distribution (D-04), per-ingredient delta via MEDICATION_LOOKUP (D-05), and an explicit UPPER-BOUND regimen-label impact from a `treatment_episodes.rds` join guarded by `file.exists()` with NO R/25/26/28 re-run (D-06). It then audits the ~24,327 crosswalk NDCs from `ndc_rxnorm_crosswalk_audit.csv` four ways: MED_ADMIN-ND drug-name string match (D-07), top-50 frequency rank (D-08), an IS_LOCAL-gated RxNav `ndcproperties`/`ndcstatus` re-query writing a NEW `ndc_rxnorm_crosswalk_requery.csv` (D-09), and a resolved-non-chemo `chemo_rxnorm` gap flag (D-10). HIPAA suppression throughout (D-11); quantification only, no downstream regeneration and no `chemo_rxnorm` list edits (D-12). Validated by R/88 Section 15u (14 checks + SMOKE-123-01) and indexed in R/SCRIPT_INDEX.md (100+ count 9->10). Full runtime confirmed on HiPerGator via a checkpoint.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12 (locked CONTEXT decisions; no ROADMAP requirement IDs mapped)
 **Depends on:** Phase 122
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 123-01-PLAN.md -- Create R/109 Sections 1-9: setup + DuckDB bootstrap + cohort scope + before/after diff (D-01..D-05) + regimen upper-bound impact (D-06) (Wave 1)
+- [x] 123-01-PLAN.md -- Create R/109 Sections 1-9: setup + DuckDB bootstrap + cohort scope + before/after diff (D-01..D-05) + regimen upper-bound impact (D-06) (Wave 1)
 - [ ] 123-02-PLAN.md -- Add R/109 Sections 10-16: four-method unmatched-NDC audit (D-07..D-10) + single multi-sheet styled xlsx (D-11) (Wave 2)
 - [ ] 123-03-PLAN.md -- Register R/109 in R/SCRIPT_INDEX.md (100+ 9->10), add R/88 Section 15u + SMOKE-123-01, HiPerGator runtime-confirmation checkpoint (Wave 3)
