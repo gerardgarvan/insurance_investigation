@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed 122-01-PLAN.md
-last_updated: "2026-07-14T15:30:50.538Z"
+stopped_at: Completed 122-02-PLAN.md
+last_updated: "2026-07-14T15:40:02.934Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 19
   completed_phases: 18
   total_plans: 29
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 ## Current Position
 
 Phase: 122 (med-admin-dispensing-gap-diagnostic-csv-gap-closure) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-14
 
@@ -53,6 +53,13 @@ Last activity: 2026-07-14
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 122 Plan 02 decisions:**
+
+- R/20 DISPENSING collapsed from two blocks (RXNORM+NDC) to single NDC block with drug_name=NA_character_; RXNORM block referenced absent RXNORM_CUI+RAW_DISPENSE_MED_NAME columns
+- R/27 MED_ADMIN ND-typed path emits raw NDC (not resolved RxCUI), consistent with DISPENSING harvest; code_type=NDC for both
+- ndc_crosswalk_fn2 variable name used in R/11 fn2 scope to avoid collision with fn1 binding
+- IS_LOCAL runtime check in Section 15t uses exists() guard for helpers; degrades gracefully if helpers not yet loaded in smoke-test scope
 
 **Phase 122 Plan 01 decisions:**
 
@@ -218,15 +225,17 @@ None identified.
 | Phase 120 P02 | 3min | 2 tasks | 3 files |
 | Phase 121 P01 | 15 | 3 tasks | 4 files |
 | Phase 122 P01 | 3 | 3 tasks | 4 files |
+| Phase 122 P02 | 12 | 3 tasks | 9 files |
 
 ## Session Continuity
 
-**Last command:** `/gsd:resume-work` (2026-07-09)
-**Stopped at:** Completed 122-01-PLAN.md
-**What's next:** Execute Phase 119 (fix death_cause_nhl_flag) — starts with R/103 HiPerGator diagnostic gate
+**Last command:** `/gsd:execute-phase` (2026-07-14)
+**Stopped at:** Completed 122-02-PLAN.md
+**What's next:** Execute Phase 122 Plan 03 (R/108 crosswalk build script + HiPerGator runtime verification)
 
 ### Recent Changes
 
+- 2026-07-14: Phase 122 Plan 02 complete (all 7 chemo consumers patched to use get_chemo_hits; R/88 Section 15t 14-check smoke test; SCRIPT_INDEX 100+ 8->9, Total 94->95)
 - 2026-07-10: Quick task 260710-i1e complete (R/104 gantt entire-history 6-col projection; cancer_7day_confirmed re-derived from episodes; R/39 registration; R/88 Section 15q 14-check smoke test; SCRIPT_INDEX 100+ 4->5, Total 90->91)
 - 2026-07-09: Phase 118 Plan 01 complete (R/102 death cause NHL flag CSV script, R/88 Section 15o 14-check smoke test, R/39 registration, SCRIPT_INDEX row)
 - 2026-07-09: Phase 117 Plan 01 complete (R/101 lifespan Gantt collapse script, R/88 Section 15n 14-check smoke test, R/39 registration, SCRIPT_INDEX row)
@@ -240,6 +249,19 @@ None identified.
 - 2026-06-12: v3.1 milestone completed (Phases 100-103, 4 phases, 9 requirements)
 
 ### Key Files Modified
+
+**Phase 122 Plan 02:**
+
+- Modified: R/10_cohort_predicates.R (has_chemo DISPENSING+MED_ADMIN use get_chemo_hits)
+- Modified: R/26_treatment_episodes.R (chemo sources #5/#6 use get_chemo_hits; immuno untouched)
+- Modified: R/25_treatment_durations.R (chemo DISPENSING+MED_ADMIN use get_chemo_hits)
+- Modified: R/11_treatment_payer.R (fn1+fn2 DISPENSING+MED_ADMIN use get_chemo_hits)
+- Modified: R/27_drug_name_resolution.R (DISPENSING emits raw NDC; MED_ADMIN uses MEDADMIN_CODE+TYPE)
+- Modified: R/20_treatment_inventory.R (DISPENSING NDC block only; MED_ADMIN uses MEDADMIN_CODE+TYPE; tryCatch surfaces errors)
+- Modified: R/76_treatment_source_coverage.R (DISPENSING+MED_ADMIN use get_chemo_hits)
+- Modified: R/88_smoke_test_comprehensive.R (Section 15t added: 14 Phase 122 checks; SMOKE-122-01 summary line)
+- Modified: R/SCRIPT_INDEX.md (R/108 row added; 100+ count 8->9; Total 94->95)
+- Created: .planning/phases/122-med-admin-dispensing-gap-diagnostic-csv-gap-closure/122-02-SUMMARY.md
 
 **Phase 118 Plan 01:**
 
