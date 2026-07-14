@@ -304,7 +304,7 @@ TUMOR_REGISTRY3_SPEC <- cols(
 # 10. DISPENSING (15 columns)
 # ------------------------------------------------------------------------------
 # Phase 9: Added for expanded treatment detection (D-08, D-15)
-# RXNORM_CUI is the key matching column for chemo drugs (D-12: no NDC matching)
+# NDC is the key column in this extract; RXNORM_CUI absent (D-12 revised Phase 122: NDC->RxNorm crosswalk used for chemo matching)
 # DISPENSE_DATE used for treatment date anchoring
 # Column list from PCORnet CDM v7.0 specification (Jan 2025)
 DISPENSING_SPEC <- cols(
@@ -319,7 +319,6 @@ DISPENSING_SPEC <- cols(
   DISPENSE_DOSE_DISP_UNIT = col_character(),
   DISPENSE_ROUTE = col_character(),
   RAW_NDC = col_character(),
-  RXNORM_CUI = col_character(), # KEY: chemo matching per D-12
   DISPENSE_SOURCE = col_character(),
   RAW_DISPENSE_MED_NAME = col_character(),
   SOURCE = col_character()
@@ -329,7 +328,7 @@ DISPENSING_SPEC <- cols(
 # 11. MED_ADMIN (12 columns)
 # ------------------------------------------------------------------------------
 # Phase 9: Added for expanded treatment detection (D-08, D-15)
-# RXNORM_CUI is the key matching column for chemo drugs (D-12: no NDC matching)
+# MEDADMIN_CODE + MEDADMIN_TYPE encode the drug code; RXNORM_CUI absent (D-12 revised Phase 122: RX-typed=RxNorm CUI, ND-typed=NDC via crosswalk)
 # MEDADMIN_START_DATE used for treatment date anchoring
 # Column list from PCORnet CDM v7.0 specification (Jan 2025)
 MED_ADMIN_SPEC <- cols(
@@ -342,7 +341,6 @@ MED_ADMIN_SPEC <- cols(
   MEDADMIN_START_DATE = col_character(), # Parsed by parse_pcornet_date()
   MEDADMIN_STOP_DATE = col_character(), # Parsed by parse_pcornet_date()
   MEDADMIN_ROUTE = col_character(),
-  RXNORM_CUI = col_character(), # KEY: chemo matching per D-12
   RAW_MEDADMIN_MED_NAME = col_character(),
   SOURCE = col_character()
 )
