@@ -273,10 +273,10 @@ Plans:
 **Goal:** Regenerate all in-scope downstream products (episodes, Gantt, timing, regimens, payer anchoring, cohort flags, coverage, inventory, Tableau + drug-grouping tables) so they reflect the expanded chemo sources unlocked by the Phase 122 fix — with a single canonical drug spelling across every output regardless of source, correct DISPENSING/MED_ADMIN Gantt labeling, an unmapped-name SME audit list, and an Amy-ready output-level before/after report proving the integration flowed.
 **Requirements**: D-01..D-15 + D-10-reg (from 124-CONTEXT.md)
 **Depends on:** Phase 123
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [x] 124-01-PLAN.md — R/26 + get_chemo_hits source_hints provenance + canonical raw-name fallback (D-06/D-07/D-10-reg/D-12)
 - [x] 124-02-PLAN.md — R/28 source_table/code_type override from source_hints + R/20 MED_ADMIN code_type fix (D-04/D-05)
-- [ ] 124-03-PLAN.md — R/110 output-level before/after report + unmapped-name audit + registration (D-02/D-03/D-08/D-09/D-15)
+- [x] 124-03-PLAN.md — R/110 output-level before/after report + unmapped-name audit + registration (D-02/D-03/D-08/D-09/D-15)
 - [ ] 124-04-PLAN.md — HiPerGator ordered regeneration + runtime confirmation checkpoint (D-01/D-10/D-11/D-13/D-14)

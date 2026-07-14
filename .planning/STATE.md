@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 124 Plan 02 (R/28 source_hints override + R/20 MEDADMIN_TYPE code_type fix)
-last_updated: "2026-07-14T22:47:45.093Z"
+stopped_at: Completed Phase 124 Plan 03 (R/110 output-level before/after report + D-08 unmapped-name audit + R/88 Section 15v)
+last_updated: "2026-07-14T22:55:14.030Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 21
   completed_phases: 20
   total_plans: 36
-  completed_plans: 34
+  completed_plans: 35
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 ## Current Position
 
 Phase: 124 (integrate-the-newly-detected-med-admin-dispensing-chemo-treatments-phase-122-fix-quantified-in-phase-123-into-all-downstream-outputs-episodes-gantt-timing-regimens-payer-anchoring-and-cohort) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-14
 
@@ -53,6 +53,12 @@ Last activity: 2026-07-14
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 124 Plan 03 decisions:**
+
+- Section 15v has 13 checks (not 14): IS_LOCAL runtime gate is 13th; intentional difference from prior sections (R/110 has fewer string-specific assertions than R/109's D-09 network step checks)
+- Payer-Anchor sheet emits documented placeholder when payer_at_chemo.csv absent — non-blocking report; user fills from R/11 output on HiPerGator
+- Unmapped-name detection: two-tier fallback — treatment_episode_detail.rds (per-code grain) then split drug_names from treatment_episodes.rds via tidyr::separate_rows
 
 **Phase 124 Plan 02 decisions:**
 
@@ -240,15 +246,17 @@ None identified.
 | Phase 123 P02 | 900 | 1 tasks | 1 files |
 | Phase 123 P03 | 30 | 3 tasks | 2 files |
 | Phase 124 P02 | 14 | 2 tasks | 2 files |
+| Phase 124 P03 | 5 | 2 tasks | 3 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:execute-phase` (2026-07-14)
-**Stopped at:** Completed Phase 124 Plan 02 (R/28 source_hints override + R/20 MEDADMIN_TYPE code_type fix)
-**What's next:** Execute Phase 122 Plan 03 (R/108 crosswalk build script + HiPerGator runtime verification)
+**Stopped at:** Completed Phase 124 Plan 03 (R/110 output-level before/after report + D-08 unmapped-name audit + R/88 Section 15v)
+**What's next:** Execute Phase 124 Plan 04 (HiPerGator runtime — snapshot baselines, regenerate artifacts, run R/110)
 
 ### Recent Changes
 
+- 2026-07-14: Phase 124 Plan 03 complete (R/110 5-sheet before/after xlsx + D-08 unmapped-name audit; R/88 Section 15v 13-check smoke test; SCRIPT_INDEX 100+ 10->11, Total 95->96)
 - 2026-07-14: Phase 122 Plan 02 complete (all 7 chemo consumers patched to use get_chemo_hits; R/88 Section 15t 14-check smoke test; SCRIPT_INDEX 100+ 8->9, Total 94->95)
 - 2026-07-10: Quick task 260710-i1e complete (R/104 gantt entire-history 6-col projection; cancer_7day_confirmed re-derived from episodes; R/39 registration; R/88 Section 15q 14-check smoke test; SCRIPT_INDEX 100+ 4->5, Total 90->91)
 - 2026-07-09: Phase 118 Plan 01 complete (R/102 death cause NHL flag CSV script, R/88 Section 15o 14-check smoke test, R/39 registration, SCRIPT_INDEX row)
@@ -263,6 +271,13 @@ None identified.
 - 2026-06-12: v3.1 milestone completed (Phases 100-103, 4 phases, 9 requirements)
 
 ### Key Files Modified
+
+**Phase 124 Plan 03:**
+
+- Created: R/110_output_level_before_after_report.R (696 lines, 5-sheet output-level before/after xlsx + D-08 unmapped-name audit)
+- Modified: R/88_smoke_test_comprehensive.R (Section 15v added: 13 Phase 124 checks; SMOKE-124-01 summary line)
+- Modified: R/SCRIPT_INDEX.md (R/110 row added to Post-Renumber Investigations; 100+ count 10->11; Total 95->96)
+- Created: .planning/phases/124-.../124-03-SUMMARY.md
 
 **Phase 122 Plan 02:**
 
