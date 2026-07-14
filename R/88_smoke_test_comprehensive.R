@@ -2645,8 +2645,13 @@ r01_text <- if (file.exists("R/01_load_pcornet.R")) {
 } else ""
 check("R/01 DISPENSING_SPEC and MED_ADMIN_SPEC no longer declare phantom RXNORM_CUI (Phase 122)",
       {
-        n_rxnorm_colspec <- length(gregexpr("RXNORM_CUI = col_character", r01_text)[[1]])
-        # Only PRESCRIBING_SPEC should remain — expect exactly 1
+        # Leading [^_] matches the bare RXNORM_CUI declaration but excludes
+        # RAW_RXNORM_CUI — PRESCRIBING_SPEC legitimately has BOTH, and a loose
+        # substring would count 2 and false-FAIL. gregexpr returns -1 (length 1)
+        # on no match, so guard that before counting.
+        m <- gregexpr("[^_]RXNORM_CUI = col_character", r01_text)[[1]]
+        n_rxnorm_colspec <- if (m[1] == -1L) 0L else length(m)
+        # Only PRESCRIBING_SPEC's bare RXNORM_CUI should remain — expect exactly 1
         n_rxnorm_colspec == 1L
       })
 
