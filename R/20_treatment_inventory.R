@@ -230,10 +230,16 @@ extract_chemo_codes <- function() {
             filter(ID %in% hl_ids) %>%
             filter(MEDADMIN_TYPE %in% c("RX", "ND"),
                    !is.na(MEDADMIN_CODE) & MEDADMIN_CODE != "") %>%
-            group_by(code = MEDADMIN_CODE, drug_name = RAW_MEDADMIN_MED_NAME) %>%
+            group_by(code = MEDADMIN_CODE, drug_name = RAW_MEDADMIN_MED_NAME, MEDADMIN_TYPE) %>%
             summarise(n = n(), .groups = "drop") %>%
             collect() %>%
-            mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
+            mutate(source_table = "MED_ADMIN",
+                   code_type = dplyr::case_when(
+                     MEDADMIN_TYPE == "ND" ~ "NDC",
+                     MEDADMIN_TYPE == "RX" ~ "RXNORM",
+                     TRUE ~ "RXNORM"  # defensive fallback (filter above restricts to RX/ND only)
+                   )) %>%
+            select(-MEDADMIN_TYPE)
         },
         error = function(e) {
           message(glue::glue("  [R/20 MED_ADMIN error]: {e$message}"))
