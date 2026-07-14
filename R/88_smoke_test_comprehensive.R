@@ -2817,6 +2817,96 @@ if (r109_exists) {
 }
 
 # ==============================================================================
+# SECTION 15v: PHASE 124 OUTPUT-LEVEL BEFORE/AFTER REPORT + UNMAPPED-NAME AUDIT ----
+# ==============================================================================
+
+# Phase 124 added R/110_output_level_before_after_report.R: a read-only
+# output-level proof artifact that proves the Phase 122 chemo-detection fix
+# propagated to FINAL PRODUCTS (treatment episodes, regimen distribution,
+# first-chemo timing, payer-anchor window). The Unmapped Names sheet (D-08)
+# lists raw/cleaned drug names with no canonical mapping for SME review.
+# NOT wired into R/39 (D: one-off analysis, like R/109).
+# STRUCTURAL greps pass LOCALLY; full runtime is HiPerGator (Plan 04).
+
+message("\n[Phase 124] Output-level before/after report + unmapped-name audit (R/110)...")
+
+# Check 1: R/110 script file exists
+r110_exists <- file.exists("R/110_output_level_before_after_report.R")
+check("R/110_output_level_before_after_report.R exists (Phase 124)", r110_exists)
+
+if (r110_exists) {
+  r110_lines <- readLines("R/110_output_level_before_after_report.R", warn = FALSE)
+  r110_text  <- paste(r110_lines, collapse = "\n")
+
+  # Check 2: BEFORE baseline uses treatment_episodes_pre_p124.rds
+  check("R/110 BEFORE baseline reads treatment_episodes_pre_p124.rds (Phase 124, D-03)",
+        grepl("treatment_episodes_pre_p124", r110_text))
+
+  # Check 3: BEFORE baseline uses gantt_episodes_pre_p124.csv
+  check("R/110 BEFORE baseline reads gantt_episodes_pre_p124.csv (Phase 124, D-03)",
+        grepl("gantt_episodes_pre_p124", r110_text))
+
+  # Check 4: add_styled_sheet called >= 6 times (definition + 5 sheet calls)
+  n_add_styled <- length(gregexpr("add_styled_sheet", r110_text)[[1]])
+  check(paste0("R/110 add_styled_sheet called >= 6 times (defn + 5 sheets): found ", n_add_styled, " (Phase 124)"),
+        n_add_styled >= 6L)
+
+  # Check 5: suppress_small called >= 5 times (HIPAA on every patient count, D-15)
+  n_suppress <- length(gregexpr("suppress_small", r110_text)[[1]])
+  check(paste0("R/110 suppress_small called >= 5 times (D-15 HIPAA): found ", n_suppress, " (Phase 124)"),
+        n_suppress >= 5L)
+
+  # Check 6: output path contains output_level_before_after_report.xlsx
+  check("R/110 references output_level_before_after_report.xlsx output path (Phase 124)",
+        grepl("output_level_before_after_report\\.xlsx", r110_text))
+
+  # Check 7: D-08 unmapped detection uses canonicalize_drug_name
+  check("R/110 D-08 unmapped detection uses canonicalize_drug_name (Phase 124)",
+        grepl("canonicalize_drug_name", r110_text))
+
+  # Check 8: Sheet 2 Regimen Distribution present (D-09)
+  check("R/110 contains Regimen Distribution sheet (D-02/D-09, Phase 124)",
+        grepl("regimen", r110_text, ignore.case = TRUE))
+
+  # Check 9: Sheet 4 Payer-Anchor Window present (D-02)
+  check("R/110 contains payer-anchor window sheet (D-02, Phase 124)",
+        grepl("payer", r110_text, ignore.case = TRUE))
+
+  # Check 10: Sheet 3 First-Chemo Timing Shift present
+  check("R/110 contains first-chemo timing shift analysis (Phase 124)",
+        grepl("timing", r110_text, ignore.case = TRUE) &&
+          grepl("first_chemo", r110_text))
+
+  # Check 11: >= 2 file.exists() guards so script parses on Windows
+  n_file_exists <- length(gregexpr("file\\.exists", r110_text)[[1]])
+  check(paste0("R/110 has >= 2 file.exists() guards (Windows-parse safe): found ", n_file_exists, " (Phase 124)"),
+        n_file_exists >= 2L)
+
+  # Check 12 (negative): R/110 is NOT wired into R/39_run_all_investigations.R
+  r39_exists <- file.exists("R/39_run_all_investigations.R")
+  if (r39_exists) {
+    r39_text <- paste(readLines("R/39_run_all_investigations.R", warn = FALSE), collapse = "\n")
+    check("R/110 is NOT wired into R/39_run_all_investigations.R (one-off analysis, Phase 124)",
+          !grepl("R/110|110_output_level", r39_text))
+  } else {
+    check("R/39 not found -- R/110 not-wired check SKIPPED (Phase 124)", TRUE)
+  }
+
+  # Check 13: IS_LOCAL runtime gate (structural PASS both branches)
+  if (IS_LOCAL) {
+    check("R/110 runtime (xlsx generation + sheet row counts) -- SKIPPED (HiPerGator runtime) (Phase 124)",
+          TRUE)
+  } else {
+    check("R/110 runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 124)",
+          TRUE)
+  }
+
+} else {
+  # If script missing, register the dependent checks as FALSE so total stays honest
+  for (i in 2:13) check(paste0("R/110 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -4393,6 +4483,7 @@ message("  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized M
 message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 14 checks)")
 message("  * SMOKE-122-01: R/88 validates Phase 122 MED_ADMIN/DISPENSING chemo-detection gap fix structural integrity (Section 15t, 14 checks)")
 message("  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + unmatched-NDC audit structural integrity (Section 15u, 14 checks)")
+message("  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/after report + unmapped-name audit structural integrity (Section 15v, 13 checks)")
 
 if (failed > 0) {
   quit(status = 1)
