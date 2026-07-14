@@ -331,26 +331,22 @@ has_chemo <- function() {
     n_drg <- length(drg_chemo)
   }
 
-  # DISPENSING: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
-  disp_tbl <- tryCatch(get_pcornet_table("DISPENSING"), error = function(e) NULL)
-  if (!is.null(disp_tbl) && "RXNORM_CUI" %in% colnames(disp_tbl)) {
-    disp_chemo <- disp_tbl %>%
-      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-      distinct(ID) %>%
-      pull(ID)
+  # DISPENSING: NDC->RxNorm crosswalk matching (D-12 revised Phase 122: NDC->RxNorm crosswalk used)
+  ndc_crosswalk <- load_ndc_crosswalk()
+  disp_hits <- get_chemo_hits("DISPENSING", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk)
+  if (!is.null(disp_hits)) {
+    disp_chemo <- disp_hits %>% distinct(ID) %>% pull(ID)
     chemo_ids <- c(chemo_ids, disp_chemo)
-    n_disp <- length(disp_chemo)
+    n_disp <- n_distinct(disp_hits$ID)
   }
 
-  # MED_ADMIN: RXNORM_CUI matching per D-12 (same CUIs as PRESCRIBING)
-  ma_tbl <- tryCatch(get_pcornet_table("MED_ADMIN"), error = function(e) NULL)
-  if (!is.null(ma_tbl) && "RXNORM_CUI" %in% colnames(ma_tbl)) {
-    ma_chemo <- ma_tbl %>%
-      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-      distinct(ID) %>%
-      pull(ID)
+  # MED_ADMIN: MEDADMIN_CODE where MEDADMIN_TYPE=='RX' (RxNorm CUI direct) + ND-typed via crosswalk
+  # (D-12 revised Phase 122: RXNORM_CUI absent; MEDADMIN_CODE+MEDADMIN_TYPE used)
+  ma_hits <- get_chemo_hits("MED_ADMIN", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk)
+  if (!is.null(ma_hits)) {
+    ma_chemo <- ma_hits %>% distinct(ID) %>% pull(ID)
     chemo_ids <- c(chemo_ids, ma_chemo)
-    n_ma <- length(ma_chemo)
+    n_ma <- n_distinct(ma_hits$ID)
   }
 
   # PROCEDURES revenue codes: 0331/0332/0335 per D-11 (PX_TYPE = "RE")
