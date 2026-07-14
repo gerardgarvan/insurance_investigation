@@ -4,7 +4,7 @@ milestone: v3.2
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 123-03-PLAN.md (Phase 123 complete)
-last_updated: "2026-07-14T21:05:52.716Z"
+last_updated: "2026-07-14T21:10:04.754Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 20
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 ## Current Position
 
-Phase: 123 (quantify-how-much-the-med-admin-dispensing-chemo-detection-fix-changes-treatment-outputs-before-after-diff-and-investigate-whether-unmatched-ndcs-are-missing-real-chemo) — EXECUTING
-Plan: 3 of 3
+Phase: 123
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-14
 
