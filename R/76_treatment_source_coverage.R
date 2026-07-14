@@ -227,24 +227,17 @@ extract_claims_chemo_dates <- function() {
       collect()
   }
 
-  # 5. DISPENSING: RXNORM_CUI
-  if (!is.null(get_pcornet_table("DISPENSING")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
-    sources$DISP <- get_pcornet_table("DISPENSING") %>%
-      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-      filter(!is.na(DISPENSE_DATE)) %>%
-      select(ID, treatment_date = DISPENSE_DATE) %>%
-      collect()
+  # 5. DISPENSING: NDC->RxNorm crosswalk (D-12 revised Phase 122: NDC->RxNorm crosswalk used)
+  ndc_crosswalk_76 <- load_ndc_crosswalk()
+  disp_hits_76 <- get_chemo_hits("DISPENSING", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk_76)
+  if (!is.null(disp_hits_76)) {
+    sources$DISP <- disp_hits_76 %>% select(ID, treatment_date)
   }
 
-  # 6. MED_ADMIN: RXNORM_CUI
-  if (!is.null(get_pcornet_table("MED_ADMIN")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
-    sources$MA <- get_pcornet_table("MED_ADMIN") %>%
-      filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-      filter(!is.na(MEDADMIN_START_DATE)) %>%
-      select(ID, treatment_date = MEDADMIN_START_DATE) %>%
-      collect()
+  # 6. MED_ADMIN: MEDADMIN_CODE+MEDADMIN_TYPE (D-12 revised Phase 122: RX-typed=RxNorm CUI, ND-typed=NDC via crosswalk)
+  ma_hits_76 <- get_chemo_hits("MED_ADMIN", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk_76)
+  if (!is.null(ma_hits_76)) {
+    sources$MA <- ma_hits_76 %>% select(ID, treatment_date)
   }
 
   # Stack and deduplicate

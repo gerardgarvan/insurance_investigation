@@ -339,47 +339,60 @@ if (!is.null(get_pcornet_table("PRESCRIBING")) &&
     select(code, code_type, source_table)
 }
 
-# RXNORM_CUI codes from DISPENSING
+# NDC codes from DISPENSING (D-12 revised Phase 122: DISPENSING has NDC only, no RXNORM_CUI)
+# Use the crosswalk to FILTER chemo-related NDCs; emit the RAW NDC as code (code_type="NDC")
+ndc_crosswalk_27 <- load_ndc_crosswalk()
 rx_codes_dispensing <- NULL
 if (!is.null(get_pcornet_table("DISPENSING")) &&
-  "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
-  rx_codes_dispensing <- get_pcornet_table("DISPENSING") %>%
-    filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-    filter(!is.na(RXNORM_CUI)) %>%
-    distinct(RXNORM_CUI) %>%
-    collect() %>%
-    mutate(code = RXNORM_CUI, code_type = "RXNORM", source_table = "DISPENSING") %>%
-    select(code, code_type, source_table)
+  "NDC" %in% colnames(get_pcornet_table("DISPENSING"))) {
+  if (length(ndc_crosswalk_27) == 0) {
+    message("  [R/27 DISPENSING] no NDC crosswalk loaded — skipping DISPENSING drug-code harvest")
+  } else {
+    disp_raw <- get_pcornet_table("DISPENSING") %>%
+      filter(!is.na(NDC), NDC != "") %>%
+      distinct(NDC) %>%
+      collect()
+    rx_codes_dispensing <- disp_raw %>%
+      mutate(rxcui = ndc_crosswalk_27[normalize_ndc(NDC)]) %>%
+      filter(!is.na(rxcui), rxcui %in% TREATMENT_CODES$chemo_rxnorm) %>%
+      mutate(code = NDC, code_type = "NDC", source_table = "DISPENSING") %>%
+      select(code, code_type, source_table)
+  }
 }
 
-# RXNORM_CUI codes from MED_ADMIN
+# RXNORM + NDC codes from MED_ADMIN
+# (D-12 revised Phase 122: MEDADMIN_CODE+MEDADMIN_TYPE used; RXNORM_CUI absent)
 rx_codes_medadmin <- NULL
 if (!is.null(get_pcornet_table("MED_ADMIN")) &&
-  "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
-  rx_codes_medadmin <- get_pcornet_table("MED_ADMIN") %>%
-    filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-    filter(!is.na(RXNORM_CUI)) %>%
-    distinct(RXNORM_CUI) %>%
+  "MEDADMIN_CODE" %in% colnames(get_pcornet_table("MED_ADMIN")) &&
+  "MEDADMIN_TYPE" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
+  # RX-typed: MEDADMIN_CODE holds RxNorm CUI directly
+  ma_rx_codes <- get_pcornet_table("MED_ADMIN") %>%
+    filter(MEDADMIN_TYPE == "RX",
+           MEDADMIN_CODE %in% TREATMENT_CODES$chemo_rxnorm,
+           !is.na(MEDADMIN_CODE)) %>%
+    distinct(MEDADMIN_CODE) %>%
     collect() %>%
-    mutate(code = RXNORM_CUI, code_type = "RXNORM", source_table = "MED_ADMIN") %>%
+    mutate(code = MEDADMIN_CODE, code_type = "RXNORM", source_table = "MED_ADMIN") %>%
     select(code, code_type, source_table)
+  # ND-typed: MEDADMIN_CODE holds NDC — filter via crosswalk; emit RAW NDC
+  ma_ndc_codes <- NULL
+  if (length(ndc_crosswalk_27) > 0) {
+    ma_nd_raw <- get_pcornet_table("MED_ADMIN") %>%
+      filter(MEDADMIN_TYPE == "ND", !is.na(MEDADMIN_CODE), MEDADMIN_CODE != "") %>%
+      distinct(MEDADMIN_CODE) %>%
+      collect()
+    ma_ndc_codes <- ma_nd_raw %>%
+      mutate(rxcui = ndc_crosswalk_27[normalize_ndc(MEDADMIN_CODE)]) %>%
+      filter(!is.na(rxcui), rxcui %in% TREATMENT_CODES$chemo_rxnorm) %>%
+      mutate(code = MEDADMIN_CODE, code_type = "NDC", source_table = "MED_ADMIN") %>%
+      select(code, code_type, source_table)
+  }
+  rx_codes_medadmin <- bind_rows(ma_rx_codes, ma_ndc_codes)
 }
 
-# NDC codes from DISPENSING (if NDC column exists)
+# ndc_codes block removed: DISPENSING now harvested directly above as raw NDC (see rx_codes_dispensing)
 ndc_codes <- NULL
-if (!is.null(get_pcornet_table("DISPENSING")) &&
-  "NDC" %in% colnames(get_pcornet_table("DISPENSING")) &&
-  "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
-  # Get NDC codes that appear alongside chemo RXNORM_CUI codes
-  # These are NDC codes for prescriptions that matched chemo_rxnorm
-  ndc_codes <- get_pcornet_table("DISPENSING") %>%
-    filter(RXNORM_CUI %in% TREATMENT_CODES$chemo_rxnorm) %>%
-    filter(!is.na(NDC)) %>%
-    distinct(NDC) %>%
-    collect() %>%
-    mutate(code = NDC, code_type = "NDC", source_table = "DISPENSING") %>%
-    select(code, code_type, source_table)
-}
 
 close_pcornet_con()
 

@@ -201,51 +201,44 @@ extract_chemo_codes <- function() {
     # --- DISPENSING (all drugs for HL patients) ---
     disp_tbl <- safe_table("DISPENSING")
     if (!is.null(disp_tbl)) {
-      # RXNORM records with drug name
-      disp_rxnorm <- tryCatch(
-        {
-          disp_tbl %>%
-            filter(ID %in% hl_ids) %>%
-            filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-            group_by(code = RXNORM_CUI, drug_name = RAW_DISPENSE_MED_NAME) %>%
-            summarise(n = n(), .groups = "drop") %>%
-            collect() %>%
-            mutate(source_table = "DISPENSING", code_type = "RXNORM")
-        },
-        error = function(e) empty_result()
-      )
-      results <- c(results, list(disp_rxnorm))
-
-      # NDC codes with drug name
+      # NDC codes (D-12 revised Phase 122: DISPENSING has NDC only; RXNORM_CUI absent; drug_name set to NA)
       disp_ndc <- tryCatch(
         {
           disp_tbl %>%
             filter(ID %in% hl_ids) %>%
             filter(!is.na(NDC) & NDC != "") %>%
-            group_by(code = NDC, drug_name = RAW_DISPENSE_MED_NAME) %>%
+            group_by(code = NDC, drug_name = NA_character_) %>%
             summarise(n = n(), .groups = "drop") %>%
             collect() %>%
             mutate(source_table = "DISPENSING", code_type = "NDC")
         },
-        error = function(e) empty_result()
+        error = function(e) {
+          message(glue::glue("  [R/20 DISPENSING error]: {e$message}"))
+          empty_result()
+        }
       )
       results <- c(results, list(disp_ndc))
     }
 
     # --- MED_ADMIN (all drugs for HL patients) ---
+    # D-12 revised Phase 122: MEDADMIN_CODE+MEDADMIN_TYPE used; RXNORM_CUI absent; RAW_MEDADMIN_MED_NAME present
     ma_tbl <- safe_table("MED_ADMIN")
     if (!is.null(ma_tbl)) {
       ma_codes <- tryCatch(
         {
           ma_tbl %>%
             filter(ID %in% hl_ids) %>%
-            filter(!is.na(RXNORM_CUI) & RXNORM_CUI != "") %>%
-            group_by(code = RXNORM_CUI, drug_name = RAW_MEDADMIN_MED_NAME) %>%
+            filter(MEDADMIN_TYPE %in% c("RX", "ND"),
+                   !is.na(MEDADMIN_CODE) & MEDADMIN_CODE != "") %>%
+            group_by(code = MEDADMIN_CODE, drug_name = RAW_MEDADMIN_MED_NAME) %>%
             summarise(n = n(), .groups = "drop") %>%
             collect() %>%
             mutate(source_table = "MED_ADMIN", code_type = "RXNORM")
         },
-        error = function(e) empty_result()
+        error = function(e) {
+          message(glue::glue("  [R/20 MED_ADMIN error]: {e$message}"))
+          empty_result()
+        }
       )
       results <- c(results, list(ma_codes))
     }
