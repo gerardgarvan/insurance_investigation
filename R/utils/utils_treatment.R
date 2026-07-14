@@ -107,3 +107,140 @@ check_file <- function(path, label) {
     message(glue("  MISSING: {label}"))
   }
 }
+
+# ==============================================================================
+# D-12 revised Phase 122: MED_ADMIN / DISPENSING chemo detection helpers
+# ==============================================================================
+
+#' Normalize an NDC code to 11-digit no-hyphen format
+#'
+#' Strips hyphens and left-pads with zeros to produce the standard 11-digit
+#' NDC string required for RxNav API lookups and crosswalk key matching.
+#' Vectorized — safe to apply to a column.
+#'
+#' @param ndc Character vector of NDC codes (hyphenated or plain)
+#' @return Character vector of 11-digit no-hyphen NDC strings
+normalize_ndc <- function(ndc) {
+  stringr::str_remove_all(ndc, "-") |>
+    stringr::str_pad(width = 11, side = "left", pad = "0")
+}
+
+#' Load NDC->RxNorm crosswalk from data/reference/ndc_rxnorm_crosswalk.rds
+#'
+#' Returns named character vector (NDC -> RxCUI) or empty vector with message.
+#' Named vector allows O(1) lookup: rxcui <- crosswalk[ndc_value].
+#' If the file is absent (crosswalk not yet built on HiPerGator), degrades
+#' gracefully — never crashes. Callers must handle character(0) return.
+#'
+#' @return Named character vector (NDC -> RxCUI) or character(0)
+load_ndc_crosswalk <- function() {
+  path <- here::here("data", "reference", "ndc_rxnorm_crosswalk.rds")
+  if (!file.exists(path)) {
+    message("  NDC->RxNorm crosswalk not found at ", path,
+            " — NDC-coded rows will NOT contribute to chemo detection.")
+    message("  Run R/108_build_ndc_rxnorm_crosswalk.R on HiPerGator to build it.")
+    return(character(0))
+  }
+  cw <- readRDS(path)
+  message(glue::glue("  NDC crosswalk loaded: {length(cw)} NDC->RxCUI mappings"))
+  cw
+}
+
+#' Extract chemo-matching rows from a single PCORnet medication table
+#'
+#' Returns a tibble of (ID, treatment_date, triggering_code) for chemo hits,
+#' or NULL with a message if the table or required columns are absent.
+#'
+#' ENCOUNTERID intentionally omitted; callers add it if the source has it.
+#' (DISPENSING may lack ENCOUNTERID in this extract; omitting keeps the
+#' helper contract consistent across all three tables.)
+#'
+#' @param table_name  "PRESCRIBING", "DISPENSING", or "MED_ADMIN"
+#' @param chemo_rxnorm  Character vector of RxNorm CUIs (TREATMENT_CODES$chemo_rxnorm)
+#' @param ndc_crosswalk Named character vector: NDC -> RxCUI, or NULL to skip NDC path
+#'   (load via load_ndc_crosswalk(); NULL/character(0) both degrade gracefully)
+#' @return Tibble(ID, treatment_date, triggering_code) with distinct rows, or NULL
+get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
+  tbl <- safe_table(table_name)
+  if (is.null(tbl)) {
+    message(glue::glue("  [{table_name}] table not found — skipping chemo detection"))
+    return(NULL)
+  }
+
+  if (table_name == "PRESCRIBING") {
+    if (!"RXNORM_CUI" %in% colnames(tbl)) {
+      message(glue::glue("  [PRESCRIBING] RXNORM_CUI absent — unexpected; skipping"))
+      return(NULL)
+    }
+    tbl %>%
+      dplyr::filter(RXNORM_CUI %in% chemo_rxnorm) %>%
+      dplyr::mutate(treatment_date = dplyr::coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
+      dplyr::filter(!is.na(treatment_date)) %>%
+      dplyr::select(ID, treatment_date, triggering_code = RXNORM_CUI) %>%
+      dplyr::collect() %>%
+      dplyr::distinct(ID, treatment_date, triggering_code)
+
+  } else if (table_name == "DISPENSING") {
+    if (!"NDC" %in% colnames(tbl)) {
+      message(glue::glue("  [DISPENSING] NDC column absent — skipping"))
+      return(NULL)
+    }
+    if (is.null(ndc_crosswalk) || length(ndc_crosswalk) == 0) {
+      message("  [DISPENSING] no NDC crosswalk loaded — skipping chemo match")
+      return(NULL)
+    }
+    rows <- tbl %>%
+      dplyr::filter(!is.na(NDC), !is.na(DISPENSE_DATE)) %>%
+      dplyr::select(ID, treatment_date = DISPENSE_DATE, NDC) %>%
+      dplyr::collect()
+    rows %>%
+      dplyr::mutate(rxcui = ndc_crosswalk[normalize_ndc(NDC)]) %>%
+      dplyr::filter(!is.na(rxcui), rxcui %in% chemo_rxnorm) %>%
+      dplyr::select(ID, treatment_date, triggering_code = rxcui) %>%
+      dplyr::distinct(ID, treatment_date, triggering_code)
+
+  } else if (table_name == "MED_ADMIN") {
+    required <- c("MEDADMIN_TYPE", "MEDADMIN_CODE", "MEDADMIN_START_DATE")
+    missing_cols <- required[!required %in% colnames(tbl)]
+    if (length(missing_cols) > 0) {
+      message(glue::glue(
+        "  [MED_ADMIN] missing columns: {paste(missing_cols, collapse = ', ')} — skipping"
+      ))
+      return(NULL)
+    }
+    # RX-typed rows: MEDADMIN_CODE holds RxNorm CUI directly
+    rx_hits <- tbl %>%
+      dplyr::filter(
+        MEDADMIN_TYPE == "RX",
+        MEDADMIN_CODE %in% chemo_rxnorm,
+        !is.na(MEDADMIN_START_DATE)
+      ) %>%
+      dplyr::select(ID, treatment_date = MEDADMIN_START_DATE,
+                    triggering_code = MEDADMIN_CODE) %>%
+      dplyr::collect() %>%
+      dplyr::distinct(ID, treatment_date, triggering_code)
+    # ND-typed rows: MEDADMIN_CODE holds NDC — needs crosswalk
+    nd_hits <- NULL
+    if (!is.null(ndc_crosswalk) && length(ndc_crosswalk) > 0) {
+      nd_rows <- tbl %>%
+        dplyr::filter(
+          MEDADMIN_TYPE == "ND",
+          !is.na(MEDADMIN_CODE),
+          !is.na(MEDADMIN_START_DATE)
+        ) %>%
+        dplyr::select(ID, treatment_date = MEDADMIN_START_DATE,
+                      NDC = MEDADMIN_CODE) %>%
+        dplyr::collect()
+      nd_hits <- nd_rows %>%
+        dplyr::mutate(rxcui = ndc_crosswalk[normalize_ndc(NDC)]) %>%
+        dplyr::filter(!is.na(rxcui), rxcui %in% chemo_rxnorm) %>%
+        dplyr::select(ID, treatment_date, triggering_code = rxcui) %>%
+        dplyr::distinct(ID, treatment_date, triggering_code)
+    }
+    dplyr::bind_rows(rx_hits, nd_hits)
+
+  } else {
+    message(glue::glue("  [{table_name}] unrecognised table for get_chemo_hits() — skipping"))
+    NULL
+  }
+}
