@@ -151,6 +151,7 @@ Standalone investigation scripts added after the 00-99 decade-based renumbering 
 | `R/105_normalize_supportive_care_meaning.R` | Resolves each Supportive Care RXNORM code to its RxNorm IN generic ingredient via RxNav (`related.json?tty=IN`, historystatus fallback for retired codes, rule-based canonicalize_drug_name fallback for misses), caches to `data/reference/rxnorm_ingredient_cache.csv`, and appends a `Normalized Meaning` column (col G) to the Supportive Care tab of `all_codes_resolved_next_tables_v2.1.xlsx` in place (combos kept as sorted "/"-joined labels). | 120 |
 | `R/106_zip_change_frequency.R` | Read-only Phase 121 investigation: probes for LDS_ADDRESS_HISTORY (the only CDM table with a time-varying 9-digit ZIP), and if present quantifies per-patient ZIP change frequency at BOTH ZIP9 and ZIP5 granularity — distinct-ZIP distribution, % ever-changed (incl. ZIP9-change-only), time-between-changes (from ADDRESS_PERIOD_START), and most-recent-vs-modal tie-break disagreement rate. Produces a 5-sheet styled xlsx (`output/zip_change_frequency.xlsx`) + console summary to inform the downstream SES-index (ADI/SVI) ZIP-handling decision. Reads the CSV directly by path (not in PCORNET_TABLES); exits gracefully if absent. | 121 |
 | `R/107_med_admin_dispensing_gap_diagnostic.R` | Read-only diagnostic sizing the chemo treatment-detection loss caused by DISPENSING and MED_ADMIN lacking RXNORM_CUI in this extract. Establishes the PRESCRIBING RXNORM_CUI baseline, then quantifies MED_ADMIN's incremental contribution via MEDADMIN_TYPE=='RX' + MEDADMIN_CODE (RxNorm CUIs) — new patients, new (ID,date) pairs, and earlier-first-chemo-date shifts beyond the baseline — plus the MEDADMIN_TYPE=='ND' volume that would need an NDC->RxNorm crosswalk. Reports DISPENSING volume/patient/date footprint only (NDC-only; no crosswalk in-repo, so no chemo match). HIPAA-suppresses patient counts 1-10. Writes output/med_admin_dispensing_gap_diagnostic.csv. NOT wired into R/39 (one-off sizing diagnostic). | quick-260714-end |
+| `R/108_build_ndc_rxnorm_crosswalk.R` | One-time HiPerGator data-prep utility (NOT a repeatable investigation; NOT wired into R/39). Harvests distinct NDC codes from DISPENSING + MED_ADMIN ND-typed rows, calls RxNav `rxcui.json?idtype=NDC` for each with httr2 retry + 0.1s sleep, writes `data/reference/ndc_rxnorm_crosswalk.rds` (named char vector: NDC->RxCUI) and `output/ndc_rxnorm_crosswalk_audit.csv`. The crosswalk is loaded offline by all 7 Phase 122 consumers via `load_ndc_crosswalk()` in utils_treatment.R. Mirrors R/27 drug_name_lookup.rds pattern. | 122 |
 
 ---
 
@@ -203,10 +204,10 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
-- **Post-renumber investigations (100+):** 8 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning, R/106 ZIP change frequency, R/107 MED_ADMIN/DISPENSING chemo-gap sizing)
+- **Post-renumber investigations (100+):** 9 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning, R/106 ZIP change frequency, R/107 MED_ADMIN/DISPENSING chemo-gap sizing, R/108 NDC->RxNorm crosswalk builder)
 - **Utility libraries:** 10 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 94
+- **Total:** 95
 
 ## Key Dependency Chains
 
