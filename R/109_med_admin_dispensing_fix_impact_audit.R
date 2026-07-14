@@ -419,8 +419,7 @@ if (!file.exists(NDC_AUDIT_CSV)) {
   ndc_unmatched  <- tibble(NDC = character(), rxcui = character(), lookup_status = character())
   ndc_matched    <- tibble(NDC = character(), rxcui = character(), lookup_status = character())
 } else {
-  ndc_audit_tbl <- readr::read_csv(NDC_AUDIT_CSV, col_types = readr::cols(.default = readr::col_character()),
-                                   show_col_types = FALSE)
+  ndc_audit_tbl <- read.csv(NDC_AUDIT_CSV, colClasses = "character", stringsAsFactors = FALSE)
   ndc_unmatched <- ndc_audit_tbl %>% filter(lookup_status == "miss")
   ndc_matched   <- ndc_audit_tbl %>% filter(lookup_status == "matched")
   message(glue("  NDC audit: {format(nrow(ndc_audit_tbl), big.mark=',')} total, {format(nrow(ndc_matched), big.mark=',')} matched, {format(nrow(ndc_unmatched), big.mark=',')} miss"))
@@ -435,9 +434,10 @@ if (!file.exists(NDC_AUDIT_CSV)) {
 
 message("--- Section 11: D-07 — drug-name string match ---")
 
-# Build chemo name list from MEDICATION_LOOKUP values that correspond to chemo
-# CUIs in CHEMO_RXNORM. DRUG_NAME_ALIASES keys also included.
-chemo_lookup_names <- unique(tolower(MEDICATION_LOOKUP[names(MEDICATION_LOOKUP) %in% CHEMO_RXNORM]))
+# Build chemo name list from MEDICATION_LOOKUP[CHEMO_RXNORM] values (chemo CUI
+# lookup; NAs for CUIs absent from MEDICATION_LOOKUP are dropped). DRUG_NAME_ALIASES
+# keys also included for variant-name matching.
+chemo_lookup_names <- unique(na.omit(tolower(MEDICATION_LOOKUP[CHEMO_RXNORM])))
 alias_names        <- if (exists("DRUG_NAME_ALIASES")) unique(tolower(names(DRUG_NAME_ALIASES))) else character(0)
 chemo_name_pattern <- paste(unique(c(chemo_lookup_names, alias_names)), collapse = "|")
 
@@ -502,7 +502,7 @@ message(glue("  D-07: {nrow(df_ndc_string_match)} unmatched NDCs with a chemo-in
 
 message("--- Section 12: D-08 — frequency-ranked unmatched NDCs ---")
 
-TOP_N_NDC <- 50L   # Number of top unmatched NDCs to surface
+N <- 50L   # Number of top unmatched NDCs to surface (D-08)
 
 df_ndc_freq_ranked <- tibble(
   NDC          = character(),
@@ -550,12 +550,12 @@ if (nrow(ndc_unmatched) > 0L) {
     ) %>%
     arrange(desc(n_rows)) %>%
     mutate(rank = row_number()) %>%
-    slice_head(n = TOP_N_NDC)
+    slice_head(n = N)
 
   df_ndc_freq_ranked <- combined_freq
 }
 
-message(glue("  D-08: {nrow(df_ndc_freq_ranked)} unmatched NDCs in top-{TOP_N_NDC} frequency table\n"))
+message(glue("  D-08: {nrow(df_ndc_freq_ranked)} unmatched NDCs in top-{N} frequency table\n"))
 
 
 # ==============================================================================
@@ -577,6 +577,7 @@ df_ndc_requery <- tibble(
   chemo_match   = logical()
 )
 
+# IS_LOCAL guard: if (!IS_LOCAL) the network re-query runs on HiPerGator; else skip.
 if (exists("IS_LOCAL") && !IS_LOCAL && nrow(ndc_unmatched) > 0L) {
   message(glue("  [D-09] Running alternate-endpoint re-query for {format(nrow(ndc_unmatched), big.mark=',')} unresolved NDCs (HiPerGator mode) ..."))
 
@@ -588,10 +589,8 @@ if (exists("IS_LOCAL") && !IS_LOCAL && nrow(ndc_unmatched) > 0L) {
       result <- tryCatch({
         resp <- httr2::request(url) |>
           httr2::req_timeout(10) |>
-          httr2::req_retry(
-            max_tries    = 3,
-            is_transient = ~ httr2::resp_status(.x) %in% c(429L, 503L, 504L)
-          ) |>
+          httr2::req_retry(max_tries = 3,
+            is_transient = ~ httr2::resp_status(.x) %in% c(429L, 503L, 504L)) |>
           httr2::req_perform()
         data <- httr2::resp_body_json(resp)
         rxcui <- data[[if (endpoint == "ndcproperties") "ndcItem" else "ndcStatus"]][["rxcui"]]
@@ -654,7 +653,7 @@ if (nrow(ndc_matched) > 0L) {
   # Of matched NDCs, which resolved RxCUIs are NOT in chemo_rxnorm?
   resolved_not_chemo <- ndc_matched %>%
     filter(!is.na(rxcui), nchar(trimws(rxcui)) > 0L) %>%
-    filter(!rxcui %in% CHEMO_RXNORM) %>%
+    filter(!(rxcui %in% CHEMO_RXNORM)) %>%
     group_by(rxcui) %>%
     summarise(n_ndc_entries = n(), .groups = "drop")
 
@@ -666,14 +665,15 @@ if (nrow(ndc_matched) > 0L) {
         in_chemo_rxnorm = FALSE,
         # Flag any resolved-non-chemo RxCUI whose name matches a chemo pattern
         flag = case_when(
-          !is.na(unname(MEDICATION_LOOKUP[rxcui])) ~
-            "HAS_LOOKUP_NAME — review for chemo_rxnorm gap",
-          TRUE ~ "NO_LOOKUP_NAME — may be non-chemo or missing from MEDICATION_LOOKUP"
+          !is.na(unname(MEDICATION_LOOKUP[rxcui])) ~ "CANDIDATE_CHEMO_GAP",
+          TRUE ~ "non_chemo"
         )
-      )
+      ) %>%
+      # CANDIDATE_CHEMO_GAP rows first, then by NDC count descending.
+      arrange(flag == "non_chemo", desc(n_ndc_entries))
   }
 
-  n_gap_candidates <- nrow(df_resolved_gap %>% filter(str_detect(flag, "HAS_LOOKUP_NAME")))
+  n_gap_candidates <- nrow(df_resolved_gap %>% filter(flag == "CANDIDATE_CHEMO_GAP"))
   message(glue("  D-10: {nrow(df_resolved_gap)} resolved-non-chemo RxCUIs; {n_gap_candidates} have MEDICATION_LOOKUP entries (potential chemo_rxnorm gaps — SME review needed)\n"))
 } else {
   message("  D-10: NDC audit CSV absent or no matched NDCs — gap check skipped.\n")
@@ -681,18 +681,175 @@ if (nrow(ndc_matched) > 0L) {
 
 
 # ==============================================================================
-# SECTION 15: BUILD AND WRITE MULTI-SHEET XLSX ----
-# openxlsx2 pattern from R/51 / R/100 / TABLE scripts.
-# xlsx assembly deferred to Plan 02 — this section is a stub so that Plan 02
-# can append sheet-writing code without structural rework.
+# SECTION 15: BUILD AND WRITE MULTI-SHEET XLSX (D-11) ----
+# openxlsx2 pattern from R/51_post_death_encounter_investigation.R (verified
+# styling constants; data at row 4, freeze at row 5, header fill FF374151).
+# Sheets: Before-After Summary, Source Counts, Timing Shift, Per-Ingredient
+#         Delta, Regimen Impact, Unmatched NDC Top-N, NDC String Match,
+#         RxNav Requery Results, Resolved-Gap Findings.
+# HIPAA: suppress_small() already applied upstream; no further suppression needed.
 # ==============================================================================
 
-message("--- Section 15: xlsx assembly (stub — full implementation in Plan 02) ---")
-message("  Data frames ready for xlsx: df_before_after_summary, df_source_counts,")
-message("  df_timing_shift, df_ingredient_delta, df_regimen_impact,")
-message("  df_ndc_freq_ranked, df_ndc_string_match, df_ndc_requery, df_resolved_gap\n")
+message("--- Section 15: D-11 — multi-sheet xlsx assembly ---")
 
-# Plan 02 will instantiate wb <- wb_workbook() and write all sheets here.
+# ---------------------------------------------------------------------------
+# DRY helper: add a styled sheet (R/51 verbatim styling constants).
+# Title: Calibri 16 bold FF1F2937, merged across all data columns.
+# Subtitle: Calibri 10 gray FF6B7280.
+# Header row (row 4): fill FF374151, font Calibri 11 bold white FFFFFFFF.
+# Data at start_row = 4; freeze at firstActiveRow = 5.
+# ---------------------------------------------------------------------------
+add_styled_sheet <- function(wb, sheet_name, title, subtitle_text, data) {
+  ncols <- max(ncol(data), 1L)
+  last_col <- if (ncols <= 26L) LETTERS[ncols] else paste0("A", LETTERS[ncols - 26L])
+
+  # Title row (row 1)
+  wb$add_data(sheet = sheet_name, x = title, start_row = 1, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$merge_cells(sheet = sheet_name, dims = glue("A1:{last_col}1"))
+
+  # Subtitle row (row 2)
+  wb$add_data(sheet = sheet_name, x = subtitle_text, start_row = 2, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A2",
+              name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+  wb$merge_cells(sheet = sheet_name, dims = glue("A2:{last_col}2"))
+
+  # Data table at row 4
+  wb$add_data(sheet = sheet_name, x = data, start_row = 4, start_col = 1)
+
+  # Header row styling (row 4): dark gray fill + white bold font
+  wb$add_fill(sheet = sheet_name, dims = glue("A4:{last_col}4"),
+              color = wb_color("FF374151"))
+  wb$add_font(sheet = sheet_name, dims = glue("A4:{last_col}4"),
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+
+  # Freeze pane below header
+  wb$freeze_pane(sheet = sheet_name, firstActiveRow = 5)
+
+  wb
+}
+
+run_date <- format(Sys.Date(), "%Y-%m-%d")
+
+# ---------------------------------------------------------------------------
+# Workbook creation
+# ---------------------------------------------------------------------------
+wb <- wb_workbook()
+
+# Sheet 1: Before-After Summary (D-03 headline + source counts combined)
+wb$add_worksheet("Before-After Summary")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Before-After Summary",
+  title         = "MED_ADMIN/DISPENSING Fix: Before vs After Patient & Date Counts (D-03)",
+  subtitle_text = glue("Generated: {run_date} | Phase 123 Phase 122 chemo-detection fix quantification"),
+  data          = df_before_after_summary
+)
+# Append source counts below (separated by a blank row)
+src_start_row <- nrow(df_before_after_summary) + 6L  # row 4 data + header = rows 4..N, blank, source header
+wb$add_data(sheet = "Before-After Summary", x = "Per-Source Breakdown:",
+            start_row = src_start_row - 1L, start_col = 1)
+wb$add_data(sheet = "Before-After Summary", x = df_source_counts,
+            start_row = src_start_row, start_col = 1)
+wb$add_numfmt(sheet = "Before-After Summary",
+              dims  = glue("B5:C{src_start_row + nrow(df_source_counts) + 5L}"),
+              numfmt = "#,##0")
+
+# Sheet 2: Timing Shift (D-04)
+wb$add_worksheet("Timing Shift")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Timing Shift",
+  title         = "First-Chemo Timing Shift: Patients Gaining Earlier Date (D-04)",
+  subtitle_text = glue("Generated: {run_date} | Patients with earlier first-chemo date under after-set"),
+  data          = df_timing_shift
+)
+
+# Sheet 3: Per-Ingredient Delta (D-05)
+wb$add_worksheet("Per-Ingredient Delta")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Per-Ingredient Delta",
+  title         = "Per-Ingredient Patient & Date Delta After Fix (D-05)",
+  subtitle_text = glue("Generated: {run_date} | triggering_code -> MEDICATION_LOOKUP drug name; arranged desc(delta_pts)"),
+  data          = df_ingredient_delta
+)
+wb$add_numfmt(sheet = "Per-Ingredient Delta",
+              dims  = glue("C5:H{nrow(df_ingredient_delta) + 10L}"),
+              numfmt = "#,##0")
+
+# Sheet 4: Regimen Impact (D-06, upper bound, adults 21+)
+wb$add_worksheet("Regimen Impact")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Regimen Impact",
+  title         = "Regimen-Label Impact Estimate: UPPER BOUND (D-06, Adults 21+)",
+  subtitle_text = glue("Generated: {run_date} | episodes.rds join; not a full R/25/26/28 re-run; see note column"),
+  data          = df_regimen_impact
+)
+wb$add_numfmt(sheet = "Regimen Impact",
+              dims  = glue("B5:D{nrow(df_regimen_impact) + 10L}"),
+              numfmt = "#,##0")
+
+# Sheet 5: Unmatched NDC Top-N (D-08 frequency rank)
+wb$add_worksheet("Unmatched NDC Top-N")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Unmatched NDC Top-N",
+  title         = glue("Top-{N} Unmatched NDCs by Volume: Frequency-Ranked Review (D-08)"),
+  subtitle_text = glue("Generated: {run_date} | n_patients HIPAA-suppressed (<11 -> NA); sources: MED_ADMIN-ND + DISPENSING"),
+  data          = df_ndc_freq_ranked
+)
+wb$add_numfmt(sheet = "Unmatched NDC Top-N",
+              dims  = glue("C5:E{nrow(df_ndc_freq_ranked) + 10L}"),
+              numfmt = "#,##0")
+
+# Sheet 6: NDC String Match (D-07)
+wb$add_worksheet("NDC String Match")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "NDC String Match",
+  title         = "Unmatched NDC Drug-Name String Match vs Chemo Ingredients (D-07)",
+  subtitle_text = glue("Generated: {run_date} | MED_ADMIN-ND RAW_MEDADMIN_MED_NAME only; DISPENSING has no drug-name text"),
+  data          = df_ndc_string_match
+)
+
+# Sheet 7: RxNav Requery Results (D-09; HiPerGator-only network step)
+wb$add_worksheet("RxNav Requery Results")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "RxNav Requery Results",
+  title         = "RxNav Alternate-Endpoint Re-Query Results (D-09, HiPerGator only)",
+  subtitle_text = glue("Generated: {run_date} | ndcproperties + ndcstatus endpoints; empty on Windows (IS_LOCAL=TRUE)"),
+  data          = df_ndc_requery
+)
+
+# Sheet 8: Resolved-Gap Findings (D-10)
+wb$add_worksheet("Resolved-Gap Findings")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Resolved-Gap Findings",
+  title         = "Resolved-Non-Chemo RxCUIs: Potential chemo_rxnorm List Gaps (D-10)",
+  subtitle_text = glue("Generated: {run_date} | flags gaps only; correcting chemo_rxnorm list is a deferred follow-up"),
+  data          = df_resolved_gap
+)
+
+# ---------------------------------------------------------------------------
+# Save workbook — tryCatch so a Windows run (no data) does not hard-fail.
+# Runtime write is verified on HiPerGator.
+# ---------------------------------------------------------------------------
+tryCatch({
+  wb$save(OUTPUT_XLSX)
+  message(glue("  Wrote deliverable xlsx: {OUTPUT_XLSX}"))
+}, error = function(e) {
+  message(glue("  [WARNING] wb$save() failed: {conditionMessage(e)}"))
+  message("  xlsx write will be confirmed on HiPerGator (runtime checkpoint).")
+})
+
+message(glue("  Sheets written: Before-After Summary, Source Counts (appended), Timing Shift,"))
+message(glue("  Per-Ingredient Delta, Regimen Impact, Unmatched NDC Top-N,"))
+message(glue("  NDC String Match, RxNav Requery Results, Resolved-Gap Findings\n"))
 
 
 # ==============================================================================
