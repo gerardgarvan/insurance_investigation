@@ -255,3 +255,13 @@ Plans:
 - [x] 122-01-PLAN.md -- Foundation: remove phantom col_spec from R/01, add get_chemo_hits/load_ndc_crosswalk/normalize_ndc to utils_treatment.R, correct MED_ADMIN+DISPENSING fixtures + synthetic crosswalk RDS (Wave 1)
 - [x] 122-02-PLAN.md -- Patch all 7 chemo consumers to the helper (immuno untouched), add R/88 Section 15t + SMOKE-122-01, update SCRIPT_INDEX for R/108 (Wave 1)
 - [x] 122-03-PLAN.md -- Create R/108 NDC->RxNorm crosswalk builder (RxNav, cached RDS) + HiPerGator runtime-confirmation checkpoint (Wave 2)
+
+### Phase 123: Quantify how much the MED_ADMIN/DISPENSING chemo-detection fix changes treatment outputs (before/after diff) and investigate whether unmatched NDCs are missing real chemo
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 122
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 123 to break down)
