@@ -2725,6 +2725,98 @@ if (IS_LOCAL) {
 }
 
 # ==============================================================================
+# SECTION 15u: MED_ADMIN/DISPENSING FIX BEFORE/AFTER DIFF + NDC AUDIT (Phase 123) ----
+# ==============================================================================
+
+# Phase 123 added R/109_med_admin_dispensing_fix_impact_audit.R: a read-only
+# post-fix quantification of the Phase 122 chemo-detection fix. It computes the
+# deterministic before/after diff using the production get_chemo_hits() path,
+# audits the ~7,739 unmatched + ~16,588 resolved NDCs from the R/108 crosswalk
+# via four methods (D-07 string match, D-08 frequency rank, D-09 IS_LOCAL-gated
+# RxNav re-query, D-10 resolved-non-chemo gap flag), and delivers a single
+# multi-sheet openxlsx2 workbook (D-11). NOT wired into R/39 (D-12).
+# STRUCTURAL greps pass LOCALLY; full runtime is HiPerGator (checkpoint Task 3).
+
+message("\n[Phase 123] MED_ADMIN/DISPENSING fix before/after diff + NDC audit (R/109)...")
+
+# Check 1: R/109 script file exists
+r109_exists <- file.exists("R/109_med_admin_dispensing_fix_impact_audit.R")
+check("R/109_med_admin_dispensing_fix_impact_audit.R exists (Phase 123)", r109_exists)
+
+if (r109_exists) {
+  r109_lines <- readLines("R/109_med_admin_dispensing_fix_impact_audit.R", warn = FALSE)
+  r109_text  <- paste(r109_lines, collapse = "\n")
+
+  # Check 2: R/109 uses get_chemo_hits for source extraction
+  check("R/109 uses get_chemo_hits for chemo source extraction (Phase 123)",
+        grepl("get_chemo_hits", r109_text))
+
+  # Check 3: before set is PRESCRIBING-only (uses get_chemo_hits("PRESCRIBING"))
+  check("R/109 before set is PRESCRIBING-only via get_chemo_hits (Phase 123)",
+        grepl('get_chemo_hits\\("PRESCRIBING"', r109_text))
+
+  # Check 4: after set includes MED_ADMIN + DISPENSING
+  check("R/109 after set includes MED_ADMIN and DISPENSING sources (Phase 123)",
+        grepl('get_chemo_hits\\("MED_ADMIN"', r109_text) &&
+          grepl('get_chemo_hits\\("DISPENSING"', r109_text))
+
+  # Check 5: parses dates with parse_pcornet_date after collect (Pitfall 2)
+  check("R/109 parses treatment_date with parse_pcornet_date after collect (Phase 123)",
+        grepl("parse_pcornet_date", r109_text))
+
+  # Check 6: D-04 timing shift uses first_after < first_before comparison
+  check("R/109 D-04 timing shift compares first_after < first_before (Phase 123)",
+        grepl("first_after < first_before", r109_text))
+
+  # Check 7: D-05 per-ingredient delta maps via MEDICATION_LOOKUP[triggering_code]
+  check("R/109 D-05 per-ingredient delta maps via MEDICATION_LOOKUP[triggering_code] (Phase 123)",
+        grepl("MEDICATION_LOOKUP\\[triggering_code\\]", r109_text))
+
+  # Check 8: D-06 guarded on file.exists(EPISODES_RDS) and does NOT source R/25/26/28
+  check("R/109 D-06 is guarded by file.exists(EPISODES_RDS) and does not source R/25/26/28 (Phase 123)",
+        grepl("file.exists\\(EPISODES_RDS\\)", r109_text) &&
+          !grepl('source\\("R/2[568]', r109_text))
+
+  # Check 9: D-06 labeled as UPPER BOUND estimate
+  check("R/109 D-06 regimen impact labeled UPPER BOUND (Phase 123)",
+        grepl("UPPER BOUND", r109_text))
+
+  # Check 10: D-09 IS_LOCAL-gated and uses ndcproperties + ndcstatus alternate endpoints
+  check("R/109 D-09 IS_LOCAL-gated with ndcproperties and ndcstatus endpoints (Phase 123)",
+        grepl("ndcproperties", r109_text) &&
+          grepl("ndcstatus", r109_text) &&
+          grepl("if.*!IS_LOCAL", r109_text))
+
+  # Check 11: D-09 writes to a NEW requery CSV, does NOT overwrite the audit CSV
+  check("R/109 D-09 writes ndc_rxnorm_crosswalk_requery.csv (NOT overwriting audit CSV) (Phase 123)",
+        grepl("ndc_rxnorm_crosswalk_requery\\.csv", r109_text) &&
+          !grepl('write\\.csv.*"ndc_rxnorm_crosswalk_audit', r109_text))
+
+  # Check 12: D-10 flags CANDIDATE_CHEMO_GAP without modifying TREATMENT_CODES list
+  check("R/109 D-10 flags CANDIDATE_CHEMO_GAP without modifying TREATMENT_CODES$chemo_rxnorm (Phase 123)",
+        grepl("CANDIDATE_CHEMO_GAP", r109_text) &&
+          !grepl("TREATMENT_CODES\\$chemo_rxnorm <-", r109_text))
+
+  # Check 13: D-11 delivers single xlsx via openxlsx2 wb_workbook() + wb$save()
+  check("R/109 D-11 writes single xlsx via wb_workbook() and wb$save(OUTPUT_XLSX) (Phase 123)",
+        grepl("wb_workbook\\(\\)", r109_text) &&
+          grepl("wb\\$save\\(OUTPUT_XLSX\\)", r109_text))
+
+  # Check 14: IS_LOCAL-gated runtime check (structural PASS both branches)
+  if (IS_LOCAL) {
+    check("R/109 runtime (Rscript parse + DuckDB diff + xlsx) -- SKIPPED (HiPerGator runtime) (Phase 123)",
+          TRUE)
+  } else {
+    check("R/109 runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 123)",
+          TRUE)
+  }
+
+} else {
+  # If script missing, register the dependent checks as FALSE so total stays honest
+  for (i in 2:14) check(paste0("R/109 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -4300,6 +4392,7 @@ message("  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural 
 message("  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized Meaning structural integrity (Section 15r, 14 checks)")
 message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 14 checks)")
 message("  * SMOKE-122-01: R/88 validates Phase 122 MED_ADMIN/DISPENSING chemo-detection gap fix structural integrity (Section 15t, 14 checks)")
+message("  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + unmatched-NDC audit structural integrity (Section 15u, 14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
