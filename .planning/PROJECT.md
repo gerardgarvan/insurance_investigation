@@ -102,6 +102,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Temporal cancer diagnosis enrichment in Gantt episodes (+/-30 day buffer) — v3.2 Phase 112
 - [x] Universal ascending alphabetical sort on all multi-value fields — v3.2 Phase 112
 - [x] Drug name consistency remediation — MEDICATION_LOOKUP centralized, blank fills, 5-source precedence, audit xlsx — v3.2 Phase 114
+- [x] MED_ADMIN/DISPENSING chemo-detection gap fix (RXNORM_CUI mismatch + NDC→RxNorm crosswalk) — v3.2 Phase 122
+- [x] Fix-impact before/after diff + unmatched-NDC audit (R/109, 9-sheet xlsx) — v3.2 Phase 123
 - [ ] RMarkdown gap resolution report compiling all investigation findings
 - [ ] Update meeting notes to mark resolved gaps and remove stale items
 
@@ -363,4 +365,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-10 — Phase 119 complete (death_cause_nhl_flag fix via DEATH_CAUSE table)*
+*Last updated: 2026-07-14 — Phase 123 complete (MED_ADMIN/DISPENSING fix-impact quantification: +1,328 patients / +13,762 chemo dates vs PRESCRIBING baseline; unmatched-NDC audit — 5 candidate chemo_rxnorm gaps flagged for SME review)*
