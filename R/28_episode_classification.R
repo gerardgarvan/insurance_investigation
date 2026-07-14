@@ -535,14 +535,26 @@ xlsx_lookups_dt <- list(
 # Step 5C-2: Record pre-enrichment row count for validation
 pre_enrichment_count <- nrow(episodes)
 
-# Step 5C-3: Explode-join-collapse for xlsx metadata (Phase 98, D-03, D-04)
+# Step 5C-3: Explode-join-collapse for xlsx metadata (Phase 98, D-03, D-04; Phase 124 D-05 override)
 episodes_dt <- copy(ensure_dt(episodes, name = "episodes", script_name = "R/28"))
 episodes_dt[, episode_row := .I]
 
-# Explode
-codes_long <- episodes_dt[!is.na(triggering_codes) & triggering_codes != "",
-                          .(code = unlist(strsplit(triggering_codes, ",", fixed = TRUE))),
-                          by = episode_row]
+# Explode triggering_codes + source_hints in parallel (Phase 124 Plan 02, D-05).
+# source_hints is built by R/26 in the SAME ascending-alphabetical sort order as triggering_codes
+# (one hint per distinct code), so splitting both together preserves positional alignment.
+# Defensive: if lengths differ for an episode (should not happen under normal R/26 output),
+# src_hint is set to NA for ALL codes in that episode rather than erroring or misaligning.
+codes_long <- episodes_dt[!is.na(triggering_codes) & triggering_codes != "", {
+  codes_vec <- unlist(strsplit(triggering_codes, ",", fixed = TRUE))
+  hints_raw <- source_hints
+  hints_vec <- if (is.na(hints_raw) || hints_raw == "") {
+    rep(NA_character_, length(codes_vec))
+  } else {
+    h <- unlist(strsplit(hints_raw, ",", fixed = TRUE))
+    if (length(h) != length(codes_vec)) rep(NA_character_, length(codes_vec)) else h
+  }
+  .(code = codes_vec, src_hint = hints_vec)
+}, by = episode_row]
 codes_long <- codes_long[!is.na(code) & code != ""]
 
 # Join 4 xlsx_lookups (medication_name removed — drug_names from R/26 is canonical)
@@ -550,6 +562,22 @@ codes_long[xlsx_lookups_dt$code_types, on = .(code), code_type := i.code_type]
 codes_long[xlsx_lookups_dt$source_tables, on = .(code), source_table := i.source_table]
 codes_long[xlsx_lookups_dt$line_labels, on = .(code), treatment_line := i.treatment_line]
 codes_long[xlsx_lookups_dt$cross_use_flags, on = .(code), sct_cross_use_flag := i.sct_cross_use_flag]
+
+# D-05: physical source table wins over code-keyed lookup for DISPENSING and MED_ADMIN.
+# The xlsx source_table map assigns chemo_rxnorm -> "PRESCRIBING" for ALL rxnorm codes,
+# but the same RxCUI can originate from PRESCRIBING, DISPENSING, or MED_ADMIN. The R/26
+# source_hint carries the physical table for each code; override the lookup result here.
+codes_long[src_hint %in% c("DISPENSING", "MED_ADMIN"),
+           source_table := src_hint]
+
+# D-04: code_type by origin where cleanly distinguishable.
+# DISPENSING codes are NDC-origin (crosswalked to RxCUI by get_chemo_hits() for the stored
+# triggering_code value, but the origin was an NDC). Label code_type = "NDC" for DISPENSING.
+# MED_ADMIN: the stored code IS a RxNorm CUI for both RX and ND paths; MEDADMIN_TYPE is not
+# preserved per-code at the episode level (would require a 3rd parallel column — out of scope
+# for this pass). Leave MED_ADMIN code_type as-is from the lookup ("RXNORM") — source_table
+# = "MED_ADMIN" (D-05) is the critical distinguishing value and IS set by the override above.
+codes_long[src_hint == "DISPENSING", code_type := "NDC"]
 
 # Collapse with column-specific aggregation (per D-04, D-05):
 # code_type, source_table: parallel comma lists
