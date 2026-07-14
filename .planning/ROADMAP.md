@@ -267,3 +267,13 @@ Plans:
 - [x] 123-01-PLAN.md -- Create R/109 Sections 1-9: setup + DuckDB bootstrap + cohort scope + before/after diff (D-01..D-05) + regimen upper-bound impact (D-06) (Wave 1)
 - [x] 123-02-PLAN.md -- Add R/109 Sections 10-16: four-method unmatched-NDC audit (D-07..D-10) + single multi-sheet styled xlsx (D-11) (Wave 2)
 - [x] 123-03-PLAN.md -- Register R/109 in R/SCRIPT_INDEX.md (100+ 9->10), add R/88 Section 15u + SMOKE-123-01, HiPerGator runtime-confirmation checkpoint (Wave 3)
+
+### Phase 124: Integrate the newly-detected MED_ADMIN/DISPENSING chemo treatments (Phase 122 fix, quantified in Phase 123) into all downstream outputs — episodes, Gantt, timing, regimens, payer anchoring, and cohort
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 123
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 124 to break down)

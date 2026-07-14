@@ -190,7 +190,8 @@ Last activity: 2026-07-14
 - Phase 120 added: In all_codes_resolved_next_tables_v2.1 (tab: Supportive Care) normalize meaning into a new column to disambiguate dosage/spelling variants and generic names
 - Phase 121 added: Investigate how often the 9-digit ZIP code changes at the individual level, to inform the decision on handling ZIP code data for socioeconomic indices
 - Phase 122 added: med_admin_dispensing_gap_diagnostic.csv gap closure (fix the RXNORM_CUI-column mismatch so DISPENSING/MED_ADMIN chemo detection stops silently dropping — MED_ADMIN codes live in MEDADMIN_CODE where MEDADMIN_TYPE=='RX'; sized by R/107 diagnostic from quick task 260714-end) -- COMPLETE
-- Phase 123 added: Quantify how much the Phase 122 MED_ADMIN/DISPENSING chemo-detection fix changes treatment outputs (before/after diff) and investigate whether unmatched NDCs (~7,739/24,327 no RxCUI in the Phase 122 crosswalk) are missing real chemo
+- Phase 123 added: Quantify how much the Phase 122 MED_ADMIN/DISPENSING chemo-detection fix changes treatment outputs (before/after diff) and investigate whether unmatched NDCs (~7,739/24,327 no RxCUI in the Phase 122 crosswalk) are missing real chemo -- COMPLETE (+1,328 patients / +13,762 chemo dates vs PRESCRIBING baseline)
+- Phase 124 added: Integrate the newly-detected MED_ADMIN/DISPENSING chemo treatments (Phase 122 fix, quantified in Phase 123) into all downstream outputs — episodes, Gantt, timing, regimens, payer anchoring, and cohort (the downstream regeneration deferred by Phases 122/123)
 
 ### Open Questions
 
