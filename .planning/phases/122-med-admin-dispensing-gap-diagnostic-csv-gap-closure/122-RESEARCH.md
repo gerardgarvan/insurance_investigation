@@ -233,7 +233,7 @@ load_ndc_crosswalk <- function() {
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
 | NDC->RxCUI HTTP lookup | Custom curl wrapper | R/27's existing `lookup_ndc_to_name()` pattern (httr2 + retry + sleep) | Already battle-tested; same rate-limit handling |
-| NDC format normalization | Custom regex | `stringr::str_remove_all(ndc, "-") |> str_pad(11, "right", "0")` | Standard 11-digit NDC normalization; one line |
+| NDC format normalization | Custom regex | `stringr::str_remove_all(ndc, "-") |> str_pad(11, "left", "0")` | Standard 11-digit NDC normalization; one line |
 | Crosswalk caching | Custom file format | `.rds` named vector, identical to R/27's `drug_name_lookup.rds` | Instantaneous load; named-vector O(1) lookup |
 | Column-absence handling | `tryCatch` everywhere inline | `get_chemo_hits()` helper with single guard point | Seven sites all behaving consistently |
 
