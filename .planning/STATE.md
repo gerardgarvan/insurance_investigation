@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 124 context gathered
-last_updated: "2026-07-14T21:33:19.767Z"
+status: executing
+stopped_at: Completed Phase 124 Plan 02 (R/28 source_hints override + R/20 MEDADMIN_TYPE code_type fix)
+last_updated: "2026-07-14T22:47:45.093Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 21
   completed_phases: 20
-  total_plans: 32
-  completed_plans: 32
+  total_plans: 36
+  completed_plans: 34
 ---
 
 # Project State
@@ -21,13 +21,13 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 123 — quantify-how-much-the-med-admin-dispensing-chemo-detection-fix-changes-treatment-outputs-before-after-diff-and-investigate-whether-unmatched-ndcs-are-missing-real-chemo
+**Current focus:** Phase 124 — integrate-the-newly-detected-med-admin-dispensing-chemo-treatments-phase-122-fix-quantified-in-phase-123-into-all-downstream-outputs-episodes-gantt-timing-regimens-payer-anchoring-and-cohort
 
 ## Current Position
 
-Phase: 123
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 124 (integrate-the-newly-detected-med-admin-dispensing-chemo-treatments-phase-122-fix-quantified-in-phase-123-into-all-downstream-outputs-episodes-gantt-timing-regimens-payer-anchoring-and-cohort) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-07-14
 
 ## Performance Metrics
@@ -53,6 +53,13 @@ Last activity: 2026-07-14
 ## Accumulated Context
 
 ### Recent Decisions
+
+**Phase 124 Plan 02 decisions:**
+
+- DISPENSING code_type=NDC (origin label): get_chemo_hits() resolves NDC to RxCUI for stored triggering_code, but origin is NDC; label by origin where cleanly distinguishable (D-04)
+- MED_ADMIN code_type left as RXNORM at episode level: stored code IS a RxCUI for both RX and ND paths; MEDADMIN_TYPE not carried per-code to episodes without a 3rd parallel column (out of scope); source_table=MED_ADMIN (D-05) is the critical distinguishing value and IS set
+- R/28 parallel-explode defensive guard: if source_hints split length != triggering_codes split length for an episode, src_hint=NA for all codes in that episode rather than erroring
+- R/20 MEDADMIN_TYPE added to group_by (available after collect()), then select(-MEDADMIN_TYPE) before bind_rows — output column set (code, drug_name, n, source_table, code_type) unchanged; downstream binds unaffected
 
 **Phase 122 Plan 02 decisions:**
 
@@ -232,11 +239,12 @@ None identified.
 | Phase 123 P01 | 5 | 3 tasks | 1 files |
 | Phase 123 P02 | 900 | 1 tasks | 1 files |
 | Phase 123 P03 | 30 | 3 tasks | 2 files |
+| Phase 124 P02 | 14 | 2 tasks | 2 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:execute-phase` (2026-07-14)
-**Stopped at:** Phase 124 context gathered
+**Stopped at:** Completed Phase 124 Plan 02 (R/28 source_hints override + R/20 MEDADMIN_TYPE code_type fix)
 **What's next:** Execute Phase 122 Plan 03 (R/108 crosswalk build script + HiPerGator runtime verification)
 
 ### Recent Changes
