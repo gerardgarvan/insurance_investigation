@@ -51,6 +51,13 @@ LOG="output/logs/phase122_recheck_${STAMP}.log"
 
   echo "############### NDC->RxNorm CROSSWALK CHEMO COVERAGE ###############"
   Rscript -e '
+    # R/00_config.R calls glue()/data.table at load time and assumes the caller
+    # already attached these (the pipeline scripts do). Load them before sourcing.
+    suppressWarnings(suppressPackageStartupMessages({
+      library(glue); library(data.table); library(dplyr)
+      library(stringr); library(lubridate); library(tibble)
+      library(tidyr); library(checkmate)
+    }))
     suppressWarnings(suppressMessages(source("R/00_config.R")))
     p <- file.path("data", "reference", "ndc_rxnorm_crosswalk.rds")
     if (!file.exists(p)) { cat("crosswalk RDS MISSING at", p, "\n"); quit(status = 0) }
