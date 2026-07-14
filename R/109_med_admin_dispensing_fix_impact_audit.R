@@ -109,7 +109,11 @@ message(glue("NDC audit CSV path:     {NDC_AUDIT_CSV}\n"))
 # per-group breakdown to prevent re-identification. Applies to n_patients fields
 # in all output sheets and console lines.
 suppress_small <- function(n) {
-  if (!is.na(n) && n >= 1L && n <= 10L) NA_integer_ else as.integer(n)
+  # Vectorized: works on both scalar counts (n_distinct(...)) and whole columns
+  # (across(...)). Uses & / ifelse (vectorized) rather than && (scalar-only) so a
+  # length > 1 input never triggers "'length = N' in coercion to 'logical(1)'".
+  n <- as.integer(n)
+  ifelse(!is.na(n) & n >= 1L & n <= 10L, NA_integer_, n)
 }
 
 
