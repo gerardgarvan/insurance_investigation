@@ -551,10 +551,14 @@ if (nrow(ndc_unmatched) > 0L) {
   combined_freq <- bind_rows(ma_nd_freq, dp_freq) %>%
     group_by(NDC) %>%
     summarise(
-      # default = NA_character_ guards groups where every raw_med_name is NA
-      # (e.g. DISPENSING-only NDCs): na.omit() -> length 0, first() -> size 0,
-      # which summarise() rejects ("must be size 1, not 0").
-      raw_med_name = first(na.omit(raw_med_name), default = NA_character_),
+      # Explicit size-1 guard for groups where every raw_med_name is NA
+      # (e.g. DISPENSING-only NDCs). na.omit() -> length 0; first(..., default=)
+      # still returned size 0 in this dplyr build, so pick the first non-NA name
+      # by hand and fall back to NA_character_ — always exactly one value.
+      raw_med_name = {
+        .nm <- stats::na.omit(raw_med_name)
+        if (length(.nm) >= 1L) as.character(.nm[[1]]) else NA_character_
+      },
       n_patients   = suppress_small(n_distinct(ID)),
       n_rows       = n(),
       .groups = "drop"
