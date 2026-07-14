@@ -220,16 +220,42 @@ extract_chemo_dates_with_codes <- function() {
   }
 
   # 5. DISPENSING: NDC->RxNorm crosswalk (D-12 revised Phase 122: NDC->RxNorm crosswalk used)
+  # Phase 124 Task 3: return_raw_name = TRUE so disp_dates carries raw_med_name for fallback tier
   ndc_crosswalk <- load_ndc_crosswalk()
-  disp_dates <- get_chemo_hits("DISPENSING", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk)
+  disp_dates <- get_chemo_hits("DISPENSING", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk,
+                               return_raw_name = TRUE)
   if (!is.null(disp_dates)) {
     disp_dates <- disp_dates %>% mutate(ENCOUNTERID = NA_character_)
   }
 
   # 6. MED_ADMIN: MEDADMIN_CODE+MEDADMIN_TYPE (D-12 revised Phase 122: RX-typed=RxNorm CUI, ND-typed=NDC via crosswalk)
-  ma_dates <- get_chemo_hits("MED_ADMIN", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk)
+  # Phase 124 Task 3: return_raw_name = TRUE so ma_dates carries RAW_MEDADMIN_MED_NAME for fallback tier
+  ma_dates <- get_chemo_hits("MED_ADMIN", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk,
+                             return_raw_name = TRUE)
   if (!is.null(ma_dates)) {
     ma_dates <- ma_dates %>% mutate(ENCOUNTERID = NA_character_)
+  }
+
+  # Phase 124 Task 3: Build per-triggering_code raw-name lookup from DISPENSING + MED_ADMIN.
+  # raw_med_name is NA for DISPENSING (no free-text in extract) and populated from
+  # RAW_MEDADMIN_MED_NAME for MED_ADMIN rows. Reduces to one non-blank raw name per code.
+  # Kept SEPARATE from the episode/detail RDS core columns — only used in Section 5B.
+  # <<- propagates raw_name_lookup to script scope so Section 5B can consume it.
+  raw_name_parts <- list()
+  if (!is.null(disp_dates) && "raw_med_name" %in% colnames(disp_dates)) {
+    raw_name_parts[["disp"]] <- dplyr::select(disp_dates, triggering_code, raw_med_name)
+  }
+  if (!is.null(ma_dates) && "raw_med_name" %in% colnames(ma_dates)) {
+    raw_name_parts[["ma"]] <- dplyr::select(ma_dates, triggering_code, raw_med_name)
+  }
+  if (length(raw_name_parts) > 0) {
+    raw_name_lookup <<- dplyr::bind_rows(raw_name_parts) %>%
+      dplyr::filter(!is.na(raw_med_name), nchar(trimws(raw_med_name)) > 0) %>%
+      dplyr::distinct(triggering_code, raw_med_name) %>%
+      dplyr::group_by(triggering_code) %>%
+      dplyr::summarise(raw_med_name = dplyr::first(raw_med_name), .groups = "drop")
+  } else {
+    raw_name_lookup <<- dplyr::tibble(triggering_code = character(0), raw_med_name = character(0))
   }
 
   # Phase 76: Tumor registry source removed — claims-based sources only
@@ -726,7 +752,10 @@ all_detail <- bind_rows(detail_list) %>%
 
 
 # --- SECTION 5B: JOIN DRUG NAMES TO EPISODE DETAIL ---
-# Cascade: MEDICATION_LOOKUP (reference Excel) primary, RxNorm API fallback
+# 3-tier cascade (D-06 order):
+#   Tier 1: MEDICATION_LOOKUP (reference Excel, canonical source — highest priority)
+#   Tier 2: raw_med_name_canonical (canonicalized RAW_MEDADMIN_MED_NAME — D-07: never verbatim)
+#   Tier 3: RxNorm API cache (drug_name_lookup.rds — existing fallback)
 
 message("\n--- Joining drug names to episode detail ---")
 
@@ -747,7 +776,23 @@ if (length(MEDICATION_LOOKUP) > 0) {
   message("  MEDICATION_LOOKUP empty — skipping reference Excel lookup")
 }
 
-# Tier 2: RxNorm API lookup (fallback for codes not in reference)
+# Tier 2 (Phase 124): raw MED_ADMIN free-text names, canonicalized via canonicalize_drug_name()
+# raw_name_lookup is populated by extract_chemo_dates_with_codes() via <<- when Chemotherapy
+# is processed. Guard for NULL/zero-row in case the loop order changes or chemo is skipped.
+if (exists("raw_name_lookup") && nrow(raw_name_lookup) > 0) {
+  all_detail <- all_detail %>%
+    left_join(raw_name_lookup, by = "triggering_code")
+  message(glue("  raw_name_lookup (MED_ADMIN free-text): {nrow(raw_name_lookup)} codes available"))
+} else {
+  all_detail <- all_detail %>% mutate(raw_med_name = NA_character_)
+  message("  raw_name_lookup empty or absent — skipping MED_ADMIN free-text fallback")
+}
+# Canonicalize: collapse spelling variants and brand->generic aliases (D-07).
+# CRITICAL: raw_med_name_canonical is ALWAYS the canonicalized form — never the raw string.
+all_detail <- all_detail %>%
+  mutate(raw_med_name_canonical = canonicalize_drug_name(toupper(trimws(raw_med_name))))
+
+# Tier 3: RxNorm API lookup (fallback for codes not in reference or raw free-text)
 DRUG_LOOKUP_RDS <- file.path(CONFIG$cache$outputs_dir, "drug_name_lookup.rds")
 
 if (file.exists(DRUG_LOOKUP_RDS)) {
@@ -764,10 +809,11 @@ if (file.exists(DRUG_LOOKUP_RDS)) {
   all_detail <- all_detail %>% mutate(rxnorm_drug_name = NA_character_)
 }
 
-# Resolve: reference Excel wins, RxNorm fills gaps
+# Resolve: 3-tier cascade — MEDICATION_LOOKUP > canonicalized raw name > RxNorm cache (D-06)
+# raw_med_name_canonical is NEVER written verbatim — always passes through canonicalize_drug_name() (D-07)
 all_detail <- all_detail %>%
-  mutate(drug_name = dplyr::coalesce(ref_drug_name, rxnorm_drug_name)) %>%
-  select(-ref_drug_name, -rxnorm_drug_name)
+  mutate(drug_name = dplyr::coalesce(ref_drug_name, raw_med_name_canonical, rxnorm_drug_name)) %>%
+  select(-ref_drug_name, -raw_med_name, -raw_med_name_canonical, -rxnorm_drug_name)
 
 n_with_names <- sum(!is.na(all_detail$drug_name))
 n_chemo_rows <- sum(all_detail$treatment_type == "Chemotherapy")
