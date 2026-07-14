@@ -524,9 +524,13 @@ if (nrow(ndc_unmatched) > 0L) {
   ma_nd_freq <- if (!is.null(ma_tbl_d08) && "MEDADMIN_CODE" %in% colnames(ma_tbl_d08)) {
     ma_tbl_d08 %>%
       filter(MEDADMIN_TYPE == "ND") %>%
+      # any_of() renames RAW_MEDADMIN_MED_NAME -> raw_med_name when present and
+      # silently omits it when absent. A bare `if (...) col else NULL` inside
+      # select() fails on a lazy dbplyr tbl because the column symbol is
+      # evaluated as an R object ("object 'RAW_MEDADMIN_MED_NAME' not found").
       select(ID,
-             NDC          = MEDADMIN_CODE,
-             raw_med_name = if ("RAW_MEDADMIN_MED_NAME" %in% colnames(ma_tbl_d08)) RAW_MEDADMIN_MED_NAME else NULL) %>%
+             NDC = MEDADMIN_CODE,
+             any_of(c(raw_med_name = "RAW_MEDADMIN_MED_NAME"))) %>%
       collect() %>%
       mutate(NDC = normalize_ndc(NDC)) %>%
       filter(NDC %in% ndc_unmatched$NDC)
