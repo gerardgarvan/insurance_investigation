@@ -159,8 +159,18 @@ load_ndc_crosswalk <- function() {
 #' @param chemo_rxnorm  Character vector of RxNorm CUIs (TREATMENT_CODES$chemo_rxnorm)
 #' @param ndc_crosswalk Named character vector: NDC -> RxCUI, or NULL to skip NDC path
 #'   (load via load_ndc_crosswalk(); NULL/character(0) both degrade gracefully)
-#' @return Tibble(ID, treatment_date, triggering_code) with distinct rows, or NULL
-get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
+#' @param return_raw_name Logical (default FALSE). When TRUE, adds a `raw_med_name`
+#'   column to the returned tibble. For MED_ADMIN rows this carries
+#'   RAW_MEDADMIN_MED_NAME when the column exists (guarded via any_of() so a
+#'   missing column degrades to NA rather than erroring). For PRESCRIBING and
+#'   DISPENSING rows, raw_med_name is always NA_character_ (no raw free-text
+#'   field available in this extract). When FALSE (default), the return contract
+#'   is unchanged — tibble(ID, treatment_date, triggering_code) — so all
+#'   existing callers in R/10, R/11, R/25, R/76, R/20 are unaffected.
+#' @return Tibble(ID, treatment_date, triggering_code) with distinct rows, or NULL.
+#'   When return_raw_name = TRUE: tibble(ID, treatment_date, triggering_code, raw_med_name).
+get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
+                           return_raw_name = FALSE) {
   tbl <- safe_table(table_name)
   if (is.null(tbl)) {
     message(glue::glue("  [{table_name}] table not found — skipping chemo detection"))
@@ -172,13 +182,15 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
       message(glue::glue("  [PRESCRIBING] RXNORM_CUI absent — unexpected; skipping"))
       return(NULL)
     }
-    tbl %>%
+    result <- tbl %>%
       dplyr::filter(RXNORM_CUI %in% chemo_rxnorm) %>%
       dplyr::mutate(treatment_date = dplyr::coalesce(RX_ORDER_DATE, RX_START_DATE)) %>%
       dplyr::filter(!is.na(treatment_date)) %>%
       dplyr::select(ID, treatment_date, triggering_code = RXNORM_CUI) %>%
       dplyr::collect() %>%
       dplyr::distinct(ID, treatment_date, triggering_code)
+    if (return_raw_name) result <- dplyr::mutate(result, raw_med_name = NA_character_)
+    result
 
   } else if (table_name == "DISPENSING") {
     if (!"NDC" %in% colnames(tbl)) {
@@ -193,11 +205,13 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
       dplyr::filter(!is.na(NDC), !is.na(DISPENSE_DATE)) %>%
       dplyr::select(ID, treatment_date = DISPENSE_DATE, NDC) %>%
       dplyr::collect()
-    rows %>%
+    result <- rows %>%
       dplyr::mutate(rxcui = ndc_crosswalk[normalize_ndc(NDC)]) %>%
       dplyr::filter(!is.na(rxcui), rxcui %in% chemo_rxnorm) %>%
       dplyr::select(ID, treatment_date, triggering_code = rxcui) %>%
       dplyr::distinct(ID, treatment_date, triggering_code)
+    if (return_raw_name) result <- dplyr::mutate(result, raw_med_name = NA_character_)
+    result
 
   } else if (table_name == "MED_ADMIN") {
     required <- c("MEDADMIN_TYPE", "MEDADMIN_CODE", "MEDADMIN_START_DATE")
@@ -208,7 +222,9 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
       ))
       return(NULL)
     }
-    # RX-typed rows: MEDADMIN_CODE holds RxNorm CUI directly
+    # RX-typed rows: MEDADMIN_CODE holds RxNorm CUI directly.
+    # When return_raw_name = TRUE, carry RAW_MEDADMIN_MED_NAME guarded by any_of()
+    # so a missing column degrades to absent (not an error) on lazy dbplyr tbls.
     rx_hits <- tbl %>%
       dplyr::filter(
         MEDADMIN_TYPE == "RX",
@@ -216,9 +232,18 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
         !is.na(MEDADMIN_START_DATE)
       ) %>%
       dplyr::select(ID, treatment_date = MEDADMIN_START_DATE,
-                    triggering_code = MEDADMIN_CODE) %>%
-      dplyr::collect() %>%
-      dplyr::distinct(ID, treatment_date, triggering_code)
+                    triggering_code = MEDADMIN_CODE,
+                    dplyr::any_of(c(raw_med_name = "RAW_MEDADMIN_MED_NAME"))) %>%
+      dplyr::collect()
+    # Ensure raw_med_name column exists regardless of source schema
+    if (!"raw_med_name" %in% colnames(rx_hits)) {
+      rx_hits <- dplyr::mutate(rx_hits, raw_med_name = NA_character_)
+    }
+    # Dedup on key cols; take first raw_med_name per (ID, treatment_date, triggering_code)
+    rx_hits <- rx_hits %>%
+      dplyr::group_by(ID, treatment_date, triggering_code) %>%
+      dplyr::summarise(raw_med_name = dplyr::first(raw_med_name), .groups = "drop")
+
     # ND-typed rows: MEDADMIN_CODE holds NDC — needs crosswalk
     nd_hits <- NULL
     if (!is.null(ndc_crosswalk) && length(ndc_crosswalk) > 0) {
@@ -229,15 +254,24 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL) {
           !is.na(MEDADMIN_START_DATE)
         ) %>%
         dplyr::select(ID, treatment_date = MEDADMIN_START_DATE,
-                      NDC = MEDADMIN_CODE) %>%
+                      NDC = MEDADMIN_CODE,
+                      dplyr::any_of(c(raw_med_name = "RAW_MEDADMIN_MED_NAME"))) %>%
         dplyr::collect()
+      if (!"raw_med_name" %in% colnames(nd_rows)) {
+        nd_rows <- dplyr::mutate(nd_rows, raw_med_name = NA_character_)
+      }
       nd_hits <- nd_rows %>%
         dplyr::mutate(rxcui = ndc_crosswalk[normalize_ndc(NDC)]) %>%
         dplyr::filter(!is.na(rxcui), rxcui %in% chemo_rxnorm) %>%
-        dplyr::select(ID, treatment_date, triggering_code = rxcui) %>%
-        dplyr::distinct(ID, treatment_date, triggering_code)
+        dplyr::select(ID, treatment_date, triggering_code = rxcui, raw_med_name) %>%
+        dplyr::group_by(ID, treatment_date, triggering_code) %>%
+        dplyr::summarise(raw_med_name = dplyr::first(raw_med_name), .groups = "drop")
     }
-    dplyr::bind_rows(rx_hits, nd_hits)
+    result <- dplyr::bind_rows(rx_hits, nd_hits)
+    # When return_raw_name = FALSE, drop the raw_med_name column to preserve
+    # the original 3-column contract for all existing callers
+    if (!return_raw_name) result <- dplyr::select(result, ID, treatment_date, triggering_code)
+    result
 
   } else {
     message(glue::glue("  [{table_name}] unrecognised table for get_chemo_hits() — skipping"))
