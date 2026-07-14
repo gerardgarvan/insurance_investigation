@@ -96,9 +96,15 @@ HISTORICAL_CUTOFF <- as.Date("2012-01-01")
 #' Per D-46-07: distinct(ID, treatment_date, triggering_code, ENCOUNTERID) — 4-column dedup —
 #' preserves multiple codes on the same date and different encounter IDs while removing exact duplicates.
 #'
+#' Phase 124: Each source row is tagged with its physical table name (source_hint) using the
+#' named-list key -> label mapping below. When the same (ID, treatment_date, triggering_code,
+#' ENCOUNTERID) tuple appears in multiple sources, priority (MED_ADMIN > DISPENSING >
+#' PROCEDURES > PRESCRIBING > DIAGNOSIS) selects one hint, ensuring DISPENSING/MED_ADMIN
+#' records are not masked by PRESCRIBING in downstream outputs.
+#'
 #' @param sources Named list of tibbles with columns ID, treatment_date, triggering_code, ENCOUNTERID
 #' @param type_name Character. Treatment type name for logging
-#' @return 4-column tibble: ID, treatment_date, triggering_code, ENCOUNTERID
+#' @return 5-column tibble: ID, treatment_date, triggering_code, ENCOUNTERID, source_hint
 stack_and_dedup_with_codes <- function(sources, type_name) {
   non_null <- compact(sources)
 
@@ -107,17 +113,51 @@ stack_and_dedup_with_codes <- function(sources, type_name) {
       ID = character(0),
       treatment_date = as.Date(character(0)),
       triggering_code = character(0),
-      ENCOUNTERID = character(0)
+      ENCOUNTERID = character(0),
+      source_hint = character(0)
     ))
   }
 
-  stacked <- bind_rows(non_null) %>%
+  # Map named-list keys to physical PCORnet table labels (Phase 124)
+  SOURCE_LABEL_MAP <- c(
+    PX   = "PROCEDURES",
+    RX   = "PRESCRIBING",
+    DX   = "DIAGNOSIS",
+    DRG  = "PROCEDURES",
+    DISP = "DISPENSING",
+    MA   = "MED_ADMIN"
+  )
+
+  # Priority for resolving the same (ID, date, code, ENCOUNTERID) appearing in multiple sources.
+  # Higher rank = higher priority (MED_ADMIN wins over PRESCRIBING when same code seen in both).
+  SOURCE_PRIORITY <- c(
+    DIAGNOSIS    = 1L,
+    PRESCRIBING  = 2L,
+    PROCEDURES   = 3L,
+    DISPENSING   = 4L,
+    MED_ADMIN    = 5L
+  )
+
+  # Tag each source with its physical table label before binding
+  tagged <- purrr::imap(non_null, function(df, key) {
+    label <- if (key %in% names(SOURCE_LABEL_MAP)) SOURCE_LABEL_MAP[[key]] else key
+    dplyr::mutate(df, source_hint = label)
+  })
+
+  stacked <- bind_rows(tagged) %>%
     mutate(treatment_date = as.Date(treatment_date)) %>%
     filter(!is.na(treatment_date))
 
-  # 4-column distinct: preserves multiple codes/encounters on same date (D-46-07 + Phase 60 D-01)
+  # Resolve priority: for each (ID, treatment_date, triggering_code, ENCOUNTERID) 4-key
+  # that appears in multiple sources, keep the highest-priority source_hint
   result <- stacked %>%
-    distinct(ID, treatment_date, triggering_code, ENCOUNTERID) %>%
+    mutate(
+      .priority = SOURCE_PRIORITY[source_hint],
+      .priority = ifelse(is.na(.priority), 0L, .priority)
+    ) %>%
+    arrange(ID, treatment_date, dplyr::desc(.priority)) %>%
+    distinct(ID, treatment_date, triggering_code, ENCOUNTERID, .keep_all = TRUE) %>%
+    select(ID, treatment_date, triggering_code, ENCOUNTERID, source_hint) %>%
     arrange(ID, treatment_date)
 
   message(glue("  {type_name} with codes: {n_distinct(result$ID)} patients, {nrow(result)} distinct (ID, date, code, ENCOUNTERID) rows"))
@@ -437,13 +477,13 @@ extract_dates_with_codes <- function(type) {
 #' Per D-46-08: bare codes only (no type prefix).
 #' Per Phase 60 D-03, D-04: encounter_ids aggregated per episode, NULL/missing omitted.
 #'
-#' @param dates_df Tibble with columns ID, treatment_date, triggering_code, ENCOUNTERID
+#' @param dates_df Tibble with columns ID, treatment_date, triggering_code, ENCOUNTERID, source_hint
 #' @param gap_threshold Integer. Max days from episode start to define cycle boundary
 #' @return Tibble with one row per patient per episode: patient_id, episode_number,
 #'   episode_start, episode_stop, episode_length_days, distinct_dates_in_episode,
-#'   historical_flag, triggering_codes, encounter_ids
+#'   historical_flag, triggering_codes, source_hints, encounter_ids
 calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD) {
-  # Empty input guard — must include triggering_codes and encounter_ids per Phase 60
+  # Empty input guard — must include triggering_codes, source_hints, and encounter_ids
   if (nrow(dates_df) == 0) {
     return(tibble(
       patient_id = character(0),
@@ -454,6 +494,7 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
       distinct_dates_in_episode = integer(0),
       historical_flag = logical(0),
       triggering_codes = character(0),
+      source_hints = character(0),
       encounter_ids = character(0)
     ))
   }
@@ -474,6 +515,21 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
       distinct_dates_in_episode = n_distinct(treatment_date),
       # D-46-07: ALL matching codes in episode window; na.omit for TR/DRG/date-only sources
       triggering_codes = paste(sort(unique(na.omit(triggering_code))), collapse = ","),
+      # Phase 124: source_hints parallel to triggering_codes — one hint per distinct code,
+      # in the SAME ascending-alphabetical sort order as triggering_codes.
+      # For each distinct non-NA triggering_code, look up its source_hint (already priority-
+      # collapsed at the raw row level by stack_and_dedup_with_codes), sort codes ascending,
+      # then paste the matching hints in the same order.
+      source_hints = {
+        code_hint_tbl <- dplyr::distinct(
+          dplyr::tibble(
+            triggering_code = na.omit(triggering_code),
+            source_hint     = source_hint[!is.na(triggering_code)]
+          )
+        ) %>%
+          dplyr::arrange(triggering_code)
+        paste(code_hint_tbl$source_hint, collapse = ",")
+      },
       # Phase 60 D-03, D-04: aggregate encounter IDs per episode
       encounter_ids = paste(sort(unique(na.omit(ENCOUNTERID))), collapse = ","),
       .groups = "drop"
@@ -486,7 +542,7 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
     # (using episode_stop < HISTORICAL_CUTOFF because if the LAST date is pre-2012,
     #  ALL dates are pre-2012)
     mutate(historical_flag = episode_stop < HISTORICAL_CUTOFF) %>%
-    # Final select — triggering_codes, encounter_ids as last columns per Phase 60
+    # Final select — triggering_codes, source_hints, encounter_ids as last columns
     select(
       patient_id = ID,
       episode_number,
@@ -496,6 +552,7 @@ calculate_episodes_detailed <- function(dates_df, gap_threshold = GAP_THRESHOLD)
       distinct_dates_in_episode,
       historical_flag,
       triggering_codes,
+      source_hints,
       encounter_ids
     )
 }
@@ -653,11 +710,11 @@ for (type in TREATMENT_TYPES) {
   detail_list[[type]] <- detail_df
 }
 
-# Combine all types into single dataset — triggering_codes and encounter_ids flow through bind_rows automatically
+# Combine all types into single dataset — triggering_codes, source_hints, and encounter_ids flow through bind_rows automatically
 all_episodes <- bind_rows(episodes_list) %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
-    episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes, encounter_ids
+    episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes, source_hints, encounter_ids
   )
 
 # Combine detail-level data
@@ -736,12 +793,12 @@ all_episodes <- all_episodes %>%
 n_with_drugs <- sum(nchar(all_episodes$drug_names) > 0)
 message(glue("  Episodes with drug names: {n_with_drugs} / {nrow(all_episodes)}"))
 
-# Update all_episodes select to include drug_names
+# Update all_episodes select to include drug_names (and source_hints from Phase 124)
 all_episodes <- all_episodes %>%
   select(
     patient_id, treatment_type, episode_number, episode_start, episode_stop,
     episode_length_days, distinct_dates_in_episode, historical_flag, triggering_codes,
-    encounter_ids, drug_names
+    source_hints, encounter_ids, drug_names
   )
 
 # Update all_detail select to include drug_name
@@ -778,11 +835,12 @@ for (type in TREATMENT_TYPES) {
   csv_path <- file.path(CONFIG$output_dir, csv_name)
 
   # Phase 60: encounter_ids as column 9, drug_names as column 10
+  # Phase 124: source_hints added between triggering_codes and encounter_ids
   write_df <- type_data %>%
     select(
       patient_id, episode_number, episode_start, episode_stop,
       episode_length_days, distinct_dates_in_episode, historical_flag,
-      triggering_codes, encounter_ids, drug_names
+      triggering_codes, source_hints, encounter_ids, drug_names
     )
 
   write.csv(write_df, csv_path, row.names = FALSE)
