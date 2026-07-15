@@ -18,7 +18,7 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 
 ### Classification (DOI-CLASS)
 
-- [ ] **DOI-CLASS-01**: `is_doi_code()` and `classify_doi_codes()` utilities live in a new `R/utils/utils_doi.R`, DX_TYPE-gated (ICD-9 `09` vs ICD-10 `10`, NA/SNOMED → FALSE), structurally mirroring `is_cancer_code()` / `classify_codes()`
+- [x] **DOI-CLASS-01**: `is_doi_code()` and `classify_doi_codes()` utilities live in a new `R/utils/utils_doi.R`, DX_TYPE-gated (ICD-9 `09` vs ICD-10 `10`, NA/SNOMED → FALSE), structurally mirroring `is_cancer_code()` / `classify_codes()`
 - [ ] **DOI-CLASS-02**: An encounter-level diagnosis-of-interest flag + category is produced, guaranteed non-overlapping with the cancer categories
 - [ ] **DOI-CLASS-03**: A patient-level diagnosis-of-interest summary is derived from the encounter grain
 - [ ] **DOI-CLASS-04**: A mutual-exclusivity hard-stop assertion (`sum(is_doi_code(DX) & is_cancer_code(DX)) == 0`) runs before any output is produced and halts the script if it fires
@@ -41,7 +41,7 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 - [ ] **DOI-QA-01**: The new investigation script is registered in `R/39_run_all_investigations.R` and gets a `R/SCRIPT_INDEX.md` row
 - [ ] **DOI-QA-02**: A new `R/88_smoke_test_comprehensive.R` section validates the DoI layer, including the mutual-exclusivity hard-stop check
 - [ ] **DOI-QA-03**: HiPerGator runtime confirmation (real DIAGNOSIS table, DoI hit counts logged) is recorded as the definition-of-done gate
-- [ ] **DOI-QA-04**: The local test fixture is augmented with at least one ICD-10 and one ICD-9 DoI patient so the classifier is exercised locally
+- [x] **DOI-QA-04**: The local test fixture is augmented with at least one ICD-10 and one ICD-9 DoI patient so the classifier is exercised locally
 
 ## Future Requirements
 
@@ -76,7 +76,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DOI-CODE-02 | Phase 127 | Pending |
 | DOI-CODE-03 | Phase 127 | Pending |
 | DOI-CODE-04 | Phase 127 | Pending |
-| DOI-CLASS-01 | Phase 127 | Pending |
+| DOI-CLASS-01 | Phase 127 | Complete |
 | DOI-CLASS-02 | Phase 128 | Pending |
 | DOI-CLASS-03 | Phase 128 | Pending |
 | DOI-CLASS-04 | Phase 128 | Pending |
@@ -90,7 +90,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DOI-QA-01 | Phase 130 | Pending |
 | DOI-QA-02 | Phase 130 | Pending |
 | DOI-QA-03 | Phase 130 | Pending |
-| DOI-QA-04 | Phase 127 | Pending |
+| DOI-QA-04 | Phase 127 | Complete |
 
 **Coverage:**
 - v3.3 requirements: 19 total
