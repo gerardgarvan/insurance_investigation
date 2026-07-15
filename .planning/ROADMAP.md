@@ -46,7 +46,7 @@ See MILESTONES.md for full details on all shipped milestones.
 ## Phases (v3.3)
 
 - [x] **Phase 127: Code-Set and Infrastructure Centralization** (2 plans) - DOI_CODE_MAP + utils_doi.R + fixture augmentation (completed 2026-07-15)
-- [ ] **Phase 128: DoI Classification** (2 plans) - DuckDB DIAGNOSIS pull, classify, mutual-exclusivity hard-stop, cached artifacts
+- [x] **Phase 128: DoI Classification** (2 plans) - DuckDB DIAGNOSIS pull, classify, mutual-exclusivity hard-stop, cached artifacts (completed 2026-07-15)
 - [ ] **Phase 129: Attribution Linkage and Output** - Two-tier join, three-state flag, 4-sheet xlsx, HIPAA suppression
 - [ ] **Phase 130: Registration, Smoke Test, and HiPerGator Runtime** - R/39 + SCRIPT_INDEX + R/88 section + runtime gate
 
@@ -99,7 +99,7 @@ See MILESTONES.md for full details on all shipped milestones.
   4. The DIAGNOSIS DuckDB query uses a native prefix filter (LEFT(DX, ...) IN (...)) and does not load the full DIAGNOSIS table into R memory
 **Plans**: 2 plans
 - [x] 128-01-PLAN.md — R/111 setup + DuckDB-native prefix pushdown pull of DIAGNOSIS + classify + paraneoplastic_flag + in_hl_cohort + mutual-exclusivity hard-stop + doi_encounters.rds [DOI-CLASS-02/04/05] (Wave 1)
-- [ ] 128-02-PLAN.md — R/111 Section 7: patient-grain rollup + tabyl(doi_category) clinical-plausibility review + doi_patients.rds + close_pcornet_con [DOI-CLASS-03] (Wave 2, depends on 128-01)
+- [x] 128-02-PLAN.md — R/111 Section 7: patient-grain rollup + tabyl(doi_category) clinical-plausibility review + doi_patients.rds + close_pcornet_con [DOI-CLASS-03] (Wave 2, depends on 128-01)
 
 ### Phase 129: Attribution Linkage and Output
 **Goal**: Drug co-occurrence linkage is produced with honest three-state attribution semantics, HIPAA suppression applied, and co-occurrence language enforced throughout all four output sheets
@@ -147,6 +147,6 @@ See MILESTONES.md for full details on all shipped milestones.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete    | 2026-07-15 |
-| 128. DoI Classification | v3.3 | 1/2 | In Progress|  |
+| 128. DoI Classification | v3.3 | 2/2 | Complete   | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 0/TBD | Not started | - |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 0/TBD | Not started | - |

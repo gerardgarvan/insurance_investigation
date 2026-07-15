@@ -20,7 +20,7 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 
 - [x] **DOI-CLASS-01**: `is_doi_code()` and `classify_doi_codes()` utilities live in a new `R/utils/utils_doi.R`, DX_TYPE-gated (ICD-9 `09` vs ICD-10 `10`, NA/SNOMED → FALSE), structurally mirroring `is_cancer_code()` / `classify_codes()`
 - [x] **DOI-CLASS-02**: An encounter-level diagnosis-of-interest flag + category is produced, guaranteed non-overlapping with the cancer categories
-- [ ] **DOI-CLASS-03**: A patient-level diagnosis-of-interest summary is derived from the encounter grain
+- [x] **DOI-CLASS-03**: A patient-level diagnosis-of-interest summary is derived from the encounter grain
 - [x] **DOI-CLASS-04**: A mutual-exclusivity hard-stop assertion (`sum(is_doi_code(DX) & is_cancer_code(DX)) == 0`) runs before any output is produced and halts the script if it fires
 - [x] **DOI-CLASS-05**: L10.81 (paraneoplastic pemphigus) encounters carry a `paraneoplastic_flag` so cancer-associated pemphigus is distinguishable from primary autoimmune pemphigus
 
@@ -78,7 +78,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DOI-CODE-04 | Phase 127 | Pending |
 | DOI-CLASS-01 | Phase 127 | Complete |
 | DOI-CLASS-02 | Phase 128 | Complete |
-| DOI-CLASS-03 | Phase 128 | Pending |
+| DOI-CLASS-03 | Phase 128 | Complete |
 | DOI-CLASS-04 | Phase 128 | Complete |
 | DOI-CLASS-05 | Phase 128 | Complete |
 | DOI-ATTR-01 | Phase 129 | Pending |
