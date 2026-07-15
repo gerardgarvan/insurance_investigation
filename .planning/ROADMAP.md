@@ -280,3 +280,13 @@ Plans:
 - [x] 124-02-PLAN.md — R/28 source_table/code_type override from source_hints + R/20 MED_ADMIN code_type fix (D-04/D-05)
 - [x] 124-03-PLAN.md — R/110 output-level before/after report + unmapped-name audit + registration (D-02/D-03/D-08/D-09/D-15)
 - [x] 124-04-PLAN.md — HiPerGator ordered regeneration + runtime confirmation checkpoint (D-01/D-10/D-11/D-13/D-14)
+
+### Phase 125: Fix R/88 stale smoke check for R/102 DEATH_CAUSE guard
+
+**Goal:** R/88 comprehensive smoke test passes with zero failures (exit 0) by correcting the stale R/102 DEATH_CAUSE guard assertion (Section 15o Check 6) to match the Phase 119 DEATH_CAUSE-table implementation. Check 6 currently asserts the removed `DEATH.DEATH_CAUSE`-era pattern (`DEATH_CAUSE_CODE` + `death_cause_available`) — neither is live in current R/102 (`death_cause_available` has zero occurrences; `DEATH_CAUSE_CODE` is comment-only), so the check can never pass and R/88 exits 1 (SLURM-breaking). The fix rewrites Check 6 to assert the current table-availability guard (`get_pcornet_table("DEATH_CAUSE")` + `is.null(dc_tbl)`, R/102 lines 144-145) and updates the description to "table-availability". Single-file edit to R/88; R/102 is NOT modified; no checks added or removed.
+**Requirements**: SMOKE-125-01
+**Depends on:** Phase 124
+**Plans:** 1 plan
+
+Plans:
+- [ ] 125-01-PLAN.md -- Rewrite R/88 Section 15o Check 6 to assert the current DEATH_CAUSE table-availability guard (get_pcornet_table + is.null(dc_tbl)); R/102 untouched; Rscript R/88 exits 0

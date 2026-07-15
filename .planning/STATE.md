@@ -205,6 +205,7 @@ Last activity: 2026-07-15
 - Phase 122 added: med_admin_dispensing_gap_diagnostic.csv gap closure (fix the RXNORM_CUI-column mismatch so DISPENSING/MED_ADMIN chemo detection stops silently dropping — MED_ADMIN codes live in MEDADMIN_CODE where MEDADMIN_TYPE=='RX'; sized by R/107 diagnostic from quick task 260714-end) -- COMPLETE
 - Phase 123 added: Quantify how much the Phase 122 MED_ADMIN/DISPENSING chemo-detection fix changes treatment outputs (before/after diff) and investigate whether unmatched NDCs (~7,739/24,327 no RxCUI in the Phase 122 crosswalk) are missing real chemo -- COMPLETE (+1,328 patients / +13,762 chemo dates vs PRESCRIBING baseline)
 - Phase 124 added: Integrate the newly-detected MED_ADMIN/DISPENSING chemo treatments (Phase 122 fix, quantified in Phase 123) into all downstream outputs — episodes, Gantt, timing, regimens, payer anchoring, and cohort (the downstream regeneration deferred by Phases 122/123)
+- Phase 125 added: Fix R/88 stale smoke check for R/102 DEATH_CAUSE guard — Check 6 asserts the old `DEATH.DEATH_CAUSE` pattern (`DEATH_CAUSE_CODE` + `death_cause_available`) that Phase 119 removed when R/102 migrated to the `DEATH_CAUSE` table; update the check to match current R/102 so the smoke test passes 682/682 (currently 1/682 fail, R/88 exit 1)
 
 ### Open Questions
 
