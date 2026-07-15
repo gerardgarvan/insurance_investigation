@@ -1,5 +1,31 @@
 # Milestones
 
+## v3.2 Meeting Gap Resolution Report (Shipped: 2026-07-15)
+
+**Phases completed:** 23 phases (Phases 104-126), 37 plans, 61 tasks
+
+**Delivered:** What began as a 4-phase charter (meeting gap investigations + a compiled RMarkdown report) grew into a 23-phase milestone that also reshaped pipeline outputs, enriched the cohort with rurality/ZIP geography, fixed the death-cause-NHL flag, closed the MED_ADMIN/DISPENSING chemo-detection gap end-to-end, and drove the R/88 comprehensive smoke test to exit 0.
+
+**Key accomplishments:**
+
+- Meeting gap investigations: pre-diagnosis treatment flagging + secondary-malignancy 7-day-gap table (Phase 104); Ethna/organ-transplant/SCT code verification + HL+NHL dual-code overlap validation (Phase 105); Tableau-ready encounter→cancer-code and chemo-drugs-by-class tables (Phase 106); RMarkdown gap-resolution report + delivery manifest + meeting-notes update (Phase 107)
+- Pipeline hardening: zero-warning run via safe min/max wrappers + filename/sentinel fixes (Phase 108); date-grain co-administration analysis with non-specific ICD9 codes removed (Phase 109)
+- Output reshaping: HL-only 7-day-confirmed V2 cancer summary (Phase 110); TABLE-2 collapsed to per-patient+date agents string (Phase 111); Gantt temporal-diagnosis enrichment + universal ascending alphabetical sort (Phase 112); post-death encounter temporal-gap investigation (Phase 113); drug-name consistency remediation via MEDICATION_LOOKUP + audit xlsx (Phase 114); Gantt 7-day-confirmed + age-at-episode columns (Phase 115)
+- Enrichment: USDA 2020 RUCA rurality classification (Phase 116); lifespan Gantt collapse (Phase 117); Supportive Care meaning normalization via RxNav IN resolver (Phase 120); 9-digit ZIP change-frequency investigation (Phase 121)
+- Death-cause NHL flag: three-state PATID flag CSV created (Phase 118) then fixed to source from the DEATH_CAUSE table (16th PCORNET_TABLES entry) instead of the non-existent DEATH.DEATH_CAUSE column — TRUE=5 / FALSE=57 / NA=1282 of 1344 deceased, was 100% blank (Phase 119)
+- MED_ADMIN/DISPENSING chemo-detection fix: removed phantom RXNORM_CUI col_specs, added shared get_chemo_hits() + NDC→RxNorm crosswalk across 7 consumers (Phase 122); before/after fix-impact quantification + four-method unmatched-NDC audit (Phase 123); full downstream integration into episodes/Gantt/timing/regimens/payer/cohort with source-provenance labeling and canonical drug names (Phase 124) — **+1,328 patients / +13,762 chemo dates** vs the PRESCRIBING baseline
+- R/88 smoke test: stale DEATH_CAUSE guard check (Section 15o Check 6) rewritten to the table-availability assertion (Phase 125); stale episode_classification_audit.xlsx regenerated so R/88 exits 0 (Phase 126)
+
+**Git range:** `400b1f9..HEAD` (330 commits, 68 `feat(`, 2026-06-15 to 2026-07-15)
+**Code:** 254 files changed, +52,863 / -1,039 lines
+
+### Known Gaps
+
+- **Phase 126** (regenerate stale `episode_classification_audit.xlsx` so R/88 exits 0) shipped without GSD artifacts — no PLAN/SUMMARY/VERIFICATION; the fix ran as a manual HiPerGator data refresh and the R/88 exit-0 pass is attested only in prose (STATE.md / user confirmation), not repository-verifiable. Accepted as verified-by-prose-only per audit path B.
+- **Runtime-deferred (structural PASS only, HiPerGator run pending):** Phases 106, 107, 108, 111, 113, 117, 120, 121 — output files / HTML render / row-count checks not yet produced on the dev host. Worth a single consolidated HiPerGator run.
+
+---
+
 ## v2.3 Gantt Data Enrichment (Shipped: 2026-06-08)
 
 **Phases completed:** 4 phases, 4 plans, 4 tasks

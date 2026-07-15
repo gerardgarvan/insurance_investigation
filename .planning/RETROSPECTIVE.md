@@ -134,6 +134,52 @@
 
 ---
 
+## Milestone: v3.2 -- Meeting Gap Resolution Report
+
+**Shipped:** 2026-07-15
+**Phases:** 23 (Phases 104-126) | **Plans:** 37
+
+### What Was Built
+- Meeting gap investigations (Phases 104-107): pre-diagnosis treatment flagging, secondary-malignancy table, Ethna/transplant/SCT code + HL+NHL overlap verification, Tableau-ready encounter tables, RMarkdown gap-resolution report + delivery manifest
+- Pipeline hardening (108-109): zero-warning run; date-grain co-administration analysis
+- Output reshaping (110-115): HL-only 7-day V2 summary, TABLE-2 date-grain collapse, Gantt temporal-dx + universal ascending sort, post-death encounter investigation, drug-name consistency remediation, Gantt 7-day-confirmed + age
+- Enrichment (116-117, 120-121): USDA RUCA rurality, lifespan Gantt, Supportive Care meaning normalization, ZIP change-frequency
+- Death-cause NHL flag (118-119): created then fixed to source from the DEATH_CAUSE table
+- MED_ADMIN/DISPENSING chemo-detection (122-124): root-cause col_spec fix + NDC crosswalk + get_chemo_hits() across 7 consumers, quantified (+1,328 patients / +13,762 chemo dates), fully integrated downstream with source provenance
+- R/88 smoke-test fixes (125-126): stale DEATH_CAUSE guard check + stale audit xlsx regenerated so R/88 exits 0
+
+### What Worked
+- Investigate-first gate pattern (R/103 read-only diagnostic gating the R/102 rewrite; R/107 diagnostic sizing the chemo-detection loss before Phase 122) prevented building on wrong assumptions
+- Shared helper extraction under load: get_chemo_hits() + NDC crosswalk fixed a class of silent-drop bugs across 7 consumers from one place
+- Dual-environment discipline (structural grep/parse on Windows, runtime on HiPerGator) let 23 phases progress without cluster access, with runtime confirmation batched for the high-value chains (119, 122-124)
+- R/88 Section-per-phase smoke-test convention gave every phase a structural regression guard
+
+### What Was Inefficient
+- Scope sprawl: a 4-phase charter (104-107) grew to 23 phases as new asks arrived — the milestone became a catch-all rather than closing and opening a new milestone
+- REQUIREMENTS.md traceability drifted repeatedly (CODE/OVERLAP/DRUGFIX checkboxes stale, table stopped at Phase 120) — same atomic-update lesson from v1.8/v2.2 recurred
+- Phase 126 shipped with no GSD artifacts (manual HiPerGator refresh, prose attestation only) — the milestone's terminal goal is not repository-verifiable
+- ~8 phases carry runtime-deferred verification; end-to-end proof lives outside the repo pending a consolidated HiPerGator run
+- R/88 accumulated cosmetic section-label anomalies (skipped 15l, out-of-order proton, duplicate SECTION 30)
+
+### Patterns Established
+- Investigate-first read-only diagnostic scripts (R/103, R/107, R/109) that gate or size a fix before implementation
+- 5-touch-point recipe for adding a PCORnet CDM table (PCORNET_TABLES + col spec + DuckDB ingest + smoke-test count + fixture)
+- Source-provenance labeling (source_hints → source_table/code_type) so newly-detected data is traceable through downstream outputs
+- SCRIPT_INDEX-only diagnostic scripts (not wired into R/39) for one-off quantification/audit work
+
+### Key Lessons
+1. Set a scope ceiling per milestone — when new asks arrive after the charter is met, prefer closing the milestone and opening the next over absorbing indefinitely
+2. Update REQUIREMENTS.md checkboxes and traceability in the same session that completes each phase — this lesson has now recurred across v1.8, v2.2, and v3.2
+3. A phase whose only deliverable is a cluster-side data refresh still needs a VERIFICATION.md capturing the runtime evidence (pasted log), or the terminal goal is unauditable
+4. Batch runtime-deferred phases into a single consolidated HiPerGator verification run before milestone completion rather than leaving proof scattered outside the repo
+
+### Cost Observations
+- Timeline: ~30 days (2026-06-15 to 2026-07-15); 330 commits, 68 `feat(`
+- Model profile: balanced; mode: yolo
+- Notable: many phases completed in 2-6 minutes (single-plan, well-defined); the chemo-detection chain (122-124) was the heaviest, spanning fix → quantification → downstream integration
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -143,6 +189,7 @@
 | v1.5 | 4 | Centralized payer config; dual-scope diagnostic pattern established |
 | v1.8 | 4 | Encounter-level linkage pattern; RDS artifact pipeline for cross-phase contracts; coarse phase granularity |
 | v2.2 | 7 | Dual-environment support; shared utility extraction (utils_cancer.R); fixture-based testing; grain-labeled outputs |
+| v3.2 | 23 | Investigate-first diagnostic gates; shared helper fixes across many consumers; per-phase smoke-test sections; scope sprawl (catch-all milestone) |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -151,5 +198,8 @@
 3. Standalone diagnostic scripts with explicit dependencies (source R/00_config.R only) are more maintainable than scripts that source the full pipeline
 4. Downstream scripts should consume upstream RDS artifacts directly rather than re-deriving data (v1.8: R/63 vs R/49 approach)
 5. Guard clauses for optional cross-phase columns prevent execution ordering failures (v1.8: drug_names, is_first_line)
-6. Shared utility extraction pays for itself immediately when 3+ scripts need the same logic (v2.2: utils_cancer.R)
-7. Ad-hoc phases added during milestone execution need formal scope expansion to keep requirement tracking consistent (v2.2: Phases 87-89)
+6. Shared utility extraction pays for itself immediately when 3+ scripts need the same logic (v2.2: utils_cancer.R; v3.2: get_chemo_hits across 7 consumers)
+7. Ad-hoc phases added during milestone execution need formal scope expansion to keep requirement tracking consistent (v2.2: Phases 87-89; v3.2: 104→126 sprawl)
+8. REQUIREMENTS.md checkbox/traceability drift is a recurring failure — update atomically at phase completion (v1.8, v2.2, v3.2 all hit this)
+9. Investigate-first read-only diagnostics that gate or size a fix before implementation prevent building on wrong assumptions (v3.2: R/103, R/107, R/109)
+10. Cluster-side-only deliverables still need an in-repo VERIFICATION.md with pasted runtime evidence, or the goal is unauditable (v3.2: Phase 126)

@@ -105,12 +105,12 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] MED_ADMIN/DISPENSING chemo-detection gap fix (RXNORM_CUI mismatch + NDC→RxNorm crosswalk) — v3.2 Phase 122
 - [x] Fix-impact before/after diff + unmatched-NDC audit (R/109, 9-sheet xlsx) — v3.2 Phase 123
 - [x] Integrate MED_ADMIN/DISPENSING chemo into all downstream outputs — episodes/Gantt/timing/regimens/payer/cohort regenerated with source-provenance labeling (source_hints → DISPENSING/MED_ADMIN + code_type NDC), canonical drug names across all outputs, output-level before/after report (R/110) — v3.2 Phase 124
-- [ ] RMarkdown gap resolution report compiling all investigation findings
-- [ ] Update meeting notes to mark resolved gaps and remove stale items
+- [x] RMarkdown gap resolution report compiling all investigation findings — v3.2 Phase 107 (structural; HTML render deferred to HiPerGator)
+- [x] Update meeting notes to mark resolved gaps and remove stale items — v3.2 Phase 107
 
 #### v3.0 Remaining
 
-- [ ] Smoke test R/88 passes with all existing sections after v3.0 optimization (VALID-01)
+- [x] Smoke test R/88 passes with all existing sections after v3.0 optimization (VALID-01) — v3.2 Phases 125-126 (Section 15o Check 6 DEATH_CAUSE guard fixed; stale episode_classification_audit.xlsx regenerated; R/88 exit 0 confirmed on HiPerGator)
 
 ### Out of Scope
 
@@ -142,11 +142,24 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**Shipped:** v3.1 (2026-06-12). 119 phases completed across 16 milestones (v1.0-v3.2). Phase 119 complete — death_cause_nhl_flag fix: cause of death now sourced from the separate PCORnet CDM `DEATH_CAUSE` table (loaded as the 16th PCORNET_TABLES entry) instead of the non-existent `DEATH.DEATH_CAUSE` column. R/102 reads the underlying cause (DEATH_CAUSE_TYPE == "U" preferred) and classifies via classify_codes(); R/103 read-only diagnostic gated the source choice (DEATH_CAUSE is the only ICD-classifiable source — TR cause fields are NAACCR-coded). Runtime confirmed on HiPerGator: output/death_cause_nhl_flag.csv now carries TRUE=5, FALSE=57, NA=1282 of 1344 deceased (was 100% blank). R/35's identical stale assumption corrected.
+**Shipped:** v3.2 Meeting Gap Resolution Report (2026-07-15). 23 phases (104-126), 37 plans. What began as a 4-phase charter (104-107: meeting gap investigations + RMarkdown report) grew into a 23-phase milestone that also absorbed pipeline warning cleanup, output reshaping (V2 HL-only 7-day summary, TABLE-2 date-grain collapse, Gantt temporal-dx + universal alphabetical sort, post-death encounter investigation, drug-name consistency remediation), RUCA rurality + lifespan-Gantt + ZIP-change enrichment, the death-cause-NHL-flag chain (sourced from the DEATH_CAUSE table, 16th PCORNET_TABLES entry), the MED_ADMIN/DISPENSING chemo-detection fix and its full downstream integration (+1,328 patients / +13,762 chemo dates vs the PRESCRIBING baseline, with source-provenance labeling and canonical drug names across every output), and two R/88 smoke-test fixes so the comprehensive smoke test exits 0. Runtime confirmed on HiPerGator for the chemo-detection chain (122-124), the DEATH_CAUSE fix (119), and the R/88 pass (125-126); ~8 structural-only phases have runtime deferred to a consolidated HiPerGator run.
 
-**Pipeline status:** 103 phases completed across 16 milestones (v1.0-v3.1). 99+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
+**Pipeline status:** 126 phases completed across 17 milestones (v1.0-v3.2). 110+ R scripts total (77 numbered in decade-based organization + 11 utils + 8 archived + validation/test scripts). DuckDB backend with dual-environment support (HiPerGator production + Windows local testing). data.table infrastructure with 6 keyed lookup tables, classify_payer_tier_dt() for hot-path payer classification. Treatment episodes with encounter-level cancer linkage, first-line regimen identification, unified ICD-9/ICD-10 cancer code handling, instance-level drug grouping tables, SCT conditioning temporal context flags, 5 treatment categories, consolidated Gantt export with dynamic schema verification, and comprehensive smoke test with 35+ validation sections.
 
 ## Previous Milestones
+
+### v3.2 Meeting Gap Resolution Report (Shipped 2026-07-15)
+
+**Goal:** Close all remaining meeting-note gaps with investigation scripts + a compiled report, then (scope-expanded) reshape outputs, enrich cohort geography/rurality, fix the death-cause-NHL flag, and close the MED_ADMIN/DISPENSING chemo-detection gap end-to-end.
+
+**Shipped:**
+- Meeting gap investigations: pre-diagnosis treatment flagging + secondary-malignancy table (Phase 104), Ethna/transplant/SCT code & HL+NHL overlap verification (Phase 105), Tableau-ready encounter tables (Phase 106), RMarkdown gap-resolution report + delivery manifest + meeting-notes update (Phase 107)
+- Pipeline hardening: zero-warning run (Phase 108), date-grain co-administration analysis with ICD9 noise removed (Phase 109)
+- Output reshaping: HL-only 7-day V2 summary (Phase 110), TABLE-2 date-grain collapse (Phase 111), Gantt temporal-dx enrichment + universal ascending sort (Phase 112), post-death encounter investigation (Phase 113), drug-name consistency remediation (Phase 114), Gantt 7-day-confirmed + age-at-episode (Phase 115)
+- Enrichment: USDA RUCA rurality (Phase 116), lifespan Gantt collapse (Phase 117), ZIP-change frequency investigation (Phase 121), Supportive Care meaning normalization via RxNav (Phase 120)
+- Death-cause NHL flag: created (Phase 118) then fixed to source from the DEATH_CAUSE table (Phase 119)
+- MED_ADMIN/DISPENSING chemo-detection: root-cause RXNORM_CUI col_spec fix + NDC→RxNorm crosswalk + get_chemo_hits() helper across 7 consumers (Phase 122), before/after fix-impact + unmatched-NDC audit (Phase 123), full downstream integration into episodes/Gantt/timing/regimens/payer/cohort with source provenance (Phase 124) — +1,328 patients / +13,762 chemo dates
+- R/88 smoke-test: stale DEATH_CAUSE guard check fixed (Phase 125), stale episode_classification_audit.xlsx regenerated so R/88 exits 0 (Phase 126)
 
 ### v3.1 Meeting Gap Closure — Clinical Data Coverage (Shipped 2026-06-12)
 
@@ -347,6 +360,10 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Broadened output as primary, linked-only as _linked_only suffix | Broadened (all encounters) is the default; linked-only preserved for backward compatibility | ✓ Phase 101 |
 | cancer_linked derived from encounter-level DX presence | !is.na(cancer_codes) at encounter level — self-contained within R/57, no R/28 dependency | ✓ Phase 101 |
 | Adopt data.table for performance | Named vector lookups and dplyr group_by are bottlenecks at scale on ENCOUNTER table (millions of rows); data.table keyed joins are 10-50x faster | -- v3.0 |
+| Cause of death from DEATH_CAUSE table, not DEATH.DEATH_CAUSE | The DEATH_CAUSE column never existed in this extract; DEATH_CAUSE is the only ICD-classifiable source (TR cause fields are NAACCR-coded) | ✓ Phase 119 |
+| Shared get_chemo_hits() + NDC→RxNorm crosswalk for chemo detection | Phantom RXNORM_CUI col_specs made DISPENSING/MED_ADMIN silently contribute zero chemo; one helper (RX-direct + ND-crosswalk) fixes all 7 consumers | ✓ Phase 122 |
+| Source-provenance labeling (source_hints → source_table/code_type) in downstream outputs | Newly-detected MED_ADMIN/DISPENSING chemo must be traceable to its source in episodes/Gantt without conflating with PRESCRIBING | ✓ Phase 124 |
+| Dual-environment verification: structural on Windows, runtime on HiPerGator | Raw PCORnet data only lives on HiPerGator; grep/parse checks gate locally, runtime pass confirmed on cluster | ⚠️ Revisit (Phase 126 attested-by-prose only) |
 
 ## Evolution
 
@@ -366,4 +383,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 — Phase 124 complete (MED_ADMIN/DISPENSING chemo integrated into all downstream outputs; Gantt now labels DISPENSING/MED_ADMIN sources — 1,058/1,668 tokens, code_type NDC 1,058; chemo episodes 26,447→27,444 (+997 episodes / +89 patients); canonical drug names across all regenerated outputs; output-level before/after report R/110; SMOKE-124-01 13/13 PASS)*
+*Last updated: 2026-07-15 after v3.2 milestone (23 phases 104-126 shipped; meeting gap resolution + output reshaping + RUCA/ZIP enrichment + DEATH_CAUSE NHL fix + MED_ADMIN/DISPENSING chemo-detection integration + R/88 exit-0). Phase 126 carried as verified-by-prose-only per audit path B.*
