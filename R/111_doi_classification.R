@@ -193,7 +193,56 @@ message(glue(
 # remain open through that section. close_pcornet_con is NOT called here.
 
 # ==============================================================================
-# End of R/111 Sections 1-6 (Plan 128-01).
-# Plan 128-02 appends Section 7: patient-grain rollup (doi_patients.rds)
-# + DuckDB connection teardown.
+# SECTION 7: PATIENT-GRAIN ROLLUP ----
 # ==============================================================================
+
+# 7a -- Roll up doi_encounters to one row per ID (PATID).
+# Patient grain is DERIVED from doi_encounters (Section 6) — DIAGNOSIS is NOT re-queried
+# (DOI-CLASS-03). L10.81/paraneoplastic encounters STILL count toward n_doi_encounters
+# and doi_categories (D-04).
+doi_patients <- doi_encounters %>%
+  group_by(ID) %>%
+  summarise(
+    has_any_doi      = TRUE,                                                   # every ID here has >=1 DoI encounter
+    doi_categories   = paste(sort(unique(doi_category)), collapse = "; "),     # ascending alphabetical (v3.2 Phase 112 convention)
+    doi_first_date   = suppressWarnings(min(DX_DATE, na.rm = TRUE)),
+    doi_last_date    = suppressWarnings(max(DX_DATE, na.rm = TRUE)),
+    n_doi_encounters = n_distinct(ENCOUNTERID),
+    in_hl_cohort     = any(in_hl_cohort),                                      # TRUE if patient is in HL cohort (D-02)
+    .groups = "drop"
+  )
+
+# Handle the min/max-of-all-NA edge: if a patient's DX_DATEs are all NA,
+# min/max returns Inf/-Inf — convert non-finite dates back to NA.
+doi_patients <- doi_patients %>%
+  mutate(
+    doi_first_date = as.Date(ifelse(is.finite(doi_first_date), doi_first_date, NA), origin = "1970-01-01"),
+    doi_last_date  = as.Date(ifelse(is.finite(doi_last_date),  doi_last_date,  NA), origin = "1970-01-01")
+  )
+
+message(glue("Patient-grain rollup: {format(nrow(doi_patients), big.mark = ',')} unique patients with any DoI"))
+
+
+# 7b -- tabyl clinical-plausibility count review (DOI-CLASS design constraint / 128-CONTEXT in-scope).
+# INTERNAL-ONLY review counts: raw, NO small-cell suppression (Phase 127 D-07). Suppress manually
+# before external sharing.
+message("--- DoI category clinical-plausibility review (RA should dominate; NMO/pemphigus rare) ---")
+doi_cat_review <- doi_encounters %>% janitor::tabyl(doi_category)
+print(doi_cat_review)
+n_paraneoplastic <- sum(doi_encounters$paraneoplastic_flag)
+message(glue("Paraneoplastic (L10.81) encounters flagged: {n_paraneoplastic}"))
+message(glue(
+  "Patients with any DoI: {format(nrow(doi_patients), big.mark = ',')}; ",
+  "in HL cohort: {format(sum(doi_patients$in_hl_cohort), big.mark = ',')}"
+))
+
+
+# 7c -- Write doi_patients.rds.
+doi_patients_path <- file.path(CONFIG$cache$outputs_dir, "doi_patients.rds")
+saveRDS(doi_patients, doi_patients_path, compress = TRUE)
+message(glue("Wrote doi_patients.rds: {format(nrow(doi_patients), big.mark = ',')} patients -> {doi_patients_path}"))
+
+
+# 7d -- Teardown + final message.
+close_pcornet_con()
+message("\nDone. (R/111 DoI classification — doi_encounters.rds + doi_patients.rds written)")
