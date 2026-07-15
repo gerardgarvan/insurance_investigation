@@ -4,10 +4,10 @@ milestone: v3.2
 milestone_name: milestone
 status: verifying
 stopped_at: Completed Phase 125 Plan 01 (125-01-PLAN.md) — R/88 Section 15o Check 6 fixed
-last_updated: "2026-07-15T15:34:14.523Z"
+last_updated: "2026-07-15T16:14:23.707Z"
 last_activity: 2026-07-15
 progress:
-  total_phases: 22
+  total_phases: 23
   completed_phases: 22
   total_plans: 37
   completed_plans: 37
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 ## Current Position
 
-Phase: 125
+Phase: 126
 Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-15
@@ -205,7 +205,8 @@ Last activity: 2026-07-15
 - Phase 122 added: med_admin_dispensing_gap_diagnostic.csv gap closure (fix the RXNORM_CUI-column mismatch so DISPENSING/MED_ADMIN chemo detection stops silently dropping — MED_ADMIN codes live in MEDADMIN_CODE where MEDADMIN_TYPE=='RX'; sized by R/107 diagnostic from quick task 260714-end) -- COMPLETE
 - Phase 123 added: Quantify how much the Phase 122 MED_ADMIN/DISPENSING chemo-detection fix changes treatment outputs (before/after diff) and investigate whether unmatched NDCs (~7,739/24,327 no RxCUI in the Phase 122 crosswalk) are missing real chemo -- COMPLETE (+1,328 patients / +13,762 chemo dates vs PRESCRIBING baseline)
 - Phase 124 added: Integrate the newly-detected MED_ADMIN/DISPENSING chemo treatments (Phase 122 fix, quantified in Phase 123) into all downstream outputs — episodes, Gantt, timing, regimens, payer anchoring, and cohort (the downstream regeneration deferred by Phases 122/123)
-- Phase 125 added: Fix R/88 stale smoke check for R/102 DEATH_CAUSE guard — Check 6 asserts the old `DEATH.DEATH_CAUSE` pattern (`DEATH_CAUSE_CODE` + `death_cause_available`) that Phase 119 removed when R/102 migrated to the `DEATH_CAUSE` table; update the check to match current R/102 so the smoke test passes 682/682 (currently 1/682 fail, R/88 exit 1)
+- Phase 125 added: Fix R/88 stale smoke check for R/102 DEATH_CAUSE guard — Check 6 asserts the old `DEATH.DEATH_CAUSE` pattern (`DEATH_CAUSE_CODE` + `death_cause_available`) that Phase 119 removed when R/102 migrated to the `DEATH_CAUSE` table; update the check to match current R/102 so the smoke test passes 682/682 (currently 1/682 fail, R/88 exit 1) — COMPLETE (fix verified on HiPerGator; separate stale-xlsx failure spun out to Phase 126)
+- Phase 126 added: Regenerate stale episode_classification_audit.xlsx so R/88 exits 0 — HiPerGator R/88 exits 1 on `FAIL: episode_classification_audit.xlsx contains 'Linkage Improvement' sheet` (log phase125_smoke_20260715_112627 line 658); R/30 source is correct, the on-disk xlsx is stale. Data refresh: re-run R/28 (creates workbook) then R/30 (adds 'Linkage Improvement' sheet via wb_load), then re-run R/88 to confirm `FAILED: 0/<total>` + exit 0 — COMPLETE (2026-07-15; regenerated on HiPerGator, R/88 now passes per user confirmation; no GSD plan/executor — manual cluster data refresh, HiPerGator log not synced to dev host)
 
 ### Open Questions
 

@@ -290,3 +290,13 @@ Plans:
 
 Plans:
 - [x] 125-01-PLAN.md -- Rewrite R/88 Section 15o Check 6 to assert the current DEATH_CAUSE table-availability guard (get_pcornet_table + is.null(dc_tbl)); R/102 untouched; Rscript R/88 exits 0
+
+### Phase 126: Regenerate stale episode_classification_audit.xlsx so R/88 exits 0
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 125
+**Plans:** 0/0 plans complete
+
+Plans:
+- [x] TBD (run /gsd:plan-phase 126 to break down) (completed 2026-07-15)
