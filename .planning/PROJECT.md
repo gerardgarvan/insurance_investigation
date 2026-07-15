@@ -86,12 +86,11 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] R/28 episode classification lookups replaced with keyed joins — v3.0 Phase 98
 - [x] Gantt v1/v2 consolidation with dynamic schema verification — v3.0 Phase 99
 - [x] Curated rituximab + methotrexate non-malignant ICD-9/ICD-10 code set centralized in R/00_config.R (DOI_CODE_MAP + DOI_CODE_TIER + drug/window constants) + tested utils_doi.R matching layer — v3.3 Phase 127
+- [x] Diagnosis-of-interest classification flag/category (patient + encounter level), non-overlapping with cancer categories (R/111: DuckDB prefix-pushdown DIAGNOSIS pull, mutual-exclusivity hard-stop, L10.81 paraneoplastic_flag, doi_encounters.rds + doi_patients.rds) — v3.3 Phase 128
 
 ### Active
 
 #### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest
-
-- [ ] Diagnosis-of-interest classification flag/category (patient + encounter level), non-overlapping with cancer categories
 - [ ] Treatment-attribution linkage (rituximab/MTX administration ↔ non-malignant diagnosis, temporal window)
 - [ ] Standalone Tableau-ready diagnosis-of-interest prevalence + drug co-occurrence table/report
 - [ ] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts
@@ -148,7 +147,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
-**In progress:** v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest — Phase 127 (Code-Set & Infrastructure Centralization) complete (2026-07-15). `DOI_CODE_MAP` (35 prefix keys → 10 category labels), `DOI_CODE_TIER`, `RITUXIMAB_CODES`/`MTX_CODES`, and `DOI_ATTRIBUTION_WINDOW_DAYS = 90L` added to `R/00_config.R` Sections 4c/4d (isolated from `TREATMENT_CODES$chemo_rxnorm`); `R/utils/utils_doi.R` provides DX_TYPE-gated `is_doi_code()` and 4-char→3-char-cascade `classify_doi_codes()`; DIAGNOSIS fixture augmented with ICD-10 (M05.9) + ICD-9 (714.0) DoI rows. Verified passed (6/6 must-haves; static inspection — HiPerGator runtime deferred). Next: Phase 128 DoI Classification.
+**In progress:** v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest — Phase 128 (DoI Classification) complete (2026-07-15). `R/111_doi_classification.R` produces the encounter- and patient-grain DoI artifacts from the real DIAGNOSIS table: a DuckDB-native `LEFT(DX,3) IN (...)` prefix pushdown (built from `DOI_CODE_MAP` keys) runs before `collect()` so the multi-million-row DIAGNOSIS table is never loaded into R; `is_doi_code()`/`classify_doi_codes()` refine the classification across all diagnosis positions; a mutual-exclusivity hard-stop (`sum(is_doi_code & is_cancer_code) == 0`, DOI-CLASS-04) halts before any write; L10.81 encounters carry `paraneoplastic_flag = TRUE` while staying in doi_category "Pemphigus" (DOI-CLASS-05); `in_hl_cohort` tagged from `get_hl_patient_ids()`. Writes `doi_encounters.rds` (encounter grain, DOI-CLASS-02) then derives `doi_patients.rds` from it (one row per ID with has_any_doi/doi_categories/dates/n_doi_encounters/in_hl_cohort, DOI-CLASS-03), logs the `tabyl(doi_category)` clinical-plausibility review, and tears down the DuckDB connection. Verified passed (8/8 must-haves; structural-only on Windows — real-data counts + tabyl review gated to the Phase 130 HiPerGator run). Next: Phase 129 (treatment-attribution linkage).
 
 **Shipped:** v3.2 Meeting Gap Resolution Report (2026-07-15). 23 phases (104-126), 37 plans. What began as a 4-phase charter (104-107: meeting gap investigations + RMarkdown report) grew into a 23-phase milestone that also absorbed pipeline warning cleanup, output reshaping (V2 HL-only 7-day summary, TABLE-2 date-grain collapse, Gantt temporal-dx + universal alphabetical sort, post-death encounter investigation, drug-name consistency remediation), RUCA rurality + lifespan-Gantt + ZIP-change enrichment, the death-cause-NHL-flag chain (sourced from the DEATH_CAUSE table, 16th PCORNET_TABLES entry), the MED_ADMIN/DISPENSING chemo-detection fix and its full downstream integration (+1,328 patients / +13,762 chemo dates vs the PRESCRIBING baseline, with source-provenance labeling and canonical drug names across every output), and two R/88 smoke-test fixes so the comprehensive smoke test exits 0. Runtime confirmed on HiPerGator for the chemo-detection chain (122-124), the DEATH_CAUSE fix (119), and the R/88 pass (125-126); ~8 structural-only phases have runtime deferred to a consolidated HiPerGator run.
 
@@ -391,4 +390,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 after completing Phase 127 (v3.3 Code-Set & Infrastructure Centralization).*
+*Last updated: 2026-07-15 after completing Phase 128 (v3.3 DoI Classification).*
