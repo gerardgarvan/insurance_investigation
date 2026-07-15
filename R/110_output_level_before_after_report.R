@@ -121,7 +121,7 @@ message("--- Section 3a: Load AFTER treatment_episodes.rds ---")
 episodes_after <- NULL
 if (file.exists(EPISODES_AFTER)) {
   episodes_after <- readRDS(EPISODES_AFTER)
-  message(glue("  AFTER episodes loaded: {nrow(episodes_after):,} rows"))
+  message(glue("  AFTER episodes loaded: {format(nrow(episodes_after), big.mark = ',')} rows"))
 } else {
   message(glue("  [SKIP] {EPISODES_AFTER} not found (HiPerGator runtime required)"))
 }
@@ -135,7 +135,7 @@ message("--- Section 3b: Load BEFORE treatment_episodes_pre_p124.rds ---")
 episodes_before <- NULL
 if (file.exists(EPISODES_BEFORE)) {
   episodes_before <- readRDS(EPISODES_BEFORE)
-  message(glue("  BEFORE episodes loaded: {nrow(episodes_before):,} rows"))
+  message(glue("  BEFORE episodes loaded: {format(nrow(episodes_before), big.mark = ',')} rows"))
 } else {
   message(glue("  [SKIP] {EPISODES_BEFORE} not found (HiPerGator Plan 04 snapshot required)"))
 }
@@ -149,7 +149,7 @@ message("--- Section 3c: Load BEFORE gantt_episodes_pre_p124.csv ---")
 gantt_before <- NULL
 if (file.exists(GANTT_BEFORE)) {
   gantt_before <- read.csv(GANTT_BEFORE, colClasses = "character", stringsAsFactors = FALSE)
-  message(glue("  BEFORE gantt loaded: {nrow(gantt_before):,} rows"))
+  message(glue("  BEFORE gantt loaded: {format(nrow(gantt_before), big.mark = ',')} rows"))
 } else {
   message(glue("  [SKIP] {GANTT_BEFORE} not found (HiPerGator Plan 04 snapshot required)"))
 }
@@ -162,7 +162,7 @@ message("--- Section 3d: Load AFTER gantt_episodes.csv ---")
 gantt_after <- NULL
 if (file.exists(GANTT_AFTER)) {
   gantt_after <- read.csv(GANTT_AFTER, colClasses = "character", stringsAsFactors = FALSE)
-  message(glue("  AFTER gantt loaded: {nrow(gantt_after):,} rows"))
+  message(glue("  AFTER gantt loaded: {format(nrow(gantt_after), big.mark = ',')} rows"))
 } else {
   message(glue("  [SKIP] {GANTT_AFTER} not found (HiPerGator runtime required)"))
 }
@@ -411,7 +411,7 @@ PAYER_CHEMO_CSV <- here::here("output", "payer_at_chemo.csv")
 df_payer <- NULL
 if (file.exists(PAYER_CHEMO_CSV)) {
   payer_raw <- read.csv(PAYER_CHEMO_CSV, colClasses = "character", stringsAsFactors = FALSE)
-  message(glue("  Payer-at-chemo CSV loaded: {nrow(payer_raw):,} rows"))
+  message(glue("  Payer-at-chemo CSV loaded: {format(nrow(payer_raw), big.mark = ',')} rows"))
 
   # Summarise payer distribution from available columns (any_of guard)
   payer_col <- intersect(c("payer_category", "payer_mode", "payer_type"), names(payer_raw))
@@ -468,7 +468,7 @@ df_unmapped <- NULL
 # Try detail RDS first (per-code grain preferred)
 if (file.exists(DETAIL_RDS)) {
   detail_raw <- readRDS(DETAIL_RDS)
-  message(glue("  Detail RDS loaded: {nrow(detail_raw):,} rows"))
+  message(glue("  Detail RDS loaded: {format(nrow(detail_raw), big.mark = ',')} rows"))
 
   # Identify available columns via any_of
   code_col     <- intersect(c("triggering_code", "code"), names(detail_raw))
