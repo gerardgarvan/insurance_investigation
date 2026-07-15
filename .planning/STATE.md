@@ -4,7 +4,7 @@ milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: verifying
 stopped_at: Completed 128-02-PLAN.md
-last_updated: "2026-07-15T22:07:09.858Z"
+last_updated: "2026-07-15T22:11:25.294Z"
 last_activity: 2026-07-15
 progress:
   total_phases: 116
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-15 after v3.2)
 
 ## Current Position
 
-Phase: 128 (doi-classification) — EXECUTING
-Plan: 2 of 2
+Phase: 128
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-15
 
