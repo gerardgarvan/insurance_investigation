@@ -72,31 +72,31 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOI-CODE-01 | TBD | Pending |
-| DOI-CODE-02 | TBD | Pending |
-| DOI-CODE-03 | TBD | Pending |
-| DOI-CODE-04 | TBD | Pending |
-| DOI-CLASS-01 | TBD | Pending |
-| DOI-CLASS-02 | TBD | Pending |
-| DOI-CLASS-03 | TBD | Pending |
-| DOI-CLASS-04 | TBD | Pending |
-| DOI-CLASS-05 | TBD | Pending |
-| DOI-ATTR-01 | TBD | Pending |
-| DOI-ATTR-02 | TBD | Pending |
-| DOI-ATTR-03 | TBD | Pending |
-| DOI-OUT-01 | TBD | Pending |
-| DOI-OUT-02 | TBD | Pending |
-| DOI-OUT-03 | TBD | Pending |
-| DOI-QA-01 | TBD | Pending |
-| DOI-QA-02 | TBD | Pending |
-| DOI-QA-03 | TBD | Pending |
-| DOI-QA-04 | TBD | Pending |
+| DOI-CODE-01 | Phase 127 | Pending |
+| DOI-CODE-02 | Phase 127 | Pending |
+| DOI-CODE-03 | Phase 127 | Pending |
+| DOI-CODE-04 | Phase 127 | Pending |
+| DOI-CLASS-01 | Phase 127 | Pending |
+| DOI-CLASS-02 | Phase 128 | Pending |
+| DOI-CLASS-03 | Phase 128 | Pending |
+| DOI-CLASS-04 | Phase 128 | Pending |
+| DOI-CLASS-05 | Phase 128 | Pending |
+| DOI-ATTR-01 | Phase 129 | Pending |
+| DOI-ATTR-02 | Phase 129 | Pending |
+| DOI-ATTR-03 | Phase 129 | Pending |
+| DOI-OUT-01 | Phase 129 | Pending |
+| DOI-OUT-02 | Phase 129 | Pending |
+| DOI-OUT-03 | Phase 129 | Pending |
+| DOI-QA-01 | Phase 130 | Pending |
+| DOI-QA-02 | Phase 130 | Pending |
+| DOI-QA-03 | Phase 130 | Pending |
+| DOI-QA-04 | Phase 127 | Pending |
 
 **Coverage:**
 - v3.3 requirements: 19 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19 (roadmap complete)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-15*
-*Last updated: 2026-07-15 after initial definition*
+*Last updated: 2026-07-15 after roadmap creation — all 19 requirements mapped*
