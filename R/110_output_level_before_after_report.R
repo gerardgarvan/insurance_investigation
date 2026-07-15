@@ -82,8 +82,10 @@ message("=== Phase 124: Output-Level Before/After Report + Unmapped-Name Audit (
 # Plan 04 on HiPerGator:
 #   - copies treatment_episodes.rds -> treatment_episodes_pre_p124.rds BEFORE R/26 runs
 #   - copies output/gantt_episodes.csv -> output/gantt_episodes_pre_p124.csv BEFORE R/52 runs
-EPISODES_AFTER  <- here::here("cache", "outputs", "treatment_episodes.rds")
-EPISODES_BEFORE <- here::here("cache", "outputs", "treatment_episodes_pre_p124.rds")
+# Use CONFIG$cache$outputs_dir (matches R/26/R/28/R/52) — on HiPerGator this is an
+# absolute path OUTSIDE the project tree (/blue/.../clean/rds/outputs), NOT here("cache").
+EPISODES_AFTER  <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
+EPISODES_BEFORE <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_pre_p124.rds")
 GANTT_AFTER     <- here::here("output", "gantt_episodes.csv")
 GANTT_BEFORE    <- here::here("output", "gantt_episodes_pre_p124.csv")
 OUT_XLSX        <- here::here("output", "output_level_before_after_report.xlsx")
@@ -461,7 +463,7 @@ message("\n--- Section 8: Sheet 5 — Unmapped Names Audit (D-08) ---")
 # Model layout on R/79. SME review list — do NOT resolve names here (D-08).
 # ---------------------------------------------------------------------------
 
-DETAIL_RDS <- here::here("cache", "outputs", "treatment_episode_detail.rds")
+DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 
 df_unmapped <- NULL
 
