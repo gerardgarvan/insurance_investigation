@@ -1,260 +1,265 @@
 # Project Research Summary
 
-**Project:** PCORnet Payer Variable Investigation (R Pipeline) - data.table Performance Optimization
-**Domain:** R pipeline optimization for healthcare data analysis (PCORnet CDM, millions of encounter rows)
-**Researched:** 2026-06-10
-**Confidence:** HIGH
+**Project:** PCORnet Payer Variable Investigation -- v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest
+**Domain:** Non-malignant ICD classification + drug co-occurrence attribution layer on an existing oncology cohort R pipeline
+**Researched:** 2026-07-15
+**Confidence:** HIGH (all findings grounded in direct codebase inspection + FDA-approved indication literature + ICD-10-CM FY2026 tabular verification)
+
+---
 
 ## Executive Summary
 
-This research evaluates adding data.table to an existing 77-script R pipeline built on tidyverse/DuckDB to optimize performance on multi-million row PCORnet datasets. The pipeline currently uses named vector lookups for payer/treatment code mapping and dplyr group_by/summarise for same-day encounter resolution, both of which become bottlenecks at scale (5M+ encounter rows on HiPerGator). data.table offers 3-10x speedups on grouped operations and 10-50x faster keyed joins versus named vector indexing.
+Milestone v3.3 adds a standalone diagnosis-of-interest (DoI) analysis layer to the existing PCORnet HL-cohort pipeline: detect when a Hodgkin Lymphoma patient's rituximab or methotrexate administration co-occurs with a non-malignant ICD code indicating an autoimmune, inflammatory, or hematologic indication. This is an additive, non-destructive extension -- the cancer cascade, treatment episode logic, and all existing outputs are read-only from v3.3's perspective. The core build pattern is already proven in the codebase: mirror classify_codes() / CANCER_SITE_MAP with parallel classify_doi_codes() / DOI_CODE_MAP structures, and call the existing get_chemo_hits() helper with a new RITDIS_DRUG_RXNORM vector. No new R packages are warranted. renv.lock is unchanged.
 
-The recommended approach is selective migration: convert lookup tables to keyed data.tables, optimize hot-path scripts (R/60 same-day payer resolution, R/28 episode classification, R/02 payer harmonization), and preserve dplyr syntax in cohort filters where readability is critical. This hybrid strategy maintains the pipeline's "named predicate" architecture (has_*, with_*, exclude_* functions) while gaining performance where it matters. The migration can proceed incrementally with full backward compatibility.
+The completed, verified code set spans 14 non-malignant clinical categories: Rheumatoid Arthritis, ANCA-Associated Vasculitis (GPA/MPA), Pemphigus/Pemphigoid, Dermatomyositis/Polymyositis, SLE, Sjogren Syndrome, Neurological Autoimmune (NMO, MG, optic neuritis), Hematologic Autoimmune (ITP, AIHA), Psoriasis/PsA, Inflammatory Bowel Disease, and additional EDGE conditions. Five categories were entirely absent from the seed RTF and have been filled by this research: hematologic (ITP D69.3, AIHA D59.1x), connective tissue (SLE M32.x, Sjogren M35.0x), and the full MTX-specific indications (psoriasis L40.x, Crohn K50.x, UC K51.x). Two seed errors require correction before coding begins: I77.82 is actually 'Dissection of artery' in ICD-10-CM (the RTF incorrectly called it 'ANCA-positive vasculitis') and must be excluded; D47.Z2 (Castleman disease) is already classified as a malignancy/near-malignancy in the existing CANCER_SITE_MAP and must be excluded to prevent double-classification.
 
-Key risks center on data.table's reference semantics (functions modify inputs in-place, breaking tidyverse copy-on-modify assumptions) and type coercion issues (factor vs character joins). These are mitigated through defensive copy() usage at function boundaries, explicit character coercion before joins, and comprehensive output parity testing against existing smoke test infrastructure (R/88, 35 validation sections).
+The most consequential design constraint for v3.3 is the honesty boundary on attribution: this pipeline can only demonstrate co-occurrence, never attribution. Output columns must use 'with [dx]' language, never 'for [dx]'. A three-state likely_non_lymphoma_directed flag (TRUE / FALSE / NA) carries the analytic signal, where NA explicitly represents the ambiguous case -- an HL-active patient whose rituximab or MTX co-occurs with a DoI code and whose clinical interpretation requires chart review. The mutual-exclusivity hard-stop assertion -- sum(is_doi_code(DX) & is_cancer_code(DX)) == 0 -- run before any output is produced, is a non-negotiable design guard.
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-data.table 1.18.4+ is the only new dependency needed for v3.0 performance optimization. The existing stack (tidyverse, DuckDB, ggplot2, vroom, checkmate, renv) is validated and documented in CLAUDE.md; this research focuses solely on data.table integration.
+**Verdict: No new dependencies.** The existing tidyverse + DuckDB + openxlsx2 stack is fully sufficient. The classify_codes() prefix-matching cascade in utils_cancer.R handles all ICD-9/ICD-10 detection requirements already; v3.3 adds two parallel named vectors and two parallel functions. Three evaluated packages were explicitly rejected: icd (100 MB data dependency, C++/Fortran compilation, hierarchy traversal at wrong granularity for a curated set), comorbidity (Charlson/Elixhauser scoring -- wrong problem entirely), and touch (runtime ICD description lookup for a static set that should embed descriptions as names() on the map vector). Runtime RxNorm API calls for rituximab CUI discovery are also rejected -- CUIs are curated once offline from rxnav.nlm.nih.gov and pinned statically in config.
 
-**Core technology:**
-- **data.table 1.18.4+**: Fast joins (keyed binary search), in-place aggregations (radix sort-based group-by), and zero-copy updates (`:=` operator). Crossover at ~100K-1M rows; below that, dplyr performance is comparable, above it the gap grows exponentially. On 1M-row dataset: data.table group-by-summarise 0.041s vs dplyr 0.115s (2.8x faster); keyed joins 10-50x faster than named vector lookups.
+**Core technologies (unchanged):**
+- R 4.4.2+ / tidyverse 2.0.0+ -- HiPerGator standard; named predicate style already established
+- dplyr 1.2.0+ -- filter() + mutate() for DoI flagging; inner_join + date arithmetic for attribution
+- stringr 1.5.1+ -- str_remove() dot normalization; already used in utils_cancer.R
+- DuckDB (DBI/dbplyr) -- push prefix filter into SQL before collect(); never load full DIAGNOSIS into R
+- openxlsx2 -- 4-sheet Tableau-ready xlsx output; established R/100+ investigation pattern
+- checkmate -- assert_character() / assert_data_frame() in new utility functions; v2.0 quality standard
 
-**Optional (deferred to Phase 2):**
-- **dtplyr 1.3.3**: Gradual migration path allowing dplyr syntax with data.table backend. Achieves 3-4x speedup with zero rewrite overhead. Useful if migration resistance emerges, but hot-path scripts should use native data.table for maximum performance.
-
-**Explicitly rejected:**
-- **collapse 2.1.7**: Advanced statistical computing package offering 10x faster aggregations than data.table on complex weighted/categorical operations. Unnecessary complexity; data.table covers all project use cases (straightforward payer frequency counts, treatment summaries, episode groupings). Would introduce third syntax paradigm (dplyr, data.table, collapse) violating simplicity.
+**Critical isolation rule:** Do NOT add rituximab RxNorm CUIs to TREATMENT_CODES$chemo_rxnorm -- this would inflate chemo detection counts and corrupt ABVD/BV+AVD regimen identification. Use a new RITDIS_DRUG_RXNORM list that references existing MTX CUIs by name and adds rituximab CUIs additively. Do NOT modify DRUG_GROUPINGS J9310/J9311/J9312 from "Chemotherapy" -- those entries are correct for the cancer pipeline and must remain unchanged.
 
 ### Expected Features
 
-Research focused on optimization features, not product features. Key capabilities needed from data.table:
+**Must have (table stakes) -- FDA-approved or major-guideline-supported:**
 
-**Must have (table stakes):**
-- Keyed joins replacing named vector lookups (AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP, TIER_MAPPING, TREATMENT_CODES) — 6 lookup tables totaling ~1,140 entries
-- In-place column updates with `:=` eliminating copy-on-modify overhead
-- `by=` aggregation replacing group_by/summarise for 3-10x speedup on R/60 same-day resolution (2M+ encounters grouped by PATID+ADMIT_DATE)
-- fcase() replacing case_when() for 2-4x speedup on multi-condition logic (30+ case_when calls across R/02 payer functions, R/60 frequency tables)
-- Preserve output correctness — migration is speed-only, results must match dplyr exactly (smoke test R/88 with 35 sections must all pass)
+| Code Set | ICD-10 Prefix | ICD-9 | Drug | Capture Strategy |
+|----------|--------------|-------|------|------------------|
+| Rheumatoid Arthritis | M05, M06 | 714 | RTX+MTX | 3-char prefix |
+| GPA (Wegener) | M31.30, M31.31, M31.39 | 446.4 | RTX | 4-char prefix M313 |
+| MPA | M31.7 | 447.8 | RTX | Specific code |
+| Pemphigus vulgaris + variants | L10 (all) | 694.4 | RTX | 3-char prefix L10 |
+| Cicatricial pemphigoid (MMP) | L12 | 694.5, 694.6x | RTX | 3-char prefix L12 |
+| SLE | M32 | 710.0 | RTX+MTX | 3-char prefix M32 |
+| ITP | D69.3, D69.41 | 287.31 | RTX | Specific codes (D693 4-char key) |
+| Warm-AIHA / Cold agglutinin | D59.1x | 283.0 | RTX | 4-char prefix D591 |
+| NMO/Devic | G36.0 | 341.0 | RTX | Specific code |
+| Dermatomyositis/PM | M33 | 710.3, 710.4 | MTX+RTX | 3-char prefix M33 |
+| Psoriasis / PsA | L40 | 696.0, 696.1 | MTX | 3-char prefix L40 |
+| Crohn disease | K50 | 555.x | MTX | 3-char prefix K50 |
 
-**Should have (differentiators):**
-- dtplyr hybrid mode for zero-rewrite migration path on low-risk scripts
-- Secondary indices (setindex()) for multi-column query optimization without data reordering
-- Rolling joins for temporal lookups (payer at treatment date ±30 days in R/11) — cleaner than manual window logic but high complexity
-- Reference semantics for nested function calls — performance win but breaks functional programming expectations (requires copy() discipline)
+**Should have (differentiators / EDGE indications):**
+- Cold agglutinin disease (D59.12) -- FY2023 expansion, distinct from warm-AIHA
+- Myasthenia gravis (G70.00, G70.01) -- RTX increasingly used; gap in most payer databases
+- Sjogren syndrome (M35.0x / M350 4-char prefix) -- RTX for systemic manifestations
+- Cryoglobulinemic vasculitis (D89.1) -- RTX preferred; often missed in code sets
+- Skin-limited vasculitis (L95.8, L95.9) -- RTX for refractory leukocytoclastic vasculitis
+- Ulcerative colitis (K51) -- MTX EDGE tier (less evidence than Crohn)
+- IgA vasculitis (D69.2) -- RTX in severe nephritis; 4-char key D692 disambiguates from D693 (ITP)
 
-**Anti-features (explicitly avoid):**
-- Complete dplyr removal — conflicts with "named predicate" readability requirement (has_*, with_*, exclude_* cohort filters)
-- Global .datatable.aware=TRUE without scoping — breaks encapsulation in utility functions
-- Native data.table in all 77 scripts — over-optimization (90% process <100K rows)
-- Replacing DuckDB backend — data.table is in-memory only, DuckDB provides disk-backed lazy queries for 1-5GB CSVs
-- Factor-level encoding for payer categories — 8-category system sees negligible memory savings, added join complexity
+**Anti-features (codes to explicitly exclude):**
+- I77.82 -- The RTF called this 'ANCA-positive vasculitis'; it is 'Dissection of artery' in ICD-10-CM FY2026. Most critical seed error. Use M31.30/M31.31/M31.7 for GPA/MPA.
+- D47.Z2 (Castleman disease) -- Already in CANCER_SITE_MAP under D47 = 'MDS/Myeloproliferative.' Double-classification is a hard error.
+- L10.81 (Paraneoplastic pemphigus) -- Include code but attach paraneoplastic_flag = TRUE column; in HL cohort, L10.81 is nearly always a cancer complication, not an independent autoimmune rituximab indication.
+- H46.2 (Nutritional optic neuropathy) and H46.3 (Toxic optic neuropathy) -- Not autoimmune; use 4-char prefix H460, H461, H468, H469 rather than 3-char H46.
+- M30.1 (EGPA/Churg-Strauss) -- Mepolizumab now FDA-preferred; RTX only off-label. Include as LOW-confidence EDGE only.
+
+**Three-state flag design (do not simplify to two-state):**
+
+The likely_non_lymphoma_directed column takes three values:
+- TRUE: drug co-occurs with DoI dx AND no active HL in same +-90-day window
+- NA: HL also active in same window (ambiguous; reviewer discretion required)
+- FALSE: no drug co-occurrence found in window
+
+Collapsing NA to FALSE silently undercounts the most clinically interesting ambiguous cases.
 
 ### Architecture Approach
 
-Integration pattern: **convert at boundaries, preserve internals**. Do NOT rewrite entire pipeline in data.table syntax — preserve dplyr/tibble for cohort filters, low-frequency scripts, and utility functions without table operations.
+The DoI layer is a parallel analysis system, not an extension of the cancer cascade. It runs in a single new investigation script (R/111_doi_attribution_report.R) that reads existing RDS artifacts (treatment_episode_detail.rds from R/26) and queries the DIAGNOSIS table via DuckDB. Two cached outputs are produced: doi_encounters.rds (encounter-grain: one row per PATID x ENCOUNTERID x doi_code) and doi_patients.rds (patient-grain summary). A 4-sheet Tableau-ready xlsx is the deliverable. Six files are touched in total -- two new, four modified -- and the cancer cascade files (utils_cancer.R, R/28, treatment_episodes.rds) are strictly read-only.
 
-**Major components:**
+**New and modified files:**
 
-1. **Lookup tables (R/00_config.R)** — Convert 6 named character vectors to keyed data.tables stored in LOOKUP_TABLES_DT list. Backward compatible: named vectors remain unchanged, scripts migrate individually.
+1. R/00_config.R (MODIFIED) -- Section 4c: DOI_CODE_MAP (ICD-10 and ICD-9 prefix entries, named character vector mirroring CANCER_SITE_MAP); Section 4d: RITUXIMAB_CODES, MTX_CODES, DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
+2. R/utils/utils_doi.R (NEW) -- is_doi_code(dx) and classify_doi_codes(codes): strict structural mirrors of is_cancer_code() / classify_codes(); auto-sourced via existing utils glob in R/00_config.R
+3. R/111_doi_attribution_report.R (NEW) -- Complete investigation script: DuckDB DIAGNOSIS pull -> DoI classification -> attribution join (ENCOUNTERID-first tier 1, +-90-day PATID temporal tier 2) -> likely_non_lymphoma_directed derivation -> 4-sheet xlsx
+4. R/39_run_all_investigations.R (MODIFIED) -- +1 entry in investigation_scripts, +1 in expected_xlsx
+5. R/SCRIPT_INDEX.md (MODIFIED) -- +1 row for R/111
+6. R/88_smoke_test_comprehensive.R (MODIFIED) -- New section [30/30] with 10 checks including the mutual-exclusivity hard-stop assertion
 
-2. **utils_dt.R (new utility module)** — Centralize data.table conversion helpers: ensure_dt() for lazy conversion, to_tibble_safe() for back-conversion, get_lookup_dt() for lookup table access. Sourced only by scripts needing data.table operations (isolates from utils_payer.R which is sourced by 20+ scripts).
+**Attribution join -- two-tier:**
+- Tier 1 (higher confidence): ENCOUNTERID direct match -- drug and DoI diagnosis share the same visit
+- Tier 2 (broader): PATID + abs(DX_DATE - treatment_date) <= 90L temporal window
 
-3. **classify_payer_tier_dt() (new function variant)** — data.table version of classify_payer_tier() in utils_payer.R using keyed joins, fcase() logic, and optional tibble return for downstream compatibility. Allows phased migration: existing classify_payer_tier() unchanged, call sites update individually.
-
-4. **Hot-path script optimization** — R/60 same-day resolution (368 lines, group_by ID+date with 10+ summarise columns), R/28 episode classification (DRUG_GROUPINGS/CODE_SUBCATEGORY_MAP lookups), R/02 payer harmonization (3 nested case_when functions). Convert group_by/summarise to DT[, .(col = expr), by = .(key)], replace named vector lookups with keyed joins.
-
-**Data flow changes:**
-- **Before:** DuckDB → materialize() → tibble → classify_payer_tier() [named vector lookup] → tibble → group_by/summarise → tibble → write_csv()
-- **After:** DuckDB → materialize() → tibble → setDT() → data.table → classify_payer_tier_dt() [keyed join] → DT[, by=] → setDF() → tibble → write_csv()
-
-**Key change:** Single conversion at start (tibble → data.table), single conversion at end (data.table → tibble). Minimizes boundary crossings, preserves downstream compatibility with openxlsx2/ggplot2.
+**+-90-day window rationale:** Rituximab maintenance for autoimmune conditions is every 6 months; clinical re-assessment is quarterly. MTX for IBD/psoriasis is re-assessed at 12-week intervals. +-30 days (the cancer cascade window) would miss the vast majority of legitimate autoimmune co-occurrences. +-180 days exceeds one rituximab dosing cycle and introduces unacceptable noise. DOI_ATTRIBUTION_WINDOW_DAYS is a named constant in config -- not a hardcoded magic number -- and is documented in the xlsx Metadata sheet for SME review.
 
 ### Critical Pitfalls
 
-1. **Reference semantics silent mutation** — Functions using `:=` modify inputs in-place, breaking tidyverse copy-on-modify assumptions. Smoke test may pass locally but fail on HiPerGator if objects reused across scripts. Lookup tables (AMC_PAYER_LOOKUP) could gain extra columns. **Prevention:** Defensive copy() at function boundaries, never pass original config objects to data.table operations, document reference semantics in function headers. **Detection:** waldo::compare() pre/post function calls, check data.table::address() for identical addresses with different content.
+1. **I77.82 seed error -- exclude, do not implement.** The seed RTF cited I77.82 as 'ANCA-positive vasculitis.' ICD-10-CM FY2026 codes I77.82 as 'Dissection of artery' -- an entirely unrelated non-inflammatory vascular injury. The correct GPA codes are M31.30/M31.31/M31.39; the correct MPA code is M31.7.
 
-2. **Factor vs character join mismatches** — data.table joins between factor columns (PCORnet CSVs with vroom type inference) and character lookup keys produce NA matches or silent type coercion. Payer categories become NA for valid codes not in factor levels. **Prevention:** Explicit as.character() before joins, specify vroom col_types to prevent factor inference, use nomatch=NA for explicit NA handling, validate join coverage post-optimization. **Detection:** Compare sum(is.na(payer_category)) before/after, check levels(enrollment$RAW_PAYER_TYPE) vs unique(names(AMC_PAYER_LOOKUP)), run on both Windows and Linux.
+2. **D47.Z2 Castleman disease -- cancer cascade hard-stop.** D47 is already mapped in CANCER_SITE_MAP as 'MDS/Myeloproliferative.' Adding D47.Z2 to DOI_CODE_MAP creates double-classification. The mutual-exclusivity assertion sum(is_doi_code(DX) & is_cancer_code(DX)) == 0 (run as a hard-stop before any output) catches this and any future accidental overlaps. This assertion must also appear in the R/88 smoke test.
 
-3. **Downstream tool incompatibility** — openxlsx2 and ggplot2 expect tibbles/data.frames; data.table's additional attributes (keys, indices, .internal.selfref) may break grain labels (Phase 89), lose grouped tibble metadata, or cause unexpected sort order in ggalluvial flows. **Prevention:** Explicit as_tibble() before wb$add_data(), preserve conversion checkpoints in optimization workflow (optimize with data.table, return tibble), test both tibble and data.table outputs. **Detection:** Compare output/*.xlsx file sizes/sheet counts, check for "Coercing data.table to data.frame" warnings, waldo::compare() on critical output structures.
+3. **L10.81 paraneoplastic pemphigus -- flag, do not exclude.** Include the code in DOI_CODE_MAP but attach a paraneoplastic_flag = TRUE marker in R/111. In an HL cohort, paraneoplastic pemphigus is typically a cancer complication, not an independent autoimmune rituximab indication. Leaving it unflagged inflates the 'Pemphigus' category with cancer-related codes.
 
-4. **DuckDB collect() interactions** — Mixing DuckDB's lazy evaluation (collect() returns new tibble) with data.table's reference semantics creates inconsistent behavior depending on USE_DUCKDB flag. RDS backend may reuse cached data.frames across scripts. **Prevention:** Explicit copy() in get_pcornet_table() backend abstraction, document mutation assumptions, parity testing between backends. **Detection:** Run with USE_DUCKDB=TRUE vs FALSE and diff outputs.
+4. **Co-occurrence, not attribution -- enforce in naming and prose.** Output columns must use 'with [dx]' language, never 'for [dx]'. Every output sheet must carry the CAVEATS footnote: 'Co-occurrence does not imply treatment attribution. Clinical chart review required for confirmation.' Code-review gate: reject any output column named rituximab_for_* or mtx_reason_*.
 
-5. **Group-by memory explosion** — Converting group_by/summarise to data.table [, by=] naively can trigger Cartesian products if keys/indices are missing. ENCOUNTER table (5M+ rows) with group_by(PATID, ADMIT_DATE) may scan full table instead of binary search. **Prevention:** setkey() or setindex() before group-by operations, benchmark before production deployment, monitor memory usage with bench::mark(). **Detection:** Compare row counts (output rows should ≤ input rows), log execution time.
+5. **ICD-9/ICD-10 DX_TYPE gating -- never mix in a single undifferentiated prefix lookup.** The classifier must partition by DX_TYPE ('09' / '10') before prefix matching, mirroring is_hl_diagnosis() in utils_icd.R. DX_TYPE can also be NA or 'SM' (SNOMED) in PCORnet; handle those as FALSE in is_doi_code().
+
+6. **D69 disambiguation via 4-char prefix keys.** D69.2 (IgA vasculitis) and D69.3 (ITP) share the 3-char prefix D69. DOI_CODE_MAP must use 4-char keys 'D692' (Vasculitis) and 'D693' (Hematologic Autoimmune) and the classifier must try the 4-char key before the 3-char key -- identical to the C810/C81 cascade in CANCER_SITE_MAP.
+
+7. **MTX attribution false-positives -- high-dose IV vs. low-dose oral are indistinguishable by RXNORM alone.** Flag temporal directionality (MTX predating HL diagnosis by >6 months is a likely pre-existing autoimmune signal), never claim attribution, and expose dose/route columns from PRESCRIBING/MED_ADMIN if available.
+
+8. **DuckDB-native prefix filter -- never load full DIAGNOSIS into R.** Push the prefix filter into DuckDB SQL (WHERE LEFT(DX, 3) IN (...)) and collect() only the filtered subset. Loading full DIAGNOSIS into R will OOM on HiPerGator with a multi-million-row table.
+
+9. **HIPAA small-cell suppression on rare DoI categories.** NMO (~1-4 per 100k), pemphigus vulgaris (~1 per 100k), GPA/Wegener (~3 per 100k) -- in a Hodgkin cohort, these will produce cells of 0-5. The suppress_small() helper (threshold = 11L, pattern from R/57) must cover all n_patients and n_encounters columns in Sheet 3. Rare ANCA sub-categories may need merging if individual counts are <11.
+
+10. **Dual-environment runtime gate -- HiPerGator confirmation is part of the definition of done.** R/88 smoke test section must include an IS_LOCAL-gated block that queries the real DIAGNOSIS table and logs DoI hit counts. Phase transition notes must explicitly record HiPerGator runtime confirmation.
+
+---
 
 ## Implications for Roadmap
 
-Based on research, suggested 4-phase structure:
+Based on the research, v3.3 decomposes cleanly into four phases following strict dependency order. Phase 1 is the prerequisite; Phases 2 through 4 can be time-boxed in a single sprint once Phase 1 is complete.
 
-### Phase 95: Infrastructure Setup (Low Risk)
+### Phase 1: Code-Set and Infrastructure Centralization
 
-**Rationale:** Add data.table infrastructure without changing behavior. Ensures backward compatibility before any optimization. Validates lookup table conversion approach.
-
-**Delivers:**
-- data.table 1.18.4+ in renv.lock
-- R/utils/utils_dt.R with conversion helpers (ensure_dt, to_tibble_safe, get_lookup_dt)
-- LOOKUP_TABLES_DT list in R/00_config.R (6 keyed lookup tables)
-- Zero behavior changes (all existing scripts run unchanged)
-
-**Addresses:** Stack integration (data.table + existing tidyverse/DuckDB/checkmate)
-
-**Avoids:** Pitfall 1 (reference semantics) via conditional creation (if data.table installed), preserving named vectors for backward compatibility
-
-**Research flags:** NO RESEARCH NEEDED — standard renv package installation, additive changes only
-
-### Phase 96: classify_payer_tier_dt() Implementation (Medium Risk)
-
-**Rationale:** Create data.table variant of most-called utility function with correctness validation before touching hot-path scripts. Validates keyed join pattern, fcase() replacement, and conversion workflow.
+**Rationale:** All downstream code depends on DOI_CODE_MAP being correct and the utility functions existing. The seed has documented gaps and one critical seed error (I77.82). These must be resolved before any classification script is written.
 
 **Delivers:**
-- classify_payer_tier_dt() in R/utils/utils_payer.R (alongside existing dplyr version)
-- Unit test comparing both versions on synthetic data (1000-row fixture)
-- Smoke test section validating output parity
-- Documentation of reference semantics in function header
+- R/00_config.R Section 4c: DOI_CODE_MAP (ICD-10 and ICD-9) with all 14 categories complete, RITDIS_CODE_VERSION constant, inline audit comments per code group
+- R/00_config.R Section 4d: RITUXIMAB_CODES, MTX_CODES (referencing existing CUIs by name), DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
+- R/utils/utils_doi.R: is_doi_code() and classify_doi_codes() with checkmate input validation
+- Fixture augmentation: at least one patient with an ICD-10 DoI code and one with the ICD-9 equivalent
 
-**Uses:** LOOKUP_TABLES_DT keyed joins, fcase() for conditional logic, := for in-place mutation, optional tibble return
+**Implements from features:** Fills all 5 seed gaps (hematologic, connective tissue, GPA/MPA, MG, MTX-specific). Excludes I77.82, D47.Z2.
 
-**Implements:** Component 3 from Architecture (payer classification utility)
+**Avoids:** Pitfalls 1 (ICD-9/10 collision), 2 (dotted/undotted mismatch), 5 (MTX CUI contamination of chemo detection), 12 (code-set incompleteness).
 
-**Avoids:** Pitfall 2 (factor/character joins) via explicit as.character() coercion, Pitfall 1 via copy() at function entry
+**Research flag:** No additional research needed -- FEATURES.md provides the complete verified code set. Implementation is a transcription task from research to config constants.
 
-**Research flags:** NO RESEARCH NEEDED — function logic mirrors existing classify_payer_tier(), data.table syntax well-documented
+---
 
-### Phase 97: R/60 Hot-Path Migration (Medium-High Risk)
+### Phase 2: DoI Classification Script (R/111, Sections 1-5)
 
-**Rationale:** Highest-impact optimization (368-line same-day payer resolution with group_by ID+date on 2M+ encounters). Expected 5-20x speedup. Complex multi-column summarise requires careful migration testing.
-
-**Delivers:**
-- R/60_tiered_same_day_payer.R migrated to data.table group-by syntax
-- CSV output parity validation (diff pre/post optimization)
-- Runtime benchmark log (before/after timings)
-- Updated smoke test Section 15f for same-day payer resolution
-
-**Addresses:** Must-have "by= aggregation" feature, hot-path script optimization from architecture Component 4
-
-**Uses:** setkey(enc_dt, PATID, ADMIT_DATE), DT[, .(n_encounters = .N, ...), by = .(PATID, ADMIT_DATE)], setDF() for tibble return
-
-**Avoids:** Pitfall 5 (DuckDB collect() interactions) via single conversion at start, Pitfall 5 (group-by memory explosion) via setkey() before aggregation, Pitfall 3 (downstream incompatibility) via as_tibble() before CSV export
-
-**Research flags:** POSSIBLE PHASE RESEARCH — if complex conditional logic in summarise doesn't translate cleanly to data.table [, j, by] syntax. May need multi-step approach (compute intermediate columns, then final resolution). Monitor during implementation; trigger /gsd:research-phase if migration stalls.
-
-### Phase 98: R/28 + Remaining Lookup Optimization (Low-Medium Risk)
-
-**Rationale:** Replace named vector lookups in R/28 episode classification (DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP) and other scripts with keyed joins. Lower complexity than R/60, isolated lookups.
+**Rationale:** With the code map and utils in place, the DuckDB query and classification logic can be built and validated. The mutual-exclusivity hard-stop assertion must run here before any outputs are produced.
 
 **Delivers:**
-- R/28_episode_classification.R with DRUG_GROUPINGS[code] → keyed join
-- Remaining lookup-heavy scripts (R/02 payer harmonization if profiling shows bottleneck, R/11 treatment payer)
-- Validation of treatment_episodes.rds structure unchanged (22 columns, same order)
-- Smoke test Section 15 (payer) + Section 20 (episodes) validation
+- R/111_doi_attribution_report.R Sections 1-5: config sourcing, DuckDB DIAGNOSIS pull with DuckDB-native prefix filter, is_doi_code() / classify_doi_codes() application, the !is_cancer_code(DX) guard, doi_encounters.rds and doi_patients.rds cached artifacts
+- Hard-stop assertion: sum(is_doi_code(DX) & is_cancer_code(DX)) == 0 -- script halts if non-zero
+- tabyl(doi_category) counts reviewed against clinical prevalence expectations (RA should dominate; NMO, pemphigus rare)
 
-**Addresses:** Must-have "keyed joins for lookup tables" feature (6 lookup tables totaling ~1,140 entries)
+**Uses:** utils_doi.R (Phase 1), DuckDB backend, DX_TYPE gating, D69 4-char disambiguation.
 
-**Uses:** DT[LOOKUP_TABLES_DT$DRUG_GROUPINGS, on = .(code), drug_group := i.treatment_type]
+**Avoids:** Pitfalls 3 (prefix over-capture caught by tabyl review), 4 (cancer cascade overlap -- hard-stop assertion), 7 (DIAGNOSIS as primary source, not CONDITION), 10 (DuckDB-native filter prevents OOM).
 
-**Avoids:** Pitfall 1 (reference semantics) via fresh lookup copies in functions, Pitfall 8 (row reordering) via setorder() post-join if needed
+**Research flag:** Standard pattern (mirrors R/104/R/105/R/106). No additional research needed.
 
-**Research flags:** NO RESEARCH NEEDED — keyed join pattern validated in Phase 96, straightforward replacement
+---
+
+### Phase 3: Attribution Linkage and Output Design (R/111, Sections 6-9)
+
+**Rationale:** Attribution logic depends on doi_encounters.rds existing (Phase 2). The +-90-day window design and column naming convention must be locked here before any report prose is written. This is the highest-risk phase for clinical validity violations.
+
+**Delivers:**
+- R/111 Sections 6-9: Two-tier attribution join (ENCOUNTERID-first, then +-90-day PATID temporal), near_rituximab / near_mtx logical flags, attribution_method column (encounter_id / temporal_window / none), likely_non_lymphoma_directed three-state flag
+- 4-sheet xlsx: Sheet 1 (Patient Prevalence), Sheet 2 (Encounter Co-occurrence), Sheet 3 (Drug x DoI Summary with HIPAA suppression), Sheet 4 (Metadata with window documentation)
+- paraneoplastic_flag column on Sheet 2 for L10.81 encounters
+- CAVEATS footnote on every sheet
+
+**Avoids:** Pitfalls 5 (MTX attribution false-positives -- co-occurrence language enforced), 6 (temporal window as named constant), 8 (clinical validity over-claiming), 9 (HIPAA suppression on all count columns).
+
+**Research flag:** The +-90-day window choice should be reviewed with the clinical SME before xlsx is finalized. Include a lookback sensitivity note in the Metadata sheet (+-30-day and +-180-day counts for comparison).
+
+---
+
+### Phase 4: Registration, Smoke Test, and HiPerGator Runtime Confirmation
+
+**Rationale:** Script and output registration are separate from implementation and can proceed in parallel with Phase 3 once R/111 structure is stable. HiPerGator runtime confirmation is the definition-of-done gate for v3.3.
+
+**Delivers:**
+- R/39_run_all_investigations.R: R/111 added to investigation_scripts and expected_xlsx
+- R/SCRIPT_INDEX.md: R/111 row added
+- R/88_smoke_test_comprehensive.R Section [30/30]: 10 checks covering DOI_CODE_MAP existence, no-overlap with cancer maps (hard-stop), is_doi_code() / classify_doi_codes() spot-checks, utils_doi.R and R/111 file existence, IS_LOCAL-gated HiPerGator runtime check
+- HiPerGator runtime confirmation logged in phase transition notes
+
+**Avoids:** Pitfalls 10 (dual-environment gap), 11 (smoke-test staleness).
+
+**Research flag:** Standard registration pattern. No additional research needed.
+
+---
 
 ### Phase Ordering Rationale
 
-- **Infrastructure first (Phase 95):** Validates data.table installation, lookup table conversion, backward compatibility before any behavior changes. Low risk, enables subsequent phases.
+- Phase 1 is a strict prerequisite for Phases 2-4: DOI_CODE_MAP must exist before any classification code is written.
+- Phase 2 is a strict prerequisite for Phase 3: doi_encounters.rds must exist before attribution joins.
+- Phases 3 and 4 have overlapping work and can proceed in parallel once Phase 2 DuckDB classification output is verified.
+- The mutual-exclusivity hard-stop assertion in Phase 2 is the most important single check in v3.3 -- it guarantees the cancer cascade is never contaminated.
 
-- **Utility function next (Phase 96):** classify_payer_tier_dt() is called from 10+ scripts including R/60. Must be validated before hot-path migration. Medium risk due to complex logic (dual-eligible detection, tier hierarchy), but existing function unchanged as fallback.
+### Research Flags
 
-- **Hot-path before bulk (Phase 97):** R/60 is highest-impact optimization (same-day resolution on 2M+ encounters). Validates complex group-by migration pattern. If this succeeds, remaining scripts (R/28, R/02) follow same pattern. Medium-high risk due to 10+ column summarise with nested conditionals, but smoke test infrastructure (Section 15f) provides validation.
+Phases with well-documented patterns -- additional research not needed:
+- **Phase 1:** Code map transcription from research to config. Pattern established; all codes verified in FEATURES.md.
+- **Phase 2:** Mirrors classify_codes() / is_cancer_code() exactly. Pattern established in utils_cancer.R.
+- **Phase 4:** Registration and smoke-test patterns established in R/39 and R/88. No novelty.
 
-- **Bulk migration last (Phase 98):** Straightforward lookup replacements after pattern proven in Phase 96-97. Low-medium risk, isolated changes.
+Phases that benefit from SME review during planning:
+- **Phase 3:** The +-90-day attribution window and the likely_non_lymphoma_directed three-state flag semantics should be reviewed with the clinical investigator before the xlsx is finalized.
 
-**Dependency chain:** Phase 95 (LOOKUP_TABLES_DT) → Phase 96 (classify_payer_tier_dt uses lookup tables) → Phase 97 (R/60 uses classify_payer_tier_dt) → Phase 98 (applies patterns from 96-97 to remaining scripts)
-
-**Pitfall avoidance:**
-- Phases 95-96 establish correct conversion workflow (copy() discipline, character coercion) before touching production hot paths
-- Phase 97 validates complex aggregation migration before bulk rollout
-- Incremental approach allows rollback at any phase without losing prior gains
-
-**Research flags:**
-- **Need deeper research:** Phase 97 only, if conditional logic in group_by/summarise doesn't translate to data.table syntax
-- **Standard patterns:** Phases 95, 96, 98 — well-documented data.table installation, keyed joins, utility function patterns
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Official CRAN page verified (data.table 1.18.4, May 2026), extensive benchmarks (3-10x speedup on 1M+ rows), integration with tidyverse/DuckDB/checkmate documented |
-| Features | MEDIUM-HIGH | Core optimizations (keyed joins, fcase, :=, by= aggregation) well-documented with proven benchmarks. Complexity risk in R/60's multi-column group_by requires careful migration testing. Performance targets directionally correct but need empirical validation on production HiPerGator data (3M encounters) |
-| Architecture | HIGH | Boundary-conversion pattern (convert once at start/end) is established best practice. Hybrid approach (data.table hot paths, dplyr cohort filters) validated by existing pipeline structure. Component boundaries clear (lookup tables, utility functions, hot-path scripts) |
-| Pitfalls | HIGH | Reference semantics, factor/character joins, downstream tool compatibility extensively documented in official vignettes and community resources. Prevention strategies proven (copy() discipline, explicit coercion, parity testing) |
+| Stack | HIGH | Direct codebase inspection confirmed all integration points; no new packages needed; renv.lock unchanged |
+| Features -- table-stakes codes | HIGH | FDA-approved indications verified; ICD-10-CM FY2025 tabular verified; cancer map overlap verified against R/00_config.R |
+| Features -- EDGE codes | MEDIUM | Published clinical evidence but not FDA-approved; RTX dose/indication ambiguity is inherent to claims data |
+| Features -- ICD-9 equivalents | MEDIUM | Standard GEMS crosswalk patterns; pre-2015 codes verified for primary conditions; EDGE ICD-9 LOW confidence until runtime |
+| Architecture | HIGH | All patterns derived from direct codebase inspection; no inference required |
+| Pitfalls | HIGH | Project-specific pitfalls derived from known failure modes in this codebase (Phase 100 CONDITION table finding, Phase 126 smoke-test attestation gap, Phase 124 MED_ADMIN RXNORM_CUI mismatch) |
 
-**Overall confidence:** HIGH
+**Overall confidence: HIGH**
 
-Core recommendations (data.table 1.18.4 for keyed joins + group-by optimization, hybrid integration preserving dplyr readability, 4-phase migration) are well-supported by official documentation and independent benchmarks. Primary uncertainty is in Phase 97 (R/60 complex aggregation) where project-specific conditional logic may require multi-step data.table translation.
+### Gaps to Address During Implementation
 
-### Gaps to Address
+- **Rituximab RxNorm CUI enumeration:** Ingredient CUI 121191 confirmed (MEDIUM confidence). Product-level CUIs must be enumerated manually from RxNav browser before Phase 1 config commit. One-time curation step, not a recurring task.
+- **D59.1 vs D59.1x granularity in real extract:** ICD-10-CM FY2023 expanded D59.1 into D59.11/D59.12/D59.13/D59.19. Older records will have D59.1 (legacy). The 4-char prefix key 'D591' captures both forms; verify at runtime.
+- **HiPerGator DIAGNOSIS table column name:** DX_TYPE confirmed in PCORnet CDM v7.0 spec and existing pipeline code. Some PCORnet extracts use DX_TYPE_CD. Phase 2 DuckDB query should log actual column name from DBI::dbListFields().
+- **EGPA (M30.1) ICD-9 ambiguity:** ICD-9 446.4 was used for both GPA and EGPA in ICD-9. Document in config comments and use 446.4 for GPA only.
+- **Fixture augmentation scope:** The current 20-patient fixture is insufficient to exercise HIPAA suppression logic. Either augment the fixture or accept that suppression can only be verified at HiPerGator runtime.
 
-**Gap 1: R/60 conditional logic complexity**
-- **What's unknown:** Whether R/60's 10+ column summarise with nested case_when (FLM override > special code override > tier hierarchy) translates cleanly to data.table [, j, by] syntax
-- **How to handle:** Start Phase 97 with dtplyr hybrid (lazy_dt() wrapper) for quick validation. If profiling shows it's still slow, convert to native data.table with multi-step approach (compute intermediate columns via chained [ operations, then final resolution)
-- **Trigger:** If Phase 97 migration stalls >4 hours, run /gsd:research-phase "R/60 complex aggregation data.table translation patterns"
-
-**Gap 2: HiPerGator-specific performance validation**
-- **What's unknown:** Actual speedup on production HiPerGator data (3M encounters from OneFlorida HL cohort) vs benchmarks (1M row synthetic data)
-- **How to handle:** Log execution times in script headers pre/post migration. Use system.time() for one-off comparisons. Validate crossover thresholds (100K-1M rows) match published benchmarks
-- **Not blocking:** Benchmarks from multiple independent sources agree; production validation confirms gains but doesn't affect migration approach
-
-**Gap 3: openxlsx2 + data.table edge cases**
-- **What's unknown:** Whether openxlsx2's write_xlsx() wrapper methods handle data.table's additional attributes (keys, indices, .internal.selfref) gracefully for grain-labeled outputs (Phase 89)
-- **How to handle:** Explicit as_tibble() before wb$add_data() (defensive approach). Test visual outputs during Phase 97 (save PNGs before/after, diff). If issues emerge, add to_tibble_safe() wrapper checking for/removing data.table attributes
-- **Low risk:** openxlsx2 documentation states "accepts everything convertible to data.frame"; data.table inherits from data.frame
+---
 
 ## Sources
 
-### Primary (HIGH confidence)
+### Primary (HIGH confidence -- direct codebase inspection)
+- R/00_config.R -- CANCER_SITE_MAP, ICD9_CANCER_SITE_MAP, DRUG_GROUPINGS, TREATMENT_CODES$chemo_rxnorm, AMC_PAYER_LOOKUP -- classifier constant patterns verified
+- R/utils/utils_cancer.R -- is_cancer_code(), classify_codes() 4-tier cascade structure confirmed
+- R/utils/utils_icd.R -- is_hl_diagnosis() DX_TYPE-gated pattern (correct template for is_doi_code())
+- R/utils/utils_treatment.R -- get_chemo_hits() signature confirmed; accepts any chemo_rxnorm vector
+- R/28_episode_classification.R -- ENCOUNTERID-first + 30-day temporal fallback pattern
+- R/100_ruca_rurality_summary.R -- R/100+ investigation script convention
+- .planning/PROJECT.md -- HIPAA suppression requirement, dual-environment constraint, Phase 100 CONDITION table finding
+- .planning/research/ritdis_seed_codes.md -- seed code set with documented gaps
 
-**Official Documentation:**
-- [data.table CRAN page](https://cran.r-project.org/web/packages/data.table/data.table.pdf) — Version 1.18.4, May 2026; keyed joins, reference semantics, fcase/fifelse, GForce optimization
-- [data.table Reference Semantics Vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-reference-semantics.html) — `:=` operator, copy() usage, set* functions
-- [data.table Keys and Fast Subset Vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-keys-fast-subset.html) — setkey(), binary search joins
-- [data.table Joins Vignette](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-joins.html) — Keyed joins, on= syntax, rolling joins, NA handling
-- [dtplyr CRAN page](https://cran.r-project.org/web/packages/dtplyr/dtplyr.pdf) — Version 1.3.3, Feb 2026; dplyr to data.table translation layer
-- [collapse CRAN page](https://cran.r-project.org/package=collapse) — Version 2.1.7, May 2026; advanced statistical computing (evaluated, rejected as unnecessary)
-- [checkmate data.table support](https://mllg.github.io/checkmate/reference/checkDataTable.html) — assert_data_table() validation
+### Primary (HIGH confidence -- official clinical/regulatory sources)
+- FDA rituximab (Rituxan) prescribing information -- approved indications: RA (2006), GPA/MPA (2011), pemphigus vulgaris (2018)
+- ICD-10-CM FY2025 Tabular List (CMS, effective Oct 2024) -- all M/L/D/G/K/I prefix code families verified
+- ICD-10-CM FY2023 expansion notes -- D59.1x AIHA granularity; M35.0x Sjogren expansion
+- PCORnet CDM v7.0 specification -- DIAGNOSIS table grain (DX_TYPE 09/10), CONDITION table grain
 
-**Performance Benchmarks:**
-- [data.table vs dplyr benchmark (MetricGate)](https://metricgate.com/blogs/data-table-vs-dplyr-r-performance/) — 3-10x faster on grouped ops >1M rows
-- [data.table vs dplyr (R-statistics.co)](https://r-statistics.co/data-table-vs-dplyr.html) — 1M row benchmark: 0.041s vs 0.115s (2.8x speedup)
-- [data.table benchmarking guide](https://rdatatable.gitlab.io/data.table/articles/datatable-benchmarking.html) — Official performance testing methodology
-- [Fast data lookups in R (R-bloggers)](https://www.r-bloggers.com/2017/03/fast-data-lookups-in-r-dplyr-vs-data-table/) — 25x improvement with keyed joins
-
-### Secondary (MEDIUM confidence)
-
-**Best Practices and Patterns:**
-- [data.table Do's and Don'ts (GitHub Wiki)](https://github.com/Rdatatable/data.table/wiki/Do's-and-Don'ts) — Best practices, common pitfalls
-- [Towards Data Science: data.table speed with dplyr syntax](https://towardsdatascience.com/data-table-speed-with-dplyr-syntax-yes-we-can-51ef9aaed585/) — dtplyr hybrid approach overview
-- [Martin Chan: Comparing dplyr and data.table](https://martinctc.github.io/blog/comparing-common-operations-in-dplyr-and-data.table/) — Common operation syntax comparison
-- [Column Assignment and Reference Semantics (rdatatable-community)](https://rdatatable-community.github.io/The-Raft/posts/2024-02-18-dt_particularities-toby_hocking/) — Common gotchas from data.table maintainers
-- [Waldo Package](https://waldo.r-lib.org/) — Testing verification for pre/post optimization parity
-
-**HPC and Environment:**
-- [HiPerGator R Guide](https://wiki.weecology.org/docs/computers-and-programming/hipergator-reference/) — HPC R package installation
-- [renv on HPC (Darya Vanichkina)](https://www.daryavanichkina.com/posts/210728_renvhpc.html) — renv installation patterns for HPC
-- [renv for HPC reproducibility](https://bioinformatics.ccr.cancer.gov/docs/reproducible-r-on-biowulf/L3_PackageManagement/) — Package management best practices
-
-**Integration Context:**
-- [DuckDB and R integration (bwlewis)](https://bwlewis.github.io/duckdb_and_r/) — DuckDB + data.table workflow
-- [InfoWorld: Quick lookup tables with named vectors](https://www.infoworld.com/article/2257959/do-more-with-r-quick-lookup-tables-using-named-vectors.html) — Named vector replacement rationale
-- [openxlsx2 Package Documentation (May 2026)](https://cran.r-project.org/web/packages/openxlsx2/openxlsx2.pdf) — Compatibility with data.frame variants
-
-### Project-Specific (LOCAL, HIGH confidence)
-
-- C:\Users\Owner\Documents\insurance_investigation\.planning\PROJECT.md — Pipeline structure (77 scripts), DuckDB backend, output requirements
-- C:\Users\Owner\Documents\insurance_investigation\R\00_config.R — 6 named vector lookups identified (3,443 lines total)
-- C:\Users\Owner\Documents\insurance_investigation\R\02_harmonize_payer.R — 3 case_when functions, AMC_PAYER_LOOKUP usage
-- C:\Users\Owner\Documents\insurance_investigation\R\60_tiered_same_day_payer.R — 368 lines, group_by same-day resolution hot path
-- C:\Users\Owner\Documents\insurance_investigation\R\88_smoke_test_comprehensive.R — 35 validation sections to extend for optimization parity
+### Secondary (MEDIUM confidence -- guideline literature)
+- ACR guidelines for biologic DMARDs in RA (2022) -- RTX+MTX combination standard
+- EULAR ANCA-associated vasculitis recommendations (2022) -- RTX FDA-approved GPA/MPA
+- ASH ITP guidelines (2019, 2021 update) -- RTX second-line confirmed
+- ASH AIHA guidelines (2021) -- RTX first-line for warm-AIHA and cold agglutinin disease
+- ECCO Crohn disease guidelines (2023) -- MTX second-line immunomodulator
+- International Pemphigus and Pemphigoid Foundation guidelines (2023)
+- NLM RxNav (rxnav.nlm.nih.gov) -- rituximab ingredient CUI 121191 (MEDIUM; product-level CUIs require manual enumeration)
 
 ---
-*Research completed: 2026-06-10*
+*Research completed: 2026-07-15*
 *Ready for roadmap: yes*
