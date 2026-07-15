@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.2
 milestone_name: milestone
-status: executing
-stopped_at: Phase 124 Waves 1-3 complete on main; PAUSED at Wave 4 HiPerGator human-action checkpoint (124-04)
-last_updated: "2026-07-15T13:44:02.162Z"
+status: verifying
+stopped_at: Completed Phase 125 Plan 01 (125-01-PLAN.md) — R/88 Section 15o Check 6 fixed
+last_updated: "2026-07-15T14:31:00.122Z"
 last_activity: 2026-07-15
 progress:
-  total_phases: 21
-  completed_phases: 21
-  total_plans: 36
-  completed_plans: 36
+  total_phases: 22
+  completed_phases: 22
+  total_plans: 37
+  completed_plans: 37
 ---
 
 # Project State
@@ -21,13 +21,13 @@ See: .planning/PROJECT.md (updated 2026-06-12)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 124 — integrate-the-newly-detected-med-admin-dispensing-chemo-treatments-phase-122-fix-quantified-in-phase-123-into-all-downstream-outputs-episodes-gantt-timing-regimens-payer-anchoring-and-cohort
+**Current focus:** Phase 125 — fix-r-88-stale-smoke-check-for-r-102-death-cause-guard
 
 ## Current Position
 
-Phase: 124
-Plan: Not started
-Status: Ready to execute
+Phase: 125 (fix-r-88-stale-smoke-check-for-r-102-death-cause-guard) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
 Last activity: 2026-07-15
 
 ## Performance Metrics
@@ -248,11 +248,12 @@ None identified.
 | Phase 123 P03 | 30 | 3 tasks | 2 files |
 | Phase 124 P02 | 14 | 2 tasks | 2 files |
 | Phase 124 P03 | 5 | 2 tasks | 3 files |
+| Phase 125 P01 | 5 | 1 tasks | 1 files |
 
 ## Session Continuity
 
 **Last command:** `/gsd:execute-phase` (2026-07-14)
-**Stopped at:** Phase 124 Waves 1-3 complete on main; PAUSED at Wave 4 HiPerGator human-action checkpoint (124-04)
+**Stopped at:** Completed Phase 125 Plan 01 (125-01-PLAN.md) — R/88 Section 15o Check 6 fixed
 **What's next:** Execute Phase 124 Plan 04 (HiPerGator runtime — snapshot baselines, regenerate artifacts, run R/110)
 
 ### Recent Changes

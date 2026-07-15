@@ -286,7 +286,7 @@ Plans:
 **Goal:** R/88 comprehensive smoke test passes with zero failures (exit 0) by correcting the stale R/102 DEATH_CAUSE guard assertion (Section 15o Check 6) to match the Phase 119 DEATH_CAUSE-table implementation. Check 6 currently asserts the removed `DEATH.DEATH_CAUSE`-era pattern (`DEATH_CAUSE_CODE` + `death_cause_available`) — neither is live in current R/102 (`death_cause_available` has zero occurrences; `DEATH_CAUSE_CODE` is comment-only), so the check can never pass and R/88 exits 1 (SLURM-breaking). The fix rewrites Check 6 to assert the current table-availability guard (`get_pcornet_table("DEATH_CAUSE")` + `is.null(dc_tbl)`, R/102 lines 144-145) and updates the description to "table-availability". Single-file edit to R/88; R/102 is NOT modified; no checks added or removed.
 **Requirements**: SMOKE-125-01
 **Depends on:** Phase 124
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 125-01-PLAN.md -- Rewrite R/88 Section 15o Check 6 to assert the current DEATH_CAUSE table-availability guard (get_pcornet_table + is.null(dc_tbl)); R/102 untouched; Rscript R/88 exits 0
+- [x] 125-01-PLAN.md -- Rewrite R/88 Section 15o Check 6 to assert the current DEATH_CAUSE table-availability guard (get_pcornet_table + is.null(dc_tbl)); R/102 untouched; Rscript R/88 exits 0
