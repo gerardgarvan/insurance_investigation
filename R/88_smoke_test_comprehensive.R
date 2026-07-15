@@ -2161,9 +2161,11 @@ if (r102_exists) {
   check("R/102 reads DEATH table (NHLDEATH-01)",
         grepl('get_pcornet_table\\("DEATH"\\)', r102_text))
 
-  # Check 6: DEATH_CAUSE field-availability guard
-  check("R/102 has DEATH_CAUSE field-availability guard",
-        grepl("DEATH_CAUSE_CODE", r102_text) && grepl("death_cause_available", r102_text))
+  # Check 6: DEATH_CAUSE table-availability guard (Phase 119: R/102 reads the
+  # DEATH_CAUSE table via get_pcornet_table + is.null(dc_tbl) guard, not the
+  # non-existent DEATH.DEATH_CAUSE column / old death_cause_available flag)
+  check("R/102 has DEATH_CAUSE table-availability guard",
+        grepl('get_pcornet_table\\("DEATH_CAUSE"\\)', r102_text) && grepl("is.null\\(dc_tbl\\)", r102_text))
 
   # Check 7: handles 1900 date sentinel + drops NA dates
   check("R/102 handles 1900 date sentinel + drops NA dates",
