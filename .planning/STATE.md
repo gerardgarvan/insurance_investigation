@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.2
-milestone_name: Meeting Gap Resolution Report
-status: shipped
-stopped_at: v3.2 milestone shipped and archived (path B — Phase 126 verified-by-prose-only); ROADMAP/REQUIREMENTS archived to milestones/, tagged v3.2
-last_updated: "2026-07-15T17:54:08.377Z"
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: defining_requirements
+stopped_at: v3.3 started — PROJECT.md updated, defining requirements
+last_updated: "2026-07-15T00:00:00.000Z"
 last_activity: 2026-07-15
 progress:
-  total_phases: 23
-  completed_phases: 23
-  total_plans: 37
-  completed_plans: 37
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-07-15 after v3.2)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.2 shipped — planning next milestone (`/gsd:new-milestone`)
+**Current focus:** v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest — defining requirements
 
 ## Current Position
 
-Phase: v3.2 complete (Phases 104-126 shipped 2026-07-15)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone shipped and archived; awaiting next milestone
-Last activity: 2026-07-15
+Status: Defining requirements
+Last activity: 2026-07-15 — Milestone v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) started
 
 ## Performance Metrics
 

@@ -88,6 +88,14 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
+#### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest
+
+- [ ] Curated rituximab + methotrexate non-malignant ICD-9/ICD-10 code set centralized in R/00_config.R
+- [ ] Diagnosis-of-interest classification flag/category (patient + encounter level), non-overlapping with cancer categories
+- [ ] Treatment-attribution linkage (rituximab/MTX administration ↔ non-malignant diagnosis, temporal window)
+- [ ] Standalone Tableau-ready diagnosis-of-interest prevalence + drug co-occurrence table/report
+- [ ] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts
+
 #### v3.2 Meeting Gap Resolution Report
 
 - [x] Radiation before HL diagnosis investigation — flag/quantify treatments occurring before first HL dx date — v3.2 Phase 104
@@ -125,20 +133,18 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.2 Meeting Gap Resolution Report
+## Current Milestone: v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest
 
-**Goal:** Create investigation scripts for all remaining meeting note gaps (G4, G5, G8, G10, G11, secondary malignancy, TABLE 1/2) and compile findings into an RMarkdown report for team presentation.
+**Goal:** Identify the non-malignant diagnoses that rituximab and methotrexate treat (autoimmune, inflammatory, hematologic), add them as a new "diagnosis of interest" class distinct from the cancer cascade, and use them to disambiguate treatment attribution — flagging when a patient's rituximab/MTX is likely for a condition other than their lymphoma.
 
 **Target features:**
-- Radiation before HL diagnosis — flag and quantify treatments occurring before first HL dx date
-- HL+NHL overlap validation — focused report on ~4,000/8,000 dual-code patient concern
-- "Ethna" immunotherapy — verify/correct in code mappings
-- Organ transplant code (line 11) — cross-check inclusion appropriateness
-- SCT codes above line 22 — verify patient data
-- Secondary malignancy table — 7-day gap criterion, population-based columns
-- TABLE 1: Encounter ID → all cancer diagnosis codes (Tableau-ready)
-- TABLE 2: Chemo drugs by class/category + associated cancer codes (Tableau-ready)
-- RMarkdown report compiling all investigation findings with tables and summaries
+- Curated, researched ICD-9/ICD-10 code set for rituximab + methotrexate non-malignant indications (seeded from `ritdis.rtf`, completed via research), centralized in `R/00_config.R` alongside the existing cancer maps
+- Classification-layer flag/category tagging patients and encounters carrying these diagnoses — explicitly non-overlapping with the HL/NHL/cancer categories
+- Treatment-attribution logic linking these diagnoses to rituximab/MTX administrations via temporal proximity to flag likely non-lymphoma-directed therapy
+- Standalone, Tableau-ready investigation table/report quantifying prevalence and drug↔diagnosis co-occurrence, consistent with prior meeting-gap deliverables
+- Smoke-test coverage + SCRIPT_INDEX / R/39 registration following v2.0 quality standards
+
+**Non-cancer scope:** HL/NHL/cancer diagnoses remain in the existing `classify_codes()` / `utils_cancer.R` cascade; this class runs parallel to it and must not double-count oncology codes.
 
 ## Current State
 
@@ -383,4 +389,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-15 after v3.2 milestone (23 phases 104-126 shipped; meeting gap resolution + output reshaping + RUCA/ZIP enrichment + DEATH_CAUSE NHL fix + MED_ADMIN/DISPENSING chemo-detection integration + R/88 exit-0). Phase 126 carried as verified-by-prose-only per audit path B.*
+*Last updated: 2026-07-15 after starting milestone v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest — defining requirements).*
