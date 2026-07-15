@@ -33,7 +33,7 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 ### Output / Report (DOI-OUT)
 
 - [ ] **DOI-OUT-01**: A Tableau-ready multi-sheet xlsx is produced (patient prevalence, encounter co-occurrence, drug × DoI summary, metadata), following the R/100+ investigation-script convention
-- [ ] **DOI-OUT-02**: HIPAA small-cell suppression (counts 1–10 → suppressed) is applied to every patient/encounter count column in shared output
+- [ ] **DOI-OUT-02**: DoI outputs are internal investigation outputs — raw counts, NO automated small-cell suppression; each output carries an "internal-only; suppress manually before external sharing" note (relaxed per Phase 127 D-07, consistent with the v3.1 internal-investigation pattern)
 - [ ] **DOI-OUT-03**: The metadata sheet documents the attribution window (with ±30/±180-day sensitivity comparison) and every sheet carries the CAVEATS footnote that co-occurrence does not imply attribution
 
 ### Registration & Validation (DOI-QA)
