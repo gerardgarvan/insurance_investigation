@@ -392,6 +392,204 @@ ICD9_NLPHL_CODES <- c(
 )
 
 # ==============================================================================
+# SECTION 4c: RITUXIMAB/METHOTREXATE NON-MALIGNANT DIAGNOSIS-OF-INTEREST MAP ----
+# ==============================================================================
+# Maps ICD-10-CM and ICD-9-CM code prefixes to non-malignant diagnosis-of-interest
+# (DoI) categories for rituximab/methotrexate treatment co-occurrence analysis.
+#
+# WHY prefix-based: Mirrors CANCER_SITE_MAP / ICD9_CANCER_SITE_MAP exactly
+#   (named character vector, undotted prefix keys). 3-char keys capture whole
+#   ICD-10 families; 4-char keys disambiguate subcategories (D692 vs D693).
+#   Consumed by is_doi_code() / classify_doi_codes() in R/utils/utils_doi.R.
+#
+# WHY non-overlapping with cancer maps: DoI keys occupy ICD-10 M/L/D-blood/G/H/K
+#   chapter space and ICD-9 710/714/446/694/287/283/341/358/696/555/556 numeric
+#   ranges. CANCER_SITE_MAP is C00-C96/D00-D49; ICD9_CANCER_SITE_MAP is 140-209.
+#   D59 and D69x are in the blood chapter (D50-D89), OUTSIDE the D00-D49 neoplasm
+#   range. Zero key overlap is guaranteed by chapter structure and enforced by
+#   the R/88 smoke-test intersect() check (Phase 130).
+#
+# TIER: Each code group is tagged table-stakes or edge in the inline comment.
+#   The queryable tier lookup (DOI_CODE_TIER) is defined below the map so
+#   downstream outputs can filter edge-condition noise (DOI-CODE-04).
+#
+# EXCLUSIONS (DOI-CODE-02):
+#   I77.82 EXCLUDED — seed RTF cited it as "ANCA-positive vasculitis" but
+#     ICD-10-CM FY2026 codes I77.82 as "Dissection of artery" (non-inflammatory
+#     vascular injury). Correct GPA/MPA codes are M31.30/M31.31/M31.39/M31.7.
+#     NO "I77" key appears in DOI_CODE_MAP.
+#   D47.Z2 EXCLUDED — multicentric Castleman disease is already owned by
+#     CANCER_SITE_MAP under the D47 = "MDS/Myeloproliferative" key. Adding it
+#     here would create double-classification (hard error).
+#
+# L10.81 (paraneoplastic pemphigus): CAPTURED by the "L10" 3-char key. In an HL
+#   cohort it is usually a cancer complication, not an independent autoimmune
+#   indication. Phase 128 attaches paraneoplastic_flag = TRUE to L10.81
+#   encounters; it is NOT excluded here.
+#
+# Source: .planning/research/FEATURES.md (14-category verified set).
+# Verified against ICD-10-CM FY2026 tabular. See RITDIS_CODE_VERSION below.
+# ==============================================================================
+
+DOI_CODE_MAP <- c(
+  # --- RHEUMATOID ARTHRITIS (table-stakes; RTX+MTX) ---
+  "M05"  = "Rheumatoid Arthritis",       # ICD-10 RA w/ rheumatoid factor (all sites)
+  "M06"  = "Rheumatoid Arthritis",       # ICD-10 seronegative / other RA (all sites)
+  "714"  = "Rheumatoid Arthritis",       # ICD-9 RA (714.0-714.9)
+
+  # --- VASCULITIS (GPA/MPA table-stakes; PAN/skin/IgA edge) ---
+  "M30"  = "Vasculitis",                 # ICD-10 polyarteritis nodosa (M30.0 edge; M30.1 EGPA edge)
+  "M31"  = "Vasculitis",                 # ICD-10 GPA M31.30/31/39 (table-stakes) + MPA M31.7 + M31.0 hypersensitivity
+  "L95"  = "Vasculitis",                 # ICD-10 skin-limited vasculitis L95.8/L95.9 (edge)
+  "D692" = "Vasculitis",                 # ICD-10 IgA vasculitis (HSP) — 4-char key disambiguates from D693 ITP (edge)
+  "446"  = "Vasculitis",                 # ICD-9 polyarteritis nodosa & allied (446.0/446.4 GPA/446.2x)
+  # NOTE: I77.82 deliberately EXCLUDED (see header) — "Dissection of artery", not vasculitis.
+
+  # --- PEMPHIGUS (table-stakes RTX; incl. L10.81 paraneoplastic — flagged in Phase 128) ---
+  "L10"  = "Pemphigus",                  # ICD-10 pemphigus vulgaris L10.0 (FDA-approved) + variants + L10.81 paraneoplastic
+  "694"  = "Pemphigus",                  # ICD-9 pemphigus 694.4 (694.5/694.6x pemphigoid also map here)
+
+  # --- PEMPHIGOID (table-stakes RTX for MMP; MTX edge) ---
+  "L12"  = "Pemphigoid",                 # ICD-10 bullous L12.0 + cicatricial/MMP L12.1 (FDA-approved) + variants
+
+  # --- INFLAMMATORY MYOPATHY (MTX table-stakes; RTX edge) ---
+  "M33"  = "Inflammatory Myopathy",      # ICD-10 dermatomyositis + polymyositis (all variants)
+  "710"  = "Inflammatory Myopathy",      # ICD-9 diffuse connective tissue: 710.0 SLE / 710.2 Sjogren / 710.3 DM / 710.4 PM
+
+  # --- NEUROLOGICAL AUTOIMMUNE (NMO table-stakes; MG/optic-neuritis edge) ---
+  "G36"  = "Neurological Autoimmune",    # ICD-10 neuromyelitis optica G36.0 (Devic)
+  "G37"  = "Neurological Autoimmune",    # ICD-10 acute transverse myelitis G37.3 (edge)
+  "G70"  = "Neurological Autoimmune",    # ICD-10 myasthenia gravis G70.00/G70.01/G70.09 (edge)
+  "H460" = "Neurological Autoimmune",    # ICD-10 optic papillitis — 4-char keys exclude H46.2 nutritional / H46.3 toxic
+  "H461" = "Neurological Autoimmune",    # ICD-10 retrobulbar neuritis
+  "H468" = "Neurological Autoimmune",    # ICD-10 other optic neuritis
+  "H469" = "Neurological Autoimmune",    # ICD-10 unspecified optic neuritis
+  "341"  = "Neurological Autoimmune",    # ICD-9 NMO / demyelinating (341.0)
+  "358"  = "Neurological Autoimmune",    # ICD-9 myasthenia gravis (358.0x)
+
+  # --- HEMATOLOGIC AUTOIMMUNE (ITP/warm-AIHA table-stakes) ---
+  "D693" = "Hematologic Autoimmune",     # ICD-10 ITP + Evans D69.41 — 4-char key disambiguates from D692 vasculitis
+  "D59"  = "Hematologic Autoimmune",     # ICD-10 AIHA D59.0/D59.1/D59.12 cold-agglutinin/D59.13/D59.19
+  "287"  = "Hematologic Autoimmune",     # ICD-9 purpura/ITP (287.31 ITP, 287.32 Evans, 287.39)
+  "283"  = "Hematologic Autoimmune",     # ICD-9 autoimmune hemolytic anemia (283.0)
+
+  # --- SLE / CONNECTIVE TISSUE (SLE table-stakes; Sjogren edge) ---
+  "M32"  = "SLE / Connective Tissue",    # ICD-10 systemic lupus erythematosus (all variants incl. lupus nephritis M32.14)
+  "M35"  = "SLE / Connective Tissue",    # ICD-10 Sjogren M35.0x + overlap syndromes (edge)
+
+  # --- PSORIASIS / PSORIATIC ARTHRITIS (MTX table-stakes) ---
+  "L40"  = "Psoriasis",                  # ICD-10 psoriasis L40.0-L40.9 + psoriatic arthritis L40.5x
+  "696"  = "Psoriasis",                  # ICD-9 psoriasis/psoriatic arthropathy (696.0 PsA, 696.1 psoriasis)
+
+  # --- INFLAMMATORY BOWEL DISEASE (Crohn's MTX table-stakes; UC edge) ---
+  "K50"  = "Inflammatory Bowel Disease", # ICD-10 Crohn's disease (all variants)
+  "K51"  = "Inflammatory Bowel Disease", # ICD-10 ulcerative colitis (edge)
+  "555"  = "Inflammatory Bowel Disease", # ICD-9 regional enteritis (Crohn's)
+  "556"  = "Inflammatory Bowel Disease", # ICD-9 ulcerative colitis (edge)
+
+  # --- CRYOGLOBULINEMIC VASCULITIS (edge; specific code, D89 prefix too broad) ---
+  "D891" = "Vasculitis"                  # ICD-10 cryoglobulinemia D89.1 (RTX-preferred, edge)
+)
+
+# Tier lookup parallel to DOI_CODE_MAP: one entry per key, values "table-stakes" | "edge".
+# Lets downstream outputs filter edge-condition noise without re-parsing comments.
+DOI_CODE_TIER <- c(
+  "M05" = "table-stakes", "M06" = "table-stakes", "714" = "table-stakes",
+  "M30" = "edge",         "M31" = "table-stakes", "L95" = "edge",
+  "D692" = "edge",        "446" = "table-stakes",
+  "L10" = "table-stakes", "694" = "table-stakes",
+  "L12" = "table-stakes",
+  "M33" = "table-stakes", "710" = "table-stakes",
+  "G36" = "table-stakes", "G37" = "edge", "G70" = "edge",
+  "H460" = "edge", "H461" = "edge", "H468" = "edge", "H469" = "edge",
+  "341" = "table-stakes", "358" = "edge",
+  "D693" = "table-stakes", "D59" = "table-stakes", "287" = "table-stakes", "283" = "table-stakes",
+  "M32" = "table-stakes", "M35" = "edge",
+  "L40" = "table-stakes", "696" = "table-stakes",
+  "K50" = "table-stakes", "K51" = "edge", "555" = "table-stakes", "556" = "edge",
+  "D891" = "edge"
+)
+
+# ------------------------------------------------------------------------------
+# 14 clinical conditions -> 10 distinct DOI_CODE_MAP category labels
+# (Label collapse is intentional per D-01 — NOT a missing category.)
+#   1. Rheumatoid Arthritis        -> "Rheumatoid Arthritis"
+#   2. Vasculitis (GPA/MPA/PAN/    -> "Vasculitis"   (M30, M31, L95, D692, 446,
+#      EGPA, skin-limited, IgA,          D891 cryoglobulinemic all collapse here)
+#      cryoglobulinemic)
+#   3. Pemphigus                   -> "Pemphigus"
+#   4. Pemphigoid                  -> "Pemphigoid"
+#   5. Inflammatory Myopathy       -> "Inflammatory Myopathy"  (DM + PM)
+#   6. Neurological Autoimmune     -> "Neurological Autoimmune" (NMO, transverse
+#      (NMO/MG/optic neuritis/           myelitis, MG, optic neuritis collapse here)
+#      transverse myelitis)
+#   7. Hematologic Autoimmune      -> "Hematologic Autoimmune"  (ITP + AIHA)
+#   8. SLE                         -> "SLE / Connective Tissue"
+#   9. Sjogren's / overlap         -> "SLE / Connective Tissue"  (folded into M35
+#      syndromes                        under the same label — NOT a separate key)
+#  10. Psoriasis / Psoriatic       -> "Psoriasis"
+#      Arthritis
+#  11. Inflammatory Bowel Disease  -> "Inflammatory Bowel Disease" (Crohn's + UC)
+# => 14 clinical conditions, 10 distinct label strings (Sjogren shares SLE's
+#    label; the several vasculitis variants share the Vasculitis label).
+# ------------------------------------------------------------------------------
+
+# FY2026 code-set version. Review each October when CMS releases new ICD-10-CM.
+# Audit trail per code group is in the DOI_CODE_MAP inline comments above; all
+# codes verified against .planning/research/FEATURES.md and ICD-10-CM FY2026.
+RITDIS_CODE_VERSION <- "FY2026_v1"
+
+# ==============================================================================
+# SECTION 4d: DIAGNOSIS-OF-INTEREST DRUG CODES & ATTRIBUTION WINDOW ----
+# ==============================================================================
+# Rituximab and methotrexate code references + the DoI attribution window.
+#
+# WHY separate from TREATMENT_CODES$chemo_rxnorm and DRUG_GROUPINGS (DOI-CODE-03):
+#   Adding rituximab CUIs to chemo_rxnorm would inflate chemo-detection counts
+#   and corrupt ABVD / BV+AVD regimen identification. These vectors are read by
+#   the Phase 129 attribution join ONLY; the chemo/regimen pipeline never sees
+#   them. MTX_CODES REFERENCES existing chemo_rxnorm CUIs by value (they are the
+#   same drug) but does not move or duplicate the chemo_rxnorm definition.
+#
+# NAMING: co-occurrence, not attribution. No "*_for_*" names anywhere.
+#
+# Rituximab CUIs curated once (offline) from rxnav.nlm.nih.gov including
+#   biosimilars Rituxan, Truxima, Ruxience, Riabni. Ingredient CUI 121191.
+#   Enumerate product-level CUIs at Phase 129 runtime if the ingredient CUI
+#   under-captures; the J-codes below are the primary high-confidence path.
+# ==============================================================================
+
+# Rituximab — HCPCS J-codes (already in PROCEDURES; primary detection path) +
+# RxNorm ingredient CUI. Biosimilar J-codes included. ADDITIVE — not in chemo_rxnorm.
+RITUXIMAB_CODES <- list(
+  hcpcs  = c("J9310",  # Rituximab injection (Rituxan)
+             "J9311",  # Rituximab/hyaluronidase SC
+             "J9312"), # Rituximab biosimilar (Truxima)
+  rxnorm = c("121191") # Rituximab ingredient CUI (rxnav.nlm.nih.gov)
+)
+
+# Methotrexate — REFERENCES existing chemo_rxnorm CUIs by value (same drug) plus
+# the MTX HCPCS J-code. Does NOT duplicate or modify TREATMENT_CODES$chemo_rxnorm.
+MTX_CODES <- list(
+  hcpcs  = c("J9250",  # Methotrexate sodium 5 mg
+             "J9260"), # Methotrexate sodium 50 mg
+  rxnorm = c("6851",    # methotrexate (ingredient)
+             "105585", "105586", "105587",  # oral tablets
+             "1655956", "1655959", "1655960", "1655968",  # injections
+             "1946772", "311625", "311627",  # injectable solutions
+             "1544388", "1544390", "1544398", "1441411",  # auto-injectors
+             "283510", "283511", "287734", "1921592", "1541215")  # tablets/solution/sodium
+)
+
+# DoI attribution temporal window: one clinical quarter. Wider than the cancer
+# cascade's +-30 days because RA/psoriasis/IBD indication-to-drug timelines span
+# months (steroid trial -> DMARD failure -> biologic). Rituximab autoimmune
+# maintenance is q6mo; quarterly reassessment is standard. Named constant, NOT a
+# magic number — documented in the Phase 129 Metadata sheet with +-30/+-180
+# sensitivity comparison. (DOI-ATTR-01 consumer.)
+DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
+
+# ==============================================================================
 # SECTION 5: PAYER MAPPING RULES ----
 # ==============================================================================
 # AMC 8-category system: Medicaid, Medicare, Private, Other govt, Other,
