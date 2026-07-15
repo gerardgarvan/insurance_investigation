@@ -104,6 +104,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Drug name consistency remediation — MEDICATION_LOOKUP centralized, blank fills, 5-source precedence, audit xlsx — v3.2 Phase 114
 - [x] MED_ADMIN/DISPENSING chemo-detection gap fix (RXNORM_CUI mismatch + NDC→RxNorm crosswalk) — v3.2 Phase 122
 - [x] Fix-impact before/after diff + unmatched-NDC audit (R/109, 9-sheet xlsx) — v3.2 Phase 123
+- [x] Integrate MED_ADMIN/DISPENSING chemo into all downstream outputs — episodes/Gantt/timing/regimens/payer/cohort regenerated with source-provenance labeling (source_hints → DISPENSING/MED_ADMIN + code_type NDC), canonical drug names across all outputs, output-level before/after report (R/110) — v3.2 Phase 124
 - [ ] RMarkdown gap resolution report compiling all investigation findings
 - [ ] Update meeting notes to mark resolved gaps and remove stale items
 
@@ -365,4 +366,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-14 — Phase 123 complete (MED_ADMIN/DISPENSING fix-impact quantification: +1,328 patients / +13,762 chemo dates vs PRESCRIBING baseline; unmatched-NDC audit — 5 candidate chemo_rxnorm gaps flagged for SME review)*
+*Last updated: 2026-07-15 — Phase 124 complete (MED_ADMIN/DISPENSING chemo integrated into all downstream outputs; Gantt now labels DISPENSING/MED_ADMIN sources — 1,058/1,668 tokens, code_type NDC 1,058; chemo episodes 26,447→27,444 (+997 episodes / +89 patients); canonical drug names across all regenerated outputs; output-level before/after report R/110; SMOKE-124-01 13/13 PASS)*
