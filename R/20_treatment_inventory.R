@@ -207,10 +207,14 @@ extract_chemo_codes <- function() {
           disp_tbl %>%
             filter(ID %in% hl_ids) %>%
             filter(!is.na(NDC) & NDC != "") %>%
-            group_by(code = NDC, drug_name = NA_character_) %>%
+            group_by(code = NDC) %>%
             summarise(n = n(), .groups = "drop") %>%
             collect() %>%
-            mutate(source_table = "DISPENSING", code_type = "NDC")
+            # drug_name added AFTER collect() so it is guaranteed character in R.
+            # DuckDB types a literal `NA_character_` grouping key as INTEGER NULL on
+            # collect(), which broke bind_rows() against the character drug_name from
+            # the other source blocks (Phase 124 first real run of the post-fix path).
+            mutate(source_table = "DISPENSING", code_type = "NDC", drug_name = NA_character_)
         },
         error = function(e) {
           message(glue::glue("  [R/20 DISPENSING error]: {e$message}"))
