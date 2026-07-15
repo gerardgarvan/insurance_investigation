@@ -188,12 +188,12 @@ message(glue(
   "{doi_encounters_path}"
 ))
 
-# close_pcornet_con() is called at the end of Section 7 (patient-grain rollup,
-# Plan 128-02). Plan 02 reads doi_encounters in-memory (DuckDB-free), so the
-# connection can remain open through that section.
+# DuckDB teardown is deferred to Section 7 (patient-grain rollup, Plan 128-02).
+# Plan 02 reads doi_encounters in-memory (DuckDB-free), so the connection can
+# remain open through that section. close_pcornet_con is NOT called here.
 
 # ==============================================================================
 # End of R/111 Sections 1-6 (Plan 128-01).
 # Plan 128-02 appends Section 7: patient-grain rollup (doi_patients.rds)
-# + close_pcornet_con() teardown.
+# + DuckDB connection teardown.
 # ==============================================================================
