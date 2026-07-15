@@ -144,7 +144,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete   | 2026-07-15 |
+| 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 128. DoI Classification | v3.3 | 0/TBD | Not started | - |
 | 129. Attribution Linkage and Output | v3.3 | 0/TBD | Not started | - |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 0/TBD | Not started | - |
