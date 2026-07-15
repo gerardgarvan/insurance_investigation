@@ -75,7 +75,7 @@ See MILESTONES.md for full details on all shipped milestones.
   4. RITUXIMAB_CODES and MTX_CODES vectors exist and do not appear in TREATMENT_CODES$chemo_rxnorm or DRUG_GROUPINGS — no chemo-detection contamination
   5. Local test fixture exercises is_doi_code() on at least one ICD-10 and one ICD-9 DoI code without errors
 **Plans**: 2 plans
-- [ ] 127-01-PLAN.md — R/00_config.R Section 4c (DOI_CODE_MAP, DOI_CODE_TIER, RITDIS_CODE_VERSION) + Section 4d (RITUXIMAB_CODES, MTX_CODES, DOI_ATTRIBUTION_WINDOW_DAYS) [DOI-CODE-01/02/03/04] (Wave 1)
+- [x] 127-01-PLAN.md — R/00_config.R Section 4c (DOI_CODE_MAP, DOI_CODE_TIER, RITDIS_CODE_VERSION) + Section 4d (RITUXIMAB_CODES, MTX_CODES, DOI_ATTRIBUTION_WINDOW_DAYS) [DOI-CODE-01/02/03/04] (Wave 1)
 - [ ] 127-02-PLAN.md — R/utils/utils_doi.R (is_doi_code DX_TYPE-gated + classify_doi_codes) + DIAGNOSIS fixture augmentation (ICD-10 M05.9, ICD-9 714.0) [DOI-CLASS-01, DOI-QA-04] (Wave 2, depends on 127-01)
 
 ### Phase 128: DoI Classification
@@ -144,7 +144,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 127. Code-Set and Infrastructure | v3.3 | 0/2 | Not started | - |
+| 127. Code-Set and Infrastructure | v3.3 | 1/2 | In Progress|  |
 | 128. DoI Classification | v3.3 | 0/TBD | Not started | - |
 | 129. Attribution Linkage and Output | v3.3 | 0/TBD | Not started | - |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 0/TBD | Not started | - |
