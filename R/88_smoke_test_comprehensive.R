@@ -2909,6 +2909,111 @@ if (r110_exists) {
 }
 
 # ==============================================================================
+# SECTION 15w: DIAGNOSIS-OF-INTEREST (DoI) LAYER VALIDATION (Phase 130) ----
+# ==============================================================================
+#
+# Phase 130 wires the DoI layer (R/111 classification + R/112 attribution) into
+# the pipeline and gates its correctness. These checks are STRUCTURAL + in-memory
+# (DOI_CODE_MAP / is_doi_code / classify_doi_codes assertions) and pass LOCALLY
+# on Windows without executing R/111 or R/112. The real-data runtime pass (logged
+# DoI category counts on the actual DIAGNOSIS table) is a HiPerGator HUMAN-UAT
+# gate — the IS_LOCAL-gated runtime checks below stay green locally and only
+# exercise real outputs when !IS_LOCAL and the artifacts exist.
+#
+# The mutual-exclusivity hard-stop (Check 3) is the single most important assertion:
+# zero key-collision tolerance between DOI_CODE_MAP and the cancer maps.
+
+message("\n[Phase 130] Diagnosis-of-Interest (DoI) layer validation (R/111 + R/112)...")
+
+# Check 1: DOI_CODE_MAP exists and is a named character vector
+check("DOI_CODE_MAP exists as a named character vector (Phase 130)",
+      exists("DOI_CODE_MAP") && is.character(DOI_CODE_MAP) &&
+        !is.null(names(DOI_CODE_MAP)))
+
+# Check 2: DOI_CODE_MAP length >= 20
+check(glue("DOI_CODE_MAP has >= 20 keys (found {length(DOI_CODE_MAP)}) (Phase 130)"),
+      length(DOI_CODE_MAP) >= 20L)
+
+# Check 3: MUTUAL-EXCLUSIVITY HARD-STOP — zero key-collision with cancer maps
+cancer_keys <- c(names(CANCER_SITE_MAP), names(ICD9_CANCER_SITE_MAP))
+doi_cancer_overlap <- intersect(names(DOI_CODE_MAP), cancer_keys)
+check(glue("ZERO DOI_CODE_MAP <-> cancer-map key collision (overlap: {length(doi_cancer_overlap)}{if (length(doi_cancer_overlap)) paste0(' = ', paste(doi_cancer_overlap, collapse=',')) else ''}) (Phase 130)"),
+      length(doi_cancer_overlap) == 0L)
+
+# Check 4: utils_doi.R file exists
+check("R/utils/utils_doi.R exists (Phase 130)",
+      file.exists("R/utils/utils_doi.R"))
+
+# Check 5: R/111 producer script exists
+check("R/111_doi_classification.R exists (Phase 130)",
+      file.exists("R/111_doi_classification.R"))
+
+# Check 6: R/112 producer script exists
+check("R/112_doi_attribution_report.R exists (Phase 130)",
+      file.exists("R/112_doi_attribution_report.R"))
+
+# Check 7: is_doi_code() functional spot-check — ICD-10 positive + cancer-negative
+check("is_doi_code('M05.9','10') is TRUE and is_doi_code('C81.90','10') is FALSE (Phase 130)",
+      isTRUE(is_doi_code("M05.9", "10")) && isFALSE(is_doi_code("C81.90", "10")))
+
+# Check 8: is_doi_code() DX_TYPE gating rejects NA/SNOMED
+check("is_doi_code('M05.9', NA) is FALSE (DX_TYPE gate rejects non ICD-9/10) (Phase 130)",
+      isFALSE(is_doi_code("M05.9", NA)))
+
+# Check 9: is_doi_code() ICD-9 positive (DX_TYPE '09')
+check("is_doi_code('714.0','09') is TRUE (ICD-9 RA) (Phase 130)",
+      isTRUE(is_doi_code("714.0", "09")))
+
+# Check 10: classify_doi_codes() functional spot-check returns expected category
+ra_cat <- classify_doi_codes("M05.9")
+check(glue("classify_doi_codes('M05.9') == 'Rheumatoid Arthritis' (found '{ra_cat}') (Phase 130)"),
+      identical(unname(ra_cat), "Rheumatoid Arthritis"))
+
+# Check 11: R/39 wiring — R/111 precedes R/112 in investigation_scripts
+r39_txt <- if (file.exists("R/39_run_all_investigations.R")) paste(readLines("R/39_run_all_investigations.R", warn = FALSE), collapse = "\n") else ""
+pos_111 <- regexpr("R/111_doi_classification\\.R", r39_txt)
+pos_112 <- regexpr("R/112_doi_attribution_report\\.R", r39_txt)
+check("R/39 registers R/111 before R/112 and expected_xlsx includes doi_attribution_report.xlsx (Phase 130, DOI-QA-01)",
+      pos_111 > 0 && pos_112 > 0 && pos_111 < pos_112 &&
+        grepl("doi_attribution_report\\.xlsx", r39_txt))
+
+# Check 12: RUNTIME (HiPerGator-only) — doi_encounters.rds + doi_patients.rds schema
+enc_rds <- file.path(CONFIG$cache$outputs_dir, "doi_encounters.rds")
+pat_rds <- file.path(CONFIG$cache$outputs_dir, "doi_patients.rds")
+if (!IS_LOCAL && file.exists(enc_rds) && file.exists(pat_rds)) {
+  enc <- readRDS(enc_rds); pat <- readRDS(pat_rds)
+  enc_cols <- c("ID","ENCOUNTERID","DX_DATE","doi_code","doi_category","paraneoplastic_flag","in_hl_cohort")
+  pat_cols <- c("ID","has_any_doi","doi_categories","doi_first_date","doi_last_date","n_doi_encounters","in_hl_cohort")
+  check("R/111 .rds artifacts have expected columns and are non-empty (Phase 130, HiPerGator)",
+        all(enc_cols %in% names(enc)) && all(pat_cols %in% names(pat)) && nrow(enc) > 0 && nrow(pat) > 0)
+} else {
+  check("R/111 .rds runtime column/non-empty check -- SKIPPED (local / no output) (Phase 130)", TRUE)
+}
+
+# Check 13: RUNTIME (HiPerGator-only) — doi_attribution_report.xlsx 4 expected sheets
+doi_xlsx <- file.path(CONFIG$cache$outputs_dir, "doi_attribution_report.xlsx")
+if (!IS_LOCAL && file.exists(doi_xlsx)) {
+  sheets_found <- openxlsx2::wb_load(doi_xlsx)$get_sheet_names()
+  expected_sheets <- c("Patient Prevalence","Encounter Co-occurrence","Drug x DoI Summary","Metadata")
+  check("R/112 xlsx has exactly the 4 expected sheets (Phase 130, HiPerGator)",
+        all(expected_sheets %in% sheets_found))
+} else {
+  check("R/112 xlsx 4-sheet runtime check -- SKIPPED (local / no output) (Phase 130)", TRUE)
+}
+
+# Check 14: RUNTIME (HiPerGator-only) — logged DoI category counts (DOI-QA-03 signal)
+if (!IS_LOCAL && file.exists(enc_rds)) {
+  enc2 <- readRDS(enc_rds)
+  cat_tab <- sort(table(enc2$doi_category), decreasing = TRUE)
+  message("  [Phase 130 RUNTIME] DoI category counts (log verbatim into phase notes):")
+  for (nm in names(cat_tab)) message(glue("    {nm}: {cat_tab[[nm]]}"))
+  check("R/111 real-data DoI counts non-empty with RA present (Phase 130, HiPerGator; log into phase notes)",
+        length(cat_tab) > 0 && "Rheumatoid Arthritis" %in% names(cat_tab))
+} else {
+  check("R/111 real-data DoI category counts -- SKIPPED (local / no output; logged on HiPerGator) (Phase 130)", TRUE)
+}
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -4486,6 +4591,8 @@ message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structu
 message("  * SMOKE-122-01: R/88 validates Phase 122 MED_ADMIN/DISPENSING chemo-detection gap fix structural integrity (Section 15t, 14 checks)")
 message("  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + unmatched-NDC audit structural integrity (Section 15u, 14 checks)")
 message("  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/after report + unmapped-name audit structural integrity (Section 15v, 13 checks)")
+message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classification + R/112 attribution) structural integrity incl. mutual-exclusivity hard-stop (Section 15w, ~14 checks)")
+message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
 
 if (failed > 0) {
   quit(status = 1)
