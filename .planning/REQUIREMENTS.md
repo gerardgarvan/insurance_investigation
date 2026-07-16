@@ -26,9 +26,9 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 
 ### Attribution Linkage (DOI-ATTR)
 
-- [ ] **DOI-ATTR-01**: A two-tier linkage joins rituximab/MTX administrations to DoI diagnoses — ENCOUNTERID direct match first, then a ±90-day PATID temporal window (window value defensible and documented)
-- [ ] **DOI-ATTR-02**: A three-state `likely_non_lymphoma_directed` flag (TRUE / FALSE / NA) carries the analytic signal, where NA explicitly marks the ambiguous case (HL also active in the same window)
-- [ ] **DOI-ATTR-03**: An `attribution_method` column records how each link was made (encounter_id / temporal_window / none); all column names and prose use co-occurrence language ("with [dx]"), never causal ("for [dx]")
+- [x] **DOI-ATTR-01**: A two-tier linkage joins rituximab/MTX administrations to DoI diagnoses — ENCOUNTERID direct match first, then a ±90-day PATID temporal window (window value defensible and documented)
+- [x] **DOI-ATTR-02**: A three-state `likely_non_lymphoma_directed` flag (TRUE / FALSE / NA) carries the analytic signal, where NA explicitly marks the ambiguous case (HL also active in the same window)
+- [x] **DOI-ATTR-03**: An `attribution_method` column records how each link was made (encounter_id / temporal_window / none); all column names and prose use co-occurrence language ("with [dx]"), never causal ("for [dx]")
 
 ### Output / Report (DOI-OUT)
 
@@ -81,9 +81,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DOI-CLASS-03 | Phase 128 | Complete |
 | DOI-CLASS-04 | Phase 128 | Complete |
 | DOI-CLASS-05 | Phase 128 | Complete |
-| DOI-ATTR-01 | Phase 129 | Pending |
-| DOI-ATTR-02 | Phase 129 | Pending |
-| DOI-ATTR-03 | Phase 129 | Pending |
+| DOI-ATTR-01 | Phase 129 | Complete |
+| DOI-ATTR-02 | Phase 129 | Complete |
+| DOI-ATTR-03 | Phase 129 | Complete |
 | DOI-OUT-01 | Phase 129 | Pending |
 | DOI-OUT-02 | Phase 129 | Pending |
 | DOI-OUT-03 | Phase 129 | Pending |

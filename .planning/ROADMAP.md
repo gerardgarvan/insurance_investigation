@@ -123,7 +123,7 @@ See MILESTONES.md for full details on all shipped milestones.
   4. No output column name contains "_for_" (causal language); all drug-diagnosis relationship columns use "_with_" (co-occurrence language); the CAVEATS footnote appears on all four sheets
   5. The Metadata sheet records DOI_ATTRIBUTION_WINDOW_DAYS = 90 and includes comparison counts for ±30-day and ±180-day windows as sensitivity context
 **Plans**: 2 plans
-- [ ] 129-01-PLAN.md — Attribution engine: inputs load, dated HL pull, two-tier linkage, three-state flag, attribution_method (DOI-ATTR-01/02/03)
+- [x] 129-01-PLAN.md — Attribution engine: inputs load, dated HL pull, two-tier linkage, three-state flag, attribution_method (DOI-ATTR-01/02/03)
 - [ ] 129-02-PLAN.md — 4-sheet doi_attribution_report.xlsx: raw counts + internal-only note + CAVEATS footnote + +/-30/+/-180 sensitivity (DOI-OUT-01/02/03)
 
 ### Phase 130: Registration, Smoke Test, and HiPerGator Runtime
@@ -150,5 +150,5 @@ See MILESTONES.md for full details on all shipped milestones.
 |-------|-----------|----------------|--------|-----------|
 | 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
-| 129. Attribution Linkage and Output | v3.3 | 0/TBD | Not started | - |
+| 129. Attribution Linkage and Output | v3.3 | 1/2 | In Progress|  |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 0/TBD | Not started | - |

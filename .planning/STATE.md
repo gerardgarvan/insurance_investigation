@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
-stopped_at: Phase 129 context gathered
-last_updated: "2026-07-16T00:02:07.362Z"
-last_activity: 2026-07-15
+status: executing
+stopped_at: Completed 129-01-PLAN.md — R/112 Sections 1-5 committed (43ea8c5); doi_drug_links contract ready for Plan 02 xlsx assembly
+last_updated: "2026-07-16T03:23:31.894Z"
+last_activity: 2026-07-16
 progress:
   total_phases: 117
   completed_phases: 104
-  total_plans: 193
-  completed_plans: 186
+  total_plans: 195
+  completed_plans: 187
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-15 after v3.2)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 128 — doi-classification
+**Current focus:** Phase 129 — attribution-linkage-and-output
 
 ## Current Position
 
-Phase: 128
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-15
+Phase: 129 (attribution-linkage-and-output) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-07-16
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -71,6 +71,6 @@ None identified.
 
 ## Session Continuity
 
-**Last command:** `/gsd:new-project` roadmapper invocation (2026-07-15)
-**Stopped at:** Phase 129 context gathered
-**What's next:** `/gsd:plan-phase 127`
+**Last command:** `/gsd:resume-work` (2026-07-16)
+**Stopped at:** Completed 129-01-PLAN.md — R/112 Sections 1-5 committed (43ea8c5); doi_drug_links contract ready for Plan 02 xlsx assembly
+**What's next:** `/gsd:execute-phase 129` — resume incomplete Plan 01 (commit + summary), then execute Plan 02 (xlsx write + close_pcornet_con)
