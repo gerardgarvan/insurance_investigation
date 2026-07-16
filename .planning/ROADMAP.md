@@ -143,7 +143,7 @@ See MILESTONES.md for full details on all shipped milestones.
   2. R/88 Section [30/30] passes with all 10+ checks green, including the no-overlap assertion between DOI_CODE_MAP keys and CANCER_SITE_MAP / ICD9_CANCER_SITE_MAP keys — zero tolerance for key collision
   3. HiPerGator runtime is confirmed: R/111 executes against the real DIAGNOSIS table, DoI category counts are logged (RA expected to dominate; NMO and pemphigus expected rare), and the confirmation is explicitly recorded in phase transition notes (not prose-only attestation)
 **Plans**: 2 plans
-- [ ] 130-01-PLAN.md — Register R/111 (classification) + R/112 (attribution) in R/39 (dependency order) + expected_xlsx; add two SCRIPT_INDEX.md rows + tally [DOI-QA-01] (Wave 1)
+- [x] 130-01-PLAN.md — Register R/111 (classification) + R/112 (attribution) in R/39 (dependency order) + expected_xlsx; add two SCRIPT_INDEX.md rows + tally [DOI-QA-01] (Wave 1)
 - [ ] 130-02-PLAN.md — R/88 Section 15w DoI validation (mutual-exclusivity hard-stop + IS_LOCAL-gated runtime) + SMOKE-130-01; HiPerGator runtime human-verify checkpoint with logged DoI counts [DOI-QA-02, DOI-QA-03] (Wave 1)
 
 ## Progress
@@ -153,4 +153,4 @@ See MILESTONES.md for full details on all shipped milestones.
 | 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete    | 2026-07-16 |
-| 130. Registration, Smoke Test, HiPerGator | v3.3 | 0/2 | Not started | - |
+| 130. Registration, Smoke Test, HiPerGator | v3.3 | 1/2 | In Progress|  |

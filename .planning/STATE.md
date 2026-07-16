@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
-stopped_at: Phase 130 context gathered
-last_updated: "2026-07-16T16:44:02.034Z"
+status: executing
+stopped_at: Completed 130-01-PLAN.md
+last_updated: "2026-07-16T17:01:49.594Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 118
   completed_phases: 105
-  total_plans: 195
-  completed_plans: 188
+  total_plans: 197
+  completed_plans: 189
   percent: 0
 ---
 
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-07-15 after v3.2)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 129 — attribution-linkage-and-output
+**Current focus:** Phase 130 — registration-smoke-test-and-hipergator-runtime
 
 ## Current Position
 
-Phase: 129
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 130 (registration-smoke-test-and-hipergator-runtime) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-07-16
 
 Progress: [░░░░░░░░░░] 0%
@@ -72,5 +72,5 @@ None identified.
 ## Session Continuity
 
 **Last command:** `/gsd:resume-work` (2026-07-16)
-**Stopped at:** Phase 130 context gathered
+**Stopped at:** Completed 130-01-PLAN.md
 **What's next:** `/gsd:execute-phase 129` — resume incomplete Plan 01 (commit + summary), then execute Plan 02 (xlsx write + close_pcornet_con)

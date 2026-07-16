@@ -38,7 +38,7 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 
 ### Registration & Validation (DOI-QA)
 
-- [ ] **DOI-QA-01**: The new investigation script is registered in `R/39_run_all_investigations.R` and gets a `R/SCRIPT_INDEX.md` row
+- [x] **DOI-QA-01**: The new investigation script is registered in `R/39_run_all_investigations.R` and gets a `R/SCRIPT_INDEX.md` row
 - [ ] **DOI-QA-02**: A new `R/88_smoke_test_comprehensive.R` section validates the DoI layer, including the mutual-exclusivity hard-stop check
 - [ ] **DOI-QA-03**: HiPerGator runtime confirmation (real DIAGNOSIS table, DoI hit counts logged) is recorded as the definition-of-done gate
 - [x] **DOI-QA-04**: The local test fixture is augmented with at least one ICD-10 and one ICD-9 DoI patient so the classifier is exercised locally
@@ -87,7 +87,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DOI-OUT-01 | Phase 129 | Complete |
 | DOI-OUT-02 | Phase 129 | Complete |
 | DOI-OUT-03 | Phase 129 | Complete |
-| DOI-QA-01 | Phase 130 | Pending |
+| DOI-QA-01 | Phase 130 | Complete |
 | DOI-QA-02 | Phase 130 | Pending |
 | DOI-QA-03 | Phase 130 | Pending |
 | DOI-QA-04 | Phase 127 | Complete |
