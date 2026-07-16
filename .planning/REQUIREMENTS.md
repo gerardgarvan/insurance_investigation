@@ -32,9 +32,9 @@ Identify the non-malignant diagnoses that rituximab and methotrexate treat (auto
 
 ### Output / Report (DOI-OUT)
 
-- [ ] **DOI-OUT-01**: A Tableau-ready multi-sheet xlsx is produced (patient prevalence, encounter co-occurrence, drug × DoI summary, metadata), following the R/100+ investigation-script convention
-- [ ] **DOI-OUT-02**: DoI outputs are internal investigation outputs — raw counts, NO automated small-cell suppression; each output carries an "internal-only; suppress manually before external sharing" note (relaxed per Phase 127 D-07, consistent with the v3.1 internal-investigation pattern)
-- [ ] **DOI-OUT-03**: The metadata sheet documents the attribution window (with ±30/±180-day sensitivity comparison) and every sheet carries the CAVEATS footnote that co-occurrence does not imply attribution
+- [x] **DOI-OUT-01**: A Tableau-ready multi-sheet xlsx is produced (patient prevalence, encounter co-occurrence, drug × DoI summary, metadata), following the R/100+ investigation-script convention
+- [x] **DOI-OUT-02**: DoI outputs are internal investigation outputs — raw counts, NO automated small-cell suppression; each output carries an "internal-only; suppress manually before external sharing" note (relaxed per Phase 127 D-07, consistent with the v3.1 internal-investigation pattern)
+- [x] **DOI-OUT-03**: The metadata sheet documents the attribution window (with ±30/±180-day sensitivity comparison) and every sheet carries the CAVEATS footnote that co-occurrence does not imply attribution
 
 ### Registration & Validation (DOI-QA)
 
@@ -84,9 +84,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DOI-ATTR-01 | Phase 129 | Complete |
 | DOI-ATTR-02 | Phase 129 | Complete |
 | DOI-ATTR-03 | Phase 129 | Complete |
-| DOI-OUT-01 | Phase 129 | Pending |
-| DOI-OUT-02 | Phase 129 | Pending |
-| DOI-OUT-03 | Phase 129 | Pending |
+| DOI-OUT-01 | Phase 129 | Complete |
+| DOI-OUT-02 | Phase 129 | Complete |
+| DOI-OUT-03 | Phase 129 | Complete |
 | DOI-QA-01 | Phase 130 | Pending |
 | DOI-QA-02 | Phase 130 | Pending |
 | DOI-QA-03 | Phase 130 | Pending |

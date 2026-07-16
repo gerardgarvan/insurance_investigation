@@ -47,7 +47,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 - [x] **Phase 127: Code-Set and Infrastructure Centralization** (2 plans) - DOI_CODE_MAP + utils_doi.R + fixture augmentation (completed 2026-07-15)
 - [x] **Phase 128: DoI Classification** (2 plans) - DuckDB DIAGNOSIS pull, classify, mutual-exclusivity hard-stop, cached artifacts (completed 2026-07-15)
-- [ ] **Phase 129: Attribution Linkage and Output** - Two-tier join, three-state flag, 4-sheet xlsx, HIPAA suppression
+- [x] **Phase 129: Attribution Linkage and Output** - Two-tier join, three-state flag, 4-sheet xlsx, HIPAA suppression (completed 2026-07-16)
 - [ ] **Phase 130: Registration, Smoke Test, and HiPerGator Runtime** - R/39 + SCRIPT_INDEX + R/88 section + runtime gate
 
 ## Phase Details
@@ -124,7 +124,7 @@ See MILESTONES.md for full details on all shipped milestones.
   5. The Metadata sheet records DOI_ATTRIBUTION_WINDOW_DAYS = 90 and includes comparison counts for ±30-day and ±180-day windows as sensitivity context
 **Plans**: 2 plans
 - [x] 129-01-PLAN.md — Attribution engine: inputs load, dated HL pull, two-tier linkage, three-state flag, attribution_method (DOI-ATTR-01/02/03)
-- [ ] 129-02-PLAN.md — 4-sheet doi_attribution_report.xlsx: raw counts + internal-only note + CAVEATS footnote + +/-30/+/-180 sensitivity (DOI-OUT-01/02/03)
+- [x] 129-02-PLAN.md — 4-sheet doi_attribution_report.xlsx: raw counts + internal-only note + CAVEATS footnote + +/-30/+/-180 sensitivity (DOI-OUT-01/02/03)
 
 ### Phase 130: Registration, Smoke Test, and HiPerGator Runtime
 **Goal**: R/111 is fully registered in the pipeline's discovery/validation infrastructure and the DoI layer's correctness is gated by a HiPerGator runtime pass on real DIAGNOSIS data
@@ -150,5 +150,5 @@ See MILESTONES.md for full details on all shipped milestones.
 |-------|-----------|----------------|--------|-----------|
 | 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
-| 129. Attribution Linkage and Output | v3.3 | 1/2 | In Progress|  |
+| 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete   | 2026-07-16 |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 0/TBD | Not started | - |
