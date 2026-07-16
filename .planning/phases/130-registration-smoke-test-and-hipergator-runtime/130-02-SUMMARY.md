@@ -99,7 +99,7 @@ Pemphigus:                      42
 ## DOI-QA-02 / DOI-QA-03 Satisfaction
 
 - **DOI-QA-02:** R/88 Section 15w validates the DoI layer incl. the mutual-exclusivity hard-stop — all 14 section checks PASSED on real data.
-- **DOI-QA-03:** HiPerGator runtime confirmed against the real DIAGNOSIS table; DoI category counts logged verbatim above and recorded in phase notes. **Residual:** one confirming re-run to capture a clean `ALL 709 CHECKS PASSED` after the stale-count fix, to fully green the milestone smoke gate.
+- **DOI-QA-03:** HiPerGator runtime confirmed against the real DIAGNOSIS table; DoI category counts logged verbatim above and recorded in phase notes. **Confirming re-run: `ALL 709 CHECKS PASSED`** (2026-07-16, production mode) after the stale-count fix — R/88 now exits 0 with the DoI Section 15w checks all green. Milestone smoke gate is fully green; DoD satisfied on a logged run (no attestation shortcut).
 
 ## Self-Check: PASSED (with documented residual)
 
