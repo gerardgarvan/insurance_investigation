@@ -122,7 +122,9 @@ See MILESTONES.md for full details on all shipped milestones.
   3. Every count column (n_patients, n_encounters) in Sheet 3 passes through suppress_small() before write — cells with values 1-10 appear as "<11", never as raw integers
   4. No output column name contains "_for_" (causal language); all drug-diagnosis relationship columns use "_with_" (co-occurrence language); the CAVEATS footnote appears on all four sheets
   5. The Metadata sheet records DOI_ATTRIBUTION_WINDOW_DAYS = 90 and includes comparison counts for ±30-day and ±180-day windows as sensitivity context
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 129-01-PLAN.md — Attribution engine: inputs load, dated HL pull, two-tier linkage, three-state flag, attribution_method (DOI-ATTR-01/02/03)
+- [ ] 129-02-PLAN.md — 4-sheet doi_attribution_report.xlsx: raw counts + internal-only note + CAVEATS footnote + +/-30/+/-180 sensitivity (DOI-OUT-01/02/03)
 
 ### Phase 130: Registration, Smoke Test, and HiPerGator Runtime
 **Goal**: R/111 is fully registered in the pipeline's discovery/validation infrastructure and the DoI layer's correctness is gated by a HiPerGator runtime pass on real DIAGNOSIS data
