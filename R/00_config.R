@@ -2463,6 +2463,9 @@ CODE_SUBCATEGORY_MAP <- c(
 # Quick sanity check
 message(paste0("Defined ", length(CODE_SUBCATEGORY_MAP), " code-to-subcategory mappings"))
 
+# glue is used in MEDICATION_LOOKUP and downstream in utils/ — load before first use
+library(glue)
+
 # ==============================================================================
 # Reference Excel Path (Phase 114)
 # ==============================================================================
@@ -3783,15 +3786,6 @@ library(checkmate)
 # and fast aggregation. Coexists with dplyr -- conflict-prone functions (between,
 # first, last, transpose) use explicit package::function() per D-02.
 library(data.table)
-
-# ==============================================================================
-# SECTION 7e: GLUE LIBRARY ----
-# ==============================================================================
-# WHY load globally: Multiple utility modules in R/utils/ (utils_assertions.R,
-# utils_dt.R, utils_snapshot.R, utils_treatment.R, utils_xlsx_lookups.R) call
-# glue() or glue::glue(). Loading here before the auto-source block at the end
-# of this file ensures glue is available when those utils are sourced.
-library(glue)
 
 # ==============================================================================
 # SECTION 7d: KEYED DATA.TABLE LOOKUP TABLES (Phase 95, v3.0) ----
