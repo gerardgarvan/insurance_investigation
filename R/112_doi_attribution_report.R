@@ -61,6 +61,7 @@ suppressPackageStartupMessages({
   library(stringr)
   library(lubridate)
   library(janitor)
+  library(openxlsx2)
 })
 
 source("R/00_config.R")
@@ -502,3 +503,156 @@ df_metadata <- tibble::tribble(
 
 message(glue("  df_metadata: {nrow(df_metadata)} rows"))
 message("\n=== Section 6 complete. All 4 sheet data frames ready. ===")
+
+
+# ==============================================================================
+# SECTION 7: OPENXLSX2 WORKBOOK ASSEMBLY AND SAVE ----
+# ==============================================================================
+# Builds doi_attribution_report.xlsx with exactly 4 sheets:
+#   1. Patient Prevalence
+#   2. Encounter Co-occurrence
+#   3. Drug x DoI Summary
+#   4. Metadata
+#
+# Every sheet carries:
+#   - Row 1: Title (Calibri 16 bold)
+#   - Row 2: Subtitle with internal_only_note + generation date (DOI-OUT-02)
+#   - Row 4: Data table (header styled dark gray / white bold, freeze at row 5)
+#   - Footer row: caveats_footnote (DOI-OUT-03), 2 rows below last data row
+#
+# NO suppress_small() — RAW counts per D-01 / DOI-OUT-02.
+# ---------------------------------------------------------------------------
+
+message("\n--- Section 7: openxlsx2 workbook assembly ---")
+
+# ---------------------------------------------------------------------------
+# DRY helper: add a styled sheet.
+# Adapted from R/110 §586-615 (title row 1 / subtitle row 2 / data row 4 /
+# freeze row 5).  EXTENDED to write caveats_footnote as a trailing footer row
+# on EVERY sheet (DOI-OUT-03).
+# ---------------------------------------------------------------------------
+add_styled_sheet <- function(wb, sheet_name, title, subtitle_text, data) {
+  ncols    <- max(ncol(data), 1L)
+  last_col <- if (ncols <= 26L) LETTERS[ncols] else paste0("A", LETTERS[ncols - 26L])
+
+  # Row 1: Title
+  wb$add_data(sheet = sheet_name, x = title, start_row = 1, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937"))
+  wb$merge_cells(sheet = sheet_name, dims = glue("A1:{last_col}1"))
+
+  # Row 2: Subtitle (internal-only note + run date)
+  wb$add_data(sheet = sheet_name, x = subtitle_text, start_row = 2, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = "A2",
+              name = "Calibri", size = 10, color = wb_color("FF6B7280"))
+  wb$merge_cells(sheet = sheet_name, dims = glue("A2:{last_col}2"))
+
+  # Row 4: Data table
+  wb$add_data(sheet = sheet_name, x = data, start_row = 4, start_col = 1)
+
+  # Row 4 header styling: dark gray fill + white bold font
+  wb$add_fill(sheet = sheet_name, dims = glue("A4:{last_col}4"),
+              color = wb_color("FF374151"))
+  wb$add_font(sheet = sheet_name, dims = glue("A4:{last_col}4"),
+              name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF"))
+
+  # Freeze pane below header row
+  wb$freeze_pane(sheet = sheet_name, firstActiveRow = 5)
+
+  # Footer row: CAVEATS footnote two rows below last data row (DOI-OUT-03).
+  # Guarantees the footnote appears on ALL FOUR sheets.
+  footer_row <- 4L + nrow(data) + 2L
+  wb$add_data(sheet = sheet_name, x = caveats_footnote,
+              start_row = footer_row, start_col = 1)
+  wb$add_font(sheet = sheet_name, dims = glue("A{footer_row}"),
+              name = "Calibri", size = 9, italic = TRUE, color = wb_color("FF6B7280"))
+  wb$merge_cells(sheet = sheet_name, dims = glue("A{footer_row}:{last_col}{footer_row}"))
+
+  wb
+}
+
+OUT_XLSX <- file.path(CONFIG$cache$outputs_dir, "doi_attribution_report.xlsx")
+run_date <- format(Sys.Date(), "%Y-%m-%d")
+
+# Shared subtitle pattern: internal-only note + generation date.
+make_subtitle <- function(sheet_desc) {
+  glue("{internal_only_note} | {sheet_desc} | Generated: {run_date}")
+}
+
+# ---------------------------------------------------------------------------
+# Build workbook: exactly 4 worksheets, exactly these 4 sheet names.
+# ---------------------------------------------------------------------------
+wb <- wb_workbook()
+
+# Sheet 1: Patient Prevalence
+wb$add_worksheet("Patient Prevalence")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Patient Prevalence",
+  title         = "DoI Drug Co-occurrence: Patient Prevalence by in_hl_cohort x DoI Category x Drug Class",
+  subtitle_text = make_subtitle("patient grain; matched links only (attribution_method != 'none')"),
+  data          = df_patient_prevalence
+)
+
+# Sheet 2: Encounter Co-occurrence
+wb$add_worksheet("Encounter Co-occurrence")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Encounter Co-occurrence",
+  title         = "DoI Drug Co-occurrence: Encounter-Grain Detail with Attribution Method",
+  subtitle_text = make_subtitle("encounter grain; one row per drug-DoI matched pair"),
+  data          = df_encounter_cooccurrence
+)
+
+# Sheet 3: Drug x DoI Summary
+wb$add_worksheet("Drug x DoI Summary")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Drug x DoI Summary",
+  title         = "DoI Drug Co-occurrence: Drug x DoI Matrix — RAW Counts by Attribution Tier",
+  subtitle_text = make_subtitle("drug x DoI matrix; rare categories show single-digit cells by design"),
+  data          = df_drug_doi_summary
+)
+
+# Sheet 4: Metadata
+wb$add_worksheet("Metadata")
+wb <- add_styled_sheet(
+  wb,
+  sheet_name    = "Metadata",
+  title         = "DoI Attribution Report: Window Parameters and Sensitivity Analysis",
+  subtitle_text = make_subtitle(glue("attribution_window_days = {DOI_ATTRIBUTION_WINDOW_DAYS}; sensitivity at ±30/±180 days")),
+  data          = df_metadata
+)
+
+# ---------------------------------------------------------------------------
+# Save workbook — tryCatch so a Windows run with no materialized inputs does
+# not hard-fail. Runtime write is verified on HiPerGator in Phase 130.
+# ---------------------------------------------------------------------------
+tryCatch({
+  wb$save(OUT_XLSX)
+  message(glue("  Wrote deliverable xlsx: {OUT_XLSX}"))
+}, error = function(e) {
+  message(glue("  [WARN] Could not write xlsx (expected on Windows with no data): {conditionMessage(e)}"))
+})
+
+message("\n=== Section 7 complete. doi_attribution_report.xlsx assembled (4 sheets). ===")
+
+
+# ==============================================================================
+# SECTION 8: TEARDOWN ----
+# ==============================================================================
+# Close the DuckDB connection opened in Section 3. This script owns teardown.
+# Plan 01 deferred this step — Plan 02 (this script continuation) owns it.
+# ---------------------------------------------------------------------------
+
+message("\n--- Section 8: Teardown ---")
+close_pcornet_con()
+
+message(glue(
+  "\n=== R/112 complete. ===\n",
+  "    doi_attribution_report.xlsx: 4 sheets (Patient Prevalence, Encounter Co-occurrence,\n",
+  "                                           Drug x DoI Summary, Metadata)\n",
+  "    RAW counts; internal-only note + CAVEATS footnote on every sheet (D-01/DOI-OUT-02/03).\n",
+  "    DuckDB connection closed.\n",
+  "    Registration (R/39, SCRIPT_INDEX, R/88 smoke-test) is Phase 130."
+))
