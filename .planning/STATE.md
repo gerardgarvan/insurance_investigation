@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: "130-02-PLAN.md Tasks 1-2 complete; paused at Task 3 checkpoint:human-verify (HiPerGator runtime gate, DOI-QA-03)"
-last_updated: "2026-07-16T17:01:49.594Z"
+stopped_at: Phase 130 runtime logged (DoI counts + mutual-exclusivity 0, all 15w checks pass); R/88 stale utils-count fixed 12->13 (commit 724294e). AWAITING confirming re-run for clean 'ALL 709 CHECKS PASSED' before phase completion.
+last_updated: "2026-07-16T18:05:18.870Z"
 last_activity: 2026-07-16
 progress:
   total_phases: 118
-  completed_phases: 105
+  completed_phases: 106
   total_plans: 197
-  completed_plans: 189
+  completed_plans: 190
   percent: 0
 ---
 
@@ -72,5 +72,5 @@ None identified.
 ## Session Continuity
 
 **Last command:** `/gsd:execute-phase 130` (2026-07-16)
-**Stopped at:** 130-02 Task 3 checkpoint — human-verify HiPerGator runtime gate (DOI-QA-03)
+**Stopped at:** Phase 130 runtime logged (DoI counts + mutual-exclusivity 0, all 15w checks pass); R/88 stale utils-count fixed 12->13 (commit 724294e). AWAITING confirming re-run for clean 'ALL 709 CHECKS PASSED' before phase completion.
 **What's next:** User runs R/88 smoke test on HiPerGator, pastes verbatim DoI category counts + 3 confirmations; continuation agent records them in 130-02-SUMMARY.md and closes the phase.
