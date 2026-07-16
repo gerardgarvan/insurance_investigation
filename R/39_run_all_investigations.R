@@ -193,7 +193,9 @@ investigation_scripts <- c(
   "R/102_death_cause_nhl_flag.R",             # Cause-of-death NHL three-state flag CSV (Phase 118; fixed Phase 119 to read DEATH_CAUSE table)
   "R/104_gantt_entire_history.R",             # Gantt entire-history 6-col projection (quick-260710-i1e); consumes gantt_lifespan.csv + gantt_episodes.csv
   "R/105_normalize_supportive_care_meaning.R",  # Supportive Care Normalized Meaning column (Phase 120); mutates data/reference/all_codes_resolved_next_tables_v2.1.xlsx in place
-  "R/106_zip_change_frequency.R"                # ZIP change frequency investigation (Phase 121); probes LDS_ADDRESS_HISTORY, read-only
+  "R/106_zip_change_frequency.R",               # ZIP change frequency investigation (Phase 121); probes LDS_ADDRESS_HISTORY, read-only
+  "R/111_doi_classification.R",                 # DoI classification (Phase 128); DuckDB prefix-pull of DIAGNOSIS -> doi_encounters.rds + doi_patients.rds. MUST run before R/112 (emits its .rds inputs).
+  "R/112_doi_attribution_report.R"              # DoI attribution (Phase 129); joins rituximab/MTX to DoI dx (co-occurrence) -> doi_attribution_report.xlsx (4 sheets). Consumes R/111's .rds.
 )
 
 for (script in investigation_scripts) {
@@ -283,7 +285,8 @@ expected_xlsx <- c(
   "code_verification.xlsx",
   "death_date_summary.xlsx",
   "tableau_table1_encounter_cancer_codes.xlsx",
-  "tableau_table2_chemo_drugs_by_class.xlsx"
+  "tableau_table2_chemo_drugs_by_class.xlsx",
+  "doi_attribution_report.xlsx"
 )
 found <- file.exists(file.path("output", expected_xlsx))
 message("  Report data files: ", sum(found), "/", length(expected_xlsx), " present")
