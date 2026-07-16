@@ -360,3 +360,145 @@ message(glue(
   "    NOTE: DuckDB teardown happens in Plan 02 after xlsx write.\n",
   "    NOTE: No file written in Plan 01 — Plan 02 owns doi_attribution_report.xlsx."
 ))
+
+
+# ==============================================================================
+# SECTION 6: SHEET DATA FRAMES (4-SHEET WORKBOOK ASSEMBLY — PLAN 02) ----
+# ==============================================================================
+# Produces four data frames for doi_attribution_report.xlsx.
+# ALL counts are RAW (no suppress_small) — internal-only workbook per D-01 /
+# DOI-OUT-02.  in_hl_cohort dimension carried on every sheet per D-02.
+#
+# Shared note + footnote strings (exact text required by DOI-OUT-02/03 acceptance
+# criteria). Defined ONCE here and referenced in Section 7 add_styled_sheet calls.
+# ---------------------------------------------------------------------------
+
+message("\n--- Section 6: Building 4-sheet data frames ---")
+
+internal_only_note <- "INTERNAL-ONLY: raw counts, no automated small-cell suppression — suppress manually before external sharing"
+caveats_footnote   <- "Co-occurrence does not imply treatment attribution. Clinical chart review required for confirmation."
+
+# ---------------------------------------------------------------------------
+# SHEET 1: Patient Prevalence  (patient grain, matched links only)
+# Group: in_hl_cohort x doi_category x drug_class
+# RAW n_patients / n_encounters; three-state flag breakdowns.
+# ---------------------------------------------------------------------------
+
+df_patient_prevalence <- doi_drug_links %>%
+  filter(attribution_method != "none") %>%
+  group_by(in_hl_cohort, doi_category, drug_class) %>%
+  summarise(
+    n_patients                      = n_distinct(ID),          # RAW
+    n_encounters                    = n_distinct(ENCOUNTERID), # RAW
+    n_likely_non_lymphoma_directed  = sum(likely_non_lymphoma_directed %in% TRUE),
+    n_ambiguous_hl_active           = sum(is.na(likely_non_lymphoma_directed)),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(in_hl_cohort), doi_category, drug_class)
+
+message(glue("  df_patient_prevalence: {nrow(df_patient_prevalence)} rows"))
+
+# ---------------------------------------------------------------------------
+# SHEET 2: Encounter Co-occurrence  (encounter grain — detail sheet)
+# Includes attribution_method (DOI-ATTR-03). Column names use "with" language
+# (co-occurrence); NO column contains "_for_".
+# ---------------------------------------------------------------------------
+
+df_encounter_cooccurrence <- doi_drug_links %>%
+  filter(attribution_method != "none") %>%
+  select(
+    ID,
+    treatment_date,
+    drug_class,
+    drug_name,
+    ENCOUNTERID,
+    doi_category,
+    DX_DATE,
+    attribution_method,
+    in_hl_cohort,
+    likely_non_lymphoma_directed
+  )
+
+message(glue("  df_encounter_cooccurrence: {nrow(df_encounter_cooccurrence)} rows (encounter grain)"))
+
+# ---------------------------------------------------------------------------
+# SHEET 3: Drug x DoI Summary  (drug x DoI matrix, RAW counts)
+# Rare categories (NMO, pemphigus, GPA) will show single-digit cells BY DESIGN.
+# No suppress_small per D-01.
+# ---------------------------------------------------------------------------
+
+df_drug_doi_summary <- doi_drug_links %>%
+  filter(attribution_method != "none") %>%
+  group_by(drug_class, doi_category, in_hl_cohort) %>%
+  summarise(
+    n_patients                 = n_distinct(ID),          # RAW
+    n_encounters               = n_distinct(ENCOUNTERID), # RAW
+    n_encounter_id_method      = sum(attribution_method == "encounter_id"),
+    n_temporal_window_method   = sum(attribution_method == "temporal_window"),
+    .groups = "drop"
+  ) %>%
+  arrange(drug_class, doi_category, desc(in_hl_cohort))
+
+message(glue("  df_drug_doi_summary: {nrow(df_drug_doi_summary)} rows"))
+
+# ---------------------------------------------------------------------------
+# SHEET 4: Metadata  (window documentation + sensitivity counts — DOI-OUT-03)
+# ±30 / ±90 / ±180 day sensitivity comparison using the inline helper.
+# The 90-day count uses the named constant DOI_ATTRIBUTION_WINDOW_DAYS.
+# ---------------------------------------------------------------------------
+
+# Attribution method distribution (from doi_drug_links).
+attribution_tabyl <- janitor::tabyl(doi_drug_links, attribution_method)
+
+n_matched_encounter_id    <- attribution_tabyl$n[attribution_tabyl$attribution_method == "encounter_id"]
+n_matched_temporal_window <- attribution_tabyl$n[attribution_tabyl$attribution_method == "temporal_window"]
+n_no_cooccurrence         <- attribution_tabyl$n[attribution_tabyl$attribution_method == "none"]
+
+# Three-state flag counts.
+flag_tabyl <- janitor::tabyl(doi_drug_links, likely_non_lymphoma_directed, show_na = TRUE)
+n_true  <- flag_tabyl$n[!is.na(flag_tabyl$likely_non_lymphoma_directed) & flag_tabyl$likely_non_lymphoma_directed == TRUE]
+n_false <- flag_tabyl$n[!is.na(flag_tabyl$likely_non_lymphoma_directed) & flag_tabyl$likely_non_lymphoma_directed == FALSE]
+n_na    <- flag_tabyl$n[is.na(flag_tabyl$likely_non_lymphoma_directed)]
+
+# Guard: tabyl may return integer(0) for absent levels — coerce to 0L.
+n_true  <- if (length(n_true)  == 0L) 0L else as.integer(n_true)
+n_false <- if (length(n_false) == 0L) 0L else as.integer(n_false)
+n_na    <- if (length(n_na)    == 0L) 0L else as.integer(n_na)
+
+# Sensitivity recompute: count temporal-window-style pairs at ±win days.
+# Uses drug_admins x doi_enc (raw input tables, not the linked frame) so
+# the window is measured cleanly without encounter-tier confounds.
+count_window_matches <- function(win) {
+  drug_admins %>%
+    inner_join(doi_enc, by = "ID") %>%
+    filter(abs(as.integer(DX_DATE - treatment_date)) <= win) %>%
+    summarise(n_pairs = n(), n_patients = n_distinct(ID))
+}
+
+sens_30  <- count_window_matches(30L)
+sens_90  <- count_window_matches(DOI_ATTRIBUTION_WINDOW_DAYS)  # named constant — must not be literal 90
+sens_180 <- count_window_matches(180L)
+
+df_metadata <- tibble::tribble(
+  ~parameter,                          ~value,
+  "attribution_window_days",           as.character(DOI_ATTRIBUTION_WINDOW_DAYS),
+  "window_rationale",                  "One clinical quarter; RA/psoriasis/IBD indication-to-drug timelines span months",
+  "n_drug_admins_total",               as.character(nrow(drug_admins)),
+  "n_drug_admins_rituximab",           as.character(sum(drug_admins$drug_class == "rituximab")),
+  "n_drug_admins_methotrexate",        as.character(sum(drug_admins$drug_class == "methotrexate")),
+  "n_matched_encounter_id",            as.character(n_matched_encounter_id),
+  "n_matched_temporal_window",         as.character(n_matched_temporal_window),
+  "n_no_cooccurrence",                 as.character(n_no_cooccurrence),
+  "n_true_likely_non_lymphoma",        as.character(n_true),
+  "n_false_likely_non_lymphoma",       as.character(n_false),
+  "n_na_ambiguous_hl_active",          as.character(n_na),
+  "sensitivity_30d_pairs",             as.character(sens_30$n_pairs),
+  "sensitivity_30d_patients",          as.character(sens_30$n_patients),
+  "sensitivity_90d_pairs",             as.character(sens_90$n_pairs),
+  "sensitivity_90d_patients",          as.character(sens_90$n_patients),
+  "sensitivity_180d_pairs",            as.character(sens_180$n_pairs),
+  "sensitivity_180d_patients",         as.character(sens_180$n_patients)
+)
+
+message(glue("  df_metadata: {nrow(df_metadata)} rows"))
+message("\n=== Section 6 complete. All 4 sheet data frames ready. ===")
