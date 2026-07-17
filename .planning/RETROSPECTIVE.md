@@ -2,6 +2,44 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v3.3 — Rituximab/Methotrexate-Associated Diagnoses of Interest
+
+**Shipped:** 2026-07-17
+**Phases:** 4 (127-130) | **Plans:** 8
+
+### What Was Built
+
+- `DOI_CODE_MAP` (35 keys, 14 clinical categories) + `utils_doi.R` (`is_doi_code()` DX_TYPE-gated, `classify_doi_codes()`) — additive layer parallel to cancer cascade
+- `R/111` DuckDB prefix-pushdown DIAGNOSIS pull → `doi_encounters.rds` + `doi_patients.rds`; mutual-exclusivity hard-stop confirmed 0 on real data
+- `R/112` two-tier attribution linkage (ENCOUNTERID direct → ±90-day window); three-state `likely_non_lymphoma_directed` flag; 4-sheet `doi_attribution_report.xlsx`
+- R/88 Section 15w (14 checks), R/39 + SCRIPT_INDEX registration; 709/709 R/88 checks on HiPerGator with real DIAGNOSIS data
+
+### What Worked
+
+- The "parallel to cancer cascade, read-only" constraint made the scope crystal-clear — no risk of corrupting existing outputs
+- DuckDB prefix pushdown pattern (established Phase 128) kept memory safe on HiPerGator for the multi-million-row DIAGNOSIS table
+- Three-state flag design (TRUE/FALSE/NA) captured the clinically meaningful ambiguous case explicitly; no pressure to collapse NA
+- Phase 127 (code-set infrastructure first) as a strict prerequisite for all others paid off — no rework in Phase 128 or 129
+- IS_LOCAL-gated R/88 checks (structural pass locally, runtime on HiPerGator) is now a well-established dual-environment pattern
+
+### What Was Inefficient
+
+- Stale R/88 utils-count check (12→13 for `utils_doi.R`) surfaced only at runtime — a minor rework in Phase 130; preventable if new util files triggered a reminder to update the expected count
+- MILESTONES.md accomplishment extraction by gsd-tools grabbed all phase summaries instead of just v3.3 phases; needed manual fix
+
+### Patterns Established
+
+- `utils_doi.R` as a separate file (not extending `utils_cancer.R`) — preserves classify_codes() output contracts for 10+ existing consumers
+- `DOI_ATTRIBUTION_WINDOW_DAYS` as a named constant (not a magic 90) — ±90d window is clinically defensible and easily widened for sensitivity analyses
+- Phase 130 "registration + smoke-test + HiPerGator runtime gate" as the standard definition-of-done for new investigation script classes
+
+### Key Lessons
+
+- Hematologic Autoimmune dominated (10797) over RA (5801) — unexpected in an HL/lymphoma cohort; likely capturing secondary/treatment-related cytopenias (D69.x). Flag for SME review of attribution report.
+- R/39 STAGE 1 pipeline noise (`glue` not attached in sub-runs for R/14, R/03) is a pre-existing issue unrelated to this milestone; candidate for a quick-task hardening effort
+
+---
+
 ## Milestone: v1.5 -- Payer Analysis Expansion
 
 **Shipped:** 2026-05-01

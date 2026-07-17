@@ -1,5 +1,22 @@
 # Milestones
 
+## v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (Shipped: 2026-07-17)
+
+**Phases completed:** 4 phases (Phases 127-130), 8 plans
+**Milestone scope:** Additive, non-destructive DoI layer parallel to the cancer cascade — cancer classification, utils_cancer.R, and all existing outputs read-only throughout.
+
+**Delivered:** Curated ICD-9/ICD-10 code set for rituximab/methotrexate non-malignant indications, a tested utility layer, encounter- and patient-grain classification artifacts from the real DIAGNOSIS table, a two-tier attribution linkage report, and full registration/smoke-test coverage — all gated behind a HiPerGator runtime pass confirming 709/709 R/88 checks.
+
+**Key accomplishments:**
+
+- `DOI_CODE_MAP` (35 keys, 14 clinical categories: RA, GPA/MPA vasculitis, pemphigus/pemphigoid, inflammatory myopathy, SLE, Sjögren's, NMO/MG, ITP/AIHA, psoriasis/PsA, IBD, plus edge conditions) + `DOI_CODE_TIER` + `RITUXIMAB_CODES` / `MTX_CODES` / `DOI_ATTRIBUTION_WINDOW_DAYS` (90L) centralized in `R/00_config.R`; I77.82 and D47.Z2 explicitly excluded with inline comments (Phase 127)
+- `utils_doi.R` — `is_doi_code()` DX_TYPE-gated (ICD-9 `09` / ICD-10 `10`, NA/SNOMED → FALSE) and `classify_doi_codes()` mirroring the `utils_cancer.R` cascade; local fixture exercises both ICD-9 (714.0) and ICD-10 (M05.9) paths (Phase 127)
+- `R/111` — DuckDB-native `LEFT(DX,3) IN (...)` prefix pushdown before `collect()` (no full DIAGNOSIS table load); mutual-exclusivity hard-stop `sum(is_doi_code & is_cancer_code) == 0` confirmed **0** on real data; L10.81 `paraneoplastic_flag = TRUE`; writes `doi_encounters.rds` (encounter grain) and `doi_patients.rds` (patient grain) (Phase 128)
+- `R/112` — two-tier attribution: ENCOUNTERID direct equi-join (tier 1) → ±90-day PATID temporal window via `DOI_ATTRIBUTION_WINDOW_DAYS` (tier 2); three-state `likely_non_lymphoma_directed` (TRUE/FALSE/NA, NA never coerced to FALSE); `attribution_method` column; 4-sheet `doi_attribution_report.xlsx` with co-occurrence language enforced and CAVEATS footnote on every sheet (Phase 129)
+- R/88 Section 15w (14 checks: structural + IS_LOCAL-gated runtime), R/39 registration (R/111 before R/112), SCRIPT_INDEX rows; HiPerGator runtime confirmed — 10 DoI categories logged (Hematologic Autoimmune 10797, RA 5801, IBD 4128, Psoriasis 1740, Pemphigus 42); **709/709 R/88 checks pass** on real DIAGNOSIS data (Phase 130)
+
+---
+
 ## v3.2 Meeting Gap Resolution Report (Shipped: 2026-07-15)
 
 **Phases completed:** 23 phases (Phases 104-126), 37 plans, 61 tasks
