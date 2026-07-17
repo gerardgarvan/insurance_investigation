@@ -2419,12 +2419,12 @@ if (r104_exists) {
 # data/reference/all_codes_resolved_next_tables_v2.1.xlsx to its RxNorm IN generic
 # ingredient (three-step: related.json?tty=IN -> historystatus derivedConcepts ->
 # rule-based canonicalize_drug_name fallback), caches lookups to
-# data/reference/rxnorm_ingredient_cache.csv, and appends a "Normalized Meaning"
+# data/reference/rxnorm_ingredient_cache.csv, and appends a "normalized_name"
 # column (col G) IN PLACE, keeping combination products as sorted "/"-joined labels.
 # These are STRUCTURAL greps against the R/105 file text -- no HiPerGator data or
 # internet needed (nyquist_validation is OFF); they pass LOCALLY.
 
-message("\n[Phase 120] Supportive Care Normalized Meaning (R/105)...")
+message("\n[Phase 120] Supportive Care normalized_name (R/105)...")
 
 # Check 1: R/105 script exists
 r105_exists <- file.exists("R/105_normalize_supportive_care_meaning.R")
@@ -2476,10 +2476,10 @@ if (r105_exists) {
   check("R/105 writes the rxnorm_ingredient_cache.csv",
         grepl("rxnorm_ingredient_cache\\.csv", r105_text))
 
-  # Check 12: appends the Normalized Meaning column at col G (header G2, data G3)
-  check("R/105 appends Normalized Meaning at col G (G2 header + G3 data)",
-        grepl("Normalized Meaning", r105_text) &&
-          grepl("G2", r105_text) && grepl("G3", r105_text))
+  # Check 12: appends normalized_name at col G (header G2, data G3)
+  check("R/105 appends normalized_name at col G (G2 header + G3 data)",
+        grepl('x = "normalized_name", dims = "G2"', r105_text, fixed = TRUE) &&
+          grepl("G3", r105_text))
 
   # Check 13: round-trip verify present (2nd wb_load + 171-row + 7-col assertions).
   #           R/105 asserts row count against the N_SUPCARE_ROWS (171L) constant and

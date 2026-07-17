@@ -4,7 +4,7 @@
 # Purpose:      Resolve each of the 171 RXNORM codes on the "Supportive Care" tab
 #               of data/reference/all_codes_resolved_next_tables_v2.1.xlsx to its
 #               generic INGREDIENT name (RxNorm IN concept) and append a new
-#               trailing column "Normalized Meaning" (column G) IN PLACE.
+#               trailing column "normalized_name" (column G) IN PLACE.
 #
 #               Collapses dosage / spelling / brand / salt / biosimilar variants
 #               of the same drug to one canonical ingredient (D-01/D-05/D-06), so
@@ -30,7 +30,7 @@
 #               R/00_config.R  (DRUG_NAME_ALIASES + canonicalize_drug_name)
 #
 # Outputs:      data/reference/all_codes_resolved_next_tables_v2.1.xlsx
-#                 -> Supportive Care tab gains trailing col G "Normalized Meaning"
+#                 -> Supportive Care tab gains trailing col G "normalized_name"
 #               data/reference/rxnorm_ingredient_cache.csv
 #                 -> columns rxcui, ingredient_name, source, resolved_at
 #
@@ -320,7 +320,7 @@ rule_based_ingredient <- function(meaning_text) {
 }
 
 # ------------------------------------------------------------------------------
-# SECTION 5: ASSEMBLE THE Normalized Meaning VECTOR (length 171, never blank) ----
+# SECTION 5: ASSEMBLE THE normalized_name VECTOR (length 171, never blank) ----
 # ------------------------------------------------------------------------------
 row_tbl <- tibble(
   rxcui   = codes,
@@ -349,7 +349,7 @@ row_tbl <- row_tbl %>%
 normalized_vec <- row_tbl$normalized
 stopifnot(length(normalized_vec) == N_SUPCARE_ROWS)
 if (any(is.na(normalized_vec) | !nzchar(trimws(normalized_vec)))) {
-  stop("Assembled Normalized Meaning contains blank/NA values -- fallback failed")
+  stop("Assembled normalized_name contains blank/NA values -- fallback failed")
 }
 
 n_combo <- sum(row_tbl$norm_source == "rxnav_IN_combo", na.rm = TRUE)
@@ -360,7 +360,7 @@ n_combo <- sum(row_tbl$norm_source == "rxnav_IN_combo", na.rm = TRUE)
 # Operate on the ALREADY-loaded wb: write the G2 header + G3:G173 data, widen the
 # autofilter to include column G, optionally copy F2's header style, then save
 # over the file in place. Do NOT rebuild with wb_workbook() (drops other 7 sheets).
-wb$add_data(sheet = SHEET, x = "Normalized Meaning", dims = "G2")
+wb$add_data(sheet = SHEET, x = "normalized_name", dims = "G2")
 wb$add_data(sheet = SHEET, x = normalized_vec, dims = "G3", col_names = FALSE)
 
 # Widen the autofilter/dimension to column G (Pitfall 1). Best-effort: the column
@@ -382,7 +382,7 @@ tryCatch(
 )
 
 openxlsx2::wb_save(wb, XLSX_PATH) # overwrite in place (D-02)
-message(glue("  saved '{SHEET}' with new 'Normalized Meaning' column to {XLSX_PATH}"))
+message(glue("  saved '{SHEET}' with new 'normalized_name' column to {XLSX_PATH}"))
 
 # ------------------------------------------------------------------------------
 # SECTION 7: LOCAL ROUND-TRIP VERIFICATION (REQUIRED) ----
@@ -401,12 +401,12 @@ if (length(wb2$sheet_names) != 8 || !identical(as.character(wb2$sheet_names), EX
 sc <- wb_to_df(wb2, SHEET, start_row = 2)
 if (ncol(sc) != 7) stop(glue("Round-trip FAIL (b): '{SHEET}' has {ncol(sc)} cols, expected 7"))
 if (nrow(sc) != N_SUPCARE_ROWS) stop(glue("Round-trip FAIL (b): '{SHEET}' has {nrow(sc)} rows, expected {N_SUPCARE_ROWS}"))
-if (!("Normalized Meaning" %in% names(sc))) stop("Round-trip FAIL (b): 'Normalized Meaning' column missing")
+if (!("normalized_name" %in% names(sc))) stop("Round-trip FAIL (b): 'normalized_name' column missing")
 
-# (c) no blank Normalized Meaning
-nm <- sc[["Normalized Meaning"]]
+# (c) no blank normalized_name
+nm <- sc[["normalized_name"]]
 if (!all(!is.na(nm) & nzchar(trimws(nm)))) {
-  stop("Round-trip FAIL (c): blank Normalized Meaning value(s) after save")
+  stop("Round-trip FAIL (c): blank normalized_name value(s) after save")
 }
 
 # (d) other sheets' data-row counts unchanged (allow +/-1 for trailing-blank drift)
@@ -429,7 +429,7 @@ src_counts <- row_tbl %>%
   arrange(desc(n))
 
 message("")
-message("=== R/105 Normalized Meaning summary ===")
+message("=== R/105 normalized_name summary ===")
 for (i in seq_len(nrow(src_counts))) {
   message(glue("  {src_counts$norm_source[i]}: {src_counts$n[i]}"))
 }
