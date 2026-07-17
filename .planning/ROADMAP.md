@@ -65,7 +65,7 @@ See `.planning/milestones/v3.3-ROADMAP.md` for full phase details.
 **Goal:** Add MED_ADMIN-exclusive RxNorm CUI rows and a uniform normalized_name column to every code tab in the reference xlsx workbook; update R/105 and R/88 to use the new column name.
 **Requirements**: 131-A (normalized_name column all tabs), 131-B (MED_ADMIN rows), 131-C (R/105 + R/88 rename)
 **Depends on:** Phase 130
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 131-01-PLAN.md — Build R/131 script: MED_ADMIN anti-join + normalized_name columns for all xlsx tabs
