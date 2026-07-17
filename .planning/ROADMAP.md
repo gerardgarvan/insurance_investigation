@@ -59,3 +59,14 @@ See `.planning/milestones/v3.3-ROADMAP.md` for full phase details.
 | 128. DoI Classification | v3.3 | 2/2 | Complete | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete | 2026-07-16 |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 2/2 | Complete | 2026-07-17 |
+
+### Phase 131: update all_codes_resolved_next_tables_v2.1_new.xlsx to include med_admin codes and also every tab should have a normalized name column
+
+**Goal:** Add MED_ADMIN-exclusive RxNorm CUI rows and a uniform normalized_name column to every code tab in the reference xlsx workbook; update R/105 and R/88 to use the new column name.
+**Requirements**: 131-A (normalized_name column all tabs), 131-B (MED_ADMIN rows), 131-C (R/105 + R/88 rename)
+**Depends on:** Phase 130
+**Plans:** 2 plans
+
+Plans:
+- [ ] 131-01-PLAN.md — Build R/131 script: MED_ADMIN anti-join + normalized_name columns for all xlsx tabs
+- [ ] 131-02-PLAN.md — Update R/105 header string + R/88 section 15r Check 12 assertion
