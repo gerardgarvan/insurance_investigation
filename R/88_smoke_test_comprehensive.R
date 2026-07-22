@@ -4677,6 +4677,7 @@ message("  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + un
 message("  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/after report + unmapped-name audit structural integrity (Section 15v, 13 checks)")
 message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classification + R/112 attribution) structural integrity incl. mutual-exclusivity hard-stop (Section 15w, ~14 checks)")
 message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
+message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
 
 if (failed > 0) {
   quit(status = 1)
