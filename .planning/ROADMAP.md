@@ -49,7 +49,7 @@ See MILESTONES.md for full details on all shipped milestones.
 - [x] **Phase 128: DoI Classification** (2 plans) - DuckDB DIAGNOSIS pull, classify, mutual-exclusivity hard-stop, cached artifacts (completed 2026-07-15)
 - [x] **Phase 129: Attribution Linkage and Output** - Two-tier join, three-state flag, 4-sheet xlsx, HIPAA suppression (completed 2026-07-16)
 - [ ] **Phase 130: Registration, Smoke Test, and HiPerGator Runtime** - R/39 + SCRIPT_INDEX + R/88 section + runtime gate
-- [ ] **Phase 131: All-Codes-Resolved MED_ADMIN/DISPENSING NDC Coverage + Medication Column** - Generalized NDC crosswalk detection across all RXNORM vectors, per-code Source Table tagging, normalized Medication column
+- [x] **Phase 131: All-Codes-Resolved MED_ADMIN/DISPENSING NDC Coverage + Medication Column** - Generalized NDC crosswalk detection across all RXNORM vectors, per-code Source Table tagging, normalized Medication column (completed 2026-07-22)
 
 ## Phase Details
 
@@ -155,14 +155,14 @@ See MILESTONES.md for full details on all shipped milestones.
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete    | 2026-07-16 |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 1/2 | In Progress|  |
-| 131. All-Codes-Resolved MED_ADMIN/DISPENSING + Medication Column | 3/4 | In Progress|  |  |
+| 131. All-Codes-Resolved MED_ADMIN/DISPENSING + Medication Column | 4/4 | Complete   | 2026-07-22 |  |
 
 ### Phase 131: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
 
 **Goal:** all_codes_resolved.xlsx (and its 5 per-type siblings) reflect true MED_ADMIN/DISPENSING NDC-resolved code coverage across all 4 RXNORM vector categories, with a per-code-accurate Source Table label and a normalized Medication column on every drug-relevant sheet
 **Requirements**: MEDXLSX-01, MEDXLSX-02, MEDXLSX-03, MEDXLSX-04, MEDXLSX-05, MEDXLSX-06, MEDXLSX-07, SMOKE-131-01 (ad-hoc IDs -- this phase has no formal ROADMAP requirement entries in REQUIREMENTS.md; derived from CONTEXT.md's locked decisions per the discuss-phase discussion)
 **Depends on:** Phase 130
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 **Design constraints:**
 - Reuses get_chemo_hits() (Phase 122, R/utils/utils_treatment.R) generalized across chemo_rxnorm/sct_rxnorm/immunotherapy_rxnorm/supportive_care_rxnorm via an additive return_source parameter -- zero behavior change for its 5 existing callers (R/10, R/11, R/25, R/26, R/76)
@@ -182,4 +182,4 @@ See MILESTONES.md for full details on all shipped milestones.
 - [x] 131-01-PLAN.md -- MEDICATION_LOOKUP Supportive Care col G wiring + fallback_normalize_medication() heuristic normalizer (R/00_config.R) [MEDXLSX-01, MEDXLSX-02] (Wave 1)
 - [x] 131-02-PLAN.md -- get_chemo_hits() additive return_source tagging + R/50 Section 3/4 MED_ADMIN/DISPENSING NDC generalization across all 4 RXNORM vectors with dedup [MEDXLSX-03, MEDXLSX-04, MEDXLSX-05] (Wave 1)
 - [x] 131-03-PLAN.md -- Medication column population (Section 4) + shared xlsx-writer layout across write_resolved_xlsx() and the combined workbook (Section 6) [MEDXLSX-06, MEDXLSX-07] (Wave 2, depends on 131-01 + 131-02)
-- [ ] 131-04-PLAN.md -- R/88 Section 15x structural smoke-test validation + SMOKE-131-01 summary line [SMOKE-131-01] (Wave 3, depends on 131-01/02/03)
+- [x] 131-04-PLAN.md -- R/88 Section 15x structural smoke-test validation + SMOKE-131-01 summary line [SMOKE-131-01] (Wave 3, depends on 131-01/02/03)

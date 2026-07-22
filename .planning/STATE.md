@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: executing
-stopped_at: Completed 131-03-PLAN.md
-last_updated: "2026-07-22T20:22:38.131Z"
+status: verifying
+stopped_at: Completed 131-04-PLAN.md
+last_updated: "2026-07-22T20:29:59.163Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-07-15 after v3.2)
 
 ## Current Position
 
-Phase: 131 (update-all-codes-resolved-xlsx-to-include-med-admin-ndc-resolved-codes-and-a-normalized-drug-name-column) — EXECUTING
-Plan: 03 of 4 complete
-Status: Ready to execute (131-04 next)
+Phase: 131 (update-all-codes-resolved-xlsx-to-include-med-admin-ndc-resolved-codes-and-a-normalized-drug-name-column) — PLANS COMPLETE
+Plan: 04 of 4 complete
+Status: All plans executed — phase ready for verification
 Last activity: 2026-07-22
 
-Progress: [█████████░] 92% (11/12 plans complete, v3.3 milestone)
+Progress: [██████████] 100% (12/12 plans complete, v3.3 milestone)
 
 ## Performance Metrics
 
@@ -73,11 +73,13 @@ Progress: [█████████░] 92% (11/12 plans complete, v3.3 miles
 - [Phase 131-02]: `get_chemo_hits()` gained an additive `return_source` param (default FALSE) tagging PRESCRIBING / MED_ADMIN (RX) / MED_ADMIN (NDC) / DISPENSING (NDC) rows; all 6 existing callers unaffected since none pass it
 - [Phase 131-02]: R/50's RXNORM loop now queries PRESCRIBING + MED_ADMIN (RX+ND) + DISPENSING generically for all 4 RXNORM vectors (`filter(code_type == "RXNORM")`), with Records/Patients de-duplicated on `(ID, treatment_date, code)` — existing Records counts for multi-row-per-day codes will drop vs. prior `all_codes_resolved.xlsx` runs (intended Pitfall-2 fix, not a regression; flag to collaborators on next regeneration)
 - [Phase 131-03]: Added `all_codes_df$medication` column (Section 4) gated by category/code_type, and a shared `resolved_xlsx_layout(category)` helper consumed by both `write_resolved_xlsx()` and the combined-workbook per-category loop so the 5 per-type xlsx files and `all_codes_resolved.xlsx` can never diverge on Medication column layout/values; Radiation sheets keep their original unchanged 6-column shape (no Medication column at all)
+- [Phase 131-04]: Added R/88 Section 15x (12 structural checks) + SMOKE-131-01 summary line validating every 131-01/02/03 artifact; all illustrative grep patterns from the plan matched the actual source text verbatim, no pattern adjustments needed
 
 ### Active TODOs
 
 - [ ] Plan Phase 127 (Code-Set and Infrastructure Centralization)
-- [ ] Execute Phase 131 Plan 04 (verification/regeneration on HiPerGator)
+- [ ] Verify Phase 131 end-to-end on HiPerGator (regenerate all_codes_resolved.xlsx, run R/88 with real R packages, confirm Section 15x checks pass and Medication column populates as expected)
+- [ ] Add a Phase 131 section to `.planning/REQUIREMENTS.md` so MEDXLSX-01..07/SMOKE-131-01 can be checked off via `gsd-tools requirements mark-complete`
 
 ### Known Blockers
 
@@ -86,5 +88,5 @@ Progress: [█████████░] 92% (11/12 plans complete, v3.3 miles
 ## Session Continuity
 
 **Last command:** `/gsd:execute-phase 131` (2026-07-22)
-**Stopped at:** Completed 131-03-PLAN.md
-**What's next:** Execute 131-04 (verification/regeneration on HiPerGator).
+**Stopped at:** Completed 131-04-PLAN.md
+**What's next:** All 4 plans in Phase 131 are executed. Phase 131 (and the v3.3 milestone) is ready for verification -- regenerate `all_codes_resolved.xlsx` on HiPerGator and confirm R/88 Section 15x passes with real R packages installed.
