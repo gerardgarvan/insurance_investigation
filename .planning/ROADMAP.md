@@ -155,14 +155,14 @@ See MILESTONES.md for full details on all shipped milestones.
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete    | 2026-07-16 |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 1/2 | In Progress|  |
-| 131. All-Codes-Resolved MED_ADMIN/DISPENSING + Medication Column | v3.3 | 0/4 | Planned |  |
+| 131. All-Codes-Resolved MED_ADMIN/DISPENSING + Medication Column | 2/4 | In Progress|  |  |
 
 ### Phase 131: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
 
 **Goal:** all_codes_resolved.xlsx (and its 5 per-type siblings) reflect true MED_ADMIN/DISPENSING NDC-resolved code coverage across all 4 RXNORM vector categories, with a per-code-accurate Source Table label and a normalized Medication column on every drug-relevant sheet
 **Requirements**: MEDXLSX-01, MEDXLSX-02, MEDXLSX-03, MEDXLSX-04, MEDXLSX-05, MEDXLSX-06, MEDXLSX-07, SMOKE-131-01 (ad-hoc IDs -- this phase has no formal ROADMAP requirement entries in REQUIREMENTS.md; derived from CONTEXT.md's locked decisions per the discuss-phase discussion)
 **Depends on:** Phase 130
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 **Design constraints:**
 - Reuses get_chemo_hits() (Phase 122, R/utils/utils_treatment.R) generalized across chemo_rxnorm/sct_rxnorm/immunotherapy_rxnorm/supportive_care_rxnorm via an additive return_source parameter -- zero behavior change for its 5 existing callers (R/10, R/11, R/25, R/26, R/76)
@@ -179,7 +179,7 @@ See MILESTONES.md for full details on all shipped milestones.
   4. Records/Patients counts are not inflated by double-counting administrations reachable via multiple source paths
   5. R/88 Section 15x validates all of the above structurally, with a SMOKE-131-01 summary line
 **Plans**: 4 plans
-- [ ] 131-01-PLAN.md -- MEDICATION_LOOKUP Supportive Care col G wiring + fallback_normalize_medication() heuristic normalizer (R/00_config.R) [MEDXLSX-01, MEDXLSX-02] (Wave 1)
+- [x] 131-01-PLAN.md -- MEDICATION_LOOKUP Supportive Care col G wiring + fallback_normalize_medication() heuristic normalizer (R/00_config.R) [MEDXLSX-01, MEDXLSX-02] (Wave 1)
 - [ ] 131-02-PLAN.md -- get_chemo_hits() additive return_source tagging + R/50 Section 3/4 MED_ADMIN/DISPENSING NDC generalization across all 4 RXNORM vectors with dedup [MEDXLSX-03, MEDXLSX-04, MEDXLSX-05] (Wave 1)
 - [ ] 131-03-PLAN.md -- Medication column population (Section 4) + shared xlsx-writer layout across write_resolved_xlsx() and the combined workbook (Section 6) [MEDXLSX-06, MEDXLSX-07] (Wave 2, depends on 131-01 + 131-02)
 - [ ] 131-04-PLAN.md -- R/88 Section 15x structural smoke-test validation + SMOKE-131-01 summary line [SMOKE-131-01] (Wave 3, depends on 131-01/02/03)

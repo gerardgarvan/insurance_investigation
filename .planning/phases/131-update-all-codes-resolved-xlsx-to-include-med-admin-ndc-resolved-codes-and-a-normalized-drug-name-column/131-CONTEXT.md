@@ -42,6 +42,11 @@ Both the combined `all_codes_resolved.xlsx` and the 5 per-type files (`chemother
 - Both the combined `all_codes_resolved.xlsx` and the 5 per-type files get all of the above (MED_ADMIN NDC coverage + Medication column) — they share the same underlying data via `write_resolved_xlsx()`, keep them in sync.
 - The 5 per-type files are legacy/low-priority in practice (nobody actively opens them), but should still get updated since they're generated from the same pipeline — don't let them silently diverge.
 
+### Medication column — Supportive Care col G reuse (added post-research)
+- Phase 120 (`R/105_normalize_supportive_care_meaning.R`) already wrote a "Normalized Meaning" column (col G) to the Supportive Care sheet of `all_codes_resolved_next_tables_v2.1.xlsx`, covering all 171 Supportive Care RXNORM codes — but `MEDICATION_LOOKUP`'s builder only reads column 3 by position, so col G is currently orphaned.
+- Decision: wire this in. Extend `MEDICATION_LOOKUP` (or add a parallel lookup consulted first for Supportive Care) to read col G for the Supportive Care sheet, using this already-validated Phase 120 output instead of re-deriving names via the new heuristic fallback.
+- Net effect: the new heuristic fallback's real-world scope narrows to SCT, Immunotherapy, and any newly NDC-resolved MED_ADMIN/DISPENSING codes lacking a `MEDICATION_LOOKUP` entry — Supportive Care codes get covered by curated lookup (column 3 or col G) rather than the fallback in the common case.
+
 ### Claude's Discretion
 - Exact string-stripping implementation for the fallback normalizer (regex approach, whether to factor it into a shared helper vs. inline in R/50)
 - Whether to reuse/extend `canonicalize_drug_name()` / `DRUG_NAME_ALIASES` for the fallback path, or write independent logic
