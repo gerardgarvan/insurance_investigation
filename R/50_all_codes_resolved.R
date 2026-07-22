@@ -424,16 +424,20 @@ for (i in seq_len(nrow(code_type_map))) {
   vec_name <- code_type_map$vector_name[i]
   category <- code_type_map$category[i]
   code_type <- code_type_map$code_type[i]
-  source_table <- code_type_map$source_table[i]
+  static_source_table <- code_type_map$source_table[i]
 
   codes <- TREATMENT_CODES[[vec_name]]
   if (is.null(codes) || length(codes) == 0) next
 
   # Create per-code rows
   vec_df <- tibble(code = codes) %>%
-    # Look up counts
+    # Look up counts AND the per-code dynamic source (added in Task 2); rename
+    # count_results$source_table to dyn_source_table so it survives the join
+    # without colliding with the static_source_table variable above.
     left_join(
-      count_results %>% filter(vector_name == vec_name) %>% select(code, records, patients),
+      count_results %>%
+        filter(vector_name == vec_name) %>%
+        select(code, records, patients, dyn_source_table = source_table),
       by = "code"
     ) %>%
     # Fill NA counts with 0
@@ -446,13 +450,23 @@ for (i in seq_len(nrow(code_type_map))) {
     left_join(hardcoded_desc_tbl %>% rename(hardcoded_desc = description), by = "code") %>%
     left_join(config_comments %>% rename(config_desc = description), by = "code") %>%
     mutate(
-      description = coalesce(api_desc, hardcoded_desc, config_desc, "No description available")
+      description = coalesce(api_desc, hardcoded_desc, config_desc, "No description available"),
+      # Dynamic per-code source (from actual matches, Task 2) wins when present;
+      # falls back to the static code_type_map value for PROCEDURES/ENCOUNTER
+      # categories where count_results never sets source_table (dyn_source_table
+      # is NA for every row there).
+      source_table = dplyr::coalesce(dyn_source_table, static_source_table)
     ) %>%
-    select(code, description, records, patients) %>%
+    # source_table is included here so it is NOT dropped by this select --
+    # this is the exact step that silently strips unlisted columns.
+    select(code, description, records, patients, source_table) %>%
     mutate(
       code_type = code_type,
-      source_table = source_table,
       category = category
+      # NOTE: do NOT reassign source_table here -- it already carries the
+      # coalesced value through the select() above. Reassigning it to the
+      # static_source_table variable at this point would silently clobber
+      # the dynamic value for every RXNORM row.
     )
 
   all_codes_df <- bind_rows(all_codes_df, vec_df)
