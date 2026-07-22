@@ -604,10 +604,30 @@ if (nrow(codes_to_update) > 0) {
 # SECTION 6: XLSX GENERATION ----
 # =============================================================================
 
+# Shared category-aware column layout (Phase 131): both write_resolved_xlsx()
+# (per-type files) and the combined-workbook per-category loop (Section 6b)
+# call this so the two writers can never silently diverge on headers/column
+# count/widths. Every category gets a Medication column (after Meaning)
+# except Radiation, which keeps its original 6-column layout untouched.
+resolved_xlsx_layout <- function(category) {
+  has_medication <- category != "Radiation"
+  list(
+    has_medication = has_medication,
+    headers = if (has_medication) {
+      c("Code", "Meaning", "Medication", "Code Type", "Source Table", "Records", "Patients")
+    } else {
+      c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
+    },
+    n_cols = if (has_medication) 7L else 6L,
+    col_widths = if (has_medication) c(15, 45, 25, 12, 15, 10, 10) else c(15, 45, 12, 15, 10, 10)
+  )
+}
+
 # 6a. write_resolved_xlsx function (adapted from R/42)
 write_resolved_xlsx <- function(df, category, output_path) {
   n_codes <- nrow(df)
   sheet_name <- paste(category, "Codes")
+  layout <- resolved_xlsx_layout(category)
 
   fill_color <- TREATMENT_TYPE_COLORS[[category]]$fill
   font_color <- TREATMENT_TYPE_COLORS[[category]]$font
@@ -625,32 +645,45 @@ write_resolved_xlsx <- function(df, category, output_path) {
     sheet = sheet_name, dims = "A1",
     name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
   )
-  wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
+  wb$merge_cells(sheet = sheet_name, dims = glue("A1:{LETTERS[layout$n_cols]}1"))
 
   # Row 2: Column headers
-  headers <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
+  headers <- layout$headers
   for (i in seq_along(headers)) {
     wb$add_data(
       sheet = sheet_name, x = headers[i],
       start_row = 2, start_col = i
     )
   }
-  wb$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
+  wb$add_fill(sheet = sheet_name, dims = glue("A2:{LETTERS[layout$n_cols]}2"), color = wb_color("FF374151"))
   wb$add_font(
-    sheet = sheet_name, dims = "A2:F2",
+    sheet = sheet_name, dims = glue("A2:{LETTERS[layout$n_cols]}2"),
     name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
   )
 
   # Row 3+: Data
-  write_df <- data.frame(
-    Code = df$code,
-    Meaning = ifelse(is.na(df$description), "", df$description),
-    Code_Type = df$code_type,
-    Source_Table = df$source_table,
-    Records = df$records,
-    Patients = df$patients,
-    stringsAsFactors = FALSE
-  )
+  write_df <- if (layout$has_medication) {
+    data.frame(
+      Code = df$code,
+      Meaning = ifelse(is.na(df$description), "", df$description),
+      Medication = ifelse(is.na(df$medication), "", df$medication),
+      Code_Type = df$code_type,
+      Source_Table = df$source_table,
+      Records = df$records,
+      Patients = df$patients,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      Code = df$code,
+      Meaning = ifelse(is.na(df$description), "", df$description),
+      Code_Type = df$code_type,
+      Source_Table = df$source_table,
+      Records = df$records,
+      Patients = df$patients,
+      stringsAsFactors = FALSE
+    )
+  }
   wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
 
   # Styling: Code column
@@ -662,14 +695,14 @@ write_resolved_xlsx <- function(df, category, output_path) {
     name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
   )
 
-  # Number formatting
+  # Number formatting (Records/Patients are always the last two columns)
   if (n_codes > 0) {
-    num_dims <- glue("E3:F{last_row}")
+    num_dims <- glue("{LETTERS[layout$n_cols - 1]}3:{LETTERS[layout$n_cols]}{last_row}")
     wb$add_numfmt(sheet = sheet_name, dims = num_dims, numfmt = "#,##0")
   }
 
   # Column widths
-  wb$set_col_widths(sheet = sheet_name, cols = 1:6, widths = c(15, 45, 12, 15, 10, 10))
+  wb$set_col_widths(sheet = sheet_name, cols = seq_len(layout$n_cols), widths = layout$col_widths)
 
   # Notes sheet
   wb$add_worksheet("Notes")
