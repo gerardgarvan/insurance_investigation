@@ -2632,6 +2632,119 @@ MEDICATION_LOOKUP <- setNames(canonicalize_drug_name(unname(MEDICATION_LOOKUP)),
 message(glue("  DRUG_NAME_ALIASES: {length(DRUG_NAME_ALIASES)} canonical aliases applied to MEDICATION_LOOKUP"))
 
 # ==============================================================================
+# fallback_normalize_medication() -- Phase 131 heuristic drug-name normalizer
+# ==============================================================================
+# WHY: MEDICATION_LOOKUP (above) is the primary source of drug names, but new
+# MED_ADMIN NDC-resolved codes, plus any SCT/Immunotherapy/Supportive Care code
+# without a curated entry, have no lookup hit. This function derives a
+# normalized drug name heuristically. It operates on R/50's already-coalesced
+# `description` field (NOT raw R/00_config.R inline comments, which can be
+# mid-word truncated). This is the Phase 131 fallback, consulted only AFTER
+# a MEDICATION_LOOKUP lookup fails.
+#
+# Three-tier priority (fully vectorized over `description`/`code_type` --
+# loops only over small fixed formulation/salt word lists, never over rows):
+#   1. Multi-ingredient " / "-delimited compound -> passthrough unchanged
+#   2. HCPCS "Injection, X, dose" -> extract X
+#   3. RxNorm-STR-style description -> strip salts/doses/formulations down to
+#      the bare generic ingredient name (adapted from R/105's
+#      rule_based_ingredient(), which performs the same strip against the
+#      Supportive Care reference Excel's Meaning column)
+#
+# Never-blank guarantee: falls back to the lowercased first word of the
+# original description if branch 3 strips everything away (mirrors R/105's
+# never-blank rule). Returns NA_character_ only when the input description
+# itself is NA/blank.
+# ==============================================================================
+fallback_normalize_medication <- function(description, code_type) {
+  stopifnot(length(description) == length(code_type))
+
+  out <- rep(NA_character_, length(description))
+  is_blank <- is.na(description) | !nzchar(stringr::str_trim(description))
+
+  # ---- Branch 1: multi-ingredient " / "-delimited compound passthrough ----
+  is_multi <- !is_blank & stringr::str_detect(description, stringr::fixed(" / "))
+  out[is_multi] <- stringr::str_squish(description[is_multi])
+
+  # ---- Branch 2: HCPCS "Injection, X, dose" pattern ----
+  is_hcpcs <- !is_blank & !is_multi &
+    !is.na(code_type) & code_type == "CPT/HCPCS" &
+    stringr::str_detect(description, "^Injection,\\s*([^,]+),")
+  if (any(is_hcpcs)) {
+    extracted <- stringr::str_match(description[is_hcpcs], "^Injection,\\s*([^,]+),")[, 2]
+    extracted <- stringr::str_trim(extracted)
+    extracted <- canonicalize_drug_name(extracted)
+    out[is_hcpcs] <- tolower(stringr::str_trim(extracted))
+  }
+
+  # ---- Branch 3: RxNorm-STR-style strip (default; adapted from R/105's
+  # rule_based_ingredient()) ----
+  is_default <- !is_blank & !is_multi & !is_hcpcs
+  if (any(is_default)) {
+    s <- description[is_default]
+
+    # (a) strip pack wrappers: leading {...} and inner "N (...)"
+    s <- stringr::str_remove(s, "^\\{.*\\}\\s*")
+    s <- stringr::str_remove_all(s, "\\d+\\s*\\([^)]*\\)")
+
+    # (b) strip leading quantity prefixes ("1 ML", "168 HR", "0.6 ML")
+    s <- stringr::str_remove(s, "^\\d+(\\.\\d+)?\\s+(ML|HR)\\s+")
+
+    # (c) strip brand brackets [Decadron], [Neulasta], ...
+    s <- stringr::str_remove_all(s, "\\s*\\[[^\\]]*\\]")
+
+    # (d) strip dose tokens: (Base Equivalent), units, numbers, percent
+    s <- stringr::str_remove_all(s, "\\(Base Equivalent\\)")
+    s <- stringr::str_remove_all(
+      s,
+      stringr::regex("\\b(MG/ML|MCG/ML|UNT/ML|UNT/MG|MG/MG|MG/HR|MG|MCG|ML)\\b", ignore_case = TRUE)
+    )
+    s <- stringr::str_remove_all(s, "\\d+(\\.\\d+)?")
+    s <- stringr::str_remove_all(s, "%")
+
+    # (e) strip formulation words (same list as R/105's rule_based_ingredient())
+    formulations <- c(
+      "Oral Tablet", "Disintegrating", "Oral Capsule", "Oral Solution",
+      "Oral Film", "Injectable Solution", "Injection Solution", "Injection",
+      "Inj", "Prefilled Syringe", "Ophthalmic Solution", "Ophthalmic Suspension",
+      "Ophthalmic Ointment", "Ophth Oint", "Otic Suspension", "Transdermal System",
+      "Pack", "Soln", "IV"
+    )
+    for (f in formulations) {
+      s <- stringr::str_remove_all(s, stringr::regex(paste0("\\b", f, "\\b"), ignore_case = TRUE))
+    }
+
+    # (f) strip salt words (same list as R/105's rule_based_ingredient())
+    salts <- c("sodium phosphate", "phosphate", "hydrochloride", "HCl")
+    for (sw in salts) {
+      s <- stringr::str_remove_all(s, stringr::regex(paste0("\\b", sw, "\\b"), ignore_case = TRUE))
+    }
+
+    # collapse whitespace + tidy stray separators
+    s <- stringr::str_squish(s)
+    s <- stringr::str_remove(s, "^[/,\\-\\s]+")
+    s <- stringr::str_remove(s, "[/,\\-\\s]+$")
+    s <- stringr::str_trim(s)
+
+    # canonicalize brand->generic, then lowercase to match RxNorm IN generic style
+    s <- canonicalize_drug_name(s)
+    s <- tolower(stringr::str_trim(s))
+
+    # never blank: fall back to the lowercased first word of the original description
+    blank_after_strip <- !nzchar(s)
+    if (any(blank_after_strip)) {
+      s[blank_after_strip] <- tolower(stringr::str_trim(
+        stringr::word(description[is_default][blank_after_strip], 1)
+      ))
+    }
+
+    out[is_default] <- s
+  }
+
+  out
+}
+
+# ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----
 # ==============================================================================
 
