@@ -220,7 +220,8 @@ count_results <- tibble(
   code = character(),
   records = integer(),
   patients = integer(),
-  vector_name = character()
+  vector_name = character(),
+  source_table = character()
 )
 
 # Query PROCEDURES (for CPT/HCPCS, ICD-9, ICD-10-PCS, Revenue)
@@ -312,9 +313,14 @@ if (!is.null(proc_tbl)) {
   message("  PROCEDURES table not found (skipping)")
 }
 
-# Query PRESCRIBING + MED_ADMIN (for RXNORM codes)
-# Use combined approach to avoid double-counting patients
-rxnorm_vectors <- code_type_map %>% filter(str_detect(source_table, "PRESCRIBING\\|MED_ADMIN"))
+# Query PRESCRIBING + MED_ADMIN (RX and ND) + DISPENSING (for RXNORM codes)
+# Uses get_chemo_hits() with return_source = TRUE so the Source Table column
+# in the output reflects which table/type actually matched each code (Phase 131).
+# Source-agnostic de-duplication on (ID, treatment_date, code) prevents
+# double-counting administrations reachable via more than one path.
+ndc_crosswalk <- load_ndc_crosswalk()
+
+rxnorm_vectors <- code_type_map %>% filter(code_type == "RXNORM")
 
 for (i in seq_len(nrow(rxnorm_vectors))) {
   vec_name <- rxnorm_vectors$vector_name[i]
@@ -324,49 +330,39 @@ for (i in seq_len(nrow(rxnorm_vectors))) {
 
   message(glue("  {vec_name} ({length(codes)} codes, RXNORM)..."))
 
-  # Query PRESCRIBING
-  presc_tbl <- safe_table("PRESCRIBING")
-  presc_matches <- tibble(ID = character(), code = character())
-  if (!is.null(presc_tbl)) {
-    presc_matches <- tryCatch(
-      {
-        presc_tbl %>%
-          filter(RXNORM_CUI %in% codes) %>%
-          select(ID, code = RXNORM_CUI) %>%
-          collect()
-      },
-      error = function(e) {
-        message(glue("    PRESCRIBING error: {e$message}"))
-        tibble(ID = character(), code = character())
-      }
-    )
-  }
+  presc_hits <- get_chemo_hits("PRESCRIBING", codes, ndc_crosswalk, return_source = TRUE)
+  medadmin_hits <- get_chemo_hits("MED_ADMIN", codes, ndc_crosswalk, return_source = TRUE)
+  dispensing_hits <- get_chemo_hits("DISPENSING", codes, ndc_crosswalk, return_source = TRUE)
 
-  # Query MED_ADMIN
-  medadmin_tbl <- safe_table("MED_ADMIN")
-  medadmin_matches <- tibble(ID = character(), code = character())
-  if (!is.null(medadmin_tbl)) {
-    medadmin_matches <- tryCatch(
-      {
-        medadmin_tbl %>%
-          filter(MEDADMIN_CODE %in% codes, MEDADMIN_TYPE == "RX") %>%
-          select(ID, code = MEDADMIN_CODE) %>%
-          collect()
-      },
-      error = function(e) {
-        message(glue("    MED_ADMIN error: {e$message}"))
-        tibble(ID = character(), code = character())
-      }
-    )
-  }
+  # bind_rows() drops NULLs transparently; if all three are NULL/empty, raw_hits
+  # has 0 rows (and possibly 0 columns) -- guard the rename so that case doesn't error.
+  raw_hits <- bind_rows(presc_hits, medadmin_hits, dispensing_hits)
 
-  # Combine and group
-  combined <- bind_rows(presc_matches, medadmin_matches)
-  if (nrow(combined) > 0) {
-    counts <- combined %>%
+  if (nrow(raw_hits) > 0) {
+    # Establish a single canonical `code` column up front (get_chemo_hits() always
+    # returns `triggering_code`) so downstream steps and Task 3's join agree on it.
+    all_hits <- raw_hits %>% rename(code = triggering_code)
+
+    # Source-labelled set (for the Source Table column) -- kept separate from
+    # the records/patients de-duplication below.
+    hits_by_source <- all_hits %>% distinct(ID, treatment_date, code, source)
+
+    # Source-agnostic de-duplication: an administration reachable via more than
+    # one path (e.g. both MED_ADMIN-RX and MED_ADMIN-ND) is counted once.
+    hits_dedup <- all_hits %>% distinct(ID, treatment_date, code)
+
+    counts <- hits_dedup %>%
       group_by(code) %>%
-      summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
+      summarise(records = n(), patients = n_distinct(ID), .groups = "drop")
+
+    source_labels <- hits_by_source %>%
+      group_by(code) %>%
+      summarise(source_table = paste(sort(unique(source)), collapse = ", "), .groups = "drop")
+
+    counts <- counts %>%
+      left_join(source_labels, by = "code") %>%
       mutate(vector_name = vec_name)
+
     count_results <- bind_rows(count_results, counts)
   }
 }
