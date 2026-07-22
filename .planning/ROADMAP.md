@@ -18,7 +18,7 @@
 - ✅ **v3.0 data.table Infrastructure** - Phases 95-99 (shipped 2026-06-11)
 - ✅ **v3.1 Meeting Gap Closure — Clinical Data Coverage** - Phases 100-103 (shipped 2026-06-12)
 - ✅ **v3.2 Meeting Gap Resolution Report** - Phases 104-126 (shipped 2026-07-15)
-- 🚧 **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-130 (in progress)
+- 🚧 **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (in progress)
 
 ## Phases
 
@@ -49,6 +49,7 @@ See MILESTONES.md for full details on all shipped milestones.
 - [x] **Phase 128: DoI Classification** (2 plans) - DuckDB DIAGNOSIS pull, classify, mutual-exclusivity hard-stop, cached artifacts (completed 2026-07-15)
 - [x] **Phase 129: Attribution Linkage and Output** - Two-tier join, three-state flag, 4-sheet xlsx, HIPAA suppression (completed 2026-07-16)
 - [ ] **Phase 130: Registration, Smoke Test, and HiPerGator Runtime** - R/39 + SCRIPT_INDEX + R/88 section + runtime gate
+- [ ] **Phase 131: All-Codes-Resolved MED_ADMIN/DISPENSING NDC Coverage + Medication Column** - Generalized NDC crosswalk detection across all RXNORM vectors, per-code Source Table tagging, normalized Medication column
 
 ## Phase Details
 
@@ -154,3 +155,31 @@ See MILESTONES.md for full details on all shipped milestones.
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete    | 2026-07-16 |
 | 130. Registration, Smoke Test, HiPerGator | v3.3 | 1/2 | In Progress|  |
+| 131. All-Codes-Resolved MED_ADMIN/DISPENSING + Medication Column | v3.3 | 0/4 | Planned |  |
+
+### Phase 131: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
+
+**Goal:** all_codes_resolved.xlsx (and its 5 per-type siblings) reflect true MED_ADMIN/DISPENSING NDC-resolved code coverage across all 4 RXNORM vector categories, with a per-code-accurate Source Table label and a normalized Medication column on every drug-relevant sheet
+**Requirements**: MEDXLSX-01, MEDXLSX-02, MEDXLSX-03, MEDXLSX-04, MEDXLSX-05, MEDXLSX-06, MEDXLSX-07, SMOKE-131-01 (ad-hoc IDs -- this phase has no formal ROADMAP requirement entries in REQUIREMENTS.md; derived from CONTEXT.md's locked decisions per the discuss-phase discussion)
+**Depends on:** Phase 130
+**Plans:** 4 plans
+
+**Design constraints:**
+- Reuses get_chemo_hits() (Phase 122, R/utils/utils_treatment.R) generalized across chemo_rxnorm/sct_rxnorm/immunotherapy_rxnorm/supportive_care_rxnorm via an additive return_source parameter -- zero behavior change for its 5 existing callers (R/10, R/11, R/25, R/26, R/76)
+- Records/Patients counts deduplicated on (ID, treatment_date, triggering_code) to avoid inflating counts when the same administration is reachable via multiple source paths (RX+ND, or PRESCRIBING+MED_ADMIN)
+- MEDICATION_LOOKUP (Phase 114) extended to consult Phase 120's orphaned Supportive Care "Normalized Meaning" col G when materialized, falling back gracefully to column 3 today (col G not yet written in this repo's copy of the reference Excel -- R/105 has not executed against real data yet)
+- New fallback_normalize_medication() heuristic (adapted from Phase 120's rule_based_ingredient()) covers RxNorm-STR salt/dose stripping, HCPCS J-code "Injection, X, dose" stripping, and unchanged multi-ingredient (" / "-delimited) passthrough
+- Medication column added to Chemotherapy/Supportive Care/Immunotherapy/SCT (SCT gated to Code Type == RXNORM rows only); explicitly excluded from Radiation
+- Both write_resolved_xlsx() (per-type files) and the combined-workbook per-category loop share one resolved_xlsx_layout() helper so they cannot silently diverge
+
+**Success Criteria** (what must be TRUE):
+  1. Codes only detectable via MED_ADMIN NDC-type or DISPENSING now appear with non-zero record/patient counts, across all 4 RXNORM vector categories (not chemo-only)
+  2. The Source Table column distinguishes MED_ADMIN (RX) / MED_ADMIN (NDC) / DISPENSING (NDC) / PRESCRIBING per code, replacing the old static per-vector label
+  3. Chemotherapy, Supportive Care, Immunotherapy, and SCT sheets each show a populated Medication column (never blank for a code that should have one); SCT shows Medication only for RXNORM rows; Radiation has no Medication column at all
+  4. Records/Patients counts are not inflated by double-counting administrations reachable via multiple source paths
+  5. R/88 Section 15x validates all of the above structurally, with a SMOKE-131-01 summary line
+**Plans**: 4 plans
+- [ ] 131-01-PLAN.md -- MEDICATION_LOOKUP Supportive Care col G wiring + fallback_normalize_medication() heuristic normalizer (R/00_config.R) [MEDXLSX-01, MEDXLSX-02] (Wave 1)
+- [ ] 131-02-PLAN.md -- get_chemo_hits() additive return_source tagging + R/50 Section 3/4 MED_ADMIN/DISPENSING NDC generalization across all 4 RXNORM vectors with dedup [MEDXLSX-03, MEDXLSX-04, MEDXLSX-05] (Wave 1)
+- [ ] 131-03-PLAN.md -- Medication column population (Section 4) + shared xlsx-writer layout across write_resolved_xlsx() and the combined workbook (Section 6) [MEDXLSX-06, MEDXLSX-07] (Wave 2, depends on 131-01 + 131-02)
+- [ ] 131-04-PLAN.md -- R/88 Section 15x structural smoke-test validation + SMOKE-131-01 summary line [SMOKE-131-01] (Wave 3, depends on 131-01/02/03)
