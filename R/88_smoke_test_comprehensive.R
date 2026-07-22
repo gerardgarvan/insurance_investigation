@@ -3014,6 +3014,90 @@ if (!IS_LOCAL && file.exists(enc_rds)) {
 }
 
 # ==============================================================================
+# SECTION 15x: MED_ADMIN/DISPENSING NDC GENERALIZATION + MEDICATION COLUMN (Phase 131) ----
+# ==============================================================================
+#
+# Phase 131 generalizes R/50's RXNORM detection to all 4 RXNORM vector
+# categories across PRESCRIBING + MED_ADMIN (RX and NDC-crosswalk) +
+# DISPENSING (net-new for R/50), tags each matched row with its detection
+# source via get_chemo_hits()'s additive return_source parameter, dedupes
+# Records/Patients counts on (ID, treatment_date, code), and adds a
+# `medication` column to all_codes_df (curated MEDICATION_LOOKUP first,
+# fallback_normalize_medication() otherwise), gated NA for Radiation and
+# SCT non-RXNORM rows. Both xlsx writers derive their column layout from one
+# shared resolved_xlsx_layout() helper so they can never silently diverge.
+# These checks are STRUCTURAL (readLines + grepl over R/utils/utils_treatment.R,
+# R/00_config.R, R/50_all_codes_resolved.R) and pass locally without DuckDB/
+# openxlsx2/HiPerGator access.
+
+message("\n[Phase 131] MED_ADMIN/DISPENSING NDC generalization + Medication column validation (R/utils/utils_treatment.R + R/00_config.R + R/50)...")
+
+utils_t_text_131 <- if (file.exists("R/utils/utils_treatment.R")) paste(readLines("R/utils/utils_treatment.R", warn = FALSE), collapse = "\n") else ""
+config_text_131  <- if (file.exists("R/00_config.R")) paste(readLines("R/00_config.R", warn = FALSE), collapse = "\n") else ""
+r50_text_131     <- if (file.exists("R/50_all_codes_resolved.R")) paste(readLines("R/50_all_codes_resolved.R", warn = FALSE), collapse = "\n") else ""
+
+# Check 1: get_chemo_hits() has an additive return_source parameter
+check("get_chemo_hits() has a return_source parameter (Phase 131)",
+      grepl("return_source", utils_t_text_131))
+
+# Check 2: MED_ADMIN branch tags both RX and NDC sub-paths distinctly
+check("MED_ADMIN branch tags MED_ADMIN (RX) and MED_ADMIN (NDC) distinctly (Phase 131)",
+      grepl("MED_ADMIN \\(RX\\)", utils_t_text_131) && grepl("MED_ADMIN \\(NDC\\)", utils_t_text_131))
+
+# Check 3: R/50 now queries DISPENSING (net-new -- R/50 never did before this phase)
+check("R/50 queries get_chemo_hits(\"DISPENSING\", ...) (Phase 131)",
+      grepl('get_chemo_hits\\("DISPENSING"', r50_text_131))
+
+# Check 4: R/50's RXNORM loop is generalized via a code_type == "RXNORM" filter
+# (not hand-enumerated vector names). NOTE: r50_text_131 is built with
+# collapse = "\n", and in R's grepl(), "." does not match across a "\n" --
+# so a pattern spanning tokens that land on different lines can never match.
+# Test for the filter call alone (allowing .data$ / whitespace variation).
+check("R/50 RXNORM loop filters code_type == RXNORM (Phase 131)",
+      grepl('filter\\(\\s*(\\.data\\$)?code_type\\s*==\\s*"RXNORM"\\s*\\)', r50_text_131))
+
+# Check 5: dedup guard against double-counting present
+check("R/50 dedupes on distinct(ID, treatment_date, code[, source]) (Phase 131)",
+      grepl("distinct\\(ID, treatment_date", r50_text_131))
+
+# Check 6: dynamic per-code source_table coalescing present
+check("R/50 coalesces dyn_source_table with static_source_table (Phase 131)",
+      grepl("coalesce\\(dyn_source_table, static_source_table\\)", r50_text_131))
+
+# Check 7: MEDICATION_LOOKUP's builder wires Supportive Care col G
+check("MEDICATION_LOOKUP builder selects Supportive Care col G via ncol(sheet_df) (Phase 131)",
+      grepl('sheet_name == "Supportive Care"', config_text_131) && grepl("ncol\\(sheet_df\\)", config_text_131))
+
+# Check 8: fallback_normalize_medication() exists and handles the HCPCS J-code pattern
+check("fallback_normalize_medication() exists and handles HCPCS J-code pattern (Phase 131)",
+      grepl("fallback_normalize_medication <- function", config_text_131) && grepl("\\^Injection,", config_text_131))
+
+# Check 9: fallback normalizer's multi-ingredient passthrough (" / " detection) present
+check('fallback_normalize_medication() detects " / "-delimited multi-ingredient compounds (Phase 131)',
+      grepl('" / "', config_text_131))
+
+# Check 10: R/50's all_codes_df gains a medication column via case_when with
+# Radiation/SCT gating
+check('all_codes_df$medication case_when gates Radiation and SCT non-RXNORM to NA (Phase 131)',
+      grepl('category == "Radiation" ~ NA_character_', r50_text_131) &&
+        grepl('category == "SCT" & code_type != "RXNORM" ~ NA_character_', r50_text_131))
+
+# Check 11: shared xlsx-writer layout helper used by BOTH writers (exactly 2 call
+# sites -- the "stay in sync" guarantee). Count with fixed = TRUE, guarding
+# gregexpr's zero-match case explicitly (it returns -1 as a length-1 vector on
+# zero matches, which a naive length(...) == 2 check would not catch correctly).
+layout_matches <- gregexpr("resolved_xlsx_layout(category)", r50_text_131, fixed = TRUE)[[1]]
+n_layout_calls <- if (length(layout_matches) == 1 && layout_matches[1] == -1) 0L else length(layout_matches)
+check(
+  "resolved_xlsx_layout(category) called by both writers, 2 sites (Phase 131)",
+  n_layout_calls == 2
+)
+
+# Check 12: Radiation excluded from Medication column entirely (no all-blank column)
+check('resolved_xlsx_layout() excludes Radiation from Medication column (has_medication <- category != "Radiation") (Phase 131)',
+      grepl('has_medication <- category != "Radiation"', r50_text_131))
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
