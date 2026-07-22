@@ -472,6 +472,24 @@ for (i in seq_len(nrow(code_type_map))) {
   all_codes_df <- bind_rows(all_codes_df, vec_df)
 }
 
+# Compute normalized medication name (Phase 131): curated MEDICATION_LOOKUP
+# first, fallback_normalize_medication() heuristic second, NA where a
+# Medication column should not be populated (Radiation entirely; SCT rows
+# that aren't RXNORM, e.g. DRG/ICD-10-PCS/procedure codes).
+all_codes_df <- all_codes_df %>%
+  mutate(
+    medication = dplyr::case_when(
+      category == "Radiation" ~ NA_character_,
+      category == "SCT" & code_type != "RXNORM" ~ NA_character_,
+      code %in% names(MEDICATION_LOOKUP) ~ unname(MEDICATION_LOOKUP[code]),
+      TRUE ~ fallback_normalize_medication(description, code_type)
+    )
+  )
+
+n_medication_curated <- sum(!is.na(all_codes_df$medication) & all_codes_df$code %in% names(MEDICATION_LOOKUP))
+n_medication_fallback <- sum(!is.na(all_codes_df$medication) & !(all_codes_df$code %in% names(MEDICATION_LOOKUP)))
+message(glue("  Medication column: {n_medication_curated} curated (MEDICATION_LOOKUP), {n_medication_fallback} fallback-derived"))
+
 # Summary by category
 summary_by_category <- all_codes_df %>%
   group_by(category) %>%
