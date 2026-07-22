@@ -2505,9 +2505,16 @@ MEDICATION_LOOKUP <- local({
   sheets <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care")
   all_meds <- character(0)
 
+  # Phase 131 addendum: Supportive Care's col G ("Normalized Meaning") is written
+  # by Phase 120's R/105 with real ingredient names (reusing that output here is
+  # preferred over re-deriving Supportive Care names via the new Phase 131
+  # fallback normalizer, per CONTEXT.md's post-research decision). Degrades
+  # gracefully to column 3 when col G is absent (confirmed the current case in
+  # this repo's copy of the reference Excel -- R/105 has not yet materialized it).
   for (sheet_name in sheets) {
     sheet_df <- openxlsx2::wb_to_df(ref_wb, sheet = sheet_name, start_row = 2)
-    sheet_map <- setNames(as.character(sheet_df[[3]]), as.character(sheet_df[[1]]))
+    med_col <- if (sheet_name == "Supportive Care" && ncol(sheet_df) >= 7) 7L else 3L
+    sheet_map <- setNames(as.character(sheet_df[[med_col]]), as.character(sheet_df[[1]]))
     sheet_map <- sheet_map[!is.na(names(sheet_map)) & !is.na(sheet_map)]
     all_meds <- c(all_meds, sheet_map)
   }
