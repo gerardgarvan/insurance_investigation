@@ -2566,7 +2566,17 @@ if (r106_exists) {
   check("R/106 applies HIPAA small-cell suppression (<=10)",
         grepl("<11|<= 10|<=10", r106_text))
 
-  # Check 14: RUNTIME (HiPerGator-only, gated) -- output xlsx present with sheets.
+  # Check 14: defines ZIP_STUDY_PERIOD_MIN / ZIP_STUDY_PERIOD_MAX date-bound constants
+  check("R/106 defines ZIP_STUDY_PERIOD_MIN/MAX study-period constants",
+        grepl("ZIP_STUDY_PERIOD_MIN", r106_text) && grepl("ZIP_STUDY_PERIOD_MAX", r106_text))
+
+  # Check 15: Section 9 filters period_start_dt against the study-period bounds
+  # before computing gap-days
+  check("R/106 Section 9 filters period_start_dt against ZIP_STUDY_PERIOD_MIN/MAX",
+        grepl("period_start_dt >= ZIP_STUDY_PERIOD_MIN", r106_text) &&
+          grepl("period_start_dt <= ZIP_STUDY_PERIOD_MAX", r106_text))
+
+  # Check 16: RUNTIME (HiPerGator-only, gated) -- output xlsx present with sheets.
   # Kept green locally: SKIPPED when IS_LOCAL or the output xlsx is absent.
   # Mirrors Section 15p Check 14 IS_LOCAL-gate pattern (lines 2301-2315).
   out_xlsx_121 <- file.path(CONFIG$output_dir, "zip_change_frequency.xlsx")
@@ -2580,7 +2590,7 @@ if (r106_exists) {
 
 } else {
   # If script missing, register the dependent checks as FALSE so total stays honest
-  for (i in 2:14) check(paste0("R/106 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+  for (i in 2:16) check(paste0("R/106 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
 }
 
 # ==============================================================================
@@ -4671,7 +4681,7 @@ message("  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_
 message("  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)")
 message("  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural integrity (Section 15q, 14 checks)")
 message("  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized Meaning structural integrity (Section 15r, 14 checks)")
-message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 14 checks)")
+message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 16 checks)")
 message("  * SMOKE-122-01: R/88 validates Phase 122 MED_ADMIN/DISPENSING chemo-detection gap fix structural integrity (Section 15t, 14 checks)")
 message("  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + unmatched-NDC audit structural integrity (Section 15u, 14 checks)")
 message("  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/after report + unmapped-name audit structural integrity (Section 15v, 13 checks)")
