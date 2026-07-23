@@ -77,6 +77,17 @@ message("=== Phase 121: ZIP Change Frequency ===\n")
 ADDR_FILENAME <- "LDS_ADDRESS_HISTORY_Mailhot_V1.csv"
 OUTPUT_XLSX   <- file.path(CONFIG$output_dir, "zip_change_frequency.xlsx")
 
+# Study/data-collection period for LDS_ADDRESS_HISTORY dates used in
+# Section 9's gap-day computation. Narrower than
+# CONFIG$analysis$date_range_min/max (1901-01-01 to 2025-03-31), which is
+# a loose, project-wide sentinel-catching bound. This is the actual
+# LDS_ADDRESS_HISTORY study window: 2012-01-01 matches the project's
+# HISTORICAL_CUTOFF convention (R/26_treatment_episodes.R); 2025-03-31
+# matches CONFIG$analysis$date_range_max, the documented end of the data
+# collection period.
+ZIP_STUDY_PERIOD_MIN <- as.Date("2012-01-01")
+ZIP_STUDY_PERIOD_MAX <- as.Date("2025-03-31")
+
 addr_path <- file.path(CONFIG$data_dir, ADDR_FILENAME)
 message(glue("  CSV probe: {addr_path}"))
 message(glue("  File exists? {file.exists(addr_path)}"))
@@ -434,9 +445,31 @@ message("--- Computing time between ZIP changes ---")
 # Parse ADDRESS_PERIOD_START (uses parse_pcornet_date from utils_dates)
 # Guard: do NOT filter on ADDRESS_PERIOD_END (open-ended addresses have NA end -- Pitfall 2)
 if ("ADDRESS_PERIOD_START" %in% names(addr)) {
-  addr_with_dates <- addr %>%
-    mutate(period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START)) %>%
-    filter(!is.na(period_start_dt), !is.na(zip9_norm))
+  addr_dates_parsed <- addr %>%
+    mutate(period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START))
+
+  # Exclude ADDRESS_PERIOD_START values outside the LDS_ADDRESS_HISTORY
+  # study period (2012-01-01 to 2025-03-31) BEFORE computing gap-days --
+  # out-of-range/garbage dates (epoch sentinels, post-cutoff dates) would
+  # otherwise silently pollute the median/p25/p75 gap stats and the
+  # Sheet 5 recommendation text derived from them.
+  n_period_start_out_of_range <- sum(
+    !is.na(addr_dates_parsed$period_start_dt) &
+      (addr_dates_parsed$period_start_dt < ZIP_STUDY_PERIOD_MIN |
+         addr_dates_parsed$period_start_dt > ZIP_STUDY_PERIOD_MAX)
+  )
+  message(glue(
+    "  ADDRESS_PERIOD_START rows dropped for being outside study period ",
+    "({ZIP_STUDY_PERIOD_MIN} to {ZIP_STUDY_PERIOD_MAX}): {n_period_start_out_of_range}"
+  ))
+
+  addr_with_dates <- addr_dates_parsed %>%
+    filter(
+      !is.na(period_start_dt),
+      period_start_dt >= ZIP_STUDY_PERIOD_MIN,
+      period_start_dt <= ZIP_STUDY_PERIOD_MAX,
+      !is.na(zip9_norm)
+    )
 
   # Time BETWEEN ZIP9 CHANGES: order each patient's records by date, collapse
   # consecutive same-ZIP periods to their first date, then diff those change points.
