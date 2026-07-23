@@ -92,7 +92,12 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
-#### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest
+#### v3.4 R Pipeline Code Review Remediation
+- [ ] Fix 8 critical/high-severity findings (crashers, wrong published numbers, inert SCT feature, silent DB-promotion bug, empty reference manual, wrong age-at-episode)
+- [ ] Standardize 8 cross-cutting patterns (A-H) at the shared-helper layer
+- [ ] Confirm 2 loose ends (suppress_small/clean_multi_value/union_field location; date_range_max vs. extract-date cutoff)
+
+#### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (open, deferred alongside v3.4)
 - [ ] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts
 
 #### v3.2 Meeting Gap Resolution Report
@@ -132,18 +137,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest
+## Current Milestone: v3.4 R Pipeline Code Review Remediation
 
-**Goal:** Identify the non-malignant diagnoses that rituximab and methotrexate treat (autoimmune, inflammatory, hematologic), add them as a new "diagnosis of interest" class distinct from the cancer cascade, and use them to disambiguate treatment attribution — flagging when a patient's rituximab/MTX is likely for a condition other than their lymphoma.
+**Goal:** Fix the crash-causing and wrong-published-number defects surfaced by the 2026-07-23 full-pipeline code review, and standardize the 8 recurring cross-cutting bug patterns (record-vs-patient-count confusion, code-normalization drift, can't-fail tests, etc.) at the shared-helper layer so they stop recurring script-by-script.
 
 **Target features:**
-- Curated, researched ICD-9/ICD-10 code set for rituximab + methotrexate non-malignant indications (seeded from `ritdis.rtf`, completed via research), centralized in `R/00_config.R` alongside the existing cancer maps
-- Classification-layer flag/category tagging patients and encounters carrying these diagnoses — explicitly non-overlapping with the HL/NHL/cancer categories
-- Treatment-attribution logic linking these diagnoses to rituximab/MTX administrations via temporal proximity to flag likely non-lymphoma-directed therapy
-- Standalone, Tableau-ready investigation table/report quantifying prevalence and drug↔diagnosis co-occurrence, consistent with prior meeting-gap deliverables
-- Smoke-test coverage + SCRIPT_INDEX / R/39 registration following v2.0 quality standards
+- Fix all 8 critical/high-severity findings from `R_pipeline_code_review.md`: stray-`n` crashers (`74`, `81`-`85`), `28`'s inert SCT-conditioning string match, `03`'s silent DB-promotion-with-missing-tables bug, `46`'s inflated Total Records, `47`'s HL anchor-date corruption (inherited by `48`/`49`), the `67`→`68`/`95`→`96` same-week source/date desync, `89`'s content-empty reference manual, `101`'s wrong age-at-episode
+- Standardize the 8 cross-cutting patterns (A-H) once at the shared-helper layer: record-count vs. distinct-patient confusion; dotted/undotted/case code-normalization drift; the `^[CD]` neoplasm over-inclusion filter; external-API transient-error-vs-permanent-miss handling; tests/validators that cannot fail (false green); fragile in-place `00_config.R` rewriting; silent NA/sentinel/impossible-date gaps; episode-vs-encounter-vs-patient-date grain mislabels
+- Confirm the review's two flagged loose ends: locate where `suppress_small()`/`clean_multi_value()`/`union_field()` are actually defined (not found in any `utils_*.R` module during the review), and reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915)
 
-**Non-cancer scope:** HL/NHL/cancer diagnoses remain in the existing `classify_codes()` / `utils_cancer.R` cascade; this class runs parallel to it and must not double-count oncology codes.
+**Explicitly deferred (not this milestone):** The ~80 additional per-script Low/Med findings cataloged by area in the review (`R/40`-`R/112`, `utils_*.R` individual nits) — tracked as backlog, not blocking v3.4. v3.3 (Rituximab/MTX DoI) remains open in parallel; its pending HiPerGator verification and REQUIREMENTS.md traceability gap are tracked separately in STATE.md and unaffected by this milestone.
 
 ## Current State
 
@@ -392,4 +395,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-16 after completing Phase 129 (v3.3 Attribution Linkage and Output).*
+*Last updated: 2026-07-23 after starting v3.4 (R Pipeline Code Review Remediation); v3.3 left open in parallel pending HiPerGator verification.*

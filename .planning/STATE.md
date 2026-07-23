@@ -1,37 +1,41 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
-stopped_at: Completed 131-04-PLAN.md
-last_updated: "2026-07-22T20:29:59.163Z"
-last_activity: 2026-07-22
+milestone: v3.4
+milestone_name: R Pipeline Code Review Remediation
+status: defining requirements
+stopped_at: —
+last_updated: "2026-07-23T18:00:00.000Z"
+last_activity: 2026-07-23
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-15 after v3.2)
+See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 131 — update-all-codes-resolved-xlsx-to-include-med-admin-ndc-resolved-codes-and-a-normalized-drug-name-column
+**Current focus:** v3.4 R Pipeline Code Review Remediation — defining requirements (phase numbering continues from Phase 131, the last used number; v3.3 has not yet been archived to MILESTONES.md)
 
 ## Current Position
 
-Phase: 131 (update-all-codes-resolved-xlsx-to-include-med-admin-ndc-resolved-codes-and-a-normalized-drug-name-column) — PLANS COMPLETE
-Plan: 04 of 4 complete
-Status: All plans executed — phase ready for verification
-Last activity: 2026-07-22
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-23 — Milestone v3.4 started
 
-Progress: [██████████] 100% (12/12 plans complete, v3.3 milestone)
+Progress: [░░░░░░░░░░] 0% (v3.4 milestone just started)
+
+## v3.3 Status (open in parallel, not abandoned)
+
+v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed (12/12 plans, Phases 127-131) but NOT yet shipped — its remaining TODOs are tracked below under "v3.3 Active TODOs" and stay open alongside v3.4 per explicit user decision (2026-07-23). Run `/gsd:complete-milestone` for v3.3 once its TODOs are cleared.
 
 ## Performance Metrics
 
@@ -80,11 +84,16 @@ Progress: [██████████] 100% (12/12 plans complete, v3.3 mile
 - [Phase 131-03]: Added `all_codes_df$medication` column (Section 4) gated by category/code_type, and a shared `resolved_xlsx_layout(category)` helper consumed by both `write_resolved_xlsx()` and the combined-workbook per-category loop so the 5 per-type xlsx files and `all_codes_resolved.xlsx` can never diverge on Medication column layout/values; Radiation sheets keep their original unchanged 6-column shape (no Medication column at all)
 - [Phase 131-04]: Added R/88 Section 15x (12 structural checks) + SMOKE-131-01 summary line validating every 131-01/02/03 artifact; all illustrative grep patterns from the plan matched the actual source text verbatim, no pattern adjustments needed
 
-### Active TODOs
+### v3.3 Active TODOs (open in parallel with v3.4 — see "v3.3 Status" above)
 
-- [ ] Plan Phase 127 (Code-Set and Infrastructure Centralization)
+- [ ] Plan Phase 127 (Code-Set and Infrastructure Centralization) — NOTE: PROJECT.md's Validated list already shows Phase 127 shipped (DOI_CODE_MAP + utils_doi.R); this line may be stale, confirm before acting on it
 - [ ] Verify Phase 131 end-to-end on HiPerGator (regenerate all_codes_resolved.xlsx, run R/88 with real R packages, confirm Section 15x checks pass and Medication column populates as expected)
 - [ ] Add a Phase 131 section to `.planning/REQUIREMENTS.md` so MEDXLSX-01..07/SMOKE-131-01 can be checked off via `gsd-tools requirements mark-complete`
+
+### v3.4 Roadmap Decisions
+
+- Phase numbering continues from Phase 131 (v3.3's last used phase number, even though v3.3 is not yet archived to MILESTONES.md) — v3.4 starts at Phase 132
+- Scope locked to: 8 critical/high findings + 8 cross-cutting patterns (A-H) + 2 loose-end confirmations from `R_pipeline_code_review.md`; ~80 per-script Low/Med findings explicitly deferred to backlog (not this milestone)
 
 ### Known Blockers
 
@@ -92,6 +101,6 @@ Progress: [██████████] 100% (12/12 plans complete, v3.3 mile
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-quick 260716` (2026-07-23)
-**Stopped at:** Completed 260716-PLAN.md (quick task, not a phase plan)
-**What's next:** All 4 plans in Phase 131 are executed. Phase 131 (and the v3.3 milestone) is ready for verification -- regenerate `all_codes_resolved.xlsx` on HiPerGator and confirm R/88 Section 15x passes with real R packages installed. R/113 (quick-260716) is ready for a real-data HiPerGator run to see non-zero confirmed HL/NHL counts.
+**Last command:** `/gsd:new-milestone r_pipeline_code_review.md` (2026-07-23)
+**Stopped at:** Milestone v3.4 initialized, requirements definition in progress
+**What's next:** Define v3.4 REQUIREMENTS.md from the code-review scope (8 critical/high findings + 8 cross-cutting patterns + 2 loose ends), then roadmap starting at Phase 132. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.
