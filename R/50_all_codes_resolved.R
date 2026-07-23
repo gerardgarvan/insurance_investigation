@@ -224,6 +224,17 @@ count_results <- tibble(
   source_table = character()
 )
 
+# Patient-ID-level accumulator for TRUE unique-patient totals on the Summary
+# sheet. The per-code `patients` values above are correct (distinct patients
+# per code), but they CANNOT be summed: a patient reached via more than one
+# code would be counted once per code, overstating the category and grand
+# totals. We therefore retain the distinct patient IDs behind each hit here,
+# tagged with vector_name, and reduce them to unique patients per category
+# (and overall) at summary time. Stored as a list of frames and bound once at
+# the end so we never pre-declare the ID column type (ID may be integer or
+# character depending on the source data).
+patient_hit_frames <- list()
+
 # Query PROCEDURES (for CPT/HCPCS, ICD-9, ICD-10-PCS, Revenue)
 proc_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
 if (!is.null(proc_tbl)) {
@@ -259,6 +270,17 @@ if (!is.null(proc_tbl)) {
         }
       )
       count_results <- bind_rows(count_results, counts)
+      # Retain distinct patient IDs for this vector (for unique-patient totals)
+      patient_hit_frames <- c(patient_hit_frames, list(
+        tryCatch(
+          proc_tbl %>%
+            filter(PX_TYPE == px_type, PX %in% codes) %>%
+            distinct(ID) %>%
+            collect() %>%
+            mutate(vector_name = vec_name),
+          error = function(e) tibble(vector_name = character())
+        )
+      ))
     } else if (match_type == "prefix") {
       # Prefix match: check if codes are full 7-char codes or actual prefixes
       # For ICD-10-PCS, config codes are full 7-char codes, use exact match
@@ -278,6 +300,17 @@ if (!is.null(proc_tbl)) {
           }
         )
         count_results <- bind_rows(count_results, counts)
+        # Retain distinct patient IDs for this vector (for unique-patient totals)
+        patient_hit_frames <- c(patient_hit_frames, list(
+          tryCatch(
+            proc_tbl %>%
+              filter(PX_TYPE == px_type, PX %in% codes) %>%
+              distinct(ID) %>%
+              collect() %>%
+              mutate(vector_name = vec_name),
+            error = function(e) tibble(vector_name = character())
+          )
+        ))
       } else {
         # True prefix match: materialize and use str_starts_with
         # (This path is unlikely for current config, but handled for completeness)
@@ -303,6 +336,10 @@ if (!is.null(proc_tbl)) {
                 summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
                 mutate(vector_name = vec_name)
               count_results <- bind_rows(count_results, counts)
+              # Retain distinct patient IDs for this vector (unique-patient totals)
+              patient_hit_frames <- c(patient_hit_frames, list(
+                matches %>% distinct(ID) %>% mutate(vector_name = vec_name)
+              ))
             }
           }
         }
@@ -364,6 +401,11 @@ for (i in seq_len(nrow(rxnorm_vectors))) {
       mutate(vector_name = vec_name)
 
     count_results <- bind_rows(count_results, counts)
+    # Retain distinct patient IDs for this vector (for unique-patient totals).
+    # all_hits already holds the ID-level matches in memory.
+    patient_hit_frames <- c(patient_hit_frames, list(
+      all_hits %>% distinct(ID) %>% mutate(vector_name = vec_name)
+    ))
   }
 }
 
@@ -397,6 +439,17 @@ if (!is.null(enc_tbl)) {
       }
     )
     count_results <- bind_rows(count_results, counts)
+    # Retain distinct patient IDs for this vector (for unique-patient totals)
+    patient_hit_frames <- c(patient_hit_frames, list(
+      tryCatch(
+        enc_tbl %>%
+          filter(DRG %in% codes) %>%
+          distinct(ID) %>%
+          collect() %>%
+          mutate(vector_name = vec_name),
+        error = function(e) tibble(vector_name = character())
+      )
+    ))
   }
 } else {
   message("  ENCOUNTER table not found (skipping)")
@@ -490,15 +543,38 @@ n_medication_curated <- sum(!is.na(all_codes_df$medication) & all_codes_df$code 
 n_medication_fallback <- sum(!is.na(all_codes_df$medication) & !(all_codes_df$code %in% names(MEDICATION_LOOKUP)))
 message(glue("  Medication column: {n_medication_curated} curated (MEDICATION_LOOKUP), {n_medication_fallback} fallback-derived"))
 
+# --- Unique-patient counts (fixes Summary-sheet double-counting) ------------
+# The per-code `patients` column is correct, but summing it counts a patient
+# once per code they appear under, overstating category and grand totals. We
+# instead collapse the retained ID-level hits to distinct (category, ID) for
+# per-category unique patients, and to distinct ID overall for the grand total.
+# Records ARE additive across codes, so total_records still uses sum().
+patient_hits <- bind_rows(patient_hit_frames)
+if (nrow(patient_hits) > 0) {
+  category_patient_hits <- patient_hits %>%
+    left_join(code_type_map %>% distinct(vector_name, category), by = "vector_name") %>%
+    filter(!is.na(ID))
+
+  patients_by_category <- category_patient_hits %>%
+    distinct(category, ID) %>%
+    count(category, name = "total_patients")
+
+  total_unique_patients <- n_distinct(category_patient_hits$ID)
+} else {
+  patients_by_category <- tibble(category = character(), total_patients = integer())
+  total_unique_patients <- 0L
+}
+
 # Summary by category
 summary_by_category <- all_codes_df %>%
   group_by(category) %>%
   summarise(
     n_codes = n(),
     total_records = sum(records),
-    total_patients = sum(patients, na.rm = TRUE),
     .groups = "drop"
   ) %>%
+  left_join(patients_by_category, by = "category") %>%
+  mutate(total_patients = dplyr::coalesce(as.integer(total_patients), 0L)) %>%
   arrange(desc(n_codes))
 
 message("\nSummary by category:")
@@ -812,7 +888,10 @@ totals_row <- 3 + nrow(summary_by_category) + 1
 wb_all$add_data(sheet = "Summary", x = "Total", start_row = totals_row, start_col = 1)
 wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$n_codes), start_row = totals_row, start_col = 2)
 wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$total_records), start_row = totals_row, start_col = 3)
-wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$total_patients), start_row = totals_row, start_col = 4)
+# Grand-total patients uses the overall distinct-ID count, NOT the sum of the
+# per-category totals (a patient treated in two categories would otherwise be
+# counted twice). This total can therefore be smaller than the column sum.
+wb_all$add_data(sheet = "Summary", x = total_unique_patients, start_row = totals_row, start_col = 4)
 wb_all$add_fill(sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"), color = wb_color("FF374151"))
 wb_all$add_font(
   sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"),
