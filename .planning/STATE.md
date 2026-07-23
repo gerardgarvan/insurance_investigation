@@ -61,6 +61,10 @@ Progress: [██████████] 100% (12/12 plans complete, v3.3 mile
 - I77.82 excluded (seed error — "Dissection of artery"), D47.Z2 excluded (CANCER_SITE_MAP conflict)
 - utils_doi.R as new file (not extension of utils_cancer.R): classify_codes() has 10+ consumers expecting cancer-site output; merging would silently corrupt them
 
+### Quick Task Log
+
+- [260715]: R/106 Section 9 (Sheet 3 "Time Between Changes") gap-day computation now bounds ADDRESS_PERIOD_START to the LDS_ADDRESS_HISTORY study period (ZIP_STUDY_PERIOD_MIN 2012-01-01 / ZIP_STUDY_PERIOD_MAX 2025-03-31) before computing gaps, with a logged out-of-range drop count; R/88 Section 15s extended to 16 checks (2 new) to verify. See [260715-for-change-in-zip-make-sure-addresses-ar](./quick/260715-for-change-in-zip-make-sure-addresses-ar/)
+
 ### Roadmap Evolution
 
 - Phase 131 added: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
