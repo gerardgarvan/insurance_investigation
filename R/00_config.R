@@ -368,6 +368,57 @@ ICD_CODES <- list(
   hl_histology = c(
     "9650", "9651", "9652", "9653", "9654", "9655", "9659",
     "9661", "9662", "9663", "9664", "9665", "9667"
+  ),
+
+  # ============================================================================
+  # *** UNVERIFIED -- REQUIRES CLINICAL/REGISTRY REVIEW BEFORE AUTHORITATIVE USE ***
+  # ============================================================================
+  # ICD-O-3 Histology codes for Non-Hodgkin Lymphoma (NHL), added quick-260716.
+  # Used for TUMOR_REGISTRY table matching (TR1: HISTOLOGICAL_TYPE, TR2/TR3: MORPH),
+  # mirroring hl_histology's structure/format exactly (4-digit codes, no "/3"
+  # behavior-suffix, matched via substr(x, 1, 4)).
+  #
+  # THIS LIST WAS ASSEMBLED FROM GENERAL SEER/WHO ICD-O-3 HEMATOPOIETIC AND
+  # LYMPHOID NEOPLASM DATABASE KNOWLEDGE. IT HAS NOT BEEN CROSS-CHECKED AGAINST
+  # THIS PROJECT'S ACTUAL TUMOR_REGISTRY EXTRACT, NOR REVIEWED BY A CLINICAL OR
+  # TUMOR-REGISTRY SME. DO NOT USE COUNTS DERIVED FROM THIS LIST IN ANY
+  # AUTHORITATIVE REPORT UNTIL A REGISTRY REVIEWER HAS VALIDATED IT.
+  #
+  # Reference: SEER ICD-O-3 Hematopoietic and Lymphoid Neoplasm code lists
+  #
+  # 9590-9597: Malignant lymphoma, NOS / composite / primary cutaneous follicle center
+  # 9670-9699: Mature B-cell lymphomas (SLL, lymphoplasmacytic, mantle cell,
+  #   primary effusion, mediastinal large B-cell, DLBCL, immunoblastic, Burkitt,
+  #   T-cell/histiocyte-rich large B-cell, splenic marginal zone, follicular
+  #   grades 1-3, marginal zone NOS/MALT)
+  # 9700-9719: Cutaneous and mature T-cell/NK-cell lymphomas (mycosis fungoides,
+  #   Sezary syndrome, T-cell NOS, angioimmunoblastic, subcutaneous
+  #   panniculitis-like, cutaneous B-cell NOS, anaplastic large cell, cutaneous
+  #   CD30+ lymphoproliferative disorder, hepatosplenic, intestinal
+  #   (enteropathy-associated), NK/T-cell nasal type)
+  # 9725: Blastic NK-cell lymphoma / plasmacytoid dendritic cell neoplasm
+  # 9727-9729: Precursor lymphoblastic lymphoma (NOS, B-cell, T-cell)
+  #
+  # Deliberately EXCLUDED (not NHL per SEER classification):
+  #   9650-9667 (Hodgkin lymphoma -- see hl_histology above)
+  #   9724 (aggressive NK-cell LEUKEMIA, not lymphoma)
+  #   9731-9734 (plasma cell neoplasms / myeloma / plasmacytoma)
+  #   9760-9765 (immunoproliferative diseases, e.g. Waldenstrom-adjacent
+  #     heavy-chain disease -- SEER classifies these separately from NHL)
+  #   9800+ (leukemias)
+  nhl_histology = c(
+    # 9590-9597: Malignant lymphoma, NOS / composite / primary cutaneous follicle center
+    "9590", "9591", "9596", "9597",
+    # 9670-9699: Mature B-cell lymphomas
+    "9670", "9671", "9673", "9678", "9679", "9680", "9684", "9687", "9688",
+    "9689", "9690", "9691", "9695", "9698", "9699",
+    # 9700-9719: Cutaneous and mature T-cell/NK-cell lymphomas
+    "9700", "9701", "9702", "9705", "9708", "9709", "9714", "9716", "9717",
+    "9718", "9719",
+    # 9725: Blastic NK-cell lymphoma / plasmacytoid dendritic cell neoplasm
+    "9725",
+    # 9727-9729: Precursor lymphoblastic lymphoma (NOS, B-cell, T-cell)
+    "9727", "9728", "9729"
   )
 )
 
