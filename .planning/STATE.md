@@ -64,6 +64,7 @@ Progress: [██████████] 100% (12/12 plans complete, v3.3 mile
 ### Quick Task Log
 
 - [260715]: R/106 Section 9 (Sheet 3 "Time Between Changes") gap-day computation now bounds ADDRESS_PERIOD_START to the LDS_ADDRESS_HISTORY study period (ZIP_STUDY_PERIOD_MIN 2012-01-01 / ZIP_STUDY_PERIOD_MAX 2025-03-31) before computing gaps, with a logged out-of-range drop count; R/88 Section 15s extended to 16 checks (2 new) to verify. See [260715-for-change-in-zip-make-sure-addresses-ar](./quick/260715-for-change-in-zip-make-sure-addresses-ar/)
+- [260716]: Added `ICD_CODES$nhl_histology` (34-code, unverified/needs-clinical-review) to R/00_config.R and new `R/113_confirmed_hl_nhl_tumor_registry_counts.R` — a console-only diagnostic printing confirmed-HL, confirmed-NHL, and confirmed-BOTH (overlap) distinct-patient counts from TUMOR_REGISTRY histology codes only (no DIAGNOSIS table query). Also fixed a pre-existing gap (since Phase 119): created the missing `tests/fixtures/DEATH_CAUSE_Mailhot_V1.csv` fixture, unblocking any local `R/01_load_pcornet.R` run. See [260716-add-script-to-count-confirmed-hl-and-nhl](./quick/260716-add-script-to-count-confirmed-hl-and-nhl/)
 
 ### Roadmap Evolution
 
@@ -91,6 +92,6 @@ Progress: [██████████] 100% (12/12 plans complete, v3.3 mile
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 131` (2026-07-22)
-**Stopped at:** Completed 131-04-PLAN.md
-**What's next:** All 4 plans in Phase 131 are executed. Phase 131 (and the v3.3 milestone) is ready for verification -- regenerate `all_codes_resolved.xlsx` on HiPerGator and confirm R/88 Section 15x passes with real R packages installed.
+**Last command:** `/gsd:execute-quick 260716` (2026-07-23)
+**Stopped at:** Completed 260716-PLAN.md (quick task, not a phase plan)
+**What's next:** All 4 plans in Phase 131 are executed. Phase 131 (and the v3.3 milestone) is ready for verification -- regenerate `all_codes_resolved.xlsx` on HiPerGator and confirm R/88 Section 15x passes with real R packages installed. R/113 (quick-260716) is ready for a real-data HiPerGator run to see non-zero confirmed HL/NHL counts.
