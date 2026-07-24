@@ -83,11 +83,42 @@ Explicitly excluded. Documented to prevent scope creep.
 
 Which phases cover which requirements. Populated during roadmap creation.
 
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CRASH-01 | Phase 132 | Pending |
+| CRASH-02 | Phase 132 | Pending |
+| DATA-01 | Phase 133 | Pending |
+| DATA-02 | Phase 133 | Pending |
+| DATA-03 | Phase 133 | Pending |
+| DATA-04 | Phase 133 | Pending |
+| DATA-05 | Phase 133 | Pending |
+| DATA-06 | Phase 133 | Pending |
+| DATA-07 | Phase 133 | Pending |
+| INGEST-01 | Phase 134 | Pending |
+| DOCS-01 | Phase 133 | Pending |
+| PATTERN-A | Phase 135 | Pending |
+| PATTERN-B | Phase 135 | Pending |
+| PATTERN-C | Phase 135 | Pending |
+| PATTERN-D | Phase 135 | Pending |
+| PATTERN-E | Phase 134 | Pending |
+| PATTERN-F | Phase 135 | Pending |
+| PATTERN-G | Phase 135 | Pending |
+| PATTERN-H | Phase 135 | Pending |
+| CONFIRM-01 | Phase 136 | Pending |
+| CONFIRM-02 | Phase 136 | Pending |
+
 **Coverage:**
 - v3.4 requirements: 21 total (2 CRASH + 7 DATA + 1 INGEST + 1 DOCS + 8 PATTERN + 2 CONFIRM)
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 21 ⚠️ (expected — roadmap not yet created)
+- Mapped to phases: 21 (roadmap complete)
+- Unmapped: 0 ✓
+
+**Phase breakdown** (follows the review's own "Suggested fix order" 5 stages):
+- Phase 132 (Crash Fixes): CRASH-01, CRASH-02 — stage 1
+- Phase 133 (Critical Correctness Fixes): DATA-01..07, DOCS-01 — stage 2 (wrong published numbers + the content-empty reference manual, findings #2/#4/#5/#6/#7/#8)
+- Phase 134 (Ingest Integrity and Honest Tests): INGEST-01, PATTERN-E — stage 3
+- Phase 135 (Shared-Helper Standardization): PATTERN-A/B/C/D/F/G/H — stage 4
+- Phase 136 (Confirm Loose Ends): CONFIRM-01, CONFIRM-02 — stage 5
 
 ---
 *Requirements defined: 2026-07-23*
-*Last updated: 2026-07-23 after initial definition*
+*Last updated: 2026-07-24 after roadmap creation — all 21 requirements mapped to Phases 132-136*

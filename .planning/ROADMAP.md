@@ -18,7 +18,8 @@
 - ✅ **v3.0 data.table Infrastructure** - Phases 95-99 (shipped 2026-06-11)
 - ✅ **v3.1 Meeting Gap Closure — Clinical Data Coverage** - Phases 100-103 (shipped 2026-06-12)
 - ✅ **v3.2 Meeting Gap Resolution Report** - Phases 104-126 (shipped 2026-07-15)
-- 🚧 **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (in progress)
+- ⏸️ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (open, deferred alongside v3.4 pending HiPerGator verification)
+- 🔄 **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (in progress)
 
 ## Phases
 
@@ -39,7 +40,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 </details>
 
-### 🚧 v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (In Progress)
+### ⏸️ v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (Open, deferred — see v3.4 below)
 
 **Milestone Goal:** Identify the non-malignant diagnoses that rituximab and methotrexate treat (autoimmune, inflammatory, hematologic), add them as a new diagnosis-of-interest (DoI) class distinct from the cancer cascade, and use them to disambiguate treatment attribution — flagging when a patient's rituximab/MTX co-occurs with a non-lymphoma condition. The cancer cascade and all existing outputs are read-only throughout.
 
@@ -49,7 +50,7 @@ See MILESTONES.md for full details on all shipped milestones.
 - [x] **Phase 128: DoI Classification** (2 plans) - DuckDB DIAGNOSIS pull, classify, mutual-exclusivity hard-stop, cached artifacts (completed 2026-07-15)
 - [x] **Phase 129: Attribution Linkage and Output** - Two-tier join, three-state flag, 4-sheet xlsx, HIPAA suppression (completed 2026-07-16)
 - [ ] **Phase 130: Registration, Smoke Test, and HiPerGator Runtime** - R/39 + SCRIPT_INDEX + R/88 section + runtime gate
-- [x] **Phase 131: All-Codes-Resolved MED_ADMIN/DISPENSING NDC Coverage + Medication Column** - Generalized NDC crosswalk detection across all RXNORM vectors, per-code Source Table tagging, normalized Medication column (completed 2026-07-22)
+- [x] **Phase 131: All-Codes-Resolved MED_ADMIN/DISPENSING NDC Coverage + Medication Column** - Generalized NDC crosswalk detection across all RXNORM vectors, per-code Source Table tagging, normalized Medication column (completed 2026-07-22)
 
 ## Phase Details
 
@@ -183,3 +184,125 @@ See MILESTONES.md for full details on all shipped milestones.
 - [x] 131-02-PLAN.md -- get_chemo_hits() additive return_source tagging + R/50 Section 3/4 MED_ADMIN/DISPENSING NDC generalization across all 4 RXNORM vectors with dedup [MEDXLSX-03, MEDXLSX-04, MEDXLSX-05] (Wave 1)
 - [x] 131-03-PLAN.md -- Medication column population (Section 4) + shared xlsx-writer layout across write_resolved_xlsx() and the combined workbook (Section 6) [MEDXLSX-06, MEDXLSX-07] (Wave 2, depends on 131-01 + 131-02)
 - [x] 131-04-PLAN.md -- R/88 Section 15x structural smoke-test validation + SMOKE-131-01 summary line [SMOKE-131-01] (Wave 3, depends on 131-01/02/03)
+
+### 🔄 v3.4 R Pipeline Code Review Remediation (Active)
+
+**Milestone Goal:** Fix the crash-causing and wrong-published-number defects surfaced by the 2026-07-23 full-pipeline code review, and standardize the 8 recurring cross-cutting bug patterns (record-vs-patient-count confusion, code-normalization drift, can't-fail tests, etc.) at the shared-helper layer so they stop recurring script-by-script. Source: `R_pipeline_code_review.md`.
+
+**Phase sequencing rationale:** Phases follow the review's own "Suggested fix order" (its 5 numbered stages), used as the primary phase-sequencing signal per REQUIREMENTS.md's locked scope: (1) unblock the crashers, (2) fix wrong published numbers, (3) harden the ingest gate + make tests honest, (4) standardize the 8 cross-cutting patterns once at the shared-helper layer, (5) confirm the two flagged loose ends. `DOCS-01` (the empty reference manual, critical/high finding #7) and `DATA-07` (finding #8) are folded into stage 2's phase since the review's own critical/high findings table lists them adjacent to the other "wrong output" findings without a separate stage, and splitting them into their own single-requirement phases would violate this milestone's coarse granularity.
+
+## Phases (v3.4)
+
+- [ ] **Phase 132: Crash Fixes** - Unblock 6 scripts (`74`,`81`-`85`) that abort immediately on editor artifacts
+- [ ] **Phase 133: Critical Correctness Fixes** - Fix wrong published numbers (SCT filter, total_records, HL anchor date, same-week desync, age_at_episode) + the content-empty reference manual
+- [ ] **Phase 134: Ingest Integrity and Honest Tests** - Harden the DuckDB ingest promotion gate + fix 5 can't-fail validators
+- [ ] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer
+- [ ] **Phase 136: Confirm Loose Ends** - Locate `suppress_small`/`clean_multi_value`/`union_field`; reconcile `date_range_max` vs. the extract cutoff
+
+## Phase Details (v3.4)
+
+### Phase 132: Crash Fixes
+**Goal**: The six scripts that currently abort immediately on an editor artifact run past that point and execute their intended logic
+**Depends on**: Phase 131 (v3.4 starting point; independent of v3.3's open work)
+**Requirements**: CRASH-01, CRASH-02
+
+**Design constraints:**
+- Stray bare `n` line appears immediately after `source("R/00_config.R")` in `R/74`, `R/81`, `R/82`, `R/83`, `R/84`, `R/85` (three separate occurrences within `84`/`85`) — delete each occurrence outright, don't comment it out
+- `R/84`'s triggered branch calls unqualified `walk()` with no `library(purrr)` attached — align with `R/85`'s correct `purrr::walk()` usage (either qualify the call or attach purrr)
+- These are one-character/one-line fixes per the review; verification is that each script no longer throws `object 'n' not found` or `could not find function "walk"` at the point it previously crashed
+
+**Success Criteria** (what must be TRUE):
+  1. `R/74`, `R/81`, `R/82`, `R/83`, `R/84`, `R/85` no longer abort with `object 'n' not found` immediately after sourcing `R/00_config.R`
+  2. `R/84`'s previously-crashing branch resolves its `walk()` call via `purrr::walk()` (or an attached `library(purrr)`) without `could not find function "walk"`
+  3. Each of the six scripts proceeds past its former abort point to execute its intended logic instead of halting on the editor artifact
+**Plans**: TBD
+
+### Phase 133: Critical Correctness Fixes
+**Goal**: The pipeline's published numbers and generated reference manual are correct — no analytic output is silently wrong or inert, and the documentation generator produces real content
+**Depends on**: Phase 132
+**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07, DOCS-01
+
+**Design constraints:**
+- `R/28`: `treatment_type == "Stem Cell Transplant"` changes to `treatment_type == "SCT"` to match the value used everywhere else in the pipeline
+- `R/46`: `total_records` must collapse to distinct code-level counts (e.g. aggregate `dx_record_counts` by category directly) instead of joining per-code counts onto the patient-grain frame before `sum()`
+- `R/47`: `first_hl_dx_date` must filter `DX_DATE >= 1910-01-01` (the same `SENTINEL_CUTOFF` used by `48`/`49`) **before** `min()`, removing the post-hoc `== 1900` nullify
+- `R/48` must exclude HL anchor codes (C81 + 201.x) from its post-HL "second cancer" set, matching `R/49`'s existing exclusion — both scripts inherit the corrected `R/47` anchor date
+- `R/49`'s category/total `both_count` must reflect the true pre∩post **patient** intersection at category grain, not a per-code sum, so `pre + post − both` reconciles
+- `R/67`→`R/68` and `R/95`→`R/96`: after `pmin`/`pmax` reorders `source_1`/`source_2`, `admit_date_1`/`admit_date_2` must be swapped as a bound unit (or the two `(date, source)` tuples grouped without breaking their correspondence) so the downstream `(ID, date, source)` join back to ENCOUNTER stays correct
+- `R/89`'s `parse_script_header()` must anchor `header_end` to the field block's closing bar (3rd `===` bar / first non-comment line), not the 2nd bar
+- `R/101`: `age_at_episode` must be computed **before** `episode_start` is reassigned to the group's `min()`, or indexed against a separately-named min column, so it reflects the row at the group's earliest `episode_start`
+
+**Success Criteria** (what must be TRUE):
+  1. `R/28`'s `sct_dates`, `is_sct_conditioning_context`, and `days_to_nearest_sct` are populated for patients with `treatment_type == "SCT"` instead of permanently empty/FALSE/NA
+  2. `R/46`'s `total_records` (including the TOTAL row) reflects true code-level record counts, not per-code records multiplied by patient count
+  3. `R/47`'s `first_hl_dx_date` retains a patient's true HL anchor date when both a real date and a sentinel are present; `R/48` excludes HL anchor codes from its post-HL "second cancer" set; `R/49`'s `both_count` reconciles at category grain (`pre + post − both`)
+  4. `R/68` and `R/96`'s same-week detail files keep each `(admit_date, source)` pair correctly bound after the `pmin`/`pmax` reordering, so the downstream ENCOUNTER join no longer misclassifies pairs into Distinct/Partial or undercounts near-duplicates
+  5. `R/89`'s generated reference manual captures each script's actual Purpose/Inputs/Outputs/Dependencies/Requirements text instead of "Not documented"; `R/101`'s `age_at_episode` reflects the row at each group's earliest `episode_start`
+**Plans**: TBD
+
+### Phase 134: Ingest Integrity and Honest Tests
+**Goal**: A "passing" DuckDB ingest and a "passing" test/validator run are both strong evidence again — neither can silently succeed while the thing they check is actually broken
+**Depends on**: Phase 133
+**Requirements**: INGEST-01, PATTERN-E
+
+**Design constraints:**
+- `R/03`: `stop()` on any table write failure before the atomic swap (discard the `.tmp` database); assert `setequal(ingested, expected)` before promotion; summary reports real per-table pass/fail counts, not a hardcoded `"N/N passed"`
+- `R/81`: remove/adjust `coerce_types()` so it no longer normalizes DuckDB vs. RDS types before `waldo::compare()` — real type divergence must be visible
+- `R/82`/`R/83`: the "≥3× speedup on 3 of 5 scripts" check must actually benchmark all 5 scripts, not just 1
+- `R/88`: separate skip counters from pass counters in the summary tally; invert the `cause_of_death` "drop" check so it fails when the value is genuinely absent (not when present)
+- `R/96_validate_payer_dt`: the FLM-override fixture must start from a non-Medicaid state so the override is provably exercised
+- `R/98_validate_r28_migration`: compare against an independently-generated baseline, not a copy of its own output
+
+**Success Criteria** (what must be TRUE):
+  1. `R/03` aborts via `stop()` and discards the `.tmp` database when any table fails to write, asserts `setequal(ingested, expected)` before promoting, and its summary reports the real per-table pass/fail counts
+  2. `R/81` no longer coerces types before `waldo::compare()`, so genuine type divergence between DuckDB and RDS outputs is detectable
+  3. `R/82`/`R/83`'s speedup check benchmarks all 5 scripts (not 1) before evaluating the "≥3× on 3 of 5" claim; `R/88` separates skip counts from pass counts and its `cause_of_death` check fails when the value is genuinely absent
+  4. `R/96_validate_payer_dt`'s FLM-override fixture starts from a non-Medicaid state so the override path is provably exercised; `R/98_validate_r28_migration` compares against an independently-generated baseline instead of a copy of its own output
+**Plans**: TBD
+
+### Phase 135: Shared-Helper Standardization
+**Goal**: The 7 recurring cross-cutting bug patterns still in scope are fixed once at the shared-helper layer, so they stop recurring script-by-script
+**Depends on**: Phase 134
+**Requirements**: PATTERN-A, PATTERN-B, PATTERN-C, PATTERN-D, PATTERN-F, PATTERN-G, PATTERN-H
+
+**Design constraints:**
+- PATTERN-A: de-duplicate to `n_distinct(ID)` / distinct code before totaling in `R/23`, `R/33` (CODE-03), `R/43`/`R/44` (TOTAL rows), `R/50` (grand total), `R/91`, `R/100` (Sheet 1) — `R/46`'s instance is already covered by DATA-02 in Phase 133, not re-touched here
+- PATTERN-B: one shared code-normalization convention (strip **all** dots + `toupper()` + dotted/undotted union) applied consistently to `R/13_survivorship_encounters.R`, `R/42_build_code_descriptions.R`, `utils_cancer.R` (`classify_codes`/`is_cancer_code`), and `utils_doi.R` (`classify_doi_codes()`)
+- PATTERN-C: replace the over-inclusive `^[CD]` with `is_cancer_code()` (or `"^C|^D[0-4]"`) in `R/40`, `R/43`, `R/44`, `R/46`
+- PATTERN-D: classify transient (429/503/504/timeout/500/502) vs. permanent "not found" errors in `R/21_investigate_unmatched.R` (currently no retry at all), `R/27`, `R/105`, `R/108`; retry transient errors; never persist a transient failure as a permanent cache miss / dropped crosswalk entry
+- PATTERN-F: harden in-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` (regex/quote-handling) so newly-discovered codes are never silently dropped on a parse/write failure — a full move to a data-driven config source is explicitly out of scope for this milestone (see REQUIREMENTS.md Out of Scope) unless the hardened guard proves insufficient
+- PATTERN-G: add a death-before-birth check to `R/53_death_date_validation.R`; apply NA-safe `min_or_na`/`max_or_na` guards consistently in `R/14`, `R/31`, `R/93`
+- PATTERN-H: rename or re-aggregate `R/56`'s `encounter_count` (actually episode count), `R/57_explore_dx_deduplication`'s same mislabel, `R/62`'s `date_tier_detail` (patient×type×episode×date grain, not one-row-per-patient-per-date), and `R/67`'s `n_total_encounters` (double-counts dates used in both roles)
+
+**Success Criteria** (what must be TRUE):
+  1. Record/patient totals in `R/23`, `R/33`, `R/43`/`R/44`, `R/50`, `R/91`, `R/100` are computed by de-duplicating to the intended grain before totaling
+  2. A single shared code-normalization convention (strip all dots + `toupper` + dotted/undotted union) is applied consistently across `R/13`, `R/42`, `utils_cancer.R`, and `utils_doi.R`
+  3. Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or `^C|^D[0-4]`) instead of the over-inclusive `^[CD]`
+  4. External-API calls in `R/21`, `R/27`, `R/105`, `R/108` classify transient errors separately from genuine "not found," retry transient errors, and never persist a transient failure as a permanent miss
+  5. In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` is hardened so newly-discovered codes are never silently dropped; `R/53` gets a death-before-birth guard and `R/14`/`R/31`/`R/93` use NA-safe `min_or_na`/`max_or_na` consistently; `R/56`, `R/57_explore_dx_deduplication`, `R/62`, and `R/67`'s grain-mislabeled columns are renamed or re-aggregated to match their documented grain
+**Plans**: TBD
+
+### Phase 136: Confirm Loose Ends
+**Goal**: The review's two flagged unknowns are resolved with a documented answer, not left as open questions
+**Depends on**: Phase 135
+**Requirements**: CONFIRM-01, CONFIRM-02
+
+**Design constraints:**
+- `suppress_small()`/`clean_multi_value()`/`union_field()` were not found in any of the 14 `utils_*.R` modules during the review; `clean_multi_value` is referenced as "reused from R/52" — locate the actual definitions (likely `R/00_config.R` or inline in a script) and confirm they load correctly in every consumer
+- `CONFIG$analysis$date_range_max` (2025-03-31) vs. the actual extract cutoff (20250915) — determine whether valid Apr-Sep 2025 encounters/deaths are currently flagged out-of-range and dropped by `R/01`'s date validation, and correct the bound if so
+
+**Success Criteria** (what must be TRUE):
+  1. The actual file/line definitions of `suppress_small()`, `clean_multi_value()`, and `union_field()` are located and documented; each is confirmed to load correctly in every script/module that calls it
+  2. `CONFIG$analysis$date_range_max` is reconciled against the 20250915 extract cutoff, with an explicit finding on whether Apr-Sep 2025 encounters/deaths were being dropped
+  3. If criterion 2 finds real data being dropped, `R/01`'s date validation bound is corrected; if not, the finding documents why 2025-03-31 is intentional and no data is lost
+**Plans**: TBD
+
+## Progress (v3.4)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 132. Crash Fixes | v3.4 | TBD | Not started | - |
+| 133. Critical Correctness Fixes | v3.4 | TBD | Not started | - |
+| 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Not started | - |
+| 135. Shared-Helper Standardization | v3.4 | TBD | Not started | - |
+| 136. Confirm Loose Ends | v3.4 | TBD | Not started | - |

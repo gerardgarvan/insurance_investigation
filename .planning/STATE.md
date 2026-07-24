@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: R Pipeline Code Review Remediation
-status: defining requirements
+status: roadmap created
 stopped_at: —
-last_updated: "2026-07-23T18:00:00.000Z"
-last_activity: 2026-07-23
+last_updated: "2026-07-24T00:00:00.000Z"
+last_activity: 2026-07-24
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.4 R Pipeline Code Review Remediation — defining requirements (phase numbering continues from Phase 131, the last used number; v3.3 has not yet been archived to MILESTONES.md)
+**Current focus:** v3.4 R Pipeline Code Review Remediation — roadmap created (5 phases, 132-136); ready for `/gsd:plan-phase 132`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 132 (Crash Fixes) — not yet planned
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-23 — Milestone v3.4 started
+Status: Roadmap created, awaiting plan-phase
+Last activity: 2026-07-24 — v3.4 ROADMAP.md written (Phases 132-136), REQUIREMENTS.md traceability updated (21/21 mapped)
 
-Progress: [░░░░░░░░░░] 0% (v3.4 milestone just started)
+Progress: [░░░░░░░░░░] 0% (0/5 v3.4 phases complete)
 
 ## v3.3 Status (open in parallel, not abandoned)
 
@@ -94,6 +94,15 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 - Phase numbering continues from Phase 131 (v3.3's last used phase number, even though v3.3 is not yet archived to MILESTONES.md) — v3.4 starts at Phase 132
 - Scope locked to: 8 critical/high findings + 8 cross-cutting patterns (A-H) + 2 loose-end confirmations from `R_pipeline_code_review.md`; ~80 per-script Low/Med findings explicitly deferred to backlog (not this milestone)
+- Research explicitly skipped (config.json `workflow.research: false`) — this is remediation of known, already-diagnosed defects from the code review, not new-capability discovery; `.planning/research/SUMMARY.md` (if present) is stale content from the unrelated v3.3 DoI milestone and was not consulted
+- 5 phases (132-136), one per stage of the review's own "Suggested fix order" section — used as the primary phase-sequencing signal per REQUIREMENTS.md's locked scope, rather than inventing a different grouping:
+  - Phase 132 Crash Fixes = stage 1 (CRASH-01, CRASH-02)
+  - Phase 133 Critical Correctness Fixes = stage 2 (DATA-01..07 + DOCS-01 — DOCS-01/finding#7 and DATA-07/finding#8 folded in here since the review's critical/high findings table lists them adjacent to the other "wrong output" findings without their own stage, and coarse granularity disfavors single-requirement phases)
+  - Phase 134 Ingest Integrity and Honest Tests = stage 3 (INGEST-01, PATTERN-E)
+  - Phase 135 Shared-Helper Standardization = stage 4 (PATTERN-A/B/C/D/F/G/H — PATTERN-A's R/46 instance stays with DATA-02 in Phase 133 per the requirement's own note; PATTERN-F/G/H aren't literally named in the review's stage-4 prose but are the remaining in-scope cross-cutting patterns and share the "standardize once at the shared-helper layer" character)
+  - Phase 136 Confirm Loose Ends = stage 5 (CONFIRM-01, CONFIRM-02)
+- All 21 v3.4 requirements mapped 1:1 to exactly one phase — no orphans, no duplicates (see REQUIREMENTS.md Traceability table)
+- Phase dependencies are sequential (132→133→134→135→136), mirroring the review's recommended fix order rather than a hard technical prerequisite chain — the underlying scripts touched by each phase mostly don't overlap, so phases could technically be reordered, but the review's stated rationale (crashers first, honest tests before relying on them, shared-helper fixes last so downstream per-script fixes aren't re-touched by the standardization pass) is preserved as the default execution order
 
 ### Known Blockers
 
@@ -101,6 +110,6 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 ## Session Continuity
 
-**Last command:** `/gsd:new-milestone r_pipeline_code_review.md` (2026-07-23)
-**Stopped at:** Milestone v3.4 initialized, requirements definition in progress
-**What's next:** Define v3.4 REQUIREMENTS.md from the code-review scope (8 critical/high findings + 8 cross-cutting patterns + 2 loose ends), then roadmap starting at Phase 132. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.
+**Last command:** `/gsd:new-project` (roadmap step) (2026-07-24)
+**Stopped at:** v3.4 ROADMAP.md written (Phases 132-136, all 21 requirements mapped), REQUIREMENTS.md traceability table populated
+**What's next:** Present roadmap for user approval, then `/gsd:plan-phase 132` (Crash Fixes) to begin execution. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.
