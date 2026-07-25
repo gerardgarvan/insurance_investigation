@@ -474,7 +474,7 @@ message("--- Table 1 impact (before vs after deduplication) ---")
 table1_before <- episode_codes %>%
   filter(!is.na(cancer_codes)) %>%
   group_by(category, sub_category, treatment_code, code_type, cancer_codes) %>%
-  summarise(encounter_count = n(), .groups = "drop")
+  summarise(episode_count = n(), .groups = "drop")
 
 message(glue("Table 1 rows before deduplication: {nrow(table1_before)}"))
 
@@ -495,7 +495,7 @@ episode_codes_dedup <- episode_codes_enc %>%
 table1_after <- episode_codes_dedup %>%
   filter(!is.na(cancer_codes)) %>%
   group_by(category, sub_category, treatment_code, code_type, cancer_codes, dx_only) %>%
-  summarise(encounter_count = n(), .groups = "drop")
+  summarise(episode_count = n(), .groups = "drop")
 
 reduction <- nrow(table1_before) - nrow(table1_after)
 pct_reduction <- round(100 * reduction / nrow(table1_before), 1)

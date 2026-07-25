@@ -39,13 +39,13 @@
 #   - D-01: Filter out NA cancer_codes rows from both tables (Phase 81)
 #   - D-03: Add category column as first column in Table 1 (Phase 81)
 #   - D-04: Category derived from DRUG_GROUPINGS per-code lookup, fallback to treatment_type
-#   - D-05: Sort Table 1 by category, then desc(encounter_count) (Phase 81)
+#   - D-05: Sort Table 1 by category, then desc(episode_count) (Phase 81)
 #   - D-09: 3-tier lookup: xlsx -> CODE_SUBCATEGORY_MAP -> code-type fallback (Phase 81)
 #   - D-12: Single xlsx output with 2 sheets matching templates
 #   - D-13: Table 1: category | sub_category | treatment_code | code_type | cancer_codes
 #     Rows repeated per encounter (no aggregation). Chemo by medication (xlsx col C),
 #     Radiation by type (xlsx col G), SCT by type (xlsx col G), Immunotherapy as one group
-#   - D-14: Table 2: all_treatments | cancer_codes | encounter_count
+#   - D-14: Table 2: all_treatments | cancer_codes | episode_count
 #   - D-15: Cancer codes = cancer/neoplasm ICD codes only (not all diagnoses),
 #     semicolon-separated
 #   - D-16: Data source = treatment_episodes.rds + DuckDB DIAGNOSIS join via encounter_ids
@@ -579,8 +579,8 @@ table2 <- episode_dx %>%
   filter(!is.na(cancer_codes), !is.na(triggering_codes)) %>%  # Per D-01 + Phase 87: exclude empty
   mutate(all_treatments = triggering_codes) %>%
   group_by(all_treatments, cancer_codes) %>%
-  summarise(encounter_count = n(), .groups = "drop") %>%
-  arrange(desc(encounter_count))
+  summarise(episode_count = n(), .groups = "drop") %>%  # D-14: renamed to episode_count — grain is one row per episode, not per encounter
+  arrange(desc(episode_count))
 
 message(glue("  Table 2: {nrow(table2)} unique treatment-set x cancer-code combinations"))
 message(glue("  Unique treatment sets: {n_distinct(table2$all_treatments)}"))
