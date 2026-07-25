@@ -49,17 +49,25 @@ fmt <- function(n, total) {
 }
 
 # Filter: Medicaid primary payer AND no treatment flags
+# WHY coalesce: HAD_* == 0 evaluates to NA (not TRUE) when the flag is NA,
+# silently dropping patients with missing treatment data from this group.
+# coalesce(HAD_*, 0L) treats NA as 0 so these patients are correctly included.
 no_tx_medicaid <- hl_cohort %>%
   filter(
     PAYER_CATEGORY_PRIMARY == "Medicaid",
-    HAD_CHEMO == 0,
-    HAD_RADIATION == 0,
-    HAD_SCT == 0
+    coalesce(HAD_CHEMO,     0L) == 0L,
+    coalesce(HAD_RADIATION, 0L) == 0L,
+    coalesce(HAD_SCT,       0L) == 0L
   )
 
 # Context: all Medicaid patients and all no-treatment patients
 all_medicaid <- hl_cohort %>% filter(PAYER_CATEGORY_PRIMARY == "Medicaid")
-all_no_tx <- hl_cohort %>% filter(HAD_CHEMO == 0 & HAD_RADIATION == 0 & HAD_SCT == 0)
+all_no_tx <- hl_cohort %>%
+  filter(
+    coalesce(HAD_CHEMO,     0L) == 0L &
+    coalesce(HAD_RADIATION, 0L) == 0L &
+    coalesce(HAD_SCT,       0L) == 0L
+  )
 
 n_cohort <- nrow(hl_cohort)
 n_medicaid <- nrow(all_medicaid)
@@ -124,7 +132,9 @@ if (n_has_dx_date > 0) {
 tx_medicaid <- hl_cohort %>%
   filter(
     PAYER_CATEGORY_PRIMARY == "Medicaid",
-    (HAD_CHEMO == 1 | HAD_RADIATION == 1 | HAD_SCT == 1)
+    (coalesce(HAD_CHEMO, 0L) == 1L |
+     coalesce(HAD_RADIATION, 0L) == 1L |
+     coalesce(HAD_SCT, 0L) == 1L)
   )
 
 message(glue("\n  --- Comparison: Medicaid WITH treatment ---"))

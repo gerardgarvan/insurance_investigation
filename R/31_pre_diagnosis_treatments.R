@@ -151,8 +151,8 @@ summary_table <- pre_dx_episodes %>%
     n_episodes = n(),
     n_patients = n_distinct(patient_id),
     median_days_before = median(days_before_dx),
-    min_days_before = min(days_before_dx),
-    max_days_before = max(days_before_dx),
+    min_days_before = min_or_na(days_before_dx),
+    max_days_before = max_or_na(days_before_dx),
     .groups = "drop"
   ) %>%
   mutate(pct_of_total = sprintf("%.1f%%", 100 * n_episodes / sum(n_episodes))) %>%
@@ -164,8 +164,8 @@ total_row <- tibble(
   n_episodes = sum(summary_table$n_episodes),
   n_patients = n_distinct(pre_dx_episodes$patient_id),
   median_days_before = median(pre_dx_episodes$days_before_dx),
-  min_days_before = min(pre_dx_episodes$days_before_dx),
-  max_days_before = max(pre_dx_episodes$days_before_dx),
+  min_days_before = min_or_na(pre_dx_episodes$days_before_dx),
+  max_days_before = max_or_na(pre_dx_episodes$days_before_dx),
   pct_of_total = "100.0%"
 )
 
