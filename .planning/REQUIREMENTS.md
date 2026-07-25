@@ -42,7 +42,7 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 - [ ] **PATTERN-E**: Tests/validators that currently cannot fail are corrected: `R/81` no longer coerces types before `waldo::compare()`; `R/82`/`R/83`'s "≥3× speedup on 3 of 5 scripts" check actually benchmarks all 5 scripts (not 1); `R/88` separates skip counters from pass counters and its `cause_of_death` "drop" check fails when the value is genuinely absent (not present); `R/96_validate_payer_dt`'s FLM-override fixture starts from a non-Medicaid state so the override is provably exercised; `R/98_validate_r28_migration` compares against an independently-generated baseline, not a copy of its own output
 - [ ] **PATTERN-F**: In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` either moves to a data-driven config source or hardens its regex/quote-handling so newly-discovered codes are never silently dropped when a parse/write attempt fails
 - [ ] **PATTERN-G**: Missing NA/sentinel/impossible-date guards are added: `R/53_death_date_validation.R` gets a death-before-birth check (flags negative `age_at_death`); `R/14`, `R/31`, `R/93` use NA-safe `min_or_na`/`max_or_na` helpers (or equivalent guards) consistently instead of producing silent `Inf` durations, unguarded `episode_start`, or dropped NA treatment flags
-- [ ] **PATTERN-H**: Grain-mislabeled columns are renamed or re-aggregated to match their documented grain: `R/56`'s `encounter_count` (actually episode count), `R/57_explore_dx_deduplication`'s same mislabel, `R/62`'s `date_tier_detail` (patient×type×episode×date, not one-row-per-patient-per-date), `R/67`'s `n_total_encounters` (double-counts dates used in both roles)
+- [x] **PATTERN-H**: Grain-mislabeled columns are renamed or re-aggregated to match their documented grain: `R/56`'s `encounter_count` (actually episode count), `R/57_explore_dx_deduplication`'s same mislabel, `R/62`'s `date_tier_detail` (patient×type×episode×date, not one-row-per-patient-per-date), `R/67`'s `n_total_encounters` (double-counts dates used in both roles)
 
 ### Confirm Loose Ends (CONFIRM)
 
@@ -103,7 +103,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PATTERN-E | Phase 134 | Pending |
 | PATTERN-F | Phase 135 | Pending |
 | PATTERN-G | Phase 135 | Pending |
-| PATTERN-H | Phase 135 | Pending |
+| PATTERN-H | Phase 135 | Complete |
 | CONFIRM-01 | Phase 136 | Pending |
 | CONFIRM-02 | Phase 136 | Pending |
 
