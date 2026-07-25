@@ -12,7 +12,8 @@
 #   - AMC_PAYER_LOOKUP from R/00_config.R
 #
 # Outputs: 3 CSV files in output/tables/:
-#   - date_tier_detail.csv (one row per patient per calendar date with fill_method)
+#   - date_tier_detail.csv (grain: patient x treatment_type x episode x date;
+#     multiple rows per patient when treatment types or episodes overlap on the same date)
 #   - date_tier_summary.csv (tier frequency across all dates)
 #   - date_tier_summary_by_type.csv (tier frequency per treatment type)
 #
@@ -324,7 +325,7 @@ for (i in seq_len(nrow(summary_all))) {
 }
 
 message(glue("\nCSV files written to {output_dir}/:"))
-message("  date_tier_detail.csv            (one row per patient per calendar date)")
+message("  date_tier_detail.csv            (grain: patient x type x episode x date)")
 message("  date_tier_summary.csv           (tier frequency across all dates)")
 message("  date_tier_summary_by_type.csv   (tier frequency per treatment type)")
 
