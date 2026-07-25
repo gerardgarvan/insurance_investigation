@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v3.4
-milestone_name: R Pipeline Code Review Remediation
-status: phase 132 context gathered
-stopped_at: .planning/phases/132-crash-fixes/132-CONTEXT.md
-last_updated: "2026-07-24T00:00:00.000Z"
-last_activity: 2026-07-24
+milestone_name: below)
+status: executing
+stopped_at: Completed 132-03-PLAN.md
+last_updated: "2026-07-25T16:10:50.031Z"
+last_activity: 2026-07-25
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 121
+  completed_phases: 108
+  total_plans: 207
+  completed_plans: 197
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.4 R Pipeline Code Review Remediation — Phase 132 (Crash Fixes) context gathered; ready for `/gsd:plan-phase 132`
+**Current focus:** Phase 132 — crash-fixes
 
 ## Current Position
 
-Phase: Phase 132 (Crash Fixes) — context gathered, not yet planned
-Plan: —
-Status: Context gathered, awaiting plan-phase
-Last activity: 2026-07-24 — Phase 132 CONTEXT.md written: corrected bare-`n` count (6, not the review's stated 3 — 3 each in R/84 and R/85), locked walk() fix to `library(purrr)` matching dominant codebase convention (11 files/14 bare call sites vs. 7 qualified), left R/88 regression-coverage scope and local-vs-HiPerGator verification method to Claude's discretion (user skipped deep-dive discussion — fixes are mechanical and already fully specified by REQUIREMENTS.md/ROADMAP.md)
+Phase: 132 (crash-fixes) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-07-25
 
 Progress: [░░░░░░░░░░] 0% (0/5 v3.4 phases complete)
 
@@ -111,5 +111,5 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 ## Session Continuity
 
 **Last command:** `/gsd:new-project` (roadmap step) (2026-07-24)
-**Stopped at:** v3.4 ROADMAP.md written (Phases 132-136, all 21 requirements mapped), REQUIREMENTS.md traceability table populated
+**Stopped at:** Completed 132-03-PLAN.md
 **What's next:** Present roadmap for user approval, then `/gsd:plan-phase 132` (Crash Fixes) to begin execution. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.

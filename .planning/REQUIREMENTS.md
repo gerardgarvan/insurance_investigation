@@ -12,7 +12,7 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Crash Fixes (CRASH)
 
-- [ ] **CRASH-01**: `R/74`, `R/81`, `R/82`, `R/83`, `R/84`, `R/85` run without aborting on the stray bare `n` token left in by an editor (three occurrences in `84`/`85`)
+- [x] **CRASH-01**: `R/74`, `R/81`, `R/82`, `R/83`, `R/84`, `R/85` run without aborting on the stray bare `n` token left in by an editor (three occurrences in `84`/`85`)
 - [ ] **CRASH-02**: `R/84` uses `purrr::walk()` (or an attached `library(purrr)`) instead of an unqualified `walk()` call, so its triggered branch no longer crashes with `could not find function "walk"`
 
 ### Published-Number Correctness (DATA)
@@ -85,7 +85,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CRASH-01 | Phase 132 | Pending |
+| CRASH-01 | Phase 132 | Complete |
 | CRASH-02 | Phase 132 | Pending |
 | DATA-01 | Phase 133 | Pending |
 | DATA-02 | Phase 133 | Pending |
