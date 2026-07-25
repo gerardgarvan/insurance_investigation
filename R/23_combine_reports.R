@@ -213,6 +213,12 @@ write_combined_report <- function(df, output_path) {
 
   # Total row
   total_row <- 6 + nrow(summary_df) + 1
+  # PATTERN-A: grand-total patients must be n_distinct(ID) not sum(per-code patient counts).
+  # The input RDS files (Phase 39/40 unmatched reports) provide pre-aggregated n_patients per
+  # code; raw patient IDs are not retained in 'df' at this point. Until Phase 39/40 are updated
+  # to forward a deduplicated patient ID set, this total may overcount patients who appear under
+  # multiple classifications. When raw IDs are available, replace with: n_distinct(df$ID)
+  grand_total_patients <- sum(summary_df$n_patients)  # PATTERN-A: ideally n_distinct(ID) — see note above
   wb$add_data(
     sheet = "Summary", x = "Total",
     start_row = total_row, start_col = 1
@@ -226,7 +232,7 @@ write_combined_report <- function(df, output_path) {
     start_row = total_row, start_col = 3
   )
   wb$add_data(
-    sheet = "Summary", x = sum(summary_df$n_patients),
+    sheet = "Summary", x = grand_total_patients,
     start_row = total_row, start_col = 4
   )
   wb$add_fill(

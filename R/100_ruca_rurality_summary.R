@@ -223,12 +223,21 @@ message()
 
 message("--- Building Sheet 1: Rurality Frequency (patient-level) ---")
 
-sheet1 <- rurality_patient_tbl %>%
-  mutate(rurality_label = if_else(is.na(rurality_label), "Unknown", rurality_label)) %>%
+# PATTERN-A: Sheet 1 patient counts must deduplicate to n_distinct(PATID).
+# distinct(PATID, rurality_label) ensures each PATID appears once per rurality label
+# before counting. The Total row uses n_distinct(PATID) across all labels to avoid
+# double-counting patients with ZIP changes that span multiple rurality categories.
+sheet1_base <- rurality_patient_tbl %>%
+  mutate(rurality_label = if_else(is.na(rurality_label), "Unknown", rurality_label))
+
+# PATTERN-A: confirmed — n_distinct(PATID) for grand total, not sum of per-label counts
+sheet1_grand_total_patients <- n_distinct(sheet1_base$PATID)
+
+sheet1 <- sheet1_base %>%
   distinct(PATID, rurality_label) %>%
   count(rurality_label, name = "n_patients") %>%
   mutate(
-    pct_patients = round(100 * n_patients / sum(n_patients), 2)
+    pct_patients = round(100 * n_patients / sheet1_grand_total_patients, 2)
   ) %>%
   arrange(rurality_label)   # ascending alphabetical (SORT-01)
 
@@ -237,7 +246,7 @@ sheet1 <- bind_rows(
   sheet1,
   tibble(
     rurality_label = "Total",
-    n_patients     = sum(sheet1$n_patients),
+    n_patients     = sheet1_grand_total_patients,  # PATTERN-A: n_distinct(PATID) not sum(per-label)
     pct_patients   = 100.00
   )
 )

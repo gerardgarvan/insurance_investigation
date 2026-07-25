@@ -269,9 +269,11 @@ code03_summary <- data.frame(
   Code = c("Z94.84", "T86.5", "T86.09"),
   Code_Description = c("Bone marrow transplant status", "SCT complications", "BMT complications"),
   Patient_Count = c(
-    sum(sct_status_dx$DX_norm == "Z9484"),
-    sum(sct_status_dx$DX_norm == "T865"),
-    sum(sct_status_dx$DX_norm == "T8609")
+    # PATTERN-A: count distinct patients per code, not diagnosis records.
+    # Use which() to avoid spurious NA index from NA-valued DX_norm rows.
+    n_distinct(sct_status_dx$ID[which(sct_status_dx$DX_norm == "Z9484")]),
+    n_distinct(sct_status_dx$ID[which(sct_status_dx$DX_norm == "T865")]),
+    n_distinct(sct_status_dx$ID[which(sct_status_dx$DX_norm == "T8609")])
   ),
   In_DRUG_GROUPINGS = c(
     if (z9484_in_dg) "Yes" else "No",

@@ -170,6 +170,10 @@ data_quality_summary <- tribble(
   "TR3 DXAGE: 13 sentinel values of 999 (unknown age). Flagged by DXAGE_VALID column",
 
   # Date range issues
+  # PATTERN-A NOTE: n_future_dates_after is an all-table grand total (sum across all
+  # PCORnet tables and date columns). It is reported on each date-type row for
+  # visibility but represents the global count, not a per-source count.
+  # (all-table grand total — not a per-source breakdown)
   "Future enrollment dates",
   279L, n_future_dates_after,
   "documented",
