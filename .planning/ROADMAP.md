@@ -311,4 +311,4 @@ See MILESTONES.md for full details on all shipped milestones.
 | 133. Critical Correctness Fixes | v3.4 | 1/1 | Complete    | 2026-07-25 |
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Complete    | 2026-07-25 |
 | 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
-| 136. Confirm Loose Ends | v3.4 | TBD | Not started | - |
+| 136. Confirm Loose Ends | v3.4 | 1/2 | In Progress|  |

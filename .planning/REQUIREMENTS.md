@@ -46,7 +46,7 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Confirm Loose Ends (CONFIRM)
 
-- [ ] **CONFIRM-01**: Locate where `suppress_small()`, `clean_multi_value()`, and `union_field()` are actually defined and confirm they load correctly (not found in any of the 14 `utils_*.R` modules during the review; `clean_multi_value` is referenced as "reused from R/52")
+- [x] **CONFIRM-01**: Locate where `suppress_small()`, `clean_multi_value()`, and `union_field()` are actually defined and confirm they load correctly (not found in any of the 14 `utils_*.R` modules during the review; `clean_multi_value` is referenced as "reused from R/52")
 - [ ] **CONFIRM-02**: Reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915) and correct the bound if valid Apr-Sep 2025 encounters/deaths are currently being flagged out-of-range and dropped by `R/01`'s date validation
 
 ## Future Requirements
@@ -104,7 +104,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PATTERN-F | Phase 135 | Complete |
 | PATTERN-G | Phase 135 | Complete |
 | PATTERN-H | Phase 135 | Complete |
-| CONFIRM-01 | Phase 136 | Pending |
+| CONFIRM-01 | Phase 136 | Complete |
 | CONFIRM-02 | Phase 136 | Pending |
 
 **Coverage:**
