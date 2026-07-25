@@ -90,7 +90,7 @@ fixture <- tibble::tibble(
     NA_character_,  # Row 16: Both NA -> Missing
     "141",    # Row 17: Dual-eligible code (in PAYER_MAPPING$dual_eligible_codes)
     "11",     # Row 18: Cross-payer: Medicare primary + Medicaid secondary
-    "219"     # Row 19: Cross-payer: Medicaid primary + Medicare secondary
+    "511"     # Row 19: FLM source with Private payer -- FLM override should reclassify to Medicaid
   ),
   PAYER_TYPE_SECONDARY = c(
     NA_character_,  # Row 1:  No secondary
@@ -111,7 +111,7 @@ fixture <- tibble::tibble(
     NA_character_,  # Row 16: Both missing -> Missing
     "219",    # Row 17: Secondary for dual-eligible test
     "219",    # Row 18: Secondary: Medicaid (cross-payer with Medicare primary)
-    "11"      # Row 19: Secondary: Medicare (cross-payer with Medicaid primary)
+    NA_character_   # Row 19: No secondary needed for FLM override test
   ),
   SOURCE = c(
     "ENC", "ENC", "ENC", "ENC", "ENC",
@@ -185,10 +185,11 @@ check("Row count matches (flm_override=TRUE)",
 check("Column count matches (flm_override=TRUE)",
       ncol(result_dplyr_flm) == ncol(result_dt_flm))
 
-# Row 19 should have tier="Medicaid" due to FLM override
-check("FLM row (row 19) has tier='Medicaid' in dplyr output",
-      result_dplyr_flm$tier[19] == "Medicaid")
-check("FLM row (row 19) has tier='Medicaid' in dt output",
+# Row 19: prove the override changed something -- without override it should be "Private",
+# with override it should be "Medicaid" (keys on SOURCE == "FLM", not on payer code value)
+check("FLM row (row 19) has tier='Private' WITHOUT override (baseline for override test)",
+      result_dt$tier[19] == "Private")
+check("FLM row (row 19) has tier='Medicaid' WITH override (override exercised)",
       result_dt_flm$tier[19] == "Medicaid")
 
 # Compare all output columns with FLM override

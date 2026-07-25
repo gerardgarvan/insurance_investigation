@@ -21,6 +21,11 @@
 #   - PERF-04: R/28 structure validation (columns, order, types)
 #   - VALID-01: Content parity (row-by-row match)
 #
+# BASELINE CAVEAT (Phase 134, D-12): If no pre-Phase-98 baseline exists, one is generated
+# from the current R/28 output on first run and committed. The first comparison is trivially
+# empty (baseline == current). Drift is detectable from that snapshot forward. Do NOT
+# regenerate the baseline after Phase 98 changes are applied -- that defeats the purpose.
+#
 # ==============================================================================
 
 source("R/00_config.R")
@@ -74,14 +79,13 @@ message(sprintf("Loaded current output: %s rows, %s columns",
 message("\n--- Section 3: Baseline mode handling ---")
 
 if (!file.exists(BASELINE_RDS)) {
-  message("BASELINE MODE: No baseline file found. Saving current output as baseline.")
+  message(glue(
+    "BASELINE MODE: no independent baseline found at {BASELINE_RDS}.\n",
+    "Generating one from CURRENT output as a Phase-134 snapshot (see caveat at top of file).\n",
+    "This eliminates the circular self-comparison going forward; drift is detectable from here."
+  ))
   saveRDS(current, BASELINE_RDS)
-  message(sprintf("Baseline saved to: %s", BASELINE_RDS))
-  message("\nNEXT STEPS:")
-  message("  1. Apply Phase 98 changes to R/28")
-  message("  2. Re-run R/28_episode_classification.R")
-  message("  3. Re-run this validation script (it will compare against baseline)")
-  message("\nExiting with status 0 (baseline capture successful).")
+  message(glue("Baseline saved. Commit it now: git add {BASELINE_RDS} && git commit -m 'chore(134): commit R/98 baseline snapshot'"))
   quit(status = 0L)
 }
 
