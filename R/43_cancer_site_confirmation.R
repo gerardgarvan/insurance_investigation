@@ -241,10 +241,15 @@ message(glue("  Overall confirmation rate (category): {scales::percent(overall_r
 # SECTION 5: TOTALS ROWS ----
 # ==============================================================================
 
+# PATTERN-A: TOTAL patients = distinct patients across ALL categories,
+# not sum of per-category counts (patients spanning categories counted once).
+# dx_cancer retains raw IDs and is the correct source for grand-total deduplication.
+grand_total_patients_43 <- n_distinct(dx_cancer$ID)
+
 totals_exact <- tibble(
   DX_norm = "TOTAL",
   category = "",
-  total_patients = sum(summary_exact$total_patients),
+  total_patients = grand_total_patients_43,
   confirmed_patients = sum(summary_exact$confirmed_patients),
   unconfirmed_patients = sum(summary_exact$unconfirmed_patients),
   confirmation_rate = NA_real_
@@ -252,7 +257,7 @@ totals_exact <- tibble(
 
 totals_category <- tibble(
   category = "TOTAL",
-  total_patients = sum(summary_category$total_patients),
+  total_patients = grand_total_patients_43,
   confirmed_patients = sum(summary_category$confirmed_patients),
   unconfirmed_patients = sum(summary_category$unconfirmed_patients),
   confirmation_rate = NA_real_

@@ -559,6 +559,7 @@ if (nrow(patient_hits) > 0) {
     distinct(category, ID) %>%
     count(category, name = "total_patients")
 
+  # PATTERN-A: confirmed — grand-total patients use n_distinct(ID) via patient_hits accumulator
   total_unique_patients <- n_distinct(category_patient_hits$ID)
 } else {
   patients_by_category <- tibble(category = character(), total_patients = integer())
