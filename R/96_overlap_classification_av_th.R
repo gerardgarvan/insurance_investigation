@@ -79,7 +79,8 @@ same_date_detail <- read_csv(
 )
 message(glue("Loaded multi_source_same_date_detail_av_th.csv: {format(nrow(same_date_detail), big.mark=',')} rows"))
 
-# Read Phase 33 Plan 01 same-week detail (AV+TH filtered)
+# (admit_date, source) pairs are already canonicalized by R/95's pmin/pmax swap fix;
+# joins below use source_1/admit_date_1 and source_2/admit_date_2 as bound units.
 same_week_detail <- read_csv(
   file.path(output_dir, "multi_source_same_week_detail_av_th.csv"),
   col_types = cols(

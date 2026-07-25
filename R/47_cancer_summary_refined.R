@@ -64,6 +64,9 @@ OUTPUT_XLSX <- build_output_path("tables", "cancer_summary.xlsx")
 OUTPUT_TABLE_XLSX <- build_output_path("tables", "cancer_summary_table.xlsx")
 OUTPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
+# Sentinel date cutoff -- any DX_DATE before this is considered invalid/sentinel
+SENTINEL_CUTOFF <- as.Date("1910-01-01")
+
 message("=== Phase 8: Cancer Summary Refined (D-code removal + HL cohort confirmation) ===")
 message(glue("Input CSV:  {INPUT_CSV}"))
 message(glue("Output CSV: {OUTPUT_CSV}"))
@@ -137,7 +140,10 @@ message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',
 message("\nComputing first HL diagnosis date from DIAGNOSIS and TUMOR_REGISTRY...")
 
 # DIAGNOSIS earliest HL date per patient (C81 + 201.x, reuse dx_hl from Section 4)
+# Exclude sentinel dates only from the anchor-date derivation, so cohort
+# membership (code-based confirmation) is unaffected.
 dx_dates <- dx_hl %>%
+  filter(is.na(DX_DATE) | DX_DATE >= SENTINEL_CUTOFF) %>%
   filter(!is.na(DX_DATE)) %>%
   group_by(ID) %>%
   summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop")
@@ -178,13 +184,7 @@ first_dx <- dx_dates %>%
   select(ID, first_hl_dx_date, first_hl_dx_source) %>%
   collect()
 
-# Nullify 1900 sentinel dates (Pitfall 3)
-n_sentinel <- sum(year(first_dx$first_hl_dx_date) == 1900L, na.rm = TRUE)
-if (n_sentinel > 0) {
-  message(glue("  Nullifying {n_sentinel} sentinel first-diagnosis dates (year 1900)"))
-  first_dx <- first_dx %>%
-    mutate(first_hl_dx_date = if_else(year(first_hl_dx_date) == 1900L, as.Date(NA), first_hl_dx_date))
-}
+message(glue("  Sentinel DX_DATE rows excluded upstream (before {SENTINEL_CUTOFF}) -- no post-hoc nullify needed"))
 
 # Log source distribution
 source_dist <- first_dx %>%

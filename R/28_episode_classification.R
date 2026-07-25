@@ -645,7 +645,7 @@ message("\n--- Phase 93: Temporal context and confidence flag enrichment ---")
 # Step 5D-1: Compute SCT conditioning temporal context (D-01, D-02, D-03, D-04)
 # For each patient, find SCT episode start dates
 sct_dates <- episodes %>%
-  filter(treatment_type == "Stem Cell Transplant") %>%
+  filter(treatment_type == "SCT") %>%
   select(patient_id, sct_start = episode_start)
 
 n_sct_patients <- n_distinct(sct_dates$patient_id)

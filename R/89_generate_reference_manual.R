@@ -62,7 +62,7 @@ parse_script_header <- function(filepath) {
   }
 
   # Find end of header (second === line or first non-comment line after header_start)
-  header_end <- which(str_detect(lines, "^#\\s*=+"))[2]
+  header_end <- which(str_detect(lines, "^#\\s*=+"))[3]
   if (is.na(header_end)) {
     # Find first non-comment line
     non_comment <- which(!str_detect(lines[(header_start + 1):length(lines)], "^#"))[1]

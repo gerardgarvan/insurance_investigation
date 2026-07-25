@@ -272,11 +272,18 @@ for (idx in seq_along(all_dates)) {
     filter(source_1 != source_2) %>%
     mutate(
       day_gap = as.integer(admit_date_2 - admit_date_1),
-      src_lo = pmin(source_1, source_2),
-      src_hi = pmax(source_1, source_2),
+      # Swap both source AND its bound admit_date together as a unit (D-08)
+      # When pmin reorders source_1/source_2, admit_date_1/admit_date_2 must follow.
+      src_lo  = pmin(source_1, source_2),
+      src_hi  = pmax(source_1, source_2),
+      # If sources are in canonical order already, keep dates; otherwise swap dates
+      admit_date_1_new = if_else(source_1 == src_lo, admit_date_1, admit_date_2),
+      admit_date_2_new = if_else(source_1 == src_lo, admit_date_2, admit_date_1),
       source_combo = paste(src_lo, src_hi, sep = "+"),
       source_1 = src_lo,
-      source_2 = src_hi
+      source_2 = src_hi,
+      admit_date_1 = admit_date_1_new,
+      admit_date_2 = admit_date_2_new
     ) %>%
     select(ID, admit_date_1, source_1, admit_date_2, source_2, day_gap, source_combo) %>%
     distinct()

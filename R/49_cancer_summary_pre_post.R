@@ -434,8 +434,19 @@ cat_post_by_category <- patients_post %>%
   group_by(category) %>%
   summarise(post_hl_count = n_distinct(ID), .groups = "drop")
 
-cat_both_by_category <- patients_both %>%
+# Both at category grain: patients who have ANY pre-HL code AND ANY post-HL code
+# in the same category. This is the true patient-level intersection, not a per-code sum.
+# (per D-07: both_count must reconcile at category grain: pre + post - both = union)
+pre_patients_by_category <- patients_pre %>%
   mutate(category = classify_codes(cancer_code)) %>%
+  distinct(ID, category)
+
+post_patients_by_category <- patients_post %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  distinct(ID, category)
+
+cat_both_by_category <- pre_patients_by_category %>%
+  inner_join(post_patients_by_category, by = c("ID", "category")) %>%
   group_by(category) %>%
   summarise(both_count = n_distinct(ID), .groups = "drop")
 
@@ -476,7 +487,11 @@ totals_category <- tibble(
   median_dates_7day_sep = NA_real_,
   pre_hl_count          = as.integer(n_distinct(patients_pre$ID)),
   post_hl_count         = as.integer(n_distinct(patients_post$ID)),
-  both_count            = as.integer(n_distinct(patients_both$ID)),
+  # TOTAL both_count: distinct patients present in BOTH windows for ANY code
+  # (patient-level intersection, not the same-code patients_both set). This keeps
+  # the grand total consistent with the corrected per-category both_counts and with
+  # pre + post - both = union at the total grain.
+  both_count            = as.integer(length(intersect(unique(patients_pre$ID), unique(patients_post$ID)))),
   total_records         = sum(category_summary$total_records)
 )
 
@@ -586,8 +601,16 @@ cat_post_by_category_v2 <- patients_post_v2 %>%
   group_by(category) %>%
   summarise(post_hl_count = n_distinct(ID), .groups = "drop")
 
-cat_both_by_category_v2 <- patients_both_v2 %>%
+pre_patients_by_category_v2 <- patients_pre_v2 %>%
   mutate(category = classify_codes(cancer_code)) %>%
+  distinct(ID, category)
+
+post_patients_by_category_v2 <- patients_post_v2 %>%
+  mutate(category = classify_codes(cancer_code)) %>%
+  distinct(ID, category)
+
+cat_both_by_category_v2 <- pre_patients_by_category_v2 %>%
+  inner_join(post_patients_by_category_v2, by = c("ID", "category")) %>%
   group_by(category) %>%
   summarise(both_count = n_distinct(ID), .groups = "drop")
 
@@ -621,7 +644,7 @@ totals_category_v2 <- tibble(
   median_dates_7day_sep = NA_real_,
   pre_hl_count          = as.integer(n_distinct(patients_pre_v2$ID)),
   post_hl_count         = as.integer(n_distinct(patients_post_v2$ID)),
-  both_count            = as.integer(n_distinct(patients_both_v2$ID)),
+  both_count            = as.integer(length(intersect(unique(patients_pre_v2$ID), unique(patients_post_v2$ID)))),
   total_records         = sum(category_summary_v2$total_records)
 )
 

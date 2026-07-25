@@ -140,6 +140,14 @@ dx_raw <- dx_raw %>%
 
 message(glue("  After sentinel exclusion: {format(nrow(dx_raw), big.mark=',')} rows"))
 
+# Exclude HL anchor codes from post-HL second-cancer set (per D-06)
+# These are the defining diagnosis -- including them would conflate the anchor with second cancers
+n_before_hl_removal <- nrow(dx_raw)
+dx_raw <- dx_raw %>%
+  filter(!str_detect(DX_norm, "^C81") & !str_detect(DX_norm, "^201"))
+n_removed_hl <- n_before_hl_removal - nrow(dx_raw)
+message(glue("  HL anchor rows excluded (C81 + 201.x): {format(n_removed_hl, big.mark=',')} ({format(nrow(dx_raw), big.mark=',')} remaining)"))
+
 # ==============================================================================
 # SECTION 5: APPLY TEMPORAL FILTER (DX_DATE > first_hl_dx_date) ----
 # ==============================================================================

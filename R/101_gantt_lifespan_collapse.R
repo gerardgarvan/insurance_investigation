@@ -196,6 +196,11 @@ message("\n--- Collapsing to lifespan grain (patient_id x treatment_type) ---")
 lifespan <- episodes %>%
   group_by(patient_id, treatment_type) %>%
   summarise(
+    # age_at_episode MUST come first: references the pre-collapse episode_start vector.
+    # After episode_start = min(episode_start) executes, episode_start becomes a scalar
+    # and which.min() always returns 1 regardless of which row is the earliest. (DATA-07)
+    age_at_episode = age_at_episode[which.min(episode_start)],
+
     # D-05: Span = earliest start -> latest stop (NOT total active days)
     episode_start   = min(episode_start, na.rm = TRUE),
     episode_stop    = max(episode_stop,  na.rm = TRUE),
@@ -221,9 +226,6 @@ lifespan <- episodes %>%
     episode_dx_codes             = union_field(episode_dx_codes),
     episode_dx_categories        = union_field(episode_dx_categories),
     episode_dx_7day_confirmed    = union_field(episode_dx_7day_confirmed),
-
-    # age_at_episode: age at the EARLIEST episode_start (min-start row)
-    age_at_episode = age_at_episode[which.min(episode_start)],
 
     .groups = "drop"
   ) %>%

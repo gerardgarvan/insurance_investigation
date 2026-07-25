@@ -103,12 +103,9 @@ dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
 
 message(glue("  Found record counts for {nrow(dx_record_counts)} unique codes"))
 
-# Join record counts to patient-level data
-cancer_summary <- cancer_summary %>%
-  left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
-  mutate(record_count = ifelse(is.na(record_count), 0L, as.integer(record_count)))
-
-message(glue("  Total records across all codes: {format(sum(cancer_summary$record_count), big.mark=',')}"))
+# NOTE: do NOT join dx_record_counts onto patient-level cancer_summary -- that would
+# multiply each code's record_count by patient count when summing in summarise().
+# Instead, aggregate record counts at code grain -> category grain separately below.
 
 # ==============================================================================
 # SECTION 5: CATEGORY-LEVEL AGGREGATION ----
@@ -129,10 +126,37 @@ category_summary <- cancer_summary %>%
     median_unique_dates = median(unique_dates_total, na.rm = TRUE),
     mean_dates_7day_sep = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
     median_dates_7day_sep = median(unique_dates_with_sep_gt_7, na.rm = TRUE),
-    total_records = sum(record_count, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   arrange(desc(total_patients))
+
+# Correct total_records: sum code-level record counts per category (not per patient-code row)
+# dx_record_counts is at code grain -- join it to cancer_summary at code grain first,
+# then aggregate to category grain.
+code_record_totals <- dx_record_counts %>%
+  left_join(
+    cancer_summary %>% distinct(cancer_code, category),
+    by = c("DX_norm" = "cancer_code")
+  ) %>%
+  group_by(category) %>%
+  summarise(total_records = sum(record_count, na.rm = TRUE), .groups = "drop")
+
+# Guard: if any cancer_code maps to more than one category, the left_join above
+# double-counts that code's records. Fail fast so the inflation is visible.
+stopifnot(!any(duplicated(distinct(cancer_summary, cancer_code, category)$cancer_code)))
+
+# Guard: codes in dx_record_counts with no matching row in cancer_summary land in
+# an NA category bucket and are silently excluded from all category totals.
+# Current decision: drop orphan codes (they have no category mapping and cannot be
+# attributed to a disease group). Log the count for auditability.
+n_orphan <- dx_record_counts %>%
+  anti_join(cancer_summary %>% distinct(cancer_code), by = c("DX_norm" = "cancer_code")) %>%
+  nrow()
+if (n_orphan > 0) message(glue("  {n_orphan} codes in dx_record_counts have no category mapping and are excluded from totals"))
+
+category_summary <- category_summary %>%
+  left_join(code_record_totals, by = "category") %>%
+  mutate(total_records = coalesce(total_records, 0L))
 
 message(glue("  Category summary: {nrow(category_summary)} rows"))
 
@@ -155,10 +179,15 @@ code_summary <- cancer_summary %>%
     median_unique_dates = median(unique_dates_total, na.rm = TRUE),
     mean_dates_7day_sep = mean(unique_dates_with_sep_gt_7, na.rm = TRUE),
     median_dates_7day_sep = median(unique_dates_with_sep_gt_7, na.rm = TRUE),
-    total_records = sum(record_count, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   arrange(desc(total_patients))
+
+# total_records for code_summary: join dx_record_counts at code grain (not summed from patient rows)
+code_summary <- code_summary %>%
+  left_join(dx_record_counts, by = c("cancer_code" = "DX_norm")) %>%
+  mutate(total_records = coalesce(as.integer(record_count), 0L)) %>%
+  select(-record_count)
 
 message(glue("  Code summary: {nrow(code_summary)} rows"))
 
