@@ -96,7 +96,7 @@ message("\nQuerying DIAGNOSIS for record counts...")
 dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(str_detect(DX_norm, "^[CD]")) %>%
+  filter(is_cancer_code(DX_norm)) %>% # PATTERN-C fix: ^[CD] replaced with map-based helper
   group_by(DX_norm) %>%
   summarise(record_count = n(), .groups = "drop") %>%
   collect()
