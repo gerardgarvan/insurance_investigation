@@ -302,21 +302,21 @@ if (length(new_treatment_codes) > 0) {
       config_text[(rad_close_idx + 1):length(config_text)]
     )
 
-    # Validate: write to temp, parse, source
-    tmp <- tempfile(fileext = ".R")
-    writeLines(config_text, tmp)
+    # PATTERN-F: verify parse BEFORE writing to the real config path (temp-file validate)
+    tmp_verify <- tempfile(fileext = ".R")
+    writeLines(config_text, tmp_verify)
     tryCatch({
-      parse(tmp)
+      parse(tmp_verify)
       tmp_env <- new.env(parent = emptyenv())
-      source(tmp, local = tmp_env)
+      source(tmp_verify, local = tmp_env)
       # If valid, overwrite original
       writeLines(config_text, config_path)
       message(glue("  Auto-added to radiation_cpt: {paste(new_treatment_codes, collapse=', ')}"))
     }, error = function(e) {
-      message(glue("  WARNING: Config auto-update failed validation: {e$message}"))
-      message("  New codes NOT added to config. Manual review required.")
+      warning(glue("[Config update] Parse check failed for {config_path}: {e$message}\n",
+                   "  Newly-discovered codes NOT written to config."))
     }, finally = {
-      if (file.exists(tmp)) file.remove(tmp)
+      if (file.exists(tmp_verify)) file.remove(tmp_verify)
     })
   } else {
     message("  WARNING: Could not locate 77525 anchor line in config. Manual review required.")
