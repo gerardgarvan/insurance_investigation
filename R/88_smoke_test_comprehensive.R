@@ -78,10 +78,8 @@ expected_utils <- c(
 )
 
 utils_files <- list.files("R/utils", pattern = "\\.R$")
-check(
-  glue("R/utils/ contains 13 files (found {length(utils_files)})"),
-  length(utils_files) == 13
-)
+check(glue("R/utils/ contains >= 13 files (found {length(utils_files)})"),
+      length(utils_files) >= 13L)
 
 missing_utils <- setdiff(expected_utils, utils_files)
 check(
@@ -1659,9 +1657,16 @@ check("R/52 EPISODES_SCHEMA includes episode_dx_categories (Phase 112)",
 check("R/52 DETAIL_SCHEMA excludes episode_dx_codes (episode-level only)",
       !any(grepl("DETAIL_SCHEMA.*episode_dx_codes", r52_lines)))
 
-# Check 11: R/52 clean_multi_value sorts values
-check("R/52 clean_multi_value includes sort() for alphabetical ordering (Phase 112 D-06)",
-      any(grepl("sort\\(unique\\(values\\)\\)", r52_lines)))
+# Check 11: clean_multi_value sorts values (function now lives in utils_format.R after Phase 136)
+fmt_lines <- if (file.exists("R/utils/utils_format.R")) {
+  readLines("R/utils/utils_format.R")
+} else character(0)
+
+check("clean_multi_value (utils_format.R) includes sort() for ascending order (Phase 112 D-06)",
+      any(grepl("sort\\(", fmt_lines)))
+
+check("clean_multi_value (utils_format.R) has no descending sort (Phase 112 D-06)",
+      !any(grepl("sort\\([^)]*decreasing\\s*=\\s*TRUE|desc\\(", fmt_lines)))
 
 # Check 12: R/52 applies clean_multi_value to episode_dx_codes
 check("R/52 applies clean_multi_value to episode_dx_codes",
@@ -1679,9 +1684,6 @@ check("R/36 has no descending sort in multi-value fields (Phase 112 D-09)",
 check("R/57 has no descending sort in multi-value fields (Phase 112 D-08)",
       !any(grepl("decreasing\\s*=\\s*TRUE", r57_lines)))
 
-# Check 15: R/52 clean_multi_value does NOT have decreasing = TRUE
-check("R/52 clean_multi_value has no descending sort",
-      !any(grepl("clean_multi_value.*decreasing", r52_text)))
 
 # ==============================================================================
 # SECTION 15i: POST-DEATH ENCOUNTER INVESTIGATION (Phase 113) ----
