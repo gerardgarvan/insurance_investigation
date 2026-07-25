@@ -335,4 +335,4 @@ See MILESTONES.md for full details on all shipped milestones.
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Complete    | 2026-07-25 |
 | 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
 | 136. Confirm Loose Ends | v3.4 | 2/2 | Complete    | 2026-07-25 |
-| 137. ZIP9 Temporal Assignment | standalone | 2/2 | Complete   | 2026-07-25 |
+| 137. ZIP9 Temporal Assignment | standalone | 2/2 | Complete    | 2026-07-25 |
