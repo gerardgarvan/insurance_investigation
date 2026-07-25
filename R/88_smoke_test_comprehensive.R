@@ -3108,6 +3108,65 @@ check('resolved_xlsx_layout() excludes Radiation from Medication column (has_med
       grepl('has_medication <- category != "Radiation"', r50_text_131))
 
 # ==============================================================================
+# SECTION 15y: CRASH FIX REGRESSION GUARD -- BARE n / MISSING purrr (Phase 132) ----
+# ==============================================================================
+#
+# Guards CRASH-01 (stray bare `n` editor artifact glued onto section-divider
+# comments in R/74, R/81, R/82, R/83, R/84, R/85) and CRASH-02 (R/84's
+# unqualified walk() needing library(purrr) attached) against reintroduction.
+# Pure readLines() + grepl() structural checks -- no data / DuckDB / execution
+# dependency, consistent with every other Section 15x-style guard.
+#
+# NOTE: all literal-with-parens patterns below use fixed = TRUE. R's grepl()
+# default is extended regex, where "(purrr)" is a capture group, not literal
+# text -- grepl("library(purrr)", x) would silently never match.
+
+message("\n[Phase 132] Crash fix regression guard (bare n + purrr)...")
+
+phase132_scripts <- c(
+  "R/74_generate_documentation.R",
+  "R/81_parity_test_cohort.R",
+  "R/82_benchmark_cohort.R",
+  "R/83_generate_speedup_report.R",
+  "R/84_test_durations.R",
+  "R/85_test_episodes.R"
+)
+
+phase132_text <- function(path) {
+  if (file.exists(path)) paste(readLines(path, warn = FALSE), collapse = "\n") else ""
+}
+
+# Check 1 (one per script, so a regression is attributable to a specific file):
+# no line begins with a bare `n ` immediately followed by `#`.
+# POLARITY: PASS when the artifact is ABSENT -> condition is negated.
+# perl = TRUE + (?m) so ^ anchors per line inside the collapsed text.
+# nzchar(txt) guard: a missing/empty file degrades to a clean FAIL, not a false PASS.
+for (scr in phase132_scripts) {
+  txt <- phase132_text(scr)
+  check(
+    glue("{scr} has no bare 'n' editor-artifact line (Phase 132)"),
+    nzchar(txt) && !grepl("(?m)^n #", txt, perl = TRUE)
+  )
+}
+
+# Check 2: R/84 attaches library(purrr) (CRASH-02 fix). fixed = TRUE -> literal parens.
+r84_text <- phase132_text("R/84_test_durations.R")
+check(
+  "R/84 attaches library(purrr) for walk() (Phase 132)",
+  grepl("library(purrr)", r84_text, fixed = TRUE)
+)
+
+# Check 3: R/85 retains its purrr::walk(message) call sites (>= 2, style unchanged).
+# fixed = TRUE for literal parens; >= 2 rather than == 2 tolerates benign additions
+# while still catching removal or a "fix" that destyles them to bare walk().
+r85_lines <- if (file.exists("R/85_test_episodes.R")) readLines("R/85_test_episodes.R", warn = FALSE) else character(0)
+r85_walk_n <- sum(grepl("purrr::walk(message)", r85_lines, fixed = TRUE))
+check(
+  glue("R/85 retains >= 2 purrr::walk(message) call sites (found {r85_walk_n}) (Phase 132)"),
+  r85_walk_n >= 2
+)
+
+# ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
 # ==============================================================================
 
@@ -4688,6 +4747,7 @@ message("  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/af
 message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classification + R/112 attribution) structural integrity incl. mutual-exclusivity hard-stop (Section 15w, ~14 checks)")
 message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
 message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
+message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)")
 
 if (failed > 0) {
   quit(status = 1)
