@@ -27,7 +27,7 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Data Integrity (INGEST)
 
-- [ ] **INGEST-01**: `R/03_duckdb_ingest.R` aborts (via `stop()`, discarding the `.tmp` database) when any table fails to write instead of silently promoting a database missing tables, asserts `setequal(ingested, expected)` before promotion, and its summary reports the real per-table pass/fail counts instead of a hardcoded `"N/N passed"`
+- [x] **INGEST-01**: `R/03_duckdb_ingest.R` aborts (via `stop()`, discarding the `.tmp` database) when any table fails to write instead of silently promoting a database missing tables, asserts `setequal(ingested, expected)` before promotion, and its summary reports the real per-table pass/fail counts instead of a hardcoded `"N/N passed"`
 
 ### Documentation Tooling (DOCS)
 
@@ -94,7 +94,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DATA-05 | Phase 133 | Complete |
 | DATA-06 | Phase 133 | Complete |
 | DATA-07 | Phase 133 | Complete |
-| INGEST-01 | Phase 134 | Pending |
+| INGEST-01 | Phase 134 | Complete |
 | DOCS-01 | Phase 133 | Complete |
 | PATTERN-A | Phase 135 | Pending |
 | PATTERN-B | Phase 135 | Pending |

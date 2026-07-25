@@ -135,8 +135,7 @@ ingest_ok <- tryCatch(
       rds_path <- file.path(CONFIG$cache$raw_dir, paste0(tbl_name, ".rds"))
 
       if (!file.exists(rds_path)) {
-        message(glue("\n  SKIPPED: {tbl_name} -- RDS file not found ({rds_path})"))
-        next
+        stop(glue("RDS file not found for table {tbl_name}: {rds_path}"))
       }
 
       message(glue("\n[{which(TABLES_TO_INGEST == tbl_name)}/{length(TABLES_TO_INGEST)}] Ingesting {tbl_name}..."))
@@ -318,6 +317,23 @@ ingest_ok <- tryCatch(
 
     message(glue("\nAll {length(tables_ingested)} ingested tables passed round-trip verification."))
 
+    # Assert that the ingested set exactly matches the expected set (INGEST-01)
+    missing_from_ingest <- setdiff(TABLES_TO_INGEST, tables_ingested)
+    extra_in_ingest     <- setdiff(tables_ingested, TABLES_TO_INGEST)
+
+    if (length(missing_from_ingest) > 0 || length(extra_in_ingest) > 0) {
+      stop(glue(
+        "Ingested table set does not match expected set. ",
+        "Missing: [{paste(missing_from_ingest, collapse=', ')}] ",
+        "Extra: [{paste(extra_in_ingest, collapse=', ')}]"
+      ))
+    }
+
+    message(glue(
+      "Set assertion passed: ingested {length(tables_ingested)} tables ",
+      "exactly match expected {length(TABLES_TO_INGEST)} tables."
+    ))
+
     TRUE # signal success
   },
   error = function(e) {
@@ -369,7 +385,9 @@ message(glue("  Size: {file_size_mb} MB"))
 message(glue("  Tables: {nrow(ingest_log)}"))
 message(glue("  Total rows: {format(sum(ingest_log$row_count), big.mark=',')}"))
 message(glue("  Indexes: {n_created} created ({n_failed} failed)"))
-message(glue("  Verification: {length(TABLES_TO_INGEST)}/{length(TABLES_TO_INGEST)} tables passed"))
+n_passed <- length(tables_ingested)
+n_expected <- length(TABLES_TO_INGEST)
+message(glue("  Verification: {n_passed}/{n_expected} tables passed"))
 message(glue("  Build time: {round(build_duration, 1)}s ({round(build_duration/60, 1)} min)"))
 message(glue("  Ingest log: {log_path}"))
 message(strrep("=", 60))
