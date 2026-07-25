@@ -96,6 +96,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Fix 8 critical/high-severity findings (crashers, wrong published numbers, inert SCT feature, silent DB-promotion bug, empty reference manual, wrong age-at-episode)
 - [ ] Standardize 8 cross-cutting patterns (A-H) at the shared-helper layer
 - [ ] Confirm 2 loose ends (suppress_small/clean_multi_value/union_field location; date_range_max vs. extract-date cutoff)
+- [x] Ingest integrity and honest tests — R/03 abort-on-partial-failure, R/81 type-coercion removed, R/82 5-script benchmark, R/88 skip counter + cause_of_death guard, R/96 FLM fixture, R/98 independent baseline — Phase 134
 
 #### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (open, deferred alongside v3.4)
 - [ ] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts
