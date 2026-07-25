@@ -193,7 +193,8 @@ See MILESTONES.md for full details on all shipped milestones.
 
 ## Phases (v3.4)
 
-- [x] **Phase 132: Crash Fixes** - Unblock 6 scripts (`74`,`81`-`85`) that abort immediately on editor artifacts (completed 2026-07-25)
+- [x] **Phase 132: Crash Fixes** - Unblock 6 scripts (`74`,`81`-`85`) that abort immediately on editor artifacts
+ (completed 2026-07-25)
 - [ ] **Phase 133: Critical Correctness Fixes** - Fix wrong published numbers (SCT filter, total_records, HL anchor date, same-week desync, age_at_episode) + the content-empty reference manual
 - [ ] **Phase 134: Ingest Integrity and Honest Tests** - Harden the DuckDB ingest promotion gate + fix 5 can't-fail validators
 - [ ] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer
@@ -242,7 +243,8 @@ See MILESTONES.md for full details on all shipped milestones.
   3. `R/47`'s `first_hl_dx_date` retains a patient's true HL anchor date when both a real date and a sentinel are present; `R/48` excludes HL anchor codes from its post-HL "second cancer" set; `R/49`'s `both_count` reconciles at category grain (`pre + post − both`)
   4. `R/68` and `R/96`'s same-week detail files keep each `(admit_date, source)` pair correctly bound after the `pmin`/`pmax` reordering, so the downstream ENCOUNTER join no longer misclassifies pairs into Distinct/Partial or undercounts near-duplicates
   5. `R/89`'s generated reference manual captures each script's actual Purpose/Inputs/Outputs/Dependencies/Requirements text instead of "Not documented"; `R/101`'s `age_at_episode` reflects the row at each group's earliest `episode_start`
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 133-01-PLAN.md -- All 8 correctness fixes (R/28, R/46, R/47, R/48, R/49, R/67, R/68, R/95, R/96, R/89, R/101) [DATA-01..07, DOCS-01] (Wave 1)
 
 ### Phase 134: Ingest Integrity and Honest Tests
 **Goal**: A "passing" DuckDB ingest and a "passing" test/validator run are both strong evidence again — neither can silently succeed while the thing they check is actually broken
@@ -306,7 +308,7 @@ See MILESTONES.md for full details on all shipped milestones.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 132. Crash Fixes | v3.4 | 4/4 | Complete    | 2026-07-25 |
-| 133. Critical Correctness Fixes | v3.4 | TBD | Not started | - |
+| 133. Critical Correctness Fixes | v3.4 | 0/1 | Not started | - |
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Not started | - |
 | 135. Shared-Helper Standardization | v3.4 | TBD | Not started | - |
 | 136. Confirm Loose Ends | v3.4 | TBD | Not started | - |
