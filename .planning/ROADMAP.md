@@ -323,7 +323,7 @@ See MILESTONES.md for full details on all shipped milestones.
   3. R/114_zip9_temporal_lookup.R validates the function with a sample call and appends "Address Timeline Diagnostics" sheet to output/zip_change_frequency.xlsx without overwriting R/106's existing sheets
   4. R/88 Section 15ab passes all structural checks (artifact existence, function definitions, wb_load anti-pattern guard, R/39 registration, SCRIPT_INDEX entries)
 **Plans**: 2 plans
-- [ ] 137-01-PLAN.md — R/utils/utils_address.R: normalize_zip9/zip5/zip5_raw + get_zip9_at_date() temporal lookup (Wave 1)
+- [x] 137-01-PLAN.md — R/utils/utils_address.R: normalize_zip9/zip5/zip5_raw + get_zip9_at_date() temporal lookup (Wave 1)
 - [ ] 137-02-PLAN.md — R/114_zip9_temporal_lookup.R + R/39 registration + R/88 Section 15ab + R/SCRIPT_INDEX.md update (Wave 2, depends on 137-01)
 
 ## Progress (v3.4)
@@ -335,4 +335,4 @@ See MILESTONES.md for full details on all shipped milestones.
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Complete    | 2026-07-25 |
 | 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
 | 136. Confirm Loose Ends | v3.4 | 2/2 | Complete    | 2026-07-25 |
-| 137. ZIP9 Temporal Assignment | standalone | 0/2 | Planning   |  |
+| 137. ZIP9 Temporal Assignment | standalone | 1/2 | In Progress|  |
