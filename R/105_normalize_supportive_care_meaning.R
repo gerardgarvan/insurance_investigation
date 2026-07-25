@@ -138,7 +138,7 @@ rxnav_in_names <- function(rxcui) {
         req_timeout(10) %>%
         req_retry(
           max_tries = 3,
-          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+          is_transient = ~ httr2::resp_status(.x) %in% c(429L, 500L, 502L, 503L, 504L)
         ) %>%
         req_perform()
       data <- resp_body_json(resp)
@@ -173,7 +173,7 @@ rxnav_historystatus_ingredients <- function(rxcui) {
         req_timeout(10) %>%
         req_retry(
           max_tries = 3,
-          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+          is_transient = ~ httr2::resp_status(.x) %in% c(429L, 500L, 502L, 503L, 504L)
         ) %>%
         req_perform()
       data <- resp_body_json(resp)

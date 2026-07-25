@@ -994,6 +994,21 @@ update_config_ndc_codes <- function(classified_codes_path) {
   }
 
   # 6. Validate updated config
+  # PATTERN-F: verify parse BEFORE writing to the real config path
+  tmp_verify <- tempfile(fileext = ".R")
+  writeLines(config_lines, tmp_verify)
+  parse_check <- tryCatch(parse(tmp_verify), error = function(e) e)
+  file.remove(tmp_verify)
+
+  if (inherits(parse_check, "error")) {
+    warning(glue(
+      "[Config update] Parse check failed for {config_path}: {parse_check$message}\n",
+      "  Newly-discovered codes NOT written to config. Backup preserved at {backup_path}."
+    ))
+    # leave config unchanged -- no writeLines in this branch
+    return(invisible(NULL))
+  }
+
   writeLines(config_lines, config_path)
   message("  Validating updated config...")
 

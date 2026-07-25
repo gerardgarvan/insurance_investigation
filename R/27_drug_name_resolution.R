@@ -121,7 +121,7 @@ lookup_rxcui_name <- function(rxcui, sleep_sec = 0.1) {
         req_timeout(10) %>%
         req_retry(
           max_tries = 3,
-          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+          is_transient = ~ httr2::resp_status(.x) %in% c(429L, 500L, 502L, 503L, 504L)
         ) %>%
         req_perform()
 
@@ -169,7 +169,7 @@ lookup_rxcui_historystatus <- function(rxcui, sleep_sec = 0.1) {
         req_timeout(10) %>%
         req_retry(
           max_tries = 3,
-          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+          is_transient = ~ httr2::resp_status(.x) %in% c(429L, 500L, 502L, 503L, 504L)
         ) %>%
         req_perform()
 
@@ -221,7 +221,7 @@ lookup_ndc_to_name <- function(ndc, sleep_sec = 0.1) {
         req_timeout(10) %>%
         req_retry(
           max_tries = 3,
-          is_transient = ~ resp_status(.x) %in% c(429, 503, 504)
+          is_transient = ~ httr2::resp_status(.x) %in% c(429L, 500L, 502L, 503L, 504L)
         ) %>%
         req_perform()
 

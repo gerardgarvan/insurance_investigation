@@ -178,7 +178,7 @@ lookup_ndc_to_rxcui <- function(ndc, sleep_sec = 0.1) {
       httr2::req_timeout(10) |>
       httr2::req_retry(
         max_tries = 3,
-        is_transient = ~ httr2::resp_status(.x) %in% c(429L, 503L, 504L)
+        is_transient = ~ httr2::resp_status(.x) %in% c(429L, 500L, 502L, 503L, 504L)
       ) |>
       httr2::req_perform()
     data <- httr2::resp_body_json(resp)

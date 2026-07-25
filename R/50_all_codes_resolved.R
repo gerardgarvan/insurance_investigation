@@ -644,8 +644,22 @@ if (nrow(codes_to_update) > 0) {
     }
   }
 
-  # Write updated config
-  writeLines(config_lines, config_path)
+  # PATTERN-F: verify parse BEFORE writing to the real config path
+  tmp_verify <- tempfile(fileext = ".R")
+  writeLines(config_lines, tmp_verify)
+  parse_check <- tryCatch(parse(tmp_verify), error = function(e) e)
+  file.remove(tmp_verify)
+
+  if (inherits(parse_check, "error")) {
+    warning(glue(
+      "[Config update] Parse check failed for {config_path}: {parse_check$message}\n",
+      "  Newly-discovered codes NOT written to config. Backup preserved at {config_backup}."
+    ))
+    # leave config unchanged -- no writeLines in this branch
+  } else {
+    # Write updated config
+    writeLines(config_lines, config_path)
+  }
 
   # Validate
   validation_ok <- tryCatch(
