@@ -43,8 +43,13 @@
 #' is_cancer_code(c("C81.90", "201.90", "J44.1", "250.00"))
 #' # Returns: c(TRUE, TRUE, FALSE, FALSE)
 #'
+# Internal: strip ALL dots and uppercase — matches normalize_icd() contract.
+# Used by is_cancer_code() and classify_codes() so every caller gets identical
+# normalization regardless of input format.
+.normalize_code <- function(x) toupper(gsub("\\.", "", x, fixed = FALSE))
+
 is_cancer_code <- function(dx) {
-  dx_clean <- str_remove(dx, "\\.")  # Normalize: remove dots for prefix matching
+  dx_clean <- .normalize_code(dx)  # Normalize: strip all dots + uppercase for prefix matching
 
   # ICD-10: check 4-char then 3-char prefix against CANCER_SITE_MAP keys
   icd10_match <- substr(dx_clean, 1, 4) %in% names(CANCER_SITE_MAP) |
@@ -90,11 +95,11 @@ is_cancer_code <- function(dx) {
 #' # Returns: c("NLPHL", "Lung and Bronchus", "Colon")
 #'
 classify_codes <- function(codes) {
-  # Step 0: Normalize all codes (strip dots for consistent prefix extraction)
-  # WHY: ICD-9 codes appear in dotted (201.90) and undotted (20190) formats.
-  # ICD-10 codes are already undotted in CANCER_SITE_MAP keys. Stripping dots
-  # at entry ensures consistent substr() results for both coding systems.
-  codes_clean <- str_remove(codes, "\\.")
+  # Step 0: Normalize all codes (strip ALL dots + toupper for consistent prefix extraction)
+  # WHY: ICD-9 codes appear in dotted (201.90) and undotted (20190) formats;
+  # lowercase input (c81.90) must match the same as uppercase (C8190). Stripping
+  # all dots and uppercasing at entry ensures consistent substr() results.
+  codes_clean <- .normalize_code(codes)
 
   # Step 1: Extract prefixes at both specificity levels
   prefix4 <- substr(codes_clean, 1, 4)  # Subcategory (C810, 2014)

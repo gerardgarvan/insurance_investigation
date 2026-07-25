@@ -96,9 +96,10 @@ is_doi_code <- function(dx, dx_type) {
 #' classify_doi_codes("C81.90")
 #' # Returns: NA  (HL code, no DOI_CODE_MAP entry)
 classify_doi_codes <- function(codes) {
-  # Normalize: strip first dot for prefix extraction
-  # (str_remove removes only the first occurrence, matching classify_codes())
-  codes_clean <- str_remove(codes, "\\.")
+  # Normalize: strip ALL dots + toupper — delegates to .normalize_code() from
+  # utils_cancer.R (sourced before this file via the R/utils/*.R glob).
+  # Replaces str_remove() which stripped only the first dot and skipped toupper.
+  codes_clean <- .normalize_code(codes)
   p4 <- substr(codes_clean, 1, 4)
   p3 <- substr(codes_clean, 1, 3)
 
