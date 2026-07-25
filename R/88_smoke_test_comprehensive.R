@@ -4611,6 +4611,176 @@ if (IS_LOCAL) {
 }
 
 # ==============================================================================
+# SECTION 15aa: PHASE 135 PATTERN-REGRESSION CHECKS ----
+# ==============================================================================
+# WHY: Patterns A-H are recurring cross-cutting bugs fixed in Phase 135.
+# These structural checks detect regression without requiring data.
+# Each check is PASS/FAIL and labels the pattern for triage.
+
+message("\n=== SECTION 15aa: Phase 135 Pattern Regression Checks ===")
+p135_pass <- 0L
+p135_fail <- 0L
+
+.p135_check <- function(label, expr) {
+  result <- tryCatch(
+    { force(expr); TRUE },
+    error = function(e) { message(glue("  FAIL [{label}]: {e$message}")); FALSE }
+  )
+  if (isTRUE(result)) {
+    message(glue("  PASS [{label}]"))
+    p135_pass <<- p135_pass + 1L
+  } else {
+    p135_fail <<- p135_fail + 1L
+  }
+}
+
+# ---- PATTERN-B: normalization contract ----
+.p135_check("PATTERN-B: is_cancer_code lowercase", {
+  stopifnot(isTRUE(is_cancer_code("c81.90")))
+})
+.p135_check("PATTERN-B: classify_codes dotted==undotted", {
+  r1 <- classify_codes("C81.90")
+  r2 <- classify_codes("C8190")
+  stopifnot(identical(r1, r2))
+})
+.p135_check("PATTERN-B: classify_doi_codes dotted==undotted", {
+  r1 <- classify_doi_codes("M05.9")
+  r2 <- classify_doi_codes("M059")
+  stopifnot(identical(r1, r2))
+})
+.p135_check("PATTERN-B: utils_cancer .normalize_code defined", {
+  stopifnot(exists(".normalize_code", mode = "function"))
+})
+.p135_check("PATTERN-B: R/42 no dotted keys in hardcoded block", {
+  lines42 <- readLines("R/42_build_code_descriptions.R")
+  # Confirm no named-vector key has a dot (e.g. Z51.11 -> should be Z5111)
+  key_lines <- grep('^\\s+"[A-Z0-9]+\\."', lines42, value = TRUE)
+  if (length(key_lines) > 0) stop("Dotted keys found: ", paste(key_lines, collapse="; "))
+})
+
+# ---- PATTERN-C: neoplasm filter ----
+.p135_check("PATTERN-C: R/40 no ^[CD] filter", {
+  lines <- readLines("R/40_cancer_site_frequency.R")
+  bad <- grep('str_detect.*\\^\\[CD\\]', lines, value = TRUE)
+  if (length(bad) > 0) stop("^[CD] still present: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-C: R/43 no ^[CD] filter", {
+  lines <- readLines("R/43_cancer_site_confirmation.R")
+  bad <- grep('str_detect.*\\^\\[CD\\]', lines, value = TRUE)
+  if (length(bad) > 0) stop("^[CD] still present: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-C: R/44 no ^[CD] filter", {
+  lines <- readLines("R/44_cancer_site_confirmation_7day.R")
+  bad <- grep('str_detect.*\\^\\[CD\\]', lines, value = TRUE)
+  if (length(bad) > 0) stop("^[CD] still present: ", paste(bad, collapse="; "))
+})
+
+# ---- PATTERN-D: API retry transient set ----
+.p135_check("PATTERN-D: R/21 uses req_retry", {
+  lines <- readLines("R/21_investigate_unmatched.R")
+  stopifnot(any(grepl("req_retry", lines)))
+})
+.p135_check("PATTERN-D: R/27 transient set includes 500", {
+  lines <- readLines("R/27_drug_name_resolution.R")
+  transient_lines <- lines[grep("is_transient", lines)]
+  if (!any(grepl("500", transient_lines)))
+    stop("500 not in transient set")
+})
+.p135_check("PATTERN-D: R/21 no bare httr::GET in lookup function", {
+  lines <- readLines("R/21_investigate_unmatched.R")
+  fn_start <- grep("lookup_hcpcs_batch <- function", lines)
+  fn_end   <- grep("^\\}", lines)
+  fn_end   <- fn_end[fn_end > fn_start[1]][1]
+  fn_lines <- lines[fn_start:fn_end]
+  bad <- grep("GET\\(url,", fn_lines, value = TRUE)
+  if (length(bad) > 0) stop("httr::GET still in function: ", paste(bad, collapse="; "))
+})
+
+# ---- PATTERN-F: config rewrite verify-before-write ----
+for (.f135 in c("R/21_investigate_unmatched.R", "R/22_investigate_unmatched_ndc.R",
+                "R/50_all_codes_resolved.R",    "R/98_radiation_cpt_audit.R")) {
+  local({
+    f <- .f135
+    .p135_check(glue("PATTERN-F: {basename(f)} has verify-before-write"), {
+      lines <- readLines(f)
+      if (!any(grepl("tmp_verify|PATTERN-F", lines)))
+        stop("verify-before-write pattern not found")
+    })
+  })
+}
+
+# ---- PATTERN-G: NA-safe guards ----
+.p135_check("PATTERN-G: R/14 uses min_or_na for ENR_START_DATE", {
+  lines <- readLines("R/14_build_cohort.R")
+  stopifnot(any(grepl("min_or_na.*ENR_START|ENR_START.*min_or_na", lines)))
+})
+.p135_check("PATTERN-G: R/53 has death-before-birth check", {
+  lines <- readLines("R/53_death_date_validation.R")
+  stopifnot(any(grepl("death_before_birth|SECTION 4C", lines)))
+})
+.p135_check("PATTERN-G: R/93 uses coalesce for HAD_CHEMO", {
+  lines <- readLines("R/93_no_treatment_medicaid.R")
+  stopifnot(any(grepl("coalesce.*HAD_CHEMO|HAD_CHEMO.*coalesce", lines)))
+})
+.p135_check("PATTERN-G: min_or_na returns NA for all-NA input", {
+  stopifnot(is.na(min_or_na(c(NA_real_, NA_real_))))
+  stopifnot(is.na(max_or_na(c(NA_real_, NA_real_))))
+})
+
+# ---- PATTERN-H: column naming ----
+.p135_check("PATTERN-H: R/56 no encounter_count = n() definition", {
+  lines <- readLines("R/56_new_tables_from_groupings.R")
+  bad <- grep("encounter_count\\s*=\\s*n\\(\\)", lines, value = TRUE)
+  if (length(bad) > 0) stop("encounter_count still defined: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-H: R/57 no encounter_count = n() definition", {
+  lines <- readLines("R/57_explore_dx_deduplication.R")
+  bad <- grep("encounter_count\\s*=\\s*n\\(\\)", lines, value = TRUE)
+  if (length(bad) > 0) stop("encounter_count still defined: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-H: R/67 uses n_total_dates", {
+  lines <- readLines("R/67_multi_source_overlap_detection.R")
+  stopifnot(any(grepl("n_total_dates", lines)))
+})
+
+# ---- PATTERN-A: de-dup totals (all six files) ----
+.p135_check("PATTERN-A: R/33 Patient_Count uses n_distinct", {
+  lines <- readLines("R/33_code_verification.R")
+  stopifnot(any(grepl("n_distinct.*sct_status_dx", lines)))
+})
+.p135_check("PATTERN-A: R/23 grand total uses n_distinct", {
+  lines <- readLines("R/23_combine_reports.R")
+  stopifnot(any(grepl("n_distinct|grand_total_patients", lines)))
+})
+.p135_check("PATTERN-A: R/43 TOTAL block uses n_distinct", {
+  lines <- readLines("R/43_cancer_site_confirmation.R")
+  # n_distinct must appear somewhere in the file after the PATTERN-A fix
+  if (!any(grepl("n_distinct", lines)))
+    stop("n_distinct not found — TOTAL row may still sum per-category counts")
+})
+.p135_check("PATTERN-A: R/44 TOTAL block uses n_distinct", {
+  lines <- readLines("R/44_cancer_site_confirmation_7day.R")
+  if (!any(grepl("n_distinct", lines)))
+    stop("n_distinct not found — TOTAL row may still sum per-category counts")
+})
+.p135_check("PATTERN-A: R/50 grand total uses n_distinct", {
+  lines <- readLines("R/50_all_codes_resolved.R")
+  # patient_hits accumulator pattern or direct n_distinct call
+  if (!any(grepl("n_distinct.*patient_hits|n_distinct.*ID|total_unique_patients", lines)))
+    stop("n_distinct patient total not found — grand total may double-count")
+})
+.p135_check("PATTERN-A: R/100 Sheet 1 uses n_distinct for PATID", {
+  lines <- readLines("R/100_ruca_rurality_summary.R")
+  if (!any(grepl("n_distinct.*PATID|n_distinct.*patid", lines, ignore.case = TRUE)))
+    stop("n_distinct(PATID) not found in Sheet 1 — patient count may not deduplicate")
+})
+
+message(glue("\nSection 15aa: {p135_pass} PASS, {p135_fail} FAIL"))
+if (p135_fail > 0) {
+  warning(glue("Phase 135 pattern checks: {p135_fail} failure(s). See FAIL lines above."))
+}
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
