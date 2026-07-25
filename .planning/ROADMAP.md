@@ -197,7 +197,7 @@ See MILESTONES.md for full details on all shipped milestones.
  (completed 2026-07-25)
 - [x] **Phase 133: Critical Correctness Fixes** - Fix wrong published numbers (SCT filter, total_records, HL anchor date, same-week desync, age_at_episode) + the content-empty reference manual (completed 2026-07-25)
 - [x] **Phase 134: Ingest Integrity and Honest Tests** - Harden the DuckDB ingest promotion gate + fix 5 can't-fail validators (completed 2026-07-25)
-- [ ] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer
+- [x] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer (completed 2026-07-25)
 - [ ] **Phase 136: Confirm Loose Ends** - Locate `suppress_small`/`clean_multi_value`/`union_field`; reconcile `date_range_max` vs. the extract cutoff
 
 ## Phase Details (v3.4)
@@ -310,5 +310,5 @@ See MILESTONES.md for full details on all shipped milestones.
 | 132. Crash Fixes | v3.4 | 4/4 | Complete    | 2026-07-25 |
 | 133. Critical Correctness Fixes | v3.4 | 1/1 | Complete    | 2026-07-25 |
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Complete    | 2026-07-25 |
-| 135. Shared-Helper Standardization | v3.4 | 5/7 | In Progress|  |
+| 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
 | 136. Confirm Loose Ends | v3.4 | TBD | Not started | - |
