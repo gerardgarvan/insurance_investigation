@@ -47,7 +47,13 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 ### Confirm Loose Ends (CONFIRM)
 
 - [x] **CONFIRM-01**: Locate where `suppress_small()`, `clean_multi_value()`, and `union_field()` are actually defined and confirm they load correctly (not found in any of the 14 `utils_*.R` modules during the review; `clean_multi_value` is referenced as "reused from R/52")
-- [ ] **CONFIRM-02**: Reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915) and correct the bound if valid Apr-Sep 2025 encounters/deaths are currently being flagged out-of-range and dropped by `R/01`'s date validation
+  *Finding: clean_multi_value() and union_field() extracted to R/utils/utils_format.R;
+  R/52, R/101, R/104 now source from there. suppress_small() remains inline in R/106
+  (single-file use). Resolved Phase 136 plan 01.*
+- [x] **CONFIRM-02**: Reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915) and correct the bound if valid Apr-Sep 2025 encounters/deaths are currently being flagged out-of-range and dropped by `R/01`'s date validation
+  *Finding: _VALID flag is informational only (used for message() counts, never as a
+  filter predicate). No records were being dropped. date_range_max left unchanged;
+  comment updated to clarify intent per D-06. Resolved Phase 136 plan 02.*
 
 ## Future Requirements
 
@@ -105,7 +111,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | PATTERN-G | Phase 135 | Complete |
 | PATTERN-H | Phase 135 | Complete |
 | CONFIRM-01 | Phase 136 | Complete |
-| CONFIRM-02 | Phase 136 | Pending |
+| CONFIRM-02 | Phase 136 | Complete |
 
 **Coverage:**
 - v3.4 requirements: 21 total (2 CRASH + 7 DATA + 1 INGEST + 1 DOCS + 8 PATTERN + 2 CONFIRM)
