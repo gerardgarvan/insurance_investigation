@@ -396,4 +396,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-25 after Phase 135 (shared-helper-standardization) completion — PATTERN-B/C/D/F/G/H all fixed; PATTERN-A fixed in 6/7 sites (R/23 deferred to upstream Phase 39/40 fix).*
+*Last updated: 2026-07-25 after Phase 136 (confirm-loose-ends) completion — CONFIRM-01: clean_multi_value/union_field extracted to R/utils/utils_format.R (three-way duplication eliminated); CONFIRM-02: _VALID flag confirmed informational-only (Branch B, no data drop), date_range_max comment clarified.*
