@@ -305,7 +305,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 132. Crash Fixes | v3.4 | 4/4 | Complete   | 2026-07-25 |
+| 132. Crash Fixes | v3.4 | 4/4 | Complete    | 2026-07-25 |
 | 133. Critical Correctness Fixes | v3.4 | TBD | Not started | - |
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Not started | - |
 | 135. Shared-Helper Standardization | v3.4 | TBD | Not started | - |

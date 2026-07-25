@@ -4,7 +4,7 @@ milestone: v3.4
 milestone_name: below)
 status: verifying
 stopped_at: Completed 132-04-PLAN.md (Section 15y regression guard)
-last_updated: "2026-07-25T16:14:56.892Z"
+last_updated: "2026-07-25T16:17:22.267Z"
 last_activity: 2026-07-25
 progress:
   total_phases: 121
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 ## Current Position
 
-Phase: 132 (crash-fixes) — EXECUTING
-Plan: 4 of 4
+Phase: 132
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-07-25
 
