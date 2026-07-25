@@ -65,7 +65,7 @@ skip <- function(reason) {
 }
 
 message(strrep("=", 70))
-message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-89)")
+message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-134)")
 message(strrep("=", 70))
 
 # ==============================================================================
@@ -4637,6 +4637,147 @@ if (IS_LOCAL) {
 }
 
 # ==============================================================================
+# SECTION 15z: PHASE 134 INGEST INTEGRITY AND HONEST TESTS ----
+# ==============================================================================
+
+message("\n[Phase 134] Ingest integrity and honest tests (INGEST-01, PATTERN-E)...")
+
+r03_lines <- readLines("R/03_duckdb_ingest.R", warn = FALSE)
+r81_lines <- readLines("R/81_parity_test_cohort.R", warn = FALSE)
+r82_lines <- readLines("R/82_benchmark_cohort.R", warn = FALSE)
+r96_lines <- readLines("R/96_validate_payer_dt.R", warn = FALSE)
+r98_lines <- readLines("R/98_validate_r28_migration.R", warn = FALSE)
+
+# --- INGEST-01: R/03 integrity ---
+
+# Check 1: R/03 no longer silently skips missing RDS files
+check(
+  "R/03 has no silent SKIPPED/next pattern for missing RDS (INGEST-01)",
+  !any(grepl("SKIPPED.*next|message.*SKIPPED.*RDS.*next", r03_lines))
+)
+
+# Check 2: R/03 uses stop() for missing RDS
+check(
+  "R/03 stops on missing RDS with stop() (INGEST-01)",
+  any(grepl("stop\\(glue.*RDS file not found", r03_lines))
+)
+
+# Check 3: R/03 has setdiff assertion before promotion
+check(
+  "R/03 asserts setdiff(TABLES_TO_INGEST, tables_ingested) before swap (INGEST-01)",
+  any(grepl("setdiff\\(TABLES_TO_INGEST", r03_lines))
+)
+
+# Check 4: R/03 summary uses tables_ingested (not hardcoded double-length)
+check(
+  "R/03 summary uses n_passed from tables_ingested, not hardcoded ratio (INGEST-01)",
+  any(grepl("n_passed <- length\\(tables_ingested\\)", r03_lines)) &&
+  !any(grepl("length\\(TABLES_TO_INGEST\\)/length\\(TABLES_TO_INGEST\\)", r03_lines))
+)
+
+# --- PATTERN-E item 1: R/81 type coercion removed ---
+
+# Check 5: R/81 no longer defines coerce_types()
+check(
+  "R/81 does not define coerce_types() (PATTERN-E)",
+  !any(grepl("^coerce_types\\s*<-\\s*function", r81_lines))
+)
+
+# Check 6: R/81 no longer calls coerce_types()
+check(
+  "R/81 has no coerce_types() call sites (PATTERN-E)",
+  !any(grepl("coerce_types\\(", r81_lines))
+)
+
+# Check 7: R/81 still calls waldo::compare (core parity check intact)
+check(
+  "R/81 still calls waldo::compare() for structural parity (PATTERN-E)",
+  any(grepl("waldo::compare\\(", r81_lines))
+)
+
+# --- PATTERN-E item 4: R/96 FLM fixture non-Medicaid start ---
+
+# Check 8: R/96 row 19 primary payer is "511" (Private), not "219" (Medicaid)
+# The fixture vector for PAYER_TYPE_PRIMARY ends with the row 19 value.
+# We check that "511" appears near "Row 19" or "FLM".
+check(
+  "R/96 FLM fixture row 19 starts from Private state '511' (PATTERN-E)",
+  any(grepl('"511".*Row 19|Row 19.*511|FLM.*511|511.*FLM', r96_lines))
+)
+
+# Check 9: R/96 explicitly asserts tier changes FROM Private TO Medicaid under override
+check(
+  "R/96 asserts tier='Private' WITHOUT override and tier='Medicaid' WITH override (PATTERN-E)",
+  any(grepl("Private.*WITHOUT override|WITHOUT override.*Private", r96_lines)) &&
+  any(grepl("Medicaid.*WITH override|WITH override.*Medicaid", r96_lines))
+)
+
+# --- PATTERN-E item 5: R/98 independent baseline ---
+
+# Check 10: R/98 has a BASELINE CAVEAT block documenting the Phase-134 snapshot approach
+# (134-02 replaced the silent circular save with an explicit snapshot + commit instruction;
+# the one-time saveRDS call is now gated behind a named CAVEAT block that explains the
+# semantics — the first comparison is trivially empty but drift is detectable from that
+# snapshot forward, which is an honest improvement over the prior silent self-comparison)
+check(
+  "R/98 has BASELINE CAVEAT block documenting Phase-134 snapshot approach (PATTERN-E)",
+  any(grepl("BASELINE CAVEAT.*Phase 134|Phase 134.*D-12", r98_lines))
+)
+
+# Check 11: R/98 has a 'Do NOT regenerate' instruction to prevent defeating the baseline
+# NOTE: the instruction spans two readLines() elements ("Do NOT" / "regenerate the baseline
+# after Phase 98 changes are applied -- that defeats the purpose.") so we match the
+# second line's unique text rather than the line-broken phrase.
+check(
+  "R/98 has instruction that regenerating the baseline defeats the purpose (PATTERN-E)",
+  any(grepl("defeats the purpose", r98_lines))
+)
+
+# --- PATTERN-E items 2/3: R/82 all-5-scripts benchmark ---
+
+# Check 12: R/82 defines SCRIPTS_TO_BENCHMARK with 5 elements
+check(
+  "R/82 defines SCRIPTS_TO_BENCHMARK with 5 scripts (PATTERN-E)",
+  any(grepl("SCRIPTS_TO_BENCHMARK\\s*<-\\s*c\\(", r82_lines))
+)
+
+r82_text <- paste(r82_lines, collapse = "\n")
+benchmark_vec_match <- regmatches(
+  r82_text,
+  regexpr("SCRIPTS_TO_BENCHMARK\\s*<-\\s*c\\([^)]+\\)", r82_text)
+)
+n_benchmark_scripts <- if (length(benchmark_vec_match) > 0) {
+  length(strsplit(benchmark_vec_match, ",")[[1]])
+} else {
+  0L
+}
+check(
+  glue("R/82 SCRIPTS_TO_BENCHMARK has 5 entries (found {n_benchmark_scripts}) (PATTERN-E)"),
+  n_benchmark_scripts == 5L
+)
+
+# Check 12b: the 5 benchmark scripts are the diagnostic set R/20-R/24 (PATTERN-E / DBDIAG-01)
+check(
+  "R/82 benchmarks the diagnostic scripts R/20-R/24 (PATTERN-E)",
+  all(vapply(20:24, function(n) any(grepl(glue("R/{n}_"), r82_lines, fixed = TRUE)), logical(1)))
+)
+
+# Check 13: R/82 uses time_script(), not time_cohort_build()
+check(
+  "R/82 uses time_script() function, not time_cohort_build() (PATTERN-E)",
+  any(grepl("^time_script\\s*<-\\s*function", r82_lines)) &&
+  !any(grepl("^time_cohort_build\\s*<-\\s*function", r82_lines))
+)
+
+# --- R/88 internal honesty ---
+
+# Check 14: R/88 defines a skipped counter
+check(
+  "R/88 defines skipped <- 0L counter (PATTERN-E)",
+  any(grepl("^skipped\\s*<-\\s*0L", readLines("R/88_smoke_test_comprehensive.R", warn = FALSE)))
+)
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -4774,6 +4915,7 @@ message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classificat
 message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
 message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
 message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)")
+message("  * SMOKE-134-01: R/88 validates Phase 134 ingest integrity and honest tests (Section 15z, 16 checks)")
 
 if (failed > 0) {
   quit(status = 1)
