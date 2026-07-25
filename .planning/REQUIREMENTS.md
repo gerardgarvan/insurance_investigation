@@ -35,7 +35,7 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Cross-Cutting Pattern Standardization (PATTERN)
 
-- [ ] **PATTERN-A**: Record/patient totals in `R/23`, `R/33` (CODE-03), `R/43`/`R/44` (TOTAL rows), `R/50` (grand total), `R/91`, `R/100` (Sheet 1) are computed by de-duplicating to the intended grain (`n_distinct(ID)` / distinct code) before totaling, not by summing per-code counts across codes a patient/record may appear under more than once (`R/46`'s instance is DATA-02 above, already covered)
+- [x] **PATTERN-A**: Record/patient totals in `R/23`, `R/33` (CODE-03), `R/43`/`R/44` (TOTAL rows), `R/50` (grand total), `R/91`, `R/100` (Sheet 1) are computed by de-duplicating to the intended grain (`n_distinct(ID)` / distinct code) before totaling, not by summing per-code counts across codes a patient/record may appear under more than once (`R/46`'s instance is DATA-02 above, already covered)
 - [ ] **PATTERN-B**: A single shared code-normalization convention (strip **all** dots + `toupper()` + dotted/undotted union) is applied consistently across `R/13_survivorship_encounters.R`, `R/42_build_code_descriptions.R`, `utils_cancer.R` (`classify_codes`/`is_cancer_code`), and `utils_doi.R` (`classify_doi_codes()`) — eliminating the dotted-only vs. dotted+undotted vs. case-sensitive drift documented in the review
 - [ ] **PATTERN-C**: Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or an equivalent `^C|^D[0-4]` pattern) instead of the over-inclusive `^[CD]`, so D50-D89 anemias/cytopenias/neutropenia no longer land in the "Unclassified" neoplasm bucket
 - [ ] **PATTERN-D**: External-API calls in `R/21_investigate_unmatched.R`, `R/27`, `R/105`, `R/108` classify transient errors (429/503/504/timeout/500/502) separately from a genuine "not found," retry transient errors (`R/21` currently has no retry at all), and never persist a transient failure as a permanent cache miss / dropped crosswalk entry
@@ -96,7 +96,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DATA-07 | Phase 133 | Complete |
 | INGEST-01 | Phase 134 | Complete |
 | DOCS-01 | Phase 133 | Complete |
-| PATTERN-A | Phase 135 | Pending |
+| PATTERN-A | Phase 135 | Complete |
 | PATTERN-B | Phase 135 | Pending |
 | PATTERN-C | Phase 135 | Pending |
 | PATTERN-D | Phase 135 | Pending |
