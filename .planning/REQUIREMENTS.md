@@ -97,13 +97,13 @@ Which phases cover which requirements. Populated during roadmap creation.
 | INGEST-01 | Phase 134 | Complete |
 | DOCS-01 | Phase 133 | Complete |
 | PATTERN-A | Phase 135 | Complete |
-| PATTERN-B | Phase 135 | Pending |
-| PATTERN-C | Phase 135 | Pending |
-| PATTERN-D | Phase 135 | Pending |
+| PATTERN-B | Phase 135 | Complete |
+| PATTERN-C | Phase 135 | Complete |
+| PATTERN-D | Phase 135 | Complete |
 | PATTERN-E | Phase 134 | Pending |
-| PATTERN-F | Phase 135 | Pending |
+| PATTERN-F | Phase 135 | Complete |
 | PATTERN-G | Phase 135 | Complete |
-| PATTERN-H | Phase 135 | Pending |
+| PATTERN-H | Phase 135 | Complete |
 | CONFIRM-01 | Phase 136 | Pending |
 | CONFIRM-02 | Phase 136 | Pending |
 
