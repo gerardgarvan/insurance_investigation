@@ -157,6 +157,7 @@ Standalone investigation scripts added after the 00-99 decade-based renumbering 
 | `R/111_doi_classification.R` | DoI (diagnosis-of-interest) classification producer. DuckDB-native prefix pull of the DIAGNOSIS table (never loads it fully into R), classifies rituximab/methotrexate non-malignant indications via `DOI_CODE_MAP` (DX_TYPE-gated ICD-9/ICD-10), runs the mutual-exclusivity hard-stop (`sum(is_doi_code(DX) & is_cancer_code(DX)) == 0`) before any output, flags L10.81 paraneoplastic pemphigus, and marks in_hl_cohort membership. Writes two .rds artifacts (NO xlsx): `output/doi_encounters.rds` (encounter grain) and `output/doi_patients.rds` (patient grain). | 128 |
 | `R/112_doi_attribution_report.R` | DoI attribution report producer. Consumes R/111's `doi_encounters.rds` and joins rituximab/MTX administrations to DoI diagnoses via a two-tier linkage (ENCOUNTERID direct match, then ±90-day PATID temporal window; `DOI_ATTRIBUTION_WINDOW_DAYS`), carrying a three-state `likely_non_lymphoma_directed` flag and an `attribution_method` column. All prose is co-occurrence language ("with [dx]"), never causal. Writes a 4-sheet styled xlsx `output/doi_attribution_report.xlsx` (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata); raw counts, internal-only (suppress manually before external sharing). | 129 |
 | `R/113_confirmed_hl_nhl_tumor_registry_counts.R` | Read-only diagnostic counting patients "confirmed" as Hodgkin Lymphoma (HL) and Non-Hodgkin Lymphoma (NHL) using ONLY TUMOR_REGISTRY histology codes (TR1 HISTOLOGICAL_TYPE, TR2/TR3 MORPH via ICD_CODES$hl_histology / ICD_CODES$nhl_histology) -- deliberately NOT the combined DIAGNOSIS+TUMOR_REGISTRY definition used by has_hodgkin_diagnosis(). Console-only output: confirmed-HL, confirmed-NHL, and confirmed-BOTH (overlap) distinct-patient counts, plus a validation caveat that nhl_histology is unreviewed. No file output. | quick-260716 |
+| `R/114_zip9_temporal_lookup.R` | Date-keyed ZIP9/ZIP5 temporal lookup validation. Validates `get_zip9_at_date()` from `utils_address.R` with a sample call, logs per-patient timeline diagnostics (gaps, overlapping periods, missing period-ends, period count distribution) to console, and appends an "Address Timeline Diagnostics" sheet to `output/zip_change_frequency.xlsx`. Uses probe-first gate: exits gracefully if `LDS_ADDRESS_HISTORY_Mailhot_V1.csv` or `zip_change_frequency.xlsx` absent. | 137 |
 
 ---
 
@@ -176,6 +177,7 @@ Sourced by 00_config.R (auto-loaded via list.files() from R/utils/ subfolder). T
 | utils/utils_pptx.R | PowerPoint styling and slide generation helpers (UF brand colors, table styling) | 72_generate_pptx, 73_generate_phase19_20_pptx |
 | utils/utils_snapshot.R | Snapshot helper for consistent RDS output creation (save_output_data, build_output_path) | 00_config |
 | utils/utils_treatment.R | Shared treatment analysis helpers (safe_table, get_hl_patient_ids, empty_result) | 00_config |
+| `utils/utils_address.R` | ZIP9/ZIP5 normalization and date-keyed address lookup. Defines `normalize_zip9()`, `normalize_zip5()`, `normalize_zip5_raw()`, and `get_zip9_at_date(ids, dates)`. `get_zip9_at_date` returns a tibble with columns ID, query_date, ZIP9, ZIP5, match_type ("interval" / "most_recent_before" / "none"). | 00_config |
 
 ---
 
@@ -209,10 +211,10 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
-- **Post-renumber investigations (100+):** 14 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning, R/106 ZIP change frequency, R/107 MED_ADMIN/DISPENSING chemo-gap sizing, R/108 NDC->RxNorm crosswalk builder, R/109 MED_ADMIN/DISPENSING fix before/after diff + unmatched-NDC audit, R/110 Phase 124 output-level before/after report + unmapped-name audit, R/111 DoI classification (.rds producer), R/112 DoI attribution (4-sheet xlsx), R/113 confirmed HL/NHL TUMOR_REGISTRY counts (console-only))
-- **Utility libraries:** 10 (in R/utils/ subfolder)
+- **Post-renumber investigations (100+):** 15 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning, R/106 ZIP change frequency, R/107 MED_ADMIN/DISPENSING chemo-gap sizing, R/108 NDC->RxNorm crosswalk builder, R/109 MED_ADMIN/DISPENSING fix before/after diff + unmatched-NDC audit, R/110 Phase 124 output-level before/after report + unmapped-name audit, R/111 DoI classification (.rds producer), R/112 DoI attribution (4-sheet xlsx), R/113 confirmed HL/NHL TUMOR_REGISTRY counts (console-only), R/114 ZIP9 temporal lookup validation (Phase 137))
+- **Utility libraries:** 11 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 99
+- **Total:** 101
 
 ## Key Dependency Chains
 

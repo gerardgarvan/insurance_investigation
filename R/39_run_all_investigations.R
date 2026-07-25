@@ -195,7 +195,9 @@ investigation_scripts <- c(
   "R/105_normalize_supportive_care_meaning.R",  # Supportive Care Normalized Meaning column (Phase 120); mutates data/reference/all_codes_resolved_next_tables_v2.1.xlsx in place
   "R/106_zip_change_frequency.R",               # ZIP change frequency investigation (Phase 121); probes LDS_ADDRESS_HISTORY, read-only
   "R/111_doi_classification.R",                 # DoI classification (Phase 128); DuckDB prefix-pull of DIAGNOSIS -> doi_encounters.rds + doi_patients.rds. MUST run before R/112 (emits its .rds inputs).
-  "R/112_doi_attribution_report.R"              # DoI attribution (Phase 129); joins rituximab/MTX to DoI dx (co-occurrence) -> doi_attribution_report.xlsx (4 sheets). Consumes R/111's .rds.
+  "R/112_doi_attribution_report.R",             # DoI attribution (Phase 129); joins rituximab/MTX to DoI dx (co-occurrence) -> doi_attribution_report.xlsx (4 sheets). Consumes R/111's .rds.
+  "R/113_confirmed_hl_nhl_tumor_registry_counts.R", # HL/NHL TUMOR_REGISTRY histology count diagnostic (quick-260716); console-only, no file output.
+  "R/114_zip9_temporal_lookup.R"                # ZIP9 temporal lookup validation (Phase 137); validates get_zip9_at_date(), appends Address Timeline Diagnostics sheet to zip_change_frequency.xlsx.
 )
 
 for (script in investigation_scripts) {

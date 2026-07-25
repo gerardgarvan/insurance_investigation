@@ -4781,6 +4781,82 @@ if (p135_fail > 0) {
 }
 
 # ==============================================================================
+# SECTION 15ab: ZIP9 TEMPORAL LOOKUP (Phase 137) ----
+# ==============================================================================
+
+p137_pass <- 0L
+p137_fail <- 0L
+
+check_137 <- function(label, result) {
+  if (isTRUE(result)) {
+    message(glue("  PASS  {label}"))
+    p137_pass <<- p137_pass + 1L
+  } else {
+    message(glue("  FAIL  {label}"))
+    p137_fail <<- p137_fail + 1L
+  }
+}
+
+message("\n=== SECTION 15ab: ZIP9 Temporal Lookup (Phase 137) ===")
+
+# Artifact existence
+check_137("R/114_zip9_temporal_lookup.R exists",
+  file.exists("R/114_zip9_temporal_lookup.R"))
+
+check_137("R/utils/utils_address.R exists",
+  file.exists("R/utils/utils_address.R"))
+
+# Function definitions in utils_address.R
+utils_addr_lines <- if (file.exists("R/utils/utils_address.R")) readLines("R/utils/utils_address.R") else character(0)
+
+check_137("get_zip9_at_date defined in utils_address.R",
+  any(grepl("get_zip9_at_date\\s*<-\\s*function", utils_addr_lines)))
+
+check_137("normalize_zip9 defined in utils_address.R",
+  any(grepl("normalize_zip9\\s*<-\\s*function", utils_addr_lines)))
+
+check_137("normalize_zip5 defined in utils_address.R",
+  any(grepl("normalize_zip5\\s*<-\\s*function", utils_addr_lines)))
+
+# Structural checks in R/114
+r114_lines <- if (file.exists("R/114_zip9_temporal_lookup.R")) readLines("R/114_zip9_temporal_lookup.R") else character(0)
+
+check_137("Probe gate (file.exists(addr_path)) present in R/114",
+  any(grepl("file.exists\\(addr_path\\)", r114_lines)))
+
+check_137("xlsx probe gate (file.exists(OUTPUT_XLSX)) present in R/114",
+  any(grepl("file.exists\\(OUTPUT_XLSX\\)", r114_lines)))
+
+check_137("wb_load() used in R/114 (anti-pattern guard: wb_load not new-workbook constructor)",
+  any(grepl("wb_load", r114_lines)) && !any(grepl("wb_workbook", r114_lines)))
+
+check_137("get_zip9_at_date called in R/114",
+  any(grepl("get_zip9_at_date", r114_lines)))
+
+check_137("match_type column documented in utils_address.R",
+  any(grepl("match_type", utils_addr_lines)))
+
+# Registration checks
+r39_lines <- if (file.exists("R/39_run_all_investigations.R")) readLines("R/39_run_all_investigations.R") else character(0)
+
+check_137("R/113 registered in R/39 investigation_scripts vector",
+  any(grepl("R/113_", r39_lines)))
+
+check_137("R/114 registered in R/39 investigation_scripts vector",
+  any(grepl("R/114_zip9_temporal_lookup\\.R", r39_lines)))
+
+# SCRIPT_INDEX checks
+idx_lines <- if (file.exists("R/SCRIPT_INDEX.md")) readLines("R/SCRIPT_INDEX.md") else character(0)
+
+check_137("R/114 present in SCRIPT_INDEX.md",
+  any(grepl("R/114_zip9_temporal_lookup", idx_lines)))
+
+check_137("utils_address.R present in SCRIPT_INDEX.md",
+  any(grepl("utils_address", idx_lines)))
+
+message(glue("\nSection 15ab: {p137_pass} PASS, {p137_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
