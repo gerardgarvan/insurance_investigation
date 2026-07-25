@@ -20,7 +20,7 @@
 source("R/00_config.R")
 source("R/01_load_pcornet.R")
 
-library(httr)
+library(httr2)
 library(jsonlite)
 library(openxlsx2)
 library(dplyr)
@@ -172,52 +172,41 @@ lookup_hcpcs_batch <- function(codes, sleep_sec = 0.15) {
     result <- tryCatch(
       {
         url <- glue("https://clinicaltables.nlm.nih.gov/api/hcpcs/v3/search?terms={code}&ef=display")
-        resp <- GET(url, timeout(10))
 
-        if (http_error(resp)) {
-          list(
-            code = code,
-            description = NA_character_,
-            lookup_status = glue("error: HTTP {status_code(resp)}")
-          )
+        # PATTERN-D: use httr2 with retry for transient HTTP errors (429/500/502/503/504)
+        resp <- httr2::request(url) |>
+          httr2::req_timeout(10) |>
+          httr2::req_retry(
+            max_tries = 4,
+            is_transient = function(resp) httr2::resp_status(resp) %in% c(429L, 500L, 502L, 503L, 504L),
+            backoff = ~ 2^.x
+          ) |>
+          httr2::req_error(is_error = function(resp) FALSE) |> # do NOT throw on 4xx/5xx; inspect status ourselves
+          httr2::req_perform()
+
+        status <- httr2::resp_status(resp)
+
+        if (status %in% c(429L, 500L, 502L, 503L, 504L)) {
+          # survived all retries and is still transient -> mark transient, NOT permanent
+          list(code = code, description = NA_character_, lookup_status = glue("error: transient_http_{status}"))
+        } else if (status >= 400L) {
+          # genuine permanent client/server error (e.g. 404)
+          list(code = code, description = NA_character_, lookup_status = glue("error: HTTP {status}"))
         } else {
-          json <- fromJSON(content(resp, as = "text", encoding = "UTF-8"))
-
-          # json structure: [total_count, [matched_codes], ..., [[display_strings]]]
-          # json[[1]] = total count
-          # json[[2]] = matched codes
-          # json[[4]] = display strings
-
-          if (length(json) >= 4 && json[[1]] > 0) {
-            matched_code <- json[[2]][1]
-            if (toupper(matched_code) == toupper(code)) {
-              list(
-                code = code,
-                description = json[[4]][1],
-                lookup_status = "success"
-              )
-            } else {
-              list(
-                code = code,
-                description = NA_character_,
-                lookup_status = "not_found"
-              )
-            }
+          json <- httr2::resp_body_json(resp)
+          if (length(json) >= 4 && json[[1]] > 0 &&
+              toupper(json[[2]][[1]]) == toupper(code)) {
+            list(code = code, description = json[[4]][[1]], lookup_status = "success")
           } else {
-            list(
-              code = code,
-              description = NA_character_,
-              lookup_status = "not_found"
-            )
+            list(code = code, description = NA_character_, lookup_status = "not_found")
           }
         }
       },
       error = function(e) {
-        list(
-          code = code,
-          description = NA_character_,
-          lookup_status = glue("error: {e$message}")
-        )
+        # only genuine request failures reach here now (timeouts, DNS, connection resets)
+        is_timeout <- grepl("timeout|timed out|CURLE_OPERATION_TIMEDOUT", e$message, ignore.case = TRUE)
+        list(code = code, description = NA_character_,
+             lookup_status = if (is_timeout) "error: transient_timeout" else glue("error: {e$message}"))
       }
     )
 
@@ -738,6 +727,21 @@ update_config_treatment_codes <- function(classified_codes_path) {
   }
 
   # 6. Validate the updated config
+  # PATTERN-F: verify parse BEFORE writing to the real config path
+  tmp_verify <- tempfile(fileext = ".R")
+  writeLines(config_lines, tmp_verify)
+  parse_check <- tryCatch(parse(tmp_verify), error = function(e) e)
+  file.remove(tmp_verify)
+
+  if (inherits(parse_check, "error")) {
+    warning(glue(
+      "[Config update] Parse check failed for {config_path}: {parse_check$message}\n",
+      "  Newly-discovered codes NOT written to config. Backup preserved at {backup_path}."
+    ))
+    # leave config unchanged -- no writeLines in this branch
+    return(invisible(NULL))
+  }
+
   writeLines(config_lines, config_path)
   message("  Validating updated config...")
 
