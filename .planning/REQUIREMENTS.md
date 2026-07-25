@@ -17,13 +17,13 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Published-Number Correctness (DATA)
 
-- [ ] **DATA-01**: `R/28_episode_classification.R` matches `treatment_type == "SCT"` (not `"Stem Cell Transplant"`) so `sct_dates`, `is_sct_conditioning_context`, and `days_to_nearest_sct` are no longer permanently empty/FALSE/NA
-- [ ] **DATA-02**: `R/46_cancer_summary_table.R`'s `total_records` (including the TOTAL row) reflects true code-level record counts, not per-code records multiplied by patient count
-- [ ] **DATA-03**: `R/47_cancer_summary_refined.R`'s `first_hl_dx_date` is computed by filtering sentinel dates (`DX_DATE >= 1910-01-01`, matching `48`/`49`'s `SENTINEL_CUTOFF`) **before** taking `min()`, not nullified post-hoc on exact-`1900` only — so a patient with both a real HL date and a sentinel keeps their true anchor instead of losing it
-- [ ] **DATA-04**: `R/48_cancer_summary_post_hl.R` excludes HL anchor codes (C81 + 201.x) from its post-HL "second cancer" set, consistent with `R/49`, so HL recurrence is not conflated with new malignancy
-- [ ] **DATA-05**: `R/49_cancer_summary_pre_post.R`'s category/total `both_count` reflects the true pre∩post **patient** intersection at category grain (not a per-code sum), so `pre + post − both` reconciles
-- [ ] **DATA-06**: `R/67`→`R/68` and `R/95`→`R/96`'s same-week detail files keep each `(admit_date, source)` pair correctly bound together after the `pmin`/`pmax` reordering, so the downstream `(ID, date, source)` join back to ENCOUNTER no longer misclassifies pairs into Distinct/Partial or undercounts near-duplicates
-- [ ] **DATA-07**: `R/101_gantt_lifespan_collapse.R`'s `age_at_episode` reflects the row at the group's earliest `episode_start`, not whichever row happened to be first in input order
+- [x] **DATA-01**: `R/28_episode_classification.R` matches `treatment_type == "SCT"` (not `"Stem Cell Transplant"`) so `sct_dates`, `is_sct_conditioning_context`, and `days_to_nearest_sct` are no longer permanently empty/FALSE/NA
+- [x] **DATA-02**: `R/46_cancer_summary_table.R`'s `total_records` (including the TOTAL row) reflects true code-level record counts, not per-code records multiplied by patient count
+- [x] **DATA-03**: `R/47_cancer_summary_refined.R`'s `first_hl_dx_date` is computed by filtering sentinel dates (`DX_DATE >= 1910-01-01`, matching `48`/`49`'s `SENTINEL_CUTOFF`) **before** taking `min()`, not nullified post-hoc on exact-`1900` only — so a patient with both a real HL date and a sentinel keeps their true anchor instead of losing it
+- [x] **DATA-04**: `R/48_cancer_summary_post_hl.R` excludes HL anchor codes (C81 + 201.x) from its post-HL "second cancer" set, consistent with `R/49`, so HL recurrence is not conflated with new malignancy
+- [x] **DATA-05**: `R/49_cancer_summary_pre_post.R`'s category/total `both_count` reflects the true pre∩post **patient** intersection at category grain (not a per-code sum), so `pre + post − both` reconciles
+- [x] **DATA-06**: `R/67`→`R/68` and `R/95`→`R/96`'s same-week detail files keep each `(admit_date, source)` pair correctly bound together after the `pmin`/`pmax` reordering, so the downstream `(ID, date, source)` join back to ENCOUNTER no longer misclassifies pairs into Distinct/Partial or undercounts near-duplicates
+- [x] **DATA-07**: `R/101_gantt_lifespan_collapse.R`'s `age_at_episode` reflects the row at the group's earliest `episode_start`, not whichever row happened to be first in input order
 
 ### Data Integrity (INGEST)
 
@@ -31,7 +31,7 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Documentation Tooling (DOCS)
 
-- [ ] **DOCS-01**: `R/89_generate_reference_manual.R`'s `parse_script_header()` correctly anchors `header_end` to the field block's closing bar, so the generated manual captures each script's actual Purpose/Inputs/Outputs/Dependencies/Requirements instead of "Not documented" for every script
+- [x] **DOCS-01**: `R/89_generate_reference_manual.R`'s `parse_script_header()` correctly anchors `header_end` to the field block's closing bar, so the generated manual captures each script's actual Purpose/Inputs/Outputs/Dependencies/Requirements instead of "Not documented" for every script
 
 ### Cross-Cutting Pattern Standardization (PATTERN)
 
@@ -87,15 +87,15 @@ Which phases cover which requirements. Populated during roadmap creation.
 |-------------|-------|--------|
 | CRASH-01 | Phase 132 | Complete |
 | CRASH-02 | Phase 132 | Complete |
-| DATA-01 | Phase 133 | Pending |
-| DATA-02 | Phase 133 | Pending |
-| DATA-03 | Phase 133 | Pending |
-| DATA-04 | Phase 133 | Pending |
-| DATA-05 | Phase 133 | Pending |
-| DATA-06 | Phase 133 | Pending |
-| DATA-07 | Phase 133 | Pending |
+| DATA-01 | Phase 133 | Complete |
+| DATA-02 | Phase 133 | Complete |
+| DATA-03 | Phase 133 | Complete |
+| DATA-04 | Phase 133 | Complete |
+| DATA-05 | Phase 133 | Complete |
+| DATA-06 | Phase 133 | Complete |
+| DATA-07 | Phase 133 | Complete |
 | INGEST-01 | Phase 134 | Pending |
-| DOCS-01 | Phase 133 | Pending |
+| DOCS-01 | Phase 133 | Complete |
 | PATTERN-A | Phase 135 | Pending |
 | PATTERN-B | Phase 135 | Pending |
 | PATTERN-C | Phase 135 | Pending |
