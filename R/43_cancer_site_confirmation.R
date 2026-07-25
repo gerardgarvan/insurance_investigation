@@ -121,9 +121,9 @@ message(glue("  Total ICD-10 DIAGNOSIS rows: {format(nrow(dx_icd10), big.mark=',
 dx_icd10 <- dx_icd10 %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\.")))
 
-# Filter to neoplasm codes (C00-D49)
+# Filter to neoplasm codes — map-based helper excludes D5x-D9x (PATTERN-C fix)
 dx_cancer <- dx_icd10 %>%
-  filter(str_detect(DX_norm, "^[CD]"))
+  filter(is_cancer_code(DX_norm))
 
 message(glue("  Neoplasm codes (C/D): {format(nrow(dx_cancer), big.mark=',')} rows"))
 
