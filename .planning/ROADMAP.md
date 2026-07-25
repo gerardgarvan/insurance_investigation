@@ -216,8 +216,8 @@ See MILESTONES.md for full details on all shipped milestones.
   2. `R/84`'s previously-crashing branch resolves its `walk()` call via `purrr::walk()` (or an attached `library(purrr)`) without `could not find function "walk"`
   3. Each of the six scripts proceeds past its former abort point to execute its intended logic instead of halting on the editor artifact
 **Plans**: 4 plans
-- [ ] 132-01-PLAN.md -- Remove stray bare `n` from R/74, R/81, R/82, R/83 (1 occurrence each) [CRASH-01] (Wave 1)
-- [ ] 132-02-PLAN.md -- Remove 3 stray bare `n` occurrences from R/84 + attach library(purrr) to fix walk() crash [CRASH-01, CRASH-02] (Wave 1)
+- [x] 132-01-PLAN.md -- Remove stray bare `n` from R/74, R/81, R/82, R/83 (1 occurrence each) [CRASH-01] (Wave 1)
+- [x] 132-02-PLAN.md -- Remove 3 stray bare `n` occurrences from R/84 + attach library(purrr) to fix walk() crash [CRASH-01, CRASH-02] (Wave 1)
 - [x] 132-03-PLAN.md -- Remove 3 stray bare `n` occurrences from R/85 (purrr::walk() calls untouched) [CRASH-01] (Wave 1)
 - [ ] 132-04-PLAN.md -- R/88 Section 15y structural regression-guard checks for CRASH-01/CRASH-02 [CRASH-01, CRASH-02] (Wave 2, depends on 132-01/02/03)
 
@@ -305,7 +305,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 132. Crash Fixes | v3.4 | 1/4 | In Progress|  |
+| 132. Crash Fixes | v3.4 | 3/4 | In Progress|  |
 | 133. Critical Correctness Fixes | v3.4 | TBD | Not started | - |
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Not started | - |
 | 135. Shared-Helper Standardization | v3.4 | TBD | Not started | - |

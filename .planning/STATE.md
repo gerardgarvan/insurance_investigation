@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Completed 132-03-PLAN.md
-last_updated: "2026-07-25T16:10:50.031Z"
+stopped_at: Completed 132-02-PLAN.md (R/84 stray-n + purrr attach)
+last_updated: "2026-07-25T16:11:34.403Z"
 last_activity: 2026-07-25
 progress:
   total_phases: 121
   completed_phases: 108
   total_plans: 207
-  completed_plans: 197
+  completed_plans: 199
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 ## Current Position
 
 Phase: 132 (crash-fixes) — EXECUTING
-Plan: 2 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-07-25
 
@@ -111,5 +111,5 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 ## Session Continuity
 
 **Last command:** `/gsd:new-project` (roadmap step) (2026-07-24)
-**Stopped at:** Completed 132-03-PLAN.md
+**Stopped at:** Completed 132-02-PLAN.md (R/84 stray-n + purrr attach)
 **What's next:** Present roadmap for user approval, then `/gsd:plan-phase 132` (Crash Fixes) to begin execution. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.
