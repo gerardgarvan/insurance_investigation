@@ -188,7 +188,7 @@ same_date_combo_freq <- same_date_detail %>%
   group_by(source_combo) %>%
   summarise(
     n_patient_dates = n(),
-    n_total_encounters = sum(n_encounters),
+    n_total_dates = sum(n_encounters),
     .groups = "drop"
   ) %>%
   arrange(desc(n_patient_dates)) %>%
@@ -199,7 +199,7 @@ message("Top 10 same-date source combinations:")
 top10_sd <- head(same_date_combo_freq, 10)
 for (i in seq_len(nrow(top10_sd))) {
   r <- top10_sd[i, ]
-  message(glue("  #{r$rank} {r$source_combo}: {format(r$n_patient_dates, big.mark=',')} patient-dates, {format(r$n_total_encounters, big.mark=',')} encounters"))
+  message(glue("  #{r$rank} {r$source_combo}: {format(r$n_patient_dates, big.mark=',')} patient-dates, {format(r$n_total_dates, big.mark=',')} dates"))
 }
 
 # ==============================================================================
@@ -377,11 +377,14 @@ for (i in seq_len(nrow(per_source_same_week))) {
 }
 
 # Same-week combo frequencies
+# NOTE (PATTERN-H): n_total_dates is intentionally an over-count -- a date used in
+# both admit_date_1 and admit_date_2 roles is counted twice. The column name reflects
+# this; use n_patient_dates for deduplicated patient-date counts.
 same_week_combo_freq <- same_week_detail %>%
   group_by(source_combo) %>%
   summarise(
     n_pairs = n(),
-    n_total_encounters = n_distinct(paste(ID, admit_date_1)) + n_distinct(paste(ID, admit_date_2)),
+    n_total_dates = n_distinct(paste(ID, admit_date_1)) + n_distinct(paste(ID, admit_date_2)),
     .groups = "drop"
   ) %>%
   arrange(desc(n_pairs)) %>%
@@ -440,18 +443,18 @@ message(glue("  Written: multi_source_same_week_detail.csv ({format(nrow(csv2), 
 
 # --- CSV 3: multi_source_combo_frequencies.csv ---
 # Two sections stacked: same_date combos then same_week combos
-# Columns: match_type, source_combo, n_patient_dates (or n_pairs), n_total_encounters, rank
+# Columns: match_type, source_combo, n_patient_dates (or n_pairs), n_total_dates, rank
 csv3_same_date <- same_date_combo_freq %>%
   mutate(match_type = "same_date") %>%
   rename(n_patient_dates = n_patient_dates) %>%
-  select(match_type, source_combo, n_patient_dates, n_total_encounters, rank)
+  select(match_type, source_combo, n_patient_dates, n_total_dates, rank)
 
 csv3_same_week <- same_week_combo_freq %>%
   mutate(
     match_type      = "same_week",
     n_patient_dates = n_pairs # reuse column name for consistency
   ) %>%
-  select(match_type, source_combo, n_patient_dates, n_total_encounters, rank)
+  select(match_type, source_combo, n_patient_dates, n_total_dates, rank)
 
 csv3 <- bind_rows(csv3_same_date, csv3_same_week)
 
