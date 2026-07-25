@@ -224,11 +224,13 @@ config_descriptions <- c(
   "41.09" = "Autologous bone marrow transplant with purging",
 
   # Diagnosis codes (lines 927-947)
-  "Z51.11" = "Encounter for antineoplastic chemotherapy",
-  "Z51.12" = "Encounter for antineoplastic immunotherapy",
-  "V58.11" = "Encounter for antineoplastic chemotherapy",
-  "V58.12" = "Encounter for antineoplastic immunotherapy",
-  "Z51.0" = "Encounter for antineoplastic radiation therapy",
+  # PATTERN-B fix: keys stored dot-stripped so they match dot-stripped consumers.
+  # Original dotted keys (Z51.11, Z51.12, etc.) were replaced with undotted forms.
+  "Z5111" = "Encounter for antineoplastic chemotherapy",
+  "Z5112" = "Encounter for antineoplastic immunotherapy",
+  "V5811" = "Encounter for antineoplastic chemotherapy",
+  "V5812" = "Encounter for antineoplastic immunotherapy",
+  "Z510" = "Encounter for antineoplastic radiation therapy",
   "V58.0" = "Encounter for radiotherapy",
   "Z94.84" = "Stem cells transplant status",
   "T86.5" = "Complications of stem cell transplant",
