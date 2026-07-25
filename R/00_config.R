@@ -2811,7 +2811,8 @@ CONFIG$analysis <- list(
 
   # Date range validation bounds (used in 01_load_pcornet.R date validation)
   # Catches SAS epoch (1899-12-30) and Excel epoch (1900-01-01) sentinels as lower bound
-  # Upper bound is end of data collection period
+  # Upper bound catches future-year sentinel dates only; does not filter records
+  # (validation flag is informational). Data-source cutoff enforced by the extract.
   date_range_min = as.Date("1901-01-01"),
   date_range_max = as.Date("2025-03-31")
 )

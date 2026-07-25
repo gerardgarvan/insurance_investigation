@@ -578,6 +578,11 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
 
   # --- Date range validation: data collection period (bounds from CONFIG$analysis) ---
   # Flags dates outside the study period and SAS epoch sentinels (1899-12-30)
+  # Intent: date_range_min guards against SAS/Excel epoch sentinels (pre-1901).
+  #         date_range_max guards against far-future sentinel dates only.
+  #         The data-source cutoff (extract date) is enforced by the extract itself,
+  #         not by this config bound. See R/00_config.R CONFIG$analysis$date_range_max.
+  #         CONFIRM-02: bound reviewed 2026-07-25; see REQUIREMENTS.md for finding.
   date_range_min <- CONFIG$analysis$date_range_min
   date_range_max <- CONFIG$analysis$date_range_max
   for (dcol in date_cols) {
