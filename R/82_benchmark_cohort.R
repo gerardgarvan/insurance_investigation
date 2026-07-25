@@ -1,23 +1,31 @@
 # ==============================================================================
-# 82_benchmark_cohort.R -- RDS vs DuckDB cohort build benchmark
+# 82_benchmark_cohort.R -- RDS vs DuckDB diagnostic-script benchmark
 # ==============================================================================
 #
 # Purpose:
-#   RDS vs DuckDB cohort build benchmark: 3 runs per backend, reports median
-#   execution time for performance comparison. WHY 3 runs per backend: Reduces
-#   variance from system load; median is more robust than mean for timing.
+#   RDS vs DuckDB benchmark for the 5 diagnostic scripts (R/20-R/24): 3 runs
+#   per backend per script, saves per-run timings to CSV for R/83 to evaluate.
+#   WHY 3 runs per backend: Reduces variance from system load; median is more
+#   robust than mean for timing. WHY these 5 scripts: They are the diagnostic
+#   set (DBDIAG-01) identified in the code review as the benchmark target.
 #
 # Inputs:
-#   - Full PCORnet CDM data
+#   - Full PCORnet CDM data (via DuckDB or RDS)
 #
 # Outputs:
-#   - output/benchmark_results.csv
+#   - output/logs/duckdb_benchmark.csv (columns: script, backend, run,
+#     elapsed_seconds, user_seconds, system_seconds, timestamp)
 #
 # Dependencies:
-#   - R/00_config.R, R/01_load_pcornet.R, R/14_build_cohort.R
+#   - R/00_config.R, R/01_load_pcornet.R
+#   - R/20_treatment_inventory.R
+#   - R/21_investigate_unmatched.R
+#   - R/22_investigate_unmatched_ndc.R
+#   - R/23_combine_reports.R
+#   - R/24_treatment_codes_resolved.R
 #
 # Requirements:
-#   - DBCOH-03
+#   - DBDIAG-01, PATTERN-E
 #
 # Usage:
 #   source("R/82_benchmark_cohort.R")
@@ -54,94 +62,55 @@ message("[Setup] Infrastructure loaded")
 # TIMING FUNCTION
 # ==============================================================================
 
-time_cohort_build <- function(backend, run_number) {
-  message(glue("\n--- {backend} run {run_number} ---"))
+time_script <- function(script_path, backend, run_number) {
+  message(glue("\n--- {backend} run {run_number}: {basename(script_path)} ---"))
 
-  # Set backend
   USE_DUCKDB <<- (backend == "DuckDB")
 
-  # Clear prior results
-  if (exists("hl_cohort", envir = .GlobalEnv)) rm(hl_cohort, envir = .GlobalEnv)
-  if (exists("attrition_log", envir = .GlobalEnv)) rm(attrition_log, envir = .GlobalEnv)
-
-  # Time the cohort build only (D-10)
   start_time <- proc.time()
-  source("R/14_build_cohort.R", local = FALSE)
+  source(script_path, local = FALSE)
   elapsed <- proc.time() - start_time
 
-  # Capture result dimensions for verification
-  cohort_rows <- nrow(get("hl_cohort", envir = .GlobalEnv))
-  cohort_cols <- ncol(get("hl_cohort", envir = .GlobalEnv))
-
   tibble(
-    backend = backend,
-    run = run_number,
+    script          = basename(script_path),
+    backend         = backend,
+    run             = run_number,
     elapsed_seconds = elapsed["elapsed"],
-    user_seconds = elapsed["user.self"],
-    system_seconds = elapsed["sys.self"],
-    cohort_rows = cohort_rows,
-    cohort_cols = cohort_cols,
-    timestamp = Sys.time()
+    user_seconds    = elapsed["user.self"],
+    system_seconds  = elapsed["sys.self"],
+    timestamp       = Sys.time()
   )
 }
 
 # ==============================================================================
-# RUN BENCHMARK: 3 runs per backend (D-12)
+# RUN BENCHMARK: 5 scripts x 3 runs x 2 backends (DBDIAG-01, PATTERN-E)
 # ==============================================================================
+
+SCRIPTS_TO_BENCHMARK <- c(
+  "R/20_treatment_inventory.R",
+  "R/21_investigate_unmatched.R",
+  "R/22_investigate_unmatched_ndc.R",
+  "R/23_combine_reports.R",
+  "R/24_treatment_codes_resolved.R"
+)
 
 n_runs <- 3L
 results <- list()
 
 message(strrep("=", 60))
-message("BENCHMARK: RDS vs DuckDB Cohort Build")
+message(glue("BENCHMARK: {length(SCRIPTS_TO_BENCHMARK)} scripts x {n_runs} runs x 2 backends"))
 message(strrep("=", 60))
 
-# RDS runs first
-for (i in seq_len(n_runs)) {
-  results[[length(results) + 1]] <- time_cohort_build("RDS", i)
-}
-
-# DuckDB runs
-for (i in seq_len(n_runs)) {
-  results[[length(results) + 1]] <- time_cohort_build("DuckDB", i)
+for (script_path in SCRIPTS_TO_BENCHMARK) {
+  for (i in seq_len(n_runs)) {
+    results[[length(results) + 1]] <- time_script(script_path, "RDS", i)
+  }
+  for (i in seq_len(n_runs)) {
+    results[[length(results) + 1]] <- time_script(script_path, "DuckDB", i)
+  }
 }
 
 benchmark_results <- bind_rows(results)
-
-# ==============================================================================
-# SUMMARY STATISTICS
-# ==============================================================================
-
-benchmark_summary <- benchmark_results %>%
-  group_by(backend) %>%
-  summarise(
-    n_runs = n(),
-    median_seconds = median(elapsed_seconds),
-    min_seconds = min(elapsed_seconds),
-    max_seconds = max(elapsed_seconds),
-    mean_seconds = mean(elapsed_seconds),
-    sd_seconds = sd(elapsed_seconds),
-    .groups = "drop"
-  )
-
-# Compute speedup ratio
-rds_median <- benchmark_summary %>%
-  filter(backend == "RDS") %>%
-  pull(median_seconds)
-ddb_median <- benchmark_summary %>%
-  filter(backend == "DuckDB") %>%
-  pull(median_seconds)
-speedup <- rds_median / ddb_median
-
-# Extract min/max/sd for console summary
-rds_summary <- benchmark_summary %>% filter(backend == "RDS")
-ddb_summary <- benchmark_summary %>% filter(backend == "DuckDB")
-min_rds <- rds_summary$min_seconds
-max_rds <- rds_summary$max_seconds
-sd_rds <- rds_summary$sd_seconds
-min_ddb <- ddb_summary$min_seconds
-max_ddb <- ddb_summary$max_seconds
-sd_ddb <- ddb_summary$sd_seconds
 
 # ==============================================================================
 # WRITE CSV OUTPUT
@@ -152,21 +121,40 @@ write_csv(benchmark_results, output_path)
 message(glue("\nBenchmark results saved to: {output_path}"))
 
 # ==============================================================================
-# CONSOLE SUMMARY
+# CONSOLE SUMMARY (per-script grouped)
 # ==============================================================================
 
 message(strrep("=", 60))
-message("BENCHMARK RESULTS")
+message("BENCHMARK RESULTS (per script)")
 message(strrep("=", 60))
-message(glue("\nRDS:    median {round(rds_median, 2)}s (range: {round(min_rds, 2)}-{round(max_rds, 2)}s)"))
-message(glue("DuckDB: median {round(ddb_median, 2)}s (range: {round(min_ddb, 2)}-{round(max_ddb, 2)}s)"))
-message(glue("\nSpeedup ratio: {round(speedup, 2)}x"))
-if (speedup > 1) {
-  message(glue("DuckDB is {round(speedup, 2)}x faster than RDS"))
-} else {
-  message(glue("RDS is {round(1/speedup, 2)}x faster than DuckDB"))
+
+benchmark_summary <- benchmark_results %>%
+  group_by(script, backend) %>%
+  summarise(
+    n_runs         = n(),
+    median_seconds = median(elapsed_seconds),
+    min_seconds    = min(elapsed_seconds),
+    max_seconds    = max(elapsed_seconds),
+    sd_seconds     = sd(elapsed_seconds),
+    .groups        = "drop"
+  )
+
+for (scr in SCRIPTS_TO_BENCHMARK) {
+  scr_name <- basename(scr)
+  rds_row <- benchmark_summary %>% filter(script == scr_name, backend == "RDS")
+  ddb_row <- benchmark_summary %>% filter(script == scr_name, backend == "DuckDB")
+  if (nrow(rds_row) > 0 && nrow(ddb_row) > 0) {
+    speedup <- rds_row$median_seconds / ddb_row$median_seconds
+    message(glue(
+      "\n{scr_name}",
+      "\n  RDS:    median {round(rds_row$median_seconds, 2)}s ",
+      "(range: {round(rds_row$min_seconds, 2)}-{round(rds_row$max_seconds, 2)}s)",
+      "\n  DuckDB: median {round(ddb_row$median_seconds, 2)}s ",
+      "(range: {round(ddb_row$min_seconds, 2)}-{round(ddb_row$max_seconds, 2)}s)",
+      "\n  Speedup: {round(speedup, 2)}x"
+    ))
+  }
 }
-message(glue("\nVariance: RDS sd={round(sd_rds, 3)}s, DuckDB sd={round(sd_ddb, 3)}s"))
 
 # ==============================================================================
 # CLEANUP

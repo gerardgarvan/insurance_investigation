@@ -45,8 +45,9 @@ rm(list = ls())
 
 library(glue)
 
-passed <- 0L
-failed <- 0L
+passed  <- 0L
+failed  <- 0L
+skipped <- 0L
 
 check <- function(description, condition) {
   if (condition) {
@@ -56,6 +57,11 @@ check <- function(description, condition) {
     message(glue("  FAIL: {description}"))
     failed <<- failed + 1L
   }
+}
+
+skip <- function(reason) {
+  message(glue("  SKIP: {reason}"))
+  skipped <<- skipped + 1L
 }
 
 message(strrep("=", 70))
@@ -1155,7 +1161,7 @@ if (file.exists("R/35_death_cause_quality.R")) {
     n_sections_r35 >= 6
   )
 } else {
-  message("  SKIP: R/35_death_cause_quality.R not found -- skipping detail checks")
+  skip("R/35_death_cause_quality.R not found -- skipping detail checks")
 }
 
 # ==============================================================================
@@ -1204,11 +1210,31 @@ check(
   any(grepl("drug_group", r52_lines))
 )
 
-# Check 7: R/52 drops cause_of_death as dead column (Phase 99, D-09)
-check(
-  "R/52 drops cause_of_death (Phase 99, D-09: 100% empty)",
-  any(grepl("cause_of_death", r52_lines))
-)
+# Check 7: R/52 EPISODES_SCHEMA does NOT include cause_of_death (Phase 99, D-09)
+# WHY: Dropped because the column is 100% NA in real data. This check fails if
+# cause_of_death is accidentally re-added to EPISODES_SCHEMA — it is a
+# regression guard, not an absence check.
+schema_start_r52_cod <- grep("EPISODES_SCHEMA\\s*<-\\s*c\\(", r52_lines)
+if (length(schema_start_r52_cod) == 0L) {
+  check("R/52 EPISODES_SCHEMA present to validate cause_of_death drop (Phase 99, D-09)", FALSE)
+} else {
+  schema_start_r52_cod <- schema_start_r52_cod[1]
+  rel_close_cod <- which(cumsum(
+    lengths(regmatches(
+      r52_lines[schema_start_r52_cod:length(r52_lines)],
+      gregexpr("\\(", r52_lines[schema_start_r52_cod:length(r52_lines)])
+    )) -
+    lengths(regmatches(
+      r52_lines[schema_start_r52_cod:length(r52_lines)],
+      gregexpr("\\)", r52_lines[schema_start_r52_cod:length(r52_lines)])
+    ))
+  ) == 0L)[1]
+  schema_block_r52 <- r52_lines[schema_start_r52_cod:(schema_start_r52_cod + rel_close_cod - 1L)]
+  check(
+    "R/52 EPISODES_SCHEMA does NOT contain cause_of_death (Phase 99, D-09)",
+    !any(grepl("cause_of_death", schema_block_r52))
+  )
+}
 
 # Check 8: R/52 uses EPISODES_SCHEMA for dynamic verification (Phase 99, D-13)
 check(
@@ -1601,7 +1627,7 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) 
 
   rm(episodes_93)
 } else {
-  message("  SKIP: treatment_episodes.rds not available -- runtime checks skipped")
+  skip("treatment_episodes.rds not available -- runtime checks skipped")
 }
 
 # ==============================================================================
@@ -3525,10 +3551,10 @@ if (file.exists("R/30_condition_linkage_investigation.R")) {
         }
       }
     }, error = function(e) {
-      message(glue("  SKIP: Could not read xlsx ({e$message})"))
+      skip(glue("Could not read xlsx ({e$message})"))
     })
   } else {
-    message("  SKIP: episode_classification_audit.xlsx not found (run R/28 first)")
+    skip("episode_classification_audit.xlsx not found (run R/28 first)")
   }
 } else {
   message("  FAIL: R/30 script not found")
@@ -3640,10 +3666,10 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
             all(c("treatment_type", "linked_count", "unlinked_count") %in% colnames(ct_data)))
 
     }, error = function(e) {
-      message(glue("  SKIP: Could not read xlsx files ({e$message})"))
+      skip(glue("Could not read xlsx files ({e$message})"))
     })
   } else {
-    message("  SKIP: Broadened/linked-only xlsx not found (run R/57 first)")
+    skip("Broadened/linked-only xlsx not found (run R/57 first)")
   }
 
 } else {
@@ -3803,10 +3829,10 @@ if (file.exists("R/58_co_administration_analysis.R")) {
             all(diff(summary_data$n_instances) <= 0))
 
     }, error = function(e) {
-      message(glue("  SKIP: Could not read co_administration xlsx ({e$message})"))
+      skip(glue("Could not read co_administration xlsx ({e$message})"))
     })
   } else {
-    message("  SKIP: co_administration_analysis.xlsx not found (run R/58 first)")
+    skip("co_administration_analysis.xlsx not found (run R/58 first)")
   }
 
 } else {
@@ -3905,10 +3931,10 @@ if (file.exists("R/59_death_date_summary.R")) {
             nrow(summary_data) == 4)
 
     }, error = function(e) {
-      message(glue("  SKIP: Could not read death_date_summary xlsx ({e$message})"))
+      skip(glue("Could not read death_date_summary xlsx ({e$message})"))
     })
   } else {
-    message("  SKIP: death_date_summary.xlsx not found (run R/59 first)")
+    skip("death_date_summary.xlsx not found (run R/59 first)")
   }
 
 } else {
@@ -4483,7 +4509,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
     check("DuckDB file accessible (connection failed)", FALSE)
   }
 } else {
-  message("  SKIP: DuckDB file not found at CONFIG path (run R/01 + R/03 first)")
+  skip("DuckDB file not found at CONFIG path (run R/01 + R/03 first)")
 }
 
 # ==============================================================================
@@ -4602,7 +4628,7 @@ if (IS_LOCAL) {
     )
 
   } else {
-    message("  SKIP: pcornet list not loaded (run R/01_load_pcornet.R first)")
+    skip("pcornet list not loaded (run R/01_load_pcornet.R first)")
     message("  To run full validation: source R/01 before R/88")
   }
 
@@ -4617,9 +4643,9 @@ if (IS_LOCAL) {
 message(glue("\n{strrep('=', 70)}"))
 total <- passed + failed
 if (failed == 0) {
-  message(glue("ALL {total} CHECKS PASSED"))
+  message(glue("ALL {total} CHECKS PASSED ({skipped} skipped)"))
 } else {
-  message(glue("FAILED: {failed}/{total} checks failed"))
+  message(glue("FAILED: {failed}/{total} checks failed ({skipped} skipped)"))
 }
 message(strrep("=", 70))
 
