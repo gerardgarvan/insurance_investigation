@@ -195,10 +195,10 @@ See MILESTONES.md for full details on all shipped milestones.
 
 - [x] **Phase 132: Crash Fixes** - Unblock 6 scripts (`74`,`81`-`85`) that abort immediately on editor artifacts
  (completed 2026-07-25)
-- [x] **Phase 133: Critical Correctness Fixes** - Fix wrong published numbers (SCT filter, total_records, HL anchor date, same-week desync, age_at_episode) + the content-empty reference manual (completed 2026-07-25)
-- [x] **Phase 134: Ingest Integrity and Honest Tests** - Harden the DuckDB ingest promotion gate + fix 5 can't-fail validators (completed 2026-07-25)
-- [x] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer (completed 2026-07-25)
-- [x] **Phase 136: Confirm Loose Ends** - Locate `suppress_small`/`clean_multi_value`/`union_field`; reconcile `date_range_max` vs. the extract cutoff (completed 2026-07-25)
+- [x] **Phase 133: Critical Correctness Fixes** - Fix wrong published numbers (SCT filter, total_records, HL anchor date, same-week desync, age_at_episode) + the content-empty reference manual (completed 2026-07-25)
+- [x] **Phase 134: Ingest Integrity and Honest Tests** - Harden the DuckDB ingest promotion gate + fix 5 can't-fail validators (completed 2026-07-25)
+- [x] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer (completed 2026-07-25)
+- [x] **Phase 136: Confirm Loose Ends** - Locate `suppress_small`/`clean_multi_value`/`union_field`; reconcile `date_range_max` vs. the extract cutoff (completed 2026-07-25)
 
 ## Phase Details (v3.4)
 
@@ -303,6 +303,29 @@ See MILESTONES.md for full details on all shipped milestones.
   3. If criterion 2 finds real data being dropped, `R/01`'s date validation bound is corrected; if not, the finding documents why 2025-03-31 is intentional and no data is lost
 **Plans**: TBD
 
+### Phase 137: ZIP9 Temporal Assignment
+**Goal**: A shared utility `get_zip9_at_date()` exists that resolves any patient's ZIP9/ZIP5 at any query date using interval overlap with a most-recent-before fallback — ready for consumption by future SES-index phases without duplicated logic
+**Depends on**: Phase 136 (independent; addresses ZIP/address domain, not the code-review remediation chain)
+**Requirements**: (none mapped in REQUIREMENTS.md — new capability phase)
+
+**Design constraints:**
+- get_zip9_at_date(ids, dates) in R/utils/utils_address.R — pure-function module, no side effects, auto-loaded by R/00_config.R
+- Primary rule: ADDRESS_PERIOD_START <= date < ADDRESS_PERIOD_END; NA ADDRESS_PERIOD_END treated as open-ended (coerced to 9999-12-31)
+- Fallback: most-recent ADDRESS_PERIOD_START on or before date; no match → NA for ZIP9 and ZIP5
+- Returns 5-column tibble: ID, query_date, ZIP9, ZIP5, match_type ("interval" / "most_recent_before" / "none")
+- R/114 uses probe-first gate for both LDS_ADDRESS_HISTORY CSV and the existing zip_change_frequency.xlsx before doing any work
+- R/114 appends via wb_load() (never wb_workbook()) to preserve R/106's existing sheets
+- ZIP normalization helpers (normalize_zip9, normalize_zip5, normalize_zip5_raw) copied verbatim from R/106 — not duplicated from scratch
+
+**Success Criteria** (what must be TRUE):
+  1. R/utils/utils_address.R defines get_zip9_at_date(), normalize_zip9(), normalize_zip5(), normalize_zip5_raw() with no side effects
+  2. get_zip9_at_date() correctly classifies interval matches, most-recent-before fallbacks, and no-match rows; NA ADDRESS_PERIOD_END rows are included in interval matching
+  3. R/114_zip9_temporal_lookup.R validates the function with a sample call and appends "Address Timeline Diagnostics" sheet to output/zip_change_frequency.xlsx without overwriting R/106's existing sheets
+  4. R/88 Section 15ab passes all structural checks (artifact existence, function definitions, wb_load anti-pattern guard, R/39 registration, SCRIPT_INDEX entries)
+**Plans**: 2 plans
+- [ ] 137-01-PLAN.md — R/utils/utils_address.R: normalize_zip9/zip5/zip5_raw + get_zip9_at_date() temporal lookup (Wave 1)
+- [ ] 137-02-PLAN.md — R/114_zip9_temporal_lookup.R + R/39 registration + R/88 Section 15ab + R/SCRIPT_INDEX.md update (Wave 2, depends on 137-01)
+
 ## Progress (v3.4)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -312,3 +335,4 @@ See MILESTONES.md for full details on all shipped milestones.
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Complete    | 2026-07-25 |
 | 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
 | 136. Confirm Loose Ends | v3.4 | 2/2 | Complete    | 2026-07-25 |
+| 137. ZIP9 Temporal Assignment | standalone | 0/2 | Planning   |  |
