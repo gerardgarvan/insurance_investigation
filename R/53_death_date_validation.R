@@ -195,6 +195,53 @@ if (!file.exists(COHORT_RDS)) {
 
 
 # ==============================================================================
+# SECTION 4C: DEATH BEFORE BIRTH CHECK (PATTERN-G) ----
+# ==============================================================================
+# WHY: age_at_death is computed in Section 6 as difftime(DEATH_DATE, BIRTH_DATE).
+# If BIRTH_DATE > DEATH_DATE the result is negative — a data error that must be
+# flagged before the value enters any analysis output.
+
+message("\n--- Checking for death before birth ---")
+
+# demographics is loaded later in Section 5; read it here for the check only.
+# Use get_pcornet_table so we stay consistent with the rest of the script.
+demo_for_birth_check <- get_pcornet_table("DEMOGRAPHIC") %>%
+  select(ID = PATID, BIRTH_DATE) %>%
+  collect() %>%
+  mutate(BIRTH_DATE = parse_pcornet_date(BIRTH_DATE))
+
+death_birth_check <- valid_deaths %>%
+  left_join(demo_for_birth_check, by = "ID") %>%
+  mutate(
+    age_at_death_days = as.numeric(difftime(DEATH_DATE, BIRTH_DATE, units = "days")),
+    death_before_birth = !is.na(BIRTH_DATE) & !is.na(DEATH_DATE) & age_at_death_days < 0
+  )
+
+n_death_before_birth <- sum(death_birth_check$death_before_birth, na.rm = TRUE)
+message(glue("  Death-before-birth impossible records: {n_death_before_birth}"))
+
+if (n_death_before_birth > 0) {
+  impossible_birth <- death_birth_check %>%
+    filter(death_before_birth) %>%
+    mutate(
+      death_valid = FALSE,
+      validation_reason = glue(
+        "Death date ({DEATH_DATE}) before birth date ({BIRTH_DATE}); ",
+        "age_at_death = {round(age_at_death_days / 365.25, 1)} years"
+      )
+    ) %>%
+    select(ID, DEATH_DATE, DEATH_SOURCE, validation_reason, death_valid)
+
+  # Remove from valid_deaths pool
+  valid_deaths <- valid_deaths %>%
+    anti_join(impossible_birth, by = "ID")
+
+  message(glue("  Removed {n_death_before_birth} death-before-birth records from valid deaths pool"))
+  message(glue("  Valid deaths remaining: {nrow(valid_deaths)}"))
+}
+
+
+# ==============================================================================
 # SECTION 5: DETECT POST-DEATH CLINICAL ACTIVITY (per D-03) ----
 # ==============================================================================
 
@@ -508,6 +555,14 @@ flagged_detail <- bind_rows(
     ) %>%
     mutate(validation_reason = glue("{post_death_encounters} encounters, {post_death_diagnoses} diagnoses, {post_death_treatments} treatments after death"))
 )
+
+# Append death-before-birth records if any were found (SECTION 4C / PATTERN-G)
+if (exists("impossible_birth") && nrow(impossible_birth) > 0) {
+  flagged_detail <- bind_rows(
+    flagged_detail,
+    impossible_birth %>% mutate(flag_type = "Death before birth")
+  )
+}
 
 # Write with standard header styling
 wb$add_data(sheet = "Flagged Patients", x = flagged_detail, start_row = 1, start_col = 1)

@@ -266,8 +266,8 @@ enrollment_dates <- enrollment_primary %>%
   ) %>%
   group_by(ID) %>%
   summarise(
-    enr_start_date = min(ENR_START_DATE, na.rm = TRUE),
-    enr_end_date = max(ENR_END_DATE, na.rm = TRUE),
+    enr_start_date = min_or_na(ENR_START_DATE),
+    enr_end_date   = max_or_na(ENR_END_DATE),
     .groups = "drop"
   ) %>%
   mutate(
