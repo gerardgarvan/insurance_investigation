@@ -77,6 +77,17 @@ message("=== Phase 121: ZIP Change Frequency ===\n")
 ADDR_FILENAME <- "LDS_ADDRESS_HISTORY_Mailhot_V1.csv"
 OUTPUT_XLSX   <- file.path(CONFIG$output_dir, "zip_change_frequency.xlsx")
 
+# Study/data-collection period for LDS_ADDRESS_HISTORY dates used in
+# Section 9's gap-day computation. Narrower than
+# CONFIG$analysis$date_range_min/max (1901-01-01 to 2025-03-31), which is
+# a loose, project-wide sentinel-catching bound. This is the actual
+# LDS_ADDRESS_HISTORY study window: 2012-01-01 matches the project's
+# HISTORICAL_CUTOFF convention (R/26_treatment_episodes.R); 2025-03-31
+# matches CONFIG$analysis$date_range_max, the documented end of the data
+# collection period.
+ZIP_STUDY_PERIOD_MIN <- as.Date("2012-01-01")
+ZIP_STUDY_PERIOD_MAX <- as.Date("2025-03-31")
+
 addr_path <- file.path(CONFIG$data_dir, ADDR_FILENAME)
 message(glue("  CSV probe: {addr_path}"))
 message(glue("  File exists? {file.exists(addr_path)}"))
@@ -90,7 +101,17 @@ if (!file.exists(addr_path)) {
     "  Phase 121 investigation requires HiPerGator with this file present.\n",
     "  If the file is named differently, update ADDR_FILENAME at the top of this script.\n"
   ))
-  quit(status = 0)   # graceful exit, NOT stop() (D-02 / Pitfall precedent)
+  # Graceful exit, NOT stop() (D-02 / Pitfall precedent) -- but quit() only
+  # when run standalone via `Rscript R/106...`. When source()-d by the
+  # orchestrator (R/39) into a local env, quit() would kill the whole R
+  # session and silently abort every later investigation script -- raise a
+  # condition instead so the orchestrator's tryCatch logs this one script as
+  # skipped and continues.
+  if (identical(environment(), globalenv())) {
+    quit(status = 0)
+  } else {
+    stop("[R/106] LDS_ADDRESS_HISTORY not found -- skipped (not a real failure; see message above)", call. = FALSE)
+  }
 }
 
 
@@ -144,11 +165,12 @@ message(glue("  ADDRESS_PREFERRED == Y:  {n_preferred_Y} / {n_rows} ({round(100*
 # SECTION 4: HELPER FUNCTIONS ----
 # ==============================================================================
 
-# Normalize ZIP9: strip hyphen BEFORE pad (Pitfall 1), pad to 9 digits,
-# then validate with ^[0-9]{9}$ regex -- returns NA for non-numeric / too short.
+# Normalize ZIP9: strip hyphen, then accept ONLY 8- or 9-digit numeric strings
+# (8 = a genuine ZIP9 that dropped its single leading zero). Left-pad 8 -> 9.
+# Anything else (bare ZIP5, too-short, non-numeric) -> NA rather than being mangled.
 normalize_zip9 <- function(zip) {
-  z <- str_remove_all(str_trim(zip), "-")    # strip hyphen before pad
-  z <- str_pad(z, 9, pad = "0")
+  z <- str_remove_all(str_trim(zip), "-")
+  z <- if_else(str_detect(z, "^[0-9]{8,9}$"), str_pad(z, 9, pad = "0"), NA_character_)
   if_else(str_detect(z, "^[0-9]{9}$"), z, NA_character_)
 }
 
@@ -223,7 +245,6 @@ patient_zip9 <- addr %>%
   group_by(ID) %>%
   summarise(
     n_zip9_distinct   = n_distinct(zip9_norm),
-    n_address_records = n(),
     .groups = "drop"
   )
 
@@ -249,9 +270,13 @@ patient_metrics <- all_ids %>%
   mutate(
     n_zip9_distinct    = replace_na(n_zip9_distinct, 0L),
     n_zip5_distinct    = replace_na(n_zip5_distinct, 0L),
-    n_address_records  = replace_na(n_address_records, 0L),
     zip9_ever_changed  = n_zip9_distinct > 1,
     zip5_ever_changed  = n_zip5_distinct > 1,
+    # Assumes n_zip9_distinct and n_zip5_distinct are computed over the same row
+    # set. Harmless when ZIP5 is derived entirely from ZIP9, but when an explicit
+    # ADDRESS_ZIP5 column is present, zip5_norm can be valid on rows where
+    # zip9_norm is NA -- the two counts then come from different row sets and
+    # this flag can misclassify.
     zip9_change_only   = n_zip9_distinct > 1 & n_zip5_distinct == 1
   )
 
@@ -263,7 +288,7 @@ n_patients_total <- nrow(patient_metrics)
 # ==============================================================================
 # Rows: distinct-count bucket (1=never changed, 2, 3, 4+)
 # Columns: n_patients_zip9 + pct_zip9 + n_patients_zip5 + pct_zip5 + Total row
-# HIPAA-safe by construction: shows patient-count distributions, not individual ZIPs
+# Patient-count distribution. Small cells ARE possible here -- counts are HIPAA-suppressed below.
 
 zip9_dist <- patient_metrics %>%
   filter(n_zip9_distinct > 0) %>%
@@ -300,15 +325,27 @@ sheet1 <- tibble(bucket = bucket_order) %>%
          `N Patients (ZIP5)`  = n_patients_zip5,
          `Pct (ZIP5)`         = pct_zip5)
 
-# Add total row
+# Add total row (computed BEFORE suppression converts N columns to strings)
 total_row <- tibble(
   `Distinct ZIP Count` = "Total",
   `N Patients (ZIP9)`  = sum(sheet1$`N Patients (ZIP9)`),
-  `Pct (ZIP9)`         = 100.0,
+  `Pct (ZIP9)`         = round(sum(sheet1$`Pct (ZIP9)`), 1),
   `N Patients (ZIP5)`  = sum(sheet1$`N Patients (ZIP5)`),
-  `Pct (ZIP5)`         = 100.0
+  `Pct (ZIP5)`         = round(sum(sheet1$`Pct (ZIP5)`), 1)
 )
 sheet1 <- bind_rows(sheet1, total_row)
+
+# HIPAA small-cell suppression on displayed counts (Total row stays exact --
+# it's the full published denominator, not a suppressible cell).
+sheet1 <- sheet1 %>%
+  mutate(
+    `N Patients (ZIP9)` = if_else(`Distinct ZIP Count` == "Total",
+                                  as.character(`N Patients (ZIP9)`),
+                                  suppress_small(`N Patients (ZIP9)`)),
+    `N Patients (ZIP5)` = if_else(`Distinct ZIP Count` == "Total",
+                                  as.character(`N Patients (ZIP5)`),
+                                  suppress_small(`N Patients (ZIP5)`))
+  )
 
 
 # ==============================================================================
@@ -346,13 +383,14 @@ headline_stats <- tibble(
     "p25 distinct ZIP5",
     "p75 distinct ZIP5"
   ),
-  Value = as.character(c(
-    n_patients_total, n_zip9_changed, pct_ever_changed_zip9,
-    n_zip5_changed, pct_ever_changed_zip5,
-    n_zip9_change_only, pct_zip9_change_only,
-    med_zip9, p25_zip9, p75_zip9,
-    med_zip5, p25_zip5, p75_zip5
-  ))
+  Value = c(
+    as.character(n_patients_total),
+    suppress_small(n_zip9_changed),      as.character(pct_ever_changed_zip9),
+    suppress_small(n_zip5_changed),      as.character(pct_ever_changed_zip5),
+    suppress_small(n_zip9_change_only),  as.character(pct_zip9_change_only),
+    as.character(med_zip9), as.character(p25_zip9), as.character(p75_zip9),
+    as.character(med_zip5), as.character(p25_zip5), as.character(p75_zip5)
+  )
 )
 
 # Change-count histogram (n_changes = n_distinct - 1)
@@ -407,32 +445,55 @@ message("--- Computing time between ZIP changes ---")
 # Parse ADDRESS_PERIOD_START (uses parse_pcornet_date from utils_dates)
 # Guard: do NOT filter on ADDRESS_PERIOD_END (open-ended addresses have NA end -- Pitfall 2)
 if ("ADDRESS_PERIOD_START" %in% names(addr)) {
-  addr_with_dates <- addr %>%
-    mutate(period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START)) %>%
-    filter(!is.na(period_start_dt), !is.na(zip9_norm))
+  addr_dates_parsed <- addr %>%
+    mutate(period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START))
 
-  # Distinct sorted start dates per patient (Pitfall 7: de-duplicate before lead())
-  distinct_starts <- addr_with_dates %>%
-    group_by(ID) %>%
-    summarise(
-      distinct_dates = list(sort(unique(period_start_dt))),
-      .groups = "drop"
+  # Exclude ADDRESS_PERIOD_START values outside the LDS_ADDRESS_HISTORY
+  # study period (2012-01-01 to 2025-03-31) BEFORE computing gap-days --
+  # out-of-range/garbage dates (epoch sentinels, post-cutoff dates) would
+  # otherwise silently pollute the median/p25/p75 gap stats and the
+  # Sheet 5 recommendation text derived from them.
+  n_period_start_out_of_range <- sum(
+    !is.na(addr_dates_parsed$period_start_dt) &
+      (addr_dates_parsed$period_start_dt < ZIP_STUDY_PERIOD_MIN |
+         addr_dates_parsed$period_start_dt > ZIP_STUDY_PERIOD_MAX)
+  )
+  message(glue(
+    "  ADDRESS_PERIOD_START rows dropped for being outside study period ",
+    "({ZIP_STUDY_PERIOD_MIN} to {ZIP_STUDY_PERIOD_MAX}): {n_period_start_out_of_range}"
+  ))
+
+  addr_with_dates <- addr_dates_parsed %>%
+    filter(
+      !is.na(period_start_dt),
+      period_start_dt >= ZIP_STUDY_PERIOD_MIN,
+      period_start_dt <= ZIP_STUDY_PERIOD_MAX,
+      !is.na(zip9_norm)
     )
 
-  # Compute gap-days via lead() within each patient's distinct date sequence
-  gap_rows <- distinct_starts %>%
-    filter(lengths(distinct_dates) > 1) %>%
-    rowwise() %>%
-    mutate(
-      gaps_days = list(as.numeric(diff(distinct_dates), units = "days"))
-    ) %>%
+  # Time BETWEEN ZIP9 CHANGES: order each patient's records by date, collapse
+  # consecutive same-ZIP periods to their first date, then diff those change points.
+  gap_rows <- addr_with_dates %>%
+    select(ID, period_start_dt, zip9_norm) %>%
+    distinct() %>%
+    arrange(ID, period_start_dt) %>%
+    group_by(ID) %>%
+    mutate(is_change = is.na(lag(zip9_norm)) | zip9_norm != lag(zip9_norm)) %>%
+    filter(is_change) %>%                                   # keep first date of each ZIP run
+    mutate(gaps_days = as.numeric(difftime(period_start_dt,
+                                           lag(period_start_dt), units = "days"))) %>%
     ungroup() %>%
-    select(ID, gaps_days) %>%
-    tidyr::unnest(gaps_days)
+    filter(!is.na(gaps_days)) %>%
+    select(ID, gaps_days)
 
-  n_patients_1date <- sum(lengths(distinct_starts$distinct_dates) <= 1)
-  message(glue("  Patients with only 1 distinct ADDRESS_PERIOD_START (gap = NA): {n_patients_1date}"))
-  message(glue("  Total gap observations: {nrow(gap_rows)}"))
+  n_patients_1date <- addr_with_dates %>%
+    distinct(ID, period_start_dt) %>%
+    count(ID) %>%
+    summarise(n = sum(n <= 1)) %>%
+    pull(n)
+
+  message(glue("  Patients with only 1 distinct ADDRESS_PERIOD_START (no gap): {n_patients_1date}"))
+  message(glue("  Total ZIP-change gap observations: {nrow(gap_rows)}"))
 
   if (nrow(gap_rows) > 0) {
     gap_summary <- tibble(
@@ -538,7 +599,7 @@ if (n_patients_evaluated > 0 && has_period_start) {
     group_by(ID, zip9_norm) %>%
     summarise(
       freq          = n(),
-      latest_date   = max(period_start_dt, na.rm = TRUE),
+      latest_date   = suppressWarnings(max(period_start_dt, na.rm = TRUE)),
       .groups = "drop"
     ) %>%
     group_by(ID) %>%
@@ -686,7 +747,8 @@ DARK_TEXT <- wb_color("FF1F2937")
 #' @param title_text Character. Title string written to A1.
 #' @param subtitle_text Character. Subtitle / grain description written to A2.
 #' @param data_tbl Data frame. Table to write starting at A4.
-add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl) {
+add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl,
+                              extra_tbl = NULL, extra_label = NULL) {
   wb$add_worksheet(sheet_name)
   n_cols           <- ncol(data_tbl)
   last_col_letter  <- openxlsx2::int2col(n_cols)
@@ -708,8 +770,31 @@ add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl
   wb$add_font(sheet = sheet_name, dims = header_range,
               name = "Calibri", size = 11, bold = TRUE, color = WHITE)
 
+  # Optional second table, written a few rows below the first.
+  if (!is.null(extra_tbl) && nrow(extra_tbl) > 0) {
+    gap_rows_offset <- 4 + nrow(data_tbl) + 2      # blank row + label row
+    label_row       <- gap_rows_offset
+    header_row      <- gap_rows_offset + 1
+
+    if (!is.null(extra_label)) {
+      wb$add_data(sheet = sheet_name, x = extra_label, dims = paste0("A", label_row))
+      wb$add_font(sheet = sheet_name, dims = paste0("A", label_row),
+                  name = "Calibri", size = 11, bold = TRUE, color = DARK_TEXT)
+    }
+
+    wb$add_data(sheet = sheet_name, x = extra_tbl,
+                dims = paste0("A", header_row), col_names = TRUE)
+
+    extra_last_col <- openxlsx2::int2col(ncol(extra_tbl))
+    extra_hdr_rng  <- paste0("A", header_row, ":", extra_last_col, header_row)
+    wb$add_fill(sheet = sheet_name, dims = extra_hdr_rng, color = DARK_GRAY)
+    wb$add_font(sheet = sheet_name, dims = extra_hdr_rng,
+                name = "Calibri", size = 11, bold = TRUE, color = WHITE)
+  }
+
   wb$freeze_pane(sheet = sheet_name, firstActiveRow = 5)
-  wb$set_col_widths(sheet = sheet_name, cols = 1:n_cols, widths = "auto")
+  wb$set_col_widths(sheet = sheet_name, cols = 1:max(n_cols, ncol(extra_tbl %||% data_tbl)),
+                    widths = "auto")
 }
 
 message("--- Writing zip_change_frequency.xlsx ---")
@@ -719,22 +804,26 @@ wb <- wb_workbook()
 add_styled_sheet(
   wb, "ZIP Change Distribution",
   title_text    = "ZIP Change Distribution -- Patient-Level Distinct ZIP Counts",
-  subtitle_text = "Grain: unique patient (ID). Rows = n_distinct_zip bucket. ZIP9 and ZIP5 shown side-by-side (D-05). Counts are patient counts, not individual ZIP codes (HIPAA-safe).",
+  subtitle_text = "Grain: unique patient (ID). Rows = n_distinct_zip bucket. ZIP9 and ZIP5 shown side-by-side (D-05). Counts are patient counts, not individual ZIP codes (HIPAA-safe). Percentages are of patients with >=1 valid ZIP of that type.",
   data_tbl      = sheet1
 )
 
 add_styled_sheet(
   wb, "Change Rates & Histogram",
   title_text    = "Change Rates & Histogram -- ZIP9, ZIP5, and ZIP9-Change-Only",
-  subtitle_text = glue("Headline stats + change-count histogram. ZIP9-change-only = ZIP9 changed but ZIP5 did not ({pct_zip9_change_only}%). HIPAA: cells <=10 replaced with '<11'."),
-  data_tbl      = sheet2_stats
+  subtitle_text = glue("Headline stats + change-count histogram. ZIP9-change-only = ZIP9 changed but ZIP5 did not ({pct_zip9_change_only}%). HIPAA: cells <=10 replaced with '<11'. Percentages are of all {n_patients_total} patients in the table (incl. those with no valid ZIP)."),
+  data_tbl      = sheet2_stats,
+  extra_tbl     = sheet2_hist,
+  extra_label   = "Change-count histogram (patients, HIPAA suppressed if <=10)"
 )
 
 add_styled_sheet(
   wb, "Time Between Changes",
   title_text    = "Time Between ZIP Changes -- Gap-Day Distribution",
-  subtitle_text = "Derived from ADDRESS_PERIOD_START. Distinct sorted dates per patient; lead() gap in days. Patients with 1 address date have no gap. HIPAA suppression applied.",
-  data_tbl      = sheet3_summary
+  subtitle_text = "Derived from ADDRESS_PERIOD_START, measured between actual ZIP9 changes (consecutive same-ZIP periods collapsed). HIPAA suppression applied.",
+  data_tbl      = sheet3_summary,
+  extra_tbl     = sheet3_hist,
+  extra_label   = "Gap-duration histogram (gaps, HIPAA suppressed if <=10)"
 )
 
 add_styled_sheet(

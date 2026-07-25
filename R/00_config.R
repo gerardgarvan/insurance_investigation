@@ -368,6 +368,57 @@ ICD_CODES <- list(
   hl_histology = c(
     "9650", "9651", "9652", "9653", "9654", "9655", "9659",
     "9661", "9662", "9663", "9664", "9665", "9667"
+  ),
+
+  # ============================================================================
+  # *** UNVERIFIED -- REQUIRES CLINICAL/REGISTRY REVIEW BEFORE AUTHORITATIVE USE ***
+  # ============================================================================
+  # ICD-O-3 Histology codes for Non-Hodgkin Lymphoma (NHL), added quick-260716.
+  # Used for TUMOR_REGISTRY table matching (TR1: HISTOLOGICAL_TYPE, TR2/TR3: MORPH),
+  # mirroring hl_histology's structure/format exactly (4-digit codes, no "/3"
+  # behavior-suffix, matched via substr(x, 1, 4)).
+  #
+  # THIS LIST WAS ASSEMBLED FROM GENERAL SEER/WHO ICD-O-3 HEMATOPOIETIC AND
+  # LYMPHOID NEOPLASM DATABASE KNOWLEDGE. IT HAS NOT BEEN CROSS-CHECKED AGAINST
+  # THIS PROJECT'S ACTUAL TUMOR_REGISTRY EXTRACT, NOR REVIEWED BY A CLINICAL OR
+  # TUMOR-REGISTRY SME. DO NOT USE COUNTS DERIVED FROM THIS LIST IN ANY
+  # AUTHORITATIVE REPORT UNTIL A REGISTRY REVIEWER HAS VALIDATED IT.
+  #
+  # Reference: SEER ICD-O-3 Hematopoietic and Lymphoid Neoplasm code lists
+  #
+  # 9590-9597: Malignant lymphoma, NOS / composite / primary cutaneous follicle center
+  # 9670-9699: Mature B-cell lymphomas (SLL, lymphoplasmacytic, mantle cell,
+  #   primary effusion, mediastinal large B-cell, DLBCL, immunoblastic, Burkitt,
+  #   T-cell/histiocyte-rich large B-cell, splenic marginal zone, follicular
+  #   grades 1-3, marginal zone NOS/MALT)
+  # 9700-9719: Cutaneous and mature T-cell/NK-cell lymphomas (mycosis fungoides,
+  #   Sezary syndrome, T-cell NOS, angioimmunoblastic, subcutaneous
+  #   panniculitis-like, cutaneous B-cell NOS, anaplastic large cell, cutaneous
+  #   CD30+ lymphoproliferative disorder, hepatosplenic, intestinal
+  #   (enteropathy-associated), NK/T-cell nasal type)
+  # 9725: Blastic NK-cell lymphoma / plasmacytoid dendritic cell neoplasm
+  # 9727-9729: Precursor lymphoblastic lymphoma (NOS, B-cell, T-cell)
+  #
+  # Deliberately EXCLUDED (not NHL per SEER classification):
+  #   9650-9667 (Hodgkin lymphoma -- see hl_histology above)
+  #   9724 (aggressive NK-cell LEUKEMIA, not lymphoma)
+  #   9731-9734 (plasma cell neoplasms / myeloma / plasmacytoma)
+  #   9760-9765 (immunoproliferative diseases, e.g. Waldenstrom-adjacent
+  #     heavy-chain disease -- SEER classifies these separately from NHL)
+  #   9800+ (leukemias)
+  nhl_histology = c(
+    # 9590-9597: Malignant lymphoma, NOS / composite / primary cutaneous follicle center
+    "9590", "9591", "9596", "9597",
+    # 9670-9699: Mature B-cell lymphomas
+    "9670", "9671", "9673", "9678", "9679", "9680", "9684", "9687", "9688",
+    "9689", "9690", "9691", "9695", "9698", "9699",
+    # 9700-9719: Cutaneous and mature T-cell/NK-cell lymphomas
+    "9700", "9701", "9702", "9705", "9708", "9709", "9714", "9716", "9717",
+    "9718", "9719",
+    # 9725: Blastic NK-cell lymphoma / plasmacytoid dendritic cell neoplasm
+    "9725",
+    # 9727-9729: Precursor lymphoblastic lymphoma (NOS, B-cell, T-cell)
+    "9727", "9728", "9729"
   )
 )
 
@@ -2505,9 +2556,16 @@ MEDICATION_LOOKUP <- local({
   sheets <- c("Chemotherapy", "Radiation", "SCT", "Immunotherapy", "Supportive Care")
   all_meds <- character(0)
 
+  # Phase 131 addendum: Supportive Care's col G ("Normalized Meaning") is written
+  # by Phase 120's R/105 with real ingredient names (reusing that output here is
+  # preferred over re-deriving Supportive Care names via the new Phase 131
+  # fallback normalizer, per CONTEXT.md's post-research decision). Degrades
+  # gracefully to column 3 when col G is absent (confirmed the current case in
+  # this repo's copy of the reference Excel -- R/105 has not yet materialized it).
   for (sheet_name in sheets) {
     sheet_df <- openxlsx2::wb_to_df(ref_wb, sheet = sheet_name, start_row = 2)
-    sheet_map <- setNames(as.character(sheet_df[[3]]), as.character(sheet_df[[1]]))
+    med_col <- if (sheet_name == "Supportive Care" && ncol(sheet_df) >= 7) 7L else 3L
+    sheet_map <- setNames(as.character(sheet_df[[med_col]]), as.character(sheet_df[[1]]))
     sheet_map <- sheet_map[!is.na(names(sheet_map)) & !is.na(sheet_map)]
     all_meds <- c(all_meds, sheet_map)
   }
@@ -2623,6 +2681,119 @@ canonicalize_drug_name <- function(x) {
 # emits the same canonical form as the R/27 side.
 MEDICATION_LOOKUP <- setNames(canonicalize_drug_name(unname(MEDICATION_LOOKUP)), names(MEDICATION_LOOKUP))
 message(glue("  DRUG_NAME_ALIASES: {length(DRUG_NAME_ALIASES)} canonical aliases applied to MEDICATION_LOOKUP"))
+
+# ==============================================================================
+# fallback_normalize_medication() -- Phase 131 heuristic drug-name normalizer
+# ==============================================================================
+# WHY: MEDICATION_LOOKUP (above) is the primary source of drug names, but new
+# MED_ADMIN NDC-resolved codes, plus any SCT/Immunotherapy/Supportive Care code
+# without a curated entry, have no lookup hit. This function derives a
+# normalized drug name heuristically. It operates on R/50's already-coalesced
+# `description` field (NOT raw R/00_config.R inline comments, which can be
+# mid-word truncated). This is the Phase 131 fallback, consulted only AFTER
+# a MEDICATION_LOOKUP lookup fails.
+#
+# Three-tier priority (fully vectorized over `description`/`code_type` --
+# loops only over small fixed formulation/salt word lists, never over rows):
+#   1. Multi-ingredient " / "-delimited compound -> passthrough unchanged
+#   2. HCPCS "Injection, X, dose" -> extract X
+#   3. RxNorm-STR-style description -> strip salts/doses/formulations down to
+#      the bare generic ingredient name (adapted from R/105's
+#      rule_based_ingredient(), which performs the same strip against the
+#      Supportive Care reference Excel's Meaning column)
+#
+# Never-blank guarantee: falls back to the lowercased first word of the
+# original description if branch 3 strips everything away (mirrors R/105's
+# never-blank rule). Returns NA_character_ only when the input description
+# itself is NA/blank.
+# ==============================================================================
+fallback_normalize_medication <- function(description, code_type) {
+  stopifnot(length(description) == length(code_type))
+
+  out <- rep(NA_character_, length(description))
+  is_blank <- is.na(description) | !nzchar(stringr::str_trim(description))
+
+  # ---- Branch 1: multi-ingredient " / "-delimited compound passthrough ----
+  is_multi <- !is_blank & stringr::str_detect(description, stringr::fixed(" / "))
+  out[is_multi] <- stringr::str_squish(description[is_multi])
+
+  # ---- Branch 2: HCPCS "Injection, X, dose" pattern ----
+  is_hcpcs <- !is_blank & !is_multi &
+    !is.na(code_type) & code_type == "CPT/HCPCS" &
+    stringr::str_detect(description, "^Injection,\\s*([^,]+),")
+  if (any(is_hcpcs)) {
+    extracted <- stringr::str_match(description[is_hcpcs], "^Injection,\\s*([^,]+),")[, 2]
+    extracted <- stringr::str_trim(extracted)
+    extracted <- canonicalize_drug_name(extracted)
+    out[is_hcpcs] <- tolower(stringr::str_trim(extracted))
+  }
+
+  # ---- Branch 3: RxNorm-STR-style strip (default; adapted from R/105's
+  # rule_based_ingredient()) ----
+  is_default <- !is_blank & !is_multi & !is_hcpcs
+  if (any(is_default)) {
+    s <- description[is_default]
+
+    # (a) strip pack wrappers: leading {...} and inner "N (...)"
+    s <- stringr::str_remove(s, "^\\{.*\\}\\s*")
+    s <- stringr::str_remove_all(s, "\\d+\\s*\\([^)]*\\)")
+
+    # (b) strip leading quantity prefixes ("1 ML", "168 HR", "0.6 ML")
+    s <- stringr::str_remove(s, "^\\d+(\\.\\d+)?\\s+(ML|HR)\\s+")
+
+    # (c) strip brand brackets [Decadron], [Neulasta], ...
+    s <- stringr::str_remove_all(s, "\\s*\\[[^\\]]*\\]")
+
+    # (d) strip dose tokens: (Base Equivalent), units, numbers, percent
+    s <- stringr::str_remove_all(s, "\\(Base Equivalent\\)")
+    s <- stringr::str_remove_all(
+      s,
+      stringr::regex("\\b(MG/ML|MCG/ML|UNT/ML|UNT/MG|MG/MG|MG/HR|MG|MCG|ML)\\b", ignore_case = TRUE)
+    )
+    s <- stringr::str_remove_all(s, "\\d+(\\.\\d+)?")
+    s <- stringr::str_remove_all(s, "%")
+
+    # (e) strip formulation words (same list as R/105's rule_based_ingredient())
+    formulations <- c(
+      "Oral Tablet", "Disintegrating", "Oral Capsule", "Oral Solution",
+      "Oral Film", "Injectable Solution", "Injection Solution", "Injection",
+      "Inj", "Prefilled Syringe", "Ophthalmic Solution", "Ophthalmic Suspension",
+      "Ophthalmic Ointment", "Ophth Oint", "Otic Suspension", "Transdermal System",
+      "Pack", "Soln", "IV"
+    )
+    for (f in formulations) {
+      s <- stringr::str_remove_all(s, stringr::regex(paste0("\\b", f, "\\b"), ignore_case = TRUE))
+    }
+
+    # (f) strip salt words (same list as R/105's rule_based_ingredient())
+    salts <- c("sodium phosphate", "phosphate", "hydrochloride", "HCl")
+    for (sw in salts) {
+      s <- stringr::str_remove_all(s, stringr::regex(paste0("\\b", sw, "\\b"), ignore_case = TRUE))
+    }
+
+    # collapse whitespace + tidy stray separators
+    s <- stringr::str_squish(s)
+    s <- stringr::str_remove(s, "^[/,\\-\\s]+")
+    s <- stringr::str_remove(s, "[/,\\-\\s]+$")
+    s <- stringr::str_trim(s)
+
+    # canonicalize brand->generic, then lowercase to match RxNorm IN generic style
+    s <- canonicalize_drug_name(s)
+    s <- tolower(stringr::str_trim(s))
+
+    # never blank: fall back to the lowercased first word of the original description
+    blank_after_strip <- !nzchar(s)
+    if (any(blank_after_strip)) {
+      s[blank_after_strip] <- tolower(stringr::str_trim(
+        stringr::word(description[is_default][blank_after_strip], 1)
+      ))
+    }
+
+    out[is_default] <- s
+  }
+
+  out
+}
 
 # ==============================================================================
 # SECTION 6: ANALYSIS PARAMETERS ----

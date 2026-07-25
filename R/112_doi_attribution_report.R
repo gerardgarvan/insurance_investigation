@@ -391,8 +391,10 @@ df_patient_prevalence <- doi_drug_links %>%
   summarise(
     n_patients                      = n_distinct(ID),          # RAW
     n_encounters                    = n_distinct(ENCOUNTERID), # RAW
-    n_likely_non_lymphoma_directed  = sum(likely_non_lymphoma_directed %in% TRUE),
-    n_ambiguous_hl_active           = sum(is.na(likely_non_lymphoma_directed)),
+    # Patient-grain to match n_patients: count DISTINCT patients with >=1 pair in
+    # each flag state, not raw pair rows (a patient with 3 TRUE pairs counts once).
+    n_patients_likely_non_lymphoma  = n_distinct(ID[likely_non_lymphoma_directed %in% TRUE]),
+    n_patients_ambiguous_hl_active  = n_distinct(ID[is.na(likely_non_lymphoma_directed)]),
     .groups = "drop"
   ) %>%
   arrange(desc(in_hl_cohort), doi_category, drug_class)
@@ -451,20 +453,25 @@ message(glue("  df_drug_doi_summary: {nrow(df_drug_doi_summary)} rows"))
 # Attribution method distribution (from doi_drug_links).
 attribution_tabyl <- janitor::tabyl(doi_drug_links, attribution_method)
 
-n_matched_encounter_id    <- attribution_tabyl$n[attribution_tabyl$attribution_method == "encounter_id"]
-n_matched_temporal_window <- attribution_tabyl$n[attribution_tabyl$attribution_method == "temporal_window"]
-n_no_cooccurrence         <- attribution_tabyl$n[attribution_tabyl$attribution_method == "none"]
+# tabyl omits levels with zero rows, so subsetting $n on an absent level yields
+# integer(0). Feeding integer(0) into the tribble below errors ("size 0"). This
+# helper coerces any zero-length pick to 0L — applied to BOTH the attribution-
+# method counts and the three-state flag counts so a run missing any single
+# level (e.g. all matches via encounter_id, so no "temporal_window" row) is safe.
+tabyl_count <- function(tab, mask) {
+  v <- tab$n[mask]
+  if (length(v) == 0L) 0L else as.integer(v)
+}
+
+n_matched_encounter_id    <- tabyl_count(attribution_tabyl, attribution_tabyl$attribution_method == "encounter_id")
+n_matched_temporal_window <- tabyl_count(attribution_tabyl, attribution_tabyl$attribution_method == "temporal_window")
+n_no_cooccurrence         <- tabyl_count(attribution_tabyl, attribution_tabyl$attribution_method == "none")
 
 # Three-state flag counts.
 flag_tabyl <- janitor::tabyl(doi_drug_links, likely_non_lymphoma_directed, show_na = TRUE)
-n_true  <- flag_tabyl$n[!is.na(flag_tabyl$likely_non_lymphoma_directed) & flag_tabyl$likely_non_lymphoma_directed == TRUE]
-n_false <- flag_tabyl$n[!is.na(flag_tabyl$likely_non_lymphoma_directed) & flag_tabyl$likely_non_lymphoma_directed == FALSE]
-n_na    <- flag_tabyl$n[is.na(flag_tabyl$likely_non_lymphoma_directed)]
-
-# Guard: tabyl may return integer(0) for absent levels — coerce to 0L.
-n_true  <- if (length(n_true)  == 0L) 0L else as.integer(n_true)
-n_false <- if (length(n_false) == 0L) 0L else as.integer(n_false)
-n_na    <- if (length(n_na)    == 0L) 0L else as.integer(n_na)
+n_true  <- tabyl_count(flag_tabyl, !is.na(flag_tabyl$likely_non_lymphoma_directed) & flag_tabyl$likely_non_lymphoma_directed == TRUE)
+n_false <- tabyl_count(flag_tabyl, !is.na(flag_tabyl$likely_non_lymphoma_directed) & flag_tabyl$likely_non_lymphoma_directed == FALSE)
+n_na    <- tabyl_count(flag_tabyl, is.na(flag_tabyl$likely_non_lymphoma_directed))
 
 # Sensitivity recompute: count temporal-window-style pairs at ±win days.
 # Uses drug_admins x doi_enc (raw input tables, not the linked frame) so

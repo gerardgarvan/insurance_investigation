@@ -167,10 +167,19 @@ load_ndc_crosswalk <- function() {
 #'   field available in this extract). When FALSE (default), the return contract
 #'   is unchanged — tibble(ID, treatment_date, triggering_code) — so all
 #'   existing callers in R/10, R/11, R/25, R/76, R/20 are unaffected.
+#' @param return_source Logical (default FALSE). When TRUE, adds a `source`
+#'   column tagging which sub-path produced each row: "PRESCRIBING" for
+#'   PRESCRIBING-table rows, "DISPENSING (NDC)" for DISPENSING-table rows,
+#'   "MED_ADMIN (RX)" for MED_ADMIN rows matched via MEDADMIN_TYPE == "RX",
+#'   and "MED_ADMIN (NDC)" for MED_ADMIN rows matched via MEDADMIN_TYPE == "ND"
+#'   (NDC-crosswalk-resolved). When FALSE (default), the return contract is
+#'   unchanged — the `source` column is never added — so all existing callers
+#'   in R/10, R/11, R/25, R/26, R/76, R/109 are unaffected.
 #' @return Tibble(ID, treatment_date, triggering_code) with distinct rows, or NULL.
 #'   When return_raw_name = TRUE: tibble(ID, treatment_date, triggering_code, raw_med_name).
+#'   When return_source = TRUE: adds a `source` column (see @param above).
 get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
-                           return_raw_name = FALSE) {
+                           return_raw_name = FALSE, return_source = FALSE) {
   tbl <- safe_table(table_name)
   if (is.null(tbl)) {
     message(glue::glue("  [{table_name}] table not found — skipping chemo detection"))
@@ -190,6 +199,7 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
       dplyr::collect() %>%
       dplyr::distinct(ID, treatment_date, triggering_code)
     if (return_raw_name) result <- dplyr::mutate(result, raw_med_name = NA_character_)
+    if (return_source) result <- dplyr::mutate(result, source = "PRESCRIBING")
     result
 
   } else if (table_name == "DISPENSING") {
@@ -211,6 +221,7 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
       dplyr::select(ID, treatment_date, triggering_code = rxcui) %>%
       dplyr::distinct(ID, treatment_date, triggering_code)
     if (return_raw_name) result <- dplyr::mutate(result, raw_med_name = NA_character_)
+    if (return_source) result <- dplyr::mutate(result, source = "DISPENSING (NDC)")
     result
 
   } else if (table_name == "MED_ADMIN") {
@@ -243,6 +254,7 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
     rx_hits <- rx_hits %>%
       dplyr::group_by(ID, treatment_date, triggering_code) %>%
       dplyr::summarise(raw_med_name = dplyr::first(raw_med_name), .groups = "drop")
+    if (return_source) rx_hits <- dplyr::mutate(rx_hits, source = "MED_ADMIN (RX)")
 
     # ND-typed rows: MEDADMIN_CODE holds NDC — needs crosswalk
     nd_hits <- NULL
@@ -266,11 +278,16 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
         dplyr::select(ID, treatment_date, triggering_code = rxcui, raw_med_name) %>%
         dplyr::group_by(ID, treatment_date, triggering_code) %>%
         dplyr::summarise(raw_med_name = dplyr::first(raw_med_name), .groups = "drop")
+      if (return_source) nd_hits <- dplyr::mutate(nd_hits, source = "MED_ADMIN (NDC)")
     }
     result <- dplyr::bind_rows(rx_hits, nd_hits)
-    # When return_raw_name = FALSE, drop the raw_med_name column to preserve
-    # the original 3-column contract for all existing callers
-    if (!return_raw_name) result <- dplyr::select(result, ID, treatment_date, triggering_code)
+    # Keep only the columns the caller asked for, preserving the original
+    # 3-column contract when both return_raw_name and return_source are FALSE
+    # (the default) so all existing callers are byte-identical to before.
+    keep_cols <- c("ID", "treatment_date", "triggering_code")
+    if (return_raw_name) keep_cols <- c(keep_cols, "raw_med_name")
+    if (return_source) keep_cols <- c(keep_cols, "source")
+    result <- dplyr::select(result, dplyr::all_of(keep_cols))
     result
 
   } else {

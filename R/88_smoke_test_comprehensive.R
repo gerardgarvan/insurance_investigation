@@ -2566,7 +2566,17 @@ if (r106_exists) {
   check("R/106 applies HIPAA small-cell suppression (<=10)",
         grepl("<11|<= 10|<=10", r106_text))
 
-  # Check 14: RUNTIME (HiPerGator-only, gated) -- output xlsx present with sheets.
+  # Check 14: defines ZIP_STUDY_PERIOD_MIN / ZIP_STUDY_PERIOD_MAX date-bound constants
+  check("R/106 defines ZIP_STUDY_PERIOD_MIN/MAX study-period constants",
+        grepl("ZIP_STUDY_PERIOD_MIN", r106_text) && grepl("ZIP_STUDY_PERIOD_MAX", r106_text))
+
+  # Check 15: Section 9 filters period_start_dt against the study-period bounds
+  # before computing gap-days
+  check("R/106 Section 9 filters period_start_dt against ZIP_STUDY_PERIOD_MIN/MAX",
+        grepl("period_start_dt >= ZIP_STUDY_PERIOD_MIN", r106_text) &&
+          grepl("period_start_dt <= ZIP_STUDY_PERIOD_MAX", r106_text))
+
+  # Check 16: RUNTIME (HiPerGator-only, gated) -- output xlsx present with sheets.
   # Kept green locally: SKIPPED when IS_LOCAL or the output xlsx is absent.
   # Mirrors Section 15p Check 14 IS_LOCAL-gate pattern (lines 2301-2315).
   out_xlsx_121 <- file.path(CONFIG$output_dir, "zip_change_frequency.xlsx")
@@ -2580,7 +2590,7 @@ if (r106_exists) {
 
 } else {
   # If script missing, register the dependent checks as FALSE so total stays honest
-  for (i in 2:14) check(paste0("R/106 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
+  for (i in 2:16) check(paste0("R/106 dependent check #", i, " -- SKIPPED (script missing)"), FALSE)
 }
 
 # ==============================================================================
@@ -3012,6 +3022,90 @@ if (!IS_LOCAL && file.exists(enc_rds)) {
 } else {
   check("R/111 real-data DoI category counts -- SKIPPED (local / no output; logged on HiPerGator) (Phase 130)", TRUE)
 }
+
+# ==============================================================================
+# SECTION 15x: MED_ADMIN/DISPENSING NDC GENERALIZATION + MEDICATION COLUMN (Phase 131) ----
+# ==============================================================================
+#
+# Phase 131 generalizes R/50's RXNORM detection to all 4 RXNORM vector
+# categories across PRESCRIBING + MED_ADMIN (RX and NDC-crosswalk) +
+# DISPENSING (net-new for R/50), tags each matched row with its detection
+# source via get_chemo_hits()'s additive return_source parameter, dedupes
+# Records/Patients counts on (ID, treatment_date, code), and adds a
+# `medication` column to all_codes_df (curated MEDICATION_LOOKUP first,
+# fallback_normalize_medication() otherwise), gated NA for Radiation and
+# SCT non-RXNORM rows. Both xlsx writers derive their column layout from one
+# shared resolved_xlsx_layout() helper so they can never silently diverge.
+# These checks are STRUCTURAL (readLines + grepl over R/utils/utils_treatment.R,
+# R/00_config.R, R/50_all_codes_resolved.R) and pass locally without DuckDB/
+# openxlsx2/HiPerGator access.
+
+message("\n[Phase 131] MED_ADMIN/DISPENSING NDC generalization + Medication column validation (R/utils/utils_treatment.R + R/00_config.R + R/50)...")
+
+utils_t_text_131 <- if (file.exists("R/utils/utils_treatment.R")) paste(readLines("R/utils/utils_treatment.R", warn = FALSE), collapse = "\n") else ""
+config_text_131  <- if (file.exists("R/00_config.R")) paste(readLines("R/00_config.R", warn = FALSE), collapse = "\n") else ""
+r50_text_131     <- if (file.exists("R/50_all_codes_resolved.R")) paste(readLines("R/50_all_codes_resolved.R", warn = FALSE), collapse = "\n") else ""
+
+# Check 1: get_chemo_hits() has an additive return_source parameter
+check("get_chemo_hits() has a return_source parameter (Phase 131)",
+      grepl("return_source", utils_t_text_131))
+
+# Check 2: MED_ADMIN branch tags both RX and NDC sub-paths distinctly
+check("MED_ADMIN branch tags MED_ADMIN (RX) and MED_ADMIN (NDC) distinctly (Phase 131)",
+      grepl("MED_ADMIN \\(RX\\)", utils_t_text_131) && grepl("MED_ADMIN \\(NDC\\)", utils_t_text_131))
+
+# Check 3: R/50 now queries DISPENSING (net-new -- R/50 never did before this phase)
+check("R/50 queries get_chemo_hits(\"DISPENSING\", ...) (Phase 131)",
+      grepl('get_chemo_hits\\("DISPENSING"', r50_text_131))
+
+# Check 4: R/50's RXNORM loop is generalized via a code_type == "RXNORM" filter
+# (not hand-enumerated vector names). NOTE: r50_text_131 is built with
+# collapse = "\n", and in R's grepl(), "." does not match across a "\n" --
+# so a pattern spanning tokens that land on different lines can never match.
+# Test for the filter call alone (allowing .data$ / whitespace variation).
+check("R/50 RXNORM loop filters code_type == RXNORM (Phase 131)",
+      grepl('filter\\(\\s*(\\.data\\$)?code_type\\s*==\\s*"RXNORM"\\s*\\)', r50_text_131))
+
+# Check 5: dedup guard against double-counting present
+check("R/50 dedupes on distinct(ID, treatment_date, code[, source]) (Phase 131)",
+      grepl("distinct\\(ID, treatment_date", r50_text_131))
+
+# Check 6: dynamic per-code source_table coalescing present
+check("R/50 coalesces dyn_source_table with static_source_table (Phase 131)",
+      grepl("coalesce\\(dyn_source_table, static_source_table\\)", r50_text_131))
+
+# Check 7: MEDICATION_LOOKUP's builder wires Supportive Care col G
+check("MEDICATION_LOOKUP builder selects Supportive Care col G via ncol(sheet_df) (Phase 131)",
+      grepl('sheet_name == "Supportive Care"', config_text_131) && grepl("ncol\\(sheet_df\\)", config_text_131))
+
+# Check 8: fallback_normalize_medication() exists and handles the HCPCS J-code pattern
+check("fallback_normalize_medication() exists and handles HCPCS J-code pattern (Phase 131)",
+      grepl("fallback_normalize_medication <- function", config_text_131) && grepl("\\^Injection,", config_text_131))
+
+# Check 9: fallback normalizer's multi-ingredient passthrough (" / " detection) present
+check('fallback_normalize_medication() detects " / "-delimited multi-ingredient compounds (Phase 131)',
+      grepl('" / "', config_text_131))
+
+# Check 10: R/50's all_codes_df gains a medication column via case_when with
+# Radiation/SCT gating
+check('all_codes_df$medication case_when gates Radiation and SCT non-RXNORM to NA (Phase 131)',
+      grepl('category == "Radiation" ~ NA_character_', r50_text_131) &&
+        grepl('category == "SCT" & code_type != "RXNORM" ~ NA_character_', r50_text_131))
+
+# Check 11: shared xlsx-writer layout helper used by BOTH writers (exactly 2 call
+# sites -- the "stay in sync" guarantee). Count with fixed = TRUE, guarding
+# gregexpr's zero-match case explicitly (it returns -1 as a length-1 vector on
+# zero matches, which a naive length(...) == 2 check would not catch correctly).
+layout_matches <- gregexpr("resolved_xlsx_layout(category)", r50_text_131, fixed = TRUE)[[1]]
+n_layout_calls <- if (length(layout_matches) == 1 && layout_matches[1] == -1) 0L else length(layout_matches)
+check(
+  "resolved_xlsx_layout(category) called by both writers, 2 sites (Phase 131)",
+  n_layout_calls == 2
+)
+
+# Check 12: Radiation excluded from Medication column entirely (no all-blank column)
+check('resolved_xlsx_layout() excludes Radiation from Medication column (has_medication <- category != "Radiation") (Phase 131)',
+      grepl('has_medication <- category != "Radiation"', r50_text_131))
 
 # ==============================================================================
 # SECTION 15g: PROTON THERAPY CATEGORY SPLIT VALIDATION (PROTON-05, PROTON-06) ----
@@ -4587,12 +4681,13 @@ message("  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_
 message("  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)")
 message("  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural integrity (Section 15q, 14 checks)")
 message("  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized Meaning structural integrity (Section 15r, 14 checks)")
-message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 14 checks)")
+message("  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 16 checks)")
 message("  * SMOKE-122-01: R/88 validates Phase 122 MED_ADMIN/DISPENSING chemo-detection gap fix structural integrity (Section 15t, 14 checks)")
 message("  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + unmatched-NDC audit structural integrity (Section 15u, 14 checks)")
 message("  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/after report + unmapped-name audit structural integrity (Section 15v, 13 checks)")
 message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classification + R/112 attribution) structural integrity incl. mutual-exclusivity hard-stop (Section 15w, ~14 checks)")
 message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
+message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
 
 if (failed > 0) {
   quit(status = 1)

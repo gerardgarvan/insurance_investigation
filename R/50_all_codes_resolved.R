@@ -220,8 +220,20 @@ count_results <- tibble(
   code = character(),
   records = integer(),
   patients = integer(),
-  vector_name = character()
+  vector_name = character(),
+  source_table = character()
 )
+
+# Patient-ID-level accumulator for TRUE unique-patient totals on the Summary
+# sheet. The per-code `patients` values above are correct (distinct patients
+# per code), but they CANNOT be summed: a patient reached via more than one
+# code would be counted once per code, overstating the category and grand
+# totals. We therefore retain the distinct patient IDs behind each hit here,
+# tagged with vector_name, and reduce them to unique patients per category
+# (and overall) at summary time. Stored as a list of frames and bound once at
+# the end so we never pre-declare the ID column type (ID may be integer or
+# character depending on the source data).
+patient_hit_frames <- list()
 
 # Query PROCEDURES (for CPT/HCPCS, ICD-9, ICD-10-PCS, Revenue)
 proc_tbl <- tryCatch(get_pcornet_table("PROCEDURES"), error = function(e) NULL)
@@ -258,6 +270,17 @@ if (!is.null(proc_tbl)) {
         }
       )
       count_results <- bind_rows(count_results, counts)
+      # Retain distinct patient IDs for this vector (for unique-patient totals)
+      patient_hit_frames <- c(patient_hit_frames, list(
+        tryCatch(
+          proc_tbl %>%
+            filter(PX_TYPE == px_type, PX %in% codes) %>%
+            distinct(ID) %>%
+            collect() %>%
+            mutate(vector_name = vec_name),
+          error = function(e) tibble(vector_name = character())
+        )
+      ))
     } else if (match_type == "prefix") {
       # Prefix match: check if codes are full 7-char codes or actual prefixes
       # For ICD-10-PCS, config codes are full 7-char codes, use exact match
@@ -277,6 +300,17 @@ if (!is.null(proc_tbl)) {
           }
         )
         count_results <- bind_rows(count_results, counts)
+        # Retain distinct patient IDs for this vector (for unique-patient totals)
+        patient_hit_frames <- c(patient_hit_frames, list(
+          tryCatch(
+            proc_tbl %>%
+              filter(PX_TYPE == px_type, PX %in% codes) %>%
+              distinct(ID) %>%
+              collect() %>%
+              mutate(vector_name = vec_name),
+            error = function(e) tibble(vector_name = character())
+          )
+        ))
       } else {
         # True prefix match: materialize and use str_starts_with
         # (This path is unlikely for current config, but handled for completeness)
@@ -302,6 +336,10 @@ if (!is.null(proc_tbl)) {
                 summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
                 mutate(vector_name = vec_name)
               count_results <- bind_rows(count_results, counts)
+              # Retain distinct patient IDs for this vector (unique-patient totals)
+              patient_hit_frames <- c(patient_hit_frames, list(
+                matches %>% distinct(ID) %>% mutate(vector_name = vec_name)
+              ))
             }
           }
         }
@@ -312,9 +350,14 @@ if (!is.null(proc_tbl)) {
   message("  PROCEDURES table not found (skipping)")
 }
 
-# Query PRESCRIBING + MED_ADMIN (for RXNORM codes)
-# Use combined approach to avoid double-counting patients
-rxnorm_vectors <- code_type_map %>% filter(str_detect(source_table, "PRESCRIBING\\|MED_ADMIN"))
+# Query PRESCRIBING + MED_ADMIN (RX and ND) + DISPENSING (for RXNORM codes)
+# Uses get_chemo_hits() with return_source = TRUE so the Source Table column
+# in the output reflects which table/type actually matched each code (Phase 131).
+# Source-agnostic de-duplication on (ID, treatment_date, code) prevents
+# double-counting administrations reachable via more than one path.
+ndc_crosswalk <- load_ndc_crosswalk()
+
+rxnorm_vectors <- code_type_map %>% filter(code_type == "RXNORM")
 
 for (i in seq_len(nrow(rxnorm_vectors))) {
   vec_name <- rxnorm_vectors$vector_name[i]
@@ -324,50 +367,45 @@ for (i in seq_len(nrow(rxnorm_vectors))) {
 
   message(glue("  {vec_name} ({length(codes)} codes, RXNORM)..."))
 
-  # Query PRESCRIBING
-  presc_tbl <- safe_table("PRESCRIBING")
-  presc_matches <- tibble(ID = character(), code = character())
-  if (!is.null(presc_tbl)) {
-    presc_matches <- tryCatch(
-      {
-        presc_tbl %>%
-          filter(RXNORM_CUI %in% codes) %>%
-          select(ID, code = RXNORM_CUI) %>%
-          collect()
-      },
-      error = function(e) {
-        message(glue("    PRESCRIBING error: {e$message}"))
-        tibble(ID = character(), code = character())
-      }
-    )
-  }
+  presc_hits <- get_chemo_hits("PRESCRIBING", codes, ndc_crosswalk, return_source = TRUE)
+  medadmin_hits <- get_chemo_hits("MED_ADMIN", codes, ndc_crosswalk, return_source = TRUE)
+  dispensing_hits <- get_chemo_hits("DISPENSING", codes, ndc_crosswalk, return_source = TRUE)
 
-  # Query MED_ADMIN
-  medadmin_tbl <- safe_table("MED_ADMIN")
-  medadmin_matches <- tibble(ID = character(), code = character())
-  if (!is.null(medadmin_tbl)) {
-    medadmin_matches <- tryCatch(
-      {
-        medadmin_tbl %>%
-          filter(MEDADMIN_CODE %in% codes, MEDADMIN_TYPE == "RX") %>%
-          select(ID, code = MEDADMIN_CODE) %>%
-          collect()
-      },
-      error = function(e) {
-        message(glue("    MED_ADMIN error: {e$message}"))
-        tibble(ID = character(), code = character())
-      }
-    )
-  }
+  # bind_rows() drops NULLs transparently; if all three are NULL/empty, raw_hits
+  # has 0 rows (and possibly 0 columns) -- guard the rename so that case doesn't error.
+  raw_hits <- bind_rows(presc_hits, medadmin_hits, dispensing_hits)
 
-  # Combine and group
-  combined <- bind_rows(presc_matches, medadmin_matches)
-  if (nrow(combined) > 0) {
-    counts <- combined %>%
+  if (nrow(raw_hits) > 0) {
+    # Establish a single canonical `code` column up front (get_chemo_hits() always
+    # returns `triggering_code`) so downstream steps and Task 3's join agree on it.
+    all_hits <- raw_hits %>% rename(code = triggering_code)
+
+    # Source-labelled set (for the Source Table column) -- kept separate from
+    # the records/patients de-duplication below.
+    hits_by_source <- all_hits %>% distinct(ID, treatment_date, code, source)
+
+    # Source-agnostic de-duplication: an administration reachable via more than
+    # one path (e.g. both MED_ADMIN-RX and MED_ADMIN-ND) is counted once.
+    hits_dedup <- all_hits %>% distinct(ID, treatment_date, code)
+
+    counts <- hits_dedup %>%
       group_by(code) %>%
-      summarise(records = n(), patients = n_distinct(ID), .groups = "drop") %>%
+      summarise(records = n(), patients = n_distinct(ID), .groups = "drop")
+
+    source_labels <- hits_by_source %>%
+      group_by(code) %>%
+      summarise(source_table = paste(sort(unique(source)), collapse = ", "), .groups = "drop")
+
+    counts <- counts %>%
+      left_join(source_labels, by = "code") %>%
       mutate(vector_name = vec_name)
+
     count_results <- bind_rows(count_results, counts)
+    # Retain distinct patient IDs for this vector (for unique-patient totals).
+    # all_hits already holds the ID-level matches in memory.
+    patient_hit_frames <- c(patient_hit_frames, list(
+      all_hits %>% distinct(ID) %>% mutate(vector_name = vec_name)
+    ))
   }
 }
 
@@ -401,6 +439,17 @@ if (!is.null(enc_tbl)) {
       }
     )
     count_results <- bind_rows(count_results, counts)
+    # Retain distinct patient IDs for this vector (for unique-patient totals)
+    patient_hit_frames <- c(patient_hit_frames, list(
+      tryCatch(
+        enc_tbl %>%
+          filter(DRG %in% codes) %>%
+          distinct(ID) %>%
+          collect() %>%
+          mutate(vector_name = vec_name),
+        error = function(e) tibble(vector_name = character())
+      )
+    ))
   }
 } else {
   message("  ENCOUNTER table not found (skipping)")
@@ -428,16 +477,20 @@ for (i in seq_len(nrow(code_type_map))) {
   vec_name <- code_type_map$vector_name[i]
   category <- code_type_map$category[i]
   code_type <- code_type_map$code_type[i]
-  source_table <- code_type_map$source_table[i]
+  static_source_table <- code_type_map$source_table[i]
 
   codes <- TREATMENT_CODES[[vec_name]]
   if (is.null(codes) || length(codes) == 0) next
 
   # Create per-code rows
   vec_df <- tibble(code = codes) %>%
-    # Look up counts
+    # Look up counts AND the per-code dynamic source (added in Task 2); rename
+    # count_results$source_table to dyn_source_table so it survives the join
+    # without colliding with the static_source_table variable above.
     left_join(
-      count_results %>% filter(vector_name == vec_name) %>% select(code, records, patients),
+      count_results %>%
+        filter(vector_name == vec_name) %>%
+        select(code, records, patients, dyn_source_table = source_table),
       by = "code"
     ) %>%
     # Fill NA counts with 0
@@ -450,16 +503,66 @@ for (i in seq_len(nrow(code_type_map))) {
     left_join(hardcoded_desc_tbl %>% rename(hardcoded_desc = description), by = "code") %>%
     left_join(config_comments %>% rename(config_desc = description), by = "code") %>%
     mutate(
-      description = coalesce(api_desc, hardcoded_desc, config_desc, "No description available")
+      description = coalesce(api_desc, hardcoded_desc, config_desc, "No description available"),
+      # Dynamic per-code source (from actual matches, Task 2) wins when present;
+      # falls back to the static code_type_map value for PROCEDURES/ENCOUNTER
+      # categories where count_results never sets source_table (dyn_source_table
+      # is NA for every row there).
+      source_table = dplyr::coalesce(dyn_source_table, static_source_table)
     ) %>%
-    select(code, description, records, patients) %>%
+    # source_table is included here so it is NOT dropped by this select --
+    # this is the exact step that silently strips unlisted columns.
+    select(code, description, records, patients, source_table) %>%
     mutate(
       code_type = code_type,
-      source_table = source_table,
       category = category
+      # NOTE: do NOT reassign source_table here -- it already carries the
+      # coalesced value through the select() above. Reassigning it to the
+      # static_source_table variable at this point would silently clobber
+      # the dynamic value for every RXNORM row.
     )
 
   all_codes_df <- bind_rows(all_codes_df, vec_df)
+}
+
+# Compute normalized medication name (Phase 131): curated MEDICATION_LOOKUP
+# first, fallback_normalize_medication() heuristic second, NA where a
+# Medication column should not be populated (Radiation entirely; SCT rows
+# that aren't RXNORM, e.g. DRG/ICD-10-PCS/procedure codes).
+all_codes_df <- all_codes_df %>%
+  mutate(
+    medication = dplyr::case_when(
+      category == "Radiation" ~ NA_character_,
+      category == "SCT" & code_type != "RXNORM" ~ NA_character_,
+      code %in% names(MEDICATION_LOOKUP) ~ unname(MEDICATION_LOOKUP[code]),
+      TRUE ~ fallback_normalize_medication(description, code_type)
+    )
+  )
+
+n_medication_curated <- sum(!is.na(all_codes_df$medication) & all_codes_df$code %in% names(MEDICATION_LOOKUP))
+n_medication_fallback <- sum(!is.na(all_codes_df$medication) & !(all_codes_df$code %in% names(MEDICATION_LOOKUP)))
+message(glue("  Medication column: {n_medication_curated} curated (MEDICATION_LOOKUP), {n_medication_fallback} fallback-derived"))
+
+# --- Unique-patient counts (fixes Summary-sheet double-counting) ------------
+# The per-code `patients` column is correct, but summing it counts a patient
+# once per code they appear under, overstating category and grand totals. We
+# instead collapse the retained ID-level hits to distinct (category, ID) for
+# per-category unique patients, and to distinct ID overall for the grand total.
+# Records ARE additive across codes, so total_records still uses sum().
+patient_hits <- bind_rows(patient_hit_frames)
+if (nrow(patient_hits) > 0) {
+  category_patient_hits <- patient_hits %>%
+    left_join(code_type_map %>% distinct(vector_name, category), by = "vector_name") %>%
+    filter(!is.na(ID))
+
+  patients_by_category <- category_patient_hits %>%
+    distinct(category, ID) %>%
+    count(category, name = "total_patients")
+
+  total_unique_patients <- n_distinct(category_patient_hits$ID)
+} else {
+  patients_by_category <- tibble(category = character(), total_patients = integer())
+  total_unique_patients <- 0L
 }
 
 # Summary by category
@@ -468,9 +571,10 @@ summary_by_category <- all_codes_df %>%
   summarise(
     n_codes = n(),
     total_records = sum(records),
-    total_patients = sum(patients, na.rm = TRUE),
     .groups = "drop"
   ) %>%
+  left_join(patients_by_category, by = "category") %>%
+  mutate(total_patients = dplyr::coalesce(as.integer(total_patients), 0L)) %>%
   arrange(desc(n_codes))
 
 message("\nSummary by category:")
@@ -576,10 +680,30 @@ if (nrow(codes_to_update) > 0) {
 # SECTION 6: XLSX GENERATION ----
 # =============================================================================
 
+# Shared category-aware column layout (Phase 131): both write_resolved_xlsx()
+# (per-type files) and the combined-workbook per-category loop (Section 6b)
+# call this so the two writers can never silently diverge on headers/column
+# count/widths. Every category gets a Medication column (after Meaning)
+# except Radiation, which keeps its original 6-column layout untouched.
+resolved_xlsx_layout <- function(category) {
+  has_medication <- category != "Radiation"
+  list(
+    has_medication = has_medication,
+    headers = if (has_medication) {
+      c("Code", "Meaning", "Medication", "Code Type", "Source Table", "Records", "Patients")
+    } else {
+      c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
+    },
+    n_cols = if (has_medication) 7L else 6L,
+    col_widths = if (has_medication) c(15, 45, 25, 12, 15, 10, 10) else c(15, 45, 12, 15, 10, 10)
+  )
+}
+
 # 6a. write_resolved_xlsx function (adapted from R/42)
 write_resolved_xlsx <- function(df, category, output_path) {
   n_codes <- nrow(df)
   sheet_name <- paste(category, "Codes")
+  layout <- resolved_xlsx_layout(category)
 
   fill_color <- TREATMENT_TYPE_COLORS[[category]]$fill
   font_color <- TREATMENT_TYPE_COLORS[[category]]$font
@@ -597,32 +721,45 @@ write_resolved_xlsx <- function(df, category, output_path) {
     sheet = sheet_name, dims = "A1",
     name = "Calibri", size = 16, bold = TRUE, color = wb_color("FF1F2937")
   )
-  wb$merge_cells(sheet = sheet_name, dims = "A1:F1")
+  wb$merge_cells(sheet = sheet_name, dims = glue("A1:{LETTERS[layout$n_cols]}1"))
 
   # Row 2: Column headers
-  headers <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
+  headers <- layout$headers
   for (i in seq_along(headers)) {
     wb$add_data(
       sheet = sheet_name, x = headers[i],
       start_row = 2, start_col = i
     )
   }
-  wb$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
+  wb$add_fill(sheet = sheet_name, dims = glue("A2:{LETTERS[layout$n_cols]}2"), color = wb_color("FF374151"))
   wb$add_font(
-    sheet = sheet_name, dims = "A2:F2",
+    sheet = sheet_name, dims = glue("A2:{LETTERS[layout$n_cols]}2"),
     name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
   )
 
   # Row 3+: Data
-  write_df <- data.frame(
-    Code = df$code,
-    Meaning = ifelse(is.na(df$description), "", df$description),
-    Code_Type = df$code_type,
-    Source_Table = df$source_table,
-    Records = df$records,
-    Patients = df$patients,
-    stringsAsFactors = FALSE
-  )
+  write_df <- if (layout$has_medication) {
+    data.frame(
+      Code = df$code,
+      Meaning = ifelse(is.na(df$description), "", df$description),
+      Medication = ifelse(is.na(df$medication), "", df$medication),
+      Code_Type = df$code_type,
+      Source_Table = df$source_table,
+      Records = df$records,
+      Patients = df$patients,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      Code = df$code,
+      Meaning = ifelse(is.na(df$description), "", df$description),
+      Code_Type = df$code_type,
+      Source_Table = df$source_table,
+      Records = df$records,
+      Patients = df$patients,
+      stringsAsFactors = FALSE
+    )
+  }
   wb$add_data(sheet = sheet_name, x = write_df, start_row = 3, col_names = FALSE)
 
   # Styling: Code column
@@ -634,14 +771,14 @@ write_resolved_xlsx <- function(df, category, output_path) {
     name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
   )
 
-  # Number formatting
+  # Number formatting (Records/Patients are always the last two columns)
   if (n_codes > 0) {
-    num_dims <- glue("E3:F{last_row}")
+    num_dims <- glue("{LETTERS[layout$n_cols - 1]}3:{LETTERS[layout$n_cols]}{last_row}")
     wb$add_numfmt(sheet = sheet_name, dims = num_dims, numfmt = "#,##0")
   }
 
   # Column widths
-  wb$set_col_widths(sheet = sheet_name, cols = 1:6, widths = c(15, 45, 12, 15, 10, 10))
+  wb$set_col_widths(sheet = sheet_name, cols = seq_len(layout$n_cols), widths = layout$col_widths)
 
   # Notes sheet
   wb$add_worksheet("Notes")
@@ -751,7 +888,10 @@ totals_row <- 3 + nrow(summary_by_category) + 1
 wb_all$add_data(sheet = "Summary", x = "Total", start_row = totals_row, start_col = 1)
 wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$n_codes), start_row = totals_row, start_col = 2)
 wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$total_records), start_row = totals_row, start_col = 3)
-wb_all$add_data(sheet = "Summary", x = sum(summary_by_category$total_patients), start_row = totals_row, start_col = 4)
+# Grand-total patients uses the overall distinct-ID count, NOT the sum of the
+# per-category totals (a patient treated in two categories would otherwise be
+# counted twice). This total can therefore be smaller than the column sum.
+wb_all$add_data(sheet = "Summary", x = total_unique_patients, start_row = totals_row, start_col = 4)
 wb_all$add_fill(sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"), color = wb_color("FF374151"))
 wb_all$add_font(
   sheet = "Summary", dims = glue("A{totals_row}:D{totals_row}"),
@@ -773,6 +913,8 @@ for (category in categories) {
   sheet_name <- category # Use category name directly (not "{Category} Codes")
   wb_all$add_worksheet(sheet_name)
 
+  layout <- resolved_xlsx_layout(category)
+
   fill_color <- TREATMENT_TYPE_COLORS[[category]]$fill
   font_color <- TREATMENT_TYPE_COLORS[[category]]$font
 
@@ -786,32 +928,45 @@ for (category in categories) {
     sheet = sheet_name, dims = "A1",
     name = "Calibri", size = 14, bold = TRUE, color = wb_color("FF1F2937")
   )
-  wb_all$merge_cells(sheet = sheet_name, dims = "A1:F1")
+  wb_all$merge_cells(sheet = sheet_name, dims = glue("A1:{LETTERS[layout$n_cols]}1"))
 
   # Row 2: Headers
-  headers_cat <- c("Code", "Meaning", "Code Type", "Source Table", "Records", "Patients")
+  headers_cat <- layout$headers
   for (i in seq_along(headers_cat)) {
     wb_all$add_data(
       sheet = sheet_name, x = headers_cat[i],
       start_row = 2, start_col = i
     )
   }
-  wb_all$add_fill(sheet = sheet_name, dims = "A2:F2", color = wb_color("FF374151"))
+  wb_all$add_fill(sheet = sheet_name, dims = glue("A2:{LETTERS[layout$n_cols]}2"), color = wb_color("FF374151"))
   wb_all$add_font(
-    sheet = sheet_name, dims = "A2:F2",
+    sheet = sheet_name, dims = glue("A2:{LETTERS[layout$n_cols]}2"),
     name = "Calibri", size = 11, bold = TRUE, color = wb_color("FFFFFFFF")
   )
 
   # Row 3+: Data
-  write_df_cat <- data.frame(
-    Code = df_cat$code,
-    Meaning = ifelse(is.na(df_cat$description), "", df_cat$description),
-    Code_Type = df_cat$code_type,
-    Source_Table = df_cat$source_table,
-    Records = df_cat$records,
-    Patients = df_cat$patients,
-    stringsAsFactors = FALSE
-  )
+  write_df_cat <- if (layout$has_medication) {
+    data.frame(
+      Code = df_cat$code,
+      Meaning = ifelse(is.na(df_cat$description), "", df_cat$description),
+      Medication = ifelse(is.na(df_cat$medication), "", df_cat$medication),
+      Code_Type = df_cat$code_type,
+      Source_Table = df_cat$source_table,
+      Records = df_cat$records,
+      Patients = df_cat$patients,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    data.frame(
+      Code = df_cat$code,
+      Meaning = ifelse(is.na(df_cat$description), "", df_cat$description),
+      Code_Type = df_cat$code_type,
+      Source_Table = df_cat$source_table,
+      Records = df_cat$records,
+      Patients = df_cat$patients,
+      stringsAsFactors = FALSE
+    )
+  }
   wb_all$add_data(sheet = sheet_name, x = write_df_cat, start_row = 3, col_names = FALSE)
 
   # Styling: Code column
@@ -823,14 +978,14 @@ for (category in categories) {
     name = "Calibri", size = 10, bold = TRUE, color = wb_color(font_color)
   )
 
-  # Number formatting
+  # Number formatting (Records/Patients are always the last two columns)
   if (nrow(df_cat) > 0) {
-    num_dims_cat <- glue("E3:F{last_row_cat}")
+    num_dims_cat <- glue("{LETTERS[layout$n_cols - 1]}3:{LETTERS[layout$n_cols]}{last_row_cat}")
     wb_all$add_numfmt(sheet = sheet_name, dims = num_dims_cat, numfmt = "#,##0")
   }
 
   # Column widths
-  wb_all$set_col_widths(sheet = sheet_name, cols = 1:6, widths = c(15, 45, 12, 15, 10, 10))
+  wb_all$set_col_widths(sheet = sheet_name, cols = seq_len(layout$n_cols), widths = layout$col_widths)
 
   # Freeze panes at row 3
   wb_all$freeze_pane(sheet = sheet_name, first_active_row = 3)

@@ -89,11 +89,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Diagnosis-of-interest classification flag/category (patient + encounter level), non-overlapping with cancer categories (R/111: DuckDB prefix-pushdown DIAGNOSIS pull, mutual-exclusivity hard-stop, L10.81 paraneoplastic_flag, doi_encounters.rds + doi_patients.rds) — v3.3 Phase 128
 - [x] Treatment-attribution linkage (rituximab/MTX administration ↔ non-malignant diagnosis, temporal window) — two-tier join (ENCOUNTERID direct → ±90-day PATID window via DOI_ATTRIBUTION_WINDOW_DAYS), three-state likely_non_lymphoma_directed flag (NA never coerced to FALSE), attribution_method column — v3.3 Phase 129
 - [x] Standalone Tableau-ready diagnosis-of-interest prevalence + drug co-occurrence table/report (R/112: 4-sheet doi_attribution_report.xlsx — Patient Prevalence, Encounter Co-occurrence, Drug×DoI Summary, Metadata with ±30/±90/±180 sensitivity; RAW counts + internal-only note per D-07/D-01, co-occurrence language enforced, CAVEATS footnote on every sheet) — v3.3 Phase 129
-- [x] R/88 Section 15w (14 DoI-layer checks: DOI_CODE_MAP↔cancer-map no-overlap, is_doi_code()/classify_doi_codes() spot-checks, IS_LOCAL-gated runtime blocks) + R/39 and SCRIPT_INDEX registration for R/111 and R/112; HiPerGator runtime confirmed 709/709 checks on real DIAGNOSIS data — v3.3 Phase 130
 
 ### Active
 
-(No active requirements — v3.3 complete. Start `/gsd:new-milestone` to define v3.4.)
+#### v3.4 R Pipeline Code Review Remediation
+- [ ] Fix 8 critical/high-severity findings (crashers, wrong published numbers, inert SCT feature, silent DB-promotion bug, empty reference manual, wrong age-at-episode)
+- [ ] Standardize 8 cross-cutting patterns (A-H) at the shared-helper layer
+- [ ] Confirm 2 loose ends (suppress_small/clean_multi_value/union_field location; date_range_max vs. extract-date cutoff)
+
+#### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (open, deferred alongside v3.4)
+- [ ] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts
 
 #### v3.2 Meeting Gap Resolution Report
 
@@ -132,11 +137,22 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
+## Current Milestone: v3.4 R Pipeline Code Review Remediation
+
+**Goal:** Fix the crash-causing and wrong-published-number defects surfaced by the 2026-07-23 full-pipeline code review, and standardize the 8 recurring cross-cutting bug patterns (record-vs-patient-count confusion, code-normalization drift, can't-fail tests, etc.) at the shared-helper layer so they stop recurring script-by-script.
+
+**Target features:**
+- Fix all 8 critical/high-severity findings from `R_pipeline_code_review.md`: stray-`n` crashers (`74`, `81`-`85`), `28`'s inert SCT-conditioning string match, `03`'s silent DB-promotion-with-missing-tables bug, `46`'s inflated Total Records, `47`'s HL anchor-date corruption (inherited by `48`/`49`), the `67`→`68`/`95`→`96` same-week source/date desync, `89`'s content-empty reference manual, `101`'s wrong age-at-episode
+- Standardize the 8 cross-cutting patterns (A-H) once at the shared-helper layer: record-count vs. distinct-patient confusion; dotted/undotted/case code-normalization drift; the `^[CD]` neoplasm over-inclusion filter; external-API transient-error-vs-permanent-miss handling; tests/validators that cannot fail (false green); fragile in-place `00_config.R` rewriting; silent NA/sentinel/impossible-date gaps; episode-vs-encounter-vs-patient-date grain mislabels
+- Confirm the review's two flagged loose ends: locate where `suppress_small()`/`clean_multi_value()`/`union_field()` are actually defined (not found in any `utils_*.R` module during the review), and reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915)
+
+**Explicitly deferred (not this milestone):** The ~80 additional per-script Low/Med findings cataloged by area in the review (`R/40`-`R/112`, `utils_*.R` individual nits) — tracked as backlog, not blocking v3.4. v3.3 (Rituximab/MTX DoI) remains open in parallel; its pending HiPerGator verification and REQUIREMENTS.md traceability gap are tracked separately in STATE.md and unaffected by this milestone.
+
 ## Current State
 
-**Shipped:** v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (2026-07-17). 4 phases (127-130), 8 plans. Additive DoI layer parallel to the cancer cascade — cancer classification, utils_cancer.R, and all existing outputs read-only throughout. DOI_CODE_MAP (35 keys, 14 categories) + utils_doi.R centralized in R/00_config.R. R/111 produces doi_encounters.rds + doi_patients.rds from real DIAGNOSIS data via DuckDB prefix pushdown; mutual-exclusivity hard-stop confirmed 0 overlap. R/112 produces doi_attribution_report.xlsx (4-sheet Tableau-ready, co-occurrence language enforced, CAVEATS footnote on every sheet). R/88 Section 15w (14 DoI checks) + R/39 + SCRIPT_INDEX registration complete; HiPerGator runtime confirmed — 10 DoI categories logged (Hematologic=10797, RA=5801, IBD=4128), 709/709 R/88 checks pass on real data.
+**In progress:** v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest — Phase 129 (Attribution Linkage and Output) complete (2026-07-16). `R/112_doi_attribution_report.R` links rituximab/MTX administrations (read from `treatment_episode_detail.rds`, filtered to RITUXIMAB_CODES | MTX_CODES) to the Phase 128 DoI encounters via a two-tier join — tier 1 direct ENCOUNTERID equi-join, tier 2 ±90-day PATID temporal window keyed on the named `DOI_ATTRIBUTION_WINDOW_DAYS` constant (no magic number, no literal 90 in any predicate). Attribution honesty is enforced by a three-state `likely_non_lymphoma_directed` flag (TRUE = drug co-occurs with DoI and no HL active in the same window / NA = HL also active, genuinely ambiguous / FALSE = no drug co-occurrence) derived from a dated HL-diagnosis DuckDB pull, with NA never collapsed to FALSE; an `attribution_method` column ("encounter_id"/"temporal_window"/"none") records how each link was established. The single deliverable `doi_attribution_report.xlsx` carries 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug×DoI Summary, Metadata with ±30/±90/±180 sensitivity counts) with RAW counts + a mandatory internal-only note (D-07/D-01 formally amended DOI-OUT-02 to substitute the internal-only note for suppress_small()), co-occurrence "with [dx]" language throughout (no `_for_` column names or prose), and the CAVEATS footnote on every sheet; `close_pcornet_con()` tears down the connection. Verified passed (7/7 must-haves; structural-only on Windows — real-data counts + xlsx render gated to the Phase 130 HiPerGator run). Next: Phase 130 (Registration, Smoke Test, and HiPerGator Runtime — R/39 + SCRIPT_INDEX + R/88 section + runtime gate = v3.3 definition-of-done).
 
-**Ready for next milestone.** Run `/gsd:new-milestone` to start v3.4.
+**Prior:** Phase 128 (DoI Classification) complete (2026-07-15). `R/111_doi_classification.R` produces the encounter- and patient-grain DoI artifacts from the real DIAGNOSIS table: a DuckDB-native `LEFT(DX,3) IN (...)` prefix pushdown (built from `DOI_CODE_MAP` keys) runs before `collect()` so the multi-million-row DIAGNOSIS table is never loaded into R; `is_doi_code()`/`classify_doi_codes()` refine the classification across all diagnosis positions; a mutual-exclusivity hard-stop (`sum(is_doi_code & is_cancer_code) == 0`, DOI-CLASS-04) halts before any write; L10.81 encounters carry `paraneoplastic_flag = TRUE` while staying in doi_category "Pemphigus" (DOI-CLASS-05); `in_hl_cohort` tagged from `get_hl_patient_ids()`. Writes `doi_encounters.rds` (encounter grain, DOI-CLASS-02) then derives `doi_patients.rds` from it (one row per ID with has_any_doi/doi_categories/dates/n_doi_encounters/in_hl_cohort, DOI-CLASS-03), logs the `tabyl(doi_category)` clinical-plausibility review, and tears down the DuckDB connection. Verified passed (8/8 must-haves; structural-only on Windows — real-data counts + tabyl review gated to the Phase 130 HiPerGator run). Next: Phase 129 (treatment-attribution linkage).
 
 **Shipped:** v3.2 Meeting Gap Resolution Report (2026-07-15). 23 phases (104-126), 37 plans. What began as a 4-phase charter (104-107: meeting gap investigations + RMarkdown report) grew into a 23-phase milestone that also absorbed pipeline warning cleanup, output reshaping (V2 HL-only 7-day summary, TABLE-2 date-grain collapse, Gantt temporal-dx + universal alphabetical sort, post-death encounter investigation, drug-name consistency remediation), RUCA rurality + lifespan-Gantt + ZIP-change enrichment, the death-cause-NHL-flag chain (sourced from the DEATH_CAUSE table, 16th PCORNET_TABLES entry), the MED_ADMIN/DISPENSING chemo-detection fix and its full downstream integration (+1,328 patients / +13,762 chemo dates vs the PRESCRIBING baseline, with source-provenance labeling and canonical drug names across every output), and two R/88 smoke-test fixes so the comprehensive smoke test exits 0. Runtime confirmed on HiPerGator for the chemo-detection chain (122-124), the DEATH_CAUSE fix (119), and the R/88 pass (125-126); ~8 structural-only phases have runtime deferred to a consolidated HiPerGator run.
 
@@ -359,7 +375,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Cause of death from DEATH_CAUSE table, not DEATH.DEATH_CAUSE | The DEATH_CAUSE column never existed in this extract; DEATH_CAUSE is the only ICD-classifiable source (TR cause fields are NAACCR-coded) | ✓ Phase 119 |
 | Shared get_chemo_hits() + NDC→RxNorm crosswalk for chemo detection | Phantom RXNORM_CUI col_specs made DISPENSING/MED_ADMIN silently contribute zero chemo; one helper (RX-direct + ND-crosswalk) fixes all 7 consumers | ✓ Phase 122 |
 | Source-provenance labeling (source_hints → source_table/code_type) in downstream outputs | Newly-detected MED_ADMIN/DISPENSING chemo must be traceable to its source in episodes/Gantt without conflating with PRESCRIBING | ✓ Phase 124 |
-| Dual-environment verification: structural on Windows, runtime on HiPerGator | Raw PCORnet data only lives on HiPerGator; grep/parse checks gate locally, runtime pass confirmed on cluster | ✓ Good (v3.3 Phase 130 log-confirmed runtime pass, 709/709 checks) |
+| Dual-environment verification: structural on Windows, runtime on HiPerGator | Raw PCORnet data only lives on HiPerGator; grep/parse checks gate locally, runtime pass confirmed on cluster | ⚠️ Revisit (Phase 126 attested-by-prose only) |
 
 ## Evolution
 
@@ -379,4 +395,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-17 after v3.3 milestone completion.*
+*Last updated: 2026-07-23 after starting v3.4 (R Pipeline Code Review Remediation); v3.3 left open in parallel pending HiPerGator verification.*
