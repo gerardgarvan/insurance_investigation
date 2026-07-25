@@ -49,7 +49,7 @@ if (exists("attrition_log")) rm(attrition_log)
 
 # Source config first to ensure pcornet list is loaded
 source("R/00_config.R")
-n # ==============================================================================
+# ==============================================================================
 # SECTION 1: SETUP ----
 # ==============================================================================
 source("R/01_load_pcornet.R") # Loads pcornet$ list
