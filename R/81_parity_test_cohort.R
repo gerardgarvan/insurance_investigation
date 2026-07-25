@@ -88,57 +88,17 @@ message(glue("DuckDB cohort: {nrow(cohort_ddb)} rows, {ncol(cohort_ddb)} cols"))
 message(glue("DuckDB attrition log: {nrow(attrition_ddb)} steps"))
 
 # ==============================================================================
-# TYPE COERCION (D-08)
-# ==============================================================================
-
-message("\n--- Type coercion (D-08) ---")
-
-coerce_types <- function(ddb_df, rds_df) {
-  result <- ddb_df
-  coercions <- character(0)
-
-  for (col in names(result)) {
-    if (col %in% names(rds_df)) {
-      rds_class <- class(rds_df[[col]])[1]
-      ddb_class <- class(result[[col]])[1]
-
-      if (rds_class == "integer" && ddb_class == "numeric") {
-        result[[col]] <- as.integer(result[[col]])
-        coercions <- c(coercions, glue("{col}: numeric -> integer"))
-      } else if (rds_class == "Date" && ddb_class == "POSIXct") {
-        result[[col]] <- as.Date(result[[col]])
-        coercions <- c(coercions, glue("{col}: POSIXct -> Date"))
-      }
-    }
-  }
-
-  if (length(coercions) > 0) {
-    message("Coercions applied:")
-    for (c in coercions) {
-      message(glue("  {c}"))
-    }
-  } else {
-    message("No type coercions needed")
-  }
-
-  result
-}
-
-cohort_ddb_coerced <- coerce_types(cohort_ddb, cohort_rds)
-attrition_ddb_coerced <- coerce_types(attrition_ddb, attrition_rds)
-
-# ==============================================================================
 # ROW ORDER NORMALIZATION (Pitfall 5)
 # ==============================================================================
 
 message("\n--- Sorting for row order normalization ---")
 
 cohort_rds_sorted <- cohort_rds %>% arrange(ID)
-cohort_ddb_sorted <- cohort_ddb_coerced %>% arrange(ID)
+cohort_ddb_sorted <- cohort_ddb %>% arrange(ID)
 
 # Attrition log has no ID; sort by step_name
 attrition_rds_sorted <- attrition_rds %>% arrange(step_name)
-attrition_ddb_sorted <- attrition_ddb_coerced %>% arrange(step_name)
+attrition_ddb_sorted <- attrition_ddb %>% arrange(step_name)
 
 # ==============================================================================
 # THREE-LEVEL PARITY CHECK (D-09)
