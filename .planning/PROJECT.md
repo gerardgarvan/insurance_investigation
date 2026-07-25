@@ -94,7 +94,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 #### v3.4 R Pipeline Code Review Remediation
 - [ ] Fix 8 critical/high-severity findings (crashers, wrong published numbers, inert SCT feature, silent DB-promotion bug, empty reference manual, wrong age-at-episode)
-- [ ] Standardize 8 cross-cutting patterns (A-H) at the shared-helper layer
+- [x] Standardize 8 cross-cutting patterns (A-H) at the shared-helper layer — Phase 135 (PATTERN-A R/23 deferred: pre-aggregated RDS has no raw PATID; upstream fix needed in Phase 39/40)
 - [ ] Confirm 2 loose ends (suppress_small/clean_multi_value/union_field location; date_range_max vs. extract-date cutoff)
 - [x] Ingest integrity and honest tests — R/03 abort-on-partial-failure, R/81 type-coercion removed, R/82 5-script benchmark, R/88 skip counter + cause_of_death guard, R/96 FLM fixture, R/98 independent baseline — Phase 134
 
@@ -396,4 +396,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-23 after starting v3.4 (R Pipeline Code Review Remediation); v3.3 left open in parallel pending HiPerGator verification.*
+*Last updated: 2026-07-25 after Phase 135 (shared-helper-standardization) completion — PATTERN-B/C/D/F/G/H all fixed; PATTERN-A fixed in 6/7 sites (R/23 deferred to upstream Phase 39/40 fix).*
