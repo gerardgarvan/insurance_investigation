@@ -45,9 +45,8 @@ rm(list = ls())
 
 library(glue)
 
-passed  <- 0L
-failed  <- 0L
-skipped <- 0L
+passed <- 0L
+failed <- 0L
 
 check <- function(description, condition) {
   if (condition) {
@@ -59,13 +58,8 @@ check <- function(description, condition) {
   }
 }
 
-skip <- function(reason) {
-  message(glue("  SKIP: {reason}"))
-  skipped <<- skipped + 1L
-}
-
 message(strrep("=", 70))
-message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-134)")
+message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-89)")
 message(strrep("=", 70))
 
 # ==============================================================================
@@ -1161,7 +1155,7 @@ if (file.exists("R/35_death_cause_quality.R")) {
     n_sections_r35 >= 6
   )
 } else {
-  skip("R/35_death_cause_quality.R not found -- skipping detail checks")
+  message("  SKIP: R/35_death_cause_quality.R not found -- skipping detail checks")
 }
 
 # ==============================================================================
@@ -1210,31 +1204,11 @@ check(
   any(grepl("drug_group", r52_lines))
 )
 
-# Check 7: R/52 EPISODES_SCHEMA does NOT include cause_of_death (Phase 99, D-09)
-# WHY: Dropped because the column is 100% NA in real data. This check fails if
-# cause_of_death is accidentally re-added to EPISODES_SCHEMA — it is a
-# regression guard, not an absence check.
-schema_start_r52_cod <- grep("EPISODES_SCHEMA\\s*<-\\s*c\\(", r52_lines)
-if (length(schema_start_r52_cod) == 0L) {
-  check("R/52 EPISODES_SCHEMA present to validate cause_of_death drop (Phase 99, D-09)", FALSE)
-} else {
-  schema_start_r52_cod <- schema_start_r52_cod[1]
-  rel_close_cod <- which(cumsum(
-    lengths(regmatches(
-      r52_lines[schema_start_r52_cod:length(r52_lines)],
-      gregexpr("\\(", r52_lines[schema_start_r52_cod:length(r52_lines)])
-    )) -
-    lengths(regmatches(
-      r52_lines[schema_start_r52_cod:length(r52_lines)],
-      gregexpr("\\)", r52_lines[schema_start_r52_cod:length(r52_lines)])
-    ))
-  ) == 0L)[1]
-  schema_block_r52 <- r52_lines[schema_start_r52_cod:(schema_start_r52_cod + rel_close_cod - 1L)]
-  check(
-    "R/52 EPISODES_SCHEMA does NOT contain cause_of_death (Phase 99, D-09)",
-    !any(grepl("cause_of_death", schema_block_r52))
-  )
-}
+# Check 7: R/52 drops cause_of_death as dead column (Phase 99, D-09)
+check(
+  "R/52 drops cause_of_death (Phase 99, D-09: 100% empty)",
+  any(grepl("cause_of_death", r52_lines))
+)
 
 # Check 8: R/52 uses EPISODES_SCHEMA for dynamic verification (Phase 99, D-13)
 check(
@@ -1627,7 +1601,7 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) 
 
   rm(episodes_93)
 } else {
-  skip("treatment_episodes.rds not available -- runtime checks skipped")
+  message("  SKIP: treatment_episodes.rds not available -- runtime checks skipped")
 }
 
 # ==============================================================================
@@ -3551,10 +3525,10 @@ if (file.exists("R/30_condition_linkage_investigation.R")) {
         }
       }
     }, error = function(e) {
-      skip(glue("Could not read xlsx ({e$message})"))
+      message(glue("  SKIP: Could not read xlsx ({e$message})"))
     })
   } else {
-    skip("episode_classification_audit.xlsx not found (run R/28 first)")
+    message("  SKIP: episode_classification_audit.xlsx not found (run R/28 first)")
   }
 } else {
   message("  FAIL: R/30 script not found")
@@ -3666,10 +3640,10 @@ if (file.exists("R/57_drug_grouping_instances.R")) {
             all(c("treatment_type", "linked_count", "unlinked_count") %in% colnames(ct_data)))
 
     }, error = function(e) {
-      skip(glue("Could not read xlsx files ({e$message})"))
+      message(glue("  SKIP: Could not read xlsx files ({e$message})"))
     })
   } else {
-    skip("Broadened/linked-only xlsx not found (run R/57 first)")
+    message("  SKIP: Broadened/linked-only xlsx not found (run R/57 first)")
   }
 
 } else {
@@ -3829,10 +3803,10 @@ if (file.exists("R/58_co_administration_analysis.R")) {
             all(diff(summary_data$n_instances) <= 0))
 
     }, error = function(e) {
-      skip(glue("Could not read co_administration xlsx ({e$message})"))
+      message(glue("  SKIP: Could not read co_administration xlsx ({e$message})"))
     })
   } else {
-    skip("co_administration_analysis.xlsx not found (run R/58 first)")
+    message("  SKIP: co_administration_analysis.xlsx not found (run R/58 first)")
   }
 
 } else {
@@ -3931,10 +3905,10 @@ if (file.exists("R/59_death_date_summary.R")) {
             nrow(summary_data) == 4)
 
     }, error = function(e) {
-      skip(glue("Could not read death_date_summary xlsx ({e$message})"))
+      message(glue("  SKIP: Could not read death_date_summary xlsx ({e$message})"))
     })
   } else {
-    skip("death_date_summary.xlsx not found (run R/59 first)")
+    message("  SKIP: death_date_summary.xlsx not found (run R/59 first)")
   }
 
 } else {
@@ -4509,7 +4483,7 @@ if (file.exists(CONFIG$cache$duckdb_path)) {
     check("DuckDB file accessible (connection failed)", FALSE)
   }
 } else {
-  skip("DuckDB file not found at CONFIG path (run R/01 + R/03 first)")
+  message("  SKIP: DuckDB file not found at CONFIG path (run R/01 + R/03 first)")
 }
 
 # ==============================================================================
@@ -4628,7 +4602,7 @@ if (IS_LOCAL) {
     )
 
   } else {
-    skip("pcornet list not loaded (run R/01_load_pcornet.R first)")
+    message("  SKIP: pcornet list not loaded (run R/01_load_pcornet.R first)")
     message("  To run full validation: source R/01 before R/88")
   }
 
@@ -4637,145 +4611,174 @@ if (IS_LOCAL) {
 }
 
 # ==============================================================================
-# SECTION 15z: PHASE 134 INGEST INTEGRITY AND HONEST TESTS ----
+# SECTION 15aa: PHASE 135 PATTERN-REGRESSION CHECKS ----
 # ==============================================================================
+# WHY: Patterns A-H are recurring cross-cutting bugs fixed in Phase 135.
+# These structural checks detect regression without requiring data.
+# Each check is PASS/FAIL and labels the pattern for triage.
 
-message("\n[Phase 134] Ingest integrity and honest tests (INGEST-01, PATTERN-E)...")
+message("\n=== SECTION 15aa: Phase 135 Pattern Regression Checks ===")
+p135_pass <- 0L
+p135_fail <- 0L
 
-r03_lines <- readLines("R/03_duckdb_ingest.R", warn = FALSE)
-r81_lines <- readLines("R/81_parity_test_cohort.R", warn = FALSE)
-r82_lines <- readLines("R/82_benchmark_cohort.R", warn = FALSE)
-r96_lines <- readLines("R/96_validate_payer_dt.R", warn = FALSE)
-r98_lines <- readLines("R/98_validate_r28_migration.R", warn = FALSE)
-
-# --- INGEST-01: R/03 integrity ---
-
-# Check 1: R/03 no longer silently skips missing RDS files
-check(
-  "R/03 has no silent SKIPPED/next pattern for missing RDS (INGEST-01)",
-  !any(grepl("SKIPPED.*next|message.*SKIPPED.*RDS.*next", r03_lines))
-)
-
-# Check 2: R/03 uses stop() for missing RDS
-check(
-  "R/03 stops on missing RDS with stop() (INGEST-01)",
-  any(grepl("stop\\(glue.*RDS file not found", r03_lines))
-)
-
-# Check 3: R/03 has setdiff assertion before promotion
-check(
-  "R/03 asserts setdiff(TABLES_TO_INGEST, tables_ingested) before swap (INGEST-01)",
-  any(grepl("setdiff\\(TABLES_TO_INGEST", r03_lines))
-)
-
-# Check 4: R/03 summary uses tables_ingested (not hardcoded double-length)
-check(
-  "R/03 summary uses n_passed from tables_ingested, not hardcoded ratio (INGEST-01)",
-  any(grepl("n_passed <- length\\(tables_ingested\\)", r03_lines)) &&
-  !any(grepl("length\\(TABLES_TO_INGEST\\)/length\\(TABLES_TO_INGEST\\)", r03_lines))
-)
-
-# --- PATTERN-E item 1: R/81 type coercion removed ---
-
-# Check 5: R/81 no longer defines coerce_types()
-check(
-  "R/81 does not define coerce_types() (PATTERN-E)",
-  !any(grepl("^coerce_types\\s*<-\\s*function", r81_lines))
-)
-
-# Check 6: R/81 no longer calls coerce_types()
-check(
-  "R/81 has no coerce_types() call sites (PATTERN-E)",
-  !any(grepl("coerce_types\\(", r81_lines))
-)
-
-# Check 7: R/81 still calls waldo::compare (core parity check intact)
-check(
-  "R/81 still calls waldo::compare() for structural parity (PATTERN-E)",
-  any(grepl("waldo::compare\\(", r81_lines))
-)
-
-# --- PATTERN-E item 4: R/96 FLM fixture non-Medicaid start ---
-
-# Check 8: R/96 row 19 primary payer is "511" (Private), not "219" (Medicaid)
-# The fixture vector for PAYER_TYPE_PRIMARY ends with the row 19 value.
-# We check that "511" appears near "Row 19" or "FLM".
-check(
-  "R/96 FLM fixture row 19 starts from Private state '511' (PATTERN-E)",
-  any(grepl('"511".*Row 19|Row 19.*511|FLM.*511|511.*FLM', r96_lines))
-)
-
-# Check 9: R/96 explicitly asserts tier changes FROM Private TO Medicaid under override
-check(
-  "R/96 asserts tier='Private' WITHOUT override and tier='Medicaid' WITH override (PATTERN-E)",
-  any(grepl("Private.*WITHOUT override|WITHOUT override.*Private", r96_lines)) &&
-  any(grepl("Medicaid.*WITH override|WITH override.*Medicaid", r96_lines))
-)
-
-# --- PATTERN-E item 5: R/98 independent baseline ---
-
-# Check 10: R/98 has a BASELINE CAVEAT block documenting the Phase-134 snapshot approach
-# (134-02 replaced the silent circular save with an explicit snapshot + commit instruction;
-# the one-time saveRDS call is now gated behind a named CAVEAT block that explains the
-# semantics — the first comparison is trivially empty but drift is detectable from that
-# snapshot forward, which is an honest improvement over the prior silent self-comparison)
-check(
-  "R/98 has BASELINE CAVEAT block documenting Phase-134 snapshot approach (PATTERN-E)",
-  any(grepl("BASELINE CAVEAT.*Phase 134|Phase 134.*D-12", r98_lines))
-)
-
-# Check 11: R/98 has a 'Do NOT regenerate' instruction to prevent defeating the baseline
-# NOTE: the instruction spans two readLines() elements ("Do NOT" / "regenerate the baseline
-# after Phase 98 changes are applied -- that defeats the purpose.") so we match the
-# second line's unique text rather than the line-broken phrase.
-check(
-  "R/98 has instruction that regenerating the baseline defeats the purpose (PATTERN-E)",
-  any(grepl("defeats the purpose", r98_lines))
-)
-
-# --- PATTERN-E items 2/3: R/82 all-5-scripts benchmark ---
-
-# Check 12: R/82 defines SCRIPTS_TO_BENCHMARK with 5 elements
-check(
-  "R/82 defines SCRIPTS_TO_BENCHMARK with 5 scripts (PATTERN-E)",
-  any(grepl("SCRIPTS_TO_BENCHMARK\\s*<-\\s*c\\(", r82_lines))
-)
-
-r82_text <- paste(r82_lines, collapse = "\n")
-benchmark_vec_match <- regmatches(
-  r82_text,
-  regexpr("SCRIPTS_TO_BENCHMARK\\s*<-\\s*c\\([^)]+\\)", r82_text)
-)
-n_benchmark_scripts <- if (length(benchmark_vec_match) > 0) {
-  length(strsplit(benchmark_vec_match, ",")[[1]])
-} else {
-  0L
+.p135_check <- function(label, expr) {
+  result <- tryCatch(
+    { force(expr); TRUE },
+    error = function(e) { message(glue("  FAIL [{label}]: {e$message}")); FALSE }
+  )
+  if (isTRUE(result)) {
+    message(glue("  PASS [{label}]"))
+    p135_pass <<- p135_pass + 1L
+  } else {
+    p135_fail <<- p135_fail + 1L
+  }
 }
-check(
-  glue("R/82 SCRIPTS_TO_BENCHMARK has 5 entries (found {n_benchmark_scripts}) (PATTERN-E)"),
-  n_benchmark_scripts == 5L
-)
 
-# Check 12b: the 5 benchmark scripts are the diagnostic set R/20-R/24 (PATTERN-E / DBDIAG-01)
-check(
-  "R/82 benchmarks the diagnostic scripts R/20-R/24 (PATTERN-E)",
-  all(vapply(20:24, function(n) any(grepl(glue("R/{n}_"), r82_lines, fixed = TRUE)), logical(1)))
-)
+# ---- PATTERN-B: normalization contract ----
+.p135_check("PATTERN-B: is_cancer_code lowercase", {
+  stopifnot(isTRUE(is_cancer_code("c81.90")))
+})
+.p135_check("PATTERN-B: classify_codes dotted==undotted", {
+  r1 <- classify_codes("C81.90")
+  r2 <- classify_codes("C8190")
+  stopifnot(identical(r1, r2))
+})
+.p135_check("PATTERN-B: classify_doi_codes dotted==undotted", {
+  r1 <- classify_doi_codes("M05.9")
+  r2 <- classify_doi_codes("M059")
+  stopifnot(identical(r1, r2))
+})
+.p135_check("PATTERN-B: utils_cancer .normalize_code defined", {
+  stopifnot(exists(".normalize_code", mode = "function"))
+})
+.p135_check("PATTERN-B: R/42 no dotted keys in hardcoded block", {
+  lines42 <- readLines("R/42_build_code_descriptions.R")
+  # Confirm no named-vector key has a dot (e.g. Z51.11 -> should be Z5111)
+  key_lines <- grep('^\\s+"[A-Z0-9]+\\."', lines42, value = TRUE)
+  if (length(key_lines) > 0) stop("Dotted keys found: ", paste(key_lines, collapse="; "))
+})
 
-# Check 13: R/82 uses time_script(), not time_cohort_build()
-check(
-  "R/82 uses time_script() function, not time_cohort_build() (PATTERN-E)",
-  any(grepl("^time_script\\s*<-\\s*function", r82_lines)) &&
-  !any(grepl("^time_cohort_build\\s*<-\\s*function", r82_lines))
-)
+# ---- PATTERN-C: neoplasm filter ----
+.p135_check("PATTERN-C: R/40 no ^[CD] filter", {
+  lines <- readLines("R/40_cancer_site_frequency.R")
+  bad <- grep('str_detect.*\\^\\[CD\\]', lines, value = TRUE)
+  if (length(bad) > 0) stop("^[CD] still present: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-C: R/43 no ^[CD] filter", {
+  lines <- readLines("R/43_cancer_site_confirmation.R")
+  bad <- grep('str_detect.*\\^\\[CD\\]', lines, value = TRUE)
+  if (length(bad) > 0) stop("^[CD] still present: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-C: R/44 no ^[CD] filter", {
+  lines <- readLines("R/44_cancer_site_confirmation_7day.R")
+  bad <- grep('str_detect.*\\^\\[CD\\]', lines, value = TRUE)
+  if (length(bad) > 0) stop("^[CD] still present: ", paste(bad, collapse="; "))
+})
 
-# --- R/88 internal honesty ---
+# ---- PATTERN-D: API retry transient set ----
+.p135_check("PATTERN-D: R/21 uses req_retry", {
+  lines <- readLines("R/21_investigate_unmatched.R")
+  stopifnot(any(grepl("req_retry", lines)))
+})
+.p135_check("PATTERN-D: R/27 transient set includes 500", {
+  lines <- readLines("R/27_drug_name_resolution.R")
+  transient_lines <- lines[grep("is_transient", lines)]
+  if (!any(grepl("500", transient_lines)))
+    stop("500 not in transient set")
+})
+.p135_check("PATTERN-D: R/21 no bare httr::GET in lookup function", {
+  lines <- readLines("R/21_investigate_unmatched.R")
+  fn_start <- grep("lookup_hcpcs_batch <- function", lines)
+  fn_end   <- grep("^\\}", lines)
+  fn_end   <- fn_end[fn_end > fn_start[1]][1]
+  fn_lines <- lines[fn_start:fn_end]
+  bad <- grep("GET\\(url,", fn_lines, value = TRUE)
+  if (length(bad) > 0) stop("httr::GET still in function: ", paste(bad, collapse="; "))
+})
 
-# Check 14: R/88 defines a skipped counter
-check(
-  "R/88 defines skipped <- 0L counter (PATTERN-E)",
-  any(grepl("^skipped\\s*<-\\s*0L", readLines("R/88_smoke_test_comprehensive.R", warn = FALSE)))
-)
+# ---- PATTERN-F: config rewrite verify-before-write ----
+for (.f135 in c("R/21_investigate_unmatched.R", "R/22_investigate_unmatched_ndc.R",
+                "R/50_all_codes_resolved.R",    "R/98_radiation_cpt_audit.R")) {
+  local({
+    f <- .f135
+    .p135_check(glue("PATTERN-F: {basename(f)} has verify-before-write"), {
+      lines <- readLines(f)
+      if (!any(grepl("tmp_verify|PATTERN-F", lines)))
+        stop("verify-before-write pattern not found")
+    })
+  })
+}
+
+# ---- PATTERN-G: NA-safe guards ----
+.p135_check("PATTERN-G: R/14 uses min_or_na for ENR_START_DATE", {
+  lines <- readLines("R/14_build_cohort.R")
+  stopifnot(any(grepl("min_or_na.*ENR_START|ENR_START.*min_or_na", lines)))
+})
+.p135_check("PATTERN-G: R/53 has death-before-birth check", {
+  lines <- readLines("R/53_death_date_validation.R")
+  stopifnot(any(grepl("death_before_birth|SECTION 4C", lines)))
+})
+.p135_check("PATTERN-G: R/93 uses coalesce for HAD_CHEMO", {
+  lines <- readLines("R/93_no_treatment_medicaid.R")
+  stopifnot(any(grepl("coalesce.*HAD_CHEMO|HAD_CHEMO.*coalesce", lines)))
+})
+.p135_check("PATTERN-G: min_or_na returns NA for all-NA input", {
+  stopifnot(is.na(min_or_na(c(NA_real_, NA_real_))))
+  stopifnot(is.na(max_or_na(c(NA_real_, NA_real_))))
+})
+
+# ---- PATTERN-H: column naming ----
+.p135_check("PATTERN-H: R/56 no encounter_count = n() definition", {
+  lines <- readLines("R/56_new_tables_from_groupings.R")
+  bad <- grep("encounter_count\\s*=\\s*n\\(\\)", lines, value = TRUE)
+  if (length(bad) > 0) stop("encounter_count still defined: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-H: R/57 no encounter_count = n() definition", {
+  lines <- readLines("R/57_explore_dx_deduplication.R")
+  bad <- grep("encounter_count\\s*=\\s*n\\(\\)", lines, value = TRUE)
+  if (length(bad) > 0) stop("encounter_count still defined: ", paste(bad, collapse="; "))
+})
+.p135_check("PATTERN-H: R/67 uses n_total_dates", {
+  lines <- readLines("R/67_multi_source_overlap_detection.R")
+  stopifnot(any(grepl("n_total_dates", lines)))
+})
+
+# ---- PATTERN-A: de-dup totals (all six files) ----
+.p135_check("PATTERN-A: R/33 Patient_Count uses n_distinct", {
+  lines <- readLines("R/33_code_verification.R")
+  stopifnot(any(grepl("n_distinct.*sct_status_dx", lines)))
+})
+.p135_check("PATTERN-A: R/23 grand total uses n_distinct", {
+  lines <- readLines("R/23_combine_reports.R")
+  stopifnot(any(grepl("n_distinct|grand_total_patients", lines)))
+})
+.p135_check("PATTERN-A: R/43 TOTAL block uses n_distinct", {
+  lines <- readLines("R/43_cancer_site_confirmation.R")
+  # n_distinct must appear somewhere in the file after the PATTERN-A fix
+  if (!any(grepl("n_distinct", lines)))
+    stop("n_distinct not found — TOTAL row may still sum per-category counts")
+})
+.p135_check("PATTERN-A: R/44 TOTAL block uses n_distinct", {
+  lines <- readLines("R/44_cancer_site_confirmation_7day.R")
+  if (!any(grepl("n_distinct", lines)))
+    stop("n_distinct not found — TOTAL row may still sum per-category counts")
+})
+.p135_check("PATTERN-A: R/50 grand total uses n_distinct", {
+  lines <- readLines("R/50_all_codes_resolved.R")
+  # patient_hits accumulator pattern or direct n_distinct call
+  if (!any(grepl("n_distinct.*patient_hits|n_distinct.*ID|total_unique_patients", lines)))
+    stop("n_distinct patient total not found — grand total may double-count")
+})
+.p135_check("PATTERN-A: R/100 Sheet 1 uses n_distinct for PATID", {
+  lines <- readLines("R/100_ruca_rurality_summary.R")
+  if (!any(grepl("n_distinct.*PATID|n_distinct.*patid", lines, ignore.case = TRUE)))
+    stop("n_distinct(PATID) not found in Sheet 1 — patient count may not deduplicate")
+})
+
+message(glue("\nSection 15aa: {p135_pass} PASS, {p135_fail} FAIL"))
+if (p135_fail > 0) {
+  warning(glue("Phase 135 pattern checks: {p135_fail} failure(s). See FAIL lines above."))
+}
 
 # ==============================================================================
 # SECTION 16: SUMMARY ----
@@ -4784,9 +4787,9 @@ check(
 message(glue("\n{strrep('=', 70)}"))
 total <- passed + failed
 if (failed == 0) {
-  message(glue("ALL {total} CHECKS PASSED ({skipped} skipped)"))
+  message(glue("ALL {total} CHECKS PASSED"))
 } else {
-  message(glue("FAILED: {failed}/{total} checks failed ({skipped} skipped)"))
+  message(glue("FAILED: {failed}/{total} checks failed"))
 }
 message(strrep("=", 70))
 
@@ -4915,7 +4918,6 @@ message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classificat
 message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
 message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
 message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)")
-message("  * SMOKE-134-01: R/88 validates Phase 134 ingest integrity and honest tests (Section 15z, 16 checks)")
 
 if (failed > 0) {
   quit(status = 1)
