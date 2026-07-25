@@ -44,6 +44,7 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
+source(here("R/utils/utils_format.R"))  # Shared format helpers (clean_multi_value, union_field) — per CONFIRM-01
 
 message("=== quick-260710-i1e: Gantt Entire History Projection ===\n")
 
@@ -76,31 +77,6 @@ message(glue("  ENTIRE_HISTORY_SCHEMA defined: {length(ENTIRE_HISTORY_SCHEMA)} c
 # ==============================================================================
 # SECTION 3: HELPER FUNCTIONS ----
 # ==============================================================================
-
-# clean_multi_value() + union_field() -- copied VERBATIM from
-# R/101_gantt_lifespan_collapse.R (SECTION 3, lines 106-131). Standalone copies
-# are documented here because R/101 does not export them. Behavior: dedup, drop
-# blanks and literal "NA" tokens, sort, join with sep_out.
-clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
-  if (is.na(field_str) || field_str == "" || field_str == "NA") {
-    return("")
-  }
-
-  values <- str_split(field_str, sep_in)[[1]]
-  values <- str_trim(values)
-  values <- values[values != "" & values != "NA" & !is.na(values)]
-  values <- sort(unique(values))
-
-  if (length(values) == 0) {
-    return("")
-  }
-  paste(values, collapse = sep_out)
-}
-
-union_field <- function(x) {
-  clean_multi_value(paste(x, collapse = ";"), sep_in = ";", sep_out = ";")
-}
-
 
 # ==============================================================================
 # SECTION 4: LOAD INPUTS (blank-safe) ----

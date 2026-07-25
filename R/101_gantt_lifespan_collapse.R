@@ -57,6 +57,7 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
+source(here("R/utils/utils_format.R"))  # Shared format helpers (clean_multi_value, union_field) — per CONFIRM-01
 
 message("=== Phase 117: Lifespan Gantt Collapse ===\n")
 
@@ -98,38 +99,6 @@ message(glue("  LIFESPAN_SCHEMA defined: {length(LIFESPAN_SCHEMA)} columns\n"))
 # ==============================================================================
 # SECTION 3: HELPER FUNCTIONS ----
 # ==============================================================================
-
-# clean_multi_value() -- copied verbatim from R/52_gantt_v2_export.R lines 772-786.
-# Standalone copy is acceptable and documented here because R/52 does not export it.
-# Behavior: dedup, drop blanks, sort, join with sep_out.
-# D-07: reuses R/52's exact sort(unique()) behavior for multi-value field collapsing.
-clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
-  if (is.na(field_str) || field_str == "" || field_str == "NA") {
-    return("")
-  }
-
-  values <- str_split(field_str, sep_in)[[1]]
-  values <- str_trim(values)
-  # DOC-03: drug_group carries literal "NA" string tokens from upstream (e.g. "Chemotherapy,NA");
-  # filter them out alongside blanks and R-NA so they never reach the output CSVs.
-  values <- values[values != "" & values != "NA" & !is.na(values)]
-  values <- sort(unique(values))
-
-  if (length(values) == 0) {
-    return("")
-  }
-  paste(values, collapse = sep_out)
-}
-
-# union_field() -- group-level helper for ALREADY semicolon-separated fields.
-# When collapsing a group of rows, we first paste all values together with ";",
-# then call clean_multi_value(..., sep_in = ";") to union+dedup+sort.
-# This correctly handles the fact that gantt_episodes.csv multi-value fields are
-# already semicolon-separated (each cell may contain multiple ";"-joined values).
-union_field <- function(x) {
-  clean_multi_value(paste(x, collapse = ";"), sep_in = ";", sep_out = ";")
-}
-
 
 # ==============================================================================
 # SECTION 4: LOAD AND PREPARE EPISODE DATA ----

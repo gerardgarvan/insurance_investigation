@@ -128,6 +128,7 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 source("R/utils/utils_cancer.R")  # Phase 115: classify_codes() for 7-day confirmed mapping
+source(here("R/utils/utils_format.R"))  # Shared format helpers (clean_multi_value, union_field) — per CONFIRM-01
 
 # Input paths: existing RDS artifacts
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
@@ -767,25 +768,6 @@ if (file.exists(COHORT_RDS)) {
 # --- SECTION 4D: DATA QUALITY CLEANUP ----
 
 message("\n--- Section 4D: Data Quality Cleanup (Phase 64) ---")
-
-# Helper function: clean multi-value field (dedup, drop blanks, change separator)
-clean_multi_value <- function(field_str, sep_in = ",", sep_out = ";") {
-  if (is.na(field_str) || field_str == "" || field_str == "NA") {
-    return("")
-  }
-
-  values <- str_split(field_str, sep_in)[[1]]
-  values <- str_trim(values)
-  # DOC-03: drug_group carries literal "NA" string tokens from upstream (e.g. "Chemotherapy,NA");
-  # filter them out alongside blanks and R-NA so they never reach the output CSVs.
-  values <- values[values != "" & values != "NA" & !is.na(values)]
-  values <- sort(unique(values))
-
-  if (length(values) == 0) {
-    return("")
-  }
-  paste(values, collapse = sep_out)
-}
 
 # Step 1: Clean multi-value fields (separator + dedup + drop blanks)
 episodes_export <- episodes_export %>%
