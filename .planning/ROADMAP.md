@@ -193,7 +193,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 ## Phases (v3.4)
 
-- [ ] **Phase 132: Crash Fixes** - Unblock 6 scripts (`74`,`81`-`85`) that abort immediately on editor artifacts
+- [x] **Phase 132: Crash Fixes** - Unblock 6 scripts (`74`,`81`-`85`) that abort immediately on editor artifacts (completed 2026-07-25)
 - [ ] **Phase 133: Critical Correctness Fixes** - Fix wrong published numbers (SCT filter, total_records, HL anchor date, same-week desync, age_at_episode) + the content-empty reference manual
 - [ ] **Phase 134: Ingest Integrity and Honest Tests** - Harden the DuckDB ingest promotion gate + fix 5 can't-fail validators
 - [ ] **Phase 135: Shared-Helper Standardization** - Standardize 7 cross-cutting patterns (A, B, C, D, F, G, H) once at the shared-helper layer
@@ -219,7 +219,7 @@ See MILESTONES.md for full details on all shipped milestones.
 - [x] 132-01-PLAN.md -- Remove stray bare `n` from R/74, R/81, R/82, R/83 (1 occurrence each) [CRASH-01] (Wave 1)
 - [x] 132-02-PLAN.md -- Remove 3 stray bare `n` occurrences from R/84 + attach library(purrr) to fix walk() crash [CRASH-01, CRASH-02] (Wave 1)
 - [x] 132-03-PLAN.md -- Remove 3 stray bare `n` occurrences from R/85 (purrr::walk() calls untouched) [CRASH-01] (Wave 1)
-- [ ] 132-04-PLAN.md -- R/88 Section 15y structural regression-guard checks for CRASH-01/CRASH-02 [CRASH-01, CRASH-02] (Wave 2, depends on 132-01/02/03)
+- [x] 132-04-PLAN.md -- R/88 Section 15y structural regression-guard checks for CRASH-01/CRASH-02 [CRASH-01, CRASH-02] (Wave 2, depends on 132-01/02/03)
 
 ### Phase 133: Critical Correctness Fixes
 **Goal**: The pipeline's published numbers and generated reference manual are correct — no analytic output is silently wrong or inert, and the documentation generator produces real content
@@ -305,7 +305,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 132. Crash Fixes | v3.4 | 3/4 | In Progress|  |
+| 132. Crash Fixes | v3.4 | 4/4 | Complete   | 2026-07-25 |
 | 133. Critical Correctness Fixes | v3.4 | TBD | Not started | - |
 | 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Not started | - |
 | 135. Shared-Helper Standardization | v3.4 | TBD | Not started | - |
