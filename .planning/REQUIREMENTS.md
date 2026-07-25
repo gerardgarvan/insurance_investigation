@@ -35,14 +35,14 @@ Fix the crash-causing and wrong-published-number defects surfaced by the code re
 
 ### Cross-Cutting Pattern Standardization (PATTERN)
 
-- [ ] **PATTERN-A**: Record/patient totals in `R/23`, `R/33` (CODE-03), `R/43`/`R/44` (TOTAL rows), `R/50` (grand total), `R/91`, `R/100` (Sheet 1) are computed by de-duplicating to the intended grain (`n_distinct(ID)` / distinct code) before totaling, not by summing per-code counts across codes a patient/record may appear under more than once (`R/46`'s instance is DATA-02 above, already covered)
-- [ ] **PATTERN-B**: A single shared code-normalization convention (strip **all** dots + `toupper()` + dotted/undotted union) is applied consistently across `R/13_survivorship_encounters.R`, `R/42_build_code_descriptions.R`, `utils_cancer.R` (`classify_codes`/`is_cancer_code`), and `utils_doi.R` (`classify_doi_codes()`) — eliminating the dotted-only vs. dotted+undotted vs. case-sensitive drift documented in the review
-- [ ] **PATTERN-C**: Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or an equivalent `^C|^D[0-4]` pattern) instead of the over-inclusive `^[CD]`, so D50-D89 anemias/cytopenias/neutropenia no longer land in the "Unclassified" neoplasm bucket
-- [ ] **PATTERN-D**: External-API calls in `R/21_investigate_unmatched.R`, `R/27`, `R/105`, `R/108` classify transient errors (429/503/504/timeout/500/502) separately from a genuine "not found," retry transient errors (`R/21` currently has no retry at all), and never persist a transient failure as a permanent cache miss / dropped crosswalk entry
+- [x] **PATTERN-A**: Record/patient totals in `R/23`, `R/33` (CODE-03), `R/43`/`R/44` (TOTAL rows), `R/50` (grand total), `R/91`, `R/100` (Sheet 1) are computed by de-duplicating to the intended grain (`n_distinct(ID)` / distinct code) before totaling, not by summing per-code counts across codes a patient/record may appear under more than once (`R/46`'s instance is DATA-02 above, already covered)
+- [x] **PATTERN-B**: A single shared code-normalization convention (strip **all** dots + `toupper()` + dotted/undotted union) is applied consistently across `R/13_survivorship_encounters.R`, `R/42_build_code_descriptions.R`, `utils_cancer.R` (`classify_codes`/`is_cancer_code`), and `utils_doi.R` (`classify_doi_codes()`) — eliminating the dotted-only vs. dotted+undotted vs. case-sensitive drift documented in the review
+- [x] **PATTERN-C**: Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or an equivalent `^C|^D[0-4]` pattern) instead of the over-inclusive `^[CD]`, so D50-D89 anemias/cytopenias/neutropenia no longer land in the "Unclassified" neoplasm bucket
+- [x] **PATTERN-D**: External-API calls in `R/21_investigate_unmatched.R`, `R/27`, `R/105`, `R/108` classify transient errors (429/503/504/timeout/500/502) separately from a genuine "not found," retry transient errors (`R/21` currently has no retry at all), and never persist a transient failure as a permanent cache miss / dropped crosswalk entry
 - [ ] **PATTERN-E**: Tests/validators that currently cannot fail are corrected: `R/81` no longer coerces types before `waldo::compare()`; `R/82`/`R/83`'s "≥3× speedup on 3 of 5 scripts" check actually benchmarks all 5 scripts (not 1); `R/88` separates skip counters from pass counters and its `cause_of_death` "drop" check fails when the value is genuinely absent (not present); `R/96_validate_payer_dt`'s FLM-override fixture starts from a non-Medicaid state so the override is provably exercised; `R/98_validate_r28_migration` compares against an independently-generated baseline, not a copy of its own output
-- [ ] **PATTERN-F**: In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` either moves to a data-driven config source or hardens its regex/quote-handling so newly-discovered codes are never silently dropped when a parse/write attempt fails
-- [ ] **PATTERN-G**: Missing NA/sentinel/impossible-date guards are added: `R/53_death_date_validation.R` gets a death-before-birth check (flags negative `age_at_death`); `R/14`, `R/31`, `R/93` use NA-safe `min_or_na`/`max_or_na` helpers (or equivalent guards) consistently instead of producing silent `Inf` durations, unguarded `episode_start`, or dropped NA treatment flags
-- [ ] **PATTERN-H**: Grain-mislabeled columns are renamed or re-aggregated to match their documented grain: `R/56`'s `encounter_count` (actually episode count), `R/57_explore_dx_deduplication`'s same mislabel, `R/62`'s `date_tier_detail` (patient×type×episode×date, not one-row-per-patient-per-date), `R/67`'s `n_total_encounters` (double-counts dates used in both roles)
+- [x] **PATTERN-F**: In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` either moves to a data-driven config source or hardens its regex/quote-handling so newly-discovered codes are never silently dropped when a parse/write attempt fails
+- [x] **PATTERN-G**: Missing NA/sentinel/impossible-date guards are added: `R/53_death_date_validation.R` gets a death-before-birth check (flags negative `age_at_death`); `R/14`, `R/31`, `R/93` use NA-safe `min_or_na`/`max_or_na` helpers (or equivalent guards) consistently instead of producing silent `Inf` durations, unguarded `episode_start`, or dropped NA treatment flags
+- [x] **PATTERN-H**: Grain-mislabeled columns are renamed or re-aggregated to match their documented grain: `R/56`'s `encounter_count` (actually episode count), `R/57_explore_dx_deduplication`'s same mislabel, `R/62`'s `date_tier_detail` (patient×type×episode×date, not one-row-per-patient-per-date), `R/67`'s `n_total_encounters` (double-counts dates used in both roles)
 
 ### Confirm Loose Ends (CONFIRM)
 
@@ -96,14 +96,14 @@ Which phases cover which requirements. Populated during roadmap creation.
 | DATA-07 | Phase 133 | Complete |
 | INGEST-01 | Phase 134 | Pending |
 | DOCS-01 | Phase 133 | Complete |
-| PATTERN-A | Phase 135 | Pending |
-| PATTERN-B | Phase 135 | Pending |
-| PATTERN-C | Phase 135 | Pending |
-| PATTERN-D | Phase 135 | Pending |
+| PATTERN-A | Phase 135 | Complete |
+| PATTERN-B | Phase 135 | Complete |
+| PATTERN-C | Phase 135 | Complete |
+| PATTERN-D | Phase 135 | Complete |
 | PATTERN-E | Phase 134 | Pending |
-| PATTERN-F | Phase 135 | Pending |
-| PATTERN-G | Phase 135 | Pending |
-| PATTERN-H | Phase 135 | Pending |
+| PATTERN-F | Phase 135 | Complete |
+| PATTERN-G | Phase 135 | Complete |
+| PATTERN-H | Phase 135 | Complete |
 | CONFIRM-01 | Phase 136 | Pending |
 | CONFIRM-02 | Phase 136 | Pending |
 
