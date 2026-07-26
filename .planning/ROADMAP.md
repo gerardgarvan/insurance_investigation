@@ -336,3 +336,16 @@ See MILESTONES.md for full details on all shipped milestones.
 | 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
 | 136. Confirm Loose Ends | v3.4 | 2/2 | Complete    | 2026-07-25 |
 | 137. ZIP9 Temporal Assignment | standalone | 2/2 | Complete    | 2026-07-25 |
+
+### Phase 138: resolve log2.txt problems
+
+**Goal:** Fix the 3 root-cause bugs behind the 9 script failures in log2.txt (real HiPerGator R/39 run): DuckDB gsub-in-lazy-filter in R/13, `tables_ingested <<-` scoping bug in R/03, and PATID column rename in R/53. Cascading failures (R/70, R/71, R/72, R/52, R/101, R/104) resolve automatically.
+**Requirements**: D-01 through D-09
+**Depends on:** Phase 137
+**Plans:** 2/5 plans executed
+
+Plans:
+- [x] 138-01-PLAN.md — Fix R/13 DuckDB gsub-in-lazy-filter: pre-compute combined dotted+undotted IN-list (D-01, D-02, D-03) (Wave 1)
+- [ ] 138-02-PLAN.md — Fix R/03 `tables_ingested <<-` scoping bug: change to `<-` (D-04, D-05) (Wave 1)
+- [x] 138-03-PLAN.md — Fix R/53 `select(ID = PATID, ...)` PATID column bug: change to `select(ID, ...)` (D-06, D-07) (Wave 1)
+- [ ] 138-04-PLAN.md — R/88 Section 15ac: 3 static grep assertions for each fix + SMOKE-138-01 footer (D-08, D-09) (Wave 2, depends on 138-01/02/03)
