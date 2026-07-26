@@ -206,7 +206,7 @@ message("\n--- Checking for death before birth ---")
 # demographics is loaded later in Section 5; read it here for the check only.
 # Use get_pcornet_table so we stay consistent with the rest of the script.
 demo_for_birth_check <- get_pcornet_table("DEMOGRAPHIC") %>%
-  select(ID = PATID, BIRTH_DATE) %>%
+  select(ID, BIRTH_DATE) %>%
   collect() %>%
   mutate(BIRTH_DATE = parse_pcornet_date(BIRTH_DATE))
 
