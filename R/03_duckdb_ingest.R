@@ -178,6 +178,12 @@ ingest_ok <- tryCatch(
                 message(glue("  Encoding error detected -- sanitizing character columns and retrying..."))
                 char_cols <- names(df)[vapply(df, is.character, logical(1))]
                 for (cc in char_cols) {
+                  # `<<-` is CORRECT here and must not be changed to `<-`.
+                  # This handler is a closure whose enclosing environment is the
+                  # source(local = new.env) environment, so `<<-` searches that env
+                  # first and finds the `df` bound above. `<-` would bind in this
+                  # handler's frame and the sanitised columns would be discarded
+                  # before the retry at dbWriteTable below.
                   df[[cc]] <<- iconv(df[[cc]], from = "latin1", to = "UTF-8", sub = "")
                 }
                 tryCatch(
@@ -196,7 +202,7 @@ ingest_ok <- tryCatch(
 
           # Record metrics
           duration <- as.numeric(difftime(Sys.time(), tbl_start, units = "secs"))
-          ingest_log <<- bind_rows(ingest_log, tibble(
+          ingest_log <- bind_rows(ingest_log, tibble(
             table_name   = tbl_name,
             row_count    = nrow(df),
             col_count    = ncol(df),
@@ -204,7 +210,7 @@ ingest_ok <- tryCatch(
           ))
 
           message(glue("  Written to DuckDB in {round(duration, 1)}s"))
-          tables_ingested <<- c(tables_ingested, tbl_name)
+          tables_ingested <- c(tables_ingested, tbl_name)
 
           # Free memory before next table
           rm(df)
@@ -217,6 +223,11 @@ ingest_ok <- tryCatch(
         }
       )
     }
+
+    # Phase 138: fail loudly and locally if ingest tracking is ever silently dropped
+    # again. Without this, a scoping regression surfaces only as a set-mismatch error
+    # ~180 lines later, after the .tmp database has already been discarded.
+    stopifnot(length(tables_ingested) == length(TABLES_TO_INGEST))
 
     # ============================================================================
     # INDEX CREATION (Phase 29 Plan 02 -- DBING-03)
