@@ -4859,6 +4859,71 @@ check_137("utils_address.R present in SCRIPT_INDEX.md",
 message(glue("\nSection 15ab: {p137_pass} PASS, {p137_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ac: PHASE 138 log2.txt BUG FIX STRUCTURAL CHECKS ----
+# ==============================================================================
+# Static grep assertions verifying the three root-cause fixes from Phase 138.
+# D-09: replicates the Section 15x/15y grep-based assertion pattern.
+
+p138_pass <- 0L
+p138_fail <- 0L
+check_138 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p138_pass <<- p138_pass + 1L
+    message(glue("  [PASS] {label}"))
+  } else {
+    p138_fail <<- p138_fail + 1L
+    message(glue("  [FAIL] {label}"))
+    failed <<- failed + 1L
+  }
+  passed <<- passed + 1L
+}
+
+message("\n--- Section 15ac: Phase 138 log2.txt fix assertions ---")
+
+read_or_null <- function(p) if (file.exists(p)) readLines(p, warn = FALSE) else NULL
+code_only    <- function(x) if (is.null(x)) character(0) else x[!grepl("^\\s*#", x)]
+
+r13_lines <- read_or_null("R/13_survivorship_encounters.R")
+r03_lines <- read_or_null("R/03_duckdb_ingest.R")
+r53_lines <- read_or_null("R/53_death_date_validation.R")
+
+# Gate: a missing file must FAIL, not vacuously pass every downstream grep.
+check_138("R/13 source file present", !is.null(r13_lines))
+check_138("R/03 source file present", !is.null(r03_lines))
+check_138("R/53 source file present", !is.null(r53_lines))
+
+r13_code <- code_only(r13_lines)
+r03_code <- code_only(r03_lines)
+r53_code <- code_only(r53_lines)
+
+# --- Fix 1: R/13 DuckDB gsub-in-lazy-filter (D-02) ---
+check_138("R/13: no gsub applied to DX column in lazy filter",
+  !any(grepl("gsub.*\\bDX\\b", r13_code)))
+check_138("R/13: combined dotted+undotted IN-lists present",
+  any(grepl("hl_icd10_combined", r13_code)) &&
+  any(grepl("hl_icd9_combined",  r13_code)))
+check_138("R/13: superseded *_clean vectors removed",
+  !any(grepl("hl_icd10_clean|hl_icd9_clean", r13_code)))
+
+# --- Fix 2: R/03 scoping (D-04, D-04a) ---
+check_138("R/03: tables_ingested uses <- not <<- (scoping fix)",
+  !any(grepl("tables_ingested\\s*<<-", r03_code)))
+check_138("R/03: ingest_log uses <- not <<- (same root cause, line 199)",
+  !any(grepl("ingest_log\\s*<<-", r03_code)))
+check_138("R/03: df[[cc]] <<- PRESERVED in encoding handler (D-04a)",
+  any(grepl("df\\[\\[cc\\]\\]\\s*<<-", r03_code)))
+check_138("R/03: ingest-count guard present after loop",
+  any(grepl("stopifnot\\(length\\(tables_ingested\\)", r03_code)))
+
+# --- Fix 3: R/53 PATID column (D-06) ---
+check_138("R/53: DEMOGRAPHIC select does not reference PATID column",
+  !any(grepl("=\\s*PATID", r53_code)))
+check_138("R/53: DEMOGRAPHIC select uses ID directly",
+  any(grepl("select\\(ID,\\s*BIRTH_DATE\\)", r53_code)))
+
+message(glue("\nSection 15ac: {p138_pass} PASS, {p138_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -4996,6 +5061,7 @@ message("  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classificat
 message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)")
 message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
 message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)")
+message("  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R/13 gsub, R/03 scoping incl. ingest_log + preserved line-181 <<-, R/53 PATID) with file-existence gates and positive-pattern assertions (Section 15ac, 12 checks)")
 
 if (failed > 0) {
   quit(status = 1)
