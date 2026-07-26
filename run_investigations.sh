@@ -5,7 +5,6 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=04:00:00
-#SBATCH --partition=default
 #SBATCH --account=erin.mobley-hl.bcu
 
 module load R/4.4.2
