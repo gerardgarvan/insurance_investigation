@@ -604,7 +604,7 @@ compute_last_any_treatment_date <- function() {
           ) %>%
           filter(!is.na(DX_DATE)) %>%
           group_by(ID) %>%
-          summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
+          summarise(tx_date = suppressWarnings(max(DX_DATE, na.rm = TRUE)), .groups = "drop") %>%
           collect()
       }
       if (!is.null(get_pcornet_table("ENCOUNTER"))) {
@@ -676,7 +676,7 @@ compute_last_any_treatment_date <- function() {
           ) %>%
           filter(!is.na(DX_DATE)) %>%
           group_by(ID) %>%
-          summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
+          summarise(tx_date = suppressWarnings(max(DX_DATE, na.rm = TRUE)), .groups = "drop") %>%
           collect()
       }
       if (!is.null(get_pcornet_table("ENCOUNTER"))) {
@@ -730,7 +730,7 @@ compute_last_any_treatment_date <- function() {
           filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
           filter(!is.na(DX_DATE)) %>%
           group_by(ID) %>%
-          summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop") %>%
+          summarise(tx_date = suppressWarnings(max(DX_DATE, na.rm = TRUE)), .groups = "drop") %>%
           collect()
       }
       if (!is.null(get_pcornet_table("ENCOUNTER"))) {

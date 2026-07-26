@@ -666,7 +666,7 @@ if (nrow(sct_dates) > 0) {
       is_sct_conditioning_context = any(is_within_window, na.rm = TRUE),
       days_to_nearest_sct = if_else(
         any(!is.na(days_to_sct) & days_to_sct >= 0),
-        as.integer(min(days_to_sct[days_to_sct >= 0], na.rm = TRUE)),
+        suppressWarnings(as.integer(min(days_to_sct[days_to_sct >= 0], na.rm = TRUE))),
         NA_integer_
       ),
       .groups = "drop"

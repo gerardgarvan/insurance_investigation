@@ -492,7 +492,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
         ) %>%
         filter(!is.na(DX_DATE)) %>%
         group_by(ID) %>%
-        summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+        summarise(tx_date = suppressWarnings(max(DX_DATE, na.rm = TRUE)), .groups = "drop")
     }
     # Chemo from ENCOUNTER DRG
     if (!is.null(pcornet$ENCOUNTER)) {
@@ -562,7 +562,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
         ) %>%
         filter(!is.na(DX_DATE)) %>%
         group_by(ID) %>%
-        summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+        summarise(tx_date = suppressWarnings(max(DX_DATE, na.rm = TRUE)), .groups = "drop")
     }
     if (!is.null(pcornet$ENCOUNTER)) {
       sources$drg <- pcornet$ENCOUNTER %>%
@@ -612,7 +612,7 @@ compute_last_tx_dates_from_procedures <- function(treatment_type) {
         filter(DX_TYPE == "10" & DX %in% TREATMENT_CODES$sct_dx_icd10) %>%
         filter(!is.na(DX_DATE)) %>%
         group_by(ID) %>%
-        summarise(tx_date = max(DX_DATE, na.rm = TRUE), .groups = "drop")
+        summarise(tx_date = suppressWarnings(max(DX_DATE, na.rm = TRUE)), .groups = "drop")
     }
     if (!is.null(pcornet$ENCOUNTER)) {
       sources$drg <- pcornet$ENCOUNTER %>%
