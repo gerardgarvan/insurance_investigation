@@ -193,7 +193,8 @@ tier1 <- drug_admins %>%
   inner_join(
     doi_enc %>% filter(!is.na(ENCOUNTERID) & ENCOUNTERID != ""),
     by = "ENCOUNTERID",
-    suffix = c("_drug", "_dx")
+    suffix = c("_drug", "_dx"),
+    relationship = "many-to-many"   # doi_enc has one row per (ENCOUNTERID, doi_code); intentional expansion
   ) %>%
   # After the join ID may appear as ID_drug / ID_dx — coalesce to a single ID.
   mutate(
@@ -226,7 +227,8 @@ drug_unmatched <- drug_admins %>%
 message(glue("  Unmatched drug admins passed to tier 2: {nrow(drug_unmatched)}"))
 
 tier2 <- drug_unmatched %>%
-  inner_join(doi_enc, by = "ID", suffix = c("_drug", "_dx")) %>%
+  inner_join(doi_enc, by = "ID", suffix = c("_drug", "_dx"),
+             relationship = "many-to-many") %>%   # one drug admin x many DoI encounters per patient; intentional
   # Keep pairs where the DoI encounter DX_DATE is within ±DOI_ATTRIBUTION_WINDOW_DAYS
   # of the drug administration date. Named constant, NOT a literal 90.
   filter(
@@ -314,7 +316,8 @@ hl_active <- doi_drug_links %>%
   filter(attribution_method != "none") %>%
   select(ID, treatment_date) %>%
   distinct() %>%
-  left_join(hl_dx_dated, by = "ID") %>%
+  left_join(hl_dx_dated, by = "ID",
+            relationship = "many-to-many") %>%   # patient has many HL dx dates; group_by+any() collapses correctly
   group_by(ID, treatment_date) %>%
   summarise(
     hl_active_in_window = any(
@@ -478,7 +481,7 @@ n_na    <- tabyl_count(flag_tabyl, is.na(flag_tabyl$likely_non_lymphoma_directed
 # the window is measured cleanly without encounter-tier confounds.
 count_window_matches <- function(win) {
   drug_admins %>%
-    inner_join(doi_enc, by = "ID") %>%
+    inner_join(doi_enc, by = "ID", relationship = "many-to-many") %>%   # sensitivity cross-join; collapsed by summarise
     filter(abs(as.integer(DX_DATE - treatment_date)) <= win) %>%
     summarise(n_pairs = n(), n_patients = n_distinct(ID))
 }
