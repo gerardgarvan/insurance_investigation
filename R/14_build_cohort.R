@@ -258,12 +258,16 @@ enrollment_primary <- get_pcornet_table("ENROLLMENT") %>%
 
 # Aggregate enrollment dates per patient
 # Safety net: re-check 1900 sentinels on derived dates where _VALID flags may not propagate
-# Materialize after summarise since downstream uses interval() (R-side lubridate function)
+# WHY collect() before summarise(): min_or_na() / max_or_na() are pure-R functions that
+# dbplyr cannot translate to SQL. Must materialize to in-memory tibble first, then
+# apply R-side aggregation. (Bug fix: previously summarise ran on lazy tbl_dbi,
+# causing DuckDB "Catalog Error: Scalar Function with name min_or_na does not exist".)
 enrollment_dates <- enrollment_primary %>%
   mutate(
     ENR_START_DATE = if_else(year(ENR_START_DATE) == 1900L, as.Date(NA), ENR_START_DATE),
     ENR_END_DATE   = if_else(year(ENR_END_DATE) == 1900L, as.Date(NA), ENR_END_DATE)
   ) %>%
+  collect() %>%
   group_by(ID) %>%
   summarise(
     enr_start_date = min_or_na(ENR_START_DATE),
@@ -272,8 +276,7 @@ enrollment_dates <- enrollment_primary %>%
   ) %>%
   mutate(
     enrollment_duration_days = as.numeric(enr_end_date - enr_start_date)
-  ) %>%
-  materialize()
+  )
 
 # Join enrollment dates and calculate ages (D-10)
 # Materialize cohort before age calculation (lubridate::interval is R-side only)

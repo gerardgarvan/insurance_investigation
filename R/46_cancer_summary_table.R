@@ -95,11 +95,12 @@ message("\nQuerying DIAGNOSIS for record counts...")
 
 dx_record_counts <- get_pcornet_table("DIAGNOSIS") %>%
   filter(DX_TYPE == "10") %>%
+  select(DX) %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
-  filter(is_cancer_code(DX_norm)) %>% # PATTERN-C fix: ^[CD] replaced with map-based helper
-  group_by(DX_norm) %>%
-  summarise(record_count = n(), .groups = "drop") %>%
-  collect()
+  collect() %>%                               # WHY collect() here: is_cancer_code() is a
+  filter(is_cancer_code(DX_norm)) %>%         # pure-R function (CANCER_SITE_MAP lookup) that
+  group_by(DX_norm) %>%                       # dbplyr cannot translate to SQL. Must
+  summarise(record_count = n(), .groups = "drop") # materialize before R-side filtering.
 
 message(glue("  Found record counts for {nrow(dx_record_counts)} unique codes"))
 
