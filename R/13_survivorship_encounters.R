@@ -113,18 +113,15 @@ classify_survivorship_encounters <- function(post_dx_date_map) {
   # D-07: HL codes ONLY -- C81.xx ICD-10, 201.xx ICD-9
   # ----------------------------------------------------------------------------
 
-  # PATTERN-B fix: accept both dotted ("C81.90") and undotted ("C8190") HL codes.
-  # ICD_CODES$hl_icd10 may store dotted codes while some sites store undotted DX
-  # values. The OR expansion checks the raw form first, then the dot-stripped form.
-  hl_icd10_clean <- gsub("\\.", "", ICD_CODES$hl_icd10)
-  hl_icd9_clean  <- gsub("\\.", "", ICD_CODES$hl_icd9)
+  # Pre-compute combined dotted+undotted IN-lists before the lazy DuckDB filter.
+  # R string functions (gsub, sub) cannot be applied to DuckDB columns inside filter().
+  hl_icd10_combined <- unique(c(ICD_CODES$hl_icd10, gsub("\\.", "", ICD_CODES$hl_icd10)))
+  hl_icd9_combined  <- unique(c(ICD_CODES$hl_icd9,  gsub("\\.", "", ICD_CODES$hl_icd9)))
 
   hl_dx_on_encounter <- get_pcornet_table("DIAGNOSIS") %>%
     filter(
-      (DX_TYPE == "10" & (DX %in% ICD_CODES$hl_icd10 |
-                           gsub("\\.", "", DX) %in% hl_icd10_clean)) |
-      (DX_TYPE == "09" & (DX %in% ICD_CODES$hl_icd9 |
-                           gsub("\\.", "", DX) %in% hl_icd9_clean))
+      (DX_TYPE == "10" & DX %in% hl_icd10_combined) |
+      (DX_TYPE == "09" & DX %in% hl_icd9_combined)
     ) %>%
     distinct(ENCOUNTERID) %>%
     collect()
