@@ -128,7 +128,8 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 source("R/utils/utils_cancer.R")  # Phase 115: classify_codes() for 7-day confirmed mapping
-source(here("R/utils/utils_format.R"))  # Shared format helpers (clean_multi_value, union_field) — per CONFIRM-01
+# utils_format.R already loaded by R/00_config.R (auto-sources all R/utils/*.R via list.files)
+# DO NOT re-source via here() — here package is not guaranteed to be loaded in every execution context
 
 # Input paths: existing RDS artifacts
 EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")

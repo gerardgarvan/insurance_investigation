@@ -57,7 +57,8 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-source(here("R/utils/utils_format.R"))  # Shared format helpers (clean_multi_value, union_field) — per CONFIRM-01
+# utils_format.R already loaded by R/00_config.R (auto-sources all R/utils/*.R via list.files)
+# DO NOT re-source via here() — here package is not guaranteed to be loaded in every execution context
 
 message("=== Phase 117: Lifespan Gantt Collapse ===\n")
 

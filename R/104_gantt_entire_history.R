@@ -44,7 +44,8 @@ suppressPackageStartupMessages({
 })
 
 source("R/00_config.R")
-source(here("R/utils/utils_format.R"))  # Shared format helpers (clean_multi_value, union_field) — per CONFIRM-01
+# utils_format.R already loaded by R/00_config.R (auto-sources all R/utils/*.R via list.files)
+# DO NOT re-source via here() — here package is not guaranteed to be loaded in every execution context
 
 message("=== quick-260710-i1e: Gantt Entire History Projection ===\n")
 
@@ -59,8 +60,19 @@ INPUT_EPISODES <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
 # OUTPUT PATH: under output/ alongside the other Gantt exports.
 OUTPUT <- file.path(CONFIG$output_dir, "gantt_entire_history.csv")
 
-# Defensive: fail fast if either upstream Gantt export is missing.
-stopifnot(file.exists(INPUT_LIFESPAN), file.exists(INPUT_EPISODES))
+# Defensive: fail fast if either upstream Gantt export is missing (D-12: named assertions).
+if (!file.exists(INPUT_LIFESPAN)) {
+  stop(glue(
+    "[R/104] Input not found: {INPUT_LIFESPAN}\n",
+    "  Run R/101_gantt_lifespan_collapse.R first to produce gantt_lifespan.csv."
+  ))
+}
+if (!file.exists(INPUT_EPISODES)) {
+  stop(glue(
+    "[R/104] Input not found: {INPUT_EPISODES}\n",
+    "  Run R/52_gantt_v2_export.R first to produce gantt_episodes.csv."
+  ))
+}
 
 message(glue("  Inputs validated:\n    {INPUT_LIFESPAN}\n    {INPUT_EPISODES}\n"))
 

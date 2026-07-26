@@ -188,10 +188,10 @@ investigation_scripts <- c(
   "R/36_tableau_ready_tables.R",               # TABLE-1 and TABLE-2
   "R/56_new_tables_from_groupings.R",          # Episode-level drug grouping tables
   "R/100_ruca_rurality_summary.R",             # RUCA rurality summary (Phase 116)
-  "R/101_gantt_lifespan_collapse.R",           # Lifespan Gantt collapse (Phase 117); consumes gantt_episodes.csv (produced by R/52)
+  # R/101 moved to Stage 4 (after R/52): consumes gantt_episodes.csv (produced by R/52)
   "R/103_death_cause_diagnostic.R",           # Cause-of-death signal inventory diagnostic (Phase 119; read-only)
   "R/102_death_cause_nhl_flag.R",             # Cause-of-death NHL three-state flag CSV (Phase 118; fixed Phase 119 to read DEATH_CAUSE table)
-  "R/104_gantt_entire_history.R",             # Gantt entire-history 6-col projection (quick-260710-i1e); consumes gantt_lifespan.csv + gantt_episodes.csv
+  # R/104 moved to Stage 4 (after R/101): consumes gantt_lifespan.csv (R/101) + gantt_episodes.csv (R/52)
   "R/105_normalize_supportive_care_meaning.R",  # Supportive Care Normalized Meaning column (Phase 120); mutates data/reference/all_codes_resolved_next_tables_v2.1.xlsx in place
   "R/106_zip_change_frequency.R",               # ZIP change frequency investigation (Phase 121); probes LDS_ADDRESS_HISTORY, read-only
   "R/111_doi_classification.R",                 # DoI classification (Phase 128); DuckDB prefix-pull of DIAGNOSIS -> doi_encounters.rds + doi_patients.rds. MUST run before R/112 (emits its .rds inputs).
@@ -241,7 +241,9 @@ export_scripts <- c(
   "R/78_venn_lymphoma_3way.R",                 # 3-way lymphoma Venn data
   "R/77_venn_hl_nlphl.R",                      # HL vs NLPHL Venn diagram
   "R/58_code_reference_tables.R",              # Code reference tables (needs R/49, R/56)
-  "R/52_gantt_v2_export.R"                     # Gantt CSVs for Tableau (needs R/28, R/42, R/53)
+  "R/52_gantt_v2_export.R",                    # Gantt CSVs for Tableau (needs R/28, R/42, R/53)
+  "R/101_gantt_lifespan_collapse.R",           # Lifespan Gantt collapse (Phase 117); consumes gantt_episodes.csv (produced by R/52 above)
+  "R/104_gantt_entire_history.R"               # Gantt entire-history 6-col projection (quick-260710-i1e); consumes gantt_lifespan.csv (R/101) + gantt_episodes.csv (R/52)
 )
 
 for (script in export_scripts) {
