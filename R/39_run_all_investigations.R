@@ -132,11 +132,13 @@ message(paste(rep("=", 70), collapse = ""))
 message("  STAGE 1: Upstream Pipeline (data loading -> episode classification)")
 message(paste(rep("=", 70), collapse = ""), "\n")
 
+# R/03 must precede R/14: promotes a fresh pcornet.duckdb so all Stage 1+ scripts
+# read from the same database. Running R/14 first would cause a split-run where
+# Stage 1 queries hit the old DB while Stage 2-6 queries hit the new one (D-13).
+results <- run_script("R/03_duckdb_ingest.R", results)
+
 # R/14 auto-sources: R/02 -> R/01 -> R/00 -> utils, plus R/10, R/11, R/12, R/13
 results <- run_script("R/14_build_cohort.R", results)
-
-# R/03 ingests RDS cache into DuckDB (needed by investigation scripts)
-results <- run_script("R/03_duckdb_ingest.R", results)
 
 # R/47 produces output/confirmed_hl_cohort.rds (needs R/01 data in memory)
 # R/47 auto-sources: R/00, R/01
