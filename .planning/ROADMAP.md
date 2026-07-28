@@ -349,3 +349,13 @@ Plans:
 - [x] 138-02-PLAN.md — Fix R/03 `tables_ingested <<-` scoping bug: change to `<-` (D-04, D-05) (Wave 1)
 - [x] 138-03-PLAN.md — Fix R/53 `select(ID = PATID, ...)` PATID column bug: change to `select(ID, ...)` (D-06, D-07) (Wave 1)
 - [x] 138-04-PLAN.md — R/88 Section 15ac: 3 static grep assertions for each fix + SMOKE-138-01 footer (D-08, D-09) (Wave 2, depends on 138-01/02/03)
+
+### Phase 139: ZIP9 Approximation
+
+**Goal:** Add approximate_zip9() to utils_address.R — fills ZIP9 for rows where ZIP9 is NA using modal ZIP9 per ZIP5 from LDS_ADDRESS_HISTORY.
+**Requirements**: ZIP9-APPROX-01
+**Depends on:** Phase 137, Phase 138
+**Plans:** 1 plan
+
+Plans:
+- [ ] 139-01-PLAN.md — Implement approximate_zip9() in R/utils/utils_address.R with unit tests (Wave 1)
