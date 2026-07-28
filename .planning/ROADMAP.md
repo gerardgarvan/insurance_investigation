@@ -355,7 +355,7 @@ Plans:
 **Goal:** Add approximate_zip9() to utils_address.R — fills ZIP9 for rows where ZIP9 is NA using modal ZIP9 per ZIP5 from LDS_ADDRESS_HISTORY.
 **Requirements**: ZIP9-APPROX-01
 **Depends on:** Phase 137, Phase 138
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 139-01-PLAN.md — Implement approximate_zip9() in R/utils/utils_address.R with unit tests (Wave 1)
+- [x] 139-01-PLAN.md — Implement approximate_zip9() in R/utils/utils_address.R with unit tests (Wave 1)
