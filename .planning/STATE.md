@@ -5,7 +5,7 @@ milestone_name: below)
 status: verifying
 stopped_at: Completed 138-04-PLAN.md (R/88 Section 15ac smoke assertions for log2.txt fixes)
 last_updated: "2026-07-26T17:47:59.817Z"
-last_activity: 2026-07-26
+last_activity: 2026-07-28 - Completed quick task 260728-jvp: test utils_address.R
 progress:
   total_phases: 127
   completed_phases: 115
@@ -70,6 +70,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - [260715]: R/106 Section 9 (Sheet 3 "Time Between Changes") gap-day computation now bounds ADDRESS_PERIOD_START to the LDS_ADDRESS_HISTORY study period (ZIP_STUDY_PERIOD_MIN 2012-01-01 / ZIP_STUDY_PERIOD_MAX 2025-03-31) before computing gaps, with a logged out-of-range drop count; R/88 Section 15s extended to 16 checks (2 new) to verify. See [260715-for-change-in-zip-make-sure-addresses-ar](./quick/260715-for-change-in-zip-make-sure-addresses-ar/)
 - [260716]: Added `ICD_CODES$nhl_histology` (34-code, unverified/needs-clinical-review) to R/00_config.R and new `R/113_confirmed_hl_nhl_tumor_registry_counts.R` — a console-only diagnostic printing confirmed-HL, confirmed-NHL, and confirmed-BOTH (overlap) distinct-patient counts from TUMOR_REGISTRY histology codes only (no DIAGNOSIS table query). Also fixed a pre-existing gap (since Phase 119): created the missing `tests/fixtures/DEATH_CAUSE_Mailhot_V1.csv` fixture, unblocking any local `R/01_load_pcornet.R` run. See [260716-add-script-to-count-confirmed-hl-and-nhl](./quick/260716-add-script-to-count-confirmed-hl-and-nhl/)
 - [260725]: Created `run_investigations.sh` — SLURM batch script to run R/39_run_all_investigations.R with dual timestamped log (SLURM %j log + named output/logs/investigations_YYYYMMDD_HHMMSS.log)
+- [260728-jvp]: Added `tests/fixtures/LDS_ADDRESS_HISTORY_Mailhot_V1.csv` (4-row fixture covering all match_type branches) and `tests/test_utils_address.R` (20 assertions, exits 0); all 3 `get_zip9_at_date()` branches verified locally (interval, most_recent_before, none). See [260728-jvp-test-utils-address-r](./quick/260728-jvp-test-utils-address-r/)
 
 ### Roadmap Evolution
 
