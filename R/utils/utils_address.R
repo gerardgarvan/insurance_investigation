@@ -15,6 +15,11 @@
 # Outputs:
 #   - get_zip9_at_date() returns a tibble: ID, query_date, ZIP9, ZIP5, match_type
 #     match_type values: "interval" | "most_recent_before" | "none"
+#   - normalize_zip9() / normalize_zip5() / normalize_zip5_raw(): ZIP normalization
+#     helpers (see function definitions below for exact contracts)
+#   - is_sentinel_zip5(zip5): TRUE for placeholder ZIP5 values (00000, 99999, and
+#     any other single-repeated-digit ZIP5), FALSE for genuine ZIP5s, NA for NA
+#     input (Phase 139, Pitfall 2)
 #
 # Dependencies:
 #   - dplyr, vroom, stringr, glue (project standard stack)
@@ -43,6 +48,16 @@ normalize_zip5_raw <- function(zip) {
   z <- str_remove_all(str_trim(zip), "-")
   z <- str_pad(z, 5, pad = "0")
   if_else(str_detect(z, "^[0-9]{5}$"), z, NA_character_)
+}
+
+# Sentinel/placeholder ZIP5 filter (Pitfall 2, Phase 139): 00000, 99999, and any
+# other single-repeated-digit ZIP5 are known placeholder/data-quality artifacts,
+# not real addresses. Applied by callers (e.g. R/115) BEFORE counting ZIP
+# transitions, so placeholder values don't inflate change counts. NOT called by
+# get_zip9_at_date() itself -- that function is Out of Scope for modification
+# in Phase 139; sentinel filtering is applied by callers on its output/inputs.
+is_sentinel_zip5 <- function(zip5) {
+  str_detect(zip5, "^(\\d)\\1{4}$")
 }
 
 #' Resolve ZIP9 (and ZIP5) for each (ID, query_date) pair using temporal lookup.
