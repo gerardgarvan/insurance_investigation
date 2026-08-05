@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: verifying
-stopped_at: Completed 138-04-PLAN.md (R/88 Section 15ac smoke assertions for log2.txt fixes)
-last_updated: "2026-07-26T17:47:59.817Z"
-last_activity: 2026-07-26
+stopped_at: Phase 139 context gathered
+last_updated: "2026-08-05T17:56:47.613Z"
+last_activity: 2026-08-05
 progress:
   total_phases: 127
   completed_phases: 115
@@ -75,6 +75,11 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 - Phase 131 added: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
 - Phase 138 added: resolve log2.txt problems
+- Phase 139 added: ZIP Stability & Imputation Occurrence Counts (source doc: 140-CONTEXT.md, self-titled "Phase 140")
+
+### Known Blockers (new)
+
+- Phase 139's CONTEXT.md (`140-CONTEXT.md`) was authored assuming a prior "Phase 139: zip9-approximation" already shipped `approximate_zip9()`, `is_sentinel_zip5()`, and an "AMEND-01" ZIP5-coalesce fix, and references `.planning/phases/139-zip9-approximation/` as a canonical ref. None of that exists — no roadmap entry, directory, commit, or function by that name; only Phase 137 (`get_zip9_at_date()`) is real. Reconcile this before `/gsd:plan-phase 139`: either that imputation work needs to be built first (as a phase inserted before 139, likely via `/gsd:insert-phase`), or the CONTEXT.md's assumptions/canonical-refs need correcting to match what actually exists.
 
 ### Phase 131 Decisions
 
@@ -113,5 +118,5 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 ## Session Continuity
 
 **Last command:** `/gsd:new-project` (roadmap step) (2026-07-24)
-**Stopped at:** Completed 138-04-PLAN.md (R/88 Section 15ac smoke assertions for log2.txt fixes)
+**Stopped at:** Phase 139 context gathered
 **What's next:** Present roadmap for user approval, then `/gsd:plan-phase 132` (Crash Fixes) to begin execution. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.
