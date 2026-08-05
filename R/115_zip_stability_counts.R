@@ -1164,4 +1164,383 @@ message(glue(
 
 message("==========================================================================\n")
 
-# Do not write any xlsx in this task -- that is Task 2 of this plan.
+
+# ==============================================================================
+# SECTION 13: QC SHEET DATA -- CONSOLIDATED DROP/EXCLUSION COUNTS ----
+# ==============================================================================
+# Single place a reviewer checks before trusting the rest of the workbook.
+# Consolidates every drop/exclusion count logged across Plans 01-04.
+
+n_period_end_open <- sum(addr_coal$period_end_open)
+
+qc_tbl <- tibble(
+  Metric = c(
+    "n_unparseable_dates (period_start_dt, dropped)",
+    "n_out_of_range_dates (outside study period, dropped)",
+    "n_zip9_sentinel_nulled",
+    "n_zip5_sentinel_nulled",
+    "period_end_open count (retained, open-ended address records)",
+    "n_excluded_no_prior (A-06 hold-out, single-record patients)",
+    "cohort N (study cohort, Part B/C population)",
+    "n_cohort_absent_from_addr (C-02, cohort patients with zero addr_coal rows)",
+    "C02_EXPECTED (cohort-scoped control total, per team notes)",
+    "n_patients_no_zip5_ever (C-02, post-filter, reconciled figure)",
+    "n_patients_no_zip5_ever_prefilter (C-02, pre-filter comparison)",
+    "c02_reconciled",
+    "has_block_group_crosswalk (A-06 optional enrichment tier)"
+  ),
+  Value = c(
+    as.character(n_unparseable_dates),
+    as.character(n_period_start_out_of_range),
+    as.character(n_zip9_sentinel_nulled),
+    as.character(n_zip5_sentinel_nulled),
+    as.character(n_period_end_open),
+    as.character(n_excluded_no_prior),
+    as.character(length(COHORT_IDS)),
+    as.character(c02_result$n_cohort_absent_from_addr),
+    as.character(C02_EXPECTED),
+    as.character(n_patients_no_zip5_ever),
+    as.character(n_patients_no_zip5_ever_prefilter),
+    if (c02_reconciled) "PASS" else "FAIL -- SEE ABOVE",
+    as.character(has_block_group_crosswalk)
+  )
+)
+
+message("--- QC sheet data assembled (Section 13) ---")
+print(qc_tbl)
+
+
+# ==============================================================================
+# SECTION 14: KEY SHEET DATA -- DEFINITIONS, UNIVERSE, DENOMINATORS ----
+# ==============================================================================
+# Written FIRST as the leftmost tab (see Section 15). Language throughout is
+# measured and neutral -- describes what was counted and under what
+# definition, WITHOUT characterizing whether the resulting completeness is
+# adequate (that is the team's call, not this script's).
+
+key_tbl <- tibble(
+  Field = c(
+    "Script / Phase",
+    "Run date",
+    "Source file (Part A sheets)",
+    "Source table (Part B/C sheets)",
+    "Universe -- Part A sheets (A_stability_patient, A_stability_summary, A_validation_curve)",
+    "Universe -- Part B/C sheets (B_scenario_counts, B_direction_split, C_completeness)",
+    "Cohort N (Part B/C population)",
+    "A-06 sampling frame (139-05-PATCH FIX-01)",
+    "Ordered vs unordered S3 (139-05-PATCH FIX-04d)",
+    "C-02 tolerance (139-05-PATCH FIX-03d)",
+    "ZIP5 coalescing",
+    "QC sheet"
+  ),
+  Value = c(
+    "R/115_zip_stability_counts.R, Phase 139, amended by 139-05-PATCH.md",
+    as.character(Sys.Date()),
+    basename(ADDR_FILENAME),
+    "ENCOUNTER (DuckDB, cohort-restricted)",
+    "Address-history records (addr_coal, one row per LDS_ADDRESS_HISTORY record after date/sentinel filtering). Per Pitfall 1, these sheets are computed on address history, not encounters.",
+    "Encounters (one row per cohort-restricted (ID, ENCOUNTERID, ADMIT_DATE) with a parseable ADMIT_DATE). Per Pitfall 1, these sheets are computed on encounters, not address history.",
+    glue("{length(COHORT_IDS)} (via get_hl_patient_ids(), the study cohort -- same population Part B and Part C count over)"),
+    paste(
+      "A-06 is computed on address-history records (addr_coal), using each record's",
+      "period_start_dt as the lookup date. This measures the same carry-forward rule",
+      "get_zip9_at_date() applies in production. Per Pitfall 1, Part A sheets are computed",
+      "on address history, not encounters."
+    ),
+    paste(
+      "B_scenario_counts reports TWO different S3 quantities: the ordered 'S3' column",
+      "(assigned only when an encounter is not already_has_zip9, not S1-eligible, and IS",
+      "S3-eligible) undercounts relative to the unordered 'S3-eligible' column, because an",
+      "encounter eligible only via S1-forward is assigned 'S1' by the ordered rule while",
+      "remaining S3-eligible. Use 'S3-eligible' for the complete count of how often S3 would",
+      "fire if evaluated on its own."
+    ),
+    paste(
+      glue("The C-02 tolerance of +/-{C02_TOLERANCE} patients around the cohort-scoped"),
+      glue("{C02_EXPECTED}-patient control total covers cohort-definition drift only (e.g."),
+      "exact membership criteria differing slightly from the notes' own count) -- NOT",
+      "denominator or methodological uncertainty. The denominator is cohort-scoped and",
+      "correct (see n_cohort_absent_from_addr on the QC sheet), so the tolerance's job is",
+      "narrower than it would have been against an un-patched denominator."
+    ),
+    paste(
+      "ZIP5 coalescing (preferring the raw ADDRESS_ZIP5 column with derived-from-ZIP9",
+      "fallback) is applied locally in this script via the single coalesce_zip5() function",
+      "(SECTION 1B), since no separate prior phase shipped this as a shared utility."
+    ),
+    "Consolidates every drop/exclusion count logged across Plans 01-04 -- check this sheet before trusting the rest of the workbook."
+  )
+)
+
+message("--- KEY sheet data assembled (Section 14) ---")
+print(key_tbl)
+
+
+# ==============================================================================
+# SECTION 15: WRITE STYLED XLSX (FULL 8-SHEET WORKBOOK) ----
+# ==============================================================================
+
+message("--- Writing zip_stability_counts_YYYYMMDD.xlsx (8 sheets) ---")
+
+# UF brand colors, per 139-CONTEXT.md's deliverable spec ("Charts use UF colors (#0021A5,
+# #FA4616)"). NOTE: this is a DIFFERENT blue than utils_pptx.R's UF_BLUE ("#003087") --
+# 139-CONTEXT.md's explicit hex values are locked and take precedence for this deliverable;
+# do not reuse utils_pptx.R's constant or source that file.
+UF_BLUE   <- "#0021A5"
+UF_ORANGE <- "#FA4616"
+WHITE     <- wb_color(hex = "#FFFFFF")
+DARK_TEXT <- wb_color(hex = "#1F2937")
+
+# add_styled_sheet() copied VERBATIM (structure) from R/106 lines 750-797 / R/114 lines
+# 234-282 per this project's "copy, don't source" convention for this helper -- adapted here
+# to use UF_BLUE (not R/106's generic DARK_GRAY) as the header fill color.
+add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl,
+                              extra_tbl = NULL, extra_label = NULL) {
+  wb$add_worksheet(sheet_name)
+  n_cols           <- ncol(data_tbl)
+  last_col_letter  <- openxlsx2::int2col(n_cols)
+
+  wb$add_data(sheet = sheet_name, x = title_text,    dims = "A1")
+  wb$add_data(sheet = sheet_name, x = subtitle_text, dims = "A2")
+  wb$add_data(sheet = sheet_name, x = data_tbl,      dims = "A4", col_names = TRUE)
+
+  wb$merge_cells(sheet = sheet_name, dims = paste0("A1:", last_col_letter, "1"))
+  wb$merge_cells(sheet = sheet_name, dims = paste0("A2:", last_col_letter, "2"))
+
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 14, bold = TRUE, color = DARK_TEXT)
+  wb$add_font(sheet = sheet_name, dims = "A2",
+              name = "Calibri", size = 10, italic = TRUE, color = DARK_TEXT)
+
+  header_range <- paste0("A4:", last_col_letter, "4")
+  wb$add_fill(sheet = sheet_name, dims = header_range, color = wb_color(hex = UF_BLUE))
+  wb$add_font(sheet = sheet_name, dims = header_range,
+              name = "Calibri", size = 11, bold = TRUE, color = WHITE)
+
+  # Optional second table, written a few rows below the first.
+  if (!is.null(extra_tbl) && nrow(extra_tbl) > 0) {
+    gap_rows_offset <- 4 + nrow(data_tbl) + 2      # blank row + label row
+    label_row       <- gap_rows_offset
+    header_row      <- gap_rows_offset + 1
+
+    if (!is.null(extra_label)) {
+      wb$add_data(sheet = sheet_name, x = extra_label, dims = paste0("A", label_row))
+      wb$add_font(sheet = sheet_name, dims = paste0("A", label_row),
+                  name = "Calibri", size = 11, bold = TRUE, color = DARK_TEXT)
+    }
+
+    wb$add_data(sheet = sheet_name, x = extra_tbl,
+                dims = paste0("A", header_row), col_names = TRUE)
+
+    extra_last_col <- openxlsx2::int2col(ncol(extra_tbl))
+    extra_hdr_rng  <- paste0("A", header_row, ":", extra_last_col, header_row)
+    wb$add_fill(sheet = sheet_name, dims = extra_hdr_rng, color = wb_color(hex = UF_BLUE))
+    wb$add_font(sheet = sheet_name, dims = extra_hdr_rng,
+                name = "Calibri", size = 11, bold = TRUE, color = WHITE)
+  }
+
+  wb$freeze_pane(sheet = sheet_name, firstActiveRow = 5)
+  wb$set_col_widths(sheet = sheet_name, cols = 1:max(n_cols, ncol(extra_tbl %||% data_tbl)),
+                    widths = "auto")
+}
+
+# ---- A_stability_patient: patient-level distribution (bucketed, HIPAA-safe -- no raw ID
+# rows), grain = unique patient (ID), per Part A's addr_coal-anchored universe. ----
+bucket_transitions <- function(x) {
+  case_when(
+    x == 0             ~ "0",
+    x == 1             ~ "1",
+    x >= 2 & x <= 5    ~ "2-5",
+    x >= 6             ~ "6+"
+  )
+}
+
+zip9_transition_dist <- patient_stability %>%
+  mutate(bucket = bucket_transitions(n_zip9_transitions)) %>%
+  count(bucket, name = "n_patients") %>%
+  mutate(
+    metric = "n_zip9_transitions",
+    pct_of_patients = round(100 * n_patients / n_patients_total, 1)
+  )
+
+zip5_transition_dist <- patient_stability %>%
+  mutate(bucket = bucket_transitions(n_zip5_transitions)) %>%
+  count(bucket, name = "n_patients") %>%
+  mutate(
+    metric = "n_zip5_transitions",
+    pct_of_patients = round(100 * n_patients / n_patients_total, 1)
+  )
+
+plus4_only_dist <- patient_stability %>%
+  mutate(bucket = bucket_transitions(n_plus4_only_transitions)) %>%
+  count(bucket, name = "n_patients") %>%
+  mutate(
+    metric = "n_plus4_only_transitions",
+    pct_of_patients = round(100 * n_patients / n_patients_total, 1)
+  )
+
+stability_patient_tbl <- bind_rows(zip9_transition_dist, zip5_transition_dist, plus4_only_dist) %>%
+  select(metric, bucket, n_patients, pct_of_patients) %>%
+  arrange(metric, factor(bucket, levels = c("0", "1", "2-5", "6+")))
+
+# ---- A_stability_summary: gap_days_summary (median/p25/p75/min/max/deciles), fixed-bucket
+# histogram, obs_span_years summary, and headline transition stats. gap_days_deciles is
+# included in FULL (A-05's explicit "median, IQR, deciles" requirement), not dropped in
+# favor of the histogram alone. ----
+gap_deciles_tbl <- tibble(
+  Percentile = names(gap_days_summary$deciles),
+  Gap_Days   = round(as.numeric(gap_days_summary$deciles), 1)
+)
+
+stability_summary_tbl <- tibble(
+  Metric = c(
+    "n_patients_total",
+    "median_n_zip9_transitions",
+    "pct_zero_transition_zip9",
+    "n_plus4_only_transitions (total)",
+    "pct_plus4_only_of_all_zip9_transitions",
+    "median_obs_span_years",
+    "p25_obs_span_years",
+    "p75_obs_span_years",
+    "gap_days: n_gap_observations",
+    "gap_days: median_days",
+    "gap_days: p25_days",
+    "gap_days: p75_days",
+    "gap_days: min_days",
+    "gap_days: max_days",
+    "gap_days: reference_note"
+  ),
+  Value = c(
+    as.character(n_patients_total),
+    as.character(median_n_zip9_transitions),
+    as.character(pct_zero_transition_zip9),
+    as.character(total_plus4_only),
+    as.character(pct_plus4_only_of_all),
+    as.character(median_obs_span_years),
+    as.character(obs_span_summary$Value[2]),
+    as.character(obs_span_summary$Value[3]),
+    as.character(gap_days_summary$n_gap_observations),
+    as.character(gap_days_summary$median_days),
+    as.character(gap_days_summary$p25_days),
+    as.character(gap_days_summary$p75_days),
+    as.character(gap_days_summary$min_days),
+    as.character(gap_days_summary$max_days),
+    gap_days_summary$reference_note
+  )
+)
+
+# ---- Assemble workbook: KEY first (leftmost tab), then A/B/C sheets, then QC. ----
+wb <- wb_workbook()
+
+add_styled_sheet(
+  wb, "KEY",
+  title_text    = "KEY -- Definitions, Universe, and Design Notes",
+  subtitle_text = "Read this sheet first. Definitions describe what was counted and under what definition -- not whether the resulting completeness is adequate (that is the team's call).",
+  data_tbl      = key_tbl
+)
+
+add_styled_sheet(
+  wb, "A_stability_patient",
+  title_text    = "A_stability_patient -- ZIP Stability Distribution (Patient-Level)",
+  subtitle_text = "Grain: unique patient (ID), Part A universe (address-history records, addr_coal). Bucketed distributions of n_zip9_transitions, n_zip5_transitions, and n_plus4_only_transitions across patients (HIPAA-safe: no raw ID rows).",
+  data_tbl      = stability_patient_tbl
+)
+
+gap_histogram_and_deciles_tbl <- bind_rows(
+  gap_days_summary$histogram %>%
+    transmute(Type = "Histogram (fixed bucket)", Label = bucket, Value = as.character(n_gaps)),
+  gap_deciles_tbl %>%
+    transmute(Type = "Decile (10th-90th pctile, days)", Label = Percentile, Value = as.character(Gap_Days))
+)
+
+add_styled_sheet(
+  wb, "A_stability_summary",
+  title_text    = "A_stability_summary -- Headline Stability Stats, Gap-Day Distribution (A-05)",
+  subtitle_text = "Median/IQR/deciles + fixed-bucket histogram of gap-days between ZIP9 changes (A-05), plus median n_zip9_transitions, % zero-transition (Pitfall 6: median reported, never mean), and exposure-denominator (obs_span_years) summary.",
+  data_tbl      = stability_summary_tbl,
+  extra_tbl     = gap_histogram_and_deciles_tbl,
+  extra_label   = "Gap-day histogram (fixed buckets) + deciles (10th-90th percentile cutpoints, days) -- A-05's explicit 'median, IQR, deciles' requirement"
+)
+
+add_styled_sheet(
+  wb, "A_validation_curve",
+  title_text    = "A_validation_curve -- Carry-Forward Hold-Out Validation (A-06)",
+  subtitle_text = glue(
+    "Record-anchored hold-out (139-05-PATCH FIX-01): hold out one addr_coal record, predict ",
+    "from the most recent PRIOR record with a non-NA ZIP9, binned by elapsed gap-days. ",
+    "{n_excluded_no_prior} patients excluded (single usable record, no prior to predict from). ",
+    "Base rate (unchanged-address test cases): {pct_unchanged}%. Same-day pairs: {n_same_day}. ",
+    "Block-group tier: {block_group_tier_status}."
+  ),
+  data_tbl      = validation_curve
+)
+
+add_styled_sheet(
+  wb, "B_scenario_counts",
+  title_text    = "B_scenario_counts -- Ordered S1-then-S2-then-S3 Scenario Assignment (B-03)",
+  subtitle_text = glue(
+    "Grain: cohort-restricted encounters (Part B/C universe). Ordered, mutually-exclusive ",
+    "assignment (case_when: already_has_zip9 > S1 > S2 > S3 > unresolvable). See KEY sheet ",
+    "and B_direction_split for the unordered S3-eligible count (139-05-PATCH FIX-04d) -- do ",
+    "not read this sheet's 'S3' row alone as the complete S3-eligible population."
+  ),
+  data_tbl      = scenario_counts_encounter,
+  extra_tbl     = scenario_counts_patient,
+  extra_label   = "Patient-level (presence across scenarios -- a patient can appear under multiple rows)"
+)
+
+add_styled_sheet(
+  wb, "B_direction_split",
+  title_text    = "B_direction_split -- Unordered Eligible-For Counts + Backward/Forward Split (B-04)",
+  subtitle_text = glue(
+    "Grain: cohort-restricted encounters. Unordered per-scenario eligibility (overlap visible, ",
+    "unlike the ordered assignment on B_scenario_counts). S3-eligible = complete S3 count ",
+    "(139-05-PATCH FIX-04d), backward-only per S3's own definition. S4-excluded = complete-case ",
+    "comparator (complement of has_direct_zip9, B-01)."
+  ),
+  data_tbl      = unordered_encounter,
+  extra_tbl     = unordered_patient,
+  extra_label   = "Patient-level"
+)
+
+add_styled_sheet(
+  wb, "C_completeness",
+  title_text    = "C_completeness -- Stepwise Completeness Waterfall (C-01)",
+  subtitle_text = glue(
+    "Grain: cohort-restricted encounters (encounter-level table) / patients (patient-level ",
+    "table, furthest-resolved scenario per patient). Cumulative stepwise waterfall in fixed ",
+    "order: already_has_zip9 -> +S1 -> +S2 -> +S3 -> unresolvable (residual). The bottom row's ",
+    "cumulative_n equals the full universe by construction -- no separate total row. See QC ",
+    "sheet for the C-02 cohort-scoped reconciliation check."
+  ),
+  data_tbl      = waterfall_encounter,
+  extra_tbl     = waterfall_patient,
+  extra_label   = "Patient level (one mutually-exclusive bucket per patient, furthest-resolved scenario)"
+)
+
+add_styled_sheet(
+  wb, "QC",
+  title_text    = "QC -- Consolidated Drop/Exclusion Counts + C-02 Reconciliation",
+  subtitle_text = glue(
+    "Single place to check before trusting the rest of the workbook. C-02 reconciles the ",
+    "cohort-scoped 'no usable ZIP5 ever' count against ~{C02_EXPECTED} (+/-{C02_TOLERANCE}, ",
+    "cohort-definition drift only -- see KEY sheet). Per 139-CONTEXT.md: if it does not ",
+    "reconcile, stop and investigate before delivering."
+  ),
+  data_tbl      = qc_tbl
+)
+
+# 139-05-PATCH FIX-03: if C-02 did not reconcile, flag it prominently on the xlsx itself --
+# not just the console -- since the xlsx is what gets forwarded to Erin/Amy.
+if (!c02_reconciled) {
+  c02_row_idx <- match("c02_reconciled", qc_tbl$Metric)
+  c02_xlsx_row <- 4 + c02_row_idx   # header at row 4, data starts row 5
+  wb$add_fill(sheet = "QC", dims = glue("A{c02_xlsx_row}:B{c02_xlsx_row}"), color = wb_color(hex = UF_ORANGE))
+  wb$add_font(sheet = "QC", dims = glue("A{c02_xlsx_row}:B{c02_xlsx_row}"),
+              name = "Calibri", size = 11, bold = TRUE, color = WHITE)
+  message(glue("[R/115] QC sheet C-02 row ({c02_xlsx_row}) flagged UF_ORANGE -- reconciliation FAILED."))
+}
+
+wb_save(wb, OUTPUT_XLSX)
+message(glue("[R/115] xlsx written to: {OUTPUT_XLSX}"))
+message("[R/115] Phase 139 ZIP stability and imputation occurrence counts investigation complete.")

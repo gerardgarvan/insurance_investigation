@@ -4924,6 +4924,79 @@ check_138("R/53: DEMOGRAPHIC select uses ID directly",
 message(glue("\nSection 15ac: {p138_pass} PASS, {p138_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ad: PHASE 139 ZIP STABILITY + IMPUTATION OCCURRENCE COUNTS ----
+#               STRUCTURAL CHECKS ----
+# ==============================================================================
+# Static grep/existence assertions for Phase 139 (R/115_zip_stability_counts.R,
+# amended by 139-05-PATCH.md). Structural only -- no real LDS_ADDRESS_HISTORY/
+# ENCOUNTER data required for these checks to pass.
+
+p139_pass <- 0L
+p139_fail <- 0L
+check_139 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p139_pass <<- p139_pass + 1L
+    message(glue("  [PASS] {label}"))
+  } else {
+    p139_fail <<- p139_fail + 1L
+    message(glue("  [FAIL] {label}"))
+    failed <<- failed + 1L
+  }
+  passed <<- passed + 1L
+}
+
+message("\n--- Section 15ad: Phase 139 ZIP stability + imputation occurrence counts assertions ---")
+
+r115_lines    <- read_or_null("R/115_zip_stability_counts.R")
+r_address_lines <- read_or_null("R/utils/utils_address.R")
+r39_lines_139 <- read_or_null("R/39_run_all_investigations.R")
+test115_lines <- read_or_null("tests/testthat/test-115-validation-curve.R")
+
+# Gate: missing files must FAIL, not vacuously pass every downstream grep.
+check_139("R/115_zip_stability_counts.R exists", !is.null(r115_lines))
+check_139("R/utils/utils_address.R exists", !is.null(r_address_lines))
+check_139("tests/testthat/test-115-validation-curve.R exists", !is.null(test115_lines))
+
+# --- 139-05-PATCH revised verification #5: is_sentinel_zip5() defined exactly once ---
+check_139("is_sentinel_zip5() defined in utils_address.R, exactly once",
+  !is.null(r_address_lines) &&
+  sum(grepl("^is_sentinel_zip5 <- function", r_address_lines)) == 1)
+
+# get_zip9_at_date() defined and unchanged (structural existence check, not a diff --
+# this project's grep-based smoke tests do not diff function bodies elsewhere either).
+check_139("get_zip9_at_date() defined in utils_address.R (unchanged, Out of Scope for Phase 139)",
+  !is.null(r_address_lines) &&
+  any(grepl("^get_zip9_at_date <- function", r_address_lines)))
+
+# --- 139-05-PATCH revised verification #6: coalesce_zip5() defined exactly once, in R/115 ---
+check_139("coalesce_zip5() defined in R/115, exactly once (single ZIP5-coalescing implementation)",
+  !is.null(r115_lines) &&
+  sum(grepl("^coalesce_zip5 <- function", r115_lines)) == 1)
+
+check_139("R/115 contains zip5_coalesced (ZIP5 coalescing present)",
+  !is.null(r115_lines) && any(grepl("zip5_coalesced", r115_lines)))
+check_139("R/115 contains scenario_assigned (Part B present)",
+  !is.null(r115_lines) && any(grepl("scenario_assigned", r115_lines)))
+check_139("R/115 contains compute_c02 (C-02 reconciliation present, cohort-scoped)",
+  !is.null(r115_lines) && any(grepl("compute_c02", r115_lines)))
+check_139("R/115 contains waterfall_encounter (Part C present)",
+  !is.null(r115_lines) && any(grepl("waterfall_encounter", r115_lines)))
+check_139("R/115 contains waterfall_patient (Part C present)",
+  !is.null(r115_lines) && any(grepl("waterfall_patient", r115_lines)))
+check_139("R/115 contains period_end_eff (139-05-PATCH FIX-02 present)",
+  !is.null(r115_lines) && any(grepl("period_end_eff", r115_lines)))
+
+# --- 139-05-PATCH FIX-05: all 6 fixtures present in the growing test file ---
+check_139("test-115-validation-curve.R contains at least 6 test_that( calls (all fixtures present)",
+  !is.null(test115_lines) && sum(grepl("test_that\\(", test115_lines)) >= 6)
+
+# --- Registration ---
+check_139("R/115 registered in R/39's investigation_scripts vector",
+  !is.null(r39_lines_139) && any(grepl("R/115_zip_stability_counts.R", r39_lines_139)))
+
+message(glue("\nSection 15ad: {p139_pass} PASS, {p139_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -5062,6 +5135,7 @@ message("  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w
 message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)")
 message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)")
 message("  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R/13 gsub, R/03 scoping incl. ingest_log + preserved line-181 <<-, R/53 PATID) with file-existence gates and positive-pattern assertions (Section 15ac, 12 checks)")
+message("  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation occurrence counts (R/115, amended by 139-05-PATCH.md) structural integrity, incl. single-implementation checks for is_sentinel_zip5()/coalesce_zip5(), Part B/C presence, C-02 reconciliation presence, and R/39 registration (Section 15ad, 14 checks)")
 
 if (failed > 0) {
   quit(status = 1)
