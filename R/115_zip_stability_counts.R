@@ -282,3 +282,240 @@ message(glue(
   "ZIP9 sentinel-nulled: {n_zip9_sentinel_nulled}, ZIP5 sentinel-nulled: {n_zip5_sentinel_nulled}, ",
   "open-ended (period_end_open) records among retained rows: {sum(addr_coal$period_end_open)}."
 ))
+
+
+# ==============================================================================
+# SECTION 4: SPELL DEDUP AND PER-PATIENT TRANSITION METRICS (A-01, A-02, A-03) ----
+# ==============================================================================
+
+message("--- Computing ZIP9/ZIP5 spell dedup and transition metrics ---")
+
+# Per A-02, ZIP9 and ZIP5 transitions are computed on TWO INDEPENDENT
+# sequences per patient: drop NA rows for that ZIP-type FIRST (not carried
+# through as gaps), THEN collapse consecutive-identical values into spells
+# (A-03). A 32611-1234 -> NA -> 32611-1234 sequence collapses to a single
+# spell (zero transitions) because the NA row is dropped before dedup, not
+# treated as a distinct value.
+#
+# Tie-break rule (Pitfall 5): order by (ID, period_start_dt ascending); when
+# two rows share the same period_start_dt, prefer the one with the LATER
+# period_end_eff (the more "current"/authoritative version of that period).
+# 139-05-PATCH FIX-02: use period_end_eff, not period_end_dt, for this
+# tie-break -- period_end_dt can be NA (open-ended records are no longer
+# pre-sentineled at parse time), and dplyr::arrange() always sorts NA last
+# regardless of asc/desc, which would silently reverse the intended
+# "prefer more current" rule for exactly the open-ended records this
+# tie-break exists to prioritize. period_end_eff (sentineled) sorts correctly.
+
+zip9_seq <- addr_coal %>%
+  filter(!is.na(zip9_norm)) %>%
+  arrange(ID, period_start_dt, desc(period_end_eff)) %>%
+  group_by(ID) %>%
+  mutate(is_new_spell = row_number() == 1 | zip9_norm != lag(zip9_norm)) %>%
+  filter(is_new_spell) %>%
+  ungroup()
+
+zip5_seq <- addr_coal %>%
+  filter(!is.na(zip5_coalesced)) %>%
+  arrange(ID, period_start_dt, desc(period_end_eff)) %>%
+  group_by(ID) %>%
+  mutate(is_new_spell = row_number() == 1 | zip5_coalesced != lag(zip5_coalesced)) %>%
+  filter(is_new_spell) %>%
+  ungroup()
+
+# Per-patient A-01 metrics: n_distinct_zip9/zip5, n_zip9/zip5_transitions
+# (spell count - 1, floored at 0).
+zip9_patient_stats <- zip9_seq %>%
+  group_by(ID) %>%
+  summarise(
+    n_distinct_zip9 = n_distinct(zip9_norm),
+    n_spells_zip9   = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(n_zip9_transitions = pmax(n_spells_zip9 - 1L, 0L))
+
+zip5_patient_stats <- zip5_seq %>%
+  group_by(ID) %>%
+  summarise(
+    n_distinct_zip5 = n_distinct(zip5_coalesced),
+    n_spells_zip5   = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(n_zip5_transitions = pmax(n_spells_zip5 - 1L, 0L))
+
+# n_plus4_only_transitions: for each patient's zip9_seq (already spell-
+# deduped, so every row after the first IS a transition by construction),
+# count consecutive spell pairs where the ZIP5 prefix did NOT change --
+# i.e. the ZIP9 changed but the ZIP5 prefix did not. zip9_seq's row order
+# within each ID group is already (period_start_dt asc, period_end_eff desc)
+# from the arrange() above; grouping again preserves that order, so no
+# re-arrange is needed here.
+plus4_only_stats <- zip9_seq %>%
+  group_by(ID) %>%
+  mutate(
+    is_plus4_only_transition = row_number() > 1 &
+      substr(zip9_norm, 1, 5) == substr(lag(zip9_norm), 1, 5)
+  ) %>%
+  summarise(n_plus4_only_transitions = sum(is_plus4_only_transition, na.rm = TRUE), .groups = "drop")
+
+# Patients with zero valid ZIP9/ZIP5 records anywhere (dropped entirely by
+# the filter(!is.na(...)) above) get 0 for all above metrics, matching
+# R/106 Section 6's "all_ids" pattern -- do not silently omit them from
+# patient_stability, since C-02's reconciliation later in this phase needs
+# the FULL patient universe including these.
+all_ids <- tibble(ID = unique(addr_coal$ID))
+
+patient_stability <- all_ids %>%
+  left_join(zip9_patient_stats %>% select(ID, n_distinct_zip9, n_zip9_transitions), by = "ID") %>%
+  left_join(zip5_patient_stats %>% select(ID, n_distinct_zip5, n_zip5_transitions), by = "ID") %>%
+  left_join(plus4_only_stats, by = "ID") %>%
+  mutate(
+    n_distinct_zip9          = replace_na(n_distinct_zip9, 0L),
+    n_zip9_transitions       = replace_na(n_zip9_transitions, 0L),
+    n_distinct_zip5          = replace_na(n_distinct_zip5, 0L),
+    n_zip5_transitions       = replace_na(n_zip5_transitions, 0L),
+    n_plus4_only_transitions = replace_na(n_plus4_only_transitions, 0L)
+  )
+
+n_patients_total <- nrow(patient_stability)
+message(glue("  n_patients_total (patient_stability): {n_patients_total}"))
+
+
+# ==============================================================================
+# SECTION 5: EXPOSURE DENOMINATOR (A-04) ----
+# ==============================================================================
+
+message("--- Computing per-patient exposure denominator ---")
+
+# Per patient, observation span in years, computed over ALL of addr_coal
+# (not just the ZIP9/ZIP5 sequences -- this is about how long the patient
+# was observed, not how many ZIP values they had).
+#
+# 139-05-PATCH FIX-04b: max(period_start_dt) - min(period_start_dt) (the
+# naive formula) ignores period_end entirely -- a patient with two records
+# 30 days apart, the second of which runs open-ended for ten years, would
+# get a 30-day span and a wildly inflated transitions-per-year rate. Use
+# period_end_eff instead, but NOT the FIX-02 far-future sentinel directly --
+# a sentineled end date makes every open-ended patient's span ~7970 years
+# and drives every rate toward zero, the opposite failure. Cap at
+# DATA_THROUGH (an alias for ZIP_STUDY_PERIOD_MAX, the data-extraction-date
+# proxy) before taking the max.
+exposure <- addr_coal %>%
+  group_by(ID) %>%
+  summarise(
+    obs_span_days = as.numeric(max(pmin(period_end_eff, DATA_THROUGH)) - min(period_start_dt)),
+    .groups = "drop"
+  ) %>%
+  mutate(obs_span_years = obs_span_days / 365.25)
+
+patient_stability <- patient_stability %>%
+  left_join(exposure, by = "ID") %>%
+  mutate(
+    # Guard: patients with exactly one address record (obs_span_days == 0)
+    # get NA_real_, NOT Inf or 0 -- a single record is absence of
+    # observation, not evidence of stability (A-04's explicit point).
+    zip9_transitions_per_patient_year = if_else(
+      obs_span_years > 0, n_zip9_transitions / obs_span_years, NA_real_
+    )
+  )
+
+obs_span_summary <- tibble(
+  Metric = c("Median obs_span_years", "p25 obs_span_years", "p75 obs_span_years"),
+  Value  = as.character(c(
+    round(median(patient_stability$obs_span_years, na.rm = TRUE), 2),
+    round(quantile(patient_stability$obs_span_years, 0.25, na.rm = TRUE), 2),
+    round(quantile(patient_stability$obs_span_years, 0.75, na.rm = TRUE), 2)
+  ))
+)
+
+message(glue("  Median obs_span_years: {obs_span_summary$Value[1]}"))
+
+
+# ==============================================================================
+# SECTION 6: TIME BETWEEN CHANGES (A-05) ----
+# ==============================================================================
+
+message("--- Computing gap-time distribution between ZIP9 changes ---")
+
+# Adapt R/106 Section 9's gap-day computation but operate on zip9_seq's
+# period_start_dt directly (spells are ALREADY deduped from Section 4 above --
+# do not re-derive from addr_coal from scratch, that would duplicate work
+# and risk a different tie-break rule from Section 4's).
+gap_rows <- zip9_seq %>%
+  group_by(ID) %>%
+  arrange(period_start_dt, .by_group = TRUE) %>%
+  mutate(gaps_days = as.numeric(difftime(period_start_dt, lag(period_start_dt), units = "days"))) %>%
+  ungroup() %>%
+  filter(!is.na(gaps_days))
+
+message(glue("  Total ZIP9-change gap observations: {nrow(gap_rows)}"))
+
+gaps_days_vec <- gap_rows$gaps_days
+
+# A-05 explicitly requires "median, IQR, deciles" -- the fixed-bucket
+# histogram alone does NOT satisfy that. Deciles are data-driven
+# equal-frequency cutpoints (e.g. "90% of gaps are under N days"), distinct
+# from the fixed-width buckets below.
+gap_days_deciles <- quantile(gaps_days_vec, probs = seq(0.1, 0.9, 0.1), na.rm = TRUE)
+
+# Fixed-bucket histogram -- SAME bucket boundaries as R/106 Section 9
+# (<30, 30-180, 181-365, 1-2 years, >2 years); keep consistent with the
+# existing precedent rather than inventing new buckets.
+gap_days_histogram <- gap_rows %>%
+  mutate(bucket = case_when(
+    gaps_days < 30  ~ "<30 days",
+    gaps_days < 181 ~ "30-180 days",
+    gaps_days < 366 ~ "181-365 days",
+    gaps_days < 731 ~ "1-2 years",
+    TRUE            ~ ">2 years"
+  )) %>%
+  group_by(bucket) %>%
+  summarise(n_gaps = n(), .groups = "drop")
+
+# Assemble median/p25/p75/min/max/gap_days_deciles/histogram into a single
+# named object called exactly `gap_days_summary` so Plan 04 can pull it
+# directly into the A_stability_summary sheet without re-deriving any of it.
+# Includes a labeled (NOT assumed) reference to the diagnosis-episode window
+# currently in use (~90 days per the 06/23 notes referenced in
+# 139-CONTEXT.md A-05) -- do NOT assume the dx window transfers to ZIP
+# behavior; just report it as a labeled reference point.
+gap_days_summary <- list(
+  n_gap_observations         = nrow(gap_rows),
+  median_days                = round(median(gaps_days_vec, na.rm = TRUE), 1),
+  p25_days                   = round(quantile(gaps_days_vec, 0.25, na.rm = TRUE), 1),
+  p75_days                   = round(quantile(gaps_days_vec, 0.75, na.rm = TRUE), 1),
+  min_days                   = round(min(gaps_days_vec, na.rm = TRUE), 1),
+  max_days                   = round(max(gaps_days_vec, na.rm = TRUE), 1),
+  deciles                    = gap_days_deciles,
+  histogram                  = gap_days_histogram,
+  reference_dx_window_days   = 90,
+  reference_note             = "Reference: diagnosis-episode window (~90 days, NOT assumed to apply to ZIP)"
+)
+
+message(glue("  Median gap-days between ZIP9 changes: {gap_days_summary$median_days}"))
+
+
+# ==============================================================================
+# SECTION 7: CONSOLE HEADLINE STATS ----
+# ==============================================================================
+
+median_n_zip9_transitions <- median(patient_stability$n_zip9_transitions, na.rm = TRUE)
+pct_zero_transition_zip9  <- round(100 * sum(patient_stability$n_zip9_transitions == 0, na.rm = TRUE) / n_patients_total, 1)
+total_zip9_transitions    <- sum(patient_stability$n_zip9_transitions, na.rm = TRUE)
+total_plus4_only          <- sum(patient_stability$n_plus4_only_transitions, na.rm = TRUE)
+pct_plus4_only_of_all     <- if (total_zip9_transitions > 0) {
+  round(100 * total_plus4_only / total_zip9_transitions, 1)
+} else {
+  NA_real_
+}
+median_obs_span_years <- median(patient_stability$obs_span_years, na.rm = TRUE)
+
+message("\n=== Phase 139: ZIP Stability -- Headline Stats ===")
+message(glue("  n_patients_total:                    {n_patients_total}"))
+# Pitfall 6: do NOT report a mean here -- median and % zero-transition only.
+message(glue("  median n_zip9_transitions:            {median_n_zip9_transitions}"))
+message(glue("  % patients with zero ZIP9 transitions: {pct_zero_transition_zip9}%"))
+message(glue("  n_plus4_only_transitions as % of all ZIP9 transitions: {pct_plus4_only_of_all}%"))
+message(glue("  median obs_span_years:                {median_obs_span_years}"))
+message(glue("  median gap-days between ZIP9 changes: {gap_days_summary$median_days}"))
+message("===================================================\n")
