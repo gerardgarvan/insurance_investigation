@@ -75,10 +75,10 @@ message("=== Phase 139: ZIP Stability and Imputation Occurrence Counts ===")
 # (addr_coal, encounters, etc.) except via its own arguments.
 #
 # Populated across this phase's plans:
-#   139-01 (this plan): coalesce_zip5()
-#   139-02:              build_validation_cases(), aggregate_validation_curve()
-#   139-03:              classify_encounter_zip()
-#   139-04:              compute_c02()
+#   139-01: coalesce_zip5()
+#   139-02: build_validation_cases(), aggregate_validation_curve()
+#   139-03: classify_encounter_zip()
+#   139-04 (this plan): compute_c02()
 
 coalesce_zip5 <- function(df) {
   df %>%
@@ -182,6 +182,28 @@ classify_encounter_zip <- function(encounters, addr_coal) {
       has_record_but_empty  = has_covering_record & is.na(direct_zip9) & is.na(direct_zip5),
       has_neither            = has_no_record | has_record_but_empty
     )
+}
+
+compute_c02 <- function(cohort_ids, addr_coal) {
+  # 139-05-PATCH FIX-03b: C-02 is computed over the STUDY COHORT (cohort_ids), not over
+  # addr_coal's own patient set -- a cohort patient with ZERO rows in addr_coal (dropped by
+  # Plan 01's study-period/unparseable-date filters, or never present in
+  # LDS_ADDRESS_HISTORY at all) must count toward "no usable ZIP5 ever", not be invisible to
+  # group_by(). left_join() + coalesce(FALSE) (not an inner join / semi_join) is what makes
+  # that absence visible.
+  zip5_ever <- addr_coal %>%
+    group_by(ID) %>%
+    summarise(has_any_zip5 = any(!is.na(zip5_coalesced)), .groups = "drop")
+
+  c02_tbl <- tibble(ID = cohort_ids) %>%
+    left_join(zip5_ever, by = "ID") %>%
+    mutate(has_any_zip5 = coalesce(has_any_zip5, FALSE))   # absent from addr_coal => no ZIP5
+
+  list(
+    c02_tbl = c02_tbl,
+    n_patients_no_zip5_ever = sum(!c02_tbl$has_any_zip5),
+    n_cohort_absent_from_addr = sum(!(cohort_ids %in% addr_coal$ID))
+  )
 }
 
 
@@ -1038,6 +1060,108 @@ message(glue(
 ))
 message("==========================================================================\n")
 
-# Do not write any xlsx in this task -- that is Plan 04.
 
-# Do not write any xlsx in this task -- that is Plan 04.
+# ==============================================================================
+# SECTION 12: PART C -- COMPLETENESS WATERFALL + C-02 RECONCILIATION (C-01, C-02) ----
+# ==============================================================================
+# Pitfall 1: Part C's universe is ENCOUNTERS for the waterfall (same as Part B above), but
+# C-02's reconciliation is over the STUDY COHORT (patients), not encounters or addr_coal's
+# own patient set -- see compute_c02() (SECTION 1B) and 139-05-PATCH FIX-03b/FIX-03c/FIX-03d.
+
+message("--- Part C: completeness waterfall (C-01) + C-02 cohort-scoped reconciliation ---")
+
+# ---- C-01: encounter-level stepwise waterfall ----
+# Built directly from Part B's scenario_assigned column (already an ordered,
+# mutually-exclusive S1-then-S2-then-S3 assignment) -- the waterfall is a
+# straightforward cumulative count over its factor levels in order. Each row's
+# count is the CUMULATIVE total after that step; the final row equals
+# n_encounters_total by construction, so no separate "total" row is needed.
+waterfall_encounter <- encounter_zip %>%
+  count(scenario_assigned) %>%
+  mutate(scenario_assigned = factor(scenario_assigned,
+           levels = c("already_has_zip9", "S1", "S2", "S3", "unresolvable"))) %>%
+  arrange(scenario_assigned) %>%
+  mutate(cumulative_n = cumsum(n), cumulative_pct = round(100 * cumulative_n / sum(n), 1))
+
+# ---- C-01: patient-level stepwise waterfall ----
+# Patient-level bucket is the FURTHEST resolved scenario across all of a patient's
+# encounters, in the same priority order (already_has_zip9 > S1 > S2 > S3 > unresolvable):
+# a patient counts as "already_has_zip9" if ANY encounter already has one; else "S1" if any
+# encounter resolves via S1; and so on, down to "unresolvable" only if EVERY encounter is
+# unresolvable. This differs from Part B's scenario_counts_patient (which reports PRESENCE
+# across scenarios, allowing a patient to appear under multiple buckets) -- the waterfall
+# needs one mutually-exclusive bucket per patient so the cumulative sum reconciles to the
+# full patient count. Priority rank matches the factor level order (lower rank = resolved
+# earlier/more-preferred); slice_min() selects each patient's single best (lowest-rank) row.
+scenario_priority <- c(already_has_zip9 = 1L, S1 = 2L, S2 = 3L, S3 = 4L, unresolvable = 5L)
+
+waterfall_patient <- encounter_zip %>%
+  mutate(scenario_rank = scenario_priority[as.character(scenario_assigned)]) %>%
+  group_by(ID) %>%
+  slice_min(scenario_rank, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  count(scenario_assigned) %>%
+  mutate(scenario_assigned = factor(scenario_assigned,
+           levels = c("already_has_zip9", "S1", "S2", "S3", "unresolvable"))) %>%
+  arrange(scenario_assigned) %>%
+  mutate(cumulative_n = cumsum(n), cumulative_pct = round(100 * cumulative_n / sum(n), 1))
+
+message("\n=== Part C: Completeness Waterfall (C-01), Encounter Level ===")
+print(waterfall_encounter)
+message(glue("Denominator: n_encounters_total = {n_encounters_total}"))
+
+message("\n=== Part C: Completeness Waterfall (C-01), Patient Level ===")
+print(waterfall_patient)
+message(glue("Denominator: n_patients_with_encounters = {n_patients_with_encounters} (one mutually-exclusive bucket per patient, furthest-resolved scenario)"))
+
+# ---- C-02: cohort-scoped reconciliation ----
+# 139-05-PATCH FIX-03b: compute_c02() (SECTION 1B) takes COHORT_IDS (139-03 Task 1, still in
+# scope as a script-level variable) and addr_coal (post-filter) -- NOT addr_coal's own
+# patient set. A cohort patient entirely absent from addr_coal counts toward the numerator.
+c02_result <- compute_c02(COHORT_IDS, addr_coal)
+n_patients_no_zip5_ever <- c02_result$n_patients_no_zip5_ever
+
+message(glue("[R/115] Cohort N: {length(COHORT_IDS)}"))
+message(glue("[R/115] Cohort patients entirely absent from addr_coal: {c02_result$n_cohort_absent_from_addr}"))
+
+C02_EXPECTED <- 26L
+C02_TOLERANCE <- 5L   # 139-05-PATCH FIX-03d: covers cohort-DEFINITION drift only (e.g. exact
+                      # membership criteria differing slightly from the notes' own count) --
+                      # NOT slack for denominator or methodological uncertainty, now that the
+                      # denominator itself is cohort-scoped and correct. Documented in the KEY
+                      # sheet (Plan 04 Task 2) as this narrowed claim, not general-purpose slack.
+c02_reconciled <- abs(n_patients_no_zip5_ever - C02_EXPECTED) <= C02_TOLERANCE
+
+if (!c02_reconciled) {
+  message(glue(
+    "\n*** C-02 RECONCILIATION FAILURE ***\n",
+    "Expected ~{C02_EXPECTED} cohort patients with no usable ZIP5 anywhere in their address ",
+    "history (per team meeting notes; cohort N = {length(COHORT_IDS)}). ",
+    "Computed: {n_patients_no_zip5_ever}.\n",
+    "Per 139-CONTEXT.md: 'If it does not [reconcile], stop and investigate before delivering.'\n",
+    "A materially higher number means the ZIP5-coalescing fix is not reaching the raw ZIP5 ",
+    "values correctly, and every downstream count in this deliverable may be wrong.\n",
+    "*** DO NOT SHIP output/{basename(OUTPUT_XLSX)} TO ERIN/AMY UNTIL THIS IS RESOLVED ***\n"
+  ))
+} else {
+  message(glue("C-02 reconciliation OK: {n_patients_no_zip5_ever} cohort patients with no usable ZIP5 ever (expected ~{C02_EXPECTED})"))
+}
+
+# 139-05-PATCH FIX-03c: pre-filter comparison. Compute the SAME "no usable ZIP5 ever"
+# statistic against addr_raw (unfiltered, from SECTION 3), reusing coalesce_zip5() (NOT a
+# second coalescing implementation) so the study-period/unparseable-date filters' effect on
+# the denominator is visible.
+addr_prefilter <- coalesce_zip5(addr_raw)
+c02_prefilter_result <- compute_c02(COHORT_IDS, addr_prefilter)
+n_patients_no_zip5_ever_prefilter <- c02_prefilter_result$n_patients_no_zip5_ever
+
+message(glue(
+  "[R/115] C-02 pre-filter comparison: {n_patients_no_zip5_ever_prefilter} (before study-period/",
+  "unparseable-date filters) vs {n_patients_no_zip5_ever} (post-filter, the reconciled figure). ",
+  "A large gap means the filters are removing cohort patients the notes' 26-patient control ",
+  "total includes -- report both, do not let C02_TOLERANCE absorb a gap this size."
+))
+
+message("==========================================================================\n")
+
+# Do not write any xlsx in this task -- that is Task 2 of this plan.
