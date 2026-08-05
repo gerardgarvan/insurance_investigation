@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: verifying
-stopped_at: Completed 139-01-PLAN.md
-last_updated: "2026-08-05T19:40:12.584Z"
+stopped_at: Completed 139-02-PLAN.md
+last_updated: "2026-08-05T20:15:00.000Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 127
@@ -22,18 +22,18 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (Plan 01 of 4 complete)
+**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (Plan 02 of 4 complete)
 
 ## Current Position
 
 Phase: 139
-Plan: 01 of 4 (139-01 complete)
-Status: In progress — 139-02 (validation curve) up next
+Plan: 02 of 4 (139-01, 139-02 complete)
+Status: In progress — 139-03 (Part B: ENCOUNTER pull + S1-S4 scenario counts) up next
 Last activity: 2026-08-05
 
 Phase 138 (resolve-log2-txt-problems) remains complete, ready for verification (unchanged by this session).
 
-Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 1/4 plans complete
+Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 2/4 plans complete
 
 ## v3.3 Status (open in parallel, not abandoned)
 
@@ -55,6 +55,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 **Recent plan executions:**
 
 - Phase 139 Plan 01 (ZIP stability foundation): 25 min, 3 tasks, 2 files
+- Phase 139 Plan 02 (A-06 carry-forward validation curve): 15 min, 3 tasks (2 auto + 1 checkpoint), 2 files
 
 ## Accumulated Context
 
@@ -95,6 +96,11 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - [Phase 139-01]: `period_end_dt` keeps NA for open-ended address records; a separate `period_end_eff` column (sentineled to 9999-12-31) is used only for interval-matching by downstream consumers, never for exposure-span math (139-05-PATCH FIX-02)
 - [Phase 139-01]: Per-patient exposure-denominator math (A-04) uses `period_end_eff` capped at `DATA_THROUGH` (alias for `ZIP_STUDY_PERIOD_MAX`), not the far-future sentinel directly and not `period_start_dt` alone, with single-record patients getting `NA_real_` (not `Inf`) for the per-patient-year rate (139-05-PATCH FIX-04b)
 - [Phase 139-01]: `gap_days_summary` (A-05) includes deciles (`quantile(gaps_days, seq(0.1,0.9,0.1))`) in addition to median/p25/p75/min/max/histogram, satisfying A-05's explicit "median, IQR, deciles" requirement
+- [Phase 139-02]: A-06's hold-out validation is record-anchored (F1, per 139-05-PATCH FIX-01), not spell-anchored: `build_validation_cases()` operates on `addr_coal` directly, holding out one address RECORD and predicting it from the most recent PRIOR record with a non-NA ZIP9 -- the pre-patch design operated on `zip9_seq` spells, which removed every unchanged-address case by construction and produced a silent 0.0% exact-match reading in every bin
+- [Phase 139-02]: `tests/testthat/test-115-validation-curve.R`'s stable-patient fixture asserts `pct_exact_zip9_match == 100` as a computed-value check (139-05-PATCH FIX-05) -- this is the specific assertion that would have caught the pre-patch defect; confirmed non-structural (not a grep for a column name) during the Task 3 checkpoint close-out
+- [Phase 139-02]: gap-bin scheme separates "0 (same-day)" from "0-30" so same-day version-correction record pairs don't inflate the shortest elapsed-time bin's accuracy; `n_excluded_no_prior` (single-record patients) is counted and logged, never silently dropped
+- [Phase 139-02]: Block-group accuracy tier is attempted only if `data/reference/neighborhood_atlas_block_group_crosswalk.csv` is found (confirmed absent in this repo); degrades to a documented `NA_real_` column with an explicit console message, not an error and not silent omission
+- [Phase 139-02]: Task 3 human-verify checkpoint approved with the automated-verification portion satisfied (0 failures / 13 expectations, stable-patient assertion confirmed real) and the plan's own step 3 (reviewing the real `validation_curve` table's Overall row on an actual HiPerGator run) explicitly deferred to a future session, per the plan text's own scoping ("out of scope for this planning session")
 
 ### Phase 131 Decisions
 
@@ -129,9 +135,11 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 ### Known Blockers
 
 - Phase 131 requirement IDs (`MEDXLSX-01..05`) are referenced in 131-01/131-02 PLAN frontmatter but are not defined in `.planning/REQUIREMENTS.md` (no Phase 131 section exists there yet). `gsd-tools requirements mark-complete` cannot find/check them off. Not blocking execution, but the traceability table needs a Phase 131 section added before this can be closed out cleanly.
+- `node gsd-tools.cjs state update-progress` and `state advance-plan` corrupt this project's non-standard STATE.md format (confirmed during 139-01 execution and again during 139-02 close-out) — apply STATE.md position/progress/decision updates manually via direct file edits instead of via that CLI command. `state record-metric`/`add-decision`/`record-session` were not invoked either, for the same reason; all STATE.md changes for Phase 139 plans are hand-authored.
+- A-06's `validation_curve` table has only been verified against synthetic testthat fixtures (0 failures / 13 expectations) in this Windows planning environment; verifying its actual computed output (the real `pct_exact_zip9_match` Overall-row value) against real `LDS_ADDRESS_HISTORY` data requires a HiPerGator run, deferred per the plan's own scoping — not a blocker to Plans 03/04, which do not depend on A-06's real-data output.
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 139` (plan 01) (2026-08-05)
-**Stopped at:** Completed 139-01-PLAN.md (`is_sentinel_zip5()` + R/115 through Part A-05)
-**What's next:** Execute 139-02-PLAN.md (validation curve). v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
+**Last command:** `/gsd:execute-phase 139` (plan 02) (2026-08-05)
+**Stopped at:** Completed 139-02-PLAN.md (A-06 carry-forward validation curve, F1 record-anchored framing; Task 3 checkpoint approved with real-HiPerGator verification deferred)
+**What's next:** Execute 139-03-PLAN.md (Part B: ENCOUNTER pull + S1-S4 imputation-scenario occurrence counts, ordered/unordered, backward/forward/either direction split). v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
