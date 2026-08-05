@@ -153,3 +153,39 @@ test_that("single-record patient: contributes zero rows to build_validation_case
 
   expect_equal(nrow(cases), 0)
 })
+
+
+# ==============================================================================
+# Task 1 (139-03): classify_encounter_zip() -- open-ended-interval fixture
+# ==============================================================================
+
+test_that("open-ended address record: covered encounter classifies has_direct_zip9, not has_neither (FIX-02)", {
+  # One patient, one address record with period_start_dt set and period_end_dt
+  # = NA (i.e. period_end_eff = the far-future sentinel, an open-ended/current-
+  # address record). One encounter with ADMIT_DATE after period_start_dt.
+  # Under the pre-patch period_end_dt-based filter, ADMIT_DATE < NA evaluates
+  # to NA and filter() drops the row entirely -- misclassifying this encounter
+  # as has_neither even though a covering (open-ended) record clearly exists.
+  addr_coal_fixture <- tibble(
+    ID = "P5",
+    zip9_norm = "326111234",
+    zip5_coalesced = "32611",
+    period_start_dt = as.Date("2020-01-01"),
+    period_end_dt = as.Date(NA),
+    period_end_eff = as.Date("9999-12-31")
+  )
+
+  encounters_fixture <- tibble(
+    ID = "P5",
+    ENCOUNTERID = "E1",
+    ADMIT_DATE = as.Date("2021-06-15")
+  )
+
+  result <- .test_env$classify_encounter_zip(encounters_fixture, addr_coal_fixture)
+
+  expect_equal(nrow(result), 1)
+  expect_true(result$has_direct_zip9[1])
+  expect_false(result$has_neither[1])
+  expect_false(result$has_no_record[1])
+  expect_false(result$has_record_but_empty[1])
+})

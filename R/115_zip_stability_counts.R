@@ -147,6 +147,43 @@ aggregate_validation_curve <- function(validation_cases) {
   bind_rows(curve, overall_row)
 }
 
+classify_encounter_zip <- function(encounters, addr_coal) {
+  # 139-05-PATCH FIX-04c: semi_join pre-filter is now the DEFAULT (not conditional on
+  # profiling) -- it is free, strictly reducing, and the many-to-many join below is the
+  # largest operation in the script.
+  addr_pref <- addr_coal %>%
+    semi_join(encounters, by = "ID") %>%
+    select(ID, zip9_norm, zip5_coalesced, period_start_dt, period_end_eff)
+
+  # 139-05-PATCH FIX-02: filter against period_end_eff (sentineled), NOT period_end_dt
+  # (NA-preserving for open-ended records). ADMIT_DATE < NA evaluates to NA and filter() drops
+  # NA rows -- under a period_end_dt-based filter, EVERY encounter covered by an open-ended
+  # (current) address record is misclassified as has_neither.
+  top1 <- encounters %>%
+    left_join(addr_pref, by = "ID", relationship = "many-to-many") %>%
+    filter(period_start_dt <= ADMIT_DATE, ADMIT_DATE < period_end_eff) %>%
+    group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+    arrange(is.na(zip9_norm), desc(period_start_dt), .by_group = TRUE) %>%
+    slice(1) %>%
+    ungroup() %>%
+    mutate(has_covering_record = TRUE) %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, direct_zip9 = zip9_norm, direct_zip5 = zip5_coalesced, has_covering_record)
+
+  encounters %>%
+    left_join(top1, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+    mutate(
+      has_covering_record   = coalesce(has_covering_record, FALSE),
+      has_direct_zip9       = !is.na(direct_zip9),
+      has_direct_zip5_only  = is.na(direct_zip9) & !is.na(direct_zip5),
+      # 139-05-PATCH FIX-04e: "no covering record exists" and "a covering record exists with
+      # both fields NA" are different data conditions -- the notes' S2 presumes a record
+      # exists. Split rather than conflate; has_neither remains their union.
+      has_no_record         = !has_covering_record,
+      has_record_but_empty  = has_covering_record & is.na(direct_zip9) & is.na(direct_zip5),
+      has_neither            = has_no_record | has_record_but_empty
+    )
+}
+
 
 # ==============================================================================
 # SECTION 2: CONSTANTS AND DUAL PROBE GATE ----
@@ -714,6 +751,63 @@ message("\n=== A-06: Carry-Forward Validation Curve (Address-History Universe, R
 print(validation_curve)
 message(glue("Block-group tier available: {has_block_group_crosswalk} (status: {block_group_tier_status})"))
 message(glue("Base rate (unchanged-address test cases): {pct_unchanged}%  |  Same-day pairs: {n_same_day}"))
+message("==========================================================================\n")
+
+
+# ==============================================================================
+# SECTION 10: PART B -- ENCOUNTER-LEVEL ZIP CLASSIFICATION (B-01..B-04) ----
+# ==============================================================================
+# Pitfall 1: Part B's universe is ENCOUNTERS (one row per (ID, ENCOUNTERID,
+# ADMIT_DATE)), NOT address-history records -- distinct from Part A's
+# addr_coal-anchored universe above. Do not conflate encounter counts with
+# address-record counts when reading console output below.
+#
+# 139-05-PATCH FIX-03a: Part B's population is the study cohort
+# (get_hl_patient_ids(), the pattern already established by R/106/R/111/R/100/
+# R/107/R/109) -- reused verbatim here, not re-invented. This is what makes
+# Plan 04's C-02 reconciliation (against the notes' 26-patient control total,
+# itself a cohort-specific number) comparable.
+
+message("--- Part B: cohort-restricted ENCOUNTER pull + per-encounter ZIP classification ---")
+
+if (!exists("get_hl_patient_ids")) source("R/utils/utils_treatment.R")
+COHORT_IDS <- get_hl_patient_ids()
+message(glue("[R/115] Study cohort (HL patients) size: {length(COHORT_IDS)}"))
+
+# USE_DUCKDB / pcornet_con already set/opened by SECTION 2's probe gate 2 --
+# do not re-open the connection here.
+enc_tbl <- get_pcornet_table("ENCOUNTER")
+if (is.null(enc_tbl)) stop("ENCOUNTER table not found in DuckDB -- cannot compute Part B scenario counts.")
+
+encounters <- enc_tbl %>%
+  filter(!is.na(ADMIT_DATE), ID %in% COHORT_IDS) %>%
+  select(ID, ENCOUNTERID, ADMIT_DATE) %>%
+  collect() %>%
+  mutate(ADMIT_DATE = parse_pcornet_date(ADMIT_DATE)) %>%
+  filter(!is.na(ADMIT_DATE))
+
+n_encounters_total <- nrow(encounters)
+message(glue("[R/115] Part B: {n_encounters_total} cohort-restricted encounters with a parseable ADMIT_DATE, across {n_distinct(encounters$ID)} patients"))
+
+# classify_encounter_zip() (SECTION 1B) reuses addr_coal directly (NOT
+# get_zip9_at_date()) -- see this plan's <interfaces> block for why: coalesced
+# ZIP5 needs to stay visible alongside ZIP9 for S1/S3 classification, which
+# get_zip9_at_date()'s own derived-only ZIP5 output would mask.
+encounter_zip <- classify_encounter_zip(encounters, addr_coal)
+
+n_has_direct_zip9      <- sum(encounter_zip$has_direct_zip9)
+n_has_direct_zip5_only <- sum(encounter_zip$has_direct_zip5_only)
+n_has_no_record        <- sum(encounter_zip$has_no_record)
+n_has_record_but_empty <- sum(encounter_zip$has_record_but_empty)
+n_has_neither          <- sum(encounter_zip$has_neither)
+
+message("\n=== Part B: Encounter ZIP-Availability Headline Counts (encounter-level) ===")
+message(glue("  n_encounters_total:       {n_encounters_total}"))
+message(glue("  has_direct_zip9:          {n_has_direct_zip9} ({round(100 * n_has_direct_zip9 / n_encounters_total, 1)}%)"))
+message(glue("  has_direct_zip5_only:     {n_has_direct_zip5_only} ({round(100 * n_has_direct_zip5_only / n_encounters_total, 1)}%)"))
+message(glue("  has_no_record:            {n_has_no_record} ({round(100 * n_has_no_record / n_encounters_total, 1)}%)"))
+message(glue("  has_record_but_empty:     {n_has_record_but_empty} ({round(100 * n_has_record_but_empty / n_encounters_total, 1)}%)"))
+message(glue("  has_neither (union of the above two): {n_has_neither} ({round(100 * n_has_neither / n_encounters_total, 1)}%)"))
 message("==========================================================================\n")
 
 # Do not write any xlsx in this task -- that is Plan 04.
