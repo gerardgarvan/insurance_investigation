@@ -355,7 +355,7 @@ Plans:
 **Goal:** A counting-and-validation deliverable (R/115_zip_stability_counts.R) that measures how often patients' 9-digit and 5-digit ZIP codes actually change (Part A, including a carry-forward validation curve), counts how often each imputation scenario S1-S4 from the 08/04 team notes would fire (Part B, ordered + unordered, encounter + patient level, direction-split), and reports a cumulative completeness waterfall reconciled against the notes' 26-patient control total (Part C) — to inform, not decide, the team's carry-forward time-window and ADI-vs-SDI design choices. This phase measures; it does not modify `get_zip9_at_date()` or build `approximate_zip9()`.
 **Requirements**: none mapped in REQUIREMENTS.md (standalone investigation deliverable) — plans use CONTEXT.md decision IDs (A-01..A-06, B-01..B-04, C-01..C-02) as acceptance criteria instead
 **Depends on:** Phase 138 (independent; addresses ZIP/address domain like Phase 137, not the code-review remediation chain)
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 **Design constraints:**
 - The source notes (139-CONTEXT.md) assumed a prior "zip9-approximation" phase had shipped `approximate_zip9()`, `is_sentinel_zip5()`, and an "AMEND-01" ZIP5-coalesce fix — none of that exists. Resolution: `approximate_zip9()` is not needed (Part B/C count occurrences, they do not write imputed values); `is_sentinel_zip5()` is added as a small new sibling function in `R/utils/utils_address.R` (Plan 01); the ZIP5-coalescing logic is applied locally inside R/115 (mirroring R/106's already-proven raw-column-preferred-with-derived-fallback pattern), not inside `utils_address.R` — `get_zip9_at_date()` itself is never modified (Out of Scope, honored)

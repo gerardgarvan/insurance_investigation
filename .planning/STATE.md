@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: verifying
-stopped_at: Phase 139 context gathered
-last_updated: "2026-08-05T17:56:47.613Z"
+stopped_at: Completed 139-01-PLAN.md
+last_updated: "2026-08-05T19:40:12.584Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 127
@@ -22,16 +22,18 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 138 — resolve-log2-txt-problems
+**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (Plan 01 of 4 complete)
 
 ## Current Position
 
-Phase: 138
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-07-26
+Phase: 139
+Plan: 01 of 4 (139-01 complete)
+Status: In progress — 139-02 (validation curve) up next
+Last activity: 2026-08-05
 
-Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete)
+Phase 138 (resolve-log2-txt-problems) remains complete, ready for verification (unchanged by this session).
+
+Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 1/4 plans complete
 
 ## v3.3 Status (open in parallel, not abandoned)
 
@@ -49,6 +51,10 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 - Average plans per phase: 1.0 (recent milestones)
 - Average tasks per plan: 3.0
+
+**Recent plan executions:**
+
+- Phase 139 Plan 01 (ZIP stability foundation): 25 min, 3 tasks, 2 files
 
 ## Accumulated Context
 
@@ -79,7 +85,16 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 ### Known Blockers (new)
 
-- Phase 139's CONTEXT.md (`140-CONTEXT.md`) was authored assuming a prior "Phase 139: zip9-approximation" already shipped `approximate_zip9()`, `is_sentinel_zip5()`, and an "AMEND-01" ZIP5-coalesce fix, and references `.planning/phases/139-zip9-approximation/` as a canonical ref. None of that exists — no roadmap entry, directory, commit, or function by that name; only Phase 137 (`get_zip9_at_date()`) is real. Reconcile this before `/gsd:plan-phase 139`: either that imputation work needs to be built first (as a phase inserted before 139, likely via `/gsd:insert-phase`), or the CONTEXT.md's assumptions/canonical-refs need correcting to match what actually exists.
+- Phase 139's CONTEXT.md (`140-CONTEXT.md`) was authored assuming a prior "Phase 139: zip9-approximation" already shipped `approximate_zip9()`, `is_sentinel_zip5()`, and an "AMEND-01" ZIP5-coalesce fix, and references `.planning/phases/139-zip9-approximation/` as a canonical ref. None of that exists — no roadmap entry, directory, commit, or function by that name; only Phase 137 (`get_zip9_at_date()`) is real. RESOLVED by 139-01: `is_sentinel_zip5()` was built directly in `R/utils/utils_address.R` and the "AMEND-01" ZIP5-coalescing fix was implemented locally in `R/115_zip_stability_counts.R` via a single `coalesce_zip5()` function (139-05-PATCH's requirement); `approximate_zip9()` was determined to be unneeded since Part B/C only counts imputation-scenario occurrences, it does not write imputed values.
+
+### Phase 139 Decisions
+
+- [Phase 139-01]: `is_sentinel_zip5()` added as a new sibling function in `R/utils/utils_address.R` (00000/99999/any single-repeated-digit ZIP5 flagged as sentinel, NA passed through as NA); `get_zip9_at_date()` left byte-for-byte unchanged (Out of Scope for this phase)
+- [Phase 139-01]: ZIP5 coalescing implemented as exactly one function, `coalesce_zip5()`, defined in `R/115_zip_stability_counts.R`'s new SECTION 1B prelude (before the probe gate, so a future testthat file can `sys.source()` pure functions even when the source CSV is absent) — not duplicated inline, not added to `utils_address.R`
+- [Phase 139-01]: `R/115` stops loudly (prints available columns, quits) if raw `ADDRESS_ZIP5` is absent, rather than silently degrading to derived-from-ZIP9-only (139-05-PATCH FIX-04a)
+- [Phase 139-01]: `period_end_dt` keeps NA for open-ended address records; a separate `period_end_eff` column (sentineled to 9999-12-31) is used only for interval-matching by downstream consumers, never for exposure-span math (139-05-PATCH FIX-02)
+- [Phase 139-01]: Per-patient exposure-denominator math (A-04) uses `period_end_eff` capped at `DATA_THROUGH` (alias for `ZIP_STUDY_PERIOD_MAX`), not the far-future sentinel directly and not `period_start_dt` alone, with single-record patients getting `NA_real_` (not `Inf`) for the per-patient-year rate (139-05-PATCH FIX-04b)
+- [Phase 139-01]: `gap_days_summary` (A-05) includes deciles (`quantile(gaps_days, seq(0.1,0.9,0.1))`) in addition to median/p25/p75/min/max/histogram, satisfying A-05's explicit "median, IQR, deciles" requirement
 
 ### Phase 131 Decisions
 
@@ -117,6 +132,6 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 ## Session Continuity
 
-**Last command:** `/gsd:new-project` (roadmap step) (2026-07-24)
-**Stopped at:** Phase 139 context gathered
-**What's next:** Present roadmap for user approval, then `/gsd:plan-phase 132` (Crash Fixes) to begin execution. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available.
+**Last command:** `/gsd:execute-phase 139` (plan 01) (2026-08-05)
+**Stopped at:** Completed 139-01-PLAN.md (`is_sentinel_zip5()` + R/115 through Part A-05)
+**What's next:** Execute 139-02-PLAN.md (validation curve). v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
