@@ -810,4 +810,234 @@ message(glue("  has_record_but_empty:     {n_has_record_but_empty} ({round(100 *
 message(glue("  has_neither (union of the above two): {n_has_neither} ({round(100 * n_has_neither / n_encounters_total, 1)}%)"))
 message("==========================================================================\n")
 
+
+# ==============================================================================
+# SECTION 11: PART B -- S1-S4 SCENARIO ELIGIBILITY + ORDERED/UNORDERED COUNTS ----
+# ==============================================================================
+# Forward-lookup logic is new, local code this plan adds -- get_zip9_at_date()
+# only looks backward, so the forward variant is implemented here directly
+# against zip9_seq/zip5_seq (SECTION 4), not by changing utils_address.R.
+# B-01/B-04 ask whether ANY such spell exists on the correct side of
+# ADMIT_DATE, not specifically the nearest one (except S2's resolution_path,
+# which is reporting-only, computed from the nearest backward spell).
+
+message("--- Part B: S1-S4 scenario eligibility (unordered) + ordered assignment ---")
+
+# ---- S1 eligibility: has_direct_zip5_only AND a zip9_seq spell whose ZIP5 matches direct_zip5 ----
+zip5_only_enc <- encounter_zip %>%
+  filter(has_direct_zip5_only) %>%
+  select(ID, ENCOUNTERID, ADMIT_DATE, direct_zip5)
+
+s1_matches <- zip5_only_enc %>%
+  left_join(
+    zip9_seq %>% select(ID, zip9_norm, period_start_dt),
+    by = "ID", relationship = "many-to-many"
+  ) %>%
+  filter(!is.na(zip9_norm), substr(zip9_norm, 1, 5) == direct_zip5) %>%
+  mutate(direction = if_else(period_start_dt <= ADMIT_DATE, "backward", "forward"))
+
+s1_elig <- zip5_only_enc %>%
+  select(ID, ENCOUNTERID, ADMIT_DATE) %>%
+  left_join(
+    s1_matches %>%
+      group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+      summarise(
+        s1_backward = any(direction == "backward"),
+        s1_forward  = any(direction == "forward"),
+        .groups = "drop"
+      ),
+    by = c("ID", "ENCOUNTERID", "ADMIT_DATE")
+  ) %>%
+  mutate(
+    s1_backward = coalesce(s1_backward, FALSE),
+    s1_forward  = coalesce(s1_forward, FALSE),
+    s1_either   = s1_backward | s1_forward
+  )
+
+# ---- S2 eligibility: has_neither AND a zip5_seq spell exists (backward/forward/either) ----
+# zip5_seq (not zip9_seq) is used because S2 covers BOTH the "take a ZIP9 from another
+# encounter" path and the "ZIP5 centroid" path -- any backward zip5_seq spell satisfies at
+# least the centroid path. resolution_path is computed for reporting transparency only
+# (take_zip9 vs centroid_only), NOT used to gate S2 eligibility itself.
+neither_enc <- encounter_zip %>%
+  filter(has_neither) %>%
+  select(ID, ENCOUNTERID, ADMIT_DATE)
+
+s2_matches <- neither_enc %>%
+  left_join(
+    zip5_seq %>% select(ID, zip5_coalesced, zip9_norm, period_start_dt),
+    by = "ID", relationship = "many-to-many"
+  ) %>%
+  filter(!is.na(zip5_coalesced)) %>%
+  mutate(direction = if_else(period_start_dt <= ADMIT_DATE, "backward", "forward"))
+
+# Nearest backward zip5_seq spell per encounter (resolution_path reporting only).
+s2_nearest_backward <- s2_matches %>%
+  filter(direction == "backward") %>%
+  group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+  slice_max(period_start_dt, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(resolution_path = if_else(!is.na(zip9_norm), "take_zip9", "centroid_only")) %>%
+  select(ID, ENCOUNTERID, ADMIT_DATE, resolution_path)
+
+s2_elig <- neither_enc %>%
+  left_join(
+    s2_matches %>%
+      group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+      summarise(
+        s2_backward = any(direction == "backward"),
+        s2_forward  = any(direction == "forward"),
+        .groups = "drop"
+      ),
+    by = c("ID", "ENCOUNTERID", "ADMIT_DATE")
+  ) %>%
+  left_join(s2_nearest_backward, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+  mutate(
+    s2_backward = coalesce(s2_backward, FALSE),
+    s2_forward  = coalesce(s2_forward, FALSE),
+    s2_either   = s2_backward | s2_forward
+    # resolution_path stays NA when no backward zip5_seq spell exists at all (nothing to
+    # resolve) -- not coalesced to a placeholder value.
+  )
+
+# ---- S3 eligibility (backward only, per S3's own definition): has_direct_zip5_only AND
+# NOT s1_backward. S1-backward and S3 are complements within the has_direct_zip5_only set
+# by construction -- a ZIP5-only encounter either matches some earlier ZIP9's ZIP5 (S1) or
+# it does not (S3). No direction split for S3 -- it is inherently backward-only.
+s3_elig <- s1_elig %>%
+  mutate(s3_eligible = !s1_backward) %>%
+  select(ID, ENCOUNTERID, ADMIT_DATE, s3_eligible)
+
+# Join all eligibility flags onto encounter_zip; encounters outside each scenario's own
+# precondition (e.g. not has_direct_zip5_only for S1/S3, not has_neither for S2) get FALSE.
+encounter_zip <- encounter_zip %>%
+  left_join(s1_elig, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+  left_join(s2_elig, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+  left_join(s3_elig, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+  mutate(
+    s1_backward = coalesce(s1_backward, FALSE),
+    s1_forward  = coalesce(s1_forward, FALSE),
+    s1_either   = coalesce(s1_either, FALSE),
+    s2_backward = coalesce(s2_backward, FALSE),
+    s2_forward  = coalesce(s2_forward, FALSE),
+    s2_either   = coalesce(s2_either, FALSE),
+    s3_eligible = coalesce(s3_eligible, FALSE)
+  )
+
+# S4 (complete-case comparator, reported separately, NOT part of the ordered assignment):
+# complement of has_direct_zip9 -- every encounter that is NOT already-has-ZIP9.
+n_s4_excluded_encounters <- sum(!encounter_zip$has_direct_zip9)
+n_s4_excluded_patients   <- n_distinct(encounter_zip$ID[!encounter_zip$has_direct_zip9])
+
+# ---- Ordered assignment: S1 then S2 then S3 ----
+encounter_zip <- encounter_zip %>%
+  mutate(
+    scenario_assigned = case_when(
+      has_direct_zip9 ~ "already_has_zip9",
+      s1_either       ~ "S1",
+      s2_either       ~ "S2",
+      s3_eligible     ~ "S3",
+      TRUE            ~ "unresolvable"
+    ),
+    scenario_assigned = factor(
+      scenario_assigned,
+      levels = c("already_has_zip9", "S1", "S2", "S3", "unresolvable")
+    )
+  )
+
+# 139-05-PATCH FIX-04d: the ordered "S3" column is NOT the complete S3-eligible population --
+# an encounter eligible ONLY via S1-forward (not S1-backward) is assigned "S1" by the ordered
+# rule (S1-eligible-either is tested first) while STILL being S3-eligible (unordered) by the
+# complement-of-S1-backward definition. Both must be reported; call this out explicitly here
+# so the ordered column is never misread as a complete S3 count.
+message(glue(
+  "NOTE (139-05-PATCH FIX-04d): the ordered 'S3' count below is NOT the complete S3-eligible ",
+  "population -- an encounter eligible only via S1-forward is assigned 'S1' by the ordered ",
+  "rule (S1 tested first) while remaining S3-eligible under S3's own complement-of-S1-backward ",
+  "definition. See the unordered 'S3-eligible' count for the complete figure. Both are reported ",
+  "on B_scenario_counts (Plan 04) -- do not read the ordered column alone as S3's true count."
+))
+
+# ---- Summary table 1: ordered assignment counts (B-03), encounter + patient level ----
+n_patients_with_encounters <- n_distinct(encounter_zip$ID)
+
+scenario_counts_encounter <- encounter_zip %>%
+  group_by(scenario_assigned, .drop = FALSE) %>%
+  summarise(n_encounters = n(), .groups = "drop") %>%
+  mutate(pct_of_encounters = round(100 * n_encounters / n_encounters_total, 1))
+
+# Patient-level presence: a patient can appear under multiple scenarios if different
+# encounters resolve differently -- this reports patient-level PRESENCE, not a forced
+# single category per patient.
+scenario_counts_patient <- encounter_zip %>%
+  distinct(ID, scenario_assigned) %>%
+  group_by(scenario_assigned, .drop = FALSE) %>%
+  summarise(n_patients = n_distinct(ID), .groups = "drop") %>%
+  mutate(pct_of_patients = round(100 * n_patients / n_patients_with_encounters, 1))
+
+# ---- Summary table 2: unordered eligible-for counts (B-03 overlap visibility) + direction
+# split (B-04), encounter + patient level. S3 stays backward-only (one row, no direction
+# split, per S3's own definition) -- this is the "S3-eligible" figure FIX-04d requires
+# alongside the ordered "S3" count above. S4 is the complete-case comparator (B-01).
+unordered_encounter <- tibble(
+  scenario  = c("S1", "S1", "S1", "S2", "S2", "S2", "S3-eligible", "S4-excluded"),
+  direction = c("backward", "forward", "either", "backward", "forward", "either", "backward", "n/a"),
+  n_encounters = c(
+    sum(encounter_zip$s1_backward),
+    sum(encounter_zip$s1_forward),
+    sum(encounter_zip$s1_either),
+    sum(encounter_zip$s2_backward),
+    sum(encounter_zip$s2_forward),
+    sum(encounter_zip$s2_either),
+    sum(encounter_zip$s3_eligible),
+    n_s4_excluded_encounters
+  )
+) %>%
+  mutate(pct_of_encounters = round(100 * n_encounters / n_encounters_total, 1))
+
+unordered_patient <- tibble(
+  scenario  = c("S1", "S1", "S1", "S2", "S2", "S2", "S3-eligible", "S4-excluded"),
+  direction = c("backward", "forward", "either", "backward", "forward", "either", "backward", "n/a"),
+  n_patients = c(
+    n_distinct(encounter_zip$ID[encounter_zip$s1_backward]),
+    n_distinct(encounter_zip$ID[encounter_zip$s1_forward]),
+    n_distinct(encounter_zip$ID[encounter_zip$s1_either]),
+    n_distinct(encounter_zip$ID[encounter_zip$s2_backward]),
+    n_distinct(encounter_zip$ID[encounter_zip$s2_forward]),
+    n_distinct(encounter_zip$ID[encounter_zip$s2_either]),
+    n_distinct(encounter_zip$ID[encounter_zip$s3_eligible]),
+    n_s4_excluded_patients
+  )
+) %>%
+  mutate(pct_of_patients = round(100 * n_patients / n_patients_with_encounters, 1))
+
+# ---- Console headline stats ----
+n_s3_eligible_unordered   <- sum(encounter_zip$s3_eligible)
+pct_s3_eligible_unordered <- round(100 * n_s3_eligible_unordered / n_encounters_total, 1)
+
+message("\n=== Part B: Ordered Scenario Assignment (S1 then S2 then S3), Encounter Level ===")
+print(scenario_counts_encounter)
+message(glue("Denominator: n_encounters_total = {n_encounters_total}"))
+
+message("\n=== Part B: Ordered Scenario Assignment, Patient Level ===")
+print(scenario_counts_patient)
+message(glue("Denominator: n_patients_with_encounters = {n_patients_with_encounters} (patients can appear under multiple scenarios)"))
+
+message("\n=== Part B: Unordered Eligible-For Counts (overlap visible) + Direction Split, Encounter Level ===")
+print(unordered_encounter)
+message(glue("Denominator: n_encounters_total = {n_encounters_total}"))
+
+message("\n=== Part B: Unordered Eligible-For Counts + Direction Split, Patient Level ===")
+print(unordered_patient)
+message(glue("Denominator: n_patients_with_encounters = {n_patients_with_encounters}"))
+
+message(glue(
+  "\nPart B: S3-eligible (unordered) = {n_s3_eligible_unordered} encounters ",
+  "({pct_s3_eligible_unordered}%). S3 resolution still pending as of 08/04 notes -- count ",
+  "reported, not presenting either resolution as decided."
+))
+message("==========================================================================\n")
+
+# Do not write any xlsx in this task -- that is Plan 04.
+
 # Do not write any xlsx in this task -- that is Plan 04.
