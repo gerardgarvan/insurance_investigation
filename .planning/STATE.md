@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: verifying
-stopped_at: Completed 139-03-PLAN.md
-last_updated: "2026-08-05T20:45:00.000Z"
+stopped_at: Completed 139-04-PLAN.md (Phase 139 complete)
+last_updated: "2026-08-05T21:15:00.000Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 127
-  completed_phases: 115
+  completed_phases: 116
   total_plans: 228
-  completed_plans: 222
+  completed_plans: 223
   percent: 20
 ---
 
@@ -22,18 +22,18 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (Plan 03 of 4 complete)
+**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (4 of 4 plans complete — phase complete, ready for goal verification)
 
 ## Current Position
 
 Phase: 139
-Plan: 03 of 4 (139-01, 139-02, 139-03 complete)
-Status: In progress — 139-04 (Part C completeness waterfall + C-02 reconciliation + full 8-sheet xlsx assembly) up next
+Plan: 04 of 4 (139-01, 139-02, 139-03, 139-04 all complete)
+Status: Phase 139 complete — ready for goal verification (per this session's explicit instructions)
 Last activity: 2026-08-05
 
 Phase 138 (resolve-log2-txt-problems) remains complete, ready for verification (unchanged by this session).
 
-Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 3/4 plans complete
+Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 4/4 plans complete (phase complete)
 
 ## v3.3 Status (open in parallel, not abandoned)
 
@@ -57,6 +57,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 139 Plan 01 (ZIP stability foundation): 25 min, 3 tasks, 2 files
 - Phase 139 Plan 02 (A-06 carry-forward validation curve): 15 min, 3 tasks (2 auto + 1 checkpoint), 2 files
 - Phase 139 Plan 03 (Part B: encounter ZIP classification + S1-S4 scenario counts): 20 min, 2 tasks, 2 files
+- Phase 139 Plan 04 (Part C waterfall + C-02 reconciliation + full 8-sheet xlsx assembly + registration): 35 min, 2 tasks, 5 files
 
 ## Accumulated Context
 
@@ -107,6 +108,14 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - [Phase 139-03]: Part B/C's population is the study cohort via `get_hl_patient_ids()` (139-05-PATCH FIX-03a, reusing the R/106/R/107/R/109/R/111 pattern verbatim) -- both the ENCOUNTER pull and `classify_encounter_zip()`'s address view are cohort-restricted, with cohort N logged, making Plan 04's C-02 26-patient reconciliation comparable
 - [Phase 139-03]: S1/S2 eligibility (backward/forward/either) computed via new local join logic against `zip9_seq`/`zip5_seq`; S2 uses `zip5_seq` (not `zip9_seq`) since it covers both the take-ZIP9 and centroid-only resolution paths, with a `resolution_path` column for reporting transparency only (not gating eligibility); S3 stays backward-only (complement of S1-eligible-backward within the `has_direct_zip5_only` set)
 - [Phase 139-03]: `scenario_assigned` applies the ordered S1-then-S2-then-S3 `case_when()` rule; unordered per-scenario eligibility flags are ALSO computed and reported so overlap hidden by the ordered rule stays visible -- an encounter eligible only via S1-forward is assigned S1 (ordered) while remaining S3-eligible (unordered), explicitly called out via a console NOTE (139-05-PATCH FIX-04d); S3 headline flagged "S3 resolution still pending as of 08/04 notes," never presented as decided (B-01); every count reported at both encounter and patient level with denominators named (B-02)
+- [Phase 139-04]: `compute_c02(cohort_ids, addr_coal)` (SECTION 1B) is computed over `COHORT_IDS` (the study cohort), NOT `addr_coal`'s own patient set -- a cohort patient entirely absent from `addr_coal` (dropped by Plan 01's filters, or never in `LDS_ADDRESS_HISTORY` at all) is `coalesce()`d to `has_any_zip5 = FALSE` and counts toward `n_patients_no_zip5_ever`, fixing the pre-patch defect where such patients were invisible to `group_by()` (139-05-PATCH FIX-03b)
+- [Phase 139-04]: A pre-filter comparison (`n_patients_no_zip5_ever_prefilter`, via `coalesce_zip5(addr_raw)` -- no second coalescing implementation) is computed and reported alongside the post-filter C-02 figure so study-period/unparseable-date filter-driven denominator drift is visible (139-05-PATCH FIX-03c); the C-02 tolerance (+/-5) is documented in the KEY sheet as covering cohort-definition drift only, not denominator or methodological uncertainty (FIX-03d)
+- [Phase 139-04]: `waterfall_encounter`/`waterfall_patient` (C-01) are cumulative stepwise tables built directly from Part B's ordered `scenario_assigned` column; patient-level bucket is the furthest-resolved scenario per patient (one mutually-exclusive bucket, `group_by(ID)` + `slice_min` on priority rank), distinct from Part B's own patient-presence reporting
+- [Phase 139-04]: A C-02 reconciliation failure produces both a loud console message AND a UF_ORANGE-filled QC-sheet cell in the xlsx itself -- the deliverable that ships to Erin/Amy carries the warning, not just build-time console output
+- [Phase 139-04]: Full 8-sheet `zip_stability_counts_YYYYMMDD.xlsx` assembled via `wb_workbook()` (KEY first, then A/B/C sheets, then QC) with locally-copied `add_styled_sheet()`/UF_BLUE (`#0021A5`)/UF_ORANGE (`#FA4616`) constants (distinct from `utils_pptx.R`'s own UF_BLUE); `A_stability_summary` carries Plan 01's `gap_days_summary` through in full, including `gap_days_deciles`, not just the fixed-bucket histogram
+- [Phase 139-04]: `R/115` registered as the final `investigation_scripts` entry in `R/39` (not `expected_xlsx`, per R/106's own dated-filename precedent); `R/88` Section 15ad (14 structural checks, `SMOKE-139-01` footer) validates single-implementation checks for `is_sentinel_zip5()`/`coalesce_zip5()` plus Part B/C/C-02 presence; `R/SCRIPT_INDEX.md` updated (16 post-renumber investigations, 102 total scripts)
+- [Phase 139-04]: Two pre-existing `R/88` failures (`source_coverage_analysis.csv` existence, Phase 122 `get_chemo_hits('MED_ADMIN')` fixture) are unrelated to Phase 139 (confirmed via an additive-only diff to `R/88` this session) and were logged to `deferred-items.md` rather than fixed, per the scope-boundary rule; Section 15ad itself (this plan's own checks) shows 14 PASS / 0 FAIL
+- [Phase 139 COMPLETE]: All 4 plans (01-04) executed; Phase 139 is ready for goal verification. Runtime verification against real `LDS_ADDRESS_HISTORY`/`ENCOUNTER` data on HiPerGator (producing the actual `output/zip_stability_counts_YYYYMMDD.xlsx` and reviewing the real C-02 reconciliation result) remains an explicitly-deferred open item requiring HiPerGator access -- this is the phase's own stated definition-of-done gate, not a blocker to this phase's planning/execution completion
 
 ### Phase 131 Decisions
 
@@ -146,6 +155,6 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 139` (plan 03) (2026-08-05)
-**Stopped at:** Completed 139-03-PLAN.md (Part B: cohort-restricted ENCOUNTER pull + classify_encounter_zip(), S1-S4 ordered/unordered scenario counts with backward/forward/either direction split)
-**What's next:** Execute 139-04-PLAN.md (Part C completeness waterfall + C-02 26-patient reconciliation + QC sheet + full 8-sheet xlsx assembly + R/39/R/88/SCRIPT_INDEX registration). v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
+**Last command:** `/gsd:execute-phase 139` (plan 04, final plan) (2026-08-05)
+**Stopped at:** Completed 139-04-PLAN.md (Part C completeness waterfall + cohort-scoped C-02 reconciliation + QC/KEY sheets + full 8-sheet xlsx assembly + R/39/R/88/SCRIPT_INDEX registration). **Phase 139 is now fully executed (4/4 plans complete).**
+**What's next:** Phase 139 is ready for goal verification (`/gsd:verify-phase 139` or equivalent) -- structural/parse-level and synthetic-fixture testthat verification is complete on this Windows machine (0 failures across all fixtures incl. C-02); real HiPerGator runtime verification (actual `output/zip_stability_counts_YYYYMMDD.xlsx` + real C-02 reconciliation result) remains explicitly deferred per the plan's own scoping, requiring HiPerGator access. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
