@@ -90,6 +90,63 @@ coalesce_zip5 <- function(df) {
     )
 }
 
+build_validation_cases <- function(addr_coal) {
+  # 139-05-PATCH FIX-01 (F1): hold out one address RECORD, not a spell -- predict it from the
+  # most recent PRIOR record with a non-NA ZIP9, the same rule get_zip9_at_date() applies.
+  # Operates on addr_coal, NOT zip9_seq: spell-collapsing removes exactly the unchanged-address
+  # cases carry-forward is supposed to get right, leaving only failures in the test population.
+  holdout_base <- addr_coal %>%
+    filter(!is.na(zip9_norm), !is.na(period_start_dt)) %>%
+    arrange(ID, period_start_dt, desc(period_end_eff))
+
+  validation_cases <- holdout_base %>%
+    group_by(ID) %>%
+    mutate(
+      predicted_zip9  = lag(zip9_norm),         # prior RECORD -- may repeat the same address
+      predicted_start = lag(period_start_dt),
+      gap_days        = as.numeric(period_start_dt - predicted_start)
+    ) %>%
+    ungroup() %>%
+    filter(!is.na(predicted_zip9))
+
+  validation_cases %>%
+    mutate(
+      exact_match = predicted_zip9 == zip9_norm,
+      zip5_match  = substr(predicted_zip9, 1, 5) == substr(zip9_norm, 1, 5),
+      gap_bin = case_when(
+        gap_days == 0   ~ "0 (same-day)",   # version corrections, not elapsed-time tests
+        gap_days <= 30  ~ "0-30",           # redefined: 1 <= gap_days <= 30 (same-day split out)
+        gap_days <= 90  ~ "31-90",
+        gap_days <= 180 ~ "91-180",
+        gap_days <= 365 ~ "181-365",
+        TRUE            ~ "366+"
+      )
+    )
+}
+
+aggregate_validation_curve <- function(validation_cases) {
+  bin_levels <- c("0 (same-day)", "0-30", "31-90", "91-180", "181-365", "366+")
+  curve <- validation_cases %>%
+    mutate(gap_bin = factor(gap_bin, levels = bin_levels)) %>%
+    group_by(gap_bin, .drop = FALSE) %>%
+    summarise(
+      n_cases = n(),
+      pct_exact_zip9_match = round(100 * mean(exact_match), 1),
+      pct_same_zip5_match  = round(100 * mean(zip5_match), 1),
+      .groups = "drop"
+    ) %>%
+    mutate(gap_bin = as.character(gap_bin))
+
+  overall_row <- tibble(
+    gap_bin = "Overall",
+    n_cases = nrow(validation_cases),
+    pct_exact_zip9_match = round(100 * mean(validation_cases$exact_match), 1),
+    pct_same_zip5_match  = round(100 * mean(validation_cases$zip5_match), 1)
+  )
+
+  bind_rows(curve, overall_row)
+}
+
 
 # ==============================================================================
 # SECTION 2: CONSTANTS AND DUAL PROBE GATE ----
