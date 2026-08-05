@@ -349,3 +349,30 @@ Plans:
 - [x] 138-02-PLAN.md — Fix R/03 `tables_ingested <<-` scoping bug: change to `<-` (D-04, D-05) (Wave 1)
 - [x] 138-03-PLAN.md — Fix R/53 `select(ID = PATID, ...)` PATID column bug: change to `select(ID, ...)` (D-06, D-07) (Wave 1)
 - [x] 138-04-PLAN.md — R/88 Section 15ac: 3 static grep assertions for each fix + SMOKE-138-01 footer (D-08, D-09) (Wave 2, depends on 138-01/02/03)
+
+### Phase 139: ZIP Stability & Imputation Occurrence Counts
+
+**Goal:** A counting-and-validation deliverable (R/115_zip_stability_counts.R) that measures how often patients' 9-digit and 5-digit ZIP codes actually change (Part A, including a carry-forward validation curve), counts how often each imputation scenario S1-S4 from the 08/04 team notes would fire (Part B, ordered + unordered, encounter + patient level, direction-split), and reports a cumulative completeness waterfall reconciled against the notes' 26-patient control total (Part C) — to inform, not decide, the team's carry-forward time-window and ADI-vs-SDI design choices. This phase measures; it does not modify `get_zip9_at_date()` or build `approximate_zip9()`.
+**Requirements**: none mapped in REQUIREMENTS.md (standalone investigation deliverable) — plans use CONTEXT.md decision IDs (A-01..A-06, B-01..B-04, C-01..C-02) as acceptance criteria instead
+**Depends on:** Phase 138 (independent; addresses ZIP/address domain like Phase 137, not the code-review remediation chain)
+**Plans:** 4 plans
+
+**Design constraints:**
+- The source notes (139-CONTEXT.md) assumed a prior "zip9-approximation" phase had shipped `approximate_zip9()`, `is_sentinel_zip5()`, and an "AMEND-01" ZIP5-coalesce fix — none of that exists. Resolution: `approximate_zip9()` is not needed (Part B/C count occurrences, they do not write imputed values); `is_sentinel_zip5()` is added as a small new sibling function in `R/utils/utils_address.R` (Plan 01); the ZIP5-coalescing logic is applied locally inside R/115 (mirroring R/106's already-proven raw-column-preferred-with-derived-fallback pattern), not inside `utils_address.R` — `get_zip9_at_date()` itself is never modified (Out of Scope, honored)
+- Part A is computed on the LDS_ADDRESS_HISTORY universe; Part B and C are computed on the ENCOUNTER universe (Pitfall 1) — stated explicitly in every sheet header, never mixed
+- A-06's carry-forward validation curve (not in the source notes, added as a recommended analysis) runs as a leave-one-out hold-out test on address-history spells, binned by gap-days, at exact-ZIP9 and same-ZIP5 accuracy tiers; a block-group tier is attempted only if a Neighborhood Atlas crosswalk file is found (none exists in this repo currently) and degrades gracefully otherwise
+- B's S1→S2→S3 ordered scenario assignment plus unordered eligible-for counts plus backward/forward/either direction split (S1, S2 only — S3 stays backward-only per its own definition) are all reported so the numbers reconcile against each other; S3 is counted but explicitly flagged as unresolved (still pending as of 08/04 notes), never presented as a decided resolution
+- C-02's reconciliation against the notes' "only 26 patients with no 5-digit ZIP code at any single point" is computed from the full address-history universe (not encounter-level scenario logic) and produces a loud, unmissable warning — in console AND as a flagged QC-sheet cell in the xlsx itself — if it fails to reconcile within tolerance, since CONTEXT.md calls this "the single most useful validation in the phase"
+- Deliverable is a single 7-sheet styled xlsx (`output/zip_stability_counts_YYYYMMDD.xlsx`, KEY sheet leftmost) using UF colors (#0021A5, #FA4616); registered in R/39's `investigation_scripts` (not `expected_xlsx`, matching R/106's own precedent for a dated-filename output) and validated structurally by a new R/88 section
+
+**Success Criteria** (what must be TRUE):
+  1. `is_sentinel_zip5()` exists in `R/utils/utils_address.R`; `get_zip9_at_date()` is unmodified
+  2. `R/115_zip_stability_counts.R` computes Part A per-patient ZIP9/ZIP5 stability metrics (distinct counts, transitions, plus4-only transitions, exposure-denominator rate, gap-time distribution) and the A-06 carry-forward validation curve
+  3. `R/115` computes Part B's S1-S4 imputation-scenario occurrence counts (ordered + unordered, encounter + patient level, backward/forward/either direction split) from the real ENCOUNTER table
+  4. `R/115` computes Part C's completeness waterfall and the C-02 26-patient reconciliation, with a visible, unmissable flag if reconciliation fails
+  5. `output/zip_stability_counts_YYYYMMDD.xlsx` is produced with all 7 sheets; R/115 is registered in R/39, R/88 (new structural-checks section), and R/SCRIPT_INDEX.md
+**Plans**: 4 plans
+- [ ] 139-01-PLAN.md — `is_sentinel_zip5()` utility + R/115 setup/probe-gate/ZIP5-coalescing address load + Part A-01/A-02/A-03/A-04/A-05 per-patient stability metrics [A-01, A-02, A-03, A-04, A-05] (Wave 1)
+- [ ] 139-02-PLAN.md — Part A-06 carry-forward leave-one-out validation curve, gap-binned, exact-ZIP9/same-ZIP5/block-group tiers [A-06] (Wave 2, depends on 139-01)
+- [ ] 139-03-PLAN.md — Part B: ENCOUNTER pull + S1-S4 ordered/unordered scenario counts + backward/forward/either direction split [B-01, B-02, B-03, B-04] (Wave 3, depends on 139-01, 139-02)
+- [ ] 139-04-PLAN.md — Part C completeness waterfall + C-02 26-patient reconciliation + QC sheet + full 7-sheet xlsx assembly + R/39/R/88/SCRIPT_INDEX registration [C-01, C-02] (Wave 4, depends on 139-01, 139-02, 139-03)
