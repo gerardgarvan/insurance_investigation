@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: verifying
-stopped_at: Completed 139-02-PLAN.md
-last_updated: "2026-08-05T20:15:00.000Z"
+stopped_at: Completed 139-03-PLAN.md
+last_updated: "2026-08-05T20:45:00.000Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 127
   completed_phases: 115
   total_plans: 228
-  completed_plans: 221
+  completed_plans: 222
   percent: 20
 ---
 
@@ -22,18 +22,18 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (Plan 02 of 4 complete)
+**Current focus:** Phase 139 — zip-stability-imputation-occurrence-counts (Plan 03 of 4 complete)
 
 ## Current Position
 
 Phase: 139
-Plan: 02 of 4 (139-01, 139-02 complete)
-Status: In progress — 139-03 (Part B: ENCOUNTER pull + S1-S4 scenario counts) up next
+Plan: 03 of 4 (139-01, 139-02, 139-03 complete)
+Status: In progress — 139-04 (Part C completeness waterfall + C-02 reconciliation + full 8-sheet xlsx assembly) up next
 Last activity: 2026-08-05
 
 Phase 138 (resolve-log2-txt-problems) remains complete, ready for verification (unchanged by this session).
 
-Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 2/4 plans complete
+Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 3/4 plans complete
 
 ## v3.3 Status (open in parallel, not abandoned)
 
@@ -56,6 +56,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 - Phase 139 Plan 01 (ZIP stability foundation): 25 min, 3 tasks, 2 files
 - Phase 139 Plan 02 (A-06 carry-forward validation curve): 15 min, 3 tasks (2 auto + 1 checkpoint), 2 files
+- Phase 139 Plan 03 (Part B: encounter ZIP classification + S1-S4 scenario counts): 20 min, 2 tasks, 2 files
 
 ## Accumulated Context
 
@@ -101,6 +102,11 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - [Phase 139-02]: gap-bin scheme separates "0 (same-day)" from "0-30" so same-day version-correction record pairs don't inflate the shortest elapsed-time bin's accuracy; `n_excluded_no_prior` (single-record patients) is counted and logged, never silently dropped
 - [Phase 139-02]: Block-group accuracy tier is attempted only if `data/reference/neighborhood_atlas_block_group_crosswalk.csv` is found (confirmed absent in this repo); degrades to a documented `NA_real_` column with an explicit console message, not an error and not silent omission
 - [Phase 139-02]: Task 3 human-verify checkpoint approved with the automated-verification portion satisfied (0 failures / 13 expectations, stable-patient assertion confirmed real) and the plan's own step 3 (reviewing the real `validation_curve` table's Overall row on an actual HiPerGator run) explicitly deferred to a future session, per the plan text's own scoping ("out of scope for this planning session")
+- [Phase 139-03]: `classify_encounter_zip()` interval-matches against `period_end_eff` (sentineled), never `period_end_dt` (NA-preserving) -- an encounter covered by an open-ended (current) address record now classifies `has_direct_zip9`, not `has_neither` (139-05-PATCH FIX-02); replicates `get_zip9_at_date()`'s own tie-break priority locally rather than calling it, since Part B needs the coalesced ZIP5 visible alongside ZIP9
+- [Phase 139-03]: `has_neither` split into `has_no_record` (no covering record exists) and `has_record_but_empty` (a covering record exists with both ZIP9 and ZIP5 NA), both reported, `has_neither` kept as their union (139-05-PATCH FIX-04e); `semi_join` pre-filter against the cohort-restricted encounters applied unconditionally, not gated on profiling (139-05-PATCH FIX-04c)
+- [Phase 139-03]: Part B/C's population is the study cohort via `get_hl_patient_ids()` (139-05-PATCH FIX-03a, reusing the R/106/R/107/R/109/R/111 pattern verbatim) -- both the ENCOUNTER pull and `classify_encounter_zip()`'s address view are cohort-restricted, with cohort N logged, making Plan 04's C-02 26-patient reconciliation comparable
+- [Phase 139-03]: S1/S2 eligibility (backward/forward/either) computed via new local join logic against `zip9_seq`/`zip5_seq`; S2 uses `zip5_seq` (not `zip9_seq`) since it covers both the take-ZIP9 and centroid-only resolution paths, with a `resolution_path` column for reporting transparency only (not gating eligibility); S3 stays backward-only (complement of S1-eligible-backward within the `has_direct_zip5_only` set)
+- [Phase 139-03]: `scenario_assigned` applies the ordered S1-then-S2-then-S3 `case_when()` rule; unordered per-scenario eligibility flags are ALSO computed and reported so overlap hidden by the ordered rule stays visible -- an encounter eligible only via S1-forward is assigned S1 (ordered) while remaining S3-eligible (unordered), explicitly called out via a console NOTE (139-05-PATCH FIX-04d); S3 headline flagged "S3 resolution still pending as of 08/04 notes," never presented as decided (B-01); every count reported at both encounter and patient level with denominators named (B-02)
 
 ### Phase 131 Decisions
 
@@ -140,6 +146,6 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 139` (plan 02) (2026-08-05)
-**Stopped at:** Completed 139-02-PLAN.md (A-06 carry-forward validation curve, F1 record-anchored framing; Task 3 checkpoint approved with real-HiPerGator verification deferred)
-**What's next:** Execute 139-03-PLAN.md (Part B: ENCOUNTER pull + S1-S4 imputation-scenario occurrence counts, ordered/unordered, backward/forward/either direction split). v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
+**Last command:** `/gsd:execute-phase 139` (plan 03) (2026-08-05)
+**Stopped at:** Completed 139-03-PLAN.md (Part B: cohort-restricted ENCOUNTER pull + classify_encounter_zip(), S1-S4 ordered/unordered scenario counts with backward/forward/either direction split)
+**What's next:** Execute 139-04-PLAN.md (Part C completeness waterfall + C-02 26-patient reconciliation + QC sheet + full 8-sheet xlsx assembly + R/39/R/88/SCRIPT_INDEX registration). v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above; Phase 131 is ready for HiPerGator verification and R/113 (quick-260716) is ready for a real-data run whenever HiPerGator access is available. v3.4 Phase 132 (Crash Fixes) planning is still pending separately from this Phase 139 work.
