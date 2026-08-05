@@ -576,3 +576,144 @@ message(glue("  n_plus4_only_transitions as % of all ZIP9 transitions: {pct_plus
 message(glue("  median obs_span_years:                {median_obs_span_years}"))
 message(glue("  median gap-days between ZIP9 changes: {gap_days_summary$median_days}"))
 message("===================================================\n")
+
+
+# ==============================================================================
+# SECTION 8: A-06 CARRY-FORWARD VALIDATION CURVE ----
+# ==============================================================================
+# 139-05-PATCH FIX-01 (F1): hold-out test operates on addr_coal RECORDS
+# (address-history universe, per Pitfall 1), not zip9_seq spells. See SECTION
+# 1B's build_validation_cases()/aggregate_validation_curve() for the pure-
+# function implementation (this section calls them against the real,
+# script-level addr_coal).
+
+message("--- Computing A-06 carry-forward validation curve ---")
+
+validation_cases <- build_validation_cases(addr_coal)
+
+n_excluded_no_prior <- addr_coal %>%
+  filter(!is.na(zip9_norm), !is.na(period_start_dt)) %>%
+  pull(ID) %>% n_distinct() - n_distinct(validation_cases$ID)
+message(glue("A-06: {n_excluded_no_prior} patients excluded from hold-out test (single usable record, no prior to predict from)"))
+message(glue("A-06: {nrow(validation_cases)} hold-out test cases across {n_distinct(validation_cases$ID)} patients"))
+
+# 139-05-PATCH FIX-01 reporting additions:
+pct_unchanged <- round(100 * mean(validation_cases$exact_match), 1)
+n_same_day    <- sum(validation_cases$gap_days == 0, na.rm = TRUE)
+message(glue("A-06: {pct_unchanged}% of test cases were unchanged-address (base rate the curve measures against)"))
+message(glue("A-06: {n_same_day} same-day record pairs (gap_days == 0) -- reported in their own bin, not folded into 0-30"))
+
+# Block-group tier probe (done once, before calling aggregate_validation_curve()).
+# Neighborhood Atlas crosswalk file: confirmed absent from this repo as of
+# Phase 139 planning (see 139-CONTEXT.md/139-05-PATCH.md). Probe here rather
+# than assume -- if a future HiPerGator run has this file, the tier activates
+# automatically; if not, it degrades to a documented NA, not an error or a
+# silent omission.
+NEIGHBORHOOD_ATLAS_PATH <- file.path("data", "reference", "neighborhood_atlas_block_group_crosswalk.csv")
+has_block_group_crosswalk <- file.exists(NEIGHBORHOOD_ATLAS_PATH)
+message(glue("A-06: Neighborhood Atlas block-group crosswalk {if (has_block_group_crosswalk) 'found' else 'NOT found'} at {NEIGHBORHOOD_ATLAS_PATH}"))
+
+block_group_tier_status <- "not available (crosswalk file not found)"
+
+if (has_block_group_crosswalk) {
+  # Load crosswalk (ZIP9 -> block_group_id, one row per ZIP9). Column name
+  # expectations are unknown ahead of time -- inspect the header row first and
+  # adapt the join key name accordingly. If the expected ZIP9-keyed join
+  # produces near-zero matches (a data problem, not a code problem), fall back
+  # to reporting the tier as "found but unusable" rather than publishing a
+  # misleading near-zero accuracy number.
+  crosswalk_raw <- tryCatch(
+    vroom::vroom(NEIGHBORHOOD_ATLAS_PATH, col_types = vroom::cols(.default = "c"), progress = FALSE),
+    error = function(e) {
+      message(glue("A-06: failed to read Neighborhood Atlas crosswalk ({conditionMessage(e)})"))
+      NULL
+    }
+  )
+
+  crosswalk_zip9_col <- NULL
+  if (!is.null(crosswalk_raw)) {
+    candidate_cols <- intersect(
+      c("ZIP9", "zip9", "ADDRESS_ZIP9", "zip9_norm", "GEOID9", "ZIP_PLUS4"),
+      names(crosswalk_raw)
+    )
+    if (length(candidate_cols) > 0) crosswalk_zip9_col <- candidate_cols[1]
+  }
+
+  candidate_bg_cols <- if (!is.null(crosswalk_raw)) {
+    intersect(c("block_group_id", "block_group", "BLOCK_GROUP", "GEOID_BG", "bg_id"), names(crosswalk_raw))
+  } else {
+    character(0)
+  }
+  crosswalk_bg_col <- if (length(candidate_bg_cols) > 0) candidate_bg_cols[1] else NULL
+
+  if (is.null(crosswalk_zip9_col) || is.null(crosswalk_bg_col)) {
+    message(glue(
+      "A-06: Neighborhood Atlas crosswalk found but expected ZIP9/block-group columns not identified ",
+      "(available columns: {if (!is.null(crosswalk_raw)) paste(names(crosswalk_raw), collapse = ', ') else 'NA (read failed)'}). ",
+      "Treating block-group tier as found-but-unusable."
+    ))
+    block_group_tier_status <- "found but unusable (expected ZIP9/block-group columns not identified)"
+  } else {
+    crosswalk_lookup <- crosswalk_raw %>%
+      select(all_of(c(crosswalk_zip9_col, crosswalk_bg_col))) %>%
+      rename(zip9_norm = all_of(crosswalk_zip9_col), block_group_id = all_of(crosswalk_bg_col)) %>%
+      distinct(zip9_norm, .keep_all = TRUE)
+
+    validation_cases <- validation_cases %>%
+      left_join(crosswalk_lookup %>% rename(predicted_block_group = block_group_id), by = c("predicted_zip9" = "zip9_norm")) %>%
+      left_join(crosswalk_lookup %>% rename(actual_block_group = block_group_id), by = c("zip9_norm" = "zip9_norm")) %>%
+      mutate(block_group_match = predicted_block_group == actual_block_group)
+
+    n_bg_matched <- sum(!is.na(validation_cases$block_group_match))
+    if (n_bg_matched == 0 || n_bg_matched / nrow(validation_cases) < 0.01) {
+      message(glue(
+        "A-06: Neighborhood Atlas crosswalk join produced near-zero matches ",
+        "({n_bg_matched} of {nrow(validation_cases)} cases) -- likely a data problem, not a code ",
+        "problem. Treating block-group tier as found-but-unusable rather than publishing a ",
+        "misleading near-zero accuracy figure."
+      ))
+      block_group_tier_status <- "found but unusable (near-zero join match rate)"
+      validation_cases$block_group_match <- NA
+    } else {
+      block_group_tier_status <- "available"
+      message(glue("A-06: block-group tier computed ({n_bg_matched} of {nrow(validation_cases)} cases matched to a block group)"))
+    }
+  }
+}
+
+
+# ==============================================================================
+# SECTION 9: A-06 AGGREGATION AND CONSOLE SUMMARY ----
+# ==============================================================================
+
+validation_curve <- aggregate_validation_curve(validation_cases)
+
+# If has_block_group_crosswalk is TRUE and the join succeeded, add
+# pct_block_group_match the same way (per-bin mean of block_group_match, plus
+# the Overall row); if FALSE (or found-but-unusable), add the column filled
+# with NA_real_ and rely on the sheet subtitle (Plan 04) to explain why.
+if (has_block_group_crosswalk && "block_group_match" %in% names(validation_cases) && block_group_tier_status == "available") {
+  bg_by_bin <- validation_cases %>%
+    mutate(gap_bin = factor(gap_bin, levels = c("0 (same-day)", "0-30", "31-90", "91-180", "181-365", "366+"))) %>%
+    group_by(gap_bin, .drop = FALSE) %>%
+    summarise(pct_block_group_match = round(100 * mean(block_group_match, na.rm = TRUE), 1), .groups = "drop") %>%
+    mutate(gap_bin = as.character(gap_bin))
+
+  bg_overall <- tibble(
+    gap_bin = "Overall",
+    pct_block_group_match = round(100 * mean(validation_cases$block_group_match, na.rm = TRUE), 1)
+  )
+
+  bg_all <- bind_rows(bg_by_bin, bg_overall)
+  validation_curve <- validation_curve %>% left_join(bg_all, by = "gap_bin")
+} else {
+  validation_curve <- validation_curve %>% mutate(pct_block_group_match = NA_real_)
+}
+
+message("\n=== A-06: Carry-Forward Validation Curve (Address-History Universe, Record-Anchored) ===")
+print(validation_curve)
+message(glue("Block-group tier available: {has_block_group_crosswalk} (status: {block_group_tier_status})"))
+message(glue("Base rate (unchanged-address test cases): {pct_unchanged}%  |  Same-day pairs: {n_same_day}"))
+message("==========================================================================\n")
+
+# Do not write any xlsx in this task -- that is Plan 04.
