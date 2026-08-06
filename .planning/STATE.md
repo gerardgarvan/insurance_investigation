@@ -85,6 +85,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 131 added: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
 - Phase 138 added: resolve log2.txt problems
 - Phase 139 added: ZIP Stability & Imputation Occurrence Counts (source doc: 140-CONTEXT.md, self-titled "Phase 140")
+- Phase 140 added: Resolve C-02 reconciliation gate and finalize ZIP assignment design (ZIP5 unit, uncapped carry-forward, backward-only primary spec) for zip_stability_counts workbook (source doc: planzip.md — follow-up plan after Phase 139's C-02 gate failed)
 
 ### Known Blockers (new)
 

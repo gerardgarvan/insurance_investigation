@@ -376,3 +376,33 @@ Plans:
 - [x] 139-02-PLAN.md — Part A-06 carry-forward leave-one-out validation curve, gap-binned, exact-ZIP9/same-ZIP5/block-group tiers [A-06] (Wave 2, depends on 139-01)
 - [x] 139-03-PLAN.md — Part B: ENCOUNTER pull + S1-S4 ordered/unordered scenario counts + backward/forward/either direction split [B-01, B-02, B-03, B-04] (Wave 3, depends on 139-01, 139-02)
 - [x] 139-04-PLAN.md — Part C completeness waterfall + C-02 26-patient reconciliation + QC sheet + full 8-sheet xlsx assembly + R/39/R/88/SCRIPT_INDEX registration [C-01, C-02] (Wave 4, depends on 139-01, 139-02, 139-03)
+
+### Phase 140: Resolve C-02 reconciliation gate and finalize ZIP assignment design (ZIP5 unit, uncapped carry-forward, backward-only primary spec) for zip_stability_counts workbook
+
+**Goal:** Phase 139's `zip_stability_counts_20260806.xlsx` is unblocked for release: the C-02 reconciliation gate failure (computed 665 vs. expected 26) is resolved via an explicit, recorded team decision rather than a silently-widened tolerance; the coverage gaps behind it are classified and reported; ZIP5-vs-ZIP9 as the analysis unit, uncapped carry-forward with a gap-days covariate, and backward-only-primary/forward-inclusive-sensitivity scenario reporting are all implemented and confirmed by explicit team decisions (D-1..D-4) rather than silently assumed.
+**Requirements**: none mapped in REQUIREMENTS.md (standalone remediation/investigation deliverable) — plans use 140-CONTEXT.md's own task/decision IDs (P-01a..P-07c, D-1..D-4) as acceptance criteria instead
+**Depends on:** Phase 139 (resolves its C-02 gate failure on the real HiPerGator run)
+**Plans:** 7 plans
+
+**Design constraints:**
+- 656 of the 665 C-02 gap (98.6%) are cohort patients with ZERO rows in `addr_coal` at all (a coverage question); only 9 are cohort patients present in `addr_coal` with no usable ZIP5 (the only population a genuine coalescing defect could produce) — the working hypothesis is that the team's "26" control total is stale relative to the now-correctly-cohort-scoped denominator, not a pipeline defect; `C02_TOLERANCE` (5L) is never widened to absorb this gap regardless of how D-1 resolves
+- D-1 through D-4 (Owner: Erin/Amy) are team decisions the executing agent cannot unilaterally resolve — each is implemented as a `checkpoint:decision` task presenting the evidence and recording the team's answer, not silently assumed; P-01a (locating the originating 26-patient control total's denominator) and P-03a (obtaining the Neighborhood Atlas block-group crosswalk) additionally require human action Claude cannot automate (no record of the exact denominator exists in this repo; no CLI/API for the restricted crosswalk dataset)
+- S1 is folded into S3 universally in the ordered scenario assignment (no longer a distinct bucket); a backward-only ordered waterfall is computed independently (its own case_when, never derived by summing `B_direction_split` rows) and reported as parallel columns alongside the existing forward-inclusive waterfall
+- ZIP5 carried forward with NO hard time-window cap; `gap_days_at_assignment` (signed: positive = backward, negative = forward inference) is written into the analytic dataset as a covariate instead of a discard rule
+- A second, encounter-anchored validation curve (sampling real `ADMIT_DATE`s) is added alongside A-06's existing record-anchored curve, which is explicitly relabeled a LOWER BOUND everywhere it appears (record-anchored sampling over-represents recently-changed addresses and structurally excludes single-record/most-stable patients)
+- Out of scope: changes to `normalize_zip9()`/`normalize_zip5()`/`normalize_zip5_raw()`; caching `LDS_ADDRESS_HISTORY`; releasing the current-form `zip_stability_counts_20260806.xlsx`; building the P-06d forward-lookup production utility unless D-4 explicitly selects it (scoped as a follow-up plan, not built here)
+
+**Success Criteria** (what must be TRUE):
+  1. The 665-vs-26 C-02 gap is broken down by the script itself (cohort-absent-from-addr_coal vs. present-but-no-usable-ZIP5), and the original 26-patient denominator is either confirmed (with `C02_EXPECTED` reset and a documented basis) or explicitly recorded as unresolved (D-1) — never silently assumed either way
+  2. Unparseable-date failure modes and the 280-patient filter-loss gap are classified/reported by the script, with any parser-extension decision (P-02b) explicitly flagged as pending real-data review
+  3. The block-group crosswalk staging contract is fully documented (no code changes needed to activate it) and its acquisition is logged as a human action; ZIP5-as-analysis-unit (D-2) is an explicit recorded decision
+  4. S1 is folded into S3 in the ordered assignment; a backward-only ordered waterfall is computed independently and reported as parallel columns on `C_completeness`; whether forward lookup becomes primary (D-4) is an explicit recorded decision
+  5. `gap_days_at_assignment` exists as a signed per-encounter covariate (uncapped carry-forward, D-3 recorded); a second encounter-anchored validation curve exists alongside A-06, which is explicitly labeled a lower bound; Part A's universe difference from Part B/C is documented and self-checking
+**Plans**: 7 plans
+- [ ] 140-01-PLAN.md — C-02 present-vs-absent breakdown (n_present_no_usable_zip5) + D-1 blocking decision on the 26-patient denominator + C02_EXPECTED/KEY-sheet resolution [P-01a, P-01b, P-01c, D-1] (Wave 1)
+- [ ] 140-02-PLAN.md — Block-group crosswalk staging contract (data/reference/README.md) + human-action acquisition checkpoint + D-2 ZIP5-as-analysis-unit decision [P-03a, P-03b, P-03c, D-2] (Wave 1)
+- [ ] 140-03-PLAN.md — classify_unparseable_dates() + SECTION 3 wiring + explicit 280-patient filter-loss QC row [P-02a, P-02b, P-02c] (Wave 2, depends on 140-01)
+- [ ] 140-04-PLAN.md — assign_scenarios() dual-mode (S1 folded into S3) + independent backward-only ordered waterfall parallel columns + D-4 forward-lookup-as-primary decision [P-06a, P-06b, P-06c, P-06d, D-4] (Wave 3, depends on 140-01, 140-03)
+- [ ] 140-05-PLAN.md — gap_days_at_assignment signed covariate + non-monotonicity diagnostic (median_gap_within_bin) + D-3 uncapped-carry-forward decision [P-04a, P-04b, D-3] (Wave 4, depends on 140-04)
+- [ ] 140-06-PLAN.md — build_encounter_anchored_validation_cases() (second estimate) + A-06 lower-bound relabeling [P-05a, P-05b] (Wave 5, depends on 140-05)
+- [ ] 140-07-PLAN.md — Part A universe-difference documentation (self-checking) + sentinel-nulling close-out + optional get_zip9_at_date() addr_full test seam [P-07a, P-07b, P-07c] (Wave 6, depends on 140-06)
