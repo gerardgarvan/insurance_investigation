@@ -386,6 +386,34 @@ message(glue("[R/115] {sum(addr_coal$period_end_open)} address record(s) are ope
 n_unparseable_dates <- sum(is.na(addr_coal$period_start_dt))
 message(glue("  Rows dropped for unparseable period_start_dt: {n_unparseable_dates}"))
 
+# 140-03 P-02a/P-02b (140-08-PATCH FIX-13): capture and classify the raw ADDRESS_PERIOD_START
+# strings BEFORE the filter below drops them, so the failure-mode breakdown and the top-20
+# most frequent raw values per category are available from a single HiPerGator run.
+unparseable_raw_sample <- addr_coal$ADDRESS_PERIOD_START[is.na(addr_coal$period_start_dt)]
+unparseable_date_breakdown <- classify_unparseable_dates(unparseable_raw_sample)
+
+# 140-08-PATCH FIX-13: counts alone cannot answer P-02b -- carry the actual strings so
+# the parser-extension decision can be made from one run, not two. LDS_ADDRESS_HISTORY
+# is a Limited Data Set, so raw date strings are permitted in the workbook; cap at 20
+# per category regardless.
+unparseable_date_examples <- tibble(raw_value = unparseable_raw_sample) %>%
+  mutate(category = classify_unparseable_dates_vec(raw_value)) %>%
+  count(category, raw_value, name = "n") %>%
+  group_by(category) %>%
+  slice_max(n, n = 20, with_ties = FALSE) %>%
+  ungroup() %>%
+  arrange(category, desc(n))
+
+message("--- Unparseable period_start_dt breakdown (P-02a) ---")
+print(unparseable_date_breakdown)
+message(glue(
+  "[R/115] Whether any category above is RECOVERABLE via extending parse_pcornet_date() (P-02b) is a ",
+  "follow-up decision requiring review of this REAL breakdown from a HiPerGator run -- not resolved by ",
+  "this script. If 'numeric_looking_but_invalid' or 'text_looking_but_invalid' account for a material ",
+  "share, inspect unparseable_date_examples (top-20 raw values per category, on the QC sheet) directly ",
+  "and consider extending R/utils/utils_dates.R's parse_pcornet_date() (out of scope for this plan)."
+))
+
 addr_coal <- addr_coal %>%
   filter(!is.na(period_start_dt))
 
@@ -1260,6 +1288,17 @@ message(glue(
   "both, do not let C02_TOLERANCE absorb a gap this size."
 ))
 
+# 140-03 P-02c: explicit, named 280-patient filter-loss figure -- arithmetic on two values
+# ALREADY computed above (n_patients_no_zip5_ever_prefilter, n_patients_no_zip5_ever), not a
+# new computation. Reported here explicitly, not left implicit in the pre/post comparison alone.
+n_patients_lost_to_filters_c02 <- n_patients_no_zip5_ever - n_patients_no_zip5_ever_prefilter
+message(glue(
+  "[R/115] P-02c: {n_patients_lost_to_filters_c02} cohort patients lose EVERY usable-ZIP5 address row to ",
+  "the study-period/unparseable-date filters (post-filter {n_patients_no_zip5_ever} minus pre-filter ",
+  "{n_patients_no_zip5_ever_prefilter}). Reported explicitly here -- not left implicit in the pre/post ",
+  "comparison alone."
+))
+
 message("==========================================================================\n")
 
 
@@ -1285,6 +1324,7 @@ qc_tbl <- tibble(
     "C02_EXPECTED (cohort-scoped control total, per team notes -- provenance UNCONFIRMED, see KEY sheet)",
     "n_patients_no_zip5_ever (C-02, post-filter, conflates coverage gap + coalescing-defect population -- NOT the reconciliation basis as of 140-01 D-1)",
     "n_patients_no_zip5_ever_prefilter (C-02, pre-filter comparison)",
+    "n_patients_lost_to_filters_c02 (P-02c, cohort patients who lose every usable-ZIP5 row to filters)",
     "c02_reconciled",
     "has_block_group_crosswalk (A-06 optional enrichment tier)"
   ),
@@ -1301,10 +1341,22 @@ qc_tbl <- tibble(
     as.character(C02_EXPECTED),
     as.character(n_patients_no_zip5_ever),
     as.character(n_patients_no_zip5_ever_prefilter),
+    as.character(n_patients_lost_to_filters_c02),
     if (c02_reconciled) "PASS" else "FAIL -- SEE ABOVE",
     as.character(has_block_group_crosswalk)
   )
 )
+
+# 140-03 P-02a (140-08-PATCH FIX-13): fold the per-category unparseable-date COUNT breakdown
+# into qc_tbl itself as individual named rows -- the QC sheet's single extra_tbl slot (SECTION
+# 15) is used for the higher-value unparseable_date_examples table (top-20 raw values per
+# category) instead.
+unparseable_breakdown_rows <- unparseable_date_breakdown %>%
+  transmute(
+    Metric = glue("n_unparseable_{category} (P-02a breakdown)"),
+    Value  = as.character(n)
+  )
+qc_tbl <- bind_rows(qc_tbl, unparseable_breakdown_rows)
 
 # 140-08-PATCH FIX-12: expose the crosswalk match-rate coverage figure on the QC sheet
 # regardless of block_group_tier_status's final value. Guarded because
@@ -1679,7 +1731,9 @@ add_styled_sheet(
     "KEY sheet. Per 139-CONTEXT.md: if it does not reconcile, stop and investigate before ",
     "delivering."
   ),
-  data_tbl      = qc_tbl
+  data_tbl      = qc_tbl,
+  extra_tbl     = unparseable_date_examples,
+  extra_label   = "Unparseable period_start_dt raw-value examples (top 20 per category, P-02a/140-08-PATCH FIX-13) -- whether any category is recoverable via extending parse_pcornet_date() (P-02b) requires reviewing this table on a real HiPerGator run"
 )
 
 # 139-05-PATCH FIX-03: if C-02 did not reconcile, flag it prominently on the xlsx itself --
