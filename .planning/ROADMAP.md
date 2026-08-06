@@ -400,9 +400,9 @@ Plans:
   5. `gap_days_at_assignment` exists as a signed per-encounter covariate (uncapped carry-forward, D-3 recorded); a second encounter-anchored validation curve exists alongside A-06, which is explicitly labeled a lower bound; Part A's universe difference from Part B/C is documented and self-checking
 **Plans**: 7 plans
 - [ ] 140-01-PLAN.md — C-02 present-vs-absent breakdown (n_present_no_usable_zip5) + D-1 blocking decision on the 26-patient denominator + C02_EXPECTED/KEY-sheet resolution [P-01a, P-01b, P-01c, D-1] (Wave 1)
-- [ ] 140-02-PLAN.md — Block-group crosswalk staging contract (data/reference/README.md) + human-action acquisition checkpoint + D-2 ZIP5-as-analysis-unit decision [P-03a, P-03b, P-03c, D-2] (Wave 1)
+- [x] 140-02-PLAN.md — Block-group crosswalk staging contract (data/reference/README.md) + human-action acquisition checkpoint + D-2 ZIP5-as-analysis-unit decision [P-03a, P-03b, P-03c, D-2] (Wave 1) — crosswalk acquisition deferred (not available); D-2 resolved option-a (ZIP5 accepted now)
 - [ ] 140-03-PLAN.md — classify_unparseable_dates() + SECTION 3 wiring + explicit 280-patient filter-loss QC row [P-02a, P-02b, P-02c] (Wave 2, depends on 140-01)
-- [ ] 140-04-PLAN.md — assign_scenarios() dual-mode (S1 folded into S3) + independent backward-only ordered waterfall parallel columns + D-4 forward-lookup-as-primary decision [P-06a, P-06b, P-06c, P-06d, D-4] (Wave 3, depends on 140-01, 140-03)
+- [ ] 140-04-PLAN.md — assign_scenarios() dual-mode (S1 folded into S3, conditional on D-2 = option-a) + independent backward-only ordered waterfall parallel columns + D-4 forward-lookup-as-primary decision [P-06a, P-06b, P-06c, P-06d, D-2, D-4] (Wave 3, depends on 140-01, 140-02, 140-03)
 - [ ] 140-05-PLAN.md — gap_days_at_assignment signed covariate + non-monotonicity diagnostic (median_gap_within_bin) + D-3 uncapped-carry-forward decision [P-04a, P-04b, D-3] (Wave 4, depends on 140-04)
 - [ ] 140-06-PLAN.md — build_encounter_anchored_validation_cases() (second estimate) + A-06 lower-bound relabeling [P-05a, P-05b] (Wave 5, depends on 140-05)
 - [ ] 140-07-PLAN.md — Part A universe-difference documentation (self-checking) + sentinel-nulling close-out + optional get_zip9_at_date() addr_full test seam [P-07a, P-07b, P-07c] (Wave 6, depends on 140-06)

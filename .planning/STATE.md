@@ -22,21 +22,21 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 140 — resolve-c-02-reconciliation-gate-and-finalize-zip-assignment-design (Wave 1 plans 140-01 and 140-02 both paused at blocking checkpoints — see below)
+**Current focus:** Phase 140 — resolve-c-02-reconciliation-gate-and-finalize-zip-assignment-design (140-02 complete; 140-01 still paused at blocking checkpoint D-1 — see below)
 
 ## Current Position
 
 Phase: 140
-Plan: 01 and 02 of 8 (both Wave 1, executed in parallel)
+Plan: 01 of 7 in progress (140-02 complete; Wave 1 has one plan remaining paused)
   - 140-01: Task 1 complete; PAUSED at Task 2, a blocking checkpoint:decision (D-1) awaiting the team's confirmation of the original 26-patient C-02 control total's denominator; Task 3 not started.
-  - 140-02: Task 1 complete (crosswalk staging contract documented in data/reference/README.md; R/115 SECTION 8/13 match-rate coverage gate wired -- landed in commit 6862a64 due to a race with 140-01's own commit, content verified present); PAUSED at Task 2, a blocking checkpoint:human-action (obtain/stage the Neighborhood Atlas crosswalk file -- no CLI/API, requires a human); Task 3 (checkpoint:decision D-2, ZIP5-vs-ZIP9 analysis unit) also blocking and not yet reached.
-Status: PAUSED — two independent blocking checkpoints awaiting user/team input (140-01 Task 2 D-1; 140-02 Task 2 human-action + Task 3 D-2), not an error
+  - 140-02: COMPLETE (3/3 tasks). Task 1: crosswalk staging contract documented in data/reference/README.md; R/115 SECTION 8/13 match-rate coverage gate wired (commits 5d4309b, 6862a64). Task 2 (human-action, crosswalk acquisition): resolved "not available -- defer" -- block-group tier stays gracefully degraded (not a regression from Phase 139); P-03b/P-03c deferred as follow-up. Task 3 (D-2 decision, ZIP5-vs-ZIP9): resolved option-a -- ZIP5 accepted as the primary analysis unit now, unblocking Plans 140-04 through 140-07 (140-04's S1-fold-in design, per 140-08-PATCH FIX-03, confirmed applicable). See 140-02-SUMMARY.md.
+Status: 140-02 done; 140-01 remains PAUSED at its own blocking checkpoint (D-1), awaiting user/team input, not an error
 Last activity: 2026-08-06
 
 Phase 139 (zip-stability-imputation-occurrence-counts) remains complete (4/4 plans), ready for goal verification (unchanged by this session).
 Phase 138 (resolve-log2-txt-problems) remains complete, ready for verification (unchanged by this session).
 
-Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 4/4 plans complete (phase complete); Phase 140: 2/8 plans in progress (140-01 Task 1/3 done paused at D-1; 140-02 Task 1/3 done paused at Task 2 human-action, Task 3 D-2 pending)
+Progress: [██░░░░░░░░] 20% (1/5 v3.4 phases complete); Phase 139: 4/4 plans complete (phase complete); Phase 140: 2/7 plans complete-or-paused (140-01 Task 1/3 done, paused at D-1; 140-02 COMPLETE 3/3 -- crosswalk deferred, D-2 = option-a)
 
 ## v3.3 Status (open in parallel, not abandoned)
 
@@ -94,6 +94,11 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 ### Known Blockers (new)
 
 - Phase 139's CONTEXT.md (`140-CONTEXT.md`) was authored assuming a prior "Phase 139: zip9-approximation" already shipped `approximate_zip9()`, `is_sentinel_zip5()`, and an "AMEND-01" ZIP5-coalesce fix, and references `.planning/phases/139-zip9-approximation/` as a canonical ref. None of that exists — no roadmap entry, directory, commit, or function by that name; only Phase 137 (`get_zip9_at_date()`) is real. RESOLVED by 139-01: `is_sentinel_zip5()` was built directly in `R/utils/utils_address.R` and the "AMEND-01" ZIP5-coalescing fix was implemented locally in `R/115_zip_stability_counts.R` via a single `coalesce_zip5()` function (139-05-PATCH's requirement); `approximate_zip9()` was determined to be unneeded since Part B/C only counts imputation-scenario occurrences, it does not write imputed values.
+
+### Phase 140 Decisions
+
+- [Phase 140-02]: D-2 resolved as **option-a** -- ZIP5 accepted as the primary analysis unit now, not deferred pending the block-group crosswalk re-run. Based on 140-CONTEXT.md's real accuracy-by-gap-bin evidence (ZIP5 exact-match 61.8% overall vs. ZIP9 exact-match 37.1%; 39.3% of ZIP9 transitions are +4-only). The block-group crosswalk re-run stays confirmatory, not gating, per 140-CONTEXT.md's own design. This decision unblocks Plans 140-04 through 140-07 and specifically confirms 140-04's S1-fold-in design (140-08-PATCH FIX-03) is applicable.
+- [Phase 140-02]: P-03a (Neighborhood Atlas crosswalk acquisition) explicitly deferred -- "not available." Block-group tier remains gracefully degraded (`block_group_tier_status = "not available (crosswalk file not found)"`), unchanged from Phase 139's shipped behavior, not a regression. P-03b (A-06 re-run with block-group tier populated) and full P-03c confirmation are follow-up work outside Phase 140's plan scope. The staging contract (path/columns/vintage/90%-match-rate threshold) is fully documented in `data/reference/README.md` so staging the file later requires zero further code changes to R/115.
 
 ### Phase 139 Decisions
 
@@ -160,8 +165,8 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 ## Session Continuity
 
-**Last command:** `/gsd:execute-phase 140` (plans 01 and 02, both Wave 1, Task 1 of each) (2026-08-06)
+**Last command:** `/gsd:execute-phase 140` (140-02 resumed and completed; 140-01 still paused) (2026-08-06)
 **Stopped at:**
 - 140-01-PLAN.md Task 1 complete and committed (`6862a64`) -- `compute_c02()` now exposes `n_present_no_usable_zip5` (the present-in-addr_coal-but-no-usable-ZIP5 population, 656-vs-9-style breakdown), reported via console message and a new adjacent `qc_tbl` row; C-02 fixtures moved to new `tests/testthat/test-115-c02.R` per 140-08-PATCH FIX-16, extended with a 4-patient breakdown fixture (0 failures / 6 passed). **PAUSED at Task 2, a blocking `checkpoint:decision` (D-1)** -- do NOT resume automatically; this requires the team (Erin/Amy) to state what population the 08/04 meeting notes' "26" figure was actually computed over. See Task 2's `<decision>`/`<options>` block in 140-01-PLAN.md for the two branches (option-a: confirmed narrower denominator, with source citation; option-b: cannot confirm). Task 3 (apply the D-1 resolution to `C02_EXPECTED`/KEY sheet) is blocked until this answer is recorded.
-- 140-02-PLAN.md Task 1 complete: `data/reference/README.md` documents the Neighborhood Atlas ZIP9-to-block-group crosswalk staging contract (expected path/columns/source/required vintage per 140-08-PATCH FIX-11), committed `5d4309b`; R/115 SECTION 8/13's match-rate coverage gate code (`BLOCK_GROUP_MATCH_THRESHOLD`, `n_zip9_matched_to_block_group`, `pct_zip9_matched_to_block_group`, per 140-08-PATCH FIX-12) landed inside commit `6862a64` (the concurrently-executing 140-01 agent's commit swept up staged hunks via a `git add -p` race) -- content verified present and correct in the current file. **PAUSED at Task 2, a blocking `checkpoint:human-action`** -- obtain and stage the crosswalk file at `data/reference/neighborhood_atlas_block_group_crosswalk.csv` (no CLI/API; Neighborhood Atlas portal download or an existing internal team source). **Task 3, a blocking `checkpoint:decision` (D-2)** -- whether ZIP5 (not ZIP9) is adopted as the primary analysis unit -- has not yet been reached/presented.
-**What's next:** Resume `/gsd:execute-phase 140` once both D-1 (140-01) and the 140-02 checkpoints (Task 2 human-action + Task 3 D-2) are answered. `C02_TOLERANCE` must stay `5L` regardless of the D-1 answer (140-CONTEXT.md Section 2 explicit constraint). 140-04's S1-fold-in design depends on D-2 landing on option-a (140-08-PATCH FIX-03). Phase 139 remains complete (4/4 plans), ready for goal verification, real HiPerGator runtime verification still deferred. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above. v3.4 Phase 132 (Crash Fixes) planning is still pending separately.
+- 140-02-PLAN.md COMPLETE (3/3 tasks). Task 1: `data/reference/README.md` documents the Neighborhood Atlas ZIP9-to-block-group crosswalk staging contract (expected path/columns/source/required vintage per 140-08-PATCH FIX-11), committed `5d4309b`; R/115 SECTION 8/13's match-rate coverage gate code (`BLOCK_GROUP_MATCH_THRESHOLD`, `n_zip9_matched_to_block_group`, `pct_zip9_matched_to_block_group`, per 140-08-PATCH FIX-12) landed inside commit `6862a64` -- content re-verified present and correct this session. Task 2 (checkpoint:human-action, crosswalk acquisition): resolved "not available -- defer" -- the team has not obtained the file; block-group tier stays gracefully degraded (not a regression from Phase 139's shipped state); P-03b/P-03c deferred as follow-up work outside this plan's scope. Task 3 (checkpoint:decision D-2): resolved **option-a** -- ZIP5 accepted as the primary analysis unit now, unblocking Plans 140-04 through 140-07; 140-04's S1-fold-in design (140-08-PATCH FIX-03) confirmed applicable. See `140-02-SUMMARY.md`.
+**What's next:** Resume `/gsd:execute-phase 140` once D-1 (140-01) is answered -- 140-02 no longer blocks anything. `C02_TOLERANCE` must stay `5L` regardless of the D-1 answer (140-CONTEXT.md Section 2 explicit constraint). Plans 140-04 through 140-07 now proceed under D-2 = option-a (ZIP5) once their Wave dependencies (140-01, 140-03) are also clear. Phase 139 remains complete (4/4 plans), ready for goal verification, real HiPerGator runtime verification still deferred. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above. v3.4 Phase 132 (Crash Fixes) planning is still pending separately.
