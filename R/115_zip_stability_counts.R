@@ -1153,6 +1153,7 @@ message(glue("Denominator: n_patients_with_encounters = {n_patients_with_encount
 # patient set. A cohort patient entirely absent from addr_coal counts toward the numerator.
 c02_result <- compute_c02(COHORT_IDS, addr_coal)
 n_patients_no_zip5_ever <- c02_result$n_patients_no_zip5_ever
+n_present_no_usable_zip5 <- c02_result$n_present_no_usable_zip5
 
 message(glue("[R/115] Cohort N: {length(COHORT_IDS)}"))
 message(glue("[R/115] Cohort patients entirely absent from addr_coal: {c02_result$n_cohort_absent_from_addr}"))
@@ -1175,21 +1176,45 @@ C02_TOLERANCE <- 5L   # 139-05-PATCH FIX-03d: covers cohort-DEFINITION drift onl
                       # NOT slack for denominator or methodological uncertainty, now that the
                       # denominator itself is cohort-scoped and correct. Documented in the KEY
                       # sheet (Plan 04 Task 2) as this narrowed claim, not general-purpose slack.
-c02_reconciled <- abs(n_patients_no_zip5_ever - C02_EXPECTED) <= C02_TOLERANCE
+                      # 140-01 D-1 (user-directed, recorded 2026-08-06): C02_EXPECTED and
+                      # C02_TOLERANCE themselves are left UNCHANGED by this decision -- see the
+                      # comparison-basis correction immediately below.
+
+# 140-01 D-1 (user-directed decision, recorded 2026-08-06 -- NOT an Erin/Amy team confirmation
+# of the original 26's denominator; that provenance remains unconfirmed and open):
+# n_patients_no_zip5_ever (665) conflates two very different populations -- 656 cohort patients
+# who are entirely ABSENT from addr_coal (a coverage/data-availability question) with the 9
+# cohort patients who ARE present in addr_coal but carry no usable ZIP5 (the only population a
+# genuine ZIP5-coalescing defect could actually produce). Comparing the conflated 665 figure
+# against C02_EXPECTED treats a coverage gap as if it were a coalescing defect. The
+# reconciliation comparison is therefore corrected to use n_present_no_usable_zip5 (9) instead
+# of n_patients_no_zip5_ever (665) as the "computed" side of the C02_EXPECTED comparison. This
+# is a comparison-BASIS correction only -- C02_EXPECTED (26L) and C02_TOLERANCE (5L) are NOT
+# re-derived or widened; the original "26" figure's exact denominator population still cannot be
+# confirmed from this codebase or from the team in this session, so with computed=9 the gate is
+# EXPECTED to continue reading FAIL (9 falls outside [21,31]). This is a known, documented, OPEN
+# ITEM -- the workbook's shippability stays explicitly blocked on C-02 pending team follow-up on
+# the original 26's provenance. See 140-01-SUMMARY.md for the full rationale.
+c02_reconciled <- abs(n_present_no_usable_zip5 - C02_EXPECTED) <= C02_TOLERANCE
 
 if (!c02_reconciled) {
   message(glue(
     "\n*** C-02 RECONCILIATION FAILURE ***\n",
     "Expected ~{C02_EXPECTED} cohort patients with no usable ZIP5 anywhere in their address ",
     "history (per team meeting notes; cohort N = {length(COHORT_IDS)}). ",
-    "Computed: {n_patients_no_zip5_ever}.\n",
+    "Computed (comparison basis corrected per 140-01 D-1, 2026-08-06): ",
+    "{n_present_no_usable_zip5} cohort patients present in addr_coal with no usable ZIP5 -- ",
+    "NOT the raw n_patients_no_zip5_ever ({n_patients_no_zip5_ever}), which conflates this ",
+    "population with {c02_result$n_cohort_absent_from_addr} cohort patients who are entirely ",
+    "absent from addr_coal (a coverage question, not a coalescing defect).\n",
+    "This is a USER-DIRECTED decision recorded 2026-08-06, not a team (Erin/Amy) confirmation ",
+    "of the original 26-patient control total's denominator -- that provenance remains ",
+    "UNCONFIRMED and is a known, documented, OPEN ITEM.\n",
     "Per 139-CONTEXT.md: 'If it does not [reconcile], stop and investigate before delivering.'\n",
-    "A materially higher number means the ZIP5-coalescing fix is not reaching the raw ZIP5 ",
-    "values correctly, and every downstream count in this deliverable may be wrong.\n",
     "*** DO NOT SHIP output/{basename(OUTPUT_XLSX)} TO ERIN/AMY UNTIL THIS IS RESOLVED ***\n"
   ))
 } else {
-  message(glue("C-02 reconciliation OK: {n_patients_no_zip5_ever} cohort patients with no usable ZIP5 ever (expected ~{C02_EXPECTED})"))
+  message(glue("C-02 reconciliation OK: {n_present_no_usable_zip5} cohort patients present in addr_coal with no usable ZIP5 (expected ~{C02_EXPECTED}, comparison basis corrected per 140-01 D-1)"))
 }
 
 # 139-05-PATCH FIX-03c: pre-filter comparison. Compute the SAME "no usable ZIP5 ever"
@@ -1202,9 +1227,11 @@ n_patients_no_zip5_ever_prefilter <- c02_prefilter_result$n_patients_no_zip5_eve
 
 message(glue(
   "[R/115] C-02 pre-filter comparison: {n_patients_no_zip5_ever_prefilter} (before study-period/",
-  "unparseable-date filters) vs {n_patients_no_zip5_ever} (post-filter, the reconciled figure). ",
-  "A large gap means the filters are removing cohort patients the notes' 26-patient control ",
-  "total includes -- report both, do not let C02_TOLERANCE absorb a gap this size."
+  "unparseable-date filters) vs {n_patients_no_zip5_ever} (post-filter). NOTE: neither figure is ",
+  "the reconciliation basis as of 140-01 D-1 -- {n_present_no_usable_zip5} (n_present_no_usable_zip5) ",
+  "is what is actually compared against C02_EXPECTED (see above). A large gap here means the ",
+  "filters are removing cohort patients the notes' 26-patient control total includes -- report ",
+  "both, do not let C02_TOLERANCE absorb a gap this size."
 ))
 
 message("==========================================================================\n")
@@ -1227,10 +1254,10 @@ qc_tbl <- tibble(
     "period_end_open count (retained, open-ended address records)",
     "n_excluded_no_prior (A-06 hold-out, single-record patients)",
     "cohort N (study cohort, Part B/C population)",
-    "n_cohort_absent_from_addr (C-02, cohort patients with zero addr_coal rows)",
-    "n_present_no_usable_zip5 (C-02, cohort patients IN addr_coal with no usable ZIP5)",
-    "C02_EXPECTED (cohort-scoped control total, per team notes)",
-    "n_patients_no_zip5_ever (C-02, post-filter, reconciled figure)",
+    "n_cohort_absent_from_addr (C-02, cohort patients with zero addr_coal rows -- coverage gap, NOT compared to C02_EXPECTED)",
+    "n_present_no_usable_zip5 (C-02 RECONCILIATION BASIS as of 140-01 D-1, 2026-08-06 -- cohort patients IN addr_coal with no usable ZIP5, compared against C02_EXPECTED)",
+    "C02_EXPECTED (cohort-scoped control total, per team notes -- provenance UNCONFIRMED, see KEY sheet)",
+    "n_patients_no_zip5_ever (C-02, post-filter, conflates coverage gap + coalescing-defect population -- NOT the reconciliation basis as of 140-01 D-1)",
     "n_patients_no_zip5_ever_prefilter (C-02, pre-filter comparison)",
     "c02_reconciled",
     "has_block_group_crosswalk (A-06 optional enrichment tier)"
@@ -1297,6 +1324,8 @@ key_tbl <- tibble(
     "A-06 sampling frame (139-05-PATCH FIX-01)",
     "Ordered vs unordered S3 (139-05-PATCH FIX-04d)",
     "C-02 tolerance (139-05-PATCH FIX-03d)",
+    "C-02 reconciliation comparison basis (140-01 D-1, 2026-08-06)",
+    "C-02 status (140-01 D-1, OPEN ITEM as of 2026-08-06)",
     "ZIP5 coalescing",
     "QC sheet"
   ),
@@ -1328,7 +1357,34 @@ key_tbl <- tibble(
       "exact membership criteria differing slightly from the notes' own count) -- NOT",
       "denominator or methodological uncertainty. The denominator is cohort-scoped and",
       "correct (see n_cohort_absent_from_addr on the QC sheet), so the tolerance's job is",
-      "narrower than it would have been against an un-patched denominator."
+      "narrower than it would have been against an un-patched denominator.",
+      "C02_EXPECTED and C02_TOLERANCE themselves are UNCHANGED by the 140-01 D-1 decision below",
+      "-- only the comparison basis (what is compared against them) was corrected."
+    ),
+    paste(
+      "As of 140-01 D-1 (user-directed decision, recorded 2026-08-06), the C-02 reconciliation",
+      "check compares n_present_no_usable_zip5 (cohort patients present in addr_coal with no",
+      "usable ZIP5 -- the only population a genuine ZIP5-coalescing defect could actually",
+      "produce) against C02_EXPECTED, NOT n_patients_no_zip5_ever (which conflates that",
+      "population with cohort patients who have ZERO rows in addr_coal at all, a coverage/",
+      "data-availability question, not a coalescing defect). This is a comparison-BASIS",
+      "correction only -- C02_EXPECTED and C02_TOLERANCE are not re-derived or widened. This",
+      "was an explicit, informed decision by the project owner made in-session on 2026-08-06;",
+      "it is NOT a team (Erin/Amy) confirmation of what population the original 08/04 meeting",
+      "notes' '26' figure was computed over."
+    ),
+    paste(
+      "UNRESOLVED as of 2026-08-06. With the corrected comparison basis",
+      "(n_present_no_usable_zip5), c02_reconciled is EXPECTED to continue reading FAIL --",
+      "the computed value (9, on the reference run this phase's planning was based on) falls",
+      "outside C02_EXPECTED +/- C02_TOLERANCE (26 +/- 5 = [21, 31]). This failure is for a",
+      "legitimate, documented, non-circular reason (the coalescing-defect-population count",
+      "genuinely differs from the historical '26' control total), not the prior conflated",
+      "reason (665 vs 26, which mixed in a coverage gap). The original '26' figure's exact",
+      "provenance/denominator population remains UNCONFIRMED by the team (Erin/Amy) as of this",
+      "decision -- see 140-01-SUMMARY.md. Do NOT treat C-02 as resolved or passing. Per",
+      "139-CONTEXT.md/140-CONTEXT.md: this workbook's shippability stays explicitly BLOCKED on",
+      "C-02 pending further team follow-up on the original 26's denominator."
     ),
     paste(
       "ZIP5 coalescing (preferring the raw ADDRESS_ZIP5 column with derived-from-ZIP9",
@@ -1589,10 +1645,13 @@ add_styled_sheet(
   wb, "QC",
   title_text    = "QC -- Consolidated Drop/Exclusion Counts + C-02 Reconciliation",
   subtitle_text = glue(
-    "Single place to check before trusting the rest of the workbook. C-02 reconciles the ",
-    "cohort-scoped 'no usable ZIP5 ever' count against ~{C02_EXPECTED} (+/-{C02_TOLERANCE}, ",
-    "cohort-definition drift only -- see KEY sheet). Per 139-CONTEXT.md: if it does not ",
-    "reconcile, stop and investigate before delivering."
+    "Single place to check before trusting the rest of the workbook. As of 140-01 D-1 ",
+    "(2026-08-06), C-02 reconciles n_present_no_usable_zip5 (cohort patients present in ",
+    "addr_coal with no usable ZIP5) against ~{C02_EXPECTED} (+/-{C02_TOLERANCE}, cohort-",
+    "definition drift only -- see KEY sheet). This is expected to continue reading FAIL; the ",
+    "original 26-patient control total's provenance remains an unconfirmed open item -- see ",
+    "KEY sheet. Per 139-CONTEXT.md: if it does not reconcile, stop and investigate before ",
+    "delivering."
   ),
   data_tbl      = qc_tbl
 )
