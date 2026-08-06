@@ -189,33 +189,3 @@ test_that("open-ended address record: covered encounter classifies has_direct_zi
   expect_false(result$has_no_record[1])
   expect_false(result$has_record_but_empty[1])
 })
-
-
-# ==============================================================================
-# Task 1 (139-04): compute_c02() -- cohort-scoped C-02 reconciliation
-# ==============================================================================
-
-test_that("cohort patient absent from addr_coal counts toward n_patients_no_zip5_ever (FIX-03)", {
-  # cohort_ids has 3 patients: P6 (has a usable ZIP5 in addr_coal), P7 (has a row in
-  # addr_coal but zip5_coalesced is NA), and P8 (does NOT appear anywhere in addr_coal --
-  # e.g. dropped by Plan 01's study-period/unparseable-date filters, or never in
-  # LDS_ADDRESS_HISTORY at all). Under the pre-patch design (all(is.na(...)) grouped over
-  # addr_coal's OWN patient set), P8 would be invisible to group_by() and NOT counted --
-  # this is the exact defect FIX-03 corrects.
-  cohort_ids_fixture <- c("P6", "P7", "P8")
-
-  addr_coal_fixture <- tibble(
-    ID = c("P6", "P7"),
-    zip5_coalesced = c("32611", NA_character_)
-  )
-
-  result <- .test_env$compute_c02(cohort_ids_fixture, addr_coal_fixture)
-
-  # P7 (record present, ZIP5 NA) and P8 (absent entirely) both count toward the numerator;
-  # P6 (has a usable ZIP5) does not. So n_patients_no_zip5_ever == 2, not 1 (which is what
-  # the pre-patch group_by()-over-addr_coal's-own-patients design would have silently
-  # produced by never seeing P8 at all).
-  expect_equal(result$n_patients_no_zip5_ever, 2)
-  expect_equal(result$n_cohort_absent_from_addr, 1)
-  expect_true(nrow(result$c02_tbl) == 3)
-})

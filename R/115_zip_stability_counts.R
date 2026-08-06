@@ -199,10 +199,17 @@ compute_c02 <- function(cohort_ids, addr_coal) {
     left_join(zip5_ever, by = "ID") %>%
     mutate(has_any_zip5 = coalesce(has_any_zip5, FALSE))   # absent from addr_coal => no ZIP5
 
+  n_no_zip5_ever     <- sum(!c02_tbl$has_any_zip5)
+  n_absent_from_addr <- sum(!(cohort_ids %in% addr_coal$ID))
+
   list(
     c02_tbl = c02_tbl,
-    n_patients_no_zip5_ever = sum(!c02_tbl$has_any_zip5),
-    n_cohort_absent_from_addr = sum(!(cohort_ids %in% addr_coal$ID))
+    n_patients_no_zip5_ever   = n_no_zip5_ever,
+    n_cohort_absent_from_addr = n_absent_from_addr,
+    # 140-01 P-01a: patients who DO have at least one addr_coal row but none carry a usable
+    # ZIP5 -- the only population a genuine ZIP5-coalescing defect could actually produce.
+    # Arithmetic on the two values already returned above, not a second group_by/summarise.
+    n_present_no_usable_zip5 = n_no_zip5_ever - n_absent_from_addr
   )
 }
 
@@ -718,6 +725,32 @@ if (has_block_group_crosswalk) {
       rename(zip9_norm = all_of(crosswalk_zip9_col), block_group_id = all_of(crosswalk_bg_col)) %>%
       distinct(zip9_norm, .keep_all = TRUE)
 
+    # 140-08-PATCH FIX-12: match-rate QC row -- how much of the DISTINCT ZIP9 universe
+    # actually observed in this run's addr_coal is covered by the crosswalk, not just the
+    # validation_cases join outcome computed below (a different, narrower measure). File
+    # existence alone is not sufficient evidence the crosswalk is usable.
+    BLOCK_GROUP_MATCH_THRESHOLD <- 0.90  # suggested; PENDING TEAM CONFIRMATION (data/reference/README.md)
+    n_zip9_distinct_observed        <- n_distinct(addr_coal$zip9_norm[!is.na(addr_coal$zip9_norm)])
+    n_zip9_matched_to_block_group   <- n_distinct(intersect(addr_coal$zip9_norm, crosswalk_lookup$zip9_norm))
+    pct_zip9_matched_to_block_group <- round(100 * n_zip9_matched_to_block_group / n_zip9_distinct_observed, 1)
+
+    if (n_zip9_matched_to_block_group / n_zip9_distinct_observed < BLOCK_GROUP_MATCH_THRESHOLD) {
+      block_group_tier_status <- "found but coverage insufficient"
+      message(glue(
+        "A-06: Neighborhood Atlas crosswalk match rate ({pct_zip9_matched_to_block_group}%, ",
+        "{n_zip9_matched_to_block_group} of {n_zip9_distinct_observed} distinct ZIP9s) is below the ",
+        "{BLOCK_GROUP_MATCH_THRESHOLD * 100}% threshold (pending team confirmation, 140-08-PATCH FIX-12) -- ",
+        "treating block-group tier as found-but-insufficient-coverage rather than publishing a percentage ",
+        "computed on a non-random subset of the data."
+      ))
+    } else {
+      message(glue(
+        "A-06: Neighborhood Atlas crosswalk match rate {pct_zip9_matched_to_block_group}% ",
+        "({n_zip9_matched_to_block_group} of {n_zip9_distinct_observed} distinct ZIP9s) -- meets the ",
+        "{BLOCK_GROUP_MATCH_THRESHOLD * 100}% threshold."
+      ))
+    }
+
     validation_cases <- validation_cases %>%
       left_join(crosswalk_lookup %>% rename(predicted_block_group = block_group_id), by = c("predicted_zip9" = "zip9_norm")) %>%
       left_join(crosswalk_lookup %>% rename(actual_block_group = block_group_id), by = c("zip9_norm" = "zip9_norm")) %>%
@@ -1124,6 +1157,18 @@ n_patients_no_zip5_ever <- c02_result$n_patients_no_zip5_ever
 message(glue("[R/115] Cohort N: {length(COHORT_IDS)}"))
 message(glue("[R/115] Cohort patients entirely absent from addr_coal: {c02_result$n_cohort_absent_from_addr}"))
 
+# 140-01 P-01a/P-01b: break the C-02 gap down into its two component populations directly
+# from the script, not just asserted in a planning document -- coverage question (zero rows
+# in addr_coal) vs the only population a genuine coalescing defect could produce (present in
+# addr_coal, no usable ZIP5).
+message(glue(
+  "[R/115] C-02 breakdown: {c02_result$n_cohort_absent_from_addr} of {c02_result$n_patients_no_zip5_ever} ",
+  "({round(100 * c02_result$n_cohort_absent_from_addr / c02_result$n_patients_no_zip5_ever, 1)}%) are cohort ",
+  "patients with ZERO rows in addr_coal (a coverage question); {c02_result$n_present_no_usable_zip5} are cohort ",
+  "patients present in addr_coal with no usable ZIP5 (the only population a coalescing defect could produce). ",
+  "See 140-CONTEXT.md Section 2 for the working hypothesis on why C02_EXPECTED may be stale."
+))
+
 C02_EXPECTED <- 26L
 C02_TOLERANCE <- 5L   # 139-05-PATCH FIX-03d: covers cohort-DEFINITION drift only (e.g. exact
                       # membership criteria differing slightly from the notes' own count) --
@@ -1183,6 +1228,7 @@ qc_tbl <- tibble(
     "n_excluded_no_prior (A-06 hold-out, single-record patients)",
     "cohort N (study cohort, Part B/C population)",
     "n_cohort_absent_from_addr (C-02, cohort patients with zero addr_coal rows)",
+    "n_present_no_usable_zip5 (C-02, cohort patients IN addr_coal with no usable ZIP5)",
     "C02_EXPECTED (cohort-scoped control total, per team notes)",
     "n_patients_no_zip5_ever (C-02, post-filter, reconciled figure)",
     "n_patients_no_zip5_ever_prefilter (C-02, pre-filter comparison)",
@@ -1198,6 +1244,7 @@ qc_tbl <- tibble(
     as.character(n_excluded_no_prior),
     as.character(length(COHORT_IDS)),
     as.character(c02_result$n_cohort_absent_from_addr),
+    as.character(c02_result$n_present_no_usable_zip5),
     as.character(C02_EXPECTED),
     as.character(n_patients_no_zip5_ever),
     as.character(n_patients_no_zip5_ever_prefilter),
@@ -1205,6 +1252,26 @@ qc_tbl <- tibble(
     as.character(has_block_group_crosswalk)
   )
 )
+
+# 140-08-PATCH FIX-12: expose the crosswalk match-rate coverage figure on the QC sheet
+# regardless of block_group_tier_status's final value. Guarded because
+# n_zip9_matched_to_block_group / pct_zip9_matched_to_block_group only exist inside
+# SECTION 8's has_block_group_crosswalk branch (crosswalk-found + columns-identified path).
+if (has_block_group_crosswalk && exists("n_zip9_matched_to_block_group")) {
+  qc_tbl <- bind_rows(
+    qc_tbl,
+    tibble(
+      Metric = c(
+        "n_zip9_matched_to_block_group (A-06 crosswalk coverage, distinct ZIP9s)",
+        "pct_zip9_matched_to_block_group (A-06 crosswalk coverage, vs 90% pending-confirmation threshold)"
+      ),
+      Value = c(
+        as.character(n_zip9_matched_to_block_group),
+        as.character(pct_zip9_matched_to_block_group)
+      )
+    )
+  )
+}
 
 message("--- QC sheet data assembled (Section 13) ---")
 print(qc_tbl)
