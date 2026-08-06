@@ -98,3 +98,36 @@ test_that("140-01 P-01a: n_present_no_usable_zip5 isolates cohort patients prese
   expect_equal(result$n_cohort_absent_from_addr, 1)   # A
   expect_equal(result$n_present_no_usable_zip5, 2)    # B, D
 })
+
+
+# ==============================================================================
+# 140-03 P-02a: classify_unparseable_dates_vec() / classify_unparseable_dates() -- failure-
+# mode classification of raw date strings that FAILED parse_pcornet_date().
+# ==============================================================================
+
+test_that("classify_unparseable_dates_vec() categorizes raw unparseable date strings correctly", {
+  raw_values <- c(NA, "", "NULL", "20259931", "not-a-date", "13FOOO2020", "###")
+
+  result <- .test_env$classify_unparseable_dates_vec(raw_values)
+
+  expect_equal(
+    result,
+    c(
+      "blank_or_null", "blank_or_null", "blank_or_null",
+      "numeric_looking_but_invalid",
+      "text_looking_but_invalid", "text_looking_but_invalid",
+      "other_unrecognized"
+    )
+  )
+})
+
+test_that("classify_unparseable_dates() returns per-category counts, descending", {
+  raw_values <- c(NA, "", "NULL", "20259931", "not-a-date", "13FOOO2020", "###")
+
+  result <- .test_env$classify_unparseable_dates(raw_values)
+
+  expect_equal(result$n[result$category == "blank_or_null"], 3)
+  expect_equal(result$n[result$category == "numeric_looking_but_invalid"], 1)
+  expect_equal(result$n[result$category == "text_looking_but_invalid"], 2)
+  expect_equal(result$n[result$category == "other_unrecognized"], 1)
+})

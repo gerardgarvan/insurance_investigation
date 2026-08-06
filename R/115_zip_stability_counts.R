@@ -213,6 +213,32 @@ compute_c02 <- function(cohort_ids, addr_coal) {
   )
 }
 
+# 140-03 P-02a (refactored per 140-08-PATCH FIX-13): classify_unparseable_dates_vec() is the
+# vectorised per-element classifier (reused directly by SECTION 3's top-20-raw-value examples
+# table); classify_unparseable_dates() is a thin counting wrapper around it. Categories mirror
+# parse_pcornet_date()'s own blank-handling list (utils_dates.R lines 58-60) so
+# "recognized-as-blank" (already handled, not a parser gap) is distinguished from
+# "attempted-and-failed" (a genuine parser gap or genuinely bad data).
+classify_unparseable_dates_vec <- function(raw_values) {
+  is_blank <- is.na(raw_values) |
+    raw_values %in% c("", "NULL", "null", ".") |
+    str_detect(coalesce(raw_values, "NA_PLACEHOLDER"), "^\\s*$")
+  is_blank[is.na(raw_values)] <- TRUE
+
+  case_when(
+    is_blank ~ "blank_or_null",
+    str_detect(raw_values, "^[0-9/\\-: ]+$") ~ "numeric_looking_but_invalid",
+    str_detect(raw_values, "[A-Za-z]") ~ "text_looking_but_invalid",
+    TRUE ~ "other_unrecognized"
+  )
+}
+
+classify_unparseable_dates <- function(raw_values) {
+  tibble(category = classify_unparseable_dates_vec(raw_values)) %>%
+    count(category, name = "n") %>%
+    arrange(desc(n))
+}
+
 
 # ==============================================================================
 # SECTION 2: CONSTANTS AND DUAL PROBE GATE ----
