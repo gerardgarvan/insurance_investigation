@@ -965,6 +965,30 @@ if (has_block_group_crosswalk) {
 
 validation_curve <- aggregate_validation_curve(validation_cases)
 
+# 140-05 P-04b: median_gap_within_bin -- stratification diagnostic for the non-monotonic
+# ZIP5 accuracy result (52.0% at 181-365 rising to 56.1% at 366+ in the 08/06 run). Distinct
+# from the bin's own boundary definition -- e.g. within "366+", cases could cluster near 400
+# days (mild tail extension) or near 4,000 days (very-stable long-tenure patients dominating
+# the bin), which is exactly the composition-vs-artifact question this figure answers.
+median_gap_by_bin <- validation_cases %>%
+  mutate(gap_bin = factor(gap_bin, levels = c("0 (same-day)", "0-30", "31-90", "91-180", "181-365", "366+"))) %>%
+  group_by(gap_bin, .drop = FALSE) %>%
+  summarise(median_gap_within_bin = round(median(gap_days, na.rm = TRUE), 1), .groups = "drop") %>%
+  mutate(gap_bin = as.character(gap_bin))
+
+overall_median_gap <- tibble(gap_bin = "Overall", median_gap_within_bin = round(median(validation_cases$gap_days, na.rm = TRUE), 1))
+
+validation_curve <- validation_curve %>%
+  left_join(bind_rows(median_gap_by_bin, overall_median_gap), by = "gap_bin")
+
+message(glue(
+  "NOTE (P-04b): median_gap_within_bin lets a real-data review determine whether the 366+ ",
+  "bin's higher-than-181-365 ZIP5 accuracy (52.0% -> 56.1% in the 08/06 run) is a composition ",
+  "effect (e.g. very-stable long-tenure patients dominating the tail) or a binning artifact -- ",
+  "if median_gap_within_bin for 366+ is far larger than 366 with a tight IQR, that supports ",
+  "composition; if it clusters just above 366, reconsider the bin boundary."
+))
+
 # If has_block_group_crosswalk is TRUE and the join succeeded, add
 # pct_block_group_match the same way (per-bin mean of block_group_match, plus
 # the Overall row); if FALSE (or found-but-unusable), add the column filled
@@ -1673,6 +1697,7 @@ key_tbl <- tibble(
     "Universe -- Part B/C sheets (B_scenario_counts, B_direction_split, C_completeness)",
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
+    "Non-monotonic ZIP5 accuracy diagnostic (140-05 P-04b)",
     "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04)",
     "Primary vs sensitivity spec (D-4, resolved 2026-08-08)",
     "C-02 historical control total (superseded by 140-09-PATCH FIX-17)",
@@ -1695,6 +1720,16 @@ key_tbl <- tibble(
       "period_start_dt as the lookup date. This measures the same carry-forward rule",
       "get_zip9_at_date() applies in production. Per Pitfall 1, Part A sheets are computed",
       "on address history, not encounters."
+    ),
+    paste(
+      "140-05 P-04b: A_validation_curve's median_gap_within_bin column exists specifically to",
+      "answer whether the non-monotonic ZIP5 accuracy result (52.0% at 181-365 rising to 56.1%",
+      "at 366+ in the 08/06 planning run) is a composition effect (very-stable long-tenure",
+      "patients dominating the 366+ bin's tail) or a binning artifact (cases clustering just",
+      "past the 366-day boundary). The actual finding requires reviewing this column's real",
+      "value on a future HiPerGator run -- deferred per this phase's established dual-",
+      "environment pattern (Rscript unavailable in this Windows planning environment), not",
+      "silently resolved here."
     ),
     paste(
       "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer",
