@@ -81,6 +81,7 @@ message("=== Phase 139: ZIP Stability and Imputation Occurrence Counts ===")
 #   140-04: assign_scenarios()
 #   140-09: compute_c02_baseline()
 #   139-04: compute_c02()
+#   140-05: compute_gap_days_at_assignment()
 
 coalesce_zip5 <- function(df) {
   df %>%
@@ -169,7 +170,8 @@ classify_encounter_zip <- function(encounters, addr_coal) {
     slice(1) %>%
     ungroup() %>%
     mutate(has_covering_record = TRUE) %>%
-    select(ID, ENCOUNTERID, ADMIT_DATE, direct_zip9 = zip9_norm, direct_zip5 = zip5_coalesced, has_covering_record)
+    select(ID, ENCOUNTERID, ADMIT_DATE, direct_zip9 = zip9_norm, direct_zip5 = zip5_coalesced,
+           direct_zip_period_start = period_start_dt, has_covering_record)
 
   encounters %>%
     left_join(top1, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
@@ -211,6 +213,85 @@ assign_scenarios <- function(encounter_zip_flagged, backward_only = FALSE) {
         levels = c("already_has_zip9", "S2", "S3", "unresolvable"))
     ) %>%
     select(-.s2_test)
+}
+
+# 140-05 P-04a (140-08-PATCH FIX-01/FIX-02/FIX-08): gap_days_at_assignment (forward-inclusive)
+# and gap_days_at_assignment_backward_only -- TWO INDEPENDENTLY-COMPUTED signed per-encounter
+# covariates, mirroring assign_scenarios()'s own dual-mode design directly above. Takes
+# s1_matches (ID/ENCOUNTERID/ADMIT_DATE/period_start_dt/direction, from has_direct_zip5_only
+# encounters against zip9_seq -- SECTION 11) and s2_matches (same shape, from has_neither
+# encounters against zip5_seq) plus encounter_zip_flagged (needs ID/ENCOUNTERID/ADMIT_DATE/
+# has_direct_zip9/direct_zip_period_start, the latter added by classify_encounter_zip() above).
+# Each column is fed by its own pair of nearest-match reductions computed here -- neither
+# column is derived from the other by filtering or arithmetic. Sign convention:
+# gap_days = ADMIT_DATE - resolving period_start_dt -- POSITIVE means the resolving record's
+# period started BEFORE the encounter (backward/normal carry-forward), NEGATIVE means it
+# started AFTER (forward inference). already_has_zip9 rows report the true elapsed days to
+# direct_zip_period_start, not a hardcoded 0. FIX-08: the either-direction reductions break
+# exact ties (a match equidistant backward and forward) in favor of the backward candidate.
+compute_gap_days_at_assignment <- function(encounter_zip_flagged, s1_matches, s2_matches) {
+  s1_nearest_any <- s1_matches %>%
+    mutate(
+      gap_signed = as.numeric(ADMIT_DATE - period_start_dt),
+      .tie_rank  = if_else(gap_signed >= 0, 0L, 1L)   # FIX-08: backward wins exact ties
+    ) %>%
+    group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+    arrange(abs(gap_signed), .tie_rank, .by_group = TRUE) %>%
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, gap_days_s3_any = gap_signed)
+
+  # All candidates here have gap_signed >= 0 by construction (direction == "backward" means
+  # period_start_dt <= ADMIT_DATE), so "nearest" is simply the minimum.
+  s1_nearest_backward <- s1_matches %>%
+    filter(direction == "backward") %>%
+    mutate(gap_signed = as.numeric(ADMIT_DATE - period_start_dt)) %>%
+    group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+    slice_min(gap_signed, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, gap_days_s3_bwd = gap_signed)
+
+  s2_nearest_any <- s2_matches %>%
+    mutate(
+      gap_signed = as.numeric(ADMIT_DATE - period_start_dt),
+      .tie_rank  = if_else(gap_signed >= 0, 0L, 1L)   # FIX-08: backward wins exact ties
+    ) %>%
+    group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+    arrange(abs(gap_signed), .tie_rank, .by_group = TRUE) %>%
+    slice_head(n = 1) %>%
+    ungroup() %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, gap_days_s2_any = gap_signed)
+
+  s2_nearest_backward_gap <- s2_matches %>%
+    filter(direction == "backward") %>%
+    mutate(gap_signed = as.numeric(ADMIT_DATE - period_start_dt)) %>%
+    group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+    slice_min(gap_signed, n = 1, with_ties = FALSE) %>%
+    ungroup() %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, gap_days_s2_bwd = gap_signed)
+
+  encounter_zip_flagged %>%
+    left_join(s2_nearest_backward_gap, by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+    left_join(s2_nearest_any,          by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+    left_join(s1_nearest_backward,     by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+    left_join(s1_nearest_any,          by = c("ID", "ENCOUNTERID", "ADMIT_DATE")) %>%
+    mutate(
+      # Forward-inclusive: nearest resolving record in either direction, signed.
+      gap_days_at_assignment = case_when(
+        has_direct_zip9         ~ as.numeric(ADMIT_DATE - direct_zip_period_start),
+        !is.na(gap_days_s2_any) ~ gap_days_s2_any,
+        !is.na(gap_days_s3_any) ~ gap_days_s3_any,
+        TRUE                     ~ NA_real_
+      ),
+      # Backward-only: backward matches only. Never negative by construction.
+      gap_days_at_assignment_backward_only = case_when(
+        has_direct_zip9         ~ as.numeric(ADMIT_DATE - direct_zip_period_start),
+        !is.na(gap_days_s2_bwd) ~ gap_days_s2_bwd,
+        !is.na(gap_days_s3_bwd) ~ gap_days_s3_bwd,
+        TRUE                     ~ NA_real_
+      )
+    ) %>%
+    select(-gap_days_s2_bwd, -gap_days_s2_any, -gap_days_s3_bwd, -gap_days_s3_any)
 }
 
 # 140-09-PATCH FIX-17: pre-coalesce baseline -- raw ADDRESS_ZIP5 only, no ZIP9-derived
@@ -1099,6 +1180,26 @@ encounter_zip$scenario_assigned <-
   assign_scenarios(encounter_zip, backward_only = FALSE)$scenario_assigned
 encounter_zip$scenario_assigned_backward_only <-
   assign_scenarios(encounter_zip, backward_only = TRUE)$scenario_assigned
+
+# ---- 140-05 P-04a (140-08-PATCH FIX-01/FIX-02/FIX-08): gap_days_at_assignment
+# (forward-inclusive) and gap_days_at_assignment_backward_only -- TWO INDEPENDENTLY-COMPUTED
+# signed per-encounter covariates, mirroring the two scenario_assigned columns above. Computed
+# by compute_gap_days_at_assignment() (SECTION 1B) directly from s1_matches/s2_matches (the
+# same match sets that fed s1_elig/s2_elig above, reflecting the FINAL, collapsed
+# scenario_assigned/scenario_assigned_backward_only columns just assigned above -- S1 folded
+# into S3 universally, per 140-04) -- neither gap column is derived from the other by
+# filtering or arithmetic.
+encounter_zip <- compute_gap_days_at_assignment(encounter_zip, s1_matches, s2_matches)
+
+# 140-08-PATCH FIX-02: the backward-only covariate must never carry a forward-inferred
+# value -- this is the invariant that makes the "backward-only" label defensible.
+stopifnot(all(encounter_zip$gap_days_at_assignment_backward_only >= 0, na.rm = TRUE))
+
+message(glue(
+  "[R/115] gap_days_at_assignment (forward-inclusive, P-04a): {sum(!is.na(encounter_zip$gap_days_at_assignment))} of ",
+  "{n_encounters_total} encounters carry a non-NA value; gap_days_at_assignment_backward_only: ",
+  "{sum(!is.na(encounter_zip$gap_days_at_assignment_backward_only))} of {n_encounters_total} (never-negative invariant confirmed)."
+))
 
 # NOTE (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer a distinct ordered
 # bucket -- every has_direct_zip5_only encounter is assigned "S3" regardless of
