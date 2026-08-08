@@ -78,7 +78,9 @@ message("=== Phase 139: ZIP Stability and Imputation Occurrence Counts ===")
 #   139-01: coalesce_zip5()
 #   139-02: build_validation_cases(), aggregate_validation_curve()
 #   139-03: classify_encounter_zip()
-#   139-04 (this plan): compute_c02()
+#   140-04: assign_scenarios()
+#   140-09: compute_c02_baseline()
+#   139-04: compute_c02()
 
 coalesce_zip5 <- function(df) {
   df %>%
@@ -182,6 +184,33 @@ classify_encounter_zip <- function(encounters, addr_coal) {
       has_record_but_empty  = has_covering_record & is.na(direct_zip9) & is.na(direct_zip5),
       has_neither            = has_no_record | has_record_but_empty
     )
+}
+
+# 140-04 P-06b (140-08-PATCH FIX-03: coherent only because D-2 = option-a, ZIP5 as analysis
+# unit, decided in 140-02): S1 is folded into S3 UNIVERSALLY in the ordered assignment -- S1
+# buys only 1.7pp and is definitionally entangled with S3 (an encounter eligible only via
+# S1-forward is assigned S1 by the old ordered rule while remaining S3-eligible under S3's own
+# complement-of-S1-backward definition). s1_backward/s1_forward/s1_either/s2_backward/
+# s2_forward/s2_either/s3_eligible are all UNCHANGED by this fold -- SECTION 11 still computes
+# them exactly as before, feeding B_direction_split's unordered reporting. Parameterized
+# backward_only controls only the S2 test (s2_either vs s2_backward); the S3 test
+# (has_direct_zip5_only, the FULL set, not the narrower s3_eligible) is identical in both
+# modes since S3 is inherently backward-only already. This is the single reversible site if
+# D-2 is later reconsidered.
+assign_scenarios <- function(encounter_zip_flagged, backward_only = FALSE) {
+  encounter_zip_flagged %>%
+    mutate(
+      .s2_test = if (backward_only) s2_backward else s2_either,
+      scenario_assigned = case_when(
+        has_direct_zip9       ~ "already_has_zip9",
+        .s2_test              ~ "S2",
+        has_direct_zip5_only  ~ "S3",   # 140-04 P-06b: S1 folded into S3 universally, no separate ordered bucket
+        TRUE                   ~ "unresolvable"
+      ),
+      scenario_assigned = factor(scenario_assigned,
+        levels = c("already_has_zip9", "S2", "S3", "unresolvable"))
+    ) %>%
+    select(-.s2_test)
 }
 
 # 140-09-PATCH FIX-17: pre-coalesce baseline -- raw ADDRESS_ZIP5 only, no ZIP9-derived
@@ -1059,33 +1088,34 @@ encounter_zip <- encounter_zip %>%
 n_s4_excluded_encounters <- sum(!encounter_zip$has_direct_zip9)
 n_s4_excluded_patients   <- n_distinct(encounter_zip$ID[!encounter_zip$has_direct_zip9])
 
-# ---- Ordered assignment: S1 then S2 then S3 ----
-encounter_zip <- encounter_zip %>%
-  mutate(
-    scenario_assigned = case_when(
-      has_direct_zip9 ~ "already_has_zip9",
-      s1_either       ~ "S1",
-      s2_either       ~ "S2",
-      s3_eligible     ~ "S3",
-      TRUE            ~ "unresolvable"
-    ),
-    scenario_assigned = factor(
-      scenario_assigned,
-      levels = c("already_has_zip9", "S1", "S2", "S3", "unresolvable")
-    )
-  )
+# ---- Ordered assignment: S1 folded into S3 (140-04 P-06b, 140-08-PATCH FIX-03: coherent
+# only because D-2 = option-a, ZIP5 as analysis unit -- see assign_scenarios(), SECTION 1B) ----
+# 140-08-PATCH FIX-09: direct $ assignment -- NOT from inside mutate(), which would reference
+# the outer (pre-assignment) encounter_zip from inside its own mutate() call, relying on
+# row-order stability between the outer frame and the function's return, and evaluating the
+# full tibble twice. Two independent calls: forward-inclusive (s2_either) and backward-only
+# (s2_backward), each producing its own scenario_assigned column.
+encounter_zip$scenario_assigned <-
+  assign_scenarios(encounter_zip, backward_only = FALSE)$scenario_assigned
+encounter_zip$scenario_assigned_backward_only <-
+  assign_scenarios(encounter_zip, backward_only = TRUE)$scenario_assigned
 
-# 139-05-PATCH FIX-04d: the ordered "S3" column is NOT the complete S3-eligible population --
-# an encounter eligible ONLY via S1-forward (not S1-backward) is assigned "S1" by the ordered
-# rule (S1-eligible-either is tested first) while STILL being S3-eligible (unordered) by the
-# complement-of-S1-backward definition. Both must be reported; call this out explicitly here
-# so the ordered column is never misread as a complete S3 count.
+# NOTE (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer a distinct ordered
+# bucket -- every has_direct_zip5_only encounter is assigned "S3" regardless of
+# S1-eligibility. Unordered s1_backward/s1_forward/s1_either counts remain reported on
+# B_direction_split for transparency (reporting-only), but do not correspond to any ordered
+# scenario_assigned level any more. The ordered S3 count now EXCEEDS B_direction_split's
+# unordered "S3-eligible" count by exactly the S1-backward count (s3_eligible retains its
+# complement-of-S1-backward definition) -- see the KEY sheet for the full explanation (Plan 04
+# Task 2).
 message(glue(
-  "NOTE (139-05-PATCH FIX-04d): the ordered 'S3' count below is NOT the complete S3-eligible ",
-  "population -- an encounter eligible only via S1-forward is assigned 'S1' by the ordered ",
-  "rule (S1 tested first) while remaining S3-eligible under S3's own complement-of-S1-backward ",
-  "definition. See the unordered 'S3-eligible' count for the complete figure. Both are reported ",
-  "on B_scenario_counts (Plan 04) -- do not read the ordered column alone as S3's true count."
+  "NOTE (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer a distinct ordered ",
+  "bucket -- every has_direct_zip5_only encounter is assigned 'S3' regardless of ",
+  "S1-eligibility. Unordered s1_backward/s1_forward/s1_either counts remain reported on ",
+  "B_direction_split for transparency (reporting-only), but do not correspond to any ordered ",
+  "scenario_assigned level any more. The ordered S3 count now EXCEEDS B_direction_split's ",
+  "unordered 'S3-eligible' count by exactly the S1-backward count (s3_eligible retains its ",
+  "complement-of-S1-backward definition) -- see the KEY sheet for the full explanation."
 ))
 
 # ---- Summary table 1: ordered assignment counts (B-03), encounter + patient level ----
