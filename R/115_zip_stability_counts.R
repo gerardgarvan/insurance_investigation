@@ -1208,30 +1208,31 @@ message("=======================================================================
 
 message("--- Part C: completeness waterfall (C-01) + C-02 cohort-scoped reconciliation ---")
 
-# ---- C-01: encounter-level stepwise waterfall ----
-# Built directly from Part B's scenario_assigned column (already an ordered,
-# mutually-exclusive S1-then-S2-then-S3 assignment) -- the waterfall is a
-# straightforward cumulative count over its factor levels in order. Each row's
-# count is the CUMULATIVE total after that step; the final row equals
-# n_encounters_total by construction, so no separate "total" row is needed.
+# ---- C-01: encounter-level stepwise waterfall (forward-inclusive, SENSITIVITY spec) ----
+# Built directly from Part B's scenario_assigned column (now the collapsed 4-level
+# already_has_zip9 > S2 > S3 > unresolvable assignment, per 140-04 P-06b -- S1 no
+# longer a distinct ordered bucket) -- the waterfall is a straightforward cumulative
+# count over its factor levels in order. Each row's count is the CUMULATIVE total
+# after that step; the final row equals n_encounters_total by construction, so no
+# separate "total" row is needed.
 waterfall_encounter <- encounter_zip %>%
   count(scenario_assigned) %>%
   mutate(scenario_assigned = factor(scenario_assigned,
-           levels = c("already_has_zip9", "S1", "S2", "S3", "unresolvable"))) %>%
+           levels = c("already_has_zip9", "S2", "S3", "unresolvable"))) %>%
   arrange(scenario_assigned) %>%
   mutate(cumulative_n = cumsum(n), cumulative_pct = round(100 * cumulative_n / sum(n), 1))
 
-# ---- C-01: patient-level stepwise waterfall ----
+# ---- C-01: patient-level stepwise waterfall (forward-inclusive, SENSITIVITY spec) ----
 # Patient-level bucket is the FURTHEST resolved scenario across all of a patient's
-# encounters, in the same priority order (already_has_zip9 > S1 > S2 > S3 > unresolvable):
-# a patient counts as "already_has_zip9" if ANY encounter already has one; else "S1" if any
-# encounter resolves via S1; and so on, down to "unresolvable" only if EVERY encounter is
+# encounters, in the same priority order (already_has_zip9 > S2 > S3 > unresolvable):
+# a patient counts as "already_has_zip9" if ANY encounter already has one; else "S2" if any
+# encounter resolves via S2; and so on, down to "unresolvable" only if EVERY encounter is
 # unresolvable. This differs from Part B's scenario_counts_patient (which reports PRESENCE
 # across scenarios, allowing a patient to appear under multiple buckets) -- the waterfall
 # needs one mutually-exclusive bucket per patient so the cumulative sum reconciles to the
 # full patient count. Priority rank matches the factor level order (lower rank = resolved
 # earlier/more-preferred); slice_min() selects each patient's single best (lowest-rank) row.
-scenario_priority <- c(already_has_zip9 = 1L, S1 = 2L, S2 = 3L, S3 = 4L, unresolvable = 5L)
+scenario_priority <- c(already_has_zip9 = 1L, S2 = 2L, S3 = 3L, unresolvable = 4L)
 
 waterfall_patient <- encounter_zip %>%
   mutate(scenario_rank = scenario_priority[as.character(scenario_assigned)]) %>%
@@ -1240,9 +1241,57 @@ waterfall_patient <- encounter_zip %>%
   ungroup() %>%
   count(scenario_assigned) %>%
   mutate(scenario_assigned = factor(scenario_assigned,
-           levels = c("already_has_zip9", "S1", "S2", "S3", "unresolvable"))) %>%
+           levels = c("already_has_zip9", "S2", "S3", "unresolvable"))) %>%
   arrange(scenario_assigned) %>%
   mutate(cumulative_n = cumsum(n), cumulative_pct = round(100 * cumulative_n / sum(n), 1))
+
+# ---- C-01 (140-04 P-06a): INDEPENDENT backward-only waterfall, PRIMARY spec ----
+# Computed from scenario_assigned_backward_only via its own count()/arrange()/cumsum() call --
+# NOT derived from the forward-inclusive waterfall_encounter/waterfall_patient tables above by
+# subtraction. get_zip9_at_date() is backward-only by design (Phase 137, Out of Scope); the
+# ~86% headline coverage figure this produces must never be computed by summing
+# B_direction_split rows (those are unordered and overlapping).
+waterfall_encounter_backward <- encounter_zip %>%
+  count(scenario_assigned_backward_only) %>%
+  mutate(scenario_assigned_backward_only = factor(scenario_assigned_backward_only,
+           levels = c("already_has_zip9", "S2", "S3", "unresolvable"))) %>%
+  arrange(scenario_assigned_backward_only) %>%
+  mutate(
+    cumulative_n_backward_only   = cumsum(n),
+    cumulative_pct_backward_only = round(100 * cumulative_n_backward_only / sum(n), 1)
+  ) %>%
+  rename(n_backward_only = n)
+
+waterfall_encounter <- waterfall_encounter %>%
+  left_join(
+    waterfall_encounter_backward %>% rename(scenario_assigned = scenario_assigned_backward_only),
+    by = "scenario_assigned"
+  )
+
+# Patient-level bucket recomputed independently against scenario_assigned_backward_only --
+# a patient's furthest-resolved scenario can differ between the two orderings (e.g. a patient
+# resolved only via forward-only S2 reaches "S2" under forward-inclusive but "unresolvable"
+# under backward-only).
+waterfall_patient_backward <- encounter_zip %>%
+  mutate(scenario_rank = scenario_priority[as.character(scenario_assigned_backward_only)]) %>%
+  group_by(ID) %>%
+  slice_min(scenario_rank, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  count(scenario_assigned_backward_only) %>%
+  mutate(scenario_assigned_backward_only = factor(scenario_assigned_backward_only,
+           levels = c("already_has_zip9", "S2", "S3", "unresolvable"))) %>%
+  arrange(scenario_assigned_backward_only) %>%
+  mutate(
+    cumulative_n_backward_only   = cumsum(n),
+    cumulative_pct_backward_only = round(100 * cumulative_n_backward_only / sum(n), 1)
+  ) %>%
+  rename(n_backward_only = n)
+
+waterfall_patient <- waterfall_patient %>%
+  left_join(
+    waterfall_patient_backward %>% rename(scenario_assigned = scenario_assigned_backward_only),
+    by = "scenario_assigned"
+  )
 
 message("\n=== Part C: Completeness Waterfall (C-01), Encounter Level ===")
 print(waterfall_encounter)
@@ -1251,6 +1300,21 @@ message(glue("Denominator: n_encounters_total = {n_encounters_total}"))
 message("\n=== Part C: Completeness Waterfall (C-01), Patient Level ===")
 print(waterfall_patient)
 message(glue("Denominator: n_patients_with_encounters = {n_patients_with_encounters} (one mutually-exclusive bucket per patient, furthest-resolved scenario)"))
+
+message("\n=== Part C: Backward-Only (Primary) vs Forward-Inclusive (Sensitivity) Waterfall Comparison ===")
+print(waterfall_encounter %>% select(scenario_assigned, n, cumulative_pct, n_backward_only, cumulative_pct_backward_only))
+message("NOTE (P-06): the backward-only cumulative_pct_backward_only figure above is computed from its own independent ordered assignment (assign_scenarios(backward_only = TRUE)) -- NEVER derived by summing B_direction_split rows, which are unordered and overlapping.")
+
+# 140-08-PATCH FIX-04: the S1 fold-in is coverage-neutral by construction (old already_has_zip9
+# + S1 + S2 + S3 = new already_has_zip9 + S2 + S3, since S1's encounters are a subset of
+# has_direct_zip5_only and therefore already counted within the new S3 bucket). Any drift here
+# means assign_scenarios() changed scope, not just labels.
+stopifnot(
+  sum(encounter_zip$scenario_assigned != "unresolvable") ==
+    sum(!encounter_zip$has_direct_zip9 &
+        (encounter_zip$s2_either | encounter_zip$has_direct_zip5_only)) +
+    sum(encounter_zip$has_direct_zip9)
+)
 
 # ---- C-02: cohort-scoped reconciliation ----
 # 139-05-PATCH FIX-03b: compute_c02() (SECTION 1B) takes COHORT_IDS (139-03 Task 1, still in
@@ -1508,7 +1572,7 @@ key_tbl <- tibble(
     "Universe -- Part B/C sheets (B_scenario_counts, B_direction_split, C_completeness)",
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
-    "Ordered vs unordered S3 (139-05-PATCH FIX-04d)",
+    "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04)",
     "C-02 historical control total (superseded by 140-09-PATCH FIX-17)",
     "C-02 gate design (140-09-PATCH FIX-17, 2026-08-06)",
     "C-02 status (140-09-PATCH FIX-17/FIX-18, 2026-08-06)",
@@ -1531,12 +1595,15 @@ key_tbl <- tibble(
       "on address history, not encounters."
     ),
     paste(
-      "B_scenario_counts reports TWO different S3 quantities: the ordered 'S3' column",
-      "(assigned only when an encounter is not already_has_zip9, not S1-eligible, and IS",
-      "S3-eligible) undercounts relative to the unordered 'S3-eligible' column, because an",
-      "encounter eligible only via S1-forward is assigned 'S1' by the ordered rule while",
-      "remaining S3-eligible. Use 'S3-eligible' for the complete count of how often S3 would",
-      "fire if evaluated on its own."
+      "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer",
+      "a distinct ordered bucket -- every has_direct_zip5_only encounter is assigned \"S3\".",
+      "The ordered S3 count therefore now EXCEEDS B_direction_split's unordered \"S3-eligible\"",
+      "count by exactly the S1-backward count, because s3_eligible retains its",
+      "complement-of-S1-backward definition. This is the inverse of the pre-fold relationship",
+      "described by 139-05-PATCH FIX-04d (which had ordered S3 UNDERCOUNTING unordered",
+      "S3-eligible, because an encounter eligible only via S1-forward was assigned \"S1\" by the",
+      "old ordered rule). Use the ordered count for the assignment; use \"S3-eligible\" only for",
+      "continuity with Phase 139 outputs."
     ),
     paste(
       glue("A prior team note (08/04/2026 meeting) recorded {C02_EXPECTED} patients with no"),
@@ -1797,12 +1864,15 @@ add_styled_sheet(
 
 add_styled_sheet(
   wb, "B_scenario_counts",
-  title_text    = "B_scenario_counts -- Ordered S1-then-S2-then-S3 Scenario Assignment (B-03)",
+  title_text    = "B_scenario_counts -- Ordered already_has_zip9-then-S2-then-S3 Scenario Assignment (B-03)",
   subtitle_text = glue(
     "Grain: cohort-restricted encounters (Part B/C universe). Ordered, mutually-exclusive ",
-    "assignment (case_when: already_has_zip9 > S1 > S2 > S3 > unresolvable). See KEY sheet ",
-    "and B_direction_split for the unordered S3-eligible count (139-05-PATCH FIX-04d) -- do ",
-    "not read this sheet's 'S3' row alone as the complete S3-eligible population."
+    "assignment (case_when: already_has_zip9 > S2 > S3 > unresolvable). 140-04 P-06b: S1 is no ",
+    "longer a distinct ordered bucket (folded into S3 universally) -- collapsed from the prior ",
+    "5-level scheme to this 4-level one. See KEY sheet and B_direction_split for the unordered ",
+    "S3-eligible count and the S1 backward/forward/either counts (reporting-only, 140-08-PATCH ",
+    "FIX-04) -- do not read this sheet's 'S3' row alone as the complete S3-eligible population, ",
+    "and note the relationship has INVERTED (ordered S3 now EXCEEDS unordered S3-eligible)."
   ),
   data_tbl      = scenario_counts_encounter,
   extra_tbl     = scenario_counts_patient,
@@ -1825,13 +1895,19 @@ add_styled_sheet(
 
 add_styled_sheet(
   wb, "C_completeness",
-  title_text    = "C_completeness -- Stepwise Completeness Waterfall (C-01)",
+  title_text    = "C_completeness -- Stepwise Completeness Waterfall (C-01), Forward-Inclusive + Backward-Only",
   subtitle_text = glue(
     "Grain: cohort-restricted encounters (encounter-level table) / patients (patient-level ",
-    "table, furthest-resolved scenario per patient). Cumulative stepwise waterfall in fixed ",
-    "order: already_has_zip9 -> +S1 -> +S2 -> +S3 -> unresolvable (residual). The bottom row's ",
-    "cumulative_n equals the full universe by construction -- no separate total row. See QC ",
-    "sheet for the C-02 cohort-scoped reconciliation check."
+    "table, furthest-resolved scenario per patient). Two INDEPENDENTLY-COMPUTED cumulative ",
+    "stepwise waterfalls, in fixed order already_has_zip9 -> +S2 -> +S3 -> unresolvable ",
+    "(residual): the forward-inclusive SENSITIVITY spec (n / cumulative_n / cumulative_pct, ",
+    "S2 tested via s2_either) and the backward-only PRIMARY spec (n_backward_only / ",
+    "cumulative_n_backward_only / cumulative_pct_backward_only, S2 tested via s2_backward). ",
+    "140-CONTEXT.md Section 7 (P-06a): the backward-only figure is never derived by summing ",
+    "B_direction_split rows -- it comes from its own ordered assign_scenarios(backward_only = ",
+    "TRUE) call. Each bottom row's cumulative_n(/_backward_only) equals the full universe by ",
+    "construction -- no separate total row. See KEY sheet for the D-4 primary-spec decision ",
+    "and QC sheet for the C-02 cohort-scoped reconciliation check."
   ),
   data_tbl      = waterfall_encounter,
   extra_tbl     = waterfall_patient,
