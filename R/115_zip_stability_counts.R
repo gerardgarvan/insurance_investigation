@@ -1573,6 +1573,7 @@ key_tbl <- tibble(
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
     "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04)",
+    "Primary vs sensitivity spec (D-4, resolved 2026-08-08)",
     "C-02 historical control total (superseded by 140-09-PATCH FIX-17)",
     "C-02 gate design (140-09-PATCH FIX-17, 2026-08-06)",
     "C-02 status (140-09-PATCH FIX-17/FIX-18, 2026-08-06)",
@@ -1604,6 +1605,19 @@ key_tbl <- tibble(
       "S3-eligible, because an encounter eligible only via S1-forward was assigned \"S1\" by the",
       "old ordered rule). Use the ordered count for the assignment; use \"S3-eligible\" only for",
       "continuity with Phase 139 outputs."
+    ),
+    paste(
+      "D-4 (140-04 P-06c, resolved 2026-08-08): option-a selected -- backward-only stays the",
+      "PRIMARY specification reported to Erin/Amy (already_has_zip9 + S2-backward + S3, tested",
+      "via scenario_assigned_backward_only), forward-inclusive remains a SENSITIVITY comparison",
+      "only (tested via scenario_assigned). This matches 140-CONTEXT.md Section 7's own",
+      "recommendation -- agreement between the two waterfalls preempts the obvious reviewer",
+      "objection to forward inference, and any divergence is itself a reportable finding.",
+      "Rejected: option-b (forward-inclusive as primary), which per P-06d would require",
+      "extending R/utils/utils_address.R (shared production utility, out of this phase's scope)",
+      "with a forward-lookup variant before adoption in production -- NOT built by this plan",
+      "regardless of the answer, and NOT triggered by this decision. See C_completeness for",
+      "both waterfalls computed side by side and 140-04-SUMMARY.md for the full decision record."
     ),
     paste(
       glue("A prior team note (08/04/2026 meeting) recorded {C02_EXPECTED} patients with no"),
