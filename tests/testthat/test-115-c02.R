@@ -131,3 +131,72 @@ test_that("classify_unparseable_dates() returns per-category counts, descending"
   expect_equal(result$n[result$category == "text_looking_but_invalid"], 2)
   expect_equal(result$n[result$category == "other_unrecognized"], 1)
 })
+
+
+# ==============================================================================
+# 140-09-PATCH FIX-17 / Task 1: compute_c02_baseline() -- pre-coalesce baseline for the
+# C-02a coalescing-monotonicity invariant. Coalescing can only ADD a ZIP5 value, never
+# remove one, so the post-coalesce n_present_no_usable_zip5 must be <= this baseline.
+# ==============================================================================
+
+test_that("compute_c02_baseline() counts cohort patients present in addr_raw with no usable raw ZIP5, and demonstrates monotone recovery vs compute_c02()'s post-coalesce figure", {
+  # 4-patient cohort: A is absent from addr_raw entirely; B has raw ZIP5 present; C has raw
+  # ZIP5 absent but is recoverable by coalescing (its zip5_coalesced ends up populated,
+  # e.g. derived from a valid ZIP9); D has neither raw nor coalesced ZIP5.
+  cohort_ids_fixture <- c("A", "B", "C", "D")
+
+  addr_raw_fixture <- tibble(
+    ID            = c("B", "C", "D"),
+    ADDRESS_ZIP9  = c(NA_character_, NA_character_, NA_character_),
+    ADDRESS_ZIP5  = c("32611", NA_character_, NA_character_)
+  )
+
+  baseline <- .test_env$compute_c02_baseline(cohort_ids_fixture, addr_raw_fixture)
+
+  # A is absent from addr_raw (compute_c02_baseline restricts to PRESENT patients, per its
+  # own contract -- absent patients are C-02c's business). B has a usable raw ZIP5. C and D
+  # do not: baseline == 2.
+  expect_equal(baseline, 2)
+
+  # Post-coalesce: simulate coalesce_zip5() having recovered C's ZIP5 (e.g. from a ZIP9 that
+  # carried it), leaving only D with no usable ZIP5 anywhere.
+  addr_coal_fixture <- tibble(
+    ID             = c("B", "C", "D"),
+    zip5_coalesced = c("32611", "32601", NA_character_)
+  )
+  post_result <- .test_env$compute_c02(cohort_ids_fixture, addr_coal_fixture)
+
+  expect_equal(post_result$n_present_no_usable_zip5, 1)   # D only -- C was recovered
+
+  # C-02a itself: post-coalesce (1) <= pre-coalesce (2) -- coalescing only added a value.
+  c02a_monotone <- post_result$n_present_no_usable_zip5 <= baseline
+  expect_true(c02a_monotone)
+})
+
+test_that("compute_c02_baseline() vs a synthetic monotonicity VIOLATION -- c02a_monotone must be able to fail", {
+  # An invariant never observed failing is an invariant never tested. Construct a case where
+  # a "coalesce" step incorrectly DROPS a ZIP5 value that was present pre-coalesce -- this is
+  # the unambiguous coalesce_zip5() defect C-02a exists to catch.
+  cohort_ids_fixture <- c("E", "F")
+
+  addr_raw_fixture <- tibble(
+    ID           = c("E", "F"),
+    ADDRESS_ZIP9 = c(NA_character_, NA_character_),
+    ADDRESS_ZIP5 = c("32611", "32601")   # both patients have a usable raw ZIP5
+  )
+  baseline <- .test_env$compute_c02_baseline(cohort_ids_fixture, addr_raw_fixture)
+  expect_equal(baseline, 0)   # neither E nor F is missing a raw ZIP5
+
+  # Buggy "post-coalesce" table: E's ZIP5 was dropped (zip5_coalesced NA) despite having a
+  # usable raw ZIP5 above -- coalesce_zip5() must never do this, but the invariant has to be
+  # able to detect it if it did.
+  addr_coal_buggy <- tibble(
+    ID             = c("E", "F"),
+    zip5_coalesced = c(NA_character_, "32601")
+  )
+  post_result <- .test_env$compute_c02(cohort_ids_fixture, addr_coal_buggy)
+  expect_equal(post_result$n_present_no_usable_zip5, 1)   # E, incorrectly
+
+  c02a_monotone <- post_result$n_present_no_usable_zip5 <= baseline
+  expect_false(c02a_monotone)   # 1 <= 0 is FALSE -- the violation is caught
+})

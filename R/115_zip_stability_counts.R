@@ -184,6 +184,27 @@ classify_encounter_zip <- function(encounters, addr_coal) {
     )
 }
 
+# 140-09-PATCH FIX-17: pre-coalesce baseline -- raw ADDRESS_ZIP5 only, no ZIP9-derived
+# fallback. normalize_zip5_raw() is called, not modified (Out of Scope, 140-CONTEXT.md
+# Section 11). Restricted to cohort patients PRESENT in addr_raw so the result is
+# directly comparable to compute_c02()'s post-coalesce n_present_no_usable_zip5 -- cohort
+# patients entirely absent from addr_raw are a coverage question (pct_cohort_with_any_address,
+# reported only per D-5, resolved 2026-08-07), not this function's business.
+compute_c02_baseline <- function(cohort_ids, addr_raw) {
+  base_tbl <- addr_raw %>%
+    mutate(.zip5_raw_only = normalize_zip5_raw(ADDRESS_ZIP5)) %>%
+    group_by(ID) %>%
+    summarise(has_any_zip5 = any(!is.na(.zip5_raw_only)), .groups = "drop")
+
+  present_ids <- intersect(cohort_ids, addr_raw$ID)
+
+  tibble(ID = present_ids) %>%
+    left_join(base_tbl, by = "ID") %>%
+    mutate(has_any_zip5 = coalesce(has_any_zip5, FALSE)) %>%
+    summarise(n = sum(!has_any_zip5)) %>%
+    pull(n)
+}
+
 compute_c02 <- function(cohort_ids, addr_coal) {
   # 139-05-PATCH FIX-03b: C-02 is computed over the STUDY COHORT (cohort_ids), not over
   # addr_coal's own patient set -- a cohort patient with ZERO rows in addr_coal (dropped by
@@ -873,9 +894,9 @@ message("=======================================================================
 #
 # 139-05-PATCH FIX-03a: Part B's population is the study cohort
 # (get_hl_patient_ids(), the pattern already established by R/106/R/111/R/100/
-# R/107/R/109) -- reused verbatim here, not re-invented. This is what makes
-# Plan 04's C-02 reconciliation (against the notes' 26-patient control total,
-# itself a cohort-specific number) comparable.
+# R/107/R/109) -- reused verbatim here, not re-invented. This is what makes C-02's
+# reconciliation (SECTION 12; invariant-based as of 140-09-PATCH FIX-17) cohort-scoped
+# and internally consistent.
 
 message("--- Part B: cohort-restricted ENCOUNTER pull + per-encounter ZIP classification ---")
 
@@ -1231,44 +1252,90 @@ C02_TOLERANCE <- 5L   # 139-05-PATCH FIX-03d: covers cohort-DEFINITION drift onl
                       # denominator itself is cohort-scoped and correct. Documented in the KEY
                       # sheet (Plan 04 Task 2) as this narrowed claim, not general-purpose slack.
                       # 140-01 D-1 (user-directed, recorded 2026-08-06): C02_EXPECTED and
-                      # C02_TOLERANCE themselves are left UNCHANGED by this decision -- see the
-                      # comparison-basis correction immediately below.
+                      # C02_TOLERANCE themselves are left UNCHANGED by that decision. As of
+                      # 140-09-PATCH FIX-17 (2026-08-06), both are retired from the gate
+                      # expression entirely -- see immediately below.
 
-# 140-01 D-1 (user-directed decision, recorded 2026-08-06 -- NOT an Erin/Amy team confirmation
-# of the original 26's denominator; that provenance remains unconfirmed and open):
-# n_patients_no_zip5_ever (665) conflates two very different populations -- 656 cohort patients
-# who are entirely ABSENT from addr_coal (a coverage/data-availability question) with the 9
-# cohort patients who ARE present in addr_coal but carry no usable ZIP5 (the only population a
-# genuine ZIP5-coalescing defect could actually produce). Comparing the conflated 665 figure
-# against C02_EXPECTED treats a coverage gap as if it were a coalescing defect. The
-# reconciliation comparison is therefore corrected to use n_present_no_usable_zip5 (9) instead
-# of n_patients_no_zip5_ever (665) as the "computed" side of the C02_EXPECTED comparison. This
-# is a comparison-BASIS correction only -- C02_EXPECTED (26L) and C02_TOLERANCE (5L) are NOT
-# re-derived or widened; the original "26" figure's exact denominator population still cannot be
-# confirmed from this codebase or from the team in this session, so with computed=9 the gate is
-# EXPECTED to continue reading FAIL (9 falls outside [21,31]). This is a known, documented, OPEN
-# ITEM -- the workbook's shippability stays explicitly blocked on C-02 pending team follow-up on
-# the original 26's provenance. See 140-01-SUMMARY.md for the full rationale.
-c02_reconciled <- abs(n_present_no_usable_zip5 - C02_EXPECTED) <= C02_TOLERANCE
+# 140-01 D-1 (user-directed, recorded 2026-08-06) corrected the comparison BASIS to
+# n_present_no_usable_zip5 (9) instead of the conflated n_patients_no_zip5_ever (665). That
+# correction stands. What it compared against -- C02_EXPECTED (26L), a constant whose exact
+# denominator population could not be confirmed from this codebase or the team -- could not.
+# 140-09-PATCH FIX-17/FIX-18 (2026-08-06): the 26-patient control total is RETIRED as a gate
+# input. Its provenance is not going to be confirmed, and the phase should not stay blocked on
+# an archaeological question about a meeting note. There was also a directional problem
+# independent of the constant's value: coalesce_zip5() can only ADD ZIP5 values, so a correctly
+# working fix drives n_present_no_usable_zip5 DOWN -- a symmetric tolerance band around a
+# pre-fix figure tested "nothing changed," the opposite of what the fix does.
+#
+# C02_EXPECTED and C02_TOLERANCE remain defined below (NOT deleted) and are reported on the KEY
+# sheet as a superseded historical footnote with provenance marked unknown -- they are no longer
+# load-bearing. C-02 is now gated on two invariants checkable against the pipeline itself:
+#   C-02a (monotonicity)      -- coalescing can only recover ZIP5, never remove it, so the
+#                                 post-coalesce count must be <= the pre-coalesce baseline.
+#   C-02b (partition identity) -- n_present_no_usable_zip5, recomputed independently (not via
+#                                 the subtraction compute_c02() already performs), must match.
+# D-5 (resolved 2026-08-07): "no floor -- report only." The share of the cohort with ANY
+# address row (pct_cohort_with_any_address) is a data-delivery question about
+# LDS_ADDRESS_HISTORY, independent of coalescing -- reported on the QC sheet as its own named
+# figure, but NOT gated. c02_reconciled therefore rests on C-02a/b alone (option-c of the D-5
+# checkpoint in 140-09-PLAN.md Task 3).
+n_present_no_usable_zip5_precoalesce <- compute_c02_baseline(COHORT_IDS, addr_raw)
+
+c02a_monotone <- n_present_no_usable_zip5 <= n_present_no_usable_zip5_precoalesce
+
+# C-02b: independent computation over c02_tbl (filter + nrow), NOT the subtraction
+# compute_c02() already performs internally -- an identity asserted against its own
+# derivation is circular and catches nothing.
+n_present_no_usable_zip5_direct <- c02_result$c02_tbl %>%
+  filter(ID %in% addr_coal$ID, !has_any_zip5) %>%
+  nrow()
+c02b_partition <- identical(
+  as.integer(n_present_no_usable_zip5_direct),
+  as.integer(n_present_no_usable_zip5)
+)
+
+# D-5 (2026-08-07): no floor -- reported only, not gated. pct_cohort_with_any_address is
+# still computed and surfaced on the QC sheet (option-c's stated pro) so a reader can see the
+# figure and judge for themselves; it is deliberately not compared against any threshold.
+pct_cohort_with_any_address <- 1 - (c02_result$n_cohort_absent_from_addr / n_distinct(COHORT_IDS))
+
+n_zip5_recovered_by_coalesce <- n_present_no_usable_zip5_precoalesce - n_present_no_usable_zip5
+
+c02_reconciled <- c02a_monotone && c02b_partition
+
+message(glue(
+  "[R/115] C-02a (coalescing monotonicity): pre-coalesce {n_present_no_usable_zip5_precoalesce}, ",
+  "post-coalesce {n_present_no_usable_zip5} -- {if (c02a_monotone) 'PASS' else 'FAIL'} ",
+  "(recovered {n_zip5_recovered_by_coalesce} patients)."
+))
+message(glue(
+  "[R/115] C-02b (partition identity): independent count {n_present_no_usable_zip5_direct} vs ",
+  "compute_c02()'s {n_present_no_usable_zip5} -- {if (c02b_partition) 'PASS' else 'FAIL'}."
+))
+message(glue(
+  "[R/115] Cohort address coverage (D-5, resolved 2026-08-07 as 'no floor -- report only'): ",
+  "{round(100 * pct_cohort_with_any_address, 1)}% of cohort has any address row. Reported only ",
+  "-- not part of the c02_reconciled gate."
+))
 
 if (!c02_reconciled) {
+  failed_invariants <- c(
+    if (!c02a_monotone) "C-02a (monotonicity)",
+    if (!c02b_partition) "C-02b (partition identity)"
+  )
   message(glue(
     "\n*** C-02 RECONCILIATION FAILURE ***\n",
-    "Expected ~{C02_EXPECTED} cohort patients with no usable ZIP5 anywhere in their address ",
-    "history (per team meeting notes; cohort N = {length(COHORT_IDS)}). ",
-    "Computed (comparison basis corrected per 140-01 D-1, 2026-08-06): ",
-    "{n_present_no_usable_zip5} cohort patients present in addr_coal with no usable ZIP5 -- ",
-    "NOT the raw n_patients_no_zip5_ever ({n_patients_no_zip5_ever}), which conflates this ",
-    "population with {c02_result$n_cohort_absent_from_addr} cohort patients who are entirely ",
-    "absent from addr_coal (a coverage question, not a coalescing defect).\n",
-    "This is a USER-DIRECTED decision recorded 2026-08-06, not a team (Erin/Amy) confirmation ",
-    "of the original 26-patient control total's denominator -- that provenance remains ",
-    "UNCONFIRMED and is a known, documented, OPEN ITEM.\n",
-    "Per 139-CONTEXT.md: 'If it does not [reconcile], stop and investigate before delivering.'\n",
+    "Failed invariant(s): {paste(failed_invariants, collapse = ', ')}.\n",
+    "This is a real defect in coalesce_zip5() or its accounting -- investigate before shipping.\n",
     "*** DO NOT SHIP output/{basename(OUTPUT_XLSX)} TO ERIN/AMY UNTIL THIS IS RESOLVED ***\n"
   ))
 } else {
-  message(glue("C-02 reconciliation OK: {n_present_no_usable_zip5} cohort patients present in addr_coal with no usable ZIP5 (expected ~{C02_EXPECTED}, comparison basis corrected per 140-01 D-1)"))
+  message(glue(
+    "C-02 reconciliation OK: both invariants pass (C-02a monotonicity, C-02b partition ",
+    "identity; D-5 resolved as no coverage floor, reported only). The historical ",
+    "C02_EXPECTED={C02_EXPECTED} control total is retained on the KEY sheet for provenance ",
+    "only and is not part of this gate (140-09-PATCH FIX-17)."
+  ))
 }
 
 # 139-05-PATCH FIX-03c: pre-filter comparison. Compute the SAME "no usable ZIP5 ever"
@@ -1281,11 +1348,12 @@ n_patients_no_zip5_ever_prefilter <- c02_prefilter_result$n_patients_no_zip5_eve
 
 message(glue(
   "[R/115] C-02 pre-filter comparison: {n_patients_no_zip5_ever_prefilter} (before study-period/",
-  "unparseable-date filters) vs {n_patients_no_zip5_ever} (post-filter). NOTE: neither figure is ",
-  "the reconciliation basis as of 140-01 D-1 -- {n_present_no_usable_zip5} (n_present_no_usable_zip5) ",
-  "is what is actually compared against C02_EXPECTED (see above). A large gap here means the ",
-  "filters are removing cohort patients the notes' 26-patient control total includes -- report ",
-  "both, do not let C02_TOLERANCE absorb a gap this size."
+  "unparseable-date filters) vs {n_patients_no_zip5_ever} (post-filter). NOTE: neither figure ",
+  "feeds the C-02a/b/c gate above (140-09-PATCH FIX-17) -- {n_present_no_usable_zip5} ",
+  "(n_present_no_usable_zip5) and {n_present_no_usable_zip5_precoalesce} ",
+  "(n_present_no_usable_zip5_precoalesce) are what the gate actually uses. A large gap here means ",
+  "the study-period/unparseable-date filters are removing a material share of cohort patients -- ",
+  "see P-02c below for the named figure."
 ))
 
 # 140-03 P-02c: explicit, named 280-patient filter-loss figure -- arithmetic on two values
@@ -1319,10 +1387,15 @@ qc_tbl <- tibble(
     "period_end_open count (retained, open-ended address records)",
     "n_excluded_no_prior (A-06 hold-out, single-record patients)",
     "cohort N (study cohort, Part B/C population)",
-    "n_cohort_absent_from_addr (C-02, cohort patients with zero addr_coal rows -- coverage gap, NOT compared to C02_EXPECTED)",
-    "n_present_no_usable_zip5 (C-02 RECONCILIATION BASIS as of 140-01 D-1, 2026-08-06 -- cohort patients IN addr_coal with no usable ZIP5, compared against C02_EXPECTED)",
-    "C02_EXPECTED (cohort-scoped control total, per team notes -- provenance UNCONFIRMED, see KEY sheet)",
-    "n_patients_no_zip5_ever (C-02, post-filter, conflates coverage gap + coalescing-defect population -- NOT the reconciliation basis as of 140-01 D-1)",
+    "n_cohort_absent_from_addr (cohort patients with zero addr_coal rows -- coverage gap, reported only)",
+    "n_present_no_usable_zip5 (post-coalesce -- C-02a/b input, cohort patients IN addr_coal with no usable ZIP5)",
+    "n_present_no_usable_zip5_precoalesce (C-02a monotonicity baseline, raw ZIP5 only, 140-09-PATCH FIX-17)",
+    "n_zip5_recovered_by_coalesce (reported, not gated -- coalescing fix's measured yield, 140-09-PATCH FIX-17)",
+    "pct_cohort_with_any_address (D-5 resolved 2026-08-07 as 'no floor -- report only' -- NOT gated, see KEY sheet)",
+    "c02a_monotone (post-coalesce <= pre-coalesce, 140-09-PATCH FIX-17)",
+    "c02b_partition (independent recount matches compute_c02(), 140-09-PATCH FIX-17)",
+    "C02_EXPECTED (superseded historical control total, 140-09-PATCH FIX-17 -- provenance UNKNOWN, no longer gate input, see KEY sheet)",
+    "n_patients_no_zip5_ever (C-02, post-filter, conflates coverage gap + coalescing-defect population -- not used by any gate)",
     "n_patients_no_zip5_ever_prefilter (C-02, pre-filter comparison)",
     "n_patients_lost_to_filters_c02 (P-02c, cohort patients who lose every usable-ZIP5 row to filters)",
     "c02_reconciled",
@@ -1338,6 +1411,11 @@ qc_tbl <- tibble(
     as.character(length(COHORT_IDS)),
     as.character(c02_result$n_cohort_absent_from_addr),
     as.character(c02_result$n_present_no_usable_zip5),
+    as.character(n_present_no_usable_zip5_precoalesce),
+    as.character(n_zip5_recovered_by_coalesce),
+    as.character(round(100 * pct_cohort_with_any_address, 1)),
+    if (c02a_monotone) "PASS" else "FAIL",
+    if (c02b_partition) "PASS" else "FAIL",
     as.character(C02_EXPECTED),
     as.character(n_patients_no_zip5_ever),
     as.character(n_patients_no_zip5_ever_prefilter),
@@ -1401,9 +1479,10 @@ key_tbl <- tibble(
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
     "Ordered vs unordered S3 (139-05-PATCH FIX-04d)",
-    "C-02 tolerance (139-05-PATCH FIX-03d)",
-    "C-02 reconciliation comparison basis (140-01 D-1, 2026-08-06)",
-    "C-02 status (140-01 D-1, OPEN ITEM as of 2026-08-06)",
+    "C-02 historical control total (superseded by 140-09-PATCH FIX-17)",
+    "C-02 gate design (140-09-PATCH FIX-17, 2026-08-06)",
+    "C-02 status (140-09-PATCH FIX-17/FIX-18, 2026-08-06)",
+    "Analysis unit (D-2, recorded 2026-08-06)",
     "ZIP5 coalescing",
     "QC sheet"
   ),
@@ -1430,39 +1509,49 @@ key_tbl <- tibble(
       "fire if evaluated on its own."
     ),
     paste(
-      glue("The C-02 tolerance of +/-{C02_TOLERANCE} patients around the cohort-scoped"),
-      glue("{C02_EXPECTED}-patient control total covers cohort-definition drift only (e.g."),
-      "exact membership criteria differing slightly from the notes' own count) -- NOT",
-      "denominator or methodological uncertainty. The denominator is cohort-scoped and",
-      "correct (see n_cohort_absent_from_addr on the QC sheet), so the tolerance's job is",
-      "narrower than it would have been against an un-patched denominator.",
-      "C02_EXPECTED and C02_TOLERANCE themselves are UNCHANGED by the 140-01 D-1 decision below",
-      "-- only the comparison basis (what is compared against them) was corrected."
+      glue("A prior team note (08/04/2026 meeting) recorded {C02_EXPECTED} patients with no"),
+      "5-digit ZIP at any point, with a tolerance of +/-", glue("{C02_TOLERANCE}"), "patients.",
+      "The population that figure was computed over was never established and its provenance",
+      "is not going to be confirmed, so as of 140-09-PATCH FIX-17/FIX-18 (2026-08-06) it is",
+      "RETIRED as a gate input -- not deleted, retained here for provenance only, marked",
+      "UNKNOWN. C02_EXPECTED and C02_TOLERANCE remain defined in the script but no longer",
+      "appear in the c02_reconciled expression. See 'C-02 gate design' below for what replaced it."
     ),
     paste(
-      "As of 140-01 D-1 (user-directed decision, recorded 2026-08-06), the C-02 reconciliation",
-      "check compares n_present_no_usable_zip5 (cohort patients present in addr_coal with no",
-      "usable ZIP5 -- the only population a genuine ZIP5-coalescing defect could actually",
-      "produce) against C02_EXPECTED, NOT n_patients_no_zip5_ever (which conflates that",
-      "population with cohort patients who have ZERO rows in addr_coal at all, a coverage/",
-      "data-availability question, not a coalescing defect). This is a comparison-BASIS",
-      "correction only -- C02_EXPECTED and C02_TOLERANCE are not re-derived or widened. This",
-      "was an explicit, informed decision by the project owner made in-session on 2026-08-06;",
-      "it is NOT a team (Erin/Amy) confirmation of what population the original 08/04 meeting",
-      "notes' '26' figure was computed over."
+      "140-09-PATCH FIX-17 (2026-08-06): C-02 is gated on two invariants checkable against",
+      "the pipeline itself, neither of which require the historical 26-patient figure above.",
+      "C-02a (coalescing monotonicity): coalesce_zip5() can only ADD a ZIP5 value, never",
+      "remove one, so the post-coalesce count of cohort patients present in addr_coal with no",
+      "usable ZIP5 (n_present_no_usable_zip5) must be <= the pre-coalesce baseline over raw",
+      "ADDRESS_ZIP5 only (n_present_no_usable_zip5_precoalesce, via compute_c02_baseline()). A",
+      "violation is an unambiguous coalescing defect. C-02b (partition identity):",
+      "n_present_no_usable_zip5 is recomputed independently (filter + nrow over c02_tbl, not",
+      "the subtraction compute_c02() performs internally) and must match. A third candidate",
+      "invariant, C-02c (coverage floor) -- gating on the share of the cohort with any address",
+      "row at all (pct_cohort_with_any_address) against a team-set floor -- was proposed but",
+      "D-5 (resolved 2026-08-07) chose 'no floor -- report only': pct_cohort_with_any_address",
+      "is reported as its own QC figure but does not gate c02_reconciled. The coalescing fix's",
+      "measured yield (n_zip5_recovered_by_coalesce = pre-coalesce minus post-coalesce) is",
+      "likewise reported, not inferred from the gate outcome. See the QC sheet for all values."
     ),
     paste(
-      "UNRESOLVED as of 2026-08-06. With the corrected comparison basis",
-      "(n_present_no_usable_zip5), c02_reconciled is EXPECTED to continue reading FAIL --",
-      "the computed value (9, on the reference run this phase's planning was based on) falls",
-      "outside C02_EXPECTED +/- C02_TOLERANCE (26 +/- 5 = [21, 31]). This failure is for a",
-      "legitimate, documented, non-circular reason (the coalescing-defect-population count",
-      "genuinely differs from the historical '26' control total), not the prior conflated",
-      "reason (665 vs 26, which mixed in a coverage gap). The original '26' figure's exact",
-      "provenance/denominator population remains UNCONFIRMED by the team (Erin/Amy) as of this",
-      "decision -- see 140-01-SUMMARY.md. Do NOT treat C-02 as resolved or passing. Per",
-      "139-CONTEXT.md/140-CONTEXT.md: this workbook's shippability stays explicitly BLOCKED on",
-      "C-02 pending further team follow-up on the original 26's denominator."
+      "c02_reconciled = c02a_monotone AND c02b_partition (140-09-PATCH FIX-17/FIX-18,",
+      "2026-08-06; D-5 resolved 2026-08-07 as no coverage floor, so C-02c is not part of this",
+      "expression). This design has a reachable PASS state -- the prior design (comparing",
+      "n_present_no_usable_zip5 against the unconfirmed 26-patient control total) did not. See",
+      "the QC sheet for each invariant's individual PASS/FAIL and the underlying figures, plus",
+      "the reported (non-gating) pct_cohort_with_any_address. A FAIL here is a real",
+      "coalesce_zip5() defect, not an artifact of an unverifiable external constant or an",
+      "address-coverage shortfall -- do not ship the workbook to Erin/Amy until c02_reconciled",
+      "reads TRUE."
+    ),
+    paste(
+      "ZIP5 (D-2, recorded 2026-08-06). Decided on the ZIP5-vs-ZIP9 accuracy comparison in",
+      "A_validation_curve. The block-group tier -- which would measure whether ZIP9's +4",
+      "carries geographic information the ZIP5 comparison cannot see -- was not available at",
+      "the time of decision and remains unpopulated (P-03a deferred, per 140-02-SUMMARY.md).",
+      "If it is later populated and disagrees, this decision was made WITHOUT that evidence,",
+      "not AGAINST it (140-09-PATCH FIX-23)."
     ),
     paste(
       "ZIP5 coalescing (preferring the raw ADDRESS_ZIP5 column with derived-from-ZIP9",
@@ -1723,13 +1812,14 @@ add_styled_sheet(
   wb, "QC",
   title_text    = "QC -- Consolidated Drop/Exclusion Counts + C-02 Reconciliation",
   subtitle_text = glue(
-    "Single place to check before trusting the rest of the workbook. As of 140-01 D-1 ",
-    "(2026-08-06), C-02 reconciles n_present_no_usable_zip5 (cohort patients present in ",
-    "addr_coal with no usable ZIP5) against ~{C02_EXPECTED} (+/-{C02_TOLERANCE}, cohort-",
-    "definition drift only -- see KEY sheet). This is expected to continue reading FAIL; the ",
-    "original 26-patient control total's provenance remains an unconfirmed open item -- see ",
-    "KEY sheet. Per 139-CONTEXT.md: if it does not reconcile, stop and investigate before ",
-    "delivering."
+    "Single place to check before trusting the rest of the workbook. As of 140-09-PATCH ",
+    "FIX-17 (2026-08-06), c02_reconciled = C-02a (coalescing monotonicity) AND C-02b ",
+    "(partition identity) -- two invariants checkable against the pipeline itself. D-5 ",
+    "(resolved 2026-08-07) chose no coverage floor: pct_cohort_with_any_address is reported ",
+    "below but does not gate. The historical {C02_EXPECTED}-patient control total ",
+    "(+/-{C02_TOLERANCE}) is retained below for provenance only and is not part of this gate ",
+    "-- see KEY sheet. A FAIL on either invariant is a real coalesce_zip5() defect; do not ",
+    "ship this workbook to Erin/Amy until c02_reconciled reads TRUE."
   ),
   data_tbl      = qc_tbl,
   extra_tbl     = unparseable_date_examples,
