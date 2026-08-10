@@ -1513,6 +1513,15 @@ stopifnot(
 # scope as a script-level variable) and addr_coal (post-filter) -- NOT addr_coal's own
 # patient set. A cohort patient entirely absent from addr_coal counts toward the numerator.
 c02_result <- compute_c02(COHORT_IDS, addr_coal)
+
+# 140-08-PATCH FIX-07 (P-07a): n_distinct() on both sides (compute_c02() counts duplicate
+# cohort IDs; intersect() dedupes) and asserted early, immediately after compute_c02() runs,
+# so a mismatch fails in seconds rather than after the full run -- not deferred to SECTION 14
+# (workbook assembly).
+n_cohort_in_addr     <- n_distinct(intersect(COHORT_IDS, addr_coal$ID))
+n_cohort_not_in_addr <- n_distinct(COHORT_IDS) - n_cohort_in_addr
+stopifnot(n_cohort_not_in_addr == c02_result$n_cohort_absent_from_addr)
+
 n_patients_no_zip5_ever <- c02_result$n_patients_no_zip5_ever
 n_present_no_usable_zip5 <- c02_result$n_present_no_usable_zip5
 
@@ -1754,6 +1763,11 @@ print(qc_tbl)
 # definition, WITHOUT characterizing whether the resulting completeness is
 # adequate (that is the team's call, not this script's).
 
+# P-07a: the ONE value specific to the KEY sheet's own documentation purpose --
+# n_cohort_in_addr/n_cohort_not_in_addr were already computed and asserted in SECTION 12,
+# immediately after compute_c02() ran (140-08-PATCH FIX-07); not recomputed or re-asserted here.
+n_addr_noncohort <- n_patients_total - n_cohort_in_addr
+
 key_tbl <- tibble(
   Field = c(
     "Script / Phase",
@@ -1762,6 +1776,8 @@ key_tbl <- tibble(
     "Source table (Part B/C sheets)",
     "Universe -- Part A sheets (A_stability_patient, A_stability_summary, A_validation_curve)",
     "Universe -- Part B/C sheets (B_scenario_counts, B_direction_split, C_completeness)",
+    "Part A vs Part B/C universe overlap (P-07a)",
+    "Sentinel ZIP nulling (Pitfall 2) -- status",
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
     "A-06 vs P-05a (140-06, encounter-anchored second estimate)",
@@ -1783,6 +1799,19 @@ key_tbl <- tibble(
     "ENCOUNTER (DuckDB, cohort-restricted)",
     "Address-history records (addr_coal, one row per LDS_ADDRESS_HISTORY record after date/sentinel filtering). Per Pitfall 1, these sheets are computed on address history, not encounters.",
     "Encounters (one row per cohort-restricted (ID, ENCOUNTERID, ADMIT_DATE) with a parseable ADMIT_DATE). Per Pitfall 1, these sheets are computed on encounters, not address history.",
+    glue(
+      "Part A's universe is addr_coal ({n_patients_total} patients, all patients in LDS_ADDRESS_HISTORY ",
+      "surviving date/sentinel filters), NOT the {length(COHORT_IDS)}-patient study cohort Part B/C use. ",
+      "Overlap: {n_cohort_in_addr}. {n_addr_noncohort} addr_coal patients are non-cohort; ",
+      "{n_cohort_not_in_addr} cohort patients have zero addr_coal rows and are entirely excluded from ",
+      "Part A (see QC sheet n_cohort_absent_from_addr / C-02 for the cohort-scoped figure; cross-checked ",
+      "in SECTION 12 immediately after compute_c02() runs, per 140-08-PATCH FIX-07). Part A's ",
+      "stability figures describe the address file, not the cohort."
+    ),
+    glue(
+      "Reviewed and closed: negligible impact ({n_zip9_sentinel_nulled} ZIP9, {n_zip5_sentinel_nulled} ",
+      "ZIP5 nulled in the {format(Sys.Date(), '%Y-%m-%d')} run). See QC sheet for the underlying counts."
+    ),
     glue("{length(COHORT_IDS)} (via get_hl_patient_ids(), the study cohort -- same population Part B and Part C count over)"),
     paste(
       "A-06 is computed on address-history records (addr_coal), using each record's",
@@ -2086,7 +2115,10 @@ add_styled_sheet(
 add_styled_sheet(
   wb, "A_stability_patient",
   title_text    = "A_stability_patient -- ZIP Stability Distribution (Patient-Level)",
-  subtitle_text = "Grain: unique patient (ID), Part A universe (address-history records, addr_coal). Bucketed distributions of n_zip9_transitions, n_zip5_transitions, and n_plus4_only_transitions across patients (HIPAA-safe: no raw ID rows).",
+  subtitle_text = glue(
+    "Grain: unique patient (ID), Part A universe (address-history records, addr_coal). Bucketed distributions of n_zip9_transitions, n_zip5_transitions, and n_plus4_only_transitions across patients (HIPAA-safe: no raw ID rows). ",
+    "Universe note: this sheet's population is addr_coal ({n_patients_total} patients), NOT the {length(COHORT_IDS)}-patient cohort Part B/C use -- see KEY sheet."
+  ),
   data_tbl      = stability_patient_tbl
 )
 
@@ -2100,7 +2132,10 @@ gap_histogram_and_deciles_tbl <- bind_rows(
 add_styled_sheet(
   wb, "A_stability_summary",
   title_text    = "A_stability_summary -- Headline Stability Stats, Gap-Day Distribution (A-05)",
-  subtitle_text = "Median/IQR/deciles + fixed-bucket histogram of gap-days between ZIP9 changes (A-05), plus median n_zip9_transitions, % zero-transition (Pitfall 6: median reported, never mean), and exposure-denominator (obs_span_years) summary.",
+  subtitle_text = glue(
+    "Median/IQR/deciles + fixed-bucket histogram of gap-days between ZIP9 changes (A-05), plus median n_zip9_transitions, % zero-transition (Pitfall 6: median reported, never mean), and exposure-denominator (obs_span_years) summary. ",
+    "Universe note: this sheet's population is addr_coal ({n_patients_total} patients), NOT the {length(COHORT_IDS)}-patient cohort Part B/C use -- see KEY sheet."
+  ),
   data_tbl      = stability_summary_tbl,
   extra_tbl     = gap_histogram_and_deciles_tbl,
   extra_label   = "Gap-day histogram (fixed buckets) + deciles (10th-90th percentile cutpoints, days) -- A-05's explicit 'median, IQR, deciles' requirement"
@@ -2120,7 +2155,9 @@ add_styled_sheet(
     "most STABLE patients in the file (64.8% of patients have zero ZIP9 transitions in the ",
     "08/06 run). Read alongside A_validation_curve_encounter_anchored (P-05a) for a second, ",
     "encounter-representative estimate -- though note that curve has its own selection ",
-    "limitation (see its subtitle)."
+    "limitation (see its subtitle). ",
+    "Universe note: this sheet's population is addr_coal ({n_patients_total} patients), NOT the ",
+    "{length(COHORT_IDS)}-patient cohort Part B/C use -- see KEY sheet."
   ),
   data_tbl      = validation_curve
 )
@@ -2141,7 +2178,10 @@ add_styled_sheet(
     "08/06 run) -- the encounters that need carry-forward are, by definition, the ones without ",
     "ground truth to validate against. Both validation curves also compute ZIP5 accuracy from ",
     "ZIP9-derived ZIP5, not zip5_coalesced, so ZIP5 accuracy is measured on the ZIP9-complete ",
-    "subpopulation only."
+    "subpopulation only. ",
+    "Universe note (P-07a): unlike the other Part A sheets, this sheet's population is ",
+    "cohort-restricted encounters (the Part B/C universe, further restricted to has_direct_zip9 ",
+    "== TRUE), NOT addr_coal -- see KEY sheet."
   ),
   data_tbl      = validation_curve_encounter_anchored
 )
