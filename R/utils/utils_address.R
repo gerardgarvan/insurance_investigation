@@ -15,6 +15,11 @@
 # Outputs:
 #   - get_zip9_at_date() returns a tibble: ID, query_date, ZIP9, ZIP5, match_type
 #     match_type values: "interval" | "most_recent_before" | "none"
+#   - normalize_zip9() / normalize_zip5() / normalize_zip5_raw(): ZIP normalization
+#     helpers (see function definitions below for exact contracts)
+#   - is_sentinel_zip5(zip5): TRUE for placeholder ZIP5 values (00000, 99999, and
+#     any other single-repeated-digit ZIP5), FALSE for genuine ZIP5s, NA for NA
+#     input (Phase 139, Pitfall 2)
 #
 # Dependencies:
 #   - dplyr, vroom, stringr, glue (project standard stack)
@@ -50,6 +55,16 @@ normalize_zip5_raw <- function(zip) {
   if_else(str_detect(z, "^[0-9]{5}$"), z, NA_character_)
 }
 
+# Sentinel/placeholder ZIP5 filter (Pitfall 2, Phase 139): 00000, 99999, and any
+# other single-repeated-digit ZIP5 are known placeholder/data-quality artifacts,
+# not real addresses. Applied by callers (e.g. R/115) BEFORE counting ZIP
+# transitions, so placeholder values don't inflate change counts. NOT called by
+# get_zip9_at_date() itself -- that function is Out of Scope for modification
+# in Phase 139; sentinel filtering is applied by callers on its output/inputs.
+is_sentinel_zip5 <- function(zip5) {
+  str_detect(zip5, "^(\\d)\\1{4}$")
+}
+
 #' Resolve ZIP9 (and ZIP5) for each (ID, query_date) pair using temporal lookup.
 #'
 #' Loads LDS_ADDRESS_HISTORY on demand (D-06: no caching), joins on ID, then
@@ -68,27 +83,43 @@ normalize_zip5_raw <- function(zip) {
 #'
 #' @param ids   Character vector of patient IDs (project convention: column "ID").
 #' @param dates Date vector of query dates (parallel to ids).
+#' @param addr_full Optional injection seam for tests (140-08-PATCH FIX-10). When
+#'   supplied, MUST have columns that are `character` or `Date` — matching what
+#'   the CSV load path produces. A `POSIXct` column is not guaranteed to survive
+#'   `as.character()` coercion into a `parse_pcornet_date()`-parseable format;
+#'   this parameter is a test seam, not a general-purpose data-loader replacement.
+#'   Defaults to NULL, preserving the existing load-on-demand behavior exactly.
 #' @return A tibble with ONE row per DISTINCT (ID, query_date) pair, sorted by
 #'   (ID, query_date): columns ID, query_date, ZIP9, ZIP5, match_type
 #'   ("interval" | "most_recent_before" | "none").
 #'   IMPORTANT: the result is NOT parallel to the input vectors — duplicate
 #'   (ID, date) pairs are returned once. Callers MUST join on c("ID","query_date");
 #'   do NOT cbind the result back onto a source frame.
-get_zip9_at_date <- function(ids, dates) {
+get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
   stopifnot(length(ids) == length(dates))
   queries <- tibble(ID = as.character(ids), query_date = as.Date(dates))
 
-  ADDR_FILENAME <- "LDS_ADDRESS_HISTORY_Mailhot_V1.csv"
-  addr_path <- file.path(CONFIG$data_dir, ADDR_FILENAME)
+  if (is.null(addr_full)) {
+    ADDR_FILENAME <- "LDS_ADDRESS_HISTORY_Mailhot_V1.csv"
+    addr_path <- file.path(CONFIG$data_dir, ADDR_FILENAME)
 
-  # D-06: load on demand — NOT precomputed/cached
-  addr_raw <- tryCatch(
-    vroom::vroom(addr_path, col_types = vroom::cols(.default = "c"), progress = FALSE),
-    error = function(e) {
-      message(glue("[utils_address] vroom failed ({conditionMessage(e)}); falling back to read.csv"))
-      read.csv(addr_path, colClasses = "character", na.strings = c("", "NA"))
-    }
-  )
+    # D-06: load on demand — NOT precomputed/cached
+    addr_raw <- tryCatch(
+      vroom::vroom(addr_path, col_types = vroom::cols(.default = "c"), progress = FALSE),
+      error = function(e) {
+        message(glue("[utils_address] vroom failed ({conditionMessage(e)}); falling back to read.csv"))
+        read.csv(addr_path, colClasses = "character", na.strings = c("", "NA"))
+      }
+    )
+  } else {
+    # P-07c: test-injection seam — character-coerce to match the file-load path's column
+    # types. 140-08-PATCH FIX-10: addr_full's columns MUST be character or Date, matching
+    # what the CSV load path above produces — a POSIXct column will coerce to
+    # "2020-01-01 00:00:00" via as.character(), which parse_pcornet_date() is not
+    # guaranteed to handle. This seam is not a general-purpose data-loader replacement;
+    # callers are responsible for passing character/Date columns.
+    addr_raw <- as.data.frame(lapply(addr_full, as.character), stringsAsFactors = FALSE)
+  }
 
   # Validate ID column (Pitfall 3: project convention is ID not PATID)
   if (!"ID" %in% names(addr_raw)) {
