@@ -189,3 +189,63 @@ test_that("open-ended address record: covered encounter classifies has_direct_zi
   expect_false(result$has_no_record[1])
   expect_false(result$has_record_but_empty[1])
 })
+
+
+# ==============================================================================
+# Task 1 (140-06): build_encounter_anchored_validation_cases() -- P-05a,
+# 140-08-PATCH FIX-05 (gap measured ADMIT_DATE - predicting record's period_start_dt,
+# NOT covering-record-to-predicting-record)
+# ==============================================================================
+
+test_that("encounter-anchored: predicts from the spell just prior to the covering record, gap_days = ADMIT_DATE - predicting period_start_dt (FIX-05)", {
+  # One patient, 3 zip9_seq spells: A at day 0, B at day 100, C at day 300
+  # (open-ended). One encounter with has_direct_zip9 = TRUE, direct_zip9 = C,
+  # direct_zip_period_start = day 300, ADMIT_DATE = day 320 (within C's active
+  # period, distinct from C's own start -- this is what makes the
+  # encounter-anchored gap differ from a record-to-record gap).
+  zip9_seq_fixture <- tibble(
+    ID = rep("P6", 3),
+    zip9_norm = c("326110001", "326110002", "326110003"),
+    period_start_dt = as.Date("2020-01-01") + c(0, 100, 300)
+  )
+
+  encounter_zip_fixture <- tibble(
+    ID = "P6",
+    ENCOUNTERID = "E1",
+    ADMIT_DATE = as.Date("2020-01-01") + 320,
+    has_direct_zip9 = TRUE,
+    direct_zip9 = "326110003",
+    direct_zip_period_start = as.Date("2020-01-01") + 300
+  )
+
+  cases <- .test_env$build_encounter_anchored_validation_cases(encounter_zip_fixture, zip9_seq_fixture)
+
+  expect_equal(nrow(cases), 1)
+  # Predicts from spell B (day 100, the record just prior to C), NOT spell C itself.
+  expect_equal(cases$gap_days[1], 220)              # ADMIT_DATE(320) - period_start_dt(100)
+  expect_false(cases$gap_days[1] == 200)             # NOT direct_zip_period_start(300) - period_start_dt(100)
+  expect_false(cases$exact_match[1])                 # predicted (B) != direct_zip9 (C)
+  expect_true(cases$zip5_match[1])                   # same ZIP5 prefix "32611"
+  expect_equal(cases$gap_bin[1], "181-365")
+})
+
+test_that("encounter-anchored: covering record is the patient's only spell -- contributes zero rows", {
+  zip9_seq_fixture <- tibble(
+    ID = "P7",
+    zip9_norm = "326110009",
+    period_start_dt = as.Date("2020-01-01")
+  )
+
+  encounter_zip_fixture <- tibble(
+    ID = "P7",
+    ENCOUNTERID = "E1",
+    ADMIT_DATE = as.Date("2020-06-01"),
+    has_direct_zip9 = TRUE,
+    direct_zip9 = "326110009",
+    direct_zip_period_start = as.Date("2020-01-01")
+  )
+
+  cases <- .test_env$build_encounter_anchored_validation_cases(encounter_zip_fixture, zip9_seq_fixture)
+
+  expect_equal(nrow(cases), 0)
+})

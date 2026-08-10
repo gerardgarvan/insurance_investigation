@@ -82,6 +82,7 @@ message("=== Phase 139: ZIP Stability and Imputation Occurrence Counts ===")
 #   140-09: compute_c02_baseline()
 #   139-04: compute_c02()
 #   140-05: compute_gap_days_at_assignment()
+#   140-06: build_encounter_anchored_validation_cases()
 
 coalesce_zip5 <- function(df) {
   df %>%
@@ -148,6 +149,56 @@ aggregate_validation_curve <- function(validation_cases) {
   )
 
   bind_rows(curve, overall_row)
+}
+
+# 140-06 P-05a (140-08-PATCH FIX-05/FIX-06): a SECOND, encounter-anchored validation curve.
+# build_validation_cases() above is record-anchored -- it samples address-CHANGE boundaries,
+# which structurally over-represents recently-changed addresses and excludes single-record
+# (most stable) patients entirely. This function instead samples real cohort ENCOUNTER
+# ADMIT_DATEs (has_direct_zip9 == TRUE only -- a genuine same-day covering record is the
+# ground truth) and predicts from the zip9_seq spell immediately PRIOR to that covering
+# record (the same backward most-recent-before rule get_zip9_at_date() applies), excluding
+# the covering record itself. gap_days is measured ADMIT_DATE - period_start_dt of the
+# PREDICTING spell (FIX-05) -- the staleness get_zip9_at_date() actually experiences in
+# production -- NOT direct_zip_period_start - period_start_dt (a record-to-record quantity,
+# the same kind A-06 already plots). Returns the same shape as build_validation_cases() so
+# aggregate_validation_curve() applies unchanged.
+build_encounter_anchored_validation_cases <- function(encounter_zip_with_direct, zip9_seq) {
+  ground_truth <- encounter_zip_with_direct %>%
+    filter(has_direct_zip9, !is.na(direct_zip_period_start)) %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, direct_zip9, direct_zip_period_start)
+
+  candidates <- ground_truth %>%
+    left_join(
+      zip9_seq %>% select(ID, zip9_norm, period_start_dt),
+      by = "ID", relationship = "many-to-many"
+    ) %>%
+    filter(period_start_dt < direct_zip_period_start)
+
+  nearest_prior <- candidates %>%
+    group_by(ID, ENCOUNTERID, ADMIT_DATE) %>%
+    slice_max(period_start_dt, n = 1, with_ties = FALSE) %>%
+    ungroup()
+
+  nearest_prior %>%
+    mutate(
+      predicted_zip9 = zip9_norm,
+      # 140-08-PATCH FIX-05: gap is measured from the ENCOUNTER date to the predicting
+      # record, not record-to-record -- this is the staleness get_zip9_at_date() sees in
+      # production, and it is what makes this curve readable against A-06's.
+      gap_days       = as.numeric(ADMIT_DATE - period_start_dt),
+      exact_match    = predicted_zip9 == direct_zip9,
+      zip5_match     = substr(predicted_zip9, 1, 5) == substr(direct_zip9, 1, 5),
+      gap_bin = case_when(
+        gap_days == 0   ~ "0 (same-day)",
+        gap_days <= 30  ~ "0-30",
+        gap_days <= 90  ~ "31-90",
+        gap_days <= 180 ~ "91-180",
+        gap_days <= 365 ~ "181-365",
+        TRUE            ~ "366+"
+      )
+    ) %>%
+    select(ID, ENCOUNTERID, ADMIT_DATE, gap_bin, gap_days, exact_match, zip5_match)
 }
 
 classify_encounter_zip <- function(encounters, addr_coal) {
