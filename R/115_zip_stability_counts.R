@@ -1698,6 +1698,7 @@ key_tbl <- tibble(
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
     "Non-monotonic ZIP5 accuracy diagnostic (140-05 P-04b)",
+    "Uncapped carry-forward design (D-3, resolved 2026-08-10)",
     "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04)",
     "Primary vs sensitivity spec (D-4, resolved 2026-08-08)",
     "C-02 historical control total (superseded by 140-09-PATCH FIX-17)",
@@ -1730,6 +1731,22 @@ key_tbl <- tibble(
       "value on a future HiPerGator run -- deferred per this phase's established dual-",
       "environment pattern (Rscript unavailable in this Windows planning environment), not",
       "silently resolved here."
+    ),
+    paste(
+      "D-3 (140-05 P-04a, resolved 2026-08-10): option-a selected -- ZIP5 is carried forward",
+      "WITHOUT a hard time-window cap (no 90/180/365-day discard rule). gap_days_at_assignment",
+      "(forward-inclusive) and gap_days_at_assignment_backward_only (never-negative) are reported",
+      "as analytic covariates/sensitivity variables on the Part B/C encounter-level output instead",
+      "-- recency is a sensitivity analysis (filter/stratify on these columns downstream), not a",
+      "discard rule baked into this script. Rationale: median gap between ZIP9 changes is 547",
+      "days (p25 184, p75 1,310; only ~22% of gap observations fall under 180 days), and ZIP5",
+      "accuracy flattens around 52-57% past 90 days with no decay cliff that would justify a cutoff",
+      "at any of 90/180/365 days -- a cap would strand the majority of encounters for little",
+      "accuracy gain. This decision requires NO code changes: Task 1 of 140-05 already implements",
+      "the uncapped design exactly as described. Rejected: option-b (impose a cap at N days),",
+      "which was not selected and is NOT built by this plan -- no discard/cap logic, no",
+      "within_cap flag, and no filtering of the analytic dataset exist anywhere in this script.",
+      "See 140-05-SUMMARY.md for the full decision record."
     ),
     paste(
       "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer",
