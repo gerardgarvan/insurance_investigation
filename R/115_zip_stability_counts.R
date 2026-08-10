@@ -1276,6 +1276,22 @@ message(glue(
   "{sum(!is.na(encounter_zip$gap_days_at_assignment_backward_only))} of {n_encounters_total} (never-negative invariant confirmed)."
 ))
 
+# ---- 140-06 P-05a / 140-08-PATCH FIX-05/FIX-06: encounter-anchored validation curve, a
+# SECOND estimate alongside A-06's record-anchored one. encounter_zip is now fully assembled
+# (all Section 11 columns above, including gap_days_at_assignment) -- reuse it directly, do
+# not re-derive a subset. ----
+encounter_anchored_cases <- build_encounter_anchored_validation_cases(encounter_zip, zip9_seq)
+validation_curve_encounter_anchored <- aggregate_validation_curve(encounter_anchored_cases)
+
+message("\n=== P-05a: Encounter-Anchored Validation Curve (Real ADMIT_DATEs, Second Estimate) ===")
+print(validation_curve_encounter_anchored)
+message(glue(
+  "P-05a: {nrow(encounter_anchored_cases)} encounter-anchored test cases (from {n_distinct(encounter_anchored_cases$ID)} patients), ",
+  "vs. {nrow(validation_cases)} record-anchored cases (A-06). Read these two curves alongside each other, ",
+  "not as a replacement -- see KEY sheet / A_validation_curve subtitle for the lower-bound framing (P-05b), ",
+  "and this sheet's own subtitle for its 74.4%-subpopulation limitation (140-08-PATCH FIX-06)."
+))
+
 # NOTE (140-04 P-06b, amended by 140-08-PATCH FIX-04): S1 is no longer a distinct ordered
 # bucket -- every has_direct_zip5_only encounter is assigned "S3" regardless of
 # S1-eligibility. Unordered s1_backward/s1_forward/s1_either counts remain reported on
@@ -1748,6 +1764,7 @@ key_tbl <- tibble(
     "Universe -- Part B/C sheets (B_scenario_counts, B_direction_split, C_completeness)",
     "Cohort N (Part B/C population)",
     "A-06 sampling frame (139-05-PATCH FIX-01)",
+    "A-06 vs P-05a (140-06, encounter-anchored second estimate)",
     "Non-monotonic ZIP5 accuracy diagnostic (140-05 P-04b)",
     "Uncapped carry-forward design (D-3, resolved 2026-08-10)",
     "Ordered vs unordered S3 (140-04 P-06b, amended by 140-08-PATCH FIX-04)",
@@ -1771,7 +1788,29 @@ key_tbl <- tibble(
       "A-06 is computed on address-history records (addr_coal), using each record's",
       "period_start_dt as the lookup date. This measures the same carry-forward rule",
       "get_zip9_at_date() applies in production. Per Pitfall 1, Part A sheets are computed",
-      "on address history, not encounters."
+      "on address history, not encounters. LOWER BOUND (P-05b, 140-06): this record-anchored",
+      "sampling over-represents recently-changed addresses (address records exist BECAUSE",
+      "something changed) and structurally excludes single-record patients -- the most STABLE",
+      "patients in the file -- from the hold-out test entirely (see n_excluded_no_prior on the",
+      "A_validation_curve sheet subtitle; 64.8% of patients have zero ZIP9 transitions in the",
+      "08/06 run). A_validation_curve's headline accuracy figures should never be read alone as",
+      "a production accuracy estimate -- read alongside A_validation_curve_encounter_anchored",
+      "(P-05a), which has its own selection limitation instead (see the next field)."
+    ),
+    paste(
+      "P-05a (140-06, 140-08-PATCH FIX-05/FIX-06): A_validation_curve_encounter_anchored samples",
+      "real cohort ENCOUNTER ADMIT_DATEs (not address-change boundaries) and predicts via the",
+      "same backward most-recent-before rule get_zip9_at_date() applies, so it naturally includes",
+      "stable patients in proportion to how often they actually generate encounters -- the",
+      "structural gap A_validation_curve's record-anchored sampling has. The two curves can",
+      "diverge because they sample different populations under different rules. P-05a's own",
+      "selection limitation (140-08-PATCH FIX-06): it is computed only on the ~74.4% of",
+      "encounters that already have a covering ZIP9 (has_direct_zip9 == TRUE) -- exactly the",
+      "subpopulation carry-forward is NOT needed for, since a genuine same-day ground-truth",
+      "record is required to score a prediction against. Both curves' ZIP5 accuracy is computed",
+      "from the ZIP9-derived ZIP5 (substr(predicted_zip9, 1, 5)), NOT zip5_coalesced -- material",
+      "since D-2 was decided partly on ZIP5-vs-ZIP9 accuracy evidence. Read both curves together,",
+      "neither alone, as the best available production-accuracy picture."
     ),
     paste(
       "140-05 P-04b: A_validation_curve's median_gap_within_bin column exists specifically to",
@@ -1882,10 +1921,10 @@ print(key_tbl)
 
 
 # ==============================================================================
-# SECTION 15: WRITE STYLED XLSX (FULL 8-SHEET WORKBOOK) ----
+# SECTION 15: WRITE STYLED XLSX (FULL 9-SHEET WORKBOOK) ----
 # ==============================================================================
 
-message("--- Writing zip_stability_counts_YYYYMMDD.xlsx (8 sheets) ---")
+message("--- Writing zip_stability_counts_YYYYMMDD.xlsx (9 sheets) ---")
 
 # UF brand colors, per 139-CONTEXT.md's deliverable spec ("Charts use UF colors (#0021A5,
 # #FA4616)"). NOTE: this is a DIFFERENT blue than utils_pptx.R's UF_BLUE ("#003087") --
@@ -2075,9 +2114,36 @@ add_styled_sheet(
     "from the most recent PRIOR record with a non-NA ZIP9, binned by elapsed gap-days. ",
     "{n_excluded_no_prior} patients excluded (single usable record, no prior to predict from). ",
     "Base rate (unchanged-address test cases): {pct_unchanged}%. Same-day pairs: {n_same_day}. ",
-    "Block-group tier: {block_group_tier_status}."
+    "Block-group tier: {block_group_tier_status}. LOWER BOUND: this record-anchored sampling ",
+    "over-represents recently-changed addresses (address records exist BECAUSE something ",
+    "changed) and structurally excludes {n_excluded_no_prior} single-record patients -- the ",
+    "most STABLE patients in the file (64.8% of patients have zero ZIP9 transitions in the ",
+    "08/06 run). Read alongside A_validation_curve_encounter_anchored (P-05a) for a second, ",
+    "encounter-representative estimate -- though note that curve has its own selection ",
+    "limitation (see its subtitle)."
   ),
   data_tbl      = validation_curve
+)
+
+add_styled_sheet(
+  wb, "A_validation_curve_encounter_anchored",
+  title_text    = "A_validation_curve_encounter_anchored -- Second Estimate, Real ADMIT_DATEs (P-05a)",
+  subtitle_text = glue(
+    "Samples real cohort-restricted ENCOUNTER ADMIT_DATEs (not address-change boundaries), ",
+    "predicts via the same backward most-recent-before rule get_zip9_at_date() applies, ",
+    "compares against a same-day covering address record where one exists. Gap is measured ",
+    "from the ENCOUNTER date to the predicting record (140-08-PATCH FIX-05), the same ",
+    "staleness quantity get_zip9_at_date() experiences in production. Unlike A_validation_curve ",
+    "(record-anchored, a LOWER BOUND -- see its subtitle), this curve naturally includes stable ",
+    "patients in proportion to how often they actually generate encounters, rather than ",
+    "excluding single-record patients by construction. Limitation (140-08-PATCH FIX-06): this ",
+    "curve is computed only on encounters that already have a covering ZIP9 (74.4% in the ",
+    "08/06 run) -- the encounters that need carry-forward are, by definition, the ones without ",
+    "ground truth to validate against. Both validation curves also compute ZIP5 accuracy from ",
+    "ZIP9-derived ZIP5, not zip5_coalesced, so ZIP5 accuracy is measured on the ZIP9-complete ",
+    "subpopulation only."
+  ),
+  data_tbl      = validation_curve_encounter_anchored
 )
 
 add_styled_sheet(
