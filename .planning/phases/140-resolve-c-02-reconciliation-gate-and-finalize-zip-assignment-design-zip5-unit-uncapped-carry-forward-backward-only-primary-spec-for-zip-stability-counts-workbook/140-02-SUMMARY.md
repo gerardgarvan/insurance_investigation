@@ -31,16 +31,44 @@ key-files:
 key-decisions:
   - "D-2: ZIP5 accepted as the primary analysis unit now (option-a), not deferred pending the block-group crosswalk re-run -- the block-group confirmation stays confirmatory, not gating, per 140-CONTEXT.md's own design"
   - "P-03a crosswalk acquisition: not available -- explicitly deferred. Block-group tier remains gracefully degraded (not a regression from Phase 139's shipped state); P-03b (A-06 re-run with block-group tier populated) and full P-03c confirmation stay deferred as follow-up work outside this plan's scope"
+  - "(140-09-PATCH FIX-23, added 2026-08-06) D-2 sequencing: decided using the ZIP5-vs-ZIP9 accuracy comparison only, block-group evidence unavailable and unpopulated at decision time -- if the block-group tier later disagrees, D-2 was made without that evidence, not against it"
 
 patterns-established:
   - "Geographic crosswalk staging: document the exact contract (path/columns/vintage/threshold) before the file exists, so acquisition is a pure human-action with zero follow-on code risk"
 
-requirements-completed: [P-03a, P-03b, P-03c, D-2]
+requirements-met: [D-2]              # 140-09-PATCH FIX-19: a decision was recorded, which was D-2's acceptance
+requirements-deferred:                # 140-09-PATCH FIX-19: addressed but their stated acceptance criteria are
+                                       # unmet -- has_block_group_crosswalk is FALSE, pct_block_group_match was
+                                       # never populated, and no P-03b output existed to decide P-03c against
+  - id: P-03a
+    reason: "Neighborhood Atlas crosswalk file not obtained by the team"
+    owner: "Erin / Amy"
+    trigger: "Resumes once the file is staged at data/reference/neighborhood_atlas_block_group_crosswalk.csv -- no code changes needed, contract already documented"
+  - id: P-03b
+    reason: "A-06 re-run with the block-group tier populated depends on P-03a's file being staged first"
+    owner: "Erin / Amy"
+    trigger: "Automatic once P-03a resolves and R/115 is re-run on HiPerGator"
+  - id: P-03c
+    reason: "No P-03b output exists yet to confirm or revise the D-2 ZIP5 recommendation against"
+    owner: "Erin / Amy"
+    trigger: "Resolves once P-03b produces pct_block_group_match figures"
+requirements-withdrawn: []
 
 # Metrics
 duration: 25min (Task 1, prior session) + this session (Task 2/3 resolution)
 completed: 2026-08-06
 ---
+
+> **Amended 2026-08-06 by 140-09-PATCH FIX-19:** This summary's frontmatter originally
+> listed `P-03a, P-03b, P-03c, D-2` under `requirements-completed`. That overstated
+> completion -- this plan's own prose says the crosswalk was "not available" (P-03a's
+> criterion is `has_block_group_crosswalk = TRUE`, which is FALSE), `pct_block_group_match`
+> was never populated (P-03b), and no P-03b output existed for P-03c to decide against.
+> P-03a/b/c are now `requirements-deferred`, each with an owner (Erin/Amy) and a resume
+> trigger; only `D-2` (a decision was recorded, which was its acceptance) remains
+> `requirements-met`. See frontmatter. Also per 140-09-PATCH FIX-23: D-2 was decided
+> before the block-group evidence existed, not against it -- see the new "D-2 sequencing"
+> note added below under Decisions Made.
 
 # Phase 140 Plan 02: Crosswalk Staging Contract + D-2 ZIP5 Decision Summary
 
@@ -78,6 +106,7 @@ _Note: Tasks 2 and 3 have no `<files>` tag in the plan -- they are decision-reco
 ## Decisions Made
 - **D-2 (ZIP5 as primary analysis unit):** option-a selected -- ZIP5 is accepted as the primary analysis unit now, not deferred pending the block-group crosswalk re-run. Rationale: 140-CONTEXT.md's real accuracy-by-gap-bin evidence shows ZIP5 exact-match consistently outperforming ZIP9 exact-match at every horizon past same-day (61.8% vs. 37.1% overall; e.g. 52.0% vs. 29.1% at 181-365 days), and 39.3% of ZIP9 transitions are +4-only (same ZIP5). The countervailing consideration (ZIP9-exact is a conservative proxy that understates ZIP9's true block-group-level utility) is acknowledged but does not block downstream Phase 140 work, per 140-CONTEXT.md's own recommendation that the block-group re-run be confirmatory, not gating. This decision unblocks Plans 140-04 through 140-07 and specifically confirms 140-04's S1-fold-in design (140-08-PATCH FIX-03) is applicable.
 - **P-03a crosswalk acquisition:** explicitly deferred -- "not available." The Neighborhood Atlas portal file has not been obtained by the team. This is recorded as a deliberate deferral, not a silent skip: the block-group tier remains gracefully degraded (`block_group_tier_status = "not available (crosswalk file not found)"`), which is the same behavior Phase 139 already shipped -- not a regression. P-03b (A-06 re-run with block-group tier populated) and full P-03c confirmation are follow-up work outside this plan's scope, to be picked up whenever the file is eventually staged (no code changes will be needed at that point, per Task 1's contract).
+- **D-2 sequencing note (added 2026-08-06 by 140-09-PATCH FIX-23):** D-2 accepted ZIP5 with the block-group evidence deferred open-endedly ("whenever the file is eventually staged"). That is reversible in code, but once ZIP5-based figures reach Erin and Amy, reversing becomes a methodological retraction rather than an edit -- the practical reversibility window closes at first delivery, not at the end of the phase. Recorded here explicitly: **D-2 was decided on 2026-08-06 using the ZIP5-vs-ZIP9 accuracy comparison in `A_validation_curve` only.** The block-group tier -- which would measure whether ZIP9's +4 carries geographic information the ZIP5 comparison cannot see -- was not available at the time of decision and remains unpopulated (P-03a deferred). If it is later populated and disagrees with D-2, this decision was made *without* that evidence, not *against* it. P-03b should be given an owner and a review date rather than an open-ended deferral; if the crosswalk has not been obtained by that date, that is itself a decision to record, not a silent continuation of the status quo.
 
 ## Deviations from Plan
 

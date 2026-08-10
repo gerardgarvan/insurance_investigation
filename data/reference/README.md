@@ -22,21 +22,32 @@ Requires portal access/download -- not obtainable via CLI or API. If the team ha
 existing internal source for this crosswalk, use that instead of a fresh Neighborhood
 Atlas download.
 
-**Vintage (140-08-PATCH FIX-11):** Neighborhood Atlas publishes ZIP+4-to-block-group
-files by release year (known releases include 2015, 2019, 2020, 2021). Applying an
-off-vintage crosswalk to LDS_ADDRESS_HISTORY records (study period 2012-01-01 to
-2025-03-31, per ZIP_STUDY_PERIOD_MIN/MAX) risks the block-group tier attributing
-boundary-redefinition noise to carry-forward error, or vice versa. Required vintage for
-this deliverable: the most recent Neighborhood Atlas release available at acquisition
-time (as of this document, that is the 2021 release) -- recommended as the default
-choice, PENDING TEAM CONFIRMATION (same pending-confirmation posture as the 90% match-rate
-threshold below; do not treat either as final without Erin/Amy sign-off). Whichever
-release year is actually obtained, record it in this README (below) and note it in the
-KEY sheet -- the block-group tier's accuracy figures are conditional on that choice and
-must not be reported as vintage-neutral. If multiple vintages end up staged
-side-by-side, R/115 SECTION 8 must be extended to select one explicitly (by filename
-convention or a config constant) rather than globbing for "a" crosswalk file -- it does
-not do this today because only one vintage is expected to be staged at a time.
+**Vintage (140-08-PATCH FIX-11; corrected 2026-08-06 by 140-09-PATCH FIX-22):**
+Neighborhood Atlas publishes ZIP+4-to-block-group files by release year (known releases
+include 2015, 2019, 2020, 2021). LDS_ADDRESS_HISTORY's study period is 2012-01-01 to
+2025-03-31 (per ZIP_STUDY_PERIOD_MIN/MAX) -- a 13-year span. **A single crosswalk
+vintage cannot match a 13-year study period; no such vintage exists.** Do not describe
+any single release as "matched to the study period." Choose explicitly between:
+
+- **Single vintage (simpler).** Use the 2021 Neighborhood Atlas release only, and
+  document that ZIP+4-to-block-group assignments drift over a 13-year window, so a
+  share of A-06's block-group misses will be crosswalk-vintage error rather than
+  carry-forward error. State this as a known limitation of the block-group tier, both
+  here and on the A-06 sheet -- not as a settled match.
+- **Two vintages (defensible).** Stage both 2015 and 2021, run A-06's block-group tier
+  against each, and report the spread. If the two agree, vintage drift is not material
+  for this deliverable and the limitation above can be dropped. If they diverge, that
+  divergence *is* the measurement error and belongs in the methods, not in a caveat.
+
+Either is acceptable; PENDING TEAM CONFIRMATION which one (same pending-confirmation
+posture as the 90% match-rate threshold below -- do not treat either as final without
+Erin/Amy sign-off). Whichever release year(s) are actually obtained, record them in this
+README (below) and note them in the KEY sheet -- the block-group tier's accuracy figures
+are conditional on that choice and must not be reported as vintage-neutral. If multiple
+vintages end up staged side-by-side, R/115 SECTION 8 must be extended to select
+explicitly (by filename convention or a config constant) or to run both and report the
+spread per the two-vintage option above -- it does not do either today because only one
+vintage is expected to be staged at a time.
 
 **Expected columns** (R/115 SECTION 8 probes for the first match in each list; if the
 staged file uses different names, add them to R/115's `candidate_cols`/`candidate_bg_cols`

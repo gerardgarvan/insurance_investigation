@@ -3,6 +3,11 @@
 **Status:** Workbook `zip_stability_counts_20260806.xlsx` is on hold. C-02 gate failed.
 **Inputs reviewed:** `R/115_zip_stability_counts.R`, `R/utils/utils_address.R`, run of 2026-08-06.
 **Cohort N:** 9,282. **Encounters:** 1,980,122.
+**Amended 2026-08-06 by 140-09-PATCH (FIX-17/18):** §2's P-01a/b/c (re-derive/confirm the
+26-patient control total) are withdrawn — provenance is unrecoverable and the phase will
+not stay blocked on it. C-02 is now gated on three internally-checkable invariants
+(coalescing monotonicity, partition identity, coverage floor) that do not require the 26.
+See §2 and §9 (D-5) below for the current design.
 
 ---
 
@@ -41,14 +46,25 @@ expected value is stale relative to the patched definition and the pipeline is c
 
 ### P-01 tasks
 
+**140-09-PATCH FIX-18 (2026-08-06): the 26-patient control total is retired as a gate
+input.** Its provenance is not going to be confirmed, and the phase should not stay
+blocked on an archaeological question about a meeting note. P-01a/b/c below are
+withdrawn, not completed — see 140-09-PATCH FIX-17 for the replacement design (three
+internally-checkable invariants: coalescing monotonicity, partition identity, coverage
+floor) and P-01d/P-01e below.
+
 | ID | Task | Acceptance |
 | --- | --- | --- |
-| P-01a | Re-derive the 26-patient control total from the originating team notes — record the exact denominator it was computed over | Written statement of the denominator, filed with the phase notes |
-| P-01b | If P-01a confirms a file-present denominator, reset `C02_EXPECTED` against a re-derived cohort-scoped total and document the change in the KEY sheet | `c02_reconciled = PASS` with the basis for the new expected value stated, not just the number changed |
-| P-01c | If P-01a does **not** confirm it, escalate before any further work — the coalescing hypothesis is back in scope | — |
+| ~~P-01a~~ | ~~Re-derive the 26-patient control total from the originating team notes~~ | **Withdrawn (140-09-PATCH FIX-18)** — provenance unrecoverable from this codebase or the team in-session; superseded by P-01d |
+| ~~P-01b~~ | ~~Reset `C02_EXPECTED` against a re-derived cohort-scoped total~~ | **Withdrawn** — `C02_EXPECTED`/`C02_TOLERANCE` are retired from the gate expression (kept defined, reported as a historical footnote only) |
+| ~~P-01c~~ | ~~If P-01a does not confirm it, escalate before any further work~~ | **Withdrawn** — the escalation trigger no longer exists; there is nothing left to confirm |
+| P-01d | Replace the C-02 gate with three internally-checkable invariants (C-02a coalescing monotonicity, C-02b partition identity, C-02c coverage floor) per FIX-17 | `c02_reconciled = TRUE` on a real run, or a named invariant identifying which one failed |
+| P-01e | Report `n_zip5_recovered_by_coalesce` and `pct_cohort_with_any_address` as named QC rows | Both present; recovery figure reviewed at the Wave 2.5 gate |
 
 Do not widen `C02_TOLERANCE` to absorb this. FIX-03d narrowed the tolerance to
-cohort-definition drift specifically; using it as general slack would undo that.
+cohort-definition drift specifically; using it as general slack would undo that. (As of
+FIX-18, `C02_TOLERANCE` is retired from the gate expression entirely rather than widened
+— the invariant-based design in FIX-17 replaces tolerance-band comparison altogether.)
 
 ---
 
@@ -218,16 +234,22 @@ Divergence is itself a reportable finding.
 
 | # | Decision | Owner | Blocks |
 | --- | --- | --- | --- |
-| D-1 | Confirm the denominator behind the 26-patient control total | Erin / Amy | P-01, release |
+| ~~D-1~~ | ~~Confirm the denominator behind the 26-patient control total~~ | Erin / Amy | **Withdrawn (140-09-PATCH FIX-18)** — resolved 2026-08-06 as "provenance unrecoverable, retire the constant as a gate input"; see D-5 for the decision that replaces it |
 | D-2 | Accept ZIP5 as the analysis unit (pending P-03b) | Erin / Amy | P-03c |
 | D-3 | Accept uncapped carry-forward with gap-days as a covariate | Erin / Amy | P-04a |
 | D-4 | Accept or reject forward lookup in the primary specification | Erin / Amy | P-06c, P-06d |
+| D-5 | Confirm `C02_COVERAGE_FLOOR` (proposed 0.90 — 92.9% observed) | Erin / Amy | P-01d, release |
+
+D-5 (140-09-PATCH FIX-18) is a genuine judgement call about acceptable cohort address
+coverage and belongs with the team. Unlike D-1 it is answerable from information that
+already exists (the 656-of-9,282 coverage figure), not an archaeological question about
+a meeting note.
 
 ---
 
 ## 10. Sequence
 
-1. **P-01** — resolve the C-02 gate. Nothing ships before this.
+1. **P-01** — replace the C-02 gate with invariants (140-09-PATCH FIX-17/FIX-18) and confirm D-5. Nothing ships before `c02_reconciled = TRUE`.
 2. **P-02** — coverage investigation, in parallel with P-01.
 3. **P-03a/b** — obtain crosswalk, re-run A-06 with block-group tier.
 4. **D-1 through D-4** — team decisions, informed by steps 1–3.
@@ -248,8 +270,9 @@ Divergence is itself a reportable finding.
 
 ## Summary
 
-Hold the workbook, but treat C-02 as a stale expected value rather than a pipeline
-defect until P-01a says otherwise — 656 of the 665 are coverage, not coalescing. Build
-on ZIP5 with uncapped carry-forward and a gap-days covariate, pending the block-group
-crosswalk. Lead with the backward-only specification and report forward-inclusive as
-sensitivity.
+Hold the workbook until `c02_reconciled = TRUE` under the invariant-based gate
+(140-09-PATCH FIX-17) and D-5 is confirmed — 656 of the 665 original gap are coverage,
+not coalescing, and the 26-patient control total's provenance is retired as a gate input
+rather than chased further. Build on ZIP5 with uncapped carry-forward and a gap-days
+covariate, pending the block-group crosswalk. Lead with the backward-only specification
+and report forward-inclusive as sensitivity.

@@ -32,7 +32,17 @@ key-decisions:
 patterns-established:
   - "C-02 fixtures live in tests/testthat/test-115-c02.R (sibling to test-115-validation-curve.R), per 140-08-PATCH FIX-16, so a single shared test file does not keep absorbing every Phase 140 plan's fixtures"
 
-requirements-completed: [P-01a, P-01b, P-01c, D-1]
+requirements-met: [D-1]              # 140-09-PATCH FIX-19: a decision was recorded, which was D-1's acceptance
+requirements-deferred: []
+requirements-withdrawn:              # 140-09-PATCH FIX-19: acceptance criteria (written denominator statement /
+                                      # c02_reconciled = PASS / an escalation trigger) were never met -- P-01a/b/c
+                                      # are superseded by 140-09-PATCH FIX-18's invariant-based redesign, not completed
+  - id: P-01a
+    superseded-by: "140-09-PATCH FIX-18 (P-01d): provenance unrecoverable, retired as a gate input"
+  - id: P-01b
+    superseded-by: "140-09-PATCH FIX-18 (P-01d): C02_EXPECTED/C02_TOLERANCE retired from the gate expression"
+  - id: P-01c
+    superseded-by: "140-09-PATCH FIX-18 (P-01d): the escalation trigger no longer exists"
 
 # Metrics
 duration: Task 1 ~15min (prior session) + this session (Task 3 implementation + close-out) ~30min
@@ -40,6 +50,15 @@ completed: 2026-08-06
 ---
 
 # Phase 140 Plan 01: C-02 Present-vs-Absent Breakdown + D-1 Comparison-Basis Correction Summary
+
+> **Amended 2026-08-06 by 140-09-PATCH FIX-19:** This summary's frontmatter originally
+> listed `P-01a, P-01b, P-01c, D-1` under `requirements-completed`. That overstated
+> completion -- this plan's own prose says P-01a's denominator was "recorded as an
+> unconfirmed open item" (not a written statement of the denominator, P-01a's actual
+> acceptance criterion), and `c02_reconciled` reads FAIL, not PASS (P-01b's criterion).
+> P-01a/b/c are now `requirements-withdrawn` (superseded by 140-09-PATCH FIX-18's
+> invariant-based C-02 redesign, not completed); only `D-1` (a decision was recorded,
+> which was its acceptance) remains `requirements-met`. See frontmatter.
 
 **compute_c02() now exposes n_present_no_usable_zip5 (the only population a genuine ZIP5-coalescing defect could produce); the C-02 reconciliation gate's comparison basis is corrected to use it instead of the conflated n_patients_no_zip5_ever, per an explicit user-directed D-1 decision that deviates from the plan's anticipated team-confirmation branches -- C02_EXPECTED/C02_TOLERANCE stay unchanged and the gate remains a documented, open FAIL.**
 
