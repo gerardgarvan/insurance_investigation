@@ -1851,6 +1851,62 @@ if (has_block_group_crosswalk && exists("n_zip9_matched_to_block_group")) {
   )
 }
 
+# Phase 141 D-03: imputation source breakdown at ENCOUNTER grain (one row per
+# ID + ENCOUNTERID + ADMIT_DATE), so it shares a denominator with the other QC rows.
+ZIP9_SOURCE_LEVELS <- c(
+  "zip9_observed", "zip5_modal", "zip5_no_zip9", "no_zip5",
+  "none", "reference_unavailable", "invalid_input", "no_lookup_row"
+)
+
+imputation_qc_rows <- encounter_zip %>%
+  mutate(
+    zip9_source = factor(
+      coalesce(zip9_source, "no_lookup_row"),
+      levels = ZIP9_SOURCE_LEVELS
+    )
+  ) %>%
+  count(zip9_source, name = "n_encounters", .drop = FALSE) %>%
+  transmute(
+    Metric = glue("n_zip9_source_{zip9_source} (encounter grain, approximate_zip9, Phase 141 D-03)"),
+    Value  = as.character(n_encounters)
+  )
+
+qc_tbl <- bind_rows(
+  qc_tbl,
+  tibble(
+    Metric = "n_encounters_zip9_after_imputation (has_zip9_after_imputation == TRUE, Phase 141)",
+    Value  = as.character(sum(encounter_zip$has_zip9_after_imputation, na.rm = TRUE))
+  ),
+  tibble(
+    Metric = "n_encounters_gained_zip9_via_carryforward (was has_direct_zip9==FALSE, zip9_source=='zip9_observed', Phase 141)",
+    Value  = as.character(n_gained_carryforward)
+  ),
+  tibble(
+    Metric = "n_encounters_gained_zip9_via_zip5_modal_imputation (was has_direct_zip9==FALSE, zip9_source=='zip5_modal', Phase 141)",
+    Value  = as.character(n_gained_modal)
+  ),
+  tibble(
+    Metric = "zip5_modal_share_median_among_imputed (zip5_modal rows, Phase 141)",
+    Value  = as.character(round(median(
+      zip9_imputed_assignment$zip5_modal_share[
+        zip9_imputed_assignment$zip9_source == "zip5_modal"], na.rm = TRUE), 3))
+  ),
+  tibble(
+    Metric = "zip5_modal_share_iqr_among_imputed (zip5_modal rows, Phase 141)",
+    Value  = paste(round(quantile(
+      zip9_imputed_assignment$zip5_modal_share[
+        zip9_imputed_assignment$zip9_source == "zip5_modal"],
+      probs = c(0.25, 0.75), na.rm = TRUE), 3), collapse = " - ")
+  ),
+  tibble(
+    Metric = "zip5_n_candidates_median_among_imputed (zip5_modal rows, Phase 141)",
+    Value  = as.character(median(
+      zip9_imputed_assignment$zip5_n_candidates[
+        zip9_imputed_assignment$zip9_source == "zip5_modal"], na.rm = TRUE))
+  ),
+  imputation_qc_rows
+)
+
 message("--- QC sheet data assembled (Section 13) ---")
 print(qc_tbl)
 
