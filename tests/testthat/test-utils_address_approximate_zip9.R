@@ -194,7 +194,7 @@ test_that("Test 4: zip9_observed -- already-filled ZIP9 rows returned unchanged"
 
 # ---- Test 5: probe-first gate ------------------------------------------------
 
-test_that("Test 5: probe-first gate -- absent LDS file returns input unchanged (no error)", {
+test_that("Test 5: probe-first gate -- absent LDS returns same schema with reference_unavailable", {
   td <- withr::local_tempdir()  # no CSV written
   old_dir <- CONFIG$data_dir
   CONFIG$data_dir <<- td
@@ -202,32 +202,41 @@ test_that("Test 5: probe-first gate -- absent LDS file returns input unchanged (
   .zip5_lookup_cache$key   <<- NULL
   .zip5_lookup_cache$value <<- NULL
 
-  input <- make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval")
+  input <- bind_rows(
+    make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval"),
+    make_result_row("P02", "2021-01-01", "123450001",   "12345", "interval")
+  )
 
-  # Should not error or stop; should emit a message
   expect_message(
     out <- approximate_zip9(input),
     regexp = "LDS_ADDRESS_HISTORY not found"
   )
+
+  expected_cols <- c(names(input), "zip9_source", "zip5_modal_freq",
+                     "zip5_n_candidates", "zip5_modal_share")
+  expect_setequal(names(out), expected_cols)
   expect_equal(nrow(out), nrow(input))
-  expect_equal(names(out), names(input))  # no extra columns
+
+  # approximable row should be reference_unavailable; already-filled row is zip9_observed
+  expect_true(all(out$zip9_source %in% c("zip9_observed", "reference_unavailable")))
+  expect_equal(sum(out$zip9_source == "reference_unavailable"), 1L)
 })
 
 # ---- Test 6: tie-break by recency --------------------------------------------
 
 test_that("Test 6: tie-break by recency -- equal freq, more recent wins", {
-  # ZIP5 55555: two ZIP9s each seen by 1 distinct patient; more recent wins
+  # ZIP5 55501 (non-sentinel): two ZIP9s each seen by 1 distinct patient; more recent wins
   lds_tiebreak <- tribble(
     ~ID,  ~ADDRESS_ZIP9, ~ADDRESS_PERIOD_START,
-    "PA", "555550001",   "2019-01-01",
-    "PB", "555550002",   "2022-06-01"   # <- more recent, should win
+    "PA", "555010001",   "2019-01-01",
+    "PB", "555010002",   "2022-06-01"   # <- more recent, should win
   )
 
-  input <- make_result_row("PX", "2021-01-01", NA_character_, "55555", "interval")
+  input <- make_result_row("PX", "2021-01-01", NA_character_, "55501", "interval")
   out   <- run_approx(input, lds_tiebreak)
 
   expect_equal(out$zip9_source, "zip5_modal")
-  expect_equal(out$ZIP9, "555550002")
+  expect_equal(out$ZIP9, "555010002")
 })
 
 # ---- Test 7: schema -----------------------------------------------------------
@@ -292,31 +301,134 @@ test_that("Test 10: no_zip5 -- ZIP9=NA, ZIP5=NA, match_type != none -> no_zip5",
   expect_equal(out$match_type, "most_recent_before")
 })
 
+# ---- Test 12: schema invariance across all four exit paths -------------------
+
+test_that("Test 12: schema invariance -- names() identical on all four exit paths", {
+  expected_cols <- c("ID", "query_date", "ZIP9", "ZIP5", "match_type",
+                     "zip9_source", "zip5_modal_freq", "zip5_n_candidates", "zip5_modal_share")
+
+  input <- make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval")
+
+  # Path 1: normal run (file present, candidates exist)
+  out_normal <- run_approx(input, lds_base)
+  expect_setequal(names(out_normal), expected_cols)
+
+  # Path 2: probe gate (file absent)
+  td_empty <- withr::local_tempdir()
+  old_dir <- CONFIG$data_dir
+  CONFIG$data_dir <<- td_empty
+  .zip5_lookup_cache$key <<- NULL; .zip5_lookup_cache$value <<- NULL
+  out_gate <- suppressMessages(approximate_zip9(input))
+  CONFIG$data_dir <<- old_dir
+  expect_setequal(names(out_gate), expected_cols)
+
+  # Path 3: missing-column guard
+  lds_bad_cols <- tribble(~ID, ~WRONG_COL, ~ADDRESS_PERIOD_START,
+                          "PA", "12345", "2020-01-01")
+  out_missing <- run_approx(input, lds_bad_cols)
+  expect_setequal(names(out_missing), expected_cols)
+
+  # Path 4: zero candidates (all ZIP9 observed, nothing to approximate)
+  input_filled <- make_result_row("P01", "2021-01-01", "123450001", "12345", "interval")
+  out_zero <- run_approx(input_filled, lds_base)
+  expect_setequal(names(out_zero), expected_cols)
+})
+
+# ---- Test 13: row preservation with match_type = NA -------------------------
+
+test_that("Test 13: row preservation -- match_type=NA row is kept as invalid_input", {
+  input <- bind_rows(
+    make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval"),
+    tibble(ID = "PX", query_date = as.Date("2021-01-01"),
+           ZIP9 = NA_character_, ZIP5 = "12345", match_type = NA_character_)
+  )
+  out <- run_approx(input, lds_base)
+
+  expect_equal(nrow(out), nrow(input))
+  expect_true("invalid_input" %in% out$zip9_source)
+  px_row <- out %>% filter(ID == "PX")
+  expect_equal(px_row$zip9_source, "invalid_input")
+})
+
+# ---- Test 14: idempotency ---------------------------------------------------
+
+test_that("Test 14: idempotency -- double application returns second input unchanged", {
+  td <- withr::local_tempdir()
+  write_lds_csv(td, lds_base)
+  old_dir <- CONFIG$data_dir
+  CONFIG$data_dir <<- td
+  on.exit(CONFIG$data_dir <<- old_dir, add = TRUE)
+  .zip5_lookup_cache$key <<- NULL; .zip5_lookup_cache$value <<- NULL
+
+  input <- make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval")
+  r1    <- approximate_zip9(input)
+  expect_message(r2 <- approximate_zip9(r1), regexp = "already carries provenance")
+  expect_true(identical(r1, r2))
+})
+
+# ---- Test 15: gate labeling -------------------------------------------------
+
+test_that("Test 15: gate labeling -- absent file labels approximable rows reference_unavailable", {
+  td <- withr::local_tempdir()
+  old_dir <- CONFIG$data_dir
+  CONFIG$data_dir <<- td
+  on.exit(CONFIG$data_dir <<- old_dir, add = TRUE)
+  .zip5_lookup_cache$key <<- NULL; .zip5_lookup_cache$value <<- NULL
+
+  input <- make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval")
+  out <- suppressMessages(approximate_zip9(input))
+
+  expect_equal(out$zip9_source, "reference_unavailable")
+})
+
+# ---- Test 16: sentinel rejection --------------------------------------------
+
+test_that("Test 16: sentinel rejection -- ADDRESS_ZIP9='00000' yields no_zip5 not zip5_no_zip9", {
+  lds_sentinel <- tribble(
+    ~ID,  ~ADDRESS_ZIP9, ~ADDRESS_PERIOD_START,
+    "PA", "00000",       "2020-01-01"
+  )
+  # The sentinel 00000 is filtered from the lookup, so the input row with ZIP5="00000"
+  # finds no modal match; zip5_no_zip9 would require ZIP5 to be non-NA in result_tbl.
+  # Sentinel in LDS simply means the lookup has no entry for that ZIP5.
+  input <- make_result_row("PX", "2021-01-01", NA_character_, "12345", "interval")
+  out   <- run_approx(input, lds_sentinel)
+  # No valid ZIP9 in LDS after sentinel filter -> zip5_no_zip9 (ZIP5 present but no modal)
+  expect_equal(out$zip9_source, "zip5_no_zip9")
+})
+
+# ---- Test 17: pad4 default --------------------------------------------------
+
+test_that("Test 17: pad4 default -- normalize_zip5_raw('3261') returns NA; pad4=TRUE returns '03261'", {
+  expect_true(is.na(normalize_zip5_raw("3261")))
+  expect_equal(normalize_zip5_raw("3261", pad4 = TRUE), "03261")
+})
+
 # ---- Test 11: modal counts patients not rows ---------------------------------
 
 test_that("Test 11: modal counts patients (not rows) -- 3-patient ZIP9-B beats 1-patient ZIP9-A", {
-  # One patient has 10 rows at ZIP9-A; 3 distinct patients have 1 row each at ZIP9-B
+  # ZIP5 11102 (non-sentinel): one patient has 10 rows at ZIP9-A; 3 distinct patients at ZIP9-B
   lds_patient_count <- tribble(
     ~ID,   ~ADDRESS_ZIP9, ~ADDRESS_PERIOD_START,
-    "PA",  "111110001",   "2019-01-01",
-    "PA",  "111110001",   "2019-02-01",
-    "PA",  "111110001",   "2019-03-01",
-    "PA",  "111110001",   "2019-04-01",
-    "PA",  "111110001",   "2019-05-01",
-    "PA",  "111110001",   "2019-06-01",
-    "PA",  "111110001",   "2019-07-01",
-    "PA",  "111110001",   "2019-08-01",
-    "PA",  "111110001",   "2019-09-01",
-    "PA",  "111110001",   "2019-10-01",
-    "PB",  "111110002",   "2021-01-01",
-    "PC",  "111110002",   "2021-02-01",
-    "PD",  "111110002",   "2021-03-01"
+    "PA",  "111020001",   "2019-01-01",
+    "PA",  "111020001",   "2019-02-01",
+    "PA",  "111020001",   "2019-03-01",
+    "PA",  "111020001",   "2019-04-01",
+    "PA",  "111020001",   "2019-05-01",
+    "PA",  "111020001",   "2019-06-01",
+    "PA",  "111020001",   "2019-07-01",
+    "PA",  "111020001",   "2019-08-01",
+    "PA",  "111020001",   "2019-09-01",
+    "PA",  "111020001",   "2019-10-01",
+    "PB",  "111020002",   "2021-01-01",
+    "PC",  "111020002",   "2021-02-01",
+    "PD",  "111020002",   "2021-03-01"
   )
 
-  input <- make_result_row("PX", "2021-01-01", NA_character_, "11111", "interval")
+  input <- make_result_row("PX", "2021-01-01", NA_character_, "11102", "interval")
   out   <- run_approx(input, lds_patient_count)
 
-  # ZIP9-B (111110002) has 3 distinct patients vs ZIP9-A (111110001) has 1
+  # ZIP9-B (111020002) has 3 distinct patients vs ZIP9-A (111020001) has 1
   expect_equal(out$zip9_source, "zip5_modal")
-  expect_equal(out$ZIP9, "111110002")
+  expect_equal(out$ZIP9, "111020002")
 })

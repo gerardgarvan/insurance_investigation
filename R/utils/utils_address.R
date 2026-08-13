@@ -20,12 +20,16 @@
 #   - is_sentinel_zip5(zip5): TRUE for placeholder ZIP5 values (00000, 99999, and
 #     any other single-repeated-digit ZIP5), FALSE for genuine ZIP5s, NA for NA
 #     input (Phase 139, Pitfall 2)
+#   - approximate_zip9() returns the same tibble plus four provenance columns:
+#     zip9_source, zip5_modal_freq, zip5_n_candidates, zip5_modal_share
+#     Column set is identical on every exit path (probe gate, missing columns, normal run).
 #
 # Dependencies:
 #   - dplyr, vroom, stringr, glue (project standard stack)
 #   - parse_pcornet_date() from R/utils/utils_dates.R (auto-loaded via R/00_config.R)
 #
 # Requirements: Phase 137 -- D-01 through D-06
+#               Phase 139 -- D-01 through D-08 (+ 139-01-PATCH, 139-02-PATCH)
 #
 # ==============================================================================
 
@@ -43,15 +47,24 @@ normalize_zip5 <- function(zip9_clean) {
   str_sub(zip9_clean, 1, 5)
 }
 
-# Normalize a raw ZIP5 column: strip non-digits, extract leading 5, left-pad 4-digit
-# inputs, validate ^[0-9]{5}$. Rewritten per Phase 139 AMEND-01 / Step 0b:
-#   Previous logic padded BEFORE validating length, causing strings longer than 5
-#   characters (e.g. "123456") to be padded to "1234560" and then fail ^[0-9]{5}$,
-#   returning NA instead of "12345". Correct order: strip, slice, maybe-pad, validate.
-normalize_zip5_raw <- function(zip) {
-  z <- str_remove_all(str_trim(zip), "[^0-9]")    # strip non-digits (including hyphens)
-  z <- if_else(nchar(z) >= 5, str_sub(z, 1, 5), z) # take first 5 when >= 5 digits present
-  z <- if_else(nchar(z) == 4, str_pad(z, 5, pad = "0"), z) # left-pad only genuine 4-digit ZIPs
+# Five identical digits (00000, 11111, ... 99999) are placeholder values, not ZIPs.
+# Note: 12345 is a real ZIP (Schenectady, NY) and is NOT in the sentinel set. (FIX-06)
+is_sentinel_zip5 <- function(zip5) {
+  !is.na(zip5) & str_detect(zip5, "^(\\d)\\1{4}$")
+}
+
+# Normalize a raw ZIP5 column: strip non-digits, extract leading 5, validate ^[0-9]{5}$.
+# Rewritten per Phase 139 AMEND-01 / Step 0b.
+# pad4: left-pad 4-digit strings to 5 (default FALSE). Off by default because the file is
+# always read with character types, so a genuine leading zero was never at risk. A 4-digit
+# value here is more likely truncation/damage than a New England ZIP -- silently relocating
+# a Gainesville patient to Connecticut would corrupt downstream SES scores. (FIX-05)
+normalize_zip5_raw <- function(zip, pad4 = FALSE) {
+  z <- str_remove_all(str_trim(zip), "[^0-9]")
+  z <- if_else(nchar(z) >= 5, str_sub(z, 1, 5), z)
+  if (isTRUE(pad4)) {
+    z <- if_else(nchar(z) == 4, str_pad(z, 5, pad = "0"), z)
+  }
   if_else(str_detect(z, "^[0-9]{5}$"), z, NA_character_)
 }
 
@@ -126,6 +139,15 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
     stop(glue("[utils_address] LDS_ADDRESS_HISTORY missing required column 'ID'. Found: {paste(names(addr_raw), collapse=', ')}"))
   }
 
+  # FIX-05: report 4-digit ADDRESS_ZIP9 values before pad4 decision is locked
+  n_pad4 <- sum(nchar(str_remove_all(str_trim(addr_raw$ADDRESS_ZIP9), "[^0-9]")) == 4, na.rm = TRUE)
+  if (n_pad4 > 0) {
+    message(glue(
+      "[utils_address] {n_pad4} ADDRESS_ZIP9 value(s) reduce to exactly 4 digits; ",
+      "not zero-padded (pad4 = FALSE). Set pad4 = TRUE only if these are known New England ZIPs."
+    ))
+  }
+
   addr <- addr_raw %>%
     mutate(
       zip9_norm       = normalize_zip9(ADDRESS_ZIP9),
@@ -136,6 +158,8 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
       # No separate ADDRESS_ZIP5 column exists in LDS_ADDRESS_HISTORY (confirmed from
       # plan analysis: ADDRESS_ZIP9 holds bare ZIP5s for some records -- Step 0a case 2).
       zip5_norm       = coalesce(normalize_zip5(zip9_norm), normalize_zip5_raw(ADDRESS_ZIP9)),
+      # FIX-06: reject sentinel ZIP5s (00000, 11111, ... 99999) -- placeholder values
+      zip5_norm       = if_else(is_sentinel_zip5(zip5_norm), NA_character_, zip5_norm),
       period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START),
       # D (Claude's Discretion): NA ADDRESS_PERIOD_END = open-ended; coerce to 9999-12-31
       # so that interval filter (date < period_end_dt) includes open periods correctly.
@@ -207,7 +231,55 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 
 # Memoisation cache for the ZIP5->modal-ZIP9 lookup table (AMEND-06).
 # Keyed by (addr_path, mtime, size) to force rebuild when file changes.
+# FIX-09c: <<- mutation works while sourced into global env; if this ever becomes a
+# package with a locked namespace, replace with an rlang environment or R6 cache.
 .zip5_lookup_cache <- list(key = NULL, value = NULL)
+
+# Shared classifier -- every exit path of approximate_zip9() routes through this so the
+# returned column set and row count are identical regardless of which path was taken.
+# FIX-01, FIX-02.
+.classify_zip9_source <- function(result_tbl, zip5_lookup, unavailable = FALSE) {
+
+  # FIX-09a: the lookup must be unique on ZIP5 or the join fans out
+  stopifnot(!any(duplicated(zip5_lookup$ZIP5)))
+
+  out <- result_tbl %>%
+    # FIX-09b: na_matches = "never" so an NA ZIP5 never joins even if a NA key appears
+    left_join(zip5_lookup, by = "ZIP5", na_matches = "never") %>%
+    mutate(
+      zip9_source = case_when(
+        !is.na(ZIP9)         ~ "zip9_observed",
+        is.na(match_type)    ~ "invalid_input",
+        match_type == "none" ~ "none",
+        unavailable          ~ "reference_unavailable",
+        !is.na(modal_zip9)   ~ "zip5_modal",
+        !is.na(ZIP5)         ~ "zip5_no_zip9",
+        TRUE                 ~ "no_zip5"
+      ),
+      ZIP9              = if_else(zip9_source == "zip5_modal", modal_zip9, ZIP9),
+      zip5_modal_freq   = if_else(zip9_source == "zip5_modal", as.integer(zip5_modal_freq),   NA_integer_),
+      zip5_n_candidates = if_else(zip9_source == "zip5_modal", as.integer(zip5_n_candidates), NA_integer_),
+      zip5_modal_share  = if_else(zip9_source == "zip5_modal", zip5_modal_share,              NA_real_)
+    ) %>%
+    select(-modal_zip9) %>%
+    arrange(ID, query_date)
+
+  # FIX-02: no partition, so this cannot fail -- assert it anyway so a future refactor
+  # that reintroduces splitting is caught on the first test run
+  stopifnot(nrow(out) == nrow(result_tbl))
+  out
+}
+
+# Empty lookup with correct column types, used on exit paths where no lookup is built.
+.empty_zip5_lookup <- function() {
+  tibble(
+    ZIP5              = character(),
+    modal_zip9        = character(),
+    zip5_modal_freq   = integer(),
+    zip5_n_candidates = integer(),
+    zip5_modal_share  = double()
+  )
+}
 
 #' Approximate ZIP9 for rows returned by get_zip9_at_date() that have ZIP9 = NA.
 #'
@@ -215,6 +287,9 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 #' most frequent (modal) valid ZIP9 for that ZIP5 across the full
 #' LDS_ADDRESS_HISTORY file. Returns the input tibble with ZIP9 filled in where
 #' approximation succeeds, plus four provenance/confidence columns.
+#'
+#' The column set returned is identical on every exit path (file absent, missing
+#' columns, zero candidates, normal run). Row count is preserved on all paths.
 #'
 #' Caller pattern:
 #' \code{get_zip9_at_date(ids, dates) |> approximate_zip9()}
@@ -229,16 +304,20 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 #'       \code{"zip5_modal"} — ZIP9 was approximated as the modal ZIP9 for this ZIP5;
 #'       \code{"zip5_no_zip9"} — ZIP5 exists but all LDS records for it have no valid ZIP9;
 #'       \code{"no_zip5"} — ZIP9 was NA, ZIP5 was NA, match_type != "none";
-#'       \code{"none"} — match_type was "none" (no address record found at all).
+#'       \code{"none"} — match_type was "none" (no address record found at all);
+#'       \code{"reference_unavailable"} — gate fired, approximation was never attempted
+#'         (LDS file absent or required columns missing);
+#'       \code{"invalid_input"} — match_type was NA; malformed row, not approximated.
+#'         Should be zero for any tibble produced by get_zip9_at_date().
 #'     }
 #'     \item{zip5_modal_freq}{(int) Number of distinct patient IDs whose ZIP+4 modal
-#'       count determined the winner for this ZIP5. NA for zip9_observed and none rows.}
+#'       count determined the winner for this ZIP5. NA for non-zip5_modal rows.}
 #'     \item{zip5_n_candidates}{(int) Number of distinct ZIP+4 values seen for this ZIP5.
-#'       NA for zip9_observed and none rows.}
+#'       NA for non-zip5_modal rows.}
 #'     \item{zip5_modal_share}{(dbl) Approximate fraction of freq / sum(freq) across all
 #'       ZIP+4 candidates for this ZIP5. Approximate because patients appearing at more
 #'       than one ZIP+4 within the same ZIP5 are double-counted in sum(freq). NA for
-#'       zip9_observed and none rows.}
+#'       non-zip5_modal rows.}
 #'   }
 #'
 #' @section match_type invariance:
@@ -260,42 +339,43 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 #'   \code{sum(freq)} across a ZIP5's groups can double-count patients who appear
 #'   at more than one ZIP+4 within the same ZIP5.
 #'
-#' # Requirements: Phase 139 -- D-01 through D-08
+# Requirements: Phase 139 -- D-01 through D-08 (+ 139-01-PATCH, 139-02-PATCH)
 approximate_zip9 <- function(result_tbl) {
 
   ADDR_FILENAME <- "LDS_ADDRESS_HISTORY_Mailhot_V1.csv"
   addr_path     <- file.path(CONFIG$data_dir, ADDR_FILENAME)
 
-  # D-08: Probe-first gate — return unchanged if file is absent (no stop())
-  if (!file.exists(addr_path)) {
+  # FIX-03: idempotency guard -- a second application would collide on the join columns
+  # and produce .x/.y suffixes with no error
+  prov_cols <- c("zip9_source", "zip5_modal_freq", "zip5_n_candidates", "zip5_modal_share")
+  if (any(prov_cols %in% names(result_tbl))) {
     message(glue(
-      "[utils_address] approximate_zip9: LDS_ADDRESS_HISTORY not found at {addr_path}",
-      " -- returning input unchanged"
+      "[utils_address] approximate_zip9: input already carries provenance column(s) ",
+      "{paste(intersect(prov_cols, names(result_tbl)), collapse = ', ')} -- returning input unchanged"
     ))
     return(result_tbl)
   }
 
-  # D-01 / D-02: identify rows that need approximation
-  # match_type == "none" means no address record existed — no ZIP5 anchor, skip them.
-  to_approx <- result_tbl %>%
-    filter(is.na(ZIP9), !is.na(match_type) & match_type != "none")
-
-  if (nrow(to_approx) == 0) {
-    # Nothing to approximate — return input with provenance columns added (all zip9_observed)
-    # but also handle the case where all rows already have ZIP9 or are "none"
-    return(
-      result_tbl %>%
-        mutate(
-          zip9_source       = if_else(!is.na(ZIP9), "zip9_observed", "none"),
-          zip5_modal_freq   = NA_integer_,
-          zip5_n_candidates = NA_integer_,
-          zip5_modal_share  = NA_real_
-        )
-    )
+  # D-08: probe-first gate -- classify with an empty lookup so the schema still holds
+  if (!file.exists(addr_path)) {
+    message(glue(
+      "[utils_address] approximate_zip9: LDS_ADDRESS_HISTORY not found at {addr_path} ",
+      "-- no approximation attempted"
+    ))
+    return(.classify_zip9_source(result_tbl, .empty_zip5_lookup(), unavailable = TRUE))
   }
 
-  # D-05: Load full LDS_ADDRESS_HISTORY (load on demand, same pattern as get_zip9_at_date())
-  # AMEND-06: Memoisation keyed on path + mtime + size to avoid rebuilding on every call.
+  # D-01 / D-02: count approximable rows. Used only to skip the file load -- classification
+  # still runs, so the schema and row count are unaffected.
+  n_to_approx <- result_tbl %>%
+    filter(is.na(ZIP9), !is.na(match_type), match_type != "none") %>%
+    nrow()
+
+  if (n_to_approx == 0) {
+    return(.classify_zip9_source(result_tbl, .empty_zip5_lookup(), unavailable = FALSE))
+  }
+
+  # D-05 / AMEND-06: memoised lookup, keyed on path + mtime + size
   cache_key <- paste0(
     normalizePath(addr_path, mustWork = FALSE), "|",
     as.numeric(file.mtime(addr_path)), "|",
@@ -309,47 +389,49 @@ approximate_zip9 <- function(result_tbl) {
       vroom::vroom(addr_path, col_types = vroom::cols(.default = "c"), progress = FALSE),
       error = function(e) {
         message(glue(
-          "[utils_address] approximate_zip9: vroom failed ({conditionMessage(e)})",
-          "; falling back to read.csv"
+          "[utils_address] approximate_zip9: vroom failed ({conditionMessage(e)}); ",
+          "falling back to read.csv"
         ))
-        # AMEND-05c: colClasses = "character" prevents leading-zero stripping
         read.csv(addr_path, colClasses = "character", na.strings = c("", "NA"))
       }
     )
 
-    # AMEND-05a: column existence guard
     req     <- c("ID", "ADDRESS_ZIP9", "ADDRESS_PERIOD_START")
     missing <- setdiff(req, names(addr_raw))
     if (length(missing) > 0) {
       message(glue(
-        "[utils_address] approximate_zip9: missing column(s) {paste(missing, collapse = ', ')}",
-        " -- returning input unchanged"
+        "[utils_address] approximate_zip9: missing column(s) ",
+        "{paste(missing, collapse = ', ')} -- no approximation attempted"
       ))
-      return(result_tbl)
+      return(.classify_zip9_source(result_tbl, .empty_zip5_lookup(), unavailable = TRUE))
     }
 
-    # D-03 / D-04 (AMEND-04): Build ZIP5 -> modal-ZIP9 lookup
-    # Modal frequency counts distinct patient IDs (not address-history rows).
-    # Tie-break is total: freq desc, then recency desc, then ZIP9 string asc.
+    # D-03 / D-04 (AMEND-04): modal frequency counts distinct patients, not rows.
+    # Tie-break is total: freq desc, recency desc, ZIP9 string asc.
     zip5_lookup <- addr_raw %>%
       mutate(
         zip9_norm       = normalize_zip9(ADDRESS_ZIP9),
         zip5_norm       = normalize_zip5(zip9_norm),
         period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START)
       ) %>%
-      filter(!is.na(zip9_norm), !is.na(zip5_norm), !is.na(period_start_dt)) %>%
+      filter(
+        !is.na(zip9_norm),
+        !is.na(zip5_norm),
+        !is.na(period_start_dt),
+        !is_sentinel_zip5(zip5_norm)          # FIX-06
+      ) %>%
       group_by(zip5_norm, zip9_norm) %>%
       summarise(
-        freq        = n_distinct(ID),         # patients, not rows (AMEND-04a)
-        latest_date = max(period_start_dt),   # na.rm not needed; NAs filtered above (AMEND-04c)
+        freq        = n_distinct(ID),
+        latest_date = max(period_start_dt),
         .groups     = "drop"
       ) %>%
       group_by(zip5_norm) %>%
       mutate(
         n_candidates = n(),
-        modal_share  = freq / sum(freq)       # approximate; patients may appear at >1 ZIP+4
+        modal_share  = freq / sum(freq)
       ) %>%
-      arrange(desc(freq), desc(latest_date), zip9_norm, .by_group = TRUE) %>%  # total tie-break (AMEND-04b)
+      arrange(desc(freq), desc(latest_date), zip9_norm, .by_group = TRUE) %>%
       slice(1) %>%
       ungroup() %>%
       select(
@@ -360,78 +442,37 @@ approximate_zip9 <- function(result_tbl) {
         zip5_modal_share  = modal_share
       )
 
-    # Store in memoisation cache
     .zip5_lookup_cache$key   <<- cache_key
     .zip5_lookup_cache$value <<- zip5_lookup
   }
 
-  # D-06 / D-07 (AMEND-02, AMEND-03): Apply lookup and classify zip9_source
-  # Split result_tbl into three subsets for clean classification:
-  #   (a) rows with ZIP9 already present -> "zip9_observed"
-  #   (b) rows with match_type == "none" -> "none"
-  #   (c) rows needing approximation (to_approx) -> join against zip5_lookup
-  already_filled <- result_tbl %>%
-    filter(!is.na(ZIP9)) %>%
-    mutate(
-      zip9_source       = "zip9_observed",
-      zip5_modal_freq   = NA_integer_,
-      zip5_n_candidates = NA_integer_,
-      zip5_modal_share  = NA_real_
-    )
+  result_out <- .classify_zip9_source(result_tbl, zip5_lookup, unavailable = FALSE)
 
-  none_rows <- result_tbl %>%
-    filter(is.na(ZIP9), match_type == "none") %>%
-    mutate(
-      zip9_source       = "none",
-      zip5_modal_freq   = NA_integer_,
-      zip5_n_candidates = NA_integer_,
-      zip5_modal_share  = NA_real_
-    )
-
-  # Join to_approx against zip5_lookup
-  approx_joined <- to_approx %>%
-    left_join(zip5_lookup, by = "ZIP5") %>%
-    mutate(
-      ZIP9 = if_else(!is.na(modal_zip9), modal_zip9, ZIP9),
-      zip9_source = case_when(
-        !is.na(modal_zip9) ~ "zip5_modal",
-        !is.na(ZIP5)       ~ "zip5_no_zip9",
-        TRUE               ~ "no_zip5"
-      ),
-      zip5_modal_freq   = if_else(zip9_source == "zip5_modal", as.integer(zip5_modal_freq), NA_integer_),
-      zip5_n_candidates = if_else(zip9_source == "zip5_modal", as.integer(zip5_n_candidates), NA_integer_),
-      zip5_modal_share  = if_else(zip9_source == "zip5_modal", zip5_modal_share, NA_real_)
-    ) %>%
-    select(-modal_zip9)  # AMEND-05b: drop join column from output
-
-  # Reassemble and restore original sort order
-  result_out <- bind_rows(already_filled, none_rows, approx_joined) %>%
-    arrange(ID, query_date)
-
-  # AMEND-08a: Diagnostic logging — zip9_source breakdown + modal_share distribution
+  # AMEND-08a / FIX-08: one line per level, newline-terminated
   src_counts <- table(result_out$zip9_source)
   get_count  <- function(k) { v <- src_counts[k]; if (is.na(v)) 0L else as.integer(v) }
 
   modal_rows <- result_out %>% filter(zip9_source == "zip5_modal")
-  if (nrow(modal_rows) > 0) {
+  share_line <- if (nrow(modal_rows) > 0) {
     ms <- modal_rows$zip5_modal_share
-    share_summary <- glue(
-      "  modal_share among zip5_modal rows -- min: {round(min(ms, na.rm=TRUE), 3)}",
-      "  median: {round(median(ms, na.rm=TRUE), 3)}",
-      "  max: {round(max(ms, na.rm=TRUE), 3)}"
-    )
+    glue("  modal_share -- min {round(min(ms, na.rm = TRUE), 3)} / ",
+         "median {round(median(ms, na.rm = TRUE), 3)} / ",
+         "max {round(max(ms, na.rm = TRUE), 3)}")
   } else {
-    share_summary <- "  modal_share among zip5_modal rows -- (none)"
+    "  modal_share -- (no approximated rows)"
   }
 
-  message(glue(
-    "[utils_address] approximate_zip9: zip9_source breakdown:\n",
-    "  zip9_observed: {get_count('zip9_observed')}",
-    "  zip5_modal: {get_count('zip5_modal')}",
-    "  zip5_no_zip9: {get_count('zip5_no_zip9')}",
-    "  no_zip5: {get_count('no_zip5')}",
-    "  none: {get_count('none')}\n",
-    share_summary
+  message(paste(
+    "[utils_address] approximate_zip9: zip9_source breakdown",
+    glue("  zip9_observed:         {get_count('zip9_observed')}"),
+    glue("  zip5_modal:            {get_count('zip5_modal')}"),
+    glue("  zip5_no_zip9:          {get_count('zip5_no_zip9')}"),
+    glue("  no_zip5:               {get_count('no_zip5')}"),
+    glue("  none:                  {get_count('none')}"),
+    glue("  reference_unavailable: {get_count('reference_unavailable')}"),
+    glue("  invalid_input:         {get_count('invalid_input')}"),
+    share_line,
+    sep = "\n"
   ))
 
   result_out
