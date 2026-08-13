@@ -16,8 +16,8 @@ QC row to the workbook, and re-issues the xlsx on HiPerGator.
 - Write the imputed ZIP9 assignment table to RDS (alongside the existing workbook output)
 - Add a named QC row in the workbook's QC sheet: imputation counts by `zip9_source`
   (`zip5_modal`, `zip5_only`, unchanged)
-- Re-run R/115 on HiPerGator to regenerate the xlsx with imputed ZIPs feeding
-  the completeness figures — workbook re-issue is the exit criterion
+- Re-run R/115 on HiPerGator to regenerate the xlsx carrying the imputation QC rows
+  alongside the existing completeness figures — workbook re-issue is the exit criterion
 
 **Out of scope:**
 - Wiring `approximate_zip9()` into the main cohort build / R/39 — future phase, no
@@ -25,6 +25,8 @@ QC row to the workbook, and re-issues the xlsx on HiPerGator.
 - New standalone R/116 script — no consumer to load from it
 - Updating validation curves (A-06, encounter-anchored) — not triggered by imputation
   wiring alone
+- Recomputing the C_completeness waterfall on post-imputation coverage — deferred; the
+  waterfall remains scenario-based per Phase 140 D-2/D-4
 
 </domain>
 
@@ -49,8 +51,9 @@ QC row to the workbook, and re-issues the xlsx on HiPerGator.
 
 ### Done criteria
 - **D-04:** Phase is complete when `approximate_zip9()` is wired into R/115, the imputed
-  assignment feeds the completeness figures, the QC row is present in the workbook, and
-  the xlsx has been re-issued from a real HiPerGator run.
+  assignment table is written to RDS, the imputation QC rows are present in the workbook,
+  and the xlsx has been re-issued from a real HiPerGator run. Recomputing the completeness
+  waterfall on post-imputation coverage is explicitly out of scope and deferred.
 
 ### Claude's Discretion
 - Exact location within R/115 where `approximate_zip9()` is called (after the
