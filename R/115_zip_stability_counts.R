@@ -1392,6 +1392,98 @@ message("=======================================================================
 
 
 # ==============================================================================
+# SECTION 11B: APPROXIMATE ZIP9 IMPUTATION (Phase 141, D-01..D-04) ----
+# ==============================================================================
+# Call get_zip9_at_date() on cohort encounters to produce the same 5-column
+# result_tbl that approximate_zip9() expects, then pipe directly into
+# approximate_zip9() for ZIP5-modal imputation. This is a SEPARATE call from
+# classify_encounter_zip() (which operates on addr_coal directly to keep
+# coalesced ZIP5 visible for S1/S3 classification) -- do not replace or
+# re-derive encounter_zip here; this call exists only to get the imputation
+# provenance columns.
+
+message("--- SECTION 11B: approximate_zip9() imputation (Phase 141, D-01/D-02) ---")
+
+# One row per (ID, ADMIT_DATE) -- dedup before the lookup so encounter_zip's
+# one-row-per-(ID, ENCOUNTERID, ADMIT_DATE) grain is preserved on the join back.
+enc_lookup_input <- encounters %>%
+  distinct(ID, ADMIT_DATE) %>%
+  rename(query_date = ADMIT_DATE)
+
+zip9_lookup_raw <- get_zip9_at_date(
+  ids   = enc_lookup_input$ID,
+  dates = enc_lookup_input$query_date
+)
+
+zip9_imputed_assignment <- zip9_lookup_raw |> approximate_zip9()
+
+imputed_src_counts <- zip9_imputed_assignment %>%
+  count(zip9_source, name = "n_person_dates") %>%
+  arrange(desc(n_person_dates))
+
+message("[R/115] approximate_zip9() zip9_source breakdown (distinct ID + ADMIT_DATE, pre-join):")
+print(imputed_src_counts)
+
+OUTPUT_RDS_IMPUTED <- file.path(
+  CONFIG$output_dir,
+  glue("zip9_imputed_assignment_{format(Sys.Date(), '%Y%m%d')}.rds")
+)
+saveRDS(zip9_imputed_assignment, OUTPUT_RDS_IMPUTED)
+message(glue("[R/115] Imputed assignment table written to: {OUTPUT_RDS_IMPUTED}"))
+message(glue("[R/115] Reload without re-running: readRDS('{OUTPUT_RDS_IMPUTED}')"))
+
+# Re-run safety: drop any columns this block previously added before joining again.
+encounter_zip <- encounter_zip %>%
+  select(-any_of(c("zip9_imputed", "zip9_source", "zip9_effective",
+                   "has_zip9_after_imputation")))
+
+# Grain guard: approximate_zip9() must return one row per (ID, query_date) or the
+# join below will fan out encounter_zip. Fail loudly rather than inflate counts.
+n_dup_lookup <- sum(duplicated(zip9_imputed_assignment[c("ID", "query_date")]))
+if (n_dup_lookup > 0L) {
+  stop(glue(
+    "[R/115] SECTION 11B: get_zip9_at_date() returned {n_dup_lookup} duplicate (ID, query_date) ",
+    "rows. Joining would inflate encounter_zip. Investigate overlapping ADDRESS_PERIOD ",
+    "intervals in LDS_ADDRESS_HISTORY before proceeding."
+  ))
+}
+
+n_encounter_zip_before <- nrow(encounter_zip)
+
+encounter_zip <- encounter_zip %>%
+  left_join(
+    zip9_imputed_assignment %>%
+      select(ID, ADMIT_DATE = query_date, zip9_imputed = ZIP9, zip9_source),
+    by = c("ID", "ADMIT_DATE"),
+    relationship = "many-to-one"
+  ) %>%
+  mutate(
+    zip9_effective            = coalesce(direct_zip9, zip9_imputed),
+    has_zip9_after_imputation = !is.na(zip9_effective)
+  )
+
+stopifnot(nrow(encounter_zip) == n_encounter_zip_before)
+
+n_gained_carryforward <- sum(
+  !encounter_zip$has_direct_zip9 & encounter_zip$zip9_source == "zip9_observed",
+  na.rm = TRUE
+)
+n_gained_modal <- sum(
+  !encounter_zip$has_direct_zip9 & encounter_zip$zip9_source == "zip5_modal",
+  na.rm = TRUE
+)
+
+message(glue(
+  "[R/115] Post-lookup gain: {n_gained_carryforward} encounters resolved via address-history ",
+  "carry-forward (zip9_observed), {n_gained_modal} via ZIP5-modal imputation (zip5_modal). ",
+  "{sum(encounter_zip$has_zip9_after_imputation)} of {nrow(encounter_zip)} encounters ",
+  "({round(100 * mean(encounter_zip$has_zip9_after_imputation), 1)}%) have a ZIP9 after imputation."
+))
+
+message("==========================================================================\n")
+
+
+# ==============================================================================
 # SECTION 12: PART C -- COMPLETENESS WATERFALL + C-02 RECONCILIATION (C-01, C-02) ----
 # ==============================================================================
 # Pitfall 1: Part C's universe is ENCOUNTERS for the waterfall (same as Part B above), but
@@ -1632,6 +1724,14 @@ if (!c02_reconciled) {
     "only and is not part of this gate (140-09-PATCH FIX-17)."
   ))
 }
+
+message(glue(
+  "[R/115] Phase 141: encounter_zip now carries zip9_effective (direct_zip9 OR zip9_imputed). ",
+  "The completeness waterfall in SECTION 12 still uses scenario_assigned (from classify_encounter_zip), ",
+  "which is based on address-history interval matching, not get_zip9_at_date(). The new ",
+  "has_zip9_after_imputation column and n_encounters_zip9_after_imputation QC row (QC sheet) ",
+  "are the imputation-specific coverage figures. Both are present in the re-issued xlsx (D-04)."
+))
 
 # 139-05-PATCH FIX-03c: pre-filter comparison. Compute the SAME "no usable ZIP5 ever"
 # statistic against addr_raw (unfiltered, from SECTION 3), reusing coalesce_zip5() (NOT a
@@ -2163,8 +2263,8 @@ add_styled_sheet(
 )
 
 add_styled_sheet(
-  wb, "A_validation_curve_encounter_anchored",
-  title_text    = "A_validation_curve_encounter_anchored -- Second Estimate, Real ADMIT_DATEs (P-05a)",
+  wb, "A_validation_curve_enc_anchored",
+  title_text    = "A_validation_curve_enc_anchored -- Second Estimate, Real ADMIT_DATEs (P-05a)",
   subtitle_text = glue(
     "Samples real cohort-restricted ENCOUNTER ADMIT_DATEs (not address-change boundaries), ",
     "predicts via the same backward most-recent-before rule get_zip9_at_date() applies, ",
