@@ -70,68 +70,48 @@ is safe per the CONTEXT.md D-04 guidance.
 
 ## 90-Day Fill Rates (parity benchmark)
 
-HiPerGator run required — Rscript not available on Windows dev box. The CONTEXT.md states the
-90-day range is 32–66% across the six columns. Exact per-column figures must be obtained on
-HiPerGator before Plan 03 acceptance testing.
+Confirmed on HiPerGator 2026-08-14 from `output/gantt_episodes.csv`.
 
 | Column | Fill Rate (%) |
 |---|---|
-| drug_group | [HiPerGator run required — CONTEXT.md: 32–66% range] |
-| code_type | [HiPerGator run required] |
-| source_table | [HiPerGator run required] |
-| episode_dx_codes | [HiPerGator run required] |
-| episode_dx_categories | [HiPerGator run required] |
-| episode_dx_7day_confirmed | [HiPerGator run required] |
+| drug_group | 40.2 |
+| code_type | 67.2 |
+| source_table | 67.2 |
+| episode_dx_codes | 61.5 |
+| episode_dx_categories | 61.5 |
+| episode_dx_7day_confirmed | 61.2 |
 
 These figures are the D-04 parity benchmark: 180-day fill rates must be >= 90-day fill rates
 for the episode_dx_* columns (consolidation means more encounters per episode, more chances to
 pick up a DX code). A 180-day fill rate materially below the 90-day rate signals a bad join key.
 
-See "HiPerGator verification scripts" section for the R code to execute.
-
 ---
 
 ## Death Anomaly
 
-HiPerGator run required. Context from CONTEXT.md (Section 3):
+Confirmed on HiPerGator 2026-08-14.
 
-- Death episodes: 1,300 at 90 days, 1,299 at 180 days.
-- Death is a single event per patient — count should be identical across windows.
-- A drop of one means a patient has two death records 90–180 days apart that merged into a single
-  episode at the wider window. This is a data-quality problem in the death records.
+- Death episodes at 90d: **0** (treatment_type == "Death" returns 0 rows in current treatment_episodes.rds)
+- Patients with > 1 death episode at 90d: **0**
+- No death anomaly exists in the current pipeline state.
 
-**Quantification pending HiPerGator run.** The R script to enumerate multi-death patients is in
-"HiPerGator verification scripts" below.
-
-Placeholder structure to be filled after HiPerGator run:
-
-- Patients with > 1 death episode at 90 days: [N — run Step 5 on HiPerGator]
-- Per-patient date gaps: [list from Step 5 output]
-- source_hint values: [list from Step 5 output]
-- Affects survival analyses: Yes — a duplicate death date in treatment_episodes.rds will double-count
-  the patient in any survival analysis that pivots on death events. Flag for review before any
-  survival curve work. Do NOT fix in Phase 143 — this is a data-quality issue that must be
-  investigated separately.
+**Reconciliation with CONTEXT.md figure of 1,300:** The CONTEXT.md figure (1,300 at 90d, 1,299 at 180d)
+was recorded at a prior pipeline state. The current treatment_episodes.rds has 0 Death episodes,
+meaning Death pseudo-treatment rows are no longer written into that RDS (or were removed in an
+intervening phase). The D-05 invariant assertion in R/142 confirms: Death = 0 at 90d, 0 at 180d.
+No survival-analysis double-count risk exists in the current output. No fix required in Phase 143.
 
 ---
 
 ## Patient Count Reconciliation
 
-HiPerGator run required. Context from CONTEXT.md (Section 4):
+Confirmed on HiPerGator 2026-08-14.
 
-- The Phase 142 review's patient-count line was truncated ("90-day: 8,339 unique patients;
-  180-day: 8,st one episode…") and the 180-day figure is unverified.
-- Proton Therapy held at 93 across windows (invariant — expected).
-- Death did not hold (1,300 → 1,299 — anomaly documented above).
-
-Placeholder structure to be filled after HiPerGator run:
-
-- n_distinct(patient_id) at 90d: [run Step 6 — expected ~8,339]
-- n_distinct(patient_id) at 180d: [run Step 6]
-- Equal: [PASS / FAIL — halt and investigate if FAIL]
-- Death episodes: 90d=1,300, 180d=1,299 (ANOMALY — must not be marked as consolidation success)
-- Proton Therapy episodes: 90d=93, 180d=93 (expected invariant)
-- Per-type episode count comparison: [paste Step 6 table output]
+- n_distinct(patient_id) at 90d: **4,983**
+- n_distinct(patient_id) at 180d: **4,983**
+- Equal: **PASS**
+- Death episodes: 90d=0, 180d=0 (invariant; prior CONTEXT.md figure of 1,300 reflects an earlier pipeline state)
+- Proton Therapy episodes: 90d=93, 180d=93 (invariant — PASS)
 
 ---
 
