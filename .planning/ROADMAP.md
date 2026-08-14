@@ -428,3 +428,15 @@ Plans:
 Plans:
 - [ ] 142-01-PLAN.md — Add vinblastine sulfate alias to DRUG_NAME_ALIASES in R/00_config.R; audit bleomycin, vincristine, dacarbazine salt variants [EP-DEDUP-01] (Wave 1)
 - [ ] 142-02-PLAN.md — Extend R/26 to produce treatment_episodes_180.rds + treatment_episode_detail_180.rds (Section 5C); create R/142_gantt_180_export.R writing gantt_episodes_180.csv + gantt_detail_180.csv with same 20/14-column schema as R/52 [EP-180-01, EP-180-02] (Wave 2, depends on 142-01)
+
+### Phase 143: 180-Day File: Enrichment Parity and Review Follow-ups
+
+**Goal:** Populate the six blank enrichment columns in the 180-day Gantt file (or remove them with documentation), verify patient-count and single-event-type invariants, document the episode definition with observed-maxima evidence, and investigate the Death-episode anomaly (1,300 to 1,299 across windows).
+**Requirements**: EP-180-DISC-01, EP-180-ENRICH-01, EP-180-ENRICH-02, EP-180-EXPORT-01, EP-180-DOC-01
+**Depends on:** Phase 142
+**Plans:** 3 plans
+
+Plans:
+- [ ] 143-01-PLAN.md -- D-01 decision checkpoint (boundaries vs content); read-only discovery: producer disposition table, 90-day fill rates, death anomaly, patient-count reconciliation -> 143-DISCOVERY.md [EP-180-DISC-01] (Wave 1)
+- [ ] 143-02-PLAN.md -- Parameterise R/28 (EPISODES_RDS_PATH / OUT_SUFFIX options, fix episode_number join keys); verify 90-day byte-identity; run 180-day enrichment pass on HiPerGator [EP-180-ENRICH-01, EP-180-ENRICH-02] (Wave 2, depends on 143-01, D-01b path only)
+- [ ] 143-03-PLAN.md -- Wire enrichment join into R/142 or drop blank columns (D-01a/D-01b); write output/gantt_180_README.txt with episode rule + observed maxima; update 142-CONTEXT.md D-01 [EP-180-EXPORT-01, EP-180-DOC-01] (Wave 3, depends on 143-01 and 143-02)
