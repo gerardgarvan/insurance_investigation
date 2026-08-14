@@ -136,6 +136,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - [260715]: R/106 Section 9 (Sheet 3 "Time Between Changes") gap-day computation now bounds ADDRESS_PERIOD_START to the LDS_ADDRESS_HISTORY study period (ZIP_STUDY_PERIOD_MIN 2012-01-01 / ZIP_STUDY_PERIOD_MAX 2025-03-31) before computing gaps, with a logged out-of-range drop count; R/88 Section 15s extended to 16 checks (2 new) to verify. See [260715-for-change-in-zip-make-sure-addresses-ar](./quick/260715-for-change-in-zip-make-sure-addresses-ar/)
 - [260716]: Added `ICD_CODES$nhl_histology` (34-code, unverified/needs-clinical-review) to R/00_config.R and new `R/113_confirmed_hl_nhl_tumor_registry_counts.R` — a console-only diagnostic printing confirmed-HL, confirmed-NHL, and confirmed-BOTH (overlap) distinct-patient counts from TUMOR_REGISTRY histology codes only (no DIAGNOSIS table query). Also fixed a pre-existing gap (since Phase 119): created the missing `tests/fixtures/DEATH_CAUSE_Mailhot_V1.csv` fixture, unblocking any local `R/01_load_pcornet.R` run. See [260716-add-script-to-count-confirmed-hl-and-nhl](./quick/260716-add-script-to-count-confirmed-hl-and-nhl/)
 - [260725]: Created `run_investigations.sh` — SLURM batch script to run R/39_run_all_investigations.R with dual timestamped log (SLURM %j log + named output/logs/investigations_YYYYMMDD_HHMMSS.log)
+- [260814-gwb]: Applied 142-PATCH.md corrections to CONTEXT.md, 142-01-PLAN.md, 142-02-PLAN.md, and created 142-DISCOVERY.md — all P0 blockers, P1 should-fix items, and P2 minor items addressed. See [260814-gwb-apply-142-patch-md-corrections-to-phase-](./quick/260814-gwb-apply-142-patch-md-corrections-to-phase-/)
 
 ### Roadmap Evolution
 
@@ -145,6 +146,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 140 added: Resolve C-02 reconciliation gate and finalize ZIP assignment design (ZIP5 unit, uncapped carry-forward, backward-only primary spec) for zip_stability_counts workbook (source doc: planzip.md — follow-up plan after Phase 139's C-02 gate failed)
 - Phase 140 plans amended: 140-08-PATCH.md (16 fixes, FIX-01..FIX-16) applied to 140-01/03 (test-file split) and 140-02/04/05/06/07 (dual gap-day columns, D-2-conditional S1 fold, inverted KEY-sheet caveat, encounter-anchored gap formula, n_distinct() cross-check relocation, crosswalk vintage/match-rate gate, unparseable-date example table, HiPerGator-run checkpoint inserted between Wave 2 and Wave 3, D-1-option-b contingency notes, test-file split across 4 files) before any plan was executed — re-verified via gsd-plan-checker, all 24 CONTEXT.md IDs still covered
 - Phase 141 added: CONTEXT-zip9-imputation
+- Phase 142 added: 180-Day Treatment Episodes + Drug-Name Deduplication
 
 ### Known Blockers (new)
 
