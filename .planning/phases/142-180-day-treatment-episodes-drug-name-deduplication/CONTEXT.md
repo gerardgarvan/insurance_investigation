@@ -36,7 +36,17 @@ Also audit for other salt/HCl/phosphate variants in the same style as doxorubici
 - No changes to payer mapping or cohort filters
 
 ## Decisions
-- D-01: Gap logic = same as 90-day (window from episode start, not consecutive gap). Verify this against the actual comparison in `calculate_episodes_detailed()` via §0c before executing — CONTEXT asserts the first interpretation but the parameter is named `gap_threshold`, which implies the second. The §0c test discriminates: 4 administrations at days 0/50/100/150 with gap_threshold=90 yields 2 episodes under window-from-start, 1 episode under gap-between-dates.
+- D-01 (Episode rule — confirmed by Phase 143 observed maxima):
+  An episode covers up to N days from its first treatment date (window from episode start).
+  A treatment date falling N or more days after the episode start begins a new episode.
+  Episodes therefore never exceed N-1 days in length.
+
+  Evidence from Phase 143 output: max chemotherapy episode length is 89 days at 90-day
+  window (median 56) and 179 days at 180-day window (median 100). Both maxima sit exactly
+  one day under the threshold. This is only possible under a window-from-episode-start rule;
+  a gap-between-doses rule would produce episodes of unbounded length.
+
+  This is NOT a gap-between-doses rule.
 - D-02: Canonical vinblastine name = "Vinblastine" (matches existing MEDICATION_LOOKUP majority)
 - D-03: Output files named `*_180.csv` to distinguish from 90-day files
 - D-04: 180-day RDS files named `treatment_episodes_180.rds` / `treatment_episode_detail_180.rds`

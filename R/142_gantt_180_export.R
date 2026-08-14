@@ -1,3 +1,6 @@
+# Phase 143: reads treatment_episodes_180_enriched.rds (R/28 run with p143_out_suffix="_180_enriched").
+# Do NOT read treatment_episodes_180.rds directly — that file lacks the enrichment columns.
+
 # ==============================================================================
 # Phase 142: 180-Day Gantt CSV Export
 # ==============================================================================
@@ -53,7 +56,7 @@ source("R/utils/utils_dates.R")
 source("R/utils/utils_cancer.R")
 
 # Input paths
-EPISODES_RDS         <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds")
+EPISODES_RDS         <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180_enriched.rds")
 DETAIL_RDS           <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail_180.rds")
 DESCRIPTIONS_RDS     <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
@@ -109,41 +112,6 @@ assert_df_valid(detail, "treatment_episode_detail_180",
   required_cols = c("patient_id", "treatment_type", "treatment_date", "triggering_code"),
   script_name = "R/142")
 
-# Guard clauses for enrichment columns absent from the 180-day RDS
-# (these are added by R/60-63/R/91/R/112, which operate on the 90-day RDS only)
-if (!"cancer_category" %in% names(episodes)) {
-  message("  NOTE: cancer_category absent from 180-day RDS — defaulting to empty string")
-  episodes <- episodes %>% mutate(cancer_category = "")
-}
-if (!"cancer_link_method" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(cancer_link_method = "none")
-}
-if (!"is_hodgkin" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(is_hodgkin = FALSE)
-}
-if (!"drug_group" %in% names(episodes)) {
-  message("  NOTE: drug_group absent from 180-day RDS — defaulting to NA")
-  episodes <- episodes %>% mutate(drug_group = NA_character_)
-}
-if (!"triggering_code_description" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(triggering_code_description = NA_character_)
-}
-if (!"code_type" %in% names(episodes)) {
-  message("  NOTE: code_type absent from 180-day RDS — defaulting to NA")
-  episodes <- episodes %>% mutate(code_type = NA_character_)
-}
-if (!"source_table" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(source_table = NA_character_)
-}
-if (!"sct_cross_use_flag" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(sct_cross_use_flag = NA_character_)
-}
-if (!"episode_dx_codes" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(episode_dx_codes = NA_character_)
-}
-if (!"episode_dx_categories" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(episode_dx_categories = NA_character_)
-}
 
 
 # --- SECTION 2B: 7-DAY CONFIRMED CATEGORIES LOOKUP (Phase 115) ---
@@ -613,6 +581,9 @@ message(glue("  Wrote {OUTPUT_DETAIL}"))
 message(glue("    {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
 
 
+ep90_check  <- readRDS(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))
+
+
 # --- SECTION 6: FINAL SUMMARY ----
 
 message("\n=== 180-Day Gantt Export Complete ===\n")
@@ -623,3 +594,32 @@ if (file.exists(ep90_path)) {
 }
 message(glue("  Episodes:  {OUTPUT_EPISODES}"))
 message(glue("  Detail:    {OUTPUT_DETAIL}"))
+
+
+# Phase 143 D-04: fill-rate parity check
+message("\n=== Phase 143 D-04: Fill-rate parity check ===")
+g90  <- readr::read_csv(file.path(CONFIG$output_dir, "gantt_episodes.csv"),     show_col_types = FALSE, col_types = readr::cols(.default = readr::col_character()))
+g180 <- readr::read_csv(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), show_col_types = FALSE, col_types = readr::cols(.default = readr::col_character()))
+enrich_cols <- c("drug_group","code_type","source_table",
+                 "episode_dx_codes","episode_dx_categories","episode_dx_7day_confirmed")
+fillrate <- function(d, col) mean(!is.na(d[[col]]) & trimws(d[[col]]) != "")
+cmp <- data.frame(
+  column   = enrich_cols,
+  fill_90  = round(100 * vapply(enrich_cols, function(col) fillrate(g90,  col), numeric(1)), 1),
+  fill_180 = round(100 * vapply(enrich_cols, function(col) fillrate(g180, col), numeric(1)), 1)
+)
+cmp$delta <- cmp$fill_180 - cmp$fill_90
+print(cmp)
+stopifnot("enrichment did not populate the 180-day file" = all(cmp$fill_180 > 0))
+message("Fill-rate parity check: PASS")
+
+# D-05: Death and Proton Therapy must be invariant across windows
+ep180_check <- readRDS(file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180_enriched.rds"))
+n_death_90   <- sum(ep90_check$treatment_type  == "Death",          na.rm = TRUE)
+n_death_180  <- sum(ep180_check$treatment_type == "Death",          na.rm = TRUE)
+n_proton_90  <- sum(ep90_check$treatment_type  == "Proton Therapy", na.rm = TRUE)
+n_proton_180 <- sum(ep180_check$treatment_type == "Proton Therapy", na.rm = TRUE)
+cat(sprintf("Death:  %d at 90d, %d at 180d\n",  n_death_90,  n_death_180))
+cat(sprintf("Proton: %d at 90d, %d at 180d\n", n_proton_90, n_proton_180))
+if (n_death_90 != n_death_180)   warning("Death episode count changed across windows — see 143-DISCOVERY.md death anomaly section")
+if (n_proton_90 != n_proton_180) stop("Proton Therapy episode count changed — this should be impossible")
