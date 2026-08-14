@@ -423,7 +423,7 @@ approximate_zip9 <- function(result_tbl) {
       group_by(zip5_norm, zip9_norm) %>%
       summarise(
         freq        = n_distinct(ID),
-        latest_date = max(period_start_dt),
+        latest_date = suppressWarnings(max(period_start_dt, na.rm = TRUE)),
         .groups     = "drop"
       ) %>%
       group_by(zip5_norm) %>%
