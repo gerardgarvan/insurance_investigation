@@ -147,6 +147,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 140 plans amended: 140-08-PATCH.md (16 fixes, FIX-01..FIX-16) applied to 140-01/03 (test-file split) and 140-02/04/05/06/07 (dual gap-day columns, D-2-conditional S1 fold, inverted KEY-sheet caveat, encounter-anchored gap formula, n_distinct() cross-check relocation, crosswalk vintage/match-rate gate, unparseable-date example table, HiPerGator-run checkpoint inserted between Wave 2 and Wave 3, D-1-option-b contingency notes, test-file split across 4 files) before any plan was executed — re-verified via gsd-plan-checker, all 24 CONTEXT.md IDs still covered
 - Phase 141 added: CONTEXT-zip9-imputation
 - Phase 142 added: 180-Day Treatment Episodes + Drug-Name Deduplication
+- Phase 143 added: 180-Day File: Enrichment Parity and Review Follow-ups
 
 ### Known Blockers (new)
 
