@@ -847,13 +847,10 @@ all_episodes <- all_episodes %>%
     source_hints, encounter_ids, drug_names
   )
 
-# Update all_detail select to include drug_name and source_hint
-# source_hint retained here (Phase 142) so the 180-day block can pass it to
-# calculate_episodes_detailed(), which references it directly in its summarise().
+# Update all_detail select to include drug_name
 all_detail <- all_detail %>%
   select(
-    patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID,
-    source_hint, drug_name,
+    patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID, drug_name,
     episode_number, episode_start, episode_stop, historical_flag
   )
 
@@ -889,14 +886,16 @@ episodes_list_180 <- list()
 detail_list_180   <- list()
 
 for (type in TREATMENT_TYPES) {
-  # Subset all_detail to this treatment type, carrying drug_name and source_hint.
-  # drug_name is carried directly — no post-hoc re-join needed (avoids fan-out
-  # when the same code appears on the same date in two encounters, Phase 142 fix).
-  # source_hint is required by calculate_episodes_detailed()'s summarise() block.
+  # Subset all_detail to this treatment type, carrying drug_name.
+  # source_hint is synthesized from treatment_type here because
+  # annotate_detail_with_episodes() drops extra columns, so source_hint
+  # does not survive into all_detail even though it existed in the per-type
+  # dates_df frames used by the 90-day loop. Any non-NA string satisfies
+  # calculate_episodes_detailed()'s summarise() reference to source_hint.
   dates_df_180 <- all_detail %>%
     filter(treatment_type == type) %>%
-    select(ID = patient_id, treatment_date, triggering_code, ENCOUNTERID,
-           source_hint, drug_name)
+    select(ID = patient_id, treatment_date, triggering_code, ENCOUNTERID, drug_name) %>%
+    mutate(source_hint = type)
 
   episodes_df_180 <- calculate_episodes_detailed(dates_df_180, gap_threshold = 180L) %>%
     mutate(treatment_type = type)
