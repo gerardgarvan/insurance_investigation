@@ -847,10 +847,13 @@ all_episodes <- all_episodes %>%
     source_hints, encounter_ids, drug_names
   )
 
-# Update all_detail select to include drug_name
+# Update all_detail select to include drug_name and source_hint
+# source_hint retained here (Phase 142) so the 180-day block can pass it to
+# calculate_episodes_detailed(), which references it directly in its summarise().
 all_detail <- all_detail %>%
   select(
-    patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID, drug_name,
+    patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID,
+    source_hint, drug_name,
     episode_number, episode_start, episode_stop, historical_flag
   )
 
@@ -868,6 +871,94 @@ message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_episodes)} rows)"))
 
 saveRDS(all_detail, OUTPUT_DETAIL_RDS)
 message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))
+
+
+# --- SECTION 5C: 180-DAY EPISODE CALCULATION (Phase 142) ---
+# Re-run episode assignment on the same drug-name-resolved all_detail data
+# using gap_threshold = 180. The expensive 3-tier drug-name lookup above runs
+# only once; this block reuses the resolved drug_name column.
+# D-01: Window logic identical to 90-day (date - episode_start >= threshold).
+# D-04: RDS names use *_180.rds suffix.
+
+message("\n--- Computing 180-day episodes (Phase 142) ---")
+
+OUTPUT_RDS_180        <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds")
+OUTPUT_DETAIL_RDS_180 <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail_180.rds")
+
+episodes_list_180 <- list()
+detail_list_180   <- list()
+
+for (type in TREATMENT_TYPES) {
+  # Subset all_detail to this treatment type, carrying drug_name and source_hint.
+  # drug_name is carried directly — no post-hoc re-join needed (avoids fan-out
+  # when the same code appears on the same date in two encounters, Phase 142 fix).
+  # source_hint is required by calculate_episodes_detailed()'s summarise() block.
+  dates_df_180 <- all_detail %>%
+    filter(treatment_type == type) %>%
+    select(ID = patient_id, treatment_date, triggering_code, ENCOUNTERID,
+           source_hint, drug_name)
+
+  episodes_df_180 <- calculate_episodes_detailed(dates_df_180, gap_threshold = 180L) %>%
+    mutate(treatment_type = type)
+
+  episodes_list_180[[type]] <- episodes_df_180
+
+  # annotate_detail_with_episodes() uses dates_df for its join keys; drug_name is
+  # NOT returned by that function automatically, so we join it back from dates_df_180
+  # using the unique (ID, treatment_date, triggering_code, ENCOUNTERID) key —
+  # which is fan-out-safe because dates_df_180 already has one drug_name per row.
+  annotated_180  <- annotate_detail_with_episodes(dates_df_180, episodes_df_180, gap_threshold = 180L)
+  n_before_join  <- nrow(annotated_180)
+
+  detail_df_180 <- annotated_180 %>%
+    mutate(treatment_type = type) %>%
+    left_join(
+      dates_df_180 %>% select(ID, treatment_date, triggering_code, ENCOUNTERID, drug_name),
+      by = c("patient_id" = "ID", "treatment_date", "triggering_code", "ENCOUNTERID")
+    )
+
+  stopifnot("drug_name join fanned out" = nrow(detail_df_180) == n_before_join)
+
+  detail_list_180[[type]] <- detail_df_180
+}
+
+all_episodes_180 <- bind_rows(episodes_list_180) %>%
+  select(
+    patient_id, treatment_type, episode_number, episode_start, episode_stop,
+    episode_length_days, distinct_dates_in_episode, historical_flag,
+    triggering_codes, source_hints, encounter_ids
+  )
+
+# Aggregate drug_names per 180-day episode from the detail rows (drug_name
+# was carried in dates_df_180 and joined onto detail_df_180, so no fan-out).
+drug_names_per_episode_180 <- bind_rows(detail_list_180) %>%
+  filter(!is.na(drug_name)) %>%
+  group_by(patient_id, treatment_type, episode_number) %>%
+  summarise(
+    drug_names = paste(sort(unique(drug_name)), collapse = ","),
+    .groups = "drop"
+  )
+
+all_episodes_180 <- all_episodes_180 %>%
+  left_join(drug_names_per_episode_180, by = c("patient_id", "treatment_type", "episode_number")) %>%
+  mutate(drug_names = ifelse(is.na(drug_names), "", drug_names)) %>%
+  select(
+    patient_id, treatment_type, episode_number, episode_start, episode_stop,
+    episode_length_days, distinct_dates_in_episode, historical_flag,
+    triggering_codes, source_hints, encounter_ids, drug_names
+  )
+
+all_detail_180 <- bind_rows(detail_list_180) %>%
+  select(
+    patient_id, treatment_type, treatment_date, triggering_code, ENCOUNTERID, drug_name,
+    episode_number, episode_start, episode_stop, historical_flag
+  )
+
+saveRDS(all_episodes_180, OUTPUT_RDS_180)
+message(glue("180-day RDS saved: {OUTPUT_RDS_180} ({nrow(all_episodes_180)} rows)"))
+
+saveRDS(all_detail_180, OUTPUT_DETAIL_RDS_180)
+message(glue("180-day detail RDS saved: {OUTPUT_DETAIL_RDS_180} ({nrow(all_detail_180)} rows)"))
 
 
 # --- SECTION 6: PER-TYPE CSV OUTPUT ---

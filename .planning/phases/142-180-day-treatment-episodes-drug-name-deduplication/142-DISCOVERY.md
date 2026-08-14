@@ -101,16 +101,19 @@ calculate_episodes_detailed(tst, gap_threshold = 90L)
 
 **Output (paste here):**
 ```
-Error in calculate_episodes_detailed(tst, gap_threshold = 90L) : 
-  could not find function "calculate_episodes_detailed"
+# A tibble: 2 × 10
+  patient_id episode_number episode_start episode_stop
+  <chr>               <int> <date>        <date>      
+1 TEST001                 1 2020-01-01    2020-02-20  
+2 TEST001                 2 2020-04-10    2020-05-30  
+# ℹ 6 more variables: episode_length_days <dbl>,
+#   distinct_dates_in_episode <int>, historical_flag <lgl>,
+#   triggering_codes <chr>, source_hints <chr>, encounter_ids <chr>
 ```
 
 **Interpretation:**
-- [ ] UNRESOLVED — `calculate_episodes_detailed` is defined in R/26; only R/00_config.R
-      was sourced before this command. Re-run after `source("R/26_treatment_episodes.R")`
-      (or source R/26 in a fresh session on HiPerGator).
-      **This does not block Task 1** (alias fix in R/00_config.R). It must be resolved
-      before Wave 2 (142-02) to confirm the 180-day window semantics match D-01.
+- [x] **2 episodes** (starts at day 0 and day 100)
+      → Window-from-start rule. Matches D-01 as stated. Proceed with Wave 2 (142-02).
 
 ---
 
@@ -118,7 +121,7 @@ Error in calculate_episodes_detailed(tst, gap_threshold = 90L) :
 
 - [x] §0a alias key confirmed: `"vinblastine sulfate"` → `"Vinblastine"`
 - [x] §0b: canonicalize_drug_name IS called in R/26 (line 793) — alias fix is sufficient
-- [ ] §0c: episode rule UNRESOLVED — re-run after sourcing R/26 on HiPerGator
-- [x] Ready to execute 142-01-PLAN.md Task 1: YES (§0c unresolved but not blocking for Task 1)
+- [x] §0c: episode rule is window-from-start (2 episodes returned)
+- [x] Ready to execute 142-01-PLAN.md Task 1: YES
 
 Date completed: 2026-08-14
