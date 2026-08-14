@@ -67,6 +67,9 @@ rm(list = ls())
 # SECTION 1: CONFIGURATION ----
 # ==============================================================================
 
+# Ensure no stale p143 options from a prior interactive session carry into this orchestrated run.
+options(p143_episodes_rds = NULL, p143_detail_rds = NULL, p143_out_suffix = NULL)
+
 # Guard: Must run from project root (all relative paths assume it)
 if (!file.exists("R/00_config.R")) {
   # Try to find project root and set it
@@ -151,6 +154,20 @@ results <- run_script("R/26_treatment_episodes.R", results)
 # R/28 enriches treatment_episodes.rds with cancer linkage + regimen detection
 # R/28 auto-sources: R/00, utils
 results <- run_script("R/28_episode_classification.R", results)
+
+# Phase 143: run R/28 a second time for the 180-day episodes file.
+# withr::with_options scopes the p143 options so they cannot leak on error.
+# Produces treatment_episodes_180_enriched.rds; does NOT touch treatment_episodes.rds.
+if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds"))) {
+  withr::with_options(
+    list(p143_episodes_rds = file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds"),
+         p143_detail_rds   = file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail_180.rds"),
+         p143_out_suffix   = "_180_enriched"),
+    source("R/28_episode_classification.R", local = new.env(parent = globalenv()))
+  )
+} else {
+  message("  [143] treatment_episodes_180.rds not found — skipping 180-day enrichment pass.")
+}
 
 # R/29 adds first-line flags and death validation
 # R/29 auto-sources: R/00, utils

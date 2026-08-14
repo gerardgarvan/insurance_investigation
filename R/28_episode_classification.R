@@ -95,18 +95,24 @@ source("R/utils/utils_dates.R")
 source("R/utils/utils_xlsx_lookups.R")  # Phase 91: xlsx metadata lookups
 
 # Output paths
-OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
-DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "episode_classification_audit.xlsx")
 OUTPUT_CSV <- file.path(CONFIG$output_dir, "episode_classification_audit.csv")
 
+# Phase 143: parameterisable path and suffix so this script can enrich the 180-day
+# episodes file without being duplicated. Defaults reproduce 90-day behaviour exactly.
+EPISODES_RDS_PATH <- getOption("p143_episodes_rds",
+                                file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))
+DETAIL_RDS_PATH   <- getOption("p143_detail_rds",
+                                file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds"))
+OUT_SUFFIX        <- getOption("p143_out_suffix", "")
+
 message("=== Phase 61: Episode Classification - Cancer Linkage and Regimen Detection ===")
 message("\nInputs:")
-message(glue("  - {OUTPUT_RDS}"))
-message(glue("  - {DETAIL_RDS}"))
+message(glue("  - {EPISODES_RDS_PATH}"))
+message(glue("  - {DETAIL_RDS_PATH}"))
 message(glue("  - DuckDB DIAGNOSIS table"))
 message("\nOutputs:")
-message(glue("  - {OUTPUT_RDS} (enriched with 4 columns)"))
+message(glue("  - {EPISODES_RDS_PATH} (enriched with 4 columns)"))
 message(glue("  - {OUTPUT_XLSX}"))
 message(glue("  - {OUTPUT_CSV}"))
 
@@ -141,14 +147,14 @@ count_j9_codes <- function(triggering_codes) {
 message("\n--- Loading treatment episodes and detail ---")
 
 # SAFE-01: Validate input RDS artifacts
-assert_rds_exists(OUTPUT_RDS, script_name = "R/28")
-assert_rds_exists(DETAIL_RDS, script_name = "R/28")
+assert_rds_exists(EPISODES_RDS_PATH, script_name = "R/28")
+assert_rds_exists(DETAIL_RDS_PATH, script_name = "R/28")
 
-episodes <- readRDS(OUTPUT_RDS)
-message(glue("  Loaded treatment_episodes.rds: {nrow(episodes)} episodes"))
+episodes <- readRDS(EPISODES_RDS_PATH)
+message(glue("  Loaded {basename(EPISODES_RDS_PATH)}: {nrow(episodes)} episodes"))
 
-episode_detail <- readRDS(DETAIL_RDS)
-message(glue("  Loaded treatment_episode_detail.rds: {nrow(episode_detail)} detail rows"))
+episode_detail <- readRDS(DETAIL_RDS_PATH)
+message(glue("  Loaded {basename(DETAIL_RDS_PATH)}: {nrow(episode_detail)} detail rows"))
 
 # SAFE-02: Validate data frame structure
 assert_df_valid(episodes, "treatment_episodes",
@@ -853,8 +859,20 @@ episodes <- episodes %>%
     episode_dx_codes, episode_dx_categories
   )
 
-saveRDS(episodes, OUTPUT_RDS)
-message(glue("  Saved enriched treatment_episodes.rds: {nrow(episodes)} episodes, {ncol(episodes)} columns"))
+out_rds <- file.path(CONFIG$cache$outputs_dir,
+                     paste0("treatment_episodes", OUT_SUFFIX, ".rds"))
+
+# Any suffixed pass must write somewhere other than its input — a suffix of "_180" would
+# resolve to treatment_episodes_180.rds and overwrite the unenriched Phase 142 output.
+if (nzchar(OUT_SUFFIX) &&
+    normalizePath(out_rds, mustWork = FALSE) ==
+    normalizePath(EPISODES_RDS_PATH, mustWork = FALSE)) {
+  stop("p143_out_suffix would overwrite the input RDS: ", out_rds)
+}
+
+saveRDS(episodes, out_rds)
+message(glue("  Saved enriched episodes to: {out_rds}"))
+message(glue("  {nrow(episodes)} episodes, {ncol(episodes)} columns"))
 
 # Verify column presence
 stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
@@ -1169,4 +1187,4 @@ message(glue("  Episodes enriched: {nrow(episodes)}"))
 message(glue("  Cancer linkage: {n_encounter_linked} encounter_id, {n_temporal_linked} closest_date, {n_none} none"))
 message(glue("  Hodgkin episodes: {sum(episodes$is_hodgkin)}"))
 message(glue("  Regimens: {n_abvd} ABVD, {n_bv} BV+AVD, {n_nivo} Nivo+AVD"))
-message(glue("  Outputs: treatment_episodes.rds (enriched), {basename(OUTPUT_XLSX)}, {basename(OUTPUT_CSV)}"))
+message(glue("  Outputs: {basename(out_rds)} (enriched), {basename(OUTPUT_XLSX)}, {basename(OUTPUT_CSV)}"))
