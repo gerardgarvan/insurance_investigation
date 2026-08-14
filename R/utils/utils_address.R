@@ -177,7 +177,8 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
   candidates <- queries %>%
     inner_join(
       addr %>% select(ID, zip9_norm, zip5_norm, period_start_dt, period_end_dt),
-      by = "ID"
+      by = "ID",
+      relationship = "many-to-many"
     ) %>%
     mutate(
       is_interval = period_start_dt <= query_date & query_date < period_end_dt,
