@@ -2637,6 +2637,18 @@ DRUG_NAME_ALIASES <- c(
   "doxorubicin"               = "Doxorubicin Hydrochloride",
   "doxorubicin hcl"           = "Doxorubicin Hydrochloride",
   "doxorubicin hydrochloride" = "Doxorubicin Hydrochloride",
+  # ABVD-regimen salt/acid variants (Phase 142, EP-DEDUP-01).
+  # RxNorm resolution (R/27) sometimes yields "Vinblastine Sulfate" while
+  # MEDICATION_LOOKUP (via J9360/67228/11198) yields "Vinblastine".
+  # Collapse salt -> base for vinblastine (canonical is the base form in MEDICATION_LOOKUP).
+  # Doxorubicin goes the other direction (base -> salt) — directions differ because
+  # MEDICATION_LOOKUP is the authority and both directions are intentional.
+  # Liposomal and conjugated forms are deliberately NOT aliased here.
+  # Audit (2026-08-14, §0a from treatment_episode_detail.rds): only vinblastine has
+  # a duplicate pair in the output. Vincristine Sulfate, Vinorelbine Tartrate,
+  # Fludarabine Phosphate, Bleomycin, and Dacarbazine all appear as single tokens —
+  # no aliases needed for those (one form only reaches the output).
+  "vinblastine sulfate"       = "Vinblastine",
   # Supportive-care single-agent brand -> generic aliases (Phase 120, SUPCARE-04).
   # These feed the R/105 rule-based fallback when RxNav cannot resolve a code.
   # Only SINGLE-INGREDIENT brands live here; combination brands (Ciprodex,
