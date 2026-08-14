@@ -407,3 +407,13 @@ Plans:
 - [x] 140-05-PLAN.md — gap_days_at_assignment signed covariate + non-monotonicity diagnostic (median_gap_within_bin) + D-3 uncapped-carry-forward decision [P-04a, P-04b, D-3] (Wave 4, depends on 140-04) — D-3 resolved 2026-08-10 as option-a (uncapped carry-forward accepted, gap covariates serve as analytic/sensitivity variables; already implemented by Task 1, no code changes required); option-b (capped at team-specified N) not selected/not built
 - [x] 140-06-PLAN.md — build_encounter_anchored_validation_cases() (second estimate) + A-06 lower-bound relabeling [P-05a, P-05b] (Wave 5, depends on 140-05) — encounter-anchored curve (9th workbook sheet) added; A-06's record-anchored curve and both curves' own selection limitations explicitly labeled in the KEY sheet and each sheet's own subtitle; no checkpoint encountered
 - [x] 140-07-PLAN.md — Part A universe-difference documentation (self-checking) + sentinel-nulling close-out + optional get_zip9_at_date() addr_full test seam [P-07a, P-07b, P-07c] (Wave 6, depends on 140-06) — universe cross-check relocated to SECTION 12 (n_distinct() both sides, 140-08-PATCH FIX-07); KEY sheet + all 4 Part A sheet subtitles carry an explicit universe note; sentinel-nulling documented reviewed-and-closed; get_zip9_at_date() gains an additive addr_full=NULL test seam (140-08-PATCH FIX-10) with a new dedicated test-utils-address.R; normalize_*()/is_sentinel_zip5() confirmed byte-for-byte unchanged. This was the final plan in Phase 140 (8/8) — all 24 of 140-CONTEXT.md's task/decision IDs addressed; phase-level goal verification (real HiPerGator run) still pending
+
+### Phase 141: CONTEXT-zip9-imputation
+
+**Goal:** Wire approximate_zip9() into R/115 and re-issue the xlsx workbook with imputation QC rows (D-01 through D-04).
+**Requirements**: D-01, D-02, D-03, D-04
+**Depends on:** Phase 140
+**Plans:** 1/1 complete
+
+Plans:
+- [x] 141-01-PLAN.md — Wire approximate_zip9() into R/115: SECTION 11B (get_zip9_at_date |> approximate_zip9, RDS write, join onto encounter_zip), SECTION 13 imputation QC rows (8-level zip9_source breakdown + summary rows), SECTION 12 reviewer note, fixture tests. HiPerGator re-run confirmed 2026-08-13: 76.5% post-imputation coverage, 42,651 encounters gained via carry-forward, 0 via zip5_modal, c02_reconciled PASS. [D-01, D-02, D-03, D-04]
