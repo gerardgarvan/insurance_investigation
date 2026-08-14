@@ -413,7 +413,7 @@ Plans:
 **Goal:** Wire approximate_zip9() into R/115 and re-issue the xlsx workbook with imputation QC rows (D-01 through D-04).
 **Requirements**: D-01, D-02, D-03, D-04
 **Depends on:** Phase 140
-**Plans:** 1/1 complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 141-01-PLAN.md — Wire approximate_zip9() into R/115: SECTION 11B (get_zip9_at_date |> approximate_zip9, RDS write, join onto encounter_zip), SECTION 13 imputation QC rows (8-level zip9_source breakdown + summary rows), SECTION 12 reviewer note, fixture tests. HiPerGator re-run confirmed 2026-08-13: 76.5% post-imputation coverage, 42,651 encounters gained via carry-forward, 0 via zip5_modal, c02_reconciled PASS. [D-01, D-02, D-03, D-04]
