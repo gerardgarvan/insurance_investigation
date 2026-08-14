@@ -434,7 +434,7 @@ Plans:
 **Goal:** Populate the six blank enrichment columns in the 180-day Gantt file (or remove them with documentation), verify patient-count and single-event-type invariants, document the episode definition with observed-maxima evidence, and investigate the Death-episode anomaly (1,300 to 1,299 across windows).
 **Requirements**: EP-180-DISC-01, EP-180-ENRICH-01, EP-180-ENRICH-02, EP-180-EXPORT-01, EP-180-DOC-01
 **Depends on:** Phase 142
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 143-01-PLAN.md -- D-01 decision checkpoint (boundaries vs content); read-only discovery: producer disposition table, 90-day fill rates, death anomaly, patient-count reconciliation -> 143-DISCOVERY.md [EP-180-DISC-01] (Wave 1)
