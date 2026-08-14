@@ -417,3 +417,14 @@ Plans:
 
 Plans:
 - [x] 141-01-PLAN.md — Wire approximate_zip9() into R/115: SECTION 11B (get_zip9_at_date |> approximate_zip9, RDS write, join onto encounter_zip), SECTION 13 imputation QC rows (8-level zip9_source breakdown + summary rows), SECTION 12 reviewer note, fixture tests. HiPerGator re-run confirmed 2026-08-13: 76.5% post-imputation coverage, 42,651 encounters gained via carry-forward, 0 via zip5_modal, c02_reconciled PASS. [D-01, D-02, D-03, D-04]
+
+### Phase 142: 180-Day Treatment Episodes + Drug-Name Deduplication
+
+**Goal:** Produce 180-day Gantt CSVs (gantt_episodes_180.csv, gantt_detail_180.csv) with the same schema as the 90-day files, and fix drug-name deduplication so salt variants like "Vinblastine Sulfate" collapse to the canonical name
+**Requirements**: EP-DEDUP-01, EP-180-01, EP-180-02
+**Depends on:** Phase 141
+**Plans:** 2 plans
+
+Plans:
+- [ ] 142-01-PLAN.md — Add vinblastine sulfate alias to DRUG_NAME_ALIASES in R/00_config.R; audit bleomycin, vincristine, dacarbazine salt variants [EP-DEDUP-01] (Wave 1)
+- [ ] 142-02-PLAN.md — Extend R/26 to produce treatment_episodes_180.rds + treatment_episode_detail_180.rds (Section 5C); create R/142_gantt_180_export.R writing gantt_episodes_180.csv + gantt_detail_180.csv with same 20/14-column schema as R/52 [EP-180-01, EP-180-02] (Wave 2, depends on 142-01)
