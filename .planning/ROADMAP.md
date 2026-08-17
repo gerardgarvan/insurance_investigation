@@ -479,3 +479,16 @@ Plans:
 - [ ] 146-04-PLAN.md — Derive SVI: R/147_build_svi_zcta.R + svi_2020_zcta_derived.csv with coverage floor (D-02a), or record drop (D-02c) (Wave 3)
 - [ ] 146-05-PLAN.md — Wire R/116 to staged files + §4 ceiling sheet + rewrite README (derived SVI, D-01 SDI, 77.7% ADI) (Wave 4)
 - [ ] 146-06-PLAN.md — HiPerGator re-run: R/116 + R/88 + sentinel-ZIP/SDI-unmatched queries against real data (Wave 5)
+
+### Phase 147: Read ADDRESS_ZIP5 and retract downstream artefacts
+
+**Goal:** Read the long-ignored `ADDRESS_ZIP5` column in `get_zip9_at_date()`, re-run R/115 and R/116, and issue written retractions for the six conclusions in phases 145–147 that were artefacts of deriving ZIP5 from `ADDRESS_ZIP9` only (50.1% apparent coverage → 96.9% actual availability).
+**Requirements**: TBD
+**Depends on:** Phase 146
+**Plans:** 4 plans
+
+Plans:
+- [ ] 147-01-PLAN.md — Discovery: column audit, 2x2 table, 12-row disagreement print, 148-DISCOVERY.md (Wave 1)
+- [ ] 147-02-PLAN.md — Code fix: get_zip9_at_date() ADDRESS_ZIP5 coalesce, guard, fixture extension, new test (Wave 2)
+- [ ] 147-03-PLAN.md — HiPerGator re-run: archive pre-148 outputs, R/115 → R/116 → R/88, fill before/after table (Wave 3, checkpoint)
+- [ ] 147-04-PLAN.md — Retraction: annotate six affected conclusions, update README.md (Wave 4)
