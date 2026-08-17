@@ -470,7 +470,7 @@ Plans:
 **Goal:** Acquire and stage the three absent SES reference files for R/116 — download SDI (ZCTA), derive SVI to ZCTA (CDC publishes no 2020 ZCTA file), and register-and-download ADI (ZIP9) — quantify each geography-mismatch haircut below the 77.7% ZIP ceiling, correct the 68.6% ADI figure to 77.7%, and re-run R/116 so each staged index reports honest sub-ceiling coverage while probe gates still degrade absent indices to NA.
 **Requirements**: SES-01, SES-02, SES-03, SES-04
 **Depends on:** Phase 145
-**Plans:** 6 plans
+**Plans:** 6/6 plans complete
 
 Plans:
 - [x] 146-01-PLAN.md — Discovery: verify SDI/SVI/ADI publications, network policy, sentinel-ZIP + normalizer-disagreement probes -> 146-DISCOVERY.md (Wave 1, autonomous)
