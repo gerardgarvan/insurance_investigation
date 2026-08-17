@@ -320,14 +320,16 @@ findSVI values are percentile-ranked against the national ZCTA universe. CDC's p
 
 ---
 
-### ADI Registration Status and Per-Index Commit Verdicts (to be completed by Task 2)
+### ADI Registration Status and Per-Index Commit Verdicts (resolved 2026-08-17)
 
-**ADI registration:** OPEN — see Task 2 checkpoint. Awaiting: name of registrant, date of registration, and portal confirmation of ZIP+4/ZIP9 column presence in the download package.
+**ADI registration:** BLOCKED — owner: Gerard, date: 2026-08-17. Registration at neighborhoodatlas.medicine.wisc.edu not yet completed. Full registration + download instructions are in `PHASE_146_REGISTRATION_CHECKLIST.txt` (repo root). ADI staging (Wave 4 dependency) is deferred until Gerard completes registration, downloads the file, and confirms ZIP9 column presence.
 
-**Per-index commit-to-repo verdicts:** OPEN — to be recorded here once Task 2 is complete.
+**Per-index commit-to-repo verdicts (confirmed by user 2026-08-17):**
 
-| Index | File | May commit to repo? | If not: transfer path |
+| Index | File | May commit to repo? | Notes |
 |-------|------|--------------------|-----------------------|
-| SDI | `data/reference/zip5_sdi_reference.csv` | OPEN — terms unclear (policy@aafp.org) | `scp` to `/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/` |
+| SDI | `data/reference/zip5_sdi_reference.csv` | YES | Confirmed by user. Terms review pending but user approved committing. |
 | SVI | `data/reference/svi_2020_zcta_derived.csv` | YES — CDC data is US government public domain; derived file freely committable | N/A |
-| ADI | `data/reference/neighborhood_atlas_block_group_crosswalk.csv` | OPEN — registration-gated; likely restricted | `scp` to `/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/` |
+| ADI | `data/reference/neighborhood_atlas_block_group_crosswalk.csv` | YES | Confirmed by user. Terms must still be reviewed after registration; if terms prohibit redistribution, move to `.gitignore` and `scp` to `/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/`. |
+
+**Census API key status:** PENDING — user will register at api.census.gov (free; ~5 min). See `PHASE_146_REGISTRATION_CHECKLIST.txt` Step 1. Must be present on HiPerGator before `R/117_build_svi_zcta.R` runs (Wave 4 / plan 146-04).
