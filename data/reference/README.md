@@ -80,6 +80,13 @@ Because Tier 3 centroid ZIP9 resolution is inert (144-CONTEXT.md D-01) AND this 
 is not staged (P-03a pending), `adi_natrank` is entirely NA on current runs. Acquisition
 status is the same as the Phase 140 block-group tier above -- not staged as of 2026-08-17.
 
+**ADI ceiling (Phase 145):** Even once the Neighborhood Atlas crosswalk is staged, ADI
+coverage is bounded by the share of encounters with `zip9_source == "zip9_observed"`.
+In the 2026-08-17 run: 1,516,469 / 1,950,696 = **77.7%**. The remaining 22.3% of encounters
+(`no_zip5` + `none`) carry no ZIP9 and cannot receive an ADI score. This is a data ceiling,
+not a join failure. The ceiling is also reported in the "Index Coverage" sheet of the summary
+workbook and in the "Coverage by Year" sheet (Phase 145).
+
 ## SDI -- Social Deprivation Index (Robert Graham Center) (Phase 145)
 
 **Expected path:** `data/reference/zip5_sdi_reference.csv`

@@ -360,12 +360,62 @@ ruca_dist <- encounter_ses %>%
   mutate(pct = round(100 * n / sum(n), 1)) %>%
   arrange(desc(n))
 
+# Phase 145: year x zip9_source coverage sheet.
+# If 'none' clusters in early years the usable SES window is shorter than the
+# 2012-01-01 to 2025-03-31 study period; analysts should check the first column.
+coverage_by_year <- encounter_ses %>%
+  dplyr::mutate(yr = lubridate::year(ADMIT_DATE)) %>%
+  dplyr::count(yr, zip9_source) %>%
+  tidyr::pivot_wider(names_from = zip9_source, values_from = n, values_fill = 0L) %>%
+  dplyr::arrange(yr)
+
+# Phase 145: no-ZIP5 share and ADI ceiling note appended to index_coverage.
+# no_zip5 + none rows can receive no index at any geography (14.1% + 8.1% = 22.3%
+# of encounters in the 2026-08-17 run). ADI is further limited to zip9_observed rows
+# (77.7%); even once the Neighborhood Atlas file is staged, ADI coverage cannot
+# exceed that ceiling.
+no_zip5_n   <- sum(encounter_ses$zip9_source %in% c("no_zip5", "none"), na.rm = TRUE)
+no_zip5_pct <- round(100 * no_zip5_n / nrow(encounter_ses), 1)
+adi_ceiling_n   <- sum(encounter_ses$zip9_source == "zip9_observed", na.rm = TRUE)
+adi_ceiling_pct <- round(100 * adi_ceiling_n / nrow(encounter_ses), 1)
+
+index_coverage <- index_coverage %>%
+  dplyr::bind_rows(tibble(
+    index        = "no-ZIP5 (no index possible)",
+    n_non_na     = no_zip5_n,
+    n_total      = nrow(encounter_ses),
+    pct_coverage = no_zip5_pct,
+    join_key     = NA_character_,
+    file_present = NA
+  ),
+  tibble(
+    index        = "ADI ceiling (zip9_observed rows)",
+    n_non_na     = adi_ceiling_n,
+    n_total      = nrow(encounter_ses),
+    pct_coverage = adi_ceiling_pct,
+    join_key     = "ZIP9",
+    file_present = NA
+  ))
+
 wb <- wb_workbook()
 wb <- wb %>%
   wb_add_worksheet("ZIP Source Breakdown") %>%
   wb_add_data(sheet = "ZIP Source Breakdown", x = zip_source_summary, start_row = 1) %>%
   wb_add_worksheet("Index Coverage") %>%
   wb_add_data(sheet = "Index Coverage", x = index_coverage, start_row = 1) %>%
+  wb_add_worksheet("Coverage by Year") %>%
+  wb_add_data(sheet = "Coverage by Year", x = coverage_by_year, start_row = 2) %>%
+  wb_add_data(sheet = "Coverage by Year",
+              x = data.frame(note = paste0(
+                "Phase 145: zip9_source counts by admission year. ",
+                "If 'none' clusters in early years, the usable SES window is shorter ",
+                "than the 2012-2025 study period. ",
+                "no_zip5 + none = ", no_zip5_n, " (", no_zip5_pct, "%) of all encounters ",
+                "can receive no index at any geography. ",
+                "ADI ceiling = zip9_observed = ", adi_ceiling_n,
+                " (", adi_ceiling_pct, "%) -- see data/reference/README.md."
+              )),
+              start_row = 1) %>%
   wb_add_worksheet("RUCA Distribution") %>%
   wb_add_data(sheet = "RUCA Distribution", x = ruca_dist, start_row = 1)
 
