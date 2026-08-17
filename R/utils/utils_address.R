@@ -198,7 +198,17 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 
   # D-03: most-recent-before fallback for queries not covered by any interval
   covered   <- interval_hits %>% select(ID, query_date)
-  uncovered <- queries %>% anti_join(covered, by = c("ID", "query_date"))
+  # FAN-OUT FIX (Phase 145): `queries` is one row per INPUT element, not per
+  # distinct key -- callers pass repeated (ID, date) pairs (e.g. several encounters
+  # on the same day). interval_hits and fallback_hits are deduped by
+  # group_by()+slice(1), but `uncovered` inherits the duplicates and carries them
+  # into still_uncovered -> none_rows -> matched. The final left_join then fans out
+  # on every match_type == "none" key, breaking the "ONE row per DISTINCT
+  # (ID, query_date)" contract in this function's @return.
+  # Observed effect (R/116, Phase 144): 1,950,696 encounters -> 2,210,904 rows.
+  uncovered <- queries %>%
+    distinct(ID, query_date) %>%
+    anti_join(covered, by = c("ID", "query_date"))
 
   fallback_hits <- candidates %>%
     semi_join(uncovered, by = c("ID", "query_date")) %>%
@@ -220,6 +230,11 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
   matched <- bind_rows(interval_hits, fallback_hits, none_rows)
   # Return one row per DISTINCT (ID, query_date) — NOT parallel to input vectors.
   # Callers MUST join on c("ID","query_date"); do NOT cbind the result back onto a source frame.
+  # Contract assertion (Phase 145): matched must be unique on the join key, or the
+  # left_join below fans out and every downstream row count is inflated.
+  stopifnot("get_zip9_at_date: matched has duplicate (ID, query_date) keys" =
+              !any(duplicated(matched[c("ID", "query_date")])))
+
   queries %>%
     distinct(ID, query_date) %>%
     left_join(matched, by = c("ID", "query_date")) %>%

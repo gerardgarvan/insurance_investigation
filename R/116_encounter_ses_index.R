@@ -134,14 +134,22 @@ zip_resolved <- get_zip9_at_date(
   dates = encounters_raw$ADMIT_DATE
 ) |> approximate_zip9()
 
-# get_zip9_at_date returns one row per DISTINCT (ID, query_date) -- join back
-# on ID=PATID, query_date=ADMIT_DATE to restore one row per ENCOUNTERID.
+# get_zip9_at_date() returns one row per DISTINCT (ID, query_date); join back on
+# ID=PATID, query_date=ADMIT_DATE to restore one row per ENCOUNTERID.
+#
+# relationship = "one-to-many" is deliberate and must NOT be relaxed to
+# "many-to-many": one resolved ZIP maps to many encounters (same patient, same
+# day), but never the reverse. Declaring many-to-many silenced the dplyr warning
+# that would have caught the Phase 144 fan-out (1,950,696 -> 2,210,904 rows).
 encounter_zip <- encounters_raw %>%
   left_join(
     zip_resolved %>% dplyr::rename(PATID = ID, ADMIT_DATE = query_date),
     by = c("PATID", "ADMIT_DATE"),
-    relationship = "many-to-many"
+    relationship = "many-to-one"
   )
+
+stopifnot("ZIP resolution fanned out -- zip_resolved has duplicate (PATID, ADMIT_DATE) keys" =
+            nrow(encounter_zip) == nrow(encounters_raw))
 
 message(glue("  ZIP resolution complete. zip9_source breakdown:"))
 print(table(encounter_zip$zip9_source, useNA = "ifany"))
@@ -291,8 +299,10 @@ encounter_ses <- encounter_zip %>%
 # All four lookups are deduplicated on their join key above, so this should hold.
 # Assert it rather than rely on it: a future reference file with duplicate ZIP5
 # or ZIP9 keys would multiply encounter rows silently.
+# Anchored to encounters_raw, not encounter_zip: comparing against an already
+# inflated frame is what let the Phase 144 fan-out pass this check.
 stopifnot("SES join fanned out -- a reference lookup has duplicate keys" =
-            nrow(encounter_ses) == nrow(encounter_zip))
+            nrow(encounter_ses) == nrow(encounters_raw))
 
 message(glue("  encounter_ses rows: {nrow(encounter_ses)}"))
 message(glue("  sdi_score coverage:   {round(100 * mean(!is.na(encounter_ses$sdi_score)),  1)}%"))
