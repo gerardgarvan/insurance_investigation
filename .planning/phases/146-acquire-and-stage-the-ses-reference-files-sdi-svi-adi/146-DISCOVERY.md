@@ -166,8 +166,8 @@ Do NOT use `R/147` — it is not the next free number, will collide when the rep
 | SDI 2020 vs 2019 vintage | SDI | OPEN | Navigate portal download page; use whichever is most recent confirmed download |
 | SDI missing-value encoding | SDI | OPEN | Inspect on download |
 | SDI redistribution terms | SDI | OPEN — unclear | Confirm with policy@aafp.org before committing |
-| SVI D-02 option decision | SVI | OPEN — gating 146-02 | D-02a-i (findSVI, recommended) or D-02a-ii (areal mean) or D-02b/c; decide in 146-02 |
-| Census API key availability | SVI | OPEN | Confirm key registered on HiPerGator before committing to findSVI path |
+| SVI D-02 option decision | SVI | **RESOLVED — D-02a-i (findSVI)** | Decided in 146-02. See PART H below. |
+| Census API key availability | SVI | **PENDING REGISTRATION** | Team member registering at api.census.gov (free). Status = pending; must be confirmed on HiPerGator before 146-04 build script runs. |
 | ADI D-05 portal verification | ADI | OPEN — gating 146-02 | Registering team member must confirm ZIP+4/ZIP9 column presence in downloaded file |
 | ADI who registers | ADI | OPEN | Confirm with Erin/Amy; record name + date here once done |
 | ADI redistribution terms | ADI | OPEN | Confirm on terms page after registration; if restricted, add to `.gitignore` and document scp transfer path |
@@ -282,3 +282,52 @@ Option B — Deduplicate `is_sentinel_zip5()` to remove the second definition (l
 **Verdict:** Fix is trivial (one-line change or removing duplicate). Five rows out of 1.95M changes nothing downstream. Do not apply in this plan; log as a follow-up item for a `/gsd:quick` or the next staging plan.
 
 **`git diff --stat R/utils/utils_address.R`:** No changes — utils_address.R is untouched by this plan (confirmed intent; verification in Task 2 automated check).
+
+---
+
+## PART H — Decisions Recorded in 146-02
+
+### D-02 — How SVI is produced (resolved 2026-08-17)
+
+**Decision: D-02a-i (findSVI)**
+
+**Rationale:** CDC publishes no 2020 ZCTA-level SVI file. The `findSVI` CRAN package computes SVI at ZCTA directly from 2020 ACS variables using the CDC SVI methodology. This removes the entire tract-to-ZCTA aggregation step and its associated error surface (spatial join, partial coverage, coverage floor rules). It is a peer-reviewed CRAN package with a documented method.
+
+Options D-02a-ii (areal mean), D-02b (county-level), and D-02c (drop) were all considered and not selected:
+- D-02a-ii was the fallback in case no Census API key was obtainable; a key will be registered at api.census.gov (free), so the fallback is not needed.
+- D-02b was rejected as too coarse (county spans very different neighborhoods; same column would hold different-geography values).
+- D-02c was rejected as unnecessarily pessimistic given findSVI is available.
+
+**Output contract for D-02a-i:**
+
+| Column | Value |
+|--------|-------|
+| `ZCTA` | character, 5-digit ZCTA code |
+| `RPL_THEMES` | numeric, 0–1 composite SVI percentile (percentile-ranked against ZCTAs) |
+| `vintage` | "2020" |
+| `method` | "findSVI CRAN package v{version}, geography=zcta, year=2020; percentile-ranked against ZCTAs, NOT comparable to CDC tract SVI" |
+| `source` | "ACS 2020 5-year estimates via Census API; findSVI package" |
+| `svi_areal_coverage` | **NOT PRESENT** — findSVI does no tract-to-ZCTA aggregation; this column has nothing to measure and must not be added |
+
+**ZCTA-vs-tract ranking caveat (must appear in `method` column and in `data/reference/README.md`):**
+findSVI values are percentile-ranked against the national ZCTA universe. CDC's published 2020 SVI values are percentile-ranked against the national census tract universe. Same ACS variables, same CDC methodology, different reference population. A findSVI ZCTA percentile of 0.75 means "more deprived than 75% of US ZCTAs" — not "more deprived than 75% of US tracts." These are not comparable and must not be described as equivalent.
+
+**Census API key status:** Pending registration at api.census.gov (free registration). Must be confirmed present on HiPerGator before the `R/117_build_svi_zcta.R` build script runs in Wave 3/146-04.
+
+**Derived file path:** `data/reference/svi_2020_zcta_derived.csv`
+**Build script:** `R/117_build_svi_zcta.R` (next free number — confirmed no R/117* exists)
+**Phase 145 README entry:** Must be rewritten in 146-04 to describe a derived file (not a download), with `vintage`, `method`, and `source` columns documented.
+
+---
+
+### ADI Registration Status and Per-Index Commit Verdicts (to be completed by Task 2)
+
+**ADI registration:** OPEN — see Task 2 checkpoint. Awaiting: name of registrant, date of registration, and portal confirmation of ZIP+4/ZIP9 column presence in the download package.
+
+**Per-index commit-to-repo verdicts:** OPEN — to be recorded here once Task 2 is complete.
+
+| Index | File | May commit to repo? | If not: transfer path |
+|-------|------|--------------------|-----------------------|
+| SDI | `data/reference/zip5_sdi_reference.csv` | OPEN — terms unclear (policy@aafp.org) | `scp` to `/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/` |
+| SVI | `data/reference/svi_2020_zcta_derived.csv` | YES — CDC data is US government public domain; derived file freely committable | N/A |
+| ADI | `data/reference/neighborhood_atlas_block_group_crosswalk.csv` | OPEN — registration-gated; likely restricted | `scp` to `/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/` |
