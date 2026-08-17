@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Completed 145-03-PLAN.md
-last_updated: "2026-08-17T18:13:48.550Z"
+stopped_at: Completed 146-05-PLAN.md (R/116 wired to staged SVI/SDI/ADI files; Coverage Ceilings sheet added; README corrected)
+last_updated: "2026-08-17T00:00:00Z"
 last_activity: 2026-08-17
 progress:
   total_phases: 136
   completed_phases: 123
   total_plans: 253
-  completed_plans: 246
+  completed_plans: 247
 ---
 
 # Project State
