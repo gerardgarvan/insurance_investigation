@@ -4093,7 +4093,7 @@ message(sprintf(
 # without requiring 8 individual source() calls.
 
 utils_files <- list.files(
-  path = "R/utils",
+  path = here::here("R/utils"),
   pattern = "\\.R$",
   full.names = TRUE
 )
