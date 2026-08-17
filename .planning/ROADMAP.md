@@ -451,4 +451,4 @@ Plans:
 Plans:
 - [x] 144-01-PLAN.md — Tier 3 centroid ZIP9 imputation in `utils_address.R`: Census ZCTA crosswalk README, `.centroid_zip9_lookup_cache`, `.empty_centroid_lookup()`, probe-first gate, `zip5_centroid` value in `.classify_zip9_source()`, 5 unit tests [D-01, D-02, D-03] (Wave 1)
 - [x] 144-02-PLAN.md — R/116_encounter_ses_index.R: DuckDB ENCOUNTER pull, `get_zip9_at_date() |> approximate_zip9()`, probe-first SDI/ADI/SVI/RUCA joins, encounter-level RDS + 3-sheet xlsx [D-04, D-05, D-06, D-07, D-08] (Wave 2, depends on 144-01)
-- [ ] 144-03-PLAN.md — R/39 registration + SCRIPT_INDEX.md row + R/88 Section 15ae (18 structural smoke-test checks) [D-08] (Wave 3, depends on 144-01 + 144-02)
+- [x] 144-03-PLAN.md — R/39 registration + SCRIPT_INDEX.md row + R/88 Section 15ae (21 structural smoke-test checks) [D-08] (Wave 3, depends on 144-01 + 144-02)

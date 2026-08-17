@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: 144-02 COMPLETE (2/2 tasks) — R/116 encounter-level SES index linkage script written
+stopped_at: 144-03 COMPLETE (2/2 tasks) — R/116 registered in R/39 + SCRIPT_INDEX; SECTION 15ae (21 checks) added to R/88
 last_updated: "2026-08-16T00:00:00.000Z"
 last_activity: 2026-08-16
 progress:
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 ## Current Position
 
 Phase: 144 (centroid-zip9-imputation-zip9-level-sdi-and-areal-mean-sdi) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
   - 140-01: COMPLETE (3/3 tasks). Task 1: compute_c02() exposes n_present_no_usable_zip5, console/QC breakdown (commit 6862a64). Task 2 (D-1 checkpoint): resolved by the user this session as a distinct comparison-basis correction -- NOT either of the plan's anticipated option-a (re-derive C02_EXPECTED) or option-b (leave everything unchanged) branches. C02_EXPECTED (26L) and C02_TOLERANCE (5L) stay unchanged; the reconciliation comparison itself is corrected to use n_present_no_usable_zip5 (9, the only population a genuine coalescing defect could produce) instead of the conflated n_patients_no_zip5_ever (665, which mixes in 656 coverage-gap patients absent from addr_coal). Task 3 implemented this resolution (commit b6f1e74) -- SECTION 12 console messages, SECTION 13 qc_tbl labels, SECTION 14 KEY-sheet fields, and the QC-sheet subtitle all updated. NOTE: this comparison basis was itself superseded by 140-09 (Wave 2a) -- see below. See 140-01-SUMMARY.md.
   - 140-02: COMPLETE (3/3 tasks). Task 1: crosswalk staging contract documented in data/reference/README.md; R/115 SECTION 8/13 match-rate coverage gate wired (commits 5d4309b, 6862a64). Task 2 (human-action, crosswalk acquisition): resolved "not available -- defer" -- block-group tier stays gracefully degraded (not a regression from Phase 139); P-03b/P-03c deferred as follow-up. Task 3 (D-2 decision, ZIP5-vs-ZIP9): resolved option-a -- ZIP5 accepted as the primary analysis unit now, unblocking Plans 140-04 through 140-07 (140-04's S1-fold-in design, per 140-08-PATCH FIX-03, confirmed applicable). See 140-02-SUMMARY.md.
