@@ -1,7 +1,7 @@
 library(testthat)
 
 # Source the utils so functions are available
-source("R/00_config.R")  # sets CONFIG, auto-sources utils_address.R
+source(here::here("R/00_config.R"))  # sets CONFIG, auto-sources utils_address.R
 
 # --- Fixture ---
 make_result_tbl <- function(ID, query_date, ZIP9, ZIP5, match_type) {
