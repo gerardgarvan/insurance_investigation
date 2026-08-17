@@ -322,14 +322,17 @@ findSVI values are percentile-ranked against the national ZCTA universe. CDC's p
 
 ### ADI Registration Status and Per-Index Commit Verdicts (resolved 2026-08-17)
 
-**ADI registration:** BLOCKED — owner: Gerard, date: 2026-08-17. Registration at neighborhoodatlas.medicine.wisc.edu not yet completed. Full registration + download instructions are in `PHASE_146_REGISTRATION_CHECKLIST.txt` (repo root). ADI staging (Wave 4 dependency) is deferred until Gerard completes registration, downloads the file, and confirms ZIP9 column presence.
+**ADI registration:** COMPLETED — registered by Gerard, 2026-08-17. File downloaded: `US_2024_block_group_adi_v_4_0_1.csv` (2024 vintage, v4.0.1).
+
+**D-05 FINAL ANSWER (confirmed from actual download 2026-08-17): block group only.**
+The downloaded file contains columns: `GISJOIN`, `FIPS` (12-digit block group GEOID), `ADI_NATRANK`, `ADI_STATERNK`. **No ZIP9, ZIP_PLUS4, ADDRESS_ZIP9, or any 9-digit ZIP column is present.** ADI cannot be joined on ZIP9 without a ZIP9→block-group crosswalk. No such crosswalk source has been identified in this phase. **ADI is NOT achievable this phase.** The downloaded file will not be staged; R/116's probe gate will degrade ADI to NA for all rows (existing behavior — no code change needed).
 
 **Per-index commit-to-repo verdicts (confirmed by user 2026-08-17):**
 
 | Index | File | May commit to repo? | Notes |
 |-------|------|--------------------|-----------------------|
-| SDI | `data/reference/zip5_sdi_reference.csv` | YES | Confirmed by user. Terms review pending but user approved committing. |
+| SDI | `data/reference/zip5_sdi_reference.csv` | YES | Confirmed by user. |
 | SVI | `data/reference/svi_2020_zcta_derived.csv` | YES — CDC data is US government public domain; derived file freely committable | N/A |
-| ADI | `data/reference/neighborhood_atlas_block_group_crosswalk.csv` | YES | Confirmed by user. Terms must still be reviewed after registration; if terms prohibit redistribution, move to `.gitignore` and `scp` to `/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/`. |
+| ADI | N/A — not staged this phase | N/A | Block group only; no ZIP9 join possible without crosswalk not yet identified. |
 
-**Census API key status:** PENDING — user will register at api.census.gov (free; ~5 min). See `PHASE_146_REGISTRATION_CHECKLIST.txt` Step 1. Must be present on HiPerGator before `R/117_build_svi_zcta.R` runs (Wave 4 / plan 146-04).
+**Census API key status:** OBTAINED — registered by Gerard at api.census.gov, 2026-08-17. Must be added to `~/.Renviron` on HiPerGator as `CENSUS_API_KEY=<key>` before `R/117_build_svi_zcta.R` runs (Wave 4 / plan 146-04).
