@@ -6,11 +6,11 @@
 #              ZIP9/ZIP5 at ADMIT_DATE via get_zip9_at_date() |> approximate_zip9()
 #              (which includes the Phase 144 Tier 3 centroid fallback), then joins
 #              four SES index scores from probe-first-gated reference files:
-#                - SDI  (Robert Graham Center, ZIP5-level)
-#                - ADI  (Neighborhood Atlas, ZIP9/block-group; pending P-03a)
-#                - SVI  (CDC Social Vulnerability Index, ZIP5 approximate)
+#                - SDI  (Robert Graham Center, ZCTA-level via ZIP5; D-01 label)
+#                - ADI  (Neighborhood Atlas, ZIP9-keyed 23-state collation; D-05 answer)
+#                - SVI  (CDC SVI 2020, derived at ZCTA via findSVI; D-02a-i)
 #                - RUCA (USDA 2020 ZIP Code Data, ZIP5; data/reference/RUCA-codes-2020-zipcode.xlsx)
-#              Produces a dated encounter-level RDS cache and a 3-sheet summary xlsx.
+#              Produces a dated encounter-level RDS cache and a 5-sheet summary xlsx.
 #              Does NOT modify any pipeline output or write hl_cohort.csv.
 #
 # Inputs:      ENCOUNTER table (via DuckDB), scoped to PATIDs present in
@@ -20,8 +20,8 @@
 #              LDS_ADDRESS_HISTORY_Mailhot_V1.csv (via get_zip9_at_date/approximate_zip9)
 #              data/reference/RUCA-codes-2020-zipcode.xlsx (Phase 116; always expected)
 #              data/reference/zip5_sdi_reference.csv       (SDI; probe-first gated)
-#              data/reference/neighborhood_atlas_block_group_crosswalk.csv (ADI; probe-first gated)
-#              data/reference/svi_2020_us_by_zcta.csv      (SVI; probe-first gated)
+#              data/reference/neighborhood_atlas_zip9_adi.csv (ADI; probe-first gated; 478MB gitignored)
+#              data/reference/svi_2020_zcta_derived.csv     (SVI derived via findSVI; probe-first gated)
 #
 # Outputs:     output/encounter_ses_index_YYYYMMDD.rds
 #              output/encounter_ses_index_summary_YYYYMMDD.xlsx
@@ -64,8 +64,12 @@ OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("encounter_ses_index_summary_{R
 # Reference file paths (all probe-first gated in SECTION 3)
 RUCA_PATH <- file.path("data", "reference", "RUCA-codes-2020-zipcode.xlsx")
 SDI_PATH  <- file.path("data", "reference", "zip5_sdi_reference.csv")
-ADI_PATH  <- file.path("data", "reference", "neighborhood_atlas_block_group_crosswalk.csv")
-SVI_PATH  <- file.path("data", "reference", "svi_2020_us_by_zcta.csv")
+ADI_PATH  <- file.path("data", "reference", "neighborhood_atlas_zip9_adi.csv")
+# ADI_PATH points at the 23-state ZIP9-keyed collation (D-05 answer; 478MB; gitignored).
+# Transfer to HiPerGator via scp before running. Block-group file is NOT used for R/116.
+SVI_PATH  <- file.path("data", "reference", "svi_2020_zcta_derived.csv")
+# SVI_PATH points at the findSVI-derived file (D-02a-i). Run R/117_build_svi_zcta.R on
+# HiPerGator to produce it. CDC does not publish 2020 ZCTA-level SVI; this is derived.
 
 # SECTION 3: PROBE GATES FOR REFERENCE FILES ----
 
@@ -223,9 +227,12 @@ if (has_sdi) {
   sdi_lookup <- tibble(ZIP5 = character(), sdi_score = numeric())
 }
 
-# ADI: Neighborhood Atlas block-group-level; joined on ZIP9.
+# ADI: Neighborhood Atlas ZIP9-keyed 23-state collation (neighborhood_atlas_zip9_adi.csv).
+# D-05 answer: ZIP9-keyed files exist for 23 states. File is 478MB and gitignored;
+# transfer to HiPerGator via scp before running. R/116 auto-detects columns:
 # Expected columns: ZIP9 key (one of ZIP9, zip9, ADDRESS_ZIP9, zip9_norm, GEOID9, ZIP_PLUS4)
 #                   ADI rank: one of adi_natrank, ADI_NATRANK, natrank
+# Coverage ceiling: <= 77.7% (zip9_observed share); see Coverage Ceilings sheet.
 if (has_adi) {
   adi_raw <- tryCatch(
     vroom::vroom(ADI_PATH, col_types = vroom::cols(.default = "c"), progress = FALSE),
@@ -259,10 +266,13 @@ if (has_adi) {
   adi_lookup <- tibble(ZIP9_key = character(), adi_natrank = integer())
 }
 
-# SVI: CDC Social Vulnerability Index 2020 by ZCTA.
-# Expected file: svi_2020_us_by_zcta.csv (download from CDC GRASP portal)
-# Expected columns: ZCTA (5-digit char) and RPL_THEMES (composite SVI percentile, 0-1)
-# Join key is ZIP5 = ZCTA (approximate; ZCTA != ZIP5 in edge cases)
+# SVI: CDC SVI 2020 derived at ZCTA via findSVI (D-02a-i).
+# Expected file: svi_2020_zcta_derived.csv (produced by R/117_build_svi_zcta.R on HiPerGator).
+# CDC does NOT publish 2020 ZCTA-level SVI; this is derived from 2020 ACS via findSVI.
+# Expected columns: ZCTA (5-digit char) and RPL_THEMES (composite SVI percentile, 0-1).
+# Additional metadata columns (vintage, method, source) are present but not joined.
+# Join key is ZIP5 = ZCTA (approximate; ZCTA != ZIP5 in edge cases).
+# CAVEAT: RPL_THEMES is percentile-ranked against ZCTAs, NOT comparable to CDC tract SVI.
 if (has_svi) {
   svi_raw <- tryCatch(
     vroom::vroom(SVI_PATH, col_types = vroom::cols(.default = "c"), progress = FALSE),
@@ -322,11 +332,12 @@ message(glue("  adi_natrank coverage: {round(100 * mean(!is.na(encounter_ses$adi
 message(glue("  svi_score coverage:   {round(100 * mean(!is.na(encounter_ses$svi_score)),  1)}%"))
 message(glue("  ruca_code coverage:   {round(100 * mean(!is.na(encounter_ses$ruca_code)),  1)}%"))
 
-# NOTE (P1-07 -- Tier 3 inert for ADI):
-# Tier 3 is currently inert -- no crosswalk exists, so zip9_source = "zip5_centroid" never fires.
-# ADI (adi_natrank) will be entirely null as a result (both because the Neighborhood Atlas
-# crosswalk is pending P-03a acquisition, AND because ZIP9 resolution via centroid is
-# unavailable). This is the honest state of the data; see 144-CONTEXT.md D-01.
+# NOTE (Phase 146 ADI update):
+# ADI_PATH now points at neighborhood_atlas_zip9_adi.csv (D-05 answer; 23 states).
+# The file is 478MB and gitignored -- transfer to HiPerGator via scp before running.
+# ADI coverage is bounded by zip9_observed rows (77.7% ceiling; see Coverage Ceilings sheet).
+# Tier 3 centroid fallback remains inert (zip9_source = "zip5_centroid" never fires);
+# ADI will still be NA for no_zip5 + none rows (22.3% of encounters). See 144-CONTEXT.md D-01.
 
 # SECTION 8: SAVE RDS CACHE ----
 
@@ -397,6 +408,44 @@ index_coverage <- index_coverage %>%
     file_present = NA
   ))
 
+# Phase 146: Coverage Ceilings table (§4 expectations per CONTEXT.md / 146-DISCOVERY.md PART C).
+# Rows: per-index geography, best-achievable coverage, limiting factors.
+# The 77.7% ceiling = zip9_observed share (1,516,469 / 1,950,696; 2026-08-17 corrected run).
+# The ZIP5-with-no-ZCTA unmatched count (second haircut below 77.7% for SDI/SVI) is
+# PENDING HiPerGator run of R/diagnostics/146_sdi_coverage_quantifier.R.
+coverage_ceilings <- tibble(
+  index       = c("RUCA", "SDI", "SVI", "ADI",
+                  "NOTE: no-index encounters", "NOTE: SVI ranking caveat"),
+  geography   = c("ZIP5", "ZCTA via ZIP5 (D-01)", "ZCTA via ZIP5 derived (D-02a-i)", "ZIP9 (D-05)",
+                  NA_character_, NA_character_),
+  best_achievable_pct = c(
+    "77.7% (achieved)",
+    paste0("<=77.7%, minus ZIP5s with no ZCTA (count PENDING HiPerGator run)"),
+    paste0("<=77.7%, minus ZCTA match (PENDING HiPerGator run of R/117_build_svi_zcta.R)"),
+    "<=77.7%",
+    NA_character_, NA_character_
+  ),
+  limited_by  = c(
+    "ZIP availability",
+    "ZIP availability, then ZCTA match (PO-box-only/single-building ZIPs unmatched)",
+    "ZIP availability, then ZCTA match, then derivation (findSVI Census API)",
+    "ZIP9 availability only (23-state collation; 478MB file; transfer via scp)",
+    NA_character_, NA_character_
+  ),
+  note = c(
+    NA_character_, NA_character_, NA_character_, NA_character_,
+    paste0(
+      "22.3% (434,227) of encounters receive no index at any geography: ",
+      "14.1% sentinel-ZIP (275,528) + 8.1% no-address-record (158,699). ",
+      "This is a data ceiling, not a reference-file problem."
+    ),
+    paste0(
+      "SVI RPL_THEMES is percentile-ranked against ZCTAs, NOT comparable to CDC tract SVI. ",
+      "findSVI uses the same ACS variables and CDC methodology but a different reference population."
+    )
+  )
+)
+
 wb <- wb_workbook()
 wb <- wb %>%
   wb_add_worksheet("ZIP Source Breakdown") %>%
@@ -417,7 +466,9 @@ wb <- wb %>%
               )),
               start_row = 1) %>%
   wb_add_worksheet("RUCA Distribution") %>%
-  wb_add_data(sheet = "RUCA Distribution", x = ruca_dist, start_row = 1)
+  wb_add_data(sheet = "RUCA Distribution", x = ruca_dist, start_row = 1) %>%
+  wb_add_worksheet("Coverage Ceilings") %>%
+  wb_add_data(sheet = "Coverage Ceilings", x = coverage_ceilings, start_row = 1)
 
 wb_save(wb, OUTPUT_XLSX, overwrite = TRUE)
 message(glue("  Saved summary xlsx: {OUTPUT_XLSX}"))
