@@ -4997,6 +4997,125 @@ check_139("R/115 registered in R/39's investigation_scripts vector",
 message(glue("\nSection 15ad: {p139_pass} PASS, {p139_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ae: PHASE 144 CENTROID ZIP9 IMPUTATION + ENCOUNTER SES INDEX ----
+#               STRUCTURAL CHECKS ----
+# ==============================================================================
+# Static grep/existence assertions for Phase 144 (utils_address.R Tier 3
+# extension and R/116_encounter_ses_index.R). Structural only -- no HiPerGator
+# data required for these checks to pass.
+
+p144_pass <- 0L
+p144_fail <- 0L
+check_144 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p144_pass <<- p144_pass + 1L
+    message(glue("  [PASS] {label}"))
+  } else {
+    p144_fail <<- p144_fail + 1L
+    message(glue("  [FAIL] {label}"))
+    failed <<- failed + 1L
+  }
+  passed <<- passed + 1L
+}
+
+message("\n--- Section 15ae: Phase 144 centroid ZIP9 imputation + encounter SES index ---")
+
+r116_lines      <- read_or_null("R/116_encounter_ses_index.R")
+r_address_144   <- read_or_null("R/utils/utils_address.R")
+r39_lines_144   <- read_or_null("R/39_run_all_investigations.R")
+r_index_144     <- read_or_null("R/SCRIPT_INDEX.md")
+test_tier3_lines <- read_or_null("tests/testthat/test-utils-address-tier3.R")
+
+# --- File existence gates ---
+check_144("R/116_encounter_ses_index.R exists", !is.null(r116_lines))
+check_144("R/utils/utils_address.R exists (Tier 3 target)", !is.null(r_address_144))
+check_144("tests/testthat/test-utils-address-tier3.R exists", !is.null(test_tier3_lines))
+
+# --- utils_address.R Tier 3 structural checks ---
+check_144("utils_address.R contains centroid_zip9_lookup_cache (Tier 3 cache object)",
+  !is.null(r_address_144) &&
+  any(grepl("centroid_zip9_lookup_cache", r_address_144)))
+
+check_144("utils_address.R contains 'zip5_centroid' zip9_source value",
+  !is.null(r_address_144) &&
+  any(grepl("zip5_centroid", r_address_144)))
+
+check_144(".classify_zip9_source has centroid_lookup parameter (Tier 3 plumbing)",
+  !is.null(r_address_144) &&
+  any(grepl("centroid_lookup", r_address_144)))
+
+check_144("utils_address.R contains centroid crosswalk probe gate (file.exists(centroid_path))",
+  !is.null(r_address_144) &&
+  any(grepl("centroid_path", r_address_144)) &&
+  any(grepl("file.exists.*centroid_path|centroid_path.*file.exists", r_address_144)))
+
+check_144("utils_address.R guards against synthetic ZIP9s ending in '0000' (P0-01)",
+  !is.null(r_address_144) &&
+  any(grepl("synthetic placeholders", r_address_144)) &&
+  any(grepl("centroid_lookup\\$centroid_zip9", r_address_144)))
+
+check_144("get_zip9_at_date() is unchanged (Out of Scope, Phase 137)",
+  !is.null(r_address_144) &&
+  any(grepl("^get_zip9_at_date <- function", r_address_144)))
+
+# --- R/116 structural checks ---
+check_144("R/116 contains get_zip9_at_date call",
+  !is.null(r116_lines) && any(grepl("get_zip9_at_date", r116_lines)))
+
+check_144("R/116 contains approximate_zip9 call",
+  !is.null(r116_lines) && any(grepl("approximate_zip9", r116_lines)))
+
+check_144("R/116 contains probe gate for all 4 reference files (has_ruca, has_sdi, has_adi, has_svi)",
+  !is.null(r116_lines) &&
+  any(grepl("has_ruca", r116_lines)) &&
+  any(grepl("has_sdi", r116_lines)) &&
+  any(grepl("has_adi", r116_lines)) &&
+  any(grepl("has_svi", r116_lines)))
+
+check_144("R/116 output RDS path matches D-06 pattern (encounter_ses_index_YYYYMMDD.rds)",
+  !is.null(r116_lines) &&
+  any(grepl("encounter_ses_index_.*\\.rds", r116_lines)))
+
+check_144("R/116 output xlsx path matches D-06 pattern (encounter_ses_index_summary_YYYYMMDD.xlsx)",
+  !is.null(r116_lines) &&
+  any(grepl("encounter_ses_index_summary_.*\\.xlsx", r116_lines)))
+
+check_144("R/116 output columns include all 11 required fields",
+  !is.null(r116_lines) &&
+  any(grepl("sdi_score", r116_lines)) &&
+  any(grepl("adi_natrank", r116_lines)) &&
+  any(grepl("svi_score", r116_lines)) &&
+  any(grepl("ruca_code", r116_lines)) &&
+  any(grepl("ruca_category", r116_lines)))
+
+check_144("R/116 scopes the encounter pull to patients present in the address extract",
+  !is.null(r116_lines) && any(grepl("addr_ids", r116_lines)))
+
+check_144("R/116 uses open_pcornet_con() / get_pcornet_table() (D-07: DuckDB pattern)",
+  !is.null(r116_lines) &&
+  any(grepl("open_pcornet_con|get_pcornet_table", r116_lines)))
+
+# --- Registration checks ---
+check_144("R/116 registered in R/39's investigation_scripts vector",
+  !is.null(r39_lines_144) &&
+  any(grepl("R/116_encounter_ses_index\\.R", r39_lines_144)))
+
+check_144("R/116 row present in R/SCRIPT_INDEX.md",
+  !is.null(r_index_144) &&
+  any(grepl("116_encounter_ses_index", r_index_144)))
+
+# --- Tier 3 unit test checks ---
+check_144("test-utils-address-tier3.R contains at least 5 test_that() calls",
+  !is.null(test_tier3_lines) &&
+  sum(grepl("test_that\\(", test_tier3_lines)) >= 5)
+
+check_144("test-utils-address-tier3.R tests zip5_centroid zip9_source value",
+  !is.null(test_tier3_lines) &&
+  any(grepl("zip5_centroid", test_tier3_lines)))
+
+message(glue("\nSection 15ae: {p144_pass} PASS, {p144_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
