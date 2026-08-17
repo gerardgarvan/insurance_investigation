@@ -226,6 +226,23 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
     arrange(ID, query_date)
 }
 
+# Guard helper: reject centroid crosswalks with synthetic ZIP9s (entries ending
+# in '0000' are placeholder delivery-point codes, not real ZIP+4 values).
+# Extracted so tests can call it directly without going through the file-load path.
+.validate_centroid_lookup <- function(lkp) {
+  stopifnot("centroid crosswalk missing centroid_zip9 column" =
+              "centroid_zip9" %in% names(lkp))
+  bad <- lkp$centroid_zip9[grepl("0000$", lkp$centroid_zip9)]
+  if (length(bad) > 0) {
+    stop(sprintf(
+      "[utils_address] centroid crosswalk contains %d ZIP9 values ending in '0000' — these are ",
+      length(bad)),
+      "synthetic placeholders, not delivery segments. See ",
+      "data/reference/README_zip5_centroid_zip9_crosswalk.txt.")
+  }
+  invisible(lkp)
+}
+
 # ==============================================================================
 # approximate_zip9() -- Fill ZIP9 from modal ZIP9 for ZIP5-only address records
 # ==============================================================================
@@ -541,19 +558,9 @@ approximate_zip9 <- function(result_tbl) {
     .empty_centroid_lookup()
   }
 
-  # Guard: reject crosswalks that contain synthetic ZIP9s (P0-01)
-  # Column is centroid_zip9 (see crosswalk schema in the README) -- NOT ZIP9.
-  # Reading $ZIP9 here returns NULL and the guard silently never fires.
-  stopifnot("centroid crosswalk missing centroid_zip9 column" =
-              "centroid_zip9" %in% names(centroid_lookup))
-  bad <- centroid_lookup$centroid_zip9[grepl("0000$", centroid_lookup$centroid_zip9)]
-  if (length(bad) > 0) {
-    stop(sprintf(
-      "[utils_address] centroid crosswalk contains %d ZIP9 values ending in '0000' — these are ",
-      length(bad)),
-      "synthetic placeholders, not delivery segments. See ",
-      "data/reference/README_zip5_centroid_zip9_crosswalk.txt.")
-  }
+  # Guard: reject crosswalks that contain synthetic ZIP9s (P0-01).
+  # Delegated to .validate_centroid_lookup() so tests can exercise the guard directly.
+  .validate_centroid_lookup(centroid_lookup)
 
   result_out <- .classify_zip9_source(result_tbl, zip5_lookup, unavailable = FALSE,
                                        centroid_lookup = centroid_lookup)

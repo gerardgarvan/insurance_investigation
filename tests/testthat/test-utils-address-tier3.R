@@ -139,25 +139,9 @@ test_that("approximate_zip9: zip5_centroid fires for ZIP5 in crosswalk, not for 
 
 # P1-03c: the 0000 guard raises on a crosswalk containing a synthetic ZIP9
 test_that("0000 guard raises on synthetic ZIP9 in crosswalk", {
-  # Exercises the guard inside approximate_zip9() via a staged crosswalk file.
-  # Do NOT inline a copy of the guard body here -- that would pass even if the
-  # real guard were broken (as it was when it read $ZIP9 instead of $centroid_zip9).
-  skip_if_not(file.exists(file.path(CONFIG$data_dir, "LDS_ADDRESS_HISTORY_Mailhot_V1.csv")),
-              "approximate_zip9 returns early via its address probe gate before reaching Tier 3")
-
-  ref_dir <- withr::local_tempdir()
-  utils::write.csv(
-    data.frame(ZIP5 = "32611", centroid_zip9 = "326110000"),
-    file.path(ref_dir, "zip5_centroid_zip9_crosswalk.csv"),
-    row.names = FALSE)
-
-  # approximate_zip9() resolves centroid_path from CONFIG$reference_dir when set,
-  # so point it at the staged directory rather than changing the working directory
-  # (which no longer affects the probe now that the path is project-root anchored).
-  old_ref <- CONFIG$reference_dir
-  CONFIG$reference_dir <<- ref_dir
-  withr::defer(CONFIG$reference_dir <<- old_ref)
-
-  inp <- make_result_tbl("P1", "2020-01-01", NA_character_, "32611", "interval")
-  expect_error(approximate_zip9(inp), "synthetic placeholders")
+  # Calls .validate_centroid_lookup() directly -- the same function that
+  # approximate_zip9() delegates to -- so the test exercises the real guard code
+  # without depending on file loading or CONFIG$reference_dir assignment.
+  bad_lkp <- tibble::tibble(ZIP5 = "32611", centroid_zip9 = "326110000")
+  expect_error(.validate_centroid_lookup(bad_lkp), "synthetic placeholders")
 })
