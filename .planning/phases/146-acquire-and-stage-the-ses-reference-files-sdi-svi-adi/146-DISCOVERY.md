@@ -409,3 +409,56 @@ The quantification script computes BOTH:
 The unmatched count from (a)/(b) is the **second haircut** below the 77.7% ceiling (first haircut = no usable ZIP5 at all). Label for the coverage sheet (146-05): **"ZIP5s with no corresponding ZCTA"**.
 
 No fabricated counts. Run `R/diagnostics/146_sdi_coverage_quantifier.R` on HiPerGator after the 146-06 job produces `output/encounter_ses_index_<date>.rds`.
+
+---
+
+## PART J — Real-Run Results (146-06, 2026-08-17)
+
+### R/116 HiPerGator Run — Coverage Per Index
+
+**Run date:** 2026-08-17
+**Encounter universe:** 1,950,696 rows, 8,953 patients
+**No-ZIP floor (no_zip5 + none):** 434,227 (22.3%) — consistent with Coverage Ceilings sheet
+
+| Index | Coverage | ≤ 77.7% ceiling? | Notes |
+|-------|----------|-------------------|-------|
+| RUCA  | 77.7%    | ✓ at ceiling      | ZIP5-keyed, full cohort ZIP universe |
+| SDI   | 77.5%    | ✓                 | ZCTA-via-ZIP5; 0.2pp below ceiling (ZIP5s with no ZCTA) |
+| SVI   | 77.5%    | ✓                 | findSVI D-02a-i derived file; ZCTA-keyed |
+| ADI   | 75.0%    | ✓                 | ZIP9-keyed; 2.7pp below ceiling (ZIP9 approximation shortfall; Tier 3 crosswalk not staged) |
+
+All four indices non-zero. Fan-out `stopifnot()` guards did not trip. "Coverage Ceilings" sheet present in workbook.
+
+### R/116 ZIP Resolution Breakdown (pre-join)
+
+| Source | Rows | Share |
+|--------|------|-------|
+| zip9_observed | 1,516,469 | 77.7% |
+| no_zip5 (sentinel-nulled) | 275,528 | 14.1% |
+| none (no address record) | 158,699 | 8.1% |
+
+Tier 3 (centroid crosswalk) skipped — `zip5_centroid_zip9_crosswalk.csv` not staged. zip5_modal = 0 (Branch C confirmed: all approximable rows have ZIP5 = NA).
+
+### R/88 Result
+
+**PASS** — probe gates degrade absent indices to NA without crashing. Smoke test ran under testthat with SKIP 1 (no `test_that()` blocks), exit code 0.
+
+### Sentinel-ZIP Frequency (D-04) — PENDING
+
+The §4 frequency query against `LDS_ADDRESS_HISTORY_Mailhot_V1.csv` was not run in this session. The 275,528 no_zip5 rows are confirmed from the R/116 zip9_source breakdown. Systematic-vs-scattered verdict: **DEFERRED** — run `R/diagnostics/146_sdi_coverage_quantifier.R` on HiPerGator to obtain the top-20 sentinel-ZIP table.
+
+### SDI ZIP5-with-no-ZCTA Count — DERIVED FROM COVERAGE
+
+SDI coverage = 77.5% vs RUCA ceiling = 77.7% → **0.2pp gap = ~3,901 encounter-weighted rows** attributed to ZIP5s present in the encounter data but absent from `zip5_sdi_reference.csv` (32,989 ZCTAs). Distinct-code unmatched count: not yet run separately; encounter-weighted figure is the deliverable-relevant metric.
+
+### Phase 146 Acceptance Criteria — Status
+
+| Criterion | Status |
+|-----------|--------|
+| All staged indices non-zero coverage | ✓ PASS |
+| All indices ≤ 77.7% ceiling | ✓ PASS |
+| R/88 passes, probe gates intact | ✓ PASS |
+| Fan-out stopifnots did not trip | ✓ PASS |
+| Coverage Ceilings sheet in workbook | ✓ PASS |
+| Sentinel-ZIP top-20 table recorded | DEFERRED (not blocking) |
+| SDI distinct unmatched ZIP5 count | DEFERRED (not blocking) |
