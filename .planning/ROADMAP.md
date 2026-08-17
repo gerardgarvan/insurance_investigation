@@ -464,3 +464,18 @@ Plans:
 - [x] 145-01-PLAN.md — Audit committed fan-out fix + trace ZIP5-modal path + document SDI/SVI/ADI reference contracts in README (Wave 1, autonomous)
 - [x] 145-02-PLAN.md — Blocking HiPerGator checkpoint: run R/116, capture zip9_source breakdown + row-count guard (Wave 2)
 - [x] 145-03-PLAN.md — Diagnose ZIP5-modal (data-driven vs bug), conditionally fix/document, regenerate corrected RDS + workbook (Wave 3)
+
+### Phase 146: Acquire and Stage the SES Reference Files (SDI, SVI, ADI)
+
+**Goal:** Acquire and stage the three absent SES reference files for R/116 — download SDI (ZCTA), derive SVI to ZCTA (CDC publishes no 2020 ZCTA file), and register-and-download ADI (ZIP9) — quantify each geography-mismatch haircut below the 77.7% ZIP ceiling, correct the 68.6% ADI figure to 77.7%, and re-run R/116 so each staged index reports honest sub-ceiling coverage while probe gates still degrade absent indices to NA.
+**Requirements**: SES-01, SES-02, SES-03, SES-04
+**Depends on:** Phase 145
+**Plans:** 6 plans
+
+Plans:
+- [ ] 146-01-PLAN.md — Discovery: verify SDI/SVI/ADI publications, network policy, sentinel-ZIP + normalizer-disagreement probes -> 146-DISCOVERY.md (Wave 1, autonomous)
+- [ ] 146-02-PLAN.md — Human-action gate: D-02 (SVI method), ADI registration (P-03a), per-file redistribution rights (Wave 2)
+- [ ] 146-03-PLAN.md — Stage SDI at data/reference/zip5_sdi_reference.csv + quantify ZIP5-with-no-ZCTA haircut + D-01 label (Wave 3)
+- [ ] 146-04-PLAN.md — Derive SVI: R/147_build_svi_zcta.R + svi_2020_zcta_derived.csv with coverage floor (D-02a), or record drop (D-02c) (Wave 3)
+- [ ] 146-05-PLAN.md — Wire R/116 to staged files + §4 ceiling sheet + rewrite README (derived SVI, D-01 SDI, 77.7% ADI) (Wave 4)
+- [ ] 146-06-PLAN.md — HiPerGator re-run: R/116 + R/88 + sentinel-ZIP/SDI-unmatched queries against real data (Wave 5)
