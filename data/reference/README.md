@@ -69,69 +69,115 @@ above threshold, not file existence alone.
 `block_group_tier_status <- "not available (crosswalk file not found)"` and
 `pct_block_group_match` is `NA_real_` across all gap bins on the last real run.
 
-### Also consumed by R/116 for ADI (Phase 145)
+## ADI -- Area Deprivation Index ZIP9-Keyed File (Phase 146, D-05)
 
-R/116_encounter_ses_index.R SECTION 6 (lines 214-248) probes this SAME file
-(`data/reference/neighborhood_atlas_block_group_crosswalk.csv`) to supply its
-encounter-level `adi_natrank` column, joined on **ZIP9** (not ZIP5). R/116 accepts the
-ZIP9 key as the first present of `ZIP9`, `zip9`, `ADDRESS_ZIP9`, `zip9_norm`, `GEOID9`,
-`ZIP_PLUS4`, and the rank as the first present of `adi_natrank`, `ADI_NATRANK`, `natrank`.
-Because Tier 3 centroid ZIP9 resolution is inert (144-CONTEXT.md D-01) AND this crosswalk
-is not staged (P-03a pending), `adi_natrank` is entirely NA on current runs. Acquisition
-status is the same as the Phase 140 block-group tier above -- not staged as of 2026-08-17.
+**Path:** `data/reference/neighborhood_atlas_zip9_adi.csv`
+**Status as of 2026-08-17:** STAGED (local). File is 478MB and **gitignored**. Transfer to
+HiPerGator via `scp data/reference/neighborhood_atlas_zip9_adi.csv {user}@hpg.rc.ufl.edu:/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/` before running R/116.
 
-**ADI ceiling (Phase 145):** Even once the Neighborhood Atlas crosswalk is staged, ADI
-coverage is bounded by the share of encounters with `zip9_source == "zip9_observed"`.
-In the 2026-08-17 run: 1,516,469 / 1,950,696 = **77.7%**. The remaining 22.3% of encounters
-(`no_zip5` + `none`) carry no ZIP9 and cannot receive an ADI score. This is a data ceiling,
-not a join failure. The ceiling is also reported in the "Index Coverage" sheet of the summary
-workbook and in the "Coverage by Year" sheet (Phase 145).
+**D-05 answer (2026-08-17):** The Neighborhood Atlas portal provides per-state 9-digit ZIP
+files (`{STATE}_2024_ADI_9Digit_Zip_v4_0_1.csv`) with column `BENE_ZIP_CD` (= ZIP9). All 23
+available state files were downloaded and collated. The file IS joinable on ZIP9 directly.
+States: AK, AL, AZ, CA, CO, CT, DC, DE, FL, GA, ID, KY, MI, MN, MT, NJ, NY, OH, PA, RI, VA, WA, WI (23 states).
 
-## SDI -- Social Deprivation Index (Robert Graham Center) (Phase 145)
+**Source:** University of Wisconsin Neighborhood Atlas
+(https://www.neighborhoodatlas.medicine.wisc.edu/). Registration required. Registered by
+Gerard, 2026-08-17. Redistribution status: terms require confirmation; file gitignored.
 
-**Expected path:** `data/reference/zip5_sdi_reference.csv`
+**Columns (after collation in Phase 146):**
+- Join key: `ZIP9` (renamed from `BENE_ZIP_CD`; character, 9-digit)
+- Value: `ADI_NATRANK` (median national percentile rank across block groups per ZIP9; suppression codes → NA)
+- Rows: 37,029,488 unique ZIP9 codes; vintage 2024 (v4.0.1)
+
+**R/116 probe gate:** SECTION 6 checks `has_adi` (file.exists on `ADI_PATH`) and auto-detects
+the ZIP9 key and rank column from candidate lists. `ZIP9` and `ADI_NATRANK` are both in the
+candidate lists -- no R/116 column-name change required.
+
+**ADI ceiling (Phase 145, corrected 2026-08-17):** ADI coverage is bounded by the share of
+encounters with `zip9_source == "zip9_observed"`.
+In the 2026-08-17 corrected run: 1,516,469 / 1,950,696 = **77.7%**. The remaining 22.3% of
+encounters (`no_zip5` + `none`) carry no ZIP9 and cannot receive an ADI score. This is a data
+ceiling, not a join failure. The ceiling is reported in the "Index Coverage" and "Coverage
+Ceilings" sheets of the summary workbook (Phase 146).
+
+### Also consumed by R/115 for block-group accuracy tier (Phase 140, P-03a)
+
+R/115_zip_stability_counts.R SECTION 8 probes `data/reference/neighborhood_atlas_block_group_crosswalk.csv`
+(a DIFFERENT file -- the block-group crosswalk, NOT the ZIP9-keyed ADI file above) for its A-06
+block-group accuracy tier. That file is NOT staged as of 2026-08-17 (P-03a still pending).
+R/116 no longer uses the block-group crosswalk path -- it uses `neighborhood_atlas_zip9_adi.csv`.
+
+## SDI -- Social Deprivation Index (Robert Graham Center) (Phase 146)
+
+**Path:** `data/reference/zip5_sdi_reference.csv`
+**Status as of 2026-08-17:** STAGED. 32,989 rows. Committed to repo (user-approved).
+Terms confirmation with policy@aafp.org still pending.
 
 **Purpose:** Supplies R/116 SECTION 6/7's `sdi_score` column (encounter-level SES),
 joined on ZIP5.
 
-**Source:** Robert Graham Center Social Deprivation Index
-(https://www.graham-center.org/maps-data-tools/social-deprivation-index.html).
-Portal download -- not obtainable via CLI/API.
+**D-01 label (mandatory wherever `sdi_score` appears in outputs):**
+`sdi_score` is a **ZCTA-level SDI value attached through ZIP5** (ZCTA is approximate; PO-box-only
+and single-building ZIPs have no ZCTA and will not match). It is NOT a ZIP5-level measure.
+Required wording: "ZCTA-level SDI score, joined via ZIP5 (ZCTA ≈ ZIP5; PO-box-only and
+single-building ZIPs have no ZCTA and will not match)."
 
-**Expected columns:**
-- Join key: `ZIP5` (character, 5-digit; normalized via `normalize_zip5_raw()`)
+**Source:** Robert Graham Center Social Deprivation Index, vintage 2015–2019 ACS 5-year
+(https://www.graham-center.org/maps-data-tools/social-deprivation-index.html).
+Portal download -- not obtainable via CLI/API. Raw file: `asset_rgc_sdi_2015_through_2019_zcta.csv`.
+Staged by `R/146_stage_sdi_reference.R` (Phase 146-03).
+
+**Columns:**
+- Join key: `ZIP5` (character, 5-digit, zero-padded; renamed from raw `ZCTA5_FIPS`)
 - Value: `SDI_score` (numeric, 0-100)
 
-**R/116 probe gate:** SECTION 6 (lines 187-212) checks `has_sdi` (file.exists on
-`SDI_PATH`) and then requires BOTH columns `ZIP5` and `SDI_score` to be present. If the
-file is absent OR either column is missing, `sdi_lookup` is empty and `sdi_score` is
-`NA_real_` for all encounter rows (a console message names the available columns). If the
-staged file uses different column names, update the `select(ZIP5, sdi_score = SDI_score)`
-in R/116 SECTION 6 rather than renaming the source file.
+**R/116 probe gate:** SECTION 6 checks `has_sdi` (file.exists on `SDI_PATH`) and then
+requires BOTH columns `ZIP5` and `SDI_score` to be present. If the file is absent OR either
+column is missing, `sdi_lookup` is empty and `sdi_score` is `NA_real_` for all encounter rows.
 
-**Status as of 2026-08-17:** Not staged. `sdi_score` is NA across all rows.
+**ZIP5-with-no-ZCTA coverage haircut:** Not all ZIP5 codes have a same-numbered ZCTA.
+PO-box-only and single-building ZIPs will not match against the SDI reference.
+The unmatched count (both distinct-code count and encounter-weighted share) is computed by
+`R/diagnostics/146_sdi_coverage_quantifier.R` (Phase 146-03). Result: **PENDING HiPerGator run**.
+This is the second haircut below the 77.7% ceiling; see the "Coverage Ceilings" sheet of the
+summary workbook for context.
 
-## SVI -- CDC/ATSDR Social Vulnerability Index 2020 (Phase 145)
+## SVI -- CDC SVI 2020 Derived at ZCTA via findSVI (Phase 146, D-02a-i)
 
-**Expected path:** `data/reference/svi_2020_us_by_zcta.csv`
+**Path:** `data/reference/svi_2020_zcta_derived.csv`
+**Status as of 2026-08-17:** PENDING HiPerGator run of `R/117_build_svi_zcta.R`. The build
+script is committed; the derived CSV will be produced when R/117 is run on a HiPerGator login
+node with the Census API key configured. Committed to repo once produced (CDC data is US
+government public domain -- no redistribution restriction).
 
 **Purpose:** Supplies R/116 SECTION 6/7's `svi_score` column, joined on ZIP5 (ZCTA is an
 approximation of ZIP5 and differs in edge cases).
 
-**Source:** CDC/ATSDR SVI 2020, ZCTA-level file, downloaded from the CDC GRASP portal
-(https://www.atsdr.cdc.gov/placeandhealth/svi/). Portal download -- not obtainable via CLI/API.
+**Why a derived file (D-02a-i):** CDC does NOT publish 2020 SVI at ZCTA geography. The
+file `svi_2020_us_by_zcta.csv` (named in earlier planning docs) does not exist as a CDC
+published product. The `findSVI` CRAN package computes SVI at ZCTA directly from 2020 ACS
+variables using the CDC SVI methodology, removing the tract-to-ZCTA aggregation step. This
+is a peer-reviewed CRAN package with a documented method. Build script: `R/117_build_svi_zcta.R`.
 
-**Expected columns:**
-- Join key: `ZCTA` (character, 5-digit; carried in R/116 as `ZIP5 = ZCTA`)
-- Value: `RPL_THEMES` (numeric, composite overall SVI percentile, 0-1). CDC encodes
-  missing as `-999`; R/116 maps any value `< 0` to `NA_real_`.
+**ZCTA-vs-tract ranking caveat (D-02a-i; must appear in all outputs using svi_score):**
+`RPL_THEMES` is percentile-ranked against the national ZCTA universe. CDC's published 2020 SVI
+values are percentile-ranked against the national census tract universe. Same ACS variables, same
+CDC methodology, different reference population. A findSVI ZCTA percentile of 0.75 means "more
+deprived than 75% of US ZCTAs" -- not "more deprived than 75% of US tracts." These are not
+comparable and must not be described as equivalent.
 
-**R/116 probe gate:** SECTION 6 (lines 250-278) checks `has_svi` and then requires BOTH
-columns `ZCTA` and `RPL_THEMES`. If absent OR either column missing, `svi_lookup` is empty
-and `svi_score` is `NA_real_` for all rows. If the staged file uses different column names,
-update the `select(ZIP5 = ZCTA, svi_score = RPL_THEMES)` in R/116 SECTION 6.
+**Columns (D-02a-i output contract):**
+- Join key: `ZCTA` (character, 5-digit, zero-padded; carried in R/116 as `ZIP5 = ZCTA`)
+- Value: `RPL_THEMES` (numeric, composite SVI percentile, 0-1; −999 suppressed → NA before writing)
+- Metadata: `vintage` ("2020"), `method` (findSVI version + ZCTA-vs-tract caveat), `source`
+  (ACS 2020 5-year via Census API)
+- **NOT present:** `svi_areal_coverage` -- findSVI does no tract-to-ZCTA aggregation; there
+  is no aggregation coverage to measure.
 
-**Status as of 2026-08-17:** Not staged. `svi_score` is NA across all rows.
+**R/116 probe gate:** SECTION 6 checks `has_svi` and then requires BOTH columns `ZCTA` and
+`RPL_THEMES`. If absent OR either column missing, `svi_lookup` is empty and `svi_score` is
+`NA_real_` for all rows. The `select(ZIP5 = ZCTA, svi_score = RPL_THEMES)` in R/116 SECTION 6
+matches the derived file's column names -- no R/116 change required when the CSV is produced.
 
 ## ZIP5-modal imputation tier -- why it can report zero rows (Phase 145)
 
