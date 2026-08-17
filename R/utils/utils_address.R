@@ -518,6 +518,22 @@ approximate_zip9 <- function(result_tbl) {
     .zip5_lookup_cache$value <<- zip5_lookup
   }
 
+  # Phase 145 Branch C note: if every approximable row has ZIP5 = NA (sentinel-nulled
+  # by normalize_zip5/is_sentinel_zip5), the modal lookup has nothing to match on and
+  # zip5_modal will report zero rows -- expected, not a defect. See
+  # data/reference/README.md 'ZIP5-modal imputation tier' note.
+  n_approx_with_zip5 <- result_tbl %>%
+    filter(is.na(ZIP9), !is.na(match_type), match_type != "none", !is.na(ZIP5)) %>%
+    nrow()
+  if (n_approx_with_zip5 == 0) {
+    message(glue(
+      "[utils_address] approximate_zip9: {n_to_approx} approximable row(s) found ",
+      "but all have ZIP5 = NA (sentinel-nulled); ",
+      "zip5_modal tier will report zero rows -- expected, not a defect (Branch C). ",
+      "See data/reference/README.md 'ZIP5-modal imputation tier' note."
+    ))
+  }
+
   # D-03 (Phase 144): Tier 3 centroid crosswalk — probe-first gated.
   CENTROID_FILENAME <- "zip5_centroid_zip9_crosswalk.csv"
   # Anchor to the project root, not getwd(). Every other path in this file goes

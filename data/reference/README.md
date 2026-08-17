@@ -125,3 +125,36 @@ and `svi_score` is `NA_real_` for all rows. If the staged file uses different co
 update the `select(ZIP5 = ZCTA, svi_score = RPL_THEMES)` in R/116 SECTION 6.
 
 **Status as of 2026-08-17:** Not staged. `svi_score` is NA across all rows.
+
+## ZIP5-modal imputation tier -- why it can report zero rows (Phase 145)
+
+The `zip5_modal` tier in `approximate_zip9()` (R/utils/utils_address.R) only fires for
+encounters that satisfy ALL of the following:
+1. ZIP9 is NA (no direct match),
+2. match_type is in {interval, most_recent_before} (a covering address record exists), AND
+3. ZIP5 is NOT NA (the covering record carries a usable 5-digit ZIP).
+
+In the Hodgkin Lymphoma cohort run of 2026-08-17 (Phase 145-02), `zip5_modal` reported
+**zero rows**. The D-02 decision tree applied to the pre-approximation diagnostic table
+produced the following three cells:
+
+| Cell | Condition | Count |
+|------|-----------|-------|
+| (i)  | match_type == "none", ZIP9 NA | 93,029 |
+| (ii) | match_type in {interval, most_recent_before}, ZIP9 NA, ZIP5 NA | 157,472 |
+| (iii)| match_type in {interval, most_recent_before}, ZIP9 NA, ZIP5 present | 0 |
+
+Cell (iii) = 0 confirms **no code bug**. Cell (ii) = 157,472 > 0 means the early-exit at
+`n_to_approx == 0` does NOT fire — the modal lookup IS built — but every approximable row
+has ZIP5 = NA (sentinel-nulled by `normalize_zip5()`/`is_sentinel_zip5()`). The modal join
+table therefore has no ZIP5 keys to match on, and `zip5_modal` fires zero rows by design.
+
+This is **Branch C (data-driven, no ZIP5 to impute from)**. No code change is required.
+The console note emitted by `approximate_zip9()` (Phase 145) will read:
+"157472 approximable row(s) found but all have ZIP5 = NA (sentinel-nulled);
+zip5_modal tier will report zero rows -- expected, not a defect (Branch C)."
+
+Final zip9_source breakdown for all 1,950,696 encounters (2026-08-17 run):
+- zip9_observed: 1,516,469 (77.7%) -- ADI ceiling; see ADI section above
+- no_zip5:         275,528 (14.1%)
+- none:            158,699  (8.1%)
