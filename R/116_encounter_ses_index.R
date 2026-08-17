@@ -129,10 +129,22 @@ message(glue("  {n_excluded} CDM encounters ({pct_excluded}%) excluded for lack 
 
 message("--- Resolving ZIP9/ZIP5 per encounter ---")
 
-zip_resolved <- get_zip9_at_date(
+zip_resolved_raw <- get_zip9_at_date(
   ids   = encounters_raw$PATID,
   dates = encounters_raw$ADMIT_DATE
-) |> approximate_zip9()
+)
+
+# Phase 145 D-02 diagnostic: the zip9_source breakdown below is assigned after
+# approximation and cannot distinguish "nothing was approximable" from "approximable
+# rows had no ZIP5". Print the pre-approximation state so the D-02 branch is decidable.
+message("  pre-approximation state (match_type x ZIP9 missing x ZIP5 missing):")
+print(with(zip_resolved_raw,
+           table(match_type,
+                 zip9_na = is.na(ZIP9),
+                 zip5_na = is.na(ZIP5),
+                 useNA = "ifany")))
+
+zip_resolved <- zip_resolved_raw |> approximate_zip9()
 
 # get_zip9_at_date() returns one row per DISTINCT (ID, query_date); join back on
 # ID=PATID, query_date=ADMIT_DATE to restore one row per ENCOUNTERID.
