@@ -107,9 +107,11 @@ total_cdm_encounters <- enc_tbl %>%
 
 message(glue("  Total CDM ENCOUNTER rows (non-NA ADMIT_DATE): {total_cdm_encounters}"))
 
+# NOTE: PCORnet CDM uses "ID" as the patient identifier column, not "PATID".
+# Rename to PATID here so downstream code is consistent with the rest of the pipeline.
 encounters_raw <- enc_tbl %>%
-  dplyr::filter(PATID %in% !!addr_ids, !is.na(ADMIT_DATE)) %>%
-  dplyr::select(PATID, ENCOUNTERID, ADMIT_DATE) %>%
+  dplyr::filter(ID %in% !!addr_ids, !is.na(ADMIT_DATE)) %>%
+  dplyr::select(PATID = ID, ENCOUNTERID, ADMIT_DATE) %>%
   dplyr::collect()
 
 stopifnot("encounter pull returned 0 rows" = nrow(encounters_raw) > 0)
@@ -136,7 +138,7 @@ zip_resolved <- get_zip9_at_date(
 # on ID=PATID, query_date=ADMIT_DATE to restore one row per ENCOUNTERID.
 encounter_zip <- encounters_raw %>%
   left_join(
-    zip_resolved %>% rename(PATID = ID, ADMIT_DATE = query_date),
+    zip_resolved %>% dplyr::rename(PATID = ID, ADMIT_DATE = query_date),
     by = c("PATID", "ADMIT_DATE")
   )
 
