@@ -116,7 +116,11 @@ stopifnot("encounter pull returned 0 rows" = nrow(encounters_raw) > 0)
 message(glue("  {nrow(encounters_raw)} encounters for {dplyr::n_distinct(encounters_raw$PATID)} patients"))
 
 n_excluded <- total_cdm_encounters - nrow(encounters_raw)
-pct_excluded <- round(100 * n_excluded / total_cdm_encounters, 1)
+pct_excluded <- if (total_cdm_encounters > 0) {
+  round(100 * n_excluded / total_cdm_encounters, 1)
+} else {
+  NA_real_
+}
 message(glue("  {n_excluded} CDM encounters ({pct_excluded}%) excluded for lack of address data"))
 
 # SECTION 5: ZIP9 RESOLUTION ----
@@ -280,6 +284,12 @@ encounter_ses <- encounter_zip %>%
     ZIP9, ZIP5, match_type, zip9_source,
     sdi_score, adi_natrank, svi_score, ruca_code, ruca_category
   )
+
+# All four lookups are deduplicated on their join key above, so this should hold.
+# Assert it rather than rely on it: a future reference file with duplicate ZIP5
+# or ZIP9 keys would multiply encounter rows silently.
+stopifnot("SES join fanned out -- a reference lookup has duplicate keys" =
+            nrow(encounter_ses) == nrow(encounter_zip))
 
 message(glue("  encounter_ses rows: {nrow(encounter_ses)}"))
 message(glue("  sdi_score coverage:   {round(100 * mean(!is.na(encounter_ses$sdi_score)),  1)}%"))

@@ -5080,13 +5080,16 @@ check_144("R/116 output xlsx path matches D-06 pattern (encounter_ses_index_summ
   !is.null(r116_lines) &&
   any(grepl("encounter_ses_index_summary_.*\\.xlsx", r116_lines)))
 
-check_144("R/116 output columns include all 11 required fields",
+check_144("R/116 output columns include all 12 required fields",
   !is.null(r116_lines) &&
   any(grepl("sdi_score", r116_lines)) &&
   any(grepl("adi_natrank", r116_lines)) &&
   any(grepl("svi_score", r116_lines)) &&
   any(grepl("ruca_code", r116_lines)) &&
   any(grepl("ruca_category", r116_lines)))
+
+check_144("R/116 asserts the SES joins did not fan out",
+  !is.null(r116_lines) && any(grepl("SES join fanned out", r116_lines)))
 
 check_144("R/116 scopes the encounter pull to patients present in the address extract",
   !is.null(r116_lines) && any(grepl("addr_ids", r116_lines)))

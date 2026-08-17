@@ -76,19 +76,37 @@ test_that("Tier 3: row count is preserved (stopifnot guard)", {
 })
 
 # P1-02: Existing-tier regression — crosswalk absent leaves behaviour identical
-# NOTE: Record .baseline_n_zip9_resolved from a HiPerGator run BEFORE the Tier 3 edit.
+#
+# BASELINE: .BASELINE_N_ZIP9_RESOLVED must be recorded from a HiPerGator run made
+# BEFORE the Tier 3 edit, using the same sample below:
+#     cohort <- get_hl_patient_ids(); ids <- head(sort(cohort), 500)
+#     sum(!is.na(approximate_zip9(get_zip9_at_date(ids, rep(as.Date("2020-01-01"), 500)))$ZIP9))
+# Until that number is recorded, leave it NULL and the test skips rather than errors.
+.BASELINE_N_ZIP9_RESOLVED <- NULL
+
 test_that("Tier 3 absent leaves existing behaviour identical", {
   skip_if_not(file.exists(file.path(CONFIG$data_dir, "LDS_ADDRESS_HISTORY_Mailhot_V1.csv")))
   skip_if(file.exists(file.path("data", "reference", "zip5_centroid_zip9_crosswalk.csv")),
           "crosswalk present — this test covers the absent case")
+  skip_if(is.null(.BASELINE_N_ZIP9_RESOLVED),
+          "baseline not recorded yet — see comment above this test")
+
+  sample_ids   <- head(sort(get_hl_patient_ids()), 500)
+  sample_dates <- rep(as.Date("2020-01-01"), length(sample_ids))
 
   fixture <- get_zip9_at_date(sample_ids, sample_dates)
   out     <- approximate_zip9(fixture)
 
-  expect_setequal(unique(out$zip9_source),
-                  c("already_has_zip9", "zip5_modal", "zip5_no_zip9", "not_attempted"))
+  # The taxonomy this function actually emits (see .classify_zip9_source):
+  #   zip9_observed, zip5_modal, zip5_centroid, zip5_no_zip9, no_zip5,
+  #   invalid_input, none, reference_unavailable
+  # There is no "already_has_zip9" and no "not_attempted".
+  # Subset rather than setequal: a 500-patient sample need not exercise every level.
+  expect_true(all(unique(out$zip9_source) %in%
+                    c("zip9_observed", "zip5_modal", "zip5_no_zip9", "no_zip5",
+                      "invalid_input", "none", "reference_unavailable")))
   expect_false("zip5_centroid" %in% out$zip9_source)
-  expect_identical(sum(!is.na(out$ZIP9)), .baseline_n_zip9_resolved)   # recorded constant
+  expect_identical(sum(!is.na(out$ZIP9)), .BASELINE_N_ZIP9_RESOLVED)
 })
 
 # P1-03a: approximate_zip9() on a fixture with crosswalk absent -> no zip5_centroid, warning emitted
@@ -124,17 +142,22 @@ test_that("0000 guard raises on synthetic ZIP9 in crosswalk", {
   # Exercises the guard inside approximate_zip9() via a staged crosswalk file.
   # Do NOT inline a copy of the guard body here -- that would pass even if the
   # real guard were broken (as it was when it read $ZIP9 instead of $centroid_zip9).
-  tmp_ref <- withr::local_tempdir()
-  dir.create(file.path(tmp_ref, "data", "reference"), recursive = TRUE)
+  skip_if_not(file.exists(file.path(CONFIG$data_dir, "LDS_ADDRESS_HISTORY_Mailhot_V1.csv")),
+              "approximate_zip9 returns early via its address probe gate before reaching Tier 3")
+
+  ref_dir <- withr::local_tempdir()
   utils::write.csv(
     data.frame(ZIP5 = "32611", centroid_zip9 = "326110000"),
-    file.path(tmp_ref, "data", "reference", "zip5_centroid_zip9_crosswalk.csv"),
+    file.path(ref_dir, "zip5_centroid_zip9_crosswalk.csv"),
     row.names = FALSE)
 
-  # The cache is keyed by (path, mtime, size), so a newly staged file rebuilds
-  # it automatically -- no reset helper is needed or defined.
-  withr::with_dir(tmp_ref, {
-    inp <- make_result_tbl("P1", "2020-01-01", NA_character_, "32611", "interval")
-    expect_error(approximate_zip9(inp), "synthetic placeholders")
-  })
+  # approximate_zip9() resolves centroid_path from CONFIG$reference_dir when set,
+  # so point it at the staged directory rather than changing the working directory
+  # (which no longer affects the probe now that the path is project-root anchored).
+  old_ref <- CONFIG$reference_dir
+  CONFIG$reference_dir <<- ref_dir
+  withr::defer(CONFIG$reference_dir <<- old_ref)
+
+  inp <- make_result_tbl("P1", "2020-01-01", NA_character_, "32611", "interval")
+  expect_error(approximate_zip9(inp), "synthetic placeholders")
 })

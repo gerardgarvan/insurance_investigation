@@ -488,7 +488,16 @@ approximate_zip9 <- function(result_tbl) {
 
   # D-03 (Phase 144): Tier 3 centroid crosswalk — probe-first gated.
   CENTROID_FILENAME <- "zip5_centroid_zip9_crosswalk.csv"
-  centroid_path     <- file.path("data", "reference", CENTROID_FILENAME)
+  # Anchor to the project root, not getwd(). Every other path in this file goes
+  # through CONFIG; a bare relative path silently reports "not found" and skips
+  # Tier 3 whenever the caller's working directory differs.
+  centroid_path     <- if (!is.null(CONFIG$reference_dir)) {
+    file.path(CONFIG$reference_dir, CENTROID_FILENAME)
+  } else if (requireNamespace("here", quietly = TRUE)) {
+    here::here("data", "reference", CENTROID_FILENAME)
+  } else {
+    file.path("data", "reference", CENTROID_FILENAME)
+  }
 
   centroid_lookup <- if (file.exists(centroid_path)) {
     cache_key_c <- paste0(
