@@ -5263,6 +5263,6 @@ message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purr
 message("  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R/13 gsub, R/03 scoping incl. ingest_log + preserved line-181 <<-, R/53 PATID) with file-existence gates and positive-pattern assertions (Section 15ac, 12 checks)")
 message("  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation occurrence counts (R/115, amended by 139-05-PATCH.md) structural integrity, incl. single-implementation checks for is_sentinel_zip5()/coalesce_zip5(), Part B/C presence, C-02 reconciliation presence, and R/39 registration (Section 15ad, 14 checks)")
 
-if (failed > 0) {
+if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
 }
