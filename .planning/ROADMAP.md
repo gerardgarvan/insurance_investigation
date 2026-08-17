@@ -440,3 +440,15 @@ Plans:
 - [ ] 143-01-PLAN.md -- D-01 decision checkpoint (boundaries vs content); read-only discovery: producer disposition table, 90-day fill rates, death anomaly, patient-count reconciliation -> 143-DISCOVERY.md [EP-180-DISC-01] (Wave 1)
 - [ ] 143-02-PLAN.md -- Parameterise R/28 (EPISODES_RDS_PATH / OUT_SUFFIX options, fix episode_number join keys); verify 90-day byte-identity; run 180-day enrichment pass on HiPerGator [EP-180-ENRICH-01, EP-180-ENRICH-02] (Wave 2, depends on 143-01, D-01b path only)
 - [ ] 143-03-PLAN.md -- Wire enrichment join into R/142 or drop blank columns (D-01a/D-01b); write output/gantt_180_README.txt with episode rule + observed maxima; update 142-CONTEXT.md D-01 [EP-180-EXPORT-01, EP-180-DOC-01] (Wave 3, depends on 143-01 and 143-02)
+
+### Phase 144: Centroid ZIP9 Imputation, ZIP9-Level SDI, and Areal-Mean SDI
+
+**Goal:** Extend `approximate_zip9()` with a Tier 3 centroid ZIP9 imputation fallback (probe-first gated, new `zip9_source = "zip5_centroid"` value), and build a new standalone investigation script (R/116) that resolves ZIP9/ZIP5 per encounter and joins SDI, ADI, SVI, and RUCA SES index scores from staged reference files.
+**Requirements**: none mapped in REQUIREMENTS.md (standalone investigation deliverable) — plans use 144-CONTEXT.md decision IDs (D-01..D-08) as acceptance criteria
+**Depends on:** Phase 143
+**Plans:** 3 plans
+
+Plans:
+- [x] 144-01-PLAN.md — Tier 3 centroid ZIP9 imputation in `utils_address.R`: Census ZCTA crosswalk README, `.centroid_zip9_lookup_cache`, `.empty_centroid_lookup()`, probe-first gate, `zip5_centroid` value in `.classify_zip9_source()`, 5 unit tests [D-01, D-02, D-03] (Wave 1)
+- [ ] 144-02-PLAN.md — R/116_encounter_ses_index.R: DuckDB ENCOUNTER pull, `get_zip9_at_date() |> approximate_zip9()`, probe-first SDI/ADI/SVI/RUCA joins, encounter-level RDS + 3-sheet xlsx [D-04, D-05, D-06, D-07, D-08] (Wave 2, depends on 144-01)
+- [ ] 144-03-PLAN.md — R/39 registration + SCRIPT_INDEX.md row + R/88 Section 15ae (18 structural smoke-test checks) [D-08] (Wave 3, depends on 144-01 + 144-02)
