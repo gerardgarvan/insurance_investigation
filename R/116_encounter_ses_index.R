@@ -139,7 +139,8 @@ zip_resolved <- get_zip9_at_date(
 encounter_zip <- encounters_raw %>%
   left_join(
     zip_resolved %>% dplyr::rename(PATID = ID, ADMIT_DATE = query_date),
-    by = c("PATID", "ADMIT_DATE")
+    by = c("PATID", "ADMIT_DATE"),
+    relationship = "many-to-many"
   )
 
 message(glue("  ZIP resolution complete. zip9_source breakdown:"))
