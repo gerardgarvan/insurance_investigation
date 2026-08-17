@@ -76,14 +76,18 @@ svi_raw <- findSVI::find_svi(
 message("findSVI returned ", nrow(svi_raw), " rows, ", ncol(svi_raw), " columns.")
 
 # ---- STEP 3: Locate the RPL_THEMES column ------------------------------------
-# findSVI returns composite SVI as RPL_THEMES (same naming as CDC's own files).
-# If the column is absent (package version change), stop with a clear message.
+# findSVI returns composite SVI as RPL_themes or RPL_THEMES depending on version.
+# Normalise to RPL_THEMES so the rest of the script is case-consistent.
 
-if (!"RPL_THEMES" %in% names(svi_raw)) {
+rpl_col <- intersect(c("RPL_THEMES", "RPL_themes"), names(svi_raw))[1]
+if (is.na(rpl_col)) {
   stop(
     "RPL_THEMES column not found in findSVI output.\n",
     "Available columns: ", paste(names(svi_raw), collapse = ", ")
   )
+}
+if (rpl_col != "RPL_THEMES") {
+  svi_raw <- dplyr::rename(svi_raw, RPL_THEMES = !!rlang::sym(rpl_col))
 }
 
 # ---- STEP 4: Locate the ZCTA identifier column -------------------------------
