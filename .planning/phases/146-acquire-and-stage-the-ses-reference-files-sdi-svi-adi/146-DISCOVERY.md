@@ -336,3 +336,36 @@ The downloaded file contains columns: `GISJOIN`, `FIPS` (12-digit block group GE
 | ADI | N/A — not staged this phase | N/A | Block group only; no ZIP9 join possible without crosswalk not yet identified. |
 
 **Census API key status:** OBTAINED — registered by Gerard at api.census.gov, 2026-08-17. Must be added to `~/.Renviron` on HiPerGator as `CENSUS_API_KEY=<key>` before `R/117_build_svi_zcta.R` runs (Wave 4 / plan 146-04).
+
+---
+
+## PART I — SDI Staging Results (146-03)
+
+### D-01 Label (mandatory wherever sdi_score appears in outputs)
+
+**sdi_score is a ZCTA-level SDI value attached through ZIP5 (ZCTA is approximate; PO-box-only and single-building ZIPs have no ZCTA and do not match) — it is NOT a ZIP5-level measure.**
+
+### SDI File Staged (2026-08-17)
+
+- **File:** `data/reference/zip5_sdi_reference.csv`
+- **Columns:** `ZIP5` (character, 5-digit zero-padded), `SDI_score` (numeric)
+- **Rows:** 32,989 distinct ZCTAs
+- **Source raw file:** `asset_rgc_sdi_2015_through_2019_zcta.csv` (2015–2019 ACS 5-year, Robert Graham Center)
+- **Raw key column:** `ZCTA5_FIPS` → renamed `ZIP5`; zero-padded to 5 characters
+- **Commit status:** Committed to repo (user-approved 2026-08-17)
+- **R/116 SECTION 6 contract:** `select(ZIP5, sdi_score = SDI_score)` — exact column match, no R/116 change required
+- **Staging script:** `R/146_stage_sdi_reference.R`
+
+### ZIP5-with-no-ZCTA Haircut Quantification
+
+**Script:** `R/diagnostics/146_sdi_coverage_quantifier.R`
+
+**Result: PENDING HiPerGator run** — this Windows box has no encounter RDS.
+
+The quantification script computes BOTH:
+- **(a) Distinct codes:** unique non-NA cohort ZIP5s matched/unmatched against `zip5_sdi_reference.csv`. This is the count of ZIP5 CODES lacking a ZCTA counterpart.
+- **(b) Encounter-weighted coverage:** `sum(!is.na(enc$ZIP5) & enc$ZIP5 %in% sdi$ZIP5) / nrow(enc)`. This is the coverage figure the deliverable reports. (a) alone is misleading since a rare ZIP5 code and a high-volume one weigh the same.
+
+The unmatched count from (a)/(b) is the **second haircut** below the 77.7% ceiling (first haircut = no usable ZIP5 at all). Label for the coverage sheet (146-05): **"ZIP5s with no corresponding ZCTA"**.
+
+No fabricated counts. Run `R/diagnostics/146_sdi_coverage_quantifier.R` on HiPerGator after the 146-06 job produces `output/encounter_ses_index_<date>.rds`.
