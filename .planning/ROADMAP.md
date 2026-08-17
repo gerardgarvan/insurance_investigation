@@ -446,7 +446,7 @@ Plans:
 **Goal:** Extend `approximate_zip9()` with a Tier 3 centroid ZIP9 imputation fallback (probe-first gated, new `zip9_source = "zip5_centroid"` value), and build a new standalone investigation script (R/116) that resolves ZIP9/ZIP5 per encounter and joins SDI, ADI, SVI, and RUCA SES index scores from staged reference files.
 **Requirements**: none mapped in REQUIREMENTS.md (standalone investigation deliverable) — plans use 144-CONTEXT.md decision IDs (D-01..D-08) as acceptance criteria
 **Depends on:** Phase 143
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 144-01-PLAN.md — Tier 3 centroid ZIP9 imputation in `utils_address.R`: Census ZCTA crosswalk README, `.centroid_zip9_lookup_cache`, `.empty_centroid_lookup()`, probe-first gate, `zip5_centroid` value in `.classify_zip9_source()`, 5 unit tests [D-01, D-02, D-03] (Wave 1)
