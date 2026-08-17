@@ -458,9 +458,9 @@ Plans:
 **Goal:** Fix the 13.3% row-count inflation in R/116's encounter-SES join (fan-out from duplicate `(ID, query_date)` keys in `get_zip9_at_date()`), regenerate the corrected RDS and summary workbook, diagnose why the ZIP5-modal imputation tier fired zero rows, and document column contracts for the three absent SES reference files (SDI, SVI, ADI).
 **Requirements**: FANOUT-01, ZIP5MODAL-01, SESDOC-01
 **Depends on:** Phase 144
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 145-01-PLAN.md — Audit committed fan-out fix + trace ZIP5-modal path + document SDI/SVI/ADI reference contracts in README (Wave 1, autonomous)
-- [ ] 145-02-PLAN.md — Blocking HiPerGator checkpoint: run R/116, capture zip9_source breakdown + row-count guard (Wave 2)
-- [ ] 145-03-PLAN.md — Diagnose ZIP5-modal (data-driven vs bug), conditionally fix/document, regenerate corrected RDS + workbook (Wave 3)
+- [x] 145-01-PLAN.md — Audit committed fan-out fix + trace ZIP5-modal path + document SDI/SVI/ADI reference contracts in README (Wave 1, autonomous)
+- [x] 145-02-PLAN.md — Blocking HiPerGator checkpoint: run R/116, capture zip9_source breakdown + row-count guard (Wave 2)
+- [x] 145-03-PLAN.md — Diagnose ZIP5-modal (data-driven vs bug), conditionally fix/document, regenerate corrected RDS + workbook (Wave 3)
