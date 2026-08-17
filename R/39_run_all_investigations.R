@@ -217,7 +217,8 @@ investigation_scripts <- c(
   "R/112_doi_attribution_report.R",             # DoI attribution (Phase 129); joins rituximab/MTX to DoI dx (co-occurrence) -> doi_attribution_report.xlsx (4 sheets). Consumes R/111's .rds.
   "R/113_confirmed_hl_nhl_tumor_registry_counts.R", # HL/NHL TUMOR_REGISTRY histology count diagnostic (quick-260716); console-only, no file output.
   "R/114_zip9_temporal_lookup.R",                # ZIP9 temporal lookup validation (Phase 137); validates get_zip9_at_date(), appends Address Timeline Diagnostics sheet to zip_change_frequency.xlsx.
-  "R/115_zip_stability_counts.R"                # ZIP stability + imputation-scenario occurrence counts (Phase 139, amended by 139-05-PATCH.md); probes LDS_ADDRESS_HISTORY + ENCOUNTER, read-only
+  "R/115_zip_stability_counts.R",               # ZIP stability + imputation-scenario occurrence counts (Phase 139, amended by 139-05-PATCH.md); probes LDS_ADDRESS_HISTORY + ENCOUNTER, read-only
+  "R/116_encounter_ses_index.R"                  # Encounter-level SES index linkage (Phase 144); resolves ZIP9/ZIP5 per encounter via get_zip9_at_date()|>approximate_zip9(), joins SDI/ADI/SVI/RUCA, outputs encounter_ses_index_YYYYMMDD.rds + summary xlsx
 )
 
 for (script in investigation_scripts) {
