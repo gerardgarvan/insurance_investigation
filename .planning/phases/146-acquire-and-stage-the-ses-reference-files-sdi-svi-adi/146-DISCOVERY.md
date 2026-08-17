@@ -322,18 +322,28 @@ findSVI values are percentile-ranked against the national ZCTA universe. CDC's p
 
 ### ADI Registration Status and Per-Index Commit Verdicts (resolved 2026-08-17)
 
-**ADI registration:** COMPLETED — registered by Gerard, 2026-08-17. File downloaded: `US_2024_block_group_adi_v_4_0_1.csv` (2024 vintage, v4.0.1).
+**ADI registration:** COMPLETED — registered by Gerard, 2026-08-17. Files downloaded: block group file (`US_2024_block_group_adi_v_4_0_1.csv`) AND 23 state-level 9-digit ZIP files (`{STATE}_2024_ADI_9Digit_Zip_v4_0_1.csv`).
 
-**D-05 FINAL ANSWER (confirmed from actual download 2026-08-17): block group only.**
-The downloaded file contains columns: `GISJOIN`, `FIPS` (12-digit block group GEOID), `ADI_NATRANK`, `ADI_STATERNK`. **No ZIP9, ZIP_PLUS4, ADDRESS_ZIP9, or any 9-digit ZIP column is present.** ADI cannot be joined on ZIP9 without a ZIP9→block-group crosswalk. No such crosswalk source has been identified in this phase. **ADI is NOT achievable this phase.** The downloaded file will not be staged; R/116's probe gate will degrade ADI to NA for all rows (existing behavior — no code change needed).
+**D-05 REVISED FINAL ANSWER (2026-08-17): ZIP9-keyed files exist — ADI IS achievable.**
 
-**Per-index commit-to-repo verdicts (confirmed by user 2026-08-17):**
+The initial download was the block group file only (no ZIP9). However, the portal also provides per-state 9-digit ZIP files with column `BENE_ZIP_CD` (= ZIP9). All 23 available state files were downloaded and collated into a single reference file.
+
+**Collated reference file:** `data/reference/neighborhood_atlas_zip9_adi.csv`
+- Columns: `ZIP9` (renamed from `BENE_ZIP_CD`), `ADI_NATRANK` (median across block groups per ZIP9; suppression codes → NA)
+- Rows: 37,029,488 unique ZIP9 codes; 7,591,693 suppressed/NA
+- States: AK, AL, AZ, CA, CO, CT, DC, DE, FL, GA, ID, KY, MI, MN, MT, NJ, NY, OH, PA, RI, VA, WA, WI (23 states)
+- Vintage: 2024 (v4.0.1)
+- File size: 478MB — **too large for git; added to `.gitignore`**
+- Transfer to HiPerGator: `scp data/reference/neighborhood_atlas_zip9_adi.csv {user}@hpg.rc.ufl.edu:/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/`
+- R/116 auto-detects `ZIP9` column (in candidate list) and `ADI_NATRANK` (in candidate list) — no R/116 column-name change needed
+
+**Per-index commit-to-repo verdicts (updated 2026-08-17):**
 
 | Index | File | May commit to repo? | Notes |
 |-------|------|--------------------|-----------------------|
 | SDI | `data/reference/zip5_sdi_reference.csv` | YES | Confirmed by user. |
-| SVI | `data/reference/svi_2020_zcta_derived.csv` | YES — CDC data is US government public domain; derived file freely committable | N/A |
-| ADI | N/A — not staged this phase | N/A | Block group only; no ZIP9 join possible without crosswalk not yet identified. |
+| SVI | `data/reference/svi_2020_zcta_derived.csv` | YES — CDC data is US government public domain | N/A |
+| ADI | `data/reference/neighborhood_atlas_zip9_adi.csv` | NO — 478MB, gitignored | Transfer via scp; see path above |
 
 **Census API key status:** OBTAINED — registered by Gerard at api.census.gov, 2026-08-17. Must be added to `~/.Renviron` on HiPerGator as `CENSUS_API_KEY=<key>` before `R/117_build_svi_zcta.R` runs (Wave 4 / plan 146-04).
 

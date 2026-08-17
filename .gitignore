@@ -74,3 +74,10 @@ __pycache__/
 # Local test output artifacts (tempdir cache, not repo content) -- Phase 83
 tests/fixtures/*.rds
 tests/fixtures/*.duckdb
+.Rproj.user
+
+# ADI ZIP9 reference file -- 478MB, too large for git; transfer via scp (Phase 146)
+data/reference/neighborhood_atlas_zip9_adi.csv
+
+# ADI source zip downloads (raw portal downloads, not repo content)
+adi-download*.zip
