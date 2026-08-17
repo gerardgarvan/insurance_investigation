@@ -96,7 +96,7 @@ addr_path     <- file.path(CONFIG$data_dir, ADDR_FILENAME)
 addr_ids <- unique(readr::read_csv(addr_path, show_col_types = FALSE)[["ID"]])
 message(glue("  Address history covers {length(addr_ids)} patients"))
 
-enc_tbl <- get_pcornet_table("ENCOUNTER")
+enc_tbl <- get_pcornet_table("ENCOUNTER") %>% dplyr::rename_with(toupper)
 
 # Get total CDM encounter count for coverage summary
 total_cdm_encounters <- enc_tbl %>%
