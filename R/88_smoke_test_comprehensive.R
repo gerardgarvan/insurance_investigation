@@ -38,10 +38,6 @@
 
 # Clear stale log handler from previous source() in same session
 try(close(.log_con), silent = TRUE)
-# globalCallingHandlers(NULL) cannot be called inside testthat (handlers on stack)
-if (!isTRUE(getOption("testthat.running"))) {
-  globalCallingHandlers(NULL)
-}
 
 # Clear workspace to avoid stale references
 rm(list = ls())
