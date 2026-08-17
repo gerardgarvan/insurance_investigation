@@ -339,6 +339,36 @@ The downloaded file contains columns: `GISJOIN`, `FIPS` (12-digit block group GE
 
 ---
 
+## PART I-SVI — SVI Build Script (146-04)
+
+**Script:** `R/117_build_svi_zcta.R`
+**Committed:** YES — committed in 146-04 wave.
+**Method:** D-02a-i (findSVI CRAN package, `find_svi(year=2020, geography="zcta")`).
+**Census API key:** Obtained (api.census.gov), must be present in `~/.Renviron` on HiPerGator as `CENSUS_API_KEY=<key>` before the script runs.
+
+**Output file:** `data/reference/svi_2020_zcta_derived.csv`
+**Output status: PENDING HiPerGator run.** This Windows development box cannot execute the findSVI API call. The script must be run on a HiPerGator login node:
+```bash
+# On HiPerGator login node, after module load R/4.4.2 and renv::restore():
+Rscript R/117_build_svi_zcta.R
+```
+The derived CSV will be committed after the HiPerGator run (Wave 6 / plan 146-06 or equivalent).
+
+**Output columns (once produced):**
+| Column | Description |
+|--------|-------------|
+| `ZCTA` | character, 5-digit, zero-padded |
+| `RPL_THEMES` | numeric, 0–1 composite SVI percentile (or NA for suppressed rows) |
+| `vintage` | "2020" |
+| `method` | findSVI version, geography=zcta, ZCTA-vs-tract ranking caveat |
+| `source` | ACS 2020 5-year estimates via Census API; findSVI package |
+
+**No `svi_areal_coverage` column** — findSVI does no tract-to-ZCTA aggregation; this column has nothing to measure and is not present.
+
+**ADI staging:** NOT applicable this phase. D-05 confirmed block group only — no ZIP9 column in the downloaded file. No ADI staging script written. R/116 probe gate continues to degrade ADI to NA for all rows (no code change needed).
+
+---
+
 ## PART I — SDI Staging Results (146-03)
 
 ### D-01 Label (mandatory wherever sdi_score appears in outputs)
