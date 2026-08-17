@@ -236,16 +236,21 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 # package with a locked namespace, replace with an rlang environment or R6 cache.
 .zip5_lookup_cache <- list(key = NULL, value = NULL)
 
+# Memoisation cache for the ZIP5->centroid-ZIP9 crosswalk (Phase 144 Tier 3).
+# Keyed by (path, mtime, size) to force rebuild when file changes.
+.centroid_zip9_lookup_cache <- list(key = NULL, value = NULL)
+
 # Shared classifier -- every exit path of approximate_zip9() routes through this so the
 # returned column set and row count are identical regardless of which path was taken.
 # FIX-01, FIX-02.
-.classify_zip9_source <- function(result_tbl, zip5_lookup, unavailable = FALSE) {
+.classify_zip9_source <- function(result_tbl, zip5_lookup, unavailable = FALSE,
+                                   centroid_lookup = NULL) {
 
   # FIX-09a: the lookup must be unique on ZIP5 or the join fans out
   stopifnot(!any(duplicated(zip5_lookup$ZIP5)))
 
+  # Apply modal (Tier 2) lookup first
   out <- result_tbl %>%
-    # FIX-09b: na_matches = "never" so an NA ZIP5 never joins even if a NA key appears
     left_join(zip5_lookup, by = "ZIP5", na_matches = "never") %>%
     mutate(
       zip9_source = case_when(
@@ -254,19 +259,45 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
         match_type == "none" ~ "none",
         unavailable          ~ "reference_unavailable",
         !is.na(modal_zip9)   ~ "zip5_modal",
-        !is.na(ZIP5)         ~ "zip5_no_zip9",
-        TRUE                 ~ "no_zip5"
+        TRUE                 ~ ".needs_centroid_check"   # placeholder
       ),
-      ZIP9              = if_else(zip9_source == "zip5_modal", modal_zip9, ZIP9),
+      ZIP9 = if_else(zip9_source == "zip5_modal", modal_zip9, ZIP9),
       zip5_modal_freq   = if_else(zip9_source == "zip5_modal", as.integer(zip5_modal_freq),   NA_integer_),
       zip5_n_candidates = if_else(zip9_source == "zip5_modal", as.integer(zip5_n_candidates), NA_integer_),
       zip5_modal_share  = if_else(zip9_source == "zip5_modal", zip5_modal_share,              NA_real_)
     ) %>%
-    select(-modal_zip9) %>%
-    arrange(ID, query_date)
+    select(-modal_zip9)
 
-  # FIX-02: no partition, so this cannot fail -- assert it anyway so a future refactor
-  # that reintroduces splitting is caught on the first test run
+  # Apply centroid (Tier 3) lookup for rows still needing resolution
+  if (!is.null(centroid_lookup) && nrow(centroid_lookup) > 0) {
+    stopifnot(!any(duplicated(centroid_lookup$ZIP5)))
+    out <- out %>%
+      left_join(centroid_lookup, by = "ZIP5", na_matches = "never") %>%
+      mutate(
+        zip9_source = case_when(
+          zip9_source != ".needs_centroid_check" ~ zip9_source,
+          !is.na(centroid_zip9)                  ~ "zip5_centroid",
+          !is.na(ZIP5)                            ~ "zip5_no_zip9",
+          TRUE                                    ~ "no_zip5"
+        ),
+        ZIP9 = if_else(zip9_source == "zip5_centroid", centroid_zip9, ZIP9)
+      ) %>%
+      select(-centroid_zip9)
+  } else {
+    # No centroid lookup available — resolve placeholder directly
+    out <- out %>%
+      mutate(
+        zip9_source = case_when(
+          zip9_source != ".needs_centroid_check" ~ zip9_source,
+          !is.na(ZIP5)                            ~ "zip5_no_zip9",
+          TRUE                                    ~ "no_zip5"
+        )
+      )
+  }
+
+  out <- out %>% arrange(ID, query_date)
+
+  # FIX-02: assert row count is preserved on every exit path
   stopifnot(nrow(out) == nrow(result_tbl))
   out
 }
@@ -279,6 +310,14 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
     zip5_modal_freq   = integer(),
     zip5_n_candidates = integer(),
     zip5_modal_share  = double()
+  )
+}
+
+# Empty centroid lookup with correct column types, used on probe-gate exit paths.
+.empty_centroid_lookup <- function() {
+  tibble(
+    ZIP5          = character(),
+    centroid_zip9 = character()
   )
 }
 
@@ -447,7 +486,68 @@ approximate_zip9 <- function(result_tbl) {
     .zip5_lookup_cache$value <<- zip5_lookup
   }
 
-  result_out <- .classify_zip9_source(result_tbl, zip5_lookup, unavailable = FALSE)
+  # D-03 (Phase 144): Tier 3 centroid crosswalk — probe-first gated.
+  CENTROID_FILENAME <- "zip5_centroid_zip9_crosswalk.csv"
+  centroid_path     <- file.path("data", "reference", CENTROID_FILENAME)
+
+  centroid_lookup <- if (file.exists(centroid_path)) {
+    cache_key_c <- paste0(
+      normalizePath(centroid_path, mustWork = FALSE), "|",
+      as.numeric(file.mtime(centroid_path)), "|",
+      file.size(centroid_path)
+    )
+    if (!is.null(.centroid_zip9_lookup_cache$key) &&
+        identical(.centroid_zip9_lookup_cache$key, cache_key_c)) {
+      .centroid_zip9_lookup_cache$value
+    } else {
+      raw_c <- tryCatch(
+        vroom::vroom(centroid_path,
+                     col_types = vroom::cols(ZIP5 = "c", centroid_zip9 = "c"),
+                     progress = FALSE),
+        error = function(e) {
+          message(glue("[utils_address] approximate_zip9: centroid crosswalk read failed ",
+                       "({conditionMessage(e)}) -- Tier 3 skipped"))
+          NULL
+        }
+      )
+      if (!is.null(raw_c) && all(c("ZIP5", "centroid_zip9") %in% names(raw_c))) {
+        lkp_c <- raw_c %>%
+          filter(!is.na(ZIP5), !is.na(centroid_zip9)) %>%
+          distinct(ZIP5, .keep_all = TRUE) %>%
+          select(ZIP5, centroid_zip9)
+        .centroid_zip9_lookup_cache$key   <<- cache_key_c
+        .centroid_zip9_lookup_cache$value <<- lkp_c
+        lkp_c
+      } else {
+        message(glue("[utils_address] approximate_zip9: centroid crosswalk missing required ",
+                     "columns ZIP5/centroid_zip9 -- Tier 3 skipped"))
+        .empty_centroid_lookup()
+      }
+    }
+  } else {
+    message(glue(
+      "[utils_address] approximate_zip9: centroid crosswalk not found at {centroid_path} ",
+      "-- Tier 3 skipped (stage data/reference/zip5_centroid_zip9_crosswalk.csv to activate)"
+    ))
+    .empty_centroid_lookup()
+  }
+
+  # Guard: reject crosswalks that contain synthetic ZIP9s (P0-01)
+  # Column is centroid_zip9 (see crosswalk schema in the README) -- NOT ZIP9.
+  # Reading $ZIP9 here returns NULL and the guard silently never fires.
+  stopifnot("centroid crosswalk missing centroid_zip9 column" =
+              "centroid_zip9" %in% names(centroid_lookup))
+  bad <- centroid_lookup$centroid_zip9[grepl("0000$", centroid_lookup$centroid_zip9)]
+  if (length(bad) > 0) {
+    stop(sprintf(
+      "[utils_address] centroid crosswalk contains %d ZIP9 values ending in '0000' — these are ",
+      length(bad)),
+      "synthetic placeholders, not delivery segments. See ",
+      "data/reference/README_zip5_centroid_zip9_crosswalk.txt.")
+  }
+
+  result_out <- .classify_zip9_source(result_tbl, zip5_lookup, unavailable = FALSE,
+                                       centroid_lookup = centroid_lookup)
 
   # AMEND-08a / FIX-08: one line per level, newline-terminated
   src_counts <- table(result_out$zip9_source)
@@ -467,6 +567,7 @@ approximate_zip9 <- function(result_tbl) {
     "[utils_address] approximate_zip9: zip9_source breakdown",
     glue("  zip9_observed:         {get_count('zip9_observed')}"),
     glue("  zip5_modal:            {get_count('zip5_modal')}"),
+    glue("  zip5_centroid:         {get_count('zip5_centroid')}"),
     glue("  zip5_no_zip9:          {get_count('zip5_no_zip9')}"),
     glue("  no_zip5:               {get_count('no_zip5')}"),
     glue("  none:                  {get_count('none')}"),
