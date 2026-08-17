@@ -473,7 +473,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
-- [ ] 146-01-PLAN.md — Discovery: verify SDI/SVI/ADI publications, network policy, sentinel-ZIP + normalizer-disagreement probes -> 146-DISCOVERY.md (Wave 1, autonomous)
+- [x] 146-01-PLAN.md — Discovery: verify SDI/SVI/ADI publications, network policy, sentinel-ZIP + normalizer-disagreement probes -> 146-DISCOVERY.md (Wave 1, autonomous)
 - [ ] 146-02-PLAN.md — Human-action gate: D-02 (SVI method), ADI registration (P-03a), per-file redistribution rights (Wave 2)
 - [ ] 146-03-PLAN.md — Stage SDI at data/reference/zip5_sdi_reference.csv + quantify ZIP5-with-no-ZCTA haircut + D-01 label (Wave 3)
 - [ ] 146-04-PLAN.md — Derive SVI: R/147_build_svi_zcta.R + svi_2020_zcta_derived.csv with coverage floor (D-02a), or record drop (D-02c) (Wave 3)

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Completed 145-03-PLAN.md
-last_updated: "2026-08-17T18:13:48.550Z"
+stopped_at: Completed 146-01-PLAN.md
+last_updated: "2026-08-17T18:49:30Z"
 last_activity: 2026-08-17
 progress:
-  total_phases: 136
+  total_phases: 137
   completed_phases: 123
-  total_plans: 253
-  completed_plans: 246
+  total_plans: 259
+  completed_plans: 247
 ---
 
 # Project State
@@ -21,12 +21,12 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 145 — r116-fan-out-fix-and-ses-reference-gap-fill
+**Current focus:** Phase 146 — acquire-and-stage-the-ses-reference-files-sdi-svi-adi
 
 ## Current Position
 
-Phase: 145
-Plan: Not started
+Phase: 146 (acquire-and-stage-the-ses-reference-files-sdi-svi-adi) — EXECUTING
+Plan: 1 of 6
 
   - 140-01: COMPLETE (3/3 tasks). Task 1: compute_c02() exposes n_present_no_usable_zip5, console/QC breakdown (commit 6862a64). Task 2 (D-1 checkpoint): resolved by the user this session as a distinct comparison-basis correction -- NOT either of the plan's anticipated option-a (re-derive C02_EXPECTED) or option-b (leave everything unchanged) branches. C02_EXPECTED (26L) and C02_TOLERANCE (5L) stay unchanged; the reconciliation comparison itself is corrected to use n_present_no_usable_zip5 (9, the only population a genuine coalescing defect could produce) instead of the conflated n_patients_no_zip5_ever (665, which mixes in 656 coverage-gap patients absent from addr_coal). Task 3 implemented this resolution (commit b6f1e74) -- SECTION 12 console messages, SECTION 13 qc_tbl labels, SECTION 14 KEY-sheet fields, and the QC-sheet subtitle all updated. NOTE: this comparison basis was itself superseded by 140-09 (Wave 2a) -- see below. See 140-01-SUMMARY.md.
   - 140-02: COMPLETE (3/3 tasks). Task 1: crosswalk staging contract documented in data/reference/README.md; R/115 SECTION 8/13 match-rate coverage gate wired (commits 5d4309b, 6862a64). Task 2 (human-action, crosswalk acquisition): resolved "not available -- defer" -- block-group tier stays gracefully degraded (not a regression from Phase 139); P-03b/P-03c deferred as follow-up. Task 3 (D-2 decision, ZIP5-vs-ZIP9): resolved option-a -- ZIP5 accepted as the primary analysis unit now, unblocking Plans 140-04 through 140-07 (140-04's S1-fold-in design, per 140-08-PATCH FIX-03, confirmed applicable). See 140-02-SUMMARY.md.
@@ -151,6 +151,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 144 added: Centroid ZIP9 Imputation, ZIP9-Level SDI, and Areal-Mean SDI
 - Phase 145 added: R/116 Fan-Out Fix and SES Reference Gap Fill
 - Phase 144 added: Centroid ZIP9 Imputation, ZIP9-Level SDI, and Areal-Mean SDI
+- Phase 146 added: Acquire and Stage the SES Reference Files (SDI, SVI, ADI)
 
 ### Known Blockers (new)
 
