@@ -68,3 +68,60 @@ above threshold, not file existence alone.
 **Status as of 2026-08-06:** Not staged. R/115's block-group tier reads
 `block_group_tier_status <- "not available (crosswalk file not found)"` and
 `pct_block_group_match` is `NA_real_` across all gap bins on the last real run.
+
+### Also consumed by R/116 for ADI (Phase 145)
+
+R/116_encounter_ses_index.R SECTION 6 (lines 214-248) probes this SAME file
+(`data/reference/neighborhood_atlas_block_group_crosswalk.csv`) to supply its
+encounter-level `adi_natrank` column, joined on **ZIP9** (not ZIP5). R/116 accepts the
+ZIP9 key as the first present of `ZIP9`, `zip9`, `ADDRESS_ZIP9`, `zip9_norm`, `GEOID9`,
+`ZIP_PLUS4`, and the rank as the first present of `adi_natrank`, `ADI_NATRANK`, `natrank`.
+Because Tier 3 centroid ZIP9 resolution is inert (144-CONTEXT.md D-01) AND this crosswalk
+is not staged (P-03a pending), `adi_natrank` is entirely NA on current runs. Acquisition
+status is the same as the Phase 140 block-group tier above -- not staged as of 2026-08-17.
+
+## SDI -- Social Deprivation Index (Robert Graham Center) (Phase 145)
+
+**Expected path:** `data/reference/zip5_sdi_reference.csv`
+
+**Purpose:** Supplies R/116 SECTION 6/7's `sdi_score` column (encounter-level SES),
+joined on ZIP5.
+
+**Source:** Robert Graham Center Social Deprivation Index
+(https://www.graham-center.org/maps-data-tools/social-deprivation-index.html).
+Portal download -- not obtainable via CLI/API.
+
+**Expected columns:**
+- Join key: `ZIP5` (character, 5-digit; normalized via `normalize_zip5_raw()`)
+- Value: `SDI_score` (numeric, 0-100)
+
+**R/116 probe gate:** SECTION 6 (lines 187-212) checks `has_sdi` (file.exists on
+`SDI_PATH`) and then requires BOTH columns `ZIP5` and `SDI_score` to be present. If the
+file is absent OR either column is missing, `sdi_lookup` is empty and `sdi_score` is
+`NA_real_` for all encounter rows (a console message names the available columns). If the
+staged file uses different column names, update the `select(ZIP5, sdi_score = SDI_score)`
+in R/116 SECTION 6 rather than renaming the source file.
+
+**Status as of 2026-08-17:** Not staged. `sdi_score` is NA across all rows.
+
+## SVI -- CDC/ATSDR Social Vulnerability Index 2020 (Phase 145)
+
+**Expected path:** `data/reference/svi_2020_us_by_zcta.csv`
+
+**Purpose:** Supplies R/116 SECTION 6/7's `svi_score` column, joined on ZIP5 (ZCTA is an
+approximation of ZIP5 and differs in edge cases).
+
+**Source:** CDC/ATSDR SVI 2020, ZCTA-level file, downloaded from the CDC GRASP portal
+(https://www.atsdr.cdc.gov/placeandhealth/svi/). Portal download -- not obtainable via CLI/API.
+
+**Expected columns:**
+- Join key: `ZCTA` (character, 5-digit; carried in R/116 as `ZIP5 = ZCTA`)
+- Value: `RPL_THEMES` (numeric, composite overall SVI percentile, 0-1). CDC encodes
+  missing as `-999`; R/116 maps any value `< 0` to `NA_real_`.
+
+**R/116 probe gate:** SECTION 6 (lines 250-278) checks `has_svi` and then requires BOTH
+columns `ZCTA` and `RPL_THEMES`. If absent OR either column missing, `svi_lookup` is empty
+and `svi_score` is `NA_real_` for all rows. If the staged file uses different column names,
+update the `select(ZIP5 = ZCTA, svi_score = RPL_THEMES)` in R/116 SECTION 6.
+
+**Status as of 2026-08-17:** Not staged. `svi_score` is NA across all rows.
