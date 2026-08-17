@@ -42,6 +42,11 @@ try(close(.log_con), silent = TRUE)
 # Clear workspace to avoid stale references
 rm(list = ls())
 
+# Ensure working directory is project root (testthat runs from tests/testthat/)
+if (requireNamespace("here", quietly = TRUE)) {
+  setwd(here::here())
+}
+
 library(glue)
 
 passed <- 0L
