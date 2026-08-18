@@ -119,10 +119,11 @@ D-02 confirmed: ADDRESS_ZIP5 wins.
 ```
 D-02: ADDRESS_ZIP5 WINS disagreements. CONFIRMED.
 
-Coalesce order:
+Coalesce order (3-arm, restored 2026-08-18 by commit 2e79285):
   zip5_norm = dplyr::coalesce(
-    normalize_zip5(ADDRESS_ZIP5),
-    normalize_zip5(zip9_norm)
+    normalize_zip5(ADDRESS_ZIP5),        -- arm 1: direct ZIP5 field
+    normalize_zip5(zip9_norm),           -- arm 2: ZIP9 prefix (291 ZIP9-only records)
+    normalize_zip5_raw(ADDRESS_ZIP9)     -- arm 3: bare 5-digit strings in ADDRESS_ZIP9
   )
 
 Rationale:
@@ -134,33 +135,36 @@ Rationale:
   digit transposition. Data-entry noise. No basis to flip the precedence.
 ```
 
-**Before/after table (post-148 column filled by Plan 3 HiPerGator re-run 2026-08-18):**
+**Before/after table — three columns, two re-runs:**
 
-| | pre-148 | post-148 |
-|---|---|---|
-| `zip9_observed` | 1,516,469 (77.7%) | 1,516,469 (77.7%) — unchanged ✓ |
-| `zip5_modal` | 0 | 0 |
-| `zip5_centroid` | 0 | 0 (no crosswalk staged) |
-| `zip5_no_zip9` | 0 | 0 |
-| `no_zip5` | 275,528 (14.1%) | 275,528 (14.1%) — unchanged |
-| `none` | 158,699 (8.1%) | 158,699 (8.1%) — unchanged ✓ |
-| RUCA coverage | 77.7% | 77.7% — unchanged |
-| SDI coverage | 77.5% | 77.5% — unchanged |
+The "post-148 (wrong)" column was produced by the Phase 148 D-02 re-run (2026-08-18) using a
+2-arm coalesce that omitted `normalize_zip5_raw(ADDRESS_ZIP9)` (Phase 139 AMEND-01 arm).
+The "post-147-redo" column is the authoritative result, produced 2026-08-18 after restoring the
+3-arm coalesce (commit `2e79285`). The third arm was not a no-op: ADDRESS_ZIP9 holds bare 5-digit
+strings for a large fraction of records, and without `normalize_zip5_raw()` those records' ZIP5s
+were silently lost.
 
-**zip5_no_zip9 (Tier 3's actual population for Phase 147): 0 rows.**
+| | pre-fix (ADDRESS_ZIP5 never read) | post-148 (wrong: 2-arm coalesce) | **post-147-redo (correct: 3-arm coalesce)** |
+|---|---|---|---|
+| `zip9_observed` | 1,516,469 (77.7%) | 1,516,469 (77.7%) — unchanged ✓ | **1,516,469 (77.7%) — unchanged ✓** |
+| `zip5_modal` | 0 | 0 | **198,768** |
+| `zip5_centroid` | 0 | 0 (no crosswalk staged) | **0 (no crosswalk staged)** |
+| `zip5_no_zip9` | 0 | 0 | **59,818** |
+| `no_zip5` | 275,528 (14.1%) | 275,528 (14.1%) | **16,942** |
+| `none` | 158,699 (8.1%) | 158,699 (8.1%) — unchanged ✓ | **158,699 (8.1%) — unchanged ✓** |
 
-The fix reads ADDRESS_ZIP5 directly and now correctly coalesces it ahead of the ZIP9-derived ZIP5.
-However, the 157,472 approximable encounters (those without a direct ZIP9) still resolve to
-`no_zip5` because all of their matched address records have ZIP5 = NA after sentinel-nulling —
-the Branch C path. The R/116 pre-approximation table confirms: zero encounters have
-`zip9_na=TRUE AND zip5_na=FALSE`, meaning none of the 18,731 raw "ZIP5 present / ZIP9 absent"
-address records translated into approximable encounters with a usable ZIP5 at their matched dates.
+**zip5_modal + zip5_no_zip9 = 258,586 > 0. REDO-PLAN assertion SATISFIED.**
 
-**zip5_no_zip9 = 0 means Phase 147's centroid crosswalk (Tier 3) has no population to serve.**
-The headline coverage gain from the ADDRESS_ZIP5 fix will be visible in the S3-scenario
-encounters (Part B of R/115), not in approximate_zip9's tier breakdown.  Phase 147's centroid
-crosswalk is not worth pursuing under this data.  Phase 147 is complete as a diagnostic and
-fix phase; no further centroid work is needed.
+The third arm recovers ZIP5 for 258,586 encounters that were landing in `no_zip5`. The
+pre-approximation table in R/116 confirms: `zip9_na=TRUE AND zip5_na=FALSE` = 148,552 encounters
+(147,326 interval + 1,226 most_recent_before) — non-zero as expected once ADDRESS_ZIP5 is read
+and the raw ZIP9 arm is present.
+
+**Retraction of the "post-148 = 0" conclusion in §4 (pre-redo):** The `zip5_no_zip9 = 0` and
+`no_zip5 = 275,528 unchanged` figures from the Phase 148 D-02 re-run were artefacts of the
+missing third coalesce arm, not a real data observation. The statement "Phase 147's centroid
+crosswalk has no population to serve" was wrong; `zip5_no_zip9 = 59,818` is Tier 3's actual
+population. Phase 148's gate (`zip5_no_zip9 = 0 → close without build`) is now void.
 
 ---
 
