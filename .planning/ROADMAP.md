@@ -492,3 +492,16 @@ Plans:
 - [ ] 147-02-PLAN.md — Code fix: get_zip9_at_date() ADDRESS_ZIP5 coalesce, guard, fixture extension, new test (Wave 2)
 - [ ] 147-03-PLAN.md — HiPerGator re-run: archive pre-148 outputs, R/115 → R/116 → R/88, fill before/after table (Wave 3, checkpoint)
 - [ ] 147-04-PLAN.md — Retraction: annotate six affected conclusions, update README.md (Wave 4)
+
+### Phase 148: Centroid ZIP9 Crosswalk (Tier 3)
+
+**Goal:** Build `data/reference/zip5_centroid_zip9_crosswalk.csv` to resolve the 59,818 encounters in the `zip5_no_zip9` tier — ZIP5-only cohort encounters where Tier 2 (modal) found no observed ZIP9 within the same ZIP5. Decide between a centroid crosswalk (D-03 route) and a ZIP5-level ADI summary (§2 cheaper route), stage the chosen file, re-run R/116, and record cohort-relevant coverage and rural degradation.
+**Requirements**: none mapped (investigation deliverable — uses 148-CONTEXT.md decision IDs)
+**Depends on:** Phase 147
+**Plans:** 4 plans
+
+Plans:
+- [ ] 148-01-PLAN.md — Gate decision (D-01: build), D-05/D-02/D-03 answers, 148-DISCOVERY.md, R/118_build_centroid_crosswalk.R (Wave 1, autonomous)
+- [ ] 148-02-PLAN.md — HiPerGator: run R/118, produce zip5_adi_summary.csv, record D-04(a) (Wave 2, checkpoint)
+- [ ] 148-03-PLAN.md — Wire utils_address.R + R/116, archive pre-148 outputs, re-run R/116 + R/88, record D-04(b/c) (Wave 3, checkpoint)
+- [ ] 148-04-PLAN.md — Fill D-04 figures into DISCOVERY.md + README.md, commit Phase 148 (Wave 4, autonomous)
