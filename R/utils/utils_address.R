@@ -164,9 +164,13 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
       # 291 ZIP9-only records). ADDRESS_ZIP5 wins the 12 prefix-disagreement rows
       # (0.061% of dual-populated records). See 147-DISCOVERY.md §4 for the decision
       # and §3 for the 12 disagreement rows.
+      # Phase 139 AMEND-01 Step 0c arm retained: normalize_zip5_raw(ADDRESS_ZIP9)
+      # covers records where ADDRESS_ZIP9 holds a bare 5-digit string that
+      # normalize_zip9() rejects and ADDRESS_ZIP5 is absent.
       zip5_norm       = dplyr::coalesce(
         normalize_zip5(ADDRESS_ZIP5),
-        normalize_zip5(zip9_norm)
+        normalize_zip5(zip9_norm),
+        normalize_zip5_raw(ADDRESS_ZIP9)
       ),
       # FIX-06: reject sentinel ZIP5s (00000, 11111, ... 99999) -- placeholder values
       zip5_norm       = if_else(is_sentinel_zip5(zip5_norm), NA_character_, zip5_norm),
