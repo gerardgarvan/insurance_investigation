@@ -93,6 +93,10 @@ Gerard, 2026-08-17. Redistribution status: terms require confirmation; file giti
 the ZIP9 key and rank column from candidate lists. `ZIP9` and `ADI_NATRANK` are both in the
 candidate lists -- no R/116 column-name change required.
 
+> **[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** The 77.7% ceiling was
+> computed when `get_zip9_at_date()` ignored `ADDRESS_ZIP5`. After the Phase 147 fix, RUCA
+> coverage rises because RUCA joins on ZIP5. Updated figures: see 147-DISCOVERY.md §4.
+
 **ADI ceiling (Phase 145, corrected 2026-08-17):** ADI coverage is bounded by the share of
 encounters with `zip9_source == "zip9_observed"`.
 In the 2026-08-17 corrected run: 1,516,469 / 1,950,696 = **77.7%**. The remaining 22.3% of
@@ -180,6 +184,14 @@ comparable and must not be described as equivalent.
 matches the derived file's column names -- no R/116 change required when the CSV is produced.
 
 ## ZIP5-modal imputation tier -- why it can report zero rows (Phase 145)
+
+> **[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** The zero-row figure was
+> an artefact of `ADDRESS_ZIP5` never being read, not a data characteristic. After the Phase 147
+> fix, 18,731 records provide a ZIP5 for Tier 2 for the first time; see 147-DISCOVERY.md §4 for
+> whether `zip5_modal` fired or those rows landed in `zip5_no_zip9`.
+> The "Branch C" console message was emitted because all approx candidates had ZIP5 = NA by
+> construction. That console message has been corrected in utils_address.R. Updated figures:
+> see 147-DISCOVERY.md §4.
 
 The `zip5_modal` tier in `approximate_zip9()` (R/utils/utils_address.R) only fires for
 encounters that satisfy ALL of the following:

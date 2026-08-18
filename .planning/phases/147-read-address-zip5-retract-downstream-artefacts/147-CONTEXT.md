@@ -16,12 +16,16 @@ additional records gain a usable ZIP5). This makes `zip5_modal` fire for the fir
 since Phase 139 and invalidates six documented conclusions in phases 145–147.
 
 **Deliverables:**
-1. `148-DISCOVERY.md` — column audit, 2×2 table, 12-row disagreement table, D-02 decision
+1. `147-DISCOVERY.md` — column audit, 2×2 table, 12-row disagreement table, D-02 decision
 2. Code fix in `R/utils/utils_address.R` + fixture update + R/88 passing locally
 3. HiPerGator re-run: R/115, R/116, R/88 — archive pre-148 outputs, fill before/after table
 4. Written retractions in affected phase docs + `data/reference/README.md` update
 
-**Out of scope:** Centroid crosswalk implementation (deferred pending Tier 3 population from this run).
+**Out of scope:** Centroid crosswalk implementation — deferred pending the `zip5_no_zip9` count
+from Plan 3. (Numbering note: the pre-written spec at the project root is `148-CONTEXT.md` and the
+centroid phase it references as "Phase 147" was never created. This phase is 147; its discovery
+file is `147-DISCOVERY.md`. Consider moving `148-CONTEXT.md` into this phase directory as
+`147-SPEC.md` so a 148-named file no longer describes a 147 phase.)
 
 </domain>
 
@@ -29,20 +33,20 @@ since Phase 139 and invalidates six documented conclusions in phases 145–147.
 ## Implementation Decisions
 
 ### D-01 — Discover before touching code
-- Print `names()` of the real address file and record every ZIP-ish column in `148-DISCOVERY.md`
+- Print `names()` of the real address file and record every ZIP-ish column in `147-DISCOVERY.md`
   before modifying `get_zip9_at_date()`. The Phase 139 comment says "No separate ADDRESS_ZIP5
   column exists" — this phase proves it does, and documents the proof.
 - Record the raw-column 2×2 (§0 of spec) alongside R/116's pre-approximation `match_type` table
   so the two are never conflated again.
 
-### D-02 — ZIP5 source and precedence (discovery-gated)
+### D-02 — ZIP5 source and precedence (discovery-gated, and the gate is in WAVE 1)
 - Provisional coalesce order: `coalesce(normalize_zip5(ADDRESS_ZIP5), normalize_zip5(substr(ADDRESS_ZIP9, 1, 5)))`
   — `ADDRESS_ZIP5` wins the 12 prefix-disagreement rows.
-- **Gate:** Before locking this in, Plan 1 prints all 12 disagreement rows and records them in
-  `148-DISCOVERY.md`. If a systematic pattern emerges (one transposed digit, a PO-box pairing,
+- **Gate:** Plan 1 **Task 2** (a blocking HiPerGator checkpoint, wave 1) prints all 12
+  disagreement rows and records them in `147-DISCOVERY.md` **before Plan 2 writes any code**. If a systematic pattern emerges (one transposed digit, a PO-box pairing,
   one source system), note it and confirm or flip the precedence there. 0.061% does not change
   any result, but the undocumented rule becomes an unanswerable question later.
-- The D-02 decision and all 12 rows must appear in `148-DISCOVERY.md`.
+- The D-02 decision and all 12 rows must appear in `147-DISCOVERY.md`.
 
 ### D-03 — Where the change goes
 - Only `R/utils/utils_address.R`, at the point `get_zip9_at_date()` loads and normalizes the
@@ -54,22 +58,32 @@ since Phase 139 and invalidates six documented conclusions in phases 145–147.
 - The Phase 145 `stopifnot` on duplicate `(ID, query_date)` keys stays intact.
 
 ### D-04 — Plan wave structure (4 plans)
-- **Plan 1 (Wave 1):** Discovery — `names()` audit, 2×2 table, 12-row disagreement print,
-  `148-DISCOVERY.md` written, D-02 precedence confirmed.
+- **Plan 1 (Wave 1):** Discovery, and it INCLUDES a HiPerGator checkpoint. Task 1 writes
+  `147-DISCOVERY.md` from the already-measured 2×2; Task 2 is a blocking human action printing
+  `names()` of the real extract (the D-01 audit nobody has ever run) and the 12 disagreement
+  rows; Task 3 records both and LOCKS D-02. The checkpoint sits here, not in Plan 3, because
+  D-02 is discovery-gated: locking the precedence in Plan 2's code one wave before the
+  inspection meant to confirm it would mean re-running R/115 and R/116 if the rows argue for
+  flipping it.
 - **Plan 2 (Wave 2, depends on Plan 1):** Code fix — `get_zip9_at_date()` updated, incorrect
   comment removed, fixture updated with all four 2×2 cells, `ADDRESS_ZIP5` test added, R/88 passes
   locally (parse checks only on Windows dev box).
 - **Plan 3 (Wave 3, depends on Plan 2) — HUMAN-ACTION CHECKPOINT:** HiPerGator re-run —
-  archive `*_pre148.*` outputs, run R/115 → R/116 → R/88 in that order, fill before/after table
-  from §4 of spec. Record `zip5_no_zip9` count (Tier 3's actual population for Phase 147).
-- **Plan 4 (Wave 4, depends on Plan 3):** Retraction — annotate six affected conclusions, update
-  `data/reference/README.md` (remove 77.7% ceiling + `zip5_modal` zero note), remove Branch C
-  console note from `utils_address.R`.
+  archive `*_pre148.*` outputs (by glob, not hardcoded names), run R/115 → R/116 → R/88 in that
+  order, fill the before/after table. Record `zip5_no_zip9` (Tier 3's actual population). The
+  12 disagreement rows are NOT re-printed here — Plan 1 Task 2 already did that.
+- **Plan 4 (Wave 4, depends on Plan 3):** Retraction — annotate six locations (seven notes
+  across five files), update `data/reference/README.md`, and correct the Branch C console note
+  in `utils_address.R`. That last edit is to CODE, so `R/utils/utils_address.R` is declared in
+  Plan 4's `files_modified` — it would otherwise be an undeclared write.
 
 ### D-05 — Retraction format
 - Dated header note only. At the top of each affected section, add:
-  `**[2026-08-17] Superseded by Phase 147 — see 148-DISCOVERY.md.** [one-line summary]`
+  `**[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** [one-line summary]`
 - Preserve original text exactly. Do not delete, strike through, or rewrite.
+- Six logical locations produce SEVEN notes across FIVE files: locations 3 and 4 each span two
+  files (a document plus, respectively, the console note in `utils_address.R` and the README).
+  Do not try to make the counts equal — they measure different things.
 - Affected locations (all six from spec §1):
   1. Phase 145 `145-DISCOVERY.md` — D-02 diagnostic "0 rows have ZIP5 present and ZIP9 missing"
   2. Phase 145 `145-DISCOVERY.md` — Branch C cause "sentinel-nulled" → was unread column
@@ -89,7 +103,7 @@ since Phase 139 and invalidates six documented conclusions in phases 145–147.
 ### Claude's Discretion
 - Exact wording of the retraction notes (beyond the format template above)
 - Whether to add an inline comment in `get_zip9_at_date()` explaining the coalesce precedence
-  decision and why `ADDRESS_ZIP5` wins (recommended: yes, reference D-02 and `148-DISCOVERY.md`)
+  decision and why `ADDRESS_ZIP5` wins (recommended: yes, reference D-02 and `147-DISCOVERY.md`)
 - Exact fixture row count — spec requires all four 2×2 cells; exact patient IDs, dates,
   and address values are Claude's to choose
 
@@ -173,7 +187,7 @@ since Phase 139 and invalidates six documented conclusions in phases 145–147.
 <specifics>
 ## Specific Ideas
 
-- The 2×2 measurement from spec §0 (must appear in `148-DISCOVERY.md`):
+- The 2×2 measurement from spec §0 (must appear in `147-DISCOVERY.md`):
 
   | ADDRESS_ZIP5 | ADDRESS_ZIP9 | records | share | |
   |---|---|---|---|---|
@@ -205,6 +219,12 @@ since Phase 139 and invalidates six documented conclusions in phases 145–147.
 
 <deferred>
 ## Deferred Ideas
+
+> **[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** The "0 encounters"
+> figure that motivated the centroid crosswalk scope is void: Tier 3's population
+> (`zip5_no_zip9`) was 0 only because Tier 2 (`zip5_modal`) had no ZIP5 keys to match on.
+> After the Phase 147 fix, the actual Tier 3 population is recorded in 147-DISCOVERY.md §4.
+> Phase 147's centroid crosswalk scope depends on that new figure.
 
 - Centroid crosswalk implementation — explicitly on hold until Plan 3 reveals `zip5_no_zip9`
   (Tier 3's actual population). If that count is negligible, the centroid crosswalk may not

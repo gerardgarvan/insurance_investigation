@@ -13,12 +13,12 @@
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| Discovery-gated | Plan prints 12 disagreement rows, records in 148-DISCOVERY.md, confirms coalesce order after inspection | ✓ |
+| Discovery-gated | Plan prints 12 disagreement rows, records in 147-DISCOVERY.md, confirms coalesce order after inspection | ✓ |
 | Pre-locked: ADDRESS_ZIP5 wins | Treat ADDRESS_ZIP5 as winner regardless of inspection | |
 | Pre-locked: ZIP9-prefix wins | Use ZIP9 prefix for the 12 disagreements | |
 
 **User's choice:** Discovery-gated
-**Notes:** Print and document the 12 rows before locking. Provisional coalesce order ADDRESS_ZIP5 first, but confirmed by inspection in 148-DISCOVERY.md.
+**Notes:** Print and document the 12 rows before locking. Provisional coalesce order ADDRESS_ZIP5 first, but confirmed by inspection in 147-DISCOVERY.md.
 
 ---
 
@@ -44,7 +44,7 @@
 | Full section rewrite | Rewrite section, move old text to "Historical note" block | |
 
 **User's choice:** Dated header note only
-**Notes:** Format: `**[2026-08-17] Superseded by Phase 147 — see 148-DISCOVERY.md.** [one-line summary]`. Preserve all original text.
+**Notes:** Format: `**[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** [one-line summary]`. Preserve all original text.
 
 ---
 

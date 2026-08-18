@@ -134,9 +134,17 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
     addr_raw <- as.data.frame(lapply(addr_full, as.character), stringsAsFactors = FALSE)
   }
 
-  # Validate ID column (Pitfall 3: project convention is ID not PATID)
-  if (!"ID" %in% names(addr_raw)) {
-    stop(glue("[utils_address] LDS_ADDRESS_HISTORY missing required column 'ID'. Found: {paste(names(addr_raw), collapse=', ')}"))
+  # Validate required columns (Pitfall 3: project convention is ID not PATID;
+  # Phase 148 added ADDRESS_ZIP5 as a ZIP5 source — an extract without it would
+  # silently fall back to deriving ZIP5 from ADDRESS_ZIP9 and lose ~47% of ZIP5 coverage)
+  required_cols <- c("ID", "ADDRESS_ZIP5", "ADDRESS_ZIP9",
+                     "ADDRESS_PERIOD_START", "ADDRESS_PERIOD_END")
+  missing_cols  <- setdiff(required_cols, names(addr_raw))
+  if (length(missing_cols) > 0) {
+    stop("[utils_address] address file missing required column(s): ",
+         paste(missing_cols, collapse = ", "),
+         ". ADDRESS_ZIP5 was added as a ZIP5 source in Phase 148; an extract without it ",
+         "would silently fall back to deriving ZIP5 from ADDRESS_ZIP9 and lose ~47% of ZIP5 coverage.")
   }
 
   # FIX-05: report 4-digit ADDRESS_ZIP9 values before pad4 decision is locked
@@ -151,13 +159,15 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
   addr <- addr_raw %>%
     mutate(
       zip9_norm       = normalize_zip9(ADDRESS_ZIP9),
-      # Phase 139 AMEND-01 / Step 0c: coalesce ZIP5 from two sources:
-      #   (1) normalize_zip5() of a valid 9-digit ZIP9 (existing path)
-      #   (2) normalize_zip5_raw() applied directly to ADDRESS_ZIP9 for rows where
-      #       ADDRESS_ZIP9 holds a bare 5-digit string that normalize_zip9() rejects
-      # No separate ADDRESS_ZIP5 column exists in LDS_ADDRESS_HISTORY (confirmed from
-      # plan analysis: ADDRESS_ZIP9 holds bare ZIP5s for some records -- Step 0a case 2).
-      zip5_norm       = coalesce(normalize_zip5(zip9_norm), normalize_zip5_raw(ADDRESS_ZIP9)),
+      # Phase 148 D-02: ZIP5 sourced from ADDRESS_ZIP5 first (the field the source
+      # system populated deliberately), then from the ZIP9 prefix (fallback for the
+      # 291 ZIP9-only records). ADDRESS_ZIP5 wins the 12 prefix-disagreement rows
+      # (0.061% of dual-populated records). See 147-DISCOVERY.md §4 for the decision
+      # and §3 for the 12 disagreement rows.
+      zip5_norm       = dplyr::coalesce(
+        normalize_zip5(ADDRESS_ZIP5),
+        normalize_zip5(zip9_norm)
+      ),
       # FIX-06: reject sentinel ZIP5s (00000, 11111, ... 99999) -- placeholder values
       zip5_norm       = if_else(is_sentinel_zip5(zip5_norm), NA_character_, zip5_norm),
       period_start_dt = parse_pcornet_date(ADDRESS_PERIOD_START),
@@ -518,19 +528,20 @@ approximate_zip9 <- function(result_tbl) {
     .zip5_lookup_cache$value <<- zip5_lookup
   }
 
-  # Phase 145 Branch C note: if every approximable row has ZIP5 = NA (sentinel-nulled
-  # by normalize_zip5/is_sentinel_zip5), the modal lookup has nothing to match on and
-  # zip5_modal will report zero rows -- expected, not a defect. See
-  # data/reference/README.md 'ZIP5-modal imputation tier' note.
+  # After Phase 148: ADDRESS_ZIP5 is now read directly, so approximable rows
+  # should have ZIP5 from that column. If all still have ZIP5 = NA, that means
+  # the sentinel filter or genuine missingness accounts for it -- not an unread column.
   n_approx_with_zip5 <- result_tbl %>%
     filter(is.na(ZIP9), !is.na(match_type), match_type != "none", !is.na(ZIP5)) %>%
     nrow()
   if (n_approx_with_zip5 == 0) {
     message(glue(
       "[utils_address] approximate_zip9: {n_to_approx} approximable row(s) found ",
-      "but all have ZIP5 = NA (sentinel-nulled); ",
-      "zip5_modal tier will report zero rows -- expected, not a defect (Branch C). ",
-      "See data/reference/README.md 'ZIP5-modal imputation tier' note."
+      "but all have ZIP5 = NA after coalescing ADDRESS_ZIP5 and ADDRESS_ZIP9 prefix; ",
+      "zip5_modal tier will report zero rows for these. ",
+      "Note: before Phase 147, ADDRESS_ZIP5 was never read so this was structurally ",
+      "guaranteed -- see 147-DISCOVERY.md. Post-147 a zero here is a genuine data ",
+      "observation, not an artefact."
     ))
   }
 

@@ -92,3 +92,67 @@ test_that("get_zip9_at_date(addr_full = NULL) default arg preserves existing sig
   expect_true("addr_full" %in% names(formals(get_zip9_at_date)))
   expect_null(formals(get_zip9_at_date)$addr_full)
 })
+
+# ==============================================================================
+# Phase 147 / 148: ADDRESS_ZIP5 column fix
+# Verifies all four 2x2 cells from 148-CONTEXT.md §0
+# ==============================================================================
+
+test_that("get_zip9_at_date reads ADDRESS_ZIP5 directly (ZIP5-only record, 2x2 yes/no cell)", {
+  # 18,731 records in the real extract have ADDRESS_ZIP5 present and ADDRESS_ZIP9 absent.
+  # Before the fix these returned ZIP5 = NA. After the fix they must return a valid ZIP5.
+  addr_zip5_only <- tibble::tibble(
+    ID                   = "P_zip5only",
+    ADDRESS_ZIP5         = "32615",
+    ADDRESS_ZIP9         = NA_character_,
+    ADDRESS_PERIOD_START = "2020-01-01",
+    ADDRESS_PERIOD_END   = NA_character_
+  )
+  result <- get_zip9_at_date("P_zip5only", as.Date("2020-06-15"), addr_full = addr_zip5_only)
+  expect_equal(nrow(result), 1L)
+  expect_false(is.na(result$ZIP5), label = "ZIP5-only record must yield non-NA ZIP5 after Phase 148 fix")
+  expect_equal(result$ZIP5, "32615")
+  expect_true(is.na(result$ZIP9), label = "ZIP9 stays NA when ADDRESS_ZIP9 is absent")
+  expect_equal(result$match_type, "interval")
+})
+
+test_that("get_zip9_at_date ADDRESS_ZIP5 wins disagreement (2x2 yes/yes cell)", {
+  # ADDRESS_ZIP5 takes precedence over the ZIP9 prefix when both are present.
+  addr_both <- tibble::tibble(
+    ID                   = "P_both",
+    ADDRESS_ZIP5         = "32611",
+    ADDRESS_ZIP9         = "326114567",
+    ADDRESS_PERIOD_START = "2020-01-01",
+    ADDRESS_PERIOD_END   = NA_character_
+  )
+  result <- get_zip9_at_date("P_both", as.Date("2020-06-15"), addr_full = addr_both)
+  expect_equal(result$ZIP5, "32611")
+  expect_equal(result$ZIP9, "326114567")
+})
+
+test_that("get_zip9_at_date ZIP9-prefix fallback works when ADDRESS_ZIP5 absent (2x2 no/yes cell)", {
+  # 291 records in the real extract have ADDRESS_ZIP9 only. ZIP5 must come from ZIP9 prefix.
+  addr_zip9_only <- tibble::tibble(
+    ID                   = "P_zip9only",
+    ADDRESS_ZIP5         = NA_character_,
+    ADDRESS_ZIP9         = "326229999",
+    ADDRESS_PERIOD_START = "2020-01-01",
+    ADDRESS_PERIOD_END   = NA_character_
+  )
+  result <- get_zip9_at_date("P_zip9only", as.Date("2020-06-15"), addr_full = addr_zip9_only)
+  expect_equal(result$ZIP5, "32622")
+  expect_equal(result$ZIP9, "326229999")
+})
+
+test_that("get_zip9_at_date returns NA ZIP5 when both columns absent (2x2 no/no cell)", {
+  addr_neither <- tibble::tibble(
+    ID                   = "P_neither",
+    ADDRESS_ZIP5         = NA_character_,
+    ADDRESS_ZIP9         = NA_character_,
+    ADDRESS_PERIOD_START = "2020-01-01",
+    ADDRESS_PERIOD_END   = NA_character_
+  )
+  result <- get_zip9_at_date("P_neither", as.Date("2020-06-15"), addr_full = addr_neither)
+  expect_true(is.na(result$ZIP5))
+  expect_true(is.na(result$ZIP9))
+})

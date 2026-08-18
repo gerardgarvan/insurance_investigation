@@ -100,6 +100,11 @@ confidence) and R/116 code inspection (HIGH confidence). Open items are flagged 
 
 *If the portal confirms block group only (no ZIP+4 column):* ADI cannot be joined on ZIP9 without a ZIP9→block-group crosswalk for which no source has been identified. ADI would then stay at 0% regardless of who registers, and staging it would not be achievable this phase. The 146-02 registration task must include a verification step.
 
+> **[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** The 77.7% figure reflects
+> `ADDRESS_ZIP9` coverage (50.1% of address records), not ZIP availability (96.9% of records
+> carry a usable ZIP5 once `ADDRESS_ZIP5` is read). The ceiling rises substantially after the
+> Phase 147 fix. See 147-DISCOVERY.md §4 for the corrected before/after table.
+
 **ADI ceiling (stated before the file arrives, per CONTEXT.md §2 D-03):**
 Even once staged, ADI coverage is bounded by the share of encounters with `zip9_source == "zip9_observed"`:
 **1,516,469 / 1,950,696 = 77.7%** (from 2026-08-17 corrected run, Phase 145). A join rate of ≤ 77.7% is not a failure; it is the ceiling. The earlier figure of 68.6% (Phase 145 pre-correction) was computed against the 13.3%-inflated denominator and must not be reused.
@@ -177,6 +182,11 @@ Do NOT use `R/147` — it is not the next free number, will collide when the rep
 ---
 
 ## PART F — Sentinel-ZIP Frequency Finding (D-04 lever)
+
+> **[2026-08-17] Superseded by Phase 147 — see 147-DISCOVERY.md.** The 157,472 figure is a
+> phantom: those are empty `ADDRESS_ZIP9` cells, not sentinel placeholder values. The sentinel
+> query returns almost nothing. After the Phase 147 fix, Tier 3's actual population is
+> `zip5_no_zip9` from 147-DISCOVERY.md §4 (measured in Plan 3's HiPerGator re-run).
 
 **PENDING HiPerGator run** — This box has no PCORnet CSV.
 
