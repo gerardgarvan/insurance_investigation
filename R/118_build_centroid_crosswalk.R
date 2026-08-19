@@ -60,7 +60,7 @@ raw <- vroom::vroom(
   col_types = vroom::cols(.default = "c"),
   progress  = FALSE
 )
-message(glue::glue("Loaded {nrow(raw):,} rows from neighborhood_atlas_zip9_adi.csv"))
+message(glue::glue("Loaded {format(nrow(raw), big.mark=',')} rows from neighborhood_atlas_zip9_adi.csv"))
 
 # ------------------------------------------------------------------------------
 # Step 3 — Clean: filter to well-formed ZIP9s, derive ZIP5, convert ADI to numeric
@@ -77,7 +77,7 @@ clean <- raw |>
     )
   )
 message(glue::glue(
-  "After format filter: {nrow(clean):,} rows; {dplyr::n_distinct(clean$ZIP5):,} unique ZIP5s"
+  "After format filter: {format(nrow(clean), big.mark=',')} rows; {format(dplyr::n_distinct(clean$ZIP5), big.mark=',')} unique ZIP5s"
 ))
 
 # ------------------------------------------------------------------------------
@@ -100,7 +100,7 @@ out <- clean |>
     source  = SOURCE
   )
 message(glue::glue(
-  "Summary: {nrow(out):,} ZIP5s; {sum(!is.na(out$adi_natrank_median)):,} with non-NA median ADI"
+  "Summary: {format(nrow(out), big.mark=',')} ZIP5s; {format(sum(!is.na(out$adi_natrank_median)), big.mark=',')} with non-NA median ADI"
 ))
 
 # ------------------------------------------------------------------------------
@@ -122,4 +122,4 @@ message("All 5 validation gates passed.")
 
 readr::write_csv(out, ADI_OUTPUT_PATH)
 message(glue::glue("Written: {ADI_OUTPUT_PATH}"))
-message(glue::glue("ZIP5s resolved: {nrow(out):,}"))
+message(glue::glue("ZIP5s resolved: {format(nrow(out), big.mark=',')}"))
