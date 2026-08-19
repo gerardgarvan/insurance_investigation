@@ -183,3 +183,39 @@ was already correct); only the `zip9_source` classification was wrong.
 | ADI (ZIP9-level) | 84.1% |
 | SVI | 90.2% |
 | RUCA | 91.0% |
+
+---
+
+## §6 — R/118 re-run after fix (118-FIX-PLAN.md steps 6–7, 2026-08-19)
+
+Script run: `Rscript R/118_build_zip5_adi_summary.R` on HiPerGator after `git pull` of commits
+`6a9eb6e` / `96c32a9` / `d9caad7` (rename + gate fix + coverage floor).
+
+**Summary output (`zip5_adi_summary.csv`):**
+
+- ZIP5s in summary (rows): **20,950** (unchanged from §5 — floor suppresses values to NA, not rows)
+- ZIP5s with a non-NA median: **14,688** (20,950 − 6,262 floor-suppressed)
+- ZIP5s suppressed by coverage floor (ADI_COVERAGE_FLOOR = 0.50): **6,262**
+
+**Denominator basis (Step 5 finding):**
+
+The Atlas source column is `BENE_ZIP_CD` — beneficiary-based. The denominator for each ZIP5's
+median is ZIP+4 segments present in the Neighborhood Atlas file, which covers Medicare
+beneficiary locations, **not** all USPS delivery segments in a ZIP5. This is recorded in the
+`METHOD` constant in `R/118_build_zip5_adi_summary.R` and will appear in the `method` column
+of `zip5_adi_summary.csv`.
+
+**Florida coverage (FL ZIPs 320xx–349xx):**
+
+- Florida ZIP5s in summary: **1,448**
+- Florida ZIP5s with a non-NA median: **914**
+
+**Cohort ZIP5 coverage (lead figure):**
+
+- Cohort ZIP5s needing coverage: **1,940**
+- In summary: **1,639** (84.5%)
+- With a non-NA median: **1,521** (78.4%) ← **lead figure**
+
+**Decision:** Florida is present. 1,521 of 1,940 cohort ZIP5s have a usable median ADI —
+sufficient to proceed with wiring `adi_natrank_zip5_median` into R/116 in a separate plan.
+All four validation gates passed. `zip5_adi_summary.csv` written.
