@@ -323,7 +323,7 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
         zip9_source = case_when(
           zip9_source != ".needs_centroid_check" ~ zip9_source,
           !is.na(centroid_zip9)                  ~ "zip5_centroid",
-          isTRUE(has_adi_zip5)                   ~ "zip5_representative",
+          has_adi_zip5                           ~ "zip5_representative",
           !is.na(ZIP5)                            ~ "zip5_no_zip9",
           TRUE                                    ~ "no_zip5"
         ),
@@ -336,7 +336,7 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
       mutate(
         zip9_source = case_when(
           zip9_source != ".needs_centroid_check" ~ zip9_source,
-          isTRUE(has_adi_zip5)                   ~ "zip5_representative",
+          has_adi_zip5                           ~ "zip5_representative",
           !is.na(ZIP5)                            ~ "zip5_no_zip9",
           TRUE                                    ~ "no_zip5"
         )
