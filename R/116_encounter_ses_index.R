@@ -62,9 +62,10 @@ OUTPUT_RDS  <- file.path(CONFIG$output_dir, glue("encounter_ses_index_{RUN_DATE}
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("encounter_ses_index_summary_{RUN_DATE}.xlsx"))
 
 # Reference file paths (all probe-first gated in SECTION 3)
-RUCA_PATH <- file.path("data", "reference", "RUCA-codes-2020-zipcode.xlsx")
-SDI_PATH  <- file.path("data", "reference", "zip5_sdi_reference.csv")
-ADI_PATH  <- file.path("data", "reference", "neighborhood_atlas_zip9_adi.csv")
+RUCA_PATH        <- file.path("data", "reference", "RUCA-codes-2020-zipcode.xlsx")
+SDI_PATH         <- file.path("data", "reference", "zip5_sdi_reference.csv")
+ADI_PATH         <- file.path("data", "reference", "neighborhood_atlas_zip9_adi.csv")
+ADI_SUMMARY_PATH <- here::here("data", "reference", "zip5_adi_summary.csv")
 # ADI_PATH points at the 23-state ZIP9-keyed collation (D-05 answer; 478MB; gitignored).
 # Transfer to HiPerGator via scp before running. Block-group file is NOT used for R/116.
 SVI_PATH  <- file.path("data", "reference", "svi_2020_zcta_derived.csv")
@@ -80,10 +81,11 @@ probe_reference <- function(path, label) {
   exists
 }
 
-has_ruca <- probe_reference(RUCA_PATH, "RUCA")
-has_sdi  <- probe_reference(SDI_PATH,  "SDI")
-has_adi  <- probe_reference(ADI_PATH,  "ADI")
-has_svi  <- probe_reference(SVI_PATH,  "SVI")
+has_ruca        <- probe_reference(RUCA_PATH,        "RUCA")
+has_sdi         <- probe_reference(SDI_PATH,         "SDI")
+has_adi         <- probe_reference(ADI_PATH,         "ADI")
+has_svi         <- probe_reference(SVI_PATH,         "SVI")
+has_adi_summary <- probe_reference(ADI_SUMMARY_PATH, "ADI_SUMMARY")
 
 if (!exists("pcornet_con", envir = .GlobalEnv)) {
   open_pcornet_con()
@@ -147,6 +149,40 @@ print(with(zip_resolved_raw,
                  zip9_na = is.na(ZIP9),
                  zip5_na = is.na(ZIP5),
                  useNA = "ifany")))
+
+# Phase 148 D-03c: ZIP5-level ADI summary join — attaches has_adi_zip5 flag so
+# .classify_zip9_source() can fire the zip5_representative branch for rows that
+# would otherwise land in zip5_no_zip9. adi_natrank_zip5_median is a DISTINCT
+# column from adi_natrank (ZIP9-level) — never coalesced.
+if (has_adi_summary) {
+  adi_summary <- vroom::vroom(
+    ADI_SUMMARY_PATH,
+    col_types = vroom::cols(
+      ZIP5               = vroom::col_character(),
+      adi_natrank_median = vroom::col_double(),
+      adi_natrank_p25    = vroom::col_double(),
+      adi_natrank_p75    = vroom::col_double(),
+      n_zip9_in_zip5     = vroom::col_integer(),
+      n_zip9_with_adi    = vroom::col_integer(),
+      vintage            = vroom::col_character(),
+      method             = vroom::col_character(),
+      source             = vroom::col_character()
+    ),
+    progress = FALSE
+  ) |>
+    dplyr::select(ZIP5, adi_natrank_zip5_median = adi_natrank_median) |>
+    dplyr::mutate(has_adi_zip5 = TRUE)
+
+  zip_resolved_raw <- zip_resolved_raw |>
+    dplyr::left_join(adi_summary, by = "ZIP5") |>
+    dplyr::mutate(has_adi_zip5 = dplyr::coalesce(has_adi_zip5, FALSE))
+
+  message(glue::glue("  ADI summary staged: {format(nrow(adi_summary), big.mark=',')} ZIP5s"))
+} else {
+  zip_resolved_raw <- zip_resolved_raw |>
+    dplyr::mutate(has_adi_zip5 = FALSE, adi_natrank_zip5_median = NA_real_)
+  message("  ADI summary not staged — zip5_representative tier inactive")
+}
 
 zip_resolved <- zip_resolved_raw |> approximate_zip9()
 
@@ -315,7 +351,7 @@ encounter_ses <- encounter_zip %>%
   select(
     PATID, ENCOUNTERID, ADMIT_DATE,
     ZIP9, ZIP5, match_type, zip9_source,
-    sdi_score, adi_natrank, svi_score, ruca_code, ruca_category
+    sdi_score, adi_natrank, adi_natrank_zip5_median, svi_score, ruca_code, ruca_category
   )
 
 # All four lookups are deduplicated on their join key above, so this should hold.

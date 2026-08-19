@@ -323,6 +323,7 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
         zip9_source = case_when(
           zip9_source != ".needs_centroid_check" ~ zip9_source,
           !is.na(centroid_zip9)                  ~ "zip5_centroid",
+          isTRUE(has_adi_zip5)                   ~ "zip5_representative",
           !is.na(ZIP5)                            ~ "zip5_no_zip9",
           TRUE                                    ~ "no_zip5"
         ),
@@ -335,6 +336,7 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
       mutate(
         zip9_source = case_when(
           zip9_source != ".needs_centroid_check" ~ zip9_source,
+          isTRUE(has_adi_zip5)                   ~ "zip5_representative",
           !is.na(ZIP5)                            ~ "zip5_no_zip9",
           TRUE                                    ~ "no_zip5"
         )
@@ -355,7 +357,8 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
     modal_zip9        = character(),
     zip5_modal_freq   = integer(),
     zip5_n_candidates = integer(),
-    zip5_modal_share  = double()
+    zip5_modal_share  = double(),
+    has_adi_zip5      = logical()
   )
 }
 
@@ -630,6 +633,7 @@ approximate_zip9 <- function(result_tbl) {
     glue("  zip9_observed:         {get_count('zip9_observed')}"),
     glue("  zip5_modal:            {get_count('zip5_modal')}"),
     glue("  zip5_centroid:         {get_count('zip5_centroid')}"),
+    glue("  zip5_representative:   {get_count('zip5_representative')}"),
     glue("  zip5_no_zip9:          {get_count('zip5_no_zip9')}"),
     glue("  no_zip5:               {get_count('no_zip5')}"),
     glue("  none:                  {get_count('none')}"),
