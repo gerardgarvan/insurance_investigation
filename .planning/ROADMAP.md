@@ -501,7 +501,7 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 148-01-PLAN.md — Gate decision (D-01: build), D-05/D-02/D-03 answers, 148-DISCOVERY.md, R/118_build_centroid_crosswalk.R (Wave 1, autonomous)
+- [x] 148-01-PLAN.md — Gate decision (D-01: build), D-05/D-02/D-03 answers, 148-DISCOVERY.md, R/118_build_centroid_crosswalk.R (Wave 1, autonomous)
 - [ ] 148-02-PLAN.md — HiPerGator: run R/118, produce zip5_adi_summary.csv, record D-04(a) (Wave 2, checkpoint)
 - [ ] 148-03-PLAN.md — Wire utils_address.R + R/116, archive pre-148 outputs, re-run R/116 + R/88, record D-04(b/c) (Wave 3, checkpoint)
 - [ ] 148-04-PLAN.md — Fill D-04 figures into DISCOVERY.md + README.md, commit Phase 148 (Wave 4, autonomous)
