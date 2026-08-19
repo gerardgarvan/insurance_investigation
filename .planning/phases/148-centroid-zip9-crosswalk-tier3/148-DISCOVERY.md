@@ -139,15 +139,47 @@ into a median ADI score. Therefore:
 
 ---
 
-## §5 — D-04 figures (placeholders, to be filled after Wave 2/3 HiPerGator runs)
+## §5 — D-04 figures (measured 2026-08-19, HiPerGator re-run after fix(148) commit)
 
 D-04 reporting requirements (from 148-CONTEXT.md §4):
 
-- **(a)** ZIP5s resolved (rows in `zip5_adi_summary.csv`): `[TBD after Wave 2]`
-- **(b)** Of the ZIP5s in `zip5_no_zip9` encounters, how many does the summary cover (lead
-  with this): `[TBD after Wave 3]`
-- **(c)** Encounters gaining ADI coverage via `zip5_representative` after re-running R/116:
-  `[TBD after Wave 3]`
+- **(a)** ZIP5s resolved (rows in `zip5_adi_summary.csv`): **20,950**
+  Source: R/118 run (148-02-SUMMARY.md); all 5 stopifnot gates passed.
 
-Note: D-04(a) can be high (the ADI file covers 37M ZIP+4s across 23 states) while D-04(b)
-is near zero if Florida ZIP5s are not well represented. Report (b) separately from (a).
+- **(b)** Of the 36,953 unique (patient, date) records needing Tier 3, how many does the
+  summary cover (lead figure): **30,725 of 36,953 = 83.2%**
+  Source: `approximate_zip9()` breakdown — `zip5_representative: 30,725`,
+  `zip5_no_zip9: 6,228` (36,953 total = 30,725 + 6,228).
+  The 36,953 is itself the residue after Tier 2 (modal) resolved 111,599 of 148,552
+  records that had ZIP5 present and ZIP9 absent.
+
+- **(c)** Encounters gaining `zip5_representative` in the final encounter_ses output:
+  **47,036** (final zip9_source table after many-to-one join back to encounter level).
+  Source: `logs/148_r116_rerun.log` — `zip5_representative: 47,036`.
+
+**Bug note:** The initial 148-03 run (commit b7a5e52) reported `zip5_representative: 0`
+because `isTRUE(has_adi_zip5)` is not vectorized — it evaluated the entire column as a
+single scalar FALSE inside `case_when`, so the branch never fired. Fixed in commit 5b65d56
+(`fix(148): replace isTRUE(has_adi_zip5) with bare has_adi_zip5 in case_when`). The
+`adi_natrank_zip5_median` column was always being populated correctly (84.1% ADI coverage
+was already correct); only the `zip9_source` classification was wrong.
+
+**zip9_source final breakdown (encounter-level, 2026-08-19):**
+
+| zip9_source | encounters |
+|---|---|
+| `zip9_observed` | 1,516,469 |
+| `zip5_modal` | 198,768 |
+| `zip5_representative` | **47,036** |
+| `zip5_no_zip9` | 12,782 |
+| `no_zip5` | 16,942 |
+| `none` | 158,699 |
+
+**SES coverage (post-fix):**
+
+| Index | Coverage |
+|---|---|
+| SDI | 90.2% |
+| ADI (ZIP9-level) | 84.1% |
+| SVI | 90.2% |
+| RUCA | 91.0% |

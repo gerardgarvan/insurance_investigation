@@ -219,7 +219,51 @@ The console note emitted by `approximate_zip9()` (Phase 145) will read:
 "157472 approximable row(s) found but all have ZIP5 = NA (sentinel-nulled);
 zip5_modal tier will report zero rows -- expected, not a defect (Branch C)."
 
-Final zip9_source breakdown for all 1,950,696 encounters (2026-08-17 run):
-- zip9_observed: 1,516,469 (77.7%) -- ADI ceiling; see ADI section above
-- no_zip5:         275,528 (14.1%)
-- none:            158,699  (8.1%)
+Final zip9_source breakdown for all 1,950,696 encounters (2026-08-19 run, post-Phase-148):
+
+| zip9_source | encounters | share |
+|---|---|---|
+| `zip9_observed` | 1,516,469 | 77.7% |
+| `zip5_modal` | 198,768 | 10.2% |
+| `zip5_representative` | 47,036 | 2.4% |
+| `zip5_no_zip9` | 12,782 | 0.7% |
+| `no_zip5` | 16,942 | 0.9% |
+| `none` | 158,699 | 8.1% |
+
+---
+
+## ZIP5-Level ADI Summary (Phase 148, D-02 Route B)
+
+**Path:** `data/reference/zip5_adi_summary.csv`
+**Status as of 2026-08-19:** STAGED on HiPerGator at
+`/blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/zip5_adi_summary.csv`.
+File is derived from `neighborhood_atlas_zip9_adi.csv` (gitignored, 478 MB); output file
+is also gitignored (derived artefact).
+**Builder:** `R/118_build_centroid_crosswalk.R`
+**Vintage:** Neighborhood Atlas 2024 v4.0.1
+
+**Columns:**
+- `ZIP5` — character(5), zero-padded; primary join key for R/116
+- `adi_natrank_median` — median ADI national rank across all ZIP9s within this ZIP5 (na.rm=TRUE)
+- `adi_natrank_p25`, `adi_natrank_p75` — IQR; wide IQR indicates intra-ZIP5 heterogeneity
+- `n_zip9_in_zip5` — total ZIP9 rows from the Atlas for this ZIP5 (before NA suppression)
+- `n_zip9_with_adi` — ZIP9 rows with non-suppressed ADI_NATRANK
+- `vintage`, `method`, `source` — provenance
+
+**R/116 integration:**
+- Loaded when `file.exists(ADI_SUMMARY_PATH)` — auto-detected; no code change needed to activate
+- Joined on `ZIP5` after the modal-tier step; adds `adi_natrank_zip5_median` column to `encounter_ses`
+- Rows resolved via this join are classified `zip9_source = "zip5_representative"` — distinct
+  from `adi_natrank` (ZIP9-level) and never coalesced with it
+
+**D-04 coverage figures (Phase 148, 2026-08-19 HiPerGator re-run):**
+- **(a) ZIP5s in summary:** 20,950
+- **(b) Records resolved of 36,953 needing Tier 3:** 30,725 (83.2%) — lead figure
+- **(c) Encounters with zip5_representative in final output:** 47,036
+
+**Note on rural degradation:** Route B does not compute `distance_m` — rural heterogeneity
+is visible through IQR width (adi_natrank_p75 - adi_natrank_p25) rather than a distance
+cutoff. See 148-DISCOVERY.md §5 for details.
+
+**Source:** University of Wisconsin Neighborhood Atlas
+(https://www.neighborhoodatlas.medicine.wisc.edu/). Registration required before downloading.
