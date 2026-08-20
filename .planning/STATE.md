@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: "149-02 COMPLETE (3/3 tasks, commits ab68914/c97c379/9b9f964); 149-03 (re-run and reconcile) is next — requires HiPerGator SCP of 478MB ADI file and R/118+115+116+88 re-run"
+stopped_at: "149-03 Task 1 COMPLETE (archive_pre149.sh committed, 18c2e75); stopped at Task 2 checkpoint — HiPerGator re-run required: bash archive_pre149.sh && R/118 -> R/115 -> R/116 -> R/88"
 last_updated: "2026-08-20T00:00:00Z"
 last_activity: 2026-08-20
 progress:
