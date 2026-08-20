@@ -5,7 +5,7 @@ milestone_name: below)
 status: executing
 stopped_at: "Phase 148 Plan 1 complete — 148-DISCOVERY.md + R/118 committed"
 last_updated: "2026-08-19T00:00:00.000Z"
-last_activity: 2026-08-19 - Completed quick task 260819-k0k: Apply 118-FIX-PLAN.md rename and fixes to R/118
+last_activity: 2026-08-20 - Completed quick task 260820-fap: Wire adi_natrank_zip5_median coverage reporting into R/116
 progress:
   total_phases: 138
   completed_phases: 120
@@ -261,5 +261,6 @@ Phase 147 context gathered
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260819-k0k | Apply 118-FIX-PLAN.md: rename R/118 to zip5_adi_summary, remove bad 0000 gate, guard empty-group quantile, add coverage floor | 2026-08-19 | ffa9b78 | [260819-k0k-apply-118-fix-plan-md-rename-to-zip5-adi](./quick/260819-k0k-apply-118-fix-plan-md-rename-to-zip5-adi/) |
+| 260820-fap | Wire adi_natrank_zip5_median coverage reporting into R/116 (col_types, SECTION 7 message, index_coverage + coverage_ceilings rows) | 2026-08-20 | 584eb56 | [260820-fap-wire-adi-natrank-zip5-median-coverage-re](./quick/260820-fap-wire-adi-natrank-zip5-median-coverage-re/) |
 
 **What's next:** Phase 140 is now 8/8 plans executed -- all 24 of 140-CONTEXT.md's task/decision IDs addressed. Phase-level goal verification (a real HiPerGator run of the full amended R/115_zip_stability_counts.R, confirming c02_reconciled plus reviewing the backward-only/forward-inclusive waterfall split, the encounter-anchored validation curve, the gap_days_at_assignment covariate, and this plan's new universe-overlap figures against real data) is the outstanding item before the workbook ships to Erin/Amy -- explicitly out of scope for this 140-07 execution (orchestrator's responsibility). Phase 139 remains complete (4/4 plans), ready for goal verification, real HiPerGator runtime verification still deferred. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above. v3.4 Phase 132 (Crash Fixes) planning is still pending separately. Note: several 140-09-PATCH-related doc files (140-01-SUMMARY.md, 140-02-PLAN.md, 140-02-SUMMARY.md, 140-03-PLAN.md, 140-CONTEXT.md, data/reference/README.md, plus 140-09-PLAN.md, 140-09-SUMMARY.md) remain uncommitted in the working tree from a prior session -- still out of scope for this 140-07 execution to commit.
