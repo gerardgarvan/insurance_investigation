@@ -40,13 +40,35 @@ grep -n "has_adi_zip5\|adi_summary\|zip5_adi" R/utils/utils_address.R
 ```
 
 ### Output
-(filled by Task 2)
+
+From `output/encounter_ses_index_20260820.rds` (real HiPerGator run, 2026-08-20):
+
+```
+# A tibble: 3 × 2
+  ZIP5      n
+  <chr> <int>
+1 00009   854
+2 00001    95
+3 00007    85
+encounters affected: 1034
+```
+
+Three ZIP5s newly rejected by the widened filter: `00009` (854 encounters), `00001` (95),
+`00007` (85). All three are numerically below 00501 — invalid by definition (lowest real US
+ZIP is 00501, Holtsville NY). No real delivery ZIP appears in the list.
 
 ### Positive control
-Count of repeated-digit sentinels rejected by the CURRENT filter in LDS_ADDRESS_HISTORY:
-(filled by Task 2)
 
-### Decision gate — verdict: (filled by Task 2)
+Count of repeated-digit sentinels rejected by the CURRENT filter in LDS_ADDRESS_HISTORY:
+
+```
+repeated-digit sentinels in ADDRESS_ZIP5: 52
+```
+
+52 > 0 — the existing filter fires. Widening it is the correct fix.
+
+### Decision gate — verdict: PASS
+
 HALT and investigate before 149-02 if EITHER:
 - the positive control returns 0 — the existing filter has never fired, so widening it is
   not the fix; something else is wrong
@@ -54,11 +76,24 @@ HALT and investigate before 149-02 if EITHER:
 
 Otherwise: PASS.
 
+Both conditions checked: positive control = 52 (non-zero); all enumerated ZIP5s (00009,
+00001, 00007) are below 00501 and invalid by definition. **149-02 may proceed.**
+
 ### has_adi_zip5 supply path
-zip5_representative resolved 47,036 encounters, so has_adi_zip5 exists when
-.classify_zip9_source() evaluates it — but it is NOT in the five-column select() at
-utils_address.R lines 526-532. Locate where it comes from before 149-02 edits this file:
-(filled by Task 2)
+
+From `grep -n "has_adi_zip5\|adi_summary\|zip5_adi" R/utils/utils_address.R`:
+
+```
+326:          has_adi_zip5                           ~ "zip5_representative",
+339:          has_adi_zip5                           ~ "zip5_representative",
+361:    has_adi_zip5      = logical()
+```
+
+`has_adi_zip5` is initialized as `logical()` at **utils_address.R line 361** (empty logical
+column in the output tibble accumulator), then consumed in `case_when` at **lines 326 and
+339** where it maps to the `"zip5_representative"` zip9_source label. It is a derived logical
+column computed internally within utils_address.R — not passed in from outside and not in the
+five-column `select()`. 149-02 must not remove or rename this column.
 
 ---
 
