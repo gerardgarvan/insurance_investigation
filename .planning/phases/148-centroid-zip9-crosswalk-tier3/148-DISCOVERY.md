@@ -18,6 +18,13 @@ This document records all D-0x decisions with evidence before any build code run
 | `no_zip5` | 16,942 |
 | `none` | 158,699 |
 
+[SUPERSEDED — 2026-08-20, Phase 149]
+The zip5_no_zip9 = 0 reading above came from a run predating commit 477ed7c, before
+ADDRESS_ZIP5 was read. When ADDRESS_ZIP5 is read (Phase 147), zip5_no_zip9 = 12,782
+(0.66%). The "all approximable rows sentinel-nulled" explanation was an artefact of the
+unread column, not a genuine data finding. This note is preserved as a record of how the
+artefact propagated. See 149-DISCOVERY.md for the correct post-147 baseline.
+
 **Decision: BUILD.** Per the D-01 decision table in 148-CONTEXT.md, 59,818 encounters is
 "material" → the phase proceeds to build a reference file.
 
@@ -37,6 +44,24 @@ ZIP9 to exist for the patient. These 59,818 encounters are genuinely unresolved 
 (c) At ~60K encounters, the cost of building a reference file (`zip5_adi_summary.csv`) using an
 already-staged 478 MB source file (`neighborhood_atlas_zip9_adi.csv`) is warranted. No new data
 acquisition is required; the build is a grouping operation on a file already on disk.
+
+D-01 RESOLVED — do not build the centroid crosswalk.
+
+zip5_no_zip9 = 12,782 encounters (0.66% of 1,950,696) across 153 distinct ZIP5s.
+
+Tier 2 (modal) and the zip5_representative tier absorbed 245,804 of the 258,586 rows
+recovered by Phase 147 -- 95%. The residue decomposes as:
+  ~850+   invalid placeholder ZIPs (00009 et al.) -- Phase 149 Task 1
+  ~11,000 out-of-state ZIP5s absent from a 23-of-50-state ADI file -- Phase 149 Task 2
+  small   genuine remainder
+
+A national ZIP+4 centroid crosswalk would cover ~41,000 ZCTAs to serve 153 ZIP5s, 92 of
+which are in states the ADI file simply does not include yet. Cost: a USPS Web Tools run
+over 41,000 ZCTAs, or a commercial ZIP+4 centroid licence. Not proportionate to 0.66% of
+encounters that two cheaper fixes address directly.
+
+Reopen only if, after Phase 149, the residue remains material AND is not explained by
+missing reference coverage.
 
 ---
 
