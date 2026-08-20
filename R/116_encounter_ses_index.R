@@ -166,7 +166,8 @@ if (has_adi_summary) {
       n_zip9_with_adi    = vroom::col_integer(),
       vintage            = vroom::col_character(),
       method             = vroom::col_character(),
-      source             = vroom::col_character()
+      source             = vroom::col_character(),
+      adi_coverage       = vroom::col_double()
     ),
     progress = FALSE
   ) |>
@@ -367,6 +368,7 @@ message(glue("  sdi_score coverage:   {round(100 * mean(!is.na(encounter_ses$sdi
 message(glue("  adi_natrank coverage: {round(100 * mean(!is.na(encounter_ses$adi_natrank)),1)}%"))
 message(glue("  svi_score coverage:   {round(100 * mean(!is.na(encounter_ses$svi_score)),  1)}%"))
 message(glue("  ruca_code coverage:   {round(100 * mean(!is.na(encounter_ses$ruca_code)),  1)}%"))
+message(glue("  adi_natrank_zip5_median coverage: {round(100 * mean(!is.na(encounter_ses$adi_natrank_zip5_median)), 1)}%"))
 
 # NOTE (Phase 146 ADI update):
 # ADI_PATH now points at neighborhood_atlas_zip9_adi.csv (D-05 answer; 23 states).
@@ -391,15 +393,16 @@ zip_source_summary <- encounter_ses %>%
   arrange(desc(n))
 
 index_coverage <- tibble(
-  index        = c("SDI", "ADI", "SVI", "RUCA"),
+  index        = c("SDI", "ADI", "ADI ZIP5 median", "SVI", "RUCA"),
   n_non_na     = c(sum(!is.na(encounter_ses$sdi_score)),
                    sum(!is.na(encounter_ses$adi_natrank)),
+                   sum(!is.na(encounter_ses$adi_natrank_zip5_median)),
                    sum(!is.na(encounter_ses$svi_score)),
                    sum(!is.na(encounter_ses$ruca_code))),
   n_total      = nrow(encounter_ses),
   pct_coverage = round(100 * n_non_na / n_total, 1),
-  join_key     = c("ZIP5","ZIP9","ZIP5","ZIP5"),
-  file_present = c(has_sdi, has_adi, has_svi, has_ruca)
+  join_key     = c("ZIP5","ZIP9","ZIP5","ZIP5","ZIP5"),
+  file_present = c(has_sdi, has_adi, has_adi_summary, has_svi, has_ruca)
 )
 
 ruca_dist <- encounter_ses %>%
@@ -450,14 +453,16 @@ index_coverage <- index_coverage %>%
 # The ZIP5-with-no-ZCTA unmatched count (second haircut below 77.7% for SDI/SVI) is
 # PENDING HiPerGator run of R/diagnostics/146_sdi_coverage_quantifier.R.
 coverage_ceilings <- tibble(
-  index       = c("RUCA", "SDI", "SVI", "ADI",
+  index       = c("RUCA", "SDI", "SVI", "ADI ZIP5 median", "ADI",
                   "NOTE: no-index encounters", "NOTE: SVI ranking caveat"),
-  geography   = c("ZIP5", "ZCTA via ZIP5 (D-01)", "ZCTA via ZIP5 derived (D-02a-i)", "ZIP9 (D-05)",
+  geography   = c("ZIP5", "ZCTA via ZIP5 (D-01)", "ZCTA via ZIP5 derived (D-02a-i)",
+                  "ZIP5 (beneficiary-based denominator)", "ZIP9 (D-05)",
                   NA_character_, NA_character_),
   best_achievable_pct = c(
     "77.7% (achieved)",
     paste0("<=77.7%, minus ZIP5s with no ZCTA (count PENDING HiPerGator run)"),
     paste0("<=77.7%, minus ZCTA match (PENDING HiPerGator run of R/117_build_svi_zcta.R)"),
+    "<=77.7%, limited to ZIP5s with >=50% ADI coverage (floor = 0.50)",
     "<=77.7%",
     NA_character_, NA_character_
   ),
@@ -465,11 +470,12 @@ coverage_ceilings <- tibble(
     "ZIP availability",
     "ZIP availability, then ZCTA match (PO-box-only/single-building ZIPs unmatched)",
     "ZIP availability, then ZCTA match, then derivation (findSVI Census API)",
+    "ZIP5 availability, then coverage floor (ADI_COVERAGE_FLOOR=0.50 in R/118); denominator is beneficiary-based ZIP+4 segments, not all USPS delivery segments",
     "ZIP9 availability only (23-state collation; 478MB file; transfer via scp)",
     NA_character_, NA_character_
   ),
   note = c(
-    NA_character_, NA_character_, NA_character_, NA_character_,
+    NA_character_, NA_character_, NA_character_, NA_character_, NA_character_,
     paste0(
       "22.3% (434,227) of encounters receive no index at any geography: ",
       "14.1% sentinel-ZIP (275,528) + 8.1% no-address-record (158,699). ",
