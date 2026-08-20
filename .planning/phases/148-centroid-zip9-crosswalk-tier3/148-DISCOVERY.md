@@ -219,3 +219,25 @@ of `zip5_adi_summary.csv`.
 **Decision:** Florida is present. 1,521 of 1,940 cohort ZIP5s have a usable median ADI —
 sufficient to proceed with wiring `adi_natrank_zip5_median` into R/116 in a separate plan.
 All four validation gates passed. `zip5_adi_summary.csv` written.
+
+---
+
+## §7 — R/116 re-run confirming adi_natrank_zip5_median wiring (2026-08-20)
+
+Run: `Rscript R/116_encounter_ses_index.R` on HiPerGator after quick task `260820-fap`
+(commit `584eb56`). All five coverage lines printed; RDS and xlsx written for run date 20260820.
+
+**Coverage summary (1,950,696 encounter rows):**
+
+| Index | Coverage |
+|---|---|
+| SDI | 90.2% |
+| ADI (ZIP9-level) | 84.1% |
+| **ADI ZIP5 median (new)** | **87.7%** |
+| SVI | 90.2% |
+| RUCA | 91.0% |
+
+The 3.6 pp gain (87.7% vs 84.1%) comes from the 47,036 `zip5_representative` encounters
+that had no ZIP9 (so `adi_natrank` = NA) but did have a ZIP5 in `zip5_adi_summary.csv`.
+Phase 148 D-04(b)/(c) figures confirmed: `zip5_representative: 47,036` encounters in the
+encounter-level output. Wiring is complete; no further action required for this phase.
