@@ -293,6 +293,13 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
   # FIX-09a: the lookup must be unique on ZIP5 or the join fans out
   stopifnot(!any(duplicated(zip5_lookup$ZIP5)))
 
+  # R/115 calls approximate_zip9() without the ADI join that R/116 does, so
+  # has_adi_zip5 may be absent. Default to FALSE (no ADI coverage) so the
+  # zip5_representative branch never fires for non-ADI callers.
+  if (!"has_adi_zip5" %in% names(result_tbl)) {
+    result_tbl <- result_tbl %>% mutate(has_adi_zip5 = FALSE)
+  }
+
   # Apply modal (Tier 2) lookup first
   out <- result_tbl %>%
     left_join(zip5_lookup, by = "ZIP5", na_matches = "never") %>%
