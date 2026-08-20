@@ -156,3 +156,18 @@ test_that("get_zip9_at_date returns NA ZIP5 when both columns absent (2x2 no/no 
   expect_true(is.na(result$ZIP5))
   expect_true(is.na(result$ZIP9))
 })
+
+# ==============================================================================
+# Phase 149 Task 1: is_sentinel_zip5() — two-class filter (FIX-06, Phase 149)
+# ==============================================================================
+
+test_that("is_sentinel_zip5 catches both placeholder classes", {
+  expect_true (is_sentinel_zip5("00000"))   # repeated digits
+  expect_true (is_sentinel_zip5("99999"))
+  expect_true (is_sentinel_zip5("00009"))   # below 00501 -- Phase 149
+  expect_true (is_sentinel_zip5("00001"))
+  expect_false(is_sentinel_zip5("00501"))   # lowest REAL ZIP -- boundary
+  expect_false(is_sentinel_zip5("12345"))   # Schenectady NY, real (FIX-06)
+  expect_false(is_sentinel_zip5("32611"))   # Gainesville FL
+  expect_false(is_sentinel_zip5(NA_character_))
+})

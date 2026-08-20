@@ -47,12 +47,6 @@ normalize_zip5 <- function(zip9_clean) {
   str_sub(zip9_clean, 1, 5)
 }
 
-# Five identical digits (00000, 11111, ... 99999) are placeholder values, not ZIPs.
-# Note: 12345 is a real ZIP (Schenectady, NY) and is NOT in the sentinel set. (FIX-06)
-is_sentinel_zip5 <- function(zip5) {
-  !is.na(zip5) & str_detect(zip5, "^(\\d)\\1{4}$")
-}
-
 # Normalize a raw ZIP5 column: strip non-digits, extract leading 5, validate ^[0-9]{5}$.
 # Rewritten per Phase 139 AMEND-01 / Step 0b.
 # pad4: left-pad 4-digit strings to 5 (default FALSE). Off by default because the file is
@@ -68,14 +62,18 @@ normalize_zip5_raw <- function(zip, pad4 = FALSE) {
   if_else(str_detect(z, "^[0-9]{5}$"), z, NA_character_)
 }
 
-# Sentinel/placeholder ZIP5 filter (Pitfall 2, Phase 139): 00000, 99999, and any
-# other single-repeated-digit ZIP5 are known placeholder/data-quality artifacts,
-# not real addresses. Applied by callers (e.g. R/115) BEFORE counting ZIP
-# transitions, so placeholder values don't inflate change counts. NOT called by
-# get_zip9_at_date() itself -- that function is Out of Scope for modification
-# in Phase 139; sentinel filtering is applied by callers on its output/inputs.
+# Placeholder ZIP5s. Two classes, both invalid:
+#   (1) five repeated digits -- 00000, 11111 ... 99999 (Phase 139, Pitfall 2)
+#   (2) numerically below 00501, the lowest real US ZIP (Holtsville, NY).
+#       Phase 149: 00009 carried 854 encounters into the zip5_no_zip9 residue
+#       because it is not five repeated digits and so passed (1).
+# NOTE: 12345 is a real ZIP (Schenectady, NY) and is NOT a sentinel. (FIX-06)
 is_sentinel_zip5 <- function(zip5) {
-  str_detect(zip5, "^(\\d)\\1{4}$")
+  n <- suppressWarnings(as.integer(zip5))
+  !is.na(zip5) & (
+    stringr::str_detect(zip5, "^(\\d)\\1{4}$") |
+    (!is.na(n) & n < 501L)
+  )
 }
 
 #' Resolve ZIP9 (and ZIP5) for each (ID, query_date) pair using temporal lookup.
