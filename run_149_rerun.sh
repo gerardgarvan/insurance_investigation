@@ -4,8 +4,6 @@
 
 set -euo pipefail
 
-module load R/4.4.2
-
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG="output/logs/phase149_rerun_${TIMESTAMP}.log"
 
