@@ -1,0 +1,1376 @@
+========================================
+149 ADI rebuild — Fri Aug 21 12:44:24 PM EDT 2026
+Log: /blue/erin.mobley-hl.bcu/insurance_investigation/output/logs/149_adi_rebuild_20260821_124424.log
+========================================
+Reference file: /blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/neighborhood_atlas_zip9_adi.csv
+  size: 626M  rows: 47656302
+
+--- Archiving pre-ADI output files ---
+  (no files to archive)
+
+========================================
+--- R/118_build_zip5_adi_summary.R --- Fri Aug 21 12:44:24 PM EDT 2026
+========================================
+here() starts at /blue/erin.mobley-hl.bcu/insurance_investigation
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Registered S3 methods overwritten by 'readr':
+  method                    from 
+  as.data.frame.spec_tbl_df vroom
+  as_tibble.spec_tbl_df     vroom
+  format.col_spec           vroom
+  print.col_spec            vroom
+  print.collector           vroom
+  print.date_names          vroom
+  print.locale              vroom
+  str.col_spec              vroom
+
+Attaching package: ‘readr’
+
+The following objects are masked from ‘package:vroom’:
+
+    as.col_spec, col_character, col_date, col_datetime, col_double,
+    col_factor, col_guess, col_integer, col_logical, col_number,
+    col_skip, col_time, cols, cols_condense, cols_only, date_names,
+    date_names_lang, date_names_langs, default_locale, fwf_cols,
+    fwf_empty, fwf_positions, fwf_widths, locale, output_column,
+    problems, spec
+
+Loaded 47,656,302 rows from neighborhood_atlas_zip9_adi.csv
+After format filter: 47,656,302 rows; 26,345 unique ZIP5s
+Summary: 26,345 ZIP5s; 18,450 with non-NA median ADI
+Coverage floor 0.5: 7,895 ZIP5s suppressed to NA (30%)
+All 4 validation gates passed.
+Written: /blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/zip5_adi_summary.csv
+ZIP5s resolved: 26,345
+--- R/118 done: Fri Aug 21 12:45:24 PM EDT 2026 ---
+
+========================================
+--- R/116_encounter_ses_index.R --- Fri Aug 21 12:45:24 PM EDT 2026
+========================================
+================================================================================
+PRODUCTION MODE (HiPerGator)
+  OS: Linux
+  Data: /orange/erin.mobley-hl.bcu/Mailhot_V1_20250915
+  DuckDB: /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb
+  Threads: 16 (SLURM allocation)
+================================================================================
+Defined 460 treatment code mappings across 6 categories
+Defined 326 code-to-subcategory mappings
+  MEDICATION_LOOKUP: dropped 79 entries where column 3 is a code type, not a drug name
+  MEDICATION_LOOKUP: 375 medication names from reference Excel
+  MEDICATION_LOOKUP supplement: 6 J-codes added (J9000, J9040, J9042, J9130, J9299, J9360)
+  DRUG_NAME_ALIASES: 25 canonical aliases applied to MEDICATION_LOOKUP
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+Built 6 keyed data.table lookups: AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP, TIER_MAPPING, TREATMENT_CODES
+
+Attaching package: ‘lubridate’
+
+The following objects are masked from ‘package:data.table’:
+
+    hour, isoweek, isoyear, mday, minute, month, quarter, second, wday,
+    week, yday, year
+
+The following objects are masked from ‘package:base’:
+
+    date, intersect, setdiff, union
+
+
+Attaching package: ‘janitor’
+
+The following objects are masked from ‘package:stats’:
+
+    chisq.test, fisher.test
+
+Loaded 15 utility modules from R/utils/
+=== Phase 144: Encounter-Level SES Index Linkage ===
+  [RUCA] data/reference/RUCA-codes-2020-zipcode.xlsx: found
+  [SDI] data/reference/zip5_sdi_reference.csv: found
+  [ADI] data/reference/neighborhood_atlas_zip9_adi.csv: found
+  [SVI] data/reference/svi_2020_zcta_derived.csv: found
+  [ADI_SUMMARY] /blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/zip5_adi_summary.csv: found
+[DuckDB] Connection opened (read_only=TRUE): /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb
+Registered S3 methods overwritten by 'readr':
+  method                    from 
+  as.data.frame.spec_tbl_df vroom
+  as_tibble.spec_tbl_df     vroom
+  format.col_spec           vroom
+  print.col_spec            vroom
+  print.collector           vroom
+  print.date_names          vroom
+  print.locale              vroom
+  str.col_spec              vroom
+  Address history covers 8953 patients
+  Total CDM ENCOUNTER rows (non-NA ADMIT_DATE): 1983780
+  1950696 encounters for 8953 patients
+  33084 CDM encounters (1.7%) excluded for lack of address data
+--- Resolving ZIP9/ZIP5 per encounter ---
+  pre-approximation state (match_type x ZIP9 missing x ZIP5 missing):
+, , zip5_na = FALSE
+
+                    zip9_na
+match_type            FALSE   TRUE
+  interval           739248 146832
+  most_recent_before   4929   1226
+  none                    0      0
+
+, , zip5_na = TRUE
+
+                    zip9_na
+match_type            FALSE   TRUE
+  interval               53   9412
+  most_recent_before      0      2
+  none                    0  93029
+
+  ADI summary staged: 26,345 ZIP5s
+[utils_address] approximate_zip9: centroid crosswalk not found at /blue/erin.mobley-hl.bcu/insurance_investigation/data/reference/zip5_centroid_zip9_crosswalk.csv -- Tier 3 skipped (stage data/reference/zip5_centroid_zip9_crosswalk.csv to activate)
+[utils_address] approximate_zip9: zip9_source breakdown
+  zip9_observed:         744230
+  zip5_modal:            111599
+  zip5_centroid:         0
+  zip5_representative:   36108
+  zip5_no_zip9:          351
+  no_zip5:               9414
+  none:                  93029
+  reference_unavailable: 0
+  invalid_input:         0
+  modal_share -- min 0.011 / median 0.111 / max 1
+  ZIP resolution complete. zip9_source breakdown:
+
+            no_zip5                none          zip5_modal        zip5_no_zip9 
+              17881              158699              198768                 600 
+zip5_representative       zip9_observed 
+              58279             1516469 
+--- Loading reference files ---
+  RUCA: 41146 ZIP5 rows loaded
+  SDI: 32989 ZIP5 rows loaded
+  ADI: 47656302 ZIP9 rows loaded (cols: ZIP9, ADI_NATRANK)
+  SVI: 33120 ZCTA rows loaded
+--- Joining SES scores to encounter-level ZIP resolution ---
+  encounter_ses rows: 1950696
+  sdi_score coverage:   90.2%
+  adi_natrank coverage: 85%
+  svi_score coverage:   90.2%
+  ruca_code coverage:   90.9%
+  adi_natrank_zip5_median coverage: 89.9%
+--- Saving RDS cache: output/encounter_ses_index_20260821.rds ---
+  Saved 1950696 rows to output/encounter_ses_index_20260821.rds
+--- Building summary xlsx: output/encounter_ses_index_summary_20260821.xlsx ---
+  Saved summary xlsx: output/encounter_ses_index_summary_20260821.xlsx
+=== Phase 144: R/116 complete ===
+[DuckDB] Connection closed.
+--- R/116 done: Fri Aug 21 12:47:41 PM EDT 2026 ---
+
+========================================
+--- zip9_source distribution check ---
+========================================
+RDS: /blue/erin.mobley-hl.bcu/insurance_investigation/output/encounter_ses_index_20260821.rds
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+zip9_source distribution:
+# A tibble: 6 × 3
+  zip9_source               n   pct
+  <chr>                 <int> <dbl>
+1 zip9_observed       1516469  77.7
+2 zip5_modal           198768  10.2
+3 none                 158699   8.1
+4 zip5_representative   58279   3  
+5 no_zip5               17881   0.9
+6 zip5_no_zip9            600   0  
+
+Total encounters: 1,950,696 
+
+Expected: zip5_no_zip9 ~900, zip5_representative ~58000, zip9_observed ~1516469, none ~158699
+
+========================================
+--- R/88_smoke_test_comprehensive.R --- Fri Aug 21 12:47:46 PM EDT 2026
+========================================
+======================================================================
+SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-89)
+======================================================================
+
+[1/29] Utils module completeness...
+  PASS: R/utils/ directory exists
+  PASS: R/utils/ contains >= 13 files (found 15)
+  PASS: All expected utils present (missing: )
+  PASS: No utils_*.R in R/ root (found: )
+
+[2/29] Config loading and auto-sourcing...
+================================================================================
+PRODUCTION MODE (HiPerGator)
+  OS: Linux
+  Data: /orange/erin.mobley-hl.bcu/Mailhot_V1_20250915
+  DuckDB: /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb
+  Threads: 16 (SLURM allocation)
+================================================================================
+Defined 460 treatment code mappings across 6 categories
+Defined 326 code-to-subcategory mappings
+  MEDICATION_LOOKUP: dropped 79 entries where column 3 is a code type, not a drug name
+  MEDICATION_LOOKUP: 375 medication names from reference Excel
+  MEDICATION_LOOKUP supplement: 6 J-codes added (J9000, J9040, J9042, J9130, J9299, J9360)
+  DRUG_NAME_ALIASES: 25 canonical aliases applied to MEDICATION_LOOKUP
+Built 6 keyed data.table lookups: AMC_PAYER_LOOKUP, DRUG_GROUPINGS, CODE_SUBCATEGORY_MAP, CANCER_SITE_MAP, TIER_MAPPING, TREATMENT_CODES
+
+Attaching package: ‘lubridate’
+
+The following objects are masked from ‘package:data.table’:
+
+    hour, isoweek, isoyear, mday, minute, month, quarter, second, wday,
+    week, yday, year
+
+The following objects are masked from ‘package:base’:
+
+    date, intersect, setdiff, union
+
+
+Attaching package: ‘janitor’
+
+The following objects are masked from ‘package:stats’:
+
+    chisq.test, fisher.test
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:data.table’:
+
+    between, first, last
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loaded 15 utility modules from R/utils/
+  PASS: 00_config.R loads without error
+  PASS: CONFIG defined in config
+  PASS: EXTRACT_DATE defined in config
+  PASS: PCORNET_TABLES defined in config
+  PASS: PCORNET_PATHS defined in config
+  PASS: ICD_CODES defined in config
+  PASS: PAYER_MAPPING defined in config
+  PASS: AMC_PAYER_LOOKUP defined in config
+  PASS: TREATMENT_CODES defined in config
+  PASS: CANCER_SITE_MAP defined in config
+  PASS: TIER_MAPPING defined in config
+  PASS: CANCER_SITE_MAP is named character vector
+  PASS: CANCER_SITE_MAP contains >= 100 mappings (found 143)
+  PASS: TIER_MAPPING is list
+  PASS: TIER_MAPPING contains 8 tiers (found 8)
+  PASS: utils_dates: parse_pcornet_date() exists
+  PASS: utils_attrition: log_attrition() exists
+  PASS: utils_icd: normalize_icd() exists
+  PASS: utils_snapshot: save_output_data() exists
+  PASS: utils_snapshot: build_output_path() exists
+  PASS: utils_duckdb: open_pcornet_con() exists
+  PASS: utils_treatment: safe_table() exists
+  PASS: utils_payer: is_missing_payer() exists
+  PASS: utils_payer: classify_payer_tier() exists
+  PASS: utils_pptx: style_table() exists
+  PASS: utils_assertions: assert_rds_exists() exists
+  PASS: utils_assertions: assert_df_valid() exists
+  PASS: utils_assertions: assert_col_types() exists
+  PASS: utils_cancer: classify_codes() exists
+
+[3/29] Foundation script chain...
+  PASS: R/00_config.R exists
+  PASS: R/01_load_pcornet.R exists
+  PASS: R/02_harmonize_payer.R exists
+  PASS: R/03_duckdb_ingest.R exists
+  PASS: R/25_duckdb_ingest.R removed (old location)
+
+[4/29] Cohort decade (10-14)...
+  PASS: Cohort decade: 5/5 scripts (found 5)
+
+[5/29] Treatment decade (20-29)...
+  PASS: Treatment decade: 10/10 scripts (found 10)
+
+[6/29] Quality/Investigations decade (30-39)...
+  PASS: Quality/Investigations decade: 2/2 scripts (found 2)
+
+[7/29] Cancer decade (40-56)...
+  PASS: Cancer decade: 17/17 scripts (found 17)
+
+[8/29] Payer/QA decade (60-69)...
+  PASS: Payer/QA decade: 10/10 scripts (found 10)
+
+[9/29] Output decade (70-76)...
+  PASS: Output decade: 7/7 scripts (found 7)
+
+[10/29] Test decade (80-88)...
+  PASS: Test decade: 9/9 scripts (found 9)
+
+[11/29] Ad-hoc decade (90-99)...
+  PASS: Ad-hoc decade: 10/10 scripts (found 10)
+
+[12/29] No stale files...
+  PASS: No stale old-numbered files (found: )
+  PASS: No a/b suffixed files (found: )
+
+[13/29] Source() reference validation...
+  PASS: No broken source() calls (found: )
+  PASS: No old-style source() paths (found: )
+
+[14/29] Key dependency chains...
+  PASS: 14_build_cohort.R sources 10_cohort_predicates.R
+  PASS: 14_build_cohort.R sources 11_treatment_payer.R
+  PASS: 26_treatment_episodes.R sources 25_treatment_durations.R
+  PASS: 72_generate_pptx.R sources 75_encounter_analysis.R
+  PASS: 73_generate_phase19_20_pptx.R sources 94_flm_duplicate_dates.R
+
+[15/29] DRY consolidation validation...
+  PASS: No duplicate PREFIX_MAP outside R/00_config.R (found: )
+  PASS: No duplicate TIER_MAPPING outside R/00_config.R (found: )
+  PASS: No duplicate classify_codes() outside R/utils/utils_cancer.R (found: )
+
+[16/29] Defensive coding infrastructure...
+  PASS: library(checkmate) loaded in R/00_config.R
+  PASS: R/utils/utils_assertions.R exists
+  PASS: Assertion helper: assert_rds_exists() exists
+  PASS: Assertion helper: assert_df_valid() exists
+  PASS: Assertion helper: assert_col_types() exists
+  PASS: Assertion helper: warn_date_range() exists
+  PASS: Assertion helper: warn_row_count() exists
+
+[17/29] Archive validation...
+  PASS: R/archive/ directory exists
+  PASS: R/archive/README.md exists
+  PASS: R/archive/ contains 8 files (found 8)
+
+[18/29] Cross-platform data availability...
+Platform: unix
+Data available: TRUE
+  PASS: ENROLLMENT CSV exists at data_dir (ENROLLMENT_Mailhot_V1.csv)
+  PASS: cache$raw_dir exists
+  PASS: cache$cohort_dir exists
+
+[19/29] NLPHL classification & death cause validation...
+  PASS: ICD-10 C81.0x codes classify as 'NLPHL'
+  PASS: ICD-9 201.4x codes classify as 'NLPHL'
+  PASS: ICD-10 C81.1-C81.9 codes classify as 'Hodgkin Lymphoma (non-NLPHL)'
+  PASS: ICD-9 201.0-201.9 (except 201.4x) classify as 'Hodgkin Lymphoma (non-NLPHL)'
+  PASS: Mutual exclusivity: NLPHL (8) + classical (12) = total (20)
+  PASS: CANCER_SITE_MAP has 'C810' = 'NLPHL'
+  PASS: CANCER_SITE_MAP has 'C81' = 'Hodgkin Lymphoma (non-NLPHL)'
+  PASS: ICD9_NLPHL_CODES contains 10 codes (found 10)
+  PASS: DEATH_CAUSE_MAP has >= 30 entries (found 317)
+  PASS: DEATH_CAUSE_MAP has 'UNK' = 'Unknown or Unspecified'
+  PASS: DEATH_CAUSE_MAP covers major ICD-10 chapters (5/5 present)
+
+[20/29] TR removal validation...
+  PASS: R/26 has no tr_dates <- NULL assignments (found 0)
+  PASS: R/26 has no TR = tr_dates in sources lists (found 0)
+  PASS: R/26 has no live TUMOR_REGISTRY_ALL references (found 0)
+  PASS: R/26 has 3 Phase 76 removal comments (found 3)
+  PASS: R/26 defines EPISODE_COUNT_BASELINE (found 4 refs)
+  PASS: Chemotherapy uses 6 sources (PX, RX, DX, DRG, DISP, MA)
+  PASS: Radiation uses 3 sources (PX, DX, DRG)
+  PASS: SCT uses 2 sources (PX, DRG)
+  PASS: Coverage analysis output exists: output/source_coverage_analysis.csv
+  PASS: R/76_treatment_source_coverage.R exists
+
+[21/29] Drug groupings validation...
+  PASS: DRUG_GROUPINGS has >= 200 entries (found 460)
+  PASS: CODE_SUBCATEGORY_MAP defined with >= 200 entries
+  PASS: CODE_SUBCATEGORY_MAP contains J9035 (Bevacizumab)
+  PASS: DRUG_GROUPINGS covers 6 core categories (6/6 found)
+  PASS: DRUG_GROUPINGS has no NA keys
+  PASS: DRUG_GROUPINGS has no NA values
+  PASS: data/reference/all_codes_resolved_next_tables_v2.1.xlsx exists
+
+[22/29] 7-day gap extension & R/49 v2 validation...
+  PASS: R/49 defines OUTPUT_TABLE_V2_XLSX path
+  PASS: R/49 filters cancer_summary_v2 by two_or_more_unique_dates_gt_7 == 1
+  PASS: R/49 V2 filters by HL-specific 7-day confirmed IDs (hl_7day_confirmed_ids)
+  PASS: R/49 has checkmate assert_int for v2 population (4000-8000)
+  PASS: R/49 has NLPHL vs Classical HL diagnostic output
+  PASS: R/49 saves v2 RDS output (saveRDS with v2)
+  PASS: R/49 category NA logic includes 'Hodgkin Lymphoma (non-NLPHL)' (not just 'Hodgkin Lymphoma')
+  PASS: V1 vs V2 comparison table is console-only (no file writes found: 0)
+
+[23/29] Phase 79: SCT 0362 investigation (CODE-02)...
+  PASS: R/54_investigate_sct_0362.R exists
+  PASS: R/54 sources R/00_config.R
+  PASS: R/54 sources R/utils/utils_duckdb.R
+  PASS: R/54 references TREATMENT_CODES for SCT code lookup
+  PASS: R/54 outputs sct_0362_investigation.xlsx
+  PASS: R/54 uses openxlsx2 for multi-sheet workbook
+  PASS: R/54 has >= 6 section headers (found: 7)
+  PASS: R/54 has automated recommendation logic
+
+[24/29] Phase 79: Replaced-by code verification (CODE-01)...
+  PASS: R/55_verify_replaced_by_codes.R exists
+  PASS: R/55 sources R/00_config.R
+  PASS: R/55 uses igraph for graph analysis
+  PASS: R/55 calls is_dag() for cycle detection
+  PASS: R/55 references DRUG_GROUPINGS for code verification
+  PASS: R/55 outputs replaced_by_verification.xlsx
+  PASS: R/55 has 3-sheet workbook structure
+  PASS: R/55 has >= 6 section headers (found: 7)
+
+[25/29] Phase 79: Drug grouping summary tables (TREAT-03)...
+  PASS: R/56_new_tables_from_groupings.R exists
+  PASS: R/56 sources R/00_config.R
+  PASS: R/56 sources R/utils/utils_assertions.R
+  PASS: R/56 references DRUG_GROUPINGS for treatment groupings
+  PASS: R/56 reads treatment_episodes.rds input
+  PASS: R/56 outputs episode_level_drug_grouping_tables.xlsx (new) and drug_grouping_tables.xlsx (compat)
+  PASS: R/56 has grain-prefixed sheets (Ep Sub-Category Summary + Ep Encounter Treatment)
+  PASS: R/56 has >= 6 section headers (found: 9)
+  PASS: R/56 references CODE_SUBCATEGORY_MAP for Tier 2 sub-category resolution
+  PASS: R/56 filters NA cancer_codes instead of replacing with Unknown
+  PASS: R/56 derives category from DRUG_GROUPINGS with treatment_type fallback
+  PASS: R/56 Table 1 selects category, sub_category, treatment_code, code_type, cancer_codes
+  PASS: R/56 has 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)
+
+[26/29] Phase 82: Encounter Dx deduplication in R/56...
+  PASS: R/57_explore_dx_deduplication.R exists
+  PASS: R/56 has Section 5B header for encounter-level deduplication
+  PASS: R/56 uses str_detect pattern matching for Encounter Dx (not hardcoded list, per D-10)
+  PASS: R/56 has is_non_informative flag variable
+  PASS: R/56 joins episode_codes to episode_encounters for encounter-level analysis
+  PASS: R/56 checks per-encounter helpful code co-occurrence (group_by ENCOUNTERID)
+  PASS: R/56 uses dx_only internally for dedup logic (per D-05: preserve orphan encounters)
+  PASS: R/56 Table 1 uses episode_codes_dedup (deduplicated source)
+  PASS: R/57 sources R/00_config.R
+  PASS: R/57 uses str_detect for Encounter Dx pattern matching
+  PASS: R/57 has diagnostic output comparing before/after Table 1
+
+[27/29] Death quality profiling validation (DEATH-01)...
+  PASS: R/35_death_cause_quality.R exists
+  PASS: R/35 sources R/00_config.R
+  PASS: R/35 references DEATH_CAUSE_MAP for cause mapping
+  PASS: R/35 has DEATH_CAUSE field availability check
+  PASS: R/35 outputs death_cause_quality.xlsx
+  PASS: R/35 saves death_cause_quality_result.rds
+  PASS: R/35 has >= 6 section headers (found: 8)
+
+[28/29] Episode enrichment and Gantt integration (CANCER-03, DEATH-02)...
+  PASS: R/28 final select includes triggering_code_description
+  PASS: R/28 final select includes drug_group
+  PASS: R/28 references DRUG_GROUPINGS for drug group mapping
+  PASS: R/28 references code_descriptions.rds for description lookup
+  PASS: R/52 episodes export includes cause_of_death
+  PASS: R/52 episodes export includes drug_group
+  PASS: R/52 drops cause_of_death (Phase 99, D-09: 100% empty)
+  PASS: R/52 defines EPISODES_SCHEMA vector (Phase 99: dynamic schema verification)
+  PASS: R/52 defines DETAIL_SCHEMA vector (Phase 99: dynamic schema verification)
+  PASS: R/52 has cause_of_death missingness warning (>40% threshold)
+
+[29/31] Environment detection validation...
+  PASS: IS_LOCAL flag is defined
+  PASS: IS_LOCAL is logical type
+  PASS: R_TESTING_ENV env var readable (empty string if unset)
+  PASS: THREAD_COUNT is defined
+  PASS: THREAD_COUNT is integer >= 1
+  PASS: Production mode: data_dir points to /orange/
+  PASS: Production mode: DuckDB path in /blue/
+  PASS: Production mode: thread count >= 1
+  PASS: PCORNET_PATHS$ENROLLMENT: no hardcoded double-separators
+  PASS: PCORNET_PATHS$DIAGNOSIS: no hardcoded double-separators
+  PASS: PCORNET_PATHS$CONDITION: no hardcoded double-separators
+  PASS: PCORNET_PATHS$PROCEDURES: no hardcoded double-separators
+  PASS: PCORNET_PATHS$PRESCRIBING: no hardcoded double-separators
+  PASS: PCORNET_PATHS$ENCOUNTER: no hardcoded double-separators
+  PASS: PCORNET_PATHS$DEMOGRAPHIC: no hardcoded double-separators
+  PASS: PCORNET_PATHS$TUMOR_REGISTRY1: no hardcoded double-separators
+  PASS: PCORNET_PATHS$TUMOR_REGISTRY2: no hardcoded double-separators
+  PASS: PCORNET_PATHS$TUMOR_REGISTRY3: no hardcoded double-separators
+  PASS: PCORNET_PATHS$DISPENSING: no hardcoded double-separators
+  PASS: PCORNET_PATHS$MED_ADMIN: no hardcoded double-separators
+  PASS: PCORNET_PATHS$LAB_RESULT_CM: no hardcoded double-separators
+  PASS: PCORNET_PATHS$PROVIDER: no hardcoded double-separators
+  PASS: PCORNET_PATHS$DEATH: no hardcoded double-separators
+  PASS: PCORNET_PATHS$DEATH_CAUSE: no hardcoded double-separators
+  PASS: output/ directory exists
+  PASS: output/figures/ directory exists
+  PASS: output/tables/ directory exists
+  PASS: cache directory exists
+  PASS: DuckDB directory exists
+  PASS: .Renviron.example template exists
+
+[CLEAN] False-positive SCT code removal validation (CLEAN-01, CLEAN-02)...
+  PASS: DRUG_GROUPINGS does not contain deprecated code Z94.84
+  PASS: DRUG_GROUPINGS does not contain deprecated code T86.5
+  PASS: DRUG_GROUPINGS does not contain deprecated code T86.09
+  PASS: DRUG_GROUPINGS does not contain deprecated code Z48.290
+  PASS: DRUG_GROUPINGS does not contain deprecated code HEMATOLOGIC_TRANSPLANT_AND_ENDOC
+  PASS: SCT section comment updated to 36 codes (was 41)
+  PASS: R/42 still has Z94.84 code description (not accidentally removed)
+  PASS: R/10 has_sct() still references Z94.84 for cohort inclusion
+
+[GANTT] Treatment metadata enrichment validation (GANTT-01 through GANTT-05)...
+  PASS: R/utils/utils_xlsx_lookups.R exists
+  PASS: utils_xlsx_lookups.R contains load_xlsx_lookups function
+  PASS: utils_xlsx_lookups.R validates no duplicate codes
+  PASS: utils_xlsx_lookups.R builds lookups from config (no XLSX dependency)
+  PASS: R/28 sources utils_xlsx_lookups.R
+  PASS: R/28 select() includes code_type
+  PASS: R/28 select() includes source_table
+  PASS: R/28 select() includes treatment_line
+  PASS: R/28 select() includes sct_cross_use_flag
+  PASS: R/28 comment updated to 26 columns
+  PASS: R/28 validates row count preserved after enrichment
+  PASS: R/28 stopifnot includes code_type
+  PASS: R/28 aggregate_treatment_line has F > S > E > N priority
+  PASS: R/28 has TBD code export section for SME review
+
+[GANTT] Gantt v2 schema extension validation (GANTT-06, GANTT-07)...
+  PASS: R/52 select() includes code_type (GANTT-06)
+  PASS: R/52 select() includes source_table (GANTT-06)
+  PASS: R/52 select() includes sct_cross_use_flag (GANTT-06)
+  PASS: R/52 episodes schema verification uses EPISODES_SCHEMA (Phase 99)
+  PASS: R/52 detail schema verification uses DETAIL_SCHEMA (Phase 99)
+  PASS: R/52 has guard clause for code_type
+  PASS: R/52 applies clean_multi_value to code_type
+  PASS: R/51 v1 export deleted (Phase 99: v2 is canonical)
+
+[IMMU] Phase 93: Cross-use flag implementation validation (IMMU-01, IMMU-02)...
+  PASS: R/00_config.R defines QUESTIONABLE_IMMUNO_CODES (D-05)
+  PASS: QUESTIONABLE_IMMUNO_CODES has 11 entries (8 vitamin + 3 CAR-T)
+  PASS: R/28 computes immuno_confidence via data.table keyed join
+  PASS: R/28 computes is_sct_conditioning_context
+  PASS: R/28 computes immuno_confidence
+  PASS: R/28 comment references 26 columns
+  PASS: R/52 does NOT include is_sct_conditioning_context in EPISODES_SCHEMA (Phase 99, D-11)
+  PASS: R/52 does NOT include immuno_confidence in EPISODES_SCHEMA (Phase 99, D-11)
+  PASS: R/52 EPISODES_SCHEMA includes is_hodgkin (Phase 99, D-07)
+  PASS: R/52 derives is_hodgkin via str_detect with Non-Hodgkin exclusion
+  PASS: R/52 documents is_sct_conditioning_context removal (Phase 99, D-11)
+  PASS: R/52 documents immuno_confidence removal (Phase 99, D-11)
+  PASS: is_sct_conditioning_context flag only on Chemotherapy episodes (D-02)
+  PASS: Non-chemotherapy episodes have NA for is_sct_conditioning_context (D-04)
+  PASS: immuno_confidence contains only valid values (D-10)
+  PASS: Each episode has exactly one row (mutual exclusivity preserved, D-13)
+
+[Phase 112] Temporal diagnosis enrichment and universal sort audit...
+  PASS: R/28 has Section 5E temporal diagnosis enrichment (Phase 112)
+  PASS: R/28 Section 5E uses is_cancer_code() for DX filtering
+  PASS: R/28 temporal join uses episode_stop + days(30) upper bound
+  PASS: R/28 final select includes episode_dx_codes
+  PASS: R/28 final select includes episode_dx_categories
+  PASS: R/28 stopifnot validates episode_dx_codes column
+  PASS: R/28 validates row count preserved after temporal dx join
+  PASS: R/52 EPISODES_SCHEMA includes episode_dx_codes (Phase 112)
+  PASS: R/52 EPISODES_SCHEMA includes episode_dx_categories (Phase 112)
+  PASS: R/52 DETAIL_SCHEMA excludes episode_dx_codes (episode-level only)
+  PASS: clean_multi_value (utils_format.R) includes sort() for ascending order (Phase 112 D-06)
+  PASS: clean_multi_value (utils_format.R) has no descending sort (Phase 112 D-06)
+  PASS: R/52 applies clean_multi_value to episode_dx_codes
+  PASS: R/52 applies clean_multi_value to drug_group (quick i1a)
+  PASS: R/36 has no descending sort in multi-value fields (Phase 112 D-09)
+  PASS: R/57 has no descending sort in multi-value fields (Phase 112 D-08)
+
+[Phase 113] Post-death encounter investigation...
+  PASS: R/51 post-death encounter investigation exists (>= 200 lines)
+  PASS: R/51 reads validated_death_dates.rds
+  PASS: R/51 filters death_valid == TRUE (Pitfall 2 avoidance)
+  PASS: R/51 filters post_death_activity == TRUE
+  PASS: R/51 queries DuckDB ENCOUNTER table (D-05)
+  PASS: R/51 queries DuckDB DIAGNOSIS table (D-05)
+  PASS: R/51 reads treatment_episodes.rds (D-05)
+  PASS: R/51 computes days_after_death = as.numeric(date - DEATH_DATE)
+  PASS: R/51 has case_when gap_bucket with 0-30/31-90/91-365/>1 year (D-03)
+  PASS: R/51 labels source_table as ENCOUNTER/DIAGNOSIS/TREATMENT (D-06)
+  PASS: R/51 creates Patient Summary and Event Detail xlsx sheets (D-01)
+  PASS: R/51 uses dark gray header fill FF374151 (D-08)
+  PASS: R/51 calls close_pcornet_con() for connection cleanup
+  PASS: R/51 freezes panes on output sheets
+
+[Phase 114] Drug name consistency remediation...
+  PASS: MEDICATION_LOOKUP exists with 200+ entries (D-02, D-03)
+  PASS: REFERENCE_XLSX constant defined in R/00_config.R
+  PASS: R/26 fills blank drug_names from MEDICATION_LOOKUP (D-01, D-03)
+  PASS: R/26 reference fill occurs BEFORE episode aggregation (Pitfall 3)
+  PASS: R/42 has reference_descriptions from MEDICATION_LOOKUP (D-04, D-05)
+  PASS: R/42 precedence chain ends with reference_descriptions (5th source)
+  PASS: R/79 drug name consistency audit exists (>= 150 lines)
+  PASS: R/79 reads treatment_episode_detail.rds
+  PASS: R/79 reads code_descriptions.rds
+  PASS: R/79 uses MEDICATION_LOOKUP for comparison
+  PASS: R/79 creates Summary and Detail xlsx sheets (D-07)
+  PASS: R/79 uses dark gray header fill FF374151
+  PASS: R/79 freezes panes on output sheets
+  PASS: R/79 outputs drug_name_consistency_audit.xlsx
+  PASS: R/00_config defines DRUG_NAME_ALIASES + canonicalize_drug_name (quick iyh)
+  PASS: R/00_config applies canonicalize_drug_name to MEDICATION_LOOKUP (quick iyh)
+  FAIL: DRUG_NAME_ALIASES has NO liposomal key (liposomal kept distinct) (quick iyh)
+  PASS: R/27 applies canonicalize_drug_name to all_lookups$drug_name (quick iyh)
+
+[Phase 115] Gantt 7-day confirmed + age at episode...
+  PASS: R/52 EPISODES_SCHEMA includes episode_dx_7day_confirmed (Phase 115)
+  PASS: R/52 EPISODES_SCHEMA includes age_at_episode (Phase 115)
+  PASS: R/52 EPISODES_SCHEMA has 20 entries (Phase 115: +2 from 18)
+  PASS: R/52 sources utils_cancer.R for classify_codes (Phase 115)
+  PASS: R/52 references cancer_summary.csv (Phase 115)
+  PASS: R/52 filters two_or_more_unique_dates_gt_7 == 1 for 7-day confirmed (Phase 115)
+  PASS: R/52 queries DEMOGRAPHIC table for birth dates (Phase 115)
+  PASS: R/52 computes age_at_episode as integer floor (Phase 115)
+  PASS: R/52 applies clean_multi_value to episode_dx_7day_confirmed (Phase 115)
+  PASS: R/52 DETAIL_SCHEMA excludes episode_dx_7day_confirmed (Phase 115: episode-level only)
+  PASS: R/52 DETAIL_SCHEMA excludes age_at_episode (Phase 115: episode-level only)
+  PASS: R/52 Death pseudo-treatment includes episode_dx_7day_confirmed (Phase 115)
+  PASS: R/52 Death pseudo-treatment computes age_at_episode (Phase 115)
+  PASS: R/52 uses classify_codes() for 7-day code-to-category mapping (Phase 115)
+
+[Phase 116] RUCA rurality summary (R/100)...
+  PASS: data/reference/RUCA-codes-2020-zipcode.xlsx bundled (Phase 116 RUCA-01)
+  PASS: R/100_ruca_rurality_summary.R exists (Phase 116)
+  PASS: R/100 has 300+ lines (Phase 116)
+  PASS: R/100 references RUCA-codes-2020-zipcode.xlsx (RUCA-01)
+  PASS: R/100 defines ruca_tier_label() with 4 tiers Metro/Micro/Small/Rural (RUCA-02)
+  PASS: R/100 sources R/00_config.R
+  PASS: R/100 sources utils_payer.R (encounter-level payer)
+  PASS: R/100 sources utils_treatment.R + calls get_hl_patient_ids()
+  PASS: R/100 queries DEMOGRAPHIC table for ZIP_CODE (RUCA-02)
+  PASS: R/100 normalizes ZIP with str_pad(., 5, pad='0') (RUCA-02)
+  PASS: R/100 validates 5-digit numeric ZIP with str_detect (RUCA-02)
+  PASS: R/100 logs NA rurality count (RUCA-04)
+  PASS: R/100 reads treatment_episode_detail.rds (Sheet 3 treatment source)
+  PASS: R/100 reads treatment_episodes.rds (Sheet 4 cancer source)
+  PASS: R/100 creates 4+ worksheets via add_styled_sheet/add_worksheet (RUCA-03)
+  PASS: R/100 uses dark gray header fill FF374151
+  PASS: R/100 freezes panes on 4+ sheets (via add_styled_sheet helper)
+  PASS: R/100 saves ruca_rurality_summary.xlsx (RUCA-03)
+  PASS: R/100 constructs row/column totals (RUCA-05)
+  PASS: R/100 sorts ascending (arrange/sort) (RUCA-05, SORT-01)
+  PASS: R/100 sheet titles document grain (patient-level / encounter-level / episode-level)
+  PASS: R/100 has 7+ SECTION markers
+
+[Phase 117] Lifespan Gantt collapse (R/101)...
+  PASS: R/101_gantt_lifespan_collapse.R exists (Phase 117)
+  PASS: R/101 has 150+ lines (Phase 117)
+  PASS: R/101 sources R/00_config.R
+  PASS: R/101 reads gantt_episodes.csv (input) (LIFESPAN-01)
+  PASS: R/101 writes gantt_lifespan.csv (LIFESPAN-01)
+  PASS: R/101 collapses by patient_id x treatment_type (LIFESPAN-02)
+  PASS: R/101 excludes Death + HL Diagnosis pseudo-rows (LIFESPAN-03)
+  PASS: R/101 spans min(episode_start) -> max(episode_stop) (LIFESPAN-02)
+  PASS: R/101 unions multi-value fields via clean_multi_value (LIFESPAN-04)
+  PASS: R/101 re-derives is_hodgkin from cancer_category
+  PASS: R/101 defines LIFESPAN_SCHEMA + identical() schema check
+  PASS: R/101 writes with row.names=FALSE, na='' (Tableau CSV convention)
+  PASS: R/101 has NO ggplot/ggsave (data export only, D-01)
+  PASS: R/101 has 7+ SECTION markers
+
+[Phase 118] Death cause NHL flag (R/102)...
+  PASS: R/102_death_cause_nhl_flag.R exists (Phase 118)
+  PASS: R/102 has 100+ lines (Phase 118)
+  PASS: R/102 sources R/00_config.R
+  PASS: R/102 self-bootstraps DuckDB (Phase 118)
+  PASS: R/102 reads DEATH table (NHLDEATH-01)
+  PASS: R/102 has DEATH_CAUSE table-availability guard
+  PASS: R/102 handles 1900 date sentinel + drops NA dates
+  PASS: R/102 aggregates one death per patient (NHLDEATH-01)
+  PASS: R/102 classifies NHL via classify_codes (NHLDEATH-02)
+  PASS: R/102 three-state flag: NA/TRUE/FALSE (NHLDEATH-02)
+  PASS: R/102 emits PATID column header (NHLDEATH-03)
+  PASS: R/102 writes death_cause_nhl_flag.csv (NHLDEATH-03)
+  PASS: R/102 writes row.names=FALSE, na='' (blank NA cell)
+  PASS: R/102 has NO ggplot/ggsave (data export only)
+
+[Phase 119] Death cause NHL fix (R/102 -> DEATH_CAUSE table; R/103 diagnostic)...
+  PASS: R/103_death_cause_diagnostic.R exists (Phase 119)
+  PASS: R/103 inventories DEATH_CAUSE for the deceased set (Phase 119)
+  PASS: R/103 classifies NHL via classify_codes (Phase 119)
+  PASS: R/102 reads DEATH_CAUSE table (NHLFIX-03)
+  PASS: R/102 no longer reads cause from DEATH column (NHLFIX-03, negative)
+  PASS: R/102 prefers underlying cause (DEATH_CAUSE_TYPE == "U") (Phase 119)
+  PASS: R/102 joins cause onto deceased set via left_join (Phase 119)
+  PASS: R/102 three-state classify preserved (Phase 119)
+  PASS: R/102 output contract unchanged (PATID, na='', filename) (Phase 119)
+  PASS: R/102 has labeled proxy backstop (D-05) (Phase 119)
+  PASS: DEATH_CAUSE registered in PCORNET_TABLES (Phase 119)
+  PASS: DEATH_CAUSE_SPEC registered in TABLE_SPECS (Phase 119)
+  PASS: R/88 table-count assertion bumped to 16 (Phase 119)
+  PASS: output has non-zero TRUE or FALSE (Phase 119, HiPerGator)
+
+[quick-260710-i1e] Gantt entire history (R/104)...
+  PASS: R/104_gantt_entire_history.R exists (quick-260710-i1e)
+  PASS: R/104 has 100+ lines (quick-260710-i1e)
+  PASS: R/104 sources R/00_config.R
+  PASS: R/104 reads gantt_lifespan.csv (input)
+  PASS: R/104 reads gantt_episodes.csv (input)
+  PASS: R/104 reads blank-safe (na.strings='')
+  PASS: R/104 copies clean_multi_value + union_field
+  PASS: R/104 excludes Death + HL Diagnosis pseudo-rows
+  PASS: R/104 re-derives 7-day union grouped by patient_id x treatment_type
+  PASS: R/104 applies the 3 renames (treatment_start/stop, cancer_7day_confirmed)
+  PASS: R/104 asserts union mismatch non-fatally (n_mismatch + warning)
+  PASS: R/104 joins episodes-derived union via left_join
+  PASS: R/104 blank-safe write to gantt_entire_history.csv (na='', row.names=FALSE)
+  PASS: R/104 has NO ggplot/ggsave (data export only)
+
+[Phase 120] Supportive Care normalized_name (R/105)...
+  PASS: R/105_normalize_supportive_care_meaning.R exists (Phase 120)
+  PASS: R/105 has 150+ lines (Phase 120)
+  PASS: R/105 sources R/00_config.R
+  PASS: R/105 reads the Supportive Care sheet (start_row = 2)
+  PASS: R/105 calls the RxNav IN endpoint (related.json?tty=IN)
+  PASS: R/105 does NOT use properties.json (uses IN, not full clinical name)
+  PASS: R/105 has the historystatus retired-code fallback
+  PASS: R/105 reuses the httr2 req_retry wrapper
+  PASS: R/105 keeps combos as sorted-unique /-joined label (rxnav_IN_combo)
+  PASS: R/105 reuses canonicalize_drug_name for the rule-based fallback
+  PASS: R/105 writes the rxnorm_ingredient_cache.csv
+  PASS: R/105 appends normalized_name at col G (G2 header + G3 data)
+  PASS: R/105 has a round-trip verify (2nd wb_load + 171-row + 7-col asserts)
+  PASS: R/105 has NO ggplot/ggsave (data-mutation only)
+
+[Phase 121] ZIP change frequency (R/106)...
+  PASS: R/106_zip_change_frequency.R exists (Phase 121)
+  PASS: R/106 has 150+ lines (Phase 121)
+  PASS: R/106 sources R/00_config.R
+  PASS: R/106 probes LDS_ADDRESS_HISTORY via file.exists()
+  PASS: R/106 exits gracefully with quit(status = 0), not stop()
+  PASS: R/106 reads the ADDRESS_ZIP9 column
+  PASS: R/106 reads the ADDRESS_PERIOD_START column (time-between-changes)
+  PASS: R/106 has normalize_zip9 with hyphen strip
+  PASS: R/106 has normalize_zip5 (str_sub 1,5)
+  PASS: R/106 validates ZIP9 as 9 digits (^[0-9]{9}$)
+  PASS: R/106 computes per-patient distinct ZIP counts (group_by(ID) + n_distinct)
+  PASS: R/106 writes a styled xlsx (add_styled_sheet + wb_save)
+  PASS: R/106 applies HIPAA small-cell suppression (<=10)
+  PASS: R/106 defines ZIP_STUDY_PERIOD_MIN/MAX study-period constants
+  PASS: R/106 Section 9 filters period_start_dt against ZIP_STUDY_PERIOD_MIN/MAX
+  PASS: R/106 output xlsx exists with sheets (Phase 121, HiPerGator)
+
+[Phase 122] MED_ADMIN/DISPENSING chemo-detection gap fix (R/108 + helpers)...
+  PASS: MED_ADMIN fixture header has no RXNORM_CUI column (Phase 122)
+  PASS: DISPENSING fixture header has no RXNORM_CUI and no RAW_DISPENSE_MED_NAME (Phase 122)
+  PASS: get_chemo_hits defined in utils_treatment.R (Phase 122)
+  PASS: get_chemo_hits DISPENSING uses ndc_crosswalk[normalize_ndc lookup (Phase 122)
+  PASS: get_chemo_hits MED_ADMIN uses MEDADMIN_TYPE == "RX" (Phase 122)
+  PASS: load_ndc_crosswalk defined and degrades gracefully with return(character(0)) (Phase 122)
+  PASS: R/108_build_ndc_rxnorm_crosswalk.R exists (Phase 122)
+  PASS: R/01 DISPENSING_SPEC and MED_ADMIN_SPEC no longer declare phantom RXNORM_CUI (Phase 122)
+  PASS: R/01 has 2 D-12 revised Phase 122 comments (DISPENSING + MED_ADMIN specs) (Phase 122)
+  PASS: R/10 old RXNORM_CUI colnames guard removed (Phase 122)
+  PASS: R/11 old RXNORM_CUI colnames guard removed AND get_chemo_hits present (Phase 122)
+  PASS: R/26 chemo uses get_chemo_hits (>=2) AND 2 immuno RXNORM_CUI guards preserved (Phase 122)
+  PASS: R/20 has no RAW_DISPENSE_MED_NAME AND R/76 uses get_chemo_hits (Phase 122)
+  PASS: get_chemo_hits runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 122)
+
+[Phase 123] MED_ADMIN/DISPENSING fix before/after diff + NDC audit (R/109)...
+  PASS: R/109_med_admin_dispensing_fix_impact_audit.R exists (Phase 123)
+  PASS: R/109 uses get_chemo_hits for chemo source extraction (Phase 123)
+  PASS: R/109 before set is PRESCRIBING-only via get_chemo_hits (Phase 123)
+  PASS: R/109 after set includes MED_ADMIN and DISPENSING sources (Phase 123)
+  PASS: R/109 parses treatment_date with parse_pcornet_date after collect (Phase 123)
+  PASS: R/109 D-04 timing shift compares first_after < first_before (Phase 123)
+  PASS: R/109 D-05 per-ingredient delta maps via MEDICATION_LOOKUP[triggering_code] (Phase 123)
+  PASS: R/109 D-06 is guarded by file.exists(EPISODES_RDS) and does not source R/25/26/28 (Phase 123)
+  PASS: R/109 D-06 regimen impact labeled UPPER BOUND (Phase 123)
+  PASS: R/109 D-09 IS_LOCAL-gated with ndcproperties and ndcstatus endpoints (Phase 123)
+  PASS: R/109 D-09 writes ndc_rxnorm_crosswalk_requery.csv (NOT overwriting audit CSV) (Phase 123)
+  PASS: R/109 D-10 flags CANDIDATE_CHEMO_GAP without modifying TREATMENT_CODES$chemo_rxnorm (Phase 123)
+  PASS: R/109 D-11 writes single xlsx via wb_workbook() and wb$save(OUTPUT_XLSX) (Phase 123)
+  PASS: R/109 runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 123)
+
+[Phase 124] Output-level before/after report + unmapped-name audit (R/110)...
+  PASS: R/110_output_level_before_after_report.R exists (Phase 124)
+  PASS: R/110 BEFORE baseline reads treatment_episodes_pre_p124.rds (Phase 124, D-03)
+  PASS: R/110 BEFORE baseline reads gantt_episodes_pre_p124.csv (Phase 124, D-03)
+  PASS: R/110 add_styled_sheet called >= 6 times (defn + 5 sheets): found 6 (Phase 124)
+  PASS: R/110 suppress_small called >= 5 times (D-15 HIPAA): found 9 (Phase 124)
+  PASS: R/110 references output_level_before_after_report.xlsx output path (Phase 124)
+  PASS: R/110 D-08 unmapped detection uses canonicalize_drug_name (Phase 124)
+  PASS: R/110 contains Regimen Distribution sheet (D-02/D-09, Phase 124)
+  PASS: R/110 contains payer-anchor window sheet (D-02, Phase 124)
+  PASS: R/110 contains first-chemo timing shift analysis (Phase 124)
+  PASS: R/110 has >= 2 file.exists() guards (Windows-parse safe): found 8 (Phase 124)
+  PASS: R/110 is NOT wired into R/39_run_all_investigations.R (one-off analysis, Phase 124)
+  PASS: R/110 runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 124)
+
+[Phase 130] Diagnosis-of-Interest (DoI) layer validation (R/111 + R/112)...
+  PASS: DOI_CODE_MAP exists as a named character vector (Phase 130)
+  PASS: DOI_CODE_MAP has >= 20 keys (found 35) (Phase 130)
+  PASS: ZERO DOI_CODE_MAP <-> cancer-map key collision (overlap: 0) (Phase 130)
+  PASS: R/utils/utils_doi.R exists (Phase 130)
+  PASS: R/111_doi_classification.R exists (Phase 130)
+  PASS: R/112_doi_attribution_report.R exists (Phase 130)
+  PASS: is_doi_code('M05.9','10') is TRUE and is_doi_code('C81.90','10') is FALSE (Phase 130)
+  PASS: is_doi_code('M05.9', NA) is FALSE (DX_TYPE gate rejects non ICD-9/10) (Phase 130)
+  PASS: is_doi_code('714.0','09') is TRUE (ICD-9 RA) (Phase 130)
+  PASS: classify_doi_codes('M05.9') == 'Rheumatoid Arthritis' (found 'Rheumatoid Arthritis') (Phase 130)
+  PASS: R/39 registers R/111 before R/112 and expected_xlsx includes doi_attribution_report.xlsx (Phase 130, DOI-QA-01)
+  PASS: R/111 .rds artifacts have expected columns and are non-empty (Phase 130, HiPerGator)
+  PASS: R/112 xlsx has exactly the 4 expected sheets (Phase 130, HiPerGator)
+  [Phase 130 RUNTIME] DoI category counts (log verbatim into phase notes):
+    Hematologic Autoimmune: 10797
+    SLE / Connective Tissue: 5816
+    Rheumatoid Arthritis: 5801
+    Inflammatory Bowel Disease: 4128
+    Psoriasis: 1740
+    Inflammatory Myopathy: 1657
+    Neurological Autoimmune: 1154
+    Vasculitis: 1020
+    Pemphigoid: 94
+    Pemphigus: 42
+  PASS: R/111 real-data DoI counts non-empty with RA present (Phase 130, HiPerGator; log into phase notes)
+
+[Phase 131] MED_ADMIN/DISPENSING NDC generalization + Medication column validation (R/utils/utils_treatment.R + R/00_config.R + R/50)...
+  PASS: get_chemo_hits() has a return_source parameter (Phase 131)
+  PASS: MED_ADMIN branch tags MED_ADMIN (RX) and MED_ADMIN (NDC) distinctly (Phase 131)
+  PASS: R/50 queries get_chemo_hits("DISPENSING", ...) (Phase 131)
+  PASS: R/50 RXNORM loop filters code_type == RXNORM (Phase 131)
+  PASS: R/50 dedupes on distinct(ID, treatment_date, code[, source]) (Phase 131)
+  PASS: R/50 coalesces dyn_source_table with static_source_table (Phase 131)
+  PASS: MEDICATION_LOOKUP builder selects Supportive Care col G via ncol(sheet_df) (Phase 131)
+  PASS: fallback_normalize_medication() exists and handles HCPCS J-code pattern (Phase 131)
+  PASS: fallback_normalize_medication() detects " / "-delimited multi-ingredient compounds (Phase 131)
+  PASS: all_codes_df$medication case_when gates Radiation and SCT non-RXNORM to NA (Phase 131)
+  PASS: resolved_xlsx_layout(category) called by both writers, 2 sites (Phase 131)
+  PASS: resolved_xlsx_layout() excludes Radiation from Medication column (has_medication <- category != "Radiation") (Phase 131)
+
+[Phase 132] Crash fix regression guard (bare n + purrr)...
+  PASS: R/74_generate_documentation.R has no bare 'n' editor-artifact line (Phase 132)
+  PASS: R/81_parity_test_cohort.R has no bare 'n' editor-artifact line (Phase 132)
+  PASS: R/82_benchmark_cohort.R has no bare 'n' editor-artifact line (Phase 132)
+  PASS: R/83_generate_speedup_report.R has no bare 'n' editor-artifact line (Phase 132)
+  PASS: R/84_test_durations.R has no bare 'n' editor-artifact line (Phase 132)
+  PASS: R/85_test_episodes.R has no bare 'n' editor-artifact line (Phase 132)
+  PASS: R/84 attaches library(purrr) for walk() (Phase 132)
+  PASS: R/85 retains >= 2 purrr::walk(message) call sites (found 2) (Phase 132)
+
+[PROTON] Proton therapy category split validation (Phase 94)...
+  PASS: TREATMENT_TYPES has 5 elements (was 4 before Phase 94)
+  PASS: TREATMENT_TYPES contains 'Proton Therapy'
+  PASS: All 4 proton codes (77520, 77522, 77523, 77525) map to 'Proton Therapy' via LOOKUP_TABLES_DT keyed join
+  PASS: Proton codes (77520, 77522, 77523, 77525) are NOT in TREATMENT_CODES$radiation_cpt
+  PASS: TREATMENT_CODES$proton_cpt exists with 4 codes
+  PASS: TREATMENT_TYPE_COLORS has 'Proton Therapy' entry
+  PASS: R/10 defines has_proton() function
+  PASS: R/14 calls has_proton()
+  PASS: R/14 joins HAD_PROTON to cohort
+  PASS: R/26 defines extract_proton_dates_with_codes()
+  PASS: R/25 defines extract_proton_dates()
+  PASS: R/20 defines extract_proton_codes()
+  PASS: DRUG_GROUPINGS Radiation section updated to 11 codes (was 15)
+
+[30/33] Phase 87: ICD-9 cancer code infrastructure...
+  PASS: ICD9_CANCER_SITE_MAP exists (72 entries)
+  PASS: All 64 assigned malignant ICD-9 prefixes mapped (6 unassigned gaps excluded)
+  PASS: No benign/uncertain ICD-9 codes (210-239) in ICD9_CANCER_SITE_MAP
+  PASS: ICD-9 HL subcategory discrimination correct (2014=NLPHL, 201=classical)
+  PASS: is_cancer_code() defined in R/utils/utils_cancer.R
+  PASS: R/56 uses shared is_cancer_code() (no local definition)
+  PASS: No DX_TYPE=="10" hard-filters in cancer summary pipeline
+  PASS: All 45 ICD-9 categories match ICD-10 category strings
+
+[31/33] Phase 88: Instance-level drug grouping tables...
+  PASS: R/57_drug_grouping_instances.R exists
+  PASS: R/57 sources R/00_config.R
+  PASS: R/57 sources R/utils/utils_assertions.R
+  PASS: R/57 sources R/utils/utils_duckdb.R
+  PASS: R/57 sources R/utils/utils_cancer.R
+  PASS: R/57 reads treatment_episode_detail.rds input (encounter-level)
+  PASS: R/57 outputs encounter_level_drug_grouping_instances.xlsx (new) and drug_grouping_instances.xlsx (compat)
+  PASS: R/57 has grain-prefixed sheets (Enc Sub-Category Detail + Enc Treatment Detail)
+  PASS: R/57 defines map_cancer_codes_to_categories helper function
+  PASS: R/57 uses both CANCER_SITE_MAP and ICD9_CANCER_SITE_MAP for code-to-category mapping
+  PASS: R/57 sorts cancer categories ascending (Phase 112 universal sort)
+  PASS: R/57 uses 3-tier sub-category lookup (xlsx, CODE_SUBCATEGORY_MAP, fallback)
+  PASS: R/57 has >= 7 section headers (found: 9)
+  PASS: R/57 does NOT aggregate with encounter_count (instance-level output)
+  PASS: R/57 uses is_cancer_code() from shared utility
+  PASS: R/57 Table 2 uses ENCOUNTERID for encounter-level grain
+
+[30/32] R/30 CONDITION linkage investigation validation...
+  PASS: R/30_condition_linkage_investigation.R exists
+  PASS: R/30 queries CONDITION table via get_pcornet_table()
+  PASS: R/30 filters CONDITION_TYPE to ICD-9 ('09') and ICD-10 ('10')
+  PASS: R/30 uses 'condition_encounter' link method label
+  PASS: R/30 uses 'condition_date' link method label
+  PASS: R/30 uses classify_codes() for cancer category assignment
+  PASS: R/30 uses ONSET_DATE for temporal matching
+  PASS: R/30 does NOT use REPORT_DATE for temporal matching
+  PASS: R/30 filters to unlinked episodes (cancer_link_method == 'none')
+  PASS: R/30 does NOT call saveRDS on treatment_episodes.rds (read-only investigation)
+  PASS: R/30 loads existing workbook via wb_load()
+  PASS: R/30 creates 'Linkage Improvement' sheet
+  PASS: R/30 produces treatment type breakdown
+  PASS: R/30 closes DuckDB connection via close_pcornet_con()
+  PASS: R/30 header contains decision traceability (D-01 through D-10)
+  PASS: episode_classification_audit.xlsx contains 'Linkage Improvement' sheet
+  PASS: 'Linkage Improvement' sheet has expected columns (Metric, Count, Percent)
+  PASS: 'Linkage Improvement' sheet contains 'Total episodes' row
+  PASS: 'Linkage Improvement' sheet contains 'Improvement' row
+
+[31/35] Phase 101: Broadened drug grouping output validation...
+  PASS: R/57 creates table1_all (broadened, all encounters)
+  PASS: R/57 creates table2_all (broadened, all encounters)
+  PASS: R/57 derives cancer_linked from !is.na(cancer_codes)
+  PASS: R/57 creates table1_linked (cancer-linked-only backward compat)
+  PASS: R/57 creates table2_linked (cancer-linked-only backward compat)
+  PASS: R/57 retains reference code filter (valid_reference_codes OR Immunotherapy)
+  PASS: R/57 removes cancer_linked from linked-only export (select(-cancer_linked))
+  PASS: R/57 creates cross-tab summary (crosstab_summary)
+  PASS: R/57 has 'Linked vs Unlinked' sheet in broadened workbook
+  PASS: R/57 defines linked-only output paths (_linked_only suffix)
+  PASS: R/57 creates separate broadened workbook (wb_broad)
+  PASS: R/57 creates separate linked-only workbook (wb_linked)
+  PASS: R/57 has Section 6B for cross-tab summary
+  PASS: R/57 header contains Phase 101 decision traceability (D-01 through D-09)
+  PASS: Broadened xlsx has 3 sheets
+  PASS: Linked-only xlsx has 2 sheets
+  PASS: Broadened xlsx contains 'Linked vs Unlinked' sheet
+  PASS: Broadened Sheet 1 contains cancer_linked column
+  PASS: Linked-only Sheet 1 does NOT contain cancer_linked column
+  PASS: Broadened has >= rows than linked-only (broadened is superset)
+  PASS: Cross-tab has treatment_type, linked_count, unlinked_count columns
+
+[32/35] Phase 109: Co-administration analysis validation...
+  PASS: R/58 filters to Chemotherapy treatment_type
+  PASS: R/58 excludes regimen-classified encounters via anti_join
+  PASS: R/58 references TREATMENT_CODES$chemo_icd9 for ICD9 procedure codes (D-01)
+  PASS: R/58 references TREATMENT_CODES$chemo_dx_icd9 for diagnosis encounter codes (D-01)
+  PASS: R/58 references TREATMENT_CODES$chemo_dx_icd10 for diagnosis encounter codes (D-01)
+  PASS: R/58 references TREATMENT_CODES$chemo_icd10pcs_prefixes for PCS route codes (D-01)
+  PASS: R/58 builds NON_SPECIFIC_EXACT for exact-match non-specific codes (D-01)
+  PASS: R/58 builds NON_SPECIFIC_PCS_RX regex for prefix-match PCS codes (D-01)
+  PASS: R/58 groups by patient_id and treatment_date for single-agent ID (D-03)
+  PASS: R/58 uses n_distinct(triggering_code) for single-agent count (D-03/D-05)
+  PASS: R/58 uses agent-exclusion: triggering_code != i.triggering_code (D-04)
+  PASS: R/58 does NOT use encounter-exclusion: no ENCOUNTERID != i.ENCOUNTERID (D-04)
+  PASS: R/58 uses 30-day window for co-administration
+  PASS: R/58 has index_date column (date grain, D-07)
+  PASS: R/58 has index_drug_code column (D-07)
+  PASS: R/58 has coadmin_date column (date grain, D-07)
+  PASS: R/58 has coadmin_drug_code column (D-07)
+  PASS: R/58 does NOT have index_encounter_id (encounter IDs removed per D-07)
+  PASS: R/58 does NOT have coadmin_encounter_id (encounter IDs removed per D-07)
+  PASS: R/58 calculates days_apart for temporal analysis
+  PASS: R/58 includes index_drug_name and coadmin_drug_name
+  PASS: R/58 creates 'Co-Administration Detail' sheet (D-06)
+  PASS: R/58 creates 'Pattern Summary' sheet (D-06)
+  PASS: R/58 uses pmin/pmax for symmetric pair deduplication
+  PASS: R/58 sources R/00_config.R
+  PASS: R/58 does NOT contain saveRDS (investigation only)
+  PASS: R/58 uses assert_rds_exists for input validation
+  PASS: R/58 uses data.table cartesian join (allow.cartesian)
+  PASS: R/58 header contains Phase 109 decision traceability (D-01 through D-07)
+  PASS: co_administration_analysis.xlsx has 2 sheets
+  PASS: Sheet 1 is 'Co-Administration Detail'
+  PASS: Sheet 2 is 'Pattern Summary'
+  PASS: Detail table has exactly 8 date-grain columns (D-07)
+  PASS: Detail table does NOT contain encounter ID columns
+  PASS: Pattern Summary contains n_instances column
+  PASS: Pattern Summary contains n_patients column
+  PASS: Pattern Summary is sorted descending by n_instances
+
+[33/35] Phase 103: Death date cross-tab summary validation...
+  PASS: R/59 sources R/00_config.R (D-01)
+  PASS: R/59 does NOT contain saveRDS (D-01: investigation only)
+  PASS: R/59 reads validated_death_dates.rds (D-02)
+  PASS: R/59 reads confirmed_hl_cohort.rds for cohort denominator (D-02, D-04)
+  PASS: R/59 queries ENCOUNTER table via get_pcornet_table (D-02)
+  PASS: R/59 builds cascading summary with death_is_last metric (D-03)
+  PASS: R/59 filters death_valid == TRUE (Pitfall 2 avoidance)
+  PASS: R/59 uses DEATH_DATE >= last_encounter_date comparison (R/29 parity)
+  PASS: R/59 uses post_death_activity flag (Phase 59)
+  PASS: R/59 logs DEATH-01 verification label (D-05)
+  PASS: R/59 creates 'Death Date Summary' worksheet (D-07)
+  PASS: R/59 uses FF374151 header fill color (D-08)
+  PASS: R/59 uses assert_rds_exists for input validation
+  PASS: R/59 does NOT apply automatic HIPAA suppression (D-06)
+  PASS: death_date_summary.xlsx has 1 sheet
+  PASS: Sheet 1 is 'Death Date Summary'
+  PASS: Summary table has Metric column
+  PASS: Summary table has Count column
+  PASS: Summary table has 4 data rows (cascading structure per D-03)
+
+[34/37] Phase 104 R/31: Pre-diagnosis treatment flagging validation...
+  PASS: R/31 sources R/00_config.R
+  PASS: R/31 does NOT contain saveRDS (investigation only per D-08)
+  PASS: R/31 reads treatment_episodes.rds
+  PASS: R/31 reads confirmed_hl_cohort.rds
+  PASS: R/31 joins on patient_id = ID (correct join key)
+  PASS: R/31 filters episode_start < first_hl_dx_date (pre-dx filter)
+  PASS: R/31 guards sentinel dates year > 1900 (Pitfall 5)
+  PASS: R/31 computes days_before_dx
+  PASS: R/31 creates 'Summary' worksheet
+  PASS: R/31 creates 'Detail' worksheet
+  PASS: R/31 uses FF374151 header fill color
+  PASS: R/31 uses assert_rds_exists for input validation
+  PASS: R/31 does NOT apply automatic HIPAA suppression (D-09)
+
+[35/37] Phase 104 R/32: Secondary malignancy table validation...
+  PASS: R/32 sources R/00_config.R
+  PASS: R/32 sources utils_cancer.R
+  PASS: R/32 does NOT contain saveRDS (investigation only per D-04)
+  PASS: R/32 reads confirmed_hl_cohort.rds (D-05)
+  PASS: R/32 queries DIAGNOSIS table via get_pcornet_table
+  PASS: R/32 uses is_cancer_code for cancer filtering
+  PASS: R/32 excludes both ICD-10 C81 and ICD-9 201 HL codes (Pitfall 2)
+  PASS: R/32 applies 7-day gap criterion (D-06)
+  PASS: R/32 uses classify_codes for cancer site classification
+  PASS: R/32 implements pre/post HL split (D-07)
+  PASS: R/32 uses total_cohort as denominator (D-07, Pitfall 3)
+  PASS: R/32 creates 'Summary' worksheet
+  PASS: R/32 creates 'Detail' worksheet
+  PASS: R/32 uses FF374151 header fill color
+  PASS: R/32 does NOT apply automatic HIPAA suppression (D-09)
+
+[36/41] Phase 105 R/33: Code verification validation...
+  PASS: R/33 sources R/00_config.R
+  PASS: R/33 sources utils_duckdb.R
+  PASS: R/33 sources utils_assertions.R
+  PASS: R/33 queries PRESCRIBING table (CODE-01)
+  PASS: R/33 includes etanercept RxNorm codes
+  PASS: R/33 queries revenue code 0362 (CODE-02)
+  PASS: R/33 checks Z94.84 SCT status code (CODE-03)
+  PASS: R/33 checks T86.5 SCT complications code
+  PASS: R/33 checks T86.09 BMT complications code
+  PASS: R/33 outputs code_verification.xlsx
+  PASS: R/33 creates openxlsx2 workbook
+  PASS: R/33 has Summary sheet
+  PASS: R/33 has CODE-01 Detail sheet
+  PASS: R/33 has CODE-02 Detail sheet
+  PASS: R/33 has CODE-03 Detail sheet
+  PASS: R/33 does NOT saveRDS (investigation script)
+  PASS: R/33 uses styled header fill (FF374151)
+  PASS: R/33 has 7+ SECTION markers
+
+[37/41] Phase 105 R/34: HL+NHL overlap validation...
+  PASS: R/34 sources R/00_config.R
+  PASS: R/34 sources utils_duckdb.R
+  PASS: R/34 queries DIAGNOSIS table
+  PASS: R/34 detects NHL ICD-10 codes (C82-C86)
+  PASS: R/34 detects HL ICD-9 codes (201)
+  PASS: R/34 detects HL ICD-10 codes (C81)
+  PASS: R/34 computes days_between for temporal analysis
+  PASS: R/34 identifies same-day diagnoses
+  PASS: R/34 assigns temporal categories
+  PASS: R/34 loads confirmed HL cohort as denominator
+  PASS: R/34 outputs hl_nhl_overlap_validation.xlsx
+  PASS: R/34 creates openxlsx2 workbook
+  PASS: R/34 has Summary sheet
+  PASS: R/34 has Patient Detail sheet
+  PASS: R/34 has Pattern Analysis sheet
+  PASS: R/34 does NOT saveRDS (investigation script)
+  PASS: R/34 uses styled header fill (FF374151)
+  PASS: R/34 has 7+ SECTION markers
+
+[38/41] Phase 106 R/36: Tableau-ready tables validation...
+  PASS: R/36 sources R/00_config.R
+  PASS: R/36 sources utils_duckdb.R
+  PASS: R/36 sources utils_assertions.R
+  PASS: R/36 sources utils_cancer.R
+  PASS: R/36 loads treatment_episode_detail.rds
+  PASS: R/36 queries DuckDB DIAGNOSIS table
+  PASS: R/36 uses is_cancer_code() filter
+  PASS: R/36 uses COMMA separator for cancer_codes (not semicolon)
+  PASS: R/36 outputs tableau_table1_encounter_cancer_codes.xlsx
+  PASS: R/36 filters to Chemotherapy for TABLE-2
+  PASS: R/36 resolves medication_name via MEDICATION_LOOKUP
+  PASS: R/36 loads reference xlsx for drug mappings
+  PASS: R/36 outputs tableau_table2_chemo_drugs_by_class.xlsx
+  PASS: R/36 TABLE-2 groups by patient+date (Phase 111 D-08)
+  PASS: R/36 TABLE-2 collapses agents string (Phase 111 D-06)
+  PASS: R/36 TABLE-2 merges cancer_codes via strsplit (Phase 111 D-03)
+  PASS: R/36 TABLE-2 uses .groups = 'drop' in summarise
+  PASS: R/36 creates openxlsx2 workbook
+  PASS: R/36 uses col_names = TRUE for Tableau compatibility
+  PASS: R/36 does NOT saveRDS (export script)
+  PASS: R/36 has 7+ SECTION markers
+
+[40/43] Phase 107 R/37: Gap resolution report validation...
+  PASS: R/37 Rmd file exists
+  PASS: R/37 specifies html_document output
+  PASS: R/37 specifies self_contained: true
+  PASS: R/37 specifies floating TOC
+  PASS: R/37 loads readxl library
+  PASS: R/37 loads kableExtra library
+  PASS: R/37 reads G1 condition_linkage xlsx
+  PASS: R/37 reads G5 pre_diagnosis_treatments xlsx
+  PASS: R/37 reads G8/G10/G11 code_verification xlsx
+  PASS: R/37 reads G4 hl_nhl_overlap xlsx
+  PASS: R/37 reads G15 death_date_summary xlsx
+  PASS: R/37 uses kbl() for table rendering
+  PASS: R/37 uses kable_styling()
+  PASS: R/37 does NOT use JavaScript table libraries
+
+[41/43] Phase 107 R/38: Delivery manifest validation...
+  PASS: R/38 script exists
+  PASS: R/38 loads openxlsx2 library
+  PASS: R/38 loads dplyr library
+  PASS: R/38 uses file.exists() for validation
+  PASS: R/38 uses file.info() for metadata
+  PASS: R/38 creates wb_workbook for xlsx output
+  PASS: R/38 uses FF374151 header styling
+  PASS: R/38 uses freeze_pane
+  PASS: R/38 outputs delivery_manifest.xlsx
+  PASS: R/38 references condition_linkage_investigation.xlsx (v3.1)
+  PASS: R/38 references pre_diagnosis_treatments.xlsx (v3.2)
+  PASS: R/38 does NOT contain saveRDS (export script)
+
+[42/43] DuckDB integration validation...
+  PASS: DuckDB file accessible at CONFIG path (pcornet.duckdb)
+  PASS: DuckDB contains >= 13 tables (found 16)
+
+[FIXTURE] Fixture schema validation -- SKIPPED (production mode)
+
+=== SECTION 15aa: Phase 135 Pattern Regression Checks ===
+  PASS [PATTERN-B: is_cancer_code lowercase]
+  PASS [PATTERN-B: classify_codes dotted==undotted]
+  PASS [PATTERN-B: classify_doi_codes dotted==undotted]
+  PASS [PATTERN-B: utils_cancer .normalize_code defined]
+  PASS [PATTERN-B: R/42 no dotted keys in hardcoded block]
+  PASS [PATTERN-C: R/40 no ^[CD] filter]
+  PASS [PATTERN-C: R/43 no ^[CD] filter]
+  PASS [PATTERN-C: R/44 no ^[CD] filter]
+  PASS [PATTERN-D: R/21 uses req_retry]
+  PASS [PATTERN-D: R/27 transient set includes 500]
+  PASS [PATTERN-D: R/21 no bare httr::GET in lookup function]
+  PASS [PATTERN-F: 21_investigate_unmatched.R has verify-before-write]
+  PASS [PATTERN-F: 22_investigate_unmatched_ndc.R has verify-before-write]
+  PASS [PATTERN-F: 50_all_codes_resolved.R has verify-before-write]
+  PASS [PATTERN-F: 98_radiation_cpt_audit.R has verify-before-write]
+  PASS [PATTERN-G: R/14 uses min_or_na for ENR_START_DATE]
+  PASS [PATTERN-G: R/53 has death-before-birth check]
+  PASS [PATTERN-G: R/93 uses coalesce for HAD_CHEMO]
+  PASS [PATTERN-G: min_or_na returns NA for all-NA input]
+  PASS [PATTERN-H: R/56 no encounter_count = n() definition]
+  PASS [PATTERN-H: R/57 no encounter_count = n() definition]
+  PASS [PATTERN-H: R/67 uses n_total_dates]
+  PASS [PATTERN-A: R/33 Patient_Count uses n_distinct]
+  PASS [PATTERN-A: R/23 grand total uses n_distinct]
+  PASS [PATTERN-A: R/43 TOTAL block uses n_distinct]
+  PASS [PATTERN-A: R/44 TOTAL block uses n_distinct]
+  PASS [PATTERN-A: R/50 grand total uses n_distinct]
+  PASS [PATTERN-A: R/100 Sheet 1 uses n_distinct for PATID]
+Section 15aa: 28 PASS, 0 FAIL
+
+=== SECTION 15ab: ZIP9 Temporal Lookup (Phase 137) ===
+  PASS  R/114_zip9_temporal_lookup.R exists
+  PASS  R/utils/utils_address.R exists
+  PASS  get_zip9_at_date defined in utils_address.R
+  PASS  normalize_zip9 defined in utils_address.R
+  PASS  normalize_zip5 defined in utils_address.R
+  PASS  Probe gate (file.exists(addr_path)) present in R/114
+  PASS  xlsx probe gate (file.exists(OUTPUT_XLSX)) present in R/114
+  PASS  wb_load() used in R/114 (anti-pattern guard: wb_load not new-workbook constructor)
+  PASS  get_zip9_at_date called in R/114
+  PASS  match_type column documented in utils_address.R
+  PASS  R/113 registered in R/39 investigation_scripts vector
+  PASS  R/114 registered in R/39 investigation_scripts vector
+  PASS  R/114 present in SCRIPT_INDEX.md
+  PASS  utils_address.R present in SCRIPT_INDEX.md
+Section 15ab: 14 PASS, 0 FAIL
+
+--- Section 15ac: Phase 138 log2.txt fix assertions ---
+  [PASS] R/13 source file present
+  [PASS] R/03 source file present
+  [PASS] R/53 source file present
+  [PASS] R/13: no gsub applied to DX column in lazy filter
+  [PASS] R/13: combined dotted+undotted IN-lists present
+  [PASS] R/13: superseded *_clean vectors removed
+  [PASS] R/03: tables_ingested uses <- not <<- (scoping fix)
+  [PASS] R/03: ingest_log uses <- not <<- (same root cause, line 199)
+  [PASS] R/03: df[[cc]] <<- PRESERVED in encoding handler (D-04a)
+  [PASS] R/03: ingest-count guard present after loop
+  [PASS] R/53: DEMOGRAPHIC select does not reference PATID column
+  [PASS] R/53: DEMOGRAPHIC select uses ID directly
+Section 15ac: 12 PASS, 0 FAIL
+
+--- Section 15ad: Phase 139 ZIP stability + imputation occurrence counts assertions ---
+  [PASS] R/115_zip_stability_counts.R exists
+  [PASS] R/utils/utils_address.R exists
+  [PASS] tests/testthat/test-115-validation-curve.R exists
+  [PASS] is_sentinel_zip5() defined in utils_address.R, exactly once
+  [PASS] get_zip9_at_date() defined in utils_address.R (unchanged, Out of Scope for Phase 139)
+  [PASS] coalesce_zip5() defined in R/115, exactly once (single ZIP5-coalescing implementation)
+  [PASS] R/115 contains zip5_coalesced (ZIP5 coalescing present)
+  [PASS] R/115 contains scenario_assigned (Part B present)
+  [PASS] R/115 contains compute_c02 (C-02 reconciliation present, cohort-scoped)
+  [PASS] R/115 contains waterfall_encounter (Part C present)
+  [PASS] R/115 contains waterfall_patient (Part C present)
+  [PASS] R/115 contains period_end_eff (139-05-PATCH FIX-02 present)
+  [PASS] test-115-validation-curve.R contains at least 6 test_that( calls (all fixtures present)
+  [PASS] R/115 registered in R/39's investigation_scripts vector
+Section 15ad: 14 PASS, 0 FAIL
+
+--- Section 15ae: Phase 144 centroid ZIP9 imputation + encounter SES index ---
+  [PASS] R/116_encounter_ses_index.R exists
+  [PASS] R/utils/utils_address.R exists (Tier 3 target)
+  [PASS] tests/testthat/test-utils-address-tier3.R exists
+  [PASS] utils_address.R contains centroid_zip9_lookup_cache (Tier 3 cache object)
+  [PASS] utils_address.R contains 'zip5_centroid' zip9_source value
+  [PASS] .classify_zip9_source has centroid_lookup parameter (Tier 3 plumbing)
+  [PASS] utils_address.R contains centroid crosswalk probe gate (file.exists(centroid_path))
+  [FAIL] utils_address.R guards against synthetic ZIP9s ending in '0000' (P0-01)
+  [PASS] get_zip9_at_date() is unchanged (Out of Scope, Phase 137)
+  [PASS] R/116 contains get_zip9_at_date call
+  [PASS] R/116 contains approximate_zip9 call
+  [PASS] R/116 contains probe gate for all 4 reference files (has_ruca, has_sdi, has_adi, has_svi)
+  [PASS] R/116 output RDS path matches D-06 pattern (encounter_ses_index_YYYYMMDD.rds)
+  [PASS] R/116 output xlsx path matches D-06 pattern (encounter_ses_index_summary_YYYYMMDD.xlsx)
+  [PASS] R/116 output columns include all 12 required fields
+  [PASS] R/116 asserts the SES joins did not fan out
+  [PASS] R/116 scopes the encounter pull to patients present in the address extract
+  [PASS] R/116 uses open_pcornet_con() / get_pcornet_table() (D-07: DuckDB pattern)
+  [PASS] R/116 registered in R/39's investigation_scripts vector
+  [PASS] R/116 row present in R/SCRIPT_INDEX.md
+  [PASS] test-utils-address-tier3.R contains at least 5 test_that() calls
+  [PASS] test-utils-address-tier3.R tests zip5_centroid zip9_source value
+Section 15ae: 21 PASS, 1 FAIL
+======================================================================
+FAILED: 2/780 checks failed
+======================================================================
+
+Validated requirements:
+  * REORG-01: Script renumbering across all decades
+  * REORG-02: Source() reference resolution
+  * REORG-03: Utils auto-sourcing from R/utils/
+  * REORG-04: Archive structure
+  * REORG-05: No broken cross-references
+  * SAFE-06: Comprehensive smoke test suite
+  * DRY-01: No duplicate PREFIX_MAP/TIER_MAPPING/classify_codes
+  * SAFE-01: assert_rds_exists() infrastructure
+  * SAFE-02: assert_df_valid() infrastructure
+  * SAFE-03: Error messages with context (glue)
+  * CANCER-01: NLPHL mutual exclusivity (classify_codes)
+  * CANCER-01: NLPHL diagnostic split in R/49 console output
+  * CANCER-02: 7-day gap extension applied to all cancer categories in R/49 v2 output
+  * CANCER-03: Per-episode triggering_code_description and drug_group columns (R/28)
+  * DEATH-01: Death cause quality profiling (R/35)
+  * DEATH-02: Cause of death in Gantt v2 exports (R/52)
+  * DEATH-01/02: DEATH_CAUSE_MAP structure and coverage
+  * TREAT-01: Tumor registry source removed from treatment pipeline
+  * TREAT-01: Coverage analysis output validates removal impact
+  * TREAT-02: DRUG_GROUPINGS centralization from xlsx
+  * CODE-01: Replaced-by code verification (R/55)
+  * CODE-02: SCT 0362 investigation (R/54)
+  * TREAT-03: Drug grouping summary tables (R/56)
+  * P82-INTEGRATE: Encounter-level dx deduplication in R/56 Table 1
+  * P82-FLAG: dx_only used internally for dedup (not in Table 1 output)
+  * CODE-01: Etanercept immunotherapy classification verification (R/33 Phase 105)
+  * CODE-02: Organ transplant code 0362 cross-check (R/33 Phase 105)
+  * CODE-03: SCT diagnosis codes above line 22 validation (R/33 Phase 105)
+  * OVERLAP-01: HL+NHL dual-code temporal validation report (R/34 Phase 105)
+  * ENV-01: IS_LOCAL auto-detection via Sys.info()
+  * ENV-02: R_TESTING_ENV override readable
+  * ENV-03: Local mode paths (tests/fixtures, tempdir)
+  * ENV-04: Production mode safe defaults (/orange, /blue)
+  * ENV-05: Startup logging (validated by sourcing 00_config.R)
+  * ENV-06: THREAD_COUNT configuration
+  * INFRA-01: file.path() usage (no hardcoded separators)
+  * INFRA-03: Automatic directory creation
+  * INFRA-04: .Renviron.example template exists
+  * ICD-06: Shared is_cancer_code() utility in R/utils/utils_cancer.R
+  * ICD-07: R/56 uses shared utility (no local is_cancer_code)
+  * ICD-08: No DX_TYPE=='10' hard-filters in R/45, R/47, R/48, R/49
+  * ICD-09: ICD9_CANCER_SITE_MAP completeness (70 malignant prefixes)
+  * ICD-10: No benign/uncertain codes (210-239) in ICD9_CANCER_SITE_MAP
+  * ICD-11: ICD-9 HL subcategory discrimination (2014=NLPHL, 201=classical)
+  * ICD-12: Category string consistency across ICD-9/ICD-10 maps
+  * P88-D01/D02: Instance-level tables in separate xlsx (R/57)
+  * P88-D03: Sub-category names via 3-tier resolution
+  * P88-D04: Cancer site category names from CANCER_SITE_MAP + ICD9_CANCER_SITE_MAP
+  * P88-D05/D06: Per-episode rows with patient_id, dates, treatment_category
+  * P88-D07/D08: New encounter_level_drug_grouping_instances.xlsx with 2 sheets, per-encounter grain
+  * DRUG-01: Broadened output includes ALL treatment encounters (R/57 Phase 101)
+  * DRUG-02: cancer_linked TRUE/FALSE flag column on broadened output (R/57 Phase 101)
+  * DRUG-03: Linked-only output preserved with _linked_only suffix (R/57 Phase 101)
+  * COADMIN-01: Co-administration detail table, date-grain with ICD9 filtering (R/58 Phase 109)
+  * COADMIN-02: Pattern summary with symmetric pair deduplication (R/58 Phase 109)
+  * DEATH-01: Death date cross-tab summary with cascading metrics (R/59 Phase 103)
+  * TIMING-01: Pre-diagnosis treatment flagging with 5 treatment types (R/31 Phase 104)
+  * TIMING-02: Secondary malignancy table with 7-day gap criterion and pre/post HL split (R/32 Phase 104)
+  * REPORT-01: Gap resolution RMarkdown report with per-gap sections (R/37 Phase 107)
+  * REPORT-02: Delivery manifest with file validation (R/38 Phase 107)
+  * TEST-01: DuckDB ingest works with fixture CSVs (Section 32)
+  * TEST-02: R/88 smoke test passes locally against fixtures (Section 32)
+  * TEST-03: Fixture schema validation in local mode (Section 33)
+  * TEST-05: Conditional fixture count assertions (Sections 32+33)
+  * CLEAN-01: False-positive SCT codes removed from DRUG_GROUPINGS (Z94.84, T86.5, T86.09, Z48.290, HEMATOLOGIC_TRANSPLANT_AND_ENDOC)
+  * CLEAN-02: Smoke test validates deprecated codes absent and descriptions preserved
+  * GANTT-01: drug_names consolidated (MEDICATION_LOOKUP primary, RxNorm fallback)
+  * GANTT-02: code_type column in treatment_episodes.rds (Phase 91)
+  * GANTT-03: source_table column in treatment_episodes.rds (Phase 91)
+  * GANTT-04: treatment_line column with F>S>E>N priority (Phase 91)
+  * GANTT-05: sct_cross_use_flag column in treatment_episodes.rds (Phase 91)
+  * GANTT-06: 5 metadata columns in gantt_detail.csv at per-date level (Phase 92)
+  * GANTT-07: v1 Gantt export (R/51) deprecated -- R/52 is canonical (Phase 99)
+  * D-07: is_hodgkin column added to Gantt export (Phase 99)
+  * D-11: is_sct_conditioning_context and immuno_confidence removed from Gantt export (Phase 99)
+  * D-13: Dynamic schema verification replaces hardcoded column counts (Phase 99)
+  * IMMU-01: immuno_confidence column flags questionable immunotherapy codes (Phase 93)
+  * IMMU-02: Distinct flag values for vitamin combos vs CAR-T ambiguity (Phase 93)
+  * TABLE-01: Encounter cancer codes Tableau table with comma separators (R/36 Phase 106)
+  * TABLE-02: Chemo agents by date (patient-date grain, collapsed agents) (R/36 Phase 106+111)
+  * GANTT-DX-01: episode_dx_codes and episode_dx_categories in treatment_episodes.rds (Phase 112)
+  * GANTT-DX-02: Temporal diagnosis columns in gantt_episodes.csv schema (Phase 112)
+  * SORT-01: Universal ascending sort in clean_multi_value and all multi-value fields (Phase 112)
+  * SORT-02: R/36 and R/57 descending sort removed (Phase 112)
+  * POSTDEATH-01: Two-sheet xlsx with per-patient summary and per-event detail (R/51 Phase 113)
+  * POSTDEATH-02: R/88 validates R/51 structure, bucketing, source_table labels (Phase 113)
+  * POSTDEATH-03: R/39 pipeline runner includes R/51 (Phase 113)
+  * DRUGFIX-01: Blank drug_names filled from reference Excel MEDICATION_LOOKUP (R/26 Phase 114)
+  * DRUGFIX-02: Code descriptions use reference Excel as highest-priority source (R/42 Phase 114)
+  * DRUGFIX-03: MEDICATION_LOOKUP centralized in R/00_config.R with 400+ entries (Phase 114)
+  * DRUGFIX-04: Standalone audit xlsx with Summary + Detail sheets (R/79 Phase 114)
+  * DRUGFIX-05: R/88 validates Phase 114 structural integrity (14 checks)
+  * GANTT7DAY-01: episode_dx_7day_confirmed column in gantt_episodes.csv (Phase 115)
+  * GANTAGE-01: age_at_episode column in gantt_episodes.csv (Phase 115)
+  * SMOKE-115-01: R/88 validates Phase 115 structural integrity (14 checks)
+  * RUCA-01: USDA 2020 ZIP RUCA reference xlsx bundled in data/reference/ (Phase 116)
+  * RUCA-02: R/100 assigns rurality (raw code + 4-tier label) from DEMOGRAPHIC.ZIP_CODE (Phase 116)
+  * RUCA-03: 4-sheet styled xlsx: patient frequency + encounter-level payer/treatment/cancer (R/100 Phase 116)
+  * RUCA-04: NA rurality logged + preserved as Unknown row/column in cross-tabs (R/100 Phase 116)
+  * RUCA-05: Row totals + column totals + ascending alpha sort on all sheets (R/100 Phase 116)
+  * RUCA-06: R/39 pipeline runner includes R/100 in investigation stage (Phase 116)
+  * SMOKE-116-01: R/88 validates Phase 116 structural integrity (22 checks)
+  * LIFESPAN-01: R/101 produces output/gantt_lifespan.csv from gantt_episodes.csv (Phase 117)
+  * LIFESPAN-02: Collapse = one row per patient_id x treatment_type, min(start)->max(stop) (Phase 117)
+  * LIFESPAN-03: Death + HL Diagnosis pseudo-rows excluded from lifespan CSV (Phase 117)
+  * LIFESPAN-04: Multi-value fields unioned/deduped/sorted via clean_multi_value (Phase 117)
+  * SMOKE-117-01: R/88 validates Phase 117 structural integrity (14 checks)
+  * NHLDEATH-01: R/102 derives deceased set from DEATH table (1900 sentinel, per-patient) (Phase 118)
+  * NHLDEATH-02: cause_of_death_is_nhl three-state flag via classify_codes == "Non-Hodgkin Lymphoma" (Phase 118)
+  * NHLDEATH-03: R/102 writes output/death_cause_nhl_flag.csv (PATID + flag, na="" blank) (Phase 118)
+  * SMOKE-118-01: R/88 validates Phase 118 structural integrity (14 checks)
+  * NHLFIX-03: R/102 reads cause of death from the DEATH_CAUSE table, not DEATH.DEATH_CAUSE (Phase 119)
+  * NHLFIX-04: R/35 cause-of-death source corrected/annotated to DEATH_CAUSE table (Phase 119)
+  * SMOKE-119-01: R/88 validates Phase 119 structural integrity (Section 15p)
+  * SMOKE-i1e-01: R/88 validates R/104 gantt entire-history structural integrity (Section 15q, 14 checks)
+  * SMOKE-120-01: R/88 validates Phase 120 Supportive Care Normalized Meaning structural integrity (Section 15r, 14 checks)
+  * SMOKE-121-01: R/88 validates Phase 121 ZIP change frequency structural integrity (Section 15s, 16 checks)
+  * SMOKE-122-01: R/88 validates Phase 122 MED_ADMIN/DISPENSING chemo-detection gap fix structural integrity (Section 15t, 14 checks)
+  * SMOKE-123-01: R/88 validates Phase 123 R/109 before/after diff + unmatched-NDC audit structural integrity (Section 15u, 14 checks)
+  * SMOKE-124-01: R/88 validates Phase 124 R/110 output-level before/after report + unmapped-name audit structural integrity (Section 15v, 13 checks)
+  * SMOKE-130-01: R/88 validates Phase 130 DoI layer (R/111 classification + R/112 attribution) structural integrity incl. mutual-exclusivity hard-stop (Section 15w, ~14 checks)
+  * DOI-QA-01/02: R/39 + SCRIPT_INDEX registration and R/88 Section 15w DoI validation (Phase 130)
+  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_ADMIN/DISPENSING NDC generalization + Medication column structural integrity (Section 15x, 12 checks)
+  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)
+  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R/13 gsub, R/03 scoping incl. ingest_log + preserved line-181 <<-, R/53 PATID) with file-existence gates and positive-pattern assertions (Section 15ac, 12 checks)
+  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation occurrence counts (R/115, amended by 139-05-PATCH.md) structural integrity, incl. single-implementation checks for is_sentinel_zip5()/coalesce_zip5(), Part B/C presence, C-02 reconciliation presence, and R/39 registration (Section 15ad, 14 checks)
