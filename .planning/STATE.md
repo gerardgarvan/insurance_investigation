@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: "149-03 Task 1 COMPLETE (archive_pre149.sh committed, 18c2e75); stopped at Task 2 checkpoint — HiPerGator re-run required: bash archive_pre149.sh && R/118 -> R/115 -> R/116 -> R/88"
+stopped_at: "149-03 COMPLETE (3/3 tasks, commits 18c2e75/8b8747b); Phase 149 all 3 plans done — sentinel fix landed (zip5_no_zip9 12782->11843); ADI expansion partial (same-state file, follow-up needed)"
 last_updated: "2026-08-20T00:00:00Z"
 last_activity: 2026-08-20
 progress:
