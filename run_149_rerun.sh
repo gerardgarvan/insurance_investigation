@@ -5,6 +5,7 @@
 set -euo pipefail
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+mkdir -p output/logs
 LOG="output/logs/phase149_rerun_${TIMESTAMP}.log"
 
 echo "Phase 149 re-run — $(date)" | tee "$LOG"
