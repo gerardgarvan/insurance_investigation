@@ -505,3 +505,13 @@ Plans:
 - [ ] 148-02-PLAN.md — HiPerGator: run R/118, produce zip5_adi_summary.csv, record D-04(a) (Wave 2, checkpoint)
 - [ ] 148-03-PLAN.md — Wire utils_address.R + R/116, archive pre-148 outputs, re-run R/116 + R/88, record D-04(b/c) (Wave 3, checkpoint)
 - [ ] 148-04-PLAN.md — Fill D-04 figures into DISCOVERY.md + README.md, commit Phase 148 (Wave 4, autonomous)
+
+### Phase 149: Close the ZIP Residue: Sentinel ZIPs, ADI State Coverage, Phase 148 Closure
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 148
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] TBD (run /gsd:plan-phase 149 to break down) (completed 2026-08-21)
