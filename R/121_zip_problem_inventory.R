@@ -13,6 +13,9 @@ suppressPackageStartupMessages({
   library(openxlsx)
 })
 
+# %b parsing of uppercase month abbreviations is locale-dependent; pin it.
+Sys.setlocale("LC_TIME", "C")
+
 cat("\n=== 121 ZIP problem inventory ===\n")
 
 # --- Pinned inputs from the Phase 150 run (D-05, D-10) ----------------------
@@ -29,6 +32,12 @@ EXPECTED <- c(
   n_rows_both_present = 19739L,
   n_rows_mismatch     = 12L
 )
+
+# ADDRESS_PERIOD_START / _END are SAS-style DDMMMYYYY (e.g. 22FEB2018), confirmed
+# by inspection: all non-blank values are exactly 9 characters. A single explicit
+# format is used rather than a cascade of candidates, because a cascade cannot
+# distinguish %m/%d/%Y from %d/%m/%Y and would silently mis-parse every day <= 12.
+PERIOD_DATE_FORMAT <- "%d%b%Y"
 
 UF_BLUE   <- "#0021A5"
 UF_ORANGE <- "#FA4616"
@@ -79,19 +88,33 @@ has_end   <- "ADDRESS_PERIOD_END"   %in% names(addr_raw)
 n_rows_read <- nrow(addr_raw)
 cat("Rows read:", n_rows_read, "\n")
 
-# --- Date format check ------------------------------------------------------
-# This checks LEXICAL SORTABILITY, not calendar validity: "2026-99-99" passes and
-# still sorts correctly. Both period columns are compared as strings — START in the
-# modal tie-break, END in period_last — so both are checked.
-assert_sortable_date <- function(x, col_name) {
-  x <- x[!is.na(x) & nzchar(trimws(x))]
-  if (length(x) > 0L && !all(grepl("^\\d{4}-\\d{2}-\\d{2}", x))) {
-    stop(col_name, " is not in a lexically sortable YYYY-MM-DD form; ",
-         "this script orders it as a string. Parse the dates before use.")
+# --- Date parsing -----------------------------------------------------------
+# Periods are parsed to Date and ordered as dates. They were previously compared
+# as strings, which is wrong for DDMMMYYYY: "02APR2013" sorts before "22FEB2018"
+# on the leading digits. Any value that fails to parse is a hard error, not an NA.
+parse_period_date <- function(x, col_name) {
+  raw <- trimws(x)
+  raw[!nzchar(raw)] <- NA_character_
+  out <- as.Date(raw, format = PERIOD_DATE_FORMAT)
+  bad <- is.na(out) & !is.na(raw)
+  if (any(bad)) {
+    stop(col_name, ": ", sum(bad), " value(s) did not parse under ",
+         PERIOD_DATE_FORMAT, "; examples: ",
+         paste(utils::head(unique(raw[bad]), 5), collapse = ", "))
   }
+  out
 }
-if (has_start) assert_sortable_date(addr_raw$ADDRESS_PERIOD_START, "ADDRESS_PERIOD_START")
-if (has_end)   assert_sortable_date(addr_raw$ADDRESS_PERIOD_END,   "ADDRESS_PERIOD_END")
+
+n_start_blank <- if (has_start) {
+  sum(is.na(addr_raw$ADDRESS_PERIOD_START) | !nzchar(trimws(addr_raw$ADDRESS_PERIOD_START)))
+} else NA_integer_
+n_end_blank <- if (has_end) {
+  sum(is.na(addr_raw$ADDRESS_PERIOD_END) | !nzchar(trimws(addr_raw$ADDRESS_PERIOD_END)))
+} else NA_integer_
+
+cat("Blank ADDRESS_PERIOD_START:", n_start_blank,
+    "| blank ADDRESS_PERIOD_END:", n_end_blank,
+    "(open-ended records)\n")
 
 # --- Normalize and flag -----------------------------------------------------
 tf <- function(x) !is.na(x) & x
@@ -102,8 +125,12 @@ addr <- addr_raw |>
     zip9_raw     = ADDRESS_ZIP9,
     zip5_norm    = norm_zip5(ADDRESS_ZIP5),
     zip9_norm    = normalize_zip9(ADDRESS_ZIP9),
-    period_start = if (has_start) ADDRESS_PERIOD_START else NA_character_,
-    period_end   = if (has_end)   ADDRESS_PERIOD_END   else NA_character_
+    period_start = if (has_start) {
+      parse_period_date(ADDRESS_PERIOD_START, "ADDRESS_PERIOD_START")
+    } else as.Date(NA),
+    period_end   = if (has_end) {
+      parse_period_date(ADDRESS_PERIOD_END, "ADDRESS_PERIOD_END")
+    } else as.Date(NA)
   )
 
 n_bad_id <- sum(is.na(addr$pid) | !nzchar(trimws(addr$pid)))
@@ -127,13 +154,13 @@ cat("Rows retained:", n_rows_kept, "| patients:", dplyr::n_distinct(addr$pid), "
 # --- Modal value per patient (grouped; deterministic tie-break) -------------
 # Tie-break order must match R/120 exactly: record frequency, then latest
 # period start, then ZIP lexically. n_concordant/n_discordant depend on it.
-max_chr <- function(x) { x <- x[!is.na(x)]; if (!length(x)) NA_character_ else max(x) }
-min_chr <- function(x) { x <- x[!is.na(x)]; if (!length(x)) NA_character_ else min(x) }
+max_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else max(x) }
+min_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else min(x) }
 
 modal_by_patient <- function(df, value_col, out_name) {
   tallied <- df |>
     dplyr::group_by(pid, .data[[value_col]]) |>
-    dplyr::summarise(n_rows = dplyr::n(), last_start = max_chr(period_start), .groups = "drop")
+    dplyr::summarise(n_rows = dplyr::n(), last_start = max_dt(period_start), .groups = "drop")
   names(tallied)[2] <- "value"
 
   ties <- tallied |>
@@ -171,8 +198,9 @@ pat <- addr |>
     n_same_row_backfill     = sum(zip5_missing & zip9_usable),
     n_both_present          = sum(!zip5_missing & zip9_usable),
     n_row_mismatch          = sum(row_mismatch, na.rm = TRUE),
-    period_first            = min_chr(period_start),
-    period_last             = max_chr(period_end),
+    period_first            = min_dt(period_start),
+    period_last             = max_dt(period_end),
+    n_open_ended_records    = sum(is.na(period_end)),
     .groups = "drop"
   ) |>
   dplyr::left_join(modal_zip5, by = "pid") |>
@@ -329,12 +357,13 @@ key_tbl <- tibble::tribble(
   "n_missing_zip5_no_same_row_zip9", "Missing-ZIP5 records with no same-row ZIP9 (residual work)",
   "n_both_present",                  "Records with a usable ZIP9 and a non-sentinel, non-NA ZIP5 (name retained to match the Phase 150 constant)",
   "n_row_mismatch",                  "Of those, records where ZIP9 first-5 differs from ZIP5",
+  "n_open_ended_records",            "Records with a blank ADDRESS_PERIOD_END (address still current)",
   "modal_zip5",                      "Most frequent observed ZIP5; ties broken by latest period start, then lexically",
   "modal_zip5_tied",                 "TRUE if modal_zip5 was decided by tie-break",
   "modal_zip9_first5",               "Most frequent usable ZIP9 first-5; same tie-break",
   "modal_zip9_first5_tied",          "TRUE if modal_zip9_first5 was decided by tie-break",
   "period_first",                    "Earliest ADDRESS_PERIOD_START across this patient's records",
-  "period_last",                     "Latest ADDRESS_PERIOD_END across this patient's records",
+  "period_last",                     "Latest non-blank ADDRESS_PERIOD_END. NA when every record is open-ended, and an EARLIER closed period when the current address is open-ended — read with n_open_ended_records",
   "n_flags",                         "Count of all 12 flags set for this patient",
   "n_actionable_flags",              "Count of defect flags (F01-F06, F09-F12); excludes the F07/F08 context flags",
   "triage",                          "Mutually exclusive category; see triage rows below",
@@ -356,7 +385,7 @@ key_tbl <- tibble::tribble(
   "triage NEEDS_TEMPORAL_MATCH",     "ZIP9 only on other records; exposed to residential mobility",
   "triage UNREACHABLE_NO_ZIP9",      "No ZIP9 anywhere; ZIP5-only methods or exclusion",
   "Modal tie-break",                 "Record frequency, then latest ADDRESS_PERIOD_START, then ZIP lexically",
-  "Date handling",                   "Period columns are compared as strings; checked for sortable YYYY-MM-DD form, not calendar validity",
+  "Date handling",                   "ADDRESS_PERIOD_START/_END parsed from DDMMMYYYY to Date under LC_TIME=C; any unparseable value is a hard error",
   "Source",                          basename(addr_path),
   "Generated",                       as.character(Sys.time()),
   "Script",                          "R/121_zip_problem_inventory.R (Phase 151)",
@@ -373,10 +402,13 @@ pkg_versions <- paste(
 qc_tbl <- tibble::tibble(
   metric = c("rows_read", "rows_retained", "blank_ids_dropped", "patients_total",
              "patients_flagged", "patients_with_context_flags_only",
-             "zip5_normalizer", "r_version", "package_versions"),
+             "blank_period_start_rows", "blank_period_end_rows",
+             "period_date_format", "zip5_normalizer", "r_version", "package_versions"),
   value  = c(as.character(n_rows_read), as.character(n_rows_kept), as.character(n_bad_id),
              as.character(n_all_patients), as.character(nrow(roster)),
-             as.character(n_context_only), PHASE150_ZIP5_FN,
+             as.character(n_context_only),
+             as.character(n_start_blank), as.character(n_end_blank),
+             PERIOD_DATE_FORMAT, PHASE150_ZIP5_FN,
              paste(R.version$major, R.version$minor, sep = "."), pkg_versions)
 )
 
@@ -420,8 +452,10 @@ if (any(recon$status == "FAIL")) {
   cat("\nWrote QC-failure workbook:", fail_path, "\n")
   stop("Reconciliation against Phase 150 failed for: ",
        paste(recon$quantity[recon$status == "FAIL"], collapse = ", "),
-       ". A flag predicate or the modal tie-break has drifted from R/120 — ",
-       "fix before shipping the roster.")
+       ". First check the tied-modal counts in the R/120 output: R/120 ordered ",
+       "ADDRESS_PERIOD_START lexically over DDMMMYYYY, so if any tie fired there, ",
+       "correcting the parse here can legitimately move n_concordant/n_discordant. ",
+       "If both tie counts were zero, a predicate has drifted instead.")
 }
 cat("\nReconciliation: all 8 quantities PASS\n\n")
 
