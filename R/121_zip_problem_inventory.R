@@ -1,8 +1,8 @@
 # R/121_zip_problem_inventory.R
 # Phase 151: Per-patient ZIP problem inventory
 # One row per patient ID with 12 problem flags, supporting counts, and a triage category.
-# Flag predicates are semantically identical to R/120, enforced by reconciliation (D-04).
-# Writes a workbook + RDS (D-01).
+# Flag predicates and the modal tie-break are semantically identical to R/120, enforced by
+# reconciliation (D-04). Writes a workbook + RDS (D-01).
 
 source("R/00_config.R")   # auto-loads R/utils/utils_address.R and defines CONFIG
 
@@ -17,7 +17,7 @@ cat("\n=== 121 ZIP problem inventory ===\n")
 
 # --- Pinned inputs from the Phase 150 run (D-05, D-10) ----------------------
 # PHASE150_ZIP5_FN must match the "ZIP5 normalizer in use:" line in 150-01-SUMMARY.md.
-PHASE150_ZIP5_FN <- "normalize_zip5_raw"   # confirmed from Phase 150 run: normalize_zip5_raw
+PHASE150_ZIP5_FN <- "normalize_zip5_raw"   # confirmed from Phase 150 run
 
 EXPECTED <- c(
   n_missing_zip5      = 1128L,
@@ -33,6 +33,14 @@ EXPECTED <- c(
 UF_BLUE   <- "#0021A5"
 UF_ORANGE <- "#FA4616"
 OUT_DIR   <- CONFIG$output_dir         # confirmed: CONFIG$output_dir (R/115 line 430)
+
+# Fail in seconds on a bad path rather than after the full read and grouping.
+# Deliberately stop() rather than dir.create(): a missing output directory usually
+# means CONFIG is wrong, and silently creating one hides that.
+if (!dir.exists(OUT_DIR)) {
+  stop("Output directory does not exist: ", OUT_DIR,
+       " — check the CONFIG field before re-running.")
+}
 
 # --- Resolve helpers; no silent fallback on the normalizer (D-10) ----------
 if (!exists(PHASE150_ZIP5_FN, mode = "function")) {
@@ -71,15 +79,19 @@ has_end   <- "ADDRESS_PERIOD_END"   %in% names(addr_raw)
 n_rows_read <- nrow(addr_raw)
 cat("Rows read:", n_rows_read, "\n")
 
-# --- Date format assertion (tie-break sorts lexically) ---------------------
-if (has_start) {
-  s <- addr_raw$ADDRESS_PERIOD_START
-  s <- s[!is.na(s) & nzchar(trimws(s))]
-  if (length(s) > 0L && !all(grepl("^\\d{4}-\\d{2}-\\d{2}", s))) {
-    stop("ADDRESS_PERIOD_START is not ISO-8601; the modal tie-break sorts these ",
-         "lexically and would pick the wrong record. Parse the dates before use.")
+# --- Date format check ------------------------------------------------------
+# This checks LEXICAL SORTABILITY, not calendar validity: "2026-99-99" passes and
+# still sorts correctly. Both period columns are compared as strings — START in the
+# modal tie-break, END in period_last — so both are checked.
+assert_sortable_date <- function(x, col_name) {
+  x <- x[!is.na(x) & nzchar(trimws(x))]
+  if (length(x) > 0L && !all(grepl("^\\d{4}-\\d{2}-\\d{2}", x))) {
+    stop(col_name, " is not in a lexically sortable YYYY-MM-DD form; ",
+         "this script orders it as a string. Parse the dates before use.")
   }
 }
+if (has_start) assert_sortable_date(addr_raw$ADDRESS_PERIOD_START, "ADDRESS_PERIOD_START")
+if (has_end)   assert_sortable_date(addr_raw$ADDRESS_PERIOD_END,   "ADDRESS_PERIOD_END")
 
 # --- Normalize and flag -----------------------------------------------------
 tf <- function(x) !is.na(x) & x
@@ -87,7 +99,6 @@ tf <- function(x) !is.na(x) & x
 addr <- addr_raw |>
   dplyr::transmute(
     pid          = ID,
-    zip5_raw     = ADDRESS_ZIP5,
     zip9_raw     = ADDRESS_ZIP9,
     zip5_norm    = norm_zip5(ADDRESS_ZIP5),
     zip9_norm    = normalize_zip9(ADDRESS_ZIP9),
@@ -114,6 +125,8 @@ n_rows_kept <- nrow(addr)
 cat("Rows retained:", n_rows_kept, "| patients:", dplyr::n_distinct(addr$pid), "\n\n")
 
 # --- Modal value per patient (grouped; deterministic tie-break) -------------
+# Tie-break order must match R/120 exactly: record frequency, then latest
+# period start, then ZIP lexically. n_concordant/n_discordant depend on it.
 max_chr <- function(x) { x <- x[!is.na(x)]; if (!length(x)) NA_character_ else max(x) }
 min_chr <- function(x) { x <- x[!is.na(x)]; if (!length(x)) NA_character_ else min(x) }
 
@@ -201,19 +214,46 @@ pat <- pat |>
     )
   )
 
-flag_cols <- grep("^F[0-9]{2}_", names(pat), value = TRUE)
+# F07 and F08 describe a patient's address history; they are not data defects.
+# Counting them in the roster filter would sweep in every patient who ever moved.
+flag_cols        <- grep("^F[0-9]{2}_", names(pat), value = TRUE)
+context_flags    <- c("F07_multiple_zip5", "F08_tied_modal")
+actionable_flags <- setdiff(flag_cols, context_flags)
+
+# Assert rather than na.rm: an NA flag is a bug to surface, not to score as zero.
+stopifnot(!any(is.na(as.matrix(pat[flag_cols]))))
+
 pat <- pat |>
-  dplyr::mutate(n_flags = rowSums(dplyr::across(dplyr::all_of(flag_cols))))
+  dplyr::mutate(
+    n_flags            = rowSums(dplyr::across(dplyr::all_of(flag_cols))),
+    n_actionable_flags = rowSums(dplyr::across(dplyr::all_of(actionable_flags)))
+  )
 
 # --- Structural invariants --------------------------------------------------
 stopifnot(sum(pat$F04_same_row_backfillable & pat$F05_other_row_zip9_only) == 0L)
 stopifnot(all(!pat$F05_other_row_zip9_only | pat$F01_missing_zip5))
 stopifnot(all(!pat$F12_partial_same_row | pat$F01_missing_zip5))
+
+# F12 is a tautology against its own definition — guards against future edits.
+stopifnot(
+  all(pat$F12_partial_same_row ==
+        (pat$n_same_row_backfill > 0L &
+         pat$n_same_row_backfill < pat$n_zip5_missing))
+)
+
+# The four F01 categories partition the missing-ZIP5 population.
 stopifnot(
   sum(pat$triage %in% c("SAME_ROW_BACKFILL_ALL", "SAME_ROW_BACKFILL_PARTIAL",
                         "NEEDS_TEMPORAL_MATCH", "UNREACHABLE_NO_ZIP9")) ==
     sum(pat$F01_missing_zip5)
 )
+# Pin the splits to Phase 150, not just their sum: catches a mis-ordered
+# case_when() that the total-only check above would allow through.
+stopifnot(
+  sum(pat$triage %in% c("SAME_ROW_BACKFILL_ALL", "SAME_ROW_BACKFILL_PARTIAL",
+                        "NEEDS_TEMPORAL_MATCH")) == EXPECTED[["n_zip9_available"]]
+)
+stopifnot(sum(pat$triage == "UNREACHABLE_NO_ZIP9") == EXPECTED[["n_unreachable"]])
 
 # --- Reconciliation against Phase 150 (D-05) --------------------------------
 obs <- c(
@@ -245,6 +285,7 @@ n_f01 <- sum(pat$F01_missing_zip5)
 
 flag_summary <- tibble::tibble(
   flag         = flag_cols,
+  kind         = ifelse(flag_cols %in% context_flags, "context", "actionable"),
   n_patients   = vapply(flag_cols, function(f) sum(pat[[f]]), integer(1)),
   n_within_F01 = vapply(flag_cols,
                         function(f) sum(pat[[f]] & pat$F01_missing_zip5), integer(1))
@@ -264,14 +305,17 @@ record_mismatches <- addr |>
   dplyr::transmute(ID = pid, zip5_norm, zip9_norm, zip9_first5, period_start, period_end)
 
 roster <- pat |>
-  dplyr::filter(n_flags > 0L) |>
-  dplyr::arrange(dplyr::desc(n_flags), triage, pid) |>
+  dplyr::filter(n_actionable_flags > 0L) |>
+  dplyr::arrange(dplyr::desc(n_actionable_flags), triage, pid) |>
   dplyr::rename(ID = pid)
+
+n_context_only <- sum(pat$n_flags > 0L & pat$n_actionable_flags == 0L)
 
 # --- KEY: every column in A_patient_flags, plus flags and triage (D-06) -----
 key_tbl <- tibble::tribble(
   ~item,                             ~definition,
-  "Unit of observation",             "One row per patient ID with at least one flag set",
+  "Unit of observation",             "One row per patient ID with at least one actionable flag set",
+  "Roster membership",               "A_patient_flags contains patients with n_actionable_flags > 0",
   "ID",                              "Patient identifier from LDS_ADDRESS_HISTORY",
   "n_records",                       "Address records for this patient after blank-ID filtering",
   "n_zip5_missing",                  "Records where ZIP5 is NA or sentinel",
@@ -283,7 +327,7 @@ key_tbl <- tibble::tribble(
   "n_distinct_zip9_first5",          "Distinct first-5 values across usable ZIP9 records",
   "n_same_row_backfill",             "Missing-ZIP5 records that carry a usable ZIP9 on the same row",
   "n_missing_zip5_no_same_row_zip9", "Missing-ZIP5 records with no same-row ZIP9 (residual work)",
-  "n_both_present",                  "Records with both a usable ZIP9 and a non-missing ZIP5",
+  "n_both_present",                  "Records with a usable ZIP9 and a non-sentinel, non-NA ZIP5 (name retained to match the Phase 150 constant)",
   "n_row_mismatch",                  "Of those, records where ZIP9 first-5 differs from ZIP5",
   "modal_zip5",                      "Most frequent observed ZIP5; ties broken by latest period start, then lexically",
   "modal_zip5_tied",                 "TRUE if modal_zip5 was decided by tie-break",
@@ -291,7 +335,8 @@ key_tbl <- tibble::tribble(
   "modal_zip9_first5_tied",          "TRUE if modal_zip9_first5 was decided by tie-break",
   "period_first",                    "Earliest ADDRESS_PERIOD_START across this patient's records",
   "period_last",                     "Latest ADDRESS_PERIOD_END across this patient's records",
-  "n_flags",                         "Count of F01-F12 flags set for this patient",
+  "n_flags",                         "Count of all 12 flags set for this patient",
+  "n_actionable_flags",              "Count of defect flags (F01-F06, F09-F12); excludes the F07/F08 context flags",
   "triage",                          "Mutually exclusive category; see triage rows below",
   "F01_missing_zip5",                ">=1 record where ZIP5 is NA or sentinel",
   "F02_zip5_never_observed",         "No non-missing ZIP5 on any record",
@@ -299,18 +344,19 @@ key_tbl <- tibble::tribble(
   "F04_same_row_backfillable",       ">=1 missing-ZIP5 record carries a usable ZIP9 on that same row",
   "F05_other_row_zip9_only",         "Has missing ZIP5 and a usable ZIP9, but never on a missing-ZIP5 row",
   "F06_modal_discordant",            "Modal ZIP9 first-5 differs from modal observed ZIP5",
-  "F07_multiple_zip5",               "More than one distinct observed ZIP5 (mobility proxy)",
-  "F08_tied_modal",                  "A modal value was decided by tie-break",
+  "F07_multiple_zip5",               "CONTEXT: more than one distinct observed ZIP5 (mobility proxy); not a defect",
+  "F08_tied_modal",                  "CONTEXT: a modal value was decided by tie-break; not a defect",
   "F09_record_level_mismatch",       ">=1 record where both values present and first-5 disagree",
   "F10_sentinel_zip5_present",       ">=1 ZIP5 present but sentinel",
   "F11_invalid_zip9_present",        ">=1 ZIP9 present but not usable",
   "F12_partial_same_row",            "Some missing-ZIP5 records have a same-row ZIP9 and some do not",
   "triage NO_MISSING_ZIP5",          "Nothing to backfill",
   "triage SAME_ROW_BACKFILL_ALL",    "Every missing-ZIP5 record has a same-row ZIP9; fully fixable now",
-  "triage SAME_ROW_BACKFILL_PARTIAL","Some but not all missing records fixable from the same row",
+  "triage SAME_ROW_BACKFILL_PARTIAL","Some missing rows are directly backfillable; the rest need record-level temporal matching or may be unreachable",
   "triage NEEDS_TEMPORAL_MATCH",     "ZIP9 only on other records; exposed to residential mobility",
   "triage UNREACHABLE_NO_ZIP9",      "No ZIP9 anywhere; ZIP5-only methods or exclusion",
   "Modal tie-break",                 "Record frequency, then latest ADDRESS_PERIOD_START, then ZIP lexically",
+  "Date handling",                   "Period columns are compared as strings; checked for sortable YYYY-MM-DD form, not calendar validity",
   "Source",                          basename(addr_path),
   "Generated",                       as.character(Sys.time()),
   "Script",                          "R/121_zip_problem_inventory.R (Phase 151)",
@@ -326,9 +372,11 @@ pkg_versions <- paste(
 
 qc_tbl <- tibble::tibble(
   metric = c("rows_read", "rows_retained", "blank_ids_dropped", "patients_total",
-             "patients_flagged", "zip5_normalizer", "r_version", "package_versions"),
+             "patients_flagged", "patients_with_context_flags_only",
+             "zip5_normalizer", "r_version", "package_versions"),
   value  = c(as.character(n_rows_read), as.character(n_rows_kept), as.character(n_bad_id),
-             as.character(n_all_patients), as.character(nrow(roster)), PHASE150_ZIP5_FN,
+             as.character(n_all_patients), as.character(nrow(roster)),
+             as.character(n_context_only), PHASE150_ZIP5_FN,
              paste(R.version$major, R.version$minor, sep = "."), pkg_versions)
 )
 
@@ -338,7 +386,7 @@ hdr <- openxlsx::createStyle(fgFill = UF_BLUE, fontColour = "#FFFFFF",
 fail_style <- openxlsx::createStyle(fgFill = UF_ORANGE, fontColour = "#FFFFFF",
                                     textDecoration = "bold")
 
-build_wb <- function(sheets) {
+build_wb <- function(sheets, recon_tbl) {
   wb <- openxlsx::createWorkbook()
   for (nm in names(sheets)) {
     df <- sheets[[nm]]
@@ -346,9 +394,13 @@ build_wb <- function(sheets) {
     openxlsx::writeData(wb, nm, df, headerStyle = hdr)
     openxlsx::freezePane(wb, nm, firstActiveRow = 2,
                          firstActiveCol = if (nm == "A_patient_flags") 2 else 1)
-    openxlsx::setColWidths(wb, nm, cols = seq_along(df), widths = "auto")
+    # "auto" measures every cell; on a large roster that is slow and pointless.
+    openxlsx::setColWidths(
+      wb, nm, cols = seq_along(df),
+      widths = if (nm == "A_patient_flags") 18 else "auto"
+    )
   }
-  fail_rows <- which(recon$status == "FAIL")
+  fail_rows <- which(recon_tbl$status == "FAIL")
   if ("E_reconciliation" %in% names(sheets) && length(fail_rows) > 0L) {
     openxlsx::addStyle(wb, "E_reconciliation", fail_style,
                        rows = fail_rows + 1L, cols = 4, gridExpand = TRUE)
@@ -362,17 +414,19 @@ stamp <- format(Sys.Date(), "%Y-%m-%d")
 if (any(recon$status == "FAIL")) {
   fail_path <- file.path(OUT_DIR, paste0("zip_problem_inventory_QC_FAILED_", stamp, ".xlsx"))
   openxlsx::saveWorkbook(
-    build_wb(list(KEY = key_tbl, E_reconciliation = recon, QC = qc_tbl)),
+    build_wb(list(KEY = key_tbl, E_reconciliation = recon, QC = qc_tbl), recon),
     fail_path, overwrite = TRUE
   )
   cat("\nWrote QC-failure workbook:", fail_path, "\n")
   stop("Reconciliation against Phase 150 failed for: ",
        paste(recon$quantity[recon$status == "FAIL"], collapse = ", "),
-       ". A flag predicate has drifted from R/120 — fix before shipping the roster.")
+       ". A flag predicate or the modal tie-break has drifted from R/120 — ",
+       "fix before shipping the roster.")
 }
 cat("\nReconciliation: all 8 quantities PASS\n\n")
 
-cat("Patients in roster (>=1 flag):", nrow(roster), "of", n_all_patients, "\n")
+cat("Patients in roster (>=1 actionable flag):", nrow(roster), "of", n_all_patients, "\n")
+cat("Patients with context flags only (excluded from roster):", n_context_only, "\n\n")
 print(as.data.frame(triage_summary), row.names = FALSE)
 
 wb <- build_wb(list(
@@ -383,7 +437,7 @@ wb <- build_wb(list(
   D_record_mismatches = record_mismatches,
   E_reconciliation    = recon,
   QC                  = qc_tbl
-))
+), recon)
 
 out_xlsx <- file.path(OUT_DIR, paste0("zip_problem_inventory_", stamp, ".xlsx"))
 out_rds  <- file.path(OUT_DIR, paste0("zip_problem_inventory_", stamp, ".rds"))
