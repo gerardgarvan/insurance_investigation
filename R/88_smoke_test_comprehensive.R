@@ -5185,6 +5185,79 @@ check_150("R/120 row present in R/SCRIPT_INDEX.md",
 message(glue("\nSection 15af: {p150_pass} PASS, {p150_fail} FAIL"))
 
 # ==============================================================================
+# Section 15ag: per-patient ZIP problem inventory (Phase 151) ----
+# Loads full LDS_ADDRESS_HISTORY CSV — registered in slow/full tier (same as R/106, R/115, R/120).
+# ==============================================================================
+
+message("\n--- Section 15ag: Phase 151 per-patient ZIP problem inventory ---")
+
+p151_pass <- 0L; p151_fail <- 0L
+check_151 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p151_pass <<- p151_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p151_fail <<- p151_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+r121_lines  <- read_or_null("R/121_zip_problem_inventory.R")
+r39_151     <- read_or_null("R/39_run_all_investigations.R")
+r_index_151 <- read_or_null("R/SCRIPT_INDEX.md")
+
+check_151("R/121_zip_problem_inventory.R exists", !is.null(r121_lines))
+
+check_151("R/121 uses ID as patient identifier (not PATID)",
+  !is.null(r121_lines) &&
+  !any(grepl("PATID", r121_lines)) &&
+  any(grepl('"ID"', r121_lines)))
+
+check_151("R/121 pins PHASE150_ZIP5_FN to normalize_zip5_raw",
+  !is.null(r121_lines) &&
+  any(grepl("PHASE150_ZIP5_FN", r121_lines)) &&
+  any(grepl("normalize_zip5_raw", r121_lines)))
+
+check_151("R/121 defines all 12 flags (F01-F12)",
+  !is.null(r121_lines) &&
+  all(vapply(paste0("F", sprintf("%02d", 1:12), "_"),
+             function(f) any(grepl(f, r121_lines)), logical(1))))
+
+check_151("R/121 triage contains SAME_ROW_BACKFILL_PARTIAL (hybrid patients not over-solved)",
+  !is.null(r121_lines) &&
+  any(grepl("SAME_ROW_BACKFILL_PARTIAL", r121_lines)))
+
+check_151("R/121 F05 is gated on n_zip5_missing > 0L (F05 gate present)",
+  !is.null(r121_lines) &&
+  any(grepl("n_zip5_missing > 0L & n_zip9_usable > 0L", r121_lines)))
+
+check_151("R/121 reconciliation contains all 8 EXPECTED quantities",
+  !is.null(r121_lines) &&
+  all(c("n_missing_zip5", "n_zip9_available", "n_unreachable",
+        "n_concordant", "n_discordant", "n_no_zip5_elsewhere",
+        "n_rows_both_present", "n_rows_mismatch") |>
+      vapply(function(q) any(grepl(q, r121_lines)), logical(1))))
+
+check_151("R/121 workbook has KEY as first sheet (leftmost)",
+  !is.null(r121_lines) &&
+  any(grepl("KEY.*=.*key_tbl", r121_lines)))
+
+check_151("R/121 uses CONFIG$output_dir (no absolute paths, no setwd)",
+  !is.null(r121_lines) &&
+  any(grepl("CONFIG\\$output_dir", r121_lines)) &&
+  !any(grepl("setwd|read\\.csv|data\\.table", r121_lines)))
+
+check_151("R/121 registered in R/39's investigation_scripts vector",
+  !is.null(r39_151) &&
+  any(grepl("121_zip_problem_inventory", r39_151)))
+
+check_151("R/121 row present in R/SCRIPT_INDEX.md",
+  !is.null(r_index_151) &&
+  any(grepl("121_zip_problem_inventory", r_index_151)))
+
+message(glue("\nSection 15ag: {p151_pass} PASS, {p151_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
