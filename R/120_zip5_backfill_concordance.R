@@ -3,6 +3,13 @@
 # Read-only diagnostic. No output files written.
 # Outputs (1), (2), (3a-c), (4) are patient-level (distinct ID) per D-02.
 # Output (5) is a supplementary record-level diagnostic per D-09.
+#
+# AMENDED (Phase 151): ADDRESS_PERIOD_START was previously compared as a string.
+# The column is SAS-style DDMMMYYYY, so "02APR2013" sorted before "22FEB2018" on
+# the leading digits and the modal tie-break could pick the wrong record. The
+# column is now parsed to Date. This changes only the tie-break, so counts (1),
+# (2), (3c) and output (5) are unaffected; (3a)/(3b) and the rate in (4) may move.
+# The corrected values from this run supersede the originals in 150-01-SUMMARY.md.
 
 source("R/00_config.R")   # auto-loads R/utils/utils_address.R and defines CONFIG
 
@@ -11,11 +18,33 @@ suppressPackageStartupMessages({
   library(vroom)
 })
 
+# %b parsing of uppercase month abbreviations is locale-dependent; pin it.
+Sys.setlocale("LC_TIME", "C")
+
 cat("\n=== 120 ZIP5-backfill concordance ===\n")
 
-# --- Resolve the ZIP5 normalizer (O-01) -------------------------------------
+# ADDRESS_PERIOD_START is SAS-style DDMMMYYYY (e.g. 22FEB2018). A single explicit
+# format is used rather than a cascade of candidates, because a cascade cannot
+# distinguish %m/%d/%Y from %d/%m/%Y and would silently mis-parse every day <= 12.
+PERIOD_DATE_FORMAT <- "%d%b%Y"
+
+parse_period_date <- function(x, col_name) {
+  raw <- trimws(x)
+  raw[!nzchar(raw)] <- NA_character_
+  out <- as.Date(raw, format = PERIOD_DATE_FORMAT)
+  bad <- is.na(out) & !is.na(raw)
+  if (any(bad)) {
+    stop(col_name, ": ", sum(bad), " value(s) did not parse under ",
+         PERIOD_DATE_FORMAT, "; examples: ",
+         paste(utils::head(unique(raw[bad]), 5), collapse = ", "))
+  }
+  out
+}
+
+# --- Resolve the ZIP5 normalizer -------------------------------------------
 # normalize_zip5_raw() is the correct call on raw ADDRESS_ZIP5 if utils_address.R
 # defines it; otherwise normalize_zip5() is used. Fail loudly if neither exists.
+# The name used is printed and must be recorded in the summary — R/121 pins it.
 zip5_fn_name <- if (exists("normalize_zip5_raw", mode = "function")) {
   "normalize_zip5_raw"
 } else if (exists("normalize_zip5", mode = "function")) {
@@ -41,6 +70,7 @@ addr_raw <- vroom::vroom(
   progress  = FALSE
 )
 
+# Patient identifier is ID (project convention), not PATID.
 required_cols <- c("ID", "ADDRESS_ZIP5", "ADDRESS_ZIP9")
 missing_cols  <- setdiff(required_cols, names(addr_raw))
 if (length(missing_cols) > 0L) {
@@ -50,19 +80,21 @@ if (length(missing_cols) > 0L) {
 has_start <- "ADDRESS_PERIOD_START" %in% names(addr_raw)
 
 cat("Rows read:", nrow(addr_raw),
-    "| period start available:", has_start, "\n")
+    "| period start available:", has_start,
+    "| date format:", PERIOD_DATE_FORMAT, "\n")
 
 # --- Normalize and flag -----------------------------------------------------
-# NA-safe logical: NA becomes FALSE so the flags partition rows cleanly.
+# NA-safe logical: NA becomes FALSE so the flags partition the rows cleanly.
 tf <- function(x) !is.na(x) & x
 
 addr <- addr_raw |>
   dplyr::transmute(
-    pid          = ID,
-    zip5_norm    = norm_zip5(ADDRESS_ZIP5),
-    zip9_norm    = normalize_zip9(ADDRESS_ZIP9),
-    # Assumed ISO-8601; used only as a modal tie-break, so lexical order suffices.
-    period_start = if (has_start) ADDRESS_PERIOD_START else NA_character_
+    pid       = ID,
+    zip5_norm = norm_zip5(ADDRESS_ZIP5),
+    zip9_norm = normalize_zip9(ADDRESS_ZIP9),
+    period_start = if (has_start) {
+      parse_period_date(ADDRESS_PERIOD_START, "ADDRESS_PERIOD_START")
+    } else as.Date(NA)
   )
 
 n_bad_id <- sum(is.na(addr$pid) | !nzchar(trimws(addr$pid)))
@@ -78,29 +110,24 @@ addr <- addr |>
     zip9_usable  = zip9_valid & !tf(is_sentinel_zip5(substr(zip9_norm, 1L, 5L)))
   )
 
-cat("Rows retained:", nrow(addr),
-    "| patients:", dplyr::n_distinct(addr$pid), "\n\n")
+n_patients_total <- dplyr::n_distinct(addr$pid)
+cat("Rows retained:", nrow(addr), "| patients:", n_patients_total, "\n\n")
 
-# --- Modal value per patient, explicit grouping + deterministic tie-break ----
-# D-08 order: record frequency, then latest period start, then ZIP lexically.
-max_chr <- function(x) {
-  x <- x[!is.na(x)]
-  if (length(x) == 0L) NA_character_ else max(x)
-}
+# --- Modal value per patient (deterministic tie-break) ----------------------
+# Tie-break order: record frequency, then most recent period start (as a DATE,
+# not a string), then ZIP lexically as a final deterministic fallback.
+max_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else max(x) }
 
 modal_by_patient <- function(df, value_col, out_name) {
   tallied <- df |>
     dplyr::group_by(pid, .data[[value_col]]) |>
-    dplyr::summarise(n_rows     = dplyr::n(),
-                     last_start = max_chr(period_start),
-                     .groups    = "drop")
+    dplyr::summarise(n_rows = dplyr::n(), last_start = max_dt(period_start),
+                     .groups = "drop")
   names(tallied)[2] <- "value"
 
-  n_tied <- tallied |>
+  ties <- tallied |>
     dplyr::group_by(pid) |>
-    dplyr::summarise(tied = sum(n_rows == max(n_rows)) > 1L, .groups = "drop") |>
-    dplyr::pull(tied) |>
-    sum()
+    dplyr::summarise(tied = sum(n_rows == max(n_rows)) > 1L, .groups = "drop")
 
   picked <- tallied |>
     dplyr::group_by(pid) |>
@@ -111,7 +138,7 @@ modal_by_patient <- function(df, value_col, out_name) {
     dplyr::select(pid, value)
 
   names(picked)[2] <- out_name
-  attr(picked, "n_tied") <- n_tied
+  attr(picked, "n_tied") <- sum(ties$tied)
   picked
 }
 
@@ -124,7 +151,9 @@ n_missing_zip5 <- nrow(pts_missing_zip5)
 cat("(1) Patients with >=1 record where ZIP5 is missing or sentinel:",
     n_missing_zip5, "\n")
 
-# --- COUNT 2 (D-07: usable ZIP9 on ANY record, same row included) -----------
+# --- COUNT 2 ----------------------------------------------------------------
+# Definition per 150-CONTEXT.md: usable ZIP9 on ANY record. The same-row /
+# other-row split is printed below so the two readings are both visible.
 pts_with_zip9 <- pts_missing_zip5 |>
   dplyr::semi_join(addr |> dplyr::filter(zip9_usable) |> dplyr::distinct(pid),
                    by = "pid")
@@ -160,7 +189,7 @@ real_zip5_by_pat <- addr_grp2 |>
   dplyr::filter(!zip5_missing) |>
   modal_by_patient("zip5_norm", "zip5_real")
 
-# Catches an accidentally ungrouped modal pick: one row per group-2 patient.
+# Catches an ungrouped modal pick: must be one row per group-2 patient.
 stopifnot(nrow(zip9_first5_by_pat) == n_zip9_available)
 stopifnot(!any(duplicated(zip9_first5_by_pat$pid)))
 stopifnot(!any(duplicated(real_zip5_by_pat$pid)))
@@ -193,6 +222,7 @@ cat("(3c) n_no_zip5_elsewhere (ZIP9 present, no ZIP5 to compare):",
 # Buckets must exhaust group 2; detects dropped or duplicated patients.
 stopifnot(n_concordant + n_discordant + n_no_zip5_elsewhere == n_zip9_available)
 
+# These bound how far the tie-break could move (3a)/(3b). Record them.
 cat("     Patients with a tied modal ZIP9 first-5:",
     attr(zip9_first5_by_pat, "n_tied"), "\n")
 cat("     Patients with a tied modal ZIP5:",
@@ -216,8 +246,9 @@ if (denom > 0L) {
 }
 
 # --- (5) Record-level same-record validation (supplementary, D-09) ----------
-# Direct test of the same-row backfill mechanism: on records carrying both a
-# usable ZIP9 and a non-missing ZIP5, does the ZIP9 first-5 equal that ZIP5?
+# Direct test of the backfill mechanism: on records carrying both a usable ZIP9
+# and a non-missing ZIP5, does the ZIP9 first-5 equal the observed ZIP5?
+# Independent of modal selection, so unaffected by the tie-break amendment.
 rowlevel <- addr |>
   dplyr::filter(!zip5_missing, zip9_usable) |>
   dplyr::mutate(row_match = substr(zip9_norm, 1L, 5L) == zip5_norm)
@@ -235,5 +266,16 @@ if (n_rows_cmp > 0L) {
 } else {
   cat("    N/A (no records carry both a usable ZIP9 and a non-missing ZIP5)\n")
 }
+
+# --- Constants for R/121 ----------------------------------------------------
+cat("\n--- Copy into EXPECTED in R/121_zip_problem_inventory.R ---\n")
+cat(sprintf("  n_missing_zip5      = %dL,\n", n_missing_zip5))
+cat(sprintf("  n_zip9_available    = %dL,\n", n_zip9_available))
+cat(sprintf("  n_unreachable       = %dL,\n", n_missing_zip5 - n_zip9_available))
+cat(sprintf("  n_concordant        = %dL,\n", n_concordant))
+cat(sprintf("  n_discordant        = %dL,\n", n_discordant))
+cat(sprintf("  n_no_zip5_elsewhere = %dL,\n", n_no_zip5_elsewhere))
+cat(sprintf("  n_rows_both_present = %dL,\n", n_rows_cmp))
+cat(sprintf("  n_rows_mismatch     = %dL\n",  n_rows_cmp - n_rows_match))
 
 cat("\n=== 120 done ===\n")
