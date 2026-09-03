@@ -3,6 +3,9 @@
 # One row per patient ID with 12 problem flags, supporting counts, and a triage category.
 # Flag predicates and the modal tie-break are semantically identical to R/120, enforced by
 # reconciliation (D-04). Writes a workbook + RDS (D-01).
+#
+# EXPECTED below must come from the AMENDED R/120 run (the one that parses
+# ADDRESS_PERIOD_START as a date). R/120 prints a ready-to-paste block at the end.
 
 source("R/00_config.R")   # auto-loads R/utils/utils_address.R and defines CONFIG
 
@@ -13,15 +16,15 @@ suppressPackageStartupMessages({
   library(openxlsx)
 })
 
-# %b parsing of uppercase month abbreviations is locale-dependent; pin it.
-Sys.setlocale("LC_TIME", "C")
-
 cat("\n=== 121 ZIP problem inventory ===\n")
 
-# --- Pinned inputs from the Phase 150 run (D-05, D-10) ----------------------
-# PHASE150_ZIP5_FN must match the "ZIP5 normalizer in use:" line in 150-01-SUMMARY.md.
-PHASE150_ZIP5_FN <- "normalize_zip5_raw"   # confirmed from Phase 150 run
+# --- Pinned inputs from the amended Phase 150 run (D-05, D-10) --------------
+# PHASE150_ZIP5_FN must match the "ZIP5 normalizer in use:" line in the R/120 output.
+PHASE150_ZIP5_FN <- "normalize_zip5_raw"
 
+# >>> PASTE the EXPECTED block printed by the amended R/120 run over this vector.
+# The values below are placeholders from the pre-amendment run and WILL fail
+# reconciliation on n_concordant / n_discordant until replaced.
 EXPECTED <- c(
   n_missing_zip5      = 1128L,
   n_zip9_available    = 701L,
@@ -33,12 +36,6 @@ EXPECTED <- c(
   n_rows_mismatch     = 12L
 )
 
-# ADDRESS_PERIOD_START / _END are SAS-style DDMMMYYYY (e.g. 22FEB2018), confirmed
-# by inspection: all non-blank values are exactly 9 characters. A single explicit
-# format is used rather than a cascade of candidates, because a cascade cannot
-# distinguish %m/%d/%Y from %d/%m/%Y and would silently mis-parse every day <= 12.
-PERIOD_DATE_FORMAT <- "%d%b%Y"
-
 UF_BLUE   <- "#0021A5"
 UF_ORANGE <- "#FA4616"
 OUT_DIR   <- CONFIG$output_dir         # confirmed: CONFIG$output_dir (R/115 line 430)
@@ -49,6 +46,41 @@ OUT_DIR   <- CONFIG$output_dir         # confirmed: CONFIG$output_dir (R/115 lin
 if (!dir.exists(OUT_DIR)) {
   stop("Output directory does not exist: ", OUT_DIR,
        " — check the CONFIG field before re-running.")
+}
+
+# --- Date parsing -----------------------------------------------------------
+# ADDRESS_PERIOD_START / _END are SAS-style DDMMMYYYY (e.g. 22FEB2018), all 9
+# characters. The month token is mapped explicitly rather than parsed with %b:
+# %b is locale-dependent, and setting LC_TIME globally would leak into every
+# script R/39 sources afterwards. This validates the month rather than trusting it.
+PERIOD_DATE_FORMAT <- "DDMMMYYYY"   # descriptive label; not passed to as.Date()
+
+MONTH_MAP <- c(JAN = "01", FEB = "02", MAR = "03", APR = "04",
+               MAY = "05", JUN = "06", JUL = "07", AUG = "08",
+               SEP = "09", OCT = "10", NOV = "11", DEC = "12")
+
+parse_period_date <- function(x, col_name) {
+  raw <- toupper(trimws(x))
+  raw[!nzchar(raw)] <- NA_character_
+
+  out <- rep(as.Date(NA), length(raw))
+  ok  <- !is.na(raw)
+
+  if (any(ok)) {
+    tok <- raw[ok]
+    mm  <- unname(MONTH_MAP[substr(tok, 3L, 5L)])
+    iso <- ifelse(nchar(tok) == 9L & !is.na(mm),
+                  paste0(substr(tok, 6L, 9L), "-", mm, "-", substr(tok, 1L, 2L)),
+                  NA_character_)
+    out[ok] <- as.Date(iso, format = "%Y-%m-%d")
+  }
+
+  bad <- is.na(out) & !is.na(raw)
+  if (any(bad)) {
+    stop(col_name, ": ", sum(bad), " value(s) are not valid DDMMMYYYY; ",
+         "examples: ", paste(utils::head(unique(raw[bad]), 5), collapse = ", "))
+  }
+  out
 }
 
 # --- Resolve helpers; no silent fallback on the normalizer (D-10) ----------
@@ -87,23 +119,6 @@ has_end   <- "ADDRESS_PERIOD_END"   %in% names(addr_raw)
 
 n_rows_read <- nrow(addr_raw)
 cat("Rows read:", n_rows_read, "\n")
-
-# --- Date parsing -----------------------------------------------------------
-# Periods are parsed to Date and ordered as dates. They were previously compared
-# as strings, which is wrong for DDMMMYYYY: "02APR2013" sorts before "22FEB2018"
-# on the leading digits. Any value that fails to parse is a hard error, not an NA.
-parse_period_date <- function(x, col_name) {
-  raw <- trimws(x)
-  raw[!nzchar(raw)] <- NA_character_
-  out <- as.Date(raw, format = PERIOD_DATE_FORMAT)
-  bad <- is.na(out) & !is.na(raw)
-  if (any(bad)) {
-    stop(col_name, ": ", sum(bad), " value(s) did not parse under ",
-         PERIOD_DATE_FORMAT, "; examples: ",
-         paste(utils::head(unique(raw[bad]), 5), collapse = ", "))
-  }
-  out
-}
 
 n_start_blank <- if (has_start) {
   sum(is.na(addr_raw$ADDRESS_PERIOD_START) | !nzchar(trimws(addr_raw$ADDRESS_PERIOD_START)))
@@ -153,7 +168,8 @@ cat("Rows retained:", n_rows_kept, "| patients:", dplyr::n_distinct(addr$pid), "
 
 # --- Modal value per patient (grouped; deterministic tie-break) -------------
 # Tie-break order must match R/120 exactly: record frequency, then latest
-# period start, then ZIP lexically. n_concordant/n_discordant depend on it.
+# period start (as a DATE), then ZIP lexically. n_concordant/n_discordant
+# depend on it.
 max_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else max(x) }
 min_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else min(x) }
 
@@ -283,7 +299,7 @@ stopifnot(
 )
 stopifnot(sum(pat$triage == "UNREACHABLE_NO_ZIP9") == EXPECTED[["n_unreachable"]])
 
-# --- Reconciliation against Phase 150 (D-05) --------------------------------
+# --- Reconciliation against the amended Phase 150 run (D-05) ----------------
 obs <- c(
   n_missing_zip5      = sum(pat$F01_missing_zip5),
   n_zip9_available    = sum(pat$F01_missing_zip5 & pat$n_zip9_usable > 0L),
@@ -296,6 +312,13 @@ obs <- c(
                             is.na(pat$modal_zip5)),
   n_rows_both_present = sum(pat$n_both_present),
   n_rows_mismatch     = sum(pat$n_row_mismatch)
+)
+
+# Internal identity, independent of EXPECTED: the three concordance buckets
+# must exhaust the comparable group. Holds even when the constants are stale.
+stopifnot(
+  obs[["n_concordant"]] + obs[["n_discordant"]] + obs[["n_no_zip5_elsewhere"]] ==
+    obs[["n_zip9_available"]]
 )
 
 recon <- tibble::tibble(
@@ -385,7 +408,7 @@ key_tbl <- tibble::tribble(
   "triage NEEDS_TEMPORAL_MATCH",     "ZIP9 only on other records; exposed to residential mobility",
   "triage UNREACHABLE_NO_ZIP9",      "No ZIP9 anywhere; ZIP5-only methods or exclusion",
   "Modal tie-break",                 "Record frequency, then latest ADDRESS_PERIOD_START, then ZIP lexically",
-  "Date handling",                   "ADDRESS_PERIOD_START/_END parsed from DDMMMYYYY to Date under LC_TIME=C; any unparseable value is a hard error",
+  "Date handling",                   "ADDRESS_PERIOD_START/_END parsed from DDMMMYYYY via an explicit month map (locale-independent); any invalid value is a hard error",
   "Source",                          basename(addr_path),
   "Generated",                       as.character(Sys.time()),
   "Script",                          "R/121_zip_problem_inventory.R (Phase 151)",
@@ -450,12 +473,13 @@ if (any(recon$status == "FAIL")) {
     fail_path, overwrite = TRUE
   )
   cat("\nWrote QC-failure workbook:", fail_path, "\n")
-  stop("Reconciliation against Phase 150 failed for: ",
+  stop("Reconciliation against the amended Phase 150 run failed for: ",
        paste(recon$quantity[recon$status == "FAIL"], collapse = ", "),
-       ". First check the tied-modal counts in the R/120 output: R/120 ordered ",
-       "ADDRESS_PERIOD_START lexically over DDMMMYYYY, so if any tie fired there, ",
-       "correcting the parse here can legitimately move n_concordant/n_discordant. ",
-       "If both tie counts were zero, a predicate has drifted instead.")
+       ". R/120 and R/121 now use the same parsed-date modal tie-break, so stale ",
+       "constants are the likeliest cause: re-run R/120, paste its printed EXPECTED ",
+       "block into this script, and retry. If it still fails, the patient-level modal ",
+       "selections differ and the two modal_by_patient() implementations need to be ",
+       "compared directly.")
 }
 cat("\nReconciliation: all 8 quantities PASS\n\n")
 

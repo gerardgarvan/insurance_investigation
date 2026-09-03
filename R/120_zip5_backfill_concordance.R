@@ -9,7 +9,7 @@
 # the leading digits and the modal tie-break could pick the wrong record. The
 # column is now parsed to Date. This changes only the tie-break, so counts (1),
 # (2), (3c) and output (5) are unaffected; (3a)/(3b) and the rate in (4) may move.
-# The corrected values from this run supersede the originals in 150-01-SUMMARY.md.
+# The values from this run supersede the originals in 150-01-SUMMARY.md.
 
 source("R/00_config.R")   # auto-loads R/utils/utils_address.R and defines CONFIG
 
@@ -18,25 +18,39 @@ suppressPackageStartupMessages({
   library(vroom)
 })
 
-# %b parsing of uppercase month abbreviations is locale-dependent; pin it.
-Sys.setlocale("LC_TIME", "C")
-
 cat("\n=== 120 ZIP5-backfill concordance ===\n")
 
-# ADDRESS_PERIOD_START is SAS-style DDMMMYYYY (e.g. 22FEB2018). A single explicit
-# format is used rather than a cascade of candidates, because a cascade cannot
-# distinguish %m/%d/%Y from %d/%m/%Y and would silently mis-parse every day <= 12.
-PERIOD_DATE_FORMAT <- "%d%b%Y"
+# --- Date parsing -----------------------------------------------------------
+# ADDRESS_PERIOD_START is SAS-style DDMMMYYYY (e.g. 22FEB2018), all 9 characters.
+# The month token is mapped explicitly rather than parsed with %b: %b is
+# locale-dependent, and setting LC_TIME globally would leak into every script
+# R/39 sources afterwards. This validates the month rather than trusting it.
+PERIOD_DATE_FORMAT <- "DDMMMYYYY"   # descriptive label; not passed to as.Date()
+
+MONTH_MAP <- c(JAN = "01", FEB = "02", MAR = "03", APR = "04",
+               MAY = "05", JUN = "06", JUL = "07", AUG = "08",
+               SEP = "09", OCT = "10", NOV = "11", DEC = "12")
 
 parse_period_date <- function(x, col_name) {
-  raw <- trimws(x)
+  raw <- toupper(trimws(x))
   raw[!nzchar(raw)] <- NA_character_
-  out <- as.Date(raw, format = PERIOD_DATE_FORMAT)
+
+  out <- rep(as.Date(NA), length(raw))
+  ok  <- !is.na(raw)
+
+  if (any(ok)) {
+    tok <- raw[ok]
+    mm  <- unname(MONTH_MAP[substr(tok, 3L, 5L)])
+    iso <- ifelse(nchar(tok) == 9L & !is.na(mm),
+                  paste0(substr(tok, 6L, 9L), "-", mm, "-", substr(tok, 1L, 2L)),
+                  NA_character_)
+    out[ok] <- as.Date(iso, format = "%Y-%m-%d")
+  }
+
   bad <- is.na(out) & !is.na(raw)
   if (any(bad)) {
-    stop(col_name, ": ", sum(bad), " value(s) did not parse under ",
-         PERIOD_DATE_FORMAT, "; examples: ",
-         paste(utils::head(unique(raw[bad]), 5), collapse = ", "))
+    stop(col_name, ": ", sum(bad), " value(s) are not valid DDMMMYYYY; ",
+         "examples: ", paste(utils::head(unique(raw[bad]), 5), collapse = ", "))
   }
   out
 }
@@ -222,7 +236,7 @@ cat("(3c) n_no_zip5_elsewhere (ZIP9 present, no ZIP5 to compare):",
 # Buckets must exhaust group 2; detects dropped or duplicated patients.
 stopifnot(n_concordant + n_discordant + n_no_zip5_elsewhere == n_zip9_available)
 
-# These bound how far the tie-break could move (3a)/(3b). Record them.
+# These bound how far the tie-break amendment could move (3a)/(3b). Record them.
 cat("     Patients with a tied modal ZIP9 first-5:",
     attr(zip9_first5_by_pat, "n_tied"), "\n")
 cat("     Patients with a tied modal ZIP5:",
@@ -268,7 +282,11 @@ if (n_rows_cmp > 0L) {
 }
 
 # --- Constants for R/121 ----------------------------------------------------
+# Paste this block over the EXPECTED vector in R/121_zip_problem_inventory.R.
+# Transcribing by hand is the one manual step between two runs whose entire
+# purpose is exact agreement, so it is emitted in source syntax.
 cat("\n--- Copy into EXPECTED in R/121_zip_problem_inventory.R ---\n")
+cat("EXPECTED <- c(\n")
 cat(sprintf("  n_missing_zip5      = %dL,\n", n_missing_zip5))
 cat(sprintf("  n_zip9_available    = %dL,\n", n_zip9_available))
 cat(sprintf("  n_unreachable       = %dL,\n", n_missing_zip5 - n_zip9_available))
@@ -277,5 +295,6 @@ cat(sprintf("  n_discordant        = %dL,\n", n_discordant))
 cat(sprintf("  n_no_zip5_elsewhere = %dL,\n", n_no_zip5_elsewhere))
 cat(sprintf("  n_rows_both_present = %dL,\n", n_rows_cmp))
 cat(sprintf("  n_rows_mismatch     = %dL\n",  n_rows_cmp - n_rows_match))
+cat(")\n")
 
 cat("\n=== 120 done ===\n")
