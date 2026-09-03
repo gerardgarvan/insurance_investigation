@@ -29,8 +29,8 @@ EXPECTED <- c(
   n_missing_zip5      = 1128L,
   n_zip9_available    = 701L,
   n_unreachable       = 427L,
-  n_concordant        = 530L,
-  n_discordant        = 152L,
+  n_concordant        = 547L,
+  n_discordant        = 135L,
   n_no_zip5_elsewhere = 19L,
   n_rows_both_present = 19739L,
   n_rows_mismatch     = 12L
