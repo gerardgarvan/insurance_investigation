@@ -5123,6 +5123,68 @@ check_144("test-utils-address-tier3.R tests zip5_centroid zip9_source value",
 message(glue("\nSection 15ae: {p144_pass} PASS, {p144_fail} FAIL"))
 
 # ==============================================================================
+# Section 15af: ZIP5 backfill concordance (Phase 150) ----
+# Loads full LDS_ADDRESS_HISTORY CSV — registered in slow/full tier (same as R/106, R/115, R/116).
+# ==============================================================================
+
+message("\n--- Section 15af: Phase 150 ZIP5-backfill concordance diagnostic ---")
+
+p150_pass <- 0L; p150_fail <- 0L
+check_150 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p150_pass <<- p150_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p150_fail <<- p150_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+r120_lines  <- read_or_null("R/120_zip5_backfill_concordance.R")
+r39_150     <- read_or_null("R/39_run_all_investigations.R")
+r_index_150 <- read_or_null("R/SCRIPT_INDEX.md")
+
+check_150("R/120_zip5_backfill_concordance.R exists", !is.null(r120_lines))
+
+check_150("R/120 uses ID as patient identifier (not PATID)",
+  !is.null(r120_lines) &&
+  !any(grepl("PATID", r120_lines)) &&
+  any(grepl('"ID"', r120_lines)))
+
+check_150("R/120 groups modal pick by pid (group_by(pid))",
+  !is.null(r120_lines) &&
+  sum(grepl("group_by\\(pid\\)", r120_lines)) >= 3L)
+
+check_150("R/120 contains runtime invariant: n_concordant + n_discordant + n_no_zip5_elsewhere == n_zip9_available",
+  !is.null(r120_lines) &&
+  any(grepl("n_concordant.*n_discordant.*n_no_zip5_elsewhere.*n_zip9_available", r120_lines)))
+
+check_150("R/120 uses CONFIG$data_dir for file path (no absolute paths)",
+  !is.null(r120_lines) &&
+  any(grepl("CONFIG\\$data_dir", r120_lines)) &&
+  !any(grepl("setwd|read\\.csv|data\\.table", r120_lines)))
+
+check_150("R/120 resolves ZIP5 normalizer at runtime (normalize_zip5_raw / normalize_zip5)",
+  !is.null(r120_lines) &&
+  any(grepl("normalize_zip5_raw", r120_lines)) &&
+  any(grepl("normalize_zip5", r120_lines)))
+
+check_150("R/120 uses normalize_zip9 and is_sentinel_zip5 helpers",
+  !is.null(r120_lines) &&
+  any(grepl("normalize_zip9", r120_lines)) &&
+  any(grepl("is_sentinel_zip5", r120_lines)))
+
+check_150("R/120 registered in R/39's investigation_scripts vector",
+  !is.null(r39_150) &&
+  any(grepl("120_zip5_backfill_concordance", r39_150)))
+
+check_150("R/120 row present in R/SCRIPT_INDEX.md",
+  !is.null(r_index_150) &&
+  any(grepl("120_zip5_backfill_concordance", r_index_150)))
+
+message(glue("\nSection 15af: {p150_pass} PASS, {p150_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
