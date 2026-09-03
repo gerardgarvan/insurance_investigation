@@ -515,3 +515,13 @@ Plans:
 
 Plans:
 - [x] TBD (run /gsd:plan-phase 149 to break down) (completed 2026-08-21)
+
+### Phase 150: ZIP5-Missing but ZIP9-Elsewhere: Patient Count and First-5 Concordance Check
+
+**Goal:** For patients who have at least one address record with a missing ZIP5, determine how many also have a ZIP9 on another record, and for those patients check whether the first 5 digits of that ZIP9 match the non-missing ZIP5 they have on other records — quantifying whether ZIP9 can reliably backfill ZIP5 gaps.
+**Requirements**: ZIP5-BACKFILL-01
+**Depends on:** Phase 149
+**Plans:** 1/1 plans complete
+
+Plans:
+- [ ] 150-01-PLAN.md — R/120_zip5_backfill_concordance.R: load LDS_ADDRESS_HISTORY, compute 4 patient-level counts (missing-ZIP5 patients, ZIP9-elsewhere, concordant/discordant/no-compare), concordance rate + interpretation; register in R/39 + R/88 Section 15af + SCRIPT_INDEX.md; HiPerGator run checkpoint [ZIP5-BACKFILL-01] (Wave 1)
