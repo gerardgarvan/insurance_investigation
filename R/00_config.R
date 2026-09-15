@@ -159,7 +159,39 @@ CONFIG <- list(
     } else {
       "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb"
     }
-  )
+  ),
+
+  # ---------------------------------------------------------------------------
+  # Neighborhood Atlas ZIP+4 -> block-group ADI files (Phase 152)
+  # ---------------------------------------------------------------------------
+  # Directory holding the 51 per-state Neighborhood Atlas ZIP+4 CSV files.
+  #
+  # UNCONFIRMED PATH — must be verified on HiPerGator before running R/122a:
+  #   ls /blue/erin.mobley.precision/
+  #   (locate the Atlas ZIP+4 download directory; update the path below)
+  #
+  # Expected file layout (2024 Atlas release):
+  #   ZIP+4 identifier : column name TBD from head inspection (Task 1);
+  #                       placeholder ZIP4_COL used in R/122a until confirmed.
+  #                       Format may be "12345_6789", "Z12345_6789", etc.
+  #   Block-group FIPS : column name TBD from head inspection (Task 1);
+  #                       placeholder FIPS_COL used in R/122a until confirmed.
+  #                       Expected 12 digits (state 2 + county 3 + tract 6 + BG 1);
+  #                       if 15-digit block-level values, substr(., 1, 12) needed.
+  #   ADI columns      : ADI_NATRANK, ADI_STATERNK (alongside the ZIP+4 and FIPS)
+  #
+  # CONFIRM ON HIPERGATOR (Task 1) before running slurm/122a_build_zip9_centroid_crosswalk.sbatch:
+  #   head -2 "$ATLAS_ZIP4_DIR"/<smallest_state_file>.csv
+  atlas_zip4_dir = if (IS_LOCAL) {
+    NULL  # Not available locally; R/122a probes this and stops with a message if NULL/missing
+  } else {
+    "/blue/erin.mobley.precision/ADI_zip4_files"
+    # ^^^ UNCONFIRMED placeholder — update after running ls on HiPerGator
+  },
+
+  # Output path for the ZIP9 -> block-group centroid crosswalk (produced by R/122a,
+  # consumed by get_zip_centroid() in R/122 and probed by Plan 02's gate 2).
+  zip9_bg_centroid_path = file.path("data", "reference", "zip9_bg_centroid_crosswalk.csv")
 )
 
 # ==============================================================================
