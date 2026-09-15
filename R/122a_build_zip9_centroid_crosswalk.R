@@ -11,10 +11,11 @@
 #   CONFIG$zip9_bg_centroid_path : ZIP9, GEOID, INTPTLAT, INTPTLON  (one row per ZIP9)
 #   sibling zip9_bg_centroid_crosswalk_BUILDLOG_<date>.txt
 # Run as a SLURM job (slurm/122a_build_zip9_centroid_crosswalk.sbatch); ~32 GB RAM.
+# Parquet is read via DuckDB (already in renv); no extra packages required.
 # ==============================================================================
 
 suppressPackageStartupMessages({
-  library(arrow); library(dplyr); library(vroom); library(stringr)
+  library(DBI);   library(duckdb); library(dplyr); library(vroom); library(stringr)
   library(glue);  library(foreign); library(tibble)
 })
 source("R/00_config.R")
@@ -39,16 +40,22 @@ logm("TIGER dir:   {TIGER_DIR} ({length(tiger_zips)} state files)")
 dir.create(dirname(OUT_PATH), showWarnings = FALSE, recursive = TRUE)
 
 # ---- 1. ZIP9 -> block-group GEOID from the existing parquet -------------------
-xw <- open_dataset(ADI_PARQUET) %>%
-  select(zip9, bg_geoid, state) %>%
-  filter(!is.na(zip9), !is.na(bg_geoid)) %>%
-  distinct() %>%
-  collect() %>%
-  filter(nchar(zip9) == 9L, str_detect(zip9, "^\\d{9}$"),
-         nchar(bg_geoid) == 12L, str_detect(bg_geoid, "^\\d{12}$"))
-
-n_pairs <- nrow(xw)
-xw <- xw %>% arrange(zip9, bg_geoid) %>% distinct(zip9, .keep_all = TRUE)
+# DuckDB reads the parquet out-of-core; distinct + first-GEOID-per-ZIP9 happen in SQL.
+con <- dbConnect(duckdb::duckdb())
+on.exit(dbDisconnect(con, shutdown = TRUE), add = TRUE)
+dbExecute(con, glue("PRAGMA threads={max(1L, as.integer(Sys.getenv('SLURM_CPUS_PER_TASK', '4')))}"))
+dbExecute(con, "PRAGMA memory_limit='24GB'")
+n_pairs <- dbGetQuery(con, glue("
+  SELECT COUNT(*) AS n FROM (
+    SELECT DISTINCT zip9, bg_geoid FROM read_parquet('{ADI_PARQUET}')
+    WHERE zip9 IS NOT NULL AND bg_geoid IS NOT NULL
+      AND regexp_matches(zip9, '^[0-9]{{9}}$') AND regexp_matches(bg_geoid, '^[0-9]{{12}}$'))"))$n
+xw <- dbGetQuery(con, glue("
+  SELECT zip9, MIN(bg_geoid) AS bg_geoid, MIN(state) AS state
+  FROM read_parquet('{ADI_PARQUET}')
+  WHERE zip9 IS NOT NULL AND bg_geoid IS NOT NULL
+    AND regexp_matches(zip9, '^[0-9]{{9}}$') AND regexp_matches(bg_geoid, '^[0-9]{{12}}$')
+  GROUP BY zip9")) %>% as_tibble()
 logm("ZIP9/GEOID pairs after filters: {n_pairs}; distinct ZIP9: {nrow(xw)}; ",
      "multi-BG ZIP9 collapsed to first GEOID: {n_pairs - nrow(xw)}")
 state_counts <- xw %>% count(state, name = "n_zip9") %>% arrange(state)
