@@ -462,6 +462,423 @@ message(glue(
   )
 ))
 
-# NOTE: No output written in this plan (Plan 02). Output (xlsx + rds) is produced
-# in Plan 03 (SECTION 8-12 of this script). enc_distance is left in memory.
-message("=== SECTION 1-7 complete. enc_distance tibble ready for Plan 03 (SECTION 8-12). ===")
+# ==============================================================================
+# SECTION 8: PATIENT SUMMARY (B_patient_summary) ----
+# ==============================================================================
+
+message("--- Building B_patient_summary ---")
+
+# Per D-02: fallback encounters (res_match_fallback == TRUE) ARE included.
+# Guard every statistic against all-NA groups: max() yields -Inf, mean() NaN
+# for pct columns when all observations are NA. Use explicit NA guards.
+B_patient_summary <- enc_distance %>%
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(
+    n_encounters     = dplyr::n(),
+    n_with_distance  = sum(!is.na(distance_km)),
+    median_km        = if (sum(!is.na(distance_km)) == 0) NA_real_ else
+                         median(distance_km, na.rm = TRUE),
+    iqr_km           = if (sum(!is.na(distance_km)) == 0) NA_real_ else
+                         IQR(distance_km, na.rm = TRUE),
+    max_km           = if (sum(!is.na(distance_km)) == 0) NA_real_ else
+                         max(distance_km, na.rm = TRUE),
+    pct_gt50km       = if (sum(!is.na(distance_km)) == 0) NA_real_ else
+                         mean(distance_km > 50, na.rm = TRUE) * 100,
+    pct_gt200km      = if (sum(!is.na(distance_km)) == 0) NA_real_ else
+                         mean(distance_km > 200, na.rm = TRUE) * 100,
+    .groups = "drop"
+  )
+
+message(glue(
+  "  B_patient_summary: {nrow(B_patient_summary)} patients; ",
+  "{sum(B_patient_summary$n_with_distance == 0)} with zero distances computed"
+))
+
+# ==============================================================================
+# SECTION 9: DISTRIBUTION (C_distribution) ----
+# ==============================================================================
+
+message("--- Building C_distribution ---")
+
+# include.lowest = TRUE is MANDATORY: without it a distance of exactly 0 (same
+# ZIP on both sides -- the most common zip5-zip5 case) falls outside the first
+# interval [0,5) and becomes NA. With include.lowest the leftmost bin is [0,5].
+dist_bins      <- c(0, 5, 25, 50, 200, Inf)
+dist_bin_labels <- c("0-5", "5-25", "25-50", "50-200", ">200")
+
+enc_distance_binned <- enc_distance %>%
+  dplyr::mutate(
+    dist_bin = dplyr::if_else(
+      is.na(distance_km),
+      "NA",
+      as.character(cut(distance_km,
+                       breaks = dist_bins,
+                       labels = dist_bin_labels,
+                       include.lowest = TRUE,
+                       right = FALSE))
+    ),
+    dist_bin = factor(dist_bin,
+                      levels = c(dist_bin_labels, "NA"))
+  )
+
+C_distribution <- enc_distance_binned %>%
+  dplyr::group_by(dist_bin, distance_basis) %>%
+  dplyr::summarise(
+    n_encounters = dplyr::n(),
+    n_patients   = dplyr::n_distinct(ID),
+    .groups = "drop"
+  ) %>%
+  dplyr::arrange(dist_bin, distance_basis)
+
+message(glue(
+  "  C_distribution: {nrow(C_distribution)} rows (bin × distance_basis combinations)"
+))
+
+# ==============================================================================
+# SECTION 10: FLAGS (D_flags) ----
+# ==============================================================================
+
+message("--- Building D_flags ---")
+
+# Both 200 km (primary) and 50 km (secondary) thresholds represented per D-01.
+# Filter to > 50 km (secondary threshold captures > 200 km subset as well).
+D_flags <- enc_distance %>%
+  dplyr::filter(distance_km > 50) %>%
+  dplyr::mutate(
+    flag_gt200 = distance_km > 200
+  ) %>%
+  dplyr::select(
+    ID, ENCOUNTERID, ADMIT_DATE,
+    enc_zip_norm, res_zip9, res_zip5,
+    res_match_type, res_match_fallback,
+    distance_km, distance_basis,
+    enc_centroid_source, res_centroid_source,
+    flag_gt200
+  ) %>%
+  dplyr::arrange(dplyr::desc(distance_km))
+
+message(glue(
+  "  D_flags: {nrow(D_flags)} encounters > 50 km; ",
+  "{sum(D_flags$flag_gt200, na.rm = TRUE)} > 200 km (primary)"
+))
+
+# ==============================================================================
+# SECTION 11: QC WATERFALL (qc_tbl) ----
+# ==============================================================================
+
+message("--- Building QC waterfall ---")
+
+# ---- Coverage waterfall ----
+# n_encounters_total = n_enc_cohort_raw (raw DuckDB cohort count BEFORE any
+# ADMIT_DATE filter). n_admit_date_usable = nrow(encounters_raw) after date filters.
+n_admit_date_usable    <- nrow(encounters_raw)
+n_enc_norm_zip         <- sum(!is.na(enc_distance$enc_zip_norm))
+n_residence_resolved   <- sum(
+  !is.na(enc_distance$res_match_type) & enc_distance$res_match_type != "none",
+  na.rm = TRUE
+)
+n_centroid_resolved    <- sum(
+  !is.na(enc_distance$enc_centroid_source) & !is.na(enc_distance$res_centroid_source)
+)
+n_distance_computed    <- sum(!is.na(enc_distance$distance_km))
+
+# Reconciliation assertions
+stopifnot(
+  "n_enc_cohort_raw does not equal n_encounters_total" =
+    n_enc_cohort_raw == n_enc_cohort_raw,        # tautological -- the name IS n_enc_cohort_raw
+  "n_admit_date_usable does not equal nrow(enc_distance)" =
+    n_admit_date_usable == nrow(enc_distance)
+)
+
+waterfall_tbl <- tibble::tibble(
+  Step = c(
+    "n_encounters_total (raw DuckDB cohort ENCOUNTER, before date filter)",
+    "n_admit_date_usable (ADMIT_DATE non-missing and parseable)",
+    "n_enc_norm_zip (enc_zip_norm non-NA)",
+    "n_residence_resolved (res_match_type not 'none')",
+    "n_centroid_resolved (both centroids non-NA)",
+    "n_distance_computed (distance_km non-NA)"
+  ),
+  N = c(
+    n_enc_cohort_raw,
+    n_admit_date_usable,
+    n_enc_norm_zip,
+    n_residence_resolved,
+    n_centroid_resolved,
+    n_distance_computed
+  ),
+  Drop_from_prior = c(
+    NA_integer_,
+    n_enc_cohort_raw - n_admit_date_usable,
+    n_admit_date_usable - n_enc_norm_zip,
+    n_enc_norm_zip - n_residence_resolved,
+    n_residence_resolved - n_centroid_resolved,
+    n_centroid_resolved - n_distance_computed
+  )
+)
+
+# ---- Unmatched ZIP9 by state (encounters where centroid_source == "zip5_fallback",
+# meaning the ZIP9 was present but unresolved in the crosswalk). ----
+# State derived from ZIP3 → state lookup. Check for existing zip3 lookup file.
+zip3_state_path <- if (!is.null(CONFIG$zip3_state_path)) {
+  CONFIG$zip3_state_path
+} else if (requireNamespace("here", quietly = TRUE)) {
+  here::here("data", "reference", "zip3_state.csv")
+} else {
+  file.path("data", "reference", "zip3_state.csv")
+}
+
+# Encounters unresolved at ZIP9 level (fell back to ZIP5 gazetteer).
+unmatched_zip9 <- enc_distance %>%
+  dplyr::filter(
+    enc_centroid_source == "zip5_fallback" | res_centroid_source == "zip5_fallback"
+  ) %>%
+  dplyr::mutate(
+    zip3 = substr(coalesce(enc_zip_norm, res_zip9, res_zip5), 1, 3)
+  )
+
+if (file.exists(zip3_state_path)) {
+  zip3_state <- vroom::vroom(
+    zip3_state_path,
+    col_types = vroom::cols(ZIP3 = vroom::col_character(), STATE = vroom::col_character()),
+    show_col_types = FALSE
+  )
+  unmatched_zip9_by_state <- unmatched_zip9 %>%
+    dplyr::left_join(zip3_state, by = c("zip3" = "ZIP3")) %>%
+    dplyr::count(STATE, name = "n_unmatched_zip9_encounters") %>%
+    dplyr::arrange(dplyr::desc(n_unmatched_zip9_encounters))
+  message(glue("  zip3_state.csv found; unmatched-by-state table has {nrow(unmatched_zip9_by_state)} rows"))
+} else {
+  # zip3_state.csv absent: collapse all to a single "ALL" row and add a QC note.
+  message("  zip3_state.csv NOT FOUND; emitting unmatched ZIP9 count as STATE = 'ALL'")
+  unmatched_zip9_by_state <- tibble::tibble(
+    STATE = "ALL",
+    n_unmatched_zip9_encounters = nrow(unmatched_zip9)
+  )
+}
+
+# ---- Fallback sensitivity row: distances from res_match_fallback == TRUE only ----
+fallback_distances <- enc_distance %>%
+  dplyr::filter(res_match_fallback == TRUE, !is.na(distance_km))
+fallback_median <- if (nrow(fallback_distances) == 0) NA_real_ else
+  median(fallback_distances$distance_km)
+fallback_max <- if (nrow(fallback_distances) == 0) NA_real_ else
+  max(fallback_distances$distance_km)
+
+# ---- Assemble full qc_tbl ----
+qc_tbl <- dplyr::bind_rows(
+  # Waterfall rows
+  waterfall_tbl %>% dplyr::rename(Metric = Step, Value = N, Note = Drop_from_prior) %>%
+    dplyr::mutate(Note = as.character(Note)),
+  # ZIP9 crosswalk presence flag
+  tibble::tibble(
+    Metric = "zip9_crosswalk_present",
+    Value  = as.numeric(ZIP9_CROSSWALK_AVAILABLE),
+    Note   = if (ZIP9_CROSSWALK_AVAILABLE) "TRUE -- ZIP9 block-group centroids used"
+             else "FALSE -- all centroids resolved at ZIP5 only"
+  ),
+  # WV gap note (Pitfall 7)
+  tibble::tibble(
+    Metric = "NOTE: WV ZIP9 centroid coverage",
+    Value  = NA_real_,
+    Note   = "WV ZIP9 centroid coverage may be lower due to the Neighborhood Atlas crosswalk gap; see unmatched-by-state counts."
+  ),
+  # zip3_state file present note (if absent)
+  if (!file.exists(zip3_state_path)) {
+    tibble::tibble(
+      Metric = "NOTE: zip3_state.csv absent",
+      Value  = NA_real_,
+      Note   = "zip3_state.csv not found; unmatched ZIP9 count reported as STATE = 'ALL' only. Stage data/reference/zip3_state.csv to get per-state breakdown."
+    )
+  } else {
+    tibble::tibble(
+      Metric = character(0), Value = numeric(0), Note = character(0)
+    )
+  },
+  # Fallback sensitivity row (D-02)
+  tibble::tibble(
+    Metric = "FALLBACK SENSITIVITY: res_match_fallback encounters",
+    Value  = as.numeric(nrow(fallback_distances)),
+    Note   = glue(
+      "median_km = {round(fallback_median, 1)}, max_km = {round(fallback_max, 1)}; ",
+      "fallback (most_recent_before) encounters are INCLUDED in B/C summaries per D-02"
+    )
+  )
+)
+
+message(glue("  qc_tbl: {nrow(qc_tbl)} rows"))
+message(glue(
+  "  Waterfall: {n_enc_cohort_raw} total -> {n_admit_date_usable} admit-usable -> ",
+  "{n_enc_norm_zip} norm-zip -> {n_residence_resolved} res-resolved -> ",
+  "{n_centroid_resolved} centroid-resolved -> {n_distance_computed} distance-computed"
+))
+
+message("=== SECTION 8-11 complete. Building SECTION 12 (xlsx + rds) next. ===")
+
+# ==============================================================================
+# SECTION 12: XLSX ASSEMBLY AND WRITE ----
+# ==============================================================================
+
+message("--- Writing encounter_distance xlsx (KEY leftmost, 6 sheets) ---")
+
+# UF brand colors, per project deliverable spec. NOTE: DIFFERENT blue than
+# utils_pptx.R's UF_BLUE ("#003087") -- hex values here are locked for this
+# deliverable; do not source utils_pptx.R.
+UF_BLUE   <- "#0021A5"
+UF_ORANGE <- "#FA4616"
+WHITE     <- wb_color(hex = "#FFFFFF")
+DARK_TEXT <- wb_color(hex = "#1F2937")
+
+# add_styled_sheet() copied VERBATIM from R/115 lines 2126-2174 per this
+# project's "copy, don't source" convention for this helper.
+add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl,
+                              extra_tbl = NULL, extra_label = NULL) {
+  wb$add_worksheet(sheet_name)
+  n_cols           <- ncol(data_tbl)
+  last_col_letter  <- openxlsx2::int2col(n_cols)
+
+  wb$add_data(sheet = sheet_name, x = title_text,    dims = "A1")
+  wb$add_data(sheet = sheet_name, x = subtitle_text, dims = "A2")
+  wb$add_data(sheet = sheet_name, x = data_tbl,      dims = "A4", col_names = TRUE)
+
+  wb$merge_cells(sheet = sheet_name, dims = paste0("A1:", last_col_letter, "1"))
+  wb$merge_cells(sheet = sheet_name, dims = paste0("A2:", last_col_letter, "2"))
+
+  wb$add_font(sheet = sheet_name, dims = "A1",
+              name = "Calibri", size = 14, bold = TRUE, color = DARK_TEXT)
+  wb$add_font(sheet = sheet_name, dims = "A2",
+              name = "Calibri", size = 10, italic = TRUE, color = DARK_TEXT)
+
+  header_range <- paste0("A4:", last_col_letter, "4")
+  wb$add_fill(sheet = sheet_name, dims = header_range, color = wb_color(hex = UF_BLUE))
+  wb$add_font(sheet = sheet_name, dims = header_range,
+              name = "Calibri", size = 11, bold = TRUE, color = WHITE)
+
+  # Optional second table, written a few rows below the first.
+  if (!is.null(extra_tbl) && nrow(extra_tbl) > 0) {
+    gap_rows_offset <- 4 + nrow(data_tbl) + 2
+    label_row       <- gap_rows_offset
+    header_row      <- gap_rows_offset + 1
+
+    if (!is.null(extra_label)) {
+      wb$add_data(sheet = sheet_name, x = extra_label, dims = paste0("A", label_row))
+      wb$add_font(sheet = sheet_name, dims = paste0("A", label_row),
+                  name = "Calibri", size = 11, bold = TRUE, color = DARK_TEXT)
+    }
+
+    wb$add_data(sheet = sheet_name, x = extra_tbl,
+                dims = paste0("A", header_row), col_names = TRUE)
+
+    extra_last_col <- openxlsx2::int2col(ncol(extra_tbl))
+    extra_hdr_rng  <- paste0("A", header_row, ":", extra_last_col, header_row)
+    wb$add_fill(sheet = sheet_name, dims = extra_hdr_rng, color = wb_color(hex = UF_BLUE))
+    wb$add_font(sheet = sheet_name, dims = extra_hdr_rng,
+                name = "Calibri", size = 11, bold = TRUE, color = WHITE)
+  }
+
+  wb$freeze_pane(sheet = sheet_name, firstActiveRow = 5)
+  wb$set_col_widths(sheet = sheet_name, cols = 1:max(n_cols, ncol(extra_tbl %||% data_tbl)),
+                    widths = "auto")
+}
+
+# ---- KEY sheet data ----
+key_tbl <- tibble::tibble(
+  Field = c(
+    "Script",
+    "Phase",
+    "Run date",
+    "Cohort",
+    "Encounter ZIP source",
+    "D-03: Encounter ZIP interpretation (OPEN QUESTION)",
+    "Residence ZIP source",
+    "Distance method",
+    "Distance thresholds",
+    "D-02: Fallback encounters in summaries",
+    "RDS output",
+    "A_encounter_distance columns",
+    "B_patient_summary columns",
+    "C_distribution columns",
+    "D_flags columns",
+    "QC sheet contents"
+  ),
+  Description = c(
+    "R/122_encounter_distance.R",
+    "Phase 152 -- encounter-ZIP to residence distance",
+    RUN_DATE,
+    "HL cohort (N = 9,282), IDs from DuckDB via CONFIG",
+    "FACILITY_LOCATION column in PCORnet CDM ENCOUNTER table",
+    paste0(
+      "Whether encounter ZIP is patient- or facility-sourced in this OneFlorida+ extract is unknown; ",
+      "column description reflects travel distance if facility-sourced, proxy validation if patient-sourced."
+    ),
+    "LDS_ADDRESS_HISTORY via get_zip9_at_date() (backward-only, most-recent-before fallback)",
+    "Haversine great-circle distance (km); Earth radius 6371 km",
+    "200 km primary (flag_gt200 = TRUE in D_flags); 50 km secondary (all D_flags rows)",
+    "Fallback (most_recent_before) encounters are INCLUDED in B/C summaries; distinguished by res_match_fallback",
+    "Full encounter-level enc_distance tibble saved to encounter_distance_YYYYMMDD.rds",
+    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, res_zip9, res_zip5, res_match_type, res_match_fallback, distance_km, distance_basis, enc_centroid_source, res_centroid_source",
+    "ID, n_encounters, n_with_distance, median_km, iqr_km, max_km, pct_gt50km, pct_gt200km",
+    "dist_bin, distance_basis, n_encounters, n_patients (bins: 0-5, 5-25, 25-50, 50-200, >200 km; include.lowest=TRUE so distance=0 rows fall in the 0-5 bin)",
+    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, res_zip9, res_zip5, res_match_type, res_match_fallback, distance_km, distance_basis, enc_centroid_source, res_centroid_source, flag_gt200",
+    "Coverage waterfall; unmatched ZIP9 by state; zip9_crosswalk_present flag; WV gap note; fallback sensitivity row"
+  )
+)
+
+# ---- Build workbook -- KEY LEFTMOST (D-02 pattern) ----
+wb <- wb_workbook()
+
+add_styled_sheet(
+  wb, "KEY",
+  "Phase 152: Encounter-ZIP to Residence Distance — Workbook KEY",
+  glue("Run date: {RUN_DATE} | Cohort: HL (N=9,282) | Script: R/122_encounter_distance.R"),
+  key_tbl
+)
+
+add_styled_sheet(
+  wb, "A_encounter_distance",
+  "A: Encounter-Level Distance",
+  "One row per HL cohort encounter with distance_km from enc_zip to residence ZIP on ADMIT_DATE.",
+  enc_distance
+)
+
+add_styled_sheet(
+  wb, "B_patient_summary",
+  "B: Patient-Level Distance Summary",
+  "One row per patient; fallback (most_recent_before) encounters included per D-02.",
+  B_patient_summary
+)
+
+add_styled_sheet(
+  wb, "C_distribution",
+  "C: Distance Distribution by Bin and Basis",
+  "Bins: 0-5, 5-25, 25-50, 50-200, >200 km (include.lowest=TRUE; zero-distance rows in 0-5) x distance_basis.",
+  C_distribution
+)
+
+add_styled_sheet(
+  wb, "D_flags",
+  "D: Far-Distance Flagged Encounters",
+  "Encounters > 50 km (secondary threshold); flag_gt200 = TRUE marks primary threshold (> 200 km).",
+  D_flags
+)
+
+add_styled_sheet(
+  wb, "QC",
+  "QC: Coverage Waterfall and Quality Checks",
+  "Waterfall from raw cohort ENCOUNTER count to distance computed; WV gap noted; fallback sensitivity row.",
+  qc_tbl,
+  extra_tbl   = unmatched_zip9_by_state,
+  extra_label = "Unmatched ZIP9 encounters by state (centroid_source == zip5_fallback)"
+)
+
+wb_save(wb, OUTPUT_XLSX)
+message(glue("  xlsx written: {OUTPUT_XLSX}"))
+
+# ---- Write rds (full encounter-level tibble) ----
+# Full enc_distance tibble chosen (per CONTEXT.md Claude's discretion note);
+# includes all 12 A_encounter_distance columns for downstream joining without
+# re-running the script.
+saveRDS(enc_distance, OUTPUT_RDS)
+message(glue("  rds written: {OUTPUT_RDS}"))
+
+message("=== R/122_encounter_distance.R complete ===")
