@@ -194,6 +194,25 @@ CONFIG <- list(
   } else {
     "/blue/erin.mobley.precision/ADI_zip4_files"
     # ^^^ UNCONFIRMED placeholder — update after running ls on HiPerGator
+  },
+
+  # Neighborhood Atlas ZIP9 ADI parquet — input for R/122a crosswalk builder.
+  # Built Aug 2026; 68.6M rows; columns include zip9, bg_geoid, state.
+  # Path matches the %||% fallback in R/122a (line 27).
+  adi_zip9_parquet = if (IS_LOCAL) {
+    NULL  # Not available locally; R/122a probes and stops with a message if NULL/missing
+  } else {
+    "/blue/erin.mobley-hl.bcu/ADI/out/adi_2024_zip9_all_dedup.parquet"
+  },
+
+  # TIGER/Line 2020 block-group zip directory — input for R/122a crosswalk builder.
+  # Contains tl_2020_<FIPS2>_bg.zip files (one per state + DC + PR).
+  # Path matches the %||% fallback in R/122a (line 28).
+  # Run slurm/122a_fetch_tiger_bg.sh on a HiPerGator login node to populate.
+  tiger_bg_dir = if (IS_LOCAL) {
+    NULL  # Not available locally; R/122a probes and stops with a message if NULL/missing
+  } else {
+    "/blue/erin.mobley-hl.bcu/ADI/tiger_bg"
   }
 )
 
