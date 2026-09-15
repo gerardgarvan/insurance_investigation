@@ -166,7 +166,7 @@ haversine_km <- function(lat1, lon1, lat2, lon2) {
 }
 ```
 
-**Known-distance test:** Miami (25.7617° N, 80.1918° W) to Tampa (27.9506° N, 82.4572° W) ≈ 279 km straight-line. The spec references ~330 km; the 330 km figure in the spec may include a driving route approximation — use the great-circle result (~279 km) as the test expectation, not 330 km.
+**Known-distance test:** Miami (25.7617° N, 80.1918° W) to Tampa (27.9506° N, 82.4572° W) ≈ 331 km great-circle (verified numerically 2026-09-15; an earlier draft of this document gave 279 km, which was an arithmetic error). The spec's ~330 km is correct. Use 331 ± 5 km as the test expectation. Miami → New York (40.7128° N, 74.0060° W) ≈ 1758 km is a second safe pair.
 
 ### ENCOUNTER Pull (mirrors R/116 SECTION 4)
 
@@ -250,9 +250,9 @@ distance_basis = case_when(
 
 ### Pitfall 6: Miami–Tampa Distance Test Value
 
-**What goes wrong:** The CONTEXT.md spec says "Miami–Tampa ≈ 330 km" but this appears to be a driving distance estimate. The haversine (great-circle) distance for Miami (25.7617°N, 80.1918°W) to Tampa (27.9506°N, 82.4572°W) is approximately 279 km. A test expecting 330 km will fail.
+**What goes wrong:** An earlier draft of this research claimed the great-circle Miami–Tampa distance was 279 km and that the spec's 330 km was a driving figure. That was wrong: the haversine distance for Miami (25.7617°N, 80.1918°W) to Tampa (27.9506°N, 82.4572°W) is ≈ 331 km. A test expecting 279 km will fail against a correct implementation.
 
-**How to avoid:** Use approximately 279 ± 5 km as the test expectation, or use a city pair with a well-documented great-circle distance (e.g., Miami to NYC ≈ 1757 km).
+**How to avoid:** Use 331 ± 5 km as the test expectation (matches the spec). Optionally add Miami → NYC ≈ 1758 ± 5 km as a second assertion.
 
 ### Pitfall 7: WV ZIP9 Coverage Gap in QC Sheet
 
@@ -298,10 +298,11 @@ R/122 belongs in the **Investigations (100-122)** group (the index currently end
 
 This phase has clear serialization requirements (helpers must exist before the main script) and an internal parallelism opportunity (encounter-side and residence-side ZIP resolution are independent computations that can be planned together but executed after setup).
 
-**Recommended 3-plan wave structure:**
+**Recommended 4-plan wave structure:**
 
 | Plan | Content | Depends On |
 |------|---------|-----------|
+| 152-00-PLAN.md | `R/122a_build_zip9_centroid_crosswalk.R` + sbatch: derive `zip9_bg_centroid_crosswalk.csv` from the Neighborhood Atlas ZIP+4 files and block-group internal points on HiPerGator (blocking checkpoint) | Nothing (runs in parallel with 01) |
 | 152-01-PLAN.md | SECTION 1B helpers in utils_address.R: `haversine_km()` + `get_zip_centroid()` (both functions, memoization caches, `.validate_zcta_centroid()` guard) + test file `test-122-distance.R` | Nothing |
 | 152-02-PLAN.md | `R/122_encounter_distance.R` scaffold: SECTION 1 through SECTION 7 (encounter pull, residence resolution, centroid resolution, distance computation, distance_basis column) | Plan 01 (helpers must exist) |
 | 152-03-PLAN.md | SECTION 8–12 (patient summary, distribution table, flags, QC waterfall, xlsx assembly + RDS write) + registration in R/39, R/88, R/SCRIPT_INDEX.md | Plan 02 |
@@ -314,7 +315,7 @@ This phase has clear serialization requirements (helpers must exist before the m
 |------------|------------|-----------|---------|----------|
 | DuckDB ENCOUNTER table | Encounter pull (SECTION 3) | HiPerGator only | — | Probe gate stops with message |
 | `data/reference/zcta_gazetteer_centroids.csv` | ZIP5 centroids | NOT YET STAGED | — | Probe gate stops with actionable message |
-| `data/reference/zip9_bg_centroid_crosswalk.csv` | ZIP9 centroids | NOT YET STAGED (on HiPerGator `/blue/erin.mobley.precision/`) | — | Probe gate stops; falls back to ZIP5 centroid |
+| `data/reference/zip9_bg_centroid_crosswalk.csv` | ZIP9 centroids | NOT YET BUILT — must be derived on HiPerGator from the 51 Neighborhood Atlas ZIP+4→block-group files under `/blue/erin.mobley.precision/` joined to block-group internal points (TIGER/NHGIS); see Plan 00 | — | Probe gate warns and degrades to all-ZIP5 (`zip5_fallback`) so a ZIP5-only run is possible before the crosswalk exists |
 | `LDS_ADDRESS_HISTORY_Mailhot_V1.csv` | `get_zip9_at_date()` | HiPerGator only | — | Existing probe in utils_address.R |
 | openxlsx2 | xlsx output | In renv | project std | — |
 | vroom | CSV loading | In renv | project std | read.csv fallback (existing pattern) |
@@ -383,7 +384,7 @@ if (!is.null(.zcta_gazetteer_cache$key) &&
 }
 ```
 
-Note the `delim = "\t"`: Census Gazetteer files are tab-delimited, not comma-delimited.
+Note on delimiter: the raw Census Gazetteer download is tab-delimited, but the staged file is named `.csv` and may have been re-saved as comma-delimited. Do NOT hard-code `delim = "\t"`; let `vroom::vroom()` infer the delimiter (omit `delim`) and validate the resulting column names afterward (Pitfall 1).
 
 ### haversine_km Inline (SECTION 1B, pure):
 
@@ -462,7 +463,7 @@ encounters_raw <- enc_tbl %>%
 - ENCOUNTER pull pattern: HIGH — directly read from `R/116_encounter_ses_index.R`
 - Registration pattern: HIGH — directly read from `R/39_run_all_investigations.R`
 - haversine formula: HIGH — standard mathematical formula, no library uncertainty
-- Miami–Tampa distance: MEDIUM — computed from known coordinates; spec value of 330 km appears to be driving distance
+- Miami–Tampa distance: HIGH — 331 km, verified numerically; the spec's 330 km is correct
 
 **Research date:** 2026-09-15
 **Valid until:** 2026-10-15 (stable codebase; centroid file column names should be verified on first HiPerGator probe run)
