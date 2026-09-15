@@ -514,7 +514,8 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [x] TBD (run /gsd:plan-phase 149 to break down) (completed 2026-08-21)
+- [x] TBD (run /gsd:plan-phase 149 to break down)
+ (completed 2026-08-21)
 
 ### Phase 150: ZIP5-Missing but ZIP9-Elsewhere: Patient Count and First-5 Concordance Check
 
@@ -525,3 +526,15 @@ Plans:
 
 Plans:
 - [ ] 150-01-PLAN.md — R/120_zip5_backfill_concordance.R: load LDS_ADDRESS_HISTORY, compute 4 patient-level counts (missing-ZIP5 patients, ZIP9-elsewhere, concordant/discordant/no-compare), concordance rate + interpretation; register in R/39 + R/88 Section 15af + SCRIPT_INDEX.md; HiPerGator run checkpoint [ZIP5-BACKFILL-01] (Wave 1)
+
+### Phase 152: Encounter-ZIP to Residence Distance
+
+**Goal:** For each cohort encounter, compute the geographic distance between the ZIP recorded on the ENCOUNTER row and the patient's residential address in effect on the encounter date (LDS_ADDRESS_HISTORY, via get_zip9_at_date()). Produce an encounter-level distance table and a patient-level summary that characterizes how far patients travel for care and flags encounters whose ZIP is implausibly far from the residence on file.
+**Requirements**: TBD
+**Depends on:** Phase 151
+**Plans:** 3 plans
+
+Plans:
+- [ ] 152-01-PLAN.md — Add haversine_km() + get_zip_centroid() helpers to utils_address.R, CONFIG paths, test-122-distance.R
+- [ ] 152-02-PLAN.md — R/122 SECTION 1-7: encounter pull (FACILITY_LOCATION), residence resolution, centroid resolution, distance compute
+- [ ] 152-03-PLAN.md — R/122 SECTION 8-12: summaries, QC waterfall, xlsx+rds; register in R/39/R/88/SCRIPT_INDEX; HiPerGator run checkpoint
