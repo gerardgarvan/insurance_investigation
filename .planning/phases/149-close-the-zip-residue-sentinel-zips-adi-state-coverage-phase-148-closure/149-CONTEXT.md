@@ -28,8 +28,18 @@ Does **not** build a centroid crosswalk. Does not reopen Phase 148.
 
 ### Task 1 — Widen is_sentinel_zip5()
 
-- **Enumerate first (read-only):** Before changing the filter, run the probe in §2a of 149-CONTEXT.md: print all `ZIP5` values where `as.integer(ZIP5) < 501` that are not already caught; run the positive control confirming the existing repeated-digit rejection fires at all.
-- Record both outputs in `149-DISCOVERY.md` before touching any source file.
+- **Enumerate first, in a SEPARATE PLAN AND WAVE.** The probe needs HiPerGator; the filter change
+  does not. Putting both in one autonomous plan means the gate can never fire, because the plan
+  cannot run the probe. So: 149-01 runs the probe (blocking human checkpoint) and records a
+  PASS/HALT verdict; 149-02 makes the filter change and reads that verdict first. 149-01 modifies
+  no source file at all.
+- Probe = §2a: print all `ZIP5` where `as.integer(ZIP5) < 501`, plus the positive control
+  confirming the existing repeated-digit rejection fires at all.
+- Record both outputs in `149-DISCOVERY.md` §1 before touching any source file.
+- **Also locate `has_adi_zip5` before editing utils_address.R.** `zip5_representative` resolved
+  47,036 encounters, so the column exists when `.classify_zip9_source()` evaluates it — but it is
+  NOT in the five-column `select()` at lines 526–532. Something supplies it on a path nobody has
+  found. 149-01 records where; 149-02 must not disturb it.
 - **Filter change:** Replace the single surviving definition in `R/utils/utils_address.R` with the two-class version (repeated digits OR numeric < 501). The exact replacement is specified verbatim in §2b of 149-CONTEXT.md.
 - **Delete the dead duplicate:** There are currently two `is_sentinel_zip5 <- function` definitions; the second silently overrides the first. Delete the dead one. `grep -c "^is_sentinel_zip5 <- function" R/utils/utils_address.R` must return 1.
 - **`!is.na(zip5) &` guard required:** predicate returns `FALSE` for `NA` (not `NA`), which is what callers inside `filter()` and `if_else()` expect.
@@ -57,7 +67,14 @@ Does **not** build a centroid crosswalk. Does not reopen Phase 148.
 
 ### General Rules (Locked)
 
-- Enumerate before widening: every ZIP5 newly rejected must be confirmed invalid before the filter changes.
+- Enumerate before widening: every ZIP5 newly rejected must be confirmed invalid before the filter
+  changes — and "before" means an earlier wave, not an earlier task in the same autonomous plan.
+- Placeholder convention: `PENDING` marks the §5 before/after table only; `TBD` marks §2's
+  checklist. 149-03's completeness check greps §5 for PENDING and §2 for TBD separately — an
+  unscoped `grep -c PENDING == 0` would fail a correctly-executed phase.
+- Resolve the Phase 148 directory before writing to it: `.planning/phases/148-*` and
+  `R/.planning/phases/148-*` have both been referenced. If both exist, that second `.planning`
+  root is itself a defect worth recording.
 - `12345` (Schenectady NY) and `00501` (Holtsville NY) are **real ZIPs** — not sentinels.
 - Do not build a centroid crosswalk.
 - Do not report out-of-state ZIPs (1.24 patients/ZIP5) as a data-quality defect.
@@ -68,7 +85,8 @@ Does **not** build a centroid crosswalk. Does not reopen Phase 148.
 
 ### Claude's Discretion
 
-- Wave assignment and plan splitting (single plan is fine if tasks are sequential and small).
+- Plan splitting WITHIN a wave. The probe-before-filter split across waves is NOT discretionary —
+  see Task 1. A single plan holding both defeats the gate.
 - Exact DISCOVERY.md formatting beyond the content requirements above.
 - Whether to split the archive bash script into a separate plan or inline it.
 
