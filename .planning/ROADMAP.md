@@ -532,7 +532,7 @@ Plans:
 **Goal:** For each cohort encounter, compute the geographic distance between the ZIP recorded on the ENCOUNTER row and the patient's residential address in effect on the encounter date (LDS_ADDRESS_HISTORY, via get_zip9_at_date()). Produce an encounter-level distance table and a patient-level summary that characterizes how far patients travel for care and flags encounters whose ZIP is implausibly far from the residence on file.
 **Requirements**: TBD
 **Depends on:** Phase 151
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 - [x] 152-01-PLAN.md — Add haversine_km() + get_zip_centroid() helpers to utils_address.R, CONFIG paths, test-122-distance.R
