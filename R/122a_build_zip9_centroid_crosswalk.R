@@ -31,7 +31,9 @@ LOG_PATH    <- sub("\\.csv$", glue("_BUILDLOG_{format(Sys.Date(), '%Y%m%d')}.txt
 sql_str     <- function(x) gsub("'", "''", x, fixed = TRUE)   # escape for single-quoted SQL literals
 
 log_lines <- character()
-logm <- function(...) { m <- glue(...); message(m); log_lines <<- c(log_lines, as.character(m)) }
+logm <- function(..., .envir = parent.frame()) {   # evaluate {vars} in the caller, not in logm
+  m <- glue(..., .envir = .envir); message(m); log_lines <<- c(log_lines, as.character(m))
+}
 
 # ---- Probe gates --------------------------------------------------------------
 if (!file.exists(ADI_PARQUET)) stop(glue("[R/122a] ADI ZIP9 parquet not found: {ADI_PARQUET}"))
