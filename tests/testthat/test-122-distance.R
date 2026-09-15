@@ -11,11 +11,9 @@ source("R/00_config.R")
 
 test_that("haversine_km returns correct distance for Miami-Tampa", {
   # Miami (25.7617N, 80.1918W) to Tampa (27.9506N, 82.4572W)
-  # Verified great-circle: ~331 km (an earlier draft said 279 km -- that was wrong)
+  # Verified great-circle: ~331 km (RESEARCH.md Pitfall 6; 331 is correct, not ~279)
   result <- haversine_km(25.7617, -80.1918, 27.9506, -82.4572)
   expect_equal(result, 331, tolerance = 5)
-  # Confirm the wrong 279 value is not the expected answer
-  expect_false(abs(result - 279) < 5)
 })
 
 test_that("haversine_km returns correct distance for Miami-New York", {
