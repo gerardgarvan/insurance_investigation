@@ -853,57 +853,36 @@ get_zip_centroid <- function(zip, level = c("zip5", "zip9")) {
                       centroid_source = "zip9_bg_absent"))
       }
 
-      # Memoized load of ZIP9 crosswalk
-      cache_key_bg <- paste0(
-        normalizePath(bg_path, mustWork = FALSE), "|",
-        as.numeric(file.mtime(bg_path)), "|",
-        file.size(bg_path)
-      )
+      # DuckDB filtered read: scan only the requested ZIP9 row(s).
+      # Never loads the full 68M-row crosswalk into R -- DuckDB pushes the
+      # WHERE filter down to the CSV scanner.
+      hit_bg <- tryCatch({
+        safe_zip <- gsub("'", "''", zip_str, fixed = TRUE)   # SQL-escape
+        con <- duckdb::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+        on.exit(duckdb::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+        bg_path_sql <- gsub("'", "''", normalizePath(bg_path, mustWork = FALSE), fixed = TRUE)
+        DBI::dbGetQuery(con, glue::glue(
+          "SELECT ZIP9, GEOID, INTPTLAT, INTPTLON
+             FROM read_csv('{bg_path_sql}',
+                           header = true,
+                           columns = {{ZIP9: 'VARCHAR', GEOID: 'VARCHAR',
+                                       INTPTLAT: 'DOUBLE',  INTPTLON: 'DOUBLE'}})
+            WHERE ZIP9 = '{safe_zip}'
+            LIMIT 1"
+        ))
+      }, error = function(e) {
+        message(glue::glue(
+          "[utils_address] get_zip_centroid: zip9 DuckDB query failed ",
+          "({conditionMessage(e)}) -- returning absent tibble"
+        ))
+        NULL
+      })
 
-      if (!is.null(.zip9_bg_centroid_cache$key) &&
-          identical(.zip9_bg_centroid_cache$key, cache_key_bg)) {
-        bg <- .zip9_bg_centroid_cache$value
-      } else {
-        bg_raw <- tryCatch(
-          vroom::vroom(
-            bg_path,
-            col_types = vroom::cols(
-              ZIP9     = vroom::col_character(),
-              GEOID    = vroom::col_character(),
-              INTPTLAT = vroom::col_double(),
-              INTPTLON = vroom::col_double()
-            ),
-            progress = FALSE
-          ),
-          error = function(e) {
-            message(glue("[utils_address] get_zip_centroid: zip9 crosswalk vroom failed ",
-                         "({conditionMessage(e)}) -- returning absent tibble"))
-            NULL
-          }
-        )
-
-        if (is.null(bg_raw)) {
-          return(tibble(zip = z, level = level,
-                        lat = NA_real_, lon = NA_real_,
-                        centroid_source = "zip9_bg_absent"))
-        }
-
-        req_cols <- c("ZIP9", "GEOID", "INTPTLAT", "INTPTLON")
-        missing_bg <- setdiff(req_cols, names(bg_raw))
-        if (length(missing_bg) > 0) {
-          stop(glue(
-            "[utils_address] get_zip_centroid: zip9 crosswalk missing required column(s): ",
-            "{paste(missing_bg, collapse = ', ')}. ",
-            "Actual columns: {paste(names(bg_raw), collapse = ', ')}"
-          ))
-        }
-
-        bg <- bg_raw %>% select(ZIP9, GEOID, INTPTLAT, INTPTLON)
-        .zip9_bg_centroid_cache$key   <<- cache_key_bg
-        .zip9_bg_centroid_cache$value <<- bg
+      if (is.null(hit_bg)) {
+        return(tibble(zip = z, level = level,
+                      lat = NA_real_, lon = NA_real_,
+                      centroid_source = "zip9_bg_absent"))
       }
-
-      hit_bg <- bg %>% filter(ZIP9 == zip_str) %>% slice(1)
 
       if (nrow(hit_bg) > 0L) {
         tibble(zip = z, level = level,
