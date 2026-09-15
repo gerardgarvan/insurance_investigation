@@ -83,6 +83,16 @@ THREAD_COUNT <- if (IS_LOCAL) {
 # Update this when a new extract arrives. Used for ingest log filenames.
 EXTRACT_DATE <- "2025-09-15"
 
+# Reference directory: anchored to the project root via here::here() so every
+# CONFIG path that points to data/reference/ is consistent regardless of the
+# caller's working directory. Same guard pattern used in utils_address.R lines
+# 565-571 for the centroid crosswalk path.
+.reference_dir <- if (requireNamespace("here", quietly = TRUE)) {
+  here::here("data", "reference")
+} else {
+  file.path("data", "reference")
+}
+
 CONFIG <- list(
   # Data directory: tests/fixtures/ locally, /orange/ production path on HPC
   data_dir = if (IS_LOCAL) {
@@ -159,7 +169,20 @@ CONFIG <- list(
     } else {
       "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb"
     }
-  )
+  ),
+
+  # ---------------------------------------------------------------------------
+  # Phase 152: Geospatial reference file paths
+  # ---------------------------------------------------------------------------
+  # Census ZCTA Gazetteer centroids (ZIP5 -> lat/lon). Tab-delimited download
+  # from https://www.census.gov/geographies/reference-files/2020/geo/gazetter-file.html
+  # Staged as data/reference/zcta_gazetteer_centroids.csv on HiPerGator.
+  zcta_gazetteer_path   = file.path(.reference_dir, "zcta_gazetteer_centroids.csv"),
+
+  # ZIP9 block-group centroid crosswalk (built by R/122a on HiPerGator from
+  # Neighborhood Atlas ZIP+4 files + TIGER block-group internal points).
+  # Staged as data/reference/zip9_bg_centroid_crosswalk.csv on HiPerGator.
+  zip9_bg_centroid_path = file.path(.reference_dir, "zip9_bg_centroid_crosswalk.csv")
 )
 
 # ==============================================================================

@@ -76,6 +76,30 @@ is_sentinel_zip5 <- function(zip5) {
   )
 }
 
+#' Compute great-circle (haversine) distance between two lat/lon pairs.
+#'
+#' Pure vectorized function — no external package dependency. Uses the WGS-84
+#' mean Earth radius of 6371 km. NA propagates through arithmetic naturally:
+#' if any of lat1, lon1, lat2, lon2 is NA, the returned distance is NA_real_
+#' (not NaN). The \code{pmin(1, sqrt(a))} guard prevents floating-point
+#' domain errors in \code{asin()} for numerically degenerate inputs.
+#'
+#' @param lat1 Numeric. Latitude of the first point (decimal degrees, WGS-84).
+#' @param lon1 Numeric. Longitude of the first point (decimal degrees, WGS-84).
+#' @param lat2 Numeric. Latitude of the second point (decimal degrees, WGS-84).
+#' @param lon2 Numeric. Longitude of the second point (decimal degrees, WGS-84).
+#' @return Numeric vector of great-circle distances in kilometres. NA when any
+#'   input element is NA; 0 when both points are identical.
+haversine_km <- function(lat1, lon1, lat2, lon2) {
+  R   <- 6371          # WGS-84 mean Earth radius, km
+  d2r <- pi / 180
+  lat1r <- lat1 * d2r; lat2r <- lat2 * d2r
+  dlat  <- (lat2 - lat1) * d2r
+  dlon  <- (lon2 - lon1) * d2r
+  a     <- sin(dlat / 2)^2 + cos(lat1r) * cos(lat2r) * sin(dlon / 2)^2
+  2 * R * asin(pmin(1, sqrt(a)))  # pmin guards against asin(x > 1) domain errors
+}
+
 #' Resolve ZIP9 (and ZIP5) for each (ID, query_date) pair using temporal lookup.
 #'
 #' Loads LDS_ADDRESS_HISTORY on demand (D-06: no caching), joins on ID, then
@@ -283,6 +307,14 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 # Memoisation cache for the ZIP5->centroid-ZIP9 crosswalk (Phase 144 Tier 3).
 # Keyed by (path, mtime, size) to force rebuild when file changes.
 .centroid_zip9_lookup_cache <- list(key = NULL, value = NULL)
+
+# Memoisation cache for the ZCTA Gazetteer (Phase 152: ZIP5 -> lat/lon centroid).
+# Keyed by (path, mtime, size) to force rebuild when file changes.
+.zcta_gazetteer_cache <- list(key = NULL, value = NULL)
+
+# Memoisation cache for the ZIP9 block-group centroid crosswalk (Phase 152).
+# Keyed by (path, mtime, size) to force rebuild when file changes.
+.zip9_bg_centroid_cache <- list(key = NULL, value = NULL)
 
 # Shared classifier -- every exit path of approximate_zip9() routes through this so the
 # returned column set and row count are identical regardless of which path was taken.
@@ -649,4 +681,244 @@ approximate_zip9 <- function(result_tbl) {
   ))
 
   result_out
+}
+
+# ==============================================================================
+# get_zip_centroid() -- Resolve ZIP5/ZIP9 to a geographic centroid lat/lon
+# ==============================================================================
+
+#' Resolve a ZIP5 or ZIP9 code to a geographic centroid (lat, lon).
+#'
+#' For ZIP5: joins the 5-digit code to the Census ZCTA Gazetteer
+#' (\code{data/reference/zcta_gazetteer_centroids.csv}). The file may be
+#' tab-delimited (raw Census download) or comma-delimited (re-saved); \code{vroom}
+#' infers the delimiter automatically — do not hard-code \code{delim}.
+#'
+#' For ZIP9: joins the full 9-digit code to the block-group centroid crosswalk
+#' (\code{data/reference/zip9_bg_centroid_crosswalk.csv}). On a miss, falls back to
+#' the ZIP5 gazetteer using the first 5 digits of the ZIP9.
+#'
+#' Both reference files are loaded lazily (first call) and memoized in file-scope
+#' caches keyed by \code{(path, mtime, size)} — same pattern as
+#' \code{.centroid_zip9_lookup_cache} in this file. Rebuild happens automatically
+#' when the reference file changes.
+#'
+#' The function is \strong{pure when reference files are absent}: it returns a
+#' typed tibble with \code{NA_real_} lat/lon and a \code{*_absent} centroid_source
+#' rather than erroring. This keeps SECTION 1B sourceable in a test context with
+#' no HiPerGator data.
+#'
+#' @param zip Character vector of ZIP codes. For \code{level = "zip5"}, the first
+#'   5 characters are used as the join key. For \code{level = "zip9"}, the full
+#'   9-character string is matched.
+#' @param level Character scalar: \code{"zip5"} or \code{"zip9"}.
+#' @return A tibble with one row per element of \code{zip} and columns:
+#'   \describe{
+#'     \item{zip}{Character. The original input ZIP value.}
+#'     \item{level}{Character. The \code{level} argument ("zip5" or "zip9").}
+#'     \item{lat}{Double. Centroid latitude; \code{NA_real_} when unresolved.}
+#'     \item{lon}{Double. Centroid longitude; \code{NA_real_} when unresolved.}
+#'     \item{centroid_source}{Character. One of:
+#'       \code{"zip5_gazetteer"} — matched in ZCTA Gazetteer;
+#'       \code{"zip5_gazetteer_absent"} — gazetteer file not found;
+#'       \code{"zip9_bg"} — matched in ZIP9 block-group crosswalk;
+#'       \code{"zip5_fallback"} — ZIP9 unmatched; fell back to ZIP5 gazetteer;
+#'       \code{"zip9_bg_absent"} — ZIP9 crosswalk file not found.}
+#'   }
+get_zip_centroid <- function(zip, level = c("zip5", "zip9")) {
+  level <- match.arg(level)
+
+  # ---------------------------------------------------------------------------
+  # Helper: resolve a single lat/lon from the ZCTA gazetteer for a ZIP5 key.
+  # Returns a one-row tibble with columns lat, lon, centroid_source.
+  # Used by both the zip5 path and as the zip9 fallback.
+  # ---------------------------------------------------------------------------
+  .resolve_zip5_centroid <- function(zip5_key, fallback_source = "zip5_gazetteer") {
+
+    gaz_path <- if (!is.null(CONFIG$zcta_gazetteer_path)) {
+      CONFIG$zcta_gazetteer_path
+    } else if (requireNamespace("here", quietly = TRUE)) {
+      here::here("data", "reference", "zcta_gazetteer_centroids.csv")
+    } else {
+      file.path("data", "reference", "zcta_gazetteer_centroids.csv")
+    }
+
+    if (!file.exists(gaz_path)) {
+      absent_src <- if (fallback_source == "zip5_gazetteer") {
+        "zip5_gazetteer_absent"
+      } else {
+        "zip5_fallback_absent"
+      }
+      return(tibble(lat = NA_real_, lon = NA_real_, centroid_source = absent_src))
+    }
+
+    # Memoized load, keyed by (path, mtime, size)
+    cache_key <- paste0(
+      normalizePath(gaz_path, mustWork = FALSE), "|",
+      as.numeric(file.mtime(gaz_path)), "|",
+      file.size(gaz_path)
+    )
+
+    if (!is.null(.zcta_gazetteer_cache$key) &&
+        identical(.zcta_gazetteer_cache$key, cache_key)) {
+      gaz <- .zcta_gazetteer_cache$value
+    } else {
+      # Omit delim so vroom infers tab vs comma automatically (Pitfall 1).
+      gaz_raw <- tryCatch(
+        vroom::vroom(
+          gaz_path,
+          col_types = vroom::cols(GEOID = vroom::col_character(), .default = vroom::col_guess()),
+          progress  = FALSE
+        ),
+        error = function(e) {
+          message(glue("[utils_address] get_zip_centroid: gazetteer vroom failed ",
+                       "({conditionMessage(e)}) -- returning absent tibble"))
+          NULL
+        }
+      )
+
+      if (is.null(gaz_raw)) {
+        return(tibble(lat = NA_real_, lon = NA_real_, centroid_source = "zip5_gazetteer_absent"))
+      }
+
+      # Resolve longitude column: Gazetteer uses INTPTLONG (trailing G); staged
+      # file may have been renamed to INTPTLON. Accept either. (Pitfall 1)
+      lon_col <- if ("INTPTLONG" %in% names(gaz_raw)) {
+        "INTPTLONG"
+      } else if ("INTPTLON" %in% names(gaz_raw)) {
+        "INTPTLON"
+      } else {
+        stop(glue(
+          "[utils_address] get_zip_centroid: gazetteer file has neither INTPTLONG nor INTPTLON. ",
+          "Actual columns: {paste(names(gaz_raw), collapse = ', ')}"
+        ))
+      }
+
+      if (!"INTPTLAT" %in% names(gaz_raw)) {
+        stop(glue(
+          "[utils_address] get_zip_centroid: gazetteer file missing INTPTLAT. ",
+          "Actual columns: {paste(names(gaz_raw), collapse = ', ')}"
+        ))
+      }
+
+      gaz <- gaz_raw %>%
+        select(GEOID, INTPTLAT, lon_col = all_of(lon_col)) %>%
+        mutate(
+          INTPTLAT = as.double(INTPTLAT),
+          lon_col  = as.double(lon_col)
+        )
+
+      .zcta_gazetteer_cache$key   <<- cache_key
+      .zcta_gazetteer_cache$value <<- gaz
+    }
+
+    # Join ZIP5 key to GEOID
+    hit <- gaz %>%
+      filter(GEOID == zip5_key) %>%
+      slice(1)
+
+    if (nrow(hit) == 0L) {
+      tibble(lat = NA_real_, lon = NA_real_, centroid_source = fallback_source)
+    } else {
+      tibble(lat = hit$INTPTLAT, lon = hit$lon_col, centroid_source = fallback_source)
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Vectorized dispatch over the zip vector
+  # ---------------------------------------------------------------------------
+  results <- lapply(zip, function(z) {
+    if (level == "zip5") {
+      zip5_key <- substr(as.character(z), 1, 5)
+      row      <- .resolve_zip5_centroid(zip5_key, fallback_source = "zip5_gazetteer")
+      tibble(zip = z, level = level, lat = row$lat, lon = row$lon,
+             centroid_source = row$centroid_source)
+
+    } else {
+      # zip9 path
+      zip_str <- as.character(z)
+
+      bg_path <- if (!is.null(CONFIG$zip9_bg_centroid_path)) {
+        CONFIG$zip9_bg_centroid_path
+      } else if (requireNamespace("here", quietly = TRUE)) {
+        here::here("data", "reference", "zip9_bg_centroid_crosswalk.csv")
+      } else {
+        file.path("data", "reference", "zip9_bg_centroid_crosswalk.csv")
+      }
+
+      if (!file.exists(bg_path)) {
+        # Crosswalk absent -- return NA with absent source
+        return(tibble(zip = z, level = level,
+                      lat = NA_real_, lon = NA_real_,
+                      centroid_source = "zip9_bg_absent"))
+      }
+
+      # Memoized load of ZIP9 crosswalk
+      cache_key_bg <- paste0(
+        normalizePath(bg_path, mustWork = FALSE), "|",
+        as.numeric(file.mtime(bg_path)), "|",
+        file.size(bg_path)
+      )
+
+      if (!is.null(.zip9_bg_centroid_cache$key) &&
+          identical(.zip9_bg_centroid_cache$key, cache_key_bg)) {
+        bg <- .zip9_bg_centroid_cache$value
+      } else {
+        bg_raw <- tryCatch(
+          vroom::vroom(
+            bg_path,
+            col_types = vroom::cols(
+              ZIP9     = vroom::col_character(),
+              GEOID    = vroom::col_character(),
+              INTPTLAT = vroom::col_double(),
+              INTPTLON = vroom::col_double()
+            ),
+            progress = FALSE
+          ),
+          error = function(e) {
+            message(glue("[utils_address] get_zip_centroid: zip9 crosswalk vroom failed ",
+                         "({conditionMessage(e)}) -- returning absent tibble"))
+            NULL
+          }
+        )
+
+        if (is.null(bg_raw)) {
+          return(tibble(zip = z, level = level,
+                        lat = NA_real_, lon = NA_real_,
+                        centroid_source = "zip9_bg_absent"))
+        }
+
+        req_cols <- c("ZIP9", "GEOID", "INTPTLAT", "INTPTLON")
+        missing_bg <- setdiff(req_cols, names(bg_raw))
+        if (length(missing_bg) > 0) {
+          stop(glue(
+            "[utils_address] get_zip_centroid: zip9 crosswalk missing required column(s): ",
+            "{paste(missing_bg, collapse = ', ')}. ",
+            "Actual columns: {paste(names(bg_raw), collapse = ', ')}"
+          ))
+        }
+
+        bg <- bg_raw %>% select(ZIP9, GEOID, INTPTLAT, INTPTLON)
+        .zip9_bg_centroid_cache$key   <<- cache_key_bg
+        .zip9_bg_centroid_cache$value <<- bg
+      }
+
+      hit_bg <- bg %>% filter(ZIP9 == zip_str) %>% slice(1)
+
+      if (nrow(hit_bg) > 0L) {
+        tibble(zip = z, level = level,
+               lat = hit_bg$INTPTLAT, lon = hit_bg$INTPTLON,
+               centroid_source = "zip9_bg")
+      } else {
+        # Fallback: resolve ZIP5 from gazetteer using first 5 digits of ZIP9
+        zip5_key <- substr(zip_str, 1, 5)
+        row      <- .resolve_zip5_centroid(zip5_key, fallback_source = "zip5_fallback")
+        tibble(zip = z, level = level,
+               lat = row$lat, lon = row$lon,
+               centroid_source = row$centroid_source)
+      }
+    }
+  })
+
+  dplyr::bind_rows(results)
 }
