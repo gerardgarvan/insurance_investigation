@@ -182,7 +182,19 @@ CONFIG <- list(
   # ZIP9 block-group centroid crosswalk (built by R/122a on HiPerGator from
   # Neighborhood Atlas ZIP+4 files + TIGER block-group internal points).
   # Staged as data/reference/zip9_bg_centroid_crosswalk.csv on HiPerGator.
-  zip9_bg_centroid_path = file.path(.reference_dir, "zip9_bg_centroid_crosswalk.csv")
+  zip9_bg_centroid_path = file.path(.reference_dir, "zip9_bg_centroid_crosswalk.csv"),
+
+  # Directory holding the 51 per-state Neighborhood Atlas ZIP+4 CSV files.
+  # UNCONFIRMED PATH — must be verified on HiPerGator before running R/122a:
+  #   ls /blue/erin.mobley.precision/
+  # CONFIRM column names via: head -2 "$ATLAS_ZIP4_DIR"/<smallest_state_file>.csv
+  # Then update R/122a's ZIP4_COL and FIPS_COL string values.
+  atlas_zip4_dir = if (IS_LOCAL) {
+    NULL  # Not available locally; R/122a probes and stops with a message if NULL/missing
+  } else {
+    "/blue/erin.mobley.precision/ADI_zip4_files"
+    # ^^^ UNCONFIRMED placeholder — update after running ls on HiPerGator
+  }
 )
 
 # ==============================================================================
