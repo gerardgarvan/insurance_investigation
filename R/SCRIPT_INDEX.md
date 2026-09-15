@@ -163,6 +163,7 @@ Standalone investigation scripts added after the 00-99 decade-based renumbering 
 | `R/118_build_zip5_adi_summary.R` | Builds data/reference/zip5_adi_summary.csv — ZIP5-level ADI summary (Route B, Phase 148 D-02). Groups Neighborhood Atlas ZIP+4 ADI_NATRANK records by ZIP5 prefix; emits median + IQR (P25/P75), n_zip9_in_zip5, n_zip9_with_adi, adi_coverage, and suppresses medians below 50% coverage floor. | 148 |
 | `R/120_zip5_backfill_concordance.R` | ZIP5-missing patients: ZIP9 availability and first-5 concordance. Read-only diagnostic. Loads LDS_ADDRESS_HISTORY and reports: (1) patients with ≥1 missing/sentinel ZIP5 record, (2) subset with a usable ZIP9 on any record, (3a–c) concordant/discordant/no-ZIP5-elsewhere patient counts by modal comparison, (4) patient-level modal concordance rate with measured interpretation, (5) supplementary record-level same-row agreement rate. No output files written. | 150 |
 | `R/121_zip_problem_inventory.R` | Per-patient ZIP problem flag inventory. Loads LDS_ADDRESS_HISTORY and produces one row per patient with 12 problem flags (F01–F12), supporting counts, and a triage category (NO_MISSING_ZIP5 / SAME_ROW_BACKFILL_ALL / SAME_ROW_BACKFILL_PARTIAL / NEEDS_TEMPORAL_MATCH / UNREACHABLE_NO_ZIP9). Reconciles 8 aggregate quantities against Phase 150 constants; writes QC-failure workbook and stops on mismatch. Outputs `output/zip_problem_inventory_YYYYMMDD.xlsx` (7 sheets, KEY leftmost) and `output/zip_problem_inventory_YYYYMMDD.rds`. | 151 |
+| `R/122_encounter_distance.R` | Encounter-ZIP to residence haversine distance; get_zip_centroid() + haversine_km() helpers; encounter-level and patient-level summaries (Phase 152) | 00_config, utils/utils_address |
 
 ---
 
@@ -216,10 +217,10 @@ These scripts represent one-off investigations, superseded implementations, or e
   - Tests (80-89): 10
   - Ad-hoc (90-99): 10
   - **Total numbered:** 69
-- **Post-renumber investigations (100+):** 18 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning, R/106 ZIP change frequency, R/107 MED_ADMIN/DISPENSING chemo-gap sizing, R/108 NDC->RxNorm crosswalk builder, R/109 MED_ADMIN/DISPENSING fix before/after diff + unmatched-NDC audit, R/110 Phase 124 output-level before/after report + unmapped-name audit, R/111 DoI classification (.rds producer), R/112 DoI attribution (4-sheet xlsx), R/113 confirmed HL/NHL TUMOR_REGISTRY counts (console-only), R/114 ZIP9 temporal lookup validation (Phase 137), R/115 ZIP stability + imputation-scenario occurrence counts (Phase 139), R/116 encounter-level SES index linkage (Phase 144), R/118 ZIP5 ADI summary builder (Phase 148))
+- **Post-renumber investigations (100+):** 19 (R/100 RUCA, R/101 Gantt lifespan, R/102 death-cause NHL flag, R/103 death-cause diagnostic, R/104 Gantt entire-history, R/105 Supportive Care Normalized Meaning, R/106 ZIP change frequency, R/107 MED_ADMIN/DISPENSING chemo-gap sizing, R/108 NDC->RxNorm crosswalk builder, R/109 MED_ADMIN/DISPENSING fix before/after diff + unmatched-NDC audit, R/110 Phase 124 output-level before/after report + unmapped-name audit, R/111 DoI classification (.rds producer), R/112 DoI attribution (4-sheet xlsx), R/113 confirmed HL/NHL TUMOR_REGISTRY counts (console-only), R/114 ZIP9 temporal lookup validation (Phase 137), R/115 ZIP stability + imputation-scenario occurrence counts (Phase 139), R/116 encounter-level SES index linkage (Phase 144), R/118 ZIP5 ADI summary builder (Phase 148), R/122 encounter-ZIP to residence haversine distance (Phase 152))
 - **Utility libraries:** 11 (in R/utils/ subfolder)
 - **Archived scripts:** 8 (in R/archive/ directory)
-- **Total:** 103
+- **Total:** 104
 
 ## Key Dependency Chains
 

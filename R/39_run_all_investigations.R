@@ -220,7 +220,8 @@ investigation_scripts <- c(
   "R/115_zip_stability_counts.R",               # ZIP stability + imputation-scenario occurrence counts (Phase 139, amended by 139-05-PATCH.md); probes LDS_ADDRESS_HISTORY + ENCOUNTER, read-only
   "R/116_encounter_ses_index.R",                 # Encounter-level SES index linkage (Phase 144); resolves ZIP9/ZIP5 per encounter via get_zip9_at_date()|>approximate_zip9(), joins SDI/ADI/SVI/RUCA, outputs encounter_ses_index_YYYYMMDD.rds + summary xlsx
   "R/120_zip5_backfill_concordance.R",            # ZIP5-missing patients: ZIP9 availability and first-5 concordance (Phase 150); read-only console diagnostic
-  "R/121_zip_problem_inventory.R"               # Per-patient ZIP problem flags, triage categories, and Phase 150 reconciliation (Phase 151); writes zip_problem_inventory_YYYYMMDD.xlsx + .rds
+  "R/121_zip_problem_inventory.R",              # Per-patient ZIP problem flags, triage categories, and Phase 150 reconciliation (Phase 151); writes zip_problem_inventory_YYYYMMDD.xlsx + .rds
+  "R/122_encounter_distance.R"                  # Encounter-ZIP to residence haversine distance (Phase 152); outputs encounter_distance_YYYYMMDD.xlsx + .rds
 )
 
 for (script in investigation_scripts) {

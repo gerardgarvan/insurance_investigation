@@ -5258,6 +5258,83 @@ check_151("R/121 row present in R/SCRIPT_INDEX.md",
 message(glue("\nSection 15ag: {p151_pass} PASS, {p151_fail} FAIL"))
 
 # ==============================================================================
+# Section 15ah: encounter-ZIP to residence distance (Phase 152) ----
+# ==============================================================================
+
+message("\n--- Section 15ah: Phase 152 encounter-ZIP to residence distance ---")
+
+p152_pass <- 0L; p152_fail <- 0L
+check_152 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p152_pass <<- p152_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p152_fail <<- p152_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+r122_lines  <- read_or_null("R/122_encounter_distance.R")
+r39_152     <- read_or_null("R/39_run_all_investigations.R")
+r_index_152 <- read_or_null("R/SCRIPT_INDEX.md")
+
+check_152("R/122_encounter_distance.R exists", !is.null(r122_lines))
+
+check_152("R/122 defines haversine_km (or sources utils_address.R which defines it)",
+  !is.null(r122_lines) &&
+  (any(grepl("haversine_km", r122_lines))))
+
+check_152("R/122 calls get_zip_centroid",
+  !is.null(r122_lines) &&
+  any(grepl("get_zip_centroid", r122_lines)))
+
+check_152("R/122 uses FACILITY_LOCATION as encounter ZIP source",
+  !is.null(r122_lines) &&
+  any(grepl("FACILITY_LOCATION", r122_lines)))
+
+check_152("R/122 has distance_basis column",
+  !is.null(r122_lines) &&
+  any(grepl("distance_basis", r122_lines)))
+
+check_152("R/122 output uses encounter_distance_{RUN_DATE} naming",
+  !is.null(r122_lines) &&
+  any(grepl("encounter_distance_", r122_lines)))
+
+check_152("R/122 workbook has KEY sheet (leftmost)",
+  !is.null(r122_lines) &&
+  any(grepl('"KEY"', r122_lines)))
+
+check_152("R/122 workbook has A_encounter_distance sheet",
+  !is.null(r122_lines) &&
+  any(grepl("A_encounter_distance", r122_lines)))
+
+check_152("R/122 workbook has B_patient_summary sheet",
+  !is.null(r122_lines) &&
+  any(grepl("B_patient_summary", r122_lines)))
+
+check_152("R/122 workbook has C_distribution sheet",
+  !is.null(r122_lines) &&
+  any(grepl("C_distribution", r122_lines)))
+
+check_152("R/122 workbook has D_flags sheet",
+  !is.null(r122_lines) &&
+  any(grepl("D_flags", r122_lines)))
+
+check_152("R/122 workbook has QC sheet",
+  !is.null(r122_lines) &&
+  any(grepl('"QC"', r122_lines)))
+
+check_152("R/122 registered in R/39's investigation_scripts vector",
+  !is.null(r39_152) &&
+  any(grepl("122_encounter_distance", r39_152)))
+
+check_152("R/122 row present in R/SCRIPT_INDEX.md",
+  !is.null(r_index_152) &&
+  any(grepl("122_encounter_distance", r_index_152)))
+
+message(glue("\nSection 15ah: {p152_pass} PASS, {p152_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
