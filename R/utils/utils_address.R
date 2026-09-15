@@ -76,6 +76,30 @@ is_sentinel_zip5 <- function(zip5) {
   )
 }
 
+#' Compute great-circle (haversine) distance between two lat/lon pairs.
+#'
+#' Pure vectorized function — no external package dependency. Uses the WGS-84
+#' mean Earth radius of 6371 km. NA propagates through arithmetic naturally:
+#' if any of lat1, lon1, lat2, lon2 is NA, the returned distance is NA_real_
+#' (not NaN). The \code{pmin(1, sqrt(a))} guard prevents floating-point
+#' domain errors in \code{asin()} for numerically degenerate inputs.
+#'
+#' @param lat1 Numeric. Latitude of the first point (decimal degrees, WGS-84).
+#' @param lon1 Numeric. Longitude of the first point (decimal degrees, WGS-84).
+#' @param lat2 Numeric. Latitude of the second point (decimal degrees, WGS-84).
+#' @param lon2 Numeric. Longitude of the second point (decimal degrees, WGS-84).
+#' @return Numeric vector of great-circle distances in kilometres. NA when any
+#'   input element is NA; 0 when both points are identical.
+haversine_km <- function(lat1, lon1, lat2, lon2) {
+  R   <- 6371          # WGS-84 mean Earth radius, km
+  d2r <- pi / 180
+  lat1r <- lat1 * d2r; lat2r <- lat2 * d2r
+  dlat  <- (lat2 - lat1) * d2r
+  dlon  <- (lon2 - lon1) * d2r
+  a     <- sin(dlat / 2)^2 + cos(lat1r) * cos(lat2r) * sin(dlon / 2)^2
+  2 * R * asin(pmin(1, sqrt(a)))  # pmin guards against asin(x > 1) domain errors
+}
+
 #' Resolve ZIP9 (and ZIP5) for each (ID, query_date) pair using temporal lookup.
 #'
 #' Loads LDS_ADDRESS_HISTORY on demand (D-06: no caching), joins on ID, then
