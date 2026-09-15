@@ -532,9 +532,11 @@ Plans:
 **Goal:** For each cohort encounter, compute the geographic distance between the ZIP recorded on the ENCOUNTER row and the patient's residential address in effect on the encounter date (LDS_ADDRESS_HISTORY, via get_zip9_at_date()). Produce an encounter-level distance table and a patient-level summary that characterizes how far patients travel for care and flags encounters whose ZIP is implausibly far from the residence on file.
 **Requirements**: TBD
 **Depends on:** Phase 151
-**Plans:** 3 plans
+**Plans:** 5 plans
 
 Plans:
 - [ ] 152-01-PLAN.md — Add haversine_km() + get_zip_centroid() helpers to utils_address.R, CONFIG paths, test-122-distance.R
 - [ ] 152-02-PLAN.md — R/122 SECTION 1-7: encounter pull (FACILITY_LOCATION), residence resolution, centroid resolution, distance compute
 - [ ] 152-03-PLAN.md — R/122 SECTION 8-12: summaries, QC waterfall, xlsx+rds; register in R/39/R/88/SCRIPT_INDEX; HiPerGator run checkpoint
+- [ ] 152-04-PLAN.md — GAP CLOSURE: replace vroom::vroom(bg_path) with DuckDB filtered read in get_zip_centroid() ZIP9 branch
+- [ ] 152-05-PLAN.md — GAP CLOSURE: add CONFIG$adi_zip9_parquet and CONFIG$tiger_bg_dir to R/00_config.R
