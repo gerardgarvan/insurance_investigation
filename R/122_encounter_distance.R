@@ -11,7 +11,8 @@
 # Inputs:      ENCOUNTER table (via DuckDB), scoped to HL cohort IDs + ADMIT_DATE
 #              LDS_ADDRESS_HISTORY_Mailhot_V1.csv (via get_zip9_at_date())
 #              data/reference/zcta_gazetteer_centroids.csv   (ZIP5 centroids)
-#              data/reference/zip9_bg_centroid_crosswalk.csv (ZIP9 centroids)
+#              data/reference/zip9_bg_centroid_crosswalk.parquet (ZIP9 centroids;
+#                the .csv is used only when the parquet twin is absent)
 #
 # Outputs:     output/encounter_distance_YYYYMMDD.xlsx
 #              output/encounter_distance_YYYYMMDD.rds
@@ -22,8 +23,10 @@
 # Requirements: Phase 152 -- DIST-SCRIPT-CORE, DIST-PROBE, DIST-ENCOUNTER-PULL,
 #               DIST-RESIDENCE, DIST-CENTROID, DIST-COMPUTE
 #
-# Usage:       Rscript R/122_encounter_distance.R
-#              source("R/122_encounter_distance.R")
+# Usage:       sbatch slurm/122_encounter_distance.sbatch   (preferred)
+#              Rscript R/122_encounter_distance.R            (compute node only)
+#              Do NOT run interactively on a login/OnDemand session: the ~2M-row
+#              encounter pull and get_zip9_at_date() need a batch allocation.
 #
 # Note:        READ-ONLY investigation. Structural verification is runnable locally
 #              (grep-based checks). Runtime (DuckDB + HiPerGator reference files)
@@ -75,11 +78,21 @@ level_from_source <- function(src) {
   )
 }
 
+# Per-section wall-clock timing so a slow step is identifiable from the SLURM log.
+.t_section <- Sys.time()
+section_done <- function(label) {
+  el <- round(as.numeric(difftime(Sys.time(), .t_section, units = "mins")), 1)
+  message(glue("  [{label}] done in {el} min"))
+  .t_section <<- Sys.time()
+  invisible(el)
+}
+
 # ==============================================================================
 # SECTION 2: CONSTANTS AND PROBE GATES ----
 # ==============================================================================
 
-RUN_DATE    <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE     <- format(Sys.Date(), "%Y%m%d")
+XLSX_ROW_CAP <- 1000000L   # Excel hard limit is 1,048,576 rows/sheet; A sheet is capped below it
 OUTPUT_RDS  <- file.path(CONFIG$output_dir, glue("encounter_distance_{RUN_DATE}.rds"))
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("encounter_distance_{RUN_DATE}.xlsx"))
 
@@ -118,16 +131,21 @@ bg_path <- if (!is.null(CONFIG$zip9_bg_centroid_path)) {
   file.path("data", "reference", "zip9_bg_centroid_crosswalk.csv")
 }
 
-message(glue("  [ZIP9 crosswalk] Checking: {bg_path}"))
-if (file.exists(bg_path)) {
-  message("  [ZIP9 crosswalk] found -- ZIP9 centroid resolution available")
+bg_parquet <- sub("\\.csv$", ".parquet", bg_path)
+message(glue("  [ZIP9 crosswalk] Checking: {bg_path} (or .parquet twin)"))
+if (file.exists(bg_parquet)) {
+  message("  [ZIP9 crosswalk] parquet found -- ZIP9 centroid resolution available (fast path)")
+  ZIP9_CROSSWALK_AVAILABLE <- TRUE
+} else if (file.exists(bg_path)) {
+  message("  [ZIP9 crosswalk] csv found (no parquet twin) -- ZIP9 available via read_csv; ",
+          "rerun R/122a to create the parquet for faster lookups")
   ZIP9_CROSSWALK_AVAILABLE <- TRUE
 } else {
   message("  [ZIP9 crosswalk] NOT FOUND")
   warning(
     "[R/122] zip9_bg_centroid_crosswalk.csv not found. ",
-    "Build it with R/122a_build_zip9_centroid_crosswalk.R (Plan 00) from the Neighborhood Atlas ",
-    "files under /blue/erin.mobley.precision/ before running the ZIP9 centroid path. ",
+    "Build it with R/122a_build_zip9_centroid_crosswalk.R (Plan 00) from the ADI ZIP9 parquet ",
+    "under /blue/erin.mobley-hl.bcu/ADI/ before running the ZIP9 centroid path. ",
     "Continuing with ZIP5-only centroid resolution (all centroid_source values will be ",
     "'zip5_gazetteer' or 'zip5_fallback'; distance_basis will only contain 'zip5-zip5'). ",
     "QC sheet will record zip9_crosswalk_present = FALSE.",
@@ -156,6 +174,7 @@ if (is.null(enc_test)) {
   )
 }
 message("  [DuckDB ENCOUNTER] available -- OK")
+section_done("SECTION 2 probe gates")
 
 # ==============================================================================
 # SECTION 3: ENCOUNTER PULL ----
@@ -195,6 +214,8 @@ message(glue(
   "{dplyr::n_distinct(encounters_raw$ID)} patients ",
   "({n_enc_admit_missing} dropped for missing/unparseable ADMIT_DATE)"
 ))
+
+section_done("SECTION 3 encounter pull")
 
 # ==============================================================================
 # SECTION 4: RESIDENCE ZIP RESOLUTION ----
@@ -240,6 +261,8 @@ message(glue(
   "{sum(is.na(encounters$res_match_type))} NA"
 ))
 
+section_done("SECTION 4 residence ZIP (get_zip9_at_date)")
+
 # ==============================================================================
 # SECTION 5: ENCOUNTER ZIP NORMALIZATION ----
 # ==============================================================================
@@ -264,11 +287,15 @@ message(glue(
   "both NA: {n_enc_zip_na}"
 ))
 
+section_done("SECTION 5 ZIP normalization")
+
 # ==============================================================================
 # SECTION 6: CENTROID RESOLUTION ----
 # ==============================================================================
 
 message("--- Resolving centroids (encounter side + residence side) ---")
+# get_zip_centroid() is fully vectorized (distinct keys internally; ONE DuckDB query
+# per call for ZIP9). Four calls total below -- never per element, never in a loop.
 
 # Resolve encounter-side centroids.
 # When ZIP9_CROSSWALK_AVAILABLE is FALSE, skip the ZIP9 call entirely; all
@@ -411,6 +438,8 @@ message(glue(
   "Res centroid resolved: {n_res_centroid_resolved} / {nrow(encounters)}"
 ))
 
+section_done("SECTION 6 centroid resolution")
+
 # ==============================================================================
 # SECTION 7: DISTANCE COMPUTATION ----
 # ==============================================================================
@@ -461,6 +490,8 @@ message(glue(
     collapse = "\n"
   )
 ))
+
+section_done("SECTION 7 distance")
 
 # ==============================================================================
 # SECTION 8: PATIENT SUMMARY (B_patient_summary) ----
@@ -713,7 +744,13 @@ message(glue(
   "{n_centroid_resolved} centroid-resolved -> {n_distance_computed} distance-computed"
 ))
 
-message("=== SECTION 8-11 complete. Building SECTION 12 (xlsx + rds) next. ===")
+section_done("SECTIONS 8-11 summaries + QC")
+
+# ==============================================================================
+# SECTION 12A: RDS WRITE (before xlsx so the full result survives an xlsx failure)
+# ==============================================================================
+saveRDS(enc_distance, OUTPUT_RDS)
+message(glue("  rds written: {OUTPUT_RDS} ({nrow(enc_distance)} rows, full encounter-level table)"))
 
 # ==============================================================================
 # SECTION 12: XLSX ASSEMBLY AND WRITE ----
@@ -781,6 +818,23 @@ add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl
                     widths = "auto")
 }
 
+# ---- A sheet row cap (Excel limit) ----
+a_truncated <- nrow(enc_distance) > XLSX_ROW_CAP
+A_sheet <- if (a_truncated) {
+  message(glue("  A_encounter_distance: {nrow(enc_distance)} rows exceeds XLSX_ROW_CAP ({XLSX_ROW_CAP}); ",
+               "writing first {XLSX_ROW_CAP} rows ordered by ID, ENCOUNTERID -- full table is in the rds"))
+  enc_distance %>% dplyr::arrange(ID, ENCOUNTERID) %>% dplyr::slice_head(n = XLSX_ROW_CAP)
+} else {
+  enc_distance
+}
+a_note <- if (a_truncated) {
+  glue("TRUNCATED: A_encounter_distance shows {XLSX_ROW_CAP} of {nrow(enc_distance)} rows ",
+       "(ordered by ID, ENCOUNTERID) because Excel sheets are limited to 1,048,576 rows. ",
+       "B/C/D/QC are computed from ALL rows. The complete table is in the .rds output.")
+} else {
+  glue("A_encounter_distance holds all {nrow(enc_distance)} rows (under the Excel limit).")
+}
+
 # ---- KEY sheet data ----
 key_tbl <- tibble::tibble(
   Field = c(
@@ -795,6 +849,7 @@ key_tbl <- tibble::tibble(
     "Distance thresholds",
     "D-02: Fallback encounters in summaries",
     "RDS output",
+    "A_encounter_distance row cap",
     "A_encounter_distance columns",
     "B_patient_summary columns",
     "C_distribution columns",
@@ -816,6 +871,7 @@ key_tbl <- tibble::tibble(
     "200 km primary (flag_gt200 = TRUE in D_flags); 50 km secondary (all D_flags rows)",
     "Fallback (most_recent_before) encounters are INCLUDED in B/C summaries; distinguished by res_match_fallback",
     "Full encounter-level enc_distance tibble saved to encounter_distance_YYYYMMDD.rds",
+    as.character(a_note),
     "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, res_zip9, res_zip5, res_match_type, res_match_fallback, distance_km, distance_basis, enc_centroid_source, res_centroid_source",
     "ID, n_encounters, n_with_distance, median_km, iqr_km, max_km, pct_gt50km, pct_gt200km",
     "dist_bin, distance_basis, n_encounters, n_patients (bins: 0-5, 5-25, 25-50, 50-200, >200 km; include.lowest=TRUE so distance=0 rows fall in the 0-5 bin)",
@@ -837,8 +893,9 @@ add_styled_sheet(
 add_styled_sheet(
   wb, "A_encounter_distance",
   "A: Encounter-Level Distance",
-  "One row per HL cohort encounter with distance_km from enc_zip to residence ZIP on ADMIT_DATE.",
-  enc_distance
+  if (a_truncated) as.character(a_note) else
+    "One row per HL cohort encounter with distance_km from enc_zip to residence ZIP on ADMIT_DATE.",
+  A_sheet
 )
 
 add_styled_sheet(
@@ -873,12 +930,6 @@ add_styled_sheet(
 
 wb_save(wb, OUTPUT_XLSX)
 message(glue("  xlsx written: {OUTPUT_XLSX}"))
-
-# ---- Write rds (full encounter-level tibble) ----
-# Full enc_distance tibble chosen (per CONTEXT.md Claude's discretion note);
-# includes all 12 A_encounter_distance columns for downstream joining without
-# re-running the script.
-saveRDS(enc_distance, OUTPUT_RDS)
-message(glue("  rds written: {OUTPUT_RDS}"))
+section_done("SECTION 12 rds + xlsx write")
 
 message("=== R/122_encounter_distance.R complete ===")

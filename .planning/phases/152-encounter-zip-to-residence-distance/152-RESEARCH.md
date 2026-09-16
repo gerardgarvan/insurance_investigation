@@ -210,7 +210,7 @@ distance_basis = case_when(
 |---------|-------------|-------------|-----|
 | Residence ZIP at encounter date | Custom temporal join | `get_zip9_at_date(ids, dates)` in utils_address.R | Already handles interval matching, most-recent-before fallback, fan-out prevention, open-ended periods |
 | ZIP normalization | New string manipulation | `normalize_zip9()`, `normalize_zip5_raw()`, `normalize_zip5()` | Already tested, handles 4-digit left-pad question, sentinel rejection |
-| Reference file memoization | New caching mechanism | `<<-` list cache keyed by (path, mtime, size) | Pattern established by `.centroid_zip9_lookup_cache` in utils_address.R; consistent with existing code |
+| Reference file memoization | New caching mechanism | `<<-` list cache keyed by (path, mtime, size) — for the ~33k-row ZCTA gazetteer only | Pattern established by `.centroid_zip9_lookup_cache` in utils_address.R. The ZIP9 crosswalk (68.6M rows after Plan 00) is NOT memoized; it is queried through DuckDB `read_csv` joined to the requested ZIP9s |
 | xlsx assembly | openxlsx or writexl | `openxlsx2` with `wb_add_worksheet` / `wb_add_data` | Already in use by R/115, R/116; renv already has it |
 | Cohort IDs | Re-derive HL cohort | `get_hl_patient_ids()` from utils_treatment.R | Same pattern used by R/115 line 1089 |
 

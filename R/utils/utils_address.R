@@ -312,9 +312,8 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 # Keyed by (path, mtime, size) to force rebuild when file changes.
 .zcta_gazetteer_cache <- list(key = NULL, value = NULL)
 
-# Memoisation cache for the ZIP9 block-group centroid crosswalk (Phase 152).
-# Keyed by (path, mtime, size) to force rebuild when file changes.
-.zip9_bg_centroid_cache <- list(key = NULL, value = NULL)
+# NOTE (Phase 152): the ZIP9 block-group crosswalk (68.6M rows) is NOT memoized.
+# get_zip_centroid() queries it through DuckDB per call (see .query_zip9_centroids).
 
 # Shared classifier -- every exit path of approximate_zip9() routes through this so the
 # returned column set and row count are identical regardless of which path was taken.
@@ -687,6 +686,108 @@ approximate_zip9 <- function(result_tbl) {
 # get_zip_centroid() -- Resolve ZIP5/ZIP9 to a geographic centroid lat/lon
 # ==============================================================================
 
+#' Load the ZCTA gazetteer (memoized). Internal.
+#'
+#' Returns a tibble with columns \code{GEOID} (5-char ZCTA), \code{lat}, \code{lon},
+#' or \code{NULL} when the file is absent or unreadable. Memoized in
+#' \code{.zcta_gazetteer_cache} keyed by (path, mtime, size).
+#' @keywords internal
+.load_zcta_gazetteer <- function() {
+  gaz_path <- if (!is.null(CONFIG$zcta_gazetteer_path)) {
+    CONFIG$zcta_gazetteer_path
+  } else if (requireNamespace("here", quietly = TRUE)) {
+    here::here("data", "reference", "zcta_gazetteer_centroids.csv")
+  } else {
+    file.path("data", "reference", "zcta_gazetteer_centroids.csv")
+  }
+  if (!file.exists(gaz_path)) return(NULL)
+
+  cache_key <- paste0(normalizePath(gaz_path, mustWork = FALSE), "|",
+                      as.numeric(file.mtime(gaz_path)), "|", file.size(gaz_path))
+  if (!is.null(.zcta_gazetteer_cache$key) && identical(.zcta_gazetteer_cache$key, cache_key)) {
+    return(.zcta_gazetteer_cache$value)
+  }
+
+  # Omit delim so vroom infers tab vs comma automatically (Pitfall 1).
+  gaz_raw <- tryCatch(
+    vroom::vroom(gaz_path,
+                 col_types = vroom::cols(GEOID = vroom::col_character(), .default = vroom::col_guess()),
+                 progress = FALSE),
+    error = function(e) {
+      message(glue("[utils_address] get_zip_centroid: gazetteer vroom failed ",
+                   "({conditionMessage(e)}) -- treating as absent"))
+      NULL
+    }
+  )
+  if (is.null(gaz_raw)) return(NULL)
+
+  # Gazetteer uses INTPTLONG (trailing G); a re-saved file may say INTPTLON. Accept either.
+  names(gaz_raw) <- trimws(names(gaz_raw))
+  lon_col <- if ("INTPTLONG" %in% names(gaz_raw)) "INTPTLONG" else if ("INTPTLON" %in% names(gaz_raw)) "INTPTLON" else NULL
+  if (is.null(lon_col) || !"INTPTLAT" %in% names(gaz_raw) || !"GEOID" %in% names(gaz_raw)) {
+    stop(glue("[utils_address] get_zip_centroid: gazetteer needs GEOID, INTPTLAT and INTPTLONG/INTPTLON. ",
+              "Actual columns: {paste(names(gaz_raw), collapse = ', ')}"))
+  }
+
+  gaz <- tibble(
+    GEOID = substr(as.character(gaz_raw$GEOID), 1, 5),
+    lat   = suppressWarnings(as.double(gaz_raw$INTPTLAT)),
+    lon   = suppressWarnings(as.double(gaz_raw[[lon_col]]))
+  ) %>% distinct(GEOID, .keep_all = TRUE)
+
+  .zcta_gazetteer_cache$key   <<- cache_key
+  .zcta_gazetteer_cache$value <<- gaz
+  gaz
+}
+
+#' Query ZIP9 centroids for a set of ZIP9s from the block-group crosswalk. Internal.
+#'
+#' ONE DuckDB query per call: the requested ZIP9s go into a temp table and are
+#' joined to the crosswalk. Prefers the parquet twin of the CSV when present
+#' (predicate pushdown on the ZIP9-sorted row groups makes this seconds); falls
+#' back to \code{read_csv} (a full 3.5 GB parse, minutes) otherwise. The 68M-row
+#' crosswalk is never loaded whole into R.
+#'
+#' @return tibble(ZIP9, lat, lon) -- one row per matched ZIP9 -- or \code{NULL} on error.
+#' @keywords internal
+.query_zip9_centroids <- function(zip9_req, bg_csv, bg_parquet) {
+  if (length(zip9_req) == 0L) return(tibble(ZIP9 = character(), lat = double(), lon = double()))
+
+  tryCatch({
+    con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+    n_thr <- suppressWarnings(as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", "2")))
+    DBI::dbExecute(con, glue("PRAGMA threads={max(1L, n_thr)}"))
+
+    DBI::dbWriteTable(con, "req", data.frame(ZIP9 = zip9_req, stringsAsFactors = FALSE),
+                      temporary = TRUE)
+
+    sql_str <- function(x) gsub("'", "''", normalizePath(x, mustWork = FALSE), fixed = TRUE)
+    src_sql <- if (file.exists(bg_parquet)) {
+      message(glue("[utils_address] get_zip_centroid: zip9 lookup via parquet ({basename(bg_parquet)}) ",
+                   "for {length(zip9_req)} distinct ZIP9"))
+      glue("read_parquet('{sql_str(bg_parquet)}')")
+    } else {
+      message(glue("[utils_address] get_zip_centroid: parquet twin absent -- zip9 lookup via read_csv ",
+                   "({basename(bg_csv)}); rerun R/122a to create the parquet for faster lookups"))
+      glue("read_csv('{sql_str(bg_csv)}', header = true, ",
+           "types = {{'ZIP9': 'VARCHAR', 'GEOID': 'VARCHAR', 'INTPTLAT': 'DOUBLE', 'INTPTLON': 'DOUBLE'}})")
+    }
+
+    hits <- DBI::dbGetQuery(con, glue(
+      "SELECT c.ZIP9, c.INTPTLAT AS lat, c.INTPTLON AS lon
+         FROM {src_sql} c
+         JOIN req r ON c.ZIP9 = r.ZIP9"
+    ))
+    tibble(ZIP9 = as.character(hits$ZIP9), lat = as.double(hits$lat), lon = as.double(hits$lon)) %>%
+      distinct(ZIP9, .keep_all = TRUE)
+  }, error = function(e) {
+    message(glue("[utils_address] get_zip_centroid: zip9 DuckDB query failed ",
+                 "({conditionMessage(e)}) -- returning absent"))
+    NULL
+  })
+}
+
 #' Resolve a ZIP5 or ZIP9 code to a geographic centroid (lat, lon).
 #'
 #' For ZIP5: joins the 5-digit code to the Census ZCTA Gazetteer
@@ -695,13 +796,15 @@ approximate_zip9 <- function(result_tbl) {
 #' infers the delimiter automatically — do not hard-code \code{delim}.
 #'
 #' For ZIP9: joins the full 9-digit code to the block-group centroid crosswalk
-#' (\code{data/reference/zip9_bg_centroid_crosswalk.csv}). On a miss, falls back to
-#' the ZIP5 gazetteer using the first 5 digits of the ZIP9.
+#' (\code{data/reference/zip9_bg_centroid_crosswalk.parquet}, or the \code{.csv}
+#' when the parquet is absent). On a miss -- including a ZIP9 present in the
+#' crosswalk whose block group had no TIGER centroid -- falls back to the ZIP5
+#' gazetteer using the first 5 digits of the ZIP9.
 #'
-#' Both reference files are loaded lazily (first call) and memoized in file-scope
-#' caches keyed by \code{(path, mtime, size)} — same pattern as
-#' \code{.centroid_zip9_lookup_cache} in this file. Rebuild happens automatically
-#' when the reference file changes.
+#' \strong{Fully vectorized.} The input vector may be millions of rows; it is
+#' reduced to distinct keys internally, resolved with ONE gazetteer join and (for
+#' ZIP9) ONE DuckDB query, and expanded back to one row per input element, in
+#' input order. Never call this inside a loop or per element.
 #'
 #' The function is \strong{pure when reference files are absent}: it returns a
 #' typed tibble with \code{NA_real_} lat/lon and a \code{*_absent} centroid_source
@@ -719,185 +822,81 @@ approximate_zip9 <- function(result_tbl) {
 #'     \item{lat}{Double. Centroid latitude; \code{NA_real_} when unresolved.}
 #'     \item{lon}{Double. Centroid longitude; \code{NA_real_} when unresolved.}
 #'     \item{centroid_source}{Character. One of:
-#'       \code{"zip5_gazetteer"} — matched in ZCTA Gazetteer;
+#'       \code{"zip5_gazetteer"} — resolved via the ZCTA Gazetteer (lat/lon NA if the ZIP5 is not a ZCTA);
 #'       \code{"zip5_gazetteer_absent"} — gazetteer file not found;
-#'       \code{"zip9_bg"} — matched in ZIP9 block-group crosswalk;
+#'       \code{"zip9_bg"} — matched in ZIP9 block-group crosswalk with a centroid;
 #'       \code{"zip5_fallback"} — ZIP9 unmatched; fell back to ZIP5 gazetteer;
-#'       \code{"zip9_bg_absent"} — ZIP9 crosswalk file not found.}
+#'       \code{"zip5_fallback_absent"} — ZIP9 unmatched and gazetteer file not found;
+#'       \code{"zip9_bg_absent"} — ZIP9 crosswalk file not found (or unreadable).}
 #'   }
 get_zip_centroid <- function(zip, level = c("zip5", "zip9")) {
   level <- match.arg(level)
+  zip   <- as.character(zip)
+  n     <- length(zip)
 
-  # ---------------------------------------------------------------------------
-  # Helper: resolve a single lat/lon from the ZCTA gazetteer for a ZIP5 key.
-  # Returns a one-row tibble with columns lat, lon, centroid_source.
-  # Used by both the zip5 path and as the zip9 fallback.
-  # ---------------------------------------------------------------------------
-  .resolve_zip5_centroid <- function(zip5_key, fallback_source = "zip5_gazetteer") {
+  out <- tibble(zip = zip, level = rep(level, n),
+                lat = rep(NA_real_, n), lon = rep(NA_real_, n),
+                centroid_source = rep(NA_character_, n))
+  if (n == 0L) return(out)
 
-    gaz_path <- if (!is.null(CONFIG$zcta_gazetteer_path)) {
-      CONFIG$zcta_gazetteer_path
-    } else if (requireNamespace("here", quietly = TRUE)) {
-      here::here("data", "reference", "zcta_gazetteer_centroids.csv")
-    } else {
-      file.path("data", "reference", "zcta_gazetteer_centroids.csv")
+  gaz      <- .load_zcta_gazetteer()          # NULL when absent
+  zip5_key <- substr(zip, 1, 5)
+
+  # ---- ZIP5 path: one match() against the memoized gazetteer -----------------
+  if (level == "zip5") {
+    if (is.null(gaz)) {
+      out$centroid_source <- "zip5_gazetteer_absent"
+      return(out)
     }
+    idx <- match(zip5_key, gaz$GEOID)
+    out$lat <- gaz$lat[idx]
+    out$lon <- gaz$lon[idx]
+    out$centroid_source <- "zip5_gazetteer"
+    return(out)
+  }
 
-    if (!file.exists(gaz_path)) {
-      absent_src <- if (fallback_source == "zip5_gazetteer") {
-        "zip5_gazetteer_absent"
-      } else {
-        "zip5_fallback_absent"
-      }
-      return(tibble(lat = NA_real_, lon = NA_real_, centroid_source = absent_src))
-    }
+  # ---- ZIP9 path: one DuckDB query over the distinct requested ZIP9s ---------
+  bg_csv <- if (!is.null(CONFIG$zip9_bg_centroid_path)) {
+    CONFIG$zip9_bg_centroid_path
+  } else if (requireNamespace("here", quietly = TRUE)) {
+    here::here("data", "reference", "zip9_bg_centroid_crosswalk.csv")
+  } else {
+    file.path("data", "reference", "zip9_bg_centroid_crosswalk.csv")
+  }
+  bg_parquet <- sub("\\.csv$", ".parquet", bg_csv)
 
-    # Memoized load, keyed by (path, mtime, size)
-    cache_key <- paste0(
-      normalizePath(gaz_path, mustWork = FALSE), "|",
-      as.numeric(file.mtime(gaz_path)), "|",
-      file.size(gaz_path)
-    )
+  if (!file.exists(bg_csv) && !file.exists(bg_parquet)) {
+    out$centroid_source <- "zip9_bg_absent"
+    return(out)
+  }
 
-    if (!is.null(.zcta_gazetteer_cache$key) &&
-        identical(.zcta_gazetteer_cache$key, cache_key)) {
-      gaz <- .zcta_gazetteer_cache$value
+  zip9_req <- unique(zip[!is.na(zip) & nchar(zip) == 9L])
+  hits     <- .query_zip9_centroids(zip9_req, bg_csv, bg_parquet)
+  if (is.null(hits)) {
+    out$centroid_source <- "zip9_bg_absent"
+    return(out)
+  }
+
+  idx    <- match(zip, hits$ZIP9)
+  hit_ok <- !is.na(idx) & !is.na(hits$lat[idx]) & !is.na(hits$lon[idx])
+  out$lat[hit_ok]             <- hits$lat[idx[hit_ok]]
+  out$lon[hit_ok]             <- hits$lon[idx[hit_ok]]
+  out$centroid_source[hit_ok] <- "zip9_bg"
+
+  # ---- Fallback for misses: ZIP5 gazetteer on the first 5 digits -------------
+  fb <- !hit_ok
+  if (any(fb)) {
+    if (is.null(gaz)) {
+      out$centroid_source[fb] <- "zip5_fallback_absent"
     } else {
-      # Omit delim so vroom infers tab vs comma automatically (Pitfall 1).
-      gaz_raw <- tryCatch(
-        vroom::vroom(
-          gaz_path,
-          col_types = vroom::cols(GEOID = vroom::col_character(), .default = vroom::col_guess()),
-          progress  = FALSE
-        ),
-        error = function(e) {
-          message(glue("[utils_address] get_zip_centroid: gazetteer vroom failed ",
-                       "({conditionMessage(e)}) -- returning absent tibble"))
-          NULL
-        }
-      )
-
-      if (is.null(gaz_raw)) {
-        return(tibble(lat = NA_real_, lon = NA_real_, centroid_source = "zip5_gazetteer_absent"))
-      }
-
-      # Resolve longitude column: Gazetteer uses INTPTLONG (trailing G); staged
-      # file may have been renamed to INTPTLON. Accept either. (Pitfall 1)
-      lon_col <- if ("INTPTLONG" %in% names(gaz_raw)) {
-        "INTPTLONG"
-      } else if ("INTPTLON" %in% names(gaz_raw)) {
-        "INTPTLON"
-      } else {
-        stop(glue(
-          "[utils_address] get_zip_centroid: gazetteer file has neither INTPTLONG nor INTPTLON. ",
-          "Actual columns: {paste(names(gaz_raw), collapse = ', ')}"
-        ))
-      }
-
-      if (!"INTPTLAT" %in% names(gaz_raw)) {
-        stop(glue(
-          "[utils_address] get_zip_centroid: gazetteer file missing INTPTLAT. ",
-          "Actual columns: {paste(names(gaz_raw), collapse = ', ')}"
-        ))
-      }
-
-      gaz <- gaz_raw %>%
-        select(GEOID, INTPTLAT, lon_col = all_of(lon_col)) %>%
-        mutate(
-          INTPTLAT = as.double(INTPTLAT),
-          lon_col  = as.double(lon_col)
-        )
-
-      .zcta_gazetteer_cache$key   <<- cache_key
-      .zcta_gazetteer_cache$value <<- gaz
-    }
-
-    # Join ZIP5 key to GEOID
-    hit <- gaz %>%
-      filter(GEOID == zip5_key) %>%
-      slice(1)
-
-    if (nrow(hit) == 0L) {
-      tibble(lat = NA_real_, lon = NA_real_, centroid_source = fallback_source)
-    } else {
-      tibble(lat = hit$INTPTLAT, lon = hit$lon_col, centroid_source = fallback_source)
+      gidx <- match(zip5_key[fb], gaz$GEOID)
+      out$lat[fb] <- gaz$lat[gidx]
+      out$lon[fb] <- gaz$lon[gidx]
+      out$centroid_source[fb] <- "zip5_fallback"
     }
   }
 
-  # ---------------------------------------------------------------------------
-  # Vectorized dispatch over the zip vector
-  # ---------------------------------------------------------------------------
-  results <- lapply(zip, function(z) {
-    if (level == "zip5") {
-      zip5_key <- substr(as.character(z), 1, 5)
-      row      <- .resolve_zip5_centroid(zip5_key, fallback_source = "zip5_gazetteer")
-      tibble(zip = z, level = level, lat = row$lat, lon = row$lon,
-             centroid_source = row$centroid_source)
-
-    } else {
-      # zip9 path
-      zip_str <- as.character(z)
-
-      bg_path <- if (!is.null(CONFIG$zip9_bg_centroid_path)) {
-        CONFIG$zip9_bg_centroid_path
-      } else if (requireNamespace("here", quietly = TRUE)) {
-        here::here("data", "reference", "zip9_bg_centroid_crosswalk.csv")
-      } else {
-        file.path("data", "reference", "zip9_bg_centroid_crosswalk.csv")
-      }
-
-      if (!file.exists(bg_path)) {
-        # Crosswalk absent -- return NA with absent source
-        return(tibble(zip = z, level = level,
-                      lat = NA_real_, lon = NA_real_,
-                      centroid_source = "zip9_bg_absent"))
-      }
-
-      # DuckDB filtered read: scan only the requested ZIP9 row(s).
-      # Never loads the full 68M-row crosswalk into R -- DuckDB pushes the
-      # WHERE filter down to the CSV scanner.
-      hit_bg <- tryCatch({
-        safe_zip <- gsub("'", "''", zip_str, fixed = TRUE)   # SQL-escape
-        con <- duckdb::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-        on.exit(duckdb::dbDisconnect(con, shutdown = TRUE), add = TRUE)
-        bg_path_sql <- gsub("'", "''", normalizePath(bg_path, mustWork = FALSE), fixed = TRUE)
-        DBI::dbGetQuery(con, glue::glue(
-          "SELECT ZIP9, GEOID, INTPTLAT, INTPTLON
-             FROM read_csv('{bg_path_sql}',
-                           header = true,
-                           columns = {{ZIP9: 'VARCHAR', GEOID: 'VARCHAR',
-                                       INTPTLAT: 'DOUBLE',  INTPTLON: 'DOUBLE'}})
-            WHERE ZIP9 = '{safe_zip}'
-            LIMIT 1"
-        ))
-      }, error = function(e) {
-        message(glue::glue(
-          "[utils_address] get_zip_centroid: zip9 DuckDB query failed ",
-          "({conditionMessage(e)}) -- returning absent tibble"
-        ))
-        NULL
-      })
-
-      if (is.null(hit_bg)) {
-        return(tibble(zip = z, level = level,
-                      lat = NA_real_, lon = NA_real_,
-                      centroid_source = "zip9_bg_absent"))
-      }
-
-      if (nrow(hit_bg) > 0L) {
-        tibble(zip = z, level = level,
-               lat = hit_bg$INTPTLAT, lon = hit_bg$INTPTLON,
-               centroid_source = "zip9_bg")
-      } else {
-        # Fallback: resolve ZIP5 from gazetteer using first 5 digits of ZIP9
-        zip5_key <- substr(zip_str, 1, 5)
-        row      <- .resolve_zip5_centroid(zip5_key, fallback_source = "zip5_fallback")
-        tibble(zip = z, level = level,
-               lat = row$lat, lon = row$lon,
-               centroid_source = row$centroid_source)
-      }
-    }
-  })
-
-  dplyr::bind_rows(results)
+  message(glue("[utils_address] get_zip_centroid(zip9): {n} inputs, {length(zip9_req)} distinct ZIP9, ",
+               "{sum(hit_ok)} zip9_bg, {sum(fb)} fell back to ZIP5"))
+  out
 }

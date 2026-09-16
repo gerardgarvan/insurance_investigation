@@ -9,6 +9,7 @@
 #                             (download with slurm/122a_fetch_tiger_bg.sh on a login node)
 # Output
 #   CONFIG$zip9_bg_centroid_path : ZIP9, GEOID, INTPTLAT, INTPTLON, N_BG  (one row per ZIP9)
+#   + the same table as .parquet (sorted by ZIP9, 1M-row groups) for fast filtered reads
 #     N_BG = number of distinct block groups the Atlas maps this ZIP9 to. When N_BG > 1 the
 #     row carries the lowest GEOID (deterministic, documented); consumers may filter N_BG == 1.
 #   sibling zip9_bg_centroid_crosswalk_BUILDLOG_<date>.txt
@@ -107,6 +108,17 @@ build_in_duckdb <- function() {
       ORDER BY z.zip9
     ) TO '{sql_str(OUT_PATH)}' (HEADER, DELIMITER ',')"))
   logm("Wrote {OUT_PATH} ({n_zip9} rows)")
+
+  # Parquet twin for fast filtered reads (DuckDB read_parquet with predicate pushdown).
+  # R/122's get_zip_centroid() prefers this file when present.
+  PARQUET_PATH <- sub("\\.csv$", ".parquet", OUT_PATH)
+  dbExecute(con, glue("
+    COPY (
+      SELECT z.zip9 AS ZIP9, z.bg_geoid AS GEOID, c.INTPTLAT, c.INTPTLON, z.n_bg AS N_BG
+      FROM zip9_dedup z LEFT JOIN cent c ON z.bg_geoid = c.GEOID
+      ORDER BY z.zip9
+    ) TO '{sql_str(PARQUET_PATH)}' (FORMAT PARQUET, ROW_GROUP_SIZE 1000000)"))
+  logm("Wrote {PARQUET_PATH}")
 
   list(
     n_matched    = dbGetQuery(con, "
