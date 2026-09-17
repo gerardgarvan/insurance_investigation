@@ -549,7 +549,7 @@ Plans:
 **Requirements:** DIST-02, DIST-03, DIST-07
 **Depends on:** Phase 152
 **Plans:** 3 plans
-- [ ] 153-01-PLAN.md — Create R/utils/utils_zip_calendar.R (build_patient_zip_calendar, pick_best_zip, compute_encounter_distance; AM rules 2-3, D-04 two-zone ranking)
+- [x] 153-01-PLAN.md — Create R/utils/utils_zip_calendar.R (build_patient_zip_calendar, pick_best_zip, compute_encounter_distance; AM rules 2-3, D-04 two-zone ranking)
 - [ ] 153-02-PLAN.md — Wire compute_encounter_distance() into R/122 SECTION 4 + completeness waterfall sheet + SCRIPT_INDEX registration
 - [ ] 153-03-PLAN.md — Unit tests (test-utils-zip-calendar.R) + R/88 Section 15ai structural checks
 
