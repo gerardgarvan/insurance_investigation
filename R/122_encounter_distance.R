@@ -52,6 +52,13 @@ source("R/00_config.R")
 #   normalize_zip9()     -- 9-digit string or NA
 #   normalize_zip5_raw() -- 5-digit string or NA (free-text safe)
 
+# Phase 153: AM-rule-2/3 nearest-in-time patient ZIP calendar path.
+# build_patient_zip_calendar() / pick_best_zip() / compute_encounter_distance()
+# These replace the get_zip9_at_date() residence lookup in SECTION 4 with a
+# bidirectional nearest-ZIP approach (DIST-02/DIST-03). get_zip9_at_date() is
+# kept in utils_address.R for Phase 139/141 consumers -- it is NOT called here.
+source("R/utils/utils_zip_calendar.R")
+
 message("=== Phase 152: Encounter-ZIP to Residence Distance ===")
 
 # SECTION 1B: TESTABLE CORE FUNCTIONS ----
@@ -218,50 +225,72 @@ message(glue(
 section_done("SECTION 3 encounter pull")
 
 # ==============================================================================
-# SECTION 4: RESIDENCE ZIP RESOLUTION ----
+# SECTION 4: RESIDENCE ZIP RESOLUTION (Phase 153: calendar + compute_encounter_distance) ----
 # ==============================================================================
 
-message("--- Resolving residence ZIP at ADMIT_DATE via get_zip9_at_date() ---")
+message("--- Building patient ZIP calendar from LDS_ADDRESS_HISTORY ---")
 
-# get_zip9_at_date() returns ONE row per DISTINCT (ID, query_date).
-# NEVER cbind -- Pitfall 2; Phase 145 documented 1,950,696 -> 2,210,904 row blowup
-# when cbind was used instead of a join.
-res_lookup <- get_zip9_at_date(encounters_raw$ID, encounters_raw$ADMIT_DATE)
+# Load LDS_ADDRESS_HISTORY restricted to COHORT_IDS for performance.
+# Use vroom with all-character col_types (same as utils_address.R's get_zip9_at_date).
+addr_raw <- vroom::vroom(
+  file.path(CONFIG$data_dir, "LDS_ADDRESS_HISTORY_Mailhot_V1.csv"),
+  col_types = vroom::cols(.default = "c"),
+  show_col_types = FALSE
+) %>%
+  dplyr::filter(ID %in% COHORT_IDS)
+
+message(glue("  addr_raw: {nrow(addr_raw)} address records for {dplyr::n_distinct(addr_raw$ID)} patients"))
+
+# Build the patient ZIP calendar (one row per (ID, ZIP, period)).
+# Sentinel and NA ZIP5 rows excluded; open periods closed at 2025-03-31.
+cal <- build_patient_zip_calendar(addr_raw)
+message(glue("  cal: {nrow(cal)} calendar rows for {dplyr::n_distinct(cal$ID)} patients"))
+
+# Compute zip5_facility inline (normalize the raw FACILITY_LOCATION column)
+# so it is available before compute_encounter_distance(). SECTION 5 also runs
+# the same normalization for enc_zip9 -- the columns are additive, not duplicated.
+enc_for_dist <- encounters_raw %>%
+  dplyr::mutate(zip5_facility = normalize_zip5_raw(enc_zip_raw))
+
+message("--- Computing encounter distances via compute_encounter_distance() ---")
+
+dist_result <- compute_encounter_distance(enc_for_dist, cal)
 
 message(glue(
-  "  res_lookup: {nrow(res_lookup)} distinct (ID, query_date) pairs"
+  "  dist_result: {nrow(dist_result)} rows; distance_status breakdown:\n",
+  paste(
+    utils::capture.output(print(table(dist_result$distance_status, useNA = "ifany"))),
+    collapse = "\n"
+  )
 ))
 
-# Join back on (ID, ADMIT_DATE = query_date) to restore one row per ENCOUNTERID.
+message(glue(
+  "  zip5_patient_source breakdown:\n",
+  paste(
+    utils::capture.output(print(table(dist_result$zip5_patient_source, useNA = "ifany"))),
+    collapse = "\n"
+  )
+))
+
+# Join dist_result back onto encounters_raw to restore one row per ENCOUNTERID.
+# NEVER cbind -- use a keyed join (Pitfall 2).
 encounters <- encounters_raw %>%
   dplyr::left_join(
-    res_lookup,
-    by = c("ID" = "ID", "ADMIT_DATE" = "query_date")
-  ) %>%
-  dplyr::rename(
-    res_zip9        = ZIP9,
-    res_zip5        = ZIP5,
-    res_match_type  = match_type
-  ) %>%
-  dplyr::mutate(
-    res_match_fallback = res_match_type == "most_recent_before"
+    dist_result,
+    by = c("ID", "ENCOUNTERID")
   )
 
-# Fan-out assertion: the join must NEVER increase the row count.
+# Fan-out assertion: the join must never increase the row count.
 stopifnot(
-  "get_zip9_at_date left_join fanned out -- review join keys" =
+  "compute_encounter_distance join fanned out -- review join keys" =
     nrow(encounters) == nrow(encounters_raw)
 )
 
 message(glue(
-  "  Residence match breakdown: ",
-  "{sum(encounters$res_match_type == 'interval', na.rm=TRUE)} interval, ",
-  "{sum(encounters$res_match_type == 'most_recent_before', na.rm=TRUE)} most_recent_before, ",
-  "{sum(encounters$res_match_type == 'none', na.rm=TRUE)} none, ",
-  "{sum(is.na(encounters$res_match_type))} NA"
+  "  encounters after join: {nrow(encounters)} rows (matches encounters_raw: {nrow(encounters_raw)})"
 ))
 
-section_done("SECTION 4 residence ZIP (get_zip9_at_date)")
+section_done("SECTION 4 residence ZIP (patient ZIP calendar + compute_encounter_distance)")
 
 # ==============================================================================
 # SECTION 5: ENCOUNTER ZIP NORMALIZATION ----
@@ -338,8 +367,10 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
   enc_centroid_source[enc_has_zip5_only] <- enc_zip5_lookup$centroid_source
 
   # Residence side: prefer ZIP9 centroid; fall back to ZIP5.
-  res_zip9_vals <- encounters$res_zip9
-  res_zip5_vals <- encounters$res_zip5
+  # Phase 153: zip9_patient / zip5_patient come from compute_encounter_distance()
+  # (dist_result joined in SECTION 4); res_zip9/res_zip5 no longer exist.
+  res_zip9_vals <- encounters$zip9_patient
+  res_zip5_vals <- encounters$zip5_patient
 
   res_has_zip9     <- !is.na(res_zip9_vals)
   res_zip9_lookup  <- if (any(res_has_zip9)) {
@@ -376,8 +407,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
 
   enc_zip5_eff <- dplyr::coalesce(encounters$enc_zip5,
                                    substr(as.character(encounters$enc_zip9), 1, 5))
-  res_zip5_eff <- dplyr::coalesce(encounters$res_zip5,
-                                   substr(as.character(encounters$res_zip9), 1, 5))
+  res_zip5_eff <- dplyr::coalesce(encounters$zip5_patient,
+                                   substr(as.character(encounters$zip9_patient), 1, 5))
 
   enc_has_zip5 <- !is.na(enc_zip5_eff)
   enc_zip5_lookup <- if (any(enc_has_zip5)) {
@@ -448,7 +479,10 @@ message("--- Computing haversine distance ---")
 
 encounters <- encounters %>%
   dplyr::mutate(
-    distance_km = haversine_km(enc_lat, enc_lon, res_lat, res_lon),
+    # Phase 153: zipcodeR distance_km from compute_encounter_distance() is canonical
+    # (D-01 from Phase 152 milestone). Haversine distance is computed for reference
+    # and for distance_basis (enc/res centroid tier) but is NOT the authoritative distance.
+    distance_km_haversine = haversine_km(enc_lat, enc_lon, res_lat, res_lon),
     distance_basis = dplyr::case_when(
       enc_level == "zip9" & res_level == "zip9" ~ "zip9-zip9",
       enc_level == "zip9" & res_level == "zip5" ~ "zip9-zip5",
@@ -458,22 +492,33 @@ encounters <- encounters %>%
     )
   )
 
-# Assemble the encounter-level tibble with the exact A_encounter_distance columns
-# from CONTEXT.md. enc_zip_norm = finest normalized ZIP (ZIP9 preferred, ZIP5 fallback).
+# Assemble the encounter-level tibble.
+# Phase 153: distance_km / distance_status / distance_mi come from
+# compute_encounter_distance() (zipcodeR, canonical per D-01 from Phase 152 milestone).
+# The haversine distance_km computed above is retained as distance_km_haversine for
+# reference and for sheets that depend on enc/res centroid columns, but is NOT the
+# authoritative distance reported to Erin/Amy.
+# enc_zip_norm = finest normalized encounter ZIP (ZIP9 preferred, ZIP5 fallback).
 enc_distance <- encounters %>%
   dplyr::mutate(
     enc_zip_norm = dplyr::coalesce(enc_zip9, enc_zip5)
+    # Note: distance_km_haversine is already in encounters from SECTION 7;
+    # distance_km (zipcodeR, canonical per D-01) comes from dist_result via SECTION 4 join.
   ) %>%
   dplyr::select(
     ID,
     ENCOUNTERID,
     ADMIT_DATE,
     enc_zip_norm,
-    res_zip9,
-    res_zip5,
-    res_match_type,
-    res_match_fallback,
+    zip5_facility,
+    zip9_patient,
+    zip5_patient,
+    zip5_patient_source,
+    days_offset,
+    n_candidates_in_range,
+    distance_mi,
     distance_km,
+    distance_status,
     distance_basis,
     enc_centroid_source,
     res_centroid_source
@@ -499,7 +544,7 @@ section_done("SECTION 7 distance")
 
 message("--- Building B_patient_summary ---")
 
-# Per D-02: fallback encounters (res_match_fallback == TRUE) ARE included.
+# Per D-02: nearest-fill encounters (zip5_patient_source nearest-*) ARE included.
 # Guard every statistic against all-NA groups: max() yields -Inf, mean() NaN
 # for pct columns when all observations are NA. Use explicit NA guards.
 B_patient_summary <- enc_distance %>%
@@ -580,9 +625,10 @@ D_flags <- enc_distance %>%
   ) %>%
   dplyr::select(
     ID, ENCOUNTERID, ADMIT_DATE,
-    enc_zip_norm, res_zip9, res_zip5,
-    res_match_type, res_match_fallback,
-    distance_km, distance_basis,
+    enc_zip_norm, zip5_facility,
+    zip9_patient, zip5_patient,
+    zip5_patient_source, days_offset,
+    distance_mi, distance_km, distance_status, distance_basis,
     enc_centroid_source, res_centroid_source,
     flag_gt200
   ) %>%
@@ -599,26 +645,79 @@ message(glue(
 
 message("--- Building QC waterfall ---")
 
-# ---- Coverage waterfall ----
-# n_encounters_total = n_enc_cohort_raw (raw DuckDB cohort count BEFORE any
-# ADMIT_DATE filter). n_admit_date_usable = nrow(encounters_raw) after date filters.
-n_admit_date_usable    <- nrow(encounters_raw)
-n_enc_norm_zip         <- sum(!is.na(enc_distance$enc_zip_norm))
-n_residence_resolved   <- sum(
-  !is.na(enc_distance$res_match_type) & enc_distance$res_match_type != "none",
+# ---- Completeness waterfall (Phase 153: distance_status-based) ----
+# Five-step waterfall keyed on distance_status from compute_encounter_distance().
+# Each step is independently counted (not derived by subtraction) so a row-for-row
+# reconciliation stopifnot can verify consistency.
+n_admit_date_usable     <- nrow(encounters_raw)
+n_with_facility_zip     <- sum(!is.na(enc_distance$zip5_facility))
+n_with_in_range_patient <- sum(
+  enc_distance$zip5_patient_source %in% c("in_range_zip9", "in_range_zip5"),
   na.rm = TRUE
 )
-n_centroid_resolved    <- sum(
-  !is.na(enc_distance$enc_centroid_source) & !is.na(enc_distance$res_centroid_source)
+n_with_nearest_patient  <- sum(
+  enc_distance$zip5_patient_source %in% c("nearest_zip9", "nearest_zip5"),
+  na.rm = TRUE
 )
-n_distance_computed    <- sum(!is.na(enc_distance$distance_km))
+n_distance_computed     <- sum(enc_distance$distance_status == "computed", na.rm = TRUE)
 
-# Reconciliation assertions
+# Independent per-status counts (used in row-for-row reconciliation stopifnot).
+n_facility_missing  <- sum(enc_distance$distance_status == "facility_zip_missing", na.rm = TRUE)
+n_patient_missing   <- sum(enc_distance$distance_status == "patient_zip_missing",  na.rm = TRUE)
+n_zip_not_in_db     <- sum(enc_distance$distance_status == "zip_not_in_db",        na.rm = TRUE)
+n_status_computed   <- sum(enc_distance$distance_status == "computed",              na.rm = TRUE)
+
+# Row-for-row reconciliation: four independent status counts must sum to nrow(enc_distance).
+# distance_status always has one of the four values (no NA expected; assert here).
 stopifnot(
-  "n_enc_cohort_raw does not equal n_encounters_total" =
-    n_enc_cohort_raw == n_enc_cohort_raw,        # tautological -- the name IS n_enc_cohort_raw
+  "waterfall does not reconcile with distance_status counts" =
+    n_status_computed == n_distance_computed,
+  "distance_status categories do not sum to nrow(enc_distance)" =
+    nrow(enc_distance) == (n_facility_missing + n_patient_missing +
+                           n_zip_not_in_db    + n_status_computed),
   "n_admit_date_usable does not equal nrow(enc_distance)" =
     n_admit_date_usable == nrow(enc_distance)
+)
+
+completeness_tbl <- tibble::tibble(
+  Step = c(
+    "n_encounters_total (raw DuckDB cohort ENCOUNTER, before date filter)",
+    "n_admit_date_usable (ADMIT_DATE non-missing and parseable)",
+    "n_with_facility_zip (zip5_facility non-NA; facility_zip_missing otherwise)",
+    "n_with_in_range_patient_zip (zip5_patient_source in_range_zip9 or in_range_zip5)",
+    "n_with_nearest_patient_zip (zip5_patient_source nearest_zip9 or nearest_zip5)",
+    "n_distance_computed (distance_status == 'computed')"
+  ),
+  N = c(
+    n_enc_cohort_raw,
+    n_admit_date_usable,
+    n_with_facility_zip,
+    n_with_in_range_patient,
+    n_with_nearest_patient,
+    n_distance_computed
+  ),
+  Drop_from_prior = c(
+    NA_integer_,
+    n_enc_cohort_raw - n_admit_date_usable,
+    n_admit_date_usable - n_with_facility_zip,
+    NA_integer_,   # in-range and nearest are parallel fill paths, not sequential drops
+    NA_integer_,
+    NA_integer_
+  )
+)
+
+# Status breakdown table to accompany the waterfall.
+status_breakdown_tbl <- tibble::tibble(
+  distance_status = c(
+    "computed", "facility_zip_missing", "patient_zip_missing", "zip_not_in_db"
+  ),
+  N = c(n_status_computed, n_facility_missing, n_patient_missing, n_zip_not_in_db)
+)
+
+# ---- Standard QC waterfall (encounter ZIP side) ----
+n_enc_norm_zip          <- sum(!is.na(enc_distance$enc_zip_norm))
+n_centroid_resolved     <- sum(
+  !is.na(enc_distance$enc_centroid_source) & !is.na(enc_distance$res_centroid_source)
 )
 
 waterfall_tbl <- tibble::tibble(
@@ -626,15 +725,13 @@ waterfall_tbl <- tibble::tibble(
     "n_encounters_total (raw DuckDB cohort ENCOUNTER, before date filter)",
     "n_admit_date_usable (ADMIT_DATE non-missing and parseable)",
     "n_enc_norm_zip (enc_zip_norm non-NA)",
-    "n_residence_resolved (res_match_type not 'none')",
-    "n_centroid_resolved (both centroids non-NA)",
-    "n_distance_computed (distance_km non-NA)"
+    "n_centroid_resolved (both enc+res centroids non-NA)",
+    "n_distance_computed (distance_status == 'computed')"
   ),
   N = c(
     n_enc_cohort_raw,
     n_admit_date_usable,
     n_enc_norm_zip,
-    n_residence_resolved,
     n_centroid_resolved,
     n_distance_computed
   ),
@@ -642,8 +739,7 @@ waterfall_tbl <- tibble::tibble(
     NA_integer_,
     n_enc_cohort_raw - n_admit_date_usable,
     n_admit_date_usable - n_enc_norm_zip,
-    n_enc_norm_zip - n_residence_resolved,
-    n_residence_resolved - n_centroid_resolved,
+    n_enc_norm_zip - n_centroid_resolved,
     n_centroid_resolved - n_distance_computed
   )
 )
@@ -660,12 +756,13 @@ zip3_state_path <- if (!is.null(CONFIG$zip3_state_path)) {
 }
 
 # Encounters unresolved at ZIP9 level (fell back to ZIP5 gazetteer).
+# Phase 153: res_zip9/res_zip5 replaced by zip9_patient/zip5_patient.
 unmatched_zip9 <- enc_distance %>%
   dplyr::filter(
     enc_centroid_source == "zip5_fallback" | res_centroid_source == "zip5_fallback"
   ) %>%
   dplyr::mutate(
-    zip3 = substr(coalesce(enc_zip_norm, res_zip9, res_zip5), 1, 3)
+    zip3 = substr(coalesce(enc_zip_norm, zip9_patient, zip5_patient), 1, 3)
   )
 
 if (file.exists(zip3_state_path)) {
@@ -688,17 +785,36 @@ if (file.exists(zip3_state_path)) {
   )
 }
 
-# ---- Fallback sensitivity row: distances from res_match_fallback == TRUE only ----
-fallback_distances <- enc_distance %>%
-  dplyr::filter(res_match_fallback == TRUE, !is.na(distance_km))
-fallback_median <- if (nrow(fallback_distances) == 0) NA_real_ else
-  median(fallback_distances$distance_km)
-fallback_max <- if (nrow(fallback_distances) == 0) NA_real_ else
-  max(fallback_distances$distance_km)
+# ---- Nearest-fill sensitivity row: distances from nearest-* fills only ----
+# Phase 153: res_match_fallback replaced by zip5_patient_source nearest-* fills.
+nearest_distances <- enc_distance %>%
+  dplyr::filter(
+    zip5_patient_source %in% c("nearest_zip9", "nearest_zip5"),
+    !is.na(distance_km)
+  )
+nearest_median <- if (nrow(nearest_distances) == 0) NA_real_ else
+  median(nearest_distances$distance_km)
+nearest_max <- if (nrow(nearest_distances) == 0) NA_real_ else
+  max(nearest_distances$distance_km)
+
+# Days offset distribution for nearest-* fills (QC: how far from the encounter date?).
+nearest_offset_summary <- if (nrow(nearest_distances) > 0) {
+  q <- quantile(abs(nearest_distances$days_offset), probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+  glue::glue(
+    "n={nrow(nearest_distances)} nearest fills; |days_offset| p25={q[1]}, p50={q[2]}, p75={q[3]}, ",
+    "min={min(abs(nearest_distances$days_offset), na.rm=TRUE)}, ",
+    "max={max(abs(nearest_distances$days_offset), na.rm=TRUE)}"
+  )
+} else {
+  "no nearest-* fills"
+}
+
+# ---- n_candidates_in_range > 1 QC count ----
+n_candidates_gt1 <- sum(enc_distance$n_candidates_in_range > 1, na.rm = TRUE)
 
 # ---- Assemble full qc_tbl ----
 qc_tbl <- dplyr::bind_rows(
-  # Waterfall rows
+  # Standard encounter-ZIP waterfall rows
   waterfall_tbl %>% dplyr::rename(Metric = Step, Value = N, Note = Drop_from_prior) %>%
     dplyr::mutate(Note = as.character(Note)),
   # ZIP9 crosswalk presence flag
@@ -726,13 +842,24 @@ qc_tbl <- dplyr::bind_rows(
       Metric = character(0), Value = numeric(0), Note = character(0)
     )
   },
-  # Fallback sensitivity row (D-02)
+  # Phase 153: n_candidates_in_range > 1 (patients with multiple ZIPs active on same date)
   tibble::tibble(
-    Metric = "FALLBACK SENSITIVITY: res_match_fallback encounters",
-    Value  = as.numeric(nrow(fallback_distances)),
-    Note   = glue(
-      "median_km = {round(fallback_median, 1)}, max_km = {round(fallback_max, 1)}; ",
-      "fallback (most_recent_before) encounters are INCLUDED in B/C summaries per D-02"
+    Metric = "n_candidates_in_range > 1 (patients with multiple ZIPs active on same date)",
+    Value  = as.numeric(n_candidates_gt1),
+    Note   = "Encounters where the patient had >1 active address period covering ADMIT_DATE; pick_best_zip() selects ZIP9 > ZIP5 within Zone 1."
+  ),
+  # Phase 153: nearest-fill days_offset distribution (replaces Phase 152 fallback sensitivity)
+  tibble::tibble(
+    Metric = "NEAREST-FILL SENSITIVITY: zip5_patient_source nearest-* encounters",
+    Value  = as.numeric(nrow(nearest_distances)),
+    Note   = nearest_offset_summary
+  ),
+  tibble::tibble(
+    Metric = "NEAREST-FILL SENSITIVITY: nearest-fill distance_km",
+    Value  = as.numeric(nearest_median),
+    Note   = glue::glue(
+      "median_km = {round(nearest_median, 1)}, max_km = {round(nearest_max, 1)}; ",
+      "nearest fills are INCLUDED in B/C summaries (no address period covers ADMIT_DATE)"
     )
   )
 )
@@ -740,8 +867,13 @@ qc_tbl <- dplyr::bind_rows(
 message(glue("  qc_tbl: {nrow(qc_tbl)} rows"))
 message(glue(
   "  Waterfall: {n_enc_cohort_raw} total -> {n_admit_date_usable} admit-usable -> ",
-  "{n_enc_norm_zip} norm-zip -> {n_residence_resolved} res-resolved -> ",
-  "{n_centroid_resolved} centroid-resolved -> {n_distance_computed} distance-computed"
+  "{n_enc_norm_zip} norm-zip -> {n_centroid_resolved} centroid-resolved -> ",
+  "{n_distance_computed} distance-computed"
+))
+message(glue(
+  "  Completeness (distance_status): computed={n_status_computed}, ",
+  "facility_missing={n_facility_missing}, patient_missing={n_patient_missing}, ",
+  "zip_not_in_db={n_zip_not_in_db}; n_candidates_gt1={n_candidates_gt1}"
 ))
 
 section_done("SECTIONS 8-11 summaries + QC")
@@ -844,21 +976,24 @@ key_tbl <- tibble::tibble(
     "Cohort",
     "Encounter ZIP source",
     "D-03: Encounter ZIP interpretation (OPEN QUESTION)",
-    "Residence ZIP source",
-    "Distance method",
+    "Residence ZIP source (Phase 153)",
+    "Distance method (Phase 153, canonical)",
+    "Distance method (haversine, reference only)",
     "Distance thresholds",
-    "D-02: Fallback encounters in summaries",
+    "D-02: Nearest-fill encounters in summaries",
+    "Phase 153 provenance columns",
     "RDS output",
     "A_encounter_distance row cap",
     "A_encounter_distance columns",
     "B_patient_summary columns",
     "C_distribution columns",
     "D_flags columns",
+    "E_completeness columns",
     "QC sheet contents"
   ),
   Description = c(
     "R/122_encounter_distance.R",
-    "Phase 152 -- encounter-ZIP to residence distance",
+    "Phase 152/153 -- encounter-ZIP to residence distance (Phase 153: calendar + zipcodeR)",
     RUN_DATE,
     "HL cohort (N = 9,282), IDs from DuckDB via CONFIG",
     "FACILITY_LOCATION column in PCORnet CDM ENCOUNTER table",
@@ -866,17 +1001,20 @@ key_tbl <- tibble::tibble(
       "Whether encounter ZIP is patient- or facility-sourced in this OneFlorida+ extract is unknown; ",
       "column description reflects travel distance if facility-sourced, proxy validation if patient-sourced."
     ),
-    "LDS_ADDRESS_HISTORY via get_zip9_at_date() (backward-only, most-recent-before fallback)",
-    "Haversine great-circle distance (km); Earth radius 6371 km",
+    "LDS_ADDRESS_HISTORY via build_patient_zip_calendar() + compute_encounter_distance() (Phase 153 AM-rules 2-3: bidirectional nearest-in-time ZIP5)",
+    "zipcodeR::zip_distance() (miles, then *1.609344 for km); canonical per D-01 from Phase 152 milestone",
+    "Haversine great-circle distance (km) in distance_km_haversine; retained for centroid-tier basis reporting only",
     "200 km primary (flag_gt200 = TRUE in D_flags); 50 km secondary (all D_flags rows)",
-    "Fallback (most_recent_before) encounters are INCLUDED in B/C summaries; distinguished by res_match_fallback",
+    "Nearest-fill (zip5_patient_source nearest_zip9 or nearest_zip5) encounters are INCLUDED in B/C summaries; see E_completeness for fill-path breakdown",
+    "zip5_patient_source: in_range_zip9/in_range_zip5/nearest_zip9/nearest_zip5; days_offset: signed days from ADMIT_DATE to nearest period boundary (0 for in-range); n_candidates_in_range: count of calendar periods covering ADMIT_DATE",
     "Full encounter-level enc_distance tibble saved to encounter_distance_YYYYMMDD.rds",
     as.character(a_note),
-    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, res_zip9, res_zip5, res_match_type, res_match_fallback, distance_km, distance_basis, enc_centroid_source, res_centroid_source",
+    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, n_candidates_in_range, distance_mi, distance_km, distance_status, distance_basis, enc_centroid_source, res_centroid_source",
     "ID, n_encounters, n_with_distance, median_km, iqr_km, max_km, pct_gt50km, pct_gt200km",
     "dist_bin, distance_basis, n_encounters, n_patients (bins: 0-5, 5-25, 25-50, 50-200, >200 km; include.lowest=TRUE so distance=0 rows fall in the 0-5 bin)",
-    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, res_zip9, res_zip5, res_match_type, res_match_fallback, distance_km, distance_basis, enc_centroid_source, res_centroid_source, flag_gt200",
-    "Coverage waterfall; unmatched ZIP9 by state; zip9_crosswalk_present flag; WV gap note; fallback sensitivity row"
+    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, distance_mi, distance_km, distance_status, distance_basis, enc_centroid_source, res_centroid_source, flag_gt200",
+    "Step (5-row completeness waterfall keyed on distance_status + fill path), N, Drop_from_prior; plus distance_status breakdown subtable",
+    "Coverage waterfall; completeness waterfall (distance_status); n_candidates_in_range>1; nearest-fill days_offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag; WV gap note"
   )
 )
 
@@ -920,9 +1058,22 @@ add_styled_sheet(
 )
 
 add_styled_sheet(
+  wb, "E_completeness",
+  "E: Completeness Waterfall (distance_status + fill-path breakdown)",
+  glue::glue(
+    "Five-step waterfall keyed on distance_status from compute_encounter_distance() (Phase 153). ",
+    "Row-for-row reconciliation stopifnot verified: computed+facility_missing+patient_missing+zip_not_in_db == nrow(enc_distance). ",
+    "In-range and nearest fill paths are parallel (not sequential drops from each other)."
+  ),
+  completeness_tbl,
+  extra_tbl   = status_breakdown_tbl,
+  extra_label = "distance_status breakdown (row-for-row reconciles to nrow(enc_distance))"
+)
+
+add_styled_sheet(
   wb, "QC",
   "QC: Coverage Waterfall and Quality Checks",
-  "Waterfall from raw cohort ENCOUNTER count to distance computed; WV gap noted; fallback sensitivity row.",
+  "Waterfall from raw cohort ENCOUNTER count to distance computed; nearest-fill days_offset distribution; n_candidates_in_range>1 count; WV gap noted.",
   qc_tbl,
   extra_tbl   = unmatched_zip9_by_state,
   extra_label = "Unmatched ZIP9 encounters by state (centroid_source == zip5_fallback)"
