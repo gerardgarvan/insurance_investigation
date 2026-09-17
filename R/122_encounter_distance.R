@@ -237,18 +237,23 @@ addr_raw <- vroom::vroom(
   col_types = vroom::cols(.default = "c"),
   show_col_types = FALSE
 ) %>%
-  dplyr::filter(ID %in% COHORT_IDS)
+  dplyr::filter(as.character(ID) %in% as.character(COHORT_IDS))
 
 message(glue("  addr_raw: {nrow(addr_raw)} address records for {dplyr::n_distinct(addr_raw$ID)} patients"))
 
 # Build the patient ZIP calendar (one row per (ID, ZIP, period)).
 # Sentinel and NA ZIP5 rows excluded; open periods closed at 2025-03-31.
+# NA-start and reversed periods are dropped with a message (see .drop_bad_periods()).
 cal <- build_patient_zip_calendar(addr_raw)
 message(glue("  cal: {nrow(cal)} calendar rows for {dplyr::n_distinct(cal$ID)} patients"))
 
 # Compute zip5_facility inline (normalize the raw FACILITY_LOCATION column)
 # so it is available before compute_encounter_distance(). SECTION 5 also runs
 # the same normalization for enc_zip9 -- the columns are additive, not duplicated.
+encounters_raw <- encounters_raw %>%
+  dplyr::mutate(ID = as.character(ID))
+COHORT_IDS <- as.character(COHORT_IDS)
+
 enc_for_dist <- encounters_raw %>%
   dplyr::mutate(zip5_facility = normalize_zip5_raw(enc_zip_raw))
 
@@ -274,11 +279,16 @@ message(glue(
 
 # Join dist_result back onto encounters_raw to restore one row per ENCOUNTERID.
 # NEVER cbind -- use a keyed join (Pitfall 2).
+stopifnot(
+  "encounters_raw has duplicate (ID, ENCOUNTERID)" =
+    !anyDuplicated(encounters_raw[c("ID", "ENCOUNTERID")]),
+  "dist_result has duplicate (ID, ENCOUNTERID)" =
+    !anyDuplicated(dist_result[c("ID", "ENCOUNTERID")]),
+  "dist_result still carries ADMIT_DATE -- apply utils_zip_calendar.R fix A5" =
+    !"ADMIT_DATE" %in% names(dist_result)
+)
 encounters <- encounters_raw %>%
-  dplyr::left_join(
-    dist_result,
-    by = c("ID", "ENCOUNTERID")
-  )
+  dplyr::left_join(dist_result, by = c("ID", "ENCOUNTERID"))
 
 # Fan-out assertion: the join must never increase the row count.
 stopifnot(
@@ -343,6 +353,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
     tibble(zip = character(), level = character(),
            lat = double(), lon = double(), centroid_source = character())
   }
+  stopifnot("get_zip_centroid(zip9) row count != input length (enc side)" =
+              nrow(enc_zip9_lookup) == sum(enc_has_zip9))
 
   # Resolve ZIP5 centroids for encounters that lack ZIP9.
   enc_has_zip5_only <- !enc_has_zip9 & !is.na(enc_zip5_vals)
@@ -352,6 +364,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
     tibble(zip = character(), level = character(),
            lat = double(), lon = double(), centroid_source = character())
   }
+  stopifnot("get_zip_centroid(zip5) row count != input length (enc side)" =
+              nrow(enc_zip5_lookup) == sum(enc_has_zip5_only))
 
   # Assemble per-encounter columns enc_lat, enc_lon, enc_centroid_source.
   enc_lat             <- rep(NA_real_,      nrow(encounters))
@@ -379,6 +393,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
     tibble(zip = character(), level = character(),
            lat = double(), lon = double(), centroid_source = character())
   }
+  stopifnot("get_zip_centroid(zip9) row count != input length (res side)" =
+              nrow(res_zip9_lookup) == sum(res_has_zip9))
 
   res_has_zip5_only <- !res_has_zip9 & !is.na(res_zip5_vals)
   res_zip5_lookup   <- if (any(res_has_zip5_only)) {
@@ -387,6 +403,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
     tibble(zip = character(), level = character(),
            lat = double(), lon = double(), centroid_source = character())
   }
+  stopifnot("get_zip_centroid(zip5) row count != input length (res side)" =
+              nrow(res_zip5_lookup) == sum(res_has_zip5_only))
 
   res_lat             <- rep(NA_real_,      nrow(encounters))
   res_lon             <- rep(NA_real_,      nrow(encounters))
@@ -417,6 +435,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
     tibble(zip = character(), level = character(),
            lat = double(), lon = double(), centroid_source = character())
   }
+  stopifnot("get_zip_centroid(zip5) row count != input length (enc side, ZIP5-only path)" =
+              nrow(enc_zip5_lookup) == sum(enc_has_zip5))
 
   res_has_zip5 <- !is.na(res_zip5_eff)
   res_zip5_lookup <- if (any(res_has_zip5)) {
@@ -425,6 +445,8 @@ if (ZIP9_CROSSWALK_AVAILABLE) {
     tibble(zip = character(), level = character(),
            lat = double(), lon = double(), centroid_source = character())
   }
+  stopifnot("get_zip_centroid(zip5) row count != input length (res side, ZIP5-only path)" =
+              nrow(res_zip5_lookup) == sum(res_has_zip5))
 
   enc_lat             <- rep(NA_real_,      nrow(encounters))
   enc_lon             <- rep(NA_real_,      nrow(encounters))
@@ -518,6 +540,7 @@ enc_distance <- encounters %>%
     n_candidates_in_range,
     distance_mi,
     distance_km,
+    distance_km_haversine,
     distance_status,
     distance_basis,
     enc_centroid_source,
@@ -544,7 +567,7 @@ section_done("SECTION 7 distance")
 
 message("--- Building B_patient_summary ---")
 
-# Per D-02: nearest-fill encounters (zip5_patient_source nearest-*) ARE included.
+# Per D-03: nearest-fill encounters (zip5_patient_source nearest-*) ARE included.
 # Guard every statistic against all-NA groups: max() yields -Inf, mean() NaN
 # for pct columns when all observations are NA. Use explicit NA guards.
 B_patient_summary <- enc_distance %>%
@@ -616,7 +639,7 @@ message(glue(
 
 message("--- Building D_flags ---")
 
-# Both 200 km (primary) and 50 km (secondary) thresholds represented per D-01.
+# Both 200 km (primary) and 50 km (secondary) thresholds represented (reference thresholds; the reportable cutoff is D-06, pending).
 # Filter to > 50 km (secondary threshold captures > 200 km subset as well).
 D_flags <- enc_distance %>%
   dplyr::filter(distance_km > 50) %>%
@@ -762,7 +785,12 @@ unmatched_zip9 <- enc_distance %>%
     enc_centroid_source == "zip5_fallback" | res_centroid_source == "zip5_fallback"
   ) %>%
   dplyr::mutate(
-    zip3 = substr(coalesce(enc_zip_norm, zip9_patient, zip5_patient), 1, 3)
+    unmatched_zip = dplyr::case_when(
+      enc_centroid_source == "zip5_fallback" ~ enc_zip_norm,
+      res_centroid_source == "zip5_fallback" ~ dplyr::coalesce(zip9_patient, zip5_patient),
+      TRUE                                   ~ NA_character_
+    ),
+    zip3 = substr(unmatched_zip, 1, 3)
   )
 
 if (file.exists(zip3_state_path)) {
@@ -846,21 +874,21 @@ qc_tbl <- dplyr::bind_rows(
   tibble::tibble(
     Metric = "n_candidates_in_range > 1 (patients with multiple ZIPs active on same date)",
     Value  = as.numeric(n_candidates_gt1),
-    Note   = "Encounters where the patient had >1 active address period covering ADMIT_DATE; pick_best_zip() selects ZIP9 > ZIP5 within Zone 1."
+    Note   = "Encounters where the patient had >1 active address period covering ADMIT_DATE; pick_best_zip() selects ZIP9 > ZIP5 within Zone 1 (D-07)."
   ),
   # Phase 153: nearest-fill days_offset distribution (replaces Phase 152 fallback sensitivity)
   tibble::tibble(
     Metric = "NEAREST-FILL SENSITIVITY: zip5_patient_source nearest-* encounters",
     Value  = as.numeric(nrow(nearest_distances)),
-    Note   = nearest_offset_summary
+    Note   = as.character(nearest_offset_summary)
   ),
   tibble::tibble(
     Metric = "NEAREST-FILL SENSITIVITY: nearest-fill distance_km",
     Value  = as.numeric(nearest_median),
-    Note   = glue::glue(
+    Note   = as.character(glue::glue(
       "median_km = {round(nearest_median, 1)}, max_km = {round(nearest_max, 1)}; ",
       "nearest fills are INCLUDED in B/C summaries (no address period covers ADMIT_DATE)"
-    )
+    ))
   )
 )
 
@@ -888,7 +916,7 @@ message(glue("  rds written: {OUTPUT_RDS} ({nrow(enc_distance)} rows, full encou
 # SECTION 12: XLSX ASSEMBLY AND WRITE ----
 # ==============================================================================
 
-message("--- Writing encounter_distance xlsx (KEY leftmost, 6 sheets) ---")
+message("--- Writing encounter_distance xlsx (KEY leftmost, 7 sheets) ---")
 
 # UF brand colors, per project deliverable spec. NOTE: DIFFERENT blue than
 # utils_pptx.R's UF_BLUE ("#003087") -- hex values here are locked for this
@@ -946,7 +974,8 @@ add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl
   }
 
   wb$freeze_pane(sheet = sheet_name, firstActiveRow = 5)
-  wb$set_col_widths(sheet = sheet_name, cols = 1:max(n_cols, ncol(extra_tbl %||% data_tbl)),
+  width_tbl <- if (is.null(extra_tbl)) data_tbl else extra_tbl
+  wb$set_col_widths(sheet = sheet_name, cols = seq_len(max(n_cols, ncol(width_tbl))),
                     widths = "auto")
 }
 
@@ -975,12 +1004,12 @@ key_tbl <- tibble::tibble(
     "Run date",
     "Cohort",
     "Encounter ZIP source",
-    "D-03: Encounter ZIP interpretation (OPEN QUESTION)",
+    "Encounter ZIP interpretation (OPEN QUESTION, not a numbered decision)",
     "Residence ZIP source (Phase 153)",
     "Distance method (Phase 153, canonical)",
     "Distance method (haversine, reference only)",
     "Distance thresholds",
-    "D-02: Nearest-fill encounters in summaries",
+    "Nearest-fill encounters in summaries (D-03)",
     "Phase 153 provenance columns",
     "RDS output",
     "A_encounter_distance row cap",
@@ -995,7 +1024,7 @@ key_tbl <- tibble::tibble(
     "R/122_encounter_distance.R",
     "Phase 152/153 -- encounter-ZIP to residence distance (Phase 153: calendar + zipcodeR)",
     RUN_DATE,
-    "HL cohort (N = 9,282), IDs from DuckDB via CONFIG",
+    glue("HL cohort (N = {length(COHORT_IDS)}), IDs from DuckDB via CONFIG"),
     "FACILITY_LOCATION column in PCORnet CDM ENCOUNTER table",
     paste0(
       "Whether encounter ZIP is patient- or facility-sourced in this OneFlorida+ extract is unknown; ",
@@ -1004,12 +1033,12 @@ key_tbl <- tibble::tibble(
     "LDS_ADDRESS_HISTORY via build_patient_zip_calendar() + compute_encounter_distance() (Phase 153 AM-rules 2-3: bidirectional nearest-in-time ZIP5)",
     "zipcodeR::zip_distance() (miles, then *1.609344 for km); canonical per D-01 from Phase 152 milestone",
     "Haversine great-circle distance (km) in distance_km_haversine; retained for centroid-tier basis reporting only",
-    "200 km primary (flag_gt200 = TRUE in D_flags); 50 km secondary (all D_flags rows)",
+    "200 km primary (flag_gt200 = TRUE in D_flags); 50 km secondary (all D_flags rows) -- reference thresholds only; reportable binary cutoff is D-06 (pending team decision)",
     "Nearest-fill (zip5_patient_source nearest_zip9 or nearest_zip5) encounters are INCLUDED in B/C summaries; see E_completeness for fill-path breakdown",
     "zip5_patient_source: in_range_zip9/in_range_zip5/nearest_zip9/nearest_zip5; days_offset: signed days from ADMIT_DATE to nearest period boundary (0 for in-range); n_candidates_in_range: count of calendar periods covering ADMIT_DATE",
     "Full encounter-level enc_distance tibble saved to encounter_distance_YYYYMMDD.rds",
     as.character(a_note),
-    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, n_candidates_in_range, distance_mi, distance_km, distance_status, distance_basis, enc_centroid_source, res_centroid_source",
+    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, n_candidates_in_range, distance_mi, distance_km, distance_km_haversine, distance_status, distance_basis, enc_centroid_source, res_centroid_source",
     "ID, n_encounters, n_with_distance, median_km, iqr_km, max_km, pct_gt50km, pct_gt200km",
     "dist_bin, distance_basis, n_encounters, n_patients (bins: 0-5, 5-25, 25-50, 50-200, >200 km; include.lowest=TRUE so distance=0 rows fall in the 0-5 bin)",
     "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, distance_mi, distance_km, distance_status, distance_basis, enc_centroid_source, res_centroid_source, flag_gt200",
@@ -1018,13 +1047,13 @@ key_tbl <- tibble::tibble(
   )
 )
 
-# ---- Build workbook -- KEY LEFTMOST (D-02 pattern) ----
+# ---- Build workbook -- KEY LEFTMOST (project convention) ----
 wb <- wb_workbook()
 
 add_styled_sheet(
   wb, "KEY",
   "Phase 152: Encounter-ZIP to Residence Distance — Workbook KEY",
-  glue("Run date: {RUN_DATE} | Cohort: HL (N=9,282) | Script: R/122_encounter_distance.R"),
+  glue("Run date: {RUN_DATE} | Cohort: HL (N={length(COHORT_IDS)}) | Script: R/122_encounter_distance.R"),
   key_tbl
 )
 
@@ -1039,7 +1068,7 @@ add_styled_sheet(
 add_styled_sheet(
   wb, "B_patient_summary",
   "B: Patient-Level Distance Summary",
-  "One row per patient; fallback (most_recent_before) encounters included per D-02.",
+  "One row per patient; nearest-fill (nearest_zip9 / nearest_zip5) encounters included.",
   B_patient_summary
 )
 
