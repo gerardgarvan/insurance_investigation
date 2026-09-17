@@ -272,3 +272,110 @@ test_that("Out-of-range nearest: ZIP5 period nearer in time beats ZIP9 farther a
   expect_equal(result$zip5_patient, "32611",
     label = "ZIP5 (nearer) wins in Zone 2 regardless of zip_len")
 })
+
+
+# ==============================================================================
+# Test 9: Adjacent periods merge into one run
+# ==============================================================================
+
+test_that("Adjacent same-ZIP periods (touching, no gap) merge into one run", {
+  # Period A: 2020-01-01 to 2020-06-30
+  # Period B: 2020-07-01 to 2020-12-31
+  # They are adjacent (end+1 == next start), so they should merge to 2020-01-01..2020-12-31.
+  adj_addr <- tibble(
+    ID                   = c("P9", "P9"),
+    ADDRESS_ZIP9         = c("326111234", "326111234"),
+    ADDRESS_ZIP5         = c("32611",     "32611"),
+    ADDRESS_PERIOD_START = c("2020-01-01", "2020-07-01"),
+    ADDRESS_PERIOD_END   = c("2020-06-30", "2020-12-31")
+  )
+
+  cal <- build_patient_zip_calendar(adj_addr)
+
+  expect_equal(nrow(cal), 1L,
+    label = "Adjacent same-ZIP periods must merge into one run")
+  expect_equal(cal$start, as.Date("2020-01-01"))
+  expect_equal(cal$end,   as.Date("2020-12-31"))
+})
+
+
+# ==============================================================================
+# Test 10: Gap periods stay as two runs
+# ==============================================================================
+
+test_that("Same ZIP with gap between periods stays as two runs", {
+  # Period A: 2020-01-01 to 2020-03-31
+  # Period B: 2020-06-01 to 2020-12-31
+  # Gap: 2020-04-01 to 2020-05-31 (61 days). Must stay as two rows.
+  gap_addr <- tibble(
+    ID                   = c("P10", "P10"),
+    ADDRESS_ZIP9         = c("326111234", "326111234"),
+    ADDRESS_ZIP5         = c("32611",     "32611"),
+    ADDRESS_PERIOD_START = c("2020-01-01", "2020-06-01"),
+    ADDRESS_PERIOD_END   = c("2020-03-31", "2020-12-31")
+  )
+
+  cal <- build_patient_zip_calendar(gap_addr)
+
+  expect_equal(nrow(cal), 2L,
+    label = "Same ZIP with a gap between periods must yield two calendar rows")
+  expect_equal(cal$start[1], as.Date("2020-01-01"))
+  expect_equal(cal$end[1],   as.Date("2020-03-31"))
+  expect_equal(cal$start[2], as.Date("2020-06-01"))
+  expect_equal(cal$end[2],   as.Date("2020-12-31"))
+})
+
+
+# ==============================================================================
+# Test 11: Row with NA ADDRESS_PERIOD_START is dropped with a message
+# ==============================================================================
+
+test_that("Row with NA ADDRESS_PERIOD_START is dropped and a message is emitted", {
+  na_start_addr <- tibble(
+    ID                   = c("P11", "P11"),
+    ADDRESS_ZIP9         = c("326111234", "326111234"),
+    ADDRESS_ZIP5         = c("32611",     "32611"),
+    ADDRESS_PERIOD_START = c(NA_character_, "2020-01-01"),
+    ADDRESS_PERIOD_END   = c("2020-12-31",  "2020-12-31")
+  )
+
+  expect_message(
+    cal <- build_patient_zip_calendar(na_start_addr),
+    regexp = "dropping.*NA ADDRESS_PERIOD_START"
+  )
+  # Only the valid row should remain
+  expect_equal(nrow(cal), 1L,
+    label = "The row with NA start must be dropped")
+})
+
+
+# ==============================================================================
+# Test 12: compute_encounter_distance() output has no ADMIT_DATE column
+# ==============================================================================
+
+test_that("compute_encounter_distance() output has no ADMIT_DATE column", {
+  skip_if_not_installed("zipcodeR")
+
+  cal <- tibble(
+    ID      = "P12",
+    zip9    = "326111234",
+    zip5    = "32611",
+    zip_len = 9L,
+    start   = as.Date("2015-01-01"),
+    end     = as.Date("2025-03-31")
+  )
+
+  enc <- tibble(
+    ID            = "P12",
+    ENCOUNTERID   = "E12",
+    ADMIT_DATE    = as.Date("2019-06-15"),
+    zip5_facility = "32608"
+  )
+
+  result <- compute_encounter_distance(enc, cal)
+
+  expect_false(
+    "ADMIT_DATE" %in% names(result),
+    label = "compute_encounter_distance() must NOT return an ADMIT_DATE column"
+  )
+})
