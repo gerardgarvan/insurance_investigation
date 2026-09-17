@@ -548,7 +548,10 @@ Plans:
 **Goal:** `R/utils/utils_zip_calendar.R` provides `build_patient_zip_calendar()`, `pick_best_zip()`, and `compute_encounter_distance()`; these are wired into R/122 replacing any direct call to `get_zip9_at_date()` for the encounter-distance domain, implementing AM rules 2-3 with provenance tracking.
 **Requirements:** DIST-02, DIST-03, DIST-07
 **Depends on:** Phase 152
-**Plans:** TBD
+**Plans:** 3 plans
+- [ ] 153-01-PLAN.md — Create R/utils/utils_zip_calendar.R (build_patient_zip_calendar, pick_best_zip, compute_encounter_distance; AM rules 2-3, D-04 two-zone ranking)
+- [ ] 153-02-PLAN.md — Wire compute_encounter_distance() into R/122 SECTION 4 + completeness waterfall sheet + SCRIPT_INDEX registration
+- [ ] 153-03-PLAN.md — Unit tests (test-utils-zip-calendar.R) + R/88 Section 15ai structural checks
 
 **Success Criteria:**
 1. `zip5_patient_source` is in {in_range_zip9, in_range_zip5, nearest_zip9, nearest_zip5} for every encounter row; `days_offset` is a signed integer
