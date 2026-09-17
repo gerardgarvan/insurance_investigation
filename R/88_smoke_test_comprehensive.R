@@ -5335,6 +5335,106 @@ check_152("R/122 row present in R/SCRIPT_INDEX.md",
 message(glue("\nSection 15ah: {p152_pass} PASS, {p152_fail} FAIL"))
 
 # ==============================================================================
+# Section 15ai: Phase 153 patient ZIP calendar + best-ZIP selection ----
+# ==============================================================================
+
+message("\n--- Section 15ai: Phase 153 patient ZIP calendar + best-ZIP selection ---")
+
+p153_pass <- 0L; p153_fail <- 0L
+check_153 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p153_pass <<- p153_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p153_fail <<- p153_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+ucal_lines  <- read_or_null("R/utils/utils_zip_calendar.R")
+r122_lines  <- read_or_null("R/122_encounter_distance.R")
+r39_153     <- read_or_null("R/39_run_all_investigations.R")
+r_index_153 <- read_or_null("R/SCRIPT_INDEX.md")
+
+# 1. utils_zip_calendar.R exists
+check_153("R/utils/utils_zip_calendar.R exists",
+  file.exists("R/utils/utils_zip_calendar.R"))
+
+# 2. build_patient_zip_calendar defined exactly once
+check_153("build_patient_zip_calendar defined exactly once in utils_zip_calendar.R",
+  !is.null(ucal_lines) &&
+  sum(grepl("build_patient_zip_calendar <- function", ucal_lines)) == 1)
+
+# 3. pick_best_zip defined exactly once
+check_153("pick_best_zip defined exactly once in utils_zip_calendar.R",
+  !is.null(ucal_lines) &&
+  sum(grepl("pick_best_zip <- function", ucal_lines)) == 1)
+
+# 4. compute_encounter_distance defined exactly once
+check_153("compute_encounter_distance defined exactly once in utils_zip_calendar.R",
+  !is.null(ucal_lines) &&
+  sum(grepl("compute_encounter_distance <- function", ucal_lines)) == 1)
+
+# 5. utils_zip_calendar.R does NOT redefine normalize_zip9
+check_153("utils_zip_calendar.R does NOT redefine normalize_zip9 (avoids shadowing utils_address.R)",
+  !is.null(ucal_lines) &&
+  sum(grepl("normalize_zip9 <- function", ucal_lines)) == 0)
+
+# 6. Two-zone arrange present (D-04 and D-05 implementation)
+check_153("Two-zone arrange present: desc(in_range), abs(days_offset), desc(days_offset)",
+  !is.null(ucal_lines) &&
+  any(grepl("desc(in_range)", ucal_lines, fixed = TRUE)) &&
+  any(grepl("abs(days_offset)", ucal_lines, fixed = TRUE)) &&
+  any(grepl("desc(days_offset)", ucal_lines, fixed = TRUE)))
+
+# 7. All four zip5_patient_source labels present
+check_153("All four zip5_patient_source labels present in utils_zip_calendar.R",
+  !is.null(ucal_lines) &&
+  any(grepl("in_range_zip9",  ucal_lines)) &&
+  any(grepl("in_range_zip5",  ucal_lines)) &&
+  any(grepl("nearest_zip9",   ucal_lines)) &&
+  any(grepl("nearest_zip5",   ucal_lines)))
+
+# 8. All four distance_status labels present
+check_153("All four distance_status labels present in utils_zip_calendar.R",
+  !is.null(ucal_lines) &&
+  any(grepl("facility_zip_missing", ucal_lines)) &&
+  any(grepl("patient_zip_missing",  ucal_lines)) &&
+  any(grepl("zip_not_in_db",        ucal_lines)) &&
+  any(grepl('"computed"',           ucal_lines)))
+
+# 9. R/122 sources utils_zip_calendar.R
+check_153("R/122 sources utils_zip_calendar.R",
+  !is.null(r122_lines) &&
+  any(grepl('source("R/utils/utils_zip_calendar.R")', r122_lines, fixed = TRUE)))
+
+# 10. R/122 calls compute_encounter_distance()
+check_153("R/122 calls compute_encounter_distance()",
+  !is.null(r122_lines) &&
+  any(grepl("compute_encounter_distance(", r122_lines, fixed = TRUE)))
+
+# 11. R/122 no longer calls `res_lookup <- get_zip9_at_date` (Phase 153 SECTION 4 replacement)
+check_153("R/122 does NOT call `res_lookup <- get_zip9_at_date` (old lookup replaced by Phase 153)",
+  !is.null(r122_lines) &&
+  sum(grepl("res_lookup <- get_zip9_at_date", r122_lines)) == 0)
+
+# 12. R/122 reports n_candidates_in_range > 1 (QC)
+check_153("R/122 reports n_candidates_in_range > 1 (QC)",
+  !is.null(r122_lines) &&
+  any(grepl("n_candidates_in_range > 1", r122_lines)))
+
+# 13. tests/testthat/test-utils-zip-calendar.R exists
+check_153("tests/testthat/test-utils-zip-calendar.R exists",
+  file.exists("tests/testthat/test-utils-zip-calendar.R"))
+
+# 14. utils_zip_calendar present in R/SCRIPT_INDEX.md
+check_153("utils_zip_calendar present in R/SCRIPT_INDEX.md",
+  !is.null(r_index_153) &&
+  any(grepl("utils_zip_calendar", r_index_153)))
+
+message(glue("\nSection 15ai: {p153_pass} PASS, {p153_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -5474,6 +5574,7 @@ message("  * SMOKE-131-01: R/88 validates Phase 131 all_codes_resolved.xlsx MED_
 message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purrr attachment structural integrity (Section 15y, 8 checks)")
 message("  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R/13 gsub, R/03 scoping incl. ingest_log + preserved line-181 <<-, R/53 PATID) with file-existence gates and positive-pattern assertions (Section 15ac, 12 checks)")
 message("  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation occurrence counts (R/115, amended by 139-05-PATCH.md) structural integrity, incl. single-implementation checks for is_sentinel_zip5()/coalesce_zip5(), Part B/C presence, C-02 reconciliation presence, and R/39 registration (Section 15ad, 14 checks)")
+message("  * SMOKE-153-01: R/88 validates Phase 153 patient ZIP calendar + best-ZIP selection (utils_zip_calendar.R) structural integrity: single-implementation of all three functions, no normalize_zip9 redefinition, two-zone arrange, all four zip5_patient_source and distance_status labels, R/122 wiring + old res_lookup removed, test file and SCRIPT_INDEX registration (Section 15ai, 14 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
