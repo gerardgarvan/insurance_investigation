@@ -20,6 +20,8 @@
 - ✅ **v3.2 Meeting Gap Resolution Report** - Phases 104-126 (shipped 2026-07-15)
 - ⏸️ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (open, deferred alongside v3.4 pending HiPerGator verification)
 - 🔄 **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (in progress)
+- 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress)
+- ⏳ **v3.6 Treatment Episode Refinement** - Phase 157 (planned)
 
 ## Phases
 
@@ -540,3 +542,64 @@ Plans:
 - [x] 152-03-PLAN.md — R/122 SECTION 8-12: summaries, QC waterfall, xlsx+rds; register in R/39/R/88/SCRIPT_INDEX; HiPerGator run checkpoint
 - [ ] 152-04-PLAN.md — GAP CLOSURE: replace vroom::vroom(bg_path) with DuckDB filtered read in get_zip_centroid() ZIP9 branch
 - [x] 152-05-PLAN.md — GAP CLOSURE: add CONFIG$adi_zip9_parquet and CONFIG$tiger_bg_dir to R/00_config.R
+
+### Phase 153: Patient ZIP Calendar and Best-ZIP Selection
+
+**Goal:** `R/utils/utils_zip_calendar.R` provides `build_patient_zip_calendar()`, `pick_best_zip()`, and `compute_encounter_distance()`; these are wired into R/122 replacing any direct call to `get_zip9_at_date()` for the encounter-distance domain, implementing AM rules 2-3 with provenance tracking.
+**Requirements:** DIST-02, DIST-03, DIST-07
+**Depends on:** Phase 152
+**Plans:** TBD
+
+**Success Criteria:**
+1. `zip5_patient_source` is in {in_range_zip9, in_range_zip5, nearest_zip9, nearest_zip5} for every encounter row; `days_offset` is a signed integer
+2. Completeness waterfall reconciles row for row with `distance_status` counts
+3. `n_candidates_in_range > 1` count (patients with multiple ZIPs active on the same encounter date) is reported in QC
+4. Unit tests in `tests/testthat/test-utils-zip-calendar.R` pass: duplicate periods collapse, overlapping same-ZIP periods merge, ZIP9 beats ZIP5, equal before/after offset chooses earlier period, no-address-history yields `patient_zip_missing`, open-ended period closes at study end
+
+### Phase 154: Distribution and Histogram Deliverable
+
+**Goal:** `encounter_distance_<date>.xlsx` is produced with 6 sheets (KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC) and 4 histogram PNGs in UF colors — figure and workbook are driven from the same binning function so they cannot drift.
+**Requirements:** DIST-04
+**Depends on:** Phase 153
+**Plans:** TBD
+
+**Success Criteria:**
+1. All 4 PNGs produced per run (`encounter_distance_hist_{level}_{scale}_{date}.png` for encounter/patient x linear/log)
+2. Row counts in `A_distribution_summary` equal the `computed` count from Phase 152; figure and workbook cannot disagree because both read from the same `bin_distance()` output
+3. Both encounter-level and patient-level distributions are delivered; reference lines (median solid, p90 dashed) appear in UF Orange (#FA4616); bars in UF Blue (#0021A5)
+4. `B_histogram_bins` sheet contains the exact bin edges and counts used to draw the PNGs
+
+### Phase 155: Binary Indicator and Cutoff Memo
+
+**Goal:** `far_from_care` (0/1) exists in all output rows when `CONFIG$distance_cutoff_mi` is set (default NA — indicator not emitted until set), and `docs/distance_cutoff_memo.md` gives Amy/Erin the distribution-based, literature-based, and sensitivity candidates they need to make the call.
+**Requirements:** DIST-05
+**Depends on:** Phase 154
+**Plans:** TBD
+
+**Success Criteria:**
+1. With `distance_cutoff_mi = NA` the pipeline output is byte-identical to Phase 154's — no behavioral change when cutoff is unset
+2. When set, `far_from_care` (0/1) and `far_from_care_cutoff_mi` appear in every output row and the workbook gains an `E_binary_by_cutoff` sheet
+3. `docs/distance_cutoff_memo.md` delivers three candidate families (distribution-based, literature-based, drive-time proxy note) with % encounters and % patients flagged at each, cross-tabulated by insurance category
+4. A D-06 row is opened in AM §3 with "Decision made: pending team"
+
+### Phase 156: Analytic Manual Write-Back and Registration
+
+**Goal:** AM §4 Distance block has no empty bullets — every rule corresponds to a named function or config value — and all six AM §3 decision rows (D-01..D-06) are populated; `R/122` and `utils_zip_calendar.R` are fully registered in the pipeline's discovery/validation infrastructure and the R/88 smoke test is green.
+**Requirements:** DIST-06, DIST-07
+**Depends on:** Phases 152-155
+**Plans:** TBD
+
+**Success Criteria:**
+1. AM §4 Expected Structure, Observed Issues, Cleaning Rules, and Unresolved Issues sections are all populated; every rule names a function or `CONFIG` key
+2. AM §3 rows D-01..D-06 are added with date and "Affected analyses" column filled
+3. `R/122` appears in `R/39_run_all_investigations.R` and `R/88_smoke_test_comprehensive.R`; both `R/122` and `R/utils/utils_zip_calendar.R` have rows in `R/SCRIPT_INDEX.md`
+4. R/88 smoke test passes on HiPerGator; workbook re-issued from HiPerGator with a run date after all six phases merged
+
+### Phase 157: 180-Day Treatment Episodes + Drug-Name Deduplication
+
+**Goal:** (1) Collapse duplicate drug names (e.g. Vinblastine variants) to one canonical label via a normalization step in the pipeline; (2) change the treatment-episode window from 90 days to 180 days and re-run all Gantt outputs. Deduplication runs first since episode boundaries depend on drug identity.
+**Requirements:** TBD (see EPISODE-180-SPEC.md)
+**Depends on:** Phase 156
+**Plans:** TBD
+
+**Source spec:** `EPISODE-180-SPEC.md` — Assign phase number 157 before use.

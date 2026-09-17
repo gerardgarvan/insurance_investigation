@@ -21,6 +21,7 @@
 - ⏸️ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (open, deferred alongside v3.4 pending HiPerGator verification)
 - 🔄 **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (in progress)
 - 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress)
+- ⏳ **v3.6 Treatment Episode Refinement** - Phase 157 (planned)
 
 ## Phases
 
@@ -567,12 +568,27 @@ Plans:
   4. R/88 smoke test passes on HiPerGator; workbook re-issued from HiPerGator with a run date after all six phases merged
 **Plans**: TBD
 
+### Phase 157: 180-Day Treatment Episodes + Drug-Name Deduplication
+
+**Goal**: (1) Collapse duplicate drug names (e.g. Vinblastine variants) to one canonical label via a normalization step in the pipeline; (2) change the treatment-episode window from 90 days to 180 days and re-run all Gantt outputs. Deduplication runs first since episode boundaries depend on drug identity.
+**Depends on**: Phase 156
+**Requirements**: TBD (see EPISODE-180-SPEC.md)
+**Plans**: TBD
+
+**Source spec:** `EPISODE-180-SPEC.md`
+
 ## Progress (v3.5)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 152. Encounter-ZIP to Residence Distance | v3.5 | 0/TBD | Not started | - |
+| 152. Encounter-ZIP to Residence Distance | v3.5 | 6/6 | human_needed | 2026-09-15 |
 | 153. Patient ZIP Calendar and Best-ZIP Selection | v3.5 | 0/TBD | Not started | - |
 | 154. Distribution and Histogram Deliverable | v3.5 | 0/TBD | Not started | - |
 | 155. Binary Indicator and Cutoff Memo | v3.5 | 0/TBD | Not started | - |
 | 156. Analytic Manual Write-Back and Registration | v3.5 | 0/TBD | Not started | - |
+
+## Progress (v3.6)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 157. 180-Day Treatment Episodes + Drug-Name Deduplication | v3.6 | 0/TBD | Not started | - |
