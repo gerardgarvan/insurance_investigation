@@ -58,6 +58,7 @@ source("R/00_config.R")
 # bidirectional nearest-ZIP approach (DIST-02/DIST-03). get_zip9_at_date() is
 # kept in utils_address.R for Phase 139/141 consumers -- it is NOT called here.
 source("R/utils/utils_zip_calendar.R")
+source("R/utils/utils_distance_hist.R")
 
 message("=== Phase 152: Encounter-ZIP to Residence Distance ===")
 
@@ -210,7 +211,7 @@ message(glue("  Raw cohort ENCOUNTER rows (any ADMIT_DATE): {n_enc_cohort_raw}")
 # There is no ZIP / ZIPCODE / FACILITY_ZIP column in this PCORnet CDM extract.
 encounters_raw <- enc_tbl %>%
   dplyr::filter(ID %in% !!COHORT_IDS, !is.na(ADMIT_DATE)) %>%
-  dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, enc_zip_raw = FACILITY_LOCATION) %>%
+  dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, ENC_TYPE, enc_zip_raw = FACILITY_LOCATION) %>%
   dplyr::collect() %>%
   dplyr::mutate(ADMIT_DATE = parse_pcornet_date(ADMIT_DATE)) %>%
   dplyr::filter(!is.na(ADMIT_DATE))
@@ -531,6 +532,7 @@ enc_distance <- encounters %>%
     ID,
     ENCOUNTERID,
     ADMIT_DATE,
+    ENC_TYPE,
     enc_zip_norm,
     zip5_facility,
     zip9_patient,
