@@ -564,7 +564,7 @@ Plans:
 **Goal:** `encounter_distance_<date>.xlsx` is produced with 6 sheets (KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC) and 4 histogram PNGs in UF colors — figure and workbook are driven from the same binning function so they cannot drift.
 **Requirements:** DIST-04
 **Depends on:** Phase 153
-**Plans:** 1/1 executed (154-SUMMARY.md)
+**Plans:** 1/1 plans complete
 
 **Success Criteria:**
 1. All 4 PNGs produced per run (`encounter_distance_hist_{level}_{scale}_{date}.png` for encounter/patient x linear/log)
