@@ -102,6 +102,12 @@ arguments so Phase 155 can revisit them without editing the helper.
   (default `c(30, 50)`; a config vector, not a decision — D-06 remains pending).
 - Also written as the `stats` input to Phase 155; not included in the xlsx.
 
+### Histogram bins after first run (154-D7)
+- **154-D7:** Linear: 10-mile bins, 350-mile cap. Log: first bin [0,1) mi, then
+  quarter-decade bins on log10(mi) so decade values are bin edges. Chosen 2026-09-18
+  after the first HiPerGator run (n = 1,725,592; median 15.1 mi; p90 196.4 mi;
+  ~7% of encounters beyond 300 mi). Same-ZIP zero count is stated in the subtitle.
+
 ### Claude's Discretion
 - Exact bin edges for `D_fill_offsets` (the sketch above is illustrative; planner
   may choose cleaner breakpoints that span the observed data range).

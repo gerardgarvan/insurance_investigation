@@ -1140,10 +1140,12 @@ message("  Table reconciliation stopifnot PASSED")
 # ---- 12.5b Histogram PNGs via make_distance_histograms() (first files written) ----
 # Returns list(bins = <tibble>, stats = <tibble>) where bins is B_histogram_bins content.
 hist_result <- make_distance_histograms(
-  dist     = enc_distance,
-  out_dir  = CONFIG$output_dir,
-  run_date = RUN_DATE,
-  cutoffs  = NULL   # dotted candidate-cutoff lines are a Phase 155 addition (154-CONTEXT)
+  dist         = enc_distance,
+  out_dir      = CONFIG$output_dir,
+  run_date     = RUN_DATE,
+  cutoffs      = NULL,  # dotted candidate-cutoff lines are a Phase 155 addition (154-CONTEXT)
+  linear_width = 10,    # 154-D7: chosen after the 2026-09-18 first run (median 15 mi, p90 196 mi)
+  linear_cap   = 350    # 154-D7: keeps the Florida body readable; out-of-state mass goes to "350+"
 )
 
 message(glue(
@@ -1164,6 +1166,28 @@ n_hist_enc_stats <- hist_result$stats %>% dplyr::filter(level == "encounter") %>
 stopifnot("make_distance_histograms() encounter stats$n != nrow(computed_rows)" =
             n_hist_enc_stats == nrow(computed_rows))
 message("  histogram bin-count reconciliation PASSED")
+
+# ---- 12.5b-ii Long-distance tail tabulation (>= linear_cap) for AM §4 Observed Issues ----
+zip_state_pat <- zipcodeR::zip_code_db %>%
+  dplyr::transmute(zipcode = as.character(zipcode), patient_state = state) %>%
+  dplyr::distinct(zipcode, .keep_all = TRUE)
+
+tail_rows <- computed_rows %>%
+  dplyr::filter(distance_mi >= 350) %>%
+  dplyr::left_join(zip_state_pat, by = c("zip5_patient" = "zipcode"))
+
+tail_by_state <- tail_rows %>%
+  dplyr::count(patient_state, facility_state, name = "N") %>%
+  dplyr::arrange(dplyr::desc(N)) %>%
+  dplyr::mutate(Pct_of_tail = round(100 * N / sum(N), 2)) %>%
+  dplyr::slice_head(n = 25)
+
+tail_by_patient_zip <- tail_rows %>%
+  dplyr::count(zip5_patient, patient_state, name = "N") %>%
+  dplyr::arrange(dplyr::desc(N)) %>%
+  dplyr::slice_head(n = 20)
+
+message(glue("  tail >= 350 mi: {nrow(tail_rows)} encounters ({round(100 * nrow(tail_rows) / nrow(computed_rows), 2)}% of computed)"))
 
 # ---- 12.5c Per-patient rds write ----
 OUTPUT_PATIENT_RDS <- file.path(CONFIG$output_dir,
@@ -1209,7 +1233,7 @@ key_tbl <- tibble::tibble(
     glue("distance_patient_{RUN_DATE}.rds: one row per patient with any computed encounter; columns: ID, n_enc_computed, median_mi, min_mi, max_mi, share_ge_<c> for c in ({paste(cutoffs_mi, collapse=', ')})"),
     "overall | year_<YYYY> (by ADMIT_DATE year) | enc_type_<X> (by ENC_TYPE) | state_<XX> (by facility_state from zipcodeR::zip_code_db)",
     "n, median_mi, IQR_mi, p90_mi, p95_mi, p99_mi, max_mi — all in miles (154-D3); no mean/SD",
-    "level, scale, bin, lower, upper, lower_mi, upper_mi, n, pct — from make_distance_histograms() bind_rows(bins_out)",
+    "level, scale, bin, lower, upper, lower_mi, upper_mi, n, pct. Linear: 10-mile bins to 350, then [350, Inf). Log: first bin [0,1) mi (includes same-ZIP zeros), then quarter-decade bins on log10(mi); lower/upper are in log10(mi) units for log rows (first bin lower = -0.25), lower_mi/upper_mi are in miles for all rows.",
     "Five-step waterfall keyed on distance_status (encounters → facility ZIP → in-range patient ZIP → nearest patient ZIP → distance computed)",
     "Nearest-* fill rows (zip5_patient_source in nearest_zip9, nearest_zip5) only; signed-integer bins. SIGN: positive days_offset = address period ended BEFORE the encounter (past); negative = period began AFTER (future). 0 never occurs.",
     "Coverage waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag"
@@ -1265,8 +1289,12 @@ add_styled_sheet(
   "QC: Coverage Waterfall and Quality Checks",
   "Waterfall from raw cohort ENCOUNTER count to distance computed; nearest-fill days_offset distribution; n_candidates_in_range>1.",
   qc_tbl,
-  extra_tbl   = unmatched_zip9_by_state,
-  extra_label = "Unmatched ZIP9 encounters by state (centroid_source == zip5_fallback)"
+  extra_tbl   = dplyr::bind_rows(
+    dplyr::mutate(unmatched_zip9_by_state, table = "unmatched_zip9_by_state", .before = 1),
+    dplyr::mutate(tail_by_state,           table = "tail_ge_350mi_by_patient_x_facility_state", .before = 1),
+    dplyr::mutate(tail_by_patient_zip,     table = "tail_ge_350mi_top20_patient_zip5", .before = 1)
+  ),
+  extra_label = "Supplementary tables (see 'table' column): unmatched ZIP9 by state; long-distance tail by state pair; top patient ZIP5s in the tail"
 )
 
 # OUTPUT_XLSX is defined in the constants block near the top of the script.
