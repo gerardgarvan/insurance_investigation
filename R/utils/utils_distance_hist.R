@@ -75,9 +75,9 @@ bin_distance <- function(mi, scale = c("linear", "log"), width = 10, cap = 350) 
 #' Layout (8 x 5 in, 300 dpi, base_size 12):
 #'   - title/subtitle/caption left-aligned to the plot edge (plot.title.position = "plot")
 #'     so long strings never clip against the y-axis labels;
-#'   - caption on two lines, each under ~90 characters;
-#'   - linear x axis labels the open top bin as "<cap>+"; log x axis has a "<1" tick
-#'     and decade ticks that sit on bin edges;
+#'   - subtitle and caption each on two lines, no line over ~85 characters;
+#'   - linear x axis labels the open top bin as "<cap>+"; log x axis ticks sit on
+#'     bin edges (1, 3, 10, 30, ...); the sub-1-mile bar is named in the axis title;
 #'   - y axis uses comma separators and bars sit on the axis (no lower expansion);
 #'   - reference lines are explained in the subtitle, never annotated on the panel.
 #'
@@ -110,7 +110,7 @@ plot_distance_hist <- function(bins, stats, level = c("encounter", "patient"),
       x = if (is_log) "Distance, miles (log scale; first bar = under 1 mile)" else "Distance, miles",
       y = if (level == "encounter") "Encounters" else "Patients",
       title    = sprintf("Patient-to-encounter distance, %s level", level),
-      subtitle = sprintf("n = %s. Median %.1f mi (solid line); 90th percentile %.1f mi (dashed line). %s same-ZIP %s at 0 mi.",
+      subtitle = sprintf("n = %s. Median %.1f mi (solid); 90th percentile %.1f mi (dashed).\n%s same-ZIP %s at 0 mi.",
                          format(stats$n, big.mark = ","), stats$median, stats$p90,
                          format(stats$n_zero, big.mark = ","), unit),
       caption  = sprintf("Distance: zipcodeR::zip_distance() between ZIP5 codes.\nExcludes %s %s with no computable distance. Run %s.",
@@ -121,7 +121,7 @@ plot_distance_hist <- function(bins, stats, level = c("encounter", "patient"),
       plot.title.position   = "plot",
       plot.caption.position = "plot",
       plot.title    = ggplot2::element_text(face = "bold", size = 13),
-      plot.subtitle = ggplot2::element_text(size = 9.5, colour = "grey20",
+      plot.subtitle = ggplot2::element_text(size = 9.5, colour = "grey20", lineheight = 1.1,
                                             margin = ggplot2::margin(b = 8)),
       plot.caption  = ggplot2::element_text(hjust = 0, size = 8.5, colour = "grey30",
                                             lineheight = 1.1, margin = ggplot2::margin(t = 8)),
@@ -135,13 +135,16 @@ plot_distance_hist <- function(bins, stats, level = c("encounter", "patient"),
   if (is_log) {
     ticks <- c(1, 3, 10, 30, 100, 300, 1000, 3000)
     ticks <- ticks[log10(ticks) <= max(bins$upper)]
+    # No "<1" tick: it would sit 0.125 log-units from "1" and collide. The first
+    # bar is identified by the axis title instead.
     p <- p + ggplot2::scale_x_continuous(
-      breaks = c(-0.125, log10(ticks)),
-      labels = c("<1", scales::label_comma()(ticks)),
+      breaks = log10(ticks),
+      labels = scales::label_comma()(ticks),
       expand = ggplot2::expansion(mult = c(0.01, 0.02)))
   } else {
     step <- if (cap >= 200) 50 else if (cap >= 100) 25 else 10
     brks <- seq(0, cap, by = step)
+    brks <- brks[brks < cap]          # the cap itself is labelled once, as "<cap>+", over the open bin
     top  <- cap + bw / 2
     p <- p + ggplot2::scale_x_continuous(
       breaks = c(brks, top),
