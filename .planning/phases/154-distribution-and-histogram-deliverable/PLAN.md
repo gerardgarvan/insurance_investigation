@@ -2,7 +2,11 @@
 
 ## Overview
 
-Phase 154 adds histogram and distribution-summary infrastructure to `R/122_encounter_distance.R`. A new utility file `R/utils/utils_distance_hist.R` provides four functions (three from Appendix B verbatim, one new). The script's SECTION 3 and SECTION 7 gain an `ENC_TYPE` column, and SECTION 12 is fully replaced: the existing 7-sheet xlsx becomes a 6-sheet spec, four histogram PNGs are written to `output/figures/`, a per-patient summary rds is written, and a row-count reconciliation stopifnot guards the final outputs.
+Phase 154 adds histogram and distribution-summary infrastructure to `R/122_encounter_distance.R`. A new utility file `R/utils/utils_distance_hist.R` provides four functions (three from Appendix B with one guard added, one new).
+
+**Execution order is 154-02 → 154-03 → 154-01.** 154-01 replaces SECTION 12 with calls into the utility file, so the file and its tests must exist first; executing in numeric order leaves R/122 unrunnable between tasks.
+
+**Anchoring:** all edits to `R/122_encounter_distance.R` are anchored on section-header comment text, not line numbers — `FIX_122_and_zip_calendar.md` has already shifted the file, and line numbers cited in prose below are approximate. The script's SECTION 3 and SECTION 7 gain an `ENC_TYPE` column, and SECTION 12 is fully replaced: the existing 7-sheet xlsx becomes a 6-sheet spec, four histogram PNGs are written to `output/figures/`, a per-patient summary rds is written, and a row-count reconciliation stopifnot guards the final outputs.
 
 ## Prerequisites
 
@@ -10,7 +14,9 @@ Phase 154 adds histogram and distribution-summary infrastructure to `R/122_encou
 - `R/utils/utils_zip_calendar.R` is already sourced in SECTION 1 of R/122 (line 60).
 - `openxlsx2` and `zipcodeR` are installed in the project renv.
 - `ggplot2` is available (part of tidyverse in renv).
-- The `add_styled_sheet()` helper at R/122 lines 931–980 is kept intact; tasks below reuse it.
+- `FIX_122_and_zip_calendar.md` has been fully applied (in particular A5 and B4).
+- The `add_styled_sheet()` helper in R/122 SECTION 12 is kept intact; tasks below reuse it. Its signature is `(wb, sheet_name, title, subtitle, data_tbl, extra_tbl = NULL, extra_label = NULL)`; confirm before use.
+- The constants block near the top of R/122 keeps `OUTPUT_RDS` and `OUTPUT_XLSX`; the new SECTION 12 references them and does not redefine them.
 
 ---
 
@@ -25,9 +31,13 @@ Phase 154 adds histogram and distribution-summary infrastructure to `R/122_encou
 
 **Steps:**
 
-1. Delete lines 916–1113 of `R/122_encounter_distance.R` (the `# SECTION 12: XLSX ASSEMBLY AND WRITE` block and the `# SECTION 12A: RDS WRITE` block above it at lines 910–913). Replace them entirely with the code block below.
+1. Before editing, confirm the object names the new block depends on exist in SECTIONS 8–11:
+   ```
+   grep -n "waterfall_tbl\|qc_tbl\|unmatched_zip9_by_state\|completeness_tbl\|status_breakdown_tbl" R/122_encounter_distance.R
+   ```
+   The block below builds `completeness_tbl` and `status_breakdown_tbl` itself (12.3a) from `enc_distance`, so only `qc_tbl` and `unmatched_zip9_by_state` must pre-exist. If either is missing, stop and report.
 
-2. Paste the following as the new SECTION 12 block starting at line 910 (immediately after the `section_done("SECTIONS 8-11 summaries + QC")` call at line 907):
+2. Locate the comment line beginning `# SECTION 12A: RDS WRITE` and delete from that line through the end of the file (this removes 12A and the `# SECTION 12: XLSX ASSEMBLY AND WRITE` block). Keep the `add_styled_sheet()` function definition: if it sits inside the deleted range, cut it out first and re-insert it immediately above the new block. Then paste the following immediately after the `section_done("SECTIONS 8-11 summaries + QC")` call:
 
 ```r
 # ==============================================================================
@@ -39,29 +49,46 @@ message("--- Phase 154: histogram PNGs, patient rds, 6-sheet xlsx ---")
 # ---- 12.0 Facility-state join (for A_distribution_summary by_facility_state breakout) ----
 # zipcodeR::zip_code_db is a data frame bundled with the package.
 # Join on zip5_facility (character, 5-digit) to state.
-zip_state_lkp <- zipcodeR::zip_code_db[, c("zipcode", "state")]
+zip_state_lkp <- zipcodeR::zip_code_db %>%
+  dplyr::transmute(zipcode = as.character(zipcode), facility_state = state) %>%
+  dplyr::distinct(zipcode, .keep_all = TRUE)
 
+n_before_state_join <- nrow(enc_distance)
 enc_distance <- enc_distance %>%
-  dplyr::left_join(zip_state_lkp, by = c("zip5_facility" = "zipcode")) %>%
-  dplyr::rename(facility_state = state)
+  dplyr::left_join(zip_state_lkp, by = c("zip5_facility" = "zipcode"))
+stopifnot("facility-state join changed row count" = nrow(enc_distance) == n_before_state_join)
+
+# ---- 12.0a Input invariants -- checked BEFORE any file is written ----
+stopifnot(
+  "computed status has missing distance_mi" =
+    !any(enc_distance$distance_status == "computed" & is.na(enc_distance$distance_mi)),
+  "non-computed status has non-missing distance_mi" =
+    !any(enc_distance$distance_status != "computed" & !is.na(enc_distance$distance_mi)),
+  "distance_mi has negative or non-finite values" =
+    all(is.finite(enc_distance$distance_mi[!is.na(enc_distance$distance_mi)]) &
+        enc_distance$distance_mi[!is.na(enc_distance$distance_mi)] >= 0),
+  "nearest-fill rows contain days_offset == 0" =
+    !any(enc_distance$zip5_patient_source %in% c("nearest_zip9", "nearest_zip5") &
+         enc_distance$days_offset == 0, na.rm = TRUE)
+)
+
+# Single canonical definition used by every table, figure, and check below.
+computed_rows <- enc_distance %>% dplyr::filter(distance_status == "computed")
+
+cutoffs_mi <- if (!is.null(CONFIG$distance_candidate_cutoffs_mi)) {
+  CONFIG$distance_candidate_cutoffs_mi
+} else {
+  c(30, 50)
+}
+stopifnot(
+  "distance_candidate_cutoffs_mi must be finite, non-negative, unique numerics" =
+    is.numeric(cutoffs_mi) && all(is.finite(cutoffs_mi)) && all(cutoffs_mi >= 0) &&
+    !anyDuplicated(cutoffs_mi)
+)
 
 message(glue(
   "  facility_state join: {sum(!is.na(enc_distance$facility_state))} of ",
   "{nrow(enc_distance)} rows matched a state ({sum(is.na(enc_distance$facility_state))} unmatched)"
-))
-
-# ---- 12.1 Histogram PNGs via make_distance_histograms() ----
-# Returns list(bins = <tibble>, stats = <tibble>) where bins is B_histogram_bins content.
-hist_result <- make_distance_histograms(
-  dist    = enc_distance,
-  out_dir = CONFIG$output_dir,
-  run_date = RUN_DATE,
-  cutoffs  = CONFIG$distance_candidate_cutoffs_mi  # NULL is fine if not set
-)
-
-message(glue(
-  "  make_distance_histograms(): {nrow(hist_result$bins)} bin rows; ",
-  "4 PNGs written to {file.path(CONFIG$output_dir, 'figures')}"
 ))
 
 # ---- 12.2 A_distribution_summary via summarise_distance() ----
@@ -82,12 +109,15 @@ nearest_rows <- enc_distance %>%
   dplyr::filter(zip5_patient_source %in% c("nearest_zip9", "nearest_zip5"),
                 !is.na(days_offset))
 
-fill_breaks <- c(-Inf, -365, -180, -90, -30, -7, -1, 1, 7, 30, 90, 180, 365, Inf)
+# 13 breaks -> 12 intervals, matching 12 labels. right = FALSE gives [-7,0) = -7..-1
+# (past) and [0,7) = 1..6 (future); 0 itself never occurs for nearest fills.
+fill_breaks <- c(-Inf, -365, -180, -90, -30, -7, 0, 7, 30, 90, 180, 365, Inf)
 fill_labels <- c(
   "[-Inf,-365)", "[-365,-180)", "[-180,-90)", "[-90,-30)",
-  "[-30,-7)", "[-7,-1)", "[1,7)", "[7,30)",
+  "[-30,-7)", "[-7,0)", "[0,7)", "[7,30)",
   "[30,90)", "[90,180)", "[180,365)", "[365,+Inf)"
 )
+stopifnot(length(fill_breaks) - 1L == length(fill_labels))
 
 D_fill_offsets_bins <- tibble::tibble(
   bin = fill_labels,
@@ -99,69 +129,117 @@ D_fill_offsets_bins <- tibble::tibble(
 ) %>%
   dplyr::mutate(pct = 100 * n / sum(n))
 
-# Summary rows appended below the bin table.
-D_fill_offsets_summary <- if (nrow(nearest_rows) > 0) {
-  tibble::tibble(
-    bin = c(
-      "SUMMARY: median_signed_offset",
-      "SUMMARY: median_abs_offset",
-      "SUMMARY: p90_abs_offset",
-      "SUMMARY: share_past (days_offset > 0)",
-      "SUMMARY: share_future (days_offset < 0)"
-    ),
-    n   = NA_integer_,
-    pct = c(
-      median(nearest_rows$days_offset,       na.rm = TRUE),
-      median(abs(nearest_rows$days_offset),  na.rm = TRUE),
-      quantile(abs(nearest_rows$days_offset), 0.90, na.rm = TRUE),
-      mean(nearest_rows$days_offset > 0, na.rm = TRUE) * 100,
-      mean(nearest_rows$days_offset < 0, na.rm = TRUE) * 100
-    )
-  )
-} else {
-  tibble::tibble(bin = character(0), n = integer(0), pct = numeric(0))
-}
+# Summary metrics go in a separate metric/value table (written via extra_tbl),
+# not into the pct column of the bin table.
+D_fill_offsets_summary <- tibble::tibble(
+  metric = c("median_signed_offset_days", "median_abs_offset_days", "p90_abs_offset_days",
+             "share_past_pct (days_offset > 0)", "share_future_pct (days_offset < 0)"),
+  value  = if (nrow(nearest_rows) > 0) c(
+    median(nearest_rows$days_offset),
+    median(abs(nearest_rows$days_offset)),
+    unname(quantile(abs(nearest_rows$days_offset), 0.90)),
+    100 * mean(nearest_rows$days_offset > 0),
+    100 * mean(nearest_rows$days_offset < 0)
+  ) else rep(NA_real_, 5)
+)
 
-D_fill_offsets <- dplyr::bind_rows(D_fill_offsets_bins, D_fill_offsets_summary)
+D_fill_offsets <- D_fill_offsets_bins
 
 message(glue(
   "  D_fill_offsets: {nrow(nearest_rows)} nearest-fill rows; ",
   "{nrow(D_fill_offsets_bins)} bins"
 ))
 
-# ---- 12.4 Per-patient summary rds ----
+# ---- 12.3a Completeness waterfall and status breakdown (C_completeness) ----
+n_enc_total     <- nrow(enc_distance)
+n_fac_zip       <- sum(!is.na(enc_distance$zip5_facility))
+n_inrange_pat   <- sum(!is.na(enc_distance$zip5_facility) &
+                       enc_distance$zip5_patient_source %in% c("in_range_zip9", "in_range_zip5"))
+n_nearest_pat   <- sum(!is.na(enc_distance$zip5_facility) &
+                       enc_distance$zip5_patient_source %in% c("nearest_zip9", "nearest_zip5"))
+n_computed      <- sum(enc_distance$distance_status == "computed")
+
+completeness_tbl <- tibble::tibble(
+  Step = c("Encounters (cohort)", "With facility ZIP5", "  of which in-range patient ZIP",
+           "  of which nearest-fill patient ZIP", "Distance computed"),
+  N    = c(n_enc_total, n_fac_zip, n_inrange_pat, n_nearest_pat, n_computed),
+  Pct_of_total = round(100 * N / n_enc_total, 2)
+)
+
+status_breakdown_tbl <- enc_distance %>%
+  dplyr::count(distance_status, name = "N") %>%
+  dplyr::mutate(Pct = round(100 * N / sum(N), 2)) %>%
+  dplyr::arrange(dplyr::desc(N))
+stopifnot(sum(status_breakdown_tbl$N) == n_enc_total)
+
+# ---- 12.4 Per-patient summary table (saved in 12.5c) ----
 # One row per patient with any computed encounter.
 # share_ge_<c> columns for each cutoff in CONFIG$distance_candidate_cutoffs_mi (default c(30, 50)).
-cutoffs_mi <- if (!is.null(CONFIG$distance_candidate_cutoffs_mi)) {
-  CONFIG$distance_candidate_cutoffs_mi
-} else {
-  c(30, 50)
-}
-
-computed_rows <- enc_distance %>% dplyr::filter(distance_status == "computed")
+# One grouped summarise; share_ge_<c> columns built from the cutoff vector.
+share_exprs <- setNames(
+  lapply(cutoffs_mi, function(cm) rlang::expr(mean(distance_mi >= !!cm))),
+  paste0("share_ge_", cutoffs_mi)
+)
 
 distance_patient <- computed_rows %>%
   dplyr::group_by(ID) %>%
   dplyr::summarise(
     n_enc_computed = dplyr::n(),
-    median_mi      = median(distance_mi, na.rm = TRUE),
-    min_mi         = min(distance_mi,    na.rm = TRUE),
-    max_mi         = max(distance_mi,    na.rm = TRUE),
+    median_mi      = median(distance_mi),
+    min_mi         = min(distance_mi),
+    max_mi         = max(distance_mi),
+    !!!share_exprs,
     .groups = "drop"
   )
 
-for (cut_mi in cutoffs_mi) {
-  col_name <- paste0("share_ge_", cut_mi)
-  distance_patient <- distance_patient %>%
-    dplyr::left_join(
-      computed_rows %>%
-        dplyr::group_by(ID) %>%
-        dplyr::summarise(!!col_name := mean(distance_mi >= cut_mi, na.rm = TRUE),
-                         .groups = "drop"),
-      by = "ID"
-    )
-}
+message(glue("  distance_patient built: {nrow(distance_patient)} patients (saved after reconciliation)"))
 
+# ---- 12.5 Table reconciliation stopifnot (nothing has been written yet) ----
+n_A_overall <- A_distribution_summary %>%
+  dplyr::filter(breakout == "overall") %>%
+  dplyr::pull(n)
+
+stopifnot(
+  "A_distribution_summary overall n != nrow(computed_rows)" =
+    n_A_overall == nrow(computed_rows),
+  "distance_patient nrow != n_distinct(ID) among computed rows" =
+    nrow(distance_patient) == dplyr::n_distinct(computed_rows$ID),
+  "D_fill_offsets bin n != number of nearest-fill rows" =
+    sum(D_fill_offsets_bins$n) == nrow(nearest_rows),
+  "completeness_tbl 'Distance computed' != nrow(computed_rows)" =
+    completeness_tbl$N[completeness_tbl$Step == "Distance computed"] == nrow(computed_rows)
+)
+message("  Table reconciliation stopifnot PASSED")
+
+# ---- 12.5b Histogram PNGs via make_distance_histograms() (first files written) ----
+# Returns list(bins = <tibble>, stats = <tibble>) where bins is B_histogram_bins content.
+hist_result <- make_distance_histograms(
+  dist     = enc_distance,
+  out_dir  = CONFIG$output_dir,
+  run_date = RUN_DATE,
+  cutoffs  = NULL   # dotted candidate-cutoff lines are a Phase 155 addition (154-CONTEXT)
+)
+
+message(glue(
+  "  make_distance_histograms(): {nrow(hist_result$bins)} bin rows; ",
+  "4 PNGs written to {file.path(CONFIG$output_dir, 'figures')}"
+))
+
+# Bin counts must contain every computed observation, at every level/scale.
+n_pat_computed <- dplyr::n_distinct(computed_rows$ID)
+for (lv in c("encounter", "patient")) {
+  for (sc in c("linear", "log")) {
+    n_bins <- sum(hist_result$bins$n[hist_result$bins$level == lv & hist_result$bins$scale == sc])
+    n_expect <- if (lv == "encounter") nrow(computed_rows) else n_pat_computed
+    if (n_bins != n_expect) stop(sprintf("bin count mismatch: %s/%s has %d, expected %d", lv, sc, n_bins, n_expect))
+  }
+}
+n_hist_enc_stats <- hist_result$stats %>% dplyr::filter(level == "encounter") %>% dplyr::pull(n)
+stopifnot("make_distance_histograms() encounter stats$n != nrow(computed_rows)" =
+            n_hist_enc_stats == nrow(computed_rows))
+message("  histogram bin-count reconciliation PASSED")
+
+# ---- 12.5c Per-patient rds write ----
 OUTPUT_PATIENT_RDS <- file.path(CONFIG$output_dir,
                                  glue("distance_patient_{RUN_DATE}.rds"))
 saveRDS(distance_patient, OUTPUT_PATIENT_RDS)
@@ -169,27 +247,8 @@ message(glue(
   "  distance_patient rds written: {OUTPUT_PATIENT_RDS} ({nrow(distance_patient)} patients)"
 ))
 
-# ---- 12.5 Row-count reconciliation stopifnot ----
-n_A_overall <- A_distribution_summary %>%
-  dplyr::filter(breakout == "overall") %>%
-  dplyr::pull(n)
-
-n_hist_enc_stats <- hist_result$stats %>%
-  dplyr::filter(level == "encounter") %>%
-  dplyr::pull(n)
-
-stopifnot(
-  "A_distribution_summary overall n != nrow(filter(enc_distance, distance_status == 'computed'))" =
-    n_A_overall == nrow(computed_rows),
-  "make_distance_histograms() encounter stats$n != nrow(computed rows)" =
-    n_hist_enc_stats == nrow(computed_rows),
-  "distance_patient nrow != n_distinct(ID) among computed rows" =
-    nrow(distance_patient) == dplyr::n_distinct(computed_rows$ID)
-)
-message("  Row-count reconciliation stopifnot PASSED")
-
 # ---- 12.6 encounter_distance rds (full table, before xlsx) ----
-OUTPUT_RDS <- file.path(CONFIG$output_dir, glue("encounter_distance_{RUN_DATE}.rds"))
+# OUTPUT_RDS is defined in the constants block near the top of the script.
 saveRDS(enc_distance, OUTPUT_RDS)
 message(glue("  rds written: {OUTPUT_RDS} ({nrow(enc_distance)} rows, full encounter-level table)"))
 
@@ -226,8 +285,8 @@ key_tbl <- tibble::tibble(
     "n, median_mi, IQR_mi, p90_mi, p95_mi, p99_mi, max_mi — all in miles (154-D3); no mean/SD",
     "level, scale, bin, lower, upper, lower_mi, upper_mi, n, pct — from make_distance_histograms() bind_rows(bins_out)",
     "Five-step waterfall keyed on distance_status (encounters → facility ZIP → in-range patient ZIP → nearest patient ZIP → distance computed)",
-    "Nearest-* fill rows (zip5_patient_source in nearest_zip9, nearest_zip5) only; signed-integer bins; no [0] bin; summary rows for median/p90 abs offset and past/future share",
-    "Coverage waterfall; completeness waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag"
+    "Nearest-* fill rows (zip5_patient_source in nearest_zip9, nearest_zip5) only; signed-integer bins. SIGN: positive days_offset = address period ended BEFORE the encounter (past); negative = period began AFTER (future). Summary metrics in the second table on the sheet.",
+    "Coverage waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag"
   )
 )
 
@@ -269,20 +328,22 @@ add_styled_sheet(
 add_styled_sheet(
   wb, "D_fill_offsets",
   "D: Nearest-Fill Days-Offset Distribution",
-  "Signed-integer bins of days_offset for zip5_patient_source in {nearest_zip9, nearest_zip5}. No [0] bin (nearest fills are always nonzero).",
-  D_fill_offsets
+  "Signed-integer bins of days_offset for zip5_patient_source in {nearest_zip9, nearest_zip5}. Positive = period ended before the encounter (past); negative = period began after (future). 0 never occurs.",
+  D_fill_offsets,
+  extra_tbl   = D_fill_offsets_summary,
+  extra_label = "Summary metrics (days; shares in percent)"
 )
 
 add_styled_sheet(
   wb, "QC",
   "QC: Coverage Waterfall and Quality Checks",
-  "Waterfall from raw cohort ENCOUNTER count to distance computed; nearest-fill days_offset distribution; n_candidates_in_range>1; WV gap noted.",
+  "Waterfall from raw cohort ENCOUNTER count to distance computed; nearest-fill days_offset distribution; n_candidates_in_range>1.",
   qc_tbl,
   extra_tbl   = unmatched_zip9_by_state,
   extra_label = "Unmatched ZIP9 encounters by state (centroid_source == zip5_fallback)"
 )
 
-OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("encounter_distance_{RUN_DATE}.xlsx"))
+# OUTPUT_XLSX is defined in the constants block near the top of the script.
 wb_save(wb, OUTPUT_XLSX)
 message(glue("  xlsx written: {OUTPUT_XLSX} (6 sheets: KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC)"))
 section_done("SECTION 12 Phase 154 outputs")
@@ -290,9 +351,9 @@ section_done("SECTION 12 Phase 154 outputs")
 message("=== R/122_encounter_distance.R complete ===")
 ```
 
-3. Remove the old `OUTPUT_RDS` and `OUTPUT_XLSX` constant assignments at lines 103–104 of the original (those two lines define `OUTPUT_RDS` and `OUTPUT_XLSX` using `glue()`). The new SECTION 12 defines them inline at steps 12.6 and 12.8 respectively. Verify no other section between lines 103 and 907 references `OUTPUT_RDS` or `OUTPUT_XLSX` other than the constants block — if any do, update those references to the inline values or guard them with a check that the variable exists.
+3. Leave the `OUTPUT_RDS` and `OUTPUT_XLSX` constants in the constants block unchanged; the new SECTION 12 uses them. Confirm with `grep -n "OUTPUT_RDS <-\|OUTPUT_XLSX <-" R/122_encounter_distance.R` that each is defined exactly once.
 
-**Verify:** Run `grep -n "OUTPUT_RDS\|OUTPUT_XLSX\|SECTION 12\|7 sheets\|add_styled_sheet" R/122_encounter_distance.R` and confirm: no `7 sheets` string, exactly one `wb_workbook()` call, and six `add_styled_sheet(` calls with sheet names KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC.
+**Verify:** Run `grep -n "OUTPUT_RDS\|OUTPUT_XLSX\|SECTION 12\|7 sheets\|add_styled_sheet\|cutoffs  = NULL" R/122_encounter_distance.R` and confirm: no `7 sheets` string, exactly one `wb_workbook()` call, six `add_styled_sheet(` calls with sheet names KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC, and `cutoffs  = NULL` in the `make_distance_histograms()` call. Then `Rscript -e 'invisible(parse("R/122_encounter_distance.R"))'` must succeed.
 
 **Done:** SECTION 12 of `R/122_encounter_distance.R` writes exactly 6 sheets, calls `make_distance_histograms()` and `summarise_distance()`, saves `distance_patient_<date>.rds`, and passes the three-part `stopifnot` row-count reconciliation.
 
@@ -321,8 +382,10 @@ message("=== R/122_encounter_distance.R complete ===")
 #   summarise_distance()     -- compute n/median/IQR/p90/p95/p99/max_mi by breakout
 #
 # Source: bin_distance / plot_distance_hist / make_distance_histograms are
-# verbatim from Appendix B of MILESTONE_encounter_distance.md (lines 264-353).
+# from Appendix B of MILESTONE_encounter_distance.md, with one addition:
+# bin_distance() returns an empty bin table on empty input instead of erroring.
 # summarise_distance() is new in Phase 154.
+# Dependencies: dplyr, tibble, ggplot2 (all namespace-qualified). No lubridate.
 #
 # Called from: R/122_encounter_distance.R SECTION 1 (after utils_zip_calendar.R)
 # ==============================================================================
@@ -343,11 +406,21 @@ UF_ORANGE <- "#FA4616"
 bin_distance <- function(mi, scale = c("linear", "log"), width = 5, cap = 300) {
   scale <- match.arg(scale)
   mi <- mi[!is.na(mi)]
+  if (length(mi) == 0L) {
+    return(tibble::tibble(bin = character(0), lower = numeric(0), upper = numeric(0),
+                          n = integer(0), pct = numeric(0), scale = character(0),
+                          lower_mi = numeric(0), upper_mi = numeric(0)))
+  }
   if (scale == "linear") {
     edges <- c(seq(0, cap, by = width), Inf)
     x <- mi
   } else {
-    edges <- seq(0, ceiling(log10(1 + max(mi)) * 4) / 4, by = 0.25)
+    # Upper edge strictly above the max so a value exactly on a 0.25 boundary
+    # (e.g. 9 mi -> log10(10) = 1) and the all-zero case (max_log = 0) both
+    # yield >= 2 edges. include.lowest = TRUE would also cover the boundary
+    # case, but the explicit form is clearer and covers all-zero.
+    max_log <- max(log10(1 + mi))
+    edges <- seq(0, (floor(max_log / 0.25) + 1) * 0.25, by = 0.25)
     x <- log10(1 + mi)
   }
   cut_x <- cut(x, breaks = edges, right = FALSE, include.lowest = TRUE)
@@ -414,6 +487,14 @@ make_distance_histograms <- function(dist, out_dir, run_date = format(Sys.Date()
                                      cutoffs = NULL) {
   dir.create(file.path(out_dir, "figures"), showWarnings = FALSE, recursive = TRUE)
   enc <- dist |> dplyr::filter(distance_status == "computed")
+  if (nrow(enc) == 0L) {
+    warning("make_distance_histograms(): no computed rows; no PNGs written")
+    empty_bins <- bin_distance(numeric(0)) |> dplyr::mutate(level = character(0), .before = 1)
+    return(list(bins = empty_bins,
+                stats = tibble::tibble(level = c("encounter", "patient"), n = 0L,
+                                       n_excluded = c(nrow(dist), dplyr::n_distinct(dist$ID)),
+                                       median = NA_real_, p90 = NA_real_, n_zero = 0L)))
+  }
   pat <- enc |> dplyr::group_by(ID) |> dplyr::summarise(distance_mi = median(distance_mi), .groups = "drop")
   summ <- function(d, n_total) tibble::tibble(
     n = nrow(d), n_excluded = n_total - nrow(d),
@@ -446,7 +527,8 @@ make_distance_histograms <- function(dist, out_dir, run_date = format(Sys.Date()
 summarise_distance <- function(enc_distance, by = c("overall", "year", "ENC_TYPE", "facility_state")) {
   by <- match.arg(by)
 
-  computed <- enc_distance |> dplyr::filter(distance_status == "computed", !is.na(distance_mi))
+  # Same definition as computed_rows in R/122; the status/NA invariant is asserted upstream.
+  computed <- enc_distance |> dplyr::filter(distance_status == "computed")
 
   .summarise_one <- function(df, label) {
     tibble::tibble(
@@ -466,10 +548,11 @@ summarise_distance <- function(enc_distance, by = c("overall", "year", "ENC_TYPE
   }
 
   group_col <- switch(by,
-    "year"          = dplyr::mutate(computed, .grp = as.character(lubridate::year(ADMIT_DATE))),
-    "ENC_TYPE"      = dplyr::mutate(computed, .grp = as.character(ENC_TYPE)),
-    "facility_state"= dplyr::mutate(computed, .grp = as.character(facility_state))
-  )
+    "year"           = dplyr::mutate(computed, .grp = format(ADMIT_DATE, "%Y")),
+    "ENC_TYPE"       = dplyr::mutate(computed, .grp = as.character(ENC_TYPE)),
+    "facility_state" = dplyr::mutate(computed, .grp = as.character(facility_state))
+  ) |>
+    dplyr::mutate(.grp = dplyr::coalesce(.grp, "unmatched"))
 
   prefix <- switch(by,
     "year"           = "year_",
@@ -494,7 +577,7 @@ summarise_distance <- function(enc_distance, by = c("overall", "year", "ENC_TYPE
    source("R/utils/utils_distance_hist.R")
    ```
 
-3. In SECTION 3 of `R/122_encounter_distance.R`, find the `dplyr::select()` call at line 213:
+3. In SECTION 3 of `R/122_encounter_distance.R`, find the `dplyr::select()` call in the ENCOUNTER pull (approx. line 213):
    ```r
      dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, enc_zip_raw = FACILITY_LOCATION) %>%
    ```
@@ -503,7 +586,7 @@ summarise_distance <- function(enc_distance, by = c("overall", "year", "ENC_TYPE
      dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, ENC_TYPE, enc_zip_raw = FACILITY_LOCATION) %>%
    ```
 
-4. In SECTION 7 of `R/122_encounter_distance.R`, find the `dplyr::select()` building `enc_distance` (lines 530–548). The current select list is:
+4. In SECTION 7 of `R/122_encounter_distance.R`, find the `dplyr::select()` building `enc_distance` (approx. lines 530–548; anchor on the `distance_km_haversine,` line added by FIX B4). The current select list is:
    ```
    ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient,
    zip5_patient_source, days_offset, n_candidates_in_range, distance_mi, distance_km,
@@ -558,8 +641,12 @@ Expected: 4
 library(testthat)
 library(dplyr)
 library(tibble)
+library(withr)
 
-source("R/utils/utils_distance_hist.R")
+# Follow the sourcing convention used by the existing test-utils-address*.R files.
+# testthat::test_path() resolves relative to tests/testthat/, so this works under
+# both test_file() and test_dir().
+source(testthat::test_path("..", "..", "R", "utils", "utils_distance_hist.R"))
 
 # ---- Synthetic data ----
 set.seed(154)
@@ -621,6 +708,43 @@ test_that("bin_distance: zero distance falls in first bin", {
   expect_true(first_bin_n >= 1L)
 })
 
+test_that("bin_distance: empty input returns an empty bin table, both scales", {
+  for (sc in c("linear", "log")) {
+    b <- bin_distance(numeric(0), scale = sc)
+    expect_equal(nrow(b), 0L)
+    expect_true(all(c("bin", "lower", "upper", "n", "pct", "scale", "lower_mi", "upper_mi") %in% names(b)))
+  }
+  b <- bin_distance(c(NA_real_, NA_real_), scale = "log")
+  expect_equal(nrow(b), 0L)
+})
+
+test_that("bin_distance: all-zero input lands entirely in the first bin", {
+  b <- bin_distance(rep(0, 7), scale = "linear")
+  expect_equal(b$n[1], 7L)
+  expect_equal(sum(b$n[-1]), 0L)
+  b_log <- bin_distance(rep(0, 7), scale = "log")
+  expect_equal(sum(b_log$n), 7L)
+})
+
+test_that("bin_distance log: value exactly on a 0.25 boundary is counted", {
+  b <- bin_distance(c(0, 9, 99), scale = "log")   # log10(10) = 1, log10(100) = 2
+  expect_equal(sum(b$n), 3L)
+  expect_true(max(b$upper) > 2)
+})
+
+test_that("bin_distance: negative or infinite input is not silently binned", {
+  # bin_distance() does not validate; the invariant lives in R/122 SECTION 12.0a.
+  # This test documents the contract: NA is dropped, everything else is counted.
+  b <- bin_distance(c(-1, 5), scale = "linear")
+  expect_equal(sum(b$n), 1L)   # -1 falls outside [0, Inf) and is dropped by cut()
+})
+
+test_that("bin_distance: single value above cap goes to the open top bin", {
+  b <- bin_distance(1234, scale = "linear", cap = 300)
+  expect_equal(b$n[is.infinite(b$upper)], 1L)
+  expect_equal(sum(b$n), 1L)
+})
+
 # ==============================================================================
 # plot_distance_hist()
 # ==============================================================================
@@ -648,32 +772,54 @@ test_that("plot_distance_hist returns a ggplot for log bins", {
 # ==============================================================================
 
 test_that("make_distance_histograms returns list with bins and stats", {
-  tmp <- tempdir()
+  tmp <- withr::local_tempdir()
   result <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918")
   expect_named(result, c("bins", "stats"))
 })
 
 test_that("make_distance_histograms bins has level column with encounter and patient", {
-  tmp <- tempdir()
+  tmp <- withr::local_tempdir()
   result <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918")
   expect_true(all(c("encounter", "patient") %in% result$bins$level))
 })
 
 test_that("make_distance_histograms bins has scale column with linear and log", {
-  tmp <- tempdir()
+  tmp <- withr::local_tempdir()
   result <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918")
   expect_true(all(c("linear", "log") %in% result$bins$scale))
 })
 
-test_that("make_distance_histograms writes 4 PNG files", {
-  tmp <- tempdir()
+test_that("make_distance_histograms writes exactly the 4 expected PNG file names", {
+  tmp <- withr::local_tempdir()
   result <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918")
+  expected <- sprintf("encounter_distance_hist_%s_%s_20260918.png",
+                      rep(c("encounter", "patient"), each = 2), rep(c("linear", "log"), 2))
   pngs <- list.files(file.path(tmp, "figures"), pattern = "\\.png$", full.names = FALSE)
-  expect_equal(length(pngs), 4L)
+  expect_setequal(pngs, expected)
+})
+
+test_that("make_distance_histograms bin counts sum to computed n at every level/scale", {
+  tmp <- withr::local_tempdir()
+  result <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918")
+  n_enc <- nrow(dplyr::filter(enc_dist, distance_status == "computed"))
+  n_pat <- dplyr::n_distinct(dplyr::filter(enc_dist, distance_status == "computed")$ID)
+  for (lv in c("encounter", "patient")) for (sc in c("linear", "log")) {
+    got <- sum(result$bins$n[result$bins$level == lv & result$bins$scale == sc])
+    expect_equal(got, if (lv == "encounter") n_enc else n_pat, info = paste(lv, sc))
+  }
+})
+
+test_that("make_distance_histograms with no computed rows warns and writes nothing", {
+  tmp <- withr::local_tempdir()
+  none <- dplyr::mutate(enc_dist, distance_status = "patient_zip_missing", distance_mi = NA_real_)
+  expect_warning(result <- make_distance_histograms(none, out_dir = tmp, run_date = "20260918"),
+                 "no computed rows")
+  expect_equal(nrow(result$bins), 0L)
+  expect_equal(length(list.files(file.path(tmp, "figures"))), 0L)
 })
 
 test_that("make_distance_histograms encounter stats$n equals nrow of computed rows", {
-  tmp <- tempdir()
+  tmp <- withr::local_tempdir()
   result <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918")
   n_computed <- nrow(dplyr::filter(enc_dist, distance_status == "computed"))
   enc_stat_n <- result$stats |> dplyr::filter(level == "encounter") |> dplyr::pull(n)
@@ -716,6 +862,12 @@ test_that("summarise_distance returns required stat columns", {
   expect_named(out, c("breakout", "n", "median_mi", "IQR_mi", "p90_mi", "p95_mi", "p99_mi", "max_mi"))
 })
 
+test_that("summarise_distance: facility_state NA maps to state_unmatched", {
+  d <- dplyr::mutate(enc_dist, facility_state = NA_character_)
+  out <- summarise_distance(d, by = "facility_state")
+  expect_equal(out$breakout, "state_unmatched")
+})
+
 test_that("summarise_distance: p90 >= median for overall", {
   out <- summarise_distance(enc_dist, by = "overall")
   expect_true(out$p90_mi >= out$median_mi)
@@ -726,21 +878,61 @@ test_that("summarise_distance: p90 >= median for overall", {
    ```r
    testthat::test_file("tests/testthat/test-utils-distance-hist.R")
    ```
-   All tests must pass. If `lubridate` is not explicitly loaded in `utils_distance_hist.R`, add `lubridate::year()` namespace-qualified calls (already done in the code above) — do not add a bare `library(lubridate)` to the util file; use `lubridate::year()` instead.
+   All tests must pass. The utility file has no lubridate dependency (year is derived with `format(ADMIT_DATE, "%Y")`).
 
 **Verify:**
 ```
 Rscript -e "testthat::test_file('tests/testthat/test-utils-distance-hist.R')"
 ```
-Expected: all tests pass, 0 failures, 0 errors. If `ggplot2::ggsave` writes to a temp directory, 4 PNG files will appear under `tempdir()/figures/`.
+Expected: all tests pass, 0 failures, 0 errors. Each `make_distance_histograms()` test writes its 4 PNGs into its own `withr::local_tempdir()`, cleaned up on exit.
 
 **Done:** `tests/testthat/test-utils-distance-hist.R` exists with tests for all four functions covering normal cases, edge cases (NAs, zero distance), and the row-count invariant. All tests pass with `testthat::test_file()`.
 
 ---
 
+### Task 154-04: zipcodeR-vs-haversine agreement test (milestone 152-02 criterion)
+
+**Goal:** Satisfy the 152-02 success criterion — `zipcodeR::zip_distance()` and `haversine_km()` agree within 1 mile on a 500-pair sample — as a testthat case that reads the Phase 154 rds. Runs only where the rds exists (HiPerGator); skipped locally.
+
+**Files:**
+- `tests/testthat/test-encounter-distance.R` — create new (or append if it exists)
+
+**Steps:**
+
+1. Add:
+
+```r
+library(testthat)
+library(dplyr)
+
+test_that("zipcodeR distance agrees with haversine cross-check within 1 mile (500-pair sample)", {
+  rds_files <- list.files(file.path(CONFIG$output_dir), pattern = "^encounter_distance_\\d{8}\\.rds$",
+                          full.names = TRUE)
+  skip_if(length(rds_files) == 0, "encounter_distance rds not present (run on HiPerGator)")
+  d <- readRDS(sort(rds_files, decreasing = TRUE)[1]) |>
+    dplyr::filter(distance_status == "computed", !is.na(distance_km_haversine))
+  skip_if(nrow(d) == 0, "no computed rows with haversine cross-check")
+  set.seed(15202)
+  s <- d[sample.int(nrow(d), min(500L, nrow(d))), ]
+  diff_mi <- abs(s$distance_mi - s$distance_km_haversine / 1.609344)
+  expect_lte(stats::median(diff_mi), 1)
+  expect_lte(mean(diff_mi > 1), 0.05)   # allow <=5% of pairs to differ by >1 mi (centroid-source differences)
+})
+```
+
+   `CONFIG` must be available; source `R/00_config.R` at the top of the file the same way the existing HiPerGator-dependent tests do.
+
+2. If the median difference exceeds 1 mile, do NOT relax the threshold. Report the median and the 95th percentile of `diff_mi` and stop: a systematic offset means the two centroid sources disagree and D-01 needs a note in AM §3.
+
+**Verify:** `Rscript -e "testthat::test_file('tests/testthat/test-encounter-distance.R')"` — skipped locally, passes on HiPerGator after a full run.
+
+**Done:** The 152-02 cross-check exists as a repeatable test and is not a workbook row (154-D3).
+
+---
+
 ## Verification
 
-After all three tasks are complete, confirm the following:
+After all four tasks are complete (order 154-02, 154-03, 154-01, 154-04), confirm the following:
 
 1. **6-sheet xlsx structure** — Open `output/encounter_distance_<date>.xlsx` and confirm exactly 6 tabs in order: KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC. Confirm no tabs named A_encounter_distance, B_patient_summary, C_distribution, D_flags, or E_completeness remain.
 
@@ -754,6 +946,12 @@ After all three tasks are complete, confirm the following:
 
 4. **Row-count reconciliation** — The `stopifnot` block in SECTION 12.5 passes without error during a full run. This is the canonical proof that the A_distribution_summary overall row, the histogram stats tibble, and the patient rds are all consistent.
 
-5. **Test suite** — `Rscript -e "testthat::test_file('tests/testthat/test-utils-distance-hist.R')"` reports 0 failures and 0 errors.
+5. **Test suite** — `Rscript -e "testthat::test_file('tests/testthat/test-utils-distance-hist.R')"` reports 0 failures and 0 errors; `test-encounter-distance.R` passes on HiPerGator.
+
+7. **No dotted cutoff lines** — open one PNG and confirm only two orange reference lines (median solid, p90 dashed).
+
+8. **D_fill_offsets** — the sheet has 12 bin rows and a second table of 5 summary metrics; no row labelled `[0]`.
+
+9. **Write order** — in the run log, "Table reconciliation stopifnot PASSED" appears before any "written" message; the first file written is a PNG, then the patient rds, then the encounter rds, then the xlsx. A failed reconciliation leaves no Phase 154 output on disk.
 
 6. **ENC_TYPE column present** — `Rscript -e "source('R/122_encounter_distance.R'); cat(names(enc_distance))"` output includes `ENC_TYPE` (requires DuckDB on HiPerGator; for local verification use the grep check from Task 154-02 step 4 instead).
