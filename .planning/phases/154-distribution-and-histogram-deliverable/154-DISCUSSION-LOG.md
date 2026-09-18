@@ -86,3 +86,20 @@
 ## Deferred Ideas
 
 None.
+
+---
+
+## Review Pass Addendum (2026-09-18)
+
+Changes made to CONTEXT.md after a review against the milestone, FIX doc, and Appendix B.
+Decisions were renumbered to phase-local `154-D1`..`154-D6`.
+
+| Item | Change | Reason |
+|------|--------|--------|
+| By-state breakout | Reinstated as "by facility state" via `zipcodeR::zip_code_db$state` on `zip5_facility` | Original omission was reasoned from ZIP3 imprecision; ZIP5→state is exact and needs no ZIP3 |
+| A_distribution_summary source | New `summarise_distance()` helper, not `make_distance_histograms()$stats` | `stats` lacks IQR/p95/p99/max and has no breakouts |
+| ENC_TYPE plumbing | Three insertion points (SECTION 3, SECTION 7 select, SECTION 12) | Adding to the pull alone does not reach `enc_distance` |
+| 154-03 patient rds | Added as 154-D6 | Was absent from the phase boundary; Phase 155 depends on it |
+| D_fill_offsets | Sign convention stated; `[0]` bin removed; summary rows redefined | Avoid inverted past/future labels; `[0]` is empty by construction |
+| Haversine cross-check | Moved to testthat, not dropped | Milestone 152-02 success criterion still applies |
+| Bin width / cap | Function arguments with Appendix B defaults | Milestone says revisit after first run |
