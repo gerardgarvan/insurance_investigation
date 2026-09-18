@@ -91,19 +91,22 @@ test_that("bin_distance: all-zero input lands entirely in the first bin", {
   expect_equal(sum(b$n[-1]), 0L)
   b_log <- bin_distance(rep(0, 7), scale = "log")
   expect_equal(sum(b_log$n), 7L)
+  expect_equal(b_log$n[1], 7L)                        # all in the [0,1) first bin
+  expect_gte(nrow(b_log), 2L)
 })
 
-test_that("bin_distance log: value exactly on a 0.25 boundary is counted", {
-  b <- bin_distance(c(0, 9, 99), scale = "log")   # log10(10) = 1, log10(100) = 2
-  expect_equal(sum(b$n), 3L)
-  expect_true(max(b$upper) > 2)
+test_that("bin_distance log: decade values sit on bin edges and are counted", {
+  b <- bin_distance(c(0, 0.5, 1, 10, 100), scale = "log")
+  expect_equal(sum(b$n), 5L)
+  expect_true(all(c(0, 1, 2) %in% b$lower))          # 1, 10, 100 mi are edges
+  expect_equal(b$n[b$lower == -0.25], 2L)             # 0 and 0.5 -> first bin
+  expect_equal(b$n[b$lower == 0], 1L)                 # 1 mi -> [1, 1.78)
+  expect_equal(b$lower_mi[b$lower == -0.25], 0)
+  expect_equal(b$upper_mi[b$lower == -0.25], 1)
 })
 
 test_that("bin_distance: negative or infinite input is not silently binned", {
-  # bin_distance() does not validate; the invariant lives in R/122 SECTION 12.0a.
-  # This test documents the contract: NA is dropped, everything else is counted.
-  b <- bin_distance(c(-1, 5), scale = "linear")
-  expect_equal(sum(b$n), 1L)   # -1 falls outside [0, Inf) and is dropped by cut()
+  expect_error(bin_distance(c(-1, 5), scale = "linear"), "negative")
 })
 
 test_that("bin_distance: single value above cap goes to the open top bin", {
@@ -238,4 +241,29 @@ test_that("summarise_distance: facility_state NA maps to state_unmatched", {
 test_that("summarise_distance: p90 >= median for overall", {
   out <- summarise_distance(enc_dist, by = "overall")
   expect_true(out$p90_mi >= out$median_mi)
+})
+
+test_that("bin_distance linear defaults are 10-mile bins to 350", {
+  b <- bin_distance(c(5, 355), scale = "linear")
+  expect_equal(b$upper[1], 10)
+  expect_equal(max(b$lower), 350)
+  expect_equal(b$n[is.infinite(b$upper)], 1L)
+})
+
+test_that("make_distance_histograms passes linear_width / linear_cap through", {
+  tmp <- withr::local_tempdir()
+  r <- make_distance_histograms(enc_dist, out_dir = tmp, run_date = "20260918",
+                                linear_width = 25, linear_cap = 200)
+  lin <- r$bins[r$bins$level == "encounter" & r$bins$scale == "linear", ]
+  expect_equal(lin$upper[1], 25)
+  expect_equal(max(lin$lower), 200)
+})
+
+test_that("plot_distance_hist log axis has a '<1' tick", {
+  b <- bin_distance(mi_vec, scale = "log")
+  stats <- tibble::tibble(n = length(mi_vec), n_excluded = 0L, median = median(mi_vec),
+                          p90 = quantile(mi_vec, 0.9), n_zero = sum(mi_vec == 0))
+  p <- plot_distance_hist(b, stats, level = "encounter")
+  lbls <- ggplot2::ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
+  expect_true("<1" %in% lbls)
 })
