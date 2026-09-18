@@ -11,7 +11,7 @@
 # from Appendix B of MILESTONE_encounter_distance.md, with one addition:
 # bin_distance() returns an empty bin table on empty input instead of erroring.
 # summarise_distance() is new in Phase 154.
-# Dependencies: dplyr, tibble, ggplot2 (all namespace-qualified). No lubridate.
+# Dependencies: dplyr, tibble, ggplot2, scales (ggplot2 dependency); all namespace-qualified. No lubridate.
 #
 # Called from: R/122_encounter_distance.R SECTION 1 (after utils_zip_calendar.R)
 # Log bins (A1, 2026-09-18): [0,1) mi first bin, then quarter-decade bins on log10(mi).
@@ -72,6 +72,15 @@ bin_distance <- function(mi, scale = c("linear", "log"), width = 10, cap = 350) 
 # ------------------------------------------------------------------------------
 #' Plot a distance histogram with UF brand colors.
 #'
+#' Layout (8 x 5 in, 300 dpi, base_size 12):
+#'   - title/subtitle/caption left-aligned to the plot edge (plot.title.position = "plot")
+#'     so long strings never clip against the y-axis labels;
+#'   - caption on two lines, each under ~90 characters;
+#'   - linear x axis labels the open top bin as "<cap>+"; log x axis has a "<1" tick
+#'     and decade ticks that sit on bin edges;
+#'   - y axis uses comma separators and bars sit on the axis (no lower expansion);
+#'   - reference lines are explained in the subtitle, never annotated on the panel.
+#'
 #' @param bins     tibble from bin_distance().
 #' @param stats    tibble with columns n, n_excluded, median, p90, n_zero.
 #' @param level    "encounter" or "patient" (controls axis label).
@@ -80,35 +89,49 @@ bin_distance <- function(mi, scale = c("linear", "log"), width = 10, cap = 350) 
 #' @return ggplot2 object.
 plot_distance_hist <- function(bins, stats, level = c("encounter", "patient"),
                                cutoffs = NULL, run_date = Sys.Date()) {
-  level <- match.arg(level)
+  level  <- match.arg(level)
   is_log <- unique(bins$scale) == "log"
   unit   <- if (level == "encounter") "encounters" else "patients"
-  bw     <- diff(bins$lower)[1]
-  cap    <- max(bins$lower[!is.infinite(bins$upper)])
-  bins <- bins |> dplyr::mutate(mid = (lower + pmin(upper, lower + (upper - lower))) / 2)
-  if (!is_log) bins$mid[is.infinite(bins$upper)] <- max(bins$lower) + (bins$lower[2] - bins$lower[1]) / 2
-  xf   <- if (is_log) function(v) ifelse(v < 1, -0.125, log10(v)) else identity
+  bw     <- bins$upper[1] - bins$lower[1]                 # bin width in axis units
+  cap    <- if (is_log) NA_real_ else max(bins$lower)     # open top bin starts here
+  bins   <- bins |>
+    dplyr::mutate(mid = ifelse(is.infinite(upper), lower + bw / 2, (lower + upper) / 2))
+
+  xf <- if (is_log) function(v) ifelse(v < 1, -0.125, log10(v)) else identity
+
   p <- ggplot2::ggplot(bins, ggplot2::aes(x = mid, y = n)) +
-    ggplot2::geom_col(width = diff(bins$lower)[1], fill = UF_BLUE, colour = "white", linewidth = 0.2) +
+    ggplot2::geom_col(width = bw, fill = UF_BLUE, colour = "white", linewidth = 0.2) +
     ggplot2::geom_vline(xintercept = xf(stats$median), colour = UF_ORANGE, linewidth = 0.8) +
-    ggplot2::geom_vline(xintercept = xf(stats$p90),    colour = UF_ORANGE, linewidth = 0.8, linetype = "dashed") +
+    ggplot2::geom_vline(xintercept = xf(stats$p90),    colour = UF_ORANGE, linewidth = 0.8,
+                        linetype = "dashed") +
+    ggplot2::scale_y_continuous(labels = scales::label_comma(),
+                                expand = ggplot2::expansion(mult = c(0, 0.05))) +
     ggplot2::labs(
       x = if (is_log) "Distance, miles (log scale; first bar = under 1 mile)" else "Distance, miles",
       y = if (level == "encounter") "Encounters" else "Patients",
-      title = sprintf("Patient-to-encounter distance, %s level", level),
+      title    = sprintf("Patient-to-encounter distance, %s level", level),
       subtitle = sprintf("n = %s. Median %.1f mi (solid line); 90th percentile %.1f mi (dashed line). %s same-ZIP %s at 0 mi.",
                          format(stats$n, big.mark = ","), stats$median, stats$p90,
                          format(stats$n_zero, big.mark = ","), unit),
-      caption = sprintf("Distance: zipcodeR::zip_distance() on ZIP5 centroids. Excludes %s %ss with no computable distance. Run %s.",
-                        format(stats$n_excluded, big.mark = ","), level, run_date)
+      caption  = sprintf("Distance: zipcodeR::zip_distance() between ZIP5 codes.\nExcludes %s %s with no computable distance. Run %s.",
+                         format(stats$n_excluded, big.mark = ","), unit, run_date)
     ) +
     ggplot2::theme_minimal(base_size = 12) +
     ggplot2::theme(
-      plot.caption  = ggplot2::element_text(hjust = 0, colour = "grey30"),
-      plot.subtitle = ggplot2::element_text(size = 9.5)
+      plot.title.position   = "plot",
+      plot.caption.position = "plot",
+      plot.title    = ggplot2::element_text(face = "bold", size = 13),
+      plot.subtitle = ggplot2::element_text(size = 9.5, colour = "grey20",
+                                            margin = ggplot2::margin(b = 8)),
+      plot.caption  = ggplot2::element_text(hjust = 0, size = 8.5, colour = "grey30",
+                                            lineheight = 1.1, margin = ggplot2::margin(t = 8)),
+      panel.grid.minor   = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_blank(),
+      axis.title  = ggplot2::element_text(size = 10),
+      axis.text   = ggplot2::element_text(size = 9),
+      plot.margin = ggplot2::margin(10, 14, 8, 10)
     )
-  if (!is.null(cutoffs))
-    p <- p + ggplot2::geom_vline(xintercept = xf(cutoffs), colour = UF_ORANGE, linetype = "dotted", linewidth = 0.6)
+
   if (is_log) {
     ticks <- c(1, 3, 10, 30, 100, 300, 1000, 3000)
     ticks <- ticks[log10(ticks) <= max(bins$upper)]
@@ -117,14 +140,18 @@ plot_distance_hist <- function(bins, stats, level = c("encounter", "patient"),
       labels = c("<1", scales::label_comma()(ticks)),
       expand = ggplot2::expansion(mult = c(0.01, 0.02)))
   } else {
-    step   <- if (cap >= 200) 50 else if (cap >= 100) 25 else 10
-    brks   <- seq(0, cap, by = step)
-    top    <- cap + bw / 2
+    step <- if (cap >= 200) 50 else if (cap >= 100) 25 else 10
+    brks <- seq(0, cap, by = step)
+    top  <- cap + bw / 2
     p <- p + ggplot2::scale_x_continuous(
       breaks = c(brks, top),
       labels = c(as.character(brks), paste0(cap, "+")),
       expand = ggplot2::expansion(mult = c(0.01, 0.02)))
   }
+
+  if (!is.null(cutoffs))
+    p <- p + ggplot2::geom_vline(xintercept = xf(cutoffs), colour = UF_ORANGE,
+                                 linetype = "dotted", linewidth = 0.6)
   p
 }
 
