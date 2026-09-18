@@ -909,27 +909,12 @@ message(glue(
 section_done("SECTIONS 8-11 summaries + QC")
 
 # ==============================================================================
-# SECTION 12A: RDS WRITE (before xlsx so the full result survives an xlsx failure)
-# ==============================================================================
-saveRDS(enc_distance, OUTPUT_RDS)
-message(glue("  rds written: {OUTPUT_RDS} ({nrow(enc_distance)} rows, full encounter-level table)"))
-
-# ==============================================================================
-# SECTION 12: XLSX ASSEMBLY AND WRITE ----
-# ==============================================================================
-
-message("--- Writing encounter_distance xlsx (KEY leftmost, 7 sheets) ---")
-
-# UF brand colors, per project deliverable spec. NOTE: DIFFERENT blue than
-# utils_pptx.R's UF_BLUE ("#003087") -- hex values here are locked for this
-# deliverable; do not source utils_pptx.R.
-UF_BLUE   <- "#0021A5"
-UF_ORANGE <- "#FA4616"
+# add_styled_sheet() -- copied VERBATIM from R/115 lines 2126-2174 per this
+# project's "copy, don't source" convention for this helper.
+# Colors used by add_styled_sheet() -- kept adjacent to the function definition.
 WHITE     <- wb_color(hex = "#FFFFFF")
 DARK_TEXT <- wb_color(hex = "#1F2937")
 
-# add_styled_sheet() copied VERBATIM from R/115 lines 2126-2174 per this
-# project's "copy, don't source" convention for this helper.
 add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl,
                               extra_tbl = NULL, extra_label = NULL) {
   wb$add_worksheet(sheet_name)
@@ -981,24 +966,219 @@ add_styled_sheet <- function(wb, sheet_name, title_text, subtitle_text, data_tbl
                     widths = "auto")
 }
 
-# ---- A sheet row cap (Excel limit) ----
-a_truncated <- nrow(enc_distance) > XLSX_ROW_CAP
-A_sheet <- if (a_truncated) {
-  message(glue("  A_encounter_distance: {nrow(enc_distance)} rows exceeds XLSX_ROW_CAP ({XLSX_ROW_CAP}); ",
-               "writing first {XLSX_ROW_CAP} rows ordered by ID, ENCOUNTERID -- full table is in the rds"))
-  enc_distance %>% dplyr::arrange(ID, ENCOUNTERID) %>% dplyr::slice_head(n = XLSX_ROW_CAP)
-} else {
-  enc_distance
-}
-a_note <- if (a_truncated) {
-  glue("TRUNCATED: A_encounter_distance shows {XLSX_ROW_CAP} of {nrow(enc_distance)} rows ",
-       "(ordered by ID, ENCOUNTERID) because Excel sheets are limited to 1,048,576 rows. ",
-       "B/C/D/QC are computed from ALL rows. The complete table is in the .rds output.")
-} else {
-  glue("A_encounter_distance holds all {nrow(enc_distance)} rows (under the Excel limit).")
-}
+# ==============================================================================
+# SECTION 12: HISTOGRAMS, PATIENT RDS, AND 6-SHEET XLSX (Phase 154) ----
+# ==============================================================================
 
-# ---- KEY sheet data ----
+message("--- Phase 154: histogram PNGs, patient rds, 6-sheet xlsx ---")
+
+# ---- 12.0 Facility-state join (for A_distribution_summary by_facility_state breakout) ----
+# zipcodeR::zip_code_db is a data frame bundled with the package.
+# Join on zip5_facility (character, 5-digit) to state.
+zip_state_lkp <- zipcodeR::zip_code_db %>%
+  dplyr::transmute(zipcode = as.character(zipcode), facility_state = state) %>%
+  dplyr::distinct(zipcode, .keep_all = TRUE)
+
+n_before_state_join <- nrow(enc_distance)
+enc_distance <- enc_distance %>%
+  dplyr::left_join(zip_state_lkp, by = c("zip5_facility" = "zipcode"))
+stopifnot("facility-state join changed row count" = nrow(enc_distance) == n_before_state_join)
+
+# ---- 12.0a Input invariants -- checked BEFORE any file is written ----
+stopifnot(
+  "computed status has missing distance_mi" =
+    !any(enc_distance$distance_status == "computed" & is.na(enc_distance$distance_mi)),
+  "non-computed status has non-missing distance_mi" =
+    !any(enc_distance$distance_status != "computed" & !is.na(enc_distance$distance_mi)),
+  "distance_mi has negative or non-finite values" =
+    all(is.finite(enc_distance$distance_mi[!is.na(enc_distance$distance_mi)]) &
+        enc_distance$distance_mi[!is.na(enc_distance$distance_mi)] >= 0),
+  "nearest-fill rows contain days_offset == 0" =
+    !any(enc_distance$zip5_patient_source %in% c("nearest_zip9", "nearest_zip5") &
+         enc_distance$days_offset == 0, na.rm = TRUE)
+)
+
+# Single canonical definition used by every table, figure, and check below.
+computed_rows <- enc_distance %>% dplyr::filter(distance_status == "computed")
+
+cutoffs_mi <- if (!is.null(CONFIG$distance_candidate_cutoffs_mi)) {
+  CONFIG$distance_candidate_cutoffs_mi
+} else {
+  c(30, 50)
+}
+stopifnot(
+  "distance_candidate_cutoffs_mi must be finite, non-negative, unique numerics" =
+    is.numeric(cutoffs_mi) && all(is.finite(cutoffs_mi)) && all(cutoffs_mi >= 0) &&
+    !anyDuplicated(cutoffs_mi)
+)
+
+message(glue(
+  "  facility_state join: {sum(!is.na(enc_distance$facility_state))} of ",
+  "{nrow(enc_distance)} rows matched a state ({sum(is.na(enc_distance$facility_state))} unmatched)"
+))
+
+# ---- 12.2 A_distribution_summary via summarise_distance() ----
+# breakout column identifies which slice: "overall", "year_<YYYY>", "enc_type_<X>", "state_<XX>"
+A_distribution_summary <- dplyr::bind_rows(
+  summarise_distance(enc_distance, by = "overall"),
+  summarise_distance(enc_distance, by = "year"),
+  summarise_distance(enc_distance, by = "ENC_TYPE"),
+  summarise_distance(enc_distance, by = "facility_state")
+)
+
+message(glue("  A_distribution_summary: {nrow(A_distribution_summary)} rows"))
+
+# ---- 12.3 D_fill_offsets ----
+# Signed-integer bin distribution of days_offset for nearest-* fill rows.
+# No [0] bin — nearest-fill rows are always nonzero by construction.
+nearest_rows <- enc_distance %>%
+  dplyr::filter(zip5_patient_source %in% c("nearest_zip9", "nearest_zip5"),
+                !is.na(days_offset))
+
+# 13 breaks -> 12 intervals, matching 12 labels. right = FALSE gives [-7,0) = -7..-1
+# (past) and [0,7) = 1..6 (future); 0 itself never occurs for nearest fills.
+fill_breaks <- c(-Inf, -365, -180, -90, -30, -7, 0, 7, 30, 90, 180, 365, Inf)
+fill_labels <- c(
+  "[-Inf,-365)", "[-365,-180)", "[-180,-90)", "[-90,-30)",
+  "[-30,-7)", "[-7,0)", "[0,7)", "[7,30)",
+  "[30,90)", "[90,180)", "[180,365)", "[365,+Inf)"
+)
+stopifnot(length(fill_breaks) - 1L == length(fill_labels))
+
+D_fill_offsets_bins <- tibble::tibble(
+  bin = fill_labels,
+  n   = as.integer(table(cut(nearest_rows$days_offset,
+                              breaks = fill_breaks,
+                              labels = fill_labels,
+                              right = FALSE,
+                              include.lowest = FALSE)))
+) %>%
+  dplyr::mutate(pct = 100 * n / sum(n))
+
+# Summary metrics go in a separate metric/value table (written via extra_tbl),
+# not into the pct column of the bin table.
+D_fill_offsets_summary <- tibble::tibble(
+  metric = c("median_signed_offset_days", "median_abs_offset_days", "p90_abs_offset_days",
+             "share_past_pct (days_offset > 0)", "share_future_pct (days_offset < 0)"),
+  value  = if (nrow(nearest_rows) > 0) c(
+    median(nearest_rows$days_offset),
+    median(abs(nearest_rows$days_offset)),
+    unname(quantile(abs(nearest_rows$days_offset), 0.90)),
+    100 * mean(nearest_rows$days_offset > 0),
+    100 * mean(nearest_rows$days_offset < 0)
+  ) else rep(NA_real_, 5)
+)
+
+D_fill_offsets <- D_fill_offsets_bins
+
+message(glue(
+  "  D_fill_offsets: {nrow(nearest_rows)} nearest-fill rows; ",
+  "{nrow(D_fill_offsets_bins)} bins"
+))
+
+# ---- 12.3a Completeness waterfall and status breakdown (C_completeness) ----
+n_enc_total     <- nrow(enc_distance)
+n_fac_zip       <- sum(!is.na(enc_distance$zip5_facility))
+n_inrange_pat   <- sum(!is.na(enc_distance$zip5_facility) &
+                       enc_distance$zip5_patient_source %in% c("in_range_zip9", "in_range_zip5"))
+n_nearest_pat   <- sum(!is.na(enc_distance$zip5_facility) &
+                       enc_distance$zip5_patient_source %in% c("nearest_zip9", "nearest_zip5"))
+n_computed      <- sum(enc_distance$distance_status == "computed")
+
+completeness_tbl <- tibble::tibble(
+  Step = c("Encounters (cohort)", "With facility ZIP5", "  of which in-range patient ZIP",
+           "  of which nearest-fill patient ZIP", "Distance computed"),
+  N    = c(n_enc_total, n_fac_zip, n_inrange_pat, n_nearest_pat, n_computed),
+  Pct_of_total = round(100 * N / n_enc_total, 2)
+)
+
+status_breakdown_tbl <- enc_distance %>%
+  dplyr::count(distance_status, name = "N") %>%
+  dplyr::mutate(Pct = round(100 * N / sum(N), 2)) %>%
+  dplyr::arrange(dplyr::desc(N))
+stopifnot(sum(status_breakdown_tbl$N) == n_enc_total)
+
+# ---- 12.4 Per-patient summary table (saved in 12.5c) ----
+# One row per patient with any computed encounter.
+# share_ge_<c> columns for each cutoff in CONFIG$distance_candidate_cutoffs_mi (default c(30, 50)).
+# One grouped summarise; share_ge_<c> columns built from the cutoff vector.
+share_exprs <- setNames(
+  lapply(cutoffs_mi, function(cm) rlang::expr(mean(distance_mi >= !!cm))),
+  paste0("share_ge_", cutoffs_mi)
+)
+
+distance_patient <- computed_rows %>%
+  dplyr::group_by(ID) %>%
+  dplyr::summarise(
+    n_enc_computed = dplyr::n(),
+    median_mi      = median(distance_mi),
+    min_mi         = min(distance_mi),
+    max_mi         = max(distance_mi),
+    !!!share_exprs,
+    .groups = "drop"
+  )
+
+message(glue("  distance_patient built: {nrow(distance_patient)} patients (saved after reconciliation)"))
+
+# ---- 12.5 Table reconciliation stopifnot (nothing has been written yet) ----
+n_A_overall <- A_distribution_summary %>%
+  dplyr::filter(breakout == "overall") %>%
+  dplyr::pull(n)
+
+stopifnot(
+  "A_distribution_summary overall n != nrow(computed_rows)" =
+    n_A_overall == nrow(computed_rows),
+  "distance_patient nrow != n_distinct(ID) among computed rows" =
+    nrow(distance_patient) == dplyr::n_distinct(computed_rows$ID),
+  "D_fill_offsets bin n != number of nearest-fill rows" =
+    sum(D_fill_offsets_bins$n) == nrow(nearest_rows),
+  "completeness_tbl 'Distance computed' != nrow(computed_rows)" =
+    completeness_tbl$N[completeness_tbl$Step == "Distance computed"] == nrow(computed_rows)
+)
+message("  Table reconciliation stopifnot PASSED")
+
+# ---- 12.5b Histogram PNGs via make_distance_histograms() (first files written) ----
+# Returns list(bins = <tibble>, stats = <tibble>) where bins is B_histogram_bins content.
+hist_result <- make_distance_histograms(
+  dist     = enc_distance,
+  out_dir  = CONFIG$output_dir,
+  run_date = RUN_DATE,
+  cutoffs  = NULL   # dotted candidate-cutoff lines are a Phase 155 addition (154-CONTEXT)
+)
+
+message(glue(
+  "  make_distance_histograms(): {nrow(hist_result$bins)} bin rows; ",
+  "4 PNGs written to {file.path(CONFIG$output_dir, 'figures')}"
+))
+
+# Bin counts must contain every computed observation, at every level/scale.
+n_pat_computed <- dplyr::n_distinct(computed_rows$ID)
+for (lv in c("encounter", "patient")) {
+  for (sc in c("linear", "log")) {
+    n_bins <- sum(hist_result$bins$n[hist_result$bins$level == lv & hist_result$bins$scale == sc])
+    n_expect <- if (lv == "encounter") nrow(computed_rows) else n_pat_computed
+    if (n_bins != n_expect) stop(sprintf("bin count mismatch: %s/%s has %d, expected %d", lv, sc, n_bins, n_expect))
+  }
+}
+n_hist_enc_stats <- hist_result$stats %>% dplyr::filter(level == "encounter") %>% dplyr::pull(n)
+stopifnot("make_distance_histograms() encounter stats$n != nrow(computed_rows)" =
+            n_hist_enc_stats == nrow(computed_rows))
+message("  histogram bin-count reconciliation PASSED")
+
+# ---- 12.5c Per-patient rds write ----
+OUTPUT_PATIENT_RDS <- file.path(CONFIG$output_dir,
+                                 glue("distance_patient_{RUN_DATE}.rds"))
+saveRDS(distance_patient, OUTPUT_PATIENT_RDS)
+message(glue(
+  "  distance_patient rds written: {OUTPUT_PATIENT_RDS} ({nrow(distance_patient)} patients)"
+))
+
+# ---- 12.6 encounter_distance rds (full table, before xlsx) ----
+# OUTPUT_RDS is defined in the constants block near the top of the script.
+saveRDS(enc_distance, OUTPUT_RDS)
+message(glue("  rds written: {OUTPUT_RDS} ({nrow(enc_distance)} rows, full encounter-level table)"))
+
+# ---- 12.7 Updated KEY sheet data (6-sheet spec) ----
 key_tbl <- tibble::tibble(
   Field = c(
     "Script",
@@ -1006,112 +1186,92 @@ key_tbl <- tibble::tibble(
     "Run date",
     "Cohort",
     "Encounter ZIP source",
-    "Encounter ZIP interpretation (OPEN QUESTION, not a numbered decision)",
-    "Residence ZIP source (Phase 153)",
-    "Distance method (Phase 153, canonical)",
-    "Distance method (haversine, reference only)",
-    "Distance thresholds",
-    "Nearest-fill encounters in summaries (D-03)",
-    "Phase 153 provenance columns",
-    "RDS output",
-    "A_encounter_distance row cap",
-    "A_encounter_distance columns",
-    "B_patient_summary columns",
-    "C_distribution columns",
-    "D_flags columns",
-    "E_completeness columns",
+    "Residence ZIP source",
+    "Distance method",
+    "Histogram PNGs",
+    "Patient rds",
+    "A_distribution_summary breakouts",
+    "A_distribution_summary statistics",
+    "B_histogram_bins columns",
+    "C_completeness waterfall",
+    "D_fill_offsets scope",
     "QC sheet contents"
   ),
   Description = c(
     "R/122_encounter_distance.R",
-    "Phase 152/153 -- encounter-ZIP to residence distance (Phase 153: calendar + zipcodeR)",
+    "Phase 154 — distribution and histogram deliverable",
     RUN_DATE,
     glue("HL cohort (N = {length(COHORT_IDS)}), IDs from DuckDB via CONFIG"),
     "FACILITY_LOCATION column in PCORnet CDM ENCOUNTER table",
-    paste0(
-      "Whether encounter ZIP is patient- or facility-sourced in this OneFlorida+ extract is unknown; ",
-      "column description reflects travel distance if facility-sourced, proxy validation if patient-sourced."
-    ),
-    "LDS_ADDRESS_HISTORY via build_patient_zip_calendar() + compute_encounter_distance() (Phase 153 AM-rules 2-3: bidirectional nearest-in-time ZIP5)",
-    "zipcodeR::zip_distance() (miles, then *1.609344 for km); canonical per D-01 from Phase 152 milestone",
-    "Haversine great-circle distance (km) in distance_km_haversine; retained for centroid-tier basis reporting only",
-    "200 km primary (flag_gt200 = TRUE in D_flags); 50 km secondary (all D_flags rows) -- reference thresholds only; reportable binary cutoff is D-06 (pending team decision)",
-    "Nearest-fill (zip5_patient_source nearest_zip9 or nearest_zip5) encounters are INCLUDED in B/C summaries; see E_completeness for fill-path breakdown",
-    "zip5_patient_source: in_range_zip9/in_range_zip5/nearest_zip9/nearest_zip5; days_offset: signed days from ADMIT_DATE to nearest period boundary (0 for in-range); n_candidates_in_range: count of calendar periods covering ADMIT_DATE",
-    "Full encounter-level enc_distance tibble saved to encounter_distance_YYYYMMDD.rds",
-    as.character(a_note),
-    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, n_candidates_in_range, distance_mi, distance_km, distance_km_haversine, distance_status, distance_basis, enc_centroid_source, res_centroid_source",
-    "ID, n_encounters, n_with_distance, median_km, iqr_km, max_km, pct_gt50km, pct_gt200km",
-    "dist_bin, distance_basis, n_encounters, n_patients (bins: 0-5, 5-25, 25-50, 50-200, >200 km; include.lowest=TRUE so distance=0 rows fall in the 0-5 bin)",
-    "ID, ENCOUNTERID, ADMIT_DATE, enc_zip_norm, zip5_facility, zip9_patient, zip5_patient, zip5_patient_source, days_offset, distance_mi, distance_km, distance_status, distance_basis, enc_centroid_source, res_centroid_source, flag_gt200",
-    "Step (5-row completeness waterfall keyed on distance_status + fill path), N, Drop_from_prior; plus distance_status breakdown subtable",
-    "Coverage waterfall; completeness waterfall (distance_status); n_candidates_in_range>1; nearest-fill days_offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag; WV gap note"
+    "LDS_ADDRESS_HISTORY via build_patient_zip_calendar() + compute_encounter_distance() (Phase 153 bidirectional nearest-in-time ZIP5)",
+    "zipcodeR::zip_distance() (miles); canonical per D-01 from Phase 152 milestone. No km in this deliverable (154-D3).",
+    glue("4 PNGs in {file.path(CONFIG$output_dir, 'figures')}: encounter_distance_hist_{{level}}_{{scale}}_{RUN_DATE}.png for level in (encounter, patient), scale in (linear, log)"),
+    glue("distance_patient_{RUN_DATE}.rds: one row per patient with any computed encounter; columns: ID, n_enc_computed, median_mi, min_mi, max_mi, share_ge_<c> for c in ({paste(cutoffs_mi, collapse=', ')})"),
+    "overall | year_<YYYY> (by ADMIT_DATE year) | enc_type_<X> (by ENC_TYPE) | state_<XX> (by facility_state from zipcodeR::zip_code_db)",
+    "n, median_mi, IQR_mi, p90_mi, p95_mi, p99_mi, max_mi — all in miles (154-D3); no mean/SD",
+    "level, scale, bin, lower, upper, lower_mi, upper_mi, n, pct — from make_distance_histograms() bind_rows(bins_out)",
+    "Five-step waterfall keyed on distance_status (encounters → facility ZIP → in-range patient ZIP → nearest patient ZIP → distance computed)",
+    "Nearest-* fill rows (zip5_patient_source in nearest_zip9, nearest_zip5) only; signed-integer bins. SIGN: positive days_offset = address period ended BEFORE the encounter (past); negative = period began AFTER (future). 0 never occurs.",
+    "Coverage waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag"
   )
 )
 
-# ---- Build workbook -- KEY LEFTMOST (project convention) ----
+# ---- 12.8 Build 6-sheet workbook ----
+message("--- Writing 6-sheet xlsx (Phase 154 spec) ---")
+
 wb <- wb_workbook()
 
 add_styled_sheet(
   wb, "KEY",
-  "Phase 152: Encounter-ZIP to Residence Distance — Workbook KEY",
+  "Phase 154: Encounter Distance — Workbook KEY",
   glue("Run date: {RUN_DATE} | Cohort: HL (N={length(COHORT_IDS)}) | Script: R/122_encounter_distance.R"),
   key_tbl
 )
 
 add_styled_sheet(
-  wb, "A_encounter_distance",
-  "A: Encounter-Level Distance",
-  if (a_truncated) as.character(a_note) else
-    "One row per HL cohort encounter with distance_km from enc_zip to residence ZIP on ADMIT_DATE.",
-  A_sheet
+  wb, "A_distribution_summary",
+  "A: Distance Distribution Summary",
+  "Rows stacked by breakout: overall, by year (ADMIT_DATE), by ENC_TYPE, by facility state. Miles only (154-D3).",
+  A_distribution_summary
 )
 
 add_styled_sheet(
-  wb, "B_patient_summary",
-  "B: Patient-Level Distance Summary",
-  "One row per patient; nearest-fill (nearest_zip9 / nearest_zip5) encounters included.",
-  B_patient_summary
+  wb, "B_histogram_bins",
+  "B: Histogram Bin Counts",
+  "Output of make_distance_histograms(): level (encounter/patient), scale (linear/log), bin edges in raw and mile units, n, pct.",
+  hist_result$bins
 )
 
 add_styled_sheet(
-  wb, "C_distribution",
-  "C: Distance Distribution by Bin and Basis",
-  "Bins: 0-5, 5-25, 25-50, 50-200, >200 km (include.lowest=TRUE; zero-distance rows in 0-5) x distance_basis.",
-  C_distribution
-)
-
-add_styled_sheet(
-  wb, "D_flags",
-  "D: Far-Distance Flagged Encounters",
-  "Encounters > 50 km (secondary threshold); flag_gt200 = TRUE marks primary threshold (> 200 km).",
-  D_flags
-)
-
-add_styled_sheet(
-  wb, "E_completeness",
-  "E: Completeness Waterfall (distance_status + fill-path breakdown)",
-  glue::glue(
-    "Five-step waterfall keyed on distance_status from compute_encounter_distance() (Phase 153). ",
-    "Row-for-row reconciliation stopifnot verified: computed+facility_missing+patient_missing+zip_not_in_db == nrow(enc_distance). ",
-    "In-range and nearest fill paths are parallel (not sequential drops from each other)."
-  ),
+  wb, "C_completeness",
+  "C: Completeness Waterfall",
+  "Five-step waterfall keyed on distance_status from compute_encounter_distance() (Phase 153).",
   completeness_tbl,
   extra_tbl   = status_breakdown_tbl,
   extra_label = "distance_status breakdown (row-for-row reconciles to nrow(enc_distance))"
 )
 
 add_styled_sheet(
+  wb, "D_fill_offsets",
+  "D: Nearest-Fill Days-Offset Distribution",
+  "Signed-integer bins of days_offset for zip5_patient_source in {nearest_zip9, nearest_zip5}. Positive = period ended before the encounter (past); negative = period began after (future). 0 never occurs.",
+  D_fill_offsets,
+  extra_tbl   = D_fill_offsets_summary,
+  extra_label = "Summary metrics (days; shares in percent)"
+)
+
+add_styled_sheet(
   wb, "QC",
   "QC: Coverage Waterfall and Quality Checks",
-  "Waterfall from raw cohort ENCOUNTER count to distance computed; nearest-fill days_offset distribution; n_candidates_in_range>1 count; WV gap noted.",
+  "Waterfall from raw cohort ENCOUNTER count to distance computed; nearest-fill days_offset distribution; n_candidates_in_range>1.",
   qc_tbl,
   extra_tbl   = unmatched_zip9_by_state,
   extra_label = "Unmatched ZIP9 encounters by state (centroid_source == zip5_fallback)"
 )
 
+# OUTPUT_XLSX is defined in the constants block near the top of the script.
 wb_save(wb, OUTPUT_XLSX)
-message(glue("  xlsx written: {OUTPUT_XLSX}"))
-section_done("SECTION 12 rds + xlsx write")
+message(glue("  xlsx written: {OUTPUT_XLSX} (6 sheets: KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC)"))
+section_done("SECTION 12 Phase 154 outputs")
 
 message("=== R/122_encounter_distance.R complete ===")
