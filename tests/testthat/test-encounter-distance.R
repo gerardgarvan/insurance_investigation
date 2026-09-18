@@ -8,9 +8,9 @@
 library(testthat)
 library(dplyr)
 
-source("R/00_config.R")
-
 test_that("zipcodeR distance agrees with haversine cross-check within 1 mile (500-pair sample)", {
+  skip_if(!file.exists("R/00_config.R"), "R/00_config.R not found (run from project root on HiPerGator)")
+  source("R/00_config.R")
   rds_files <- list.files(file.path(CONFIG$output_dir), pattern = "^encounter_distance_\\d{8}\\.rds$",
                           full.names = TRUE)
   skip_if(length(rds_files) == 0, "encounter_distance rds not present (run on HiPerGator)")
