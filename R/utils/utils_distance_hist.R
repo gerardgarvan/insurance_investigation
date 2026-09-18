@@ -57,8 +57,8 @@ bin_distance <- function(mi, scale = c("linear", "log"), width = 5, cap = 300) {
     dplyr::mutate(n = dplyr::coalesce(as.integer(n), 0L),
                   pct = 100 * n / sum(n),
                   scale = scale,
-                  lower_mi = if (scale == "log") 10^lower - 1 else lower,
-                  upper_mi = if (scale == "log") 10^upper - 1 else upper)
+                  lower_mi = dplyr::if_else(scale == "log", 10^lower - 1, lower),
+                  upper_mi = dplyr::if_else(scale == "log", 10^upper - 1, upper))
 }
 
 # ------------------------------------------------------------------------------
