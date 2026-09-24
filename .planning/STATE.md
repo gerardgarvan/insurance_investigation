@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Completed 158-03-PLAN.md
-last_updated: "2026-09-24T18:53:49.683Z"
+stopped_at: "Checkpoint: Task 2 HiPerGator run — awaiting human action"
+last_updated: "2026-09-24T18:57:55.886Z"
 last_activity: 2026-09-24
 progress:
   total_phases: 146
-  completed_phases: 125
+  completed_phases: 126
   total_plans: 272
-  completed_plans: 276
+  completed_plans: 277
 ---
 
 # Project State
@@ -250,7 +250,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 **Last command:** execute 143-03 Tasks 1-2 -- COMPLETE. R/142 rewired to treatment_episodes_180_enriched.rds; guard clauses removed; D-04 fill-rate parity check and D-05 invariant assertions added; output/gantt_180_README.txt created; 142-CONTEXT.md D-01 updated with 89/179-day max evidence. Commit: df65aa6. Task 3 (HiPerGator run of R/142 + R/88 + R/39) is pending and requires HiPerGator access.
 **Stopped at:**
-Completed 158-03-PLAN.md
+Checkpoint: Task 2 HiPerGator run — awaiting human action
 
 - 140-02-PLAN.md COMPLETE (3/3 tasks). D-2 resolved option-a (ZIP5 as primary analysis unit). See `140-02-SUMMARY.md`.
 - 140-09-PLAN.md (Wave 2a, inserted by 140-09-PATCH) COMPLETE (3/3 tasks) AND COMMITTED (`9123628`, 2026-08-08). `c02_reconciled` rewired onto `c02a_monotone && c02b_partition` (retiring the unverifiable 26-patient control total from the gate); D-5 resolved option-c ("no floor -- report only"). See `140-09-SUMMARY.md`.
@@ -272,3 +272,4 @@ Completed 158-03-PLAN.md
 **What's next:** Phase 140 is now 8/8 plans executed -- all 24 of 140-CONTEXT.md's task/decision IDs addressed. Phase-level goal verification (a real HiPerGator run of the full amended R/115_zip_stability_counts.R, confirming c02_reconciled plus reviewing the backward-only/forward-inclusive waterfall split, the encounter-anchored validation curve, the gap_days_at_assignment covariate, and this plan's new universe-overlap figures against real data) is the outstanding item before the workbook ships to Erin/Amy -- explicitly out of scope for this 140-07 execution (orchestrator's responsibility). Phase 139 remains complete (4/4 plans), ready for goal verification, real HiPerGator runtime verification still deferred. v3.3 remains open in parallel — see "v3.3 Status" and "v3.3 Active TODOs" above. v3.4 Phase 132 (Crash Fixes) planning is still pending separately. Note: several 140-09-PATCH-related doc files (140-01-SUMMARY.md, 140-02-PLAN.md, 140-02-SUMMARY.md, 140-03-PLAN.md, 140-CONTEXT.md, data/reference/README.md, plus 140-09-PLAN.md, 140-09-SUMMARY.md) remain uncommitted in the working tree from a prior session -- still out of scope for this 140-07 execution to commit.
 | Phase 158-surveillance-modality-frequency P02 | 3 | 1 tasks | 2 files |
 | Phase 158-surveillance-modality-frequency P03 | 10 | 1 tasks | 1 files |
+| Phase 158 P04 | 15 | 1 tasks | 3 files |
