@@ -524,3 +524,143 @@ suppress_table <- function(df, rules, threshold = 10L) {
   }
   df
 }
+
+# ------------------------------------------------------------------------------
+# Phase 159: analyte rules and per-patient date counts
+# ------------------------------------------------------------------------------
+
+#' Map collected CDM rows to Lab_Analytes rows.
+#' raw: ID, code_raw, type_val ("" for labs), event_date (Date), cdm_table.
+#' Returns ID, analyte_row_id, analyte, event_date, type_ok, type_val.
+#' A code listed under several analytes maps to each of them.
+map_analyte_hits <- function(raw, analytes) {
+  empty <- tibble::tibble(ID = character(), analyte_row_id = character(),
+                          analyte = character(), event_date = as.Date(character()),
+                          type_ok = logical(), type_val = character())
+  if (nrow(raw) == 0) return(empty)
+  raw |>
+    dplyr::mutate(code_norm = normalize_surv_code(code_raw),
+                  type_val  = trimws(dplyr::coalesce(as.character(type_val), ""))) |>
+    dplyr::inner_join(analytes |> dplyr::select(analyte_row_id, analyte, cdm_table,
+                                                code_norm, type_filter),
+                      by = c("cdm_table", "code_norm"),
+                      relationship = "many-to-many") |>
+    dplyr::mutate(type_ok = type_filter == "" | type_val == type_filter) |>
+    dplyr::select(dplyr::all_of(names(empty)))
+}
+
+#' Build events for analyte_all_same_day / analyte_min_same_day rule rows
+#' (Phase 159 D-08..D-10). hits: output of map_analyte_hits().
+#' An ID x date qualifies when the number of DISTINCT listed analytes resulted
+#' that day (type_ok rows only, from either table) reaches the threshold:
+#' all listed analytes, or min_analyte_count.
+#' Returns list(events = same schema as build_component_events()$events,
+#'              near_miss = one row per rule row x analytes-present count).
+build_analyte_events <- function(hits, codeset) {
+  empty_ev <- tibble::tibble(
+    codeset_row_id = character(), ID = character(), code_data = character(),
+    type_val = character(), event_date = as.Date(character()),
+    source_table = character(), modality = character(),
+    submodality = character(), tier = character(), type_ok = logical())
+  empty_nm <- tibble::tibble(
+    codeset_row_id = character(), modality = character(), match = character(),
+    n_listed = integer(), threshold = integer(), n_analytes_present = integer(),
+    n_id_dates = integer(), qualifies = logical())
+  rules <- codeset |> dplyr::filter(match %in% SURV_ANALYTE_MATCHES)
+  if (nrow(rules) == 0)
+    return(list(events = empty_ev, near_miss = empty_nm))
+
+  day_analytes <- hits |>
+    dplyr::filter(type_ok, !is.na(event_date)) |>
+    dplyr::distinct(ID, event_date, analyte)
+
+  res <- lapply(seq_len(nrow(rules)), function(i) {
+    r <- rules[i, ]
+    listed <- surv_components(r$code_norm)
+    thr <- if (r$match == "analyte_all_same_day") length(listed)
+           else as.integer(r$min_analyte_count)
+    by_day <- day_analytes |>
+      dplyr::filter(analyte %in% listed) |>
+      dplyr::count(ID, event_date, name = "n_present")
+    ev <- by_day |>
+      dplyr::filter(n_present >= thr) |>
+      dplyr::transmute(codeset_row_id = r$codeset_row_id, ID,
+                       code_data = r$code_norm, type_val = "", event_date,
+                       source_table = "ANALYTE_RULE", modality = r$modality,
+                       submodality = r$submodality, tier = r$tier, type_ok = TRUE)
+    nm <- by_day |>
+      dplyr::count(n_present, name = "n_id_dates") |>
+      dplyr::transmute(codeset_row_id = r$codeset_row_id, modality = r$modality,
+                       match = r$match, n_listed = length(listed),
+                       threshold = as.integer(thr),
+                       n_analytes_present = as.integer(n_present),
+                       n_id_dates = as.integer(n_id_dates),
+                       qualifies = n_present >= thr)
+    list(ev = ev, nm = nm)
+  })
+  list(events    = dplyr::bind_rows(empty_ev, lapply(res, `[[`, "ev")),
+       near_miss = dplyr::bind_rows(empty_nm, lapply(res, `[[`, "nm")))
+}
+
+#' A2_analyte_presence (LAB-04): one row per Lab_Analytes row, from its own
+#' hits (all dates, before any de-duplication across codes).
+build_analyte_presence <- function(analytes, hits) {
+  ok <- hits |>
+    dplyr::filter(type_ok) |>
+    dplyr::group_by(analyte_row_id) |>
+    dplyr::summarise(
+      n_results       = dplyr::n(),
+      n_patients      = dplyr::n_distinct(ID),
+      n_patient_dates = dplyr::n_distinct(ID, event_date),
+      first_date      = min(event_date, na.rm = TRUE),
+      last_date       = max(event_date, na.rm = TRUE),
+      .groups = "drop")
+  mism <- hits |>
+    dplyr::filter(!type_ok) |>
+    dplyr::count(analyte_row_id, name = "n_results_other_type")
+  out <- analytes |>
+    dplyr::left_join(ok,   by = "analyte_row_id") |>
+    dplyr::left_join(mism, by = "analyte_row_id") |>
+    dplyr::mutate(
+      dplyr::across(c(n_results, n_patients, n_patient_dates, n_results_other_type),
+                    ~ dplyr::coalesce(as.integer(.x), 0L)),
+      present = n_results > 0)
+  stopifnot("A2 must have one row per Lab_Analytes row" =
+              nrow(out) == nrow(analytes))
+  out
+}
+
+#' LAB-06 per-patient table: one row per follow-up (denominator) ID; for each
+#' modality in lookup order, distinct post-anchor dates within follow-up for
+#' the primary tier (n_dates_<prefix>) and for primary or sensitivity
+#' (n_dates_<prefix>_any). Missing combinations are 0L, never NA.
+build_patient_modality_dates <- function(events_win, followup, lookup) {
+  unknown <- setdiff(unique(events_win$modality), names(lookup))
+  if (length(unknown) > 0)
+    stop("Modalities without a column prefix: ", paste(unknown, collapse = ", "))
+
+  post <- events_win |>
+    dplyr::filter(type_ok, window == "post") |>
+    dplyr::select(ID, modality, tier, event_date)
+  cnt <- dplyr::bind_rows(
+    post |> dplyr::filter(tier == "primary") |>
+      dplyr::distinct(ID, modality, event_date) |>
+      dplyr::count(ID, modality, name = "n") |>
+      dplyr::mutate(col = paste0("n_dates_", lookup[modality])),
+    post |>
+      dplyr::distinct(ID, modality, event_date) |>
+      dplyr::count(ID, modality, name = "n") |>
+      dplyr::mutate(col = paste0("n_dates_", lookup[modality], "_any")))
+
+  cols <- as.vector(rbind(paste0("n_dates_", lookup),
+                          paste0("n_dates_", lookup, "_any")))
+  wide <- followup |>
+    dplyr::select(ID, hl_anchor_date, follow_end, person_years, in_confirmed_cohort)
+  for (cl in cols) {
+    v <- cnt[cnt$col == cl, c("ID", "n")]
+    wide[[cl]] <- dplyr::coalesce(as.integer(v$n[match(wide$ID, v$ID)]), 0L)
+  }
+  stopifnot("One row per denominator ID" = !anyDuplicated(wide$ID),
+            "No NA counts" = !anyNA(wide[cols]))
+  wide
+}
