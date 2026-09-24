@@ -27,9 +27,14 @@ Deliver an investigation script that counts how often each audited Surveillance 
 ### Stress echo classification (D-1 — discussed)
 - **D-06:** CPT codes 93350, 93351, 93352 count under **both** Echocardiogram and Stress test modalities. Rationale: a stress echo answers two distinct clinical questions (anthracycline cardiotoxicity and radiation-related heart disease); omitting it from either modality undercounts each.
 - **D-07:** KEY sheet must include a note that modality counts are not additive — a patient's events may appear under multiple modalities.
+- **D-20:** D-06 is implemented in the **codeset file**, not the script (L-4). Add three rows to `surveillance_codeset.xlsx` under modality `Stress test` for 93350, 93351, 93352 (same `code_norm`, `cdm_table`, `type_filter`, `match = exact`, `tier = primary` as their Echocardiogram rows). The existing Echocardiogram rows stay. The script contains no stress-echo special case; the both-modality behavior falls out of the codeset.
 
 ### Thyroid modality name (D-2 — default accepted)
 - **D-08:** Rename the "TSH" modality to "Thyroid function." Retain a TSH-only sub-count within the modality row so that the narrower measure is still visible.
+- **D-21:** Both halves of D-08 are driven by the **codeset file**, not the script (L-4):
+  - The rename is done in the codeset: every row with modality `Thyroid stimulating hormone` becomes `Thyroid function`.
+  - A new codeset column `submodality` (character, may be blank) identifies the sub-count. Values for the thyroid rows: 84443, 11580-8, 3016-3 → `TSH`; 3024-7, 84439 → `Free T4`. Blank for all other modalities.
+  - B/C sheets report sub-counts for any modality with non-blank `submodality` values, computed at the same ID × date grain as the parent. The script must not hard-code TSH code lists. Sub-counts are not additive to each other or to the parent (a TSH and a Free T4 on the same day are one parent event).
 
 ### Follow-up end date for person-years (D-3 — discussed)
 - **D-09:** End of follow-up per patient = `min(death_date, last_encounter_date_any_type)`, capped at extract cutoff 2025-09-15. Rationale: OneFlorida is not a closed claims population — patients who leave the system would still accumulate denominator time under an extract-cutoff rule, artificially deflating events per person-year. Use the last encounter of any type (not HL-only).
@@ -37,6 +42,12 @@ Deliver an investigation script that counts how often each audited Surveillance 
 
 ### CBC component fallback (D-4 — default accepted)
 - **D-11:** Include the CBC component fallback (WBC LOINC 6690-2 + Hgb 718-7 + PLT 777-3 on the same calendar day) in the **sensitivity tier only**. Never pooled into primary counts.
+- **D-22:** The CBC fallback is a structured codeset row, not a free-text rule:
+  - `match` has a closed set of allowed values: `exact`, `prefix`, `component_all_same_day`. The loader stops on any other value.
+  - For the CBC row: `match = component_all_same_day`, `code` / `code_norm` = `6690-2;718-7;777-3` (semicolon-separated, no spaces), `cdm_table = LAB_RESULT_CM`, `tier = sensitivity`. This replaces the audit workbook's `6690-2 + 718-7 + 777-3` / `component rule (all 3 same day)` text.
+  - D-15 normalization is applied to each component after splitting on `;`, never to the joined string.
+  - An event is an ID × date where **all** listed components have a result on that calendar day (`RESULT_DATE`, same fallback chain as other LOINC rows). A day with only two of the three components is not an event.
+  - In A_code_presence this row reports the same columns as other rows, computed over qualifying ID × dates: n records = qualifying ID × dates, n distinct patients, n distinct patient-dates, first/last date, `present`. QC additionally reports the count of ID × dates with 1 or 2 of the 3 components, so a near-miss pattern is visible.
 
 ### Plausible-verify codes (D-5 — default accepted)
 - **D-12:** Include BH3xY0Z and ICD-10-PCS `B24*` prefix codes. Flag them in the KEY sheet as "Plausibility: verify." Their volume will be small (inpatient PCS); A_code_presence will surface whether they matter.
@@ -48,12 +59,12 @@ Deliver an investigation script that counts how often each audited Surveillance 
 - **D-14:** All matching against PROCEDURES, LAB_RESULT_CM, and DIAGNOSIS is pushed down to DuckDB before `collect()`. R/111 is the reference implementation for this pattern.
 
 ### Code normalization
-- **D-15:** Both codeset codes and CDM codes are trimmed, uppercased, and dots stripped before matching. Prefix matching (LIKE 'X%') is applied only where the codeset `match` column is `'prefix'`.
+- **D-15:** Both codeset codes and CDM codes are trimmed, uppercased, and dots stripped before matching. Prefix matching (LIKE 'X%') is applied only where the codeset `match` column is `'prefix'`. For `component_all_same_day` rows, see D-22.
 
 ### Workbook structure (locked)
 - **D-16:** Sheet order: KEY (leftmost), A_code_presence, B_modality_primary, C_modality_with_sensitivity, D_pre_vs_post_anchor, QC.
 - **D-17:** UF Blue (#0021A5) headers; UF Orange (#FA4616) highlight for `present = FALSE` rows in A_code_presence.
-- **D-18:** A_code_presence has exactly one row per codeset row (105 at audit baseline); zero-count rows are included, not dropped.
+- **D-18:** A_code_presence has exactly one row per codeset row; zero-count rows are included, not dropped. The check is `nrow(A_code_presence) == nrow(codeset)` — no literal row count in code. For reference, the codeset after the D-20/D-21/D-22 edits has **108 rows** (105 audit baseline + 3 stress-echo rows under Stress test); the brief's "105" is superseded.
 
 ### Small-cell suppression
 - **D-19:** Apply the project's small-cell suppression convention (cells 1–10 → `"<11"`) before the workbook leaves HiPerGator. `suppress_small()` is currently inline in R/106; copy the inline helper into the new script (do not add a dependency on R/106).
@@ -111,6 +122,20 @@ Deliver an investigation script that counts how often each audited Surveillance 
 - `get_hl_any_dx_ids()` must be added to `utils_treatment.R` — R/39 and R/88 source this file via R/00_config.R.
 - Codeset file `data/reference/surveillance_codeset.xlsx` must exist before the script runs; loader function validates required columns on load.
 
+### Codeset edits required before staging (D-20, D-21, D-22)
+The audit workbook's `Analysis_Codeset` sheet is the starting point but must be edited before it is staged as `surveillance_codeset.xlsx`:
+1. Add 3 `Stress test` rows for 93350, 93351, 93352 (D-20).
+2. Rename modality `Thyroid stimulating hormone` → `Thyroid function`; add `submodality` column with TSH / Free T4 values (D-21).
+3. Replace the CBC component row's `code`, `code_norm`, and `match` with the structured form (D-22).
+
+Loader validation (`load_surveillance_codeset()`) must check:
+- required columns present, including `submodality`
+- `tier` ∈ {primary, sensitivity}
+- `match` ∈ {exact, prefix, component_all_same_day}
+- no duplicate `modality` × `code_norm`
+- all code columns are character (`col_types = "text"`)
+- every `component_all_same_day` row has ≥2 components after splitting on `;` and `cdm_table = LAB_RESULT_CM`
+
 </code_context>
 
 <specifics>
@@ -134,4 +159,4 @@ Deliver an investigation script that counts how often each audited Surveillance 
 ---
 
 *Phase: 158-surveillance-modality-frequency*
-*Context gathered: 2026-09-24*
+*Context gathered: 2026-09-24; D-20..D-22 added 2026-09-24 (codeset-driven implementation of D-06, D-08, D-11)*
