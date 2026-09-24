@@ -3,18 +3,23 @@
 # ==============================================================================
 # Purpose:  For every patient with >= 1 HL diagnosis code, count how often each
 #           audited Surveillance Strategy modality appears in the extract.
-#           Per-code presence (A) is reviewed by the team before the frequency
-#           sheets (B/C/D) circulate.
+#           Per-code presence (A, A2) is reviewed by the team before the
+#           frequency sheets (B/C/D) circulate. Phase 159 adds the BMP, CMP,
+#           LIPID, LFT and KIDNEY lab modalities (analyte rules) and a
+#           per-patient table of unique post-anchor dates per modality.
 #
-# Inputs:   data/reference/surveillance_codeset.xlsx (load_surveillance_codeset)
+# Inputs:   data/reference/surveillance_codeset.xlsx (sheets Analysis_Codeset,
+#           Lab_Analytes, Modalities)
 #           DuckDB: DIAGNOSIS, PROCEDURES, LAB_RESULT_CM, ENCOUNTER, DEATH
 #
 # Outputs (CONFIG$cache$outputs_dir):
 #   surveillance_modality_frequency_INTERNAL_<date>.xlsx  unsuppressed; stays on HiPerGator
 #   surveillance_modality_frequency_<date>.xlsx           release; cells 1-10 -> "<11"
 #   surveillance_modality_patient_<date>.rds              ID x modality (SURV-06); stays on HiPerGator
+#   surveillance_patient_modality_dates_<date>.rds/.csv   one row per ID (LAB-06); stays on HiPerGator
 #
-# Requirements: SURV-01..SURV-06   Decisions: 158-CONTEXT.md D-01..D-30
+# Requirements: SURV-01..SURV-06, LAB-01..LAB-07
+# Decisions:    158-CONTEXT.md D-01..D-30; 159-CONTEXT.md D-01..D-27
 # All counting logic lives in R/utils/utils_surveillance.R (unit-tested).
 # ==============================================================================
 
@@ -44,8 +49,11 @@ message(glue("=== Surveillance modality frequency (run {run_date}) ==="))
 # SECTION 1: CODESET AND DENOMINATOR ----
 # ==============================================================================
 
-codeset <- load_surveillance_codeset()
-message(glue("  Codeset: {nrow(codeset)} rows, {n_distinct(codeset$modality)} modalities"))
+codeset    <- load_surveillance_codeset()
+analytes   <- load_lab_analytes(codeset = codeset)       # Phase 159 LAB-01
+mod_lookup <- load_modality_lookup(codeset = codeset)    # Phase 159 LAB-06
+message(glue("  Codeset: {nrow(codeset)} rows, {n_distinct(codeset$modality)} modalities; ",
+             "Lab_Analytes: {nrow(analytes)} codes for {n_distinct(analytes$analyte)} analytes"))
 
 denom_all <- get_hl_any_dx_ids()
 confirmed_ids <- get_hl_patient_ids()
@@ -145,10 +153,53 @@ lab_date <- pick_date(lab_raw, c("RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE
 loinc_hit <- normalize_surv_code(dplyr::coalesce(lab_raw$LAB_LOINC, "")) %in% lab_codes |
   Reduce(`|`, lapply(codes_for("LAB_RESULT_CM", "prefix"), function(p)
     startsWith(normalize_surv_code(dplyr::coalesce(lab_raw$LAB_LOINC, "")), p)), FALSE)
-lab_code_raw <- if (has_lab_px) ifelse(loinc_hit, lab_raw$LAB_LOINC, lab_raw$LAB_PX) else lab_raw$LAB_LOINC
+lab_code_raw <- as.character(if (has_lab_px) ifelse(loinc_hit, lab_raw$LAB_LOINC, lab_raw$LAB_PX) else lab_raw$LAB_LOINC)
 lab_events_in <- tibble(ID = lab_raw$ID, code_raw = lab_code_raw, type_val = "",
                         event_date = lab_date, source_table = "LAB_RESULT_CM")
 message(glue("  LAB_RESULT_CM rows collected: {nrow(lab_raw)}"))
+
+# ==============================================================================
+# SECTION 4B: ANALYTE PULL FOR LAB RULES (Phase 159 LAB-01..LAB-03, L-6) ----
+# ==============================================================================
+# DISTINCT ID x code x raw date inside DuckDB, HL IDs via the temp table, then
+# dates parsed after collect (158 D-28). Codes map to analytes via Lab_Analytes.
+
+la_lab  <- analytes$code_norm[analytes$cdm_table == "LAB_RESULT_CM"]
+la_proc <- analytes$code_norm[analytes$cdm_table == "PROCEDURES"]
+
+an_lab_where <- surv_code_where("LAB_LOINC", la_lab)
+if (has_lab_px)
+  an_lab_where <- paste0("(", an_lab_where, " OR (TRIM(LAB_PX_TYPE) = 'LC' AND ",
+                         surv_code_where("LAB_PX", la_lab), "))")
+an_lab_raw <- lab_tbl |>
+  semi_join(hl_ids_tbl, by = "ID") |>
+  filter(dplyr::sql(an_lab_where)) |>
+  select(any_of(c("ID", "LAB_LOINC", "LAB_PX", "LAB_PX_TYPE",
+                  "RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE"))) |>
+  distinct() |>
+  collect()
+an_loinc <- normalize_surv_code(dplyr::coalesce(an_lab_raw$LAB_LOINC, ""))
+an_lab_code <- as.character(if (has_lab_px) ifelse(an_loinc %in% la_lab, an_lab_raw$LAB_LOINC, an_lab_raw$LAB_PX) else an_lab_raw$LAB_LOINC)
+
+an_proc_raw <- proc_tbl |>
+  semi_join(hl_ids_tbl, by = "ID") |>
+  filter(dplyr::sql(surv_code_where("PX", la_proc))) |>
+  select(any_of(c("ID", "PX", "PX_TYPE", "PX_DATE", "ADMIT_DATE"))) |>
+  distinct() |>
+  collect()
+
+analyte_hits <- map_analyte_hits(
+  bind_rows(
+    tibble(ID = an_lab_raw$ID, code_raw = an_lab_code, type_val = "",
+           event_date = pick_date(an_lab_raw, c("RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE")),
+           cdm_table = "LAB_RESULT_CM"),
+    tibble(ID = an_proc_raw$ID, code_raw = an_proc_raw$PX, type_val = an_proc_raw$PX_TYPE,
+           event_date = pick_date(an_proc_raw, c("PX_DATE", "ADMIT_DATE")),
+           cdm_table = "PROCEDURES")) |>
+    filter(!is.na(event_date)),
+  analytes)
+message(glue("  Analyte rows collected: LAB_RESULT_CM {nrow(an_lab_raw)}, ",
+             "PROCEDURES {nrow(an_proc_raw)}; mapped hits {nrow(analyte_hits)}"))
 
 # ==============================================================================
 # SECTION 5: DIAGNOSIS (screening dx codes; DX_TYPE checked in R) ----
@@ -197,7 +248,8 @@ matched_coded <- match_coded_events(
   bind_rows(proc_events_in, lab_events_in, dx_events_in) |> filter(!is.na(event_date)),
   codeset)
 comp <- build_component_events(lab_events_in |> select(ID, code_raw, event_date), codeset)
-matched_all <- bind_rows(matched_coded, comp$events)
+an_rules <- build_analyte_events(analyte_hits, codeset)          # Phase 159 LAB-03
+matched_all <- bind_rows(matched_coded, comp$events, an_rules$events)
 
 events_win <- classify_event_window(matched_all, followup,
                                     anchor_day_is_post = ANCHOR_DAY_IS_POST)
@@ -219,7 +271,9 @@ A_code_presence <- build_code_presence(codeset, matched_all) |>
          n_patients, n_patient_dates, first_date, last_date,
          n_records_other_type, other_types)
 
-mod_keys <- distinct(codeset, modality) |> arrange(modality)
+A2_analyte_presence <- build_analyte_presence(analytes, analyte_hits)   # LAB-04
+
+mod_keys <- tibble(modality = names(mod_lookup))   # display order from the Modalities sheet
 sub_keys <- codeset |> filter(submodality != "") |>
   distinct(modality, submodality) |> arrange(modality, submodality)
 
@@ -270,6 +324,34 @@ D_pre_vs_post <- events_win |>
 
 pt_modality <- build_patient_modality(events_win, followup)
 
+# ---- LAB-06: one row per denominator ID, unique post-anchor dates per modality ----
+patient_wide <- build_patient_modality_dates(events_win, followup, mod_lookup)
+
+pw_all_B <- filter(B_primary, submodality == "(all)")
+pw_all_C <- filter(S_any, submodality == "(all)")
+n_pos <- function(col) sum(patient_wide[[col]] > 0)
+sc4_ok <- vapply(names(mod_lookup), function(m) {
+  p <- mod_lookup[[m]]
+  n_pos(paste0("n_dates_", p))     == pw_all_B$n_patients[pw_all_B$modality == m] &&
+  n_pos(paste0("n_dates_", p, "_any")) == pw_all_C$n_patients[pw_all_C$modality == m]
+}, logical(1))
+sc5_ok <- vapply(mod_lookup, function(p)
+  all(patient_wide[[paste0("n_dates_", p)]] <= patient_wide[[paste0("n_dates_", p, "_any")]]),
+  logical(1))
+nest_le <- function(a, b) {   # a's primary dates <= b's primary dates, per ID (159 D-01)
+  if (!all(c(a, b) %in% names(mod_lookup))) return(TRUE)
+  all(patient_wide[[paste0("n_dates_", mod_lookup[[a]])]] <=
+        patient_wide[[paste0("n_dates_", mod_lookup[[b]])]])
+}
+stopifnot(
+  "LAB-06: one row per denominator ID" = nrow(patient_wide) == nrow(followup),
+  "SC-4: per-patient positives must equal B/C n_patients for every modality" = all(sc4_ok),
+  "SC-5: primary dates <= primary-or-sensitivity dates for every ID x modality" = all(sc5_ok),
+  "SC-6 nesting: CMP <= BMP per ID" = nest_le("CMP", "BMP"),
+  "SC-6 nesting: CMP <= LFT per ID" = nest_le("CMP", "LFT"),
+  "SC-6 nesting: BMP <= KIDNEY per ID" = nest_le("BMP", "KIDNEY")
+)
+
 # ---- QC ----
 count_by <- function(df, col) if (nrow(df)) paste(names(table(df[[col]])), table(df[[col]]), sep = "=", collapse = "; ") else ""
 qc <- tibble::tribble(
@@ -292,6 +374,13 @@ qc <- tibble::tribble(
   "Matched events: after follow-up end (excluded)", sum(events_win$type_ok & events_win$window == "after_followup"), "",
   "De-duplicated ID x modality x date rows", nrow(event_dedup), glue("collapsed from {sum(events_win$type_ok)} matched rows"),
   "CBC component days with some but not all components", sum(comp$near_miss$n_partial_id_dates), "D-22 near-miss",
+  "Analyte rows collected: LAB_RESULT_CM (distinct ID x code x date)", nrow(an_lab_raw), if (has_lab_px) "LAB_LOINC + LAB_PX(LC)" else "LAB_LOINC only",
+  "Analyte rows collected: PROCEDURES (distinct ID x code x date)", nrow(an_proc_raw), count_by(an_proc_raw, "PX_TYPE"),
+  "Analyte hits, other PX_TYPE (not counted)", sum(!analyte_hits$type_ok), count_by(filter(analyte_hits, !type_ok), "type_val"),
+  "Analyte rule events (all rule rows, all windows)", nrow(an_rules$events), "159 D-08..D-10; near-miss table below",
+  "Lab_Analytes codes present", sum(A2_analyte_presence$present), glue("of {nrow(analytes)}"),
+  "A2 rows minus Lab_Analytes rows", nrow(A2_analyte_presence) - nrow(analytes), "must be 0",
+  "Per-patient table rows minus denominator N", nrow(patient_wide) - nrow(denominator), "must be 0",
   "A_code_presence rows minus codeset rows", nrow(A_code_presence) - nrow(codeset), "must be 0"
 )
 
@@ -300,6 +389,11 @@ qc <- tibble::tribble(
 # ==============================================================================
 
 verify_rows <- codeset |> filter(plausibility == "verify")
+rule_rows_key <- codeset |> filter(match %in% SURV_ANALYTE_MATCHES)
+rule_text <- paste0(rule_rows_key$modality, " ",
+                    ifelse(rule_rows_key$match == "analyte_all_same_day", "primary: all of ",
+                           paste0("sensitivity: >= ", rule_rows_key$min_analyte_count, " of ")),
+                    gsub(";", ", ", rule_rows_key$code_norm), collapse = "; ")
 key <- tibble::tribble(
   ~item, ~value,
   "Denominator", "Distinct IDs with >= 1 HL diagnosis code: ICD-10 C81* (DX_TYPE 10) or ICD-9 201* (DX_TYPE 09); NLPHL included.",
@@ -317,7 +411,12 @@ key <- tibble::tribble(
   "Thyroid function (D-08)", "Modality renamed from TSH; TSH and Free T4 sub-counts via the codeset submodality column.",
   "CBC fallback (D-22)", "WBC 6690-2 + Hgb 718-7 + PLT 777-3 resulted the same day = one CBC event; sensitivity tier only.",
   "Plausibility: verify (D-12)", paste(verify_rows$code, collapse = ", "),
-  "Presence (A sheet)", "Built before de-duplication: each codeset row's own hits. Rows with present = FALSE are highlighted. Matches under a different PX_TYPE/DX_TYPE are shown but not counted."
+  "Presence (A sheet)", "Built before de-duplication: each codeset row's own hits. Rows with present = FALSE are highlighted. Matches under a different PX_TYPE/DX_TYPE are shown but not counted.",
+  "Lab modalities (Phase 159)", paste0("BMP, CMP, LIPID, LFT, KIDNEY. Primary = a panel code, or every listed analyte resulted the same day. Sensitivity = at least min_analyte_count listed analytes the same day. Rules: ", rule_text, "."),
+  "Lab nesting (159 D-01)", "Nested: a CMP day also counts as a BMP, LFT and KIDNEY day, because those analytes were resulted. BMP/CMP/LFT/KIDNEY counts are not additive. KIDNEY primary is creatinine alone, so KIDNEY counts run at least as high as BMP.",
+  "Lab analyte codes", "Lab_Analytes sheet: codes chosen from lab_code_crosswalk.xlsx by exact LOINC component and specimen (blood: Ser/Plas, Ser, Plas, Ser/Plas/Bld, Bld, BldV; urine only for the urine kidney markers), plus single-analyte CPT codes. Fingerstick/test-strip, blood-gas pCO2, electrophoresis and qualitative codes are excluded (Lab_Analytes_Excluded).",
+  "A2_analyte_presence", "One row per Lab_Analytes code: results (distinct ID x code x date), patients, first/last date. Review rows with a review_note (possible blood-gas or urinalysis source) and glucose first.",
+  "E_patient_modality_dates", "INTERNAL only. One row per denominator patient; n_dates_<modality> = distinct post-anchor dates within follow-up (primary); n_dates_<modality>_any = primary or sensitivity. Zeros, never blank."
 )
 
 write_workbook <- function(path, release) {
@@ -335,12 +434,20 @@ write_workbook <- function(path, release) {
     A_code_presence = sup(A_code_presence, list(n_records = character(), n_patients = character(),
                                                 n_patient_dates = character(),
                                                 n_records_other_type = character())),
+    A2_analyte_presence = sup(A2_analyte_presence, list(n_results = character(), n_patients = character(),
+                                                        n_patient_dates = character(),
+                                                        n_results_other_type = character())),
     B_modality_primary = sup(B_primary, stat_rules()),
     C_modality_with_sensitivity = sup(C_with_sensitivity,
       c(stat_rules("primary_"), stat_rules("sensitivity_"), stat_rules("any_"))),
     D_pre_vs_post_anchor = sup(D_pre_vs_post, setNames(rep(list(character()), length(n_cols_D)), n_cols_D)),
+    E_patient_modality_dates = if (release) NULL else patient_wide,   # patient rows: INTERNAL only
     QC = if (release) mutate(qc, value = suppress_small(value, SUPPRESS_THRESHOLD)) else qc
   )
+  sheets <- sheets[!vapply(sheets, is.null, logical(1))]
+  near_miss_out <- if (release)
+    mutate(an_rules$near_miss, n_id_dates = suppress_small(n_id_dates, SUPPRESS_THRESHOLD))
+  else an_rules$near_miss
   wb <- createWorkbook()
   hdr  <- createStyle(fgFill = "#0021A5", fontColour = "#FFFFFF", textDecoration = "bold",
                       fontName = "Arial", wrapText = TRUE)
@@ -351,6 +458,11 @@ write_workbook <- function(path, release) {
     freezePane(wb, nm, firstRow = TRUE)
     setColWidths(wb, nm, cols = seq_along(sheets[[nm]]), widths = if (nm == "KEY") c(34, 120) else "auto")
   }
+  # Analyte near-miss block under the QC table (159 D-09 thresholds)
+  nm_row <- nrow(sheets$QC) + 4L
+  writeData(wb, "QC", "Lab analyte rules: ID x dates by number of listed analytes present (qualifies = met the rule)",
+            startRow = nm_row - 1L)
+  writeData(wb, "QC", near_miss_out, startRow = nm_row, headerStyle = hdr)
   absent <- which(!A_code_presence$present) + 1L
   if (length(absent))
     addStyle(wb, "A_code_presence", flag, rows = absent,
@@ -362,5 +474,9 @@ write_workbook <- function(path, release) {
 write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_INTERNAL_{run_date}.xlsx")), release = FALSE)
 write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_{run_date}.xlsx")), release = TRUE)
 saveRDS(pt_modality, file.path(out_dir, glue("surveillance_modality_patient_{run_date}.rds")))
+saveRDS(patient_wide, file.path(out_dir, glue("surveillance_patient_modality_dates_{run_date}.rds")))
+utils::write.csv(patient_wide, file.path(out_dir, glue("surveillance_patient_modality_dates_{run_date}.csv")),
+                 row.names = FALSE, na = "")
+message(glue("  Wrote surveillance_patient_modality_dates_{run_date}.rds/.csv ({nrow(patient_wide)} patients)"))
 message(glue("  Wrote surveillance_modality_patient_{run_date}.rds ({nrow(pt_modality)} ID x modality rows)"))
 message("=== Surveillance modality frequency complete ===")
