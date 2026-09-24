@@ -267,3 +267,15 @@ cutoff. See 148-DISCOVERY.md §5 for details.
 
 **Source:** University of Wisconsin Neighborhood Atlas
 (https://www.neighborhoodatlas.medicine.wisc.edu/). Registration required before downloading.
+
+## surveillance_codeset.xlsx
+- Used by: load_surveillance_codeset() (R/utils/utils_surveillance.R); Phase 158
+- Sheets: KEY (column definitions), Analysis_Codeset (data; read by name)
+- Rows: 108 at 2026-09-24 = 105 from surveillance_strategy_code_audit.xlsx + 3 Stress test rows (D-20)
+- Key: codeset_row_id (SC001..), unique and never reused; new rows take the next number
+- type_filter: bare PX_TYPE/DX_TYPE value (CH, 10, 09); blank for LAB_RESULT_CM
+- match: exact | prefix | component_all_same_day
+- tier: primary | sensitivity (tier/modality edits flow to outputs with no code change, L-4)
+- submodality: TSH / Free T4 on Thyroid function rows only (D-21)
+- plausibility: "verify" on rows still to be confirmed (D-12)
+- Source: desk audit of VariableDetails.xlsx "Surveillance Strategy" sheet, 2026-09-24
