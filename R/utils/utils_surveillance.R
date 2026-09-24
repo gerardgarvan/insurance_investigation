@@ -6,20 +6,24 @@
 #
 # Contents:
 #   Codeset:    load_surveillance_codeset(), normalize_surv_code(),
-#               surv_components()
+#               surv_components(), load_lab_analytes(), load_modality_lookup()
 #   SQL:        surv_sql_in(), surv_code_where()
 #   Denominator: hl_any_dx_from_tibble()
 #   Matching:   match_coded_events(), build_component_events()
 #   Outputs:    build_code_presence(), compute_followup(),
 #               classify_event_window(), compute_modality_stats(),
 #               build_patient_modality(), suppress_small(), suppress_table()
+#   Phase 159:  map_analyte_hits(), build_analyte_events(),
+#               build_analyte_presence(), build_patient_modality_dates()
 # ==============================================================================
 
 SURV_REQUIRED_COLS <- c("codeset_row_id", "modality", "submodality",
                         "code_system", "code", "code_norm", "cdm_table",
                         "cdm_column", "type_filter", "match", "tier",
                         "plausibility")
-SURV_MATCH_VALUES  <- c("exact", "prefix", "component_all_same_day")
+SURV_MATCH_VALUES  <- c("exact", "prefix", "component_all_same_day",
+                        "analyte_all_same_day", "analyte_min_same_day")
+SURV_ANALYTE_MATCHES <- c("analyte_all_same_day", "analyte_min_same_day")
 SURV_TIERS         <- c("primary", "sensitivity")
 SURV_TABLE_TYPES   <- list(PROCEDURES    = c("CH", "10", "09"),
                            DIAGNOSIS     = c("10", "09"),
@@ -60,6 +64,9 @@ load_surveillance_codeset <- function(
     stop("surveillance codeset missing required columns: ",
          paste(missing_cols, collapse = ", "))
 
+  # Optional column (Phase 159); absent in Phase 158-era files and fixtures
+  if (!"min_analyte_count" %in% names(cs)) cs$min_analyte_count <- ""
+
   cs <- cs |>
     dplyr::mutate(dplyr::across(dplyr::everything(),
                                 ~ trimws(dplyr::coalesce(.x, ""))))
@@ -70,7 +77,7 @@ load_surveillance_codeset <- function(
   if (any(cs$codeset_row_id == ""))
     stop("codeset_row_id must be non-blank on every row")
   if (anyDuplicated(cs$codeset_row_id))
-    stop("Duplicate codeset_row_id values: not allowed")
+    stop("codeset_row_id values must be unique")
   if (any(cs$modality == "" | cs$code_norm == ""))
     stop("modality and code_norm must be non-blank on every row")
 
@@ -82,21 +89,30 @@ load_surveillance_codeset <- function(
   if (length(bad_match) > 0)
     stop("Invalid match values: ", paste(bad_match, collapse = ", "))
 
-  bad_table <- setdiff(unique(cs$cdm_table), names(SURV_TABLE_TYPES))
+  is_rule <- cs$match %in% SURV_ANALYTE_MATCHES
+
+  # Analyte rule rows draw on Lab_Analytes across tables: cdm_table and
+  # type_filter must be blank. All other rows need a known table.
+  bad_rule_tbl <- is_rule & (cs$cdm_table != "" | cs$type_filter != "")
+  if (any(bad_rule_tbl))
+    stop("Analyte rule rows must have blank cdm_table and type_filter: ",
+         paste(cs$codeset_row_id[bad_rule_tbl], collapse = ", "))
+  bad_table <- setdiff(unique(cs$cdm_table[!is_rule]), names(SURV_TABLE_TYPES))
   if (length(bad_table) > 0)
     stop("Invalid cdm_table values: ", paste(bad_table, collapse = ", "))
 
   # type_filter must be the bare value for its table (e.g. "CH", not
   # "PX_TYPE='CH'"); LAB_RESULT_CM rows must be blank
-  bad_type <- purrr::pmap_lgl(list(cs$cdm_table, cs$type_filter),
-                              function(t, f) !(f %in% SURV_TABLE_TYPES[[t]]))
+  bad_type <- !is_rule & purrr::pmap_lgl(
+    list(cs$cdm_table, cs$type_filter),
+    function(t, f) !is.null(SURV_TABLE_TYPES[[t]]) && !(f %in% SURV_TABLE_TYPES[[t]]))
   if (any(bad_type))
     stop("Invalid type_filter for its cdm_table on rows: ",
          paste(cs$codeset_row_id[bad_type], collapse = ", "))
 
-  # Normalize code_norm (component rows part by part)
+  # Normalize code_norm (component and analyte rule rows part by part)
   cs$code_norm <- ifelse(
-    cs$match == "component_all_same_day",
+    cs$match %in% c("component_all_same_day", SURV_ANALYTE_MATCHES),
     vapply(cs$code_norm, function(z) paste(surv_components(z), collapse = ";"),
            character(1)),
     normalize_surv_code(cs$code_norm)
@@ -111,12 +127,115 @@ load_surveillance_codeset <- function(
            "codes and cdm_table = LAB_RESULT_CM")
   }
 
-  dup <- duplicated(cs[, c("modality", "code_norm")])
+  # min_analyte_count: integer 1..(n listed - 1) on analyte_min_same_day rows,
+  # blank everywhere else (Phase 159 D-10)
+  is_min <- cs$match == "analyte_min_same_day"
+  if (any(!is_min & cs$min_analyte_count != ""))
+    stop("min_analyte_count must be blank except on analyte_min_same_day rows: ",
+         paste(cs$codeset_row_id[!is_min & cs$min_analyte_count != ""], collapse = ", "))
+  if (any(is_min)) {
+    k <- suppressWarnings(as.integer(cs$min_analyte_count[is_min]))
+    n <- vapply(cs$code_norm[is_min], function(z) length(surv_components(z)), integer(1))
+    bad <- is.na(k) | k < 1 | k >= n |
+      !grepl("^[0-9]+$", cs$min_analyte_count[is_min])
+    if (any(bad))
+      stop("min_analyte_count must be a whole number >= 1 and < the number of ",
+           "listed analytes on rows: ",
+           paste(cs$codeset_row_id[is_min][bad], collapse = ", "))
+  }
+  if (any(is_rule & !nzchar(cs$code_norm)))
+    stop("Analyte rule rows must list at least one analyte")
+
+  dup <- duplicated(cs[, c("modality", "code_norm", "match")])
   if (any(dup))
-    stop("Duplicate modality x code_norm (not unique): ",
+    stop("Duplicate modality x code_norm: ",
          paste(cs$modality[dup], cs$code_norm[dup], sep = "/", collapse = "; "))
 
   tibble::as_tibble(cs)
+}
+
+#' Load and validate the Lab_Analytes sheet (Phase 159 LAB-01).
+#' If codeset is given, every analyte named in an analyte rule row must exist.
+load_lab_analytes <- function(
+    path = file.path("data", "reference", "surveillance_codeset.xlsx"),
+    codeset = NULL) {
+
+  req <- c("analyte_row_id", "analyte", "code_system", "code", "code_norm",
+           "cdm_table", "type_filter")
+  la <- readxl::read_excel(path, sheet = "Lab_Analytes", col_types = "text")
+  miss <- setdiff(req, names(la))
+  if (length(miss) > 0)
+    stop("Lab_Analytes missing required columns: ", paste(miss, collapse = ", "))
+
+  la <- la |>
+    dplyr::mutate(dplyr::across(dplyr::everything(),
+                                ~ trimws(dplyr::coalesce(.x, ""))))
+  la <- la[rowSums(la != "") > 0, , drop = FALSE]
+
+  if (any(la$analyte_row_id == "") || anyDuplicated(la$analyte_row_id))
+    stop("Lab_Analytes analyte_row_id must be non-blank and unique")
+  if (any(la$analyte == "" | la$code_norm == ""))
+    stop("Lab_Analytes analyte and code_norm must be non-blank")
+
+  la$analyte   <- toupper(la$analyte)
+  la$code_norm <- normalize_surv_code(la$code_norm)
+
+  bad_tbl <- !la$cdm_table %in% c("LAB_RESULT_CM", "PROCEDURES")
+  if (any(bad_tbl))
+    stop("Lab_Analytes cdm_table must be LAB_RESULT_CM or PROCEDURES: ",
+         paste(la$analyte_row_id[bad_tbl], collapse = ", "))
+  bad_type <- purrr::pmap_lgl(list(la$cdm_table, la$type_filter),
+                              function(t, f) !(f %in% SURV_TABLE_TYPES[[t]]))
+  if (any(bad_type))
+    stop("Lab_Analytes invalid type_filter on rows: ",
+         paste(la$analyte_row_id[bad_type], collapse = ", "))
+
+  dup <- duplicated(la[, c("analyte", "cdm_table", "code_norm")])
+  if (any(dup))
+    stop("Lab_Analytes duplicate analyte x code: ",
+         paste(la$analyte[dup], la$code_norm[dup], sep = "/", collapse = "; "))
+
+  if (!is.null(codeset)) {
+    rules <- codeset[codeset$match %in% SURV_ANALYTE_MATCHES, , drop = FALSE]
+    for (i in seq_len(nrow(rules))) {
+      unknown <- setdiff(surv_components(rules$code_norm[i]), la$analyte)
+      if (length(unknown) > 0)
+        stop("Rule row ", rules$codeset_row_id[i], " references analyte ",
+             paste(unknown, collapse = ", "), " not found in Lab_Analytes")
+    }
+  }
+  tibble::as_tibble(la)
+}
+
+#' Load the Modalities sheet: modality -> column prefix for the per-patient
+#' table, in display order. Every codeset modality must be listed (LAB-06).
+load_modality_lookup <- function(
+    path = file.path("data", "reference", "surveillance_codeset.xlsx"),
+    codeset = NULL) {
+
+  md <- readxl::read_excel(path, sheet = "Modalities", col_types = "text")
+  miss <- setdiff(c("modality", "column_prefix", "display_order"), names(md))
+  if (length(miss) > 0)
+    stop("Modalities missing required columns: ", paste(miss, collapse = ", "))
+  md <- md |>
+    dplyr::mutate(dplyr::across(dplyr::everything(),
+                                ~ trimws(dplyr::coalesce(.x, "")))) |>
+    dplyr::filter(modality != "")
+  if (anyDuplicated(md$modality) || anyDuplicated(md$column_prefix))
+    stop("Modalities: modality and column_prefix must be unique")
+  if (!all(grepl("^[a-z][a-z0-9_]*$", md$column_prefix)))
+    stop("Modalities: column_prefix must be lowercase letters, digits, underscores")
+  ord <- suppressWarnings(as.numeric(md$display_order))
+  if (anyNA(ord)) stop("Modalities: display_order must be numeric")
+
+  if (!is.null(codeset)) {
+    unlisted <- setdiff(unique(codeset$modality), md$modality)
+    if (length(unlisted) > 0)
+      stop("Modalities sheet is missing codeset modalities: ",
+           paste(unlisted, collapse = ", "))
+  }
+  md <- md[order(ord), ]
+  stats::setNames(md$column_prefix, md$modality)
 }
 
 # ------------------------------------------------------------------------------
