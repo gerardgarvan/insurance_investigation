@@ -162,3 +162,246 @@ hl_any_dx_from_tibble <- function(dx_tbl) {
                        else min(use_date, na.rm = TRUE),
       .groups = "drop")
 }
+
+# ------------------------------------------------------------------------------
+# Matching
+# ------------------------------------------------------------------------------
+
+#' Match collected CDM rows to exact/prefix codeset rows.
+#' raw: ID, code_raw, type_val ("" for labs), event_date (Date), source_table.
+#' Returns one row per raw row x matching codeset row, with type_ok flag
+#' (type_val equals the row's type_filter; always TRUE when type_filter = "").
+match_coded_events <- function(raw, codeset) {
+  empty <- tibble::tibble(
+    codeset_row_id = character(), ID = character(), code_data = character(),
+    type_val = character(), event_date = as.Date(character()),
+    source_table = character(), modality = character(),
+    submodality = character(), tier = character(), type_ok = logical())
+  if (nrow(raw) == 0) return(empty)
+
+  raw <- raw |>
+    dplyr::mutate(code_data = normalize_surv_code(code_raw),
+                  type_val  = trimws(dplyr::coalesce(as.character(type_val), "")))
+  cs_cols <- c("codeset_row_id", "code_norm", "type_filter", "modality",
+               "submodality", "tier")
+
+  ex <- codeset |> dplyr::filter(match == "exact") |> dplyr::select(dplyr::all_of(cs_cols))
+  m_exact <- raw |>
+    dplyr::inner_join(ex, by = c(code_data = "code_norm"),
+                      relationship = "many-to-many")
+
+  px <- codeset |> dplyr::filter(match == "prefix") |> dplyr::select(dplyr::all_of(cs_cols))
+  m_prefix <- purrr::map_dfr(seq_len(nrow(px)), function(i) {
+    r <- px[i, ]
+    raw |>
+      dplyr::filter(startsWith(code_data, r$code_norm)) |>
+      dplyr::mutate(codeset_row_id = r$codeset_row_id,
+                    type_filter = r$type_filter, modality = r$modality,
+                    submodality = r$submodality, tier = r$tier)
+  })
+
+  out <- dplyr::bind_rows(m_exact, m_prefix)
+  if (nrow(out) == 0) return(empty)
+  out |>
+    dplyr::mutate(type_ok = type_filter == "" | type_val == type_filter) |>
+    dplyr::select(dplyr::all_of(names(empty)))
+}
+
+#' Build component_all_same_day events (D-22).
+#' lab: ID, code_raw, event_date. Returns list(events, near_miss) where
+#' near_miss has one row per codeset row with the count of ID x dates having
+#' some but not all components.
+build_component_events <- function(lab, codeset) {
+  comp_rows <- codeset |> dplyr::filter(match == "component_all_same_day")
+  empty_ev <- tibble::tibble(
+    codeset_row_id = character(), ID = character(), code_data = character(),
+    type_val = character(), event_date = as.Date(character()),
+    source_table = character(), modality = character(),
+    submodality = character(), tier = character(), type_ok = logical())
+  if (nrow(comp_rows) == 0)
+    return(list(events = empty_ev,
+                near_miss = tibble::tibble(codeset_row_id = character(),
+                                           n_partial_id_dates = integer())))
+  lab <- lab |>
+    dplyr::mutate(code_data = normalize_surv_code(code_raw)) |>
+    dplyr::filter(!is.na(event_date))
+
+  res <- lapply(seq_len(nrow(comp_rows)), function(i) {
+    r <- comp_rows[i, ]
+    comps <- surv_components(r$code_norm)
+    by_day <- lab |>
+      dplyr::filter(code_data %in% comps) |>
+      dplyr::distinct(ID, event_date, code_data) |>
+      dplyr::count(ID, event_date, name = "n_comp")
+    ev <- by_day |>
+      dplyr::filter(n_comp == length(comps)) |>
+      dplyr::transmute(codeset_row_id = r$codeset_row_id, ID,
+                       code_data = r$code_norm, type_val = "",
+                       event_date, source_table = "LAB_RESULT_CM",
+                       modality = r$modality, submodality = r$submodality,
+                       tier = r$tier, type_ok = TRUE)
+    nm <- tibble::tibble(codeset_row_id = r$codeset_row_id,
+                         n_partial_id_dates = sum(by_day$n_comp < length(comps)))
+    list(ev = ev, nm = nm)
+  })
+  list(events    = dplyr::bind_rows(empty_ev, lapply(res, `[[`, "ev")),
+       near_miss = dplyr::bind_rows(lapply(res, `[[`, "nm")))
+}
+
+# ------------------------------------------------------------------------------
+# Outputs
+# ------------------------------------------------------------------------------
+
+#' A_code_presence (SURV-03): one row per codeset row, built from matched
+#' events BEFORE any de-duplication. Only type_ok rows count toward presence;
+#' code matches with a different PX_TYPE/DX_TYPE are reported separately.
+build_code_presence <- function(codeset, matched) {
+  ok <- matched |>
+    dplyr::filter(type_ok) |>
+    dplyr::group_by(codeset_row_id) |>
+    dplyr::summarise(
+      n_records       = dplyr::n(),
+      n_patients      = dplyr::n_distinct(ID),
+      n_patient_dates = dplyr::n_distinct(ID, event_date),
+      first_date      = min(event_date, na.rm = TRUE),
+      last_date       = max(event_date, na.rm = TRUE),
+      .groups = "drop")
+  mism <- matched |>
+    dplyr::filter(!type_ok) |>
+    dplyr::group_by(codeset_row_id) |>
+    dplyr::summarise(
+      n_records_other_type = dplyr::n(),
+      other_types = paste(sort(unique(type_val)), collapse = ";"),
+      .groups = "drop")
+  out <- codeset |>
+    dplyr::left_join(ok,   by = "codeset_row_id") |>
+    dplyr::left_join(mism, by = "codeset_row_id") |>
+    dplyr::mutate(
+      dplyr::across(c(n_records, n_patients, n_patient_dates,
+                      n_records_other_type), ~ dplyr::coalesce(as.integer(.x), 0L)),
+      other_types = dplyr::coalesce(other_types, ""),
+      present = n_records > 0)
+  stopifnot("A_code_presence must have one row per codeset row" =
+              nrow(out) == nrow(codeset))
+  out
+}
+
+#' Follow-up per patient (D-09, D-10, D-26).
+#' denominator: ID, hl_anchor_date. last_enc: ID, last_enc_date.
+#' death: ID, death_date (may have several rows per ID; earliest is used).
+compute_followup <- function(denominator, last_enc, death, cutoff) {
+  death1 <- death |>
+    dplyr::filter(!is.na(death_date)) |>
+    dplyr::group_by(ID) |>
+    dplyr::summarise(death_date = min(death_date), .groups = "drop")
+  denominator |>
+    dplyr::left_join(last_enc, by = "ID") |>
+    dplyr::left_join(death1,   by = "ID") |>
+    dplyr::mutate(
+      follow_end = dplyr::if_else(
+        is.na(death_date) & is.na(last_enc_date), as.Date(NA),
+        pmin(death_date, last_enc_date, cutoff, na.rm = TRUE)),
+      fu_days = as.numeric(follow_end - hl_anchor_date),
+      fu_status = dplyr::case_when(
+        is.na(follow_end) ~ "no_followup_date",
+        fu_days <= 0      ~ "zero_or_negative",
+        TRUE              ~ "ok"),
+      person_years = dplyr::if_else(fu_status == "ok", fu_days / 365.25, 0))
+}
+
+#' Assign each event to pre / post / after_followup (D-25).
+#' Anchor-day events are "pre" unless anchor_day_is_post = TRUE.
+classify_event_window <- function(events, followup, anchor_day_is_post = FALSE) {
+  events |>
+    dplyr::inner_join(followup |> dplyr::select(ID, hl_anchor_date, follow_end),
+                      by = "ID") |>
+    dplyr::mutate(window = dplyr::case_when(
+      event_date <  hl_anchor_date ~ "pre",
+      event_date == hl_anchor_date & !anchor_day_is_post ~ "pre",
+      is.na(follow_end) | event_date > follow_end ~ "after_followup",
+      TRUE ~ "post"))
+}
+
+#' Modality frequency (SURV-04/05) for the given tiers, post-anchor window,
+#' at ID x <by> x date grain. keys: tibble of all key combinations to report
+#' (zero rows kept). Events per person-year is pooled over the WHOLE
+#' denominator's person-years (D-26).
+compute_modality_stats <- function(events, followup, keys, tiers,
+                                   by = "modality") {
+  denom_n  <- nrow(followup)
+  total_py <- sum(followup$person_years)
+  ev <- events |>
+    dplyr::filter(type_ok, tier %in% tiers, window == "post") |>
+    dplyr::distinct(dplyr::across(dplyr::all_of(c("ID", by, "event_date"))))
+  per_pt <- ev |> dplyr::count(dplyr::across(dplyr::all_of(c(by, "ID"))),
+                               name = "n_dates")
+  stats <- per_pt |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(by))) |>
+    dplyr::summarise(
+      n_patients        = dplyr::n(),
+      dates_per_pt_median = stats::median(n_dates),
+      dates_per_pt_q1   = unname(stats::quantile(n_dates, 0.25)),
+      dates_per_pt_q3   = unname(stats::quantile(n_dates, 0.75)),
+      dates_per_pt_max  = max(n_dates),
+      total_event_dates = sum(n_dates),
+      .groups = "drop")
+  keys |>
+    dplyr::left_join(stats, by = by) |>
+    dplyr::mutate(
+      n_patients        = dplyr::coalesce(n_patients, 0L),
+      total_event_dates = dplyr::coalesce(total_event_dates, 0L),
+      pct_of_denominator = 100 * n_patients / denom_n,
+      person_years_denominator = total_py,
+      events_per_person_year = if (total_py > 0) total_event_dates / total_py
+                               else NA_real_)
+}
+
+#' SURV-06: one row per ID x modality.
+build_patient_modality <- function(events, followup) {
+  ev <- events |> dplyr::filter(type_ok)
+  summ <- function(d, suffix) {
+    d |>
+      dplyr::distinct(ID, modality, window, event_date) |>
+      dplyr::group_by(ID, modality) |>
+      dplyr::summarise(
+        n_dates_pre   = sum(window == "pre"),
+        n_dates_post  = sum(window == "post"),
+        n_dates_after_followup = sum(window == "after_followup"),
+        first_post_date = if (any(window == "post")) min(event_date[window == "post"]) else as.Date(NA),
+        last_post_date  = if (any(window == "post")) max(event_date[window == "post"]) else as.Date(NA),
+        .groups = "drop") |>
+      dplyr::rename_with(~ paste0(.x, suffix), -c(ID, modality))
+  }
+  summ(ev, "_any") |>
+    dplyr::left_join(summ(dplyr::filter(ev, tier == "primary"), "_primary"),
+                     by = c("ID", "modality")) |>
+    dplyr::mutate(dplyr::across(dplyr::starts_with("n_dates") & dplyr::ends_with("_primary"),
+                                ~ dplyr::coalesce(.x, 0L))) |>
+    dplyr::left_join(followup |> dplyr::select(ID, hl_anchor_date, follow_end,
+                                               person_years, in_confirmed_cohort),
+                     by = "ID")
+}
+
+# ------------------------------------------------------------------------------
+# Small-cell suppression (D-19, D-27)
+# ------------------------------------------------------------------------------
+
+#' 1..threshold -> "<11"; 0 and larger counts unchanged (as character)
+suppress_small <- function(x, threshold = 10L) {
+  ifelse(!is.na(x) & x > 0 & x <= threshold, "<11", as.character(x))
+}
+
+#' Suppress count columns and blank the columns derived from them.
+#' rules: named list, count column -> character vector of dependent columns.
+suppress_table <- function(df, rules, threshold = 10L) {
+  for (cnt in names(rules)) {
+    x <- df[[cnt]]
+    hit <- !is.na(x) & x > 0 & x <= threshold
+    for (dep in rules[[cnt]]) {
+      df[[dep]] <- as.character(df[[dep]])
+      df[[dep]][hit] <- ""
+    }
+    df[[cnt]] <- suppress_small(x, threshold)
+  }
+  df
+}
