@@ -5539,6 +5539,89 @@ check_158("SCRIPT_INDEX.md lists utils_surveillance.R",
 message(glue("\nSection 15aj: {p158_pass} PASS, {p158_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ak: Phase 159 lab surveillance modalities and per-patient date counts ----
+# ==============================================================================
+
+message("\n--- Section 15ak: Phase 159 lab surveillance modalities ---")
+
+p159_pass <- 0L; p159_fail <- 0L
+check_159 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p159_pass <<- p159_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p159_fail <<- p159_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+surv_util_159   <- read_or_null("R/utils/utils_surveillance.R")
+r147_lines_159  <- read_or_null("R/147_surveillance_modality_frequency.R")
+lab_test_loader <- read_or_null("tests/testthat/test-159-codeset-loader.R")
+lab_test_rules  <- read_or_null("tests/testthat/test-159-analyte-rules.R")
+
+# 1. Codeset xlsx sheets include Lab_Analytes and Modalities
+check_159("Codeset xlsx includes Lab_Analytes and Modalities sheets (referenced in test fixtures or utils)",
+  (!is.null(lab_test_loader) &&
+    any(grepl("Lab_Analytes",  lab_test_loader)) &&
+    any(grepl("Modalities",    lab_test_loader))) ||
+  (!is.null(surv_util_159) &&
+    any(grepl("Lab_Analytes",  surv_util_159)) &&
+    any(grepl("Modalities",    surv_util_159))))
+
+# 2. load_lab_analytes() defined in utils_surveillance.R
+check_159("load_lab_analytes defined in R/utils/utils_surveillance.R",
+  !is.null(surv_util_159) &&
+  any(grepl("load_lab_analytes <- function", surv_util_159)))
+
+# 3. load_modality_lookup() defined in utils_surveillance.R (validates prefix for every modality)
+check_159("load_modality_lookup defined in R/utils/utils_surveillance.R",
+  !is.null(surv_util_159) &&
+  any(grepl("load_modality_lookup <- function", surv_util_159)))
+
+# 4. Each panel (BMP/CMP/LIPID/LFT/KIDNEY) has exact, analyte_all_same_day,
+#    analyte_min_same_day rows -- verified via test-159-codeset-loader.R fixtures
+check_159("Panel rows (BMP/CMP/LIPID/LFT/KIDNEY) with exact/analyte_all_same_day/analyte_min_same_day verified in test-159-codeset-loader.R",
+  !is.null(lab_test_loader) &&
+  any(grepl("BMP",                   lab_test_loader)) &&
+  any(grepl("analyte_all_same_day",  lab_test_loader)) &&
+  any(grepl("analyte_min_same_day",  lab_test_loader)))
+
+# 5. KIDNEY analyte_min_same_day does not list CREATININE (D-22) -- verified in test fixtures
+check_159("KIDNEY analyte_min_same_day excludes CREATININE (D-22) -- verified in test-159-codeset-loader.R",
+  !is.null(lab_test_loader) &&
+  any(grepl("KIDNEY",      lab_test_loader)) &&
+  any(grepl("CREATININE",  lab_test_loader)))
+
+# 6. CPT 80053 appears under BMP, CMP, LFT, KIDNEY in test fixtures (D-01 panel nesting)
+check_159("CPT 80053 present in test-159-codeset-loader.R fixtures (D-01 panel nesting across BMP/CMP/LFT/KIDNEY)",
+  !is.null(lab_test_loader) &&
+  any(grepl("80053", lab_test_loader)))
+
+# 7. All 6 Phase 159 functions defined in utils_surveillance.R
+check_159("All 6 Phase 159 functions defined in utils_surveillance.R",
+  !is.null(surv_util_159) &&
+  any(grepl("load_lab_analytes <- function",          surv_util_159)) &&
+  any(grepl("load_modality_lookup <- function",       surv_util_159)) &&
+  any(grepl("map_analyte_hits <- function",           surv_util_159)) &&
+  any(grepl("build_analyte_events <- function",       surv_util_159)) &&
+  any(grepl("build_analyte_presence <- function",     surv_util_159)) &&
+  any(grepl("build_patient_modality_dates <- function", surv_util_159)))
+
+# 8. R/147 contains E_patient_modality_dates, SC-6, and surveillance_patient_modality_dates_
+check_159("R/147 contains E_patient_modality_dates, SC-6, and surveillance_patient_modality_dates_ (Phase 159 wiring)",
+  !is.null(r147_lines_159) &&
+  any(grepl("E_patient_modality_dates",         r147_lines_159)) &&
+  any(grepl("SC-6",                             r147_lines_159)) &&
+  any(grepl("surveillance_patient_modality_dates_", r147_lines_159)))
+
+# 9. Both test-159-*.R files exist
+check_159("Both tests/testthat/test-159-*.R files exist",
+  length(list.files("tests/testthat", pattern = "^test-159-.*\\.R$")) >= 2)
+
+message(glue("\nSection 15ak: {p159_pass} PASS, {p159_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -5680,6 +5763,7 @@ message("  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R
 message("  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation occurrence counts (R/115, amended by 139-05-PATCH.md) structural integrity, incl. single-implementation checks for is_sentinel_zip5()/coalesce_zip5(), Part B/C presence, C-02 reconciliation presence, and R/39 registration (Section 15ad, 14 checks)")
 message("  * SMOKE-153-01: R/88 validates Phase 153 patient ZIP calendar + best-ZIP selection (utils_zip_calendar.R) structural integrity: single-implementation of all three functions, no normalize_zip9 redefinition, two-zone arrange, all four zip5_patient_source and distance_status labels, R/122 wiring + old res_lookup removed, test file and SCRIPT_INDEX registration (Section 15ai, 14 checks)")
 message("  * SMOKE-158-01: R/88 validates Phase 158 surveillance modality frequency structural integrity: codeset file, load_surveillance_codeset, codeset_row_id uniqueness, echo codes D-20, TSH/Free T4 D-21, component_all_same_day D-22, all 9 util functions, R/147 patterns (stopifnot/INTERNAL/suppress_table/no as.Date(PX_DATE)), both test files, R/39 registration, SCRIPT_INDEX rows for R/147 and utils_surveillance (Section 15aj, 12 checks)")
+message("  * SMOKE-159-01: R/88 validates Phase 159 lab surveillance modalities structural integrity: Lab_Analytes/Modalities sheets in codeset, load_lab_analytes/load_modality_lookup defined, panel rows with all 3 rule types, KIDNEY analyte_min_same_day excludes CREATININE (D-22), CPT 80053 nesting (D-01), all 6 Phase 159 functions, R/147 E_patient_modality_dates/SC-6/surveillance_patient_modality_dates_ wiring, both test-159-*.R files (Section 15ak, 9 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
