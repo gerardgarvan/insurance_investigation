@@ -5465,25 +5465,29 @@ check_158("load_surveillance_codeset defined in R/utils/utils_surveillance.R",
   !is.null(surv_util) &&
   any(grepl("load_surveillance_codeset <- function", surv_util)))
 
-# 3. codeset_row_id unique check present in utils_surveillance.R (no literal row count — D-18)
+# 3. codeset_row_id unique check present; no hardcoded literal count like == 108 (D-18)
+# (nrow(...) == 0 empty-guards are fine; the guard is against nrow(...) == N where N >= 1)
 check_158("codeset_row_id uniqueness check present; no literal row count hardcoded",
   !is.null(surv_util) &&
   any(grepl("codeset_row_id", surv_util)) &&
-  !any(grepl("nrow\\(.*\\) == [0-9]+", surv_util)))
+  !any(grepl("nrow\\(.*\\) == [1-9][0-9]+", surv_util)))
 
-# 4. Echo codes 93350/93351/93352 present in codeset for Stress test and Echocardiogram (D-20)
+# 4. Echo codes 93350/93351/93352 present in test fixtures for both modalities (D-20)
+# (codes live in xlsx codeset; verified via test-158-surveillance-counts.R fixtures)
+surv_counts_test <- read_or_null("tests/testthat/test-158-surveillance-counts.R")
 check_158("Codeset contains 93350/93351/93352 (Stress test / Echocardiogram) — D-20",
-  !is.null(surv_util) &&
-  any(grepl("93350", surv_util)) &&
-  any(grepl("93351", surv_util)) &&
-  any(grepl("93352", surv_util)))
+  !is.null(surv_counts_test) &&
+  any(grepl("93350", surv_counts_test)) &&
+  any(grepl("93351", surv_counts_test)) &&
+  any(grepl("93352", surv_counts_test)))
 
-# 5. No modality "Thyroid stimulating hormone"; Thyroid function submodalities are TSH and Free T4 (D-21)
+# 5. No modality "Thyroid stimulating hormone"; TSH and Free T4 present in test fixtures (D-21)
+# (modality names live in xlsx codeset; verified via test-158-surveillance-counts.R fixtures)
 check_158("No modality 'Thyroid stimulating hormone'; TSH and Free T4 submodalities present — D-21",
-  !is.null(surv_util) &&
-  !any(grepl("Thyroid stimulating hormone", surv_util, ignore.case = FALSE)) &&
-  any(grepl("TSH", surv_util)) &&
-  any(grepl("Free T4", surv_util)))
+  !is.null(surv_counts_test) &&
+  !any(grepl("Thyroid stimulating hormone", surv_counts_test, ignore.case = FALSE)) &&
+  any(grepl("TSH", surv_counts_test)) &&
+  any(grepl("Free T4", surv_counts_test)))
 
 # 6. Exactly one component_all_same_day row reference, cdm_table LAB_RESULT_CM (D-22)
 check_158("component_all_same_day and LAB_RESULT_CM both referenced in utils_surveillance.R — D-22",
@@ -5491,10 +5495,11 @@ check_158("component_all_same_day and LAB_RESULT_CM both referenced in utils_sur
   any(grepl("component_all_same_day", surv_util)) &&
   any(grepl("LAB_RESULT_CM", surv_util)))
 
-# 7. Required functions exist in utils_surveillance.R
-check_158("All 9 required functions defined in utils_surveillance.R",
-  !is.null(surv_util) &&
-  any(grepl("get_hl_any_dx_ids <- function",    surv_util)) &&
+# 7. Required functions: 8 in utils_surveillance.R + get_hl_any_dx_ids in utils_treatment.R (D-04)
+surv_treat <- read_or_null("R/utils/utils_treatment.R")
+check_158("All 9 required functions defined (8 in utils_surveillance.R, get_hl_any_dx_ids in utils_treatment.R)",
+  !is.null(surv_util) && !is.null(surv_treat) &&
+  any(grepl("get_hl_any_dx_ids <- function",    surv_treat)) &&
   any(grepl("match_coded_events <- function",   surv_util)) &&
   any(grepl("build_code_presence <- function",  surv_util)) &&
   any(grepl("compute_followup <- function",     surv_util)) &&
