@@ -1,0 +1,364 @@
+# ==============================================================================
+# 147_surveillance_modality_frequency.R -- Surveillance Modality Frequency
+# ==============================================================================
+# Purpose:  For every patient with >= 1 HL diagnosis code, count how often each
+#           audited Surveillance Strategy modality appears in the extract.
+#           Per-code presence (A) is reviewed by the team before the frequency
+#           sheets (B/C/D) circulate.
+#
+# Inputs:   data/reference/surveillance_codeset.xlsx (load_surveillance_codeset)
+#           DuckDB: DIAGNOSIS, PROCEDURES, LAB_RESULT_CM, ENCOUNTER, DEATH
+#
+# Outputs (CONFIG$cache$outputs_dir):
+#   surveillance_modality_frequency_INTERNAL_<date>.xlsx  unsuppressed; stays on HiPerGator
+#   surveillance_modality_frequency_<date>.xlsx           release; cells 1-10 -> "<11"
+#   surveillance_modality_patient_<date>.rds              ID x modality (SURV-06); stays on HiPerGator
+#
+# Requirements: SURV-01..SURV-06   Decisions: 158-CONTEXT.md D-01..D-30
+# All counting logic lives in R/utils/utils_surveillance.R (unit-tested).
+# ==============================================================================
+
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(glue)
+  library(openxlsx)
+})
+
+source("R/00_config.R")
+if (!exists("load_surveillance_codeset")) source("R/utils/utils_surveillance.R")
+if (!exists("get_hl_any_dx_ids"))         source("R/utils/utils_treatment.R")
+
+# ---- Run constants (all reported on the KEY sheet) ----
+EXTRACT_CUTOFF     <- as.Date(EXTRACT_DATE)          # D-09; from CONFIG (R/00_config.R line 84)
+ANCHOR_DAY_IS_POST <- FALSE                          # D-25: anchor-day events count as pre-anchor
+SUPPRESS_THRESHOLD <- 10L                            # D-27
+run_date <- format(Sys.Date(), "%Y%m%d")
+out_dir  <- CONFIG$cache$outputs_dir
+
+message(glue("=== Surveillance modality frequency (run {run_date}) ==="))
+
+# ==============================================================================
+# SECTION 1: CODESET AND DENOMINATOR ----
+# ==============================================================================
+
+codeset <- load_surveillance_codeset()
+message(glue("  Codeset: {nrow(codeset)} rows, {n_distinct(codeset$modality)} modalities"))
+
+denom_all <- get_hl_any_dx_ids()
+confirmed_ids <- get_hl_patient_ids()
+
+stopifnot(
+  "HL any-dx denominator is empty (D-24)" = nrow(denom_all) > 0,
+  "get_hl_patient_ids() returned no IDs (D-24)" = length(confirmed_ids) > 0,
+  "Every confirmed-cohort ID must be in the HL any-dx set (success criterion 2)" =
+    all(confirmed_ids %in% denom_all$ID),
+  "HL any-dx N must be >= confirmed-cohort N" =
+    nrow(denom_all) >= length(unique(confirmed_ids))
+)
+
+n_no_anchor <- sum(is.na(denom_all$hl_anchor_date))
+denominator <- denom_all |> filter(!is.na(hl_anchor_date))
+message(glue("  Denominator: {nrow(denominator)} HL any-dx patients ",
+             "({n_no_anchor} dropped: no usable HL diagnosis date); ",
+             "{sum(denominator$in_confirmed_cohort)} in confirmed cohort"))
+
+# ==============================================================================
+# SECTION 2: DUCKDB HANDLES AND HL ID TEMP TABLE ----
+# ==============================================================================
+
+lazy_table <- function(name) {
+  t <- get_pcornet_table(name)
+  if (!inherits(t, "tbl_lazy"))
+    stop(glue("get_pcornet_table('{name}') is not a lazy DuckDB tbl (L-5)"))
+  t
+}
+
+proc_tbl  <- lazy_table("PROCEDURES")
+lab_tbl   <- lazy_table("LAB_RESULT_CM")
+dx_tbl    <- lazy_table("DIAGNOSIS")
+enc_tbl   <- lazy_table("ENCOUNTER")
+death_tbl <- lazy_table("DEATH")
+
+con <- dbplyr::remote_con(proc_tbl)
+hl_ids_tbl <- dplyr::copy_to(con, tibble(ID = denominator$ID),
+                             name = "tmp_surv_hl_ids",
+                             temporary = TRUE, overwrite = TRUE)
+
+# Parse whichever date columns exist, coalescing in the given order
+pick_date <- function(df, cols) {
+  out <- rep(as.Date(NA), nrow(df))
+  for (cl in intersect(cols, names(df)))
+    out <- dplyr::coalesce(out, parse_pcornet_date(df[[cl]]))
+  out
+}
+
+pull_codes <- function(tbl, cols, where) {
+  tbl |>
+    semi_join(hl_ids_tbl, by = "ID") |>
+    filter(dplyr::sql(where)) |>
+    select(any_of(cols)) |>
+    collect()
+}
+
+codes_for <- function(table, match_type) {
+  codeset$code_norm[codeset$cdm_table == table & codeset$match == match_type]
+}
+
+# ==============================================================================
+# SECTION 3: PROCEDURES (no PX_TYPE filter in SQL; type checked in R for QC) ----
+# ==============================================================================
+
+proc_raw <- pull_codes(
+  proc_tbl, c("ID", "PX", "PX_TYPE", "PX_DATE", "ADMIT_DATE"),
+  surv_code_where("PX", codes_for("PROCEDURES", "exact"),
+                  codes_for("PROCEDURES", "prefix")))
+proc_events_in <- tibble(
+  ID = proc_raw$ID, code_raw = proc_raw$PX, type_val = proc_raw$PX_TYPE,
+  event_date = pick_date(proc_raw, c("PX_DATE", "ADMIT_DATE")),
+  source_table = "PROCEDURES")
+message(glue("  PROCEDURES rows collected: {nrow(proc_raw)}"))
+
+# ==============================================================================
+# SECTION 4: LAB_RESULT_CM (LAB_LOINC, then LAB_PX where LAB_PX_TYPE = 'LC') ----
+# ==============================================================================
+
+lab_exact <- codes_for("LAB_RESULT_CM", "exact")
+lab_comp  <- unlist(lapply(codeset$code_norm[codeset$match == "component_all_same_day"],
+                           surv_components))
+lab_codes <- unique(c(lab_exact, lab_comp))
+has_lab_px <- all(c("LAB_PX", "LAB_PX_TYPE") %in% colnames(lab_tbl))
+
+lab_where <- surv_code_where("LAB_LOINC", lab_codes, codes_for("LAB_RESULT_CM", "prefix"))
+if (has_lab_px)
+  lab_where <- paste0("(", lab_where, " OR (TRIM(LAB_PX_TYPE) = 'LC' AND ",
+                      surv_code_where("LAB_PX", lab_codes,
+                                      codes_for("LAB_RESULT_CM", "prefix")), "))")
+
+lab_raw <- pull_codes(
+  lab_tbl, c("ID", "LAB_LOINC", "LAB_PX", "LAB_PX_TYPE",
+             "RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE"),
+  lab_where)
+lab_date <- pick_date(lab_raw, c("RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE"))
+loinc_hit <- normalize_surv_code(dplyr::coalesce(lab_raw$LAB_LOINC, "")) %in% lab_codes |
+  Reduce(`|`, lapply(codes_for("LAB_RESULT_CM", "prefix"), function(p)
+    startsWith(normalize_surv_code(dplyr::coalesce(lab_raw$LAB_LOINC, "")), p)), FALSE)
+lab_code_raw <- if (has_lab_px) ifelse(loinc_hit, lab_raw$LAB_LOINC, lab_raw$LAB_PX) else lab_raw$LAB_LOINC
+lab_events_in <- tibble(ID = lab_raw$ID, code_raw = lab_code_raw, type_val = "",
+                        event_date = lab_date, source_table = "LAB_RESULT_CM")
+message(glue("  LAB_RESULT_CM rows collected: {nrow(lab_raw)}"))
+
+# ==============================================================================
+# SECTION 5: DIAGNOSIS (screening dx codes; DX_TYPE checked in R) ----
+# ==============================================================================
+
+dx_raw <- pull_codes(
+  dx_tbl, c("ID", "DX", "DX_TYPE", "DX_DATE", "ADMIT_DATE"),
+  surv_code_where("DX", codes_for("DIAGNOSIS", "exact"),
+                  codes_for("DIAGNOSIS", "prefix")))
+dx_events_in <- tibble(
+  ID = dx_raw$ID, code_raw = dx_raw$DX, type_val = dx_raw$DX_TYPE,
+  event_date = pick_date(dx_raw, c("DX_DATE", "ADMIT_DATE")),
+  source_table = "DIAGNOSIS")
+message(glue("  DIAGNOSIS rows collected: {nrow(dx_raw)}"))
+
+# ==============================================================================
+# SECTION 6: FOLLOW-UP (D-09, D-10, D-26, D-28) ----
+# ==============================================================================
+
+enc_raw <- enc_tbl |>
+  semi_join(hl_ids_tbl, by = "ID") |>
+  select(any_of(c("ID", "ADMIT_DATE", "DISCHARGE_DATE"))) |>
+  distinct() |>
+  collect()
+last_enc <- tibble(ID = enc_raw$ID,
+                   d1 = pick_date(enc_raw, "ADMIT_DATE"),
+                   d2 = pick_date(enc_raw, "DISCHARGE_DATE")) |>
+  mutate(d = pmax(d1, d2, na.rm = TRUE)) |>
+  filter(!is.na(d)) |>
+  group_by(ID) |>
+  summarise(last_enc_date = max(d), .groups = "drop")
+
+death_raw <- death_tbl |>
+  semi_join(hl_ids_tbl, by = "ID") |>
+  select(ID, DEATH_DATE) |>
+  collect()
+death <- tibble(ID = death_raw$ID, death_date = parse_pcornet_date(death_raw$DEATH_DATE))
+
+followup <- compute_followup(denominator, last_enc, death, EXTRACT_CUTOFF)
+
+# ==============================================================================
+# SECTION 7: MATCH, COMPONENT RULE, WINDOW ----
+# ==============================================================================
+
+matched_coded <- match_coded_events(
+  bind_rows(proc_events_in, lab_events_in, dx_events_in) |> filter(!is.na(event_date)),
+  codeset)
+comp <- build_component_events(lab_events_in |> select(ID, code_raw, event_date), codeset)
+matched_all <- bind_rows(matched_coded, comp$events)
+
+events_win <- classify_event_window(matched_all, followup,
+                                    anchor_day_is_post = ANCHOR_DAY_IS_POST)
+
+# D-05 grain, used for all frequency outputs
+event_dedup <- events_win |>
+  filter(type_ok) |>
+  distinct(ID, modality, event_date, window)
+stopifnot("Event table must have no duplicate ID x modality x date rows" =
+            !anyDuplicated(event_dedup[, c("ID", "modality", "event_date")]))
+
+# ==============================================================================
+# SECTION 8: OUTPUT TABLES ----
+# ==============================================================================
+
+A_code_presence <- build_code_presence(codeset, matched_all) |>
+  select(codeset_row_id, modality, submodality, code_system, code, code_norm,
+         cdm_table, type_filter, match, tier, plausibility, present, n_records,
+         n_patients, n_patient_dates, first_date, last_date,
+         n_records_other_type, other_types)
+
+mod_keys <- distinct(codeset, modality) |> arrange(modality)
+sub_keys <- codeset |> filter(submodality != "") |>
+  distinct(modality, submodality) |> arrange(modality, submodality)
+
+stats_for <- function(tiers) {
+  bind_rows(
+    compute_modality_stats(events_win, followup, mod_keys, tiers) |>
+      mutate(submodality = "(all)"),
+    compute_modality_stats(events_win, followup, sub_keys, tiers,
+                           by = c("modality", "submodality"))) |>
+    relocate(modality, submodality) |>
+    arrange(modality, submodality != "(all)", submodality)
+}
+
+B_primary <- stats_for("primary")
+S_sens    <- stats_for("sensitivity")
+S_any     <- stats_for(c("primary", "sensitivity"))
+
+prefix_cols <- function(df, p) rename_with(df, ~ paste0(p, .x), -c(modality, submodality))
+C_with_sensitivity <- prefix_cols(B_primary, "primary_") |>
+  left_join(prefix_cols(S_sens, "sensitivity_"), by = c("modality", "submodality")) |>
+  left_join(prefix_cols(S_any,  "any_"),         by = c("modality", "submodality"))
+
+stopifnot(
+  "primary <= primary-or-sensitivity patients for every modality" =
+    all(C_with_sensitivity$primary_n_patients <= C_with_sensitivity$any_n_patients),
+  "sensitivity <= primary-or-sensitivity patients for every modality" =
+    all(C_with_sensitivity$sensitivity_n_patients <= C_with_sensitivity$any_n_patients),
+  "primary-or-sensitivity patients <= denominator" =
+    all(C_with_sensitivity$any_n_patients <= nrow(denominator)),
+  "Total person-years must be positive" = sum(followup$person_years) > 0
+)
+
+D_pre_vs_post <- events_win |>
+  filter(type_ok) |>
+  mutate(tier_scope = "any") |>
+  bind_rows(events_win |> filter(type_ok, tier == "primary") |> mutate(tier_scope = "primary")) |>
+  distinct(tier_scope, ID, modality, event_date, window) |>
+  group_by(modality, tier_scope, window) |>
+  summarise(n_patients = n_distinct(ID), n_event_dates = n(), .groups = "drop") |>
+  complete(modality = mod_keys$modality, tier_scope = c("primary", "any"),
+           window = c("pre", "post", "after_followup"),
+           fill = list(n_patients = 0L, n_event_dates = 0L)) |>
+  pivot_wider(names_from = window, values_from = c(n_patients, n_event_dates)) |>
+  select(modality, tier_scope,
+         n_patients_pre, n_patients_post, n_patients_after_followup,
+         n_event_dates_pre, n_event_dates_post, n_event_dates_after_followup) |>
+  arrange(modality, desc(tier_scope))
+
+pt_modality <- build_patient_modality(events_win, followup)
+
+# ---- QC ----
+count_by <- function(df, col) if (nrow(df)) paste(names(table(df[[col]])), table(df[[col]]), sep = "=", collapse = "; ") else ""
+qc <- tibble::tribble(
+  ~check, ~value, ~note,
+  "HL any-dx patients (before date filter)", nrow(denom_all), "",
+  "Dropped: no usable HL diagnosis date", n_no_anchor, "",
+  "Denominator N", nrow(denominator), "",
+  "Confirmed-cohort IDs (get_hl_patient_ids)", length(unique(confirmed_ids)), "all contained in any-dx set",
+  "Follow-up ok", sum(followup$fu_status == "ok"), "",
+  "Follow-up zero or negative (0 person-years)", sum(followup$fu_status == "zero_or_negative"), "",
+  "No follow-up date (0 person-years)", sum(followup$fu_status == "no_followup_date"), "",
+  "Total person-years", round(sum(followup$person_years), 1), "",
+  "PROCEDURES rows collected", nrow(proc_raw), count_by(proc_raw, "PX_TYPE"),
+  "LAB_RESULT_CM rows collected", nrow(lab_raw), if (has_lab_px) "LAB_LOINC + LAB_PX(LC)" else "LAB_LOINC only",
+  "DIAGNOSIS rows collected", nrow(dx_raw), count_by(dx_raw, "DX_TYPE"),
+  "Matched rows, type ok", sum(matched_all$type_ok), "",
+  "Matched rows, other PX_TYPE/DX_TYPE (not counted)", sum(!matched_all$type_ok), count_by(filter(matched_all, !type_ok), "type_val"),
+  "Matched events: pre-anchor", sum(events_win$type_ok & events_win$window == "pre"), glue("anchor day counted as {if (ANCHOR_DAY_IS_POST) 'post' else 'pre'}"),
+  "Matched events: post-anchor", sum(events_win$type_ok & events_win$window == "post"), "",
+  "Matched events: after follow-up end (excluded)", sum(events_win$type_ok & events_win$window == "after_followup"), "",
+  "De-duplicated ID x modality x date rows", nrow(event_dedup), glue("collapsed from {sum(events_win$type_ok)} matched rows"),
+  "CBC component days with some but not all components", sum(comp$near_miss$n_partial_id_dates), "D-22 near-miss",
+  "A_code_presence rows minus codeset rows", nrow(A_code_presence) - nrow(codeset), "must be 0"
+)
+
+# ==============================================================================
+# SECTION 9: WRITE OUTPUTS ----
+# ==============================================================================
+
+verify_rows <- codeset |> filter(plausibility == "verify")
+key <- tibble::tribble(
+  ~item, ~value,
+  "Denominator", "Distinct IDs with >= 1 HL diagnosis code: ICD-10 C81* (DX_TYPE 10) or ICD-9 201* (DX_TYPE 09); NLPHL included.",
+  "Denominator N", format(nrow(denominator), big.mark = ","),
+  "Confirmed-cohort N (in_confirmed_cohort)", format(sum(denominator$in_confirmed_cohort), big.mark = ","),
+  "Anchor date", "Earliest HL diagnosis date (DX_DATE, falling back to ADMIT_DATE).",
+  "Anchor-day events", if (ANCHOR_DAY_IS_POST) "Counted as post-anchor." else "Counted as pre-anchor (staging workup) (D-25).",
+  "Follow-up end", glue("min(death date, last encounter of any type), capped at {EXTRACT_CUTOFF} (D-09/D-10). Events after follow-up end are excluded (D-25)."),
+  "Person-years", "Pooled: post-anchor event dates / total person-years of the whole denominator. Zero-follow-up patients contribute 0 person-years (D-26).",
+  "Event grain", "Distinct ID x modality x date; add-on and professional/technical codes on the same day count once (D-05).",
+  "Codeset", glue("surveillance_codeset.xlsx, {nrow(codeset)} rows; tiers and modalities come only from the codeset (L-4)."),
+  "Tiers", "primary = code documents the test was done; sensitivity = suggestive only. C sheet shows primary, sensitivity and primary-or-sensitivity side by side; never pooled into primary.",
+  "Stress echo (D-06)", "93350/93351/93352 count under both Echocardiogram and Stress test.",
+  "Non-additive", "Modality counts are not additive - a single encounter may contribute to more than one modality (e.g., stress echocardiogram counted under both Echocardiogram and Stress test). Sub-counts are not additive to each other or to the parent.",
+  "Thyroid function (D-08)", "Modality renamed from TSH; TSH and Free T4 sub-counts via the codeset submodality column.",
+  "CBC fallback (D-22)", "WBC 6690-2 + Hgb 718-7 + PLT 777-3 resulted the same day = one CBC event; sensitivity tier only.",
+  "Plausibility: verify (D-12)", paste(verify_rows$code, collapse = ", "),
+  "Presence (A sheet)", "Built before de-duplication: each codeset row's own hits. Rows with present = FALSE are highlighted. Matches under a different PX_TYPE/DX_TYPE are shown but not counted."
+)
+
+write_workbook <- function(path, release) {
+  sup <- function(df, rules) if (release) suppress_table(df, rules, SUPPRESS_THRESHOLD) else df
+  stat_rules <- function(p = "") setNames(list(
+    paste0(p, c("pct_of_denominator", "dates_per_pt_median", "dates_per_pt_q1",
+                "dates_per_pt_q3", "dates_per_pt_max")),
+    paste0(p, "events_per_person_year")),
+    paste0(p, c("n_patients", "total_event_dates")))
+  n_cols_D <- grep("^n_", names(D_pre_vs_post), value = TRUE)
+  sheets <- list(
+    KEY = bind_rows(key, tibble(item = "Suppression",
+      value = if (release) as.character(glue("Counts 1-{SUPPRESS_THRESHOLD} shown as <11; derived values blanked."))
+              else "INTERNAL - unsuppressed. Do not distribute outside HiPerGator.")),
+    A_code_presence = sup(A_code_presence, list(n_records = character(), n_patients = character(),
+                                                n_patient_dates = character(),
+                                                n_records_other_type = character())),
+    B_modality_primary = sup(B_primary, stat_rules()),
+    C_modality_with_sensitivity = sup(C_with_sensitivity,
+      c(stat_rules("primary_"), stat_rules("sensitivity_"), stat_rules("any_"))),
+    D_pre_vs_post_anchor = sup(D_pre_vs_post, setNames(rep(list(character()), length(n_cols_D)), n_cols_D)),
+    QC = if (release) mutate(qc, value = suppress_small(value, SUPPRESS_THRESHOLD)) else qc
+  )
+  wb <- createWorkbook()
+  hdr  <- createStyle(fgFill = "#0021A5", fontColour = "#FFFFFF", textDecoration = "bold",
+                      fontName = "Arial", wrapText = TRUE)
+  flag <- createStyle(fgFill = "#FA4616", fontColour = "#FFFFFF", fontName = "Arial")
+  for (nm in names(sheets)) {
+    addWorksheet(wb, nm)
+    writeData(wb, nm, sheets[[nm]], headerStyle = hdr)
+    freezePane(wb, nm, firstRow = TRUE)
+    setColWidths(wb, nm, cols = seq_along(sheets[[nm]]), widths = if (nm == "KEY") c(34, 120) else "auto")
+  }
+  absent <- which(!A_code_presence$present) + 1L
+  if (length(absent))
+    addStyle(wb, "A_code_presence", flag, rows = absent,
+             cols = seq_along(sheets$A_code_presence), gridExpand = TRUE)
+  saveWorkbook(wb, path, overwrite = TRUE)
+  message(glue("  Wrote {path}"))
+}
+
+write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_INTERNAL_{run_date}.xlsx")), release = FALSE)
+write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_{run_date}.xlsx")), release = TRUE)
+saveRDS(pt_modality, file.path(out_dir, glue("surveillance_modality_patient_{run_date}.rds")))
+message(glue("  Wrote surveillance_modality_patient_{run_date}.rds ({nrow(pt_modality)} ID x modality rows)"))
+message("=== Surveillance modality frequency complete ===")
