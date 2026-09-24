@@ -5473,13 +5473,14 @@ check_158("codeset_row_id uniqueness check present; no literal row count hardcod
   !any(grepl("nrow\\(.*\\) == [1-9][0-9]+", surv_util)))
 
 # 4. Echo codes 93350/93351/93352 present in test fixtures for both modalities (D-20)
-# (codes live in xlsx codeset; verified via test-158-surveillance-counts.R fixtures)
-surv_counts_test <- read_or_null("tests/testthat/test-158-surveillance-counts.R")
+# (codes live in xlsx codeset; verified via test-158-codeset-loader.R which checks all three)
+surv_counts_test  <- read_or_null("tests/testthat/test-158-surveillance-counts.R")
+surv_loader_test  <- read_or_null("tests/testthat/test-158-codeset-loader.R")
 check_158("Codeset contains 93350/93351/93352 (Stress test / Echocardiogram) — D-20",
-  !is.null(surv_counts_test) &&
-  any(grepl("93350", surv_counts_test)) &&
-  any(grepl("93351", surv_counts_test)) &&
-  any(grepl("93352", surv_counts_test)))
+  (!is.null(surv_counts_test) || !is.null(surv_loader_test)) &&
+  any(grepl("93350", c(surv_counts_test, surv_loader_test))) &&
+  any(grepl("93351", c(surv_counts_test, surv_loader_test))) &&
+  any(grepl("93352", c(surv_counts_test, surv_loader_test))))
 
 # 5. No modality "Thyroid stimulating hormone"; TSH and Free T4 present in test fixtures (D-21)
 # (modality names live in xlsx codeset; verified via test-158-surveillance-counts.R fixtures)
