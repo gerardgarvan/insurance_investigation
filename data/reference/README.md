@@ -269,13 +269,25 @@ cutoff. See 148-DISCOVERY.md §5 for details.
 (https://www.neighborhoodatlas.medicine.wisc.edu/). Registration required before downloading.
 
 ## surveillance_codeset.xlsx
-- Used by: load_surveillance_codeset() (R/utils/utils_surveillance.R); Phase 158
-- Sheets: KEY (column definitions), Analysis_Codeset (data; read by name)
-- Rows: 108 at 2026-09-24 = 105 from surveillance_strategy_code_audit.xlsx + 3 Stress test rows (D-20)
+- Used by: load_surveillance_codeset(), load_lab_analytes(), load_modality_lookup() (R/utils/utils_surveillance.R); Phase 158 and Phase 159
+- Sheets (Phase 159, in order): KEY (column definitions), Analysis_Codeset (data; 167 rows at 2026-09-24), Lab_Analytes (analyte LOINC/CPT codes; 189 rows, LA001–LA189), Lab_Analytes_Excluded (documentation only; 43 rows; not read by code), Modalities (column prefix lookup; 14 rows)
+- Rows: 167 at 2026-09-24 = SC001–SC108 from Phase 158 (unchanged) + SC109–SC167 Phase 159 lab modality rows
+- New modalities added (Phase 159): BMP, CMP, LIPID, LFT, KIDNEY
 - Key: codeset_row_id (SC001..), unique and never reused; new rows take the next number
-- type_filter: bare PX_TYPE/DX_TYPE value (CH, 10, 09); blank for LAB_RESULT_CM
-- match: exact | prefix | component_all_same_day
+- type_filter: bare PX_TYPE/DX_TYPE value (CH, 10, 09); blank for LAB_RESULT_CM; blank for analyte rule rows
+- match: exact | prefix | component_all_same_day | analyte_all_same_day | analyte_min_same_day
 - tier: primary | sensitivity (tier/modality edits flow to outputs with no code change, L-4)
-- submodality: TSH / Free T4 on Thyroid function rows only (D-21)
+- submodality: TSH / Free T4 on Thyroid function rows only (D-21); blank for lab modality rows
 - plausibility: "verify" on rows still to be confirmed (D-12)
-- Source: desk audit of VariableDetails.xlsx "Surveillance Strategy" sheet, 2026-09-24
+- min_analyte_count: integer as text; set only on analyte_min_same_day rows; blank elsewhere; must be >= 1 and < the number of listed analytes
+- Source: desk audit of VariableDetails.xlsx "Surveillance Strategy" sheet (Phase 158) + delivered Phase 159 codeset, 2026-09-24
+
+## lab_code_crosswalk.xlsx
+- Path: data/reference/lab_code_crosswalk.xlsx
+- Status as of 2026-09-24: NOT YET STAGED (expected; to be placed by user)
+- Not read by any code — provenance documentation only
+- Purpose: LOINC 2.83 crosswalk (run 2026-09-22) used as the dictionary for Lab_Analytes analyte code selection
+- Sheet: MASTER; analytes selected by exact LOINC component match + D-12 specimen allowlist (not by grouping flags — 159 D-21)
+- Specimens used: Ser/Plas, Ser, Plas, Ser/Plas/Bld, Bld, BldV (blood); urine only for URINE_PROTEIN and URINE_ALBUMIN_CREATININE_RATIO (KIDNEY sensitivity)
+- Exclusion categories recorded in Lab_Analytes_Excluded sheet: test strip/glucometer, challenge "Stdy" timepoints, pCO2, electrophoresis fractions, qualitative results, percentage results, interpretations, calculated blood-gas CO2, calculated triglyceride, timed serum albumin
+- Single-analyte CPT codes from the CPT rows are PROCEDURES members (cdm_table = PROCEDURES, type_filter = CH)
