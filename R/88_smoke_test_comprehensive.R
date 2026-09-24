@@ -5435,6 +5435,104 @@ check_153("utils_zip_calendar present in R/SCRIPT_INDEX.md",
 message(glue("\nSection 15ai: {p153_pass} PASS, {p153_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15aj: Phase 158 surveillance modality frequency ----
+# ==============================================================================
+
+message("\n--- Section 15aj: Phase 158 surveillance modality frequency ---")
+
+p158_pass <- 0L; p158_fail <- 0L
+check_158 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p158_pass <<- p158_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p158_fail <<- p158_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+r147_lines  <- read_or_null("R/147_surveillance_modality_frequency.R")
+surv_util   <- read_or_null("R/utils/utils_surveillance.R")
+r39_158     <- read_or_null("R/39_run_all_investigations.R")
+r_index_158 <- read_or_null("R/SCRIPT_INDEX.md")
+
+# 1. surveillance_codeset.xlsx exists
+check_158("data/reference/surveillance_codeset.xlsx exists",
+  file.exists("data/reference/surveillance_codeset.xlsx"))
+
+# 2. load_surveillance_codeset() defined (structural: function must exist in utils_surveillance.R)
+check_158("load_surveillance_codeset defined in R/utils/utils_surveillance.R",
+  !is.null(surv_util) &&
+  any(grepl("load_surveillance_codeset <- function", surv_util)))
+
+# 3. codeset_row_id unique check present in utils_surveillance.R (no literal row count — D-18)
+check_158("codeset_row_id uniqueness check present; no literal row count hardcoded",
+  !is.null(surv_util) &&
+  any(grepl("codeset_row_id", surv_util)) &&
+  !any(grepl("nrow\\(.*\\) == [0-9]+", surv_util)))
+
+# 4. Echo codes 93350/93351/93352 present in codeset for Stress test and Echocardiogram (D-20)
+check_158("Codeset contains 93350/93351/93352 (Stress test / Echocardiogram) — D-20",
+  !is.null(surv_util) &&
+  any(grepl("93350", surv_util)) &&
+  any(grepl("93351", surv_util)) &&
+  any(grepl("93352", surv_util)))
+
+# 5. No modality "Thyroid stimulating hormone"; Thyroid function submodalities are TSH and Free T4 (D-21)
+check_158("No modality 'Thyroid stimulating hormone'; TSH and Free T4 submodalities present — D-21",
+  !is.null(surv_util) &&
+  !any(grepl("Thyroid stimulating hormone", surv_util, ignore.case = FALSE)) &&
+  any(grepl("TSH", surv_util)) &&
+  any(grepl("Free T4", surv_util)))
+
+# 6. Exactly one component_all_same_day row reference, cdm_table LAB_RESULT_CM (D-22)
+check_158("component_all_same_day and LAB_RESULT_CM both referenced in utils_surveillance.R — D-22",
+  !is.null(surv_util) &&
+  any(grepl("component_all_same_day", surv_util)) &&
+  any(grepl("LAB_RESULT_CM", surv_util)))
+
+# 7. Required functions exist in utils_surveillance.R
+check_158("All 9 required functions defined in utils_surveillance.R",
+  !is.null(surv_util) &&
+  any(grepl("get_hl_any_dx_ids <- function",    surv_util)) &&
+  any(grepl("match_coded_events <- function",   surv_util)) &&
+  any(grepl("build_code_presence <- function",  surv_util)) &&
+  any(grepl("compute_followup <- function",     surv_util)) &&
+  any(grepl("classify_event_window <- function",surv_util)) &&
+  any(grepl("compute_modality_stats <- function",surv_util)) &&
+  any(grepl("build_patient_modality <- function",surv_util)) &&
+  any(grepl("suppress_table <- function",       surv_util)))
+
+# 8. R/147 contains required patterns and not forbidden pattern
+check_158("R/147 contains stopifnot, INTERNAL, suppress_table and NOT as.Date(PX_DATE",
+  !is.null(r147_lines) &&
+  any(grepl("stopifnot",      r147_lines)) &&
+  any(grepl("INTERNAL",       r147_lines)) &&
+  any(grepl("suppress_table", r147_lines)) &&
+  !any(grepl("as.Date(PX_DATE", r147_lines, fixed = TRUE)))
+
+# 9. tests/testthat/test-158-*.R files exist (both)
+check_158("Both tests/testthat/test-158-*.R files exist",
+  length(list.files("tests/testthat", pattern = "^test-158-.*\\.R$")) >= 2)
+
+# 10. R/147 registered in R/39 investigation_scripts
+check_158("R/147_surveillance_modality_frequency.R registered in R/39",
+  !is.null(r39_158) &&
+  any(grepl("147_surveillance_modality_frequency", r39_158)))
+
+# 11. SCRIPT_INDEX.md lists surveillance_modality_frequency
+check_158("SCRIPT_INDEX.md lists R/147_surveillance_modality_frequency.R",
+  !is.null(r_index_158) &&
+  any(grepl("surveillance_modality_frequency", r_index_158)))
+
+# 12. SCRIPT_INDEX.md lists utils_surveillance.R
+check_158("SCRIPT_INDEX.md lists utils_surveillance.R",
+  !is.null(r_index_158) &&
+  any(grepl("utils_surveillance", r_index_158)))
+
+message(glue("\nSection 15aj: {p158_pass} PASS, {p158_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -5575,6 +5673,7 @@ message("  * SMOKE-132-01: R/88 validates Phase 132 bare-n crash fix + R/84 purr
 message("  * SMOKE-138-01: R/88 validates Phase 138 log2.txt root-cause fixes (R/13 gsub, R/03 scoping incl. ingest_log + preserved line-181 <<-, R/53 PATID) with file-existence gates and positive-pattern assertions (Section 15ac, 12 checks)")
 message("  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation occurrence counts (R/115, amended by 139-05-PATCH.md) structural integrity, incl. single-implementation checks for is_sentinel_zip5()/coalesce_zip5(), Part B/C presence, C-02 reconciliation presence, and R/39 registration (Section 15ad, 14 checks)")
 message("  * SMOKE-153-01: R/88 validates Phase 153 patient ZIP calendar + best-ZIP selection (utils_zip_calendar.R) structural integrity: single-implementation of all three functions, no normalize_zip9 redefinition, two-zone arrange, all four zip5_patient_source and distance_status labels, R/122 wiring + old res_lookup removed, test file and SCRIPT_INDEX registration (Section 15ai, 14 checks)")
+message("  * SMOKE-158-01: R/88 validates Phase 158 surveillance modality frequency structural integrity: codeset file, load_surveillance_codeset, codeset_row_id uniqueness, echo codes D-20, TSH/Free T4 D-21, component_all_same_day D-22, all 9 util functions, R/147 patterns (stopifnot/INTERNAL/suppress_table/no as.Date(PX_DATE)), both test files, R/39 registration, SCRIPT_INDEX rows for R/147 and utils_surveillance (Section 15aj, 12 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
