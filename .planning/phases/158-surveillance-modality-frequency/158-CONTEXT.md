@@ -1,7 +1,7 @@
 # Phase 158: Surveillance Modality Frequency - Context
 
 **Gathered:** 2026-09-24
-**Status:** Ready for planning
+**Status:** Ready for planning (revised after plan review 2026-09-24: D-23..D-30 added; plans rewritten as 158-01..158-04)
 
 <domain>
 ## Phase Boundary
@@ -19,7 +19,7 @@ Deliver an investigation script that counts how often each audited Surveillance 
 - **D-01:** Denominator = all distinct IDs with ≥1 HL diagnosis code in DIAGNOSIS (ICD-10 `C81*` with `DX_TYPE = "10"`, or ICD-9 `201*` with `DX_TYPE = "09"`). NLPHL included.
 - **D-02:** Anchor date = first HL diagnosis date per patient.
 - **D-03:** Each patient also carries `in_confirmed_cohort` flag from `get_hl_patient_ids()`. This flag is a column for comparability — it does not gate the denominator.
-- **D-04:** A new function `get_hl_any_dx_ids()` is needed (returns tibble: `ID`, `hl_anchor_date`, `in_confirmed_cohort`). The existing `get_hl_patient_ids()` in `utils_treatment.R` returns only a character vector with no dates — it is not sufficient. Add the new function to `utils_treatment.R` alongside the existing one.
+- **D-04:** *(guard behavior superseded by D-24)* A new function `get_hl_any_dx_ids()` is needed (returns tibble: `ID`, `hl_anchor_date`, `in_confirmed_cohort`). The existing `get_hl_patient_ids()` in `utils_treatment.R` returns only a character vector with no dates — it is not sufficient. Add the new function to `utils_treatment.R` alongside the existing one.
 
 ### Event grain (locked L-2)
 - **D-05:** Event unit = distinct `ID` × modality × date. Add-on codes (77063, 93352, 78496, 94729, G0279) and professional/technical splits (93000/93005/93010) are de-duplicated at this grain.
@@ -67,7 +67,18 @@ Deliver an investigation script that counts how often each audited Surveillance 
 - **D-18:** A_code_presence has exactly one row per codeset row; zero-count rows are included, not dropped. The check is `nrow(A_code_presence) == nrow(codeset)` — no literal row count in code. For reference, the codeset after the D-20/D-21/D-22 edits has **108 rows** (105 audit baseline + 3 stress-echo rows under Stress test); the brief's "105" is superseded.
 
 ### Small-cell suppression
-- **D-19:** Apply the project's small-cell suppression convention (cells 1–10 → `"<11"`) before the workbook leaves HiPerGator. `suppress_small()` is currently inline in R/106; copy the inline helper into the new script (do not add a dependency on R/106).
+- **D-19:** *(superseded by D-27)* Apply the project's small-cell suppression convention (cells 1–10 → `"<11"`) before the workbook leaves HiPerGator. `suppress_small()` is currently inline in R/106; copy the inline helper into the new script (do not add a dependency on R/106).
+
+### Decisions added after plan review (2026-09-24)
+
+- **D-23 — Staged codeset and row key.** `data/reference/surveillance_codeset.xlsx` is delivered pre-built with D-20/D-21/D-22 already applied (108 rows; sheets KEY, Analysis_Codeset). Every row has a unique `codeset_row_id` (SC001..SC108) that is carried on every matched event, so per-row presence survives de-duplication and prefix matching. `type_filter` holds the bare value (`CH`, `10`, `09`; blank for LAB_RESULT_CM) — never `PX_TYPE='CH'`; the loader rejects any other form. A `plausibility` column marks D-12 rows (`verify`). Blank cells read back as NA and are converted to `""` by the loader.
+- **D-24 — Denominator guards stop, never return empty.** `get_hl_any_dx_ids()` stops (does not `tryCatch` to an empty tibble) if DIAGNOSIS is unavailable, is not a lazy DuckDB tbl, or `get_hl_patient_ids()` returns no IDs. The script checks `get_hl_patient_ids()` directly (not the flag column): both sets non-empty and every confirmed ID in the any-dx set. Anchor = earliest `DX_DATE`, falling back to `ADMIT_DATE`; patients with no usable date are dropped from the denominator and counted in QC.
+- **D-25 — Event window.** Each event is `pre` (before the anchor), `post` (after the anchor, on or before `follow_end`), or `after_followup` (after `follow_end`, or no follow-up date). Only `post` counts toward B/C frequency and person-year rates; `after_followup` is excluded and counted in QC and D. Anchor-day events are `pre` by default (`ANCHOR_DAY_IS_POST <- FALSE`, stated on the KEY sheet; the team may flip it).
+- **D-26 — Person-years.** Pooled rate = post-anchor event dates / total person-years of the whole denominator (not only patients with events). Patients with follow-up of zero or less, or with no follow-up date, contribute 0 person-years and are counted in QC.
+- **D-27 — Two workbooks; suppression in one shared helper.** The script writes an unsuppressed `surveillance_modality_frequency_INTERNAL_<date>.xlsx` (stays on HiPerGator; used for the A_code_presence review) and a release `surveillance_modality_frequency_<date>.xlsx` (counts 1–10 shown as `<11`; derived columns such as percentages, medians and rates blanked where their count is suppressed). Suppression runs after every `stopifnot`. `suppress_small()` / `suppress_table()` live in `R/utils/utils_surveillance.R` (no copy of R/106's helper). The patient-level `.rds` is unsuppressed and stays on HiPerGator.
+- **D-28 — Dates and death.** All CDM dates are parsed with `parse_pcornet_date()` after `collect()`, never with `as.Date()` or compared as strings in SQL. Death date comes from the `DEATH` table (`DEATH_DATE`), earliest per ID. Last encounter = latest `ADMIT_DATE`/`DISCHARGE_DATE` in ENCOUNTER (all types).
+- **D-29 — Pushdown mechanics.** Code matching is pushed down with SQL built by `surv_code_where()` (`REPLACE(UPPER(TRIM(col)), '.', '') IN (...)` / `LIKE 'X%'`), mirroring R/111. HL IDs are copied to a temporary DuckDB table on the same connection (`dbplyr::remote_con()`) and joined with `semi_join()` — no inlined ID vectors. PX_TYPE/DX_TYPE are not filtered in SQL; rows whose type differs from the codeset `type_filter` are kept out of the counts but reported (A: `n_records_other_type`, `other_types`; QC: type distribution) so legacy values such as `C4`/`HC` are visible. LAB rows match on `LAB_LOINC`, or on `LAB_PX` where `LAB_PX_TYPE = 'LC'` when those columns exist.
+- **D-30 — Where the logic lives and how it is tested.** All counting rules are pure functions in a new `R/utils/utils_surveillance.R` (loader, normalization, SQL builders, HL helper, matching, component rule, presence, follow-up, window, frequency, patient-level, suppression), covered by `tests/testthat/test-158-codeset-loader.R` and `tests/testthat/test-158-surveillance-counts.R`. The investigation script only wires DuckDB pulls to these functions. `get_hl_any_dx_ids()` (DuckDB wrapper) stays in `utils_treatment.R` per D-04. Frequency tables: B = primary; C = primary, sensitivity and primary-or-sensitivity side by side (each with the full SURV-04 metric set); submodality rows appear under their parent in B and C.
 
 ### Claude's Discretion
 - Script structure (section headers, defensive sourcing pattern) — follow R/111 as the template.
@@ -86,6 +97,7 @@ Deliver an investigation script that counts how often each audited Surveillance 
 
 ### Existing functions to reuse / extend
 - `R/utils/utils_treatment.R` — `get_hl_patient_ids()` (character-vector-only; `get_hl_any_dx_ids()` is a new function to be added here)
+- `R/utils/utils_surveillance.R` — new in 158-01/158-02 (D-30)
 - `R/utils/utils_cancer.R` — `is_cancer_code()`, `classify_codes()` (reuse for HL prefix logic if applicable)
 - `R/utils/utils_duckdb.R` — `open_pcornet_con()`, `get_pcornet_table()`, `close_pcornet_con()`
 
@@ -109,7 +121,7 @@ Deliver an investigation script that counts how often each audited Surveillance 
 - `get_hl_patient_ids()` (`utils_treatment.R`): Returns `character(0)` on DuckDB failure — extend, don't replace. New `get_hl_any_dx_ids()` should follow the same `tryCatch` + `safe_table()` guard pattern.
 - `is_cancer_code()` / `classify_codes()` (`utils_cancer.R`): Can detect C81* / 201* — evaluate whether these functions already isolate HL codes precisely enough before writing new prefix logic.
 - R/111 section structure: SECTION 1 Setup, SECTION 2 prefix list/pushdown, SECTION 3+ per-CDM-table queries, SECTION N output write — use this as the script skeleton.
-- `suppress_small()` inline in R/106: copy inline (do not source R/106).
+- `suppress_small()` inline in R/106: *(superseded by D-27 — use `suppress_small()`/`suppress_table()` from `utils_surveillance.R`)*.
 
 ### Established Patterns
 - DuckDB pushdown before `collect()` — all scripts from R/111 onward.
@@ -123,6 +135,7 @@ Deliver an investigation script that counts how often each audited Surveillance 
 - Codeset file `data/reference/surveillance_codeset.xlsx` must exist before the script runs; loader function validates required columns on load.
 
 ### Codeset edits required before staging (D-20, D-21, D-22)
+*(Done: the delivered `surveillance_codeset.xlsx` already contains these edits — see D-23. Kept here as the record of what changed.)*
 The audit workbook's `Analysis_Codeset` sheet is the starting point but must be edited before it is staged as `surveillance_codeset.xlsx`:
 1. Add 3 `Stress test` rows for 93350, 93351, 93352 (D-20).
 2. Rename modality `Thyroid stimulating hormone` → `Thyroid function`; add `submodality` column with TSH / Free T4 values (D-21).
@@ -159,4 +172,4 @@ Loader validation (`load_surveillance_codeset()`) must check:
 ---
 
 *Phase: 158-surveillance-modality-frequency*
-*Context gathered: 2026-09-24; D-20..D-22 added 2026-09-24 (codeset-driven implementation of D-06, D-08, D-11)*
+*Context gathered: 2026-09-24; D-20..D-22 added 2026-09-24 (codeset-driven implementation of D-06, D-08, D-11); D-23..D-30 added 2026-09-24 after plan review*
