@@ -29,6 +29,8 @@ source("R/00_config.R")
 if (!exists("load_surveillance_codeset")) source("R/utils/utils_surveillance.R")
 if (!exists("get_hl_any_dx_ids"))         source("R/utils/utils_treatment.R")
 
+if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
+
 # ---- Run constants (all reported on the KEY sheet) ----
 EXTRACT_CUTOFF     <- as.Date(EXTRACT_DATE)          # D-09; from CONFIG (R/00_config.R line 84)
 ANCHOR_DAY_IS_POST <- FALSE                          # D-25: anchor-day events count as pre-anchor
