@@ -612,6 +612,6 @@ Plans:
 **Goal:** Deliver an R investigation script that counts Surveillance Strategy modalities (VariableDetails.xlsx codes, audited codeset staged as data/reference/surveillance_codeset.xlsx) among all patients with >=1 HL diagnosis code (C81* ICD-10 / 201* ICD-9), with a confirmed-cohort flag from get_hl_patient_ids(). Outputs: surveillance_modality_frequency_<date>.xlsx (KEY leftmost, A_code_presence with one row per codeset code incl. zero-count codes, B_modality_primary, C_modality_with_sensitivity, D_pre_vs_post_anchor, QC) plus a patient x modality .rds. Events counted at ID x modality x date grain, post-first-HL-dx only for surveillance. Registered in R/39, R/88, SCRIPT_INDEX; HiPerGator run with team review of A_code_presence before B/C circulate.
 **Requirements:** SURV-01, SURV-02, SURV-03, SURV-04, SURV-05, SURV-06
 **Depends on:** Phase 157
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 **Source spec:** `.planning/phases/158-surveillance-modality-frequency/158-SURVEILLANCE-BRIEF.md` — decisions L-1..L-5, open D-1..D-5.
