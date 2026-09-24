@@ -74,7 +74,8 @@ test_that("loader rejects structural violations", {
                                                        cs_row(codeset_row_id = "SC002")))),
                "Duplicate")
   expect_error(load_surveillance_codeset(write_cs(list(cs_row(),
-                                                       cs_row(code = "93307", code_norm = "93307")))),
+                                                       cs_row(codeset_row_id = "SC002",
+                                                              code = "93307", code_norm = "93307")))),
                "unique")
   expect_error(load_surveillance_codeset(write_cs(list(cs_row(
     code = "6690-2", code_norm = "6690-2", cdm_table = "LAB_RESULT_CM",
