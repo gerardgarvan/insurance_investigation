@@ -295,3 +295,45 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
     NULL
   }
 }
+
+#' Get all patients with at least one HL diagnosis code (SURV-02, D-01..D-04, D-24)
+#'
+#' ICD-10 C81* (DX_TYPE "10") or ICD-9 201* (DX_TYPE "09"), matched in DuckDB
+#' before collect(). Anchor = earliest DX_DATE, falling back to ADMIT_DATE
+#' (hl_any_dx_from_tibble() in utils_surveillance.R). Patients with no usable
+#' date are returned with hl_anchor_date = NA; the caller drops and counts them.
+#'
+#' Unlike get_hl_patient_ids(), this function STOPS on failure instead of
+#' returning an empty result, so a broken query cannot yield N = 0 silently.
+#'
+#' @return tibble: ID (chr), hl_anchor_date (Date), in_confirmed_cohort (lgl)
+get_hl_any_dx_ids <- function() {
+  dx <- safe_table("DIAGNOSIS")
+  if (is.null(dx))
+    stop("get_hl_any_dx_ids(): DIAGNOSIS table unavailable")
+  if (!inherits(dx, "tbl_lazy"))
+    stop("get_hl_any_dx_ids(): safe_table('DIAGNOSIS') returned an in-memory ",
+         "table; a lazy DuckDB tbl is required (L-5)")
+
+  date_cols <- intersect(c("DX_DATE", "ADMIT_DATE"), colnames(dx))
+  raw <- dx |>
+    dplyr::filter(dplyr::sql(paste0(
+      "(TRIM(DX_TYPE) = '10' AND REPLACE(UPPER(TRIM(DX)), '.', '') LIKE 'C81%') OR ",
+      "(TRIM(DX_TYPE) = '09' AND REPLACE(UPPER(TRIM(DX)), '.', '') LIKE '201%')"))) |>
+    dplyr::select(dplyr::all_of(c("ID", "DX", "DX_TYPE", date_cols))) |>
+    dplyr::collect()
+
+  for (dc in c("DX_DATE", "ADMIT_DATE")) {
+    raw[[dc]] <- if (dc %in% names(raw)) parse_pcornet_date(raw[[dc]])
+                 else rep(as.Date(NA), nrow(raw))
+  }
+
+  anchors <- hl_any_dx_from_tibble(raw)
+
+  confirmed <- get_hl_patient_ids()
+  if (length(confirmed) == 0)
+    stop("get_hl_any_dx_ids(): get_hl_patient_ids() returned no IDs; ",
+         "refusing to build in_confirmed_cohort (D-24)")
+
+  anchors |> dplyr::mutate(in_confirmed_cohort = ID %in% confirmed)
+}
