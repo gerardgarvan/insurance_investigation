@@ -615,3 +615,16 @@ Plans:
 **Plans:** 4/4 plans complete
 
 **Source spec:** `.planning/phases/158-surveillance-modality-frequency/158-SURVEILLANCE-BRIEF.md` — decisions L-1..L-5, open D-1..D-5.
+
+### Phase 159: Lab Surveillance Modalities and Per-Patient Date Counts
+
+**Goal:** Add BMP, CMP, LIPID, LFT and KIDNEY as surveillance modalities in R/147, using `lab_code_crosswalk.xlsx` as the code dictionary. Then produce a per-patient table: one row per HL any-dx patient, one column per modality (all 14), holding the number of unique dates the modality occurred after the HL anchor, within follow-up.
+**Requirements**: LAB-01 .. LAB-07
+**Depends on:** Phase 158
+**Plans:** 4 plans (1/4 complete)
+
+Plans:
+- [x] 159-01: Stage codeset, loader extensions (load_lab_analytes, load_modality_lookup), TDD tests
+- [ ] 159-02: build_analyte_events(), build_analyte_presence() in utils_surveillance.R; R/147 integration
+- [ ] 159-03: Per-patient modality date table (LAB-06) and E sheet
+- [ ] 159-04: HiPerGator run, workbook output, R/88 checks
