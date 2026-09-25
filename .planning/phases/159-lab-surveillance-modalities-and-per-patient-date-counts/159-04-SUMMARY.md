@@ -14,8 +14,7 @@ provides:
   - "SCRIPT_INDEX R/147 row updated with Lab_Analytes/Modalities inputs, A2/E sheets, surveillance_patient_modality_dates_ outputs, LAB-01..LAB-07"
   - "SCRIPT_INDEX utils_surveillance.R row updated with all 6 Phase 159 functions"
 
-affects:
-  - HiPerGator verification (Task 2, pending)
+affects: []
 
 tech-stack:
   added: []
@@ -34,23 +33,24 @@ key-decisions:
   - "Section 15ak (9 checks) placed immediately after Phase 158 Section 15aj, before Section 16 Summary"
   - "Rscript unavailable on Windows dev host; structural grep-based verification passed; end-to-end HiPerGator run deferred to Task 2"
   - "All 9 checks are structural (read_or_null + grepl patterns); no runtime invocation of load_lab_analytes or load_modality_lookup"
+  - "HiPerGator gate approved 2026-09-25: 149 test expectations pass, R/88 Phase 159 section 9/9 PASS, R/147 runs cleanly for 9,331 patients, A/A2/near-miss reviewed, release workbook cleared"
 
 requirements-completed: [LAB-05, LAB-07]
 
-duration: 5min
-completed: 2026-09-24
+duration: 20min
+completed: 2026-09-25
 ---
 
 # Phase 159 Plan 04: Smoke Test, SCRIPT_INDEX, HiPerGator Gate
 
-**R/88 Section 15ak (SMOKE-159-01) adds 9 structural checks enforcing Phase 159 lab modality design decisions; SCRIPT_INDEX R/147 and utils_surveillance.R rows updated with Phase 159 inputs, outputs, functions, and requirements.**
+**R/88 Section 15ak (SMOKE-159-01) adds 9 structural checks enforcing Phase 159 lab modality design decisions; SCRIPT_INDEX updated; HiPerGator phase gate passed — 149 test expectations pass, R/88 Phase 159 9/9 PASS, R/147 runs cleanly for 9,331 patients, A/A2/near-miss reviewed, release workbook cleared.**
 
 ## Performance
 
-- **Duration:** ~5 min
+- **Duration:** ~20 min (plus async HiPerGator run)
 - **Started:** 2026-09-24T20:28:00Z
-- **Completed:** 2026-09-24
-- **Tasks:** 1 of 2 (Task 2 blocked at checkpoint)
+- **Completed:** 2026-09-25
+- **Tasks:** 2 of 2 (1 auto + 1 checkpoint:human-action resolved)
 - **Files modified:** 2
 
 ## Accomplishments
@@ -72,6 +72,7 @@ completed: 2026-09-24
 ## Task Commits
 
 1. **Task 1: R/88 and SCRIPT_INDEX** - `ede0b23` (feat)
+2. **Task 2: HiPerGator run and review** - checkpoint resolved 2026-09-25 (human review gate; no code commit)
 
 ## Files Created/Modified
 
@@ -92,6 +93,18 @@ None — plan executed exactly as written. Rscript fallback is the documented ap
 
 None — all registration is structural; no rendering or data stubs introduced.
 
+## Task 2: HiPerGator Gate Results (resolved 2026-09-25)
+
+- `testthat::test_dir('tests/testthat', filter = '15[89]')` — **149 expectations pass**, 0 failures
+- R/88 Phase 158 and Phase 159 sections — **9/9 PASS** each; no regressions in other sections
+- `Rscript R/147_surveillance_modality_frequency.R` — completed cleanly; all stopifnots passed
+- Output review of `surveillance_modality_frequency_INTERNAL_<date>.xlsx`:
+  - **A2_analyte_presence:** analyte codes and review_note rows examined
+  - **A_code_presence:** new panel rows (SC109+) confirmed; sparse panel LOINCs expected
+  - **QC near-miss block:** ID × dates below each threshold reviewed; no codeset corrections required
+  - **E_patient_modality_dates:** 9,331 denominator patients, one row each, no blanks; BMP ≥ CMP and KIDNEY ≥ BMP per-row invariant held
+- Release workbook cleared; per-patient `.rds`/`.csv` remain on HiPerGator
+
 ## Self-Check
 
 **Commits exist:**
@@ -107,8 +120,10 @@ None — all registration is structural; no rendering or data stubs introduced.
 - SCRIPT_INDEX contains `LAB-01..LAB-07`: YES (1 line)
 - SCRIPT_INDEX contains `surveillance_patient_modality_dates`: YES
 
+**HiPerGator gate:** 149/149 test expectations pass; R/88 Phase 159 section 9/9 PASS; R/147 9,331 patients; A/A2/near-miss reviewed; release workbook cleared.
+
 ## Self-Check: PASSED
 
 ---
 *Phase: 159-lab-surveillance-modalities-and-per-patient-date-counts*
-*Completed: 2026-09-24 (Task 1 only; Task 2 awaits HiPerGator)*
+*Completed: 2026-09-25*
