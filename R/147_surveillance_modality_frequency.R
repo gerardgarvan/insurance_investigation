@@ -7,6 +7,8 @@
 #           frequency sheets (B/C/D) circulate. Phase 159 adds the BMP, CMP,
 #           LIPID, LFT and KIDNEY lab modalities (analyte rules) and a
 #           per-patient table of unique post-anchor dates per modality.
+#           Phase 160 adds the missing-analyte diagnostic (A3), female-denominator
+#           columns for breast imaging, and a generated Codeset_summary sheet.
 #
 # Inputs:   data/reference/surveillance_codeset.xlsx (sheets Analysis_Codeset,
 #           Lab_Analytes, Modalities)
@@ -19,7 +21,8 @@
 #   surveillance_patient_modality_dates_<date>.rds/.csv   one row per ID (LAB-06); stays on HiPerGator
 #
 # Requirements: SURV-01..SURV-06, LAB-01..LAB-07
-# Decisions:    158-CONTEXT.md D-01..D-30; 159-CONTEXT.md D-01..D-27
+# Decisions:    158-CONTEXT.md D-01..D-30; 159-CONTEXT.md D-01..D-27;
+#               160-CONTEXT.md D-01..D-13
 # All counting logic lives in R/utils/utils_surveillance.R (unit-tested).
 # ==============================================================================
 
@@ -40,6 +43,11 @@ if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
 EXTRACT_CUTOFF     <- as.Date(EXTRACT_DATE)          # D-09; from CONFIG (R/00_config.R line 84)
 ANCHOR_DAY_IS_POST <- FALSE                          # D-25: anchor-day events count as pre-anchor
 SUPPRESS_THRESHOLD <- 10L                            # D-27
+A3_SEED            <- 2026L                          # 160 D-03: fixed sampling seed
+A3_MAX_DAYS        <- 5000L                          # 160 D-03: max sampled days per A3 group
+A3_TOP_N           <- 25L                            # 160 D-08: candidates kept per rule x missing analyte
+CODESET_PATH       <- file.path("data", "reference", "surveillance_codeset.xlsx")
+CROSSWALK_PATH     <- file.path("data", "reference", "lab_code_crosswalk.xlsx")
 run_date <- format(Sys.Date(), "%Y%m%d")
 out_dir  <- CONFIG$cache$outputs_dir
 
@@ -52,6 +60,7 @@ message(glue("=== Surveillance modality frequency (run {run_date}) ==="))
 codeset    <- load_surveillance_codeset()
 analytes   <- load_lab_analytes(codeset = codeset)       # Phase 159 LAB-01
 mod_lookup <- load_modality_lookup(codeset = codeset)    # Phase 159 LAB-06
+elig       <- modality_eligible_sex(mod_lookup)          # Phase 160 IMP-04
 message(glue("  Codeset: {nrow(codeset)} rows, {n_distinct(codeset$modality)} modalities; ",
              "Lab_Analytes: {nrow(analytes)} codes for {n_distinct(analytes$analyte)} analytes"))
 
@@ -89,6 +98,7 @@ lab_tbl   <- lazy_table("LAB_RESULT_CM")
 dx_tbl    <- lazy_table("DIAGNOSIS")
 enc_tbl   <- lazy_table("ENCOUNTER")
 death_tbl <- lazy_table("DEATH")
+demo_tbl  <- lazy_table("DEMOGRAPHIC")                   # Phase 160 IMP-04
 
 con <- dbplyr::remote_con(proc_tbl)
 hl_ids_tbl <- dplyr::copy_to(con, tibble(ID = denominator$ID),
@@ -240,6 +250,15 @@ death <- tibble(ID = death_raw$ID, death_date = parse_pcornet_date(death_raw$DEA
 
 followup <- compute_followup(denominator, last_enc, death, EXTRACT_CUTOFF)
 
+# Sex for the eligible-sex views (160 IMP-04); missing or non-F/M -> "UN" downstream
+demo_raw <- demo_tbl |>
+  semi_join(hl_ids_tbl, by = "ID") |>
+  select(ID, SEX) |>
+  distinct() |>
+  collect()
+sex_lookup <- tibble(ID = demo_raw$ID, sex = as.character(demo_raw$SEX)) |>
+  filter(ID %in% followup$ID)
+
 # ==============================================================================
 # SECTION 7: MATCH, COMPONENT RULE, WINDOW ----
 # ==============================================================================
@@ -277,9 +296,16 @@ mod_keys <- tibble(modality = names(mod_lookup))   # display order from the Moda
 sub_keys <- codeset |> filter(submodality != "") |>
   distinct(modality, submodality) |> arrange(modality, submodality)
 
+# Modality-level rows get the eligible-sex view where the Modalities sheet asks
+# for it (160 IMP-04); all-patient columns are unchanged (L-5).
+mod_stats <- function(tiers) {
+  bind_rows(lapply(mod_keys$modality, function(m)
+    compute_eligible_modality_stats(events_win, followup, tibble(modality = m), tiers,
+                                    sex_lookup, elig[[m]])))
+}
 stats_for <- function(tiers) {
   bind_rows(
-    compute_modality_stats(events_win, followup, mod_keys, tiers) |>
+    mod_stats(tiers) |>
       mutate(submodality = "(all)"),
     compute_modality_stats(events_win, followup, sub_keys, tiers,
                            by = c("modality", "submodality"))) |>
@@ -290,6 +316,11 @@ stats_for <- function(tiers) {
 B_primary <- stats_for("primary")
 S_sens    <- stats_for("sensitivity")
 S_any     <- stats_for(c("primary", "sensitivity"))
+
+plain_B <- compute_modality_stats(events_win, followup, mod_keys, "primary") |> arrange(modality)
+chk_B   <- B_primary |> filter(submodality == "(all)") |> select(all_of(names(plain_B))) |> arrange(modality)
+stopifnot("L-5: eligibility must not change the all-patient B columns" =
+            isTRUE(all.equal(as.data.frame(chk_B), as.data.frame(plain_B), check.attributes = FALSE)))
 
 prefix_cols <- function(df, p) rename_with(df, ~ paste0(p, .x), -c(modality, submodality))
 C_with_sensitivity <- prefix_cols(B_primary, "primary_") |>
@@ -352,6 +383,63 @@ stopifnot(
   "SC-6 nesting: BMP <= KIDNEY per ID" = nest_le("BMP", "KIDNEY")
 )
 
+# ---- A3: missing-analyte diagnostic (160 IMP-02; report only, L-2) ----
+a3 <- summarise_missing_analyte(analyte_hits, codeset)
+a3_chk <- full_join(
+  an_rules$near_miss |>
+    filter(match == "analyte_all_same_day", n_listed >= 2, n_analytes_present == n_listed - 1L) |>
+    select(codeset_row_id, n_near = n_id_dates),
+  a3$overall |> group_by(codeset_row_id) |> summarise(n_a3 = sum(n_id_dates), .groups = "drop"),
+  by = "codeset_row_id") |>
+  mutate(across(c(n_near, n_a3), ~ coalesce(as.integer(.x), 0L)))
+stopifnot("A3 block 1 must reconcile with the near-miss table at n_listed - 1" =
+            all(a3_chk$n_near == a3_chk$n_a3))
+
+a3_sample <- select_a3_sample(a3$days, n_max = A3_MAX_DAYS, seed = A3_SEED)
+a3_days   <- distinct(a3_sample, ID, event_date)
+a3_date_cols <- intersect(c("RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE"), colnames(lab_tbl))
+a3_dialect <- if (inherits(con, "duckdb_connection")) "duckdb" else "sqlite"
+a3_cand <- tibble(ID = character(), event_date = as.Date(character()))
+if (nrow(a3_days) > 0) {
+  # 160 D-09: join sampled ID x dates inside the database (L-4), then re-parse
+  # and keep exact matches in R. Lab_Analytes LOINCs are excluded in SQL.
+  a3_days_tbl <- dplyr::copy_to(
+    con, transmute(a3_days, ID, a3_date = if (a3_dialect == "duckdb") event_date else format(event_date)),
+    name = "tmp_surv_a3_days", temporary = TRUE, overwrite = TRUE)
+  known_loinc <- analytes$code_norm[analytes$cdm_table == "LAB_RESULT_CM"]
+  a3_raw <- lab_tbl |>
+    mutate(a3_date = dplyr::sql(surv_sql_date_expr(a3_date_cols, a3_dialect))) |>
+    inner_join(a3_days_tbl, by = c("ID", "a3_date")) |>
+    filter(dplyr::sql(paste0("(LAB_LOINC IS NULL OR TRIM(LAB_LOINC) = '' OR NOT ",
+                             surv_code_where("LAB_LOINC", known_loinc), ")"))) |>
+    select(any_of(c("ID", "LAB_LOINC", "LAB_PX", "LAB_PX_TYPE", "RAW_LAB_CODE",
+                    "RAW_LAB_NAME", "RESULT_UNIT", a3_date_cols))) |>
+    distinct() |>
+    collect()
+  a3_cand <- a3_raw |>
+    mutate(event_date = pick_date(a3_raw, a3_date_cols)) |>
+    semi_join(a3_days, by = c("ID", "event_date"))
+}
+a3_day_cover <- if (nrow(a3_days)) nrow(distinct(a3_cand, ID, event_date)) / nrow(a3_days) else NA_real_
+if (!is.na(a3_day_cover) && a3_day_cover < 0.5)
+  message(glue("  WARNING A3: only {round(100 * a3_day_cover)}% of sampled days returned lab rows; ",
+               "check the date format behind surv_sql_date_expr() before trusting block 2"))
+
+a3_excluded <- readxl::read_excel(CODESET_PATH, sheet = "Lab_Analytes_Excluded", col_types = "text")
+a3_master <- character()
+if (file.exists(CROSSWALK_PATH)) {
+  a3_master <- normalize_surv_code(readxl::read_excel(CROSSWALK_PATH, sheet = "MASTER", col_types = "text")$code)
+} else {
+  message("  A3: crosswalk not found at ", CROSSWALK_PATH, "; in_master will be FALSE")
+}
+a3_rank <- rank_candidate_codes(a3_cand, a3_sample, analytes, a3_excluded, a3_master, top_n = A3_TOP_N)
+a3_raw_top <- any(a3_rank$code_source == "RAW" & a3_rank$rank <= 5)
+if (a3_raw_top)
+  message("  A3: a top-5 candidate exists only as RAW_LAB_CODE (no LOINC). Adding it needs a new ",
+          "Lab_Analytes match column - flag at checkpoint 1, do not improvise.")
+
+codeset_summary <- build_codeset_summary(codeset, analytes, A2_analyte_presence)   # 160 IMP-05
+
 # ---- QC ----
 count_by <- function(df, col) if (nrow(df)) paste(names(table(df[[col]])), table(df[[col]]), sep = "=", collapse = "; ") else ""
 qc <- tibble::tribble(
@@ -381,7 +469,11 @@ qc <- tibble::tribble(
   "Lab_Analytes codes present", sum(A2_analyte_presence$present), glue("of {nrow(analytes)}"),
   "A2 rows minus Lab_Analytes rows", nrow(A2_analyte_presence) - nrow(analytes), "must be 0",
   "Per-patient table rows minus denominator N", nrow(patient_wide) - nrow(denominator), "must be 0",
-  "A_code_presence rows minus codeset rows", nrow(A_code_presence) - nrow(codeset), "must be 0"
+  "A_code_presence rows minus codeset rows", nrow(A_code_presence) - nrow(codeset), "must be 0",
+  "Denominator by DEMOGRAPHIC.SEX", nrow(followup), count_by(left_join(select(followup, ID), sex_lookup, by = "ID") |> mutate(sex = coalesce(sex, "missing")), "sex"),
+  "A3 sampled days (near-miss + comparison)", nrow(a3_days), glue("seed {A3_SEED}; max {A3_MAX_DAYS} per group; one day per patient per group"),
+  "A3 candidate lab rows on sampled days", nrow(a3_cand), glue("{round(100 * coalesce(a3_day_cover, 0))}% of sampled days returned rows"),
+  "A3 top-5 candidate only as RAW_LAB_CODE", as.integer(a3_raw_top), "1 = needs a new match column (flag at checkpoint)"
 )
 
 # ==============================================================================
@@ -416,11 +508,19 @@ key <- tibble::tribble(
   "Lab nesting (159 D-01)", "Nested: a CMP day also counts as a BMP, LFT and KIDNEY day, because those analytes were resulted. BMP/CMP/LFT/KIDNEY counts are not additive. KIDNEY primary is creatinine alone, so KIDNEY counts run at least as high as BMP.",
   "Lab analyte codes", "Lab_Analytes sheet: codes chosen from lab_code_crosswalk.xlsx by exact LOINC component and specimen (blood: Ser/Plas, Ser, Plas, Ser/Plas/Bld, Bld, BldV; urine only for the urine kidney markers), plus single-analyte CPT codes. Fingerstick/test-strip, blood-gas pCO2, electrophoresis and qualitative codes are excluded (Lab_Analytes_Excluded).",
   "A2_analyte_presence", "One row per Lab_Analytes code: results (distinct ID x code x date), patients, first/last date. Review rows with a review_note (possible blood-gas or urinalysis source) and glucose first.",
-  "E_patient_modality_dates", "INTERNAL only. One row per denominator patient; n_dates_<modality> = distinct post-anchor dates within follow-up (primary); n_dates_<modality>_any = primary or sensitivity. Zeros, never blank."
+  "E_patient_modality_dates", "INTERNAL only. One row per denominator patient; n_dates_<modality> = distinct post-anchor dates within follow-up (primary); n_dates_<modality>_any = primary or sensitivity. Zeros, never blank.",
+  "A3_missing_analyte (Phase 160)", "Report only - never changes any count (L-2). Block 1: days with exactly one listed analyte missing, by missing analyte, overall and by year. Block 2: lab codes not in Lab_Analytes, ranked by lift = share of sampled near-miss days with the code minus share of sampled complete days with it; a replacement for the missing analyte scores near 1, routine labs near 0. Sampled: one day per patient, up to A3_MAX_DAYS days per group, fixed seed. Release copy: LOINC-level only.",
+  "Breast imaging denominators (160 D-04)", paste0("All-patient columns measure any breast imaging across the full cohort; female columns measure screening-population uptake (guideline-style) among women (N = ",
+    format(sum(left_join(select(followup, ID), sex_lookup, by = "ID")$sex %in% "F"), big.mark = ","), "). Male and unknown-sex patients with a breast imaging event are shown in *_other_sex columns. Release: if either the female or the other-sex count is 1-10, both are withheld, because all-patient = female + other-sex."),
+  "Codeset_summary (Phase 160)", "Generated from the loaded codeset on every run: codes per modality x tier x match with thresholds, and codes per analyte with how many were present in this run. Replaces the hand-built code_mapping_summary.xlsx."
 )
 
 write_workbook <- function(path, release) {
   sup <- function(df, rules) if (release) suppress_table(df, rules, SUPPRESS_THRESHOLD) else df
+  sup_elig <- function(df, prefixes = "") {   # 160 D-11 complementary suppression
+    if (release) for (p in prefixes) df <- suppress_eligible_columns(df, p, SUPPRESS_THRESHOLD)
+    df
+  }
   stat_rules <- function(p = "") setNames(list(
     paste0(p, c("pct_of_denominator", "dates_per_pt_median", "dates_per_pt_q1",
                 "dates_per_pt_q3", "dates_per_pt_max")),
@@ -437,12 +537,14 @@ write_workbook <- function(path, release) {
     A2_analyte_presence = sup(A2_analyte_presence, list(n_results = character(), n_patients = character(),
                                                         n_patient_dates = character(),
                                                         n_results_other_type = character())),
-    B_modality_primary = sup(B_primary, stat_rules()),
-    C_modality_with_sensitivity = sup(C_with_sensitivity,
+    A3_missing_analyte = sup(a3$overall, list(n_id_dates = character())),
+    B_modality_primary = sup(sup_elig(B_primary), stat_rules()),
+    C_modality_with_sensitivity = sup(sup_elig(C_with_sensitivity, c("primary_", "sensitivity_", "any_")),
       c(stat_rules("primary_"), stat_rules("sensitivity_"), stat_rules("any_"))),
     D_pre_vs_post_anchor = sup(D_pre_vs_post, setNames(rep(list(character()), length(n_cols_D)), n_cols_D)),
     E_patient_modality_dates = if (release) NULL else patient_wide,   # patient rows: INTERNAL only
-    QC = if (release) mutate(qc, value = suppress_small(value, SUPPRESS_THRESHOLD)) else qc
+    QC = if (release) mutate(qc, value = suppress_small(value, SUPPRESS_THRESHOLD)) else qc,
+    Codeset_summary = codeset_summary$by_modality
   )
   sheets <- sheets[!vapply(sheets, is.null, logical(1))]
   near_miss_out <- if (release)
@@ -463,6 +565,24 @@ write_workbook <- function(path, release) {
   writeData(wb, "QC", "Lab analyte rules: ID x dates by number of listed analytes present (qualifies = met the rule)",
             startRow = nm_row - 1L)
   writeData(wb, "QC", near_miss_out, startRow = nm_row, headerStyle = hdr)
+  # A3 blocks 2-3 and Codeset_summary block 2, under each sheet's first table
+  a3_year_out <- sup(a3$by_year, list(n_id_dates = character()))
+  a3_rank_out <- if (release)
+    a3_rank |> filter(code_source != "RAW") |> select(-top_raw_code, -top_raw_name) |>
+      (\(d) sup(d, list(n_near_days = c("coverage_near", "lift"),
+                         n_control_days = c("coverage_control", "lift"),
+                         n_near_sampled = character(), n_control_sampled = character())))()
+  else a3_rank
+  r <- nrow(sheets$A3_missing_analyte) + 4L
+  writeData(wb, "A3_missing_analyte", "Block 1b: near-miss days by missing analyte and calendar year", startRow = r - 1L)
+  writeData(wb, "A3_missing_analyte", a3_year_out, startRow = r, headerStyle = hdr)
+  r <- r + nrow(a3_year_out) + 4L
+  writeData(wb, "A3_missing_analyte", paste0("Block 2: candidate codes not in Lab_Analytes, ranked by lift within rule x missing analyte",
+                                             if (release) " (LOINC-level only)" else ""), startRow = r - 1L)
+  writeData(wb, "A3_missing_analyte", a3_rank_out, startRow = r, headerStyle = hdr)
+  r <- nrow(sheets$Codeset_summary) + 4L
+  writeData(wb, "Codeset_summary", "Codes per analyte (n_codes_present = codes seen in this run)", startRow = r - 1L)
+  writeData(wb, "Codeset_summary", codeset_summary$by_analyte, startRow = r, headerStyle = hdr)
   absent <- which(!A_code_presence$present) + 1L
   if (length(absent))
     addStyle(wb, "A_code_presence", flag, rows = absent,
