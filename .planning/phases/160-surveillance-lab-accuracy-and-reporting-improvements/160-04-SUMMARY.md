@@ -74,24 +74,29 @@ None. All documentation paths are complete and all R/88 checks reference real sy
 
 **Task 2 (HiPerGator run + A3 review)** — COMPLETE (checkpoint:human-verify).
 A3 confirmed codes: 2026-3 (CO2 CONTENT), 1752-5 (ALBUMIN), 45066-8 (Creatinine). No new match column needed. 1756-6 deliberately excluded.
+A3 re-run confirmed: 1756-6 (ALBUMIN, g/dL) carries serum albumin on its own days — present on 61% of CMP days still missing albumin after LA190-LA192.
 
-**Task 3 (add confirmed codes + before/after figures)** — CODESET COMMITTED. Awaiting HiPerGator re-run.
+**Task 3 (add confirmed codes + before/after figures)** — COMPLETE.
 
-Commit: f8b0f5e — feat(160-04): add A3-confirmed CO2/albumin/creatinine codes to Lab_Analytes
+Commits:
+- f8b0f5e — feat(160-04): add A3-confirmed CO2/albumin/creatinine codes to Lab_Analytes (LA190-LA192)
+- 7968afe — feat(160-04): add LA193 (1756-6 albumin) from A3 re-run
 
-### Before/After Table (HiPerGator re-run pending)
+### Before/After Table
 
-| Metric | Before (2026-09-25 run) | After |
-|--------|------------------------|-------|
-| SC125 near-miss (7 of 8) | 51,386 | TBD |
-| SC131 near-miss (13 of 14) | 48,677 | TBD |
-| BMP primary n_patients | 8,131 | TBD |
-| BMP primary total_event_dates | 218,616 | TBD |
-| CMP primary n_patients | 7,570 | TBD |
-| CMP primary total_event_dates | 154,135 | TBD |
-| A2 n_patient_dates LA190 (2026-3 / CO2) | — | TBD |
-| A2 n_patient_dates LA191 (1752-5 / ALBUMIN) | — | TBD |
-| A2 n_patient_dates LA192 (45066-8 / CREATININE) | — | TBD |
+| Metric | Before (2026-09-25 run) | After LA190-LA192 | After LA193 |
+|--------|------------------------|-------------------|-------------|
+| SC131 CMP 13-of-14 near-miss | — | 13,293 | TBD |
+| A3 ALBUMIN-missing days | — | 5,084 | TBD |
+| CMP complete days | — | 115,175 | TBD |
+| CMP primary n_patients | 7,570 | 7,660 | TBD |
+| CMP primary total_event_dates | 154,135 | 157,074 | TBD |
+| A2 n_patient_dates LA190 (2026-3 / CO2) | — | TBD | TBD |
+| A2 n_patient_dates LA191 (1752-5 / ALBUMIN) | — | TBD | TBD |
+| A2 n_patient_dates LA192 (45066-8 / CREATININE) | — | TBD | TBD |
+| A2 n_patient_dates LA193 (1756-6 / ALBUMIN) | — | — | TBD |
+
+**Remaining analyte gaps:** CO2, total protein, and glucose had no candidate code on either A3 run. Treated as genuinely missing results; no further action in Phase 160.
 
 ## Verification Status
 
