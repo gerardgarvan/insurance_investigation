@@ -684,3 +684,294 @@ build_patient_modality_dates <- function(events_win, followup, lookup) {
             "No NA counts" = !anyNA(wide[cols]))
   wide
 }
+
+# ------------------------------------------------------------------------------
+# Phase 160: missing-analyte diagnostic, eligible denominators, codeset summary
+# ------------------------------------------------------------------------------
+
+#' A3 block 1 (IMP-02, 160 D-02): for every analyte_all_same_day rule row with
+#' >= 2 listed analytes, the ID x dates with exactly n_listed - 1 listed
+#' analytes present, attributed to the one missing analyte. Also returns the
+#' complete days (all listed analytes present), which 160 D-08 uses as the
+#' comparison group for block 2. Same inputs and filters as
+#' build_analyte_events(), so totals reconcile with its near-miss table.
+#' @return list(days, overall, by_year)
+#'   days:    codeset_row_id, modality, ID, event_date, day_type
+#'            ("near_miss" / "complete"), missing_analyte (NA on complete days)
+#'   overall: codeset_row_id, modality, n_listed, missing_analyte, n_id_dates
+#'   by_year: as overall plus calendar_year
+summarise_missing_analyte <- function(hits, codeset) {
+  empty_days <- tibble::tibble(codeset_row_id = character(), modality = character(),
+                               ID = character(), event_date = as.Date(character()),
+                               day_type = character(), missing_analyte = character())
+  rules <- codeset |> dplyr::filter(match == "analyte_all_same_day")
+  rules <- rules[vapply(rules$code_norm, function(z) length(surv_components(z)),
+                        integer(1)) >= 2, , drop = FALSE]
+
+  day_an <- hits |>
+    dplyr::filter(type_ok, !is.na(event_date)) |>
+    dplyr::distinct(ID, event_date, analyte)
+
+  days <- dplyr::bind_rows(empty_days, lapply(seq_len(nrow(rules)), function(i) {
+    r <- rules[i, ]
+    listed <- surv_components(r$code_norm)
+    n_l <- length(listed)
+    present <- dplyr::filter(day_an, analyte %in% listed)
+    by_day <- dplyr::count(present, ID, event_date, name = "n_present")
+    near <- dplyr::filter(by_day, n_present == n_l - 1L)
+    missing <- near |>
+      dplyr::select(ID, event_date) |>
+      tidyr::crossing(analyte = listed) |>
+      dplyr::anti_join(present, by = c("ID", "event_date", "analyte")) |>
+      dplyr::transmute(ID, event_date, missing_analyte = analyte)
+    dplyr::bind_rows(
+      missing |> dplyr::mutate(day_type = "near_miss"),
+      by_day |> dplyr::filter(n_present == n_l) |>
+        dplyr::transmute(ID, event_date, day_type = "complete",
+                         missing_analyte = NA_character_)) |>
+      dplyr::mutate(codeset_row_id = r$codeset_row_id, modality = r$modality,
+                    n_listed = n_l)
+  }))
+  if (!"n_listed" %in% names(days)) days$n_listed <- integer()
+
+  near <- dplyr::filter(days, day_type == "near_miss")
+  overall <- near |>
+    dplyr::count(codeset_row_id, modality, n_listed, missing_analyte, name = "n_id_dates") |>
+    dplyr::arrange(codeset_row_id, dplyr::desc(n_id_dates))
+  by_year <- near |>
+    dplyr::mutate(calendar_year = as.integer(format(event_date, "%Y"))) |>
+    dplyr::count(codeset_row_id, modality, n_listed, missing_analyte, calendar_year,
+                 name = "n_id_dates") |>
+    dplyr::arrange(codeset_row_id, missing_analyte, calendar_year)
+  list(days = dplyr::select(days, -n_listed), overall = overall, by_year = by_year)
+}
+
+#' Deterministic sample of A3 days for the candidate-code query (160 D-03, D-08,
+#' D-09). Near-miss days are sampled within each rule x missing analyte, and
+#' complete (comparison) days within each rule; one day per patient per group;
+#' at most n_max days per group. Rows are sorted before sampling so the result
+#' does not depend on the order DuckDB returned them in.
+select_a3_sample <- function(days, n_max = 5000L, seed = 2026L) {
+  if (nrow(days) == 0) return(dplyr::mutate(days, sample_group = character()))
+  d <- days |>
+    dplyr::mutate(sample_group = paste(codeset_row_id, day_type,
+                                       dplyr::coalesce(missing_analyte, ""), sep = "|")) |>
+    dplyr::arrange(sample_group, ID, event_date)
+  set.seed(seed)
+  d$.u <- stats::runif(nrow(d))
+  d |>
+    dplyr::group_by(sample_group, ID) |>
+    dplyr::slice_min(.u, n = 1, with_ties = FALSE) |>
+    dplyr::group_by(sample_group) |>
+    dplyr::slice_min(.u, n = n_max, with_ties = FALSE) |>
+    dplyr::ungroup() |>
+    dplyr::select(-.u) |>
+    dplyr::arrange(sample_group, ID, event_date)
+}
+
+#' SQL expression giving the first non-missing of several raw date columns as
+#' a DATE, for joining sampled ID x dates inside the database (160 D-09).
+#' DuckDB: tries ISO text, then MM/DD/YYYY text; SQLite (local fixtures): DATE().
+#' Rows it cannot convert simply do not join; R re-parses and filters exactly.
+surv_sql_date_expr <- function(cols, dialect = c("duckdb", "sqlite")) {
+  dialect <- match.arg(dialect)
+  one <- function(col) switch(dialect,
+    duckdb = sprintf(paste0("COALESCE(TRY_CAST(LEFT(CAST(%1$s AS VARCHAR), 10) AS DATE), ",
+                            "CAST(TRY_STRPTIME(CAST(%1$s AS VARCHAR), '%%m/%%d/%%Y') AS DATE))"), col),
+    sqlite = sprintf("DATE(%s)", col))
+  if (length(cols) == 1) return(one(cols))
+  paste0("COALESCE(", paste(vapply(cols, one, character(1)), collapse = ", "), ")")
+}
+
+#' A3 block 2 (IMP-02, 160 D-08): rank lab codes that are not in Lab_Analytes by
+#' how much more often they appear on near-miss days than on complete days of
+#' the same rule. A replacement code for the missing analyte scores near 1
+#' (present on near-miss days, absent on complete days); routine labs such as
+#' hemoglobin appear on both and score near 0.
+#' @param candidates LAB_RESULT_CM rows on sampled days: ID, event_date and any
+#'   of LAB_LOINC, LAB_PX, LAB_PX_TYPE, RAW_LAB_CODE, RAW_LAB_NAME, RESULT_UNIT
+#' @param sample select_a3_sample() output
+#' @param analytes Lab_Analytes; excluded: Lab_Analytes_Excluded (code, reason)
+#' @param master_codes normalized crosswalk MASTER codes (character)
+#' @param top_n rows kept per rule x missing analyte
+rank_candidate_codes <- function(candidates, sample, analytes, excluded,
+                                 master_codes = character(), top_n = 25L) {
+  out_cols <- c("codeset_row_id", "modality", "missing_analyte", "rank", "code_source",
+                "code_norm", "top_raw_code", "top_raw_name", "top_unit",
+                "n_near_days", "n_near_sampled", "coverage_near",
+                "n_control_days", "n_control_sampled", "coverage_control", "lift",
+                "in_excluded", "excluded_reason", "in_master")
+  empty <- tibble::as_tibble(stats::setNames(
+    lapply(out_cols, function(x) if (x %in% c("rank", "n_near_days", "n_near_sampled",
+                                              "n_control_days", "n_control_sampled")) integer()
+                                 else if (x %in% c("coverage_near", "coverage_control", "lift")) numeric()
+                                 else if (x %in% c("in_excluded", "in_master")) logical()
+                                 else character()), out_cols))
+  if (nrow(candidates) == 0 || nrow(sample) == 0) return(empty)
+
+  col <- function(nm) if (nm %in% names(candidates)) trimws(dplyr::coalesce(as.character(candidates[[nm]]), "")) else rep("", nrow(candidates))
+  loinc <- col("LAB_LOINC"); lpx <- col("LAB_PX"); lpxt <- toupper(col("LAB_PX_TYPE"))
+  raw_code <- col("RAW_LAB_CODE")
+  cand <- tibble::tibble(
+    ID = candidates$ID, event_date = candidates$event_date,
+    code_source = dplyr::case_when(nzchar(loinc) ~ "LOINC",
+                                   lpxt == "LC" & nzchar(lpx) ~ "LAB_PX",
+                                   nzchar(raw_code) ~ "RAW", TRUE ~ NA_character_),
+    code_norm = normalize_surv_code(dplyr::case_when(nzchar(loinc) ~ loinc,
+                                                     lpxt == "LC" & nzchar(lpx) ~ lpx,
+                                                     TRUE ~ raw_code)),
+    raw_code = raw_code, raw_name = col("RAW_LAB_NAME"), unit = col("RESULT_UNIT")) |>
+    dplyr::filter(!is.na(code_source)) |>
+    dplyr::filter(!(code_source != "RAW" & code_norm %in% analytes$code_norm))
+
+  # Most common raw code / name / unit per code (display only)
+  top_of <- function(x) { x <- x[nzchar(x)]; if (!length(x)) "" else names(sort(table(x), decreasing = TRUE))[1] }
+  labels <- cand |>
+    dplyr::group_by(code_source, code_norm) |>
+    dplyr::summarise(top_raw_code = top_of(raw_code), top_raw_name = top_of(raw_name),
+                     top_unit = top_of(unit), .groups = "drop")
+  cand_days <- dplyr::distinct(cand, ID, event_date, code_source, code_norm)
+
+  ctrl <- sample |> dplyr::filter(day_type == "complete") |>
+    dplyr::distinct(codeset_row_id, ID, event_date)
+  near <- sample |> dplyr::filter(day_type == "near_miss") |>
+    dplyr::distinct(codeset_row_id, modality, missing_analyte, ID, event_date)
+  if (nrow(near) == 0) return(empty)
+
+  near_n <- dplyr::count(near, codeset_row_id, modality, missing_analyte, name = "n_near_sampled")
+  ctrl_n <- dplyr::count(ctrl, codeset_row_id, name = "n_control_sampled")
+  near_hits <- near |>
+    dplyr::inner_join(cand_days, by = c("ID", "event_date"), relationship = "many-to-many") |>
+    dplyr::count(codeset_row_id, modality, missing_analyte, code_source, code_norm,
+                 name = "n_near_days")
+  ctrl_hits <- ctrl |>
+    dplyr::inner_join(cand_days, by = c("ID", "event_date"), relationship = "many-to-many") |>
+    dplyr::count(codeset_row_id, code_source, code_norm, name = "n_control_days")
+
+  excl <- tibble::tibble(code_norm = normalize_surv_code(excluded$code),
+                         excluded_reason = as.character(excluded$reason)) |>
+    dplyr::distinct(code_norm, .keep_all = TRUE)
+
+  res <- near_hits |>
+    dplyr::left_join(near_n, by = c("codeset_row_id", "modality", "missing_analyte")) |>
+    dplyr::left_join(ctrl_hits, by = c("codeset_row_id", "code_source", "code_norm")) |>
+    dplyr::left_join(ctrl_n, by = "codeset_row_id") |>
+    dplyr::mutate(n_control_days = dplyr::coalesce(n_control_days, 0L),
+                  n_control_sampled = dplyr::coalesce(n_control_sampled, 0L),
+                  coverage_near = n_near_days / n_near_sampled,
+                  coverage_control = dplyr::if_else(n_control_sampled > 0,
+                                                    n_control_days / n_control_sampled, NA_real_),
+                  lift = coverage_near - dplyr::coalesce(coverage_control, 0)) |>
+    dplyr::left_join(labels, by = c("code_source", "code_norm")) |>
+    dplyr::left_join(excl, by = "code_norm") |>
+    dplyr::mutate(in_excluded = !is.na(excluded_reason),
+                  excluded_reason = dplyr::coalesce(excluded_reason, ""),
+                  in_master = code_norm %in% master_codes) |>
+    dplyr::group_by(codeset_row_id, missing_analyte) |>
+    dplyr::arrange(dplyr::desc(lift), dplyr::desc(n_near_days), code_norm, .by_group = TRUE) |>
+    dplyr::mutate(rank = dplyr::row_number()) |>
+    dplyr::filter(rank <= top_n) |>
+    dplyr::ungroup()
+  dplyr::bind_rows(empty, res)[, out_cols]
+}
+
+#' B/C statistics with an optional sex-specific view (IMP-04, 160 D-04/D-10).
+#' All-patient columns come from compute_modality_stats() unchanged (L-5).
+#' When eligible_sex is "F" or "M", adds the eligible-sex columns and the
+#' other/unknown-sex counts. Patients missing from sex_lookup, or with a blank
+#' or non-F/M sex, count as "UN" (other/unknown).
+compute_eligible_modality_stats <- function(events, followup, keys, tiers,
+                                            sex_lookup, eligible_sex = "",
+                                            by = "modality") {
+  base <- compute_modality_stats(events, followup, keys, tiers, by)
+  if (is.null(eligible_sex) || eligible_sex == "") return(base)
+
+  sx <- followup |>
+    dplyr::select(ID) |>
+    dplyr::left_join(dplyr::distinct(sex_lookup, ID, .keep_all = TRUE), by = "ID") |>
+    dplyr::mutate(sex = toupper(trimws(dplyr::coalesce(as.character(sex), ""))),
+                  sex = dplyr::if_else(sex %in% c("F", "M"), sex, "UN"))
+  e_ids <- sx$ID[sx$sex == eligible_sex]
+  fu_e <- dplyr::filter(followup, ID %in% e_ids)
+  fu_o <- dplyr::filter(followup, !ID %in% e_ids)
+  st <- function(fu) {
+    if (nrow(fu) == 0)   # no patients of that sex: zero counts, undefined rates
+      return(dplyr::mutate(base, n_patients = 0L, total_event_dates = 0L,
+                           pct_of_denominator = NA_real_, person_years_denominator = 0,
+                           events_per_person_year = NA_real_))
+    compute_modality_stats(dplyr::filter(events, ID %in% fu$ID), fu, keys, tiers, by)
+  }
+  e <- st(fu_e); o <- st(fu_o)
+  base |>
+    dplyr::left_join(e |> dplyr::transmute(dplyr::across(dplyr::all_of(by)),
+                       denominator_eligible = nrow(fu_e),
+                       n_patients_eligible = n_patients,
+                       pct_of_eligible = pct_of_denominator,
+                       total_event_dates_eligible = total_event_dates,
+                       person_years_eligible = person_years_denominator,
+                       events_per_person_year_eligible = events_per_person_year),
+                     by = by) |>
+    dplyr::left_join(o |> dplyr::transmute(dplyr::across(dplyr::all_of(by)),
+                       n_patients_other_sex = n_patients,
+                       total_event_dates_other_sex = total_event_dates),
+                     by = by) |>
+    dplyr::mutate(eligible_sex = eligible_sex)
+}
+
+#' Release suppression for the eligible-sex columns, including complementary
+#' suppression (160 D-11): because the all-patient count is published,
+#' eligible = all - other, so if either side of a pair is 1..threshold both
+#' sides and their derived columns are withheld. Counts 1..threshold show
+#' "<11"; other withheld cells are blank. prefix handles C-sheet column names.
+suppress_eligible_columns <- function(df, prefix = "", threshold = 10L) {
+  p <- function(x) paste0(prefix, x)
+  pairs <- list(
+    list(a = p("n_patients_eligible"), b = p("n_patients_other_sex"),
+         deps = p("pct_of_eligible")),
+    list(a = p("total_event_dates_eligible"), b = p("total_event_dates_other_sex"),
+         deps = p("events_per_person_year_eligible")))
+  for (pr in pairs) {
+    if (!all(c(pr$a, pr$b) %in% names(df))) next
+    a <- df[[pr$a]]; b <- df[[pr$b]]
+    small <- function(x) !is.na(x) & x > 0 & x <= threshold
+    hide <- small(a) | small(b)
+    for (cl in c(pr$a, pr$b, intersect(pr$deps, names(df)))) {
+      v <- as.character(df[[cl]])
+      v[hide] <- ""
+      df[[cl]] <- v
+    }
+    df[[pr$a]][small(a)] <- "<11"
+    df[[pr$b]][small(b)] <- "<11"
+  }
+  df
+}
+
+#' Codeset_summary sheet (IMP-05): generated from the loaded codeset each run.
+#' @return list(by_modality, by_analyte)
+build_codeset_summary <- function(codeset, analytes, analyte_presence = NULL) {
+  by_modality <- codeset |>
+    dplyr::group_by(modality, tier, match) |>
+    dplyr::summarise(
+      n_codes = dplyr::n_distinct(code_norm),
+      codes = paste(sort(unique(code)), collapse = "; "),
+      threshold = dplyr::case_when(
+        dplyr::first(match) == "analyte_min_same_day" ~
+          paste0(">= ", paste(unique(min_analyte_count), collapse = "/"), " listed analytes"),
+        dplyr::first(match) %in% c("analyte_all_same_day", "component_all_same_day") ~ "all listed",
+        TRUE ~ ""),
+      .groups = "drop") |>
+    dplyr::arrange(modality, dplyr::desc(tier == "primary"), match)
+  by_analyte <- analytes |>
+    dplyr::group_by(analyte) |>
+    dplyr::summarise(n_codes = dplyr::n_distinct(code_norm),
+                     codes = paste(sort(unique(code)), collapse = "; "),
+                     .groups = "drop")
+  if (!is.null(analyte_presence)) {
+    pres <- analyte_presence |>
+      dplyr::group_by(analyte) |>
+      dplyr::summarise(n_codes_present = sum(present), .groups = "drop")
+    by_analyte <- dplyr::left_join(by_analyte, pres, by = "analyte") |>
+      dplyr::relocate(n_codes_present, .after = n_codes)
+  }
+  list(by_modality = by_modality, by_analyte = by_analyte)
+}
