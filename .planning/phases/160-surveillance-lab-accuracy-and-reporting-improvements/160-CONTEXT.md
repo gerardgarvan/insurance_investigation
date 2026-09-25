@@ -1,7 +1,7 @@
 # Phase 160: Surveillance Lab Accuracy and Reporting Improvements - Context
 
 **Gathered:** 2026-09-25
-**Status:** Ready for planning
+**Status:** Ready for planning (revised after plan review 2026-09-25: D-07..D-13 added; plans rewritten)
 
 <domain>
 ## Phase Boundary
@@ -20,7 +20,7 @@ Fix two lab-counting problems found in the 2026-09-25 R/147 run: raise the CMP s
 
 ### D-2 / D-3 — A3 diagnostic parameters
 - **D-02 (block 1 depth):** Near-miss depth = **exactly n_listed − 1 only**. For BMP that is 7-of-8 days; for CMP that is 13-of-14 days. Shallower near-misses are not included in block 1.
-- **D-03 (block 2 sample):** Sample up to **5,000 near-miss ID × dates per rule row**, fixed seed (to be set in the plan). Sample size is printed on the A3 sheet. If the checkpoint review finds the sample did not expose the missing code, the sample size can be raised and R/147 re-run — no code redesign needed.
+- **D-03 (block 2 sample):** *(sampling unit and comparison group refined by D-08/D-09)* Sample up to **5,000 near-miss ID × dates per rule row**, fixed seed (to be set in the plan). Sample size is printed on the A3 sheet. If the checkpoint review finds the sample did not expose the missing code, the sample size can be raised and R/147 re-run — no code redesign needed.
 
 ### D-4 — Breast imaging denominator presentation (discussed)
 - **D-04:** The **all-patient figure is the headline**, labelled "any breast imaging", consistent with every other modality in the B/C sheets. The female-denominator figure sits **directly beside it**, labelled "among women (screening population)".
@@ -40,8 +40,53 @@ Fix two lab-counting problems found in the 2026-09-25 R/147 run: raise the CMP s
 - **L-4:** A3 block 2 candidate query is restricted in DuckDB to sampled near-miss IDs before `collect()`.
 - **L-5:** IMP-04 adds columns and removes nothing — all-patient figures, per-patient table and D sheet are unchanged.
 
+### Decisions added after plan review (2026-09-25)
+
+- **D-07 — Delivered codeset.**
+  - `data/reference/surveillance_codeset.xlsx` is delivered with exactly two data edits:
+    - CMP `analyte_min_same_day` (SC132) `min_analyte_count` 7 → 11
+    - a new Modalities column `eligible_sex` = F on Mammogram and Breast MRI
+  - It also has two new KEY rows documenting them.
+  - Every other cell of Analysis_Codeset, Lab_Analytes and Lab_Analytes_Excluded is unchanged; 160-01 verifies this against the committed file before replacing it.
+- **D-08 — A3 block 2 ranks by contrast, not raw coverage.**
+  - Ranking by the share of near-miss days a code appears on would put routine labs (hemoglobin, WBC, platelets) first.
+  - Block 2 therefore also samples complete days (all listed analytes present) of the same rule as a comparison group, and ranks each candidate by `lift = coverage on near-miss days − coverage on complete days`.
+  - Ranking is within rule × missing analyte (from block 1), keeping the top `A3_TOP_N` = 25 per group.
+  - A replacement code for the missing analyte scores near 1; routine labs score near 0.
+- **D-09 — A3 sampling and query.**
+  - Sampling:
+    - Groups are rule × missing analyte for near-miss days, and rule for complete days.
+    - One day per patient per group, at most 5,000 days per group.
+    - Rows are sorted before sampling with a fixed seed (`A3_SEED` = 2026), so the sample does not depend on database row order.
+  - Query:
+    - Sampled ID × dates are copied to a DuckDB temp table and joined to LAB_RESULT_CM on ID and date inside the database (L-4).
+    - The date comes from `surv_sql_date_expr()`: ISO text, then MM/DD/YYYY, via TRY_CAST / TRY_STRPTIME.
+    - Lab_Analytes LOINCs are excluded in SQL.
+    - Rows are re-parsed with `parse_pcornet_date()` and filtered exactly in R.
+  - If fewer than 50% of sampled days return any lab row, R/147 warns that the date expression needs checking.
+  - This replaces the ID-only filter, which would pull whole lab histories.
+- **D-10 — Sex handling.**
+  - Patients missing from DEMOGRAPHIC, or with SEX other than F/M, count as unknown ("UN") in the other-sex columns; they are never dropped.
+  - A zero eligible denominator gives NA percentages and rates.
+  - Two extra columns sit beside the six IMP-04 columns:
+    - `denominator_eligible` (the eligible N)
+    - `total_event_dates_eligible` (needed for complementary suppression)
+- **D-11 — Complementary suppression.**
+  - Because the all-patient count is published, eligible = all − other-sex.
+  - In the release workbook, if either the eligible or the other-sex count is 1–10, both are withheld, along with their percentage or rate.
+  - The small one shows "<11" and the other shows blank.
+  - This applies separately to patient counts and event-date counts, and to each C-sheet prefix.
+  - Done by `suppress_eligible_columns()` before the standard suppression.
+- **D-12 — Block 1 scope and release shape.**
+  - Block 1 covers only `analyte_all_same_day` rules with ≥ 2 analytes (BMP, CMP, LIPID, LFT). Sensitivity (`analyte_min_same_day`) rows and single-analyte KIDNEY are excluded.
+  - Block 2 is aggregated per candidate code, with the most common raw code, name and unit shown for display. The release copy drops RAW-only candidates and the raw code/name columns, so no regrouping is needed.
+  - A3 also includes a by-year table (block 1b).
+- **D-13 — Checks and names.**
+  - R/88 checks the CMP rule as an invariant (threshold > 8, so a full BMP cannot qualify), not the literal "11".
+  - Real paths and names are in the corrected canonical references below and the plans; the Modalities names are the full names (Electrocardiogram, Multiple gated acquisition (MUGA), Pulmonary function test, Complete blood count).
+
 ### Claude's Discretion
-- Exact fixed seed value for A3 block 2 sampling (any reasonable constant, e.g. 42 or 2026).
+- Exact fixed seed value for A3 block 2 sampling: 2026 (`A3_SEED`).
 - Sheet column ordering within A3 blocks.
 - Internal variable names for eligibility denominators.
 
@@ -63,9 +108,10 @@ Fix two lab-counting problems found in the 2026-09-25 R/147 run: raise the CMP s
 - `data/reference/surveillance_codeset.xlsx` — sheets: KEY, Analysis_Codeset (SC001–SC167), Lab_Analytes (LA001–LA189), Lab_Analytes_Excluded, Modalities; IMP-01 edits the Analysis_Codeset CMP row; IMP-04 adds `eligible_sex` to Modalities
 
 ### Script under modification
-- `R/147_surveillance_lab_counts.R` (or current equivalent in SCRIPT_INDEX) — Wave 3 wiring target
-- `R/utils_surveillance.R` — pure functions; Wave 2 additions go here
-- `R/88_smoke_test.R` — Phase 159 section extended per IMP-06
+- `R/147_surveillance_modality_frequency.R` — Wave 3 wiring target
+- `R/utils/utils_surveillance.R` — pure functions; Wave 1–2 additions go here
+- `R/88_smoke_test_comprehensive.R` — Phase 159 section (15ak) extended per IMP-06
+- `data/reference/lab_code_crosswalk.xlsx` — crosswalk MASTER, read by A3 for the in_master flag (staged in 159-01)
 
 ### Reference for suppression rules and workbook structure
 - `data/reference/README.md` — documents the two-workbook release pattern; update per IMP-06
@@ -115,4 +161,4 @@ Fix two lab-counting problems found in the 2026-09-25 R/147 run: raise the CMP s
 ---
 
 *Phase: 160-surveillance-lab-accuracy-and-reporting-improvements*
-*Context gathered: 2026-09-25*
+*Context gathered: 2026-09-25; D-07..D-13 added 2026-09-25 after plan review*
