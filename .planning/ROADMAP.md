@@ -628,3 +628,16 @@ Plans:
 - [x] 159-02: build_analyte_events(), build_analyte_presence() in utils_surveillance.R; R/147 integration
 - [x] 159-03: Wire Phase 159 into R/147 (Section 4B analyte pull, an_rules, A2/E sheets, SC-4/SC-5/SC-6, per-patient .rds/.csv)
 - [x] 159-04: HiPerGator run, workbook output, R/88 checks — 149 tests pass, R/147 cleanly completes (9,331 patients), release workbook cleared (2026-09-25)
+
+### Phase 160: Surveillance Lab Accuracy and Reporting Improvements
+
+**Goal:** Fix two lab-counting problems found in the 2026-09-25 R/147 run: raise the CMP sensitivity threshold so a plain BMP no longer qualifies; add a missing-analyte diagnostic (A3) to identify and then add the missing CO2 code. Also add female-denominator columns for breast imaging modalities, and auto-generate a codeset summary sheet on every run.
+**Requirements**: IMP-01 .. IMP-06
+**Depends on:** Phase 159
+**Plans:** 4 plans
+
+Plans:
+- [ ] 160-01-PLAN.md — Codeset edits (CMP min_analyte_count=11) + Modalities.eligible_sex + loader support [IMP-01, IMP-04] (Wave 1)
+- [ ] 160-02-PLAN.md — Pure functions: summarise_missing_analyte, rank_candidate_codes, compute_eligible_modality_stats, build_codeset_summary + tests [IMP-02, IMP-04, IMP-05] (Wave 2, depends on 160-01)
+- [ ] 160-03-PLAN.md — R/147 wiring: DEMOGRAPHIC.SEX + eligibility on B/C, A3 build + sampled candidate query, Codeset_summary, sheet order + suppression [IMP-02, IMP-04, IMP-05] (Wave 3, depends on 160-01, 160-02)
+- [ ] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03)
