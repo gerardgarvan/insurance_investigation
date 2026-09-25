@@ -16,14 +16,16 @@ key_files:
     - R/88_smoke_test_comprehensive.R
     - R/SCRIPT_INDEX.md
     - data/reference/README.md
+    - data/reference/surveillance_codeset.xlsx
 decisions:
   - "Rscript unavailable on Windows host; structural fallback (grep checks) used in place of Rscript parse; HiPerGator testthat run deferred to Task 2 checkpoint"
   - "D-13 invariant check implemented as absence-of-literal-11 grep (per plan spec), not a numeric comparison"
+  - "Root surveillance_codeset.xlsx confirmed as the 160b replacement via Excel XML diff (only KEY row 20 + LA190-LA192 added; Analysis_Codeset, Lab_Analytes_Excluded, Modalities, LA001-LA189 byte-identical)"
 metrics:
-  duration_minutes: 15
+  duration_minutes: 20
   completed_date: "2026-09-25"
-  tasks_completed: 1
-  files_modified: 3
+  tasks_completed: 2
+  files_modified: 4
 ---
 
 # Phase 160 Plan 04: Registration, Validation, and Gap Resolution Summary
@@ -70,10 +72,26 @@ None. All documentation paths are complete and all R/88 checks reference real sy
 
 ## Checkpoint Status
 
-**Task 2 (HiPerGator run + A3 review)** — AWAITING (checkpoint:human-verify).
-**Task 3 (add confirmed code + re-run + before/after)** — AWAITING (checkpoint:human-action).
+**Task 2 (HiPerGator run + A3 review)** — COMPLETE (checkpoint:human-verify).
+A3 confirmed codes: 2026-3 (CO2 CONTENT), 1752-5 (ALBUMIN), 45066-8 (Creatinine). No new match column needed. 1756-6 deliberately excluded.
 
-Both are gating checkpoints. No further code changes can be made until the real-data run confirms the top missing-analyte candidate code(s) and whether a new Lab_Analytes match column is required.
+**Task 3 (add confirmed codes + before/after figures)** — CODESET COMMITTED. Awaiting HiPerGator re-run.
+
+Commit: f8b0f5e — feat(160-04): add A3-confirmed CO2/albumin/creatinine codes to Lab_Analytes
+
+### Before/After Table (HiPerGator re-run pending)
+
+| Metric | Before (2026-09-25 run) | After |
+|--------|------------------------|-------|
+| SC125 near-miss (7 of 8) | 51,386 | TBD |
+| SC131 near-miss (13 of 14) | 48,677 | TBD |
+| BMP primary n_patients | 8,131 | TBD |
+| BMP primary total_event_dates | 218,616 | TBD |
+| CMP primary n_patients | 7,570 | TBD |
+| CMP primary total_event_dates | 154,135 | TBD |
+| A2 n_patient_dates LA190 (2026-3 / CO2) | — | TBD |
+| A2 n_patient_dates LA191 (1752-5 / ALBUMIN) | — | TBD |
+| A2 n_patient_dates LA192 (45066-8 / CREATININE) | — | TBD |
 
 ## Verification Status
 
