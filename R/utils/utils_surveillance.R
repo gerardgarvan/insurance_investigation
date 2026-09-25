@@ -209,6 +209,9 @@ load_lab_analytes <- function(
 
 #' Load the Modalities sheet: modality -> column prefix for the per-patient
 #' table, in display order. Every codeset modality must be listed (LAB-06).
+#' Returns a named character vector (names = modality, values = prefix).
+#' Phase 160: the optional eligible_sex column ("" / "F" / "M") is validated and
+#' attached as attribute "eligible_sex"; read it with modality_eligible_sex().
 load_modality_lookup <- function(
     path = file.path("data", "reference", "surveillance_codeset.xlsx"),
     codeset = NULL) {
@@ -234,8 +237,25 @@ load_modality_lookup <- function(
       stop("Modalities sheet is missing codeset modalities: ",
            paste(unlisted, collapse = ", "))
   }
+  # Phase 160 IMP-04: optional eligible_sex column; absent = no extra views
+  if (!"eligible_sex" %in% names(md)) md$eligible_sex <- ""
+  md$eligible_sex <- toupper(md$eligible_sex)
+  bad_sex <- !md$eligible_sex %in% c("", "F", "M")
+  if (any(bad_sex))
+    stop("Modalities: eligible_sex must be blank, F, or M: ",
+         paste(md$modality[bad_sex], collapse = ", "))
+
   md <- md[order(ord), ]
-  stats::setNames(md$column_prefix, md$modality)
+  lookup <- stats::setNames(md$column_prefix, md$modality)
+  attr(lookup, "eligible_sex") <- stats::setNames(md$eligible_sex, md$modality)
+  lookup
+}
+
+#' Per-modality eligible_sex ("" / "F" / "M") for a load_modality_lookup()
+#' result; all "" when the attribute is absent.
+modality_eligible_sex <- function(lookup) {
+  es <- attr(lookup, "eligible_sex")
+  if (is.null(es)) stats::setNames(rep("", length(lookup)), names(lookup)) else es
 }
 
 # ------------------------------------------------------------------------------
