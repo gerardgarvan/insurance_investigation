@@ -148,7 +148,7 @@ load_surveillance_codeset <- function(
 
   dup <- duplicated(cs[, c("modality", "code_norm", "match")])
   if (any(dup))
-    stop("Non-unique modality x code_norm: ",
+    stop("Duplicate (non-unique) modality x code_norm: ",
          paste(cs$modality[dup], cs$code_norm[dup], sep = "/", collapse = "; "))
 
   tibble::as_tibble(cs)
