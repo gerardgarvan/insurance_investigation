@@ -284,7 +284,7 @@ cutoff. See 148-DISCOVERY.md §5 for details.
 - **Phase 160 edits (2026-09-25):**
   - Modalities sheet: new `eligible_sex` column (blank / F / M). Set to `F` on Mammogram and Breast MRI; blank for all other modalities. Adds female-denominator view columns for those two modalities; never changes all-patient figures. Read by `load_modality_lookup()` and exposed via `modality_eligible_sex()`.
   - Analysis_Codeset SC132 (CMP sensitivity rule): `min_analyte_count` raised 7 → 11 (11 of 14 analytes required). This is the CMP sensitivity threshold as of Phase 160; it cuts out all 8-of-14 (BMP-equivalent) and 9-of-14 days. A full BMP (8 analytes) can no longer qualify as a CMP. R/88 invariant: threshold > 8.
-  - Lab_Analytes: LA190 (2026-3, CO2), LA191 (1752-5, ALBUMIN), and LA192 (45066-8, CREATININE) added from the A3 missing-analyte diagnostic (see review_note column). These are non-standard LOINCs used by one source to report serum CO2, serum albumin, and creatinine. 1756-6 (CSF/serum albumin ratio) was reviewed and deliberately not added.
+  - Lab_Analytes: LA190-LA193 added from the A3 diagnostic (non-standard LOINCs from one source; see review_note). LA190 (2026-3, CO2), LA191 (1752-5, ALBUMIN), LA192 (45066-8, CREATININE) confirmed on the initial A3 run; LA193 (1756-6, ALBUMIN) confirmed on the A3 re-run — carries serum albumin (g/dL) on its own days at 61% of CMP days still missing albumin.
 
 ## Phase 160 output artifacts: A3_missing_analyte, Codeset_summary, eligible_sex columns
 
