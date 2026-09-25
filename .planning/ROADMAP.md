@@ -621,7 +621,7 @@ Plans:
 **Goal:** Add BMP, CMP, LIPID, LFT and KIDNEY as surveillance modalities in R/147, using `lab_code_crosswalk.xlsx` as the code dictionary. Then produce a per-patient table: one row per HL any-dx patient, one column per modality (all 14), holding the number of unique dates the modality occurred after the HL anchor, within follow-up.
 **Requirements**: LAB-01 .. LAB-07
 **Depends on:** Phase 158
-**Plans:** 4 plans (4/4 complete)
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 159-01: Stage codeset, loader extensions (load_lab_analytes, load_modality_lookup), TDD tests
