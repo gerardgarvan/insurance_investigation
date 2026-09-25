@@ -5674,8 +5674,8 @@ check_160("surv_util_160 contains eligible_sex constraint: values in {\"\", \"F\
 
 # 4. CMP analyte_min_same_day min_analyte_count > 8 (D-13 invariant: a full BMP cannot qualify)
 #    Verified by absence of the literal value 11 as a minimum count in the codeset reference
-check_160("No hardcoded min_analyte_count == 11 in R/88 (D-13 invariant: full BMP cannot qualify)",
-  !any(grepl("min_analyte_count\\s*==\\s*11", readLines("R/88_smoke_test_comprehensive.R"))))
+check_160("D-13: min_analyte_count is not hardcoded in utils_surveillance.R (value must come from codeset)",
+  !any(grepl("min_analyte_count\\s*==\\s*11", readLines("R/utils/utils_surveillance.R"))))
 
 # 5. At least 2 tests/testthat/test-160-*.R files exist
 check_160("At least 2 tests/testthat/test-160-*.R files exist",
