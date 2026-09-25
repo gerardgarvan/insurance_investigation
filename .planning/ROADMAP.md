@@ -634,10 +634,10 @@ Plans:
 **Goal:** Fix two lab-counting problems found in the 2026-09-25 R/147 run: raise the CMP sensitivity threshold so a plain BMP no longer qualifies; add a missing-analyte diagnostic (A3) to identify and then add the missing CO2 code. Also add female-denominator columns for breast imaging modalities, and auto-generate a codeset summary sheet on every run.
 **Requirements**: IMP-01 .. IMP-06
 **Depends on:** Phase 159
-**Plans:** 2/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 160-01-PLAN.md — Codeset edits (CMP min_analyte_count=11) + Modalities.eligible_sex + loader support [IMP-01, IMP-04] (Wave 1)
 - [x] 160-02-PLAN.md — Pure functions: summarise_missing_analyte, rank_candidate_codes, compute_eligible_modality_stats, build_codeset_summary + tests [IMP-02, IMP-04, IMP-05] (Wave 2, depends on 160-01)
 - [ ] 160-03-PLAN.md — R/147 wiring: DEMOGRAPHIC.SEX + eligibility on B/C, A3 build + sampled candidate query, Codeset_summary, sheet order + suppression [IMP-02, IMP-04, IMP-05] (Wave 3, depends on 160-01, 160-02)
-- [ ] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03)
+- [x] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03) (completed 2026-09-25)
