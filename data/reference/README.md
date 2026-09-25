@@ -285,6 +285,40 @@ cutoff. See 148-DISCOVERY.md §5 for details.
   - Modalities sheet: new `eligible_sex` column (blank / F / M). Set to `F` on Mammogram and Breast MRI; blank for all other modalities. Adds female-denominator view columns for those two modalities; never changes all-patient figures. Read by `load_modality_lookup()` and exposed via `modality_eligible_sex()`.
   - Analysis_Codeset SC132 (CMP sensitivity rule): `min_analyte_count` raised 7 → 11 (11 of 14 analytes required). This is the CMP sensitivity threshold as of Phase 160; it cuts out all 8-of-14 (BMP-equivalent) and 9-of-14 days. A full BMP (8 analytes) can no longer qualify as a CMP. R/88 invariant: threshold > 8.
 
+## Phase 160 output artifacts: A3_missing_analyte, Codeset_summary, eligible_sex columns
+
+### A3_missing_analyte sheet
+
+Produced on every run of R/147 via `summarise_missing_analyte()` + `rank_candidate_codes()`.
+
+**INTERNAL workbook** (stays on HiPerGator — not for external release):
+- Block 1: BMP/CMP near-miss days broken out by which analyte is missing (raw LOINC codes and names, unsuppressed patient-date counts)
+- Block 1b: year-level breakdown of those near-miss days
+- Block 2: top lift candidates for the analyte gap (LOINC/RAW code, `top_raw_name`, `code_source`, `in_excluded` flag for Lab_Analytes_Excluded membership, `lift` rank)
+
+**Release workbook** (shareable):
+- Same blocks, but raw-only candidates (code_source == "RAW") are dropped
+- Raw code and raw name columns are removed; only LOINC-level codes remain
+- Patient-date counts are suppressed to <= 10 threshold (same `suppress_small()` rule as all other release sheets)
+
+### Codeset_summary sheet
+
+Auto-generated each run by `build_codeset_summary()`. **Replaces `code_mapping_summary.xlsx`** (do not maintain that file manually going forward).
+
+Contents:
+- Codes per modality x tier x match type, with min_analyte_count thresholds where applicable
+- Codes per analyte: how many were actually observed in this data run vs. how many are in Lab_Analytes
+
+The Codeset_summary sheet appears in both INTERNAL and release workbooks; it contains only codeset metadata (no patient counts), so no suppression is applied.
+
+### eligible_sex denominators (Mammogram and Breast MRI)
+
+`modality_eligible_sex()` reads the `eligible_sex` column from the Modalities sheet and returns a named vector (modality -> "" / "F" / "M"). For modalities with a non-blank eligible_sex:
+
+- `compute_eligible_modality_stats()` adds `n_patients_eligible_sex` and `n_dates_eligible_sex` columns alongside the standard all-patient columns. These are the female (or male) denominators: e.g. Mammogram's `n_patients_F` = distinct female patients with >= 1 mammogram.
+- `suppress_eligible_columns()` applies **complementary suppression** to the eligible/other-sex column pair: if either the eligible-sex count or the complement (other-sex count = all-patient minus eligible) falls in the 1–10 suppression range, BOTH columns are withheld from the release workbook. This prevents back-calculation of a small cell from a published total.
+- The all-patient columns (B sheet primary and C sheet sensitivity) are NEVER changed by this logic. The L-5 guard (`stopifnot("L-5: eligibility must not change the all-patient B columns")`) enforces this invariant.
+
 ## lab_code_crosswalk.xlsx
 - Path: data/reference/lab_code_crosswalk.xlsx
 - Status as of 2026-09-24: NOT YET STAGED (expected; to be placed by user)

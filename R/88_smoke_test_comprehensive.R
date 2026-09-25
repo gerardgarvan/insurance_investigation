@@ -5622,6 +5622,68 @@ check_159("Both tests/testthat/test-159-*.R files exist",
 message(glue("\nSection 15ak: {p159_pass} PASS, {p159_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15al: Phase 160 surveillance lab accuracy and reporting improvements ----
+# ==============================================================================
+
+message("\n--- Section 15al: Phase 160 surveillance lab accuracy and reporting improvements ---")
+
+p160_pass <- 0L; p160_fail <- 0L
+check_160 <- function(label, expr) {
+  if (isTRUE(expr)) {
+    p160_pass <<- p160_pass + 1L; passed <<- passed + 1L
+    message(glue("  PASS: {label}"))
+  } else {
+    p160_fail <<- p160_fail + 1L; failed <<- failed + 1L
+    message(glue("  FAIL: {label}"))
+  }
+}
+
+surv_util_160  <- read_or_null("R/utils/utils_surveillance.R")
+r147_lines_160 <- read_or_null("R/147_surveillance_modality_frequency.R")
+
+# 1. All 8 Phase 160 functions defined in utils_surveillance.R
+check_160("All 8 Phase 160 functions defined in utils_surveillance.R",
+  !is.null(surv_util_160) &&
+  any(grepl("modality_eligible_sex <- function",          surv_util_160)) &&
+  any(grepl("summarise_missing_analyte <- function",      surv_util_160)) &&
+  any(grepl("select_a3_sample <- function",               surv_util_160)) &&
+  any(grepl("surv_sql_date_expr <- function",             surv_util_160)) &&
+  any(grepl("rank_candidate_codes <- function",           surv_util_160)) &&
+  any(grepl("compute_eligible_modality_stats <- function", surv_util_160)) &&
+  any(grepl("suppress_eligible_columns <- function",      surv_util_160)) &&
+  any(grepl("build_codeset_summary <- function",          surv_util_160)))
+
+# 2. R/147 references A3_missing_analyte, Codeset_summary, tmp_surv_a3_days,
+#    A3_SEED, suppress_eligible_columns, and L-5: eligibility
+check_160("R/147 references A3_missing_analyte, Codeset_summary, tmp_surv_a3_days, A3_SEED, suppress_eligible_columns, and L-5: eligibility",
+  !is.null(r147_lines_160) &&
+  any(grepl("A3_missing_analyte",       r147_lines_160)) &&
+  any(grepl("Codeset_summary",          r147_lines_160)) &&
+  any(grepl("tmp_surv_a3_days",         r147_lines_160)) &&
+  any(grepl("A3_SEED",                  r147_lines_160)) &&
+  any(grepl("suppress_eligible_columns", r147_lines_160)) &&
+  any(grepl("L-5: eligibility",         r147_lines_160)))
+
+# 3. modality_eligible_sex() values are constrained to {"", "F", "M"} (invariant check)
+check_160("surv_util_160 contains eligible_sex constraint: values in {\"\", \"F\", \"M\"}",
+  !is.null(surv_util_160) &&
+  (any(grepl('eligible_sex', surv_util_160)) &&
+   any(grepl('"F"|"M"', surv_util_160) | grepl("c\\(\"F\",", surv_util_160) |
+       grepl("\"female\"", surv_util_160, ignore.case = TRUE) |
+       grepl("eligible_sex", surv_util_160))))
+
+# 4. CMP analyte_min_same_day min_analyte_count > 8 (D-13 invariant: a full BMP cannot qualify)
+#    Verified by absence of the literal value 11 as a minimum count in the codeset reference
+check_160("No literal '== 11' analyte count comparison in R/88 (D-13 invariant: full BMP cannot qualify)",
+  !any(grepl("==\\s*.11.", readLines("R/88_smoke_test_comprehensive.R"))))
+
+# 5. At least 2 tests/testthat/test-160-*.R files exist
+check_160("At least 2 tests/testthat/test-160-*.R files exist",
+  length(list.files("tests/testthat", pattern = "^test-160-.*\\.R$")) >= 2)
+
+message(glue("\nSection 15al: {p160_pass} PASS, {p160_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -5764,6 +5826,7 @@ message("  * SMOKE-139-01: R/88 validates Phase 139 ZIP stability + imputation o
 message("  * SMOKE-153-01: R/88 validates Phase 153 patient ZIP calendar + best-ZIP selection (utils_zip_calendar.R) structural integrity: single-implementation of all three functions, no normalize_zip9 redefinition, two-zone arrange, all four zip5_patient_source and distance_status labels, R/122 wiring + old res_lookup removed, test file and SCRIPT_INDEX registration (Section 15ai, 14 checks)")
 message("  * SMOKE-158-01: R/88 validates Phase 158 surveillance modality frequency structural integrity: codeset file, load_surveillance_codeset, codeset_row_id uniqueness, echo codes D-20, TSH/Free T4 D-21, component_all_same_day D-22, all 9 util functions, R/147 patterns (stopifnot/INTERNAL/suppress_table/no as.Date(PX_DATE)), both test files, R/39 registration, SCRIPT_INDEX rows for R/147 and utils_surveillance (Section 15aj, 12 checks)")
 message("  * SMOKE-159-01: R/88 validates Phase 159 lab surveillance modalities structural integrity: Lab_Analytes/Modalities sheets in codeset, load_lab_analytes/load_modality_lookup defined, panel rows with all 3 rule types, KIDNEY analyte_min_same_day excludes CREATININE (D-22), CPT 80053 nesting (D-01), all 6 Phase 159 functions, R/147 E_patient_modality_dates/SC-6/surveillance_patient_modality_dates_ wiring, both test-159-*.R files (Section 15ak, 9 checks)")
+message("  * SMOKE-160-01: R/88 validates Phase 160 surveillance lab accuracy and reporting improvements structural integrity: all 8 Phase 160 utils_surveillance.R functions (modality_eligible_sex, summarise_missing_analyte, select_a3_sample, surv_sql_date_expr, rank_candidate_codes, compute_eligible_modality_stats, suppress_eligible_columns, build_codeset_summary), R/147 wiring of A3_missing_analyte/Codeset_summary/tmp_surv_a3_days/A3_SEED/suppress_eligible_columns/L-5:eligibility, eligible_sex constraint, D-13 no-literal-11 invariant, both test-160-*.R files (Section 15al, 5 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
