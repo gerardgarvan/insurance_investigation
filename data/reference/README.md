@@ -281,6 +281,9 @@ cutoff. See 148-DISCOVERY.md §5 for details.
 - plausibility: "verify" on rows still to be confirmed (D-12)
 - min_analyte_count: integer as text; set only on analyte_min_same_day rows; blank elsewhere; must be >= 1 and < the number of listed analytes
 - Source: desk audit of VariableDetails.xlsx "Surveillance Strategy" sheet (Phase 158) + delivered Phase 159 codeset, 2026-09-24
+- **Phase 160 edits (2026-09-25):**
+  - Modalities sheet: new `eligible_sex` column (blank / F / M). Set to `F` on Mammogram and Breast MRI; blank for all other modalities. Adds female-denominator view columns for those two modalities; never changes all-patient figures. Read by `load_modality_lookup()` and exposed via `modality_eligible_sex()`.
+  - Analysis_Codeset SC132 (CMP sensitivity rule): `min_analyte_count` raised 7 → 11 (11 of 14 analytes required). This is the CMP sensitivity threshold as of Phase 160; it cuts out all 8-of-14 (BMP-equivalent) and 9-of-14 days. A full BMP (8 analytes) can no longer qualify as a CMP. R/88 invariant: threshold > 8.
 
 ## lab_code_crosswalk.xlsx
 - Path: data/reference/lab_code_crosswalk.xlsx
