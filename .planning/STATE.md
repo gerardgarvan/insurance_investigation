@@ -158,6 +158,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 158 added: Surveillance Modality Frequency (renamed from "Surveillance Brief"; spec in 158-SURVEILLANCE-BRIEF.md)
 - Phase 159 added: Lab Surveillance Modalities and Per-Patient Date Counts (BMP, CMP, LIPID, LFT, KIDNEY via analyte-rule matching; spec in 159-LAB-MODALITIES-BRIEF.md)
 - Phase 160 added: Surveillance Lab Accuracy and Reporting Improvements (CMP threshold fix, missing-analyte diagnostic A3, female-denominator breast imaging columns, auto codeset summary; spec in 160-SURVEILLANCE-IMPROVEMENTS-BRIEF.md)
+- Phase 161 added: Unzip Files (13) and Read Contents
 
 ### Known Blockers (new)
 
