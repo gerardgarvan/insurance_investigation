@@ -642,12 +642,19 @@ Plans:
 - [ ] 160-03-PLAN.md — R/147 wiring: DEMOGRAPHIC.SEX + eligibility on B/C, A3 build + sampled candidate query, Codeset_summary, sheet order + suppression [IMP-02, IMP-04, IMP-05] (Wave 3, depends on 160-01, 160-02)
 - [x] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03) (completed 2026-09-25)
 
-### Phase 161: Unzip Files (13) and Read Contents
+### Phase 161: Death-date Plausibility and Follow-up End Definition
 
-**Goal:** [To be planned]
+**Goal:** Fix the 46 patients with `hl_anchor_date >= follow_end` and the 261 decedents (19.4%) whose recorded death date precedes confirmed clinical activity. Implement a shared `resolve_death_date()` utility (30-day grace period, earliest-consistent-date rule for conflicts, D2 flag-not-exclude for implausible dates), redefine `follow_end` to use latest observed activity rather than admit date only, and audit every script that reads DEATH to confirm it uses the shared utility.
 **Requirements**: TBD
 **Depends on:** Phase 160
-**Plans:** 0 plans
+**Plans:** 8 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 161 to break down)
+- [ ] 161-01-PLAN.md — Fix R/03 ingest: type DEATH_DATE_IMPUTE as VARCHAR; rebuild DuckDB (Wave 1)
+- [ ] 161-02-PLAN.md — Re-run diagnostic on rebuilt DB; record n_conflicting / n_death_max_reconciles (Wave 2)
+- [ ] 161-03-PLAN.md — Shared resolve_death_date() utility in utils_death.R; sensitivity table at N=0/30/60/90/365 (Wave 3, team sign-off required)
+- [ ] 161-04-PLAN.md — Redefine compute_followup(): obs_end + resolved death date + 3-level fu_status (Wave 3)
+- [ ] 161-05-PLAN.md — R/147 reporting: death_flag counts, sensitivity exclusion analysis, anchor-day classification (Wave 4)
+- [ ] 161-06-PLAN.md — Tests: test-161-death-plausibility.R fixtures + R/88 assertions (Wave 4)
+- [ ] 161-07-PLAN.md — Audit all DEATH-reading scripts for resolve_death_date() usage (Wave 4)
+- [ ] 161-08-PLAN.md — HiPerGator full pipeline re-run + before/after comparison (Wave 5)
