@@ -557,15 +557,17 @@ compute_followup <- function(denominator, activity, death_resolved, cutoff,
       person_years = fu_days / 365.25)
 }
 
-#' Assign each event to pre / post / after_followup (D-25).
-#' Anchor-day events are "pre" unless anchor_day_is_post = TRUE.
+#' Assign each event to pre / post / after_followup (D-25, D5).
+#' D5: events on hl_anchor_date are always "pre" (staging workup) unless
+#' anchor_day_is_post = TRUE is explicitly set. This means the boundary
+#' condition is event_date <= hl_anchor_date -> "pre".
 classify_event_window <- function(events, followup, anchor_day_is_post = FALSE) {
   events |>
     dplyr::inner_join(followup |> dplyr::select(ID, hl_anchor_date, follow_end),
                       by = "ID") |>
     dplyr::mutate(window = dplyr::case_when(
-      event_date <  hl_anchor_date ~ "pre",
-      event_date == hl_anchor_date & !anchor_day_is_post ~ "pre",
+      event_date <= hl_anchor_date & !anchor_day_is_post ~ "pre",   # D5: anchor-day is pre
+      event_date <  hl_anchor_date ~ "pre",                          # anchor_day_is_post=TRUE path
       is.na(follow_end) | event_date > follow_end ~ "after_followup",
       TRUE ~ "post"))
 }

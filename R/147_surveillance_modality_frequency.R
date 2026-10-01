@@ -31,11 +31,14 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(glue)
   library(openxlsx)
+  library(readr)
 })
 
 source("R/00_config.R")
 if (!exists("load_surveillance_codeset")) source("R/utils/utils_surveillance.R")
 if (!exists("get_hl_any_dx_ids"))         source("R/utils/utils_treatment.R")
+if (!exists("get_last_activity"))         source("R/utils/utils_activity.R")   # 161-05
+if (!exists("resolve_death_date"))        source("R/utils/utils_death.R")       # 161-05
 
 if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
 
@@ -226,29 +229,45 @@ dx_events_in <- tibble(
 message(glue("  DIAGNOSIS rows collected: {nrow(dx_raw)}"))
 
 # ==============================================================================
-# SECTION 6: FOLLOW-UP (D-09, D-10, D-26, D-28) ----
+# SECTION 6: FOLLOW-UP (D-09, D-10, D-26, D-28; updated Phase 161-05) ----
 # ==============================================================================
+# 161-05: use shared activity and death definitions (D1-D4).
+# get_last_activity() queries nine CDM tables for last clinical contact.
+# resolve_death_date() applies grace-period plausibility check (D1) and
+# source-priority resolution (D3); implausible dates -> NA (D2).
+# compute_followup() consumes these outputs directly (new signature).
 
-enc_raw <- enc_tbl |>
-  semi_join(hl_ids_tbl, by = "ID") |>
-  select(any_of(c("ID", "ADMIT_DATE", "DISCHARGE_DATE"))) |>
-  distinct() |>
-  collect()
-last_enc <- tibble(ID = enc_raw$ID,
-                   d1 = pick_date(enc_raw, "ADMIT_DATE"),
-                   d2 = pick_date(enc_raw, "DISCHARGE_DATE")) |>
-  mutate(d = pmax(d1, d2, na.rm = TRUE)) |>
-  filter(!is.na(d)) |>
-  group_by(ID) |>
-  summarise(last_enc_date = max(d), .groups = "drop")
+activity       <- get_last_activity(con, denominator, EXTRACT_CUTOFF)   # D4
 
 death_raw <- death_tbl |>
   semi_join(hl_ids_tbl, by = "ID") |>
-  select(ID, DEATH_DATE) |>
+  select(any_of(c("ID", "DEATH_DATE", "DEATH_SOURCE"))) |>
   collect()
-death <- tibble(ID = death_raw$ID, death_date = parse_pcornet_date(death_raw$DEATH_DATE))
+death_rows <- tibble(
+  ID           = death_raw$ID,
+  DEATH_DATE   = parse_pcornet_date(death_raw$DEATH_DATE),
+  DEATH_SOURCE = if ("DEATH_SOURCE" %in% names(death_raw)) death_raw$DEATH_SOURCE
+                 else NA_character_)
 
-followup <- compute_followup(denominator, last_enc, death, EXTRACT_CUTOFF)
+death_resolved <- resolve_death_date(death_rows, activity, grace_days = 30L)  # D1
+
+followup <- compute_followup(denominator, activity, death_resolved, EXTRACT_CUTOFF)
+
+# ---- 161-05: flag summary (aggregate only; never patient-level) ----
+flag_summary <- dplyr::count(followup, death_flag, fu_status, fu_reason)
+message("[161-05] death_flag x fu_status x fu_reason:")
+print(flag_summary, n = Inf)
+readr::write_csv(flag_summary, file.path(out_dir, "161_flag_summary.csv"))
+message(glue("  Wrote output/161_flag_summary.csv ({nrow(flag_summary)} flag combinations)"))
+
+# D2: confirm no patient with NA death_date_resolved is counted as deceased
+n_na_death <- sum(is.na(followup$death_date_resolved))
+n_flagged_not_dead <- followup |>
+  dplyr::filter(death_flag %in% c("implausible_post_activity", "conflicting_unresolved")) |>
+  nrow()
+message(glue("  [161-05] {n_na_death} patients with NA death_date_resolved ",
+             "(censored at obs_end, not counted as deceased); ",
+             "{n_flagged_not_dead} flagged as implausible/conflicting_unresolved"))
 
 # Sex for the eligible-sex views (160 IMP-04); missing or non-F/M -> "UN" downstream
 demo_raw <- demo_tbl |>
@@ -448,9 +467,9 @@ qc <- tibble::tribble(
   "Dropped: no usable HL diagnosis date", n_no_anchor, "",
   "Denominator N", nrow(denominator), "",
   "Confirmed-cohort IDs (get_hl_patient_ids)", length(unique(confirmed_ids)), "all contained in any-dx set",
-  "Follow-up ok", sum(followup$fu_status == "ok"), "",
-  "Follow-up zero or negative (0 person-years)", sum(followup$fu_status == "zero_or_negative"), "",
-  "No follow-up date (0 person-years)", sum(followup$fu_status == "no_followup_date"), "",
+  "Follow-up positive", sum(followup$fu_status == "positive"), "",
+  "Follow-up zero (0 person-years; same-day last contact)", sum(followup$fu_status == "zero"), "161-05: reported separately from negative",
+  "Follow-up negative (should be 0 after D6)", sum(followup$fu_status == "negative"), "161-05: reported separately; D6 fixes posthumous dx",
   "Total person-years", round(sum(followup$person_years), 1), "",
   "PROCEDURES rows collected", nrow(proc_raw), count_by(proc_raw, "PX_TYPE"),
   "LAB_RESULT_CM rows collected", nrow(lab_raw), if (has_lab_px) "LAB_LOINC + LAB_PX(LC)" else "LAB_LOINC only",
@@ -593,6 +612,67 @@ write_workbook <- function(path, release) {
 
 write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_INTERNAL_{run_date}.xlsx")), release = FALSE)
 write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_{run_date}.xlsx")), release = TRUE)
+
+# ==============================================================================
+# SENSITIVITY ANALYSIS: exclude implausible / conflicting-unresolved deaths ----
+# (161-05 D2 sensitivity; does not change main tables)
+# ==============================================================================
+# Patients with death_flag in {implausible_post_activity, conflicting_unresolved}
+# have death_date_resolved = NA and are censored at obs_end in the main analysis.
+# This sensitivity cohort simply removes them to check robustness.
+
+excl_flags <- c("implausible_post_activity", "conflicting_unresolved")
+followup_sensitivity <- dplyr::filter(followup, !death_flag %in% excl_flags)
+
+n_excl_sens <- nrow(followup) - nrow(followup_sensitivity)
+py_main <- sum(followup$person_years)
+py_sens <- sum(followup_sensitivity$person_years)
+
+message(glue("[161-05] Sensitivity exclusion: removing {n_excl_sens} patients ",
+             "with death_flag in {{implausible_post_activity, conflicting_unresolved}}"))
+message(glue("  Main cohort: N = {nrow(followup)}, person-years = {round(py_main, 1)}"))
+message(glue("  Sensitivity cohort: N = {nrow(followup_sensitivity)}, ",
+             "person-years = {round(py_sens, 1)}"))
+
+# Re-run per-modality primary-tier stats on the sensitivity cohort
+events_win_sens <- dplyr::filter(events_win, ID %in% followup_sensitivity$ID)
+sens_stats <- compute_modality_stats(
+  events_win_sens, followup_sensitivity, mod_keys, "primary") |>
+  dplyr::arrange(modality)
+
+main_stats <- compute_modality_stats(
+  events_win, followup, mod_keys, "primary") |>
+  dplyr::arrange(modality)
+
+sens_comparison <- dplyr::left_join(
+  main_stats |> dplyr::select(modality, n_patients_main = n_patients,
+                               total_event_dates_main = total_event_dates,
+                               events_per_py_main = events_per_person_year),
+  sens_stats |> dplyr::select(modality, n_patients_sens = n_patients,
+                               total_event_dates_sens = total_event_dates,
+                               events_per_py_sens = events_per_person_year),
+  by = "modality") |>
+  dplyr::mutate(
+    delta_n_patients        = n_patients_sens - n_patients_main,
+    delta_total_event_dates = total_event_dates_sens - total_event_dates_main,
+    person_years_main = py_main,
+    person_years_sens = py_sens,
+    n_cohort_main = nrow(followup),
+    n_cohort_sens = nrow(followup_sensitivity))
+
+sens_path <- file.path(out_dir, "147_surveillance_sensitivity_excl_no_credible_death.csv")
+readr::write_csv(sens_comparison, sens_path)
+message(glue("  Wrote {sens_path}"))
+
+message("[161-05] Modality rate differences (main vs sensitivity; primary tier):")
+sens_comparison |>
+  dplyr::mutate(
+    rate_diff = round(events_per_py_sens - events_per_py_main, 4),
+    pct_change_n = round(100 * delta_n_patients / pmax(n_patients_main, 1), 1)) |>
+  dplyr::select(modality, n_patients_main, n_patients_sens, pct_change_n,
+                events_per_py_main, events_per_py_sens, rate_diff) |>
+  print(n = Inf)
+
 saveRDS(pt_modality, file.path(out_dir, glue("surveillance_modality_patient_{run_date}.rds")))
 saveRDS(patient_wide, file.path(out_dir, glue("surveillance_patient_modality_dates_{run_date}.rds")))
 utils::write.csv(patient_wide, file.path(out_dir, glue("surveillance_patient_modality_dates_{run_date}.csv")),
