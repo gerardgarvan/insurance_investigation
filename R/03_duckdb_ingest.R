@@ -156,6 +156,22 @@ ingest_ok <- tryCatch(
           assert_df_valid(df, tbl_name, required_cols = required_cols,
                           script_name = "R/03", allow_empty = TRUE)
 
+          # 161-01: Defensive guard for DEATH_DATE_IMPUTE.
+          # DEATH_DATE_IMPUTE is a PCORnet CDM B/D/M/N imputation-method flag — NOT a
+          # real date. If it arrives here typed as Date, the flag values were silently
+          # lost upstream (R/01 date-name regex or a stale RDS cache). Coercing it to
+          # character at this point would only produce NA strings, hiding the problem.
+          # This stop() forces the user to fix the upstream cause before ingesting.
+          if (tbl_name == "DEATH" && "DEATH_DATE_IMPUTE" %in% names(df)) {
+            if (inherits(df[["DEATH_DATE_IMPUTE"]], c("Date", "POSIXt"))) {
+              stop("[161-01] DEATH_DATE_IMPUTE arrived in R/03 as a Date class; ",
+                   "its B/D/M/N flag values were already lost upstream. ",
+                   "Fix R/01_load_pcornet.R NOT_DATE_COLS or rebuild the DEATH RDS cache.")
+            }
+            # Ensure it is stored as plain character (idempotent if already character).
+            df[["DEATH_DATE_IMPUTE"]] <- as.character(df[["DEATH_DATE_IMPUTE"]])
+          }
+
           # Phase 108 D-04: Coerce pre-1900 dates to NA (SAS epoch sentinels)
           # DuckDB's R client warns on pre-1900 dates during dbWriteTable.
           # These are SAS epoch sentinels (1899-12-30), not real dates.

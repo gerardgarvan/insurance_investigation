@@ -507,7 +507,10 @@ load_pcornet_table <- function(table_name, file_path, col_spec,
   #   ALL date columns have regex_match = TRUE. No missed columns detected.
   #   No regex expansion needed for this cohort extract.
   # Columns that match the date regex but are NOT dates (Y/N flags, etc.)
-  NOT_DATE_COLS <- c("DXDATE_IMPUTED")
+  # 161-01: DEATH_DATE_IMPUTE is a PCORnet CDM imputation-method flag (B/D/M/N),
+  # not a real date. Its name contains "DATE" so the regex below would capture it
+  # and parse_pcornet_date() would coerce the flag values to NA. Exclude it here.
+  NOT_DATE_COLS <- c("DXDATE_IMPUTED", "DEATH_DATE_IMPUTE")
   date_cols <- names(df)[str_detect(names(df), "(?i)(DATE|^DT_|^BDATE$|^DOD$|^DT_FU$|DXDATE|_DT$|RECUR_DT|COMBINED_LAST_CONTACT|ADDRESS_PERIOD_START|ADDRESS_PERIOD_END)")]
   date_cols <- date_cols[!date_cols %in% NOT_DATE_COLS]
   for (col in date_cols) {
