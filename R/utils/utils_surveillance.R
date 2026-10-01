@@ -425,27 +425,136 @@ build_code_presence <- function(codeset, matched) {
   out
 }
 
-#' Follow-up per patient (D-09, D-10, D-26).
-#' denominator: ID, hl_anchor_date. last_enc: ID, last_enc_date.
-#' death: ID, death_date (may have several rows per ID; earliest is used).
-compute_followup <- function(denominator, last_enc, death, cutoff) {
-  death1 <- death |>
-    dplyr::filter(!is.na(death_date)) |>
-    dplyr::group_by(ID) |>
-    dplyr::summarise(death_date = min(death_date), .groups = "drop")
-  denominator |>
-    dplyr::left_join(last_enc, by = "ID") |>
-    dplyr::left_join(death1,   by = "ID") |>
+#' Follow-up per patient (D-09, D-10, D-26; updated Phase 161).
+#'
+#' @param denominator  Tibble: ID, hl_anchor_date.
+#' @param activity     Output of get_last_activity(): ID, last_enc_any,
+#'                     last_activity_any, last_observed. One row per cohort ID.
+#' @param death_resolved Output of resolve_death_date(): ID, death_date_resolved,
+#'                     death_flag. NA death_date_resolved means no credible death
+#'                     (D2); follow-up ends at obs_end, not treated as death.
+#' @param cutoff       Scalar Date; analysis end-of-observation.
+#' @param last_enc     DEPRECATED. Pass activity= instead. Triggers a warning.
+#' @param death        DEPRECATED. Pass death_resolved= instead. Triggers a warning.
+#'
+#' @return Tibble with one row per denominator ID, columns:
+#'   ID, hl_anchor_date, last_enc_any, last_activity_any, last_observed, obs_end,
+#'   death_date_resolved, death_flag, follow_end_raw, posthumous_dx, follow_end,
+#'   fu_days, fu_status ("positive" / "zero" / "negative"), fu_reason,
+#'   person_years.
+#'
+#' @details
+#'   D2: When death_date_resolved is NA the patient is censored at obs_end; the
+#'       absence of a credible death date is never treated as a death event.
+#'   D6: A death date that precedes hl_anchor_date (posthumous diagnosis) is
+#'       overridden: follow_end = hl_anchor_date so the anchor day counts, and
+#'       fu_status = "positive" (unless obs_end itself == anchor, yielding "zero").
+#'   fu_status levels:
+#'     "negative" -- follow_end < hl_anchor_date; should not occur after D6 fix.
+#'     "zero"     -- follow_end == hl_anchor_date (same-day last contact).
+#'     "positive" -- follow_end > hl_anchor_date (normal).
+#'   person_years is floored at 0 (fu_days / 365.25 when fu_days > 0, else 0).
+compute_followup <- function(denominator, activity, death_resolved, cutoff,
+                             last_enc = NULL, death = NULL) {
+
+  # ---- backward-compat detection: pre-161 callers pass last_enc/death data ---
+  # Old callers call compute_followup(denominator, last_enc, death, cutoff)
+  # positionally, so 'activity' receives a last_enc tibble and 'death_resolved'
+  # receives a raw death tibble. Detect by column fingerprint and reroute.
+  activity_is_legacy <- !missing(activity) &&
+    "last_enc_date" %in% names(activity) &&
+    !"last_observed" %in% names(activity)
+  death_is_legacy <- !missing(death_resolved) &&
+    "death_date" %in% names(death_resolved) &&
+    !"death_date_resolved" %in% names(death_resolved)
+
+  if (activity_is_legacy || death_is_legacy || !is.null(last_enc) || !is.null(death)) {
+    warning(
+      "[161-04] compute_followup(): called with pre-161 (legacy) arguments. ",
+      "Pass activity = get_last_activity(...) and ",
+      "death_resolved = resolve_death_date(...) instead. ",
+      "These arguments will be removed in 161-07.",
+      call. = FALSE)
+  }
+
+  # ---- legacy rerouting: reconstruct minimal activity/death_resolved frames --
+  if (activity_is_legacy) {
+    # last_enc has: ID, last_enc_date
+    legacy_enc <- if (!missing(activity)) activity else last_enc
+    activity <- legacy_enc |>
+      dplyr::rename(last_enc_any = last_enc_date) |>
+      dplyr::mutate(last_activity_any = as.Date(NA_character_),
+                    last_observed     = last_enc_any)
+  } else if (!is.null(last_enc)) {
+    activity <- last_enc |>
+      dplyr::rename(last_enc_any = last_enc_date) |>
+      dplyr::mutate(last_activity_any = as.Date(NA_character_),
+                    last_observed     = last_enc_any)
+  }
+
+  if (death_is_legacy) {
+    # death has: ID, death_date (possibly multiple rows; resolve to single min)
+    legacy_death <- if (!missing(death_resolved)) death_resolved else death
+    death_resolved <- legacy_death |>
+      dplyr::filter(!is.na(death_date)) |>
+      dplyr::group_by(ID) |>
+      dplyr::summarise(death_date_resolved = min(death_date), .groups = "drop") |>
+      dplyr::mutate(death_flag = "plausible")
+  } else if (!is.null(death)) {
+    death_resolved <- death |>
+      dplyr::filter(!is.na(death_date)) |>
+      dplyr::group_by(ID) |>
+      dplyr::summarise(death_date_resolved = min(death_date), .groups = "drop") |>
+      dplyr::mutate(death_flag = "plausible")
+  }
+
+  if (missing(activity) || missing(death_resolved)) {
+    stop(
+      "[161-04] compute_followup() requires 'activity' (from get_last_activity()) ",
+      "and 'death_resolved' (from resolve_death_date()). ",
+      "See utils_activity.R and utils_death.R.",
+      call. = FALSE)
+  }
+
+  # ---- core logic ------------------------------------------------------------
+  cutoff <- as.Date(cutoff)
+
+  fu <- denominator |>
+    dplyr::left_join(
+      dplyr::select(activity, "ID", "last_enc_any", "last_activity_any", "last_observed"),
+      by = "ID") |>
+    dplyr::left_join(
+      dplyr::select(death_resolved, "ID", "death_date_resolved", "death_flag"),
+      by = "ID") |>
     dplyr::mutate(
-      follow_end = dplyr::if_else(
-        is.na(death_date) & is.na(last_enc_date), as.Date(NA),
-        pmin(death_date, last_enc_date, cutoff, na.rm = TRUE)),
-      fu_days = as.numeric(follow_end - hl_anchor_date),
+      # D2: patients with no death record inherit "no_death_record" from
+      # resolve_death_date(); coalesce handles any IDs absent from death_resolved.
+      death_flag     = dplyr::coalesce(death_flag, "no_death_record"),
+      # obs_end: last credible clinical contact, capped at cutoff.
+      obs_end        = pmin(last_observed, cutoff, na.rm = TRUE),
+      # follow_end_raw: earliest of credible death, obs_end, cutoff.
+      # When death_date_resolved is NA (D2) it is excluded by na.rm = TRUE,
+      # so censoring falls at obs_end.
+      follow_end_raw = pmin(death_date_resolved, obs_end, cutoff, na.rm = TRUE),
+      # D6: a death date strictly before the anchor signals a posthumous diagnosis.
+      # Override follow_end to the anchor so the patient contributes time.
+      posthumous_dx  = !is.na(death_date_resolved) &
+                         death_date_resolved < hl_anchor_date,
+      follow_end     = dplyr::if_else(posthumous_dx,
+                                      hl_anchor_date,
+                                      follow_end_raw),
+      # Three-level fu_status.
       fu_status = dplyr::case_when(
-        is.na(follow_end) ~ "no_followup_date",
-        fu_days <= 0      ~ "zero_or_negative",
-        TRUE              ~ "ok"),
-      person_years = dplyr::if_else(fu_status == "ok", fu_days / 365.25, 0))
+        follow_end <  hl_anchor_date ~ "negative",
+        follow_end == hl_anchor_date ~ "zero",
+        TRUE                         ~ "positive"),
+      fu_reason = dplyr::case_when(
+        posthumous_dx           ~ "posthumous_dx",
+        fu_status == "zero"     ~ "same_day_last_contact",
+        fu_status == "negative" ~ "check_definition",
+        TRUE                    ~ NA_character_),
+      fu_days      = pmax(0, as.numeric(follow_end - hl_anchor_date)),
+      person_years = fu_days / 365.25)
 }
 
 #' Assign each event to pre / post / after_followup (D-25).
