@@ -8,11 +8,15 @@
 # patient to a root cause, and quantifies follow-up under-count for ALL HL
 # patients under a broader "last observed activity" definition.
 #
-# Usage (HiPerGator):
-#   HL_DUCKDB_PATH=/blue/.../pcornet.duckdb \
-#   HL_CUTOFF_DATE=2025-12-31 \
-#   HL_E_TABLE_PATH=output/E_patient_modality_dates.rds \
-#   Rscript R/161_diag_anchor_followup.R
+# Usage:
+#   source("/blue/erin.mobley-hl.bcu/insurance_investigation/R/161_diag_anchor_followup.R")
+#
+# Optional env overrides (set with Sys.setenv() before sourcing):
+#   HL_PROJECT_ROOT  project root (default: /blue/erin.mobley-hl.bcu/insurance_investigation)
+#   HL_DUCKDB_PATH   DuckDB file (default: auto-resolved from R/03 or project search)
+#   HL_CUTOFF_DATE   study cutoff used by R/147 (default: 2025-12-31)
+#   HL_E_TABLE_PATH  R/147 E_patient_modality_dates output (.rds/.csv) for replication check
+#   HL_DIAG_OUT      output directory (default: <root>/output/diagnostics/161_anchor_followup)
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -25,11 +29,50 @@ suppressPackageStartupMessages({
 })
 
 # ---- Config ------------------------------------------------------------------
-DUCKDB_PATH  <- Sys.getenv("HL_DUCKDB_PATH", "data/pcornet_cdm.duckdb")
+PROJECT_ROOT <- Sys.getenv("HL_PROJECT_ROOT", "/blue/erin.mobley-hl.bcu/insurance_investigation")
 CUTOFF_DATE  <- as.Date(Sys.getenv("HL_CUTOFF_DATE", "2025-12-31"))
-E_TABLE_PATH <- Sys.getenv("HL_E_TABLE_PATH", "")  # optional R/147 output (.rds/.csv)
-OUT_DIR      <- Sys.getenv("HL_DIAG_OUT", "output/diagnostics/161_anchor_followup")
+E_TABLE_PATH <- Sys.getenv("HL_E_TABLE_PATH", "")
+OUT_DIR      <- Sys.getenv("HL_DIAG_OUT",
+                           file.path(PROJECT_ROOT, "output", "diagnostics", "161_anchor_followup"))
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+
+# ---- Resolve DuckDB path -----------------------------------------------------
+resolve_duckdb_path <- function(project_root) {
+  env_path <- Sys.getenv("HL_DUCKDB_PATH", "")
+  if (nzchar(env_path)) {
+    if (!file.exists(env_path)) stop("HL_DUCKDB_PATH does not exist: ", env_path)
+    return(normalizePath(env_path))
+  }
+
+  # 1. Look for a quoted *.duckdb path in the ingest script
+  ingest <- file.path(project_root, "R", "03_duckdb_ingest.R")
+  if (file.exists(ingest)) {
+    src  <- readLines(ingest, warn = FALSE)
+    hits <- unlist(regmatches(src, gregexpr("[\"'][^\"']*\\.duckdb[\"']", src)))
+    hits <- unique(gsub("^[\"']|[\"']$", "", hits))
+    cand <- unique(c(hits, file.path(project_root, hits)))
+    cand <- cand[file.exists(cand)]
+    if (length(cand) >= 1) return(normalizePath(cand[1]))
+  }
+
+  # 2. Search the project tree
+  found <- list.files(project_root, pattern = "\\.duckdb$", recursive = TRUE,
+                      full.names = TRUE, all.files = FALSE)
+  found <- found[!grepl("renv/|\\.Rproj\\.user|/tmp/", found)]
+  if (length(found) == 1) return(normalizePath(found))
+  if (length(found) == 0) {
+    stop("No .duckdb file found under ", project_root,
+         ". If R/03 builds it in $TMPDIR or node-local scratch, point HL_DUCKDB_PATH ",
+         "at the persisted copy.")
+  }
+  stop("Multiple .duckdb files found; set HL_DUCKDB_PATH to one of:\n  ",
+       paste(found, collapse = "\n  "))
+}
+
+DUCKDB_PATH <- resolve_duckdb_path(PROJECT_ROOT)
+cat("Using DuckDB:", DUCKDB_PATH, "\n")
+cat("Cutoff date :", format(CUTOFF_DATE), "\n")
+cat("Output dir  :", normalizePath(OUT_DIR), "\n")
 
 con <- dbConnect(duckdb::duckdb(), dbdir = DUCKDB_PATH, read_only = TRUE)
 
@@ -39,8 +82,16 @@ real_name  <- function(t) all_tables[match(toupper(t), toupper(all_tables))]
 has_col    <- function(t, col) {
   has_table(t) && toupper(col) %in% toupper(dbListFields(con, real_name(t)))
 }
-banner <- function(x) cat("\n", strrep("=", 78), "\n", x, "\n", strrep("=", 78), "\n", sep = "")
+banner   <- function(x) cat("\n", strrep("=", 78), "\n", x, "\n", strrep("=", 78), "\n", sep = "")
 save_csv <- function(df, name) write_csv(df, file.path(OUT_DIR, paste0(name, ".csv")))
+
+required <- c("DIAGNOSIS", "ENCOUNTER")
+missing_req <- required[!vapply(required, has_table, logical(1))]
+if (length(missing_req)) {
+  dbDisconnect(con, shutdown = TRUE)
+  stop("Required table(s) missing from DuckDB: ", paste(missing_req, collapse = ", "),
+       "\nTables present: ", paste(all_tables, collapse = ", "))
+}
 
 # ---- 1. Date column type audit ----------------------------------------------
 banner("1. Date column types (VARCHAR = parse risk; TIMESTAMPTZ = day-shift risk)")
@@ -312,6 +363,8 @@ if (nzchar(E_TABLE_PATH) && file.exists(E_TABLE_PATH)) {
              "08_follow_end_mismatches")
     cat("follow_end mismatches written; check last_enc_date definition in compute_followup().\n")
   }
+} else if (nzchar(E_TABLE_PATH)) {
+  cat("\nHL_E_TABLE_PATH set but file not found; skipping replication check:", E_TABLE_PATH, "\n")
 }
 
 # ---- 9. Write outputs --------------------------------------------------------
@@ -321,10 +374,12 @@ save_csv(by_binding, "09_binding_component")
 save_csv(by_profile, "09_anchor_profile")
 save_csv(last_src,   "09_last_activity_source")
 save_csv(impact,     "09_cohort_impact")
-save_csv(tibble(n_hl_patients = n_distinct(hl_dx$ID), n_na_anchor = n_na_anchor,
+save_csv(tibble(duckdb_path        = DUCKDB_PATH,
+                n_hl_patients      = n_distinct(hl_dx$ID),
+                n_na_anchor        = n_na_anchor,
                 n_unparsed_dx_date = sum(hl_dx$dx_date_unparsed),
                 n_unparsed_admit   = sum(hl_dx$admit_unparsed),
-                cutoff_date = CUTOFF_DATE), "09_run_meta")
+                cutoff_date        = CUTOFF_DATE), "09_run_meta")
 
 duckdb::duckdb_unregister(con, "hl_ids")
 dbDisconnect(con, shutdown = TRUE)
