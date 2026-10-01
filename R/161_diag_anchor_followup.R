@@ -212,9 +212,33 @@ anchor_enc <- dbGetQuery(con, fill_pk(sprintf("
 
 # ---- 4. Death ---------------------------------------------------------------
 banner("4. DEATH summaries")
+col_type <- function(t, col) {
+  out <- dbGetQuery(con, sprintf(
+    "SELECT data_type FROM information_schema.columns
+      WHERE upper(table_name) = '%s' AND upper(column_name) = '%s'",
+    toupper(t), toupper(col)))$data_type
+  if (length(out)) toupper(out[1]) else NA_character_
+}
+
+IMPUTE_STATUS <- "not_present"
 death_sum <- if (has_table("DEATH")) {
-  impute_expr <- if (has_col("DEATH", "DEATH_DATE_IMPUTE"))
-    "bool_or(d.DEATH_DATE_IMPUTE IN ('B','D','M'))" else "FALSE"
+  impute_expr <- "CAST(NULL AS BOOLEAN)"
+  if (has_col("DEATH", "DEATH_DATE_IMPUTE")) {
+    imp_type <- col_type("DEATH", "DEATH_DATE_IMPUTE")
+    if (grepl("VARCHAR|TEXT|STRING|CHAR", imp_type)) {
+      impute_expr   <- "bool_or(trim(upper(d.DEATH_DATE_IMPUTE)) IN ('B','D','M'))"
+      IMPUTE_STATUS <- "ok"
+    } else {
+      IMPUTE_STATUS <- paste0("mistyped_", imp_type)
+      cat("WARNING: DEATH.DEATH_DATE_IMPUTE is typed ", imp_type,
+          " in DuckDB (should be VARCHAR flags B/D/M/N). Imputation flags were likely ",
+          "lost at ingest (R/03); death_imputed set to NA.\n", sep = "")
+      imp_nonnull <- dbGetQuery(con, sprintf(
+        "SELECT count(*) AS n_nonnull FROM %s WHERE DEATH_DATE_IMPUTE IS NOT NULL",
+        real_name("DEATH")))$n_nonnull
+      cat("  Non-null DEATH_DATE_IMPUTE values in DuckDB:", imp_nonnull, "\n")
+    }
+  }
   dbGetQuery(con, fill_pk(sprintf("
     SELECT d.{PK} AS ID,
            min(TRY_CAST(d.DEATH_DATE AS DATE))            AS death_min,
@@ -407,6 +431,7 @@ save_csv(last_src,   "09_last_activity_source")
 save_csv(impact,     "09_cohort_impact")
 save_csv(tibble(duckdb_path        = DUCKDB_PATH,
                 patient_key        = pk_col("DIAGNOSIS"),
+                death_impute_flag  = IMPUTE_STATUS,
                 n_hl_patients      = n_distinct(hl_dx$ID),
                 n_na_anchor        = n_na_anchor,
                 n_unparsed_dx_date = sum(hl_dx$dx_date_unparsed),
