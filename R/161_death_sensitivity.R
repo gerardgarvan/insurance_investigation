@@ -36,9 +36,10 @@ library(dplyr)
 library(readr)
 
 # ---------------------------------------------------------------------------
-# 1. Open DuckDB read-only (no write lock; safe alongside other sessions)
+# 1. Open DuckDB via the shared helper so safe_table() / get_pcornet_table()
+#    pick up pcornet_con and USE_DUCKDB = TRUE (raw dbConnect bypasses both)
 # ---------------------------------------------------------------------------
-con <- DBI::dbConnect(duckdb::duckdb(), dbdir = CONFIG$cache$duckdb_path, read_only = TRUE)
+con <- open_pcornet_con(read_only = TRUE)
 on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
 # ---------------------------------------------------------------------------
