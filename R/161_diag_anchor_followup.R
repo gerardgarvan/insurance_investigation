@@ -422,6 +422,75 @@ if (nzchar(E_TABLE_PATH) && file.exists(E_TABLE_PATH)) {
   cat("\nHL_E_TABLE_PATH set but file not found; skipping replication check:", E_TABLE_PATH, "\n")
 }
 
+# ---- 8b. Death-row detail (161-02) ------------------------------------------
+banner("8b. Conflicting death dates, DEATH_SOURCE, imputation, projected person-years")
+GRACE <- 30L
+src_expr <- if (has_col("DEATH", "DEATH_SOURCE")) "CAST(d.DEATH_SOURCE AS VARCHAR)" else "NULL"
+imp_expr <- if (IMPUTE_STATUS == "ok") "CAST(d.DEATH_DATE_IMPUTE AS VARCHAR)" else "NULL"
+death_rows <- dbGetQuery(con, fill_pk(sprintf("
+  SELECT d.{PK} AS ID, TRY_CAST(d.DEATH_DATE AS DATE) AS DEATH_DATE,
+         %s AS DEATH_SOURCE, %s AS DEATH_DATE_IMPUTE
+    FROM %s d JOIN hl_ids h ON d.{PK} = h.ID",
+  src_expr, imp_expr, real_name("DEATH")), pk_col("DEATH"))) |>
+  as_tibble() |>
+  mutate(DEATH_DATE = as.Date(DEATH_DATE),
+         DEATH_SOURCE = toupper(trimws(DEATH_SOURCE)),
+         DEATH_DATE_IMPUTE = toupper(trimws(DEATH_DATE_IMPUTE))) |>
+  filter(!is.na(DEATH_DATE))
+
+obs <- diag |> transmute(ID, last_observed = pmax(last_enc_any, last_activity_any, na.rm = TRUE))
+death_chk <- death_rows |>
+  left_join(obs, by = "ID") |>
+  mutate(consistent = is.na(last_observed) | DEATH_DATE >= last_observed - GRACE)
+
+per_id <- death_chk |>
+  group_by(ID) |>
+  summarise(n_dates = n_distinct(DEATH_DATE),
+            any_consistent = any(consistent),
+            imputed = any(DEATH_DATE_IMPUTE %in% c("B", "D", "M")),
+            .groups = "drop")
+
+death_detail <- tibble(
+  n_decedents                  = nrow(per_id),
+  n_single_plausible           = sum(per_id$n_dates == 1 &  per_id$any_consistent),
+  n_single_implausible         = sum(per_id$n_dates == 1 & !per_id$any_consistent),
+  n_conflicting                = sum(per_id$n_dates > 1),
+  n_conflicting_resolved       = sum(per_id$n_dates > 1 &  per_id$any_consistent),
+  n_conflicting_unresolved     = sum(per_id$n_dates > 1 & !per_id$any_consistent),
+  n_imputed_bdm                = sum(per_id$imputed),
+  n_imputed_and_implausible    = sum(per_id$imputed & !per_id$any_consistent),
+  impute_flag_status           = IMPUTE_STATUS)
+print(death_detail, width = Inf)
+
+source_tab <- death_rows |>
+  count(DEATH_SOURCE = coalesce(DEATH_SOURCE, "<NULL>"), sort = TRUE)
+cat("\nDEATH_SOURCE distribution (HL decedent rows):\n"); print(source_tab, n = Inf)
+
+# Projection: D2 (no credible date -> NA) + D3 approximated as earliest consistent
+# date (source priority ignored; affects conflicting patients only) + D6.
+proj_death <- death_chk |>
+  filter(consistent) |>
+  group_by(ID) |>
+  summarise(death_proj = min(DEATH_DATE), .groups = "drop")
+proj <- diag |>
+  left_join(proj_death, by = "ID") |>
+  mutate(obs_end = pmin(pmax(last_enc_any, last_activity_any, na.rm = TRUE), CUTOFF_DATE),
+         fe      = pmin(death_proj, obs_end, CUTOFF_DATE, na.rm = TRUE),
+         fe      = if_else(!is.na(death_proj) & death_proj < hl_anchor_date, hl_anchor_date, fe),
+         fu_days = pmax(0L, as.integer(fe - hl_anchor_date)))
+projection <- tibble(
+  person_years_current      = round(sum(diag$fu_days_current) / 365.25, 1),
+  person_years_obs_end_only = round(sum(diag$fu_days_proposed) / 365.25, 1),
+  person_years_projected_d2 = round(sum(proj$fu_days) / 365.25, 1),
+  n_zero_projected          = sum(proj$fu_days == 0),
+  n_negative_projected      = sum(proj$fe < proj$hl_anchor_date)) |>
+  mutate(pct_increase_d2 = round(100 * (person_years_projected_d2 / person_years_current - 1), 1))
+cat("\nProjected person-years under D2/D3/D6:\n"); print(projection, width = Inf)
+
+save_csv(death_detail, "08b_death_detail")
+save_csv(source_tab,   "08b_death_source")
+save_csv(projection,   "08b_person_years_projection")
+
 # ---- 9. Write outputs --------------------------------------------------------
 save_csv(diag,       "09_patient_level_diagnostics")
 save_csv(by_cause,   "09_root_cause_summary")
