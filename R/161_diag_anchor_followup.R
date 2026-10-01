@@ -13,7 +13,7 @@
 #
 # Optional env overrides (set with Sys.setenv() before sourcing):
 #   HL_PROJECT_ROOT  project root (default: /blue/erin.mobley-hl.bcu/insurance_investigation)
-#   HL_DUCKDB_PATH   DuckDB file (default: auto-resolved from R/03 or project search)
+#   HL_DUCKDB_PATH   DuckDB file (default: /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb)
 #   HL_CUTOFF_DATE   study cutoff used by R/147 (default: 2025-12-31)
 #   HL_E_TABLE_PATH  R/147 E_patient_modality_dates output (.rds/.csv) for replication check
 #   HL_DIAG_OUT      output directory (default: <root>/output/diagnostics/161_anchor_followup)
@@ -36,34 +36,44 @@ OUT_DIR      <- Sys.getenv("HL_DIAG_OUT",
                            file.path(PROJECT_ROOT, "output", "diagnostics", "161_anchor_followup"))
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
+KNOWN_DB_PATHS <- c(
+  "/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb",
+  file.path(dirname(PROJECT_ROOT), "clean", "duckdb", "pcornet.duckdb")
+)
+
 # ---- Resolve DuckDB path -----------------------------------------------------
-resolve_duckdb_path <- function(project_root) {
+resolve_duckdb_path <- function(project_root, known = KNOWN_DB_PATHS) {
   env_path <- Sys.getenv("HL_DUCKDB_PATH", "")
   if (nzchar(env_path)) {
     if (!file.exists(env_path)) stop("HL_DUCKDB_PATH does not exist: ", env_path)
     return(normalizePath(env_path))
   }
 
-  # 1. Look for a quoted *.duckdb path in the ingest script
-  ingest <- file.path(project_root, "R", "03_duckdb_ingest.R")
-  if (file.exists(ingest)) {
-    src  <- readLines(ingest, warn = FALSE)
+  # 1. Known persisted location(s)
+  hit <- known[file.exists(known)]
+  if (length(hit)) return(normalizePath(hit[1]))
+
+  # 2. Quoted *.duckdb path in R/00_config.R or R/03_duckdb_ingest.R
+  for (f in file.path(project_root, "R", c("00_config.R", "03_duckdb_ingest.R"))) {
+    if (!file.exists(f)) next
+    src  <- readLines(f, warn = FALSE)
     hits <- unlist(regmatches(src, gregexpr("[\"'][^\"']*\\.duckdb[\"']", src)))
     hits <- unique(gsub("^[\"']|[\"']$", "", hits))
     cand <- unique(c(hits, file.path(project_root, hits)))
     cand <- cand[file.exists(cand)]
-    if (length(cand) >= 1) return(normalizePath(cand[1]))
+    if (length(cand)) return(normalizePath(cand[1]))
   }
 
-  # 2. Search the project tree
-  found <- list.files(project_root, pattern = "\\.duckdb$", recursive = TRUE,
-                      full.names = TRUE, all.files = FALSE)
+  # 3. Search project tree and sibling clean/ folder
+  roots <- unique(c(project_root, file.path(dirname(project_root), "clean")))
+  roots <- roots[dir.exists(roots)]
+  found <- unlist(lapply(roots, list.files, pattern = "\\.duckdb$",
+                         recursive = TRUE, full.names = TRUE))
   found <- found[!grepl("renv/|\\.Rproj\\.user|/tmp/", found)]
   if (length(found) == 1) return(normalizePath(found))
   if (length(found) == 0) {
-    stop("No .duckdb file found under ", project_root,
-         ". If R/03 builds it in $TMPDIR or node-local scratch, point HL_DUCKDB_PATH ",
-         "at the persisted copy.")
+    stop("No .duckdb file found under: ", paste(roots, collapse = ", "),
+         ". Set HL_DUCKDB_PATH explicitly.")
   }
   stop("Multiple .duckdb files found; set HL_DUCKDB_PATH to one of:\n  ",
        paste(found, collapse = "\n  "))
@@ -74,16 +84,27 @@ cat("Using DuckDB:", DUCKDB_PATH, "\n")
 cat("Cutoff date :", format(CUTOFF_DATE), "\n")
 cat("Output dir  :", normalizePath(OUT_DIR), "\n")
 
-con <- dbConnect(duckdb::duckdb(), dbdir = DUCKDB_PATH, read_only = TRUE)
+con <- tryCatch(
+  dbConnect(duckdb::duckdb(), dbdir = DUCKDB_PATH, read_only = TRUE),
+  error = function(e) stop("Could not open DuckDB read-only (another session may hold a ",
+                           "write lock, e.g. a running R/03):\n", conditionMessage(e)))
 
 all_tables <- dbListTables(con)
 has_table  <- function(t) toupper(t) %in% toupper(all_tables)
 real_name  <- function(t) all_tables[match(toupper(t), toupper(all_tables))]
-has_col    <- function(t, col) {
-  has_table(t) && toupper(col) %in% toupper(dbListFields(con, real_name(t)))
+fields_up  <- function(t) toupper(dbListFields(con, real_name(t)))
+has_col    <- function(t, col) has_table(t) && toupper(col) %in% fields_up(t)
+banner     <- function(x) cat("\n", strrep("=", 78), "\n", x, "\n", strrep("=", 78), "\n", sep = "")
+save_csv   <- function(df, name) write_csv(df, file.path(OUT_DIR, paste0(name, ".csv")))
+
+# Patient key may be ID (renamed) or PATID (raw CDM) inside DuckDB
+pk_col <- function(t) {
+  f <- fields_up(t)
+  if ("ID" %in% f) return("ID")
+  if ("PATID" %in% f) return("PATID")
+  stop("Table ", t, " has neither ID nor PATID column.")
 }
-banner   <- function(x) cat("\n", strrep("=", 78), "\n", x, "\n", strrep("=", 78), "\n", sep = "")
-save_csv <- function(df, name) write_csv(df, file.path(OUT_DIR, paste0(name, ".csv")))
+fill_pk <- function(sql, pk) gsub("{PK}", pk, sql, fixed = TRUE)
 
 required <- c("DIAGNOSIS", "ENCOUNTER")
 missing_req <- required[!vapply(required, has_table, logical(1))]
@@ -92,6 +113,8 @@ if (length(missing_req)) {
   stop("Required table(s) missing from DuckDB: ", paste(missing_req, collapse = ", "),
        "\nTables present: ", paste(all_tables, collapse = ", "))
 }
+cat("Patient key — DIAGNOSIS:", pk_col("DIAGNOSIS"), "| ENCOUNTER:", pk_col("ENCOUNTER"),
+    if (has_table("DEATH")) paste("| DEATH:", pk_col("DEATH")) else "", "\n")
 
 # ---- 1. Date column type audit ----------------------------------------------
 banner("1. Date column types (VARCHAR = parse risk; TIMESTAMPTZ = day-shift risk)")
@@ -111,16 +134,16 @@ save_csv(type_audit, "01_date_type_audit")
 
 # ---- 2. HL diagnosis rows and anchor ----------------------------------------
 banner("2. HL diagnosis rows and anchor derivation")
-hl_dx <- dbGetQuery(con, "
-  SELECT ID, ENCOUNTERID, DX, CAST(DX_TYPE AS VARCHAR) AS DX_TYPE,
+hl_dx <- dbGetQuery(con, fill_pk(paste0("
+  SELECT {PK} AS ID, ENCOUNTERID, DX, CAST(DX_TYPE AS VARCHAR) AS DX_TYPE,
          (DX_DATE    IS NOT NULL AND TRY_CAST(DX_DATE    AS DATE) IS NULL) AS dx_date_unparsed,
          (ADMIT_DATE IS NOT NULL AND TRY_CAST(ADMIT_DATE AS DATE) IS NULL) AS admit_unparsed,
          TRY_CAST(DX_DATE    AS DATE) AS dx_date,
          TRY_CAST(ADMIT_DATE AS DATE) AS dx_admit_date
-    FROM DIAGNOSIS
+    FROM ", real_name("DIAGNOSIS"), "
    WHERE (CAST(DX_TYPE AS VARCHAR) = '10'        AND upper(DX) LIKE 'C81%')
-      OR (CAST(DX_TYPE AS VARCHAR) IN ('09','9') AND replace(DX, '.', '') LIKE '201%')
-") |>
+      OR (CAST(DX_TYPE AS VARCHAR) IN ('09','9') AND replace(DX, '.', '') LIKE '201%')"),
+  pk_col("DIAGNOSIS"))) |>
   as_tibble() |>
   mutate(dx_date       = as.Date(dx_date),
          dx_admit_date = as.Date(dx_admit_date),
@@ -129,6 +152,10 @@ hl_dx <- dbGetQuery(con, "
 cat(sprintf("HL dx rows: %d | patients: %d | DX_DATE unparsed: %d | ADMIT_DATE unparsed: %d\n",
             nrow(hl_dx), n_distinct(hl_dx$ID),
             sum(hl_dx$dx_date_unparsed), sum(hl_dx$admit_unparsed)))
+if (nrow(hl_dx) == 0) {
+  dbDisconnect(con, shutdown = TRUE)
+  stop("No HL diagnosis rows found — check DX_TYPE coding (e.g. 'ICD10' vs '10') in DIAGNOSIS.")
+}
 
 anchor <- hl_dx |>
   filter(!is.na(anchor_cand)) |>
@@ -150,12 +177,14 @@ duckdb::duckdb_register(con, "hl_ids",
 
 # ---- 3. Encounter-based last contact ----------------------------------------
 banner("3. ENCOUNTER summaries")
-enc_sum <- dbGetQuery(con, sprintf("
+enc_tbl <- real_name("ENCOUNTER")
+enc_pk  <- pk_col("ENCOUNTER")
+enc_sum <- dbGetQuery(con, fill_pk(sprintf("
   WITH e AS (
-    SELECT e.ID,
+    SELECT e.{PK} AS ID,
            TRY_CAST(e.ADMIT_DATE     AS DATE) AS admit,
            TRY_CAST(e.DISCHARGE_DATE AS DATE) AS disch
-      FROM ENCOUNTER e JOIN hl_ids h ON e.ID = h.ID
+      FROM %s e JOIN hl_ids h ON e.{PK} = h.ID
   )
   SELECT ID,
          count(*)                                                       AS n_enc,
@@ -163,20 +192,20 @@ enc_sum <- dbGetQuery(con, sprintf("
          max(greatest(coalesce(admit, disch), coalesce(disch, admit)))
            FILTER (WHERE coalesce(admit, disch) <= DATE '%s')           AS last_enc_any,
          sum(CASE WHEN admit > DATE '%s' THEN 1 ELSE 0 END)             AS n_enc_after_cutoff
-    FROM e GROUP BY ID", CUTOFF_DATE, CUTOFF_DATE)) |>
+    FROM e GROUP BY ID", enc_tbl, CUTOFF_DATE, CUTOFF_DATE), enc_pk)) |>
   as_tibble() |>
   mutate(across(c(last_enc_admit, last_enc_any), as.Date),
          last_enc_any = pmin(last_enc_any, CUTOFF_DATE))
 
-anchor_enc <- dbGetQuery(con, "
+anchor_enc <- dbGetQuery(con, fill_pk(sprintf("
   SELECT h.ID,
          (e.ENCOUNTERID IS NOT NULL)          AS anchor_enc_found,
          CAST(e.ENC_TYPE AS VARCHAR)          AS anchor_enc_type,
          TRY_CAST(e.ADMIT_DATE     AS DATE)   AS anchor_enc_admit,
          TRY_CAST(e.DISCHARGE_DATE AS DATE)   AS anchor_enc_disch
     FROM hl_ids h
-    LEFT JOIN ENCOUNTER e
-      ON e.ID = h.ID AND e.ENCOUNTERID = h.anchor_encounterid") |>
+    LEFT JOIN %s e
+      ON e.{PK} = h.ID AND e.ENCOUNTERID = h.anchor_encounterid", enc_tbl), enc_pk)) |>
   as_tibble() |>
   distinct(ID, .keep_all = TRUE) |>
   mutate(across(c(anchor_enc_admit, anchor_enc_disch), as.Date))
@@ -186,14 +215,14 @@ banner("4. DEATH summaries")
 death_sum <- if (has_table("DEATH")) {
   impute_expr <- if (has_col("DEATH", "DEATH_DATE_IMPUTE"))
     "bool_or(d.DEATH_DATE_IMPUTE IN ('B','D','M'))" else "FALSE"
-  dbGetQuery(con, sprintf("
-    SELECT d.ID,
+  dbGetQuery(con, fill_pk(sprintf("
+    SELECT d.{PK} AS ID,
            min(TRY_CAST(d.DEATH_DATE AS DATE))            AS death_min,
            max(TRY_CAST(d.DEATH_DATE AS DATE))            AS death_max,
            count(DISTINCT TRY_CAST(d.DEATH_DATE AS DATE)) AS n_death_dates,
            %s                                              AS death_imputed
-      FROM DEATH d JOIN hl_ids h ON d.ID = h.ID
-     GROUP BY d.ID", impute_expr)) |>
+      FROM %s d JOIN hl_ids h ON d.{PK} = h.ID
+     GROUP BY d.{PK}", impute_expr, real_name("DEATH")), pk_col("DEATH"))) |>
     as_tibble() |>
     mutate(across(c(death_min, death_max), as.Date))
 } else {
@@ -219,14 +248,16 @@ activity_sources <- list(
 )
 act_sql <- imap(activity_sources, function(cols, tbl) {
   if (!has_table(tbl)) return(NULL)
+  pk <- tryCatch(pk_col(tbl), error = function(e) NULL)
+  if (is.null(pk)) return(NULL)
   cols <- cols[map_lgl(cols, ~ has_col(tbl, .x))]
   if (!length(cols)) return(NULL)
-  map_chr(cols, ~ sprintf(
-    "SELECT t.ID, '%s.%s' AS src,
+  map_chr(cols, ~ fill_pk(sprintf(
+    "SELECT t.{PK} AS ID, '%s.%s' AS src,
             max(TRY_CAST(t.%s AS DATE)) FILTER (WHERE TRY_CAST(t.%s AS DATE) <= DATE '%s') AS d
-       FROM %s t JOIN hl_ids h ON t.ID = h.ID
-      GROUP BY t.ID",
-    tbl, .x, .x, .x, CUTOFF_DATE, real_name(tbl)))
+       FROM %s t JOIN hl_ids h ON t.{PK} = h.ID
+      GROUP BY t.{PK}",
+    tbl, .x, .x, .x, CUTOFF_DATE, real_name(tbl)), pk))
 }) |> compact() |> unlist()
 
 cat("Activity sources used:", length(act_sql), "\n")
@@ -375,6 +406,7 @@ save_csv(by_profile, "09_anchor_profile")
 save_csv(last_src,   "09_last_activity_source")
 save_csv(impact,     "09_cohort_impact")
 save_csv(tibble(duckdb_path        = DUCKDB_PATH,
+                patient_key        = pk_col("DIAGNOSIS"),
                 n_hl_patients      = n_distinct(hl_dx$ID),
                 n_na_anchor        = n_na_anchor,
                 n_unparsed_dx_date = sum(hl_dx$dx_date_unparsed),
