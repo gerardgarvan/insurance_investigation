@@ -42,6 +42,8 @@ library(readr)
 con <- open_pcornet_con(read_only = TRUE)
 on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
+CUTOFF_DATE <- as.Date(Sys.getenv("HL_CUTOFF_DATE", "2025-12-31"))
+
 # ---------------------------------------------------------------------------
 # 2. Build HL cohort IDs using the same denominator as R/147
 # ---------------------------------------------------------------------------
