@@ -1,6 +1,7 @@
 # ==============================================================================
 # 102_death_cause_nhl_flag.R -- Cause-of-Death NHL Flag CSV (Phase 118 / 119)
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Flags cause-of-death codes only.
 # Purpose:     Produce a per-patient CSV flagging whether each deceased patient's
 #              cause of death classifies as Non-Hodgkin Lymphoma (NHL). The flag
 #              is a three-state logical: TRUE (NHL cause), FALSE (other coded

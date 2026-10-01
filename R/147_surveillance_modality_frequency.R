@@ -1,6 +1,7 @@
 # ==============================================================================
 # 147_surveillance_modality_frequency.R -- Surveillance Modality Frequency
 # ==============================================================================
+# [161-07 audit] Updated in Phase 161-05 (compute_followup uses death_date_resolved).
 # Purpose:  For every patient with >= 1 HL diagnosis code, count how often each
 #           audited Surveillance Strategy modality appears in the extract.
 #           Per-code presence (A, A2) is reviewed by the team before the

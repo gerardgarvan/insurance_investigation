@@ -1,6 +1,7 @@
 # ==============================================================================
 # 03_duckdb_ingest.R -- Ingest 13 PCORnet CDM tables from RDS cache into DuckDB with atomic write
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Data ingest only.
 #
 # Purpose:
 #   Reads all 13 PCORnet tables from RDS cache (/blue/erin.mobley-hl.bcu/clean/rds/raw/)

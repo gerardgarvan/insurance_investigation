@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+# [161-07 audit] Exempt: raw-data study (diagnostic); studies raw DEATH records to attribute root causes.
 # =============================================================================
 # R/161_diag_anchor_followup.R
 # Phase 161 (diagnostic) — Why does hl_anchor_date >= follow_end occur?

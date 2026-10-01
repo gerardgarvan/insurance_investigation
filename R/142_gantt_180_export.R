@@ -48,7 +48,10 @@ suppressPackageStartupMessages({
   library(glue)
   library(stringr)
   library(lubridate)
+  library(DBI)
+  library(duckdb)
 })
+# utils_death.R and utils_activity.R auto-sourced via R/00_config.R
 
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
@@ -315,12 +318,38 @@ if (!is.null(birth_dates)) {
 
 
 # --- SECTION 4B: DEATH PSEUDO-TREATMENT ROWS ---
+# [161-07 audit] Updated: death marker uses death_date_resolved (resolve_death_date, grace 30).
+# Patients with implausible death dates get NA resolved dates and are excluded from the marker.
 
 if (file.exists(VALIDATED_DEATHS_RDS)) {
   message("\n--- Building Death pseudo-treatment rows ---")
   assert_rds_exists(VALIDATED_DEATHS_RDS, script_name = "R/142")
   validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
-  death_data <- validated_deaths %>% filter(!is.na(DEATH_DATE)) %>% select(ID, DEATH_DATE)
+
+  # Resolve death dates using the shared canonical utility (161-07).
+  con_death <- DBI::dbConnect(duckdb::duckdb(), dbdir = CONFIG$cache$duckdb_path, read_only = TRUE)
+  tryCatch({
+    death_id_tbl <- validated_deaths %>% distinct(ID)
+    activity_for_death <- get_last_activity(con_death, death_id_tbl, CUTOFF_DATE)
+
+    death_raw_tbl <- validated_deaths %>%
+      filter(!is.na(DEATH_DATE)) %>%
+      select(ID, DEATH_DATE, DEATH_SOURCE)
+
+    resolved_deaths <- resolve_death_date(death_raw_tbl, activity_for_death, grace_days = 30L)
+  }, finally = {
+    DBI::dbDisconnect(con_death, shutdown = TRUE)
+  })
+
+  n_raw      <- nrow(validated_deaths %>% filter(!is.na(DEATH_DATE)))
+  n_resolved <- sum(!is.na(resolved_deaths$death_date_resolved))
+  message(glue("  Death dates: {n_raw} raw -> {n_resolved} credible (resolve_death_date grace=30)"))
+  if (n_raw != n_resolved)
+    message(glue("  {n_raw - n_resolved} implausible death date(s) excluded from 180d Gantt marker"))
+
+  death_data <- resolved_deaths %>%
+    filter(!is.na(death_date_resolved)) %>%
+    transmute(ID, DEATH_DATE = death_date_resolved)
 
   if (nrow(death_data) > 0) {
     death_episodes <- death_data %>%

@@ -1,6 +1,7 @@
 # ==============================================================================
 # 88_smoke_test_comprehensive.R -- Comprehensive Structural Smoke Test
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Structural smoke test only.
 #
 # Purpose:
 #   Comprehensive structural smoke test validating pipeline integrity after v2.0

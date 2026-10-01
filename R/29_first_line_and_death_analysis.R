@@ -1,6 +1,9 @@
 # ==============================================================================
 # 29_first_line_and_death_analysis.R -- First-Line Therapy Flagging and Death Validation
 # ==============================================================================
+# [161-07 audit] Exempt: raw-data study — cross-references recorded DEATH_DATE against treatment
+# timelines to detect impossible deaths. Raw dates are required; resolved dates would hide the
+# anomalies under investigation (post-death activity is the subject, not an endpoint to censor).
 # Purpose:     First-line therapy flagging (60-day clean period before first treatment)
 #              and death date validation cross-referenced against treatment timeline.
 #

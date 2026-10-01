@@ -1,6 +1,7 @@
 # ==============================================================================
 # 51_post_death_encounter_investigation.R -- Post-Death Encounter Drill-Down Investigation
 # ==============================================================================
+# [161-07 audit] Exempt: studies raw DEATH records; resolved dates would hide the cases examined.
 #
 # Purpose:
 #   Drill into the ~200 patients flagged with post-death clinical activity,

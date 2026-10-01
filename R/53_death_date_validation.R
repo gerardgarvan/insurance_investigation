@@ -1,4 +1,5 @@
 # Phase 53: Death Date Validation & Treatment Timeline Cleanup
+# [161-07 audit] Exempt: studies raw DEATH records; resolved dates would hide the cases examined.
 #
 # Purpose:
 #   Validate death dates against treatment timelines and identify impossible

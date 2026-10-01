@@ -1,6 +1,7 @@
 # ==============================================================================
 # R/39_run_all_investigations.R
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Orchestration script only.
 #
 # Purpose:
 #   Run the full pipeline end-to-end: data loading, cohort building, episode

@@ -1,6 +1,7 @@
 # ==============================================================================
 # test_phase78_human.R -- HiPerGator Human Verification Tests for Phase 78
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. UAT verification script only.
 #
 # Purpose:
 #   Interactive test script to verify Phase 78 (Episode Enhancement & Death

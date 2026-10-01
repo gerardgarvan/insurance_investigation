@@ -1,6 +1,7 @@
 # ==============================================================================
 # 01_load_pcornet.R -- Load 15 PCORnet CDM CSV tables with explicit column types into named list
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Data loading only.
 #
 # Purpose:
 #   Loads 15 primary PCORnet CDM tables from CSV files on HiPerGator /orange

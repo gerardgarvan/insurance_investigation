@@ -1,6 +1,7 @@
 # ==============================================================================
 # 52_strange_death_source_and_enc_type.R -- Source & Encounter Type for Strange Deaths
 # ==============================================================================
+# [161-07 audit] Exempt: studies raw DEATH records; resolved dates would hide the cases examined.
 #
 # Purpose:
 #   Compare ALL deceased patients against the "strange deaths" subset to reveal

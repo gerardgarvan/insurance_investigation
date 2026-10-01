@@ -1,6 +1,7 @@
 # ==============================================================================
 # filter_strange_death_csvs.R -- Filter DEATH CSVs to strange-death patients
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Filters raw CSV files by patient ID flag only.
 #
 # Purpose:
 #   Filter DEATH_Mailhot_V1.csv and DEATH_CAUSE_Mailhot_V1.csv to only the ~258

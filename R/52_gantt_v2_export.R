@@ -122,12 +122,15 @@ suppressPackageStartupMessages({
   library(glue)
   library(stringr)
   library(lubridate)
+  library(DBI)
+  library(duckdb)
 })
 
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 source("R/utils/utils_cancer.R")  # Phase 115: classify_codes() for 7-day confirmed mapping
+# utils_death.R and utils_activity.R auto-sourced via R/00_config.R
 # utils_format.R already loaded by R/00_config.R (auto-sources all R/utils/*.R via list.files)
 # DO NOT re-source via here() — here package is not guaranteed to be loaded in every execution context
 
@@ -484,6 +487,9 @@ if (!is.null(birth_dates)) {
 
 
 # --- SECTION 4B: DEATH PSEUDO-TREATMENT ROWS (per D-09, D-12) ---
+# [161-07 audit] Updated: death marker uses death_date_resolved (resolve_death_date, grace 30).
+# Patients with implausible death dates (post_death_activity > grace) get NA resolved dates
+# and are excluded from the Death pseudo-treatment rows.
 
 if (file.exists(VALIDATED_DEATHS_RDS)) {
   message("\n--- Building Death pseudo-treatment rows ---")
@@ -492,9 +498,32 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
   assert_rds_exists(VALIDATED_DEATHS_RDS, script_name = "R/52")
   validated_deaths <- readRDS(VALIDATED_DEATHS_RDS)
 
-  death_data <- validated_deaths %>%
-    filter(!is.na(DEATH_DATE)) %>%
-    select(ID, DEATH_DATE)
+  # Resolve death dates using the shared canonical utility (161-07).
+  # Opens a read-only DuckDB connection specifically for last-activity computation.
+  con_death <- DBI::dbConnect(duckdb::duckdb(), dbdir = CONFIG$cache$duckdb_path, read_only = TRUE)
+  tryCatch({
+    # Build cohort IDs from the death records (we only resolve for patients in death table)
+    death_id_tbl <- validated_deaths %>% distinct(ID)
+    activity_for_death <- get_last_activity(con_death, death_id_tbl, CUTOFF_DATE)
+
+    death_raw_tbl <- validated_deaths %>%
+      filter(!is.na(DEATH_DATE)) %>%
+      select(ID, DEATH_DATE, DEATH_SOURCE)
+
+    resolved_deaths <- resolve_death_date(death_raw_tbl, activity_for_death, grace_days = 30L)
+  }, finally = {
+    DBI::dbDisconnect(con_death, shutdown = TRUE)
+  })
+
+  death_data <- resolved_deaths %>%
+    filter(!is.na(death_date_resolved)) %>%
+    transmute(ID, DEATH_DATE = death_date_resolved)
+
+  n_raw   <- nrow(validated_deaths %>% filter(!is.na(DEATH_DATE)))
+  n_resolved <- nrow(death_data)
+  message(glue("  Death dates: {n_raw} raw -> {n_resolved} credible (resolve_death_date grace=30)"))
+  if (n_raw != n_resolved)
+    message(glue("  {n_raw - n_resolved} implausible death date(s) excluded from Gantt marker"))
 
   if (nrow(death_data) > 0) {
     # Build death_episodes (20 columns after dead-column removal)

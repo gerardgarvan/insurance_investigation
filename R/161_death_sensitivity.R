@@ -1,6 +1,8 @@
 # ==============================================================================
 # 161_death_sensitivity.R -- Grace-period sensitivity table and D1 reproduction check
 # ==============================================================================
+# [161-07 audit] Compliant: calls resolve_death_date() and death_sensitivity_table() directly.
+# This script IS the canonical verification of the grace-period choice.
 #
 # Purpose:
 #   Runs resolve_death_date() at N = 0, 30, 60, 90, 365 days to document the D1

@@ -1,6 +1,7 @@
 # ==============================================================================
 # 35_death_cause_quality.R -- Death Cause Data Quality Profiling
 # ==============================================================================
+# [161-07 audit] Exempt: studies raw DEATH records; resolved dates would hide the cases examined.
 #
 # Purpose:
 #   Profile death cause completeness and quality to establish a baseline for

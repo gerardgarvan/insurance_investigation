@@ -1,6 +1,7 @@
 # ==============================================================================
 # 00_config.R -- Project-wide configuration: data paths, ICD code lists, payer mapping rules, treatment codes, analysis parameters
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Configuration and path definitions only.
 #
 # Purpose:
 #   Defines all project-wide configuration objects for the PCORnet Payer Variable

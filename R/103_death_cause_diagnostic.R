@@ -1,6 +1,7 @@
 # ==============================================================================
 # 103_death_cause_diagnostic.R -- Cause-of-Death Signal Inventory (Phase 119)
 # ==============================================================================
+# [161-07 audit] Exempt: does not use DEATH_DATE for an endpoint. Inventories cause-of-death signals only.
 # Purpose:     READ-ONLY diagnostic that determines WHERE a populated
 #              cause-of-death signal lives for the deceased patient set
 #              (patients with a valid DEATH_DATE). Phase 118's R/102 produced

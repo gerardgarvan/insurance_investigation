@@ -1,6 +1,8 @@
 # ==============================================================================
 # 59_death_date_summary.R -- Death Date Cross-Tab Summary
 # ==============================================================================
+# [161-07 audit] Exempt: raw-data study — summarizes recorded death records (counts, post-death
+# activity flag). Raw dates are required; the script describes the data, not an endpoint.
 #
 # Purpose:
 #   Produce a meeting-ready death date cross-tab summary answering three team
