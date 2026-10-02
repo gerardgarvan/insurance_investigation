@@ -147,6 +147,7 @@ open_pcornet_con <- function(db_path = CONFIG$cache$duckdb_path, read_only = TRU
   ")
 
   assign("pcornet_con", con, envir = .GlobalEnv)
+  assign("USE_DUCKDB", TRUE, envir = .GlobalEnv)
   message(glue("[DuckDB] Connection opened (read_only={read_only}): {db_path}"))
   invisible(con)
 }
