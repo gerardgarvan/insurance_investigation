@@ -41,7 +41,13 @@ if (!exists("get_hl_any_dx_ids"))         source("R/utils/utils_treatment.R")
 if (!exists("get_last_activity"))         source("R/utils/utils_activity.R")   # 161-05
 if (!exists("resolve_death_date"))        source("R/utils/utils_death.R")       # 161-05
 
+message("DEBUG: pcornet_con exists before open: ", exists("pcornet_con", envir = .GlobalEnv))
 if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
+message("DEBUG: pcornet_con exists after open:  ", exists("pcornet_con", envir = .GlobalEnv))
+if (exists("pcornet_con", envir = .GlobalEnv)) {
+  message("DEBUG: USE_DUCKDB = ", get("USE_DUCKDB", envir = .GlobalEnv))
+  message("DEBUG: tables = ", paste(DBI::dbListTables(pcornet_con), collapse = ", "))
+}
 
 # ---- Run constants (all reported on the KEY sheet) ----
 EXTRACT_CUTOFF     <- as.Date(EXTRACT_DATE)          # D-09; from CONFIG (R/00_config.R line 84)
