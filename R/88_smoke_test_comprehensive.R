@@ -379,6 +379,10 @@ check(
 r_files <- list.files("R", pattern = "\\.R$")
 ab_pattern <- "^[0-9]+[ab]_"
 ab_suffixed <- grep(ab_pattern, r_files, value = TRUE)
+# 122a_build_zip9_centroid_crosswalk.R is an intentional companion script to
+# R/122 (builds the centroid crosswalk it consumes) — not a stale renaming artefact.
+WHITELIST_AB <- c("122a_build_zip9_centroid_crosswalk.R")
+ab_suffixed <- setdiff(ab_suffixed, WHITELIST_AB)
 check(
   glue("No a/b suffixed files (found: {paste(ab_suffixed, collapse=', ') %||% 'none'})"),
   length(ab_suffixed) == 0

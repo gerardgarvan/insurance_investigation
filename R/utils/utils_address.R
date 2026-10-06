@@ -280,10 +280,10 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
 # Guard helper: reject centroid crosswalks with synthetic ZIP9s (entries ending
 # in '0000' are placeholder delivery-point codes, not real ZIP+4 values).
 # Extracted so tests can call it directly without going through the file-load path.
-.validate_centroid_lookup <- function(lkp) {
+.validate_centroid_lookup <- function(centroid_lookup) {
   stopifnot("centroid crosswalk missing centroid_zip9 column" =
-              "centroid_zip9" %in% names(lkp))
-  bad <- lkp$centroid_zip9[grepl("0000$", lkp$centroid_zip9)]
+              "centroid_zip9" %in% names(centroid_lookup))
+  bad <- centroid_lookup$centroid_zip9[grepl("0000$", centroid_lookup$centroid_zip9)]
   if (length(bad) > 0) {
     stop(sprintf(
       "[utils_address] centroid crosswalk contains %d ZIP9 values ending in '0000' — these are ",
@@ -291,7 +291,7 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
       "synthetic placeholders, not delivery segments. See ",
       "data/reference/README_zip5_centroid_zip9_crosswalk.txt.")
   }
-  invisible(lkp)
+  invisible(centroid_lookup)
 }
 
 # ==============================================================================
