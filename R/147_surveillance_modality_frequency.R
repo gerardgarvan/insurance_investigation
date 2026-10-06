@@ -58,6 +58,7 @@ A3_MAX_DAYS        <- 5000L                          # 160 D-03: max sampled day
 A3_TOP_N           <- 25L                            # 160 D-08: candidates kept per rule x missing analyte
 CODESET_PATH       <- file.path("data", "reference", "surveillance_codeset.xlsx")
 CROSSWALK_PATH     <- file.path("data", "reference", "lab_code_crosswalk.xlsx")
+EXCLUDED_CDM_TABLES <- c("DIAGNOSIS")               # 163 D-01: surveillance-event collection skips these tables
 run_date <- format(Sys.Date(), "%Y%m%d")
 out_dir  <- CONFIG$cache$outputs_dir
 
@@ -67,11 +68,21 @@ message(glue("=== Surveillance modality frequency (run {run_date}) ==="))
 # SECTION 1: CODESET AND DENOMINATOR ----
 # ==============================================================================
 
-codeset    <- load_surveillance_codeset()
+codeset_full <- load_surveillance_codeset()
+
+# 163 D-01: split out excluded CDM tables before any counting
+codeset_excluded <- codeset_full |> dplyr::filter(cdm_table %in% EXCLUDED_CDM_TABLES)
+codeset          <- codeset_full |> dplyr::filter(!cdm_table %in% EXCLUDED_CDM_TABLES)
+if (nrow(codeset_excluded) > 0)
+  message(glue("  Codeset: {nrow(codeset_excluded)} rows excluded ",
+               "(cdm_table in {paste(EXCLUDED_CDM_TABLES, collapse=', ')}): ",
+               "IDs ", paste(codeset_excluded$codeset_row_id, collapse = ", ")))
+
 analytes   <- load_lab_analytes(codeset = codeset)       # Phase 159 LAB-01
 mod_lookup <- load_modality_lookup(codeset = codeset)    # Phase 159 LAB-06
 elig       <- modality_eligible_sex(mod_lookup)          # Phase 160 IMP-04
-message(glue("  Codeset: {nrow(codeset)} rows, {n_distinct(codeset$modality)} modalities; ",
+message(glue("  Codeset: {nrow(codeset)} rows used ({nrow(codeset_excluded)} excluded), ",
+             "{n_distinct(codeset$modality)} modalities; ",
              "Lab_Analytes: {nrow(analytes)} codes for {n_distinct(analytes$analyte)} analytes"))
 
 denom_all <- get_hl_any_dx_ids()
@@ -222,18 +233,11 @@ message(glue("  Analyte rows collected: LAB_RESULT_CM {nrow(an_lab_raw)}, ",
              "PROCEDURES {nrow(an_proc_raw)}; mapped hits {nrow(analyte_hits)}"))
 
 # ==============================================================================
-# SECTION 5: DIAGNOSIS (screening dx codes; DX_TYPE checked in R) ----
+# SECTION 5: DIAGNOSIS (surveillance collector removed — 163 D-01) ----
 # ==============================================================================
-
-dx_raw <- pull_codes(
-  dx_tbl, c("ID", "DX", "DX_TYPE", "DX_DATE", "ADMIT_DATE"),
-  surv_code_where("DX", codes_for("DIAGNOSIS", "exact"),
-                  codes_for("DIAGNOSIS", "prefix")))
-dx_events_in <- tibble(
-  ID = dx_raw$ID, code_raw = dx_raw$DX, type_val = dx_raw$DX_TYPE,
-  event_date = pick_date(dx_raw, c("DX_DATE", "ADMIT_DATE")),
-  source_table = "DIAGNOSIS")
-message(glue("  DIAGNOSIS rows collected: {nrow(dx_raw)}"))
+# DIAGNOSIS is listed in EXCLUDED_CDM_TABLES.  The HL denominator and anchor
+# reads (C81*/201* codes) in SECTION 1 are NOT affected — only the surveillance-
+# event collector is removed here.
 
 # ==============================================================================
 # SECTION 6: FOLLOW-UP (D-09, D-10, D-26, D-28; updated Phase 161-05) ----
@@ -289,8 +293,11 @@ sex_lookup <- tibble(ID = demo_raw$ID, sex = as.character(demo_raw$SEX)) |>
 # SECTION 7: MATCH, COMPONENT RULE, WINDOW ----
 # ==============================================================================
 
+# 163 D-01: assert no excluded rows slipped into the codeset used for matching
+stopifnot(!any(codeset$cdm_table %in% EXCLUDED_CDM_TABLES))
+
 matched_coded <- match_coded_events(
-  bind_rows(proc_events_in, lab_events_in, dx_events_in) |> filter(!is.na(event_date)),
+  bind_rows(proc_events_in, lab_events_in) |> filter(!is.na(event_date)),
   codeset)
 comp <- build_component_events(lab_events_in |> select(ID, code_raw, event_date), codeset)
 an_rules <- build_analyte_events(analyte_hits, codeset)          # Phase 159 LAB-03
@@ -464,7 +471,7 @@ if (a3_raw_top)
   message("  A3: a top-5 candidate exists only as RAW_LAB_CODE (no LOINC). Adding it needs a new ",
           "Lab_Analytes match column - flag at checkpoint 1, do not improvise.")
 
-codeset_summary <- build_codeset_summary(codeset, analytes, A2_analyte_presence)   # 160 IMP-05
+codeset_summary <- build_codeset_summary(codeset, analytes, A2_analyte_presence)   # 163 D-02
 
 # ---- QC ----
 count_by <- function(df, col) if (nrow(df)) paste(names(table(df[[col]])), table(df[[col]]), sep = "=", collapse = "; ") else ""
@@ -480,7 +487,7 @@ qc <- tibble::tribble(
   "Total person-years", round(sum(followup$person_years), 1), "",
   "PROCEDURES rows collected", nrow(proc_raw), count_by(proc_raw, "PX_TYPE"),
   "LAB_RESULT_CM rows collected", nrow(lab_raw), if (has_lab_px) "LAB_LOINC + LAB_PX(LC)" else "LAB_LOINC only",
-  "DIAGNOSIS rows collected", nrow(dx_raw), count_by(dx_raw, "DX_TYPE"),
+  "Codeset rows excluded (DIAGNOSIS)", nrow(codeset_excluded), glue("163 D-01; IDs: {paste(codeset_excluded$codeset_row_id, collapse=', ')}"),
   "Matched rows, type ok", sum(matched_all$type_ok), "",
   "Matched rows, other PX_TYPE/DX_TYPE (not counted)", sum(!matched_all$type_ok), count_by(filter(matched_all, !type_ok), "type_val"),
   "Matched events: pre-anchor", sum(events_win$type_ok & events_win$window == "pre"), glue("anchor day counted as {if (ANCHOR_DAY_IS_POST) 'post' else 'pre'}"),
@@ -522,8 +529,9 @@ key <- tibble::tribble(
   "Follow-up end", glue("min(death date, last encounter of any type), capped at {EXTRACT_CUTOFF} (D-09/D-10). Events after follow-up end are excluded (D-25)."),
   "Person-years", "Pooled: post-anchor event dates / total person-years of the whole denominator. Zero-follow-up patients contribute 0 person-years (D-26).",
   "Event grain", "Distinct ID x modality x date; add-on and professional/technical codes on the same day count once (D-05).",
-  "Codeset", glue("surveillance_codeset.xlsx, {nrow(codeset)} rows; tiers and modalities come only from the codeset (L-4)."),
-  "Tiers", "primary = code documents the test was done; sensitivity = suggestive only. C sheet shows primary, sensitivity and primary-or-sensitivity side by side; never pooled into primary.",
+  "Codeset", glue("surveillance_codeset.xlsx, {nrow(codeset_full)} rows loaded; {nrow(codeset_excluded)} excluded (163 D-01); {nrow(codeset)} rows used. Tiers and modalities come only from the kept codeset (L-4)."),
+  "Tiers", "primary = code documents the test was done; sensitivity = suggestive only (ICD screening Z-codes). C sheet shows primary, sensitivity and primary-or-sensitivity side by side; never pooled into primary.",
+  "Diagnosis codes (163 D-01)", glue("Four codeset rows with cdm_table = DIAGNOSIS are excluded from surveillance-event collection: {paste(codeset_excluded$codeset_row_id, collapse=', ')} ({paste(codeset_excluded$modality, codeset_excluded$code, sep=' ', collapse='; ')}). These were the only sensitivity-tier codes for Echocardiogram, Electrocardiogram, Mammogram and Pulmonary function test; those four modalities now have an empty sensitivity tier (any = primary). The HL denominator and anchor reads (C81*/201* codes) are unaffected."),
   "Stress echo (D-06)", "93350/93351/93352 count under both Echocardiogram and Stress test.",
   "Non-additive", "Modality counts are not additive - a single encounter may contribute to more than one modality (e.g., stress echocardiogram counted under both Echocardiogram and Stress test). Sub-counts are not additive to each other or to the parent.",
   "Thyroid function (D-08)", "Modality renamed from TSH; TSH and Free T4 sub-counts via the codeset submodality column.",
@@ -538,7 +546,7 @@ key <- tibble::tribble(
   "A3_missing_analyte (Phase 160)", "Report only - never changes any count (L-2). Block 1: days with exactly one listed analyte missing, by missing analyte, overall and by year. Block 2: lab codes not in Lab_Analytes, ranked by lift = share of sampled near-miss days with the code minus share of sampled complete days with it; a replacement for the missing analyte scores near 1, routine labs near 0. Sampled: one day per patient, up to A3_MAX_DAYS days per group, fixed seed. Release copy: LOINC-level only.",
   "Breast imaging denominators (160 D-04)", paste0("All-patient columns measure any breast imaging across the full cohort; female columns measure screening-population uptake (guideline-style) among women (N = ",
     format(sum(left_join(select(followup, ID), sex_lookup, by = "ID")$sex %in% "F"), big.mark = ","), "). Male and unknown-sex patients with a breast imaging event are shown in *_other_sex columns. Release: if either the female or the other-sex count is 1-10, both are withheld, because all-patient = female + other-sex."),
-  "Codeset_summary (Phase 160)", "Generated from the loaded codeset on every run: codes per modality x tier x match with thresholds, and codes per analyte with how many were present in this run. Replaces the hand-built code_mapping_summary.xlsx."
+  "Codeset_summary (163 D-02)", "Generated from the kept codeset on every run. One block per modality in sort order, separated by blank rows. Each block: codes table (tier / match / code_system / n_codes / n_codes_present / codes / threshold); followed by analyte table for BMP, CMP, LIPID, LFT and KIDNEY. Analytes per modality come from that modality's own rule rows — shared analytes (e.g., CREATININE) repeat across blocks. No cross-modality analyte block."
 )
 
 write_workbook <- function(path, release) {
@@ -570,7 +578,9 @@ write_workbook <- function(path, release) {
     D_pre_vs_post_anchor = sup(D_pre_vs_post, setNames(rep(list(character()), length(n_cols_D)), n_cols_D)),
     E_patient_modality_dates = if (release) NULL else patient_wide,   # patient rows: INTERNAL only
     QC = if (release) mutate(qc, value = suppress_small(value, SUPPRESS_THRESHOLD)) else qc,
-    Codeset_summary = codeset_summary$by_modality
+    # 163 D-02: Codeset_summary is now a flat stacked-block tibble; row_type
+    # column is used for bold styling below, then stripped before writeData.
+    Codeset_summary = dplyr::select(codeset_summary, -row_type)
   )
   sheets <- sheets[!vapply(sheets, is.null, logical(1))]
   near_miss_out <- if (release)
@@ -579,6 +589,7 @@ write_workbook <- function(path, release) {
   wb <- createWorkbook()
   hdr  <- createStyle(fgFill = "#0021A5", fontColour = "#FFFFFF", textDecoration = "bold",
                       fontName = "Arial", wrapText = TRUE)
+  hdr_mod <- createStyle(textDecoration = "bold", fontName = "Arial")   # 163 D-02 modality headers
   flag <- createStyle(fgFill = "#FA4616", fontColour = "#FFFFFF", fontName = "Arial")
   for (nm in names(sheets)) {
     addWorksheet(wb, nm)
@@ -586,12 +597,18 @@ write_workbook <- function(path, release) {
     freezePane(wb, nm, firstRow = TRUE)
     setColWidths(wb, nm, cols = seq_along(sheets[[nm]]), widths = if (nm == "KEY") c(34, 120) else "auto")
   }
+  # 163 D-02: bold modality and analyte-header rows in Codeset_summary
+  cs_row_types <- codeset_summary$row_type
+  bold_data_rows <- which(cs_row_types %in% c("header", "analyte_header")) + 1L  # +1 for the header row written by writeData
+  if (length(bold_data_rows))
+    addStyle(wb, "Codeset_summary", hdr_mod, rows = bold_data_rows,
+             cols = seq_len(ncol(sheets$Codeset_summary)), gridExpand = TRUE)
   # Analyte near-miss block under the QC table (159 D-09 thresholds)
   nm_row <- nrow(sheets$QC) + 4L
   writeData(wb, "QC", "Lab analyte rules: ID x dates by number of listed analytes present (qualifies = met the rule)",
             startRow = nm_row - 1L)
   writeData(wb, "QC", near_miss_out, startRow = nm_row, headerStyle = hdr)
-  # A3 blocks 2-3 and Codeset_summary block 2, under each sheet's first table
+  # A3 blocks 2-3
   a3_year_out <- sup(a3$by_year, list(n_id_dates = character()))
   a3_rank_out <- if (release)
     a3_rank |> filter(code_source != "RAW") |> select(-top_raw_code, -top_raw_name) |>
@@ -606,9 +623,6 @@ write_workbook <- function(path, release) {
   writeData(wb, "A3_missing_analyte", paste0("Block 2: candidate codes not in Lab_Analytes, ranked by lift within rule x missing analyte",
                                              if (release) " (LOINC-level only)" else ""), startRow = r - 1L)
   writeData(wb, "A3_missing_analyte", a3_rank_out, startRow = r, headerStyle = hdr)
-  r <- nrow(sheets$Codeset_summary) + 4L
-  writeData(wb, "Codeset_summary", "Codes per analyte (n_codes_present = codes seen in this run)", startRow = r - 1L)
-  writeData(wb, "Codeset_summary", codeset_summary$by_analyte, startRow = r, headerStyle = hdr)
   absent <- which(!A_code_presence$present) + 1L
   if (length(absent))
     addStyle(wb, "A_code_presence", flag, rows = absent,
