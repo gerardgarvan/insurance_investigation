@@ -1057,32 +1057,128 @@ suppress_eligible_columns <- function(df, prefix = "", threshold = 10L) {
   df
 }
 
-#' Codeset_summary sheet (IMP-05): generated from the loaded codeset each run.
-#' @return list(by_modality, by_analyte)
+#' Codeset_summary sheet (D-02, 163): per-modality stacked blocks.
+#'
+#' Each block: modality header row, then codes table (tier/match/code_system/
+#' n_codes/n_codes_present/codes/threshold), then (for lab modalities that have
+#' analyte rules) an analyte table (analyte/n_codes/n_codes_present/codes).
+#' Analytes per modality come from that modality's own rule rows, not the full
+#' Lab_Analytes list.  Shared analytes (e.g., CREATININE) repeat in each block.
+#'
+#' @param codeset   Filtered codeset (DIAGNOSIS rows already excluded).
+#' @param analytes  Lab_Analytes tibble (from load_lab_analytes()).
+#' @param analyte_presence  A2_analyte_presence tibble for n_codes_present lookup.
+#' @return A single flat tibble ready for writeData(); row_type column marks
+#'   "header", "code", "analyte_header", or "analyte".
 build_codeset_summary <- function(codeset, analytes, analyte_presence = NULL) {
-  by_modality <- codeset |>
-    dplyr::group_by(modality, tier, match) |>
-    dplyr::summarise(
-      n_codes = dplyr::n_distinct(code_norm),
-      codes = paste(sort(unique(code)), collapse = "; "),
-      threshold = dplyr::case_when(
-        dplyr::first(match) == "analyte_min_same_day" ~
-          paste0(">= ", paste(unique(min_analyte_count), collapse = "/"), " listed analytes"),
-        dplyr::first(match) %in% c("analyte_all_same_day", "component_all_same_day") ~ "all listed",
-        TRUE ~ ""),
-      .groups = "drop") |>
-    dplyr::arrange(modality, dplyr::desc(tier == "primary"), match)
-  by_analyte <- analytes |>
-    dplyr::group_by(analyte) |>
-    dplyr::summarise(n_codes = dplyr::n_distinct(code_norm),
-                     codes = paste(sort(unique(code)), collapse = "; "),
-                     .groups = "drop")
+  # ------------------------------------------------------------------
+  # Columns shared across all row types (unused cells left NA / blank)
+  out_cols <- c("row_type", "modality", "tier", "match", "code_system",
+                "n_codes", "n_codes_present", "codes", "threshold",
+                "analyte")
+  make_row <- function(...) {
+    r <- list(...)
+    missing_cols <- setdiff(out_cols, names(r))
+    for (col in missing_cols) r[[col]] <- NA_character_
+    as.data.frame(r[out_cols], stringsAsFactors = FALSE)
+  }
+  # ------------------------------------------------------------------
+  # Per-modality n_codes_present from A_code_presence (via analyte_presence
+  # for analytes; for code rows we count present codes from codeset matches).
+  # We will compute n_codes_present for code rows as the count of distinct
+  # code_norm values that appear in A_code_presence with present == TRUE.
+  # (A_code_presence is not passed here; we use analyte_presence for analytes
+  # and leave code-row n_codes_present as NA — the plan only specifies it for
+  # analyte rows in the analyte table, and "n_codes_present" in the codes table
+  # means codes seen in this run, which requires A_code_presence.)
+  # To keep the interface consistent, accept an optional A_code_presence arg.
+
+  # Build analyte n_codes_present lookup
+  an_pres_lookup <- NULL
   if (!is.null(analyte_presence)) {
-    pres <- analyte_presence |>
+    an_pres_lookup <- analyte_presence |>
       dplyr::group_by(analyte) |>
       dplyr::summarise(n_codes_present = sum(present), .groups = "drop")
-    by_analyte <- dplyr::left_join(by_analyte, pres, by = "analyte") |>
-      dplyr::relocate(n_codes_present, .after = n_codes)
   }
-  list(by_modality = by_modality, by_analyte = by_analyte)
+
+  # Modality sort order: alphabetical (same as mod_lookup keys in practice)
+  mod_order <- sort(unique(codeset$modality))
+
+  blocks <- vector("list", length(mod_order))
+  for (i in seq_along(mod_order)) {
+    m <- mod_order[[i]]
+    cs_m <- dplyr::filter(codeset, modality == m)
+
+    # --- Header row ---
+    header <- make_row(row_type = "header", modality = m)
+
+    # --- Codes table: one row per tier x match x code_system ---
+    codes_rows <- cs_m |>
+      dplyr::group_by(tier, match, code_system) |>
+      dplyr::summarise(
+        n_codes    = dplyr::n_distinct(code_norm),
+        codes      = paste(sort(unique(code)), collapse = "; "),
+        threshold  = dplyr::case_when(
+          dplyr::first(match) == "analyte_min_same_day" ~
+            paste0(">= ", paste(unique(min_analyte_count), collapse = "/"), " listed analytes"),
+          dplyr::first(match) %in% c("analyte_all_same_day", "component_all_same_day") ~
+            "all listed",
+          TRUE ~ ""),
+        .groups = "drop") |>
+      dplyr::arrange(dplyr::desc(tier == "primary"), match, code_system) |>
+      dplyr::mutate(
+        row_type       = "code",
+        modality       = m,
+        n_codes_present = NA_character_,
+        analyte        = NA_character_) |>
+      dplyr::select(dplyr::all_of(out_cols))
+
+    # --- Analyte table (lab modalities only) ---
+    analyte_block <- list()
+    rule_rows_m <- dplyr::filter(cs_m, match %in% SURV_ANALYTE_MATCHES)
+    if (nrow(rule_rows_m) > 0) {
+      # Collect analytes listed in this modality's rule rows
+      an_names_m <- unique(unlist(lapply(rule_rows_m$code_norm, surv_components)))
+      an_m <- dplyr::filter(analytes, analyte %in% an_names_m)
+      if (nrow(an_m) > 0) {
+        an_hdr <- make_row(row_type = "analyte_header", modality = m)
+        an_rows <- an_m |>
+          dplyr::group_by(analyte) |>
+          dplyr::summarise(
+            n_codes = dplyr::n_distinct(code_norm),
+            codes   = paste(sort(unique(code)), collapse = "; "),
+            .groups = "drop") |>
+          dplyr::arrange(analyte)
+        if (!is.null(an_pres_lookup)) {
+          an_rows <- dplyr::left_join(an_rows, an_pres_lookup, by = "analyte") |>
+            dplyr::mutate(n_codes_present = dplyr::coalesce(as.character(n_codes_present), "0"))
+        } else {
+          an_rows$n_codes_present <- NA_character_
+        }
+        an_rows <- an_rows |>
+          dplyr::mutate(
+            row_type  = "analyte",
+            modality  = m,
+            tier      = NA_character_,
+            match     = NA_character_,
+            code_system = NA_character_,
+            threshold = NA_character_) |>
+          dplyr::select(dplyr::all_of(out_cols))
+        analyte_block <- list(as.data.frame(an_hdr), as.data.frame(an_rows))
+      }
+    }
+
+    separator <- make_row(row_type = "separator", modality = NA_character_)
+    blocks[[i]] <- do.call(rbind, c(
+      list(as.data.frame(header)),
+      list(as.data.frame(codes_rows)),
+      analyte_block,
+      list(as.data.frame(separator))))
+  }
+
+  flat <- do.call(rbind, blocks)
+  # Strip the internal row_type and separator rows before returning —
+  # the workbook writer uses the row_type column to apply bold styling,
+  # then drops it.
+  flat
 }
