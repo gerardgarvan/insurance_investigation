@@ -5151,14 +5151,14 @@ r_index_150 <- read_or_null("R/SCRIPT_INDEX.md")
 
 check_150("R/120_zip5_backfill_concordance.R exists", !is.null(r120_lines))
 
-check_150("R/120 uses ID as patient identifier (not PATID)",
+check_150("R/120 uses PATID as patient identifier (Phase 138 / R/53 convention)",
   !is.null(r120_lines) &&
-  !any(grepl("PATID", r120_lines)) &&
-  any(grepl('"ID"', r120_lines)))
+  any(grepl("PATID", r120_lines)) &&
+  !any(grepl('"ID"', r120_lines)))
 
-check_150("R/120 groups modal pick by pid (group_by(pid))",
+check_150("R/120 groups modal pick by PATID (group_by(PATID))",
   !is.null(r120_lines) &&
-  sum(grepl("group_by\\(pid\\)", r120_lines)) >= 3L)
+  sum(grepl("group_by\\(PATID\\)", r120_lines)) >= 3L)
 
 check_150("R/120 contains runtime invariant: n_concordant + n_discordant + n_no_zip5_elsewhere == n_zip9_available",
   !is.null(r120_lines) &&
@@ -5213,10 +5213,10 @@ r_index_151 <- read_or_null("R/SCRIPT_INDEX.md")
 
 check_151("R/121_zip_problem_inventory.R exists", !is.null(r121_lines))
 
-check_151("R/121 uses ID as patient identifier (not PATID)",
+check_151("R/121 uses PATID as patient identifier (Phase 138 / R/53 convention)",
   !is.null(r121_lines) &&
-  !any(grepl("PATID", r121_lines)) &&
-  any(grepl('"ID"', r121_lines)))
+  any(grepl("PATID", r121_lines)) &&
+  !any(grepl('"ID"', r121_lines)))
 
 check_151("R/121 pins PHASE150_ZIP5_FN to normalize_zip5_raw",
   !is.null(r121_lines) &&

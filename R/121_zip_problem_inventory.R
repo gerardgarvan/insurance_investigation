@@ -108,7 +108,7 @@ addr_raw <- vroom::vroom(
   progress  = FALSE
 )
 
-required_cols <- c("ID", "ADDRESS_ZIP5", "ADDRESS_ZIP9")
+required_cols <- c("PATID", "ADDRESS_ZIP5", "ADDRESS_ZIP9")
 missing_cols  <- setdiff(required_cols, names(addr_raw))
 if (length(missing_cols) > 0L) {
   stop("Missing expected column(s) in ", basename(addr_path), ": ",
@@ -136,7 +136,7 @@ tf <- function(x) !is.na(x) & x
 
 addr <- addr_raw |>
   dplyr::transmute(
-    pid          = ID,
+    PATID        = PATID,
     zip9_raw     = ADDRESS_ZIP9,
     zip5_norm    = norm_zip5(ADDRESS_ZIP5),
     zip9_norm    = normalize_zip9(ADDRESS_ZIP9),
@@ -148,9 +148,9 @@ addr <- addr_raw |>
     } else as.Date(NA)
   )
 
-n_bad_id <- sum(is.na(addr$pid) | !nzchar(trimws(addr$pid)))
-if (n_bad_id > 0L) cat("WARNING: dropping", n_bad_id, "row(s) with missing or blank ID\n")
-addr <- addr |> dplyr::filter(!is.na(pid), nzchar(trimws(pid)))
+n_bad_id <- sum(is.na(addr$PATID) | !nzchar(trimws(addr$PATID)))
+if (n_bad_id > 0L) cat("WARNING: dropping", n_bad_id, "row(s) with missing or blank PATID\n")
+addr <- addr |> dplyr::filter(!is.na(PATID), nzchar(trimws(PATID)))
 
 addr <- addr |>
   dplyr::mutate(
@@ -164,7 +164,7 @@ addr <- addr |>
   )
 
 n_rows_kept <- nrow(addr)
-cat("Rows retained:", n_rows_kept, "| patients:", dplyr::n_distinct(addr$pid), "\n\n")
+cat("Rows retained:", n_rows_kept, "| patients:", dplyr::n_distinct(addr$PATID), "\n\n")
 
 # --- Modal value per patient (grouped; deterministic tie-break) -------------
 # Tie-break order must match R/120 exactly: record frequency, then latest
@@ -175,33 +175,33 @@ min_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else min(
 
 modal_by_patient <- function(df, value_col, out_name) {
   tallied <- df |>
-    dplyr::group_by(pid, .data[[value_col]]) |>
+    dplyr::group_by(PATID, .data[[value_col]]) |>
     dplyr::summarise(n_rows = dplyr::n(), last_start = max_dt(period_start), .groups = "drop")
   names(tallied)[2] <- "value"
 
   ties <- tallied |>
-    dplyr::group_by(pid) |>
+    dplyr::group_by(PATID) |>
     dplyr::summarise(tied = sum(n_rows == max(n_rows)) > 1L, .groups = "drop")
 
   tallied |>
-    dplyr::group_by(pid) |>
+    dplyr::group_by(PATID) |>
     dplyr::arrange(dplyr::desc(n_rows), dplyr::desc(last_start), value, .by_group = TRUE) |>
     dplyr::slice(1L) |>
     dplyr::ungroup() |>
-    dplyr::select(pid, value) |>
+    dplyr::select(PATID, value) |>
     dplyr::rename(!!out_name := value) |>
-    dplyr::left_join(ties, by = "pid") |>
+    dplyr::left_join(ties, by = "PATID") |>
     dplyr::rename(!!paste0(out_name, "_tied") := tied)
 }
 
 modal_zip5 <- addr |> dplyr::filter(!zip5_missing) |> modal_by_patient("zip5_norm",   "modal_zip5")
 modal_zip9 <- addr |> dplyr::filter(zip9_usable)   |> modal_by_patient("zip9_first5", "modal_zip9_first5")
 
-stopifnot(!anyDuplicated(modal_zip5$pid), !anyDuplicated(modal_zip9$pid))
+stopifnot(!anyDuplicated(modal_zip5$PATID), !anyDuplicated(modal_zip9$PATID))
 
 # --- Per-patient aggregation ------------------------------------------------
 pat <- addr |>
-  dplyr::group_by(pid) |>
+  dplyr::group_by(PATID) |>
   dplyr::summarise(
     n_records               = dplyr::n(),
     n_zip5_missing          = sum(zip5_missing),
@@ -219,15 +219,15 @@ pat <- addr |>
     n_open_ended_records    = sum(is.na(period_end)),
     .groups = "drop"
   ) |>
-  dplyr::left_join(modal_zip5, by = "pid") |>
-  dplyr::left_join(modal_zip9, by = "pid") |>
+  dplyr::left_join(modal_zip5, by = "PATID") |>
+  dplyr::left_join(modal_zip9, by = "PATID") |>
   dplyr::mutate(
     modal_zip5_tied        = dplyr::coalesce(modal_zip5_tied, FALSE),
     modal_zip9_first5_tied = dplyr::coalesce(modal_zip9_first5_tied, FALSE),
     n_missing_zip5_no_same_row_zip9 = n_zip5_missing - n_same_row_backfill
   )
 
-stopifnot(!anyDuplicated(pat$pid))
+stopifnot(!anyDuplicated(pat$PATID))
 
 # --- Flags ------------------------------------------------------------------
 pat <- pat |>
@@ -353,12 +353,12 @@ triage_summary <- pat |>
 
 record_mismatches <- addr |>
   dplyr::filter(tf(row_mismatch)) |>
-  dplyr::transmute(ID = pid, zip5_norm, zip9_norm, zip9_first5, period_start, period_end)
+  dplyr::transmute(PATID = PATID, zip5_norm, zip9_norm, zip9_first5, period_start, period_end)
 
 roster <- pat |>
   dplyr::filter(n_actionable_flags > 0L) |>
-  dplyr::arrange(dplyr::desc(n_actionable_flags), triage, pid) |>
-  dplyr::rename(ID = pid)
+  dplyr::arrange(dplyr::desc(n_actionable_flags), triage, PATID) |>
+  dplyr::rename(PATID = PATID)
 
 n_context_only <- sum(pat$n_flags > 0L & pat$n_actionable_flags == 0L)
 
@@ -367,7 +367,7 @@ key_tbl <- tibble::tribble(
   ~item,                             ~definition,
   "Unit of observation",             "One row per patient ID with at least one actionable flag set",
   "Roster membership",               "A_patient_flags contains patients with n_actionable_flags > 0",
-  "ID",                              "Patient identifier from LDS_ADDRESS_HISTORY",
+  "PATID",                           "Patient identifier from LDS_ADDRESS_HISTORY",
   "n_records",                       "Address records for this patient after blank-ID filtering",
   "n_zip5_missing",                  "Records where ZIP5 is NA or sentinel",
   "n_zip5_observed",                 "Records with a usable non-sentinel ZIP5",

@@ -84,8 +84,8 @@ addr_raw <- vroom::vroom(
   progress  = FALSE
 )
 
-# Patient identifier is ID (project convention), not PATID.
-required_cols <- c("ID", "ADDRESS_ZIP5", "ADDRESS_ZIP9")
+# Patient identifier is PATID (Phase 138 / R/53 convention).
+required_cols <- c("PATID", "ADDRESS_ZIP5", "ADDRESS_ZIP9")
 missing_cols  <- setdiff(required_cols, names(addr_raw))
 if (length(missing_cols) > 0L) {
   stop("Missing expected column(s) in ", basename(addr_path), ": ",
@@ -103,7 +103,7 @@ tf <- function(x) !is.na(x) & x
 
 addr <- addr_raw |>
   dplyr::transmute(
-    pid       = ID,
+    PATID     = PATID,
     zip5_norm = norm_zip5(ADDRESS_ZIP5),
     zip9_norm = normalize_zip9(ADDRESS_ZIP9),
     period_start = if (has_start) {
@@ -111,11 +111,11 @@ addr <- addr_raw |>
     } else as.Date(NA)
   )
 
-n_bad_id <- sum(is.na(addr$pid) | !nzchar(trimws(addr$pid)))
+n_bad_id <- sum(is.na(addr$PATID) | !nzchar(trimws(addr$PATID)))
 if (n_bad_id > 0L) {
-  cat("WARNING: dropping", n_bad_id, "row(s) with missing or blank ID\n")
+  cat("WARNING: dropping", n_bad_id, "row(s) with missing or blank PATID\n")
 }
-addr <- addr |> dplyr::filter(!is.na(pid), nzchar(trimws(pid)))
+addr <- addr |> dplyr::filter(!is.na(PATID), nzchar(trimws(PATID)))
 
 addr <- addr |>
   dplyr::mutate(
@@ -124,7 +124,7 @@ addr <- addr |>
     zip9_usable  = zip9_valid & !tf(is_sentinel_zip5(substr(zip9_norm, 1L, 5L)))
   )
 
-n_patients_total <- dplyr::n_distinct(addr$pid)
+n_patients_total <- dplyr::n_distinct(addr$PATID)
 cat("Rows retained:", nrow(addr), "| patients:", n_patients_total, "\n\n")
 
 # --- Modal value per patient (deterministic tie-break) ----------------------
@@ -134,22 +134,22 @@ max_dt <- function(x) { x <- x[!is.na(x)]; if (!length(x)) as.Date(NA) else max(
 
 modal_by_patient <- function(df, value_col, out_name) {
   tallied <- df |>
-    dplyr::group_by(pid, .data[[value_col]]) |>
+    dplyr::group_by(PATID, .data[[value_col]]) |>
     dplyr::summarise(n_rows = dplyr::n(), last_start = max_dt(period_start),
                      .groups = "drop")
   names(tallied)[2] <- "value"
 
   ties <- tallied |>
-    dplyr::group_by(pid) |>
+    dplyr::group_by(PATID) |>
     dplyr::summarise(tied = sum(n_rows == max(n_rows)) > 1L, .groups = "drop")
 
   picked <- tallied |>
-    dplyr::group_by(pid) |>
+    dplyr::group_by(PATID) |>
     dplyr::arrange(dplyr::desc(n_rows), dplyr::desc(last_start), value,
                    .by_group = TRUE) |>
     dplyr::slice(1L) |>
     dplyr::ungroup() |>
-    dplyr::select(pid, value)
+    dplyr::select(PATID, value)
 
   names(picked)[2] <- out_name
   attr(picked, "n_tied") <- sum(ties$tied)
@@ -159,7 +159,7 @@ modal_by_patient <- function(df, value_col, out_name) {
 # --- COUNT 1 ----------------------------------------------------------------
 pts_missing_zip5 <- addr |>
   dplyr::filter(zip5_missing) |>
-  dplyr::distinct(pid)
+  dplyr::distinct(PATID)
 
 n_missing_zip5 <- nrow(pts_missing_zip5)
 cat("(1) Patients with >=1 record where ZIP5 is missing or sentinel:",
@@ -169,8 +169,8 @@ cat("(1) Patients with >=1 record where ZIP5 is missing or sentinel:",
 # Definition per 150-CONTEXT.md: usable ZIP9 on ANY record. The same-row /
 # other-row split is printed below so the two readings are both visible.
 pts_with_zip9 <- pts_missing_zip5 |>
-  dplyr::semi_join(addr |> dplyr::filter(zip9_usable) |> dplyr::distinct(pid),
-                   by = "pid")
+  dplyr::semi_join(addr |> dplyr::filter(zip9_usable) |> dplyr::distinct(PATID),
+                   by = "PATID")
 
 n_zip9_available <- nrow(pts_with_zip9)
 cat("(2) Of those, patients with a usable ZIP9 on at least one record:",
@@ -178,13 +178,13 @@ cat("(2) Of those, patients with a usable ZIP9 on at least one record:",
 
 n_same_row <- addr |>
   dplyr::filter(zip5_missing, zip9_usable) |>
-  dplyr::distinct(pid) |>
+  dplyr::distinct(PATID) |>
   nrow()
 
 n_other_row <- addr |>
-  dplyr::semi_join(pts_with_zip9, by = "pid") |>
+  dplyr::semi_join(pts_with_zip9, by = "PATID") |>
   dplyr::filter(!zip5_missing, zip9_usable) |>
-  dplyr::distinct(pid) |>
+  dplyr::distinct(PATID) |>
   nrow()
 
 cat("    (2a) usable ZIP9 on a missing-ZIP5 record itself:", n_same_row, "\n")
@@ -192,7 +192,7 @@ cat("    (2b) usable ZIP9 on a record where ZIP5 is present:", n_other_row, "\n"
 cat("         (2a and 2b overlap; they do not sum to (2))\n")
 
 # --- COUNTS 3a / 3b / 3c ----------------------------------------------------
-addr_grp2 <- addr |> dplyr::semi_join(pts_with_zip9, by = "pid")
+addr_grp2 <- addr |> dplyr::semi_join(pts_with_zip9, by = "PATID")
 
 zip9_first5_by_pat <- addr_grp2 |>
   dplyr::filter(zip9_usable) |>
@@ -205,11 +205,11 @@ real_zip5_by_pat <- addr_grp2 |>
 
 # Catches an ungrouped modal pick: must be one row per group-2 patient.
 stopifnot(nrow(zip9_first5_by_pat) == n_zip9_available)
-stopifnot(!any(duplicated(zip9_first5_by_pat$pid)))
-stopifnot(!any(duplicated(real_zip5_by_pat$pid)))
+stopifnot(!any(duplicated(zip9_first5_by_pat$PATID)))
+stopifnot(!any(duplicated(real_zip5_by_pat$PATID)))
 
 concordance_tbl <- zip9_first5_by_pat |>
-  dplyr::left_join(real_zip5_by_pat, by = "pid") |>
+  dplyr::left_join(real_zip5_by_pat, by = "PATID") |>
   dplyr::mutate(
     status = dplyr::case_when(
       is.na(zip5_real)         ~ "no_zip5_elsewhere",
@@ -269,7 +269,7 @@ rowlevel <- addr |>
 
 n_rows_cmp   <- nrow(rowlevel)
 n_rows_match <- sum(rowlevel$row_match, na.rm = TRUE)
-n_pts_cmp    <- dplyr::n_distinct(rowlevel$pid)
+n_pts_cmp    <- dplyr::n_distinct(rowlevel$PATID)
 
 cat("\n(5) Record-level same-record check (supplementary, not patient-level):\n")
 if (n_rows_cmp > 0L) {
