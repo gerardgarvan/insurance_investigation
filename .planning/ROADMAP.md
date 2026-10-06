@@ -658,3 +658,13 @@ Plans:
 - [ ] 161-06-PLAN.md — Tests: test-161-death-plausibility.R fixtures + R/88 assertions (Wave 4)
 - [ ] 161-07-PLAN.md — Audit all DEATH-reading scripts for resolve_death_date() usage (Wave 4)
 - [ ] 161-08-PLAN.md — HiPerGator full pipeline re-run + before/after comparison (Wave 5)
+
+### Phase 162: Export Patient Modality Dates (no _any columns)
+
+**Goal:** Wire `R/162_export_patient_modality_dates.R` into the pipeline's registration and validation infrastructure. The script already exists; this phase adds the INTERNAL header comment, RDS-source logging, R/39 registration, SCRIPT_INDEX row, and R/88 Section 15an (8 checks), then confirms the CSV is produced on HiPerGator.
+**Requirements**: REG-162-01, REG-162-02, SMOKE-162-01, RUN-162-01
+**Depends on:** Phase 161
+**Plans:** 1 plan
+
+Plans:
+- [x] 162-01-PLAN.md — INTERNAL comment + RDS-date log (R/162), R/39 + SCRIPT_INDEX registration, R/88 Section 15an (8 checks: 4 structural + 4 output-level), HiPerGator run checkpoint [REG-162-01, REG-162-02, SMOKE-162-01, RUN-162-01] (Wave 1)

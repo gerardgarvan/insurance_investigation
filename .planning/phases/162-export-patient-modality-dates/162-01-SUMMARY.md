@@ -19,18 +19,18 @@ key_files:
     - R/88_smoke_test_comprehensive.R
 decisions: []
 metrics:
-  duration_minutes: 12
+  duration_minutes: 20
   completed_date: "2026-10-06"
-  tasks_completed: 3
+  tasks_completed: 4
   tasks_total: 4
   files_modified: 4
-requirements_met: [REG-162-01, REG-162-02, SMOKE-162-01]
-requirements_deferred: [RUN-162-01]
+requirements_met: [REG-162-01, REG-162-02, SMOKE-162-01, RUN-162-01]
+requirements_deferred: []
 ---
 
 # Phase 162 Plan 01: Export Patient Modality Dates — Pipeline Registration Summary
 
-**One-liner:** Wired R/162 into the pipeline with INTERNAL comment, RDS-source logging, R/39 and SCRIPT_INDEX registration, and R/88 Section 15an (8 structural + output-level checks, SMOKE-162-01).
+**One-liner:** Wired R/162 into the pipeline with INTERNAL comment, RDS-source logging, R/39 and SCRIPT_INDEX registration, R/88 Section 15an (8 checks, SMOKE-162-01), and HiPerGator confirmation of 9,331 patients x 19 columns with no _any columns (RUN-162-01).
 
 ## Tasks Completed
 
@@ -39,7 +39,7 @@ requirements_deferred: [RUN-162-01]
 | 1 | Add INTERNAL comment and RDS-date logging to R/162 | 7a63d66 | R/162_export_patient_modality_dates.R |
 | 2 | Register R/162 in R/39 and SCRIPT_INDEX.md | 09a08d8 | R/39_run_all_investigations.R, R/SCRIPT_INDEX.md |
 | 3 | Add R/88 Section 15an (SMOKE-162-01, 8 checks) | 1c9ee6e | R/88_smoke_test_comprehensive.R |
-| 4 | HiPerGator run — confirm CSV output | CHECKPOINT | (awaiting human action) |
+| 4 | HiPerGator run — confirm CSV output | APPROVED | (see HiPerGator Results below) |
 
 ## What Was Done
 
@@ -58,23 +58,35 @@ requirements_deferred: [RUN-162-01]
 - 4 structural checks (always-run): R/162 file exists, registered in R/39, output path pattern `patient_modality_dates_no_any_` present, INTERNAL header present.
 - 4 output-level checks guarded by `csv_files` list: no `_any` columns in CSV header, row count ~9331 (±50), ID unique/non-missing, at least one `n_dates_` column.
 - NOTE message when no CSV found (offline skip for checks 5-8).
-- `grep -c "SMOKE-162-01" R/88_smoke_test_comprehensive.R` returns 10 (8 check labels + 1 section header + 1 NOTE/footer message).
 
-## Checkpoint Status
+**Task 4 — HiPerGator run (approved):**
+- See HiPerGator Results section below.
 
-**Task 4 (HiPerGator run) is a `checkpoint:human-action` — awaiting manual verification.**
+## HiPerGator Results (Task 4, 2026-10-06)
 
-The HiPerGator run to confirm CSV output (`output/patient_modality_dates_no_any_<date>.csv`) and R/88 Section 15an 8/8 PASS has NOT been executed. See checkpoint message in the execution output for exact commands.
+```
+Loading: /blue/erin.mobley-hl.bcu/clean/rds/outputs/surveillance_patient_modality_dates_20261006.rds
+RDS source: surveillance_patient_modality_dates_20261006.rds  (modified: 2026-10-06 12:44)
+Columns kept: 19  (dropped 14 _any columns)
+Written: /blue/erin.mobley-hl.bcu/insurance_investigation/output/patient_modality_dates_no_any_20261006.csv
+  9331 patients x 19 columns
+```
 
-Required artifacts pending HiPerGator confirmation:
-- `output/patient_modality_dates_no_any_<date>.csv` exists with no `_any` columns
-- Log contains `RDS source:` line with filename and modification date
-- Log shows `Columns kept: N  (dropped M _any columns)` and `Written:` and `P patients x N columns`
-- R/88 Section 15an: 8/8 PASS (RUN-162-01)
+- No `_any` columns in CSV header (empty grep confirmed).
+- R/88 Section 15an: **8 PASS, 0 FAIL** (SMOKE-162-01 satisfied).
+- RDS source: `surveillance_patient_modality_dates_20261006.rds` (modified 2026-10-06 12:44).
+- Output: `output/patient_modality_dates_no_any_20261006.csv` — 9,331 patients x 19 columns.
 
 ## Deviations from Plan
 
-None — plan executed exactly as written. `grep -c` returns 10 instead of the plan's expected 9 because the section header comment also contains "SMOKE-162-01"; this is correct and matches the plan's literal code block.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] RDS search path corrected to CONFIG$cache$outputs_dir**
+- **Found during:** Task 4 (HiPerGator run)
+- **Issue:** R/162 searched `CONFIG$output_dir` for `surveillance_patient_modality_dates_*.rds`, but R/147 writes the RDS to `CONFIG$cache$outputs_dir` (`/blue/erin.mobley-hl.bcu/clean/rds/outputs/`), not `output/`. Script would stop with "No surveillance_patient_modality_dates_*.rds found" on every run.
+- **Fix:** Changed the `list.files()` path argument from `CONFIG$output_dir %||% "output"` to `CONFIG$cache$outputs_dir`.
+- **Files modified:** R/162_export_patient_modality_dates.R
+- **Commit:** 3b9d57c
 
 ## Self-Check: PASSED
 
@@ -85,3 +97,6 @@ None — plan executed exactly as written. `grep -c` returns 10 instead of the p
 - Commit 7a63d66: FOUND
 - Commit 09a08d8: FOUND
 - Commit 1c9ee6e: FOUND
+- Commit 3b9d57c: FOUND
+- HiPerGator CSV: output/patient_modality_dates_no_any_20261006.csv — 9,331 x 19, 0 _any columns
+- R/88 Section 15an: 8/8 PASS
