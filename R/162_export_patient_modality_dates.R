@@ -6,6 +6,7 @@
 #   module load R/4.4.2
 #   Rscript R/162_export_patient_modality_dates.R
 # ==============================================================================
+# INTERNAL — contains patient IDs. Not for release outside the secure enclave.
 
 source(here::here("R/00_config.R"))
 library(DBI)
@@ -32,6 +33,8 @@ rds_files <- list.files(
 if (length(rds_files) > 0) {
   latest <- rds_files[order(file.info(rds_files)$mtime, decreasing = TRUE)[1]]
   message("Loading: ", latest)
+  message("RDS source: ", basename(latest),
+          "  (modified: ", format(file.info(latest)$mtime, "%Y-%m-%d %H:%M"), ")")
   patient_wide <- readRDS(latest)
 } else {
   stop("No surveillance_patient_modality_dates_*.rds found in output/. ",
