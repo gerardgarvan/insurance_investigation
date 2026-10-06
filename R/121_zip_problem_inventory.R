@@ -108,6 +108,16 @@ addr_raw <- vroom::vroom(
   progress  = FALSE
 )
 
+# Patient identifier: use PATID if the extract carries it, otherwise ID (the
+# Phase 138 / R/53 convention for this extract). Standardized to PATID here so
+# downstream code and the output column name are unchanged.
+id_col <- intersect(c("PATID", "ID"), names(addr_raw))[1]
+if (is.na(id_col)) {
+  stop("No patient identifier column (PATID or ID) in ", basename(addr_path))
+}
+if (id_col != "PATID") addr_raw <- dplyr::rename(addr_raw, PATID = dplyr::all_of(id_col))
+cat("Patient identifier column:", id_col, "\n")
+
 required_cols <- c("PATID", "ADDRESS_ZIP5", "ADDRESS_ZIP9")
 missing_cols  <- setdiff(required_cols, names(addr_raw))
 if (length(missing_cols) > 0L) {
