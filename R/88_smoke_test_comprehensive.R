@@ -5857,6 +5857,95 @@ tryCatch({
 message(glue("\nSection 15am: {p161_pass} PASS, {p161_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15an: PHASE 162 — EXPORT PATIENT MODALITY DATES (SMOKE-162-01) ----
+# ==============================================================================
+
+p162_pass <- 0L; p162_fail <- 0L
+
+chk_162 <- function(condition, label) {
+  if (isTRUE(condition)) {
+    p162_pass <<- p162_pass + 1L
+    passed    <<- passed    + 1L
+    message("  PASS  ", label)
+  } else {
+    p162_fail <<- p162_fail + 1L
+    failed    <<- failed    + 1L
+    message("  FAIL  ", label)
+  }
+}
+
+message("\n--- Section 15an: Phase 162 export patient modality dates ---")
+
+# Structural checks (always-run) -----------------------------------------------
+
+# Check 1: R/162 file exists
+chk_162(
+  file.exists("R/162_export_patient_modality_dates.R"),
+  "SMOKE-162-01 [1/8] R/162_export_patient_modality_dates.R exists"
+)
+
+# Check 2: R/162 appears in R/39 investigation_scripts
+r39_text <- paste(readLines("R/39_run_all_investigations.R"), collapse = "\n")
+chk_162(
+  grepl("R/162_export_patient_modality_dates\\.R", r39_text),
+  "SMOKE-162-01 [2/8] R/162 registered in R/39 investigation_scripts"
+)
+
+# Check 3: R/162 contains the output path pattern (D-03)
+r162_text <- paste(readLines("R/162_export_patient_modality_dates.R"), collapse = "\n")
+chk_162(
+  grepl("patient_modality_dates_no_any_", r162_text),
+  "SMOKE-162-01 [3/8] R/162 contains output path pattern patient_modality_dates_no_any_"
+)
+
+# Check 4: R/162 contains the INTERNAL header comment (D-01)
+chk_162(
+  grepl("INTERNAL", r162_text),
+  "SMOKE-162-01 [4/8] R/162 contains INTERNAL header comment"
+)
+
+# Output-level checks (skipped offline if no CSV exists) -----------------------
+csv_files <- list.files("output", pattern = "^patient_modality_dates_no_any_.*\\.csv$",
+                         full.names = TRUE)
+
+if (length(csv_files) > 0) {
+  latest_csv <- csv_files[order(file.info(csv_files)$mtime, decreasing = TRUE)[1]]
+  csv_header <- strsplit(readLines(latest_csv, n = 1L), ",")[[1]]
+
+  # Check 5: No _any columns in CSV header
+  chk_162(
+    !any(grepl("_any$", csv_header)),
+    "SMOKE-162-01 [5/8] CSV header contains no _any columns"
+  )
+
+  # Check 6: Row count approximately 9,331 (± 50 for cohort drift)
+  n_rows <- length(readLines(latest_csv)) - 1L  # subtract header
+  chk_162(
+    abs(n_rows - 9331L) <= 50L,
+    sprintf("SMOKE-162-01 [6/8] CSV row count %d ~ 9331 (± 50)", n_rows)
+  )
+
+  # Check 7: ID column present, unique, and non-missing
+  csv_df <- utils::read.csv(latest_csv, nrows = 9500L)
+  chk_162(
+    "ID" %in% names(csv_df) &&
+      !any(is.na(csv_df$ID)) &&
+      n_distinct(csv_df$ID) == nrow(csv_df),
+    "SMOKE-162-01 [7/8] ID column present, unique, and non-missing"
+  )
+
+  # Check 8: At least one n_dates_ column present
+  chk_162(
+    any(grepl("^n_dates_", names(csv_df))),
+    "SMOKE-162-01 [8/8] CSV contains at least one n_dates_ column"
+  )
+} else {
+  message("  NOTE  SMOKE-162-01 [5-8/8] CSV not found in output/ — output-level checks skipped (offline)")
+}
+
+message(glue("\nSection 15an: {p162_pass} PASS, {p162_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
