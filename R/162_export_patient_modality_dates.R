@@ -25,7 +25,7 @@ run_date    <- format(Sys.Date(), "%Y%m%d")
 # otherwise source R/147 outputs (patient_wide must be in environment)
 # ------------------------------------------------------------------
 rds_files <- list.files(
-  file.path(CONFIG$output_dir %||% "output"),
+  CONFIG$cache$outputs_dir %||% file.path(CONFIG$output_dir %||% "output"),
   pattern = "^surveillance_patient_modality_dates_.*\\.rds$",
   full.names = TRUE
 )
@@ -37,7 +37,8 @@ if (length(rds_files) > 0) {
           "  (modified: ", format(file.info(latest)$mtime, "%Y-%m-%d %H:%M"), ")")
   patient_wide <- readRDS(latest)
 } else {
-  stop("No surveillance_patient_modality_dates_*.rds found in output/. ",
+  stop("No surveillance_patient_modality_dates_*.rds found in ",
+       CONFIG$cache$outputs_dir %||% "output/", ". ",
        "Run R/147_surveillance_modality_frequency.R first.")
 }
 
