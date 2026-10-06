@@ -5309,9 +5309,9 @@ check_152("R/122 workbook has KEY sheet (leftmost)",
   !is.null(r122_lines) &&
   any(grepl('"KEY"', r122_lines)))
 
-check_152("R/122 workbook has A_encounter_distance sheet",
+check_152("R/122 workbook has A_distribution_summary sheet (renamed in Phase 153)",
   !is.null(r122_lines) &&
-  any(grepl("A_encounter_distance", r122_lines)))
+  any(grepl("A_distribution_summary", r122_lines)))
 
 check_152("R/122 workbook has B_patient_summary sheet",
   !is.null(r122_lines) &&
@@ -5741,6 +5741,15 @@ check_161("tests/testthat/test-161-death-plausibility.R exists",
 # 4. Assertion A (161-01): If a live DuckDB connection is available, verify
 #    DEATH_DATE_IMPUTE is VARCHAR and (conditionally) has non-NULL values.
 #    When running offline (no con), this block is skipped gracefully.
+# Ensure a live DuckDB connection for 15am checks — earlier sections may have
+# closed it. open_pcornet_con() is idempotent if already open.
+if (!exists("con") || !inherits(con, "duckdb_connection")) {
+  tryCatch(
+    con <- open_pcornet_con(),
+    error = function(e) message(glue("  NOTE [15am]: could not reopen DuckDB: {e$message}"))
+  )
+}
+
 if (exists("con") && inherits(con, "duckdb_connection")) {
   tryCatch({
     death_schema <- DBI::dbGetQuery(con, "DESCRIBE DEATH")
