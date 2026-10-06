@@ -647,7 +647,7 @@ Plans:
 **Goal:** Fix the 46 patients with `hl_anchor_date >= follow_end` and the 261 decedents (19.4%) whose recorded death date precedes confirmed clinical activity. Implement a shared `resolve_death_date()` utility (30-day grace period, earliest-consistent-date rule for conflicts, D2 flag-not-exclude for implausible dates), redefine `follow_end` to use latest observed activity rather than admit date only, and audit every script that reads DEATH to confirm it uses the shared utility.
 **Requirements**: TBD
 **Depends on:** Phase 160
-**Plans:** 8 plans
+**Plans:** 9/9 plans complete
 
 Plans:
 - [ ] 161-01-PLAN.md — Fix R/03 ingest: type DEATH_DATE_IMPUTE as VARCHAR; rebuild DuckDB (Wave 1)
