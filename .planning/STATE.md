@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Completed 163-01-PLAN.md
-last_updated: "2026-10-06T19:00:00.000Z"
+stopped_at: Completed 161-04-PLAN.md
+last_updated: "2026-10-06T18:52:42.125Z"
 last_activity: 2026-10-06
 progress:
-  total_phases: 150
-  completed_phases: 130
-  total_plans: 290
+  total_phases: 151
+  completed_phases: 131
+  total_plans: 291
   completed_plans: 296
 ---
 
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 ## Current Position
 
-Phase: 162
+Phase: 163
 Plan: Not started
 
   - 140-01: COMPLETE (3/3 tasks). Task 1: compute_c02() exposes n_present_no_usable_zip5, console/QC breakdown (commit 6862a64). Task 2 (D-1 checkpoint): resolved by the user this session as a distinct comparison-basis correction -- NOT either of the plan's anticipated option-a (re-derive C02_EXPECTED) or option-b (leave everything unchanged) branches. C02_EXPECTED (26L) and C02_TOLERANCE (5L) stay unchanged; the reconciliation comparison itself is corrected to use n_present_no_usable_zip5 (9, the only population a genuine coalescing defect could produce) instead of the conflated n_patients_no_zip5_ever (665, which mixes in 656 coverage-gap patients absent from addr_coal). Task 3 implemented this resolution (commit b6f1e74) -- SECTION 12 console messages, SECTION 13 qc_tbl labels, SECTION 14 KEY-sheet fields, and the QC-sheet subtitle all updated. NOTE: this comparison basis was itself superseded by 140-09 (Wave 2a) -- see below. See 140-01-SUMMARY.md.

@@ -674,7 +674,7 @@ Plans:
 **Goal:** Stop R/147 from counting DIAGNOSIS-table Z-codes as surveillance events (4 rows excluded); rebuild Codeset_summary as per-modality stacked blocks replacing the cross-modality layout.
 **Requirements**: TBD
 **Depends on:** Phase 162
-**Plans:** 1 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 163-01-PLAN.md — R/147 changes: exclude DIAGNOSIS rows, downstream sheets, Codeset_summary by modality, KEY/QC updates (Wave 1)
