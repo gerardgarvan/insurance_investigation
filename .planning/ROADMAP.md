@@ -668,3 +668,13 @@ Plans:
 
 Plans:
 - [x] 162-01-PLAN.md — INTERNAL comment + RDS-date log (R/162), R/39 + SCRIPT_INDEX registration, R/88 Section 15an (8 checks: 4 structural + 4 output-level), HiPerGator run checkpoint [REG-162-01, REG-162-02, SMOKE-162-01, RUN-162-01] (Wave 1)
+
+### Phase 163: Drop diagnosis-code surveillance rows; Codeset_summary by modality
+
+**Goal:** Stop R/147 from counting DIAGNOSIS-table Z-codes as surveillance events (4 rows excluded); rebuild Codeset_summary as per-modality stacked blocks replacing the cross-modality layout.
+**Requirements**: TBD
+**Depends on:** Phase 162
+**Plans:** 1 plans
+
+Plans:
+- [x] 163-01-PLAN.md — R/147 changes: exclude DIAGNOSIS rows, downstream sheets, Codeset_summary by modality, KEY/QC updates (Wave 1)
