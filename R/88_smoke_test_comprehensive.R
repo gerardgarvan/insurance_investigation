@@ -1848,21 +1848,43 @@ check("R/00_config defines DRUG_NAME_ALIASES + canonicalize_drug_name (quick iyh
 check("R/00_config applies canonicalize_drug_name to MEDICATION_LOOKUP (quick iyh)",
       any(grepl("MEDICATION_LOOKUP <- setNames\\(canonicalize_drug_name\\(", r00_lines_iyh)))
 
-# Check 17: liposomal doxorubicin is NOT an alias key (clinically distinct)
+# Check 17 (Phase 164, D-3): Adriamycin and liposomal doxorubicin variants ARE
+# alias keys — all collapse to the bare generic "Doxorubicin" per D-1/D-3.
+# Verify that the required brand and liposomal keys are present in the alias map.
 alias_start <- grep("DRUG_NAME_ALIASES <- c\\(", r00_lines_iyh)[1]
 alias_end <- if (!is.na(alias_start)) {
   alias_start + which(grepl("^\\s*\\)\\s*$", r00_lines_iyh[alias_start:length(r00_lines_iyh)]))[1] - 1
 } else NA
 alias_block <- if (!is.na(alias_start) && !is.na(alias_end)) r00_lines_iyh[alias_start:alias_end] else character(0)
-# Only alias KEYS (left of "=") count; comments and canonical values may mention liposomal.
 alias_code <- sub("#.*$", "", alias_block)
-alias_keys <- ifelse(grepl("=", alias_code), sub("=.*$", "", alias_code), "")
-liposomal_keys <- trimws(alias_keys[grepl("liposomal", alias_keys, ignore.case = TRUE)])
-if (length(liposomal_keys) > 0) {
-  message("    liposomal alias key(s) found: ", paste(liposomal_keys, collapse = ", "))
+alias_keys <- trimws(ifelse(grepl("=", alias_code), sub("=.*$", "", alias_code), ""))
+# Required keys (Phase 164, D-1/D-3): all must be present as alias map keys.
+required_dox_keys <- c("adriamycin", "doxil", "caelyx", "liposomal doxorubicin",
+                        "doxorubicin liposomal", "doxorubicin hcl liposome")
+missing_dox_keys <- setdiff(required_dox_keys, tolower(alias_keys))
+if (length(missing_dox_keys) > 0) {
+  message("    Missing dox alias key(s): ", paste(missing_dox_keys, collapse = ", "))
 }
-check("DRUG_NAME_ALIASES has NO liposomal key (liposomal kept distinct) (quick iyh)",
-      length(alias_block) > 0 && length(liposomal_keys) == 0)
+check("DRUG_NAME_ALIASES has adriamycin + liposomal dox keys -> Doxorubicin (Phase 164)",
+      length(alias_block) > 0 && length(missing_dox_keys) == 0)
+
+# Check 17b: Gantt inputs contain NO adriamycin/doxil/caelyx/liposom drug labels
+# (structural check on Gantt scripts — neither R/52 nor R/142 should patch drug
+#  strings inline; normalization happens upstream in R/00_config.R).
+r52_lines_dox  <- readLines("R/52_gantt_v2_export.R",   warn = FALSE)
+r142_lines_dox <- readLines("R/142_gantt_180_export.R", warn = FALSE)
+INLINE_DOX_PAT <- "adriamycin|doxil|caelyx|liposom"
+r52_inline  <- grep(INLINE_DOX_PAT, r52_lines_dox,  ignore.case = TRUE, value = TRUE)
+r142_inline <- grep(INLINE_DOX_PAT, r142_lines_dox, ignore.case = TRUE, value = TRUE)
+# Strip comment-only lines — comments are documentation, not patches.
+r52_code_hits  <- r52_inline[ !grepl("^\\s*#", r52_inline)]
+r142_code_hits <- r142_inline[!grepl("^\\s*#", r142_inline)]
+if (length(r52_code_hits) > 0 || length(r142_code_hits) > 0) {
+  if (length(r52_code_hits)  > 0) message("    R/52 inline dox hit(s): ",  paste(trimws(r52_code_hits),  collapse = " | "))
+  if (length(r142_code_hits) > 0) message("    R/142 inline dox hit(s): ", paste(trimws(r142_code_hits), collapse = " | "))
+}
+check("R/52 + R/142 have no inline adriamycin/doxil/caelyx/liposom string patches (Phase 164)",
+      length(r52_code_hits) == 0 && length(r142_code_hits) == 0)
 
 # Check 18: R/27 applies canonicalize_drug_name to all_lookups before save
 check("R/27 applies canonicalize_drug_name to all_lookups$drug_name (quick iyh)",
