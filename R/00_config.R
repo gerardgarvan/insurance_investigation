@@ -2273,7 +2273,8 @@ CODE_SUBCATEGORY_MAP <- c(
   "J9209" = "Mesna",
   "J9217" = "Leuprolide",
   "J9218" = "Lurbinectedin",
-  "J9223" = "Liposomal Doxorubicin",
+  "J9001" = "Doxorubicin",
+  "J9223" = "Doxorubicin",
   "J9228" = "Ipilimumab",
   "J9230" = "Mechlorethamine",
   "J9245" = "Melphalan (IV)",
@@ -2664,8 +2665,11 @@ MEDICATION_LOOKUP <- local({
 message(glue("  MEDICATION_LOOKUP: {length(MEDICATION_LOOKUP)} medication names from reference Excel"))
 
 # Supplement: J-codes not in reference Excel but identifiable via HCPCS
+# J9000 = Doxorubicin HCl (Adriamycin), J9001 = Doxorubicin HCl (liposomal/Doxil)
+# Both collapse to "Doxorubicin" via DRUG_NAME_ALIASES (Phase 164, D-1/D-3).
 MEDICATION_LOOKUP_JCODE_SUPPLEMENT <- c(
-  "J9000" = "Doxorubicin Hydrochloride",
+  "J9000" = "Doxorubicin",
+  "J9001" = "Doxorubicin",
   "J9040" = "Bleomycin",
   "J9042" = "Brentuximab Vedotin",
   "J9130" = "Dacarbazine",
@@ -2683,27 +2687,39 @@ message(glue("  MEDICATION_LOOKUP supplement: {length(new_codes)} J-codes added 
 # ==============================================================================
 # WHY: the same drug can enter drug_names under different names from two sources
 # (MEDICATION_LOOKUP from the reference Excel vs the R/27 RxNorm cache), producing
-# duplicate tokens on one episode (e.g. "doxorubicin" AND "Doxorubicin Hydrochloride").
-# This map collapses same-drug variants to ONE canonical display name so the
-# drug_names union in R/26 dedups them. Keys are lowercased match forms.
-# NOTE: liposomal doxorubicin ("Doxorubicin (Liposomal)", "Liposomal Doxorubicin")
-# is a clinically distinct formulation and is deliberately NOT a key here.
+# duplicate tokens on one episode. This map collapses same-drug variants to ONE
+# canonical display name so the drug_names union in R/26 dedups them.
+# Keys are lowercased match forms.
+#
+# DOXORUBICIN NOTE (Phase 164, D-1/D-3): All brand names (Adriamycin, Adriamycin
+# PFS, Adriamycin RDF), salt forms (Doxorubicin HCl, Doxorubicin Hydrochloride),
+# and liposomal variants (Doxil, Caelyx, Liposomal Doxorubicin, Doxorubicin
+# Liposomal, Doxorubicin HCl Liposome) collapse to the bare generic "Doxorubicin".
+# D-3 resolved option (b): liposomal is NOT kept distinct in Gantt labels.
 DRUG_NAME_ALIASES <- c(
-  "doxorubicin"               = "Doxorubicin Hydrochloride",
-  "doxorubicin hcl"           = "Doxorubicin Hydrochloride",
-  "doxorubicin hydrochloride" = "Doxorubicin Hydrochloride",
+  # ── Doxorubicin: brand, salt, and liposomal variants → bare generic ──────
+  # (Phase 164, D-1 canonical form, D-3 liposomal collapse)
+  "adriamycin"                    = "Doxorubicin",
+  "adriamycin pfs"                = "Doxorubicin",
+  "adriamycin rdf"                = "Doxorubicin",
+  "doxorubicin"                   = "Doxorubicin",
+  "doxorubicin hcl"               = "Doxorubicin",
+  "doxorubicin hydrochloride"     = "Doxorubicin",
+  "doxil"                         = "Doxorubicin",
+  "caelyx"                        = "Doxorubicin",
+  "liposomal doxorubicin"         = "Doxorubicin",
+  "doxorubicin liposomal"         = "Doxorubicin",
+  "doxorubicin hcl liposome"      = "Doxorubicin",
+  "doxorubicin (liposomal)"       = "Doxorubicin",
   # ABVD-regimen salt/acid variants (Phase 142, EP-DEDUP-01).
   # RxNorm resolution (R/27) sometimes yields "Vinblastine Sulfate" while
   # MEDICATION_LOOKUP (via J9360/67228/11198) yields "Vinblastine".
-  # Collapse salt -> base for vinblastine (canonical is the base form in MEDICATION_LOOKUP).
-  # Doxorubicin goes the other direction (base -> salt) — directions differ because
-  # MEDICATION_LOOKUP is the authority and both directions are intentional.
-  # Liposomal and conjugated forms are deliberately NOT aliased here.
+  # Collapse salt -> base (canonical is the base form in MEDICATION_LOOKUP).
   # Audit (2026-08-14, §0a from treatment_episode_detail.rds): only vinblastine has
   # a duplicate pair in the output. Vincristine Sulfate, Vinorelbine Tartrate,
   # Fludarabine Phosphate, Bleomycin, and Dacarbazine all appear as single tokens —
   # no aliases needed for those (one form only reaches the output).
-  "vinblastine sulfate"       = "Vinblastine",
+  "vinblastine sulfate"           = "Vinblastine",
   # Supportive-care single-agent brand -> generic aliases (Phase 120, SUPCARE-04).
   # These feed the R/105 rule-based fallback when RxNav cannot resolve a code.
   # Only SINGLE-INGREDIENT brands live here; combination brands (Ciprodex,
@@ -2734,8 +2750,7 @@ DRUG_NAME_ALIASES <- c(
 
 # canonicalize_drug_name(): vectorized, NA-safe, case-insensitive alias lookup.
 # Returns the canonical name when the trimmed/lowercased input matches an alias
-# key; otherwise returns the input unchanged (so non-aliased and liposomal names
-# pass through untouched).
+# key; otherwise returns the input unchanged.
 canonicalize_drug_name <- function(x) {
   key <- tolower(stringr::str_trim(x))
   hit <- DRUG_NAME_ALIASES[key]

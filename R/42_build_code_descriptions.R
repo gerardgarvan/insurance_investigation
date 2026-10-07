@@ -118,7 +118,7 @@ message(glue("  Source 3 (R/45 radiation hardcoded): {length(radiation_hardcoded
 
 config_descriptions <- c(
   # Chemo HCPCS (ABVD regimen, lines 417-422)
-  "J9000" = "Doxorubicin HCl (Adriamycin)",
+  "J9000" = "Doxorubicin HCl",
   "J9040" = "Bleomycin sulfate",
   "J9360" = "Vinblastine sulfate",
   "J9130" = "Dacarbazine (DTIC)",

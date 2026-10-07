@@ -100,7 +100,7 @@ radiation_hardcoded <- c(
 
 # Supplement with config curated descriptions (same as R/42 Source 4)
 config_descriptions <- c(
-  "J9000" = "Doxorubicin HCl (Adriamycin)",
+  "J9000" = "Doxorubicin HCl",
   "J9040" = "Bleomycin sulfate",
   "J9360" = "Vinblastine sulfate",
   "J9130" = "Dacarbazine (DTIC)",
