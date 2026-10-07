@@ -19,7 +19,6 @@
 
 suppressPackageStartupMessages({
   library(dplyr)
-  library(tidyr)
   library(stringr)
   library(glue)
 })
@@ -46,33 +45,28 @@ message(glue("Using: {detail_path} (modified {format(file.mtime(detail_path), '%
 
 detail <- readRDS(detail_path)
 
-required_cols <- c("ID", "drug_names", "episode_start", "episode_stop")
+required_cols <- c("patient_id", "drug_name", "episode_start", "episode_stop")
 missing_cols  <- setdiff(required_cols, names(detail))
 if (length(missing_cols) > 0) {
   stop(glue("treatment_episode_detail is missing column(s): {paste(missing_cols, collapse = ', ')}"))
 }
-message(glue("Loaded treatment_episode_detail: {nrow(detail)} rows, {n_distinct(detail$ID)} patients"))
+message(glue("Loaded treatment_episode_detail: {nrow(detail)} rows, {n_distinct(detail$patient_id)} patients"))
 
-# ── 2. Identify doxorubicin-related strings in drug_names ────────────────────
+# ── 2. Identify doxorubicin-related strings in drug_name ─────────────────────
+# The detail RDS has one row per treatment event; drug_name is a single string
+# (already resolved via canonicalize_drug_name / DRUG_NAME_ALIASES in R/26).
 DOX_PATTERN  <- "adriamycin|doxorubicin|doxil|caelyx|lipodox|liposom"
 LIPO_PATTERN <- "doxil|caelyx|lipodox|liposom"
 
-# Each row can have multiple semicolon- or comma-separated drug names. Expand.
-drug_rows <- detail %>%
-  filter(!is.na(drug_names) & drug_names != "") %>%
-  mutate(drug_list = str_split(drug_names, ";\\s*|,\\s*")) %>%
-  unnest(drug_list) %>%
-  mutate(drug_list = str_trim(drug_list)) %>%
-  filter(drug_list != "")
+dox_rows <- detail %>%
+  filter(!is.na(drug_name) & drug_name != "") %>%
+  filter(str_detect(tolower(drug_name), DOX_PATTERN))
 
-dox_rows <- drug_rows %>%
-  filter(str_detect(tolower(drug_list), DOX_PATTERN))
-
-message(glue("Doxorubicin-related drug-name tokens: {nrow(dox_rows)} rows across {n_distinct(dox_rows$ID)} patients"))
+message(glue("Doxorubicin-related rows: {nrow(dox_rows)} across {n_distinct(dox_rows$patient_id)} patients"))
 
 # Guard: if every token is already the bare canonical "Doxorubicin", the RDS was
 # probably rebuilt after the Phase 164 alias change and is not a true baseline.
-non_canonical <- dox_rows %>% filter(drug_list != "Doxorubicin")
+non_canonical <- dox_rows %>% filter(drug_name != "Doxorubicin")
 if (nrow(dox_rows) > 0 && nrow(non_canonical) == 0) {
   warning(paste(
     "All doxorubicin tokens are already 'Doxorubicin'. The RDS may postdate the",
@@ -82,11 +76,11 @@ if (nrow(dox_rows) > 0 && nrow(non_canonical) == 0) {
 
 # ── 3. Count per raw string ───────────────────────────────────────────────────
 per_string <- dox_rows %>%
-  group_by(raw_string = drug_list) %>%
+  group_by(raw_string = drug_name) %>%
   summarise(
     n_rows     = n(),
-    n_patients = n_distinct(ID),
-    n_episodes = n_distinct(paste(ID, episode_start, episode_stop)),
+    n_patients = n_distinct(patient_id),
+    n_episodes = n_distinct(paste(patient_id, episode_start, episode_stop)),
     .groups    = "drop"
   ) %>%
   mutate(is_liposomal = str_detect(tolower(raw_string), LIPO_PATTERN)) %>%
@@ -96,19 +90,19 @@ message("\nPer-string counts:")
 print(per_string, n = Inf)
 
 # ── 4. Liposomal breakdown ────────────────────────────────────────────────────
-liposomal_rows <- dox_rows %>% filter(str_detect(tolower(drug_list), LIPO_PATTERN))
+liposomal_rows <- dox_rows %>% filter(str_detect(tolower(drug_name), LIPO_PATTERN))
 
-n_lipo_patients <- n_distinct(liposomal_rows$ID)
-n_lipo_episodes <- n_distinct(paste(liposomal_rows$ID, liposomal_rows$episode_start, liposomal_rows$episode_stop))
+n_lipo_patients <- n_distinct(liposomal_rows$patient_id)
+n_lipo_episodes <- n_distinct(paste(liposomal_rows$patient_id, liposomal_rows$episode_start, liposomal_rows$episode_stop))
 
 # Episode windows with BOTH a liposomal AND a conventional token
 # (these collapse to one Doxorubicin bar after mapping).
 episode_flags <- dox_rows %>%
-  group_by(ID, episode_start, episode_stop) %>%
+  group_by(patient_id, episode_start, episode_stop) %>%
   summarise(
-    n_dox_tokens = n_distinct(drug_list),
-    has_lipo     = any(str_detect(tolower(drug_list), LIPO_PATTERN)),
-    has_conv     = any(!str_detect(tolower(drug_list), LIPO_PATTERN)),
+    n_dox_tokens = n_distinct(drug_name),
+    has_lipo     = any(str_detect(tolower(drug_name), LIPO_PATTERN)),
+    has_conv     = any(!str_detect(tolower(drug_name), LIPO_PATTERN)),
     .groups      = "drop"
   )
 
@@ -125,7 +119,7 @@ message(glue(
 ))
 
 # ── 5. Overall doxorubicin patient / episode counts (any variant) ────────────
-n_dox_patients_total <- n_distinct(dox_rows$ID)
+n_dox_patients_total <- n_distinct(dox_rows$patient_id)
 n_dox_episodes_total <- nrow(episode_flags)
 message(glue("Total patients with any doxorubicin variant: {n_dox_patients_total}"))
 message(glue("Total episode windows with any doxorubicin variant: {n_dox_episodes_total}"))
