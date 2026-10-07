@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Completed 161-04-PLAN.md
-last_updated: "2026-10-06T18:52:42.125Z"
-last_activity: 2026-10-06
+stopped_at: Completed 164-01-PLAN.md (T1-T4; T5 = HiPerGator checkpoint pending)
+last_updated: "2026-10-07T02:39:00Z"
+last_activity: 2026-10-07
 progress:
-  total_phases: 151
+  total_phases: 152
   completed_phases: 131
-  total_plans: 291
+  total_plans: 292
   completed_plans: 296
 ---
 
@@ -21,12 +21,14 @@ See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 162 — export-patient-modality-dates
+**Current focus:** Phase 164 — doxorubicin-generic-name
 
 ## Current Position
 
-Phase: 163
-Plan: Not started
+Phase: 164 (doxorubicin-generic-name) — EXECUTING (T1-T4 complete; T5 HiPerGator checkpoint pending)
+Plan: 1 of 1
+
+  - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 
   - 140-01: COMPLETE (3/3 tasks). Task 1: compute_c02() exposes n_present_no_usable_zip5, console/QC breakdown (commit 6862a64). Task 2 (D-1 checkpoint): resolved by the user this session as a distinct comparison-basis correction -- NOT either of the plan's anticipated option-a (re-derive C02_EXPECTED) or option-b (leave everything unchanged) branches. C02_EXPECTED (26L) and C02_TOLERANCE (5L) stay unchanged; the reconciliation comparison itself is corrected to use n_present_no_usable_zip5 (9, the only population a genuine coalescing defect could produce) instead of the conflated n_patients_no_zip5_ever (665, which mixes in 656 coverage-gap patients absent from addr_coal). Task 3 implemented this resolution (commit b6f1e74) -- SECTION 12 console messages, SECTION 13 qc_tbl labels, SECTION 14 KEY-sheet fields, and the QC-sheet subtitle all updated. NOTE: this comparison basis was itself superseded by 140-09 (Wave 2a) -- see below. See 140-01-SUMMARY.md.
   - 140-02: COMPLETE (3/3 tasks). Task 1: crosswalk staging contract documented in data/reference/README.md; R/115 SECTION 8/13 match-rate coverage gate wired (commits 5d4309b, 6862a64). Task 2 (human-action, crosswalk acquisition): resolved "not available -- defer" -- block-group tier stays gracefully degraded (not a regression from Phase 139); P-03b/P-03c deferred as follow-up. Task 3 (D-2 decision, ZIP5-vs-ZIP9): resolved option-a -- ZIP5 accepted as the primary analysis unit now, unblocking Plans 140-04 through 140-07 (140-04's S1-fold-in design, per 140-08-PATCH FIX-03, confirmed applicable). See 140-02-SUMMARY.md.
@@ -69,7 +71,7 @@ Status: Executing Phase 141
   - **140-09-PATCH applied** (2026-08-06/07, uncommitted as of this session): FIX-17 rewires C-02 onto internally-checkable invariants; FIX-18 supersedes 140-CONTEXT.md's P-01a/b/c (withdrawn, not completed) with P-01d/P-01e and adds decision D-5; FIX-19 retro-corrects 140-01-SUMMARY.md/140-02-SUMMARY.md frontmatter (`requirements-completed` split into `requirements-met`/`requirements-deferred`/`requirements-withdrawn`, since both files claimed completion their own prose contradicts); FIX-20 retroactively documents that 140-02's Task 1 R/115 edit (SECTION 8 match-rate gate) landed in Wave 1 alongside 140-01's own R/115 edit (commit `6862a64`, verified via `git show` to contain exactly the intended hunks from both plans) -- a violation of the "no two plans share a wave on R/115" rule now stated explicitly going forward; FIX-21 adds a `test_dir()` run to 140-03 Task 3's HiPerGator checkpoint (every fixture this phase has added has never actually executed -- Rscript is unavailable in this Windows environment); FIX-22 corrects `data/reference/README.md`'s crosswalk vintage section (a single vintage cannot span LDS_ADDRESS_HISTORY's 13-year study period; offers single-vintage-with-caveat vs two-vintage-compare-spread as explicit options); FIX-23 records that D-2 (ZIP5 as analysis unit) was decided without the block-group evidence, not against it, in both 140-02-SUMMARY.md and the R/115 KEY sheet.
   - **140-09 (Wave 2a) COMPLETE, 3/3 tasks.** Task 1: `compute_c02_baseline()` added to SECTION 1B (pre-coalesce baseline, raw ZIP5 only), with a recovery-demonstrating fixture and a synthetic monotonicity-violation fixture in `tests/testthat/test-115-c02.R`. Task 2: SECTION 12's `c02_reconciled` rewired onto `c02a_monotone` (post-coalesce <= pre-coalesce) and `c02b_partition` (independent recount via `filter()`+`nrow()`, not the subtraction `compute_c02()` already performs); `C02_EXPECTED <- 26L`/`C02_TOLERANCE <- 5L` retained but removed from the gate; `n_zip5_recovered_by_coalesce` reported; SECTION 13 `qc_tbl` and SECTION 14 KEY sheet updated (superseded-constant footnote + D-2 sequencing note); the `"c02_reconciled"` `qc_tbl$Metric` string is byte-for-byte unchanged (SECTION 15 `match()` lookup intact). **Task 3 (D-5, checkpoint:decision) resolved 2026-08-07 as option-c: "no floor -- report coverage without gating on it"** -- NOT the plan's recommended option-a (0.90 floor). `c02c_coverage`/`C02_COVERAGE_FLOOR` were removed from the script entirely (clean removal, not dead code, confirmed via `grep`); `pct_cohort_with_any_address` (92.9% observed) remains computed and reported (qc_tbl row, KEY-sheet field, QC-sheet subtitle) but does not gate `c02_reconciled`. `c02_reconciled = c02a_monotone && c02b_partition` is the final gate expression. Structural brace/paren/bracket balance check passed on both modified files after every edit pass (Rscript unavailable in this Windows environment; true R-parse + `testthat::test_dir()` execution deferred to the Wave 2.5 HiPerGator run per FIX-21). See `140-09-SUMMARY.md`. **None of this session's edits (140-09-PATCH's doc fixes, the new 140-09-PLAN.md/140-09-SUMMARY.md, or the R/115 code changes) are committed to git yet -- awaiting explicit instruction to commit.**
 
-Last activity: 2026-10-06
+Last activity: 2026-10-07
 
 **2026-08-08 executor re-entry into 140-03 (first pass):** Re-confirmed (not re-executed) that 140-03's Task 1 (`d76a485`) and Task 2 (`fef75e8`) are committed and present in `R/115_zip_stability_counts.R`/`tests/testthat/test-115-c02.R` (`grep` confirms `classify_unparseable_dates_vec`, `unparseable_date_examples`, `n_patients_lost_to_filters_c02` all present). Also confirmed via `git diff --stat` that the working tree's `R/115_zip_stability_counts.R` carried 140-09's still-uncommitted rewiring (`c02_reconciled <- c02a_monotone && c02b_partition`, line ~1304) layered on top of 140-03's committed Tasks 1-2. `Rscript` confirmed still unavailable in this Windows environment. Task 3 returned to the user as a blocking `checkpoint:human-action`, unresolved at that point.
 
@@ -161,6 +163,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 161 added: Unzip Files (13) and Read Contents
 - Phase 162 added: Unzip files15 and read contents
 - Phase 163 added: files (1) unzip this
+- Phase 164 added: Doxorubicin generic name
 
 ### Known Blockers (new)
 
