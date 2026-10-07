@@ -30,9 +30,9 @@ source("R/00_config.R")
 # CONFIG has no top-level cache_dir; the cache lives at CONFIG$cache$cache_dir.
 # Check the likely save locations and use the first that exists.
 candidate_paths <- c(
-  file.path(CONFIG$cache$cache_dir, "treatment_episode_detail.rds"),
-  file.path(CONFIG$output_dir, "treatment_episode_detail.rds"),
-  file.path(CONFIG$output_dir, "cohort", "treatment_episode_detail.rds")
+  file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds"),
+  file.path(CONFIG$cache$cache_dir,   "treatment_episode_detail.rds"),
+  file.path(CONFIG$output_dir,        "treatment_episode_detail.rds")
 )
 detail_path <- candidate_paths[file.exists(candidate_paths)][1]
 if (is.na(detail_path)) {
