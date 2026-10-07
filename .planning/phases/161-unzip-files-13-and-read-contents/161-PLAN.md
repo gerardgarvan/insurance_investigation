@@ -1,85 +1,50 @@
 # Phase 161 — Plan
 
-Depends on: D1–D5 locked in 161-CONTEXT.md.
-Tasks 161-01 and 161-02 can proceed before team sign-off on D1/D2.
-161-03 onward implements the agreed rules and requires team sign-off.
+Depends on: decisions in 161-CONTEXT.md. 161-01 and 161-02 can proceed before team
+sign-off on D1/D2/D6. 161-03 onward implements the agreed rules.
 
-## 161-01 Fix ingest typing (R/03)
-- In `R/03_duckdb_ingest.R`, type `DEATH_DATE_IMPUTE` as VARCHAR (it is an
-  imputation flag, not a date). Audit all columns whose name contains `DATE`
-  and confirm only true date fields are cast to DATE.
-- Rebuild `/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb`.
-- Acceptance: `DEATH_DATE_IMPUTE` is VARCHAR with non-null B/D/M/N values;
-  R/88 asserts the column is populated.
+| Task | Wave | Depends on | Sign-off |
+|---|---|---|---|
+| 161-01 Snapshot R/147 outputs; locate and fix DEATH_DATE_IMPUTE loss; rebuild | 1 | — | no |
+| 161-02 Re-run diagnostic; conflicting-date counts; projected person-years | 2 | 161-01 | no |
+| 161-03 `get_last_activity()` + `resolve_death_date()` + sensitivity table | 3 | 161-02 | D1, D2 |
+| 161-04 `compute_followup()`: shared activity, resolved death, 3-level status | 4 | 161-03 | D6 |
+| 161-05 R/147 reporting, sensitivity exclusion, anchor-day rule | 5 | 161-03, 161-04 | no |
+| 161-06 Tests + R/88 assertions | 5 | 161-03, 161-04 | no |
+| 161-07 Audit DEATH-reading scripts | 5 | 161-03, 161-04 | no |
+| 161-08 Full pipeline re-run, before/after comparison, close phase | 6 | all | no |
 
-## 161-02 Re-run diagnostic on rebuilt database
-- Re-run `R/161_diag_anchor_followup.R` with `print(width = Inf)`; record
-  category 2a (imputed death dates) and conflicting-date reconciliation counts
-  (`n_conflicting`, `n_death_max_reconciles`). Update 161-CONTEXT.md with the
-  numbers so D3 inputs are available for team review.
-- Acceptance: updated counts committed to 161-CONTEXT.md.
+## 161-01 Snapshot, locate flag loss, fix ingest
+- Copy current R/147 outputs to `output/before_161/` before any code change.
+- Trace `DEATH_DATE_IMPUTE` from raw extract → R/01 → RDS cache → R/03 → DuckDB
+  to find where B/D/M values become NULL; fix at that point, rebuild cache/DuckDB.
+- R/03 guard stops (does not coerce) if the column arrives as Date.
+- Audit: no column typed DATE whose name does not end in `_DATE`.
 
-## 161-03 Shared death-date plausibility utility (FIXED REQUIREMENT — D4)
-- Add `resolve_death_date()` to `R/utils/utils_death.R` (new file). Returns
-  one row per patient:
-  - `death_date_raw` — earliest raw date from DEATH
-  - `death_date_resolved` — date after applying plausibility rules
-  - `death_flag` — one of: `plausible` / `implausible_post_activity` /
-    `conflicting_resolved` / `conflicting_unresolved`
-  - `post_death_activity_days` — days of activity beyond recorded death date
-- Rules (per D1–D3):
-  - Grace period N = 30 days.
-  - Conflicting dates: use the *earliest* date consistent with clinical activity
-    (consistent = death_date ≥ last_activity_date − N); if `DEATH_SOURCE` is
-    populated, use NDI/state > SSA > local/tumor-registry as tiebreaker.
-  - Apply D2 if no date is consistent: end follow-up at last observed activity,
-    set `death_flag = implausible_post_activity`.
-  - Output sensitivity table: patient counts at N = 0, 30, 60, 90, 365 days
-    flagged as implausible, so the threshold choice is documented.
-- Acceptance: reproduces the 261 implausible cases from the pre-fix diagnostic
-  at N = 30; sensitivity table written to output.
+## 161-02 Re-run diagnostic
+- Add section 8b (row-level DEATH: conflicting dates, DEATH_SOURCE, imputation,
+  projected person-years under D2/D3); record numbers in 161-CONTEXT.md.
 
-## 161-04 Redefine follow-up end (utils_surveillance.R)
-- In `compute_followup()`:
-  - Replace admit-only `last_enc_date` with
-    `obs_end = max(discharge-or-admit, latest CDM activity)`, capped at cutoff.
-  - Use `death_date_resolved` from `resolve_death_date()` in `pmin()`.
-  - Split `fu_status` into three levels: `positive` / `zero` / `negative`.
-    Zero-follow-up patients are reported separately from negative.
-  - Carry `death_flag` through to output.
-- Acceptance: no retained patient has `follow_end < hl_anchor_date`;
-  `fu_status` has three levels in all downstream tables.
+## 161-03 Shared utilities (D4)
+- `R/utils/utils_activity.R::get_last_activity()` — same sources as the diagnostic.
+- `R/utils/utils_death.R::resolve_death_date()`, `death_sensitivity_table()`.
+- Driver `R/161_death_sensitivity.R`; reproduces 261 (post_death_activity_days > 30).
 
-## 161-05 R/147 reporting
-- Report counts by `death_flag` and `fu_status` in the R/147 output log and
-  deliverable notes.
-- Apply D2 consistently: flagged patients are included with follow-up ending at
-  last observed activity; sensitivity analysis excluding flagged patients is
-  written alongside the main output.
-- Confirm event-window classification: events on `hl_anchor_date` are "pre"
-  (D5); "post" means strictly after `hl_anchor_date`.
+## 161-04 compute_followup()
+- `obs_end` from `get_last_activity()`; `death_date_resolved` in `pmin()`;
+  D6 rule; `fu_status` positive/zero/negative + `fu_reason`; carry `death_flag`.
 
-## 161-06 Tests and smoke checks
-- In `tests/testthat/test-161-death-plausibility.R` (new file), add fixtures for:
-  - Death before diagnosis (single and conflicting death dates)
-  - Post-death activity within grace period (should remain `plausible`)
-  - Post-death activity beyond grace period (should flag `implausible_post_activity`)
-  - Inpatient anchor with later discharge date
-  - Zero-follow-up patient after fix (≥ 0 days, reported separately)
-- R/88: assert `follow_end >= hl_anchor_date` for all retained patients;
-  assert `DEATH_DATE_IMPUTE` is VARCHAR and populated.
+## 161-05 R/147
+- Use shared utilities; flag × status summary; sensitivity excluding flagged
+  patients; anchor-day events = pre.
 
-## 161-07 Audit DEATH usage across all scripts (FIXED REQUIREMENT — D4)
-- Search the entire codebase for scripts that read the DEATH table directly
-  (e.g., `grep -r "DEATH" R/ --include="*.R"`).
-- For each script found: confirm it calls `resolve_death_date()` or explicitly
-  documents why it does not (e.g., a script that only counts death records, not
-  dates).
-- Re-run R/147; compare per-modality counts, person-years, and rates against the
-  current deliverable. Summarize differences for the team.
+## 161-06 Tests and R/88
+- Fixtures for every `death_flag`, grace boundary, source priority, D6,
+  inpatient discharge extension; R/88 type/population and no-negative assertions.
 
-## 161-08 HiPerGator checkpoint
-- Re-run the full pipeline on HiPerGator after 161-01 through 161-07.
-- Confirm rebuilt DuckDB, updated R/147 output, sensitivity tables, and smoke
-  checks all pass.
-- Record final `n_implausible` and person-year delta in 161-CONTEXT.md.
+## 161-07 Audit
+- Every DEATH-reading script updated or exempted with a stated reason; audit CSV.
+
+## 161-08 Re-run and close
+- Full pipeline via R/39; before/after vs `output/before_161/`; person-years vs
+  161-02 projection; final numbers in 161-CONTEXT.md; commit aggregates only.
