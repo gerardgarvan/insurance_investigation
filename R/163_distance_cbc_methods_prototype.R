@@ -60,6 +60,9 @@ stopifnot(
 # GEE working correlation from config (may be overridden to "independence" in Section 3)
 CORSTR <- CONFIG$distance_gee_corstr
 
+# Set SKIP_GEE <- TRUE to skip C3 GEE (can take 30-60+ min on large encounter sets).
+SKIP_GEE <- TRUE
+
 message(glue("=== Phase 165 prototype (run {RUN_DATE}) ==="))
 message(glue("  Cutoff: {CUTOFF} mi | GEE corstr: {CORSTR}"))
 
@@ -305,6 +308,16 @@ run_candidates <- function(window_label) {
   )
 
   # ------ C3: GEE logistic (encounter level, cluster = patient) ------
+  if (isTRUE(SKIP_GEE)) {
+    message("    C3 GEE: SKIPPED (SKIP_GEE=TRUE)")
+    results[["C3"]] <- tibble::tibble(
+      window = window_label, candidate = "C3_gee", unit = "encounter",
+      n_rows = n_rows, n_patients = dplyr::n_distinct(d_enc$ID),
+      OR = NA_real_, CI_lo = NA_real_, CI_hi = NA_real_,
+      SE_log_OR = NA_real_, DEFF = NA_real_, p = NA_real_,
+      notes = "skipped (SKIP_GEE=TRUE)"
+    )
+  } else {
   t0 <- proc.time()
   d_gee <- d_enc |>
     dplyr::mutate(cid = as.integer(factor(ID))) |>
@@ -386,6 +399,7 @@ run_candidates <- function(window_label) {
     }
   })
   results[["C3"]] <- c3_result
+  } # end if (!SKIP_GEE)
 
   # ------ C4: Patient-level chi-square / Fisher ------
   t0 <- proc.time()
