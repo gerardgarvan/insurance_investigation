@@ -771,8 +771,9 @@ Plans:
 1. `single_source_care` (0/1) and `n_sources` exist for every cohort patient with ≥1 encounter; NA-SOURCE patients are counted in QC
 2. `single_source_care_<date>.xlsx` has KEY, A_summary (n/% single-source, distribution of n_sources, breakdown by SOURCE for single-source patients), B_post_anchor (same summary for post-anchor window), QC
 3. All displayed counts pass through `suppress_small()` (<11)
-**Plans:** TBD
-- [ ] TBD (run /gsd:plan-phase 167 to break down)
+**Plans:** 2 (167-01 R/169 core: DuckDB query + flag construction + CSV/RDS; 167-02 workbook + registration + HiPerGator run)
+- [ ] 167-01-PLAN.md — R/169 SECTIONS 1-3: DuckDB ENCOUNTER.SOURCE aggregation, single_source_care/_post flag construction, CSV + internal RDS export (Wave 1)
+- [ ] 167-02-PLAN.md — R/169 SECTIONS 4-5 workbook (KEY/A_summary/B_post_anchor/QC) + R/39/R/88/SCRIPT_INDEX registration + SLURM wrapper + HiPerGator run (Wave 2)
 
 ### Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets
 **Goal:** Two subsets of `gantt_episodes_180` — patients where all sheet episodes are marked Definitely NHL and none HL, and patients where any episode is marked HL and NHL — each joined to columns E-J of the team's chemo-combos sheet
