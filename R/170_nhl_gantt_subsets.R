@@ -52,11 +52,11 @@ classify_x <- function(v) {
   !is.na(v) & tolower(trimws(v)) == "x"
 }
 
-#' Return TRUE where v is non-NA, non-blank after trim, and NOT "x"
-#' (case-insensitive) — i.e. an unexpected value the team should inspect.
+#' Return TRUE where v is non-NA, non-blank, and neither "x" nor "0"
+#' (case-insensitive). "0" means false/no in this sheet; "x" means true/yes.
 flag_unexpected_x <- function(v) {
-  trimmed <- trimws(v)
-  !is.na(v) & trimmed != "" & tolower(trimmed) != "x"
+  trimmed <- tolower(trimws(v))
+  !is.na(v) & trimmed != "" & trimmed != "x" & trimmed != "0"
 }
 
 #' Normalise drug_names for cross-check comparison.

@@ -61,11 +61,12 @@ test_that("classify_x: rejects blank, NA, and non-x values", {
   expect_false(classify_x("yes"))
 })
 
-test_that("flag_unexpected_x: TRUE only for non-blank, non-x values", {
+test_that("flag_unexpected_x: TRUE only for non-blank, non-x, non-0 values", {
   expect_true(flag_unexpected_x("x?"))
   expect_true(flag_unexpected_x("yes"))
   expect_false(flag_unexpected_x("x"))
   expect_false(flag_unexpected_x("X"))
+  expect_false(flag_unexpected_x("0"))   # 0 = false/no in this sheet
   expect_false(flag_unexpected_x(""))
   expect_false(flag_unexpected_x(NA_character_))
 })
