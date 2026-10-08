@@ -27,6 +27,7 @@ Deliver the `far_from_care_100mi` binary indicator (encounter level, derived fro
 ### D-165-01 Decision Handoff
 - **D-07:** After Plan 01 executes (memo + prototype output in hand), the user reviews the memo here and makes a recommendation, then forwards to Amy and Erin. Plan 02 is blocked until their answer is recorded as D-165-01.
 - **D-08:** This is acceptable given execution order — Phases 166, 167, 168 can proceed in parallel while the memo is with the team. Plan 02 should be written to accept the method name as a parameter/config value.
+- **D-165-01 (DECIDED 2026-10-08):** Primary analysis method = **rao_scott** (C2 Rao-Scott cluster-adjusted chi-square, encounter-level, clustered on patient ID). `CONFIG$distance_assoc_method <- "rao_scott"`. Sensitivity = C4 patient-level Fisher.
 
 ### Confounders: Primary Unadjusted, Adjusted as Sensitivity
 - **D-09:** Primary analysis is bivariate (unadjusted), with clustering accounted for by the chosen method. This directly answers the team's question: is distance associated with CBC?

@@ -196,7 +196,8 @@ the clustering structure observed here.
 
 ## D-165-01
 
-Team selection: ________  Date: ________
+Team selection: **rao_scott** (C2 Rao-Scott encounter-level, cluster = patient)
+Date: 2026-10-08
 
-*(Record here and in 165-CONTEXT.md Decisions; set CONFIG$distance_assoc_method before Plan 02 runs.
-Recommended value: "patient_fisher" for C4 primary; "rao_scott" for C2 sensitivity.)*
+Sensitivity: C4 patient-level Fisher (reported in Plan 02 Sheet C_sensitivity).
+`CONFIG$distance_assoc_method <- "rao_scott"` — set in R/00_config.R.

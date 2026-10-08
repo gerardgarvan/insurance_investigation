@@ -229,7 +229,7 @@ CONFIG$far_from_care_cutoff_mi <- 100
 
 # Method selected by the team (D-165-01). NA until decided; R/165 refuses to
 # run while NA. Set to one of: "gee", "rao_scott", "patient_fisher".
-CONFIG$distance_assoc_method   <- NA_character_
+CONFIG$distance_assoc_method   <- "rao_scott"  # D-165-01: 2026-10-08
 
 # GEE working correlation structure. "exchangeable" is the default; R/163 falls
 # back to "independence" if exchangeable is infeasible at this cluster size and
