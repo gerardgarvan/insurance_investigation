@@ -463,22 +463,27 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
   sensitivity <- tryCatch({
     message(glue("    Running sensitivity model ({window}) ..."))
 
-    # Complete-case subset (enc level, must have rurality + payer + SOURCE)
-    enc_cc <- enc_win |>
-      dplyr::filter(
-        !is.na(ruca_category),
-        !is.na(PAYER_CATEGORY_PRIMARY),
-        !is.na(SOURCE)
-      )
-    n_cc      <- nrow(enc_cc)
-    n_drop_ruca  <- sum(is.na(enc_win$ruca_category))
-    n_drop_payer <- sum(is.na(enc_win$PAYER_CATEGORY_PRIMARY) &
-                          !is.na(enc_win$ruca_category))
-    n_drop_src   <- sum(is.na(enc_win$SOURCE) &
-                          !is.na(enc_win$ruca_category) &
-                          !is.na(enc_win$PAYER_CATEGORY_PRIMARY))
+    # Determine which covariates are available (drop entirely-NA columns)
+    has_payer   <- !all(is.na(enc_win$PAYER_CATEGORY_PRIMARY))
+    has_rurality <- !all(is.na(enc_win$ruca_category))
 
-    # Collapse sparse SOURCE levels (< 11 patients)
+    # Complete-case subset: require rurality + SOURCE; payer only if available
+    cc_filter <- !is.na(enc_win$ruca_category) & !is.na(enc_win$SOURCE)
+    if (has_payer) cc_filter <- cc_filter & !is.na(enc_win$PAYER_CATEGORY_PRIMARY)
+    enc_cc <- enc_win[cc_filter, ]
+
+    n_cc         <- nrow(enc_cc)
+    n_drop_ruca  <- sum(is.na(enc_win$ruca_category))
+    n_drop_payer <- if (has_payer)
+      sum(is.na(enc_win$PAYER_CATEGORY_PRIMARY) & !is.na(enc_win$ruca_category))
+      else nrow(enc_win)   # all missing
+    n_drop_src   <- sum(is.na(enc_win$SOURCE) & cc_filter | (!cc_filter & !is.na(enc_win$SOURCE)))
+    n_drop_src   <- sum(is.na(enc_win$SOURCE))
+
+    if (n_cc < 30L)
+      stop(glue("sensitivity model ({window}): only {n_cc} complete cases — too few to fit"))
+
+    # Collapse sparse levels (< 11 patients) into "Other"
     collapse_to_other <- function(df, col, min_n = 11L) {
       pat_counts <- df |>
         dplyr::group_by(.data[[col]]) |>
@@ -493,23 +498,29 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
 
     enc_cc <- enc_cc |>
       collapse_to_other("SOURCE") |>
-      collapse_to_other("PAYER_CATEGORY_PRIMARY") |>
       collapse_to_other("ruca_category")
+    if (has_payer)
+      enc_cc <- collapse_to_other(enc_cc, "PAYER_CATEGORY_PRIMARY")
 
     enc_cc <- enc_cc |>
       dplyr::mutate(
-        SOURCE                = factor(SOURCE),
-        PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY),
-        ruca_category         = factor(ruca_category)
+        SOURCE        = factor(SOURCE),
+        ruca_category = factor(ruca_category)
       )
+    if (has_payer)
+      enc_cc <- dplyr::mutate(enc_cc,
+        PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY))
+
+    # Build formula dynamically based on available covariates
+    sens_covariates <- c("ruca_category", if (has_payer) "PAYER_CATEGORY_PRIMARY", "SOURCE")
+    sens_formula <- as.formula(
+      paste("cbc_in_encounter ~ far_from_care_100mi +", paste(sens_covariates, collapse = " + "))
+    )
+    if (!has_payer)
+      message(glue("    sensitivity ({window}): payer unavailable, fitting without PAYER_CATEGORY_PRIMARY"))
 
     des_cc <- survey::svydesign(ids = ~ID, data = enc_cc)
-    glm_adj <- survey::svyglm(
-      cbc_in_encounter ~ far_from_care_100mi + ruca_category +
-        PAYER_CATEGORY_PRIMARY + SOURCE,
-      design = des_cc,
-      family = quasibinomial()
-    )
+    glm_adj <- survey::svyglm(sens_formula, design = des_cc, family = quasibinomial())
     coef_adj <- summary(glm_adj)$coefficients
     log_or_adj <- coef_adj["far_from_care_100mi", "Estimate"]
     se_adj     <- coef_adj["far_from_care_100mi", "Std. Error"]
@@ -718,7 +729,7 @@ for (wn in c("whole", "post")) {
     Window      = results[[wn]]$label,
     Method      = "Rao-Scott (F)",
     F_statistic = fmt_or(pri$statistic),
-    df          = if (!is.na(pri$df)) as.character(pri$df) else NA_character_,
+    df          = if (length(pri$df) == 1L && !is.na(pri$df)) as.character(pri$df) else paste(pri$df, collapse = "/"),
     p_chisq     = fmt_p(pri$p_chisq),
     OR          = fmt_or(pri$or),
     CI_lo       = fmt_or(pri$ci_lo),
