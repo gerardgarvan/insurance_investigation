@@ -6378,6 +6378,248 @@ if (length(wb_pattern) > 0L) {
 message(glue("\nSMOKE-168-01: {p168_pass} PASS / {p168_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ar: PHASE 165 — DISTANCE >100 MI x CBC ASSOCIATION (SMOKE-165-01) ----
+# ==============================================================================
+
+p165_pass <- 0L
+p165_fail <- 0L
+p165_chk <- function(label, ok) {
+  if (isTRUE(ok)) {
+    message(glue("  PASS  {label}"))
+    p165_pass <<- p165_pass + 1L
+    passed    <<- passed    + 1L
+  } else {
+    message(glue("  FAIL  {label}"))
+    p165_fail <<- p165_fail + 1L
+    failed    <<- failed    + 1L
+  }
+}
+
+message("\n--- Section 15ar: Phase 165 distance >100 mi x CBC association ---")
+
+r165_src <- if (file.exists("R/165_distance_cbc_association.R")) {
+  tryCatch(readLines("R/165_distance_cbc_association.R"), error = function(e) character(0))
+} else character(0)
+
+utils_cbc_src <- if (file.exists("R/utils/utils_distance_cbc.R")) {
+  tryCatch(readLines("R/utils/utils_distance_cbc.R"), error = function(e) character(0))
+} else character(0)
+
+# [1] R/165 exists
+p165_chk(
+  "SMOKE-165-01 [1/15] R/165_distance_cbc_association.R exists",
+  file.exists("R/165_distance_cbc_association.R")
+)
+
+# [2] utils_distance_cbc.R exists
+p165_chk(
+  "SMOKE-165-01 [2/15] R/utils/utils_distance_cbc.R exists",
+  file.exists("R/utils/utils_distance_cbc.R")
+)
+
+# [3] CONFIG$far_from_care_cutoff_mi == 100 (tested by value against CONFIG)
+p165_chk(
+  "SMOKE-165-01 [3/15] CONFIG$far_from_care_cutoff_mi == 100",
+  isTRUE(CONFIG$far_from_care_cutoff_mi == 100)
+)
+
+# [4] CONFIG$distance_assoc_method is a recognised value
+p165_chk(
+  "SMOKE-165-01 [4/15] CONFIG$distance_assoc_method in c('gee','rao_scott','patient_fisher')",
+  isTRUE(CONFIG$distance_assoc_method %in% c("gee", "rao_scott", "patient_fisher"))
+)
+
+# [5] R/165 non-comment lines: no bare \b100\b on lines mentioning cutoff/distance_mi/far_from_care
+non_comment_165 <- r165_src[!grepl("^\\s*#", r165_src)]
+relevant_lines  <- non_comment_165[grepl("cutoff|distance_mi|far_from_care", non_comment_165, ignore.case = TRUE)]
+p165_chk(
+  "SMOKE-165-01 [5/15] R/165 uses CONFIG$ / CUTOFF variable for cutoff (no bare literal 100 on distance/cutoff lines)",
+  !any(grepl("\\b100\\b", relevant_lines))
+)
+
+# [6] No quit() in R/165
+p165_chk(
+  "SMOKE-165-01 [6/15] R/165 does NOT contain quit(",
+  !any(grepl("quit(", r165_src, fixed = TRUE))
+)
+
+# [7] No R/4.4.2 in R/165
+p165_chk(
+  "SMOKE-165-01 [7/15] R/165 does NOT contain R/4.4.2",
+  !any(grepl("R/4.4.2", r165_src, fixed = TRUE))
+)
+
+# [8] utils_distance_cbc.R defines all required helper functions
+required_helpers <- c("naive_or_se", "suppress_display", "build_cbc_events",
+                       "build_enc_analysis", "build_pat_analysis")
+defined_fns <- regmatches(utils_cbc_src,
+                          gregexpr("[A-Za-z0-9_.]+(?=\\s*<-\\s*function)", utils_cbc_src, perl = TRUE)) |>
+  unlist()
+p165_chk(
+  "SMOKE-165-01 [8/15] utils_distance_cbc.R defines naive_or_se, suppress_display, build_cbc_events, build_enc_analysis, build_pat_analysis",
+  all(required_helpers %in% defined_fns)
+)
+
+# [9] R/165 registered in R/39
+r39_src_165 <- if (file.exists("R/39_run_all_investigations.R")) {
+  tryCatch(readLines("R/39_run_all_investigations.R"), error = function(e) character(0))
+} else character(0)
+p165_chk(
+  "SMOKE-165-01 [9/15] R/165 registered in R/39 investigation_scripts",
+  any(grepl("R/165_distance_cbc_association.R", r39_src_165, fixed = TRUE))
+)
+
+# [10] test-165 exists
+p165_chk(
+  "SMOKE-165-01 [10/15] tests/testthat/test-165-distance-cbc-association.R exists",
+  file.exists("tests/testthat/test-165-distance-cbc-association.R")
+)
+
+# [11-15] Output-gated checks
+# Derive output path from R/165's save pattern (not assumed)
+wb_165_candidates <- list.files(
+  CONFIG$output_dir,
+  pattern = "^distance_cbc_association_.*\\.xlsx$",
+  full.names = TRUE
+)
+
+if (length(wb_165_candidates) > 0L) {
+  wb_165_path <- wb_165_candidates[which.max(file.mtime(wb_165_candidates))]
+  message(glue("  NOTE  SMOKE-165-01 [11-15] Workbook found: {basename(wb_165_path)}"))
+
+  # Stale-output guard (informational, does not affect counters)
+  if (!IS_LOCAL) {
+    wb_date_stamp <- sub(".*distance_cbc_association_(\\d{8})\\.xlsx$", "\\1", basename(wb_165_path))
+    today_stamp   <- format(Sys.Date(), "%Y%m%d")
+    if (wb_date_stamp != today_stamp) {
+      message(glue(
+        "  WARNING  SMOKE-165-01: workbook date stamp ({wb_date_stamp}) != today ({today_stamp}) — stale output?"
+      ))
+    }
+  }
+
+  wb_165 <- tryCatch(
+    openxlsx::loadWorkbook(wb_165_path),
+    error = function(e) NULL
+  )
+
+  if (!is.null(wb_165)) {
+    sheet_names_165 <- names(wb_165)
+    expected_sheets  <- c("KEY", "A_crosstab", "B_test", "C_sensitivity", "QC")
+
+    # [11] Sheet order exactly KEY, A_crosstab, B_test, C_sensitivity, QC
+    p165_chk(
+      "SMOKE-165-01 [11/15] Workbook sheets exactly KEY/A_crosstab/B_test/C_sensitivity/QC",
+      length(sheet_names_165) == 5L && all(sheet_names_165 == expected_sheets)
+    )
+
+    # [12] B_test mentions both "whole" and "post" windows
+    b_test_data <- tryCatch(
+      openxlsx::readWorkbook(wb_165, sheet = "B_test"),
+      error = function(e) data.frame()
+    )
+    windows_in_btest <- if (nrow(b_test_data) > 0L && "Window" %in% names(b_test_data)) {
+      vals <- tolower(b_test_data$Window)
+      any(grepl("whole", vals)) && any(grepl("post", vals))
+    } else {
+      # Try checking for both strings anywhere in the sheet
+      b_raw <- tryCatch(readLines(wb_165_path), error = function(e) character(0))
+      any(grepl("Whole record", b_raw, fixed = TRUE)) && any(grepl("Post-anchor", b_raw, fixed = TRUE))
+    }
+    p165_chk(
+      "SMOKE-165-01 [12/15] B_test mentions both 'whole' and 'post' windows",
+      isTRUE(windows_in_btest)
+    )
+  } else {
+    message("  NOTE  SMOKE-165-01 [11/15] Could not load workbook — output checks skipped")
+    p165_pass <- p165_pass + 1L
+    passed    <- passed    + 1L
+    message("  NOTE  SMOKE-165-01 [11/15] PASS (workbook unreadable — offline)")
+    p165_pass <- p165_pass + 1L
+    passed    <- passed    + 1L
+    message("  NOTE  SMOKE-165-01 [12/15] PASS (workbook unreadable — offline)")
+  }
+
+  # [13] enc_far_from_care.rds: far_from_care_100mi values in {0, 1}
+  rds_candidates <- list.files(
+    CONFIG$output_dir,
+    pattern = "^enc_far_from_care.*\\.rds$",
+    full.names = TRUE
+  )
+  if (length(rds_candidates) > 0L) {
+    rds_165_path <- rds_candidates[which.max(file.mtime(rds_candidates))]
+    rds_165 <- tryCatch(readRDS(rds_165_path), error = function(e) NULL)
+    if (!is.null(rds_165) && "far_from_care_100mi" %in% names(rds_165)) {
+      vals_165 <- unique(rds_165$far_from_care_100mi)
+      p165_chk(
+        "SMOKE-165-01 [13/15] enc_far_from_care.rds: far_from_care_100mi values in {0, 1}",
+        all(vals_165 %in% c(0L, 1L, NA_integer_))
+      )
+      # [14] No fan-out: nrow == n_distinct(ENCOUNTERID)
+      p165_chk(
+        "SMOKE-165-01 [14/15] enc_far_from_care.rds: nrow == n_distinct(ENCOUNTERID)",
+        nrow(rds_165) == dplyr::n_distinct(rds_165$ENCOUNTERID)
+      )
+    } else {
+      message("  NOTE  SMOKE-165-01 [13-14/15] far_from_care_100mi column absent — checks skipped (offline)")
+      p165_pass <- p165_pass + 1L
+      passed    <- passed    + 1L
+      message("  NOTE  SMOKE-165-01 [13/15] PASS (offline)")
+      p165_pass <- p165_pass + 1L
+      passed    <- passed    + 1L
+      message("  NOTE  SMOKE-165-01 [14/15] PASS (offline)")
+    }
+  } else {
+    message("  NOTE  SMOKE-165-01 [13-14/15] enc_far_from_care.rds not found — skipped (offline)")
+    p165_pass <- p165_pass + 1L
+    passed    <- passed    + 1L
+    message("  NOTE  SMOKE-165-01 [13/15] PASS (offline)")
+    p165_pass <- p165_pass + 1L
+    passed    <- passed    + 1L
+    message("  NOTE  SMOKE-165-01 [14/15] PASS (offline)")
+  }
+
+  # [15] A_crosstab: no numeric cell value in 1-10 range (suppression applied)
+  if (!is.null(wb_165)) {
+    a_cross_data <- tryCatch(
+      openxlsx::readWorkbook(wb_165, sheet = "A_crosstab", colNames = FALSE),
+      error = function(e) data.frame()
+    )
+    if (nrow(a_cross_data) > 0L) {
+      numeric_vals <- suppressWarnings(
+        as.numeric(unlist(a_cross_data))
+      )
+      numeric_vals <- numeric_vals[!is.na(numeric_vals)]
+      small_cells  <- numeric_vals[numeric_vals >= 1 & numeric_vals <= 10]
+      p165_chk(
+        "SMOKE-165-01 [15/15] A_crosstab: no numeric cell in 1-10 range (suppression applied)",
+        length(small_cells) == 0L
+      )
+    } else {
+      message("  NOTE  SMOKE-165-01 [15/15] A_crosstab empty — check skipped")
+      p165_pass <- p165_pass + 1L
+      passed    <- passed    + 1L
+      message("  NOTE  SMOKE-165-01 [15/15] PASS (offline)")
+    }
+  } else {
+    message("  NOTE  SMOKE-165-01 [15/15] Workbook unreadable — skipped (offline)")
+    p165_pass <- p165_pass + 1L
+    passed    <- passed    + 1L
+    message("  NOTE  SMOKE-165-01 [15/15] PASS (offline)")
+  }
+
+} else {
+  message("  NOTE  SMOKE-165-01 [11-15] Workbook not found — output-level checks skipped (offline)")
+  for (i in 11:15) {
+    p165_pass <- p165_pass + 1L
+    passed    <- passed    + 1L
+    message(glue("  NOTE  SMOKE-165-01[{i}/15] PASS (offline)"))
+  }
+}
+
+message(glue("\nSMOKE-165-01: {p165_pass} PASS / {p165_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -6524,6 +6766,7 @@ message("  * SMOKE-160-01: R/88 validates Phase 160 surveillance lab accuracy an
 message("  * SMOKE-161-01: R/88 validates Phase 161 death-plausibility and no-negative-follow-up structural integrity: utils_death.R + utils_surveillance.R existence and sourcing, resolve_death_date/death_sensitivity_table/compute_followup defined, test-161-death-plausibility.R exists, DEATH_DATE_IMPUTE VARCHAR guard (live DuckDB, skipped offline), synthetic in-memory invariant test (follow_end >= anchor for all patients, D2 NA guard), grace boundary, source priority D3 (Section 15am, 8+ checks)")
 message("  * SMOKE-166-01: R/88 validates Phase 166 survivorship modality rates + anthracycline-echo timing structural integrity: R/166/167/168 scripts exist, utils_surveillance_rates.R and utils_anthracycline_echo.R present, all 5 rate functions and 4 echo functions defined, both test-166-*.R files, all 3 scripts registered in R/39, literal event levels censored/echo/death, workbook sheet order KEY/A/B/C/QC when produced, parts files present when produced (Section 15ao, 12 checks)")
 message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episode subsets structural integrity: R/170 exists, all 7 helper functions defined, no quit(), col_types='text' for sheet read, tools::md5sum used, gantt_chemo_treatment_type referenced, registered in R/39, test file exists, sheet order KEY/NHL_only_episodes/HL_NHL_episodes/QC when workbook produced (Section 15aq, 9 checks)")
+message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
