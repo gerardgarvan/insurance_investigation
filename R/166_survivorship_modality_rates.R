@@ -164,43 +164,45 @@ death_rows <- dplyr::tibble(
 death_resolved <- resolve_death_date(death_rows, activity, grace_days = 30L)
 followup_full  <- compute_followup(denominator, activity, death_resolved, EXTRACT_CUTOFF)
 
+# pick_date: coalesce date columns in priority order, parsing each (mirrors R/147)
+pick_date_166 <- function(df, cols) {
+  out <- rep(as.Date(NA), nrow(df))
+  for (cl in intersect(cols, names(df)))
+    out <- dplyr::coalesce(out, parse_pcornet_date(df[[cl]]))
+  out
+}
+
 # Pull raw events for the function chain
 hl_ids_tbl <- dplyr::copy_to(pcornet_con,
                               dplyr::tibble(ID = denom_all$ID),
                               name = "hl_ids_166", overwrite = TRUE)
 
-proc_events_in <- dplyr::tbl(pcornet_con, "PROCEDURES") |>
+proc_raw <- dplyr::tbl(pcornet_con, "PROCEDURES") |>
   dplyr::semi_join(hl_ids_tbl, by = "ID") |>
-  dplyr::select(dplyr::any_of(c("ID", "PROCEDURESID", "PX_TYPE", "PX",
-                                 "ADMIT_DATE", "PROCEDURE_DATE"))) |>
-  dplyr::collect() |>
-  dplyr::rename(
-    code_raw   = dplyr::any_of(c("PX")),
-    type_val   = dplyr::any_of(c("PX_TYPE")),
-    event_date = dplyr::any_of(c("PROCEDURE_DATE", "ADMIT_DATE"))
-  ) |>
-  dplyr::mutate(
-    event_date = parse_pcornet_date(.data$event_date),
-    source_table = "PROCEDURES",
-    code_data    = .data$code_raw
-  )
+  dplyr::select(dplyr::any_of(c("ID", "PX", "PX_TYPE", "PX_DATE", "ADMIT_DATE"))) |>
+  dplyr::collect()
+proc_events_in <- dplyr::tibble(
+  ID           = proc_raw$ID,
+  code_raw     = proc_raw$PX,
+  type_val     = proc_raw$PX_TYPE,
+  event_date   = pick_date_166(proc_raw, c("PX_DATE", "ADMIT_DATE")),
+  source_table = "PROCEDURES",
+  code_data    = proc_raw$PX
+)
 
-lab_events_in <- dplyr::tbl(pcornet_con, "LAB_RESULT_CM") |>
+lab_raw <- dplyr::tbl(pcornet_con, "LAB_RESULT_CM") |>
   dplyr::semi_join(hl_ids_tbl, by = "ID") |>
   dplyr::select(dplyr::any_of(c("ID", "LAB_LOINC", "RESULT_DATE",
-                                 "SPECIMEN_DATE", "RESULT_NUM",
-                                 "RESULT_UNIT", "RAW_LAB_NAME"))) |>
-  dplyr::collect() |>
-  dplyr::rename(
-    code_raw   = dplyr::any_of(c("LAB_LOINC")),
-    event_date = dplyr::any_of(c("RESULT_DATE", "SPECIMEN_DATE"))
-  ) |>
-  dplyr::mutate(
-    event_date   = parse_pcornet_date(.data$event_date),
-    source_table = "LAB_RESULT_CM",
-    type_val     = "",
-    code_data    = .data$code_raw
-  )
+                                 "SPECIMEN_DATE", "LAB_ORDER_DATE"))) |>
+  dplyr::collect()
+lab_events_in <- dplyr::tibble(
+  ID           = lab_raw$ID,
+  code_raw     = lab_raw$LAB_LOINC,
+  type_val     = "",
+  event_date   = pick_date_166(lab_raw, c("RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE")),
+  source_table = "LAB_RESULT_CM",
+  code_data    = lab_raw$LAB_LOINC
+)
 
 # Step-by-step function chain (mirrors R/147 SECTION 7)
 matched_coded <- match_coded_events(
