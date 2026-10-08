@@ -6260,6 +6260,124 @@ if (length(rds_167_files) > 0L) {
 message(glue("\nSMOKE-167-01: {p167_pass} PASS / {p167_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15aq: PHASE 168 — NHL-ONLY AND HL+NHL GANTT EPISODE SUBSETS (SMOKE-168-01) ----
+# ==============================================================================
+
+p168_pass <- 0L
+p168_fail <- 0L
+p168_chk <- function(label, ok) {
+  if (isTRUE(ok)) {
+    message(glue("  PASS  {label}"))
+    p168_pass <<- p168_pass + 1L
+    passed    <<- passed    + 1L
+  } else {
+    message(glue("  FAIL  {label}"))
+    p168_fail <<- p168_fail + 1L
+    failed    <<- failed    + 1L
+  }
+}
+
+message("\n--- Section 15aq: Phase 168 NHL-only/HL+NHL gantt episode subsets ---")
+
+# [1] Script exists
+p168_chk(
+  "SMOKE-168-01 [1/9] R/170_nhl_gantt_subsets.R exists",
+  file.exists("R/170_nhl_gantt_subsets.R")
+)
+
+# [2] Helper functions defined
+r170_src <- if (file.exists("R/170_nhl_gantt_subsets.R")) {
+  tryCatch(readLines("R/170_nhl_gantt_subsets.R"), error = function(e) character(0))
+} else character(0)
+
+p168_chk(
+  "SMOKE-168-01 [2/9] R/170 defines norm_key, classify_x, flag_unexpected_x, normalize_drug_names, classify_groups, join_ej_chemo_only, check_drug_names",
+  all(c("norm_key", "classify_x", "flag_unexpected_x", "normalize_drug_names",
+        "classify_groups", "join_ej_chemo_only", "check_drug_names") %in%
+      regmatches(r170_src, gregexpr("[a-z_]+(?=\\s*<-\\s*function)", r170_src, perl = TRUE)) |>
+      unlist())
+)
+
+# [3] No quit()
+p168_chk(
+  'SMOKE-168-01 [3/9] R/170 does NOT contain quit(',
+  !any(grepl("quit(", r170_src, fixed = TRUE))
+)
+
+# [4] Reads sheet with col_types = "text"
+p168_chk(
+  'SMOKE-168-01 [4/9] R/170 reads chemo-combos sheet with col_types = "text"',
+  any(grepl('col_types\\s*=\\s*["\']text["\']', r170_src))
+)
+
+# [5] Uses tools::md5sum
+p168_chk(
+  "SMOKE-168-01 [5/9] R/170 uses tools::md5sum for snapshot identity",
+  any(grepl("tools::md5sum", r170_src, fixed = TRUE))
+)
+
+# [6] References gantt_chemo_treatment_type
+p168_chk(
+  "SMOKE-168-01 [6/9] R/170 references CONFIG$gantt_chemo_treatment_type",
+  any(grepl("gantt_chemo_treatment_type", r170_src, fixed = TRUE))
+)
+
+# [7] Registered in R/39
+r39_src <- if (file.exists("R/39_run_all_investigations.R")) {
+  tryCatch(readLines("R/39_run_all_investigations.R"), error = function(e) character(0))
+} else character(0)
+p168_chk(
+  "SMOKE-168-01 [7/9] R/170 registered in R/39 investigation_scripts",
+  any(grepl("R/170_nhl_gantt_subsets.R", r39_src, fixed = TRUE))
+)
+
+# [8] Test file exists
+p168_chk(
+  "SMOKE-168-01 [8/9] tests/testthat/test-170-nhl-gantt-subsets.R exists",
+  file.exists("tests/testthat/test-170-nhl-gantt-subsets.R")
+)
+
+# [9] Output-gated: if the workbook exists, check sheet order and E-J invariant
+wb_pattern <- list.files(
+  file.path("output", "internal"),
+  pattern = "^nhl_gantt_subsets_.*\\.xlsx$",
+  full.names = TRUE
+)
+if (length(wb_pattern) > 0L) {
+  wb_path_found <- wb_pattern[length(wb_pattern)]  # most recent
+  wb_ok <- tryCatch({
+    if (requireNamespace("openxlsx", quietly = TRUE)) {
+      wb_chk <- openxlsx::loadWorkbook(wb_path_found)
+      sheet_names <- names(wb_chk)
+      expected_order <- c("KEY", "NHL_only_episodes", "HL_NHL_episodes", "QC")
+      sheets_ok <- length(sheet_names) >= 4L &&
+        all(sheet_names[1:4] == expected_order)
+      if (!sheets_ok) {
+        message(sprintf(
+          "  NOTE  SMOKE-168-01 [9/9] Sheet order wrong (found: %s)",
+          paste(sheet_names, collapse = "/")
+        ))
+      }
+      sheets_ok
+    } else {
+      message("  NOTE  SMOKE-168-01 [9/9] openxlsx not available — sheet-order check skipped")
+      TRUE
+    }
+  }, error = function(e) {
+    message(glue("  NOTE  SMOKE-168-01 [9/9] Could not read workbook: {conditionMessage(e)}"))
+    FALSE
+  })
+  p168_chk("SMOKE-168-01 [9/9] Sheet order KEY/NHL_only_episodes/HL_NHL_episodes/QC", wb_ok)
+} else {
+  message("  NOTE  SMOKE-168-01 [9/9] Workbook not found — output-level checks skipped (offline)")
+  p168_pass <- p168_pass + 1L
+  passed    <- passed    + 1L
+  message("  NOTE  SMOKE-168-01 [9/9] PASS (offline)")
+}
+
+message(glue("\nSMOKE-168-01: {p168_pass} PASS / {p168_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -6405,6 +6523,7 @@ message("  * SMOKE-159-01: R/88 validates Phase 159 lab surveillance modalities 
 message("  * SMOKE-160-01: R/88 validates Phase 160 surveillance lab accuracy and reporting improvements structural integrity: all 8 Phase 160 utils_surveillance.R functions (modality_eligible_sex, summarise_missing_analyte, select_a3_sample, surv_sql_date_expr, rank_candidate_codes, compute_eligible_modality_stats, suppress_eligible_columns, build_codeset_summary), R/147 wiring of A3_missing_analyte/Codeset_summary/tmp_surv_a3_days/A3_SEED/suppress_eligible_columns/L-5:eligibility, eligible_sex constraint, D-13 no-literal-11 invariant, both test-160-*.R files (Section 15al, 5 checks)")
 message("  * SMOKE-161-01: R/88 validates Phase 161 death-plausibility and no-negative-follow-up structural integrity: utils_death.R + utils_surveillance.R existence and sourcing, resolve_death_date/death_sensitivity_table/compute_followup defined, test-161-death-plausibility.R exists, DEATH_DATE_IMPUTE VARCHAR guard (live DuckDB, skipped offline), synthetic in-memory invariant test (follow_end >= anchor for all patients, D2 NA guard), grace boundary, source priority D3 (Section 15am, 8+ checks)")
 message("  * SMOKE-166-01: R/88 validates Phase 166 survivorship modality rates + anthracycline-echo timing structural integrity: R/166/167/168 scripts exist, utils_surveillance_rates.R and utils_anthracycline_echo.R present, all 5 rate functions and 4 echo functions defined, both test-166-*.R files, all 3 scripts registered in R/39, literal event levels censored/echo/death, workbook sheet order KEY/A/B/C/QC when produced, parts files present when produced (Section 15ao, 12 checks)")
+message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episode subsets structural integrity: R/170 exists, all 7 helper functions defined, no quit(), col_types='text' for sheet read, tools::md5sum used, gantt_chemo_treatment_type referenced, registered in R/39, test file exists, sheet order KEY/NHL_only_episodes/HL_NHL_episodes/QC when workbook produced (Section 15aq, 9 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)

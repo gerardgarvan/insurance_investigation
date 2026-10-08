@@ -232,7 +232,14 @@ investigation_scripts <- c(
   # Outputs: output/single_source_care_<date>.xlsx (aggregate, suppressed)
   #          output/internal/single_source_care_<date>.csv (patient-level, INTERNAL)
   #          output/internal/single_source_care_<date>.rds (patient-level, INTERNAL)
-  "R/169_single_source_care.R"                 # Single-source care flag (Phase 167); DuckDB ENCOUNTER.SOURCE aggregation; whole + post-anchor flags; xlsx + internal CSV/RDS
+  "R/169_single_source_care.R",                # Single-source care flag (Phase 167); DuckDB ENCOUNTER.SOURCE aggregation; whole + post-anchor flags; xlsx + internal CSV/RDS
+  # Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets
+  # HiPerGator-only inputs (chemo-combos workbook + gantt_episodes_180 snapshot);
+  # skips cleanly when absent (probe gate in R/170).
+  # Outputs: output/internal/nhl_gantt_subsets_<date>.xlsx
+  #          output/internal/nhl_only_episodes_<date>.csv
+  #          output/internal/hl_nhl_episodes_<date>.csv
+  "R/170_nhl_gantt_subsets.R"                 # NHL-only/HL+NHL gantt subsets with chemo-combos E-J join (Phase 168); internal patient-level outputs
 )
 
 for (script in investigation_scripts) {
