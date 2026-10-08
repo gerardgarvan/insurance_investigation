@@ -298,6 +298,7 @@ message(glue("  Patients with zero or NA person_years: {n_zero_py_patients}"))
 # ==============================================================================
 
 out_list <- list(
+  followup                    = followup,
   long_rates                  = long_rates,
   wide_rates                  = wide_rates,
   A_rates_summary             = A_rates_summary,
