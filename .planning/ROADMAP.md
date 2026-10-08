@@ -702,7 +702,8 @@ Plans:
 - [ ] **Phase 165: Distance >100 mi Indicator and CBC Association** (2 plans) — Encounter-level `far_from_care_100mi`; methods memo to choose the test; then implement it
 - [x] **Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing** (TBD plans) — Per-person-year rates per modality; time/rate since last anthracycline for echo (completed 2026-10-08)
 - [ ] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE
-- [ ] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (TBD plans) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
+- [ ] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (1 plan) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
+  - [ ] 168-01-PLAN.md — CONFIG keys + R/170_nhl_gantt_subsets.R: load/validate, classify Group 1/2, join E-J, workbook+CSVs, HiPerGator run
 - [ ] **Phase 169: Registration, Smoke Test, and HiPerGator Run** (TBD plans) — R/39, R/88, SCRIPT_INDEX for 165-168; real-data run
 
 ## Phase Details (v3.7)
