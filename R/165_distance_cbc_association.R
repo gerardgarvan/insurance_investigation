@@ -96,7 +96,7 @@ if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
 # 1c. Anchor dates (hl_anchor_date) from utils_treatment
 message("  Fetching anchor dates via get_hl_any_dx_ids() ...")
 cohort_ids <- unique(enc_distance$ID)
-anchors     <- get_hl_any_dx_ids(pcornet_con, cohort_ids)
+anchors     <- get_hl_any_dx_ids()
 message(glue("  Anchor dates: {nrow(anchors)} patients; ",
              "{sum(is.na(anchors$hl_anchor_date))} missing anchor date."))
 
