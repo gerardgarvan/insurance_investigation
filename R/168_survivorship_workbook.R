@@ -95,7 +95,7 @@ qc_interval_fail       <- p02$qc_interval_fail
 n_zero_py_patients     <- p02$n_zero_py_patients
 
 # Extract Plan 03 objects
-C_anthracycline_echo       <- p03$C_anthracycline_echo
+C_anthracycline_echo       <- p03$C_anthracycline_echo$rate_summary
 cif_km_by_variant          <- p03$cif_km_by_variant
 echo_rate_patient          <- p03$echo_rate_patient
 qc_echo                    <- p03$qc_echo
