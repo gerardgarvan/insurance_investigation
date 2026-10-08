@@ -221,20 +221,7 @@ build_enc_analysis <- function(enc_distance, cbc_events, anchors, enc_dates, cut
   enc_anchored <- enc_anchored |>
     dplyr::mutate(post_anchor = as.integer(ADMIT_DATE > hl_anchor_date))
 
-  # Step 6: CBC-in-encounter flag via non-equi join (dplyr 1.1+ join_by / between)
-  # Join cbc_events to encounters where cbc_date is within [ADMIT_DATE, enc_end].
-  # This may produce multiple rows per ENCOUNTERID if multiple CBC dates fall within.
-  cbc_match <- enc_anchored |>
-    dplyr::select(ENCOUNTERID, ADMIT_DATE, enc_end) |>
-    dplyr::left_join(
-      cbc_events |> dplyr::rename(enc_ID = ID),
-      dplyr::join_by(
-        ENCOUNTERID == ENCOUNTERID |> dplyr::select(enc_anchored$ENCOUNTERID),
-        between(y$cbc_date, x$ADMIT_DATE, x$enc_end)
-      )
-    )
-
-  # Alternative join that works without the column self-reference ambiguity:
+  # Step 6: CBC-in-encounter flag.
   # Join enc_anchored (with ID) to cbc_events on ID + date range.
   cbc_flag <- enc_anchored |>
     dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, enc_end) |>
