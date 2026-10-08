@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Phase 168 planned — 1 plan ready to execute
-last_updated: "2026-10-08T22:48:08.295Z"
+stopped_at: Phase 168 plan 01 COMPLETE — 168-01-SUMMARY.md created; next = v3.7 remaining phases (ACC, SRATE, SRC pending)
+last_updated: "2026-10-08T23:45:00.000Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 156
-  completed_phases: 135
+  completed_phases: 136
   total_plans: 301
-  completed_plans: 305
+  completed_plans: 306
 ---
 
 # Project State
@@ -21,12 +21,12 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 166 — survivorship-modality-rates-and-anthracycline-to-echo-timing
+**Current focus:** Phase 168 — nhl-only-and-hl-nhl-gantt-episode-subsets
 
 ## Current Position
 
-Phase: 166 (survivorship-modality-rates-and-anthracycline-to-echo-timing) — EXECUTING
-Plan: 3 of 4
+Phase: 168 (nhl-only-and-hl-nhl-gantt-episode-subsets) — EXECUTING
+Plan: 1 of 1
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 

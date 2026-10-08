@@ -165,10 +165,10 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 
 ### NHL Episode Subsets (Phase 168)
 
-- [ ] **NHLSUB-01**: NHL-only subset of `gantt_episodes_180`: every sheet episode for the patient has `Definitely NHL` = x AND no episode has `Definitely HL` = x OR `HL and NHL` = x (strict "all episodes" rule); `NHL_only_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
-- [ ] **NHLSUB-02**: HL+NHL subset: any sheet episode for the patient has `HL and NHL` = x; `HL_NHL_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
-- [ ] **NHLSUB-03**: Both subsets left-joined to chemo-combos columns E-J (`Definitely HL`, `Definitely NHL`, `Initial`, `Relapse`, `Notes`, `HL and NHL`) at treatment-period grain (`patient_id` + `episode_number`); chemo rows only (non-chemo rows get empty E-J values); aligned to the 2026-08-14 `gantt_episodes_180` snapshot (pinned via `CONFIG$gantt_180_snapshot_path`); input file `Chemo_combos_6mo_amc090826-smc` read by tab name ("Chemo and Cancer Dx"), not position; probe-first gate (skip with log if absent, e.g. local run); D-168-01 (also deliver post-rename version) defaults to pre-rename only
-- [ ] **NHLSUB-04**: QC reports: patient counts per group; matched/unmatched periods in each direction; duplicate sheet (`patient_id`, `episode_number`) keys (stop join if found); group overlap (should be empty); non-"x" values in columns F/J; sheet episodes that match only non-chemo gantt rows; loose Group 1 count (any Definitely NHL) vs strict count (all episodes)
+- [x] **NHLSUB-01**: NHL-only subset of `gantt_episodes_180`: every sheet episode for the patient has `Definitely NHL` = x AND no episode has `Definitely HL` = x OR `HL and NHL` = x (strict "all episodes" rule); `NHL_only_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
+- [x] **NHLSUB-02**: HL+NHL subset: any sheet episode for the patient has `HL and NHL` = x; `HL_NHL_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
+- [x] **NHLSUB-03**: Both subsets left-joined to chemo-combos columns E-J (`Definitely HL`, `Definitely NHL`, `Initial`, `Relapse`, `Notes`, `HL and NHL`) at treatment-period grain (`patient_id` + `episode_number`); chemo rows only (non-chemo rows get empty E-J values); aligned to the 2026-08-14 `gantt_episodes_180` snapshot (pinned via `CONFIG$gantt_180_snapshot_path`); input file `Chemo_combos_6mo_amc090826-smc` read by tab name ("Chemo and Cancer Dx"), not position; probe-first gate (skip with log if absent, e.g. local run); D-168-01 (also deliver post-rename version) defaults to pre-rename only
+- [x] **NHLSUB-04**: QC reports: patient counts per group; matched/unmatched periods in each direction; duplicate sheet (`patient_id`, `episode_number`) keys (stop join if found); group overlap (should be empty); non-"x" values in columns F/J; sheet episodes that match only non-chemo gantt rows; loose Group 1 count (any Definitely NHL) vs strict count (all episodes)
 
 ### Registration (Phase 169)
 
@@ -203,10 +203,10 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 | SRC-01 | 167 | Complete |
 | SRC-02 | 167 | Complete |
 | SRC-03 | 167 | Complete |
-| NHLSUB-01 | 168 | Pending |
-| NHLSUB-02 | 168 | Pending |
-| NHLSUB-03 | 168 | Pending |
-| NHLSUB-04 | 168 | Pending |
+| NHLSUB-01 | 168 | Complete (168-01) |
+| NHLSUB-02 | 168 | Complete (168-01) |
+| NHLSUB-03 | 168 | Complete (168-01) |
+| NHLSUB-04 | 168 | Complete (168-01) |
 | REG-37-01 | 169 | Pending |
 | SMOKE-37-01 | 169 | Pending |
 | RUN-37-01 | 169 | Pending |
@@ -220,7 +220,7 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 - Phase 165 (Distance >100 mi Indicator + CBC Association): ACC-01..04 — 2 plans (methods memo first, then implementation after D-165-01)
 - Phase 166 (Survivorship Modality Rates + Anthracycline-Echo): SRATE-01..04 — TBD plans (audit first)
 - Phase 167 (Single-Health-System Care Flag): SRC-01..03 — TBD plans
-- Phase 168 (NHL-Only and HL+NHL Gantt Subsets): NHLSUB-01..04 — TBD plans (HiPerGator only)
+- Phase 168 (NHL-Only and HL+NHL Gantt Subsets): NHLSUB-01..04 — COMPLETE (168-01, HiPerGator confirmed 2026-10-08)
 - Phase 169 (Registration, Smoke Test, HiPerGator Run): REG-37-01, SMOKE-37-01, RUN-37-01 — TBD plans
 
 ---
