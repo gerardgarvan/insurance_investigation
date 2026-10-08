@@ -218,6 +218,25 @@ CONFIG <- list(
 )
 
 # ==============================================================================
+# Phase 165: Distance >100 mi indicator and CBC association
+# Single source of truth for the far-from-care cutoff and method selection.
+# R/163 (prototype) and R/165 (production) read these; no other script may
+# hardcode the numeric value 100 as a cutoff.
+# ==============================================================================
+
+# Cutoff for far_from_care_100mi. Single source of truth for R/163 and R/165.
+CONFIG$far_from_care_cutoff_mi <- 100
+
+# Method selected by the team (D-165-01). NA until decided; R/165 refuses to
+# run while NA. Set to one of: "gee", "rao_scott", "patient_fisher".
+CONFIG$distance_assoc_method   <- NA_character_
+
+# GEE working correlation structure. "exchangeable" is the default; R/163 falls
+# back to "independence" if exchangeable is infeasible at this cluster size and
+# logs why. The chosen value is reported in 165-METHODS.md.
+CONFIG$distance_gee_corstr     <- "exchangeable"
+
+# ==============================================================================
 # SECTION 1b: AUTOMATIC DIRECTORY CREATION ----
 # ==============================================================================
 # Create output and cache directories at startup if they don't exist.
