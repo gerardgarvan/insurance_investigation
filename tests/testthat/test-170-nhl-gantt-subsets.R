@@ -12,16 +12,12 @@
 # Load helpers from R/170 (stops before any I/O at the probe gate).
 # Requires here package to be available.
 skip_if_not_installed("here")
-local({
-  tryCatch(
-    sys.source(here::here("R/170_nhl_gantt_subsets.R"), envir = environment()),
-    error = function(e) {
-      # If the script exits gracefully at the probe gate, helper functions are
-      # still defined in the environment; any other error is a real failure.
-      if (!grepl("skipping", conditionMessage(e), ignore.case = TRUE)) stop(e)
-    }
-  )
-})
+tryCatch(
+  sys.source(here::here("R/170_nhl_gantt_subsets.R"), envir = globalenv()),
+  error = function(e) {
+    if (!grepl("skipping", conditionMessage(e), ignore.case = TRUE)) stop(e)
+  }
+)
 
 # Confirm helpers are defined before proceeding
 skip_if(!exists("norm_key"),             "norm_key not defined — R/170 did not load")
