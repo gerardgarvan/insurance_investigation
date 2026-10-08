@@ -771,8 +771,8 @@ Plans:
 1. `single_source_care` (0/1) and `n_sources` exist for every cohort patient with ≥1 encounter; NA-SOURCE patients are counted in QC
 2. `single_source_care_<date>.xlsx` has KEY, A_summary (n/% single-source, distribution of n_sources, breakdown by SOURCE for single-source patients), B_post_anchor (same summary for post-anchor window), QC
 3. All displayed counts pass through `suppress_small()` (<11)
-**Plans:** 2 (167-01 R/169 core: DuckDB query + flag construction + CSV/RDS; 167-02 workbook + registration + HiPerGator run)
-- [ ] 167-01-PLAN.md — R/169 SECTIONS 1-3: DuckDB ENCOUNTER.SOURCE aggregation, single_source_care/_post flag construction, CSV + internal RDS export (Wave 1)
+**Plans:** 1/2 plans executed
+- [x] 167-01-PLAN.md — R/169 SECTIONS 1-3: DuckDB ENCOUNTER.SOURCE aggregation, single_source_care/_post flag construction, CSV + internal RDS export (Wave 1)
 - [ ] 167-02-PLAN.md — R/169 SECTIONS 4-5 workbook (KEY/A_summary/B_post_anchor/QC) + R/39/R/88/SCRIPT_INDEX registration + SLURM wrapper + HiPerGator run (Wave 2)
 
 ### Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets
@@ -820,6 +820,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 165. Distance >100 mi + CBC Association | 0/2 | Not started | |
 | 166. Survivorship Modality Rates + Anthracycline-Echo | 4/4 | Complete   | 2026-10-08 |
-| 167. Single-Health-System Care Flag | 0/TBD | Not started | |
+| 167. Single-Health-System Care Flag | 1/2 | In Progress|  |
 | 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
 | 169. Registration, Smoke Test, HiPerGator | 0/TBD | Not started | |

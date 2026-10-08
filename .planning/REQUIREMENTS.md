@@ -159,9 +159,9 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 
 ### Single Health System (Phase 167)
 
-- [ ] **SRC-01**: Patient-level binary `single_source_care` (1 = `n_distinct(ENCOUNTER.SOURCE) == 1`) and `n_sources` for every cohort patient with ≥1 encounter; computed in DuckDB, not by loading ENCOUNTER into R; SOURCE from ENCOUNTER only (D-167-01 closed)
-- [ ] **SRC-02**: Delivered in two windows as separate columns: whole-record and post-HL-anchor (D-167-02 closed); flag designed to be joinable onto Phase 165/166 patient tables on `ID`
-- [ ] **SRC-03**: Patients with NA/blank SOURCE on any encounter are flagged and counted in QC, not coerced to a site; NA-SOURCE patient count in `single_source_care_<date>.xlsx` QC sheet
+- [x] **SRC-01**: Patient-level binary `single_source_care` (1 = `n_distinct(ENCOUNTER.SOURCE) == 1`) and `n_sources` for every cohort patient with ≥1 encounter; computed in DuckDB, not by loading ENCOUNTER into R; SOURCE from ENCOUNTER only (D-167-01 closed)
+- [x] **SRC-02**: Delivered in two windows as separate columns: whole-record and post-HL-anchor (D-167-02 closed); flag designed to be joinable onto Phase 165/166 patient tables on `ID`
+- [x] **SRC-03**: Patients with NA/blank SOURCE on any encounter are flagged and counted in QC, not coerced to a site; NA-SOURCE patient count in `single_source_care_<date>.xlsx` QC sheet
 
 ### NHL Episode Subsets (Phase 168)
 
@@ -200,9 +200,9 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 | SRATE-02 | 166 | Pending |
 | SRATE-03 | 166 | Complete |
 | SRATE-04 | 166 | Complete |
-| SRC-01 | 167 | Pending |
-| SRC-02 | 167 | Pending |
-| SRC-03 | 167 | Pending |
+| SRC-01 | 167 | Complete |
+| SRC-02 | 167 | Complete |
+| SRC-03 | 167 | Complete |
 | NHLSUB-01 | 168 | Pending |
 | NHLSUB-02 | 168 | Pending |
 | NHLSUB-03 | 168 | Pending |

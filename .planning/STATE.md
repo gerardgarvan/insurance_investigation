@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Phase 167 context gathered
-last_updated: "2026-10-08T20:43:57.802Z"
+stopped_at: Completed 167-01-PLAN.md
+last_updated: "2026-10-08T21:43:49.478Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 155
   completed_phases: 134
-  total_plans: 298
-  completed_plans: 303
+  total_plans: 300
+  completed_plans: 304
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 ## Current Position
 
 Phase: 166 (survivorship-modality-rates-and-anthracycline-to-echo-timing) — EXECUTING
-Plan: 1 of 4
+Plan: 2 of 4
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 
@@ -258,7 +258,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 **Last command:** execute 143-03 Tasks 1-2 -- COMPLETE. R/142 rewired to treatment_episodes_180_enriched.rds; guard clauses removed; D-04 fill-rate parity check and D-05 invariant assertions added; output/gantt_180_README.txt created; 142-CONTEXT.md D-01 updated with 89/179-day max evidence. Commit: df65aa6. Task 3 (HiPerGator run of R/142 + R/88 + R/39) is pending and requires HiPerGator access.
 **Stopped at:**
-Phase 167 context gathered
+Completed 167-01-PLAN.md
 
 - 140-02-PLAN.md COMPLETE (3/3 tasks). D-2 resolved option-a (ZIP5 as primary analysis unit). See `140-02-SUMMARY.md`.
 - 140-09-PLAN.md (Wave 2a, inserted by 140-09-PATCH) COMPLETE (3/3 tasks) AND COMMITTED (`9123628`, 2026-08-08). `c02_reconciled` rewired onto `c02a_monotone && c02b_partition` (retiring the unverifiable 26-patient control total from the gate); D-5 resolved option-c ("no floor -- report only"). See `140-09-SUMMARY.md`.
@@ -282,3 +282,4 @@ Phase 167 context gathered
 | Phase 158-surveillance-modality-frequency P02 | 3 | 1 tasks | 2 files |
 | Phase 158-surveillance-modality-frequency P03 | 10 | 1 tasks | 1 files |
 | Phase 158 P04 | 15 | 1 tasks | 3 files |
+| Phase 167 P01 | 134 | 2 tasks | 2 files |
