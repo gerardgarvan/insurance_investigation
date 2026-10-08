@@ -75,12 +75,12 @@ con <- get("pcornet_con", envir = .GlobalEnv)
 
 # 1b. Load enc_distance (R/122 output, read-only)
 enc_dist_path <- list.files(
-  CONFIG$cache$outputs_dir,
-  pattern = "^enc_distance.*\\.rds$",
+  CONFIG$output_dir,
+  pattern = "^encounter_distance.*\\.rds$",
   full.names = TRUE
 )
 if (length(enc_dist_path) == 0)
-  stop("enc_distance RDS not found in ", CONFIG$cache$outputs_dir,
+  stop("enc_distance RDS not found in ", CONFIG$output_dir,
        " -- run R/122_encounter_distance.R first")
 enc_dist_path <- enc_dist_path[which.max(file.mtime(enc_dist_path))]  # most recent
 message(glue("  Loading enc_distance: {basename(enc_dist_path)}"))
@@ -141,7 +141,7 @@ enc <- build_enc_analysis(
 message(glue("  build_enc_analysis(): {round((proc.time()-enc_t0)[['elapsed']])}s"))
 
 # Save ACC-01 deliverable: enc_far_from_care.rds
-out_rds <- file.path(CONFIG$cache$outputs_dir, "enc_far_from_care.rds")
+out_rds <- file.path(CONFIG$output_dir, "enc_far_from_care.rds")
 saveRDS(enc, out_rds)
 message(glue("  Saved enc_far_from_care.rds: {format(nrow(enc), big.mark=',')} encounters"))
 
