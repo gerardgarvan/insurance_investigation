@@ -145,10 +145,10 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 
 ### Distance to Care (Phase 165)
 
-- [ ] **ACC-01**: Encounter-level binary `far_from_care_100mi` (0/1) derived from R/122 distances converted to miles (km / 1.609344); cutoff held in `CONFIG$distance_cutoff_mi`; all encounters; encounters without a computed distance counted in QC, not silently dropped
-- [ ] **ACC-02**: `165-METHODS.md` methods memo comparing candidate tests (encounter-level GEE/mixed model, Rao-Scott cluster chi-square, patient-level aggregate, CMH stratified) on: unit of analysis, CBC operationalization, expected-cell assumptions, effect size and confounders; makes a recommendation; D-165-01 records the team's choice
+- [x] **ACC-01**: Encounter-level binary `far_from_care_100mi` (0/1) derived from R/122 distances converted to miles (km / 1.609344); cutoff held in `CONFIG$distance_cutoff_mi`; all encounters; encounters without a computed distance counted in QC, not silently dropped
+- [x] **ACC-02**: `165-METHODS.md` methods memo comparing candidate tests (encounter-level GEE/mixed model, Rao-Scott cluster chi-square, patient-level aggregate, CMH stratified) on: unit of analysis, CBC operationalization, expected-cell assumptions, effect size and confounders; makes a recommendation; D-165-01 records the team's choice
 - [ ] **ACC-03**: Team-selected test implemented: statistic, p-value, effect size, 95% CI, assumption checks; both whole-record and post-anchor windows reported side by side; sensitivity analysis per the memo's named approach
-- [ ] **ACC-04**: All displayed counts pass through `suppress_small()` (threshold 11); statistics computed on unsuppressed counts; telehealth/virtual encounter count with a distance reported in QC
+- [x] **ACC-04**: All displayed counts pass through `suppress_small()` (threshold 11); statistics computed on unsuppressed counts; telehealth/virtual encounter count with a distance reported in QC
 
 ### Survivorship Rates (Phase 166)
 
@@ -192,10 +192,10 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 
 | Req ID | Phase | Status |
 |--------|-------|--------|
-| ACC-01 | 165 | Pending |
-| ACC-02 | 165 | Pending |
+| ACC-01 | 165 | Complete |
+| ACC-02 | 165 | Complete |
 | ACC-03 | 165 | Pending |
-| ACC-04 | 165 | Pending |
+| ACC-04 | 165 | Complete |
 | SRATE-01 | 166 | Pending |
 | SRATE-02 | 166 | Pending |
 | SRATE-03 | 166 | Pending |

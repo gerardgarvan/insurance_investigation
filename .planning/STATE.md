@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: Phase 165 context gathered
-last_updated: "2026-10-08T15:40:22.070Z"
-last_activity: 2026-10-07
+stopped_at: Completed 165-01 auto tasks (1,3,4); paused at Task 2 checkpoint
+last_updated: "2026-10-08T16:04:11.496Z"
+last_activity: 2026-10-08
 progress:
-  total_phases: 37
-  completed_phases: 30
-  total_plans: 102
-  completed_plans: 115
+  total_phases: 153
+  completed_phases: 132
+  total_plans: 294
+  completed_plans: 298
 ---
 
 # Project State
@@ -71,7 +71,7 @@ Status: Executing Phase 141
   - **140-09-PATCH applied** (2026-08-06/07, uncommitted as of this session): FIX-17 rewires C-02 onto internally-checkable invariants; FIX-18 supersedes 140-CONTEXT.md's P-01a/b/c (withdrawn, not completed) with P-01d/P-01e and adds decision D-5; FIX-19 retro-corrects 140-01-SUMMARY.md/140-02-SUMMARY.md frontmatter (`requirements-completed` split into `requirements-met`/`requirements-deferred`/`requirements-withdrawn`, since both files claimed completion their own prose contradicts); FIX-20 retroactively documents that 140-02's Task 1 R/115 edit (SECTION 8 match-rate gate) landed in Wave 1 alongside 140-01's own R/115 edit (commit `6862a64`, verified via `git show` to contain exactly the intended hunks from both plans) -- a violation of the "no two plans share a wave on R/115" rule now stated explicitly going forward; FIX-21 adds a `test_dir()` run to 140-03 Task 3's HiPerGator checkpoint (every fixture this phase has added has never actually executed -- Rscript is unavailable in this Windows environment); FIX-22 corrects `data/reference/README.md`'s crosswalk vintage section (a single vintage cannot span LDS_ADDRESS_HISTORY's 13-year study period; offers single-vintage-with-caveat vs two-vintage-compare-spread as explicit options); FIX-23 records that D-2 (ZIP5 as analysis unit) was decided without the block-group evidence, not against it, in both 140-02-SUMMARY.md and the R/115 KEY sheet.
   - **140-09 (Wave 2a) COMPLETE, 3/3 tasks.** Task 1: `compute_c02_baseline()` added to SECTION 1B (pre-coalesce baseline, raw ZIP5 only), with a recovery-demonstrating fixture and a synthetic monotonicity-violation fixture in `tests/testthat/test-115-c02.R`. Task 2: SECTION 12's `c02_reconciled` rewired onto `c02a_monotone` (post-coalesce <= pre-coalesce) and `c02b_partition` (independent recount via `filter()`+`nrow()`, not the subtraction `compute_c02()` already performs); `C02_EXPECTED <- 26L`/`C02_TOLERANCE <- 5L` retained but removed from the gate; `n_zip5_recovered_by_coalesce` reported; SECTION 13 `qc_tbl` and SECTION 14 KEY sheet updated (superseded-constant footnote + D-2 sequencing note); the `"c02_reconciled"` `qc_tbl$Metric` string is byte-for-byte unchanged (SECTION 15 `match()` lookup intact). **Task 3 (D-5, checkpoint:decision) resolved 2026-08-07 as option-c: "no floor -- report coverage without gating on it"** -- NOT the plan's recommended option-a (0.90 floor). `c02c_coverage`/`C02_COVERAGE_FLOOR` were removed from the script entirely (clean removal, not dead code, confirmed via `grep`); `pct_cohort_with_any_address` (92.9% observed) remains computed and reported (qc_tbl row, KEY-sheet field, QC-sheet subtitle) but does not gate `c02_reconciled`. `c02_reconciled = c02a_monotone && c02b_partition` is the final gate expression. Structural brace/paren/bracket balance check passed on both modified files after every edit pass (Rscript unavailable in this Windows environment; true R-parse + `testthat::test_dir()` execution deferred to the Wave 2.5 HiPerGator run per FIX-21). See `140-09-SUMMARY.md`. **None of this session's edits (140-09-PATCH's doc fixes, the new 140-09-PLAN.md/140-09-SUMMARY.md, or the R/115 code changes) are committed to git yet -- awaiting explicit instruction to commit.**
 
-Last activity: 2026-10-07
+Last activity: 2026-10-08
 
 **2026-08-08 executor re-entry into 140-03 (first pass):** Re-confirmed (not re-executed) that 140-03's Task 1 (`d76a485`) and Task 2 (`fef75e8`) are committed and present in `R/115_zip_stability_counts.R`/`tests/testthat/test-115-c02.R` (`grep` confirms `classify_unparseable_dates_vec`, `unparseable_date_examples`, `n_patients_lost_to_filters_c02` all present). Also confirmed via `git diff --stat` that the working tree's `R/115_zip_stability_counts.R` carried 140-09's still-uncommitted rewiring (`c02_reconciled <- c02a_monotone && c02b_partition`, line ~1304) layered on top of 140-03's committed Tasks 1-2. `Rscript` confirmed still unavailable in this Windows environment. Task 3 returned to the user as a blocking `checkpoint:human-action`, unresolved at that point.
 
@@ -258,7 +258,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 **Last command:** execute 143-03 Tasks 1-2 -- COMPLETE. R/142 rewired to treatment_episodes_180_enriched.rds; guard clauses removed; D-04 fill-rate parity check and D-05 invariant assertions added; output/gantt_180_README.txt created; 142-CONTEXT.md D-01 updated with 89/179-day max evidence. Commit: df65aa6. Task 3 (HiPerGator run of R/142 + R/88 + R/39) is pending and requires HiPerGator access.
 **Stopped at:**
-Phase 165 context gathered
+Completed 165-01 auto tasks (1,3,4); paused at Task 2 checkpoint
 
 - 140-02-PLAN.md COMPLETE (3/3 tasks). D-2 resolved option-a (ZIP5 as primary analysis unit). See `140-02-SUMMARY.md`.
 - 140-09-PLAN.md (Wave 2a, inserted by 140-09-PATCH) COMPLETE (3/3 tasks) AND COMMITTED (`9123628`, 2026-08-08). `c02_reconciled` rewired onto `c02a_monotone && c02b_partition` (retiring the unverifiable 26-patient control total from the gate); D-5 resolved option-c ("no floor -- report only"). See `140-09-SUMMARY.md`.
