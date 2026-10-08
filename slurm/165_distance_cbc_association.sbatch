@@ -43,10 +43,17 @@
 #   output/distance_cbc_association_<YYYYMMDD>.xlsx
 # ==============================================================================
 
+set -e
+
 module load R/4.5
 
 cd /blue/erin.mobley-hl.bcu/insurance_investigation
 
 mkdir -p logs
 
-Rscript R/165_distance_cbc_association.R > logs/164_association_$(date +%Y%m%d).log 2>&1
+# Step 1: run unit tests for utils_distance_cbc.R helpers (fail fast if tests fail)
+Rscript -e 'testthat::test_file("tests/testthat/test-165-distance-cbc-association.R", stop_on_failure = TRUE)' \
+  >> logs/165_association_$(date +%Y%m%d).log 2>&1
+
+# Step 2: run the production analysis
+Rscript R/165_distance_cbc_association.R >> logs/165_association_$(date +%Y%m%d).log 2>&1
