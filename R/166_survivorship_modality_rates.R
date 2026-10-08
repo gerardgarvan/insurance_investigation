@@ -201,6 +201,7 @@ lab_events_in <- dplyr::tibble(
   type_val     = "",
   event_date   = pick_date_166(lab_raw, c("RESULT_DATE", "SPECIMEN_DATE", "LAB_ORDER_DATE")),
   source_table = "LAB_RESULT_CM",
+  cdm_table    = "LAB_RESULT_CM",
   code_data    = lab_raw$LAB_LOINC
 )
 
