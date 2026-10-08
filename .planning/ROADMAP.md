@@ -641,7 +641,8 @@ Plans:
 - [x] 160-01-PLAN.md — Codeset edits (CMP min_analyte_count=11) + Modalities.eligible_sex + loader support [IMP-01, IMP-04] (Wave 1)
 - [x] 160-02-PLAN.md — Pure functions: summarise_missing_analyte, rank_candidate_codes, compute_eligible_modality_stats, build_codeset_summary + tests [IMP-02, IMP-04, IMP-05] (Wave 2, depends on 160-01)
 - [ ] 160-03-PLAN.md — R/147 wiring: DEMOGRAPHIC.SEX + eligibility on B/C, A3 build + sampled candidate query, Codeset_summary, sheet order + suppression [IMP-02, IMP-04, IMP-05] (Wave 3, depends on 160-01, 160-02)
-- [x] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03) (completed 2026-09-25)
+- [x] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03)
+ (completed 2026-09-25)
 
 ### Phase 161: Death-date Plausibility and Follow-up End Definition
 
@@ -748,8 +749,11 @@ Plans:
 2. Any missing modality rates are added so every modality has a person-time rate in one per-patient table (`.rds` + `.csv`)
 3. `survivorship_modality_rates_<date>.xlsx` has KEY, A_rates_summary, B_rates_by_fu_year, C_anthracycline_echo (timed from last anthracycline dose), QC
 4. Event totals reconcile to R/147's counts within the follow-up window; D-166-01 is recorded
-**Plans:** TBD (166-01 audit first)
-- [ ] TBD (run /gsd:plan-phase 166 to break down)
+**Plans:** 4 plans
+- [ ] 166-01-PLAN.md — `166-AUDIT.md`: inventory existing person-time rate work, follow-up & dated-source status, treatment-episode readiness (Wave 1)
+- [ ] 166-02-PLAN.md — per-patient long+wide modality rate tables, A_rates_summary, B_rates_by_fu_year (Wave 2)
+- [ ] 166-03-PLAN.md — anthracycline-to-echo block: last-dose clock, Aalen-Johansen CIF + 1-KM, post-dose echo rate, C_anthracycline_echo (Wave 2)
+- [ ] 166-04-PLAN.md — assemble `survivorship_modality_rates_<date>.xlsx` (KEY/A/B/C/QC) + CSV/RDS exports + R/39/R/88/SCRIPT_INDEX registration (Wave 3)
 
 ### Phase 167: Single-Health-System Care Flag
 **Goal:** A patient-level binary `single_source_care` identifies patients whose care occurred entirely within one health system (SOURCE)
