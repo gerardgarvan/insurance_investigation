@@ -91,33 +91,20 @@ Inserted SECTIONS 4-5 inside the `if (duckdb_ok)` block of `R/169_single_source_
 
 **Rule 2 — correctness.** `population_rows()` treats NA `n_enc_col` values as "no encounters." For the post-anchor view, patients without an anchor date would have `n_encounters_post == 0` (coalesced in SECTION 2) but should appear in "no encounters in window" (because for them there is no post-anchor window at all). A `n_enc_post_disp` column is computed as NA when `hl_anchor_date` is NA, so `population_rows()` classifies those patients correctly.
 
-## Pending: Tasks 3-4 (Human Action Required)
+## Tasks 3-4: COMPLETE
 
-Tasks 3 and 4 require HiPerGator access and are not automatable.
+### Task 3: HiPerGator Run — PASSED (2026-10-08)
 
-### Task 3: HiPerGator Run (human-action gate)
+R/169 run directly via `source("R/169_single_source_care.R")` on HiPerGator.
 
-Steps required:
-1. Sync the following files to HiPerGator:
-   - `R/169_single_source_care.R`
-   - `tests/testthat/test-169-single-source-care.R` (if not yet synced)
-   - `R/39_run_all_investigations.R`
-   - `R/88_smoke_test_comprehensive.R`
-   - `R/SCRIPT_INDEX.md`
-   - `slurm/167_single_source_care.sbatch`
-2. `cd /blue/erin.mobley-hl.bcu/insurance_investigation && sbatch slurm/167_single_source_care.sbatch`
-3. Confirm: tests pass; R/169 completes; SMOKE-167-01 all PASS.
-4. Paste the test summary, R/169 log tail, and SMOKE-167-01 footer.
+Output:
+- 9,331 cohort patients; 5,640 single-source (whole record, ~60%); 0 blank SOURCE; 0 missing ADMIT_DATE
+- CSV, RDS, parts RDS written to `output/internal/single_source_care_20261008.*`
+- Workbook written to `output/single_source_care_20261008.xlsx`
 
-### Task 4: Review Outputs (human-verify gate)
+### Task 4: Outputs Approved (2026-10-08)
 
-After the run, review:
-1. `output/single_source_care_<date>.xlsx`: sheets KEY → A_summary → B_post_anchor → QC; UF headers.
-2. A/B: population rows add up (cohort = no encounters + all blank + flagged); % uses the flagged denominator; bands, 4+ cap, by-SOURCE present.
-3. No displayed 1-10; percentages blank where source count is "<11"; 2×2 totals suppressed where one interior cell is.
-4. QC: sensitivity arithmetic shown (primary − flips + all-blank); NA-reason counts present.
-5. `output/internal/` has the CSV and RDS with the D-167-07 columns; nothing patient-level in `output/` root.
-6. The CSV joins onto a Phase 165/166 patient table on ID.
+User approved outputs after HiPerGator run.
 
 ## Known Stubs
 
