@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.4
 milestone_name: below)
 status: executing
-stopped_at: "166-03 COMPLETE (2/2 tasks). Commits 53180b7 (RED tests), 61c76b0 (pure functions), ad87881 (driver R/167). Ready for 166-04."
-last_updated: "2026-10-08T22:00:00.000Z"
+stopped_at: "166-04 Tasks 1-2 COMPLETE. Commits 9880fb3 (R/168), b0c08f6 (R/88+SCRIPT_INDEX+sbatch), 70f4846 (R/39). Checkpoint:human-action at Task 3 (HiPerGator run). Sync files, sbatch slurm/166_survivorship.sbatch, paste results."
+last_updated: "2026-10-08T23:00:00.000Z"
 last_activity: 2026-10-08
 progress:
   total_phases: 154

@@ -700,7 +700,7 @@ Plans:
 ## Phases (v3.7)
 
 - [ ] **Phase 165: Distance >100 mi Indicator and CBC Association** (2 plans) — Encounter-level `far_from_care_100mi`; methods memo to choose the test; then implement it
-- [ ] **Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing** (TBD plans) — Per-person-year rates per modality; time/rate since last anthracycline for echo
+- [x] **Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing** (TBD plans) — Per-person-year rates per modality; time/rate since last anthracycline for echo (completed 2026-10-08)
 - [ ] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE
 - [ ] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (TBD plans) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
 - [ ] **Phase 169: Registration, Smoke Test, and HiPerGator Run** (TBD plans) — R/39, R/88, SCRIPT_INDEX for 165-168; real-data run
@@ -749,11 +749,11 @@ Plans:
 2. Any missing modality rates are added so every modality has a person-time rate in one per-patient table (`.rds` + `.csv`)
 3. `survivorship_modality_rates_<date>.xlsx` has KEY, A_rates_summary, B_rates_by_fu_year, C_anthracycline_echo (timed from last anthracycline dose), QC
 4. Event totals reconcile to R/147's counts within the follow-up window; D-166-01 is recorded
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 - [x] 166-01-PLAN.md — `166-AUDIT.md`: inventory existing person-time rate work, follow-up & dated-source status, treatment-episode readiness (Wave 1)
 - [x] 166-02-PLAN.md — per-patient long+wide modality rate tables, A_rates_summary, B_rates_by_fu_year (Wave 2)
 - [x] 166-03-PLAN.md — anthracycline-to-echo block: last-dose clock, Aalen-Johansen CIF + 1-KM, post-dose echo rate, C_anthracycline_echo (Wave 2)
-- [ ] 166-04-PLAN.md — assemble `survivorship_modality_rates_<date>.xlsx` (KEY/A/B/C/QC) + CSV/RDS exports + R/39/R/88/SCRIPT_INDEX registration (Wave 3)
+- [x] 166-04-PLAN.md — assemble `survivorship_modality_rates_<date>.xlsx` (KEY/A/B/C/QC) + CSV/RDS exports + R/39/R/88/SCRIPT_INDEX registration (Wave 3)
 
 ### Phase 167: Single-Health-System Care Flag
 **Goal:** A patient-level binary `single_source_care` identifies patients whose care occurred entirely within one health system (SOURCE)
@@ -818,7 +818,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 165. Distance >100 mi + CBC Association | 0/2 | Not started | |
-| 166. Survivorship Modality Rates + Anthracycline-Echo | 3/4 | In Progress|  |
+| 166. Survivorship Modality Rates + Anthracycline-Echo | 4/4 | Complete   | 2026-10-08 |
 | 167. Single-Health-System Care Flag | 0/TBD | Not started | |
 | 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
 | 169. Registration, Smoke Test, HiPerGator | 0/TBD | Not started | |
