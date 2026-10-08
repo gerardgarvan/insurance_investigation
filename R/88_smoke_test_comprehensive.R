@@ -5968,6 +5968,156 @@ if (length(csv_files) > 0) {
 message(glue("\nSection 15an: {p162_pass} PASS, {p162_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ao: PHASE 166 — SURVIVORSHIP MODALITY RATES + ANTHRACYCLINE-ECHO
+#               TIMING (SMOKE-166-01)
+# ==============================================================================
+
+p166_pass <- 0L; p166_fail <- 0L
+
+chk_166 <- function(condition, label) {
+  if (isTRUE(condition)) {
+    p166_pass <<- p166_pass + 1L
+    passed    <<- passed    + 1L
+    message("  PASS  ", label)
+  } else {
+    p166_fail <<- p166_fail + 1L
+    failed    <<- failed    + 1L
+    message("  FAIL  ", label)
+  }
+}
+
+message("\n--- Section 15ao: Phase 166 survivorship modality rates + anthracycline-echo timing ---")
+
+# --- Structural checks (always-run) ------------------------------------------
+
+# Check 1: R/166 script exists
+chk_166(
+  file.exists("R/166_survivorship_modality_rates.R"),
+  "SMOKE-166-01 [1/12] R/166_survivorship_modality_rates.R exists"
+)
+
+# Check 2: R/167 script exists
+chk_166(
+  file.exists("R/167_anthracycline_echo.R"),
+  "SMOKE-166-01 [2/12] R/167_anthracycline_echo.R exists"
+)
+
+# Check 3: R/168 script exists
+chk_166(
+  file.exists("R/168_survivorship_workbook.R"),
+  "SMOKE-166-01 [3/12] R/168_survivorship_workbook.R exists"
+)
+
+# Check 4: utils_surveillance_rates.R exists (Plan 02 pure functions)
+chk_166(
+  file.exists("R/utils/utils_surveillance_rates.R"),
+  "SMOKE-166-01 [4/12] R/utils/utils_surveillance_rates.R exists"
+)
+
+# Check 5: utils_anthracycline_echo.R exists (Plan 03 pure functions)
+chk_166(
+  file.exists("R/utils/utils_anthracycline_echo.R"),
+  "SMOKE-166-01 [5/12] R/utils/utils_anthracycline_echo.R exists"
+)
+
+# Check 6: R/39 contains all three Phase 166 scripts in investigation_scripts
+r39_166_text <- paste(readLines("R/39_run_all_investigations.R"), collapse = "\n")
+chk_166(
+  grepl("R/166_survivorship_modality_rates\\.R", r39_166_text) &&
+    grepl("R/167_anthracycline_echo\\.R", r39_166_text) &&
+    grepl("R/168_survivorship_workbook\\.R", r39_166_text),
+  "SMOKE-166-01 [6/12] All three Phase 166 scripts registered in R/39 investigation_scripts"
+)
+
+# Check 7: utils functions defined in utils_surveillance_rates.R
+rates_util_text <- if (file.exists("R/utils/utils_surveillance_rates.R"))
+  paste(readLines("R/utils/utils_surveillance_rates.R"), collapse = "\n") else ""
+chk_166(
+  grepl("build_dated_post_events", rates_util_text) &&
+    grepl("compute_modality_rates", rates_util_text) &&
+    grepl("rates_wide", rates_util_text) &&
+    grepl("split_followup_intervals", rates_util_text) &&
+    grepl("rates_summary", rates_util_text),
+  "SMOKE-166-01 [7/12] utils_surveillance_rates.R defines all 5 rate functions"
+)
+
+# Check 8: utils functions defined in utils_anthracycline_echo.R
+echo_util_text <- if (file.exists("R/utils/utils_anthracycline_echo.R"))
+  paste(readLines("R/utils/utils_anthracycline_echo.R"), collapse = "\n") else ""
+chk_166(
+  grepl("last_anthracycline_dose", echo_util_text) &&
+    grepl("echo_time_to_event", echo_util_text) &&
+    grepl("echo_cif_km", echo_util_text) &&
+    grepl("echo_rate_post_dose", echo_util_text),
+  "SMOKE-166-01 [8/12] utils_anthracycline_echo.R defines all 4 echo functions"
+)
+
+# Check 9: test files exist
+chk_166(
+  file.exists("tests/testthat/test-166-rates.R") &&
+    file.exists("tests/testthat/test-166-echo.R"),
+  "SMOKE-166-01 [9/12] Both test-166-rates.R and test-166-echo.R exist"
+)
+
+# Check 10: literal event levels in utils_anthracycline_echo.R
+chk_166(
+  grepl("censored", echo_util_text) &&
+    grepl('"echo"', echo_util_text) &&
+    grepl('"death"', echo_util_text),
+  'SMOKE-166-01 [10/12] utils_anthracycline_echo.R contains literal event levels censored/echo/death'
+)
+
+# --- Output-level checks (skipped offline if workbook not found) --------------
+xlsx_files <- list.files(
+  if (exists("CONFIG")) CONFIG$cache$outputs_dir else "output",
+  pattern = "^survivorship_modality_rates_[0-9]{8}\\.xlsx$",
+  full.names = TRUE
+)
+
+if (length(xlsx_files) > 0) {
+  latest_xlsx <- xlsx_files[order(file.info(xlsx_files)$mtime, decreasing = TRUE)[1]]
+
+  # Check 11: sheet names in exact required order
+  if (requireNamespace("openxlsx", quietly = TRUE)) {
+    wb_sheets <- openxlsx::getSheetNames(latest_xlsx)
+    expected_sheets <- c("KEY", "A_rates_summary", "B_rates_by_fu_year",
+                         "C_anthracycline_echo", "QC")
+    chk_166(
+      identical(wb_sheets, expected_sheets),
+      sprintf(
+        "SMOKE-166-01 [11/12] Workbook sheet order KEY/A/B/C/QC (found: %s)",
+        paste(wb_sheets, collapse = ", ")
+      )
+    )
+  } else {
+    message("  NOTE  SMOKE-166-01 [11/12] openxlsx not available — sheet-order check skipped")
+  }
+
+  # Check 12: parts files exist (QC interval reconciliation recorded)
+  parts_files <- list.files(
+    if (exists("CONFIG")) CONFIG$cache$outputs_dir else "output",
+    pattern = "^survivorship_modality_rates_parts_.*\\.rds$",
+    full.names = FALSE
+  )
+  echo_parts_files <- list.files(
+    if (exists("CONFIG")) CONFIG$cache$outputs_dir else "output",
+    pattern = "^survivorship_echo_parts_.*\\.rds$",
+    full.names = FALSE
+  )
+  chk_166(
+    length(parts_files) > 0 && length(echo_parts_files) > 0,
+    sprintf(
+      "SMOKE-166-01 [12/12] Part files found — rates: %d, echo: %d",
+      length(parts_files), length(echo_parts_files)
+    )
+  )
+} else {
+  message("  NOTE  SMOKE-166-01 [11-12/12] Workbook not found — output-level checks skipped (offline)")
+}
+
+message(glue("\nSMOKE-166-01: {p166_pass} PASS / {p166_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -6112,6 +6262,7 @@ message("  * SMOKE-158-01: R/88 validates Phase 158 surveillance modality freque
 message("  * SMOKE-159-01: R/88 validates Phase 159 lab surveillance modalities structural integrity: Lab_Analytes/Modalities sheets in codeset, load_lab_analytes/load_modality_lookup defined, panel rows with all 3 rule types, KIDNEY analyte_min_same_day excludes CREATININE (D-22), CPT 80053 nesting (D-01), all 6 Phase 159 functions, R/147 E_patient_modality_dates/SC-6/surveillance_patient_modality_dates_ wiring, both test-159-*.R files (Section 15ak, 9 checks)")
 message("  * SMOKE-160-01: R/88 validates Phase 160 surveillance lab accuracy and reporting improvements structural integrity: all 8 Phase 160 utils_surveillance.R functions (modality_eligible_sex, summarise_missing_analyte, select_a3_sample, surv_sql_date_expr, rank_candidate_codes, compute_eligible_modality_stats, suppress_eligible_columns, build_codeset_summary), R/147 wiring of A3_missing_analyte/Codeset_summary/tmp_surv_a3_days/A3_SEED/suppress_eligible_columns/L-5:eligibility, eligible_sex constraint, D-13 no-literal-11 invariant, both test-160-*.R files (Section 15al, 5 checks)")
 message("  * SMOKE-161-01: R/88 validates Phase 161 death-plausibility and no-negative-follow-up structural integrity: utils_death.R + utils_surveillance.R existence and sourcing, resolve_death_date/death_sensitivity_table/compute_followup defined, test-161-death-plausibility.R exists, DEATH_DATE_IMPUTE VARCHAR guard (live DuckDB, skipped offline), synthetic in-memory invariant test (follow_end >= anchor for all patients, D2 NA guard), grace boundary, source priority D3 (Section 15am, 8+ checks)")
+message("  * SMOKE-166-01: R/88 validates Phase 166 survivorship modality rates + anthracycline-echo timing structural integrity: R/166/167/168 scripts exist, utils_surveillance_rates.R and utils_anthracycline_echo.R present, all 5 rate functions and 4 echo functions defined, both test-166-*.R files, all 3 scripts registered in R/39, literal event levels censored/echo/death, workbook sheet order KEY/A/B/C/QC when produced, parts files present when produced (Section 15ao, 12 checks)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
