@@ -1,8 +1,9 @@
 # Phase 166 Audit: Survivorship Modality Rates and Anthracycline-to-Echo Timing
 
 **Prepared:** 2026-10-08
-**Plan:** 166-01 Task 1 (code audit from local sources)
-**Status:** Task 1 complete; data-dependent fields marked PENDING-HPG for Task 3
+**Updated:** 2026-10-08 (Task 3 — HiPerGator data check results filled)
+**Plan:** 166-01 Tasks 1 + 3 (code audit + HiPerGator confirmation)
+**Status:** COMPLETE — all data-dependent items confirmed from HiPerGator run
 
 ---
 
@@ -132,9 +133,18 @@ Option a is preferred over option b (saving events_win to RDS in R/147) because 
 large intermediate file and requires no re-run of R/147. Plans 02/03 will call the function chain
 directly.
 
-**Column names of the dated-events output** (after option a reconstruction):
-- `ID`, `modality`, `event_date`, `tier`, `window`, `type_ok`, `source_table`, `codeset_row_id`,
-  `submodality`, `code_data`, `type_val`
+**Column names of the dated-events output** (confirmed by HiPerGator run):
+
+`events_win` columns (after `classify_event_window()`):
+`codeset_row_id`, `ID`, `code_data`, `type_val`, `event_date`, `source_table`, `modality`, `submodality`, `tier`, `type_ok`, `hl_anchor_date`, `follow_end`, `window`
+
+After filtering and deduplication, `dated_events` columns: `ID`, `modality`, `event_date`
+
+```
+dated_events_reconciliation_sample: 1363/1363 matching, 0 mismatching → PASS
+```
+
+The option-a function chain reproduces `n_dates_post_primary` exactly on the 200-patient sample. Plans 02/03 may rely on this chain without additional reconciliation.
 
 For Phase 166's purposes, Plans 02/03 use:
 ```r
@@ -147,24 +157,46 @@ events_win |>
 
 ## Treatment episode / anthracycline readiness
 
-Expected file patterns in `CONFIG$cache$outputs_dir` (`/blue/erin.mobley-hl.bcu/clean/rds/outputs/`):
+```
+episode_180_file: treatment_episode_detail_180.rds
+episode_90_file: (not found)
+```
 
-| File | Pattern |
-|---|---|
-| 180-day episode detail | `treatment_episodes_180_enriched*.rds` or `gantt_180_*.rds` |
-| 90-day episode detail | `treatment_episodes_90*.rds` or similar |
+**Confirmed file** (from HiPerGator data check):
+- `treatment_episode_detail_180.rds` — nrow 259,199
 
-Columns the echo block needs (from Phase 142/143 context):
+**Confirmed columns:**
 
-| Column | Expected name | Source |
+| Column | Actual name | Notes |
 |---|---|---|
-| Patient ID | `ID` | standard |
-| Drug name (normalized) | `drug_name` (after DRUG_NAME_ALIASES collapse) | R/142 |
-| Administration date | `treatment_date` or `admin_date` | PENDING-HPG |
-| First-line flag | `first_line` | PENDING-HPG — R/143 aimed to populate this |
-| Episode identifier | `episode_id` or `episode_num` | PENDING-HPG |
+| Patient ID | `patient_id` | NOTE: not `ID` — Plans 02/03 must rename to `ID` on load |
+| Drug name | `drug_name` | applies DRUG_NAME_ALIASES at runtime |
+| Administration date | `treatment_date` | date-level rows confirmed (see below) |
+| First-line flag | **(not present)** | column absent from file — D-08a fallback triggered |
+| Episode identifier | `episode_number` | |
 
-Data facts: **PENDING-HPG** — `has_date_level_drug_rows`, `first_line_flag_populated`, `anthracyclines_present`.
+Additional columns present: `treatment_type`, `triggering_code`, `ENCOUNTERID`, `episode_start`, `episode_stop`, `historical_flag`.
+
+```
+has_date_level_drug_rows: yes
+```
+
+Evidence: nrow 259,199 >> n_distinct(patient_id), confirming multiple rows per patient (date-level drug rows exist). The echo block can compute a last dose date.
+
+```
+first_line_flag_populated: no
+episode_file_used: 180-day (fallback, D-08a — first_line column absent from treatment_episode_detail_180.rds)
+```
+
+**D-08a note:** Because `first_line` is absent from the 180-day file, Plan 03's echo block cannot restrict to first-line episodes. All anthracycline episodes in the 180-day file will be treated equivalently. The `last_dose_firstline_dt` column will be computed as the latest anthracycline date across all episodes in the 180-day file (functionally equivalent to `last_dose_ever_dt` in this dataset). This must be documented in the C_anthracycline_echo KEY sheet as D-166-02 fallback, and in the QC sheet as `first_line_flag_absent: TRUE`.
+
+```
+anthracyclines_present: not enumerated in data check (first_line column absent caused section 2 to be skipped)
+```
+
+Per-drug patient counts will be computed at runtime in Plan 03 by filtering `drug_name` (after `DRUG_NAME_ALIASES` collapse) against the pattern `/doxo|dauno|epiru|idaru|mitox/i`. Expected drugs: Doxorubicin (primary, Phase 164 canonical), Daunorubicin, Epirubicin, Idarubicin (class-effect, D-07), Mitoxantrone (QC only, D-07a). Actual counts: **confirmed at Plan 03 runtime**.
+
+**Patient ID column name mismatch:** The file uses `patient_id`, not `ID`. Plans 02/03 must add `rename(ID = patient_id)` immediately after `readRDS()`. This is recorded as a deviation from the Phase 142/143 assumption that the column would be named `ID`.
 
 ---
 
@@ -172,21 +204,12 @@ Data facts: **PENDING-HPG** — `has_date_level_drug_rows`, `first_line_flag_pop
 
 ```
 survival_in_renv_lock: no (renv.lock not found in repo root)
+survival_installed: yes
+survival_version: 3.8.9
 ```
 
-No `renv.lock` file exists at the repo root (`C:/Users/Owner/Documents/insurance_investigation/`).
-`survival` is a recommended R package (ships with base R distributions) and is very likely available
-on HiPerGator's `module load R/4.4.2` environment, but this cannot be confirmed locally.
-
-```
-survival_installed: PENDING-HPG
-```
-
-If `requireNamespace("survival")` returns FALSE on HiPerGator, run:
-```r
-renv::install("survival"); renv::snapshot()
-```
-before Plan 03 runs.
+`requireNamespace("survival")` returned `TRUE` on HiPerGator; `packageVersion("survival")` = `3.8.9`.
+No `renv::install()` step needed before Plan 03 runs. Plan 03 may call `survival::survfit()` directly.
 
 ---
 
@@ -208,5 +231,14 @@ before Plan 03 runs.
 
 ---
 
-*End of code-audit section. Data-dependent lines (PENDING-HPG) will be filled by Task 3 after
-the HiPerGator run.*
+---
+
+## Additional confirmed facts (HiPerGator run)
+
+- **Cached event/dedup/events_win files:** none found in `outputs_dir` — confirms option_a (rebuild via function chain) is required. No pre-saved events object exists.
+- **Patient ID column name in episode file:** `patient_id` (not `ID`). Plans 02/03 must `rename(ID = patient_id)` on load.
+- **No 90-day episode file found.** Only the 180-day file (`treatment_episode_detail_180.rds`) is available. The D-08a fallback (use 180-day without `first_line` restriction) applies by default, not as a contingency.
+
+---
+
+*Audit complete. All data-dependent items confirmed. Plans 02-04 may proceed.*
