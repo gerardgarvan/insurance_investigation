@@ -89,7 +89,7 @@ build_single_source_result <- function(whole_raw, post_raw, anchors, source_coun
 }
 
 # =============================================================================
-# SECTION 1 — DuckDB connection (no quit(); opened_here pattern)
+# SECTION 1 — DuckDB connection (opened_here pattern, never calls quit)
 # =============================================================================
 
 opened_here <- FALSE
