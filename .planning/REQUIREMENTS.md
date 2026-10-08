@@ -152,7 +152,7 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 
 ### Survivorship Rates (Phase 166)
 
-- [ ] **SRATE-01**: `166-AUDIT.md` inventories existing person-time modality rates in R/147/R/162 outputs (which modalities have rates, numerator/denominator definitions, follow-up end used); flags discrepancies rather than silently changing definitions
+- [x] **SRATE-01**: `166-AUDIT.md` inventories existing person-time modality rates in R/147/R/162 outputs (which modalities have rates, numerator/denominator definitions, follow-up end used); flags discrepancies rather than silently changing definitions
 - [ ] **SRATE-02**: Every modality has a person-time rate (unique dates / person-years) in one per-patient table (`.rds` + `.csv`); zero-event patients in the denominator; follow-up = HL anchor → `follow_end` (`compute_followup()`, Phase 161); only missing rates are built (no recomputation of existing ones under a different definition)
 - [ ] **SRATE-03**: Time from last anthracycline dose (last date in first-line course; latest-ever last dose as sensitivity) to first subsequent echocardiogram; cumulative incidence of first echo at 1/2/5 years (death censored, competing-risk noted); patients with no anthracycline excluded from the echo block and counted in QC; D-166-01 (anthracycline drug set) recorded
 - [ ] **SRATE-04**: Echocardiogram rate per person-year from last anthracycline dose to `follow_end`; reported per patient and as cohort summary in `survivorship_modality_rates_<date>.xlsx`
@@ -196,7 +196,7 @@ Deliver four analytical deliverables requested by the team: a >100-mile distance
 | ACC-02 | 165 | Complete |
 | ACC-03 | 165 | Pending |
 | ACC-04 | 165 | Complete |
-| SRATE-01 | 166 | Pending |
+| SRATE-01 | 166 | Complete |
 | SRATE-02 | 166 | Pending |
 | SRATE-03 | 166 | Pending |
 | SRATE-04 | 166 | Pending |
