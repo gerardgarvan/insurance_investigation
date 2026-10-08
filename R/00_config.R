@@ -237,6 +237,21 @@ CONFIG$distance_assoc_method   <- "rao_scott"  # D-165-01: 2026-10-08
 CONFIG$distance_gee_corstr     <- "exchangeable"
 
 # ==============================================================================
+# Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets
+# Paths to the chemo-combos workbook and the pinned 2026-08-14 gantt snapshot.
+# Both exist only on HiPerGator; IS_LOCAL paths are NULL so the probe gate
+# in R/170 skips the body cleanly.
+# UNCONFIRMED — verify exact paths on HiPerGator before running.
+# ==============================================================================
+
+CONFIG$chemo_combos_path        <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/Chemo_combos_6mo_amc090826-smc.xlsx"  # UNCONFIRMED — verify on HiPerGator
+CONFIG$chemo_combos_tab         <- "Chemo and Cancer Dx"
+CONFIG$gantt_180_snapshot_path  <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/<confirm>/gantt_episodes_180.csv"      # UNCONFIRMED — verify on HiPerGator
+CONFIG$gantt_180_snapshot_bytes <- 6549041L  # size of the 2026-08-14 Drive copy
+CONFIG$gantt_180_snapshot_md5   <- NA_character_  # optional: pin once computed from the Drive copy
+CONFIG$gantt_chemo_treatment_type <- "Chemotherapy"  # literal assigned by R/20 (treatment_type = "Chemotherapy")
+
+# ==============================================================================
 # SECTION 1b: AUTOMATIC DIRECTORY CREATION ----
 # ==============================================================================
 # Create output and cache directories at startup if they don't exist.
