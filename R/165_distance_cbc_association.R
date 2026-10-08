@@ -413,6 +413,8 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
       statistic = "F"
     )
 
+    # svyglm with patient clusters gives the same point estimate as a GEE with
+    # independence working correlation, with robust (sandwich) standard errors.
     # svyglm for OR (quasibinomial = logit link, appropriate for binary outcome
     # in a survey design; produces cluster-robust SEs)
     glm_fit <- survey::svyglm(
@@ -428,7 +430,9 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     ci_hi    <- exp(log_or + 1.96 * se_log)
     p_val    <- coef_tbl["far_from_care_100mi", "Pr(>|t|)"]
 
-    # DEFF: ratio of cluster SE^2 to naive SE^2
+    # DEFF = (SE_rao_scott / SE_naive)^2 on the log-OR scale:
+    # se_log is the svyglm cluster-robust SE; naive$se is the Woolf SE from naive_or_se().
+    # This ratio captures how much the encounter-level clustering inflates uncertainty.
     deff <- (se_log / naive$se)^2
 
     list(
@@ -607,7 +611,8 @@ key_rows <- list(
   c("Field", "Value"),
   c("Analysis",       "far_from_care_100mi x CBC receipt (encounter-level)"),
   c("Run date",        RUN_DATE),
-  c("Method (D-165-01)", "C2 Rao-Scott cluster-adjusted chi-square (encounter-level, cluster = patient ID)"),
+  c("Method (D-165-01)", paste0("Method (D-165-01): ", CONFIG$distance_assoc_method,
+                                " - pending confirmation from Amy and Erin")),
   c("Why Rao-Scott",  paste0(
     "DEFF = 130 in both windows (whole SE/naive SE ratio = 11x). ",
     "Naive chi-square ignores patient clustering and produces dramatically overconfident ",
@@ -646,6 +651,11 @@ key_rows <- list(
     "B_test: primary test statistics. ",
     "C_sensitivity: adjusted model. ",
     "QC: analysis-set counts per window."
+  )),
+  c("CBC lab caveat",  paste0(
+    "CBC is captured only for labs recorded at OneFlorida+ partner sites; ",
+    "labs drawn at outside facilities are missing, so lower CBC at far encounters ",
+    "may partly reflect missing data."
   ))
 )
 

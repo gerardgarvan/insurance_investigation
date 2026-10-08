@@ -73,8 +73,11 @@ naive_or_se <- function(ct) {
     "ct must be a 2x2 matrix" = is.matrix(ct),
     "ct must have dim c(2,2)"  = all(dim(ct) == c(2L, 2L))
   )
-  haldane <- any(ct == 0)
-  m <- if (haldane) ct + 0.5 else ct
+  # Convert to double before any arithmetic: integer overflow occurs at scale
+  # (e.g., 120000L * 65000L = 7.8e9, which exceeds .Machine$integer.max = 2.1e9).
+  m <- matrix(as.numeric(ct), nrow = 2)
+  haldane <- any(m == 0)
+  if (haldane) m <- m + 0.5
   log_or <- log((m[2L, 2L] * m[1L, 1L]) / (m[2L, 1L] * m[1L, 2L]))
   se     <- sqrt(sum(1 / m))
   list(log_or = log_or, se = se, haldane = haldane)

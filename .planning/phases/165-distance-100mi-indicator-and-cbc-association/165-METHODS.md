@@ -142,7 +142,21 @@ some monitoring at their home site in the post-treatment period.
 
 ---
 
+## Notes on Method Equivalence
+
+svyglm with patient clusters gives the same point estimate as a GEE with independence
+working correlation, with robust (sandwich) standard errors. The two approaches differ only
+in how they handle within-cluster correlation assumptions; with an independence working
+correlation, the GEE estimating equations are identical to the score equations solved by
+svyglm when clustering is specified via `ids = ~ID`.
+
+---
+
 ## Caveats
+
+- **Outside-facility lab caveat:** CBC is captured only for labs recorded at OneFlorida+
+  partner sites; labs drawn at outside facilities are missing, so lower CBC at far encounters
+  may partly reflect missing data rather than (or in addition to) true lower receipt.
 
 - **SOURCE:** Encounters far from home tend to occur at a different SOURCE site than the
   patient's usual care, so SOURCE partly measures the same thing as distance. Adjusting for
