@@ -227,7 +227,12 @@ investigation_scripts <- c(
   "R/162_export_patient_modality_dates.R",      # Patient modality date export (Phase 162); INTERNAL CSV, no _any columns
   "R/166_survivorship_modality_rates.R",        # Survivorship modality rates (Phase 166); long/wide per-patient rates + Plan 02 parts RDS
   "R/167_anthracycline_echo.R",                 # Anthracycline-to-echo timing (Phase 166); CIF/KM/echo-rate + Plan 03 parts RDS
-  "R/168_survivorship_workbook.R"               # Survivorship workbook assembler (Phase 166); survivorship_modality_rates_<date>.xlsx + per-patient exports
+  "R/168_survivorship_workbook.R",              # Survivorship workbook assembler (Phase 166); survivorship_modality_rates_<date>.xlsx + per-patient exports
+  # Phase 167: Single-health-system care flag
+  # Outputs: output/single_source_care_<date>.xlsx (aggregate, suppressed)
+  #          output/internal/single_source_care_<date>.csv (patient-level, INTERNAL)
+  #          output/internal/single_source_care_<date>.rds (patient-level, INTERNAL)
+  "R/169_single_source_care.R"                 # Single-source care flag (Phase 167); DuckDB ENCOUNTER.SOURCE aggregation; whole + post-anchor flags; xlsx + internal CSV/RDS
 )
 
 for (script in investigation_scripts) {

@@ -6118,6 +6118,148 @@ if (length(xlsx_files) > 0) {
 message(glue("\nSMOKE-166-01: {p166_pass} PASS / {p166_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15ap: PHASE 167 — SINGLE-HEALTH-SYSTEM CARE FLAG (SMOKE-167-01) ----
+# ==============================================================================
+
+p167_pass <- 0L; p167_fail <- 0L
+
+chk_167 <- function(condition, label) {
+  if (isTRUE(condition)) {
+    p167_pass <<- p167_pass + 1L
+    passed    <<- passed    + 1L
+    message("  PASS  ", label)
+  } else {
+    p167_fail <<- p167_fail + 1L
+    failed    <<- failed    + 1L
+    message("  FAIL  ", label)
+  }
+}
+
+message("\n--- Section 15ap: Phase 167 single-health-system care flag ---")
+
+# --- Structural checks (always-run) ------------------------------------------
+
+# Check 1: R/169 file exists
+chk_167(
+  file.exists("R/169_single_source_care.R"),
+  "SMOKE-167-01 [1/10] R/169_single_source_care.R exists"
+)
+
+# Check 2: R/169 defines build_single_source_result
+r169_text <- if (file.exists("R/169_single_source_care.R"))
+  paste(readLines("R/169_single_source_care.R"), collapse = "\n") else ""
+chk_167(
+  grepl("build_single_source_result", r169_text),
+  "SMOKE-167-01 [2/10] R/169 defines build_single_source_result"
+)
+
+# Check 3: uses openxlsx (not openxlsx2)
+chk_167(
+  grepl("openxlsx", r169_text) && !grepl("openxlsx2", r169_text),
+  "SMOKE-167-01 [3/10] R/169 uses openxlsx (not openxlsx2)"
+)
+
+# Check 4: contains sheet literals KEY, A_summary, B_post_anchor, QC
+chk_167(
+  grepl('"KEY"', r169_text) &&
+    grepl('"A_summary"', r169_text) &&
+    grepl('"B_post_anchor"', r169_text) &&
+    grepl('"QC"', r169_text),
+  'SMOKE-167-01 [4/10] R/169 contains sheet literals KEY, A_summary, B_post_anchor, QC'
+)
+
+# Check 5: contains get_hl_any_dx_ids, duckdb_register, duckdb_unregister
+chk_167(
+  grepl("get_hl_any_dx_ids", r169_text) &&
+    grepl("duckdb_register", r169_text) &&
+    grepl("duckdb_unregister", r169_text),
+  "SMOKE-167-01 [5/10] R/169 contains get_hl_any_dx_ids, duckdb_register, duckdb_unregister"
+)
+
+# Check 6: does NOT contain quit(
+chk_167(
+  !grepl('quit\\(', r169_text),
+  'SMOKE-167-01 [6/10] R/169 does NOT contain quit('
+)
+
+# Check 7: R/169 registered in R/39 investigation_scripts
+r39_167_text <- paste(readLines("R/39_run_all_investigations.R"), collapse = "\n")
+chk_167(
+  grepl("R/169_single_source_care\\.R", r39_167_text),
+  "SMOKE-167-01 [7/10] R/169 registered in R/39 investigation_scripts"
+)
+
+# Check 8: test file exists
+chk_167(
+  file.exists("tests/testthat/test-169-single-source-care.R"),
+  "SMOKE-167-01 [8/10] tests/testthat/test-169-single-source-care.R exists"
+)
+
+# --- Output-level checks (skipped offline if xlsx not found) -----------------
+xlsx_167_files <- list.files(
+  if (exists("CONFIG")) CONFIG$output_dir else "output",
+  pattern = "^single_source_care_[0-9]{8}\\.xlsx$",
+  full.names = TRUE
+)
+
+if (length(xlsx_167_files) > 0L) {
+  latest_167_xlsx <- xlsx_167_files[order(file.info(xlsx_167_files)$mtime,
+                                          decreasing = TRUE)[1L]]
+  # Check 9: sheet order correct
+  if (requireNamespace("openxlsx", quietly = TRUE)) {
+    sheets_167 <- openxlsx::getSheetNames(latest_167_xlsx)
+    expected_167_sheets <- c("KEY", "A_summary", "B_post_anchor", "QC")
+    chk_167(
+      identical(sheets_167, expected_167_sheets),
+      sprintf(
+        "SMOKE-167-01 [9/10] Sheet order KEY/A_summary/B_post_anchor/QC (found: %s)",
+        paste(sheets_167, collapse = ", ")
+      )
+    )
+  } else {
+    message("  NOTE  SMOKE-167-01 [9/10] openxlsx not available — sheet-order check skipped")
+  }
+} else {
+  message("  NOTE  SMOKE-167-01 [9/10] Workbook not found — output-level checks skipped (offline)")
+}
+
+# Check 10: if internal RDS exists, validate column constraints
+rds_167_files <- list.files(
+  "output/internal",
+  pattern = "^single_source_care_[0-9]{8}\\.rds$",
+  full.names = TRUE
+)
+
+if (length(rds_167_files) > 0L) {
+  latest_167_rds <- rds_167_files[order(file.info(rds_167_files)$mtime,
+                                        decreasing = TRUE)[1L]]
+  rds_167 <- tryCatch(readRDS(latest_167_rds), error = function(e) NULL)
+  if (!is.null(rds_167)) {
+    flag_vals_ok      <- all(rds_167$single_source_care      %in% c(0L, 1L, NA_integer_))
+    flag_post_vals_ok <- all(rds_167$single_source_care_post %in% c(0L, 1L, NA_integer_))
+    # n_sources == 0 implies any_blank_source TRUE or n_encounters NA
+    zero_src_mask <- !is.na(rds_167$n_sources) & rds_167$n_sources == 0L
+    invariant_ok  <- all(
+      rds_167$any_blank_source[zero_src_mask] |
+        is.na(rds_167$n_encounters[zero_src_mask])
+    )
+    chk_167(
+      flag_vals_ok && flag_post_vals_ok && invariant_ok,
+      sprintf(
+        "SMOKE-167-01 [10/10] RDS column constraints: flag in {0,1,NA}=%s, post flag in {0,1,NA}=%s, n_sources==0 invariant=%s",
+        flag_vals_ok, flag_post_vals_ok, invariant_ok
+      )
+    )
+  } else {
+    message("  NOTE  SMOKE-167-01 [10/10] Could not read RDS — constraint checks skipped")
+  }
+} else {
+  message("  NOTE  SMOKE-167-01 [10/10] Internal RDS not found — constraint checks skipped (offline)")
+}
+
+message(glue("\nSMOKE-167-01: {p167_pass} PASS / {p167_fail} FAIL"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
