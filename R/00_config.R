@@ -244,9 +244,9 @@ CONFIG$distance_gee_corstr     <- "exchangeable"
 # UNCONFIRMED — verify exact paths on HiPerGator before running.
 # ==============================================================================
 
-CONFIG$chemo_combos_path        <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/Chemo_combos_6mo_amc090826-smc.xlsx"  # UNCONFIRMED — verify on HiPerGator
+CONFIG$chemo_combos_path        <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/chemo_combos_6mo_amc090826-smc.xlsx"
 CONFIG$chemo_combos_tab         <- "Chemo and Cancer Dx"
-CONFIG$gantt_180_snapshot_path  <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/<confirm>/gantt_episodes_180.csv"      # UNCONFIRMED — verify on HiPerGator
+CONFIG$gantt_180_snapshot_path  <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/insurance_investigation/output/gantt_episodes_180.csv"
 CONFIG$gantt_180_snapshot_bytes <- 6549041L  # size of the 2026-08-14 Drive copy
 CONFIG$gantt_180_snapshot_md5   <- NA_character_  # optional: pin once computed from the Drive copy
 CONFIG$gantt_chemo_treatment_type <- "Chemotherapy"  # literal assigned by R/20 (treatment_type = "Chemotherapy")
