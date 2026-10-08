@@ -128,3 +128,101 @@ Which phases cover which requirements. Populated during roadmap creation.
 ---
 *Requirements defined: 2026-07-23*
 *Last updated: 2026-07-24 after roadmap creation — all 21 requirements mapped to Phases 132-136*
+
+---
+
+# Requirements: v3.7 Access, Survivorship Rates & NHL Episode Subsets
+
+**Defined:** 2026-10-08
+**Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
+**Source:** Team request list 2026-10-08; decisions settled same day (see Settled section below).
+
+## Milestone Goal
+
+Deliver four analytical deliverables requested by the team: a >100-mile distance-to-care indicator tested against CBC surveillance; per-patient survivorship modality rates including time from last anthracycline dose to echocardiogram; a binary single-health-system care flag; and NHL-only / HL+NHL subsets of `gantt_episodes_180` joined to the team-annotated chemo-combos workbook. All existing outputs are read-only.
+
+## v3.7 Requirements
+
+### Distance to Care (Phase 165)
+
+- [ ] **ACC-01**: Encounter-level binary `far_from_care_100mi` (0/1) derived from R/122 distances converted to miles (km / 1.609344); cutoff held in `CONFIG$distance_cutoff_mi`; all encounters; encounters without a computed distance counted in QC, not silently dropped
+- [ ] **ACC-02**: `165-METHODS.md` methods memo comparing candidate tests (encounter-level GEE/mixed model, Rao-Scott cluster chi-square, patient-level aggregate, CMH stratified) on: unit of analysis, CBC operationalization, expected-cell assumptions, effect size and confounders; makes a recommendation; D-165-01 records the team's choice
+- [ ] **ACC-03**: Team-selected test implemented: statistic, p-value, effect size, 95% CI, assumption checks; both whole-record and post-anchor windows reported side by side; sensitivity analysis per the memo's named approach
+- [ ] **ACC-04**: All displayed counts pass through `suppress_small()` (threshold 11); statistics computed on unsuppressed counts; telehealth/virtual encounter count with a distance reported in QC
+
+### Survivorship Rates (Phase 166)
+
+- [ ] **SRATE-01**: `166-AUDIT.md` inventories existing person-time modality rates in R/147/R/162 outputs (which modalities have rates, numerator/denominator definitions, follow-up end used); flags discrepancies rather than silently changing definitions
+- [ ] **SRATE-02**: Every modality has a person-time rate (unique dates / person-years) in one per-patient table (`.rds` + `.csv`); zero-event patients in the denominator; follow-up = HL anchor → `follow_end` (`compute_followup()`, Phase 161); only missing rates are built (no recomputation of existing ones under a different definition)
+- [ ] **SRATE-03**: Time from last anthracycline dose (last date in first-line course; latest-ever last dose as sensitivity) to first subsequent echocardiogram; cumulative incidence of first echo at 1/2/5 years (death censored, competing-risk noted); patients with no anthracycline excluded from the echo block and counted in QC; D-166-01 (anthracycline drug set) recorded
+- [ ] **SRATE-04**: Echocardiogram rate per person-year from last anthracycline dose to `follow_end`; reported per patient and as cohort summary in `survivorship_modality_rates_<date>.xlsx`
+
+### Single Health System (Phase 167)
+
+- [ ] **SRC-01**: Patient-level binary `single_source_care` (1 = `n_distinct(ENCOUNTER.SOURCE) == 1`) and `n_sources` for every cohort patient with ≥1 encounter; computed in DuckDB, not by loading ENCOUNTER into R; SOURCE from ENCOUNTER only (D-167-01 closed)
+- [ ] **SRC-02**: Delivered in two windows as separate columns: whole-record and post-HL-anchor (D-167-02 closed); flag designed to be joinable onto Phase 165/166 patient tables on `ID`
+- [ ] **SRC-03**: Patients with NA/blank SOURCE on any encounter are flagged and counted in QC, not coerced to a site; NA-SOURCE patient count in `single_source_care_<date>.xlsx` QC sheet
+
+### NHL Episode Subsets (Phase 168)
+
+- [ ] **NHLSUB-01**: NHL-only subset of `gantt_episodes_180`: every sheet episode for the patient has `Definitely NHL` = x AND no episode has `Definitely HL` = x OR `HL and NHL` = x (strict "all episodes" rule); `NHL_only_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
+- [ ] **NHLSUB-02**: HL+NHL subset: any sheet episode for the patient has `HL and NHL` = x; `HL_NHL_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
+- [ ] **NHLSUB-03**: Both subsets left-joined to chemo-combos columns E-J (`Definitely HL`, `Definitely NHL`, `Initial`, `Relapse`, `Notes`, `HL and NHL`) at treatment-period grain (`patient_id` + `episode_number`); chemo rows only (non-chemo rows get empty E-J values); aligned to the 2026-08-14 `gantt_episodes_180` snapshot (pinned via `CONFIG$gantt_180_snapshot_path`); input file `Chemo_combos_6mo_amc090826-smc` read by tab name ("Chemo and Cancer Dx"), not position; probe-first gate (skip with log if absent, e.g. local run); D-168-01 (also deliver post-rename version) defaults to pre-rename only
+- [ ] **NHLSUB-04**: QC reports: patient counts per group; matched/unmatched periods in each direction; duplicate sheet (`patient_id`, `episode_number`) keys (stop join if found); group overlap (should be empty); non-"x" values in columns F/J; sheet episodes that match only non-chemo gantt rows; loose Group 1 count (any Definitely NHL) vs strict count (all episodes)
+
+### Registration (Phase 169)
+
+- [ ] **REG-37-01**: All v3.7 scripts appear in `R/39_run_all_investigations.R` (dependency order) and `R/SCRIPT_INDEX.md`
+- [ ] **SMOKE-37-01**: R/88 gains a section per v3.7 script with structural checks: file existence, output sheet names, KEY leftmost, binary columns 0/1 only (where applicable); no fan-out row-count checks
+- [ ] **RUN-37-01**: R/88 passes on HiPerGator (`module load R/4.5`); all four v3.7 workbooks re-issued with a post-merge run date
+
+## Open Team Decisions
+
+| ID | Question | Recommended default | Status |
+|----|----------|---------------------|--------|
+| D-165-01 | Test for distance-CBC relationship | Chosen from 165-METHODS.md; leading candidate = encounter-level GEE clustered on ID | Open — team selects from memo |
+| D-166-01 | Anthracycline drug set | Doxorubicin (incl. liposomal after Phase 164 rename); add others only if present in cohort | Open |
+| D-167-01 | SOURCE table scope | ENCOUNTER.SOURCE only | **Closed 2026-10-08** |
+| D-167-02 | Single-SOURCE flag windows | Both whole-record and post-anchor columns | **Closed 2026-10-08** |
+| D-168-01 | Also deliver a post-rename version of the subsets? | Pre-rename join only for now | Open |
+| D-168-02 | Two tabs in one workbook vs two files | One workbook, two tabs (+ CSVs on request) | **Closed 2026-10-08** |
+| D-168-03 | Group 1 rule: NHL on all episodes (strict) vs any episode | Strict, with loose count shown in QC | **Closed 2026-10-08** |
+
+## Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| ACC-01 | 165 | Pending |
+| ACC-02 | 165 | Pending |
+| ACC-03 | 165 | Pending |
+| ACC-04 | 165 | Pending |
+| SRATE-01 | 166 | Pending |
+| SRATE-02 | 166 | Pending |
+| SRATE-03 | 166 | Pending |
+| SRATE-04 | 166 | Pending |
+| SRC-01 | 167 | Pending |
+| SRC-02 | 167 | Pending |
+| SRC-03 | 167 | Pending |
+| NHLSUB-01 | 168 | Pending |
+| NHLSUB-02 | 168 | Pending |
+| NHLSUB-03 | 168 | Pending |
+| NHLSUB-04 | 168 | Pending |
+| REG-37-01 | 169 | Pending |
+| SMOKE-37-01 | 169 | Pending |
+| RUN-37-01 | 169 | Pending |
+
+**Coverage:**
+- v3.7 requirements: 18 total (4 ACC + 4 SRATE + 3 SRC + 4 NHLSUB + 3 REG)
+- Mapped to phases: 18 (roadmap complete)
+- Unmapped: 0 ✓
+
+**Phase breakdown:**
+- Phase 165 (Distance >100 mi Indicator + CBC Association): ACC-01..04 — 2 plans (methods memo first, then implementation after D-165-01)
+- Phase 166 (Survivorship Modality Rates + Anthracycline-Echo): SRATE-01..04 — TBD plans (audit first)
+- Phase 167 (Single-Health-System Care Flag): SRC-01..03 — TBD plans
+- Phase 168 (NHL-Only and HL+NHL Gantt Subsets): NHLSUB-01..04 — TBD plans (HiPerGator only)
+- Phase 169 (Registration, Smoke Test, HiPerGator Run): REG-37-01, SMOKE-37-01, RUN-37-01 — TBD plans
+
+---
+*Requirements defined: 2026-10-08*
+*Last updated: 2026-10-08 — v3.7 milestone initialized, all 18 requirements mapped to Phases 165-169*

@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.4
-milestone_name: below)
-status: executing
-stopped_at: Completed 164-01-PLAN.md (T1-T4; T5 = HiPerGator checkpoint pending)
-last_updated: "2026-10-07T02:39:00Z"
-last_activity: 2026-10-07
+milestone: v3.7
+milestone_name: Access, Survivorship Rates & NHL Episode Subsets
+status: defining requirements
+stopped_at: Milestone v3.7 initialized — ready to plan Phase 165
+last_updated: "2026-10-08T00:00:00Z"
+last_activity: 2026-10-08
 progress:
-  total_phases: 152
-  completed_phases: 131
+  total_phases: 169
+  completed_phases: 164
   total_plans: 292
   completed_plans: 296
 ---
@@ -17,11 +17,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-23 after starting v3.4)
+See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 164 — doxorubicin-generic-name
+**Current focus:** Milestone v3.7 initialized — Phase 165 is next
 
 ## Current Position
 

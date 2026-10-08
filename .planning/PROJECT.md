@@ -92,6 +92,26 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ### Active
 
+#### v3.7 Access, Survivorship Rates & NHL Episode Subsets
+- [ ] ACC-01: Encounter-level binary for distance >100 miles, using R/122 distances (km→miles)
+- [ ] ACC-02: Methods memo comparing tests for the distance-CBC relationship accounting for clustered encounters
+- [ ] ACC-03: Team-selected test implemented with effect size, CI, and assumption checks
+- [ ] ACC-04: Displayed counts HIPAA-suppressed (<11); excluded encounters reported
+- [ ] SRATE-01: Audit of existing person-time modality rates; build only what is missing
+- [ ] SRATE-02: Every modality has a person-time rate in one per-patient table
+- [ ] SRATE-03: Time from last anthracycline dose to first echocardiogram, with cumulative incidence at 1/2/5 years
+- [ ] SRATE-04: Echocardiogram rate per person-year after last anthracycline dose
+- [ ] SRC-01: Binary `single_source_care` from ENCOUNTER.SOURCE only (whole-record + post-anchor)
+- [ ] SRC-02: Sensitivity versions (post-anchor window) — NOTE: all-tables sensitivity removed (ENCOUNTER.SOURCE only per D-167-01)
+- [ ] SRC-03: NA-SOURCE handling reported, not coerced
+- [ ] NHLSUB-01: NHL-only subset (all episodes Definitely NHL, none HL) of gantt_episodes_180
+- [ ] NHLSUB-02: HL+NHL subset (any episode marked HL and NHL) of gantt_episodes_180
+- [ ] NHLSUB-03: Both subsets left-joined to chemo-combos columns E-J at treatment-period level (chemo rows only, 2026-08-14 snapshot)
+- [ ] NHLSUB-04: QC of unmatched IDs, group overlap, and unexpected marker values
+- [ ] REG-37-01: R/39 + SCRIPT_INDEX registration for all v3.7 scripts
+- [ ] SMOKE-37-01: R/88 structural checks for all v3.7 outputs
+- [ ] RUN-37-01: Real-data HiPerGator run with re-issued workbooks
+
 #### v3.4 R Pipeline Code Review Remediation
 - [ ] Fix 8 critical/high-severity findings (crashers, wrong published numbers, inert SCT feature, silent DB-promotion bug, empty reference manual, wrong age-at-episode)
 - [x] Standardize 8 cross-cutting patterns (A-H) at the shared-helper layer — Phase 135 (PATTERN-A R/23 deferred: pre-aggregated RDS has no raw PATID; upstream fix needed in Phase 39/40)
@@ -138,16 +158,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.4 R Pipeline Code Review Remediation
+## Current Milestone: v3.7 Access, Survivorship Rates & NHL Episode Subsets
 
-**Goal:** Fix the crash-causing and wrong-published-number defects surfaced by the 2026-07-23 full-pipeline code review, and standardize the 8 recurring cross-cutting bug patterns (record-vs-patient-count confusion, code-normalization drift, can't-fail tests, etc.) at the shared-helper layer so they stop recurring script-by-script.
+**Goal:** Deliver four team requests from 2026-10-08: (1) an encounter-level >100-mile distance-to-care indicator tested against CBC surveillance; (2) per-patient survivorship modality rates, including time from last anthracycline dose to echocardiogram; (3) a binary flag for patients whose care is entirely within one health system (ENCOUNTER.SOURCE); (4) NHL-only and HL+NHL subsets of `gantt_episodes_180` joined to the team-annotated chemo-combos workbook. All existing outputs are read-only inputs; each phase writes a new KEY-leftmost workbook in UF colors.
 
 **Target features:**
-- Fix all 8 critical/high-severity findings from `R_pipeline_code_review.md`: stray-`n` crashers (`74`, `81`-`85`), `28`'s inert SCT-conditioning string match, `03`'s silent DB-promotion-with-missing-tables bug, `46`'s inflated Total Records, `47`'s HL anchor-date corruption (inherited by `48`/`49`), the `67`→`68`/`95`→`96` same-week source/date desync, `89`'s content-empty reference manual, `101`'s wrong age-at-episode
-- Standardize the 8 cross-cutting patterns (A-H) once at the shared-helper layer: record-count vs. distinct-patient confusion; dotted/undotted/case code-normalization drift; the `^[CD]` neoplasm over-inclusion filter; external-API transient-error-vs-permanent-miss handling; tests/validators that cannot fail (false green); fragile in-place `00_config.R` rewriting; silent NA/sentinel/impossible-date gaps; episode-vs-encounter-vs-patient-date grain mislabels
-- Confirm the review's two flagged loose ends: locate where `suppress_small()`/`clean_multi_value()`/`union_field()` are actually defined (not found in any `utils_*.R` module during the review), and reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915)
-
-**Explicitly deferred (not this milestone):** The ~80 additional per-script Low/Med findings cataloged by area in the review (`R/40`-`R/112`, `utils_*.R` individual nits) — tracked as backlog, not blocking v3.4. v3.3 (Rituximab/MTX DoI) remains open in parallel; its pending HiPerGator verification and REQUIREMENTS.md traceability gap are tracked separately in STATE.md and unaffected by this milestone.
+- ACC: Encounter-level `far_from_care_100mi` (km→miles, cutoff in CONFIG); methods memo comparing tests for the distance-CBC relationship accounting for clustered encounters per patient; team-selected test implemented (GEE leading candidate); both whole-record and post-anchor windows reported
+- SRATE: Audit existing person-time modality rates; build any missing; per-patient survivorship rates table; time from last anthracycline dose to first echo with cumulative incidence at 1/2/5 years and echo rate per person-year
+- SRC: Patient-level `single_source_care` binary from ENCOUNTER.SOURCE only, in both whole-record and post-anchor windows; NA-SOURCE patients counted in QC, not coerced
+- NHLSUB: NHL-only subset (all episodes Definitely NHL, none HL) and HL+NHL subset (any episode marked HL and NHL) from `gantt_episodes_180`; left-joined to chemo-combos columns E-J at treatment-period grain, chemo rows only, against the 2026-08-14 snapshot
+- REG: R/39 + SCRIPT_INDEX registration for all v3.7 scripts; R/88 structural checks; real-data HiPerGator run re-issuing all four workbooks
 
 ## Current State
 

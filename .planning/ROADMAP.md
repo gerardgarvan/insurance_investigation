@@ -22,6 +22,7 @@
 - 🔄 **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (in progress)
 - 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress)
 - ⏳ **v3.6 Treatment Episode Refinement** - Phase 157 (planned)
+- ⏳ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (planned)
 
 ## Phases
 
@@ -678,3 +679,142 @@ Plans:
 
 Plans:
 - [x] 163-01-PLAN.md — R/147 changes: exclude DIAGNOSIS rows, downstream sheets, Codeset_summary by modality, KEY/QC updates (Wave 1)
+
+### Phase 164: Doxorubicin generic name
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 163
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 164 to break down)
+
+---
+
+## ⏳ v3.7 Access, Survivorship Rates & NHL Episode Subsets (Planned)
+
+**Milestone Goal:** Deliver four team requests from 2026-10-08: (1) an encounter-level >100-mile distance-to-care indicator tested against CBC surveillance; (2) per-patient survivorship modality rates including time from last anthracycline dose to echocardiogram; (3) a binary flag for patients whose care is entirely within one health system (ENCOUNTER.SOURCE); (4) NHL-only and HL+NHL subsets of `gantt_episodes_180` joined to the team-annotated chemo-combos workbook. All existing outputs are read-only inputs; each phase writes a new KEY-leftmost workbook in UF colors.
+
+## Phases (v3.7)
+
+- [ ] **Phase 165: Distance >100 mi Indicator and CBC Association** (2 plans) — Encounter-level `far_from_care_100mi`; methods memo to choose the test; then implement it
+- [ ] **Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing** (TBD plans) — Per-person-year rates per modality; time/rate since last anthracycline for echo
+- [ ] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE
+- [ ] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (TBD plans) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
+- [ ] **Phase 169: Registration, Smoke Test, and HiPerGator Run** (TBD plans) — R/39, R/88, SCRIPT_INDEX for 165-168; real-data run
+
+## Phase Details (v3.7)
+
+### Phase 165: Distance >100 mi Indicator and CBC Association
+**Goal:** An encounter-level binary `far_from_care_100mi` exists; the appropriate statistical test for its relationship with CBC is researched and documented in a methods memo, then the team-selected test is implemented and reported
+**Depends on:** Phase 152-154 (R/122 encounter distances), Phase 159 (R/147 modality events)
+**Requirements:** ACC-01, ACC-02, ACC-03, ACC-04
+
+**Design constraints:**
+- Distance stays at encounter level (one value per encounter, as R/122 computes today). Reuse R/122 distances; convert km → miles (`km / 1.609344`); flag `distance_mi > 100`; cutoff held in `CONFIG$distance_cutoff_mi` (NA default = no indicator emitted, byte-identical output) if Phase 155 has not already added it
+- **Plan 01 is research, not code**: `165-METHODS.md` evaluates candidate tests and recommends one. Must address: unit of analysis (encounter-level logistic GEE or mixed model clustered on `ID`; Rao-Scott cluster-adjusted chi-square; patient-level aggregate + chi-square/Fisher; CMH stratified by a covariate); CBC operationalization at each unit; expected-cell checks; effect size (OR / risk difference with 95% CI); confounders (rurality, insurance, SOURCE)
+- Team selects the method from the memo (D-165-01); Plan 02 implements only the selected method plus the memo's named sensitivity analysis
+- Encounter scope = all encounters (no ENC_TYPE exclusions); QC reports count of telehealth/virtual encounters carrying a distance
+- **Two windows, both delivered**: each encounter carries `post_anchor` (1 if on/after HL anchor date) alongside `far_from_care_100mi`; crosstab and selected test run for (a) whole record and (b) post-anchor encounters only, reported side by side
+- Denominator = HL cohort encounters with a computed distance; encounters without one counted in QC, never silently dropped
+- `suppress_small()` (threshold 11) on every displayed count; statistics computed on unsuppressed counts
+
+**Success Criteria:**
+1. `far_from_care_100mi` (0/1) exists on every encounter with a computed distance, derived in miles; excluded encounters counted in QC
+2. `165-METHODS.md` compares the candidate tests and makes a recommendation; D-165-01 records the team's choice
+3. `distance_cbc_association_<date>.xlsx` has KEY (leftmost), A_crosstab and B_test (selected method: statistic, p, effect size, 95% CI, assumption checks), each with whole-record and post-anchor columns side by side, C_sensitivity, QC
+4. Crosstab totals reconcile to the QC denominator
+**Plans:** 2 (165-01 methods research memo; 165-02 implementation after D-165-01)
+- [ ] 165-01-PLAN.md — `165-METHODS.md`: candidate test comparison, CBC operationalization, recommendation (Wave 1)
+- [ ] 165-02-PLAN.md — `far_from_care_100mi` indicator + `distance_cbc_association_<date>.xlsx` (Wave 2, after D-165-01)
+
+### Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing
+**Goal:** Each survivorship modality has a per-patient rate (unique dates / person-year of post-anchor follow-up) with cohort summaries, and echocardiogram is additionally characterized relative to last anthracycline exposure
+**Depends on:** Phase 159/160/163 (R/147 modality events), Phase 161 (`compute_followup()` / resolved death date), Phase 164 (Doxorubicin canonical naming)
+**Requirements:** SRATE-01, SRATE-02, SRATE-03, SRATE-04
+
+**Design constraints:**
+- **Plan 01 is an audit**: inventory existing person-time rate work in R/147 / R/162 outputs and `.planning/`; record findings in `166-AUDIT.md`; later plans build only what the audit shows is missing
+- Rate = unique modality dates / person-years, HL anchor → `follow_end` (`compute_followup()`); zero-event patients stay in denominator
+- Anthracycline = Doxorubicin after Phase 164 collapse (incl. liposomal). D-166-01 records whether other anthracyclines appear in the cohort
+- **Echo clock starts at the last anthracycline dose** (last date in first-line course); latest-ever last dose as sensitivity column for re-treated patients
+- Echo outputs: days from last anthracycline dose to first subsequent echo; cumulative incidence of first echo at 1/2/5 years (death censored, competing-risk noted); echo rate per person-year from last dose to `follow_end`
+- Patients with no anthracycline excluded from echo block and counted in QC
+- Existing R/147 outputs are read-only
+
+**Success Criteria:**
+1. `166-AUDIT.md` states which modality rates already exist, their definitions, and what remains to build
+2. Any missing modality rates are added so every modality has a person-time rate in one per-patient table (`.rds` + `.csv`)
+3. `survivorship_modality_rates_<date>.xlsx` has KEY, A_rates_summary, B_rates_by_fu_year, C_anthracycline_echo (timed from last anthracycline dose), QC
+4. Event totals reconcile to R/147's counts within the follow-up window; D-166-01 is recorded
+**Plans:** TBD (166-01 audit first)
+- [ ] TBD (run /gsd:plan-phase 166 to break down)
+
+### Phase 167: Single-Health-System Care Flag
+**Goal:** A patient-level binary `single_source_care` identifies patients whose care occurred entirely within one health system (SOURCE)
+**Depends on:** Phase 164
+**Requirements:** SRC-01, SRC-02, SRC-03
+
+**Design constraints:**
+- Primary definition: `n_distinct(ENCOUNTER.SOURCE) == 1` across all cohort encounters within the study period; computed in DuckDB, not by loading ENCOUNTER into R
+- SOURCE is taken from ENCOUNTER only (D-167-01 closed); other CDM tables are not unioned
+- Deliver both windows as separate columns: whole record and post-HL-anchor only (D-167-02 closed)
+- Patients with NA/blank SOURCE on any encounter are flagged, not coerced to a site
+- Output joins on `ID`; flag is designed to be joinable onto Phase 165/166 patient tables
+
+**Success Criteria:**
+1. `single_source_care` (0/1) and `n_sources` exist for every cohort patient with ≥1 encounter; NA-SOURCE patients are counted in QC
+2. `single_source_care_<date>.xlsx` has KEY, A_summary (n/% single-source, distribution of n_sources, breakdown by SOURCE for single-source patients), B_post_anchor (same summary for post-anchor window), QC
+3. All displayed counts pass through `suppress_small()` (<11)
+**Plans:** TBD
+- [ ] TBD (run /gsd:plan-phase 167 to break down)
+
+### Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets
+**Goal:** Two subsets of `gantt_episodes_180` — patients where all sheet episodes are marked Definitely NHL and none HL, and patients where any episode is marked HL and NHL — each joined to columns E-J of the team's chemo-combos sheet
+**Depends on:** Phase 142/143 (gantt_episodes_180)
+**Requirements:** NHLSUB-01, NHLSUB-02, NHLSUB-03, NHLSUB-04
+
+**Design constraints:**
+- Input: `Chemo_combos_6mo_amc090826-smc` at `/blue/erin.mobley-hl.bcu/` on HiPerGator, tab "Chemo and Cancer Dx". `CONFIG$chemo_combos_path` in R/00_config.R; read by tab name, never by position; probe-first gate (skip with log if absent on local runs)
+- Sheet is hand-marked and predates Phase 164 Doxorubicin rename — treat as read-only
+- Sheet layout (one row per patient x episode), read by header name: A `patient_id` · B `episode_number` · C `drug_names` · D `episode_dx_categories` · E `Definitely HL` · F `Definitely NHL` · G `Initial` · H `Relapse` · I `Notes` · J `HL and NHL`
+- **Group 1 (NHL only — strict):** every sheet episode for the patient has `Definitely NHL` = x AND no episode has `Definitely HL` = x OR `HL and NHL` = x
+- **Group 2 (HL and NHL):** any sheet episode for the patient has `HL and NHL` = x
+- QC reports the loose Group 1 count (any `Definitely NHL` = x) alongside the strict count (D-168-03 closed)
+- **Join grain = treatment period**: left join columns E-J onto `gantt_episodes_180` on `patient_id` + `episode_number`; chemo rows only (non-chemo rows get empty E-J values); no gantt rows dropped or duplicated
+- `drug_names` used as cross-check only, not join key; mismatches listed in QC
+- **Version alignment**: join against 2026-08-14 `gantt_episodes_180.csv` (pinned via `CONFIG$gantt_180_snapshot_path`); record row count and checksum in QC; D-168-01 (post-rename version) defaults to pre-rename only
+- Assert (`patient_id`, `episode_number`) unique in sheet before joining; duplicates listed in QC and stop the join
+- Output: one workbook with KEY (leftmost), `NHL_only_episodes`, `HL_NHL_episodes`, QC — plus matching CSVs if team needs them for Tableau (D-168-02 closed: one workbook with two tabs)
+- **Execution note:** Phase 168 runs on HiPerGator only — chemo-combos input lives under `/blue/erin.mobley-hl.bcu/`
+
+**Success Criteria:**
+1. `NHL_only_episodes` contains only Group 1 IDs and every `gantt_episodes_180` treatment-period row for them; `HL_NHL_episodes` likewise for Group 2
+2. Row counts per tab equal the source gantt row counts for those IDs; unmatched periods show empty E-J values
+3. QC reports: IDs per group, matched/unmatched periods in each direction, duplicate period keys, group overlap, non-"x" values in F/J, gantt snapshot version used
+4. Columns E-J appear with their original header names
+**Plans:** TBD
+- [ ] TBD (run /gsd:plan-phase 168 to break down)
+
+### Phase 169: Registration, Smoke Test, and HiPerGator Run
+**Goal:** Phases 165-168 scripts are registered and validated, and every workbook is produced from a real HiPerGator run
+**Depends on:** Phases 165-168
+**Requirements:** REG-37-01, SMOKE-37-01, RUN-37-01
+
+**Success Criteria:**
+1. New scripts appear in `R/39_run_all_investigations.R` (dependency order) and `R/SCRIPT_INDEX.md`
+2. R/88 gains a section with structural checks per script (file existence, output sheet names, KEY leftmost, binary columns 0/1 only, no fan-out row-count checks)
+3. R/88 passes on HiPerGator (`module load R/4.5`); all four workbooks re-issued with a post-merge run date
+**Plans:** TBD
+- [ ] TBD (run /gsd:plan-phase 169 to break down)
+
+## Progress (v3.7)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 165. Distance >100 mi + CBC Association | 0/2 | Not started | |
+| 166. Survivorship Modality Rates + Anthracycline-Echo | 0/TBD | Not started | |
+| 167. Single-Health-System Care Flag | 0/TBD | Not started | |
+| 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
+| 169. Registration, Smoke Test, HiPerGator | 0/TBD | Not started | |
