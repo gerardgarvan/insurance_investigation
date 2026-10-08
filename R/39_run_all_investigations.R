@@ -225,6 +225,7 @@ investigation_scripts <- c(
   "R/122_encounter_distance.R",                 # Encounter-ZIP to residence haversine distance (Phase 152); outputs encounter_distance_YYYYMMDD.xlsx + .rds
   "R/147_surveillance_modality_frequency.R",   # Surveillance modality frequency (Phase 158); outputs surveillance_modality_frequency_INTERNAL_<date>.xlsx, surveillance_modality_frequency_<date>.xlsx, surveillance_modality_patient_<date>.rds
   "R/162_export_patient_modality_dates.R",      # Patient modality date export (Phase 162); INTERNAL CSV, no _any columns
+  "R/165_distance_cbc_association.R",   # Distance >100 mi x CBC association (Phase 165); method per CONFIG$distance_assoc_method; both windows
   "R/166_survivorship_modality_rates.R",        # Survivorship modality rates (Phase 166); long/wide per-patient rates + Plan 02 parts RDS
   "R/167_anthracycline_echo.R",                 # Anthracycline-to-echo timing (Phase 166); CIF/KM/echo-rate + Plan 03 parts RDS
   "R/168_survivorship_workbook.R",              # Survivorship workbook assembler (Phase 166); survivorship_modality_rates_<date>.xlsx + per-patient exports
