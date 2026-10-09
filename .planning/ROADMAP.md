@@ -753,7 +753,7 @@ Plans:
   1. Primary-tier surveillance rates (Echo, ECG, Mammogram, PFT excluded) in the R/166 output are identical to the 2026-10-08 workbook values
   2. Cumulative incidence function (CIF) values in R/166 are identical to the 2026-10-08 workbook
   3. Any-tier rates for Echo, ECG, Mammogram, and PFT shift (expected, attributable to Phase 163 DIAGNOSIS exclusion) and shifts are documented in the phase transition notes
-**Plans**: TBD
+**Plans**: 171-01-PLAN.md (3 tasks: T1 code artifacts, T2 HiPerGator checkpoint, T3 close-out)
 **UI hint**: yes
 
 ### Phase 172: Phase 164 Close-out and R/170 NHL Subsets
@@ -788,6 +788,6 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete    | 2026-10-09 |
-| 171. Survivorship Workbook Refresh | v3.8 | 0/TBD | Not started | - |
+| 171. Survivorship Workbook Refresh | v3.8 | 0/3 | Planned | - |
 | 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
 | 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |
