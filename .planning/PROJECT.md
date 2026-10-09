@@ -171,6 +171,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
+**Phase 165 complete (2026-10-09):** Distance >100 mi Indicator and CBC Association. `R/163_distance_cbc_prototype.R` prototyped four candidate tests (naive chi-square, Rao-Scott, GEE, patient-level Fisher); `165-METHODS.md` recommended Rao-Scott. `R/165_distance_cbc_association.R` implements primary Rao-Scott encounter-level analysis (clustered on patient ID) and adjusted sensitivity; `output/distance_cbc_association_20261008.xlsx` (KEY/A_crosstab/B_test/C_sensitivity/QC). Primary result: OR = 0.553 [0.470, 0.651], p = 6.8e-13, DEFF = 130 (whole record). ACC-01–04 satisfied.
+
 **Phase 167 complete (2026-10-09):** Single-Health-System Care Flag. `R/169_single_source_care.R` produces patient-level `single_source_care` and `single_source_care_post` binary flags from DuckDB ENCOUNTER.SOURCE (NULLIF/UPPER/TRIM normalisation; blanks excluded from n_sources, counted in QC). Delivers `output/internal/single_source_care_<date>.csv` + `.rds` (joinable by ID) and `output/single_source_care_<date>.xlsx` (KEY/A_summary/B_post_anchor/QC sheets with encounter-band crosstab, 4+ n_sources cap, complementary suppression, blank-SOURCE sensitivity row). Registered in R/39, SMOKE-167-01 in R/88, SLURM wrapper at slurm/167_single_source_care.sbatch. Verified passed (5/5 must-haves; SRC-01/02/03 satisfied).
 
 **Phase 154 complete (2026-09-18):** Distribution and histogram deliverable. `R/utils/utils_distance_hist.R` provides four functions (`bin_distance`, `plot_distance_hist`, `make_distance_histograms`, `summarise_distance`) sourced in R/122 SECTION 1. `ENC_TYPE` wired through SECTION 3 and SECTION 7. SECTION 12 fully replaced: 4 histogram PNGs written to `output/figures/`, per-patient `distance_patient_<date>.rds`, and a 6-sheet xlsx (KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC) with row-count reconciliation stopifnots. 26 unit tests (test-utils-distance-hist.R) + 152-02 zipcodeR-vs-haversine cross-check test (test-encounter-distance.R, skips locally).
@@ -422,4 +424,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-09 after Phase 167 (single-health-system-care-flag) completion — single_source_care flag from ENCOUNTER.SOURCE; SRC-01/02/03 verified.*
+*Last updated: 2026-10-09 after Phase 165 (distance-100mi-indicator-and-cbc-association) completion — Rao-Scott CBC association analysis; ACC-01–04 verified.*
