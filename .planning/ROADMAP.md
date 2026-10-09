@@ -20,7 +20,7 @@
 - ✅ **v3.2 Meeting Gap Resolution Report** - Phases 104-126 (shipped 2026-07-15)
 - ✅ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (shipped 2026-07-22)
 - ✅ **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (shipped 2026-07-25 — Pattern-A partial: R/23 receives pre-aggregated input; accepted limitation)
-- 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress — Phase 156 deferred; AM write-back outstanding)
+- ✅ **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (shipped — Phase 156 AM write-back dropped 2026-10-09; registration covered by Phase 169)
 - ✅ **v3.6 Treatment Episode Refinement** - Phase 157 (closed — delivered by Phase 142)
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
 
@@ -603,7 +603,7 @@ Plans:
 
 ### Phase 156: Analytic Manual Write-Back and Registration
 
-⏸ Deferred — Registration delivered by Phase 169; AM §4 Distance write-back and AM §3 D-01..D-06 rows outstanding.
+⊘ Dropped (2026-10-09) — Registration delivered by Phase 169. AM §4 Distance write-back scoped against a document that does not exist; REFERENCE_MANUAL in docs/ is the closest analogue but does not use the §3/§4 decision-row structure. No further action planned.
 
 **Goal:** AM §4 Distance block has no empty bullets — every rule corresponds to a named function or config value — and all six AM §3 decision rows (D-01..D-06) are populated; `R/122` and `utils_zip_calendar.R` are fully registered in the pipeline's discovery/validation infrastructure and the R/88 smoke test is green.
 **Requirements:** DIST-06, DIST-07
