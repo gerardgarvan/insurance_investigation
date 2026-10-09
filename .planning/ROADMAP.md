@@ -699,7 +699,7 @@ Plans:
 
 ## Phases (v3.7)
 
-- [ ] **Phase 165: Distance >100 mi Indicator and CBC Association** (2 plans) — Encounter-level `far_from_care_100mi`; methods memo to choose the test; then implement it
+- [x] **Phase 165: Distance >100 mi Indicator and CBC Association** (2 plans) — Encounter-level `far_from_care_100mi`; methods memo to choose the test; then implement it (completed 2026-10-09)
 - [x] **Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing** (TBD plans) — Per-person-year rates per modality; time/rate since last anthracycline for echo (completed 2026-10-08)
 - [x] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE (completed 2026-10-09)
 - [x] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (1/1 plans complete) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
@@ -727,7 +727,7 @@ Plans:
 2. `165-METHODS.md` compares the candidate tests and makes a recommendation; D-165-01 records the team's choice
 3. `distance_cbc_association_<date>.xlsx` has KEY (leftmost), A_crosstab and B_test (selected method: statistic, p, effect size, 95% CI, assumption checks), each with whole-record and post-anchor columns side by side, C_sensitivity, QC
 4. Crosstab totals reconcile to the QC denominator
-**Plans:** 2 (165-01 methods research memo; 165-02 implementation after D-165-01)
+**Plans:** 2/2 plans complete
 - [ ] 165-01-PLAN.md — `165-METHODS.md`: candidate test comparison, CBC operationalization, recommendation (Wave 1)
 - [ ] 165-02-PLAN.md — `far_from_care_100mi` indicator + `distance_cbc_association_<date>.xlsx` (Wave 2, after D-165-01)
 
@@ -819,7 +819,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 165. Distance >100 mi + CBC Association | 0/2 | Not started | |
+| 165. Distance >100 mi + CBC Association | 0/2 | Complete    | 2026-10-09 |
 | 166. Survivorship Modality Rates + Anthracycline-Echo | 4/4 | Complete   | 2026-10-08 |
 | 167. Single-Health-System Care Flag | 1/2 | Complete    | 2026-10-09 |
 | 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
