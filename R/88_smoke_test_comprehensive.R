@@ -6620,6 +6620,111 @@ if (length(wb_165_candidates) > 0L) {
 message(glue("\nSMOKE-165-01: {p165_pass} PASS / {p165_fail} FAIL"))
 
 # ==============================================================================
+# SECTION 15as: PHASE 163 — DIAGNOSIS EXCLUSION (SMOKE-163-01) ----
+# ==============================================================================
+
+p163_pass <- 0L
+p163_fail <- 0L
+p163_skip <- 0L
+p163_chk  <- function(label, ok) {
+  if (isTRUE(ok)) {
+    message(glue("  PASS  {label}"))
+    p163_pass <<- p163_pass + 1L
+    passed    <<- passed    + 1L
+  } else {
+    message(glue("  FAIL  {label}"))
+    p163_fail <<- p163_fail + 1L
+    failed    <<- failed    + 1L
+  }
+}
+p163_skip_note <- function(label, why) {
+  message(glue("  SKIP  {label} — {why}"))
+  p163_skip <<- p163_skip + 1L
+}
+
+message("\n--- Section 15as: Phase 163 DIAGNOSIS exclusion ---")
+
+r147_src_163 <- if (file.exists("R/147_surveillance_modality_frequency.R")) {
+  tryCatch(readLines("R/147_surveillance_modality_frequency.R"), error = function(e) character(0))
+} else character(0)
+
+# [1] EXCLUDED_CDM_TABLES is defined in R/147
+p163_chk(
+  "SMOKE-163-01 [1/4] EXCLUDED_CDM_TABLES <- defined in R/147",
+  any(grepl("EXCLUDED_CDM_TABLES\\s*<-", r147_src_163))
+)
+
+# [2] R/147 contains a stopifnot() that also references EXCLUDED_CDM_TABLES
+p163_chk(
+  "SMOKE-163-01 [2/4] stopifnot() referencing EXCLUDED_CDM_TABLES in R/147",
+  any(grepl("stopifnot", r147_src_163) & grepl("EXCLUDED_CDM_TABLES", r147_src_163))
+)
+
+# [3] & [4] Output checks — require a real INTERNAL workbook
+outputs_dir_163 <- if (exists("CONFIG") && !is.null(CONFIG$cache$outputs_dir)) {
+  CONFIG$cache$outputs_dir
+} else {
+  "output"
+}
+
+wb_163_candidates <- list.files(
+  outputs_dir_163,
+  pattern = "^surveillance_modality_frequency_INTERNAL_\\d{8}\\.xlsx$",
+  full.names = TRUE
+)
+
+if (length(wb_163_candidates) == 0) {
+  p163_skip_note("SMOKE-163-01 [3/4] A_code_presence has no DIAGNOSIS cell", "LOCAL run — no INTERNAL workbook found")
+  p163_skip_note("SMOKE-163-01 [4/4] Codeset_summary has no Z-code", "LOCAL run — no INTERNAL workbook found")
+} else {
+  wb_163_path <- wb_163_candidates[which.max(file.mtime(wb_163_candidates))]
+  message(glue("  NOTE  SMOKE-163-01 [3-4/4] Workbook found: {basename(wb_163_path)}"))
+
+  wb_163 <- tryCatch(openxlsx2::wb_load(wb_163_path), error = function(e) NULL)
+
+  if (!is.null(wb_163)) {
+    # [3] A_code_presence: no cell equal to "DIAGNOSIS" (case-insensitive)
+    # and none of SC039/SC047/SC065/SC090 (Z-code codeset IDs)
+    a_code_presence_163 <- tryCatch(
+      openxlsx2::wb_to_df(wb_163, sheet = "A_code_presence", col_names = TRUE),
+      error = function(e) NULL
+    )
+    if (!is.null(a_code_presence_163)) {
+      all_cells_a <- unlist(lapply(a_code_presence_163, as.character))
+      has_diag_cell <- any(grepl("^diagnosis$", all_cells_a, ignore.case = TRUE), na.rm = TRUE)
+      has_zcode_id  <- any(all_cells_a %in% c("SC039", "SC047", "SC065", "SC090"), na.rm = TRUE)
+      p163_chk(
+        "SMOKE-163-01 [3/4] A_code_presence: no DIAGNOSIS cell and no SC039/SC047/SC065/SC090",
+        !has_diag_cell && !has_zcode_id
+      )
+    } else {
+      p163_skip_note("SMOKE-163-01 [3/4] A_code_presence has no DIAGNOSIS cell", "A_code_presence sheet unreadable")
+    }
+
+    # [4] Codeset_summary: no Z-code anywhere (pattern: (^|[;,[:space:]])Z[0-9])
+    codeset_summary_163 <- tryCatch(
+      openxlsx2::wb_to_df(wb_163, sheet = "Codeset_summary", col_names = TRUE),
+      error = function(e) NULL
+    )
+    if (!is.null(codeset_summary_163)) {
+      all_cells_cs <- unlist(lapply(codeset_summary_163, as.character))
+      has_zcode <- any(grepl("(^|[;,[:space:]])Z[0-9]", all_cells_cs, perl = TRUE), na.rm = TRUE)
+      p163_chk(
+        "SMOKE-163-01 [4/4] Codeset_summary: no Z-code (pattern (^|[;,[:space:]])Z[0-9])",
+        !has_zcode
+      )
+    } else {
+      p163_skip_note("SMOKE-163-01 [4/4] Codeset_summary has no Z-code", "Codeset_summary sheet unreadable")
+    }
+  } else {
+    p163_skip_note("SMOKE-163-01 [3/4] A_code_presence has no DIAGNOSIS cell", "LOCAL run — workbook unreadable")
+    p163_skip_note("SMOKE-163-01 [4/4] Codeset_summary has no Z-code", "LOCAL run — workbook unreadable")
+  }
+}
+
+message(glue("\nSMOKE-163-01: {p163_pass} PASS / {p163_fail} FAIL / {p163_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -6767,6 +6872,7 @@ message("  * SMOKE-161-01: R/88 validates Phase 161 death-plausibility and no-ne
 message("  * SMOKE-166-01: R/88 validates Phase 166 survivorship modality rates + anthracycline-echo timing structural integrity: R/166/167/168 scripts exist, utils_surveillance_rates.R and utils_anthracycline_echo.R present, all 5 rate functions and 4 echo functions defined, both test-166-*.R files, all 3 scripts registered in R/39, literal event levels censored/echo/death, workbook sheet order KEY/A/B/C/QC when produced, parts files present when produced (Section 15ao, 12 checks)")
 message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episode subsets structural integrity: R/170 exists, all 7 helper functions defined, no quit(), col_types='text' for sheet read, tools::md5sum used, gantt_chemo_treatment_type referenced, registered in R/39, test file exists, sheet order KEY/NHL_only_episodes/HL_NHL_episodes/QC when workbook produced (Section 15aq, 9 checks)")
 message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
+message("  * SMOKE-163-01: R/88 validates Phase 163 DIAGNOSIS exclusion structural integrity: EXCLUDED_CDM_TABLES defined in R/147, stopifnot referencing it, A_code_presence has no DIAGNOSIS cell or Z-code IDs, Codeset_summary has no Z-code pattern (Section 15as, 4 checks; checks 3-4 skip in local runs without INTERNAL workbook)")
 
 if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
   quit(status = 1)
