@@ -37,6 +37,13 @@ new_rds_path <- file.path(out_dir, glue("surveillance_patient_modality_dates_{ru
 
 EXCLUDED_IDS  <- c("SC039", "SC047", "SC065", "SC090")
 CHANGED_MODS  <- c("Echocardiogram", "Electrocardiogram", "Mammogram", "Pulmonary function test")
+# RDS columns use abbreviated names; map each changed modality to its abbreviation
+CHANGED_MOD_ABBR <- c(
+  "Echocardiogram"          = "echo",
+  "Electrocardiogram"       = "ecg",
+  "Mammogram"               = "mammo",
+  "Pulmonary function test" = "pft"
+)
 
 # EXPECTED_DIFFS: check names that should SKIP instead of FAIL.
 # Phase 163 outcomes are all positively asserted — no checks need to be skipped.
@@ -466,29 +473,13 @@ run_check("RDS:changed_any_eq_primary", function() {
   if (!file.exists(new_rds_path)) return("FAIL — new RDS missing")
   new <- tryCatch(readRDS(new_rds_path), error = function(e) NULL)
   if (is.null(new)) return("FAIL — could not load new RDS")
-  norm <- function(x) tolower(gsub("[^a-z0-9]", "", x))
-  norm_names <- setNames(vapply(names(new), norm, character(1)), names(new))
-  any_cols   <- grep("_any$", names(new), value = TRUE)
   fails <- character(0)
   for (mod in CHANGED_MODS) {
-    norm_mod <- norm(mod)
-    # Find primary column: normalised name contains norm_mod and column name doesn't end in _any
-    prim_col <- names(norm_names)[grepl(norm_mod, norm_names, fixed = TRUE) & !grepl("_any$", names(norm_names))]
-    if (length(prim_col) == 0) {
-      fails <- c(fails, glue("'{mod}': primary column not found (norm='{norm_mod}'; available: {paste(names(new), collapse=',')})"))
-      next
-    }
-    prim_col <- prim_col[1]
-    # Derive _any column: try appending _any first, then fall back to normalisation search
-    any_col <- paste0(prim_col, "_any")
-    if (!any_col %in% names(new)) {
-      cand <- any_cols[vapply(any_cols, function(cn) grepl(norm_mod, norm(cn), fixed = TRUE), logical(1))]
-      if (length(cand) == 0) {
-        fails <- c(fails, glue("'{mod}': _any column not found (tried '{any_col}' and normalisation)"))
-        next
-      }
-      any_col <- cand[1]
-    }
+    abbr     <- CHANGED_MOD_ABBR[[mod]]
+    prim_col <- paste0("n_dates_", abbr)
+    any_col  <- paste0("n_dates_", abbr, "_any")
+    if (!prim_col %in% names(new)) { fails <- c(fails, glue("'{mod}': column '{prim_col}' not found")); next }
+    if (!any_col  %in% names(new)) { fails <- c(fails, glue("'{mod}': column '{any_col}' not found"));  next }
     eq <- all.equal(new[[any_col]], new[[prim_col]], check.attributes = FALSE)
     if (!isTRUE(eq)) fails <- c(fails, glue("'{mod}': {any_col} != {prim_col}"))
   }
@@ -508,10 +499,10 @@ run_check("RDS:unaffected_any_eq_ref", function() {
   if (is.na(key)) return("FAIL — ID column not found")
   ord  <- function(d) { d <- as.data.frame(d); d[order(d[[key]]), , drop = FALSE] }
   ref_s <- ord(ref); new_s <- ord(new)
-  norm  <- function(x) tolower(gsub("[^a-z0-9]", "", x))
   all_any <- grep("_any$", names(new_s), value = TRUE)
-  changed_norm <- sapply(CHANGED_MODS, norm)
-  unaffected_any <- all_any[!sapply(all_any, function(c) any(sapply(changed_norm, function(n) grepl(n, norm(c)))))]
+  # Exclude _any columns belonging to CHANGED_MODS (identified by abbreviation map)
+  changed_any_cols <- paste0("n_dates_", unname(CHANGED_MOD_ABBR), "_any")
+  unaffected_any   <- setdiff(all_any, changed_any_cols)
   if (length(unaffected_any) == 0) return("SKIP — no unaffected _any columns found")
   shared <- intersect(unaffected_any, names(ref_s))
   if (length(shared) == 0) return("SKIP — unaffected _any columns not in ref RDS")
