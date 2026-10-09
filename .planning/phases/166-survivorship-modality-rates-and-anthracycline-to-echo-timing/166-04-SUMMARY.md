@@ -66,8 +66,8 @@ SCRIPT_INDEX.md: added 3 new rows for R/166, R/167, R/168; updated post-renumber
 |------|------|--------|--------|
 | 1 | R/168_survivorship_workbook.R | COMPLETE | 9880fb3 |
 | 2 | Registration + SLURM wrapper | COMPLETE | b0c08f6, 70f4846 |
-| 3 | Run on HiPerGator | PENDING (checkpoint:human-action) | — |
-| 4 | Review the workbook | PENDING (checkpoint:human-verify) | — |
+| 3 | Run on HiPerGator | COMPLETE | 755249c, 8ebfb36, 4306a20 |
+| 4 | Review the workbook | COMPLETE (approved 2026-10-08) | — |
 
 ## Deviations from Plan
 
@@ -81,7 +81,7 @@ SCRIPT_INDEX.md: added 3 new rows for R/166, R/167, R/168; updated post-renumber
 
 None. R/168 reads all data from parts files produced by R/166 and R/167 at runtime; no hardcoded empty values or placeholders.
 
-## Self-Check: PARTIAL
+## Self-Check: COMPLETE
 
 Files created/modified:
 - FOUND: R/168_survivorship_workbook.R ✓ (committed 9880fb3)
@@ -90,4 +90,9 @@ Files created/modified:
 - FOUND: R/88 modifications ✓ (committed b0c08f6)
 - FOUND: SCRIPT_INDEX.md modifications ✓ (committed b0c08f6)
 
-HiPerGator run (Tasks 3-4): PENDING — checkpoint returned to user. Final verification artifacts (test summaries, QC reconciliation result, SMOKE-166-01 footer) will be produced on HiPerGator.
+HiPerGator run (2026-10-08): 166 → 1,054,151 dated events (8,623 patients, 14 modalities); 167 → 12,026 echo events, 4 variants (primary/sens_ever/sens_dox_only/sens_mitox); 168 → survivorship_modality_rates_20261008.xlsx produced. Workbook approved by user.
+
+Bug fixes applied during HiPerGator run:
+- 755249c: add cdm_table col to lab_events_in (map_analyte_hits join key missing)
+- 8ebfb36: include followup in out_list so R/167 can extract hl_anchor_date/follow_end
+- 4306a20: extract rate_summary from C_anthracycline_echo list for nrow() check
