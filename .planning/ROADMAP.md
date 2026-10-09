@@ -704,7 +704,7 @@ Plans:
 - [ ] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE
 - [x] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (1/1 plans complete) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
   - [x] 168-01-PLAN.md — CONFIG keys + R/170_nhl_gantt_subsets.R: load/validate, classify Group 1/2, join E-J, workbook+CSVs, HiPerGator run (849 G1 / 176 G2 / 0 overlap; 9 PASS SMOKE-168-01)
-- [ ] **Phase 169: Registration, Smoke Test, and HiPerGator Run** (TBD plans) — R/39, R/88, SCRIPT_INDEX for 165-168; real-data run
+- [x] **Phase 169: Registration, Smoke Test, and HiPerGator Run** (1/1 plans complete) — R/165 registered, SMOKE-165-01 15 PASS/0 FAIL, four workbooks dated 20261008
 
 ## Phase Details (v3.7)
 
@@ -813,7 +813,7 @@ Plans:
 2. R/88 gains a section with structural checks per script (file existence, output sheet names, KEY leftmost, binary columns 0/1 only, no fan-out row-count checks)
 3. R/88 passes on HiPerGator (`module load R/4.5`); all four workbooks re-issued with a post-merge run date
 **Plans:** 1
-- [ ] 169-01-PLAN.md — R/39 + SCRIPT_INDEX registration (R/163 one-off, R/165 before R/166); SMOKE-165-01 SECTION 15ar (15 checks: 10 always-on + 5 output-gated); test-165 with 4 real test cases; memo-fix verification + KEY pending-confirmation note; HiPerGator sbatch chain (165→166→167→168→88) + paste-back
+- [x] 169-01-PLAN.md — R/39 + SCRIPT_INDEX registration (R/163 one-off, R/165 before R/166); SMOKE-165-01 SECTION 15ar (15 checks: 10 always-on + 5 output-gated); test-165 with 4 real test cases; memo-fix verification + KEY pending-confirmation note; HiPerGator sbatch chain (165→168→88) + paste-back (SMOKE-165-01: 15 PASS / 0 FAIL; 4 workbooks 20261008)
 
 ## Progress (v3.7)
 
@@ -823,4 +823,4 @@ Plans:
 | 166. Survivorship Modality Rates + Anthracycline-Echo | 4/4 | Complete   | 2026-10-08 |
 | 167. Single-Health-System Care Flag | 1/2 | In Progress|  |
 | 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
-| 169. Registration, Smoke Test, HiPerGator | 0/TBD | Not started | |
+| 169. Registration, Smoke Test, HiPerGator | 1/1 | Complete | 2026-10-08 |
