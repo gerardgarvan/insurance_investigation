@@ -812,7 +812,7 @@ Plans:
 1. New scripts appear in `R/39_run_all_investigations.R` (dependency order) and `R/SCRIPT_INDEX.md`
 2. R/88 gains a section with structural checks per script (file existence, output sheet names, KEY leftmost, binary columns 0/1 only, no fan-out row-count checks)
 3. R/88 passes on HiPerGator (`module load R/4.5`); all four workbooks re-issued with a post-merge run date
-**Plans:** 1
+**Plans:** 1/1 plans complete
 - [x] 169-01-PLAN.md — R/39 + SCRIPT_INDEX registration (R/163 one-off, R/165 before R/166); SMOKE-165-01 SECTION 15ar (15 checks: 10 always-on + 5 output-gated); test-165 with 4 real test cases; memo-fix verification + KEY pending-confirmation note; HiPerGator sbatch chain (165→168→88) + paste-back (SMOKE-165-01: 15 PASS / 0 FAIL; 4 workbooks 20261008)
 
 ## Progress (v3.7)
@@ -823,4 +823,4 @@ Plans:
 | 166. Survivorship Modality Rates + Anthracycline-Echo | 4/4 | Complete   | 2026-10-08 |
 | 167. Single-Health-System Care Flag | 1/2 | In Progress|  |
 | 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
-| 169. Registration, Smoke Test, HiPerGator | 1/1 | Complete | 2026-10-08 |
+| 169. Registration, Smoke Test, HiPerGator | 1/1 | Complete    | 2026-10-09 |
