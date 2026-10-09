@@ -171,6 +171,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Current State
 
+**Phase 167 complete (2026-10-09):** Single-Health-System Care Flag. `R/169_single_source_care.R` produces patient-level `single_source_care` and `single_source_care_post` binary flags from DuckDB ENCOUNTER.SOURCE (NULLIF/UPPER/TRIM normalisation; blanks excluded from n_sources, counted in QC). Delivers `output/internal/single_source_care_<date>.csv` + `.rds` (joinable by ID) and `output/single_source_care_<date>.xlsx` (KEY/A_summary/B_post_anchor/QC sheets with encounter-band crosstab, 4+ n_sources cap, complementary suppression, blank-SOURCE sensitivity row). Registered in R/39, SMOKE-167-01 in R/88, SLURM wrapper at slurm/167_single_source_care.sbatch. Verified passed (5/5 must-haves; SRC-01/02/03 satisfied).
+
 **Phase 154 complete (2026-09-18):** Distribution and histogram deliverable. `R/utils/utils_distance_hist.R` provides four functions (`bin_distance`, `plot_distance_hist`, `make_distance_histograms`, `summarise_distance`) sourced in R/122 SECTION 1. `ENC_TYPE` wired through SECTION 3 and SECTION 7. SECTION 12 fully replaced: 4 histogram PNGs written to `output/figures/`, per-patient `distance_patient_<date>.rds`, and a 6-sheet xlsx (KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC) with row-count reconciliation stopifnots. 26 unit tests (test-utils-distance-hist.R) + 152-02 zipcodeR-vs-haversine cross-check test (test-encounter-distance.R, skips locally).
 
 **Phase 137 complete (2026-07-25):** ZIP9 temporal lookup utility and investigation script. `R/utils/utils_address.R` provides `normalize_zip9()`, `normalize_zip5()`, `normalize_zip5_raw()`, and `get_zip9_at_date(ids, dates)` — a pure-function module auto-loaded by `R/00_config.R`. `R/114_zip9_temporal_lookup.R` validates `get_zip9_at_date()` with a sample call, computes per-patient address timeline diagnostics (gaps, overlaps, open-ended periods), and appends an "Address Timeline Diagnostics" sheet to `output/zip_change_frequency.xlsx` via `wb_load`. Registered in R/39, R/88 Section 15ab, and SCRIPT_INDEX.md. This is the last phase in the current roadmap.
@@ -420,4 +422,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-18 after Phase 154 (distribution-and-histogram-deliverable) completion — CONFIRM-01: clean_multi_value/union_field extracted to R/utils/utils_format.R (three-way duplication eliminated); CONFIRM-02: _VALID flag confirmed informational-only (Branch B, no data drop), date_range_max comment clarified.*
+*Last updated: 2026-10-09 after Phase 167 (single-health-system-care-flag) completion — single_source_care flag from ENCOUNTER.SOURCE; SRC-01/02/03 verified.*
