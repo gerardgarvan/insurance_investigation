@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.4
-milestone_name: below)
-status: executing
-stopped_at: Phase 168 planned — 1 plan ready to execute
-last_updated: "2026-10-09T01:07:31.360Z"
-last_activity: 2026-10-09
+milestone: v3.7
+milestone_name: Access, Survivorship Rates & NHL Episode Subsets
+status: complete
+stopped_at: "Roadmap cleanup 2026-10-08 — v3.3/v3.4/v3.6 closed; v3.5 Phase 156 deferred (AM write-back outstanding); 3 phases marked superseded (155→165, 157→142); 19 stale plan checkboxes corrected; Phase 151 added as deferred"
+last_updated: "2026-10-08T00:00:00.000Z"
+last_activity: 2026-10-08
 progress:
-  total_phases: 157
-  completed_phases: 137
+  total_phases: 169
+  completed_phases: 154
   total_plans: 302
   completed_plans: 307
 ---
@@ -21,12 +21,12 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 165 — distance-100mi-indicator-and-cbc-association
+**Current focus:** v3.7 complete. Next outstanding work: Phase 156 (AM §4 Distance write-back, AM §3 D-01..D-06 rows) — deferred; Phase 151 (per-patient ZIP problem inventory) — deferred.
 
 ## Current Position
 
-Phase: 166
-Plan: Not started
+Phase: v3.7 complete (Phases 165–169 all shipped 2026-10-08/09)
+Plan: N/A — roadmap cleanup applied 2026-10-08
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 

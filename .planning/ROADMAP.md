@@ -18,10 +18,10 @@
 - ✅ **v3.0 data.table Infrastructure** - Phases 95-99 (shipped 2026-06-11)
 - ✅ **v3.1 Meeting Gap Closure — Clinical Data Coverage** - Phases 100-103 (shipped 2026-06-12)
 - ✅ **v3.2 Meeting Gap Resolution Report** - Phases 104-126 (shipped 2026-07-15)
-- ⏸️ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (open, deferred alongside v3.4 pending HiPerGator verification)
-- 🔄 **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (in progress)
-- 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress)
-- ⏳ **v3.6 Treatment Episode Refinement** - Phase 157 (planned)
+- ✅ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (shipped 2026-07-22)
+- ✅ **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (shipped 2026-07-25)
+- 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress — Phase 156 deferred; AM write-back outstanding)
+- ✅ **v3.6 Treatment Episode Refinement** - Phase 157 (closed — delivered by Phase 142)
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
 
 ## Phases
@@ -43,7 +43,7 @@ See MILESTONES.md for full details on all shipped milestones.
 
 </details>
 
-### ⏸️ v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (Open, deferred — see v3.4 below)
+### ✅ v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (Shipped 2026-07-22)
 
 **Milestone Goal:** Identify the non-malignant diagnoses that rituximab and methotrexate treat (autoimmune, inflammatory, hematologic), add them as a new diagnosis-of-interest (DoI) class distinct from the cancer cascade, and use them to disambiguate treatment attribution — flagging when a patient's rituximab/MTX co-occurs with a non-lymphoma condition. The cancer cascade and all existing outputs are read-only throughout.
 
@@ -149,7 +149,7 @@ See MILESTONES.md for full details on all shipped milestones.
   3. HiPerGator runtime is confirmed: R/111 executes against the real DIAGNOSIS table, DoI category counts are logged (RA expected to dominate; NMO and pemphigus expected rare), and the confirmation is explicitly recorded in phase transition notes (not prose-only attestation)
 **Plans**: 2 plans
 - [x] 130-01-PLAN.md — Register R/111 (classification) + R/112 (attribution) in R/39 (dependency order) + expected_xlsx; add two SCRIPT_INDEX.md rows + tally [DOI-QA-01] (Wave 1)
-- [ ] 130-02-PLAN.md — R/88 Section 15w DoI validation (mutual-exclusivity hard-stop + IS_LOCAL-gated runtime) + SMOKE-130-01; HiPerGator runtime human-verify checkpoint with logged DoI counts [DOI-QA-02, DOI-QA-03] (Wave 1)
+- [x] 130-02-PLAN.md — R/88 Section 15w DoI validation (mutual-exclusivity hard-stop + IS_LOCAL-gated runtime) + SMOKE-130-01; HiPerGator runtime human-verify checkpoint with logged DoI counts [DOI-QA-02, DOI-QA-03] (Wave 1)
 
 ## Progress
 
@@ -158,7 +158,7 @@ See MILESTONES.md for full details on all shipped milestones.
 | 127. Code-Set and Infrastructure | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 128. DoI Classification | v3.3 | 2/2 | Complete    | 2026-07-15 |
 | 129. Attribution Linkage and Output | v3.3 | 2/2 | Complete    | 2026-07-16 |
-| 130. Registration, Smoke Test, HiPerGator | v3.3 | 2/2 | Complete | 2026-07-22 |
+| 130. Registration, Smoke Test, HiPerGator | v3.3 | 2/2 | Complete | 2026-07-22 | ✓ Section 15w + HiPerGator DoI counts confirmed |
 | 131. All-Codes-Resolved MED_ADMIN/DISPENSING + Medication Column | 4/4 | Complete   | 2026-07-22 |  |
 
 ### Phase 131: Update all_codes_resolved.xlsx to include MED_ADMIN NDC-resolved codes and a normalized drug-name column
@@ -267,7 +267,7 @@ See MILESTONES.md for full details on all shipped milestones.
   2. `R/81` no longer coerces types before `waldo::compare()`, so genuine type divergence between DuckDB and RDS outputs is detectable
   3. `R/82`/`R/83`'s speedup check benchmarks all 5 scripts (not 1) before evaluating the "≥3× on 3 of 5" claim; `R/88` separates skip counts from pass counts and its `cause_of_death` check fails when the value is genuinely absent
   4. `R/96_validate_payer_dt`'s FLM-override fixture starts from a non-Medicaid state so the override path is provably exercised; `R/98_validate_r28_migration` compares against an independently-generated baseline instead of a copy of its own output
-**Plans**: TBD
+**Plans**: complete — R/03 verified: stop() on write failure (line 139), setequal before promotion (line 349), real per-table counts (line 418). No separate plan files generated.
 
 ### Phase 135: Shared-Helper Standardization
 **Goal**: The 7 recurring cross-cutting bug patterns still in scope are fixed once at the shared-helper layer, so they stop recurring script-by-script
@@ -289,7 +289,7 @@ See MILESTONES.md for full details on all shipped milestones.
   3. Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or `^C|^D[0-4]`) instead of the over-inclusive `^[CD]`
   4. External-API calls in `R/21`, `R/27`, `R/105`, `R/108` classify transient errors separately from genuine "not found," retry transient errors, and never persist a transient failure as a permanent miss
   5. In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` is hardened so newly-discovered codes are never silently dropped; `R/53` gets a death-before-birth guard and `R/14`/`R/31`/`R/93` use NA-safe `min_or_na`/`max_or_na` consistently; `R/56`, `R/57_explore_dx_deduplication`, `R/62`, and `R/67`'s grain-mislabeled columns are renamed or re-aggregated to match their documented grain
-**Plans**: TBD
+**Plans**: 6/7 patterns complete — Pattern-A partial (R/23 receives pre-aggregated data without raw IDs; upstream constraint documented; R/50 and all other consumers fully implement n_distinct). No separate plan files generated.
 
 ### Phase 136: Confirm Loose Ends
 **Goal**: The review's two flagged unknowns are resolved with a documented answer, not left as open questions
@@ -304,7 +304,7 @@ See MILESTONES.md for full details on all shipped milestones.
   1. The actual file/line definitions of `suppress_small()`, `clean_multi_value()`, and `union_field()` are located and documented; each is confirmed to load correctly in every script/module that calls it
   2. `CONFIG$analysis$date_range_max` is reconciled against the 20250915 extract cutoff, with an explicit finding on whether Apr-Sep 2025 encounters/deaths were being dropped
   3. If criterion 2 finds real data being dropped, `R/01`'s date validation bound is corrected; if not, the finding documents why 2025-03-31 is intentional and no data is lost
-**Plans**: TBD
+**Plans**: complete — date_range_max (2025-03-31) verified informational-only (flag, not filter); no Apr-Sep 2025 records dropped; documented in R/00_config.R comments and R/01_load_pcornet.R CONFIRM-02 block. No separate plan files generated.
 
 ### Phase 137: ZIP9 Temporal Assignment
 **Goal**: A shared utility `get_zip9_at_date()` exists that resolves any patient's ZIP9/ZIP5 at any query date using interval overlap with a most-recent-before fallback — ready for consumption by future SES-index phases without duplicated logic
@@ -335,9 +335,9 @@ See MILESTONES.md for full details on all shipped milestones.
 |-------|-----------|----------------|--------|-----------|
 | 132. Crash Fixes | v3.4 | 4/4 | Complete    | 2026-07-25 |
 | 133. Critical Correctness Fixes | v3.4 | 1/1 | Complete    | 2026-07-25 |
-| 134. Ingest Integrity and Honest Tests | v3.4 | TBD | Complete    | 2026-07-25 |
-| 135. Shared-Helper Standardization | v3.4 | 5/7 | Complete    | 2026-07-25 |
-| 136. Confirm Loose Ends | v3.4 | 2/2 | Complete    | 2026-07-25 |
+| 134. Ingest Integrity and Honest Tests | v3.4 | complete | Complete    | 2026-07-25 |
+| 135. Shared-Helper Standardization | v3.4 | 6/7 (Pattern-A partial — upstream constraint in R/23 documented) | Complete    | 2026-07-25 |
+| 136. Confirm Loose Ends | v3.4 | complete | Complete    | 2026-07-25 |
 | 137. ZIP9 Temporal Assignment | standalone | 2/2 | Complete    | 2026-07-25 |
 
 ### Phase 138: resolve log2.txt problems
@@ -429,8 +429,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 142-01-PLAN.md — Add vinblastine sulfate alias to DRUG_NAME_ALIASES in R/00_config.R; audit bleomycin, vincristine, dacarbazine salt variants [EP-DEDUP-01] (Wave 1)
-- [ ] 142-02-PLAN.md — Extend R/26 to produce treatment_episodes_180.rds + treatment_episode_detail_180.rds (Section 5C); create R/142_gantt_180_export.R writing gantt_episodes_180.csv + gantt_detail_180.csv with same 20/14-column schema as R/52 [EP-180-01, EP-180-02] (Wave 2, depends on 142-01)
+- [x] 142-01-PLAN.md — Add vinblastine sulfate alias to DRUG_NAME_ALIASES in R/00_config.R; audit bleomycin, vincristine, dacarbazine salt variants [EP-DEDUP-01] (Wave 1)
+- [x] 142-02-PLAN.md — Extend R/26 to produce treatment_episodes_180.rds + treatment_episode_detail_180.rds (Section 5C); create R/142_gantt_180_export.R writing gantt_episodes_180.csv + gantt_detail_180.csv with same 20/14-column schema as R/52 [EP-180-01, EP-180-02] (Wave 2, depends on 142-01)
 
 ### Phase 143: 180-Day File: Enrichment Parity and Review Follow-ups
 
@@ -440,9 +440,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 143-01-PLAN.md -- D-01 decision checkpoint (boundaries vs content); read-only discovery: producer disposition table, 90-day fill rates, death anomaly, patient-count reconciliation -> 143-DISCOVERY.md [EP-180-DISC-01] (Wave 1)
-- [ ] 143-02-PLAN.md -- Parameterise R/28 (EPISODES_RDS_PATH / OUT_SUFFIX options, fix episode_number join keys); verify 90-day byte-identity; run 180-day enrichment pass on HiPerGator [EP-180-ENRICH-01, EP-180-ENRICH-02] (Wave 2, depends on 143-01, D-01b path only)
-- [ ] 143-03-PLAN.md -- Wire enrichment join into R/142 or drop blank columns (D-01a/D-01b); write output/gantt_180_README.txt with episode rule + observed maxima; update 142-CONTEXT.md D-01 [EP-180-EXPORT-01, EP-180-DOC-01] (Wave 3, depends on 143-01 and 143-02)
+- [x] 143-01-PLAN.md -- D-01 decision checkpoint (boundaries vs content); read-only discovery: producer disposition table, 90-day fill rates, death anomaly, patient-count reconciliation -> 143-DISCOVERY.md [EP-180-DISC-01] (Wave 1)
+- [x] 143-02-PLAN.md -- Parameterise R/28 (EPISODES_RDS_PATH / OUT_SUFFIX options, fix episode_number join keys); verify 90-day byte-identity; run 180-day enrichment pass on HiPerGator [EP-180-ENRICH-01, EP-180-ENRICH-02] (Wave 2, depends on 143-01, D-01b path only)
+- [x] 143-03-PLAN.md -- Wire enrichment join into R/142 or drop blank columns (D-01a/D-01b); write output/gantt_180_README.txt with episode rule + observed maxima; update 142-CONTEXT.md D-01 [EP-180-EXPORT-01, EP-180-DOC-01] (Wave 3, depends on 143-01 and 143-02)
 
 ### Phase 144: Centroid ZIP9 Imputation, ZIP9-Level SDI, and Areal-Mean SDI
 
@@ -477,11 +477,11 @@ Plans:
 
 Plans:
 - [x] 146-01-PLAN.md — Discovery: verify SDI/SVI/ADI publications, network policy, sentinel-ZIP + normalizer-disagreement probes -> 146-DISCOVERY.md (Wave 1, autonomous)
-- [ ] 146-02-PLAN.md — Human-action gate: D-02 (SVI method), ADI registration (P-03a), per-file redistribution rights (Wave 2)
-- [ ] 146-03-PLAN.md — Stage SDI at data/reference/zip5_sdi_reference.csv + quantify ZIP5-with-no-ZCTA haircut + D-01 label (Wave 3)
-- [ ] 146-04-PLAN.md — Derive SVI: R/147_build_svi_zcta.R + svi_2020_zcta_derived.csv with coverage floor (D-02a), or record drop (D-02c) (Wave 3)
-- [ ] 146-05-PLAN.md — Wire R/116 to staged files + §4 ceiling sheet + rewrite README (derived SVI, D-01 SDI, 77.7% ADI) (Wave 4)
-- [ ] 146-06-PLAN.md — HiPerGator re-run: R/116 + R/88 + sentinel-ZIP/SDI-unmatched queries against real data (Wave 5)
+- [x] 146-02-PLAN.md — Human-action gate: D-02 (SVI method), ADI registration (P-03a), per-file redistribution rights (Wave 2)
+- [x] 146-03-PLAN.md — Stage SDI at data/reference/zip5_sdi_reference.csv + quantify ZIP5-with-no-ZCTA haircut + D-01 label (Wave 3)
+- [x] 146-04-PLAN.md — Derive SVI: R/147_build_svi_zcta.R + svi_2020_zcta_derived.csv with coverage floor (D-02a), or record drop (D-02c) (Wave 3)
+- [x] 146-05-PLAN.md — Wire R/116 to staged files + §4 ceiling sheet + rewrite README (derived SVI, D-01 SDI, 77.7% ADI) (Wave 4)
+- [x] 146-06-PLAN.md — HiPerGator re-run: R/116 + R/88 + sentinel-ZIP/SDI-unmatched queries against real data (Wave 5)
 
 ### Phase 147: Read ADDRESS_ZIP5 and retract downstream artefacts
 
@@ -491,10 +491,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 147-01-PLAN.md — Discovery: column audit, 2x2 table, 12-row disagreement print, 148-DISCOVERY.md (Wave 1)
-- [ ] 147-02-PLAN.md — Code fix: get_zip9_at_date() ADDRESS_ZIP5 coalesce, guard, fixture extension, new test (Wave 2)
-- [ ] 147-03-PLAN.md — HiPerGator re-run: archive pre-148 outputs, R/115 → R/116 → R/88, fill before/after table (Wave 3, checkpoint)
-- [ ] 147-04-PLAN.md — Retraction: annotate six affected conclusions, update README.md (Wave 4)
+- [x] 147-01-PLAN.md — Discovery: column audit, 2x2 table, 12-row disagreement print, 148-DISCOVERY.md (Wave 1)
+- [x] 147-02-PLAN.md — Code fix: get_zip9_at_date() ADDRESS_ZIP5 coalesce, guard, fixture extension, new test (Wave 2)
+- [x] 147-03-PLAN.md — HiPerGator re-run: archive pre-148 outputs, R/115 → R/116 → R/88, fill before/after table (Wave 3, checkpoint)
+- [x] 147-04-PLAN.md — Retraction: annotate six affected conclusions, update README.md (Wave 4)
 
 ### Phase 148: Centroid ZIP9 Crosswalk (Tier 3)
 
@@ -505,9 +505,9 @@ Plans:
 
 Plans:
 - [x] 148-01-PLAN.md — Gate decision (D-01: build), D-05/D-02/D-03 answers, 148-DISCOVERY.md, R/118_build_centroid_crosswalk.R (Wave 1, autonomous)
-- [ ] 148-02-PLAN.md — HiPerGator: run R/118, produce zip5_adi_summary.csv, record D-04(a) (Wave 2, checkpoint)
-- [ ] 148-03-PLAN.md — Wire utils_address.R + R/116, archive pre-148 outputs, re-run R/116 + R/88, record D-04(b/c) (Wave 3, checkpoint)
-- [ ] 148-04-PLAN.md — Fill D-04 figures into DISCOVERY.md + README.md, commit Phase 148 (Wave 4, autonomous)
+- [x] 148-02-PLAN.md — HiPerGator: run R/118, produce zip5_adi_summary.csv, record D-04(a) (Wave 2, checkpoint)
+- [x] 148-03-PLAN.md — Wire utils_address.R + R/116, archive pre-148 outputs, re-run R/116 + R/88, record D-04(b/c) (Wave 3, checkpoint)
+- [x] 148-04-PLAN.md — Fill D-04 figures into DISCOVERY.md + README.md, commit Phase 148 (Wave 4, autonomous)
 
 ### Phase 149: Close the ZIP Residue: Sentinel ZIPs, ADI State Coverage, Phase 148 Closure
 
@@ -517,8 +517,7 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [x] TBD (run /gsd:plan-phase 149 to break down)
- (completed 2026-08-21)
+- [x] 149-01-PLAN.md, 149-02-PLAN.md, 149-03-PLAN.md — 3/3 complete (VERIFICATION.md confirmed; completed 2026-08-21)
 
 ### Phase 150: ZIP5-Missing but ZIP9-Elsewhere: Patient Count and First-5 Concordance Check
 
@@ -528,7 +527,16 @@ Plans:
 **Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 150-01-PLAN.md — R/120_zip5_backfill_concordance.R: load LDS_ADDRESS_HISTORY, compute 4 patient-level counts (missing-ZIP5 patients, ZIP9-elsewhere, concordant/discordant/no-compare), concordance rate + interpretation; register in R/39 + R/88 Section 15af + SCRIPT_INDEX.md; HiPerGator run checkpoint [ZIP5-BACKFILL-01] (Wave 1)
+- [x] 150-01-PLAN.md — R/120_zip5_backfill_concordance.R: load LDS_ADDRESS_HISTORY, compute 4 patient-level counts (missing-ZIP5 patients, ZIP9-elsewhere, concordant/discordant/no-compare), concordance rate + interpretation; register in R/39 + R/88 Section 15af + SCRIPT_INDEX.md; HiPerGator run checkpoint [ZIP5-BACKFILL-01] (Wave 1)
+
+### Phase 151: Per-Patient ZIP Problem Inventory
+
+⏸ Deferred — R/121_zip_problem_inventory.R scaffolded; plan and context exist but no SUMMARY file confirming execution.
+
+**Goal:** Produce a per-patient roster with one row per patient ID and flags for every ZIP-related problem that patient exhibits (address coverage, sentinel ZIPs, concordance issues) and a triage category, turning Phase 150's aggregate counts into an addressable patient list.
+**Depends on:** Phase 150
+**Plans:** 0/1 executed
+- [ ] 151-01-PLAN.md — per-patient ZIP flag table + triage categories (1,128/701/427/152/19/12 groups from Phase 150 as addressable lists) + R/121 registration (Wave 1)
 
 ### Phase 152: Encounter-ZIP to Residence Distance
 
@@ -541,7 +549,7 @@ Plans:
 - [x] 152-01-PLAN.md — Add haversine_km() + get_zip_centroid() helpers to utils_address.R, CONFIG paths, test-122-distance.R
 - [x] 152-02-PLAN.md — R/122 SECTION 1-7: encounter pull (FACILITY_LOCATION), residence resolution, centroid resolution, distance compute
 - [x] 152-03-PLAN.md — R/122 SECTION 8-12: summaries, QC waterfall, xlsx+rds; register in R/39/R/88/SCRIPT_INDEX; HiPerGator run checkpoint
-- [ ] 152-04-PLAN.md — GAP CLOSURE: replace vroom::vroom(bg_path) with DuckDB filtered read in get_zip_centroid() ZIP9 branch
+- [x] 152-04-PLAN.md — GAP CLOSURE: replace vroom::vroom(bg_path) with DuckDB filtered read in get_zip_centroid() ZIP9 branch
 - [x] 152-05-PLAN.md — GAP CLOSURE: add CONFIG$adi_zip9_parquet and CONFIG$tiger_bg_dir to R/00_config.R
 
 ### Phase 153: Patient ZIP Calendar and Best-ZIP Selection
@@ -551,8 +559,8 @@ Plans:
 **Depends on:** Phase 152
 **Plans:** 3/3 plans complete
 - [x] 153-01-PLAN.md — Create R/utils/utils_zip_calendar.R (build_patient_zip_calendar, pick_best_zip, compute_encounter_distance; AM rules 2-3, D-04 two-zone ranking)
-- [ ] 153-02-PLAN.md — Wire compute_encounter_distance() into R/122 SECTION 4 + completeness waterfall sheet + SCRIPT_INDEX registration
-- [ ] 153-03-PLAN.md — Unit tests (test-utils-zip-calendar.R) + R/88 Section 15ai structural checks
+- [x] 153-02-PLAN.md — Wire compute_encounter_distance() into R/122 SECTION 4 + completeness waterfall sheet + SCRIPT_INDEX registration
+- [x] 153-03-PLAN.md — Unit tests (test-utils-zip-calendar.R) + R/88 Section 15ai structural checks
 
 **Success Criteria:**
 1. `zip5_patient_source` is in {in_range_zip9, in_range_zip5, nearest_zip9, nearest_zip5} for every encounter row; `days_offset` is a signed integer
@@ -575,10 +583,12 @@ Plans:
 
 ### Phase 155: Binary Indicator and Cutoff Memo
 
+⊘ Superseded by Phase 165 (2026-10-09) — Team chose >100 mi (2026-10-08); Phase 165 delivered `far_from_care_100mi` and the CBC association workbook. 155's remaining items (sensitivity sweep sheet, PNG cutoff lines, cutoff memo) dropped as no longer needed.
+
 **Goal:** `far_from_care` (0/1) exists in all output rows when `CONFIG$distance_cutoff_mi` is set (default NA — indicator not emitted until set), and `docs/distance_cutoff_memo.md` gives Amy/Erin the distribution-based, literature-based, and sensitivity candidates they need to make the call.
 **Requirements:** DIST-05
 **Depends on:** Phase 154
-**Plans:** 3 plans
+**Plans:** 3 plans (not executed — superseded)
 
 Plans:
 - [ ] 155-01-PLAN.md — CONFIG gate + far_from_care indicator + E_binary_by_cutoff sheet + histogram dotted lines
@@ -594,6 +604,8 @@ Plans:
 
 ### Phase 156: Analytic Manual Write-Back and Registration
 
+⏸ Deferred — Registration delivered by Phase 169; AM §4 Distance write-back and AM §3 D-01..D-06 rows outstanding.
+
 **Goal:** AM §4 Distance block has no empty bullets — every rule corresponds to a named function or config value — and all six AM §3 decision rows (D-01..D-06) are populated; `R/122` and `utils_zip_calendar.R` are fully registered in the pipeline's discovery/validation infrastructure and the R/88 smoke test is green.
 **Requirements:** DIST-06, DIST-07
 **Depends on:** Phases 152-155
@@ -606,6 +618,8 @@ Plans:
 4. R/88 smoke test passes on HiPerGator; workbook re-issued from HiPerGator with a run date after all six phases merged
 
 ### Phase 157: 180-Day Treatment Episodes + Drug-Name Deduplication
+
+⊘ Superseded by Phase 142 — Phase 142 delivered gantt_episodes_180.csv, gantt_detail_180.csv, and drug-name deduplication (all SUMMARY files present; R/142_gantt_180_export.R delivered). Phase 157 was written before Phase 142 was recognised as complete.
 
 **Goal:** (1) Collapse duplicate drug names (e.g. Vinblastine variants) to one canonical label via a normalization step in the pipeline; (2) change the treatment-episode window from 90 days to 180 days and re-run all Gantt outputs. Deduplication runs first since episode boundaries depend on drug identity.
 **Requirements:** TBD (see EPISODE-180-SPEC.md)
@@ -646,7 +660,7 @@ Plans:
 Plans:
 - [x] 160-01-PLAN.md — Codeset edits (CMP min_analyte_count=11) + Modalities.eligible_sex + loader support [IMP-01, IMP-04] (Wave 1)
 - [x] 160-02-PLAN.md — Pure functions: summarise_missing_analyte, rank_candidate_codes, compute_eligible_modality_stats, build_codeset_summary + tests [IMP-02, IMP-04, IMP-05] (Wave 2, depends on 160-01)
-- [ ] 160-03-PLAN.md — R/147 wiring: DEMOGRAPHIC.SEX + eligibility on B/C, A3 build + sampled candidate query, Codeset_summary, sheet order + suppression [IMP-02, IMP-04, IMP-05] (Wave 3, depends on 160-01, 160-02)
+- [x] 160-03-PLAN.md — R/147 wiring: DEMOGRAPHIC.SEX + eligibility on B/C, A3 build + sampled candidate query, Codeset_summary, sheet order + suppression [IMP-02, IMP-04, IMP-05] (Wave 3, depends on 160-01, 160-02)
 - [x] 160-04-PLAN.md — R/88 Phase 160 block + SCRIPT_INDEX + README; HiPerGator run + A3 review + add confirmed code(s) to Lab_Analytes checkpoints [IMP-03, IMP-06] (Wave 4, depends on 160-03)
  (completed 2026-09-25)
 
@@ -658,14 +672,14 @@ Plans:
 **Plans:** 9/9 plans complete
 
 Plans:
-- [ ] 161-01-PLAN.md — Fix R/03 ingest: type DEATH_DATE_IMPUTE as VARCHAR; rebuild DuckDB (Wave 1)
-- [ ] 161-02-PLAN.md — Re-run diagnostic on rebuilt DB; record n_conflicting / n_death_max_reconciles (Wave 2)
-- [ ] 161-03-PLAN.md — Shared resolve_death_date() utility in utils_death.R; sensitivity table at N=0/30/60/90/365 (Wave 3, team sign-off required)
-- [ ] 161-04-PLAN.md — Redefine compute_followup(): obs_end + resolved death date + 3-level fu_status (Wave 3)
-- [ ] 161-05-PLAN.md — R/147 reporting: death_flag counts, sensitivity exclusion analysis, anchor-day classification (Wave 4)
-- [ ] 161-06-PLAN.md — Tests: test-161-death-plausibility.R fixtures + R/88 assertions (Wave 4)
-- [ ] 161-07-PLAN.md — Audit all DEATH-reading scripts for resolve_death_date() usage (Wave 4)
-- [ ] 161-08-PLAN.md — HiPerGator full pipeline re-run + before/after comparison (Wave 5)
+- [x] 161-01-PLAN.md — Fix R/03 ingest: type DEATH_DATE_IMPUTE as VARCHAR; rebuild DuckDB (Wave 1)
+- [x] 161-02-PLAN.md — Re-run diagnostic on rebuilt DB; record n_conflicting / n_death_max_reconciles (Wave 2)
+- [x] 161-03-PLAN.md — Shared resolve_death_date() utility in utils_death.R; sensitivity table at N=0/30/60/90/365 (Wave 3, team sign-off required)
+- [x] 161-04-PLAN.md — Redefine compute_followup(): obs_end + resolved death date + 3-level fu_status (Wave 3)
+- [x] 161-05-PLAN.md — R/147 reporting: death_flag counts, sensitivity exclusion analysis, anchor-day classification (Wave 4)
+- [x] 161-06-PLAN.md — Tests: test-161-death-plausibility.R fixtures + R/88 assertions (Wave 4)
+- [x] 161-07-PLAN.md — Audit all DEATH-reading scripts for resolve_death_date() usage (Wave 4)
+- [x] 161-08-PLAN.md — HiPerGator full pipeline re-run + before/after comparison (Wave 5)
 
 ### Phase 162: Export Patient Modality Dates (no _any columns)
 
@@ -692,10 +706,10 @@ Plans:
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 163
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 164 to break down)
+- [x] 164-01-PLAN.md — Doxorubicin generic name collapse: DRUG_NAME_ALIASES + MEDICATION_LOOKUP + R/88 checks (SUMMARY confirmed; R/164_dox_baseline_counts.R delivered)
 
 ---
 
@@ -736,8 +750,8 @@ See `.planning/milestones/v3.7-ROADMAP.md` for full phase details.
 3. `distance_cbc_association_<date>.xlsx` has KEY (leftmost), A_crosstab and B_test (selected method: statistic, p, effect size, 95% CI, assumption checks), each with whole-record and post-anchor columns side by side, C_sensitivity, QC
 4. Crosstab totals reconcile to the QC denominator
 **Plans:** 2/2 plans complete
-- [ ] 165-01-PLAN.md — `165-METHODS.md`: candidate test comparison, CBC operationalization, recommendation (Wave 1)
-- [ ] 165-02-PLAN.md — `far_from_care_100mi` indicator + `distance_cbc_association_<date>.xlsx` (Wave 2, after D-165-01)
+- [x] 165-01-PLAN.md — `165-METHODS.md`: candidate test comparison, CBC operationalization, recommendation (Wave 1)
+- [x] 165-02-PLAN.md — `far_from_care_100mi` indicator + `distance_cbc_association_<date>.xlsx` (Wave 2, after D-165-01)
 
 ### Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing
 **Goal:** Each survivorship modality has a per-patient rate (unique dates / person-year of post-anchor follow-up) with cohort summaries, and echocardiogram is additionally characterized relative to last anthracycline exposure
@@ -782,7 +796,7 @@ See `.planning/milestones/v3.7-ROADMAP.md` for full phase details.
 3. All displayed counts pass through `suppress_small()` (<11)
 **Plans:** 2/2 plans complete
 - [x] 167-01-PLAN.md — R/169 SECTIONS 1-3: DuckDB ENCOUNTER.SOURCE aggregation, single_source_care/_post flag construction, CSV + internal RDS export (Wave 1)
-- [ ] 167-02-PLAN.md — R/169 SECTIONS 4-5 workbook (KEY/A_summary/B_post_anchor/QC) + R/39/R/88/SCRIPT_INDEX registration + SLURM wrapper + HiPerGator run (Wave 2)
+- [x] 167-02-PLAN.md — R/169 SECTIONS 4-5 workbook (KEY/A_summary/B_post_anchor/QC) + R/39/R/88/SCRIPT_INDEX registration + SLURM wrapper + HiPerGator run (Wave 2)
 
 ### Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets
 **Goal:** Two subsets of `gantt_episodes_180` — patients where all sheet episodes are marked Definitely NHL and none HL, and patients where any episode is marked HL and NHL — each joined to columns E-J of the team's chemo-combos sheet
