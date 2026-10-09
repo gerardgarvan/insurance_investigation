@@ -1,228 +1,38 @@
-# Requirements: v3.4 R Pipeline Code Review Remediation
+# Milestone v3.8 Requirements
+# Pipeline Refresh & Phase 130 Close-out
 
-**Defined:** 2026-07-23
-**Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Source:** `R_pipeline_code_review.md` (full-pipeline review, reviewed 2026-07-23, ~115 pipeline scripts + 14 utils modules)
+## Active Requirements
 
-## Milestone Goal
+### Pipeline Refresh (closes Phase 163/164 runtime gates)
 
-Fix the crash-causing and wrong-published-number defects surfaced by the code review, and standardize the 8 recurring cross-cutting bug patterns at the shared-helper layer so they stop recurring script-by-script. Scope is locked to the review's 8 numbered critical/high findings, its 8 cross-cutting patterns (A-H), and its 2 flagged loose ends — matching the review's own "Suggested fix order" stages 1-4. The ~80 additional per-script Low/Med findings are explicitly deferred (see Future Requirements).
+- [ ] **RFSH-01:** Re-run R/147 on HiPerGator after Phase 163 changes; run `R/147_verify_vs_1006.R` against the 1006 reference workbook (all checks pass) and confirm R/88 Section 15ao passes
+- [ ] **RFSH-02:** Re-run R/166, R/167, R/168 after the clean R/147 output; verify primary-tier results and CIF are identical to the 10-08 workbook; confirm only Echo/ECG/Mammogram/PFT any-tier rates shift
+- [ ] **RFSH-03:** Close Phase 164 HiPerGator checkpoint (Dox rename in Gantt); re-run R/170; verify matched rows are identical and document that any `n_norm_only`/`n_mismatch` shifts involve doxorubicin/Adriamycin only
 
-## v3.4 Requirements
+### Phase 130 Close-out (v3.3 deferred)
 
-### Crash Fixes (CRASH)
-
-- [x] **CRASH-01**: `R/74`, `R/81`, `R/82`, `R/83`, `R/84`, `R/85` run without aborting on the stray bare `n` token left in by an editor (three occurrences in `84`/`85`)
-- [x] **CRASH-02**: `R/84` uses `purrr::walk()` (or an attached `library(purrr)`) instead of an unqualified `walk()` call, so its triggered branch no longer crashes with `could not find function "walk"`
-
-### Published-Number Correctness (DATA)
-
-- [x] **DATA-01**: `R/28_episode_classification.R` matches `treatment_type == "SCT"` (not `"Stem Cell Transplant"`) so `sct_dates`, `is_sct_conditioning_context`, and `days_to_nearest_sct` are no longer permanently empty/FALSE/NA
-- [x] **DATA-02**: `R/46_cancer_summary_table.R`'s `total_records` (including the TOTAL row) reflects true code-level record counts, not per-code records multiplied by patient count
-- [x] **DATA-03**: `R/47_cancer_summary_refined.R`'s `first_hl_dx_date` is computed by filtering sentinel dates (`DX_DATE >= 1910-01-01`, matching `48`/`49`'s `SENTINEL_CUTOFF`) **before** taking `min()`, not nullified post-hoc on exact-`1900` only — so a patient with both a real HL date and a sentinel keeps their true anchor instead of losing it
-- [x] **DATA-04**: `R/48_cancer_summary_post_hl.R` excludes HL anchor codes (C81 + 201.x) from its post-HL "second cancer" set, consistent with `R/49`, so HL recurrence is not conflated with new malignancy
-- [x] **DATA-05**: `R/49_cancer_summary_pre_post.R`'s category/total `both_count` reflects the true pre∩post **patient** intersection at category grain (not a per-code sum), so `pre + post − both` reconciles
-- [x] **DATA-06**: `R/67`→`R/68` and `R/95`→`R/96`'s same-week detail files keep each `(admit_date, source)` pair correctly bound together after the `pmin`/`pmax` reordering, so the downstream `(ID, date, source)` join back to ENCOUNTER no longer misclassifies pairs into Distinct/Partial or undercounts near-duplicates
-- [x] **DATA-07**: `R/101_gantt_lifespan_collapse.R`'s `age_at_episode` reflects the row at the group's earliest `episode_start`, not whichever row happened to be first in input order
-
-### Data Integrity (INGEST)
-
-- [x] **INGEST-01**: `R/03_duckdb_ingest.R` aborts (via `stop()`, discarding the `.tmp` database) when any table fails to write instead of silently promoting a database missing tables, asserts `setequal(ingested, expected)` before promotion, and its summary reports the real per-table pass/fail counts instead of a hardcoded `"N/N passed"`
-
-### Documentation Tooling (DOCS)
-
-- [x] **DOCS-01**: `R/89_generate_reference_manual.R`'s `parse_script_header()` correctly anchors `header_end` to the field block's closing bar, so the generated manual captures each script's actual Purpose/Inputs/Outputs/Dependencies/Requirements instead of "Not documented" for every script
-
-### Cross-Cutting Pattern Standardization (PATTERN)
-
-- [x] **PATTERN-A**: Record/patient totals in `R/23`, `R/33` (CODE-03), `R/43`/`R/44` (TOTAL rows), `R/50` (grand total), `R/91`, `R/100` (Sheet 1) are computed by de-duplicating to the intended grain (`n_distinct(ID)` / distinct code) before totaling, not by summing per-code counts across codes a patient/record may appear under more than once (`R/46`'s instance is DATA-02 above, already covered)
-- [ ] **PATTERN-B**: A single shared code-normalization convention (strip **all** dots + `toupper()` + dotted/undotted union) is applied consistently across `R/13_survivorship_encounters.R`, `R/42_build_code_descriptions.R`, `utils_cancer.R` (`classify_codes`/`is_cancer_code`), and `utils_doi.R` (`classify_doi_codes()`) — eliminating the dotted-only vs. dotted+undotted vs. case-sensitive drift documented in the review
-- [ ] **PATTERN-C**: Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or an equivalent `^C|^D[0-4]` pattern) instead of the over-inclusive `^[CD]`, so D50-D89 anemias/cytopenias/neutropenia no longer land in the "Unclassified" neoplasm bucket
-- [ ] **PATTERN-D**: External-API calls in `R/21_investigate_unmatched.R`, `R/27`, `R/105`, `R/108` classify transient errors (429/503/504/timeout/500/502) separately from a genuine "not found," retry transient errors (`R/21` currently has no retry at all), and never persist a transient failure as a permanent cache miss / dropped crosswalk entry
-- [ ] **PATTERN-E**: Tests/validators that currently cannot fail are corrected: `R/81` no longer coerces types before `waldo::compare()`; `R/82`/`R/83`'s "≥3× speedup on 3 of 5 scripts" check actually benchmarks all 5 scripts (not 1); `R/88` separates skip counters from pass counters and its `cause_of_death` "drop" check fails when the value is genuinely absent (not present); `R/96_validate_payer_dt`'s FLM-override fixture starts from a non-Medicaid state so the override is provably exercised; `R/98_validate_r28_migration` compares against an independently-generated baseline, not a copy of its own output
-- [ ] **PATTERN-F**: In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` either moves to a data-driven config source or hardens its regex/quote-handling so newly-discovered codes are never silently dropped when a parse/write attempt fails
-- [x] **PATTERN-G**: Missing NA/sentinel/impossible-date guards are added: `R/53_death_date_validation.R` gets a death-before-birth check (flags negative `age_at_death`); `R/14`, `R/31`, `R/93` use NA-safe `min_or_na`/`max_or_na` helpers (or equivalent guards) consistently instead of producing silent `Inf` durations, unguarded `episode_start`, or dropped NA treatment flags
-- [ ] **PATTERN-H**: Grain-mislabeled columns are renamed or re-aggregated to match their documented grain: `R/56`'s `encounter_count` (actually episode count), `R/57_explore_dx_deduplication`'s same mislabel, `R/62`'s `date_tier_detail` (patient×type×episode×date, not one-row-per-patient-per-date), `R/67`'s `n_total_encounters` (double-counts dates used in both roles)
-
-### Confirm Loose Ends (CONFIRM)
-
-- [x] **CONFIRM-01**: Locate where `suppress_small()`, `clean_multi_value()`, and `union_field()` are actually defined and confirm they load correctly (not found in any of the 14 `utils_*.R` modules during the review; `clean_multi_value` is referenced as "reused from R/52")
-  *Finding: clean_multi_value() and union_field() extracted to R/utils/utils_format.R;
-  R/52, R/101, R/104 now source from there. suppress_small() remains inline in R/106
-  (single-file use). Resolved Phase 136 plan 01.*
-- [x] **CONFIRM-02**: Reconcile `CONFIG$analysis$date_range_max` (2025-03-31) against the actual data extract cutoff (20250915) and correct the bound if valid Apr-Sep 2025 encounters/deaths are currently being flagged out-of-range and dropped by `R/01`'s date validation
-  *Finding: _VALID flag is informational only (used for message() counts, never as a
-  filter predicate). No records were being dropped. date_range_max left unchanged;
-  comment updated to clarify intent per D-06. Resolved Phase 136 plan 02.*
+- [ ] **DOI-REG-01:** Add R/111 and R/112 to R/39 and SCRIPT_INDEX
+- [ ] **DOI-REG-02:** Add R/88 smoke section for DoI scripts (structural checks already validated locally)
+- [ ] **DOI-REG-03:** HiPerGator runtime gate — confirm R/111 and R/112 run cleanly against real data and workbook renders
 
 ## Future Requirements
 
-Deferred to a later milestone. Tracked but not in the current roadmap — the ~80 per-script Low/Med findings cataloged by area in the review.
-
-### Per-Script Findings Backlog (REVIEW-FUT)
-
-- **REVIEW-FUT-01**: Foundation/config low findings (`R/00`-`R/03`) — case-sensitive source pattern, `supportive_care_*` name-split mis-bucket, stale count comments, invalid/placeholder codes, dual `14x` payer prefix fallthrough, `02`'s header/table mismatch, `03`'s no-DB-window swap
-- **REVIEW-FUT-02**: Cohort layer (`R/10`-`R/14`) — dead-code predicates, lazy-`tbl_dbi` local-join gap in `R/10`/`R/11`, `R/14` non-NA-safe min/max
-- **REVIEW-FUT-03**: Treatment analysis (`R/20`-`R/29`) low/med findings not covered by DATA-01 — `R/20` CAR-T prefix-vs-exact mismatch, `R/21` brittle NLM JSON parse + 773xx fallthrough, `R/22` RXNORM_CUI silent-swallow + checkpoint-inhibitor chemo/immuno priority + fan-out join, `R/25` 90-day episode-splitting window-from-start bug + missing Proton Therapy color, `R/26` source_hints/triggering_codes misalignment, `R/28` temporal tie-break preference, `R/29` NA-age dropout
-- **REVIEW-FUT-04**: Investigations (`R/30`-`R/39`) — `R/33` record-vs-patient CODE-03 count, `R/34` dual-code population-mismatch denominator, `R/35` empty-frame sequence footgun, `R/37` merged-title guard, `R/38` manifest self-listing, `R/39` Stage 2/4 ordering bug (High — `101`/`104` run before their producer `52`)
-- **REVIEW-FUT-05**: Cancer site (`R/40`-`R/53`) findings not covered by DATA-03..05 — `R/40` ICD-O-3-through-ICD-10-CM classifier divergence, `R/42` dotted-key mismatch, `R/50` additive-with-overlap grand total, `R/52_gantt_v2_export` comma-splitting corruption, `R/53` no-1900-birth-sentinel + `DEATH_SOURCE`/date mismatch, `R/55` off-by-one chain count
-- **REVIEW-FUT-06**: Codes/death/drug groupings (`R/56`-`R/59`) findings not covered by PATTERN-H — `R/57_drug_grouping_instances` pivot_wider crash risk, `R/58_co_administration_analysis` code-identity-vs-drug-identity spurious pairs + directional double-count, `R/59` no-encounter-as-death-is-last miscount
-- **REVIEW-FUT-07**: Payer & overlap (`R/60`-`R/69`, `R/76`) — `R/60` alphabetical tie-break, `R/63` `ID$` regex also dropping `_VALID` columns, `R/64`/`R/65` unvalidated-table assertion mismatch, `R/66` magrittr dot gotcha, `R/68` same-date self-join over-weighting, `R/76` exact-day-vs-±7-day tolerance inconsistency
-- **REVIEW-FUT-08**: Outputs & viz (`R/70`-`R/79`) — `R/71` ≤10-patient mislabel, `R/72_generate_pptx` triple Med finding (NA→"Missing" ordering hides true unassigned rate; slide-14 date-equality complement miscount; CWD write + missing ggplot2 library()), `R/73` stale "phase24" labels, `R/74` output-filename mismatch, `R/75` encounter-ratio-vs-percent column conflation + unmapped-payer silent drop, `R/79` overlapping summary buckets
-- **REVIEW-FUT-09**: Tests & smoke tests (`R/80`-`R/89`) findings not covered by CRASH/PATTERN-E — `R/80` header/implementation mismatch + partial-sample predicates, `R/87` broken-source() false positives + loose decade thresholds, `test_phase78_human.R` unsafe `source()` of `R/88`
-- **REVIEW-FUT-10**: Ad-hoc diagnostics (`R/90`-`R/99`) — `R/90` silent column skip + inconsistent threshold, `R/91` grand-total-attributed-to-single-source + boolean-vs-count bug, `R/92` unreachable branch, `R/93` NA-treatment-flag dropout (also PATTERN-G), `R/95`/`R/96` AV+TH scope confirmation, `R/97_payer_code_frequency` join-key asymmetry + numeric-coercion leading-zero loss, `R/98_radiation_cpt_audit` config-rewrite trailing-comma bug (also PATTERN-F) + nuclear-medicine gap, `R/99_claude_diagnostics` unclosed sink()
-- **REVIEW-FUT-11**: Post-renumber investigations (`R/100`-`R/112`) findings not covered by CONFIRM-02 — `R/100` ZIP de-dup fan-out risk, `R/102` DEATH_CAUSE-absent silent proxy switch, `R/103` coverage-denominator mismatch, `R/104` doc/behavior mismatch, `R/105` hardcoded-column-G append + transient-outage cache poisoning (also PATTERN-D), `R/106` different-row-subset ZIP9/ZIP5 misclassification + missing `suppress_small()` on Sheet 4, `R/107` PRESCRIBING-absent overcount, `R/108` transient-vs-genuine-miss crosswalk loss (also PATTERN-D) + `normalize_ndc()` mis-padding, `R/109` constant-flagged-patient-count reconciliation bug, `R/110` `.` pronoun / `.data[[...]]` fallback-branch errors, `R/112` uncoerced `treatment_date` type
-- **REVIEW-FUT-12**: Utility modules (`utils_*.R`) findings not covered by PATTERN-B/CONFIRM-01 — `utils_dates.R` Excel-serial catch-all + `ymd()`-first US-date pre-emption + 2-digit-year cutoff, `utils_icd.R` strict-equality `DX_TYPE` gating, `utils_payer.R` dual-eligible ordering + sentinel-list drift + `TIER_MAPPING` list/dt divergence, `utils_duckdb.R` eager-vs-lazy return-type footgun, `utils_treatment.R` `normalize_ndc()` mis-padding + no match-rate logging, `utils_doi.R` no-uppercase gate/classifier inconsistency + V/E-code digit-partition trap, `utils_xlsx_lookups.R` dead duplicate-code `stop()`, `utils_snapshot.R` non-atomic RDS write + inconsistent root paths
+- Move `EXCLUDED_CDM_TABLES` into `load_surveillance_codeset()` in `utils_surveillance.R` so R/147 and R/166 share a single source of truth (stability milestone)
+- R/165 CBC re-derivation: read R/147 output RDS instead of re-deriving from DuckDB to avoid silent drift (stability milestone)
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
-| Feature | Reason |
-|---------|--------|
-| The ~80 per-script Low/Med findings not in Future Requirements' backlog list | Tracked in REVIEW-FUT-01..12 above, not individually re-derived here — the backlog groupings are the scope boundary |
-| Re-running the full pipeline on HiPerGator to re-verify fixed outputs | Each fix is verified structurally (code-level) in this milestone; a consolidated HiPerGator re-run is a v3.3-style deferred verification step, tracked separately once this milestone's fixes are complete |
-| Rewriting `R/00_config.R`'s in-place mutation to a fully data-driven (CSV/RDS) config source | PATTERN-F requires hardening the existing regex/guard approach at minimum; a full architectural move to data-driven config is a larger design decision left for a future milestone if the hardened guard proves insufficient |
-| Auditing scripts the review marked "clean" | Not revisited — the review's "clean" verdicts are trusted as-is for this milestone |
+- New analytical deliverables (deferred to v3.9 pending team asks from refreshed workbooks)
+- v3.4 code review remediation (stability milestone, separate track)
+- ZIP/SES enrichment (deferred)
 
 ## Traceability
 
-Which phases cover which requirements. Populated during roadmap creation.
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| CRASH-01 | Phase 132 | Complete |
-| CRASH-02 | Phase 132 | Complete |
-| DATA-01 | Phase 133 | Complete |
-| DATA-02 | Phase 133 | Complete |
-| DATA-03 | Phase 133 | Complete |
-| DATA-04 | Phase 133 | Complete |
-| DATA-05 | Phase 133 | Complete |
-| DATA-06 | Phase 133 | Complete |
-| DATA-07 | Phase 133 | Complete |
-| INGEST-01 | Phase 134 | Complete |
-| DOCS-01 | Phase 133 | Complete |
-| PATTERN-A | Phase 135 | Complete |
-| PATTERN-B | Phase 135 | Complete |
-| PATTERN-C | Phase 135 | Complete |
-| PATTERN-D | Phase 135 | Complete |
-| PATTERN-E | Phase 134 | Pending |
-| PATTERN-F | Phase 135 | Complete |
-| PATTERN-G | Phase 135 | Complete |
-| PATTERN-H | Phase 135 | Complete |
-| CONFIRM-01 | Phase 136 | Complete |
-| CONFIRM-02 | Phase 136 | Complete |
-
-**Coverage:**
-- v3.4 requirements: 21 total (2 CRASH + 7 DATA + 1 INGEST + 1 DOCS + 8 PATTERN + 2 CONFIRM)
-- Mapped to phases: 21 (roadmap complete)
-- Unmapped: 0 ✓
-
-**Phase breakdown** (follows the review's own "Suggested fix order" 5 stages):
-- Phase 132 (Crash Fixes): CRASH-01, CRASH-02 — stage 1
-- Phase 133 (Critical Correctness Fixes): DATA-01..07, DOCS-01 — stage 2 (wrong published numbers + the content-empty reference manual, findings #2/#4/#5/#6/#7/#8)
-- Phase 134 (Ingest Integrity and Honest Tests): INGEST-01, PATTERN-E — stage 3
-- Phase 135 (Shared-Helper Standardization): PATTERN-A/B/C/D/F/G/H — stage 4
-- Phase 136 (Confirm Loose Ends): CONFIRM-01, CONFIRM-02 — stage 5
-
----
-*Requirements defined: 2026-07-23*
-*Last updated: 2026-07-24 after roadmap creation — all 21 requirements mapped to Phases 132-136*
-
----
-
-# Requirements: v3.7 Access, Survivorship Rates & NHL Episode Subsets
-
-**Defined:** 2026-10-08
-**Core Value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
-**Source:** Team request list 2026-10-08; decisions settled same day (see Settled section below).
-
-## Milestone Goal
-
-Deliver four analytical deliverables requested by the team: a >100-mile distance-to-care indicator tested against CBC surveillance; per-patient survivorship modality rates including time from last anthracycline dose to echocardiogram; a binary single-health-system care flag; and NHL-only / HL+NHL subsets of `gantt_episodes_180` joined to the team-annotated chemo-combos workbook. All existing outputs are read-only.
-
-## v3.7 Requirements
-
-### Distance to Care (Phase 165)
-
-- [x] **ACC-01**: Encounter-level binary `far_from_care_100mi` (0/1) derived from R/122 distances converted to miles (km / 1.609344); cutoff held in `CONFIG$distance_cutoff_mi`; all encounters; encounters without a computed distance counted in QC, not silently dropped
-- [x] **ACC-02**: `165-METHODS.md` methods memo comparing candidate tests (encounter-level GEE/mixed model, Rao-Scott cluster chi-square, patient-level aggregate, CMH stratified) on: unit of analysis, CBC operationalization, expected-cell assumptions, effect size and confounders; makes a recommendation; D-165-01 records the team's choice
-- [ ] **ACC-03**: Team-selected test implemented: statistic, p-value, effect size, 95% CI, assumption checks; both whole-record and post-anchor windows reported side by side; sensitivity analysis per the memo's named approach
-- [x] **ACC-04**: All displayed counts pass through `suppress_small()` (threshold 11); statistics computed on unsuppressed counts; telehealth/virtual encounter count with a distance reported in QC
-
-### Survivorship Rates (Phase 166)
-
-- [x] **SRATE-01**: `166-AUDIT.md` inventories existing person-time modality rates in R/147/R/162 outputs (which modalities have rates, numerator/denominator definitions, follow-up end used); flags discrepancies rather than silently changing definitions
-- [ ] **SRATE-02**: Every modality has a person-time rate (unique dates / person-years) in one per-patient table (`.rds` + `.csv`); zero-event patients in the denominator; follow-up = HL anchor → `follow_end` (`compute_followup()`, Phase 161); only missing rates are built (no recomputation of existing ones under a different definition)
-- [x] **SRATE-03**: Time from last anthracycline dose (last date in first-line course; latest-ever last dose as sensitivity) to first subsequent echocardiogram; cumulative incidence of first echo at 1/2/5 years (death censored, competing-risk noted); patients with no anthracycline excluded from the echo block and counted in QC; D-166-01 (anthracycline drug set) recorded
-- [x] **SRATE-04**: Echocardiogram rate per person-year from last anthracycline dose to `follow_end`; reported per patient and as cohort summary in `survivorship_modality_rates_<date>.xlsx`
-
-### Single Health System (Phase 167)
-
-- [x] **SRC-01**: Patient-level binary `single_source_care` (1 = `n_distinct(ENCOUNTER.SOURCE) == 1`) and `n_sources` for every cohort patient with ≥1 encounter; computed in DuckDB, not by loading ENCOUNTER into R; SOURCE from ENCOUNTER only (D-167-01 closed)
-- [x] **SRC-02**: Delivered in two windows as separate columns: whole-record and post-HL-anchor (D-167-02 closed); flag designed to be joinable onto Phase 165/166 patient tables on `ID`
-- [x] **SRC-03**: Patients with NA/blank SOURCE on any encounter are flagged and counted in QC, not coerced to a site; NA-SOURCE patient count in `single_source_care_<date>.xlsx` QC sheet
-
-### NHL Episode Subsets (Phase 168)
-
-- [x] **NHLSUB-01**: NHL-only subset of `gantt_episodes_180`: every sheet episode for the patient has `Definitely NHL` = x AND no episode has `Definitely HL` = x OR `HL and NHL` = x (strict "all episodes" rule); `NHL_only_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
-- [x] **NHLSUB-02**: HL+NHL subset: any sheet episode for the patient has `HL and NHL` = x; `HL_NHL_episodes` tab contains all `gantt_episodes_180` treatment-period rows for these patients
-- [x] **NHLSUB-03**: Both subsets left-joined to chemo-combos columns E-J (`Definitely HL`, `Definitely NHL`, `Initial`, `Relapse`, `Notes`, `HL and NHL`) at treatment-period grain (`patient_id` + `episode_number`); chemo rows only (non-chemo rows get empty E-J values); aligned to the 2026-08-14 `gantt_episodes_180` snapshot (pinned via `CONFIG$gantt_180_snapshot_path`); input file `Chemo_combos_6mo_amc090826-smc` read by tab name ("Chemo and Cancer Dx"), not position; probe-first gate (skip with log if absent, e.g. local run); D-168-01 (also deliver post-rename version) defaults to pre-rename only
-- [x] **NHLSUB-04**: QC reports: patient counts per group; matched/unmatched periods in each direction; duplicate sheet (`patient_id`, `episode_number`) keys (stop join if found); group overlap (should be empty); non-"x" values in columns F/J; sheet episodes that match only non-chemo gantt rows; loose Group 1 count (any Definitely NHL) vs strict count (all episodes)
-
-### Registration (Phase 169)
-
-- [ ] **REG-37-01**: All v3.7 scripts appear in `R/39_run_all_investigations.R` (dependency order) and `R/SCRIPT_INDEX.md`
-- [ ] **SMOKE-37-01**: R/88 gains a section per v3.7 script with structural checks: file existence, output sheet names, KEY leftmost, binary columns 0/1 only (where applicable); no fan-out row-count checks
-- [ ] **RUN-37-01**: R/88 passes on HiPerGator (`module load R/4.5`); all four v3.7 workbooks re-issued with a post-merge run date
-
-## Open Team Decisions
-
-| ID | Question | Recommended default | Status |
-|----|----------|---------------------|--------|
-| D-165-01 | Test for distance-CBC relationship | Chosen from 165-METHODS.md; leading candidate = encounter-level GEE clustered on ID | Open — team selects from memo |
-| D-166-01 | Anthracycline drug set | Doxorubicin (incl. liposomal after Phase 164 rename); add others only if present in cohort | Open |
-| D-167-01 | SOURCE table scope | ENCOUNTER.SOURCE only | **Closed 2026-10-08** |
-| D-167-02 | Single-SOURCE flag windows | Both whole-record and post-anchor columns | **Closed 2026-10-08** |
-| D-168-01 | Also deliver a post-rename version of the subsets? | Pre-rename join only for now | Open |
-| D-168-02 | Two tabs in one workbook vs two files | One workbook, two tabs (+ CSVs on request) | **Closed 2026-10-08** |
-| D-168-03 | Group 1 rule: NHL on all episodes (strict) vs any episode | Strict, with loose count shown in QC | **Closed 2026-10-08** |
-
-## Traceability
-
-| Req ID | Phase | Status |
+| REQ-ID | Phase | Status |
 |--------|-------|--------|
-| ACC-01 | 165 | Complete |
-| ACC-02 | 165 | Complete |
-| ACC-03 | 165 | Pending |
-| ACC-04 | 165 | Complete |
-| SRATE-01 | 166 | Complete |
-| SRATE-02 | 166 | Pending |
-| SRATE-03 | 166 | Complete |
-| SRATE-04 | 166 | Complete |
-| SRC-01 | 167 | Complete |
-| SRC-02 | 167 | Complete |
-| SRC-03 | 167 | Complete |
-| NHLSUB-01 | 168 | Complete (168-01) |
-| NHLSUB-02 | 168 | Complete (168-01) |
-| NHLSUB-03 | 168 | Complete (168-01) |
-| NHLSUB-04 | 168 | Complete (168-01) |
-| REG-37-01 | 169 | Pending |
-| SMOKE-37-01 | 169 | Pending |
-| RUN-37-01 | 169 | Pending |
-
-**Coverage:**
-- v3.7 requirements: 18 total (4 ACC + 4 SRATE + 3 SRC + 4 NHLSUB + 3 REG)
-- Mapped to phases: 18 (roadmap complete)
-- Unmapped: 0 ✓
-
-**Phase breakdown:**
-- Phase 165 (Distance >100 mi Indicator + CBC Association): ACC-01..04 — 2 plans (methods memo first, then implementation after D-165-01)
-- Phase 166 (Survivorship Modality Rates + Anthracycline-Echo): SRATE-01..04 — TBD plans (audit first)
-- Phase 167 (Single-Health-System Care Flag): SRC-01..03 — TBD plans
-- Phase 168 (NHL-Only and HL+NHL Gantt Subsets): NHLSUB-01..04 — COMPLETE (168-01, HiPerGator confirmed 2026-10-08)
-- Phase 169 (Registration, Smoke Test, HiPerGator Run): REG-37-01, SMOKE-37-01, RUN-37-01 — TBD plans
-
----
-*Requirements defined: 2026-10-08*
-*Last updated: 2026-10-08 — v3.7 milestone initialized, all 18 requirements mapped to Phases 165-169*
+| RFSH-01 | TBD | pending |
+| RFSH-02 | TBD | pending |
+| RFSH-03 | TBD | pending |
+| DOI-REG-01 | TBD | pending |
+| DOI-REG-02 | TBD | pending |
+| DOI-REG-03 | TBD | pending |

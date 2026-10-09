@@ -145,6 +145,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
+## Current Milestone: v3.8 Pipeline Refresh & Phase 130 Close-out
+
+**Goal:** Close two dangling HiPerGator runtime gates (Phase 163 DIAGNOSIS exclusion, Phase 164 Dox rename) with verified reruns of downstream scripts, then close the deferred v3.3 Phase 130 DoI registration and smoke-test.
+
+**Target features:**
+- Re-run R/147 with Phase 163 verification (`verify_vs_1006.R` + R/88 Section 15ao)
+- Refresh survivorship workbook (R/166/167/168) from clean R/147 output; any-tier rates correct for Echo/ECG/Mammogram/PFT
+- Close Phase 164 HiPerGator checkpoint; re-run R/170 NHL subsets with corrected drug names
+- Phase 130: R/111 + R/112 registered in R/39, SCRIPT_INDEX, R/88 smoke section, HiPerGator runtime confirmed
+
 ## Shipped: v3.7 Access, Survivorship Rates & NHL Episode Subsets (2026-10-09)
 
 **Delivered:** Four team requests — (1) Rao-Scott CBC association analysis (OR=0.553, p=6.8e-13 for far-from-care encounters vs CBC); (2) survivorship modality rates + anthracycline-to-echo timing workbook; (3) single-health-system care flag (whole-record + post-anchor windows); (4) NHL-only (849 patients) and HL+NHL (176 patients, 0 overlap) gantt episode subsets joined to chemo-combos. All four workbooks produced on HiPerGator 2026-10-08.
@@ -408,4 +418,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-09 after v3.7 milestone completion — 5 phases, 10 plans; all ACC/SRATE/SRC/NHLSUB/REG requirements validated.*
+*Last updated: 2026-10-09 — v3.8 milestone started (Pipeline Refresh & Phase 130 Close-out).*

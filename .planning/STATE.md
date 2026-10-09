@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.7
-milestone_name: Access, Survivorship Rates & NHL Episode Subsets
-status: complete
-stopped_at: "Roadmap cleanup complete — v3.3/v3.4/v3.5/v3.6 closed; Phase 156 AM write-back dropped (no target document); Phase 151 complete (HiPerGator run 2026-10-09)"
-last_updated: "2026-10-08T00:00:00.000Z"
-last_activity: 2026-10-08
+milestone: v3.8
+milestone_name: Pipeline Refresh & Phase 130 Close-out
+status: defining_requirements
+stopped_at: "Milestone v3.8 started — requirements written, roadmap pending"
+last_updated: "2026-10-09T00:00:00.000Z"
+last_activity: 2026-10-09
 progress:
   total_phases: 169
-  completed_phases: 154
-  total_plans: 302
+  completed_phases: 169
+  total_plans: 307
   completed_plans: 307
 ---
 
