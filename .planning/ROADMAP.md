@@ -19,7 +19,7 @@
 - ✅ **v3.1 Meeting Gap Closure — Clinical Data Coverage** - Phases 100-103 (shipped 2026-06-12)
 - ✅ **v3.2 Meeting Gap Resolution Report** - Phases 104-126 (shipped 2026-07-15)
 - ✅ **v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest** - Phases 127-131 (shipped 2026-07-22)
-- ✅ **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (shipped 2026-07-25)
+- ✅ **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (shipped 2026-07-25 — Pattern-A partial: R/23 receives pre-aggregated input; accepted limitation)
 - 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress — Phase 156 deferred; AM write-back outstanding)
 - ✅ **v3.6 Treatment Episode Refinement** - Phase 157 (closed — delivered by Phase 142)
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
@@ -289,7 +289,7 @@ See MILESTONES.md for full details on all shipped milestones.
   3. Neoplasm filters in `R/40`, `R/43`, `R/44`, `R/46` use `is_cancer_code()` (or `^C|^D[0-4]`) instead of the over-inclusive `^[CD]`
   4. External-API calls in `R/21`, `R/27`, `R/105`, `R/108` classify transient errors separately from genuine "not found," retry transient errors, and never persist a transient failure as a permanent miss
   5. In-place `R/00_config.R` rewriting in `R/21`, `R/22`, `R/50`, `R/98` is hardened so newly-discovered codes are never silently dropped; `R/53` gets a death-before-birth guard and `R/14`/`R/31`/`R/93` use NA-safe `min_or_na`/`max_or_na` consistently; `R/56`, `R/57_explore_dx_deduplication`, `R/62`, and `R/67`'s grain-mislabeled columns are renamed or re-aggregated to match their documented grain
-**Plans**: 6/7 patterns complete — Pattern-A partial (R/23 receives pre-aggregated data without raw IDs; upstream constraint documented; R/50 and all other consumers fully implement n_distinct). No separate plan files generated.
+**Plans**: 6/7 — Pattern-A partial: R/23 receives pre-aggregated input, so n_distinct() de-duplication cannot be applied there (R/50 implements it fully). Accepted limitation, not fixed. No separate plan files generated.
 
 ### Phase 136: Confirm Loose Ends
 **Goal**: The review's two flagged unknowns are resolved with a documented answer, not left as open questions
@@ -336,7 +336,7 @@ See MILESTONES.md for full details on all shipped milestones.
 | 132. Crash Fixes | v3.4 | 4/4 | Complete    | 2026-07-25 |
 | 133. Critical Correctness Fixes | v3.4 | 1/1 | Complete    | 2026-07-25 |
 | 134. Ingest Integrity and Honest Tests | v3.4 | complete | Complete    | 2026-07-25 |
-| 135. Shared-Helper Standardization | v3.4 | 6/7 (Pattern-A partial — upstream constraint in R/23 documented) | Complete    | 2026-07-25 |
+| 135. Shared-Helper Standardization | v3.4 | 6/7 — Pattern-A partial: R/23 pre-aggregated input, accepted limitation | Complete    | 2026-07-25 |
 | 136. Confirm Loose Ends | v3.4 | complete | Complete    | 2026-07-25 |
 | 137. ZIP9 Temporal Assignment | standalone | 2/2 | Complete    | 2026-07-25 |
 
@@ -531,7 +531,7 @@ Plans:
 
 ### Phase 151: Per-Patient ZIP Problem Inventory
 
-⏸ Deferred — R/121_zip_problem_inventory.R scaffolded; plan and context exist but no SUMMARY file confirming execution.
+⚠ Code present (R/121_zip_problem_inventory.R), no SUMMARY — verify output before marking complete.
 
 **Goal:** Produce a per-patient roster with one row per patient ID and flags for every ZIP-related problem that patient exhibits (address coverage, sentinel ZIPs, concordance issues) and a triage category, turning Phase 150's aggregate counts into an addressable patient list.
 **Depends on:** Phase 150
