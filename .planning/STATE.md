@@ -4,7 +4,7 @@ milestone: v3.4
 milestone_name: below)
 status: executing
 stopped_at: Phase 168 planned — 1 plan ready to execute
-last_updated: "2026-10-09T00:37:45.668Z"
+last_updated: "2026-10-09T01:00:33.397Z"
 last_activity: 2026-10-09
 progress:
   total_phases: 157
@@ -21,11 +21,11 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 169 — registration-smoke-test-and-hipergator-run
+**Current focus:** Phase 167 — single-health-system-care-flag
 
 ## Current Position
 
-Phase: 169
+Phase: 168
 Plan: Not started
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).

@@ -701,7 +701,7 @@ Plans:
 
 - [ ] **Phase 165: Distance >100 mi Indicator and CBC Association** (2 plans) — Encounter-level `far_from_care_100mi`; methods memo to choose the test; then implement it
 - [x] **Phase 166: Survivorship Modality Rates and Anthracycline-to-Echo Timing** (TBD plans) — Per-person-year rates per modality; time/rate since last anthracycline for echo (completed 2026-10-08)
-- [ ] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE
+- [x] **Phase 167: Single-Health-System Care Flag** (TBD plans) — Binary `single_source_care` from ENCOUNTER.SOURCE (completed 2026-10-09)
 - [x] **Phase 168: NHL-Only and HL+NHL Gantt Episode Subsets** (1/1 plans complete) — Two filtered `gantt_episodes_180` tables joined to chemo-combos columns E-J
   - [x] 168-01-PLAN.md — CONFIG keys + R/170_nhl_gantt_subsets.R: load/validate, classify Group 1/2, join E-J, workbook+CSVs, HiPerGator run (849 G1 / 176 G2 / 0 overlap; 9 PASS SMOKE-168-01)
 - [x] **Phase 169: Registration, Smoke Test, and HiPerGator Run** (1/1 plans complete) — R/165 registered, SMOKE-165-01 15 PASS/0 FAIL, four workbooks dated 20261008
@@ -772,7 +772,7 @@ Plans:
 1. `single_source_care` (0/1) and `n_sources` exist for every cohort patient with ≥1 encounter; NA-SOURCE patients are counted in QC
 2. `single_source_care_<date>.xlsx` has KEY, A_summary (n/% single-source, distribution of n_sources, breakdown by SOURCE for single-source patients), B_post_anchor (same summary for post-anchor window), QC
 3. All displayed counts pass through `suppress_small()` (<11)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 - [x] 167-01-PLAN.md — R/169 SECTIONS 1-3: DuckDB ENCOUNTER.SOURCE aggregation, single_source_care/_post flag construction, CSV + internal RDS export (Wave 1)
 - [ ] 167-02-PLAN.md — R/169 SECTIONS 4-5 workbook (KEY/A_summary/B_post_anchor/QC) + R/39/R/88/SCRIPT_INDEX registration + SLURM wrapper + HiPerGator run (Wave 2)
 
@@ -821,6 +821,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 165. Distance >100 mi + CBC Association | 0/2 | Not started | |
 | 166. Survivorship Modality Rates + Anthracycline-Echo | 4/4 | Complete   | 2026-10-08 |
-| 167. Single-Health-System Care Flag | 1/2 | In Progress|  |
+| 167. Single-Health-System Care Flag | 1/2 | Complete    | 2026-10-09 |
 | 168. NHL-Only and HL+NHL Gantt Subsets | 0/TBD | Not started | |
 | 169. Registration, Smoke Test, HiPerGator | 1/1 | Complete    | 2026-10-09 |
