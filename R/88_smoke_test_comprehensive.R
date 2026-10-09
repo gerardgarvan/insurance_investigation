@@ -1857,7 +1857,7 @@ alias_end <- if (!is.na(alias_start)) {
 } else NA
 alias_block <- if (!is.na(alias_start) && !is.na(alias_end)) r00_lines_iyh[alias_start:alias_end] else character(0)
 alias_code <- sub("#.*$", "", alias_block)
-alias_keys <- trimws(ifelse(grepl("=", alias_code), sub("=.*$", "", alias_code), ""))
+alias_keys <- gsub('"', '', trimws(ifelse(grepl("=", alias_code), sub("=.*$", "", alias_code), "")))
 # Required keys (Phase 164, D-1/D-3): all must be present as alias map keys.
 required_dox_keys <- c("adriamycin", "doxil", "caelyx", "liposomal doxorubicin",
                         "doxorubicin liposomal", "doxorubicin hcl liposome")
