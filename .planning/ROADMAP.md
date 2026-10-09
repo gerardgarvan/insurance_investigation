@@ -787,7 +787,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete | 2026-10-09 |
+| 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete    | 2026-10-09 |
 | 171. Survivorship Workbook Refresh | v3.8 | 0/TBD | Not started | - |
 | 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
 | 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |
