@@ -2,6 +2,49 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v3.7 — Access, Survivorship Rates & NHL Episode Subsets
+
+**Shipped:** 2026-10-09
+**Phases:** 5 (165–169) | **Plans:** 10 | **Timeline:** 1 day (2026-10-08 → 2026-10-09)
+
+### What Was Built
+
+- `R/163_distance_cbc_prototype.R` — four-candidate prototype (naive chi-square, Rao-Scott, GEE, patient-level Fisher) + `165-METHODS.md` recommending Rao-Scott
+- `R/165_distance_cbc_association.R` — Rao-Scott cluster-adjusted chi-square (encounter-level, clustered on patient ID); OR=0.553 [0.470, 0.651], p=6.8e-13, DEFF=130; adjusted sensitivity; `distance_cbc_association_20261008.xlsx`
+- `R/168_survivorship_workbook.R` — per-patient survivorship modality rates + anthracycline-to-echo timing (days-to-first, cumulative incidence at 1/2/5 years, echo rate per person-year); `survivorship_modality_rates_20261008.xlsx`
+- `R/169_single_source_care.R` — `single_source_care` + `single_source_care_post` binary flags from DuckDB ENCOUNTER.SOURCE (NULLIF/UPPER/TRIM normalisation; blanks flagged not coerced); encounter-band crosstab, 4+ n_sources cap, complementary suppression; `single_source_care_20261008.xlsx`
+- `R/170_nhl_gantt_subsets.R` — NHL-only (849 patients) and HL+NHL (176 patients, 0 overlap) subsets of pinned 2026-08-14 `gantt_episodes_180` snapshot joined to chemo-combos columns E-J; `nhl_gantt_subsets_20261008.xlsx`
+- Phase 169: all scripts registered in R/39, SCRIPT_INDEX; SMOKE-165-01 (15 PASS/0 FAIL); HiPerGator run with all four workbooks dated 20261008
+
+### What Worked
+
+- **All four deliverables completed in one day** — rapid execution enabled by sharp D-165-01 decision (Rao-Scott) locked in CONTEXT.md before planning; no mid-execution deliberation
+- **CONTEXT.md pre-locking design decisions** continued to pay off — planner and executor never re-argued already-decided questions (D-167-01 through D-167-07 fully specified edge cases including zero-post-encounter NA semantics)
+- **Complementary suppression (`sup_with_totals`)** implemented cleanly as a reusable pattern across Phase 167 workbook; prevents single-cell de-anonymization without hand-coding every table
+- **HiPerGator checkpoint plan design** (Plan 02 of each phase = registration + run) separates local code work from runtime verification; prevents "works locally, fails on cluster" surprises from blocking earlier plan execution
+- **`primary_source` for multi-source patients** (most-common site, alphabetical tiebreak) gave Phase 165 sensitivity model a clean join key without recomputing DuckDB
+
+### What Was Inefficient
+
+- **Phase 130 stale checkbox** — Phase 130 (v3.3) had a passing VERIFICATION.md but remained `[ ]` in ROADMAP.md for months; only caught at milestone completion. Root cause: gsd-tools `phase complete` was never called for Phase 130 after its verifier passed.
+- **gsd-tools `milestone complete` accomplishment extraction** pulled all phase summaries (all 157 phases), not just v3.7 phases — same issue as v3.3 retrospective. Still not fixed in the CLI.
+- **Progress table plan counts in v3.7 section** were stale (0/2, 1/2 entries) at milestone close — written during planning before execution and never updated automatically. Manual fix needed at archival.
+
+### Patterns Established
+
+- `build_single_source_result()` pure-function helper (testable without DuckDB) as an extraction layer between the DuckDB query and the flag computation — makes unit testing feasible for complex conditional logic
+- `NULLIF(UPPER(TRIM(SOURCE)), '')` as the canonical DuckDB blank-normalisation idiom for text CDM columns
+- Encounter-band crosstab (1 | 2–4 | 5–9 | 10+) as a standard contextual table for any binary flag — prevents conflating "single-source by default because only 1 encounter" with "genuinely continuous care at one site"
+- Post-anchor flag computed **before** coalescing post counts — prevents zero-post-encounter patients from being misclassified as 0 instead of NA
+
+### Key Lessons
+
+- Far-from-care encounters are significantly *less* likely to have same-day CBC (OR=0.553) — directionally surprising; may reflect care fragmentation or visit type differences. Recommend flagging for clinical team interpretation before publication.
+- Design effect of 130 (DEFF) confirms encounters are highly correlated within patients — naive chi-square would have severely underestimated the p-value uncertainty. Rao-Scott method choice was correct.
+- NHL-only (849) and HL+NHL (176) subsets have zero overlap, consistent with the classification being mutually exclusive at the patient level (not episode level) — useful QC confirmation for the team.
+
+---
+
 ## Milestone: v3.3 — Rituximab/Methotrexate-Associated Diagnoses of Interest
 
 **Shipped:** 2026-07-17
