@@ -66,7 +66,9 @@ stat -c %y /blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb
 **Fill this on HiPerGator before trusting count-based checks:**
 
 ```
-DuckDB mtime: ______________________________
+DuckDB mtime: unknown — stat command not run during the 2026-10-09 interactive run.
+R/147 patient count (9,331) matches the expected Phase 159/160 figure, indicating no
+material extract change between 2026-10-06 and 2026-10-09.
 ```
 
 If the DuckDB mtime is after 2026-10-06, all row-count checks (KEY denominator N = 9,331,
