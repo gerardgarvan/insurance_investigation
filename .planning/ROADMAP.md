@@ -578,7 +578,13 @@ Plans:
 **Goal:** `far_from_care` (0/1) exists in all output rows when `CONFIG$distance_cutoff_mi` is set (default NA — indicator not emitted until set), and `docs/distance_cutoff_memo.md` gives Amy/Erin the distribution-based, literature-based, and sensitivity candidates they need to make the call.
 **Requirements:** DIST-05
 **Depends on:** Phase 154
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 155-01-PLAN.md — CONFIG gate + far_from_care indicator + E_binary_by_cutoff sheet + histogram dotted lines
+- [ ] 155-02-PLAN.md — docs/distance_cutoff_memo.md + D-06 AM §3 row
+- [ ] 155-03-PLAN.md — F_sensitivity_cutoffs sheet (always written)
+
 
 **Success Criteria:**
 1. With `distance_cutoff_mi = NA` the pipeline output is byte-identical to Phase 154's — no behavioral change when cutoff is unset
@@ -591,7 +597,7 @@ Plans:
 **Goal:** AM §4 Distance block has no empty bullets — every rule corresponds to a named function or config value — and all six AM §3 decision rows (D-01..D-06) are populated; `R/122` and `utils_zip_calendar.R` are fully registered in the pipeline's discovery/validation infrastructure and the R/88 smoke test is green.
 **Requirements:** DIST-06, DIST-07
 **Depends on:** Phases 152-155
-**Plans:** TBD
+
 
 **Success Criteria:**
 1. AM §4 Expected Structure, Observed Issues, Cleaning Rules, and Unresolved Issues sections are all populated; every rule names a function or `CONFIG` key
@@ -604,7 +610,7 @@ Plans:
 **Goal:** (1) Collapse duplicate drug names (e.g. Vinblastine variants) to one canonical label via a normalization step in the pipeline; (2) change the treatment-episode window from 90 days to 180 days and re-run all Gantt outputs. Deduplication runs first since episode boundaries depend on drug identity.
 **Requirements:** TBD (see EPISODE-180-SPEC.md)
 **Depends on:** Phase 156
-**Plans:** TBD
+
 
 **Source spec:** `EPISODE-180-SPEC.md` — Assign phase number 157 before use.
 
@@ -802,7 +808,7 @@ See `.planning/milestones/v3.7-ROADMAP.md` for full phase details.
 2. Row counts per tab equal the source gantt row counts for those IDs; unmatched periods show empty E-J values
 3. QC reports: IDs per group, matched/unmatched periods in each direction, duplicate period keys, group overlap, non-"x" values in F/J, gantt snapshot version used
 4. Columns E-J appear with their original header names
-**Plans:** TBD
+
 - [ ] TBD (run /gsd:plan-phase 168 to break down)
 
 ### Phase 169: Registration, Smoke Test, and HiPerGator Run
