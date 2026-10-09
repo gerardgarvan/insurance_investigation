@@ -112,13 +112,37 @@ The plan spec for Test 4 says "a patient whose encounter is on the anchor-day ma
 
 ---
 
-## Task 6: Awaiting HiPerGator Run
+## Task 6: HiPerGator Run — COMPLETE (2026-10-08)
 
-**Status:** PENDING — checkpoint:human-action
+All five scripts ran interactively (`source()`) from an R 4.5.3 session on HiPerGator.
 
-See plan's `<how-to-verify>` section for exact sbatch commands.
+**Workbook outputs (all dated 20261008):**
+- `output/distance_cbc_association_20261008.xlsx`
+- `/blue/erin.mobley-hl.bcu/clean/rds/outputs/survivorship_modality_rates_20261008.xlsx`
+- `output/single_source_care_20261008.xlsx`
+- `output/internal/single_source_care_20261008.csv/.rds`
 
-Sacct table, SMOKE footers, workbook paths, and test-165 result from the 165 log to be pasted back after run.
+**SMOKE footers from R/88:**
+
+```
+SMOKE-165-01: 15 PASS / 0 FAIL
+SMOKE-166-01: 12 PASS / 0 FAIL
+SMOKE-167-01: 10 PASS / 0 FAIL
+SMOKE-168-01: 9 PASS / 0 FAIL
+```
+
+**R/88 overall:** 2/914 failures — both pre-existing, unrelated to Phase 169:
+1. FAIL: DRUG_NAME_ALIASES missing adriamycin + liposomal dox keys (Phase 164 backlog)
+2. FAIL: episode_classification_audit.xlsx missing 'Linkage Improvement' sheet (R/30 output not regenerated)
+
+**Integer overflow fix confirmed:** Warnings 3/4/7/8 (`NAs produced by integer overflow`) absent from R/165 run after `as.numeric()` fix in `naive_or_se()`.
+
+**R/88 exit behavior:** R/88 calls `quit(status = 1)` when any check FAILs (outside `TESTTHAT=true` mode). The `slurm/88_smoke_test.sbatch` wrapper's `set -e` propagates this as SLURM FAILED.
+
+**Notable notes from runs:**
+- R/167: `deaths_resolved` not found → death-as-competing-event not applied (expected; `D-166-02` fallback active)
+- R/167: `first_line` column absent from 180-day episode file → all episodes treated as first-line (`D-08a/D-166-02`)
+- R/165: payer RDS not found → sensitivity model fitted without `PAYER_CATEGORY_PRIMARY` (expected)
 
 ---
 
