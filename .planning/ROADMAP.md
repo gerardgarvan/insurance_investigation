@@ -531,12 +531,11 @@ Plans:
 
 ### Phase 151: Per-Patient ZIP Problem Inventory
 
-⚠ Code present (R/121_zip_problem_inventory.R), no SUMMARY — verify output before marking complete.
-
 **Goal:** Produce a per-patient roster with one row per patient ID and flags for every ZIP-related problem that patient exhibits (address coverage, sentinel ZIPs, concordance issues) and a triage category, turning Phase 150's aggregate counts into an addressable patient list.
 **Depends on:** Phase 150
-**Plans:** 0/1 executed
-- [ ] 151-01-PLAN.md — per-patient ZIP flag table + triage categories (1,128/701/427/152/19/12 groups from Phase 150 as addressable lists) + R/121 registration (Wave 1)
+**Plans:** 1/1 plans complete
+
+- [x] 151-01-PLAN.md — per-patient ZIP flag table + triage categories + R/121 registration (HiPerGator run confirmed 2026-10-09: all 8 reconciliation quantities PASS; 3,769 patients in roster; output/zip_problem_inventory_2026-10-09.xlsx + .rds written)
 
 ### Phase 152: Encounter-ZIP to Residence Distance
 
