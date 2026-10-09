@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 170-01-PLAN.md
-last_updated: "2026-10-09T20:49:13.031Z"
+stopped_at: Phase 171 context gathered
+last_updated: "2026-10-09T20:55:19.738Z"
 last_activity: 2026-10-09
 progress:
-  total_phases: 159
+  total_phases: 160
   completed_phases: 138
   total_plans: 305
   completed_plans: 310
@@ -258,7 +258,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 
 **Last command:** execute 143-03 Tasks 1-2 -- COMPLETE. R/142 rewired to treatment_episodes_180_enriched.rds; guard clauses removed; D-04 fill-rate parity check and D-05 invariant assertions added; output/gantt_180_README.txt created; 142-CONTEXT.md D-01 updated with 89/179-day max evidence. Commit: df65aa6. Task 3 (HiPerGator run of R/142 + R/88 + R/39) is pending and requires HiPerGator access.
 **Stopped at:**
-Completed 170-01-PLAN.md
+Phase 171 context gathered
 
 - 140-02-PLAN.md COMPLETE (3/3 tasks). D-2 resolved option-a (ZIP5 as primary analysis unit). See `140-02-SUMMARY.md`.
 - 140-09-PLAN.md (Wave 2a, inserted by 140-09-PATCH) COMPLETE (3/3 tasks) AND COMMITTED (`9123628`, 2026-08-08). `c02_reconciled` rewired onto `c02a_monotone && c02b_partition` (retiring the unverifiable 26-patient control total from the gate); D-5 resolved option-c ("no floor -- report only"). See `140-09-SUMMARY.md`.
