@@ -30,7 +30,7 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| RFSH-01 | Phase 170 | pending |
+| RFSH-01 | Phase 170 | Complete |
 | RFSH-02 | Phase 171 | pending |
 | RFSH-03 | Phase 172 | pending |
 | DOI-REG-01 | Phase 173 | pending |

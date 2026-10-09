@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Phase 170 context gathered
-last_updated: "2026-10-09T19:10:25.062Z"
+stopped_at: Phase 170 Plan 02 complete (170-02-SUMMARY.md); Plan 03 (HiPerGator run) is next
+last_updated: "2026-10-09T20:19:02.860Z"
 last_activity: 2026-10-09
 progress:
-  total_phases: 38
-  completed_phases: 30
-  total_plans: 103
-  completed_plans: 115
+  total_phases: 159
+  completed_phases: 137
+  total_plans: 305
+  completed_plans: 307
 ---
 
 # Project State
@@ -21,12 +21,12 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.7 complete. Next outstanding work: Phase 156 (AM §4 Distance write-back, AM §3 D-01..D-06 rows) — deferred; Phase 151 (per-patient ZIP problem inventory) — deferred.
+**Current focus:** Phase 170 — r147-rerun-and-verification
 
 ## Current Position
 
-Phase: v3.7 complete (Phases 165–169 all shipped 2026-10-08/09)
-Plan: N/A — roadmap cleanup applied 2026-10-08
+Phase: 170 (r147-rerun-and-verification) — EXECUTING
+Plan: 2 of 3
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 
