@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.8
 milestone_name: Pipeline Refresh & Phase 130 Close-out
-status: defining_requirements
-stopped_at: "Milestone v3.8 started — requirements written, roadmap pending"
+status: roadmap_defined
+stopped_at: "Roadmap v3.8 written — Phases 170-173 defined, ready for plan-phase"
 last_updated: "2026-10-09T00:00:00.000Z"
 last_activity: 2026-10-09
 progress:
-  total_phases: 169
+  total_phases: 173
   completed_phases: 169
   total_plans: 307
   completed_plans: 307

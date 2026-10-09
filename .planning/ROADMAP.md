@@ -23,6 +23,7 @@
 - ✅ **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (shipped — Phase 156 AM write-back dropped 2026-10-09; registration covered by Phase 169)
 - ✅ **v3.6 Treatment Episode Refinement** - Phase 157 (closed — delivered by Phase 142)
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
+- 🔄 **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (in progress)
 
 ## Phases
 
@@ -714,3 +715,76 @@ Plans:
 ---
 
 ## ✅ v3.7 Access, Survivorship Rates & NHL Episode Subsets (Shipped 2026-10-09) — 5 phases, 10 plans — see [milestones/v3.7-ROADMAP.md](.planning/milestones/v3.7-ROADMAP.md)
+
+
+---
+
+## 🔄 v3.8 Pipeline Refresh & Phase 130 Close-out (Active — started 2026-10-09)
+
+**Milestone Goal:** Close two dangling HiPerGator runtime gates (Phase 163 DIAGNOSIS exclusion, Phase 164 Dox rename) with verified reruns of all downstream scripts, and close the deferred v3.3 Phase 130 DoI registration and smoke-test. Two independent tracks (RFSH and DOI-REG) can run in parallel.
+
+## Phases (v3.8)
+
+- [ ] **Phase 170: R/147 Re-run and Verification** - Re-run R/147 after Phase 163 changes; verify vs 1006 reference workbook; confirm R/88 Section 15ao
+- [ ] **Phase 171: Survivorship Workbook Refresh** - Re-run R/166/R/167/R/168 from clean R/147 output; verify primary-tier and CIF parity with 10-08 workbook
+- [ ] **Phase 172: Phase 164 Close-out and R/170 NHL Subsets** - Close Phase 164 HiPerGator checkpoint; re-run R/170; verify matched-row identity and attribute any dox/Adriamycin shifts
+- [ ] **Phase 173: Phase 130 DoI Registration and HiPerGator Gate** - Register R/111 and R/112 in R/39 and SCRIPT_INDEX; add R/88 smoke section; confirm HiPerGator runtime
+
+## Phase Details (v3.8)
+
+### Phase 170: R/147 Re-run and Verification
+**Goal**: The R/147 output reflects the Phase 163 changes (no DIAGNOSIS Z-code rows, per-modality Codeset_summary) and passes all verification gates before any downstream script consumes the new RDS
+**Depends on**: Phase 169 (v3.7 final phase)
+**Requirements**: RFSH-01
+**Success Criteria** (what must be TRUE):
+  1. verify_vs_1006.R runs against the freshly-produced R/147 output and all checks pass — no failures reported
+  2. R/147 produces exactly 14 modality blocks in Codeset_summary with no Z-codes present in any block
+  3. R/88 Section 15ao passes green on HiPerGator with the new R/147 output in place
+**Plans**: TBD
+
+### Phase 171: Survivorship Workbook Refresh
+**Goal**: R/166, R/167, and R/168 workbooks are regenerated from the Phase 170 R/147 output and primary-tier clinical results are stable relative to the 2026-10-08 workbooks
+**Depends on**: Phase 170
+**Requirements**: RFSH-02
+**Success Criteria** (what must be TRUE):
+  1. Primary-tier surveillance rates (Echo, ECG, Mammogram, PFT excluded) in the R/166 output are identical to the 2026-10-08 workbook values
+  2. Cumulative incidence function (CIF) values in R/166 are identical to the 2026-10-08 workbook
+  3. Any-tier rates for Echo, ECG, Mammogram, and PFT shift (expected, attributable to Phase 163 DIAGNOSIS exclusion) and shifts are documented in the phase transition notes
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 172: Phase 164 Close-out and R/170 NHL Subsets
+**Goal**: The Phase 164 Dox rename is confirmed on HiPerGator and R/170 NHL subset output is verified to match the 2026-10-08 baseline on all non-dox columns
+**Depends on**: Phase 169 (independent of Phase 170/171 track)
+**Requirements**: RFSH-03
+**Success Criteria** (what must be TRUE):
+  1. R/170 runs cleanly on HiPerGator and produces a matched-rows count identical to the 2026-10-08 output
+  2. Any n_norm_only or n_mismatch shifts in the R/170 output are present exclusively in rows involving doxorubicin or Adriamycin drug names — no other drugs shift
+  3. The Phase 164 HiPerGator checkpoint is formally closed with the run date and output file name recorded in the phase transition notes
+**Plans**: TBD
+
+### Phase 173: Phase 130 DoI Registration and HiPerGator Gate
+**Goal**: R/111 and R/112 are fully registered in the pipeline discovery and validation infrastructure and their correctness is confirmed by a HiPerGator runtime pass on real DIAGNOSIS data
+**Depends on**: Phase 169 (independent of RFSH track; can run in parallel with Phases 170-172)
+**Requirements**: DOI-REG-01, DOI-REG-02, DOI-REG-03
+**Success Criteria** (what must be TRUE):
+  1. R/111 and R/112 appear in R/39_run_all_investigations.R (dependency order, R/111 before R/112) and both scripts have rows in R/SCRIPT_INDEX.md
+  2. R/88 smoke section for DoI scripts passes with all structural checks green, including the no-overlap assertion between DOI_CODE_MAP keys and CANCER_SITE_MAP / ICD9_CANCER_SITE_MAP keys
+  3. R/111 and R/112 run without error on HiPerGator against real DIAGNOSIS data; DoI category counts are logged (RA expected to dominate); the attribution report xlsx renders and is confirmed with a run date in the phase transition notes
+**Plans**: TBD
+
+## Tech Debt (logged, no phases created)
+
+| ID | Description | Risk |
+|----|-------------|------|
+| DEBT-01 | R/165 re-derives CBC logic from DuckDB rather than reading R/147 output RDS — silent drift risk if R/147 CBC rule changes | Medium — would silently produce different CBC counts than R/147 without any error |
+| DEBT-02 | R/166 carries its own copy of EXCLUDED_CDM_TABLES; fix is to move this into load_surveillance_codeset() in utils_surveillance.R so R/147 and R/166 share a single source of truth | Low — currently identical copies, divergence possible on next surveillance codeset edit |
+
+## Progress (v3.8)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 170. R/147 Re-run and Verification | v3.8 | 0/TBD | Not started | - |
+| 171. Survivorship Workbook Refresh | v3.8 | 0/TBD | Not started | - |
+| 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
+| 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |

@@ -30,9 +30,9 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| RFSH-01 | TBD | pending |
-| RFSH-02 | TBD | pending |
-| RFSH-03 | TBD | pending |
-| DOI-REG-01 | TBD | pending |
-| DOI-REG-02 | TBD | pending |
-| DOI-REG-03 | TBD | pending |
+| RFSH-01 | Phase 170 | pending |
+| RFSH-02 | Phase 171 | pending |
+| RFSH-03 | Phase 172 | pending |
+| DOI-REG-01 | Phase 173 | pending |
+| DOI-REG-02 | Phase 173 | pending |
+| DOI-REG-03 | Phase 173 | pending |
