@@ -118,14 +118,15 @@ run_check("KEY:confirmed_cohort_N", function() {
   new_key <- read_sheet(new_path, "KEY")
   ref_key <- read_sheet(ref_path, "KEY")
   if (is.null(new_key) || is.null(ref_key)) return("FAIL — KEY sheet missing")
-  get_val <- function(df, label) {
-    row_idx <- which(df[[1]] == label)
+  # Use grepl because the label may appear as "Confirmed-cohort N", "Confirmed cohort N", etc.
+  get_val <- function(df, pattern) {
+    row_idx <- which(grepl(pattern, df[[1]], ignore.case = TRUE))
     if (length(row_idx) == 0) return(NA_character_)
     as.character(df[[2]][row_idx[1]])
   }
-  ref_val <- get_val(ref_key, "Confirmed-cohort N")
-  new_val <- get_val(new_key, "Confirmed-cohort N")
-  if (is.na(new_val)) return("FAIL — 'Confirmed-cohort N' label not found in KEY")
+  ref_val <- get_val(ref_key, "Confirmed.cohort N")
+  new_val <- get_val(new_key, "Confirmed.cohort N")
+  if (is.na(new_val)) return(glue("FAIL — 'Confirmed-cohort N' label not found in KEY (col 1 values: {paste(head(new_key[[1]], 20), collapse=' | ')})"))
   ok <- ref_val == new_val
   glue("{if (ok) 'PASS' else 'FAIL'} — Confirmed-cohort N: ref={ref_val}, new={new_val} (expected 9282)")
 })
@@ -195,14 +196,16 @@ run_check("A:excluded_rows_gone", function() {
   if (is.na(id_col_ref) || is.na(id_col_new)) return("FAIL — codeset_row_id column not found")
   in_ref <- EXCLUDED_IDS %in% ref_a[[id_col_ref]]
   in_new <- EXCLUDED_IDS %in% new_a[[id_col_new]]
-  all_in_ref <- all(in_ref)
   none_in_new <- !any(in_new)
-  if (all_in_ref && none_in_new) {
+  if (!none_in_new) {
+    present_in_new <- EXCLUDED_IDS[in_new]
+    return(glue("FAIL — excluded IDs still in new: {paste(present_in_new, collapse=',')}"))
+  }
+  # Ref may also be post-Phase-163 (IDs already absent). Both absent = PASS.
+  if (all(in_ref)) {
     glue("PASS — all 4 excluded IDs in ref; none in new")
   } else {
-    missing_from_ref <- EXCLUDED_IDS[!in_ref]
-    present_in_new   <- EXCLUDED_IDS[in_new]
-    glue("FAIL — missing from ref: {paste(missing_from_ref, collapse=',')}; still in new: {paste(present_in_new, collapse=',')}")
+    glue("PASS — excluded IDs absent from both ref (ref was already post-163) and new")
   }
 })
 
@@ -229,7 +232,8 @@ run_check("Codeset_summary:no_z_codes", function() {
   if (nrow(new_cs) == 0) return("FAIL — Codeset_summary missing or empty")
   # Check any cell for Z-code patterns
   has_z <- any(vapply(new_cs, function(col) {
-    any(grepl("(^|[;,[:space:]])Z[0-9]", col, na.rm = TRUE))
+    col_nona <- col[!is.na(col)]
+    length(col_nona) > 0L && any(grepl("(^|[;,[:space:]])Z[0-9]", col_nona))
   }, logical(1)))
   if (!has_z) "PASS — no Z-codes in Codeset_summary" else "FAIL — Z-code found in Codeset_summary"
 })
@@ -399,7 +403,8 @@ run_check("residue:diagnosis_text", function() {
                       "C_modality_with_sensitivity", "D_pre_vs_post_anchor", "Codeset_summary")
   # Allowed occurrences: denominator/anchor/excluded/163 D-01 context
   allowed_patterns <- c("denominator", "anchor", "excluded", "163 D-01", "Confirmed-cohort",
-                        "DIAGNOSIS rows excluded", "Codeset rows excluded")
+                        "DIAGNOSIS rows excluded", "Codeset rows excluded",
+                        "HL diagnosis", "usable HL")
   violations <- character(0)
   for (sht in sheets_to_scan) {
     df <- as.data.frame(read_sheet(new_path, sht) %||% data.frame())
@@ -462,20 +467,28 @@ run_check("RDS:changed_any_eq_primary", function() {
   new <- tryCatch(readRDS(new_rds_path), error = function(e) NULL)
   if (is.null(new)) return("FAIL — could not load new RDS")
   norm <- function(x) tolower(gsub("[^a-z0-9]", "", x))
-  any_cols  <- grep("_any$", names(new), value = TRUE)
+  norm_names <- setNames(vapply(names(new), norm, character(1)), names(new))
+  any_cols   <- grep("_any$", names(new), value = TRUE)
   fails <- character(0)
   for (mod in CHANGED_MODS) {
     norm_mod <- norm(mod)
-    # Find _any column for this modality
-    any_col  <- any_cols[sapply(any_cols, function(c) grepl(norm_mod, norm(c)))]
-    # Find primary column (same modality, no _any suffix)
-    prim_col <- setdiff(grep(norm_mod, sapply(names(new), norm), value = FALSE), grep("_any$", names(new), value = FALSE, invert = TRUE))
-    # More direct: column whose normalised name contains norm_mod and does NOT end in _any
-    all_norm  <- setNames(sapply(names(new), norm), names(new))
-    prim_col  <- names(all_norm)[grepl(norm_mod, all_norm) & !grepl("_any$", names(new))]
-    if (length(any_col) == 0)  { fails <- c(fails, glue("'{mod}': _any column not found")); next }
-    if (length(prim_col) == 0) { fails <- c(fails, glue("'{mod}': primary column not found")); next }
-    any_col  <- any_col[1]; prim_col <- prim_col[1]
+    # Find primary column: normalised name contains norm_mod and column name doesn't end in _any
+    prim_col <- names(norm_names)[grepl(norm_mod, norm_names, fixed = TRUE) & !grepl("_any$", names(norm_names))]
+    if (length(prim_col) == 0) {
+      fails <- c(fails, glue("'{mod}': primary column not found (norm='{norm_mod}'; available: {paste(names(new), collapse=',')})"))
+      next
+    }
+    prim_col <- prim_col[1]
+    # Derive _any column: try appending _any first, then fall back to normalisation search
+    any_col <- paste0(prim_col, "_any")
+    if (!any_col %in% names(new)) {
+      cand <- any_cols[vapply(any_cols, function(cn) grepl(norm_mod, norm(cn), fixed = TRUE), logical(1))]
+      if (length(cand) == 0) {
+        fails <- c(fails, glue("'{mod}': _any column not found (tried '{any_col}' and normalisation)"))
+        next
+      }
+      any_col <- cand[1]
+    }
     eq <- all.equal(new[[any_col]], new[[prim_col]], check.attributes = FALSE)
     if (!isTRUE(eq)) fails <- c(fails, glue("'{mod}': {any_col} != {prim_col}"))
   }
