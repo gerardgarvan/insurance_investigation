@@ -725,7 +725,7 @@ Plans:
 
 ## Phases (v3.8)
 
-- [ ] **Phase 170: R/147 Re-run and Verification** - Re-run R/147 after Phase 163 changes; verify vs 1006 reference workbook; confirm R/88 Section 15ao
+- [x] **Phase 170: R/147 Re-run and Verification** - Re-run R/147 after Phase 163 changes; verify vs 1006 reference workbook; confirm R/88 Section 15ao (completed 2026-10-09)
 - [ ] **Phase 171: Survivorship Workbook Refresh** - Re-run R/166/R/167/R/168 from clean R/147 output; verify primary-tier and CIF parity with 10-08 workbook
 - [ ] **Phase 172: Phase 164 Close-out and R/170 NHL Subsets** - Close Phase 164 HiPerGator checkpoint; re-run R/170; verify matched-row identity and attribute any dox/Adriamycin shifts
 - [ ] **Phase 173: Phase 130 DoI Registration and HiPerGator Gate** - Register R/111 and R/112 in R/39 and SCRIPT_INDEX; add R/88 smoke section; confirm HiPerGator runtime
@@ -743,7 +743,7 @@ Plans:
 **Plans**: 3 plans
 - [x] 170-01-PLAN.md — Upgrade R/147_verify_vs_1006.R to a pinned-path PASS/FAIL harness + create slurm/147 sbatch scripts
 - [x] 170-02-PLAN.md — Add R/88 Section 15as (SMOKE-163-01) + capture downstream pre-flight gate snippet
-- [ ] 170-03-PLAN.md — HiPerGator sbatch chain run + SUMMARY (checkpoint)
+- [x] 170-03-PLAN.md — HiPerGator sbatch chain run + SUMMARY (checkpoint) — ran interactively; 30 PASS / 0 FAIL / 0 SKIP; R/88 921 checks passed; RFSH-01 gate cleared (2026-10-09)
 
 ### Phase 171: Survivorship Workbook Refresh
 **Goal**: R/166, R/167, and R/168 workbooks are regenerated from the Phase 170 R/147 output and primary-tier clinical results are stable relative to the 2026-10-08 workbooks
@@ -787,7 +787,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 170. R/147 Re-run and Verification | v3.8 | 2/3 | In Progress|  |
+| 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete | 2026-10-09 |
 | 171. Survivorship Workbook Refresh | v3.8 | 0/TBD | Not started | - |
 | 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
 | 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |

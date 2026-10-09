@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 170-01-PLAN.md
+stopped_at: Completed 170-03-PLAN.md
 last_updated: "2026-10-09T20:24:33.284Z"
 last_activity: 2026-10-09
 progress:
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 ## Current Position
 
 Phase: 170 (r147-rerun-and-verification) — EXECUTING
-Plan: 3 of 3
+Plan: 3 of 3 — COMPLETE
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 
