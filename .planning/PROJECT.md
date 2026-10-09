@@ -89,28 +89,15 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] Diagnosis-of-interest classification flag/category (patient + encounter level), non-overlapping with cancer categories (R/111: DuckDB prefix-pushdown DIAGNOSIS pull, mutual-exclusivity hard-stop, L10.81 paraneoplastic_flag, doi_encounters.rds + doi_patients.rds) — v3.3 Phase 128
 - [x] Treatment-attribution linkage (rituximab/MTX administration ↔ non-malignant diagnosis, temporal window) — two-tier join (ENCOUNTERID direct → ±90-day PATID window via DOI_ATTRIBUTION_WINDOW_DAYS), three-state likely_non_lymphoma_directed flag (NA never coerced to FALSE), attribution_method column — v3.3 Phase 129
 - [x] Standalone Tableau-ready diagnosis-of-interest prevalence + drug co-occurrence table/report (R/112: 4-sheet doi_attribution_report.xlsx — Patient Prevalence, Encounter Co-occurrence, Drug×DoI Summary, Metadata with ±30/±90/±180 sensitivity; RAW counts + internal-only note per D-07/D-01, co-occurrence language enforced, CAVEATS footnote on every sheet) — v3.3 Phase 129
+- [x] ACC-01/02/03/04: Encounter-level `far_from_care_100mi` (km→miles, CONFIG cutoff); Rao-Scott methods memo; cluster-adjusted chi-square (encounter-level, clustered on patient ID); suppressed counts + QC exclusion report — v3.7 Phase 165 (OR=0.553, p=6.8e-13)
+- [x] SRATE-01/02/03/04: Modality rate audit; per-patient survivorship rates table; time from last anthracycline dose to first echo with cumulative incidence at 1/2/5 years; echo rate per person-year — v3.7 Phase 166
+- [x] SRC-01/02/03: Binary `single_source_care` (whole-record + post-anchor) from ENCOUNTER.SOURCE only; NA-SOURCE flagged in QC; `single_source_care_post = NA` for no-anchor or zero-post-encounter patients — v3.7 Phase 167
+- [x] NHLSUB-01/02/03/04: NHL-only (849 patients) and HL+NHL (176 patients, 0 overlap) subsets of gantt_episodes_180 joined to chemo-combos columns E-J at treatment-period grain; QC of unmatched IDs and group overlap — v3.7 Phase 168
+- [x] REG-37-01/SMOKE-37-01/RUN-37-01: All v3.7 scripts registered in R/39 and SCRIPT_INDEX; R/88 smoke checks; HiPerGator run with four workbooks dated 20261008 — v3.7 Phase 169
 
 ### Active
 
-#### v3.7 Access, Survivorship Rates & NHL Episode Subsets
-- [ ] ACC-01: Encounter-level binary for distance >100 miles, using R/122 distances (km→miles)
-- [ ] ACC-02: Methods memo comparing tests for the distance-CBC relationship accounting for clustered encounters
-- [ ] ACC-03: Team-selected test implemented with effect size, CI, and assumption checks
-- [ ] ACC-04: Displayed counts HIPAA-suppressed (<11); excluded encounters reported
-- [ ] SRATE-01: Audit of existing person-time modality rates; build only what is missing
-- [ ] SRATE-02: Every modality has a person-time rate in one per-patient table
-- [ ] SRATE-03: Time from last anthracycline dose to first echocardiogram, with cumulative incidence at 1/2/5 years
-- [ ] SRATE-04: Echocardiogram rate per person-year after last anthracycline dose
-- [ ] SRC-01: Binary `single_source_care` from ENCOUNTER.SOURCE only (whole-record + post-anchor)
-- [ ] SRC-02: Sensitivity versions (post-anchor window) — NOTE: all-tables sensitivity removed (ENCOUNTER.SOURCE only per D-167-01)
-- [ ] SRC-03: NA-SOURCE handling reported, not coerced
-- [ ] NHLSUB-01: NHL-only subset (all episodes Definitely NHL, none HL) of gantt_episodes_180
-- [ ] NHLSUB-02: HL+NHL subset (any episode marked HL and NHL) of gantt_episodes_180
-- [ ] NHLSUB-03: Both subsets left-joined to chemo-combos columns E-J at treatment-period level (chemo rows only, 2026-08-14 snapshot)
-- [ ] NHLSUB-04: QC of unmatched IDs, group overlap, and unexpected marker values
-- [ ] REG-37-01: R/39 + SCRIPT_INDEX registration for all v3.7 scripts
-- [ ] SMOKE-37-01: R/88 structural checks for all v3.7 outputs
-- [ ] RUN-37-01: Real-data HiPerGator run with re-issued workbooks
+#### v3.4 R Pipeline Code Review Remediation (open — v3.4/v3.3 stalled)
 
 #### v3.4 R Pipeline Code Review Remediation
 - [ ] Fix 8 critical/high-severity findings (crashers, wrong published numbers, inert SCT feature, silent DB-promotion bug, empty reference manual, wrong age-at-episode)
@@ -158,16 +145,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.7 Access, Survivorship Rates & NHL Episode Subsets
+## Shipped: v3.7 Access, Survivorship Rates & NHL Episode Subsets (2026-10-09)
 
-**Goal:** Deliver four team requests from 2026-10-08: (1) an encounter-level >100-mile distance-to-care indicator tested against CBC surveillance; (2) per-patient survivorship modality rates, including time from last anthracycline dose to echocardiogram; (3) a binary flag for patients whose care is entirely within one health system (ENCOUNTER.SOURCE); (4) NHL-only and HL+NHL subsets of `gantt_episodes_180` joined to the team-annotated chemo-combos workbook. All existing outputs are read-only inputs; each phase writes a new KEY-leftmost workbook in UF colors.
+**Delivered:** Four team requests — (1) Rao-Scott CBC association analysis (OR=0.553, p=6.8e-13 for far-from-care encounters vs CBC); (2) survivorship modality rates + anthracycline-to-echo timing workbook; (3) single-health-system care flag (whole-record + post-anchor windows); (4) NHL-only (849 patients) and HL+NHL (176 patients, 0 overlap) gantt episode subsets joined to chemo-combos. All four workbooks produced on HiPerGator 2026-10-08.
 
-**Target features:**
-- ACC: Encounter-level `far_from_care_100mi` (km→miles, cutoff in CONFIG); methods memo comparing tests for the distance-CBC relationship accounting for clustered encounters per patient; team-selected test implemented (GEE leading candidate); both whole-record and post-anchor windows reported
-- SRATE: Audit existing person-time modality rates; build any missing; per-patient survivorship rates table; time from last anthracycline dose to first echo with cumulative incidence at 1/2/5 years and echo rate per person-year
-- SRC: Patient-level `single_source_care` binary from ENCOUNTER.SOURCE only, in both whole-record and post-anchor windows; NA-SOURCE patients counted in QC, not coerced
-- NHLSUB: NHL-only subset (all episodes Definitely NHL, none HL) and HL+NHL subset (any episode marked HL and NHL) from `gantt_episodes_180`; left-joined to chemo-combos columns E-J at treatment-period grain, chemo rows only, against the 2026-08-14 snapshot
-- REG: R/39 + SCRIPT_INDEX registration for all v3.7 scripts; R/88 structural checks; real-data HiPerGator run re-issuing all four workbooks
+**Open work (deferred milestones):**
+- v3.3: Phase 130 (R/88 smoke test for DoI scripts) — HiPerGator runtime gate pending
+- v3.4/v3.5/v3.6: ZIP/SES/episode phases — stalled or deferred
 
 ## Current State
 
@@ -424,4 +408,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-09 after Phase 165 (distance-100mi-indicator-and-cbc-association) completion — Rao-Scott CBC association analysis; ACC-01–04 verified.*
+*Last updated: 2026-10-09 after v3.7 milestone completion — 5 phases, 10 plans; all ACC/SRATE/SRC/NHLSUB/REG requirements validated.*

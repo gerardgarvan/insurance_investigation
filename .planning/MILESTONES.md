@@ -1,5 +1,63 @@
 # Milestones
 
+## v3.7 Access, Survivorship Rates & NHL Episode Subsets (Shipped: 2026-10-09)
+
+**Phases completed:** 157 phases, 303 plans, 367 tasks
+
+**Key accomplishments:**
+
+- Context:
+- Purpose:
+- Commit:
+- Purpose:
+- Commit:
+- Phase 102 (encounter-grain, 10 columns):
+- Status:
+- Files:
+- Modified sections:
+- >
+- Task 1 — `R/utils/utils_address.R` (three edits):
+- Invariants held:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- Completeness waterfall (SECTION 11):
+- One-liner:
+- `R/utils/utils_distance_hist.R`
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- load_lab_analytes() and load_modality_lookup() added to utils_surveillance.R with full validation; surveillance_codeset.xlsx (5 sheets, 167 rows) verified identical to Phase 158 in shared columns; Phase 158 callers and return type unchanged
+- Four pure analyte-rule functions added to utils_surveillance.R with 8 test_that blocks (39 expectations) covering CMP nesting, partial-panel thresholds, duplicate-source dedup, KIDNEY eGFR sensitivity, near-miss format, anchor-day exclusion, and A2 row-level presence
+- R/147 updated with Phase 159 analyte pull (Section 4B), an_rules bound into matched_all, A2 and E sheets, SC-4/SC-5/SC-6 stopifnots, and per-patient modality-dates .rds/.csv output
+- R/88 Section 15ak (SMOKE-159-01) adds 9 structural checks enforcing Phase 159 lab modality design decisions; SCRIPT_INDEX updated; HiPerGator phase gate passed — 149 test expectations pass, R/88 Phase 159 9/9 PASS, R/147 runs cleanly for 9,331 patients, A/A2/near-miss reviewed, release workbook cleared.
+- Task 1 — Codeset staging:
+- Task 1 (RED) — Test file `tests/testthat/test-160-diagnostic-and-eligibility.R`:
+- R/147_surveillance_modality_frequency.R — Phase 160 wiring (127 net insertions):
+- R/88_smoke_test_comprehensive.R — Section 15al (Phase 160 block):
+- Old (pre-161):
+- 1. [Rule 2 - Missing functionality] DEATH_SOURCE collection
+- R/52_gantt_v2_export.R
+- One-liner:
+- R/147 (T1, T2, T4):
+- One-liner:
+- Plan:
+- One-liner:
+- 1. [Rule 1 - Correction] Driver script number: R/166, not R/165
+- One-liner:
+- [Deviation - Minor] R/39 expected_xlsx not updated for dated workbook
+- One-liner:
+- One-liner:
+- One-liner:
+- 1. [Rule 1 - Bug] slurm/165 log name typo
+
+---
+
 ## v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (Shipped: 2026-07-17)
 
 **Phases completed:** 4 phases (Phases 127-130), 8 plans
