@@ -740,7 +740,10 @@ Plans:
   1. verify_vs_1006.R runs against the freshly-produced R/147 output and all checks pass — no failures reported
   2. R/147 produces exactly 14 modality blocks in Codeset_summary with no Z-codes present in any block
   3. R/88 Section 15ao passes green on HiPerGator with the new R/147 output in place
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 170-01-PLAN.md — Upgrade R/147_verify_vs_1006.R to a pinned-path PASS/FAIL harness + create slurm/147 sbatch scripts
+- [ ] 170-02-PLAN.md — Add R/88 Section 15as (SMOKE-163-01) + capture downstream pre-flight gate snippet
+- [ ] 170-03-PLAN.md — HiPerGator sbatch chain run + SUMMARY (checkpoint)
 
 ### Phase 171: Survivorship Workbook Refresh
 **Goal**: R/166, R/167, and R/168 workbooks are regenerated from the Phase 170 R/147 output and primary-tier clinical results are stable relative to the 2026-10-08 workbooks
