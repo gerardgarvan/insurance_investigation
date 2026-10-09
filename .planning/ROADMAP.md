@@ -741,7 +741,7 @@ Plans:
   2. R/147 produces exactly 14 modality blocks in Codeset_summary with no Z-codes present in any block
   3. R/88 Section 15ao passes green on HiPerGator with the new R/147 output in place
 **Plans**: 3 plans
-- [ ] 170-01-PLAN.md — Upgrade R/147_verify_vs_1006.R to a pinned-path PASS/FAIL harness + create slurm/147 sbatch scripts
+- [x] 170-01-PLAN.md — Upgrade R/147_verify_vs_1006.R to a pinned-path PASS/FAIL harness + create slurm/147 sbatch scripts
 - [x] 170-02-PLAN.md — Add R/88 Section 15as (SMOKE-163-01) + capture downstream pre-flight gate snippet
 - [ ] 170-03-PLAN.md — HiPerGator sbatch chain run + SUMMARY (checkpoint)
 
@@ -787,7 +787,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 170. R/147 Re-run and Verification | v3.8 | 1/3 | In Progress|  |
+| 170. R/147 Re-run and Verification | v3.8 | 2/3 | In Progress|  |
 | 171. Survivorship Workbook Refresh | v3.8 | 0/TBD | Not started | - |
 | 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
 | 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |
