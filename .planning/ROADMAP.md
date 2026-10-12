@@ -764,7 +764,8 @@ Plans:
   1. R/170 runs cleanly on HiPerGator and produces a matched-rows count identical to the 2026-10-08 output
   2. Any n_norm_only or n_mismatch shifts in the R/170 output are present exclusively in rows involving doxorubicin or Adriamycin drug names — no other drugs shift
   3. The Phase 164 HiPerGator checkpoint is formally closed with the run date and output file name recorded in the phase transition notes
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 172-01-PLAN.md — R/170 re-run + Phase 164 HiPerGator checkpoint closure [RFSH-03] (Wave 1)
 
 ### Phase 173: Phase 130 DoI Registration and HiPerGator Gate
 **Goal**: R/111 and R/112 are fully registered in the pipeline discovery and validation infrastructure and their correctness is confirmed by a HiPerGator runtime pass on real DIAGNOSIS data
