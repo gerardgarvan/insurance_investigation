@@ -99,6 +99,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] RFSH-03: Phase 164 doxorubicin rename confirmed in both 90-day and 180-day Gantt outputs (0 liposomal rows, 2384/2384 patient count preserved); R/170 NHL subsets unchanged (2615/592 episode-tab rows, 849/1261/176 group counts); `_PINNED` snapshot protection in R/00_config.R — v3.8 Phase 172
 - [x] DOI-REG-01/02/03: R/111 and R/112 registered in R/39 (L217/L218, dependency order) and SCRIPT_INDEX (L157/L158); Section 15w (SMOKE-130-01) in R/88; HiPerGator runtime confirmed — 920 checks PASS, 32,249 DoI encounters — v3.8 Phase 173
 
+## Current Milestone: v3.9 Pipeline Hygiene
+
+**Goal:** Close small loose ends from v3.5–v3.8 so the smoke test and ZIP work are trustworthy. No new analysis.
+
+**Target features:**
+- Resolve 920/921 smoke-check discrepancy — find the missing/skipped/failed check, fix or document it
+- R/88 exit-status hardening — quit(status=1) on failure in non-interactive runs; print "FAILED: N" in interactive sessions; skip branches must not inflate PASS count
+- Phase 151 close-out — run R/121 on HiPerGator, verify against 151-PLAN.md criteria, write 151-01-SUMMARY.md
+- NEEDS_TEMPORAL_MATCH sizing memo — count unfilled-ZIP encounters (zip9_source == "none" OR missing ZIP5) by R/121 group, cite Phase 150 concordance (547/135, ~80%) as expected error rate, recommend whether a new imputation tier is worth a phase
+
 ### Active
 
 #### v3.4 R Pipeline Code Review Remediation (open — v3.4/v3.3 stalled)
@@ -419,4 +429,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-12 — v3.8 milestone shipped (Pipeline Refresh & Phase 130 Close-out).*
+*Last updated: 2026-10-12 — v3.9 milestone started (Pipeline Hygiene).*

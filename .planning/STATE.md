@@ -1,32 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: executing
-stopped_at: Phase 171 context gathered
-last_updated: "2026-10-12T17:21:08.206Z"
+milestone: v3.9
+milestone_name: Pipeline Hygiene
+status: defining requirements
+stopped_at: Milestone started — roadmap pending
+last_updated: "2026-10-12T00:00:00.000Z"
 last_activity: 2026-10-12
 progress:
-  total_phases: 162
-  completed_phases: 141
-  total_plans: 308
-  completed_plans: 313
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
+See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 173 — phase-130-doi-registration-and-hipergator-gate — COMPLETE 2026-10-12
+**Current focus:** Milestone v3.9 — Pipeline Hygiene — defining requirements
 
 ## Current Position
 
-Phase: 173
-Plan: Not started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-10-12 — Milestone v3.9 started
 
 **Phase 173 close-out (2026-10-12):** Path B taken (fresh HiPerGator re-run, R/4.5 interactive, ~0.2 min, host c0700a-s28.ufhpc). Encounter-grain DoI counts exactly match Phase 130 baseline (2026-07-16) — DuckDB pcornet.duckdb confirmed unchanged. ALL 920 R/88 CHECKS PASSED. SMOKE-130-01 footer confirmed in R/88 validated requirements list. doi_attribution_report.xlsx produced with 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata). Mutual-exclusivity: 0 codes classify as both DoI and cancer. DOI-REG-01/02/03 closed. Unrelated R/88 IMMU fix (bd94062) committed separately — non-blocking for this gate.
 
