@@ -4,13 +4,13 @@ milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
 stopped_at: Phase 171 context gathered
-last_updated: "2026-10-12T16:24:45.587Z"
+last_updated: "2026-10-12T16:47:22.331Z"
 last_activity: 2026-10-12
 progress:
-  total_phases: 38
-  completed_phases: 30
-  total_plans: 103
-  completed_plans: 115
+  total_phases: 162
+  completed_phases: 141
+  total_plans: 308
+  completed_plans: 313
 ---
 
 # Project State
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 ## Current Position
 
-Phase: 173 (phase-130-doi-registration-and-hipergator-gate) — COMPLETE
-Plan: 1 of 1 — DONE
+Phase: 173
+Plan: Not started
 
 **Phase 173 close-out (2026-10-12):** Path B taken (fresh HiPerGator re-run, R/4.5 interactive, ~0.2 min, host c0700a-s28.ufhpc). Encounter-grain DoI counts exactly match Phase 130 baseline (2026-07-16) — DuckDB pcornet.duckdb confirmed unchanged. ALL 920 R/88 CHECKS PASSED. SMOKE-130-01 footer confirmed in R/88 validated requirements list. doi_attribution_report.xlsx produced with 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata). Mutual-exclusivity: 0 codes classify as both DoI and cancer. DOI-REG-01/02/03 closed. Unrelated R/88 IMMU fix (bd94062) committed separately — non-blocking for this gate.
 
