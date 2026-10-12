@@ -22,6 +22,7 @@
 - 🔄 **v3.4 R Pipeline Code Review Remediation** - Phases 132-136 (in progress)
 - 🔄 **v3.5 Encounter Distance (AM §4)** - Phases 152-156 (in progress)
 - ⏳ **v3.6 Treatment Episode Refinement** - Phase 157 (planned)
+- ⏳ **v3.7 Smoke Test Hardening** - Phase 175 (planned)
 
 ## Phases
 
@@ -592,3 +593,24 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 157. 180-Day Treatment Episodes + Drug-Name Deduplication | v3.6 | 0/TBD | Not started | - |
+
+## Phases (v3.7)
+
+### ⏳ v3.7 Smoke Test Hardening
+
+**Milestone Goal:** Make R/88 a reliable CI gate — hard exit-status failure when any check fails, correct skip/counter wiring throughout.
+
+## Phase Details (v3.7)
+
+### Phase 175: R/88 Exit-Status Hardening
+
+**Goal**: Make R/88 signal failure (`quit(status=1)` / `FAILED: N` message) when any check fails; verify skip and counter wiring so every section's pass/fail count is accurate and the script exits non-zero on HiPerGator when failures are present.
+**Depends on**: Phase 174
+**Requirements**: TBD
+**Plans**: TBD
+
+## Progress (v3.7)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 175. R/88 Exit-Status Hardening | v3.7 | 0/TBD | Not started | - |
