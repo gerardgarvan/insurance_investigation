@@ -50,8 +50,9 @@ if (requireNamespace("here", quietly = TRUE)) {
 
 library(glue)
 
-passed <- 0L
-failed <- 0L
+passed  <- 0L
+failed  <- 0L
+skipped <- 0L
 
 check <- function(description, condition) {
   if (condition) {
@@ -63,9 +64,20 @@ check <- function(description, condition) {
   }
 }
 
+skip_check <- function(label, reason = "") {
+  msg <- if (nzchar(reason)) paste0("  SKIP: ", label, " (", reason, ")") else paste0("  SKIP: ", label)
+  message(msg)
+  skipped <<- skipped + 1L
+}
+
 message(strrep("=", 70))
 message("SMOKE TEST: Comprehensive Pipeline Validation (v2.2 + Phase 87-89)")
 message(strrep("=", 70))
+
+# Failure-path sentinel: fires only when the env var is set (Phase 175)
+if (identical(Sys.getenv("R88_FORCE_FAIL"), "1")) {
+  check("Forced failure sentinel (env var set)", FALSE)
+}
 
 # ==============================================================================
 # SECTION 2: UTILS MODULE COMPLETENESS ----
@@ -2346,8 +2358,7 @@ if (r102_exists_119 && r103_exists) {
     check("output has non-zero TRUE or FALSE (Phase 119, HiPerGator)",
           (n_true + n_false) > 0)
   } else {
-    check("output has non-zero TRUE or FALSE -- SKIPPED (local / no output) (Phase 119)",
-          TRUE)
+    skip_check("output has non-zero TRUE or FALSE (Phase 119)", "local / no output")
   }
 
 } else {
@@ -2618,8 +2629,7 @@ if (r106_exists) {
     check("R/106 output xlsx exists with sheets (Phase 121, HiPerGator)",
           file.exists(out_xlsx_121))
   } else {
-    check("R/106 output xlsx present -- SKIPPED (local / no output) (Phase 121)",
-          TRUE)
+    skip_check("R/106 output xlsx present (Phase 121)", "local / no output")
   }
 
 } else {
@@ -2759,15 +2769,13 @@ if (IS_LOCAL) {
       check("get_chemo_hits('MED_ADMIN') returns >=1 row against local fixture (Phase 122, IS_LOCAL)",
             !is.null(hits) && nrow(hits) >= 1L)
     } else {
-      check("get_chemo_hits runtime check -- SKIPPED (helpers not loaded in this scope) (Phase 122)",
-            TRUE)
+      skip_check("get_chemo_hits runtime check (Phase 122)", "helpers not loaded in this scope")
     }
   }, error = function(e) {
-    check("get_chemo_hits runtime check -- SKIPPED (error loading fixtures) (Phase 122)", TRUE)
+    skip_check("get_chemo_hits runtime check (Phase 122)", "error loading fixtures")
   })
 } else {
-  check("get_chemo_hits runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 122)",
-        TRUE)
+  skip_check("get_chemo_hits runtime check (Phase 122)", "HiPerGator runtime, not IS_LOCAL")
 }
 
 # ==============================================================================
@@ -2850,11 +2858,9 @@ if (r109_exists) {
 
   # Check 14: IS_LOCAL-gated runtime check (structural PASS both branches)
   if (IS_LOCAL) {
-    check("R/109 runtime (Rscript parse + DuckDB diff + xlsx) -- SKIPPED (HiPerGator runtime) (Phase 123)",
-          TRUE)
+    skip_check("R/109 runtime (Rscript parse + DuckDB diff + xlsx) (Phase 123)", "HiPerGator runtime")
   } else {
-    check("R/109 runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 123)",
-          TRUE)
+    skip_check("R/109 runtime check (Phase 123)", "HiPerGator runtime, not IS_LOCAL")
   }
 
 } else {
@@ -2935,16 +2941,14 @@ if (r110_exists) {
     check("R/110 is NOT wired into R/39_run_all_investigations.R (one-off analysis, Phase 124)",
           !grepl("R/110|110_output_level", r39_text))
   } else {
-    check("R/39 not found -- R/110 not-wired check SKIPPED (Phase 124)", TRUE)
+    skip_check("R/110 not-wired check (Phase 124)", "R/39 not found")
   }
 
   # Check 13: IS_LOCAL runtime gate (structural PASS both branches)
   if (IS_LOCAL) {
-    check("R/110 runtime (xlsx generation + sheet row counts) -- SKIPPED (HiPerGator runtime) (Phase 124)",
-          TRUE)
+    skip_check("R/110 runtime (xlsx generation + sheet row counts) (Phase 124)", "HiPerGator runtime")
   } else {
-    check("R/110 runtime check -- SKIPPED (HiPerGator runtime, not IS_LOCAL) (Phase 124)",
-          TRUE)
+    skip_check("R/110 runtime check (Phase 124)", "HiPerGator runtime, not IS_LOCAL")
   }
 
 } else {
@@ -3031,7 +3035,7 @@ if (!IS_LOCAL && file.exists(enc_rds) && file.exists(pat_rds)) {
   check("R/111 .rds artifacts have expected columns and are non-empty (Phase 130, HiPerGator)",
         all(enc_cols %in% names(enc)) && all(pat_cols %in% names(pat)) && nrow(enc) > 0 && nrow(pat) > 0)
 } else {
-  check("R/111 .rds runtime column/non-empty check -- SKIPPED (local / no output) (Phase 130)", TRUE)
+  skip_check("R/111 .rds runtime column/non-empty check (Phase 130)", "local / no output")
 }
 
 # Check 13: RUNTIME (HiPerGator-only) — doi_attribution_report.xlsx 4 expected sheets
@@ -3042,7 +3046,7 @@ if (!IS_LOCAL && file.exists(doi_xlsx)) {
   check("R/112 xlsx has exactly the 4 expected sheets (Phase 130, HiPerGator)",
         all(expected_sheets %in% sheets_found))
 } else {
-  check("R/112 xlsx 4-sheet runtime check -- SKIPPED (local / no output) (Phase 130)", TRUE)
+  skip_check("R/112 xlsx 4-sheet runtime check (Phase 130)", "local / no output")
 }
 
 # Check 14: RUNTIME (HiPerGator-only) — logged DoI category counts (DOI-QA-03 signal)
@@ -3054,7 +3058,7 @@ if (!IS_LOCAL && file.exists(enc_rds)) {
   check("R/111 real-data DoI counts non-empty with RA present (Phase 130, HiPerGator; log into phase notes)",
         length(cat_tab) > 0 && "Rheumatoid Arthritis" %in% names(cat_tab))
 } else {
-  check("R/111 real-data DoI category counts -- SKIPPED (local / no output; logged on HiPerGator) (Phase 130)", TRUE)
+  skip_check("R/111 real-data DoI category counts (Phase 130)", "local / no output; logged on HiPerGator")
 }
 
 # ==============================================================================
@@ -4333,7 +4337,7 @@ if (file.exists("R/37_gap_resolution_report.Rmd")) {
   r37_text <- paste(r37_lines, collapse = "\n")
 
   # File and output format
-  check("R/37 Rmd file exists", TRUE)
+  check("R/37 Rmd file exists", file.exists("R/37_gap_resolution_report.Rmd"))
 
   check("R/37 specifies html_document output",
         any(str_detect(r37_lines, "html_document")))
@@ -4395,7 +4399,7 @@ if (file.exists("R/38_delivery_manifest.R")) {
   r38_text <- paste(r38_lines, collapse = "\n")
 
   # File exists
-  check("R/38 script exists", TRUE)
+  check("R/38 script exists", file.exists("R/38_delivery_manifest.R"))
 
   # Library dependencies
   check("R/38 loads openxlsx2 library",
@@ -6638,6 +6642,7 @@ p163_chk  <- function(label, ok) {
 p163_skip_note <- function(label, why) {
   message(glue("  SKIP  {label} — {why}"))
   p163_skip <<- p163_skip + 1L
+  skipped   <<- skipped   + 1L
 }
 
 message("\n--- Section 15as: Phase 163 DIAGNOSIS exclusion ---")
@@ -6727,11 +6732,11 @@ message(glue("\nSMOKE-163-01: {p163_pass} PASS / {p163_fail} FAIL / {p163_skip} 
 # ==============================================================================
 
 message(glue("\n{strrep('=', 70)}"))
-total <- passed + failed
+total <- passed + failed   # skips are not checks
 if (failed == 0) {
-  message(glue("ALL {total} CHECKS PASSED"))
+  message(glue("ALL {total} CHECKS PASSED  ({skipped} skipped)"))
 } else {
-  message(glue("FAILED: {failed}/{total} checks failed"))
+  message(glue("FAILED: {failed}/{total} checks failed  ({skipped} skipped)"))
 }
 message(strrep("=", 70))
 
@@ -6872,6 +6877,12 @@ message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episod
 message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
 message("  * SMOKE-163-01: R/88 validates Phase 163 DIAGNOSIS exclusion structural integrity: EXCLUDED_CDM_TABLES defined in R/147, stopifnot referencing it, A_code_presence has no DIAGNOSIS cell or Z-code IDs, Codeset_summary has no Z-code pattern (Section 15as, 4 checks; checks 3-4 skip in local runs without INTERNAL workbook)")
 
-if (failed > 0 && !identical(Sys.getenv("TESTTHAT"), "true")) {
-  quit(status = 1)
+if (failed > 0) {
+  if (identical(Sys.getenv("TESTTHAT"), "true")) {
+    # testthat: no-op; the harness reads FAIL lines
+  } else if (interactive()) {
+    stop(paste0("R/88: ", failed, " check(s) FAILED"))
+  } else {
+    quit(status = 1)
+  }
 }
