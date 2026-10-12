@@ -81,3 +81,7 @@ data/reference/neighborhood_atlas_zip9_adi.csv
 
 # ADI source zip downloads (raw portal downloads, not repo content)
 adi-download*.zip
+
+# R/.planning/ -- stale parallel planning tree created when GSD was launched from R/
+# (archived to root .planning/ in Phase 177 session; guard against future mis-launches)
+R/.planning/
