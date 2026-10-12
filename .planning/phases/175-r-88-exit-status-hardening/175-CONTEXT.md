@@ -38,17 +38,15 @@ if (failed > 0) {
   } else {
     quit(status = 1)
   }
-} else {
-  if (!interactive() && !identical(Sys.getenv("TESTTHAT"), "true")) {
-    quit(status = 0)
-  }
 }
 ```
+
+No explicit `quit(status = 0)` on success: Rscript exits 0 when the script finishes, and an explicit quit would cut off any non-interactive caller that sources R/88 and continues.
 
 **Rationale:**
 - Interactive R (HiPerGator `source()` pattern): `stop()` — session stays alive, error is loud
 - testthat: current no-op behaviour — harness reads FAIL lines directly
-- Non-interactive (Rscript): `quit(status=1)` on failure, `quit(status=0)` on success
+- Non-interactive (Rscript): `quit(status=1)` on failure; normal completion exits 0
 
 ### D-02: Skip-as-pass — add `skip_check()`, audit all `check("…", TRUE)` instances
 
@@ -78,6 +76,9 @@ if (failed == 0) {
 **Grep audit required:** Find every `check("…", TRUE)` in R/88 and classify:
 - If it is a runtime check skipped because output files are absent or environment is wrong → convert to `skip_check(label, reason)`
 - If it is a genuine structural assertion that is always true → leave as `check()`
+- If it is a hard-coded TRUE standing in for a testable condition (e.g. "R/37 Rmd file exists", "R/38 script exists") → replace TRUE with the real condition (`file.exists(...)`)
+- Audit every checker (`check`, `.p135_check`, `check_137`, the 138/139/144 checkers), including calls wrapped across lines — not only labels containing "SKIPPED"
+- `p163_skip_note()` also increments the global `skipped` so the footer count is complete
 - Document the judgment for each in the SUMMARY
 
 **Baseline shift:** The PASS total will drop by roughly the number of skip conversions (estimated ~12 from the grep). The SUMMARY must record the new baseline number after HiPerGator confirmation. Downstream phases cite "PASS == total, FAIL == 0" not a fixed number.
@@ -97,12 +98,13 @@ This check never fires in normal runs. It requires no cleanup.
 
 ```r
 # Non-interactive path — expect exit code 1
-ec1 <- system2("Rscript", "R/88_smoke_test_comprehensive.R",
-               env = c(Sys.getenv(), R88_FORCE_FAIL = "1"))
+rs <- file.path(R.home("bin"), "Rscript")   # same R as the session
+ec1 <- system2(rs, "R/88_smoke_test_comprehensive.R",
+               env = "R88_FORCE_FAIL=1")      # NAME=value strings, not Sys.getenv()
 stopifnot(ec1 == 1L)   # must be 1
 
 # Non-interactive clean path — expect exit code 0
-ec0 <- system2("Rscript", "R/88_smoke_test_comprehensive.R")
+ec0 <- system2(rs, "R/88_smoke_test_comprehensive.R")
 stopifnot(ec0 == 0L)   # must be 0
 
 # Interactive path — expect stop(), session must stay alive
