@@ -94,6 +94,10 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] SRC-01/02/03: Binary `single_source_care` (whole-record + post-anchor) from ENCOUNTER.SOURCE only; NA-SOURCE flagged in QC; `single_source_care_post = NA` for no-anchor or zero-post-encounter patients — v3.7 Phase 167
 - [x] NHLSUB-01/02/03/04: NHL-only (849 patients) and HL+NHL (176 patients, 0 overlap) subsets of gantt_episodes_180 joined to chemo-combos columns E-J at treatment-period grain; QC of unmatched IDs and group overlap — v3.7 Phase 168
 - [x] REG-37-01/SMOKE-37-01/RUN-37-01: All v3.7 scripts registered in R/39 and SCRIPT_INDEX; R/88 smoke checks; HiPerGator run with four workbooks dated 20261008 — v3.7 Phase 169
+- [x] RFSH-01: R/147 fail-safe verify harness (`verify_vs_1006.R`): pinned-path PASS/FAIL design (sink-first, no stop(), OVERALL always written, exit 0/1); SMOKE-163-01 (Section 15as) in R/88; `147_verify_last_pass.txt` pointer for downstream gating; 14/14 truths HiPerGator-confirmed — v3.8 Phase 170
+- [x] RFSH-02: Survivorship workbooks (R/166/R/167/R/168) refreshed from Phase 163-corrected R/147 output; primary-tier clinical results identical to 10-08 workbook; R/171 verify script with provenance check — v3.8 Phase 171
+- [x] RFSH-03: Phase 164 doxorubicin rename confirmed in both 90-day and 180-day Gantt outputs (0 liposomal rows, 2384/2384 patient count preserved); R/170 NHL subsets unchanged (2615/592 episode-tab rows, 849/1261/176 group counts); `_PINNED` snapshot protection in R/00_config.R — v3.8 Phase 172
+- [x] DOI-REG-01/02/03: R/111 and R/112 registered in R/39 (L217/L218, dependency order) and SCRIPT_INDEX (L157/L158); Section 15w (SMOKE-130-01) in R/88; HiPerGator runtime confirmed — 920 checks PASS, 32,249 DoI encounters — v3.8 Phase 173
 
 ### Active
 
@@ -105,8 +109,8 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [ ] Confirm 2 loose ends (suppress_small/clean_multi_value/union_field location; date_range_max vs. extract-date cutoff)
 - [x] Ingest integrity and honest tests — R/03 abort-on-partial-failure, R/81 type-coercion removed, R/82 5-script benchmark, R/88 skip counter + cause_of_death guard, R/96 FLM fixture, R/98 independent baseline — Phase 134
 
-#### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (open, deferred alongside v3.4)
-- [ ] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts
+#### v3.3 Rituximab/Methotrexate-Associated Diagnoses of Interest (closed — v3.8 Phase 173)
+- [x] Smoke-test coverage + SCRIPT_INDEX / R/39 registration for new scripts — Phase 173
 
 #### v3.2 Meeting Gap Resolution Report
 
@@ -145,15 +149,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.8 Pipeline Refresh & Phase 130 Close-out
+## Last Shipped: v3.8 Pipeline Refresh & Phase 130 Close-out (2026-10-12)
 
-**Goal:** Close two dangling HiPerGator runtime gates (Phase 163 DIAGNOSIS exclusion, Phase 164 Dox rename) with verified reruns of downstream scripts, then close the deferred v3.3 Phase 130 DoI registration and smoke-test.
-
-**Target features:**
-- Re-run R/147 with Phase 163 verification (`verify_vs_1006.R` + R/88 Section 15ao)
-- Refresh survivorship workbook (R/166/167/168) from clean R/147 output; any-tier rates correct for Echo/ECG/Mammogram/PFT
-- Close Phase 164 HiPerGator checkpoint; re-run R/170 NHL subsets with corrected drug names
-- Phase 130: R/111 + R/112 registered in R/39, SCRIPT_INDEX, R/88 smoke section, HiPerGator runtime confirmed
+All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Phase 163-corrected R/147 output. Phase 164 doxorubicin rename confirmed clean in both Gantt outputs. Phase 130 DoI layer (R/111, R/112) fully registered. R/88 at 921 checks. Next milestone not yet defined — run `/gsd:new-milestone` to start planning.
 
 ## Shipped: v3.7 Access, Survivorship Rates & NHL Episode Subsets (2026-10-09)
 
@@ -340,7 +338,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 
 ## Context
 
-- **Current state**: 99 phases completed across 15 milestones (v1.0-v3.0), 99+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure (6 keyed lookup tables, classify_payer_tier_dt, R/60 and R/28 migrated), AMC 8-category payer system, unified ICD-9/ICD-10 cancer code handling via shared utils_cancer.R, instance-level drug grouping tables, episode/encounter grain-labeled xlsx outputs, xlsx metadata enrichment (5 columns from all_codes_resolved2.xlsx), SCT conditioning temporal context and immunotherapy confidence flags, consolidated Gantt export with dynamic schema verification (Phase 99), 20-patient test fixture suite with 11 clinical edge cases, end-to-end local test runner, comprehensive smoke test (R/88) with 35+ validation sections
+- **Current state**: 173 phases completed across 18 milestones (v1.0-v3.8), 173+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed (920 checks, 32,249 encounters), survivorship workbooks regenerated and verified (R/166/167/168), comprehensive smoke test R/88 with 921 checks, `147_verify_last_pass.txt` pointer-based downstream gating, PINNED snapshot protection for R/170
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -399,6 +397,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 | Shared get_chemo_hits() + NDC→RxNorm crosswalk for chemo detection | Phantom RXNORM_CUI col_specs made DISPENSING/MED_ADMIN silently contribute zero chemo; one helper (RX-direct + ND-crosswalk) fixes all 7 consumers | ✓ Phase 122 |
 | Source-provenance labeling (source_hints → source_table/code_type) in downstream outputs | Newly-detected MED_ADMIN/DISPENSING chemo must be traceable to its source in episodes/Gantt without conflating with PRESCRIBING | ✓ Phase 124 |
 | Dual-environment verification: structural on Windows, runtime on HiPerGator | Raw PCORnet data only lives on HiPerGator; grep/parse checks gate locally, runtime pass confirmed on cluster | ⚠️ Revisit (Phase 126 attested-by-prose only) |
+| Fail-safe verify harness pattern (sink-first, no stop(), OVERALL always written, exit 0/1, pointer file) | HPC scripts that crash before writing OVERALL silently pass; this design makes every exit observable and downstream gates can read the pointer without env vars | ✓ Phase 170 — standardized for all future verify scripts |
+| `_PINNED` snapshot for shared input files | When R/142 overwrites gantt_episodes_180.csv, R/170 must read the frozen August baseline; CONFIG$gantt_180_snapshot_path permanently points to `_PINNED` copy | ✓ Phase 172 |
+| Per-token canonicalize_drug_name() before dedup in R/142 Section 4D | Enriched RDS drug_names may predate alias changes; applying canonicalization at aggregation makes R/142 defensively correct regardless of RDS vintage | ✓ Phase 172 |
 
 ## Evolution
 
@@ -418,4 +419,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-09 — v3.8 milestone started (Pipeline Refresh & Phase 130 Close-out).*
+*Last updated: 2026-10-12 — v3.8 milestone shipped (Pipeline Refresh & Phase 130 Close-out).*

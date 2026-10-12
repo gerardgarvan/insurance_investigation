@@ -2,6 +2,45 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v3.8 — Pipeline Refresh & Phase 130 Close-out
+
+**Shipped:** 2026-10-12
+**Phases:** 4 (170–173) | **Plans:** 6 | **Timeline:** 4 days (2026-10-09 → 2026-10-12)
+
+### What Was Built
+
+- Fail-safe R/147 verify harness (`verify_vs_1006.R`): sink-first, no `stop()`, OVERALL always written, exit 0/1, `147_verify_last_pass.txt` pointer for downstream gating — confirmed 14/14 truths on HiPerGator
+- Survivorship workbooks (R/166/167/168) refreshed from Phase 163-corrected R/147 output; primary-tier clinical results identical to 10-08 workbook; R/171 verify script with provenance check
+- Phase 164 doxorubicin rename confirmed in both Gantt outputs (0 liposomal rows, 2384 patient count preserved); R/170 NHL subsets unchanged; `_PINNED` snapshot protection implemented
+- R/142 per-token `canonicalize_drug_name()` fix — defensively correct regardless of enriched RDS vintage
+- Phase 130 DoI layer (R/111/R/112) fully registered in R/39, SCRIPT_INDEX, and R/88 (Section 15w, SMOKE-130-01); 920 checks PASS, 32,249 DoI encounters on HiPerGator
+
+### What Worked
+
+- **Two-track parallel structure** (RFSH vs DOI-REG) allowed Phases 172 and 173 to proceed independently of 170/171 — no blocking dependency
+- **Pointer file pattern** (`147_verify_last_pass.txt`) cleanly decoupled Phase 170's output from Phase 171's gate without env var threading
+- **SUMMARY-as-evidence** accepted for HiPerGator runtime outputs — right call for HPC-bound phases where local reproduction is impossible
+
+### What Was Inefficient
+
+- RFSH-01 checkbox in REQUIREMENTS.md was not updated during Phase 170 execution — caught at milestone audit
+- Phase 172 VERIFICATION.md was never run after execution — only caught during audit-milestone; required a separate gsd-verifier pass to close
+- R/142's Section 4D drug name issue required two debug passes (one for CUTOFF_DATE, one for per-token canonicalization) before the 180-day Gantt passed
+
+### Patterns Established
+
+- **Fail-safe verify harness design**: all future HiPerGator verify scripts should follow the Phase 170 pattern (sink-first, tryCatch on each check, OVERALL always in finally block, exit 0/1)
+- **PINNED snapshot protection**: shared input files consumed by multiple scripts should get a `_PINNED` copy pointed to by CONFIG when the original can be overwritten by another script
+- **Audit-milestone before complete-milestone**: the audit caught two bookkeeping gaps (RFSH-01 checkbox, missing VERIFICATION.md) that would have shipped as unresolved if skipped
+
+### Key Lessons
+
+- Run `/gsd:audit-milestone` before `/gsd:complete-milestone` — caught real gaps this time
+- Write VERIFICATION.md immediately after phase execution; don't defer it
+- Phase-level bookkeeping (REQUIREMENTS.md checkboxes) should be updated at Task 3 (close-out), not left for the audit
+
+---
+
 ## Milestone: v3.7 — Access, Survivorship Rates & NHL Episode Subsets
 
 **Shipped:** 2026-10-09
