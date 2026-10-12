@@ -749,8 +749,8 @@ Plans:
 
 - [x] **Phase 174: Smoke-Check Discrepancy** - Resolve the 920 PASS / 921 total discrepancy in R/88; identify and fix or document the missing check (completed 2026-10-12)
 - [x] **Phase 175: R/88 Exit-Status Hardening** - Make R/88 signal failure (quit status=1 / FAILED: N message) when any check fails; verify skip and counter wiring (completed 2026-10-12)
-- [ ] **Phase 176: Phase 151 Close-Out** - Run R/121 on HiPerGator, verify against 151-PLAN.md criteria, write 151-01-SUMMARY.md, tick Phase 151
-- [ ] **Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo** - Count unfilled-ZIP encounters by R/121 group; recommend whether a new imputation tier warrants a phase
+- [x] **Phase 176: Phase 151 Close-Out** - Run R/121 on HiPerGator, verify against 151-PLAN.md criteria, write 151-01-SUMMARY.md, tick Phase 151 (completed 2026-10-12)
+- [x] **Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo** - Count unfilled-ZIP encounters by R/121 group; recommend whether a new imputation tier warrants a phase (completed 2026-10-12; outcome: Document only — 0 unfilled encounters in R/122 for NEEDS_TEMPORAL_MATCH patients)
 
 ## Phase Details (v3.9)
 
@@ -804,13 +804,14 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 175-01-PLAN.md — Apply three-way exit guard, skip_check(), R88_FORCE_FAIL sentinel; HiPerGator verify all paths
+- [x] 177-01-PLAN.md — Build R/177 sizing script, produce temporal_match_sizing_20261012.xlsx
+- [x] 177-02-PLAN.md — Cross-tab D-04 verdict (explained), write 177-SIZING-MEMO.md; outcome: Document only
 
 ## Progress (v3.9)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 174. Smoke-Check Discrepancy | 1/1 | Complete    | 2026-10-12 |
-| 175. R/88 Exit-Status Hardening | TBD | Not started | - |
+| 174. Smoke-Check Discrepancy | 1/1 | Complete | 2026-10-12 |
+| 175. R/88 Exit-Status Hardening | 1/1 | Complete | 2026-10-12 |
 | 176. Phase 151 Close-Out | 1/1 | Complete | 2026-10-12 |
-| 177. NEEDS_TEMPORAL_MATCH Sizing Memo | TBD | Not started | - |
+| 177. NEEDS_TEMPORAL_MATCH Sizing Memo | 2/2 | Complete (Document only) | 2026-10-12 |

@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: completed
-stopped_at: Phase 176 complete
+stopped_at: Phase 177 complete (v3.9 milestone closed)
 last_updated: "2026-10-12T00:00:00.000Z"
 last_activity: 2026-10-12
 progress:
@@ -22,14 +22,16 @@ See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 177 — NEEDS_TEMPORAL_MATCH Sizing Memo
+**Current focus:** v3.9 milestone complete — ready for complete-milestone
 
 ## Current Position
 
-Phase: 177
-Plan: Not started
-Status: Phase 176 complete — ready for Phase 177
+Phase: 177 (COMPLETE)
+Plan: 177-02
+Status: All 4 v3.9 phases complete; milestone ready to archive
 Last activity: 2026-10-12
+
+**Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ to be retired in Step 3). Quick task: add "Document only — 0 unfilled encounters" note to R/122 workbook KEY sheet (deferred for operator).
 
 **Phase 176 close-out (2026-10-12):** 2026-10-09 HiPerGator run confirmed as the close-out run (both inputs predate run; 547/135 constants confirmed). All 8 reconciliation quantities PASS. 151-01-SUMMARY.md written with Verdict: PASS. All 12 record-level mismatches documented (10 same-ZIP3, 2 different-ZIP3) — all accepted as expected data quirks. Phase 151 ticked [x] in root ROADMAP. HYGIENE-03 marked Complete. R/.planning/ is a full parallel planning tree created when GSD was launched from inside R/ subdirectory; deferred to Phase 177 for resolution (not a pure stale subset — has diverged content). Note: always launch GSD from the repo root, not from R/.
 
@@ -46,7 +48,7 @@ Last activity: 2026-10-12
 - Phase 176: Phase 151 Close-Out (HYGIENE-03) — R/121 HiPerGator run + 151-01-SUMMARY.md; may run with 177
 - Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo (HYGIENE-04) — unfilled-ZIP encounter counts + imputation-tier recommendation; may run with 176
 
-Progress: [██░░░░░░░░] 25% (1/4 phases complete)
+Progress: [██████████] 100% (4/4 phases complete)
 
 ## Performance Metrics
 
@@ -91,5 +93,5 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Last command:** Phase 175 complete — R/88 exit-status hardening, skip_check(), sentinel; HiPerGator confirmed
-**Stopped at:** Phase 176 context gathered
+**Last command:** Phase 177 complete — temporal-match sizing memo; Document only outcome confirmed; R/.planning/ duplication resolved (git mv 177 to root, retire R/.planning in Step 3)
+**Stopped at:** GATE 2 — awaiting approval to commit and continue to Step 3
