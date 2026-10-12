@@ -775,7 +775,7 @@ Plans:
   1. R/111 and R/112 appear in R/39_run_all_investigations.R (dependency order, R/111 before R/112) and both scripts have rows in R/SCRIPT_INDEX.md
   2. R/88 smoke section for DoI scripts passes with all structural checks green, including the no-overlap assertion between DOI_CODE_MAP keys and CANCER_SITE_MAP / ICD9_CANCER_SITE_MAP keys
   3. R/111 and R/112 run without error on HiPerGator against real DIAGNOSIS data; DoI category counts are logged (RA expected to dominate); the attribution report xlsx renders and is confirmed with a run date in the phase transition notes
-**Plans**: TBD
+**Plans**: 1 plan (173-01)
 
 ## Tech Debt (logged, no phases created)
 
