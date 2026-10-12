@@ -140,8 +140,26 @@ r122_pinned_flag  <- nzchar(r122_override) && file.exists(r122_override)
 message("--- Building Phase 165 analysis set via build_enc_analysis() ---")
 
 # Anchor dates
+# Primary: get_hl_any_dx_ids() requires DIAGNOSIS table in DuckDB.
+# Fallback: confirmed_hl_cohort.rds (R/47 output) has first_hl_dx_date = anchor.
 cohort_ids <- unique(enc_distance$ID)
-anchors    <- get_hl_any_dx_ids()   # from utils_surveillance.R (auto-sourced)
+anchors <- tryCatch(
+  get_hl_any_dx_ids(),
+  error = function(e) {
+    message("  get_hl_any_dx_ids() failed: ", conditionMessage(e))
+    cohort_rds <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+    if (!file.exists(cohort_rds))
+      stop("Fallback anchor source not found: ", cohort_rds,
+           "\nEnsure R/47 has been run or DIAGNOSIS is available in DuckDB.")
+    message("  Falling back to confirmed_hl_cohort.rds (R/47 output) for anchor dates.")
+    rds <- readRDS(cohort_rds)
+    dplyr::tibble(
+      ID                 = rds$ID,
+      hl_anchor_date     = as.Date(rds$first_hl_dx_date),
+      in_confirmed_cohort = TRUE
+    )
+  }
+)
 message(glue("  Anchors: {nrow(anchors)} patients; ",
              "{sum(is.na(anchors$hl_anchor_date))} missing anchor date."))
 
