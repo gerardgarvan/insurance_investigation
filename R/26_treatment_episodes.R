@@ -833,7 +833,7 @@ drug_names_per_episode <- all_detail %>%
   filter(!is.na(drug_name)) %>%
   group_by(patient_id, treatment_type, episode_number) %>%
   summarise(
-    drug_names = paste(sort(unique(drug_name)), collapse = ","),
+    drug_names = paste(sort(unique(canonicalize_drug_name(drug_name))), collapse = ","),
     .groups = "drop"
   )
 
@@ -940,7 +940,7 @@ drug_names_per_episode_180 <- bind_rows(detail_list_180) %>%
   filter(!is.na(drug_name)) %>%
   group_by(patient_id, treatment_type, episode_number) %>%
   summarise(
-    drug_names = paste(sort(unique(drug_name)), collapse = ","),
+    drug_names = paste(sort(unique(canonicalize_drug_name(drug_name))), collapse = ","),
     .groups = "drop"
   )
 
