@@ -61,21 +61,29 @@ out_dir  <- CONFIG$cache$outputs_dir
 message(glue("=== Survivorship modality rates (run {run_date}) ==="))
 
 # ==============================================================================
-# SECTION 1: LOAD PATIENT-MODALITY TABLE (from R/147) ----
+# SECTION 1: LOAD PATIENT-MODALITY TABLE (from R/147, via Phase 170 gate) ----
 # ==============================================================================
 
-rds_files <- list.files(
-  out_dir,
-  pattern    = "^surveillance_modality_patient_.*\\.rds$",
-  full.names = TRUE
-)
-if (length(rds_files) == 0) {
-  stop("No surveillance_modality_patient_*.rds found in ", out_dir, ". ",
-       "Run R/147_surveillance_modality_frequency.R first.")
-}
-latest_rds <- rds_files[order(file.info(rds_files)$mtime, decreasing = TRUE)[1]]
-message("Loading: ", basename(latest_rds))
-patient_modality <- readRDS(latest_rds)
+# ---- Phase 170 pre-flight gate (D-06) ----
+ptr <- file.path(CONFIG$output_dir, "logs", "147_verify_last_pass.txt")
+if (!file.exists(ptr)) stop("No verified R/147 run found (", ptr, "). Run Phase 170 first.")
+kv <- read.delim(ptr, sep = "=", header = FALSE, col.names = c("k", "v"), quote = "")
+ptr_get <- function(k) kv$v[kv$k == k][1]
+r147_run_date <- ptr_get("run_date")
+r147_log      <- ptr_get("log")
+stopifnot(grepl("^[0-9]{8}$", r147_run_date))
+if (!file.exists(r147_log) || !any(readLines(r147_log) == "OVERALL: PASS"))
+  stop("R/147 verify log missing or not PASS: ", r147_log)
+patient_mod_rds <- file.path(out_dir, sprintf("surveillance_modality_patient_%s.rds", r147_run_date))
+if (!file.exists(patient_mod_rds)) stop("Verified patient-modality RDS not found: ", patient_mod_rds)
+newer <- list.files(out_dir, "^surveillance_modality_frequency_INTERNAL_\\d{8}\\.xlsx$")
+newer_dates <- sub(".*_(\\d{8})\\.xlsx$", "\\1", newer)
+if (any(newer_dates > r147_run_date))
+  warning("Newer R/147 run (", max(newer_dates), ") not verified; using ", r147_run_date)
+message("Phase 170 gate OK: R/147 run ", r147_run_date, "; loading ", basename(patient_mod_rds))
+# ---- end gate ----
+
+patient_modality <- readRDS(patient_mod_rds)
 
 message(glue("  patient_modality: {nrow(patient_modality)} rows, ",
              "{n_distinct(patient_modality$ID)} patients, ",
@@ -307,7 +315,8 @@ out_list <- list(
   qc_interval_fail            = qc_interval_fail,
   n_zero_py_patients          = n_zero_py_patients,
   n_dates_col                 = n_dates_col,
-  run_date                    = run_date
+  run_date                    = run_date,
+  r147_run_date               = r147_run_date
 )
 
 out_path <- file.path(out_dir,

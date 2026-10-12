@@ -258,7 +258,9 @@ key_rows <- data.frame(
     "CIF method",
     "1 - KM note",
     "Person-years note",
-    "Sheet guide"
+    "Sheet guide",
+    "R/147 input run date",
+    "Phase 163 note"
   ),
   Value = c(
     run_date,
@@ -282,7 +284,9 @@ key_rows <- data.frame(
     "Aalen-Johansen estimator (proper competing-risk CIF) with death as competing event, via survival::survfit(Surv(time, event_factor) ~ 1) with factor event levels: censored / echo / death.",
     "1 - Kaplan-Meier: deaths treated as censored at the death date. This OVERESTIMATES echo receipt because competing deaths are censored. Shown alongside CIF for transparency.",
     "Person-years are not suppressed. Counts 1-10 are shown as '<11'. Rates whose paired count is '<11' are blanked (prevents back-calculation from rate x person-years).",
-    "KEY (this sheet) | A_rates_summary (per-modality summary, counts suppressed) | B_rates_by_fu_year (interval rates, suppression applied) | C_anthracycline_echo (echo timing CIF/KM/rate by variant) | QC (interval reconciliation, echo QC, per-drug counts)"
+    "KEY (this sheet) | A_rates_summary (per-modality summary, counts suppressed) | B_rates_by_fu_year (interval rates, suppression applied) | C_anthracycline_echo (echo timing CIF/KM/rate by variant) | QC (interval reconciliation, echo QC, per-drug counts)",
+    if (!is.null(p02$r147_run_date)) p02$r147_run_date else "not recorded",
+    "Phase 163 removed diagnosis-based sensitivity codes from R/147; survivorship rates and echo timing use the primary code set and are unaffected."
   ),
   stringsAsFactors = FALSE
 )
