@@ -246,7 +246,10 @@ CONFIG$distance_gee_corstr     <- "exchangeable"
 
 CONFIG$chemo_combos_path        <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/chemo_combos_6mo_amc090826-smc.xlsx"
 CONFIG$chemo_combos_tab         <- "Chemo and Cancer Dx"
-CONFIG$gantt_180_snapshot_path  <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/insurance_investigation/output/gantt_episodes_180.csv"
+CONFIG$gantt_180_snapshot_path  <- if (IS_LOCAL) NULL else "/blue/erin.mobley-hl.bcu/insurance_investigation/output/gantt_episodes_180_20260814_PINNED.csv"
+# WHY: R/142 writes gantt_episodes_180.csv; pointing snapshot at that file would let R/142 re-runs
+# silently overwrite the pinned August 2026 snapshot that R/170 needs for its drug-name cross-check.
+# Permanently re-pointed to the _PINNED copy during Phase 172 (2026-10-12).
 CONFIG$gantt_180_snapshot_bytes <- 6549041L  # size of the 2026-08-14 Drive copy
 CONFIG$gantt_180_snapshot_md5   <- "69dc62e86be8e0647f6a4623dda901b6"  # pinned 2026-08-14 Drive copy (confirmed 2026-10-08 HiPerGator run)
 CONFIG$gantt_chemo_treatment_type <- "Chemotherapy"  # literal assigned by R/20 (treatment_type = "Chemotherapy")
