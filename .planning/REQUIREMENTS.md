@@ -23,7 +23,7 @@ Make R/88 signal failure when any check fails. After the summary block: if `fail
 Run `R/121_zip_problem_inventory.R` on HiPerGator; check outputs against `151-PLAN.md` success criteria; write `151-01-SUMMARY.md`; tick Phase 151 in ROADMAP. If outputs fall short of criteria, record the gap and leave Phase 151 open.
 
 - **Phase**: 176
-- **Status**: Pending
+- **Status**: Complete
 
 ### HYGIENE-04 — NEEDS_TEMPORAL_MATCH Sizing Memo
 
@@ -38,5 +38,5 @@ Using the latest R/116 encounter-level output, count encounters where `zip9_sour
 |-------------|-------|--------|
 | HYGIENE-01 | Phase 174 | Pending |
 | HYGIENE-02 | Phase 175 | Complete |
-| HYGIENE-03 | Phase 176 | Pending |
+| HYGIENE-03 | Phase 176 | Complete |
 | HYGIENE-04 | Phase 177 | Pending |

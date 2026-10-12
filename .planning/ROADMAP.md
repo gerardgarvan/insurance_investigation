@@ -790,7 +790,7 @@ Progress: 1/1 plans complete. Baseline: ALL 960 CHECKS PASSED (3 skipped). ec0=0
 **Plans**: 1 plan
 
 Plans:
-- [ ] 175-01-PLAN.md — Apply three-way exit guard, skip_check(), R88_FORCE_FAIL sentinel; HiPerGator verify all paths
+- [x] 176-01-PLAN.md — Verify 2026-10-09 run freshness, write 151-01-SUMMARY.md (Verdict: PASS), tick Phase 151, document R/.planning/ duplication (deferred to Phase 177)
 
 ### Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo
 **Goal**: Using the latest R/116 encounter-level output, count encounters where zip9_source == "none" OR ZIP5 is missing, split by R/121 groups; produce a decision memo on whether a new imputation tier warrants a phase
@@ -812,5 +812,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 174. Smoke-Check Discrepancy | 1/1 | Complete    | 2026-10-12 |
 | 175. R/88 Exit-Status Hardening | TBD | Not started | - |
-| 176. Phase 151 Close-Out | TBD | Not started | - |
+| 176. Phase 151 Close-Out | 1/1 | Complete | 2026-10-12 |
 | 177. NEEDS_TEMPORAL_MATCH Sizing Memo | TBD | Not started | - |

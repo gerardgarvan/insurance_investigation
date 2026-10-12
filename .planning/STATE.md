@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: completed
-stopped_at: Phase 176 context gathered
-last_updated: "2026-10-12T19:12:22.688Z"
+stopped_at: Phase 176 complete
+last_updated: "2026-10-12T00:00:00.000Z"
 last_activity: 2026-10-12
 progress:
   total_phases: 167
@@ -22,14 +22,16 @@ See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 176 — Phase 151 close-out
+**Current focus:** Phase 177 — NEEDS_TEMPORAL_MATCH Sizing Memo
 
 ## Current Position
 
-Phase: 176
+Phase: 177
 Plan: Not started
-Status: Phase 175 complete — ready for Phase 176
+Status: Phase 176 complete — ready for Phase 177
 Last activity: 2026-10-12
+
+**Phase 176 close-out (2026-10-12):** 2026-10-09 HiPerGator run confirmed as the close-out run (both inputs predate run; 547/135 constants confirmed). All 8 reconciliation quantities PASS. 151-01-SUMMARY.md written with Verdict: PASS. All 12 record-level mismatches documented (10 same-ZIP3, 2 different-ZIP3) — all accepted as expected data quirks. Phase 151 ticked [x] in root ROADMAP. HYGIENE-03 marked Complete. R/.planning/ is a full parallel planning tree created when GSD was launched from inside R/ subdirectory; deferred to Phase 177 for resolution (not a pure stale subset — has diverged content). Note: always launch GSD from the repo root, not from R/.
 
 **Phase 175 close-out (2026-10-12):** Three-way exit guard added to R/88 (testthat no-op / interactive stop() / batch quit(status=1)). skip_check() helper added; 13 runtime-skip fake-TRUEs and 2 fake-assertions converted. p163_skip_note now bumps global skipped counter. R88_FORCE_FAIL sentinel added. HiPerGator confirmed all 4 paths: ec0=0 (ALL 960 CHECKS PASSED, 3 skipped), ec1=1 (FAILED: 1/961, 3 skipped), stop() fires in interactive with session alive. New R/88 baseline: 960 CHECKS PASSED, 3 skipped. Downstream phases cite "PASS == total, FAIL == 0" not a fixed number.
 
