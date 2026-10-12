@@ -4,13 +4,13 @@ milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
 stopped_at: "Phase 174 planning pending — run /gsd:plan-phase 174 to begin"
-last_updated: "2026-10-12T18:08:24.052Z"
-last_activity: 2026-10-12 -- Phase 174 execution started
+last_updated: "2026-10-12T18:11:24.646Z"
+last_activity: 2026-10-12
 progress:
-  total_phases: 38
-  completed_phases: 30
-  total_plans: 103
-  completed_plans: 115
+  total_phases: 163
+  completed_phases: 142
+  total_plans: 309
+  completed_plans: 314
   percent: 0
 ---
 
@@ -22,14 +22,16 @@ See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 174 — smoke-check-discrepancy
+**Current focus:** Phase 175 — R/88 exit-status hardening
 
 ## Current Position
 
-Phase: 174 (smoke-check-discrepancy) — EXECUTING
-Plan: 1 of 1
-Status: Executing Phase 174
-Last activity: 2026-10-12 -- Phase 174 execution started
+Phase: 175
+Plan: Not started
+Status: Phase 174 complete — ready for Phase 175
+Last activity: 2026-10-12
+
+**Phase 174 close-out (2026-10-12):** Counter bugs fixed in R/88. .p135_check and check_137 (28+14 checks) now update global passed/failed. check_138/139/144 unconditional passed<<- moved into pass branch only. Production cache_dir check added. HiPerGator confirmed: ALL 963 CHECKS PASSED, FAIL == 0. R/88 baseline is now 963 (was 920). Downstream phases should cite "PASS == total, FAIL == 0" not a fixed number.
 
 **Phase 173 close-out (2026-10-12):** Path B taken (fresh HiPerGator re-run, R/4.5 interactive, ~0.2 min, host c0700a-s28.ufhpc). Encounter-grain DoI counts exactly match Phase 130 baseline (2026-07-16) — DuckDB pcornet.duckdb confirmed unchanged. ALL 920 R/88 CHECKS PASSED. SMOKE-130-01 footer confirmed in R/88 validated requirements list. doi_attribution_report.xlsx produced with 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata). Mutual-exclusivity: 0 codes classify as both DoI and cancer. DOI-REG-01/02/03 closed.
 

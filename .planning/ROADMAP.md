@@ -789,7 +789,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 174. Smoke-Check Discrepancy | 1/1 | Complete   | 2026-10-12 |
+| 174. Smoke-Check Discrepancy | 1/1 | Complete    | 2026-10-12 |
 | 175. R/88 Exit-Status Hardening | TBD | Not started | - |
 | 176. Phase 151 Close-Out | TBD | Not started | - |
 | 177. NEEDS_TEMPORAL_MATCH Sizing Memo | TBD | Not started | - |
