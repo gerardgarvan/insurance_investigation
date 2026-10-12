@@ -1574,26 +1574,16 @@ check(
 if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))) {
   episodes_93 <- readRDS(file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))
 
-  # Check 13: is_sct_conditioning_context only appears on Chemotherapy episodes (D-02, D-13)
-  non_chemo_with_flag <- episodes_93 %>%
-    filter(treatment_type != "Chemotherapy" & is_sct_conditioning_context == TRUE)
+  # Check 13: is_sct_conditioning_context absent from episodes (Phase 99, D-11 — column removed)
   check(
-    "is_sct_conditioning_context flag only on Chemotherapy episodes (D-02)",
-    nrow(non_chemo_with_flag) == 0
+    "is_sct_conditioning_context absent from treatment_episodes.rds (Phase 99, D-11)",
+    !"is_sct_conditioning_context" %in% names(episodes_93)
   )
 
-  # Check 14: Non-chemotherapy episodes have NA for conditioning flag (D-04)
-  non_chemo <- episodes_93 %>% filter(treatment_type != "Chemotherapy")
+  # Check 14: immuno_confidence absent from episodes (Phase 99, D-11 — column removed)
   check(
-    "Non-chemotherapy episodes have NA for is_sct_conditioning_context (D-04)",
-    all(is.na(non_chemo$is_sct_conditioning_context))
-  )
-
-  # Check 15: immuno_confidence has only expected values (D-10)
-  valid_confidence_values <- c("questionable-vitamin", "questionable-CAR-T vs immunotherapy")
-  check(
-    "immuno_confidence contains only valid values (D-10)",
-    all(episodes_93$immuno_confidence %in% valid_confidence_values | is.na(episodes_93$immuno_confidence))
+    "immuno_confidence absent from treatment_episodes.rds (Phase 99, D-11)",
+    !"immuno_confidence" %in% names(episodes_93)
   )
 
   # Check 16: Mutual exclusivity preserved -- each (patient_id, treatment_type, episode_number) triple is unique (D-13)
