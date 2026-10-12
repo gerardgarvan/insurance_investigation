@@ -25,7 +25,7 @@ Report two encounter counts, each serving a different question:
 - ZIP5 is missing on that encounter row, AND
 - At least one dated address-history row covers the encounter date (i.e., a temporal lookup could fill it).
 
-The analytic universe for the decision row is the **Phase 165 per-encounter distance set** — that is where a fix would move a distance result. Report both:
+The analytic universe for the decision row is the **Phase 165 per-encounter analysis set**, built the way R/165 builds it (`build_enc_analysis()` and the Phase 165 anchor logic in `utils_distance_cbc.R`) — not every `enc_distance` row. Candidates are all `patient_zip_missing` encounters that would enter that set if filled, regardless of R/121 triage group (reported by triage group). "Coverable" also requires the matched ZIP5 to be non-missing. Report both:
 - Whole-record count (all qualifying encounters)
 - Post-anchor count (encounters within the Phase 165 anchor window, mirroring the two Phase 165 flags)
 
@@ -57,9 +57,18 @@ Also count how many filled encounters would land >100 mi — this flag drives th
 
 Thresholds are locked here so the recommendation cannot be chosen after seeing the counts.
 
+**"Could change the >100 mi result" (locked):** projected newly-far encounters (filled encounters with projected distance > CONFIG$far_from_care_cutoff_mi) are more than **5 %** of the current far-encounter count in the Phase 165 analysis set. Evaluated whole-record and post-anchor; either exceeding 5 % triggers it.
+
+**Decision rule (applied mechanically):**
+1. If D-04 is not explained → no tier; memo says "recommendation withheld" and why.
+2. Else if share filled > 5 % OR the far rule above triggers → New phase.
+3. Else if share filled ≥ 1 % → Inline fix.
+4. Else → Document only.
+Share filled = filled encounters / current Phase 165 analysis-set encounters (same window: whole-record and post-anchor; the larger of the two drives the tier).
+
 ### D-04: R/122 cross-check — reconciliation required before recommendation
 
-Confirm that R/121's `NEEDS_TEMPORAL_MATCH` patient count (expected ~410 from the prior run) agrees with the `patient_zip_missing` waterfall step in R/122 (encounters where `distance_status == "patient_zip_missing"`), or explain the gap using the definitional difference (patient-level triage vs. encounter-level distance status).
+Reconcile R/121's `NEEDS_TEMPORAL_MATCH` patients (~410) with R/122's `patient_zip_missing` encounters structurally, not by a numeric tolerance: cross-tab R/122 `patient_zip_missing` patients by R/121 triage group, and count NEEDS_TEMPORAL_MATCH patients with no `patient_zip_missing` encounter. The explanation is taken from the code definitions in R/121 and R/122. "Explained" means every cell of the cross-tab has a definitional reason.
 
 This is a few lines in the script. If the counts disagree without a clear definitional explanation, the memo must say so explicitly before making any recommendation, because the sizing would rest on a count that may be wrong.
 
@@ -115,7 +124,7 @@ This is a few lines in the script. If the counts disagree without a clear defini
 <specifics>
 ## Specific Ideas
 
-- The >100 mi count is specifically called out because it drives the CBC (complement-binding capacity?) test — make this a named row in the workbook, not just a footnote.
+- The >100 mi count is specifically called out because it drives the Phase 165 far-from-care vs CBC (complete blood count) association — make it a named row. Because candidate encounters currently have no distance, this is a PROJECTED count: distance recomputed from the temporally matched ZIP5 and the facility ZIP using R/122's own method.
 - The recommendation table (thresholds D-03) should appear verbatim in the memo *before* the actual count rows, so the logic is transparent and the decision can be audited.
 - If the R/121 vs R/122 reconciliation (D-04) shows a gap, the memo should quantify the definitional difference (e.g., "R/121 counts patients; R/122 counts encounter rows; the gap of N is explained by patients with multiple missing-ZIP5 encounters").
 
