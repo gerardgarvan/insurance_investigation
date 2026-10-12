@@ -1,16 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.9
-milestone_name: Pipeline Hygiene
-status: planning
-stopped_at: Roadmap written — Phase 174 planning pending
-last_updated: "2026-10-12T00:00:00.000Z"
-last_activity: 2026-10-12
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: executing
+stopped_at: "Phase 174 planning pending — run /gsd:plan-phase 174 to begin"
+last_updated: "2026-10-12T18:08:24.052Z"
+last_activity: 2026-10-12 -- Phase 174 execution started
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 38
+  completed_phases: 30
+  total_plans: 103
+  completed_plans: 115
+  percent: 0
 ---
 
 # Project State
@@ -21,18 +22,19 @@ See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Milestone v3.9 — Pipeline Hygiene — Phase 174 planning
+**Current focus:** Phase 174 — smoke-check-discrepancy
 
 ## Current Position
 
-Phase: 174 — Smoke-Check Discrepancy
-Plan: —
-Status: Planning
-Last activity: 2026-10-12 — Roadmap written for v3.9 (4 phases: 174-177)
+Phase: 174 (smoke-check-discrepancy) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 174
+Last activity: 2026-10-12 -- Phase 174 execution started
 
 **Phase 173 close-out (2026-10-12):** Path B taken (fresh HiPerGator re-run, R/4.5 interactive, ~0.2 min, host c0700a-s28.ufhpc). Encounter-grain DoI counts exactly match Phase 130 baseline (2026-07-16) — DuckDB pcornet.duckdb confirmed unchanged. ALL 920 R/88 CHECKS PASSED. SMOKE-130-01 footer confirmed in R/88 validated requirements list. doi_attribution_report.xlsx produced with 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata). Mutual-exclusivity: 0 codes classify as both DoI and cancer. DOI-REG-01/02/03 closed.
 
 **v3.9 Roadmap (2026-10-12):**
+
 - Phase 174: Smoke-Check Discrepancy (HYGIENE-01) — find and fix/document the 920/921 gap
 - Phase 175: R/88 Exit-Status Hardening (HYGIENE-02) — quit(status=1) + interactive FAILED message; depends on 174
 - Phase 176: Phase 151 Close-Out (HYGIENE-03) — R/121 HiPerGator run + 151-01-SUMMARY.md; may run with 177
@@ -67,6 +69,7 @@ Progress: [░░░░░░░░░░] 0% (0/4 phases complete)
 ### HiPerGator Run Pattern (v3.9 standard)
 
 All phases in v3.9 use the same confirmation pattern:
+
 ```r
 module load R/4.5
 R --no-save

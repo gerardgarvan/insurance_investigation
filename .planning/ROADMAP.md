@@ -737,7 +737,7 @@ Plans:
 
 ### Phases
 
-- [ ] **Phase 174: Smoke-Check Discrepancy** - Resolve the 920 PASS / 921 total discrepancy in R/88; identify and fix or document the missing check
+- [x] **Phase 174: Smoke-Check Discrepancy** - Resolve the 920 PASS / 921 total discrepancy in R/88; identify and fix or document the missing check (completed 2026-10-12)
 - [ ] **Phase 175: R/88 Exit-Status Hardening** - Make R/88 signal failure (quit status=1 / FAILED: N message) when any check fails; verify skip and counter wiring
 - [ ] **Phase 176: Phase 151 Close-Out** - Run R/121 on HiPerGator, verify against 151-PLAN.md criteria, write 151-01-SUMMARY.md, tick Phase 151
 - [ ] **Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo** - Count unfilled-ZIP encounters by R/121 group; recommend whether a new imputation tier warrants a phase
@@ -789,7 +789,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 174. Smoke-Check Discrepancy | 174-01-PLAN.md | Not started | - |
+| 174. Smoke-Check Discrepancy | 1/1 | Complete   | 2026-10-12 |
 | 175. R/88 Exit-Status Hardening | TBD | Not started | - |
 | 176. Phase 151 Close-Out | TBD | Not started | - |
 | 177. NEEDS_TEMPORAL_MATCH Sizing Memo | TBD | Not started | - |
