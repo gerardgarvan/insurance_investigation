@@ -2,123 +2,121 @@
 
 ## v3.8 Pipeline Refresh and Phase 130 Close-out (Shipped: 2026-10-12)
 
-**Phases completed:** 162 phases, 309 plans, 383 tasks
+**Phases completed:** 4 phases (Phases 170-173), 7 plans
+
+**Delivered:** R/147 surveillance re-run with a formal verification harness; survivorship
+workbook refreshed and gated on the verified run; Phase 164 (doxorubicin generic-name
+rename) confirmed in both 90-day and 180-day Gantts; Phase 130 DoI layer confirmed
+registered and runtime-verified on HiPerGator against the 2026-07-16 baseline.
 
 **Key accomplishments:**
 
-- Context:
-- Purpose:
-- Commit:
-- Purpose:
-- Commit:
-- Phase 102 (encounter-grain, 10 columns):
-- Status:
-- Files:
-- Modified sections:
-- >
-- Task 1 — `R/utils/utils_address.R` (three edits):
-- Invariants held:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- Completeness waterfall (SECTION 11):
-- One-liner:
-- `R/utils/utils_distance_hist.R`
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- load_lab_analytes() and load_modality_lookup() added to utils_surveillance.R with full validation; surveillance_codeset.xlsx (5 sheets, 167 rows) verified identical to Phase 158 in shared columns; Phase 158 callers and return type unchanged
-- Four pure analyte-rule functions added to utils_surveillance.R with 8 test_that blocks (39 expectations) covering CMP nesting, partial-panel thresholds, duplicate-source dedup, KIDNEY eGFR sensitivity, near-miss format, anchor-day exclusion, and A2 row-level presence
-- R/147 updated with Phase 159 analyte pull (Section 4B), an_rules bound into matched_all, A2 and E sheets, SC-4/SC-5/SC-6 stopifnots, and per-patient modality-dates .rds/.csv output
-- R/88 Section 15ak (SMOKE-159-01) adds 9 structural checks enforcing Phase 159 lab modality design decisions; SCRIPT_INDEX updated; HiPerGator phase gate passed — 149 test expectations pass, R/88 Phase 159 9/9 PASS, R/147 runs cleanly for 9,331 patients, A/A2/near-miss reviewed, release workbook cleared.
-- Task 1 — Codeset staging:
-- Task 1 (RED) — Test file `tests/testthat/test-160-diagnostic-and-eligibility.R`:
-- R/147_surveillance_modality_frequency.R — Phase 160 wiring (127 net insertions):
-- R/88_smoke_test_comprehensive.R — Section 15al (Phase 160 block):
-- Old (pre-161):
-- 1. [Rule 2 - Missing functionality] DEATH_SOURCE collection
-- R/52_gantt_v2_export.R
-- One-liner:
-- R/147 (T1, T2, T4):
-- One-liner:
-- Plan:
-- One-liner:
-- 1. [Rule 1 - Correction] Driver script number: R/166, not R/165
-- One-liner:
-- [Deviation - Minor] R/39 expected_xlsx not updated for dated workbook
-- One-liner:
-- One-liner:
-- One-liner:
-- 1. [Rule 1 - Bug] slurm/165 log name typo
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- Script written:
-- One-liner:
+- R/147 re-ran on HiPerGator (2026-10-09); verify harness (`R/147_verify_vs_1006.R`,
+  `slurm/147_verify.sbatch`) returned 30 PASS / 0 FAIL — RFSH-01 cleared (Phase 170)
+- Survivorship workbook refresh: R/166 wired to the Phase 170 gate via `r147_run_date`
+  pointer; R/168 workbook assembler adds provenance KEY rows; `R/171_verify_survivorship.R`
+  confirms 8/8 checks PASS — primary-tier rates and anthracycline-to-echo timing unchanged
+  from 2026-10-08 reference — RFSH-02 closed (Phase 171)
+- Phase 164 close-out: `doxorubicin` generic-name rename verified in 90-day Gantt
+  (`gantt_episodes.csv`) and 180-day Gantt (`gantt_episodes_180.csv`) on HiPerGator
+  (2026-10-12); `CUTOFF_DATE` env-var fix applied to standalone R/52 and R/142 runs;
+  R/170 NHL subsets regression confirmed (Phase 172)
+- Phase 130 DoI layer confirmed registered and runtime-verified: 920 R/88 checks PASS
+  (pre-Phase 174 counting; baseline after v3.9 fixes is 960 passed, 3 skipped),
+  SMOKE-130-01 footer confirmed, encounter-grain DoI counts exactly match 2026-07-16
+  baseline — DuckDB unchanged; DOI-REG-01/02/03 closed (Phase 173)
 
 ---
 
 ## v3.7 Access, Survivorship Rates & NHL Episode Subsets (Shipped: 2026-10-09)
 
-**Phases completed:** 157 phases, 303 plans, 367 tasks
+**Phases completed:** 5 phases (Phases 165-169), 10 plans
+
+**Delivered:** >100 mi access indicator and CBC association analysis; per-patient
+survivorship modality rates and anthracycline-to-echo timing workbook; single-health-system
+care flag; NHL-only and HL+NHL Gantt episode subsets; R/165 pipeline registration,
+SMOKE-165-01, and `88_smoke_test.sbatch`.
 
 **Key accomplishments:**
 
-- Context:
-- Purpose:
-- Commit:
-- Purpose:
-- Commit:
-- Phase 102 (encounter-grain, 10 columns):
-- Status:
-- Files:
-- Modified sections:
-- >
-- Task 1 — `R/utils/utils_address.R` (three edits):
-- Invariants held:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- Completeness waterfall (SECTION 11):
-- One-liner:
-- `R/utils/utils_distance_hist.R`
-- One-liner:
-- One-liner:
-- One-liner:
-- One-liner:
-- load_lab_analytes() and load_modality_lookup() added to utils_surveillance.R with full validation; surveillance_codeset.xlsx (5 sheets, 167 rows) verified identical to Phase 158 in shared columns; Phase 158 callers and return type unchanged
-- Four pure analyte-rule functions added to utils_surveillance.R with 8 test_that blocks (39 expectations) covering CMP nesting, partial-panel thresholds, duplicate-source dedup, KIDNEY eGFR sensitivity, near-miss format, anchor-day exclusion, and A2 row-level presence
-- R/147 updated with Phase 159 analyte pull (Section 4B), an_rules bound into matched_all, A2 and E sheets, SC-4/SC-5/SC-6 stopifnots, and per-patient modality-dates .rds/.csv output
-- R/88 Section 15ak (SMOKE-159-01) adds 9 structural checks enforcing Phase 159 lab modality design decisions; SCRIPT_INDEX updated; HiPerGator phase gate passed — 149 test expectations pass, R/88 Phase 159 9/9 PASS, R/147 runs cleanly for 9,331 patients, A/A2/near-miss reviewed, release workbook cleared.
-- Task 1 — Codeset staging:
-- Task 1 (RED) — Test file `tests/testthat/test-160-diagnostic-and-eligibility.R`:
-- R/147_surveillance_modality_frequency.R — Phase 160 wiring (127 net insertions):
-- R/88_smoke_test_comprehensive.R — Section 15al (Phase 160 block):
-- Old (pre-161):
-- 1. [Rule 2 - Missing functionality] DEATH_SOURCE collection
-- R/52_gantt_v2_export.R
-- One-liner:
-- R/147 (T1, T2, T4):
-- One-liner:
-- Plan:
-- One-liner:
-- 1. [Rule 1 - Correction] Driver script number: R/166, not R/165
-- One-liner:
-- [Deviation - Minor] R/39 expected_xlsx not updated for dated workbook
-- One-liner:
-- One-liner:
-- One-liner:
-- 1. [Rule 1 - Bug] slurm/165 log name typo
+- `far_from_care_100mi` column added to analysis set (cutoff locked by team 2026-10-08);
+  primary method pending team confirmation (D-165-01; provisionally patient-level Fisher:
+  OR 0.586 whole record / 0.659 post-anchor). Rao-Scott cluster-adjusted (DEFF ~130)
+  reported alongside: OR 0.553 [0.470, 0.651] whole / 0.558 [0.468, 0.665] post-anchor.
+  Payer covariate absent (no payer_summary RDS). `R/165_distance_cbc_association.R` +
+  `utils_distance_cbc.R` (Phase 165)
+- Survivorship modality rates: per-patient rates (post-primary tier), anthracycline-to-echo
+  timing (D6/D7/D8 decision chain), complementary suppression;
+  `R/166_survivorship_modality_rates.R` (Sections 1-5) + `R/168_survivorship_workbook.R`
+  assembler; SMOKE-166-01 wired (Phase 166)
+- Single health-system care flag: `build_single_source_result()` pure helper (TDD,
+  7 test cases); encounter-band crosstabs whole-record and post-anchor;
+  `R/169_single_source_care.R` + `slurm/167_single_source_care.sbatch` (Phase 167)
+- NHL-only and HL+NHL Gantt episode subsets from `gantt_episodes_180.csv` joined to
+  chemo-combos workbook via `norm_key()` + chemo-only E-J row-split/rejoin;
+  `R/170_nhl_gantt_subsets.R` + `test-170-nhl-gantt-subsets.R` (Phase 168)
+- R/165 registered in R/39 + SCRIPT_INDEX; SMOKE-165-01 (7 structural checks) +
+  `test-165` unit tests; `88_smoke_test.sbatch` SLURM wrapper; all R/88 checks PASS
+  on HiPerGator (Phase 169)
+
+---
+
+## v3.6 Treatment Episode Refinement (Superseded: 2026-10-08)
+
+**Phases completed:** Phase 157 (closed without execution — commit `00adaeb`)
+
+**Outcome:** Phase 157 was written to deliver 180-day treatment episodes and drug-name
+deduplication. Phase 142 had already delivered `gantt_episodes_180.csv`,
+`gantt_detail_180.csv`, and drug-name deduplication (all SUMMARY files present;
+`R/142_gantt_180_export.R` delivered). Phase 157 was marked superseded on 2026-10-08
+when the roadmap cleanup commit (`00adaeb`) noted it. No additional code produced.
+`EPISODE-180-SPEC.md` scoping document remains in repo root.
+
+---
+
+## v3.5 Encounter Distance (AM §4) (Shipped: 2026-09-18)
+
+**Phases completed:** Phases 152-154 complete; 155 superseded by Phase 165
+(team chose >100 mi cutoff 2026-10-08); 156 (AM §4 write-back) dropped 2026-10-09
+
+**Outcome:** Encounter-to-residence distance computed for all cohort encounters using
+haversine-equivalent ZIP-centroid method (`utils_address.R`: `haversine_km()`,
+`get_zip_centroid()`); patient ZIP calendar and best-ZIP selection rules implemented
+(`utils_zip_calendar.R`); distribution histogram deliverable produced. Phase 155 (binary
+indicator + cutoff memo) superseded by Phase 165. Phase 156 (AM §4 write-back) dropped
+— AM §4 was scoped against a document that does not exist; REFERENCE_MANUAL in docs/ does
+not use the §3/§4 decision-row structure; no further action planned.
+
+---
+
+## v3.4 R Pipeline Code Review Remediation (Shipped: 2026-07-25)
+
+**Phases completed:** 5 phases (Phases 132-136), 7 plans
+
+**Outcome:** Addressed all critical/high findings from a code review. Crash fixes:
+NA-safe `min_or_na`/`max_or_na`, `R/53` death-before-birth guard, DuckDB UDF guard
+(Phase 132). Wrong published number corrections: SCT filter, `total_records`, HL anchor
+date, same-week desync, `age_at_episode`, empty reference manual (Phase 133). Ingest
+integrity: DuckDB promotion gate hardened, 5 can't-fail validators fixed (Phase 134).
+Cross-cutting patterns: 6/7 patterns standardized at shared-helper layer; Pattern A
+(n_distinct de-duplication) accepted as a limitation — R/23 receives pre-aggregated
+input, so it cannot be applied there (Phase 135). Loose ends confirmed: `date_range_max`
+informational-only, no data dropped (Phase 136).
+
+---
+
+## Phases 137-151: Standalone ZIP/SES Investigations (2026-07-25 to 2026-10-12)
+
+No milestone assigned. These 15 phases addressed the ZIP-code and SES data chain:
+ZIP9 temporal assignment design (Phase 137), log-file cleanup (Phase 138), ZIP stability
+counts workbook with C-02 reconciliation gate (Phases 139-140), context and design
+documents (Phase 141), 180-day Gantt (Phase 142, retroactively closed v3.6),
+180-day file enrichment (Phase 143), centroid ZIP9 crosswalk and areal-mean SDI
+(Phase 144), SES reference file staging (Phases 145-146), ADDRESS_ZIP5 retraction
+(Phase 147), centroid ZIP9 crosswalk tier 3 (Phase 148), sentinel-ZIP and ADI coverage
+(Phase 149), ZIP5 concordance check (Phase 150), and per-patient ZIP problem inventory
+(Phase 151, closed by Phase 176 on 2026-10-12). All produced planning artifacts and
+outputs; none were scoped to a named milestone.
 
 ---
 
@@ -131,10 +129,10 @@
 
 **Key accomplishments:**
 
-- `DOI_CODE_MAP` (35 keys, 14 clinical categories: RA, GPA/MPA vasculitis, pemphigus/pemphigoid, inflammatory myopathy, SLE, Sjögren's, NMO/MG, ITP/AIHA, psoriasis/PsA, IBD, plus edge conditions) + `DOI_CODE_TIER` + `RITUXIMAB_CODES` / `MTX_CODES` / `DOI_ATTRIBUTION_WINDOW_DAYS` (90L) centralized in `R/00_config.R`; I77.82 and D47.Z2 explicitly excluded with inline comments (Phase 127)
-- `utils_doi.R` — `is_doi_code()` DX_TYPE-gated (ICD-9 `09` / ICD-10 `10`, NA/SNOMED → FALSE) and `classify_doi_codes()` mirroring the `utils_cancer.R` cascade; local fixture exercises both ICD-9 (714.0) and ICD-10 (M05.9) paths (Phase 127)
+- `DOI_CODE_MAP` (35 keys, 14 clinical categories: RA, GPA/MPA vasculitis, pemphigus/pemphigoid, inflammatory myopathy, SLE, Sjogren's, NMO/MG, ITP/AIHA, psoriasis/PsA, IBD, plus edge conditions) + `DOI_CODE_TIER` + `RITUXIMAB_CODES` / `MTX_CODES` / `DOI_ATTRIBUTION_WINDOW_DAYS` (90L) centralized in `R/00_config.R`; I77.82 and D47.Z2 explicitly excluded with inline comments (Phase 127)
+- `utils_doi.R` — `is_doi_code()` DX_TYPE-gated (ICD-9 `09` / ICD-10 `10`, NA/SNOMED -> FALSE) and `classify_doi_codes()` mirroring the `utils_cancer.R` cascade; local fixture exercises both ICD-9 (714.0) and ICD-10 (M05.9) paths (Phase 127)
 - `R/111` — DuckDB-native `LEFT(DX,3) IN (...)` prefix pushdown before `collect()` (no full DIAGNOSIS table load); mutual-exclusivity hard-stop `sum(is_doi_code & is_cancer_code) == 0` confirmed **0** on real data; L10.81 `paraneoplastic_flag = TRUE`; writes `doi_encounters.rds` (encounter grain) and `doi_patients.rds` (patient grain) (Phase 128)
-- `R/112` — two-tier attribution: ENCOUNTERID direct equi-join (tier 1) → ±90-day PATID temporal window via `DOI_ATTRIBUTION_WINDOW_DAYS` (tier 2); three-state `likely_non_lymphoma_directed` (TRUE/FALSE/NA, NA never coerced to FALSE); `attribution_method` column; 4-sheet `doi_attribution_report.xlsx` with co-occurrence language enforced and CAVEATS footnote on every sheet (Phase 129)
+- `R/112` — two-tier attribution: ENCOUNTERID direct equi-join (tier 1) -> +/-90-day PATID temporal window via `DOI_ATTRIBUTION_WINDOW_DAYS` (tier 2); three-state `likely_non_lymphoma_directed` (TRUE/FALSE/NA, NA never coerced to FALSE); `attribution_method` column; 4-sheet `doi_attribution_report.xlsx` with co-occurrence language enforced and CAVEATS footnote on every sheet (Phase 129)
 - R/88 Section 15w (14 checks: structural + IS_LOCAL-gated runtime), R/39 registration (R/111 before R/112), SCRIPT_INDEX rows; HiPerGator runtime confirmed — 10 DoI categories logged (Hematologic Autoimmune 10797, RA 5801, IBD 4128, Psoriasis 1740, Pemphigus 42); **709/709 R/88 checks pass** on real DIAGNOSIS data (Phase 130)
 
 ---
@@ -147,12 +145,12 @@
 
 **Key accomplishments:**
 
-- Meeting gap investigations: pre-diagnosis treatment flagging + secondary-malignancy 7-day-gap table (Phase 104); Ethna/organ-transplant/SCT code verification + HL+NHL dual-code overlap validation (Phase 105); Tableau-ready encounter→cancer-code and chemo-drugs-by-class tables (Phase 106); RMarkdown gap-resolution report + delivery manifest + meeting-notes update (Phase 107)
+- Meeting gap investigations: pre-diagnosis treatment flagging + secondary-malignancy 7-day-gap table (Phase 104); Ethna/organ-transplant/SCT code verification + HL+NHL dual-code overlap validation (Phase 105); Tableau-ready encounter->cancer-code and chemo-drugs-by-class tables (Phase 106); RMarkdown gap-resolution report + delivery manifest + meeting-notes update (Phase 107)
 - Pipeline hardening: zero-warning run via safe min/max wrappers + filename/sentinel fixes (Phase 108); date-grain co-administration analysis with non-specific ICD9 codes removed (Phase 109)
 - Output reshaping: HL-only 7-day-confirmed V2 cancer summary (Phase 110); TABLE-2 collapsed to per-patient+date agents string (Phase 111); Gantt temporal-diagnosis enrichment + universal ascending alphabetical sort (Phase 112); post-death encounter temporal-gap investigation (Phase 113); drug-name consistency remediation via MEDICATION_LOOKUP + audit xlsx (Phase 114); Gantt 7-day-confirmed + age-at-episode columns (Phase 115)
 - Enrichment: USDA 2020 RUCA rurality classification (Phase 116); lifespan Gantt collapse (Phase 117); Supportive Care meaning normalization via RxNav IN resolver (Phase 120); 9-digit ZIP change-frequency investigation (Phase 121)
 - Death-cause NHL flag: three-state PATID flag CSV created (Phase 118) then fixed to source from the DEATH_CAUSE table (16th PCORNET_TABLES entry) instead of the non-existent DEATH.DEATH_CAUSE column — TRUE=5 / FALSE=57 / NA=1282 of 1344 deceased, was 100% blank (Phase 119)
-- MED_ADMIN/DISPENSING chemo-detection fix: removed phantom RXNORM_CUI col_specs, added shared get_chemo_hits() + NDC→RxNorm crosswalk across 7 consumers (Phase 122); before/after fix-impact quantification + four-method unmatched-NDC audit (Phase 123); full downstream integration into episodes/Gantt/timing/regimens/payer/cohort with source-provenance labeling and canonical drug names (Phase 124) — **+1,328 patients / +13,762 chemo dates** vs the PRESCRIBING baseline
+- MED_ADMIN/DISPENSING chemo-detection fix: removed phantom RXNORM_CUI col_specs, added shared get_chemo_hits() + NDC->RxNorm crosswalk across 7 consumers (Phase 122); before/after fix-impact quantification + four-method unmatched-NDC audit (Phase 123); full downstream integration into episodes/Gantt/timing/regimens/payer/cohort with source-provenance labeling and canonical drug names (Phase 124) — **+1,328 patients / +13,762 chemo dates** vs the PRESCRIBING baseline
 - R/88 smoke test: stale DEATH_CAUSE guard check (Section 15o Check 6) rewritten to the table-availability assertion (Phase 125); stale episode_classification_audit.xlsx regenerated so R/88 exits 0 (Phase 126)
 
 **Git range:** `400b1f9..HEAD` (330 commits, 68 `feat(`, 2026-06-15 to 2026-07-15)
