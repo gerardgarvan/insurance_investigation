@@ -728,7 +728,7 @@ Plans:
 - [x] **Phase 170: R/147 Re-run and Verification** - Re-run R/147 after Phase 163 changes; verify vs 1006 reference workbook; confirm R/88 Section 15ao (completed 2026-10-09)
 - [x] **Phase 171: Survivorship Workbook Refresh** - Re-run R/166/R/167/R/168 from clean R/147 output; verify primary-tier and CIF parity with 10-08 workbook (completed 2026-10-12)
 - [x] **Phase 172: Phase 164 Close-out and R/170 NHL Subsets** - Close Phase 164 HiPerGator checkpoint; re-run R/170; verify matched-row identity and attribute any dox/Adriamycin shifts (completed 2026-10-12)
-- [ ] **Phase 173: Phase 130 DoI Registration and HiPerGator Gate** - Register R/111 and R/112 in R/39 and SCRIPT_INDEX; add R/88 smoke section; confirm HiPerGator runtime
+- [x] **Phase 173: Phase 130 DoI Registration and HiPerGator Gate** - Register R/111 and R/112 in R/39 and SCRIPT_INDEX; add R/88 smoke section; confirm HiPerGator runtime (completed 2026-10-12)
 
 ## Phase Details (v3.8)
 
@@ -775,7 +775,7 @@ Plans:
   1. R/111 and R/112 appear in R/39_run_all_investigations.R (dependency order, R/111 before R/112) and both scripts have rows in R/SCRIPT_INDEX.md
   2. R/88 smoke section for DoI scripts passes with all structural checks green, including the no-overlap assertion between DOI_CODE_MAP keys and CANCER_SITE_MAP / ICD9_CANCER_SITE_MAP keys
   3. R/111 and R/112 run without error on HiPerGator against real DIAGNOSIS data; DoI category counts are logged (RA expected to dominate); the attribution report xlsx renders and is confirmed with a run date in the phase transition notes
-**Plans**: 1 plan (173-01)
+**Plans**: 1 plan (173-01) — complete 2026-10-12
 
 ## Tech Debt (logged, no phases created)
 
@@ -791,4 +791,4 @@ Plans:
 | 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete    | 2026-10-09 |
 | 171. Survivorship Workbook Refresh | v3.8 | 1/1 | Complete    | 2026-10-12 |
 | 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 1/1 | Complete    | 2026-10-12 |
-| 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |
+| 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 1/1 | Complete | 2026-10-12 |

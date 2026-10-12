@@ -11,9 +11,9 @@
 
 ### Phase 130 Close-out (v3.3 deferred)
 
-- [ ] **DOI-REG-01:** Add R/111 and R/112 to R/39 and SCRIPT_INDEX
-- [ ] **DOI-REG-02:** Add R/88 smoke section for DoI scripts (structural checks already validated locally)
-- [ ] **DOI-REG-03:** HiPerGator runtime gate — confirm R/111 and R/112 run cleanly against real data and workbook renders
+- [x] **DOI-REG-01:** Add R/111 and R/112 to R/39 and SCRIPT_INDEX
+- [x] **DOI-REG-02:** Add R/88 smoke section for DoI scripts (structural checks already validated locally)
+- [x] **DOI-REG-03:** HiPerGator runtime gate — confirm R/111 and R/112 run cleanly against real data and workbook renders
 
 ## Future Requirements
 
@@ -33,6 +33,6 @@
 | RFSH-01 | Phase 170 | Complete |
 | RFSH-02 | Phase 171 | Complete |
 | RFSH-03 | Phase 172 | Complete |
-| DOI-REG-01 | Phase 173 | pending |
-| DOI-REG-02 | Phase 173 | pending |
-| DOI-REG-03 | Phase 173 | pending |
+| DOI-REG-01 | Phase 173 | Complete |
+| DOI-REG-02 | Phase 173 | Complete |
+| DOI-REG-03 | Phase 173 | Complete |

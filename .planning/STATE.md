@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.8
-milestone_name: Pipeline Refresh and Phase 130 Close-out
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Phase 172 COMPLETE — next is Phase 173 (DoI Registration)
-last_updated: "2026-10-12T19:00:00.000Z"
+stopped_at: Phase 171 context gathered
+last_updated: "2026-10-12T16:24:45.587Z"
 last_activity: 2026-10-12
 progress:
-  total_phases: 173
-  completed_phases: 172
-  total_plans: 308
-  completed_plans: 312
+  total_phases: 38
+  completed_phases: 30
+  total_plans: 103
+  completed_plans: 115
 ---
 
 # Project State
@@ -21,12 +21,14 @@ See: .planning/PROJECT.md (updated 2026-10-08 after starting v3.7)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 172 — phase-164-closeout-and-r170-nhl-subsets
+**Current focus:** Phase 173 — phase-130-doi-registration-and-hipergator-gate — COMPLETE 2026-10-12
 
 ## Current Position
 
-Phase: 172 (phase-164-closeout-and-r170-nhl-subsets) — EXECUTING
-Plan: 1 of 1
+Phase: 173 (phase-130-doi-registration-and-hipergator-gate) — COMPLETE
+Plan: 1 of 1 — DONE
+
+**Phase 173 close-out (2026-10-12):** Path B taken (fresh HiPerGator re-run, R/4.5 interactive, ~0.2 min, host c0700a-s28.ufhpc). Encounter-grain DoI counts exactly match Phase 130 baseline (2026-07-16) — DuckDB pcornet.duckdb confirmed unchanged. ALL 920 R/88 CHECKS PASSED. SMOKE-130-01 footer confirmed in R/88 validated requirements list. doi_attribution_report.xlsx produced with 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata). Mutual-exclusivity: 0 codes classify as both DoI and cancer. DOI-REG-01/02/03 closed. Unrelated R/88 IMMU fix (bd94062) committed separately — non-blocking for this gate.
 
   - 164-01: T1-T4 COMPLETE (commits 75372c6, 93fc54d, 2925e72). T2: R/164_dox_baseline_counts.R. T3: DRUG_NAME_ALIASES extended with adriamycin/liposomal variants -> bare generic "Doxorubicin"; J9000/J9001 in MEDICATION_LOOKUP_JCODE_SUPPLEMENT; J9223 in CODE_SUBCATEGORY_MAP; "(Adriamycin)" removed from R/42+R/58 code descriptions. T4: 8-block testthat file + R/88 Check 17 replaced (liposomal keys now required, not forbidden) + Check 17b (no inline string patches in Gantt scripts). T5 = HiPerGator run + visual reconciliation (checkpoint, pending user action).
 
