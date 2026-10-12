@@ -506,7 +506,15 @@ message("\n--- Section 4D: Data Quality Cleanup ---")
 episodes_export <- episodes_export %>%
   mutate(
     triggering_codes              = sapply(triggering_codes,              clean_multi_value, USE.NAMES = FALSE),
-    drug_names                    = sapply(drug_names,                    clean_multi_value, USE.NAMES = FALSE),
+    drug_names                    = sapply(drug_names, function(dn) {
+      if (is.na(dn) || dn == "" || dn == "NA") return("")
+      parts <- str_trim(str_split(dn, ",")[[1]])
+      parts <- parts[parts != "" & parts != "NA" & !is.na(parts)]
+      parts <- canonicalize_drug_name(parts)
+      parts <- sort(unique(parts[!is.na(parts) & parts != ""]))
+      if (length(parts) == 0) return("")
+      paste(parts, collapse = ";")
+    }, USE.NAMES = FALSE),
     triggering_code_descriptions  = sapply(triggering_code_descriptions,  clean_multi_value, USE.NAMES = FALSE),
     code_type                     = sapply(code_type,                     clean_multi_value, USE.NAMES = FALSE),
     source_table                  = sapply(source_table,                  clean_multi_value, USE.NAMES = FALSE),
