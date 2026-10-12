@@ -752,7 +752,7 @@ Plans:
   1. R/88 PASS count equals total check count, OR a written explanation of the gap is present in the phase SUMMARY
   2. R/88 run on HiPerGator confirms the result (interactive R session, module load R/4.5, source() with local = new.env(parent = globalenv()))
   3. ROADMAP.md Phase 174 ticked only after the HiPerGator confirmation pass
-**Plans**: TBD
+**Plans**: 174-01-PLAN.md
 
 ### Phase 175: R/88 Exit-Status Hardening
 **Goal**: R/88 signals failure when any check fails -- quit(status=1) in non-interactive runs, a prominent "R/88 FAILED: N checks" line in interactive sessions; skip branches do not inflate PASS count; all per-section counters feed the global passed/failed totals
@@ -789,7 +789,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 174. Smoke-Check Discrepancy | TBD | Not started | - |
+| 174. Smoke-Check Discrepancy | 174-01-PLAN.md | Not started | - |
 | 175. R/88 Exit-Status Hardening | TBD | Not started | - |
 | 176. Phase 151 Close-Out | TBD | Not started | - |
 | 177. NEEDS_TEMPORAL_MATCH Sizing Memo | TBD | Not started | - |
