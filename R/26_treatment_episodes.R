@@ -811,9 +811,15 @@ if (file.exists(DRUG_LOOKUP_RDS)) {
 
 # Resolve: 3-tier cascade — MEDICATION_LOOKUP > canonicalized raw name > RxNorm cache (D-06)
 # raw_med_name_canonical is NEVER written verbatim — always passes through canonicalize_drug_name() (D-07)
+# Tier 3 (rxnorm_drug_name) is also canonicalized here: the RxNorm cache may predate Phase 164
+# DRUG_NAME_ALIASES, so brand/variant names (Adriamycin, Doxil, liposomal) must be collapsed
+# to the bare generic before coalescing — same invariant as Tiers 1 and 2.
 all_detail <- all_detail %>%
-  mutate(drug_name = dplyr::coalesce(ref_drug_name, raw_med_name_canonical, rxnorm_drug_name)) %>%
-  select(-ref_drug_name, -raw_med_name, -raw_med_name_canonical, -rxnorm_drug_name)
+  mutate(
+    rxnorm_drug_name_canonical = canonicalize_drug_name(rxnorm_drug_name),
+    drug_name = dplyr::coalesce(ref_drug_name, raw_med_name_canonical, rxnorm_drug_name_canonical)
+  ) %>%
+  select(-ref_drug_name, -raw_med_name, -raw_med_name_canonical, -rxnorm_drug_name, -rxnorm_drug_name_canonical)
 
 n_with_names <- sum(!is.na(all_detail$drug_name))
 n_chemo_rows <- sum(all_detail$treatment_type == "Chemotherapy")
