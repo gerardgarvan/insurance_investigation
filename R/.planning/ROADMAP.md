@@ -623,7 +623,11 @@ Plans:
 **Milestone**: v3.5 (ZIP/encounter-distance investigation thread)
 **Depends on**: Phase 152 (R/121 inventory of invalid/placeholder ZIPs)
 **Requirements**: none mapped (standalone sizing/recommendation memo)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 177-01-PLAN.md — Write R/177_temporal_match_sizing.R and register in R/39 + SCRIPT_INDEX
+- [ ] 177-02-PLAN.md — Run script on HiPerGator, populate 177-SIZING-MEMO.md with results and recommendation
 
 **Description:** R/121 classifies encounters into groups (e.g., `NEEDS_TEMPORAL_MATCH`, `invalid_zip`, `placeholder_zip`). This memo phase queries the actual group counts from the R/121 output, determines how many encounters remain unfilled after the current imputation tiers, and produces a written recommendation (as a markdown memo and/or xlsx summary) on whether the volume of `NEEDS_TEMPORAL_MATCH` encounters justifies a dedicated new imputation tier or can be addressed with a minor extension to an existing phase.
 
