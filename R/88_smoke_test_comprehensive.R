@@ -1292,6 +1292,10 @@ if (IS_LOCAL) {
     "Production mode: thread count >= 1",
     CONFIG$performance$num_threads >= 1
   )
+  check(
+    "Production mode: cache_dir in /blue/",
+    !is.null(CONFIG$cache$cache_dir) && grepl("^/blue/", CONFIG$cache$cache_dir)
+  )
 }
 
 # INFRA-01: Validate file.path() usage in PCORNET_PATHS (no hardcoded separators)
@@ -4659,8 +4663,10 @@ p135_fail <- 0L
   if (isTRUE(result)) {
     message(glue("  PASS [{label}]"))
     p135_pass <<- p135_pass + 1L
+    passed <<- passed + 1L
   } else {
     p135_fail <<- p135_fail + 1L
+    failed <<- failed + 1L
   }
 }
 
@@ -4821,9 +4827,11 @@ check_137 <- function(label, result) {
   if (isTRUE(result)) {
     message(glue("  PASS  {label}"))
     p137_pass <<- p137_pass + 1L
+    passed <<- passed + 1L
   } else {
     message(glue("  FAIL  {label}"))
     p137_fail <<- p137_fail + 1L
+    failed <<- failed + 1L
   }
 }
 
@@ -4897,13 +4905,13 @@ p138_fail <- 0L
 check_138 <- function(label, expr) {
   if (isTRUE(expr)) {
     p138_pass <<- p138_pass + 1L
+    passed <<- passed + 1L
     message(glue("  [PASS] {label}"))
   } else {
     p138_fail <<- p138_fail + 1L
-    message(glue("  [FAIL] {label}"))
     failed <<- failed + 1L
+    message(glue("  [FAIL] {label}"))
   }
-  passed <<- passed + 1L
 }
 
 message("\n--- Section 15ac: Phase 138 log2.txt fix assertions ---")
@@ -4964,13 +4972,13 @@ p139_fail <- 0L
 check_139 <- function(label, expr) {
   if (isTRUE(expr)) {
     p139_pass <<- p139_pass + 1L
+    passed <<- passed + 1L
     message(glue("  [PASS] {label}"))
   } else {
     p139_fail <<- p139_fail + 1L
-    message(glue("  [FAIL] {label}"))
     failed <<- failed + 1L
+    message(glue("  [FAIL] {label}"))
   }
-  passed <<- passed + 1L
 }
 
 message("\n--- Section 15ad: Phase 139 ZIP stability + imputation occurrence counts assertions ---")
@@ -5037,13 +5045,13 @@ p144_fail <- 0L
 check_144 <- function(label, expr) {
   if (isTRUE(expr)) {
     p144_pass <<- p144_pass + 1L
+    passed <<- passed + 1L
     message(glue("  [PASS] {label}"))
   } else {
     p144_fail <<- p144_fail + 1L
-    message(glue("  [FAIL] {label}"))
     failed <<- failed + 1L
+    message(glue("  [FAIL] {label}"))
   }
-  passed <<- passed + 1L
 }
 
 message("\n--- Section 15ae: Phase 144 centroid ZIP9 imputation + encounter SES index ---")
