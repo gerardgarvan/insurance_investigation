@@ -340,16 +340,16 @@ message(glue("  Distinct (ID, date) lookup keys: {nrow(keys)}"))
 
 # get_zip9_at_date() returns tibble(ID, query_date, ZIP9, ZIP5, match_type)
 # Result is distinct on (ID, query_date). Join on (id, query_date).
+message("  cand cols before lookup: ", paste(names(cand), collapse = ", "))
 lk <- get_zip9_at_date(ids = keys$id, dates = keys$d)
+message("  get_zip9_at_date returned ", nrow(lk), " rows; cols: ", paste(names(lk), collapse = ", "))
 names(lk)[names(lk) == "ZIP5"] <- "ZIP5_matched"   # rename to avoid collision with cand$zip5_patient
 
-# Prepare join keys on cand side
+# Prepare join keys on cand side using base R to avoid any dplyr masking issue
 n0 <- nrow(cand)
+cand$.id <- as.character(cand$ID)
+cand$.d  <- as.Date(cand$ADMIT_DATE)
 cand <- cand |>
-  dplyr::mutate(
-    .id = as.character(ID),
-    .d  = as.Date(ADMIT_DATE)
-  ) |>
   dplyr::left_join(
     lk |> dplyr::select(ID, query_date, ZIP9_matched = ZIP9, ZIP5_matched, match_type),
     by = c(".id" = "ID", ".d" = "query_date")
