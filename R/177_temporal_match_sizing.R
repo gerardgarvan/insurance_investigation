@@ -333,10 +333,9 @@ message(glue(
 
 message("--- Temporal lookup via get_zip9_at_date() ---")
 
-keys <- dplyr::distinct(cand,
-  id = as.character(ID),
-  d  = as.Date(ADMIT_DATE)
-)
+keys <- cand |>
+  dplyr::mutate(id = as.character(ID), d = as.Date(ADMIT_DATE)) |>
+  dplyr::distinct(id, d)
 message(glue("  Distinct (ID, date) lookup keys: {nrow(keys)}"))
 
 # get_zip9_at_date() returns tibble(ID, query_date, ZIP9, ZIP5, match_type)
