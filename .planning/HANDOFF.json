@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-10-12T15:23:55.683Z",
+  "phase": "172",
+  "phase_name": "phase-164-closeout-and-r170-nhl-subsets",
+  "phase_dir": ".planning/phases/172-phase-164-closeout-and-r170-nhl-subsets",
+  "plan": 1,
+  "task": 3,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Write read-only check script (scratch/172_closeout_checks.R)", "status": "done", "commit": "d564b85"},
+    {"id": 2, "name": "HiPerGator interactive R run", "status": "done", "commit": "ee01b75"},
+    {"id": 3, "name": "Close-out: SUMMARY, ROADMAP, STATE, REQUIREMENTS", "status": "in_progress", "progress": "SUMMARY written (partial close — 180-day issue found and fixed); RFSH-03 and Phase 172 left OPEN pending re-run"}
+  ],
+  "remaining_tasks": [
+    {"id": 3, "name": "Re-run R/26 + R/142 on HiPerGator to confirm 0 alias rows in 180-day Gantt, then mark RFSH-03 + Phase 172 complete", "status": "needs_hiperGator_run"}
+  ],
+  "blockers": [
+    {
+      "description": "R/26 fix (Tier 3 rxnorm canonicalization) is committed but not yet run on HiPerGator. Need to re-run pipeline to confirm 0 alias rows in gantt_episodes_180.csv.",
+      "type": "human_action",
+      "workaround": "None — needs interactive R session on HiPerGator"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "On HiPerGator: git pull, then run R/26 and R/142, then re-run scratch/172_closeout_checks.R to confirm 0 alias rows in 180-day Gantt",
+      "context": "R/26 fix (commit 488c254) canonicalizes Tier 3 rxnorm_drug_name. Once confirmed clean, Task 3 auto-work can mark RFSH-03 + Phase 172 complete.",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Permanently re-pointed CONFIG$gantt_180_snapshot_path to gantt_episodes_180_20260814_PINNED.csv",
+      "rationale": "R/142 writes gantt_episodes_180.csv — same path the snapshot used to point at. This would silently overwrite R/170's pinned August 2026 reference on every R/142 re-run.",
+      "phase": "172"
+    },
+    {
+      "decision": "Root cause of 5 alias rows: Tier 3 (RxNorm cache) not canonicalized in R/26 coalesce",
+      "rationale": "Tier 1 (MEDICATION_LOOKUP) and Tier 2 (raw MED_ADMIN) both pass through canonicalize_drug_name() but Tier 3 did not. 5 codes hit Tier 3 only in the 180-day window (different window → different episodes → different codes reach Tier 3 fallback).",
+      "phase": "172"
+    },
+    {
+      "decision": "RFSH-03 and Phase 172 left open (not marked complete) in ROADMAP/STATE",
+      "rationale": "Plan spec: only close if Phase 164 checks AND R/170 regression both pass. 180-day had 5 residual rows — condition not met.",
+      "phase": "172"
+    }
+  ],
+  "uncommitted_files": [],
+  "next_action": "On HiPerGator: git pull → source R/00_config.R → run('R/26_treatment_episodes.R') → run('R/142_gantt_180_export.R') → re-run scratch/172_closeout_checks.R → confirm 0 alias rows in 180-day → then re-execute /gsd:execute-phase 172 (which will skip Task 1 + 2 via SUMMARY.md and only run Task 3 close-out)",
+  "context_notes": "Phase 172 is a closeout/regression check phase. The HiPerGator run completed successfully for 90-day but revealed 5 alias rows in 180-day. Root cause identified and fixed in R/26. R/170 QC regression passed on all clinical fields (group counts, match counts, drug-name cross-check). Smoke test 921/921 passed. The −3 patient drop in 180-day patient count is likely caused by the same 5 rows (those patients' episodes may collapse differently once aliases are applied). Confirm after re-run."
+}
