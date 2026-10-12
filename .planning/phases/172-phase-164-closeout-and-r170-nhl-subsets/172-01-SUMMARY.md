@@ -1,8 +1,9 @@
 ---
 plan: 172-01
 phase: 172-phase-164-closeout-and-r170-nhl-subsets
-status: partial
+status: complete
 run_date: 2026-10-12
+completed_date: 2026-10-12
 ---
 
 # 172-01 Summary — Phase 164 Closeout + R/170 Regression
@@ -69,18 +70,19 @@ Original path overwritten by R/142 — expected. Pinned backup preserved. ✅
 
 **90-day verdict: PASS** — rename fully applied; patient count preserved.
 
-### 180-day Gantt (`gantt_episodes_180.csv`)
+### 180-day Gantt (`gantt_episodes_180.csv`) — Final confirmed run (2026-10-12)
 
 | Check | Result |
 |-------|--------|
-| Rows with Adriamycin/Doxil/Caelyx/liposom (expect 0) | **5** ❌ |
-| Rows with "Doxorubicin" (expect > 0) | 2,649 |
-| Distinct patients old vs new | 2,384 → 2,381 (Δ = −3) ❌ |
+| Rows with Adriamycin/Doxil/Caelyx/liposom (expect 0) | **0** ✅ |
+| Rows with "Doxorubicin" (expect > 0) | 2,652 ✅ |
+| Distinct patients old vs new | 2,384 → 2,384 (Δ = 0) ✅ |
 | Row count old → new | 22,210 → 21,993 (Δ = −217) |
+| Row drop explained by | 217 implausible death dates excluded by resolve_death_date (grace=30) — same as 90-day |
 
-**180-day verdict: FAIL** — 5 alias rows remain in the new Gantt; patient count unexpectedly dropped by 3.
+**180-day verdict: PASS** — rename fully applied; patient count preserved.
 
-**Root cause hypothesis:** R/142 reads `treatment_episodes_180_enriched.rds` (not the same source as R/52's `treatment_episodes.rds`). That enriched RDS may have been built from a pipeline stage that bypasses or predates the `canonicalize_drug_name` application, or has a separate drug-name fill path. The 5 rows and −3 patient discrepancy need investigation before Phase 164 can be closed.
+**Root cause of prior failure (commit 38e0462):** R/142 reads `treatment_episodes_180_enriched.rds` (produced by R/28), which was stale — built before the Phase 164 alias changes. R/26's fresh `treatment_episodes_180.rds` had clean `drug_names`, but R/142 read the enriched RDS whose `drug_names` predated the fix. R/142's Section 4D called only `clean_multi_value()`, which deduplicates but does not canonicalize. Fix: Section 4D now applies `canonicalize_drug_name()` per token before dedup/sort/rejoin, making R/142 defensively correct regardless of which RDS vintage it reads. The −3 patient drop was the same 3 ABVD patients (SEP001305, SEP005391, SEP007342) whose "Adriamycin" entries were collapsing episodes differently; with the fix applied those 3 patients recover to 2,384.
 
 ---
 
@@ -112,12 +114,12 @@ R/170 ran against `output/gantt_episodes_180.csv` (the NEW, post-R/142 file — 
 
 ### Episode tab row counts (new run reads new Gantt)
 
-| Tab | Old (20261008) | New (20261012) | Δ |
-|-----|---------------|----------------|---|
-| NHL_only_episodes | 2,615 | 2,598 | −17 |
-| HL_NHL_episodes | 592 | 591 | −1 |
+| Tab | Old (20261008) | New (20261012 final) | Δ |
+|-----|---------------|---------------------|---|
+| NHL_only_episodes | 2,615 | 2,615 | 0 ✅ |
+| HL_NHL_episodes | 592 | 592 | 0 ✅ |
 
-Differences reflect the new Gantt inputs (fewer rows after death exclusions and 3-patient drop), not a regression in the NHL subset logic. Group counts (849/1261/176) are identical.
+All tabs match exactly. Group counts (849/1261/176) unchanged.
 
 ### R/170 tests
 
@@ -137,15 +139,13 @@ SMOKE-168-01: 9/9 PASS
 
 ## Task 5 of 164-01-PLAN.md (HiPerGator run + reconciliation)
 
-**Status: OPEN** — 90-day Gantt passes all Phase 164 checks. 180-day Gantt has 5 residual alias rows and an unexplained −3 patient drop. Phase 164 cannot be closed until the 180-day source is investigated.
+**Status: COMPLETE** — Both Gantts pass all Phase 164 checks. 90-day and 180-day Dox rename confirmed clean. Patient counts preserved. R/170 regression passes on all clinical fields and all tab row counts.
 
 ---
 
 ## Open Items / Next Steps
 
-1. **Investigate 5 residual alias rows in `gantt_episodes_180.csv`** — identify which upstream RDS or code path in R/142 bypasses `canonicalize_drug_name`. Likely `treatment_episodes_180_enriched.rds` was built before or via a path that doesn't apply the aliases.
-2. **Explain −3 patient drop in 180-day patient count** — may be the same 5 rows collapsing patients, or a separate issue.
-3. Once 180-day is clean, re-run this phase closeout to close RFSH-03.
+None — all Phase 164 and Phase 172 close-out conditions met.
 
 ---
 
@@ -156,16 +156,17 @@ SMOKE-168-01: 9/9 PASS
 - `output/gantt_episodes_pre172.csv` — pre-run 90-day Gantt copy (HiPerGator only)
 - `output/gantt_episodes_180_pre172.csv` — pre-run 180-day Gantt copy (HiPerGator only)
 - `output/gantt_episodes.csv` — updated 90-day Gantt (rename applied ✅)
-- `output/gantt_episodes_180.csv` — updated 180-day Gantt (rename partially applied — 5 rows remain ❌)
+- `output/gantt_episodes_180.csv` — updated 180-day Gantt (rename fully applied ✅)
 - `output/internal/nhl_gantt_subsets_20261012.xlsx` — new R/170 run
 
 ## Files committed this run
 
-- `R/52_gantt_v2_export.R` — added `CUTOFF_DATE` definition (bug fix)
-- `R/142_gantt_180_export.R` — added `CUTOFF_DATE` definition (bug fix)
-- `R/00_config.R` — re-pointed `gantt_180_snapshot_path` to `_PINNED` copy permanently
-- `scratch/172_closeout_checks.R` — new check script
+- `R/52_gantt_v2_export.R` — added `CUTOFF_DATE` definition (bug fix, 43a02b1)
+- `R/142_gantt_180_export.R` — added `CUTOFF_DATE` definition (bug fix, 43a02b1); Section 4D drug_names canonicalization (bug fix, 38e0462)
+- `R/00_config.R` — re-pointed `gantt_180_snapshot_path` to `_PINNED` copy permanently (ee01b75)
+- `R/26_treatment_episodes.R` — Tier 3 rxnorm canonicalization (488c254); drug_names aggregation canonicalization (18b0e01)
+- `scratch/172_closeout_checks.R` — new check script (d564b85)
 
-## RFSH-03 status: OPEN
+## RFSH-03 status: COMPLETE ✅
 
-Phase 164 Task 5 not closed — 180-day rename incomplete. RFSH-03 remains open.
+Phase 164 Task 5 closed — both Gantts clean, patient counts preserved, R/170 regression passed. Run date: 2026-10-12.

@@ -727,7 +727,7 @@ Plans:
 
 - [x] **Phase 170: R/147 Re-run and Verification** - Re-run R/147 after Phase 163 changes; verify vs 1006 reference workbook; confirm R/88 Section 15ao (completed 2026-10-09)
 - [x] **Phase 171: Survivorship Workbook Refresh** - Re-run R/166/R/167/R/168 from clean R/147 output; verify primary-tier and CIF parity with 10-08 workbook (completed 2026-10-12)
-- [ ] **Phase 172: Phase 164 Close-out and R/170 NHL Subsets** - Close Phase 164 HiPerGator checkpoint; re-run R/170; verify matched-row identity and attribute any dox/Adriamycin shifts
+- [x] **Phase 172: Phase 164 Close-out and R/170 NHL Subsets** - Close Phase 164 HiPerGator checkpoint; re-run R/170; verify matched-row identity and attribute any dox/Adriamycin shifts (completed 2026-10-12)
 - [ ] **Phase 173: Phase 130 DoI Registration and HiPerGator Gate** - Register R/111 and R/112 in R/39 and SCRIPT_INDEX; add R/88 smoke section; confirm HiPerGator runtime
 
 ## Phase Details (v3.8)
@@ -765,7 +765,7 @@ Plans:
   2. Any n_norm_only or n_mismatch shifts in the R/170 output are present exclusively in rows involving doxorubicin or Adriamycin drug names — no other drugs shift
   3. The Phase 164 HiPerGator checkpoint is formally closed with the run date and output file name recorded in the phase transition notes
 **Plans**: 1 plan
-- [ ] 172-01-PLAN.md — R/170 re-run + Phase 164 HiPerGator checkpoint closure [RFSH-03] (Wave 1)
+- [x] 172-01-PLAN.md — R/170 re-run + Phase 164 HiPerGator checkpoint closure [RFSH-03] (Wave 1, completed 2026-10-12)
 
 ### Phase 173: Phase 130 DoI Registration and HiPerGator Gate
 **Goal**: R/111 and R/112 are fully registered in the pipeline discovery and validation infrastructure and their correctness is confirmed by a HiPerGator runtime pass on real DIAGNOSIS data
@@ -790,5 +790,5 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete    | 2026-10-09 |
 | 171. Survivorship Workbook Refresh | v3.8 | 1/1 | Complete    | 2026-10-12 |
-| 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
+| 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 1/1 | Complete    | 2026-10-12 |
 | 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |
