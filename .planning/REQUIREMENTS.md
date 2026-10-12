@@ -6,7 +6,7 @@
 ### Pipeline Refresh (closes Phase 163/164 runtime gates)
 
 - [ ] **RFSH-01:** Re-run R/147 on HiPerGator after Phase 163 changes; run `R/147_verify_vs_1006.R` against the 1006 reference workbook (all checks pass) and confirm R/88 Section 15ao passes
-- [ ] **RFSH-02:** Re-run R/166, R/167, R/168 after the clean R/147 output; verify primary-tier results and CIF are identical to the 10-08 workbook; confirm only Echo/ECG/Mammogram/PFT any-tier rates shift
+- [x] **RFSH-02:** Re-run R/166, R/167, R/168 after the clean R/147 output; verify primary-tier results and CIF are identical to the 10-08 workbook; confirm only Echo/ECG/Mammogram/PFT any-tier rates shift
 - [ ] **RFSH-03:** Close Phase 164 HiPerGator checkpoint (Dox rename in Gantt); re-run R/170; verify matched rows are identical and document that any `n_norm_only`/`n_mismatch` shifts involve doxorubicin/Adriamycin only
 
 ### Phase 130 Close-out (v3.3 deferred)
@@ -31,7 +31,7 @@
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
 | RFSH-01 | Phase 170 | Complete |
-| RFSH-02 | Phase 171 | pending |
+| RFSH-02 | Phase 171 | Complete |
 | RFSH-03 | Phase 172 | pending |
 | DOI-REG-01 | Phase 173 | pending |
 | DOI-REG-02 | Phase 173 | pending |
