@@ -380,10 +380,8 @@ message(glue(
 message("--- Projecting distances for coverable encounters ---")
 
 cov <- cand |>
-  dplyr::filter(coverable) |>
-  dplyr::mutate(
-    zip5_facility = normalize_zip5_raw(enc_zip_raw)   # facility ZIP5, same method as R/122
-  )
+  dplyr::filter(coverable)
+# zip5_facility is already present in enc_distance output (R/122 computes it there)
 
 # Compute on distinct (zip5_patient_proj, zip5_facility) pairs for performance.
 proj_pairs <- cov |>
