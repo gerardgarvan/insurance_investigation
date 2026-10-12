@@ -158,44 +158,12 @@ run_check("B_rates_by_fu_year", function() same_sheet("B_rates_by_fu_year"))
 # designation, not primary codes.  Explicit assertion per D-02 / 171-CONTEXT.md.
 run_check("C_anthracycline_echo", function() same_sheet("C_anthracycline_echo"))
 
-# D5: QC interval reconciliation still PASS
-# qc_interval_recon_summary columns: n_checked, n_py_fail, n_dates_fail,
-#   recon_py_pass, recon_dates_pass.
-# Check: n_py_fail == "0" and n_dates_fail == "0" (read as text).
-run_check("QC:interval_reconciliation", function() {
-  if (!file.exists(new_path)) return(paste0("FAIL — new workbook missing: ", new_path))
-  qc <- as.data.frame(read_txt(new_path, "QC"))
-  if (nrow(qc) == 0) return("FAIL — QC sheet missing or empty")
-  # qc_interval_recon_summary is written immediately after the "Interval reconciliation"
-  # header row.  Locate n_py_fail and n_dates_fail by column name in the header row.
-  # The block is a data frame written with writeData; the first column of data has
-  # column header "n_checked".  Find the row containing "n_checked" in col 1.
-  hdr_row <- which(qc[[1]] == "n_checked")
-  if (length(hdr_row) == 0)
-    return("FAIL — 'n_checked' header not found in QC sheet (interval reconciliation block)")
-  # Data row immediately follows header row
-  data_row_idx <- hdr_row[1] + 1L
-  if (data_row_idx > nrow(qc))
-    return("FAIL — no data row after 'n_checked' header")
-  data_row <- qc[data_row_idx, , drop = FALSE]
-  col_names_in_qc <- unlist(qc[hdr_row[1], , drop = FALSE])
-  py_col   <- which(col_names_in_qc == "n_py_fail")
-  dt_col   <- which(col_names_in_qc == "n_dates_fail")
-  if (length(py_col) == 0)
-    return("FAIL — 'n_py_fail' column not found in interval reconciliation block")
-  if (length(dt_col) == 0)
-    return("FAIL — 'n_dates_fail' column not found in interval reconciliation block")
-  py_val   <- trimws(data_row[[py_col]])
-  dt_val   <- trimws(data_row[[dt_col]])
-  py_ok    <- isTRUE(py_val == "0")
-  dt_ok    <- isTRUE(dt_val == "0")
-  if (py_ok && dt_ok) {
-    paste0("PASS — n_py_fail=", py_val, ", n_dates_fail=", dt_val)
-  } else {
-    paste0("FAIL — n_py_fail=", py_val, ", n_dates_fail=", dt_val,
-           " (both must be '0')")
-  }
-})
+# D5: QC sheet unchanged vs reference
+# The reference workbook (2026-10-08) has n_dates_fail=855 and recon_dates_pass=FALSE
+# — a pre-existing condition unrelated to Phase 171 (confirmed Task 0 / D-03: no
+# any-tier values flow into this workbook).  Asserting zero would be wrong.
+# Instead compare the full QC sheet cell-for-cell, same as A/B/C.
+run_check("QC:interval_reconciliation", function() same_sheet("QC"))
 
 # ==============================================================================
 # E. FINAL BLOCK (always runs)
