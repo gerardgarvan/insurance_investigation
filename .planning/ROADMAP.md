@@ -713,6 +713,16 @@ Plans:
 - [x] 164-01-PLAN.md — Doxorubicin generic name collapse: DRUG_NAME_ALIASES + MEDICATION_LOOKUP + R/88 checks (SUMMARY confirmed; R/164_dox_baseline_counts.R delivered)
 
 
+### Phase 1: R/88 Exit-Status Hardening
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 0
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 1 to break down)
+
 ---
 
 ## ✅ v3.7 Access, Survivorship Rates & NHL Episode Subsets (Shipped 2026-10-09) — 5 phases, 10 plans — see [milestones/v3.7-ROADMAP.md](.planning/milestones/v3.7-ROADMAP.md)
@@ -762,7 +772,10 @@ Plans:
   1. A deliberate failing check (temporary condition or test fixture modification) produces "R/88 FAILED: N checks" in interactive mode and exit code 1 in non-interactive mode -- this must be tested, not assumed
   2. A clean run produces identical totals to Phase 174's confirmed baseline
   3. HiPerGator confirmation run (interactive R, source() pattern); ROADMAP tick only after real pass
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 175-01-PLAN.md — Apply three-way exit guard, skip_check(), R88_FORCE_FAIL sentinel; HiPerGator verify all paths
 
 ### Phase 176: Phase 151 Close-Out
 **Goal**: R/121_zip_problem_inventory.R runs to completion on HiPerGator; outputs are checked against 151-PLAN.md success criteria; 151-01-SUMMARY.md is written with a pass/fail verdict; Phase 151 is ticked in ROADMAP if all criteria met
@@ -772,7 +785,10 @@ Plans:
   1. R/121 runs to completion on HiPerGator (interactive R session)
   2. 151-01-SUMMARY.md written with pass/fail verdict against each 151-PLAN.md criterion
   3. ROADMAP Phase 151 ticked if all criteria met; documented gap recorded if not
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 175-01-PLAN.md — Apply three-way exit guard, skip_check(), R88_FORCE_FAIL sentinel; HiPerGator verify all paths
 
 ### Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo
 **Goal**: Using the latest R/116 encounter-level output, count encounters where zip9_source == "none" OR ZIP5 is missing, split by R/121 groups; produce a decision memo on whether a new imputation tier warrants a phase
@@ -783,7 +799,10 @@ Plans:
   2. Memo cites Phase 150 concordance (547/135, ~80%) as the expected imputation error rate
   3. Memo contains a clear recommendation (yes / no / conditional) on whether a new imputation tier warrants a phase
   4. HiPerGator confirmation run; ROADMAP tick only after real pass
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 175-01-PLAN.md — Apply three-way exit guard, skip_check(), R88_FORCE_FAIL sentinel; HiPerGator verify all paths
 
 ## Progress (v3.9)
 
