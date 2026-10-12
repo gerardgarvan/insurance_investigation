@@ -726,7 +726,7 @@ Plans:
 ## Phases (v3.8)
 
 - [x] **Phase 170: R/147 Re-run and Verification** - Re-run R/147 after Phase 163 changes; verify vs 1006 reference workbook; confirm R/88 Section 15ao (completed 2026-10-09)
-- [ ] **Phase 171: Survivorship Workbook Refresh** - Re-run R/166/R/167/R/168 from clean R/147 output; verify primary-tier and CIF parity with 10-08 workbook
+- [x] **Phase 171: Survivorship Workbook Refresh** - Re-run R/166/R/167/R/168 from clean R/147 output; verify primary-tier and CIF parity with 10-08 workbook (completed 2026-10-12)
 - [ ] **Phase 172: Phase 164 Close-out and R/170 NHL Subsets** - Close Phase 164 HiPerGator checkpoint; re-run R/170; verify matched-row identity and attribute any dox/Adriamycin shifts
 - [ ] **Phase 173: Phase 130 DoI Registration and HiPerGator Gate** - Register R/111 and R/112 in R/39 and SCRIPT_INDEX; add R/88 smoke section; confirm HiPerGator runtime
 
@@ -788,6 +788,6 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 170. R/147 Re-run and Verification | v3.8 | 3/3 | Complete    | 2026-10-09 |
-| 171. Survivorship Workbook Refresh | v3.8 | 0/3 | Planned | - |
+| 171. Survivorship Workbook Refresh | v3.8 | 1/1 | Complete    | 2026-10-12 |
 | 172. Phase 164 Close-out and R/170 NHL Subsets | v3.8 | 0/TBD | Not started | - |
 | 173. Phase 130 DoI Registration and HiPerGator Gate | v3.8 | 0/TBD | Not started | - |
