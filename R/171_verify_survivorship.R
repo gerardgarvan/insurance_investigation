@@ -228,4 +228,9 @@ if (n_fail == 0) {
 sink()
 close(con)
 
-quit(status = if (n_fail == 0) 0 else 1, save = "no")
+# quit() kills the R session when sourced interactively; use a condition instead
+if (interactive()) {
+  if (n_fail == 0) message("171 verify: OVERALL PASS") else stop("171 verify: OVERALL FAIL")
+} else {
+  quit(status = if (n_fail == 0) 0 else 1, save = "no")
+}
