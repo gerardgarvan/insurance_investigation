@@ -16,7 +16,7 @@ Resolve the 920 PASS / 921 total discrepancy in R/88. Identify the one check tha
 Make R/88 signal failure when any check fails. After the summary block: if `failed > 0` and `!interactive()`, call `quit(status = 1)`; in interactive sessions print a prominent "R/88 FAILED: N checks" line. Verify skip branches do not add to PASS count. Verify all per-section counters feed the global passed/failed totals.
 
 - **Phase**: 175
-- **Status**: Pending
+- **Status**: Complete
 
 ### HYGIENE-03 — Phase 151 Close-Out
 
@@ -37,6 +37,6 @@ Using the latest R/116 encounter-level output, count encounters where `zip9_sour
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | HYGIENE-01 | Phase 174 | Pending |
-| HYGIENE-02 | Phase 175 | Pending |
+| HYGIENE-02 | Phase 175 | Complete |
 | HYGIENE-03 | Phase 176 | Pending |
 | HYGIENE-04 | Phase 177 | Pending |

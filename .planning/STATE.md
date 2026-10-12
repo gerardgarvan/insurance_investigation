@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: completed
-stopped_at: Phase 175 context gathered
+stopped_at: Phase 175 complete — 175-01-SUMMARY.md written
 last_updated: "2026-10-12T18:23:02.534Z"
 last_activity: 2026-10-12
 progress:
@@ -22,16 +22,18 @@ See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 175 — R/88 exit-status hardening
+**Current focus:** Phase 176 — Phase 151 close-out
 
 ## Current Position
 
-Phase: 175
+Phase: 176
 Plan: Not started
-Status: Phase 174 complete — ready for Phase 175
+Status: Phase 175 complete — ready for Phase 176
 Last activity: 2026-10-12
 
-**Phase 174 close-out (2026-10-12):** Counter bugs fixed in R/88. .p135_check and check_137 (28+14 checks) now update global passed/failed. check_138/139/144 unconditional passed<<- moved into pass branch only. Production cache_dir check added. HiPerGator confirmed: ALL 963 CHECKS PASSED, FAIL == 0. R/88 baseline is now 963 (was 920). Downstream phases should cite "PASS == total, FAIL == 0" not a fixed number.
+**Phase 175 close-out (2026-10-12):** Three-way exit guard added to R/88 (testthat no-op / interactive stop() / batch quit(status=1)). skip_check() helper added; 13 runtime-skip fake-TRUEs and 2 fake-assertions converted. p163_skip_note now bumps global skipped counter. R88_FORCE_FAIL sentinel added. HiPerGator confirmed all 4 paths: ec0=0 (ALL 960 CHECKS PASSED, 3 skipped), ec1=1 (FAILED: 1/961, 3 skipped), stop() fires in interactive with session alive. New R/88 baseline: 960 CHECKS PASSED, 3 skipped. Downstream phases cite "PASS == total, FAIL == 0" not a fixed number.
+
+**Phase 174 close-out (2026-10-12):** Counter bugs fixed in R/88. .p135_check and check_137 (28+14 checks) now update global passed/failed. check_138/139/144 unconditional passed<<- moved into pass branch only. Production cache_dir check added. HiPerGator confirmed: ALL 963 CHECKS PASSED, FAIL == 0. R/88 baseline was 963 (was 920) — superseded by Phase 175 baseline of 960 CHECKS PASSED (3 skipped).
 
 **Phase 173 close-out (2026-10-12):** Path B taken (fresh HiPerGator re-run, R/4.5 interactive, ~0.2 min, host c0700a-s28.ufhpc). Encounter-grain DoI counts exactly match Phase 130 baseline (2026-07-16) — DuckDB pcornet.duckdb confirmed unchanged. ALL 920 R/88 CHECKS PASSED. SMOKE-130-01 footer confirmed in R/88 validated requirements list. doi_attribution_report.xlsx produced with 4 sheets (Patient Prevalence, Encounter Co-occurrence, Drug x DoI Summary, Metadata). Mutual-exclusivity: 0 codes classify as both DoI and cancer. DOI-REG-01/02/03 closed.
 
@@ -42,7 +44,7 @@ Last activity: 2026-10-12
 - Phase 176: Phase 151 Close-Out (HYGIENE-03) — R/121 HiPerGator run + 151-01-SUMMARY.md; may run with 177
 - Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo (HYGIENE-04) — unfilled-ZIP encounter counts + imputation-tier recommendation; may run with 176
 
-Progress: [░░░░░░░░░░] 0% (0/4 phases complete)
+Progress: [██░░░░░░░░] 25% (1/4 phases complete)
 
 ## Performance Metrics
 
@@ -80,12 +82,12 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 ### Known Context
 
-- R/88 currently reports 921 total checks but only 920 PASS — one check is not PASS (failed, skipped, or not counted in the PASS total)
+- R/88 baseline (Phase 175): ALL 960 CHECKS PASSED (3 skipped); exit code 0 clean, exit code 1 with R88_FORCE_FAIL=1
 - Phase 151 (Per-Patient ZIP Problem Inventory) had a HiPerGator run confirmed 2026-10-09 per the ROADMAP detail note, but no 151-01-SUMMARY.md was written and the phase is not ticked — Phase 176 closes this out
 - R/121 groups from Phase 151: NEEDS_TEMPORAL_MATCH (~410 patients), UNREACHABLE_NO_ZIP9 (~427 patients)
 - Phase 150 concordance baseline: 547 concordant / 135 discordant (~80%) — used as expected error rate in Phase 177 memo
 
 ## Session Continuity
 
-**Last command:** Roadmap written for v3.9 (REQUIREMENTS.md, ROADMAP.md, STATE.md)
-**Stopped at:** Phase 175 context gathered
+**Last command:** Phase 175 complete — R/88 exit-status hardening, skip_check(), sentinel; HiPerGator confirmed
+**Stopped at:** Phase 175 complete — 175-01-SUMMARY.md written, planning files updated
