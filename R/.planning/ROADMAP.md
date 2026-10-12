@@ -614,3 +614,27 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 175. R/88 Exit-Status Hardening | v3.7 | 0/TBD | Not started | - |
+
+---
+
+### ⏳ Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo (planned)
+
+**Goal**: Count unfilled-ZIP encounters by R/121 group; recommend whether a new imputation tier warrants a phase.
+**Milestone**: v3.5 (ZIP/encounter-distance investigation thread)
+**Depends on**: Phase 152 (R/121 inventory of invalid/placeholder ZIPs)
+**Requirements**: none mapped (standalone sizing/recommendation memo)
+**Plans**: TBD
+
+**Description:** R/121 classifies encounters into groups (e.g., `NEEDS_TEMPORAL_MATCH`, `invalid_zip`, `placeholder_zip`). This memo phase queries the actual group counts from the R/121 output, determines how many encounters remain unfilled after the current imputation tiers, and produces a written recommendation (as a markdown memo and/or xlsx summary) on whether the volume of `NEEDS_TEMPORAL_MATCH` encounters justifies a dedicated new imputation tier or can be addressed with a minor extension to an existing phase.
+
+**Success Criteria** (what must be TRUE):
+  1. R/121 group counts are tabulated at both encounter and patient level, broken down by the exact `distance_status` / ZIP-inventory group labels R/121 produces
+  2. The fraction of cohort encounters in each unfilled group is computed and presented
+  3. A written recommendation is produced: either "volume warrants a new imputation tier phase" (with a proposed scope) or "volume does not warrant a new phase" (with a rationale and the suggested inline fix, if any)
+  4. The memo is committed to `docs/` or the phase directory so it is recoverable for future planning
+
+## Progress (standalone sizing phases)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 177. NEEDS_TEMPORAL_MATCH Sizing Memo | v3.5 | 0/TBD | Not started | - |

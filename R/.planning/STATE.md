@@ -155,6 +155,7 @@ v3.3 (Rituximab/Methotrexate-Associated Diagnoses of Interest) is fully executed
 - Phase 144 added: Centroid ZIP9 Imputation, ZIP9-Level SDI, and Areal-Mean SDI
 - Phase 148 added: 148-CONTEXT-centroid
 - Phase 175 added: R/88 Exit-Status Hardening (milestone v3.7)
+- Phase 177 added: NEEDS_TEMPORAL_MATCH Sizing Memo — count unfilled-ZIP encounters by R/121 group; recommend whether a new imputation tier warrants a phase (milestone v3.5, standalone sizing memo, depends on Phase 152)
 
 ### Known Blockers (new)
 
