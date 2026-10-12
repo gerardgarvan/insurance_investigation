@@ -240,7 +240,8 @@ investigation_scripts <- c(
   # Outputs: output/internal/nhl_gantt_subsets_<date>.xlsx
   #          output/internal/nhl_only_episodes_<date>.csv
   #          output/internal/hl_nhl_episodes_<date>.csv
-  "R/170_nhl_gantt_subsets.R"                 # NHL-only/HL+NHL gantt subsets with chemo-combos E-J join (Phase 168); internal patient-level outputs
+  "R/170_nhl_gantt_subsets.R",                # NHL-only/HL+NHL gantt subsets with chemo-combos E-J join (Phase 168); internal patient-level outputs
+  "R/177_temporal_match_sizing.R"            # Temporal ZIP-match sizing memo (Phase 177); sizes patient_zip_missing encounters, projects >100 mi, applies locked decision rule; writes temporal_match_sizing_YYYYMMDD.xlsx + internal RDS
 )
 
 for (script in investigation_scripts) {
