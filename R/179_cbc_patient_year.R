@@ -71,16 +71,11 @@ BROAD_LOINCS <- c("6690-2", "718-7", "777-3", "4544-3", "789-8", "787-2", "785-6
                   "786-4", "788-0", "770-8", "26499-4", "731-0", "58410-2",
                   "57021-8", "57782-5")
 
-# Phase 165 side-by-side: exact KEY labels (column 1) of the rows holding the ORs.
-# Fill these once from the Phase 165 workbook; unconfigured/unmatched labels are
-# reported as such (no pattern matching).
-P165_XLSX   <- file.path(CONFIG$output_dir, "distance_cbc_association_20261008.xlsx")
-P165_LABELS <- c(
-  # "Whole record OR (Rao-Scott)" = "<exact KEY label>",
-  # "Post-anchor OR (Rao-Scott)"  = "<exact KEY label>",
-  # "Whole record OR (Fisher)"    = "<exact KEY label>",
-  # "Post-anchor OR (Fisher)"     = "<exact KEY label>"
-)
+# Phase 165 side-by-side: read from B_test sheet (Window / OR / CI_lo / CI_hi / p_svyglm).
+# Exact column names required; stops with a message if any are missing.
+P165_XLSX <- file.path(CONFIG$output_dir, "distance_cbc_association_20261008.xlsx")
+# Expected exact values in the Window column:
+P165_WINDOWS <- c("Whole record", "Post-anchor")
 
 # --- Helpers ------------------------------------------------------------------
 sup <- function(x) {                       # counts 1-10 -> "<11" (vectorised)
@@ -463,27 +458,25 @@ for (r in all_fits) message("  ", fmt_result(r))
 # SECTION 6: WORKBOOK (D-16) ----
 # ==============================================================================
 
-p165_text <- if (length(P165_LABELS) == 0L) {
-  glue("Labels not configured in P165_LABELS -- see {basename(P165_XLSX)}")
-} else if (!file.exists(P165_XLSX)) {
-  glue("{basename(P165_XLSX)} not found")
+p165_text <- if (!file.exists(P165_XLSX)) {
+  glue("{basename(P165_XLSX)} not found -- cannot add Phase 165 side-by-side")
 } else {
-  k165 <- readxl::read_excel(P165_XLSX, sheet = "KEY", col_types = "text")
-  lab  <- trimws(k165[[1]])
-  vals <- vapply(names(P165_LABELS), function(nm) {
-    hit <- which(lab == P165_LABELS[[nm]])
-    if (length(hit) != 1L) return(glue("{nm}: label not found ({length(hit)} matches)"))
-    glue("{nm}: {k165[[2]][hit]}")
-  }, character(1))
-  paste(vals, collapse = "; ")
+  b165 <- readxl::read_excel(P165_XLSX, sheet = "B_test", col_types = "text")
+  req_cols <- c("Window", "Method", "OR", "CI_lo", "CI_hi", "p_svyglm")
+  missing_cols <- setdiff(req_cols, names(b165))
+  if (length(missing_cols) > 0L)
+    stop("B_test sheet missing required columns: ", paste(missing_cols, collapse = ", "))
+  missing_windows <- setdiff(P165_WINDOWS, trimws(b165$Window))
+  if (length(missing_windows) > 0L)
+    stop("B_test sheet missing expected Window values: ", paste(missing_windows, collapse = ", "))
+  rows <- lapply(P165_WINDOWS, function(w) {
+    r <- b165[trimws(b165$Window) == w, , drop = FALSE]
+    glue("{w} ({r$Method[1]}): OR {r$OR[1]} ({r$CI_lo[1]}–{r$CI_hi[1]}), p={r$p_svyglm[1]}")
+  })
+  paste(rows, collapse = "; ")
 }
-if (grepl("not found|not configured", p165_text)) {
-  message("  [ACTION] Phase 165 side-by-side incomplete: ", p165_text)
-  if (file.exists(P165_XLSX)) {
-    message("  Phase 165 KEY labels available:")
-    print(trimws(readxl::read_excel(P165_XLSX, sheet = "KEY", col_types = "text")[[1]]))
-  }
-}
+if (grepl("not found", p165_text))
+  message("  [ACTION] Phase 165 side-by-side: ", p165_text)
 
 key_df <- data.frame(
   Field = c("Analysis", "Relation to Phase 165", "Run date", "Unit", "Fully observed years",
