@@ -99,16 +99,17 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] RFSH-03: Phase 164 doxorubicin rename confirmed in both 90-day and 180-day Gantt outputs (0 liposomal rows, 2384/2384 patient count preserved); R/170 NHL subsets unchanged (2615/592 episode-tab rows, 849/1261/176 group counts); `_PINNED` snapshot protection in R/00_config.R — v3.8 Phase 172
 - [x] DOI-REG-01/02/03: R/111 and R/112 registered in R/39 (L217/L218, dependency order) and SCRIPT_INDEX (L157/L158); Section 15w (SMOKE-130-01) in R/88; HiPerGator runtime confirmed — 920 checks PASS, 32,249 DoI encounters — v3.8 Phase 173
 
-## Current Milestone
+## Current Milestone: v3.10 Distance Missingness & Script Fixes
 
-No active milestone — v3.9 shipped 2026-10-12. Run `/gsd:new-milestone` to plan next work.
+**Goal:** Find out whether encounters without a computed distance could bias the Phase 165 far-from-care (>100 mi) vs CBC association, and fix two small script issues first.
 
-**Carry-forward backlog (open items):**
+**Target features:**
+- FIX-01/FIX-02: R/147 verify-script guard + exact-match label lookups; R/122 KEY temporal-match note
+- MISS-01/02/03: R/179_distance_missingness.R — CBC rate comparison across distance_status groups, bounding sensitivity ORs, decision rule applied (limitation vs team flag)
+
+**Carry-forward backlog (deferred, not in scope):**
 - D-165-01: Amy/Erin confirmation of primary analysis method (patient-level Fisher vs Rao-Scott)
 - Phase 168: Team review of NHL Gantt episode subsets
-- R/122 workbook KEY note: temporal match would fill 0 encounters; 3,731 patient_zip_missing = UNREACHABLE_NO_ZIP9
-- R/147_verify_vs_1006.R: guard final quit() with !interactive(); exact-match label lookups (fixed = TRUE / ==)
-- Candidate bias check: CBC rates with vs without encounter distance
 
 ### Active
 

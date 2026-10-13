@@ -1,35 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.9
-milestone_name: Pipeline Hygiene
-status: completed
-stopped_at: v3.9 archived 2026-10-13; next milestone not yet defined
+milestone: v3.10
+milestone_name: Distance Missingness & Script Fixes
+status: in_progress
+stopped_at: v3.10 started 2026-10-13; Phase 178 not yet planned
 last_updated: "2026-10-13T00:00:00.000Z"
 last_activity: 2026-10-13
 progress:
-  total_phases: 167
-  completed_phases: 142
+  total_phases: 179
+  completed_phases: 177
   total_plans: 310
   completed_plans: 315
-  percent: 25
+  percent: 98
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-13 after archiving v3.9)
+See: .planning/PROJECT.md (updated 2026-10-13, v3.10 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.9 archived — no active milestone; run `/gsd:new-milestone` to plan next work
+**Current focus:** v3.10 Distance Missingness & Script Fixes — Phase 178 (script fixes) next
 
 ## Current Position
 
-Phase: 177 (COMPLETE)
-Plan: 177-02
-Status: All 4 v3.9 phases complete; milestone ready to archive
-Last activity: 2026-10-12
+Phase: 178 (not started)
+Plan: —
+Status: Defining requirements / roadmap set; Phase 178 ready to plan
+Last activity: 2026-10-13 — Milestone v3.10 started
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
