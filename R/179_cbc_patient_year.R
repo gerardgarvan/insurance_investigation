@@ -133,27 +133,28 @@ anchor_candidates <- list.files(
   pattern = "^surveillance_modality_patient.*\\.rds$",
   full.names = TRUE
 )
-if (length(anchor_candidates) == 0L)
-  stop(
-    "R/147 anchor RDS not found in ", CONFIG$output_dir,
-    " -- run R/147_surveillance_modality_frequency.R first."
-  )
-anchor_rds_path <- anchor_candidates[which.max(file.mtime(anchor_candidates))]
-message(glue("  Loading R/147 anchor RDS: {basename(anchor_rds_path)}"))
-r147_raw <- readRDS(anchor_rds_path)
-
-# Extract one row per patient with ID and hl_anchor_date
-anchors <- r147_raw |>
-  dplyr::distinct(ID, hl_anchor_date) |>
-  dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
+if (length(anchor_candidates) > 0L) {
+  anchor_rds_path <- anchor_candidates[which.max(file.mtime(anchor_candidates))]
+  message(glue("  Loading R/147 anchor RDS: {basename(anchor_rds_path)}"))
+  r147_raw <- readRDS(anchor_rds_path)
+  anchors <- r147_raw |>
+    dplyr::distinct(ID, hl_anchor_date) |>
+    dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
+  anchor_source <- glue("R/147 RDS ({basename(anchor_rds_path)})")
+} else {
+  # R/147 RDS not yet produced; fall back to get_hl_any_dx_ids() — same source Phase 165 uses.
+  message("  R/147 anchor RDS not found; falling back to get_hl_any_dx_ids() (same as Phase 165).")
+  anchors <- get_hl_any_dx_ids() |>
+    dplyr::distinct(ID, hl_anchor_date) |>
+    dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
+  anchor_source <- "get_hl_any_dx_ids() [R/147 RDS absent — fallback]"
+}
 
 n_anchors      <- nrow(anchors)
 n_anchor_na    <- sum(is.na(anchors$hl_anchor_date))
-message(glue("  Anchors from R/147: {n_anchors} patients; {n_anchor_na} missing hl_anchor_date."))
+message(glue("  Anchors ({anchor_source}): {n_anchors} patients; {n_anchor_na} missing hl_anchor_date."))
 
 # Cross-check against Phase 165's cohort source (get_hl_any_dx_ids()).
-# R/165 derives cohort from enc_distance IDs + get_hl_any_dx_ids(); we log counts only.
-# Any cohort difference does not block execution (D-02 specifies R/147 as the authority).
 tryCatch({
   anchors_165 <- get_hl_any_dx_ids()
   ids_179     <- unique(anchors$ID[!is.na(anchors$hl_anchor_date)])
@@ -163,8 +164,8 @@ tryCatch({
   message(glue(
     "  Phase 165 cohort cross-check (get_hl_any_dx_ids()): ",
     "{length(ids_165)} patients with anchor.\n",
-    "    In R/179 (R/147 RDS) but not R/165: {n_in_179_not_165}\n",
-    "    In R/165 but not R/179 (R/147 RDS): {n_in_165_not_179}"
+    "    In R/179 but not R/165: {n_in_179_not_165}\n",
+    "    In R/165 but not R/179: {n_in_165_not_179}"
   ))
 }, error = function(e) {
   message("  [INFO] Phase 165 cross-check skipped (get_hl_any_dx_ids() unavailable): ",
@@ -311,8 +312,8 @@ close_pcornet_con()
 KEY_META <- list(
   cdm_cutoff_date   = as.character(CDM_CUTOFF),
   cdm_cutoff_source = "EXTRACT_DATE in R/00_config.R (Mailhot_V1_20250915)",
-  anchor_rds        = basename(anchor_rds_path),
-  anchor_source     = "R/147 surveillance_modality_patient RDS (D-02)",
+  anchor_rds        = anchor_source,
+  anchor_source     = anchor_source,
   enc_distance_rds  = basename(enc_dist_path),
   r121_rds          = if (!is.null(r121_path)) basename(r121_path) else "not found",
   death_source      = death_source,
@@ -876,7 +877,7 @@ key_rows_179 <- list(
   c("Unit",           "Patient-year (half-open 365-day interval after hl_anchor_date)"),
   c("Year interval",  "Year k = (anchor + 365*(k-1), anchor + 365*k]; anchor day = pre (D-01)"),
   c("CDM cutoff",     glue("{CDM_CUTOFF} (source: EXTRACT_DATE in R/00_config.R, Mailhot_V1_20250915)")),
-  c("Anchor source",  glue("{KEY_META$anchor_rds} (R/147 surveillance_modality_patient RDS, D-02)")),
+  c("Anchor source",  KEY_META$anchor_source),
   c("Cohort cross-check", "get_hl_any_dx_ids() vs R/147 RDS counts logged at runtime (non-blocking, D-02)"),
   c("Death source",   KEY_META$death_source),
   c("Enc_distance src", KEY_META$enc_distance_rds),
