@@ -1219,7 +1219,8 @@ key_tbl <- tibble::tibble(
     "B_histogram_bins columns",
     "C_completeness waterfall",
     "D_fill_offsets scope",
-    "QC sheet contents"
+    "QC sheet contents",
+    "Note: patient_zip_missing"
   ),
   Description = c(
     "R/122_encounter_distance.R",
@@ -1236,7 +1237,8 @@ key_tbl <- tibble::tibble(
     "level, scale, bin, lower, upper, lower_mi, upper_mi, n, pct. Linear: 10-mile bins to 350, then [350, Inf). Log: first bin [0,1) mi (includes same-ZIP zeros), then quarter-decade bins on log10(mi); lower/upper are in log10(mi) units for log rows (first bin lower = -0.25), lower_mi/upper_mi are in miles for all rows.",
     "Five-step waterfall keyed on distance_status (encounters → facility ZIP → in-range patient ZIP → nearest patient ZIP → distance computed)",
     "Nearest-* fill rows (zip5_patient_source in nearest_zip9, nearest_zip5) only; signed-integer bins. SIGN: positive days_offset = address period ended BEFORE the encounter (past); negative = period began AFTER (future). 0 never occurs.",
-    "Coverage waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag"
+    "Coverage waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag",
+    "Temporal ZIP match would fill 0 encounters (Phase 177). The patient_zip_missing encounters belong to patients with no ZIP9 (UNREACHABLE_NO_ZIP9) or no address history (not in R/121); no dated ZIP exists to fill them."
   )
 )
 
