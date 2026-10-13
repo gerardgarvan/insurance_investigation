@@ -142,13 +142,15 @@ run_check("QC:total_person_years", function() {
   ref_qc <- read_sheet(ref_path, "QC")
   if (is.null(new_qc) || is.null(ref_qc)) return("FAIL — QC sheet missing")
   get_val <- function(df, label) {
-    row_idx <- which(grepl(label, df[[1]], fixed = TRUE))
-    if (length(row_idx) == 0) return(NA_character_)
-    as.character(df[[2]][row_idx[1]])
+    row_idx <- which(trimws(df[[1]]) == label)
+    if (length(row_idx) != 1)
+      return(paste0("FAIL — '", label, "' matched ", length(row_idx), " row(s) in QC"))
+    as.character(df[[2]][row_idx])
   }
   ref_val <- get_val(ref_qc, "Total person-years")
   new_val <- get_val(new_qc, "Total person-years")
-  if (is.na(new_val)) return("FAIL — 'Total person-years' label not found in QC")
+  if (startsWith(ref_val, "FAIL") || startsWith(new_val, "FAIL"))
+    return(if (startsWith(ref_val, "FAIL")) ref_val else new_val)
   ok <- ref_val == new_val
   glue("{if (ok) 'PASS' else 'FAIL'} — Total person-years: ref={ref_val}, new={new_val} (expected 40298.9)")
 })
@@ -366,13 +368,16 @@ run_check("QC:matched_rows_drop", function() {
   excl_rows <- ref_a[ref_a[[id_col]] %in% EXCLUDED_IDS, , drop = FALSE]
   expected_drop <- sum(suppressWarnings(as.integer(excl_rows[[rec_col]])), na.rm = TRUE)
   get_qc_val <- function(qc, label) {
-    row_idx <- which(grepl(label, qc[[1]], fixed = TRUE))
-    if (length(row_idx) == 0) return(NA_integer_)
-    suppressWarnings(as.integer(qc[[2]][row_idx[1]]))
+    row_idx <- which(trimws(qc[[1]]) == label)
+    if (length(row_idx) != 1)
+      return(paste0("FAIL — '", label, "' matched ", length(row_idx), " row(s) in QC"))
+    suppressWarnings(as.integer(qc[[2]][row_idx]))
   }
   matched_ref <- get_qc_val(ref_qc, "Matched rows, type ok")
   matched_new <- get_qc_val(new_qc, "Matched rows, type ok")
-  if (is.na(matched_ref) || is.na(matched_new)) return("FAIL — 'Matched rows, type ok' label not found in QC")
+  if (is.character(matched_ref) || is.character(matched_new))
+    return(if (is.character(matched_ref)) matched_ref else matched_new)
+  if (is.na(matched_ref) || is.na(matched_new)) return("FAIL — 'Matched rows, type ok' not found in QC")
   actual_drop <- matched_ref - matched_new
   if (actual_drop == expected_drop) {
     glue("PASS — drop={actual_drop}, expected={expected_drop} (sum of n_records for excluded IDs)")
