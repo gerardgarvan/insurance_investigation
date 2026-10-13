@@ -610,6 +610,8 @@ openxlsx::addWorksheet(wb, "KEY")
 key_rows <- list(
   c("Field", "Value"),
   c("Analysis",       "far_from_care_100mi x CBC receipt (encounter-level)"),
+  c("Analysis level", "Encounter-level: CBC drawn during the encounter"),
+  c("Patient-year analysis", "Phase 179 (R/179_cbc_patient_year.R): CBC within each follow-up year; primary choice pending (D-15)"),
   c("Run date",        RUN_DATE),
   c("Method (D-165-01)", paste0("Method (D-165-01): ", CONFIG$distance_assoc_method,
                                 " - pending confirmation from Amy and Erin")),
