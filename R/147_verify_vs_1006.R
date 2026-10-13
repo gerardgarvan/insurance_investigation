@@ -125,14 +125,13 @@ run_check("KEY:confirmed_cohort_N", function() {
   new_key <- read_sheet(new_path, "KEY")
   ref_key <- read_sheet(ref_path, "KEY")
   if (is.null(new_key) || is.null(ref_key)) return("FAIL — KEY sheet missing")
-  # Use grepl because the label may appear as "Confirmed-cohort N", "Confirmed cohort N", etc.
-  get_val <- function(df, pattern) {
-    row_idx <- which(grepl(pattern, df[[1]], ignore.case = TRUE))
+  get_val <- function(df, label) {
+    row_idx <- which(df[[1]] == label)
     if (length(row_idx) == 0) return(NA_character_)
     as.character(df[[2]][row_idx[1]])
   }
-  ref_val <- get_val(ref_key, "Confirmed.cohort N")
-  new_val <- get_val(new_key, "Confirmed.cohort N")
+  ref_val <- get_val(ref_key, "Confirmed-cohort N")
+  new_val <- get_val(new_key, "Confirmed-cohort N")
   if (is.na(new_val)) return(glue("FAIL — 'Confirmed-cohort N' label not found in KEY (col 1 values: {paste(head(new_key[[1]], 20), collapse=' | ')})"))
   ok <- ref_val == new_val
   glue("{if (ok) 'PASS' else 'FAIL'} — Confirmed-cohort N: ref={ref_val}, new={new_val} (expected 9282)")
@@ -551,4 +550,4 @@ if (n_fail == 0) {
 sink()
 close(con)
 
-quit(status = if (n_fail == 0) 0 else 1)
+if (!interactive()) quit(status = if (n_fail == 0) 0 else 1)
