@@ -176,10 +176,9 @@ No GEE convergence failures; no fallback ORs used.
 - `output/internal/cbc_patient_year_20261013.rds` (58,595 rows, 8,632 patients) — Phase 180 input
 - `output/cbc_patient_year_20261013.xlsx` (KEY, Descriptives, Per_Year, Model_Results)
 
-**One remaining action item (does not block close-out):** Phase 165 KEY side-by-side OR row is blank
-in the current workbook — the 2026-10-08 Phase 165 workbook was not found at runtime. Will need
-to be populated before the workbook goes to Amy/Erin (search for `distance_cbc_association_20261008.xlsx`
-on HiPerGator or re-run R/165 to regenerate it and then re-run R/179).
+**Phase 165 side-by-side:** populated in the KEY on the 2026-10-13 re-run (fix(179) commit 1677214).
+- Whole record (Rao-Scott F): OR 0.553 (0.470–0.651), p<0.001
+- Post-anchor (Rao-Scott F): OR 0.558 (0.468–0.665), p<0.001
 
 **D-15 status:** Primary-analysis choice (Phase 165 encounter-level vs Phase 179 patient-year)
 remains pending. Both analyses show OR < 1, with the patient-year primary (OR 0.84, p=0.027)
