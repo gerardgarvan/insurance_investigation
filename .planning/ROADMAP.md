@@ -785,7 +785,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 178. Script Fixes | v3.10 | 3/3 | Complete   | 2026-10-13 |
+| 178. Script Fixes | v3.10 | 3/3 | Complete    | 2026-10-13 |
 | 179. Missing-Distance Bias Check | v3.10 | 0/TBD | Not started | — |
 
 ---
