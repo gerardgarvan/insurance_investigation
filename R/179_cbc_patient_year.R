@@ -486,7 +486,8 @@ key_df <- data.frame(
             "Missing exposure (excluded)",
             "Primary OR", "Secondary OR", "Sensitivity OR (per-year exposure)",
             "Sensitivity OR (broad outcome)", "Phase 165 (encounter-level) ORs",
-            "Primary analysis choice", "Suppression", "Patient-year RDS"),
+            "Primary analysis choice", "Suppression", "Patient-year RDS",
+            "Missing-exposure limitation (Phase 180, D-05)"),
   Value = c(
     "Far from care (>100 mi) x CBC within each follow-up year (patient-year)",
     "Companion to Phase 165 (encounter-level: CBC drawn during the encounter). Which is primary is pending (D-15, with D-165-01).",
@@ -508,7 +509,13 @@ key_df <- data.frame(
     p165_text,
     "Pending team decision (D-15, with D-165-01)",
     "Counts 1-10 shown as <11; rates and crude ORs shown only when underlying counts are >= 11",
-    basename(rds_out)),
+    basename(rds_out),
+    paste0("Phase 180 bounding (D-05): missing-exposure patients assigned far=1 -> OR 0.776 (0.693-0.867); ",
+           "far=0 -> OR 0.872 (0.751-1.012). Both bounded ORs below 1 (same side as primary OR 0.845). ",
+           "D-05 branch: same side -> stated limitation. Limitation: patients with missing exposure are excluded; ",
+           "bounding shows the primary association is robust to their exclusion (bounded ORs remain below 1), ",
+           "but confidence intervals widen when missing patients are assigned far=0. Source: Phase 180 workbook ",
+           "cbc_missing_capture_20261013.xlsx.")),
   stringsAsFactors = FALSE)
 
 model_df <- do.call(rbind, lapply(all_fits, function(r) data.frame(

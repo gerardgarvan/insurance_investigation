@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: complete
-stopped_at: Completed 179-02-PLAN.md (Phase 179 close-out)
+stopped_at: Completed 180-01-PLAN.md (Phase 180 close-out)
 last_updated: "2026-10-13T00:00:00Z"
 last_activity: 2026-10-13
 progress:
@@ -22,18 +22,20 @@ See: .planning/PROJECT.md (updated 2026-10-13, v3.10 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.10 complete — Phase 179 CBC patient-year analysis shipped
+**Current focus:** v3.10 complete — Phase 180 missing-exposure bounding and CBC capture check shipped
 
 ## Current Position
 
-Phase: 179
-Plan: 02 (complete)
+Phase: 180
+Plan: 01 (complete)
 Status: Phase complete — HiPerGator run confirmed 2026-10-13
 Last activity: 2026-10-13
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
 **Quick task — R/147_verify_vs_1006.R fixes (2026-10-13):** Guard final `quit()` with `!interactive()` (line 554); exact-match 'Confirmed-cohort N' and QC label lookups use `fixed = TRUE` / `==` rather than partial regex. Quit audit found no other unguarded `quit()` calls in `R/`. Follow-up (post-phase-178): QC row lookups at `QC:total_person_years` and `QC:matched_rows_drop` tightened to `trimws(df[[1]]) == label` with exact single-match enforcement (FAIL if != 1 match, naming label and count).
+
+**Phase 180 close-out (2026-10-13):** D-05 same side confirmed — limitation row added to R/179 KEY builder; bounded ORs: far=1 OR 0.776 (0.693–0.867), far=0 OR 0.872 (0.751–1.012), both below 1 alongside primary 0.845. D-09 result (primary restriction, any_lab_year=1): moves toward 1 (37.4% shrinkage >= 25%) — consistent with out-of-system care; report to Amy/Erin alongside D-165-01. MISS-01 top groups: (b) facility ZIP missing 581 pts / 2,421 py, (a) patient ZIP missing 164 pts / 1,260 py. Outputs: cbc_missing_capture_20261013.xlsx + internal RDS (58,595 rows).
 
 **Study hypothesis (added 2026-10-13, MISS-04):** Far patients may obtain CBCs outside the UFHealth system, so "no CBC in the record" can mean "not captured" rather than "not received." MISS-04 tests this via: (a) in-system encounter rate in the same one-year window (far vs not-far), (b) Phase 165 association restricted to patients with ≥1 in-system encounter, (c) Phase 165 association stratified by Phase 167 single-health-system flag. OR movement toward 1 under restriction/stratification → consistent with out-of-system care (non-capture); OR stays → consistent with true difference in CBC receipt. Report only; goes to Amy/Erin with D-165-01.
 
@@ -97,5 +99,5 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Last command:** Phase 179 complete — CBC patient-year GEE analysis; primary OR 0.84 (0.73–0.98), p=0.027 (years 2+, GEE exchangeable); D-14 relabel in R/165; D-19 registration in R/39 + SCRIPT_INDEX; HiPerGator run confirmed 2026-10-13. D-15 (primary-choice 165 vs 179) pending Amy/Erin with D-165-01. Phase 180 ready (RDS: cbc_patient_year_20261013.rds).
-**Stopped at:** Completed 179-02-PLAN.md
+**Last command:** Phase 180 complete — missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04). D-05: same side → limitation row added to R/179 KEY builder (both bounded ORs below 1: far=1 OR 0.776, far=0 OR 0.872). D-09: moves toward 1 (37.4% log-OR shrinkage, >= 25% threshold) → consistent with out-of-system care; report only to Amy/Erin with D-165-01. MISS-01..04 ticked. HiPerGator run confirmed 2026-10-13.
+**Stopped at:** Completed 180-01-PLAN.md

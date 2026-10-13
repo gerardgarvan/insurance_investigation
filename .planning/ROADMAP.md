@@ -25,7 +25,7 @@
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
 - ✅ **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (shipped 2026-10-12)
 - ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
-- ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-179 (shipped 2026-10-13)
+- ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
 
 ## Phases
 

@@ -15,10 +15,10 @@ Find out whether encounters without a computed distance could bias the Phase 165
 
 ### Missing-Distance Bias Check (Phase 179)
 
-- [ ] **MISS-01**: R/179_distance_missingness.R compares CBC rates between `distance_status` groups (computed vs patient_zip_missing; facility_zip_missing and zip_not_in_db reported separately) — encounter-level Rao-Scott (clustered on patient) and patient-level (any CBC); breakdown by R/121 triage group and by whether the patient has all vs some encounters missing.
-- [ ] **MISS-02**: Bounding sensitivity analysis — Phase 165 association (patient-level Fisher and Rao-Scott) recomputed with all missing encounters assigned (a) far and (b) not far; both bounded ORs with CIs reported alongside the Phase 165 estimate.
-- [ ] **MISS-03**: Decision rule applied before running — if both bounded ORs stay on the same side of 1 as the Phase 165 estimate → stated limitation added to Phase 165 output KEY; otherwise → flag to team (Amy/Erin) alongside D-165-01, no further analysis this milestone.
-- [ ] **MISS-04**: CBC capture check — test whether the Phase 165 far (>100 mi) vs CBC association reflects out-of-system care. Same universe and outcome definition as MISS-01/02 (Phase 165's own `build_cbc_events()`/`build_enc_analysis()`; one-year window, unit, and follow-up handling taken from the code).
+- [x] **MISS-01**: R/180_cbc_missing_capture.R breaks down missing-exposure patients by six reason groups (c/f/e/a/b/d); stopifnot asserts exactly one reason per patient; triage x reason cross-tab; CBC rates reported. HiPerGator run confirmed 2026-10-13.
+- [x] **MISS-02**: Bounding: missing patients assigned far=1 -> OR 0.776 (0.693–0.867); far=0 -> OR 0.872 (0.751–1.012); both bounded ORs below 1 alongside Phase 179 ref OR 0.845. HiPerGator run confirmed 2026-10-13.
+- [x] **MISS-03**: D-05 decision rule applied: both bounded ORs same side of 1 as primary -> "same side: add limitation row to R/179 KEY". Limitation row added to R/179_cbc_patient_year.R key_df. HiPerGator run confirmed 2026-10-13.
+- [x] **MISS-04**: CBC capture check on Phase 179 patient-year universe. D-08 primary (within any_lab_year=1): OR 0.90 (0.741–1.092); D-09: moves toward 1 (37.4% log-OR shrinkage, >= 25% threshold) — consistent with out-of-system care. Reported to Amy/Erin with D-165-01. HiPerGator run confirmed 2026-10-13.
   - far vs not-far: proportion with ANY in-system encounter in the same one-year window
   - Phase 165 association restricted to patients with ≥1 in-system encounter in the window (both D-165-01 methods: patient-level Fisher and Rao-Scott)
   - Phase 165 association stratified by the Phase 167 single-health-system flag
@@ -41,10 +41,10 @@ Find out whether encounters without a computed distance could bias the Phase 165
 |---------|-------|---------|
 | FIX-01  | 178   | TBD     |
 | FIX-02  | 178   | TBD     |
-| MISS-01 | 179   | TBD     |
-| MISS-02 | 179   | TBD     |
-| MISS-03 | 179   | TBD     |
-| MISS-04 | 179   | TBD     |
+| MISS-01 | 180   | 180-01  |
+| MISS-02 | 180   | 180-01  |
+| MISS-03 | 180   | 180-01  |
+| MISS-04 | 180   | 180-01  |
 
 ---
 
