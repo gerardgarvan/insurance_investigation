@@ -18,6 +18,11 @@ Find out whether encounters without a computed distance could bias the Phase 165
 - [ ] **MISS-01**: R/179_distance_missingness.R compares CBC rates between `distance_status` groups (computed vs patient_zip_missing; facility_zip_missing and zip_not_in_db reported separately) — encounter-level Rao-Scott (clustered on patient) and patient-level (any CBC); breakdown by R/121 triage group and by whether the patient has all vs some encounters missing.
 - [ ] **MISS-02**: Bounding sensitivity analysis — Phase 165 association (patient-level Fisher and Rao-Scott) recomputed with all missing encounters assigned (a) far and (b) not far; both bounded ORs with CIs reported alongside the Phase 165 estimate.
 - [ ] **MISS-03**: Decision rule applied before running — if both bounded ORs stay on the same side of 1 as the Phase 165 estimate → stated limitation added to Phase 165 output KEY; otherwise → flag to team (Amy/Erin) alongside D-165-01, no further analysis this milestone.
+- [ ] **MISS-04**: CBC capture check — test whether the Phase 165 far (>100 mi) vs CBC association reflects out-of-system care. Same universe and outcome definition as MISS-01/02 (Phase 165's own `build_cbc_events()`/`build_enc_analysis()`; one-year window, unit, and follow-up handling taken from the code).
+  - far vs not-far: proportion with ANY in-system encounter in the same one-year window
+  - Phase 165 association restricted to patients with ≥1 in-system encounter in the window (both D-165-01 methods: patient-level Fisher and Rao-Scott)
+  - Phase 165 association stratified by the Phase 167 single-health-system flag
+  - Interpretation rule (locked before running): OR moves toward 1 under restriction/stratification → "consistent with out-of-system care (non-capture)"; OR stays → "consistent with a true difference in CBC receipt". Report only; goes to Amy/Erin with D-165-01.
 
 ---
 
@@ -39,6 +44,7 @@ Find out whether encounters without a computed distance could bias the Phase 165
 | MISS-01 | 179   | TBD     |
 | MISS-02 | 179   | TBD     |
 | MISS-03 | 179   | TBD     |
+| MISS-04 | 179   | TBD     |
 
 ---
 

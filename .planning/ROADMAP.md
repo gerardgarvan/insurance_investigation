@@ -752,10 +752,10 @@ Plans:
 **Plans:** 0 plans (run `/gsd:plan-phase 178` to break down)
 - [ ] TBD
 
-### Phase 179: Missing-Distance Bias Check
+### Phase 179: Missing-Distance Bias Check and CBC Capture Check
 
-**Goal:** Determine whether encounters excluded from Phase 165 (due to missing distance) are systematically different from the analysis set in their CBC rates, and apply a pre-specified decision rule to either add a stated limitation to the Phase 165 output KEY or flag to Amy/Erin.
-**Requirements:** MISS-01, MISS-02, MISS-03
+**Goal:** Determine whether encounters excluded from Phase 165 (due to missing distance) are systematically different from the analysis set in their CBC rates, apply a pre-specified decision rule (stated limitation vs team flag), and test whether the far-from-care association reflects out-of-system care (MISS-04 capture check — restriction/stratification analysis reported to Amy/Erin with D-165-01).
+**Requirements:** MISS-01, MISS-02, MISS-03, MISS-04
 **Depends on:** Phase 178
 
 **Design constraints:**

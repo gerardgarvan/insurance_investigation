@@ -106,6 +106,9 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 **Target features:**
 - FIX-01/FIX-02: R/147 verify-script guard + exact-match label lookups; R/122 KEY temporal-match note
 - MISS-01/02/03: R/179_distance_missingness.R — CBC rate comparison across distance_status groups, bounding sensitivity ORs, decision rule applied (limitation vs team flag)
+- MISS-04: CBC capture check — far vs not-far in-system encounter rate; Phase 165 association under patient restriction (≥1 in-system encounter) and Phase 167 stratification; OR movement toward 1 → consistent with out-of-system non-capture; OR stays → true difference. Study hypothesis: far patients may obtain CBCs outside the system ("not captured" ≠ "not received").
+
+**Key study hypothesis (MISS-04):** The Phase 165 far-from-care OR (0.553) may reflect out-of-system care rather than a true difference in CBC receipt. Far patients who obtain CBCs at non-UFHealth facilities would appear as "no CBC" in the PCORnet extract.
 
 **Carry-forward backlog (deferred, not in scope):**
 - D-165-01: Amy/Erin confirmation of primary analysis method (patient-level Fisher vs Rao-Scott)
