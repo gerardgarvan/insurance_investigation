@@ -1,55 +1,76 @@
-# Phase 180: CBC per Patient-Year — Context (Seed)
+# Phase 180: Missing-Exposure Bias Check and CBC Capture Check — Context
 
 **Gathered:** 2026-10-13
-**Status:** Seed decisions captured — Phase not yet in ROADMAP.md. Run `/gsd:plan-phase 180` after adding to roadmap.
+**Status:** Ready for planning
+**Depends on:** Phase 179 (`output/internal/cbc_patient_year_<date>.rds`)
 
 <domain>
 ## Phase Boundary
 
-[To be defined when phase is added to roadmap. Working name: "CBC per patient-year (CBCY) association analysis."]
+Build `R/180_cbc_missing_capture.R`: read-only checks on the Phase 179 patient-year analysis.
+(1) Could patients with missing exposure bias the Phase 179 OR? (2) Does the far → lower CBC
+association reflect CBCs done outside our system (non-capture) rather than not done?
 
+Study hypothesis: far patients obtain CBCs outside our system, so "no CBC" can mean "not captured".
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### CBCY-04 — Exposure definition
-- **CBCY-04a (primary exposure):** Patient-level **median of per-encounter `distance_mi`** from R/122 `enc_distance`, restricted to `distance_status == "computed"` post-anchor encounters. One value per patient; applied uniformly to all of that patient's patient-years.
-  - Far = median > `CONFIG$far_from_care_cutoff_mi` (100 mi).
-  - Source: R/122 RDS (`enc_distance` tibble, same as Phase 165/179).
-  - Window: post-anchor encounters only (`ADMIT_DATE > hl_anchor_date`).
-  - Patients with **no computed-distance post-anchor encounter** → exposure **missing** (excluded from primary analysis; handled in Phase 180, not Phase 179).
+### Inputs
+- **D-01:** Phase 179 patient-year RDS (pin the file by name; env-var override allowed; record in
+  KEY). Use the Phase 179 primary specification throughout: years 2+, GEE logistic
+  `cbc_year ~ far + year_index_cat`, `id = ID`, `corstr = CONFIG$distance_gee_corstr`. Repeat for
+  all years as secondary.
 
-- **CBCY-04b (sensitivity exposure):** Per-year median over that calendar year's computed post-anchor encounters. Patient-years with zero computed encounters in that year are **excluded from the sensitivity only** (not from the primary). Report how many patient-years drop out under this definition vs CBCY-04a.
+### MISS-01 — missing exposure
+- **D-02:** Missing-exposure patients = `exposure_missing == TRUE` (no computed-distance post-anchor
+  encounter). Break down by reason: (a) has post-anchor encounters, all `patient_zip_missing`;
+  (b) `facility_zip_missing` / `zip_not_in_db` only; (c) **no post-anchor encounters at all**.
+  Also by R/121 triage group (incl. "not in R/121").
+- **D-03:** Report patients, patient-years and CBC-year rate per group vs the observed-exposure
+  group. Group (c) is flagged in KEY as directly relevant to capture (no in-system contact after
+  anchor).
 
-### Claude's Discretion
-- Definition of "patient-year" (calendar year vs anchor-relative year vs observation year) — to be decided during Phase 180 discussion.
-- Outcome definition for the CBCY analysis — carry forward Phase 165's `build_cbc_events()` / `build_pat_analysis()` conventions unless changed by Amy/Erin via D-165-01.
+### MISS-02 / MISS-03 — bounding
+- **D-04:** Refit the Phase 179 primary model with all missing-exposure patients assigned
+  (i) far, (ii) not far. Report both ORs with 95% CIs beside the Phase 179 estimate.
+- **D-05 (locked):** both bounded ORs on the same side of 1 as Phase 179 → add a stated limitation
+  row to the Phase 179 KEY builder (lands on next R/179 run). Either crosses 1 → flag to Amy/Erin
+  with D-165-01; no further analysis this milestone. KEY records the branch and the numbers.
 
+### MISS-04 — capture
+- **D-06:** Per patient-year flags, same interval as the outcome:
+  (a) `any_lab_year` — ≥1 LAB_RESULT_CM result with LOINC **not** in the CBC set and **not** in
+  the hematology list {6690-2, 718-7, 777-3, 4544-3, 789-8, 787-2, 785-6, 786-4, 788-0, 770-8,
+  26499-4, 731-0, 58410-2, 57021-8, 57782-5}; date = coalesce(RESULT_DATE, SPECIMEN_DATE,
+  LAB_ORDER_DATE); SQL push-down.
+  (b) `any_enc_year` — ≥1 in-system encounter (any ENC_TYPE) in the year.
+- **D-07 Descriptive first:** far vs not far proportion of patient-years with (a) and (b).
+- **D-08:** Refit the primary model within (a)-years **[primary restriction]** and within
+  (b)-years [secondary]; and stratified by Phase 167 `single_source_care_post` (R/169 RDS).
+- **D-09 (locked):** OR moves toward 1 under the primary restriction → "consistent with
+  out-of-system care (non-capture)"; stays or moves away from 1 → "consistent with a true
+  difference in CBC receipt". Secondary restriction and stratification reported alongside. Report
+  only; goes to Amy/Erin with D-165-01.
+- **D-10 Caveat check:** inspect LAB_RESULT_CM source fields (e.g. LAB_RESULT_SOURCE, RESULT_LOC)
+  for externally resulted labs; report counts by value. If outside results are present, state in
+  KEY that the lab restriction partly includes outside care.
+
+### Outputs and execution
+- **D-11:** Workbook `output/cbc_missing_capture_<YYYYMMDD>.xlsx`: KEY leftmost (inputs, branches
+  taken for D-05 and D-09 with numbers), MISS-01, MISS-02/03, MISS-04 sheets. Counts 1–10 → "<11";
+  percentages only when both counts ≥11; UF colors. Patient-year flags to
+  `output/internal/cbc_missing_capture_<YYYYMMDD>.rds`.
+- **D-12:** Interactive R on HiPerGator from the repo root (`module load R/4.5`;
+  `source(..., local = new.env(parent = globalenv()))`); no SLURM, no Rscript; local checks grep
+  only. Register in R/39 (one-off) and SCRIPT_INDEX; no R/88 section.
 </decisions>
 
 <canonical_refs>
-## Canonical References
-
-**Downstream agents MUST read these before planning or implementing.**
-
-- `R/utils/utils_distance_cbc.R` — `build_cbc_events()`, `build_enc_analysis()`, `build_pat_analysis()`; exposure and outcome building blocks
-- `R/00_config.R` — `CONFIG$far_from_care_cutoff_mi` (100 mi cutoff)
-- `.planning/phases/179-missing-distance-bias-check/179-CONTEXT.md` — Phase 179 exposure/outcome decisions (CBCY-04 inherits distance_status and anchor-day conventions from there)
-- `.planning/phases/165-distance-100mi-indicator-and-cbc-association/165-CONTEXT.md` — D-165-01, anchor-day convention, CBC LOINC set
-
+- Phase 179 CONTEXT and RDS
+- `R/179_cbc_patient_year.R` — model specification and KEY builder (D-05 limitation row)
+- `R/169_single_source_care.R` RDS — `single_source_care_post`
+- `R/121_zip_problem_inventory.R` RDS — `triage`
+- `R/122_encounter_distance.R` — `distance_status`
 </canonical_refs>
-
-<deferred>
-## Deferred / Open
-
-- CBCY-01 through CBCY-03 definitions (not yet provided — capture when given).
-- "Patient-year" operationalization — calendar year, anchor-relative year, or observation year.
-- How to handle patients missing exposure (no computed post-anchor encounter): exclusion rule confirmed as Phase 180's responsibility.
-
-</deferred>
-
----
-
-*Phase: 180-cbc-per-patient-year*
-*Seed decisions captured: 2026-10-13*
