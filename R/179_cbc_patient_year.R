@@ -125,9 +125,28 @@ BROAD_LOINCS <- c(
 # SECTION 1: INPUTS ----
 # ==============================================================================
 
-# --- 1a. Anchor dates from R/147 RDS (D-02) ------------------------------------
-# Pattern: surveillance_modality_patient_<YYYYMMDD>.rds in CONFIG$output_dir.
-# Most recent by mtime; columns include ID and hl_anchor_date.
+# --- 1a. Anchor dates (D-02) ---------------------------------------------------
+# Priority: (1) R/147 surveillance_modality_patient RDS, (2) get_hl_any_dx_ids(),
+# (3) enc_distance RDS (distinct ID + hl_anchor_date; limited to patients with
+# computed-distance encounters, but sufficient when DIAGNOSIS is unavailable).
+
+# Detect enc_distance path early so it's available as a fallback anchor source.
+# (Also used in 1b below — loaded once into enc_distance.)
+r122_override <- Sys.getenv("R179_R122_RDS", unset = "")
+if (nzchar(r122_override) && file.exists(r122_override)) {
+  enc_dist_path <- r122_override
+} else {
+  enc_dist_candidates <- list.files(
+    CONFIG$output_dir,
+    pattern = "^encounter_distance.*\\.rds$",
+    full.names = TRUE
+  )
+  if (length(enc_dist_candidates) == 0L)
+    stop("enc_distance RDS not found in ", CONFIG$output_dir,
+         " -- run R/122_encounter_distance.R first, or set R179_R122_RDS.")
+  enc_dist_path <- enc_dist_candidates[which.max(file.mtime(enc_dist_candidates))]
+}
+
 anchor_candidates <- list.files(
   CONFIG$output_dir,
   pattern = "^surveillance_modality_patient.*\\.rds$",
@@ -142,19 +161,34 @@ if (length(anchor_candidates) > 0L) {
     dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
   anchor_source <- glue("R/147 RDS ({basename(anchor_rds_path)})")
 } else {
-  # R/147 RDS not yet produced; fall back to get_hl_any_dx_ids() — same source Phase 165 uses.
-  message("  R/147 anchor RDS not found; falling back to get_hl_any_dx_ids() (same as Phase 165).")
-  anchors <- get_hl_any_dx_ids() |>
-    dplyr::distinct(ID, hl_anchor_date) |>
-    dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
-  anchor_source <- "get_hl_any_dx_ids() [R/147 RDS absent — fallback]"
+  anchors <- tryCatch({
+    message("  R/147 RDS absent; trying get_hl_any_dx_ids() ...")
+    res <- get_hl_any_dx_ids() |>
+      dplyr::distinct(ID, hl_anchor_date) |>
+      dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
+    anchor_source <- "get_hl_any_dx_ids() [R/147 RDS absent]"
+    res
+  }, error = function(e) {
+    # DIAGNOSIS unavailable in this DuckDB snapshot; derive from enc_distance RDS.
+    message(glue(
+      "  get_hl_any_dx_ids() failed ({conditionMessage(e)}); ",
+      "deriving anchors from enc_distance RDS (patients with computed-distance encounters)."
+    ))
+    ed <- readRDS(enc_dist_path)
+    if (!"hl_anchor_date" %in% names(ed))
+      stop("enc_distance RDS lacks hl_anchor_date — cannot derive anchor dates.")
+    anchor_source <<- glue("enc_distance RDS ({basename(enc_dist_path)}) [R/147 and DIAGNOSIS unavailable]")
+    ed |>
+      dplyr::distinct(ID, hl_anchor_date) |>
+      dplyr::mutate(hl_anchor_date = as.Date(hl_anchor_date))
+  })
 }
 
 n_anchors      <- nrow(anchors)
 n_anchor_na    <- sum(is.na(anchors$hl_anchor_date))
 message(glue("  Anchors ({anchor_source}): {n_anchors} patients; {n_anchor_na} missing hl_anchor_date."))
 
-# Cross-check against Phase 165's cohort source (get_hl_any_dx_ids()).
+# Cross-check skipped non-blockingly if DIAGNOSIS unavailable.
 tryCatch({
   anchors_165 <- get_hl_any_dx_ids()
   ids_179     <- unique(anchors$ID[!is.na(anchors$hl_anchor_date)])
@@ -162,34 +196,19 @@ tryCatch({
   n_in_179_not_165 <- sum(!ids_179 %in% ids_165)
   n_in_165_not_179 <- sum(!ids_165 %in% ids_179)
   message(glue(
-    "  Phase 165 cohort cross-check (get_hl_any_dx_ids()): ",
-    "{length(ids_165)} patients with anchor.\n",
+    "  Phase 165 cohort cross-check: {length(ids_165)} patients with anchor.\n",
     "    In R/179 but not R/165: {n_in_179_not_165}\n",
     "    In R/165 but not R/179: {n_in_165_not_179}"
   ))
 }, error = function(e) {
-  message("  [INFO] Phase 165 cross-check skipped (get_hl_any_dx_ids() unavailable): ",
-          conditionMessage(e))
+  message("  [INFO] Phase 165 cross-check skipped (DIAGNOSIS unavailable): ", conditionMessage(e))
 })
 
 # --- 1b. enc_distance from R/122 RDS -------------------------------------------
-# Override via env var R179_R122_RDS; otherwise most recent by mtime.
-r122_override <- Sys.getenv("R179_R122_RDS", unset = "")
+# Path already resolved above; load the full table now.
 if (nzchar(r122_override) && file.exists(r122_override)) {
-  enc_dist_path <- r122_override
   message(glue("  [R/122 RDS] Using R179_R122_RDS override: {enc_dist_path}"))
 } else {
-  enc_dist_candidates <- list.files(
-    CONFIG$output_dir,
-    pattern = "^encounter_distance.*\\.rds$",
-    full.names = TRUE
-  )
-  if (length(enc_dist_candidates) == 0L)
-    stop(
-      "enc_distance RDS not found in ", CONFIG$output_dir,
-      " -- run R/122_encounter_distance.R first, or set R179_R122_RDS."
-    )
-  enc_dist_path <- enc_dist_candidates[which.max(file.mtime(enc_dist_candidates))]
   message(glue("  NOTE: Pin enc_distance path in R179_R122_RDS once validated."))
 }
 message(glue("  Loading enc_distance: {basename(enc_dist_path)}"))
