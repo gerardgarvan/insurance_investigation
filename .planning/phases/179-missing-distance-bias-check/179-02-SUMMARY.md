@@ -25,7 +25,7 @@ decisions:
 metrics:
   duration: "~20 min"
   completed: "2026-10-13"
-  tasks: 3
+  tasks: 5
   files: 4
 ---
 
@@ -148,19 +148,42 @@ R/SCRIPT_INDEX.md:176: | `R/179_cbc_patient_year.R` | Patient-year re-specificat
 | Fallback to crude OR happens only on a real fitting error and is labelled; warnings captured and reported | SATISFIED — fallback inside `if (inherits(fit, "error"))` only; label "CRUDE FALLBACK (GEE error)"; `withCallingHandlers()` captures all warnings into `warns` |
 | KEY calls Phase 179 a companion to Phase 165 (primary choice pending, D-15) and shows Phase 165's ORs beside Phase 179's | SATISFIED — "Companion to Phase 165" row in KEY; Phase 165 ORs read at runtime from workbook; fallback to "see Phase 165 workbook" if not found |
 | Counts 1-10 shown as `<11`; percentages only when numerator and denominator ≥ 11; distance quantiles 5th-95th only | SATISFIED — `suppress_display()` throughout; `show_rate()` helper gates on num AND denom ≥ 11; quantiles at `c(0.05,0.10,0.25,0.50,0.75,0.90,0.95)` only |
-| Phase closes only after an interactive HiPerGator run and review | PENDING — Task 4 checkpoint not yet completed |
+| Phase closes only after an interactive HiPerGator run and review | SATISFIED — HiPerGator run completed 2026-10-13; all four fits returned; workbook confirmed written |
 
 ---
 
-## Known Stubs
+## HiPerGator Run Results (2026-10-13)
 
-None. All columns come from real data sources loaded in Sections 0-3.
+**Cohort counts:**
+- 9,331 patients with anchor; 9,112 with ≥1 fully observed year; 58,595 patient-years after death censoring
+- py_all (exposure known): 54,364 py / 7,785 patients
+- py_primary (years 2+): 46,579 py / 7,075 patients (GEE: 46,579 rows, 7,075 clusters, max cluster size 12)
+- py_yr1 (year 1): 7,785 py
+- Missing exposure: 4,231 py / 847 patients (excluded from estimates, carried in RDS for Phase 180)
 
-## Open Item
+**Model results (GEE exchangeable, robust SE):**
 
-Task 4 (HiPerGator interactive run) is a `checkpoint:human-action` gate. Phase close-out
-(Task 5: SUMMARY update with actual ORs, STATE.md D-15 item) is deferred until the run output
-is reviewed.
+| Label | OR | 95% CI | p | Method |
+|-------|----|--------|---|--------|
+| Primary: years 2+ | 0.84 | 0.73–0.98 | 0.0266 | GEE exchangeable |
+| Secondary: all years | 0.91 | 0.80–1.03 | 0.134 | GEE exchangeable |
+| Sensitivity (per-year median exposure, years 2+) | 0.86 | 0.78–0.96 | 0.0054 | GEE exchangeable |
+| Sensitivity (broad hematology outcome, years 2+) | 0.87 | 0.76–0.99 | 0.0413 | GEE exchangeable |
+
+No GEE convergence failures; no fallback ORs used.
+
+**Outputs written:**
+- `output/internal/cbc_patient_year_20261013.rds` (58,595 rows, 8,632 patients) — Phase 180 input
+- `output/cbc_patient_year_20261013.xlsx` (KEY, Descriptives, Per_Year, Model_Results)
+
+**One remaining action item (does not block close-out):** Phase 165 KEY side-by-side OR row is blank
+in the current workbook — the 2026-10-08 Phase 165 workbook was not found at runtime. Will need
+to be populated before the workbook goes to Amy/Erin (search for `distance_cbc_association_20261008.xlsx`
+on HiPerGator or re-run R/165 to regenerate it and then re-run R/179).
+
+**D-15 status:** Primary-analysis choice (Phase 165 encounter-level vs Phase 179 patient-year)
+remains pending. Both analyses show OR < 1, with the patient-year primary (OR 0.84, p=0.027)
+directionally consistent with the Phase 165 result. Decision with Amy/Erin alongside D-165-01.
 
 ## Self-Check
 

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
-stopped_at: Completed 179-01-PLAN.md
-last_updated: "2026-10-13T16:54:32.228Z"
+status: complete
+stopped_at: Completed 179-02-PLAN.md (Phase 179 close-out)
+last_updated: "2026-10-13T00:00:00Z"
 last_activity: 2026-10-13
 progress:
   total_phases: 169
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-10-13, v3.10 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 178 — script-fixes
+**Current focus:** v3.10 complete — Phase 179 CBC patient-year analysis shipped
 
 ## Current Position
 
-Phase: 178
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 179
+Plan: 02 (complete)
+Status: Phase complete — HiPerGator run confirmed 2026-10-13
 Last activity: 2026-10-13
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
@@ -97,5 +97,5 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Last command:** Phase 177 complete — temporal-match sizing memo; Document only outcome confirmed; R/.planning/ duplication resolved (git mv 177 to root, retire R/.planning in Step 3)
-**Stopped at:** Completed 179-01-PLAN.md
+**Last command:** Phase 179 complete — CBC patient-year GEE analysis; primary OR 0.84 (0.73–0.98), p=0.027 (years 2+, GEE exchangeable); D-14 relabel in R/165; D-19 registration in R/39 + SCRIPT_INDEX; HiPerGator run confirmed 2026-10-13. D-15 (primary-choice 165 vs 179) pending Amy/Erin with D-165-01. Phase 180 ready (RDS: cbc_patient_year_20261013.rds).
+**Stopped at:** Completed 179-02-PLAN.md

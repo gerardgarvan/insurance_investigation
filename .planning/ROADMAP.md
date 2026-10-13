@@ -25,7 +25,7 @@
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
 - ✅ **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (shipped 2026-10-12)
 - ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
-- 🔄 **v3.10 Distance Missingness & Script Fixes** - Phases 178-179 (active)
+- ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-179 (shipped 2026-10-13)
 
 ## Phases
 
@@ -777,8 +777,8 @@ Plans:
 4. R/179 registered in R/39 and SCRIPT_INDEX; workbook written to output/ with KEY leftmost and <11 suppression
 
 **Plans:** 0 plans (run `/gsd:plan-phase 179` to break down)
-- [ ] 179-01-PLAN.md — Data assembly: patient-year table, exposure/outcome flags, internal RDS (D-01–D-10, D-17) (Wave 1)
-- [ ] 179-02-PLAN.md — Analysis, workbook, D-14 relabel, registration (D-11–D-16, D-18–D-19) (Wave 2, depends on 179-01)
+- [x] 179-01-PLAN.md — Data assembly: patient-year table, exposure/outcome flags, internal RDS (D-01–D-10, D-17) (Wave 1)
+- [x] 179-02-PLAN.md — Analysis, workbook, D-14 relabel, registration (D-11–D-16, D-18–D-19) (Wave 2, depends on 179-01)
 
 ---
 
@@ -787,7 +787,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 178. Script Fixes | v3.10 | 3/3 | Complete    | 2026-10-13 |
-| 179. Missing-Distance Bias Check | v3.10 | 0/2 | Not started | — |
+| 179. CBC Patient-Year Analysis    | v3.10 | 2/2 | Complete    | 2026-10-13 |
 
 ---
 
