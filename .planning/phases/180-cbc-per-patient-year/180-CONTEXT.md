@@ -18,15 +18,20 @@ Study hypothesis: far patients obtain CBCs outside our system, so "no CBC" can m
 ## Implementation Decisions
 
 ### Inputs
-- **D-01:** Phase 179 patient-year RDS (pin the file by name; env-var override allowed; record in
-  KEY). Use the Phase 179 primary specification throughout: years 2+, GEE logistic
+- **D-01:** Phase 179 patient-year RDS pinned to `cbc_patient_year_20261013.rds` (env-var override
+  `R180_P179_RDS`; record in KEY). The recomputed primary OR must reproduce Phase 179
+  (0.84, 95% CI 0.73–0.98, rounded) or the script stops. Use the Phase 179 primary specification throughout: years 2+, GEE logistic
   `cbc_year ~ far + year_index_cat`, `id = ID`, `corstr = CONFIG$distance_gee_corstr`. Repeat for
   all years as secondary.
 
 ### MISS-01 — missing exposure
 - **D-02:** Missing-exposure patients = `exposure_missing == TRUE` (no computed-distance post-anchor
-  encounter). Break down by reason: (a) has post-anchor encounters, all `patient_zip_missing`;
-  (b) `facility_zip_missing` / `zip_not_in_db` only; (c) **no post-anchor encounters at all**.
+  encounter). Break down by reason, exactly one group per patient (asserted):
+  (c) **no post-anchor encounter in the ENCOUNTER table** (checked first);
+  (a) post-anchor encounters in enc_distance, all `patient_zip_missing`;
+  (b) only `facility_zip_missing` / `zip_not_in_db`;
+  (d) mixed (a)+(b) reasons; (e) `computed` status but no distance value;
+  (f) post-anchor ENCOUNTER rows but none in enc_distance.
   Also by R/121 triage group (incl. "not in R/121").
 - **D-03:** Report patients, patient-years and CBC-year rate per group vs the observed-exposure
   group. Group (c) is flagged in KEY as directly relevant to capture (no in-system contact after
@@ -49,13 +54,21 @@ Study hypothesis: far patients obtain CBCs outside our system, so "no CBC" can m
 - **D-07 Descriptive first:** far vs not far proportion of patient-years with (a) and (b).
 - **D-08:** Refit the primary model within (a)-years **[primary restriction]** and within
   (b)-years [secondary]; and stratified by Phase 167 `single_source_care_post` (R/169 RDS).
-- **D-09 (locked):** OR moves toward 1 under the primary restriction → "consistent with
-  out-of-system care (non-capture)"; stays or moves away from 1 → "consistent with a true
-  difference in CBC receipt". Secondary restriction and stratification reported alongside. Report
-  only; goes to Amy/Erin with D-165-01.
-- **D-10 Caveat check:** inspect LAB_RESULT_CM source fields (e.g. LAB_RESULT_SOURCE, RESULT_LOC)
-  for externally resulted labs; report counts by value. If outside results are present, state in
-  KEY that the lab restriction partly includes outside care.
+- **D-09 (locked):** compare the restricted OR with the Phase 179 primary OR on the log scale:
+  change = 1 − log(OR_restricted) / log(OR_179).
+  - change ≥ +25% (log-OR shrinks by at least a quarter) → "moves toward 1: consistent with
+    out-of-system care (non-capture)"
+  - change between −25% and +25% → "no material change: consistent with a true difference in CBC
+    receipt"
+  - change ≤ −25% (log-OR grows by at least a quarter) → "moves away from 1: consistent with a true
+    difference in CBC receipt"
+  The label is decided by the PRIMARY restriction; the secondary restriction and each
+  single_source_care_post stratum get the same rule applied and are reported alongside. Always
+  report the percentage change and CIs. Report only; goes to Amy/Erin with D-165-01.
+- **D-10 Caveat check:** report value counts of LAB_RESULT_CM source fields (e.g. LAB_RESULT_SOURCE,
+  RESULT_LOC). These describe how a result was captured, not whether it came from an outside
+  facility; unless a field explicitly identifies external results, KEY states "external origin of
+  lab results could not be determined from available fields" (absence is not evidence of none).
 
 ### Outputs and execution
 - **D-11:** Workbook `output/cbc_missing_capture_<YYYYMMDD>.xlsx`: KEY leftmost (inputs, branches
