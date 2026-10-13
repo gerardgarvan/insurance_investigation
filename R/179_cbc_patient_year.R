@@ -554,8 +554,448 @@ message(glue("  Rows : {format(nrow(py_final), big.mark = ',')}\n",
 message(glue(
   "================================================================================\n",
   "R/179 Sections 0-3 COMPLETE -- {RUN_DATE}\n",
-  "  Output: {rds_out}\n",
-  "  Next  : source('R/179b_cbc_patient_year_models.R', local = new.env(...))\n",
-  "          (Plan 02: GEE models + workbook output)\n",
+  "  RDS  : {rds_out}\n",
+  "  Continuing to Sections 4-7 (descriptives, GEE, workbook) ...\n",
+  "================================================================================"
+))
+
+# ==============================================================================
+# SECTION 4: SUBSETS AND DESCRIPTIVES ----
+# ==============================================================================
+
+message("--- Section 4: Descriptives ---")
+
+# Load RDS (re-uses py_final if already in memory; RDS write confirmed above)
+py <- py_final |>
+  dplyr::mutate(
+    year_index_cat = factor(
+      dplyr::if_else(year_index >= 5L, "5+", as.character(year_index)),
+      levels = c("1", "2", "3", "4", "5+")
+    )
+  )
+
+py_all     <- dplyr::filter(py, !exposure_missing)
+py_primary <- dplyr::filter(py_all, year_index >= 2L)
+py_yr1     <- dplyr::filter(py_all, year_index == 1L)
+
+n_missing_py <- sum(py$exposure_missing)
+n_missing_pat <- dplyr::n_distinct(py$ID[py$exposure_missing])
+
+message(glue(
+  "  Patient-year subsets:\n",
+  "    py (all rows)           : {format(nrow(py), big.mark=',')} py, ",
+  "{format(dplyr::n_distinct(py$ID), big.mark=',')} patients\n",
+  "    py_all (exposure known) : {format(nrow(py_all), big.mark=',')} py, ",
+  "{format(dplyr::n_distinct(py_all$ID), big.mark=',')} patients\n",
+  "    py_primary (years 2+)   : {format(nrow(py_primary), big.mark=',')} py, ",
+  "{format(dplyr::n_distinct(py_primary$ID), big.mark=',')} patients\n",
+  "    py_yr1 (year 1 only)    : {format(nrow(py_yr1), big.mark=',')} py\n",
+  "    exposure_missing py     : {format(n_missing_py, big.mark=',')} py, ",
+  "{format(n_missing_pat, big.mark=',')} patients"
+))
+
+# --- 4a. Exposure distribution (D-10) -----------------------------------------
+# One row per patient: patient-level median_distance (already constant per patient)
+pat_level <- py_all |>
+  dplyr::distinct(ID, median_distance, far)
+
+n_far     <- sum(pat_level$far == 1L, na.rm = TRUE)
+n_not_far <- sum(pat_level$far == 0L, na.rm = TRUE)
+n_miss_exp_pat <- sum(is.na(pat_level$far))   # should match n_missing_pat
+
+q_probs <- c(0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95)
+dist_quantiles <- quantile(pat_level$median_distance, probs = q_probs, na.rm = TRUE)
+
+desc_4a <- data.frame(
+  Metric = c(
+    paste0("Median distance (mi) — ", c("P5","P10","P25","P50","P75","P90","P95")),
+    "N patients: far (>100 mi)",
+    "N patients: not far (<=100 mi)",
+    "N patients: missing exposure"
+  ),
+  Value = c(
+    as.character(round(dist_quantiles, 1)),
+    suppress_display(n_far),
+    suppress_display(n_not_far),
+    suppress_display(n_miss_exp_pat)
+  ),
+  stringsAsFactors = FALSE
+)
+
+message(glue(
+  "  4a exposure (patient-level median distance):\n",
+  "    P5={round(dist_quantiles[1],1)}, P25={round(dist_quantiles[3],1)}, ",
+  "P50={round(dist_quantiles[4],1)}, P75={round(dist_quantiles[5],1)}, ",
+  "P95={round(dist_quantiles[7],1)} mi\n",
+  "    far={suppress_display(n_far)}, not far={suppress_display(n_not_far)}, ",
+  "missing={suppress_display(n_miss_exp_pat)}"
+))
+
+# --- 4b. Per year index (D-13) -----------------------------------------------
+# Patient-years far / not far, CBC rate in each, crude OR (naive_or_se).
+# A rate is shown only if its numerator AND denominator are both >= 11, else "—".
+
+show_rate <- function(num, denom) {
+  if (is.na(num) || is.na(denom) || num < 11 || denom < 11) return("—")
+  paste0(round(100 * num / denom, 1), "%")
+}
+
+per_year_rows <- lapply(levels(py_all$year_index_cat), function(yr) {
+  d_yr <- dplyr::filter(py_all, year_index_cat == yr)
+
+  n_far_yr    <- sum(d_yr$far == 1L, na.rm = TRUE)
+  n_notfar_yr <- sum(d_yr$far == 0L, na.rm = TRUE)
+
+  cbc_far     <- sum(d_yr$cbc_year[d_yr$far == 1L], na.rm = TRUE)
+  cbc_notfar  <- sum(d_yr$cbc_year[d_yr$far == 0L], na.rm = TRUE)
+
+  ct <- matrix(as.double(c(
+    n_notfar_yr - cbc_notfar, cbc_notfar,
+    n_far_yr    - cbc_far,    cbc_far
+  )), nrow = 2, byrow = TRUE)
+
+  nb <- tryCatch(naive_or_se(ct), error = function(e) list(log_or = NA_real_, se = NA_real_, haldane = NA))
+
+  data.frame(
+    Year_index   = yr,
+    N_py_far     = suppress_display(n_far_yr),
+    N_py_notfar  = suppress_display(n_notfar_yr),
+    N_cbc_far    = suppress_display(cbc_far),
+    N_cbc_notfar = suppress_display(cbc_notfar),
+    Rate_far     = show_rate(cbc_far, n_far_yr),
+    Rate_notfar  = show_rate(cbc_notfar, n_notfar_yr),
+    Crude_OR     = if (is.na(nb$log_or)) NA_character_ else as.character(round(exp(nb$log_or), 2)),
+    Haldane      = if (is.na(nb$haldane)) NA_character_ else as.character(nb$haldane),
+    stringsAsFactors = FALSE
+  )
+})
+
+desc_4b <- do.call(rbind, per_year_rows)
+
+message("  4b per year-index table built (", nrow(desc_4b), " year groups).")
+
+# --- 4c. Year 1 2x2 (far × cbc_year) with interior suppression ---------------
+suppress_2x2 <- function(tab) {
+  # tab: 2x2 matrix (rows = far 0/1, cols = cbc_year 0/1)
+  # Interior cells: suppress_display; margins suppressed if a cell was suppressed
+  inner <- matrix(suppress_display(as.integer(tab)), nrow = 2)
+  # Row totals
+  row_tots <- rowSums(tab)
+  col_tots <- colSums(tab)
+  grand    <- sum(tab)
+  # Any interior suppression in a row => suppress that row total
+  row_suppressed <- sapply(1:2, function(i) any(as.integer(tab[i,]) %in% 1:10))
+  col_suppressed <- sapply(1:2, function(j) any(as.integer(tab[,j]) %in% 1:10))
+  row_tots_d <- dplyr::if_else(row_suppressed, "<11", suppress_display(as.integer(row_tots)))
+  col_tots_d <- dplyr::if_else(col_suppressed, "<11", suppress_display(as.integer(col_tots)))
+  grand_d    <- suppress_display(as.integer(grand))
+  df <- data.frame(
+    Exposure    = c("not far (0)", "far (1)", "Total"),
+    CBC_no      = c(inner[1,1], inner[2,1], col_tots_d[1]),
+    CBC_yes     = c(inner[1,2], inner[2,2], col_tots_d[2]),
+    Total       = c(row_tots_d[1], row_tots_d[2], grand_d),
+    stringsAsFactors = FALSE
+  )
+  names(df) <- c("Exposure (far)", "CBC in year: No", "CBC in year: Yes", "Total")
+  df
+}
+
+ct_yr1 <- table(
+  factor(py_yr1$far, levels = c(0L, 1L), labels = c("not far", "far")),
+  factor(py_yr1$cbc_year, levels = c(0L, 1L))
+)
+desc_4c <- suppress_2x2(matrix(as.integer(ct_yr1), nrow = 2))
+
+message("  4c Year 1 2x2 suppressed table built.")
+
+# ==============================================================================
+# SECTION 5: GEE MODELS (D-11, D-12, D-13) ----
+# ==============================================================================
+
+message("--- Section 5: GEE models ---")
+
+run_gee <- function(data, outcome, exposure, label) {
+  d <- data |>
+    dplyr::filter(!is.na(.data[[exposure]])) |>
+    dplyr::arrange(ID, year_index) |>
+    dplyr::mutate(
+      year_index_cat = droplevels(year_index_cat),
+      y = .data[[outcome]],
+      x = .data[[exposure]]
+    )
+
+  warns <- character(0)
+  fit <- tryCatch(
+    withCallingHandlers(
+      geepack::geeglm(
+        y ~ x + year_index_cat,
+        data   = d,
+        id     = ID,
+        family = binomial("logit"),
+        corstr = GEE_CORSTR
+      ),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    ),
+    error = function(e) e
+  )
+
+  base <- list(
+    label    = label,
+    n_py     = nrow(d),
+    n_pat    = dplyr::n_distinct(d$ID),
+    warnings = paste(unique(warns), collapse = " | ")
+  )
+
+  if (inherits(fit, "error")) {
+    # Fallback: crude OR via naive_or_se (labelled, not silent; D-13)
+    ct_fb <- matrix(
+      as.numeric(table(factor(d$x, 0:1), factor(d$y, 0:1))),
+      nrow = 2
+    )
+    nb <- naive_or_se(ct_fb)
+    return(c(base, list(
+      method = "CRUDE FALLBACK (GEE error)",
+      or     = exp(nb$log_or),
+      ci_lo  = NA_real_,
+      ci_hi  = NA_real_,
+      p      = NA_real_,
+      error  = conditionMessage(fit)
+    )))
+  }
+
+  ct_coef <- summary(fit)$coefficients
+  b  <- ct_coef["x", "Estimate"]
+  se <- ct_coef["x", "Std.err"]    # geepack robust SE column (D-11)
+
+  c(base, list(
+    method = glue::glue("GEE ({GEE_CORSTR})"),
+    or     = exp(b),
+    ci_lo  = exp(b - 1.96 * se),
+    ci_hi  = exp(b + 1.96 * se),
+    p      = ct_coef["x", "Pr(>|W|)"],
+    error  = NA_character_
+  ))
+}
+
+# D-12: Primary = years 2+; Secondary = all years; Year 1 = 4c descriptive only
+message("  Fitting primary GEE (years 2+, far ~ primary exposure) ...")
+res_primary   <- run_gee(py_primary, "cbc_year",       "far",            "Primary: years 2+")
+
+message("  Fitting secondary GEE (all years, far ~ primary exposure) ...")
+res_secondary <- run_gee(py_all,     "cbc_year",       "far",            "Secondary: all years")
+
+# D-09 sensitivity: per-year median distance exposure
+message("  Fitting sensitivity GEE (years 2+, far_year_median) ...")
+py_primary_yr_exp <- dplyr::filter(py_primary, !is.na(far_year_median))
+n_dropped_yr_exp  <- nrow(py_primary) - nrow(py_primary_yr_exp)
+n_pat_dropped_yr  <- dplyr::n_distinct(py_primary$ID) - dplyr::n_distinct(py_primary_yr_exp$ID)
+message(glue(
+  "    Per-year exposure sensitivity: dropped {format(n_dropped_yr_exp, big.mark=',')} py ",
+  "and {format(n_pat_dropped_yr, big.mark=',')} patients vs primary."
+))
+res_sens_exposure <- run_gee(py_primary_yr_exp, "cbc_year", "far_year_median",
+                              "Sensitivity (per-year median exposure, years 2+)")
+
+# D-06 sensitivity: broad hematology outcome
+message("  Fitting sensitivity GEE (years 2+, broad hematology outcome) ...")
+res_sens_outcome  <- run_gee(py_primary, "cbc_year_broad", "far",
+                              "Sensitivity (broad hematology outcome, years 2+)")
+
+all_fits <- list(res_primary, res_secondary, res_sens_exposure, res_sens_outcome)
+
+# Helper for console summary
+fmt_result <- function(r) {
+  if (r$method == "CRUDE FALLBACK (GEE error)") {
+    glue::glue("  [{r$label}] FALLBACK OR={round(r$or,2)} [CI unavailable]; error: {r$error}")
+  } else {
+    glue::glue("  [{r$label}] OR={round(r$or,2)} ({round(r$ci_lo,2)}-{round(r$ci_hi,2)}), p={format.pval(r$p,3)}, method={r$method}")
+  }
+}
+
+for (r in all_fits) message(fmt_result(r))
+
+# ==============================================================================
+# SECTION 6: WORKBOOK (D-16) ----
+# ==============================================================================
+
+message("--- Section 6: Workbook ---")
+
+wb_path <- file.path(CONFIG$output_dir, glue("cbc_patient_year_{RUN_DATE}.xlsx"))
+
+# UF style helpers
+uf_blue   <- "#0021A5"
+uf_orange <- "#FA4616"
+
+uf_header_style <- openxlsx::createStyle(
+  fgFill    = uf_blue,
+  fontColor = "#FFFFFF",
+  textDecoration = "bold",
+  border    = "Bottom"
+)
+uf_section_style <- openxlsx::createStyle(
+  fgFill    = uf_orange,
+  fontColor = "#FFFFFF",
+  textDecoration = "bold"
+)
+
+wb <- openxlsx::createWorkbook()
+
+# -- Sheet 1: KEY --------------------------------------------------------------
+openxlsx::addWorksheet(wb, "KEY")
+
+# Attempt to read Phase 165 ORs from the workbook written on 2026-10-08
+phase165_xlsx <- file.path(CONFIG$output_dir, "distance_cbc_association_20261008.xlsx")
+phase165_or_text <- tryCatch({
+  if (!file.exists(phase165_xlsx)) stop("not found")
+  p165_key <- readxl::read_excel(phase165_xlsx, sheet = "KEY")
+  # Locate rows by label pattern
+  extract_val <- function(pattern) {
+    idx <- grep(pattern, p165_key[[1]], ignore.case = TRUE)
+    if (length(idx) == 0) return(NA_character_)
+    paste(p165_key[[2]][idx], collapse = "; ")
+  }
+  whole_or  <- extract_val("whole.*or|whole.*result|whole record")
+  post_or   <- extract_val("post.*or|post.*result|post.anchor")
+  glue::glue("Phase 165 (encounter-level) ORs from {basename(phase165_xlsx)}: whole-record={whole_or}; post-anchor={post_or}")
+}, error = function(e) {
+  message(glue("  [INFO] Phase 165 workbook not readable: {conditionMessage(e)} -- writing placeholder"))
+  "see Phase 165 workbook (distance_cbc_association_20261008.xlsx)"
+})
+
+# KEY rows
+key_rows_179 <- list(
+  c("Field", "Value"),
+  c("Analysis", "far_from_care_100mi x CBC receipt (patient-year)"),
+  c("Companion to Phase 165",
+    paste0("Companion to Phase 165 (encounter-level: CBC drawn during the encounter). ",
+           "Which analysis is primary is pending team decision (D-15, with D-165-01).")),
+  c("Run date",       RUN_DATE),
+  c("Unit",           "Patient-year (half-open 365-day interval after hl_anchor_date)"),
+  c("Year interval",  "Year k = (anchor + 365*(k-1), anchor + 365*k]; anchor day = pre (D-01)"),
+  c("CDM cutoff",     glue("{CDM_CUTOFF} (source: EXTRACT_DATE in R/00_config.R, Mailhot_V1_20250915)")),
+  c("Anchor source",  glue("{KEY_META$anchor_rds} (R/147 surveillance_modality_patient RDS, D-02)")),
+  c("Cohort cross-check", "get_hl_any_dx_ids() vs R/147 RDS counts logged at runtime (non-blocking, D-02)"),
+  c("Death source",   KEY_META$death_source),
+  c("Enc_distance src", KEY_META$enc_distance_rds),
+  c("R/121 triage src", KEY_META$r121_rds),
+  c("Primary outcome",     "cbc_year: >= 1 CBC (WBC+Hgb+PLT same date via build_cbc_events()) in the year"),
+  c("Sensitivity outcome", "cbc_year_broad: >= 1 of 15 hematology LOINCs in the year (no same-date req., D-06)"),
+  c("Primary exposure",    glue("patient-level median distance_mi (post-anchor computed encounters); far = median > {CUTOFF} mi")),
+  c("Sensitivity exposure","per-year median distance_mi (computed enc. in that year's window); D-09"),
+  c("GEE spec",       glue("geepack::geeglm, binomial logit, corstr={GEE_CORSTR}, id=ID, year_index_cat adj.")),
+  c("Why years 2+ primary", paste0(
+    "Year 1 overlaps primary HL treatment; CBCs near-universal regardless of distance. ",
+    "Surveillance CBC signal is cleaner from year 2 onward. Year 1 reported as descriptive 2x2 only (D-12)."
+  )),
+  c("Exposure missing", glue("{suppress_display(n_missing_pat)} patients / {suppress_display(n_missing_py)} py excluded from estimates (exposure_missing = TRUE)")),
+  c("Primary OR",     fmt_result(res_primary)),
+  c("Secondary OR",   fmt_result(res_secondary)),
+  c("Sensitivity OR (per-year exp.)", fmt_result(res_sens_exposure)),
+  c("Sensitivity OR (broad outcome)", fmt_result(res_sens_outcome)),
+  c("Phase 165 side-by-side", phase165_or_text),
+  c("Primary choice",  "Pending team decision (D-15, with D-165-01); see D-15 in STATE.md"),
+  c("Suppression rule","Counts 1-10 displayed as '<11'; rates shown only when numerator AND denominator >= 11"),
+  c("RDS basename",    basename(rds_out))
+)
+
+key_df_179 <- do.call(rbind, lapply(key_rows_179, function(r) {
+  data.frame(Field = r[1], Value = paste(r[-1], collapse = " "), stringsAsFactors = FALSE)
+}))
+
+openxlsx::writeData(wb, "KEY", key_df_179, startRow = 1, startCol = 1, headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "KEY", style = uf_header_style, rows = 1, cols = 1:2)
+openxlsx::setColWidths(wb, "KEY", cols = 1:2, widths = c(32, 80))
+
+# -- Sheet 2: Descriptives (4a then 4c) ----------------------------------------
+openxlsx::addWorksheet(wb, "Descriptives")
+
+openxlsx::writeData(wb, "Descriptives",
+  data.frame(Section = "4a: Patient-level exposure distribution (D-10)"),
+  startRow = 1, startCol = 1, headerStyle = uf_section_style)
+openxlsx::addStyle(wb, "Descriptives", style = uf_section_style, rows = 1, cols = 1)
+openxlsx::writeData(wb, "Descriptives", desc_4a, startRow = 2, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "Descriptives", style = uf_header_style, rows = 2, cols = 1:2)
+
+yr1_offset <- nrow(desc_4a) + 4L
+openxlsx::writeData(wb, "Descriptives",
+  data.frame(Section = "4c: Year 1 -- descriptive only, not in primary model"),
+  startRow = yr1_offset, startCol = 1, headerStyle = uf_section_style)
+openxlsx::addStyle(wb, "Descriptives", style = uf_section_style, rows = yr1_offset, cols = 1)
+openxlsx::writeData(wb, "Descriptives", desc_4c, startRow = yr1_offset + 1L, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "Descriptives", style = uf_header_style,
+                   rows = yr1_offset + 1L, cols = 1:ncol(desc_4c))
+openxlsx::setColWidths(wb, "Descriptives", cols = 1:4, widths = c(28, 16, 16, 16))
+
+# -- Sheet 3: Per_Year (4b) ----------------------------------------------------
+openxlsx::addWorksheet(wb, "Per_Year")
+openxlsx::writeData(wb, "Per_Year", desc_4b, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "Per_Year", style = uf_header_style, rows = 1, cols = 1:ncol(desc_4b))
+openxlsx::setColWidths(wb, "Per_Year", cols = 1:ncol(desc_4b), widths = 16)
+
+# -- Sheet 4: Model_Results ----------------------------------------------------
+openxlsx::addWorksheet(wb, "Model_Results")
+
+model_df <- do.call(rbind, lapply(all_fits, function(r) {
+  data.frame(
+    Label         = r$label,
+    Method        = r$method,
+    N_patient_yrs = r$n_py,
+    N_patients    = suppress_display(r$n_pat),
+    OR            = if (is.na(r$or))    NA_character_ else as.character(round(r$or,    3)),
+    CI_lo         = if (is.na(r$ci_lo)) NA_character_ else as.character(round(r$ci_lo, 3)),
+    CI_hi         = if (is.na(r$ci_hi)) NA_character_ else as.character(round(r$ci_hi, 3)),
+    p_value       = if (is.na(r$p))     NA_character_ else format.pval(r$p, digits = 3),
+    Warnings      = r$warnings,
+    Error         = if (is.na(r$error)) "" else r$error,
+    stringsAsFactors = FALSE
+  )
+}))
+
+openxlsx::writeData(wb, "Model_Results", model_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "Model_Results", style = uf_header_style,
+                   rows = 1, cols = 1:ncol(model_df))
+
+# Orange fill on any fallback row
+fallback_rows <- which(grepl("FALLBACK", model_df$Method)) + 1L  # +1 for header
+if (length(fallback_rows) > 0L) {
+  openxlsx::addStyle(wb, "Model_Results", style = uf_section_style,
+                     rows = fallback_rows, cols = 1:ncol(model_df), gridExpand = TRUE)
+}
+openxlsx::setColWidths(wb, "Model_Results", cols = 1:ncol(model_df),
+                       widths = c(40, 28, 14, 12, 8, 8, 8, 10, 40, 30))
+
+openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
+message(glue("  Workbook saved: {wb_path}"))
+
+# ==============================================================================
+# SECTION 7: CONSOLE SUMMARY ----
+# ==============================================================================
+
+message(glue(
+  "================================================================================\n",
+  "R/179 COMPLETE -- {RUN_DATE}\n",
+  "  RDS    : {rds_out}\n",
+  "  Workbook: {wb_path}\n",
+  "  Sheets : KEY | Descriptives | Per_Year | Model_Results\n",
+  "\n",
+  "  Primary result:\n",
+  "    {fmt_result(res_primary)}\n",
+  "  Secondary:\n",
+  "    {fmt_result(res_secondary)}\n",
+  "  Sensitivity (per-year exposure):\n",
+  "    {fmt_result(res_sens_exposure)}\n",
+  "  Sensitivity (broad outcome):\n",
+  "    {fmt_result(res_sens_outcome)}\n",
+  "\n",
+  "  Phase 165 comparison: {phase165_or_text}\n",
+  "\n",
+  "  Primary-analysis choice (165 vs 179): PENDING team decision (D-15 / D-165-01)\n",
   "================================================================================"
 ))
