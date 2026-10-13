@@ -10,8 +10,8 @@ Find out whether encounters without a computed distance could bias the Phase 165
 
 ### Script Fixes (Phase 178)
 
-- [ ] **FIX-01**: `R/147_verify_vs_1006.R` guard — final `quit()` replaced with `if (!interactive()) quit(status = if (n_fail == 0) 0 else 1)`; "Confirmed-cohort N" and QC label lookups use exact-match (`==` or `fixed = TRUE`), not case-insensitive partial regex.
-- [ ] **FIX-02**: R/122 workbook KEY note added — "Temporal ZIP match would fill 0 encounters (Phase 177). The patient_zip_missing encounters belong to patients with no ZIP9 (UNREACHABLE_NO_ZIP9) or no address history (not in R/121); no dated ZIP exists to fill them."
+- [x] **FIX-01**: `R/147_verify_vs_1006.R` guard — final `quit()` replaced with `if (!interactive()) quit(status = if (n_fail == 0) 0 else 1)`; "Confirmed-cohort N" and QC label lookups use exact-match (`==` or `fixed = TRUE`), not case-insensitive partial regex.
+- [x] **FIX-02**: R/122 workbook KEY note added — "Temporal ZIP match would fill 0 encounters (Phase 177). The patient_zip_missing encounters belong to patients with no ZIP9 (UNREACHABLE_NO_ZIP9) or no address history (not in R/121); no dated ZIP exists to fill them."
 
 ### Missing-Distance Bias Check (Phase 179)
 

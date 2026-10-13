@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.10
-milestone_name: Distance Missingness & Script Fixes
-status: in_progress
-stopped_at: v3.10 started 2026-10-13; Phase 178 not yet planned
-last_updated: "2026-10-13T00:00:00.000Z"
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: executing
+stopped_at: Completed 178-02-PLAN.md
+last_updated: "2026-10-13T15:27:00.489Z"
 last_activity: 2026-10-13
 progress:
-  total_phases: 179
-  completed_phases: 177
-  total_plans: 310
-  completed_plans: 315
-  percent: 98
+  total_phases: 167
+  completed_phases: 146
+  total_plans: 316
+  completed_plans: 321
+  percent: 100
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-10-13, v3.10 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.10 Distance Missingness & Script Fixes — Phase 178 (script fixes) next
+**Current focus:** Phase 178 — script-fixes
 
 ## Current Position
 
-Phase: 178 (not started)
-Plan: —
-Status: Defining requirements / roadmap set; Phase 178 ready to plan
-Last activity: 2026-10-13 — Milestone v3.10 started
+Phase: 178 (script-fixes) — EXECUTING
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-10-13
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
@@ -96,4 +96,4 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 ## Session Continuity
 
 **Last command:** Phase 177 complete — temporal-match sizing memo; Document only outcome confirmed; R/.planning/ duplication resolved (git mv 177 to root, retire R/.planning in Step 3)
-**Stopped at:** GATE 2 — awaiting approval to commit and continue to Step 3
+**Stopped at:** Completed 178-02-PLAN.md
