@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: complete
-stopped_at: Completed 180-01-PLAN.md (Phase 180 close-out)
-last_updated: "2026-10-13T00:00:00Z"
+status: completed
+stopped_at: Completed 180-01-PLAN.md
+last_updated: "2026-10-13T18:02:04.851Z"
 last_activity: 2026-10-13
 progress:
   total_phases: 169
-  completed_phases: 147
-  total_plans: 318
-  completed_plans: 323
+  completed_phases: 149
+  total_plans: 319
+  completed_plans: 325
   percent: 100
 ---
 

@@ -2,6 +2,43 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v3.10 — Distance Missingness & Script Fixes
+
+**Shipped:** 2026-10-13
+**Phases:** 3 (178–180) | **Plans:** 6 | **Timeline:** 1 day
+
+### What Was Built
+
+- Phase 178: `R/147_verify_vs_1006.R` quit() guard (`!interactive()`) + exact-match QC lookups; `R/122` workbook KEY temporal-match note (0 fillable encounters confirmed by Phase 177)
+- Phase 179: `R/179_cbc_patient_year.R` — patient-year CBC outcome, per-patient-year GEE (exchangeable, clustered on patient ID); primary OR=0.845 (0.727–0.981), p=0.027; `cbc_patient_year_20261013.xlsx` + internal RDS (58,595 patient-years, 8,632 patients)
+- Phase 180: `R/180_cbc_missing_capture.R` — MISS-01 reason breakdown (6 mutually exclusive groups, stopifnot-enforced), MISS-02/03 bounding (both ORs same side → limitation row in R/179 KEY), MISS-04 capture check (D-09 37.4% shrinkage → out-of-system care signal); `cbc_missing_capture_20261013.xlsx`
+
+### What Worked
+
+- **Pre-specified D-09 threshold (≥25% log-OR change)** locked before running meant the branch decision was mechanical, not judgement-based at runtime
+- **Reproduction check as Phase 180's first gate** (`stopifnot(round(ref$or, 2) == 0.84)`) ensured phases were chained correctly — caught any input mismatch immediately
+- **One-reason-per-patient stopifnot** (MISS-01) enforced by the script itself before any table was written; no silent mis-classification possible
+- **Checkpoint:human-action pattern** (Task 6) correctly separated code delivery (Tasks 1–5, automated) from HiPerGator runtime (human) and interpretation + close-out (Task 7, automated after paste)
+
+### What Was Inefficient
+
+- Phase 179 required two re-specs: the original plan was encounter-level and had to be rewritten as patient-year (180 was designed around the encounter-level plan). Single up-front alignment with the team on the analytic unit would have avoided this
+- `gsd-tools milestone complete` accomplishment extraction continued to pull all phase summaries, not just v3.10 — same known CLI issue as prior milestones
+
+### Patterns Established
+
+- **Patient-year GEE as the canonical CBC association model**: `geeglm(cbc_year ~ far + year_index_cat, id = integer cluster, corstr = "exchangeable")` with robust SE from `Std.err` — to be reused by any per-patient-year binary outcome analysis
+- **Bounding analysis structure** (ref / far=1 extreme / far=0 extreme + D-05 same-side rule) as a standard sensitivity pattern when a subset of the analytic population has missing exposure
+- **Capture check structure** (primary restriction + secondary + single-source strata + D-09 label) as a standard non-capture falsification approach for administrative data
+
+### Key Lessons
+
+- Phase 165 OR (0.845 far vs CBC, patient-year model) is robust to missing-exposure assignment — the direction is stable regardless of how the 847 missing-exposure patients are handled. This is a strength of the analysis worth highlighting in reporting.
+- The 37.4% D-09 shrinkage exceeds the threshold but the restricted subset (any in-system lab) changes the patient-year count substantially — restriction + non-capture cannot be fully disentangled from the data alone. The correct framing is "consistent with" non-capture, not "proven by."
+- `single_source_care_post` is a strong effect modifier (OR 0.754 vs 1.068) — patients getting care at multiple systems in the post-anchor period show a very different CBC pattern. This is the most actionable sub-finding for the team.
+
+---
+
 ## Milestone: v3.8 — Pipeline Refresh & Phase 130 Close-out
 
 **Shipped:** 2026-10-12

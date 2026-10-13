@@ -714,82 +714,16 @@ Plans:
 - [x] 164-01-PLAN.md — Doxorubicin generic name collapse: DRUG_NAME_ALIASES + MEDICATION_LOOKUP + R/88 checks (SUMMARY confirmed; R/164_dox_baseline_counts.R delivered)
 
 
-### Phase 1: R/88 Exit-Status Hardening
+<details>
+<summary>✅ v3.10 Distance Missingness & Script Fixes (Phases 178-180) — SHIPPED 2026-10-13</summary>
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 0
-**Plans:** 0 plans
+- [x] Phase 178: Script Fixes (3/3 plans) — completed 2026-10-13
+- [x] Phase 179: CBC Patient-Year Analysis — Missing-Distance Bias Check (2/2 plans) — completed 2026-10-13
+- [x] Phase 180: CBC Missing-Exposure Bounding and Capture Check (1/1 plan) — completed 2026-10-13
 
-Plans:
-- [ ] TBD (run /gsd:plan-phase 1 to break down)
+See `.planning/milestones/v3.10-ROADMAP.md` for full phase details.
 
----
-
-## 🔄 v3.10 Distance Missingness & Script Fixes (Active — started 2026-10-13)
-
-**Milestone Goal:** Find out whether encounters without a computed distance could bias the Phase 165 far-from-care (>100 mi) vs CBC association, and fix two small script issues first.
-
-### Phase 178: Script Fixes
-
-**Goal:** R/147_verify_vs_1006.R no longer ends interactive R sessions; exact-match guards protect label lookups; R/122 workbook KEY documents why temporal ZIP match is not applicable.
-**Requirements:** FIX-01, FIX-02
-**Depends on:** Phase 177
-
-**Design constraints:**
-- R/147_verify_vs_1006.R: guard final `quit()` with `if (!interactive()) quit(status = if (n_fail == 0) 0 else 1)`
-- R/147_verify_vs_1006.R: "Confirmed-cohort N" and QC label lookups use `==` or `fixed = TRUE`, not case-insensitive partial regex
-- R/122 workbook KEY: add note — "Temporal ZIP match would fill 0 encounters (Phase 177). The patient_zip_missing encounters belong to patients with no ZIP9 (UNREACHABLE_NO_ZIP9) or no address history (not in R/121); no dated ZIP exists to fill them."
-- Verify locally by grep only (no R on the local machine)
-- One interactive R confirmation on HiPerGator that sourcing R/147_verify_vs_1006.R no longer ends the session
-
-**Success Criteria:**
-1. `grep -n "quit()" R/147_verify_vs_1006.R` returns only the guarded form (inside `if (!interactive())`)
-2. Label lookups for "Confirmed-cohort N" and QC fields use `==` or `fixed = TRUE` — no `ignore.case = TRUE` or unanchored regex
-3. R/122 workbook KEY sheet contains the temporal-match note as a verbatim or equivalent sentence
-4. HiPerGator interactive R session survives sourcing R/147_verify_vs_1006.R (session alive after source completes)
-
-**Plans:** 0 plans (run `/gsd:plan-phase 178` to break down)
-- [ ] TBD
-
-### Phase 179: Missing-Distance Bias Check and CBC Capture Check
-
-**Goal:** Determine whether encounters excluded from Phase 165 (due to missing distance) are systematically different from the analysis set in their CBC rates, apply a pre-specified decision rule (stated limitation vs team flag), and test whether the far-from-care association reflects out-of-system care (MISS-04 capture check — restriction/stratification analysis reported to Amy/Erin with D-165-01).
-**Requirements:** MISS-01, MISS-02, MISS-03, MISS-04
-**Depends on:** Phase 178
-
-**Design constraints:**
-- Script: R/179_distance_missingness.R — read-only, reusing utils_distance_cbc.R and R/177's candidate logic
-- Universe: encounters meeting every Phase 165 inclusion rule except distance_status filter (R/177 candidates + current Phase 165 set)
-- Groups: computed (Phase 165 analysis set) vs patient_zip_missing; facility_zip_missing and zip_not_in_db reported separately
-- Outcome: CBC per encounter using Phase 165's `build_cbc_events()`
-- Comparisons: encounter-level Rao-Scott (clustered on patient); patient-level (any CBC); breakdown by R/121 triage group and by all-vs-some encounters missing
-- Bounding sensitivity: both Phase 165 methods (patient-level Fisher and Rao-Scott) recomputed with missing → (a) far and (b) not far; both bounded ORs with CIs reported next to Phase 165 estimate
-- Decision rule (locked before running): both bounded ORs same side of 1 as Phase 165 → add stated limitation to Phase 165 KEY; otherwise → flag to team alongside D-165-01
-- Outputs: counts workbook in output/ (KEY leftmost, <11 suppression, UF colors); encounter-level detail in output/internal/
-- Register in R/39 and SCRIPT_INDEX as a one-off; no new R/88 section
-- Run: interactive R on HiPerGator (module load R/4.5; source(f, local = new.env(parent = globalenv()))). No SLURM, no Rscript
-
-**Success Criteria:**
-1. R/179_distance_missingness.R exists and produces the counts workbook with CBC rate comparison across distance_status groups (encounter-level Rao-Scott + patient-level), including R/121 triage breakdown and all-vs-some missing subgroup
-2. Bounding sensitivity: Phase 165 ORs (Fisher + Rao-Scott) recomputed under both extreme assumptions; all four bounded ORs with CIs appear in the workbook alongside the Phase 165 primary estimate
-3. Decision rule applied and documented: either (a) stated limitation added to Phase 165 KEY workbook or (b) team-flag note written (naming D-165-01 and Amy/Erin) — output documents which branch was taken and why
-4. R/179 registered in R/39 and SCRIPT_INDEX; workbook written to output/ with KEY leftmost and <11 suppression
-
-**Plans:** 0 plans (run `/gsd:plan-phase 179` to break down)
-- [x] 179-01-PLAN.md — Data assembly: patient-year table, exposure/outcome flags, internal RDS (D-01–D-10, D-17) (Wave 1)
-- [x] 179-02-PLAN.md — Analysis, workbook, D-14 relabel, registration (D-11–D-16, D-18–D-19) (Wave 2, depends on 179-01)
-
----
-
-## Progress (v3.10)
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 178. Script Fixes | v3.10 | 3/3 | Complete    | 2026-10-13 |
-| 179. CBC Patient-Year Analysis    | v3.10 | 2/2 | Complete    | 2026-10-13 |
-
----
+</details>
 
 ## ✅ v3.7 Access, Survivorship Rates & NHL Episode Subsets (Shipped 2026-10-09) — 5 phases, 10 plans — see [milestones/v3.7-ROADMAP.md](.planning/milestones/v3.7-ROADMAP.md)
 

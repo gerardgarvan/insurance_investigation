@@ -1,5 +1,79 @@
 # Milestones
 
+## v3.10 Distance Missingness & Script Fixes (Shipped: 2026-10-13)
+
+**Phases completed:** 169 phases, 320 plans, 391 tasks
+
+**Key accomplishments:**
+
+- Context:
+- Purpose:
+- Commit:
+- Purpose:
+- Commit:
+- Phase 102 (encounter-grain, 10 columns):
+- Status:
+- Files:
+- Modified sections:
+- >
+- Task 1 — `R/utils/utils_address.R` (three edits):
+- Invariants held:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- Verdict: PASS
+- One-liner:
+- One-liner:
+- One-liner:
+- Completeness waterfall (SECTION 11):
+- One-liner:
+- `R/utils/utils_distance_hist.R`
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- load_lab_analytes() and load_modality_lookup() added to utils_surveillance.R with full validation; surveillance_codeset.xlsx (5 sheets, 167 rows) verified identical to Phase 158 in shared columns; Phase 158 callers and return type unchanged
+- Four pure analyte-rule functions added to utils_surveillance.R with 8 test_that blocks (39 expectations) covering CMP nesting, partial-panel thresholds, duplicate-source dedup, KIDNEY eGFR sensitivity, near-miss format, anchor-day exclusion, and A2 row-level presence
+- R/147 updated with Phase 159 analyte pull (Section 4B), an_rules bound into matched_all, A2 and E sheets, SC-4/SC-5/SC-6 stopifnots, and per-patient modality-dates .rds/.csv output
+- R/88 Section 15ak (SMOKE-159-01) adds 9 structural checks enforcing Phase 159 lab modality design decisions; SCRIPT_INDEX updated; HiPerGator phase gate passed — 149 test expectations pass, R/88 Phase 159 9/9 PASS, R/147 runs cleanly for 9,331 patients, A/A2/near-miss reviewed, release workbook cleared.
+- Task 1 — Codeset staging:
+- Task 1 (RED) — Test file `tests/testthat/test-160-diagnostic-and-eligibility.R`:
+- R/147_surveillance_modality_frequency.R — Phase 160 wiring (127 net insertions):
+- R/88_smoke_test_comprehensive.R — Section 15al (Phase 160 block):
+- Old (pre-161):
+- 1. [Rule 2 - Missing functionality] DEATH_SOURCE collection
+- R/52_gantt_v2_export.R
+- One-liner:
+- R/147 (T1, T2, T4):
+- One-liner:
+- Plan:
+- One-liner:
+- 1. [Rule 1 - Correction] Driver script number: R/166, not R/165
+- One-liner:
+- [Deviation - Minor] R/39 expected_xlsx not updated for dated workbook
+- One-liner:
+- One-liner:
+- One-liner:
+- 1. [Rule 1 - Bug] slurm/165 log name typo
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- Script written:
+- One-liner:
+- 920 vs 921 discrepancy:
+- Verdict: PASS
+- Run date:
+- One-liner:
+- One-liner:
+- R/147_verify_vs_1006.R sourced interactively on HiPerGator — session survived, confirming the !interactive() quit() guard from Plan 01 works correctly
+- One-liner:
+- One-liner:
+- One-liner:
+
+---
+
 ## v3.9 Pipeline Hygiene (Shipped: 2026-10-12)
 
 **Phases completed:** 4 phases (Phases 174-177), 5 plans
@@ -29,14 +103,17 @@ registered and runtime-verified on HiPerGator against the 2026-07-16 baseline.
 
 - R/147 re-ran on HiPerGator (2026-10-09); verify harness (`R/147_verify_vs_1006.R`,
   `slurm/147_verify.sbatch`) returned 30 PASS / 0 FAIL — RFSH-01 cleared (Phase 170)
+
 - Survivorship workbook refresh: R/166 wired to the Phase 170 gate via `r147_run_date`
   pointer; R/168 workbook assembler adds provenance KEY rows; `R/171_verify_survivorship.R`
   confirms 8/8 checks PASS — primary-tier rates and anthracycline-to-echo timing unchanged
   from 2026-10-08 reference — RFSH-02 closed (Phase 171)
+
 - Phase 164 close-out: `doxorubicin` generic-name rename verified in 90-day Gantt
   (`gantt_episodes.csv`) and 180-day Gantt (`gantt_episodes_180.csv`) on HiPerGator
   (2026-10-12); `CUTOFF_DATE` env-var fix applied to standalone R/52 and R/142 runs;
   R/170 NHL subsets regression confirmed (Phase 172)
+
 - Phase 130 DoI layer confirmed registered and runtime-verified: 920 R/88 checks PASS
   (pre-Phase 174 counting; baseline after v3.9 fixes is 960 passed, 3 skipped),
   SMOKE-130-01 footer confirmed, encounter-grain DoI counts exactly match 2026-07-16
@@ -61,16 +138,20 @@ SMOKE-165-01, and `88_smoke_test.sbatch`.
   reported alongside: OR 0.553 [0.470, 0.651] whole / 0.558 [0.468, 0.665] post-anchor.
   Payer covariate absent (no payer_summary RDS). `R/165_distance_cbc_association.R` +
   `utils_distance_cbc.R` (Phase 165)
+
 - Survivorship modality rates: per-patient rates (post-primary tier), anthracycline-to-echo
   timing (D6/D7/D8 decision chain), complementary suppression;
   `R/166_survivorship_modality_rates.R` (Sections 1-5) + `R/168_survivorship_workbook.R`
   assembler; SMOKE-166-01 wired (Phase 166)
+
 - Single health-system care flag: `build_single_source_result()` pure helper (TDD,
   7 test cases); encounter-band crosstabs whole-record and post-anchor;
   `R/169_single_source_care.R` + `slurm/167_single_source_care.sbatch` (Phase 167)
+
 - NHL-only and HL+NHL Gantt episode subsets from `gantt_episodes_180.csv` joined to
   chemo-combos workbook via `norm_key()` + chemo-only E-J row-split/rejoin;
   `R/170_nhl_gantt_subsets.R` + `test-170-nhl-gantt-subsets.R` (Phase 168)
+
 - R/165 registered in R/39 + SCRIPT_INDEX; SMOKE-165-01 (7 structural checks) +
   `test-165` unit tests; `88_smoke_test.sbatch` SLURM wrapper; all R/88 checks PASS
   on HiPerGator (Phase 169)

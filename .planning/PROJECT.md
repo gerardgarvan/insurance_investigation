@@ -98,21 +98,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] RFSH-02: Survivorship workbooks (R/166/R/167/R/168) refreshed from Phase 163-corrected R/147 output; primary-tier clinical results identical to 10-08 workbook; R/171 verify script with provenance check — v3.8 Phase 171
 - [x] RFSH-03: Phase 164 doxorubicin rename confirmed in both 90-day and 180-day Gantt outputs (0 liposomal rows, 2384/2384 patient count preserved); R/170 NHL subsets unchanged (2615/592 episode-tab rows, 849/1261/176 group counts); `_PINNED` snapshot protection in R/00_config.R — v3.8 Phase 172
 - [x] DOI-REG-01/02/03: R/111 and R/112 registered in R/39 (L217/L218, dependency order) and SCRIPT_INDEX (L157/L158); Section 15w (SMOKE-130-01) in R/88; HiPerGator runtime confirmed — 920 checks PASS, 32,249 DoI encounters — v3.8 Phase 173
+- [x] FIX-01: R/147_verify_vs_1006.R quit() guarded with `!interactive()`; "Confirmed-cohort N" and QC label lookups use exact-match (`==` / `fixed = TRUE`) — v3.10 Phase 178
+- [x] FIX-02: R/122 workbook KEY note added — temporal ZIP match fills 0 encounters (patient_zip_missing patients are UNREACHABLE_NO_ZIP9 or absent from R/121) — v3.10 Phase 178
+- [x] MISS-01/02/03: R/180_cbc_missing_capture.R breakdowns missing-exposure patients into 6 reason groups; bounding ORs (far=1: 0.776, far=0: 0.872) both same side as primary 0.845 → limitation row added to R/179 KEY — v3.10 Phase 180
+- [x] MISS-04: CBC capture check — OR moves toward 1 (37.4% shrinkage, ≥25% threshold) when restricted to patient-years with ≥1 in-system non-CBC lab → consistent with out-of-system care; reported to Amy/Erin with D-165-01 — v3.10 Phase 180
 
-## Current Milestone: v3.10 Distance Missingness & Script Fixes
+## Carry-Forward Backlog
 
-**Goal:** Find out whether encounters without a computed distance could bias the Phase 165 far-from-care (>100 mi) vs CBC association, and fix two small script issues first.
-
-**Target features:**
-- FIX-01/FIX-02: R/147 verify-script guard + exact-match label lookups; R/122 KEY temporal-match note
-- MISS-01/02/03: R/179_distance_missingness.R — CBC rate comparison across distance_status groups, bounding sensitivity ORs, decision rule applied (limitation vs team flag)
-- MISS-04: CBC capture check — far vs not-far in-system encounter rate; Phase 165 association under patient restriction (≥1 in-system encounter) and Phase 167 stratification; OR movement toward 1 → consistent with out-of-system non-capture; OR stays → true difference. Study hypothesis: far patients may obtain CBCs outside the system ("not captured" ≠ "not received").
-
-**Key study hypothesis (MISS-04):** The Phase 165 far-from-care OR (0.553) may reflect out-of-system care rather than a true difference in CBC receipt. Far patients who obtain CBCs at non-UFHealth facilities would appear as "no CBC" in the PCORnet extract.
-
-**Carry-forward backlog (deferred, not in scope):**
 - D-165-01: Amy/Erin confirmation of primary analysis method (patient-level Fisher vs Rao-Scott)
 - Phase 168: Team review of NHL Gantt episode subsets
+- D-09 capture finding (Phase 180): OR moves toward 1 (37.4%) when restricted to patients with ≥1 in-system lab — consistent with out-of-system care; to be reported to Amy/Erin with D-165-01
 
 ### Active
 
@@ -164,11 +159,15 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Last Shipped: v3.9 Pipeline Hygiene (2026-10-12)
+## Last Shipped: v3.10 Distance Missingness & Script Fixes (2026-10-13)
 
-R/88 counter bugs fixed (Sections 135/137/138/139/144; corrected baseline 960 CHECKS PASSED, 3 skipped). Three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel added. Phase 151 formally closed (151-01-SUMMARY.md, Verdict: PASS). NEEDS_TEMPORAL_MATCH sizing confirmed Document only (0 fillable encounters). R/.planning/ parallel tree retired and gitignored.
+R/179 patient-year CBC analysis confirmed Phase 165 OR (0.845) robust to how missing-exposure patients are classified (both bounded ORs same side). R/180 capture check: OR moves 37.4% toward 1 when restricted to patient-years with in-system lab activity — consistent with out-of-system CBC receipt. D-05 limitation row added to R/179 KEY. D-09 result flagged to Amy/Erin with D-165-01. FIX-01/02 (R/147 quit guard + R/122 KEY note) shipped in Phase 178.
 
-## Prior Shipped: v3.8 Pipeline Refresh & Phase 130 Close-out (2026-10-12)
+## Prior Shipped: v3.9 Pipeline Hygiene (2026-10-12)
+
+R/88 counter bugs fixed. Three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel added. Phase 151 formally closed. NEEDS_TEMPORAL_MATCH sizing: 0 fillable encounters. R/.planning/ parallel tree retired.
+
+## Shipped: v3.8 Pipeline Refresh & Phase 130 Close-out (2026-10-12)
 
 All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Phase 163-corrected R/147 output. Phase 164 doxorubicin rename confirmed clean in both Gantt outputs. Phase 130 DoI layer (R/111, R/112) fully registered.
 
@@ -357,7 +356,7 @@ All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Pha
 
 ## Context
 
-- **Current state**: 177 phases completed across 19 milestones (v1.0-v3.9), 177+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed (32,249 encounters), survivorship workbooks regenerated and verified (R/166/167/168), R/88 comprehensive smoke test with **960 CHECKS PASSED (3 skipped)** — three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel, `147_verify_last_pass.txt` pointer-based downstream gating, PINNED snapshot protection for R/170
+- **Current state**: 180 phases completed across 20 milestones (v1.0-v3.10), 180+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed (32,249 encounters), survivorship workbooks regenerated and verified (R/166/167/168), R/88 comprehensive smoke test with **960 CHECKS PASSED (3 skipped)** — three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel, `147_verify_last_pass.txt` pointer-based downstream gating, PINNED snapshot protection for R/170. Phase 165 far-CBC OR (0.845) confirmed robust to missing-exposure assignment (D-05); D-09 capture check flags 37.4% shrinkage toward 1 → out-of-system care hypothesis; reported to Amy/Erin with D-165-01.
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -424,6 +423,8 @@ All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Pha
 | Downstream phases cite "PASS == total, FAIL == 0" not a fixed check count | Total shifts as checks are added/converted to skip_check(); a fixed number becomes stale immediately | ✓ Phase 175 |
 | NEEDS_TEMPORAL_MATCH sizing: Document only — no new imputation tier | 410 NEEDS_TEMPORAL_MATCH patients generate zero patient_zip_missing encounters; R/122 already resolves their ZIPs from LDS_ADDRESS_HISTORY | ✓ Phase 177 |
 | Always launch GSD from repo root, never from R/ | Launching from R/ creates R/.planning/ as a parallel planning tree; CLAUDE.md now enforces this | ✓ Phase 176/177 |
+| D-05 bounding: add stated limitation, not team-flag | Both bounded ORs (far=1: 0.776, far=0: 0.872) same side as primary 0.845 → limitation row added to R/179 KEY; Phase 165 primary estimate robust to missing-exposure classification | ✓ Phase 180 |
+| D-09 capture rule (≥25% shrinkage threshold): move toward 1 = non-capture signal | Restricting to patient-years with ≥1 in-system non-CBC lab shrinks log-OR by 37.4%; OR movement toward 1 under restriction is pre-specified as evidence of out-of-system care, not a true far/CBC difference | ✓ Phase 180 — reported to Amy/Erin with D-165-01 |
 
 ## Evolution
 
@@ -443,4 +444,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-13 — v3.9 milestone complete (Pipeline Hygiene).*
+*Last updated: 2026-10-13 — v3.10 milestone complete (Distance Missingness & Script Fixes).*
