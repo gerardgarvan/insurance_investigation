@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+milestone: v3.9
+milestone_name: Pipeline Hygiene
 status: completed
-stopped_at: Phase 177 complete (v3.9 milestone closed)
-last_updated: "2026-10-12T00:00:00.000Z"
-last_activity: 2026-10-12
+stopped_at: v3.9 archived 2026-10-13; next milestone not yet defined
+last_updated: "2026-10-13T00:00:00.000Z"
+last_activity: 2026-10-13
 progress:
   total_phases: 167
   completed_phases: 142
@@ -18,11 +18,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-12 after starting v3.9)
+See: .planning/PROJECT.md (updated 2026-10-13 after archiving v3.9)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.9 milestone complete — ready for complete-milestone
+**Current focus:** v3.9 archived — no active milestone; run `/gsd:new-milestone` to plan next work
 
 ## Current Position
 
@@ -32,6 +32,8 @@ Status: All 4 v3.9 phases complete; milestone ready to archive
 Last activity: 2026-10-12
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
+
+**Quick task — R/147_verify_vs_1006.R fixes (2026-10-13):** Guard final `quit()` with `!interactive()` (line 554); exact-match 'Confirmed-cohort N' and QC label lookups use `fixed = TRUE` / `==` rather than partial regex. Quit audit found no other unguarded `quit()` calls in `R/`.
 
 **Phase 176 close-out (2026-10-12):** 2026-10-09 HiPerGator run confirmed as the close-out run (both inputs predate run; 547/135 constants confirmed). All 8 reconciliation quantities PASS. 151-01-SUMMARY.md written with Verdict: PASS. All 12 record-level mismatches documented (10 same-ZIP3, 2 different-ZIP3) — all accepted as expected data quirks. Phase 151 ticked [x] in root ROADMAP. HYGIENE-03 marked Complete. R/.planning/ is a full parallel planning tree created when GSD was launched from inside R/ subdirectory; deferred to Phase 177 for resolution (not a pure stale subset — has diverged content). Note: always launch GSD from the repo root, not from R/.
 

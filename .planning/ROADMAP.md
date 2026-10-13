@@ -24,7 +24,7 @@
 - ✅ **v3.6 Treatment Episode Refinement** - Phase 157 (closed — delivered by Phase 142)
 - ✅ **v3.7 Access, Survivorship Rates & NHL Episode Subsets** - Phases 165-169 (shipped 2026-10-09)
 - ✅ **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (shipped 2026-10-12)
-- **v3.9 Pipeline Hygiene** - Phases 174-177 (in progress)
+- ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
 
 ## Phases
 
@@ -741,77 +741,15 @@ Plans:
 </details>
 
 
-## v3.9 Pipeline Hygiene (In Progress)
 
-**Milestone Goal:** Close small loose ends from v3.5-v3.8 so the smoke test and ZIP work are trustworthy. No new analysis.
+<details>
+<summary>✅ v3.9 Pipeline Hygiene (Phases 174-177) — SHIPPED 2026-10-12</summary>
 
-### Phases
+- [x] Phase 174: Smoke-Check Discrepancy (1/1 plans) — completed 2026-10-12
+- [x] Phase 175: R/88 Exit-Status Hardening (1/1 plans) — completed 2026-10-12
+- [x] Phase 176: Phase 151 Close-Out (1/1 plans) — completed 2026-10-12
+- [x] Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo (2/2 plans) — completed 2026-10-12 (Document only — 0 fillable encounters)
 
-- [x] **Phase 174: Smoke-Check Discrepancy** - Resolve the 920 PASS / 921 total discrepancy in R/88; identify and fix or document the missing check (completed 2026-10-12)
-- [x] **Phase 175: R/88 Exit-Status Hardening** - Make R/88 signal failure (quit status=1 / FAILED: N message) when any check fails; verify skip and counter wiring (completed 2026-10-12)
-- [x] **Phase 176: Phase 151 Close-Out** - Run R/121 on HiPerGator, verify against 151-PLAN.md criteria, write 151-01-SUMMARY.md, tick Phase 151 (completed 2026-10-12)
-- [x] **Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo** - Count unfilled-ZIP encounters by R/121 group; recommend whether a new imputation tier warrants a phase (completed 2026-10-12; outcome: Document only — 0 unfilled encounters in R/122 for NEEDS_TEMPORAL_MATCH patients)
+See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
-## Phase Details (v3.9)
-
-### Phase 174: Smoke-Check Discrepancy
-**Goal**: R/88 PASS count equals total check count, OR a written explanation of the gap is present in the phase SUMMARY
-**Depends on**: Phase 173
-**Requirements**: HYGIENE-01
-**Success Criteria** (what must be TRUE):
-  1. R/88 PASS count equals total check count, OR a written explanation of the gap is present in the phase SUMMARY
-  2. R/88 run on HiPerGator confirms the result (interactive R session, module load R/4.5, source() with local = new.env(parent = globalenv()))
-  3. ROADMAP.md Phase 174 ticked only after the HiPerGator confirmation pass
-**Plans**: 174-01-PLAN.md
-
-### Phase 175: R/88 Exit-Status Hardening
-**Goal**: R/88 signals failure when any check fails -- quit(status=1) in non-interactive runs, a prominent "R/88 FAILED: N checks" line in interactive sessions; skip branches do not inflate PASS count; all per-section counters feed the global passed/failed totals
-**Depends on**: Phase 174
-**Requirements**: HYGIENE-02
-**Success Criteria** (what must be TRUE):
-  1. A deliberate failing check (temporary condition or test fixture modification) produces "R/88 FAILED: N checks" in interactive mode and exit code 1 in non-interactive mode -- this must be tested, not assumed
-  2. A clean run produces identical totals to Phase 174's confirmed baseline
-  3. HiPerGator confirmation run (interactive R, source() pattern); ROADMAP tick only after real pass
-**Plans**: 1 plan
-
-Plans:
-- [x] 175-01-PLAN.md — Apply three-way exit guard, skip_check(), R88_FORCE_FAIL sentinel; HiPerGator verify all paths
-
-Progress: 1/1 plans complete. Baseline: ALL 960 CHECKS PASSED (3 skipped). ec0=0 clean, ec1=1 sentinel, stop() in interactive, session alive. Logs: output/logs/175_rscript_clean.txt, output/logs/175_rscript_fail.txt
-
-### Phase 176: Phase 151 Close-Out
-**Goal**: R/121_zip_problem_inventory.R runs to completion on HiPerGator; outputs are checked against 151-PLAN.md success criteria; 151-01-SUMMARY.md is written with a pass/fail verdict; Phase 151 is ticked in ROADMAP if all criteria met
-**Depends on**: Phase 175 (may run concurrently with Phase 177)
-**Requirements**: HYGIENE-03
-**Success Criteria** (what must be TRUE):
-  1. R/121 runs to completion on HiPerGator (interactive R session)
-  2. 151-01-SUMMARY.md written with pass/fail verdict against each 151-PLAN.md criterion
-  3. ROADMAP Phase 151 ticked if all criteria met; documented gap recorded if not
-**Plans**: 1 plan
-
-Plans:
-- [x] 176-01-PLAN.md — Verify 2026-10-09 run freshness, write 151-01-SUMMARY.md (Verdict: PASS), tick Phase 151, document R/.planning/ duplication (deferred to Phase 177)
-
-### Phase 177: NEEDS_TEMPORAL_MATCH Sizing Memo
-**Goal**: Using the latest R/116 encounter-level output, count encounters where zip9_source == "none" OR ZIP5 is missing, split by R/121 groups; produce a decision memo on whether a new imputation tier warrants a phase
-**Depends on**: Phase 175 (may run concurrently with Phase 176)
-**Requirements**: HYGIENE-04
-**Success Criteria** (what must be TRUE):
-  1. Encounter and patient counts per group (NEEDS_TEMPORAL_MATCH and UNREACHABLE_NO_ZIP9) reported, using zip9_source == "none" OR missing ZIP5 as the unfilled definition
-  2. Memo cites Phase 150 concordance (547/135, ~80%) as the expected imputation error rate
-  3. Memo contains a clear recommendation (yes / no / conditional) on whether a new imputation tier warrants a phase
-  4. HiPerGator confirmation run; ROADMAP tick only after real pass
-**Plans**: 1 plan
-
-Plans:
-- [x] 177-01-PLAN.md — Build R/177 sizing script, produce temporal_match_sizing_20261012.xlsx
-- [x] 177-02-PLAN.md — Cross-tab D-04 verdict (explained), write 177-SIZING-MEMO.md; outcome: Document only
-
-## Progress (v3.9)
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 174. Smoke-Check Discrepancy | 1/1 | Complete | 2026-10-12 |
-| 175. R/88 Exit-Status Hardening | 1/1 | Complete | 2026-10-12 |
-| 176. Phase 151 Close-Out | 1/1 | Complete | 2026-10-12 |
-| 177. NEEDS_TEMPORAL_MATCH Sizing Memo | 2/2 | Complete (Document only) | 2026-10-12 |
+</details>

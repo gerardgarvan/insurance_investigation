@@ -99,15 +99,16 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] RFSH-03: Phase 164 doxorubicin rename confirmed in both 90-day and 180-day Gantt outputs (0 liposomal rows, 2384/2384 patient count preserved); R/170 NHL subsets unchanged (2615/592 episode-tab rows, 849/1261/176 group counts); `_PINNED` snapshot protection in R/00_config.R — v3.8 Phase 172
 - [x] DOI-REG-01/02/03: R/111 and R/112 registered in R/39 (L217/L218, dependency order) and SCRIPT_INDEX (L157/L158); Section 15w (SMOKE-130-01) in R/88; HiPerGator runtime confirmed — 920 checks PASS, 32,249 DoI encounters — v3.8 Phase 173
 
-## Current Milestone: v3.9 Pipeline Hygiene
+## Current Milestone
 
-**Goal:** Close small loose ends from v3.5–v3.8 so the smoke test and ZIP work are trustworthy. No new analysis.
+No active milestone — v3.9 shipped 2026-10-12. Run `/gsd:new-milestone` to plan next work.
 
-**Target features:**
-- Resolve 920/921 smoke-check discrepancy — find the missing/skipped/failed check, fix or document it
-- R/88 exit-status hardening — quit(status=1) on failure in non-interactive runs; print "FAILED: N" in interactive sessions; skip branches must not inflate PASS count
-- Phase 151 close-out — run R/121 on HiPerGator, verify against 151-PLAN.md criteria, write 151-01-SUMMARY.md
-- NEEDS_TEMPORAL_MATCH sizing memo — count unfilled-ZIP encounters (zip9_source == "none" OR missing ZIP5) by R/121 group, cite Phase 150 concordance (547/135, ~80%) as expected error rate, recommend whether a new imputation tier is worth a phase
+**Carry-forward backlog (open items):**
+- D-165-01: Amy/Erin confirmation of primary analysis method (patient-level Fisher vs Rao-Scott)
+- Phase 168: Team review of NHL Gantt episode subsets
+- R/122 workbook KEY note: temporal match would fill 0 encounters; 3,731 patient_zip_missing = UNREACHABLE_NO_ZIP9
+- R/147_verify_vs_1006.R: guard final quit() with !interactive(); exact-match label lookups (fixed = TRUE / ==)
+- Candidate bias check: CBC rates with vs without encounter distance
 
 ### Active
 
@@ -159,9 +160,13 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Last Shipped: v3.8 Pipeline Refresh & Phase 130 Close-out (2026-10-12)
+## Last Shipped: v3.9 Pipeline Hygiene (2026-10-12)
 
-All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Phase 163-corrected R/147 output. Phase 164 doxorubicin rename confirmed clean in both Gantt outputs. Phase 130 DoI layer (R/111, R/112) fully registered. R/88 at 921 checks. Next milestone not yet defined — run `/gsd:new-milestone` to start planning.
+R/88 counter bugs fixed (Sections 135/137/138/139/144; corrected baseline 960 CHECKS PASSED, 3 skipped). Three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel added. Phase 151 formally closed (151-01-SUMMARY.md, Verdict: PASS). NEEDS_TEMPORAL_MATCH sizing confirmed Document only (0 fillable encounters). R/.planning/ parallel tree retired and gitignored.
+
+## Prior Shipped: v3.8 Pipeline Refresh & Phase 130 Close-out (2026-10-12)
+
+All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Phase 163-corrected R/147 output. Phase 164 doxorubicin rename confirmed clean in both Gantt outputs. Phase 130 DoI layer (R/111, R/112) fully registered.
 
 ## Shipped: v3.7 Access, Survivorship Rates & NHL Episode Subsets (2026-10-09)
 
@@ -348,7 +353,7 @@ All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Pha
 
 ## Context
 
-- **Current state**: 173 phases completed across 18 milestones (v1.0-v3.8), 173+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed (920 checks, 32,249 encounters), survivorship workbooks regenerated and verified (R/166/167/168), comprehensive smoke test R/88 with 921 checks, `147_verify_last_pass.txt` pointer-based downstream gating, PINNED snapshot protection for R/170
+- **Current state**: 177 phases completed across 19 milestones (v1.0-v3.9), 177+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed (32,249 encounters), survivorship workbooks regenerated and verified (R/166/167/168), R/88 comprehensive smoke test with **960 CHECKS PASSED (3 skipped)** — three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel, `147_verify_last_pass.txt` pointer-based downstream gating, PINNED snapshot protection for R/170
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -410,6 +415,11 @@ All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Pha
 | Fail-safe verify harness pattern (sink-first, no stop(), OVERALL always written, exit 0/1, pointer file) | HPC scripts that crash before writing OVERALL silently pass; this design makes every exit observable and downstream gates can read the pointer without env vars | ✓ Phase 170 — standardized for all future verify scripts |
 | `_PINNED` snapshot for shared input files | When R/142 overwrites gantt_episodes_180.csv, R/170 must read the frozen August baseline; CONFIG$gantt_180_snapshot_path permanently points to `_PINNED` copy | ✓ Phase 172 |
 | Per-token canonicalize_drug_name() before dedup in R/142 Section 4D | Enriched RDS drug_names may predate alias changes; applying canonicalization at aggregation makes R/142 defensively correct regardless of RDS vintage | ✓ Phase 172 |
+| Three-way exit guard for R/88 (testthat no-op / interactive stop() / batch quit) | HPC batch scripts must exit non-zero on failure; interactive sessions must survive with a message; testthat must not call quit() | ✓ Phase 175 |
+| skip_check() replaces check(..., TRUE) for runtime-skips | Fake-TRUE checks inflate PASS count and mask real skip context; named helper + skipped counter makes skips visible in the footer | ✓ Phase 175 |
+| Downstream phases cite "PASS == total, FAIL == 0" not a fixed check count | Total shifts as checks are added/converted to skip_check(); a fixed number becomes stale immediately | ✓ Phase 175 |
+| NEEDS_TEMPORAL_MATCH sizing: Document only — no new imputation tier | 410 NEEDS_TEMPORAL_MATCH patients generate zero patient_zip_missing encounters; R/122 already resolves their ZIPs from LDS_ADDRESS_HISTORY | ✓ Phase 177 |
+| Always launch GSD from repo root, never from R/ | Launching from R/ creates R/.planning/ as a parallel planning tree; CLAUDE.md now enforces this | ✓ Phase 176/177 |
 
 ## Evolution
 
@@ -429,4 +439,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-12 — v3.9 milestone started (Pipeline Hygiene).*
+*Last updated: 2026-10-13 — v3.9 milestone complete (Pipeline Hygiene).*

@@ -1,5 +1,21 @@
 # Milestones
 
+## v3.9 Pipeline Hygiene (Shipped: 2026-10-12)
+
+**Phases completed:** 4 phases (Phases 174-177), 5 plans
+
+**Delivered:** Closed four hygiene items deferred from v3.5–v3.8: fixed R/88 counter bugs that undercounted PASS by 43 checks; hardened R/88 with three-way exit guard, `skip_check()`, and `R88_FORCE_FAIL` sentinel; formally closed Phase 151 with a HiPerGator-confirmed PASS verdict; and confirmed NEEDS_TEMPORAL_MATCH sizing is Document only (zero fillable encounters — no new imputation tier warranted). R/.planning/ parallel planning tree identified, archived, and gitignored.
+
+**Key accomplishments:**
+
+- R/88 counter bugs in Sections 135/137/138/139/144 fixed (42 checks + 1 cache_dir check added); corrected baseline 963 CHECKS PASSED confirmed on HiPerGator; root cause of "921 vs 920" was IS_LOCAL branch difference, not a FAIL (Phase 174)
+- Three-way exit guard added to R/88 (testthat no-op / interactive stop() / batch quit(status=1)); `skip_check()` replaces 13 fake-TRUE runtime-skips + 2 fake-assertions; `R88_FORCE_FAIL` sentinel for testing; new baseline 960 CHECKS PASSED (3 skipped) — all 4 HiPerGator paths confirmed (Phase 175)
+- Phase 151 (Per-Patient ZIP Problem Inventory) formally closed: 151-01-SUMMARY.md written (Verdict: PASS), all 8 reconciliation quantities pass, 12 record-level mismatches accepted, Phase 151 ticked in ROADMAP (Phase 176)
+- NEEDS_TEMPORAL_MATCH sizing: R/177 run on HiPerGator; 410 NEEDS_TEMPORAL_MATCH patients generate zero patient_zip_missing encounters in R/122 (address-history calendar already resolves their ZIPs); no new imputation tier warranted; 177-SIZING-MEMO.md and temporal_match_sizing_20261012.xlsx produced (Phase 177)
+- R/.planning/ parallel planning tree (created when GSD was launched from R/ subdirectory) diagnosed, artifacts archived to root .planning/, R/.planning/ retired and gitignored; CLAUDE.md updated to prevent recurrence
+
+---
+
 ## v3.8 Pipeline Refresh and Phase 130 Close-out (Shipped: 2026-10-12)
 
 **Phases completed:** 4 phases (Phases 170-173), 7 plans
