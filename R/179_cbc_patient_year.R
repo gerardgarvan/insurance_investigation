@@ -148,7 +148,7 @@ if (nzchar(r122_override) && file.exists(r122_override)) {
 }
 
 anchor_candidates <- list.files(
-  CONFIG$output_dir,
+  CONFIG$cache$outputs_dir,
   pattern = "^surveillance_modality_patient.*\\.rds$",
   full.names = TRUE
 )
