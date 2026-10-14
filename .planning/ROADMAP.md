@@ -767,7 +767,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
 - [x] **Phase 181: CBC Prior-Year vs Distance** — Patient-level 2×2 (prior-year CBC × far), chi-squared/Fisher test, OR, and one-page team summary memo
  (completed 2026-10-14)
-- [ ] **Phase 182: Facility ZIP Recovery** (3 plans) — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180
+- [x] **Phase 182: Facility ZIP Recovery** (3 plans) — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180 (completed 2026-10-14)
 - [ ] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
 - [ ] **Phase 184: Survivorship Modality Rates and Distance × Modality Interaction** — Per-modality rates per patient-year; Poisson/NB GEE with far × modality interaction
 
@@ -817,7 +817,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 **Plans**: 3 plans
 - [x] 182-01-PLAN.md — Fill engine (utils_facility_zip.R: build_facility_zip_lookup + apply_facility_zip_fill), CONFIG$facility_zip_fill toggle, R/122 FACILITYID+SOURCE pull + fill step, unit tests [FZIP-01, FZIP-02] (Wave 1)
 - [x] 182-02-PLAN.md — 5-sheet diagnostic workbook (KEY/A_status_summary/B_facility_table/C_zip_not_in_db/QC) in R/122 + KEY fill metrics + R/39/SCRIPT_INDEX/R/88 SMOKE-182-01 registration [FZIP-01] (Wave 2, depends on 182-01)
-- [ ] 182-03-PLAN.md — R/182 script-generated 182-RECOVERY.md (before/after ORs read from workbooks by label) + HiPerGator re-run R/122→R/179→R/180 pinned + report placement [FZIP-02] (Wave 3, depends on 182-01, 182-02)
+- [x] 182-03-PLAN.md — R/182 script-generated 182-RECOVERY.md (before/after ORs read from workbooks by label) + HiPerGator re-run R/122→R/179→R/180 pinned + report placement [FZIP-02] (Wave 3, depends on 182-01, 182-02)
 
 ### Phase 183: MICE Sensitivity for Distance
 **Goal**: Quantify how sensitive the Phase 179 primary GEE result is to the missing-exposure assumption by imputing patient median distance / `far` via MICE and pooling with Rubin's rules

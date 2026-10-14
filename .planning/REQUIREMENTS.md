@@ -15,8 +15,8 @@ Deliver the CBC × distance prior-year analysis the team requested on 2026-10-13
 
 ### Facility ZIP Recovery (Phase 182)
 
-- [ ] **FZIP-01**: Analyst can diagnose the 581 missing-exposure patients in Phase 180 MISS-01 group (b) (facility_zip_missing / zip_not_in_db reasons) — identifying which facilities / ZIPs are missing, whether FACILITY_LOCATION or FACILITYID can be filled from other encounters at the same facility, and whether ZIPs can be added to the centroid table.
-- [ ] **FZIP-02**: Analyst can apply unambiguous fixes in R/122 (or its helpers only), re-run R/122 → R/179 → R/180, and produce a before/after report of patients/encounters recovered and how the primary OR and missingness breakdown change.
+- [x] **FZIP-01**: Analyst can diagnose the 581 missing-exposure patients in Phase 180 MISS-01 group (b) (facility_zip_missing / zip_not_in_db reasons) — identifying which facilities / ZIPs are missing, whether FACILITY_LOCATION or FACILITYID can be filled from other encounters at the same facility, and whether ZIPs can be added to the centroid table.
+- [x] **FZIP-02**: Analyst can apply unambiguous fixes in R/122 (or its helpers only), re-run R/122 → R/179 → R/180, and produce a before/after report of patients/encounters recovered and how the primary OR and missingness breakdown change.
 
 ### Multiple-Imputation Sensitivity for Distance (Phase 183)
 

@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
-stopped_at: Phase 182 context gathered
-last_updated: "2026-10-14T17:48:49.147Z"
+status: in_progress
+stopped_at: Phase 182 complete — ready for Phase 183 (MICE sensitivity)
+last_updated: "2026-10-14T20:00:00.000Z"
 last_activity: 2026-10-14
 progress:
   total_phases: 171
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 181 complete — awaiting next phase
+**Current focus:** Phase 182 complete — awaiting Phase 183 (MICE sensitivity for residual missing-exposure: 86,005 facility_zip_missing + 134,949 zip_not_in_db)
 
 ## Current Position
 
-Phase: 181 (cbc-prior-year-vs-distance) — COMPLETE
-Plan: 1 of 1
-Status: Phase complete — ready for verification
+Phase: 182 (facility-zip-recovery) — COMPLETE
+Plan: 3 of 3
+Status: Phase complete — ready for Phase 183 (MICE sensitivity)
 Last activity: 2026-10-14
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
@@ -99,5 +99,5 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Last command:** Phase 181 complete — prior-year CBC x distance 2x2 + team memo. Primary: OR 0.833 (0.682–1.016), p=0.071; Secondary: OR 0.871 (0.73–1.04), p=0.126; Sensitivity (calendar window, year_index>=2, N=6468): OR 0.850 (0.687–1.052), p=0.136. Sensitivity had a filter bug (year_start <= CDM_CUTOFF-730 → year_index >= 2), fixed and re-run same date. Memo approved and placed in phase folder. D-15 and D-165-01 remain open (pending Amy/Erin/Ray).
-**Stopped at:** Phase 182 context gathered
+**Last command:** Phase 182 complete — facility ZIP recovery and re-run. utils_facility_zip.R (Tier-1 FACILITYID donor fill) wired into R/122 behind CONFIG$facility_zip_fill toggle; diagnostic workbook (5 sheets); SMOKE-182-01 (10 checks). HiPerGator run 2026-10-14: R/88 ALL 970 CHECKS PASSED (3 skipped). Recovery headline: 0 patients crossed 100 mi threshold after fill (ZIPs recovered but no far reclassification). Remaining missing: 86,005 facility_zip_missing + 134,949 zip_not_in_db. Phase 179 primary OR: 0.84 → 0.83 (essentially unchanged). D-05: same side (locked). D-09: 37.4% → 30.4% shrinkage (moves toward 1; out-of-system care interpretation; report to Amy/Erin with D-165-01). 4 bugs fixed during execution (here::here() in tests, enc_zip_raw retain, glue() syntax, XML entity unescaping). FZIP-01 and FZIP-02 complete.
+**Stopped at:** Phase 182 complete — ready for Phase 183 (MICE sensitivity)
