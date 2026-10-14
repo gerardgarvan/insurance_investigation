@@ -837,8 +837,8 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 - Diagnosis tables: counts suppressed <11; patient ZIPs as ZIP3 only.
 - Expected impact: 1,080 patients affected; 38 gain exposure; 36 change far status; 365 medians shift >0.5 mi.
 
-**Plans:** 4 plans
-- [ ] 182.1-01-PLAN.md — R/utils/utils_zip_crosswalk.R (map_zip_to_zcta, is_placeholder_facility_zip5) + CONFIG$hrsa_zip_zcta_path + SCRIPT_INDEX row [FZIP-01, FZIP-02] (Wave 1)
+**Plans:** 1/4 plans executed
+- [x] 182.1-01-PLAN.md — R/utils/utils_zip_crosswalk.R (map_zip_to_zcta, is_placeholder_facility_zip5) + CONFIG$hrsa_zip_zcta_path + SCRIPT_INDEX row [FZIP-01, FZIP-02] (Wave 1)
 - [ ] 182.1-02-PLAN.md — R/122 placeholder step + three-tier crosswalk fallback + distance_method column + 182-RECOVERY.md correction [FZIP-01, FZIP-02] (Wave 2, depends on 182.1-01)
 - [ ] 182.1-03-PLAN.md — R/165 R165_R122_RDS override [FZIP-02] (Wave 2, depends on 182.1-01)
 - [ ] 182.1-04-PLAN.md — R/88 SMOKE-182.1-01 (8 checks) + R/182 182.1 before/after comparison section + HiPerGator re-run chain checkpoint [FZIP-01, FZIP-02] (Wave 3, depends on 182.1-02, 182.1-03)
@@ -889,6 +889,6 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 |-------|-----------|----------------|--------|-----------|
 | 181. CBC Prior-Year vs Distance | v3.11 | 1/1 | Complete   | 2026-10-14 |
 | 182. Facility ZIP Recovery | v3.11 | 3/3 | Complete | 2026-10-14 |
-| 182.1. ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs | v3.11 | 4 | Not started | — |
+| 182.1. ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs | v3.11 | 1/4 | In Progress|  |
 | 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
 | 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0 | Not started | — |
