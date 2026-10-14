@@ -6728,6 +6728,110 @@ if (length(wb_163_candidates) == 0) {
 message(glue("\nSMOKE-163-01: {p163_pass} PASS / {p163_fail} FAIL / {p163_skip} SKIP"))
 
 # ==============================================================================
+# SECTION 15at: PHASE 182 — FACILITY ZIP RECOVERY (SMOKE-182-01) ----
+# ==============================================================================
+
+p182_pass <- 0L
+p182_fail <- 0L
+p182_skip <- 0L
+p182_chk <- function(label, ok) {
+  if (isTRUE(ok)) {
+    message(glue("  PASS  {label}"))
+    p182_pass <<- p182_pass + 1L
+    passed    <<- passed    + 1L
+  } else {
+    message(glue("  FAIL  {label}"))
+    p182_fail <<- p182_fail + 1L
+    failed    <<- failed    + 1L
+  }
+}
+
+message("\n--- Section 15at: Phase 182 facility ZIP recovery ---")
+
+r122_src_182 <- if (file.exists("R/122_encounter_distance.R")) {
+  tryCatch(readLines("R/122_encounter_distance.R"), error = function(e) character(0))
+} else character(0)
+
+r180_src_182 <- if (file.exists("R/180_cbc_missing_capture.R")) {
+  tryCatch(readLines("R/180_cbc_missing_capture.R"), error = function(e) character(0))
+} else character(0)
+
+r00_src_182 <- if (file.exists("R/00_config.R")) {
+  tryCatch(readLines("R/00_config.R"), error = function(e) character(0))
+} else character(0)
+
+# [1] utils_facility_zip.R exists
+p182_chk(
+  "SMOKE-182-01 [1/8] utils/utils_facility_zip.R exists",
+  file.exists("R/utils/utils_facility_zip.R")
+)
+
+# [2] Sourcing utils_facility_zip.R defines the three required functions
+if (file.exists("R/utils/utils_facility_zip.R")) {
+  .tmp_env_182 <- new.env(parent = baseenv())
+  # Provide stub for normalize_zip5_raw (needed by build_facility_zip_lookup)
+  .tmp_env_182$normalize_zip5_raw <- function(x) substr(gsub("[^0-9]", "", x), 1, 5)
+  tryCatch(
+    sys.source("R/utils/utils_facility_zip.R", envir = .tmp_env_182),
+    error = function(e) message(glue("  NOTE  utils_facility_zip source error: {e$message}"))
+  )
+  p182_chk(
+    "SMOKE-182-01 [2/8] sourcing defines build_facility_zip_lookup",
+    exists("build_facility_zip_lookup", envir = .tmp_env_182, inherits = FALSE)
+  )
+  p182_chk(
+    "SMOKE-182-01 [2b/8] sourcing defines apply_facility_zip_fill",
+    exists("apply_facility_zip_fill", envir = .tmp_env_182, inherits = FALSE)
+  )
+  p182_chk(
+    "SMOKE-182-01 [2c/8] sourcing defines facility_key_ok",
+    exists("facility_key_ok", envir = .tmp_env_182, inherits = FALSE)
+  )
+} else {
+  skip_check("SMOKE-182-01 [2/8] sourcing defines build_facility_zip_lookup")
+  skip_check("SMOKE-182-01 [2b/8] sourcing defines apply_facility_zip_fill")
+  skip_check("SMOKE-182-01 [2c/8] sourcing defines facility_key_ok")
+}
+
+# [3] R/122 contains FACILITYID, SOURCE in the encounter pull
+p182_chk(
+  "SMOKE-182-01 [3/8] R/122 encounter pull includes FACILITYID, SOURCE",
+  any(grepl("FACILITYID.*SOURCE|SOURCE.*FACILITYID", r122_src_182))
+)
+
+# [4] R/122 sources utils_facility_zip.R
+p182_chk(
+  "SMOKE-182-01 [4/8] R/122 sources utils_facility_zip.R",
+  any(grepl("utils_facility_zip\\.R", r122_src_182))
+)
+
+# [5] R/122 contains the diagnosis workbook name pattern
+p182_chk(
+  "SMOKE-182-01 [5/8] R/122 contains 182_facility_zip_diagnosis reference",
+  any(grepl("182_facility_zip_diagnosis", r122_src_182))
+)
+
+# [6] R/00_config.R contains facility_zip_fill
+p182_chk(
+  "SMOKE-182-01 [6/8] R/00_config.R contains facility_zip_fill",
+  any(grepl("facility_zip_fill", r00_src_182))
+)
+
+# [7] R/180 has no hard-coded 0.84 reproduction check
+p182_chk(
+  "SMOKE-182-01 [7/8] R/180 has no hard-coded 0.84 reproduction check",
+  !any(grepl("==\\s*0\\.84", r180_src_182))
+)
+
+# [8] test-utils-facility-zip.R exists
+p182_chk(
+  "SMOKE-182-01 [8/8] tests/testthat/test-utils-facility-zip.R exists",
+  file.exists("tests/testthat/test-utils-facility-zip.R")
+)
+
+message(glue("\nSMOKE-182-01: {p182_pass} PASS / {p182_fail} FAIL / {p182_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -6876,6 +6980,7 @@ message("  * SMOKE-166-01: R/88 validates Phase 166 survivorship modality rates 
 message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episode subsets structural integrity: R/170 exists, all 7 helper functions defined, no quit(), col_types='text' for sheet read, tools::md5sum used, gantt_chemo_treatment_type referenced, registered in R/39, test file exists, sheet order KEY/NHL_only_episodes/HL_NHL_episodes/QC when workbook produced (Section 15aq, 9 checks)")
 message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
 message("  * SMOKE-163-01: R/88 validates Phase 163 DIAGNOSIS exclusion structural integrity: EXCLUDED_CDM_TABLES defined in R/147, stopifnot referencing it, A_code_presence has no DIAGNOSIS cell or Z-code IDs, Codeset_summary has no Z-code pattern (Section 15as, 4 checks; checks 3-4 skip in local runs without INTERNAL workbook)")
+message("  * SMOKE-182-01: R/88 validates Phase 182 facility ZIP recovery structural integrity: utils_facility_zip.R exists, sourcing defines build_facility_zip_lookup/apply_facility_zip_fill/facility_key_ok, R/122 FACILITYID+SOURCE pull, R/122 sources utils_facility_zip.R, R/122 182_facility_zip_diagnosis reference, R/00_config.R facility_zip_fill, R/180 no hard-coded 0.84, test-utils-facility-zip.R exists (Section 15at, 8 checks)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {

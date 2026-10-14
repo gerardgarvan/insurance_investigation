@@ -1242,7 +1242,13 @@ key_tbl <- tibble::tibble(
     "C_completeness waterfall",
     "D_fill_offsets scope",
     "QC sheet contents",
-    "Note: patient_zip_missing"
+    "Note: patient_zip_missing",
+    # Phase 182 fill rows
+    "Phase 182: facility_zip_fill toggle",
+    "Phase 182: filled_tier1 encounters",
+    "Phase 182: ambiguous keys",
+    "Phase 182: no_donor keys",
+    "Phase 182: no-key encounters (not_filled_no_key)"
   ),
   Description = c(
     "R/122_encounter_distance.R",
@@ -1260,7 +1266,15 @@ key_tbl <- tibble::tibble(
     "Five-step waterfall keyed on distance_status (encounters → facility ZIP → in-range patient ZIP → nearest patient ZIP → distance computed)",
     "Nearest-* fill rows (zip5_patient_source in nearest_zip9, nearest_zip5) only; signed-integer bins. SIGN: positive days_offset = address period ended BEFORE the encounter (past); negative = period began AFTER (future). 0 never occurs.",
     "Coverage waterfall; n_candidates_in_range>1; nearest-fill offset distribution; unmatched ZIP9 by state; zip9_crosswalk_present flag",
-    "Temporal ZIP match would fill 0 encounters (Phase 177). The patient_zip_missing encounters belong to patients with no ZIP9 (UNREACHABLE_NO_ZIP9) or no address history (not in R/121); no dated ZIP exists to fill them."
+    "Temporal ZIP match would fill 0 encounters (Phase 177). The patient_zip_missing encounters belong to patients with no ZIP9 (UNREACHABLE_NO_ZIP9) or no address history (not in R/121); no dated ZIP exists to fill them.",
+    # Phase 182 fill values
+    as.character(isTRUE(CONFIG$facility_zip_fill)),
+    as.character(if (exists("enc_for_dist") && "facility_zip_source" %in% names(enc_for_dist))
+      sum(enc_for_dist$facility_zip_source == "filled_tier1") else "N/A"),
+    as.character(if (exists("fac_lookup")) sum(fac_lookup$fill_status == "ambiguous") else "N/A"),
+    as.character(if (exists("fac_lookup")) sum(fac_lookup$fill_status == "no_donor") else "N/A"),
+    as.character(if (exists("enc_for_dist") && "facility_zip_source" %in% names(enc_for_dist))
+      sum(enc_for_dist$facility_zip_source == "not_filled_no_key") else "N/A")
   )
 )
 
@@ -1325,5 +1339,296 @@ add_styled_sheet(
 wb_save(wb, OUTPUT_XLSX)
 message(glue("  xlsx written: {OUTPUT_XLSX} (6 sheets: KEY, A_distribution_summary, B_histogram_bins, C_completeness, D_fill_offsets, QC)"))
 section_done("SECTION 12 Phase 154 outputs")
+
+# ==============================================================================
+# SECTION 12b: PHASE 182 FACILITY ZIP DIAGNOSTIC WORKBOOK ----
+# ==============================================================================
+# Sheets (in order): KEY · A_status_summary · B_facility_table · C_zip_not_in_db · QC
+# Baseline: env R122_BASELINE_RDS — the actual 20261013 encounter_distance RDS.
+# If absent: workbook written with "baseline not available" note in KEY/QC;
+# before/after rows and transition table are skipped.
+# ==============================================================================
+
+message("--- Phase 182: Building facility ZIP diagnostic workbook ---")
+
+DIAG_OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("182_facility_zip_diagnosis_{RUN_DATE}.xlsx"))
+
+# Suppression helper: counts 1-10 -> "<11"
+sup11 <- function(x) {
+  x <- as.integer(x)
+  ifelse(is.na(x), NA_character_,
+         ifelse(x >= 1L & x <= 10L, "<11", format(x, big.mark = ",", trim = TRUE)))
+}
+
+# Load baseline RDS (env R122_BASELINE_RDS)
+.baseline_rds_path <- Sys.getenv("R122_BASELINE_RDS",
+  unset = file.path(CONFIG$output_dir,
+                    "<20261013_rds_name_from_pre_flight_confirm_after_run>"))
+.baseline_available <- file.exists(.baseline_rds_path)
+
+if (.baseline_available) {
+  enc_baseline <- readRDS(.baseline_rds_path)
+  stopifnot("baseline RDS missing ENCOUNTERID or distance_status" =
+              all(c("ENCOUNTERID", "distance_status") %in% names(enc_baseline)))
+  message(glue("  Baseline RDS: {basename(.baseline_rds_path)} ({format(nrow(enc_baseline), big.mark=',')} rows)"))
+} else {
+  message(glue("  Baseline RDS not found at {basename(.baseline_rds_path)} -- writing workbook without before/after comparison"))
+  enc_baseline <- NULL
+}
+
+# ----- A_status_summary -----
+.after_status <- enc_distance |>
+  dplyr::count(distance_status, facility_zip_source, name = "n_enc") |>
+  dplyr::mutate(n_enc_sup = sup11(n_enc))
+
+if (.baseline_available) {
+  .join_cols <- dplyr::select(enc_baseline, ENCOUNTERID, status_before = distance_status)
+  .enc_paired <- enc_distance |>
+    dplyr::left_join(.join_cols, by = "ENCOUNTERID") |>
+    dplyr::mutate(status_after = distance_status)
+
+  # Transition table (status_before x status_after)
+  .transition_tbl <- .enc_paired |>
+    dplyr::count(status_before, status_after, name = "n_enc") |>
+    dplyr::mutate(n_sup = sup11(n_enc))
+
+  # Only-in-baseline and only-in-after
+  .only_baseline <- sum(!enc_baseline$ENCOUNTERID %in% enc_distance$ENCOUNTERID)
+  .only_after    <- sum(!enc_distance$ENCOUNTERID %in% enc_baseline$ENCOUNTERID)
+
+  A_status_summary <- dplyr::bind_rows(
+    dplyr::mutate(.after_status, comparison = "after", .before = 1),
+    .enc_paired |>
+      dplyr::count(status_before, name = "n_enc") |>
+      dplyr::rename(distance_status = status_before) |>
+      dplyr::mutate(n_enc_sup = sup11(n_enc), comparison = "before",
+                    facility_zip_source = NA_character_, .before = 1)
+  )
+  A_only_note <- tibble::tibble(
+    note = c(
+      glue("Encounters only in baseline: {sup11(.only_baseline)}"),
+      glue("Encounters only in after: {sup11(.only_after)}")
+    )
+  )
+} else {
+  .transition_tbl <- tibble::tibble(note = "Baseline not available — transition table skipped")
+  A_status_summary <- dplyr::mutate(.after_status, comparison = "after (no baseline)", .before = 1)
+  A_only_note <- tibble::tibble(note = "Baseline not available")
+}
+
+# zip_not_in_db split by side and cause (facility vs patient, format vs not-in-table)
+.znid <- enc_distance |>
+  dplyr::filter(distance_status == "zip_not_in_db") |>
+  dplyr::mutate(
+    fac_side    = !is.na(zip5_facility),
+    pat_side    = !is.na(zip5_patient),
+    fac_format  = is.na(zip5_facility) & !is.na(enc_zip_raw) & nchar(enc_zip_raw) > 0,
+    fac_notin   = !is.na(zip5_facility),
+    pat_format  = is.na(zip5_patient) & !is.na(enc_zip_raw),
+    pat_notin   = !is.na(zip5_patient)
+  )
+
+.znid_summary <- tibble::tibble(
+  side    = c("facility", "facility", "patient", "patient"),
+  cause   = c("format_issue (zip5_facility NA)", "not_in_centroid_table (zip5_facility present)",
+              "format_issue (zip5_patient NA)", "not_in_centroid_table (zip5_patient present)"),
+  n_enc   = c(sum(.znid$fac_format), sum(.znid$fac_notin),
+              sum(.znid$pat_format), sum(.znid$pat_notin)),
+) |> dplyr::mutate(n_enc_sup = sup11(n_enc))
+
+# ----- B_facility_table -----
+B_facility_table <- fac_lookup |>
+  dplyr::filter(n_missing_zip > 0 | fill_status == "filled_tier1") |>
+  dplyr::mutate(
+    n_enc_missing_zip_sup = sup11(n_missing_zip),
+    n_supporting_sup      = sup11(n_supporting),
+    candidate_zip5        = dplyr::if_else(fill_status == "filled_tier1", fill_zip, NA_character_)
+  ) |>
+  dplyr::select(SOURCE, FACILITYID, n_enc_missing_zip_sup, n_distinct_zips,
+                candidate_zip5, n_supporting_sup, fill_status,
+                sens_modal_share, sens_fill_ok) |>
+  dplyr::arrange(dplyr::desc(fill_status), SOURCE, FACILITYID)
+
+# Summary row for no-key encounters
+.no_key_enc <- if ("facility_zip_source" %in% names(enc_distance))
+  sum(enc_distance$facility_zip_source == "not_filled_no_key") else NA_integer_
+B_no_key_row <- tibble::tibble(
+  SOURCE = "(no key)", FACILITYID = NA_character_,
+  n_enc_missing_zip_sup = sup11(.no_key_enc),
+  n_distinct_zips = NA_integer_, candidate_zip5 = NA_character_,
+  n_supporting_sup = NA_character_, fill_status = "not_filled_no_key",
+  sens_modal_share = NA_real_, sens_fill_ok = NA
+)
+B_facility_table <- dplyr::bind_rows(B_facility_table, B_no_key_row)
+
+# ----- C_zip_not_in_db -----
+# Facility side: ZIP5 + n_enc; patient side: ZIP3 + n_enc (no 5-digit patient ZIPs)
+.znid_enc <- enc_distance |> dplyr::filter(distance_status == "zip_not_in_db")
+
+C_fac_side <- .znid_enc |>
+  dplyr::filter(!is.na(zip5_facility)) |>
+  dplyr::count(zip5_facility, name = "n_enc") |>
+  dplyr::mutate(side = "facility", zip = zip5_facility, n_sup = sup11(n_enc)) |>
+  dplyr::select(side, zip, n_sup)
+
+C_pat_side <- .znid_enc |>
+  dplyr::filter(!is.na(zip5_patient)) |>
+  dplyr::mutate(zip3 = substr(zip5_patient, 1, 3)) |>
+  dplyr::count(zip3, name = "n_enc") |>
+  dplyr::mutate(side = "patient", zip = zip3, n_sup = sup11(n_enc)) |>
+  dplyr::select(side, zip, n_sup)
+
+C_zip_not_in_db <- dplyr::bind_rows(C_fac_side, C_pat_side) |>
+  dplyr::arrange(side, zip)
+
+# ----- QC -----
+.n_filled_tier1_enc <- if ("facility_zip_source" %in% names(enc_distance))
+  sum(enc_distance$facility_zip_source == "filled_tier1") else 0L
+.n_filled_tier1_keys <- sum(fac_lookup$fill_status == "filled_tier1")
+.sum_missing_filled_keys <- sum(fac_lookup$n_missing_zip[fac_lookup$fill_status == "filled_tier1"])
+.suppressed_cells <- sum(
+  sapply(list(B_facility_table$n_enc_missing_zip_sup, B_facility_table$n_supporting_sup), function(x)
+    sum(x == "<11", na.rm = TRUE))
+)
+
+QC_hard <- tibble::tibble(
+  Check = c(
+    "no computed->other transition",
+    "filled_tier1 enc == sum missing of filled_tier1 keys",
+    "zip_not_in_db facility vs patient sides"
+  ),
+  Expected = c(
+    "0",
+    as.character(.sum_missing_filled_keys),
+    "facility + patient rows in C_zip_not_in_db"
+  ),
+  Observed = c(
+    if (.baseline_available)
+      as.character(sum(.transition_tbl$n_enc[.transition_tbl$status_before == "computed" &
+                                               .transition_tbl$status_after != "computed"],
+                       na.rm = TRUE))
+    else "N/A (no baseline)",
+    as.character(.n_filled_tier1_enc),
+    glue("{nrow(C_fac_side)} facility rows, {nrow(C_pat_side)} patient rows")
+  ),
+  Pass = c(
+    if (.baseline_available)
+      as.character(sum(.transition_tbl$n_enc[.transition_tbl$status_before == "computed" &
+                                               .transition_tbl$status_after != "computed"],
+                       na.rm = TRUE) == 0)
+    else "N/A",
+    as.character(.n_filled_tier1_enc == .sum_missing_filled_keys),
+    "informational"
+  )
+)
+
+if (.baseline_available) {
+  .no_computed_flip <- sum(
+    .transition_tbl$n_enc[.transition_tbl$status_before == "computed" &
+                          .transition_tbl$status_after != "computed"],
+    na.rm = TRUE)
+  stopifnot("QC FAIL: computed->other transition found (Phase 182 D-18)" = .no_computed_flip == 0L)
+}
+stopifnot("QC FAIL: filled_tier1 encounter count != sum of missing enc for filled keys" =
+            .n_filled_tier1_enc == .sum_missing_filled_keys)
+
+QC_info <- tibble::tibble(
+  Item = c(
+    "baseline_rds", "baseline_available", "toggle_facility_zip_fill",
+    "FACILITYID_placeholder_list", "filled_tier1_encounters",
+    "ambiguous_keys", "no_donor_keys", "no_key_encounters",
+    "sensitivity_tier_fill_ok_keys",
+    "suppressed_cell_count"
+  ),
+  Value = c(
+    basename(.baseline_rds_path),
+    as.character(.baseline_available),
+    as.character(isTRUE(CONFIG$facility_zip_fill)),
+    paste(FACILITYID_PLACEHOLDERS, collapse = ", "),
+    sup11(.n_filled_tier1_enc),
+    sup11(sum(fac_lookup$fill_status == "ambiguous")),
+    sup11(sum(fac_lookup$fill_status == "no_donor")),
+    sup11(.no_key_enc),
+    sup11(sum(fac_lookup$sens_fill_ok, na.rm = TRUE)),
+    sup11(.suppressed_cells)
+  )
+)
+
+# ----- KEY sheet for diag workbook -----
+.diag_n_recovered <- if (.baseline_available && "facility_zip_source" %in% names(enc_distance)) {
+  # encounters that moved from non-computed to computed after fill
+  .enc_paired2 <- enc_distance |>
+    dplyr::left_join(dplyr::select(enc_baseline, ENCOUNTERID, status_before = distance_status),
+                     by = "ENCOUNTERID")
+  sum(.enc_paired2$facility_zip_source == "filled_tier1" &
+      .enc_paired2$distance_status == "computed" &
+      .enc_paired2$status_before != "computed", na.rm = TRUE)
+} else { NA_integer_ }
+
+KEY_diag <- tibble::tibble(
+  Field = c(
+    "Script", "Run date", "Baseline RDS", "After RDS",
+    "toggle_facility_zip_fill", "FACILITYID_placeholder_list",
+    "Tier 1 rule", "Sensitivity tier rule (reported only)",
+    "Encounters recovered (status -> computed) by Tier 1",
+    "Remaining facility_zip_missing", "Remaining zip_not_in_db",
+    "zip_not_in_db: facility side", "zip_not_in_db: patient side"
+  ),
+  Description = c(
+    "R/122_encounter_distance.R",
+    RUN_DATE,
+    basename(.baseline_rds_path),
+    basename(OUTPUT_RDS),
+    as.character(isTRUE(CONFIG$facility_zip_fill)),
+    paste(FACILITYID_PLACEHOLDERS, collapse = ", "),
+    "Exactly 1 distinct ZIP5 with >= 3 supporting encounters per (SOURCE, FACILITYID) key",
+    "Modal ZIP5 >= 95% share and >= 10 supporting encounters; NOT applied to primary RDS",
+    sup11(.diag_n_recovered),
+    sup11(sum(enc_distance$distance_status == "facility_zip_missing")),
+    sup11(sum(enc_distance$distance_status == "zip_not_in_db")),
+    glue("{nrow(C_fac_side)} distinct ZIP5 codes"),
+    glue("{nrow(C_pat_side)} distinct ZIP3 prefixes")
+  )
+)
+
+# ----- Build and save diagnostic workbook -----
+wb_diag <- wb_workbook()
+
+add_styled_sheet(wb_diag, "KEY",
+  "Phase 182: Facility ZIP Diagnosis — Workbook KEY",
+  glue("Run date: {RUN_DATE} | Baseline: {basename(.baseline_rds_path)} | After: {basename(OUTPUT_RDS)}"),
+  KEY_diag)
+
+add_styled_sheet(wb_diag, "A_status_summary",
+  "A: Distance Status Summary (Before vs After Fill)",
+  "Encounter and patient counts by distance_status; zip_not_in_db split by side/cause. Baseline comparison if available.",
+  A_status_summary,
+  extra_tbl = .znid_summary,
+  extra_label = "zip_not_in_db split by side and cause")
+
+add_styled_sheet(wb_diag, "B_facility_table",
+  "B: Facility Keys with Missing ZIP",
+  "One row per (SOURCE, FACILITYID) key with >= 1 encounter missing a facility ZIP. Counts suppressed 1-10. Final row: no-key encounters.",
+  B_facility_table)
+
+add_styled_sheet(wb_diag, "C_zip_not_in_db",
+  "C: ZIP Codes Not in Centroid Table",
+  "Facility side: ZIP5 + n_enc. Patient side: ZIP3 prefix + n_enc (no 5-digit patient ZIPs).",
+  C_zip_not_in_db)
+
+add_styled_sheet(wb_diag, "QC",
+  "QC: Phase 182 Facility ZIP Fill Quality Checks",
+  "Hard checks (stopifnot on critical) and informational items. Transition table if baseline available.",
+  QC_hard,
+  extra_tbl = dplyr::bind_rows(
+    QC_info,
+    if (.baseline_available) .transition_tbl else tibble::tibble(note = "no baseline")
+  ),
+  extra_label = "Informational items and transition table (status_before x status_after)")
+
+wb_save(wb_diag, DIAG_OUTPUT_XLSX)
+message(glue("  Phase 182 diagnostic workbook written: {DIAG_OUTPUT_XLSX}"))
+message(glue("  Sheets: KEY, A_status_summary, B_facility_table, C_zip_not_in_db, QC"))
+section_done("SECTION 12b Phase 182 diagnostic workbook")
 
 message("=== R/122_encounter_distance.R complete ===")

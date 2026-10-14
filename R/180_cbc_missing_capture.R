@@ -231,13 +231,43 @@ py_primary_ref <- py_raw |>
 
 ref <- run_gee(py_primary_ref, "cbc_year", "far", "Phase 179 primary (recomputed)")
 
+# Phase 182 D-22a: Read expected OR/CI from the Phase 179 workbook matching the pinned RDS.
+# Derive the xlsx date from the RDS name (cbc_patient_year_YYYYMMDD.rds).
+P179_PRIMARY_LABEL <- "Primary: years 2+"  # exact label in Model_Results (R/179 line ~439)
+.p179_rds_date_match <- regmatches(basename(p179_path), regexpr("\\d{8}", basename(p179_path)))
+if (length(.p179_rds_date_match) == 1L && nzchar(.p179_rds_date_match)) {
+  .p179_xlsx_path <- file.path(CONFIG$output_dir, glue("cbc_patient_year_{.p179_rds_date_match}.xlsx"))
+} else {
+  .p179_xlsx_path <- ""
+}
 stopifnot(
-  "Reproduction check FAILED: round(ref$or, 2) != 0.84  -- verify you are using the pinned Phase 179 RDS cbc_patient_year_20261013.rds" =
-    round(ref$or, 2) == 0.84,
-  "Reproduction check FAILED: round(ref$ci_lo, 2) != 0.73 -- verify you are using the pinned Phase 179 RDS" =
-    round(ref$ci_lo, 2) == 0.73,
-  "Reproduction check FAILED: round(ref$ci_hi, 2) != 0.98 -- verify you are using the pinned Phase 179 RDS" =
-    round(ref$ci_hi, 2) == 0.98
+  "Phase 179 workbook not found for reproduction check (D-22a) -- confirm xlsx exists alongside RDS" =
+    nzchar(.p179_xlsx_path) && file.exists(.p179_xlsx_path)
+)
+.p179_model_results <- tryCatch(
+  openxlsx::read.xlsx(.p179_xlsx_path, sheet = "Model_Results"),
+  error = function(e) stop(glue("D-22a: Cannot read Model_Results from {basename(.p179_xlsx_path)}: {e$message}"))
+)
+stopifnot("D-22a: Model_Results sheet missing Analysis column" = "Analysis" %in% names(.p179_model_results))
+.p179_primary_rows <- .p179_model_results[.p179_model_results$Analysis == P179_PRIMARY_LABEL, ]
+stopifnot(
+  glue("D-22a: exactly one row matching '{P179_PRIMARY_LABEL}' required in Model_Results; ",
+       "found {nrow(.p179_primary_rows)} (check label or workbook)") =
+    nrow(.p179_primary_rows) == 1L
+)
+.p179_ref <- .p179_primary_rows[1, ]
+message(glue("  D-22a repro reference: OR={round(as.numeric(.p179_ref$OR), 2)}, ",
+             "CI={round(as.numeric(.p179_ref$CI_low), 2)}-{round(as.numeric(.p179_ref$CI_high), 2)}, ",
+             "from {basename(.p179_xlsx_path)} '{P179_PRIMARY_LABEL}'"))
+
+stopifnot(
+  glue("Reproduction check FAILED: round(OR, 2) != {round(as.numeric(.p179_ref$OR), 2)}  ",
+       "-- verify you are using the Phase 179 RDS matching {basename(.p179_xlsx_path)}") =
+    round(ref$or, 2) == round(as.numeric(.p179_ref$OR), 2),
+  glue("Reproduction check FAILED: round(CI_low, 2) != {round(as.numeric(.p179_ref$CI_low), 2)}") =
+    round(ref$ci_lo, 2) == round(as.numeric(.p179_ref$CI_low), 2),
+  glue("Reproduction check FAILED: round(CI_high, 2) != {round(as.numeric(.p179_ref$CI_high), 2)}") =
+    round(ref$ci_hi, 2) == round(as.numeric(.p179_ref$CI_high), 2)
 )
 message(glue("  Reproduction check PASSED: {fmt_result(ref)}"))
 

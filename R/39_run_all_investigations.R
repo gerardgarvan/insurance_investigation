@@ -222,7 +222,7 @@ investigation_scripts <- c(
   "R/116_encounter_ses_index.R",                 # Encounter-level SES index linkage (Phase 144); resolves ZIP9/ZIP5 per encounter via get_zip9_at_date()|>approximate_zip9(), joins SDI/ADI/SVI/RUCA, outputs encounter_ses_index_YYYYMMDD.rds + summary xlsx
   "R/120_zip5_backfill_concordance.R",            # ZIP5-missing patients: ZIP9 availability and first-5 concordance (Phase 150); read-only console diagnostic
   "R/121_zip_problem_inventory.R",              # Per-patient ZIP problem flags, triage categories, and Phase 150 reconciliation (Phase 151); writes zip_problem_inventory_YYYYMMDD.xlsx + .rds
-  "R/122_encounter_distance.R",                 # Encounter-ZIP to residence haversine distance (Phase 152); outputs encounter_distance_YYYYMMDD.xlsx + .rds
+  "R/122_encounter_distance.R",                 # Encounter-ZIP to residence haversine distance (Phase 152); facility ZIP fill + diagnosis workbook (Phase 182); outputs encounter_distance_YYYYMMDD.xlsx + .rds + 182_facility_zip_diagnosis_YYYYMMDD.xlsx
   "R/147_surveillance_modality_frequency.R",   # Surveillance modality frequency (Phase 158); outputs surveillance_modality_frequency_INTERNAL_<date>.xlsx, surveillance_modality_frequency_<date>.xlsx, surveillance_modality_patient_<date>.rds
   "R/162_export_patient_modality_dates.R",      # Patient modality date export (Phase 162); INTERNAL CSV, no _any columns
   "R/165_distance_cbc_association.R",   # Distance >100 mi x CBC association (Phase 165); method per CONFIG$distance_assoc_method; both windows
