@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.11
-milestone_name: CBC Team Deliverable, Distance Completeness, Survivorship Modeling
-status: in_progress
-stopped_at: Milestone initialized — no phases planned yet
-last_updated: "2026-10-14T00:00:00.000Z"
-last_activity: 2026-10-14
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: Defining requirements
+stopped_at: Phase 181 context gathered
+last_updated: "2026-10-14T15:14:34.106Z"
+last_activity: 2026-10-14 — Milestone v3.11 started
 progress:
-  total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 38
+  completed_phases: 31
+  total_plans: 103
+  completed_plans: 116
+  percent: 100
 ---
 
 # Project State
@@ -100,4 +100,4 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 ## Session Continuity
 
 **Last command:** Phase 180 complete — missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04). D-05: same side → limitation row added to R/179 KEY builder (both bounded ORs below 1: far=1 OR 0.776, far=0 OR 0.872). D-09: moves toward 1 (37.4% log-OR shrinkage, >= 25% threshold) → consistent with out-of-system care; report only to Amy/Erin with D-165-01. MISS-01..04 ticked. HiPerGator run confirmed 2026-10-13.
-**Stopped at:** Completed 180-01-PLAN.md
+**Stopped at:** Phase 181 context gathered
