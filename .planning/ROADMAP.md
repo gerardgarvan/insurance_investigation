@@ -793,7 +793,8 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 2. Chi-squared (or Fisher) p-value, OR, and 95% CI are reported.
 3. Missing-exposure patient count is reported in the KEY and QC sheet, not included in the 2×2.
 4. A one-page markdown memo covering all five required elements (181 result, 165 vs 179, 180 bounds, 180 capture check, D-15/D-165-01) exists in the phase directory.
-**Plans**: TBD (plan at `/gsd:plan-phase 181`)
+**Plans**: 1 plan
+- [ ] 181-01-PLAN.md — R/181 patient-level prior-year CBC × far 2×2 analysis + workbook, R/39/SCRIPT_INDEX registration, and team memo (CBCP-01, CBCP-02)
 
 ### Phase 182: Facility ZIP Recovery
 **Goal**: Recover as many of the 581 missing-exposure patients (MISS-01 group b) as possible by diagnosing and fixing facility ZIP gaps in R/122, then propagating the fix through R/179 and R/180
