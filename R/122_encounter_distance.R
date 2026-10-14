@@ -1383,7 +1383,15 @@ key_tbl <- tibble::tibble(
     "Phase 182: filled_tier1 encounters",
     "Phase 182: ambiguous keys",
     "Phase 182: no_donor keys",
-    "Phase 182: no-key encounters (not_filled_no_key)"
+    "Phase 182: no-key encounters (not_filled_no_key)",
+    # Phase 182.1 rows
+    "Phase 182.1: HRSA crosswalk file",
+    "Phase 182.1: HRSA crosswalk rows (ZIP->ZCTA mappings)",
+    "Phase 182.1: placeholder facility ZIPs blanked",
+    "Phase 182.1: distance_status before fallback (computed | zip_not_in_db | ...)",
+    "Phase 182.1: distance_status after fallback (computed | zip_not_in_db | ...)",
+    "Phase 182.1: distance_method distribution",
+    "Phase 182.1: gazetteer vintage note"
   ),
   Description = c(
     "R/122_encounter_distance.R",
@@ -1409,7 +1417,26 @@ key_tbl <- tibble::tibble(
     as.character(if (exists("fac_lookup")) sum(fac_lookup$fill_status == "ambiguous") else "N/A"),
     as.character(if (exists("fac_lookup")) sum(fac_lookup$fill_status == "no_donor") else "N/A"),
     as.character(if (exists("enc_for_dist") && "facility_zip_source" %in% names(enc_for_dist))
-      sum(enc_for_dist$facility_zip_source == "not_filled_no_key") else "N/A")
+      sum(enc_for_dist$facility_zip_source == "not_filled_no_key") else "N/A"),
+    # Phase 182.1 values
+    attr(hrsa_xwalk, "source_file"),
+    as.character(nrow(hrsa_xwalk)),
+    as.character(n_placeholder),
+    paste(
+      mapply(function(nm, n) paste0(nm, "=", n), names(status_before), as.integer(status_before)),
+      collapse = " | "
+    ),
+    paste(
+      mapply(function(nm, n) paste0(nm, "=", n), names(status_after), as.integer(status_after)),
+      collapse = " | "
+    ),
+    {
+      dm_tbl <- table(encounters$distance_method, useNA = "ifany")
+      paste(mapply(function(nm, n) paste0(nm, "=", n),
+                   names(dm_tbl), as.integer(dm_tbl)), collapse = " | ")
+    },
+    glue("ZCTA gazetteer: Census 2020 ZCTA Gazetteer ({basename(gaz_path)}); ",
+         "HRSA crosswalk vintage may differ — note for comparability.")
   )
 )
 
