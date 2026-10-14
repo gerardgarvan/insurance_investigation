@@ -26,6 +26,7 @@
 - ✅ **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (shipped 2026-10-12)
 - ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
 - ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
+- 🔄 **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (in progress)
 
 ## Phases
 
@@ -753,3 +754,111 @@ See `.planning/milestones/v3.10-ROADMAP.md` for full phase details.
 See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
 </details>
+
+---
+
+## 🔄 v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (Active)
+
+**Milestone Goal:** Deliver the team's CBC × distance prior-year analysis (Phase 181), recover 581 missing-exposure patients via facility ZIP repair and re-run affected analyses (Phase 182), add a MICE multiple-imputation sensitivity analysis for remaining missing-exposure (Phase 183), and model survivorship surveillance modality rates with a distance × modality interaction (Phase 184).
+
+**Phase sequencing rationale:** Phase 181 is independent (reads Phase 179 RDS only) and delivers first. Phase 182 must precede Phase 183 (imputation handles residual missing-exposure after ZIP recovery). Phase 184 is independent of 182/183 and can begin after 181 ships.
+
+## Phases (v3.11)
+
+- [ ] **Phase 181: CBC Prior-Year vs Distance** — Patient-level 2×2 (prior-year CBC × far), chi-squared/Fisher test, OR, and one-page team summary memo
+- [ ] **Phase 182: Facility ZIP Recovery** — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180
+- [ ] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
+- [ ] **Phase 184: Survivorship Modality Rates and Distance × Modality Interaction** — Per-modality rates per patient-year; Poisson/NB GEE with far × modality interaction
+
+## Phase Details (v3.11)
+
+### Phase 181: CBC Prior-Year vs Distance
+**Goal**: Deliver the patient-level 2×2 chi-squared analysis of CBC in the prior year vs far-from-care, and the team summary memo, to close the 2026-10-13 Erin/Ray request
+**Depends on**: Phase 180 (reads `output/internal/cbc_patient_year_20261013.rds`)
+**Requirements**: CBCP-01, CBCP-02
+
+**Design constraints:**
+- Unit: patient. "Prior year" = max year_index per patient from the Phase 179 RDS.
+- Primary: year_index ≥ 2 (survivorship cohort). Secondary: all patients (year_index ≥ 1).
+- Outcome: `cbc_year` from the Phase 179 RDS (build_cbc_events() definition).
+- Exposure: Phase 179 `far` (patient median post-anchor distance > 100 mi). Missing `far` → reported not tested.
+- Test: 2×2 Pearson chi-squared; Fisher if any expected cell count < 5. OR with 95% CI. CBC rates by group.
+- Also report: year_index distribution of the "prior year" for each patient.
+- Team memo (CBCP-02): neutral language, markdown in the phase directory. Content: Phase 181 result; Phase 165 vs Phase 179 OR comparison; Phase 180 bounding (noting not-far CI crosses 1); Phase 180 capture check (37.4% shrinkage, single-source split 0.754 vs 1.068, with which group is which stated); open decisions D-15 and D-165-01.
+- KEY note: "Prior year" definition to be confirmed with Erin/Ray.
+- Convention: interactive R on HiPerGator; source(f, local = new.env(parent = globalenv())); register in R/39 + SCRIPT_INDEX; no R/88 section unless team requests.
+
+**Success Criteria** (what must be TRUE):
+1. A workbook (KEY leftmost, A_2x2, B_rates, C_year_distribution, QC) is produced for the primary (year_index ≥ 2) and secondary (all years) analysis, with counts 1-10 suppressed.
+2. Chi-squared (or Fisher) p-value, OR, and 95% CI are reported.
+3. Missing-exposure patient count is reported in the KEY and QC sheet, not included in the 2×2.
+4. A one-page markdown memo covering all five required elements (181 result, 165 vs 179, 180 bounds, 180 capture check, D-15/D-165-01) exists in the phase directory.
+**Plans**: TBD (plan at `/gsd:plan-phase 181`)
+
+### Phase 182: Facility ZIP Recovery
+**Goal**: Recover as many of the 581 missing-exposure patients (MISS-01 group b) as possible by diagnosing and fixing facility ZIP gaps in R/122, then propagating the fix through R/179 and R/180
+**Depends on**: Phase 181 (can begin after 181 ships; Phase 183 depends on Phase 182)
+**Requirements**: FZIP-01, FZIP-02
+
+**Design constraints:**
+- Source of truth for the 581: Phase 180 output `cbc_missing_capture_20261013.xlsx` MISS-01 group (b) (facility_zip_missing + zip_not_in_db).
+- Diagnosis scope: which FACILITY_LOCATION / FACILITYID values are responsible; whether encounters at those facilities elsewhere in the data carry a fillable ZIP.
+- Fix scope: R/122 and its helper utilities only. No changes to R/179 or R/180 logic — only re-run them.
+- Fix condition: unambiguous source only (e.g. same FACILITYID has a ZIP on other records with no contradicting ZIP).
+- Re-run chain: R/122 → R/179 → R/180. Record before/after patients/encounters recovered and OR change.
+- Output: a diagnostic workbook + a brief recovery report in the phase directory.
+
+**Success Criteria** (what must be TRUE):
+1. FZIP-01: A diagnosis document identifies which facilities/ZIPs are responsible for the 581, and whether FACILITY_LOCATION or FACILITYID-based fill or centroid-table additions are available.
+2. FZIP-02: R/122 (or its helpers) is updated where the source is unambiguous; R/122 → R/179 → R/180 re-run on HiPerGator; a recovery report states patients/encounters recovered and the updated OR with 95% CI.
+3. If no unambiguous fill exists for any facility, FZIP-02 is satisfied with a documented "no fillable rows" finding.
+**Plans**: TBD (plan at `/gsd:plan-phase 182`)
+
+### Phase 183: MICE Sensitivity for Distance
+**Goal**: Quantify how sensitive the Phase 179 primary GEE result is to the missing-exposure assumption by imputing patient median distance / `far` via MICE and pooling with Rubin's rules
+**Depends on**: Phase 182 (imputation handles residual missing-exposure after ZIP recovery)
+**Requirements**: MICE-01, MICE-02
+
+**Design constraints:**
+- mice package (CRAN); m ≥ 20 imputed datasets.
+- Predictors: to be confirmed at /gsd:discuss-phase 183. Candidates: triage, SOURCE, single-source flag, age, sex, payer, ADI, encounter counts.
+- Imputation target: patient median post-anchor distance or `far` (binary). Discuss which is the more defensible target.
+- Refit: Phase 179 primary GEE specification in each imputed dataset.
+- Pool: Rubin's rules (mice::pool()).
+- Diagnostics: convergence trace plots, density overlays of observed vs imputed.
+- Comparison table: pooled OR vs complete-case OR vs Phase 180 lower bound vs Phase 180 upper bound.
+- Output: a workbook + a summary section for the team.
+
+**Success Criteria** (what must be TRUE):
+1. MICE-01: m ≥ 20 imputed datasets produced; trace plots and density overlays confirm reasonable convergence; imputation model and predictor rationale documented in KEY.
+2. MICE-02: Phase 179 primary GEE refitted in each imputed set; pooled OR with 95% CI produced via Rubin's rules; comparison table (pooled vs complete-case vs bounds) in the workbook.
+**Plans**: TBD (plan at `/gsd:discuss-phase 183` then `/gsd:plan-phase 183`)
+
+### Phase 184: Survivorship Modality Rates and Distance × Modality Interaction
+**Goal**: Produce per-modality surveillance rates per patient-year and a formal model testing whether the far × modality interaction is significant
+**Depends on**: Phase 181 (independent of 182/183; can start after 181 ships)
+**Requirements**: MODR-01, MODR-02
+
+**Design constraints:**
+- Reuse R/147 / R/166 definitions and person-time (do not re-derive).
+- Annual primary; 6-month as sensitivity.
+- Rates per patient-year: count of distinct modality dates / person-years, by modality, with suppression (counts 1-10 → "<11"; rates only when both n ≥ 11).
+- Model: count of tests per patient-year by modality, offset = log(person_years), link = log.
+- Distribution: Poisson or negative-binomial (choose based on overdispersion in discuss phase). GEE or GLMM (GEE preferred for marginal inference; GLMM as sensitivity).
+- Cluster: patient ID.
+- Terms: far + modality + far:modality + covariates TBD in discuss.
+- Estimand: modality-specific rate ratio for far vs not-far.
+
+**Success Criteria** (what must be TRUE):
+1. MODR-01: Per-modality surveillance rate table (rate per patient-year by modality × period; annual primary, 6-month sensitivity) produced with suppression applied.
+2. MODR-02: A fitted model with far × modality interaction is reported with modality-specific rate ratios, 95% CIs, and a model-fit summary; overdispersion check documented.
+**Plans**: TBD (plan at `/gsd:discuss-phase 184` then `/gsd:plan-phase 184`)
+
+## Progress (v3.11)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 181. CBC Prior-Year vs Distance | v3.11 | 0 | Not started | — |
+| 182. Facility ZIP Recovery | v3.11 | 0 | Not started | — |
+| 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
+| 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0 | Not started | — |

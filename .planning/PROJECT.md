@@ -159,6 +159,18 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
+## Current Milestone: v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling
+
+**Goal:** Deliver the team's CBC × distance deliverable (Phase 181), recover 581 missing-exposure patients via facility ZIP repair (Phase 182), add a multiple-imputation sensitivity analysis for remaining missing-exposure (Phase 183), and model survivorship surveillance modality rates with a distance × modality interaction (Phase 184).
+
+**Target features:**
+- Prior-year CBC × distance 2×2 analysis + team summary memo (Phase 181)
+- Facility ZIP diagnosis and recovery in R/122 + downstream re-runs (Phase 182)
+- MICE-based multiple-imputation sensitivity for patient median distance / far (Phase 183)
+- Survivorship modality rates over time + Poisson/NB GEE distance × modality interaction (Phase 184)
+
+**Parked (no phases this milestone):** end-of-treatment date rules (pending Sharon); data-completeness check vs Medicaid claims; D-15 primary analysis and D-165-01 method (awaiting Amy/Erin); Phase 168 NHL subsets (pending team review).
+
 ## Last Shipped: v3.10 Distance Missingness & Script Fixes (2026-10-13)
 
 R/179 patient-year CBC analysis confirmed Phase 165 OR (0.845) robust to how missing-exposure patients are classified (both bounded ORs same side). R/180 capture check: OR moves 37.4% toward 1 when restricted to patient-years with in-system lab activity — consistent with out-of-system CBC receipt. D-05 limitation row added to R/179 KEY. D-09 result flagged to Amy/Erin with D-165-01. FIX-01/02 (R/147 quit guard + R/122 KEY note) shipped in Phase 178.

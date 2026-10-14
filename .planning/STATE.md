@@ -1,35 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: completed
-stopped_at: Completed 180-01-PLAN.md
-last_updated: "2026-10-13T18:02:04.851Z"
-last_activity: 2026-10-13
+milestone: v3.11
+milestone_name: CBC Team Deliverable, Distance Completeness, Survivorship Modeling
+status: in_progress
+stopped_at: Milestone initialized — no phases planned yet
+last_updated: "2026-10-14T00:00:00.000Z"
+last_activity: 2026-10-14
 progress:
-  total_phases: 169
-  completed_phases: 149
-  total_plans: 319
-  completed_plans: 325
-  percent: 100
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-13, v3.10 started)
+See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.10 complete — Phase 180 missing-exposure bounding and CBC capture check shipped
+**Current focus:** v3.11 initialized — CBC Team Deliverable, Distance Completeness, Survivorship Modeling (4 phases, starting at Phase 181)
 
 ## Current Position
 
-Phase: 180
-Plan: 01 (complete)
-Status: Phase complete — HiPerGator run confirmed 2026-10-13
-Last activity: 2026-10-13
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-10-14 — Milestone v3.11 started
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
