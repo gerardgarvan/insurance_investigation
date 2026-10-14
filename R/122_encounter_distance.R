@@ -568,7 +568,8 @@ enc_distance <- encounters %>%
     distance_basis,
     enc_centroid_source,
     res_centroid_source,
-    facility_zip_source  # Phase 182: observed/filled_tier1/not_filled/not_filled_no_key
+    facility_zip_source, # Phase 182: observed/filled_tier1/not_filled/not_filled_no_key
+    enc_zip_raw          # Phase 182: retained for diagnostic workbook (Section 12b)
   )
 
 n_with_distance <- sum(!is.na(enc_distance$distance_km))
