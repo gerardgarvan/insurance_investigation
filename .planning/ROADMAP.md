@@ -815,7 +815,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 2. FZIP-02: R/122 (or its helpers) is updated where the source is unambiguous; R/122 → R/179 → R/180 re-run on HiPerGator; a recovery report states patients/encounters recovered and the updated OR with 95% CI.
 3. If no unambiguous fill exists for any facility, FZIP-02 is satisfied with a documented "no fillable rows" finding.
 **Plans**: 3 plans
-- [ ] 182-01-PLAN.md — Fill engine (utils_facility_zip.R: build_facility_zip_lookup + apply_facility_zip_fill), CONFIG$facility_zip_fill toggle, R/122 FACILITYID+SOURCE pull + fill step, unit tests [FZIP-01, FZIP-02] (Wave 1)
+- [x] 182-01-PLAN.md — Fill engine (utils_facility_zip.R: build_facility_zip_lookup + apply_facility_zip_fill), CONFIG$facility_zip_fill toggle, R/122 FACILITYID+SOURCE pull + fill step, unit tests [FZIP-01, FZIP-02] (Wave 1)
 - [ ] 182-02-PLAN.md — 5-sheet diagnostic workbook (KEY/A_status_summary/B_facility_table/C_zip_not_in_db/QC) in R/122 + KEY fill metrics + R/39/SCRIPT_INDEX/R/88 SMOKE-182-01 registration [FZIP-01] (Wave 2, depends on 182-01)
 - [ ] 182-03-PLAN.md — R/182 script-generated 182-RECOVERY.md (before/after ORs read from workbooks by label) + HiPerGator re-run R/122→R/179→R/180 pinned + report placement [FZIP-02] (Wave 3, depends on 182-01, 182-02)
 
@@ -864,6 +864,6 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 181. CBC Prior-Year vs Distance | v3.11 | 1/1 | Complete   | 2026-10-14 |
-| 182. Facility ZIP Recovery | v3.11 | 0 | Not started | — |
+| 182. Facility ZIP Recovery | v3.11 | 1/3 | In Progress|  |
 | 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
 | 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0 | Not started | — |

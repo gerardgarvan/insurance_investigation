@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: completed
+status: verifying
 stopped_at: Phase 182 context gathered
-last_updated: "2026-10-14T16:48:38.387Z"
+last_updated: "2026-10-14T17:43:35.156Z"
 last_activity: 2026-10-14
 progress:
   total_phases: 171
   completed_phases: 150
-  total_plans: 320
-  completed_plans: 326
+  total_plans: 323
+  completed_plans: 327
   percent: 100
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 Phase: 181 (cbc-prior-year-vs-distance) — COMPLETE
 Plan: 1 of 1
-Status: Done — sensitivity bug fixed (year_index >= 2), re-run confirmed, memo approved 2026-10-14
+Status: Phase complete — ready for verification
 Last activity: 2026-10-14
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
