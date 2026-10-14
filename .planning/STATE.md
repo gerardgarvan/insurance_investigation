@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: Defining requirements
-stopped_at: Phase 181 context gathered
-last_updated: "2026-10-14T15:14:34.106Z"
-last_activity: 2026-10-14 — Milestone v3.11 started
+status: verifying
+stopped_at: Completed 181-01-PLAN.md
+last_updated: "2026-10-14T16:12:40.535Z"
+last_activity: 2026-10-14
 progress:
-  total_phases: 38
-  completed_phases: 31
-  total_plans: 103
-  completed_plans: 116
+  total_phases: 170
+  completed_phases: 150
+  total_plans: 320
+  completed_plans: 326
   percent: 100
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.11 initialized — CBC Team Deliverable, Distance Completeness, Survivorship Modeling (4 phases, starting at Phase 181)
+**Current focus:** Phase 181 — cbc-prior-year-vs-distance
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-10-14 — Milestone v3.11 started
+Phase: 181 (cbc-prior-year-vs-distance) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-10-14
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
@@ -100,4 +100,4 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 ## Session Continuity
 
 **Last command:** Phase 180 complete — missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04). D-05: same side → limitation row added to R/179 KEY builder (both bounded ORs below 1: far=1 OR 0.776, far=0 OR 0.872). D-09: moves toward 1 (37.4% log-OR shrinkage, >= 25% threshold) → consistent with out-of-system care; report only to Amy/Erin with D-165-01. MISS-01..04 ticked. HiPerGator run confirmed 2026-10-13.
-**Stopped at:** Phase 181 context gathered
+**Stopped at:** Completed 181-01-PLAN.md

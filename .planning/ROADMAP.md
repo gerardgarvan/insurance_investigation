@@ -765,7 +765,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
 ## Phases (v3.11)
 
-- [ ] **Phase 181: CBC Prior-Year vs Distance** — Patient-level 2×2 (prior-year CBC × far), chi-squared/Fisher test, OR, and one-page team summary memo
+- [x] **Phase 181: CBC Prior-Year vs Distance** — Patient-level 2×2 (prior-year CBC × far), chi-squared/Fisher test, OR, and one-page team summary memo (completed 2026-10-14)
 - [ ] **Phase 182: Facility ZIP Recovery** — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180
 - [ ] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
 - [ ] **Phase 184: Survivorship Modality Rates and Distance × Modality Interaction** — Per-modality rates per patient-year; Poisson/NB GEE with far × modality interaction
@@ -794,7 +794,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 3. Missing-exposure patient count is reported in the KEY and QC sheet, not included in the 2×2.
 4. A one-page markdown memo covering all five required elements (181 result, 165 vs 179, 180 bounds, 180 capture check, D-15/D-165-01) exists in the phase directory.
 **Plans**: 1 plan
-- [ ] 181-01-PLAN.md — R/181 patient-level prior-year CBC × far 2×2 analysis + workbook, R/39/SCRIPT_INDEX registration, and team memo (CBCP-01, CBCP-02)
+- [x] 181-01-PLAN.md — R/181 patient-level prior-year CBC × far 2×2 analysis + workbook, R/39/SCRIPT_INDEX registration, and team memo (CBCP-01, CBCP-02)
 
 ### Phase 182: Facility ZIP Recovery
 **Goal**: Recover as many of the 581 missing-exposure patients (MISS-01 group b) as possible by diagnosing and fixing facility ZIP gaps in R/122, then propagating the fix through R/179 and R/180
@@ -859,7 +859,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 181. CBC Prior-Year vs Distance | v3.11 | 0 | Not started | — |
+| 181. CBC Prior-Year vs Distance | v3.11 | 1/1 | Complete   | 2026-10-14 |
 | 182. Facility ZIP Recovery | v3.11 | 0 | Not started | — |
 | 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
 | 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0 | Not started | — |

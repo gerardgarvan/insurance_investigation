@@ -10,8 +10,8 @@ Deliver the CBC × distance prior-year analysis the team requested on 2026-10-13
 
 ### CBC Prior-Year Analysis (Phase 181)
 
-- [ ] **CBCP-01**: Analyst can produce a 2×2 table of CBC-in-prior-year (yes/no) × far-from-care (<100 mi / ≥100 mi) at the patient level, using the most recent fully observed follow-up year per patient from the Phase 179 RDS (`output/internal/cbc_patient_year_20261013.rds`), with a Pearson chi-squared test (Fisher if any expected count < 5), OR with 95% CI, CBC rates by group, missing-exposure count reported not tested, year_index distribution of the "prior year" reported, and primary analysis restricted to patients with year_index ≥ 2 (survivorship) with all-years secondary analysis.
-- [ ] **CBCP-02**: Analyst can share a one-page team memo (neutral language, markdown in the phase directory) covering: Phase 181 CBCP-01 result; Phase 165 encounter-level OR vs Phase 179 patient-year OR comparison; Phase 180 bounding results (noting that the not-far bound CI crosses 1); Phase 180 capture check (log-OR shrinks 37.4% under lab restriction, single-source split OR 0.754 vs 1.068 with which group is which stated); and open decisions D-15 and D-165-01.
+- [x] **CBCP-01**: Analyst can produce a 2×2 table of CBC-in-prior-year (yes/no) × far-from-care (<100 mi / ≥100 mi) at the patient level, using the most recent fully observed follow-up year per patient from the Phase 179 RDS (`output/internal/cbc_patient_year_20261013.rds`), with a Pearson chi-squared test (Fisher if any expected count < 5), OR with 95% CI, CBC rates by group, missing-exposure count reported not tested, year_index distribution of the "prior year" reported, and primary analysis restricted to patients with year_index ≥ 2 (survivorship) with all-years secondary analysis.
+- [x] **CBCP-02**: Analyst can share a one-page team memo (neutral language, markdown in the phase directory) covering: Phase 181 CBCP-01 result; Phase 165 encounter-level OR vs Phase 179 patient-year OR comparison; Phase 180 bounding results (noting that the not-far bound CI crosses 1); Phase 180 capture check (log-OR shrinks 37.4% under lab restriction, single-source split OR 0.754 vs 1.068 with which group is which stated); and open decisions D-15 and D-165-01.
 
 ### Facility ZIP Recovery (Phase 182)
 
@@ -53,8 +53,8 @@ Deliver the CBC × distance prior-year analysis the team requested on 2026-10-13
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| CBCP-01 | 181 | Pending |
-| CBCP-02 | 181 | Pending |
+| CBCP-01 | 181 | Complete |
+| CBCP-02 | 181 | Complete |
 | FZIP-01 | 182 | Pending |
 | FZIP-02 | 182 | Pending |
 | MICE-01 | 183 | Pending |
