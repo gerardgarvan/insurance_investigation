@@ -344,6 +344,117 @@ message(glue(
   "  encounters after join: {nrow(encounters)} rows (matches encounters_raw: {nrow(encounters_raw)})"
 ))
 
+# ==============================================================================
+# Phase 182.1: Three-tier fallback for zip_not_in_db encounters ----
+# ==============================================================================
+# Applies ONLY to rows currently zip_not_in_db. Existing computed rows are
+# never touched (asserted below).
+# Tier 1 (zipcodeR_raw) is already done by compute_encounter_distance().
+# Tier 2: zipcodeR on HRSA-crosswalked ZCTAs of the zip_not_in_db pairs.
+# Tier 3: haversine on gazetteer centroids of crosswalked ZCTAs (in miles).
+# distance_method column:
+#   zipcodeR_raw       -- resolved by compute_encounter_distance() (tier 1)
+#   zipcodeR_crosswalk -- recovered in tier 2
+#   haversine_gazetteer -- recovered in tier 3
+#   NA                 -- unresolved
+
+# Save distance_mi for all currently-computed rows to assert unchanged after fallback.
+.computed_before <- encounters[encounters$distance_status == "computed", c("ENCOUNTERID", "distance_mi")]
+
+status_before <- table(encounters$distance_status, useNA = "ifany")
+message(glue(
+  "  [182.1 fallback] status_before: ",
+  paste(names(status_before), status_before, sep = "=", collapse = " | ")
+))
+
+encounters$distance_method <- dplyr::if_else(
+  encounters$distance_status == "computed", "zipcodeR_raw", NA_character_
+)
+
+fb <- which(encounters$distance_status == "zip_not_in_db")
+if (length(fb) > 0L) {
+  message(glue("  [182.1 fallback] {length(fb)} zip_not_in_db rows to try"))
+
+  zp <- dplyr::coalesce(map_zip_to_zcta(encounters$zip5_patient[fb],  hrsa_xwalk),
+                        encounters$zip5_patient[fb])
+  zf <- dplyr::coalesce(map_zip_to_zcta(encounters$zip5_facility[fb], hrsa_xwalk),
+                        encounters$zip5_facility[fb])
+
+  pairs <- unique(data.frame(zp, zf, stringsAsFactors = FALSE))
+
+  # Tier 2: zipcodeR on crosswalked codes (same call/row-count/order checks
+  # as compute_encounter_distance() in utils_zip_calendar.R).
+  zd2 <- zipcodeR::zip_distance(pairs$zp, pairs$zf, units = "miles")
+  stopifnot(
+    "tier2 zip_distance() row count != pairs" = nrow(zd2) == nrow(pairs),
+    "tier2 zip_distance() order mismatch"     = identical(as.character(zd2$zipcode_a), pairs$zp)
+  )
+  d2 <- zd2$distance
+
+  # Tier 3: haversine on gazetteer centroids for still-NA pairs.
+  need3 <- is.na(d2)
+  d3    <- rep(NA_real_, nrow(pairs))
+  if (any(need3)) {
+    cp <- get_zip_centroid(pairs$zp[need3], level = "zip5")
+    cf <- get_zip_centroid(pairs$zf[need3], level = "zip5")
+    stopifnot(
+      "tier3 patient centroid rows != need3 count" = nrow(cp) == sum(need3),
+      "tier3 facility centroid rows != need3 count" = nrow(cf) == sum(need3)
+    )
+    d3[need3] <- haversine_km(cp$lat, cp$lon, cf$lat, cf$lon) * 0.621371
+  }
+
+  pairs$d <- d2
+  pairs$m <- ifelse(!is.na(d2), "zipcodeR_crosswalk", NA_character_)
+  pairs$d[need3] <- d3[need3]
+  pairs$m[need3] <- ifelse(!is.na(d3[need3]), "haversine_gazetteer", NA_character_)
+
+  res <- dplyr::left_join(
+    data.frame(zp, zf, stringsAsFactors = FALSE),
+    pairs, by = c("zp", "zf")
+  )
+  stopifnot("fallback res row count != length(fb)" = nrow(res) == length(fb))
+
+  ok <- !is.na(res$d)
+  encounters$distance_mi[fb[ok]]     <- res$d[ok]
+  encounters$distance_method[fb[ok]] <- res$m[ok]
+  encounters$distance_status[fb[ok]] <- "computed"
+
+  n_recovered <- sum(ok)
+  message(glue("  [182.1 fallback] recovered: {n_recovered} (tier2+tier3 combined)"))
+} else {
+  message("  [182.1 fallback] no zip_not_in_db rows -- fallback skipped")
+}
+
+status_after <- table(encounters$distance_status, useNA = "ifany")
+message(glue(
+  "  [182.1 fallback] status_after:  ",
+  paste(names(status_after), status_after, sep = "=", collapse = " | ")
+))
+
+stopifnot(
+  "fallback changed total row count"                   = sum(status_before) == sum(status_after),
+  "fallback reduced computed count (impossible)"       =
+    (if (is.na(status_after[["computed"]])) 0L else status_after[["computed"]]) >=
+    (if (is.na(status_before[["computed"]])) 0L else status_before[["computed"]])
+)
+
+# Assert that all previously-computed distance_mi values are unchanged.
+.computed_after <- encounters[encounters$ENCOUNTERID %in% .computed_before$ENCOUNTERID &
+                               encounters$distance_status == "computed",
+                              c("ENCOUNTERID", "distance_mi")]
+.computed_after <- .computed_after[order(.computed_after$ENCOUNTERID), ]
+.computed_before <- .computed_before[order(.computed_before$ENCOUNTERID), ]
+stopifnot(
+  "previously-computed distance_mi values changed after fallback" =
+    isTRUE(all.equal(.computed_before$distance_mi, .computed_after$distance_mi,
+                     tolerance = 0, check.names = FALSE))
+)
+
+# Recompute distance_km for ALL rows from the (possibly updated) distance_mi.
+encounters <- encounters |>
+  dplyr::mutate(distance_km = distance_mi * 1.609344)
+
 section_done("SECTION 4 residence ZIP (patient ZIP calendar + compute_encounter_distance)")
 
 # ==============================================================================
@@ -587,6 +698,7 @@ enc_distance <- encounters %>%
     distance_km,
     distance_km_haversine,
     distance_status,
+    distance_method,     # Phase 182.1: zipcodeR_raw/zipcodeR_crosswalk/haversine_gazetteer/NA
     distance_basis,
     enc_centroid_source,
     res_centroid_source,
