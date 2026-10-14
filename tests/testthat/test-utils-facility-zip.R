@@ -1,5 +1,5 @@
-source("R/00_config.R")
-source("R/utils/utils_facility_zip.R")
+source(here::here("R/00_config.R"))
+source(here::here("R/utils/utils_facility_zip.R"))
 
 # ==============================================================================
 # test-utils-facility-zip.R -- Unit tests for facility ZIP fill helpers
