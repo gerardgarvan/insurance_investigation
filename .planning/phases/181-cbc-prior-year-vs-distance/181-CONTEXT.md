@@ -65,7 +65,7 @@ plus a one-page team summary memo. Read-only: no new cohort building, no new exp
 - **D-12:** "Out of system" in the memo means outside the OneFlorida+ network.
 
 ### Team Memo Structure (CBCP-02)
-- **D-13:** One-page markdown file in the phase directory. Five headed sections with bullet lists
+- **D-13:** One-page markdown file in the phase directory. Six headed sections with bullet lists
   under each. Neutral language throughout. No patient-level data; counts 1–10 as `<11`.
 - **D-14:** Section structure:
   1. **Question and definitions** — "prior year" = working definition; distance = patient median
@@ -116,7 +116,7 @@ plus a one-page team summary memo. Read-only: no new cohort building, no new exp
   file naming convention
 
 ### Phase 165 — Encounter-Level OR (memo comparison)
-- `.planning/phases/165-*/165-CONTEXT.md` — D-165-01 (rao_scott decided 2026-10-08), window
+- `.planning/phases/165-*/165-CONTEXT.md` — D-165-01 primary method — pending Amy/Erin (provisionally patient-level Fisher), window
   conventions
 
 ### Config and Conventions

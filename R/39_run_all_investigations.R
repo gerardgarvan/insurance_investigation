@@ -243,7 +243,8 @@ investigation_scripts <- c(
   "R/170_nhl_gantt_subsets.R",                # NHL-only/HL+NHL gantt subsets with chemo-combos E-J join (Phase 168); internal patient-level outputs
   "R/177_temporal_match_sizing.R",           # Temporal ZIP-match sizing memo (Phase 177); sizes patient_zip_missing encounters, projects >100 mi, applies locked decision rule; writes temporal_match_sizing_YYYYMMDD.xlsx + internal RDS
   "R/179_cbc_patient_year.R",                # CBC within each follow-up year, patient-year re-spec of Phase 165 (Phase 179); GEE logistic, years 2+ primary; writes cbc_patient_year_YYYYMMDD.xlsx + internal RDS
-  "R/180_cbc_missing_capture.R"              # Missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04) for Phase 179; reads pinned cbc_patient_year_20261013.rds; writes cbc_missing_capture_YYYYMMDD.xlsx + internal RDS (Phase 180)
+  "R/180_cbc_missing_capture.R",             # Missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04) for Phase 179; reads pinned cbc_patient_year_20261013.rds; writes cbc_missing_capture_YYYYMMDD.xlsx + internal RDS (Phase 180)
+  "R/181_cbc_prior_year.R"                   # Prior-year CBC x far-from-care 2x2 (Phase 181); reads pinned cbc_patient_year_20261013.rds and cbc_missing_capture_20261013.xlsx; writes cbc_prior_year_YYYYMMDD.xlsx + memo (CBCP-01, CBCP-02)
 )
 
 for (script in investigation_scripts) {
