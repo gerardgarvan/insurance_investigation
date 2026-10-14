@@ -11,7 +11,9 @@ Diagnose and fix facility ZIP gaps in R/122 that cause the 581 MISS-01 group (b)
 fills via a new helper utility; re-runs R/122 → R/179 → R/180; produces a diagnostic workbook
 and a brief recovery report.
 
-Fix scope is R/122 + its helper utilities only. R/179 and R/180 logic is unchanged — only re-run.
+Fix scope is R/122 + its helper utilities. R/179 analysis logic is unchanged — only re-run. R/180 gets one
+mechanical change (D-22a: reproduction check reads its expected values instead of constants); its analysis
+logic is unchanged.
 
 </domain>
 
@@ -20,7 +22,9 @@ Fix scope is R/122 + its helper utilities only. R/179 and R/180 logic is unchang
 
 ### Disambiguation Rule
 - **D-01:** Fill key = `SOURCE + FACILITYID` (never match across SOURCE — FACILITYID is not
-  unique across OneFlorida+ partners).
+  unique across OneFlorida+ partners). FACILITYID that is NA, blank/whitespace, or a placeholder code
+  identified in pre-flight is "no key": never a donor, never filled (status `no_key`). Joins use
+  `na_matches = "never"`.
 - **D-02 (Tier 1 — primary fill):** Fill if and only if all encounters sharing that
   `(SOURCE, FACILITYID)` key with a valid `FACILITY_LOCATION` have **exactly one distinct
   normalized ZIP5**, with **≥ 3 supporting encounters**. Any disagreement → no fill.
@@ -77,8 +81,11 @@ Workbook: `output/182_facility_zip_diagnosis_<YYYYMMDD>.xlsx` (UF colors, suppre
   suppressed 1–10.
 - **D-17 C_zip_not_in_db:** Facility-side ZIPs listed with counts. Patient-side: ZIP3 + count
   only.
-- **D-18 QC:** Before/after encounter totals reconcile; no encounter flipped from `computed`
-  to another status; suppression count; Tier 1 n == sum of `filled_tier1` encounters.
+- **D-18 QC:** "Before" = the actual 20261013 R/122 RDS, matched by ENCOUNTERID (row-set
+  differences reported). Before/after encounter totals reconcile; no encounter flipped from
+  `computed` to another status; Tier 1 n == sum of `filled_tier1` encounters; filled encounters
+  split into "now computed" vs "still not computed" (e.g. filled ZIP not in centroid table);
+  suppression count.
 - **D-19 Nice-to-have (Claude's discretion):** Facility ZIP stability by year (does a
   FACILITYID flip ZIPs across calendar years?). Include if it fits without major extra work.
 
@@ -89,17 +96,22 @@ Workbook: `output/182_facility_zip_diagnosis_<YYYYMMDD>.xlsx` (UF colors, suppre
   2. The key numbers also appear in the workbook KEY (D-14) — not a separate sheet.
 - **D-21 Required content of 182-RECOVERY.md:**
   - Encounters and patients recovered by tier; remaining missing by reason.
+  - Headline: of the Phase 180 MISS-01 missing-exposure patients, how many gained exposure (old vs new
+    Phase 179 RDS `exposure_missing`), by their Phase 180 `miss_reason` (group (b) = the 581).
   - zip_not_in_db diagnosis summary.
   - Effect on results: Phase 179 primary OR (before vs after, read from Phase 179 workbook
     by exact label at runtime), Phase 180 bounds/branch and capture-check % change/branch,
-    whether any locked decision branch changed.
+    whether any locked decision branch changed (D-05 bounding AND D-09 capture check).
   - If no unambiguous fill exists for any facility: explicit "no fillable rows" statement.
   - Neutral language; aggregates only; counts 1–10 as `<11`.
 
 ### Re-Run Chain and Path Pinning
 - **D-22:** R/179 reads the R/122 RDS via `R179_R122_RDS` (explicit override, not
   auto-latest pickup). For the Phase 182 re-run, pass the new dated RDS path explicitly
-  when sourcing R/179. Similarly for R/180.
+  when sourcing R/179. Similarly for R/180 (`R180_P179_RDS`, `R180_R122_RDS`).
+- **D-22a:** R/180's reproduction check (currently hard-wired to OR 0.84, CI 0.73–0.98) is changed to
+  read the expected primary OR and CI from the KEY/Model_Results of the Phase 179 workbook whose run
+  date matches the pinned Phase 179 RDS. Behaviour on the original 20261013 inputs is unchanged.
 - **D-23:** Phase 181's memo has been sent to the team. Re-running R/181 is out of scope
   unless explicitly requested.
 - **D-24:** All pinned file paths for the re-run (new R/122 RDS, R/179 output, R/180 output)
@@ -109,8 +121,10 @@ Workbook: `output/182_facility_zip_diagnosis_<YYYYMMDD>.xlsx` (UF colors, suppre
 - **D-25:** Interactive R on HiPerGator from repo root. `module load R/4.5`.
   `source("R/122_encounter_distance.R", local = new.env(parent = globalenv()))`.
   Same pattern for R/179 and R/180 re-runs with the pinned paths.
-- **D-26:** Script names: `R/utils/utils_facility_zip.R` (new helper); R/122 modified in place.
-  Register any new one-off steps in R/39 and SCRIPT_INDEX.
+- **D-26:** Script names: `R/utils/utils_facility_zip.R` (new helper); R/122 modified in place;
+  `R/182_facility_zip_recovery_report.R` (new). Register in SCRIPT_INDEX. R/182 is NOT added to R/39
+  `investigation_scripts` (it needs P182_* pins); R/88 gets a SMOKE-182-01 structural section using
+  the Phase 174/175 check()/skip_check() conventions.
 
 ### Claude's Discretion
 - Whether to store `facility_zip_source` in the RDS or only in the diagnostic workbook
