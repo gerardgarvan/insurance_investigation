@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 182.1-01-PLAN.md
-last_updated: "2026-10-14T20:55:31.261Z"
+stopped_at: Completed 182.1-03-PLAN.md
+last_updated: "2026-10-14T20:57:11.132Z"
 last_activity: 2026-10-14
 progress:
   total_phases: 172
   completed_phases: 151
   total_plans: 327
-  completed_plans: 330
+  completed_plans: 331
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 ## Current Position
 
 Phase: 182.1 (zip-centroid-mapping-for-unique-po-box-and-placeholder-zips) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-14
 
@@ -104,4 +104,4 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 ## Session Continuity
 
 **Last command:** Phase 182 complete — facility ZIP recovery and re-run. utils_facility_zip.R (Tier-1 FACILITYID donor fill) wired into R/122 behind CONFIG$facility_zip_fill toggle; diagnostic workbook (5 sheets); SMOKE-182-01 (10 checks). HiPerGator run 2026-10-14: R/88 ALL 970 CHECKS PASSED (3 skipped). Recovery headline: 0 patients crossed 100 mi threshold after fill (ZIPs recovered but no far reclassification). Remaining missing: 86,005 facility_zip_missing + 134,949 zip_not_in_db. Phase 179 primary OR: 0.84 → 0.83 (essentially unchanged). D-05: same side (locked). D-09: 37.4% → 30.4% shrinkage (moves toward 1; out-of-system care interpretation; report to Amy/Erin with D-165-01). 4 bugs fixed during execution (here::here() in tests, enc_zip_raw retain, glue() syntax, XML entity unescaping). FZIP-01 and FZIP-02 complete.
-**Stopped at:** Completed 182.1-01-PLAN.md
+**Stopped at:** Completed 182.1-03-PLAN.md
