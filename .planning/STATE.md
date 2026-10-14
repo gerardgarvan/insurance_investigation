@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: idle
-stopped_at: Completed Phase 181
-last_updated: "2026-10-14"
+status: completed
+stopped_at: Phase 182 context gathered
+last_updated: "2026-10-14T16:48:38.387Z"
 last_activity: 2026-10-14
 progress:
-  total_phases: 170
+  total_phases: 171
   completed_phases: 150
   total_plans: 320
   completed_plans: 326
@@ -100,4 +100,4 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 ## Session Continuity
 
 **Last command:** Phase 181 complete — prior-year CBC x distance 2x2 + team memo. Primary: OR 0.833 (0.682–1.016), p=0.071; Secondary: OR 0.871 (0.73–1.04), p=0.126; Sensitivity (calendar window, year_index>=2, N=6468): OR 0.850 (0.687–1.052), p=0.136. Sensitivity had a filter bug (year_start <= CDM_CUTOFF-730 → year_index >= 2), fixed and re-run same date. Memo approved and placed in phase folder. D-15 and D-165-01 remain open (pending Amy/Erin/Ray).
-**Stopped at:** Phase 181 complete
+**Stopped at:** Phase 182 context gathered
