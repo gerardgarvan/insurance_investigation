@@ -1,0 +1,209 @@
+# Phase 182: Facility ZIP Recovery — Context
+
+**Gathered:** 2026-10-14
+**Status:** Ready for planning
+
+<domain>
+## Phase Boundary
+
+Diagnose and fix facility ZIP gaps in R/122 that cause the 581 MISS-01 group (b) patients
+(`facility_zip_missing` / `zip_not_in_db`) to lose distance computation. Applies unambiguous
+fills via a new helper utility; re-runs R/122 → R/179 → R/180; produces a diagnostic workbook
+and a brief recovery report.
+
+Fix scope is R/122 + its helper utilities only. R/179 and R/180 logic is unchanged — only re-run.
+
+</domain>
+
+<decisions>
+## Implementation Decisions
+
+### Disambiguation Rule
+- **D-01:** Fill key = `SOURCE + FACILITYID` (never match across SOURCE — FACILITYID is not
+  unique across OneFlorida+ partners).
+- **D-02 (Tier 1 — primary fill):** Fill if and only if all encounters sharing that
+  `(SOURCE, FACILITYID)` key with a valid `FACILITY_LOCATION` have **exactly one distinct
+  normalized ZIP5**, with **≥ 3 supporting encounters**. Any disagreement → no fill.
+- **D-03 (Sensitivity tier — reported, not used in primary re-run):** Modal ZIP5 with ≥ 95%
+  share and ≥ 10 supporting encounters. Report recovery under this rule but do not apply it
+  to the R/122 RDS used for R/179/R/180 re-run.
+- **D-04:** No fill from fuzzy FACILITY_LOCATION text matching (e.g., clinic name strings).
+  FACILITY_LOCATION is the raw ZIP text — if it has a value, it is either already usable
+  (normalization handles format issues) or missing. Text-matching across location strings is
+  out of scope.
+- **D-05:** Every encounter gets a `facility_zip_source` column:
+  `observed` / `filled_tier1` / `not_filled`. FACILITYID keys with > 1 distinct ZIP are
+  listed as ambiguous with counts in B_facility_table.
+
+### FACILITYID and SOURCE Pull
+- **D-06:** `FACILITYID` and `SOURCE` are added to the R/122 encounter pull (Section 3
+  `dplyr::select()`). They are needed for the fill lookup and must be present before
+  `compute_encounter_distance()` is called.
+- **D-07:** The fill logic lives in a new helper function `build_facility_zip_lookup()` in
+  `R/utils/` (e.g., `utils_facility_zip.R`). R/122 sources it and calls it as an explicit,
+  logged fill step.
+- **D-08:** The fill step is guarded by a CONFIG toggle:
+  `CONFIG$facility_zip_fill` (default `TRUE`). When `FALSE`, R/122 runs exactly as before
+  (no fill applied), enabling reproducibility of the 20261013-era output.
+- **D-09:** R/122 writes a **new dated RDS** (e.g., `output/encounter_distance_<YYYYMMDD>.rds`).
+  The 20261013-era RDS is **never overwritten** — Phases 179 and 180 pinned to it explicitly.
+- **D-10:** Fill counts (n encounters filled tier 1, n ambiguous, n no_donor) are recorded
+  in the R/122 KEY sheet.
+
+### zip_not_in_db Diagnosis
+- **D-11:** For `zip_not_in_db` rows, first diagnose which side fails (patient ZIP vs facility
+  ZIP) and why:
+  - Format issues (ZIP+4, leading-zero loss, 3-digit, text garbage) → fix via the existing
+    `normalize_zip5_raw()` / `normalize_zip9()` normalizers (no new logic, already in utils).
+  - Valid ZIPs absent from the centroid table (PO-box-only, unique, newer ZIPs) → check
+    whether the Phase 144/148 ZIP→ZCTA/centroid crosswalk work covers them; if yes, route
+    through it; if no, leave unfilled and list in C_zip_not_in_db.
+  - Do NOT add centroids from an undocumented or ad-hoc source.
+- **D-12:** Patient-side `zip_not_in_db` entries: shown in the diagnostic workbook as ZIP3 +
+  count only (no 5-digit patient ZIPs in output artifacts).
+
+### Diagnostic Workbook Structure
+Workbook: `output/182_facility_zip_diagnosis_<YYYYMMDD>.xlsx` (UF colors, suppression ≥ 11).
+
+- **D-13 Sheet order:** KEY · A_status_summary · B_facility_table · C_zip_not_in_db · QC
+- **D-14 KEY (leftmost):** Input file names + run date; CONFIG toggle value; fill rule
+  description; encounters and patients recovered by tier (Tier 1 primary, Sensitivity tier);
+  remaining missing by reason after fill; zip_not_in_db diagnosis summary.
+- **D-15 A_status_summary:** Encounters and patients by `distance_status` before vs after
+  fill. zip_not_in_db split by side (patient / facility) and cause (format / not-in-table).
+- **D-16 B_facility_table:** `SOURCE`, `FACILITYID`, n encounters missing ZIP, n distinct
+  observed ZIPs, candidate ZIP5 (if unambiguous), supporting n, fill status
+  (`filled_tier1` / `ambiguous` / `no_donor`). FACILITYID is not patient data; counts
+  suppressed 1–10.
+- **D-17 C_zip_not_in_db:** Facility-side ZIPs listed with counts. Patient-side: ZIP3 + count
+  only.
+- **D-18 QC:** Before/after encounter totals reconcile; no encounter flipped from `computed`
+  to another status; suppression count; Tier 1 n == sum of `filled_tier1` encounters.
+- **D-19 Nice-to-have (Claude's discretion):** Facility ZIP stability by year (does a
+  FACILITYID flip ZIPs across calendar years?). Include if it fits without major extra work.
+
+### Recovery Report
+- **D-20:** Two artifacts:
+  1. A markdown file `182-RECOVERY.md` generated by the script into `output/`, then copied
+     to the phase directory after review (same pattern as Phase 181 MEMO.md).
+  2. The key numbers also appear in the workbook KEY (D-14) — not a separate sheet.
+- **D-21 Required content of 182-RECOVERY.md:**
+  - Encounters and patients recovered by tier; remaining missing by reason.
+  - zip_not_in_db diagnosis summary.
+  - Effect on results: Phase 179 primary OR (before vs after, read from Phase 179 workbook
+    by exact label at runtime), Phase 180 bounds/branch and capture-check % change/branch,
+    whether any locked decision branch changed.
+  - If no unambiguous fill exists for any facility: explicit "no fillable rows" statement.
+  - Neutral language; aggregates only; counts 1–10 as `<11`.
+
+### Re-Run Chain and Path Pinning
+- **D-22:** R/179 reads the R/122 RDS via `R179_R122_RDS` (explicit override, not
+  auto-latest pickup). For the Phase 182 re-run, pass the new dated RDS path explicitly
+  when sourcing R/179. Similarly for R/180.
+- **D-23:** Phase 181's memo has been sent to the team. Re-running R/181 is out of scope
+  unless explicitly requested.
+- **D-24:** All pinned file paths for the re-run (new R/122 RDS, R/179 output, R/180 output)
+  are recorded in the Phase 182 KEY and in 182-SUMMARY.md.
+
+### Execution Convention
+- **D-25:** Interactive R on HiPerGator from repo root. `module load R/4.5`.
+  `source("R/122_encounter_distance.R", local = new.env(parent = globalenv()))`.
+  Same pattern for R/179 and R/180 re-runs with the pinned paths.
+- **D-26:** Script names: `R/utils/utils_facility_zip.R` (new helper); R/122 modified in place.
+  Register any new one-off steps in R/39 and SCRIPT_INDEX.
+
+### Claude's Discretion
+- Whether to store `facility_zip_source` in the RDS or only in the diagnostic workbook
+  (either is fine as long as the fill provenance is traceable).
+- Minor formatting within workbook sheets (column widths, freeze panes) — follow Phase 179/180/181 precedent.
+- Whether to implement D-19 (ZIP stability by year) — only if it fits cleanly.
+
+</decisions>
+
+<canonical_refs>
+## Canonical References
+
+**Downstream agents MUST read these before planning or implementing.**
+
+### R/122 — Core Script to Modify
+- `R/122_encounter_distance.R` — Full script; Section 3 is the encounter pull (add FACILITYID,
+  SOURCE); the fill step inserts between Section 3 and the call to `compute_encounter_distance()`.
+  Section 6 (centroid resolution) handles zip_not_in_db. Section 12 (KEY) records fill counts.
+
+### Helper Utilities
+- `R/utils/utils_zip_calendar.R` — `compute_encounter_distance()`, `build_patient_zip_calendar()`,
+  `normalize_zip5_raw()`, `normalize_zip9()` — understand these before writing the fill helper.
+- `R/utils/utils_address.R` — `get_zip_centroid()` — called for centroid resolution; relevant
+  for understanding zip_not_in_db root cause.
+
+### Phase 144/148 Crosswalk Work
+- `.planning/phases/144-*/144-CONTEXT.md` (if exists) — ZIP→ZCTA crosswalk approach; check
+  whether it covers the missing ZIP5 values in C_zip_not_in_db.
+- `.planning/phases/148-*/148-CONTEXT.md` (if exists) — centroid table additions.
+- `data/reference/zcta_gazetteer_centroids.csv` — current ZIP5 centroid table.
+- `data/reference/zip9_bg_centroid_crosswalk.parquet` — ZIP9 centroid table.
+
+### Downstream Inputs (read-only reference for re-run validation)
+- `R/179_cbc_patient_year.R` — `R179_R122_RDS` override pattern; Phase 179 KEY label for OR.
+- `R/180_cbc_missing_capture.R` — reads Phase 179 RDS; Phase 180 MISS-01, MISS-02/03, MISS-04
+  sheet labels for bounds, branch decisions, capture % change.
+- `output/cbc_missing_capture_20261013.xlsx` — Phase 180 output; MISS-01 group (b) = source
+  of truth for the 581 patients this phase targets.
+
+### Config
+- `R/00_config.R` — add `CONFIG$facility_zip_fill` toggle here; UF color palette; `EXTRACT_DATE`.
+
+### No External Specs
+- Requirements FZIP-01 and FZIP-02 are fully captured in the roadmap and decisions above.
+
+</canonical_refs>
+
+<code_context>
+## Existing Code Insights
+
+### Reusable Assets
+- `normalize_zip5_raw()` / `normalize_zip9()` in `utils_address.R` — handles ZIP format issues;
+  call these before deciding zip_not_in_db is a centroid-table gap (not a format problem).
+- `get_zip_centroid()` — vectorized centroid lookup; understands when a ZIP is not in the table.
+- `suppress_small()` from Phase 180 — reuse for counts 1–10 suppression in the workbook.
+- `openxlsx2` workbook builder with UF colors — established pattern in R/179, R/180, R/181.
+
+### Established Patterns
+- Explicit override paths (e.g., `R179_R122_RDS`) rather than auto-latest file pickup — D-22.
+- CONFIG toggles for optional steps — add `CONFIG$facility_zip_fill` following this pattern.
+- KEY sheet leftmost; QC sheet rightmost — follow R/179/180/181 precedent.
+- `source(f, local = new.env(parent = globalenv()))` execution convention.
+
+### Integration Points
+- R/122 → new dated RDS → R/179 (via `R179_R122_RDS`) → R/180 (via its own RDS override) →
+  recovery comparison reads both before/after workbooks by exact label.
+- New helper `utils_facility_zip.R` sourced inside R/122 (after R/00_config.R sources the
+  other utils).
+
+</code_context>
+
+<specifics>
+## Specific Requirements
+
+- Fill key must include SOURCE to avoid cross-partner FACILITYID collisions.
+- Sensitivity tier (modal ZIP ≥ 95%, n ≥ 10) reported in the workbook but NOT applied to the
+  primary re-run RDS.
+- Patient-side zip_not_in_db entries: ZIP3 + count only in output (no 5-digit patient ZIPs).
+- The 20261013-era R/122 RDS must never be overwritten.
+- 182-RECOVERY.md is script-generated (not hand-written) so numbers are reproducible.
+- All before/after comparison numbers read from workbooks by exact label at runtime (not
+  hard-coded) — same principle as Phase 181 D-10.
+
+</specifics>
+
+<deferred>
+## Deferred Ideas
+
+- None — discussion stayed within phase scope.
+
+</deferred>
+
+---
+
+*Phase: 182-facility-zip-recovery*
+*Context gathered: 2026-10-14*
