@@ -208,8 +208,8 @@ message(glue("  {fmt_2x2(res_secondary)}"))
 # SECTION 4: SENSITIVITY -- FIXED CALENDAR WINDOW ----
 # ==============================================================================
 # For patients whose prior year ends within 365 days of CDM_CUTOFF (i.e., followed
-# to near the cutoff), flag whether they had a CBC in (CDM_CUTOFF - 365, CDM_CUTOFF].
-# Anchor <= CDM_CUTOFF - 730 restriction so this window is effectively year 2 or later.
+# to near the cutoff) AND whose prior year is year_index >= 2 (survivorship cohort),
+# flag whether they had a CBC in (CDM_CUTOFF - 365, CDM_CUTOFF].
 
 message("  S4 sensitivity: fixed calendar window CBC flag...")
 
@@ -219,11 +219,11 @@ if (!exists("pcornet_con", envir = .GlobalEnv)) { open_pcornet_con(); opened_her
 sens_ids <- prior_obs |>
   dplyr::filter(
     as.Date(year_end) >= (CDM_CUTOFF - 365L),
-    as.Date(year_start) <= (CDM_CUTOFF - 730L)
+    year_index >= 2L
   ) |>
   dplyr::pull(ID)
 
-message(glue("  Sensitivity eligible patients (near-cutoff, year >= 2 equivalent): {length(sens_ids)}"))
+message(glue("  Sensitivity eligible patients (year_end >= CDM_CUTOFF-365, year_index >= 2): {length(sens_ids)}"))
 
 if (length(sens_ids) > 0L) {
   id_sql <- paste(sprintf("'%s'", gsub("'", "''", sens_ids)), collapse = ", ")
@@ -519,7 +519,7 @@ qc_df <- data.frame(
     count_small_cells(res_secondary),
     count_small_cells(res_sens),
     glue("(CDM_CUTOFF - 365, CDM_CUTOFF] = ({CDM_CUTOFF - 365L}, {CDM_CUTOFF}]; ",
-         "anchor <= CDM_CUTOFF - 730; exposure = far from Phase 179 RDS")),
+         "year_index >= 2; exposure = far from Phase 179 RDS")),
   stringsAsFactors = FALSE)
 
 # KEY sheet (leftmost)
@@ -575,7 +575,7 @@ key_df <- data.frame(
     if (is.na(res_sens$p)) "—" else format.pval(res_sens$p, digits = 3),
     res_sens$test,
     glue("(CDM_CUTOFF - 365, CDM_CUTOFF] = ({CDM_CUTOFF - 365L}, {CDM_CUTOFF}]; ",
-         "anchor <= CDM_CUTOFF - 730; exposure = far from Phase 179 RDS"),
+         "year_index >= 2; exposure = far from Phase 179 RDS"),
     p179_primary_or_text,
     p179_p165_side_by_side,
     "Counts 1-10 shown as <11; rates shown only when both underlying counts are >= 11",
