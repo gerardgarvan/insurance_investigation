@@ -22,7 +22,7 @@ key_files:
 decisions:
   - "Prior year = max(year_index) per patient (working definition; label as such in KEY and memo — confirm with Erin/Ray)"
   - "Primary test: Pearson chi-squared (min expected cell = 148.6 > 5); no Fisher fallback needed"
-  - "Sensitivity (CDM-cutoff window) yielded no eligible patients under anchor <= CDM_CUTOFF − 730 restriction"
+  - "Sensitivity (CDM-cutoff window): bug fixed post-execution — year_start <= CDM_CUTOFF-730 replaced with year_index >= 2; corrected result: N=6468, OR=0.850 (0.687-1.052), p=0.136"
   - "Memo generated at runtime from Phase 179/180 workbook labels — no hard-coded result values"
   - "CONTEXT fixes: D-165-01 wording updated to 'pending Amy/Erin (provisionally patient-level Fisher)'; section count corrected from Five to Six"
 metrics:
@@ -45,7 +45,7 @@ requirements:
 
 1. **Prior-year 2×2 (CBCP-01):** Each patient's `max(year_index)` row defines their "prior year." Primary analytic set: year_index ≥ 2 (survivorship cohort), N = 7,075 patients. Pearson chi-squared used throughout (min expected cell = 148.6 > 5). OR 0.833 (95% CI 0.682–1.016), p = 0.071. Secondary (all years): OR 0.871 (0.73–1.04), p = 0.126.
 
-2. **Sensitivity (calendar window):** No patients were eligible for the fixed `(CDM_CUTOFF − 365, CDM_CUTOFF]` window under the anchor ≤ CDM_CUTOFF − 730 restriction; reported as N/A in the workbook.
+2. **Sensitivity (calendar window):** Fixed `(2024-09-15, 2025-09-15]` window, year_index ≥ 2. N = 6,468. OR 0.850 (95% CI 0.687–1.052), p = 0.136, Pearson chi-squared. (Original run had a bug — year_start ≤ CDM_CUTOFF − 730 instead of year_index ≥ 2 — yielding 0 eligible patients; corrected and re-run same date.)
 
 3. **Workbook** `output/cbc_prior_year_20261014.xlsx`: sheets KEY, A_2x2, B_rates, C_year_distribution, QC. Suppression rule (counts 1–10 → `<11`) applied consistently; no suppressed cells in the primary block.
 
@@ -70,7 +70,7 @@ Distribution of max year_index (patients whose "prior year" is year 1, 2, 3, …
 |----------|---|----|--------|---|------|
 | Primary (year_index ≥ 2) | 7,075 | 0.833 | 0.682–1.016 | 0.071 | Pearson chi-squared |
 | Secondary (all years) | see workbook | 0.871 | 0.73–1.04 | 0.126 | Pearson chi-squared |
-| Sensitivity (CDM-cutoff window) | 0 eligible | N/A | N/A | N/A | N/A |
+| Sensitivity (CDM-cutoff window, year_index ≥ 2) | 6,468 | 0.850 | 0.687–1.052 | 0.136 | Pearson chi-squared |
 
 Missing exposure: 847 patients excluded. Patients who died earlier: 851.
 
@@ -88,12 +88,12 @@ Ready to send to Amy/Erin.
 
 ## Deviations from Plan
 
-**1. [Rule 1 - Bug] Sensitivity window yielded no eligible patients**
-- **Found during:** Task 1 (design) / confirmed in Task 3 (HiPerGator run)
-- **Issue:** Under the restriction anchor ≤ CDM_CUTOFF − 730 (ensuring the window is year 2 or later), no patients qualified for the fixed calendar window sensitivity analysis. The DuckDB query ran without error; the result was N = 0 eligible patients.
-- **Fix:** Script reports the sensitivity as N/A in KEY, A_2x2, and QC sheets with an explanatory note. Memo documents this as "sensitivity not available."
-- **Files modified:** R/181_cbc_prior_year.R (defensive handling already in place at write time)
-- **Commit:** a852c03
+**1. [Bug] Sensitivity filter too restrictive — zero eligible patients**
+- **Found during:** Post-run review (Task 3 HiPerGator output)
+- **Issue:** Filter used `year_start <= CDM_CUTOFF − 730` on the *prior-year* row. For year_index = 2, year_start = anchor + 365, so the condition required anchor ≤ CDM_CUTOFF − 1095 (3 years before cutoff) instead of the intended 2 years. Result: 0 eligible patients.
+- **Fix:** Replaced with `year_index >= 2L`, which directly encodes the survivorship requirement. Re-run same date yielded N = 6,468 eligible patients.
+- **Files modified:** R/181_cbc_prior_year.R
+- **Commit:** aa9dc77
 
 ## Known Stubs
 
