@@ -250,25 +250,25 @@ stopifnot(
 )
 stopifnot("D-22a: Model_Results sheet missing Analysis column" = "Analysis" %in% names(.p179_model_results))
 .p179_primary_rows <- .p179_model_results[.p179_model_results$Analysis == P179_PRIMARY_LABEL, ]
-stopifnot(
-  glue("D-22a: exactly one row matching '{P179_PRIMARY_LABEL}' required in Model_Results; ",
-       "found {nrow(.p179_primary_rows)} (check label or workbook)") =
-    nrow(.p179_primary_rows) == 1L
-)
+if (nrow(.p179_primary_rows) != 1L) stop(glue(
+  "D-22a: exactly one row matching '{P179_PRIMARY_LABEL}' required in Model_Results; ",
+  "found {nrow(.p179_primary_rows)} (check label or workbook)"
+))
 .p179_ref <- .p179_primary_rows[1, ]
 message(glue("  D-22a repro reference: OR={round(as.numeric(.p179_ref$OR), 2)}, ",
              "CI={round(as.numeric(.p179_ref$CI_low), 2)}-{round(as.numeric(.p179_ref$CI_high), 2)}, ",
              "from {basename(.p179_xlsx_path)} '{P179_PRIMARY_LABEL}'"))
 
-stopifnot(
-  glue("Reproduction check FAILED: round(OR, 2) != {round(as.numeric(.p179_ref$OR), 2)}  ",
-       "-- verify you are using the Phase 179 RDS matching {basename(.p179_xlsx_path)}") =
-    round(ref$or, 2) == round(as.numeric(.p179_ref$OR), 2),
-  glue("Reproduction check FAILED: round(CI_low, 2) != {round(as.numeric(.p179_ref$CI_low), 2)}") =
-    round(ref$ci_lo, 2) == round(as.numeric(.p179_ref$CI_low), 2),
-  glue("Reproduction check FAILED: round(CI_high, 2) != {round(as.numeric(.p179_ref$CI_high), 2)}") =
-    round(ref$ci_hi, 2) == round(as.numeric(.p179_ref$CI_high), 2)
-)
+if (round(ref$or, 2) != round(as.numeric(.p179_ref$OR), 2)) stop(glue(
+  "Reproduction check FAILED: round(OR, 2) != {round(as.numeric(.p179_ref$OR), 2)}  ",
+  "-- verify you are using the Phase 179 RDS matching {basename(.p179_xlsx_path)}"
+))
+if (round(ref$ci_lo, 2) != round(as.numeric(.p179_ref$CI_low), 2)) stop(glue(
+  "Reproduction check FAILED: round(CI_low, 2) != {round(as.numeric(.p179_ref$CI_low), 2)}"
+))
+if (round(ref$ci_hi, 2) != round(as.numeric(.p179_ref$CI_high), 2)) stop(glue(
+  "Reproduction check FAILED: round(CI_high, 2) != {round(as.numeric(.p179_ref$CI_high), 2)}"
+))
 message(glue("  Reproduction check PASSED: {fmt_result(ref)}"))
 
 KEY_META[["repro_check"]] <- glue("PASSED: {fmt_result(ref)}")
