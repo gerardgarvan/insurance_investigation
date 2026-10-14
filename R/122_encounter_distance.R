@@ -60,6 +60,7 @@ source("R/00_config.R")
 source("R/utils/utils_zip_calendar.R")
 source("R/utils/utils_distance_hist.R")
 source("R/utils/utils_facility_zip.R")  # Phase 182: facility ZIP fill helpers
+source("R/utils/utils_zip_crosswalk.R") # Phase 182.1: HRSA ZIP->ZCTA crosswalk helpers
 
 message("=== Phase 152: Encounter-ZIP to Residence Distance ===")
 
@@ -183,6 +184,16 @@ if (is.null(enc_test)) {
   )
 }
 message("  [DuckDB ENCOUNTER] available -- OK")
+
+# ---------------------------------------------------------------------------
+# Phase 182.1: Load HRSA ZIP->ZCTA crosswalk (hard stop if absent)
+# ---------------------------------------------------------------------------
+hrsa_xwalk <- load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)
+message(glue(
+  "  [HRSA crosswalk] loaded: {attr(hrsa_xwalk, 'source_file')} | ",
+  "{nrow(hrsa_xwalk)} ZIP->ZCTA mappings"
+))
+
 section_done("SECTION 2 probe gates")
 
 # ==============================================================================
@@ -259,6 +270,17 @@ COHORT_IDS <- as.character(COHORT_IDS)
 
 enc_for_dist <- encounters_raw %>%
   dplyr::mutate(zip5_facility = normalize_zip5_raw(enc_zip_raw))
+
+# Phase 182.1: Placeholder step -- blank placeholder facility ZIPs in BOTH
+# zip5_facility AND enc_zip_raw so a placeholder can never be a donor ZIP.
+# Runs BEFORE build_facility_zip_lookup() so blanked rows become fillable by
+# the Phase 182 FACILITYID donor step (CONTEXT.md D-06).
+ph <- is_placeholder_facility_zip5(enc_for_dist$zip5_facility, hrsa_xwalk) %in% TRUE
+enc_for_dist <- enc_for_dist |>
+  dplyr::mutate(zip5_facility = dplyr::if_else(ph, NA_character_, zip5_facility),
+                enc_zip_raw   = dplyr::if_else(ph, NA_character_, enc_zip_raw))
+n_placeholder <- sum(ph)
+message(glue("  [Phase 182.1] placeholder facility ZIPs blanked: {n_placeholder}"))
 
 # Phase 182: Facility ZIP fill (Tier 1 rule; guarded by CONFIG$facility_zip_fill toggle)
 fac_lookup   <- build_facility_zip_lookup(enc_for_dist)

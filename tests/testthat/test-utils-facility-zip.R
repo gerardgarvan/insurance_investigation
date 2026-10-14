@@ -224,3 +224,35 @@ test_that("apply = FALSE produces no filled_tier1 rows; only observed and not_fi
   # NA row stays NA
   expect_true(is.na(out$zip5_facility[2]))
 })
+
+# ------------------------------------------------------------------------------
+# Test 11 (Phase 182.1): Placeholder blanking -> no_donor, not filled_tier1
+# A (SOURCE, FACILITYID) key whose encounters all had placeholder ZIPs ("00000")
+# must yield no_donor after blanking -- a placeholder can never be a donor.
+# ------------------------------------------------------------------------------
+test_that("placeholder-blanked key yields no_donor, not filled_tier1", {
+  # Simulate the placeholder blanking step from R/122 Phase 182.1:
+  # zip5_facility is NA for all encounters (blanked by is_placeholder_facility_zip5)
+  enc_raw_blank <- make_enc_raw(
+    SOURCE      = rep("UF", 4),
+    FACILITYID  = rep("FAC011", 4),
+    enc_zip_raw = rep(NA_character_, 4)  # enc_zip_raw blanked (was "00000")
+  )
+  lk <- build_facility_zip_lookup(enc_raw_blank)
+  # Key should exist but have n_supporting == 0 -> no_donor
+  expect_equal(nrow(lk), 1L)
+  expect_equal(lk$fill_status, "no_donor")
+  expect_equal(lk$n_supporting, 0L)
+  expect_true(is.na(lk$fill_zip))
+
+  # Verify apply step: these encounters should remain unfilled (not_filled)
+  enc_dist <- make_enc_for_dist(
+    SOURCE        = rep("UF", 4),
+    FACILITYID    = rep("FAC011", 4),
+    zip5_facility = rep(NA_character_, 4)
+  )
+  out <- apply_facility_zip_fill(enc_dist, lk, apply = TRUE)
+  # All rows have a valid key but fill_status == no_donor -> "not_filled"
+  expect_true(all(out$facility_zip_source == "not_filled"))
+  expect_true(all(is.na(out$zip5_facility)))
+})
