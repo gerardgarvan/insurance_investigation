@@ -76,17 +76,24 @@ message(glue("==================================================================
 # SECTION 1: INPUTS ----
 # ==============================================================================
 
-# 1a. enc_distance (R/122 output) -- read most recent by mtime from output_dir
-enc_dist_candidates <- list.files(
-  CONFIG$output_dir,
-  pattern = "^encounter_distance.*\\.rds$",
-  full.names = TRUE
-)
-if (length(enc_dist_candidates) == 0L)
-  stop("enc_distance RDS not found in ", CONFIG$output_dir,
-       " -- run R/122_encounter_distance.R first")
-enc_dist_path <- enc_dist_candidates[which.max(file.mtime(enc_dist_candidates))]
-message(glue("  Loading enc_distance: {basename(enc_dist_path)}"))
+# 1a. enc_distance (R/122 output) -- pin with R165_R122_RDS or read most recent
+r165_override <- Sys.getenv("R165_R122_RDS", unset = "")
+if (nzchar(r165_override)) {
+  stopifnot("R165_R122_RDS file not found" = file.exists(r165_override))
+  enc_dist_path <- r165_override; r165_pinned <- TRUE
+} else {
+  enc_dist_candidates <- list.files(
+    CONFIG$output_dir,
+    pattern = "^encounter_distance.*\\.rds$",
+    full.names = TRUE
+  )
+  if (length(enc_dist_candidates) == 0L)
+    stop("enc_distance RDS not found in ", CONFIG$output_dir,
+         " -- run R/122_encounter_distance.R first or set R165_R122_RDS")
+  enc_dist_path <- enc_dist_candidates[which.max(file.mtime(enc_dist_candidates))]
+  r165_pinned <- FALSE
+}
+message(glue("  Loading enc_distance: {basename(enc_dist_path)} (pinned={r165_pinned})"))
 enc_distance <- readRDS(enc_dist_path)
 message(glue("  enc_distance rows: {format(nrow(enc_distance), big.mark = ',')}"))
 
@@ -613,6 +620,7 @@ key_rows <- list(
   c("Analysis level", "Encounter-level: CBC drawn during the encounter"),
   c("Patient-year analysis", "Phase 179 (R/179_cbc_patient_year.R): CBC within each follow-up year; primary choice pending (D-15)"),
   c("Run date",        RUN_DATE),
+  c("R/122 input",     glue("{basename(enc_dist_path)} (pinned: {r165_pinned})")),
   c("Method (D-165-01)", paste0("Method (D-165-01): ", CONFIG$distance_assoc_method,
                                 " - pending confirmation from Amy and Erin")),
   c("Why Rao-Scott",  paste0(
