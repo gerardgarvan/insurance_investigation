@@ -142,10 +142,19 @@ read_sheet_safe <- function(path, sheet) {
 }
 
 # Helper: get value from a KEY-style data frame (Field=col1, Value/Description=col2)
+# Unescapes HTML entities that openxlsx2 may leave in strings (e.g. > stored as &gt;).
+.unescape_xml <- function(x) {
+  x <- gsub("&gt;",  ">",  x, fixed = TRUE)
+  x <- gsub("&lt;",  "<",  x, fixed = TRUE)
+  x <- gsub("&amp;", "&",  x, fixed = TRUE)
+  x <- gsub("&quot;", "\"", x, fixed = TRUE)
+  x
+}
 key_val <- function(df, field_pattern, strict = TRUE) {
   col1 <- names(df)[1]
   col2 <- names(df)[2]
-  rows <- df[grepl(field_pattern, df[[col1]], fixed = strict), ]
+  col1_vals <- .unescape_xml(as.character(df[[col1]]))
+  rows <- df[grepl(field_pattern, col1_vals, fixed = strict), ]
   if (nrow(rows) != 1L) {
     stop(glue("Expected exactly 1 row matching '{field_pattern}'; found {nrow(rows)}"))
   }
