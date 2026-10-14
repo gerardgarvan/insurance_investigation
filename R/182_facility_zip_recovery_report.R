@@ -429,3 +429,466 @@ writeLines(recovery_md, out_path)
 message(glue("\n  Written: {out_path}"))
 message("  Review output/182-RECOVERY.md, then copy to the phase folder.")
 message("  All paths resolved at runtime — numbers are reproducible from the inputs above.")
+
+# ==============================================================================
+# SECTION 6: PHASE 182.1 BEFORE/AFTER COMPARISON ----
+# ==============================================================================
+# Driven entirely by P1821_* env vars (no file auto-picking).
+# Stop with available labels printed if any required label is missing.
+# Appends a 182.1 section to output/182-RECOVERY.md.
+# ==============================================================================
+
+message("\n=== Phase 182.1 comparison section ===")
+
+# --------------------------------------------------------------------------
+# 6.1  Resolve pins (all required) ----
+# --------------------------------------------------------------------------
+
+resolve_1821 <- function(var) {
+  val <- Sys.getenv(var, unset = "")
+  if (!nzchar(val)) stop(glue(
+    "P1821 env var {var} is not set.\n",
+    "Set ALL P1821_* vars before sourcing (see plan Task 3 run script)."
+  ))
+  if (!file.exists(val)) stop(glue("{var}='{val}' — file not found"))
+  val
+}
+
+P1821_R122_BEFORE       <- resolve_1821("P1821_R122_BEFORE")
+P1821_R122_AFTER        <- resolve_1821("P1821_R122_AFTER")
+P1821_P165_BEFORE       <- resolve_1821("P1821_P165_BEFORE")
+P1821_P165_AFTER        <- resolve_1821("P1821_P165_AFTER")
+P1821_P179_BEFORE_XLSX  <- resolve_1821("P1821_P179_BEFORE_XLSX")
+P1821_P179_AFTER_XLSX   <- resolve_1821("P1821_P179_AFTER_XLSX")
+P1821_P179_BEFORE_RDS   <- resolve_1821("P1821_P179_BEFORE_RDS")
+P1821_P179_AFTER_RDS    <- resolve_1821("P1821_P179_AFTER_RDS")
+P1821_P180_BEFORE       <- resolve_1821("P1821_P180_BEFORE")
+P1821_P180_AFTER        <- resolve_1821("P1821_P180_AFTER")
+P1821_P181_BEFORE       <- resolve_1821("P1821_P181_BEFORE")
+P1821_P181_AFTER        <- resolve_1821("P1821_P181_AFTER")
+
+message("  All P1821_* pins resolved.")
+
+# --------------------------------------------------------------------------
+# 6.2  Helper: read workbook value by exact label ----
+# --------------------------------------------------------------------------
+
+# Stops with available labels printed if match != 1
+wb_val <- function(path, sheet, label) {
+  df <- tryCatch(
+    openxlsx::read.xlsx(path, sheet = sheet, colNames = TRUE),
+    error = function(e) stop(glue("Cannot read sheet '{sheet}' from {basename(path)}: {e$message}"))
+  )
+  col1 <- names(df)[1]
+  col2 <- names(df)[2]
+  vals <- .unescape_xml(as.character(df[[col1]]))
+  rows <- df[vals == label, ]
+  if (nrow(rows) != 1L) {
+    avail <- paste(head(vals[nzchar(vals)], 30), collapse = "\n    ")
+    stop(glue(
+      "Expected exactly 1 row matching '{label}' in {basename(path)}[{sheet}]; found {nrow(rows)}.\n",
+      "Available labels (first 30):\n    {avail}"
+    ))
+  }
+  .unescape_xml(as.character(rows[[col2]][1]))
+}
+
+# --------------------------------------------------------------------------
+# 6.3  R/165 ORs (whole-record and post-anchor, both methods) ----
+# --------------------------------------------------------------------------
+
+message("\n--- Reading R/165 B_test sheet (OR by window) ---")
+
+read_165_or <- function(path, label) {
+  df <- tryCatch(
+    openxlsx::read.xlsx(path, sheet = "B_test", colNames = TRUE),
+    error = function(e) stop(glue("Cannot read B_test from {basename(path)}: {e$message}"))
+  )
+  rows <- df[trimws(as.character(df$Window)) == label, ]
+  if (nrow(rows) != 1L) {
+    avail <- paste(unique(trimws(as.character(df$Window))), collapse = ", ")
+    stop(glue(
+      "Expected 1 row with Window='{label}' in {basename(path)} B_test; found {nrow(rows)}.\n",
+      "Available Window values: {avail}"
+    ))
+  }
+  list(
+    OR    = as.character(rows$OR[1]),
+    CI_lo = as.character(rows$CI_lo[1]),
+    CI_hi = as.character(rows$CI_hi[1])
+  )
+}
+
+p165_before_whole <- read_165_or(P1821_P165_BEFORE, "Whole record")
+p165_after_whole  <- read_165_or(P1821_P165_AFTER,  "Whole record")
+p165_before_post  <- read_165_or(P1821_P165_BEFORE, "Post-anchor")
+p165_after_post   <- read_165_or(P1821_P165_AFTER,  "Post-anchor")
+
+fmt_ci <- function(lst) glue("OR {lst$OR} ({lst$CI_lo}–{lst$CI_hi})")
+
+message(glue("  R/165 before whole-record: {fmt_ci(p165_before_whole)}"))
+message(glue("  R/165 after  whole-record: {fmt_ci(p165_after_whole)}"))
+message(glue("  R/165 before post-anchor : {fmt_ci(p165_before_post)}"))
+message(glue("  R/165 after  post-anchor : {fmt_ci(p165_after_post)}"))
+
+# --------------------------------------------------------------------------
+# 6.4  R/179 primary OR ----
+# --------------------------------------------------------------------------
+
+message("\n--- Reading R/179 primary OR ---")
+
+read_179_or <- function(path, label = "Primary: years 2+") {
+  df <- tryCatch(
+    openxlsx::read.xlsx(path, sheet = "Model_Results", colNames = TRUE),
+    error = function(e) stop(glue("Cannot read Model_Results from {basename(path)}: {e$message}"))
+  )
+  rows <- df[trimws(as.character(df$Analysis)) == label, ]
+  if (nrow(rows) != 1L) {
+    avail <- paste(unique(trimws(as.character(df$Analysis))), collapse = ", ")
+    stop(glue(
+      "Expected 1 row with Analysis='{label}' in {basename(path)}; found {nrow(rows)}.\n",
+      "Available: {avail}"
+    ))
+  }
+  list(
+    OR    = as.character(rows$OR[1]),
+    CI_lo = as.character(rows$CI_low[1]),
+    CI_hi = as.character(rows$CI_high[1])
+  )
+}
+
+p179_before_or <- read_179_or(P1821_P179_BEFORE_XLSX)
+p179_after_or  <- read_179_or(P1821_P179_AFTER_XLSX)
+
+message(glue("  R/179 before: {fmt_ci(p179_before_or)}"))
+message(glue("  R/179 after : {fmt_ci(p179_after_or)}"))
+
+# --------------------------------------------------------------------------
+# 6.5  R/180 bounded ORs, D-05, D-09 (KEY sheet) ----
+# --------------------------------------------------------------------------
+
+message("\n--- Reading R/180 KEY ---")
+
+p180b_key <- tryCatch(
+  openxlsx::read.xlsx(P1821_P180_BEFORE, sheet = "KEY", colNames = TRUE),
+  error = function(e) stop(glue("Cannot read KEY from {basename(P1821_P180_BEFORE)}: {e$message}"))
+)
+p180a_key <- tryCatch(
+  openxlsx::read.xlsx(P1821_P180_AFTER, sheet = "KEY", colNames = TRUE),
+  error = function(e) stop(glue("Cannot read KEY from {basename(P1821_P180_AFTER)}: {e$message}"))
+)
+
+p180_get2 <- function(df, field, source) {
+  col1 <- names(df)[1]; col2 <- names(df)[2]
+  rows <- df[trimws(as.character(df[[col1]])) == field, ]
+  if (nrow(rows) != 1L) {
+    avail <- paste(head(trimws(as.character(df[[col1]])), 30), collapse = "\n    ")
+    stop(glue(
+      "KEY field '{field}' not found (1 match required) in {source}.\n",
+      "Available labels (first 30):\n    {avail}"
+    ))
+  }
+  .unescape_xml(as.character(rows[[col2]][1]))
+}
+
+MISS02_B <- p180_get2(p180b_key, "MISS-02 (missing -> far=1)", "P180 BEFORE (182.1)")
+MISS02_A <- p180_get2(p180a_key, "MISS-02 (missing -> far=1)", "P180 AFTER (182.1)")
+MISS03_B <- p180_get2(p180b_key, "MISS-03 (missing -> far=0)", "P180 BEFORE (182.1)")
+MISS03_A <- p180_get2(p180a_key, "MISS-03 (missing -> far=0)", "P180 AFTER (182.1)")
+D05_B    <- p180_get2(p180b_key, "D-05 branch",                "P180 BEFORE (182.1)")
+D05_A    <- p180_get2(p180a_key, "D-05 branch",                "P180 AFTER (182.1)")
+D09_B    <- p180_get2(p180b_key, "D-09 branch (primary)",      "P180 BEFORE (182.1)")
+D09_A    <- p180_get2(p180a_key, "D-09 branch (primary)",      "P180 AFTER (182.1)")
+D09PCT_B <- p180_get2(p180b_key, "D-09 pct change (primary)",  "P180 BEFORE (182.1)")
+D09PCT_A <- p180_get2(p180a_key, "D-09 pct change (primary)",  "P180 AFTER (182.1)")
+
+# --------------------------------------------------------------------------
+# 6.6  R/181 prior-year OR (KEY sheet) ----
+# --------------------------------------------------------------------------
+
+message("\n--- Reading R/181 KEY ---")
+
+p181b_key <- tryCatch(
+  openxlsx::read.xlsx(P1821_P181_BEFORE, sheet = "KEY", colNames = TRUE),
+  error = function(e) stop(glue("Cannot read KEY from {basename(P1821_P181_BEFORE)}: {e$message}"))
+)
+p181a_key <- tryCatch(
+  openxlsx::read.xlsx(P1821_P181_AFTER, sheet = "KEY", colNames = TRUE),
+  error = function(e) stop(glue("Cannot read KEY from {basename(P1821_P181_AFTER)}: {e$message}"))
+)
+
+# R/181 KEY label: "Primary OR (prior year CBC x far)" — read with exact match
+P181_OR_LABEL    <- "Primary OR (prior year CBC x far)"
+P181_CI_LO_LABEL <- "Primary CI lower"
+P181_CI_HI_LABEL <- "Primary CI upper"
+
+p181_get <- function(df, field, source) {
+  col1 <- names(df)[1]; col2 <- names(df)[2]
+  rows <- df[trimws(as.character(df[[col1]])) == field, ]
+  if (nrow(rows) != 1L) {
+    avail <- paste(head(trimws(as.character(df[[col1]])), 30), collapse = "\n    ")
+    stop(glue(
+      "KEY field '{field}' not found (1 match required) in {source}.\n",
+      "Available labels (first 30):\n    {avail}"
+    ))
+  }
+  .unescape_xml(as.character(rows[[col2]][1]))
+}
+
+P181_OR_B  <- p181_get(p181b_key, P181_OR_LABEL,    "P181 BEFORE (182.1)")
+P181_CI_LO_B <- p181_get(p181b_key, P181_CI_LO_LABEL, "P181 BEFORE (182.1)")
+P181_CI_HI_B <- p181_get(p181b_key, P181_CI_HI_LABEL, "P181 BEFORE (182.1)")
+P181_OR_A  <- p181_get(p181a_key, P181_OR_LABEL,    "P181 AFTER (182.1)")
+P181_CI_LO_A <- p181_get(p181a_key, P181_CI_LO_LABEL, "P181 AFTER (182.1)")
+P181_CI_HI_A <- p181_get(p181a_key, P181_CI_HI_LABEL, "P181 AFTER (182.1)")
+
+fmt_181 <- function(or, lo, hi) glue("OR {or} ({lo}–{hi})")
+
+# --------------------------------------------------------------------------
+# 6.7  R/122 status transition table + distance_method distribution ----
+# --------------------------------------------------------------------------
+
+message("\n--- Reading R/122 RDS files for transition table ---")
+
+r122_before <- readRDS(P1821_R122_BEFORE)
+r122_after  <- readRDS(P1821_R122_AFTER)
+
+# Both must have ENCOUNTERID and distance_status
+stopifnot(
+  "R/122 BEFORE RDS missing ENCOUNTERID or distance_status" =
+    all(c("ENCOUNTERID", "distance_status") %in% names(r122_before)),
+  "R/122 AFTER RDS missing ENCOUNTERID or distance_status" =
+    all(c("ENCOUNTERID", "distance_status") %in% names(r122_after))
+)
+
+# Also check distance_mi for the invariant assertion
+has_dist_mi <- all(c("distance_mi") %in% names(r122_before)) &&
+               all(c("distance_mi") %in% names(r122_after))
+
+# Transition table: join on ENCOUNTERID, before -> after status
+trans <- r122_before |>
+  dplyr::select(ENCOUNTERID, status_before = distance_status) |>
+  dplyr::mutate(ENCOUNTERID = as.character(ENCOUNTERID)) |>
+  dplyr::inner_join(
+    r122_after |>
+      dplyr::select(ENCOUNTERID, status_after = distance_status) |>
+      dplyr::mutate(ENCOUNTERID = as.character(ENCOUNTERID)),
+    by = "ENCOUNTERID"
+  )
+
+trans_table <- trans |>
+  dplyr::count(status_before, status_after, name = "n_encounters") |>
+  dplyr::arrange(dplyr::desc(n_encounters))
+
+message("  Status transition table (before -> after):")
+print(trans_table)
+
+# Assert: no previously computed encounter changes status
+computed_to_other <- trans |>
+  dplyr::filter(status_before == "computed", status_after != "computed")
+n_bad <- nrow(computed_to_other)
+if (n_bad > 0L) {
+  stop(glue(
+    "ASSERTION FAILED: {n_bad} encounters had status_before='computed' but ",
+    "status_after != 'computed'. Previously resolved distances must not change."
+  ))
+}
+message(glue("  ASSERT PASS: 0 computed->other transitions."))
+
+# Assert: distance_mi unchanged for previously computed rows
+if (has_dist_mi) {
+  prev_computed_ids <- trans |>
+    dplyr::filter(status_before == "computed") |>
+    dplyr::pull(ENCOUNTERID)
+
+  dist_before <- r122_before |>
+    dplyr::filter(as.character(ENCOUNTERID) %in% prev_computed_ids) |>
+    dplyr::select(ENCOUNTERID, distance_mi) |>
+    dplyr::mutate(ENCOUNTERID = as.character(ENCOUNTERID))
+  dist_after <- r122_after |>
+    dplyr::filter(as.character(ENCOUNTERID) %in% prev_computed_ids) |>
+    dplyr::select(ENCOUNTERID, distance_mi) |>
+    dplyr::mutate(ENCOUNTERID = as.character(ENCOUNTERID))
+
+  dist_joined <- dplyr::inner_join(dist_before, dist_after,
+                                   by = "ENCOUNTERID", suffix = c("_before", "_after"))
+  dist_changed <- dist_joined |>
+    dplyr::filter(abs(distance_mi_before - distance_mi_after) > 1e-6)
+  n_dist_bad <- nrow(dist_changed)
+  if (n_dist_bad > 0L) {
+    stop(glue(
+      "ASSERTION FAILED: {n_dist_bad} previously-computed encounters have different ",
+      "distance_mi in AFTER run."
+    ))
+  }
+  message(glue("  ASSERT PASS: 0 distance_mi changes for previously computed rows."))
+}
+
+# distance_method distribution (AFTER only)
+if ("distance_method" %in% names(r122_after)) {
+  dist_method_tbl <- r122_after |>
+    dplyr::count(distance_method, name = "n_encounters") |>
+    dplyr::arrange(dplyr::desc(n_encounters))
+  message("  distance_method distribution (AFTER):")
+  print(dist_method_tbl)
+} else {
+  dist_method_tbl <- data.frame(distance_method = "(column absent)", n_encounters = NA_integer_)
+  message("  WARNING: distance_method column not found in AFTER R/122 RDS")
+}
+
+# --------------------------------------------------------------------------
+# 6.8  R/179 RDS: patients gaining exposure, far switches, still missing ----
+# --------------------------------------------------------------------------
+
+message("\n--- Reading R/179 RDS files for patient-level counts ---")
+
+p179_before_df <- readRDS(P1821_P179_BEFORE_RDS)
+p179_after_df  <- readRDS(P1821_P179_AFTER_RDS)
+
+stopifnot(
+  "P179 BEFORE RDS missing ID or exposure_missing" =
+    all(c("ID", "exposure_missing") %in% names(p179_before_df)),
+  "P179 AFTER RDS missing ID or exposure_missing" =
+    all(c("ID", "exposure_missing") %in% names(p179_after_df))
+)
+
+has_far_before <- "far_from_care_100mi" %in% names(p179_before_df)
+has_far_after  <- "far_from_care_100mi" %in% names(p179_after_df)
+
+# Patients gaining exposure (exposure_missing TRUE -> FALSE)
+p179_miss_before <- p179_before_df |>
+  dplyr::mutate(ID = as.character(ID)) |>
+  dplyr::filter(isTRUE(exposure_missing)) |>
+  dplyr::distinct(ID)
+
+p179_exposed_after <- p179_after_df |>
+  dplyr::mutate(ID = as.character(ID)) |>
+  dplyr::filter(!isTRUE(exposure_missing)) |>
+  dplyr::distinct(ID)
+
+n_gained_1821 <- nrow(dplyr::semi_join(p179_miss_before, p179_exposed_after, by = "ID"))
+message(glue("  Patients gaining exposure (182.1): {n_gained_1821}"))
+
+# Far switches (far_from_care_100mi changes)
+if (has_far_before && has_far_after) {
+  far_before_df <- p179_before_df |>
+    dplyr::mutate(ID = as.character(ID)) |>
+    dplyr::select(ID, far_before = far_from_care_100mi) |>
+    dplyr::distinct(ID, .keep_all = TRUE)
+  far_after_df <- p179_after_df |>
+    dplyr::mutate(ID = as.character(ID)) |>
+    dplyr::select(ID, far_after = far_from_care_100mi) |>
+    dplyr::distinct(ID, .keep_all = TRUE)
+  far_joined <- dplyr::inner_join(far_before_df, far_after_df, by = "ID")
+  n_far_switched <- nrow(far_joined |> dplyr::filter(far_before != far_after))
+  message(glue("  Far switches (far_from_care_100mi changed): {n_far_switched}"))
+} else {
+  n_far_switched <- NA_integer_
+  message("  NOTE: far_from_care_100mi column not found in one or both RDS files — far switches skipped")
+}
+
+# Patients still missing (Phase 183 target)
+n_still_missing_1821 <- p179_after_df |>
+  dplyr::mutate(ID = as.character(ID)) |>
+  dplyr::filter(isTRUE(exposure_missing)) |>
+  dplyr::distinct(ID) |>
+  nrow()
+message(glue("  Patients still missing after 182.1 (Phase 183 target): {n_still_missing_1821}"))
+
+# --------------------------------------------------------------------------
+# 6.9  Build and append the 182.1 markdown section ----
+# --------------------------------------------------------------------------
+
+message("\n--- Appending 182.1 comparison section to 182-RECOVERY.md ---")
+
+# Build transition table as markdown
+trans_md_rows <- paste(
+  apply(trans_table, 1, function(r) {
+    glue("| {r['status_before']} | {r['status_after']} | {sup_md(as.integer(r['n_encounters']))} |")
+  }),
+  collapse = "\n"
+)
+
+# Build distance_method table as markdown
+method_md_rows <- paste(
+  apply(dist_method_tbl, 1, function(r) {
+    n_val <- suppressWarnings(as.integer(r["n_encounters"]))
+    glue("| {r['distance_method']} | {sup_md(n_val)} |")
+  }),
+  collapse = "\n"
+)
+
+# Locked branch notes
+d05_1821_changed <- !identical(D05_B, D05_A)
+d09_1821_changed <- !identical(D09_B, D09_A)
+d05_1821_note    <- if (d05_1821_changed) glue("CHANGED ({D05_B} -> {D05_A})") else glue("same ({D05_A})")
+d09_1821_note    <- if (d09_1821_changed) glue("CHANGED ({D09_B} -> {D09_A})") else glue("same ({D09_A})")
+
+recovery_182_1_section <- glue::glue(
+"
+---
+
+## Phase 182.1: ZIP Centroid Crosswalk Before/After Comparison
+
+**Generated:** {RUN_DATE}
+**Crosswalk:** HRSA UDS Mapper ZIP-to-ZCTA (staged in data/reference/)
+**R/122 BEFORE:** {basename(P1821_R122_BEFORE)}
+**R/122 AFTER:**  {basename(P1821_R122_AFTER)}
+**R/165 BEFORE (pre-182):** {basename(P1821_P165_BEFORE)}
+**R/165 AFTER:**  {basename(P1821_P165_AFTER)}
+**R/179 BEFORE xlsx:** {basename(P1821_P179_BEFORE_XLSX)}
+**R/179 AFTER xlsx:**  {basename(P1821_P179_AFTER_XLSX)}
+**R/180 BEFORE:** {basename(P1821_P180_BEFORE)}
+**R/180 AFTER:**  {basename(P1821_P180_AFTER)}
+**R/181 BEFORE:** {basename(P1821_P181_BEFORE)}
+**R/181 AFTER:**  {basename(P1821_P181_AFTER)}
+
+### R/122 Status Transition Table
+
+| status before | status after | encounters |
+|---------------|--------------|------------|
+{trans_md_rows}
+
+**Assertions:** no computed->other transition (PASS); distance_mi unchanged for previously computed rows (PASS).
+
+### R/122 distance_method Distribution (AFTER)
+
+| distance_method | encounters |
+|-----------------|------------|
+{method_md_rows}
+
+### Patients Gaining Distance Exposure (182.1)
+
+| Metric | Count |
+|--------|-------|
+| Patients gaining exposure (exposure_missing TRUE -> FALSE) | {sup_md(n_gained_1821)} |
+| Far switches (far_from_care_100mi changed) | {if (is.na(n_far_switched)) 'N/A' else sup_md(n_far_switched)} |
+| Patients still missing — Phase 183 target | {sup_md(n_still_missing_1821)} |
+
+### Old-vs-New Comparison Table
+
+| Metric | Before (Phase 182) | After (Phase 182.1) |
+|--------|--------------------|---------------------|
+| R/165 Whole-record OR (95% CI) | {fmt_ci(p165_before_whole)} | {fmt_ci(p165_after_whole)} |
+| R/165 Post-anchor OR (95% CI)  | {fmt_ci(p165_before_post)}  | {fmt_ci(p165_after_post)}  |
+| R/179 Primary OR (95% CI)      | {fmt_ci(p179_before_or)}    | {fmt_ci(p179_after_or)}    |
+| R/180 MISS-02 (missing -> far=1) OR | {MISS02_B} | {MISS02_A} |
+| R/180 MISS-03 (missing -> far=0) OR | {MISS03_B} | {MISS03_A} |
+| R/180 D-09 pct change (primary)     | {D09PCT_B} | {D09PCT_A} |
+| R/181 Primary prior-year CBC x far OR (95% CI) | {fmt_181(P181_OR_B, P181_CI_LO_B, P181_CI_HI_B)} | {fmt_181(P181_OR_A, P181_CI_LO_A, P181_CI_HI_A)} |
+
+### Locked Branches
+
+| Decision | Before | After | Change? |
+|----------|--------|-------|---------|
+| D-05 (same side of 1 as primary) | {D05_B} | {D05_A} | {d05_1821_note} |
+| D-09 (capture check direction)   | {D09_B} | {D09_A} | {d09_1821_note} |
+
+*Counts 1-10 shown as <11.*
+")
+
+# Append to the output file
+cat(recovery_182_1_section, file = out_path, append = TRUE)
+message(glue("  Appended 182.1 section to: {out_path}"))
+message(glue("  Phase 183 target (patients still missing): {n_still_missing_1821}"))
+message("==== R/182 Phase 182.1 comparison section complete ====")
