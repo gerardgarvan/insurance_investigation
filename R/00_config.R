@@ -255,6 +255,14 @@ CONFIG$gantt_180_snapshot_md5   <- "69dc62e86be8e0647f6a4623dda901b6"  # pinned 
 CONFIG$gantt_chemo_treatment_type <- "Chemotherapy"  # literal assigned by R/20 (treatment_type = "Chemotherapy")
 
 # ==============================================================================
+# Phase 182: Facility ZIP fill toggle
+# When TRUE (default), R/122 fills NA zip5_facility via build_facility_zip_lookup()
+# and apply_facility_zip_fill() using the Tier 1 rule (one distinct ZIP, >= 3 enc).
+# Set FALSE to reproduce pre-182 R/122 output (no fill applied).
+# ==============================================================================
+CONFIG$facility_zip_fill <- TRUE  # Phase 182: FALSE reproduces pre-182 R/122 output (no fill)
+
+# ==============================================================================
 # SECTION 1b: AUTOMATIC DIRECTORY CREATION ----
 # ==============================================================================
 # Create output and cache directories at startup if they don't exist.

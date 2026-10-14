@@ -59,6 +59,7 @@ source("R/00_config.R")
 # kept in utils_address.R for Phase 139/141 consumers -- it is NOT called here.
 source("R/utils/utils_zip_calendar.R")
 source("R/utils/utils_distance_hist.R")
+source("R/utils/utils_facility_zip.R")  # Phase 182: facility ZIP fill helpers
 
 message("=== Phase 152: Encounter-ZIP to Residence Distance ===")
 
@@ -211,7 +212,8 @@ message(glue("  Raw cohort ENCOUNTER rows (any ADMIT_DATE): {n_enc_cohort_raw}")
 # There is no ZIP / ZIPCODE / FACILITY_ZIP column in this PCORnet CDM extract.
 encounters_raw <- enc_tbl %>%
   dplyr::filter(ID %in% !!COHORT_IDS, !is.na(ADMIT_DATE)) %>%
-  dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, ENC_TYPE, enc_zip_raw = FACILITY_LOCATION) %>%
+  dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, ENC_TYPE, enc_zip_raw = FACILITY_LOCATION,
+               FACILITYID, SOURCE) %>%
   dplyr::collect() %>%
   dplyr::mutate(ADMIT_DATE = parse_pcornet_date(ADMIT_DATE)) %>%
   dplyr::filter(!is.na(ADMIT_DATE))
@@ -258,6 +260,15 @@ COHORT_IDS <- as.character(COHORT_IDS)
 enc_for_dist <- encounters_raw %>%
   dplyr::mutate(zip5_facility = normalize_zip5_raw(enc_zip_raw))
 
+# Phase 182: Facility ZIP fill (Tier 1 rule; guarded by CONFIG$facility_zip_fill toggle)
+fac_lookup   <- build_facility_zip_lookup(enc_for_dist)
+enc_for_dist <- apply_facility_zip_fill(enc_for_dist, fac_lookup, apply = isTRUE(CONFIG$facility_zip_fill))
+message(glue("  [facility_zip_fill={isTRUE(CONFIG$facility_zip_fill)}] filled_tier1 encounters: ",
+             "{sum(enc_for_dist$facility_zip_source == 'filled_tier1')}; ambiguous keys: ",
+             "{sum(fac_lookup$fill_status == 'ambiguous')}; no_donor keys: ",
+             "{sum(fac_lookup$fill_status == 'no_donor')}; encounters without key: ",
+             "{sum(enc_for_dist$facility_zip_source == 'not_filled_no_key')}"))
+
 message("--- Computing encounter distances via compute_encounter_distance() ---")
 
 dist_result <- compute_encounter_distance(enc_for_dist, cal)
@@ -296,6 +307,16 @@ stopifnot(
   "compute_encounter_distance join fanned out -- review join keys" =
     nrow(encounters) == nrow(encounters_raw)
 )
+
+# Phase 182: join filled zip5_facility and facility_zip_source from enc_for_dist.
+# Drop any pre-existing zip5_facility (unfilled) before the join so the filled
+# version from enc_for_dist is authoritative.
+n_before_fac_join <- nrow(encounters)
+fac_zip_cols <- dplyr::select(enc_for_dist, ENCOUNTERID, zip5_facility, facility_zip_source)
+encounters <- encounters %>%
+  dplyr::select(-zip5_facility) %>%
+  dplyr::left_join(fac_zip_cols, by = "ENCOUNTERID")
+stopifnot("facility_zip join changed row count" = nrow(encounters) == n_before_fac_join)
 
 message(glue(
   "  encounters after join: {nrow(encounters)} rows (matches encounters_raw: {nrow(encounters_raw)})"
@@ -546,7 +567,8 @@ enc_distance <- encounters %>%
     distance_status,
     distance_basis,
     enc_centroid_source,
-    res_centroid_source
+    res_centroid_source,
+    facility_zip_source  # Phase 182: observed/filled_tier1/not_filled/not_filled_no_key
   )
 
 n_with_distance <- sum(!is.na(enc_distance$distance_km))
