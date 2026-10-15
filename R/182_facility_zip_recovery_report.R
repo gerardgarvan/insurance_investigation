@@ -54,6 +54,48 @@ sup_md <- function(x) {
   format(x, big.mark = ",")
 }
 
+# Shared helper: compute patients who gained/lost far_from_care_100mi exposure
+# between two cbc_patient_year (P179) RDS files.
+# miss_before/miss_after = distinct IDs where far_from_care_100mi is NA.
+# gained = in miss_before and not in miss_after (exposure filled).
+# lost   = in miss_after  and not in miss_before (expected 0; stops if > 0).
+# stopifnot identity: before - after == gained - lost.
+compute_exposure_gained <- function(before_rds, after_rds, section_label) {
+  bdf <- readRDS(before_rds)
+  adf <- readRDS(after_rds)
+  stopifnot(
+    "far_from_care_100mi missing in BEFORE RDS" = "far_from_care_100mi" %in% names(bdf),
+    "far_from_care_100mi missing in AFTER RDS"  = "far_from_care_100mi" %in% names(adf),
+    "ID missing in BEFORE RDS" = "ID" %in% names(bdf),
+    "ID missing in AFTER RDS"  = "ID" %in% names(adf)
+  )
+  n_patients  <- length(unique(as.character(bdf$ID)))
+  miss_before <- unique(as.character(bdf$ID[is.na(bdf$far_from_care_100mi)]))
+  miss_after  <- unique(as.character(adf$ID[is.na(adf$far_from_care_100mi)]))
+  gained      <- setdiff(miss_before, miss_after)
+  lost        <- setdiff(miss_after,  miss_before)
+  stopifnot(length(miss_before) - length(miss_after) == length(gained) - length(lost))
+  if (length(lost) > 0L)
+    stop(glue(
+      "[{section_label}] {length(lost)} patient(s) LOST exposure (is.na(far) AFTER but not BEFORE).\n",
+      "Expected 0 — a fill operation must not remove existing distances."
+    ))
+  message(glue(
+    "  [{section_label}] n_patients={n_patients}, miss_before={length(miss_before)}, ",
+    "miss_after={length(miss_after)}, gained={length(gained)}, lost={length(lost)}"
+  ))
+  list(
+    n_patients  = n_patients,
+    miss_before = miss_before,
+    miss_after  = miss_after,
+    gained_ids  = gained,
+    n_gained    = length(gained),
+    n_lost      = length(lost),
+    before_df   = bdf,
+    after_df    = adf
+  )
+}
+
 # ==============================================================================
 # SECTION 1: INPUT RESOLUTION ----
 # ==============================================================================
@@ -88,25 +130,32 @@ resolve_env <- function(var, default_path = NULL, required = FALSE) {
 }
 
 # Phase 179 (before = 20261013 pinned; after = new run)
-P179_BEFORE_XLSX <- resolve_env("P182_P179_BEFORE_XLSX",
+P179_BEFORE_XLSX        <- resolve_env("P182_P179_BEFORE_XLSX",
   file.path(CONFIG$output_dir, "cbc_patient_year_20261013.xlsx"))
-P179_AFTER_XLSX  <- resolve_env("P182_P179_AFTER_XLSX", required = TRUE)
-P179_BEFORE_RDS  <- resolve_env("P182_P179_BEFORE_RDS",
+P179_BEFORE_XLSX_PINNED <- nzchar(Sys.getenv("P182_P179_BEFORE_XLSX", unset = ""))
+P179_AFTER_XLSX         <- resolve_env("P182_P179_AFTER_XLSX", required = TRUE)
+P179_BEFORE_RDS         <- resolve_env("P182_P179_BEFORE_RDS",
   file.path(CONFIG$output_dir, "internal", "cbc_patient_year_20261013.rds"))
-P179_AFTER_RDS   <- resolve_env("P182_P179_AFTER_RDS", required = TRUE)
+P179_BEFORE_RDS_PINNED  <- nzchar(Sys.getenv("P182_P179_BEFORE_RDS", unset = ""))
+P179_AFTER_RDS          <- resolve_env("P182_P179_AFTER_RDS", required = TRUE)
 
 # Phase 180 (before = most recent pre-run; after = new run)
-P180_BEFORE_XLSX <- resolve_env("P182_P180_BEFORE_XLSX",
+P180_BEFORE_XLSX        <- resolve_env("P182_P180_BEFORE_XLSX",
   file.path(CONFIG$output_dir, "cbc_missing_capture_20261013.xlsx"))
-P180_AFTER_XLSX  <- resolve_env("P182_P180_AFTER_XLSX", required = TRUE)
-P180_BEFORE_RDS  <- resolve_env("P182_P180_BEFORE_RDS", {
+P180_BEFORE_XLSX_PINNED <- nzchar(Sys.getenv("P182_P180_BEFORE_XLSX", unset = ""))
+P180_AFTER_XLSX         <- resolve_env("P182_P180_AFTER_XLSX", required = TRUE)
+P180_BEFORE_RDS         <- resolve_env("P182_P180_BEFORE_RDS", {
   cand <- list.files(file.path(CONFIG$output_dir, "internal"),
                      "^cbc_missing_capture.*\\.rds$", full.names = TRUE)
   if (length(cand) > 0) cand[which.min(file.mtime(cand))] else NA_character_
 })
+P180_BEFORE_RDS_PINNED  <- nzchar(Sys.getenv("P182_P180_BEFORE_RDS", unset = ""))
 
 DIAG_XLSX   <- resolve_env("P182_DIAG_XLSX", required = TRUE)
 R122_RDS    <- resolve_env("P182_R122_RDS", required = TRUE)
+
+# Helper: annotation for default (non-pinned) paths in the report
+pin_tag <- function(pinned) if (!isTRUE(pinned)) " *(default, not pinned)*" else ""
 
 # Resolve check — stop if any REQUIRED is still missing
 required_paths <- list(P179_AFTER_XLSX, P179_AFTER_RDS, P180_AFTER_XLSX, DIAG_XLSX, R122_RDS)
@@ -217,51 +266,20 @@ DIAG_SENS_RULE    <- key_val(diag_key, "Sensitivity tier rule")
 
 message("\n--- Computing headline: patients who gained exposure ---")
 
-# Join BEFORE Phase 180 RDS (patient -> miss_reason, exposure_missing)
-# to AFTER Phase 179 RDS (exposure_missing) by ID.
-# Count patients who moved from exposure_missing=TRUE (BEFORE) to FALSE (AFTER).
+# Phase 182 gained exposure: P179 BEFORE (20261013) -> P179 AFTER (20261014).
+# Uses is.na(far_from_care_100mi) as the "missing" criterion (patient-level).
+exp182 <- compute_exposure_gained(P179_BEFORE_RDS, P179_AFTER_RDS, "Phase 182")
+n_gained_total <- exp182$n_gained
 
+# miss_reason breakdown: join gained IDs against P180 BEFORE RDS (cbc_missing_capture),
+# which carries the miss_reason classification.
 if (!is.na(P180_BEFORE_RDS) && file.exists(P180_BEFORE_RDS)) {
   p180_before_df <- readRDS(P180_BEFORE_RDS)
-  stopifnot("P180 BEFORE RDS missing ID or exposure_missing or miss_reason" =
-              all(c("ID", "exposure_missing") %in% names(p180_before_df)))
-
-  has_miss_reason <- "miss_reason" %in% names(p180_before_df)
-
-  # Get the BEFORE exposure_missing by patient (one row per patient)
-  p180_before_pts <- p180_before_df |>
-    dplyr::mutate(ID = as.character(ID)) |>
-    dplyr::filter(isTRUE(exposure_missing)) |>
-    dplyr::distinct(ID, .keep_all = TRUE)
-
-  if (has_miss_reason) {
-    p180_before_pts_miss <- p180_before_df |>
+  if ("miss_reason" %in% names(p180_before_df)) {
+    gained_by_reason <- p180_before_df |>
       dplyr::mutate(ID = as.character(ID)) |>
-      dplyr::filter(isTRUE(exposure_missing)) |>
-      dplyr::select(ID, miss_reason) |>
-      dplyr::distinct(ID, .keep_all = TRUE)
-  }
-
-  p179_after_df <- readRDS(P179_AFTER_RDS)
-  stopifnot("P179 AFTER RDS missing ID or exposure_missing" =
-              all(c("ID", "exposure_missing") %in% names(p179_after_df)))
-
-  # Patients who now have exposure (exposure_missing == FALSE) in AFTER
-  p179_after_exposed <- p179_after_df |>
-    dplyr::mutate(ID = as.character(ID)) |>
-    dplyr::filter(!isTRUE(exposure_missing)) |>
-    dplyr::distinct(ID)
-
-  # Which formerly-missing patients now have exposure?
-  gained <- p180_before_pts |>
-    dplyr::semi_join(p179_after_exposed, by = "ID")
-
-  n_gained_total <- nrow(gained)
-  message(glue("  Patients who gained exposure: {n_gained_total}"))
-
-  if (has_miss_reason) {
-    gained_by_reason <- p180_before_pts_miss |>
-      dplyr::semi_join(dplyr::select(gained, ID), by = "ID") |>
+      dplyr::filter(ID %in% exp182$gained_ids) |>
+      dplyr::distinct(ID, miss_reason) |>
       dplyr::count(miss_reason, name = "n_patients") |>
       dplyr::arrange(dplyr::desc(n_patients))
     message("  Gained exposure by miss_reason:")
@@ -269,12 +287,11 @@ if (!is.na(P180_BEFORE_RDS) && file.exists(P180_BEFORE_RDS)) {
     HEADLINE_BY_REASON <- gained_by_reason
   } else {
     HEADLINE_BY_REASON <- data.frame(miss_reason = "(not available)", n_patients = n_gained_total)
-    message("  NOTE: miss_reason column not found in BEFORE P180 RDS")
+    message("  NOTE: miss_reason column not found in P180 BEFORE RDS")
   }
 } else {
-  n_gained_total  <- NA_integer_
   HEADLINE_BY_REASON <- data.frame(miss_reason = "(P180 BEFORE RDS not set)", n_patients = NA_integer_)
-  message("  WARNING: P182_P180_BEFORE_RDS not set or not found — headline skipped")
+  message("  WARNING: P182_P180_BEFORE_RDS not set or not found — miss_reason breakdown skipped")
 }
 
 # ==============================================================================
@@ -402,17 +419,17 @@ broken down by Phase 180 `miss_reason` (group (b) = facility ZIP missing, 581 pa
 
 ## Pinned Paths (for reproducibility)
 
-| Item | Path |
-|------|------|
-| Phase 179 BEFORE xlsx | {basename(P179_BEFORE_XLSX)} |
-| Phase 179 AFTER xlsx | {basename(P179_AFTER_XLSX)} |
-| Phase 179 BEFORE RDS | {basename(P179_BEFORE_RDS)} |
-| Phase 179 AFTER RDS | {basename(P179_AFTER_RDS)} |
-| Phase 180 BEFORE xlsx | {basename(P180_BEFORE_XLSX)} |
-| Phase 180 AFTER xlsx | {basename(P180_AFTER_XLSX)} |
-| Phase 180 BEFORE RDS | {if (is.na(P180_BEFORE_RDS)) 'NOT SET' else basename(P180_BEFORE_RDS)} |
-| Diagnostic xlsx | {basename(DIAG_XLSX)} |
-| R/122 RDS (new) | {basename(R122_RDS)} |
+| Item | Path | Pinned? |
+|------|------|---------|
+| Phase 179 BEFORE xlsx | {basename(P179_BEFORE_XLSX)}{pin_tag(P179_BEFORE_XLSX_PINNED)} | {P179_BEFORE_XLSX_PINNED} |
+| Phase 179 AFTER xlsx | {basename(P179_AFTER_XLSX)} | TRUE |
+| Phase 179 BEFORE RDS | {basename(P179_BEFORE_RDS)}{pin_tag(P179_BEFORE_RDS_PINNED)} | {P179_BEFORE_RDS_PINNED} |
+| Phase 179 AFTER RDS | {basename(P179_AFTER_RDS)} | TRUE |
+| Phase 180 BEFORE xlsx | {basename(P180_BEFORE_XLSX)}{pin_tag(P180_BEFORE_XLSX_PINNED)} | {P180_BEFORE_XLSX_PINNED} |
+| Phase 180 AFTER xlsx | {basename(P180_AFTER_XLSX)} | TRUE |
+| Phase 180 BEFORE RDS | {if (is.na(P180_BEFORE_RDS)) 'NOT SET' else basename(P180_BEFORE_RDS)}{pin_tag(P180_BEFORE_RDS_PINNED)} | {P180_BEFORE_RDS_PINNED} |
+| Diagnostic xlsx | {basename(DIAG_XLSX)} | TRUE |
+| R/122 RDS (new) | {basename(R122_RDS)} | TRUE |
 
 ---
 
@@ -593,14 +610,19 @@ p180_get2 <- function(df, field, source) {
 
 MISS02_B <- p180_get2(p180b_key, "MISS-02 (missing -> far=1)", "P180 BEFORE (182.1)")
 MISS02_A <- p180_get2(p180a_key, "MISS-02 (missing -> far=1)", "P180 AFTER (182.1)")
+message(glue("  R/180 MISS-02 (missing -> far=1): before={MISS02_B}  after={MISS02_A}"))
 MISS03_B <- p180_get2(p180b_key, "MISS-03 (missing -> far=0)", "P180 BEFORE (182.1)")
 MISS03_A <- p180_get2(p180a_key, "MISS-03 (missing -> far=0)", "P180 AFTER (182.1)")
+message(glue("  R/180 MISS-03 (missing -> far=0): before={MISS03_B}  after={MISS03_A}"))
 D05_B    <- p180_get2(p180b_key, "D-05 branch",                "P180 BEFORE (182.1)")
 D05_A    <- p180_get2(p180a_key, "D-05 branch",                "P180 AFTER (182.1)")
+message(glue("  R/180 D-05 branch: before={D05_B}  after={D05_A}"))
 D09_B    <- p180_get2(p180b_key, "D-09 branch (primary)",      "P180 BEFORE (182.1)")
 D09_A    <- p180_get2(p180a_key, "D-09 branch (primary)",      "P180 AFTER (182.1)")
+message(glue("  R/180 D-09 branch: before={D09_B}  after={D09_A}"))
 D09PCT_B <- p180_get2(p180b_key, "D-09 pct change (primary)",  "P180 BEFORE (182.1)")
 D09PCT_A <- p180_get2(p180a_key, "D-09 pct change (primary)",  "P180 AFTER (182.1)")
+message(glue("  R/180 D-09 pct change: before={D09PCT_B}  after={D09PCT_A}"))
 
 # --------------------------------------------------------------------------
 # 6.6  R/181 prior-year OR (KEY sheet) ----
@@ -617,10 +639,9 @@ p181a_key <- tryCatch(
   error = function(e) stop(glue("Cannot read KEY from {basename(P1821_P181_AFTER)}: {e$message}"))
 )
 
-# R/181 KEY label: "Primary OR (prior year CBC x far)" — read with exact match
-P181_OR_LABEL    <- "Primary OR (prior year CBC x far)"
-P181_CI_LO_LABEL <- "Primary CI lower"
-P181_CI_HI_LABEL <- "Primary CI upper"
+# R/181 KEY labels: separate rows for "Primary OR" and "Primary 95% CI"
+P181_OR_LABEL <- "Primary OR"
+P181_CI_LABEL <- "Primary 95% CI"
 
 p181_get <- function(df, field, source) {
   col1 <- names(df)[1]; col2 <- names(df)[2]
@@ -635,14 +656,15 @@ p181_get <- function(df, field, source) {
   .unescape_xml(as.character(rows[[col2]][1]))
 }
 
-P181_OR_B  <- p181_get(p181b_key, P181_OR_LABEL,    "P181 BEFORE (182.1)")
-P181_CI_LO_B <- p181_get(p181b_key, P181_CI_LO_LABEL, "P181 BEFORE (182.1)")
-P181_CI_HI_B <- p181_get(p181b_key, P181_CI_HI_LABEL, "P181 BEFORE (182.1)")
-P181_OR_A  <- p181_get(p181a_key, P181_OR_LABEL,    "P181 AFTER (182.1)")
-P181_CI_LO_A <- p181_get(p181a_key, P181_CI_LO_LABEL, "P181 AFTER (182.1)")
-P181_CI_HI_A <- p181_get(p181a_key, P181_CI_HI_LABEL, "P181 AFTER (182.1)")
+P181_OR_B <- p181_get(p181b_key, P181_OR_LABEL, "P181 BEFORE (182.1)")
+P181_CI_B <- p181_get(p181b_key, P181_CI_LABEL, "P181 BEFORE (182.1)")
+P181_OR_A <- p181_get(p181a_key, P181_OR_LABEL, "P181 AFTER (182.1)")
+P181_CI_A <- p181_get(p181a_key, P181_CI_LABEL, "P181 AFTER (182.1)")
 
-fmt_181 <- function(or, lo, hi) glue("OR {or} ({lo}–{hi})")
+message(glue("  R/181 before: OR {P181_OR_B} ({P181_CI_B})"))
+message(glue("  R/181 after : OR {P181_OR_A} ({P181_CI_A})"))
+
+fmt_181 <- function(or, ci) glue("OR {or} ({ci})")
 
 # --------------------------------------------------------------------------
 # 6.7  R/122 status transition table + distance_method distribution ----
@@ -742,57 +764,35 @@ if ("distance_method" %in% names(r122_after)) {
 
 message("\n--- Reading R/179 RDS files for patient-level counts ---")
 
-p179_before_df <- readRDS(P1821_P179_BEFORE_RDS)
-p179_after_df  <- readRDS(P1821_P179_AFTER_RDS)
+# Phase 182.1 gained exposure: P179 BEFORE (20261014) -> P179 AFTER (20261015).
+exp1821 <- compute_exposure_gained(P1821_P179_BEFORE_RDS, P1821_P179_AFTER_RDS, "Phase 182.1")
+n_gained_1821  <- exp1821$n_gained
+p179_before_df <- exp1821$before_df
+p179_after_df  <- exp1821$after_df
 
-stopifnot(
-  "P179 BEFORE RDS missing ID or exposure_missing" =
-    all(c("ID", "exposure_missing") %in% names(p179_before_df)),
-  "P179 AFTER RDS missing ID or exposure_missing" =
-    all(c("ID", "exposure_missing") %in% names(p179_after_df))
-)
-
-has_far_before <- "far_from_care_100mi" %in% names(p179_before_df)
-has_far_after  <- "far_from_care_100mi" %in% names(p179_after_df)
-
-# Patients gaining exposure (exposure_missing TRUE -> FALSE)
-p179_miss_before <- p179_before_df |>
-  dplyr::mutate(ID = as.character(ID)) |>
-  dplyr::filter(isTRUE(exposure_missing)) |>
-  dplyr::distinct(ID)
-
-p179_exposed_after <- p179_after_df |>
-  dplyr::mutate(ID = as.character(ID)) |>
-  dplyr::filter(!isTRUE(exposure_missing)) |>
-  dplyr::distinct(ID)
-
-n_gained_1821 <- nrow(dplyr::semi_join(p179_miss_before, p179_exposed_after, by = "ID"))
-message(glue("  Patients gaining exposure (182.1): {n_gained_1821}"))
-
-# Far switches (far_from_care_100mi changes)
-if (has_far_before && has_far_after) {
-  far_before_df <- p179_before_df |>
-    dplyr::mutate(ID = as.character(ID)) |>
-    dplyr::select(ID, far_before = far_from_care_100mi) |>
-    dplyr::distinct(ID, .keep_all = TRUE)
-  far_after_df <- p179_after_df |>
-    dplyr::mutate(ID = as.character(ID)) |>
-    dplyr::select(ID, far_after = far_from_care_100mi) |>
-    dplyr::distinct(ID, .keep_all = TRUE)
-  far_joined <- dplyr::inner_join(far_before_df, far_after_df, by = "ID")
-  n_far_switched <- nrow(far_joined |> dplyr::filter(far_before != far_after))
+# Far switches: patients whose far_from_care_100mi value changed (including NA -> value)
+if ("far_from_care_100mi" %in% names(p179_before_df) &&
+    "far_from_care_100mi" %in% names(p179_after_df)) {
+  far_joined <- dplyr::inner_join(
+    p179_before_df |> dplyr::mutate(ID = as.character(ID)) |>
+      dplyr::distinct(ID, far_before = far_from_care_100mi),
+    p179_after_df  |> dplyr::mutate(ID = as.character(ID)) |>
+      dplyr::distinct(ID, far_after  = far_from_care_100mi),
+    by = "ID"
+  )
+  n_far_switched <- sum(
+    is.na(far_joined$far_before) != is.na(far_joined$far_after) |
+    (!is.na(far_joined$far_before) & !is.na(far_joined$far_after) &
+     far_joined$far_before != far_joined$far_after),
+    na.rm = TRUE
+  )
   message(glue("  Far switches (far_from_care_100mi changed): {n_far_switched}"))
 } else {
   n_far_switched <- NA_integer_
-  message("  NOTE: far_from_care_100mi column not found in one or both RDS files — far switches skipped")
+  message("  NOTE: far_from_care_100mi column not found in one or both RDS — far switches skipped")
 }
 
-# Patients still missing (Phase 183 target)
-n_still_missing_1821 <- p179_after_df |>
-  dplyr::mutate(ID = as.character(ID)) |>
-  dplyr::filter(isTRUE(exposure_missing)) |>
-  dplyr::distinct(ID) |>
-  nrow()
+n_still_missing_1821 <- length(exp1821$miss_after)
 message(glue("  Patients still missing after 182.1 (Phase 183 target): {n_still_missing_1821}"))
 
 # --------------------------------------------------------------------------
@@ -875,7 +875,7 @@ recovery_182_1_section <- glue::glue(
 | R/180 MISS-02 (missing -> far=1) OR | {MISS02_B} | {MISS02_A} |
 | R/180 MISS-03 (missing -> far=0) OR | {MISS03_B} | {MISS03_A} |
 | R/180 D-09 pct change (primary)     | {D09PCT_B} | {D09PCT_A} |
-| R/181 Primary prior-year CBC x far OR (95% CI) | {fmt_181(P181_OR_B, P181_CI_LO_B, P181_CI_HI_B)} | {fmt_181(P181_OR_A, P181_CI_LO_A, P181_CI_HI_A)} |
+| R/181 Primary prior-year CBC x far OR (95% CI) | {fmt_181(P181_OR_B, P181_CI_B)} | {fmt_181(P181_OR_A, P181_CI_A)} |
 
 ### Locked Branches
 
