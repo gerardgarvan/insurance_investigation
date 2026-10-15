@@ -70,11 +70,11 @@ COL_EXP_MISSING     <- "exposure_missing"
 COL_TRIAGE          <- "triage"
 
 # R/122 RDS columns (R/122_encounter_distance.R, select lines 685-707):
+# NOTE: SOURCE is not in the final enc_distance select; retrieved from DuckDB ENCOUNTER.
 COL_122_ID          <- "ID"
 COL_122_ADMIT_DATE  <- "ADMIT_DATE"
 COL_122_ZIP5_PAT    <- "zip5_patient"
 COL_122_ZIP5_FAC    <- "zip5_facility"
-COL_122_SOURCE      <- "SOURCE"
 COL_122_DIST_STATUS <- "distance_status"
 
 # R/169 RDS: output/internal/single_source_care_<YYYYMMDD>.rds
@@ -242,8 +242,24 @@ pat_exposure <- py_full |>
 # 2d. Encounters from R/122 RDS
 enc <- readRDS(PINS$r122_rds$path)
 need_cols(enc, c(COL_122_ID, COL_122_ADMIT_DATE, COL_122_ZIP5_PAT,
-                 COL_122_SOURCE, COL_122_DIST_STATUS), "R/122 RDS")
+                 COL_122_DIST_STATUS), "R/122 RDS")
 enc <- enc |> dplyr::mutate(ID = as_id(.data[[COL_122_ID]]))
+
+# SOURCE is not in the final enc_distance RDS (R/122 dropped it in the select).
+# Retrieve from DuckDB ENCOUNTER (read-only) and join by ENCOUNTERID.
+message("  Fetching SOURCE from DuckDB ENCOUNTER ...")
+enc_source <- tryCatch({
+  con183 <- open_pcornet_con()
+  on.exit(try(DBI::dbDisconnect(con183), silent = TRUE), add = TRUE)
+  src_raw <- DBI::dbGetQuery(con183,
+    "SELECT ENCOUNTERID, SOURCE FROM ENCOUNTER WHERE ENCOUNTERID IS NOT NULL")
+  src_raw
+}, error = function(e) {
+  stop(glue("[R/183] DuckDB ENCOUNTER SOURCE fetch failed: {e$message}"), call. = FALSE)
+})
+enc <- enc |>
+  dplyr::left_join(dplyr::distinct(enc_source, ENCOUNTERID, SOURCE), by = "ENCOUNTERID")
+message(glue("  SOURCE joined: {sum(!is.na(enc$SOURCE))} of {nrow(enc)} rows have SOURCE"))
 
 enc_post <- enc |>
   dplyr::left_join(anchors, by = "ID") |>
