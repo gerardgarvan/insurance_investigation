@@ -223,7 +223,7 @@ These scripts represent one-off investigations, superseded implementations, or e
 
 | Script | Purpose | Depends on |
 |--------|---------|------------|
-| `utils/build_hrsa_crosswalk.R` | One-off reference build: downloads the HRSA UDS Mapper ZIP→ZCTA crosswalk (2023 vintage) via `zippeR::zi_load_crosswalk(zip_source="UDS", year=2023)`, validates ZIP_CODE/ZCTA columns, pads to 5 digits, and writes `data/reference/hrsa_zip_zcta_2023.csv`. Prints MD5 checksum. Will not overwrite unless `OVERWRITE_XWALK=1`. Run once interactively on HiPerGator, then `renv::snapshot()`. Pipeline reads the CSV via `load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)` — zippeR is NOT a pipeline dependency. | zippeR (installed interactively) |
+| `utils/build_hrsa_crosswalk.R` | One-off reference build: downloads the HRSA UDS Mapper ZIP→ZCTA crosswalk (2022 vintage) via `zippeR::zi_load_crosswalk(zip_source="UDS", year=2022)`, validates ZIP_CODE/ZCTA columns, pads to 5 digits, and writes `data/reference/hrsa_zip_zcta_2022.csv`. Prints MD5 checksum. Will not overwrite unless `OVERWRITE_XWALK=1`. Run once interactively on HiPerGator, then `renv::snapshot()`. Pipeline reads the CSV via `load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)` — zippeR is NOT a pipeline dependency. | zippeR (installed interactively) |
 
 ---
 

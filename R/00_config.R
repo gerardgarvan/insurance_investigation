@@ -182,7 +182,7 @@ CONFIG <- list(
 
   # HRSA UDS Mapper ZIP->ZCTA crosswalk; built once by R/utils/build_hrsa_crosswalk.R
   # (uses zippeR::zi_load_crosswalk, vintage 2023). Read by load_hrsa_crosswalk().
-  hrsa_zip_zcta_path    = file.path(.reference_dir, "hrsa_zip_zcta_2023.csv"),
+  hrsa_zip_zcta_path    = file.path(.reference_dir, "hrsa_zip_zcta_2022.csv"),
 
   # ZIP9 block-group centroid crosswalk (built by R/122a on HiPerGator from
   # Neighborhood Atlas ZIP+4 files + TIGER block-group internal points).

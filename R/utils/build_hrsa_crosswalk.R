@@ -24,7 +24,7 @@ if (!requireNamespace("zippeR", quietly = TRUE))
   stop("zippeR is not installed. Run install.packages('zippeR') first.",
        call. = FALSE)
 
-out_path <- here::here("data", "reference", "hrsa_zip_zcta_2023.csv")
+out_path <- here::here("data", "reference", "hrsa_zip_zcta_2022.csv")
 
 if (file.exists(out_path) && Sys.getenv("OVERWRITE_XWALK") != "1") {
   message("[build_hrsa_crosswalk] File already exists -- skipping download.")
@@ -33,7 +33,7 @@ if (file.exists(out_path) && Sys.getenv("OVERWRITE_XWALK") != "1") {
 } else {
 
   message("[build_hrsa_crosswalk] Calling zippeR::zi_load_crosswalk(UDS, 2023)...")
-  raw <- zippeR::zi_load_crosswalk(zip_source = "UDS", year = 2023)
+  raw <- zippeR::zi_load_crosswalk(zip_source = "UDS", year = 2022)
 
   message("[build_hrsa_crosswalk] Raw columns: ", paste(names(raw), collapse = ", "))
   message("[build_hrsa_crosswalk] Raw rows:    ", nrow(raw))
@@ -72,6 +72,6 @@ if (file.exists(out_path) && Sys.getenv("OVERWRITE_XWALK") != "1") {
   message("[build_hrsa_crosswalk] Written: ", out_path)
   message("  Rows:   ", nrow(out))
   message("  MD5:    ", chk)
-  message("  Source: HRSA UDS crosswalk via zippeR 0.2.0 (zi_load_crosswalk), vintage 2023")
+  message("  Source: HRSA UDS crosswalk via zippeR 0.2.0 (zi_load_crosswalk), vintage 2022")
   message("[build_hrsa_crosswalk] Done. Run renv::snapshot() to lock zippeR.")
 }

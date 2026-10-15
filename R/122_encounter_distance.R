@@ -1420,7 +1420,7 @@ key_tbl <- tibble::tibble(
       sum(enc_for_dist$facility_zip_source == "not_filled_no_key") else "N/A"),
     # Phase 182.1 values
     paste0(attr(hrsa_xwalk, "source_file"),
-           " — HRSA UDS crosswalk via zippeR 0.2.0 (zi_load_crosswalk), vintage 2023"),
+           " — HRSA UDS crosswalk via zippeR 0.2.0 (zi_load_crosswalk), vintage 2022"),
     as.character(nrow(hrsa_xwalk)),
     as.character(n_placeholder),
     paste(
