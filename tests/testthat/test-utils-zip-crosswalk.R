@@ -60,14 +60,14 @@ test_that("zi_normalise_xwalk deduplicates on ZIP, keeping first row", {
 # ==============================================================================
 # Test block 2: load_hrsa_crosswalk() -- structure check (requires zippeR)
 # ==============================================================================
-test_that("load_hrsa_crosswalk() returns ZIP/ZCTA data.frame via zippeR", {
-  skip_if_not_installed("zippeR")
-  xwalk <- load_hrsa_crosswalk()
+test_that("load_hrsa_crosswalk() returns ZIP/ZCTA data.frame from CSV", {
+  skip_if(!file.exists(CONFIG$hrsa_zip_zcta_path),
+          "HRSA crosswalk CSV not present (HiPerGator only)")
+  xwalk <- load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)
   expect_true(is.data.frame(xwalk))
   expect_true(all(c("ZIP", "ZCTA") %in% names(xwalk)))
   expect_true(nrow(xwalk) > 1000)
-  expect_equal(attr(xwalk, "source_file"), "zippeR::zi_load_crosswalk(UDS,2023)")
-  # All ZIPs should be exactly 5 characters
+  expect_equal(attr(xwalk, "source_file"), basename(CONFIG$hrsa_zip_zcta_path))
   expect_true(all(nchar(xwalk$ZIP) == 5))
 })
 
