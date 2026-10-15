@@ -1,43 +1,49 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-15T15:55:30.696Z",
-  "phase": "182.1",
-  "phase_name": "zip-centroid-mapping-for-unique-po-box-and-placeholder-zips",
-  "phase_dir": ".planning/phases/182.1-zip-centroid-mapping-for-unique-po-box-and-placeholder-zips",
-  "plan": 4,
+  "timestamp": "2026-10-15T19:31:17.494Z",
+  "phase": "183",
+  "phase_name": "mice-sensitivity-for-distance",
+  "phase_dir": ".planning/phases/183-mice-sensitivity-for-distance",
+  "plan": 1,
   "task": 3,
   "total_tasks": 4,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "R/88 SMOKE-182.1-01 section", "status": "done", "commit": "9d68289"},
-    {"id": 2, "name": "R/182 template fix + 182.1 comparison section", "status": "done", "commit": "5e5c9d5"},
-    {"id": 3, "name": "HiPerGator run (checkpoint:human-action)", "status": "in_progress", "progress": "R/122+R/165+R/179 confirmed good (20261015). Paused before R/180 — user needs to continue the chain."}
+    {"id": 0, "name": "Task 0: Record names and labels (read-only)", "status": "done", "commit": "36170cf"},
+    {"id": 1, "name": "Task 1: SECTIONS 0-2 — setup, inputs, patient dataset", "status": "done", "commit": "36170cf"},
+    {"id": 2, "name": "Task 2: SECTION 3 — reproduction gate", "status": "done", "commit": "36170cf"}
   ],
   "remaining_tasks": [
-    {"id": 3, "name": "HiPerGator run — R/180 onwards", "status": "in_progress"},
-    {"id": 4, "name": "Close-out (SUMMARY, ROADMAP, STATE, commit)", "status": "not_started"}
+    {"id": 3, "name": "Task 3: HiPerGator run up to gate", "status": "in_progress", "progress": "First run failed: SOURCE not in R/122 RDS — fixed by fetching from DuckDB ENCOUNTER (commit 57eaef7, pushed). Awaiting re-run."},
+    {"id": 4, "name": "Plan 02 Wave 2 (full MICE, pooling, workbook, memo)", "status": "not_started"}
   ],
   "blockers": [
     {
-      "description": "HiPerGator run incomplete — user must run R/180 → R/181 → R/182 → R/88 and paste results",
+      "description": "HiPerGator checkpoint: user must run R/183 Plan 01 and paste back output before Plan 02 can proceed",
       "type": "human_action",
-      "workaround": "Paths confirmed: NEW_R122=output/encounter_distance_20261015.rds, NEW_P165=output/distance_cbc_association_20261015.xlsx, NEW_P179_RDS=output/internal/cbc_patient_year_20261015.rds, NEW_P179_XLSX=output/cbc_patient_year_20261015.xlsx"
+      "workaround": "none — gate is blocking by design"
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Run R/180 → R/181 → R/182 → R/88 on HiPerGator and paste log output",
-      "context": "R/122, R/165, R/179 already ran successfully on 20261015. Use exact paths in HANDOFF. R181_P179_XLSX pin now required (added this session).",
+      "action": "Re-run R/183 on HiPerGator after git pull, paste back log",
+      "context": "Previous run failed on missing SOURCE column; fix committed and pushed (57eaef7). Expect Task-0 PASS and availability table.",
       "blocking": true
     }
   ],
   "decisions": [
-    {"decision": "Vintage 2022 for HRSA crosswalk", "rationale": "Latest year available in zippeR::zi_load_crosswalk(UDS) at build time", "phase": "182.1"},
-    {"decision": "Move build_hrsa_crosswalk.R to R/tools/", "rationale": "One-off interactive tool; must not be auto-sourced by utils loader", "phase": "182.1"},
-    {"decision": "R181_P179_XLSX pin with date-stamp fallback", "rationale": "Phase 179 workbook was previously hard-coded to 20261013; now follows the RDS stamp automatically", "phase": "182.1"},
-    {"decision": "test-utils-zip-crosswalk block 2 uses skip_if", "rationale": "Old test called load_hrsa_crosswalk() with no args (zippeR signature); new signature requires path; skip locally, run on HiPerGator", "phase": "182.1"}
+    {
+      "decision": "SOURCE column not in R/122 enc_distance RDS — fetch from DuckDB ENCOUNTER by ENCOUNTERID join",
+      "rationale": "R/122 final dplyr::select (lines 685-707) dropped SOURCE; it is available in DuckDB ENCOUNTER table",
+      "phase": "183"
+    },
+    {
+      "decision": "haversine_km returns km — multiply by 0.621371 for miles",
+      "rationale": "Confirmed from R/122 line 399 which applies the same conversion",
+      "phase": "183"
+    }
   ],
   "uncommitted_files": [],
-  "next_action": "User runs R/180 → R/181 → R/182 → R/88 on HiPerGator using paths from .continue-here.md. After approved, execute Task 4 close-out inline.",
-  "context_notes": "Phase 182.1 adds ZIP→ZCTA crosswalk fallback for zip_not_in_db encounters. 182.1 fallback recovered 13,666 encounters in the 20261015 run (121,290 → 107,624 remaining). No far reclassifications. Remaining zip_not_in_db (107,624) is Phase 183 target."
+  "next_action": "After user pastes HiPerGator log showing Task-0 PASS: reply 'approved' to unblock Plan 02, then /clear and execute Plan 02 (Wave 2).",
+  "context_notes": "Plan 01 Tasks 0-2 are done and committed. R/183 Sections 0-3 write the patient-level dataset and reproduction gate. Script stops after printing 'R/183 Plan 01 complete: stopped after reproduction gate'. Plan 02 appends Sections 4-8 (two MICE runs, Rubin pooling, workbook, memo, registration). Context was ~82% at pause — start Plan 02 in a fresh session after /clear."
 }
