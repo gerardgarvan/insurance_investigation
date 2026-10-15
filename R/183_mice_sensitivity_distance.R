@@ -410,6 +410,11 @@ pat_mice <- anchors |>
     dplyr::select(pat_aux, ID, post_anchor_enc_count, main_source, pat_zip5,
                   dist_to_source_facility_mi),
     by = "ID") |>
+  dplyr::mutate(
+    # Patients with no post-anchor encounters in R/122 get count=0, not NA.
+    # main_source stays NA so MICE can impute it.
+    post_anchor_enc_count = dplyr::coalesce(post_anchor_enc_count, 0L)
+  ) |>
   dplyr::left_join(ssc, by = "ID") |>
   dplyr::left_join(dplyr::select(adi_lkp, pat_zip5, adi), by = "pat_zip5")
 
@@ -419,7 +424,24 @@ if (demo_avail && !is.null(age_sex)) {
     dplyr::transmute(
       ID,
       age_at_anchor = as.numeric(difftime(anchor, BIRTH_DATE, units = "days")) / 365.25,
-      sex = factor(SEX))
+      sex_raw = SEX)
+  # Join to cohort patients BEFORE creating factor — prevents empty-level polyreg failures.
+  # Merge any category with fewer than 11 cohort patients into "Other/Unknown".
+  age_sex_pat <- age_sex_pat |>
+    dplyr::filter(ID %in% anchors$ID)
+  sex_counts <- table(age_sex_pat$sex_raw, useNA = "no")
+  rare_levels <- names(sex_counts)[sex_counts < 11L]
+  if (length(rare_levels) > 0L) {
+    msg <- glue("sex levels merged into 'Other/Unknown' (<11 patients): ",
+                "{paste(rare_levels, collapse=', ')}")
+    DROPPED[["sex_merge_note"]] <- msg
+    message(glue("  [R/183] {msg}"))
+    age_sex_pat <- age_sex_pat |>
+      dplyr::mutate(sex_raw = dplyr::if_else(sex_raw %in% rare_levels, "Other/Unknown", sex_raw))
+  }
+  age_sex_pat <- age_sex_pat |>
+    dplyr::mutate(sex = droplevels(factor(sex_raw))) |>
+    dplyr::select(ID, age_at_anchor, sex)
   pat_mice <- pat_mice |> dplyr::left_join(age_sex_pat, by = "ID")
 } else {
   DROPPED[["age_at_anchor"]] <- "DEMOGRAPHIC table unavailable"
@@ -466,6 +488,16 @@ if ("age_at_anchor" %in% names(pat_mice) && all(is.na(pat_mice$age_at_anchor))) 
 if ("sex" %in% names(pat_mice) && all(is.na(pat_mice$sex))) {
   DROPPED[["sex"]] <- "sex is NA for all patients"
   pat_mice <- pat_mice |> dplyr::select(-sex)
+}
+
+# Drop unused factor levels and guard against empty levels that break polyreg/logreg.
+factor_cols <- names(pat_mice)[sapply(pat_mice, is.factor)]
+for (fc in factor_cols) {
+  pat_mice[[fc]] <- droplevels(pat_mice[[fc]])
+  empty <- levels(pat_mice[[fc]])[table(pat_mice[[fc]]) == 0L]
+  if (length(empty) > 0L)
+    stop(glue("[R/183] Factor '{fc}' still has empty levels after droplevels: ",
+              "{paste(empty, collapse=', ')}"), call. = FALSE)
 }
 
 # Final column selection (D-07): ID, log_dist, far, prop_cbc_years, n_years_observed,
@@ -828,30 +860,29 @@ read_p180_key_val <- function(path, label) {
   as.character(rows[[2L]][1L])
 }
 
-# Phase 180 bounding rows (MISS-02, MISS-03) — value column is a formatted string
-# We need OR + CI: extract from the formatted string if present, else read OR/CI_lo/CI_hi cols
+# Phase 180 bounding rows (MISS-02, MISS-03).
+# The KEY Value column stores a formatted string e.g. "far=1: OR 0.692 (0.614-0.781)".
+# Parse OR and CI bounds from the string using the R/182 approach.
+parse_or_string <- function(s, label) {
+  m <- regmatches(s, regexpr("OR\\s+([0-9.]+)\\s+\\(([0-9.]+)-([0-9.]+)\\)", s, perl = TRUE))
+  if (length(m) == 0L || !nzchar(m))
+    stop(glue("[R/183] Cannot parse OR/CI from Phase 180 KEY string for '{label}': '{s}'"),
+         call. = FALSE)
+  parts <- regmatches(m, regexec("OR\\s+([0-9.]+)\\s+\\(([0-9.]+)-([0-9.]+)\\)", m, perl = TRUE))[[1L]]
+  vals <- list(or = as.numeric(parts[2L]), ci_lo = as.numeric(parts[3L]), ci_hi = as.numeric(parts[4L]))
+  if (any(is.na(unlist(vals))))
+    stop(glue("[R/183] NA after parsing OR/CI from Phase 180 KEY for '{label}': '{s}'"),
+         call. = FALSE)
+  vals
+}
+
 p180_miss2_raw <- read_p180_key_val(PINS$p180_xlsx$path, LBL_P180_FAR1)
 p180_miss3_raw <- read_p180_key_val(PINS$p180_xlsx$path, LBL_P180_FAR0)
 message(glue("  Phase 180 {LBL_P180_FAR1}: {p180_miss2_raw}"))
 message(glue("  Phase 180 {LBL_P180_FAR0}: {p180_miss3_raw}"))
 
-# Full KEY sheet for bound rows that have OR/CI_lo/CI_hi columns
-p180_key_df <- openxlsx::read.xlsx(PINS$p180_xlsx$path, sheet = "KEY")
-p180_get_or <- function(df, label) {
-  col1 <- names(df)[1]
-  row  <- df[trimws(as.character(df[[col1]])) == label, ]
-  if (nrow(row) == 0L) return(list(or = NA_real_, ci_lo = NA_real_, ci_hi = NA_real_))
-  or_col  <- intersect(c("OR", "or"), names(row))
-  lo_col  <- intersect(c("CI_lo", "ci_lo", "CI_low"), names(row))
-  hi_col  <- intersect(c("CI_hi", "ci_hi", "CI_high"), names(row))
-  list(
-    or    = if (length(or_col) > 0L) as.numeric(row[[or_col[1L]]]) else NA_real_,
-    ci_lo = if (length(lo_col) > 0L) as.numeric(row[[lo_col[1L]]]) else NA_real_,
-    ci_hi = if (length(hi_col) > 0L) as.numeric(row[[hi_col[1L]]]) else NA_real_
-  )
-}
-P180_FAR1_REF <- p180_get_or(p180_key_df, LBL_P180_FAR1)
-P180_FAR0_REF <- p180_get_or(p180_key_df, LBL_P180_FAR0)
+P180_FAR1_REF <- parse_or_string(p180_miss2_raw, LBL_P180_FAR1)
+P180_FAR0_REF <- parse_or_string(p180_miss3_raw, LBL_P180_FAR0)
 
 # Complete-case all years (P179 secondary — only include if label exists)
 if (P179_HAS_SECONDARY) {
