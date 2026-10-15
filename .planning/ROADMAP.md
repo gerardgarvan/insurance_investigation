@@ -885,7 +885,10 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 **Success Criteria** (what must be TRUE):
 1. MODR-01: Per-modality surveillance rate table (rate per patient-year by modality × period; annual primary, 6-month sensitivity) produced with suppression applied.
 2. MODR-02: A fitted model with far × modality interaction is reported with modality-specific rate ratios, 95% CIs, and a model-fit summary; overdispersion check documented.
-**Plans**: TBD (plan at `/gsd:discuss-phase 184` then `/gsd:plan-phase 184`)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 184-01-PLAN.md — Single-script build: reproduction gate, rate table (MODR-01), Poisson GEE with far×modality interaction (MODR-02), diagnostics, workbook, memo
 
 ## Progress (v3.11)
 
@@ -895,4 +898,4 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 | 182. Facility ZIP Recovery | v3.11 | 3/3 | Complete | 2026-10-14 |
 | 182.1. ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs | v3.11 | 4/4 | Complete | 2026-10-15 |
 | 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
-| 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0 | Not started | — |
+| 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0/1 | In progress | — |
