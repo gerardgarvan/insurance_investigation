@@ -65,12 +65,14 @@ ALL 970 CHECKS PASSED (3 skipped) — SMOKE-182-01: 10 PASS / 0 FAIL / 0 SKIP
 
 | Transition | Encounters |
 |---|---|
-| zip_not_in_db → computed (crosswalk/haversine) | 27,312 |
-| missing (patient ZIP missing + placeholder facility ZIP) → facility_zip_missing | 2,647 |
+| zip_not_in_db → computed (crosswalk/haversine) | 13,666 |
+| zip_not_in_db → facility_zip_missing (placeholder blanked) | 13,659 |
+| patient_zip_missing → facility_zip_missing (missing patient + placeholder facility) | 2,647 |
+| still zip_not_in_db | 107,624 |
 | unchanged computed | retained; distance_mi identical |
-| unchanged missing | retained |
 
 Assert: no computed → other regression. PASS.
+Assert: no distance_mi changes for previously computed rows. PASS.
 
 ## Distance Method Distribution (after)
 
@@ -104,12 +106,18 @@ Note: 2,647 encounters where the patient ZIP was missing and the facility ZIP wa
 
 ## Effect on Results
 
-| Metric | Phase 182 baseline | After 182.1 | Change |
-|---|---|---|---|
-| Phase 179 Primary OR (95% CI) | 0.83 (0.71–0.96) | — | — |
-| Phase 180 D-09 % shrinkage | 30.4% | 19.7% | No material change |
+| Metric | Before (Phase 182 baseline) | After (Phase 182.1) |
+|---|---|---|
+| R/165 whole-record OR (95% CI) | 0.553 (0.470–0.651) | 0.553 (0.472–0.648) |
+| R/165 post-anchor OR (95% CI) | 0.558 (0.468–0.665) | 0.557 (0.470–0.661) |
+| R/179 primary OR (95% CI) | 0.828 (0.713–0.961) | 0.834 (0.719–0.967) |
+| R/180 MISS-02 OR (far=1) | 0.699 | 0.692 |
+| R/180 MISS-03 OR (far=0, 95% CI) | 0.864 (0.745–1.003) | 0.871 (0.751–1.009) |
+| D-05 | same side | same side |
+| D-09 % shrinkage | 30.4%, toward 1 | 19.7%, no material change |
+| R/181 prior-year OR (95% CI) | 0.833 (0.682–1.016) | 0.823 (0.677–1.001) |
 
-D-09 note: 30.4% → 19.7% moves further toward 1 but remains near the 25% monitoring threshold; described as a check, not a reversal. Report to Amy/Erin alongside D-165-01.
+D-09 note: 30.4% → 19.7% sits near the 25% monitoring threshold — the direction (toward 1) is consistent with out-of-system care and does not constitute a reversal. Report to Amy/Erin alongside D-165-01.
 
 ## Locked Branches
 

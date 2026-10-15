@@ -55,8 +55,8 @@ Deliver the CBC × distance prior-year analysis the team requested on 2026-10-13
 |--------|-------|--------|
 | CBCP-01 | 181 | Complete |
 | CBCP-02 | 181 | Complete |
-| FZIP-01 | 182 | Pending |
-| FZIP-02 | 182 | Pending |
+| FZIP-01 | 182 | Complete |
+| FZIP-02 | 182 | Complete |
 | MICE-01 | 183 | Pending |
 | MICE-02 | 183 | Pending |
 | MODR-01 | 184 | Pending |
