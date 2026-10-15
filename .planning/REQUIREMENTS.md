@@ -25,8 +25,8 @@ Deliver the CBC × distance prior-year analysis the team requested on 2026-10-13
 
 ### Survivorship Modality Rates and Distance × Modality Interaction (Phase 184)
 
-- [ ] **MODR-01**: Analyst can produce rates of each surveillance modality per patient-year (annual primary; 6-month as sensitivity), reusing R/147 / R/166 definitions and person-time, with suppression applied per HIPAA rules.
-- [ ] **MODR-02**: Analyst can fit a count-per-patient-year model by modality (Poisson or negative-binomial GEE or GLMM, with log person-time offset, terms far × modality, clustered on patient ID), and report modality-specific rate ratios for far vs not-far with 95% CIs.
+- [x] **MODR-01**: Analyst can produce rates of each surveillance modality per patient-year (annual primary; 6-month as sensitivity), reusing R/147 / R/166 definitions and person-time, with suppression applied per HIPAA rules.
+- [x] **MODR-02**: Analyst can fit a count-per-patient-year model by modality (Poisson or negative-binomial GEE or GLMM, with log person-time offset, terms far × modality, clustered on patient ID), and report modality-specific rate ratios for far vs not-far with 95% CIs.
 
 ---
 
@@ -59,8 +59,8 @@ Deliver the CBC × distance prior-year analysis the team requested on 2026-10-13
 | FZIP-02 | 182 | Complete |
 | MICE-01 | 183 | Pending |
 | MICE-02 | 183 | Pending |
-| MODR-01 | 184 | Pending |
-| MODR-02 | 184 | Pending |
+| MODR-01 | 184 | Complete |
+| MODR-02 | 184 | Complete |
 
 ---
 
