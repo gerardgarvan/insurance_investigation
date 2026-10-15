@@ -564,4 +564,583 @@ message(glue("Task-0 PASS: complete-case OR {round(t0_fit$or, 3)} ",
              "({round(t0_fit$ci_lo, 3)}-{round(t0_fit$ci_hi, 3)}) matches ",
              "Phase 179 {round(P179_REF$or, 3)} ({round(P179_REF$ci_lo, 3)}-{round(P179_REF$ci_hi, 3)})"))
 
-message("==== R/183 Plan 01 complete: stopped after reproduction gate ====")
+
+# ==============================================================================
+# SECTION 4: MICE IMPUTATION — TWO SEPARATE RUNS (D-01 and D-02) ----
+# ==============================================================================
+
+# Predictor set: exclude ID, targets, miss_reason (D-07c), and exposure_missing
+PRED <- setdiff(names(pat_mice), c("ID", "log_dist", "far", "exposure_missing", "miss_reason"))
+
+run_mice <- function(target, method_target) {
+  d <- pat_mice[, c(target, PRED)]
+  ini  <- mice::mice(d, maxit = 0, printFlag = FALSE)
+  meth <- ini$method
+  meth[target] <- method_target
+  imp  <- mice::mice(d, m = MICE_M, maxit = MICE_MAXIT, method = meth,
+                     predictorMatrix = ini$predictorMatrix, seed = MICE_SEED,
+                     printFlag = FALSE)
+  # D-09.1: no NA in target after imputation
+  for (i in seq_len(MICE_M)) {
+    ci <- mice::complete(imp, i)
+    if (anyNA(ci[[target]]))
+      stop(glue("D-09 FAIL: NA in {target} after imputation, dataset {i}"), call. = FALSE)
+  }
+  # D-09.2: mandatory predictors not removed by mice
+  le   <- imp$loggedEvents
+  must <- c("prop_cbc_years", "n_years_observed", "dist_to_source_facility_mi")
+  if (!is.null(le) && any(le$out %in% must))
+    stop(glue("D-09 FAIL: mice removed {paste(intersect(le$out, must), collapse=', ')}"),
+         call. = FALSE)
+  imp
+}
+
+# D-02: far stored as factor with levels "0","1" (convert back via as.integer(as.character(.)))
+pat_mice$far <- factor(pat_mice$far, levels = c(0, 1), labels = c("0", "1"))
+
+message("\n==== SECTION 4: MICE D-01 (log_dist, pmm) ====")
+imp_d01 <- run_mice("log_dist", "pmm")
+message(glue("  D-01 complete: m={MICE_M}, maxit={MICE_MAXIT}, seed={MICE_SEED}"))
+
+message("\n==== SECTION 4: MICE D-02 (far, logreg) ====")
+imp_d02 <- run_mice("far", "logreg")
+message(glue("  D-02 complete: m={MICE_M}, maxit={MICE_MAXIT}, seed={MICE_SEED}"))
+
+# Save mids objects (patient-level — internal only, D-17)
+mids_path <- file.path("output", "internal", glue("mice_mids_{RUN_DATE}.rds"))
+saveRDS(list(d01 = imp_d01, d02 = imp_d02), mids_path)
+message(glue("  Saved: {mids_path}"))
+
+# --- D-10: Diagnostics (non-blocking) ---
+
+# loggedEvents
+message("\n  D-10: loggedEvents D-01:")
+if (is.null(imp_d01$loggedEvents)) message("    None") else print(imp_d01$loggedEvents)
+message("  D-10: loggedEvents D-02:")
+if (is.null(imp_d02$loggedEvents)) message("    None") else print(imp_d02$loggedEvents)
+
+# n patients imputed per target
+n_imp_d01 <- sup(sum(pat_mice$exposure_missing & !is.na(pat_mice$exposure_missing)))
+message(glue("  D-10: patients missing (exposure_missing): {n_imp_d01}"))
+
+# Observed far proportion
+obs_far_prop <- mean(as.integer(as.character(pat_mice$far[!pat_mice$exposure_missing])), na.rm = TRUE)
+message(glue("  D-10: observed far proportion (non-missing): {round(obs_far_prop, 4)}"))
+
+# Per-dataset imputed far proportion across m datasets (D-01: derived; D-02: direct)
+far_props_d01 <- sapply(seq_len(MICE_M), function(i) {
+  ci <- mice::complete(imp_d01, i)
+  imp_rows <- pat_mice$exposure_missing
+  mean(as.integer(expm1(ci$log_dist[imp_rows]) > CUTOFF), na.rm = TRUE)
+})
+far_props_d02 <- sapply(seq_len(MICE_M), function(i) {
+  ci <- mice::complete(imp_d02, i)
+  imp_rows <- pat_mice$exposure_missing
+  mean(as.integer(as.character(ci$far[imp_rows])), na.rm = TRUE)
+})
+message(glue("  D-10: D-01 imputed far proportion (missing patients, over m): ",
+             "mean={round(mean(far_props_d01), 4)}, ",
+             "min={round(min(far_props_d01), 4)}, ",
+             "max={round(max(far_props_d01), 4)}"))
+message(glue("  D-10: D-02 imputed far proportion (missing patients, over m): ",
+             "mean={round(mean(far_props_d02), 4)}, ",
+             "min={round(min(far_props_d02), 4)}, ",
+             "max={round(max(far_props_d02), 4)}"))
+
+# Trace plots: chainMean / chainVar for both runs (2x2 panels)
+trace_png <- file.path("output", glue("mice_trace_{RUN_DATE}.png"))
+png(trace_png, width = 1200, height = 800)
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+# D-01 chainMean / chainVar for log_dist
+target_d01 <- "log_dist"
+if (!is.null(imp_d01$chainMean) && target_d01 %in% dimnames(imp_d01$chainMean)[[1]]) {
+  matplot(t(imp_d01$chainMean[target_d01, , ]), type = "l", lty = 1,
+          xlab = "Iteration", ylab = "Chain Mean", main = "D-01: log_dist chain mean")
+  matplot(t(imp_d01$chainVar[target_d01, , ]), type = "l", lty = 1,
+          xlab = "Iteration", ylab = "Chain Var", main = "D-01: log_dist chain var")
+} else {
+  plot.new(); title("D-01: chainMean not available")
+  plot.new(); title("D-01: chainVar not available")
+}
+# D-02 chainMean / chainVar for far
+target_d02 <- "far"
+if (!is.null(imp_d02$chainMean) && target_d02 %in% dimnames(imp_d02$chainMean)[[1]]) {
+  matplot(t(imp_d02$chainMean[target_d02, , ]), type = "l", lty = 1,
+          xlab = "Iteration", ylab = "Chain Mean", main = "D-02: far chain mean")
+  matplot(t(imp_d02$chainVar[target_d02, , ]), type = "l", lty = 1,
+          xlab = "Iteration", ylab = "Chain Var", main = "D-02: far chain var")
+} else {
+  plot.new(); title("D-02: chainMean not available")
+  plot.new(); title("D-02: chainVar not available")
+}
+dev.off()
+message(glue("  D-10 trace PNG: {trace_png}"))
+
+# Density / proportion PNG
+density_png <- file.path("output", glue("mice_density_{RUN_DATE}.png"))
+png(density_png, width = 1200, height = 500)
+par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+# D-01: observed vs imputed log_dist (pooled over m datasets)
+obs_log_dist <- pat_mice$log_dist[!pat_mice$exposure_missing]
+imp_log_dist  <- unlist(lapply(seq_len(MICE_M), function(i)
+  mice::complete(imp_d01, i)$log_dist[pat_mice$exposure_missing]))
+plot(density(obs_log_dist, na.rm = TRUE), col = "steelblue", lwd = 2,
+     main = "D-01: log_dist distribution", xlab = "log_dist")
+lines(density(imp_log_dist, na.rm = TRUE), col = "tomato", lwd = 2, lty = 2)
+legend("topright", c("Observed", "Imputed"), col = c("steelblue", "tomato"),
+       lwd = 2, lty = c(1, 2), bty = "n", cex = 0.8)
+# D-02: bar of observed vs imputed far proportion
+obs_far_bar <- obs_far_prop
+imp_far_bar <- mean(far_props_d02)
+barplot(c(obs_far_bar, imp_far_bar), names.arg = c("Observed", "Imputed (D-02)"),
+        ylab = "Proportion far=1", main = "D-02: far proportion (observed vs imputed)",
+        col = c("steelblue", "tomato"), ylim = c(0, max(obs_far_bar, imp_far_bar) * 1.3))
+dev.off()
+message(glue("  D-10 density PNG: {density_png}"))
+
+# Store loggedEvents for workbook
+LE_D01 <- imp_d01$loggedEvents
+LE_D02 <- imp_d02$loggedEvents
+
+# ==============================================================================
+# SECTION 5: REFIT AND POOL (Rubin 1987; Barnard-Rubin df) ----
+# ==============================================================================
+
+# far_from: how to derive far (integer 0/1) from each completed dataset per branch
+far_from <- list(
+  d01 = function(ci) as.integer(expm1(ci$log_dist) > CUTOFF),
+  d02 = function(ci) as.integer(as.character(ci$far))
+)
+
+# Rubin (1987); df per Barnard & Rubin form for large complete-data df
+pool_rubin <- function(Q, SE) {
+  m  <- length(Q)
+  U  <- mean(SE^2)
+  B  <- var(Q)
+  Tv <- U + (1 + 1/m) * B
+  r  <- (1 + 1/m) * B / U
+  df <- if (B > 0) (m - 1) * (1 + 1/r)^2 else Inf
+  q  <- qt(0.975, df)
+  list(
+    or  = exp(mean(Q)),
+    lo  = exp(mean(Q) - q * sqrt(Tv)),
+    hi  = exp(mean(Q) + q * sqrt(Tv)),
+    fmi = (r + 2 / (df + 3)) / (r + 1),
+    df  = df,
+    U   = U,
+    B   = B,
+    T   = Tv,
+    m   = m
+  )
+}
+
+# Prepare complete-case py subsets for all-years (D-12a)
+py_cc_all <- dplyr::filter(py_full, !.data[[COL_EXP_MISSING]])
+
+mids_list  <- list(d01 = imp_d01, d02 = imp_d02)
+subsets    <- list(
+  pri = list(label = "years 2+",  filter_fn = function(d) dplyr::filter(d, year_index >= 2L)),
+  all = list(label = "all years", filter_fn = function(d) d)
+)
+
+pooled_results <- list()
+
+for (branch in c("d01", "d02")) {
+  imp_obj <- mids_list[[branch]]
+  for (sname in c("pri", "all")) {
+    sub_label  <- subsets[[sname]]$label
+    filter_fn  <- subsets[[sname]]$filter_fn
+    result_key <- paste0(branch, "_", sname)
+
+    Q_vec  <- numeric(MICE_M)
+    SE_vec <- numeric(MICE_M)
+
+    for (i in seq_len(MICE_M)) {
+      ci <- mice::complete(imp_obj, i)
+      # Derive far for imputed patients; observed far unchanged
+      far_imp_vec <- far_from[[branch]](ci)
+
+      # Assert observed far is unchanged for non-missing patients
+      obs_idx <- !pat_mice$exposure_missing
+      obs_far_orig <- as.integer(as.character(pat_mice$far[obs_idx]))
+      obs_far_imp  <- far_imp_vec[obs_idx]
+      if (!identical(obs_far_orig, obs_far_imp))
+        stop(glue("D-09 FAIL: observed far changed for non-missing patients in branch {branch} dataset {i}"),
+             call. = FALSE)
+
+      imp_far_tbl <- tibble::tibble(ID = pat_mice$ID, far_imp = far_imp_vec)
+
+      # Build patient-year frame: join imputed far for missing patients only
+      py_imp <- py_full |>
+        dplyr::left_join(imp_far_tbl, by = "ID") |>
+        dplyr::mutate(
+          far = dplyr::if_else(.data[[COL_EXP_MISSING]], far_imp, as.integer(as.character(.data[[COL_FAR]])))
+        ) |>
+        dplyr::select(-far_imp)
+
+      py_sub <- filter_fn(py_imp)
+
+      fit <- tryCatch(
+        run_gee(py_sub, COL_CBC_YEAR, "far",
+                glue("{branch} {sub_label} dataset {i}")),
+        error = function(e)
+          stop(glue("D-09 FAIL: GEE error branch {branch} subset {sname} dataset {i}: {e$message}"),
+               call. = FALSE)
+      )
+      if (!is.null(fit$error) && !is.na(fit$error))
+        stop(glue("D-09 FAIL: GEE error branch {branch} subset {sname} dataset {i}: {fit$error}"),
+             call. = FALSE)
+
+      b  <- log(fit$or)
+      se <- (log(fit$ci_hi) - log(fit$ci_lo)) / (2 * 1.96)
+      Q_vec[i]  <- b
+      SE_vec[i] <- se
+    }
+
+    pooled <- pool_rubin(Q_vec, SE_vec)
+    pooled_results[[result_key]] <- c(pooled, list(branch = branch, subset = sub_label))
+
+    message(glue("  Pooled [{branch} {sub_label}]: OR={round(pooled$or, 3)} ",
+                 "({round(pooled$lo, 3)}-{round(pooled$hi, 3)}) ",
+                 "FMI={round(pooled$fmi, 3)} df={round(pooled$df, 1)}"))
+  }
+}
+
+# ==============================================================================
+# SECTION 6: REFERENCE VALUES AND WORKBOOK ----
+# ==============================================================================
+
+# --- 6a. Phase 180 KEY reader (R/182 exact-label pattern) ---
+read_p180_key_val <- function(path, label) {
+  key_df <- tryCatch(
+    openxlsx::read.xlsx(path, sheet = "KEY"),
+    error = function(e)
+      stop(glue("Cannot read KEY sheet from {basename(path)}: {e$message}"), call. = FALSE)
+  )
+  col1 <- names(key_df)[1]
+  rows <- key_df[trimws(as.character(key_df[[col1]])) == label, ]
+  if (nrow(rows) != 1L) {
+    avail <- paste(head(trimws(as.character(key_df[[col1]])), 30), collapse = ", ")
+    stop(glue("Expected 1 row with Field='{label}' in KEY of {basename(path)}; ",
+              "found {nrow(rows)}. Available: {avail}"), call. = FALSE)
+  }
+  # Return second column as character
+  as.character(rows[[2L]][1L])
+}
+
+# Phase 180 bounding rows (MISS-02, MISS-03) — value column is a formatted string
+# We need OR + CI: extract from the formatted string if present, else read OR/CI_lo/CI_hi cols
+p180_miss2_raw <- read_p180_key_val(PINS$p180_xlsx$path, LBL_P180_FAR1)
+p180_miss3_raw <- read_p180_key_val(PINS$p180_xlsx$path, LBL_P180_FAR0)
+message(glue("  Phase 180 {LBL_P180_FAR1}: {p180_miss2_raw}"))
+message(glue("  Phase 180 {LBL_P180_FAR0}: {p180_miss3_raw}"))
+
+# Full KEY sheet for bound rows that have OR/CI_lo/CI_hi columns
+p180_key_df <- openxlsx::read.xlsx(PINS$p180_xlsx$path, sheet = "KEY")
+p180_get_or <- function(df, label) {
+  col1 <- names(df)[1]
+  row  <- df[trimws(as.character(df[[col1]])) == label, ]
+  if (nrow(row) == 0L) return(list(or = NA_real_, ci_lo = NA_real_, ci_hi = NA_real_))
+  or_col  <- intersect(c("OR", "or"), names(row))
+  lo_col  <- intersect(c("CI_lo", "ci_lo", "CI_low"), names(row))
+  hi_col  <- intersect(c("CI_hi", "ci_hi", "CI_high"), names(row))
+  list(
+    or    = if (length(or_col) > 0L) as.numeric(row[[or_col[1L]]]) else NA_real_,
+    ci_lo = if (length(lo_col) > 0L) as.numeric(row[[lo_col[1L]]]) else NA_real_,
+    ci_hi = if (length(hi_col) > 0L) as.numeric(row[[hi_col[1L]]]) else NA_real_
+  )
+}
+P180_FAR1_REF <- p180_get_or(p180_key_df, LBL_P180_FAR1)
+P180_FAR0_REF <- p180_get_or(p180_key_df, LBL_P180_FAR0)
+
+# Complete-case all years (P179 secondary — only include if label exists)
+if (P179_HAS_SECONDARY) {
+  P179_REF_ALL_USED <- P179_REF_ALL
+} else {
+  P179_REF_ALL_USED <- NULL
+}
+
+# --- 6b. Comparison table (D-13a) ---
+fmt3 <- function(x) if (is.na(x)) "—" else formatC(round(x, 3), format = "f", digits = 3)
+
+make_comp_row <- function(analysis, or, lo, hi, fmi = NA, df_val = NA, source = "") {
+  data.frame(
+    Analysis = analysis,
+    OR       = fmt3(or),
+    CI_lo    = fmt3(lo),
+    CI_hi    = fmt3(hi),
+    FMI      = if (is.na(fmi)) "—" else fmt3(fmi),
+    df       = if (is.na(df_val) || is.infinite(df_val)) "—" else as.character(round(df_val, 1)),
+    Source   = source,
+    stringsAsFactors = FALSE
+  )
+}
+
+comp_rows <- list()
+
+# Row 1: Complete-case years 2+ (Phase 179 primary)
+comp_rows[["cc_pri"]] <- make_comp_row(
+  glue("Complete-case ({LBL_P179_PRIMARY})"),
+  P179_REF$or, P179_REF$ci_lo, P179_REF$ci_hi,
+  source = "Phase 179 workbook"
+)
+
+# Row 2: Complete-case all years (Phase 179 secondary — only if label exists)
+if (!is.null(P179_REF_ALL_USED)) {
+  comp_rows[["cc_all"]] <- make_comp_row(
+    glue("Complete-case ({LBL_P179_SECONDARY})"),
+    P179_REF_ALL_USED$or, P179_REF_ALL_USED$ci_lo, P179_REF_ALL_USED$ci_hi,
+    source = "Phase 179 workbook"
+  )
+}
+
+# Row 3: Phase 180 missing -> far=1
+comp_rows[["p180_far1"]] <- make_comp_row(
+  LBL_P180_FAR1,
+  P180_FAR1_REF$or, P180_FAR1_REF$ci_lo, P180_FAR1_REF$ci_hi,
+  source = "Phase 180 workbook KEY"
+)
+
+# Row 4: Phase 180 missing -> far=0
+comp_rows[["p180_far0"]] <- make_comp_row(
+  LBL_P180_FAR0,
+  P180_FAR0_REF$or, P180_FAR0_REF$ci_lo, P180_FAR0_REF$ci_hi,
+  source = "Phase 180 workbook KEY"
+)
+
+# Rows 5-8: Four pooled MICE estimates (D-12a)
+for (rk in names(pooled_results)) {
+  pr <- pooled_results[[rk]]
+  label <- glue("MICE {pr$branch} ({pr$subset})")
+  comp_rows[[rk]] <- make_comp_row(label, pr$or, pr$lo, pr$hi,
+                                   fmi = pr$fmi, df_val = pr$df,
+                                   source = "MICE (this script)")
+}
+
+comp_tbl <- do.call(rbind, comp_rows)
+rownames(comp_tbl) <- NULL
+message("\n  Comparison table (MICE-02):")
+print(comp_tbl)
+
+# --- 6c. Build workbook ---
+hdr  <- openxlsx::createStyle(fgFill = "#0021A5", fontColour = "#FFFFFF", textDecoration = "bold")
+sec  <- openxlsx::createStyle(fgFill = "#FA4616", fontColour = "#FFFFFF", textDecoration = "bold")
+wrap <- openxlsx::createStyle(wrapText = TRUE, valign = "top")
+
+wb <- openxlsx::createWorkbook()
+
+# KEY sheet
+key_rows <- c(
+  Field = "Field", Value = "Value",  # header placeholder (writeData adds its own header)
+  list(
+    list(Field = "Run date",       Value = RUN_DATE),
+    list(Field = "Host",           Value = Sys.info()[["nodename"]]),
+    list(Field = "MICE_M",         Value = as.character(MICE_M)),
+    list(Field = "MICE_MAXIT",     Value = as.character(MICE_MAXIT)),
+    list(Field = "MICE_SEED",      Value = as.character(MICE_SEED)),
+    list(Field = "D-01 target",    Value = "log_dist (pmm)"),
+    list(Field = "D-02 target",    Value = "far (logreg)"),
+    list(Field = "Predictor list", Value = paste(PRED, collapse = ", ")),
+    list(Field = "DROPPED variables",
+         Value = if (length(DROPPED) == 0L) "None"
+                 else paste(names(DROPPED), unlist(DROPPED), sep = ": ", collapse = "; ")),
+    list(Field = "Task-0 line",
+         Value = glue("PASS: OR={round(t0_fit$or, 3)} ({round(t0_fit$ci_lo, 3)}-{round(t0_fit$ci_hi, 3)})")),
+    list(Field = "D-09 status",    Value = "PASS (script reached workbook step)"),
+    list(Field = "Privacy note",   Value = paste0(
+      "Patient-level RDS in output/internal/ only. ",
+      "No patient IDs or ZIPs in this workbook. Counts 1-10 as <11.")),
+    list(Field = "PNG: trace",     Value = basename(trace_png)),
+    list(Field = "PNG: density",   Value = basename(density_png))
+  )
+)
+
+# Add PIN rows to KEY
+for (nm in names(PINS)) {
+  p <- PINS[[nm]]
+  key_rows <- c(key_rows,
+    list(list(Field = glue("PIN: {p$var}"),
+              Value = glue("{p$path} (pinned={p$pinned})"))))
+}
+
+key_df <- data.frame(
+  Field = sapply(key_rows[-(1:2)], `[[`, "Field"),
+  Value = sapply(key_rows[-(1:2)], `[[`, "Value"),
+  stringsAsFactors = FALSE
+)
+
+openxlsx::addWorksheet(wb, "KEY")
+openxlsx::writeData(wb, "KEY", key_df, headerStyle = hdr)
+openxlsx::addStyle(wb, "KEY", wrap, rows = 2:(nrow(key_df) + 1), cols = 1:2, gridExpand = TRUE)
+openxlsx::freezePane(wb, "KEY", firstRow = TRUE)
+openxlsx::setColWidths(wb, "KEY", cols = 1:2, widths = c(30, 60))
+
+# MICE-01 sheet: methods, loggedEvents, availability, imputed counts, far proportion, FMI
+openxlsx::addWorksheet(wb, "MICE-01")
+cur_row <- 1L
+
+write_sec <- function(sheet, label, row) {
+  openxlsx::writeData(wb, sheet, label, startRow = row)
+  openxlsx::addStyle(wb, sheet, sec, rows = row, cols = 1)
+  row + 1L
+}
+
+cur_row <- write_sec("MICE-01", "Methods per variable (D-01: log_dist target, pmm)", cur_row)
+meth_d01_df <- data.frame(
+  Variable = names(imp_d01$method),
+  Method   = unname(imp_d01$method),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "MICE-01", meth_d01_df, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(meth_d01_df) + 2L
+
+cur_row <- write_sec("MICE-01", "Methods per variable (D-02: far target, logreg)", cur_row)
+meth_d02_df <- data.frame(
+  Variable = names(imp_d02$method),
+  Method   = unname(imp_d02$method),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "MICE-01", meth_d02_df, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(meth_d02_df) + 2L
+
+cur_row <- write_sec("MICE-01", "loggedEvents — D-01", cur_row)
+le_d01_df <- if (is.null(LE_D01)) data.frame(Note = "None") else as.data.frame(LE_D01)
+openxlsx::writeData(wb, "MICE-01", le_d01_df, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(le_d01_df) + 2L
+
+cur_row <- write_sec("MICE-01", "loggedEvents — D-02", cur_row)
+le_d02_df <- if (is.null(LE_D02)) data.frame(Note = "None") else as.data.frame(LE_D02)
+openxlsx::writeData(wb, "MICE-01", le_d02_df, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(le_d02_df) + 2L
+
+cur_row <- write_sec("MICE-01", "Predictor availability", cur_row)
+openxlsx::writeData(wb, "MICE-01", avail_tbl, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(avail_tbl) + 2L
+
+cur_row <- write_sec("MICE-01", "Imputed far proportion (missing patients)", cur_row)
+far_prop_df <- data.frame(
+  Branch   = c("D-01 (derived)", "D-02 (direct)", "Observed (non-missing)"),
+  Mean     = c(round(mean(far_props_d01), 4), round(mean(far_props_d02), 4), round(obs_far_prop, 4)),
+  Min      = c(round(min(far_props_d01),  4), round(min(far_props_d02),  4), NA_real_),
+  Max      = c(round(max(far_props_d01),  4), round(max(far_props_d02),  4), NA_real_),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "MICE-01", far_prop_df, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(far_prop_df) + 2L
+
+cur_row <- write_sec("MICE-01", "FMI and df per pooled estimate", cur_row)
+fmi_rows <- do.call(rbind, lapply(names(pooled_results), function(rk) {
+  pr <- pooled_results[[rk]]
+  data.frame(
+    Estimate = glue("{pr$branch} ({pr$subset})"),
+    FMI      = round(pr$fmi, 4),
+    df       = round(pr$df, 2),
+    m        = pr$m,
+    stringsAsFactors = FALSE
+  )
+}))
+openxlsx::writeData(wb, "MICE-01", fmi_rows, startRow = cur_row, headerStyle = hdr)
+cur_row <- cur_row + nrow(fmi_rows) + 2L
+
+openxlsx::freezePane(wb, "MICE-01", firstRow = FALSE)
+
+# MICE-02 sheet: comparison table
+openxlsx::addWorksheet(wb, "MICE-02")
+openxlsx::writeData(wb, "MICE-02", "Comparison table (D-13a): OR (3 dp), 95% CI, FMI, df",
+                    startRow = 1)
+openxlsx::addStyle(wb, "MICE-02", sec, rows = 1, cols = 1)
+openxlsx::writeData(wb, "MICE-02", comp_tbl, startRow = 2, headerStyle = hdr)
+openxlsx::freezePane(wb, "MICE-02", firstRow = FALSE, firstActiveRow = 3)
+openxlsx::setColWidths(wb, "MICE-02", cols = 1:7, widths = c(40, 10, 10, 10, 10, 10, 25))
+
+wb_path <- file.path("output", glue("mice_sensitivity_distance_{RUN_DATE}.xlsx"))
+openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
+message(glue("  Workbook saved: {wb_path}"))
+
+# ==============================================================================
+# SECTION 7: MEMO ----
+# ==============================================================================
+
+# Determine agreement: does pooled primary (D-01 years 2+) OR lie within +-0.05 of complete-case?
+pool_pri <- pooled_results[["d01_pri"]]
+cc_or    <- P179_REF$or
+agree_diff <- abs(pool_pri$or - cc_or)
+agree_word <- if (agree_diff <= 0.05) "similar to" else "differs from"
+agree_rule <- glue("Agreement rule: pooled primary OR within +-0.05 of complete-case on OR scale ",
+                   "(|{round(pool_pri$or, 3)} - {round(cc_or, 3)}| = {round(agree_diff, 3)}).")
+
+pool_d02_pri <- pooled_results[["d02_pri"]]
+d02_agree_diff <- abs(pool_d02_pri$or - cc_or)
+d02_agree_word <- if (d02_agree_diff <= 0.05) "similar to" else "differs from"
+
+memo_path <- file.path("output", glue("183-MEMO_{RUN_DATE}.md"))
+memo_lines <- c(
+  glue("# MICE Sensitivity Analysis for Distance Exposure — Memo ({RUN_DATE})"),
+  "",
+  glue("**Script:** R/183_mice_sensitivity_distance.R  |  **Run date:** {RUN_DATE}"),
+  "",
+  "## Background",
+  "",
+  glue("Of {n_patients} cohort patients with {n_py} patient-years, ",
+       "{sup(sum(pat_mice$exposure_missing, na.rm = TRUE))} patients have missing ",
+       "distance exposure after Phase 182. Two multiple-imputation runs (m = {MICE_M}) ",
+       "were conducted:"),
+  glue("- **D-01 (primary):** Impute `log_dist` by PMM; derive `far` via threshold ",
+       "({CUTOFF} mi)."),
+  glue("- **D-02 (sensitivity):** Impute `far` directly by logistic regression."),
+  "",
+  "## Results",
+  "",
+  glue("The pooled primary estimate (D-01, years 2+): OR = {round(pool_pri$or, 3)} ",
+       "({round(pool_pri$lo, 3)}–{round(pool_pri$hi, 3)}), ",
+       "FMI = {round(pool_pri$fmi, 3)}, df = {round(pool_pri$df, 1)}."),
+  glue("This is {agree_word} the complete-case estimate ",
+       "(OR = {round(cc_or, 3)}, {round(P179_REF$ci_lo, 3)}–{round(P179_REF$ci_hi, 3)}). ",
+       agree_rule),
+  "",
+  glue("The D-02 sensitivity estimate (years 2+): OR = {round(pool_d02_pri$or, 3)} ",
+       "({round(pool_d02_pri$lo, 3)}–{round(pool_d02_pri$hi, 3)}) is ",
+       "{d02_agree_word} the complete-case."),
+  "",
+  "## Comparison to bounding analyses (Phase 180)",
+  "",
+  glue("- Missing assigned far=1 (Phase 180 MISS-02): {p180_miss2_raw}"),
+  glue("- Missing assigned far=0 (Phase 180 MISS-03): {p180_miss3_raw}"),
+  "",
+  "## Method notes",
+  "",
+  glue("- Imputation at patient level (one row per patient, n = {n_patients})."),
+  glue("- MICE settings: m = {MICE_M}, maxit = {MICE_MAXIT}, seed = {MICE_SEED}."),
+  "- Predictors: prop_cbc_years, n_years_observed (outcome summary), ",
+  "  dist_to_source_facility_mi (auxiliary), and available demographic/",
+  "  clinical variables.",
+  paste("- DROPPED variables:", if (length(DROPPED) == 0L) "None"
+        else paste(names(DROPPED), unlist(DROPPED), sep = ": ", collapse = "; ")),
+  "- Phase 179 GEE refitted in each completed dataset; Rubin's rules with ",
+  "  Barnard–Rubin degrees of freedom and t quantile (not z).",
+  "- Observed far values are never changed; only missing-exposure patients ",
+  "  receive imputed values.",
+  "",
+  "## Outputs",
+  "",
+  glue("- Workbook: {basename(wb_path)}"),
+  glue("- Trace PNG: {basename(trace_png)}"),
+  glue("- Density PNG: {basename(density_png)}"),
+  glue("- Patient-level mids: {basename(mids_path)} (output/internal/)"),
+  ""
+)
+writeLines(memo_lines, memo_path)
+message(glue("  Memo saved: {memo_path}"))
+
+# ==============================================================================
+# SECTION 8: OUTPUT PATHS AND CLOSE ----
+# ==============================================================================
+
+message("\n==== R/183 output paths ====")
+message(glue("  Workbook:    {wb_path}"))
+message(glue("  Trace PNG:   {trace_png}"))
+message(glue("  Density PNG: {density_png}"))
+message(glue("  Memo:        {memo_path}"))
+message(glue("  mids RDS:    {mids_path}"))
+message(glue("  Input RDS:   output/internal/mice_input_patient_{RUN_DATE}.rds"))
+message("\n==== R/183 mice_sensitivity_distance COMPLETE ====")
