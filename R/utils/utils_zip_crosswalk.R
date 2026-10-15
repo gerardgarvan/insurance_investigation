@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   Load the HRSA UDS Mapper ZIP Code to ZCTA Crosswalk CSV (built once by
-#   R/utils/build_hrsa_crosswalk.R) and provide pure helper functions for
+#   R/tools/build_hrsa_crosswalk.R) and provide pure helper functions for
 #   mapping facility ZIPs to ZCTAs and flagging placeholder facility ZIPs.
 #   Patient-side sentinel logic (is_sentinel_zip5) is NOT modified here.
 #
@@ -37,7 +37,7 @@
 #
 # Dependencies:
 #   normalize_zip5_raw() from R/utils/utils_address.R (auto-sourced by 00_config.R).
-#   The crosswalk CSV is built once by R/utils/build_hrsa_crosswalk.R (zippeR).
+#   The crosswalk CSV is built once by R/tools/build_hrsa_crosswalk.R (zippeR).
 #   zippeR is NOT a dependency of this file or any pipeline script.
 #
 # No I/O except in load_hrsa_crosswalk(); no library() calls; no data.table syntax.
@@ -86,7 +86,7 @@ zi_normalise_xwalk <- function(x, label = "unknown") {
 # ------------------------------------------------------------------------------
 #' Load the HRSA UDS Mapper ZIP Code to ZCTA Crosswalk from a local CSV.
 #'
-#' Reads the file built by R/utils/build_hrsa_crosswalk.R. Accepts columns
+#' Reads the file built by R/tools/build_hrsa_crosswalk.R. Accepts columns
 #' named ZIP_CODE or ZIP (case-insensitive) plus ZCTA. Pads both to 5 digits.
 #' Stops with a clear message if the file is absent or columns are missing.
 #'
@@ -101,7 +101,7 @@ load_hrsa_crosswalk <- function(path) {
   if (is.null(path) || !nzchar(path) || !file.exists(path))
     stop(
       "[Phase 182.1] HRSA ZIP->ZCTA crosswalk not found at: ", path,
-      "\nBuild it first: source('R/utils/build_hrsa_crosswalk.R', local=TRUE)",
+      "\nBuild it first: source('R/tools/build_hrsa_crosswalk.R', local=TRUE)",
       call. = FALSE
     )
   x <- utils::read.csv(path, colClasses = "character", check.names = FALSE)
