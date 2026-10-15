@@ -862,7 +862,9 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 **Success Criteria** (what must be TRUE):
 1. MICE-01: m ≥ 20 imputed datasets produced; trace plots and density overlays confirm reasonable convergence; imputation model and predictor rationale documented in KEY.
 2. MICE-02: Phase 179 primary GEE refitted in each imputed set; pooled OR with 95% CI produced via Rubin's rules; comparison table (pooled vs complete-case vs bounds) in the workbook.
-**Plans**: TBD (plan at `/gsd:discuss-phase 183` then `/gsd:plan-phase 183`)
+**Plans**: 2 plans
+- [ ] 183-01-PLAN.md — Script scaffold (SECTIONS 0-3): pinned-input loading, patient-level MICE dataset assembly, Task-0 complete-case GEE gate [MICE-01, MICE-02] (Wave 1)
+- [ ] 183-02-PLAN.md — MICE run, D-09 hard-stops, Rubin's rules pooling, workbook (KEY/MICE-01/MICE-02), memo, R/39 + SCRIPT_INDEX registration; HiPerGator checkpoint [MICE-01, MICE-02] (Wave 2)
 
 ### Phase 184: Survivorship Modality Rates and Distance × Modality Interaction
 **Goal**: Produce per-modality surveillance rates per patient-year and a formal model testing whether the far × modality interaction is significant
