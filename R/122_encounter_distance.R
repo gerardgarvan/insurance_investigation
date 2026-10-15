@@ -188,7 +188,7 @@ message("  [DuckDB ENCOUNTER] available -- OK")
 # ---------------------------------------------------------------------------
 # Phase 182.1: Load HRSA ZIP->ZCTA crosswalk (hard stop if absent)
 # ---------------------------------------------------------------------------
-hrsa_xwalk <- load_hrsa_crosswalk()
+hrsa_xwalk <- load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)
 message(glue(
   "  [HRSA crosswalk] loaded: {attr(hrsa_xwalk, 'source_file')} | ",
   "{nrow(hrsa_xwalk)} ZIP->ZCTA mappings"
@@ -1419,7 +1419,8 @@ key_tbl <- tibble::tibble(
     as.character(if (exists("enc_for_dist") && "facility_zip_source" %in% names(enc_for_dist))
       sum(enc_for_dist$facility_zip_source == "not_filled_no_key") else "N/A"),
     # Phase 182.1 values
-    attr(hrsa_xwalk, "source_file"),
+    paste0(attr(hrsa_xwalk, "source_file"),
+           " — HRSA UDS crosswalk via zippeR 0.2.0 (zi_load_crosswalk), vintage 2023"),
     as.character(nrow(hrsa_xwalk)),
     as.character(n_placeholder),
     paste(
