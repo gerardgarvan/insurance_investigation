@@ -1,11 +1,11 @@
 source(here::here("R/00_config.R"))
 
 # ==============================================================================
-# test-utils-zip-crosswalk.R -- Unit tests for HRSA crosswalk helpers
+# test-utils-zip-crosswalk.R -- Unit tests for ZIP-to-ZCTA crosswalk helpers
 # Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs
 # ==============================================================================
 # Tests run on HiPerGator (Phase 182.1 Plan 04). Local runs use in-memory
-# fixtures only -- no real crosswalk file required.
+# fixtures only -- no network call or crosswalk file required.
 # ==============================================================================
 
 # Helper: tiny in-memory crosswalk ------------------------------------------------
@@ -18,70 +18,57 @@ make_xwalk <- function() {
 }
 
 # ==============================================================================
-# Test block 1: load_hrsa_crosswalk() -- header variants and padding
+# Test block 1: zi_normalise_xwalk() -- column detection and padding
 # ==============================================================================
-test_that("load_hrsa_crosswalk accepts ZIP_CODE/ZCTA headers and pads to 5 digits", {
-  tmp <- tempfile(fileext = ".csv")
-  on.exit(unlink(tmp))
-
-  # ZIP_CODE column name, lower-case ZCTA, raw unpadded values
-  write.csv(
-    data.frame(ZIP_CODE = c("501", "32608"), zcta = c("501", "32608"),
-               stringsAsFactors = FALSE),
-    tmp, row.names = FALSE
-  )
-
-  xwalk <- load_hrsa_crosswalk(tmp)
+test_that("zi_normalise_xwalk accepts ZIP_CODE/ZCTA headers and pads to 5 digits", {
+  raw <- data.frame(ZIP_CODE = c("501", "32608"), zcta = c("501", "32608"),
+                    stringsAsFactors = FALSE)
+  xwalk <- zi_normalise_xwalk(raw, label = "test")
   expect_true(is.data.frame(xwalk))
   expect_true(all(c("ZIP", "ZCTA") %in% names(xwalk)))
-  # "501" should be left-padded to "00501"
   expect_true("00501" %in% xwalk$ZIP)
   expect_true("00501" %in% xwalk$ZCTA)
-  expect_equal(attr(xwalk, "source_file"), basename(tmp))
+  expect_equal(attr(xwalk, "source_file"), "test")
 })
 
-test_that("load_hrsa_crosswalk accepts ZIP (not ZIP_CODE) column name", {
-  tmp <- tempfile(fileext = ".csv")
-  on.exit(unlink(tmp))
-
-  write.csv(
-    data.frame(ZIP = "32610", ZCTA = "32608", stringsAsFactors = FALSE),
-    tmp, row.names = FALSE
-  )
-
-  xwalk <- load_hrsa_crosswalk(tmp)
+test_that("zi_normalise_xwalk accepts ZIP (not ZIP_CODE) column name", {
+  raw <- data.frame(ZIP = "32610", ZCTA = "32608", stringsAsFactors = FALSE)
+  xwalk <- zi_normalise_xwalk(raw)
   expect_equal(xwalk$ZIP,  "32610")
   expect_equal(xwalk$ZCTA, "32608")
 })
 
-# ==============================================================================
-# Test block 2: load_hrsa_crosswalk() -- error cases
-# ==============================================================================
-test_that("load_hrsa_crosswalk stops with clear message when file is missing", {
+test_that("zi_normalise_xwalk stops when required columns are absent", {
+  raw <- data.frame(ZIPCODE = "32610", ZCTA5 = "32608", stringsAsFactors = FALSE)
   expect_error(
-    load_hrsa_crosswalk("/nonexistent/path/crosswalk.csv"),
-    regexp = "HRSA ZIP.*ZCTA crosswalk not found"
-  )
-})
-
-test_that("load_hrsa_crosswalk stops when required columns are absent", {
-  tmp <- tempfile(fileext = ".csv")
-  on.exit(unlink(tmp))
-  write.csv(
-    data.frame(ZIPCODE = "32610", ZCTA5 = "32608", stringsAsFactors = FALSE),
-    tmp, row.names = FALSE
-  )
-  expect_error(
-    load_hrsa_crosswalk(tmp),
+    zi_normalise_xwalk(raw),
     regexp = "crosswalk needs ZIP_CODE.*and ZCTA columns"
   )
 })
 
-test_that("load_hrsa_crosswalk stops with clear message when path is NULL", {
-  expect_error(
-    load_hrsa_crosswalk(NULL),
-    regexp = "HRSA ZIP.*ZCTA crosswalk not found"
+test_that("zi_normalise_xwalk deduplicates on ZIP, keeping first row", {
+  raw <- data.frame(
+    ZIP_CODE = c("32608", "32608"),
+    ZCTA     = c("32608", "99999"),
+    stringsAsFactors = FALSE
   )
+  xwalk <- zi_normalise_xwalk(raw)
+  expect_equal(nrow(xwalk), 1L)
+  expect_equal(xwalk$ZCTA, "32608")
+})
+
+# ==============================================================================
+# Test block 2: load_hrsa_crosswalk() -- structure check (requires zippeR)
+# ==============================================================================
+test_that("load_hrsa_crosswalk() returns ZIP/ZCTA data.frame via zippeR", {
+  skip_if_not_installed("zippeR")
+  xwalk <- load_hrsa_crosswalk()
+  expect_true(is.data.frame(xwalk))
+  expect_true(all(c("ZIP", "ZCTA") %in% names(xwalk)))
+  expect_true(nrow(xwalk) > 1000)
+  expect_equal(attr(xwalk, "source_file"), "zippeR::zi_load_crosswalk(UDS,2023)")
+  # All ZIPs should be exactly 5 characters
+  expect_true(all(nchar(xwalk$ZIP) == 5))
 })
 
 # ==============================================================================

@@ -180,12 +180,6 @@ CONFIG <- list(
   # Staged as data/reference/zcta_gazetteer_centroids.csv on HiPerGator.
   zcta_gazetteer_path   = file.path(.reference_dir, "zcta_gazetteer_centroids.csv"),
 
-  # HRSA UDS Mapper ZIP Code to ZCTA Crosswalk; staged manually; update the name
-  # to match the staged file (e.g. "ZIP_to_ZCTA_2024.csv").
-  # Path consumed by load_hrsa_crosswalk() in R/utils/utils_zip_crosswalk.R.
-  # Script stops with a clear message if the file is absent or malformed.
-  hrsa_zip_zcta_path    = file.path(.reference_dir, "ZIP_to_ZCTA_2024.csv"),
-
   # ZIP9 block-group centroid crosswalk (built by R/122a on HiPerGator from
   # Neighborhood Atlas ZIP+4 files + TIGER block-group internal points).
   # Staged as data/reference/zip9_bg_centroid_crosswalk.csv on HiPerGator.

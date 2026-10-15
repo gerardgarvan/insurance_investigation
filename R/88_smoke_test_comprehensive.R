@@ -6929,10 +6929,15 @@ p1821_chk(
   any(grepl("distance_method", r122_src_1821))
 )
 
-# [7] R/00_config.R has hrsa_zip_zcta_path
+# [7] utils_zip_crosswalk.R uses zippeR::zi_load_crosswalk
+if (!exists("xwalk_src")) {
+  xwalk_src <- tryCatch(
+    readLines("R/utils/utils_zip_crosswalk.R"), error = function(e) character(0)
+  )
+}
 p1821_chk(
-  "SMOKE-182.1-01 [7/7] R/00_config.R has hrsa_zip_zcta_path",
-  any(grepl("hrsa_zip_zcta_path", r00_src_1821))
+  "SMOKE-182.1-01 [7/7] utils_zip_crosswalk.R calls zi_load_crosswalk(UDS)",
+  any(grepl("zi_load_crosswalk", xwalk_src))
 )
 
 # [8] R/165 has R165_R122_RDS override
@@ -7093,7 +7098,7 @@ message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episod
 message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
 message("  * SMOKE-163-01: R/88 validates Phase 163 DIAGNOSIS exclusion structural integrity: EXCLUDED_CDM_TABLES defined in R/147, stopifnot referencing it, A_code_presence has no DIAGNOSIS cell or Z-code IDs, Codeset_summary has no Z-code pattern (Section 15as, 4 checks; checks 3-4 skip in local runs without INTERNAL workbook)")
 message("  * SMOKE-182-01: R/88 validates Phase 182 facility ZIP recovery structural integrity: utils_facility_zip.R exists, sourcing defines build_facility_zip_lookup/apply_facility_zip_fill/facility_key_ok, R/122 FACILITYID+SOURCE pull, R/122 sources utils_facility_zip.R, R/122 182_facility_zip_diagnosis reference, R/00_config.R facility_zip_fill, R/180 no hard-coded 0.84, test-utils-facility-zip.R exists (Section 15at, 8 checks)")
-message("  * SMOKE-182.1-01: R/88 validates Phase 182.1 ZIP centroid crosswalk structural integrity: utils_zip_crosswalk.R exists, sourcing defines load_hrsa_crosswalk/map_zip_to_zcta/is_placeholder_facility_zip5, helper does not reference is_sentinel_zip5, R/122 calls load_hrsa_crosswalk/is_placeholder_facility_zip5/distance_method and has distance_status fallback wiring, R/00_config.R has hrsa_zip_zcta_path, R/165 has R165_R122_RDS override (Section 15au, 8 checks)")
+message("  * SMOKE-182.1-01: R/88 validates Phase 182.1 ZIP centroid crosswalk structural integrity: utils_zip_crosswalk.R exists, sourcing defines load_hrsa_crosswalk/map_zip_to_zcta/is_placeholder_facility_zip5, helper does not reference is_sentinel_zip5, R/122 calls load_hrsa_crosswalk/is_placeholder_facility_zip5/distance_method and has distance_status fallback wiring, utils_zip_crosswalk.R calls zi_load_crosswalk(UDS), R/165 has R165_R122_RDS override (Section 15au, 8 checks)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {

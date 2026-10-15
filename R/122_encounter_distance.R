@@ -188,7 +188,7 @@ message("  [DuckDB ENCOUNTER] available -- OK")
 # ---------------------------------------------------------------------------
 # Phase 182.1: Load HRSA ZIP->ZCTA crosswalk (hard stop if absent)
 # ---------------------------------------------------------------------------
-hrsa_xwalk <- load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)
+hrsa_xwalk <- load_hrsa_crosswalk()
 message(glue(
   "  [HRSA crosswalk] loaded: {attr(hrsa_xwalk, 'source_file')} | ",
   "{nrow(hrsa_xwalk)} ZIP->ZCTA mappings"

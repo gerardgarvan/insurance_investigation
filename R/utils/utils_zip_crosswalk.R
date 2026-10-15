@@ -1,19 +1,23 @@
 # ==============================================================================
-# utils/utils_zip_crosswalk.R -- HRSA ZIP-to-ZCTA crosswalk helpers (Phase 182.1)
+# utils/utils_zip_crosswalk.R -- ZIP-to-ZCTA crosswalk helpers (Phase 182.1)
 # ==============================================================================
 #
 # Purpose:
-#   Load the HRSA UDS Mapper ZIP Code to ZCTA Crosswalk and provide pure helper
-#   functions for mapping facility ZIPs to ZCTAs and flagging placeholder facility
-#   ZIPs. Patient-side sentinel logic (is_sentinel_zip5) is NOT modified here.
+#   Load the UDS Mapper ZIP Code to ZCTA Crosswalk via zippeR and provide pure
+#   helper functions for mapping facility ZIPs to ZCTAs and flagging placeholder
+#   facility ZIPs. Patient-side sentinel logic (is_sentinel_zip5) is NOT modified.
 #
 # Functions:
-#   load_hrsa_crosswalk(path)
-#     Reads the HRSA UDS Mapper crosswalk file (CSV or xlsx). Accepts columns
-#     named ZIP_CODE or ZIP (case-insensitive) plus ZCTA. Pads both columns to
-#     5 digits. Stops with a clear message if the file is absent or malformed.
-#     Returns a data.frame with columns ZIP and ZCTA (character, 5-digit, unique
-#     on ZIP). Records the source filename as attr(out, "source_file").
+#   load_hrsa_crosswalk()
+#     Loads the UDS Mapper 2023 crosswalk via zippeR::zi_load_crosswalk().
+#     Normalises columns (ZIP_CODE or ZIP + ZCTA, case-insensitive), pads to
+#     5 digits, deduplicates on ZIP. Stops clearly if zippeR is absent or the
+#     data is malformed. Returns a data.frame with columns ZIP and ZCTA
+#     (character, 5-digit). attr(out, "source_file") = "zippeR::zi_load_crosswalk(UDS,2023)".
+#
+#   zi_normalise_xwalk(x, label)
+#     Internal helper: normalises a raw data.frame to ZIP/ZCTA. Exported for
+#     direct use in unit tests without requiring network access.
 #
 #   map_zip_to_zcta(zip5, xwalk)
 #     Looks up each element of zip5 in the crosswalk. Returns the corresponding
@@ -22,9 +26,8 @@
 #
 #   is_placeholder_facility_zip5(zip5, xwalk)
 #     Returns TRUE for 000xx patterns AND for ZIP3+"00" codes (e.g., 32800,
-#     32700) that are absent from the HRSA crosswalk (i.e., not real delivery
-#     ZIPs). Uses the crosswalk to avoid hard-coding the list of placeholder
-#     values. Returns NA for NA input.
+#     32700) that are absent from the crosswalk (i.e., not real delivery ZIPs).
+#     Returns NA for NA input.
 #
 # Design decisions (Phase 182.1 CONTEXT.md):
 #   D-04: Pure helpers with no library() calls; no data.table syntax.
@@ -32,47 +35,23 @@
 #   D-01a: Loader accepts ZIP_CODE or ZIP and ZCTA, case-insensitive, pads to 5.
 #
 # Dependencies:
-#   normalize_zip5_raw() from R/utils/utils_address.R (auto-sourced by 00_config.R)
-#   readxl (only for .xlsx files; loaded at point of use via requireNamespace)
+#   zippeR (zi_load_crosswalk); checked at point of use via requireNamespace.
+#   normalize_zip5_raw() from R/utils/utils_address.R (auto-sourced by 00_config.R).
 #
 # No I/O except in load_hrsa_crosswalk(); no library() calls; no data.table syntax.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-#' Load the HRSA UDS Mapper ZIP Code to ZCTA Crosswalk.
+#' Normalise a raw ZIP->ZCTA data.frame to the standard two-column format.
 #'
-#' Accepts CSV or Excel (.xls/.xlsx) files. Column names are matched
-#' case-insensitively: the first column named ZIP_CODE or ZIP is used as the
-#' ZIP source column; the first column named ZCTA is used as the ZCTA column.
-#' Both are padded to 5 digits (numeric-only characters; leading zeros preserved).
-#' Rows with non-parseable ZIP values are dropped with a warning. Duplicate ZIPs
-#' are deduplicated, keeping the first occurrence.
+#' Detects ZIP_CODE or ZIP column (case-insensitive), pads both to 5 digits,
+#' drops unparseable ZIP rows, deduplicates on ZIP. Exported so unit tests can
+#' exercise normalisation without a network call.
 #'
-#' @param path Character. Path to the HRSA crosswalk file.
-#' @return A data.frame with columns ZIP (chr, 5-digit) and ZCTA (chr, 5-digit
-#'   or NA where ZCTA is missing/unparseable). attr(out, "source_file") = basename.
-#' @examples
-#' \dontrun{
-#'   xwalk <- load_hrsa_crosswalk(CONFIG$hrsa_zip_zcta_path)
-#' }
-load_hrsa_crosswalk <- function(path) {
-  if (is.null(path) || !nzchar(path) || !file.exists(path))
-    stop(
-      "[Phase 182.1] HRSA ZIP→ZCTA crosswalk not found at: ", path,
-      "\nStage the UDS Mapper 'ZIP Code to ZCTA Crosswalk' in data/reference/ ",
-      "and set CONFIG$hrsa_zip_zcta_path.",
-      call. = FALSE
-    )
-
-  x <- if (grepl("\\.xlsx?$", path, ignore.case = TRUE)) {
-    if (!requireNamespace("readxl", quietly = TRUE))
-      stop("[Phase 182.1] readxl is required to read .xlsx crosswalk files.",
-           call. = FALSE)
-    readxl::read_excel(path, col_types = "text")
-  } else {
-    utils::read.csv(path, colClasses = "character", check.names = FALSE)
-  }
-
+#' @param x   data.frame returned by zippeR::zi_load_crosswalk or any compatible source.
+#' @param label Character scalar. Stored as attr(out, "source_file").
+#' @return data.frame with columns ZIP and ZCTA (chr, 5-digit).
+zi_normalise_xwalk <- function(x, label = "unknown") {
   nm <- toupper(trimws(names(x)))
   zip_col  <- which(nm %in% c("ZIP_CODE", "ZIP"))[1]
   zcta_col <- which(nm == "ZCTA")[1]
@@ -85,7 +64,7 @@ load_hrsa_crosswalk <- function(path) {
     )
 
   pad5 <- function(v) {
-    v <- gsub("[^0-9]", "", trimws(v))
+    v <- gsub("[^0-9]", "", trimws(as.character(v)))
     ifelse(nchar(v) %in% 1:5,
            formatC(as.integer(v), width = 5, flag = "0"),
            NA_character_)
@@ -98,13 +77,36 @@ load_hrsa_crosswalk <- function(path) {
   )
   out <- out[!is.na(out$ZIP), ]
   out <- out[!duplicated(out$ZIP), ]
-
-  attr(out, "source_file") <- basename(path)
+  attr(out, "source_file") <- label
   out
 }
 
 # ------------------------------------------------------------------------------
-#' Map ZIP5 codes to ZCTAs using the HRSA crosswalk.
+#' Load the UDS Mapper ZIP Code to ZCTA Crosswalk via zippeR.
+#'
+#' Calls zippeR::zi_load_crosswalk(zip_source = "UDS", year = 2023) and
+#' normalises the result to a two-column data.frame (ZIP, ZCTA). Stops with a
+#' clear message if zippeR is not installed or returns malformed data.
+#'
+#' @return A data.frame with columns ZIP (chr, 5-digit) and ZCTA (chr, 5-digit
+#'   or NA where ZCTA is missing). attr(out, "source_file") records the source.
+#' @examples
+#' \dontrun{
+#'   xwalk <- load_hrsa_crosswalk()
+#' }
+load_hrsa_crosswalk <- function() {
+  if (!requireNamespace("zippeR", quietly = TRUE))
+    stop(
+      "[Phase 182.1] zippeR package required for ZIP->ZCTA crosswalk. ",
+      "Install with: install.packages('zippeR')",
+      call. = FALSE
+    )
+  raw <- zippeR::zi_load_crosswalk(zip_source = "UDS", year = 2023)
+  zi_normalise_xwalk(raw, label = "zippeR::zi_load_crosswalk(UDS,2023)")
+}
+
+# ------------------------------------------------------------------------------
+#' Map ZIP5 codes to ZCTAs using the crosswalk.
 #'
 #' For each element of zip5, returns the corresponding ZCTA from the crosswalk
 #' or NA if the ZIP is not present. Normalises input via normalize_zip5_raw()
@@ -125,7 +127,7 @@ map_zip_to_zcta <- function(zip5, xwalk) {
 #' Returns TRUE for:
 #'   (1) Any ZIP matching ^000 (000xx codes -- never a real delivery ZIP).
 #'   (2) ZIP3+"00" patterns (e.g., 32800, 32700, 34700) that are absent from
-#'       the HRSA crosswalk -- i.e., not a real delivery ZIP with a ZCTA mapping.
+#'       the crosswalk -- i.e., not a real delivery ZIP with a ZCTA mapping.
 #'
 #' Real ZIPs that appear in the crosswalk are never flagged TRUE, even if they
 #' happen to end in "00". NA input returns NA.
