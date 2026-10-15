@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: completed
-stopped_at: Phase 183 context gathered
-last_updated: "2026-10-15T17:19:29.470Z"
-last_activity: 2026-10-15 -- Phase 182.1 complete
+status: executing
+stopped_at: Phase 183 complete — advancing to Phase 184
+last_updated: "2026-10-15T20:00:00.000Z"
+last_activity: 2026-10-15 -- Phase 183 complete (MICE sensitivity for distance; 982 checks passed)
 progress:
   total_phases: 173
   completed_phases: 152
-  total_plans: 327
+  total_plans: 329
   completed_plans: 333
   percent: 100
 ---
@@ -22,14 +22,15 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 183 — MICE Sensitivity for Distance
+**Current focus:** Phase 184 — Survivorship Modality Rates and Distance x Modality Interaction
 
 ## Current Position
 
-Phase: 182.1 (zip-centroid-mapping-for-unique-po-box-and-placeholder-zips) — COMPLETE
-Next: Phase 183 (MICE Sensitivity for Distance) — Phase 183 target: 614 patients with missing exposure
-Status: Phase 182.1 complete; Phase 183 not yet started
-Last activity: 2026-10-15 -- Phase 182.1 complete
+Phase: 184 (survivorship-modality-rates) — NEXT
+Plan: 1 of 1
+Next: Phase 184 (Survivorship Modality Rates and Distance x Modality Interaction)
+Status: Phase 183 complete; ready for Phase 184
+Last activity: 2026-10-15 -- Phase 183 execution started
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
@@ -102,6 +103,8 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 - Phase 150 concordance baseline: 547 concordant / 135 discordant (~80%) — used as expected error rate in Phase 177 memo
 
 ## Session Continuity
+
+**Phase 183 close-out (2026-10-15):** MICE sensitivity for distance complete. D-01 (log_dist PMM) and D-02 (far logreg), m=20 each, 614 patients imputed. Pooled primary (years 2+): D-01 OR=0.842 (0.725–0.977) FMI=0.049, D-02 OR=0.834 (0.713–0.976) FMI=0.160 — both within Phase 180 bounds and within 0.01 of each other. loggedEvents: main_sourceUCI dropped (D-01 PMM only, non-mandatory, not a D-09 stop). payer dropped (payer_summary RDS not found, optional per D-07b). R/88: ALL 982 CHECKS PASSED (3 skipped). Outputs: mice_sensitivity_distance_20261015.xlsx, mice_trace_20261015.png, mice_density_20261015.png, 183-MEMO.md.
 
 **Last command:** Phase 182.1 complete — ZIP→ZCTA crosswalk fallback (HRSA 2022 vintage) added to R/122; 13,652 encounters resolved via zipcodeR_crosswalk, 14 via haversine_gazetteer; 2,647 encounters with missing patient ZIP + placeholder facility ZIP now classified as facility_zip_missing; 107,624 encounters remain zip_not_in_db. Phase 182.1 gained 48 patients (vs 185 in Phase 182); far switches: 50 total. D-09 % shrinkage: 30.4% → 19.7% (no material change, near 25% threshold). Phase 183 target: 614 patients. R/88 ALL 982 CHECKS PASSED (3 skipped); SMOKE-182.1-01 9/9 PASS (fixed [2d] to strip comment lines before is_sentinel_zip5 check; renumbered all labels [x/7]→[x/9]).
 **Stopped at:** Phase 183 context gathered

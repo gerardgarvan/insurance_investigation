@@ -770,7 +770,8 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 - [x] **Phase 182: Facility ZIP Recovery** (3 plans) — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180 (completed 2026-10-14)
 - [x] **Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs** (INSERTED) — Map 32610/32611/32614 and other unique/PO-box ZIPs to ZCTA via crosswalk; treat placeholder ZIPs as missing; re-run R/122→R/165→R/179→R/180→R/181; report OR impact
  (completed 2026-10-15)
-- [ ] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
+- [x] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
+ (completed 2026-10-15)
 - [ ] **Phase 184: Survivorship Modality Rates and Distance × Modality Interaction** — Per-modality rates per patient-year; Poisson/NB GEE with far × modality interaction
 
 ## Phase Details (v3.11)
