@@ -54,9 +54,12 @@ sup_md <- function(x) {
   format(x, big.mark = ",")
 }
 
-# Shared helper: compute patients who gained/lost far_from_care_100mi exposure
-# between two cbc_patient_year (P179) RDS files.
-# miss_before/miss_after = distinct IDs where far_from_care_100mi is NA.
+# Column name for the 0/1/NA exposure flag in the P179 (cbc_patient_year) RDS files.
+# NA = missing exposure (no distance computed); 0/1 = not-far/far.
+P179_EXPOSURE_COL <- "far"
+
+# Shared helper: compute patients who gained/lost exposure between two P179 RDS files.
+# miss_before/miss_after = distinct IDs where P179_EXPOSURE_COL is NA.
 # gained = in miss_before and not in miss_after (exposure filled).
 # lost   = in miss_after  and not in miss_before (expected 0; stops if > 0).
 # stopifnot identity: before - after == gained - lost.
@@ -64,14 +67,14 @@ compute_exposure_gained <- function(before_rds, after_rds, section_label) {
   bdf <- readRDS(before_rds)
   adf <- readRDS(after_rds)
   stopifnot(
-    "far_from_care_100mi missing in BEFORE RDS" = "far_from_care_100mi" %in% names(bdf),
-    "far_from_care_100mi missing in AFTER RDS"  = "far_from_care_100mi" %in% names(adf),
+    "P179_EXPOSURE_COL ('far') missing in BEFORE RDS" = P179_EXPOSURE_COL %in% names(bdf),
+    "P179_EXPOSURE_COL ('far') missing in AFTER RDS"  = P179_EXPOSURE_COL %in% names(adf),
     "ID missing in BEFORE RDS" = "ID" %in% names(bdf),
     "ID missing in AFTER RDS"  = "ID" %in% names(adf)
   )
   n_patients  <- length(unique(as.character(bdf$ID)))
-  miss_before <- unique(as.character(bdf$ID[is.na(bdf$far_from_care_100mi)]))
-  miss_after  <- unique(as.character(adf$ID[is.na(adf$far_from_care_100mi)]))
+  miss_before <- unique(as.character(bdf$ID[is.na(bdf[[P179_EXPOSURE_COL]])]))
+  miss_after  <- unique(as.character(adf$ID[is.na(adf[[P179_EXPOSURE_COL]])]))
   gained      <- setdiff(miss_before, miss_after)
   lost        <- setdiff(miss_after,  miss_before)
   stopifnot(length(miss_before) - length(miss_after) == length(gained) - length(lost))
@@ -267,7 +270,7 @@ DIAG_SENS_RULE    <- key_val(diag_key, "Sensitivity tier rule")
 message("\n--- Computing headline: patients who gained exposure ---")
 
 # Phase 182 gained exposure: P179 BEFORE (20261013) -> P179 AFTER (20261014).
-# Uses is.na(far_from_care_100mi) as the "missing" criterion (patient-level).
+# Uses is.na(P179_EXPOSURE_COL) as the "missing" criterion (patient-level).
 exp182 <- compute_exposure_gained(P179_BEFORE_RDS, P179_AFTER_RDS, "Phase 182")
 n_gained_total <- exp182$n_gained
 
@@ -358,8 +361,8 @@ recovery_md <- glue::glue(
 
 ## Headline: Patients Who Gained Distance Exposure
 
-Patients who had `exposure_missing = TRUE` in the Phase 180 BEFORE run
-and now have `exposure_missing = FALSE` in the Phase 179 AFTER run,
+Patients who had `far` = NA (no distance computed) in the Phase 179 BEFORE run
+and now have `far` non-NA in the Phase 179 AFTER run,
 broken down by Phase 180 `miss_reason` (group (b) = facility ZIP missing, 581 patients targeted).
 
 | miss_reason | Patients who gained exposure |
@@ -770,14 +773,14 @@ n_gained_1821  <- exp1821$n_gained
 p179_before_df <- exp1821$before_df
 p179_after_df  <- exp1821$after_df
 
-# Far switches: patients whose far_from_care_100mi value changed (including NA -> value)
-if ("far_from_care_100mi" %in% names(p179_before_df) &&
-    "far_from_care_100mi" %in% names(p179_after_df)) {
+# Far switches: patients whose P179_EXPOSURE_COL value changed (including NA -> value)
+if (P179_EXPOSURE_COL %in% names(p179_before_df) &&
+    P179_EXPOSURE_COL %in% names(p179_after_df)) {
   far_joined <- dplyr::inner_join(
     p179_before_df |> dplyr::mutate(ID = as.character(ID)) |>
-      dplyr::distinct(ID, far_before = far_from_care_100mi),
+      dplyr::distinct(ID, far_before = .data[[P179_EXPOSURE_COL]]),
     p179_after_df  |> dplyr::mutate(ID = as.character(ID)) |>
-      dplyr::distinct(ID, far_after  = far_from_care_100mi),
+      dplyr::distinct(ID, far_after  = .data[[P179_EXPOSURE_COL]]),
     by = "ID"
   )
   n_far_switched <- sum(
@@ -786,10 +789,10 @@ if ("far_from_care_100mi" %in% names(p179_before_df) &&
      far_joined$far_before != far_joined$far_after),
     na.rm = TRUE
   )
-  message(glue("  Far switches (far_from_care_100mi changed): {n_far_switched}"))
+  message(glue("  Far switches ({P179_EXPOSURE_COL} changed): {n_far_switched}"))
 } else {
   n_far_switched <- NA_integer_
-  message("  NOTE: far_from_care_100mi column not found in one or both RDS — far switches skipped")
+  message(glue("  NOTE: '{P179_EXPOSURE_COL}' column not found in one or both RDS — far switches skipped"))
 }
 
 n_still_missing_1821 <- length(exp1821$miss_after)
@@ -861,8 +864,8 @@ recovery_182_1_section <- glue::glue(
 
 | Metric | Count |
 |--------|-------|
-| Patients gaining exposure (exposure_missing TRUE -> FALSE) | {sup_md(n_gained_1821)} |
-| Far switches (far_from_care_100mi changed) | {if (is.na(n_far_switched)) 'N/A' else sup_md(n_far_switched)} |
+| Patients gaining exposure (far: NA -> non-NA) | {sup_md(n_gained_1821)} |
+| Far switches (far value changed, incl. NA -> 0/1) | {if (is.na(n_far_switched)) 'N/A' else sup_md(n_far_switched)} |
 | Patients still missing — Phase 183 target | {sup_md(n_still_missing_1821)} |
 
 ### Old-vs-New Comparison Table
