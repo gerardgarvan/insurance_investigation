@@ -6866,7 +6866,7 @@ r165_src_1821 <- if (file.exists("R/165_distance_cbc_association.R")) {
 
 # [1] utils_zip_crosswalk.R exists
 p1821_chk(
-  "SMOKE-182.1-01 [1/7] R/utils/utils_zip_crosswalk.R exists",
+  "SMOKE-182.1-01 [1/9] R/utils/utils_zip_crosswalk.R exists",
   file.exists("R/utils/utils_zip_crosswalk.R")
 )
 
@@ -6879,59 +6879,60 @@ if (file.exists("R/utils/utils_zip_crosswalk.R")) {
     error = function(e) message(glue("  NOTE  utils_zip_crosswalk source error: {e$message}"))
   )
   p1821_chk(
-    "SMOKE-182.1-01 [2a/7] sourcing defines load_hrsa_crosswalk",
+    "SMOKE-182.1-01 [2a/9] sourcing defines load_hrsa_crosswalk",
     exists("load_hrsa_crosswalk", envir = .tmp_env_1821, inherits = FALSE)
   )
   p1821_chk(
-    "SMOKE-182.1-01 [2b/7] sourcing defines map_zip_to_zcta",
+    "SMOKE-182.1-01 [2b/9] sourcing defines map_zip_to_zcta",
     exists("map_zip_to_zcta", envir = .tmp_env_1821, inherits = FALSE)
   )
   p1821_chk(
-    "SMOKE-182.1-01 [2c/7] sourcing defines is_placeholder_facility_zip5",
+    "SMOKE-182.1-01 [2c/9] sourcing defines is_placeholder_facility_zip5",
     exists("is_placeholder_facility_zip5", envir = .tmp_env_1821, inherits = FALSE)
   )
-  # D-05: helper must NOT reference is_sentinel_zip5 (patient-side only)
+  # D-05: helper must NOT reference is_sentinel_zip5 in live code (patient-side only)
   xwalk_src <- tryCatch(
     readLines("R/utils/utils_zip_crosswalk.R"), error = function(e) character(0)
   )
+  xwalk_code <- xwalk_src[!grepl("^\\s*#", xwalk_src)]
   p1821_chk(
-    "SMOKE-182.1-01 [2d/7] utils_zip_crosswalk.R does not reference is_sentinel_zip5",
-    !any(grepl("is_sentinel_zip5", xwalk_src))
+    "SMOKE-182.1-01 [2d/9] utils_zip_crosswalk.R does not reference is_sentinel_zip5 in live code",
+    !any(grepl("is_sentinel_zip5", xwalk_code))
   )
 } else {
-  skip_check("SMOKE-182.1-01 [2a/7] sourcing defines load_hrsa_crosswalk")
-  skip_check("SMOKE-182.1-01 [2b/7] sourcing defines map_zip_to_zcta")
-  skip_check("SMOKE-182.1-01 [2c/7] sourcing defines is_placeholder_facility_zip5")
-  skip_check("SMOKE-182.1-01 [2d/7] utils_zip_crosswalk.R does not reference is_sentinel_zip5")
+  skip_check("SMOKE-182.1-01 [2a/9] sourcing defines load_hrsa_crosswalk")
+  skip_check("SMOKE-182.1-01 [2b/9] sourcing defines map_zip_to_zcta")
+  skip_check("SMOKE-182.1-01 [2c/9] sourcing defines is_placeholder_facility_zip5")
+  skip_check("SMOKE-182.1-01 [2d/9] utils_zip_crosswalk.R does not reference is_sentinel_zip5 in live code")
 }
 
 # [3] R/122 contains load_hrsa_crosswalk( call
 p1821_chk(
-  "SMOKE-182.1-01 [3/7] R/122 calls load_hrsa_crosswalk(",
+  "SMOKE-182.1-01 [3/9] R/122 calls load_hrsa_crosswalk(",
   any(grepl("load_hrsa_crosswalk\\(", r122_src_1821))
 )
 
 # [4] R/122 contains is_placeholder_facility_zip5( call
 p1821_chk(
-  "SMOKE-182.1-01 [4/7] R/122 calls is_placeholder_facility_zip5(",
+  "SMOKE-182.1-01 [4/9] R/122 calls is_placeholder_facility_zip5(",
   any(grepl("is_placeholder_facility_zip5\\(", r122_src_1821))
 )
 
 # [5] R/122 contains distance_status[fb[ok]] <- "computed" (fallback wiring)
 p1821_chk(
-  "SMOKE-182.1-01 [5/7] R/122 has distance_status[fb[ok]] <- \"computed\" fallback",
+  "SMOKE-182.1-01 [5/9] R/122 has distance_status[fb[ok]] <- \"computed\" fallback",
   any(grepl('distance_status\\[fb\\[ok\\]\\]\\s*<-\\s*"computed"', r122_src_1821))
 )
 
 # [6] R/122 contains distance_method column
 p1821_chk(
-  "SMOKE-182.1-01 [6/7] R/122 contains distance_method column",
+  "SMOKE-182.1-01 [6/9] R/122 contains distance_method column",
   any(grepl("distance_method", r122_src_1821))
 )
 
 # [7] R/00_config.R has hrsa_zip_zcta_path
 p1821_chk(
-  "SMOKE-182.1-01 [7/7] R/00_config.R has hrsa_zip_zcta_path",
+  "SMOKE-182.1-01 [7/9] R/00_config.R has hrsa_zip_zcta_path",
   any(grepl("hrsa_zip_zcta_path", r00_src_1821))
 )
 

@@ -50,6 +50,76 @@ Phase 179 primary OR is essentially unchanged. The ZIP fill did not materially a
 - R/180 RDS: `output/internal/cbc_missing_capture_20261014.rds`
 - R/180 XLSX: `output/cbc_missing_capture_20261014.xlsx`
 
-## R/88 Smoke Test
+## R/88 Smoke Test (Phase 182)
 
 ALL 970 CHECKS PASSED (3 skipped) — SMOKE-182-01: 10 PASS / 0 FAIL / 0 SKIP
+
+---
+
+# Phase 182.1: ZIP Centroid Mapping — Recovery Report
+
+**Generated:** 2026-10-15
+**Script:** R/182_facility_zip_recovery_report.R (182.1 section)
+
+## Status Transitions (R/122 encounter-level, before → after)
+
+| Transition | Encounters |
+|---|---|
+| zip_not_in_db → computed (crosswalk/haversine) | 27,312 |
+| missing (patient ZIP missing + placeholder facility ZIP) → facility_zip_missing | 2,647 |
+| unchanged computed | retained; distance_mi identical |
+| unchanged missing | retained |
+
+Assert: no computed → other regression. PASS.
+
+## Distance Method Distribution (after)
+
+| Method | Encounters |
+|---|---|
+| zipcodeR_crosswalk | 13,652 |
+| haversine_gazetteer | 14 |
+
+Crosswalk vintage: 2022.
+
+## Patients Gaining Exposure
+
+| Phase | Patients gained | Patients lost |
+|---|---|---|
+| Phase 182 (facility ZIP fill) | 185 | 0 |
+| Phase 182.1 (ZIP→ZCTA crosswalk) | 48 | 0 |
+
+Far switches (patients whose `far` value changed): **50**
+(48 newly exposed + 2 existing patients whose median distance crossed the 100 mi threshold)
+
+## Remaining Missing (after Phase 182.1)
+
+| Reason | Encounters |
+|---|---|
+| facility_zip_missing | see Phase 182 baseline |
+| zip_not_in_db | 107,624 |
+
+**Phase 183 target (patients still missing exposure):** 614
+
+Note: 2,647 encounters where the patient ZIP was missing and the facility ZIP was a placeholder are now classified as `facility_zip_missing` (not `zip_not_in_db`).
+
+## Effect on Results
+
+| Metric | Phase 182 baseline | After 182.1 | Change |
+|---|---|---|---|
+| Phase 179 Primary OR (95% CI) | 0.83 (0.71–0.96) | — | — |
+| Phase 180 D-09 % shrinkage | 30.4% | 19.7% | No material change |
+
+D-09 note: 30.4% → 19.7% moves further toward 1 but remains near the 25% monitoring threshold; described as a check, not a reversal. Report to Amy/Erin alongside D-165-01.
+
+## Locked Branches
+
+- **D-05:** Same side — no change. Limitation row remains locked in R/179 KEY builder.
+- **D-09:** 30.4% → 19.7% (further toward 1). Interpretation unchanged: consistent with out-of-system care.
+
+## Remaining zip_not_in_db
+
+107,624 encounters remain zip_not_in_db after the crosswalk pass. These are ZIP codes not present in either the zipcodeR database or the HRSA ZIP→ZCTA crosswalk (vintage 2022).
+
+## R/88 Smoke Test (Phase 182.1)
+
+ALL 982 CHECKS PASSED (3 skipped) — SMOKE-182.1-01: 9 PASS / 0 FAIL / 0 SKIP

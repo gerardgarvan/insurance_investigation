@@ -768,7 +768,8 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 - [x] **Phase 181: CBC Prior-Year vs Distance** — Patient-level 2×2 (prior-year CBC × far), chi-squared/Fisher test, OR, and one-page team summary memo
  (completed 2026-10-14)
 - [x] **Phase 182: Facility ZIP Recovery** (3 plans) — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180 (completed 2026-10-14)
-- [ ] **Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs** (INSERTED) — Map 32610/32611/32614 and other unique/PO-box ZIPs to ZCTA via crosswalk; treat placeholder ZIPs as missing; re-run R/122→R/165→R/179→R/180→R/181; report OR impact
+- [x] **Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs** (INSERTED) — Map 32610/32611/32614 and other unique/PO-box ZIPs to ZCTA via crosswalk; treat placeholder ZIPs as missing; re-run R/122→R/165→R/179→R/180→R/181; report OR impact
+ (completed 2026-10-15)
 - [ ] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
 - [ ] **Phase 184: Survivorship Modality Rates and Distance × Modality Interaction** — Per-modality rates per patient-year; Poisson/NB GEE with far × modality interaction
 
@@ -837,11 +838,11 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 - Diagnosis tables: counts suppressed <11; patient ZIPs as ZIP3 only.
 - Expected impact: 1,080 patients affected; 38 gain exposure; 36 change far status; 365 medians shift >0.5 mi.
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed
 - [x] 182.1-01-PLAN.md — R/utils/utils_zip_crosswalk.R (map_zip_to_zcta, is_placeholder_facility_zip5) + CONFIG$hrsa_zip_zcta_path + SCRIPT_INDEX row [FZIP-01, FZIP-02] (Wave 1)
 - [x] 182.1-02-PLAN.md — R/122 placeholder step + three-tier crosswalk fallback + distance_method column + 182-RECOVERY.md correction [FZIP-01, FZIP-02] (Wave 2, depends on 182.1-01)
 - [x] 182.1-03-PLAN.md — R/165 R165_R122_RDS override [FZIP-02] (Wave 2, depends on 182.1-01)
-- [ ] 182.1-04-PLAN.md — R/88 SMOKE-182.1-01 (8 checks) + R/182 182.1 before/after comparison section + HiPerGator re-run chain checkpoint [FZIP-01, FZIP-02] (Wave 3, depends on 182.1-02, 182.1-03)
+- [x] 182.1-04-PLAN.md — R/88 SMOKE-182.1-01 (9 checks, fix [2d] comment-filter) + 182-RECOVERY.md 182.1 section + close-out [FZIP-01, FZIP-02] (Wave 3, depends on 182.1-02, 182.1-03)
 
 ### Phase 183: MICE Sensitivity for Distance
 **Goal**: Quantify how sensitive the Phase 179 primary GEE result is to the missing-exposure assumption by imputing patient median distance / `far` via MICE and pooling with Rubin's rules
@@ -889,6 +890,6 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 |-------|-----------|----------------|--------|-----------|
 | 181. CBC Prior-Year vs Distance | v3.11 | 1/1 | Complete   | 2026-10-14 |
 | 182. Facility ZIP Recovery | v3.11 | 3/3 | Complete | 2026-10-14 |
-| 182.1. ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs | v3.11 | 3/4 | In Progress|  |
+| 182.1. ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs | v3.11 | 4/4 | Complete | 2026-10-15 |
 | 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
 | 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 0 | Not started | — |

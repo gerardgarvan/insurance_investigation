@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 182.1-02-PLAN.md
-last_updated: "2026-10-14T21:00:48.340Z"
-last_activity: 2026-10-14
+stopped_at: Completed 182.1-04-PLAN.md
+last_updated: "2026-10-15T00:00:00.000Z"
+last_activity: 2026-10-15 -- Phase 182.1 complete
 progress:
   total_phases: 172
   completed_phases: 151
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 182.1 — zip-centroid-mapping-for-unique-po-box-and-placeholder-zips
+**Current focus:** Phase 183 — MICE Sensitivity for Distance
 
 ## Current Position
 
-Phase: 182.1 (zip-centroid-mapping-for-unique-po-box-and-placeholder-zips) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-10-14
+Phase: 182.1 (zip-centroid-mapping-for-unique-po-box-and-placeholder-zips) — COMPLETE
+Next: Phase 183 (MICE Sensitivity for Distance) — Phase 183 target: 614 patients with missing exposure
+Status: Phase 182.1 complete; Phase 183 not yet started
+Last activity: 2026-10-15 -- Phase 182.1 complete
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
@@ -103,5 +103,5 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Last command:** Phase 182 complete — facility ZIP recovery and re-run. utils_facility_zip.R (Tier-1 FACILITYID donor fill) wired into R/122 behind CONFIG$facility_zip_fill toggle; diagnostic workbook (5 sheets); SMOKE-182-01 (10 checks). HiPerGator run 2026-10-14: R/88 ALL 970 CHECKS PASSED (3 skipped). Recovery headline: 0 patients crossed 100 mi threshold after fill (ZIPs recovered but no far reclassification). Remaining missing: 86,005 facility_zip_missing + 134,949 zip_not_in_db. Phase 179 primary OR: 0.84 → 0.83 (essentially unchanged). D-05: same side (locked). D-09: 37.4% → 30.4% shrinkage (moves toward 1; out-of-system care interpretation; report to Amy/Erin with D-165-01). 4 bugs fixed during execution (here::here() in tests, enc_zip_raw retain, glue() syntax, XML entity unescaping). FZIP-01 and FZIP-02 complete.
-**Stopped at:** Completed 182.1-02-PLAN.md
+**Last command:** Phase 182.1 complete — ZIP→ZCTA crosswalk fallback (HRSA 2022 vintage) added to R/122; 13,652 encounters resolved via zipcodeR_crosswalk, 14 via haversine_gazetteer; 2,647 encounters with missing patient ZIP + placeholder facility ZIP now classified as facility_zip_missing; 107,624 encounters remain zip_not_in_db. Phase 182.1 gained 48 patients (vs 185 in Phase 182); far switches: 50 total. D-09 % shrinkage: 30.4% → 19.7% (no material change, near 25% threshold). Phase 183 target: 614 patients. R/88 ALL 982 CHECKS PASSED (3 skipped); SMOKE-182.1-01 9/9 PASS (fixed [2d] to strip comment lines before is_sentinel_zip5 check; renumbered all labels [x/7]→[x/9]).
+**Stopped at:** Completed 182.1-04-PLAN.md
