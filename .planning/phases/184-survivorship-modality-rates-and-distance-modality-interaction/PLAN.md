@@ -830,7 +830,7 @@ Add SECTION 11 to `R/184_modality_rate_model.R` to generate the memo per D-19 an
 **SECTION 11 — Memo generation (D-19, D-21):**
 
 ```r
-memo_path <- file.path(CONFIG$output_dir, glue("184-MEMO_{RUN_DATE}.md"))
+memo_path <- file.path(CONFIG$output_dir, "184-MEMO.md")
 
 # Format helpers
 fmt_rr <- function(rr, lo, hi) sprintf("RR=%.2f (95%% CI %.2f–%.2f)", rr, lo, hi)
@@ -893,7 +893,7 @@ message(glue("Memo written: {memo_path}"))
     </automated>
   </verify>
   <done>
-    SECTION 11 exists. `writeLines` writes `output/184-MEMO_<YYYYMMDD>.md`. Memo includes run date, cohort pin, model formula, reproduction gate result, per-modality RRs, global Wald test, overdispersion summary, adjusted sensitivity note, and workbook filename. Script stops if file not written.
+    SECTION 11 exists. `writeLines` writes `output/184-MEMO.md`. Memo includes run date, cohort pin, model formula, reproduction gate result, per-modality RRs, global Wald test, overdispersion summary, adjusted sensitivity note, and workbook filename. Script stops if file not written.
   </done>
 </task>
 
@@ -915,7 +915,7 @@ message(glue("Memo written: {memo_path}"))
     - SECTION 8: Adjusted sensitivity (age + sex)
     - SECTION 9: 6-month period sensitivity GEE
     - SECTION 10: Workbook (KEY, Rates, Model_Results, Interaction, Diagnostics, QC)
-    - SECTION 11: Memo (184-MEMO_<YYYYMMDD>.md)
+    - SECTION 11: Memo (184-MEMO.md)
   </what-built>
   <how-to-verify>
     **Run on HiPerGator (interactive R session at repo root):**
@@ -934,12 +934,12 @@ message(glue("Memo written: {memo_path}"))
     5. `Primary Poisson GEE fitted. Convergence: 0`
     6. `Global Wald test: chi2(...) = ..., p = ...`
     7. `Workbook written: output/modality_rate_model_<YYYYMMDD>.xlsx`
-    8. `Memo written: output/184-MEMO_<YYYYMMDD>.md`
+    8. `Memo written: output/184-MEMO.md`
 
     **File checks:**
     ```r
     file.exists("output/modality_rate_model_<YYYYMMDD>.xlsx")  # TRUE
-    file.exists("output/184-MEMO_<YYYYMMDD>.md")               # TRUE
+    file.exists("output/184-MEMO.md")               # TRUE
     readxl::excel_sheets("output/modality_rate_model_<YYYYMMDD>.xlsx")
     # Must be: "KEY" "Rates" "Model_Results" "Interaction" "Diagnostics" "QC"
     ```
@@ -955,7 +955,7 @@ message(glue("Memo written: {memo_path}"))
     **If any section errors:** paste the R error and traceback here.
   </how-to-verify>
   <action>Source R/184_modality_rate_model.R in an interactive R session on HiPerGator and verify all console output and output files per the how-to-verify steps below.</action>
-  <files>output/modality_rate_model_<YYYYMMDD>.xlsx, output/184-MEMO_<YYYYMMDD>.md</files>
+  <files>output/modality_rate_model_<YYYYMMDD>.xlsx, output/184-MEMO.md</files>
   <verify><automated>file.exists(list.files("output", "modality_rate_model.*.xlsx", full.names=TRUE)[1])</automated></verify>
   <done>Script runs end-to-end; workbook has 6 tabs in order KEY/Rates/Model_Results/Interaction/Diagnostics/QC; memo written; reproduction gate PASSED; user types "approved".</done>
   <resume-signal>
@@ -975,7 +975,7 @@ After Task 10 smoke-test approval:
 5. Model_Results tab has one row per modality with positive numeric RR, CI_lo, CI_hi.
 6. Interaction tab has global Wald chi2, df, p — and one row per non-CBC interaction term.
 7. Diagnostics tab has Pearson phi per modality and NB sensitivity RRs.
-8. Memo file `output/184-MEMO_<YYYYMMDD>.md` exists and contains model formula, reproduction gate result, per-modality RRs, global Wald test result.
+8. Memo file `output/184-MEMO.md` exists and contains model formula, reproduction gate result, per-modality RRs, global Wald test result.
 </verification>
 
 <success_criteria>
