@@ -1,165 +1,115 @@
 # Phase 183: MICE Sensitivity for Distance - Context
 
-**Gathered:** 2026-10-15
+**Gathered:** 2026-10-15 (revised 2026-10-15 after plan review)
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Run multiple imputation (mice, m ≥ 20) on the ~614 remaining missing-exposure patients after Phase 182/182.1 ZIP recovery, refit the Phase 179 primary GEE specification in each imputed dataset, pool estimates via manually implemented Rubin's rules, and produce a workbook + short script-generated memo comparing pooled OR to complete-case OR and Phase 180 bounding ORs. Imputation is performed at the **patient level** (not patient-year), since the 614 patients are missing their single median post-anchor distance value for every year.
+Run multiple imputation (mice, m = 20) for the 614 patients still missing the exposure after Phase 182/182.1, refit the Phase 179 GEE in each imputed dataset, pool with Rubin's rules written out in code, and produce a workbook plus a short script-generated memo comparing the pooled OR to the complete-case OR and the Phase 180 bounds. Imputation is at the **patient level**: the exposure is one value per patient (median post-anchor distance), and the 614 are missing it for every year.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### Imputation Target
-- **D-01 (primary):** Impute `log(median_distance)` using predictive mean matching (PMM). After imputation, derive `far = (exp(imputed_log_dist) > CONFIG$far_from_care_cutoff_mi)`. Logged distance is less skewed; PMM only draws from actually observed values, which is appropriate for a bounded, right-skewed variable.
-- **D-02 (sensitivity):** Also run a parallel imputation of `far` directly using logistic regression (`method = "logreg"`). If pooled ORs from D-01 and D-02 agree, that is reported as reassurance in the memo.
-- **D-03:** Imputation is at the **patient level** (one row per patient), not patient-year. The 614 missing patients are missing for all years, so patient-year–level imputation would allow far to flip between years for the same patient — statistically incoherent.
+### Imputation target
+- **D-01 (primary):** Impute `log_dist = log1p(median_distance)` by PMM. Derive `far = as.integer(expm1(log_dist) > CONFIG$far_from_care_cutoff_mi)`. `log1p` avoids extreme values for distance 0 (same-ZIP patients).
+- **D-02 (sensitivity):** Impute `far` directly with `logreg` (`far` stored as a factor with levels "0","1"; convert back with `as.integer(as.character(.))`).
+- **D-02a:** D-01 and D-02 are **two separate mice runs**. D-01 data contain `log_dist` and not `far`; D-02 data contain `far` and not `log_dist`. (In the observed data `far` is a deterministic function of `log_dist`; one joint run would give complete separation in the logreg model and circular imputation.)
+- **D-03:** One row per patient (all 8,632 cohort patients in the pinned Phase 179 RDS). Imputed patient values are joined back to patient-years; observed `far` is never changed.
 
-### MICE Settings
-- **D-04:** `m = 20`, `maxit = 20`, fixed seed (record in KEY). With ~7% missing patients, m = 20 is sufficient.
+### MICE settings
+- **D-04:** `m = 20`, `maxit = 20`, seed `20261015` (both runs; recorded in KEY).
 
-### Predictor Set
-The imputation model must include the **outcome summary** (to avoid biasing the pooled OR toward 1) and the strongest **auxiliary variable**.
+### Predictor set (one row per patient; all computed for ALL patients, observed and missing)
+- **D-05 (outcome — mandatory):** `prop_cbc_years` = mean(`cbc_year`) and `n_years_observed` = number of rows, over **all rows of the pinned Phase 179 RDS** for that patient (the RDS holds only fully observed years — the same years the GEE uses). No `exposure_missing` filter: the outcome is observed for the 614; only the exposure is missing.
+- **D-06 (auxiliary — mandatory where computable):** `dist_to_source_facility_mi` = haversine distance (miles) between the gazetteer centroid of the patient's modal post-anchor patient ZIP5 and the gazetteer centroid of the **modal facility ZIP5 of the patient's main SOURCE**, where the SOURCE modal facility ZIP5 is computed from `distance_status == "computed"` encounters across all patients. Computed for every patient with a usable patient ZIP5; NA otherwise (mice imputes it).
+- **D-07 (standard):**
+  - `age_at_anchor`, `sex` (factor) — source confirmed in Task 0;
+  - `main_source` (factor) = modal SOURCE across the patient's post-anchor encounters in the pinned R/122 RDS;
+  - `post_anchor_enc_count` = all post-anchor encounters in the pinned R/122 RDS, **any distance_status**;
+  - `single_source_care_post` (factor) from the pinned R/169 RDS;
+  - `payer` (factor) — source confirmed in Task 0;
+  - `adi` — from the patient's modal post-anchor ZIP5 joined to `data/reference/zip5_adi_summary.csv` (column confirmed in Task 0).
+- **D-07a:** Anchor date = `min(year_start)` per patient from the Phase 179 RDS (year 1 starts at the anchor); post-anchor = encounter date > anchor.
+- **D-07b:** `payer` and `adi` are optional: if no usable source exists, or a variable is missing for all patients, drop it and record the reason in the KEY. Never drop silently. The outcome variables and the auxiliary are never optional.
+- **D-07c:** `miss_reason` is **not** a predictor (it is constant, "none", for every observed patient). It is kept for reporting only.
+- **D-08:** Variables with missing values other than the target (ADI, auxiliary, payer, …) are imputed in the same run with mice defaults (pmm numeric, logreg/polyreg factors).
+- **D-08a:** All character/logical predictors are converted to factors before mice. Predictor matrix = mice default for the variables present (ID excluded, diagonal 0).
 
-- **D-05 (outcome in imputation model — mandatory):** Include in the predictor matrix:
-  - `prop_cbc_years` — proportion of observed years with a CBC (patient-level summary of outcome)
-  - `n_years_observed` — number of observed follow-up years
-- **D-06 (strongest auxiliary):** For patients in triage group (b) (patient ZIP known, only facility ZIP missing — ~416 patients), compute `dist_to_modal_facility`: haversine distance from the patient's ZIP centroid to the modal facility ZIP of the patient's main SOURCE. This is computable without new data from R/122 and the gazetteer. Include as a predictor (NA for groups where patient ZIP is also missing).
-- **D-07 (standard predictors):** age at anchor, sex, payer, ADI, SOURCE (HL_SOURCE), single_source_care_post, post-anchor encounter count, `miss_reason` (factor encoding the Phase 180 D-02 reason groups a–f).
-- **D-08 (ADI missing):** ADI will be missing for most group (a) patients (patient ZIP unknown). Let MICE impute ADI alongside distance rather than dropping it. ADI is included in the predictor matrix as a variable with its own imputation column.
+### Hard stops (script stops with an error)
+- **D-09:**
+  1. Any NA in the target (`log_dist` for D-01, `far` for D-02) in any completed dataset.
+  2. `loggedEvents` shows `prop_cbc_years`, `n_years_observed` or `dist_to_source_facility_mi` removed.
+  3. A GEE error in any imputed dataset (report branch, subset, dataset number).
+  4. Task 0 reproduction failure (see D-16).
+- **D-10 (produced, not blocking):** trace plots (chain mean/SD of the target per iteration), observed vs imputed distribution of `log_dist` and observed vs imputed far proportion, FMI per pooled estimate, number of patients imputed. Differences between observed and imputed values are expected under MAR and do not fail the run.
 
-### Hard-Stop Convergence Criteria
-- **D-09:** The script **stops with an error** (non-zero exit) if:
-  1. Any `NA` remains in `far` or `log_dist` after imputation in any of the m datasets.
-  2. `loggedEvents` from mice includes the outcome summary (`prop_cbc_years`) or the main auxiliary variable (`dist_to_modal_facility`) being dropped from any predictor column.
-  3. Pooling fails (e.g., all GEEs fail to converge in a single imputed dataset — stop and report which).
-- **D-10 (produced but not blocking):** Trace plots (mean and SD per iteration for each imputed variable), density overlays (observed vs imputed `log_dist`; observed vs imputed `far` proportion), and the fraction of missing information (FMI) for the `far` coefficient. These go in the MICE-01 diagnostics sheet. Differences between observed and imputed distributions are expected under MAR and do not themselves fail the run.
+### Pooling
+- **D-11:** Refit the Phase 179 GEE in each completed dataset using the `run_gee()` specification copied verbatim from R/179 (formula, year-category construction, `arrange(ID, year_index)`, integer cluster id, `droplevels`, `CONFIG$distance_gee_corstr`, robust `Std.err`). Do not re-derive the specification.
+- **D-12:** Rubin's rules written out in code (cite Rubin 1987):
+  `Q_bar = mean(Q)`, `U_bar = mean(SE^2)`, `B = var(Q)`, `T = U_bar + (1 + 1/m) B`,
+  `r = (1 + 1/m) B / U_bar`, `df = (m - 1) (1 + 1/r)^2` (Inf if B = 0),
+  CI = `Q_bar ± qt(0.975, df) * sqrt(T)`, `FMI = (r + 2/(df + 3)) / (r + 1)`; report on the OR scale.
+- **D-12a:** Four pooled estimates: D-01 years 2+ (primary), D-02 years 2+, D-01 all years, D-02 all years.
 
-### Rubin's Rules Pooling
-- **D-11:** `mice::pool()` does not support `geeglm`. Implement Rubin's rules in code:
-  - Fit Phase 179 primary GEE (`cbc_year ~ far + year_index_cat`, `id = ID`, `corstr = CONFIG$distance_gee_corstr`, `family = binomial("logit")`) on each of the m imputed datasets.
-  - Use the **robust** standard error from `geeglm` (sandwich SE) for each fit.
-  - Pool: `Q_bar = mean(Q_i)`, `U_bar = mean(Var_i)`, `B = var(Q_i)`, `T = U_bar + (1 + 1/m)*B`.
-  - Report pooled log-OR, 95% CI = Q_bar ± 1.96 * sqrt(T), back-transformed to OR scale.
-  - Do this for: primary (D-01, log-dist imputed), sensitivity (D-02, far imputed directly), and for years 2+ (primary analytic set) and all years (secondary) — matching the Phase 179 structure.
-- **D-12:** Write the Rubin's rules computation out explicitly in R code (not a wrapper). Include an inline comment citing Rubin (1987) for auditability.
+### Comparison table (MICE-02)
+- **D-13:** All reference values are read at run time by exact label from the pinned workbooks, reusing the exact-label readers and label constants already in R/180 (Phase 179 "Primary: years 2+") and R/182 (Phase 180 KEY rows for missing → far=1 and missing → far=0). One match required; otherwise stop and print the available labels. Include CIs where the source row has them. No numeric reference values in code.
+- **D-13a:** Rows: complete-case years 2+ (Phase 179), complete-case all years (Phase 179, only if an exact label exists — confirmed in Task 0), Phase 180 missing → far=1, Phase 180 missing → far=0, and the four pooled MICE estimates (OR, 95% CI, FMI, df).
+- **D-14:** Counts 1–10 shown as "<11"; percentages only when numerator and denominator are both ≥ 11. KEY leftmost; UF colours.
 
-### Comparison Table
-- **D-13:** MICE-02 sheet contains the comparison table with rows:
-  - Complete-case OR — **read from the pinned Phase 179 workbook**, label `"Primary: years 2+"`. Stop with a clear error if the label is not found (same pattern as R/180–182). Do **not** hard-code numeric values.
-  - Phase 180 lower bound — **read from the pinned Phase 180 workbook**, MISS-02 sheet, label for "all far" bound. Stop if label not found.
-  - Phase 180 upper bound — **read from the pinned Phase 180 workbook**, MISS-03 sheet, label for "all not-far" bound. Stop if label not found.
-  - Pooled MICE OR — primary (log-dist PMM, years 2+)
-  - Pooled MICE OR — primary sensitivity (far logreg, years 2+)
-  - Pooled MICE OR — all years (log-dist PMM)
-- **D-14:** Counts 1–10 → `"<11"`. Percentages only when both counts ≥ 11. UF color palette.
+### Input pinning
+- **D-15:** Pinned inputs, each overridable by env var; path and pinned TRUE/FALSE recorded in KEY; every file checked to exist at startup:
+  - `R183_P179_RDS` (`output/internal/cbc_patient_year_20261015.rds`)
+  - `R183_P179_XLSX` (`output/cbc_patient_year_20261015.xlsx`)
+  - `R183_P180_XLSX` (`output/cbc_missing_capture_20261015.xlsx`)
+  - `R183_R122_RDS` (`output/encounter_distance_20261015.rds`)
+  - `R183_R169_RDS` (`output/internal/single_source_care_20261008.rds` — the file R/180 used; confirm location in Task 0)
+  - `R183_ADI_CSV` (`data/reference/zip5_adi_summary.csv`)
+  - Demographics/payer source as confirmed in Task 0 (pinned the same way if it is a file; if from DuckDB, read-only connection, recorded in KEY).
 
-### Input Pinning and Env Vars
-- **D-15:** Four pinned inputs, each overridable via environment variable (default paths in parentheses):
-  - `R183_P179_RDS` (default: `output/internal/cbc_patient_year_20261015.rds`) — Phase 179 patient-year RDS
-  - `R183_P179_XLSX` (default: `output/cbc_patient_year_20261015.xlsx`) — Phase 179 workbook (source of complete-case OR)
-  - `R183_P180_XLSX` (default: `output/cbc_missing_capture_20261015.xlsx`) — Phase 180 workbook (source of bounding ORs)
-  - `R183_R122_RDS` (default: `output/encounter_distance_20261015.rds`) — R/122 encounter distance RDS (for encounter counts and modal facility ZIP)
-  - All four paths are checked with `assert_file_exists()` at script startup. Whether each was the default or overridden via env var is recorded in the KEY sheet.
-
-### Task 0 — Pre-Imputation Verification (Read-Only)
-- **D-16:** Plan task 0 is a read-only confirmation step that must pass before any imputation runs:
-  1. Read the pinned Phase 179 RDS; confirm column names for patient median distance, `far`, `SOURCE`, payer, ADI, and `single_source_care` are present (exact names to be confirmed against the actual RDS at run time).
-  2. Fit a complete-case GEE on the pinned RDS using the exact Phase 179 primary specification (years 2+). Confirm the resulting OR reproduces `"Primary: years 2+"` from the Phase 179 workbook (within rounding). Stop with an explicit error message if it does not. Only proceed to imputation after task 0 passes.
+### Task 0 and the Plan 01 checkpoint
+- **D-16:** Task 0 (read-only, local grep of the writing scripts) records the exact column names in the Phase 179 RDS, R/122 RDS, R/169 RDS, the ADI CSV and the demographics/payer source, plus the exact labels in the Phase 179 workbook and Phase 180 KEY, before any code is written. The script holds these names as constants and stops, printing the available names, if any is absent.
+- **D-16a:** Plan 01 ends at the reproduction gate: a complete-case GEE on the pinned RDS must reproduce "Primary: years 2+" (OR and both CI bounds within 0.005). Plan 01 closes with a HiPerGator checkpoint that runs the script up to that gate and prints the predictor availability table; Plan 02 starts only after it passes.
 
 ### Privacy
-- **D-17:** Patient-level imputed datasets (all m completed datasets) are written **only** to `output/internal/`. They are never written to `output/`, the workbook, the memo, or any `.planning/` file.
-- No patient IDs or patient ZIPs appear in the workbook, memo, or any `.planning/` artifact. All counts 1–10 are shown as `"<11"` per the established suppression rule.
+- **D-17:** Patient-level inputs, both `mids` objects and completed datasets go only to `output/internal/`. No patient IDs or ZIPs in the workbook, memo, PNGs or `.planning/`. Counts 1–10 as "<11".
 
-### Outputs and Execution
-- **D-16:** Workbook: `output/mice_sensitivity_distance_<YYYYMMDD>.xlsx`
-  - Sheet order: KEY (leftmost), MICE-01 (diagnostics: settings, loggedEvents, trace plots embedded, density overlays), MICE-02 (pooled results + comparison table)
-  - KEY records: input file names + dates, m, maxit, seed, predictor list, target variable, D-01 branch vs D-02 branch, hard-stop outcome (pass/fail each D-09 criterion)
-- **D-17:** Short memo generated by the script: `.planning/phases/183-mice-sensitivity-for-distance/183-MEMO.md`. For the record — not being sent to team. Summarizes the sensitivity conclusion (pooled OR similar to / differs from complete-case OR) in neutral language.
-- **D-18:** Script name: `R/183_mice_sensitivity_distance.R`. Register in `R/39` (one-off section) and `SCRIPT_INDEX`. No R/88 section unless team requests.
-- **D-19:** Interactive R on HiPerGator from repo root: `module load R/4.5`; `source("R/183_mice_sensitivity_distance.R", local = new.env(parent = globalenv()))`. No SLURM.
+### Outputs and execution
+- **D-18:** Workbook `output/mice_sensitivity_distance_<YYYYMMDD>.xlsx`, sheets KEY, MICE-01 (settings, methods, loggedEvents, FMI, imputed counts, observed vs imputed far proportion, PNG names), MICE-02 (comparison table). PNGs: `output/mice_trace_<YYYYMMDD>.png`, `output/mice_density_<YYYYMMDD>.png` (aggregate only).
+- **D-19:** Memo written by the script to `output/183-MEMO_<YYYYMMDD>.md` (neutral language; for the record). Copied into the phase folder at close-out, not hand-edited.
+- **D-20:** Script `R/183_mice_sensitivity_distance.R`; registered in R/39 (one-off section) and SCRIPT_INDEX. No R/88 section; R/88 is rerun at the checkpoint to confirm the 982-pass baseline holds.
+- **D-21:** Interactive R on HiPerGator from the repo root (`module load R/4.5`; `source(f, local = new.env(parent = globalenv()))`). No SLURM, no Rscript. No R on the local machine: local checks are grep only.
 
 ### Claude's Discretion
-- Exact column widths, freeze panes, and minor workbook formatting — follow Phase 179/180/181 precedent.
-- Choice of `predictorMatrix` structure in mice (whether to zero out outcome-on-outcome entries) — follow standard mice guidance.
-- Whether to embed trace plots as PNG in the xlsx or write them to `output/` as separate files — follow whichever approach is consistent with the existing pipeline output convention.
+- Workbook formatting following R/179–181 (same xlsx package as R/180).
+- Base-R PNGs (no new plotting dependency).
 
 </decisions>
 
 <canonical_refs>
 ## Canonical References
-
-**Downstream agents MUST read these before planning or implementing.**
-
-### Phase 179 — Primary GEE (the model being re-fitted)
-- `R/179_cbc_patient_year.R` — GEE specification (`cbc_year ~ far + year_index_cat`, corstr, years 2+ primary), RDS schema, `far` derivation, `exposure_missing` flag, `triage` column
-- `.planning/phases/` (infer path) — Phase 179 CONTEXT for GEE spec details
-
-### Phase 180 — Bounding ORs (comparison table inputs)
-- `.planning/phases/180-cbc-per-patient-year/180-CONTEXT.md` — D-04 (bounding spec), D-05 (branch decision), bounding OR values
-- `R/180_cbc_missing_capture.R` — MISS-02/03 sheet structure, bounding logic
-
-### Phase 182 / 182.1 — Updated exposure RDS (primary input)
-- `.planning/phases/182.1-zip-centroid-mapping-for-unique-po-box-and-placeholder-zips/182.1-CONTEXT.md` — D-09 (new dated RDS), D-08 (distance_method column), D-07a (distance_status after fallback)
-- `R/122_encounter_distance.R` — encounter-level distance columns, `zip_not_in_db` status, modal facility ZIP derivable here
-
-### Gazetteer (for dist_to_modal_facility auxiliary)
-- `data/reference/zcta_gazetteer_centroids.csv` — tab-delimited; columns GEOID, INTPTLAT, INTPTLONG
-- `R/utils/utils_address.R` — `.load_zcta_gazetteer()`, `haversine_distance_mi()` already implemented
-
-### Phase 181 — Memo format reference
-- `.planning/phases/181-cbc-prior-year-vs-distance/181-CONTEXT.md` — D-13/D-14 (memo structure for script-generated markdown)
-
-### Phase 169 — single_source_care_post
-- `R/169_single_source_care.R` RDS — `single_source_care_post` column (for predictor D-07)
-
+- `R/179_cbc_patient_year.R` — `run_gee()` (copy verbatim), RDS schema, `sup()` / `show_rate()`
+- `R/180_cbc_missing_capture.R` — exact-label reader for Phase 179 "Primary: years 2+"; DuckDB read-only pattern; xlsx pattern
+- `R/182_facility_zip_recovery_report.R` — exact-label constants/readers for Phase 180 KEY rows
+- `R/181_cbc_prior_year.R` — script-generated memo pattern
+- `R/122_encounter_distance.R` — RDS columns (patient/facility ZIP5, SOURCE, encounter date, distance_status)
+- `R/169_single_source_care.R` — `single_source_care_post`
+- `R/utils/utils_address.R` — gazetteer loader and haversine helper (confirm names and units in Task 0)
+- `data/reference/zcta_gazetteer_centroids.csv` (tab-delimited), `data/reference/zip5_adi_summary.csv`
 </canonical_refs>
-
-<code_context>
-## Existing Code Insights
-
-### Reusable Assets
-- `R/utils/utils_address.R`: `.load_zcta_gazetteer()`, `haversine_distance_mi()` — use directly for `dist_to_modal_facility` auxiliary variable
-- `R/179_cbc_patient_year.R`: GEE fitting function (sections 5+) — copy the exact `geepack::geeglm()` call signature; do not alter the spec
-- `R/180_cbc_missing_capture.R`: suppression helper, UF color palette, xlsx write pattern — reuse
-- `R/181_cbc_prior_year.R`: script-generated memo pattern — follow for 183-MEMO.md
-
-### Established Patterns
-- `assert_file_exists()` (checkmate) before reading any pinned RDS — required by Phase 72 quality standards
-- `source(…, local = new.env(parent = globalenv()))` execution pattern — all v3.9+ phases
-- Dated output files (`output/xxx_<YYYYMMDD>.xlsx`) — consistent with 179/180/181
-
-### Integration Points
-- Reads Phase 179 dated RDS (`exposure_missing`, `far`, `triage`, `year_index`, `cbc_year`, `ID`)
-- Reads R/169 RDS for `single_source_care_post`
-- Reads R/122 RDS for encounter counts and modal facility ZIP (for auxiliary variable)
-- Reads `data/reference/zcta_gazetteer_centroids.csv` for haversine auxiliary
-
-</code_context>
 
 <specifics>
 ## Specific Ideas
-
-- **"Imputing patient-year would let one patient be near in one year and far in the next — statistically incoherent."** Patient-level imputation is the correct grain because the 614 missing patients lack a median post-anchor distance entirely.
-- **Logged distance:** "PMM only uses values that actually occur in the observed data" — this is the key justification for PMM on log scale over normal-model imputation.
-- **No hard-coded reference numbers:** complete-case OR and Phase 180 bounds are read at runtime from the pinned workbooks by exact label match (D-13). The 20261015 run values (0.834, 0.692, 0.871) are for human orientation only and must not appear in script code.
-- **Rubin's rules by hand:** cited to Rubin (1987). No mice::pool() wrapper — geeglm is not supported.
-- **Outcome in imputation model:** `prop_cbc_years` and `n_years_observed` are computed using the **same fully observed years as the Phase 179 GEE** (years 2+ for primary; all years for secondary). They must not include imputed rows. Including them is mandatory to avoid attenuation of the pooled OR toward 1 — this is the key methodological point the ROADMAP candidate list omits.
-- **ADI imputed jointly:** rather than dropped when patient ZIP is unknown (group a).
-
+- Reference values for orientation only (never in code): complete-case 0.834 (0.719–0.967); Phase 180 far=1 0.692 (0.614–0.781), far=0 0.871 (0.751–1.009).
+- 614 patients missing exposure of 8,632; 58,595 patient-years.
 </specifics>
 
 <deferred>
 ## Deferred Ideas
-
-None — discussion stayed within phase scope.
-
+None.
 </deferred>
 
 ---
-
-*Phase: 183-mice-sensitivity-for-distance*
-*Context gathered: 2026-10-15*
+*Phase: 183-mice-sensitivity-for-distance — revised after plan review 2026-10-15*
