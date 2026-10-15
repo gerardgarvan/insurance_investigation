@@ -49,16 +49,30 @@ The imputation model must include the **outcome summary** (to avoid biasing the 
 
 ### Comparison Table
 - **D-13:** MICE-02 sheet contains the comparison table with rows:
-  - Complete-case OR: 0.834 (95% CI 0.719–0.967) — **pinned from Phase 179 20261015 RDS run**
-  - Phase 180 lower bound (all far): 0.692
-  - Phase 180 upper bound (all not-far): 0.871 (95% CI 0.751–1.009)
+  - Complete-case OR — **read from the pinned Phase 179 workbook**, label `"Primary: years 2+"`. Stop with a clear error if the label is not found (same pattern as R/180–182). Do **not** hard-code numeric values.
+  - Phase 180 lower bound — **read from the pinned Phase 180 workbook**, MISS-02 sheet, label for "all far" bound. Stop if label not found.
+  - Phase 180 upper bound — **read from the pinned Phase 180 workbook**, MISS-03 sheet, label for "all not-far" bound. Stop if label not found.
   - Pooled MICE OR — primary (log-dist PMM, years 2+)
   - Pooled MICE OR — primary sensitivity (far logreg, years 2+)
   - Pooled MICE OR — all years (log-dist PMM)
 - **D-14:** Counts 1–10 → `"<11"`. Percentages only when both counts ≥ 11. UF color palette.
 
-### Input Pinning
-- **D-15:** Phase 179 RDS pinned to the `20261015` dated file (the post-182.1 re-run). Record exact filename in KEY. Script stops if file is absent (use `assert_file_exists()` from checkmate, consistent with pipeline conventions).
+### Input Pinning and Env Vars
+- **D-15:** Four pinned inputs, each overridable via environment variable (default paths in parentheses):
+  - `R183_P179_RDS` (default: `output/internal/cbc_patient_year_20261015.rds`) — Phase 179 patient-year RDS
+  - `R183_P179_XLSX` (default: `output/cbc_patient_year_20261015.xlsx`) — Phase 179 workbook (source of complete-case OR)
+  - `R183_P180_XLSX` (default: `output/cbc_missing_capture_20261015.xlsx`) — Phase 180 workbook (source of bounding ORs)
+  - `R183_R122_RDS` (default: `output/encounter_distance_20261015.rds`) — R/122 encounter distance RDS (for encounter counts and modal facility ZIP)
+  - All four paths are checked with `assert_file_exists()` at script startup. Whether each was the default or overridden via env var is recorded in the KEY sheet.
+
+### Task 0 — Pre-Imputation Verification (Read-Only)
+- **D-16:** Plan task 0 is a read-only confirmation step that must pass before any imputation runs:
+  1. Read the pinned Phase 179 RDS; confirm column names for patient median distance, `far`, `SOURCE`, payer, ADI, and `single_source_care` are present (exact names to be confirmed against the actual RDS at run time).
+  2. Fit a complete-case GEE on the pinned RDS using the exact Phase 179 primary specification (years 2+). Confirm the resulting OR reproduces `"Primary: years 2+"` from the Phase 179 workbook (within rounding). Stop with an explicit error message if it does not. Only proceed to imputation after task 0 passes.
+
+### Privacy
+- **D-17:** Patient-level imputed datasets (all m completed datasets) are written **only** to `output/internal/`. They are never written to `output/`, the workbook, the memo, or any `.planning/` file.
+- No patient IDs or patient ZIPs appear in the workbook, memo, or any `.planning/` artifact. All counts 1–10 are shown as `"<11"` per the established suppression rule.
 
 ### Outputs and Execution
 - **D-16:** Workbook: `output/mice_sensitivity_distance_<YYYYMMDD>.xlsx`
@@ -131,9 +145,9 @@ The imputation model must include the **outcome summary** (to avoid biasing the 
 
 - **"Imputing patient-year would let one patient be near in one year and far in the next — statistically incoherent."** Patient-level imputation is the correct grain because the 614 missing patients lack a median post-anchor distance entirely.
 - **Logged distance:** "PMM only uses values that actually occur in the observed data" — this is the key justification for PMM on log scale over normal-model imputation.
-- **Complete-case reference numbers pinned:** OR = 0.834 (0.719–0.967), Phase 180 far-bound = 0.692, not-far-bound = 0.871 (0.751–1.009). These are the 20261015 run values.
+- **No hard-coded reference numbers:** complete-case OR and Phase 180 bounds are read at runtime from the pinned workbooks by exact label match (D-13). The 20261015 run values (0.834, 0.692, 0.871) are for human orientation only and must not appear in script code.
 - **Rubin's rules by hand:** cited to Rubin (1987). No mice::pool() wrapper — geeglm is not supported.
-- **Outcome in imputation model:** including `prop_cbc_years` and `n_years_observed` is mandatory to avoid attenuation of the pooled OR toward 1. This is the key methodological point the ROADMAP candidate list omits.
+- **Outcome in imputation model:** `prop_cbc_years` and `n_years_observed` are computed using the **same fully observed years as the Phase 179 GEE** (years 2+ for primary; all years for secondary). They must not include imputed rows. Including them is mandatory to avoid attenuation of the pooled OR toward 1 — this is the key methodological point the ROADMAP candidate list omits.
 - **ADI imputed jointly:** rather than dropped when patient ZIP is unknown (group a).
 
 </specifics>
