@@ -26,12 +26,19 @@ Annual primary period; 6-month as sensitivity.
   reported alongside primary in the Diagnostics tab.
 
 ### Working correlation structure
-- **D-04:** Working correlation = `independence` with robust SEs. Each patient contributes many
-  rows across modalities and years; `exchangeable` fits this structure poorly.
+- **D-04:** Working correlation = `independence` with robust SEs, held in its own constant
+  `MODR_CORSTR <- "independence"`. Do NOT use `CONFIG$distance_gee_corstr` (that is
+  "exchangeable", the Phase 179 setting, used only in the reproduction gate).
 
 ### Data structure
 - **D-05:** One row per patient × modality × follow-up year. Outcome = count of distinct modality
-  dates within that year. Offset = `log(person_years)` for that year.
+  dates within that year. Offset = `log(person_years)`.
+- **D-05a:** Year window = Phase 179 convention: an event belongs to year k when
+  `year_start < event_date <= year_end`.
+- **D-05b:** The Phase 179 RDS has no person-time column. `person_years = as.numeric(year_end - year_start) / 365`
+  (expected 1 for every row, since Phase 179 keeps only fully observed years); assert and report.
+- **D-05c:** `far` is integer 0/1 in the Phase 179 RDS: the coefficient is `far`, interaction terms
+  `far:modality<level>`. No `farTRUE` names.
 - **D-06:** Cohort = Phase 179 pinned RDS (`cbc_patient_year_20261015.rds`), complete-case on
   exposure (exclude the 614 missing-exposure patients). `far` taken from the Phase 179 RDS.
   Primary analysis: years 2+ (matches Phase 179 primary). Secondary: all years.
@@ -39,13 +46,14 @@ Annual primary period; 6-month as sensitivity.
   per R/147/Phase 158–159 definitions (e.g., echo restricted to post-anthracycline patients).
   Do not include ineligible patients in a modality's rate denominator.
 - **D-08:** Reference modality = CBC (ties back to Phase 179 as the anchor outcome).
-- **D-09:** `year_index_cat` is included in the model to control for follow-up time trends
-  (same construction as Phase 179).
+- **D-09:** `year_index_cat` built exactly as R/179 (years 1–4 and "5+"), copied verbatim.
 
 ### Covariates
 - **D-10 (primary model terms):** `far + modality + far:modality + year_index_cat`. No additional
   adjustment. Matches the Phase 179 unadjusted specification.
-- **D-11 (adjusted sensitivity):** Add `age_at_anchor + sex` from the same sources used in R/183.
+- **D-11 (adjusted sensitivity):** Add `age_at_anchor + sex` from the same sources used in R/183
+  (DuckDB DEMOGRAPHIC, read-only; anchor = min(year_start)). Sex factor built after the cohort join,
+  categories < 11 patients merged into "Other/Unknown", `droplevels()`.
 - **D-12:** `payer` excluded — no usable source was found in Phase 183; do not attempt to add it
   here.
 - **D-13:** Variables that sit on the causal pathway between distance and testing (encounter counts,
@@ -58,14 +66,22 @@ Annual primary period; 6-month as sensitivity.
   the distance effect differs across modalities.
 
 ### Reproduction gate (hard stop)
-- **D-16:** Before the modality model runs, fit the CBC-only Poisson GEE on the pinned Phase 179
-  cohort and confirm the "Primary: years 2+" OR (and 95% CI) from the pinned Phase 179 workbook
-  matches within 0.005, read by exact label. Script stops with an error if this check fails.
-  Also assert patient-year row count and far/near patient split match Phase 179 exactly.
+- **D-16:** Before the modality model runs, refit the Phase 179 model itself (logistic GEE on
+  `cbc_year`, `run_gee()` copied verbatim from R/179, `CONFIG$distance_gee_corstr`) on the pinned
+  Phase 179 RDS, years 2+, complete case. OR and both CI bounds must match the pinned Phase 179
+  workbook "Primary: years 2+" (exact-label reader copied from R/183) within 0.005. Patient-year count
+  and far/near patient counts printed and recorded (they define the cohort, no tolerance).
+- **D-16a (long-frame check):** In the long frame, for CBC rows, `as.integer(count > 0)` must equal
+  Phase 179 `cbc_year` for every patient-year. If not, stop and report the agreement table — it means
+  the R/147/R/166 CBC event definition differs from the Phase 165/179 definition, which must be
+  resolved before modelling.
+- **D-16b:** Patient-years in the long CBC rows must equal the Phase 179 complete-case patient-years
+  exactly (CBC applies to every patient).
 
 ### Suppression
-- **D-17:** Counts 1–10 displayed as "<11". Rates shown only when both numerator and denominator
-  are ≥ 11. Applied to the Rate_Table tab and the Rates tab in the workbook.
+- **D-17:** Counts 1–10 displayed as "<11" — events, eligible patients and person-years alike.
+  Rates shown only when numerator and denominator are both ≥ 11. Applied to every count shown
+  (Rates, QC, memo).
 
 ### Workbook structure
 - **D-18:** Single workbook, UF colours, KEY leftmost. Tabs in order:
@@ -85,7 +101,35 @@ Annual primary period; 6-month as sensitivity.
 
 ### Output file names
 - **D-20:** Workbook: `output/modality_rate_model_<YYYYMMDD>.xlsx`
-- **D-21:** Memo: `184-MEMO.md` (in the phase directory or output/)
+- **D-21:** Memo: `output/184-MEMO_<YYYYMMDD>.md`, copied unchanged to the phase folder at close-out.
+
+### Sensitivity details
+- **D-23 (6-month):** Each follow-up year is split into two half-years,
+  `(year_start, year_start + 182.5]` and `(year_start + 182.5, year_end]`, each 0.5 person-years;
+  events counted per half; same model with a half-year period factor. (Not a truncation to the first
+  half of each year.)
+- **D-24 (NB):** The same joint formula fitted with `MASS::glm.nb`, with cluster-robust SEs by
+  patient (`sandwich::vcovCL(fit, cluster = ~ID)`). Modality-specific RRs and the joint Wald test
+  computed from that covariance. If `sandwich` is not in renv, install + `renv::snapshot()` at the
+  checkpoint.
+
+### Pinning and names
+- **D-25:** Pinned inputs (env override; path + pinned TRUE/FALSE in KEY; exist-check at start):
+  `R184_P179_RDS` (output/internal/cbc_patient_year_20261015.rds),
+  `R184_P179_XLSX` (output/cbc_patient_year_20261015.xlsx),
+  `R184_EVENTS_RDS` (R/166 or R/147 dated modality events — path confirmed in Task 0),
+  `R184_ELIG_RDS` (modality eligibility source — confirmed in Task 0),
+  R/147 pointer file recorded as read.
+- **D-26:** Task 0 (read-only, local grep of the writing scripts) records exact column names,
+  modality labels (incl. the CBC label), eligibility flag, CBC event definition used by R/147/R/166,
+  and the Phase 179 workbook sheet/label column, before code is written. Held as constants; missing
+  names stop the run with the available names printed.
+
+### Execution
+- **D-27:** Interactive R on HiPerGator (`module load R/4.5`; `source(f, local = new.env(parent = globalenv()))`).
+  No SLURM, no Rscript; local checks are grep only. UF colours #0021A5 / #FA4616.
+- **D-28:** Two plans. 01 = Task 0, pins, gate, long frame, checkpoint. 02 = rates, models,
+  workbook, memo, registration (R/39, SCRIPT_INDEX), R/88 rerun, close-out.
 
 ### Script number
 - **D-22:** `R/184_modality_rate_model.R` (next available sequential number; depends on R/147,
@@ -117,7 +161,7 @@ Annual primary period; 6-month as sensitivity.
 
 ### Pinned data
 - Phase 179 RDS: `output/internal/cbc_patient_year_20261015.rds` (cohort pin; env-var override `R184_P179_RDS`)
-- Phase 179 workbook (exact label "Primary: years 2+"): most recent `output/cbc_patient_year_*.xlsx`
+- Phase 179 workbook (exact label "Primary: years 2+"): pinned `output/cbc_patient_year_20261015.xlsx` (`R184_P179_XLSX`)
 
 </canonical_refs>
 
