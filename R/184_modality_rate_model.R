@@ -248,22 +248,31 @@ if (any(py_cc$person_years < 0.99 | py_cc$person_years > 1.01, na.rm = TRUE)) {
             "[{round(py_range[1], 4)}, {round(py_range[2], 4)}]"), call. = FALSE)
 }
 
-# 2e. Exact-label reader (copied from R/183 lines 548-562; do not edit)
+# 2e. Exact-label reader (copied verbatim from R/183 lines 548-562)
 read_p179_or <- function(path, label) {
   sheet_df <- tryCatch(
-    openxlsx::read.xlsx(path, sheet = LBL_P179_SHEET),
-    error = function(e) stop(glue("Cannot read {LBL_P179_SHEET} from {basename(path)}: {e$message}")))
-  if (!LBL_P179_COL %in% names(sheet_df))
-    stop(glue("{LBL_P179_SHEET} in {basename(path)} missing '{LBL_P179_COL}' column"))
-  rows <- sheet_df[trimws(as.character(sheet_df[[LBL_P179_COL]])) == label, ]
+    openxlsx::read.xlsx(path, sheet = "Model_Results"),
+    error = function(e) stop(glue("Cannot read Model_Results from {basename(path)}: {e$message}")))
+  if (!"Analysis" %in% names(sheet_df))
+    stop(glue("Model_Results in {basename(path)} missing 'Analysis' column. ",
+              "Columns found: {paste(names(sheet_df), collapse=', ')}"))
+  rows <- sheet_df[trimws(as.character(sheet_df$Analysis)) == label, ]
   if (nrow(rows) != 1L) {
-    avail <- paste(head(trimws(as.character(sheet_df[[LBL_P179_COL]])), 30), collapse = ", ")
-    stop(glue("Expected 1 row with {LBL_P179_COL}='{label}' in {basename(path)}; ",
+    avail <- paste(head(trimws(as.character(sheet_df$Analysis)), 30), collapse = ", ")
+    stop(glue("Expected 1 row with Analysis='{label}' in {basename(path)}; ",
               "found {nrow(rows)}. Available: {avail}"), call. = FALSE)
   }
-  list(or    = as.numeric(rows[[LBL_P179_OR]]),
-       ci_lo = as.numeric(rows[[LBL_P179_LO]]),
-       ci_hi = as.numeric(rows[[LBL_P179_HI]]))
+  or    <- as.numeric(rows$OR)
+  ci_lo <- as.numeric(rows$CI_lo)
+  ci_hi <- as.numeric(rows$CI_hi)
+  if (length(or) != 1L || is.na(or) ||
+      length(ci_lo) != 1L || is.na(ci_lo) ||
+      length(ci_hi) != 1L || is.na(ci_hi)) {
+    stop(glue("read_p179_or: OR/CI_lo/CI_hi must each be a single non-NA numeric. ",
+              "Got OR={deparse(or)}, CI_lo={deparse(ci_lo)}, CI_hi={deparse(ci_hi)}. ",
+              "Sheet columns: {paste(names(sheet_df), collapse=', ')}"), call. = FALSE)
+  }
+  list(or = or, ci_lo = ci_lo, ci_hi = ci_hi)
 }
 
 P179_REF <- read_p179_or(PINS$p179_xlsx$path, LBL_P179_PRIMARY)
@@ -275,6 +284,11 @@ GEE_CORSTR <- P179_CORSTR   # required by run_gee(); scoped to gate only
 message(glue("  Running reproduction gate (GEE_CORSTR={GEE_CORSTR}) ..."))
 g <- run_gee(dplyr::filter(py_cc, year_index >= 2L), COL_CBC_YEAR, COL_FAR,
              LBL_P179_PRIMARY)
+
+if (anyNA(c(g$or, g$ci_lo, g$ci_hi, P179_REF$or, P179_REF$ci_lo, P179_REF$ci_hi)))
+  stop(glue("REPRODUCTION GATE FAIL: NA in gate values — ",
+            "g=({g$or},{g$ci_lo},{g$ci_hi}) P179=({P179_REF$or},{P179_REF$ci_lo},{P179_REF$ci_hi})"),
+       call. = FALSE)
 
 delta_or <- abs(g$or    - P179_REF$or)
 delta_lo <- abs(g$ci_lo - P179_REF$ci_lo)
