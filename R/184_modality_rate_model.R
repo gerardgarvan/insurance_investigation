@@ -379,16 +379,26 @@ if (!LBL_CBC %in% mod_labels)
 #
 SEX_RESTRICTED <- c("Mammogram", "Breast MRI")   # data/reference/README.md line 285
 
-# Sex lookup via duck_query (open-query-disconnect in one call; avoids stale-connection error)
-# Copied from R/147 lines 283-290 (demo_tbl query pattern).
+# Sex lookup via duck_query — query full table, join to cohort in R (avoids IN-list and PATID errors).
+# Copied verbatim from R/183 lines 366-383 (duck_query + full-table pattern; column is ID not PATID).
 cc_patient_ids <- unique(py_cc$ID)
-demo_raw_184 <- duck_query(
-  sprintf("SELECT PATID AS ID, SEX FROM DEMOGRAPHIC WHERE PATID IN (%s)",
-          paste(sprintf("'%s'", cc_patient_ids), collapse = ",")))
-sex_lookup_184 <- tibble::tibble(ID = as.character(demo_raw_184$ID),
-                                 sex = as.character(demo_raw_184$SEX))
-female_ids <- sex_lookup_184$ID[sex_lookup_184$sex %in% "F"]
-message(glue("  sex_lookup: {nrow(sex_lookup_184)} of {length(cc_patient_ids)} ",
+demo_raw_184 <- duck_query("SELECT ID, BIRTH_DATE, SEX FROM DEMOGRAPHIC")
+demo_raw_184$ID <- as_id(demo_raw_184$ID)
+
+# Join to complete-case cohort BEFORE making sex a factor (prevents empty-level errors).
+# Merge categories with < 11 cohort patients into "Other/Unknown"; droplevels().
+# Copied from R/183 lines 421-444.
+sex_184 <- demo_raw_184 |>
+  dplyr::filter(ID %in% cc_patient_ids) |>
+  dplyr::select(ID, sex_raw = SEX)
+sex_counts_184 <- table(sex_184$sex_raw, useNA = "no")
+rare_sex_184 <- names(sex_counts_184)[sex_counts_184 < 11L]
+if (length(rare_sex_184) > 0L)
+  sex_184 <- sex_184 |>
+    dplyr::mutate(sex_raw = dplyr::if_else(sex_raw %in% rare_sex_184, "Other/Unknown", sex_raw))
+sex_184 <- sex_184 |> dplyr::mutate(sex = droplevels(factor(sex_raw)))
+female_ids <- sex_184$ID[sex_184$sex_raw %in% "F"]
+message(glue("  sex_lookup: {nrow(sex_184)} of {length(cc_patient_ids)} ",
              "complete-case patients in DEMOGRAPHIC; female (SEX='F'): {length(female_ids)}"))
 
 # Build eligibility: all patients × unrestricted modalities + female × sex-restricted
