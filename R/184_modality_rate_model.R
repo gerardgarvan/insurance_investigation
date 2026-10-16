@@ -1060,6 +1060,8 @@ fit_adjusted <- tryCatch({
 
   V_adj    <- vcov(fit_adj_)
   beta_adj <- coef(fit_adj_)
+  # Assert beta belongs to fit_adj_ (guards against accidental reuse of primary beta).
+  stopifnot(identical(names(beta_adj), names(coef(fit_adj_))))
   rr_adj   <- modality_rr(beta_adj, V_adj, levels(d_adj$modality), levels(d_adj$modality)[1])
   gw_adj   <- global_wald(beta_adj, V_adj)
 
@@ -1091,12 +1093,17 @@ fit_half_year <- tryCatch({
       cl        = as.integer(factor(ID, levels = unique(ID))),
       count     = count_half,
       person_years = half_py,
-      period_cat = year_index_cat   # D-23 choice: year_index_cat bins (not half-split)
+      period_cat = year_index_cat,  # D-23 choice: year_index_cat bins (not half-split)
+      # Coerce to factor before droplevels so levels() is non-NULL even if half_df join
+      # coerced modality to character (left_join with half_event_counts).
+      modality  = factor(modality, levels = levels(long_df$modality))
     ) |>
     droplevels()
-  if (is.factor(d_half$modality) && LBL_CBC %in% levels(d_half$modality))
+  # Always relevel — guard above ensures modality is a factor.
+  if (LBL_CBC %in% levels(d_half$modality))
     d_half$modality <- relevel(d_half$modality, ref = LBL_CBC)
-  stopifnot("CBC must be reference level of d_half modality" = levels(d_half$modality)[1] == LBL_CBC)
+  stopifnot("CBC must be reference level of d_half modality" =
+              is.factor(d_half$modality) && levels(d_half$modality)[1] == LBL_CBC)
 
   fit_hy_ <- geepack::geeglm(
     count ~ far * modality + period_cat + offset(log(person_years)),
@@ -1110,12 +1117,18 @@ fit_half_year <- tryCatch({
 
   V_hy    <- vcov(fit_hy_)
   beta_hy <- coef(fit_hy_)
-  rr_hy   <- modality_rr(beta_hy, V_hy, levels(d_half$modality), levels(d_half$modality)[1])
+  # Assert beta belongs to fit_hy_ (guards against accidental reuse of primary beta).
+  stopifnot(identical(names(beta_hy), names(coef(fit_hy_))))
+  mod_levels_hy <- levels(d_half$modality)
+  rr_hy   <- modality_rr(beta_hy, V_hy, mod_levels_hy, mod_levels_hy[1])
   gw_hy   <- global_wald(beta_hy, V_hy)
 
   message(glue("  [Half-year] Global Wald: chi2={round(gw_hy$chi2,2)} df={gw_hy$df} p={round(gw_hy$p,4)}"))
-  print(as.data.frame(dplyr::mutate(rr_hy, RR=round(RR,3), CI_low=round(CI_low,3),
-                                    CI_high=round(CI_high,3), p=round(p,4))))
+  print(as.data.frame(dplyr::mutate(rr_hy,
+    RR      = round(RR,      3),
+    CI_low  = round(CI_low,  3),
+    CI_high = round(CI_high, 3),
+    p       = round(p,       4))))
 
   list(fit = fit_hy_, rr_table = rr_hy, global_wald = gw_hy, error = NA_character_)
 
@@ -1140,8 +1153,12 @@ fit_data_end <- tryCatch({
   if (is.factor(d_de$modality) && LBL_CBC %in% levels(d_de$modality))
     d_de$modality <- relevel(d_de$modality, ref = LBL_CBC)
   stopifnot("CBC must be reference level of d_de modality" = levels(d_de$modality)[1] == LBL_CBC)
-  message(glue("  [Data-end] n_py={format(nrow(d_de), big.mark=',')} ",
-               "patients={format(dplyr::n_distinct(d_de$ID), big.mark=',')}"))
+  de_n_rows    <- nrow(d_de)
+  de_py        <- sum(d_de$person_years, na.rm = TRUE)
+  de_n_pat     <- dplyr::n_distinct(d_de$ID)
+  message(glue("  [Data-end] model rows={format(de_n_rows, big.mark=',')} ",
+               "patient-years={format(round(de_py), big.mark=',')} ",
+               "patients={sup(de_n_pat)}"))
 
   fit_de_ <- geepack::geeglm(
     count ~ far * modality + year_index_cat + offset(log(person_years)),
@@ -1163,12 +1180,13 @@ fit_data_end <- tryCatch({
                                     CI_high=round(CI_high,3), p=round(p,4))))
 
   list(fit = fit_de_, rr_table = rr_de, global_wald = gw_de,
-       n_py = nrow(d_de), error = NA_character_)
+       n_rows = de_n_rows, n_py = de_py, n_pat = de_n_pat, error = NA_character_)
 
 }, error = function(e) {
   msg <- glue("not estimated: {conditionMessage(e)}")
   message(glue("  Data-end sensitivity FAILED: {msg}"))
-  list(fit = NULL, rr_table = NULL, global_wald = NULL, n_py = NA_integer_, error = msg)
+  list(fit = NULL, rr_table = NULL, global_wald = NULL,
+       n_rows = NA_integer_, n_py = NA_real_, n_pat = NA_integer_, error = msg)
 })
 
 message("==== SECTION 7: sensitivities complete ====")
