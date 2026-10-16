@@ -117,13 +117,15 @@ rate_or_dash <- function(num, den) {
   round(num / den, 4)
 }
 
-# --- duck_query: open connection, query, disconnect immediately (avoids stale-con errors) ---
-# Never hold pcornet_con open across pipeline helpers (R/utils/utils_duckdb.R open_pcornet_con
-# registers on.exit(dbDisconnect) inside its tryCatch, which fires when the enclosing frame exits).
+# --- duck_query: open connection, query, close via close_pcornet_con() (removes globalenv ref) ---
+# open_pcornet_con() is a SINGLE shared connection; a new call closes any existing pcornet_con
+# (see utils_duckdb.R line 128). DBI::dbDisconnect() alone leaves a stale pcornet_con object in
+# globalenv, causing the next block's !exists() guard to silently skip reopening. Must use
+# close_pcornet_con() so pcornet_con is removed from globalenv after the query.
 duck_query <- function(sql) {
-  con <- open_pcornet_con()
-  on.exit(try(DBI::dbDisconnect(con), silent = TRUE), add = TRUE)
-  DBI::dbGetQuery(con, sql)
+  open_pcornet_con()
+  on.exit(try(close_pcornet_con(), silent = TRUE), add = TRUE)
+  DBI::dbGetQuery(pcornet_con, sql)
 }
 
 # --- need_cols: stop with available names if any column is missing ---
@@ -397,24 +399,36 @@ message(glue("  Dropped R/166 '{LBL_R166_CBC}' rows. Remaining: ",
 #
 SEX_RESTRICTED <- c("Mammogram", "Breast MRI")   # data/reference/README.md line 285
 
-# Sex lookup via duck_query — query full table, join to cohort in R (avoids IN-list and PATID errors).
-# Copied verbatim from R/183 lines 366-383 (duck_query + full-table pattern; column is ID not PATID).
+# Sex lookup: full-table query inside the DuckDB block below, join in R (avoids IN-list and PATID).
 cc_patient_ids <- unique(py_cc$ID)
 
-# Replace R/166 CBC rows with Phase 165 CBC events via build_cbc_events().
-# Copied verbatim from R/179_cbc_patient_year.R lines 186-195 (open-query-close pattern;
-# Phase 179 complete-case IDs used as the patient set; R/utils/utils_distance_cbc.R line 108).
-message("  Building Phase 165 CBC events via build_cbc_events() ...")
-cbc165_opened <- FALSE
-if (!exists("pcornet_con", envir = .GlobalEnv)) { open_pcornet_con(); cbc165_opened <- TRUE }
+# One DuckDB block: CBC events + DEMOGRAPHIC sex lookup.
+# open_pcornet_con() is a SINGLE shared connection — any call to open_pcornet_con() (including
+# inside duck_query) closes the previous connection. All DuckDB queries must happen between ONE
+# open and ONE close_pcornet_con() call; no duck_query or other open_pcornet_con() call may
+# occur between open and close.
+# Pattern copied verbatim from R/179_cbc_patient_year.R lines 186-232 (open / query / close).
+message("  DuckDB block: Phase 165 CBC events + DEMOGRAPHIC sex lookup ...")
+db184_opened <- FALSE
+if (!exists("pcornet_con", envir = .GlobalEnv)) { open_pcornet_con(); db184_opened <- TRUE }
+
+# Phase 165 CBC events (build_cbc_events; R/utils/utils_distance_cbc.R line 108)
+# Verbatim from R/179 lines 191-194: transmute, filter NA, distinct; all collected in-block.
 cbc165_events <- build_cbc_events(pcornet_con, cc_patient_ids) |>   # R/utils/utils_distance_cbc.R line 108
   dplyr::transmute(ID = as_id(ID), cbc_date = as.Date(cbc_date)) |>
   dplyr::filter(!is.na(cbc_date)) |>
   dplyr::distinct() |>
   dplyr::transmute(ID, modality = LBL_CBC, event_date = cbc_date)
-if (cbc165_opened) close_pcornet_con()
 message(glue("  Phase 165 CBC events: {format(nrow(cbc165_events), big.mark=',')} ",
              "patient-dates, {dplyr::n_distinct(cbc165_events$ID)} patients"))
+
+# DEMOGRAPHIC sex lookup — full-table query, join in R (no IN-list, no PATID; CLAUDE.md rule).
+demo_raw_184 <- DBI::dbGetQuery(pcornet_con, "SELECT ID, BIRTH_DATE, SEX FROM DEMOGRAPHIC")
+
+if (db184_opened) close_pcornet_con()   # close BEFORE any further code; no lazy tbl() survives
+
+demo_raw_184$ID <- as_id(demo_raw_184$ID)
+
 events_rds <- dplyr::bind_rows(events_rds, cbc165_events) |>
   dplyr::distinct(ID, modality, event_date)
 
@@ -431,8 +445,6 @@ mod_labels <- sort(unique(events_rds$modality))
 if (!LBL_CBC %in% mod_labels)
   stop(glue("[R/184] LBL_CBC='{LBL_CBC}' not found after replacing CBC events. ",
             "Found: {paste(mod_labels, collapse = ', ')}"), call. = FALSE)
-demo_raw_184 <- duck_query("SELECT ID, BIRTH_DATE, SEX FROM DEMOGRAPHIC")
-demo_raw_184$ID <- as_id(demo_raw_184$ID)
 
 # Join to complete-case cohort BEFORE making sex a factor (prevents empty-level errors).
 # Merge categories with < 11 cohort patients into "Other/Unknown"; droplevels().
