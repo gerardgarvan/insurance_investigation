@@ -656,4 +656,791 @@ long_out <- file.path(internal_dir, glue("modality_long_{RUN_DATE}.rds"))
 saveRDS(long_df, long_out)
 message(glue("  Saved: {long_out} ({format(nrow(long_df), big.mark = ',')} rows)"))
 
-message("==== R/184 Plan 01 complete: stopped after long-frame checks ====")
+message("==== R/184 SECTIONS 0-3 complete — continuing to Plan 02 sections ====")
+
+# ==============================================================================
+# SECTION 4: RATES (MODR-01) ----
+# ==============================================================================
+
+# --- 4a. Annual rates: years 2+ and all years, by modality × far ---------------
+
+make_rate_table <- function(df, period_label) {
+  df |>
+    dplyr::group_by(modality, far) |>
+    dplyr::summarise(
+      n_patients   = dplyr::n_distinct(ID),
+      patient_years = sum(person_years),
+      n_events     = sum(count),
+      .groups      = "drop"
+    ) |>
+    dplyr::mutate(
+      period         = period_label,
+      n_patients_sup = sup(n_patients),
+      patient_years_sup = sup(patient_years),
+      n_events_sup   = sup(n_events),
+      rate           = mapply(rate_or_dash, n_events, patient_years)
+    )
+}
+
+rates_yr2plus <- make_rate_table(dplyr::filter(long_df, year_index >= 2L), "years 2+")
+rates_all     <- make_rate_table(long_df,                                   "all years")
+
+# --- 4b. Annual rates by year_index_cat (years 2+ and all years) ---------------
+
+make_rate_table_by_year <- function(df, period_label) {
+  df |>
+    dplyr::group_by(modality, far, year_index_cat) |>
+    dplyr::summarise(
+      n_patients    = dplyr::n_distinct(ID),
+      patient_years = sum(person_years),
+      n_events      = sum(count),
+      .groups       = "drop"
+    ) |>
+    dplyr::mutate(
+      period            = period_label,
+      n_patients_sup    = sup(n_patients),
+      patient_years_sup = sup(patient_years),
+      n_events_sup      = sup(n_events),
+      rate              = mapply(rate_or_dash, n_events, patient_years)
+    )
+}
+
+rates_by_year_yr2plus <- make_rate_table_by_year(dplyr::filter(long_df, year_index >= 2L), "years 2+")
+rates_by_year_all     <- make_rate_table_by_year(long_df,                                   "all years")
+
+# --- 4c. Half-year frame (D-23) ------------------------------------------------
+# Each long row → two half-rows: half=1 (year_start, year_start+182.5] and
+# half=2 (year_start+182.5, year_end]; person_years = 0.5 each.
+# Events counted strictly: year_start < event_date <= year_start+182.5 (half 1)
+#                          year_start+182.5 < event_date <= year_end     (half 2)
+
+half_base <- long_df |>
+  dplyr::select(ID, modality, year_index, year_start, year_end, far, person_years, year_index_cat) |>
+  tidyr::crossing(half = 1:2) |>
+  dplyr::mutate(
+    half_start = dplyr::if_else(half == 1L, year_start,       year_start + 182.5),
+    half_end   = dplyr::if_else(half == 1L, year_start + 182.5, year_end),
+    half_py    = 0.5
+  )
+
+# Count events per half-window: half_start < event_date <= half_end
+half_event_counts <- half_base |>
+  dplyr::select(ID, modality, year_index, half, half_start, half_end) |>
+  dplyr::inner_join(
+    dplyr::select(events_rds, ID, modality, event_date),
+    by = dplyr::join_by(ID, modality, half_start < event_date, half_end >= event_date)
+  ) |>
+  dplyr::count(ID, modality, year_index, half, name = "count_half")
+
+half_df <- half_base |>
+  dplyr::left_join(half_event_counts, by = c("ID", "modality", "year_index", "half")) |>
+  dplyr::mutate(count_half = dplyr::coalesce(count_half, 0L))
+
+# Assert: half1 + half2 counts == annual count for every (ID, modality, year_index)
+annual_totals <- long_df |> dplyr::select(ID, modality, year_index, count)
+half_totals   <- half_df |>
+  dplyr::group_by(ID, modality, year_index) |>
+  dplyr::summarise(count_sum = sum(count_half), .groups = "drop")
+assert_half <- dplyr::inner_join(annual_totals, half_totals, by = c("ID", "modality", "year_index")) |>
+  dplyr::mutate(ok = (count == count_sum))
+n_mismatch_half <- sum(!assert_half$ok, na.rm = TRUE)
+if (n_mismatch_half > 0L)
+  stop(glue("[R/184] Half-year assertion FAIL: {n_mismatch_half} (ID, modality, year_index) rows where ",
+            "half1 + half2 counts != annual count"), call. = FALSE)
+message(glue("  Half-year assertion: half1 + half2 == annual count for all ",
+             "{format(nrow(assert_half), big.mark=',')} patient-year-modality rows: OK"))
+
+# Half-year rate tables
+make_rate_table_half <- function(df, period_label) {
+  df |>
+    dplyr::group_by(modality, far, half) |>
+    dplyr::summarise(
+      n_patients    = dplyr::n_distinct(ID),
+      patient_years = sum(half_py),
+      n_events      = sum(count_half),
+      .groups       = "drop"
+    ) |>
+    dplyr::mutate(
+      period            = period_label,
+      n_patients_sup    = sup(n_patients),
+      patient_years_sup = sup(patient_years),
+      n_events_sup      = sup(n_events),
+      rate              = mapply(rate_or_dash, n_events, patient_years)
+    )
+}
+
+rates_half_yr2plus <- make_rate_table_half(dplyr::filter(half_df, year_index >= 2L), "years 2+")
+rates_half_all     <- make_rate_table_half(half_df,                                   "all years")
+
+# --- 4d. Suppression audit: share of cells shown as "<11" or "—" per modality --
+
+supp_audit <- function(rt, label) {
+  rt |>
+    dplyr::group_by(modality) |>
+    dplyr::summarise(
+      table        = label,
+      n_cells      = dplyr::n(),
+      n_suppressed = sum(n_events_sup %in% c("<11", "—") | rate == "—"),
+      .groups      = "drop"
+    ) |>
+    dplyr::mutate(pct_suppressed = round(100 * n_suppressed / n_cells, 1),
+                  flag_gt50      = pct_suppressed > 50)
+}
+
+suppression_audit <- dplyr::bind_rows(
+  supp_audit(rates_yr2plus,     "annual years 2+"),
+  supp_audit(rates_all,         "annual all years"),
+  supp_audit(rates_half_yr2plus,"half-year years 2+"),
+  supp_audit(rates_half_all,    "half-year all years")
+)
+message("  Suppression audit (> 50% flag per modality × table):")
+print(as.data.frame(dplyr::filter(suppression_audit, flag_gt50)))
+
+message("==== SECTION 4: rates complete ====")
+
+# ==============================================================================
+# SECTION 5-6: PRIMARY POISSON GEE MODEL + INTERACTION (MODR-02) ----
+# ==============================================================================
+
+# --- 5a. Helper: modality RR from GEE fit + robust vcov -------------------------
+modality_rr <- function(beta, V, levels_mod, ref_level) {
+  # beta and V must be named by coefficient
+  # ref_level: contrast on "far" only
+  # level L: "far" + "far:modality{L}"
+  results <- list()
+  for (lev in levels_mod) {
+    if (lev == ref_level) {
+      term_names <- "far"
+      c_vec      <- numeric(length(beta)); names(c_vec) <- names(beta)
+      c_vec["far"] <- 1
+    } else {
+      int_term  <- paste0("far:modality", lev)
+      term_names <- c("far", int_term)
+      missing_terms <- setdiff(term_names, names(beta))
+      if (length(missing_terms) > 0L)
+        stop(glue("[R/184] modality_rr: expected coefficient(s) not found: ",
+                  "{paste(missing_terms, collapse=', ')}. ",
+                  "Available: {paste(names(beta), collapse=', ')}"), call. = FALSE)
+      c_vec <- numeric(length(beta)); names(c_vec) <- names(beta)
+      c_vec["far"]    <- 1
+      c_vec[int_term] <- 1
+    }
+    b_lin <- sum(c_vec * beta)
+    se_lin <- sqrt(as.numeric(t(c_vec) %*% V %*% c_vec))
+    rr  <- exp(b_lin)
+    rlo <- exp(b_lin - 1.96 * se_lin)
+    rhi <- exp(b_lin + 1.96 * se_lin)
+    p_z <- 2 * (1 - pnorm(abs(b_lin / se_lin)))
+    results[[lev]] <- data.frame(modality = lev, RR = rr, CI_low = rlo, CI_high = rhi, p = p_z,
+                                  stringsAsFactors = FALSE)
+  }
+  dplyr::bind_rows(results)
+}
+
+# --- 5b. Global Wald test of all far:modality interaction terms -----------------
+global_wald <- function(beta, V) {
+  int_idx <- grep("^far:modality", names(beta))
+  if (length(int_idx) == 0L) {
+    message("  [global_wald] No far:modality interaction terms found")
+    return(list(chi2 = NA_real_, df = 0L, p = NA_real_))
+  }
+  b_int <- beta[int_idx]
+  V_int <- V[int_idx, int_idx, drop = FALSE]
+  chi2  <- as.numeric(t(b_int) %*% solve(V_int) %*% b_int)
+  df_   <- length(int_idx)
+  p_val <- pchisq(chi2, df = df_, lower.tail = FALSE)
+  list(chi2 = chi2, df = df_, p = p_val)
+}
+
+# --- 5c. Fit function: Poisson GEE + extract RRs --------------------------------
+fit_poisson_gee <- function(data, label) {
+  d <- data |>
+    dplyr::arrange(ID, modality, year_index) |>
+    dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID))))
+
+  tryCatch({
+    fit_p <- geepack::geeglm(
+      count ~ far * modality + year_index_cat + offset(log(person_years)),
+      family  = poisson("log"),
+      id      = cl,
+      corstr  = MODR_CORSTR,
+      data    = d)
+
+    if (!is.null(fit_p$geese$error) && fit_p$geese$error != 0)
+      stop(glue("geese error code {fit_p$geese$error} (possible non-convergence)"))
+
+    V    <- vcov(fit_p)   # robust sandwich vcov
+    beta <- coef(fit_p)
+    mod_levels <- levels(d$modality)
+    ref_lev    <- mod_levels[1]
+
+    rr_table <- modality_rr(beta, V, mod_levels, ref_lev)
+    gw        <- global_wald(beta, V)
+
+    # individual interaction terms (log scale and exp)
+    int_idx <- grep("^far:modality", names(beta))
+    int_terms <- data.frame(
+      term   = names(beta)[int_idx],
+      log_RR = beta[int_idx],
+      RR     = exp(beta[int_idx]),
+      SE_log = sqrt(diag(V)[int_idx]),
+      stringsAsFactors = FALSE
+    )
+
+    message(glue("  [{label}] Global Wald: chi2={round(gw$chi2, 2)} df={gw$df} p={round(gw$p, 4)}"))
+    message(glue("  [{label}] Modality RRs (far vs not-far):"))
+    print(as.data.frame(dplyr::mutate(rr_table,
+      RR    = round(RR,     3),
+      CI_low  = round(CI_low,  3),
+      CI_high = round(CI_high, 3),
+      p       = round(p,       4))))
+
+    list(label = label, fit = fit_p, rr_table = rr_table, global_wald = gw,
+         int_terms = int_terms, error = NA_character_)
+
+  }, error = function(e) {
+    message(glue("  [{label}] GEE FAILED: {e$message}"))
+    list(label = label, fit = NULL, rr_table = NULL, global_wald = NULL,
+         int_terms = NULL, error = conditionMessage(e))
+  })
+}
+
+# --- 5d. Primary (years 2+) and secondary (all years) ---------------------------
+message("  Fitting primary Poisson GEE (years 2+) ...")
+res_primary   <- fit_poisson_gee(dplyr::filter(long_df, year_index >= 2L), "Primary: years 2+")
+
+message("  Fitting secondary Poisson GEE (all years) ...")
+res_secondary <- fit_poisson_gee(long_df, "Secondary: all years")
+
+message("==== SECTION 5-6: primary model + interaction complete ====")
+
+# ==============================================================================
+# SECTION 7: SENSITIVITIES ----
+# ==============================================================================
+
+# --- 7a. Overdispersion diagnostic (Pearson chi2/df) ----------------------------
+
+overdispersion_diag <- function(fit_obj, data, label) {
+  tryCatch({
+    fitted_vals <- fitted(fit_obj)
+    resid_p     <- (data$count - fitted_vals) / sqrt(fitted_vals + 1e-10)
+    n <- nrow(data); p <- length(coef(fit_obj))
+    overall_disp <- sum(resid_p^2, na.rm = TRUE) / (n - p)
+
+    by_mod <- data |>
+      dplyr::mutate(.resid_sq = resid_p^2) |>
+      dplyr::group_by(modality) |>
+      dplyr::summarise(
+        n_mod    = dplyr::n(),
+        disp_mod = sum(.resid_sq, na.rm = TRUE) / (dplyr::n() - 1),
+        .groups  = "drop"
+      )
+    list(label = label, overall = overall_disp, by_mod = by_mod, error = NA_character_)
+  }, error = function(e)
+    list(label = label, overall = NA_real_, by_mod = NULL, error = conditionMessage(e)))
+}
+
+d_primary <- dplyr::filter(long_df, year_index >= 2L) |>
+  dplyr::arrange(ID, modality, year_index) |>
+  dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID))))
+
+disp_diag <- if (!is.null(res_primary$fit))
+  overdispersion_diag(res_primary$fit, d_primary, "Primary: years 2+")
+else
+  list(label = "Primary: years 2+", overall = NA_real_, by_mod = NULL,
+       error = "primary model not estimated")
+
+message(glue("  Overdispersion (Pearson chi2/df): overall={round(disp_diag$overall, 3)}"))
+if (!is.null(disp_diag$by_mod)) print(as.data.frame(disp_diag$by_mod))
+
+# --- 7b. NB sensitivity (D-24) --------------------------------------------------
+
+fit_nb <- tryCatch({
+  message("  Fitting NB sensitivity (MASS::glm.nb) ...")
+  d_nb <- d_primary
+
+  fit_nb_ <- MASS::glm.nb(
+    count ~ far * modality + year_index_cat + offset(log(person_years)),
+    data = d_nb)
+
+  # cluster-robust vcov by patient (sandwich package required)
+  V_nb <- if (requireNamespace("sandwich", quietly = TRUE)) {
+    sandwich::vcovCL(fit_nb_, cluster = ~ID)
+  } else {
+    message("  NOTE: sandwich not available; using vcov() for NB sensitivity")
+    vcov(fit_nb_)
+  }
+
+  beta_nb   <- coef(fit_nb_)
+  mod_levels_nb <- levels(d_nb$modality)
+  rr_nb     <- modality_rr(beta_nb, V_nb, mod_levels_nb, mod_levels_nb[1])
+  gw_nb     <- global_wald(beta_nb, V_nb)
+
+  message(glue("  [NB] Global Wald: chi2={round(gw_nb$chi2,2)} df={gw_nb$df} p={round(gw_nb$p,4)}"))
+  message(glue("  [NB] theta={round(fit_nb_$theta, 3)}"))
+  print(as.data.frame(dplyr::mutate(rr_nb, RR=round(RR,3), CI_low=round(CI_low,3),
+                                    CI_high=round(CI_high,3), p=round(p,4))))
+
+  list(fit = fit_nb_, rr_table = rr_nb, global_wald = gw_nb,
+       theta = fit_nb_$theta, V = V_nb, error = NA_character_)
+
+}, error = function(e) {
+  msg <- glue("not estimated: {conditionMessage(e)}")
+  message(glue("  NB sensitivity FAILED: {msg}"))
+  list(fit = NULL, rr_table = NULL, global_wald = NULL, theta = NA_real_,
+       V = NULL, error = msg)
+})
+
+# --- 7c. Adjusted sensitivity (D-11): + age_at_anchor + sex --------------------
+
+fit_adjusted <- tryCatch({
+  message("  Fitting adjusted sensitivity (age_at_anchor + sex) ...")
+
+  # age_at_anchor: anchor = min(year_start) per patient; age from DEMOGRAPHIC.BIRTH_DATE
+  anchor_dates <- py_cc |>
+    dplyr::group_by(ID) |>
+    dplyr::summarise(anchor_date = min(year_start), .groups = "drop")
+
+  demo_adj <- demo_raw_184 |>
+    dplyr::filter(ID %in% unique(d_primary$ID)) |>
+    dplyr::left_join(anchor_dates, by = "ID") |>
+    dplyr::mutate(
+      birth_date    = as.Date(BIRTH_DATE),
+      age_at_anchor = as.numeric(anchor_date - birth_date) / 365.25
+    ) |>
+    dplyr::select(ID, age_at_anchor, sex_raw = SEX)
+
+  # Sex: categories < 11 patients -> "Other/Unknown", droplevels
+  sex_counts_adj <- table(demo_adj$sex_raw, useNA = "no")
+  rare_adj       <- names(sex_counts_adj)[sex_counts_adj < 11L]
+  if (length(rare_adj) > 0L)
+    demo_adj <- demo_adj |>
+      dplyr::mutate(sex_raw = dplyr::if_else(sex_raw %in% rare_adj, "Other/Unknown", sex_raw))
+  demo_adj <- demo_adj |>
+    dplyr::mutate(sex = droplevels(factor(sex_raw)))
+
+  d_adj <- d_primary |>
+    dplyr::left_join(dplyr::select(demo_adj, ID, age_at_anchor, sex), by = "ID")
+
+  n_missing_adj <- sum(is.na(d_adj$age_at_anchor) | is.na(d_adj$sex))
+  d_adj         <- dplyr::filter(d_adj, !is.na(age_at_anchor), !is.na(sex))
+  message(glue("  [Adjusted] excluded {sup(n_missing_adj)} patient-year rows missing age/sex"))
+
+  fit_adj_ <- geepack::geeglm(
+    count ~ far * modality + year_index_cat + age_at_anchor + sex +
+      offset(log(person_years)),
+    family = poisson("log"),
+    id     = as.integer(factor(d_adj$ID, levels = unique(d_adj$ID))),
+    corstr = MODR_CORSTR,
+    data   = d_adj)
+
+  if (!is.null(fit_adj_$geese$error) && fit_adj_$geese$error != 0)
+    stop(glue("geese error code {fit_adj_$geese$error}"))
+
+  V_adj    <- vcov(fit_adj_)
+  beta_adj <- coef(fit_adj_)
+  rr_adj   <- modality_rr(beta_adj, V_adj, levels(d_adj$modality), levels(d_adj$modality)[1])
+  gw_adj   <- global_wald(beta_adj, V_adj)
+
+  message(glue("  [Adjusted] Global Wald: chi2={round(gw_adj$chi2,2)} df={gw_adj$df} p={round(gw_adj$p,4)}"))
+  print(as.data.frame(dplyr::mutate(rr_adj, RR=round(RR,3), CI_low=round(CI_low,3),
+                                    CI_high=round(CI_high,3), p=round(p,4))))
+
+  list(fit = fit_adj_, rr_table = rr_adj, global_wald = gw_adj,
+       n_missing = n_missing_adj, error = NA_character_)
+
+}, error = function(e) {
+  msg <- glue("not estimated: {conditionMessage(e)}")
+  message(glue("  Adjusted sensitivity FAILED: {msg}"))
+  list(fit = NULL, rr_table = NULL, global_wald = NULL,
+       n_missing = NA_integer_, error = msg)
+})
+
+# --- 7d. Half-year sensitivity (D-23) ------------------------------------------
+# Use the half_df frame; offset = log(0.5).
+# period_cat = year_index_cat (same bins). Choice recorded in KEY.
+
+fit_half_year <- tryCatch({
+  message("  Fitting half-year sensitivity GEE ...")
+
+  d_half <- half_df |>
+    dplyr::filter(year_index >= 2L) |>
+    dplyr::arrange(ID, modality, year_index, half) |>
+    dplyr::mutate(
+      cl        = as.integer(factor(ID, levels = unique(ID))),
+      count     = count_half,
+      person_years = half_py,
+      period_cat = year_index_cat   # D-23 choice: year_index_cat bins (not half-split)
+    )
+
+  fit_hy_ <- geepack::geeglm(
+    count ~ far * modality + period_cat + offset(log(person_years)),
+    family = poisson("log"),
+    id     = cl,
+    corstr = MODR_CORSTR,
+    data   = d_half)
+
+  if (!is.null(fit_hy_$geese$error) && fit_hy_$geese$error != 0)
+    stop(glue("geese error code {fit_hy_$geese$error}"))
+
+  V_hy    <- vcov(fit_hy_)
+  beta_hy <- coef(fit_hy_)
+  rr_hy   <- modality_rr(beta_hy, V_hy, levels(d_half$modality), levels(d_half$modality)[1])
+  gw_hy   <- global_wald(beta_hy, V_hy)
+
+  message(glue("  [Half-year] Global Wald: chi2={round(gw_hy$chi2,2)} df={gw_hy$df} p={round(gw_hy$p,4)}"))
+  print(as.data.frame(dplyr::mutate(rr_hy, RR=round(RR,3), CI_low=round(CI_low,3),
+                                    CI_high=round(CI_high,3), p=round(p,4))))
+
+  list(fit = fit_hy_, rr_table = rr_hy, global_wald = gw_hy, error = NA_character_)
+
+}, error = function(e) {
+  msg <- glue("not estimated: {conditionMessage(e)}")
+  message(glue("  Half-year sensitivity FAILED: {msg}"))
+  list(fit = NULL, rr_table = NULL, global_wald = NULL, error = msg)
+})
+
+message("==== SECTION 7: sensitivities complete ====")
+
+# ==============================================================================
+# SECTION 8: WORKBOOK ----
+# ==============================================================================
+
+wb <- openxlsx::createWorkbook()
+
+# Header styles
+hdr_blue   <- openxlsx::createStyle(fgFill = UF_BLUE,   fontColour = "white",
+                                     textDecoration = "bold", halign = "center")
+hdr_orange <- openxlsx::createStyle(fgFill = UF_ORANGE, fontColour = "white",
+                                     textDecoration = "bold")
+
+add_section_header <- function(wb, sheet, row, text) {
+  openxlsx::writeData(wb, sheet, data.frame(V1 = text), startRow = row,
+                      startCol = 1, colNames = FALSE)
+  openxlsx::addStyle(wb, sheet,
+                     style = openxlsx::createStyle(fgFill = UF_ORANGE, fontColour = "white",
+                                                   textDecoration = "bold"),
+                     rows = row, cols = 1, gridExpand = TRUE)
+}
+
+style_header_row <- function(wb, sheet, row, ncols) {
+  openxlsx::addStyle(wb, sheet, style = hdr_blue,
+                     rows = row, cols = seq_len(ncols), gridExpand = TRUE)
+}
+
+# --- Sheet 1: KEY ---------------------------------------------------------------
+openxlsx::addWorksheet(wb, "KEY")
+key_data <- data.frame(
+  Parameter = c(
+    "run_date", "host",
+    "R184_P179_RDS (pin)", "R184_P179_XLSX (pin)", "R184_EVENTS_RDS (pin)",
+    "R184_P179_RDS pinned", "R184_P179_XLSX pinned", "R184_EVENTS_RDS pinned",
+    "R/147 pointer value (run_date)",
+    "CBC definition note (Task 0 item 5)",
+    "formula", "family", "MODR_CORSTR", "offset", "reference modality",
+    "period definitions (primary)", "period definitions (sensitivity)",
+    "half-year period_cat choice",
+    "suppression rule",
+    "gate result"
+  ),
+  Value = c(
+    RUN_DATE, Sys.info()[["nodename"]],
+    PINS$p179_rds$path, PINS$p179_xlsx$path, PINS$events$path,
+    as.character(PINS$p179_rds$pinned),
+    as.character(PINS$p179_xlsx$pinned),
+    as.character(PINS$events$pinned),
+    r147_run_date,
+    paste0("Phase 165 (build_cbc_events: WBC 6690-2 + Hgb 718-7 + PLT 777-3 same date); ",
+           "replaces R/166 'Complete blood count' which disagreed with Phase 179 cbc_year"),
+    "count ~ far * modality + year_index_cat + offset(log(person_years))",
+    "poisson(log)", MODR_CORSTR,
+    "log(person_years) [annual]; log(0.5) [half-year via offset=log(person_years) with half_py=0.5]",
+    as.character(LBL_CBC),
+    "years 2+ (primary); all years (secondary)",
+    "NB (MASS::glm.nb + sandwich::vcovCL cluster=~ID); adjusted (+age_at_anchor+sex); half-year (half-windows 182.5 days)",
+    "year_index_cat (same 5 bins as primary: 1,2,3,4,5+); half dimension shown as half=1/2 per row",
+    "counts 1-10 shown as '<11'; rates only when num and den both >= 11",
+    glue("PASS: OR={round(g$or,4)} ({round(g$ci_lo,4)}-{round(g$ci_hi,4)}) vs P179 {round(P179_REF$or,4)} ({round(P179_REF$ci_lo,4)}-{round(P179_REF$ci_hi,4)})")
+  ),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "KEY", key_data, startRow = 1)
+style_header_row(wb, "KEY", 1, 2)
+
+# --- Sheet 2: Rates -------------------------------------------------------------
+openxlsx::addWorksheet(wb, "Rates")
+cur_row <- 1L
+add_section_header(wb, "Rates", cur_row, "Annual rates (years 2+) — by modality x far")
+cur_row <- cur_row + 1L
+out_cols <- c("period","modality","far","n_patients_sup","patient_years_sup","n_events_sup","rate")
+openxlsx::writeData(wb, "Rates", rates_yr2plus[, out_cols], startRow = cur_row)
+style_header_row(wb, "Rates", cur_row, length(out_cols))
+cur_row <- cur_row + nrow(rates_yr2plus) + 2L
+
+add_section_header(wb, "Rates", cur_row, "Annual rates (all years) — by modality x far")
+cur_row <- cur_row + 1L
+openxlsx::writeData(wb, "Rates", rates_all[, out_cols], startRow = cur_row)
+style_header_row(wb, "Rates", cur_row, length(out_cols))
+cur_row <- cur_row + nrow(rates_all) + 2L
+
+add_section_header(wb, "Rates", cur_row, "Annual rates by year_index_cat (years 2+)")
+cur_row <- cur_row + 1L
+out_by_yr <- c("period","modality","far","year_index_cat","n_patients_sup","patient_years_sup","n_events_sup","rate")
+openxlsx::writeData(wb, "Rates", rates_by_year_yr2plus[, out_by_yr], startRow = cur_row)
+style_header_row(wb, "Rates", cur_row, length(out_by_yr))
+cur_row <- cur_row + nrow(rates_by_year_yr2plus) + 2L
+
+add_section_header(wb, "Rates", cur_row, "Half-year rates (years 2+)")
+cur_row <- cur_row + 1L
+out_half <- c("period","modality","far","half","n_patients_sup","patient_years_sup","n_events_sup","rate")
+openxlsx::writeData(wb, "Rates", rates_half_yr2plus[, out_half], startRow = cur_row)
+style_header_row(wb, "Rates", cur_row, length(out_half))
+cur_row <- cur_row + nrow(rates_half_yr2plus) + 2L
+
+add_section_header(wb, "Rates", cur_row, "Half-year rates (all years)")
+cur_row <- cur_row + 1L
+openxlsx::writeData(wb, "Rates", rates_half_all[, out_half], startRow = cur_row)
+style_header_row(wb, "Rates", cur_row, length(out_half))
+
+# --- Sheet 3: Model_Results -----------------------------------------------------
+openxlsx::addWorksheet(wb, "Model_Results")
+rr_cols <- c("modality","RR","CI_low","CI_high","p")
+mr_row  <- 1L
+
+write_rr_block <- function(wb, sheet, rr_tbl, label, row, gw_obj = NULL, err = NULL) {
+  add_section_header(wb, sheet, row, label)
+  row <- row + 1L
+  if (!is.null(err) && !is.na(err)) {
+    openxlsx::writeData(wb, sheet, data.frame(Note = err), startRow = row, colNames = FALSE)
+    return(row + 2L)
+  }
+  if (!is.null(gw_obj) && !is.null(gw_obj$chi2)) {
+    gw_row <- data.frame(modality = "Global Wald",
+                          RR = NA_real_, CI_low = NA_real_, CI_high = NA_real_,
+                          p = gw_obj$p)
+    gw_meta <- data.frame(modality = glue("chi2={round(gw_obj$chi2,2)} df={gw_obj$df}"),
+                           RR = NA_real_, CI_low = NA_real_, CI_high = NA_real_, p = NA_real_)
+    openxlsx::writeData(wb, sheet, dplyr::bind_rows(gw_meta, gw_row, rr_tbl[, rr_cols]),
+                        startRow = row)
+    style_header_row(wb, sheet, row, length(rr_cols))
+    return(row + nrow(rr_tbl) + 4L)
+  }
+  openxlsx::writeData(wb, sheet, rr_tbl[, rr_cols], startRow = row)
+  style_header_row(wb, sheet, row, length(rr_cols))
+  row + nrow(rr_tbl) + 2L
+}
+
+mr_row <- write_rr_block(wb, "Model_Results", res_primary$rr_table,   "Primary: years 2+",   mr_row, res_primary$global_wald,   res_primary$error)
+mr_row <- write_rr_block(wb, "Model_Results", res_secondary$rr_table, "Secondary: all years", mr_row, res_secondary$global_wald, res_secondary$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_nb$rr_table,        "NB sensitivity",       mr_row, fit_nb$global_wald,        fit_nb$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_adjusted$rr_table,  "Adjusted (age+sex)",   mr_row, fit_adjusted$global_wald,  fit_adjusted$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_half_year$rr_table, "Half-year sensitivity",mr_row, fit_half_year$global_wald, fit_half_year$error)
+
+# --- Sheet 4: Interaction -------------------------------------------------------
+openxlsx::addWorksheet(wb, "Interaction")
+int_row <- 1L
+add_section_header(wb, "Interaction", int_row, "Global Wald tests — all far:modality terms")
+int_row <- int_row + 1L
+gw_summary <- data.frame(
+  model = c("Primary: years 2+", "Secondary: all years", "NB sensitivity",
+            "Adjusted (age+sex)", "Half-year sensitivity"),
+  chi2  = c(if (!is.null(res_primary$global_wald))   round(res_primary$global_wald$chi2,2)   else NA,
+            if (!is.null(res_secondary$global_wald)) round(res_secondary$global_wald$chi2,2) else NA,
+            if (!is.null(fit_nb$global_wald))        round(fit_nb$global_wald$chi2,2)        else NA,
+            if (!is.null(fit_adjusted$global_wald))  round(fit_adjusted$global_wald$chi2,2)  else NA,
+            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$chi2,2) else NA),
+  df    = c(if (!is.null(res_primary$global_wald))   res_primary$global_wald$df   else NA_integer_,
+            if (!is.null(res_secondary$global_wald)) res_secondary$global_wald$df else NA_integer_,
+            if (!is.null(fit_nb$global_wald))        fit_nb$global_wald$df        else NA_integer_,
+            if (!is.null(fit_adjusted$global_wald))  fit_adjusted$global_wald$df  else NA_integer_,
+            if (!is.null(fit_half_year$global_wald)) fit_half_year$global_wald$df else NA_integer_),
+  p     = c(if (!is.null(res_primary$global_wald))   round(res_primary$global_wald$p,4)   else NA,
+            if (!is.null(res_secondary$global_wald)) round(res_secondary$global_wald$p,4) else NA,
+            if (!is.null(fit_nb$global_wald))        round(fit_nb$global_wald$p,4)        else NA,
+            if (!is.null(fit_adjusted$global_wald))  round(fit_adjusted$global_wald$p,4)  else NA,
+            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$p,4) else NA),
+  error = c(res_primary$error, res_secondary$error, fit_nb$error,
+            fit_adjusted$error, fit_half_year$error),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "Interaction", gw_summary, startRow = int_row)
+style_header_row(wb, "Interaction", int_row, ncol(gw_summary))
+int_row <- int_row + nrow(gw_summary) + 2L
+
+add_section_header(wb, "Interaction", int_row, "Individual far:modality terms (Primary: years 2+, log scale)")
+int_row <- int_row + 1L
+if (!is.null(res_primary$int_terms)) {
+  openxlsx::writeData(wb, "Interaction", res_primary$int_terms, startRow = int_row)
+  style_header_row(wb, "Interaction", int_row, ncol(res_primary$int_terms))
+}
+
+# --- Sheet 5: Diagnostics -------------------------------------------------------
+openxlsx::addWorksheet(wb, "Diagnostics")
+diag_row <- 1L
+add_section_header(wb, "Diagnostics", diag_row, "Pearson chi2/df overdispersion")
+diag_row <- diag_row + 1L
+if (!is.null(disp_diag$by_mod)) {
+  disp_out <- data.frame(model = "Primary: years 2+",
+                          overall_dispersion = round(disp_diag$overall, 3))
+  openxlsx::writeData(wb, "Diagnostics", disp_out, startRow = diag_row)
+  style_header_row(wb, "Diagnostics", diag_row, ncol(disp_out))
+  diag_row <- diag_row + 3L
+  openxlsx::writeData(wb, "Diagnostics",
+                      dplyr::mutate(disp_diag$by_mod, disp_mod = round(disp_mod, 3)),
+                      startRow = diag_row)
+  style_header_row(wb, "Diagnostics", diag_row, ncol(disp_diag$by_mod))
+  diag_row <- diag_row + nrow(disp_diag$by_mod) + 2L
+}
+add_section_header(wb, "Diagnostics", diag_row, "NB theta")
+diag_row <- diag_row + 1L
+openxlsx::writeData(wb, "Diagnostics",
+                    data.frame(NB_theta = if (!is.na(fit_nb$theta)) round(fit_nb$theta,3) else "not estimated",
+                               NB_error = if (!is.na(fit_nb$error)) fit_nb$error else "none"),
+                    startRow = diag_row)
+
+# --- Sheet 6: QC ----------------------------------------------------------------
+openxlsx::addWorksheet(wb, "QC")
+qc_row <- 1L
+add_section_header(wb, "QC", qc_row, "Reproduction gate")
+qc_row <- qc_row + 1L
+gate_qc <- data.frame(
+  check    = c("Phase 179 OR", "Phase 179 CI_low", "Phase 179 CI_high", "Gate"),
+  value    = c(round(g$or,4), round(g$ci_lo,4), round(g$ci_hi,4), "PASS"),
+  ref      = c(round(P179_REF$or,4), round(P179_REF$ci_lo,4), round(P179_REF$ci_hi,4), ""),
+  delta    = c(round(delta_or,4), round(delta_lo,4), round(delta_hi,4), ""),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "QC", gate_qc, startRow = qc_row)
+style_header_row(wb, "QC", qc_row, ncol(gate_qc))
+qc_row <- qc_row + nrow(gate_qc) + 2L
+
+add_section_header(wb, "QC", qc_row, "GATE counts (years 2+, complete-case)")
+qc_row <- qc_row + 1L
+gate_counts_qc <- data.frame(
+  metric = c("patient-years total","patient-years far=1","patient-years far=0",
+             "patients total","patients far=1","patients far=0"),
+  value  = c(format(GATE$n_py,big.mark=","), format(GATE$n_py_far1,big.mark=","),
+             format(GATE$n_py_far0,big.mark=","), format(GATE$n_pat,big.mark=","),
+             sup(GATE$n_pat_far1), sup(GATE$n_pat_far0)),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "QC", gate_counts_qc, startRow = qc_row)
+style_header_row(wb, "QC", qc_row, ncol(gate_counts_qc))
+qc_row <- qc_row + nrow(gate_counts_qc) + 2L
+
+add_section_header(wb, "QC", qc_row, "CBC agreement (D-16a)")
+qc_row <- qc_row + 1L
+openxlsx::writeData(wb, "QC",
+                    data.frame(check = "count_pos == cbc_year", result = "PASS",
+                               n_patient_years = format(nrow(chk), big.mark=",")),
+                    startRow = qc_row)
+style_header_row(wb, "QC", qc_row, 3L)
+qc_row <- qc_row + 3L
+
+add_section_header(wb, "QC", qc_row, "Eligible patients per modality")
+qc_row <- qc_row + 1L
+openxlsx::writeData(wb, "QC",
+                    dplyr::mutate(elig_n_by_mod,
+                                  n_eligible_sup = sup(n_eligible),
+                                  expected_sup   = sup(expected)),
+                    startRow = qc_row)
+style_header_row(wb, "QC", qc_row, ncol(elig_n_by_mod) + 2L)
+qc_row <- qc_row + nrow(elig_n_by_mod) + 2L
+
+add_section_header(wb, "QC", qc_row, "Suppression audit (> 50% flag)")
+qc_row <- qc_row + 1L
+openxlsx::writeData(wb, "QC", suppression_audit, startRow = qc_row)
+style_header_row(wb, "QC", qc_row, ncol(suppression_audit))
+
+# Save workbook
+wb_path <- file.path(CONFIG$output_dir, glue("modality_rate_model_{RUN_DATE}.xlsx"))
+openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
+message(glue("  Workbook saved: {wb_path}"))
+
+message("==== SECTION 8: workbook complete ====")
+
+# ==============================================================================
+# SECTION 9: MEMO ----
+# ==============================================================================
+
+# Helper: format RR line (neutral language, no "significant")
+fmt_rr <- function(rr_row) {
+  glue("  {rr_row$modality}: RR {round(rr_row$RR,2)} (95% CI {round(rr_row$CI_low,2)}–{round(rr_row$CI_high,2)}, p={round(rr_row$p,3)})")
+}
+
+memo_lines <- c(
+  glue("# Phase 184 Modality Rate Model Memo"),
+  glue("**Run date:** {RUN_DATE}"),
+  "",
+  "## Cohort",
+  glue("- Complete-case patient-years (all years): {format(nrow(long_df), big.mark=',')}"),
+  glue("- Unique patients: {format(dplyr::n_distinct(long_df$ID), big.mark=',')}"),
+  glue("- Gate cohort (years 2+): {format(GATE$n_py, big.mark=',')} patient-years, {format(GATE$n_pat, big.mark=',')} patients"),
+  "",
+  "## Reproduction gate",
+  glue("Phase 179 OR reproduced: R/184 OR={round(g$or,4)} ({round(g$ci_lo,4)}–{round(g$ci_hi,4)}) ",
+       "vs Phase 179 {round(P179_REF$or,4)} ({round(P179_REF$ci_lo,4)}–{round(P179_REF$ci_hi,4)}). PASS."),
+  "",
+  "## Global Wald test (far:modality interaction)"
+)
+
+# Primary global wald
+if (!is.null(res_primary$global_wald) && !is.na(res_primary$global_wald$chi2)) {
+  gw_p <- res_primary$global_wald
+  memo_lines <- c(memo_lines,
+    glue("Primary (years 2+): chi2={round(gw_p$chi2,2)}, df={gw_p$df}, p={round(gw_p$p,4)}"),
+    "(A p-value below 0.05 indicates that the association between far-from-care status and modality receipt differs across modalities.)")
+} else {
+  memo_lines <- c(memo_lines, glue("Primary: {res_primary$error}"))
+}
+memo_lines <- c(memo_lines, "")
+
+# Per-modality RRs (primary)
+memo_lines <- c(memo_lines, "## Per-modality RRs (far vs not-far, primary years 2+)")
+if (!is.null(res_primary$rr_table)) {
+  for (i in seq_len(nrow(res_primary$rr_table))) {
+    memo_lines <- c(memo_lines, fmt_rr(res_primary$rr_table[i, ]))
+  }
+} else {
+  memo_lines <- c(memo_lines, glue("Not estimated: {res_primary$error}"))
+}
+memo_lines <- c(memo_lines, "")
+
+# Sensitivity agreement
+memo_lines <- c(memo_lines, "## Sensitivity agreement")
+
+sens_status <- function(obj, label) {
+  if (is.na(obj$error)) {
+    glue("- {label}: estimated successfully.")
+  } else {
+    glue("- {label}: {obj$error}")
+  }
+}
+memo_lines <- c(memo_lines,
+  sens_status(fit_nb,        "NB"),
+  sens_status(fit_adjusted,  "Adjusted (age+sex)"),
+  sens_status(fit_half_year, "Half-year"))
+memo_lines <- c(memo_lines, "")
+
+memo_lines <- c(memo_lines,
+  "## Notes",
+  "- Counts 1–10 suppressed to '<11' throughout. Rates displayed only when both numerator and denominator ≥ 11.",
+  "- Language is neutral and descriptive; no causal claims are made.",
+  glue("- Workbook: {basename(wb_path)}")
+)
+
+memo_path <- file.path(CONFIG$output_dir, glue("184-MEMO_{RUN_DATE}.md"))
+writeLines(memo_lines, memo_path)
+message(glue("  Memo saved: {memo_path}"))
+
+message("==== SECTION 9: memo complete ====")
+
+# ==============================================================================
+# SECTION 10: REGISTRATION (R/39 + SCRIPT_INDEX done externally at Plan 02 close-out) ----
+# ==============================================================================
+
+message(glue("==== R/184 Plan 02 complete ===="))
+message(glue("  Workbook : {wb_path}"))
+message(glue("  Memo     : {memo_path}"))
+message(glue("  long_df  : {long_out}"))
+message("  Next: source R/88_smoke_test_comprehensive.R; paste back gate + global Wald + modality RR lines.")

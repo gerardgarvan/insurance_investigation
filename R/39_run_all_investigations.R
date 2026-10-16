@@ -245,7 +245,8 @@ investigation_scripts <- c(
   "R/179_cbc_patient_year.R",                # CBC within each follow-up year, patient-year re-spec of Phase 165 (Phase 179); GEE logistic, years 2+ primary; writes cbc_patient_year_YYYYMMDD.xlsx + internal RDS
   "R/180_cbc_missing_capture.R",             # Missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04) for Phase 179; reads pinned cbc_patient_year_20261013.rds; writes cbc_missing_capture_YYYYMMDD.xlsx + internal RDS (Phase 180)
   "R/181_cbc_prior_year.R",                  # Prior-year CBC x far-from-care 2x2 (Phase 181); reads pinned cbc_patient_year_20261013.rds and cbc_missing_capture_20261013.xlsx; writes cbc_prior_year_YYYYMMDD.xlsx + memo (CBCP-01, CBCP-02)
-  "R/183_mice_sensitivity_distance.R"        # MICE sensitivity for distance exposure (Phase 183); two runs (D-01 log_dist pmm, D-02 far logreg); Rubin pooling; comparison workbook + memo; MICE-01, MICE-02
+  "R/183_mice_sensitivity_distance.R",        # MICE sensitivity for distance exposure (Phase 183); two runs (D-01 log_dist pmm, D-02 far logreg); Rubin pooling; comparison workbook + memo; MICE-01, MICE-02
+  "R/184_modality_rate_model.R"              # Modality rate model (Phase 184); per-modality Poisson GEE rates + far x modality interaction; MODR-01, MODR-02
 )
 
 for (script in investigation_scripts) {
