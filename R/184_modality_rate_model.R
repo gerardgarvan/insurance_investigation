@@ -81,7 +81,7 @@ COL_EVT_MOD     <- "modality"
 COL_EVT_DATE    <- "event_date"
 
 # Modality label constants (from surveillance_codeset.xlsx Modalities sheet)
-LBL_CBC         <- "CBC"   # reference level (D-08)
+LBL_CBC         <- "Complete blood count"  # exact label in R/166 events RDS; reference level (D-08)
 
 # Phase 179 workbook: sheet "Model_Results", column "Analysis" (R/183 reader pattern)
 LBL_P179_SHEET  <- "Model_Results"
@@ -308,13 +308,20 @@ message(glue("REPRODUCTION GATE PASSED: OR {round(g$or, 4)} ({round(g$ci_lo, 4)}
 # 2g. Gate summary counts
 py_gate <- dplyr::filter(py_cc, year_index >= 2L)
 GATE <- list(
-  n_py      = nrow(py_gate),
-  n_pat     = dplyr::n_distinct(py_gate$ID),
-  n_far1    = sum(py_gate[[COL_FAR]] == 1L, na.rm = TRUE),
-  n_far0    = sum(py_gate[[COL_FAR]] == 0L, na.rm = TRUE)
+  n_py       = nrow(py_gate),
+  n_pat      = dplyr::n_distinct(py_gate$ID),
+  n_pat_far1 = dplyr::n_distinct(py_gate$ID[py_gate[[COL_FAR]] == 1L]),
+  n_pat_far0 = dplyr::n_distinct(py_gate$ID[py_gate[[COL_FAR]] == 0L]),
+  n_py_far1  = sum(py_gate[[COL_FAR]] == 1L, na.rm = TRUE),
+  n_py_far0  = sum(py_gate[[COL_FAR]] == 0L, na.rm = TRUE)
 )
-message(glue("  GATE counts (years 2+): {GATE$n_py} patient-years, {GATE$n_pat} patients, ",
-             "far=1: {sup(GATE$n_far1)}, far=0: {sup(GATE$n_far0)}"))
+message(glue("  GATE counts (years 2+, complete-case):"))
+message(glue("    patient-years total : {format(GATE$n_py,  big.mark=',')}"))
+message(glue("    patient-years far=1 : {format(GATE$n_py_far1, big.mark=',')}"))
+message(glue("    patient-years far=0 : {format(GATE$n_py_far0, big.mark=',')}"))
+message(glue("    patients      total : {format(GATE$n_pat, big.mark=',')}"))
+message(glue("    patients      far=1 : {sup(GATE$n_pat_far1)}"))
+message(glue("    patients      far=0 : {sup(GATE$n_pat_far0)}"))
 
 rm(GEE_CORSTR)   # do not reuse; MODR_CORSTR is used in Plan 02
 
@@ -337,25 +344,55 @@ mod_labels <- sort(unique(events_rds$modality))
 message(glue("  events_rds: {format(nrow(events_rds), big.mark = ',')} rows, ",
              "{dplyr::n_distinct(events_rds$ID)} patients, ",
              "{length(mod_labels)} modalities: {paste(mod_labels, collapse = ', ')}"))
+if (!LBL_CBC %in% mod_labels)
+  stop(glue("[R/184] LBL_CBC='{LBL_CBC}' not found among event modalities. ",
+            "Found: {paste(mod_labels, collapse = ', ')}"), call. = FALSE)
 
 # 3b. Eligibility frame (D-07): one row per ID × modality
-#   Eligibility is patient-level: all Phase 179 complete-case patients are
-#   eligible for modalities with no sex restriction. Sex-restricted modalities
-#   (Mammogram, Breast MRI) require female sex from DEMOGRAPHIC.
-#   For this plan, we use all-patient eligibility and note sex restrictions in QC.
-#   Future: sex-restriction can be added via DuckDB DEMOGRAPHIC query.
-cc_ids <- dplyr::distinct(py_cc, ID)
-elig <- tidyr::expand_grid(
-  ID       = cc_ids$ID,
-  modality = mod_labels
-)
-message(glue("  elig (all-modality for complete-case patients): {format(nrow(elig), big.mark = ',')} rows"))
-message("  NOTE: sex-restricted modalities (Mammogram, Breast MRI) not yet filtered;",
-        " full restriction added in Plan 02 when DuckDB DEMOGRAPHIC is read.")
+#   Rules (copied from R/147 lines 83 and 283-290 / data/reference/README.md line 285):
+#   - All complete-case patients: eligible for every modality without sex restriction.
+#   - Mammogram, Breast MRI: eligible only for patients with DEMOGRAPHIC.SEX = "F".
+#   No other modalities have treatment-dependent or time-dependent eligibility in
+#   R/147/R/166 (echo_post_anthracycline is a separate R/166 Plan 03 output, not a
+#   standard modality in the surveillance frequency table).
+SEX_RESTRICTED <- c("Mammogram", "Breast MRI")   # data/reference/README.md line 285
 
-# 3c. Confirm CBC is eligible for every complete-case patient
-cbc_elig_ids <- dplyr::filter(elig, modality == LBL_CBC)$ID
+# Sex lookup — copied from R/147 lines 283-290 (open connection if needed)
+opened_here_184 <- FALSE
+if (!exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con()   # R/utils/utils_duckdb.R: opens read-only, sets pcornet_con in .GlobalEnv
+  opened_here_184 <- TRUE
+}
 cc_patient_ids <- unique(py_cc$ID)
+demo_raw_184 <- DBI::dbGetQuery(
+  pcornet_con,
+  sprintf("SELECT PATID AS ID, SEX FROM DEMOGRAPHIC WHERE PATID IN (%s)",
+          paste(sprintf("'%s'", cc_patient_ids), collapse = ",")))
+sex_lookup_184 <- tibble::tibble(ID = as.character(demo_raw_184$ID),
+                                 sex = as.character(demo_raw_184$SEX))
+female_ids <- sex_lookup_184$ID[sex_lookup_184$sex %in% "F"]
+message(glue("  sex_lookup: {nrow(sex_lookup_184)} of {length(cc_patient_ids)} ",
+             "complete-case patients in DEMOGRAPHIC; female (SEX='F'): {length(female_ids)}"))
+
+# Build eligibility: all patients × unrestricted modalities + female × sex-restricted
+cc_ids <- dplyr::distinct(py_cc, ID)
+unrestricted <- setdiff(mod_labels, SEX_RESTRICTED)
+elig_unrest  <- tidyr::expand_grid(ID = cc_ids$ID,       modality = unrestricted)
+elig_sexrest <- tidyr::expand_grid(ID = female_ids,       modality = intersect(SEX_RESTRICTED, mod_labels))
+elig <- dplyr::bind_rows(elig_unrest, elig_sexrest)
+message(glue("  elig: {format(nrow(elig), big.mark = ',')} rows ",
+             "(unrestricted: {format(nrow(elig_unrest), big.mark=',')}, ",
+             "sex-restricted to females: {format(nrow(elig_sexrest), big.mark=',')})"))
+
+# Eligible-N per modality (for QC against R/166)
+elig_n_by_mod <- elig |>
+  dplyr::count(modality, name = "n_eligible") |>
+  dplyr::arrange(modality)
+message("  Eligible patients per modality (R/184 elig frame):")
+print(as.data.frame(elig_n_by_mod))
+
+# 3c. Confirm CBC is eligible for every complete-case patient (CBC is unrestricted)
+cbc_elig_ids <- dplyr::filter(elig, modality == LBL_CBC)$ID
 if (!all(cc_patient_ids %in% cbc_elig_ids)) {
   missing_n <- sum(!cc_patient_ids %in% cbc_elig_ids)
   stop(glue("[R/184] {missing_n} complete-case patients missing from CBC eligibility frame ",
