@@ -15,7 +15,7 @@ key_files:
   modified: []
 decisions:
   - "MODR_CORSTR='independence' (D-04); P179_CORSTR from CONFIG$distance_gee_corstr (gate only)"
-  - "Eligibility frame = all Phase 179 CC patients × all modalities; sex restriction deferred to Plan 02 (DEMOGRAPHIC read)"
+  - "Eligibility frame: all CC patients × unrestricted modalities; Mammogram/Breast MRI restricted to DEMOGRAPHIC.SEX='F' via duck_query() (open-query-disconnect pattern)"
   - "Events source = R/166 survivorship_dated_events RDS via R/147 pointer run_date"
 metrics:
   duration: "~30 min"
@@ -68,11 +68,9 @@ factor(if_else(year_index >= 5L, "5+", as.character(year_index)),
 
 ### 4. Modality labels exactly as stored (including CBC label)
 
-**Source:** `R/147_surveillance_modality_frequency.R` (line 538) and old R/12/R/14 scripts; confirmed in events_rds at runtime.
+**Source:** `R/147_surveillance_modality_frequency.R` (line 538) and confirmed from events RDS at runtime (2026-10-16 run: 14 modalities, 1,054,151 rows, 8,623 patients).
 
-**Known modalities:** `CBC`, `MAMMOGRAM`, `BREAST_MRI`, `ECHO`, `STRESS_TEST`, `ECG`, `MUGA`, `PFT`, `TSH`, `BMP`, `CMP`, `LIPID`, `LFT`, `KIDNEY` (from `surveillance_codeset.xlsx` Modalities sheet, column `modality`).
-
-**CBC label:** `"CBC"` — set as `LBL_CBC` constant (reference level per D-08).
+**CBC label in events RDS:** `"Complete blood count"` — set as `LBL_CBC` constant (reference level per D-08). Guard added: stop with all found modality labels if LBL_CBC is not in mod_labels.
 
 ### 5. CBC event definition — R/147/R/166 vs Phase 165/179
 
@@ -86,15 +84,25 @@ factor(if_else(year_index >= 5L, "5+", as.character(year_index)),
 
 ### 6. Eligibility
 
-**Source:** `R/147` via `modality_eligible_sex()` (`utils_surveillance.R` line 256-258), reading attribute `eligible_sex` from `load_modality_lookup()`.
+**Source:** `R/147` via `modality_eligible_sex()` (`R/utils/utils_surveillance.R` lines 254–258), reading the `eligible_sex` attribute set by `load_modality_lookup()` from the Modalities sheet (`data/reference/README.md` line 285).
 
-**Type:** Patient-level (not time-varying).
+**Type:** Patient-level (not time-varying). No treatment-dependent or time-dependent eligibility applies to any modality in the standard surveillance frequency table. `echo_post_anthracycline` (`R/utils/utils_anthracycline_echo.R` line 304) is a separate R/166 Plan 03 output and does not appear in `survivorship_dated_events`.
 
-**Values:** `""` = all patients eligible; `"F"` = female only (Mammogram, Breast MRI); `"M"` = male only (none currently).
+**Values:**
+- `""` (blank) = all patients eligible — applies to all modalities except Mammogram and Breast MRI.
+- `"F"` = female only — Mammogram and Breast MRI (`data/reference/README.md` line 285; `R/147` line 83).
+- `"M"` = male only — none currently.
 
-**R/166 application:** `build_dated_post_events()` does not apply sex restriction — it returns all primary-tier post-anchor events. Sex restriction is applied at the stats level in R/147 via `compute_eligible_modality_stats()`.
+**Eligibility RDS:** None. `R/147` saves `surveillance_modality_patient_<date>.rds` (`build_patient_modality`, `R/utils/utils_surveillance.R` line 610) — one row per ID × modality for patients who HAD events; this is an events summary, not a denominator eligibility frame. `R/166` saves events RDS and rates-parts RDS, also events-based. No prebuilt eligibility file exists; derivation is done inline in R/184.
 
-**R/184 approach (Plan 01):** Eligibility frame uses all Phase 179 complete-case patients for all modalities (matching D-07 intent); sex restriction for Mammogram/Breast MRI added in Plan 02 via DuckDB DEMOGRAPHIC query.
+**DuckDB connection:** `duck_query()` helper (open-query-disconnect in one call) used for DEMOGRAPHIC.SEX lookup. Copied from `R/147` lines 283–290 (demo_tbl pattern). Never hold `pcornet_con` open across pipeline helpers.
+
+**R/184 implementation:**
+- Unrestricted modalities: `tidyr::expand_grid(ID = cc_patient_ids, modality = unrestricted_labels)`
+- Sex-restricted (Mammogram, Breast MRI): `tidyr::expand_grid(ID = female_ids, modality = sex_restricted_labels)`
+- Sanity check: eligible N per modality must equal `n_cc_patients` (unrestricted) or `n_female_ids` (sex-restricted); stops with both numbers if mismatch.
+
+**R/166 application (for reference):** `build_dated_post_events()` does not apply sex restriction — returns all primary-tier post-anchor events. Sex restriction is applied at stats level in R/147 via `compute_eligible_modality_stats()` (`R/utils/utils_surveillance.R` line 991).
 
 ### 7. `sandwich` and `MASS` in renv.lock
 
@@ -132,12 +140,11 @@ Tasks 1 and 2 were committed together (single file, sequential sections).
 
 ### Auto-applied adjustments
 
-**1. [Rule 2 - Missing functionality] Eligibility frame deferred sex-restriction**
+**1. [Rule 2 - Fixed] Eligibility sex-restriction applied in Plan 01**
 
-- **Found during:** Task 2 implementation
-- **Issue:** Sex restriction for Mammogram/Breast MRI requires DuckDB DEMOGRAPHIC query; no DEMOGRAPHIC access during local script writing; Plan 01 scope is setup through long-frame checkpoint only.
-- **Fix:** Plan 01 eligibility frame includes all CC patients for all modalities; Plan 02 will add sex filtering when DuckDB DEMOGRAPHIC is available (same session as the HiPerGator run). A NOTE is printed at runtime.
-- **Impact:** Zero-event female patients count in Mammogram/Breast MRI denominator until Plan 02 restriction is applied. Does not affect CBC check (D-16a/b).
+- **Original deviation:** Plan 01 placeholder used all CC patients × all modalities; sex restriction was deferred.
+- **Fix (2026-10-16):** `duck_query()` helper added (open-query-disconnect); DEMOGRAPHIC.SEX queried immediately before eligibility build; Mammogram/Breast MRI restricted to females. Sanity check added (stop if eligible N ≠ expected). SUMMARY updated.
+- **Impact:** None — gate was already confirmed passing before this fix.
 
 **2. [Observation] `renv.lock` not found locally**
 
@@ -145,7 +152,7 @@ Tasks 1 and 2 were committed together (single file, sequential sections).
 
 ## Known Stubs
 
-- Eligibility sex-restriction (Mammogram, Breast MRI) is noted in a runtime message but not yet implemented. Plan 02 must complete this before rates and model fitting.
+None. Eligibility sex-restriction (Mammogram, Breast MRI) is now implemented inline via `duck_query()` in Section 3b.
 
 ## Self-Check: PENDING
 

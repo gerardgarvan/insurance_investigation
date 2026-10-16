@@ -117,6 +117,15 @@ rate_or_dash <- function(num, den) {
   round(num / den, 4)
 }
 
+# --- duck_query: open connection, query, disconnect immediately (avoids stale-con errors) ---
+# Never hold pcornet_con open across pipeline helpers (R/utils/utils_duckdb.R open_pcornet_con
+# registers on.exit(dbDisconnect) inside its tryCatch, which fires when the enclosing frame exits).
+duck_query <- function(sql) {
+  con <- open_pcornet_con()
+  on.exit(try(DBI::dbDisconnect(con), silent = TRUE), add = TRUE)
+  DBI::dbGetQuery(con, sql)
+}
+
 # --- need_cols: stop with available names if any column is missing ---
 need_cols <- function(df, cols, what) {
   missing <- setdiff(cols, names(df))
@@ -349,23 +358,31 @@ if (!LBL_CBC %in% mod_labels)
             "Found: {paste(mod_labels, collapse = ', ')}"), call. = FALSE)
 
 # 3b. Eligibility frame (D-07): one row per ID × modality
-#   Rules (copied from R/147 lines 83 and 283-290 / data/reference/README.md line 285):
+#
+#   Source check: R/147 saves surveillance_modality_patient_<date>.rds (build_patient_modality,
+#   R/utils/utils_surveillance.R line 610) — one row per ID × modality for patients who HAD
+#   events; it is an events summary, not a denominator eligibility frame. R/166 saves
+#   survivorship_dated_events_<date>.rds and survivorship_modality_rates_parts_<date>.rds —
+#   also events-based, not eligible-population frames. No prebuilt eligibility RDS exists;
+#   derivation follows.
+#
+#   Rules (sources cited):
 #   - All complete-case patients: eligible for every modality without sex restriction.
+#     Source: R/147 line 83 (modality_eligible_sex returns "" for unrestricted modalities),
+#             data/reference/README.md line 285.
 #   - Mammogram, Breast MRI: eligible only for patients with DEMOGRAPHIC.SEX = "F".
-#   No other modalities have treatment-dependent or time-dependent eligibility in
-#   R/147/R/166 (echo_post_anthracycline is a separate R/166 Plan 03 output, not a
-#   standard modality in the surveillance frequency table).
+#     Source: data/reference/README.md line 285; R/147 line 83 (eligible_sex = "F" on these).
+#   - No treatment-dependent or time-dependent eligibility applies to any modality in the
+#     standard surveillance frequency table. echo_post_anthracycline (R/utils/utils_anthracycline_echo.R
+#     line 304) is a separate R/166 Plan 03 output and does not appear as a modality in
+#     survivorship_dated_events.
+#
 SEX_RESTRICTED <- c("Mammogram", "Breast MRI")   # data/reference/README.md line 285
 
-# Sex lookup — copied from R/147 lines 283-290 (open connection if needed)
-opened_here_184 <- FALSE
-if (!exists("pcornet_con", envir = .GlobalEnv)) {
-  open_pcornet_con()   # R/utils/utils_duckdb.R: opens read-only, sets pcornet_con in .GlobalEnv
-  opened_here_184 <- TRUE
-}
+# Sex lookup via duck_query (open-query-disconnect in one call; avoids stale-connection error)
+# Copied from R/147 lines 283-290 (demo_tbl query pattern).
 cc_patient_ids <- unique(py_cc$ID)
-demo_raw_184 <- DBI::dbGetQuery(
-  pcornet_con,
+demo_raw_184 <- duck_query(
   sprintf("SELECT PATID AS ID, SEX FROM DEMOGRAPHIC WHERE PATID IN (%s)",
           paste(sprintf("'%s'", cc_patient_ids), collapse = ",")))
 sex_lookup_184 <- tibble::tibble(ID = as.character(demo_raw_184$ID),
@@ -375,21 +392,32 @@ message(glue("  sex_lookup: {nrow(sex_lookup_184)} of {length(cc_patient_ids)} "
              "complete-case patients in DEMOGRAPHIC; female (SEX='F'): {length(female_ids)}"))
 
 # Build eligibility: all patients × unrestricted modalities + female × sex-restricted
-cc_ids <- dplyr::distinct(py_cc, ID)
+cc_ids    <- dplyr::distinct(py_cc, ID)
 unrestricted <- setdiff(mod_labels, SEX_RESTRICTED)
-elig_unrest  <- tidyr::expand_grid(ID = cc_ids$ID,       modality = unrestricted)
-elig_sexrest <- tidyr::expand_grid(ID = female_ids,       modality = intersect(SEX_RESTRICTED, mod_labels))
+elig_unrest  <- tidyr::expand_grid(ID = cc_ids$ID,  modality = unrestricted)
+elig_sexrest <- tidyr::expand_grid(ID = female_ids, modality = intersect(SEX_RESTRICTED, mod_labels))
 elig <- dplyr::bind_rows(elig_unrest, elig_sexrest)
 message(glue("  elig: {format(nrow(elig), big.mark = ',')} rows ",
              "(unrestricted: {format(nrow(elig_unrest), big.mark=',')}, ",
              "sex-restricted to females: {format(nrow(elig_sexrest), big.mark=',')})"))
 
-# Eligible-N per modality (for QC against R/166)
+# Eligible-N per modality — print with expected N; stop if any modality disagrees
+n_cc     <- length(cc_patient_ids)
+n_female <- length(female_ids)
 elig_n_by_mod <- elig |>
   dplyr::count(modality, name = "n_eligible") |>
+  dplyr::mutate(
+    expected = dplyr::if_else(modality %in% SEX_RESTRICTED, n_female, n_cc),
+    ok       = (n_eligible == expected)) |>
   dplyr::arrange(modality)
-message("  Eligible patients per modality (R/184 elig frame):")
-print(as.data.frame(elig_n_by_mod))
+message("  Eligible patients per modality (n_eligible vs expected):")
+print(as.data.frame(dplyr::select(elig_n_by_mod, modality, n_eligible, expected, ok)))
+bad_elig <- dplyr::filter(elig_n_by_mod, !ok)
+if (nrow(bad_elig) > 0L)
+  stop(glue("[R/184] Eligibility mismatch for {nrow(bad_elig)} modality(ies):\n",
+            paste(sprintf("  %s: got %d, expected %d",
+                          bad_elig$modality, bad_elig$n_eligible, bad_elig$expected),
+                  collapse = "\n")), call. = FALSE)
 
 # 3c. Confirm CBC is eligible for every complete-case patient (CBC is unrestricted)
 cbc_elig_ids <- dplyr::filter(elig, modality == LBL_CBC)$ID
