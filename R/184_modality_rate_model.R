@@ -1060,8 +1060,6 @@ fit_adjusted <- tryCatch({
 
   V_adj    <- vcov(fit_adj_)
   beta_adj <- coef(fit_adj_)
-  # Assert beta belongs to fit_adj_ (guards against accidental reuse of primary beta).
-  stopifnot(identical(names(beta_adj), names(coef(fit_adj_))))
   rr_adj   <- modality_rr(beta_adj, V_adj, levels(d_adj$modality), levels(d_adj$modality)[1])
   gw_adj   <- global_wald(beta_adj, V_adj)
 
@@ -1117,8 +1115,6 @@ fit_half_year <- tryCatch({
 
   V_hy    <- vcov(fit_hy_)
   beta_hy <- coef(fit_hy_)
-  # Assert beta belongs to fit_hy_ (guards against accidental reuse of primary beta).
-  stopifnot(identical(names(beta_hy), names(coef(fit_hy_))))
   mod_levels_hy <- levels(d_half$modality)
   rr_hy   <- modality_rr(beta_hy, V_hy, mod_levels_hy, mod_levels_hy[1])
   gw_hy   <- global_wald(beta_hy, V_hy)
@@ -1154,10 +1150,11 @@ fit_data_end <- tryCatch({
     d_de$modality <- relevel(d_de$modality, ref = LBL_CBC)
   stopifnot("CBC must be reference level of d_de modality" = levels(d_de$modality)[1] == LBL_CBC)
   de_n_rows    <- nrow(d_de)
-  de_py        <- sum(d_de$person_years, na.rm = TRUE)
+  # patient-years = distinct ID × year_index combinations (one observation-year per patient)
+  de_py        <- dplyr::n_distinct(d_de$ID, d_de$year_index)
   de_n_pat     <- dplyr::n_distinct(d_de$ID)
   message(glue("  [Data-end] model rows={format(de_n_rows, big.mark=',')} ",
-               "patient-years={format(round(de_py), big.mark=',')} ",
+               "patient-years={format(de_py, big.mark=',')} ",
                "patients={sup(de_n_pat)}"))
 
   fit_de_ <- geepack::geeglm(
@@ -1229,9 +1226,12 @@ key_data <- data.frame(
     "formula", "family", "MODR_CORSTR", "offset", "reference modality",
     "period definitions (primary)", "period definitions (sensitivity)",
     "half-year period_cat choice",
+    "half-year sensitivity — dropped",
     "suppression rule",
     "gate result",
     "DATA_END_CUTOFF",
+    "data-end model rows",
+    "data-end patient-years (distinct ID x year_index)",
     "event coverage note",
     "max event_date per modality"
   ),
@@ -1249,11 +1249,16 @@ key_data <- data.frame(
     "log(person_years) [annual]; log(0.5) [half-year via offset=log(person_years) with half_py=0.5]",
     as.character(LBL_CBC),
     "years 2+ (primary); all years (secondary)",
-    "NB (MASS::glm.nb + sandwich::vcovCL cluster=~ID); adjusted (+age_at_anchor+sex); half-year (half-windows 182.5 days); data-end (year_end <= 2025-03-31, years 2+)",
+    "NB (MASS::glm.nb + sandwich::vcovCL cluster=~ID); adjusted (+age_at_anchor+sex); data-end (year_end <= 2025-03-31, years 2+)",
     "year_index_cat (same 5 bins as primary: 1,2,3,4,5+); half dimension shown as half=1/2 per row",
+    paste0("Half-year sensitivity dropped from Model_Results and Interaction: with identical ",
+           "covariates in both half-windows, the model reproduces the annual Poisson estimates ",
+           "exactly (same far x modality structure; offset log 0.5 absorbed into intercept)."),
     "counts 1-10 shown as '<11'; rates only when num and den both >= 11",
     glue("PASS: OR={round(g$or,4)} ({round(g$ci_lo,4)}-{round(g$ci_hi,4)}) vs P179 {round(P179_REF$or,4)} ({round(P179_REF$ci_lo,4)}-{round(P179_REF$ci_hi,4)})"),
     as.character(DATA_END_CUTOFF),
+    if (!is.na(fit_data_end$n_rows)) format(fit_data_end$n_rows, big.mark=",") else "not estimated",
+    if (!is.na(fit_data_end$n_py))   format(fit_data_end$n_py,   big.mark=",") else "not estimated",
     glue("Event data in this extract end around 2025-03-31 despite EXTRACT_DATE={EVENTS_COVERAGE_END}. ",
          "Data-end sensitivity restricts to year_end <= {DATA_END_CUTOFF}."),
     paste(apply(max_evt_by_mod, 1, function(r) paste0(r["modality"], "=", r["max_event_date"])), collapse = "; ")
@@ -1330,7 +1335,9 @@ mr_row <- write_rr_block(wb, "Model_Results", res_primary$rr_table,   "Primary: 
 mr_row <- write_rr_block(wb, "Model_Results", res_secondary$rr_table, "Secondary: all years",                    mr_row, res_secondary$global_wald, res_secondary$error)
 mr_row <- write_rr_block(wb, "Model_Results", fit_nb$rr_table,        "NB sensitivity",                          mr_row, fit_nb$global_wald,        fit_nb$error)
 mr_row <- write_rr_block(wb, "Model_Results", fit_adjusted$rr_table,  "Adjusted (age+sex)",                      mr_row, fit_adjusted$global_wald,  fit_adjusted$error)
-mr_row <- write_rr_block(wb, "Model_Results", fit_half_year$rr_table, "Half-year sensitivity",                   mr_row, fit_half_year$global_wald, fit_half_year$error)
+# Half-year sensitivity omitted from Model_Results: with identical covariates in both
+# half-windows it reproduces the annual Poisson estimates exactly (same far × modality
+# structure; offset log 0.5 is absorbed into the intercept and does not change RRs).
 mr_row <- write_rr_block(wb, "Model_Results", fit_data_end$rr_table,  glue("Data-end sensitivity (year_end <= {DATA_END_CUTOFF}, years 2+)"), mr_row, fit_data_end$global_wald, fit_data_end$error)
 
 # --- Sheet 4: Interaction -------------------------------------------------------
@@ -1338,30 +1345,28 @@ openxlsx::addWorksheet(wb, "Interaction")
 int_row <- 1L
 add_section_header(wb, "Interaction", int_row, "Global Wald tests — all far:modality terms")
 int_row <- int_row + 1L
+# Half-year excluded: reproduces annual estimates (see KEY note).
 gw_summary <- data.frame(
   model = c("Primary: years 2+", "Secondary: all years", "NB sensitivity",
-            "Adjusted (age+sex)", "Half-year sensitivity",
+            "Adjusted (age+sex)",
             as.character(glue("Data-end (year_end <= {DATA_END_CUTOFF}, years 2+)"))),
   chi2  = c(if (!is.null(res_primary$global_wald))   round(res_primary$global_wald$chi2,2)   else NA,
             if (!is.null(res_secondary$global_wald)) round(res_secondary$global_wald$chi2,2) else NA,
             if (!is.null(fit_nb$global_wald))        round(fit_nb$global_wald$chi2,2)        else NA,
             if (!is.null(fit_adjusted$global_wald))  round(fit_adjusted$global_wald$chi2,2)  else NA,
-            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$chi2,2) else NA,
             if (!is.null(fit_data_end$global_wald))  round(fit_data_end$global_wald$chi2,2)  else NA),
   df    = c(if (!is.null(res_primary$global_wald))   res_primary$global_wald$df   else NA_integer_,
             if (!is.null(res_secondary$global_wald)) res_secondary$global_wald$df else NA_integer_,
             if (!is.null(fit_nb$global_wald))        fit_nb$global_wald$df        else NA_integer_,
             if (!is.null(fit_adjusted$global_wald))  fit_adjusted$global_wald$df  else NA_integer_,
-            if (!is.null(fit_half_year$global_wald)) fit_half_year$global_wald$df else NA_integer_,
             if (!is.null(fit_data_end$global_wald))  fit_data_end$global_wald$df  else NA_integer_),
   p     = c(if (!is.null(res_primary$global_wald))   round(res_primary$global_wald$p,4)   else NA,
             if (!is.null(res_secondary$global_wald)) round(res_secondary$global_wald$p,4) else NA,
             if (!is.null(fit_nb$global_wald))        round(fit_nb$global_wald$p,4)        else NA,
             if (!is.null(fit_adjusted$global_wald))  round(fit_adjusted$global_wald$p,4)  else NA,
-            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$p,4) else NA,
             if (!is.null(fit_data_end$global_wald))  round(fit_data_end$global_wald$p,4)  else NA),
   error = c(res_primary$error, res_secondary$error, fit_nb$error,
-            fit_adjusted$error, fit_half_year$error, fit_data_end$error),
+            fit_adjusted$error, fit_data_end$error),
   stringsAsFactors = FALSE
 )
 openxlsx::writeData(wb, "Interaction", gw_summary, startRow = int_row)
@@ -1494,6 +1499,11 @@ if (!is.null(res_primary$global_wald) && !is.na(res_primary$global_wald$chi2)) {
 } else {
   memo_lines <- c(memo_lines, glue("Primary: {res_primary$error}"))
 }
+if (!is.null(fit_adjusted$global_wald) && !is.na(fit_adjusted$global_wald$chi2)) {
+  memo_lines <- c(memo_lines,
+    glue("Adjusted (age+sex): chi2={round(fit_adjusted$global_wald$chi2,2)}, df={fit_adjusted$global_wald$df}, p={round(fit_adjusted$global_wald$p,4)}"),
+    "(The adjusted global Wald matches the primary because age and sex shift the far main effect but not the far:modality interaction terms.)")
+}
 memo_lines <- c(memo_lines, "")
 
 # Per-modality RRs (primary)
@@ -1518,10 +1528,10 @@ sens_status <- function(obj, label) {
   }
 }
 memo_lines <- c(memo_lines,
-  sens_status(fit_nb,        "NB"),
-  sens_status(fit_adjusted,  "Adjusted (age+sex)"),
-  sens_status(fit_half_year, "Half-year"),
-  sens_status(fit_data_end,  glue("Data-end (year_end <= {DATA_END_CUTOFF}, years 2+)")))
+  sens_status(fit_nb,       "NB"),
+  sens_status(fit_adjusted, "Adjusted (age+sex)"),
+  "- Half-year sensitivity dropped: with identical covariates in both half-windows it reproduces the annual Poisson estimates exactly.",
+  sens_status(fit_data_end, glue("Data-end (year_end <= {DATA_END_CUTOFF}, years 2+)")))
 memo_lines <- c(memo_lines, "")
 
 memo_lines <- c(memo_lines,

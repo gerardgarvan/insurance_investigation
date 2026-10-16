@@ -125,6 +125,10 @@ Annual primary period; 6-month as sensitivity.
   `(year_start, year_start + 182.5]` and `(year_start + 182.5, year_end]`, each 0.5 person-years;
   events counted per half; same model with a half-year period factor. (Not a truncation to the first
   half of each year.)
+  **Dropped from Model_Results and Interaction:** with identical covariates in both half-windows,
+  the model reproduces the annual Poisson estimates exactly — the offset log(0.5) is absorbed into
+  the intercept and does not change the far × modality RRs or the global Wald statistic.
+  Half-year rates are retained in the Rates sheet for descriptive purposes. KEY records this decision.
 - **D-24 (NB):** The same joint formula fitted with `MASS::glm.nb`, with cluster-robust SEs by
   patient (`sandwich::vcovCL(fit, cluster = ~ID)`). Modality-specific RRs and the joint Wald test
   computed from that covariance. If `sandwich` is not in renv, install + `renv::snapshot()` at the
