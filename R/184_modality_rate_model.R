@@ -539,9 +539,11 @@ long_df <- long_base |>
 # events for eligible cohort patients whose event_date falls in a patient-year window
 # (year_start < event_date <= year_end). Both counts printed with sup().
 py_windows <- py_cc |> dplyr::select(ID, year_start, year_end)
+stopifnot("elig must have one row per ID x modality" =
+  !anyDuplicated(elig[, c("ID", "modality")]))
 recount_events <- elig |>
-  dplyr::inner_join(events_rds, by = c("ID", "modality")) |>
-  dplyr::inner_join(py_windows, by = "ID") |>
+  dplyr::inner_join(events_rds, by = c("ID", "modality"), relationship = "one-to-many") |>
+  dplyr::inner_join(py_windows, by = "ID", relationship = "many-to-many") |>
   dplyr::filter(event_date > year_start, event_date <= year_end) |>
   dplyr::count(modality, name = "recount")
 longdf_counts <- long_df |>
@@ -793,8 +795,12 @@ suppression_audit <- dplyr::bind_rows(
   supp_audit(rates_half_yr2plus,"half-year years 2+"),
   supp_audit(rates_half_all,    "half-year all years")
 )
-message("  Suppression audit (> 50% flag per modality × table):")
-print(as.data.frame(dplyr::filter(suppression_audit, flag_gt50)))
+suppression_audit <- suppression_audit |>
+  dplyr::mutate(sparse_note = dplyr::if_else(
+    modality %in% c("MUGA", "Breast MRI"),
+    "sparse (events years 2+: MUGA=69, Breast MRI=354)", ""))
+message("  Suppression audit (all modalities x tables):")
+print(as.data.frame(suppression_audit))
 
 message("==== SECTION 4: rates complete ====")
 
@@ -856,7 +862,11 @@ global_wald <- function(beta, V) {
 fit_poisson_gee <- function(data, label) {
   d <- data |>
     dplyr::arrange(ID, modality, year_index) |>
-    dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID))))
+    dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID)))) |>
+    droplevels()
+  if (is.factor(d$modality) && LBL_CBC %in% levels(d$modality))
+    d$modality <- relevel(d$modality, ref = LBL_CBC)
+  stopifnot("CBC must be reference level of modality" = levels(d$modality)[1] == LBL_CBC)
 
   tryCatch({
     fit_p <- geepack::geeglm(
@@ -909,6 +919,10 @@ fit_poisson_gee <- function(data, label) {
 message("  Fitting primary Poisson GEE (years 2+) ...")
 res_primary   <- fit_poisson_gee(dplyr::filter(long_df, year_index >= 2L), "Primary: years 2+")
 
+if (is.null(res_primary$fit))
+  stop(glue("[R/184] Primary Poisson GEE (years 2+) failed — no workbook or memo will be written.\n",
+            "Error: {res_primary$error}"), call. = FALSE)
+
 message("  Fitting secondary Poisson GEE (all years) ...")
 res_secondary <- fit_poisson_gee(long_df, "Secondary: all years")
 
@@ -942,7 +956,10 @@ overdispersion_diag <- function(fit_obj, data, label) {
 
 d_primary <- dplyr::filter(long_df, year_index >= 2L) |>
   dplyr::arrange(ID, modality, year_index) |>
-  dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID))))
+  dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID)))) |>
+  droplevels()
+d_primary$modality <- relevel(d_primary$modality, ref = LBL_CBC)
+stopifnot("CBC must be reference level of d_primary modality" = levels(d_primary$modality)[1] == LBL_CBC)
 
 disp_diag <- if (!is.null(res_primary$fit)) {
   overdispersion_diag(res_primary$fit, d_primary, "Primary: years 2+")
@@ -1024,7 +1041,10 @@ fit_adjusted <- tryCatch({
     dplyr::left_join(dplyr::select(demo_adj, ID, age_at_anchor, sex), by = "ID")
 
   n_missing_adj <- sum(is.na(d_adj$age_at_anchor) | is.na(d_adj$sex))
-  d_adj         <- dplyr::filter(d_adj, !is.na(age_at_anchor), !is.na(sex))
+  d_adj         <- dplyr::filter(d_adj, !is.na(age_at_anchor), !is.na(sex)) |> droplevels()
+  if (is.factor(d_adj$modality) && LBL_CBC %in% levels(d_adj$modality))
+    d_adj$modality <- relevel(d_adj$modality, ref = LBL_CBC)
+  stopifnot("CBC must be reference level of d_adj modality" = levels(d_adj$modality)[1] == LBL_CBC)
   message(glue("  [Adjusted] excluded {sup(n_missing_adj)} patient-year rows missing age/sex"))
 
   fit_adj_ <- geepack::geeglm(
@@ -1072,7 +1092,11 @@ fit_half_year <- tryCatch({
       count     = count_half,
       person_years = half_py,
       period_cat = year_index_cat   # D-23 choice: year_index_cat bins (not half-split)
-    )
+    ) |>
+    droplevels()
+  if (is.factor(d_half$modality) && LBL_CBC %in% levels(d_half$modality))
+    d_half$modality <- relevel(d_half$modality, ref = LBL_CBC)
+  stopifnot("CBC must be reference level of d_half modality" = levels(d_half$modality)[1] == LBL_CBC)
 
   fit_hy_ <- geepack::geeglm(
     count ~ far * modality + period_cat + offset(log(person_years)),
@@ -1099,6 +1123,52 @@ fit_half_year <- tryCatch({
   msg <- glue("not estimated: {conditionMessage(e)}")
   message(glue("  Half-year sensitivity FAILED: {msg}"))
   list(fit = NULL, rr_table = NULL, global_wald = NULL, error = msg)
+})
+
+# --- 7e. Data-end sensitivity (D-28 / Plan 01 approval request) -----------------
+# Refit primary Poisson GEE on patient-years with year_end <= 2025-03-31 (years 2+).
+# Event data in this extract end around March 2025 despite EXTRACT_DATE = 2025-09-15.
+
+DATA_END_CUTOFF <- as.Date("2025-03-31")
+
+fit_data_end <- tryCatch({
+  message(glue("  Fitting data-end sensitivity (year_end <= {DATA_END_CUTOFF}, years 2+) ..."))
+  d_de <- dplyr::filter(long_df, year_index >= 2L, year_end <= DATA_END_CUTOFF) |>
+    dplyr::arrange(ID, modality, year_index) |>
+    dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID)))) |>
+    droplevels()
+  if (is.factor(d_de$modality) && LBL_CBC %in% levels(d_de$modality))
+    d_de$modality <- relevel(d_de$modality, ref = LBL_CBC)
+  stopifnot("CBC must be reference level of d_de modality" = levels(d_de$modality)[1] == LBL_CBC)
+  message(glue("  [Data-end] n_py={format(nrow(d_de), big.mark=',')} ",
+               "patients={format(dplyr::n_distinct(d_de$ID), big.mark=',')}"))
+
+  fit_de_ <- geepack::geeglm(
+    count ~ far * modality + year_index_cat + offset(log(person_years)),
+    family = poisson("log"),
+    id     = cl,
+    corstr = MODR_CORSTR,
+    data   = d_de)
+
+  if (!is.null(fit_de_$geese$error) && fit_de_$geese$error != 0)
+    stop(glue("geese error code {fit_de_$geese$error}"))
+
+  V_de    <- vcov(fit_de_)
+  beta_de <- coef(fit_de_)
+  rr_de   <- modality_rr(beta_de, V_de, levels(d_de$modality), levels(d_de$modality)[1])
+  gw_de   <- global_wald(beta_de, V_de)
+
+  message(glue("  [Data-end] Global Wald: chi2={round(gw_de$chi2,2)} df={gw_de$df} p={round(gw_de$p,4)}"))
+  print(as.data.frame(dplyr::mutate(rr_de, RR=round(RR,3), CI_low=round(CI_low,3),
+                                    CI_high=round(CI_high,3), p=round(p,4))))
+
+  list(fit = fit_de_, rr_table = rr_de, global_wald = gw_de,
+       n_py = nrow(d_de), error = NA_character_)
+
+}, error = function(e) {
+  msg <- glue("not estimated: {conditionMessage(e)}")
+  message(glue("  Data-end sensitivity FAILED: {msg}"))
+  list(fit = NULL, rr_table = NULL, global_wald = NULL, n_py = NA_integer_, error = msg)
 })
 
 message("==== SECTION 7: sensitivities complete ====")
@@ -1142,7 +1212,10 @@ key_data <- data.frame(
     "period definitions (primary)", "period definitions (sensitivity)",
     "half-year period_cat choice",
     "suppression rule",
-    "gate result"
+    "gate result",
+    "DATA_END_CUTOFF",
+    "event coverage note",
+    "max event_date per modality"
   ),
   Value = c(
     RUN_DATE, Sys.info()[["nodename"]],
@@ -1158,10 +1231,14 @@ key_data <- data.frame(
     "log(person_years) [annual]; log(0.5) [half-year via offset=log(person_years) with half_py=0.5]",
     as.character(LBL_CBC),
     "years 2+ (primary); all years (secondary)",
-    "NB (MASS::glm.nb + sandwich::vcovCL cluster=~ID); adjusted (+age_at_anchor+sex); half-year (half-windows 182.5 days)",
+    "NB (MASS::glm.nb + sandwich::vcovCL cluster=~ID); adjusted (+age_at_anchor+sex); half-year (half-windows 182.5 days); data-end (year_end <= 2025-03-31, years 2+)",
     "year_index_cat (same 5 bins as primary: 1,2,3,4,5+); half dimension shown as half=1/2 per row",
     "counts 1-10 shown as '<11'; rates only when num and den both >= 11",
-    glue("PASS: OR={round(g$or,4)} ({round(g$ci_lo,4)}-{round(g$ci_hi,4)}) vs P179 {round(P179_REF$or,4)} ({round(P179_REF$ci_lo,4)}-{round(P179_REF$ci_hi,4)})")
+    glue("PASS: OR={round(g$or,4)} ({round(g$ci_lo,4)}-{round(g$ci_hi,4)}) vs P179 {round(P179_REF$or,4)} ({round(P179_REF$ci_lo,4)}-{round(P179_REF$ci_hi,4)})"),
+    as.character(DATA_END_CUTOFF),
+    glue("Event data in this extract end around 2025-03-31 despite EXTRACT_DATE={EVENTS_COVERAGE_END}. ",
+         "Data-end sensitivity restricts to year_end <= {DATA_END_CUTOFF}."),
+    paste(apply(max_evt_by_mod, 1, function(r) paste0(r["modality"], "=", r["max_event_date"])), collapse = "; ")
   ),
   stringsAsFactors = FALSE
 )
@@ -1231,11 +1308,12 @@ write_rr_block <- function(wb, sheet, rr_tbl, label, row, gw_obj = NULL, err = N
   row + nrow(rr_tbl) + 2L
 }
 
-mr_row <- write_rr_block(wb, "Model_Results", res_primary$rr_table,   "Primary: years 2+",   mr_row, res_primary$global_wald,   res_primary$error)
-mr_row <- write_rr_block(wb, "Model_Results", res_secondary$rr_table, "Secondary: all years", mr_row, res_secondary$global_wald, res_secondary$error)
-mr_row <- write_rr_block(wb, "Model_Results", fit_nb$rr_table,        "NB sensitivity",       mr_row, fit_nb$global_wald,        fit_nb$error)
-mr_row <- write_rr_block(wb, "Model_Results", fit_adjusted$rr_table,  "Adjusted (age+sex)",   mr_row, fit_adjusted$global_wald,  fit_adjusted$error)
-mr_row <- write_rr_block(wb, "Model_Results", fit_half_year$rr_table, "Half-year sensitivity",mr_row, fit_half_year$global_wald, fit_half_year$error)
+mr_row <- write_rr_block(wb, "Model_Results", res_primary$rr_table,   "Primary: years 2+",                      mr_row, res_primary$global_wald,   res_primary$error)
+mr_row <- write_rr_block(wb, "Model_Results", res_secondary$rr_table, "Secondary: all years",                    mr_row, res_secondary$global_wald, res_secondary$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_nb$rr_table,        "NB sensitivity",                          mr_row, fit_nb$global_wald,        fit_nb$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_adjusted$rr_table,  "Adjusted (age+sex)",                      mr_row, fit_adjusted$global_wald,  fit_adjusted$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_half_year$rr_table, "Half-year sensitivity",                   mr_row, fit_half_year$global_wald, fit_half_year$error)
+mr_row <- write_rr_block(wb, "Model_Results", fit_data_end$rr_table,  glue("Data-end sensitivity (year_end <= {DATA_END_CUTOFF}, years 2+)"), mr_row, fit_data_end$global_wald, fit_data_end$error)
 
 # --- Sheet 4: Interaction -------------------------------------------------------
 openxlsx::addWorksheet(wb, "Interaction")
@@ -1244,24 +1322,28 @@ add_section_header(wb, "Interaction", int_row, "Global Wald tests — all far:mo
 int_row <- int_row + 1L
 gw_summary <- data.frame(
   model = c("Primary: years 2+", "Secondary: all years", "NB sensitivity",
-            "Adjusted (age+sex)", "Half-year sensitivity"),
+            "Adjusted (age+sex)", "Half-year sensitivity",
+            as.character(glue("Data-end (year_end <= {DATA_END_CUTOFF}, years 2+)"))),
   chi2  = c(if (!is.null(res_primary$global_wald))   round(res_primary$global_wald$chi2,2)   else NA,
             if (!is.null(res_secondary$global_wald)) round(res_secondary$global_wald$chi2,2) else NA,
             if (!is.null(fit_nb$global_wald))        round(fit_nb$global_wald$chi2,2)        else NA,
             if (!is.null(fit_adjusted$global_wald))  round(fit_adjusted$global_wald$chi2,2)  else NA,
-            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$chi2,2) else NA),
+            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$chi2,2) else NA,
+            if (!is.null(fit_data_end$global_wald))  round(fit_data_end$global_wald$chi2,2)  else NA),
   df    = c(if (!is.null(res_primary$global_wald))   res_primary$global_wald$df   else NA_integer_,
             if (!is.null(res_secondary$global_wald)) res_secondary$global_wald$df else NA_integer_,
             if (!is.null(fit_nb$global_wald))        fit_nb$global_wald$df        else NA_integer_,
             if (!is.null(fit_adjusted$global_wald))  fit_adjusted$global_wald$df  else NA_integer_,
-            if (!is.null(fit_half_year$global_wald)) fit_half_year$global_wald$df else NA_integer_),
+            if (!is.null(fit_half_year$global_wald)) fit_half_year$global_wald$df else NA_integer_,
+            if (!is.null(fit_data_end$global_wald))  fit_data_end$global_wald$df  else NA_integer_),
   p     = c(if (!is.null(res_primary$global_wald))   round(res_primary$global_wald$p,4)   else NA,
             if (!is.null(res_secondary$global_wald)) round(res_secondary$global_wald$p,4) else NA,
             if (!is.null(fit_nb$global_wald))        round(fit_nb$global_wald$p,4)        else NA,
             if (!is.null(fit_adjusted$global_wald))  round(fit_adjusted$global_wald$p,4)  else NA,
-            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$p,4) else NA),
+            if (!is.null(fit_half_year$global_wald)) round(fit_half_year$global_wald$p,4) else NA,
+            if (!is.null(fit_data_end$global_wald))  round(fit_data_end$global_wald$p,4)  else NA),
   error = c(res_primary$error, res_secondary$error, fit_nb$error,
-            fit_adjusted$error, fit_half_year$error),
+            fit_adjusted$error, fit_half_year$error, fit_data_end$error),
   stringsAsFactors = FALSE
 )
 openxlsx::writeData(wb, "Interaction", gw_summary, startRow = int_row)
@@ -1420,7 +1502,31 @@ sens_status <- function(obj, label) {
 memo_lines <- c(memo_lines,
   sens_status(fit_nb,        "NB"),
   sens_status(fit_adjusted,  "Adjusted (age+sex)"),
-  sens_status(fit_half_year, "Half-year"))
+  sens_status(fit_half_year, "Half-year"),
+  sens_status(fit_data_end,  glue("Data-end (year_end <= {DATA_END_CUTOFF}, years 2+)")))
+memo_lines <- c(memo_lines, "")
+
+memo_lines <- c(memo_lines,
+  "## Data-end sensitivity",
+  glue("Event data in this extract end around {DATA_END_CUTOFF} per modality, despite EXTRACT_DATE={EVENTS_COVERAGE_END}."),
+  "The data-end sensitivity refits the primary Poisson GEE restricting to patient-years with year_end <= 2025-03-31 (years 2+).",
+  "",
+  "Max event_date per modality:")
+for (i in seq_len(nrow(max_evt_by_mod))) {
+  memo_lines <- c(memo_lines, glue("  {max_evt_by_mod$modality[i]}: {max_evt_by_mod$max_event_date[i]}"))
+}
+if (!is.null(fit_data_end$global_wald) && !is.na(fit_data_end$global_wald$chi2)) {
+  memo_lines <- c(memo_lines,
+    glue("Data-end global Wald: chi2={round(fit_data_end$global_wald$chi2,2)}, df={fit_data_end$global_wald$df}, p={round(fit_data_end$global_wald$p,4)}"))
+  if (!is.null(fit_data_end$rr_table)) {
+    memo_lines <- c(memo_lines, "Data-end modality RRs (far vs not-far):")
+    for (i in seq_len(nrow(fit_data_end$rr_table))) {
+      memo_lines <- c(memo_lines, fmt_rr(fit_data_end$rr_table[i, ]))
+    }
+  }
+} else {
+  memo_lines <- c(memo_lines, glue("Data-end sensitivity: {fit_data_end$error}"))
+}
 memo_lines <- c(memo_lines, "")
 
 memo_lines <- c(memo_lines,
