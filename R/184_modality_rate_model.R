@@ -81,7 +81,7 @@ COL_EVT_MOD     <- "modality"
 COL_EVT_DATE    <- "event_date"
 
 # Modality label constants (from surveillance_codeset.xlsx Modalities sheet)
-LBL_CBC         <- "Complete blood count"  # exact label in R/166 events RDS; reference level (D-08)
+LBL_CBC         <- "CBC (Phase 165 definition)"  # reference level (D-08); replaces R/166 "Complete blood count" (see Section 3a)
 
 # Phase 179 workbook: sheet "Model_Results", column "Analysis" (R/183 reader pattern)
 LBL_P179_SHEET  <- "Model_Results"
@@ -207,12 +207,23 @@ if (is.na(r147_rds)) {
 stopifnot("R/147 patient-modality RDS named by the pointer does not exist" = file.exists(r147_rds))
 message(glue("  R/147 pointer: run_date={r147_run_date} | rds={basename(r147_rds)}"))
 
+# EVENTS_COVERAGE_END: R/147/R/166 event collection ends at EXTRACT_CUTOFF (R/00_config.R line 85,
+# R/147 line 53). Used in D-29 to restrict the model sample to patient-years fully within coverage.
+EVENTS_COVERAGE_END <- as.Date(EXTRACT_DATE)   # "2025-09-15"; R/00_config.R line 85
+
+r166_xlsx_default <- list.files(CONFIG$output_dir,
+                                 pattern = "^survivorship_modality_rates_\\d{8}\\.xlsx$",
+                                 full.names = TRUE)
+r166_xlsx_default <- if (length(r166_xlsx_default) > 0L)
+  r166_xlsx_default[order(file.mtime(r166_xlsx_default), decreasing = TRUE)[1L]] else ""
+
 PINS <- list(
   p179_rds  = pin("R184_P179_RDS",  "output/internal/cbc_patient_year_20261015.rds"),
   p179_xlsx = pin("R184_P179_XLSX", "output/cbc_patient_year_20261015.xlsx"),
   events    = pin("R184_EVENTS_RDS",
                   file.path(CONFIG$cache$outputs_dir,
-                            sprintf("survivorship_dated_events_%s.rds", r147_run_date)))
+                            sprintf("survivorship_dated_events_%s.rds", r147_run_date))),
+  r166_xlsx = pin("R184_R166_XLSX", r166_xlsx_default)
 )
 message("  PINS:")
 for (nm in names(PINS)) {
@@ -349,12 +360,50 @@ events_rds <- events_rds |>
   ) |>
   dplyr::distinct(ID, modality, event_date)
 
-mod_labels <- sort(unique(events_rds$modality))
-message(glue("  events_rds: {format(nrow(events_rds), big.mark = ',')} rows, ",
+LBL_R166_CBC <- "Complete blood count"  # R/166 label — excluded below; NOT used in the model
+
+mod_labels_r166 <- sort(unique(events_rds$modality))
+message(glue("  events_rds (R/166): {format(nrow(events_rds), big.mark = ',')} rows, ",
              "{dplyr::n_distinct(events_rds$ID)} patients, ",
-             "{length(mod_labels)} modalities: {paste(mod_labels, collapse = ', ')}"))
+             "{length(mod_labels_r166)} modalities: {paste(mod_labels_r166, collapse = ', ')}"))
+if (!LBL_R166_CBC %in% mod_labels_r166)
+  stop(glue("[R/184] R/166 events missing '{LBL_R166_CBC}'. ",
+            "Found: {paste(mod_labels_r166, collapse = ', ')}"), call. = FALSE)
+
+# Drop R/166 "Complete blood count" — its definition differs from Phase 165/179 CBC.
+# Diagnostic (2026-10-16): 5,919 patient-years had Phase 179 cbc_year=1 but no R/166 CBC event;
+# 3,959 belonged to patients with NO R/166 CBC events at all; median gap to nearest R/166 CBC
+# event was 539 days — not a window-alignment issue. R/147 "Complete blood count" is a different
+# measure from Phase 165/179 (WBC 6690-2 + Hgb 718-7 + PLT 777-3 same date).
+events_rds <- dplyr::filter(events_rds, modality != LBL_R166_CBC)
+message(glue("  Dropped R/166 '{LBL_R166_CBC}' rows. Remaining: ",
+             "{format(nrow(events_rds), big.mark=',')}"))
+
+# Replace with Phase 165 CBC events (build_cbc_events; R/utils/utils_distance_cbc.R line 108).
+# Copied verbatim from R/179 lines 186-195: open connection, call build_cbc_events, close.
+message("  Building Phase 165 CBC events via build_cbc_events() ...")
+cbc165_opened <- FALSE
+if (!exists("pcornet_con", envir = .GlobalEnv)) { open_pcornet_con(); cbc165_opened <- TRUE }
+cbc165_events <- build_cbc_events(pcornet_con, cc_patient_ids) |>  # R/utils/utils_distance_cbc.R line 108
+  dplyr::transmute(ID = as_id(ID), modality = LBL_CBC, event_date = cbc_date)
+if (cbc165_opened) close_pcornet_con()
+message(glue("  Phase 165 CBC events: {format(nrow(cbc165_events), big.mark=',')} ",
+             "patient-dates, {dplyr::n_distinct(cbc165_events$ID)} patients"))
+events_rds <- dplyr::bind_rows(events_rds, cbc165_events) |>
+  dplyr::distinct(ID, modality, event_date)
+
+# Print max event_date per modality (D-29 QC)
+max_evt_by_mod <- events_rds |>
+  dplyr::group_by(modality) |>
+  dplyr::summarise(max_event_date = max(event_date, na.rm = TRUE), .groups = "drop") |>
+  dplyr::arrange(modality)
+message(glue("  EVENTS_COVERAGE_END (D-29): {EVENTS_COVERAGE_END} (EXTRACT_DATE, R/00_config.R line 85)"))
+message("  Max event_date per modality:")
+print(as.data.frame(max_evt_by_mod))
+
+mod_labels <- sort(unique(events_rds$modality))
 if (!LBL_CBC %in% mod_labels)
-  stop(glue("[R/184] LBL_CBC='{LBL_CBC}' not found among event modalities. ",
+  stop(glue("[R/184] LBL_CBC='{LBL_CBC}' not found after replacing CBC events. ",
             "Found: {paste(mod_labels, collapse = ', ')}"), call. = FALSE)
 
 # 3b. Eligibility frame (D-07): one row per ID × modality
@@ -372,10 +421,11 @@ if (!LBL_CBC %in% mod_labels)
 #             data/reference/README.md line 285.
 #   - Mammogram, Breast MRI: eligible only for patients with DEMOGRAPHIC.SEX = "F".
 #     Source: data/reference/README.md line 285; R/147 line 83 (eligible_sex = "F" on these).
-#   - No treatment-dependent or time-dependent eligibility applies to any modality in the
-#     standard surveillance frequency table. echo_post_anthracycline (R/utils/utils_anthracycline_echo.R
-#     line 304) is a separate R/166 Plan 03 output and does not appear as a modality in
-#     survivorship_dated_events.
+#   - Echocardiogram, MUGA, Pulmonary function test, Stress test: NO eligibility restriction.
+#     R/166/R/147 applies none; modality_eligible_sex() returns "" for these (R/utils/utils_surveillance.R
+#     line 256; eligible_sex column blank in Modalities sheet per data/reference/README.md line 285).
+#     echo_post_anthracycline (R/utils/utils_anthracycline_echo.R line 304) is a separate R/166
+#     Plan 03 output and does not appear in survivorship_dated_events.
 #
 SEX_RESTRICTED <- c("Mammogram", "Breast MRI")   # data/reference/README.md line 285
 
@@ -411,7 +461,9 @@ message(glue("  elig: {format(nrow(elig), big.mark = ',')} rows ",
              "(unrestricted: {format(nrow(elig_unrest), big.mark=',')}, ",
              "sex-restricted to females: {format(nrow(elig_sexrest), big.mark=',')})"))
 
-# Eligible-N per modality — print with expected N; stop if any modality disagrees
+# Eligible-N per modality — internal check + comparison against R/166 workbook A_rates_summary.
+# R/166 eligible N = n_patients in A_rates_summary (patients with >= 1 event per modality, full
+# cohort). R/184's eligible N is the Phase 179 CC denominator. R/184 must be <= R/166.
 n_cc     <- length(cc_patient_ids)
 n_female <- length(female_ids)
 elig_n_by_mod <- elig |>
@@ -420,14 +472,34 @@ elig_n_by_mod <- elig |>
     expected = dplyr::if_else(modality %in% SEX_RESTRICTED, n_female, n_cc),
     ok       = (n_eligible == expected)) |>
   dplyr::arrange(modality)
-message("  Eligible patients per modality (n_eligible vs expected):")
-print(as.data.frame(dplyr::select(elig_n_by_mod, modality, n_eligible, expected, ok)))
 bad_elig <- dplyr::filter(elig_n_by_mod, !ok)
 if (nrow(bad_elig) > 0L)
   stop(glue("[R/184] Eligibility mismatch for {nrow(bad_elig)} modality(ies):\n",
             paste(sprintf("  %s: got %d, expected %d",
                           bad_elig$modality, bad_elig$n_eligible, bad_elig$expected),
                   collapse = "\n")), call. = FALSE)
+
+# R/166 workbook comparison (A_rates_summary sheet; n_patients = patients with >= 1 event)
+r166_a <- tryCatch(
+  openxlsx::read.xlsx(PINS$r166_xlsx$path, sheet = "A_rates_summary"),
+  error = function(e) { message("[R/184] R166 xlsx unreadable: ", conditionMessage(e)); NULL })
+if (!is.null(r166_a) && "modality" %in% names(r166_a) && "n_patients" %in% names(r166_a)) {
+  r166_ref <- dplyr::tibble(modality = as.character(r166_a$modality),
+                             r166_n_patients = suppressWarnings(as.integer(r166_a$n_patients)))
+  elig_cmp <- elig_n_by_mod |>
+    dplyr::select(modality, n_eligible) |>
+    dplyr::left_join(r166_ref, by = "modality")
+  message("  Eligible patients per modality (R/184 eligible N vs R/166 A_rates_summary n_patients):")
+  print(as.data.frame(elig_cmp))
+  over <- dplyr::filter(elig_cmp, !is.na(r166_n_patients), n_eligible > r166_n_patients)
+  if (nrow(over) > 0L)
+    stop(glue("[R/184] R/184 eligible N exceeds R/166 n_patients for: ",
+              paste(sprintf("%s (%d > %d)", over$modality, over$n_eligible, over$r166_n_patients),
+                    collapse = "; ")), call. = FALSE)
+} else {
+  message("  Eligible patients per modality (R/184 elig frame; R/166 xlsx comparison skipped):")
+  print(as.data.frame(dplyr::select(elig_n_by_mod, modality, n_eligible, expected)))
+}
 
 # 3c. Confirm CBC is eligible for every complete-case patient (CBC is unrestricted)
 cbc_elig_ids <- dplyr::filter(elig, modality == LBL_CBC)$ID
@@ -463,6 +535,20 @@ event_counts <- long_base |>
 long_df <- long_base |>
   dplyr::left_join(event_counts, by = c("ID", "modality", "year_index")) |>
   dplyr::mutate(count = dplyr::coalesce(count, 0L))
+
+# 3f-ii. D-29: restrict model sample to patient-years within events coverage.
+# Gate and CBC CHECK (D-16a/b) use the full Phase 179 years and are already done above.
+# For modality rates and the model, keep only year_end <= EVENTS_COVERAGE_END so all
+# modalities are compared over the same observation window.
+long_base_full_n <- nrow(long_base)
+long_base_full_pat <- dplyr::n_distinct(long_base$ID)
+long_base <- dplyr::filter(long_base, year_end <= EVENTS_COVERAGE_END)
+removed_py  <- long_base_full_n   - nrow(long_base)
+removed_pat <- long_base_full_pat - dplyr::n_distinct(long_base$ID)
+message(glue("  D-29 coverage filter (year_end <= {EVENTS_COVERAGE_END}): ",
+             "kept {format(nrow(long_base), big.mark=',')} patient-years, ",
+             "{format(dplyr::n_distinct(long_base$ID), big.mark=',')} patients; ",
+             "removed {sup(removed_py)} patient-years, {sup(removed_pat)} patients"))
 
 # 3g. modality as factor with CBC as reference (D-08)
 long_df <- long_df |>

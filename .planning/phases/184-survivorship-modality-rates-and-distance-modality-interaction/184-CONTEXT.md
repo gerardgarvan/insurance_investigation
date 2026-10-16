@@ -42,10 +42,23 @@ Annual primary period; 6-month as sensitivity.
 - **D-06:** Cohort = Phase 179 pinned RDS (`cbc_patient_year_20261015.rds`), complete-case on
   exposure (exclude the 614 missing-exposure patients). `far` taken from the Phase 179 RDS.
   Primary analysis: years 2+ (matches Phase 179 primary). Secondary: all years.
-- **D-07:** Modality eligibility: restrict each modality to the patients for whom it applies,
-  per R/147/Phase 158–159 definitions (e.g., echo restricted to post-anthracycline patients).
-  Do not include ineligible patients in a modality's rate denominator.
-- **D-08:** Reference modality = CBC (ties back to Phase 179 as the anchor outcome).
+- **D-07:** Modality eligibility per R/147/R/166 (data/reference/README.md line 285):
+  Mammogram and Breast MRI → DEMOGRAPHIC.SEX = "F" only. Echocardiogram, MUGA,
+  Pulmonary function test, Stress test → NO eligibility restriction (eligible_sex blank;
+  R/utils/utils_surveillance.R line 256). D-07 therefore reduces to sex restriction for
+  Mammogram/Breast MRI only.
+- **D-08:** Reference modality = "CBC (Phase 165 definition)". R/147 "Complete blood count"
+  events are excluded — they disagreed with Phase 179 cbc_year (5,919 patient-years with
+  cbc_year=1 had no R/166 CBC event; 3,959 in patients with no R/166 CBC events at all;
+  median gap to nearest R/166 CBC event 539 days). Phase 165 events (build_cbc_events:
+  WBC 6690-2 + Hgb 718-7 + PLT 777-3 same date, R/utils/utils_distance_cbc.R line 108)
+  replace the R/166 CBC rows and must reproduce Phase 179 cbc_year exactly (D-16a).
+- **D-16a:** CBC CHECK now compares Phase 165 CBC events (not R/166 "Complete blood count")
+  with Phase 179 cbc_year. Should agree exactly; stop with 2×2 (sup()) if not.
+- **D-29:** Model sample restricted to patient-years with year_end ≤ EXTRACT_DATE ("2025-09-15",
+  R/00_config.R line 85) so all modalities are compared over the same coverage window. R/166
+  event dates stop at 2025-03-29 (observed max), but the coverage boundary is defined from
+  EXTRACT_DATE, not the observed max. Gate and D-16a CBC CHECK use the full Phase 179 years.
 - **D-09:** `year_index_cat` built exactly as R/179 (years 1–4 and "5+"), copied verbatim.
 
 ### Covariates
