@@ -150,9 +150,26 @@ Tasks 1 and 2 were committed together (single file, sequential sections).
 
 - `MASS` is a recommended package, always present. `sandwich` loaded conditionally with `requireNamespace()` guard and informational message.
 
+**3. [Fixed] build_cbc_events() called before cc_patient_ids defined**
+
+- **Error:** `object 'cc_patient_ids' not found` — the call was placed in section 3a before
+  `cc_patient_ids <- unique(py_cc$ID)` was defined in section 3b.
+- **Fix (2026-10-16):** Moved the build_cbc_events block to section 3b, immediately after
+  `cc_patient_ids` is defined. Copied verbatim from R/179 lines 186-195 with `filter(!is.na(cbc_date))` and
+  `distinct()` before transmute. `close_pcornet_con()` called immediately after the call.
+
+**4. [Decided] Eligibility: sex restriction only; no R/166 xlsx comparison**
+
+- **Decision (2026-10-16):** R/166 `survivorship_modality_rates_long` contains only patients with
+  a recorded event — not a denominator frame. Removed `R184_R166_XLSX` pin and the "R/184 eligible N
+  exceeds R/166 n_patients" hard stop. Primary eligibility = sex restriction only (D-07).
+  Anthracycline echo/MUGA sensitivity deferred to Plan 02 (D-07a).
+- **Added:** Event-count construction check (section 3f-iii) replaces the R/166 comparison as
+  the hard stop verifying event-count integrity.
+
 ## Known Stubs
 
-None. Eligibility sex-restriction (Mammogram, Breast MRI) is now implemented inline via `duck_query()` in Section 3b.
+Anthracycline echo/MUGA sensitivity (D-07a) deferred to Plan 02.
 
 ## Self-Check: PENDING
 

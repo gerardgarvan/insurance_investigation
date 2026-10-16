@@ -42,11 +42,15 @@ Annual primary period; 6-month as sensitivity.
 - **D-06:** Cohort = Phase 179 pinned RDS (`cbc_patient_year_20261015.rds`), complete-case on
   exposure (exclude the 614 missing-exposure patients). `far` taken from the Phase 179 RDS.
   Primary analysis: years 2+ (matches Phase 179 primary). Secondary: all years.
-- **D-07:** Modality eligibility per R/147/R/166 (data/reference/README.md line 285):
-  Mammogram and Breast MRI → DEMOGRAPHIC.SEX = "F" only. Echocardiogram, MUGA,
-  Pulmonary function test, Stress test → NO eligibility restriction (eligible_sex blank;
-  R/utils/utils_surveillance.R line 256). D-07 therefore reduces to sex restriction for
-  Mammogram/Breast MRI only.
+- **D-07 (primary):** Eligibility = sex restriction only. Mammogram and Breast MRI →
+  DEMOGRAPHIC.SEX = "F" only (data/reference/README.md line 285; R/147 line 83). All other
+  modalities eligible for every complete-case patient. R/166 `survivorship_modality_rates_long`
+  contains only patients who had a recorded event (not a denominator frame) and cannot be used
+  as the expected eligible N; no R184_R166_XLSX comparison is made.
+- **D-07a (sensitivity, Plan 02):** Echocardiogram and MUGA additionally restricted to
+  anthracycline-exposed patients, defined exactly as the `echo_post_anthracycline` population
+  in R/166 Plan 03 (R/167_anthracycline_echo.R; cite file:line; pin required input). Modality
+  RRs for this restricted set reported alongside the primary results.
 - **D-08:** Reference modality = "CBC (Phase 165 definition)". R/147 "Complete blood count"
   events are excluded — they disagreed with Phase 179 cbc_year (5,919 patient-years with
   cbc_year=1 had no R/166 CBC event; 3,959 in patients with no R/166 CBC events at all;
