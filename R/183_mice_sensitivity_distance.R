@@ -250,7 +250,7 @@ enc <- enc |> dplyr::mutate(ID = as_id(.data[[COL_122_ID]]))
 message("  Fetching SOURCE from DuckDB ENCOUNTER ...")
 enc_source <- tryCatch({
   con183 <- open_pcornet_con()
-  on.exit(try(DBI::dbDisconnect(con183), silent = TRUE), add = TRUE)
+  on.exit(try(close_pcornet_con(), silent = TRUE), add = TRUE)
   src_raw <- DBI::dbGetQuery(con183,
     "SELECT ENCOUNTERID, SOURCE FROM ENCOUNTER WHERE ENCOUNTERID IS NOT NULL")
   src_raw
@@ -369,7 +369,7 @@ adi_lkp <- adi_raw |>
 demo_avail <- FALSE
 age_sex <- tryCatch({
   con <- open_pcornet_con()
-  on.exit(try(DBI::dbDisconnect(con), silent = TRUE), add = TRUE)
+  on.exit(try(close_pcornet_con(), silent = TRUE), add = TRUE)
   demo_raw <- DBI::dbGetQuery(con,
     "SELECT ID, BIRTH_DATE, SEX FROM DEMOGRAPHIC")
   demo_raw$ID <- as_id(demo_raw$ID)

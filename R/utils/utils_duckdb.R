@@ -167,8 +167,8 @@ close_pcornet_con <- function() {
   }
 
   con <- get("pcornet_con", envir = .GlobalEnv)
-  DBI::dbDisconnect(con, shutdown = TRUE)
-  rm(pcornet_con, envir = .GlobalEnv)
+  try(DBI::dbDisconnect(con, shutdown = TRUE), silent = TRUE)
+  rm(pcornet_con, envir = .GlobalEnv)   # remove even if already-closed
   message("[DuckDB] Connection closed.")
   invisible(NULL)
 }

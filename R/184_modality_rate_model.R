@@ -410,7 +410,8 @@ cc_patient_ids <- unique(py_cc$ID)
 # Pattern copied verbatim from R/179_cbc_patient_year.R lines 186-232 (open / query / close).
 message("  DuckDB block: Phase 165 CBC events + DEMOGRAPHIC sex lookup ...")
 db184_opened <- FALSE
-if (!exists("pcornet_con", envir = .GlobalEnv)) { open_pcornet_con(); db184_opened <- TRUE }
+if (!exists("pcornet_con", envir = .GlobalEnv) ||
+    !DBI::dbIsValid(get("pcornet_con", envir = .GlobalEnv))) { open_pcornet_con(); db184_opened <- TRUE }
 
 # Phase 165 CBC events (build_cbc_events; R/utils/utils_distance_cbc.R line 108)
 # Verbatim from R/179 lines 191-194: transmute, filter NA, distinct; all collected in-block.

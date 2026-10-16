@@ -184,7 +184,8 @@ message(glue("  R/121 triage: {basename(r121_path)} ({nrow(triage_map)} patients
 
 # --- 1d-1h. DuckDB: CBC events, broad hematology, death -----------------------
 opened_here <- FALSE
-if (!exists("pcornet_con", envir = .GlobalEnv)) { open_pcornet_con(); opened_here <- TRUE }
+if (!exists("pcornet_con", envir = .GlobalEnv) ||
+    !DBI::dbIsValid(get("pcornet_con", envir = .GlobalEnv))) { open_pcornet_con(); opened_here <- TRUE }
 
 cohort_ids <- unique(anchors$ID[!is.na(anchors$hl_anchor_date)])
 
