@@ -558,8 +558,8 @@ read_p179_or <- function(path, label) {
               "found {nrow(rows)}. Available: {avail}"), call. = FALSE)
   }
   list(or    = as.numeric(rows$OR),
-       ci_lo = as.numeric(rows$CI_lo),
-       ci_hi = as.numeric(rows$CI_hi))
+       ci_lo = as.numeric(rows$CI_low),
+       ci_hi = as.numeric(rows$CI_high))
 }
 
 P179_REF <- read_p179_or(PINS$p179_xlsx$path, LBL_P179_PRIMARY)

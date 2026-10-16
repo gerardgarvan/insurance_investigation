@@ -87,8 +87,8 @@ LBL_CBC         <- "CBC (Phase 165 definition)"  # reference level (D-08); repla
 LBL_P179_SHEET  <- "Model_Results"
 LBL_P179_COL    <- "Analysis"
 LBL_P179_OR     <- "OR"
-LBL_P179_LO     <- "CI_lo"
-LBL_P179_HI     <- "CI_hi"
+LBL_P179_LO     <- "CI_low"
+LBL_P179_HI     <- "CI_high"
 LBL_P179_PRIMARY <- "Primary: years 2+"
 
 # UF colours
@@ -283,13 +283,13 @@ read_p179_or <- function(path, label) {
               "found {nrow(rows)}. Available: {avail}"), call. = FALSE)
   }
   or    <- as.numeric(rows$OR)
-  ci_lo <- as.numeric(rows$CI_lo)
-  ci_hi <- as.numeric(rows$CI_hi)
+  ci_lo <- as.numeric(rows$CI_low)
+  ci_hi <- as.numeric(rows$CI_high)
   if (length(or) != 1L || is.na(or) ||
       length(ci_lo) != 1L || is.na(ci_lo) ||
       length(ci_hi) != 1L || is.na(ci_hi)) {
-    stop(glue("read_p179_or: OR/CI_lo/CI_hi must each be a single non-NA numeric. ",
-              "Got OR={deparse(or)}, CI_lo={deparse(ci_lo)}, CI_hi={deparse(ci_hi)}. ",
+    stop(glue("read_p179_or: OR/CI_low/CI_high must each be a single non-NA numeric. ",
+              "Got OR={deparse(or)}, CI_low={deparse(ci_lo)}, CI_high={deparse(ci_hi)}. ",
               "Sheet columns: {paste(names(sheet_df), collapse=', ')}"), call. = FALSE)
   }
   list(or = or, ci_lo = ci_lo, ci_hi = ci_hi)
@@ -536,19 +536,9 @@ long_df <- long_base |>
   dplyr::left_join(event_counts, by = c("ID", "modality", "year_index")) |>
   dplyr::mutate(count = dplyr::coalesce(count, 0L))
 
-# 3f-ii. D-29: restrict model sample to patient-years within events coverage.
-# Gate and CBC CHECK (D-16a/b) use the full Phase 179 years and are already done above.
-# For modality rates and the model, keep only year_end <= EVENTS_COVERAGE_END so all
-# modalities are compared over the same observation window.
-long_base_full_n <- nrow(long_base)
-long_base_full_pat <- dplyr::n_distinct(long_base$ID)
-long_base <- dplyr::filter(long_base, year_end <= EVENTS_COVERAGE_END)
-removed_py  <- long_base_full_n   - nrow(long_base)
-removed_pat <- long_base_full_pat - dplyr::n_distinct(long_base$ID)
-message(glue("  D-29 coverage filter (year_end <= {EVENTS_COVERAGE_END}): ",
-             "kept {format(nrow(long_base), big.mark=',')} patient-years, ",
-             "{format(dplyr::n_distinct(long_base$ID), big.mark=',')} patients; ",
-             "removed {sup(removed_py)} patient-years, {sup(removed_pat)} patients"))
+# 3f-ii. D-29 coverage-end diagnostic: print max event_date boundary and coverage constant.
+# The actual D-29 filter on long_df is applied in section 3h-ii, AFTER the CBC CHECK,
+# so D-16a/b use the full Phase 179 years as required.
 
 # 3g. modality as factor with CBC as reference (D-08)
 long_df <- long_df |>
@@ -586,6 +576,20 @@ if (n_disagree > 0) {
 }
 message("  D-16a: CBC count_pos == cbc_year for all ", format(nrow(chk), big.mark = ","),
         " patient-years: OK")
+
+# 3h-ii. D-29: restrict long_df to patient-years within events coverage.
+# Applied AFTER CBC CHECK so D-16a/b use the full Phase 179 years.
+# For modality rates and the model, keep only year_end <= EVENTS_COVERAGE_END so all
+# modalities are compared over the same observation window.
+long_df_pre_d29_n   <- nrow(long_df)
+long_df_pre_d29_pat <- dplyr::n_distinct(long_df$ID)
+long_df <- dplyr::filter(long_df, year_end <= EVENTS_COVERAGE_END)
+removed_py  <- long_df_pre_d29_n   - nrow(long_df)
+removed_pat <- long_df_pre_d29_pat - dplyr::n_distinct(long_df$ID)
+message(glue("  D-29 coverage filter (year_end <= {EVENTS_COVERAGE_END}): ",
+             "kept {format(nrow(long_df), big.mark=',')} patient-years, ",
+             "{format(dplyr::n_distinct(long_df$ID), big.mark=',')} patients; ",
+             "removed {sup(removed_py)} patient-years, {sup(removed_pat)} patients"))
 
 # 3i. QC objects
 QC_ELIG <- dplyr::bind_rows(
