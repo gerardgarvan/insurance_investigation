@@ -944,11 +944,12 @@ d_primary <- dplyr::filter(long_df, year_index >= 2L) |>
   dplyr::arrange(ID, modality, year_index) |>
   dplyr::mutate(cl = as.integer(factor(ID, levels = unique(ID))))
 
-disp_diag <- if (!is.null(res_primary$fit))
+disp_diag <- if (!is.null(res_primary$fit)) {
   overdispersion_diag(res_primary$fit, d_primary, "Primary: years 2+")
-else
+} else {
   list(label = "Primary: years 2+", overall = NA_real_, by_mod = NULL,
        error = "primary model not estimated")
+}
 
 message(glue("  Overdispersion (Pearson chi2/df): overall={round(disp_diag$overall, 3)}"))
 if (!is.null(disp_diag$by_mod)) print(as.data.frame(disp_diag$by_mod))
