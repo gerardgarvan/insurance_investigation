@@ -26,7 +26,7 @@
 - ✅ **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (shipped 2026-10-12)
 - ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
 - ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
-- 🔄 **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (in progress)
+- ✅ **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (shipped 2026-10-17 — Phase 184 HiPerGator checkpoint pending)
 
 ## Phases
 
@@ -757,145 +757,16 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
 ---
 
-## 🔄 v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (Active)
+<details>
+<summary>✅ v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (Phases 181–184) — SHIPPED 2026-10-17</summary>
 
-**Milestone Goal:** Deliver the team's CBC × distance prior-year analysis (Phase 181), recover 581 missing-exposure patients via facility ZIP repair and re-run affected analyses (Phase 182), add a MICE multiple-imputation sensitivity analysis for remaining missing-exposure (Phase 183), and model survivorship surveillance modality rates with a distance × modality interaction (Phase 184).
+- [x] Phase 181: CBC Prior-Year vs Distance (1/1 plan) — completed 2026-10-14
+- [x] Phase 182: Facility ZIP Recovery (3/3 plans) — completed 2026-10-14
+- [x] Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs (4/4 plans) — completed 2026-10-15
+- [x] Phase 183: MICE Sensitivity for Distance (2/2 plans) — completed 2026-10-15
+- [~] Phase 184: Survivorship Modality Rates and Distance × Modality Interaction (1/2 plans) — code written 2026-10-16, HiPerGator checkpoint pending
 
-**Phase sequencing rationale:** Phase 181 is independent (reads Phase 179 RDS only) and delivers first. Phase 182 must precede Phase 183 (imputation handles residual missing-exposure after ZIP recovery). Phase 184 is independent of 182/183 and can begin after 181 ships.
+See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
-## Phases (v3.11)
+</details>
 
-- [x] **Phase 181: CBC Prior-Year vs Distance** — Patient-level 2×2 (prior-year CBC × far), chi-squared/Fisher test, OR, and one-page team summary memo
- (completed 2026-10-14)
-- [x] **Phase 182: Facility ZIP Recovery** (3 plans) — Diagnose and fix facility_zip_missing / zip_not_in_db patients; re-run R/122 → R/179 → R/180 (completed 2026-10-14)
-- [x] **Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs** (INSERTED) — Map 32610/32611/32614 and other unique/PO-box ZIPs to ZCTA via crosswalk; treat placeholder ZIPs as missing; re-run R/122→R/165→R/179→R/180→R/181; report OR impact
- (completed 2026-10-15)
-- [x] **Phase 183: MICE Sensitivity for Distance** — Multiple imputation (m ≥ 20) for remaining missing-exposure; pool Phase 179 GEE; compare to complete-case and Phase 180 bounds
- (completed 2026-10-15)
-- [ ] **Phase 184: Survivorship Modality Rates and Distance × Modality Interaction** — Per-modality rates per patient-year; Poisson/NB GEE with far × modality interaction
-
-## Phase Details (v3.11)
-
-### Phase 181: CBC Prior-Year vs Distance
-**Goal**: Deliver the patient-level 2×2 chi-squared analysis of CBC in the prior year vs far-from-care, and the team summary memo, to close the 2026-10-13 Erin/Ray request
-**Depends on**: Phase 180 (reads `output/internal/cbc_patient_year_20261013.rds`)
-**Requirements**: CBCP-01, CBCP-02
-
-**Design constraints:**
-- Unit: patient. "Prior year" = max year_index per patient from the Phase 179 RDS.
-- Primary: year_index ≥ 2 (survivorship cohort). Secondary: all patients (year_index ≥ 1).
-- Outcome: `cbc_year` from the Phase 179 RDS (build_cbc_events() definition).
-- Exposure: Phase 179 `far` (patient median post-anchor distance > 100 mi). Missing `far` → reported not tested.
-- Test: 2×2 Pearson chi-squared; Fisher if any expected cell count < 5. OR with 95% CI. CBC rates by group.
-- Also report: year_index distribution of the "prior year" for each patient.
-- Team memo (CBCP-02): neutral language, markdown in the phase directory. Content: Phase 181 result; Phase 165 vs Phase 179 OR comparison; Phase 180 bounding (noting not-far CI crosses 1); Phase 180 capture check (37.4% shrinkage, single-source split 0.754 vs 1.068, with which group is which stated); open decisions D-15 and D-165-01.
-- KEY note: "Prior year" definition to be confirmed with Erin/Ray.
-- Convention: interactive R on HiPerGator; source(f, local = new.env(parent = globalenv())); register in R/39 + SCRIPT_INDEX; no R/88 section unless team requests.
-
-**Success Criteria** (what must be TRUE):
-1. A workbook (KEY leftmost, A_2x2, B_rates, C_year_distribution, QC) is produced for the primary (year_index ≥ 2) and secondary (all years) analysis, with counts 1-10 suppressed.
-2. Chi-squared (or Fisher) p-value, OR, and 95% CI are reported.
-3. Missing-exposure patient count is reported in the KEY and QC sheet, not included in the 2×2.
-4. A one-page markdown memo covering all five required elements (181 result, 165 vs 179, 180 bounds, 180 capture check, D-15/D-165-01) exists in the phase directory.
-**Plans**: 1 plan
-- [x] 181-01-PLAN.md — R/181 patient-level prior-year CBC × far 2×2 analysis + workbook, R/39/SCRIPT_INDEX registration, and team memo (CBCP-01, CBCP-02)
-
-### Phase 182: Facility ZIP Recovery
-**Goal**: Recover as many of the 581 missing-exposure patients (MISS-01 group b) as possible by diagnosing and fixing facility ZIP gaps in R/122, then propagating the fix through R/179 and R/180
-**Depends on**: Phase 181 (can begin after 181 ships; Phase 183 depends on Phase 182)
-**Requirements**: FZIP-01, FZIP-02
-
-**Design constraints:**
-- Source of truth for the 581: Phase 180 output `cbc_missing_capture_20261013.xlsx` MISS-01 group (b) (facility_zip_missing + zip_not_in_db).
-- Diagnosis scope: which FACILITY_LOCATION / FACILITYID values are responsible; whether encounters at those facilities elsewhere in the data carry a fillable ZIP.
-- Fix scope: R/122 and its helper utilities only. No changes to R/179 or R/180 logic — only re-run them.
-- Fix condition: unambiguous source only (e.g. same FACILITYID has a ZIP on other records with no contradicting ZIP).
-- Re-run chain: R/122 → R/179 → R/180. Record before/after patients/encounters recovered and OR change.
-- Output: a diagnostic workbook + a brief recovery report in the phase directory.
-
-**Success Criteria** (what must be TRUE):
-1. FZIP-01: A diagnosis document identifies which facilities/ZIPs are responsible for the 581, and whether FACILITY_LOCATION or FACILITYID-based fill or centroid-table additions are available.
-2. FZIP-02: R/122 (or its helpers) is updated where the source is unambiguous; R/122 → R/179 → R/180 re-run on HiPerGator; a recovery report states patients/encounters recovered and the updated OR with 95% CI.
-3. If no unambiguous fill exists for any facility, FZIP-02 is satisfied with a documented "no fillable rows" finding.
-**Plans**: 3 plans
-- [x] 182-01-PLAN.md — Fill engine (utils_facility_zip.R: build_facility_zip_lookup + apply_facility_zip_fill), CONFIG$facility_zip_fill toggle, R/122 FACILITYID+SOURCE pull + fill step, unit tests [FZIP-01, FZIP-02] (Wave 1)
-- [x] 182-02-PLAN.md — 5-sheet diagnostic workbook (KEY/A_status_summary/B_facility_table/C_zip_not_in_db/QC) in R/122 + KEY fill metrics + R/39/SCRIPT_INDEX/R/88 SMOKE-182-01 registration [FZIP-01] (Wave 2, depends on 182-01)
-- [x] 182-03-PLAN.md — R/182 script-generated 182-RECOVERY.md (before/after ORs read from workbooks by label) + HiPerGator re-run R/122→R/179→R/180 pinned + report placement [FZIP-02] (Wave 3, depends on 182-01, 182-02)
-
-### Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs (INSERTED)
-**Goal**: Recover distances for 134,949 zip_not_in_db encounters by (a) crosswalking unique/PO-box ZIPs to ZCTA, (b) marking placeholder ZIPs as missing, and (c) re-running R/122→R/165→R/179→R/180→R/181 to quantify impact on all locked ORs and missing-exposure count
-**Depends on**: Phase 182 (uses recovered FACILITYID-fill infrastructure)
-**Requirements**: FZIP-01, FZIP-02
-
-**Design constraints:**
-- ZIP→ZCTA crosswalk: check Phase 144/148 artifacts first; otherwise use HRSA UDS Mapper. Record source and version in KEY sheet. No hand-coded mappings.
-- Facility unique ZIPs: 32610 (106,423 encounters; UF Health Shands campus), 32611 (344), 32614 (19), and others (33468, 33242, 33539, …).
-- Placeholder ZIPs: 000xx (~450 encounters) and ZIP3+"00" patterns (32800: 12,050; 32700: 813; 34700: 343) verified against crosswalk → treated as missing.
-- Patient-side: ~15,000 encounters with unique/PO-box ZIPs.
-- Distance method: keep all existing zipcodeR distances unchanged; for pairs currently failing use zip_distance() on crosswalked ZCTAs, or haversine on gazetteer centroids when ZCTA unavailable. Record distance_method per encounter (zipcodeR_raw / zipcodeR_crosswalk / haversine_gazetteer).
-- Remove false "zipcodeR coverage gap" sentence from 182-RECOVERY.md; replace with actual finding.
-- Re-run chain: R/122 → R/165 (encounter-level) → R/179 → R/180 → R/181. Expect ~106k main-campus encounters to return.
-- Report: old vs new for each primary OR and locked branches D-05, D-09; remaining missing-exposure count for Phase 183.
-- Diagnosis tables: counts suppressed <11; patient ZIPs as ZIP3 only.
-- Expected impact: 1,080 patients affected; 38 gain exposure; 36 change far status; 365 medians shift >0.5 mi.
-
-**Plans:** 4/4 plans executed
-- [x] 182.1-01-PLAN.md — R/utils/utils_zip_crosswalk.R (map_zip_to_zcta, is_placeholder_facility_zip5) + CONFIG$hrsa_zip_zcta_path + SCRIPT_INDEX row [FZIP-01, FZIP-02] (Wave 1)
-- [x] 182.1-02-PLAN.md — R/122 placeholder step + three-tier crosswalk fallback + distance_method column + 182-RECOVERY.md correction [FZIP-01, FZIP-02] (Wave 2, depends on 182.1-01)
-- [x] 182.1-03-PLAN.md — R/165 R165_R122_RDS override [FZIP-02] (Wave 2, depends on 182.1-01)
-- [x] 182.1-04-PLAN.md — R/88 SMOKE-182.1-01 (9 checks, fix [2d] comment-filter) + 182-RECOVERY.md 182.1 section + close-out [FZIP-01, FZIP-02] (Wave 3, depends on 182.1-02, 182.1-03)
-
-### Phase 183: MICE Sensitivity for Distance
-**Goal**: Quantify how sensitive the Phase 179 primary GEE result is to the missing-exposure assumption by imputing patient median distance / `far` via MICE and pooling with Rubin's rules
-**Depends on**: Phase 182 (imputation handles residual missing-exposure after ZIP recovery)
-**Requirements**: MICE-01, MICE-02
-
-**Design constraints:**
-- mice package (CRAN); m ≥ 20 imputed datasets.
-- Predictors: to be confirmed at /gsd:discuss-phase 183. Candidates: triage, SOURCE, single-source flag, age, sex, payer, ADI, encounter counts.
-- Imputation target: patient median post-anchor distance or `far` (binary). Discuss which is the more defensible target.
-- Refit: Phase 179 primary GEE specification in each imputed dataset.
-- Pool: Rubin's rules (mice::pool()).
-- Diagnostics: convergence trace plots, density overlays of observed vs imputed.
-- Comparison table: pooled OR vs complete-case OR vs Phase 180 lower bound vs Phase 180 upper bound.
-- Output: a workbook + a summary section for the team.
-
-**Success Criteria** (what must be TRUE):
-1. MICE-01: m ≥ 20 imputed datasets produced; trace plots and density overlays confirm reasonable convergence; imputation model and predictor rationale documented in KEY.
-2. MICE-02: Phase 179 primary GEE refitted in each imputed set; pooled OR with 95% CI produced via Rubin's rules; comparison table (pooled vs complete-case vs bounds) in the workbook.
-**Plans**: 2 plans
-- [ ] 183-01-PLAN.md — Script scaffold (SECTIONS 0-3): pinned-input loading, patient-level MICE dataset assembly, Task-0 complete-case GEE gate [MICE-01, MICE-02] (Wave 1)
-- [ ] 183-02-PLAN.md — MICE run, D-09 hard-stops, Rubin's rules pooling, workbook (KEY/MICE-01/MICE-02), memo, R/39 + SCRIPT_INDEX registration; HiPerGator checkpoint [MICE-01, MICE-02] (Wave 2)
-
-### Phase 184: Survivorship Modality Rates and Distance × Modality Interaction
-**Goal**: Produce per-modality surveillance rates per patient-year and a formal model testing whether the far × modality interaction is significant
-**Depends on**: Phase 181 (independent of 182/183; can start after 181 ships)
-**Requirements**: MODR-01, MODR-02
-
-**Design constraints:**
-- Reuse R/147 / R/166 definitions and person-time (do not re-derive).
-- Annual primary; 6-month as sensitivity.
-- Rates per patient-year: count of distinct modality dates / person-years, by modality, with suppression (counts 1-10 → "<11"; rates only when both n ≥ 11).
-- Model: count of tests per patient-year by modality, offset = log(person_years), link = log.
-- Distribution: Poisson or negative-binomial (choose based on overdispersion in discuss phase). GEE or GLMM (GEE preferred for marginal inference; GLMM as sensitivity).
-- Cluster: patient ID.
-- Terms: far + modality + far:modality + covariates TBD in discuss.
-- Estimand: modality-specific rate ratio for far vs not-far.
-
-**Success Criteria** (what must be TRUE):
-1. MODR-01: Per-modality surveillance rate table (rate per patient-year by modality × period; annual primary, 6-month sensitivity) produced with suppression applied.
-2. MODR-02: A fitted model with far × modality interaction is reported with modality-specific rate ratios, 95% CIs, and a model-fit summary; overdispersion check documented.
-**Plans**: 1 plan
-
-Plans:
-- [x] 184-01-PLAN.md — Single-script build: reproduction gate, rate table (MODR-01), Poisson GEE with far×modality interaction (MODR-02), diagnostics, workbook, memo
-
-## Progress (v3.11)
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 181. CBC Prior-Year vs Distance | v3.11 | 1/1 | Complete   | 2026-10-14 |
-| 182. Facility ZIP Recovery | v3.11 | 3/3 | Complete | 2026-10-14 |
-| 182.1. ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs | v3.11 | 4/4 | Complete | 2026-10-15 |
-| 183. MICE Sensitivity for Distance | v3.11 | 0 | Not started | — |
-| 184. Survivorship Modality Rates and Distance × Modality Interaction | v3.11 | 1/2 | In Progress|  |

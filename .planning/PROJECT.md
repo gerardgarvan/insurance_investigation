@@ -456,4 +456,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-13 — v3.10 milestone complete (Distance Missingness & Script Fixes).*
+*Last updated: 2026-10-17 — v3.11 milestone complete (CBC Team Deliverable, Distance Completeness, Survivorship Modeling).*

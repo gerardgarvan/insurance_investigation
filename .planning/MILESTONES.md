@@ -1,5 +1,21 @@
 # Milestones
 
+## v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (Shipped: 2026-10-17)
+
+**Phases completed:** Phases 181–184 (5 phases incl. 182.1), 13 plans
+
+**Known gap:** Phase 184 Plan 02 HiPerGator checkpoint not confirmed before close-out; R/184 code written and fixed, formal SUMMARY pending.
+
+**Key accomplishments:**
+
+- Patient-level prior-year CBC × far-from-care 2×2: OR 0.833 (95% CI 0.682–1.016, p=0.071) in survivorship cohort (year_index ≥ 2, N=7,075); team memo generated at runtime from Phase 179/180 workbook labels (Phase 181)
+- Tier-1 facility ZIP fill (SOURCE+FACILITYID key, ≥3 supporting encounters, 1 distinct ZIP) wired into R/122; R/122→R/179→R/180 re-run; R/88 ALL 970 CHECKS PASSED (Phase 182)
+- ZIP→ZCTA crosswalk fallback (HRSA 2022) added to R/122; 13,652 encounters resolved via crosswalk, 14 via haversine; placeholder ZIPs (000xx, 32800, etc.) classified missing; R/122→R/165→R/179→R/180→R/181 re-run; R/88 ALL 982 CHECKS PASSED (Phase 182.1)
+- MICE multiple imputation (m=20, D-01 PMM / D-02 logreg): pooled primary ORs 0.842/0.834 (years 2+) within Phase 180 bounds, FMI 0.049/0.160 (low-moderate); confirms Phase 179 result robust to MAR assumption (Phase 183)
+- Per-modality surveillance rate table (annual primary, 6-month sensitivity) + Poisson GEE far×modality interaction; R/184_modality_rate_model.R written and bug-fixed; HiPerGator close-out pending (Phase 184)
+
+---
+
 ## v3.10 Distance Missingness & Script Fixes (Shipped: 2026-10-13)
 
 **Phases completed:** 169 phases, 320 plans, 391 tasks
