@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
-stopped_at: Phase 189 context gathered
-last_updated: "2026-10-22T23:02:13.192Z"
+status: executing
+stopped_at: Completed 189-02-PLAN.md
+last_updated: "2026-10-22T23:24:32.379Z"
 last_activity: 2026-10-22
 progress:
   total_phases: 179
   completed_phases: 157
-  total_plans: 335
-  completed_plans: 340
+  total_plans: 339
+  completed_plans: 341
   percent: 100
 ---
 
@@ -22,13 +22,13 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 187 — anthracycline-exposure-variables
+**Current focus:** Phase 189 — team-deliverables-and-milestone-closeout
 
 ## Current Position
 
-Phase: 187
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 189 (team-deliverables-and-milestone-closeout) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-10-22
 
 **Progress:** [██████████] 100%
@@ -101,6 +101,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | D-187-02: mitoxantrone excluded from anthracycline set | Project spec | Phase 187 | Resolved (excluded) |
 | D-189-01: team questions for Amy email | Gerard | Phase 189 | Open — Gerard supplies before Phase 189 |
 | Phase 187 P01 | 15 | 3 tasks | 4 files |
+| Phase 189 P02 | 5 | 1 tasks | 1 files |
 
 ### Parked Items (no phases this milestone)
 
@@ -114,7 +115,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 **Phase 183 close-out (2026-10-15):** MICE sensitivity for distance complete. D-01 (log_dist PMM) and D-02 (far logreg), m=20 each, 614 patients imputed. Pooled primary (years 2+): D-01 OR=0.842 (0.725–0.977) FMI=0.049, D-02 OR=0.834 (0.713–0.976) FMI=0.160 — both within Phase 180 bounds and within 0.01 of each other. loggedEvents: main_sourceUCI dropped (D-01 PMM only, non-mandatory, not a D-09 stop). payer dropped (payer_summary RDS not found, optional per D-07b). R/88: ALL 982 CHECKS PASSED (3 skipped). Outputs: mice_sensitivity_distance_20261015.xlsx, mice_trace_20261015.png, mice_density_20261015.png, 183-MEMO.md.
 
-**Stopped at:** Phase 189 context gathered
+**Stopped at:** Completed 189-02-PLAN.md
 
 ### Quick Tasks Completed
 
