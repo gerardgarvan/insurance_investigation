@@ -8,7 +8,7 @@
 #
 # Inputs (pinned):
 #   R187_EPISODE_RDS      cache/outputs/treatment_episode_detail_180.rds
-#   R187_RATES_PARTS_RDS  output/internal/survivorship_modality_rates_parts_20261012.rds
+#   R187_RATES_PARTS_RDS  clean/rds/outputs/survivorship_modality_rates_parts_20261012.rds
 #
 # Outputs:
 #   output/internal/anthracycline_exposure_patient_<YYYYMMDD>.rds  (patient-grain, internal)
@@ -43,11 +43,12 @@ pins <- list(
                         file.path(CONFIG$cache$outputs_dir,
                                   "treatment_episode_detail_180.rds")),
   rates_parts_rds = pin("R187_RATES_PARTS_RDS",
-                        file.path(CONFIG$output_dir, "internal",
+                        file.path(CONFIG$cache$outputs_dir,
                                   "survivorship_modality_rates_parts_20261012.rds"))
   # Default R187_RATES_PARTS_RDS: Phase 171 survivorship run (SURV_RUN_DATE 20261012)
-  # per 171-01-SUMMARY.md. R/184 does not pin this file (R/184 uses patient-year RDS
-  # from R/179 for its model; R/187 needs follow_end per D-11, sourced from R/166 parts).
+  # per 171-01-SUMMARY.md. Lives in CONFIG$cache$outputs_dir (clean/rds/outputs on HiPerGator).
+  # R/184 does not pin this file (R/184 uses patient-year RDS from R/179 for its model;
+  # R/187 needs follow_end per D-11, sourced from R/166 parts).
 )
 
 message("[187] Pins:")
