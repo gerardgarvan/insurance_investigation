@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.11
-milestone_name: CBC Team Deliverable, Distance Completeness, Survivorship Modeling
-status: milestone_complete
-stopped_at: v3.11 archived 2026-10-17 — Phase 184 HiPerGator checkpoint pending; start v3.12 with /gsd:new-milestone
-last_updated: "2026-10-17T00:50:13.382Z"
-last_activity: 2026-10-17
+milestone: v3.12
+milestone_name: Team To-Do Close-out (Survivorship Rates, Anthracycline Exposure, NHL Follow-up)
+status: defining_requirements
+stopped_at: —
+last_updated: "2026-10-22T00:00:00.000Z"
+last_activity: 2026-10-22
 progress:
-  total_phases: 174
-  completed_phases: 153
-  total_plans: 331
-  completed_plans: 336
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,11 +26,10 @@ See: .planning/PROJECT.md (updated 2026-10-14, v3.11 started)
 
 ## Current Position
 
-Phase: 184 (survivorship-modality-rates-and-distance-modality-interaction) — EXECUTING
-Plan: 1 of 2
-Next: Phase 184 (Survivorship Modality Rates and Distance x Modality Interaction)
-Status: Executing Phase 184
-Last activity: 2026-10-17
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-10-22 — Milestone v3.12 started
 
 **Phase 177 close-out (2026-10-12):** Outcome = Document only. R/177_temporal_match_sizing.R built and run on HiPerGator; output workbook: output/temporal_match_sizing_20261012.xlsx. NEEDS_TEMPORAL_MATCH patients (410) generate **zero** patient_zip_missing encounters in R/122 — R/122's address-history calendar already resolves their ZIPs from LDS_ADDRESS_HISTORY. share_whole=0%, share_post=0%, far_ratio=0%. No new imputation tier warranted. All D-04 cross-tab cells explained. 177-SIZING-MEMO.md written. R/.planning/ duplication resolved in this session (planning artifacts archived to root; R/.planning/ retired and gitignored). Quick task (operator): add note to R/122 workbook KEY — temporal match would fill 0 encounters (Phase 177); the 3,731 patient_zip_missing encounters are UNREACHABLE_NO_ZIP9 or not in R/121 — no dated ZIP exists to fill them.
 
