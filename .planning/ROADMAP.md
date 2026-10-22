@@ -26,7 +26,7 @@
 - ✅ **v3.8 Pipeline Refresh & Phase 130 Close-out** - Phases 170-173 (shipped 2026-10-12)
 - ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
 - ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
-- ✅ **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (shipped 2026-10-17 — Phase 184 HiPerGator checkpoint pending)
+- ✅ **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (shipped 2026-10-17)
 - 🔄 **v3.12 Team To-Do Close-out** - Phases 185-189 (started 2026-10-22)
 
 ## Phases
@@ -765,7 +765,7 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 - [x] Phase 182: Facility ZIP Recovery (3/3 plans) — completed 2026-10-14
 - [x] Phase 182.1: ZIP Centroid Mapping for Unique/PO-Box and Placeholder ZIPs (4/4 plans) — completed 2026-10-15
 - [x] Phase 183: MICE Sensitivity for Distance (2/2 plans) — completed 2026-10-15
-- [~] Phase 184: Survivorship Modality Rates and Distance × Modality Interaction (1/2 plans) — code written 2026-10-16, HiPerGator checkpoint pending
+- [x] Phase 184: Survivorship Modality Rates and Distance × Modality Interaction (2/2 plans) — completed 2026-10-22
 
 See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
@@ -808,7 +808,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
   4. Annual-window modality rates (patients, events, patient-years, rate per modality) are readable from the pinned workbook by exact label — no re-estimation required by Phase 186
   5. 185-01-SUMMARY.md exists in the phase folder; v3.11 MILESTONES entry for Phase 184 is marked resolved
 **Plans**: 1 plan
-- [ ] 185-01-PLAN.md — HiPerGator run of R/184 + schema probe (blocking checkpoint), close-out SUMMARY (pinned workbook filename, Rates header, gate values, D-05 row count, R/88 count), ROADMAP/MILESTONES close-out [CLOSE-01, CLOSE-02, RATE-01] (Wave 1)
+- [x] 185-01-PLAN.md — HiPerGator run of R/184 + schema probe (blocking checkpoint), close-out SUMMARY (pinned workbook filename, Rates header, gate values, D-05 row count, R/88 count), ROADMAP/MILESTONES close-out [CLOSE-01, CLOSE-02, RATE-01] (Wave 1)
 **UI hint**: no
 
 ### Phase 186: Survivorship Rate Granularity
@@ -902,7 +902,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 185. Phase 184 Close-out and Modality Rates | v3.12 | 0/TBD | Not started | — |
+| 185. Phase 184 Close-out and Modality Rates | v3.12 | 1/1 | Complete | 2026-10-22 |
 | 186. Survivorship Rate Granularity | v3.12 | 0/TBD | Not started | — |
 | 187. Anthracycline Exposure Variables | v3.12 | 0/TBD | Not started | — |
 | 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Not started | — |
