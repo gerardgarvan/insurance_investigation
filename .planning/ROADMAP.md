@@ -781,7 +781,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
 - [ ] **Phase 185: Phase 184 Close-out and Modality Rates** — R/184 HiPerGator checkpoint; per-modality rates at annual window (CLOSE-01, CLOSE-02, RATE-01)
 - [x] **Phase 186: Survivorship Rate Granularity** — Annual and biannual per-modality table (RATE-02, RATE-03); depends on Phase 185 (completed 2026-10-22)
-- [ ] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185
+- [x] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185 (completed 2026-10-22)
 - [ ] **Phase 188: Echo Rate Since Anthracycline** — Echo rate per patient-year since last dose; reconciliation vs Phase 166 (ECHO-01, ECHO-02); depends on Phases 186 and 187
 - [ ] **Phase 189: Team Deliverables and Milestone Close-out** — NHL explainer, email draft, R/39 + R/88 registration, to-do table (COMM-01, COMM-02, REG-01, TRACK-01); depends on Phases 185, 186, 187, 188
 
@@ -858,7 +858,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
   5. The anthracycline variables are joined into the survivorship analysis set and readable by Phase 188 without re-reading the internal RDS
 **Plans**: 1 plan
 Plans:
-- [ ] 187-01-PLAN.md — Build R/187_anthracycline_exposure.R: pins, compute flags + time variables, write patient-grain RDS and aggregate summary; HiPerGator checkpoint; output probe
+- [x] 187-01-PLAN.md — Build R/187_anthracycline_exposure.R: pins, compute flags + time variables, write patient-grain RDS and aggregate summary; HiPerGator checkpoint; output probe
 **UI hint**: no
 
 ### Phase 188: Echo Rate Since Anthracycline
@@ -907,6 +907,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 185. Phase 184 Close-out and Modality Rates | v3.12 | 1/1 | Complete | 2026-10-22 |
 | 186. Survivorship Rate Granularity | v3.12 | 1/1 | Complete    | 2026-10-22 |
-| 187. Anthracycline Exposure Variables | v3.12 | 0/TBD | Not started | — |
+| 187. Anthracycline Exposure Variables | v3.12 | 1/1 | Complete   | 2026-10-22 |
 | 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Not started | — |
 | 189. Team Deliverables and Milestone Close-out | v3.12 | 0/TBD | Not started | — |

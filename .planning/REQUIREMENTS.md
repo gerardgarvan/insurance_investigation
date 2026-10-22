@@ -21,9 +21,9 @@
 
 ### ANTH — Anthracycline Exposure Variables
 
-- [ ] **ANTH-01**: `any_anthracycline` (TRUE/FALSE, **never NA**) per cohort patient; `any_chemo` (TRUE/FALSE, never NA) per cohort patient; drug set: doxorubicin (liposomal collapsed per Phase 164), daunorubicin, epirubicin, idarubicin — mitoxantrone explicitly excluded; aggregate counts reported by flag and by drug, suppressed per HIPAA.
-- [ ] **ANTH-02**: `last_anthracycline_date` = latest `treatment_date` across all episodes for included drugs; `years_since_last_anthracycline` = last dose → `follow_end` (Phase 161 `compute_followup()` definition, accounts for death); NA (not 0, not negative) when `any_anthracycline == FALSE` or when last dose date is after `follow_end`; `days_since_last_anthracycline_dose` per echo encounter is Phase 188 (ECHO-01), not Phase 187.
-- [ ] **ANTH-03**: Patient-grain RDS written to `output/internal/` (patient IDs + dates — internal only); aggregate-only summary in `output/`; variables joined into the survivorship analysis set; schema probe updated before code is written.
+- [x] **ANTH-01**: `any_anthracycline` (TRUE/FALSE, **never NA**) per cohort patient; `any_chemo` (TRUE/FALSE, never NA) per cohort patient; drug set: doxorubicin (liposomal collapsed per Phase 164), daunorubicin, epirubicin, idarubicin — mitoxantrone explicitly excluded; aggregate counts reported by flag and by drug, suppressed per HIPAA.
+- [x] **ANTH-02**: `last_anthracycline_date` = latest `treatment_date` across all episodes for included drugs; `years_since_last_anthracycline` = last dose → `follow_end` (Phase 161 `compute_followup()` definition, accounts for death); NA (not 0, not negative) when `any_anthracycline == FALSE` or when last dose date is after `follow_end`; `days_since_last_anthracycline_dose` per echo encounter is Phase 188 (ECHO-01), not Phase 187.
+- [x] **ANTH-03**: Patient-grain RDS written to `output/internal/` (patient IDs + dates — internal only); aggregate-only summary in `output/`; variables joined into the survivorship analysis set; schema probe updated before code is written.
 
 ### ECHO — Echocardiogram Rate Since Anthracycline
 

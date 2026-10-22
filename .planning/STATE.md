@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: executing
-stopped_at: Phase 187 context gathered
-last_updated: "2026-10-22T21:04:33.196Z"
-last_activity: 2026-10-22 -- Phase 187 execution started
+status: verifying
+stopped_at: Phase 187 Plan 01 complete — awaiting Phase 188
+last_updated: "2026-10-22T21:24:24.247Z"
+last_activity: 2026-10-22
 progress:
   total_phases: 177
-  completed_phases: 155
+  completed_phases: 156
   total_plans: 334
-  completed_plans: 338
+  completed_plans: 339
   percent: 100
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 
 Phase: 187 (anthracycline-exposure-variables) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 187
-Last activity: 2026-10-22 -- Phase 187 execution started
+Status: Phase complete — ready for verification
+Last activity: 2026-10-22
 
 **Progress:** [██████████] 100%
 
@@ -100,6 +100,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | D-186-01: biannual = every 6 months or every 2 years? | Gerard/team | Phase 186 | Open — must be recorded in CONTEXT.md before Phase 186 code |
 | D-187-02: mitoxantrone excluded from anthracycline set | Project spec | Phase 187 | Resolved (excluded) |
 | D-189-01: team questions for Amy email | Gerard | Phase 189 | Open — Gerard supplies before Phase 189 |
+| Phase 187 P01 | 15 | 3 tasks | 4 files |
 
 ### Parked Items (no phases this milestone)
 
@@ -113,7 +114,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 **Phase 183 close-out (2026-10-15):** MICE sensitivity for distance complete. D-01 (log_dist PMM) and D-02 (far logreg), m=20 each, 614 patients imputed. Pooled primary (years 2+): D-01 OR=0.842 (0.725–0.977) FMI=0.049, D-02 OR=0.834 (0.713–0.976) FMI=0.160 — both within Phase 180 bounds and within 0.01 of each other. loggedEvents: main_sourceUCI dropped (D-01 PMM only, non-mandatory, not a D-09 stop). payer dropped (payer_summary RDS not found, optional per D-07b). R/88: ALL 982 CHECKS PASSED (3 skipped). Outputs: mice_sensitivity_distance_20261015.xlsx, mice_trace_20261015.png, mice_density_20261015.png, 183-MEMO.md.
 
-**Stopped at:** Phase 187 context gathered
+**Stopped at:** Phase 187 Plan 01 complete — awaiting Phase 188
 
 ### Quick Tasks Completed
 
