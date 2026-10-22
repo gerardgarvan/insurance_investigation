@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: Not started
-stopped_at: Phase 186 context gathered
-last_updated: "2026-10-22T18:13:04.837Z"
-last_activity: 2026-10-22 — v3.12 roadmap created
+status: executing
+stopped_at: "Phase 186-01: Tasks 0-4 complete; Task 5 (HiPerGator checkpoint) pending"
+last_updated: "2026-10-22T18:40:13.839Z"
+last_activity: 2026-10-22 -- Phase 186 execution started
 progress:
   total_phases: 176
-  completed_phases: 154
-  total_plans: 332
-  completed_plans: 337
+  completed_phases: 155
+  total_plans: 333
+  completed_plans: 338
   percent: 0
 ---
 
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 185 — Phase 184 close-out and modality rates
+**Current focus:** Phase 186 — survivorship-rate-granularity
 
 ## Current Position
 
-Phase: 185 — Phase 184 Close-out and Modality Rates
-Plan: —
-Status: Not started
-Last activity: 2026-10-22 — v3.12 roadmap created
+Phase: 186 (survivorship-rate-granularity) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 186
+Last activity: 2026-10-22 -- Phase 186 execution started
 
 **Progress:** [          ] 0% (0/5 phases complete)
 
@@ -113,7 +113,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 **Phase 183 close-out (2026-10-15):** MICE sensitivity for distance complete. D-01 (log_dist PMM) and D-02 (far logreg), m=20 each, 614 patients imputed. Pooled primary (years 2+): D-01 OR=0.842 (0.725–0.977) FMI=0.049, D-02 OR=0.834 (0.713–0.976) FMI=0.160 — both within Phase 180 bounds and within 0.01 of each other. loggedEvents: main_sourceUCI dropped (D-01 PMM only, non-mandatory, not a D-09 stop). payer dropped (payer_summary RDS not found, optional per D-07b). R/88: ALL 982 CHECKS PASSED (3 skipped). Outputs: mice_sensitivity_distance_20261015.xlsx, mice_trace_20261015.png, mice_density_20261015.png, 183-MEMO.md.
 
-**Stopped at:** Phase 186 context gathered
+**Stopped at:** Phase 186-01: Tasks 0-4 complete; Task 5 (HiPerGator checkpoint) pending
 
 ### Quick Tasks Completed
 

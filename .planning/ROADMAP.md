@@ -780,7 +780,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 ## Phases (v3.12)
 
 - [ ] **Phase 185: Phase 184 Close-out and Modality Rates** — R/184 HiPerGator checkpoint; per-modality rates at annual window (CLOSE-01, CLOSE-02, RATE-01)
-- [ ] **Phase 186: Survivorship Rate Granularity** — Annual and biannual per-modality table (RATE-02, RATE-03); depends on Phase 185
+- [x] **Phase 186: Survivorship Rate Granularity** — Annual and biannual per-modality table (RATE-02, RATE-03); depends on Phase 185 (completed 2026-10-22)
 - [ ] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185
 - [ ] **Phase 188: Echo Rate Since Anthracycline** — Echo rate per patient-year since last dose; reconciliation vs Phase 166 (ECHO-01, ECHO-02); depends on Phases 186 and 187
 - [ ] **Phase 189: Team Deliverables and Milestone Close-out** — NHL explainer, email draft, R/39 + R/88 registration, to-do table (COMM-01, COMM-02, REG-01, TRACK-01); depends on Phases 185, 186, 187, 188
@@ -831,7 +831,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
   4. All counts 1–10 appear as "<11"; complementary suppression applied where back-calculation would otherwise be possible
   5. Annual-window values match the Phase 185 pinned workbook to the last digit — no recomputation drift
 **Plans**: 1 plan
-- [ ] 186-01-PLAN.md — Read annual + half-year (years 2+) rate blocks from pinned R/184 workbook by exact section header, resolve rate unit (D-09), stack to one modality x far x window table, write dated xlsx (KEY leftmost, Primary + Secondary sheets, UF colours) [RATE-02, RATE-03] (Wave 1)
+- [x] 186-01-PLAN.md — Read annual + half-year (years 2+) rate blocks from pinned R/184 workbook by exact section header, resolve rate unit (D-09), stack to one modality x far x window table, write dated xlsx (KEY leftmost, Primary + Secondary sheets, UF colours) [RATE-02, RATE-03] (Wave 1)
 **UI hint**: no
 
 ### Phase 187: Anthracycline Exposure Variables
@@ -904,7 +904,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 185. Phase 184 Close-out and Modality Rates | v3.12 | 1/1 | Complete | 2026-10-22 |
-| 186. Survivorship Rate Granularity | v3.12 | 0/TBD | Not started | — |
+| 186. Survivorship Rate Granularity | v3.12 | 1/1 | Complete   | 2026-10-22 |
 | 187. Anthracycline Exposure Variables | v3.12 | 0/TBD | Not started | — |
 | 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Not started | — |
 | 189. Team Deliverables and Milestone Close-out | v3.12 | 0/TBD | Not started | — |
