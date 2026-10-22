@@ -807,7 +807,8 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
   3. Patient counts 1–10 appear as "<11" throughout; no suppressed cell is back-calculated from adjacent unsuppressed values
   4. Annual-window modality rates (patients, events, patient-years, rate per modality) are readable from the pinned workbook by exact label — no re-estimation required by Phase 186
   5. 185-01-SUMMARY.md exists in the phase folder; v3.11 MILESTONES entry for Phase 184 is marked resolved
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 185-01-PLAN.md — HiPerGator run of R/184 + schema probe (blocking checkpoint), close-out SUMMARY (pinned workbook filename, Rates header, gate values, D-05 row count, R/88 count), ROADMAP/MILESTONES close-out [CLOSE-01, CLOSE-02, RATE-01] (Wave 1)
 **UI hint**: no
 
 ### Phase 186: Survivorship Rate Granularity
