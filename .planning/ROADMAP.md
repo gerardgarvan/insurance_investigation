@@ -830,7 +830,8 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
   3. KEY sheet is leftmost; UF blue (#0021A5) and orange (#FA4616) applied to header rows
   4. All counts 1–10 appear as "<11"; complementary suppression applied where back-calculation would otherwise be possible
   5. Annual-window values match the Phase 185 pinned workbook to the last digit — no recomputation drift
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 186-01-PLAN.md — Read annual + half-year (years 2+) rate blocks from pinned R/184 workbook by exact section header, resolve rate unit (D-09), stack to one modality x far x window table, write dated xlsx (KEY leftmost, Primary + Secondary sheets, UF colours) [RATE-02, RATE-03] (Wave 1)
 **UI hint**: no
 
 ### Phase 187: Anthracycline Exposure Variables
