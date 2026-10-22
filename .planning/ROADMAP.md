@@ -856,7 +856,9 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
   3. last_anthracycline_date and years_since_last_anthracycline are NA (not 0) for unexposed patients; years_since uses min(last_encounter_date, data_cutoff_date) as the end anchor
   4. Patient-grain RDS (with IDs and dates) is in `output/internal/` only; aggregate summary in `output/` contains no patient-level data; counts 1–10 suppressed as "<11"
   5. The anthracycline variables are joined into the survivorship analysis set and readable by Phase 188 without re-reading the internal RDS
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 187-01-PLAN.md — Build R/187_anthracycline_exposure.R: pins, compute flags + time variables, write patient-grain RDS and aggregate summary; HiPerGator checkpoint; output probe
 **UI hint**: no
 
 ### Phase 188: Echo Rate Since Anthracycline
