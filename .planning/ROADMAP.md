@@ -907,6 +907,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 185. Phase 184 Close-out and Modality Rates | v3.12 | 1/1 | Complete | 2026-10-22 |
 | 186. Survivorship Rate Granularity | v3.12 | 1/1 | Complete    | 2026-10-22 |
-| 187. Anthracycline Exposure Variables | v3.12 | 1/1 | Complete   | 2026-10-22 |
+| 187. Anthracycline Exposure Variables | v3.12 | 1/1 | Complete    | 2026-10-22 |
 | 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Not started | — |
 | 189. Team Deliverables and Milestone Close-out | v3.12 | 0/TBD | Not started | — |
