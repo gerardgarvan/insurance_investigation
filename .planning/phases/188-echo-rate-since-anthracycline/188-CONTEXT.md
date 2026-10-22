@@ -1,7 +1,7 @@
 # Phase 188: Echo Rate Since Anthracycline - Context
 
 **Gathered:** 2026-10-22
-**Status:** Awaiting probes (D-21) and the D-02a window check — planning starts after both
+**Status:** Planned — 188-01-PLAN.md ready for execution
 
 <domain>
 ## Phase Boundary
