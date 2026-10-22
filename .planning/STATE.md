@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: verifying
+status: executing
 stopped_at: Phase 187 context gathered
-last_updated: "2026-10-22T20:40:34.476Z"
-last_activity: 2026-10-22
+last_updated: "2026-10-22T21:04:33.196Z"
+last_activity: 2026-10-22 -- Phase 187 execution started
 progress:
   total_phases: 177
   completed_phases: 155
-  total_plans: 333
+  total_plans: 334
   completed_plans: 338
   percent: 100
 ---
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 186 — survivorship-rate-granularity
+**Current focus:** Phase 187 — anthracycline-exposure-variables
 
 ## Current Position
 
-Phase: 186
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-10-22
+Phase: 187 (anthracycline-exposure-variables) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 187
+Last activity: 2026-10-22 -- Phase 187 execution started
 
 **Progress:** [██████████] 100%
 
