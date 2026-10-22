@@ -15,7 +15,7 @@
 
 ### RATE — Survivorship Rate Granularity
 
-- [ ] **RATE-01**: Patient-level count and rate per modality at the annual window, read from the verified R/184 output by exact label (no recomputation drift; values read from pinned workbook).
+- [x] **RATE-01**: Patient-level count and rate per modality at the annual window, read from the verified R/184 output by exact label (no recomputation drift; values read from pinned workbook).
 - [x] **RATE-02**: "Biannual" definition resolved via D-186-01 (recorded in CONTEXT.md before any code) and implemented — either every 6 months (reuse R/184 sensitivity tier) or every 2 years (new window).
 - [x] **RATE-03**: Single team-facing table with one row per modality × window (annual / biannual); columns: patients, events, patient-years, rate; KEY sheet leftmost; UF colours (#0021A5 / #FA4616); suppression rules applied.
 

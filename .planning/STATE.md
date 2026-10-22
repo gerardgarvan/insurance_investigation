@@ -4,7 +4,7 @@ milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: verifying
 stopped_at: "Phase 186-01: COMPLETE. HiPerGator run passed. Schema probe 186_schema_20261022.md written."
-last_updated: "2026-10-22T20:24:40.839Z"
+last_updated: "2026-10-22T20:29:21.361Z"
 last_activity: 2026-10-22
 progress:
   total_phases: 176
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 
 ## Current Position
 
-Phase: 186 (survivorship-rate-granularity) — EXECUTING
-Plan: 1 of 1
+Phase: 186
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-10-22
 
