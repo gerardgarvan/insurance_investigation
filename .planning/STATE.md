@@ -108,3 +108,11 @@ source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
 
 **Last command:** Phase 182.1 complete — ZIP→ZCTA crosswalk fallback (HRSA 2022 vintage) added to R/122; 13,652 encounters resolved via zipcodeR_crosswalk, 14 via haversine_gazetteer; 2,647 encounters with missing patient ZIP + placeholder facility ZIP now classified as facility_zip_missing; 107,624 encounters remain zip_not_in_db. Phase 182.1 gained 48 patients (vs 185 in Phase 182); far switches: 50 total. D-09 % shrinkage: 30.4% → 19.7% (no material change, near 25% threshold). Phase 183 target: 614 patients. R/88 ALL 982 CHECKS PASSED (3 skipped); SMOKE-182.1-01 9/9 PASS (fixed [2d] to strip comment lines before is_sentinel_zip5 check; renumbered all labels [x/7]→[x/9]).
 **Stopped at:** Phase 184 Plan 01 complete — awaiting HiPerGator checkpoint
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261022-hg3 | Add caveman lite as the project default | 2026-10-22 | d568ea3 | [261022-hg3-add-caveman-lite-as-the-project-default](./quick/261022-hg3-add-caveman-lite-as-the-project-default/) |
+
+Last activity: 2026-10-22 - Completed quick task 261022-hg3: Add caveman lite as the project default
