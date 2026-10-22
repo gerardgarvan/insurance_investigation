@@ -781,7 +781,8 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
 - [ ] **Phase 185: Phase 184 Close-out and Modality Rates** — R/184 HiPerGator checkpoint; per-modality rates at annual window (CLOSE-01, CLOSE-02, RATE-01)
 - [x] **Phase 186: Survivorship Rate Granularity** — Annual and biannual per-modality table (RATE-02, RATE-03); depends on Phase 185 (completed 2026-10-22)
-- [x] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185 (completed 2026-10-22)
+- [x] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185
+ (completed 2026-10-22)
 - [ ] **Phase 188: Echo Rate Since Anthracycline** — Echo rate per patient-year since last dose; reconciliation vs Phase 166 (ECHO-01, ECHO-02); depends on Phases 186 and 187
 - [ ] **Phase 189: Team Deliverables and Milestone Close-out** — NHL explainer, email draft, R/39 + R/88 registration, to-do table (COMM-01, COMM-02, REG-01, TRACK-01); depends on Phases 185, 186, 187, 188
 
@@ -879,7 +880,13 @@ Plans:
   2. Echoes on or before `last_anthracycline_date` are excluded from the numerator and counted separately in a reconciliation column — no silent exclusion
   3. The workbook KEY explains the anchoring difference between Phase 166 (first administration) and Phase 188 (last administration), with numeric reconciliation showing how many patients and echoes shift between the two anchoring rules
   4. Counts 1–10 appear as "<11"; patient-level data (IDs, dates) is only in `output/internal/`
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 189-01-PLAN.md -- COMM-01: NHL explainer R script (R/189_nhl_explainer.R writes dated .md to output/)
+- [ ] 189-02-PLAN.md -- COMM-02: Amy email draft written to phase folder with [QUESTIONS] placeholder
+- [ ] 189-03-PLAN.md -- REG-01: R/39, SCRIPT_INDEX, R/88 registration for R/186-188; HiPerGator ALL CHECKS PASSED gate
+- [ ] 189-04-PLAN.md -- TRACK-01: v3.12 milestone to-do status table (pre-execution gate on v3.12-milestone-brief.md)
 **UI hint**: no
 
 ### Phase 189: Team Deliverables and Milestone Close-out
