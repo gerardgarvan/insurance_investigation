@@ -32,6 +32,12 @@ message("==== R/187: Anthracycline Exposure Variables -- run_date = ", run_date,
 UF_BLUE   <- "#0021A5"
 UF_ORANGE <- "#FA4616"
 
+pin <- function(var, default) {
+  v <- Sys.getenv(var, unset = "")
+  p <- if (nzchar(v)) v else here::here(default)
+  list(var = var, path = p, pinned = nzchar(v))
+}
+
 pins <- list(
   episode_rds     = pin("R187_EPISODE_RDS",
                         file.path(CONFIG$cache$outputs_dir,
