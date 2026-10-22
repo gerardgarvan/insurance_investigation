@@ -1,0 +1,146 @@
+# Phase 189: Team Deliverables and Milestone Close-out - Context
+
+**Gathered:** 2026-10-22
+**Status:** Ready for planning
+
+<domain>
+## Phase Boundary
+
+Package four team-facing deliverables to close out milestone v3.12:
+
+1. **COMM-01** — Script-generated NHL explainer document
+2. **COMM-02** — Amy email draft with question placeholder
+3. **REG-01** — Register Phase 185–188 scripts in R/39 and R/88
+4. **TRACK-01** — Milestone to-do status table in markdown
+
+No new modeling. The hard milestone gate is R/88 ALL CHECKS PASSED on HiPerGator after registration. COMM-02 remains open until D-189-01 (Amy questions) is supplied by Gerard.
+
+</domain>
+
+<decisions>
+## Implementation Decisions
+
+### COMM-01: NHL Explainer
+
+- **D-01:** Format = short prose paragraph(s) followed by a compact summary table: `subset | N (suppressed per HIPAA) | build logic`. One page.
+- **D-02:** Audience = clinical readers (Amy, Erin, Sharon) as the primary audience — plain clinical language, no R code or pipeline internals in the main body. Analyst footnote citing `gantt_episodes_180.csv` and the Chemo_combos column names (E–J: `Definitely HL`, `Definitely NHL`, `Initial`, `Relapse`, `Notes`, `HL and NHL`) and the tab name ("Chemo and Cancer Dx").
+- **D-03:** Patient counts 1–10 suppressed as `"<11"` per HIPAA; rates/percentages only when both numerator and denominator ≥ 11.
+- **D-04:** Language: measured and non-causal throughout. No "significant", no causal claims.
+- **D-05:** Output written to `output/` with a date stamp; copied unchanged into the phase folder. Never hand-edited after generation.
+- **D-06:** Source facts for the explainer: NHL-only = 849 patients; HL+NHL = 176 patients; 0 overlap (from Phase 168, STATE.md). Input file = `gantt_episodes_180.csv`. Chemo_combos columns E–J contributed by the left-join in Phase 168 at treatment-period grain (patient_id + episode_number); chemo rows only (non-chemo rows get empty E–J values). These facts are used verbatim — do not recompute from data.
+
+### COMM-02: Amy Email Draft
+
+- **D-07:** Email draft written to the phase folder (not `output/`). Never auto-sent.
+- **D-08:** Recipient: Amy (To); Ray, Erin, Sharon (cc).
+- **D-09:** Sign-off: "Best, Gerard".
+- **D-10 (D-189-01 — OPEN):** The questions Gerard wants in the email are not yet supplied. The draft includes a clearly marked placeholder block:
+  ```
+  [QUESTIONS — TO BE SUPPLIED BY GERARD]
+  ```
+  COMM-02 is left as **Open** in TRACK-01 until Gerard fills in the questions and the draft is finalized.
+
+### REG-01: R/39 and R/88 Registration
+
+Scripts to register: `R/186_survivorship_rate_granularity.R`, `R/187_anthracycline_exposure.R`, `R/188_echo_rate_since_anthracycline.R`. (R/185 is a close-out helper, not a standalone analysis script — planner confirms whether it belongs in R/39.)
+
+- **D-11:** Each script is added to `R/39_run_all_investigations.R` and `R/SCRIPT_INDEX.md`.
+- **D-12:** R/88 smoke section requirements for each script:
+  - **(a)** Confirm the script is registered in R/39 and SCRIPT_INDEX.
+  - **(b)** Check output at the **dated path recorded in the phase SUMMARY**, held as a pinned constant in R/88 — never via `list.files()` or `file.mtime()`.
+  - **(c)** Expected sheet names and column names come from that phase's output probe file (`.planning/schemas/<phase>_schema_<date>.md`); KEY must be confirmed as the first sheet.
+  - **(d)** Internal RDS files (`output/internal/`) get structural checks only: column names, types, and row count matching the SUMMARY value. R/88 never prints patient-level values.
+  - **(e)** Runtime checks use `skip_check()` when `IS_LOCAL` (same guard pattern as existing R/88 sections).
+  - **(f)** No script is re-run inside R/88. Checks are read-only structural validation of existing outputs.
+- **D-13:** Milestone close-out is gated on R/88 reporting `ALL CHECKS PASSED` (FAIL == 0) on HiPerGator after Phase 189 registration. This is a hard gate — not optional.
+
+### TRACK-01: To-Do Status Table
+
+- **D-14:** Source = `to-do → milestone map` table in `.planning/v3.12-milestone-brief.md`. This file must exist before Phase 189 executes — **pre-execution gate** (Task 0 checks its existence and stops if absent).
+- **D-15:** One row per to-do map item (items 1–4.3 from the meeting notes), showing: item | status (Done / Closed-with-pointer / Open) | the phase or output that closed it.
+- **D-16:** Additional rows for open decisions still affecting the team: D-186-01 ("biannual" definition, awaiting team confirmation) and D-189-01 (Amy questions, Open until supplied).
+- **D-17:** Scope = v3.12 milestone items only. Pre-v3.12 parked items from STATE.md are excluded — they belong to a future milestone.
+- **D-18:** Format = markdown table written to the Phase 189 milestone folder (`189-TODO-STATUS.md`). Worded for pasting into TeamMtgNotes2026 — plain language, no pipeline internals.
+- **D-19:** TRACK-01 is written by the **executor as a planning document**, not generated by an R script. No R/189 script needed for this deliverable.
+
+### Claude's Discretion
+
+- Whether R/185 (close-out helper) belongs in R/39 — planner checks R/185 source and existing R/39 conventions (grep for close-out helpers) and decides.
+- Exact ordering of new entries in R/39 (append or insert by phase number).
+- Whether R/88 smoke sections for R/186–188 are grouped under a single `## v3.12 New Scripts` header or added to existing topical sections — match whatever R/88 structure is most legible.
+
+</decisions>
+
+<canonical_refs>
+## Canonical References
+
+**Downstream agents MUST read these before planning or implementing.**
+
+### Phase 186 outputs (for R/88 smoke)
+- `.planning/phases/186-survivorship-rate-granularity/186-01-SUMMARY.md` — dated workbook path, exact sheet names, row counts; R/88 pinned constants come from here
+- `.planning/schemas/` — look for `186_schema_<date>.md` for sheet names and column names
+
+### Phase 187 outputs (for R/88 smoke)
+- `.planning/phases/187-anthracycline-exposure-variables/187-01-SUMMARY.md` — dated RDS paths, column names, row counts
+- `.planning/schemas/` — look for `187_schema_<date>.md` and `187out_schema_<date>.md`
+
+### Phase 188 outputs (for R/88 smoke)
+- `.planning/phases/188-echo-rate-since-anthracycline/188-01-SUMMARY.md` — dated workbook and RDS paths, sheet names, row counts
+- `.planning/schemas/` — look for `188_schema_<date>.md`
+
+### NHL explainer source facts
+- `.planning/STATE.md` — NHL-only 849 patients, HL+NHL 176 patients, 0 overlap
+- `.planning/phases/168-nhl-only-and-hl-nhl-gantt-episode-subsets/168-01-PLAN.md` — Chemo_combos join logic, column names E–J, tab name
+
+### Registration targets
+- `R/39_run_all_investigations.R` — add new scripts here
+- `R/SCRIPT_INDEX.md` — add new script entries here
+- `R/88_smoke_test_comprehensive.R` — add structural smoke sections here
+
+### To-do source
+- `.planning/v3.12-milestone-brief.md` — **must exist before execution**; contains to-do → milestone map table (pre-execution gate)
+
+### Requirements
+- `.planning/REQUIREMENTS.md` — COMM-01, COMM-02, REG-01, TRACK-01 acceptance criteria
+
+</canonical_refs>
+
+<code_context>
+## Existing Code Insights
+
+### Reusable Assets
+- `R/88_smoke_test_comprehensive.R` — existing structural check patterns (`skip_check()`, IS_LOCAL guard, pinned-path constants, sheet-name checks); new sections must follow the same pattern
+- `R/39_run_all_investigations.R` — existing registration format; append new scripts in phase-number order
+- `R/SCRIPT_INDEX.md` — existing index format; match heading/entry style
+
+### Established Patterns
+- Dated output filenames pinned as constants in R/88 (not discovered at runtime)
+- `skip_check()` wraps checks that need HiPerGator filesystem access
+- Sheet name checks use `expect_true(sheetName %in% names(wb))` or equivalent
+
+### Integration Points
+- R/88 is a standalone script sourced interactively — new sections add to its existing check count; the final summary line (`n_ok`, `n_fail`) updates automatically
+- R/39 is a sequential source-all script — new entries append
+
+</code_context>
+
+<specifics>
+## Specific Ideas
+
+- TRACK-01 rows are phrased for direct paste into TeamMtgNotes2026 — plain clinical/project language, no R internals.
+- COMM-02 placeholder text exactly: `[QUESTIONS — TO BE SUPPLIED BY GERARD]` — one clearly marked block, easy to find and replace.
+- Analyst footnote in COMM-01 cites: `gantt_episodes_180.csv`, tab "Chemo and Cancer Dx", columns E–J (`Definitely HL`, `Definitely NHL`, `Initial`, `Relapse`, `Notes`, `HL and NHL`).
+
+</specifics>
+
+<deferred>
+## Deferred Ideas
+
+None — discussion stayed within phase scope.
+
+</deferred>
+
+---
+
+*Phase: 189-team-deliverables-and-milestone-closeout*
+*Context gathered: 2026-10-22*
