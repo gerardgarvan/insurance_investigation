@@ -21,7 +21,7 @@ decisions:
 metrics:
   duration: "~45 min"
   completed_date: "2026-10-22"
-  tasks_completed: 4
+  tasks_completed: 5
   tasks_total: 5
   files_created: 1
 ---
@@ -32,9 +32,9 @@ metrics:
 
 ## Status
 
-**Tasks 0-4 complete. Task 5 (HiPerGator checkpoint) pending.**
+**ALL 5 TASKS COMPLETE. Run passed on HiPerGator (2026-10-22).**
 
-Script `R/186_survivorship_rate_granularity.R` written and committed (08d4f05). The HiPerGator run (Task 5) is the blocking gate. This SUMMARY will be updated with run output once Task 5 reports "run passed".
+Script `R/186_survivorship_rate_granularity.R` written and committed (08d4f05). HiPerGator run confirmed. One deviation applied during the run (blank-named trailing columns; commit 95aab6a).
 
 ## Section 1: Pin and Input
 
@@ -100,44 +100,48 @@ Team-facing column names in output: `patients`, `patient_years`, `events`, `rate
 **Output path**: `output/survivorship_rate_granularity_<YYYYMMDD>.xlsx`
 **R186_OUTPUT pin**: messaged at end of script for Phase 188.
 
+## Task 5: HiPerGator Run Results (2026-10-22)
+
+**(a) Fixtures:** All four PASSED.
+
+**(b) Output:** `/blue/erin.mobley-hl.bcu/insurance_investigation/output/survivorship_rate_granularity_20261022.xlsx`
+
+**(c) Row counts and nesting:**
+- primary_tbl: 84 rows. Key unique: OK.
+- Nesting check (primary): 27 testable rows; 27 matched (annual = H1+H2). nested=TRUE
+- Primary suppression pass cells changed: events=0, patient_years=0, rate=0
+- secondary_pre: 84 rows. nested_all=TRUE
+- Secondary suppression pass cells changed: events=1, patient_years=0, rate=1
+
+**(d) Annual match check:** `[R/186] annual cells match R/184: 112 identical, 0 added suppression`
+
+**Schema probe:** `.planning/schemas/186_schema_20261022.md` written and copied to Windows repo.
+
+**Visual check:** KEY is leftmost tab. No rate shown next to a suppressed cell (secondary had 1 event cell suppressed; corresponding rate also suppressed — Rule 1 fired correctly on second pass).
+
+**RATE-02 satisfied:** biannual = every 6 months (D-186-01); 84 rows in Primary = 28 annual + 56 biannual (14 modalities x 2 far x 2 halves).
+**RATE-03 satisfied:** single team table with team-facing columns, KEY sheet leftmost, UF colours, complementary suppression applied.
+
 ## Deviations from Plan
 
-None — plan executed exactly as written. All four fixtures implemented and will pass in-code (verified by logic review; HiPerGator run required for data-dependent assertions).
+### Auto-fixed Issues
 
-## Task 5 (HiPerGator run) — Pending
-
-**How to run:**
-```r
-module load R/4.5
-R --no-save
-source("R/00_config.R")
-source("R/186_survivorship_rate_granularity.R", local = new.env(parent = globalenv()))
-```
-
-**Expected console output to paste back:**
-- (a) Four fixture checks passing (no stopifnot error)
-- (b) `[R/186] wrote output/survivorship_rate_granularity_<date>.xlsx`
-- (c) Primary/secondary row counts, nesting check results, cells-changed counts
-- (d) `[R/186] annual cells match R/184: <n> identical, <k> added suppression`
-
-Then probe the output workbook:
-```r
-probe_inputs("186", files = c("output/survivorship_rate_granularity_<date>.xlsx"))
-```
-Copy `.planning/schemas/186_schema_<YYYYMMDD>.md` to the Windows repo unedited.
+**1. [Rule 3 - Bug] Trailing blank-named columns from xlsx caused dplyr error**
+- **Found during:** Task 5 (HiPerGator run)
+- **Issue:** `openxlsx::read.xlsx(..., colNames=FALSE)` on the Rates sheet produced trailing columns with blank names (e.g., `X9`, `X10`) when the column-name row had fewer non-blank entries than the raw sheet width. After `names(data_rows) <- col_names`, the blank entries became empty strings, causing a dplyr error on `dplyr::across(dplyr::everything(), as.character)` or downstream column selection.
+- **Fix:** Added a drop of blank-named columns after name assignment in `read_rates_block`: `data_rows <- data_rows[, nzchar(trimws(names(data_rows))), drop=FALSE]`
+- **Files modified:** R/186_survivorship_rate_granularity.R
+- **Commit:** 95aab6a
 
 ## Known Stubs
 
 None — no hardcoded empty values or placeholder data in the output path. All values read at run time from the pinned workbook.
 
-## Self-Check
-
-Script file exists: `R/186_survivorship_rate_granularity.R` (722 lines, created).
-Commit 08d4f05: `feat(186-01): implement R/186 survivorship rate granularity script`.
-
 ## Self-Check: PASSED
 
 - R/186_survivorship_rate_granularity.R created (722 lines, > 150 minimum)
-- Commit 08d4f05 present
-- All Tasks 0-4 acceptance criteria grep checks pass
-- Task 5 (HiPerGator checkpoint) pending — SUMMARY will be updated after run
+- Commit 08d4f05: Tasks 0-4 script
+- Commit 95aab6a: Rule 3 blank-column bug fix (applied on HiPerGator during Task 5 run)
+- HiPerGator run: all fixtures PASSED, 0 mismatches in annual match check, output written
+- Schema probe: .planning/schemas/186_schema_20261022.md present
+- Visual check: KEY leftmost, no rate shown next to suppressed count
