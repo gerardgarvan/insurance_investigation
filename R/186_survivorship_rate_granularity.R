@@ -104,8 +104,11 @@ read_rates_block <- function(path, section_header) {
   # Drop rows where col-1 is NA or blank (blank gap rows that survived read.xlsx)
   keep <- !is.na(data_rows[[1]]) & nzchar(trimws(as.character(data_rows[[1]])))
   data_rows <- data_rows[keep, , drop = FALSE]
-  # Assign column names
+  # Assign column names; drop trailing empty columns from xlsx
   names(data_rows) <- col_names
+  keep_cols <- nzchar(col_names) & !is.na(col_names)
+  data_rows  <- data_rows[, keep_cols, drop = FALSE]
+  col_names  <- col_names[keep_cols]
   # Convert all columns to character -- carry suppressed "<11" verbatim, no coercion
   data_rows <- dplyr::mutate(data_rows,
                              dplyr::across(dplyr::everything(), as.character))
