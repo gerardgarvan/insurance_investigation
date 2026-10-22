@@ -102,6 +102,7 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] FIX-02: R/122 workbook KEY note added — temporal ZIP match fills 0 encounters (patient_zip_missing patients are UNREACHABLE_NO_ZIP9 or absent from R/121) — v3.10 Phase 178
 - [x] MISS-01/02/03: R/180_cbc_missing_capture.R breakdowns missing-exposure patients into 6 reason groups; bounding ORs (far=1: 0.776, far=0: 0.872) both same side as primary 0.845 → limitation row added to R/179 KEY — v3.10 Phase 180
 - [x] MISS-04: CBC capture check — OR moves toward 1 (37.4% shrinkage, ≥25% threshold) when restricted to patient-years with ≥1 in-system non-CBC lab → consistent with out-of-system care; reported to Amy/Erin with D-165-01 — v3.10 Phase 180
+- [x] RATE-01/02/03: Annual and biannual (6-month) survivorship rates per modality stacked into one team-facing table (one row per modality × far × window × half); annual values carried verbatim from R/184 (112 cells, 0 drift); complementary suppression applied (Secondary: 1 event/rate cell changed); KEY leftmost; UF colours — v3.3 Phase 186
 
 ## Carry-Forward Backlog
 
