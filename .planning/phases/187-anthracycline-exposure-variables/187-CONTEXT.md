@@ -1,7 +1,7 @@
 # Phase 187: Anthracycline Exposure Variables - Context
 
 **Gathered:** 2026-10-22
-**Status:** Awaiting schema probe — planning starts after probe file is confirmed
+**Status:** Schema probe confirmed — ready for planning
 
 <domain>
 ## Phase Boundary
@@ -17,17 +17,17 @@ Produce three patient-grain variables (`any_anthracycline`, `last_anthracycline_
 
 - **D-01:** Drug source = 180-day treatment episode detail RDS — the same pinned object R/167 reads. One row per ID × drug × admin_date after `DRUG_NAME_ALIASES` collapse. Phase 124 already folded MED_ADMIN and DISPENSING into this pipeline; probing them separately would risk double-counting.
 - **D-02:** The schema probe (`probe_inputs()` on the 180-day episode detail RDS) runs on HiPerGator **before planning begins**. The user copies `.planning/schemas/187_schema_<date>.md` to the repo unedited and confirms drug labels and `admin_date` min/max. Task 0 of the Phase 187 plan **cites that existing probe file** — it does not re-run the probe.
-- **D-03:** Task 0 must confirm two things from the probe: (a) which of {Doxorubicin, Daunorubicin, Epirubicin, Idarubicin} appear after alias collapse — any absent from the data are recorded as absent in KEY, not hunted in raw tables; (b) whether `admin_date` has any window filter (e.g., anchor-relative cutoff) — if it does, flag it and decide before writing drug-reading code.
-- **D-04:** Drug set (ROADMAP D-187-02): Doxorubicin (liposomal collapsed via `DRUG_NAME_ALIASES`, Phase 164), Daunorubicin, Epirubicin, Idarubicin. Mitoxantrone explicitly excluded. Any drug in the file that is not in this set is ignored. The set is held as one named constant (`ANTHRACYCLINE_DRUGS`) with labels spelled exactly as the probe records them, and passed explicitly to `last_anthracycline_dose()` — never rely on a drug list defaulted inside the helper (Phase 166 had a mitoxantrone sensitivity, so a default could differ).
+- **D-03:** Probe confirmed (2026-10-22): (a) only **Doxorubicin** appears after alias collapse (24,404 rows); Daunorubicin, Epirubicin, and Idarubicin have zero rows in this extract — record all three as absent in KEY, do not hunt in raw tables; (b) `treatment_date` range = 2012-01-01 to 2025-03-27, no window filter. Date column is `treatment_date` (not `admin_date`). Patient ID column is `patient_id` (not `ID`). `first_line` column is absent (D-08a confirmed).
+- **D-04:** Drug set constant `ANTHRACYCLINE_DRUGS <- c("Doxorubicin", "Daunorubicin", "Epirubicin", "Idarubicin")` — define the full four-drug set; only Doxorubicin will match in practice. Mitoxantrone excluded. Pass `ANTHRACYCLINE_DRUGS` explicitly to `last_anthracycline_dose()` — never rely on a default inside the helper.
 - **D-04a:** Cohort (row set). The output has one row per patient in the same follow-up table R/184 uses (the source of `follow_end`, D-11), so Phase 188 joins on an identical patient set. Patients in the episode file but not in that table are dropped and counted on KEY. The planner states the row count of that table from its probe or pin before writing code.
-- **D-04b:** `any_chemo` counts chemotherapy rows only. If the probe shows the episode detail file also carries non-chemo treatment rows (radiation, SCT, supportive care), `any_chemo` is restricted to the chemo class using the column and labels the probe shows; if every row is chemo, no filter is needed. Record which applied on KEY.
+- **D-04b:** `any_chemo` filter = `treatment_type == "Chemotherapy"` (183,835 rows in file; probe confirmed 5 treatment_type levels: Chemotherapy, Radiation, Immunotherapy, SCT, Proton Therapy). Record filter on KEY.
 
 ### D-187-02: Patient-Grain Output Columns
 
 - **D-05:** R/187 writes one patient-grain RDS to `output/internal/` with these columns per cohort patient:
   - `any_chemo` — TRUE if patient has any row in the 180-day episode detail RDS (any drug), FALSE if absent
   - `any_anthracycline` — TRUE if patient has a row for an included anthracycline drug, FALSE otherwise. **Never NA.**
-  - `last_anthracycline_date` — max admin_date across all episodes for included drugs; NA when `any_anthracycline == FALSE`
+  - `last_anthracycline_date` — max `treatment_date` across all episodes for included drugs; NA when `any_anthracycline == FALSE`
   - `years_since_last_anthracycline` — last dose → `follow_end` (Phase 161 definition); NA when `any_anthracycline == FALSE`; NA (not negative) when last dose is after `follow_end` (flag count on KEY)
   - `follow_end` — carried from `compute_followup()` output or its pinned RDS; do not reimplement the min() logic
   - `drugs_received` — one character string: included anthracycline drug names received, sorted alphabetically, joined with "; " (NA when `any_anthracycline == FALSE`). Not a list-column, so probes and CSV exports stay flat.
@@ -65,8 +65,11 @@ Produce three patient-grain variables (`any_anthracycline`, `last_anthracycline_
 
 **Downstream agents MUST read these before planning or implementing.**
 
-### Schema Probe (run before planning — not yet written)
-- `.planning/schemas/187_schema_<date>.md` — Column names, drug name labels, and admin_date range from the 180-day episode detail RDS. **Task 0 of every Phase 187 plan must cite this file.** Does not exist until the user runs the probe on HiPerGator and copies it.
+### Schema Probe (confirmed 2026-10-22)
+- `.planning/schemas/187_schema_20261022.md` — Column names and types from the 180-day episode detail RDS. **Task 0 of every Phase 187 plan must cite this file.**
+  - Key columns: `patient_id` (character), `treatment_type` (character), `treatment_date` (Date, range 2012-01-01 to 2025-03-27), `drug_name` (character, NA=150,317 rows — non-chemo rows have no drug name)
+  - No `first_line` column (D-08a confirmed)
+  - Anthracyclines present after alias collapse: **Doxorubicin only** (24,404 rows). Daunorubicin, Epirubicin, Idarubicin: zero rows.
 
 ### Drug-Name Normalization
 - `R/00_config.R` lines 2749+ — `DRUG_NAME_ALIASES` lookup (Doxorubicin canonical collapse, Phase 164 D-1/D-3)
