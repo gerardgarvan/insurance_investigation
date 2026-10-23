@@ -6951,6 +6951,374 @@ p1821_chk(
 message(glue("\nSMOKE-182.1-01: {p1821_pass} PASS / {p1821_fail} FAIL / {p1821_skip} SKIP"))
 
 # ==============================================================================
+# SECTION 15av: PHASE 184 MODALITY RATE MODEL (SMOKE-184-01) ----
+# Handed to Phase 189 from 185-01-SUMMARY (R/88 section was missing at Phase 185 run)
+# ==============================================================================
+
+message("\n[SMOKE-184-01] Phase 184 modality rate model...")
+
+p184_pass <- 0L; p184_fail <- 0L; p184_skip <- 0L
+p184_chk <- function(label, condition) {
+  if (condition) { message("  PASS: ", label); p184_pass <<- p184_pass + 1L; passed <<- passed + 1L }
+  else           { message("  FAIL: ", label); p184_fail <<- p184_fail + 1L; failed <<- failed + 1L }
+}
+
+# Pinned constants (from 185-01-SUMMARY.md Section 10 — dated HiPerGator run 2026-10-22)
+R184_OUTPUT_SMOKE  <- "output/modality_rate_model_20261022.xlsx"
+R184_SCRIPT_PATH   <- "R/184_modality_rate_model.R"
+R184_SHEETS_EXPECTED <- c("KEY", "Rates", "Model_Results", "Interaction", "Diagnostics", "QC")
+
+# [a] Script file exists
+p184_chk("SMOKE-184-01 [a] R/184 script exists", file.exists(R184_SCRIPT_PATH))
+
+# [b] Script registered in R/39
+r39_src_184 <- if (file.exists("R/39_run_all_investigations.R")) readLines("R/39_run_all_investigations.R") else character(0)
+p184_chk("SMOKE-184-01 [b] R/184 registered in R/39",
+  any(grepl('^\\s*"R/184_modality_rate_model\\.R"', r39_src_184)))
+
+# [c] Script in SCRIPT_INDEX
+sidx_src_184 <- if (file.exists("R/SCRIPT_INDEX.md")) readLines("R/SCRIPT_INDEX.md") else character(0)
+p184_chk("SMOKE-184-01 [c] R/184 in SCRIPT_INDEX.md",
+  any(grepl("^\\|\\s*`R/184_modality_rate_model\\.R`", sidx_src_184)))
+
+# [d] Output workbook exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-184-01 [d] R/184 output workbook exists", "IS_LOCAL")
+  p184_skip <- p184_skip + 1L
+} else {
+  p184_chk("SMOKE-184-01 [d] R/184 output workbook exists", file.exists(R184_OUTPUT_SMOKE))
+}
+
+# [e] KEY is first sheet (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-184-01 [e] R/184 KEY is first sheet", "IS_LOCAL")
+  p184_skip <- p184_skip + 1L
+} else if (file.exists(R184_OUTPUT_SMOKE)) {
+  wb184_names <- tryCatch(openxlsx::getSheetNames(R184_OUTPUT_SMOKE), error = function(e) character(0))
+  p184_chk("SMOKE-184-01 [e] R/184 KEY is first sheet",
+    length(wb184_names) >= 1 && wb184_names[1] == "KEY")
+} else {
+  p184_chk("SMOKE-184-01 [e] R/184 KEY is first sheet (output file absent)", FALSE)
+}
+
+# [f] All six expected sheets present (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-184-01 [f] R/184 all six sheets present", "IS_LOCAL")
+  p184_skip <- p184_skip + 1L
+} else if (file.exists(R184_OUTPUT_SMOKE)) {
+  wb184_names2 <- tryCatch(openxlsx::getSheetNames(R184_OUTPUT_SMOKE), error = function(e) character(0))
+  p184_chk("SMOKE-184-01 [f] R/184 all six sheets present",
+    all(R184_SHEETS_EXPECTED %in% wb184_names2))
+} else {
+  p184_chk("SMOKE-184-01 [f] R/184 all six sheets present (output file absent)", FALSE)
+}
+
+message(glue("\nSMOKE-184-01: {p184_pass} PASS / {p184_fail} FAIL / {p184_skip} SKIP"))
+
+# ==============================================================================
+# SECTION 15aw: PHASE 186 SURVIVORSHIP RATE GRANULARITY (SMOKE-186-01) ----
+# ==============================================================================
+
+message("\n[SMOKE-186-01] Phase 186 survivorship rate granularity...")
+
+p186_pass <- 0L; p186_fail <- 0L; p186_skip <- 0L
+p186_chk <- function(label, condition) {
+  if (condition) { message("  PASS: ", label); p186_pass <<- p186_pass + 1L; passed <<- passed + 1L }
+  else           { message("  FAIL: ", label); p186_fail <<- p186_fail + 1L; failed <<- failed + 1L }
+}
+
+# Pinned constants (from 186-01-SUMMARY.md — dated HiPerGator run 2026-10-22)
+R186_OUTPUT_SMOKE  <- "output/survivorship_rate_granularity_20261022.xlsx"
+R186_SCRIPT_PATH   <- "R/186_survivorship_rate_granularity.R"
+R186_SHEETS_EXPECTED <- c("KEY", "Primary", "Secondary")
+
+# [a] Script file exists
+p186_chk("SMOKE-186-01 [a] R/186 script exists", file.exists(R186_SCRIPT_PATH))
+
+# [b] Script registered in R/39
+r39_src_186 <- if (file.exists("R/39_run_all_investigations.R")) readLines("R/39_run_all_investigations.R") else character(0)
+p186_chk("SMOKE-186-01 [b] R/186 registered in R/39",
+  any(grepl('^\\s*"R/186_survivorship_rate_granularity\\.R"', r39_src_186)))
+
+# [c] Script registered in SCRIPT_INDEX
+sidx_src_186 <- if (file.exists("R/SCRIPT_INDEX.md")) readLines("R/SCRIPT_INDEX.md") else character(0)
+p186_chk("SMOKE-186-01 [c] R/186 in SCRIPT_INDEX.md",
+  any(grepl("^\\|\\s*`R/186_survivorship_rate_granularity\\.R`", sidx_src_186)))
+
+# [d] Output workbook exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-186-01 [d] R/186 output workbook exists", "IS_LOCAL")
+  p186_skip <- p186_skip + 1L
+} else {
+  p186_chk("SMOKE-186-01 [d] R/186 output workbook exists", file.exists(R186_OUTPUT_SMOKE))
+}
+
+# [e] KEY is first sheet (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-186-01 [e] R/186 KEY is first sheet", "IS_LOCAL")
+  p186_skip <- p186_skip + 1L
+} else if (file.exists(R186_OUTPUT_SMOKE)) {
+  wb186_names <- tryCatch(openxlsx::getSheetNames(R186_OUTPUT_SMOKE), error = function(e) character(0))
+  p186_chk("SMOKE-186-01 [e] R/186 KEY is first sheet",
+    length(wb186_names) >= 1 && wb186_names[1] == "KEY")
+} else {
+  p186_chk("SMOKE-186-01 [e] R/186 KEY is first sheet (output file absent)", FALSE)
+}
+
+# [f] Primary and Secondary sheets present (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-186-01 [f] R/186 Primary and Secondary sheets present", "IS_LOCAL")
+  p186_skip <- p186_skip + 1L
+} else if (file.exists(R186_OUTPUT_SMOKE)) {
+  wb186_names2 <- tryCatch(openxlsx::getSheetNames(R186_OUTPUT_SMOKE), error = function(e) character(0))
+  p186_chk("SMOKE-186-01 [f] R/186 Primary and Secondary sheets present",
+    all(c("Primary", "Secondary") %in% wb186_names2))
+} else {
+  p186_chk("SMOKE-186-01 [f] R/186 Primary and Secondary sheets present (output file absent)", FALSE)
+}
+
+# [g] Primary sheet header row carries the team-facing columns (names from 186-01-SUMMARY)
+R186_PRIMARY_COLS <- c("modality", "far", "window", "half", "patients", "patient_years", "events", "rate", "rate_unit")
+if (IS_LOCAL) {
+  skip_check("SMOKE-186-01 [g] R/186 Primary columns", "IS_LOCAL")
+  p186_skip <- p186_skip + 1L
+} else if (file.exists(R186_OUTPUT_SMOKE)) {
+  hdr186 <- tryCatch(openxlsx::read.xlsx(R186_OUTPUT_SMOKE, sheet = "Primary", colNames = FALSE, rows = 1:3),
+                     error = function(e) NULL)
+  p186_chk("SMOKE-186-01 [g] R/186 Primary columns present",
+    !is.null(hdr186) && any(apply(hdr186, 1, function(r) all(R186_PRIMARY_COLS %in% r))))
+} else {
+  p186_chk("SMOKE-186-01 [g] R/186 Primary columns (output file absent)", FALSE)
+}
+
+message(glue("\nSMOKE-186-01: {p186_pass} PASS / {p186_fail} FAIL / {p186_skip} SKIP"))
+
+# ==============================================================================
+# SECTION 15ax: PHASE 187 ANTHRACYCLINE EXPOSURE VARIABLES (SMOKE-187-01) ----
+# ==============================================================================
+
+message("\n[SMOKE-187-01] Phase 187 anthracycline exposure variables...")
+
+p187_pass <- 0L; p187_fail <- 0L; p187_skip <- 0L
+p187_chk <- function(label, condition) {
+  if (condition) { message("  PASS: ", label); p187_pass <<- p187_pass + 1L; passed <<- passed + 1L }
+  else           { message("  FAIL: ", label); p187_fail <<- p187_fail + 1L; failed <<- failed + 1L }
+}
+
+# Pinned constants (from 187-01-SUMMARY.md — dated HiPerGator run 2026-10-22)
+R187_RDS_SMOKE     <- "output/internal/anthracycline_exposure_patient_20261022.rds"
+R187_XLSX_SMOKE    <- "output/anthracycline_exposure_summary_20261022.xlsx"
+R187_SCRIPT_PATH   <- "R/187_anthracycline_exposure.R"
+R187_COLS_EXPECTED <- c("ID", "any_chemo", "any_anthracycline", "last_anthracycline_date",
+                         "years_since_last_anthracycline", "follow_end", "drugs_received")
+R187_NROW_EXPECTED <- 8925L
+
+# [a] Script file exists
+p187_chk("SMOKE-187-01 [a] R/187 script exists", file.exists(R187_SCRIPT_PATH))
+
+# [b] Script registered in R/39
+r39_src_187 <- if (file.exists("R/39_run_all_investigations.R")) readLines("R/39_run_all_investigations.R") else character(0)
+p187_chk("SMOKE-187-01 [b] R/187 registered in R/39",
+  any(grepl('^\\s*"R/187_anthracycline_exposure\\.R"', r39_src_187)))
+
+# [c] Script in SCRIPT_INDEX
+sidx_src_187 <- if (file.exists("R/SCRIPT_INDEX.md")) readLines("R/SCRIPT_INDEX.md") else character(0)
+p187_chk("SMOKE-187-01 [c] R/187 in SCRIPT_INDEX.md",
+  any(grepl("^\\|\\s*`R/187_anthracycline_exposure\\.R`", sidx_src_187)))
+
+# [d] Patient-grain RDS exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-187-01 [d] R/187 patient RDS exists", "IS_LOCAL")
+  p187_skip <- p187_skip + 1L
+} else {
+  p187_chk("SMOKE-187-01 [d] R/187 patient RDS exists", file.exists(R187_RDS_SMOKE))
+}
+
+# [e] RDS has expected columns and row count (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-187-01 [e] R/187 RDS columns and row count", "IS_LOCAL")
+  p187_skip <- p187_skip + 1L
+} else if (file.exists(R187_RDS_SMOKE)) {
+  rds187 <- tryCatch(readRDS(R187_RDS_SMOKE), error = function(e) NULL)
+  if (!is.null(rds187)) {
+    missing_cols_187 <- setdiff(R187_COLS_EXPECTED, names(rds187))
+    missing_txt_187 <- if (length(missing_cols_187) == 0) "none" else paste(missing_cols_187, collapse = ", ")
+    p187_chk(glue::glue("SMOKE-187-01 [ea] R/187 RDS has all 7 expected columns (missing: {missing_txt_187})"),
+      length(missing_cols_187) == 0)
+    p187_chk(glue::glue("SMOKE-187-01 [eb] R/187 RDS row count = {R187_NROW_EXPECTED} (found {nrow(rds187)})"),
+      nrow(rds187) == R187_NROW_EXPECTED)
+  } else {
+    p187_chk("SMOKE-187-01 [e] R/187 RDS columns and row count (RDS load failed)", FALSE)
+  }
+} else {
+  p187_chk("SMOKE-187-01 [e] R/187 RDS columns and row count (RDS file absent)", FALSE)
+}
+
+# [f] Aggregate workbook exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-187-01 [f] R/187 aggregate workbook exists", "IS_LOCAL")
+  p187_skip <- p187_skip + 1L
+} else {
+  p187_chk("SMOKE-187-01 [f] R/187 aggregate workbook exists", file.exists(R187_XLSX_SMOKE))
+}
+
+# [g] KEY is first sheet of aggregate workbook (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-187-01 [g] R/187 KEY is first sheet of workbook", "IS_LOCAL")
+  p187_skip <- p187_skip + 1L
+} else if (file.exists(R187_XLSX_SMOKE)) {
+  wb187_names <- tryCatch(openxlsx::getSheetNames(R187_XLSX_SMOKE), error = function(e) character(0))
+  p187_chk("SMOKE-187-01 [g] R/187 KEY is first sheet of workbook",
+    length(wb187_names) >= 1 && wb187_names[1] == "KEY")
+} else {
+  p187_chk("SMOKE-187-01 [g] R/187 KEY is first sheet of workbook (workbook absent)", FALSE)
+}
+
+message(glue("\nSMOKE-187-01: {p187_pass} PASS / {p187_fail} FAIL / {p187_skip} SKIP"))
+
+# ==============================================================================
+# SECTION 15ay: PHASE 188 ECHO RATE SINCE ANTHRACYCLINE (SMOKE-188-01) ----
+# ==============================================================================
+
+message("\n[SMOKE-188-01] Phase 188 echo rate since anthracycline...")
+
+p188_pass <- 0L; p188_fail <- 0L; p188_skip <- 0L
+p188_chk <- function(label, condition) {
+  if (condition) { message("  PASS: ", label); p188_pass <<- p188_pass + 1L; passed <<- passed + 1L }
+  else           { message("  FAIL: ", label); p188_fail <<- p188_fail + 1L; failed <<- failed + 1L }
+}
+
+# Pinned constants (from 188-01-SUMMARY.md — dated HiPerGator run 2026-10-22)
+R188_OUTPUT_SMOKE  <- "output/20261022_188_echo_rate_anthracycline.xlsx"
+R188_ENC_RDS_SMOKE <- "output/internal/echo_enc_anthracycline_20261022.rds"
+R188_PAT_RDS_SMOKE <- "output/internal/echo_rate_anthracycline_patient_20261022.rds"
+R188_SCRIPT_PATH   <- "R/188_echo_rate_since_anthracycline.R"
+R188_SHEETS_EXPECTED <- c("KEY", "Rates", "Anchor Comparison", "QC")
+R188_ENC_COLS <- c("ID", "echo_date", "days_since_last_anthracycline_dose", "window_label")
+R188_PAT_COLS <- c("ID", "n_echoes_post", "person_years", "rate_per_py", "n_echoes_before_or_on_last_dose",
+                   "n_echoes_after_follow_end", "n_echoes_unclassifiable", "in_rate_population")
+R188_ENC_NROW <- 4316L   # from 188-01-SUMMARY.md: Encounter-grain RDS 4,316 rows
+R188_PAT_NROW <- 2379L   # from 188-01-SUMMARY.md: Patient-grain RDS 2,379 rows
+
+# [a] Script file exists
+p188_chk("SMOKE-188-01 [a] R/188 script exists", file.exists(R188_SCRIPT_PATH))
+
+# [b] Script registered in R/39
+r39_src_188 <- if (file.exists("R/39_run_all_investigations.R")) readLines("R/39_run_all_investigations.R") else character(0)
+p188_chk("SMOKE-188-01 [b] R/188 registered in R/39",
+  any(grepl('^\\s*"R/188_echo_rate_since_anthracycline\\.R"', r39_src_188)))
+
+# [c] Script in SCRIPT_INDEX
+sidx_src_188 <- if (file.exists("R/SCRIPT_INDEX.md")) readLines("R/SCRIPT_INDEX.md") else character(0)
+p188_chk("SMOKE-188-01 [c] R/188 in SCRIPT_INDEX.md",
+  any(grepl("^\\|\\s*`R/188_echo_rate_since_anthracycline\\.R`", sidx_src_188)))
+
+# [d] Output workbook exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-188-01 [d] R/188 output workbook exists", "IS_LOCAL")
+  p188_skip <- p188_skip + 1L
+} else {
+  p188_chk("SMOKE-188-01 [d] R/188 output workbook exists", file.exists(R188_OUTPUT_SMOKE))
+}
+
+# [e] Sheet order: KEY, Rates, Anchor Comparison, QC (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-188-01 [e] R/188 sheet order KEY/Rates/Anchor Comparison/QC", "IS_LOCAL")
+  p188_skip <- p188_skip + 1L
+} else if (file.exists(R188_OUTPUT_SMOKE)) {
+  wb188_names <- tryCatch(openxlsx::getSheetNames(R188_OUTPUT_SMOKE), error = function(e) character(0))
+  p188_chk("SMOKE-188-01 [ea] R/188 KEY is first sheet", length(wb188_names) >= 1 && wb188_names[1] == "KEY")
+  p188_chk("SMOKE-188-01 [eb] R/188 all four sheets present",
+    all(R188_SHEETS_EXPECTED %in% wb188_names))
+} else {
+  p188_chk("SMOKE-188-01 [ea] R/188 KEY is first sheet (output file absent)", FALSE)
+  p188_chk("SMOKE-188-01 [eb] R/188 all four sheets present (output file absent)", FALSE)
+}
+
+# [f] Encounter-grain RDS exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-188-01 [f] R/188 encounter-grain RDS exists", "IS_LOCAL")
+  p188_skip <- p188_skip + 1L
+} else {
+  p188_chk("SMOKE-188-01 [f] R/188 encounter-grain RDS exists", file.exists(R188_ENC_RDS_SMOKE))
+}
+
+# [g] Patient-grain RDS exists (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-188-01 [g] R/188 patient-grain RDS exists", "IS_LOCAL")
+  p188_skip <- p188_skip + 1L
+} else {
+  p188_chk("SMOKE-188-01 [g] R/188 patient-grain RDS exists", file.exists(R188_PAT_RDS_SMOKE))
+}
+
+# [h] Internal RDS structure: column names and row counts (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-188-01 [h] R/188 internal RDS structure", "IS_LOCAL")
+  p188_skip <- p188_skip + 1L
+} else if (file.exists(R188_ENC_RDS_SMOKE) && file.exists(R188_PAT_RDS_SMOKE)) {
+  enc188 <- tryCatch(readRDS(R188_ENC_RDS_SMOKE), error = function(e) NULL)
+  pat188 <- tryCatch(readRDS(R188_PAT_RDS_SMOKE), error = function(e) NULL)
+  p188_chk(glue::glue("SMOKE-188-01 [ha] R/188 encounter RDS columns and rows (expected {R188_ENC_NROW})"),
+    !is.null(enc188) && setequal(names(enc188), R188_ENC_COLS) && nrow(enc188) == R188_ENC_NROW)
+  p188_chk(glue::glue("SMOKE-188-01 [hb] R/188 patient RDS columns and rows (expected {R188_PAT_NROW})"),
+    !is.null(pat188) && setequal(names(pat188), R188_PAT_COLS) && nrow(pat188) == R188_PAT_NROW)
+  if (!is.null(enc188) && !is.null(pat188)) {
+    p188_chk("SMOKE-188-01 [hc] R/188 patient RDS one row per ID", !anyDuplicated(pat188$ID))
+    p188_chk("SMOKE-188-01 [hd] R/188 window labels are the four permitted values",
+      all(enc188$window_label %in% c("on_or_before_last_dose", "after_last_dose", "after_follow_end", "unclassifiable")))
+    p188_chk("SMOKE-188-01 [he] R/188 window counts sum to encounter rows",
+      sum(pat188$n_echoes_post, pat188$n_echoes_before_or_on_last_dose,
+          pat188$n_echoes_after_follow_end, pat188$n_echoes_unclassifiable) == nrow(enc188))
+    p188_chk("SMOKE-188-01 [hf] R/188 rate eligibility consistent with person-years",
+      all(!pat188$in_rate_population | (!is.na(pat188$person_years) & pat188$person_years > 0)))
+  } else {
+    p188_chk("SMOKE-188-01 [hc-f] R/188 integrity checks (RDS load failed)", FALSE)
+  }
+} else {
+  p188_chk("SMOKE-188-01 [h] R/188 internal RDS structure (RDS file absent)", FALSE)
+}
+
+message(glue("\nSMOKE-188-01: {p188_pass} PASS / {p188_fail} FAIL / {p188_skip} SKIP"))
+
+# ==============================================================================
+# SECTION 15az: PHASE 189 NHL EXPLAINER (SMOKE-189-01) ----
+# ==============================================================================
+
+message("\n[SMOKE-189-01] Phase 189 NHL explainer...")
+
+p189_pass <- 0L; p189_fail <- 0L; p189_skip <- 0L
+p189_chk <- function(label, condition) {
+  if (condition) { message("  PASS: ", label); p189_pass <<- p189_pass + 1L; passed <<- passed + 1L }
+  else           { message("  FAIL: ", label); p189_fail <<- p189_fail + 1L; failed <<- failed + 1L }
+}
+
+# Pinned constants (from 189-01-SUMMARY.md — dated HiPerGator run 2026-10-23)
+R189_SCRIPT_PATH   <- "R/189_nhl_explainer.R"
+R189_EXPLAINER_OUT <- "output/189-NHL-EXPLAINER-20261023.md"
+
+# [a] Script file exists
+p189_chk("SMOKE-189-01 [a] R/189 script exists", file.exists(R189_SCRIPT_PATH))
+
+# [b] Script in SCRIPT_INDEX (R/189 is NOT in R/39 — document generator only)
+sidx_src_189 <- if (file.exists("R/SCRIPT_INDEX.md")) readLines("R/SCRIPT_INDEX.md") else character(0)
+p189_chk("SMOKE-189-01 [b] R/189 in SCRIPT_INDEX.md",
+  any(grepl("^\\|\\s*`R/189_nhl_explainer\\.R`", sidx_src_189)))
+
+# [c] Explainer document exists with required analyst footnote citations (HiPerGator only)
+if (IS_LOCAL) {
+  skip_check("SMOKE-189-01 [c] explainer exists with analyst footnote", "IS_LOCAL")
+  p189_skip <- p189_skip + 1L
+} else if (file.exists(R189_EXPLAINER_OUT)) {
+  txt189 <- readLines(R189_EXPLAINER_OUT, warn = FALSE)
+  p189_chk("SMOKE-189-01 [c] explainer exists with analyst footnote",
+    any(grepl("gantt_episodes_180.csv", txt189, fixed = TRUE)) && any(grepl("Chemo and Cancer Dx", txt189, fixed = TRUE)))
+} else {
+  p189_chk("SMOKE-189-01 [c] explainer exists with analyst footnote (file absent)", FALSE)
+}
+
+message(glue("\nSMOKE-189-01: {p189_pass} PASS / {p189_fail} FAIL / {p189_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -7101,6 +7469,11 @@ message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC assoc
 message("  * SMOKE-163-01: R/88 validates Phase 163 DIAGNOSIS exclusion structural integrity: EXCLUDED_CDM_TABLES defined in R/147, stopifnot referencing it, A_code_presence has no DIAGNOSIS cell or Z-code IDs, Codeset_summary has no Z-code pattern (Section 15as, 4 checks; checks 3-4 skip in local runs without INTERNAL workbook)")
 message("  * SMOKE-182-01: R/88 validates Phase 182 facility ZIP recovery structural integrity: utils_facility_zip.R exists, sourcing defines build_facility_zip_lookup/apply_facility_zip_fill/facility_key_ok, R/122 FACILITYID+SOURCE pull, R/122 sources utils_facility_zip.R, R/122 182_facility_zip_diagnosis reference, R/00_config.R facility_zip_fill, R/180 no hard-coded 0.84, test-utils-facility-zip.R exists (Section 15at, 8 checks)")
 message("  * SMOKE-182.1-01: R/88 validates Phase 182.1 ZIP centroid crosswalk structural integrity: utils_zip_crosswalk.R exists, sourcing defines load_hrsa_crosswalk/map_zip_to_zcta/is_placeholder_facility_zip5, helper does not reference is_sentinel_zip5, R/122 calls load_hrsa_crosswalk/is_placeholder_facility_zip5/distance_method and has distance_status fallback wiring, R/00_config.R has hrsa_zip_zcta_path, R/165 has R165_R122_RDS override, R/utils/build_hrsa_crosswalk.R is absent (Section 15au, 9 checks)")
+message("  * SMOKE-184-01: R/88 validates Phase 184 modality rate model structural integrity (Section 15av, 6 checks; handed off from 185-01-SUMMARY)")
+message("  * SMOKE-186-01: R/88 validates Phase 186 survivorship rate granularity structural integrity (Section 15aw, 7 checks)")
+message("  * SMOKE-187-01: R/88 validates Phase 187 anthracycline exposure variables structural integrity (Section 15ax, 7+ checks)")
+message("  * SMOKE-188-01: R/88 validates Phase 188 echo rate since anthracycline structural integrity (Section 15ay, 13 checks)")
+message("  * SMOKE-189-01: R/88 validates Phase 189 NHL explainer structural integrity (Section 15az, 3 checks)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {
