@@ -37,7 +37,7 @@
 
 ### REG — Pipeline Registration
 
-- [ ] **REG-01**: All new Phase 185–189 scripts registered in `R/39_run_all_investigations.R` and `R/SCRIPT_INDEX.md`; a new SMOKE section in `R/88_smoke_test_comprehensive.R` covering structural checks for each new script; R/88 ALL CHECKS PASSED on HiPerGator after Phase 189.
+- [x] **REG-01**: All new Phase 185–189 scripts registered in `R/39_run_all_investigations.R` and `R/SCRIPT_INDEX.md`; a new SMOKE section in `R/88_smoke_test_comprehensive.R` covering structural checks for each new script; R/88 ALL CHECKS PASSED on HiPerGator after Phase 189.
 
 ### TRACK — Status Tracking
 
