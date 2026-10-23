@@ -784,7 +784,7 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 - [x] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185
  (completed 2026-10-22)
 - [ ] **Phase 188: Echo Rate Since Anthracycline** — Echo rate per patient-year since last dose; reconciliation vs Phase 166 (ECHO-01, ECHO-02); depends on Phases 186 and 187
-- [ ] **Phase 189: Team Deliverables and Milestone Close-out** — NHL explainer, email draft, R/39 + R/88 registration, to-do table (COMM-01, COMM-02, REG-01, TRACK-01); depends on Phases 185, 186, 187, 188
+- [x] **Phase 189: Team Deliverables and Milestone Close-out** — NHL explainer, email draft, R/39 + R/88 registration, to-do table (COMM-01, COMM-02, REG-01, TRACK-01); depends on Phases 185, 186, 187, 188 (completed 2026-10-23)
 
 ## Phase Details (v3.12)
 
@@ -916,4 +916,4 @@ Plans:
 | 186. Survivorship Rate Granularity | v3.12 | 1/1 | Complete    | 2026-10-22 |
 | 187. Anthracycline Exposure Variables | v3.12 | 1/1 | Complete    | 2026-10-22 |
 | 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Not started | — |
-| 189. Team Deliverables and Milestone Close-out | v3.12 | 3/4 | In Progress|  |
+| 189. Team Deliverables and Milestone Close-out | v3.12 | 3/4 | Complete    | 2026-10-23 |
