@@ -32,7 +32,7 @@
 
 ### COMM — Team Deliverables
 
-- [ ] **COMM-01**: Script-generated one-page explainer (written to `output/`, dated, copied unchanged into phase folder): how NHL-only and HL+NHL subsets were built from `gantt_episodes_180.csv`; patient counts (suppressed per HIPAA); what Chemo_combos columns E–J contribute.
+- [x] **COMM-01**: Script-generated one-page explainer (written to `output/`, dated, copied unchanged into phase folder): how NHL-only and HL+NHL subsets were built from `gantt_episodes_180.csv`; patient counts (suppressed per HIPAA); what Chemo_combos columns E–J contribute.
 - [x] **COMM-02**: Email draft ready for Gerard to send to Amy (cc Ray, Erin, Sharon); team questions supplied by Gerard (D-189-01); sign-off "Best, Gerard".
 
 ### REG — Pipeline Registration

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 189-02-PLAN.md
-last_updated: "2026-10-22T23:24:32.379Z"
-last_activity: 2026-10-22
+stopped_at: Completed 189-01-PLAN.md
+last_updated: "2026-10-23T13:57:48.789Z"
+last_activity: 2026-10-23
 progress:
   total_phases: 179
   completed_phases: 157
   total_plans: 339
-  completed_plans: 341
+  completed_plans: 342
   percent: 100
 ---
 
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 ## Current Position
 
 Phase: 189 (team-deliverables-and-milestone-closeout) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
-Last activity: 2026-10-22
+Last activity: 2026-10-23
 
 **Progress:** [██████████] 100%
 
@@ -102,6 +102,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | D-189-01: team questions for Amy email | Gerard | Phase 189 | Open — Gerard supplies before Phase 189 |
 | Phase 187 P01 | 15 | 3 tasks | 4 files |
 | Phase 189 P02 | 5 | 1 tasks | 1 files |
+| Phase 189 P01 | 30 | 2 tasks | 3 files |
 
 ### Parked Items (no phases this milestone)
 
@@ -115,7 +116,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 **Phase 183 close-out (2026-10-15):** MICE sensitivity for distance complete. D-01 (log_dist PMM) and D-02 (far logreg), m=20 each, 614 patients imputed. Pooled primary (years 2+): D-01 OR=0.842 (0.725–0.977) FMI=0.049, D-02 OR=0.834 (0.713–0.976) FMI=0.160 — both within Phase 180 bounds and within 0.01 of each other. loggedEvents: main_sourceUCI dropped (D-01 PMM only, non-mandatory, not a D-09 stop). payer dropped (payer_summary RDS not found, optional per D-07b). R/88: ALL 982 CHECKS PASSED (3 skipped). Outputs: mice_sensitivity_distance_20261015.xlsx, mice_trace_20261015.png, mice_density_20261015.png, 183-MEMO.md.
 
-**Stopped at:** Completed 189-02-PLAN.md
+**Stopped at:** Completed 189-01-PLAN.md
 
 ### Quick Tasks Completed
 
