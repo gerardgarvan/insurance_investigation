@@ -246,7 +246,10 @@ investigation_scripts <- c(
   "R/180_cbc_missing_capture.R",             # Missing-exposure bounding (MISS-01..03) and CBC capture check (MISS-04) for Phase 179; reads pinned cbc_patient_year_20261013.rds; writes cbc_missing_capture_YYYYMMDD.xlsx + internal RDS (Phase 180)
   "R/181_cbc_prior_year.R",                  # Prior-year CBC x far-from-care 2x2 (Phase 181); reads pinned cbc_patient_year_20261013.rds and cbc_missing_capture_20261013.xlsx; writes cbc_prior_year_YYYYMMDD.xlsx + memo (CBCP-01, CBCP-02)
   "R/183_mice_sensitivity_distance.R",        # MICE sensitivity for distance exposure (Phase 183); two runs (D-01 log_dist pmm, D-02 far logreg); Rubin pooling; comparison workbook + memo; MICE-01, MICE-02
-  "R/184_modality_rate_model.R"              # Modality rate model (Phase 184); per-modality Poisson GEE rates + far x modality interaction; MODR-01, MODR-02
+  "R/184_modality_rate_model.R",             # Modality rate model (Phase 184); per-modality Poisson GEE rates + far x modality interaction; MODR-01, MODR-02
+  "R/186_survivorship_rate_granularity.R",   # Survivorship rate granularity (Phase 186); section-header block reader + complementary suppression stacker; annual + biannual rates per patient-year; RATE-02, RATE-03
+  "R/187_anthracycline_exposure.R",          # Anthracycline exposure variables (Phase 187); patient-grain flags (any_anthracycline, last_anthracycline_date, years_since); internal RDS + aggregate workbook; ANTH-01, ANTH-02, ANTH-03
+  "R/188_echo_rate_since_anthracycline.R"    # Echo rate since last anthracycline dose (Phase 188); encounter-grain dedup + window labeling; Anchor Comparison vs Phase 166; ECHO-01, ECHO-02
 )
 
 for (script in investigation_scripts) {
