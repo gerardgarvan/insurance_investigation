@@ -28,6 +28,7 @@
 - ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
 - ✅ **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (shipped 2026-10-17)
 - ✅ **v3.12 Team To-Do Close-out** - Phases 185-189 (shipped 2026-10-27)
+- 🔄 **v3.13 Analytic Manual Fill-out and Verification** - Phases 190-194 (active)
 
 ## Phases
 
@@ -785,3 +786,87 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 </details>
+
+---
+
+## v3.13 Analytic Manual Fill-out and Verification (Active)
+
+**Milestone Goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo. Every existing statement is checked against code and given a verdict. Every empty section the repo can answer is drafted from code, config, planning decisions, and team meeting notes. The result is a tracked-change new version of the manual and an evidence workbook tying each statement to its code source.
+
+## Phases (v3.13)
+
+- [ ] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status
+- [ ] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches
+- [ ] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8
+- [ ] **Phase 193: Produce Updated Manual** — Tracked-change .docx + finalized evidence workbook
+- [ ] **Phase 194: Team Review Package and Close-out** — Cover email, decision log, SCRIPT_INDEX; R/88 only if script is pipeline-registered
+
+## Phase Details (v3.13)
+
+### Phase 190: Evidence Map
+**Goal**: Every item in the analytic manual has a documented status and a repo source reference so Phase 191 knows exactly where to start checking
+**Depends on**: Nothing (first v3.13 phase; manual inputs must be copied to docs/analytic_manual/ before starting)
+**Requirements**: AM-MAP-01, AM-MAP-02, AM-MAP-03
+
+**Success Criteria** (what must be TRUE):
+  1. `AM-EVIDENCE-MAP.md` exists in `.planning/phases/190-evidence-map/` with every manual section represented and every item assigned a status from {FILLED-NEEDS-CHECK, EMPTY-REPO-CAN-ANSWER, EMPTY-NEEDS-TEAM, OUT-OF-SCOPE}
+  2. `am_evidence_<date>.xlsx` (draft) exists in `output/` with KEY leftmost and one row per manual item; no patient IDs and no unsuppressed counts 1–10
+  3. Repo domains not yet in the manual are listed (AM-MAP-02 list: single-health-system flag, MED_ADMIN/DISPENSING chemo, drug-name normalization, first-line regimens, anthracycline exposure, CBC definition, RUCA/RUCC rurality, SDI, DoI, HL vs NHL classification, post-death encounters)
+  4. Team decisions mined from TeamMtgNotes2026.docx and phase CONTEXT.md files are catalogued; D-190-01 (OneFLquestions document location) is recorded with its default resolution
+**Plans**: TBD
+
+### Phase 191: Verify Existing Entries
+**Goal**: Every `FILLED-NEEDS-CHECK` item from Phase 190 has a documented verdict with a code citation; Amy's open comments and the Insurance "Gerard to confirm" item are answered; mismatches are logged as team decisions, not fixed
+**Depends on**: Phase 190
+**Requirements**: AM-VER-01, AM-VER-02, AM-VER-03, AM-VER-04
+
+**Success Criteria** (what must be TRUE):
+  1. `am_verification_<date>.xlsx` exists with KEY leftmost and one sheet per verification check; every FILLED-NEEDS-CHECK row has a verdict (MATCH, MISMATCH, PARTIAL, or CANNOT-VERIFY) and an evidence citation (script + line, CONFIG key, or decision ID)
+  2. Leads L1–L9 are each answered — L1–L6 via read-only HiPerGator queries from the verification script; L5/L7/L8/L9 via code-reading citations (no queries)
+  3. Amy's comments c0 and c1 and the Insurance "Gerard to confirm" item each have an explicit written answer recorded in the workbook
+  4. Every MISMATCH has a corresponding D-191-NN row in the decision log; no manual text and no code changed in this phase
+**Plans**: TBD
+
+### Phase 192: Draft New Content
+**Goal**: Every section the repo can answer has a drafted paragraph tagged to its source; mismatches are parked in §8 as open questions, not resolved
+**Depends on**: Phase 191
+**Requirements**: AM-FILL-01, AM-FILL-02, AM-FILL-03, AM-FILL-04
+
+**Success Criteria** (what must be TRUE):
+  1. `AM-DRAFT.md` in `.planning/phases/192-draft-new-content/` contains drafted text for §0 front matter, §1 Data Ingest, §2 Cohort, and §3 Decision Log; every statement is tagged with its source (script:line, CONFIG key, or decision ID)
+  2. Each EMPTY-REPO-CAN-ANSWER domain from Phase 190 has a new §4 block in AM-DRAFT.md using the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues)
+  3. §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot, and §11 Known Limitations are drafted where the repo has a source; §6 sign-off boxes are annotated with the responsible party but left unfilled
+  4. Every Phase 191 MISMATCH appears in §8 as an open question attributed to its D-191-NN decision ID — none appear as resolved text anywhere else in the draft
+**Plans**: TBD
+
+### Phase 193: Produce Updated Manual
+**Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
+**Depends on**: Phase 192
+**Requirements**: AM-DOC-01, AM-DOC-02, AM-DOC-03
+
+**Success Criteria** (what must be TRUE):
+  1. `AnalyticManual_<YYYY.MM.DD>.docx` exists in `docs/analytic_manual/` as a new versioned copy with all Phase 192 drafted content inserted as Word tracked changes authored "Gerard Garvan"; the original `AnalyticManual_2026.01.30.docx` is byte-for-byte unchanged
+  2. Amy's existing comments in the original have replies citing Phase 191 answers; the document version field and "Date last updated" field are updated in the new copy
+  3. `am_evidence_<date>.xlsx` (finalized) exists in `output/` with KEY leftmost; columns: AM section, item, manual text, verdict/status, repo source, decision ID, notes; all counts 1–10 suppressed; no patient IDs
+**Plans**: TBD
+
+### Phase 194: Team Review Package and Close-out
+**Goal**: The team has everything needed to review the manual changes and make the pending decisions; the planning record is closed out
+**Depends on**: Phase 193
+**Requirements**: AM-TEAM-01, AM-TEAM-02, AM-TEAM-03
+
+**Success Criteria** (what must be TRUE):
+  1. A cover email draft exists addressed to Amy (cc Erin, Ray) summarizing: what was filled, what was confirmed, each mismatch needing a team decision, and items requiring MPI input; signed "Best, Gerard"
+  2. All team decision rows are current: D-190-01, D-190-02, D-193-01, and all D-191-NN rows exist in the decision log with status and default resolution documented
+  3. The verification script (R/NNN_am_verification.R) is listed in R/SCRIPT_INDEX.md; if added to the R/39 pipeline, it is also registered in R/39 and structural checks added to R/88 with R/88 passing on HiPerGator; if kept standalone, no R/39 or R/88 change required
+**Plans**: TBD
+
+## Progress (v3.13)
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 190. Evidence Map | v3.13 | 0/TBD | Not started | — |
+| 191. Verify Existing Entries | v3.13 | 0/TBD | Not started | — |
+| 192. Draft New Content | v3.13 | 0/TBD | Not started | — |
+| 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |
+| 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |
