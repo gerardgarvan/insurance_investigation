@@ -27,7 +27,7 @@
 - ✅ **v3.9 Pipeline Hygiene** - Phases 174-177 (shipped 2026-10-12)
 - ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
 - ✅ **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (shipped 2026-10-17)
-- 🔄 **v3.12 Team To-Do Close-out** - Phases 185-189 (started 2026-10-22)
+- ✅ **v3.12 Team To-Do Close-out** - Phases 185-189 (shipped 2026-10-27)
 
 ## Phases
 
@@ -773,147 +773,15 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
 ---
 
-## 🔄 v3.12 Team To-Do Close-out (Phases 185–189 — Active)
+<details>
+<summary>✅ v3.12 Team To-Do Close-out (Phases 185–189) — SHIPPED 2026-10-27</summary>
 
-**Milestone Goal:** Deliver every open item on Gerard's two-week to-do list as a pinned, dated output or close it with a pointer to the phase that already completed it. Close the v3.11 Phase 184 HiPerGator gap, produce granular survivorship rates, build anthracycline exposure variables, compute echo rate since last anthracycline, and package team deliverables.
+- [x] Phase 185: Phase 184 Close-out and Modality Rates (1/1 plan) — completed 2026-10-22
+- [x] Phase 186: Survivorship Rate Granularity (1/1 plan) — completed 2026-10-22
+- [x] Phase 187: Anthracycline Exposure Variables (1/1 plan) — completed 2026-10-22
+- [x] Phase 188: Echo Rate Since Anthracycline (4/4 plans) — completed 2026-10-27
+- [x] Phase 189: Team Deliverables and Milestone Close-out (4/4 plans) — completed 2026-10-27
 
-## Phases (v3.12)
+See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
-- [ ] **Phase 185: Phase 184 Close-out and Modality Rates** — R/184 HiPerGator checkpoint; per-modality rates at annual window (CLOSE-01, CLOSE-02, RATE-01)
-- [x] **Phase 186: Survivorship Rate Granularity** — Annual and biannual per-modality table (RATE-02, RATE-03); depends on Phase 185 (completed 2026-10-22)
-- [x] **Phase 187: Anthracycline Exposure Variables** — any_anthracycline, last_anthracycline_date, years_since (ANTH-01, ANTH-02, ANTH-03); can run in parallel with Phase 185
- (completed 2026-10-22)
-- [x] **Phase 188: Echo Rate Since Anthracycline** — Echo rate per patient-year since last dose; reconciliation vs Phase 166 (ECHO-01, ECHO-02); depends on Phases 186 and 187 (completed 2026-10-27)
-- [x] **Phase 189: Team Deliverables and Milestone Close-out** — NHL explainer, email draft, R/39 + R/88 registration, to-do table (COMM-01, COMM-02, REG-01, TRACK-01); depends on Phases 185, 186, 187, 188 (completed 2026-10-23)
-
-## Phase Details (v3.12)
-
-### Phase 185: Phase 184 Close-out and Modality Rates
-**Goal**: v3.11's known gap is formally closed — R/184 has a confirmed HiPerGator run, per-modality rate estimates with 95% CIs are in a pinned workbook, and interaction estimates are reported with non-convergence transparently logged
-**Depends on**: Phase 184 (v3.11; close-out of pending checkpoint)
-**Requirements**: CLOSE-01, CLOSE-02, RATE-01
-
-**Design constraints:**
-- R/184 runs interactively on HiPerGator (`module load R/4.5`; `source("R/184_modality_rate_model.R", local = new.env(parent = globalenv()))`)
-- Output workbook path pinned via env var (R184_OUTPUT); path recorded in KEY sheet; dated filename
-- far_from_care_100mi × modality interaction estimates one per modality row with OR and 95% CI columns
-- Any non-convergence from Poisson GEE logged as a named note in the workbook QC sheet — not silently dropped
-- Patient counts 1–10 suppressed as "<11"; rates/percentages only when numerator and denominator both ≥ 11
-- Formal 185-01-SUMMARY.md written to `.planning/phases/185-*/`; v3.11 MILESTONES known-gap entry marked resolved
-- RATE-01: annual-window modality rates read from the pinned R/184 workbook by exact label (no recomputation)
-
-**Success Criteria** (what must be TRUE):
-  1. R/184 completes interactively on HiPerGator without error; a dated output workbook is pinned via R184_OUTPUT and its path is recorded in the KEY sheet
-  2. The workbook contains per-modality interaction estimates (OR, 95% CI) for far_from_care_100mi × modality; non-convergence cells are labeled, not blank
-  3. Patient counts 1–10 appear as "<11" throughout; no suppressed cell is back-calculated from adjacent unsuppressed values
-  4. Annual-window modality rates (patients, events, patient-years, rate per modality) are readable from the pinned workbook by exact label — no re-estimation required by Phase 186
-  5. 185-01-SUMMARY.md exists in the phase folder; v3.11 MILESTONES entry for Phase 184 is marked resolved
-**Plans**: 1 plan
-- [x] 185-01-PLAN.md — HiPerGator run of R/184 + schema probe (blocking checkpoint), close-out SUMMARY (pinned workbook filename, Rates header, gate values, D-05 row count, R/88 count), ROADMAP/MILESTONES close-out [CLOSE-01, CLOSE-02, RATE-01] (Wave 1)
-**UI hint**: no
-
-### Phase 186: Survivorship Rate Granularity
-**Goal**: A single team-facing table delivers per-modality survivorship rates at both the annual and biannual windows — defined, resolved, and implemented via D-186-01 recorded before any code is written
-**Depends on**: Phase 185
-**Requirements**: RATE-02, RATE-03
-
-**Design constraints:**
-- D-186-01 decision (biannual = every 6 months reusing R/184 sensitivity tier, OR every 2 years as a new window) must be recorded in CONTEXT.md before any code is written — no silent assumption
-- Annual rates read from the Phase 185 pinned workbook by exact label (no recomputation drift)
-- Table grain: one row per modality × window combination; columns: patients, events, patient-years, rate
-- KEY sheet leftmost; UF colors #0021A5 (blue) and #FA4616 (orange)
-- Suppression rules applied: counts 1–10 shown as "<11"; rates only when numerator and denominator both ≥ 11
-- Complementary suppression: if a "<11" cell would allow back-calculation from a known total, suppress the adjacent cell as well
-
-**Success Criteria** (what must be TRUE):
-  1. D-186-01 is recorded in CONTEXT.md (with date and decision owner) before the script is written — biannual definition is explicit, not assumed
-  2. The output workbook contains a single table with one row per modality × window (annual / biannual); columns present: patients, events, patient-years, rate
-  3. KEY sheet is leftmost; UF blue (#0021A5) and orange (#FA4616) applied to header rows
-  4. All counts 1–10 appear as "<11"; complementary suppression applied where back-calculation would otherwise be possible
-  5. Annual-window values match the Phase 185 pinned workbook to the last digit — no recomputation drift
-**Plans**: 1 plan
-- [x] 186-01-PLAN.md — Read annual + half-year (years 2+) rate blocks from pinned R/184 workbook by exact section header, resolve rate unit (D-09), stack to one modality x far x window table, write dated xlsx (KEY leftmost, Primary + Secondary sheets, UF colours) [RATE-02, RATE-03] (Wave 1)
-**UI hint**: no
-
-### Phase 187: Anthracycline Exposure Variables
-**Goal**: Every cohort patient has a correct any_anthracycline flag, a last_anthracycline_date, and a years_since_last_anthracycline value derived from a schema-probed, pinned drug source — NA (not zero) for unexposed patients
-**Depends on**: Phase 184 (independent of Phase 185/186 — can run in parallel with Phase 185)
-**Requirements**: ANTH-01, ANTH-02, ANTH-03
-
-**Design constraints:**
-- Task 0 cites the schema probe file used for drug column names and anthracycline drug name labels (required per CLAUDE.md)
-- Drug set: doxorubicin (liposomal collapsed per Phase 164 DRUG_NAME_ALIASES), daunorubicin, epirubicin, idarubicin — mitoxantrone explicitly excluded (D-187-02)
-- last_anthracycline_date: latest administration date across all sources for that patient
-- years_since_last_anthracycline: last dose → min(last_encounter_date, data_cutoff_date); NA for unexposed
-- Each echo encounter in the survivorship set carries days_since_last_anthracycline_dose (NA for unexposed; date difference, not years)
-- Patient-grain RDS written to `output/internal/` (contains patient IDs + dates — internal only per D-07/D-01)
-- Aggregate-only summary (counts by any_anthracycline flag, by drug, suppressed per HIPAA) written to `output/`
-- Anthracycline variables joined into the survivorship analysis set used by Phase 188
-- Schema probe updated before code is written (ANTH-03)
-
-**Success Criteria** (what must be TRUE):
-  1. Task 0 in the Phase 187 plan cites the schema probe file and lists the exact column names and drug name labels used — no column names inferred from memory or other scripts
-  2. any_anthracycline is TRUE/FALSE with NA only when the patient has no chemo records at all; mitoxantrone is absent from the drug set; doxorubicin liposomal collapses to doxorubicin per Phase 164 aliases
-  3. last_anthracycline_date and years_since_last_anthracycline are NA (not 0) for unexposed patients; years_since uses min(last_encounter_date, data_cutoff_date) as the end anchor
-  4. Patient-grain RDS (with IDs and dates) is in `output/internal/` only; aggregate summary in `output/` contains no patient-level data; counts 1–10 suppressed as "<11"
-  5. The anthracycline variables are joined into the survivorship analysis set and readable by Phase 188 without re-reading the internal RDS
-**Plans**: 1 plan
-Plans:
-- [x] 187-01-PLAN.md — Build R/187_anthracycline_exposure.R: pins, compute flags + time variables, write patient-grain RDS and aggregate summary; HiPerGator checkpoint; output probe
-**UI hint**: no
-
-### Phase 188: Echo Rate Since Anthracycline
-**Goal**: Among anthracycline-exposed patients, echo rate per patient-year since last dose is computed and reconciled against Phase 166 timing — with a transparent explanation of any differences between first- and last-administration anchoring
-**Depends on**: Phase 186 and Phase 187
-**Requirements**: ECHO-01, ECHO-02
-
-**Design constraints:**
-- Denominator: `years_since_last_anthracycline` from Phase 187 (only patients with `any_anthracycline == TRUE`)
-- Numerator: echo encounters occurring strictly after last_anthracycline_date; echoes on or before last dose excluded and counted separately in a reconciliation column
-- Reconciliation column: n_echoes_before_or_on_last_dose per patient, reported in workbook QC sheet
-- Reconciliation table vs Phase 166: explicitly compare first- vs last-administration anchoring; explain differences in workbook KEY narrative
-- KEY sheet leftmost; UF colors; counts 1–10 suppressed as "<11"
-- Patient-level echo × anthracycline detail stored only in `output/internal/`
-
-**Success Criteria** (what must be TRUE):
-  1. Echo rate per patient-year is computed only among patients with `any_anthracycline == TRUE`; the denominator is `years_since_last_anthracycline` from Phase 187
-  2. Echoes on or before `last_anthracycline_date` are excluded from the numerator and counted separately in a reconciliation column — no silent exclusion
-  3. The workbook KEY explains the anchoring difference between Phase 166 (first administration) and Phase 188 (last administration), with numeric reconciliation showing how many patients and echoes shift between the two anchoring rules
-  4. Counts 1–10 appear as "<11"; patient-level data (IDs, dates) is only in `output/internal/`
-**Plans**: 4 plans
-
-Plans:
-- [x] 189-01-PLAN.md -- COMM-01: NHL explainer R script (R/189_nhl_explainer.R writes dated .md to output/)
-- [x] 189-02-PLAN.md -- COMM-02: Amy email draft written to phase folder with [QUESTIONS] placeholder
-- [x] 189-03-PLAN.md -- REG-01: R/39, SCRIPT_INDEX, R/88 registration for R/186-188; HiPerGator ALL CHECKS PASSED gate
-- [x] 189-04-PLAN.md -- TRACK-01: v3.12 milestone to-do status table (pre-execution gate on v3.12-milestone-brief.md)
-**UI hint**: no
-
-### Phase 189: Team Deliverables and Milestone Close-out
-**Goal**: Every open team-facing item is packaged, the pipeline's discovery and validation infrastructure covers all new Phase 185–189 scripts, and the milestone to-do table is complete
-**Depends on**: Phases 185, 186, 187, 188
-**Requirements**: COMM-01, COMM-02, REG-01, TRACK-01
-
-**Design constraints:**
-- COMM-01: script-generated one-page NHL explainer written to `output/` (dated), copied unchanged into the phase folder; language measured and non-causal; patient counts suppressed per HIPAA; explains how NHL-only (849 patients) and HL+NHL (176 patients, 0 overlap) subsets were built from `gantt_episodes_180.csv` and what Chemo_combos columns E–J contribute
-- COMM-02: email draft ready for Gerard to send to Amy (cc Ray, Erin, Sharon); questions supplied by Gerard as D-189-01; sign-off "Best, Gerard"; draft written to the phase folder, never auto-sent
-- REG-01: all new Phase 185–189 scripts registered in `R/39_run_all_investigations.R` and `R/SCRIPT_INDEX.md`; new SMOKE sections in `R/88_smoke_test_comprehensive.R` with structural checks for each new script; R/88 ALL CHECKS PASSED on HiPerGator after Phase 189 — this is a hard gate for milestone close-out
-- TRACK-01: to-do status table written to the Phase 189 milestone folder; every item shows Done or Closed-with-pointer; used for next team meeting notes update
-
-**Success Criteria** (what must be TRUE):
-  1. The NHL explainer document exists in `output/` (dated) and the phase folder; it contains patient counts (suppressed per HIPAA), the subset-building logic, and the Chemo_combos column role — language does not attribute causation
-  2. The email draft exists in the phase folder with Gerard's questions (D-189-01), a correct recipient list (Amy; cc Ray, Erin, Sharon), and the sign-off "Best, Gerard" — ready to send without editing
-  3. All Phase 185–189 scripts appear in R/39 and R/SCRIPT_INDEX.md; R/88 has a structural smoke section for each; R/88 reports ALL CHECKS PASSED on HiPerGator (FAIL == 0) after this phase — milestone close-out is gated on this confirmation
-  4. The to-do status table in the phase folder shows every v3.12-milestone item as Done or Closed-with-pointer; no items are left as "In progress" or blank
-**Plans**: TBD
-**UI hint**: no
-
-## Progress (v3.12)
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 185. Phase 184 Close-out and Modality Rates | v3.12 | 1/1 | Complete | 2026-10-22 |
-| 186. Survivorship Rate Granularity | v3.12 | 1/1 | Complete    | 2026-10-22 |
-| 187. Anthracycline Exposure Variables | v3.12 | 1/1 | Complete    | 2026-10-22 |
-| 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Complete    | 2026-10-27 |
-| 189. Team Deliverables and Milestone Close-out | v3.12 | 4/4 | Complete   | 2026-10-27 |
+</details>

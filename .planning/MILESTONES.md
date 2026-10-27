@@ -1,5 +1,23 @@
 # Milestones
 
+## v3.12 Team To-Do Close-out (Shipped: 2026-10-27)
+
+**Phases completed:** Phases 185–189 (5 phases), 12 plans
+
+**Delivered:** Formal close-out of v3.11 Phase 184 HiPerGator gap; per-modality survivorship rates at annual and biannual (6-month) windows in one team-facing table; anthracycline exposure variables for all cohort patients; echo rate since last anthracycline with Phase 166 reconciliation; NHL subset explainer; all Phase 185–189 scripts registered in R/39, R/88 (Sections 15av–15az), and SCRIPT_INDEX; R/88 ALL CHECKS PASSED 2026-10-23.
+
+**Key accomplishments:**
+
+- R/184 formally closed on HiPerGator — far_from_care_100mi × modality interaction estimates confirmed, dated workbook pinned, v3.11 known-gap resolved (Phase 185)
+- Per-modality survivorship rate table (annual + biannual 6-month) with 112 annual cells carried verbatim from R/184 with zero drift; complementary suppression applied (Phase 186)
+- Anthracycline exposure variables: `any_anthracycline`, `last_anthracycline_date`, `years_since_last_anthracycline` — doxorubicin liposomal collapsed per Phase 164; mitoxantrone excluded per D-187-02; patient-grain RDS to output/internal/ only (Phase 187)
+- Echo rate since last anthracycline = 0.2501 echoes/patient-year; first-vs-last dose anchoring delta = 0 vs Phase 166; reconciliation table in workbook KEY (Phase 188)
+- Script-generated NHL subset explainer (R/189); all new scripts registered; R/88 ALL CHECKS PASSED 2026-10-23; v3.12 to-do table confirms all 12 items Done or Closed-with-pointer (Phase 189)
+
+**Archive:** `.planning/milestones/v3.12-ROADMAP.md`
+
+---
+
 ## v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (Shipped: 2026-10-17)
 
 **Phases completed:** Phases 181–184 (5 phases incl. 182.1), 13 plans

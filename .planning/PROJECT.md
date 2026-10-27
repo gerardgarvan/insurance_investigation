@@ -102,7 +102,11 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - [x] FIX-02: R/122 workbook KEY note added — temporal ZIP match fills 0 encounters (patient_zip_missing patients are UNREACHABLE_NO_ZIP9 or absent from R/121) — v3.10 Phase 178
 - [x] MISS-01/02/03: R/180_cbc_missing_capture.R breakdowns missing-exposure patients into 6 reason groups; bounding ORs (far=1: 0.776, far=0: 0.872) both same side as primary 0.845 → limitation row added to R/179 KEY — v3.10 Phase 180
 - [x] MISS-04: CBC capture check — OR moves toward 1 (37.4% shrinkage, ≥25% threshold) when restricted to patient-years with ≥1 in-system non-CBC lab → consistent with out-of-system care; reported to Amy/Erin with D-165-01 — v3.10 Phase 180
-- [x] RATE-01/02/03: Annual and biannual (6-month) survivorship rates per modality stacked into one team-facing table (one row per modality × far × window × half); annual values carried verbatim from R/184 (112 cells, 0 drift); complementary suppression applied (Secondary: 1 event/rate cell changed); KEY leftmost; UF colours — v3.3 Phase 186
+- [x] RATE-01/02/03: Annual and biannual (6-month) survivorship rates per modality stacked into one team-facing table (one row per modality × far × window × half); annual values carried verbatim from R/184 (112 cells, 0 drift); complementary suppression applied (Secondary: 1 event/rate cell changed); KEY leftmost; UF colours — v3.12 Phase 186
+- [x] ANTH-01/02/03: Anthracycline exposure variables (any_anthracycline, last_anthracycline_date, years_since_last_anthracycline) for all cohort patients; doxorubicin liposomal collapsed per Phase 164; mitoxantrone excluded (D-187-02); patient-grain RDS in output/internal/ only; aggregate summary in output/ — v3.12 Phase 187
+- [x] ECHO-01/02: Echo rate since last anthracycline = 0.2501/py among any_anthracycline patients; echoes on/before last dose counted separately; reconciliation vs Phase 166 first-vs-last anchoring: delta = 0 — v3.12 Phase 188
+- [x] COMM-01: Script-generated NHL subset explainer (R/189_nhl_explainer.R); NHL-only (849 patients), HL+NHL (176 patients, 0 overlap), Chemo_combos columns E–J explained; HIPAA suppression applied — v3.12 Phase 189
+- [x] REG-01: All Phase 185–189 scripts registered in R/39, R/SCRIPT_INDEX.md, R/88 Sections 15av–15az; R/88 ALL CHECKS PASSED 2026-10-23 — v3.12 Phase 189
 
 ## Carry-Forward Backlog
 
@@ -160,20 +164,11 @@ A working cohort filter chain that reads like a clinical protocol — with logge
 - Multi-line therapy sequencing — requires episode boundary formalization first
 - Insurance category consolidation (self-pay+uninsured, other govt+other merge) — superseded by AMC 8-category framework
 
-## Current Milestone: v3.12 Team To-Do Close-out (Survivorship Rates, Anthracycline Exposure, NHL Follow-up)
+## Last Shipped: v3.12 Team To-Do Close-out (2026-10-27)
 
-**Goal:** Deliver every open item on Gerard's two-week to-do list as a pinned, dated output or close it with a pointer to the phase that already completed it.
+Phases 185–189 (5 phases, 12 plans). R/184 formally closed on HiPerGator; per-modality survivorship rates at annual and biannual (6-month) windows in one team-facing table; anthracycline exposure variables (any_anthracycline, last_anthracycline_date, years_since_last_anthracycline) for all cohort patients; echo rate since last anthracycline = 0.2501/py with Phase 166 reconciliation; NHL subset explainer generated; all Phase 185–189 scripts registered; R/88 ALL CHECKS PASSED 2026-10-23.
 
-**Target features:**
-- Phase 185 — Close out v3.11 Phase 184 (R/184 HiPerGator checkpoint; modality rates + distance × modality interaction)
-- Phase 186 — Per-modality survivorship rates at annual and biannual windows in one team-facing table
-- Phase 187 — Anthracycline exposure variables (any_anthracycline, last_anthracycline_date, years_since)
-- Phase 188 — Echo rate since last anthracycline; reconciliation vs Phase 166 timing
-- Phase 189 — Team deliverables (NHL explainer, email draft), R/39 + R/88 + SCRIPT_INDEX registration, TRACK-01 to-do table
-
-**Parked (no phases this milestone):** end-of-treatment date rules (pending Sharon); data-completeness check vs Medicaid claims; D-15 primary analysis and D-165-01 method (awaiting Amy/Erin); new CBC models beyond year 1; anthracycline as a covariate in the R/184 interaction model.
-
-## Last Shipped: v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (2026-10-17)
+## Prior Shipped: v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling (2026-10-17)
 
 Phases 181–184 (5 phases incl. 182.1). Patient-level prior-year CBC × far-from-care 2×2 (OR 0.833, p=0.071); tier-1 facility ZIP fill wired into R/122; ZIP→ZCTA crosswalk fallback; MICE sensitivity (pooled ORs 0.842/0.834, FMI 0.049/0.160); R/184 modality rate model written and bug-fixed (HiPerGator checkpoint pending, carried to Phase 185).
 
@@ -374,7 +369,7 @@ All HiPerGator runtime gates closed. Survivorship workbooks regenerated from Pha
 
 ## Context
 
-- **Current state**: 180 phases completed across 20 milestones (v1.0-v3.10), 180+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed (32,249 encounters), survivorship workbooks regenerated and verified (R/166/167/168), R/88 comprehensive smoke test with **960 CHECKS PASSED (3 skipped)** — three-way exit guard + skip_check() + R88_FORCE_FAIL sentinel, `147_verify_last_pass.txt` pointer-based downstream gating, PINNED snapshot protection for R/170. Phase 165 far-CBC OR (0.845) confirmed robust to missing-exposure assignment (D-05); D-09 capture check flags 37.4% shrinkage toward 1 → out-of-system care hypothesis; reported to Amy/Erin with D-165-01.
+- **Current state**: 189 phases completed across 21 milestones (v1.0-v3.12), 190+ R scripts total, DuckDB backend with dual-environment support, data.table infrastructure, AMC 8-category payer system, DoI layer (R/111/R/112) fully registered and HiPerGator-confirmed, survivorship workbooks regenerated and verified, anthracycline exposure variables in output/internal/, echo rate since last dose = 0.2501/py, R/88 comprehensive smoke test **ALL CHECKS PASSED 2026-10-23** (Sections 15av–15az added for Phase 185–189 scripts). Phase 165 far-CBC OR (0.845) confirmed robust to missing-exposure assignment (D-05); D-09 capture check flags 37.4% shrinkage toward 1 → out-of-system care hypothesis; reported to Amy/Erin with D-165-01.
 - **Existing Python pipeline** at `C:\cygwin64\home\Owner\Data loading and cleaing\` — parallel exploration tool, not a replacement
 - **Data source**: OneFlorida+ PCORnet CDM extract (Mailhot HL cohort, extracted 2025-09-15), 22 CSV tables on HiPerGator
 - **Study**: UFPTI 2405-HLX17A — investigating insurance disparities in Hodgkin Lymphoma treatment
@@ -462,4 +457,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-22 — v3.12 milestone started (Team To-Do Close-out: Survivorship Rates, Anthracycline Exposure, NHL Follow-up).*
+*Last updated: 2026-10-27 — v3.12 milestone shipped (Team To-Do Close-out: Survivorship Rates, Anthracycline Exposure, NHL Follow-up).*
