@@ -1,0 +1,7 @@
+# Source file hashes for Phase 190 evidence map
+# Generated: 2026-10-27
+# These hashes must match at T6 review to confirm source files were not modified.
+
+SHA-256  2e119764b63cf9e491decc1177ff38ea49335cd2f15673b9e92b68a127a1517d  docs/analytic_manual/AnalyticManual_2026.01.30.docx
+SHA-256  ad685823abe879133450e4af0866f32162893fde2bbcd9fb656f6d7d2ce927a8  docs/analytic_manual/TeamMtgNotes2026.docx
+SHA-256  32c8d62c8f4e416e5305042c701a2352acd1e7967fe146631d1a763e4aa14107  docs/analytic_manual/VariableDetails.xlsx
