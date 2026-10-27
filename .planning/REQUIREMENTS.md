@@ -1,83 +1,81 @@
-# Requirements — v3.12 Team To-Do Close-out
+# Requirements — v3.13 Analytic Manual Fill-out and Verification
 
-**Milestone:** v3.12 Team To-Do Close-out (Survivorship Rates, Anthracycline Exposure, NHL Follow-up)
-**Window:** 2026-10-22 → 2026-11-05
-**Starts at:** Phase 185
+**Milestone goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo. Every existing statement is checked against code and given a verdict. Every empty section the repo can answer is drafted from code, config, planning decisions, and team meeting notes. The result is a reviewed new version of the manual and an evidence workbook tying each statement to its code source.
 
 ---
 
 ## v1 Requirements
 
-### CLOSE — Phase 184 Carry-over
+### Evidence Mapping (Phase 190)
 
-- [ ] **CLOSE-01**: R/184 runs end-to-end in interactive R on HiPerGator; dated workbook pinned via env var; path recorded in KEY; formal close-out SUMMARY in `.planning/phases/185-*/`; v3.11 MILESTONES known-gap marked resolved.
-- [ ] **CLOSE-02**: far_from_care_100mi × modality interaction estimates reported per modality with 95% CIs; any non-convergence logged (not silently dropped); cells with patient count < 11 suppressed; language measured and non-causal.
+- [ ] **AM-MAP-01**: Every manual item (including both Amy comments c0/c1) mapped to repo evidence with a status: `FILLED-NEEDS-CHECK`, `EMPTY-REPO-CAN-ANSWER`, `EMPTY-NEEDS-TEAM`, or `OUT-OF-SCOPE`
+- [ ] **AM-MAP-02**: Repo domains not yet mentioned in the manual identified for addition — including single-health-system flag, MED_ADMIN/DISPENSING chemo detection with NDC→RxNorm, drug-name normalization, first-line regimens, treatment episodes, anthracycline exposure, CBC definition, rurality (RUCA/RUCC), SDI, diagnoses of interest, HL vs NHL classification, and post-death encounters
+- [ ] **AM-MAP-03**: Team decisions mined from `TeamMtgNotes2026.docx` and all phase CONTEXT.md files; OneFLquestions document status recorded (D-190-01)
 
-### RATE — Survivorship Rate Granularity
+### Verification (Phase 191)
 
-- [x] **RATE-01**: Patient-level count and rate per modality at the annual window, read from the verified R/184 output by exact label (no recomputation drift; values read from pinned workbook).
-- [x] **RATE-02**: "Biannual" definition resolved via D-186-01 (recorded in CONTEXT.md before any code) and implemented — either every 6 months (reuse R/184 sensitivity tier) or every 2 years (new window).
-- [x] **RATE-03**: Single team-facing table with one row per modality × window (annual / biannual); columns: patients, events, patient-years, rate; KEY sheet leftmost; UF colours (#0021A5 / #FA4616); suppression rules applied.
+- [ ] **AM-VER-01**: Every `FILLED-NEEDS-CHECK` row from Phase 190 has a verdict (`MATCH`, `MISMATCH`, `PARTIAL`, or `CANNOT-VERIFY`) with evidence citation (script + function + line, or CONFIG key, or decision ID)
+- [ ] **AM-VER-02**: Amy's comments c0 and c1 and the Insurance "Gerard to confirm" item each have an explicit answer
+- [ ] **AM-VER-03**: Each `MISMATCH` recorded as a team decision row (D-191-NN) — neither code nor manual text changed in this milestone
+- [ ] **AM-VER-04**: Verification script (`R/NNN_am_verification.R`) runs read-only HiPerGator queries for leads L1–L6; L5/L7/L8/L9 covered by code-reading citations; outputs `am_verification_<date>.xlsx` (KEY leftmost, one sheet per check, QC)
 
-### ANTH — Anthracycline Exposure Variables
+### Draft New Content (Phase 192)
 
-- [x] **ANTH-01**: `any_anthracycline` (TRUE/FALSE, **never NA**) per cohort patient; `any_chemo` (TRUE/FALSE, never NA) per cohort patient; drug set: doxorubicin (liposomal collapsed per Phase 164), daunorubicin, epirubicin, idarubicin — mitoxantrone explicitly excluded; aggregate counts reported by flag and by drug, suppressed per HIPAA.
-- [x] **ANTH-02**: `last_anthracycline_date` = latest `treatment_date` across all episodes for included drugs; `years_since_last_anthracycline` = last dose → `follow_end` (Phase 161 `compute_followup()` definition, accounts for death); NA (not 0, not negative) when `any_anthracycline == FALSE` or when last dose date is after `follow_end`; `days_since_last_anthracycline_dose` per echo encounter is Phase 188 (ECHO-01), not Phase 187.
-- [x] **ANTH-03**: Patient-grain RDS written to `output/internal/` (patient IDs + dates — internal only); aggregate-only summary in `output/`; variables joined into the survivorship analysis set; schema probe updated before code is written.
+- [ ] **AM-FILL-01**: Front matter (§0), §1 Data Ingest & Change Log, §2 Cohort, §3 Decision Log drafted where the repo has a source; every statement tagged with its source
+- [ ] **AM-FILL-02**: New §4 domains drafted in the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues) for each `EMPTY-REPO-CAN-ANSWER` domain from Phase 190
+- [ ] **AM-FILL-03**: §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot (parked D-IDs from STATE.md), §11 Known Limitations drafted where repo has a source; §6 technical checks annotated with script evidence, sign-off boxes untouched
+- [ ] **AM-FILL-04**: Every Phase 191 `MISMATCH` appears in §8 as an open question, not as resolved text
 
-### ECHO — Echocardiogram Rate Since Anthracycline
+### Updated Manual (Phase 193)
 
-- [ ] **ECHO-01**: Echo rate per patient-year since last anthracycline among `any_anthracycline == TRUE`: echoes after last dose ÷ `years_since_last_anthracycline`; echoes on or before last dose excluded and counted separately in a reconciliation column.
-- [ ] **ECHO-02**: Reconciliation table vs Phase 166 anthracycline-to-echo timing (D6/D7/D8 decision chain): first- vs last-administration anchoring; differences explained in workbook KEY.
+- [ ] **AM-DOC-01**: New versioned manual copy (`AnalyticManual_<YYYY.MM.DD>.docx`) with all Phase 192 content inserted as Word tracked changes authored "Gerard Garvan", each with a comment citing evidence; original file untouched
+- [ ] **AM-DOC-02**: Amy's existing comments replied to with Phase 191 answers; document version and "Date last updated" field updated
+- [ ] **AM-DOC-03**: Evidence workbook exported as `am_evidence_<date>.xlsx` (KEY leftmost; columns: AM section, item, manual text, verdict/status, repo source, decision ID, notes); no counts 1–10 unsuppressed; no patient IDs in the document
 
-### COMM — Team Deliverables
+### Team Review and Close-out (Phase 194)
 
-- [x] **COMM-01**: Script-generated one-page explainer (written to `output/`, dated, copied unchanged into phase folder): how NHL-only and HL+NHL subsets were built from `gantt_episodes_180.csv`; patient counts (suppressed per HIPAA); what Chemo_combos columns E–J contribute.
-- [x] **COMM-02**: Email draft ready for Gerard to send to Amy (cc Ray, Erin, Sharon); team questions supplied by Gerard (D-189-01); sign-off "Best, Gerard".
-
-### REG — Pipeline Registration
-
-- [x] **REG-01**: All new Phase 185–189 scripts registered in `R/39_run_all_investigations.R` and `R/SCRIPT_INDEX.md`; a new SMOKE section in `R/88_smoke_test_comprehensive.R` covering structural checks for each new script; R/88 ALL CHECKS PASSED on HiPerGator after Phase 189.
-
-### TRACK — Status Tracking
-
-- [x] **TRACK-01**: To-do status table (from v3.12-milestone-brief.md map, final state) written to the Phase 189 milestone folder; every item shows Done or Closed-with-pointer; used for next team meeting notes update.
+- [ ] **AM-TEAM-01**: Cover email to Amy (cc Erin, Ray) drafted: what was filled, what was confirmed, each mismatch needing a team decision, items needing MPI input; signed "Best, Gerard"
+- [ ] **AM-TEAM-02**: Team-decision rows current (D-190-01, D-190-02, D-193-01, all D-191-NN); code changes if any scheduled for a later milestone
+- [ ] **AM-TEAM-03**: Verification script listed in R/SCRIPT_INDEX.md. If added to the pipeline, also registered in R/39 and structural checks added to R/88; R/88 passes on HiPerGator. If kept standalone, no R/39 or R/88 change required.
 
 ---
 
-## Future Requirements (deferred)
+## Future Requirements
 
-- Anthracycline exposure as a covariate in the R/184 distance × modality interaction model — candidate for v3.13
-- New CBC models beyond Phase 181/183 year-1 analysis
-- End-of-treatment date rules (pending Sharon)
-- Data-completeness check vs Medicaid claims
-- D-15 primary analysis and D-165-01 method confirmation (awaiting Amy/Erin)
+- Incorporating team responses and agreed-upon code corrections — once D-191-NN decisions are made, scheduled for a later milestone
+- Treatment-window and relapse rules (pending Sharon)
+- Sign-off sections (§6 boxes) — filled by biostatistician and MPI, not in scope for this milestone
 
 ---
 
 ## Out of Scope
 
-- SLURM/sbatch wrappers — interactive HiPerGator R only
-- Adding mitoxantrone to the anthracycline drug set (excluded by D-187-02)
-- Publication-ready figure formatting — exploratory quality sufficient
+- Changing pipeline logic to match the manual or vice versa — mismatch → team decision → later milestone
+- Filling grant number, project title, or PI/co-I fields without a source in the repo or meeting notes
+- Treatment-window and relapse rules (still pending Sharon's input)
+- Statistical modeling or new analysis output
+- Any new R scripts beyond the verification script (Phase 191); no new numbered analysis scripts
 
 ---
 
 ## Traceability
 
-| REQ-ID   | Phase | Status |
-|----------|-------|--------|
-| CLOSE-01 | 185   | —      |
-| CLOSE-02 | 185   | —      |
-| RATE-01  | 186   | —      |
-| RATE-02  | 186   | —      |
-| RATE-03  | 186   | —      |
-| ANTH-01  | 187   | —      |
-| ANTH-02  | 187   | —      |
-| ANTH-03  | 187   | —      |
-| ECHO-01  | 188   | —      |
-| ECHO-02  | 188   | —      |
-| COMM-01  | 189   | —      |
-| COMM-02  | 189   | —      |
-| REG-01   | 189   | —      |
-| TRACK-01 | 189   | —      |
+| REQ-ID | Phase | Notes |
+|--------|-------|-------|
+| AM-MAP-01 | 190 | Manual items → evidence map |
+| AM-MAP-02 | 190 | Unlisted repo domains |
+| AM-MAP-03 | 190 | Team decisions + meeting notes |
+| AM-VER-01 | 191 | Verdicts for all FILLED items |
+| AM-VER-02 | 191 | Amy's c0/c1 and Insurance question answered |
+| AM-VER-03 | 191 | Mismatches → D-191-NN |
+| AM-VER-04 | 191 | Verification script + workbook |
+| AM-FILL-01 | 192 | §0/§1/§2/§3 drafted |
+| AM-FILL-02 | 192 | New §4 domains |
+| AM-FILL-03 | 192 | §5/§6/§7/§8/§11 |
+| AM-FILL-04 | 192 | Mismatches in §8 only |
+| AM-DOC-01 | 193 | Tracked-change .docx |
+| AM-DOC-02 | 193 | Amy comments replied to |
+| AM-DOC-03 | 193 | Evidence workbook |
+| AM-TEAM-01 | 194 | Cover email |
+| AM-TEAM-02 | 194 | Decision rows current |
+| AM-TEAM-03 | 194 | SCRIPT_INDEX always; R/39 + R/88 only if pipeline-registered |
