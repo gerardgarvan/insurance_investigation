@@ -8,6 +8,17 @@ A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files f
 
 A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
+## Current Milestone: v3.13 Analytic Manual Fill-out and Verification
+
+**Goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo — every existing statement checked against code with a verdict, every answerable empty section drafted from repo evidence, producing a tracked-change manual version and evidence workbook the team can review change by change.
+
+**Target features:**
+- Evidence map: section-by-section crosswalk from the manual to repo sources (Phase 190)
+- Verification script: verdicts for all existing manual statements, including 9 known leads L1–L9 (Phase 191)
+- Drafted new content: front matter, §1–§3, new §4 domains, §5/§7/§8/§11 where repo has a source (Phase 192)
+- Updated manual: tracked-change .docx (original untouched) + evidence workbook (Phase 193)
+- Team review package: cover email, decision log, R/88 registration if applicable (Phase 194)
+
 ## Requirements
 
 ### Validated
@@ -457,4 +468,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-27 — v3.12 milestone shipped (Team To-Do Close-out: Survivorship Rates, Anthracycline Exposure, NHL Follow-up).*
+*Last updated: 2026-10-27 — v3.13 milestone started (Analytic Manual Fill-out and Verification).*
