@@ -6,7 +6,7 @@
 
 ---
 
-All analysis work for the to-do list is complete; two team decisions remain open (biannual definition; questions for Amy email).
+All analysis work for the to-do list is complete; one team decision remains open (questions for Amy email).
 
 | Item | Description | Status | Closed by / Notes |
 |------|-------------|--------|-------------------|
@@ -23,7 +23,7 @@ All analysis work for the to-do list is complete; two team decisions remain open
 | 4.3 (echo rate since anthracycline) | Echocardiogram rate per patient-year since last anthracycline, among exposed patients, with reconciliation against Phase 166 timing | Done | Phase 188 Plan 01 SUMMARY: echo rate computed from Phase 187 exposure variables; encounter-grain and patient-grain results in output/internal/; Phase 166 reconciliation documented in output/20261022_188_echo_rate_anthracycline.xlsx. |
 | REG-01 | Registration of new Phase 185–189 analysis scripts in the investigation registry and smoke test suite; smoke test passes on HiPerGator | Done | Phase 189 Plan 03 SUMMARY: R/186, R/187, R/188 added to R/39 registry and script index; smoke sections 15av–15az added to R/88 (Phases 184–189). R/88 ALL CHECKS PASSED confirmed on HiPerGator 2026-10-23. |
 | TRACK-01 | Milestone to-do status table for team meeting notes | Done | This document (189-TODO-STATUS.md in the phase folder), written 2026-10-27 by Phase 189 Plan 04. |
-| D-186-01 | Definition of "biannual" surveillance interval | Open | Provisional: every 6 months (half-year window from Phase 184 sensitivity tier). Awaiting team confirmation before treating as final. |
+| D-186-01 | Definition of "biannual" surveillance interval | Done | Confirmed 2026-10-27: biannual = every 6 months (half-year window, Phase 184 sensitivity tier). |
 | D-189-01 | Questions for the Amy email | Open | Gerard supplies the questions. The email draft (189-AMY-EMAIL-DRAFT.md) is ready in the phase folder but will not be sent until this placeholder is filled. |
 
 ---
