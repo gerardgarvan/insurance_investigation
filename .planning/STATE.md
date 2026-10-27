@@ -4,8 +4,8 @@ milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
 stopped_at: Completed 189-03-PLAN.md (awaiting HiPerGator checkpoint Task 3)
-last_updated: "2026-10-23T15:39:39.231Z"
-last_activity: 2026-10-23
+last_updated: "2026-10-27T15:29:34.991Z"
+last_activity: 2026-10-27
 progress:
   total_phases: 179
   completed_phases: 157
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-10-22, v3.12 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 189 — team-deliverables-and-milestone-closeout
+**Current focus:** Phase 188 — echo-rate-since-anthracycline
 
 ## Current Position
 
 Phase: 189
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-23
+Status: Executing Phase 188
+Last activity: 2026-10-27
 
 **Progress:** [██████████] 100%
 
