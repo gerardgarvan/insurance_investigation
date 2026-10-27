@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Phase 190 Plan 01 complete — T6 checkpoint awaiting human review
-last_updated: "2026-10-27T20:00:00Z"
-last_activity: 2026-10-27 -- Phase 190 Plan 01 executed; T6 checkpoint
+stopped_at: Phase 190 Plan 01 complete — user approved T6; ready for Phase 191
+last_updated: "2026-10-27T21:00:00Z"
+last_activity: 2026-10-27 -- Phase 190 Plan 01 complete (T6 approved by user)
 progress:
   total_phases: 175
   completed_phases: 153
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 190 (evidence-map) — EXECUTING (T6 checkpoint)
-Plan: 1 of 1 — plans T0-T5 complete; T6 awaiting human review
-Status: T6 checkpoint
-Last activity: 2026-10-27 -- Phase 190 Plan 01 T0-T5 complete; AM-EVIDENCE-MAP.md, xlsx, tool created
+Phase: 190 (evidence-map) — COMPLETE
+Plan: 1 of 1 — all tasks complete; T6 human-verify approved 2026-10-27
+Status: Complete; Phase 191 is next
+Last activity: 2026-10-27 -- Phase 190 Plan 01 all tasks complete (T6 approved)
 
 ## Phase Map (v3.13)
 
 | Phase | Name | Depends on | Status |
 |-------|------|------------|--------|
-| 190 | Evidence Map | — | Not started |
+| 190 | Evidence Map | — | Complete |
 | 191 | Verify Existing Entries | Phase 190 | Not started |
 | 192 | Draft New Content | Phase 191 | Not started |
 | 193 | Produce Updated Manual | Phase 192 | Not started |
@@ -98,4 +98,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 190 Plan 01 T6 checkpoint — awaiting human review of AM-EVIDENCE-MAP.md and xlsx workbook
+**Stopped at:** Phase 190 Plan 01 complete — T6 approved 2026-10-27; next is Phase 191 (verify existing entries)
