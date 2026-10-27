@@ -6,7 +6,7 @@
 
 ---
 
-All analysis work for the to-do list is complete; one registration gate (R/88 on HiPerGator) and two team decisions remain open (biannual definition; questions for Amy email).
+All analysis work for the to-do list is complete; two team decisions remain open (biannual definition; questions for Amy email).
 
 | Item | Description | Status | Closed by / Notes |
 |------|-------------|--------|-------------------|
@@ -21,7 +21,7 @@ All analysis work for the to-do list is complete; one registration gate (R/88 on
 | 4.3 (binary flag) | Binary indicator of any anthracycline administration per patient | Done | Phase 187 Plan 01 SUMMARY: any_anthracycline flag (TRUE/FALSE) built for all cohort patients; patient-grain file in output/internal/anthracycline_exposure_patient_20261022.rds; aggregate counts in output/anthracycline_exposure_summary_20261022.xlsx. |
 | 4.3 (time since last dose) | Time (in years) since the last anthracycline administration, per exposed patient | Done | Phase 187 Plan 01 SUMMARY: years_since_last_anthracycline computed from last dose to end of follow-up; NA for unexposed patients; written to same patient-grain files as above. |
 | 4.3 (echo rate since anthracycline) | Echocardiogram rate per patient-year since last anthracycline, among exposed patients, with reconciliation against Phase 166 timing | Done | Phase 188 Plan 01 SUMMARY: echo rate computed from Phase 187 exposure variables; encounter-grain and patient-grain results in output/internal/; Phase 166 reconciliation documented in output/20261022_188_echo_rate_anthracycline.xlsx. |
-| REG-01 | Registration of new Phase 185–189 analysis scripts in the investigation registry and smoke test suite; smoke test passes on HiPerGator | Open | Phase 189 Plan 03 SUMMARY: R/186, R/187, R/188 added to R/39 registry and script index; smoke sections 15av–15az added to R/88 (Phases 184–189). HiPerGator ALL CHECKS PASSED gate is pending — user must run R/88 interactively to close this item. |
+| REG-01 | Registration of new Phase 185–189 analysis scripts in the investigation registry and smoke test suite; smoke test passes on HiPerGator | Done | Phase 189 Plan 03 SUMMARY: R/186, R/187, R/188 added to R/39 registry and script index; smoke sections 15av–15az added to R/88 (Phases 184–189). R/88 ALL CHECKS PASSED confirmed on HiPerGator 2026-10-23. |
 | TRACK-01 | Milestone to-do status table for team meeting notes | Done | This document (189-TODO-STATUS.md in the phase folder), written 2026-10-27 by Phase 189 Plan 04. |
 | D-186-01 | Definition of "biannual" surveillance interval | Open | Provisional: every 6 months (half-year window from Phase 184 sensitivity tier). Awaiting team confirmation before treating as final. |
 | D-189-01 | Questions for the Amy email | Open | Gerard supplies the questions. The email draft (189-AMY-EMAIL-DRAFT.md) is ready in the phase folder but will not be sent until this placeholder is filled. |
