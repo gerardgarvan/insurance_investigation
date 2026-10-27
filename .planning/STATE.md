@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 189-03-PLAN.md (awaiting HiPerGator checkpoint Task 3)
-last_updated: "2026-10-27T15:29:34.991Z"
+stopped_at: Completed 189-04-PLAN.md
+last_updated: "2026-10-27T15:34:18.927Z"
 last_activity: 2026-10-27
 progress:
   total_phases: 179
-  completed_phases: 157
+  completed_phases: 158
   total_plans: 339
-  completed_plans: 343
+  completed_plans: 344
   percent: 100
 ---
 
@@ -117,7 +117,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 **Phase 183 close-out (2026-10-15):** MICE sensitivity for distance complete. D-01 (log_dist PMM) and D-02 (far logreg), m=20 each, 614 patients imputed. Pooled primary (years 2+): D-01 OR=0.842 (0.725–0.977) FMI=0.049, D-02 OR=0.834 (0.713–0.976) FMI=0.160 — both within Phase 180 bounds and within 0.01 of each other. loggedEvents: main_sourceUCI dropped (D-01 PMM only, non-mandatory, not a D-09 stop). payer dropped (payer_summary RDS not found, optional per D-07b). R/88: ALL 982 CHECKS PASSED (3 skipped). Outputs: mice_sensitivity_distance_20261015.xlsx, mice_trace_20261015.png, mice_density_20261015.png, 183-MEMO.md.
 
-**Stopped at:** Completed 189-03-PLAN.md (awaiting HiPerGator checkpoint Task 3)
+**Stopped at:** Completed 189-04-PLAN.md
 
 ### Quick Tasks Completed
 

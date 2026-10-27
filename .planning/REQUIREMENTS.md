@@ -41,7 +41,7 @@
 
 ### TRACK — Status Tracking
 
-- [ ] **TRACK-01**: To-do status table (from v3.12-milestone-brief.md map, final state) written to the Phase 189 milestone folder; every item shows Done or Closed-with-pointer; used for next team meeting notes update.
+- [x] **TRACK-01**: To-do status table (from v3.12-milestone-brief.md map, final state) written to the Phase 189 milestone folder; every item shows Done or Closed-with-pointer; used for next team meeting notes update.
 
 ---
 

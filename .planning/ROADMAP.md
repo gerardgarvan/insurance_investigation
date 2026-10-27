@@ -886,7 +886,7 @@ Plans:
 - [x] 189-01-PLAN.md -- COMM-01: NHL explainer R script (R/189_nhl_explainer.R writes dated .md to output/)
 - [x] 189-02-PLAN.md -- COMM-02: Amy email draft written to phase folder with [QUESTIONS] placeholder
 - [x] 189-03-PLAN.md -- REG-01: R/39, SCRIPT_INDEX, R/88 registration for R/186-188; HiPerGator ALL CHECKS PASSED gate
-- [ ] 189-04-PLAN.md -- TRACK-01: v3.12 milestone to-do status table (pre-execution gate on v3.12-milestone-brief.md)
+- [x] 189-04-PLAN.md -- TRACK-01: v3.12 milestone to-do status table (pre-execution gate on v3.12-milestone-brief.md)
 **UI hint**: no
 
 ### Phase 189: Team Deliverables and Milestone Close-out
@@ -916,4 +916,4 @@ Plans:
 | 186. Survivorship Rate Granularity | v3.12 | 1/1 | Complete    | 2026-10-22 |
 | 187. Anthracycline Exposure Variables | v3.12 | 1/1 | Complete    | 2026-10-22 |
 | 188. Echo Rate Since Anthracycline | v3.12 | 0/TBD | Complete    | 2026-10-27 |
-| 189. Team Deliverables and Milestone Close-out | v3.12 | 3/4 | Complete    | 2026-10-23 |
+| 189. Team Deliverables and Milestone Close-out | v3.12 | 4/4 | Complete   | 2026-10-27 |
