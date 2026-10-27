@@ -795,7 +795,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 ## Phases (v3.13)
 
-- [ ] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status
+- [x] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status (completed 2026-10-27)
 - [ ] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches
 - [ ] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8
 - [ ] **Phase 193: Produce Updated Manual** — Tracked-change .docx + finalized evidence workbook
@@ -865,7 +865,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 190. Evidence Map | v3.13 | 0/TBD | Not started | — |
+| 190. Evidence Map | v3.13 | 1/1 | Complete   | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 0/TBD | Not started | — |
 | 192. Draft New Content | v3.13 | 0/TBD | Not started | — |
 | 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |

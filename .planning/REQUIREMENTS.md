@@ -8,9 +8,9 @@
 
 ### Evidence Mapping (Phase 190)
 
-- [ ] **AM-MAP-01**: Every manual item (including both Amy comments c0/c1) mapped to repo evidence with a status: `FILLED-NEEDS-CHECK`, `EMPTY-REPO-CAN-ANSWER`, `EMPTY-NEEDS-TEAM`, or `OUT-OF-SCOPE`
-- [ ] **AM-MAP-02**: Repo domains not yet mentioned in the manual identified for addition — including single-health-system flag, MED_ADMIN/DISPENSING chemo detection with NDC→RxNorm, drug-name normalization, first-line regimens, treatment episodes, anthracycline exposure, CBC definition, rurality (RUCA/RUCC), SDI, diagnoses of interest, HL vs NHL classification, and post-death encounters
-- [ ] **AM-MAP-03**: Team decisions mined from `TeamMtgNotes2026.docx` and all phase CONTEXT.md files; OneFLquestions document status recorded (D-190-01)
+- [x] **AM-MAP-01**: Every manual item (including both Amy comments c0/c1) mapped to repo evidence with a status: `FILLED-NEEDS-CHECK`, `EMPTY-REPO-CAN-ANSWER`, `EMPTY-NEEDS-TEAM`, or `OUT-OF-SCOPE`
+- [x] **AM-MAP-02**: Repo domains not yet mentioned in the manual identified for addition — including single-health-system flag, MED_ADMIN/DISPENSING chemo detection with NDC→RxNorm, drug-name normalization, first-line regimens, treatment episodes, anthracycline exposure, CBC definition, rurality (RUCA/RUCC), SDI, diagnoses of interest, HL vs NHL classification, and post-death encounters
+- [x] **AM-MAP-03**: Team decisions mined from `TeamMtgNotes2026.docx` and all phase CONTEXT.md files; OneFLquestions document status recorded (D-190-01)
 
 ### Verification (Phase 191)
 
