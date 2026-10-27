@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.13
-milestone_name: Analytic Manual Fill-out and Verification
-status: planning
-stopped_at: Roadmap created — ready for Phase 190
-last_updated: "2026-10-27T00:00:00.000Z"
-last_activity: 2026-10-27
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: Ready to begin Phase 190
+stopped_at: Phase 190 context gathered
+last_updated: "2026-10-27T17:51:31.816Z"
+last_activity: 2026-10-27 — Roadmap written for v3.13
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 38
+  completed_phases: 31
+  total_plans: 103
+  completed_plans: 116
 ---
 
 # Project State
@@ -99,4 +98,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** v3.13 roadmap created — begin with `/gsd:plan-phase 190`.
+**Stopped at:** Phase 190 context gathered
