@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: executing
-stopped_at: Phase 190 Plan 01 complete — user approved T6; ready for Phase 191
-last_updated: "2026-10-27T21:00:00Z"
-last_activity: 2026-10-27 -- Phase 190 Plan 01 complete (T6 approved by user)
+status: completed
+stopped_at: Phase 190 Plan 01 complete — T6 approved 2026-10-27; next is Phase 191 (verify existing entries)
+last_updated: "2026-10-27T19:29:05.416Z"
+last_activity: 2026-10-27
 progress:
   total_phases: 175
-  completed_phases: 153
+  completed_phases: 154
   total_plans: 332
-  completed_plans: 336
+  completed_plans: 337
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 190 (evidence-map) — COMPLETE
-Plan: 1 of 1 — all tasks complete; T6 human-verify approved 2026-10-27
+Phase: 190
+Plan: Not started
 Status: Complete; Phase 191 is next
-Last activity: 2026-10-27 -- Phase 190 Plan 01 all tasks complete (T6 approved)
+Last activity: 2026-10-27
 
 ## Phase Map (v3.13)
 

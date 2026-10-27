@@ -865,7 +865,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 190. Evidence Map | v3.13 | 1/1 | Complete   | 2026-10-27 |
+| 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 0/TBD | Not started | — |
 | 192. Draft New Content | v3.13 | 0/TBD | Not started | — |
 | 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |
