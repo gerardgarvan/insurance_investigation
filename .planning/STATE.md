@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: Completed 191-02-PLAN.md
-last_updated: "2026-10-28T03:04:40.887Z"
+stopped_at: Completed 191-03-PLAN.md
+last_updated: "2026-10-28T04:00:00.000Z"
 last_activity: 2026-10-28
 progress:
   total_phases: 176
@@ -70,6 +70,7 @@ Last activity: 2026-10-28
 |----|----------|----------------------|
 | D-190-01 | Location of the OneFLquestions document | Proceed without it; list as a gap in §8 |
 | D-190-02 | Data freeze label to use in Front Matter | Extract filename + DuckDB build date |
+| D-191-01..08 | see AM-EVIDENCE-MAP.md AM-MAP-03 (6 open, 2 manual-update-only) | — |
 | D-193-01 | Tracked changes in the original file vs a new versioned copy | New versioned copy (recommended) |
 
 ### Carried from v3.12

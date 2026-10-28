@@ -645,20 +645,41 @@ def cmd_export(args):
 
 def _count_lint_check(text: str, location: str) -> list:
     """
-    Return a list of lint failure messages if any count-like number (1–10) appears
+    Return a list of lint failure messages if any standalone count number (1–10) appears
     within 3 words of a count noun in `text`. Never modifies text.
+
+    A number is 'standalone' if it is NOT:
+      - immediately followed by a hyphen (e.g. '5-digit', '9-digit')
+      - part of a comma-formatted larger number (e.g. '1,344')
+      - immediately preceded by a hyphen
     """
     failures = []
-    # Tokenise loosely — split on whitespace for proximity check
     tokens = text.split()
     for i, tok in enumerate(tokens):
-        # Does this token contain a number 1-10?
-        if _COUNT_LINT_NUM.search(tok):
-            # Look ±3 tokens for a count noun
-            window = tokens[max(0, i - 3):i + 4]
-            window_str = " ".join(window)
-            if _COUNT_NOUNS.search(window_str):
-                failures.append(f"Count lint at {location}: '{window_str.strip()}'")
+        # Strip surrounding punctuation for the number check but keep original tok for context
+        clean = tok.strip("().,;:\"'")
+
+        # Must be purely a small number: 1-10 with no hyphens
+        if not re.match(r"^([1-9]|10)$", clean):
+            continue
+
+        # Exclude if the original token has a hyphen (e.g. '5-digit', '9-digit')
+        if "-" in tok:
+            continue
+
+        # Exclude if the next token starts with a digit/comma (comma-formatted number like "1,344")
+        if i + 1 < len(tokens) and re.match(r"^[,\d]", tokens[i + 1]):
+            continue
+
+        # Exclude if the previous token ends with a comma+digit (e.g. "1,344" split oddly)
+        if i > 0 and re.match(r".*,\d+$", tokens[i - 1]):
+            continue
+
+        # Look ±3 tokens for a count noun
+        window = tokens[max(0, i - 3):i + 4]
+        window_str = " ".join(window)
+        if _COUNT_NOUNS.search(window_str):
+            failures.append(f"Count lint at {location}: '{window_str.strip()}'")
     return failures
 
 
