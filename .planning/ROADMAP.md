@@ -797,8 +797,9 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 - [x] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status (completed 2026-10-27)
 - [x] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches (completed 2026-10-28)
-- [x] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8 (completed 2026-10-28)
-- [ ] **Phase 193: Produce Updated Manual** — Tracked-change .docx + finalized evidence workbook
+- [x] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8
+ (completed 2026-10-28)
+- [ ] **Phase 193: Produce Updated Manual** (5 plans) — Tracked-change .docx (lxml OOXML) + c0/c1 replies + evidence workbook + Word review
 - [ ] **Phase 194: Team Review Package and Close-out** — Cover email, decision log, SCRIPT_INDEX; R/88 only if script is pipeline-registered
 
 ### Phase Details
@@ -860,11 +861,13 @@ Plans:
   1. `AnalyticManual_<YYYY.MM.DD>.docx` exists in `docs/analytic_manual/` as a new versioned copy with all Phase 192 drafted content inserted as Word tracked changes authored "Gerard Garvan"; the original `AnalyticManual_2026.01.30.docx` is byte-for-byte unchanged
   2. Amy's existing comments in the original have replies citing Phase 191 answers; the document version field and "Date last updated" field are updated in the new copy
   3. `am_evidence_<date>.xlsx` (finalized) exists in `output/` with KEY leftmost; columns: AM section, item, manual text, verdict/status, repo source, decision ID, notes; all counts 1–10 suppressed; no patient IDs
-**Plans**: 3 plans
+**Plans**: 5 plans
 Plans:
-- [x] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
-- [ ] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
-- [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
+- [ ] 193-01-PLAN.md — 193-PREFLIGHT.md inventory (D-11) + am_manual_lib.py OOXML helpers / ID-space scanner / anchor matcher [AM-DOC-01, AM-DOC-02] (Wave 1)
+- [ ] 193-02-PLAN.md — build_operations() classifier (M1/M2, D-13, D-34) + 193-OPERATIONS.json with dry-run anchor resolution (D-12a) [AM-DOC-01, AM-DOC-02] (Wave 2, depends on 193-01)
+- [ ] 193-03-PLAN.md — tracked-change builders + reply threading (D-12/D-14) + apply_operations() producing AnalyticManual_2026.10.28.docx with reject-all/accept-all proofs (D-15) [AM-DOC-01, AM-DOC-02] (Wave 3, depends on 193-02)
+- [ ] 193-04-PLAN.md — manual-export subcommand (D-08) + full D-15 QA suite + reconciliation + am_evidence_<date>.xlsx (D-09/D-17) + STATE.md AUTOMATED-QA-PASSED [AM-DOC-03] (Wave 4, depends on 193-03)
+- [ ] 193-05-PLAN.md — human Word review checkpoint (D-16) + STATE.md WORD-REVIEW-APPROVED [AM-DOC-01, AM-DOC-02, AM-DOC-03] (Wave 5, depends on 193-04)
 
 ### Phase 194: Team Review Package and Close-out
 **Goal**: The team has everything needed to review the manual changes and make the pending decisions; the planning record is closed out
@@ -888,5 +891,5 @@ Plans:
 | 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 3/3 | Complete    | 2026-10-28 |
 | 192. Draft New Content | v3.13 | 3/3 | Complete    | 2026-10-28 |
-| 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |
+| 193. Produce Updated Manual | v3.13 | 0/5 | Not started | — |
 | 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |
