@@ -1,0 +1,6 @@
+# Source file hashes for mini fixture
+# Generated: 2026-10-28
+
+SHA-256  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  docs/analytic_manual/AnalyticManual_2026.01.30.docx
+SHA-256  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  docs/analytic_manual/TeamMtgNotes2026.docx
+SHA-256  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  docs/analytic_manual/VariableDetails.xlsx
