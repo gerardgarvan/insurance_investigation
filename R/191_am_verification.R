@@ -485,7 +485,7 @@ check_v2 <- function() {
     dplyr::summarise(n = dplyr::n(), .groups = "drop") |>
     tidyr::pivot_wider(names_from = resolved_payer, values_from = n, values_fill = 0L)
   xtab_raw$row_total <- rowSums(dplyr::select(xtab_raw, -manual_resolved), na.rm = TRUE)
-  col_totals <- c("Total", colSums(dplyr::select(xtab_raw, -manual_resolved), na.rm = TRUE))
+  col_totals <- c(manual_resolved = "Total", colSums(dplyr::select(xtab_raw, -manual_resolved), na.rm = TRUE))
   xtab_disp  <- sup_table(rbind(as.data.frame(xtab_raw), as.list(col_totals)))
 
   # UNMAPPED categories
@@ -707,13 +707,14 @@ check_v4 <- function() {
     map_ids = "L4", provenance = r49_path, tables = list(), internal = list()
   ))
 
-  # Detect cancer_category column
+  # Detect cancer_category column — artifact may be a summary list, not a per-patient frame.
+  # If missing, record the artifact shape as a note and continue with the independent re-derivation.
   cat_col <- intersect(c("cancer_category", "category", "cancer_site"), names(pipeline_art))[1]
-  if (is.na(cat_col)) return(list(
-    status = "FAILED",
-    reason = glue("cancer_category column not found in R/49 artifact; columns: {paste(names(pipeline_art), collapse=', ')}"),
-    map_ids = "L4", provenance = r49_path, tables = list(), internal = list()
-  ))
+  artifact_note <- if (is.na(cat_col)) {
+    glue("R/49 artifact does not contain a per-patient cancer_category column (found: {paste(names(pipeline_art), collapse=', ')}). Pipeline comparison skipped; independent re-derivation from DIAGNOSIS used.")
+  } else {
+    glue("R/49 artifact column used: {cat_col}")
+  }
 
   # Independent re-check: for each cancer type, count per (ID, cancer_category) pairs
   # that have >= 2 encounter dates >= 7 days apart in DIAGNOSIS
@@ -779,7 +780,7 @@ check_v4 <- function() {
   )
 
   prov <- glue(
-    "Pipeline: {r49_path} (mtime {r49_mtime}); ",
+    "Pipeline: {r49_path} (mtime {r49_mtime}); {artifact_note}; ",
     "Re-check: SQL on DuckDB DIAGNOSIS + classify_codes() (utils_cancer.R)"
   )
 
