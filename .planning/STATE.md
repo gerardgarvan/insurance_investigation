@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: completed
-stopped_at: Phase 191 context gathered
-last_updated: "2026-10-28T01:22:03.829Z"
-last_activity: 2026-10-27
+status: executing
+stopped_at: "191-01: checkpoint Task 2 HiPerGator run"
+last_updated: "2026-10-28T02:32:39.990Z"
+last_activity: 2026-10-28
 progress:
   total_phases: 176
   completed_phases: 154
-  total_plans: 332
-  completed_plans: 337
+  total_plans: 335
+  completed_plans: 338
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 190 — evidence-map
+**Current focus:** Phase 191 — verify-existing-entries
 
 ## Current Position
 
-Phase: 190
-Plan: Not started
-Status: Complete; Phase 191 is next
-Last activity: 2026-10-27
+Phase: 191 (verify-existing-entries) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-10-28
 
 ## Phase Map (v3.13)
 
@@ -98,4 +98,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 191 context gathered
+**Stopped at:** 191-01: checkpoint Task 2 HiPerGator run

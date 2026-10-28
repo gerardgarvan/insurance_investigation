@@ -14,10 +14,10 @@
 
 ### Verification (Phase 191)
 
-- [ ] **AM-VER-01**: Every `FILLED-NEEDS-CHECK` row from Phase 190 has a verdict (`MATCH`, `MISMATCH`, `PARTIAL`, or `CANNOT-VERIFY`) with evidence citation (script + function + line, or CONFIG key, or decision ID)
+- [x] **AM-VER-01**: Every `FILLED-NEEDS-CHECK` row from Phase 190 has a verdict (`MATCH`, `MISMATCH`, `PARTIAL`, or `CANNOT-VERIFY`) with evidence citation (script + function + line, or CONFIG key, or decision ID)
 - [ ] **AM-VER-02**: Amy's comments c0 and c1 and the Insurance "Gerard to confirm" item each have an explicit answer
 - [ ] **AM-VER-03**: Each `MISMATCH` recorded as a team decision row (D-191-NN) — neither code nor manual text changed in this milestone
-- [ ] **AM-VER-04**: Verification script (`R/NNN_am_verification.R`) runs read-only HiPerGator queries for leads L1–L6; L5/L7/L8/L9 covered by code-reading citations; outputs `am_verification_<date>.xlsx` (KEY leftmost, one sheet per check, QC)
+- [x] **AM-VER-04**: Verification script (`R/NNN_am_verification.R`) runs read-only HiPerGator queries for leads L1–L6; L5/L7/L8/L9 covered by code-reading citations; outputs `am_verification_<date>.xlsx` (KEY leftmost, one sheet per check, QC)
 
 ### Draft New Content (Phase 192)
 
