@@ -796,7 +796,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 ## Phases (v3.13)
 
 - [x] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status (completed 2026-10-27)
-- [ ] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches
+- [x] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches (completed 2026-10-28)
 - [ ] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8
 - [ ] **Phase 193: Produce Updated Manual** — Tracked-change .docx + finalized evidence workbook
 - [ ] **Phase 194: Team Review Package and Close-out** — Cover email, decision log, SCRIPT_INDEX; R/88 only if script is pipeline-registered
@@ -817,7 +817,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 Plans:
 - [x] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
 - [x] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
-- [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
+- [x] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
 
 ### Phase 191: Verify Existing Entries
 **Goal**: Every `FILLED-NEEDS-CHECK` item from Phase 190 has a documented verdict with a code citation; Amy's open comments and the Insurance "Gerard to confirm" item are answered; mismatches are logged as team decisions, not fixed
@@ -832,7 +832,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
-- [ ] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
+- [x] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
 - [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
 
 ### Phase 192: Draft New Content
@@ -862,7 +862,7 @@ Plans:
   3. `am_evidence_<date>.xlsx` (finalized) exists in `output/` with KEY leftmost; columns: AM section, item, manual text, verdict/status, repo source, decision ID, notes; all counts 1–10 suppressed; no patient IDs
 **Plans**: 3 plans
 Plans:
-- [ ] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
+- [x] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
 - [ ] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
 - [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
 
@@ -886,7 +886,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
-| 191. Verify Existing Entries | v3.13 | 2/3 | In Progress|  |
+| 191. Verify Existing Entries | v3.13 | 3/3 | Complete   | 2026-10-28 |
 | 192. Draft New Content | v3.13 | 0/TBD | Not started | — |
 | 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |
 | 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |
