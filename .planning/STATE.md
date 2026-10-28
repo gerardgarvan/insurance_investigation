@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-stopped_at: "191-01: checkpoint Task 2 HiPerGator run"
-last_updated: "2026-10-28T02:32:39.990Z"
+stopped_at: "191-01: COMPLETE — HiPerGator run approved; V1-V4 V6 COMPLETE, V5 PARTIAL"
+last_updated: "2026-10-28T02:51:52.307Z"
 last_activity: 2026-10-28
 progress:
   total_phases: 176
@@ -98,4 +98,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** 191-01: checkpoint Task 2 HiPerGator run
+**Stopped at:** 191-01: COMPLETE — HiPerGator run approved; V1-V4 V6 COMPLETE, V5 PARTIAL

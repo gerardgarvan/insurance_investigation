@@ -831,7 +831,7 @@ Plans:
   4. Every MISMATCH has a corresponding D-191-NN row in the decision log; no manual text and no code changed in this phase
 **Plans**: 3 plans
 Plans:
-- [ ] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
+- [x] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
 - [ ] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
 - [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
 
