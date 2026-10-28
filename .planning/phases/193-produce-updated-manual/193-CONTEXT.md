@@ -1,62 +1,100 @@
 # Phase 193: Produce Updated Manual - Context
 
 **Gathered:** 2026-10-28
+**Revised:** 2026-10-28 (preflight inventory, run-aware anchors, operation manifest, table-row revisions, accept-all/reject-all integrity test, comment-reply outcomes, completion states, suppression scope, export separation)
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Produce `AnalyticManual_<YYYY.MM.DD>.docx` as a new versioned copy — original byte-for-byte unchanged — with all AM-DRAFT.md content inserted as real Word tracked changes (w:ins / w:del markup), Amy's existing comments c0 and c1 replied to, and a new `am_evidence_<date>.xlsx` workbook recording every tracked change. No pipeline code changes in this phase.
+Produce `AnalyticManual_<YYYY.MM.DD>.docx` as a new versioned copy — original byte-for-byte unchanged — with AM-DRAFT.md content applied as real Word tracked changes, replies to Amy's comments c0 and c1, and a new `am_evidence_<date>.xlsx` reconciling every edit operation to its source. No pipeline code changes. Phase 193 is complete only after a human Word review is recorded (D-16).
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### Tracked-change insertion method
+### Method
 
-- **D-01:** Unpack the `.docx` zip, edit `word/document.xml` directly to inject `w:ins` and `w:del` elements (`w:author="Gerard Garvan"`, timestamp = build time), then repack. Do not use python-docx's high-level API for this — it does not produce tracked-change XML. python-docx is fine for reading the original structure.
-- **D-02:** Read the OOXML tracked-change spec (the "docx skill") before building the insertion script.
-- **D-03:** Three-way verification gate before the phase is complete:
-  1. Reopen the output with python-docx and confirm it parses without error.
-  2. Run `pandoc --track-changes=all` on the output; confirm insertion, deletion, and comment counts match the plan.
-  3. Human checkpoint: open in Word, confirm tracked changes are visible and the file is clean.
-- **D-04:** Write only to the new versioned copy. Verify the original's SHA-256 hash has not changed.
+- **D-01:** Unpack the `.docx`, edit the package XML with lxml, repack. python-docx is used only for reading. Read the docx skill's tracked-changes and comments guidance before building.
+- **D-04:** Write only to the new versioned copy in `docs/analytic_manual/`. If the target filename exists, stop unless run with an explicit `--overwrite`; record a build ID (timestamp + git commit) in the manifest and the workbook KEY. Verify the original's SHA-256 at start and end.
 
-### What gets inserted
+### Preflight inventory (before any edit)
 
-- **DRAFTED units** → `w:ins` tracked insertions into the corresponding empty section.
-- **CORRECTION units** → tracked deletion (`w:del`) of the anchor text + `w:ins` of the replacement text, plus a comment citing the decision ID and evidence (per D-24 from Phase 192 context). Comment appears on the CORRECTION only.
-- **OPEN-QUESTION-SEE-§8 units** → existing text is not changed; add a comment pointing to the §8 row. Where the unit fills an empty field, insert current-code description as tracked text with that comment.
-- **TEAM-INPUT-NEEDED units** → insert a visible `[TEAM INPUT NEEDED]` placeholder as a tracked insertion so reviewers see the gap. Do not skip.
-- **§8 rows** → tracked insertions into the existing Parking Lot table. Existing rows are not moved or deleted.
-- **Front matter** → "Date last updated" and "Document version" fields updated as tracked changes.
-- **Strip draft helper columns:** Map ID tags (`[S4-…]`), STATUS, and CITE lines do not appear in the Word text — they go to the evidence workbook, keyed by change ID.
-- **Comment volume:** comments only on CORRECTIONs, OPEN-QUESTION flags, and the c0/c1 replies. No comment on every DRAFTED line — that would bury reviewers.
+- **D-11:** Write `193-PREFLIGHT.md` recording:
+  - original SHA-256
+  - package parts and relationships present (`comments.xml`, `commentsExtended.xml`, `commentsIds.xml`, `commentsExtensible.xml`, `people.xml`, `settings.xml`, headers/footers)
+  - existing tracked changes, comments (ID, author, initials, text, anchor, `w14:paraId` of the comment paragraph), bookmarks, content controls, fields
+  - the paragraph/table location of every target: each section heading, each existing domain field, the §8 table, the front-matter "Date last updated" and "Document version" fields (including whether they sit in body, table, header or footer), and the heading/paragraph/table styles in use
+  - c0 and c1 identified by author and comment text, not by assumed numeric ID
+  Existing revisions and comments are left untouched unless an operation explicitly targets them.
 
-### Comment replies (AM-DOC-02)
+### Operation manifest
 
-- **D-05:** Reply to Amy's c0 and c1 in `comments.xml` / `commentsExtended.xml` using `w:paraIdParent` threading. Author: "Gerard Garvan".
-  - **c0 reply:** "OneFLquestions document not received; listed as open in §8 (D-190-01)."
-  - **c1 reply:** Phase 191 verdict in 1–2 sentences covering both steps (Tumor Registry default, then first HL code date). If a mismatch, add "see §8."
-- **D-06:** If `commentsExtended.xml` threading proves unreliable, fallback is a new comment on the same anchor paragraph starting "Re: Amy's comment —".
-- **D-07:** Both replies also appear in the evidence workbook and are noted in the Phase 194 cover email.
+- **D-13:** Build `193-OPERATIONS.json` deterministically from `_parse_draft()` before writing XML. One operation per logical edit:
+  `op_id` (OP-NNN), source unit(s) and map ID, status, target (section, paragraph/table/cell locator from the preflight), action (`INSERT-PARA`, `INSERT-ROW`, `REPLACE`, `COMMENT-ONLY`, `REPLY`, `PLACEHOLDER`), text to insert, anchor text (for REPLACE/COMMENT), citation(s), decision ID, verdict.
+  After writing, each operation records the physical IDs created (`w:ins`/`w:del` revision IDs, comment IDs). The source-unit count (e.g., 138) is an inventory, not the expected revision count; expected counts come from the manifest.
+- **M1/M2:** Classify every unit by destination before insertion: empty field (fill), populated field (insert after the last existing paragraph of that field — never duplicate existing text), new subsection (repo-only domains, using existing heading styles from the preflight; no new styles), table row, front-matter field.
 
-### Evidence workbook (AM-DOC-03)
+### Anchors
 
-- **D-08:** Produce a new `am_evidence_<date>.xlsx` by extending the existing `cmd_export` in `tools/am_evidence/am_evidence_map.py`. This is distinct from the Phase 191 verdicts workbook (`am_verdicts_20261027.xlsx`), which remains the Phase 191 record.
-- **D-09:** Workbook structure:
-  - **KEY** sheet (leftmost): column index + reference to `am_verdicts_20261027.xlsx` as the Phase 191 record.
-  - **Changes** sheet: one row per tracked change — columns: change ID, section, map ID, action (insert / replace / comment), inserted or replaced text, citation, verdict, decision ID (where applicable).
-  - **Open Items** sheet: all §8 parking-lot rows.
-  - Integrity check: every tracked change in the .docx has exactly one workbook row, and vice versa. Export fails if the counts diverge.
-- **D-10:** UF colours (`#0021A5` / `#FA4616`); all counts 1–10 suppressed as `"<11"`; no patient IDs.
+- **D-12a:** Corrections and comment anchors are matched against the DOCX structure, not the markdown: concatenate the run text of each candidate paragraph or cell, find the quoted anchor, and map it back to the runs it spans (splitting runs at the boundaries while copying their `w:rPr`). Require exactly one match within one paragraph or cell. Zero matches, multiple matches, or a span across paragraphs/cells/fields/hyperlinks → that operation is not applied and is reported as `ANCHOR-FAILED` in the manifest and workbook; the build fails unless every failure is resolved.
+
+### Tracked-change construction
+
+- **D-12:**
+  - Insertions: `w:ins` wrapping `w:r` elements with `w:t` (`xml:space="preserve"` where needed); new paragraphs carry a paragraph-mark insertion (`w:pPr/w:rPr/w:ins`) so the whole paragraph is accepted or rejected together.
+  - Deletions: `w:del` wrapping runs whose text is in `w:delText`, preserving the original `w:rPr`.
+  - Inserted table rows: `w:trPr/w:ins` on the row plus `w:ins` runs in each cell; cell properties copied from an existing row of the same table.
+  - Every revision has a unique `w:id` (not colliding with existing revision, comment or bookmark IDs), `w:author="Gerard Garvan"`, and one build timestamp.
+  - Inserted text uses the formatting of the surrounding paragraph (copied `w:pPr`/`w:rPr`).
+  - Set `w:trackRevisions` in `settings.xml` so further edits by reviewers are tracked.
+- **What gets inserted** (unchanged from discussion):
+  - DRAFTED → tracked insertion.
+  - CORRECTION → tracked deletion of the anchor text + tracked insertion of the replacement + one comment citing decision ID and evidence.
+  - OPEN-QUESTION-SEE-§8 → existing text unchanged plus a comment pointing to the §8 row; where it fills an empty field, current-code description inserted as tracked text with that comment.
+  - TEAM-INPUT-NEEDED → visible `[TEAM INPUT NEEDED]` placeholder as a tracked insertion.
+  - §8 rows → tracked row insertions; existing rows untouched.
+  - Front matter → "Date last updated" and "Document version" as tracked changes, in whatever part the preflight located them.
+- **D-34 (what is stripped):** draft-control metadata only — `[S4-…]` tags, `STATUS:`, `CITE:` lines and the trailing Map ID/Status/Cite table columns. These go to the workbook keyed by `op_id`. Substantive references that belong in the manual (decision dates, team decision wording, the §8 Notes IDs) stay in the text. Code paths and line ranges go to comments (CORRECTION/OPEN only) and the workbook, not the body text.
+- **Comment volume:** comments only on CORRECTIONs, OPEN-QUESTION units and the two replies.
+
+### Comment replies
+
+- **D-14:** Using the preflight inventory, reply to c0 and c1 as threaded replies: new comment in `comments.xml` (author "Gerard Garvan", initials), its paragraph given a new unique `w14:paraId`, and a `w15:commentEx` entry in `commentsExtended.xml` with `w15:paraIdParent` = the original comment's paragraph ID; add the reply to `commentsIds.xml` / `people.xml` if those parts exist, and create missing parts with their relationships and content types if needed. The reply carries the same anchor range as the original. Original comments and anchors are unchanged.
+  - c0 reply: "OneFLquestions document not received; listed as open in §8 (D-190-01)."
+  - c1 reply: the Phase 191 verdict in one or two sentences covering both steps (Tumor Registry default, then first HL code date); if a mismatch, add "see §8."
+- **D-06/D-07:** If threading cannot be produced reliably, fall back to a new comment on the same anchor beginning "Re: Amy's comment —". Each reply's outcome is recorded as `THREADED-REPLY` or `FALLBACK-COMMENT` in the manifest and workbook, and the Phase 194 email uses the recorded outcome.
+
+### Evidence workbook
+
+- **D-08:** New subcommand `manual-export` (not a change to `export`), writing `am_evidence_<date>.xlsx`. Existing `export` output is unchanged; a regression check compares `export` output before and after.
+- **D-09/D-17:**
+  - KEY (leftmost): build ID, original and output SHA-256, column definitions, reference to `am_verdicts_<date>.xlsx` as the Phase 191 record, reply outcomes.
+  - Operations: one row per logical operation — op_id, section, map ID, action, inserted/replaced text, anchor text, revision IDs, comment IDs, citation(s), verdict, decision ID, status (`APPLIED` / `ANCHOR-FAILED`).
+  - Open Items: §8 rows as inserted.
+  - Reconciliation: every `w:ins`/`w:del`/comment created by the build belongs to exactly one operation, and every APPLIED operation's IDs exist in the output XML; any difference fails the export.
+- **D-10:** UF colours; KEY leftmost; no patient IDs. Count suppression applies only to patient or result counts (there should be none in the manual); methodological numbers (day windows, mile cutoffs, code lists, dates, version numbers) are never suppressed.
+
+### Verification
+
+- **D-15:**
+  1. Package checks: well-formed XML in every edited part; relationships and content types resolve; revision, comment and paraId uniqueness; every `commentRangeStart` has a matching end and reference.
+  2. Reject-all test: programmatically reject every revision created by this build (drop `w:ins` content, unwrap `w:del` → `w:t`); the resulting document text must equal the original's text exactly. This proves no untracked changes.
+  3. Accept-all test: accept every revision; the resulting text must contain each operation's inserted text once and none of the deleted anchor text.
+  4. Untouched content: existing comments, revisions, tables and sections outside targeted locations are byte-identical in XML after the rejection pass.
+  5. Reopen with python-docx; run `pandoc --track-changes=all` and confirm its insertion/deletion/comment markers match manifest counts (cross-check only; the XML checks are authoritative).
+  6. Render to PDF (LibreOffice headless) and look at the pages with changes for layout defects.
+  7. Human checkpoint in Microsoft Word (D-16).
+
+### Completion states
+
+- **D-16:** The phase records its state in STATE.md: `ARTIFACTS-GENERATED` → `AUTOMATED-QA-PASSED` → `WORD-REVIEW-APPROVED`. Only the last allows Phase 193 to be marked complete. The Word review confirms: file opens without a repair prompt; tracked changes visible and attributed to Gerard Garvan; accept/reject works on a sample; c0/c1 replies show under Amy's comments (or the fallback is visible and labelled); no layout damage on changed pages.
 
 ### Claude's Discretion
 
-- Change ID scheme (e.g., `TC-NNN` prefix) and exact column order within the Changes sheet.
-- Whether to build the insertion script as a new subcommand in `am_evidence_map.py` or as a standalone script in `tools/am_evidence/`.
-- Exact timestamp value used in `w:ins`/`w:del` attributes (build time is fine).
+- Insertion code as a standalone script in `tools/am_evidence/` or a subcommand, provided `manual-export` stays separate from `export`.
+- Exact column order within the Operations sheet.
 
 </decisions>
 
@@ -65,63 +103,45 @@ Produce `AnalyticManual_<YYYY.MM.DD>.docx` as a new versioned copy — original 
 
 **Downstream agents MUST read these before planning or implementing.**
 
-### AM-DRAFT source
-- `.planning/phases/192-draft-new-content/AM-DRAFT.md` — the 95 DRAFTED + 2 CORRECTION + 33 TEAM-INPUT-NEEDED + 8 OPEN-QUESTION units to be inserted
+### Draft and prior decisions
+- `.planning/phases/192-draft-new-content/AM-DRAFT.md` — source units (inventory reported by Phase 192: DRAFTED, CORRECTION, TEAM-INPUT-NEEDED, OPEN-QUESTION-SEE-§8)
+- `.planning/phases/192-draft-new-content/192-CONTEXT.md`, `192-01-PLAN.md` (draft grammar)
+- `.planning/phases/191-verify-existing-entries/AM-VERDICTS.md` — c0/c1 verdicts
+- `.planning/phases/190-evidence-map/AM-EVIDENCE-MAP.md`, `am_source_hashes.txt`
 
-### Prior phase decisions
-- `.planning/phases/192-draft-new-content/192-CONTEXT.md` — D-22 through D-27 (evidence precedence, CORRECTION directive format, D-24 comment-on-correction rule)
-- `.planning/phases/191-verify-existing-entries/191-CONTEXT.md` — D-191-NN decision row format, c0 / c1 verdict details
-- `.planning/phases/190-evidence-map/190-CONTEXT.md` — D-190-01 (OneFLquestions open), map ID scheme
+### Tool and guidance
+- `tools/am_evidence/am_evidence_map.py` — `_parse_draft()`, `export`, `draft-check`
+- docx skill guidance on tracked changes and comments (locate in the Claude Code skills available in this environment)
 
-### Evidence map and verdicts
-- `.planning/phases/191-verify-existing-entries/AM-VERDICTS.md` — Phase 191 verdicts (c0 BLOCKED, c1 verdict)
-- `.planning/phases/190-evidence-map/AM-EVIDENCE-MAP.md` — map IDs, AM-MAP-02 repo-only domain rows, AM-MAP-03 decision rows
-
-### Existing tool
-- `tools/am_evidence/am_evidence_map.py` — `cmd_export` (evidence workbook skeleton to extend), `cmd_draft_check`, `_parse_draft`
-
-### Requirements and roadmap
-- `.planning/REQUIREMENTS.md` — AM-DOC-01, AM-DOC-02, AM-DOC-03
-- `.planning/ROADMAP.md` §Phase 193 — success criteria
+### Requirements
+- `.planning/REQUIREMENTS.md` — AM-DOC-01..03; `.planning/ROADMAP.md` §Phase 193
 
 ### Source document
-- `docs/analytic_manual/AnalyticManual_2026.01.30.docx` — original (read-only; hash must not change)
-- `docs/analytic_manual/AnalyticManual_2026.01.30.md` — markdown mirror (for anchor lookups)
+- `docs/analytic_manual/AnalyticManual_2026.01.30.docx` (read-only)
 
 </canonical_refs>
 
 <code_context>
 ## Existing Code Insights
 
-### Reusable Assets
-- `tools/am_evidence/am_evidence_map.py`: `_parse_draft()` already parses AM-DRAFT.md into structured units with status, cite, and text fields — reuse this to drive the insertion script.
-- `tools/am_evidence/am_evidence_map.py`: `cmd_export()` produces `am_evidence_<date>.xlsx` with UF styling from `AM-EVIDENCE-MAP.md` — extend this (new sheet or new command) for the Changes + Open Items sheets.
-- `python-docx` v1.2.0 is installed — use for reading .docx structure; use `lxml` (bundled with python-docx) for raw XML manipulation.
-
-### Established Patterns
-- All tools run on local Windows; no HiPerGator needed for this phase (no R data reads).
-- Output workbooks: KEY leftmost, UF blue/orange, counts suppressed.
-- Verification gate: `validate` subcommand must pass after any change to AM-EVIDENCE-MAP.md.
-
-### Integration Points
-- Phase 194 consumes the new `.docx` and `am_evidence_<date>.xlsx` to draft the cover email and decision log.
-- c0/c1 replies feed directly into the Phase 194 email.
+- `_parse_draft()` gives units with status, cite and text — input to the manifest.
+- python-docx 1.2.0 and lxml available locally; pandoc 3.13 installed; LibreOffice needed for the render check (install or skip with the reason recorded).
+- All work runs on local Windows; no HiPerGator.
 
 </code_context>
 
 <specifics>
 ## Specific Ideas
 
-- User explicitly wants the insertion script to read the OOXML tracked-change spec ("the docx skill") before building — check if such a reference exists in the project or web.
-- Three-way verification gate is non-negotiable: python-docx reopen + pandoc count match + human Word checkpoint.
-- The SHA-256 hash of the original `AnalyticManual_2026.01.30.docx` must be recorded at plan time and re-verified at phase close.
+- The reject-all = original test is the key integrity proof; build it early and run it after every change to the insertion code.
+- c0/c1 outcomes (THREADED-REPLY vs FALLBACK-COMMENT) flow to the Phase 194 email exactly as recorded.
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-None — discussion stayed within phase scope.
+None.
 
 </deferred>
 
