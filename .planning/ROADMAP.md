@@ -847,7 +847,7 @@ Plans:
   4. Every Phase 191 MISMATCH appears in §8 as an open question attributed to its D-191-NN decision ID — none appear as resolved text anywhere else in the draft
 **Plans**: 3 plans
 Plans:
-- [ ] 192-01-PLAN.md — Add draft-check subcommand to am_evidence_map.py (D-26 rules)
+- [x] 192-01-PLAN.md — Add draft-check subcommand to am_evidence_map.py (D-26 rules)
 - [ ] 192-02-PLAN.md — Write AM-DRAFT.md §0–§3, §5–§8, §11 and Appendices A1–A4
 - [ ] 192-03-PLAN.md — Write all 12 repo-only §4 domain blocks (SHS–PDE)
 
@@ -887,6 +887,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 3/3 | Complete    | 2026-10-28 |
-| 192. Draft New Content | v3.13 | 0/TBD | Not started | — |
+| 192. Draft New Content | v3.13 | 1/3 | In Progress|  |
 | 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |
 | 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |

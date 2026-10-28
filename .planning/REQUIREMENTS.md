@@ -21,10 +21,10 @@
 
 ### Draft New Content (Phase 192)
 
-- [ ] **AM-FILL-01**: Front matter (§0), §1 Data Ingest & Change Log, §2 Cohort, §3 Decision Log drafted where the repo has a source; every statement tagged with its source
-- [ ] **AM-FILL-02**: New §4 domains drafted in the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues) for each `EMPTY-REPO-CAN-ANSWER` domain from Phase 190
-- [ ] **AM-FILL-03**: §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot (parked D-IDs from STATE.md), §11 Known Limitations drafted where repo has a source; §6 technical checks annotated with script evidence, sign-off boxes untouched
-- [ ] **AM-FILL-04**: Every Phase 191 `MISMATCH` appears in §8 as an open question, not as resolved text
+- [x] **AM-FILL-01**: Front matter (§0), §1 Data Ingest & Change Log, §2 Cohort, §3 Decision Log drafted where the repo has a source; every statement tagged with its source
+- [x] **AM-FILL-02**: New §4 domains drafted in the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues) for each `EMPTY-REPO-CAN-ANSWER` domain from Phase 190
+- [x] **AM-FILL-03**: §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot (parked D-IDs from STATE.md), §11 Known Limitations drafted where repo has a source; §6 technical checks annotated with script evidence, sign-off boxes untouched
+- [x] **AM-FILL-04**: Every Phase 191 `MISMATCH` appears in §8 as an open question, not as resolved text
 
 ### Updated Manual (Phase 193)
 
