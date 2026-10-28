@@ -485,8 +485,14 @@ check_v2 <- function() {
     dplyr::summarise(n = dplyr::n(), .groups = "drop") |>
     tidyr::pivot_wider(names_from = resolved_payer, values_from = n, values_fill = 0L)
   xtab_raw$row_total <- rowSums(dplyr::select(xtab_raw, -manual_resolved), na.rm = TRUE)
-  col_totals <- c(manual_resolved = "Total", colSums(dplyr::select(xtab_raw, -manual_resolved), na.rm = TRUE))
-  xtab_disp  <- sup_table(rbind(as.data.frame(xtab_raw), as.list(col_totals)))
+  # Build totals row with correct types before rbind (Bug fix: col_totals must be a
+  # data.frame with the same column names and types as xtab_raw to avoid coercion errors)
+  num_cols    <- setdiff(names(xtab_raw), "manual_resolved")
+  col_sums    <- colSums(dplyr::select(xtab_raw, dplyr::all_of(num_cols)), na.rm = TRUE)
+  totals_row  <- as.data.frame(as.list(col_sums), stringsAsFactors = FALSE)
+  totals_row$manual_resolved <- "Total"
+  totals_row  <- totals_row[, names(xtab_raw), drop = FALSE]
+  xtab_disp   <- sup_table(dplyr::bind_rows(xtab_raw, totals_row))
 
   # UNMAPPED categories
   unmapped_tbl <- compared |>
