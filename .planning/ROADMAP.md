@@ -845,8 +845,11 @@ Plans:
   2. Each EMPTY-REPO-CAN-ANSWER domain from Phase 190 has a new §4 block in AM-DRAFT.md using the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues)
   3. §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot, and §11 Known Limitations are drafted where the repo has a source; §6 sign-off boxes are annotated with the responsible party but left unfilled
   4. Every Phase 191 MISMATCH appears in §8 as an open question attributed to its D-191-NN decision ID — none appear as resolved text anywhere else in the draft
-**Plans**: 0 plans
+**Plans**: 3 plans
 Plans:
+- [ ] 192-01-PLAN.md — Add draft-check subcommand to am_evidence_map.py (D-26 rules)
+- [ ] 192-02-PLAN.md — Write AM-DRAFT.md §0–§3, §5–§8, §11 and Appendices A1–A4
+- [ ] 192-03-PLAN.md — Write all 12 repo-only §4 domain blocks (SHS–PDE)
 
 ### Phase 193: Produce Updated Manual
 **Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
