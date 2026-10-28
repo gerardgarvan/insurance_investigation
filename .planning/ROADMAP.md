@@ -797,7 +797,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 - [x] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status (completed 2026-10-27)
 - [x] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches (completed 2026-10-28)
-- [ ] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8
+- [x] **Phase 192: Draft New Content** — New paragraphs for all EMPTY-REPO-CAN-ANSWER domains; mismatches parked in §8 (completed 2026-10-28)
 - [ ] **Phase 193: Produce Updated Manual** — Tracked-change .docx + finalized evidence workbook
 - [ ] **Phase 194: Team Review Package and Close-out** — Cover email, decision log, SCRIPT_INDEX; R/88 only if script is pipeline-registered
 
@@ -849,7 +849,7 @@ Plans:
 Plans:
 - [x] 192-01-PLAN.md — Add draft-check subcommand to am_evidence_map.py (D-26 rules)
 - [x] 192-02-PLAN.md — Write AM-DRAFT.md §0–§3, §5–§8, §11 and Appendices A1–A4
-- [ ] 192-03-PLAN.md — Write all 12 repo-only §4 domain blocks (SHS–PDE)
+- [x] 192-03-PLAN.md — Write all 12 repo-only §4 domain blocks (SHS–PDE)
 
 ### Phase 193: Produce Updated Manual
 **Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
@@ -887,6 +887,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 3/3 | Complete    | 2026-10-28 |
-| 192. Draft New Content | v3.13 | 2/3 | In Progress|  |
+| 192. Draft New Content | v3.13 | 3/3 | Complete   | 2026-10-28 |
 | 193. Produce Updated Manual | v3.13 | 0/TBD | Not started | — |
 | 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |
