@@ -789,11 +789,11 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 ---
 
-## v3.13 Analytic Manual Fill-out and Verification (Active)
+## 🚧 **v3.13 Analytic Manual Fill-out and Verification** (Active)
 
 **Milestone Goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo. Every existing statement is checked against code and given a verdict. Every empty section the repo can answer is drafted from code, config, planning decisions, and team meeting notes. The result is a tracked-change new version of the manual and an evidence workbook tying each statement to its code source.
 
-## Phases (v3.13)
+### Phases
 
 - [x] **Phase 190: Evidence Map** — Read-only crosswalk from manual to repo sources; every item has a status (completed 2026-10-27)
 - [x] **Phase 191: Verify Existing Entries** — Verdicts for all FILLED-NEEDS-CHECK rows; L1–L9 leads answered; D-191-NN decisions created for mismatches (completed 2026-10-28)
@@ -801,7 +801,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 - [ ] **Phase 193: Produce Updated Manual** — Tracked-change .docx + finalized evidence workbook
 - [ ] **Phase 194: Team Review Package and Close-out** — Cover email, decision log, SCRIPT_INDEX; R/88 only if script is pipeline-registered
 
-## Phase Details (v3.13)
+### Phase Details
 
 ### Phase 190: Evidence Map
 **Goal**: Every item in the analytic manual has a documented status and a repo source reference so Phase 191 knows exactly where to start checking
@@ -845,11 +845,8 @@ Plans:
   2. Each EMPTY-REPO-CAN-ANSWER domain from Phase 190 has a new §4 block in AM-DRAFT.md using the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues)
   3. §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot, and §11 Known Limitations are drafted where the repo has a source; §6 sign-off boxes are annotated with the responsible party but left unfilled
   4. Every Phase 191 MISMATCH appears in §8 as an open question attributed to its D-191-NN decision ID — none appear as resolved text anywhere else in the draft
-**Plans**: 3 plans
+**Plans**: 0 plans
 Plans:
-- [x] 191-01-PLAN.md — R verification script (V1_SOURCE..V6_DEATH) + HiPerGator checkpoint
-- [ ] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
-- [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
 
 ### Phase 193: Produce Updated Manual
 **Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
@@ -881,7 +878,7 @@ Plans:
 - [ ] 191-02-PLAN.md — Write AM-VERDICTS.md and D-191-NN rows in AM-MAP-03
 - [ ] 191-03-PLAN.md — verdicts-export subcommand + am_verdicts workbook + STATE.md update
 
-## Progress (v3.13)
+### Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|

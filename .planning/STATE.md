@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+milestone: v3.13
+milestone_name: Analytic Manual Fill-out and Verification
 status: verifying
 stopped_at: Completed 191-03-PLAN.md
 last_updated: "2026-10-28T03:14:01.335Z"
