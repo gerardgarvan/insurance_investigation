@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-am_evidence_map.py — Phase 190 evidence-map tool.
+am_evidence_map.py — Phase 190/191 evidence-map tool.
 
 Subcommands:
-  coverage  — list every non-blank manual line; report uncovered lines not in skip list
-  validate  — check IDs, uniqueness, registry match, valid statuses/evidence types, column counts
-              (use --final to also check for [T2]/[T3] placeholders)
-  export    — write xlsx workbook and run round-trip check
+  coverage        — list every non-blank manual line; report uncovered lines not in skip list
+  validate        — check IDs, uniqueness, registry match, valid statuses/evidence types, column counts
+                    (use --final to also check for [T2]/[T3] placeholders)
+  export          — write xlsx workbook and run round-trip check (Phase 190 map workbook)
+  verdicts-export — validate AM-VERDICTS.md and write the team-facing verdict workbook
 
 Usage:
   python tools/am_evidence/am_evidence_map.py coverage
   python tools/am_evidence/am_evidence_map.py validate [--final]
   python tools/am_evidence/am_evidence_map.py export
+  python tools/am_evidence/am_evidence_map.py verdicts-export [--date YYYYMMDD]
 
 Reused in Phase 193.
 """
@@ -46,6 +48,21 @@ VALID_DECISION_STATUSES = {"OPEN", "CONFIRMED", "SUPERSEDED"}
 VALID_EVIDENCE_TYPES = {"CODE", "CONFIG", "PLANNING-DOC", "TEAM-DECISION", "MEETING-NOTES", "NONE"}
 
 VALID_ORIGINS = {"MANUAL", "REPO-ONLY"}
+
+# ---------------------------------------------------------------------------
+# Constants for verdicts-export
+# ---------------------------------------------------------------------------
+
+VERDICTS_MD = REPO_ROOT / ".planning" / "phases" / "191-verify-existing-entries" / "AM-VERDICTS.md"
+VERDICTS_DIR = REPO_ROOT / ".planning" / "phases" / "191-verify-existing-entries"
+
+VALID_VERDICTS = {"MATCH", "MISMATCH", "PARTIAL", "CANNOT-VERIFY", "BLOCKED"}
+VALID_VERDICT_EVIDENCE = {"CODE", "CONFIG", "QUERY", "PLANNING-DOC", "TEAM-DECISION", "—", ""}
+VALID_CHECK_STATUS = {"COMPLETE", "PARTIAL", "SKIPPED", "FAILED", "—", ""}
+
+# Count-lint: numbers 1-10 adjacent to a count noun within ~3 words
+_COUNT_LINT_NUM = re.compile(r"\b([1-9]|10)\b")
+_COUNT_NOUNS = re.compile(r"\b(patients|encounters|rows|records|people|n=)\b", re.IGNORECASE)
 
 # Column counts per table (including the leading and trailing pipe implies N+1 splits)
 TABLE_COLS = {
@@ -623,11 +640,602 @@ def cmd_export(args):
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: verdicts-export
+# ---------------------------------------------------------------------------
+
+def _count_lint_check(text: str, location: str) -> list:
+    """
+    Return a list of lint failure messages if any count-like number (1–10) appears
+    within 3 words of a count noun in `text`. Never modifies text.
+    """
+    failures = []
+    # Tokenise loosely — split on whitespace for proximity check
+    tokens = text.split()
+    for i, tok in enumerate(tokens):
+        # Does this token contain a number 1-10?
+        if _COUNT_LINT_NUM.search(tok):
+            # Look ±3 tokens for a count noun
+            window = tokens[max(0, i - 3):i + 4]
+            window_str = " ".join(window)
+            if _COUNT_NOUNS.search(window_str):
+                failures.append(f"Count lint at {location}: '{window_str.strip()}'")
+    return failures
+
+
+def _parse_verdicts(verdicts_path: Path) -> dict:
+    """
+    Parse AM-VERDICTS.md into:
+      frontmatter: dict  (query_workbook, created, ...)
+      verdicts: list of row dicts (9 keys matching the table headers)
+      lead_summary: dict  lead_id -> {overall, rests_on, complete}
+      other_items: str  (text under ### Other items)
+    """
+    text = verdicts_path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+
+    # --- frontmatter ---
+    frontmatter = {}
+    if lines[0].strip() == "---":
+        end = lines.index("---", 1)
+        for line in lines[1:end]:
+            if ":" in line:
+                k, _, v = line.partition(":")
+                frontmatter[k.strip()] = v.strip()
+        body_lines = lines[end + 1:]
+    else:
+        body_lines = lines
+
+    # --- helpers ---
+    def parse_row(line: str) -> list:
+        stripped = line.strip().strip("|")
+        cells = re.split(r"(?<!\\)\|", stripped)
+        return [c.strip() for c in cells]
+
+    def is_sep(line: str) -> bool:
+        return bool(re.match(r"^\s*\|[-| :]+\|\s*$", line))
+
+    # --- Verdict Table ---
+    verdicts = []
+    in_verdict_table = False
+    verdict_header_seen = False
+    in_lead_summary = False
+    current_lead = None
+    lead_summary = {}  # lead_id -> {overall, rests_on, complete, raw_complete}
+    other_items_lines = []
+    in_other_items = False
+
+    i = 0
+    while i < len(body_lines):
+        line = body_lines[i]
+        stripped = line.strip()
+
+        # Section: Verdict Table
+        if stripped == "## Verdict Table":
+            in_verdict_table = True
+            verdict_header_seen = False
+            in_lead_summary = False
+            in_other_items = False
+            i += 1
+            continue
+
+        # Section: Lead Summary
+        if stripped == "## Lead Summary":
+            in_verdict_table = False
+            in_lead_summary = True
+            in_other_items = False
+            i += 1
+            continue
+
+        # Detect lead headings ### L1 — ...  or ### Other items
+        if in_lead_summary and stripped.startswith("###"):
+            heading_text = stripped.lstrip("#").strip()
+            in_other_items = False
+            if heading_text.lower().startswith("other items"):
+                in_other_items = True
+                current_lead = "Other items"
+                lead_summary["Other items"] = {"overall": [], "rests_on": "", "complete": "", "raw_complete": ""}
+            else:
+                m = re.match(r"(L\d+)", heading_text)
+                if m:
+                    current_lead = m.group(1)
+                    lead_summary[current_lead] = {"overall": [], "rests_on": "", "complete": "", "raw_complete": ""}
+            i += 1
+            continue
+
+        # Inside verdict table
+        if in_verdict_table and stripped.startswith("|"):
+            if is_sep(stripped):
+                verdict_header_seen = True
+                i += 1
+                continue
+            if not verdict_header_seen:
+                i += 1
+                continue
+            cells = parse_row(stripped)
+            if len(cells) >= 9:
+                verdicts.append({
+                    "map_id": cells[0],
+                    "lead": cells[1],
+                    "verdict": cells[2],
+                    "evidence_type": cells[3],
+                    "citations": cells[4],
+                    "what_code_does": cells[5],
+                    "what_manual_says": cells[6],
+                    "check_status": cells[7],
+                    "decision_id": cells[8],
+                })
+            i += 1
+            continue
+
+        # Inside lead summary block
+        if in_lead_summary and current_lead:
+            lead = lead_summary[current_lead]
+            if stripped.startswith("**Overall:**"):
+                lead["overall"].append(stripped[len("**Overall:**"):].strip())
+            elif stripped.startswith("**Rests on:**"):
+                lead["rests_on"] = stripped[len("**Rests on:**"):].strip()
+            elif stripped.startswith("**Complete:**"):
+                raw = stripped[len("**Complete:**"):].strip()
+                lead["raw_complete"] = raw
+                lead["complete"] = "yes" if raw.lower().startswith("yes") else "no"
+            elif stripped.startswith("---"):
+                pass
+            elif stripped and not stripped.startswith("##") and not stripped.startswith("###"):
+                # continuation text
+                if lead["overall"] is not None and lead.get("rests_on") == "" and lead.get("complete") == "":
+                    lead["overall"].append(stripped)
+
+        i += 1
+
+    # Join overall lists
+    for k, v in lead_summary.items():
+        if isinstance(v["overall"], list):
+            v["overall"] = " ".join(v["overall"]).strip()
+
+    return {
+        "frontmatter": frontmatter,
+        "verdicts": verdicts,
+        "lead_summary": lead_summary,
+    }
+
+
+def cmd_verdicts_export(args):
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        print("ERROR: openpyxl is required. Install with: pip install openpyxl")
+        sys.exit(1)
+
+    from datetime import date, datetime
+
+    # --- Date argument ---
+    if args.date:
+        d_str = args.date
+        if not re.match(r"^\d{8}$", d_str):
+            print(f"ERROR: --date must be YYYYMMDD (8 digits), got: '{d_str}'")
+            sys.exit(1)
+        try:
+            datetime.strptime(d_str, "%Y%m%d")
+        except ValueError:
+            print(f"ERROR: --date '{d_str}' is not a valid calendar date.")
+            sys.exit(1)
+        today = d_str
+    else:
+        today = date.today().strftime("%Y%m%d")
+
+    if not VERDICTS_MD.exists():
+        print(f"ERROR: AM-VERDICTS.md not found: {VERDICTS_MD}")
+        sys.exit(1)
+    if not MAP_MD.exists():
+        print(f"ERROR: AM-EVIDENCE-MAP.md not found: {MAP_MD}")
+        sys.exit(1)
+
+    # --- Parse ---
+    map_data = _parse_map(MAP_MD)
+    verdict_data = _parse_verdicts(VERDICTS_MD)
+
+    verdicts = verdict_data["verdicts"]
+    lead_summary = verdict_data["lead_summary"]
+    fmatter = verdict_data["frontmatter"]
+    query_workbook = fmatter.get("query_workbook", "am_verification_20261027.xlsx")
+
+    # Build required ID set from map: FILLED-NEEDS-CHECK or BLOCKED
+    all_map_rows = map_data["main_map"] + map_data["repo_domains"]
+    required_ids = {r["id"] for r in all_map_rows if r["status"] in ("FILLED-NEEDS-CHECK", "BLOCKED")}
+
+    # Build map-row lookup (lead, decision_id) by map ID
+    map_row_lookup = {r["id"]: r for r in all_map_rows}
+
+    # Build team_decisions lookup by decision_id
+    decision_lookup = {d["decision_id"]: d for d in map_data["team_decisions"]}
+    d191_rows = [d for d in map_data["team_decisions"]
+                 if re.match(r"^D-191-\d{2}$", d["decision_id"])]
+    d191_ids = {d["decision_id"] for d in d191_rows}
+
+    # Registry IDs
+    registry_ids = map_data["all_ids_in_registry"]
+
+    failures = []
+
+    # 1. Required IDs without a verdict
+    verdict_ids = {v["map_id"] for v in verdicts}
+    for rid in sorted(required_ids):
+        if rid not in verdict_ids:
+            failures.append(f"Required ID missing from verdicts: {rid}")
+
+    # 2. Duplicate verdict IDs
+    seen = {}
+    for v in verdicts:
+        vid = v["map_id"]
+        if vid in seen:
+            failures.append(f"Duplicate verdict ID: {vid}")
+        seen[vid] = True
+
+    # 3. Verdict IDs not in required set
+    for v in verdicts:
+        if v["map_id"] not in required_ids:
+            failures.append(f"Verdict ID '{v['map_id']}' not in required set (FILLED-NEEDS-CHECK/BLOCKED)")
+
+    for v in verdicts:
+        vid = v["map_id"]
+        map_row = map_row_lookup.get(vid, {})
+
+        # 4. Lead mismatch
+        map_lead = map_row.get("lead", "—").strip()
+        verd_lead = v["lead"].strip()
+        # Normalize "—" and ""
+        map_lead_norm = "" if map_lead == "—" else map_lead
+        verd_lead_norm = "" if verd_lead == "—" else verd_lead
+        if map_lead_norm != verd_lead_norm:
+            failures.append(f"Lead mismatch for {vid}: map='{map_lead}' verdict='{verd_lead}'")
+
+        # 5. Invalid Verdict
+        if v["verdict"] not in VALID_VERDICTS:
+            failures.append(f"Invalid Verdict '{v['verdict']}' for {vid}")
+
+        # 6. Invalid Evidence Type (semicolon-separated)
+        et_raw = v["evidence_type"]
+        for part in re.split(r"[;,]", et_raw):
+            part = part.strip()
+            if part and part not in VALID_VERDICT_EVIDENCE:
+                failures.append(f"Invalid Evidence Type '{part}' for {vid}")
+
+        # 7. Invalid Check Status
+        cs = v["check_status"].strip()
+        if cs not in VALID_CHECK_STATUS:
+            failures.append(f"Invalid Check Status '{cs}' for {vid}")
+
+        # 8. MATCH on non-COMPLETE check or PLANNING-DOC-only evidence
+        if v["verdict"] == "MATCH":
+            if cs not in ("COMPLETE", "—", ""):
+                failures.append(f"MATCH verdict for {vid} but Check Status is '{cs}' (must be COMPLETE or —)")
+            # PLANNING-DOC-only evidence
+            et_parts = [p.strip() for p in re.split(r"[;,]", et_raw) if p.strip() and p.strip() != "—"]
+            if et_parts and all(p == "PLANNING-DOC" for p in et_parts):
+                failures.append(f"MATCH verdict for {vid} with PLANNING-DOC-only evidence")
+
+        # 9. MISMATCH/PARTIAL without D-191-NN
+        dec_id = v["decision_id"].strip()
+        if v["verdict"] in ("MISMATCH", "PARTIAL"):
+            if not re.match(r"^D-191-\d{2}$", dec_id):
+                failures.append(f"MISMATCH/PARTIAL verdict for {vid} but Decision ID '{dec_id}' is not D-191-NN")
+
+        # 10. Non-MISMATCH/PARTIAL rows with a D-191-NN
+        if v["verdict"] not in ("MISMATCH", "PARTIAL"):
+            if re.match(r"^D-191-\d{2}$", dec_id):
+                failures.append(f"Non-MISMATCH/PARTIAL verdict for {vid} has D-191-NN Decision ID '{dec_id}'")
+
+        # 11. D-191-NN not in AM-MAP-03 or registry; map_rows mismatch
+        if re.match(r"^D-191-\d{2}$", dec_id):
+            if dec_id not in decision_lookup:
+                failures.append(f"Decision ID '{dec_id}' (for {vid}) not found in AM-MAP-03")
+            elif dec_id not in registry_ids:
+                failures.append(f"Decision ID '{dec_id}' (for {vid}) not in ID Registry")
+            else:
+                dec_row = decision_lookup[dec_id]
+                dec_map_rows = dec_row.get("map_rows", "").strip()
+                # map_rows field may be comma-separated; check vid is in there
+                dec_map_rows_list = [r.strip() for r in dec_map_rows.split(",")]
+                if vid not in dec_map_rows_list:
+                    failures.append(
+                        f"Decision ID '{dec_id}' Map Row(s) field '{dec_map_rows}' does not include verdict ID {vid}"
+                    )
+
+        # Count lint in text fields
+        for field_name, field_val in [
+            ("What the Code Does", v["what_code_does"]),
+            ("What the Manual Says Differently", v["what_manual_says"]),
+        ]:
+            lint_errs = _count_lint_check(field_val, f"{vid}/{field_name}")
+            failures.extend(lint_errs)
+
+    # 12. D-191-NN rows in AM-MAP-03 with no verdict row referencing them
+    for did in d191_ids:
+        has_ref = any(v["decision_id"].strip() == did for v in verdicts)
+        if not has_ref:
+            failures.append(f"Orphan D-191 row in AM-MAP-03: '{did}' has no verdict row referencing it")
+
+    # 13. Lead Summary: must have L1–L9 and Other items; each must have a Complete field
+    required_leads = [f"L{n}" for n in range(1, 10)]
+    for lead_id in required_leads:
+        if lead_id not in lead_summary:
+            failures.append(f"Lead Summary missing section: {lead_id}")
+        else:
+            raw_complete = lead_summary[lead_id].get("raw_complete", "")
+            if not raw_complete:
+                failures.append(f"Lead Summary {lead_id} missing Complete field")
+            elif not (raw_complete.lower().startswith("yes") or raw_complete.lower().startswith("no")):
+                failures.append(f"Lead Summary {lead_id} Complete field invalid: '{raw_complete}'")
+
+    if "Other items" not in lead_summary:
+        failures.append("Lead Summary missing section: Other items")
+
+    # Count lint in Lead Summary text fields
+    for lead_id, ls in lead_summary.items():
+        for field_name, field_val in [("Overall", ls.get("overall", "")), ("Rests on", ls.get("rests_on", ""))]:
+            lint_errs = _count_lint_check(field_val, f"Lead Summary {lead_id}/{field_name}")
+            failures.extend(lint_errs)
+
+    if failures:
+        print(f"VERDICTS-EXPORT FAILED — {len(failures)} failure(s):")
+        for f_msg in failures:
+            print(f"  {f_msg}")
+        sys.exit(1)
+
+    # --- Build workbook ---
+    out_path = VERDICTS_DIR / f"am_verdicts_{today}.xlsx"
+
+    UF_BLUE = "0021A5"
+    UF_ORANGE = "FA4616"
+    LIGHT_GREY = "D9D9D9"
+    CALIBRI_11 = Font(name="Calibri", size=11)
+    HEADER_FONT = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    HEADER_FILL = PatternFill("solid", fgColor=UF_BLUE)
+    MISMATCH_FILL = PatternFill("solid", fgColor=UF_ORANGE)
+    GREY_FILL = PatternFill("solid", fgColor=LIGHT_GREY)
+    WRAP = Alignment(wrap_text=True, vertical="top")
+
+    def style_header(ws, row_num, ncols):
+        for col in range(1, ncols + 1):
+            cell = ws.cell(row=row_num, column=col)
+            cell.font = HEADER_FONT
+            cell.fill = HEADER_FILL
+            cell.alignment = WRAP
+
+    def write_cell(ws, row_num, col_num, value, fill=None):
+        cell = ws.cell(row=row_num, column=col_num)
+        val_str = str(value).replace("<br>", "\n")
+        cell.value = _safe_cell(val_str)
+        cell.alignment = WRAP
+        cell.font = CALIBRI_11
+        if fill:
+            cell.fill = fill
+
+    def write_row(ws, row_num, values):
+        for col, val in enumerate(values, start=1):
+            write_cell(ws, row_num, col, val)
+
+    def cap_widths(ws, text_cols, max_text=70, max_other=25):
+        for col in ws.columns:
+            col_idx = col[0].column
+            letter = get_column_letter(col_idx)
+            ws.column_dimensions[letter].width = max_text if col_idx in text_cols else max_other
+
+    wb = openpyxl.Workbook()
+
+    # ---- KEY sheet ----
+    ws_key = wb.active
+    ws_key.title = "KEY"
+
+    key_rows = [
+        ["Field", "Value"],
+        ["Title", "Phase 191 — AM Verdict Workbook"],
+        ["Generated date", today],
+        ["Query workbook", query_workbook],
+        ["Source — verdicts", str(VERDICTS_MD.relative_to(REPO_ROOT))],
+        ["Source — map", str(MAP_MD.relative_to(REPO_ROOT))],
+        ["", ""],
+        ["Verdict definitions", ""],
+        ["MATCH", "The code path implements what the manual states; any query evidence is consistent."],
+        ["MISMATCH", "The code path does something materially different from the manual statement."],
+        ["PARTIAL", "Part of the statement matches and part does not."],
+        ["CANNOT-VERIFY", "The code path cannot be located, or needed check is SKIPPED/FAILED/PARTIAL."],
+        ["BLOCKED", "Depends on an input not received."],
+        ["", ""],
+        ["Evidence types", ""],
+        ["CODE", "Current executable code: path:function() and line range"],
+        ["CONFIG", "R/00_config.R:KEY"],
+        ["QUERY", "am_verification_20261027.xlsx:<sheet>"],
+        ["PLANNING-DOC", "Phase SUMMARY/CONTEXT/DISCUSSION-LOG"],
+        ["TEAM-DECISION", "Attributed decision linked via Decision ID"],
+        ["", ""],
+        ["Decision status meaning", ""],
+        ["OPEN", "Team question; team answer required before manual update"],
+        ["CONFIRMED", "Manual update only; no pipeline change needed"],
+        ["", ""],
+        ["Privacy note", "No patient-level data in this workbook; counts 1-10 shown as <11"],
+        ["", ""],
+        ["Sheet guide", ""],
+        ["Verdicts", "One row per required map ID; MISMATCH/PARTIAL highlighted orange; BLOCKED/CANNOT-VERIFY grey"],
+        ["Lead Summary", "L1–L9 + Other items: Overall, Rests on, Complete"],
+        ["Decisions", "D-191-NN decision rows from AM-MAP-03"],
+        ["Gaps", "BLOCKED/CANNOT-VERIFY verdicts and incomplete leads"],
+    ]
+
+    for r_idx, row in enumerate(key_rows, start=1):
+        for c_idx, val in enumerate(row, start=1):
+            cell = ws_key.cell(row=r_idx, column=c_idx)
+            cell.value = _safe_cell(str(val))
+            cell.font = CALIBRI_11
+            cell.alignment = WRAP
+            if r_idx == 1:
+                cell.font = HEADER_FONT
+                cell.fill = HEADER_FILL
+
+    ws_key.freeze_panes = "A2"
+    ws_key.column_dimensions["A"].width = 30
+    ws_key.column_dimensions["B"].width = 80
+
+    # ---- Verdicts sheet ----
+    VERDICT_HEADERS = ["Map ID", "Lead", "Verdict", "Evidence Type(s)", "Citation(s)",
+                       "What the Code Does", "What the Manual Says Differently",
+                       "Check Status", "Decision ID"]
+    VERDICT_COL_IDX = 3  # 1-based: Verdict column
+
+    ws_v = wb.create_sheet("Verdicts")
+    write_row(ws_v, 1, VERDICT_HEADERS)
+    style_header(ws_v, 1, len(VERDICT_HEADERS))
+
+    for r_idx, v in enumerate(verdicts, start=2):
+        verd = v["verdict"]
+        if verd in ("MISMATCH", "PARTIAL"):
+            row_fill = None
+            verdict_fill = MISMATCH_FILL
+        elif verd in ("BLOCKED", "CANNOT-VERIFY"):
+            row_fill = GREY_FILL
+            verdict_fill = GREY_FILL
+        else:
+            row_fill = None
+            verdict_fill = None
+
+        vals = [v["map_id"], v["lead"], v["verdict"], v["evidence_type"],
+                v["citations"], v["what_code_does"], v["what_manual_says"],
+                v["check_status"], v["decision_id"]]
+
+        for col, val in enumerate(vals, start=1):
+            fill = verdict_fill if col == VERDICT_COL_IDX else row_fill
+            write_cell(ws_v, r_idx, col, val, fill=fill)
+
+    ws_v.freeze_panes = "A2"
+    cap_widths(ws_v, text_cols={5, 6, 7}, max_text=70, max_other=25)
+
+    # ---- Lead Summary sheet ----
+    LS_HEADERS = ["Lead", "Overall", "Rests on", "Complete"]
+    ws_ls = wb.create_sheet("Lead Summary")
+    write_row(ws_ls, 1, LS_HEADERS)
+    style_header(ws_ls, 1, len(LS_HEADERS))
+
+    lead_order = [f"L{n}" for n in range(1, 10)] + ["Other items"]
+    for r_idx, lid in enumerate(lead_order, start=2):
+        ls = lead_summary.get(lid, {"overall": "", "rests_on": "", "raw_complete": ""})
+        vals = [lid, ls.get("overall", ""), ls.get("rests_on", ""), ls.get("raw_complete", "")]
+        write_row(ws_ls, r_idx, vals)
+
+    ws_ls.freeze_panes = "A2"
+    cap_widths(ws_ls, text_cols={2, 3, 4}, max_text=70, max_other=15)
+
+    # ---- Decisions sheet (D-191-NN only) ----
+    DEC_HEADERS = ["Decision ID", "Original ID", "Decision Text", "Raised By", "Decided By",
+                   "Date", "Source File", "Map Row(s)", "Status", "Notes"]
+    ws_dec = wb.create_sheet("Decisions")
+    write_row(ws_dec, 1, DEC_HEADERS)
+    style_header(ws_dec, 1, len(DEC_HEADERS))
+
+    for r_idx, dec in enumerate(d191_rows, start=2):
+        vals = [dec["decision_id"], dec["original_id"], dec["decision_text"], dec["raised_by"],
+                dec["decided_by"], dec["date"], dec["source_file"], dec["map_rows"],
+                dec["status"], dec["notes"]]
+        write_row(ws_dec, r_idx, vals)
+
+    ws_dec.freeze_panes = "A2"
+    cap_widths(ws_dec, text_cols={3, 10}, max_text=70, max_other=25)
+
+    # ---- Gaps sheet ----
+    GAPS_HEADERS = ["Map ID or Lead", "Lead", "Verdict / Complete", "Reason"]
+    ws_gaps = wb.create_sheet("Gaps")
+    write_row(ws_gaps, 1, GAPS_HEADERS)
+    style_header(ws_gaps, 1, len(GAPS_HEADERS))
+
+    gap_r = 2
+    # BLOCKED or CANNOT-VERIFY verdict rows
+    for v in verdicts:
+        if v["verdict"] in ("BLOCKED", "CANNOT-VERIFY"):
+            reason = v["what_code_does"] or v["citations"] or "—"
+            vals = [v["map_id"], v["lead"], v["verdict"], reason[:200]]
+            write_row(ws_gaps, gap_r, vals)
+            gap_r += 1
+
+    # Incomplete leads
+    for lid in lead_order:
+        ls = lead_summary.get(lid, {})
+        raw = ls.get("raw_complete", "")
+        if raw.lower().startswith("no"):
+            reason = raw[3:].strip().lstrip("—").strip() if len(raw) > 3 else "not complete"
+            vals = [lid, lid, f"Complete: {raw}", reason]
+            write_row(ws_gaps, gap_r, vals)
+            gap_r += 1
+
+    ws_gaps.freeze_panes = "A2"
+    cap_widths(ws_gaps, text_cols={4}, max_text=80, max_other=25)
+
+    wb.save(out_path)
+    print(f"Workbook written: {out_path}")
+
+    # --- Round-trip check ---
+    print("Running round-trip check...")
+    wb2 = openpyxl.load_workbook(out_path)
+    rt_errors = []
+
+    expected_sheets = ["KEY", "Verdicts", "Lead Summary", "Decisions", "Gaps"]
+    actual_sheets = wb2.sheetnames
+    if actual_sheets[:5] != expected_sheets:
+        rt_errors.append(f"Sheet order mismatch: got {actual_sheets[:5]}, expected {expected_sheets}")
+
+    ws2_v = wb2["Verdicts"]
+    if ws2_v.max_row - 1 != len(verdicts):
+        rt_errors.append(f"Verdicts row count: wrote {len(verdicts)}, read {ws2_v.max_row - 1}")
+
+    written_vids = [v["map_id"] for v in verdicts]
+    read_vids = [ws2_v.cell(row=r, column=1).value for r in range(2, ws2_v.max_row + 1)]
+    if written_vids != read_vids:
+        rt_errors.append("Verdicts Map ID order mismatch between written and read")
+
+    # Check verdicts column
+    for r_idx, v in enumerate(verdicts, start=2):
+        cell_verdict = ws2_v.cell(row=r_idx, column=3).value or ""
+        if v["verdict"] not in str(cell_verdict):
+            rt_errors.append(f"Verdict mismatch row {r_idx}: wrote '{v['verdict']}', read '{cell_verdict}'")
+
+    # Check decision IDs in Decisions sheet
+    ws2_dec = wb2["Decisions"]
+    read_dec_ids = [ws2_dec.cell(row=r, column=1).value for r in range(2, ws2_dec.max_row + 1)]
+    written_dec_ids = [d["decision_id"] for d in d191_rows]
+    if written_dec_ids != read_dec_ids:
+        rt_errors.append("Decisions sheet D-191-NN ID list mismatch")
+
+    if rt_errors:
+        print(f"ROUND-TRIP FAILED — {len(rt_errors)} error(s):")
+        for e in rt_errors:
+            print(f"  {e}")
+        sys.exit(1)
+
+    print("Round-trip OK")
+
+    # --- Summary counts ---
+    verdict_counts = {}
+    for v in verdicts:
+        verdict_counts[v["verdict"]] = verdict_counts.get(v["verdict"], 0) + 1
+
+    open_count = sum(1 for d in d191_rows if d["status"] == "OPEN")
+    confirmed_count = sum(1 for d in d191_rows if d["status"] == "CONFIRMED")
+    gaps_count = gap_r - 2
+
+    print("\nVerdict counts:")
+    for verd, cnt in sorted(verdict_counts.items()):
+        print(f"  {verd}: {cnt}")
+    print(f"\nD-191 decisions: {open_count} OPEN, {confirmed_count} CONFIRMED")
+    print(f"Gaps: {gaps_count} rows")
+    sys.exit(0)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="AM evidence map tool (Phase 190/193)")
+    parser = argparse.ArgumentParser(description="AM evidence map tool (Phase 190/191/193)")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("coverage", help="Report uncovered manual lines")
@@ -636,7 +1244,11 @@ def main():
     val_p.add_argument("--final", action="store_true",
                        help="Also check for [T2]/[T3] placeholders")
 
-    sub.add_parser("export", help="Write xlsx and run round-trip check")
+    sub.add_parser("export", help="Write Phase 190 xlsx and run round-trip check")
+
+    ve_p = sub.add_parser("verdicts-export", help="Validate AM-VERDICTS.md and write team verdict workbook")
+    ve_p.add_argument("--date", default=None,
+                      help="Date suffix for filename (YYYYMMDD); defaults to today")
 
     args = parser.parse_args()
 
@@ -646,6 +1258,8 @@ def main():
         cmd_validate(args)
     elif args.command == "export":
         cmd_export(args)
+    elif args.command == "verdicts-export":
+        cmd_verdicts_export(args)
     else:
         parser.print_help()
         sys.exit(1)
