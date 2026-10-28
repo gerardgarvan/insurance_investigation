@@ -5,7 +5,7 @@
 
 | Event | Type | Date | Source | Notes | Map ID | Status | Cite |
 |-------|------|------|--------|-------|--------|--------|------|
-| PCORnet CDM extract received | RECEIVED | 2025-09-15 | OneFlorida+ | Mailhot HL cohort | SA1-LOG-01 | DRAFTED | R/00_config.R:DUCKDB_PATH:L1-L5 |
+| PCORnet CDM extract received | RECEIVED | 2025-09-15 | OneFlorida+ | Mailhot HL cohort | S1-LOG-01 | DRAFTED | R/00_config.R:DUCKDB_PATH:L1-L5 |
   STATUS: DRAFTED
   CITE: R/00_config.R:DUCKDB_PATH:L1-L5
 

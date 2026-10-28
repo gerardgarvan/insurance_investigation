@@ -27,10 +27,10 @@
 
 #### CORRECTION S4-DXDT-01
 - Target: §4 / S4-DXDT-01
-- Anchor: "Expected fields listed here." (mini_manual.md:L5)
+- Anchor: "Expected fields listed here." (mini_manual.md:L19)
 - Action: REPLACE
 - Replacement: ICD codes assigned per AMC 8-category mapping.
-- Provenance: D-191-01
+- Provenance: DEC-001
   STATUS: CORRECTION
   CITE: R/00_config.R:CANCER_CODES:L1-L5
 
@@ -109,3 +109,4 @@ Not documented in available sources.
 ## Not drafted
 
 - S3-DEC-01: Insufficient repo evidence.
+- S1-LOG-01: No dated ingest events confirmed.

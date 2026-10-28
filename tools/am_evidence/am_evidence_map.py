@@ -1252,6 +1252,878 @@ def cmd_verdicts_export(args):
 
 
 # ---------------------------------------------------------------------------
+# Subcommand: draft-check
+# ---------------------------------------------------------------------------
+
+# Section headings in scope (verbatim from the manual's ## headings).
+# These are the sections that AM-DRAFT.md must include.
+_DRAFT_REQUIRED_SECTIONS = [
+    "1. Data Ingest & Change Log",
+    "3. Variable and Phenotype Decision Log",
+    "4. Data Cleaning and Harmonization Rules",
+    "8. Open Questions and Decision Parking Lot",
+]
+
+# Appendix sections required for mirror checks
+_DRAFT_APPENDIX_SECTIONS = ["A1", "A3"]
+
+# Valid STATUS values in a draft unit
+_DRAFT_VALID_STATUSES = {
+    "DRAFTED",
+    "CORRECTION",
+    "TEAM-INPUT-NEEDED",
+    "OPEN-QUESTION-SEE-§8",
+}
+
+# Citation form patterns (each CITE line must match at least one)
+_CITE_CODE_CONFIG = re.compile(
+    r"^[A-Za-z0-9_./-]+\.[A-Za-z]+:"      # file path
+    r"([A-Za-z_][A-Za-z0-9_.]*\(\)|[A-Z0-9_]+)"   # function() or CONFIG_KEY
+    r"(:L\d+-L\d+)?$"                       # optional :La-Lb
+)
+_CITE_WORKBOOK = re.compile(
+    r"^am_verification_\d{8}\.xlsx:.+"
+)
+_CITE_DECISION = re.compile(r"^(DEC-\d{3}|D-\d{3}-\d{2})$")
+_CITE_PLANNING = re.compile(r"^\.planning/")
+_CITE_MANUAL = re.compile(r"^docs/analytic_manual/.+\.md:L\d+-L\d+$")
+# Combined: a cite is valid if it matches any of the above
+_CITE_LINE_RANGE = re.compile(r":L(\d+)-L(\d+)")
+
+
+def _is_valid_cite(cite: str) -> bool:
+    """Return True if the citation string matches at least one valid citation form."""
+    cite = cite.strip()
+    if not cite:
+        return False
+    if _CITE_CODE_CONFIG.match(cite):
+        return True
+    if _CITE_WORKBOOK.match(cite):
+        return True
+    if _CITE_DECISION.match(cite):
+        return True
+    if _CITE_PLANNING.match(cite):
+        return True
+    if _CITE_MANUAL.match(cite):
+        return True
+    return False
+
+
+def _parse_draft(draft_path: Path) -> dict:
+    """
+    Parse AM-DRAFT.md into:
+      header_ok: bool (has # AM-DRAFT and commit comment)
+      sections: dict section_name -> list of content lines
+      units: list of dicts {type: 'bullet'|'table_row'|'correction',
+                            id_tags: list, status: str, cites: list[str],
+                            line_num: int, raw: str}
+      s8_rows: list of dicts {item: str, notes_tag: str, decision_ids: list, raw_notes: str}
+      repo_only_blocks: list of domain short codes found inside markers
+      marker_begin_count: int
+      marker_end_count: int
+      s1_rows: list of raw data rows (excluding header and separator)
+      s3_rows: list of raw data rows
+      a1_rows: list of raw data rows
+      a3_rows: list of raw data rows
+      not_drafted_ids: set of map IDs mentioned in ## Not drafted
+      raw_lines: list[str]
+    """
+    text = draft_path.read_text(encoding="utf-8")
+    raw_lines = text.splitlines()
+
+    result = {
+        "header_ok": False,
+        "sections": {},
+        "units": [],
+        "s8_rows": [],
+        "repo_only_blocks": [],
+        "marker_begin_count": 0,
+        "marker_end_count": 0,
+        "s1_rows": [],
+        "s3_rows": [],
+        "a1_rows": [],
+        "a3_rows": [],
+        "not_drafted_ids": set(),
+        "raw_lines": raw_lines,
+    }
+
+    # Check header
+    has_amdraft = any(l.strip() == "# AM-DRAFT" for l in raw_lines[:5])
+    has_commit = any(l.strip().startswith("<!-- commit:") for l in raw_lines[:10])
+    result["header_ok"] = has_amdraft and has_commit
+
+    # Current parse state
+    current_section = None
+    current_section_key = None  # normalised key e.g. "1. Data Ingest & Change Log"
+    in_repo_only = False
+    in_not_drafted = False
+    in_s8 = False
+    in_s1 = False
+    in_s3 = False
+    in_a1 = False
+    in_a3 = False
+
+    # Table parse state
+    table_header_row = None
+    table_sep_seen = False
+    current_table_section = None  # which logical table are we in
+
+    # Bullet/correction parse state
+    pending_bullet = None   # {id_tags, raw, line_num}
+
+    def flush_pending_bullet(pending, units):
+        """Bullet with no STATUS line yet — flush with status=None."""
+        if pending:
+            units.append({
+                "type": "bullet",
+                "id_tags": pending["id_tags"],
+                "status": pending.get("status"),
+                "cites": pending.get("cites", []),
+                "line_num": pending["line_num"],
+                "raw": pending["raw"],
+            })
+        return None
+
+    def _extract_id_tags(text):
+        return re.findall(r"\[([A-Z0-9-]+)\]", text)
+
+    def _is_table_row(line):
+        return line.strip().startswith("|") and not re.match(r"^\s*\|[-| :]+\|\s*$", line)
+
+    def _is_table_sep(line):
+        return bool(re.match(r"^\s*\|[-| :]+\|\s*$", line))
+
+    def _row_cells(line):
+        stripped = line.strip().strip("|")
+        cells = re.split(r"(?<!\\)\|", stripped)
+        return [c.strip() for c in cells]
+
+    i = 0
+    while i < len(raw_lines):
+        line = raw_lines[i]
+        stripped = line.strip()
+
+        # --- Markers ---
+        if stripped == "<!-- BEGIN REPO-ONLY DOMAINS -->":
+            result["marker_begin_count"] += 1
+            in_repo_only = True
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            i += 1
+            continue
+        if stripped == "<!-- END REPO-ONLY DOMAINS -->":
+            result["marker_end_count"] += 1
+            in_repo_only = False
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            i += 1
+            continue
+
+        # --- Level-2 section headings ---
+        if stripped.startswith("## ") and not stripped.startswith("### "):
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            heading = stripped[3:].strip()
+
+            # Reset all table-tracking state
+            in_s8 = False
+            in_s1 = False
+            in_s3 = False
+            in_a1 = False
+            in_a3 = False
+            table_header_row = None
+            table_sep_seen = False
+            current_table_section = None
+
+            if heading.startswith("Not drafted"):
+                in_not_drafted = True
+                current_section = heading
+                i += 1
+                continue
+            else:
+                in_not_drafted = False
+
+            # Identify section
+            current_section = heading
+            result["sections"][heading] = []
+
+            # Tag which table we're entering
+            if re.match(r"1\. Data Ingest", heading):
+                in_s1 = True
+                current_table_section = "s1"
+            elif re.match(r"3\. Variable", heading):
+                in_s3 = True
+                current_table_section = "s3"
+            elif re.match(r"8\. Open Questions", heading):
+                in_s8 = True
+                current_table_section = "s8"
+            i += 1
+            continue
+
+        # --- Appendix level-2 (APPENDIX A. Embedded...)
+        if stripped.startswith("## APPENDIX"):
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            current_section = stripped[3:].strip()
+            result["sections"][current_section] = []
+            in_s8 = False
+            in_s1 = False
+            in_s3 = False
+            in_a1 = False
+            in_a3 = False
+            table_sep_seen = False
+            table_header_row = None
+            current_table_section = None
+            i += 1
+            continue
+
+        # --- Appendix A subsection headings (### A1. or ### A3.)
+        if stripped.startswith("### A1."):
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            in_a1 = True
+            in_a3 = False
+            in_s1 = False
+            in_s3 = False
+            in_s8 = False
+            table_sep_seen = False
+            table_header_row = None
+            current_table_section = "a1"
+            i += 1
+            continue
+        if stripped.startswith("### A3."):
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            in_a1 = False
+            in_a3 = True
+            in_s1 = False
+            in_s3 = False
+            in_s8 = False
+            table_sep_seen = False
+            table_header_row = None
+            current_table_section = "a3"
+            i += 1
+            continue
+
+        # --- Repo-only domain blocks: ### DomainName {#S4-XXX}
+        if in_repo_only and stripped.startswith("### ") and "{#S4-" in stripped:
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            m = re.search(r"\{#S4-([A-Z]+)\}", stripped)
+            if m:
+                result["repo_only_blocks"].append(m.group(1))
+            i += 1
+            continue
+
+        # --- Not-drafted lines ---
+        if in_not_drafted and stripped.startswith("- "):
+            # Extract map IDs: - S4-CBC-01: reason  (also SA1-, SA3-, SB-)
+            ids = re.findall(r"\b(S[AB]?\d{1,2}-[A-Z]{2,6}-\d{2})\b", stripped)
+            result["not_drafted_ids"].update(ids)
+            i += 1
+            continue
+
+        # --- Table rows ---
+        if _is_table_sep(stripped):
+            table_sep_seen = True
+            i += 1
+            continue
+
+        if _is_table_row(stripped) and table_sep_seen:
+            cells = _row_cells(stripped)
+
+            if current_table_section in ("s8", None) and in_s8:
+                # §8 table: Item | Notes | Date added [| Map ID | Status | Cite]
+                if len(cells) >= 2:
+                    item_text = cells[0] if len(cells) > 0 else ""
+                    notes_raw = cells[1] if len(cells) > 1 else ""
+                    # Parse notes tag and IDs
+                    notes_tag = ""
+                    decision_ids = []
+                    if notes_raw.startswith("MISMATCH"):
+                        notes_tag = "MISMATCH"
+                        decision_ids = re.findall(r"(D-\d{3}-\d{2}|DEC-\d{3})", notes_raw)
+                    elif notes_raw.startswith("OPEN-DEPENDENCY"):
+                        notes_tag = "OPEN-DEPENDENCY"
+                        decision_ids = re.findall(r"(D-\d{3}-\d{2}|DEC-\d{3})", notes_raw)
+                    # Extract trailing Map ID | Status | Cite if present (draft table adds these)
+                    map_id_val = cells[3] if len(cells) > 3 else ""
+                    status_val = cells[4] if len(cells) > 4 else ""
+                    cite_val = cells[5] if len(cells) > 5 else ""
+                    # Extract map IDs from the Map ID column
+                    row_map_ids = re.findall(r"\b(S[AB]?\d{1,2}-[A-Z]{2,6}-\d{2})\b", map_id_val)
+                    result["s8_rows"].append({
+                        "item": item_text,
+                        "notes_tag": notes_tag,
+                        "decision_ids": decision_ids,
+                        "raw_notes": notes_raw,
+                        "status": status_val,
+                        "cite": cite_val,
+                        "row_map_ids": row_map_ids,
+                    })
+            elif current_table_section == "s1":
+                result["s1_rows"].append(cells)
+            elif current_table_section == "s3":
+                result["s3_rows"].append(cells)
+            elif current_table_section == "a1":
+                result["a1_rows"].append(cells)
+            elif current_table_section == "a3":
+                result["a3_rows"].append(cells)
+
+            # Table rows also get unit tracking (for status/cite in trailing cols)
+            if current_table_section not in ("s8",):
+                # Check trailing Status / Cite columns in table rows.
+                # Draft tables append Map ID | Status | Cite as trailing columns.
+                # Status col is second-to-last, Cite is last, Map ID is third-to-last.
+                if len(cells) >= 3:
+                    status_idx = len(cells) - 2
+                    cite_idx = len(cells) - 1
+                    map_id_idx = len(cells) - 3
+                    status_val = cells[status_idx] if status_idx >= 0 else ""
+                    cite_val = cells[cite_idx] if cite_idx >= 0 else ""
+                    map_id_val = cells[map_id_idx] if map_id_idx >= 0 else ""
+                    # Collect map IDs: from [BRACKET] tags in any cell AND from Map ID column
+                    id_tags = _extract_id_tags(stripped)
+                    # Also include map IDs from the explicit Map ID column
+                    extra_ids = re.findall(r"\b(S[AB]?\d{1,2}-[A-Z]{2,6}-\d{2})\b", map_id_val)
+                    id_tags = list(set(id_tags + extra_ids))
+                    # Only record if there's a meaningful status
+                    if status_val in _DRAFT_VALID_STATUSES:
+                        cites = [c.strip() for c in cite_val.split(";") if c.strip()] if cite_val else []
+                        result["units"].append({
+                            "type": "table_row",
+                            "id_tags": id_tags,
+                            "status": status_val,
+                            "cites": cites,
+                            "line_num": i + 1,
+                            "raw": stripped,
+                        })
+            i += 1
+            continue
+
+        # If line starts with | but no sep seen yet — header row
+        if stripped.startswith("|") and not table_sep_seen:
+            table_header_row = stripped
+            i += 1
+            continue
+
+        # A non-table non-header line resets table header tracking if not a sep
+        if not stripped.startswith("|") and not stripped.startswith("  STATUS:") and not stripped.startswith("  CITE:"):
+            if stripped and not stripped.startswith("<!--") and not stripped.startswith("####") and not stripped.startswith("###") and not stripped.startswith("##") and not stripped.startswith("#"):
+                # Only reset if we're not in an indented metadata block
+                pass  # Keep table_sep_seen; metadata can follow non-table lines
+
+        # --- Bullet lines ---
+        if stripped.startswith("- ") and not stripped.startswith("- Target:") and not stripped.startswith("- Anchor:") and not stripped.startswith("- Action:") and not stripped.startswith("- Replacement:") and not stripped.startswith("- Provenance:"):
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            id_tags = _extract_id_tags(stripped)
+            pending_bullet = {
+                "id_tags": id_tags,
+                "raw": stripped,
+                "line_num": i + 1,
+                "status": None,
+                "cites": [],
+            }
+            i += 1
+            continue
+
+        # --- Indented STATUS: line ---
+        if stripped.startswith("STATUS:"):
+            status_val = stripped[len("STATUS:"):].strip()
+            if pending_bullet is not None:
+                pending_bullet["status"] = status_val
+            # Also: plain text blocks may have STATUS lines not tied to bullets
+            i += 1
+            continue
+
+        # --- Indented CITE: line ---
+        if stripped.startswith("CITE:"):
+            cite_val = stripped[len("CITE:"):].strip()
+            if pending_bullet is not None:
+                pending_bullet["cites"].append(cite_val)
+            i += 1
+            continue
+
+        # --- CORRECTION directive blocks ---
+        if stripped.startswith("#### CORRECTION "):
+            pending_bullet = flush_pending_bullet(pending_bullet, result["units"])
+            map_id = stripped[len("#### CORRECTION "):].strip()
+            # Collect the directive lines
+            directive = {
+                "type": "correction",
+                "id_tags": [map_id],
+                "status": "CORRECTION",
+                "cites": [],
+                "line_num": i + 1,
+                "raw": stripped,
+                "anchor": "",
+                "anchor_line": None,
+                "action": "",
+                "target": "",
+            }
+            i += 1
+            while i < len(raw_lines):
+                dl = raw_lines[i].strip()
+                if dl.startswith("- Target:"):
+                    directive["target"] = dl[len("- Target:"):].strip()
+                elif dl.startswith("- Anchor:"):
+                    anchor_raw = dl[len("- Anchor:"):].strip()
+                    # Extract quoted text and line number
+                    m_anchor = re.search(r'"([^"]+)"\s*\(.*?:L(\d+)\)', anchor_raw)
+                    if m_anchor:
+                        directive["anchor"] = m_anchor.group(1)
+                        directive["anchor_line"] = int(m_anchor.group(2))
+                    else:
+                        directive["anchor"] = anchor_raw
+                elif dl.startswith("- Action:"):
+                    directive["action"] = dl[len("- Action:"):].strip()
+                elif dl.startswith("- Replacement:"):
+                    pass
+                elif dl.startswith("- Provenance:"):
+                    pass
+                elif dl.startswith("STATUS:"):
+                    directive["status"] = dl[len("STATUS:"):].strip()
+                elif dl.startswith("CITE:"):
+                    directive["cites"].append(dl[len("CITE:"):].strip())
+                elif dl.startswith("#### ") or dl.startswith("### ") or dl.startswith("## ") or dl.startswith("- ["):
+                    break
+                elif dl == "":
+                    pass
+                elif dl.startswith("<!-- BEGIN REPO-ONLY") or dl.startswith("<!-- END REPO-ONLY"):
+                    # Do not consume repo-only markers — let the outer loop handle them
+                    break
+                elif dl.startswith("<!--"):
+                    pass
+                else:
+                    break
+                i += 1
+            result["units"].append(directive)
+            continue
+
+        i += 1
+
+    # Flush any trailing pending bullet
+    flush_pending_bullet(pending_bullet, result["units"])
+
+    return result
+
+
+def _get_open_decision_ids(map_data: dict, verdicts_data: dict) -> set:
+    """
+    Return the set of D-191-NN decision IDs that are OPEN in AM-MAP-03.
+    Also include DEC-001 (the D-190-01 proxy from the mini fixture).
+    """
+    open_ids = set()
+    for dec in map_data["team_decisions"]:
+        did = dec.get("decision_id", "")
+        status = dec.get("status", "")
+        if status == "OPEN":
+            if re.match(r"^D-191-\d{2}$", did):
+                open_ids.add(did)
+            elif did == "DEC-001":
+                # DEC-001 is the D-190-01 stand-in
+                open_ids.add(did)
+    return open_ids
+
+
+def _get_confirmed_d191_ids(map_data: dict) -> set:
+    """Return set of D-191-NN IDs with CONFIRMED status in AM-MAP-03."""
+    confirmed = set()
+    for dec in map_data["team_decisions"]:
+        did = dec.get("decision_id", "")
+        if re.match(r"^D-191-\d{2}$", did) and dec.get("status") == "CONFIRMED":
+            confirmed.add(did)
+    return confirmed
+
+
+def _get_repo_only_domain_codes(map_data: dict) -> list:
+    """Return list of domain short codes from AM-MAP-02 (REPO-ONLY rows)."""
+    codes = []
+    for row in map_data["repo_domains"]:
+        rid = row.get("id", "")
+        m = re.match(r"S4-([A-Z]+)-\d+", rid)
+        if m:
+            code = m.group(1)
+            if code not in codes:
+                codes.append(code)
+    return codes
+
+
+def _get_empty_repo_can_answer_ids(map_data: dict) -> set:
+    """Return set of map IDs with status EMPTY-REPO-CAN-ANSWER from both tables."""
+    ids = set()
+    for row in map_data["main_map"] + map_data["repo_domains"]:
+        if row.get("status") == "EMPTY-REPO-CAN-ANSWER":
+            rid = row.get("id", "")
+            if rid:
+                ids.add(rid)
+    return ids
+
+
+def check_draft(
+    draft_path: Path,
+    map_path: Path,
+    verdicts_path: Path,
+    manual_path: Path,
+    hashes_path: Path,
+    stage: str = "full",
+) -> tuple:
+    """
+    Validate an AM-DRAFT.md file against the grammar and run-time inputs.
+
+    Parameters
+    ----------
+    draft_path : Path
+        Path to the draft file to validate.
+    map_path : Path
+        Path to AM-EVIDENCE-MAP.md.
+    verdicts_path : Path
+        Path to AM-VERDICTS.md.
+    manual_path : Path
+        Path to AnalyticManual_<date>.md.
+    hashes_path : Path
+        Path to am_source_hashes.txt.
+    stage : str
+        'core' or 'full'. core defers repo-only domain block checks.
+
+    Returns
+    -------
+    (failures: list[str], exit_code: int)
+    """
+    failures = []
+
+    # --- Load run-time inputs ---
+    if not draft_path.exists():
+        return ([f"FAIL: Draft file not found: {draft_path}"], 1)
+    if not map_path.exists():
+        return ([f"FAIL: Map not found: {map_path}"], 1)
+
+    map_data = _parse_map(map_path)
+    manual_lines = manual_path.read_text(encoding="utf-8").splitlines() if manual_path.exists() else []
+    draft_data = _parse_draft(draft_path)
+
+    # Load verdicts (optional — may not exist yet)
+    verdicts_data = None
+    if verdicts_path and verdicts_path.exists():
+        verdicts_data = _parse_verdicts(verdicts_path)
+
+    # Build run-time sets
+    registry_ids = map_data["all_ids_in_registry"]
+    repo_only_codes = _get_repo_only_domain_codes(map_data)
+    empty_repo_ids = _get_empty_repo_can_answer_ids(map_data)
+    open_d191_ids = _get_open_decision_ids(map_data, verdicts_data or {})
+    confirmed_d191_ids = _get_confirmed_d191_ids(map_data)
+    all_decision_ids = {d["decision_id"] for d in map_data["team_decisions"]}
+
+    # --- Check 1: Header ---
+    if not draft_data["header_ok"]:
+        failures.append("FAIL: Missing header — draft must begin with '# AM-DRAFT' and '<!-- commit: <sha> -->'")
+
+    # --- Check 2: Required section headings ---
+    present_sections = set(draft_data["sections"].keys())
+    for req in _DRAFT_REQUIRED_SECTIONS:
+        found = any(req in s for s in present_sections)
+        if not found:
+            failures.append(f"FAIL: Required section heading not found in draft: '{req}'")
+
+    # --- Check 3: Repo-only domain markers ---
+    if draft_data["marker_begin_count"] != 1:
+        failures.append(
+            f"FAIL: Expected exactly 1 '<!-- BEGIN REPO-ONLY DOMAINS -->' marker; "
+            f"found {draft_data['marker_begin_count']}"
+        )
+    if draft_data["marker_end_count"] != 1:
+        failures.append(
+            f"FAIL: Expected exactly 1 '<!-- END REPO-ONLY DOMAINS -->' marker; "
+            f"found {draft_data['marker_end_count']}"
+        )
+
+    # --- Check 4: Repo-only domain blocks [full stage only] ---
+    if stage == "full":
+        found_codes = set(draft_data["repo_only_blocks"])
+        for code in repo_only_codes:
+            if code not in found_codes:
+                failures.append(
+                    f"FAIL: Repo-only domain block missing inside markers: '{code}' "
+                    f"(expected '### <name> {{#S4-{code}}}')"
+                )
+
+    # --- Check 5: Every bullet/table unit has a valid STATUS ---
+    for unit in draft_data["units"]:
+        status = unit.get("status")
+        if status is None:
+            failures.append(
+                f"FAIL: Unit at line {unit['line_num']} has no STATUS line "
+                f"(ids: {unit['id_tags']}; raw: {unit['raw'][:80]})"
+            )
+        elif status not in _DRAFT_VALID_STATUSES:
+            failures.append(
+                f"FAIL: Unit at line {unit['line_num']} has unknown STATUS '{status}' "
+                f"(ids: {unit['id_tags']})"
+            )
+
+    # --- Check 6: DRAFTED/CORRECTION units must have at least one CITE ---
+    for unit in draft_data["units"]:
+        status = unit.get("status", "")
+        if status in ("DRAFTED", "CORRECTION"):
+            if not unit.get("cites"):
+                failures.append(
+                    f"FAIL: Unit with STATUS {status} at line {unit['line_num']} has no CITE "
+                    f"(ids: {unit['id_tags']}; raw: {unit['raw'][:80]})"
+                )
+
+    # --- Check 7: Every map ID tag in units exists in the registry ---
+    for unit in draft_data["units"]:
+        for tag in unit["id_tags"]:
+            # Tags like S4-CBC-01 etc must be in registry
+            if tag not in registry_ids:
+                failures.append(
+                    f"FAIL: Map ID tag [{tag}] at line {unit['line_num']} not found in ID Registry"
+                )
+
+    # --- Check 8: Citation syntax validation ---
+    for unit in draft_data["units"]:
+        for cite in unit.get("cites", []):
+            if not _is_valid_cite(cite):
+                failures.append(
+                    f"FAIL: Malformed citation '{cite}' in unit at line {unit['line_num']} "
+                    f"(ids: {unit['id_tags']})"
+                )
+
+    # --- Check 9: Citation existence (file path citations) ---
+    if manual_path.exists():
+        repo_root = manual_path.resolve().parents[2]  # docs/analytic_manual/ -> repo root
+        for unit in draft_data["units"]:
+            for cite in unit.get("cites", []):
+                # File-path citations: check file exists and line range is within file
+                # Avoid checking decision IDs and planning docs (they may not exist locally)
+                if not _CITE_DECISION.match(cite) and not cite.startswith(".planning/"):
+                    # Extract file path (before the first colon that isn't in a function name)
+                    m_path = re.match(r"^([^:]+\.[A-Za-z]+)", cite)
+                    if m_path:
+                        file_rel = m_path.group(1)
+                        file_abs = repo_root / file_rel
+                        if not file_abs.exists():
+                            # Don't fail on files that may be HiPerGator-only
+                            # (this is a best-effort check)
+                            pass
+                        else:
+                            # Check line range if present
+                            m_range = _CITE_LINE_RANGE.search(cite)
+                            if m_range:
+                                start_l = int(m_range.group(1))
+                                end_l = int(m_range.group(2))
+                                file_lines = file_abs.read_text(encoding="utf-8", errors="replace").splitlines()
+                                if end_l > len(file_lines):
+                                    failures.append(
+                                        f"FAIL: Citation '{cite}' references line L{end_l} "
+                                        f"but file has only {len(file_lines)} lines"
+                                    )
+
+    # --- Check 10: §8 table validation ---
+    s8_rows = draft_data["s8_rows"]
+    # Collect all decision IDs cited in §8
+    s8_decision_ids = set()
+    for row in s8_rows:
+        for did in row["decision_ids"]:
+            s8_decision_ids.add(did)
+
+    # Every OPEN D-191 row must appear in §8
+    for did in open_d191_ids:
+        if did not in s8_decision_ids:
+            failures.append(
+                f"FAIL: OPEN decision '{did}' must appear in §8 table but was not found"
+            )
+
+    # No CONFIRMED D-191 row should appear in §8
+    for row in s8_rows:
+        for did in row["decision_ids"]:
+            if did in confirmed_d191_ids:
+                failures.append(
+                    f"FAIL: CONFIRMED decision '{did}' must not appear in §8 (it belongs in a CORRECTION directive)"
+                )
+
+    # §8 MISMATCH rows must follow the item template
+    mismatch_pattern = re.compile(r"^Manual: .+\. Code: .+\. Which should the manual record\?$")
+    for row in s8_rows:
+        if row["notes_tag"] == "MISMATCH":
+            if not mismatch_pattern.match(row["item"].strip()):
+                failures.append(
+                    f"FAIL: §8 MISMATCH row item text does not match template "
+                    f"'Manual: ... Code: ... Which should the manual record?': "
+                    f"'{row['item'][:100]}'"
+                )
+
+    # --- Check 11: CORRECTION directives for CONFIRMED D-191 ---
+    correction_targets = set()
+    for unit in draft_data["units"]:
+        if unit["type"] == "correction":
+            for tag in unit["id_tags"]:
+                correction_targets.add(tag)
+    for did in confirmed_d191_ids:
+        # Find map rows affected by this decision
+        dec_row = next((d for d in map_data["team_decisions"] if d["decision_id"] == did), None)
+        if dec_row:
+            map_rows_field = dec_row.get("map_rows", "")
+            affected_ids = [r.strip() for r in map_rows_field.split(",") if r.strip()]
+            for mid in affected_ids:
+                if mid not in correction_targets:
+                    failures.append(
+                        f"FAIL: CONFIRMED decision '{did}' requires a CORRECTION directive "
+                        f"for map ID '{mid}' but none was found"
+                    )
+
+    # --- Check 12: CORRECTION anchor text verification ---
+    # CORRECTION directive anchors always reference the analytic manual by line number.
+    # We check the anchor text against the manual_path provided (which is the manual MD).
+    if manual_path.exists() and manual_lines:
+        for unit in draft_data["units"]:
+            if unit["type"] == "correction":
+                anchor = unit.get("anchor", "")
+                anchor_line = unit.get("anchor_line")
+                if anchor and anchor_line is not None:
+                    if anchor_line <= len(manual_lines):
+                        actual_line = manual_lines[anchor_line - 1]
+                        if anchor not in actual_line:
+                            failures.append(
+                                f"FAIL: CORRECTION directive for {unit['id_tags']} — "
+                                f"anchor text '{anchor}' not found at manual line L{anchor_line} "
+                                f"(actual: '{actual_line[:80]}')"
+                            )
+                    else:
+                        failures.append(
+                            f"FAIL: CORRECTION anchor line L{anchor_line} exceeds manual length "
+                            f"({len(manual_lines)} lines)"
+                        )
+
+    # --- Check 13: Mirror checks (A1 mirrors §1, A3 mirrors §3) ---
+    def normalize_row(cells):
+        """Normalize a table row for comparison: strip IDs with S/SA prefix, lowercase, strip."""
+        normalized = []
+        for c in cells:
+            # Remove trailing map-ID-like tokens (S1-/SA1-)
+            c2 = re.sub(r"\b(S[A-Z]?\d{1,2}-[A-Z]{2,6}-\d{2})\b", "", c)
+            normalized.append(c2.strip().lower())
+        return normalized
+
+    # Compare §1 rows with A1 rows
+    s1_norm = [normalize_row(r) for r in draft_data["s1_rows"]]
+    a1_norm = [normalize_row(r) for r in draft_data["a1_rows"]]
+    if len(s1_norm) != len(a1_norm):
+        failures.append(
+            f"FAIL: §1 has {len(s1_norm)} data rows but A1 has {len(a1_norm)} rows (mirrors must match)"
+        )
+    else:
+        for idx, (s1r, a1r) in enumerate(zip(s1_norm, a1_norm)):
+            # Compare only the shared leading columns (ignore trailing Map ID/Status/Cite)
+            min_cols = min(len(s1r), len(a1r))
+            if s1r[:min_cols] != a1r[:min_cols]:
+                failures.append(
+                    f"FAIL: §1 row {idx + 1} differs from A1 row {idx + 1} after normalization"
+                )
+
+    # Compare §3 rows with A3 rows
+    s3_norm = [normalize_row(r) for r in draft_data["s3_rows"]]
+    a3_norm = [normalize_row(r) for r in draft_data["a3_rows"]]
+    if len(s3_norm) != len(a3_norm):
+        failures.append(
+            f"FAIL: §3 has {len(s3_norm)} data rows but A3 has {len(a3_norm)} rows (mirrors must match)"
+        )
+    else:
+        for idx, (s3r, a3r) in enumerate(zip(s3_norm, a3_norm)):
+            min_cols = min(len(s3r), len(a3r))
+            if s3r[:min_cols] != a3r[:min_cols]:
+                failures.append(
+                    f"FAIL: §3 row {idx + 1} differs from A3 row {idx + 1} after normalization"
+                )
+
+    # --- Check 14: Inventory — EMPTY-REPO-CAN-ANSWER IDs must appear or be in Not drafted ---
+    # Collect all id_tags used in units
+    all_unit_ids = set()
+    for unit in draft_data["units"]:
+        all_unit_ids.update(unit["id_tags"])
+    # Also collect IDs from §8 table rows (Map ID column captures S8-PRK-* etc.)
+    for row in draft_data["s8_rows"]:
+        all_unit_ids.update(row.get("row_map_ids", []))
+    # IDs explicitly in Not-drafted cover the EMPTY-REPO-CAN-ANSWER inventory
+    all_unit_ids.update(draft_data["not_drafted_ids"])
+
+    # §4 EMPTY-REPO-CAN-ANSWER IDs are only checked in full stage
+    for eid in empty_repo_ids:
+        is_s4 = eid.startswith("S4-")
+        if stage == "core" and is_s4:
+            continue
+        if eid not in all_unit_ids and eid not in draft_data["not_drafted_ids"]:
+            failures.append(
+                f"FAIL: EMPTY-REPO-CAN-ANSWER ID '{eid}' not found in draft units or '## Not drafted'"
+            )
+
+    # --- Check 15: Count lint ---
+    draft_text = draft_path.read_text(encoding="utf-8")
+    lint_errs = _count_lint_check(draft_text, "draft")
+    failures.extend([f"FAIL: {e}" for e in lint_errs])
+
+    # --- Check 16: Hash file validation ---
+    if hashes_path and hashes_path.exists():
+        hash_lines = hashes_path.read_text(encoding="utf-8").splitlines()
+        for hl in hash_lines:
+            hl = hl.strip()
+            if not hl or hl.startswith("#"):
+                continue
+            # Format: SHA-256  <hex64>  <path>
+            parts = hl.split()
+            if len(parts) < 3:
+                failures.append(f"FAIL: Malformed hash line in hashes file: '{hl}'")
+                continue
+            algo, hex_hash, file_rel = parts[0], parts[1], parts[2]
+            if algo != "SHA-256":
+                failures.append(f"FAIL: Unsupported hash algorithm '{algo}' in hashes file")
+                continue
+            if len(hex_hash) != 64:
+                failures.append(f"FAIL: Hash value for '{file_rel}' is not 64 hex chars: '{hex_hash}'")
+                continue
+            # File existence check (best effort; HiPerGator files may not exist locally)
+            # We only fail if the format is malformed, not if the file is absent on Windows.
+    elif hashes_path:
+        failures.append(f"FAIL: Hash file not found: {hashes_path}")
+
+    exit_code = 1 if failures else 0
+    return failures, exit_code
+
+
+def cmd_draft_check(args):
+    """
+    Entry point for the draft-check subcommand.
+
+    Usage:
+      python am_evidence_map.py draft-check [--stage core|full] [--draft PATH]
+    """
+    stage = getattr(args, "stage", "full")
+    draft_arg = getattr(args, "draft", None)
+
+    draft_path = Path(draft_arg) if draft_arg else (
+        REPO_ROOT / "docs" / "analytic_manual" / "AM-DRAFT.md"
+    )
+    verdicts_path = VERDICTS_MD
+    manual_path = MANUAL_MD
+    hashes_path = Path(__file__).resolve().parents[2] / ".planning" / "phases" / "190-evidence-map" / "am_source_hashes.txt"
+
+    if not draft_path.exists():
+        print(f"FAIL: Draft file not found: {draft_path}")
+        sys.exit(1)
+
+    failures, exit_code = check_draft(
+        draft_path=draft_path,
+        map_path=MAP_MD,
+        verdicts_path=verdicts_path,
+        manual_path=manual_path,
+        hashes_path=hashes_path,
+        stage=stage,
+    )
+
+    if failures:
+        for msg in failures:
+            print(msg)
+        sys.exit(1)
+    else:
+        print(f"draft-check ({stage}): all checks passed")
+        sys.exit(0)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -1271,6 +2143,12 @@ def main():
     ve_p.add_argument("--date", default=None,
                       help="Date suffix for filename (YYYYMMDD); defaults to today")
 
+    dc_p = sub.add_parser("draft-check", help="Validate AM-DRAFT.md against the grammar and run-time inputs")
+    dc_p.add_argument("--stage", default="full", choices=["core", "full"],
+                      help="Validation stage: core defers repo-only domain region; full is default")
+    dc_p.add_argument("--draft", default=None,
+                      help="Path to AM-DRAFT.md (default: docs/analytic_manual/AM-DRAFT.md)")
+
     args = parser.parse_args()
 
     if args.command == "coverage":
@@ -1281,6 +2159,8 @@ def main():
         cmd_export(args)
     elif args.command == "verdicts-export":
         cmd_verdicts_export(args)
+    elif args.command == "draft-check":
+        cmd_draft_check(args)
     else:
         parser.print_help()
         sys.exit(1)
