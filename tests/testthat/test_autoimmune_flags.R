@@ -178,11 +178,13 @@ testthat::test_that("summarise_autoimmune_dx: one dated ICD-10 -> TRUE/date", {
   testthat::expect_equal(out$first_autoimmune_dx_date, as.Date("2020-06-15"))
 })
 
-testthat::test_that("summarise_autoimmune_dx: one dated ICD-9 -> TRUE/date", {
+testthat::test_that("summarise_autoimmune_dx: ICD-9 code -> FALSE/NA with real constant (ICD-10 only, 2026-10-29)", {
+  # summarise_autoimmune_dx calls is_autoimmune_code() with default AUTOIMMUNE_DX_CODES
+  # (real constant, empty icd9 slot) — so ICD-9 codes do not qualify.
   dx <- make_dx("P1", "714.0", "09", "2018-03-01", NA)
   out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
-  testthat::expect_true(out$has_autoimmune_dx)
-  testthat::expect_equal(out$first_autoimmune_dx_date, as.Date("2018-03-01"))
+  testthat::expect_false(out$has_autoimmune_dx)
+  testthat::expect_true(is.na(out$first_autoimmune_dx_date))
 })
 
 testthat::test_that("summarise_autoimmune_dx: multiple dates -> earliest", {
