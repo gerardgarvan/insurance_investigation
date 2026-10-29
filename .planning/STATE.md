@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: verifying
-stopped_at: Phase 193 context gathered
-last_updated: "2026-10-28T16:09:46.012Z"
+stopped_at: Phase 192.1 context gathered
+last_updated: "2026-10-29T15:32:57.935Z"
 last_activity: 2026-10-28
 progress:
-  total_phases: 43
+  total_phases: 44
   completed_phases: 34
-  total_plans: 110
+  total_plans: 115
   completed_plans: 123
 ---
 
@@ -41,6 +41,10 @@ Last activity: 2026-10-28
 | 194 | Team Review Package and Close-out | Phase 193 | Not started |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 192.1 inserted after Phase 192: Rebase v3.13 to the revised Analytic Manual (URGENT)
 
 ### v3.13 Milestone Context
 
@@ -99,4 +103,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 193 context gathered
+**Stopped at:** Phase 192.1 context gathered
