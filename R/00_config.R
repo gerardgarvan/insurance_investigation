@@ -746,6 +746,61 @@ MTX_CODES <- list(
 DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
 
 # ==============================================================================
+# Phase 192.1: Autoimmune diagnosis flag constants (AUTOIMMUNE-FLAG-01)
+# ==============================================================================
+# SENTINEL_CUTOFF: dates on or before this value are treated as invalid (SAS/PCORnet
+# epoch placeholders). Matches the local SENTINEL_CUTOFF used in R/47, R/48, R/49.
+# Promoted to a config constant here so all autoimmune helpers and Gantt scripts
+# share one value without redefining it locally.
+SENTINEL_CUTOFF <- as.Date("1910-01-01")
+
+# AUTOIMMUNE_DX_CODES: ICD-10 and ICD-9 prefix sets for autoimmune diagnosis detection.
+# Keys = normalized code prefix (dots removed, uppercase); values = official condition title.
+# Verified against CMS 2018 GEM files (192.1-ICD9-MAPPING.md, 2026-10-29).
+# ICD-9 keys are numeric; ICD-10 keys are alpha-leading — never mixed in one lookup.
+# Codes marked "broader" cover ICD-9 categories wider than their ICD-10 counterpart;
+# they are reported separately in QC but included in the flag (team decision in Phase 194).
+# NOTE: M31.3 — "M31.3C3" in the original request is not a valid ICD-10-CM code; read as
+# M31.3 (codes M31.30 and M31.31). Assumption recorded for team confirmation in Phase 194.
+AUTOIMMUNE_DX_CODES <- list(
+  icd10 = c(
+    "M05"   = "Seropositive rheumatoid arthritis",
+    "M06"   = "Other rheumatoid arthritis",
+    "M313"  = "Granulomatosis with polyangiitis (GPA / Wegener)",   # M31.30, M31.31
+    "M317"  = "Microscopic polyangiitis",
+    "L100"  = "Pemphigus vulgaris",
+    "M083"  = "Juvenile rheumatoid arthritis, pauciarticular",
+    "M0809" = "Juvenile rheumatoid arthritis, unspecified site (M08.09)",
+    "M0800" = "Juvenile rheumatoid arthritis, unspecified (M08.00)",
+    "L40"   = "Psoriasis"
+  ),
+  icd9 = c(
+    "7140"  = "Rheumatoid arthritis",
+    "7141"  = "Felty's syndrome",
+    "7142"  = "Rheumatoid arthritis with visceral or systemic involvement",
+    "71430" = "Juvenile rheumatoid arthritis, unspecified",
+    "71431" = "Juvenile rheumatoid arthritis, monoarticular onset",
+    "71481" = "Inflammatory polyarthropathy, other specified RA site",
+    "71489" = "Inflammatory polyarthropathy, other site",
+    "7149"  = "Other specified inflammatory polyarthropathy",
+    "4464"  = "Wegener's granulomatosis",
+    "4460"  = "Polyarteritis nodosa [broader: GEM maps M31.7 to 4460; reverse maps to M30.0]",
+    "6944"  = "Pemphigus [broader: covers all pemphigus variants L10.0-L10.9, not only L10.0]",
+    "6960"  = "Psoriatic arthropathy",
+    "6961"  = "Other psoriasis",
+    "6943"  = "Pustular psoriasis / dermatitis herpetiformis (GEM: L40.1)"
+  )
+)
+
+# AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
+# 2026-10-29) that identify ICD-9 and ICD-10 records. "OT" and "SM" are excluded
+# (not ICD coding systems). No trimming variants observed in the cohort DX_TYPE values.
+AUTOIMMUNE_DX_TYPE_ACCEPT <- list(
+  icd10 = c("10"),
+  icd9  = c("09")
+)
+
+# ==============================================================================
 # SECTION 5: PAYER MAPPING RULES ----
 # ==============================================================================
 # AMC 8-category system: Medicaid, Medicare, Private, Other govt, Other,
