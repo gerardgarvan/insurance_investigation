@@ -1,49 +1,42 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-15T19:31:17.494Z",
-  "phase": "183",
-  "phase_name": "mice-sensitivity-for-distance",
-  "phase_dir": ".planning/phases/183-mice-sensitivity-for-distance",
+  "timestamp": "2026-10-29T15:15:17.550Z",
+  "phase": "193",
+  "phase_name": "Produce Updated Manual",
+  "phase_dir": ".planning/phases/193-produce-updated-manual",
   "plan": 1,
-  "task": 3,
-  "total_tasks": 4,
+  "task": 0,
+  "total_tasks": 10,
   "status": "paused",
-  "completed_tasks": [
-    {"id": 0, "name": "Task 0: Record names and labels (read-only)", "status": "done", "commit": "36170cf"},
-    {"id": 1, "name": "Task 1: SECTIONS 0-2 — setup, inputs, patient dataset", "status": "done", "commit": "36170cf"},
-    {"id": 2, "name": "Task 2: SECTION 3 — reproduction gate", "status": "done", "commit": "36170cf"}
-  ],
+  "completed_tasks": [],
   "remaining_tasks": [
-    {"id": 3, "name": "Task 3: HiPerGator run up to gate", "status": "in_progress", "progress": "First run failed: SOURCE not in R/122 RDS — fixed by fetching from DuckDB ENCOUNTER (commit 57eaef7, pushed). Awaiting re-run."},
-    {"id": 4, "name": "Plan 02 Wave 2 (full MICE, pooling, workbook, memo)", "status": "not_started"}
+    {"id": 1, "name": "193-01 Task 0: Preflight inventory script + 193-PREFLIGHT.md", "status": "not_started"},
+    {"id": 2, "name": "193-01 Task 1: am_manual_lib.py — lxml helpers, ID scanner, anchor matcher", "status": "not_started"},
+    {"id": 3, "name": "193-02 Task 0: build_operations() + 193-OPERATIONS.json (manifest + D-34 strip + anchor dry-run)", "status": "not_started"},
+    {"id": 4, "name": "193-02 Task 1: Anchor resolution — ANCHOR-FAILED gate", "status": "not_started"},
+    {"id": 5, "name": "193-03 Task 0: Tracked-change builders + reject-all unit tests", "status": "not_started"},
+    {"id": 6, "name": "193-03 Task 1: apply_operations() → AnalyticManual_2026.10.29.docx + c0/c1 replies + SHA guards", "status": "not_started"},
+    {"id": 7, "name": "193-04 Task 0: manual-export subcommand + regression check vs export", "status": "not_started"},
+    {"id": 8, "name": "193-04 Task 1: D-15 QA suite + am_evidence_*.xlsx + AUTOMATED-QA-PASSED in STATE.md", "status": "not_started"},
+    {"id": 9, "name": "193-05 Task 0: Human Word review checkpoint (D-16)", "status": "not_started"},
+    {"id": 10, "name": "193-05 Task 1: Record WORD-REVIEW-APPROVED in STATE.md", "status": "not_started"}
   ],
-  "blockers": [
-    {
-      "description": "HiPerGator checkpoint: user must run R/183 Plan 01 and paste back output before Plan 02 can proceed",
-      "type": "human_action",
-      "workaround": "none — gate is blocking by design"
-    }
-  ],
+  "blockers": [],
   "human_actions_pending": [
     {
-      "action": "Re-run R/183 on HiPerGator after git pull, paste back log",
-      "context": "Previous run failed on missing SOURCE column; fix committed and pushed (57eaef7). Expect Task-0 PASS and availability table.",
+      "action": "Human Word review of AnalyticManual_<date>.docx in Microsoft Word",
+      "context": "D-16 gate: confirm file opens without repair prompt, tracked changes visible and attributed to Gerard Garvan, accept/reject works on a sample, c0/c1 replies appear under Amy's comments (or fallback labelled), no layout damage on changed pages. This is Plan 05 Task 0.",
       "blocking": true
     }
   ],
   "decisions": [
-    {
-      "decision": "SOURCE column not in R/122 enc_distance RDS — fetch from DuckDB ENCOUNTER by ENCOUNTERID join",
-      "rationale": "R/122 final dplyr::select (lines 685-707) dropped SOURCE; it is available in DuckDB ENCOUNTER table",
-      "phase": "183"
-    },
-    {
-      "decision": "haversine_km returns km — multiply by 0.621371 for miles",
-      "rationale": "Confirmed from R/122 line 399 which applies the same conversion",
-      "phase": "183"
-    }
+    {"decision": "Research confirmed §8 has no existing table — must insert a new tracked table, not rows into an existing table", "rationale": "Live DOCX inspection by researcher agent", "phase": "193"},
+    {"decision": "All threading DOCX parts present (commentsExtended.xml etc.) — no new content-type registrations needed", "rationale": "Live DOCX inspection by researcher agent", "phase": "193"},
+    {"decision": "Existing w:id space is {0,1}; new revision IDs start at 2", "rationale": "Verified by researcher agent", "phase": "193"},
+    {"decision": "Max w14:paraId is 7FF8A73E; new paraIds start at 7FF8A740", "rationale": "Verified by researcher agent", "phase": "193"},
+    {"decision": "c0 paraId = 4AFA1B64, c1 paraId = 0EC496CC — used as w15:paraIdParent for threaded replies", "rationale": "Verified from live commentsExtended.xml by researcher", "phase": "193"}
   ],
   "uncommitted_files": [],
-  "next_action": "After user pastes HiPerGator log showing Task-0 PASS: reply 'approved' to unblock Plan 02, then /clear and execute Plan 02 (Wave 2).",
-  "context_notes": "Plan 01 Tasks 0-2 are done and committed. R/183 Sections 0-3 write the patient-level dataset and reproduction gate. Script stops after printing 'R/183 Plan 01 complete: stopped after reproduction gate'. Plan 02 appends Sections 4-8 (two MICE runs, Rubin pooling, workbook, memo, registration). Context was ~82% at pause — start Plan 02 in a fresh session after /clear."
+  "next_action": "Run /gsd:execute-phase 193 — starts Wave 1 (193-01): preflight inventory script writing 193-PREFLIGHT.md then am_manual_lib.py with lxml helpers",
+  "context_notes": "Phase 193 planning completed this session. 5 plans across 5 sequential waves: preflight → manifest → insertion engine → evidence workbook → human review. All plans verified clean (all 10 dimensions passed by gsd-plan-checker). Research confirmed key structural facts about the live DOCX. No execution has started. The docx skill was not found in skills directories; 193-RESEARCH.md OOXML patterns are the executor's authoritative reference. Plans are fully autonomous through Wave 4; Wave 5 (Plan 05) requires a human Word checkpoint."
 }
