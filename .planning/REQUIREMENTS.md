@@ -38,6 +38,14 @@
 - [ ] **AM-TEAM-02**: Team-decision rows current (D-190-01, D-190-02, D-193-01, all D-191-NN); code changes if any scheduled for a later milestone
 - [ ] **AM-TEAM-03**: Verification script listed in R/SCRIPT_INDEX.md. If added to the pipeline, also registered in R/39 and structural checks added to R/88; R/88 passes on HiPerGator. If kept standalone, no R/39 or R/88 change required.
 
+### Autoimmune Diagnosis Flags (Phase 192.1)
+
+- [ ] **AUTOIMMUNE-FLAG-01**: `AUTOIMMUNE_DX_CODES` constant added to `R/00_config.R` Section 4c with ICD-10 and ICD-9 sub-lists, every code verified against CMS GEM files; `AUTOIMMUNE_DX_TYPE_ACCEPT` constant added listing observed DX_TYPE values
+- [ ] **AUTOIMMUNE-FLAG-02**: `is_autoimmune_code()`, `summarise_autoimmune_dx()` (pure, in-memory), and `build_autoimmune_dx_flags()` (DuckDB wrapper) implemented in `R/utils/utils_doi.R`; mirroring the HL flag/date rule for sentinel and date handling
+- [ ] **AUTOIMMUNE-FLAG-03**: `has_autoimmune_dx` (logical, never NA) and `first_autoimmune_dx_date` (Date) appended as the final two columns to `gantt_episodes.csv` (R/52) and `gantt_episodes_180.csv` (R/142); original row count, column order, and values unchanged (D-08 comparison passes)
+- [ ] **AUTOIMMUNE-FLAG-04**: R/170 handles D-09 re-pin or join branch; chemo-combos key check recorded in QC; R/88 checks cover both columns in all inventoried outputs
+- [ ] **AUTOIMMUNE-FLAG-05**: testthat fixtures in `tests/testthat/test_autoimmune_flags.R` pass on HiPerGator; 0 failures covering all specified cases (no-qualifying, ICD-10, ICD-9, DX_TYPE gating, earliest-date, sentinel, ADMIT_DATE fallback, join invariants)
+
 ---
 
 ## Future Requirements
@@ -79,3 +87,8 @@
 | AM-TEAM-01 | 194 | Cover email |
 | AM-TEAM-02 | 194 | Decision rows current |
 | AM-TEAM-03 | 194 | SCRIPT_INDEX always; R/39 + R/88 only if pipeline-registered |
+| AUTOIMMUNE-FLAG-01 | 192.1 | Config constant with verified ICD codes + DX_TYPE |
+| AUTOIMMUNE-FLAG-02 | 192.1 | Helper functions in utils_doi.R |
+| AUTOIMMUNE-FLAG-03 | 192.1 | Gantt column injection + D-08 verification |
+| AUTOIMMUNE-FLAG-04 | 192.1 | R/170 re-pin/join branch + R/88 checks |
+| AUTOIMMUNE-FLAG-05 | 192.1 | testthat fixtures pass on HiPerGator |
