@@ -7362,6 +7362,10 @@ p1921_chk("AUTOIMMUNE-FLAG-02 [e] is_autoimmune_code() returns FALSE for C81.90/
   !isTRUE(is_autoimmune_code("C81.90", "10")))
 p1921_chk("AUTOIMMUNE-FLAG-02 [f] is_autoimmune_code() returns FALSE for M05.9 with ICD-9 system",
   !isTRUE(is_autoimmune_code("M05.9", "09")))
+p1921_chk("AUTOIMMUNE-FLAG-02 [g] icd9 slot is empty (ICD-10-only decision 2026-10-29)",
+  exists("AUTOIMMUNE_DX_CODES") && length(AUTOIMMUNE_DX_CODES$icd9) == 0L)
+p1921_chk("AUTOIMMUNE-FLAG-02 [h] is_autoimmune_code() returns FALSE for 714.0/'09' (empty icd9)",
+  !isTRUE(is_autoimmune_code("714.0", "09")))
 
 # (d) gantt_episodes.csv column checks
 gantt_ep_path <- file.path(CONFIG$output_dir, "gantt_episodes.csv")

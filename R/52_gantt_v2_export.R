@@ -825,6 +825,7 @@ n_pts_true      <- sum(aim_full$has_autoimmune_dx)
 n_qc_no_date    <- sum(aim_full$qc_qualifying_no_valid_date)
 message(glue("  Autoimmune flags: {fmt_sup(n_pts_true)} patients with has_autoimmune_dx = TRUE"))
 message(glue("  QC qualifying-no-valid-date: {fmt_sup(n_qc_no_date)} patients"))
+message("  KEY/QC: Autoimmune flag: ICD-10 codes only; diagnoses recorded only in ICD-9 (before Oct 2015) are not captured.")
 
 
 # --- SECTION 4D: DATA QUALITY CLEANUP ----

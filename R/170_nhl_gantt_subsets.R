@@ -691,7 +691,8 @@ key_rows <- data.frame(
     "Chemo-combos tab",
     "E-J source",
     "Key normalisation",
-    "Drug-name normalisation"
+    "Drug-name normalisation",
+    "Autoimmune flag scope"
   ),
   Value = c(
     run_date,
@@ -711,7 +712,8 @@ key_rows <- data.frame(
     CONFIG$chemo_combos_tab,
     "Sheet tab 'Chemo and Cancer Dx' columns E-J (Definitely HL, Definitely NHL, Initial, Relapse, Notes, HL and NHL)",
     "norm_key(): trimws + strip .0+$ + empty->NA; applied to both sides",
-    "normalize_drug_names(): lowercase, split ;/,, trim, drop empty, sort, rejoin ;"
+    "normalize_drug_names(): lowercase, split ;/,, trim, drop empty, sort, rejoin ;",
+    "ICD-10 codes only; diagnoses recorded only in ICD-9 (before Oct 2015) are not captured"
   ),
   stringsAsFactors = FALSE
 )
