@@ -206,6 +206,122 @@ if (!is.na(CONFIG$gantt_180_snapshot_md5) && CONFIG$gantt_180_snapshot_md5 != sn
   ))
 }
 
+## 2.1b D-08 comparison: new gantt_episodes_180.csv vs pinned snapshot (Phase 192.1)
+# Compare on the original 20 columns only (character reads).
+# Identical -> prints re-pin values for manual config edit; branch label = "REPIN".
+# Not identical -> branch label = "JOIN"; new columns added via patient-level join below.
+
+NEW_BUILD_PATH <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+D08_ORIG_COLS <- c(
+  "patient_id", "treatment_type", "episode_number",
+  "episode_start", "episode_stop", "episode_length_days",
+  "distinct_dates_in_episode",
+  "triggering_codes", "drug_names", "triggering_code_descriptions",
+  "cancer_category", "is_hodgkin",
+  "drug_group", "code_type", "source_table", "sct_cross_use_flag",
+  "episode_dx_codes", "episode_dx_categories",
+  "episode_dx_7day_confirmed", "age_at_episode"
+)
+
+d08_branch <- "SKIP"
+
+if (!file.exists(NEW_BUILD_PATH)) {
+  stop(glue("[R/170] D-08: new gantt_episodes_180.csv not found at {NEW_BUILD_PATH}. ",
+            "Run R/142 first."))
+}
+
+message("\n--- D-08: Comparing new gantt_episodes_180.csv with pinned snapshot ---")
+
+new_build_char <- readr::read_csv(NEW_BUILD_PATH,
+  col_types = readr::cols(.default = readr::col_character()),
+  show_col_types = FALSE)
+snap_char <- readr::read_csv(gantt_path,
+  col_types = readr::cols(.default = readr::col_character()),
+  show_col_types = FALSE)
+
+# Step 1: row counts
+d08_rows_match <- nrow(new_build_char) == nrow(snap_char)
+message(glue("  D-08 row counts: new={nrow(new_build_char)}, pin={nrow(snap_char)}, match={d08_rows_match}"))
+
+# Step 2: original column names present in new build
+d08_cols_ok <- all(D08_ORIG_COLS %in% names(new_build_char))
+message(glue("  D-08 original columns present in new build: {d08_cols_ok}"))
+
+# Step 3: sorted multiset comparison of original columns
+new_orig <- new_build_char[, D08_ORIG_COLS[D08_ORIG_COLS %in% names(new_build_char)]]
+pin_orig  <- snap_char[, D08_ORIG_COLS[D08_ORIG_COLS %in% names(snap_char)]]
+
+d08_content_match <- FALSE
+if (d08_rows_match && d08_cols_ok && all(D08_ORIG_COLS %in% names(pin_orig))) {
+  # Sort both by all original columns (character) and compare
+  new_sorted <- new_orig[do.call(order, new_orig), ]
+  pin_sorted  <- pin_orig[do.call(order, pin_orig), ]
+  d08_content_match <- identical(new_sorted, pin_sorted)
+}
+message(glue("  D-08 original-column multiset match: {d08_content_match}"))
+
+# Step 4: key multiplicity
+new_keys <- table(paste(new_build_char$patient_id, new_build_char$episode_number,
+                        new_build_char$treatment_type, sep = "||"))
+pin_keys  <- table(paste(snap_char$patient_id, snap_char$episode_number,
+                         snap_char$treatment_type, sep = "||"))
+d08_keys_match <- identical(sort(names(new_keys)), sort(names(pin_keys))) &&
+                  identical(sort(as.integer(new_keys)), sort(as.integer(pin_keys)))
+message(glue("  D-08 key multiplicity match: {d08_keys_match}"))
+
+d08_pass <- d08_rows_match && d08_cols_ok && d08_content_match && d08_keys_match
+
+if (d08_pass) {
+  d08_branch <- "REPIN"
+  new_bytes <- file.size(NEW_BUILD_PATH)
+  new_md5   <- unname(tools::md5sum(NEW_BUILD_PATH))
+  message("\n  D-08 PASSED — new build is identical to pinned snapshot on original columns.")
+  message("  To re-pin, run these steps manually:")
+  message(glue("    1. Copy {NEW_BUILD_PATH} to a _PINNED file with today's date"))
+  message(glue("    2. Set CONFIG$gantt_180_snapshot_path <- '<new_PINNED_path>'"))
+  message(glue("    3. Set CONFIG$gantt_180_snapshot_bytes <- {new_bytes}L"))
+  message(glue("    4. Set CONFIG$gantt_180_snapshot_md5   <- '{new_md5}'"))
+  message("    5. Re-run R/170 to confirm it loads the new pin and new columns appear.")
+} else {
+  d08_branch <- "JOIN"
+  message("\n  D-08: new build differs from pinned snapshot on original columns.")
+  message("  Branch: JOIN — keeping old pin; adding new columns via patient-level join.")
+}
+message(glue("  D-09 branch: {d08_branch}"))
+
+# Build new-column join table from the new build (typed) for JOIN branch
+if (d08_branch == "JOIN") {
+  new_build_typed <- readr::read_csv(NEW_BUILD_PATH,
+    col_types = readr::cols(
+      has_autoimmune_dx         = readr::col_logical(),
+      first_autoimmune_dx_date  = readr::col_date(format = "%Y-%m-%d"),
+      .default = readr::col_character()
+    ),
+    show_col_types = FALSE)
+
+  if (!all(c("has_autoimmune_dx", "first_autoimmune_dx_date") %in% names(new_build_typed))) {
+    stop("[R/170] JOIN branch: new build is missing has_autoimmune_dx / first_autoimmune_dx_date columns. ",
+         "Run R/142 after implementing Phase 192.1 changes.")
+  }
+
+  # Patient-level: one distinct (flag, date) pair per patient_id
+  aim_join <- new_build_typed |>
+    dplyr::distinct(patient_id, has_autoimmune_dx, first_autoimmune_dx_date)
+
+  # Assert each patient has exactly one distinct pair
+  n_aim_pts <- dplyr::n_distinct(aim_join$patient_id)
+  n_aim_pairs <- nrow(aim_join)
+  stopifnot(
+    "each patient must have exactly one (has_autoimmune_dx, first_autoimmune_dx_date) pair" =
+      n_aim_pairs == n_aim_pts
+  )
+  message(glue("  JOIN: {format(n_aim_pts, big.mark=',')} distinct patients with autoimmune flag"))
+}
+
+# Remove comparison-only objects from memory
+rm(new_build_char, snap_char, new_orig, pin_orig, new_sorted, pin_sorted, new_keys, pin_keys)
+if (exists("new_build_typed") && d08_branch != "JOIN") rm(new_build_typed)
+
 ## 2.2 Load gantt ----------------------------------------------------------
 
 EXPECTED_GANTT_COLS <- c(
@@ -502,6 +618,27 @@ message(glue("    Normalised-only     : {dn$n_norm_only}"))
 message(glue("    Real mismatches     : {dn$n_mismatch}"))
 message(glue("    One side missing    : {dn$n_one_side_missing}"))
 
+## 4.1b Add autoimmune columns (Phase 192.1, D-09)
+# JOIN branch: left-join the patient-level flag table from the new build.
+# REPIN branch: columns already present in the gantt (loaded from new pin after re-pin).
+# In both branches, add columns so output CSVs and workbook carry them.
+
+if (d08_branch == "JOIN") {
+  n_nhl_pre  <- nrow(nhl_only_episodes)
+  n_hlnhl_pre <- nrow(hl_nhl_episodes)
+  nhl_only_episodes <- dplyr::left_join(nhl_only_episodes, aim_join, by = "patient_id")
+  hl_nhl_episodes   <- dplyr::left_join(hl_nhl_episodes,  aim_join, by = "patient_id")
+  stopifnot(
+    "nhl_only_episodes row count unchanged after autoimmune join" = nrow(nhl_only_episodes) == n_nhl_pre,
+    "hl_nhl_episodes row count unchanged after autoimmune join"   = nrow(hl_nhl_episodes)   == n_hlnhl_pre
+  )
+  message(glue("\n  JOIN: autoimmune columns added to nhl_only_episodes and hl_nhl_episodes"))
+} else if (d08_branch == "REPIN") {
+  # After a re-pin the gantt snapshot already contains the new columns.
+  # They are propagated automatically via the existing subset filters.
+  message("\n  REPIN: autoimmune columns already present in re-pinned snapshot.")
+}
+
 ## 4.2 Write CSVs ----------------------------------------------------------
 
 int_dir <- file.path(CONFIG$output_dir, "internal")
@@ -676,7 +813,22 @@ qc_df <- dplyr::bind_rows(
   # (k) Episode-number scope
   data.frame(QC_Field = "--- (k) Episode-number scope (D-14) ---", QC_Value = "", stringsAsFactors = FALSE),
   qc_block("Episode scope finding", episode_scope_note),
-  qc_block("Cross-type duplicate (patient_id,episode_number) pairs in gantt", n_all_scope_dupes)
+  qc_block("Cross-type duplicate (patient_id,episode_number) pairs in gantt", n_all_scope_dupes),
+  # (l) Phase 192.1 D-08/D-09 autoimmune flag comparison
+  data.frame(QC_Field = "--- (l) Phase 192.1 D-08/D-09 autoimmune flag comparison ---", QC_Value = "", stringsAsFactors = FALSE),
+  qc_block("D-08 row count match",          d08_rows_match),
+  qc_block("D-08 original columns present", d08_cols_ok),
+  qc_block("D-08 content match (orig cols)", d08_content_match),
+  qc_block("D-08 key multiplicity match",    d08_keys_match),
+  qc_block("D-08 overall PASS",              d08_pass),
+  qc_block("D-09 branch",                    d08_branch),
+  if (d08_branch == "JOIN") {
+    qc_block("JOIN: distinct patients with autoimmune flag in aim_join", n_aim_pts)
+  } else if (d08_branch == "REPIN") {
+    data.frame(QC_Field = "REPIN: config update required (see console output)", QC_Value = "See printed instructions", stringsAsFactors = FALSE)
+  } else {
+    data.frame(QC_Field = "Branch not executed", QC_Value = "SKIP", stringsAsFactors = FALSE)
+  }
 )
 
 openxlsx::addWorksheet(wb, "QC")
