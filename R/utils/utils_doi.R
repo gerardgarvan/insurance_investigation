@@ -154,7 +154,7 @@ is_autoimmune_code <- function(dx, dx_type,
   if (n == 0) return(logical(0))
 
   dx_clean <- normalize_icd(trimws(dx))          # strip dots, uppercase
-  dt       <- trimws(as.character(dx_type))
+  dt       <- as.character(dx_type)              # exact match — no trimming (real values are clean)
 
   # Helper: TRUE where x starts with any key in `keys`
   match_any <- function(x, keys) {
