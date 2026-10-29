@@ -774,7 +774,7 @@ AUTOIMMUNE_DX_CODES <- list(
     "M0800" = "Juvenile rheumatoid arthritis, unspecified (M08.00)",
     "L40"   = "Psoriasis"
   ),
-  icd9 = c()  # empty — ICD-9 excluded by decision 2026-10-29
+  icd9 = character(0)  # empty — ICD-9 excluded by decision 2026-10-29; character(0) not NULL
 )
 
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
