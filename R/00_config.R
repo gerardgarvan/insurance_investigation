@@ -754,14 +754,14 @@ DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
 # share one value without redefining it locally.
 SENTINEL_CUTOFF <- as.Date("1910-01-01")
 
-# AUTOIMMUNE_DX_CODES: ICD-10 and ICD-9 prefix sets for autoimmune diagnosis detection.
+# AUTOIMMUNE_DX_CODES: ICD-10 prefix set for autoimmune diagnosis detection.
 # Keys = normalized code prefix (dots removed, uppercase); values = official condition title.
-# Verified against CMS 2018 GEM files (192.1-ICD9-MAPPING.md, 2026-10-29).
-# ICD-9 keys are numeric; ICD-10 keys are alpha-leading — never mixed in one lookup.
-# Codes marked "broader" cover ICD-9 categories wider than their ICD-10 counterpart;
-# they are reported separately in QC but included in the flag (team decision in Phase 194).
+# ICD-9 EXCLUDED by decision 2026-10-29 (Task 2 skipped; GEM verification deferred).
+# Diagnoses recorded only in ICD-9 (before Oct 2015) are not captured by this flag.
+# The icd9 slot is kept as an empty named vector so ICD-9 codes can be added later
+# without changing function signatures or call sites.
 # NOTE: M31.3 — "M31.3C3" in the original request is not a valid ICD-10-CM code; read as
-# M31.3 (codes M31.30 and M31.31). Assumption recorded for team confirmation in Phase 194.
+# M31.3 (codes M31.30 and M31.31). Assumption recorded for team confirmation.
 AUTOIMMUNE_DX_CODES <- list(
   icd10 = c(
     "M05"   = "Seropositive rheumatoid arthritis",
@@ -774,22 +774,7 @@ AUTOIMMUNE_DX_CODES <- list(
     "M0800" = "Juvenile rheumatoid arthritis, unspecified (M08.00)",
     "L40"   = "Psoriasis"
   ),
-  icd9 = c(
-    "7140"  = "Rheumatoid arthritis",
-    "7141"  = "Felty's syndrome",
-    "7142"  = "Rheumatoid arthritis with visceral or systemic involvement",
-    "71430" = "Juvenile rheumatoid arthritis, unspecified",
-    "71431" = "Juvenile rheumatoid arthritis, monoarticular onset",
-    "71481" = "Inflammatory polyarthropathy, other specified RA site",
-    "71489" = "Inflammatory polyarthropathy, other site",
-    "7149"  = "Other specified inflammatory polyarthropathy",
-    "4464"  = "Wegener's granulomatosis",
-    "4460"  = "Polyarteritis nodosa [broader: GEM maps M31.7 to 4460; reverse maps to M30.0]",
-    "6944"  = "Pemphigus [broader: covers all pemphigus variants L10.0-L10.9, not only L10.0]",
-    "6960"  = "Psoriatic arthropathy",
-    "6961"  = "Other psoriasis",
-    "6943"  = "Pustular psoriasis / dermatitis herpetiformis (GEM: L40.1)"
-  )
+  icd9 = c()  # empty — ICD-9 excluded by decision 2026-10-29
 )
 
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
