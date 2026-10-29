@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: verifying
-stopped_at: Phase 192.1 context gathered
-last_updated: "2026-10-29T15:32:57.935Z"
-last_activity: 2026-10-28
+stopped_at: Completed 192.1-01-PLAN.md
+last_updated: "2026-10-29T17:45:45.386Z"
+last_activity: 2026-10-29
 progress:
   total_phases: 44
-  completed_phases: 34
-  total_plans: 115
-  completed_plans: 123
+  completed_phases: 35
+  total_plans: 116
+  completed_plans: 124
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 192 — draft-new-content
+**Current focus:** Phase 192.1 — autoimmune-diagnosis-flags-in-gantt-episodes (COMPLETE)
 
 ## Current Position
 
-Phase: 193
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-10-28
+Phase: 192.1 (autoimmune-diagnosis-flags-in-gantt-episodes) — COMPLETE
+Plan: 1 of 1 — COMPLETE
+Status: Phase 192.1 complete; next: Phase 191 (Verify Existing Entries) or Phase 192 continuation
+Last activity: 2026-10-29
 
 ## Phase Map (v3.13)
 
@@ -45,6 +45,8 @@ Last activity: 2026-10-28
 ### Roadmap Evolution
 
 - Phase 192.1 inserted after Phase 192: Rebase v3.13 to the revised Analytic Manual (URGENT)
+- Phase 192.1 renamed from "rebase-v3-13-to-the-revised-analytic-manual" to "autoimmune-diagnosis-flags-in-gantt-episodes" (canonical name)
+- Phase 192.1 COMPLETE 2026-10-29: has_autoimmune_dx + first_autoimmune_dx_date added to gantt_episodes.csv and gantt_episodes_180.csv
 
 ### v3.13 Milestone Context
 
@@ -80,6 +82,8 @@ Last activity: 2026-10-28
 ### Carried from v3.12
 
 - R/88 ALL CHECKS PASSED 2026-10-23 (Sections 15av–15az, Phase 185–189 scripts)
+- R/88 ALL AUTOIMMUNE-FLAG checks PASSED 2026-10-29 (Section 15ba, Phase 192.1, 29 checks)
+- Phase 192.1 decisions: 4460/6944 broader ICD-9 codes included; 71432/71433/3571/3596 excluded per GEM; SENTINEL_CUTOFF promoted to config; detail CSVs excluded from column injection; D-09 branch determined at R/170 runtime
 - Survivorship cohort: 9,331 patients (R/147 baseline 2026-09-25)
 - Anthracycline exposure variables in output/internal/ (Phase 187)
 - Echo rate since last anthracycline = 0.2501/py (Phase 188)
@@ -103,4 +107,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 192.1 context gathered
+**Stopped at:** Completed 192.1-01-PLAN.md

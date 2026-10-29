@@ -40,11 +40,11 @@
 
 ### Autoimmune Diagnosis Flags (Phase 192.1)
 
-- [ ] **AUTOIMMUNE-FLAG-01**: `AUTOIMMUNE_DX_CODES` constant added to `R/00_config.R` Section 4c with ICD-10 and ICD-9 sub-lists, every code verified against CMS GEM files; `AUTOIMMUNE_DX_TYPE_ACCEPT` constant added listing observed DX_TYPE values
-- [ ] **AUTOIMMUNE-FLAG-02**: `is_autoimmune_code()`, `summarise_autoimmune_dx()` (pure, in-memory), and `build_autoimmune_dx_flags()` (DuckDB wrapper) implemented in `R/utils/utils_doi.R`; mirroring the HL flag/date rule for sentinel and date handling
-- [ ] **AUTOIMMUNE-FLAG-03**: `has_autoimmune_dx` (logical, never NA) and `first_autoimmune_dx_date` (Date) appended as the final two columns to `gantt_episodes.csv` (R/52) and `gantt_episodes_180.csv` (R/142); original row count, column order, and values unchanged (D-08 comparison passes)
-- [ ] **AUTOIMMUNE-FLAG-04**: R/170 handles D-09 re-pin or join branch; chemo-combos key check recorded in QC; R/88 checks cover both columns in all inventoried outputs
-- [ ] **AUTOIMMUNE-FLAG-05**: testthat fixtures in `tests/testthat/test_autoimmune_flags.R` pass on HiPerGator; 0 failures covering all specified cases (no-qualifying, ICD-10, ICD-9, DX_TYPE gating, earliest-date, sentinel, ADMIT_DATE fallback, join invariants)
+- [x] **AUTOIMMUNE-FLAG-01**: `AUTOIMMUNE_DX_CODES` constant added to `R/00_config.R` Section 4c with ICD-10 and ICD-9 sub-lists, every code verified against CMS GEM files; `AUTOIMMUNE_DX_TYPE_ACCEPT` constant added listing observed DX_TYPE values
+- [x] **AUTOIMMUNE-FLAG-02**: `is_autoimmune_code()`, `summarise_autoimmune_dx()` (pure, in-memory), and `build_autoimmune_dx_flags()` (DuckDB wrapper) implemented in `R/utils/utils_doi.R`; mirroring the HL flag/date rule for sentinel and date handling
+- [x] **AUTOIMMUNE-FLAG-03**: `has_autoimmune_dx` (logical, never NA) and `first_autoimmune_dx_date` (Date) appended as the final two columns to `gantt_episodes.csv` (R/52) and `gantt_episodes_180.csv` (R/142); original row count, column order, and values unchanged (D-08 comparison passes)
+- [x] **AUTOIMMUNE-FLAG-04**: R/170 handles D-09 re-pin or join branch; chemo-combos key check recorded in QC; R/88 checks cover both columns in all inventoried outputs
+- [x] **AUTOIMMUNE-FLAG-05**: testthat fixtures in `tests/testthat/test_autoimmune_flags.R` pass on HiPerGator; 0 failures covering all specified cases (no-qualifying, ICD-10, ICD-9, DX_TYPE gating, earliest-date, sentinel, ADMIT_DATE fallback, join invariants)
 
 ---
 

@@ -857,10 +857,10 @@ Plans:
 **Goal:** Add has_autoimmune_dx (logical) and first_autoimmune_dx_date (Date) as patient-level columns 21-22 to every Gantt episode output, sourced from DuckDB DIAGNOSIS via prefix-matched ICD-10/ICD-9 autoimmune codes; existing rows, columns, and values unchanged
 **Requirements**: AUTOIMMUNE-FLAG-01, AUTOIMMUNE-FLAG-02, AUTOIMMUNE-FLAG-03, AUTOIMMUNE-FLAG-04, AUTOIMMUNE-FLAG-05
 **Depends on:** Phase 192
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 192.1-01-PLAN.md -- AUTOIMMUNE_DX_CODES constant + is_autoimmune_code() helper + Gantt column injection (R/52, R/142, R/170 D-09 re-pin) + R/88 checks + testthat fixtures [AUTOIMMUNE-FLAG-01 through 05] (Wave 1-5)
+- [x] 192.1-01-PLAN.md -- AUTOIMMUNE_DX_CODES constant + is_autoimmune_code() helper + Gantt column injection (R/52, R/142, R/170 D-09 re-pin) + R/88 checks + testthat fixtures [AUTOIMMUNE-FLAG-01 through 05] (Wave 1-5)
 
 ### Phase 193: Produce Updated Manual
 **Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
