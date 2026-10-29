@@ -114,5 +114,179 @@ classify_doi_codes <- function(codes) {
 }
 
 # ==============================================================================
+# Phase 192.1: Autoimmune diagnosis helpers (AUTOIMMUNE-FLAG-02)
+# ==============================================================================
+# Three functions mirroring the HL flag/date pattern in R/52 and R/142 but
+# sourcing data from DuckDB DIAGNOSIS rather than a pre-built cohort RDS.
+#
+# is_autoimmune_code()      — vectorised, DX_TYPE-gated prefix match
+# summarise_autoimmune_dx() — pure (in-memory) per-patient aggregation
+# build_autoimmune_dx_flags() — DuckDB wrapper (calls the two above)
+#
+# Dependencies: AUTOIMMUNE_DX_CODES, AUTOIMMUNE_DX_TYPE_ACCEPT, SENTINEL_CUTOFF
+#   from R/00_config.R; normalize_icd() from utils_icd.R (auto-sourced before
+#   this file via the R/utils/*.R glob).
+# ==============================================================================
+
+#' Detect autoimmune diagnosis codes (DX_TYPE-gated prefix match)
+#'
+#' Prefix-matches dx against AUTOIMMUNE_DX_CODES, gated on DX_TYPE so that
+#' numeric ICD-9 keys only match ICD-9 records and alpha-leading ICD-10 keys
+#' only match ICD-10 records. NA or unrecognised DX_TYPE values return FALSE.
+#' Tolerates dotted codes (normalize_icd strips dots before matching).
+#'
+#' @param dx      Character vector of diagnosis codes (dotted or undotted)
+#' @param dx_type Character vector of DX_TYPE values
+#' @param codes   Named list with \code{$icd10} and \code{$icd9} named character
+#'   vectors (default: \code{AUTOIMMUNE_DX_CODES} from config)
+#' @param accept  Named list with \code{$icd10} and \code{$icd9} character
+#'   vectors of accepted DX_TYPE values (default: \code{AUTOIMMUNE_DX_TYPE_ACCEPT})
+#' @return Logical vector; TRUE only when the code's prefix is in the
+#'   appropriate sub-list and dx_type is in the matching accepted set.
+#'
+#' @examples
+#' is_autoimmune_code(c("M05.79", "714.0", "C81.90"), c("10", "09", "10"))
+#' # Returns: c(TRUE, TRUE, FALSE)
+is_autoimmune_code <- function(dx, dx_type,
+                               codes  = AUTOIMMUNE_DX_CODES,
+                               accept = AUTOIMMUNE_DX_TYPE_ACCEPT) {
+  n <- length(dx)
+  if (n == 0) return(logical(0))
+
+  dx_clean <- normalize_icd(trimws(dx))          # strip dots, uppercase
+  dt       <- trimws(as.character(dx_type))
+
+  # Helper: TRUE where x starts with any key in `keys`
+  match_any <- function(x, keys) {
+    if (!length(keys)) return(rep(FALSE, length(x)))
+    Reduce(`|`, lapply(keys, function(k) startsWith(x, k)))
+  }
+
+  out <- rep(FALSE, n)
+
+  i10 <- !is.na(dx_clean) & !is.na(dt) & dt %in% accept$icd10
+  i09 <- !is.na(dx_clean) & !is.na(dt) & dt %in% accept$icd9
+
+  if (any(i10)) out[i10] <- match_any(dx_clean[i10], names(codes$icd10))
+  if (any(i09)) out[i09] <- match_any(dx_clean[i09], names(codes$icd9))
+
+  out
+}
+
+
+#' Aggregate per-patient autoimmune flags from in-memory diagnosis rows (pure)
+#'
+#' Returns one row per unique cohort ID with:
+#'   \itemize{
+#'     \item \code{has_autoimmune_dx} - logical, TRUE iff first_autoimmune_dx_date is non-NA
+#'     \item \code{first_autoimmune_dx_date} - Date, earliest valid date across
+#'       qualifying records (NA if none)
+#'     \item \code{qc_qualifying_no_valid_date} - logical, TRUE only for patients
+#'       who have a qualifying code but no valid date at all
+#'   }
+#'
+#' Date priority per record: DX_DATE if non-NA and after sentinel, else ADMIT_DATE
+#' if non-NA and after sentinel, else no valid date. Mirrors the sentinel usage in
+#' R/47, R/48, R/49 (SENTINEL_CUTOFF = 1910-01-01).
+#'
+#' @param dx          data.frame with columns ID, DX, DX_TYPE, DX_DATE, ADMIT_DATE
+#' @param cohort_ids  character vector of patient IDs (defines output row set)
+#' @param sentinel    Date; records with all dates on or before this are invalid
+#' @return tibble; nrow == n_distinct(cohort_ids); asserted on exit
+summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
+  # Filter to qualifying codes only
+  q <- dx[is_autoimmune_code(dx$DX, dx$DX_TYPE), , drop = FALSE]
+
+  if (nrow(q) > 0) {
+    d1  <- as.Date(q$DX_DATE)
+    d2  <- as.Date(q$ADMIT_DATE)
+    ok1 <- !is.na(d1) & d1 > sentinel
+    ok2 <- !is.na(d2) & d2 > sentinel
+    # Valid date: DX_DATE if usable, else ADMIT_DATE if usable, else NA
+    q$valid_date <- as.Date(
+      ifelse(ok1, as.character(d1),
+             ifelse(ok2, as.character(d2), NA_character_))
+    )
+
+    per_id <- q |>
+      dplyr::group_by(ID) |>
+      dplyr::summarise(
+        first_autoimmune_dx_date = if (all(is.na(valid_date))) as.Date(NA) else min(valid_date, na.rm = TRUE),
+        any_qualifying            = TRUE,
+        any_valid_date            = any(!is.na(valid_date)),
+        .groups = "drop"
+      )
+  } else {
+    per_id <- tibble::tibble(
+      ID                       = character(0),
+      first_autoimmune_dx_date = as.Date(character(0)),
+      any_qualifying           = logical(0),
+      any_valid_date           = logical(0)
+    )
+  }
+
+  out <- tibble::tibble(ID = unique(cohort_ids)) |>
+    dplyr::left_join(per_id, by = "ID") |>
+    dplyr::mutate(
+      has_autoimmune_dx = !is.na(first_autoimmune_dx_date),
+      qc_qualifying_no_valid_date =
+        dplyr::coalesce(any_qualifying, FALSE) &
+        !dplyr::coalesce(any_valid_date, FALSE)
+    )
+
+  # Invariant assertions (fail-fast)
+  stopifnot(
+    "output has one row per distinct cohort ID" =
+      nrow(out) == dplyr::n_distinct(cohort_ids),
+    "no TRUE flag with NA date" =
+      !any(out$has_autoimmune_dx & is.na(out$first_autoimmune_dx_date)),
+    "no FALSE flag with non-NA date" =
+      !any(!out$has_autoimmune_dx & !is.na(out$first_autoimmune_dx_date))
+  )
+
+  out
+}
+
+
+#' Build patient-level autoimmune flags by querying DuckDB DIAGNOSIS
+#'
+#' Joins DIAGNOSIS to the cohort via a registered table (no IN-list), collects
+#' into memory, then delegates to \code{summarise_autoimmune_dx()} for all
+#' aggregation logic.
+#'
+#' Connection protocol: opens a connection only if one is not already open;
+#' always unregisters the temporary table; closes only if it opened.
+#' Uses \code{open_pcornet_con()} / \code{close_pcornet_con()} from
+#' utils_duckdb.R (single shared connection pattern).
+#'
+#' @param cohort_ids character vector of patient IDs
+#' @param sentinel   Date passed to \code{summarise_autoimmune_dx()}
+#' @return tibble from \code{summarise_autoimmune_dx()}
+build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF) {
+  opened_here <- FALSE
+  if (!exists("pcornet_con", envir = .GlobalEnv) || !DBI::dbIsValid(pcornet_con)) {
+    open_pcornet_con()
+    opened_here <- TRUE
+  }
+
+  duckdb::duckdb_register(
+    pcornet_con, "aim_cohort",
+    tibble::tibble(ID = unique(as.character(cohort_ids)))
+  )
+
+  on.exit({
+    try(duckdb::duckdb_unregister(pcornet_con, "aim_cohort"), silent = TRUE)
+    if (opened_here) try(close_pcornet_con(), silent = TRUE)
+  }, add = TRUE)
+
+  dx <- DBI::dbGetQuery(pcornet_con,
+    "SELECT d.ID, d.DX, d.DX_TYPE, d.DX_DATE, d.ADMIT_DATE
+     FROM DIAGNOSIS d JOIN aim_cohort c ON c.ID = d.ID"
+  )
+
+  summarise_autoimmune_dx(dx, cohort_ids, sentinel)
+}
+
+# ==============================================================================
 # End of utils_doi.R
 # ==============================================================================
