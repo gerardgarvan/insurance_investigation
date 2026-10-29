@@ -158,7 +158,9 @@ EPISODES_SCHEMA <- c(
   "code_type", "source_table", "sct_cross_use_flag",
   "episode_dx_codes", "episode_dx_categories",
   # Phase 115: 7-day confirmed subset + age (+2 columns, now 20 total)
-  "episode_dx_7day_confirmed", "age_at_episode"
+  "episode_dx_7day_confirmed", "age_at_episode",
+  # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
+  "has_autoimmune_dx", "first_autoimmune_dx_date"
 )
 
 DETAIL_SCHEMA <- c(
@@ -796,6 +798,35 @@ if (file.exists(COHORT_RDS)) {
 }
 
 
+# --- SECTION 4C2: AUTOIMMUNE DIAGNOSIS FLAGS (Phase 192.1, AUTOIMMUNE-FLAG-03) ---
+# Patient-level has_autoimmune_dx (logical) and first_autoimmune_dx_date (Date)
+# appended as columns 21-22.  Mirror of the HL flag/date pattern; sourced from
+# DuckDB DIAGNOSIS rather than a cohort RDS (D-05a).  One row per patient,
+# left-joined so every episode row (including HL and Death pseudo-rows) carries
+# the patient's flag value. Row count asserted unchanged.
+
+message("\n--- Building autoimmune diagnosis flags ---")
+
+aim_full <- build_autoimmune_dx_flags(
+  unique(episodes_export$patient_id),
+  sentinel = SENTINEL_CUTOFF
+)
+
+aim <- aim_full |>
+  dplyr::select(patient_id = ID, has_autoimmune_dx, first_autoimmune_dx_date)
+
+n0 <- nrow(episodes_export)
+episodes_export <- dplyr::left_join(episodes_export, aim, by = "patient_id")
+stopifnot("autoimmune join must not change row count" = nrow(episodes_export) == n0)
+
+# QC counts (counts 1-10 shown as "<11" per privacy convention)
+fmt_sup <- function(n) if (n >= 1L && n <= 10L) "<11" else format(n, big.mark = ",")
+n_pts_true      <- sum(aim_full$has_autoimmune_dx)
+n_qc_no_date    <- sum(aim_full$qc_qualifying_no_valid_date)
+message(glue("  Autoimmune flags: {fmt_sup(n_pts_true)} patients with has_autoimmune_dx = TRUE"))
+message(glue("  QC qualifying-no-valid-date: {fmt_sup(n_qc_no_date)} patients"))
+
+
 # --- SECTION 4D: DATA QUALITY CLEANUP ----
 
 message("\n--- Section 4D: Data Quality Cleanup (Phase 64) ---")
@@ -899,7 +930,9 @@ episodes_export <- episodes_export %>%
     # Phase 112: Temporal diagnosis enrichment (GANTT-DX-02)
     episode_dx_codes, episode_dx_categories,
     # Phase 115: 7-day confirmed subset + age (+2 columns, now 20 total)
-    episode_dx_7day_confirmed, age_at_episode
+    episode_dx_7day_confirmed, age_at_episode,
+    # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
+    has_autoimmune_dx, first_autoimmune_dx_date
   )
 
 detail_export <- detail_export %>%
