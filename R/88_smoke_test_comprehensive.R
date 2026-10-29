@@ -1910,23 +1910,22 @@ check("R/52 EPISODES_SCHEMA includes episode_dx_7day_confirmed (Phase 115)",
 check("R/52 EPISODES_SCHEMA includes age_at_episode (Phase 115)",
       any(grepl("age_at_episode", r52_lines)))
 
-# Check 3: R/52 EPISODES_SCHEMA has 20 entries (was 18 pre-Phase 115)
+# Check 3: R/52 EPISODES_SCHEMA has 22 entries (Phase 115: +2 from 18; Phase 192.1: +2 from 20)
 r52_schema_start <- grep("^EPISODES_SCHEMA\\s*<-", r52_lines)[1]
 if (!is.na(r52_schema_start)) {
   r52_schema_end <- r52_schema_start
   # WHY: match ONLY a standalone ")" line as the terminator. R/52's EPISODES_SCHEMA
-  # block has a comment line ending in ")" ("...now 20 total)") one line above the real
-  # closing ")". The old "\\)\\s*$" terminator stopped on that comment and undercounted
-  # entries (18 instead of 20). "^\\s*\\)\\s*$" only matches the true closing paren line.
+  # block has comment lines ending in ")" above the real closing ")".
+  # "^\\s*\\)\\s*$" only matches the true closing paren line.
   while (r52_schema_end <= length(r52_lines) && !grepl("^\\s*\\)\\s*$", r52_lines[r52_schema_end])) {
     r52_schema_end <- r52_schema_end + 1
   }
-  schema_text_115 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
-  schema_entries_115 <- lengths(regmatches(schema_text_115, gregexpr('"[a-z0-9_]+"', schema_text_115)))
-  check("R/52 EPISODES_SCHEMA has 20 entries (Phase 115: +2 from 18)",
-        schema_entries_115 == 20)
+  schema_text_1921 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
+  schema_entries_1921 <- lengths(regmatches(schema_text_1921, gregexpr('"[a-z0-9_]+"', schema_text_1921)))
+  check("R/52 EPISODES_SCHEMA has 22 entries (Phase 192.1: +2 from 20)",
+        schema_entries_1921 == 22)
 } else {
-  check("R/52 EPISODES_SCHEMA has 20 entries (Phase 115: +2 from 18)", FALSE)
+  check("R/52 EPISODES_SCHEMA has 22 entries (Phase 192.1: +2 from 20)", FALSE)
 }
 
 # Check 4: R/52 sources utils_cancer.R (needed for classify_codes)
