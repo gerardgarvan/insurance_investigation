@@ -7319,6 +7319,154 @@ if (IS_LOCAL) {
 message(glue("\nSMOKE-189-01: {p189_pass} PASS / {p189_fail} FAIL / {p189_skip} SKIP"))
 
 # ==============================================================================
+# SECTION 15ba: PHASE 192.1 AUTOIMMUNE DIAGNOSIS FLAGS (AUTOIMMUNE-FLAG-01..05) ----
+# ==============================================================================
+
+message("\n[AUTOIMMUNE-FLAG] Phase 192.1 autoimmune diagnosis flags...")
+
+p1921_pass <- 0L; p1921_fail <- 0L; p1921_skip <- 0L
+
+p1921_chk <- function(label, condition) {
+  if (isTRUE(condition))  { message("  PASS: ", label); p1921_pass <<- p1921_pass + 1L; passed  <<- passed  + 1L }
+  else                    { message("  FAIL: ", label); p1921_fail <<- p1921_fail + 1L; failed  <<- failed  + 1L }
+}
+p1921_skip_fn <- function(label) {
+  message("  SKIP: ", label)
+  p1921_skip <<- p1921_skip + 1L
+  skipped    <<- skipped    + 1L
+}
+
+# (a) Config constants defined
+p1921_chk("AUTOIMMUNE-FLAG-01 [a] AUTOIMMUNE_DX_CODES defined",
+  exists("AUTOIMMUNE_DX_CODES") && is.list(AUTOIMMUNE_DX_CODES) &&
+  !is.null(AUTOIMMUNE_DX_CODES$icd10) && !is.null(AUTOIMMUNE_DX_CODES$icd9))
+p1921_chk("AUTOIMMUNE-FLAG-01 [b] AUTOIMMUNE_DX_TYPE_ACCEPT defined",
+  exists("AUTOIMMUNE_DX_TYPE_ACCEPT") && is.list(AUTOIMMUNE_DX_TYPE_ACCEPT) &&
+  !is.null(AUTOIMMUNE_DX_TYPE_ACCEPT$icd10) && !is.null(AUTOIMMUNE_DX_TYPE_ACCEPT$icd9))
+p1921_chk("AUTOIMMUNE-FLAG-01 [c] SENTINEL_CUTOFF defined as Date",
+  exists("SENTINEL_CUTOFF") && inherits(SENTINEL_CUTOFF, "Date"))
+p1921_chk("AUTOIMMUNE-FLAG-01 [d] AUTOIMMUNE_DX_CODES next to MTX_CODES in config",
+  any(grepl("AUTOIMMUNE_DX_CODES", readLines(here::here("R/00_config.R")))))
+
+# (b) Helper functions defined
+p1921_chk("AUTOIMMUNE-FLAG-02 [a] is_autoimmune_code() exists",
+  exists("is_autoimmune_code") && is.function(is_autoimmune_code))
+p1921_chk("AUTOIMMUNE-FLAG-02 [b] summarise_autoimmune_dx() exists",
+  exists("summarise_autoimmune_dx") && is.function(summarise_autoimmune_dx))
+p1921_chk("AUTOIMMUNE-FLAG-02 [c] build_autoimmune_dx_flags() exists",
+  exists("build_autoimmune_dx_flags") && is.function(build_autoimmune_dx_flags))
+
+# (c) is_autoimmune_code() basic sanity
+p1921_chk("AUTOIMMUNE-FLAG-02 [d] is_autoimmune_code() returns TRUE for M05.9/'10'",
+  isTRUE(is_autoimmune_code("M05.9", "10")))
+p1921_chk("AUTOIMMUNE-FLAG-02 [e] is_autoimmune_code() returns FALSE for C81.90/'10'",
+  !isTRUE(is_autoimmune_code("C81.90", "10")))
+p1921_chk("AUTOIMMUNE-FLAG-02 [f] is_autoimmune_code() returns FALSE for M05.9 with ICD-9 system",
+  !isTRUE(is_autoimmune_code("M05.9", "09")))
+
+# (d) gantt_episodes.csv column checks
+gantt_ep_path <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
+if (!file.exists(gantt_ep_path)) {
+  p1921_skip_fn("AUTOIMMUNE-FLAG-03 [a-e] gantt_episodes.csv absent — run R/52 first")
+} else {
+  gantt_ep_hdr <- names(readr::read_csv(gantt_ep_path, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1921_chk("AUTOIMMUNE-FLAG-03 [a] gantt_episodes.csv has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% gantt_ep_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-03 [b] gantt_episodes.csv has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% gantt_ep_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-03 [c] gantt_episodes.csv has 22 columns",
+    length(gantt_ep_hdr) == 22L)
+  p1921_chk("AUTOIMMUNE-FLAG-03 [d] has_autoimmune_dx is second-to-last column",
+    gantt_ep_hdr[21L] == "has_autoimmune_dx")
+  p1921_chk("AUTOIMMUNE-FLAG-03 [e] first_autoimmune_dx_date is last column",
+    gantt_ep_hdr[22L] == "first_autoimmune_dx_date")
+
+  if (!IS_LOCAL) {
+    # Full-data checks: parse types and flag/date invariant
+    gantt_ep_full <- readr::read_csv(gantt_ep_path,
+      col_types = readr::cols(
+        has_autoimmune_dx        = readr::col_logical(),
+        first_autoimmune_dx_date = readr::col_date(format = "%Y-%m-%d"),
+        .default = readr::col_character()
+      ),
+      show_col_types = FALSE)
+    p1921_chk("AUTOIMMUNE-FLAG-03 [f] has_autoimmune_dx parses as logical",
+      is.logical(gantt_ep_full$has_autoimmune_dx))
+    p1921_chk("AUTOIMMUNE-FLAG-03 [g] first_autoimmune_dx_date parses as Date",
+      inherits(gantt_ep_full$first_autoimmune_dx_date, "Date"))
+    p1921_chk("AUTOIMMUNE-FLAG-03 [h] flag/date invariant: no TRUE with NA date",
+      !any(gantt_ep_full$has_autoimmune_dx & is.na(gantt_ep_full$first_autoimmune_dx_date), na.rm = TRUE))
+    p1921_chk("AUTOIMMUNE-FLAG-03 [i] flag/date invariant: no FALSE with non-NA date",
+      !any(!gantt_ep_full$has_autoimmune_dx & !is.na(gantt_ep_full$first_autoimmune_dx_date), na.rm = TRUE))
+    p1921_chk("AUTOIMMUNE-FLAG-03 [j] at least one patient TRUE (real data)",
+      any(gantt_ep_full$has_autoimmune_dx, na.rm = TRUE))
+    rm(gantt_ep_full)
+  }
+}
+
+# (e) gantt_episodes_180.csv column checks
+gantt_180_path <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+if (!file.exists(gantt_180_path)) {
+  p1921_skip_fn("AUTOIMMUNE-FLAG-03 [k-o] gantt_episodes_180.csv absent — run R/142 first")
+} else {
+  gantt_180_hdr <- names(readr::read_csv(gantt_180_path, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1921_chk("AUTOIMMUNE-FLAG-03 [k] gantt_episodes_180.csv has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% gantt_180_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-03 [l] gantt_episodes_180.csv has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% gantt_180_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-03 [m] gantt_episodes_180.csv has 22 columns",
+    length(gantt_180_hdr) == 22L)
+
+  if (!IS_LOCAL) {
+    gantt_180_full <- readr::read_csv(gantt_180_path,
+      col_types = readr::cols(
+        has_autoimmune_dx        = readr::col_logical(),
+        first_autoimmune_dx_date = readr::col_date(format = "%Y-%m-%d"),
+        .default = readr::col_character()
+      ),
+      show_col_types = FALSE)
+    p1921_chk("AUTOIMMUNE-FLAG-03 [n] flag/date invariant on gantt_episodes_180.csv",
+      !any(gantt_180_full$has_autoimmune_dx & is.na(gantt_180_full$first_autoimmune_dx_date), na.rm = TRUE) &&
+      !any(!gantt_180_full$has_autoimmune_dx & !is.na(gantt_180_full$first_autoimmune_dx_date), na.rm = TRUE))
+    p1921_chk("AUTOIMMUNE-FLAG-03 [o] at least one patient TRUE in gantt_episodes_180",
+      any(gantt_180_full$has_autoimmune_dx, na.rm = TRUE))
+    rm(gantt_180_full)
+  }
+}
+
+# (f) R/170 subset CSVs: latest dated pair carries both columns
+r170_nhl_latest  <- sort(list.files(file.path(CONFIG$output_dir, "internal"),
+  pattern = "^nhl_only_episodes_[0-9]{8}\\.csv$", full.names = TRUE), decreasing = TRUE)[1]
+r170_hlnhl_latest <- sort(list.files(file.path(CONFIG$output_dir, "internal"),
+  pattern = "^hl_nhl_episodes_[0-9]{8}\\.csv$", full.names = TRUE), decreasing = TRUE)[1]
+
+if (!IS_LOCAL && !is.na(r170_nhl_latest) && file.exists(r170_nhl_latest)) {
+  r170_hdr <- names(readr::read_csv(r170_nhl_latest, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1921_chk("AUTOIMMUNE-FLAG-04 [a] latest nhl_only_episodes CSV has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% r170_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-04 [b] latest nhl_only_episodes CSV has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% r170_hdr)
+} else {
+  p1921_skip_fn("AUTOIMMUNE-FLAG-04 [a-b] R/170 nhl_only_episodes CSV absent or local")
+}
+
+if (!IS_LOCAL && !is.na(r170_hlnhl_latest) && file.exists(r170_hlnhl_latest)) {
+  r170_hlnhl_hdr <- names(readr::read_csv(r170_hlnhl_latest, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1921_chk("AUTOIMMUNE-FLAG-04 [c] latest hl_nhl_episodes CSV has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% r170_hlnhl_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-04 [d] latest hl_nhl_episodes CSV has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% r170_hlnhl_hdr)
+} else {
+  p1921_skip_fn("AUTOIMMUNE-FLAG-04 [c-d] R/170 hl_nhl_episodes CSV absent or local")
+}
+
+message(glue("\nAUTOIMMUNE-FLAG: {p1921_pass} PASS / {p1921_fail} FAIL / {p1921_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -7474,6 +7622,7 @@ message("  * SMOKE-186-01: R/88 validates Phase 186 survivorship rate granularit
 message("  * SMOKE-187-01: R/88 validates Phase 187 anthracycline exposure variables structural integrity (Section 15ax, 7+ checks)")
 message("  * SMOKE-188-01: R/88 validates Phase 188 echo rate since anthracycline structural integrity (Section 15ay, 13 checks)")
 message("  * SMOKE-189-01: R/88 validates Phase 189 NHL explainer structural integrity (Section 15az, 3 checks)")
+message("  * AUTOIMMUNE-FLAG-01..05: R/88 validates Phase 192.1 autoimmune diagnosis flags (Section 15ba)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {
