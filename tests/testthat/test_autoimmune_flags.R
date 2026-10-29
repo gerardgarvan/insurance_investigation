@@ -138,14 +138,20 @@ testthat::test_that("is_autoimmune_code: vectorised mix", {
   testthat::expect_equal(result, c(TRUE, TRUE, FALSE, FALSE))
 })
 
-testthat::test_that("is_autoimmune_code: real config constant key set contains expected prefixes", {
-  # Smoke test against the real AUTOIMMUNE_DX_CODES from config
+testthat::test_that("is_autoimmune_code: real config constant — ICD-10 keys present", {
   testthat::expect_true("M05"   %in% names(AUTOIMMUNE_DX_CODES$icd10))
   testthat::expect_true("L40"   %in% names(AUTOIMMUNE_DX_CODES$icd10))
   testthat::expect_true("M0809" %in% names(AUTOIMMUNE_DX_CODES$icd10))
-  testthat::expect_true("7140"  %in% names(AUTOIMMUNE_DX_CODES$icd9))
-  testthat::expect_true("4460"  %in% names(AUTOIMMUNE_DX_CODES$icd9))
-  testthat::expect_true("71430" %in% names(AUTOIMMUNE_DX_CODES$icd9))
+})
+
+testthat::test_that("is_autoimmune_code: real config constant — icd9 slot is empty (ICD-9 excluded 2026-10-29)", {
+  testthat::expect_equal(length(AUTOIMMUNE_DX_CODES$icd9), 0L)
+})
+
+testthat::test_that("is_autoimmune_code: 714.0/'09' -> FALSE with real constant (empty icd9 slot)", {
+  # Confirms the empty icd9 slot silently passes through without matching any code
+  result <- is_autoimmune_code("714.0", "09")   # uses real AUTOIMMUNE_DX_CODES from config
+  testthat::expect_false(result)
 })
 
 # ===========================================================================
