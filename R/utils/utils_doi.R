@@ -192,7 +192,16 @@ is_autoimmune_code <- function(dx, dx_type,
 #' @param dx          data.frame with columns ID, DX, DX_TYPE, DX_DATE, ADMIT_DATE
 #' @param cohort_ids  character vector of patient IDs (defines output row set)
 #' @param sentinel    Date; records with all dates on or before this are invalid
-#' @return tibble; nrow == n_distinct(cohort_ids); asserted on exit
+#' @return tibble; nrow == n_distinct(cohort_ids); asserted on exit. Columns:
+#'   \itemize{
+#'     \item \code{ID} - patient identifier
+#'     \item \code{first_autoimmune_dx_date} - Date; NA when has_autoimmune_dx is FALSE
+#'     \item \code{has_autoimmune_dx} - logical
+#'     \item \code{qc_qualifying_no_valid_date} - logical
+#'     \item \code{autoimmune_dx_code_system} - character; "ICD-9", "ICD-10", "Both",
+#'       or NA (NA iff has_autoimmune_dx is FALSE). Derived from validly-dated qualifying
+#'       records only (same subset that drives first_autoimmune_dx_date).
+#'   }
 summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
   # Filter to qualifying codes only
   q <- dx[is_autoimmune_code(dx$DX, dx$DX_TYPE), , drop = FALSE]
@@ -208,20 +217,39 @@ summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
              ifelse(ok2, as.character(d2), NA_character_))
     )
 
+    # Per-record code system label (NA when valid_date is NA)
+    # DX_TYPE "09" -> ICD-9; "10" -> ICD-10. Only values in AUTOIMMUNE_DX_TYPE_ACCEPT
+    # appear in qualifying records (is_autoimmune_code() already gates on accept).
+    q$code_system <- ifelse(
+      q$DX_TYPE %in% AUTOIMMUNE_DX_TYPE_ACCEPT$icd9,  "ICD-9",
+      ifelse(q$DX_TYPE %in% AUTOIMMUNE_DX_TYPE_ACCEPT$icd10, "ICD-10",
+             NA_character_)
+    )
+
     per_id <- q |>
       dplyr::group_by(ID) |>
       dplyr::summarise(
         first_autoimmune_dx_date = if (all(is.na(valid_date))) as.Date(NA) else min(valid_date, na.rm = TRUE),
         any_qualifying            = TRUE,
         any_valid_date            = any(!is.na(valid_date)),
+        autoimmune_dx_code_system = {
+          sys <- unique(stats::na.omit(code_system[!is.na(valid_date)]))
+          stopifnot(all(sys %in% c("ICD-9", "ICD-10")))
+          if (length(sys) == 0L)                           NA_character_
+          else if (length(sys) == 1L && sys == "ICD-9")   "ICD-9"
+          else if (length(sys) == 1L && sys == "ICD-10")  "ICD-10"
+          else if (length(sys) == 2L)                      "Both"
+          else                                             NA_character_  # unreachable after stopifnot
+        },
         .groups = "drop"
       )
   } else {
     per_id <- tibble::tibble(
-      ID                       = character(0),
-      first_autoimmune_dx_date = as.Date(character(0)),
-      any_qualifying           = logical(0),
-      any_valid_date           = logical(0)
+      ID                        = character(0),
+      first_autoimmune_dx_date  = as.Date(character(0)),
+      any_qualifying            = logical(0),
+      any_valid_date            = logical(0),
+      autoimmune_dx_code_system = character(0)
     )
   }
 
@@ -231,7 +259,11 @@ summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
       has_autoimmune_dx = !is.na(first_autoimmune_dx_date),
       qc_qualifying_no_valid_date =
         dplyr::coalesce(any_qualifying, FALSE) &
-        !dplyr::coalesce(any_valid_date, FALSE)
+        !dplyr::coalesce(any_valid_date, FALSE),
+      # D-04/D-05: code_system is NA for any patient where has_autoimmune_dx is FALSE
+      # (covers both no-qualifying-code and qualifying-no-valid-date patients)
+      autoimmune_dx_code_system =
+        dplyr::if_else(has_autoimmune_dx, autoimmune_dx_code_system, NA_character_)
     )
 
   # Invariant assertions (fail-fast)
@@ -241,7 +273,9 @@ summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
     "no TRUE flag with NA date" =
       !any(out$has_autoimmune_dx & is.na(out$first_autoimmune_dx_date)),
     "no FALSE flag with non-NA date" =
-      !any(!out$has_autoimmune_dx & !is.na(out$first_autoimmune_dx_date))
+      !any(!out$has_autoimmune_dx & !is.na(out$first_autoimmune_dx_date)),
+    "code_system NA iff has_autoimmune_dx FALSE" =
+      all(is.na(out$autoimmune_dx_code_system) == !out$has_autoimmune_dx)
   )
 
   out
