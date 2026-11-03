@@ -754,14 +754,18 @@ DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
 # share one value without redefining it locally.
 SENTINEL_CUTOFF <- as.Date("1910-01-01")
 
-# AUTOIMMUNE_DX_CODES: ICD-10 prefix set for autoimmune diagnosis detection.
+# AUTOIMMUNE_DX_CODES: ICD-10 and ICD-9 prefix sets for autoimmune diagnosis detection.
 # Keys = normalized code prefix (dots removed, uppercase); values = official condition title.
-# ICD-9 EXCLUDED by decision 2026-10-29 (Task 2 skipped; GEM verification deferred).
-# Diagnoses recorded only in ICD-9 (before Oct 2015) are not captured by this flag.
-# The icd9 slot is kept as an empty named vector so ICD-9 codes can be added later
-# without changing function signatures or call sites.
+# ICD-9 keys were populated in Phase 192.2 from the Rituximab sheet of
+# "Autoimmune Diagnosis codes based on Rituximab and MTX.xlsx" (repo root).
+# The Methotrexate sheet has ICD-10 only and was not used for ICD-9 keys.
 # NOTE: M31.3 — "M31.3C3" in the original request is not a valid ICD-10-CM code; read as
 # M31.3 (codes M31.30 and M31.31). Assumption recorded for team confirmation.
+# ICD-9 flags for team review:
+#   - 71432: included; team workbook lists it as a decision override of the Phase 192.1 GEM exclusion
+#   - 6960 (D-192.2-04): added beyond workbook to match ICD-10 L40.5x (psoriatic arthritis);
+#     flagged for team confirmation — report count of patients flagged by 696.0 alone
+#   - 4460, 6944: broader than their ICD-10 counterparts (M31.7, L10.0); flagged for team review
 AUTOIMMUNE_DX_CODES <- list(
   icd10 = c(
     "M05"   = "Seropositive rheumatoid arthritis",
@@ -774,7 +778,22 @@ AUTOIMMUNE_DX_CODES <- list(
     "M0800" = "Juvenile rheumatoid arthritis, unspecified (M08.00)",
     "L40"   = "Psoriasis"
   ),
-  icd9 = character(0)  # empty — ICD-9 excluded by decision 2026-10-29; character(0) not NULL
+  icd9 = c(
+    # Source: "Autoimmune Diagnosis codes based on Rituximab and MTX.xlsx" (repo root), Rituximab sheet.
+    # Covers both Rituximab and MTX; MTX sheet is ICD-10 only. Phase 192.2, D-01.
+    "7140"  = "Rheumatoid arthritis (714.0)",
+    "7141"  = "Rheumatoid arthritis (714.1)",
+    "7142"  = "Rheumatoid arthritis (714.2)",
+    "7148"  = "Rheumatoid arthritis (714.8x)",          # prefix — 714.80/.81/.89 etc.
+    "7149"  = "Rheumatoid arthritis (714.9)",
+    "4464"  = "Granulomatosis with polyangiitis (446.4)",
+    "4460"  = "Polyarteritis nodosa (446.0) — broader than M31.7",   # broader (D-02)
+    "6944"  = "Pemphigus (694.4) — broader than L10.0",              # broader (D-02)
+    "71430" = "Juvenile arthritis (714.30)",
+    "71432" = "Juvenile arthritis (714.32) — team workbook override of 192.1 GEM exclusion",
+    "6961"  = "Psoriasis (696.1)",
+    "6960"  = "Psoriatic arthropathy (696.0) — D-192.2-04: added beyond workbook to match ICD-10 L40.5x; flag for team confirmation"
+  )
 )
 
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
