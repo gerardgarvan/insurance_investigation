@@ -83,7 +83,9 @@ EPISODES_SCHEMA <- c(
   "episode_dx_codes", "episode_dx_categories",
   "episode_dx_7day_confirmed", "age_at_episode",
   # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
-  "has_autoimmune_dx", "first_autoimmune_dx_date"
+  "has_autoimmune_dx", "first_autoimmune_dx_date",
+  # Phase 192.2: ICD-9/10 code system column (+1 column, now 23 total)
+  "autoimmune_dx_code_system"
 )
 
 DETAIL_SCHEMA <- c(

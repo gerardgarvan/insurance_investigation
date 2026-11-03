@@ -7598,6 +7598,22 @@ if (!IS_LOCAL && !is.na(r170_hlnhl_latest_bb) && file.exists(r170_hlnhl_latest_b
   p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [h2] R/170 hl_nhl_episodes CSV absent or local")
 }
 
+r170_xlsx_latest_bb <- sort(list.files(
+  file.path("output", "internal"),
+  pattern = "^nhl_gantt_subsets_[0-9]{8}\\.xlsx$", full.names = TRUE), decreasing = TRUE)[1]
+
+if (!IS_LOCAL && !is.na(r170_xlsx_latest_bb) && file.exists(r170_xlsx_latest_bb)) {
+  r170_xlsx_hdr_bb <- names(openxlsx::read.xlsx(r170_xlsx_latest_bb, sheet = 1, rows = 1))
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h3a] nhl_gantt_subsets xlsx has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% r170_xlsx_hdr_bb)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h3b] nhl_gantt_subsets xlsx has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% r170_xlsx_hdr_bb)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h3c] nhl_gantt_subsets xlsx has autoimmune_dx_code_system",
+    "autoimmune_dx_code_system" %in% r170_xlsx_hdr_bb)
+} else {
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [h3] nhl_gantt_subsets xlsx absent or local")
+}
+
 message(glue("\nAUTOIMMUNE-FLAG-192.2: {p1922_pass} PASS / {p1922_fail} FAIL / {p1922_skip} SKIP"))
 
 # ==============================================================================
