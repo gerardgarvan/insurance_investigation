@@ -867,10 +867,10 @@ Plans:
 **Goal:** Add ICD-9 equivalents from the team workbook to the Phase 192.1 autoimmune flag, so a patient whose only qualifying diagnosis is an ICD-9 code gets `has_autoimmune_dx = TRUE` and a `first_autoimmune_dx_date` in `gantt_episodes.csv` and `gantt_episodes_180.csv`; add `autoimmune_dx_code_system` column
 **Requirements**: AUTOIMMUNE-FLAG-01, AUTOIMMUNE-FLAG-02, AUTOIMMUNE-FLAG-03, AUTOIMMUNE-FLAG-04
 **Depends on:** Phase 192.1
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 192.2-01-PLAN.md — Populate AUTOIMMUNE_DX_CODES$icd9 (12 keys) + extend summarise_autoimmune_dx() with autoimmune_dx_code_system
+- [x] 192.2-01-PLAN.md — Populate AUTOIMMUNE_DX_CODES$icd9 (12 keys) + extend summarise_autoimmune_dx() with autoimmune_dx_code_system
 - [ ] 192.2-02-PLAN.md — Write autoimmune_dx_code_system as 23rd column in R/52, R/142, R/170; D-08 regression + PRE1922 baselines
 - [ ] 192.2-03-PLAN.md — R/88: remove outdated 15ba checks, add SECTION 15bb Phase 192.2 checks (a)-(h)
 

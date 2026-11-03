@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
-status: verifying
-stopped_at: Phase 192.2 planned — 3 plans ready
-last_updated: "2026-11-03T18:58:38.367Z"
-last_activity: 2026-10-29
+status: executing
+stopped_at: Completed 192.2-01-PLAN.md
+last_updated: "2026-11-03T20:04:45.115Z"
+last_activity: 2026-11-03
 progress:
   total_phases: 45
   completed_phases: 35
   total_plans: 119
-  completed_plans: 124
+  completed_plans: 125
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 192.1 — autoimmune-diagnosis-flags-in-gantt-episodes (COMPLETE)
+**Current focus:** Phase 192.2 — icd-9-autoimmune-codes-in-gantt-episodes
 
 ## Current Position
 
-Phase: 192.1 (autoimmune-diagnosis-flags-in-gantt-episodes) — COMPLETE
-Plan: 1 of 1 — COMPLETE
-Status: Phase 192.1 complete; next: Phase 191 (Verify Existing Entries) or Phase 192 continuation
-Last activity: 2026-10-29
+Phase: 192.2 (icd-9-autoimmune-codes-in-gantt-episodes) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-11-03
 
 ## Phase Map (v3.13)
 
@@ -108,4 +108,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 192.2 planned — 3 plans ready
+**Stopped at:** Completed 192.2-01-PLAN.md
