@@ -144,14 +144,46 @@ testthat::test_that("is_autoimmune_code: real config constant — ICD-10 keys pr
   testthat::expect_true("M0809" %in% names(AUTOIMMUNE_DX_CODES$icd10))
 })
 
-testthat::test_that("is_autoimmune_code: real config constant — icd9 slot is empty (ICD-9 excluded 2026-10-29)", {
-  testthat::expect_equal(length(AUTOIMMUNE_DX_CODES$icd9), 0L)
+testthat::test_that("is_autoimmune_code: real config constant — icd9 slot has 12 keys (Phase 192.2)", {
+  # Phase 192.2 populated $icd9 with 12 keys; empty slot check is superseded
+  testthat::expect_equal(length(AUTOIMMUNE_DX_CODES$icd9), 12L)
+  testthat::expect_true("7140" %in% names(AUTOIMMUNE_DX_CODES$icd9))
+  testthat::expect_true("4464" %in% names(AUTOIMMUNE_DX_CODES$icd9))
+  testthat::expect_true("6961" %in% names(AUTOIMMUNE_DX_CODES$icd9))
 })
 
-testthat::test_that("is_autoimmune_code: 714.0/'09' -> FALSE with real constant (empty icd9 slot)", {
-  # Confirms the empty icd9 slot silently passes through without matching any code
+testthat::test_that("is_autoimmune_code: 714.0/'09' -> TRUE with real constant (ICD-9 populated, Phase 192.2)", {
+  # Phase 192.2: $icd9 is now populated; 714.0 must qualify via DX_TYPE "09"
   result <- is_autoimmune_code("714.0", "09")   # uses real AUTOIMMUNE_DX_CODES from config
-  testthat::expect_false(result)
+  testthat::expect_true(result)
+})
+
+# ===========================================================================
+# SECTION 1b: is_autoimmune_code() — Phase 192.2 ICD-9 key coverage
+# ===========================================================================
+
+testthat::test_that("is_autoimmune_code: all 12 ICD-9 keys return TRUE for DX_TYPE '09', FALSE for '10'", {
+  # Hard-coded dotted forms of the 12 D-01 keys for unambiguous testing
+  dotted_keys <- c(
+    "714.0",  "714.1",  "714.2",  "714.8",  "714.9",
+    "446.4",  "446.0",  "694.4",
+    "714.30", "714.32",
+    "696.1",  "696.0"
+  )
+  for (dk in dotted_keys) {
+    testthat::expect_true(
+      is_autoimmune_code(dk, "09"),
+      label = paste0("is_autoimmune_code(", dk, ", '09') should be TRUE")
+    )
+    testthat::expect_false(
+      is_autoimmune_code(dk, "10"),
+      label = paste0("is_autoimmune_code(", dk, ", '10') should be FALSE")
+    )
+  }
+})
+
+testthat::test_that("is_autoimmune_code: 714.33 -> FALSE (explicitly excluded per D-01)", {
+  testthat::expect_false(is_autoimmune_code("714.33", "09"))
 })
 
 # ===========================================================================
@@ -178,13 +210,13 @@ testthat::test_that("summarise_autoimmune_dx: one dated ICD-10 -> TRUE/date", {
   testthat::expect_equal(out$first_autoimmune_dx_date, as.Date("2020-06-15"))
 })
 
-testthat::test_that("summarise_autoimmune_dx: ICD-9 code -> FALSE/NA with real constant (ICD-10 only, 2026-10-29)", {
-  # summarise_autoimmune_dx calls is_autoimmune_code() with default AUTOIMMUNE_DX_CODES
-  # (real constant, empty icd9 slot) — so ICD-9 codes do not qualify.
+testthat::test_that("summarise_autoimmune_dx: ICD-9 code 714.0 -> TRUE with real constant (Phase 192.2 $icd9 populated)", {
+  # Phase 192.2: $icd9 slot populated; 714.0/'09' now qualifies
   dx <- make_dx("P1", "714.0", "09", "2018-03-01", NA)
   out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
-  testthat::expect_false(out$has_autoimmune_dx)
-  testthat::expect_true(is.na(out$first_autoimmune_dx_date))
+  testthat::expect_true(out$has_autoimmune_dx)
+  testthat::expect_equal(out$first_autoimmune_dx_date, as.Date("2018-03-01"))
+  testthat::expect_equal(out$autoimmune_dx_code_system, "ICD-9")
 })
 
 testthat::test_that("summarise_autoimmune_dx: multiple dates -> earliest", {
@@ -250,6 +282,63 @@ testthat::test_that("summarise_autoimmune_dx: output rows == n distinct cohort I
   cohort <- c("P1", "P2", "P3")
   out <- summarise_autoimmune_dx(dx, cohort_ids = cohort, sentinel = sentinel)
   testthat::expect_equal(nrow(out), dplyr::n_distinct(cohort))
+})
+
+# ===========================================================================
+# SECTION 2b: summarise_autoimmune_dx() — Phase 192.2 autoimmune_dx_code_system
+# ===========================================================================
+
+testthat::test_that("summarise_autoimmune_dx: ICD-10-only patient -> code_system 'ICD-10'", {
+  dx <- make_dx("P1", "M05.79", "10", "2020-06-15", NA)
+  out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
+  testthat::expect_true(out$has_autoimmune_dx)
+  testthat::expect_equal(out$autoimmune_dx_code_system, "ICD-10")
+})
+
+testthat::test_that("summarise_autoimmune_dx: ICD-9-only patient -> code_system 'ICD-9'", {
+  # Uses real config constant (Phase 192.2: $icd9 is now populated)
+  dx <- make_dx("P1", "714.0", "09", "2014-01-15", NA)
+  out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
+  testthat::expect_true(out$has_autoimmune_dx)
+  testthat::expect_equal(out$autoimmune_dx_code_system, "ICD-9")
+})
+
+testthat::test_that("summarise_autoimmune_dx: mixed ICD-9 and ICD-10 patient -> code_system 'Both'", {
+  # Uses real config constant (Phase 192.2: $icd9 is now populated)
+  dx <- rbind(
+    make_dx("P1", "714.0",  "09", "2014-01-15", NA),
+    make_dx("P1", "M05.79", "10", "2020-06-15", NA)
+  )
+  out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
+  testthat::expect_true(out$has_autoimmune_dx)
+  testthat::expect_equal(out$autoimmune_dx_code_system, "Both")
+})
+
+testthat::test_that("summarise_autoimmune_dx: no qualifying code -> code_system NA", {
+  dx <- make_dx("P1", "C81.90", "10", "2020-01-01", NA)
+  out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
+  testthat::expect_false(out$has_autoimmune_dx)
+  testthat::expect_true(is.na(out$autoimmune_dx_code_system))
+})
+
+testthat::test_that("summarise_autoimmune_dx: qualifying code but only sentinel dates -> code_system NA (D-05)", {
+  dx <- make_dx("P1", "M05.79", "10", "1900-01-01", "1900-01-01")
+  out <- summarise_autoimmune_dx(dx, cohort_ids = "P1", sentinel = sentinel)
+  testthat::expect_false(out$has_autoimmune_dx)
+  testthat::expect_true(out$qc_qualifying_no_valid_date)
+  testthat::expect_true(is.na(out$autoimmune_dx_code_system))
+})
+
+testthat::test_that("summarise_autoimmune_dx: NA-iff-FALSE invariant holds across mixed cohort", {
+  # Uses real config constant (Phase 192.2: $icd9 is now populated)
+  dx <- rbind(
+    make_dx("P1", "M05.79", "10", "2020-01-01", NA),          # TRUE, ICD-10
+    make_dx("P2", "714.0",  "09", "2014-01-15", NA),          # TRUE, ICD-9
+    make_dx("P3", "C81.90", "10", "2020-01-01", NA)           # FALSE
+  )
+  out <- summarise_autoimmune_dx(dx, cohort_ids = c("P1", "P2", "P3"),
+                                 sentinel = sentinel)
+  testthat::expect_true(all(is.na(out$autoimmune_dx_code_system) == !out$has_autoimmune_dx))
 })
 
 testthat::test_that("summarise_autoimmune_dx: join test — multi-row episodes table preserves row count and value consistency", {
