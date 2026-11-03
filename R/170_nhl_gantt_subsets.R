@@ -295,24 +295,27 @@ if (d08_branch == "JOIN") {
     col_types = readr::cols(
       has_autoimmune_dx         = readr::col_logical(),
       first_autoimmune_dx_date  = readr::col_date(format = "%Y-%m-%d"),
+      autoimmune_dx_code_system = readr::col_character(),
       .default = readr::col_character()
     ),
     show_col_types = FALSE)
 
-  if (!all(c("has_autoimmune_dx", "first_autoimmune_dx_date") %in% names(new_build_typed))) {
-    stop("[R/170] JOIN branch: new build is missing has_autoimmune_dx / first_autoimmune_dx_date columns. ",
-         "Run R/142 after implementing Phase 192.1 changes.")
+  # Phase 192.2: check all three autoimmune columns present (Phase 192.1 adds first two; 192.2 adds third)
+  if (!all(c("has_autoimmune_dx", "first_autoimmune_dx_date", "autoimmune_dx_code_system") %in% names(new_build_typed))) {
+    stop("[R/170] JOIN branch: new build is missing one or more of: has_autoimmune_dx, ",
+         "first_autoimmune_dx_date, autoimmune_dx_code_system. ",
+         "Run R/142 after implementing Phase 192.2 changes.")
   }
 
-  # Patient-level: one distinct (flag, date) pair per patient_id
+  # Patient-level: one distinct (flag, date, code_system) tuple per patient_id
   aim_join <- new_build_typed |>
-    dplyr::distinct(patient_id, has_autoimmune_dx, first_autoimmune_dx_date)
+    dplyr::distinct(patient_id, has_autoimmune_dx, first_autoimmune_dx_date, autoimmune_dx_code_system)
 
-  # Assert each patient has exactly one distinct pair
+  # Assert each patient has exactly one distinct (flag, date, code_system) tuple
   n_aim_pts <- dplyr::n_distinct(aim_join$patient_id)
   n_aim_pairs <- nrow(aim_join)
   stopifnot(
-    "each patient must have exactly one (has_autoimmune_dx, first_autoimmune_dx_date) pair" =
+    "each patient must have exactly one (flag, date, code_system) tuple" =
       n_aim_pairs == n_aim_pts
   )
   message(glue("  JOIN: {format(n_aim_pts, big.mark=',')} distinct patients with autoimmune flag"))
@@ -632,11 +635,29 @@ if (d08_branch == "JOIN") {
     "nhl_only_episodes row count unchanged after autoimmune join" = nrow(nhl_only_episodes) == n_nhl_pre,
     "hl_nhl_episodes row count unchanged after autoimmune join"   = nrow(hl_nhl_episodes)   == n_hlnhl_pre
   )
-  message(glue("\n  JOIN: autoimmune columns added to nhl_only_episodes and hl_nhl_episodes"))
+  # Phase 192.2: assert all three autoimmune columns are present in both subsets after JOIN
+  stopifnot(
+    "nhl_only_episodes must have has_autoimmune_dx"         = "has_autoimmune_dx"         %in% names(nhl_only_episodes),
+    "nhl_only_episodes must have first_autoimmune_dx_date"  = "first_autoimmune_dx_date"  %in% names(nhl_only_episodes),
+    "nhl_only_episodes must have autoimmune_dx_code_system" = "autoimmune_dx_code_system" %in% names(nhl_only_episodes),
+    "hl_nhl_episodes must have has_autoimmune_dx"           = "has_autoimmune_dx"         %in% names(hl_nhl_episodes),
+    "hl_nhl_episodes must have first_autoimmune_dx_date"    = "first_autoimmune_dx_date"  %in% names(hl_nhl_episodes),
+    "hl_nhl_episodes must have autoimmune_dx_code_system"   = "autoimmune_dx_code_system" %in% names(hl_nhl_episodes)
+  )
+  message(glue("\n  JOIN: autoimmune columns (has_autoimmune_dx, first_autoimmune_dx_date, autoimmune_dx_code_system) added to nhl_only_episodes and hl_nhl_episodes"))
 } else if (d08_branch == "REPIN") {
-  # After a re-pin the gantt snapshot already contains the new columns.
+  # After a re-pin the gantt snapshot already contains all three new columns.
   # They are propagated automatically via the existing subset filters.
-  message("\n  REPIN: autoimmune columns already present in re-pinned snapshot.")
+  # Phase 192.2: fail-fast if stale pin lacks autoimmune_dx_code_system.
+  stopifnot(
+    "REPIN: nhl_only_episodes must have has_autoimmune_dx"         = "has_autoimmune_dx"         %in% names(nhl_only_episodes),
+    "REPIN: nhl_only_episodes must have first_autoimmune_dx_date"  = "first_autoimmune_dx_date"  %in% names(nhl_only_episodes),
+    "REPIN: nhl_only_episodes must have autoimmune_dx_code_system" = "autoimmune_dx_code_system" %in% names(nhl_only_episodes),
+    "REPIN: hl_nhl_episodes must have has_autoimmune_dx"           = "has_autoimmune_dx"         %in% names(hl_nhl_episodes),
+    "REPIN: hl_nhl_episodes must have first_autoimmune_dx_date"    = "first_autoimmune_dx_date"  %in% names(hl_nhl_episodes),
+    "REPIN: hl_nhl_episodes must have autoimmune_dx_code_system"   = "autoimmune_dx_code_system" %in% names(hl_nhl_episodes)
+  )
+  message("\n  REPIN: autoimmune columns (has_autoimmune_dx, first_autoimmune_dx_date, autoimmune_dx_code_system) already present in re-pinned snapshot.")
 }
 
 ## 4.2 Write CSVs ----------------------------------------------------------
@@ -852,6 +873,140 @@ if (!snap_size_ok) {
 wb_path <- file.path(int_dir, glue("nhl_gantt_subsets_{run_date}.xlsx"))
 openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
 message(glue("  Wrote: {wb_path}"))
+# Output file names (Phase 192.2 — explicitly named for downstream reference):
+#   nhl_only_episodes_{run_date}.csv  — written to output/internal/
+#   hl_nhl_episodes_{run_date}.csv    — written to output/internal/
+#   nhl_gantt_subsets_{run_date}.xlsx — written to output/internal/
+
+## 4.5 Regression vs *_PRE1922 baselines (Phase 192.2) ----------------------
+# Compare regenerated 23-column CSVs against PRE1922 baselines (saved by R/52
+# before it ran). Scope:
+#   - 20 original columns must match exactly (multiset comparison, same as D-08).
+#   - has_autoimmune_dx: FALSE -> TRUE allowed; TRUE -> FALSE is a FAIL.
+#   - first_autoimmune_dx_date: same or earlier allowed; later is a FAIL.
+# autoimmune_dx_code_system is a NEW column -- excluded from original-column comparison.
+
+{
+  pre1922_90  <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_PRE1922.csv")
+  pre1922_180 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE1922.csv")
+
+  D22_ORIG_COLS <- c(
+    "patient_id", "treatment_type", "episode_number",
+    "episode_start", "episode_stop", "episode_length_days",
+    "distinct_dates_in_episode",
+    "triggering_codes", "drug_names", "triggering_code_descriptions",
+    "cancer_category", "is_hodgkin",
+    "drug_group", "code_type", "source_table", "sct_cross_use_flag",
+    "episode_dx_codes", "episode_dx_categories",
+    "episode_dx_7day_confirmed", "age_at_episode"
+  )
+  # autoimmune_dx_code_system is excluded from D22_ORIG_COLS (new in Phase 192.2)
+
+  for (new_path in c(
+    file.path(CONFIG$output_dir, "gantt_episodes.csv"),
+    file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+  )) {
+    baseline_path <- if (grepl("_180", new_path)) pre1922_180 else pre1922_90
+    label <- basename(new_path)
+    message(glue("\n--- PRE1922 regression: {label} ---"))
+
+    if (!file.exists(baseline_path)) {
+      stop(glue("[R/170] PRE1922 baseline not found: {baseline_path}. Run R/52 first (saves baseline before regenerating)."))
+    }
+
+    new_char  <- readr::read_csv(new_path,      col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
+    base_char <- readr::read_csv(baseline_path, col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
+
+    # 1. Original columns: multiset match
+    orig_cols_in_new  <- D22_ORIG_COLS[D22_ORIG_COLS %in% names(new_char)]
+    orig_cols_in_base <- D22_ORIG_COLS[D22_ORIG_COLS %in% names(base_char)]
+    new_orig  <- new_char[,  orig_cols_in_new]
+    base_orig <- base_char[, orig_cols_in_base]
+    new_sorted  <- new_orig[do.call(order, new_orig), ]
+    base_sorted <- base_orig[do.call(order, base_orig), ]
+    orig_match <- identical(new_sorted, base_sorted)
+    if (!orig_match) stop(glue("[R/170] PRE1922 regression FAIL: original 20 columns differ in {label}. ",
+                                "Investigate before proceeding."))
+    message(glue("  Original 20 columns: MATCH"))
+
+    # 2. has_autoimmune_dx: FALSE->TRUE allowed; TRUE->FALSE is a FAIL
+    if (all(c("has_autoimmune_dx") %in% names(new_char)) && "has_autoimmune_dx" %in% names(base_char)) {
+      joined_aim <- dplyr::inner_join(
+        new_char  |> dplyr::distinct(patient_id, has_autoimmune_dx_new  = has_autoimmune_dx),
+        base_char |> dplyr::distinct(patient_id, has_autoimmune_dx_base = has_autoimmune_dx),
+        by = "patient_id"
+      )
+      n_false_to_true <- sum(joined_aim$has_autoimmune_dx_base == "FALSE" & joined_aim$has_autoimmune_dx_new == "TRUE",  na.rm = TRUE)
+      n_true_to_false <- sum(joined_aim$has_autoimmune_dx_base == "TRUE"  & joined_aim$has_autoimmune_dx_new == "FALSE", na.rm = TRUE)
+      message(glue("  has_autoimmune_dx FALSE->TRUE: {n_false_to_true} patients"))
+      if (n_true_to_false > 0L) stop(glue("[R/170] PRE1922 regression FAIL: {n_true_to_false} patients lost autoimmune flag (TRUE->FALSE) in {label}."))
+    }
+
+    # 3. first_autoimmune_dx_date: same or earlier allowed; later is a FAIL
+    if (all(c("first_autoimmune_dx_date") %in% names(new_char)) && "first_autoimmune_dx_date" %in% names(base_char)) {
+      joined_dates <- dplyr::inner_join(
+        new_char  |> dplyr::distinct(patient_id, date_new  = first_autoimmune_dx_date),
+        base_char |> dplyr::distinct(patient_id, date_base = first_autoimmune_dx_date),
+        by = "patient_id"
+      ) |> dplyr::filter(!is.na(date_new) & !is.na(date_base))
+      n_earlier  <- sum(as.Date(joined_dates$date_new) < as.Date(joined_dates$date_base), na.rm = TRUE)
+      n_later    <- sum(as.Date(joined_dates$date_new) > as.Date(joined_dates$date_base), na.rm = TRUE)
+      message(glue("  first_autoimmune_dx_date moved earlier: {n_earlier} patients"))
+      if (n_later > 0L) stop(glue("[R/170] PRE1922 regression FAIL: {n_later} patients have a later first_autoimmune_dx_date in {label}."))
+    }
+
+    rm(new_char, base_char, new_orig, base_orig, new_sorted, base_sorted, orig_match)
+  }
+}
+
+## 4.6 Cross-export consistency check (Phase 192.2) -------------------------
+# For patients in gantt_episodes_180.csv and each R/170 output CSV, assert that
+# (patient_id, has_autoimmune_dx, first_autoimmune_dx_date, autoimmune_dx_code_system)
+# is identical across the three sources. Any mismatch -> stop().
+
+{
+  aim_cols <- c("patient_id", "has_autoimmune_dx", "first_autoimmune_dx_date", "autoimmune_dx_code_system")
+  g180_path <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+
+  if (file.exists(g180_path)) {
+    g180 <- readr::read_csv(g180_path, col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE) |>
+      dplyr::select(dplyr::any_of(aim_cols)) |>
+      dplyr::distinct()
+
+    for (sub_csv in c(csv_nhl, csv_hlnhl)) {
+      sub_label <- basename(sub_csv)
+      sub_df <- readr::read_csv(sub_csv, col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE) |>
+        dplyr::select(dplyr::any_of(aim_cols)) |>
+        dplyr::distinct()
+
+      shared <- dplyr::inner_join(
+        g180   |> dplyr::rename_with(~ paste0(.x, "_g180"),   -patient_id),
+        sub_df |> dplyr::rename_with(~ paste0(.x, "_sub"),    -patient_id),
+        by = "patient_id"
+      )
+      n_shared <- nrow(shared)
+      message(glue("\n  Cross-export check: gantt_episodes_180.csv vs {sub_label}: {format(n_shared, big.mark=',')} shared patients"))
+
+      mismatches <- shared |>
+        dplyr::filter(
+          has_autoimmune_dx_g180        != has_autoimmune_dx_sub         |
+          first_autoimmune_dx_date_g180 != first_autoimmune_dx_date_sub  |
+          # NA comparison: treat NA==NA as match
+          xor(is.na(autoimmune_dx_code_system_g180), is.na(autoimmune_dx_code_system_sub)) |
+          (!is.na(autoimmune_dx_code_system_g180) & !is.na(autoimmune_dx_code_system_sub) &
+             autoimmune_dx_code_system_g180 != autoimmune_dx_code_system_sub)
+        )
+      if (nrow(mismatches) > 0L) {
+        stop(glue("[R/170] Cross-export mismatch: {nrow(mismatches)} patients differ between gantt_episodes_180.csv and {sub_label} on autoimmune columns."))
+      }
+      message(glue("  Cross-export: all {format(n_shared, big.mark=',')} shared patients consistent."))
+    }
+    rm(g180, sub_df, shared, mismatches)
+  } else {
+    message("  Cross-export check skipped: gantt_episodes_180.csv not found (run R/142 first).")
+  }
+}
+
 message("\n=== Phase 168: COMPLETE ===")
 
 }  # end else (inputs_ok)
