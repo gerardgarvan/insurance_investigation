@@ -7467,6 +7467,140 @@ if (!IS_LOCAL && !is.na(r170_hlnhl_latest) && file.exists(r170_hlnhl_latest)) {
 message(glue("\nAUTOIMMUNE-FLAG: {p1921_pass} PASS / {p1921_fail} FAIL / {p1921_skip} SKIP"))
 
 # ==============================================================================
+# SECTION 15bb: PHASE 192.2 ICD-9 AUTOIMMUNE CODES + CODE-SYSTEM COLUMN ----
+# ==============================================================================
+
+message("\n[AUTOIMMUNE-FLAG-192.2] Phase 192.2 ICD-9 autoimmune codes + code-system column...")
+
+p1922_pass <- 0L; p1922_fail <- 0L; p1922_skip <- 0L
+
+p1922_chk <- function(label, condition) {
+  if (isTRUE(condition))  { message("  PASS: ", label); p1922_pass <<- p1922_pass + 1L; passed  <<- passed  + 1L }
+  else                    { message("  FAIL: ", label); p1922_fail <<- p1922_fail + 1L; failed  <<- failed  + 1L }
+}
+p1922_skip_fn <- function(label) {
+  message("  SKIP: ", label)
+  p1922_skip <<- p1922_skip + 1L
+  skipped    <<- skipped    + 1L
+}
+
+# (a) AUTOIMMUNE_DX_CODES$icd9 has the expected keys
+p1922_chk("AUTOIMMUNE-FLAG-192.2 [a1] icd9 slot has keys 7140, 4464, 6961",
+  exists("AUTOIMMUNE_DX_CODES") &&
+  all(c("7140", "4464", "6961") %in% names(AUTOIMMUNE_DX_CODES$icd9)))
+p1922_chk("AUTOIMMUNE-FLAG-192.2 [a2] icd9 slot has exactly 12 keys",
+  exists("AUTOIMMUNE_DX_CODES") && length(AUTOIMMUNE_DX_CODES$icd9) == 12L)
+p1922_chk("AUTOIMMUNE-FLAG-192.2 [a3] icd9 slot does NOT contain 71433",
+  exists("AUTOIMMUNE_DX_CODES") && !("71433" %in% names(AUTOIMMUNE_DX_CODES$icd9)))
+
+# (b) is_autoimmune_code() ICD-9 routing
+p1922_chk("AUTOIMMUNE-FLAG-192.2 [b1] is_autoimmune_code('7140','09') returns TRUE",
+  isTRUE(is_autoimmune_code("7140", "09")))
+p1922_chk("AUTOIMMUNE-FLAG-192.2 [b2] is_autoimmune_code('7140','10') returns FALSE",
+  !isTRUE(is_autoimmune_code("7140", "10")))
+
+# (c) Column count == 23 in both gantt CSVs
+gantt_ep_path_bb  <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
+gantt_180_path_bb <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+
+if (!file.exists(gantt_ep_path_bb)) {
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [c1] gantt_episodes.csv absent — run R/52 first")
+} else {
+  gantt_ep_hdr_bb <- names(readr::read_csv(gantt_ep_path_bb, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c1] gantt_episodes.csv has 23 columns",
+    length(gantt_ep_hdr_bb) == 23L)
+  # (d) autoimmune_dx_code_system is last column
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [d1] gantt_episodes.csv last column is autoimmune_dx_code_system",
+    gantt_ep_hdr_bb[23L] == "autoimmune_dx_code_system")
+}
+
+if (!file.exists(gantt_180_path_bb)) {
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv absent — run R/142 first")
+} else {
+  gantt_180_hdr_bb <- names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 23 columns",
+    length(gantt_180_hdr_bb) == 23L)
+  # (d)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [d2] gantt_episodes_180.csv last column is autoimmune_dx_code_system",
+    gantt_180_hdr_bb[23L] == "autoimmune_dx_code_system")
+}
+
+# (e) autoimmune_dx_code_system value domain + (f) NA-iff-FALSE invariant
+# (g) ICD-9 date-sentinel guard
+# All three gated by !IS_LOCAL (require real data)
+if (!IS_LOCAL) {
+  if (file.exists(gantt_ep_path_bb)) {
+    gantt_ep_full_bb <- readr::read_csv(gantt_ep_path_bb,
+      col_types = readr::cols(
+        has_autoimmune_dx        = readr::col_logical(),
+        first_autoimmune_dx_date = readr::col_date(format = "%Y-%m-%d"),
+        autoimmune_dx_code_system = readr::col_character(),
+        .default = readr::col_character()
+      ),
+      show_col_types = FALSE)
+    p1922_chk("AUTOIMMUNE-FLAG-192.2 [e] autoimmune_dx_code_system values in {ICD-9,ICD-10,Both,NA}",
+      all(stats::na.omit(unique(gantt_ep_full_bb$autoimmune_dx_code_system)) %in%
+        c("ICD-9", "ICD-10", "Both")))
+    p1922_chk("AUTOIMMUNE-FLAG-192.2 [f] NA-iff-FALSE invariant on gantt_episodes.csv",
+      all(is.na(gantt_ep_full_bb$autoimmune_dx_code_system) == !gantt_ep_full_bb$has_autoimmune_dx))
+    # (g) ICD-9 date-sentinel guard: scope to pure ICD-9 patients only
+    icd9_only_bb <- dplyr::filter(gantt_ep_full_bb,
+      !is.na(autoimmune_dx_code_system) & autoimmune_dx_code_system == "ICD-9")
+    n_post_cutoff <- sum(
+      !is.na(icd9_only_bb$first_autoimmune_dx_date) &
+      icd9_only_bb$first_autoimmune_dx_date >= as.Date("2015-10-01"),
+      na.rm = FALSE)
+    message(glue("  [WARN] ICD-9-only patients with first_autoimmune_dx_date >= 2015-10-01: {fmt_sup(n_post_cutoff)}"))
+    n_na_date <- sum(icd9_only_bb$has_autoimmune_dx & is.na(icd9_only_bb$first_autoimmune_dx_date))
+    p1922_chk("AUTOIMMUNE-FLAG-192.2 [g2] ICD-9-only patients with NA date (must be 0)",
+      n_na_date == 0L)
+    rm(gantt_ep_full_bb, icd9_only_bb)
+  } else {
+    p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [e/f/g] gantt_episodes.csv absent — run R/52 first")
+  }
+} else {
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [e] autoimmune_dx_code_system value domain (local)")
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [f] NA-iff-FALSE invariant (local)")
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [g] ICD-9 date-sentinel guard (local)")
+}
+
+# (h) R/170 subset CSVs: latest dated pair carries all three autoimmune columns
+r170_nhl_latest_bb <- sort(list.files(file.path(CONFIG$output_dir, "internal"),
+  pattern = "^nhl_only_episodes_[0-9]{8}\\.csv$", full.names = TRUE), decreasing = TRUE)[1]
+r170_hlnhl_latest_bb <- sort(list.files(file.path(CONFIG$output_dir, "internal"),
+  pattern = "^hl_nhl_episodes_[0-9]{8}\\.csv$", full.names = TRUE), decreasing = TRUE)[1]
+
+if (!IS_LOCAL && !is.na(r170_nhl_latest_bb) && file.exists(r170_nhl_latest_bb)) {
+  r170_nhl_hdr_bb <- names(readr::read_csv(r170_nhl_latest_bb, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h1a] latest nhl_only_episodes CSV has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% r170_nhl_hdr_bb)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h1b] latest nhl_only_episodes CSV has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% r170_nhl_hdr_bb)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h1c] latest nhl_only_episodes CSV has autoimmune_dx_code_system",
+    "autoimmune_dx_code_system" %in% r170_nhl_hdr_bb)
+} else {
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [h1] R/170 nhl_only_episodes CSV absent or local")
+}
+
+if (!IS_LOCAL && !is.na(r170_hlnhl_latest_bb) && file.exists(r170_hlnhl_latest_bb)) {
+  r170_hlnhl_hdr_bb <- names(readr::read_csv(r170_hlnhl_latest_bb, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h2a] latest hl_nhl_episodes CSV has has_autoimmune_dx",
+    "has_autoimmune_dx" %in% r170_hlnhl_hdr_bb)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h2b] latest hl_nhl_episodes CSV has first_autoimmune_dx_date",
+    "first_autoimmune_dx_date" %in% r170_hlnhl_hdr_bb)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [h2c] latest hl_nhl_episodes CSV has autoimmune_dx_code_system",
+    "autoimmune_dx_code_system" %in% r170_hlnhl_hdr_bb)
+} else {
+  p1922_skip_fn("AUTOIMMUNE-FLAG-192.2 [h2] R/170 hl_nhl_episodes CSV absent or local")
+}
+
+message(glue("\nAUTOIMMUNE-FLAG-192.2: {p1922_pass} PASS / {p1922_fail} FAIL / {p1922_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
@@ -7623,6 +7757,7 @@ message("  * SMOKE-187-01: R/88 validates Phase 187 anthracycline exposure varia
 message("  * SMOKE-188-01: R/88 validates Phase 188 echo rate since anthracycline structural integrity (Section 15ay, 13 checks)")
 message("  * SMOKE-189-01: R/88 validates Phase 189 NHL explainer structural integrity (Section 15az, 3 checks)")
 message("  * AUTOIMMUNE-FLAG-01..05: R/88 validates Phase 192.1 autoimmune diagnosis flags (Section 15ba)")
+message("  * AUTOIMMUNE-FLAG-192.2: R/88 validates Phase 192.2 ICD-9 codes + autoimmune_dx_code_system column (Section 15bb)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {
