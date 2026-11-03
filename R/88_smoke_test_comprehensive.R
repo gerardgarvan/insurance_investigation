@@ -7362,10 +7362,8 @@ p1921_chk("AUTOIMMUNE-FLAG-02 [e] is_autoimmune_code() returns FALSE for C81.90/
   !isTRUE(is_autoimmune_code("C81.90", "10")))
 p1921_chk("AUTOIMMUNE-FLAG-02 [f] is_autoimmune_code() returns FALSE for M05.9 with ICD-9 system",
   !isTRUE(is_autoimmune_code("M05.9", "09")))
-p1921_chk("AUTOIMMUNE-FLAG-02 [g] icd9 slot is empty (ICD-10-only decision 2026-10-29)",
-  exists("AUTOIMMUNE_DX_CODES") && length(AUTOIMMUNE_DX_CODES$icd9) == 0L)
-p1921_chk("AUTOIMMUNE-FLAG-02 [h] is_autoimmune_code() returns FALSE for 714.0/'09' (empty icd9)",
-  !isTRUE(is_autoimmune_code("714.0", "09")))
+# [g] icd9-slot-empty check removed in Phase 192.2 — icd9 slot now populated; see SECTION 15bb (a).
+# [h] 714.0/'09' now TRUE — moved to SECTION 15bb (b).
 
 # (d) gantt_episodes.csv column checks
 gantt_ep_path <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
@@ -7378,12 +7376,12 @@ if (!file.exists(gantt_ep_path)) {
     "has_autoimmune_dx" %in% gantt_ep_hdr)
   p1921_chk("AUTOIMMUNE-FLAG-03 [b] gantt_episodes.csv has first_autoimmune_dx_date",
     "first_autoimmune_dx_date" %in% gantt_ep_hdr)
-  p1921_chk("AUTOIMMUNE-FLAG-03 [c] gantt_episodes.csv has 22 columns",
-    length(gantt_ep_hdr) == 22L)
-  p1921_chk("AUTOIMMUNE-FLAG-03 [d] has_autoimmune_dx is second-to-last column",
-    gantt_ep_hdr[21L] == "has_autoimmune_dx")
-  p1921_chk("AUTOIMMUNE-FLAG-03 [e] first_autoimmune_dx_date is last column",
-    gantt_ep_hdr[22L] == "first_autoimmune_dx_date")
+  # column-count check moved to SECTION 15bb (c) — now 23 columns.
+  p1921_chk("AUTOIMMUNE-FLAG-03 [d] has_autoimmune_dx present in gantt_episodes.csv",
+    "has_autoimmune_dx" %in% gantt_ep_hdr)
+  p1921_chk("AUTOIMMUNE-FLAG-03 [e] first_autoimmune_dx_date present in gantt_episodes.csv",
+    "first_autoimmune_dx_date" %in% gantt_ep_hdr)
+  # exact position checks moved to SECTION 15bb (d)
 
   if (!IS_LOCAL) {
     # Full-data checks: parse types and flag/date invariant
@@ -7419,8 +7417,7 @@ if (!file.exists(gantt_180_path)) {
     "has_autoimmune_dx" %in% gantt_180_hdr)
   p1921_chk("AUTOIMMUNE-FLAG-03 [l] gantt_episodes_180.csv has first_autoimmune_dx_date",
     "first_autoimmune_dx_date" %in% gantt_180_hdr)
-  p1921_chk("AUTOIMMUNE-FLAG-03 [m] gantt_episodes_180.csv has 22 columns",
-    length(gantt_180_hdr) == 22L)
+  # column-count check moved to SECTION 15bb (c) — now 23 columns.
 
   if (!IS_LOCAL) {
     gantt_180_full <- readr::read_csv(gantt_180_path,
