@@ -501,9 +501,11 @@ if (file.exists(COHORT_RDS)) {
 }
 
 
-# --- SECTION 4C2: AUTOIMMUNE DIAGNOSIS FLAGS (Phase 192.1, AUTOIMMUNE-FLAG-03) ---
-# Patient-level has_autoimmune_dx (logical) and first_autoimmune_dx_date (Date)
-# appended as columns 21-22. Identical logic to R/52 Section 4C2.
+# --- SECTION 4C2: AUTOIMMUNE DIAGNOSIS FLAGS (Phase 192.1/192.2, AUTOIMMUNE-FLAG-03/04) ---
+# Patient-level has_autoimmune_dx (logical), first_autoimmune_dx_date (Date),
+# and autoimmune_dx_code_system (character: "ICD-9", "ICD-10", "Both", NA)
+# appended as columns 21-23. Identical logic to R/52 Section 4C2.
+# PRE1922 baselines already saved by R/52 (run R/52 before R/142).
 
 message("\n--- Building autoimmune diagnosis flags ---")
 
@@ -513,7 +515,7 @@ aim_full <- build_autoimmune_dx_flags(
 )
 
 aim <- aim_full |>
-  dplyr::select(patient_id = ID, has_autoimmune_dx, first_autoimmune_dx_date)
+  dplyr::select(patient_id = ID, has_autoimmune_dx, first_autoimmune_dx_date, autoimmune_dx_code_system)
 
 n0 <- nrow(episodes_export)
 episodes_export <- dplyr::left_join(episodes_export, aim, by = "patient_id")
@@ -524,7 +526,17 @@ n_pts_true   <- sum(aim_full$has_autoimmune_dx)
 n_qc_no_date <- sum(aim_full$qc_qualifying_no_valid_date)
 message(glue("  Autoimmune flags: {fmt_sup(n_pts_true)} patients with has_autoimmune_dx = TRUE"))
 message(glue("  QC qualifying-no-valid-date: {fmt_sup(n_qc_no_date)} patients"))
-message("  KEY/QC: Autoimmune flag: ICD-10 codes only; diagnoses recorded only in ICD-9 (before Oct 2015) are not captured.")
+# Phase 192.2: flag now covers ICD-9 and ICD-10; autoimmune_dx_code_system labels each patient.
+message("  KEY/QC: Autoimmune flag covers ICD-9 and ICD-10 codes. autoimmune_dx_code_system is ICD-9 / ICD-10 / Both / NA per patient.")
+
+# QC: code system breakdown (counts 1-10 shown as "<11")
+n_icd9  <- sum(aim_full$autoimmune_dx_code_system == "ICD-9",  na.rm = TRUE)
+n_icd10 <- sum(aim_full$autoimmune_dx_code_system == "ICD-10", na.rm = TRUE)
+n_both  <- sum(aim_full$autoimmune_dx_code_system == "Both",   na.rm = TRUE)
+message(glue("  autoimmune_dx_code_system breakdown (patient-level):"))
+message(glue("    ICD-9  : {fmt_sup(n_icd9)}"))
+message(glue("    ICD-10 : {fmt_sup(n_icd10)}"))
+message(glue("    Both   : {fmt_sup(n_both)}"))
 
 
 # --- SECTION 4D: DATA QUALITY CLEANUP ----
@@ -607,7 +619,9 @@ episodes_export <- episodes_export %>%
     episode_dx_codes, episode_dx_categories,
     episode_dx_7day_confirmed, age_at_episode,
     # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
-    has_autoimmune_dx, first_autoimmune_dx_date
+    has_autoimmune_dx, first_autoimmune_dx_date,
+    # Phase 192.2: code system label (+1 column, now 23 total)
+    autoimmune_dx_code_system
   )
 
 detail_export <- detail_export %>%

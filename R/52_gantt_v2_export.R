@@ -160,7 +160,9 @@ EPISODES_SCHEMA <- c(
   # Phase 115: 7-day confirmed subset + age (+2 columns, now 20 total)
   "episode_dx_7day_confirmed", "age_at_episode",
   # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
-  "has_autoimmune_dx", "first_autoimmune_dx_date"
+  "has_autoimmune_dx", "first_autoimmune_dx_date",
+  # Phase 192.2: + autoimmune_dx_code_system (+1 column, now 23 total)
+  "autoimmune_dx_code_system"
 )
 
 DETAIL_SCHEMA <- c(
@@ -798,12 +800,23 @@ if (file.exists(COHORT_RDS)) {
 }
 
 
-# --- SECTION 4C2: AUTOIMMUNE DIAGNOSIS FLAGS (Phase 192.1, AUTOIMMUNE-FLAG-03) ---
-# Patient-level has_autoimmune_dx (logical) and first_autoimmune_dx_date (Date)
-# appended as columns 21-22.  Mirror of the HL flag/date pattern; sourced from
+# --- SECTION 4C2: AUTOIMMUNE DIAGNOSIS FLAGS (Phase 192.1/192.2, AUTOIMMUNE-FLAG-03/04) ---
+# Patient-level has_autoimmune_dx (logical), first_autoimmune_dx_date (Date),
+# and autoimmune_dx_code_system (character: "ICD-9", "ICD-10", "Both", NA)
+# appended as columns 21-23.  Mirror of the HL flag/date pattern; sourced from
 # DuckDB DIAGNOSIS rather than a cohort RDS (D-05a).  One row per patient,
 # left-joined so every episode row (including HL and Death pseudo-rows) carries
 # the patient's flag value. Row count asserted unchanged.
+
+# Step 0 (Phase 192.2): Save PRE1922 baselines BEFORE regenerating CSVs.
+# stop() (not warning()) if already exist — no overwrite.
+pre1922_90  <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_PRE1922.csv")
+pre1922_180 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE1922.csv")
+if (file.exists(pre1922_90))  stop("[R/52] PRE1922 baseline already exists — delete manually before re-run: ", pre1922_90)
+if (file.exists(pre1922_180)) stop("[R/52] PRE1922 baseline already exists — delete manually before re-run: ", pre1922_180)
+file.copy(file.path(CONFIG$output_dir, "gantt_episodes.csv"),     pre1922_90,  overwrite = FALSE)
+file.copy(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), pre1922_180, overwrite = FALSE)
+message(glue("  PRE1922 baselines saved:\n    {pre1922_90}\n    {pre1922_180}"))
 
 message("\n--- Building autoimmune diagnosis flags ---")
 
@@ -813,7 +826,7 @@ aim_full <- build_autoimmune_dx_flags(
 )
 
 aim <- aim_full |>
-  dplyr::select(patient_id = ID, has_autoimmune_dx, first_autoimmune_dx_date)
+  dplyr::select(patient_id = ID, has_autoimmune_dx, first_autoimmune_dx_date, autoimmune_dx_code_system)
 
 n0 <- nrow(episodes_export)
 episodes_export <- dplyr::left_join(episodes_export, aim, by = "patient_id")
@@ -825,7 +838,74 @@ n_pts_true      <- sum(aim_full$has_autoimmune_dx)
 n_qc_no_date    <- sum(aim_full$qc_qualifying_no_valid_date)
 message(glue("  Autoimmune flags: {fmt_sup(n_pts_true)} patients with has_autoimmune_dx = TRUE"))
 message(glue("  QC qualifying-no-valid-date: {fmt_sup(n_qc_no_date)} patients"))
-message("  KEY/QC: Autoimmune flag: ICD-10 codes only; diagnoses recorded only in ICD-9 (before Oct 2015) are not captured.")
+# Phase 192.2: flag now covers ICD-9 and ICD-10; autoimmune_dx_code_system labels each patient.
+message("  KEY/QC: Autoimmune flag covers ICD-9 and ICD-10 codes. autoimmune_dx_code_system is ICD-9 / ICD-10 / Both / NA per patient.")
+
+# QC: code system breakdown (counts 1-10 shown as "<11")
+n_icd9  <- sum(aim_full$autoimmune_dx_code_system == "ICD-9",  na.rm = TRUE)
+n_icd10 <- sum(aim_full$autoimmune_dx_code_system == "ICD-10", na.rm = TRUE)
+n_both  <- sum(aim_full$autoimmune_dx_code_system == "Both",   na.rm = TRUE)
+message(glue("  autoimmune_dx_code_system breakdown (patient-level):"))
+message(glue("    ICD-9  : {fmt_sup(n_icd9)}"))
+message(glue("    ICD-10 : {fmt_sup(n_icd10)}"))
+message(glue("    Both   : {fmt_sup(n_both)}"))
+
+# --- D-192.2-04: Broader ICD-9 code contribution counts ---
+# Expose the raw dx tibble from aim_full's internal DuckDB query for sensitivity counts.
+# Re-call summarise_autoimmune_dx() with modified code lists to count flip patients.
+# These counts inform the team decision on whether to include/drop broader ICD-9 codes.
+{
+  # The raw dx tibble used by build_autoimmune_dx_flags is not exposed directly.
+  # Re-query via open_pcornet_con() / duck_query() to get the same data.
+  # build_autoimmune_dx_flags already closed its connection; safe to open a new one.
+  cohort_ids_vec <- unique(episodes_export$patient_id)
+
+  # Full set result (reference) — already computed as aim_full
+  full_flags <- aim_full |>
+    dplyr::select(ID, has_autoimmune_dx_full = has_autoimmune_dx)
+
+  # Build dx for sensitivity analyses (re-query the same DIAGNOSIS table)
+  open_pcornet_con()
+  dx_sens <- DBI::dbGetQuery(pcornet_con, "SELECT ID, DX, DX_TYPE FROM DIAGNOSIS") |>
+    dplyr::as_tibble()
+  close_pcornet_con()
+
+  # 6960-alone count: remove key "6960" from $icd9 and re-run
+  doi_map_no6960 <- DOI_CODE_MAP
+  doi_map_no6960[["icd9"]] <- doi_map_no6960[["icd9"]][doi_map_no6960[["icd9"]] != "6960"]
+  # summarise_autoimmune_dx uses DOI_CODE_MAP from environment; override via local copy
+  # We call it directly with the modified map by temporarily overriding the global (see below).
+  # Safer approach: use a wrapper that accepts an explicit code map argument.
+  # summarise_autoimmune_dx() reads DOI_CODE_MAP from its enclosing environment (utils_doi.R).
+  # Temporarily replace it, run, restore. Flag as intended transient override.
+  .doi_backup <- DOI_CODE_MAP
+  DOI_CODE_MAP <<- doi_map_no6960   # nolint: global assignment intentional for sensitivity run
+  flags_no6960 <- summarise_autoimmune_dx(dx_sens, cohort_ids_vec, sentinel = SENTINEL_CUTOFF)
+  DOI_CODE_MAP <<- .doi_backup      # restore
+  rm(.doi_backup)
+
+  n_flip_6960 <- dplyr::inner_join(full_flags, flags_no6960 |> dplyr::select(ID, has_autoimmune_dx_no6960 = has_autoimmune_dx), by = "ID") |>
+    dplyr::filter(has_autoimmune_dx_full == TRUE, has_autoimmune_dx_no6960 == FALSE) |>
+    nrow()
+  message(glue("  D-192.2-04: {fmt_sup(n_flip_6960)} patients flagged only by key 6960 (psoriatic arthropathy / 696.0)"))
+
+  # Broader-only count: remove 4460 and 6944 from $icd9
+  doi_map_no_broader <- DOI_CODE_MAP
+  doi_map_no_broader[["icd9"]] <- doi_map_no_broader[["icd9"]][!doi_map_no_broader[["icd9"]] %in% c("4460", "6944")]
+  .doi_backup2 <- DOI_CODE_MAP
+  DOI_CODE_MAP <<- doi_map_no_broader
+  flags_no_broader <- summarise_autoimmune_dx(dx_sens, cohort_ids_vec, sentinel = SENTINEL_CUTOFF)
+  DOI_CODE_MAP <<- .doi_backup2
+  rm(.doi_backup2)
+
+  n_flip_broader <- dplyr::inner_join(full_flags, flags_no_broader |> dplyr::select(ID, has_autoimmune_dx_no_broader = has_autoimmune_dx), by = "ID") |>
+    dplyr::filter(has_autoimmune_dx_full == TRUE, has_autoimmune_dx_no_broader == FALSE) |>
+    nrow()
+  message(glue("  Broader ICD-9 (4460/6944) alone: {fmt_sup(n_flip_broader)} patients"))
+
+  rm(dx_sens, cohort_ids_vec, full_flags, flags_no6960, flags_no_broader,
+     doi_map_no6960, doi_map_no_broader, n_flip_6960, n_flip_broader)
+}
 
 
 # --- SECTION 4D: DATA QUALITY CLEANUP ----
@@ -933,7 +1013,9 @@ episodes_export <- episodes_export %>%
     # Phase 115: 7-day confirmed subset + age (+2 columns, now 20 total)
     episode_dx_7day_confirmed, age_at_episode,
     # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
-    has_autoimmune_dx, first_autoimmune_dx_date
+    has_autoimmune_dx, first_autoimmune_dx_date,
+    # Phase 192.2: code system label (+1 column, now 23 total)
+    autoimmune_dx_code_system
   )
 
 detail_export <- detail_export %>%
