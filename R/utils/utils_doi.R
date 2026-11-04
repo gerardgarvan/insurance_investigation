@@ -25,10 +25,17 @@
 
 library(stringr)
 
-# Which DOI_CODE_MAP keys are ICD-9 (bare numeric) vs ICD-10 (alpha-leading).
-# Computed once at source time from the map so the two systems never cross-match.
-.doi_keys_icd9  <- grep("^[0-9]", names(DOI_CODE_MAP), value = TRUE)
-.doi_keys_icd10 <- grep("^[0-9]", names(DOI_CODE_MAP), value = TRUE, invert = TRUE)
+# DOI_CODE_MAP key sets are split at first call, not at source time, because
+# utils_doi.R is auto-sourced before DOI_CODE_MAP is defined in R/00_config.R.
+.doi_keys_icd9  <- NULL
+.doi_keys_icd10 <- NULL
+
+.doi_init_keys <- function() {
+  if (is.null(.doi_keys_icd9)) {
+    .doi_keys_icd9  <<- grep("^[0-9]", names(DOI_CODE_MAP), value = TRUE)
+    .doi_keys_icd10 <<- grep("^[0-9]", names(DOI_CODE_MAP), value = TRUE, invert = TRUE)
+  }
+}
 
 #' Detect whether diagnosis codes are non-malignant DoI codes (DX_TYPE-gated)
 #'
@@ -50,6 +57,7 @@ library(stringr)
 #' is_doi_code(c("M05.9", "M05.9"), c(NA, "SM"))
 #' # Returns: c(FALSE, FALSE)
 is_doi_code <- function(dx, dx_type) {
+  .doi_init_keys()
   if (length(dx) == 0) return(logical(0))
   result <- rep(FALSE, length(dx))
 
