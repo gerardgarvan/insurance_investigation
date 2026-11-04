@@ -1431,11 +1431,18 @@ for (sht in sheets_to_check) {
       c_val <- if (is.na(cv[i])) NA_character_ else cv[i]
       # Exclude run-date cells (ISO date pattern)
       if (!is.na(p_val) && grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", p_val)) next
-      if (!identical(p_val, c_val)) {
-        regression_pass <- FALSE
-        regression_diffs <- c(regression_diffs,
-          glue::glue("FAIL: sheet '{sht}' row {i} col '{col}': prior='{p_val}' new='{c_val}'"))
+      if (identical(p_val, c_val)) next
+      # Non-integer numeric cells: compare with relative tolerance (floating-point noise)
+      p_num <- suppressWarnings(as.numeric(p_val))
+      c_num <- suppressWarnings(as.numeric(c_val))
+      if (!is.na(p_num) && !is.na(c_num) &&
+          !grepl("^-?[0-9]+$", trimws(p_val))) {
+        # Both parse as non-integer numbers: allow 1e-8 relative tolerance
+        if (abs(p_num - c_num) <= 1e-8 * max(1, abs(p_num))) next
       }
+      regression_pass <- FALSE
+      regression_diffs <- c(regression_diffs,
+        glue::glue("FAIL: sheet '{sht}' row {i} col '{col}': prior='{p_val}' new='{c_val}'"))
     }
   }
 }

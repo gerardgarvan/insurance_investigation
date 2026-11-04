@@ -319,8 +319,9 @@ assign_analytic_source <- function(enc, enc_all, addr_full, config) {
     dplyr::select(-addr_source_interval, -addr_source_recency, -addr_source_effective,
                   -addr_resolved, -modal_source)
 
+  # Restore caller's row order: bind, then re-index by the original ENCOUNTERID sequence.
   out <- dplyr::bind_rows(enc_nonclaims, enc_claims_resolved) |>
-    dplyr::arrange(ENCOUNTERID)
+    dplyr::slice(match(enc$ENCOUNTERID, ENCOUNTERID))
 
   # Guard: no rows gained or lost after recombine (no duplicate ENCOUNTERIDs)
   stopifnot("assign_analytic_source: duplicate ENCOUNTERIDs in output" =
