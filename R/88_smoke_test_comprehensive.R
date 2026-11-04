@@ -6506,12 +6506,16 @@ if (length(wb_165_candidates) > 0L) {
 
   if (!is.null(wb_165)) {
     sheet_names_165 <- names(wb_165)
-    expected_sheets  <- c("KEY", "A_crosstab", "B_test", "C_sensitivity", "QC")
+    expected_sheets  <- c("KEY", "A_crosstab", "B_test", "C_sensitivity", "QC",
+                           "BY_SOURCE_enc", "BY_SOURCE_pat",
+                           "BY_SOURCE_enc_addr", "BY_SOURCE_pat_addr",
+                           "SOURCE_REASSIGN_QC",
+                           "BY_SOURCE_enc_flm", "BY_SOURCE_pat_flm")
 
-    # [11] Sheet order exactly KEY, A_crosstab, B_test, C_sensitivity, QC
+    # [11] Sheet order: KEY/A_crosstab/B_test/C_sensitivity/QC + 7 SOURCE sheets (Phase 192.3)
     p165_chk(
-      "SMOKE-165-01 [11/15] Workbook sheets exactly KEY/A_crosstab/B_test/C_sensitivity/QC",
-      length(sheet_names_165) == 5L && all(sheet_names_165 == expected_sheets)
+      "SMOKE-165-01 [11/15] Workbook sheets: KEY/A_crosstab/B_test/C_sensitivity/QC + 7 SOURCE sheets (Phase 192.3)",
+      length(sheet_names_165) == 12L && all(sheet_names_165 == expected_sheets)
     )
 
     # [12] B_test mentions both "whole" and "post" windows
@@ -7764,7 +7768,7 @@ message("  * SMOKE-160-01: R/88 validates Phase 160 surveillance lab accuracy an
 message("  * SMOKE-161-01: R/88 validates Phase 161 death-plausibility and no-negative-follow-up structural integrity: utils_death.R + utils_surveillance.R existence and sourcing, resolve_death_date/death_sensitivity_table/compute_followup defined, test-161-death-plausibility.R exists, DEATH_DATE_IMPUTE VARCHAR guard (live DuckDB, skipped offline), synthetic in-memory invariant test (follow_end >= anchor for all patients, D2 NA guard), grace boundary, source priority D3 (Section 15am, 8+ checks)")
 message("  * SMOKE-166-01: R/88 validates Phase 166 survivorship modality rates + anthracycline-echo timing structural integrity: R/166/167/168 scripts exist, utils_surveillance_rates.R and utils_anthracycline_echo.R present, all 5 rate functions and 4 echo functions defined, both test-166-*.R files, all 3 scripts registered in R/39, literal event levels censored/echo/death, workbook sheet order KEY/A/B/C/QC when produced, parts files present when produced (Section 15ao, 12 checks)")
 message("  * SMOKE-168-01: R/88 validates Phase 168 NHL-only/HL+NHL gantt episode subsets structural integrity: R/170 exists, all 7 helper functions defined, no quit(), col_types='text' for sheet read, tools::md5sum used, gantt_chemo_treatment_type referenced, registered in R/39, test file exists, sheet order KEY/NHL_only_episodes/HL_NHL_episodes/QC when workbook produced (Section 15aq, 9 checks)")
-message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
+message("  * SMOKE-165-01: R/88 validates Phase 165 distance >100 mi x CBC association structural integrity: R/165 + utils_distance_cbc.R exist, CONFIG cutoff==100 and method in known set, no bare 100 on cutoff lines, no quit(), no R/4.4.2, all 5 helpers defined, R/165 registered in R/39, test-165 exists, sheet order KEY/A_crosstab/B_test/C_sensitivity/QC + 7 Phase 192.3 SOURCE stratification sheets (BY_SOURCE_enc/pat, BY_SOURCE_enc_addr/pat_addr, SOURCE_REASSIGN_QC, BY_SOURCE_enc_flm, BY_SOURCE_pat_flm) = 12 sheets total, both windows in B_test, far_from_care_100mi in {0,1}, no fan-out, A_crosstab suppression applied (Section 15ar, 15 checks)")
 message("  * SMOKE-163-01: R/88 validates Phase 163 DIAGNOSIS exclusion structural integrity: EXCLUDED_CDM_TABLES defined in R/147, stopifnot referencing it, A_code_presence has no DIAGNOSIS cell or Z-code IDs, Codeset_summary has no Z-code pattern (Section 15as, 4 checks; checks 3-4 skip in local runs without INTERNAL workbook)")
 message("  * SMOKE-182-01: R/88 validates Phase 182 facility ZIP recovery structural integrity: utils_facility_zip.R exists, sourcing defines build_facility_zip_lookup/apply_facility_zip_fill/facility_key_ok, R/122 FACILITYID+SOURCE pull, R/122 sources utils_facility_zip.R, R/122 182_facility_zip_diagnosis reference, R/00_config.R facility_zip_fill, R/180 no hard-coded 0.84, test-utils-facility-zip.R exists (Section 15at, 8 checks)")
 message("  * SMOKE-182.1-01: R/88 validates Phase 182.1 ZIP centroid crosswalk structural integrity: utils_zip_crosswalk.R exists, sourcing defines load_hrsa_crosswalk/map_zip_to_zcta/is_placeholder_facility_zip5, helper does not reference is_sentinel_zip5, R/122 calls load_hrsa_crosswalk/is_placeholder_facility_zip5/distance_method and has distance_status fallback wiring, R/00_config.R has hrsa_zip_zcta_path, R/165 has R165_R122_RDS override, R/utils/build_hrsa_crosswalk.R is absent (Section 15au, 9 checks)")
