@@ -29,14 +29,12 @@
 source("R/00_config.R")
 # 00_config.R auto-sources utils_distance_cbc.R, utils_duckdb.R — verify key symbols
 stopifnot(
-  "CONFIG not found after sourcing R/00_config.R"          = exists("CONFIG"),
-  "duck_query not found — utils_duckdb.R not sourced"      = exists("duck_query"),
-  "build_enc_analysis not found — utils_distance_cbc.R not sourced" =
-    exists("build_enc_analysis"),
-  "suppress_display not found — utils_distance_cbc.R not sourced"   =
-    exists("suppress_display")
+  "CONFIG not found after sourcing R/00_config.R"                            = exists("CONFIG"),
+  "open_pcornet_con not found — utils_duckdb.R not sourced"                 = exists("open_pcornet_con"),
+  "build_enc_analysis not found — utils_distance_cbc.R not sourced"         = exists("build_enc_analysis"),
+  "suppress_display not found — utils_distance_cbc.R not sourced"           = exists("suppress_display")
 )
-message("[R/192] R/00_config.R sourced OK — CONFIG, duck_query, build_enc_analysis, suppress_display present.")
+message("[R/192] R/00_config.R sourced OK — CONFIG, open_pcornet_con, build_enc_analysis, suppress_display present.")
 
 # ==============================================================================
 # SECTION 1: ENV-VAR PINS ----
@@ -79,7 +77,8 @@ on.exit(close_pcornet_con(), add = TRUE)
 
 message("[R/192] SECTION (a): ENCOUNTER SOURCE freq ...")
 
-enc_source_raw <- duck_query(
+enc_source_raw <- DBI::dbGetQuery(
+  pcornet_con,
   "SELECT ID, ENCOUNTERID, ADMIT_DATE, DISCHARGE_DATE, SOURCE FROM ENCOUNTER"
 ) |>
   dplyr::semi_join(hl_ids, by = "ID") |>
