@@ -993,7 +993,7 @@ build_by_source_pat_sheet_181 <- function(primary_df, source_col, sheet_label) {
     mh_row$N <- glue("Excluded from MH: {paste(excluded_strata, collapse = ', ')}")
   }
 
-  dplyr::bind_rows(rows_list, mh_row) |>
+  dplyr::bind_rows(c(unname(rows_list), list(mh_row))) |>
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character))
 }
 
