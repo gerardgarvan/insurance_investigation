@@ -872,7 +872,20 @@ Plans:
 Plans:
 - [x] 192.2-01-PLAN.md — Populate AUTOIMMUNE_DX_CODES$icd9 (12 keys) + extend summarise_autoimmune_dx() with autoimmune_dx_code_system
 - [x] 192.2-02-PLAN.md — Write autoimmune_dx_code_system as 23rd column in R/52, R/142, R/170; D-08 regression + PRE1922 baselines
-- [x] 192.2-03-PLAN.md — R/88: remove outdated 15ba checks, add SECTION 15bb Phase 192.2 checks (a)-(h) (completed 2026-11-03)
+- [x] 192.2-03-PLAN.md — R/88: remove outdated 15ba checks, add SECTION 15bb Phase 192.2 checks (a)-(h)
+ (completed 2026-11-03)
+
+### Phase 192.3: Distance >100 mi vs CBC stratified by SOURCE (Medicare reassigned to address source) (INSERTED)
+
+**Goal:** Re-run the far-from-care (>100 mi) × CBC association (R/165_distance_cbc_association.R / utils_distance_cbc.R) stratified by data SOURCE. Encounters whose SOURCE is Medicare get the SOURCE of the patient's address record instead. New sheets BY_SOURCE_enc, BY_SOURCE_pat, SOURCE_REASSIGN_QC added to the distance-CBC workbook; Mantel–Haenszel pooled OR + Breslow–Day.
+**Requirements**: TBD
+**Depends on:** Phase 192.2
+**Plans:** 3 plans
+
+Plans:
+- [ ] 192.3-01-PLAN.md — Step-0 SOURCE discovery probe (R/192); prints ENCOUNTER/LDS SOURCE freq tables; blocks Plans 02 and 03
+- [ ] 192.3-02-PLAN.md — R/165 SOURCE stratification: assign_analytic_source() helper, CONFIG keys, BY_SOURCE_enc/pat/_addr, SOURCE_REASSIGN_QC, MH+Breslow-Day, regression check
+- [ ] 192.3-03-PLAN.md — R/181 SOURCE stratification: same new sheets as Plan 02 for prior-year CBC workbook, with year-1 window patient SOURCE and whole-record fallback
 
 ### Phase 193: Produce Updated Manual
 **Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
