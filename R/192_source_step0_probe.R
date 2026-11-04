@@ -143,10 +143,10 @@ n_addr_missing_source <- sum(is.na(addr_raw$SOURCE) | trimws(addr_raw$SOURCE) ==
 addr_cohort <- addr_raw |>
   dplyr::semi_join(hl_ids, by = "ID") |>
   dplyr::mutate(
-    period_start = as.Date(ADDRESS_PERIOD_START),
+    period_start = parse_pcornet_date(ADDRESS_PERIOD_START),
     period_end   = dplyr::if_else(
       is.na(ADDRESS_PERIOD_END) | trimws(ADDRESS_PERIOD_END) == "",
-      as.Date("9999-12-31"), as.Date(ADDRESS_PERIOD_END)
+      as.Date("9999-12-31"), parse_pcornet_date(ADDRESS_PERIOD_END)
     )
   )
 
