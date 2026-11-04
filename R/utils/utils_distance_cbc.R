@@ -147,6 +147,218 @@ build_cbc_events <- function(con, ids) {
 }
 
 # ------------------------------------------------------------------------------
+# assign_analytic_source() -- Reassign claims-sourced encounters for stratification
+# (Phase 192.3)
+#
+# Temporal rule (matches get_zip9_at_date() exactly):
+#   1. Address lookup: select the in-effect LDS_ADDRESS_HISTORY row at ADMIT_DATE.
+#      Pass 1 — exact interval: ADDRESS_PERIOD_START <= ADMIT_DATE < ADDRESS_PERIOD_END
+#      (missing/blank ADDRESS_PERIOD_END treated as 9999-12-31).
+#      Pass 2 — most-recent-before: largest ADDRESS_PERIOD_START <= ADMIT_DATE.
+#      Interval match wins over recency fallback for the same encounter.
+#      THEN check the selected row's SOURCE: accept only when SOURCE is non-blank
+#      and NOT in config$claims_source_codes. If the selected row's SOURCE is unusable,
+#      fall through to Step 2 — do NOT look at a different address row.
+#   2. Modal non-claims SOURCE: modal SOURCE from enc_all (whole-record) where
+#      SOURCE_all is NOT in config$claims_source_codes. Modal computed from enc_all rows
+#      where `SOURCE %in% config$claims_source_codes` is FALSE. Ties: most recent
+#      ADMIT_DATE (from enc_all), then alphabetical SOURCE. enc_all MUST be the
+#      unfiltered cohort ENCOUNTER table — not derived from enc.
+#   3. Unresolved: SOURCE_analytic = "Claims_unresolved". Kept; not dropped.
+#
+# CRITICAL ORDER: Temporal rule applied first, THEN SOURCE quality check.
+# Never skip to an older/different address row based on SOURCE quality.
+# After the in-effect row is identified, THEN check whether its SOURCE is usable.
+#
+# enc_all MUST be the unfiltered cohort ENCOUNTER data passed from the caller,
+# NOT derived from enc (which may already be restricted to encounters with
+# computed distances). Modal SOURCE computed from enc_all rows where
+# `SOURCE %in% config$claims_source_codes` is FALSE.
+#
+# @param enc       tibble: ID (chr), ENCOUNTERID (chr), ADMIT_DATE (Date), SOURCE (chr).
+# @param enc_all   tibble: ID (chr), ADMIT_DATE (Date), SOURCE (chr) — ALL cohort ENCOUNTER rows.
+# @param addr_full LDS_ADDRESS_HISTORY tibble (character columns):
+#                  ID, ADDRESS_PERIOD_START, ADDRESS_PERIOD_END, SOURCE.
+# @param config    list with element `claims_source_codes` (character vector).
+#
+# @return enc with four new columns:
+#   SOURCE_raw             -- original SOURCE (never modified)
+#   SOURCE_analytic        -- reassigned value for stratification
+#   source_reassigned      -- 0L/1L flag (1 for address or modal_encounter)
+#   source_reassign_method -- "not_reassigned", "address", "modal_encounter", "unresolved"
+# ------------------------------------------------------------------------------
+assign_analytic_source <- function(enc, enc_all, addr_full, config) {
+  stopifnot(
+    "enc must be a data.frame"                 = is.data.frame(enc),
+    "enc_all must be a data.frame"             = is.data.frame(enc_all),
+    "addr_full must be a data.frame"           = is.data.frame(addr_full),
+    "enc must have ID"                         = "ID" %in% names(enc),
+    "enc must have ENCOUNTERID"                = "ENCOUNTERID" %in% names(enc),
+    "enc must have ADMIT_DATE"                 = "ADMIT_DATE" %in% names(enc),
+    "enc must have SOURCE"                     = "SOURCE" %in% names(enc),
+    "enc_all must have ID"                     = "ID" %in% names(enc_all),
+    "enc_all must have ADMIT_DATE"             = "ADMIT_DATE" %in% names(enc_all),
+    "enc_all must have SOURCE"                 = "SOURCE" %in% names(enc_all),
+    "addr_full must have ID"                   = "ID" %in% names(addr_full),
+    "addr_full must have ADDRESS_PERIOD_START" = "ADDRESS_PERIOD_START" %in% names(addr_full),
+    "addr_full must have ADDRESS_PERIOD_END"   = "ADDRESS_PERIOD_END" %in% names(addr_full),
+    "addr_full must have SOURCE"               = "SOURCE" %in% names(addr_full),
+    "config must have claims_source_codes"     = !is.null(config$claims_source_codes)
+  )
+
+  # Rename SOURCE to SOURCE_raw
+  enc <- enc |> dplyr::rename(SOURCE_raw = SOURCE)
+
+  # Split into claims-sourced and non-claims rows
+  enc_claims    <- enc |> dplyr::filter( SOURCE_raw %in% config$claims_source_codes)
+  enc_nonclaims <- enc |> dplyr::filter(!SOURCE_raw %in% config$claims_source_codes)
+  enc_nonclaims <- enc_nonclaims |>
+    dplyr::mutate(
+      SOURCE_analytic        = SOURCE_raw,
+      source_reassigned      = 0L,
+      source_reassign_method = "not_reassigned"
+    )
+
+  # Step 1: Address lookup for claims rows (temporal rule first, THEN SOURCE quality)
+  addr <- addr_full |>
+    dplyr::mutate(
+      period_start = as.Date(ADDRESS_PERIOD_START),
+      period_end   = dplyr::if_else(
+        is.na(ADDRESS_PERIOD_END) | trimws(as.character(ADDRESS_PERIOD_END)) == "",
+        as.Date("9999-12-31"),
+        as.Date(ADDRESS_PERIOD_END)
+      ),
+      addr_source  = trimws(SOURCE)
+    )
+
+  # Pass 1: exact interval match (ADDRESS_PERIOD_START <= ADMIT_DATE < ADDRESS_PERIOD_END)
+  claims_addr_interval <- enc_claims |>
+    dplyr::select(ID, ENCOUNTERID, ADMIT_DATE) |>
+    dplyr::left_join(
+      addr |> dplyr::select(ID, period_start, period_end, addr_source),
+      by = "ID", relationship = "many-to-many"
+    ) |>
+    dplyr::filter(
+      !is.na(period_start),
+      period_start <= ADMIT_DATE,
+      ADMIT_DATE < period_end
+    ) |>
+    dplyr::arrange(ID, ENCOUNTERID, dplyr::desc(period_start), dplyr::desc(period_end)) |>
+    dplyr::group_by(ENCOUNTERID) |>
+    dplyr::slice_head(n = 1L) |>
+    dplyr::ungroup() |>
+    dplyr::select(ENCOUNTERID, addr_source_interval = addr_source)
+
+  # Pass 2: most-recent-before fallback (only for encounters with no interval match)
+  claims_addr_recency <- enc_claims |>
+    dplyr::select(ID, ENCOUNTERID, ADMIT_DATE) |>
+    dplyr::anti_join(claims_addr_interval, by = "ENCOUNTERID") |>
+    dplyr::left_join(
+      addr |> dplyr::select(ID, period_start, addr_source),
+      by = "ID", relationship = "many-to-many"
+    ) |>
+    dplyr::filter(!is.na(period_start), period_start <= ADMIT_DATE) |>
+    dplyr::arrange(ID, ENCOUNTERID, dplyr::desc(period_start)) |>
+    dplyr::group_by(ENCOUNTERID) |>
+    dplyr::slice_head(n = 1L) |>
+    dplyr::ungroup() |>
+    dplyr::select(ENCOUNTERID, addr_source_recency = addr_source)
+
+  # Coalesce interval over recency, then check SOURCE quality
+  enc_claims_step1 <- enc_claims |>
+    dplyr::left_join(claims_addr_interval, by = "ENCOUNTERID") |>
+    dplyr::left_join(claims_addr_recency,  by = "ENCOUNTERID") |>
+    dplyr::mutate(
+      addr_source_effective = dplyr::coalesce(addr_source_interval, addr_source_recency),
+      # Accept only non-blank, non-claims address SOURCE (quality check AFTER temporal rule)
+      addr_resolved = dplyr::if_else(
+        !is.na(addr_source_effective) &
+          trimws(addr_source_effective) != "" &
+          !addr_source_effective %in% config$claims_source_codes,
+        addr_source_effective,
+        NA_character_
+      )
+    )
+
+  # Step 2: Whole-record modal non-claims SOURCE from enc_all
+  # enc_all is the unfiltered cohort ENCOUNTER table — not derived from enc.
+  # Modal SOURCE computed from enc_all rows where `SOURCE %in% config$claims_source_codes` is FALSE.
+  # Tiebreak: most recent ADMIT_DATE (from enc_all), then alphabetical SOURCE.
+  modal_tbl <- enc_all |>
+    dplyr::filter(!SOURCE %in% config$claims_source_codes,
+                  !is.na(SOURCE), trimws(SOURCE) != "") |>
+    dplyr::group_by(ID, SOURCE) |>
+    dplyr::summarise(n = dplyr::n(), last_date = max(ADMIT_DATE, na.rm = TRUE),
+                     .groups = "drop") |>
+    dplyr::group_by(ID) |>
+    dplyr::slice_max(order_by = n, n = 1L, with_ties = TRUE) |>
+    dplyr::arrange(ID, dplyr::desc(last_date), SOURCE) |>
+    dplyr::slice_head(n = 1L) |>
+    dplyr::ungroup() |>
+    dplyr::rename(modal_source = SOURCE)
+
+  # Step 3: Resolve all three steps in priority order
+  enc_claims_resolved <- enc_claims_step1 |>
+    dplyr::left_join(modal_tbl |> dplyr::select(ID, modal_source), by = "ID") |>
+    dplyr::mutate(
+      SOURCE_analytic = dplyr::case_when(
+        !is.na(addr_resolved) ~ addr_resolved,
+        !is.na(modal_source)  ~ modal_source,
+        TRUE                  ~ "Claims_unresolved"
+      ),
+      source_reassign_method = dplyr::case_when(
+        !is.na(addr_resolved) ~ "address",
+        !is.na(modal_source)  ~ "modal_encounter",
+        TRUE                  ~ "unresolved"
+      ),
+      source_reassigned = dplyr::if_else(
+        source_reassign_method %in% c("address", "modal_encounter"), 1L, 0L
+      )
+    ) |>
+    dplyr::select(-addr_source_interval, -addr_source_recency, -addr_source_effective,
+                  -addr_resolved, -modal_source)
+
+  out <- dplyr::bind_rows(enc_nonclaims, enc_claims_resolved) |>
+    dplyr::arrange(ENCOUNTERID)
+
+  # Guard: no rows gained or lost after recombine (no duplicate ENCOUNTERIDs)
+  stopifnot("assign_analytic_source: duplicate ENCOUNTERIDs in output" =
+              nrow(out) == nrow(enc))
+
+  out
+}
+
+# ------------------------------------------------------------------------------
+# build_flm_sensitivity_set() -- Sensitivity set for BY_SOURCE_flm sheets
+# (Phase 192.3, D-192.3-05)
+#
+# Tests the "CBC captured outside our system" hypothesis directly.
+# Takes the full enc_with_source (output of assign_analytic_source) and returns a
+# copy where rows with SOURCE_raw %in% config$claims_source_codes have SOURCE_analytic
+# overwritten to SOURCE_raw (effectively un-reassigning FLM encounters — keeping FLM
+# as its own stratum). All other SOURCE strata keep their SOURCE_analytic value.
+#
+# Pass the returned object to the same build_by_source_sheet() helper used for the
+# main BY_SOURCE sheets.
+# ------------------------------------------------------------------------------
+build_flm_sensitivity_set <- function(enc_with_source, config) {
+  stopifnot(
+    "enc_with_source must be a data.frame"      = is.data.frame(enc_with_source),
+    "enc_with_source must have SOURCE_raw"      = "SOURCE_raw" %in% names(enc_with_source),
+    "enc_with_source must have SOURCE_analytic" = "SOURCE_analytic" %in% names(enc_with_source),
+    "config must have claims_source_codes"      = !is.null(config$claims_source_codes)
+  )
+  enc_with_source |>
+    dplyr::mutate(
+      SOURCE_analytic = dplyr::if_else(
+        SOURCE_raw %in% config$claims_source_codes,
+        SOURCE_raw,       # un-reassign: FLM stays as FLM (tests CBC-outside-system hypothesis)
+        SOURCE_analytic   # all others keep their analytic SOURCE
+      )
+    )
+}
+
+# ------------------------------------------------------------------------------
 # build_enc_analysis() -- encounter-level analysis set (both windows as columns)
 #
 # Constructs the primary analysis tibble for R/163 and R/165. Carries
@@ -179,7 +391,8 @@ build_cbc_events <- function(con, ids) {
 # WHY anchor-date drop: encounters for patients without an anchor date cannot be
 # assigned to a window. The count is logged by the caller (QC).
 # ------------------------------------------------------------------------------
-build_enc_analysis <- function(enc_distance, cbc_events, anchors, enc_dates, cutoff) {
+build_enc_analysis <- function(enc_distance, cbc_events, anchors, enc_dates, cutoff,
+                               addr_full = NULL, enc_all = NULL, config = NULL) {
   stopifnot(
     "enc_distance must be a data.frame" = is.data.frame(enc_distance),
     "cbc_events must be a data.frame"   = is.data.frame(cbc_events),
@@ -187,6 +400,15 @@ build_enc_analysis <- function(enc_distance, cbc_events, anchors, enc_dates, cut
     "enc_dates must be a data.frame"    = is.data.frame(enc_dates),
     "cutoff must be a positive numeric" = is.numeric(cutoff) && length(cutoff) == 1L && cutoff > 0
   )
+  if (!is.null(addr_full)) {
+    stopifnot(
+      "addr_full must be a data.frame"               = is.data.frame(addr_full),
+      "config must be provided when addr_full is non-NULL" = !is.null(config),
+      "config must have claims_source_codes"         = !is.null(config$claims_source_codes),
+      "enc_all must be provided when addr_full is non-NULL" = !is.null(enc_all),
+      "enc_all must be a data.frame"                 = is.data.frame(enc_all)
+    )
+  }
 
   # Step 1: Keep only computed-distance encounters
   enc_computed <- enc_distance |>
@@ -198,6 +420,20 @@ build_enc_analysis <- function(enc_distance, cbc_events, anchors, enc_dates, cut
       enc_dates |> dplyr::select(ENCOUNTERID, DISCHARGE_DATE, SOURCE),
       by = "ENCOUNTERID"
     )
+
+  # Step 2b (Phase 192.3): Reassign claims SOURCE when addr_full + enc_all provided
+  if (!is.null(addr_full)) {
+    enc_with_dates <- assign_analytic_source(enc_with_dates, enc_all, addr_full, config)
+  } else {
+    # Legacy path: rename SOURCE to SOURCE_raw; SOURCE_analytic mirrors SOURCE_raw
+    enc_with_dates <- enc_with_dates |>
+      dplyr::rename(SOURCE_raw = SOURCE) |>
+      dplyr::mutate(
+        SOURCE_analytic        = SOURCE_raw,
+        source_reassigned      = 0L,
+        source_reassign_method = "not_reassigned"
+      )
+  }
 
   # Step 3: Compute far_from_care_100mi
   enc_with_dates <- enc_with_dates |>
@@ -246,10 +482,11 @@ build_enc_analysis <- function(enc_distance, cbc_events, anchors, enc_dates, cut
       !anyDuplicated(out$ENCOUNTERID)
   )
 
-  # Step 8: Select and return canonical columns
+  # Step 8: Select and return canonical columns (Phase 192.3: SOURCE_raw/SOURCE_analytic added)
   out |>
     dplyr::select(
-      ID, ENCOUNTERID, ADMIT_DATE, ENC_TYPE, SOURCE,
+      ID, ENCOUNTERID, ADMIT_DATE, ENC_TYPE, SOURCE_raw, SOURCE_analytic,
+      source_reassigned, source_reassign_method,
       distance_mi, far_from_care_100mi, post_anchor, cbc_in_encounter
     )
 }
