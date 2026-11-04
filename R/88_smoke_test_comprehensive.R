@@ -1910,7 +1910,7 @@ check("R/52 EPISODES_SCHEMA includes episode_dx_7day_confirmed (Phase 115)",
 check("R/52 EPISODES_SCHEMA includes age_at_episode (Phase 115)",
       any(grepl("age_at_episode", r52_lines)))
 
-# Check 3: R/52 EPISODES_SCHEMA has 22 entries (Phase 115: +2 from 18; Phase 192.1: +2 from 20)
+# Check 3: R/52 EPISODES_SCHEMA has 23 entries (Phase 115: +2 from 18; Phase 192.1: +2 from 20; Phase 192.2: +1)
 r52_schema_start <- grep("^EPISODES_SCHEMA\\s*<-", r52_lines)[1]
 if (!is.na(r52_schema_start)) {
   r52_schema_end <- r52_schema_start
@@ -1922,10 +1922,10 @@ if (!is.na(r52_schema_start)) {
   }
   schema_text_1921 <- paste(r52_lines[r52_schema_start:r52_schema_end], collapse = "\n")
   schema_entries_1921 <- lengths(regmatches(schema_text_1921, gregexpr('"[a-z0-9_]+"', schema_text_1921)))
-  check("R/52 EPISODES_SCHEMA has 22 entries (Phase 192.1: +2 from 20)",
-        schema_entries_1921 == 22)
+  check("R/52 EPISODES_SCHEMA has 23 entries (Phase 192.2: +1 from 22)",
+        schema_entries_1921 == 23)
 } else {
-  check("R/52 EPISODES_SCHEMA has 22 entries (Phase 192.1: +2 from 20)", FALSE)
+  check("R/52 EPISODES_SCHEMA has 23 entries (Phase 192.2: +1 from 22)", FALSE)
 }
 
 # Check 4: R/52 sources utils_cancer.R (needed for classify_codes)
