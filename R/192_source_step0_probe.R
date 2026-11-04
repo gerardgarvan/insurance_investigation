@@ -250,27 +250,30 @@ analysis_source_freq <- enc_analysis |>
 # SECTION (e): Print paste-ready block ----
 # ==============================================================================
 
+# NOTE: dbGetQuery() returns a plain data.frame, so print(x, n = 30) was routed to
+# print.default(), where `n` partially matches `na.print` -> error. Print as
+# data.frame with all rows instead (no truncation).
 cat("\n===BEGIN STEP0 OUTPUT===\n\n")
 
 cat("--- SECTION (a): ENCOUNTER SOURCE frequency (HL cohort) ---\n")
-print(enc_source_freq |> dplyr::select(SOURCE, n_display), n = 30)
+print(as.data.frame(enc_source_freq |> dplyr::select(SOURCE, n_display)), row.names = FALSE)
 cat(glue::glue("Duplicate ENCOUNTERIDs in cohort ENCOUNTER pull: {suppress_display(n_dup_encounterid)}\n"))
 
 cat("\n--- SECTION (b): LDS_ADDRESS_HISTORY SOURCE frequency ---\n")
-print(addr_source_freq |> dplyr::select(SOURCE, n_display), n = 30)
+print(as.data.frame(addr_source_freq |> dplyr::select(SOURCE, n_display)), row.names = FALSE)
 cat(glue::glue("Missing/blank SOURCE rows in LDS_ADDRESS_HISTORY: {suppress_display(n_addr_missing_source)}\n"))
 cat(glue::glue("Patients with overlapping address periods: {suppress_display(n_patients_with_overlap)}\n"))
 cat(glue::glue("Overlapping address period rows: {suppress_display(n_overlap_rows)}\n"))
 
 cat("\n--- SECTION (c): ENCOUNTER.SOURCE x in-effect address SOURCE crosstab ---\n")
 cat("Match category counts (all HL cohort encounters):\n")
-print(match_summary, n = 10)
+print(as.data.frame(match_summary |> dplyr::select(match_category, n_display)), row.names = FALSE)
 cat("\nCrosstab enc_source x addr_source_effective x match_category:\n")
-print(crosstab_src, n = 50)
+print(as.data.frame(crosstab_src |> dplyr::select(match_category, enc_source, addr_source_effective, n_display)), row.names = FALSE)
 
 cat("\n--- SECTION (d): Analysis-set encounter counts by SOURCE_raw ---\n")
 cat("(build_enc_analysis() output — SOURCE column before any reassignment)\n")
-print(analysis_source_freq, n = 30)
+print(as.data.frame(analysis_source_freq |> dplyr::select(SOURCE, n_display)), row.names = FALSE)
 
 cat("\n===END STEP0 OUTPUT===\n")
 message("[R/192] Step-0 probe complete. Paste the block above to the planner.")
