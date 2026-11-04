@@ -67,9 +67,8 @@ message("[R/192] enc_distance_raw rows: ", format(nrow(enc_distance_raw), big.ma
 
 hl_ids <- enc_distance_raw |> dplyr::distinct(ID)
 
-# Open DuckDB once; on.exit guarantees close even on error.
+# Open DuckDB once; closed explicitly after all DuckDB queries complete.
 open_pcornet_con()
-on.exit(close_pcornet_con(), add = TRUE)
 
 # ==============================================================================
 # SECTION (a): ENCOUNTER SOURCE freq for HL cohort (DuckDB) ----
