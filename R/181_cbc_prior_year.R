@@ -286,7 +286,6 @@ message(glue("  {fmt_2x2(res_secondary)}"))
 
 message("[R/181] Opening DuckDB for ENCOUNTER SOURCE + sensitivity CBC window pull ...")
 open_pcornet_con()
-on.exit(close_pcornet_con(), add = TRUE)   # safety net — closes even on error
 
 # --- 4a. ENCOUNTER SOURCE for all cohort patients (Phase 192.3) ---------------
 enc_source_181 <- DBI::dbGetQuery(
