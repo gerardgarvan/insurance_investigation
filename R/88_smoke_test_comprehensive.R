@@ -7473,6 +7473,7 @@ message(glue("\nAUTOIMMUNE-FLAG: {p1921_pass} PASS / {p1921_fail} FAIL / {p1921_
 message("\n[AUTOIMMUNE-FLAG-192.2] Phase 192.2 ICD-9 autoimmune codes + code-system column...")
 
 p1922_pass <- 0L; p1922_fail <- 0L; p1922_skip <- 0L
+fmt_sup <- function(n) if (n >= 1L && n <= 10L) "<11" else format(n, big.mark = ",")
 
 p1922_chk <- function(label, condition) {
   if (isTRUE(condition))  { message("  PASS: ", label); p1922_pass <<- p1922_pass + 1L; passed  <<- passed  + 1L }
