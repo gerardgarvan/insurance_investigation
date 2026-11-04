@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: verifying
-stopped_at: Completed 192.2-03-PLAN.md
-last_updated: "2026-11-03T20:21:18.323Z"
+stopped_at: Phase 192.3 context gathered
+last_updated: "2026-11-04T16:44:46.721Z"
 last_activity: 2026-11-03
 progress:
-  total_phases: 45
+  total_phases: 46
   completed_phases: 36
   total_plans: 119
   completed_plans: 127
@@ -46,6 +46,7 @@ Last activity: 2026-11-03
 
 - Phase 192.1 inserted after Phase 192: Rebase v3.13 to the revised Analytic Manual (URGENT)
 - Phase 192.2 inserted after Phase 192.1: ICD-9 autoimmune codes in Gantt episodes (URGENT)
+- Phase 192.3 inserted after Phase 192.2: Distance >100 mi vs CBC stratified by SOURCE (Medicare reassigned to address source) (URGENT)
 - Phase 192.1 renamed from "rebase-v3-13-to-the-revised-analytic-manual" to "autoimmune-diagnosis-flags-in-gantt-episodes" (canonical name)
 - Phase 192.1 COMPLETE 2026-10-29: has_autoimmune_dx + first_autoimmune_dx_date added to gantt_episodes.csv and gantt_episodes_180.csv
 
@@ -108,4 +109,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Completed 192.2-03-PLAN.md
+**Stopped at:** Phase 192.3 context gathered
