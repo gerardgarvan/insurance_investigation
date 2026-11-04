@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
-status: verifying
-stopped_at: Phase 192.3 context gathered
-last_updated: "2026-11-04T16:44:46.721Z"
-last_activity: 2026-11-03
+status: executing
+stopped_at: "Phase 192.3 Plan 01 — checkpoint:human-verify (awaiting step-0 console paste)"
+last_updated: "2026-11-04T17:40:06.386Z"
+last_activity: 2026-11-04 -- Phase 192.3 execution started
 progress:
   total_phases: 46
   completed_phases: 36
-  total_plans: 119
-  completed_plans: 127
+  total_plans: 122
+  completed_plans: 128
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 192.2 — icd-9-autoimmune-codes-in-gantt-episodes
+**Current focus:** Phase 192.3 — distance-100-mi-vs-cbc-stratified-by-source-medicare-reassigned-to-address-source
 
 ## Current Position
 
-Phase: 193
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-11-03
+Phase: 192.3 (distance-100-mi-vs-cbc-stratified-by-source-medicare-reassigned-to-address-source) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 192.3
+Last activity: 2026-11-04 -- Phase 192.3 execution started
 
 ## Phase Map (v3.13)
 
@@ -109,4 +109,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 192.3 context gathered
+**Stopped at:** Phase 192.3 Plan 01 — checkpoint:human-verify (awaiting step-0 console paste)

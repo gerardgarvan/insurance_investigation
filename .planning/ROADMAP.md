@@ -880,10 +880,10 @@ Plans:
 **Goal:** Re-run the far-from-care (>100 mi) × CBC association (R/165_distance_cbc_association.R / utils_distance_cbc.R) stratified by data SOURCE. Encounters whose SOURCE is Medicare get the SOURCE of the patient's address record instead. New sheets BY_SOURCE_enc, BY_SOURCE_pat, SOURCE_REASSIGN_QC added to the distance-CBC workbook; Mantel–Haenszel pooled OR + Breslow–Day.
 **Requirements**: TBD
 **Depends on:** Phase 192.2
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 192.3-01-PLAN.md — Step-0 SOURCE discovery probe (R/192); prints ENCOUNTER/LDS SOURCE freq tables; blocks Plans 02 and 03
+- [x] 192.3-01-PLAN.md — Step-0 SOURCE discovery probe (R/192); prints ENCOUNTER/LDS SOURCE freq tables; blocks Plans 02 and 03
 - [ ] 192.3-02-PLAN.md — R/165 SOURCE stratification: assign_analytic_source() helper, CONFIG keys, BY_SOURCE_enc/pat/_addr, SOURCE_REASSIGN_QC, MH+Breslow-Day, regression check
 - [ ] 192.3-03-PLAN.md — R/181 SOURCE stratification: same new sheets as Plan 02 for prior-year CBC workbook, with year-1 window patient SOURCE and whole-record fallback
 
