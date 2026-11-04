@@ -289,7 +289,8 @@ open_pcornet_con()
 on.exit(close_pcornet_con(), add = TRUE)   # safety net — closes even on error
 
 # --- 4a. ENCOUNTER SOURCE for all cohort patients (Phase 192.3) ---------------
-enc_source_181 <- duck_query(
+enc_source_181 <- DBI::dbGetQuery(
+  pcornet_con,
   "SELECT ID, ENCOUNTERID, ADMIT_DATE, SOURCE FROM ENCOUNTER"
 ) |>
   dplyr::semi_join(cohort_ids_181, by = "ID") |>
