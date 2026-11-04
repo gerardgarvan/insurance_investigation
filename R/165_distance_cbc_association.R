@@ -97,17 +97,48 @@ message(glue("  Loading enc_distance: {basename(enc_dist_path)} (pinned={r165_pi
 enc_distance <- readRDS(enc_dist_path)
 message(glue("  enc_distance rows: {format(nrow(enc_distance), big.mark = ',')}"))
 
-# 1b. Open DuckDB
+# 1b. Address file pin (Phase 192.3: assign_analytic_source() injection)
+ADDR_PATH_1923 <- Sys.getenv(
+  "R1923_ADDR_PATH",
+  unset = file.path(CONFIG$data_dir, "LDS_ADDRESS_HISTORY_Mailhot_V1.csv")
+)
+if (!file.exists(ADDR_PATH_1923)) stop("[R/165] Address file not found: ", ADDR_PATH_1923)
+addr_full_1923 <- vroom::vroom(
+  ADDR_PATH_1923,
+  col_types = vroom::cols(.default = "c"),
+  progress = FALSE
+)
+message(glue("  addr_full_1923 rows: {format(nrow(addr_full_1923), big.mark = ',')}"))
+
+# 1c. Open DuckDB
 if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
 
-# 1c. Anchor dates (hl_anchor_date) from utils_treatment
+# 1d. Anchor dates (hl_anchor_date) from utils_treatment
 message("  Fetching anchor dates via get_hl_any_dx_ids() ...")
 cohort_ids <- unique(enc_distance$ID)
 anchors     <- get_hl_any_dx_ids()
 message(glue("  Anchor dates: {nrow(anchors)} patients; ",
              "{sum(is.na(anchors$hl_anchor_date))} missing anchor date."))
 
-# 1d. ENCOUNTER dates + SOURCE + ENC_TYPE (DuckDB push-down to cohort)
+# 1e. enc_all_1923: ALL cohort ENCOUNTER rows (ID, ADMIT_DATE, SOURCE) — unfiltered
+# This is distinct from enc_dates_for_build (which is semi-joined to enc_distance IDs).
+# enc_all_1923 is used exclusively by assign_analytic_source() as the modal-SOURCE fallback.
+# CONSTRAINT: must include ALL encounters for every cohort patient, not just those in enc_distance.
+message("  Pulling enc_all_1923 (all cohort ENCOUNTER rows) from DuckDB ...")
+cohort_ids_sql <- paste(sprintf("'%s'", cohort_ids), collapse = ", ")
+enc_all_raw <- DBI::dbGetQuery(pcornet_con, sprintf("
+  SELECT
+    ID,
+    TRY_CAST(ADMIT_DATE AS DATE) AS ADMIT_DATE,
+    SOURCE
+  FROM ENCOUNTER
+  WHERE ID IN (%s)
+", cohort_ids_sql))
+enc_all_raw$ADMIT_DATE <- as.Date(enc_all_raw$ADMIT_DATE)
+enc_all_1923 <- enc_all_raw
+message(glue("  enc_all_1923 rows: {format(nrow(enc_all_1923), big.mark = ',')}"))
+
+# 1f. ENCOUNTER dates + SOURCE + ENC_TYPE (DuckDB push-down to cohort)
 message("  Pulling ENCOUNTER dates, ENC_TYPE, SOURCE from DuckDB ...")
 enc_ids_sql <- paste(sprintf("'%s'", unique(enc_distance$ENCOUNTERID)), collapse = ", ")
 enc_dates_raw <- DBI::dbGetQuery(pcornet_con, sprintf("
@@ -124,16 +155,16 @@ enc_dates_raw$ADMIT_DATE    <- as.Date(enc_dates_raw$ADMIT_DATE)
 enc_dates_raw$DISCHARGE_DATE <- as.Date(enc_dates_raw$DISCHARGE_DATE)
 message(glue("  enc_dates_raw rows: {format(nrow(enc_dates_raw), big.mark = ',')}"))
 
-# 1e. CBC events (whole record) re-derived from DuckDB LAB_RESULT_CM
+# 1g. CBC events (whole record) re-derived from DuckDB LAB_RESULT_CM
 message("  Building CBC events (whole record) via build_cbc_events() ...")
 cbc_events <- build_cbc_events(pcornet_con, cohort_ids)
 message(glue("  cbc_events rows: {format(nrow(cbc_events), big.mark = ',')}",
              " (patient x date pairs)"))
 
-# 1f. Close DuckDB connection
+# 1h. Close DuckDB connection
 close_pcornet_con()
 
-# 1g. R/116 encounter-level SES (rurality) -- most recent by mtime
+# 1i. R/116 encounter-level SES (rurality) -- most recent by mtime
 ses_candidates <- list.files(
   CONFIG$output_dir,
   pattern = "^encounter_ses_index.*\\.rds$",
@@ -153,7 +184,7 @@ if (length(ses_candidates) == 0L) {
     dplyr::select(PATID, ENCOUNTERID, ruca_code, ruca_category)
 }
 
-# 1h. Patient-level payer (payer_summary from R/02) -- read from output dir
+# 1j. Patient-level payer (payer_summary from R/02) -- read from output dir
 payer_candidates <- list.files(
   CONFIG$output_dir,
   pattern = "^payer_summary.*\\.rds$",
@@ -195,7 +226,10 @@ enc <- build_enc_analysis(
   cbc_events   = cbc_events,
   anchors      = anchors,
   enc_dates    = enc_dates_for_build,
-  cutoff       = CUTOFF
+  cutoff       = CUTOFF,
+  addr_full    = addr_full_1923,
+  enc_all      = enc_all_1923,
+  config       = CONFIG
 )
 message(glue("  enc_analysis rows (whole): {format(nrow(enc), big.mark = ',')}"))
 message(glue("  enc_analysis post-anchor : {format(sum(enc$post_anchor), big.mark = ',')}"))
@@ -352,7 +386,8 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
   modal_src_tbl <- enc_win |>
     dplyr::group_by(ID) |>
     dplyr::summarise(
-      modal_source = modal_source_fn(SOURCE, ADMIT_DATE),
+      # Existing sheets use SOURCE_raw — do NOT change to SOURCE_analytic (Phase 192.3 constraint)
+      modal_source = modal_source_fn(SOURCE_raw, ADMIT_DATE),
       .groups = "drop"
     )
 
@@ -479,7 +514,8 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     has_rurality <- !all(is.na(enc_win$ruca_category))
 
     # Complete-case subset: require rurality + SOURCE; payer only if available
-    cc_filter <- !is.na(enc_win$ruca_category) & !is.na(enc_win$SOURCE)
+    # Existing sheets use SOURCE_raw — do NOT change to SOURCE_analytic (Phase 192.3 constraint)
+    cc_filter <- !is.na(enc_win$ruca_category) & !is.na(enc_win$SOURCE_raw)
     if (has_payer) cc_filter <- cc_filter & !is.na(enc_win$PAYER_CATEGORY_PRIMARY)
     enc_cc <- enc_win[cc_filter, ]
 
@@ -488,8 +524,8 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     n_drop_payer <- if (has_payer)
       sum(is.na(enc_win$PAYER_CATEGORY_PRIMARY) & !is.na(enc_win$ruca_category))
       else nrow(enc_win)   # all missing
-    n_drop_src   <- sum(is.na(enc_win$SOURCE) & cc_filter | (!cc_filter & !is.na(enc_win$SOURCE)))
-    n_drop_src   <- sum(is.na(enc_win$SOURCE))
+    n_drop_src   <- sum(is.na(enc_win$SOURCE_raw) & cc_filter | (!cc_filter & !is.na(enc_win$SOURCE_raw)))
+    n_drop_src   <- sum(is.na(enc_win$SOURCE_raw))
 
     if (n_cc < 30L)
       stop(glue("sensitivity model ({window}): only {n_cc} complete cases — too few to fit"))
@@ -507,15 +543,16 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
       )
     }
 
+    # Existing sheets use SOURCE_raw — do NOT change to SOURCE_analytic (Phase 192.3 constraint)
     enc_cc <- enc_cc |>
-      collapse_to_other("SOURCE") |>
+      collapse_to_other("SOURCE_raw") |>
       collapse_to_other("ruca_category")
     if (has_payer)
       enc_cc <- collapse_to_other(enc_cc, "PAYER_CATEGORY_PRIMARY")
 
     enc_cc <- enc_cc |>
       dplyr::mutate(
-        SOURCE        = factor(SOURCE),
+        SOURCE_raw    = factor(SOURCE_raw),
         ruca_category = factor(ruca_category)
       )
     if (has_payer)
@@ -523,7 +560,7 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
         PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY))
 
     # Build formula dynamically based on available covariates
-    sens_covariates <- c("ruca_category", if (has_payer) "PAYER_CATEGORY_PRIMARY", "SOURCE")
+    sens_covariates <- c("ruca_category", if (has_payer) "PAYER_CATEGORY_PRIMARY", "SOURCE_raw")
     sens_formula <- as.formula(
       paste("cbc_in_encounter ~ far_from_care_100mi +", paste(sens_covariates, collapse = " + "))
     )
@@ -861,7 +898,454 @@ openxlsx::addStyle(wb, "QC", style = uf_header_style, rows = 1, cols = 1:ncol(qc
 openxlsx::setColWidths(wb, "QC", cols = seq_len(ncol(qc_df)), widths = 22)
 
 # ==============================================================================
-# SECTION 7: SAVE WORKBOOK ----
+# SECTION 7: NEW SOURCE-STRATIFICATION SHEETS (Phase 192.3) ----
+# ==============================================================================
+
+# ----------------------------------------------------------------------------
+# Helper: compute patient-level SOURCE_analytic for one window
+# Modal SOURCE_analytic across window encounters; ties: most recent ADMIT_DATE,
+# then alphabetical SOURCE_analytic. (D-07)
+# ----------------------------------------------------------------------------
+compute_pat_source_165 <- function(enc_win_w_source) {
+  enc_win_w_source |>
+    dplyr::group_by(ID, SOURCE_analytic) |>
+    dplyr::summarise(
+      n_src      = dplyr::n(),
+      last_date  = max(ADMIT_DATE, na.rm = TRUE),
+      .groups    = "drop"
+    ) |>
+    dplyr::group_by(ID) |>
+    dplyr::slice_max(order_by = n_src, n = 1L, with_ties = TRUE) |>
+    dplyr::arrange(ID, dplyr::desc(last_date), SOURCE_analytic) |>
+    dplyr::slice_head(n = 1L) |>
+    dplyr::ungroup() |>
+    dplyr::rename(pat_SOURCE_analytic = SOURCE_analytic) |>
+    dplyr::select(ID, pat_SOURCE_analytic)
+}
+
+# ----------------------------------------------------------------------------
+# Helper: build a by-source sheet data frame from encounter-level enc_ws
+# columns: SOURCE_analytic, window, n_far, n_not_far, n_cbc_far, n_cbc_not_far,
+#          pct_far_with_cbc, pct_not_far_with_cbc, chi_stat, p_value, OR,
+#          CI_lo, CI_hi, test_method, stratum_informative
+# MH_POOLED row appended after the loop.
+# ----------------------------------------------------------------------------
+build_by_source_sheet <- function(enc_ws, window_label) {
+  strata <- sort(unique(enc_ws$SOURCE_analytic))
+  rows <- lapply(strata, function(src) {
+    sub <- enc_ws[enc_ws$SOURCE_analytic == src, ]
+    ct  <- table(far = sub$far_from_care_100mi, cbc = sub$cbc_in_encounter)
+    # Ensure 2x2
+    full_ct <- matrix(0L, 2L, 2L, dimnames = list(far = c("0","1"), cbc = c("0","1")))
+    for (r in rownames(ct)) for (cl in colnames(ct)) full_ct[r, cl] <- ct[r, cl]
+    ct <- as.matrix(full_ct)
+
+    n_far       <- as.integer(ct[2, 1] + ct[2, 2])
+    n_not_far   <- as.integer(ct[1, 1] + ct[1, 2])
+    n_cbc_far   <- as.integer(ct[2, 2])
+    n_cbc_not_far <- as.integer(ct[1, 2])
+
+    informative <- all(rowSums(ct) > 0) && all(colSums(ct) > 0)
+    expected <- outer(rowSums(ct), colSums(ct)) / sum(ct)
+    use_fisher <- any(expected < 5, na.rm = TRUE)
+
+    test_res <- tryCatch({
+      if (use_fisher) {
+        ft <- stats::fisher.test(ct)
+        list(stat = NA_real_, p = ft$p.value, or = ft$estimate, ci_lo = ft$conf.int[1],
+             ci_hi = ft$conf.int[2], method = "fisher")
+      } else {
+        chi <- stats::chisq.test(ct, correct = FALSE)
+        wo  <- naive_or_se(ct)
+        or  <- exp(wo$log_or)
+        list(stat = chi$statistic, p = chi$p.value, or = or,
+             ci_lo = exp(wo$log_or - 1.96 * wo$se), ci_hi = exp(wo$log_or + 1.96 * wo$se),
+             method = "chi2")
+      }
+    }, error = function(e) {
+      list(stat = NA_real_, p = NA_real_, or = NA_real_, ci_lo = NA_real_, ci_hi = NA_real_,
+           method = "error")
+    })
+
+    pct_far_cbc <- if (!is.na(suppress_small_vec(n_cbc_far)) && !is.na(suppress_small_vec(n_far)) &&
+                       n_far > 0) sprintf("%.1f%%", n_cbc_far / n_far * 100) else NA_character_
+    pct_not_cbc <- if (!is.na(suppress_small_vec(n_cbc_not_far)) && !is.na(suppress_small_vec(n_not_far)) &&
+                       n_not_far > 0) sprintf("%.1f%%", n_cbc_not_far / n_not_far * 100) else NA_character_
+
+    data.frame(
+      SOURCE_analytic       = src,
+      window                = window_label,
+      n_far                 = suppress_display(n_far),
+      n_not_far             = suppress_display(n_not_far),
+      n_cbc_far             = suppress_display(n_cbc_far),
+      n_cbc_not_far         = suppress_display(n_cbc_not_far),
+      pct_far_with_cbc      = pct_far_cbc,
+      pct_not_far_with_cbc  = pct_not_cbc,
+      chi_stat              = if (is.na(test_res$stat)) NA_character_ else formatC(test_res$stat, digits=3, format="f"),
+      p_value               = fmt_p(test_res$p),
+      OR                    = fmt_or(test_res$or),
+      CI_lo                 = fmt_or(test_res$ci_lo),
+      CI_hi                 = fmt_or(test_res$ci_hi),
+      test_method           = test_res$method,
+      stratum_informative   = as.character(informative),
+      stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, rows)
+}
+
+# ----------------------------------------------------------------------------
+# Helper: patient-level by-source sheet
+# ----------------------------------------------------------------------------
+build_by_source_pat_sheet <- function(enc_ws, cbc_events, anchors, window, window_label) {
+  # Rederive patient SOURCE_analytic from enc_ws (window-specific)
+  pat_src <- compute_pat_source_165(enc_ws)
+
+  # Patient analysis (using existing build_pat_analysis helper)
+  # Note: build_pat_analysis uses SOURCE_raw column via modal_source_fn inside enc_analysis.
+  # For BY_SOURCE_pat we need patient-level using SOURCE_analytic from enc_ws directly.
+  pat_base <- build_pat_analysis(
+    enc_analysis = enc_ws |> dplyr::mutate(SOURCE = SOURCE_raw),   # pass SOURCE_raw as SOURCE for helper compatibility
+    cbc_events   = cbc_events,
+    anchors      = anchors,
+    window       = window
+  )
+  pat_ws <- pat_base |>
+    dplyr::left_join(pat_src, by = "ID")
+
+  strata <- sort(unique(pat_ws$pat_SOURCE_analytic))
+  rows <- lapply(strata, function(src) {
+    sub <- pat_ws[!is.na(pat_ws$pat_SOURCE_analytic) & pat_ws$pat_SOURCE_analytic == src, ]
+    ct  <- table(far = sub$any_far, cbc = sub$any_cbc)
+    full_ct <- matrix(0L, 2L, 2L, dimnames = list(far = c("0","1"), cbc = c("0","1")))
+    for (r in rownames(ct)) for (cl in colnames(ct)) full_ct[r, cl] <- ct[r, cl]
+    ct <- as.matrix(full_ct)
+
+    n_far         <- as.integer(ct[2, 1] + ct[2, 2])
+    n_not_far     <- as.integer(ct[1, 1] + ct[1, 2])
+    n_cbc_far     <- as.integer(ct[2, 2])
+    n_cbc_not_far <- as.integer(ct[1, 2])
+    informative   <- all(rowSums(ct) > 0) && all(colSums(ct) > 0)
+    expected      <- outer(rowSums(ct), colSums(ct)) / sum(ct)
+    use_fisher    <- any(expected < 5, na.rm = TRUE)
+
+    test_res <- tryCatch({
+      if (use_fisher) {
+        ft <- stats::fisher.test(ct)
+        list(stat = NA_real_, p = ft$p.value, or = ft$estimate, ci_lo = ft$conf.int[1],
+             ci_hi = ft$conf.int[2], method = "fisher")
+      } else {
+        chi <- stats::chisq.test(ct, correct = FALSE)
+        wo  <- naive_or_se(ct)
+        or  <- exp(wo$log_or)
+        list(stat = chi$statistic, p = chi$p.value, or = or,
+             ci_lo = exp(wo$log_or - 1.96 * wo$se), ci_hi = exp(wo$log_or + 1.96 * wo$se),
+             method = "chi2")
+      }
+    }, error = function(e) {
+      list(stat = NA_real_, p = NA_real_, or = NA_real_, ci_lo = NA_real_, ci_hi = NA_real_,
+           method = "error")
+    })
+
+    pct_far_cbc <- if (!is.na(suppress_small_vec(n_cbc_far)) && !is.na(suppress_small_vec(n_far)) &&
+                       n_far > 0) sprintf("%.1f%%", n_cbc_far / n_far * 100) else NA_character_
+    pct_not_cbc <- if (!is.na(suppress_small_vec(n_cbc_not_far)) && !is.na(suppress_small_vec(n_not_far)) &&
+                       n_not_far > 0) sprintf("%.1f%%", n_cbc_not_far / n_not_far * 100) else NA_character_
+
+    data.frame(
+      SOURCE_analytic       = src,
+      window                = window_label,
+      n_far                 = suppress_display(n_far),
+      n_not_far             = suppress_display(n_not_far),
+      n_cbc_far             = suppress_display(n_cbc_far),
+      n_cbc_not_far         = suppress_display(n_cbc_not_far),
+      pct_far_with_cbc      = pct_far_cbc,
+      pct_not_far_with_cbc  = pct_not_cbc,
+      chi_stat              = if (is.na(test_res$stat)) NA_character_ else formatC(test_res$stat, digits=3, format="f"),
+      p_value               = fmt_p(test_res$p),
+      OR                    = fmt_or(test_res$or),
+      CI_lo                 = fmt_or(test_res$ci_lo),
+      CI_hi                 = fmt_or(test_res$ci_hi),
+      test_method           = test_res$method,
+      stratum_informative   = as.character(informative),
+      stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, rows)
+}
+
+# ----------------------------------------------------------------------------
+# Helper: Mantel-Haenszel pooled OR for a by-source data frame
+# Excludes "Claims_unresolved" stratum and strata with any zero row/col
+# ----------------------------------------------------------------------------
+compute_mh_breslow <- function(enc_ws, window_label, level = "enc") {
+  strata <- sort(unique(enc_ws$SOURCE_analytic))
+  strata <- strata[strata != "Claims_unresolved"]
+
+  mats <- lapply(strata, function(src) {
+    if (level == "enc") {
+      sub <- enc_ws[enc_ws$SOURCE_analytic == src, ]
+      ct  <- table(far = sub$far_from_care_100mi, cbc = sub$cbc_in_encounter)
+    } else {
+      sub <- enc_ws[enc_ws$SOURCE_analytic == src, ]
+      ct  <- table(far = sub$any_far, cbc = sub$any_cbc)
+    }
+    full_ct <- matrix(0L, 2L, 2L, dimnames = list(far = c("0","1"), cbc = c("0","1")))
+    for (r in rownames(ct)) for (cl in colnames(ct)) full_ct[r, cl] <- ct[r, cl]
+    full_ct
+  })
+  names(mats) <- strata
+
+  # Keep only informative strata (no zero row or column)
+  informative <- vapply(mats, function(m) all(rowSums(m) > 0) && all(colSums(m) > 0), logical(1))
+  mats_inf <- mats[informative]
+  strata_excl <- strata[!informative]
+
+  mh_or <- NA_real_; mh_ci_lo <- NA_real_; mh_ci_hi <- NA_real_; mh_p <- NA_real_
+  bd_stat <- NA_real_; bd_df <- NA_integer_; bd_p <- NA_real_
+
+  if (length(mats_inf) >= 2L) {
+    arr <- array(
+      unlist(mats_inf),
+      dim = c(2L, 2L, length(mats_inf)),
+      dimnames = list(
+        far = c("0","1"), cbc = c("0","1"), stratum = names(mats_inf)
+      )
+    )
+    mh_res <- tryCatch(stats::mantelhaen.test(arr), error = function(e) NULL)
+    if (!is.null(mh_res)) {
+      mh_or    <- mh_res$estimate
+      mh_ci_lo <- mh_res$conf.int[1]
+      mh_ci_hi <- mh_res$conf.int[2]
+      mh_p     <- mh_res$p.value
+    }
+    # Breslow-Day (Tarone correction)
+    bd_res <- tryCatch({
+      if (requireNamespace("DescTools", quietly = TRUE)) {
+        DescTools::BreslowDayTest(arr, correct = TRUE)
+      } else {
+        NULL
+      }
+    }, error = function(e) NULL)
+    if (!is.null(bd_res)) {
+      bd_stat <- bd_res$statistic
+      bd_df   <- bd_res$parameter
+      bd_p    <- bd_res$p.value
+    }
+  }
+
+  data.frame(
+    SOURCE_analytic      = "MH_POOLED",
+    window               = window_label,
+    n_far                = NA_character_,
+    n_not_far            = NA_character_,
+    n_cbc_far            = NA_character_,
+    n_cbc_not_far        = NA_character_,
+    pct_far_with_cbc     = NA_character_,
+    pct_not_far_with_cbc = NA_character_,
+    chi_stat             = fmt_or(bd_stat),
+    p_value              = fmt_p(bd_p),
+    OR                   = fmt_or(mh_or),
+    CI_lo                = fmt_or(mh_ci_lo),
+    CI_hi                = fmt_or(mh_ci_hi),
+    test_method          = glue::glue("MH OR; BD_df={if(is.na(bd_df)) 'NA' else bd_df}"),
+    stratum_informative  = glue::glue(
+      "n_strata={length(mats_inf)}; excluded={paste(strata_excl, collapse=',')}"),
+    stringsAsFactors = FALSE
+  )
+}
+
+# --- Build the enc-level SOURCE sets for both windows ---
+enc_whole <- enc_full |> dplyr::rename(SOURCE_analytic = SOURCE_analytic)  # already has it
+enc_post  <- enc_full |> dplyr::filter(post_anchor == 1L)
+
+# Build addr-only sensitivity set (replace modal-encounter reassigned rows with Claims_unresolved)
+enc_whole_addr <- enc_whole |>
+  dplyr::mutate(SOURCE_analytic = dplyr::if_else(
+    source_reassign_method == "modal_encounter", "Claims_unresolved", SOURCE_analytic))
+enc_post_addr <- enc_post |>
+  dplyr::mutate(SOURCE_analytic = dplyr::if_else(
+    source_reassign_method == "modal_encounter", "Claims_unresolved", SOURCE_analytic))
+
+# Build FLM-as-stratum sensitivity sets
+enc_whole_flm <- build_flm_sensitivity_set(enc_whole, CONFIG)
+enc_post_flm  <- build_flm_sensitivity_set(enc_post, CONFIG)
+
+# --- Sheet: BY_SOURCE_enc ---
+message("  Building BY_SOURCE_enc ...")
+by_src_enc_whole <- build_by_source_sheet(enc_whole, "Whole record")
+by_src_enc_post  <- build_by_source_sheet(enc_post,  "Post-anchor")
+mh_enc_whole     <- compute_mh_breslow(enc_whole, "Whole record", level = "enc")
+mh_enc_post      <- compute_mh_breslow(enc_post,  "Post-anchor",  level = "enc")
+by_src_enc_df    <- rbind(by_src_enc_whole, mh_enc_whole, by_src_enc_post, mh_enc_post)
+
+openxlsx::addWorksheet(wb, "BY_SOURCE_enc")
+openxlsx::writeData(wb, "BY_SOURCE_enc", by_src_enc_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "BY_SOURCE_enc", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(by_src_enc_df)))
+openxlsx::setColWidths(wb, "BY_SOURCE_enc", cols = seq_len(ncol(by_src_enc_df)), widths = 20)
+
+# --- Sheet: BY_SOURCE_pat ---
+message("  Building BY_SOURCE_pat ...")
+by_src_pat_whole <- build_by_source_pat_sheet(enc_whole, cbc_events, anchors, "whole", "Whole record")
+by_src_pat_post  <- build_by_source_pat_sheet(enc_post,  cbc_events, anchors, "post",  "Post-anchor")
+mh_pat_whole     <- compute_mh_breslow(
+  enc_whole |> dplyr::left_join(compute_pat_source_165(enc_whole) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
+  "Whole record", level = "enc"
+)
+mh_pat_post <- compute_mh_breslow(
+  enc_post |> dplyr::left_join(compute_pat_source_165(enc_post) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
+  "Post-anchor", level = "enc"
+)
+by_src_pat_df <- rbind(by_src_pat_whole, mh_pat_whole, by_src_pat_post, mh_pat_post)
+
+openxlsx::addWorksheet(wb, "BY_SOURCE_pat")
+openxlsx::writeData(wb, "BY_SOURCE_pat", by_src_pat_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "BY_SOURCE_pat", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(by_src_pat_df)))
+openxlsx::setColWidths(wb, "BY_SOURCE_pat", cols = seq_len(ncol(by_src_pat_df)), widths = 20)
+
+# --- Sheet: BY_SOURCE_enc_addr (sensitivity: address-only reassignment) ---
+message("  Building BY_SOURCE_enc_addr ...")
+by_src_enc_addr_whole <- build_by_source_sheet(enc_whole_addr, "Whole record")
+by_src_enc_addr_post  <- build_by_source_sheet(enc_post_addr,  "Post-anchor")
+mh_enc_addr_whole <- compute_mh_breslow(enc_whole_addr, "Whole record", level = "enc")
+mh_enc_addr_post  <- compute_mh_breslow(enc_post_addr,  "Post-anchor",  level = "enc")
+by_src_enc_addr_df <- rbind(by_src_enc_addr_whole, mh_enc_addr_whole,
+                             by_src_enc_addr_post,  mh_enc_addr_post)
+
+openxlsx::addWorksheet(wb, "BY_SOURCE_enc_addr")
+openxlsx::writeData(wb, "BY_SOURCE_enc_addr", by_src_enc_addr_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "BY_SOURCE_enc_addr", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(by_src_enc_addr_df)))
+openxlsx::setColWidths(wb, "BY_SOURCE_enc_addr", cols = seq_len(ncol(by_src_enc_addr_df)), widths = 20)
+
+# --- Sheet: BY_SOURCE_pat_addr (sensitivity: address-only, patient level) ---
+message("  Building BY_SOURCE_pat_addr ...")
+by_src_pat_addr_whole <- build_by_source_pat_sheet(enc_whole_addr, cbc_events, anchors, "whole", "Whole record")
+by_src_pat_addr_post  <- build_by_source_pat_sheet(enc_post_addr,  cbc_events, anchors, "post",  "Post-anchor")
+by_src_pat_addr_df <- rbind(by_src_pat_addr_whole, by_src_pat_addr_post)
+
+openxlsx::addWorksheet(wb, "BY_SOURCE_pat_addr")
+openxlsx::writeData(wb, "BY_SOURCE_pat_addr", by_src_pat_addr_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "BY_SOURCE_pat_addr", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(by_src_pat_addr_df)))
+openxlsx::setColWidths(wb, "BY_SOURCE_pat_addr", cols = seq_len(ncol(by_src_pat_addr_df)), widths = 20)
+
+# --- Sheet: SOURCE_REASSIGN_QC ---
+message("  Building SOURCE_REASSIGN_QC ...")
+qc_method_df <- enc_full |>
+  dplyr::count(source_reassign_method, name = "n_encounters") |>
+  dplyr::left_join(
+    enc_full |>
+      dplyr::group_by(source_reassign_method) |>
+      dplyr::summarise(n_patients_with_method = dplyr::n_distinct(ID), .groups = "drop"),
+    by = "source_reassign_method"
+  )
+n_claims_total <- sum(enc_full$SOURCE_raw %in% CONFIG$claims_source_codes)
+qc_method_df <- qc_method_df |>
+  dplyr::mutate(
+    pct_of_claims_enc     = dplyr::if_else(
+      n_claims_total > 0,
+      sprintf("%.1f%%", n_encounters / n_claims_total * 100),
+      NA_character_
+    ),
+    n_encounters          = suppress_display(n_encounters),
+    n_patients_with_method = suppress_display(n_patients_with_method)
+  )
+
+# Sub-table: distribution of SOURCE_analytic for reassigned encounters
+reassigned_src_dist <- enc_full |>
+  dplyr::filter(source_reassigned == 1L) |>
+  dplyr::count(SOURCE_analytic, name = "n_reassigned_enc") |>
+  dplyr::arrange(dplyr::desc(n_reassigned_enc)) |>
+  dplyr::mutate(n_reassigned_enc = suppress_display(n_reassigned_enc))
+
+openxlsx::addWorksheet(wb, "SOURCE_REASSIGN_QC")
+openxlsx::writeData(wb, "SOURCE_REASSIGN_QC", qc_method_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "SOURCE_REASSIGN_QC", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(qc_method_df)))
+openxlsx::writeData(wb, "SOURCE_REASSIGN_QC",
+  data.frame(Label = "SOURCE_analytic distribution for reassigned encounters only (source_reassigned==1)"),
+  startRow = nrow(qc_method_df) + 3L, startCol = 1L)
+openxlsx::addStyle(wb, "SOURCE_REASSIGN_QC", style = section_style,
+                   rows = nrow(qc_method_df) + 3L, cols = 1L)
+openxlsx::writeData(wb, "SOURCE_REASSIGN_QC", reassigned_src_dist,
+                    startRow = nrow(qc_method_df) + 4L, startCol = 1L,
+                    headerStyle = bold_style)
+openxlsx::setColWidths(wb, "SOURCE_REASSIGN_QC", cols = seq_len(ncol(qc_method_df)), widths = 28)
+
+# --- Sheet: BY_SOURCE_enc_flm (FLM as own stratum — no reassignment) ---
+message("  Building BY_SOURCE_enc_flm ...")
+by_src_enc_flm_whole <- build_by_source_sheet(enc_whole_flm, "Whole record")
+by_src_enc_flm_post  <- build_by_source_sheet(enc_post_flm,  "Post-anchor")
+mh_enc_flm_whole <- compute_mh_breslow(enc_whole_flm, "Whole record", level = "enc")
+mh_enc_flm_post  <- compute_mh_breslow(enc_post_flm,  "Post-anchor",  level = "enc")
+by_src_enc_flm_df <- rbind(by_src_enc_flm_whole, mh_enc_flm_whole,
+                            by_src_enc_flm_post,  mh_enc_flm_post)
+
+openxlsx::addWorksheet(wb, "BY_SOURCE_enc_flm")
+openxlsx::writeData(wb, "BY_SOURCE_enc_flm", by_src_enc_flm_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "BY_SOURCE_enc_flm", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(by_src_enc_flm_df)))
+openxlsx::setColWidths(wb, "BY_SOURCE_enc_flm", cols = seq_len(ncol(by_src_enc_flm_df)), widths = 20)
+
+# --- Sheet: BY_SOURCE_pat_flm (FLM as own stratum, patient level) ---
+message("  Building BY_SOURCE_pat_flm ...")
+by_src_pat_flm_whole <- build_by_source_pat_sheet(enc_whole_flm, cbc_events, anchors, "whole", "Whole record")
+by_src_pat_flm_post  <- build_by_source_pat_sheet(enc_post_flm,  cbc_events, anchors, "post",  "Post-anchor")
+by_src_pat_flm_df <- rbind(by_src_pat_flm_whole, by_src_pat_flm_post)
+
+openxlsx::addWorksheet(wb, "BY_SOURCE_pat_flm")
+openxlsx::writeData(wb, "BY_SOURCE_pat_flm", by_src_pat_flm_df, startRow = 1, startCol = 1,
+                    headerStyle = uf_header_style)
+openxlsx::addStyle(wb, "BY_SOURCE_pat_flm", style = uf_header_style, rows = 1,
+                   cols = seq_len(ncol(by_src_pat_flm_df)))
+openxlsx::setColWidths(wb, "BY_SOURCE_pat_flm", cols = seq_len(ncol(by_src_pat_flm_df)), widths = 20)
+
+# ==============================================================================
+# SECTION 7a: KEY SHEET — append Phase 192.3 source-stratification notes ----
+# ==============================================================================
+
+key_additional <- data.frame(
+  Field = c(
+    "Phase 192.3 — BY_SOURCE sheets",
+    "BY_SOURCE_enc / BY_SOURCE_pat",
+    "BY_SOURCE_enc_addr / BY_SOURCE_pat_addr",
+    "BY_SOURCE_enc_flm / BY_SOURCE_pat_flm",
+    "SOURCE_REASSIGN_QC",
+    "Claims_unresolved",
+    "FLM reassignment rationale",
+    "MH pooled OR"
+  ),
+  Value = c(
+    "Seven new sheets stratify the distance >100 mi x CBC association by analytic SOURCE (data partner site).",
+    paste0("BY_SOURCE_enc uses modal encounter SOURCE as step-2 reassignment fallback; BY_SOURCE_enc_addr ",
+           "treats those rows as Claims_unresolved (address reassignment only). Denominators are identical."),
+    "Sensitivity: address-only reassignment (modal_encounter rows relabelled Claims_unresolved). Same denominator.",
+    paste0("BY_SOURCE_enc_flm keeps FLM encounters as their own stratum (no reassignment applied). ",
+           "Tests the CBC-captured-outside-our-system hypothesis directly. ",
+           "BY_SOURCE_pat_flm: patient-level version of BY_SOURCE_enc_flm; FLM kept as own stratum."),
+    "Counts of encounters by reassignment method (address / modal_encounter / unresolved / not_reassigned); also SOURCE_analytic distribution for reassigned encounters.",
+    "FLM encounters that could not be reassigned to a non-claims address SOURCE and have no non-claims encounters in enc_all.",
+    paste0("FLM = Florida Medicaid administrative claims feed. Address SOURCE is the in-effect residential ",
+           "address at ADMIT_DATE (interval match first, then recency fallback). Modal fallback uses ",
+           "non-claims enc_all encounters. CONFIG$claims_source_codes = c('FLM')."),
+    "Mantel-Haenszel pooled OR excludes Claims_unresolved and strata with zero row or column. Breslow-Day (Tarone-corrected) tests homogeneity."
+  ),
+  stringsAsFactors = FALSE
+)
+openxlsx::writeData(wb, "KEY", key_additional, startRow = nrow(key_df) + 2L, startCol = 1L,
+                    colNames = FALSE)
+
+# ==============================================================================
+# SECTION 8: SAVE WORKBOOK ----
 # ==============================================================================
 
 out_path <- file.path(
@@ -872,7 +1356,76 @@ openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
 message(glue("  Workbook saved: {out_path}"))
 
 # ==============================================================================
-# SECTION 8: SESSION / RUNTIME ----
+# SECTION 8a: REGRESSION CHECK (D-11) ----
+# Pre-existing sheets must match prior dated workbook cell-by-cell as character.
+# Excludes KEY sheet and cells matching ISO date pattern.
+# Reads back from the actual written workbook file (not in-memory objects).
+# ==============================================================================
+
+PRIOR_WB_PATH <- Sys.getenv(
+  "R1923_PRIOR_DIST_CBC_WB",
+  unset = file.path(CONFIG$output_dir, "distance_cbc_association_20261008.xlsx")
+)
+if (!file.exists(PRIOR_WB_PATH)) {
+  stop("[R/165] Prior workbook for regression check not found: ", PRIOR_WB_PATH,
+       "\nSet env var R1923_PRIOR_DIST_CBC_WB to the correct path.")
+}
+
+prior_sheet_names <- openxlsx::getSheetNames(PRIOR_WB_PATH)
+message("[R/165] Regression check: prior workbook sheets: ",
+        paste(prior_sheet_names, collapse = ", "))
+
+# Sheets to compare: all pre-existing sheets except KEY
+sheets_to_check <- setdiff(prior_sheet_names, "KEY")
+
+regression_pass  <- TRUE
+regression_diffs <- character(0)
+
+for (sht in sheets_to_check) {
+  prior_df   <- openxlsx::read.xlsx(PRIOR_WB_PATH, sheet = sht, colNames = TRUE)
+  current_df <- openxlsx::read.xlsx(out_path,       sheet = sht, colNames = TRUE)
+
+  if (!identical(dim(prior_df), dim(current_df))) {
+    regression_pass <- FALSE
+    regression_diffs <- c(regression_diffs,
+      glue::glue("FAIL: sheet '{sht}' dims differ: prior={nrow(prior_df)}x{ncol(prior_df)},",
+                 " new={nrow(current_df)}x{ncol(current_df)}"))
+    next
+  }
+  if (!identical(names(prior_df), names(current_df))) {
+    regression_pass <- FALSE
+    regression_diffs <- c(regression_diffs,
+      glue::glue("FAIL: sheet '{sht}' column names differ"))
+    next
+  }
+  for (col in names(prior_df)) {
+    pv <- as.character(prior_df[[col]])
+    cv <- as.character(current_df[[col]])
+    for (i in seq_along(pv)) {
+      p_val <- if (is.na(pv[i])) NA_character_ else pv[i]
+      c_val <- if (is.na(cv[i])) NA_character_ else cv[i]
+      # Exclude run-date cells (ISO date pattern)
+      if (!is.na(p_val) && grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}", p_val)) next
+      if (!identical(p_val, c_val)) {
+        regression_pass <- FALSE
+        regression_diffs <- c(regression_diffs,
+          glue::glue("FAIL: sheet '{sht}' row {i} col '{col}': prior='{p_val}' new='{c_val}'"))
+      }
+    }
+  }
+}
+
+if (!regression_pass) {
+  stop(
+    "[R/165] REGRESSION CHECK FAILED.\n",
+    paste(regression_diffs, collapse = "\n"),
+    "\nManual sign-off required."
+  )
+}
+message("[R/165] Regression check PASSED — all pre-existing sheets match prior workbook cell-by-cell.")
+
+# ==============================================================================
+# SECTION 9: SESSION / RUNTIME ----
 # ==============================================================================
 
 RUN_ELAPSED <- proc.time() - RUN_START

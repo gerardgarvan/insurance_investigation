@@ -232,6 +232,13 @@ CONFIG <- list(
 # Cutoff for far_from_care_100mi. Single source of truth for R/163 and R/165.
 CONFIG$far_from_care_cutoff_mi <- 100
 
+# Phase 192.3: SOURCE codes triggering claims reassignment in assign_analytic_source().
+# Values confirmed by step-0 probe (192.3-01-SUMMARY.md, D-192.3-05).
+# FLM = Florida Medicaid administrative claims feed — only claims/payer-based partner in this extract.
+CONFIG$claims_source_codes   <- c("FLM")
+# no Medicare SOURCE code exists in this extract; retained for documentation
+CONFIG$medicare_source_codes <- character(0)
+
 # Method selected by the team (D-165-01). NA until decided; R/165 refuses to
 # run while NA. Set to one of: "gee", "rao_scott", "patient_fisher".
 CONFIG$distance_assoc_method   <- "rao_scott"  # D-165-01: 2026-10-08
