@@ -1,42 +1,37 @@
 {
   "version": "1.0",
-  "timestamp": "2026-10-29T15:15:17.550Z",
-  "phase": "193",
-  "phase_name": "Produce Updated Manual",
-  "phase_dir": ".planning/phases/193-produce-updated-manual",
-  "plan": 1,
+  "timestamp": "2026-11-04T19:02:11.387Z",
+  "phase": "192.3",
+  "phase_name": "distance-100-mi-vs-cbc-stratified-by-source-medicare-reassigned-to-address-source",
+  "phase_dir": ".planning/phases/192.3-distance-100-mi-vs-cbc-stratified-by-source-medicare-reassigned-to-address-source",
+  "plan": 2,
   "task": 0,
-  "total_tasks": 10,
+  "total_tasks": 7,
   "status": "paused",
-  "completed_tasks": [],
+  "completed_tasks": [
+    {"id": "01-T1", "name": "Write R/192_source_step0_probe.R", "status": "done", "commit": "849c5a0"},
+    {"id": "01-T2", "name": "Checkpoint: paste step-0 console output + record D-192.3-01/02/05", "status": "done", "commit": "560e25d"}
+  ],
   "remaining_tasks": [
-    {"id": 1, "name": "193-01 Task 0: Preflight inventory script + 193-PREFLIGHT.md", "status": "not_started"},
-    {"id": 2, "name": "193-01 Task 1: am_manual_lib.py — lxml helpers, ID scanner, anchor matcher", "status": "not_started"},
-    {"id": 3, "name": "193-02 Task 0: build_operations() + 193-OPERATIONS.json (manifest + D-34 strip + anchor dry-run)", "status": "not_started"},
-    {"id": 4, "name": "193-02 Task 1: Anchor resolution — ANCHOR-FAILED gate", "status": "not_started"},
-    {"id": 5, "name": "193-03 Task 0: Tracked-change builders + reject-all unit tests", "status": "not_started"},
-    {"id": 6, "name": "193-03 Task 1: apply_operations() → AnalyticManual_2026.10.29.docx + c0/c1 replies + SHA guards", "status": "not_started"},
-    {"id": 7, "name": "193-04 Task 0: manual-export subcommand + regression check vs export", "status": "not_started"},
-    {"id": 8, "name": "193-04 Task 1: D-15 QA suite + am_evidence_*.xlsx + AUTOMATED-QA-PASSED in STATE.md", "status": "not_started"},
-    {"id": 9, "name": "193-05 Task 0: Human Word review checkpoint (D-16)", "status": "not_started"},
-    {"id": 10, "name": "193-05 Task 1: Record WORD-REVIEW-APPROVED in STATE.md", "status": "not_started"}
+    {"id": "02-T1", "name": "Add assign_analytic_source() to utils_distance_cbc.R", "status": "not_started"},
+    {"id": "02-T2a", "name": "Update CONFIG keys + R/165 call site + SOURCE column scan", "status": "not_started"},
+    {"id": "02-T2b", "name": "New sheet builders in R/165 + regression check", "status": "not_started"},
+    {"id": "02-T3", "name": "Update R/88 Section 15ar assertion (5->12 sheets)", "status": "not_started"},
+    {"id": "03-T1", "name": "R/181 SOURCE stratification + assign_analytic_source() reuse", "status": "not_started"},
+    {"id": "03-T2", "name": "R/181 new sheet builders + regression check", "status": "not_started"}
   ],
   "blockers": [],
-  "human_actions_pending": [
-    {
-      "action": "Human Word review of AnalyticManual_<date>.docx in Microsoft Word",
-      "context": "D-16 gate: confirm file opens without repair prompt, tracked changes visible and attributed to Gerard Garvan, accept/reject works on a sample, c0/c1 replies appear under Amy's comments (or fallback labelled), no layout damage on changed pages. This is Plan 05 Task 0.",
-      "blocking": true
-    }
-  ],
+  "human_actions_pending": [],
   "decisions": [
-    {"decision": "Research confirmed §8 has no existing table — must insert a new tracked table, not rows into an existing table", "rationale": "Live DOCX inspection by researcher agent", "phase": "193"},
-    {"decision": "All threading DOCX parts present (commentsExtended.xml etc.) — no new content-type registrations needed", "rationale": "Live DOCX inspection by researcher agent", "phase": "193"},
-    {"decision": "Existing w:id space is {0,1}; new revision IDs start at 2", "rationale": "Verified by researcher agent", "phase": "193"},
-    {"decision": "Max w14:paraId is 7FF8A73E; new paraIds start at 7FF8A740", "rationale": "Verified by researcher agent", "phase": "193"},
-    {"decision": "c0 paraId = 4AFA1B64, c1 paraId = 0EC496CC — used as w15:paraIdParent for threaded replies", "rationale": "Verified from live commentsExtended.xml by researcher", "phase": "193"}
+    {"decision": "D-192.3-01: All 15 ENCOUNTER SOURCE codes are data partner institution codes — no Medicare SOURCE exists; CONFIG$medicare_source_codes = character(0)", "rationale": "Step-0 probe confirmed", "phase": "192.3"},
+    {"decision": "D-192.3-02: LDS_ADDRESS_HISTORY 14 institution SOURCE codes; missing/blank SOURCE = 0; 4810 patients with overlapping address periods", "rationale": "Step-0 probe section (b)", "phase": "192.3"},
+    {"decision": "D-192.3-05: CONFIG$claims_source_codes = c('FLM'); modal fallback from non-claims encounters only; method label 'Claims_unresolved'; sensitivity sheets BY_SOURCE_pat_flm / BY_SOURCE_enc_flm", "rationale": "FLM = Florida Medicaid claims feed — only claims-based partner in extract. Option A.", "phase": "192.3"},
+    {"decision": "assign_analytic_source(enc, enc_all, addr_full, config): select in-effect address row FIRST then check SOURCE quality; modal from enc_all not enc", "rationale": "Plan 02 design", "phase": "192.3"},
+    {"decision": "Existing R/165 sheets keep SOURCE_raw + modal_source_fn; new BY_SOURCE_* sheets use SOURCE_analytic", "rationale": "Regression check integrity", "phase": "192.3"},
+    {"decision": "R/88 Section 15ar sheet count 5->12 (5 original + 5 SOURCE + 2 flm sensitivity)", "rationale": "New workbook structure", "phase": "192.3"},
+    {"decision": "Plan 03 drops BY_SOURCE_enc/enc_addr (no encounter-level CBC); adds BY_SOURCE_pat_flm only", "rationale": "R/181 is patient-level", "phase": "192.3"}
   ],
   "uncommitted_files": [],
-  "next_action": "Run /gsd:execute-phase 193 — starts Wave 1 (193-01): preflight inventory script writing 193-PREFLIGHT.md then am_manual_lib.py with lxml helpers",
-  "context_notes": "Phase 193 planning completed this session. 5 plans across 5 sequential waves: preflight → manifest → insertion engine → evidence workbook → human review. All plans verified clean (all 10 dimensions passed by gsd-plan-checker). Research confirmed key structural facts about the live DOCX. No execution has started. The docx skill was not found in skills directories; 193-RESEARCH.md OOXML patterns are the executor's authoritative reference. Plans are fully autonomous through Wave 4; Wave 5 (Plan 05) requires a human Word checkpoint."
+  "next_action": "Run /gsd:execute-phase 192.3 --wave 2 to execute Plan 02 (assign_analytic_source + R/165 SOURCE stratification). All decisions resolved, plans revised.",
+  "context_notes": "Plan 01 complete. D-192.3-05 closed (claims_source_codes=FLM). Plans 02 and 03 revised with all decisions incorporated. No blockers. Clean working tree (pre-existing untracked files are not phase-related)."
 }
