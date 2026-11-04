@@ -288,7 +288,8 @@ assign_analytic_source <- function(enc, enc_all, addr_full, config) {
     dplyr::filter(!SOURCE %in% config$claims_source_codes,
                   !is.na(SOURCE), trimws(SOURCE) != "") |>
     dplyr::group_by(ID, SOURCE) |>
-    dplyr::summarise(n = dplyr::n(), last_date = max(ADMIT_DATE, na.rm = TRUE),
+    dplyr::summarise(n = dplyr::n(),
+                     last_date = if (all(is.na(ADMIT_DATE))) as.Date(NA_character_) else max(ADMIT_DATE, na.rm = TRUE),
                      .groups = "drop") |>
     dplyr::group_by(ID) |>
     dplyr::slice_max(order_by = n, n = 1L, with_ties = TRUE) |>

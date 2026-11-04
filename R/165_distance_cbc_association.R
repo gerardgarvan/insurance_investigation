@@ -1249,12 +1249,16 @@ qc_method_df <- enc_full |>
 n_claims_total <- sum(enc_full$SOURCE_raw %in% CONFIG$claims_source_codes)
 qc_method_df <- qc_method_df |>
   dplyr::mutate(
-    pct_of_claims_enc     = dplyr::if_else(
-      n_claims_total > 0,
-      sprintf("%.1f%%", n_encounters / n_claims_total * 100),
-      NA_character_
-    ),
-    n_encounters          = suppress_display(n_encounters),
+    pct_of_claims_enc = if (n_claims_total > 0) {
+      dplyr::if_else(
+        n_encounters >= 1L & n_encounters <= 10L,
+        "<11",
+        sprintf("%.1f%%", n_encounters / n_claims_total * 100)
+      )
+    } else {
+      rep(NA_character_, dplyr::n())
+    },
+    n_encounters           = suppress_display(n_encounters),
     n_patients_with_method = suppress_display(n_patients_with_method)
   )
 
