@@ -871,18 +871,15 @@ message(glue("    Both   : {fmt_sup(n_both)}"))
   close_pcornet_con()
 
   # 6960-alone count: remove key "6960" from $icd9 and re-run
-  doi_map_no6960 <- DOI_CODE_MAP
-  doi_map_no6960[["icd9"]] <- doi_map_no6960[["icd9"]][doi_map_no6960[["icd9"]] != "6960"]
-  # summarise_autoimmune_dx uses DOI_CODE_MAP from environment; override via local copy
-  # We call it directly with the modified map by temporarily overriding the global (see below).
-  # Safer approach: use a wrapper that accepts an explicit code map argument.
-  # summarise_autoimmune_dx() reads DOI_CODE_MAP from its enclosing environment (utils_doi.R).
-  # Temporarily replace it, run, restore. Flag as intended transient override.
-  .doi_backup <- DOI_CODE_MAP
-  DOI_CODE_MAP <<- doi_map_no6960   # nolint: global assignment intentional for sensitivity run
+  # summarise_autoimmune_dx() reads AUTOIMMUNE_DX_CODES from its environment.
+  # Temporarily replace it, run, restore.
+  adx_no6960 <- AUTOIMMUNE_DX_CODES
+  adx_no6960[["icd9"]] <- adx_no6960[["icd9"]][names(adx_no6960[["icd9"]]) != "6960"]
+  .adx_backup <- AUTOIMMUNE_DX_CODES
+  AUTOIMMUNE_DX_CODES <<- adx_no6960   # nolint: global assignment intentional for sensitivity run
   flags_no6960 <- summarise_autoimmune_dx(dx_sens, cohort_ids_vec, sentinel = SENTINEL_CUTOFF)
-  DOI_CODE_MAP <<- .doi_backup      # restore
-  rm(.doi_backup)
+  AUTOIMMUNE_DX_CODES <<- .adx_backup  # restore
+  rm(.adx_backup)
 
   n_flip_6960 <- dplyr::inner_join(full_flags, flags_no6960 |> dplyr::select(ID, has_autoimmune_dx_no6960 = has_autoimmune_dx), by = "ID") |>
     dplyr::filter(has_autoimmune_dx_full == TRUE, has_autoimmune_dx_no6960 == FALSE) |>
@@ -890,13 +887,13 @@ message(glue("    Both   : {fmt_sup(n_both)}"))
   message(glue("  D-192.2-04: {fmt_sup(n_flip_6960)} patients flagged only by key 6960 (psoriatic arthropathy / 696.0)"))
 
   # Broader-only count: remove 4460 and 6944 from $icd9
-  doi_map_no_broader <- DOI_CODE_MAP
-  doi_map_no_broader[["icd9"]] <- doi_map_no_broader[["icd9"]][!doi_map_no_broader[["icd9"]] %in% c("4460", "6944")]
-  .doi_backup2 <- DOI_CODE_MAP
-  DOI_CODE_MAP <<- doi_map_no_broader
+  adx_no_broader <- AUTOIMMUNE_DX_CODES
+  adx_no_broader[["icd9"]] <- adx_no_broader[["icd9"]][!names(adx_no_broader[["icd9"]]) %in% c("4460", "6944")]
+  .adx_backup2 <- AUTOIMMUNE_DX_CODES
+  AUTOIMMUNE_DX_CODES <<- adx_no_broader
   flags_no_broader <- summarise_autoimmune_dx(dx_sens, cohort_ids_vec, sentinel = SENTINEL_CUTOFF)
-  DOI_CODE_MAP <<- .doi_backup2
-  rm(.doi_backup2)
+  AUTOIMMUNE_DX_CODES <<- .adx_backup2
+  rm(.adx_backup2)
 
   n_flip_broader <- dplyr::inner_join(full_flags, flags_no_broader |> dplyr::select(ID, has_autoimmune_dx_no_broader = has_autoimmune_dx), by = "ID") |>
     dplyr::filter(has_autoimmune_dx_full == TRUE, has_autoimmune_dx_no_broader == FALSE) |>
@@ -904,7 +901,7 @@ message(glue("    Both   : {fmt_sup(n_both)}"))
   message(glue("  Broader ICD-9 (4460/6944) alone: {fmt_sup(n_flip_broader)} patients"))
 
   rm(dx_sens, cohort_ids_vec, full_flags, flags_no6960, flags_no_broader,
-     doi_map_no6960, doi_map_no_broader, n_flip_6960, n_flip_broader)
+     adx_no6960, adx_no_broader, n_flip_6960, n_flip_broader)
 }
 
 
