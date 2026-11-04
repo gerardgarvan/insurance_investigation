@@ -322,7 +322,9 @@ if (d08_branch == "JOIN") {
 }
 
 # Remove comparison-only objects from memory
-rm(new_build_char, snap_char, new_orig, pin_orig, new_sorted, pin_sorted, new_keys, pin_keys)
+rm(new_build_char, snap_char, new_orig, pin_orig, new_keys, pin_keys)
+if (exists("new_sorted")) rm(new_sorted)
+if (exists("pin_sorted")) rm(pin_sorted)
 if (exists("new_build_typed") && d08_branch != "JOIN") rm(new_build_typed)
 
 ## 2.2 Load gantt ----------------------------------------------------------
