@@ -559,8 +559,11 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
       enc_cc <- dplyr::mutate(enc_cc,
         PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY))
 
-    # Build formula dynamically based on available covariates
-    sens_covariates <- c("ruca_category", if (has_payer) "PAYER_CATEGORY_PRIMARY", "SOURCE_raw")
+    # Build formula dynamically based on available covariates.
+    # Alias SOURCE_raw -> SOURCE so coefficient labels match the 20261008 baseline (SOURCE_xxx).
+    enc_cc <- enc_cc |> dplyr::mutate(SOURCE = SOURCE_raw)
+    enc_cc <- enc_cc |> dplyr::mutate(SOURCE = factor(SOURCE))
+    sens_covariates <- c("ruca_category", if (has_payer) "PAYER_CATEGORY_PRIMARY", "SOURCE")
     sens_formula <- as.formula(
       paste("cbc_in_encounter ~ far_from_care_100mi +", paste(sens_covariates, collapse = " + "))
     )
@@ -1112,12 +1115,17 @@ compute_mh_breslow <- function(enc_ws, window_label, level = "enc") {
         far = c("0","1"), cbc = c("0","1"), stratum = names(mats_inf)
       )
     )
+    storage.mode(arr) <- "double"   # prevent integer overflow in mantelhaen.test s.x*s.y products
     mh_res <- tryCatch(stats::mantelhaen.test(arr), error = function(e) NULL)
     if (!is.null(mh_res)) {
       mh_or    <- mh_res$estimate
       mh_ci_lo <- mh_res$conf.int[1]
       mh_ci_hi <- mh_res$conf.int[2]
       mh_p     <- mh_res$p.value
+      stopifnot(
+        "MH OR/CI/p are non-finite despite >= 2 informative strata" =
+          all(is.finite(c(mh_or, mh_ci_lo, mh_ci_hi, mh_p)))
+      )
     }
     # Breslow-Day (Tarone correction)
     bd_res <- tryCatch({
@@ -1173,6 +1181,8 @@ enc_post_flm  <- build_flm_sensitivity_set(enc_post, CONFIG)
 
 # --- Sheet: BY_SOURCE_enc ---
 message("  Building BY_SOURCE_enc ...")
+stopifnot("SOURCE_analytic missing from enc_whole" = "SOURCE_analytic" %in% names(enc_whole))
+stopifnot("SOURCE_analytic missing from enc_post"  = "SOURCE_analytic" %in% names(enc_post))
 by_src_enc_whole <- build_by_source_sheet(enc_whole, "Whole record")
 by_src_enc_post  <- build_by_source_sheet(enc_post,  "Post-anchor")
 mh_enc_whole     <- compute_mh_breslow(enc_whole, "Whole record", level = "enc")
@@ -1188,14 +1198,21 @@ openxlsx::setColWidths(wb, "BY_SOURCE_enc", cols = seq_len(ncol(by_src_enc_df)),
 
 # --- Sheet: BY_SOURCE_pat ---
 message("  Building BY_SOURCE_pat ...")
+stopifnot("SOURCE_analytic missing from enc_whole (pat)" = "SOURCE_analytic" %in% names(enc_whole))
+stopifnot("SOURCE_analytic missing from enc_post (pat)"  = "SOURCE_analytic" %in% names(enc_post))
 by_src_pat_whole <- build_by_source_pat_sheet(enc_whole, cbc_events, anchors, "whole", "Whole record")
 by_src_pat_post  <- build_by_source_pat_sheet(enc_post,  cbc_events, anchors, "post",  "Post-anchor")
-mh_pat_whole     <- compute_mh_breslow(
-  enc_whole |> dplyr::left_join(compute_pat_source_165(enc_whole) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
+# Drop enc-level SOURCE_analytic before joining pat-level SOURCE_analytic to avoid column collision
+mh_pat_whole <- compute_mh_breslow(
+  enc_whole |>
+    dplyr::select(-SOURCE_analytic) |>
+    dplyr::left_join(compute_pat_source_165(enc_whole) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
   "Whole record", level = "enc"
 )
 mh_pat_post <- compute_mh_breslow(
-  enc_post |> dplyr::left_join(compute_pat_source_165(enc_post) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
+  enc_post |>
+    dplyr::select(-SOURCE_analytic) |>
+    dplyr::left_join(compute_pat_source_165(enc_post) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
   "Post-anchor", level = "enc"
 )
 by_src_pat_df <- rbind(by_src_pat_whole, mh_pat_whole, by_src_pat_post, mh_pat_post)
@@ -1209,6 +1226,8 @@ openxlsx::setColWidths(wb, "BY_SOURCE_pat", cols = seq_len(ncol(by_src_pat_df)),
 
 # --- Sheet: BY_SOURCE_enc_addr (sensitivity: address-only reassignment) ---
 message("  Building BY_SOURCE_enc_addr ...")
+stopifnot("SOURCE_analytic missing from enc_whole_addr" = "SOURCE_analytic" %in% names(enc_whole_addr))
+stopifnot("SOURCE_analytic missing from enc_post_addr"  = "SOURCE_analytic" %in% names(enc_post_addr))
 by_src_enc_addr_whole <- build_by_source_sheet(enc_whole_addr, "Whole record")
 by_src_enc_addr_post  <- build_by_source_sheet(enc_post_addr,  "Post-anchor")
 mh_enc_addr_whole <- compute_mh_breslow(enc_whole_addr, "Whole record", level = "enc")
@@ -1286,6 +1305,8 @@ openxlsx::setColWidths(wb, "SOURCE_REASSIGN_QC", cols = seq_len(ncol(qc_method_d
 
 # --- Sheet: BY_SOURCE_enc_flm (FLM as own stratum — no reassignment) ---
 message("  Building BY_SOURCE_enc_flm ...")
+stopifnot("SOURCE_analytic missing from enc_whole_flm" = "SOURCE_analytic" %in% names(enc_whole_flm))
+stopifnot("SOURCE_analytic missing from enc_post_flm"  = "SOURCE_analytic" %in% names(enc_post_flm))
 by_src_enc_flm_whole <- build_by_source_sheet(enc_whole_flm, "Whole record")
 by_src_enc_flm_post  <- build_by_source_sheet(enc_post_flm,  "Post-anchor")
 mh_enc_flm_whole <- compute_mh_breslow(enc_whole_flm, "Whole record", level = "enc")
