@@ -808,15 +808,33 @@ if (file.exists(COHORT_RDS)) {
 # left-joined so every episode row (including HL and Death pseudo-rows) carries
 # the patient's flag value. Row count asserted unchanged.
 
-# Step 0 (Phase 192.2): Save PRE1922 baselines BEFORE regenerating CSVs.
-# stop() (not warning()) if already exist — no overwrite.
+# Step 0 (Phase 192.2): Save PRE1922 baselines (the 192.1, 22-column outputs)
+# BEFORE regenerating CSVs. Re-run safe:
+#   - baseline already exists  -> keep it, never overwrite
+#   - baseline missing         -> copy from the live CSV, but ONLY if the live CSV
+#                                 is still a pre-192.2 file (no autoimmune_dx_code_system);
+#                                 otherwise stop — copying would save a post-192.2 file
+#                                 under the PRE1922 name.
+save_pre1922 <- function(src, dst) {
+  if (file.exists(dst)) {
+    message(glue("  PRE1922 baseline kept (exists): {dst}"))
+    return(invisible(FALSE))
+  }
+  if (!file.exists(src)) stop("[R/52] Cannot create PRE1922 baseline — source missing: ", src)
+  src_hdr <- names(read.csv(src, nrows = 1, check.names = FALSE))
+  if ("autoimmune_dx_code_system" %in% src_hdr) {
+    stop("[R/52] ", src, " is already a Phase 192.2 output; refusing to save it as ",
+         dst, ". Restore the 192.1 file (22 cols) or recover the baseline before re-running.")
+  }
+  dir.create(dirname(dst), showWarnings = FALSE, recursive = TRUE)
+  if (!file.copy(src, dst, overwrite = FALSE)) stop("[R/52] file.copy failed: ", dst)
+  message(glue("  PRE1922 baseline saved ({length(src_hdr)} cols): {dst}"))
+  invisible(TRUE)
+}
 pre1922_90  <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_PRE1922.csv")
 pre1922_180 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE1922.csv")
-if (file.exists(pre1922_90))  stop("[R/52] PRE1922 baseline already exists — delete manually before re-run: ", pre1922_90)
-if (file.exists(pre1922_180)) stop("[R/52] PRE1922 baseline already exists — delete manually before re-run: ", pre1922_180)
-file.copy(file.path(CONFIG$output_dir, "gantt_episodes.csv"),     pre1922_90,  overwrite = FALSE)
-file.copy(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), pre1922_180, overwrite = FALSE)
-message(glue("  PRE1922 baselines saved:\n    {pre1922_90}\n    {pre1922_180}"))
+save_pre1922(file.path(CONFIG$output_dir, "gantt_episodes.csv"),     pre1922_90)
+save_pre1922(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), pre1922_180)
 
 message("\n--- Building autoimmune diagnosis flags ---")
 
@@ -850,59 +868,35 @@ message(glue("    ICD-9  : {fmt_sup(n_icd9)}"))
 message(glue("    ICD-10 : {fmt_sup(n_icd10)}"))
 message(glue("    Both   : {fmt_sup(n_both)}"))
 
-# --- D-192.2-04: Broader ICD-9 code contribution counts ---
-# Expose the raw dx tibble from aim_full's internal DuckDB query for sensitivity counts.
-# Re-call summarise_autoimmune_dx() with modified code lists to count flip patients.
-# These counts inform the team decision on whether to include/drop broader ICD-9 codes.
-{
-  # The raw dx tibble used by build_autoimmune_dx_flags is not exposed directly.
-  # Re-query via open_pcornet_con() / duck_query() to get the same data.
-  # build_autoimmune_dx_flags already closed its connection; safe to open a new one.
-  cohort_ids_vec <- unique(episodes_export$patient_id)
-
-  # Full set result (reference) — already computed as aim_full
-  full_flags <- aim_full |>
-    dplyr::select(ID, has_autoimmune_dx_full = has_autoimmune_dx)
-
-  # Build dx for sensitivity analyses (re-query the same DIAGNOSIS table)
-  open_pcornet_con()
-  dx_sens <- DBI::dbGetQuery(pcornet_con, "SELECT ID, DX, DX_TYPE, DX_DATE, ADMIT_DATE FROM DIAGNOSIS") |>
-    dplyr::as_tibble()
-  close_pcornet_con()
-
-  # 6960-alone count: remove key "6960" from $icd9 and re-run
-  # summarise_autoimmune_dx() reads AUTOIMMUNE_DX_CODES from its environment.
-  # Temporarily replace it, run, restore.
-  adx_no6960 <- AUTOIMMUNE_DX_CODES
-  adx_no6960[["icd9"]] <- adx_no6960[["icd9"]][names(adx_no6960[["icd9"]]) != "6960"]
-  .adx_backup <- AUTOIMMUNE_DX_CODES
-  AUTOIMMUNE_DX_CODES <<- adx_no6960   # nolint: global assignment intentional for sensitivity run
-  flags_no6960 <- summarise_autoimmune_dx(dx_sens, cohort_ids_vec, sentinel = SENTINEL_CUTOFF)
-  AUTOIMMUNE_DX_CODES <<- .adx_backup  # restore
-  rm(.adx_backup)
-
-  n_flip_6960 <- dplyr::inner_join(full_flags, flags_no6960 |> dplyr::select(ID, has_autoimmune_dx_no6960 = has_autoimmune_dx), by = "ID") |>
-    dplyr::filter(has_autoimmune_dx_full == TRUE, has_autoimmune_dx_no6960 == FALSE) |>
-    nrow()
-  message(glue("  D-192.2-04: {fmt_sup(n_flip_6960)} patients flagged only by key 6960 (psoriatic arthropathy / 696.0)"))
-
-  # Broader-only count: remove 4460 and 6944 from $icd9
-  adx_no_broader <- AUTOIMMUNE_DX_CODES
-  adx_no_broader[["icd9"]] <- adx_no_broader[["icd9"]][!names(adx_no_broader[["icd9"]]) %in% c("4460", "6944")]
-  .adx_backup2 <- AUTOIMMUNE_DX_CODES
-  AUTOIMMUNE_DX_CODES <<- adx_no_broader
-  flags_no_broader <- summarise_autoimmune_dx(dx_sens, cohort_ids_vec, sentinel = SENTINEL_CUTOFF)
-  AUTOIMMUNE_DX_CODES <<- .adx_backup2
-  rm(.adx_backup2)
-
-  n_flip_broader <- dplyr::inner_join(full_flags, flags_no_broader |> dplyr::select(ID, has_autoimmune_dx_no_broader = has_autoimmune_dx), by = "ID") |>
-    dplyr::filter(has_autoimmune_dx_full == TRUE, has_autoimmune_dx_no_broader == FALSE) |>
-    nrow()
-  message(glue("  Broader ICD-9 (4460/6944) alone: {fmt_sup(n_flip_broader)} patients"))
-
-  rm(dx_sens, cohort_ids_vec, full_flags, flags_no6960, flags_no_broader,
-     adx_no6960, adx_no_broader, n_flip_6960, n_flip_broader)
+# --- D-192.2-04 / D-02: sensitivity counts for flagged ICD-9 keys ---
+# Definition: patients who LOSE has_autoimmune_dx when the key(s) are removed.
+# Same cohort-scoped DuckDB path as aim_full (build_autoimmune_dx_flags with a
+# reduced `codes` list) — no global config mutation, no unscoped DIAGNOSIS pull.
+count_lost_flags <- function(drop_keys) {
+  codes_red <- AUTOIMMUNE_DX_CODES
+  codes_red$icd9 <- codes_red$icd9[!names(codes_red$icd9) %in% drop_keys]
+  stopifnot("drop_keys must exist in AUTOIMMUNE_DX_CODES$icd9" =
+              all(drop_keys %in% names(AUTOIMMUNE_DX_CODES$icd9)))
+  red <- build_autoimmune_dx_flags(
+    unique(episodes_export$patient_id),
+    sentinel = SENTINEL_CUTOFF,
+    codes    = codes_red
+  )
+  cmp <- dplyr::inner_join(
+    aim_full |> dplyr::select(ID, full = has_autoimmune_dx),
+    red      |> dplyr::select(ID, reduced = has_autoimmune_dx),
+    by = "ID"
+  )
+  stopifnot("sensitivity run must cover the same patients" = nrow(cmp) == nrow(aim_full),
+            "removing codes can never ADD a flag" = !any(!cmp$full & cmp$reduced))
+  sum(cmp$full & !cmp$reduced)
 }
+
+n_lost_6960    <- count_lost_flags("6960")
+n_lost_broader <- count_lost_flags(c("4460", "6944"))
+message(glue("  D-192.2-04: {fmt_sup(n_lost_6960)} patients lose the flag if 6960 (696.0 psoriatic arthropathy) is dropped"))
+message(glue("  D-02: {fmt_sup(n_lost_broader)} patients lose the flag if broader keys 4460/6944 are dropped"))
+rm(count_lost_flags, n_lost_6960, n_lost_broader)
 
 
 # --- SECTION 4D: DATA QUALITY CLEANUP ----

@@ -200,6 +200,9 @@ is_autoimmune_code <- function(dx, dx_type,
 #' @param dx          data.frame with columns ID, DX, DX_TYPE, DX_DATE, ADMIT_DATE
 #' @param cohort_ids  character vector of patient IDs (defines output row set)
 #' @param sentinel    Date; records with all dates on or before this are invalid
+#' @param codes       Named list ($icd10, $icd9) passed to is_autoimmune_code()
+#'   (default AUTOIMMUNE_DX_CODES). Phase 192.2: lets sensitivity runs drop keys
+#'   without mutating the global config constant.
 #' @return tibble; nrow == n_distinct(cohort_ids); asserted on exit. Columns:
 #'   \itemize{
 #'     \item \code{ID} - patient identifier
@@ -210,9 +213,20 @@ is_autoimmune_code <- function(dx, dx_type,
 #'       or NA (NA iff has_autoimmune_dx is FALSE). Derived from validly-dated qualifying
 #'       records only (same subset that drives first_autoimmune_dx_date).
 #'   }
-summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
+summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel,
+                                    codes = AUTOIMMUNE_DX_CODES) {
+  # Phase 192.2: fail fast on a malformed input (a missing column silently
+  # becomes NULL via $ on a tibble and surfaces later as a 0-row recycle error)
+  req_cols <- c("ID", "DX", "DX_TYPE", "DX_DATE", "ADMIT_DATE")
+  miss <- setdiff(req_cols, names(dx))
+  if (length(miss)) {
+    stop("summarise_autoimmune_dx(): dx is missing column(s): ",
+         paste(miss, collapse = ", "), call. = FALSE)
+  }
+  dx <- as.data.frame(dx)
+
   # Filter to qualifying codes only
-  q <- dx[is_autoimmune_code(dx$DX, dx$DX_TYPE), , drop = FALSE]
+  q <- dx[is_autoimmune_code(dx$DX, dx$DX_TYPE, codes = codes), , drop = FALSE]
 
   if (nrow(q) > 0) {
     d1  <- as.Date(q$DX_DATE)
@@ -303,8 +317,11 @@ summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel) {
 #'
 #' @param cohort_ids character vector of patient IDs
 #' @param sentinel   Date passed to \code{summarise_autoimmune_dx()}
+#' @param codes      Named list passed to \code{summarise_autoimmune_dx()}
+#'   (default AUTOIMMUNE_DX_CODES). Phase 192.2 sensitivity runs pass a reduced list.
 #' @return tibble from \code{summarise_autoimmune_dx()}
-build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF) {
+build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
+                                      codes = AUTOIMMUNE_DX_CODES) {
   opened_here <- FALSE
   if (!exists("pcornet_con", envir = .GlobalEnv) || !DBI::dbIsValid(pcornet_con)) {
     open_pcornet_con()
@@ -326,7 +343,7 @@ build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF) {
      FROM DIAGNOSIS d JOIN aim_cohort c ON c.ID = d.ID"
   )
 
-  summarise_autoimmune_dx(dx, cohort_ids, sentinel)
+  summarise_autoimmune_dx(dx, cohort_ids, sentinel, codes = codes)
 }
 
 # ==============================================================================
