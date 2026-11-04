@@ -866,7 +866,7 @@ message(glue("    Both   : {fmt_sup(n_both)}"))
 
   # Build dx for sensitivity analyses (re-query the same DIAGNOSIS table)
   open_pcornet_con()
-  dx_sens <- DBI::dbGetQuery(pcornet_con, "SELECT ID, DX, DX_TYPE FROM DIAGNOSIS") |>
+  dx_sens <- DBI::dbGetQuery(pcornet_con, "SELECT ID, DX, DX_TYPE, DX_DATE, ADMIT_DATE FROM DIAGNOSIS") |>
     dplyr::as_tibble()
   close_pcornet_con()
 
