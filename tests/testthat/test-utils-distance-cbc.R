@@ -6,6 +6,9 @@
 
 library(testthat)
 library(dplyr)
+library(lubridate)
+
+source(here::here("R/utils/utils_distance_cbc.R"))
 
 # Minimal config for tests
 test_config <- list(claims_source_codes = c("FLM"))
