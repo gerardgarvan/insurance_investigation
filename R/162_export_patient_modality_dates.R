@@ -1,12 +1,22 @@
 # ==============================================================================
-# 162_export_patient_modality_dates.R
-# Exports E_patient_modality_dates without *_any columns as a CSV.
-#
-# Usage (HiPerGator):
-#   module load R/4.4.2
-#   Rscript R/162_export_patient_modality_dates.R
+# 162_export_patient_modality_dates.R -- Export patient modality dates CSV
 # ==============================================================================
-# INTERNAL — contains patient IDs. Not for release outside the secure enclave.
+# INTERNAL — output contains patient IDs; write only to output/internal/.
+#
+# Purpose:
+#   Export the patient-modality-dates wide table (excluding *_any columns) as a
+#   dated CSV for downstream delivery or manual QC.
+#
+# Inputs:
+#   DuckDB E_patient_modality_dates table (or cached RDS from R/147)
+#
+# Outputs:
+#   output/internal/patient_modality_dates_<YYYYMMDD>.csv   (patient IDs: internal)
+#
+# Dependencies:
+#   R/00_config.R (defines CONFIG, open_pcornet_con)
+#
+# ==============================================================================
 
 source(here::here("R/00_config.R"))
 library(DBI)

@@ -1,30 +1,27 @@
-# =============================================================================
-# R/186_survivorship_rate_granularity.R
-# Phase 186: Survivorship Rate Granularity
-# =============================================================================
-# Purpose: Reader + stacker. Pins the Phase 185 / R/184 output workbook, reads
-# the annual (years 2+) and half-year/biannual (years 2+) rate blocks by exact
-# section header, stacks them to one long team-facing table (one row per
-# modality x far x window x half), applies a complementary suppression pass,
-# and writes a dated xlsx with KEY (leftmost), Primary (years 2+), and
-# Secondary (all-years) sheets.
-#
-# Source-of-truth citations (CLAUDE.md: schema probes win over guesses):
-#   Default R184_OUTPUT from 185-01-SUMMARY.md Section 1:
-#     output/modality_rate_model_20261022.xlsx
-#   Section headers and rate unit confirmed against
-#     .planning/schemas/185_schema_20261022.md (probed 2026-10-22)
-#
-# Run (HiPerGator interactive):
-#   module load R/4.5
-#   R --no-save
-#   source("R/00_config.R")
-#   source("R/186_survivorship_rate_granularity.R", local = new.env(parent = globalenv()))
-#
-# No new patient-year computation. R/184 is not modified (read-only).
+# ==============================================================================
+# 186_survivorship_rate_granularity.R -- Survivorship rate granularity table
+# ==============================================================================
+# Phase 186. No new patient-year computation; R/184 is not modified (read-only).
 # All values carried verbatim from the pinned workbook, including "<11".
-# The complementary pass can only add suppression, never remove it.
-# =============================================================================
+# Schema probe: .planning/schemas/185_schema_20261022.md (probed 2026-10-22).
+#
+# Purpose:
+#   Pin the Phase 185 / R/184 output workbook, read annual (years 2+) and
+#   half-year/biannual (years 2+) rate blocks by exact section header, stack
+#   them to one long team-facing table (one row per modality x far x window x
+#   half), apply a complementary suppression pass, and write a dated xlsx with
+#   KEY (leftmost), Primary (years 2+), and Secondary (all-years) sheets.
+#
+# Inputs:
+#   output/modality_rate_model_20261022.xlsx  (pinned R184_OUTPUT; env-overridable)
+#
+# Outputs:
+#   output/survivorship_rate_granularity_<YYYYMMDD>.xlsx
+#
+# Dependencies:
+#   R/00_config.R (defines CONFIG)
+#
+# ==============================================================================
 
 message("==== R/186: Survivorship Rate Granularity ====")
 

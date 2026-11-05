@@ -1,11 +1,26 @@
-# R/121_zip_problem_inventory.R
-# Phase 151: Per-patient ZIP problem inventory
-# One row per patient ID with 12 problem flags, supporting counts, and a triage category.
-# Flag predicates and the modal tie-break are semantically identical to R/120, enforced by
-# reconciliation (D-04). Writes a workbook + RDS (D-01).
+# ==============================================================================
+# 121_zip_problem_inventory.R -- Per-patient ZIP problem inventory
+# ==============================================================================
+# Phase 151: one row per patient ID with 12 problem flags, supporting counts,
+# and a triage category. Flag predicates and modal tie-break mirror R/120
+# (enforced by reconciliation D-04). EXPECTED block must come from amended R/120.
 #
-# EXPECTED below must come from the AMENDED R/120 run (the one that parses
-# ADDRESS_PERIOD_START as a date). R/120 prints a ready-to-paste block at the end.
+# Purpose:
+#   Build a per-patient ZIP problem inventory (12 flags + triage category) and
+#   write a workbook and RDS for downstream triage and repair steps.
+#
+# Inputs:
+#   DuckDB ADDRESS_HISTORY table (ADDRESS, ZIP5, ZIP9, ADDRESS_PERIOD_START columns)
+#   EXPECTED reconciliation vector (pasted from amended R/120 console output)
+#
+# Outputs:
+#   output/zip_problem_inventory_<YYYYMMDD>.xlsx
+#   clean/rds/outputs/zip_problem_inventory_<YYYYMMDD>.rds
+#
+# Dependencies:
+#   R/00_config.R (auto-loads utils_address.R, defines CONFIG)
+#
+# ==============================================================================
 
 source("R/00_config.R")   # auto-loads R/utils/utils_address.R and defines CONFIG
 

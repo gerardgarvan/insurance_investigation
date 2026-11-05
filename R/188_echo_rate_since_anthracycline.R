@@ -1,25 +1,27 @@
-# R/188_echo_rate_since_anthracycline.R
-# Phase 188 — Echo rate per patient-year after last anthracycline dose
+# ==============================================================================
+# 188_echo_rate_since_anthracycline.R -- Echo rate per patient-year after anthracycline
+# ==============================================================================
+# Phase 188. Schema probes: .planning/schemas/187out_schema_20261022.md,
+#   188_dated_events_schema_20261022.md, 188_166parts_schema_20261022.md
+#   (all probed 2026-10-22).
 #
-# Schema probes used (Task 0):
-#   .planning/schemas/187out_schema_20261022.md
-#     Path: output/internal/anthracycline_exposure_patient_20261022.rds
-#     Cols: ID, any_chemo, any_anthracycline, last_anthracycline_date,
-#           years_since_last_anthracycline, follow_end, drugs_received
-#     any_anthracycline TRUE = 2,379
-#   .planning/schemas/188_dated_events_schema_20261022.md
-#     Path: CONFIG$cache$outputs_dir / survivorship_dated_events_20261012.rds
-#     Cols: ID, modality, event_date (3 cols, 1,054,151 rows, 8,623 IDs)
-#     Echo label: "Echocardiogram" (12,026 rows)
-#     D-02a: no window/tier/year_index column — file is NOT windowed
-#   .planning/schemas/188_166parts_schema_20261022.md
-#     Path: CONFIG$cache$outputs_dir / survivorship_echo_parts_20261012.rds
-#     Phase 166 per-patient echo rates: element echo_rate_patient (2,387 x 5)
-#     Cols: ID, modality, n_dates_post, person_years, rate_per_py
-#     modality distinct value: "echo_post_anthracycline" (no variant column)
+# Purpose:
+#   Compute echo rate per patient-year in the window after each patient's last
+#   anthracycline dose, joining R/187 exposure output with the R/166 dated-events
+#   file, and write a summary workbook.
 #
-# Source from repo root:
-#   source("R/188_echo_rate_since_anthracycline.R", local = new.env(parent = globalenv()))
+# Inputs:
+#   output/internal/anthracycline_exposure_patient_<YYYYMMDD>.rds  (R/187 output)
+#   CONFIG$cache$outputs_dir / survivorship_dated_events_20261012.rds  (R/166)
+#   CONFIG$cache$outputs_dir / survivorship_echo_parts_20261012.rds    (R/166)
+#
+# Outputs:
+#   output/echo_rate_since_anthracycline_<YYYYMMDD>.xlsx
+#
+# Dependencies:
+#   R/00_config.R (defines CONFIG)
+#
+# ==============================================================================
 
 source(here::here("R", "00_config.R"))
 

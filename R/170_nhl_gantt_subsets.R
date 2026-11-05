@@ -1,25 +1,28 @@
-# R/170_nhl_gantt_subsets.R
-# =============================================================================
-# Purpose:  Produce NHL-only (Group 1 strict) and HL+NHL (Group 2) filtered
-#           views of the pinned 2026-08-14 gantt_episodes_180 snapshot, with
-#           chemo-combos columns E-J left-joined onto chemo rows only at the
-#           (patient_id, episode_number) grain.  Delivers one workbook
-#           (KEY / NHL_only_episodes / HL_NHL_episodes / QC) plus two matching
-#           CSVs in output/internal/.
+# ==============================================================================
+# 170_nhl_gantt_subsets.R -- NHL-only and HL+NHL Gantt episode subsets
+# ==============================================================================
+# Phase 168 (plan 168-01). INTERNAL: outputs contain patient IDs.
+# Requirements: NHLSUB-01, NHLSUB-02, NHLSUB-03, NHLSUB-04.
 #
-# Inputs:   CONFIG$gantt_180_snapshot_path  — pinned 2026-08-14 gantt CSV
-#           CONFIG$chemo_combos_path        — team chemo-combos workbook
-#           CONFIG$chemo_combos_tab         — sheet name "Chemo and Cancer Dx"
+# Purpose:
+#   Produce NHL-only (Group 1 strict) and HL+NHL (Group 2) filtered views of
+#   the pinned 2026-08-14 gantt_episodes_180 snapshot, with chemo-combos columns
+#   E-J left-joined onto chemo rows at the (patient_id, episode_number) grain.
 #
-# Outputs:  output/internal/nhl_gantt_subsets_<YYYYMMDD>.xlsx
-#           output/internal/nhl_only_episodes_<YYYYMMDD>.csv
-#           output/internal/hl_nhl_episodes_<YYYYMMDD>.csv
+# Inputs:
+#   CONFIG$gantt_180_snapshot_path  -- pinned 2026-08-14 Gantt CSV
+#   CONFIG$chemo_combos_path        -- team chemo-combos workbook
+#   CONFIG$chemo_combos_tab         -- sheet name "Chemo and Cancer Dx"
 #
-# Requirements: NHLSUB-01, NHLSUB-02, NHLSUB-03, NHLSUB-04
-# Phase: 168 — nhl-only-and-hl-nhl-gantt-episode-subsets
-# Plan:  168-01
-# INTERNAL: outputs contain patient IDs — write only to output/internal/
-# =============================================================================
+# Outputs:
+#   output/internal/nhl_gantt_subsets_<YYYYMMDD>.xlsx
+#   output/internal/nhl_only_episodes_<YYYYMMDD>.csv
+#   output/internal/hl_nhl_episodes_<YYYYMMDD>.csv
+#
+# Dependencies:
+#   R/00_config.R (defines CONFIG)
+#
+# ==============================================================================
 
 source(here::here("R/00_config.R"))
 suppressPackageStartupMessages({

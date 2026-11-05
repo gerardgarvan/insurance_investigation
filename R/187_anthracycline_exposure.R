@@ -1,24 +1,28 @@
-# R/187_anthracycline_exposure.R
-# Phase 187: Anthracycline Exposure Variables
-# Source: .planning/phases/187-anthracycline-exposure-variables/187-CONTEXT.md
-# Schema probe: .planning/schemas/187_schema_20261022.md (confirmed 2026-10-22)
+# ==============================================================================
+# 187_anthracycline_exposure.R -- Anthracycline exposure variables
+# ==============================================================================
+# Phase 187. Schema probe: .planning/schemas/187_schema_20261022.md (2026-10-22).
+# R187_RATES_PARTS_RDS uses the R/166 parts file as follow_end source (D-11).
+# Default date 20261012 from Phase 171 SURV_RUN_DATE (171-01-SUMMARY.md).
 #
-# Run: source("R/187_anthracycline_exposure.R", local = new.env(parent = globalenv()))
-#   from repo root on HiPerGator (module load R/4.5)
+# Purpose:
+#   Build patient-level anthracycline exposure variables (any_anthracycline,
+#   last_anthracycline_date, years_since_last_anthracycline, drugs_received)
+#   from the pinned episode-detail RDS and survivorship rates parts, and write
+#   a patient-grain internal RDS plus an aggregate public xlsx.
 #
-# Inputs (pinned):
-#   R187_EPISODE_RDS      cache/outputs/treatment_episode_detail_180.rds
-#   R187_RATES_PARTS_RDS  clean/rds/outputs/survivorship_modality_rates_parts_20261012.rds
+# Inputs:
+#   R187_EPISODE_RDS      -- cache/outputs/treatment_episode_detail_180.rds
+#   R187_RATES_PARTS_RDS  -- clean/rds/outputs/survivorship_modality_rates_parts_20261012.rds
 #
 # Outputs:
-#   output/internal/anthracycline_exposure_patient_<YYYYMMDD>.rds  (patient-grain, internal)
-#   output/anthracycline_exposure_summary_<YYYYMMDD>.xlsx           (aggregate, public)
+#   output/internal/anthracycline_exposure_patient_<YYYYMMDD>.rds  (IDs: internal)
+#   output/anthracycline_exposure_summary_<YYYYMMDD>.xlsx           (aggregate)
 #
-# Note on R187_RATES_PARTS_RDS default: R/184 does not pin survivorship_modality_rates_parts_*.rds.
-#   R/184 reads follow_end from the patient-year RDS (R/179), not from rates_parts$followup.
-#   R/187 uses the R/166 parts file as its follow_end source (same source as R/167), following
-#   D-11 (do not reimplement compute_followup()). Default date 20261012 from Phase 171 SURV_RUN_DATE
-#   (171-01-SUMMARY.md line "Survivorship run date (SURV_RUN_DATE): 20261012").
+# Dependencies:
+#   R/00_config.R (defines CONFIG)
+#
+# ==============================================================================
 
 # ==============================================================================
 # SECTION 0 — Header and Pins ----

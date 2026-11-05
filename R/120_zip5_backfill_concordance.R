@@ -1,15 +1,25 @@
-# R/120_zip5_backfill_concordance.R
-# Phase 150: ZIP5-missing but ZIP9-elsewhere — patient counts and first-5 concordance
-# Read-only diagnostic. No output files written.
-# Outputs (1), (2), (3a-c), (4) are patient-level (distinct ID) per D-02.
-# Output (5) is a supplementary record-level diagnostic per D-09.
+# ==============================================================================
+# 120_zip5_backfill_concordance.R -- ZIP5-missing/ZIP9-elsewhere concordance
+# ==============================================================================
+# Phase 150 (amended Phase 151): read-only diagnostic; no output files written.
+# Outputs (1-4) are patient-level per D-02; output (5) is record-level per D-09.
+# AMENDMENT (Phase 151): ADDRESS_PERIOD_START parsed as Date (was string).
+# Values from this run supersede the originals in 150-01-SUMMARY.md.
 #
-# AMENDED (Phase 151): ADDRESS_PERIOD_START was previously compared as a string.
-# The column is SAS-style DDMMMYYYY, so "02APR2013" sorted before "22FEB2018" on
-# the leading digits and the modal tie-break could pick the wrong record. The
-# column is now parsed to Date. This changes only the tie-break, so counts (1),
-# (2), (3c) and output (5) are unaffected; (3a)/(3b) and the rate in (4) may move.
-# The values from this run supersede the originals in 150-01-SUMMARY.md.
+# Purpose:
+#   Count patients with missing ZIP5 but available ZIP9, assess first-five
+#   digit concordance, and produce a console summary for Phase 150/151 QC.
+#
+# Inputs:
+#   DuckDB ADDRESS_HISTORY table (ADDRESS, ZIP5, ZIP9, ADDRESS_PERIOD_START columns)
+#
+# Outputs:
+#   None — prints diagnostic counts to console only.
+#
+# Dependencies:
+#   R/00_config.R (auto-loads utils_address.R, defines CONFIG)
+#
+# ==============================================================================
 
 source("R/00_config.R")   # auto-loads R/utils/utils_address.R and defines CONFIG
 

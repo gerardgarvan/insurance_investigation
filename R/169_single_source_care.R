@@ -1,22 +1,28 @@
-# R/169_single_source_care.R
-# =============================================================================
-# Purpose:  Compute patient-level single_source_care flags from ENCOUNTER.SOURCE
-#           in DuckDB. Delivers two windows (whole-record and post-HL-anchor)
-#           as separate columns on every output row.
+# ==============================================================================
+# 169_single_source_care.R -- Patient-level single-source care flags
+# ==============================================================================
+# Phase 167 (plan 167-01). INTERNAL: outputs contain patient IDs.
+# Requirements: SRC-01, SRC-02, SRC-03.
 #
-# Inputs:   DuckDB ENCOUNTER table (SOURCE, ADMIT_DATE, ID columns)
-#           get_hl_any_dx_ids() anchor dates
-#           CONFIG$analysis date range bounds
+# Purpose:
+#   Compute patient-level single_source_care flags from ENCOUNTER.SOURCE in
+#   DuckDB, delivering whole-record and post-HL-anchor windows as separate
+#   columns on every output row.
 #
-# Outputs:  output/internal/single_source_care_<YYYYMMDD>.csv      (IDs: internal)
-#           output/internal/single_source_care_<YYYYMMDD>.rds      (IDs: internal)
-#           output/internal/single_source_care_parts_<YYYYMMDD>.rds (for Plan 02)
+# Inputs:
+#   DuckDB ENCOUNTER table (SOURCE, ADMIT_DATE, ID columns)
+#   get_hl_any_dx_ids() anchor dates
+#   CONFIG$analysis date range bounds
 #
-# Requirements: SRC-01, SRC-02, SRC-03
-# Phase: 167 — single-health-system-care-flag
-# Plan:  167-01
-# INTERNAL: outputs contain patient IDs — write only to output/internal/
-# =============================================================================
+# Outputs:
+#   output/internal/single_source_care_<YYYYMMDD>.csv       (IDs: internal)
+#   output/internal/single_source_care_<YYYYMMDD>.rds       (IDs: internal)
+#   output/internal/single_source_care_parts_<YYYYMMDD>.rds (for Plan 02)
+#
+# Dependencies:
+#   R/00_config.R (defines CONFIG, get_hl_any_dx_ids, open_pcornet_con)
+#
+# ==============================================================================
 
 source(here::here("R/00_config.R"))
 suppressPackageStartupMessages({
