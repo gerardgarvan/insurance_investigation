@@ -899,7 +899,7 @@ Plans:
 **Plans**: 5 plans
 Plans:
 - [x] 193-01-PLAN.md — 193-PREFLIGHT.md inventory (D-11) + am_manual_lib.py OOXML helpers / ID-space scanner / anchor matcher [AM-DOC-01, AM-DOC-02] (Wave 1)
-- [ ] 193-02-PLAN.md — build_operations() classifier (M1/M2, D-13, D-34) + 193-OPERATIONS.json with dry-run anchor resolution (D-12a) [AM-DOC-01, AM-DOC-02] (Wave 2, depends on 193-01)
+- [x] 193-02-PLAN.md — build_operations() classifier (M1/M2, D-13, D-34) + 193-OPERATIONS.json with dry-run anchor resolution (D-12a) [AM-DOC-01, AM-DOC-02] (Wave 2, depends on 193-01)
 - [ ] 193-03-PLAN.md — tracked-change builders + reply threading (D-12/D-14) + apply_operations() producing AnalyticManual_2026.10.28.docx with reject-all/accept-all proofs (D-15) [AM-DOC-01, AM-DOC-02] (Wave 3, depends on 193-02)
 - [ ] 193-04-PLAN.md — manual-export subcommand (D-08) + full D-15 QA suite + reconciliation + am_evidence_<date>.xlsx (D-09/D-17) + STATE.md AUTOMATED-QA-PASSED [AM-DOC-03] (Wave 4, depends on 193-03)
 - [ ] 193-05-PLAN.md — human Word review checkpoint (D-16) + STATE.md WORD-REVIEW-APPROVED [AM-DOC-01, AM-DOC-02, AM-DOC-03] (Wave 5, depends on 193-04)
@@ -926,5 +926,5 @@ Plans:
 | 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 3/3 | Complete    | 2026-10-28 |
 | 192. Draft New Content | v3.13 | 3/3 | Complete    | 2026-10-28 |
-| 193. Produce Updated Manual | v3.13 | 1/5 | In Progress|  |
+| 193. Produce Updated Manual | v3.13 | 2/5 | In Progress|  |
 | 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |
