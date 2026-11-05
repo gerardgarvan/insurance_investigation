@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: executing
-stopped_at: Completed Phase 191 (all 3 plans, verification passed); Phase 192 is next
+stopped_at: Completed Phase 192 (all 3 plans, verification 16/16 passed); Phase 193 is next
 last_updated: "2026-11-05T00:00:00.000Z"
 last_activity: 2026-11-05
 progress:
@@ -21,11 +21,12 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 192 — Draft New Content
+**Current focus:** Phase 193 — Produce Updated Manual
 
 ## Current Position
 
 Phase: 191 (verify-existing-entries) — COMPLETE 2026-10-28: all 3 plans done; 24 verdicts, 8 D-191-NN decisions (6 OPEN, 2 CONFIRMED); am_verdicts_20261027.xlsx produced; validate passes.
+Phase: 192 (draft-new-content) — COMPLETE 2026-10-28: all 3 plans done; AM-DRAFT.md with sourced sections for all MISMATCH/PARTIAL leads; verification 16/16 passed.
 Phase 192.3 COMPLETE 2026-11-04: all 3 plans done; R/181 produces 9-sheet workbook with SOURCE stratification; regression check passed on HiPerGator.
 Last activity: 2026-11-05
 
@@ -35,8 +36,8 @@ Last activity: 2026-11-05
 |-------|------|------------|--------|
 | 190 | Evidence Map | — | Complete |
 | 191 | Verify Existing Entries | Phase 190 | Complete |
-| 192 | Draft New Content | Phase 191 | Ready |
-| 193 | Produce Updated Manual | Phase 192 | Not started |
+| 192 | Draft New Content | Phase 191 | Complete |
+| 193 | Produce Updated Manual | Phase 192 | Ready |
 | 194 | Team Review Package and Close-out | Phase 193 | Not started |
 
 ## Accumulated Context
