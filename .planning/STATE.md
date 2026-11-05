@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: executing
-stopped_at: Completed 194-03-PLAN.md
+stopped_at: Completed 194-04-PLAN.md
 last_updated: "2026-11-05T18:53:19.634Z"
 last_activity: 2026-11-05
 progress:
@@ -51,7 +51,7 @@ Last activity: 2026-11-05
 | 191 | Verify Existing Entries | Phase 190 | Complete |
 | 192 | Draft New Content | Phase 191 | Complete |
 | 193 | Produce Updated Manual | Phase 192 | AUTOMATED-QA-PASSED (awaiting WORD-REVIEW-APPROVED) |
-| 194 | Team Review Package and Close-out | Phase 193 | Not started |
+| 194 | Reference Manual Regeneration | Phase 193 | AUTOMATED-QA-PASSED (Plans 01–04 complete; run source("R/89...") on HiPerGator to regenerate docs/REFERENCE_MANUAL.md, then commit) |
 
 ## Accumulated Context
 
