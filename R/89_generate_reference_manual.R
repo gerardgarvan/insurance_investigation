@@ -102,55 +102,20 @@ assign_stage <- function(script_basename) {
 # SECTION 3: HEADER PARSING FUNCTION
 # ==============================================================================
 
+# Field keywords and accepted spellings (singular/plural, "Depends").
+# Names are the canonical field keys stored in the result list.
+HEADER_FIELDS <- c(
+  purpose      = "Purpose",
+  inputs       = "Inputs?",
+  outputs      = "Outputs?",
+  dependencies = "(?:Dependencies|Depends)",
+  requirements = "Requirements?"
+)
+ANY_FIELD_RX <- glue("^#\\s*(?:{paste(HEADER_FIELDS, collapse = '|')}):")
+BANNER_RX    <- "^#\\s*={3,}"
+
 parse_script_header <- function(filepath) {
   lines <- readLines(filepath, warn = FALSE)
-
-  # Find first opening banner line (^# followed by >= 3 equals signs)
-  banner_hits <- which(str_detect(lines, "^#\\s*={3,}"))
-  header_start <- banner_hits[1]
-
-  if (is.na(header_start)) {
-    # No banner: try to extract first comment paragraph as Purpose (USABLE fallback)
-    comment_lines <- lines[str_detect(lines, "^#")]
-    # Strip comment marker; skip blank comment lines at the top
-    prose <- str_trim(str_replace(comment_lines, "^#\\s*", ""))
-    prose <- prose[nchar(prose) > 0]
-    # Take up to the first blank comment or non-comment as the purpose paragraph
-    purpose_text <- if (length(prose) > 0) paste(head(prose, 3), collapse = " ") else "Not documented"
-
-    return(list(
-      script      = basename(filepath),
-      purpose     = purpose_text,
-      inputs      = "Not documented",
-      outputs     = "Not documented",
-      dependencies = "Not documented",
-      requirements = "Not documented",
-      documented  = FALSE
-    ))
-  }
-
-  # Header ends at the SECOND banner line (closing ===), or at the first
-  # non-comment, non-blank line after header_start, whichever comes first.
-  # (Previous implementation used the third banner, which bled into section
-  # headers inside the script body.)
-  second_banner <- banner_hits[2]
-
-  # First non-comment, non-blank line after header_start
-  tail_lines <- lines[(header_start + 1):length(lines)]
-  first_code <- which(!str_detect(tail_lines, "^#") & !str_detect(tail_lines, "^\\s*$"))[1]
-  first_code_abs <- if (!is.na(first_code)) header_start + first_code else NA_integer_
-
-  if (!is.na(second_banner) && !is.na(first_code_abs)) {
-    header_end <- min(second_banner, first_code_abs)
-  } else if (!is.na(second_banner)) {
-    header_end <- second_banner
-  } else if (!is.na(first_code_abs)) {
-    header_end <- first_code_abs
-  } else {
-    header_end <- length(lines)
-  }
-
-  header_lines <- lines[header_start:header_end]
 
   fields <- list(
     script       = basename(filepath),
@@ -162,63 +127,94 @@ parse_script_header <- function(filepath) {
     documented   = FALSE
   )
 
-  field_keywords <- c("Purpose", "Inputs", "Outputs", "Dependencies", "Requirements")
+  # First line of executable code (non-comment, non-blank) in the file.
+  # The header can never extend past this point.
+  first_code <- which(!str_detect(lines, "^\\s*#") & !str_detect(lines, "^\\s*$"))[1]
+  search_end <- if (!is.na(first_code)) first_code - 1L else length(lines)
 
-  for (field_name in field_keywords) {
-    pattern <- glue("^#\\s*{field_name}:\\s*(.*)$")
-    field_line_idx <- which(str_detect(header_lines, pattern))[1]
+  # Field lines inside the leading comment region.
+  field_hits <- which(str_detect(lines, ANY_FIELD_RX))
+  field_hits <- field_hits[field_hits <= search_end]
 
-    if (!is.na(field_line_idx)) {
-      match <- str_match(header_lines[field_line_idx], pattern)
-      field_value <- str_trim(match[, 2])
+  if (length(field_hits) == 0) {
+    # No structured fields: use the first comment paragraph as Purpose (USABLE fallback).
+    comment_lines <- lines[seq_len(search_end)]
+    comment_lines <- comment_lines[str_detect(comment_lines, "^#") &
+                                   !str_detect(comment_lines, BANNER_RX)]
+    prose <- str_trim(str_replace(comment_lines, "^#\\s*", ""))
+    prose <- prose[nchar(prose) > 0]
+    # Skip a leading line that is just the file name
+    prose <- prose[prose != basename(filepath)]
+    if (length(prose) > 0) fields$purpose <- paste(head(prose, 3), collapse = " ")
+    header_end <- search_end
+  } else {
+    # Header block = from the first field line to the first banner AFTER it
+    # (or to the end of the leading comment region). This handles both layouts:
+    #   ===== / title / ===== / fields / =====   (banner-sandwiched title)
+    #   ===== / fields / =====                   (single opening banner)
+    # without bleeding into "# SECTION n" banners in the script body.
+    first_field  <- field_hits[1]
+    banners      <- which(str_detect(lines, BANNER_RX))
+    closing      <- banners[banners > first_field][1]
+    header_end   <- if (!is.na(closing)) min(closing - 1L, search_end) else search_end
+    header_lines <- lines[first_field:header_end]
 
-      # Collect continuation lines: comment lines with >= 1 leading space that
-      # don't start another field keyword and don't match a banner line.
-      continuation_lines <- c()
-      next_idx <- field_line_idx + 1
+    for (key in names(HEADER_FIELDS)) {
+      pattern <- glue("^#\\s*{HEADER_FIELDS[[key]]}:\\s*(.*)$")
+      idx <- which(str_detect(header_lines, pattern))[1]
+      if (is.na(idx)) next
 
-      while (next_idx <= length(header_lines)) {
-        line <- header_lines[next_idx]
-        is_continuation <- str_detect(line, "^#\\s+") &&
-          !str_detect(line, "^#\\s*(Purpose|Inputs|Outputs|Dependencies|Requirements):") &&
-          !str_detect(line, "^#\\s*={3,}")
-        if (is_continuation) {
-          continuation <- str_trim(str_replace(line, "^#\\s*", ""))
-          if (nchar(continuation) > 0) {
-            continuation_lines <- c(continuation_lines, continuation)
-          }
-          next_idx <- next_idx + 1
+      value <- str_trim(str_match(header_lines[idx], pattern)[, 2])
+
+      # Continuation lines: indented comment lines that are not another field,
+      # not a banner, and not an empty "#" line (which ends the field).
+      cont <- character(0)
+      k <- idx + 1L
+      while (k <= length(header_lines)) {
+        ln <- header_lines[k]
+        if (str_detect(ln, "^#\\s+\\S") &&
+            !str_detect(ln, ANY_FIELD_RX) &&
+            !str_detect(ln, BANNER_RX)) {
+          cont <- c(cont, str_trim(str_replace(ln, "^#\\s*(?:[-*]\\s+)?", "")))
+          k <- k + 1L
         } else {
           break
         }
       }
-
-      if (length(continuation_lines) > 0) {
-        field_value <- paste(c(field_value, continuation_lines), collapse = " ")
-      }
-
-      fields[[tolower(field_name)]] <- field_value
+      value <- str_trim(str_replace(value, "^[-*]\\s+", ""))
+      parts <- c(value, cont)
+      parts <- parts[nchar(parts) > 0]
+      # Bulleted lists become "a; b; c"; wrapped prose is joined with spaces
+      had_bullets <- k > idx + 1L &&
+        any(str_detect(header_lines[(idx + 1L):(k - 1L)], "^#\\s*[-*]\\s+"))
+      value <- paste(parts, collapse = if (had_bullets) "; " else " ")
+      if (nchar(value) > 0) fields[[key]] <- value
     }
   }
 
-  # Mark as documented if at least Purpose, Inputs, and Outputs were found
+  # Documented = Purpose, Inputs and Outputs all present
   fields$documented <- !any(c(fields$purpose, fields$inputs, fields$outputs) == "Not documented")
 
-  # Dependency auto-detection from body: find source("R/...") calls, excluding 00_config.R
-  if (fields$dependencies == "Not documented") {
-    body_lines <- lines[(header_end + 1):length(lines)]
+  # Dependency auto-detection from body: source("R/...") calls, excluding 00_config.R
+  if (fields$dependencies == "Not documented" && header_end < length(lines)) {
+    body_lines <- lines[(header_end + 1L):length(lines)]
     source_matches <- str_match_all(
       body_lines,
       'source\\((?:here::here\\()?["\'](?:R/|"R",\\s*")([^"\']+\\.R)["\']'
     )
     sourced <- unique(unlist(lapply(source_matches, function(m) m[, 2])))
     sourced <- sourced[!is.na(sourced) & !str_detect(sourced, "00_config")]
-    if (length(sourced) > 0) {
-      fields$dependencies <- paste(sourced, collapse = ", ")
-    }
+    if (length(sourced) > 0) fields$dependencies <- paste(sourced, collapse = ", ")
   }
 
-  return(fields)
+  fields$header_end <- header_end
+  fields
+}
+
+# Which of Purpose / Inputs / Outputs a parsed header is missing (for error reports)
+missing_fields <- function(h) {
+  req <- c("purpose", "inputs", "outputs")
+  req[vapply(req, function(f) identical(h[[f]], "Not documented"), logical(1))]
 }
 
 # ==============================================================================
@@ -328,7 +324,7 @@ n_missing <- 0L   # will remain 0 — discovery is live from list.files()
 
 # One-line summary (always printed)
 message(glue(
-  "[R/89] {n_documented}/{n_production} production scripts documented; ",
+  "[R/89] {n_production - length(undocumented_production)}/{n_production} production scripts documented; ",
   "{n_utils_documented}/{n_utils} utils; {n_missing} missing"
 ))
 
@@ -342,21 +338,28 @@ if (length(non_prod_undoc) > 0) {
                paste(non_prod_undoc, collapse = ", ")))
 }
 
-# Undocumented production: stop() unless overridden
-if (length(undocumented_production) > 0 && !isTRUE(ALLOW_UNDOCUMENTED)) {
-  stop(glue(
-    "[R/89] {length(undocumented_production)} production script(s) have incomplete headers ",
-    "(Purpose, Inputs, or Outputs missing). Set ALLOW_UNDOCUMENTED <- TRUE to override.\n",
-    "Scripts: ", paste(undocumented_production, collapse = ", ")
-  ))
+# Print every gap in full via message() (stop() messages are truncated by R),
+# with the specific fields each file is missing.
+report_gaps <- function(headers, label) {
+  gaps <- Filter(function(h) !isTRUE(h$documented), headers)
+  if (length(gaps) == 0) return(invisible(0L))
+  message(glue("[R/89] {label} with incomplete headers ({length(gaps)}):"))
+  for (h in gaps) {
+    message(glue("  - {h$script}  (missing: {paste(missing_fields(h), collapse = ', ')})"))
+  }
+  invisible(length(gaps))
 }
 
-# Undocumented utils: also stop() (all 26 are production)
-if (length(undocumented_utils) > 0 && !isTRUE(ALLOW_UNDOCUMENTED)) {
+prod_headers <- numbered_headers[prod_idxs]
+n_prod_gaps  <- report_gaps(prod_headers,  "Production scripts")
+n_util_gaps  <- report_gaps(utils_headers, "Utils modules")
+
+if ((n_prod_gaps + n_util_gaps) > 0 && !isTRUE(ALLOW_UNDOCUMENTED)) {
   stop(glue(
-    "[R/89] {length(undocumented_utils)} utils module(s) have incomplete headers.\n",
-    "Modules: ", paste(undocumented_utils, collapse = ", ")
-  ))
+    "[R/89] {n_prod_gaps} production script(s) and {n_util_gaps} utils module(s) ",
+    "have incomplete headers (see list above). ",
+    "Set ALLOW_UNDOCUMENTED <- TRUE to generate anyway."
+  ), call. = FALSE)
 }
 
 # ==============================================================================
@@ -365,7 +368,9 @@ if (length(undocumented_utils) > 0 && !isTRUE(ALLOW_UNDOCUMENTED)) {
 
 message("\n=== Reading config constants ===")
 
-config_env <- new.env(parent = emptyenv())
+# Parent must be globalenv(): an emptyenv() parent cannot see base R (`<-`, list(),
+# library()), so sourcing always failed and every size showed "see description".
+config_env <- new.env(parent = globalenv())
 # Attempt to source; failures are caught so the manual still generates.
 tryCatch(
   source("R/00_config.R", local = config_env),
@@ -388,14 +393,14 @@ constants_meta <- list(
   list(name = "IS_LOCAL",          desc = "TRUE on Windows; FALSE on Linux/HiPerGator"),
   list(name = "THREAD_COUNT",      desc = "1L locally; SLURM_CPUS_PER_TASK (default 16) on HPG"),
   list(name = "EXTRACT_DATE",      desc = "PCORnet data extract date (2025-09-15)"),
-  list(name = "CONFIG",            desc = "Data paths, cache paths, DuckDB settings, performance tuning (~20 elements)"),
-  list(name = "PCORNET_TABLES",    desc = "PCORnet CDM table names to load (16 tables)"),
-  list(name = "PCORNET_PATHS",     desc = "Full CSV file paths for each PCORnet table (16 paths)"),
-  list(name = "ICD_CODES",         desc = "HL diagnosis codes — hl_icd10 (77) + hl_icd9 (~73); total ~150"),
+  list(name = "CONFIG",            desc = "Data paths, cache paths, DuckDB settings, performance tuning"),
+  list(name = "PCORNET_TABLES",    desc = "PCORnet CDM table names to load"),
+  list(name = "PCORNET_PATHS",     desc = "Full CSV file paths for each PCORnet table"),
+  list(name = "ICD_CODES",         desc = "HL diagnosis codes (hl_icd10 + hl_icd9)"),
   list(name = "PAYER_MAPPING",     desc = "9-category payer mapping with prefix-based fallback rules"),
-  list(name = "AMC_PAYER_LOOKUP",  desc = "Code-to-category lookup (~50 entries); also in LOOKUP_TABLES_DT"),
-  list(name = "CANCER_SITE_MAP",   desc = "ICD-10 prefix to cancer site category (297 entries)"),
-  list(name = "ICD9_CANCER_SITE_MAP", desc = "ICD-9 prefix to cancer site category (additional entries)"),
+  list(name = "AMC_PAYER_LOOKUP",  desc = "Code-to-category lookup; also in LOOKUP_TABLES_DT"),
+  list(name = "CANCER_SITE_MAP",   desc = "ICD-10 prefix to cancer site category"),
+  list(name = "ICD9_CANCER_SITE_MAP", desc = "ICD-9 prefix to cancer site category"),
   list(name = "TIER_MAPPING",      desc = "Payer tier classification: Medicaid=1, Medicare=2, Private=3, ..."),
   list(name = "TREATMENT_CODES",   desc = "CPT/HCPCS/NDC codes for chemotherapy, radiation, SCT, immunotherapy"),
   list(name = "ANALYSIS_PARAMS",   desc = "Thresholds for cohort filtering (via CONFIG$analysis)"),
