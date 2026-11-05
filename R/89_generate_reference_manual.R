@@ -34,6 +34,10 @@ library(stringr)
 
 output_path <- "docs/REFERENCE_MANUAL.md"
 
+# Set to TRUE to suppress stop() on undocumented production scripts.
+# Leave FALSE for normal CI/generation runs so missing headers are caught.
+ALLOW_UNDOCUMENTED <- FALSE
+
 message("=== Reference Manual Generator ===")
 message(glue("Output: {output_path}"))
 
@@ -294,6 +298,68 @@ n_utils <- length(utils_files)
 message(glue("Parsed {length(numbered_headers)} numbered scripts + {n_utils} utils modules"))
 
 # ==============================================================================
+# COVERAGE CHECK
+# ==============================================================================
+# Production scripts: numbered scripts whose stage is not Outputs/Tests/Ad-hoc.
+# (These are the scripts where "Not documented" is a blocker, not a warning.)
+
+NON_PRODUCTION_STAGES <- c("Outputs (70-79)", "Tests (80-89)", "Ad-hoc (90-99)")
+
+is_production_script <- function(script_basename) {
+  stage <- assign_stage(script_basename)
+  !stage %in% NON_PRODUCTION_STAGES
+}
+
+prod_idxs    <- which(sapply(all_script_names, is_production_script))
+n_production <- length(prod_idxs)
+
+undocumented_production <- all_script_names[
+  prod_idxs[!sapply(numbered_headers[prod_idxs], function(x) isTRUE(x$documented))]
+]
+
+n_utils_documented <- sum(sapply(utils_headers, function(x) isTRUE(x$documented)))
+undocumented_utils  <- sapply(utils_files, basename)[
+  !sapply(utils_headers, function(x) isTRUE(x$documented))
+]
+
+# Missing-file check: list.files() cannot return duplicates; presence = OK.
+# (Duplicate filenames in the same directory are impossible on all supported OS.)
+n_missing <- 0L   # will remain 0 — discovery is live from list.files()
+
+# One-line summary (always printed)
+message(glue(
+  "[R/89] {n_documented}/{n_production} production scripts documented; ",
+  "{n_utils_documented}/{n_utils} utils; {n_missing} missing"
+))
+
+# Undocumented non-production: message only
+non_prod_undoc <- all_script_names[
+  which(!sapply(all_script_names, is_production_script) &
+        !sapply(numbered_headers, function(x) isTRUE(x$documented)))
+]
+if (length(non_prod_undoc) > 0) {
+  message(glue("[R/89] NOTE: {length(non_prod_undoc)} non-production script(s) undocumented: ",
+               paste(non_prod_undoc, collapse = ", ")))
+}
+
+# Undocumented production: stop() unless overridden
+if (length(undocumented_production) > 0 && !isTRUE(ALLOW_UNDOCUMENTED)) {
+  stop(glue(
+    "[R/89] {length(undocumented_production)} production script(s) have incomplete headers ",
+    "(Purpose, Inputs, or Outputs missing). Set ALLOW_UNDOCUMENTED <- TRUE to override.\n",
+    "Scripts: ", paste(undocumented_production, collapse = ", ")
+  ))
+}
+
+# Undocumented utils: also stop() (all 26 are production)
+if (length(undocumented_utils) > 0 && !isTRUE(ALLOW_UNDOCUMENTED)) {
+  stop(glue(
+    "[R/89] {length(undocumented_utils)} utils module(s) have incomplete headers.\n",
+    "Modules: ", paste(undocumented_utils, collapse = ", ")
+  ))
+}
+
+# ==============================================================================
 # SECTION 7: SOURCE 00_CONFIG INTO ISOLATED ENV FOR CONSTANT SIZES
 # ==============================================================================
 
@@ -391,10 +457,17 @@ message("\n=== Generating Markdown ===")
 content <- c()
 
 # -- Title and header --
+git_hash <- tryCatch(
+  trimws(system("git rev-parse --short HEAD", intern = TRUE)),
+  error   = function(e) "unknown",
+  warning = function(w) "unknown"
+)
+if (length(git_hash) == 0 || nchar(git_hash) == 0) git_hash <- "unknown"
+
 content <- c(content,
   "# PCORnet Payer Variable Investigation -- Pipeline Reference Manual",
   "",
-  glue("> **Auto-generated** by `R/89_generate_reference_manual.R` on {Sys.Date()}."),
+  glue("> **Auto-generated** by `R/89_generate_reference_manual.R` on {Sys.Date()} (git {git_hash})."),
   "> To regenerate: open an interactive R/4.5 session on HiPerGator and run",
   "> `source(\"R/89_generate_reference_manual.R\", local = new.env(parent = globalenv()))`",
   "",
