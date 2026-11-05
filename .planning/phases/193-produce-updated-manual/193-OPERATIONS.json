@@ -42,7 +42,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        2,
+        3
+      ],
       "comment_ids": []
     },
     {
@@ -69,7 +72,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        4,
+        5
+      ],
       "comment_ids": []
     },
     {
@@ -96,7 +102,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        6,
+        7
+      ],
       "comment_ids": []
     },
     {
@@ -124,7 +133,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78.",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        8
+      ],
       "anchor_failure_reason": "anchor 'Data sources: EHR (primary), Claims (secondary) \u00e2\u20ac\u201d existing text preserved; claim' matched 0 paragraphs"
     },
     {
@@ -151,7 +162,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        9,
+        10
+      ],
       "comment_ids": []
     },
     {
@@ -178,7 +192,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        11,
+        12
+      ],
       "comment_ids": []
     },
     {
@@ -205,7 +222,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        13,
+        14
+      ],
       "comment_ids": []
     },
     {
@@ -232,7 +252,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        15,
+        16
+      ],
       "comment_ids": []
     },
     {
@@ -259,7 +282,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        17,
+        18
+      ],
       "comment_ids": []
     },
     {
@@ -286,7 +312,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        19
+      ],
       "comment_ids": []
     },
     {
@@ -313,7 +341,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        20
+      ],
       "comment_ids": []
     },
     {
@@ -340,7 +370,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        21
+      ],
       "comment_ids": []
     },
     {
@@ -367,7 +399,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        22
+      ],
       "comment_ids": []
     },
     {
@@ -394,7 +428,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        23
+      ],
       "comment_ids": []
     },
     {
@@ -421,7 +457,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        24
+      ],
       "comment_ids": []
     },
     {
@@ -448,7 +486,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        25
+      ],
       "comment_ids": []
     },
     {
@@ -475,7 +515,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        26
+      ],
       "comment_ids": []
     },
     {
@@ -502,7 +544,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        27
+      ],
       "comment_ids": []
     },
     {
@@ -529,7 +573,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        28
+      ],
       "comment_ids": []
     },
     {
@@ -556,7 +602,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        29,
+        30
+      ],
       "comment_ids": []
     },
     {
@@ -584,7 +633,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        31,
+        32
+      ],
       "comment_ids": []
     },
     {
@@ -613,7 +665,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-02",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        33
+      ],
       "anchor_failure_reason": "anchor 'Index Date Definition: The earliest HL diagnosis code date (DX_DATE, with ADMIT_' matched 0 paragraphs"
     },
     {
@@ -640,7 +694,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        34,
+        35
+      ],
       "comment_ids": []
     },
     {
@@ -667,7 +724,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        36,
+        37
+      ],
       "comment_ids": []
     },
     {
@@ -694,7 +754,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        38
+      ],
       "comment_ids": []
     },
     {
@@ -721,7 +783,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        39
+      ],
       "comment_ids": []
     },
     {
@@ -748,7 +812,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        40
+      ],
       "comment_ids": []
     },
     {
@@ -775,7 +841,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        41
+      ],
       "comment_ids": []
     },
     {
@@ -802,7 +870,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        42
+      ],
       "comment_ids": []
     },
     {
@@ -829,7 +899,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        43
+      ],
       "comment_ids": []
     },
     {
@@ -856,7 +928,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        44
+      ],
       "comment_ids": []
     },
     {
@@ -883,7 +957,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        45
+      ],
       "comment_ids": []
     },
     {
@@ -910,7 +986,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        46
+      ],
       "comment_ids": []
     },
     {
@@ -937,7 +1015,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        47
+      ],
       "comment_ids": []
     },
     {
@@ -964,7 +1044,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        48
+      ],
       "comment_ids": []
     },
     {
@@ -991,7 +1073,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        49,
+        50
+      ],
       "comment_ids": []
     },
     {
@@ -1019,7 +1104,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        51,
+        52
+      ],
       "comment_ids": []
     },
     {
@@ -1048,7 +1136,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-03",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        53
+      ],
       "anchor_failure_reason": "anchor 'Cleaning Rules Applied: The pipeline anchor date is the earliest HL diagnosis co' matched 0 paragraphs"
     },
     {
@@ -1075,7 +1165,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        54,
+        55
+      ],
       "comment_ids": []
     },
     {
@@ -1102,7 +1195,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        56,
+        57
+      ],
       "comment_ids": []
     },
     {
@@ -1130,7 +1226,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        58,
+        59
+      ],
       "comment_ids": []
     },
     {
@@ -1157,7 +1256,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        60,
+        61
+      ],
       "comment_ids": []
     },
     {
@@ -1184,7 +1286,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        62,
+        63
+      ],
       "comment_ids": []
     },
     {
@@ -1213,7 +1318,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        64,
+        65
+      ],
       "comment_ids": []
     },
     {
@@ -1242,7 +1350,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        66,
+        67
+      ],
       "comment_ids": []
     },
     {
@@ -1273,7 +1384,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-04",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        68
+      ],
       "anchor_failure_reason": "anchor 'Cleaning Rules Applied: Two separate encounters with a diagnosis of the same can' matched 0 paragraphs"
     },
     {
@@ -1300,7 +1413,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        69,
+        70
+      ],
       "comment_ids": []
     },
     {
@@ -1328,7 +1444,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        71,
+        72
+      ],
       "comment_ids": []
     },
     {
@@ -1356,7 +1475,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        73,
+        74
+      ],
       "comment_ids": []
     },
     {
@@ -1386,8 +1508,13 @@
       "verdict": "MISMATCH",
       "comment_text": "Correction per see citations. Evidence: R/60_tiered_same_day_payer.R:resolve_same_day_payer(); R/00_config.R:AMC_PAYER_LOOKUP; R/00_config.R:TIER_MAPPING; DEC-002",
       "anchor_resolution": "OK",
-      "revision_ids": [],
-      "comment_ids": []
+      "revision_ids": [
+        75,
+        76
+      ],
+      "comment_ids": [
+        77
+      ]
     },
     {
       "op_id": "OP-051",
@@ -1414,7 +1541,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        78,
+        79
+      ],
       "comment_ids": []
     },
     {
@@ -1442,7 +1572,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        80,
+        81
+      ],
       "comment_ids": []
     },
     {
@@ -1470,7 +1603,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        82,
+        83
+      ],
       "comment_ids": []
     },
     {
@@ -1498,7 +1634,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        84,
+        85
+      ],
       "comment_ids": []
     },
     {
@@ -1526,7 +1665,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        86,
+        87
+      ],
       "comment_ids": []
     },
     {
@@ -1554,7 +1696,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        88,
+        89
+      ],
       "comment_ids": []
     },
     {
@@ -1581,7 +1726,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        90,
+        91
+      ],
       "comment_ids": []
     },
     {
@@ -1608,7 +1756,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        92,
+        93
+      ],
       "comment_ids": []
     },
     {
@@ -1635,7 +1786,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        94,
+        95
+      ],
       "comment_ids": []
     },
     {
@@ -1662,7 +1816,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        96,
+        97
+      ],
       "comment_ids": []
     },
     {
@@ -1689,7 +1846,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        98,
+        99
+      ],
       "comment_ids": []
     },
     {
@@ -1716,7 +1876,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        100,
+        101
+      ],
       "comment_ids": []
     },
     {
@@ -1743,7 +1906,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        102,
+        103
+      ],
       "comment_ids": []
     },
     {
@@ -1771,7 +1937,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        104,
+        105
+      ],
       "comment_ids": []
     },
     {
@@ -1798,7 +1967,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        106,
+        107
+      ],
       "comment_ids": []
     },
     {
@@ -1825,7 +1997,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        108,
+        109
+      ],
       "comment_ids": []
     },
     {
@@ -1853,7 +2028,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        110,
+        111
+      ],
       "comment_ids": []
     },
     {
@@ -1882,7 +2060,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-06",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        112
+      ],
       "anchor_failure_reason": "anchor 'Cleaning Rule \u00e2\u20ac\u201d grace window: If a death date falls within a grace window prior ' matched 0 paragraphs"
     },
     {
@@ -1910,7 +2090,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        113,
+        114
+      ],
       "comment_ids": []
     },
     {
@@ -1937,7 +2120,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        115,
+        116
+      ],
       "comment_ids": []
     },
     {
@@ -1965,7 +2151,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        117,
+        118
+      ],
       "comment_ids": []
     },
     {
@@ -1992,7 +2181,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        119,
+        120
+      ],
       "comment_ids": []
     },
     {
@@ -2020,7 +2212,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        121,
+        122
+      ],
       "comment_ids": []
     },
     {
@@ -2047,7 +2242,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        123,
+        124
+      ],
       "comment_ids": []
     },
     {
@@ -2074,7 +2272,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        125,
+        126
+      ],
       "comment_ids": []
     },
     {
@@ -2101,7 +2302,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        127,
+        128
+      ],
       "comment_ids": []
     },
     {
@@ -2128,7 +2332,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        129,
+        130
+      ],
       "comment_ids": []
     },
     {
@@ -2157,7 +2364,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-07",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        131
+      ],
       "anchor_failure_reason": "anchor 'Cleaning Rule \u00e2\u20ac\u201d distance method: Distance is calculated using a three-tier fallb' matched 0 paragraphs"
     },
     {
@@ -2185,7 +2394,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        132,
+        133
+      ],
       "comment_ids": []
     },
     {
@@ -2213,7 +2425,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        134,
+        135
+      ],
       "comment_ids": []
     },
     {
@@ -2241,8 +2456,13 @@
       "verdict": "MISMATCH",
       "comment_text": "Correction per see citations. Evidence: R/00_config.R:IS_LOCAL; DEC-008",
       "anchor_resolution": "OK",
-      "revision_ids": [],
-      "comment_ids": []
+      "revision_ids": [
+        136,
+        137
+      ],
+      "comment_ids": [
+        138
+      ]
     },
     {
       "op_id": "OP-082",
@@ -2268,7 +2488,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        139,
+        140
+      ],
       "comment_ids": []
     },
     {
@@ -2295,7 +2518,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        141,
+        142
+      ],
       "comment_ids": []
     },
     {
@@ -2322,7 +2548,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        143,
+        144
+      ],
       "comment_ids": []
     },
     {
@@ -2349,7 +2578,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        145,
+        146
+      ],
       "comment_ids": []
     },
     {
@@ -2376,7 +2608,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        147,
+        148
+      ],
       "comment_ids": []
     },
     {
@@ -2403,7 +2638,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        149,
+        150
+      ],
       "comment_ids": []
     },
     {
@@ -2430,7 +2668,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        151,
+        152
+      ],
       "comment_ids": []
     },
     {
@@ -2458,7 +2699,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        153,
+        154
+      ],
       "comment_ids": []
     },
     {
@@ -2485,7 +2729,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        155,
+        156
+      ],
       "comment_ids": []
     },
     {
@@ -2512,7 +2759,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        157,
+        158
+      ],
       "comment_ids": []
     },
     {
@@ -2540,7 +2790,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        159,
+        160
+      ],
       "comment_ids": []
     },
     {
@@ -2567,7 +2820,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        161,
+        162
+      ],
       "comment_ids": []
     },
     {
@@ -2595,7 +2851,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        163,
+        164
+      ],
       "comment_ids": []
     },
     {
@@ -2622,7 +2881,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        165,
+        166
+      ],
       "comment_ids": []
     },
     {
@@ -2649,7 +2911,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        167,
+        168
+      ],
       "comment_ids": []
     },
     {
@@ -2676,7 +2941,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        169,
+        170
+      ],
       "comment_ids": []
     },
     {
@@ -2703,7 +2971,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        171,
+        172
+      ],
       "comment_ids": []
     },
     {
@@ -2730,7 +3001,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        173,
+        174
+      ],
       "comment_ids": []
     },
     {
@@ -2757,7 +3031,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        175,
+        176
+      ],
       "comment_ids": []
     },
     {
@@ -2784,7 +3061,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        177,
+        178
+      ],
       "comment_ids": []
     },
     {
@@ -2811,7 +3091,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        179,
+        180
+      ],
       "comment_ids": []
     },
     {
@@ -2839,7 +3122,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        181,
+        182
+      ],
       "comment_ids": []
     },
     {
@@ -2866,7 +3152,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        183,
+        184
+      ],
       "comment_ids": []
     },
     {
@@ -2895,7 +3184,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        185,
+        186
+      ],
       "comment_ids": []
     },
     {
@@ -2923,7 +3215,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        187,
+        188
+      ],
       "comment_ids": []
     },
     {
@@ -2950,7 +3245,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        189,
+        190
+      ],
       "comment_ids": []
     },
     {
@@ -2977,7 +3275,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        191,
+        192
+      ],
       "comment_ids": []
     },
     {
@@ -3004,7 +3305,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        193,
+        194
+      ],
       "comment_ids": []
     },
     {
@@ -3031,7 +3335,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        195,
+        196
+      ],
       "comment_ids": []
     },
     {
@@ -3058,7 +3365,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        197,
+        198
+      ],
       "comment_ids": []
     },
     {
@@ -3085,7 +3395,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        199,
+        200
+      ],
       "comment_ids": []
     },
     {
@@ -3112,7 +3425,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        201,
+        202
+      ],
       "comment_ids": []
     },
     {
@@ -3139,7 +3455,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        203,
+        204
+      ],
       "comment_ids": []
     },
     {
@@ -3166,7 +3485,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        205,
+        206
+      ],
       "comment_ids": []
     },
     {
@@ -3193,7 +3515,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        207,
+        208
+      ],
       "comment_ids": []
     },
     {
@@ -3220,7 +3545,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        209,
+        210
+      ],
       "comment_ids": []
     },
     {
@@ -3248,7 +3576,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        211,
+        212
+      ],
       "comment_ids": []
     },
     {
@@ -3275,7 +3606,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        213,
+        214
+      ],
       "comment_ids": []
     },
     {
@@ -3302,7 +3636,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        215,
+        216
+      ],
       "comment_ids": []
     },
     {
@@ -3329,7 +3666,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        217,
+        218
+      ],
       "comment_ids": []
     },
     {
@@ -3356,7 +3696,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        219,
+        220
+      ],
       "comment_ids": []
     },
     {
@@ -3383,7 +3726,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        221,
+        222
+      ],
       "comment_ids": []
     },
     {
@@ -3410,7 +3756,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        223,
+        224
+      ],
       "comment_ids": []
     },
     {
@@ -3438,7 +3787,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        225,
+        226
+      ],
       "comment_ids": []
     },
     {
@@ -3465,7 +3817,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        227,
+        228
+      ],
       "comment_ids": []
     },
     {
@@ -3493,7 +3848,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        229,
+        230
+      ],
       "comment_ids": []
     },
     {
@@ -3520,7 +3878,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        231,
+        232
+      ],
       "comment_ids": []
     },
     {
@@ -3547,7 +3908,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        233,
+        234
+      ],
       "comment_ids": []
     },
     {
@@ -3574,7 +3938,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        235,
+        236
+      ],
       "comment_ids": []
     },
     {
@@ -3601,7 +3968,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        237,
+        238
+      ],
       "comment_ids": []
     },
     {
@@ -3630,7 +4000,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        239,
+        240
+      ],
       "comment_ids": []
     },
     {
@@ -3658,7 +4031,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        241,
+        242
+      ],
       "comment_ids": []
     },
     {
@@ -3685,7 +4061,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        243,
+        244
+      ],
       "comment_ids": []
     },
     {
@@ -3712,7 +4091,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        245,
+        246
+      ],
       "comment_ids": []
     },
     {
@@ -3739,7 +4121,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        247,
+        248
+      ],
       "comment_ids": []
     },
     {
@@ -3766,7 +4151,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        249,
+        250
+      ],
       "comment_ids": []
     },
     {
@@ -3794,7 +4182,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        251,
+        252
+      ],
       "comment_ids": []
     },
     {
@@ -3821,7 +4212,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        253,
+        254
+      ],
       "comment_ids": []
     },
     {
@@ -3848,7 +4242,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        255,
+        256
+      ],
       "comment_ids": []
     },
     {
@@ -3875,7 +4272,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        257,
+        258
+      ],
       "comment_ids": []
     },
     {
@@ -3904,7 +4304,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-01",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        259
+      ],
       "anchor_failure_reason": "anchor 'Record provenance: Whether claims-derived records are present within the CDM tab' matched 0 paragraphs"
     },
     {
@@ -3931,7 +4333,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        260,
+        261
+      ],
       "comment_ids": []
     },
     {
@@ -3958,7 +4363,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        262,
+        263
+      ],
       "comment_ids": []
     },
     {
@@ -3985,7 +4393,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        264,
+        265
+      ],
       "comment_ids": []
     },
     {
@@ -4012,7 +4423,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        266,
+        267
+      ],
       "comment_ids": []
     },
     {
@@ -4039,7 +4453,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        268,
+        269
+      ],
       "comment_ids": []
     },
     {
@@ -4066,7 +4483,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        270,
+        271
+      ],
       "comment_ids": []
     },
     {
@@ -4093,7 +4513,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        272,
+        273
+      ],
       "comment_ids": []
     },
     {
@@ -4120,7 +4543,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        274,
+        275
+      ],
       "comment_ids": []
     },
     {
@@ -4147,7 +4573,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        276,
+        277
+      ],
       "comment_ids": []
     },
     {
@@ -4174,7 +4603,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        278,
+        279
+      ],
       "comment_ids": []
     },
     {
@@ -4202,7 +4634,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        280,
+        281
+      ],
       "comment_ids": []
     },
     {
@@ -4231,7 +4666,9 @@
       "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-01",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        282
+      ],
       "anchor_failure_reason": "anchor 'Claims and LNK source status: Whether the extract contains claims-derived record' matched 0 paragraphs"
     },
     {
@@ -4259,7 +4696,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        283,
+        284
+      ],
       "comment_ids": []
     },
     {
@@ -4286,7 +4726,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        285,
+        286
+      ],
       "comment_ids": []
     },
     {
@@ -4314,7 +4757,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        287,
+        288
+      ],
       "comment_ids": []
     },
     {
@@ -4342,7 +4788,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        289,
+        290
+      ],
       "comment_ids": []
     },
     {
@@ -4369,7 +4818,10 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        291,
+        292
+      ],
       "comment_ids": []
     },
     {
@@ -4396,7 +4848,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        293
+      ],
       "comment_ids": []
     },
     {
@@ -4423,7 +4877,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        294
+      ],
       "comment_ids": []
     },
     {
@@ -4450,7 +4906,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        295
+      ],
       "comment_ids": []
     },
     {
@@ -4477,7 +4935,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        296
+      ],
       "comment_ids": []
     },
     {
@@ -4504,7 +4964,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        297
+      ],
       "comment_ids": []
     },
     {
@@ -4531,7 +4993,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        298
+      ],
       "comment_ids": []
     },
     {
@@ -4558,7 +5022,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        299
+      ],
       "comment_ids": []
     },
     {
@@ -4585,7 +5051,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        300
+      ],
       "comment_ids": []
     },
     {
@@ -4612,7 +5080,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        301
+      ],
       "comment_ids": []
     },
     {
@@ -4639,7 +5109,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        302
+      ],
       "comment_ids": []
     },
     {
@@ -4666,7 +5138,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        303
+      ],
       "comment_ids": []
     },
     {
@@ -4693,7 +5167,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        304
+      ],
       "comment_ids": []
     },
     {
@@ -4720,7 +5196,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        305
+      ],
       "comment_ids": []
     },
     {
@@ -4747,7 +5225,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        306
+      ],
       "comment_ids": []
     },
     {
@@ -4774,7 +5254,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        307
+      ],
       "comment_ids": []
     },
     {
@@ -4801,7 +5283,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        308
+      ],
       "comment_ids": []
     },
     {
@@ -4828,7 +5312,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        309
+      ],
       "comment_ids": []
     },
     {
@@ -4855,7 +5341,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        310
+      ],
       "comment_ids": []
     },
     {
@@ -4882,7 +5370,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        311
+      ],
       "comment_ids": []
     },
     {
@@ -4909,7 +5399,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        312
+      ],
       "comment_ids": []
     },
     {
@@ -4936,7 +5428,9 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        313
+      ],
       "comment_ids": []
     },
     {
@@ -4961,7 +5455,18 @@
       "verdict": null,
       "comment_text": null,
       "anchor_resolution": "OK",
-      "revision_ids": [],
+      "revision_ids": [
+        314,
+        315,
+        316,
+        317,
+        318,
+        319,
+        320,
+        321,
+        322,
+        323
+      ],
       "comment_ids": [],
       "table_columns": [
         "Item",
@@ -5039,7 +5544,9 @@
       "comment_text": "OneFLquestions document not received; listed as open in \u00c2\u00a78 (D-190-01).",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        324
+      ],
       "parent_para_id": "4AFA1B64"
     },
     {
@@ -5067,7 +5574,9 @@
       "comment_text": "Confirmed: get_hl_any_dx_ids() uses the earliest HL diagnosis code date from DIAGNOSIS (DX_DATE with ADMIT_DATE as fallback); the Tumor Registry date is not consulted in the production anchor function (D-191-02, D-191-03). See \u00c2\u00a78.",
       "anchor_resolution": "OK",
       "revision_ids": [],
-      "comment_ids": [],
+      "comment_ids": [
+        325
+      ],
       "parent_para_id": "0EC496CC"
     }
   ]

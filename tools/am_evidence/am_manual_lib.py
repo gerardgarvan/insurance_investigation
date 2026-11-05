@@ -948,6 +948,12 @@ def make_tracked_row(
 
     row = copy.deepcopy(template_row)
 
+    # Remove any pre-existing w14:paraId from the copied row element itself
+    # (the template row may carry a paraId that must not be duplicated).
+    _W14_PARA_ID_ATTR_STR = qn("w14", "paraId")
+    if row.get(_W14_PARA_ID_ATTR_STR) is not None:
+        del row.attrib[_W14_PARA_ID_ATTR_STR]
+
     # Add w:trPr/w:ins to mark the entire row as inserted
     trPr = row.find(qn("w", "trPr"))
     if trPr is None:
@@ -958,13 +964,16 @@ def make_tracked_row(
     ins_trPr.set(qn("w", "author"), author)
     ins_trPr.set(qn("w", "date"), date)
 
-    # Replace cell content with tracked paragraphs
+    # Replace cell content with tracked paragraphs.
+    # ALL cells get their paragraphs replaced to avoid copying pre-existing paraIds
+    # from the template row into repeated copies (would create duplicate paraId values).
     tcs = row.findall(qn("w", "tc"))
-    for idx, (tc, text) in enumerate(zip(tcs, cells_text)):
-        # Remove existing paragraphs in this cell
+    for idx, tc in enumerate(tcs):
+        # Remove all existing paragraphs in this cell (preserves tcPr, nested tables, etc.)
         for p in tc.findall(qn("w", "p")):
             tc.remove(p)
-        # Append a tracked paragraph
+        # Use the provided text for covered columns; empty string for extra cells.
+        text = cells_text[idx] if idx < len(cells_text) else ""
         p_new = make_tracked_paragraph(
             text,
             rev_id=run_rev_id,
@@ -1722,9 +1731,11 @@ def _add_comment_to_doc(
     """
     cmt_id = alloc.next_w_id()
     new_para_id = alloc.next_para_id()
-    range_start_id = alloc.next_w_id()
-    range_end_id = alloc.next_w_id()
-    ref_id = alloc.next_w_id()
+    # commentRangeStart, commentRangeEnd, and commentReference all use the same w:id
+    # as the comment itself — this is the standard OOXML pattern (verified from live DOCX).
+    range_start_id = cmt_id
+    range_end_id = cmt_id
+    ref_id = cmt_id
 
     # Build comment in comments.xml
     if parent_para_id:
@@ -1777,25 +1788,29 @@ def _add_comment_to_doc(
                 break
 
     if anchor_para is not None:
-        parent = anchor_para.getparent()
-        if parent is not None:
-            idx = list(parent).index(anchor_para)
-            # Insert commentRangeStart before the paragraph
-            crs = etree.Element(qn("w", "commentRangeStart"))
-            crs.set(qn("w", "id"), str(range_start_id))
-            parent.insert(idx, crs)
-            # Insert commentRangeEnd after the paragraph (now at idx+1)
-            cre = etree.Element(qn("w", "commentRangeEnd"))
-            cre.set(qn("w", "id"), str(range_end_id))
-            parent.insert(idx + 2, cre)
-            # Add a commentReference run after the paragraph
-            ref_para = etree.Element(qn("w", "p"))
-            ref_para_id = alloc.next_para_id()
-            ref_para.set(qn("w14", "paraId"), ref_para_id)
-            ref_run = etree.SubElement(ref_para, qn("w", "r"))
-            ref_el = etree.SubElement(ref_run, qn("w", "commentReference"))
-            ref_el.set(qn("w", "id"), str(cmt_id))
-            parent.insert(idx + 3, ref_para)
+        # Insert range markers and commentReference as children of the anchor paragraph.
+        # The standard OOXML pattern (verified from the live DOCX) is:
+        #   w:p
+        #     ...existing w:r children...
+        #     w:commentRangeStart w:id="X"
+        #     w:commentRangeEnd   w:id="X"
+        #     w:r
+        #       w:rPr ...
+        #       w:commentReference w:id="X"
+        # All three elements are siblings inside the same w:p.
+        crs = etree.Element(qn("w", "commentRangeStart"))
+        crs.set(qn("w", "id"), str(range_start_id))
+        anchor_para.append(crs)
+
+        cre = etree.Element(qn("w", "commentRangeEnd"))
+        cre.set(qn("w", "id"), str(range_end_id))
+        anchor_para.append(cre)
+
+        # w:r containing the commentReference
+        ref_run = etree.Element(qn("w", "r"))
+        ref_el = etree.SubElement(ref_run, qn("w", "commentReference"))
+        ref_el.set(qn("w", "id"), str(cmt_id))
+        anchor_para.append(ref_run)
 
     op.setdefault("comment_ids", []).append(cmt_id)
     return cmt_id
@@ -2066,14 +2081,18 @@ def _insert_s8_table(
         tc = etree.SubElement(template_row, qn("w", "tc"))
         p = etree.SubElement(tc, qn("w", "p"))
 
-    # Header row (not tracked — it's the table structure)
-    header_row = etree.SubElement(tbl, qn("w", "tr"))
-    for col_name in columns:
-        tc = etree.SubElement(header_row, qn("w", "tc"))
-        p = etree.SubElement(tc, qn("w", "p"))
-        r = etree.SubElement(p, qn("w", "r"))
-        t = etree.SubElement(r, qn("w", "t"))
-        t.text = col_name
+    # Header row — also tracked so reject-all removes the entire table.
+    header_row_id = alloc.next_w_id()
+    header_row = make_tracked_row(
+        cells_text=columns,
+        template_row=template_row,
+        rev_id=header_row_id,
+        author=author,
+        date=date,
+        para_id_factory=alloc.next_para_id,
+    )
+    tbl.append(header_row)
+    op.setdefault("revision_ids", []).append(header_row_id)
 
     # Data rows as tracked insertions
     for cells in table_rows:
