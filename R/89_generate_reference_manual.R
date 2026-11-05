@@ -102,8 +102,9 @@ assign_stage <- function(script_basename) {
 # SECTION 3: HEADER PARSING FUNCTION
 # ==============================================================================
 
-# Field keywords and accepted spellings (singular/plural, "Depends").
-# Names are the canonical field keys stored in the result list.
+# Field keywords and accepted spellings. Matching is case-insensitive and accepts:
+#   "Inputs:", "Input:", "INPUTS:", "Inputs (CONFIG$cache$outputs_dir):",
+#   and a bare "Inputs" / "Output" label on its own line (values on following lines).
 HEADER_FIELDS <- c(
   purpose      = "Purpose",
   inputs       = "Inputs?",
@@ -111,10 +112,43 @@ HEADER_FIELDS <- c(
   dependencies = "(?:Dependencies|Depends)",
   requirements = "Requirements?"
 )
-ANY_FIELD_RX <- glue("^#\\s*(?:{paste(HEADER_FIELDS, collapse = '|')}):")
-BANNER_RX    <- "^#\\s*={3,}"
+field_rx <- function(label) {
+  glue("(?i)^#\\s*{label}\\s*(?:(\\([^)]*\\))\\s*:|:|$)\\s*(.*)$")
+}
+ANY_FIELD_RX <- field_rx(glue("(?:{paste(HEADER_FIELDS, collapse = '|')})"))
+BANNER_RX    <- "^#\\s*[=\\-]{3,}"
 
-parse_script_header <- function(filepath) {
+# Scripts whose name marks them as checks/one-off probes are non-production
+# regardless of number (e.g. 147_verify_vs_1006.R, 192_source_step0_probe.R).
+NON_PRODUCTION_NAME_RX <- "(?i)(^|_)(verify|probe|diag|checkpoint)(_|\\.R$)"
+
+# Purpose from the free-text lines before the first field (or the whole leading
+# comment block when there are no fields): skips banners, shebangs, "[...]" audit
+# tags and a bare file-name line; a "<name> -- description" title yields the
+# description. Takes the first paragraph, up to 3 lines.
+purpose_from_prose <- function(comment_lines, filename) {
+  stem <- str_replace(filename, "\\.R$", "")
+  name_rx <- glue("^(?:R/)?(?:utils/)?{stem}\\.R")
+  para <- character(0)
+  for (ln in comment_lines) {
+    if (str_detect(ln, "^#!")) next
+    if (str_detect(ln, BANNER_RX)) { if (length(para)) break else next }
+    txt <- str_trim(str_replace(ln, "^#\\s?", ""))
+    if (nchar(txt) == 0) { if (length(para)) break else next }
+    if (str_detect(txt, "^\\[")) next
+    if (str_detect(txt, name_rx)) {
+      rest <- str_trim(str_replace(txt, name_rx, ""))
+      rest <- str_trim(str_replace(rest, "^(?:--|—|–|-|:)\\s*", ""))
+      if (nchar(rest) == 0) next
+      txt <- rest
+    }
+    para <- c(para, txt)
+    if (length(para) >= 3) break
+  }
+  if (length(para)) paste(para, collapse = " ") else "Not documented"
+}
+
+parse_script_header <- function(filepath, is_utils = FALSE) {
   lines <- readLines(filepath, warn = FALSE)
 
   fields <- list(
@@ -124,35 +158,25 @@ parse_script_header <- function(filepath) {
     outputs      = "Not documented",
     dependencies = "Not documented",
     requirements = "Not documented",
-    documented   = FALSE
+    documented   = FALSE,
+    is_utils     = is_utils
   )
 
-  # First line of executable code (non-comment, non-blank) in the file.
-  # The header can never extend past this point.
+  # The header can never extend past the first line of executable code.
   first_code <- which(!str_detect(lines, "^\\s*#") & !str_detect(lines, "^\\s*$"))[1]
   search_end <- if (!is.na(first_code)) first_code - 1L else length(lines)
+  lead       <- lines[seq_len(search_end)]
+  lead_cmt   <- lead[str_detect(lead, "^\\s*#")]
 
-  # Field lines inside the leading comment region.
   field_hits <- which(str_detect(lines, ANY_FIELD_RX))
   field_hits <- field_hits[field_hits <= search_end]
 
   if (length(field_hits) == 0) {
-    # No structured fields: use the first comment paragraph as Purpose (USABLE fallback).
-    comment_lines <- lines[seq_len(search_end)]
-    comment_lines <- comment_lines[str_detect(comment_lines, "^#") &
-                                   !str_detect(comment_lines, BANNER_RX)]
-    prose <- str_trim(str_replace(comment_lines, "^#\\s*", ""))
-    prose <- prose[nchar(prose) > 0]
-    # Skip a leading line that is just the file name
-    prose <- prose[prose != basename(filepath)]
-    if (length(prose) > 0) fields$purpose <- paste(head(prose, 3), collapse = " ")
     header_end <- search_end
   } else {
-    # Header block = from the first field line to the first banner AFTER it
-    # (or to the end of the leading comment region). This handles both layouts:
-    #   ===== / title / ===== / fields / =====   (banner-sandwiched title)
-    #   ===== / fields / =====                   (single opening banner)
-    # without bleeding into "# SECTION n" banners in the script body.
+    # Header block = first field line to the first banner after it (or the end of
+    # the leading comment region). Works for banner/title/banner/fields/banner,
+    # banner/fields/banner, and unbannered layouts.
     first_field  <- field_hits[1]
     banners      <- which(str_detect(lines, BANNER_RX))
     closing      <- banners[banners > first_field][1]
@@ -160,40 +184,55 @@ parse_script_header <- function(filepath) {
     header_lines <- lines[first_field:header_end]
 
     for (key in names(HEADER_FIELDS)) {
-      pattern <- glue("^#\\s*{HEADER_FIELDS[[key]]}:\\s*(.*)$")
-      idx <- which(str_detect(header_lines, pattern))[1]
-      if (is.na(idx)) next
+      pattern <- field_rx(HEADER_FIELDS[[key]])
+      hits <- which(str_detect(header_lines, pattern))
+      if (length(hits) == 0) next
 
-      value <- str_trim(str_match(header_lines[idx], pattern)[, 2])
+      values <- character(0)
+      for (idx in hits) {
+        m     <- str_match(header_lines[idx], pattern)
+        paren <- ifelse(is.na(m[, 2]), "", m[, 2])
+        value <- str_trim(str_replace(ifelse(is.na(m[, 3]), "", m[, 3]), "^[-*]\\s+", ""))
 
-      # Continuation lines: indented comment lines that are not another field,
-      # not a banner, and not an empty "#" line (which ends the field).
-      cont <- character(0)
-      k <- idx + 1L
-      while (k <= length(header_lines)) {
-        ln <- header_lines[k]
-        if (str_detect(ln, "^#\\s+\\S") &&
-            !str_detect(ln, ANY_FIELD_RX) &&
-            !str_detect(ln, BANNER_RX)) {
-          cont <- c(cont, str_trim(str_replace(ln, "^#\\s*(?:[-*]\\s+)?", "")))
-          k <- k + 1L
-        } else {
-          break
+        # Continuation lines: indented comment lines that are not another field,
+        # not a banner, and not an empty "#" line (which ends the field).
+        cont <- character(0)
+        k <- idx + 1L
+        while (k <= length(header_lines)) {
+          ln <- header_lines[k]
+          if (str_detect(ln, "^#\\s+\\S") &&
+              !str_detect(ln, ANY_FIELD_RX) &&
+              !str_detect(ln, BANNER_RX)) {
+            cont <- c(cont, str_trim(str_replace(ln, "^#\\s*(?:[-*]\\s+)?", "")))
+            k <- k + 1L
+          } else {
+            break
+          }
         }
+        parts <- c(value, cont)
+        parts <- parts[nchar(parts) > 0]
+        # Bulleted lists become "a; b; c"; wrapped prose is joined with spaces
+        had_bullets <- k > idx + 1L &&
+          any(str_detect(header_lines[(idx + 1L):(k - 1L)], "^#\\s*[-*]\\s+"))
+        joined <- paste(parts, collapse = if (had_bullets) "; " else " ")
+        if (nchar(paren) > 0) joined <- str_trim(paste(paren, joined))
+        if (nchar(joined) > 0) values <- c(values, joined)
       }
-      value <- str_trim(str_replace(value, "^[-*]\\s+", ""))
-      parts <- c(value, cont)
-      parts <- parts[nchar(parts) > 0]
-      # Bulleted lists become "a; b; c"; wrapped prose is joined with spaces
-      had_bullets <- k > idx + 1L &&
-        any(str_detect(header_lines[(idx + 1L):(k - 1L)], "^#\\s*[-*]\\s+"))
-      value <- paste(parts, collapse = if (had_bullets) "; " else " ")
-      if (nchar(value) > 0) fields[[key]] <- value
+      if (length(values) > 0) fields[[key]] <- paste(values, collapse = "; ")
     }
   }
 
-  # Documented = Purpose, Inputs and Outputs all present
-  fields$documented <- !any(c(fields$purpose, fields$inputs, fields$outputs) == "Not documented")
+  # Purpose fallback: title line or first prose paragraph before the first field
+  if (fields$purpose == "Not documented") {
+    pre <- if (length(field_hits)) lines[seq_len(field_hits[1] - 1L)] else lead_cmt
+    pre <- pre[str_detect(pre, "^\\s*#")]
+    fields$purpose <- purpose_from_prose(pre, basename(filepath))
+  }
+
+  # Documented: scripts need Purpose + Inputs + Outputs; utils modules are function
+  # libraries (their I/O is per-function), so they need Purpose only.
+  required <- if (is_utils) "purpose" else c("purpose", "inputs", "outputs")
+  fields$documented <- all(vapply(required, function(f) fields[[f]] != "Not documented", logical(1)))
 
   # Dependency auto-detection from body: source("R/...") calls, excluding 00_config.R
   if (fields$dependencies == "Not documented" && header_end < length(lines)) {
@@ -211,9 +250,9 @@ parse_script_header <- function(filepath) {
   fields
 }
 
-# Which of Purpose / Inputs / Outputs a parsed header is missing (for error reports)
+# Which required fields a parsed header is missing (for error reports)
 missing_fields <- function(h) {
-  req <- c("purpose", "inputs", "outputs")
+  req <- if (isTRUE(h$is_utils)) "purpose" else c("purpose", "inputs", "outputs")
   req[vapply(req, function(f) identical(h[[f]], "Not documented"), logical(1))]
 }
 
@@ -273,7 +312,7 @@ message(glue("  Found {length(utils_files)} utils modules"))
 message("\n=== Parsing Scripts ===")
 
 numbered_headers <- lapply(numbered_files, parse_script_header)
-utils_headers    <- lapply(utils_files,    parse_script_header)
+utils_headers    <- lapply(utils_files, parse_script_header, is_utils = TRUE)
 numbered_constants <- sapply(numbered_files, detect_config_constants)
 
 # Check for unassigned scripts and warn
@@ -296,14 +335,16 @@ message(glue("Parsed {length(numbered_headers)} numbered scripts + {n_utils} uti
 # ==============================================================================
 # COVERAGE CHECK
 # ==============================================================================
-# Production scripts: numbered scripts whose stage is not Outputs/Tests/Ad-hoc.
+# Production scripts: numbered scripts whose stage is not Outputs/Tests/Ad-hoc
+# and whose name does not mark them as a check/probe (NON_PRODUCTION_NAME_RX).
 # (These are the scripts where "Not documented" is a blocker, not a warning.)
 
 NON_PRODUCTION_STAGES <- c("Outputs (70-79)", "Tests (80-89)", "Ad-hoc (90-99)")
 
 is_production_script <- function(script_basename) {
   stage <- assign_stage(script_basename)
-  !stage %in% NON_PRODUCTION_STAGES
+  !stage %in% NON_PRODUCTION_STAGES &&
+    !str_detect(script_basename, NON_PRODUCTION_NAME_RX)
 }
 
 prod_idxs    <- which(sapply(all_script_names, is_production_script))
