@@ -1514,6 +1514,12 @@ def apply_operations(
     reply_outcomes = {}
     n_comments_added = 0
 
+    # Clear recorded IDs from any previous run so this run's manifest is authoritative.
+    # (setdefault(...).extend() would otherwise accumulate IDs across --overwrite re-runs.)
+    for _op in ops:
+        _op["revision_ids"] = []
+        _op["comment_ids"] = []
+
     for op in ops:
         op_id = op["op_id"]
         action = op["action"]
@@ -1525,6 +1531,7 @@ def apply_operations(
             continue
 
         try:
+            _w_before = alloc._next_w
             _apply_single_op(
                 op=op,
                 doc_tree=doc_tree,
@@ -1539,6 +1546,15 @@ def apply_operations(
                 first_table=first_table,
                 reply_outcomes=reply_outcomes,
             )
+            # Capture any IDs issued by alloc during this op but not explicitly
+            # recorded (e.g. make_tracked_row sub-ids, paragraph marks inside cells).
+            _w_after = alloc._next_w
+            if _w_after > _w_before:
+                issued_range = list(range(_w_before, _w_after))
+                recorded = set(op.get("revision_ids", [])) | set(op.get("comment_ids", []))
+                for _id in issued_range:
+                    if _id not in recorded:
+                        op.setdefault("revision_ids", []).append(_id)
             n_comments_added += len(op.get("comment_ids", []))
         except AnchorFailed as e:
             print(f"  WARNING: AnchorFailed for {op_id}: {e}")
