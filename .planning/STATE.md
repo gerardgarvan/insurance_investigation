@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: executing
-stopped_at: Completed 193-03-PLAN.md
-last_updated: "2026-11-05T16:50:11.681Z"
+stopped_at: Completed 193-04-PLAN.md
+last_updated: "2026-11-05T17:02:52.615Z"
 last_activity: 2026-11-05
 progress:
   total_phases: 46
   completed_phases: 37
   total_plans: 122
-  completed_plans: 133
+  completed_plans: 134
 ---
 
 # Project State
@@ -28,6 +28,19 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 Phase: 191 (verify-existing-entries) — COMPLETE 2026-10-28: all 3 plans done; 24 verdicts, 8 D-191-NN decisions (6 OPEN, 2 CONFIRMED); am_verdicts_20261027.xlsx produced; validate passes.
 Phase: 192 (draft-new-content) — COMPLETE 2026-10-28: all 3 plans done; AM-DRAFT.md with sourced sections for all MISMATCH/PARTIAL leads; verification 16/16 passed.
 Phase 192.3 COMPLETE 2026-11-04: all 3 plans done; R/181 produces 9-sheet workbook with SOURCE stratification; regression check passed on HiPerGator.
+Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01–04 complete):
+
+  - Output DOCX: docs/analytic_manual/AnalyticManual_2026.10.28.docx
+    SHA-256: 74ebe4e05ec5d805cd850bf5fc3f4cc922adca12ae36810e5158fe4761f663e1
+
+  - Evidence workbook: output/am_evidence_20261028.xlsx (KEY, Operations, Open Items, Reconciliation)
+  - Reply outcomes: c0=THREADED-REPLY, c1=THREADED-REPLY
+  - D-15 QA: package checks=PASS, reconciliation=PASS, pandoc=PASS, LibreOffice=SKIP(not installed), export regression=PASS
+  - 324 revisions issued, 12 comments added
+  - D-193-01 resolved: new versioned copy used (default)
+  - NEXT GATE: WORD-REVIEW-APPROVED (Plan 05) — Phase 193 is NOT complete until human Word review passes.
+    Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
+    accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Last activity: 2026-11-05
 
 ## Phase Map (v3.13)
@@ -37,7 +50,7 @@ Last activity: 2026-11-05
 | 190 | Evidence Map | — | Complete |
 | 191 | Verify Existing Entries | Phase 190 | Complete |
 | 192 | Draft New Content | Phase 191 | Complete |
-| 193 | Produce Updated Manual | Phase 192 | Ready |
+| 193 | Produce Updated Manual | Phase 192 | AUTOMATED-QA-PASSED (awaiting WORD-REVIEW-APPROVED) |
 | 194 | Team Review Package and Close-out | Phase 193 | Not started |
 
 ## Accumulated Context
@@ -115,4 +128,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Completed 193-03-PLAN.md
+**Stopped at:** Completed 193-04-PLAN.md
