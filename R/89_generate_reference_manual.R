@@ -4,11 +4,13 @@
 #
 # Purpose:
 #   Auto-generate docs/REFERENCE_MANUAL.md by parsing structured 5-field headers
-#   from all pipeline scripts. Builds dependency matrix and writes onboarding
-#   documentation.
+#   from all pipeline scripts. Discovers scripts dynamically via list.files(),
+#   groups three-digit scripts by functional range, and builds a live utils
+#   function-usage cross-reference.
 #
 # Inputs:
 #   - R/*.R and R/utils/*.R script files (header blocks)
+#   - R/00_config.R (sourced into isolated env to read constant sizes)
 #
 # Outputs:
 #   - docs/REFERENCE_MANUAL.md (complete reference manual)
@@ -25,105 +27,190 @@
 # SECTION 1: SETUP
 # ==============================================================================
 
-# Clear workspace
 rm(list = ls())
 
-# Load libraries
 library(glue)
 library(stringr)
 
-# Define output path
 output_path <- "docs/REFERENCE_MANUAL.md"
 
 message("=== Reference Manual Generator ===")
 message(glue("Output: {output_path}"))
 
 # ==============================================================================
-# SECTION 2: HEADER PARSING FUNCTION
+# SECTION 2: STAGE RANGE MAP (three-digit scripts)
+# ==============================================================================
+
+# Named list: group label -> integer range (inclusive).
+# Scripts with a three-digit leading number are matched against these ranges in order.
+# Any that match no range go into "Unassigned".
+THREE_DIGIT_STAGE_MAP <- list(
+  list(name = "Geospatial & SES (100-122)",           lo = 100L, hi = 122L),
+  list(name = "Treatment Enhancement (130-146)",       lo = 130L, hi = 146L),
+  list(name = "Surveillance & Survivorship (147-188)", lo = 147L, hi = 188L),
+  list(name = "Supplemental Diagnostics (189+)",       lo = 189L, hi = 999L)
+)
+
+# Two-digit decade groups (unchanged from original)
+DECADE_GROUPS <- list(
+  list(name = "Foundation (00-09)"),
+  list(name = "Cohort (10-19)"),
+  list(name = "Treatment (20-29)"),
+  list(name = "Supplemental (30-39)"),
+  list(name = "Cancer (40-59)"),
+  list(name = "Payer & QA (60-69)"),
+  list(name = "Outputs (70-79)"),
+  list(name = "Tests (80-89)"),
+  list(name = "Ad-hoc (90-99)")
+)
+
+assign_stage <- function(script_basename) {
+  # Extract leading integer from filename (e.g. "122a_..." -> 122, "00_..." -> 0)
+  num_str <- str_extract(script_basename, "^[0-9]+")
+  if (is.na(num_str)) return("Unassigned")
+  num <- as.integer(num_str)
+
+  if (num >= 100L) {
+    for (grp in THREE_DIGIT_STAGE_MAP) {
+      if (num >= grp$lo && num <= grp$hi) return(grp$name)
+    }
+    return("Unassigned")
+  }
+
+  # Two-digit: map decade
+  decade <- (num %/% 10L) * 10L
+  switch(as.character(decade),
+    "0"  = "Foundation (00-09)",
+    "10" = "Cohort (10-19)",
+    "20" = "Treatment (20-29)",
+    "30" = "Supplemental (30-39)",
+    "40" = ,
+    "50" = "Cancer (40-59)",
+    "60" = "Payer & QA (60-69)",
+    "70" = "Outputs (70-79)",
+    "80" = "Tests (80-89)",
+    "90" = "Ad-hoc (90-99)",
+    "Unassigned"
+  )
+}
+
+# ==============================================================================
+# SECTION 3: HEADER PARSING FUNCTION
 # ==============================================================================
 
 parse_script_header <- function(filepath) {
-  # Read file
   lines <- readLines(filepath, warn = FALSE)
 
-  # Find header block boundaries (between first # == and closing # == or first non-comment)
-  header_start <- which(str_detect(lines, "^#\\s*=+"))[1]
+  # Find first opening banner line (^# followed by >= 3 equals signs)
+  banner_hits <- which(str_detect(lines, "^#\\s*={3,}"))
+  header_start <- banner_hits[1]
 
   if (is.na(header_start)) {
-    # No header found
+    # No banner: try to extract first comment paragraph as Purpose (USABLE fallback)
+    comment_lines <- lines[str_detect(lines, "^#")]
+    # Strip comment marker; skip blank comment lines at the top
+    prose <- str_trim(str_replace(comment_lines, "^#\\s*", ""))
+    prose <- prose[nchar(prose) > 0]
+    # Take up to the first blank comment or non-comment as the purpose paragraph
+    purpose_text <- if (length(prose) > 0) paste(head(prose, 3), collapse = " ") else "Not documented"
+
     return(list(
-      script = basename(filepath),
-      purpose = "Not documented",
-      inputs = "Not documented",
-      outputs = "Not documented",
+      script      = basename(filepath),
+      purpose     = purpose_text,
+      inputs      = "Not documented",
+      outputs     = "Not documented",
       dependencies = "Not documented",
-      requirements = "Not documented"
+      requirements = "Not documented",
+      documented  = FALSE
     ))
   }
 
-  # Find end of header (second === line or first non-comment line after header_start)
-  header_end <- which(str_detect(lines, "^#\\s*=+"))[3]
-  if (is.na(header_end)) {
-    # Find first non-comment line
-    non_comment <- which(!str_detect(lines[(header_start + 1):length(lines)], "^#"))[1]
-    if (!is.na(non_comment)) {
-      header_end <- header_start + non_comment - 1
-    } else {
-      header_end <- length(lines)
-    }
+  # Header ends at the SECOND banner line (closing ===), or at the first
+  # non-comment, non-blank line after header_start, whichever comes first.
+  # (Previous implementation used the third banner, which bled into section
+  # headers inside the script body.)
+  second_banner <- banner_hits[2]
+
+  # First non-comment, non-blank line after header_start
+  tail_lines <- lines[(header_start + 1):length(lines)]
+  first_code <- which(!str_detect(tail_lines, "^#") & !str_detect(tail_lines, "^\\s*$"))[1]
+  first_code_abs <- if (!is.na(first_code)) header_start + first_code else NA_integer_
+
+  if (!is.na(second_banner) && !is.na(first_code_abs)) {
+    header_end <- min(second_banner, first_code_abs)
+  } else if (!is.na(second_banner)) {
+    header_end <- second_banner
+  } else if (!is.na(first_code_abs)) {
+    header_end <- first_code_abs
+  } else {
+    header_end <- length(lines)
   }
 
-  # Extract header block
   header_lines <- lines[header_start:header_end]
 
-  # Initialize fields
   fields <- list(
-    script = basename(filepath),
-    purpose = "Not documented",
-    inputs = "Not documented",
-    outputs = "Not documented",
+    script       = basename(filepath),
+    purpose      = "Not documented",
+    inputs       = "Not documented",
+    outputs      = "Not documented",
     dependencies = "Not documented",
-    requirements = "Not documented"
+    requirements = "Not documented",
+    documented   = FALSE
   )
 
-  # Field keywords
   field_keywords <- c("Purpose", "Inputs", "Outputs", "Dependencies", "Requirements")
 
-  # Parse each field
   for (field_name in field_keywords) {
-    # Find line matching "# Field:"
     pattern <- glue("^#\\s*{field_name}:\\s*(.*)$")
     field_line_idx <- which(str_detect(header_lines, pattern))[1]
 
     if (!is.na(field_line_idx)) {
-      # Extract first-line value
       match <- str_match(header_lines[field_line_idx], pattern)
       field_value <- str_trim(match[, 2])
 
-      # Collect multi-line continuation (subsequent comment lines with leading whitespace)
+      # Collect continuation lines: comment lines with >= 1 leading space that
+      # don't start another field keyword and don't match a banner line.
       continuation_lines <- c()
       next_idx <- field_line_idx + 1
 
       while (next_idx <= length(header_lines)) {
-        # Check if line is a continuation (starts with # followed by whitespace, not a new field)
-        if (str_detect(header_lines[next_idx], "^#\\s{2,}") &&
-            !str_detect(header_lines[next_idx], "^#\\s*(Purpose|Inputs|Outputs|Dependencies|Requirements):")) {
-          # Extract continuation text
-          continuation <- str_replace(header_lines[next_idx], "^#\\s*", "")
-          continuation_lines <- c(continuation_lines, str_trim(continuation))
+        line <- header_lines[next_idx]
+        is_continuation <- str_detect(line, "^#\\s+") &&
+          !str_detect(line, "^#\\s*(Purpose|Inputs|Outputs|Dependencies|Requirements):") &&
+          !str_detect(line, "^#\\s*={3,}")
+        if (is_continuation) {
+          continuation <- str_trim(str_replace(line, "^#\\s*", ""))
+          if (nchar(continuation) > 0) {
+            continuation_lines <- c(continuation_lines, continuation)
+          }
           next_idx <- next_idx + 1
         } else {
           break
         }
       }
 
-      # Combine first line + continuations
       if (length(continuation_lines) > 0) {
         field_value <- paste(c(field_value, continuation_lines), collapse = " ")
       }
 
-      # Store in fields list
       fields[[tolower(field_name)]] <- field_value
+    }
+  }
+
+  # Mark as documented if at least Purpose, Inputs, and Outputs were found
+  fields$documented <- !any(c(fields$purpose, fields$inputs, fields$outputs) == "Not documented")
+
+  # Dependency auto-detection from body: find source("R/...") calls, excluding 00_config.R
+  if (fields$dependencies == "Not documented") {
+    body_lines <- lines[(header_end + 1):length(lines)]
+    source_matches <- str_match_all(
+      body_lines,
+      'source\\((?:here::here\\()?["\'](?:R/|"R",\\s*")([^"\']+\\.R)["\']'
+    )
+    sourced <- unique(unlist(lapply(source_matches, function(m) m[, 2])))
+    sourced <- sourced[!is.na(sourced) & !str_detect(sourced, "00_config")]
+    if (length(sourced) > 0) {
+      fields$dependencies <- paste(sourced, collapse = ", ")
     }
   }
 
@@ -131,354 +218,447 @@ parse_script_header <- function(filepath) {
 }
 
 # ==============================================================================
-# SECTION 3: CONFIG CONSTANT DETECTION
+# SECTION 4: CONFIG CONSTANT DETECTION (unchanged — works correctly)
 # ==============================================================================
 
 detect_config_constants <- function(filepath) {
-  # Exclude R/00_config.R itself (it defines constants, doesn't consume them)
-  if (basename(filepath) == "00_config.R") {
-    return("None")
-  }
+  if (basename(filepath) == "00_config.R") return("None")
 
-  # Read file
   lines <- readLines(filepath, warn = FALSE)
 
-  # Known constants
   known_constants <- c(
     "CONFIG", "EXTRACT_DATE", "PCORNET_TABLES", "PCORNET_PATHS",
     "ICD_CODES", "PAYER_MAPPING", "AMC_PAYER_LOOKUP", "TREATMENT_CODES",
-    "ANALYSIS_PARAMS", "CANCER_SITE_MAP", "TIER_MAPPING"
+    "ANALYSIS_PARAMS", "CANCER_SITE_MAP", "TIER_MAPPING",
+    "ICD9_CANCER_SITE_MAP", "LOOKUP_TABLES_DT", "USE_DUCKDB",
+    "IS_LOCAL", "THREAD_COUNT"
   )
 
-  # Filter to non-comment lines
   code_lines <- lines[!str_detect(lines, "^\\s*#")]
 
-  # Detect which constants are used
-  used_constants <- c()
-  for (constant in known_constants) {
-    # Check if constant appears in any code line
-    if (any(str_detect(code_lines, constant))) {
-      used_constants <- c(used_constants, constant)
-    }
-  }
+  used_constants <- Filter(function(constant) {
+    any(str_detect(code_lines, constant))
+  }, known_constants)
 
-  if (length(used_constants) == 0) {
-    return("None")
-  } else {
-    return(paste(used_constants, collapse = ", "))
-  }
+  if (length(used_constants) == 0) "None" else paste(used_constants, collapse = ", ")
 }
 
 # ==============================================================================
-# SECTION 4: PARSE ALL SCRIPTS
+# SECTION 5: DISCOVER SCRIPTS
+# ==============================================================================
+
+message("\n=== Discovering Scripts ===")
+
+# Numbered scripts: sort numerically by leading integer (not alphabetically,
+# so that 100.R sorts after 99.R).
+numbered_files_raw <- list.files("R", pattern = "^[0-9]+.*\\.R$", full.names = TRUE)
+
+extract_leading_int <- function(path) {
+  as.integer(str_extract(basename(path), "^[0-9]+"))
+}
+
+numbered_files <- numbered_files_raw[order(extract_leading_int(numbered_files_raw),
+                                           basename(numbered_files_raw))]
+
+# Utils scripts
+utils_files <- sort(list.files("R/utils", pattern = "\\.R$", full.names = TRUE))
+
+message(glue("  Found {length(numbered_files)} numbered scripts"))
+message(glue("  Found {length(utils_files)} utils modules"))
+
+# ==============================================================================
+# SECTION 6: PARSE ALL SCRIPTS
 # ==============================================================================
 
 message("\n=== Parsing Scripts ===")
 
-# Get numbered scripts (sorted)
-numbered_files <- list.files("R", pattern = "^[0-9]+.*\\.R$", full.names = TRUE)
-numbered_files <- sort(numbered_files)
-
-# Get utils scripts (sorted)
-utils_files <- list.files("R/utils", pattern = "\\.R$", full.names = TRUE)
-utils_files <- sort(utils_files)
-
-# Parse headers for numbered scripts
 numbered_headers <- lapply(numbered_files, parse_script_header)
-
-# Parse headers for utils scripts
-utils_headers <- lapply(utils_files, parse_script_header)
-
-# Detect config constants for numbered scripts
+utils_headers    <- lapply(utils_files,    parse_script_header)
 numbered_constants <- sapply(numbered_files, detect_config_constants)
 
-message(glue("Parsed {length(numbered_headers)} numbered scripts + {length(utils_headers)} utils modules"))
+# Check for unassigned scripts and warn
+all_script_names <- sapply(numbered_headers, function(x) x$script)
+all_stages       <- sapply(all_script_names, assign_stage)
+unassigned       <- all_script_names[all_stages == "Unassigned"]
+if (length(unassigned) > 0) {
+  warning(glue("R/89: {length(unassigned)} script(s) matched no stage group: ",
+               paste(unassigned, collapse = ", ")))
+}
+
+# Documentation coverage
+n_documented <- sum(sapply(numbered_headers, function(x) isTRUE(x$documented)))
+message(glue("  Documented (Purpose+Inputs+Outputs): {n_documented}/{length(numbered_headers)}"))
+
+n_utils <- length(utils_files)
+
+message(glue("Parsed {length(numbered_headers)} numbered scripts + {n_utils} utils modules"))
 
 # ==============================================================================
-# SECTION 5: GENERATE MARKDOWN
+# SECTION 7: SOURCE 00_CONFIG INTO ISOLATED ENV FOR CONSTANT SIZES
+# ==============================================================================
+
+message("\n=== Reading config constants ===")
+
+config_env <- new.env(parent = emptyenv())
+# Attempt to source; failures are caught so the manual still generates.
+tryCatch(
+  source("R/00_config.R", local = config_env),
+  error = function(e) {
+    message(glue("  Warning: could not source R/00_config.R: {conditionMessage(e)}"))
+    message("  Config Constants Reference table will show static sizes.")
+  }
+)
+
+get_const_size <- function(name) {
+  if (!exists(name, envir = config_env, inherits = FALSE)) return(NA_character_)
+  obj <- get(name, envir = config_env, inherits = FALSE)
+  cl  <- class(obj)[1]
+  sz  <- if (is.data.frame(obj)) glue("{nrow(obj)} rows") else glue("length {length(obj)}")
+  glue("{cl} ({sz})")
+}
+
+# Constants table: columns = Constant, Type/Size (live), Description (from audit)
+constants_meta <- list(
+  list(name = "IS_LOCAL",          desc = "TRUE on Windows; FALSE on Linux/HiPerGator"),
+  list(name = "THREAD_COUNT",      desc = "1L locally; SLURM_CPUS_PER_TASK (default 16) on HPG"),
+  list(name = "EXTRACT_DATE",      desc = "PCORnet data extract date (2025-09-15)"),
+  list(name = "CONFIG",            desc = "Data paths, cache paths, DuckDB settings, performance tuning (~20 elements)"),
+  list(name = "PCORNET_TABLES",    desc = "PCORnet CDM table names to load (16 tables)"),
+  list(name = "PCORNET_PATHS",     desc = "Full CSV file paths for each PCORnet table (16 paths)"),
+  list(name = "ICD_CODES",         desc = "HL diagnosis codes — hl_icd10 (77) + hl_icd9 (~73); total ~150"),
+  list(name = "PAYER_MAPPING",     desc = "9-category payer mapping with prefix-based fallback rules"),
+  list(name = "AMC_PAYER_LOOKUP",  desc = "Code-to-category lookup (~50 entries); also in LOOKUP_TABLES_DT"),
+  list(name = "CANCER_SITE_MAP",   desc = "ICD-10 prefix to cancer site category (297 entries)"),
+  list(name = "ICD9_CANCER_SITE_MAP", desc = "ICD-9 prefix to cancer site category (additional entries)"),
+  list(name = "TIER_MAPPING",      desc = "Payer tier classification: Medicaid=1, Medicare=2, Private=3, ..."),
+  list(name = "TREATMENT_CODES",   desc = "CPT/HCPCS/NDC codes for chemotherapy, radiation, SCT, immunotherapy"),
+  list(name = "ANALYSIS_PARAMS",   desc = "Thresholds for cohort filtering (via CONFIG$analysis)"),
+  list(name = "LOOKUP_TABLES_DT",  desc = "data.table versions of 6 lookup objects for fast joins"),
+  list(name = "USE_DUCKDB",        desc = "TRUE (hardcoded) — DuckDB is required, not optional")
+)
+
+# ==============================================================================
+# SECTION 8: BUILD UTILS USAGE MAP
+# ==============================================================================
+
+message("\n=== Building utils usage map ===")
+
+# Read all numbered script bodies once
+script_bodies <- lapply(numbered_files, function(f) {
+  paste(readLines(f, warn = FALSE), collapse = "\n")
+})
+script_basenames <- sapply(numbered_files, basename)
+
+# For each utils file, detect exported top-level functions and which scripts call them
+build_utils_used_by <- function(utils_path) {
+  lines <- readLines(utils_path, warn = FALSE)
+  # Top-level function definitions: name <- function(
+  func_line_values <- grep("^[a-zA-Z_.][a-zA-Z0-9_.]*\\s*<-\\s*function\\s*\\(", lines, value = TRUE)
+  func_names <- str_extract(func_line_values, "^[a-zA-Z_.][a-zA-Z0-9_.]*")
+  func_names <- unique(func_names[!is.na(func_names)])
+
+  if (length(func_names) == 0) return(list(functions = character(0), used_by = "None"))
+
+  # Find which numbered scripts reference any of these functions
+  callers <- c()
+  for (fn in func_names) {
+    # Match whole-word usage (not inside function definitions themselves)
+    pattern <- glue("\\b{fn}\\b")
+    matches <- which(str_detect(script_bodies, pattern))
+    callers <- union(callers, script_basenames[matches])
+  }
+
+  callers <- sort(callers)
+  used_by_str <- if (length(callers) == 0) {
+    "None detected"
+  } else if (length(callers) > 8) {
+    paste(paste(head(callers, 8), collapse = ", "), glue("+ {length(callers) - 8} more"))
+  } else {
+    paste(callers, collapse = ", ")
+  }
+
+  list(functions = func_names, used_by = used_by_str)
+}
+
+utils_usage <- lapply(utils_files, build_utils_used_by)
+
+# ==============================================================================
+# SECTION 9: GENERATE MARKDOWN
 # ==============================================================================
 
 message("\n=== Generating Markdown ===")
 
-# Build content as character vector
 content <- c()
 
-# 5a. Title and header
-content <- c(content, "# PCORnet Payer Variable Investigation -- Pipeline Reference Manual")
-content <- c(content, "")
-content <- c(content, glue("> **Auto-generated** by `R/89_generate_reference_manual.R` on {Sys.Date()}."))
-content <- c(content, "> To regenerate: `Rscript R/89_generate_reference_manual.R`")
-content <- c(content, "")
-content <- c(content, "---")
-content <- c(content, "")
-
-# 5b. Table of Contents
-content <- c(content, "## Table of Contents")
-content <- c(content, "")
-content <- c(content, "1. [Architecture Overview](#architecture-overview)")
-content <- c(content, "2. [Dependency Matrix](#dependency-matrix)")
-content <- c(content, "3. [Utils Module Reference](#utils-module-reference)")
-content <- c(content, "4. [Run-Order Guide](#run-order-guide)")
-content <- c(content, "5. [Config Constants Reference](#config-constants-reference)")
-content <- c(content, "6. [Onboarding Guide](#onboarding-guide)")
-content <- c(content, "")
-content <- c(content, "---")
-content <- c(content, "")
-
-# 5c. Architecture Overview
-content <- c(content, "## Architecture Overview")
-content <- c(content, "")
-content <- c(content, "### Decade-Based Organization")
-content <- c(content, "")
-content <- c(content, "The pipeline uses a decade-based numbering system for logical organization:")
-content <- c(content, "")
-content <- c(content, "- **00-09 Foundation:** Configuration, data loading, payer harmonization, DuckDB ingest")
-content <- c(content, "- **10-19 Cohort:** Named predicates, treatment-anchored payer, cohort building")
-content <- c(content, "- **20-29 Treatment:** Treatment inventory, episodes, drug resolution, first-line therapy")
-content <- c(content, "- **40-59 Cancer:** Cancer site classification, confirmation, Gantt export, death validation")
-content <- c(content, "- **60-69 Payer/QA:** Payer tiering, missingness analysis, multi-source overlap, value audit")
-content <- c(content, "- **70-79 Outputs:** Visualizations (waterfall, Sankey), PowerPoint presentations, documentation")
-content <- c(content, "- **80-89 Tests:** Backend parity tests, smoke tests, verification scripts")
-content <- c(content, "- **90-99 Ad-hoc:** Standalone diagnostics and one-off analysis tools")
-content <- c(content, "")
-content <- c(content, "### Source Chain Pattern")
-content <- c(content, "")
-content <- c(content, "The pipeline follows a consistent dependency pattern:")
-content <- c(content, "")
-content <- c(content, "1. **R/00_config.R** is the root configuration script")
-content <- c(content, "2. It auto-sources all **R/utils/*.R** modules via `list.files()`")
-content <- c(content, "3. Downstream scripts source `00_config.R` to inherit all utilities and constants")
-content <- c(content, "")
-content <- c(content, "This creates a clean dependency tree where every script has access to:")
-content <- c(content, "- Configuration constants (11 objects: CONFIG, ICD_CODES, PAYER_MAPPING, etc.)")
-content <- c(content, "- Utility functions (8 modules: dates, attrition, DuckDB, ICD, payer, PPTX, snapshot, treatment)")
-content <- c(content, "")
-content <- c(content, "### Named Predicate Pattern")
-content <- c(content, "")
-content <- c(content, "Cohort building uses human-readable named predicates (`has_*`, `with_*`, `exclude_*`) rather than opaque one-liners. This makes the filter chain read like a clinical protocol:")
-content <- c(content, "")
-content <- c(content, "```r")
-content <- c(content, "cohort <- enrollment %>%")
-content <- c(content, "  has_florida_enrollment() %>%")
-content <- c(content, "  with_hl_diagnosis() %>%")
-content <- c(content, "  exclude_neither_source()")
-content <- c(content, "```")
-content <- c(content, "")
-content <- c(content, "### Defensive Coding")
-content <- c(content, "")
-content <- c(content, "All production scripts (decades 00-69) use checkmate assertions via **R/utils/utils_assertions.R** helper functions:")
-content <- c(content, "")
-content <- c(content, "- `assert_rds_exists()`: File existence checks")
-content <- c(content, "- `assert_df_valid()`: Data frame structure validation")
-content <- c(content, "- `assert_col_types()`: Column type validation")
-content <- c(content, "- `warn_date_range()`: Date range warnings")
-content <- c(content, "- `warn_row_count()`: Row count sanity checks")
-content <- c(content, "")
-content <- c(content, "All error messages follow the `[R/XX ACTION] message` format using `glue()` for context-rich diagnostics.")
-content <- c(content, "")
-content <- c(content, "---")
-content <- c(content, "")
-
-# 5d. Dependency Matrix (grouped by decade)
-content <- c(content, "## Dependency Matrix")
-content <- c(content, "")
-
-# Define decade groups
-decade_groups <- list(
-  list(name = "Foundation (00-09)", pattern = "^0[0-9]_"),
-  list(name = "Cohort (10-19)", pattern = "^1[0-9]_"),
-  list(name = "Treatment (20-29)", pattern = "^2[0-9]_"),
-  list(name = "Cancer (40-59)", pattern = "^[4-5][0-9]_"),
-  list(name = "Payer & QA (60-69)", pattern = "^6[0-9]_"),
-  list(name = "Outputs (70-79)", pattern = "^7[0-9]_"),
-  list(name = "Tests (80-89)", pattern = "^8[0-9]_"),
-  list(name = "Ad-hoc (90-99)", pattern = "^9[0-9]_")
+# -- Title and header --
+content <- c(content,
+  "# PCORnet Payer Variable Investigation -- Pipeline Reference Manual",
+  "",
+  glue("> **Auto-generated** by `R/89_generate_reference_manual.R` on {Sys.Date()}."),
+  "> To regenerate: open an interactive R/4.5 session on HiPerGator and run",
+  "> `source(\"R/89_generate_reference_manual.R\", local = new.env(parent = globalenv()))`",
+  "",
+  "---",
+  ""
 )
 
-for (decade in decade_groups) {
-  # Filter scripts for this decade
-  decade_scripts <- numbered_headers[str_detect(sapply(numbered_headers, function(x) x$script), decade$pattern)]
+# -- Table of Contents --
+content <- c(content,
+  "## Table of Contents",
+  "",
+  "1. [Architecture Overview](#architecture-overview)",
+  "2. [Dependency Matrix](#dependency-matrix)",
+  "3. [Utils Module Reference](#utils-module-reference)",
+  "4. [Run-Order Guide](#run-order-guide)",
+  "5. [Config Constants Reference](#config-constants-reference)",
+  "6. [Onboarding Guide](#onboarding-guide)",
+  "",
+  "---",
+  ""
+)
 
-  if (length(decade_scripts) == 0) next
+# -- Architecture Overview --
+n_numbered   <- length(numbered_files)
+n_utils_live <- length(utils_files)
+n_consts     <- length(constants_meta)
 
-  content <- c(content, glue("### {decade$name}"))
-  content <- c(content, "")
-  content <- c(content, "| Script | Purpose | source() Deps | Inputs | Outputs | Config Constants Used |")
-  content <- c(content, "|--------|---------|---------------|--------|---------|----------------------|")
+content <- c(content,
+  "## Architecture Overview",
+  "",
+  "### Script Organization",
+  "",
+  glue("The pipeline contains **{n_numbered} numbered scripts** and **{n_utils_live} utility modules**."),
+  "",
+  "Two-digit scripts (00–99) use a decade-based numbering system:",
+  "",
+  "- **00-09 Foundation:** Configuration, data loading, payer harmonization, DuckDB ingest",
+  "- **10-19 Cohort:** Named predicates, treatment-anchored payer, cohort building",
+  "- **20-29 Treatment:** Treatment inventory, episodes, drug resolution, first-line therapy",
+  "- **30-39 Supplemental:** Linkage, secondary malignancy, code verification, Tableau export, delivery manifest",
+  "- **40-59 Cancer:** Cancer site classification, confirmation, Gantt export, death validation",
+  "- **60-69 Payer/QA:** Payer tiering, missingness analysis, multi-source overlap, value audit",
+  "- **70-79 Outputs:** Visualizations (waterfall, Sankey), PowerPoint presentations, documentation",
+  "- **80-89 Tests:** Backend parity tests, smoke tests, verification scripts",
+  "- **90-99 Ad-hoc:** Standalone diagnostics and one-off analysis tools",
+  "",
+  "Three-digit scripts (100+) are grouped by functional area:",
+  "",
+  "- **100-122 Geospatial & SES:** RUCA rurality, Gantt collapse, ZIP stability, DOI classification, encounter distance, SES index",
+  "- **130-146 Treatment Enhancement:** XLSX updates, Gantt exports, staging/SDI reference",
+  "- **147-188 Surveillance & Survivorship:** Modality frequency, CBC, MICE sensitivity, distance-CBC, modality rates, anthracycline/echo",
+  "- **189+ Supplemental Diagnostics:** NHL explainer, AM verification, source probes",
+  "",
+  "### Source Chain Pattern",
+  "",
+  "1. **R/00_config.R** is the root configuration script.",
+  glue("2. It auto-sources all **{n_utils_live} R/utils/*.R** modules via `list.files()`."),
+  "3. Downstream scripts source `00_config.R` to inherit all utilities and constants.",
+  "",
+  "This creates a clean dependency tree where every script has access to:",
+  glue("- Configuration constants ({n_consts} objects: CONFIG, ICD_CODES, PAYER_MAPPING, etc.)"),
+  glue("- Utility functions ({n_utils_live} modules: dates, attrition, DuckDB, ICD, payer, PPTX, snapshot, treatment, and more)"),
+  "",
+  "### Named Predicate Pattern",
+  "",
+  "Cohort building uses human-readable named predicates (`has_*`, `with_*`, `exclude_*`) rather than opaque one-liners. This makes the filter chain read like a clinical protocol:",
+  "",
+  "```r",
+  "cohort <- enrollment %>%",
+  "  has_florida_enrollment() %>%",
+  "  with_hl_diagnosis() %>%",
+  "  exclude_neither_source()",
+  "```",
+  "",
+  "### Defensive Coding",
+  "",
+  "All production scripts (decades 00-69) use checkmate assertions via **R/utils/utils_assertions.R** helper functions:",
+  "",
+  "- `assert_rds_exists()`: File existence checks",
+  "- `assert_df_valid()`: Data frame structure validation",
+  "- `assert_col_types()`: Column type validation",
+  "- `warn_date_range()`: Date range warnings",
+  "- `warn_row_count()`: Row count sanity checks",
+  "",
+  "All error messages follow the `[R/XX ACTION] message` format using `glue()` for context-rich diagnostics.",
+  "",
+  "---",
+  ""
+)
 
-  for (i in seq_along(decade_scripts)) {
-    script_info <- decade_scripts[[i]]
+# -- Dependency Matrix --
+content <- c(content,
+  "## Dependency Matrix",
+  ""
+)
+
+# Collect all group names in the order we want to emit them
+all_groups <- c(
+  sapply(DECADE_GROUPS, function(g) g$name),
+  sapply(THREE_DIGIT_STAGE_MAP, function(g) g$name),
+  "Unassigned"
+)
+
+for (grp_name in all_groups) {
+  group_idxs <- which(sapply(numbered_headers, function(x) assign_stage(x$script)) == grp_name)
+  if (length(group_idxs) == 0) next
+
+  content <- c(content,
+    glue("### {grp_name}"),
+    "",
+    "| Script | Purpose | Dependencies | Inputs | Outputs | Config Constants Used |",
+    "|--------|---------|--------------|--------|---------|----------------------|"
+  )
+
+  for (i in group_idxs) {
+    script_info <- numbered_headers[[i]]
     script_name <- script_info$script
+    constants_used <- numbered_constants[[i]]
 
-    # Find matching constant detection
-    script_idx <- which(sapply(numbered_headers, function(x) x$script) == script_name)
-    constants_used <- numbered_constants[script_idx]
-
-    # Truncate purpose to ~80 chars
     purpose <- script_info$purpose
-    if (nchar(purpose) > 80) {
-      purpose <- paste0(substr(purpose, 1, 77), "...")
-    }
+    if (nchar(purpose) > 80) purpose <- paste0(substr(purpose, 1, 77), "...")
 
-    # Escape pipe characters in fields
-    escape_pipes <- function(text) {
-      str_replace_all(text, "\\|", "\\\\|")
-    }
+    ep <- function(text) str_replace_all(text, "\\|", "\\\\|")
 
-    row <- glue("| {escape_pipes(script_name)} | {escape_pipes(purpose)} | {escape_pipes(script_info$dependencies)} | {escape_pipes(script_info$inputs)} | {escape_pipes(script_info$outputs)} | {escape_pipes(constants_used)} |")
+    row <- glue("| {ep(script_name)} | {ep(purpose)} | {ep(script_info$dependencies)} | {ep(script_info$inputs)} | {ep(script_info$outputs)} | {ep(constants_used)} |")
     content <- c(content, row)
   }
 
   content <- c(content, "")
 }
 
-content <- c(content, "---")
-content <- c(content, "")
+content <- c(content, "---", "")
 
-# 5e. Utils Module Reference
-content <- c(content, "## Utils Module Reference")
-content <- c(content, "")
-content <- c(content, "Utility modules are auto-sourced by `R/00_config.R` and available to all downstream scripts.")
-content <- c(content, "")
-content <- c(content, "| Module | Purpose | Key Functions | Used By |")
-content <- c(content, "|--------|---------|---------------|---------|")
+# -- Utils Module Reference --
+content <- c(content,
+  "## Utils Module Reference",
+  "",
+  glue("All {n_utils_live} utility modules are auto-sourced by `R/00_config.R` and available to all downstream scripts."),
+  "",
+  "| Module | Purpose | Key Functions | Used By |",
+  "|--------|---------|---------------|---------|"
+)
 
-for (utils_info in utils_headers) {
-  # Parse function definitions from file
-  utils_file <- file.path("R/utils", utils_info$script)
-  utils_lines <- readLines(utils_file, warn = FALSE)
+for (j in seq_along(utils_headers)) {
+  info   <- utils_headers[[j]]
+  usage  <- utils_usage[[j]]
 
-  # Find function definitions (pattern: name <- function)
-  func_lines <- grep("^[a-z_]+ <- function", utils_lines, value = TRUE)
-  func_names <- str_extract(func_lines, "^[a-z_]+")
+  purpose <- info$purpose
+  if (nchar(purpose) > 80) purpose <- paste0(substr(purpose, 1, 77), "...")
 
-  if (length(func_names) > 0) {
-    key_functions <- paste(func_names, collapse = ", ")
-  } else {
-    key_functions <- "N/A"
-  }
+  key_functions <- if (length(usage$functions) > 0) paste(usage$functions, collapse = ", ") else "N/A"
+  ep <- function(text) str_replace_all(text, "\\|", "\\\\|")
 
-  # Truncate purpose
-  purpose <- utils_info$purpose
-  if (nchar(purpose) > 80) {
-    purpose <- paste0(substr(purpose, 1, 77), "...")
-  }
-
-  row <- glue("| {utils_info$script} | {purpose} | {key_functions} | All scripts via 00_config.R auto-sourcing |")
+  row <- glue("| {ep(info$script)} | {ep(purpose)} | {ep(key_functions)} | {ep(usage$used_by)} |")
   content <- c(content, row)
 }
 
-content <- c(content, "")
-content <- c(content, "---")
-content <- c(content, "")
+content <- c(content, "", "---", "")
 
-# 5f. Run-Order Guide
-content <- c(content, "## Run-Order Guide")
-content <- c(content, "")
-content <- c(content, "### Recommended Run Order")
-content <- c(content, "")
-content <- c(content, "#### Foundation (run once per data extract)")
-content <- c(content, "")
-content <- c(content, "1. `R/00_config.R` -- Loaded automatically by all scripts")
-content <- c(content, "2. `R/01_load_pcornet.R` -- Load raw PCORnet tables")
-content <- c(content, "3. `R/02_harmonize_payer.R` -- Create payer categories")
-content <- c(content, "4. `R/03_duckdb_ingest.R` -- Create DuckDB backend (optional)")
-content <- c(content, "")
-content <- c(content, "#### Cohort Building")
-content <- c(content, "")
-content <- c(content, "5. `R/14_build_cohort.R` -- Auto-sources R/10-R/13 via source() chain")
-content <- c(content, "")
-content <- c(content, "#### Treatment Analysis")
-content <- c(content, "")
-content <- c(content, "6. `R/20_treatment_inventory.R` through `R/29_first_line_and_death_analysis.R` -- Run sequentially; R/26 depends on R/25")
-content <- c(content, "")
-content <- c(content, "#### Cancer Site Analysis")
-content <- c(content, "")
-content <- c(content, "7. `R/40_cancer_site_frequency.R` through `R/53_death_date_validation.R` -- Run sequentially")
-content <- c(content, "")
-content <- c(content, "#### Payer & QA")
-content <- c(content, "")
-content <- c(content, "8. `R/60_tiered_same_day_payer.R` through `R/69_per_patient_source_detection.R`")
-content <- c(content, "")
-content <- c(content, "#### Outputs")
-content <- c(content, "")
-content <- c(content, "9. `R/70_visualize_waterfall.R` and `R/71_visualize_sankey.R` -- Require cohort")
-content <- c(content, "10. `R/72_generate_pptx.R` -- Requires R/75 (auto-sources it)")
-content <- c(content, "")
-content <- c(content, "**Note:** Ad-hoc scripts (90-99) are standalone and can be run independently.")
-content <- c(content, "")
-content <- c(content, "---")
-content <- c(content, "")
+# -- Run-Order Guide (updated from live facts) --
+content <- c(content,
+  "## Run-Order Guide",
+  "",
+  "All scripts are sourced interactively on HiPerGator:",
+  "```r",
+  "source(\"R/<script>.R\", local = new.env(parent = globalenv()))",
+  "```",
+  "",
+  "### Stage 0 — Foundation (run once per data extract)",
+  "",
+  "1. `R/01_load_pcornet.R` -- Load raw PCORnet tables",
+  "2. `R/02_harmonize_payer.R` -- Create payer categories",
+  "3. `R/03_duckdb_ingest.R` -- Create DuckDB backend (required)",
+  "4. `R/14_build_cohort.R` -- Auto-sources R/10–R/13 via chain",
+  "",
+  "### Stage 1 — Post-cohort investigations (via R/39)",
+  "",
+  "Run `R/39_run_all_investigations.R` to execute the full investigation batch in order.",
+  "R/39 covers: R/20–R/36, R/38, R/40–R/69, R/75, R/100–R/122, R/147–R/188.",
+  "",
+  "### Stage 2 — Outputs",
+  "",
+  "5. `R/70_visualize_waterfall.R` and `R/71_visualize_sankey.R` -- Require cohort",
+  "6. `R/72_generate_pptx.R` and `R/73_generate_phase19_20_pptx.R`",
+  "",
+  "### Stage 3 — Report rendering",
+  "",
+  "7. `R/37_gap_resolution_report.Rmd` -- Via `rmarkdown::render()`",
+  "",
+  "### Stage 4 — Post-R/52 dependents",
+  "",
+  "8. `R/101_gantt_lifespan_collapse.R`, `R/104_gantt_entire_history.R`, `R/76_treatment_source_coverage.R`",
+  "",
+  "### Stage 5 — Manifest",
+  "",
+  "9. `R/38_delivery_manifest.R`",
+  "",
+  "**Note:** Ad-hoc scripts (90–99) and supplemental diagnostics (189+) are standalone and can be run independently.",
+  "",
+  "---",
+  ""
+)
 
-# 5g. Config Constants Reference
-content <- c(content, "## Config Constants Reference")
-content <- c(content, "")
-content <- c(content, "All constants defined in `R/00_config.R` and available to downstream scripts:")
-content <- c(content, "")
-content <- c(content, "| Constant | Type | Size | Description |")
-content <- c(content, "|----------|------|------|-------------|")
-content <- c(content, "| CONFIG | list | ~15 elements | Data paths, cache paths, DuckDB settings, performance tuning |")
-content <- c(content, "| EXTRACT_DATE | Date | 1 value | PCORnet data extract date (2025-09-15) |")
-content <- c(content, "| PCORNET_TABLES | character | 14 tables | PCORnet CDM table names to load |")
-content <- c(content, "| PCORNET_PATHS | named vector | 14 paths | Full CSV file paths for each table |")
-content <- c(content, "| ICD_CODES | list | 150 codes | HL diagnosis codes (77 ICD-10 + 73 ICD-9) |")
-content <- c(content, "| PAYER_MAPPING | named vector | ~50 entries | AMC 8-category payer lookup |")
-content <- c(content, "| AMC_PAYER_LOOKUP | data.frame | ~50 rows | Detailed payer code-to-category mapping |")
-content <- c(content, "| TREATMENT_CODES | list | 4 types | CPT/HCPCS/NDC codes for radiation, SCT, immunotherapy, supportive care |")
-content <- c(content, "| ANALYSIS_PARAMS | list | ~10 params | Thresholds for cohort filtering, HL diagnosis matching |")
-content <- c(content, "| CANCER_SITE_MAP | named character | 324 entries | ICD-10 prefix to cancer site category mapping |")
-content <- c(content, "| TIER_MAPPING | list | 8 entries | Payer tier classification rules (Medicaid > Medicare > Private) |")
-content <- c(content, "")
-content <- c(content, "---")
-content <- c(content, "")
+# -- Config Constants Reference --
+content <- c(content,
+  "## Config Constants Reference",
+  "",
+  glue("All {n_consts} constants defined in `R/00_config.R` and available to downstream scripts."),
+  "Size/type are read at generation time by sourcing `R/00_config.R` into an isolated environment.",
+  "",
+  "| Constant | Type / Size | Description |",
+  "|----------|-------------|-------------|"
+)
 
-# 5h. Onboarding Guide
-content <- c(content, "## Onboarding Guide")
-content <- c(content, "")
-content <- c(content, "### HiPerGator Setup")
-content <- c(content, "")
-content <- c(content, "1. SSH to HiPerGator: `ssh <gatorlink>@hpg.rc.ufl.edu`")
-content <- c(content, "2. Load R module: `module load R/4.4.2`")
-content <- c(content, "3. Navigate to project: `cd /blue/erin.mobley-hl.bcu/R`")
-content <- c(content, "4. Restore packages: `Rscript -e 'renv::restore()'`")
-content <- c(content, "5. Verify: `Rscript R/88_smoke_test_comprehensive.R`")
-content <- c(content, "")
-content <- c(content, "**Data location:** `/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915` (raw PCORnet CSVs)")
-content <- c(content, "")
-content <- c(content, "### Local Development (Windows/RStudio)")
-content <- c(content, "")
-content <- c(content, "1. Clone the repository")
-content <- c(content, "2. Open `insurance_investigation.Rproj` in RStudio")
-content <- c(content, "3. Run `renv::restore()` in R console")
-content <- c(content, "4. Run smoke test: `source(\"R/88_smoke_test_comprehensive.R\")`")
-content <- c(content, "5. Note: Data-dependent scripts require HiPerGator data mount")
-content <- c(content, "")
-content <- c(content, "### Output File Locations")
-content <- c(content, "")
-content <- c(content, "| Directory | Contents |")
-content <- c(content, "|-----------|----------|")
-content <- c(content, "| output/ | Root output directory |")
-content <- c(content, "| output/tables/ | Excel workbooks (.xlsx) |")
-content <- c(content, "| output/figures/ | Visualizations (.png, .pdf) |")
-content <- c(content, "| output/reports/ | PowerPoint decks (.pptx) |")
-content <- c(content, "| output/gantt/ | Gantt chart CSV exports |")
-content <- c(content, "| cache/raw/ | RDS cached raw tables |")
-content <- c(content, "| cache/cohort/ | RDS cohort and treatment intermediates |")
-content <- c(content, "")
+for (cm in constants_meta) {
+  size_str <- get_const_size(cm$name)
+  if (is.na(size_str)) size_str <- "see description"
+  ep <- function(text) str_replace_all(text, "\\|", "\\\\|")
+  row <- glue("| {ep(cm$name)} | {ep(size_str)} | {ep(cm$desc)} |")
+  content <- c(content, row)
+}
+
+content <- c(content, "", "---", "")
+
+# -- Onboarding Guide --
+content <- c(content,
+  "## Onboarding Guide",
+  "",
+  "### HiPerGator Setup",
+  "",
+  "1. SSH to HiPerGator: `ssh <gatorlink>@hpg.rc.ufl.edu`",
+  "2. Load R module: `module load R/4.5`",
+  "3. Navigate to project: `cd /blue/erin.mobley-hl.bcu/insurance_investigation`",
+  "4. Launch interactive R session and restore packages: `renv::restore()`",
+  "5. Verify: `source(\"R/88_smoke_test_comprehensive.R\", local = new.env(parent = globalenv()))`",
+  "",
+  "**Data location:** `/orange/erin.mobley-hl.bcu/Mailhot_V1_20250915` (raw PCORnet CSVs)",
+  "**DuckDB:** `/blue/erin.mobley-hl.bcu/clean/duckdb/pcornet.duckdb` (required; USE_DUCKDB = TRUE)",
+  "**RDS cache:** `/blue/erin.mobley-hl.bcu/clean/rds`",
+  "",
+  "### Output File Locations",
+  "",
+  "| Directory | Contents |",
+  "|-----------|----------|",
+  "| output/ | Root output directory |",
+  "| output/tables/ | Excel workbooks (.xlsx) |",
+  "| output/figures/ | Visualizations (.png, .pdf) |",
+  "| output/reports/ | PowerPoint decks (.pptx) |",
+  "| output/gantt/ | Gantt chart CSV exports |",
+  "| output/internal/ | Patient-level data (PHI — not shared) |",
+  "| cache/raw/ | RDS cached raw tables |",
+  "| cache/cohort/ | RDS cohort and treatment intermediates |",
+  ""
+)
 
 # ==============================================================================
-# SECTION 6: WRITE OUTPUT
+# SECTION 10: WRITE OUTPUT
 # ==============================================================================
 
-# Ensure docs/ directory exists
 dir.create("docs", showWarnings = FALSE)
-
-# Write content
 writeLines(content, output_path)
 
-# Print summary
 message(glue("\nReference manual written to {output_path}"))
 message(glue("  Numbered scripts documented: {length(numbered_headers)}"))
-message(glue("  Utils modules documented: {length(utils_headers)}"))
+message(glue("  Utils modules documented: {n_utils_live}"))
 message(glue("  Total lines: {length(content)}"))
 message("\nDone.")
