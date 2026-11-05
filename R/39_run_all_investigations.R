@@ -9,6 +9,10 @@
 #   analysis, code resolution, exports, visualizations, then render the gap
 #   resolution report and generate the delivery manifest.
 #
+# Inputs:
+#   - Raw PCORnet CDM CSVs (CONFIG / PCORNET_PATHS) and the DuckDB build
+#   - All downstream inputs are produced by the scripts this file sources
+#
 # Outputs:
 #   Upstream:
 #     - cache/outputs/treatment_episodes.rds

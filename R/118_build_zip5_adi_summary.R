@@ -6,6 +6,8 @@
 # Grouping by ZIP5 prefix gives a median + IQR without coordinates or geocoding.
 # See 148-DISCOVERY.md §2 for full reasoning.
 #
+# Input: data/reference/neighborhood_atlas_zip9_adi.csv (ADI_INPUT_PATH; built by R/119)
+#
 # Output: data/reference/zip5_adi_summary.csv
 #   ZIP5                  character(5), zero-padded
 #   adi_natrank_median    numeric, median ADI national rank across ZIP9s in ZIP5

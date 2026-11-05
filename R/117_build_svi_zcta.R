@@ -10,6 +10,9 @@
 #   A findSVI RPL_THEMES value is NOT comparable to a CDC tract SVI value.
 #   This caveat is recorded in the `method` column of every output row.
 #
+# Input: ACS 2020 5-year estimates via the Census API (findSVI / tidycensus;
+#   requires CENSUS_API_KEY in ~/.Renviron)
+#
 # Output: data/reference/svi_2020_zcta_derived.csv
 #   Columns: ZCTA (character, 5-digit), RPL_THEMES (numeric, 0-1 or NA),
 #            vintage (character), method (character), source (character).

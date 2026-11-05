@@ -6,6 +6,8 @@
 # ONLY. The 9-digit ZIP linkage is state-by-state, so this file is hand-assembled
 # and must be rebuilt whenever a cohort gains out-of-state patients.
 #
+# Input: per-state Neighborhood Atlas ZIP9 ADI downloads (state-by-state CSVs)
+#
 # Output: data/reference/neighborhood_atlas_zip9_adi.csv  (ADI_INPUT_PATH in R/118)
 # ==============================================================================
 
