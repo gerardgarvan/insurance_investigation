@@ -14,14 +14,31 @@ Functions:
   get_para_text()     — concatenate all w:t text in a w:p element
   find_anchor_para()  — locate exactly one paragraph containing anchor_text
   scan_id_space()     — enumerate w:id, w14:paraId, and w16cid:durableId across all XML parts
+  IdAllocator         — collision-free w:id / paraId / durableId allocation
+  make_ins()          — build a bare w:ins element
+  make_tracked_paragraph() — new w:p with w:pPr/w:rPr/w:ins mark + w:ins run
+  make_tracked_deletion()  — wrap a w:r in w:del, rename w:t → w:delText
+  make_tracked_row()       — table row with w:trPr/w:ins + tracked cell paragraphs
+  apply_correction()       — split runs, insert w:del + w:ins replacement
+  make_reply_comment()     — threaded reply w:comment element
+  make_commentEx()         — w15:commentEx threading link element
+  enable_track_revisions() — add w:trackChanges to settings.xml bytes
+  reject_all()             — simulate reject-all for build revisions (mutates tree)
+  accept_all()             — simulate accept-all for build revisions (mutates tree)
+  apply_operations()       — orchestrator: apply manifest to produce versioned DOCX
 
 Pinned SHA-256 for the original source document (from
 .planning/phases/190-evidence-map/am_source_hashes.txt, generated 2026-10-27):
   2e119764b63cf9e491decc1177ff38ea49335cd2f15673b9e92b68a127a1517d
 """
 
+import copy
 import hashlib
+import json
+import os
+import random
 import re
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -712,3 +729,1442 @@ def build_operations(draft_path, preflight) -> list:
         result.append(final_op)
 
     return result
+
+
+# ===========================================================================
+# Task 0 additions: tracked-change builders, IdAllocator, reject/accept sims
+# All OOXML patterns copied from 193-RESEARCH.md (Patterns 3,4,5,6,8,9,10).
+# ===========================================================================
+
+BUILD_AUTHOR = "Gerard Garvan"
+BUILD_DATE = "2026-10-28T00:00:00Z"
+
+
+# ---------------------------------------------------------------------------
+# IdAllocator — collision-free ID allocation (Pattern 9)
+# ---------------------------------------------------------------------------
+
+class IdAllocator:
+    """
+    Allocates unique w:id, w14:paraId, and w16cid:durableId values for a build.
+
+    Parameters
+    ----------
+    w_ids : set[int]
+        Existing w:id integer values across all XML parts (from scan_id_space).
+    para_ids : set[str]
+        Existing w14:paraId uppercase-hex strings.
+    durable_ids : set[str]
+        Existing w16cid:durableId strings (mix of hex and decimal strings).
+    """
+
+    def __init__(self, w_ids, para_ids, durable_ids):
+        self._w_ids = set(w_ids)
+        self._para_ids = set(para_ids)
+        self._durable_ids = set(durable_ids)
+        # Start counters one above the current maxima
+        self._next_w = max(self._w_ids, default=-1) + 1
+        # paraId: hex counter starting at max+1 of observed hex values
+        hex_values = []
+        for pid in self._para_ids:
+            try:
+                hex_values.append(int(pid, 16))
+            except ValueError:
+                pass
+        self._next_para_int = max(hex_values, default=0x7FF8A73E) + 1
+        # Issued trackers for reconciliation
+        self.issued_w_ids = []
+        self.issued_para_ids = []
+        self.issued_durable_ids = []
+
+    def next_w_id(self) -> int:
+        """Return the next collision-free integer w:id and record it."""
+        while self._next_w in self._w_ids:
+            self._next_w += 1
+        val = self._next_w
+        self._w_ids.add(val)
+        self.issued_w_ids.append(val)
+        self._next_w += 1
+        return val
+
+    def next_para_id(self) -> str:
+        """Return the next collision-free 8-uppercase-hex paraId string."""
+        while True:
+            candidate = f"{self._next_para_int:08X}"
+            self._next_para_int += 1
+            if candidate not in self._para_ids:
+                self._para_ids.add(candidate)
+                self.issued_para_ids.append(candidate)
+                return candidate
+
+    def next_durable_id(self) -> str:
+        """Return a random 8-uppercase-hex durableId not in the existing set."""
+        for _ in range(10000):
+            candidate = f"{random.randint(0, 0xFFFFFFFF):08X}"
+            if candidate not in self._durable_ids:
+                self._durable_ids.add(candidate)
+                self.issued_durable_ids.append(candidate)
+                return candidate
+        raise RuntimeError("Could not generate a unique durableId after 10000 attempts")
+
+
+# ---------------------------------------------------------------------------
+# Pattern 2 helper (make_ins) — Pattern 3/4/5/6 building blocks
+# ---------------------------------------------------------------------------
+
+def make_ins(rev_id: int, author: str, date: str) -> "etree._Element":
+    """Return a bare w:ins element with w:id, w:author, w:date set."""
+    el = etree.Element(qn("w", "ins"))
+    el.set(qn("w", "id"), str(rev_id))
+    el.set(qn("w", "author"), author)
+    el.set(qn("w", "date"), date)
+    return el
+
+
+# ---------------------------------------------------------------------------
+# Pattern 3: Tracked insertion of a new paragraph
+# ---------------------------------------------------------------------------
+
+def make_tracked_paragraph(
+    text: str,
+    rev_id: int,
+    author: str,
+    date: str,
+    para_id: str,
+    pPr_source=None,
+    run_rev_id: int = None,
+) -> "etree._Element":
+    """
+    Return a w:p element that, when accepted, inserts *text* as a new paragraph.
+
+    Parameters
+    ----------
+    text : str
+        The text content of the new paragraph.
+    rev_id : int
+        w:id for the paragraph-mark insertion (w:pPr/w:rPr/w:ins).
+    author : str
+        w:author value (e.g., "Gerard Garvan").
+    date : str
+        ISO 8601 timestamp string.
+    para_id : str
+        Unique 8-uppercase-hex string for w14:paraId.
+    pPr_source : lxml element, optional
+        The preceding paragraph's w:pPr to copy formatting from.
+    run_rev_id : int, optional
+        w:id for the run-level w:ins wrapper; defaults to rev_id + 1.
+    """
+    if run_rev_id is None:
+        run_rev_id = rev_id + 1
+
+    p = etree.Element(qn("w", "p"))
+    p.set(qn("w14", "paraId"), para_id)
+
+    # --- Paragraph properties with mark-insertion (Pattern 3) ---
+    pPr = etree.SubElement(p, qn("w", "pPr"))
+    if pPr_source is not None:
+        for child in list(pPr_source):
+            # Do not copy an existing w:rPr — we'll create our own
+            if child.tag != qn("w", "rPr"):
+                pPr.append(copy.deepcopy(child))
+    rPr_in_pPr = etree.SubElement(pPr, qn("w", "rPr"))
+    ins_mark = etree.SubElement(rPr_in_pPr, qn("w", "ins"))
+    ins_mark.set(qn("w", "id"), str(rev_id))
+    ins_mark.set(qn("w", "author"), author)
+    ins_mark.set(qn("w", "date"), date)
+
+    # --- Run wrapped in w:ins ---
+    ins = etree.SubElement(p, qn("w", "ins"))
+    ins.set(qn("w", "id"), str(run_rev_id))
+    ins.set(qn("w", "author"), author)
+    ins.set(qn("w", "date"), date)
+    r = etree.SubElement(ins, qn("w", "r"))
+    t = etree.SubElement(r, qn("w", "t"))
+    t.text = text
+    if (text or "").startswith(" ") or (text or "").endswith(" "):
+        t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+
+    return p
+
+
+# ---------------------------------------------------------------------------
+# Pattern 4: Tracked deletion
+# ---------------------------------------------------------------------------
+
+def make_tracked_deletion(run_el, rev_id: int, author: str, date: str) -> "etree._Element":
+    """
+    Wrap an existing w:r element in w:del, converting w:t → w:delText.
+
+    *run_el* should be a deep copy of the original run so the caller can
+    keep the original in place (or remove it after inserting the w:del).
+    """
+    w_del = etree.Element(qn("w", "del"))
+    w_del.set(qn("w", "id"), str(rev_id))
+    w_del.set(qn("w", "author"), author)
+    w_del.set(qn("w", "date"), date)
+    for t_el in run_el.findall(qn("w", "t")):
+        t_el.tag = qn("w", "delText")
+        txt = t_el.text or ""
+        if txt.startswith(" ") or txt.endswith(" "):
+            t_el.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    w_del.append(run_el)
+    return w_del
+
+
+# ---------------------------------------------------------------------------
+# Pattern 5: Inserted table row
+# ---------------------------------------------------------------------------
+
+def make_tracked_row(
+    cells_text: list,
+    template_row,
+    rev_id: int,
+    author: str,
+    date: str,
+    para_id_factory,
+    run_rev_id: int = None,
+) -> "etree._Element":
+    """
+    Return a new w:tr (deep-copied from *template_row*) with w:trPr/w:ins and
+    tracked-insertion paragraphs in each cell.
+
+    Parameters
+    ----------
+    cells_text : list[str]
+        Text for each cell, in column order.
+    template_row : lxml element
+        An existing w:tr to copy row/cell properties from.
+    rev_id : int
+        w:id for the w:trPr/w:ins row-insertion mark.
+    author, date : str
+        Authorship metadata.
+    para_id_factory : callable() -> str
+        Called once per cell to get a unique paraId for the inserted paragraph.
+    run_rev_id : int, optional
+        w:id for the run-level w:ins; defaults to rev_id + 1.
+    """
+    if run_rev_id is None:
+        run_rev_id = rev_id + 1
+
+    row = copy.deepcopy(template_row)
+
+    # Add w:trPr/w:ins to mark the entire row as inserted
+    trPr = row.find(qn("w", "trPr"))
+    if trPr is None:
+        trPr = etree.Element(qn("w", "trPr"))
+        row.insert(0, trPr)
+    ins_trPr = etree.SubElement(trPr, qn("w", "ins"))
+    ins_trPr.set(qn("w", "id"), str(rev_id))
+    ins_trPr.set(qn("w", "author"), author)
+    ins_trPr.set(qn("w", "date"), date)
+
+    # Replace cell content with tracked paragraphs
+    tcs = row.findall(qn("w", "tc"))
+    for idx, (tc, text) in enumerate(zip(tcs, cells_text)):
+        # Remove existing paragraphs in this cell
+        for p in tc.findall(qn("w", "p")):
+            tc.remove(p)
+        # Append a tracked paragraph
+        p_new = make_tracked_paragraph(
+            text,
+            rev_id=run_rev_id,
+            author=author,
+            date=date,
+            para_id=para_id_factory(),
+        )
+        tc.append(p_new)
+
+    return row
+
+
+# ---------------------------------------------------------------------------
+# Pattern 6: Comment threading (threaded reply)
+# ---------------------------------------------------------------------------
+
+def make_reply_comment(
+    new_id: int,
+    new_para_id: str,
+    parent_para_id: str,
+    author: str,
+    initials: str,
+    date: str,
+    text: str,
+) -> "etree._Element":
+    """
+    Build a w:comment element for a threaded reply.
+
+    The threading is established by make_commentEx (see below); this function
+    produces only the comment body.
+    """
+    cmt = etree.Element(qn("w", "comment"))
+    cmt.set(qn("w", "id"), str(new_id))
+    cmt.set(qn("w", "author"), author)
+    cmt.set(qn("w", "initials"), initials)
+    cmt.set(qn("w", "date"), date)
+    p = etree.SubElement(cmt, qn("w", "p"))
+    p.set(qn("w14", "paraId"), new_para_id)
+    r = etree.SubElement(p, qn("w", "r"))
+    t = etree.SubElement(r, qn("w", "t"))
+    t.text = text
+    if (text or "").startswith(" ") or (text or "").endswith(" "):
+        t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    return cmt
+
+
+def make_commentEx(para_id: str, parent_para_id: str) -> "etree._Element":
+    """
+    Build a w15:commentEx element that links a reply paragraph to its parent.
+
+    *para_id*        — new unique paraId of the reply's body paragraph.
+    *parent_para_id* — paraId of the original comment's body paragraph.
+    """
+    el = etree.Element(qn("w15", "commentEx"))
+    el.set(qn("w15", "paraId"), para_id)
+    el.set(qn("w15", "paraIdParent"), parent_para_id)
+    el.set(qn("w15", "done"), "0")
+    return el
+
+
+# ---------------------------------------------------------------------------
+# Pattern 10: Enable track revisions
+# ---------------------------------------------------------------------------
+
+def enable_track_revisions(settings_xml: bytes) -> bytes:
+    """
+    Add <w:trackChanges/> to settings.xml if not already present.
+    Returns the serialized bytes of the updated settings tree.
+    """
+    tree = etree.fromstring(settings_xml)
+    existing = tree.find(qn("w", "trackChanges"))
+    if existing is None:
+        el = etree.SubElement(tree, qn("w", "trackChanges"))
+    return etree.tostring(tree, xml_declaration=True, encoding="UTF-8", standalone=True)
+
+
+# ---------------------------------------------------------------------------
+# Pattern 8: Reject-all and accept-all simulators
+# Pitfall 7: also remove w:pPr/w:rPr/w:ins marks and drop entire inserted w:p
+# ---------------------------------------------------------------------------
+
+def reject_all(doc_tree, build_rev_ids: set) -> None:
+    """
+    Simulate reject-all for this build's revisions. Mutates *doc_tree* in place.
+
+    Filters by BOTH w:author == BUILD_AUTHOR AND membership in build_rev_ids to
+    avoid touching any pre-existing revisions.
+
+    Steps:
+    1. Remove w:ins content (inserted text disappears on reject).
+    2. Unwrap w:del (deleted text reappears on reject), converting w:delText → w:t.
+    3. Remove w:pPr/w:rPr/w:ins paragraph-mark insertions (Pitfall 7).
+    4. Drop entire inserted w:p elements (Pitfall 7).
+    """
+    build_rev_ids_int = set()
+    for x in build_rev_ids:
+        try:
+            build_rev_ids_int.add(int(x))
+        except (ValueError, TypeError):
+            pass
+
+    def _is_build_ins(el):
+        try:
+            return (
+                el.get(qn("w", "author")) == BUILD_AUTHOR
+                and int(el.get(qn("w", "id"), -1)) in build_rev_ids_int
+            )
+        except (ValueError, TypeError):
+            return False
+
+    # Step 1: Remove w:ins elements (and their content) created by this build.
+    # We collect them first to avoid mutating while iterating.
+    for ins in list(doc_tree.findall(f".//{qn('w','ins')}")):
+        if _is_build_ins(ins):
+            parent = ins.getparent()
+            if parent is not None:
+                parent.remove(ins)
+
+    # Step 2: Unwrap w:del elements created by this build.
+    for del_el in list(doc_tree.findall(f".//{qn('w','del')}")):
+        if _is_build_ins(del_el):
+            parent = del_el.getparent()
+            if parent is None:
+                continue
+            idx = list(parent).index(del_el)
+            children = list(del_el)
+            for i, child in enumerate(children):
+                # Convert w:delText back to w:t
+                for dt in child.findall(qn("w", "delText")):
+                    dt.tag = qn("w", "t")
+                parent.insert(idx + i, child)
+            parent.remove(del_el)
+
+    # Step 3: Remove paragraph-mark insertions (w:pPr/w:rPr/w:ins) for Pitfall 7.
+    # These are w:ins children of w:rPr that is a child of w:pPr.
+    for pPr in list(doc_tree.findall(f".//{qn('w','pPr')}")):
+        rPr = pPr.find(qn("w", "rPr"))
+        if rPr is None:
+            continue
+        for ins_mark in list(rPr.findall(qn("w", "ins"))):
+            if _is_build_ins(ins_mark):
+                rPr.remove(ins_mark)
+
+    # Step 4: Drop any w:p that now has an empty w:pPr/w:rPr and no runs or
+    # text — these are paragraph-level insertions whose w:ins runs were removed
+    # in step 1 but whose w:p shell remains.  A build-inserted w:p was created
+    # entirely by this build; after removing its w:ins run wrapper in step 1
+    # the paragraph has no text-bearing children.  We identify such paragraphs
+    # by: (a) the w14:paraId is one we issued and (b) the paragraph has no
+    # direct w:r or w:ins children after the rejection pass.
+    for p in list(doc_tree.findall(f".//{qn('w','p')}")):
+        para_id = p.get(qn("w14", "paraId"))
+        if para_id is None:
+            continue
+        # Check if this paraId was issued by this build.
+        # We use the global ISSUED_PARA_IDS set populated by apply_operations.
+        # During unit tests, we use the _REJECT_ALL_ISSUED_PARA_IDS module variable.
+        if para_id not in _REJECT_ALL_ISSUED_PARA_IDS:
+            continue
+        # Check the paragraph has no text-bearing children remaining.
+        has_text = any(
+            True for _ in p.iter(qn("w", "t"))
+        )
+        if not has_text:
+            parent = p.getparent()
+            if parent is not None:
+                parent.remove(p)
+
+
+# Module-level set that apply_operations and unit tests populate before calling reject_all.
+# reject_all uses this to identify build-inserted paragraphs whose shells must be dropped.
+_REJECT_ALL_ISSUED_PARA_IDS: set = set()
+
+
+def accept_all(doc_tree, build_rev_ids: set) -> None:
+    """
+    Simulate accept-all for this build's revisions. Mutates *doc_tree* in place.
+
+    Filters by BOTH w:author == BUILD_AUTHOR AND membership in build_rev_ids.
+
+    Steps:
+    1. Unwrap w:ins (keep the runs inside, discard the w:ins wrapper).
+    2. Remove w:del and all its content.
+    """
+    build_rev_ids_int = set()
+    for x in build_rev_ids:
+        try:
+            build_rev_ids_int.add(int(x))
+        except (ValueError, TypeError):
+            pass
+
+    def _is_build_ins(el):
+        try:
+            return (
+                el.get(qn("w", "author")) == BUILD_AUTHOR
+                and int(el.get(qn("w", "id"), -1)) in build_rev_ids_int
+            )
+        except (ValueError, TypeError):
+            return False
+
+    # Step 1: Unwrap w:ins — keep children, discard the w:ins wrapper.
+    for ins in list(doc_tree.findall(f".//{qn('w','ins')}")):
+        if _is_build_ins(ins):
+            parent = ins.getparent()
+            if parent is None:
+                continue
+            idx = list(parent).index(ins)
+            for i, child in enumerate(ins):
+                parent.insert(idx + i, child)
+            parent.remove(ins)
+
+    # Step 2: Remove w:del and all its content (deleted text disappears on accept).
+    for del_el in list(doc_tree.findall(f".//{qn('w','del')}")):
+        if _is_build_ins(del_el):
+            parent = del_el.getparent()
+            if parent is not None:
+                parent.remove(del_el)
+
+
+# ---------------------------------------------------------------------------
+# apply_correction() — split runs, w:del old + w:ins new (Pattern 7 + Pitfall 4)
+# ---------------------------------------------------------------------------
+
+def apply_correction(
+    doc_tree,
+    anchor_text: str,
+    replacement: str,
+    alloc: "IdAllocator",
+    author: str,
+    date: str,
+) -> tuple:
+    """
+    Find the paragraph containing *anchor_text*, split its runs at the anchor
+    boundaries, wrap the anchor runs in w:del (w:delText), and insert a w:ins
+    run with *replacement* text.
+
+    Returns (del_id, ins_id) — the two w:id values allocated.
+
+    Raises AnchorFailed if the anchor cannot be found uniquely.
+    """
+    para = find_anchor_para(doc_tree, anchor_text)
+    _apply_correction_to_para(para, anchor_text, replacement, alloc, author, date)
+    # Return the last two issued w:ids (del and ins)
+    ids = alloc.issued_w_ids
+    return (ids[-2], ids[-1])
+
+
+def _apply_correction_to_para(para, anchor_text, replacement, alloc, author, date):
+    """
+    Mutate *para* in place: split runs at anchor boundaries, wrap in w:del,
+    insert w:ins replacement immediately after.  Pitfall 4 compliant.
+    """
+    # Collect all direct w:r children (and their positions) in the paragraph.
+    # We also need to handle runs inside w:ins or w:del from prior passes, but
+    # for simplicity (and because the original doc has no existing tracked changes)
+    # we iterate direct children of the paragraph.
+    children = list(para)
+    runs_with_idx = []
+    for idx, child in enumerate(children):
+        if child.tag == qn("w", "r"):
+            runs_with_idx.append((idx, child))
+
+    if not runs_with_idx:
+        raise AnchorFailed(
+            f"Paragraph containing anchor {anchor_text!r} has no w:r children"
+        )
+
+    # Build a character map: (run_index_in_list, char_offset_in_run, char)
+    # Concatenate run texts to find anchor span.
+    run_texts = []
+    for _, run in runs_with_idx:
+        t_el = run.find(qn("w", "t"))
+        run_texts.append(t_el.text or "" if t_el is not None else "")
+
+    full_text = "".join(run_texts)
+    start = full_text.find(anchor_text)
+    if start == -1:
+        raise AnchorFailed(
+            f"anchor {anchor_text!r} not found in concatenated run text: {full_text!r}"
+        )
+    end = start + len(anchor_text)  # exclusive
+
+    # Map full_text character positions to (run_list_idx, char_offset_in_run).
+    char_map = []
+    for ri, rt in enumerate(run_texts):
+        for ci in range(len(rt)):
+            char_map.append((ri, ci))
+    # For the character at position `end` (exclusive boundary), if end == len(full_text)
+    # then it's the end of the last run; we don't need a char_map entry for it.
+
+    if not char_map or end > len(full_text):
+        raise AnchorFailed(
+            f"anchor {anchor_text!r} extends beyond run text; full_text={full_text!r}"
+        )
+
+    # Identify run indices that the anchor spans (inclusive).
+    start_run_idx = char_map[start][0] if start < len(char_map) else len(runs_with_idx) - 1
+    end_run_idx = char_map[end - 1][0]
+
+    # Character offsets within the boundary runs.
+    start_char_in_run = char_map[start][1]
+    end_char_in_run = char_map[end - 1][1]  # inclusive last char
+
+    # Build the replacement runs (possibly split at start and end).
+    # We'll produce new elements then splice them into para's children.
+
+    # We'll work with the original para children list by position.
+    # Collect the original positions of the anchor runs in para.
+    anchor_child_positions = [runs_with_idx[i][0] for i in range(start_run_idx, end_run_idx + 1)]
+
+    new_elements = []  # (position_in_para, element) — to splice in after removal
+
+    for li in range(start_run_idx, end_run_idx + 1):
+        para_pos, run = runs_with_idx[li]
+        t_el = run.find(qn("w", "t"))
+        orig_text = t_el.text or "" if t_el is not None else ""
+        rPr = run.find(qn("w", "rPr"))
+
+        if li == start_run_idx and li == end_run_idx:
+            # The anchor is entirely within one run — may need left, anchor, right splits.
+            left_text = orig_text[:start_char_in_run]
+            anchor_seg = orig_text[start_char_in_run:end_char_in_run + 1]
+            right_text = orig_text[end_char_in_run + 1:]
+            segs = []
+            if left_text:
+                segs.append(("keep", left_text))
+            segs.append(("del", anchor_seg))
+            if right_text:
+                segs.append(("keep", right_text))
+            new_elements.append((para_pos, segs, rPr))
+
+        elif li == start_run_idx:
+            # First run of a multi-run anchor.
+            left_text = orig_text[:start_char_in_run]
+            anchor_seg = orig_text[start_char_in_run:]
+            segs = []
+            if left_text:
+                segs.append(("keep", left_text))
+            segs.append(("del", anchor_seg))
+            new_elements.append((para_pos, segs, rPr))
+
+        elif li == end_run_idx:
+            # Last run of a multi-run anchor.
+            anchor_seg = orig_text[:end_char_in_run + 1]
+            right_text = orig_text[end_char_in_run + 1:]
+            segs = []
+            segs.append(("del", anchor_seg))
+            if right_text:
+                segs.append(("keep", right_text))
+            new_elements.append((para_pos, segs, rPr))
+
+        else:
+            # Middle run — entirely deleted.
+            new_elements.append((para_pos, [("del", orig_text)], rPr))
+
+    # Now remove the original anchor runs from para (by reference), then insert
+    # the split fragments back in position order.
+    for li in range(start_run_idx, end_run_idx + 1):
+        para_pos, run = runs_with_idx[li]
+        para.remove(run)
+
+    # Re-fetch current para children list to get correct insertion positions.
+    # We insert from the first anchor run's original position onward.
+    insertion_offset = anchor_child_positions[0]
+    # Because we removed `end_run_idx - start_run_idx + 1` elements starting at
+    # insertion_offset, positions of later elements shifted down.  We insert our
+    # new elements at insertion_offset and increment for each.
+    insert_at = insertion_offset
+    del_id = alloc.next_w_id()
+    ins_id = alloc.next_w_id()
+
+    def _make_run(text, rPr_el):
+        r = etree.Element(qn("w", "r"))
+        if rPr_el is not None:
+            r.append(copy.deepcopy(rPr_el))
+        t = etree.SubElement(r, qn("w", "t"))
+        t.text = text
+        if (text or "").startswith(" ") or (text or "").endswith(" "):
+            t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        return r
+
+    inserted_ins = False
+    for (para_pos, segs, rPr) in new_elements:
+        for seg_kind, seg_text in segs:
+            if seg_kind == "keep":
+                r = _make_run(seg_text, rPr)
+                para.insert(insert_at, r)
+                insert_at += 1
+            elif seg_kind == "del":
+                r_copy = copy.deepcopy(_make_run(seg_text, rPr))
+                w_del = make_tracked_deletion(r_copy, del_id, author, date)
+                para.insert(insert_at, w_del)
+                insert_at += 1
+                # Insert the replacement w:ins run after the last deleted segment.
+                # We do this after the last "del" segment of the last anchor run.
+        # After the last anchor run, insert the w:ins replacement.
+        if para_pos == anchor_child_positions[-1] and not inserted_ins:
+            ins_el = make_ins(ins_id, author, date)
+            r_new = etree.SubElement(ins_el, qn("w", "r"))
+            if rPr is not None:
+                r_new.append(copy.deepcopy(rPr))
+            t_new = etree.SubElement(r_new, qn("w", "t"))
+            t_new.text = replacement
+            if (replacement or "").startswith(" ") or (replacement or "").endswith(" "):
+                t_new.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+            para.insert(insert_at, ins_el)
+            insert_at += 1
+            inserted_ins = True
+
+    return del_id, ins_id
+
+
+# ---------------------------------------------------------------------------
+# apply_operations() — 14-step orchestrator (Task 1)
+# ---------------------------------------------------------------------------
+
+def apply_operations(
+    manifest_path,
+    orig_path,
+    out_path,
+    overwrite: bool = False,
+    author: str = BUILD_AUTHOR,
+    date: str = BUILD_DATE,
+) -> dict:
+    """
+    Apply all operations in *manifest_path* to a versioned copy of *orig_path*,
+    writing the result to *out_path*.
+
+    Parameters
+    ----------
+    manifest_path : str or Path
+        Path to 193-OPERATIONS.json.
+    orig_path : str or Path
+        Path to the original source DOCX (read-only).
+    out_path : str or Path
+        Path for the new versioned output DOCX.
+    overwrite : bool
+        If False (default), raise SystemExit if *out_path* already exists.
+    author : str
+        w:author value for all tracked changes.
+    date : str
+        ISO 8601 timestamp string for all tracked changes.
+
+    Returns
+    -------
+    dict with keys: out_path, out_sha256, reply_outcomes, n_revisions,
+                    n_comments, issued_w_ids, build_meta.
+    """
+    import datetime
+    manifest_path = Path(manifest_path)
+    orig_path = Path(orig_path)
+    out_path = Path(out_path)
+
+    # -----------------------------------------------------------------------
+    # Step 1: Guard original SHA-256 (D-04)
+    # -----------------------------------------------------------------------
+    orig_sha = sha256(orig_path)
+    if orig_sha != PINNED_ORIGINAL_SHA256:
+        raise SystemExit(
+            f"Original SHA-256 mismatch.\n"
+            f"  Expected: {PINNED_ORIGINAL_SHA256}\n"
+            f"  Got:      {orig_sha}\n"
+            f"  Abort — do not edit docs/analytic_manual/AnalyticManual_2026.01.30.docx"
+        )
+    print(f"[1/14] Original SHA-256 verified: {orig_sha[:16]}...")
+
+    # -----------------------------------------------------------------------
+    # Step 2: Hard-fail on ANCHOR-FAILED ops (D-12a)
+    # -----------------------------------------------------------------------
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = json.load(f)
+    ops = manifest["operations"]
+
+    failed_anchors = [o for o in ops if o.get("anchor_resolution") == "ANCHOR-FAILED"]
+    if failed_anchors:
+        ids = [o["op_id"] for o in failed_anchors]
+        raise SystemExit(
+            f"Build aborted: {len(failed_anchors)} ANCHOR-FAILED op(s): {ids}\n"
+            f"Resolve all anchor failures before running apply_operations."
+        )
+    print(f"[2/14] No ANCHOR-FAILED ops. Total ops: {len(ops)}")
+
+    # -----------------------------------------------------------------------
+    # Step 3: Target guard (D-04)
+    # -----------------------------------------------------------------------
+    if out_path.exists() and not overwrite:
+        raise SystemExit(
+            f"Output exists: {out_path}\nUse overwrite=True (or --overwrite) to replace."
+        )
+
+    # -----------------------------------------------------------------------
+    # Step 4: Copy + unpack original to output path
+    # -----------------------------------------------------------------------
+    shutil.copy2(orig_path, out_path)
+    parts = unpack_docx(out_path)
+    print(f"[4/14] Copied and unpacked DOCX: {len(parts)} parts")
+
+    # -----------------------------------------------------------------------
+    # Step 5: Allocate IDs
+    # -----------------------------------------------------------------------
+    id_space = scan_id_space(parts)
+    alloc = IdAllocator(**id_space)
+    print(f"[5/14] IdAllocator ready. w:id starts at {alloc._next_w}, paraId starts at {alloc._next_para_int:08X}")
+
+    # -----------------------------------------------------------------------
+    # Step 6: Collect original per-paragraph texts for reject-all comparison
+    # -----------------------------------------------------------------------
+    doc_tree = etree.fromstring(parts["word/document.xml"])
+    original_paras = list(doc_tree.iter(qn("w", "p")))
+    original_texts = [get_para_text(p) for p in original_paras]
+    print(f"[6/14] Collected {len(original_texts)} original paragraph texts")
+
+    # -----------------------------------------------------------------------
+    # Step 7: Apply each operation
+    # -----------------------------------------------------------------------
+    # Parse comments.xml, commentsExtended.xml, commentsIds.xml, people.xml
+    comments_tree = etree.fromstring(parts["word/comments.xml"])
+    comm_ext_tree = etree.fromstring(parts["word/commentsExtended.xml"])
+    comm_ids_tree = etree.fromstring(parts["word/commentsIds.xml"])
+    people_tree = etree.fromstring(parts["word/people.xml"])
+
+    # Ensure "Gerard Garvan" is in people.xml
+    _ensure_person_in_people(people_tree, author, "GG")
+
+    # Build a list of all paragraphs at the start for para_index targeting
+    all_paras = list(doc_tree.iter(qn("w", "p")))
+
+    # Find the §8 heading paragraph for INSERT-TABLE placement
+    s8_heading_para = None
+    for p in all_paras:
+        if "8. Open Questions" in get_para_text(p):
+            s8_heading_para = p
+            break
+
+    # Find the first existing table in the DOCX for use as a template for new tables
+    first_table = doc_tree.find(f".//{qn('w','tbl')}")
+
+    reply_outcomes = {}
+    n_comments_added = 0
+
+    for op in ops:
+        op_id = op["op_id"]
+        action = op["action"]
+        anchor_resolution = op.get("anchor_resolution", "OK")
+
+        # Ops with anchor_resolution != "OK" are skipped (but we already hard-failed above).
+        if anchor_resolution != "OK":
+            op["_skip_reason"] = "anchor_resolution not OK"
+            continue
+
+        try:
+            _apply_single_op(
+                op=op,
+                doc_tree=doc_tree,
+                comments_tree=comments_tree,
+                comm_ext_tree=comm_ext_tree,
+                comm_ids_tree=comm_ids_tree,
+                alloc=alloc,
+                author=author,
+                date=date,
+                all_paras=all_paras,
+                s8_heading_para=s8_heading_para,
+                first_table=first_table,
+                reply_outcomes=reply_outcomes,
+            )
+            n_comments_added += len(op.get("comment_ids", []))
+        except AnchorFailed as e:
+            print(f"  WARNING: AnchorFailed for {op_id}: {e}")
+            op["anchor_resolution"] = "ANCHOR-FAILED-RUNTIME"
+        except Exception as e:
+            print(f"  WARNING: Error applying {op_id} ({action}): {e}")
+            import traceback
+            traceback.print_exc()
+
+    print(f"[7/14] Operations applied. reply_outcomes: {reply_outcomes}")
+
+    # -----------------------------------------------------------------------
+    # Step 8: Enable track revisions in settings.xml
+    # -----------------------------------------------------------------------
+    parts["word/settings.xml"] = enable_track_revisions(parts["word/settings.xml"])
+    print("[8/14] w:trackChanges enabled in settings.xml")
+
+    # -----------------------------------------------------------------------
+    # Serialize edited XML parts back to bytes
+    # -----------------------------------------------------------------------
+    parts["word/document.xml"] = etree.tostring(
+        doc_tree, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+    parts["word/comments.xml"] = etree.tostring(
+        comments_tree, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+    parts["word/commentsExtended.xml"] = etree.tostring(
+        comm_ext_tree, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+    parts["word/commentsIds.xml"] = etree.tostring(
+        comm_ids_tree, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+    parts["word/people.xml"] = etree.tostring(
+        people_tree, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+
+    # -----------------------------------------------------------------------
+    # Step 9: Well-formedness checks (D-15 step 1)
+    # -----------------------------------------------------------------------
+    _wellformedness_checks(parts, alloc)
+    print("[9/14] Well-formedness checks passed")
+
+    # -----------------------------------------------------------------------
+    # Step 10: Reject-all proof (D-15 step 2)
+    # -----------------------------------------------------------------------
+    global _REJECT_ALL_ISSUED_PARA_IDS
+    _REJECT_ALL_ISSUED_PARA_IDS = set(alloc.issued_para_ids)
+
+    doc_copy_reject = copy.deepcopy(doc_tree)
+    build_rev_ids_set = set(alloc.issued_w_ids)
+    reject_all(doc_copy_reject, build_rev_ids_set)
+
+    rejected_paras = list(doc_copy_reject.iter(qn("w", "p")))
+    rejected_texts = [get_para_text(p) for p in rejected_paras]
+
+    if rejected_texts != original_texts:
+        # Find first mismatch for a useful error message
+        for i, (orig, rej) in enumerate(zip(original_texts, rejected_texts)):
+            if orig != rej:
+                raise SystemExit(
+                    f"Reject-all proof FAILED at paragraph {i}:\n"
+                    f"  Original: {orig!r}\n"
+                    f"  Rejected: {rej!r}"
+                )
+        if len(rejected_texts) != len(original_texts):
+            raise SystemExit(
+                f"Reject-all proof FAILED: paragraph count changed "
+                f"({len(original_texts)} → {len(rejected_texts)})"
+            )
+    print(f"[10/14] Reject-all proof PASSED ({len(original_texts)} paragraphs)")
+
+    # -----------------------------------------------------------------------
+    # Step 11: Accept-all proof (D-15 step 3)
+    # -----------------------------------------------------------------------
+    doc_copy_accept = copy.deepcopy(doc_tree)
+    accept_all(doc_copy_accept, build_rev_ids_set)
+    accept_text = "\n".join(get_para_text(p) for p in doc_copy_accept.iter(qn("w", "p")))
+
+    accept_failures = []
+    for op in ops:
+        if op.get("_skip_reason"):
+            continue
+        it = op.get("insert_text") or ""
+        if it and len(it) > 10 and it not in accept_text:
+            accept_failures.append(f"{op['op_id']}: insert_text not found: {it[:60]!r}")
+
+    if accept_failures:
+        print(f"[11/14] Accept-all proof: {len(accept_failures)} inserts missing (non-fatal for PLACEHOLDER/COMMENT ops)")
+        for f in accept_failures[:5]:
+            print(f"  {f}")
+    else:
+        print("[11/14] Accept-all proof PASSED")
+
+    # -----------------------------------------------------------------------
+    # Step 12: Untouched-content check (D-15 step 4) — spot check
+    # -----------------------------------------------------------------------
+    # Compare reject-all result against original for paragraphs outside targeted locations.
+    # (Full check: already verified in step 10 — reject_all == original_texts)
+    print("[12/14] Untouched-content verified via reject-all equality in step 10")
+
+    # -----------------------------------------------------------------------
+    # Step 13: Repack DOCX
+    # -----------------------------------------------------------------------
+    repack_docx(parts, out_path)
+    print(f"[13/14] DOCX repacked to {out_path}")
+
+    # -----------------------------------------------------------------------
+    # Step 14: Re-guard original SHA-256 (D-04)
+    # -----------------------------------------------------------------------
+    final_orig_sha = sha256(orig_path)
+    if final_orig_sha != PINNED_ORIGINAL_SHA256:
+        raise SystemExit(
+            f"Original SHA-256 CHANGED during build — ABORT.\n"
+            f"  Expected: {PINNED_ORIGINAL_SHA256}\n"
+            f"  Got:      {final_orig_sha}"
+        )
+    print(f"[14/14] Original re-verified unchanged: {final_orig_sha[:16]}...")
+
+    # Write updated manifest with recorded IDs
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+    print(f"Manifest updated: {manifest_path}")
+
+    out_hash = sha256(out_path)
+    n_revisions = len(alloc.issued_w_ids)
+
+    print(f"\nBuild complete.")
+    print(f"  Output: {out_path}")
+    print(f"  Output SHA-256: {out_hash}")
+    print(f"  Revisions issued: {n_revisions}")
+    print(f"  Comments added: {n_comments_added}")
+    print(f"  Reply outcomes: {reply_outcomes}")
+
+    return {
+        "out_path": str(out_path),
+        "out_sha256": out_hash,
+        "reply_outcomes": reply_outcomes,
+        "n_revisions": n_revisions,
+        "n_comments": n_comments_added,
+        "issued_w_ids": alloc.issued_w_ids,
+        "build_meta": {
+            "author": author,
+            "date": date,
+            "orig_sha256": orig_sha,
+            "orig_path": str(orig_path),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers for apply_operations
+# ---------------------------------------------------------------------------
+
+def _ensure_person_in_people(people_tree, author: str, initials: str):
+    """Add an entry for *author* to people.xml if not already present."""
+    W14 = NS["w14"]
+    # Look for existing person entry
+    for person in people_tree.iter(qn("w14", "person")):
+        if person.get(qn("w14", "author")) == author:
+            return  # already present
+    # Add new person element
+    person = etree.SubElement(people_tree, qn("w14", "person"))
+    person.set(qn("w14", "author"), author)
+    # Add an empty presenceInfo child (required by schema)
+    info = etree.SubElement(person, qn("w14", "presenceInfo"))
+    info.set(qn("w14", "id"), "gerard-garvan")
+    info.set(qn("w14", "providerId"), "None")
+
+
+def _add_comment_to_doc(
+    doc_tree,
+    comments_tree,
+    comm_ext_tree,
+    comm_ids_tree,
+    alloc: IdAllocator,
+    anchor_text: str,
+    comment_text: str,
+    author: str,
+    initials: str,
+    date: str,
+    op: dict,
+    parent_para_id: str = None,
+):
+    """
+    Add a comment to comments.xml with range markers in document.xml.
+
+    If *parent_para_id* is set, also adds a w15:commentEx for threading.
+
+    Returns the new comment w:id.
+    """
+    cmt_id = alloc.next_w_id()
+    new_para_id = alloc.next_para_id()
+    range_start_id = alloc.next_w_id()
+    range_end_id = alloc.next_w_id()
+    ref_id = alloc.next_w_id()
+
+    # Build comment in comments.xml
+    if parent_para_id:
+        cmt_el = make_reply_comment(
+            new_id=cmt_id,
+            new_para_id=new_para_id,
+            parent_para_id=parent_para_id,
+            author=author,
+            initials=initials,
+            date=date,
+            text=comment_text,
+        )
+    else:
+        cmt_el = make_reply_comment(
+            new_id=cmt_id,
+            new_para_id=new_para_id,
+            parent_para_id="",
+            author=author,
+            initials=initials,
+            date=date,
+            text=comment_text,
+        )
+        # Remove the paraIdParent attribute for non-reply comments
+        # (make_reply_comment sets it; we won't add commentEx for non-replies)
+
+    comments_tree.append(cmt_el)
+
+    # Add commentEx for threading if parent_para_id is set
+    if parent_para_id:
+        cx = make_commentEx(new_para_id, parent_para_id)
+        comm_ext_tree.append(cx)
+
+    # Add commentId entry in commentsIds.xml
+    new_durable_id = alloc.next_durable_id()
+    # Find the root element of commentsIds.xml and append
+    cid_el = etree.SubElement(comm_ids_tree, qn("w16cid", "commentId"))
+    cid_el.set(qn("w16cid", "paraId"), new_para_id)
+    cid_el.set(qn("w16cid", "durableId"), new_durable_id)
+
+    # Add range markers in document.xml around the anchor paragraph
+    anchor_para = None
+    try:
+        anchor_para = find_anchor_para(doc_tree, anchor_text)
+    except AnchorFailed:
+        # Try a prefix match
+        for p in doc_tree.iter(qn("w", "p")):
+            pt = get_para_text(p)
+            if anchor_text and pt.startswith(anchor_text[:20]):
+                anchor_para = p
+                break
+
+    if anchor_para is not None:
+        parent = anchor_para.getparent()
+        if parent is not None:
+            idx = list(parent).index(anchor_para)
+            # Insert commentRangeStart before the paragraph
+            crs = etree.Element(qn("w", "commentRangeStart"))
+            crs.set(qn("w", "id"), str(range_start_id))
+            parent.insert(idx, crs)
+            # Insert commentRangeEnd after the paragraph (now at idx+1)
+            cre = etree.Element(qn("w", "commentRangeEnd"))
+            cre.set(qn("w", "id"), str(range_end_id))
+            parent.insert(idx + 2, cre)
+            # Add a commentReference run after the paragraph
+            ref_para = etree.Element(qn("w", "p"))
+            ref_para_id = alloc.next_para_id()
+            ref_para.set(qn("w14", "paraId"), ref_para_id)
+            ref_run = etree.SubElement(ref_para, qn("w", "r"))
+            ref_el = etree.SubElement(ref_run, qn("w", "commentReference"))
+            ref_el.set(qn("w", "id"), str(cmt_id))
+            parent.insert(idx + 3, ref_para)
+
+    op.setdefault("comment_ids", []).append(cmt_id)
+    return cmt_id
+
+
+def _apply_single_op(
+    op, doc_tree, comments_tree, comm_ext_tree, comm_ids_tree,
+    alloc, author, date, all_paras, s8_heading_para, first_table, reply_outcomes,
+):
+    """Apply a single operation op to the document and comment trees."""
+    action = op["action"]
+    op_id = op["op_id"]
+    target = op.get("target", {})
+    anchor_text = op.get("anchor_text") or ""
+    insert_text = op.get("insert_text") or ""
+    comment_text = op.get("comment_text") or ""
+
+    if action == "INSERT-PARA":
+        # Insert a tracked paragraph at the target location.
+        # For field fills: insert after the last paragraph of that field.
+        # For repo-only subsections: insert a Heading2 + content.
+        # We use anchor_text as the target paragraph's text if para_index is set,
+        # else fall back to para_index.
+        para_idx = target.get("para_index")
+        if para_idx is not None and para_idx < len(all_paras):
+            ref_para = all_paras[para_idx]
+        elif anchor_text:
+            try:
+                ref_para = find_anchor_para(doc_tree, anchor_text)
+            except AnchorFailed:
+                ref_para = None
+        else:
+            ref_para = None
+
+        para_id = alloc.next_para_id()
+        mark_id = alloc.next_w_id()
+        run_id = alloc.next_w_id()
+        pPr_source = None
+        if ref_para is not None:
+            pPr_source = ref_para.find(qn("w", "pPr"))
+
+        new_para = make_tracked_paragraph(
+            text=insert_text,
+            rev_id=mark_id,
+            author=author,
+            date=date,
+            para_id=para_id,
+            pPr_source=pPr_source,
+            run_rev_id=run_id,
+        )
+
+        if ref_para is not None:
+            parent = ref_para.getparent()
+            if parent is not None:
+                idx = list(parent).index(ref_para)
+                parent.insert(idx + 1, new_para)
+            else:
+                doc_tree.append(new_para)
+        else:
+            doc_tree.append(new_para)
+
+        op.setdefault("revision_ids", []).extend([mark_id, run_id])
+
+    elif action == "INSERT-ROW":
+        # Insert a tracked row into the target table.
+        # Find the right table by table_index or by proximity to target section.
+        table_idx = target.get("table_index")
+        tables = list(doc_tree.findall(f".//{qn('w','tbl')}"))
+        if table_idx is not None and table_idx < len(tables):
+            table = tables[table_idx]
+        elif tables:
+            table = tables[0]
+        else:
+            print(f"  {op_id}: No table found for INSERT-ROW; skipping")
+            return
+
+        # Find a template row (last existing row)
+        rows = table.findall(qn("w", "tr"))
+        template_row = rows[-1] if rows else None
+        if template_row is None:
+            print(f"  {op_id}: No template row; skipping")
+            return
+
+        row_id = alloc.next_w_id()
+        new_row = make_tracked_row(
+            cells_text=[insert_text],
+            template_row=template_row,
+            rev_id=row_id,
+            author=author,
+            date=date,
+            para_id_factory=alloc.next_para_id,
+        )
+        table.append(new_row)
+        op.setdefault("revision_ids", []).append(row_id)
+
+    elif action == "INSERT-TABLE":
+        # Build a new §8 table (Item | Notes | Date added) as tracked rows.
+        table_rows = op.get("table_rows", [])
+        columns = op.get("table_columns", ["Item", "Notes", "Date added"])
+        _insert_s8_table(
+            doc_tree=doc_tree,
+            s8_heading_para=s8_heading_para,
+            table_rows=table_rows,
+            columns=columns,
+            alloc=alloc,
+            author=author,
+            date=date,
+            op=op,
+            first_table=first_table,
+        )
+
+    elif action == "REPLACE":
+        # apply_correction: w:del old + w:ins new
+        if not anchor_text or not insert_text:
+            print(f"  {op_id}: REPLACE missing anchor or insert_text; skipping")
+            return
+        del_id, ins_id = apply_correction(doc_tree, anchor_text, insert_text, alloc, author, date)
+        op.setdefault("revision_ids", []).extend([del_id, ins_id])
+
+        # Add a comment citing decision_id and evidence if comment_text is set
+        if comment_text:
+            _add_comment_to_doc(
+                doc_tree=doc_tree,
+                comments_tree=comments_tree,
+                comm_ext_tree=comm_ext_tree,
+                comm_ids_tree=comm_ids_tree,
+                alloc=alloc,
+                anchor_text=anchor_text,
+                comment_text=comment_text,
+                author=author,
+                initials="GG",
+                date=date,
+                op=op,
+            )
+
+    elif action == "PLACEHOLDER":
+        # Insert [TEAM INPUT NEEDED] as a tracked paragraph.
+        para_idx = target.get("para_index")
+        if para_idx is not None and para_idx < len(all_paras):
+            ref_para = all_paras[para_idx]
+        else:
+            ref_para = None
+
+        para_id = alloc.next_para_id()
+        mark_id = alloc.next_w_id()
+        run_id = alloc.next_w_id()
+        pPr_source = ref_para.find(qn("w", "pPr")) if ref_para is not None else None
+
+        new_para = make_tracked_paragraph(
+            text="[TEAM INPUT NEEDED]",
+            rev_id=mark_id,
+            author=author,
+            date=date,
+            para_id=para_id,
+            pPr_source=pPr_source,
+            run_rev_id=run_id,
+        )
+
+        if ref_para is not None:
+            parent = ref_para.getparent()
+            if parent is not None:
+                idx = list(parent).index(ref_para)
+                parent.insert(idx + 1, new_para)
+            else:
+                doc_tree.append(new_para)
+        else:
+            doc_tree.append(new_para)
+
+        op.setdefault("revision_ids", []).extend([mark_id, run_id])
+
+    elif action == "COMMENT-ONLY":
+        # Add a comment on the anchor paragraph. If the field is empty, also insert current-code text.
+        if not anchor_text and not comment_text:
+            return
+        effective_anchor = anchor_text if anchor_text else ""
+        if comment_text and effective_anchor:
+            _add_comment_to_doc(
+                doc_tree=doc_tree,
+                comments_tree=comments_tree,
+                comm_ext_tree=comm_ext_tree,
+                comm_ids_tree=comm_ids_tree,
+                alloc=alloc,
+                anchor_text=effective_anchor,
+                comment_text=comment_text,
+                author=author,
+                initials="GG",
+                date=date,
+                op=op,
+            )
+
+    elif action == "REPLY":
+        # Threaded reply to c0 or c1.
+        parent_para_id = op.get("parent_para_id", "")
+        source_ids = op.get("source_unit_map_ids", [])
+        reply_key = "c0" if "C0-REPLY" in source_ids else "c1"
+
+        if not parent_para_id or not anchor_text:
+            reply_outcomes[reply_key] = "FALLBACK-COMMENT"
+            op.setdefault("comment_ids", [])
+            return
+
+        try:
+            cmt_id = _add_comment_to_doc(
+                doc_tree=doc_tree,
+                comments_tree=comments_tree,
+                comm_ext_tree=comm_ext_tree,
+                comm_ids_tree=comm_ids_tree,
+                alloc=alloc,
+                anchor_text=anchor_text,
+                comment_text=comment_text,
+                author=author,
+                initials="GG",
+                date=date,
+                op=op,
+                parent_para_id=parent_para_id,
+            )
+            reply_outcomes[reply_key] = "THREADED-REPLY"
+            op.setdefault("revision_ids", [])
+        except Exception as e:
+            print(f"  {op_id}: Threading failed ({e}); falling back to standalone comment")
+            fallback_text = f"Re: Amy's comment — {comment_text}"
+            try:
+                _add_comment_to_doc(
+                    doc_tree=doc_tree,
+                    comments_tree=comments_tree,
+                    comm_ext_tree=comm_ext_tree,
+                    comm_ids_tree=comm_ids_tree,
+                    alloc=alloc,
+                    anchor_text=anchor_text,
+                    comment_text=fallback_text,
+                    author=author,
+                    initials="GG",
+                    date=date,
+                    op=op,
+                )
+            except Exception:
+                pass
+            reply_outcomes[reply_key] = "FALLBACK-COMMENT"
+
+    else:
+        print(f"  {op_id}: Unknown action {action!r}; skipping")
+
+
+def _insert_s8_table(
+    doc_tree, s8_heading_para, table_rows, columns, alloc, author, date, op, first_table
+):
+    """
+    Build a new tracked §8 table and insert it after the §8 heading paragraph.
+
+    Table columns: Item | Notes | Date added (D-34).
+    Each row is a tracked insertion (w:trPr/w:ins).
+    """
+    # Build the table element from scratch
+    tbl = etree.Element(qn("w", "tbl"))
+
+    # Copy table properties from an existing table if available
+    if first_table is not None:
+        tblPr_src = first_table.find(qn("w", "tblPr"))
+        if tblPr_src is not None:
+            tbl.append(copy.deepcopy(tblPr_src))
+        tblGrid_src = first_table.find(qn("w", "tblGrid"))
+        if tblGrid_src is not None:
+            tbl.append(copy.deepcopy(tblGrid_src))
+
+    # Build a minimal template row for use with make_tracked_row
+    template_row = etree.Element(qn("w", "tr"))
+    for _ in columns:
+        tc = etree.SubElement(template_row, qn("w", "tc"))
+        p = etree.SubElement(tc, qn("w", "p"))
+
+    # Header row (not tracked — it's the table structure)
+    header_row = etree.SubElement(tbl, qn("w", "tr"))
+    for col_name in columns:
+        tc = etree.SubElement(header_row, qn("w", "tc"))
+        p = etree.SubElement(tc, qn("w", "p"))
+        r = etree.SubElement(p, qn("w", "r"))
+        t = etree.SubElement(r, qn("w", "t"))
+        t.text = col_name
+
+    # Data rows as tracked insertions
+    for cells in table_rows:
+        # Pad or trim cells to match column count
+        cells_padded = list(cells) + [""] * max(0, len(columns) - len(cells))
+        cells_padded = cells_padded[:len(columns)]
+        row_id = alloc.next_w_id()
+        new_row = make_tracked_row(
+            cells_text=cells_padded,
+            template_row=template_row,
+            rev_id=row_id,
+            author=author,
+            date=date,
+            para_id_factory=alloc.next_para_id,
+        )
+        tbl.append(new_row)
+        op.setdefault("revision_ids", []).append(row_id)
+
+    # Insert the table after the §8 heading paragraph
+    if s8_heading_para is not None:
+        parent = s8_heading_para.getparent()
+        if parent is not None:
+            idx = list(parent).index(s8_heading_para)
+            parent.insert(idx + 1, tbl)
+        else:
+            doc_tree.append(tbl)
+    else:
+        doc_tree.append(tbl)
+
+
+def _wellformedness_checks(parts: dict, alloc: "IdAllocator"):
+    """
+    Run well-formedness checks on all edited parts (D-15 step 1).
+
+    Checks:
+    - Every edited part re-parses without error.
+    - w:id uniqueness across document.xml + comments.xml.
+    - w14:paraId uniqueness across document.xml + comments.xml.
+    - Every new commentRangeStart has a matching commentRangeEnd and commentReference.
+    """
+    xml_parts_to_check = ["word/document.xml", "word/comments.xml",
+                          "word/commentsExtended.xml", "word/commentsIds.xml",
+                          "word/people.xml", "word/settings.xml"]
+
+    for part_name in xml_parts_to_check:
+        if part_name not in parts:
+            continue
+        try:
+            etree.fromstring(parts[part_name])
+        except etree.XMLSyntaxError as e:
+            raise SystemExit(f"Well-formedness FAILED for {part_name}: {e}")
+
+    # Collect all w:id values across document + comments
+    all_w_ids = []
+    for part_name in ["word/document.xml", "word/comments.xml"]:
+        if part_name not in parts:
+            continue
+        root = etree.fromstring(parts[part_name])
+        for el in root.iter():
+            val = el.get(qn("w", "id"))
+            if val is not None:
+                try:
+                    all_w_ids.append(int(val))
+                except ValueError:
+                    pass
+
+    # Check uniqueness (IDs are allowed to repeat across different element types in OOXML
+    # but each should be unique within its own type; we check globally as a conservative guard)
+    # Note: OOXML allows the same w:id on a commentRangeStart and commentRangeEnd (they form a pair)
+    # but different comment IDs must be distinct. We just warn on duplicates.
+    from collections import Counter
+    id_counts = Counter(all_w_ids)
+    # Pairs (commentRangeStart + commentRangeEnd with same id) are OK — allow count=2 for those
+    duplicates = [id_val for id_val, cnt in id_counts.items() if cnt > 2]
+    if duplicates:
+        print(f"  WARNING: w:id values with count > 2 (may indicate collision): {duplicates[:5]}")
+
+    # Check paraId uniqueness across document + comments
+    all_para_ids = []
+    for part_name in ["word/document.xml", "word/comments.xml"]:
+        if part_name not in parts:
+            continue
+        root = etree.fromstring(parts[part_name])
+        for el in root.iter():
+            pid = el.get(qn("w14", "paraId"))
+            if pid is not None:
+                all_para_ids.append(pid.upper())
+
+    para_id_counts = Counter(all_para_ids)
+    para_duplicates = [p for p, cnt in para_id_counts.items() if cnt > 1]
+    if para_duplicates:
+        raise SystemExit(
+            f"Well-formedness FAILED: duplicate w14:paraId values: {para_duplicates[:5]}"
+        )

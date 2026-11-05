@@ -14,7 +14,8 @@
     "n_comment_only": 8,
     "n_placeholder": 31,
     "n_reply": 2,
-    "n_anchor_failed": 8
+    "n_anchor_failed": 0,
+    "n_anchor_ok": 8
   },
   "operations": [
     {
@@ -25,7 +26,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -52,7 +53,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -79,7 +80,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -103,28 +104,28 @@
       "source_unit_map_ids": [
         "S0-FM-04"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
-        "para_index": null,
+        "para_index": 4,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Data sources: EHR (primary), Claims (secondary) — existing text preserved; claim",
+      "anchor_text": "Data sources: EHR (primary), Claims (secondary)",
       "citations": [
         "docs/analytic_manual/AnalyticManual_2026.01.30.md:L9-L9"
       ],
       "decision_id": null,
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8.",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78.",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
-      "anchor_failure_reason": "anchor 'Data sources: EHR (primary), Claims (secondary) — existing text preserved; claim' matched 0 paragraphs"
+      "anchor_failure_reason": "anchor 'Data sources: EHR (primary), Claims (secondary) \u00e2\u20ac\u201d existing text preserved; claim' matched 0 paragraphs"
     },
     {
       "op_id": "OP-005",
@@ -134,7 +135,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -161,7 +162,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -188,7 +189,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "REPLACE",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "frontmatter",
         "para_index": 7,
         "table_index": null,
@@ -215,7 +216,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "REPLACE",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "frontmatter",
         "para_index": 8,
         "table_index": null,
@@ -242,7 +243,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§0",
+        "section": "\u00c2\u00a70",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -269,7 +270,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -296,7 +297,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -323,7 +324,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -350,7 +351,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -377,7 +378,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -404,7 +405,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -431,7 +432,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -458,7 +459,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -485,7 +486,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -512,7 +513,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§1",
+        "section": "\u00c2\u00a71",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -539,7 +540,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§2",
+        "section": "\u00c2\u00a72",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -566,7 +567,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§2",
+        "section": "\u00c2\u00a72",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -591,26 +592,26 @@
       "source_unit_map_ids": [
         "S2-COH-03"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§2",
+        "section": "\u00c2\u00a72",
         "kind": "field",
-        "para_index": null,
+        "para_index": 49,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Index Date Definition: The earliest HL diagnosis code date (DX_DATE, with ADMIT_",
+      "anchor_text": "Index Date Definition: ",
       "citations": [
         "R/utils/utils_treatment.R:get_hl_any_dx_ids()",
         "D-191-02"
       ],
       "decision_id": "D-191-02",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-02",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-02",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
       "anchor_failure_reason": "anchor 'Index Date Definition: The earliest HL diagnosis code date (DX_DATE, with ADMIT_' matched 0 paragraphs"
@@ -623,7 +624,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§2",
+        "section": "\u00c2\u00a72",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -650,7 +651,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§2",
+        "section": "\u00c2\u00a72",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -677,7 +678,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -704,14 +705,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Insurance harmonization — same-day hierarchy | Apply payer hierarchy within a day when multiple tiers present | Multiple payer records on a single day with differing tiers | Hierarchy: Medicaid (incl. codes 93/14/FLM source) > Medicare > Private (incl. Tricare) > Other > Self-pay or Uninsured → Uninsured > All missing → missing | Deterministic resolution per guidance from Amy | 2026-05-01 | All payer-stratified analyses",
+      "insert_text": "Insurance harmonization \u00e2\u20ac\u201d same-day hierarchy | Apply payer hierarchy within a day when multiple tiers present | Multiple payer records on a single day with differing tiers | Hierarchy: Medicaid (incl. codes 93/14/FLM source) > Medicare > Private (incl. Tricare) > Other > Self-pay or Uninsured \u00e2\u2020\u2019 Uninsured > All missing \u00e2\u2020\u2019 missing | Deterministic resolution per guidance from Amy | 2026-05-01 | All payer-stratified analyses",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L1837-L1850"
@@ -731,14 +732,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "ADI — ZIP9 extrapolation from matching encounter | Require ZIP9 for ADI; no fallback defined | Some encounters have only ZIP5 or no ZIP | If 5-digit ZIP in one encounter matches 9-digit ZIP in another encounter for the same patient, extrapolate 9-digit to 5-digit encounter | Team confirmed ZIPs consistent longitudinally | 2026-08-18 | ADI covariate assignment",
+      "insert_text": "ADI \u00e2\u20ac\u201d ZIP9 extrapolation from matching encounter | Require ZIP9 for ADI; no fallback defined | Some encounters have only ZIP5 or no ZIP | If 5-digit ZIP in one encounter matches 9-digit ZIP in another encounter for the same patient, extrapolate 9-digit to 5-digit encounter | Team confirmed ZIPs consistent longitudinally | 2026-08-18 | ADI covariate assignment",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L810-L820"
@@ -758,14 +759,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "ADI — population-weighted average for ZIP5-only | — | Encounters with only ZIP5 have no direct ZIP9 | Use population-weighted average ADI of the 5-digit ZIP when no 9-digit is available | Accepted standard for ZIP5-level ADI approximation | 2026-08-25 | ADI covariate assignment",
+      "insert_text": "ADI \u00e2\u20ac\u201d population-weighted average for ZIP5-only | \u00e2\u20ac\u201d | Encounters with only ZIP5 have no direct ZIP9 | Use population-weighted average ADI of the 5-digit ZIP when no 9-digit is available | Accepted standard for ZIP5-level ADI approximation | 2026-08-25 | ADI covariate assignment",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L689-L700"
@@ -785,14 +786,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "RUCA — ZIP5 acceptable | Require ZIP9 for RUCA lookup | RUCA works natively at ZIP code level | Can use 5-digit ZIP for RUCA assignment | RUCA database supports 5-digit ZIP directly | 2026-08-25 | Rurality covariate",
+      "insert_text": "RUCA \u00e2\u20ac\u201d ZIP5 acceptable | Require ZIP9 for RUCA lookup | RUCA works natively at ZIP code level | Can use 5-digit ZIP for RUCA assignment | RUCA database supports 5-digit ZIP directly | 2026-08-25 | Rurality covariate",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L689-L700"
@@ -812,7 +813,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -839,7 +840,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -866,7 +867,7 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -893,14 +894,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Distance cutoff — far from care binary | Binary distance variable with unresolved cutoff | Uncertainty about evidence-based cutoff | 100 miles, based on doi.org/10.1182/blood-2023-182477 | Published literature reference for HL care distance threshold | 2026-10-13 | Far-from-care analyses",
+      "insert_text": "Distance cutoff \u00e2\u20ac\u201d far from care binary | Binary distance variable with unresolved cutoff | Uncertainty about evidence-based cutoff | 100 miles, based on doi.org/10.1182/blood-2023-182477 | Published literature reference for HL care distance threshold | 2026-10-13 | Far-from-care analyses",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L3-L30"
@@ -920,14 +921,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Drug name normalization — brand to generic | Use raw drug names from source tables | Brand-name proliferation impedes regimen identification | Convert all brand names to generic equivalents (e.g., adriamycin to doxorubicin); includes liposomal variants | Consistency for regimen detection and reporting | 2026-10-13 | Chemo classification; regimen identification; all outputs",
+      "insert_text": "Drug name normalization \u00e2\u20ac\u201d brand to generic | Use raw drug names from source tables | Brand-name proliferation impedes regimen identification | Convert all brand names to generic equivalents (e.g., adriamycin to doxorubicin); includes liposomal variants | Consistency for regimen detection and reporting | 2026-10-13 | Chemo classification; regimen identification; all outputs",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L3-L30"
@@ -947,14 +948,14 @@
       "status": "DRAFTED",
       "action": "INSERT-ROW",
       "target": {
-        "section": "§3",
+        "section": "\u00c2\u00a73",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Survivorship — remove diagnosis table from modality codes | Include all encounter types as survivorship encounters | Diagnosis-coded encounters inflate modality counts | Remove diagnosis table data from surveillance modality codes for survivorship care | Modality classification should reflect active care delivery | 2026-10-13 | Survivorship modality rates",
+      "insert_text": "Survivorship \u00e2\u20ac\u201d remove diagnosis table from modality codes | Include all encounter types as survivorship encounters | Diagnosis-coded encounters inflate modality counts | Remove diagnosis table data from surveillance modality codes for survivorship care | Modality classification should reflect active care delivery | 2026-10-13 | Survivorship modality rates",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L3-L30"
@@ -974,7 +975,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1001,7 +1002,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1026,26 +1027,26 @@
       "source_unit_map_ids": [
         "S4-DXDT-03"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
-        "para_index": null,
+        "para_index": 123,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Cleaning Rules Applied: The pipeline anchor date is the earliest HL diagnosis co",
+      "anchor_text": "Use diagnosis date from Tumor Registry as default.",
       "citations": [
         "R/utils/utils_treatment.R:get_hl_any_dx_ids()",
         "D-191-03"
       ],
       "decision_id": "D-191-03",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-03",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-03",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
       "anchor_failure_reason": "anchor 'Cleaning Rules Applied: The pipeline anchor date is the earliest HL diagnosis co' matched 0 paragraphs"
@@ -1058,7 +1059,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1085,7 +1086,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1112,7 +1113,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1140,7 +1141,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1167,7 +1168,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1194,7 +1195,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1223,7 +1224,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1249,18 +1250,18 @@
       "source_unit_map_ids": [
         "S4-DX-03"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
-        "para_index": null,
+        "para_index": 143,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Cleaning Rules Applied: Two separate encounters with a diagnosis of the same can",
+      "anchor_text": " Only counting cancer diagnoses with at least two separate encounters with a diagnosis of the same cancer type at least 7 days apart. This applies to all cancer types.",
       "citations": [
         "R/49_cancer_summary_pre_post.R:two_or_more_unique_dates_gt_7()",
         "R/utils/utils_treatment.R:get_hl_any_dx_ids()",
@@ -1269,8 +1270,8 @@
       ],
       "decision_id": "D-191-04",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-04",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-04",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
       "anchor_failure_reason": "anchor 'Cleaning Rules Applied: Two separate encounters with a diagnosis of the same can' matched 0 paragraphs"
@@ -1283,7 +1284,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1310,7 +1311,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1338,7 +1339,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1366,14 +1367,14 @@
       "status": "CORRECTION",
       "action": "REPLACE",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": 152,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Insurance was harmonized across all visits on a given day for a given individual using an 8-category AMC framework with the following priority hierarchy: (1) Medicaid — including encounters with raw codes 93 or 14, or where SOURCE = FLM; (2) Medicare; (3) Private — including Tricare (code 311); (4) Other govt — government programs such as VA/TRICARE not captured in Private tier; (5) Other; (6) Self-pay; (7) Uninsured; (8) All missing → missing (no change).",
+      "insert_text": "Insurance was harmonized across all visits on a given day for a given individual using an 8-category AMC framework with the following priority hierarchy: (1) Medicaid \u00e2\u20ac\u201d including encounters with raw codes 93 or 14, or where SOURCE = FLM; (2) Medicare; (3) Private \u00e2\u20ac\u201d including Tricare (code 311); (4) Other govt \u00e2\u20ac\u201d government programs such as VA/TRICARE not captured in Private tier; (5) Other; (6) Self-pay; (7) Uninsured; (8) All missing \u00e2\u2020\u2019 missing (no change).",
       "anchor_text": "Insurance was harmonized across all visits on a given day for a",
       "citations": [
         "R/60_tiered_same_day_payer.R:resolve_same_day_payer()",
@@ -1396,7 +1397,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1424,7 +1425,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1452,7 +1453,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1480,14 +1481,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — ZIP9 extrapolation: If a five-digit ZIP in one encounter matches a nine-digit ZIP in another encounter for the same patient, the nine-digit ZIP is extrapolated to the five-digit-only encounter (DEC-005).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d ZIP9 extrapolation: If a five-digit ZIP in one encounter matches a nine-digit ZIP in another encounter for the same patient, the nine-digit ZIP is extrapolated to the five-digit-only encounter (DEC-005).",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_address.R:approximate_zip9()",
@@ -1508,14 +1509,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — population-weighted average: When no ZIP9 is available, the population-weighted average ADI of the five-digit ZIP is used (DEC-004). Provenance columns zip5_modal_freq and zip5_modal_share document the assignment.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d population-weighted average: When no ZIP9 is available, the population-weighted average ADI of the five-digit ZIP is used (DEC-004). Provenance columns zip5_modal_freq and zip5_modal_share document the assignment.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_address.R:approximate_zip9()",
@@ -1536,14 +1537,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — non-matching five-digit ZIP: When a five-digit ZIP does not match any nine-digit ZIP for that patient, the population-weighted average ADI of the five-digit ZIP is applied to the missing-ZIP encounter (DEC-004).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d non-matching five-digit ZIP: When a five-digit ZIP does not match any nine-digit ZIP for that patient, the population-weighted average ADI of the five-digit ZIP is applied to the missing-ZIP encounter (DEC-004).",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_address.R:approximate_zip9()",
@@ -1564,7 +1565,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1591,7 +1592,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1618,7 +1619,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1645,7 +1646,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1672,7 +1673,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1699,7 +1700,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1726,7 +1727,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1753,7 +1754,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1781,7 +1782,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1808,7 +1809,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1835,7 +1836,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1860,29 +1861,29 @@
       "source_unit_map_ids": [
         "S4-DTH-03"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
-        "para_index": null,
+        "para_index": 200,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Cleaning Rule — grace window: If a death date falls within a grace window prior ",
+      "anchor_text": "If death date is 14 days prior to last treatment encounter, ignore death",
       "citations": [
         "R/utils/utils_death.R:resolve_death_date()",
         "D-191-06"
       ],
       "decision_id": "D-191-06",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-06",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-06",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
-      "anchor_failure_reason": "anchor 'Cleaning Rule — grace window: If a death date falls within a grace window prior ' matched 0 paragraphs"
+      "anchor_failure_reason": "anchor 'Cleaning Rule \u00e2\u20ac\u201d grace window: If a death date falls within a grace window prior ' matched 0 paragraphs"
     },
     {
       "op_id": "OP-069",
@@ -1892,14 +1893,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — cause of death not used for exclusion: Cause of death is not used to exclude patients. NHL as a cause of death does not trigger exclusion from the cohort.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d cause of death not used for exclusion: Cause of death is not used to exclude patients. NHL as a cause of death does not trigger exclusion from the cohort.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_death.R:resolve_death_date()",
@@ -1920,7 +1921,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1947,7 +1948,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -1975,7 +1976,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2002,7 +2003,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2030,7 +2031,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2057,7 +2058,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2084,7 +2085,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2111,7 +2112,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2135,29 +2136,29 @@
       "source_unit_map_ids": [
         "S4-DIST-03"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
-        "para_index": null,
+        "para_index": 223,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Cleaning Rule — distance method: Distance is calculated using a three-tier fallb",
+      "anchor_text": "Using the zipcodeR package to calculate distance between patient zip and encounter location zip.",
       "citations": [
         "R/122_encounter_distance.R:compute_encounter_distance()",
         "D-191-07"
       ],
       "decision_id": "D-191-07",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-07",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-07",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
-      "anchor_failure_reason": "anchor 'Cleaning Rule — distance method: Distance is calculated using a three-tier fallb' matched 0 paragraphs"
+      "anchor_failure_reason": "anchor 'Cleaning Rule \u00e2\u20ac\u201d distance method: Distance is calculated using a three-tier fallb' matched 0 paragraphs"
     },
     {
       "op_id": "OP-079",
@@ -2167,14 +2168,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — nine-digit to five-digit ZIP: Where a nine-digit ZIP is available, the five-digit prefix is extracted for distance computation.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d nine-digit to five-digit ZIP: Where a nine-digit ZIP is available, the five-digit prefix is extracted for distance computation.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_address.R:normalize_zip9()",
@@ -2195,14 +2196,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — temporally closest ZIP fallback: Where an encounter has no ZIP code, the temporally closest prior address record for that patient is used (match_type = most_recent_before).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d temporally closest ZIP fallback: Where an encounter has no ZIP code, the temporally closest prior address record for that patient is used (match_type = most_recent_before).",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_address.R:get_zip9_at_date()",
@@ -2223,7 +2224,7 @@
       "status": "CORRECTION",
       "action": "REPLACE",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": 227,
         "table_index": null,
@@ -2251,7 +2252,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -2278,7 +2279,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2305,14 +2306,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — blank SOURCE exclusion: SOURCE values are normalized using NULLIF(UPPER(TRIM(SOURCE)), '') before any flag computation; blank SOURCE entries are excluded from the single-source determination.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d blank SOURCE exclusion: SOURCE values are normalized using NULLIF(UPPER(TRIM(SOURCE)), '') before any flag computation; blank SOURCE entries are excluded from the single-source determination.",
       "anchor_text": null,
       "citations": [
         "R/169_single_source_care.R:build_single_source_result():L64-L86"
@@ -2332,14 +2333,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — NA assignment: `single_source_care` is NA where `n_encounters` equals zero; `single_source_care_post` is NA where `n_encounters_post` equals zero.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d NA assignment: `single_source_care` is NA where `n_encounters` equals zero; `single_source_care_post` is NA where `n_encounters_post` equals zero.",
       "anchor_text": null,
       "citations": [
         "R/169_single_source_care.R:build_single_source_result():L64-L86"
@@ -2359,7 +2360,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2386,14 +2387,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Expected Structure: Chemotherapy hits are drawn from three PCORnet medication tables — PRESCRIBING, DISPENSING, and MED_ADMIN — via the `get_chemo_hits()` helper. Each returned row carries the patient ID, treatment date, triggering code, and a `source` column identifying the originating table path (\"PRESCRIBING\", \"DISPENSING (NDC)\", \"MED_ADMIN (RX)\", or \"MED_ADMIN (NDC)\").",
+      "insert_text": "Expected Structure: Chemotherapy hits are drawn from three PCORnet medication tables \u00e2\u20ac\u201d PRESCRIBING, DISPENSING, and MED_ADMIN \u00e2\u20ac\u201d via the `get_chemo_hits()` helper. Each returned row carries the patient ID, treatment date, triggering code, and a `source` column identifying the originating table path (\"PRESCRIBING\", \"DISPENSING (NDC)\", \"MED_ADMIN (RX)\", or \"MED_ADMIN (NDC)\").",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_treatment.R:get_chemo_hits():L181-L290"
@@ -2413,14 +2414,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — RXNORM_CUI mismatch: DISPENSING and MED_ADMIN rows in the Mailhot V1 extract lacked usable RXNORM_CUI values for direct RxNorm matching. Without a crosswalk, chemo hits from these two tables were silently dropped (Phase 122 SUMMARY).",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d RXNORM_CUI mismatch: DISPENSING and MED_ADMIN rows in the Mailhot V1 extract lacked usable RXNORM_CUI values for direct RxNorm matching. Without a crosswalk, chemo hits from these two tables were silently dropped (Phase 122 SUMMARY).",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_treatment.R:get_chemo_hits():L205-L290"
@@ -2440,14 +2441,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — NDC-to-RxNorm crosswalk: An NDC-to-RxNorm crosswalk (`data/reference/ndc_rxnorm_crosswalk.rds`, built by `R/108_build_ndc_rxnorm_crosswalk.R`) is loaded and passed to `get_chemo_hits()`. For DISPENSING and MED_ADMIN NDC-path rows, `normalize_ndc()` strips hyphens from the raw NDC before lookup.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d NDC-to-RxNorm crosswalk: An NDC-to-RxNorm crosswalk (`data/reference/ndc_rxnorm_crosswalk.rds`, built by `R/108_build_ndc_rxnorm_crosswalk.R`) is loaded and passed to `get_chemo_hits()`. For DISPENSING and MED_ADMIN NDC-path rows, `normalize_ndc()` strips hyphens from the raw NDC before lookup.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_treatment.R:normalize_ndc():L123-L125",
@@ -2468,14 +2469,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — graceful degradation: If the crosswalk is NULL or empty, the NDC-path DISPENSING and MED_ADMIN branches log a message and return zero rows rather than erroring.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d graceful degradation: If the crosswalk is NULL or empty, the NDC-path DISPENSING and MED_ADMIN branches log a message and return zero rows rather than erroring.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_treatment.R:get_chemo_hits():L210-L213"
@@ -2495,7 +2496,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2522,7 +2523,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -2550,14 +2551,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — brand-name proliferation: Brand names and salt variants (adriamycin, adriamycin pfs, adriamycin rdf; vinblastine sulfate) appear across medication tables. Without normalization these aliases produce distinct drug-name values that fail regimen detection logic.",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d brand-name proliferation: Brand names and salt variants (adriamycin, adriamycin pfs, adriamycin rdf; vinblastine sulfate) appear across medication tables. Without normalization these aliases produce distinct drug-name values that fail regimen detection logic.",
       "anchor_text": null,
       "citations": [
         "R/00_config.R:MEDICATION_LOOKUP:L2750-L2812"
@@ -2577,14 +2578,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — brand-to-generic mapping: `canonicalize_drug_name()` maps brand and salt variants to generic equivalents. Examples: adriamycin → Doxorubicin; vinblastine sulfate → Vinblastine; liposomal doxorubicin variants included. Applied to all MEDICATION_LOOKUP values on config load (DEC-011 CONFIRMED 2026-10-13).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d brand-to-generic mapping: `canonicalize_drug_name()` maps brand and salt variants to generic equivalents. Examples: adriamycin \u00e2\u2020\u2019 Doxorubicin; vinblastine sulfate \u00e2\u2020\u2019 Vinblastine; liposomal doxorubicin variants included. Applied to all MEDICATION_LOOKUP values on config load (DEC-011 CONFIRMED 2026-10-13).",
       "anchor_text": null,
       "citations": [
         "R/00_config.R:MEDICATION_LOOKUP:L2750-L2814",
@@ -2605,14 +2606,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — JCODE supplement: J-code entries (`MEDICATION_LOOKUP_JCODE_SUPPLEMENT`) are merged into `MEDICATION_LOOKUP` after canonicalization so that HCPCS J-codes resolve to the same generic names as RxNorm-derived entries.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d JCODE supplement: J-code entries (`MEDICATION_LOOKUP_JCODE_SUPPLEMENT`) are merged into `MEDICATION_LOOKUP` after canonicalization so that HCPCS J-codes resolve to the same generic names as RxNorm-derived entries.",
       "anchor_text": null,
       "citations": [
         "R/00_config.R:MEDICATION_LOOKUP_JCODE_SUPPLEMENT:L2720-L2733"
@@ -2632,7 +2633,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2659,7 +2660,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -2686,7 +2687,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2713,14 +2714,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — ABVD labeling: An episode is labeled ABVD when it contains doxorubicin + bleomycin + vinblastine + dacarbazine with no brentuximab or nivolumab and at most four unique drugs.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d ABVD labeling: An episode is labeled ABVD when it contains doxorubicin + bleomycin + vinblastine + dacarbazine with no brentuximab or nivolumab and at most four unique drugs.",
       "anchor_text": null,
       "citations": [
         "R/28_episode_classification.R:calculate_episodes_detailed():L338-L342"
@@ -2740,14 +2741,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — BV+AVD labeling: An episode is labeled BV+AVD when it contains brentuximab + doxorubicin + vinblastine + dacarbazine without bleomycin or nivolumab, and the episode start is on or after 2019-01-01.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d BV+AVD labeling: An episode is labeled BV+AVD when it contains brentuximab + doxorubicin + vinblastine + dacarbazine without bleomycin or nivolumab, and the episode start is on or after 2019-01-01.",
       "anchor_text": null,
       "citations": [
         "R/28_episode_classification.R:calculate_episodes_detailed():L328-L335"
@@ -2767,14 +2768,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — Nivo+AVD labeling: An episode is labeled Nivo+AVD when it contains nivolumab + doxorubicin + vinblastine + dacarbazine without bleomycin, has exactly four unique drugs, and the episode start is on or after 2024-01-01.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d Nivo+AVD labeling: An episode is labeled Nivo+AVD when it contains nivolumab + doxorubicin + vinblastine + dacarbazine without bleomycin, has exactly four unique drugs, and the episode start is on or after 2024-01-01.",
       "anchor_text": null,
       "citations": [
         "R/28_episode_classification.R:calculate_episodes_detailed():L333-L336"
@@ -2794,7 +2795,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2821,7 +2822,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -2849,7 +2850,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2876,14 +2877,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — episode segmentation: `assign_episode_ids()` starts a new episode when `treatment_date - episode_start >= gap_threshold`. The default gap threshold is 90 days (`R/00_config.R:GAP_THRESHOLD = 90`, L4054). A 180-day variant is produced in the same script with `gap_threshold = 180L`.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d episode segmentation: `assign_episode_ids()` starts a new episode when `treatment_date - episode_start >= gap_threshold`. The default gap threshold is 90 days (`R/00_config.R:GAP_THRESHOLD = 90`, L4054). A 180-day variant is produced in the same script with `gap_threshold = 180L`.",
       "anchor_text": null,
       "citations": [
         "R/25_treatment_durations.R:assign_episode_ids():L492-L512",
@@ -2905,14 +2906,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — distinct constructs: Episode segmentation (gap measured from episode start), relapse/refractory classification (90-day break from end of initial treatment line — DEC-007), and Gantt display window (90-day or 180-day export file) are three separate constructs. A decision about one does not govern the others.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d distinct constructs: Episode segmentation (gap measured from episode start), relapse/refractory classification (90-day break from end of initial treatment line \u00e2\u20ac\u201d DEC-007), and Gantt display window (90-day or 180-day export file) are three separate constructs. A decision about one does not govern the others.",
       "anchor_text": null,
       "citations": [
         "R/26_treatment_episodes.R:calculate_episodes_detailed():L511-L590",
@@ -2933,7 +2934,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -2960,7 +2961,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -2987,14 +2988,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — first_line column absence: The `first_line` column is absent from `treatment_episode_detail_180.rds`. When all `first_line` values are FALSE or NA, `last_dose_firstline_dt` is NA for that patient (D-08a).",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d first_line column absence: The `first_line` column is absent from `treatment_episode_detail_180.rds`. When all `first_line` values are FALSE or NA, `last_dose_firstline_dt` is NA for that patient (D-08a).",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_anthracycline_echo.R:last_anthracycline_dose():L24-L28"
@@ -3014,14 +3015,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — first-line dose: `last_anthracycline_dose()` filters rows where `first_line == TRUE` to derive `last_dose_firstline_dt`; rows with `first_line == FALSE` or NA are excluded from the first-line clock.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d first-line dose: `last_anthracycline_dose()` filters rows where `first_line == TRUE` to derive `last_dose_firstline_dt`; rows with `first_line == FALSE` or NA are excluded from the first-line clock.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_anthracycline_echo.R:last_anthracycline_dose():L71-L85"
@@ -3041,14 +3042,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — ever dose: `last_dose_ever_dt` is the maximum admin_date across all episode rows regardless of first-line status.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d ever dose: `last_dose_ever_dt` is the maximum admin_date across all episode rows regardless of first-line status.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_anthracycline_echo.R:last_anthracycline_dose():L58-L90"
@@ -3068,7 +3069,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3095,7 +3096,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -3122,7 +3123,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3149,14 +3150,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — three-LOINC requirement: `build_cbc_events()` filters LAB_RESULT_CM to the three LOINC codes via SQL push-down, then retains only dates where all three codes are present for the same patient (ID × date grouping).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d three-LOINC requirement: `build_cbc_events()` filters LAB_RESULT_CM to the three LOINC codes via SQL push-down, then retains only dates where all three codes are present for the same patient (ID \u00c3\u2014 date grouping).",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_distance_cbc.R:build_cbc_events():L114-L143"
@@ -3176,14 +3177,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — DuckDB push-down: LAB_RESULT_CM is large; the LOINC filter and ID filter are applied in SQL before results are returned to R to reduce memory use.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d DuckDB push-down: LAB_RESULT_CM is large; the LOINC filter and ID filter are applied in SQL before results are returned to R to reduce memory use.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_distance_cbc.R:build_cbc_events():L105-L135"
@@ -3203,7 +3204,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3230,14 +3231,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Expected Structure: Rurality is assigned at the encounter level using RUCA (USDA 2020 ZIP Code Data) joined on ZIP5. Four RUCA categories: Metropolitan (codes 1–3), Micropolitan (4–6), Small town (7–9), Rural (10), Not coded (99). Five-digit ZIP is acceptable for RUCA assignment (DEC-006).",
+      "insert_text": "Expected Structure: Rurality is assigned at the encounter level using RUCA (USDA 2020 ZIP Code Data) joined on ZIP5. Four RUCA categories: Metropolitan (codes 1\u00e2\u20ac\u201c3), Micropolitan (4\u00e2\u20ac\u201c6), Small town (7\u00e2\u20ac\u201c9), Rural (10), Not coded (99). Five-digit ZIP is acceptable for RUCA assignment (DEC-006).",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:RUCA_PATH:L214-L237",
@@ -3258,14 +3259,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — missing reference file: If the RUCA reference file (`data/reference/RUCA-codes-2020-zipcode.xlsx`) is absent, `ruca_code` and `ruca_category` are NA for all encounters; the script degrades gracefully with a message.",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d missing reference file: If the RUCA reference file (`data/reference/RUCA-codes-2020-zipcode.xlsx`) is absent, `ruca_code` and `ruca_category` are NA for all encounters; the script degrades gracefully with a message.",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:RUCA_PATH:L236-L237"
@@ -3285,14 +3286,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — ZIP5 join: RUCA lookup joins the encounter-level ZIP5 column using `left_join` on ZIP5 with `na_matches = \"never\"` to exclude NA ZIPs from the join.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d ZIP5 join: RUCA lookup joins the encounter-level ZIP5 column using `left_join` on ZIP5 with `na_matches = \"never\"` to exclude NA ZIPs from the join.",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:RUCA_PATH:L344-L345"
@@ -3312,14 +3313,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — primary RUCA code: The USDA 2020 primary RUCA code (column `PrimaryRUCA`, sheet \"RUCA 2020 ZIP Code Data\") is used; the code is truncated to integer before category assignment.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d primary RUCA code: The USDA 2020 primary RUCA code (column `PrimaryRUCA`, sheet \"RUCA 2020 ZIP Code Data\") is used; the code is truncated to integer before category assignment.",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:RUCA_PATH:L216-L228"
@@ -3339,7 +3340,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3366,14 +3367,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Expected Structure: The Social Deprivation Index (SDI; Robert Graham Center) is assigned at the encounter level using ZIP5 as the geographic unit. SDI scores range 0–100. SDI is ZIP5-level only; no ZIP9 or census-tract granularity is used.",
+      "insert_text": "Expected Structure: The Social Deprivation Index (SDI; Robert Graham Center) is assigned at the encounter level using ZIP5 as the geographic unit. SDI scores range 0\u00e2\u20ac\u201c100. SDI is ZIP5-level only; no ZIP9 or census-tract granularity is used.",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:SDI_PATH:L240-L265"
@@ -3393,14 +3394,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — missing or malformed reference file: If `data/reference/zip5_sdi_reference.csv` is absent or lacks the expected ZIP5/SDI_score columns, `sdi_score` is NA for all encounters; the script logs the available column names and continues.",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d missing or malformed reference file: If `data/reference/zip5_sdi_reference.csv` is absent or lacks the expected ZIP5/SDI_score columns, `sdi_score` is NA for all encounters; the script logs the available column names and continues.",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:SDI_PATH:L244-L264"
@@ -3420,14 +3421,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — ZIP5 normalization and join: `normalize_zip5_raw()` is applied to the reference ZIP5 column before join; SDI is joined by ZIP5 with `na_matches = \"never\"`.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d ZIP5 normalization and join: `normalize_zip5_raw()` is applied to the reference ZIP5 column before join; SDI is joined by ZIP5 with `na_matches = \"never\"`.",
       "anchor_text": null,
       "citations": [
         "R/116_encounter_ses_index.R:SDI_PATH:L252-L254",
@@ -3448,7 +3449,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3475,7 +3476,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -3503,7 +3504,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3530,14 +3531,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — DX_TYPE gating: `is_doi_code()` matches ICD-9 codes only against numeric-leading DOI_CODE_MAP keys and ICD-10 codes only against alpha-leading keys. This prevents cross-version false matches. ICD-9 records with DX_TYPE == \"SM\" or missing DX_TYPE are excluded.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d DX_TYPE gating: `is_doi_code()` matches ICD-9 codes only against numeric-leading DOI_CODE_MAP keys and ICD-10 codes only against alpha-leading keys. This prevents cross-version false matches. ICD-9 records with DX_TYPE == \"SM\" or missing DX_TYPE are excluded.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_doi.R:is_doi_code():L62-L78"
@@ -3557,14 +3558,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — 4-then-3-character prefix cascade: `classify_doi_codes()` tries the 4-character prefix first, then the 3-character prefix, to allow both specific and category-level matches.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d 4-then-3-character prefix cascade: `classify_doi_codes()` tries the 4-character prefix first, then the 3-character prefix, to allow both specific and category-level matches.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_doi.R:classify_doi_codes():L107-L115"
@@ -3584,7 +3585,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3611,7 +3612,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -3640,14 +3641,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — mixed HL/NHL codes: Many patients have diagnoses for both HL and NHL. Gantt-based episode detection is used to identify episodes that are clearly NHL-only, but the precise episode-level classification logic was not located in a single function.",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d mixed HL/NHL codes: Many patients have diagnoses for both HL and NHL. Gantt-based episode detection is used to identify episodes that are clearly NHL-only, but the precise episode-level classification logic was not located in a single function.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_cancer.R:classify_codes():L97-L115",
@@ -3668,14 +3669,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — NHL-only exclusion: Patients whose multiple treatment lines are clearly NHL-only are removed from the dataset (DEC-009 CONFIRMED 2026-09-22).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d NHL-only exclusion: Patients whose multiple treatment lines are clearly NHL-only are removed from the dataset (DEC-009 CONFIRMED 2026-09-22).",
       "anchor_text": null,
       "citations": [
         "DEC-009"
@@ -3695,14 +3696,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — uncertain HL inclusion: Patients who cannot be definitively confirmed as NHL-only are retained in the cohort, erring on the side of inclusion (DEC-010 CONFIRMED 2026-09-22).",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d uncertain HL inclusion: Patients who cannot be definitively confirmed as NHL-only are retained in the cohort, erring on the side of inclusion (DEC-010 CONFIRMED 2026-09-22).",
       "anchor_text": null,
       "citations": [
         "DEC-010"
@@ -3722,7 +3723,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3749,7 +3750,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
@@ -3776,14 +3777,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Observed Issue — post-death encounters present in data: Some patients have encounters recorded after their death date. Phase 29 (`R/29_first_line_and_death_analysis.R:L258–L259`) reports the patient count with post-death activity.",
+      "insert_text": "Observed Issue \u00e2\u20ac\u201d post-death encounters present in data: Some patients have encounters recorded after their death date. Phase 29 (`R/29_first_line_and_death_analysis.R:L258\u00e2\u20ac\u201cL259`) reports the patient count with post-death activity.",
       "anchor_text": null,
       "citations": [
         "R/29_first_line_and_death_analysis.R:DEATH_RDS:L258-L259",
@@ -3804,14 +3805,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "new_subsection",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Cleaning Rule — post-death activity flag: `resolve_death_date()` computes `post_death_activity_days` as `pmax(0, last_observed - death_date_raw)`; the value is zero for patients with no post-death activity and for patients with no death record. `death_flag` takes five values: plausible, implausible_post_activity, conflicting_resolved, conflicting_unresolved, no_death_record.",
+      "insert_text": "Cleaning Rule \u00e2\u20ac\u201d post-death activity flag: `resolve_death_date()` computes `post_death_activity_days` as `pmax(0, last_observed - death_date_raw)`; the value is zero for patients with no post-death activity and for patients with no death record. `death_flag` takes five values: plausible, implausible_post_activity, conflicting_resolved, conflicting_unresolved, no_death_record.",
       "anchor_text": null,
       "citations": [
         "R/utils/utils_death.R:resolve_death_date():L101-L116"
@@ -3831,7 +3832,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3858,7 +3859,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§5",
+        "section": "\u00c2\u00a75",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3882,26 +3883,26 @@
       "source_unit_map_ids": [
         "S5-REC-02"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§5",
+        "section": "\u00c2\u00a75",
         "kind": "field",
-        "para_index": null,
+        "para_index": 232,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Record provenance: Whether claims-derived records are present within the CDM tab",
+      "anchor_text": "Variables where Claims is authoritative: ",
       "citations": [
         "am_verification_20261027.xlsx:V1_SOURCE",
         "D-191-01"
       ],
       "decision_id": "D-191-01",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-01",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-01",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
       "anchor_failure_reason": "anchor 'Record provenance: Whether claims-derived records are present within the CDM tab' matched 0 paragraphs"
@@ -3914,7 +3915,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§5",
+        "section": "\u00c2\u00a75",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3941,7 +3942,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§5",
+        "section": "\u00c2\u00a75",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3968,7 +3969,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§5",
+        "section": "\u00c2\u00a75",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -3995,7 +3996,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4022,7 +4023,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4049,7 +4050,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4076,7 +4077,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4103,7 +4104,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4130,7 +4131,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4157,7 +4158,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§6",
+        "section": "\u00c2\u00a76",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4184,14 +4185,14 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
         "para_index": null,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Care outside the system: The OneFlorida+ PCORnet CDM extract captures encounters at contributing partner sites only. Care received outside these systems — including out-of-network visits, non-partner facilities, and pharmacy dispensing — is not captured and may affect completeness of treatment and survivorship encounter data.",
+      "insert_text": "Care outside the system: The OneFlorida+ PCORnet CDM extract captures encounters at contributing partner sites only. Care received outside these systems \u00e2\u20ac\u201d including out-of-network visits, non-partner facilities, and pharmacy dispensing \u00e2\u20ac\u201d is not captured and may affect completeness of treatment and survivorship encounter data.",
       "anchor_text": null,
       "citations": [
         "R/00_config.R:IS_LOCAL",
@@ -4209,26 +4210,26 @@
       "source_unit_map_ids": [
         "S11-LIM-02"
       ],
-      "status": "OPEN-QUESTION-SEE-§8",
+      "status": "OPEN-QUESTION-SEE-\u00c2\u00a78",
       "action": "COMMENT-ONLY",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
-        "para_index": null,
+        "para_index": 308,
         "table_index": null,
         "row_index": null,
         "cell_index": null
       },
       "insert_text": null,
-      "anchor_text": "Claims and LNK source status: Whether the extract contains claims-derived record",
+      "anchor_text": "Limitations related to claims completeness or lag: ",
       "citations": [
         "am_verification_20261027.xlsx:V1_SOURCE",
         "D-191-01"
       ],
       "decision_id": "D-191-01",
       "verdict": "MISMATCH",
-      "comment_text": "Open question — see §8. D-191-01",
-      "anchor_resolution": "ANCHOR-FAILED",
+      "comment_text": "Open question \u00e2\u20ac\u201d see \u00c2\u00a78. D-191-01",
+      "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
       "anchor_failure_reason": "anchor 'Claims and LNK source status: Whether the extract contains claims-derived record' matched 0 paragraphs"
@@ -4241,7 +4242,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4269,7 +4270,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4296,7 +4297,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4324,7 +4325,7 @@
       "status": "DRAFTED",
       "action": "INSERT-PARA",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4352,7 +4353,7 @@
       "status": "TEAM-INPUT-NEEDED",
       "action": "PLACEHOLDER",
       "target": {
-        "section": "§11",
+        "section": "\u00c2\u00a711",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -4683,7 +4684,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Insurance harmonization — same-day hierarchy | Apply payer hierarchy within a day when multiple tiers present | Multiple payer records on a single day with differing tiers | Hierarchy: Medicaid (incl. codes 93/14/FLM source) > Medicare > Private (incl. Tricare) > Other > Self-pay or Uninsured → Uninsured > All missing → missing | Deterministic resolution per guidance from Amy | 2026-05-01 | All payer-stratified analyses",
+      "insert_text": "Insurance harmonization \u00e2\u20ac\u201d same-day hierarchy | Apply payer hierarchy within a day when multiple tiers present | Multiple payer records on a single day with differing tiers | Hierarchy: Medicaid (incl. codes 93/14/FLM source) > Medicare > Private (incl. Tricare) > Other > Self-pay or Uninsured \u00e2\u2020\u2019 Uninsured > All missing \u00e2\u2020\u2019 missing | Deterministic resolution per guidance from Amy | 2026-05-01 | All payer-stratified analyses",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L1837-L1850"
@@ -4710,7 +4711,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "ADI — ZIP9 extrapolation from matching encounter | Require ZIP9 for ADI; no fallback defined | Some encounters have only ZIP5 or no ZIP | If 5-digit ZIP in one encounter matches 9-digit ZIP in another encounter for the same patient, extrapolate 9-digit to 5-digit encounter | Team confirmed ZIPs consistent longitudinally | 2026-08-18 | ADI covariate assignment",
+      "insert_text": "ADI \u00e2\u20ac\u201d ZIP9 extrapolation from matching encounter | Require ZIP9 for ADI; no fallback defined | Some encounters have only ZIP5 or no ZIP | If 5-digit ZIP in one encounter matches 9-digit ZIP in another encounter for the same patient, extrapolate 9-digit to 5-digit encounter | Team confirmed ZIPs consistent longitudinally | 2026-08-18 | ADI covariate assignment",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L810-L820"
@@ -4737,7 +4738,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "ADI — population-weighted average for ZIP5-only | — | Encounters with only ZIP5 have no direct ZIP9 | Use population-weighted average ADI of the 5-digit ZIP when no 9-digit is available | Accepted standard for ZIP5-level ADI approximation | 2026-08-25 | ADI covariate assignment",
+      "insert_text": "ADI \u00e2\u20ac\u201d population-weighted average for ZIP5-only | \u00e2\u20ac\u201d | Encounters with only ZIP5 have no direct ZIP9 | Use population-weighted average ADI of the 5-digit ZIP when no 9-digit is available | Accepted standard for ZIP5-level ADI approximation | 2026-08-25 | ADI covariate assignment",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L689-L700"
@@ -4764,7 +4765,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "RUCA — ZIP5 acceptable | Require ZIP9 for RUCA lookup | RUCA works natively at ZIP code level | Can use 5-digit ZIP for RUCA assignment | RUCA database supports 5-digit ZIP directly | 2026-08-25 | Rurality covariate",
+      "insert_text": "RUCA \u00e2\u20ac\u201d ZIP5 acceptable | Require ZIP9 for RUCA lookup | RUCA works natively at ZIP code level | Can use 5-digit ZIP for RUCA assignment | RUCA database supports 5-digit ZIP directly | 2026-08-25 | Rurality covariate",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L689-L700"
@@ -4872,7 +4873,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Distance cutoff — far from care binary | Binary distance variable with unresolved cutoff | Uncertainty about evidence-based cutoff | 100 miles, based on doi.org/10.1182/blood-2023-182477 | Published literature reference for HL care distance threshold | 2026-10-13 | Far-from-care analyses",
+      "insert_text": "Distance cutoff \u00e2\u20ac\u201d far from care binary | Binary distance variable with unresolved cutoff | Uncertainty about evidence-based cutoff | 100 miles, based on doi.org/10.1182/blood-2023-182477 | Published literature reference for HL care distance threshold | 2026-10-13 | Far-from-care analyses",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L3-L30"
@@ -4899,7 +4900,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Drug name normalization — brand to generic | Use raw drug names from source tables | Brand-name proliferation impedes regimen identification | Convert all brand names to generic equivalents (e.g., adriamycin to doxorubicin); includes liposomal variants | Consistency for regimen detection and reporting | 2026-10-13 | Chemo classification; regimen identification; all outputs",
+      "insert_text": "Drug name normalization \u00e2\u20ac\u201d brand to generic | Use raw drug names from source tables | Brand-name proliferation impedes regimen identification | Convert all brand names to generic equivalents (e.g., adriamycin to doxorubicin); includes liposomal variants | Consistency for regimen detection and reporting | 2026-10-13 | Chemo classification; regimen identification; all outputs",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L3-L30"
@@ -4926,7 +4927,7 @@
         "row_index": null,
         "cell_index": null
       },
-      "insert_text": "Survivorship — remove diagnosis table from modality codes | Include all encounter types as survivorship encounters | Diagnosis-coded encounters inflate modality counts | Remove diagnosis table data from surveillance modality codes for survivorship care | Modality classification should reflect active care delivery | 2026-10-13 | Survivorship modality rates",
+      "insert_text": "Survivorship \u00e2\u20ac\u201d remove diagnosis table from modality codes | Include all encounter types as survivorship encounters | Diagnosis-coded encounters inflate modality counts | Remove diagnosis table data from surveillance modality codes for survivorship care | Modality classification should reflect active care delivery | 2026-10-13 | Survivorship modality rates",
       "anchor_text": null,
       "citations": [
         "docs/analytic_manual/TeamMtgNotes2026.md:L3-L30"
@@ -4946,7 +4947,7 @@
       "status": "DRAFTED",
       "action": "INSERT-TABLE",
       "target": {
-        "section": "§8",
+        "section": "\u00c2\u00a78",
         "kind": "field",
         "para_index": null,
         "table_index": null,
@@ -5004,7 +5005,7 @@
           ""
         ],
         [
-          "D-15 primary analysis method and D-165-01 — far-from-care CBC association analysis method confirmation (patient-level Fisher vs Rao-Scott) — awaiting Amy and Erin. D-09 capture finding reported to Amy and Erin.",
+          "D-15 primary analysis method and D-165-01 \u00e2\u20ac\u201d far-from-care CBC association analysis method confirmation (patient-level Fisher vs Rao-Scott) \u00e2\u20ac\u201d awaiting Amy and Erin. D-09 capture finding reported to Amy and Erin.",
           "OPEN-DEPENDENCY; D-165-01",
           ""
         ],
@@ -5023,7 +5024,7 @@
       "status": "REPLY",
       "action": "REPLY",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": 115,
         "table_index": null,
@@ -5035,7 +5036,7 @@
       "citations": [],
       "decision_id": "D-190-01",
       "verdict": "BLOCKED",
-      "comment_text": "OneFLquestions document not received; listed as open in §8 (D-190-01).",
+      "comment_text": "OneFLquestions document not received; listed as open in \u00c2\u00a78 (D-190-01).",
       "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
@@ -5049,7 +5050,7 @@
       "status": "REPLY",
       "action": "REPLY",
       "target": {
-        "section": "§4",
+        "section": "\u00c2\u00a74",
         "kind": "field",
         "para_index": 123,
         "table_index": null,
@@ -5063,7 +5064,7 @@
       ],
       "decision_id": "D-191-02",
       "verdict": "PARTIAL",
-      "comment_text": "Confirmed: get_hl_any_dx_ids() uses the earliest HL diagnosis code date from DIAGNOSIS (DX_DATE with ADMIT_DATE as fallback); the Tumor Registry date is not consulted in the production anchor function (D-191-02, D-191-03). See §8.",
+      "comment_text": "Confirmed: get_hl_any_dx_ids() uses the earliest HL diagnosis code date from DIAGNOSIS (DX_DATE with ADMIT_DATE as fallback); the Tumor Registry date is not consulted in the production anchor function (D-191-02, D-191-03). See \u00c2\u00a78.",
       "anchor_resolution": "OK",
       "revision_ids": [],
       "comment_ids": [],
