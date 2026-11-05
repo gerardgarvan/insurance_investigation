@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
 status: executing
-stopped_at: Completed 193-04-PLAN.md
-last_updated: "2026-11-05T17:02:52.615Z"
+stopped_at: Completed 194-02-PLAN.md
+last_updated: "2026-11-05T18:52:39.203Z"
 last_activity: 2026-11-05
 progress:
   total_phases: 46
   completed_phases: 37
-  total_plans: 122
-  completed_plans: 134
+  total_plans: 126
+  completed_plans: 136
 ---
 
 # Project State
@@ -128,4 +128,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Completed 193-04-PLAN.md
+**Stopped at:** Completed 194-02-PLAN.md
