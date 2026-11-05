@@ -28,8 +28,8 @@
 
 ### Updated Manual (Phase 193)
 
-- [ ] **AM-DOC-01**: New versioned manual copy (`AnalyticManual_<YYYY.MM.DD>.docx`) with all Phase 192 content inserted as Word tracked changes authored "Gerard Garvan", each with a comment citing evidence; original file untouched
-- [ ] **AM-DOC-02**: Amy's existing comments replied to with Phase 191 answers; document version and "Date last updated" field updated
+- [x] **AM-DOC-01**: New versioned manual copy (`AnalyticManual_<YYYY.MM.DD>.docx`) with all Phase 192 content inserted as Word tracked changes authored "Gerard Garvan", each with a comment citing evidence; original file untouched
+- [x] **AM-DOC-02**: Amy's existing comments replied to with Phase 191 answers; document version and "Date last updated" field updated
 - [ ] **AM-DOC-03**: Evidence workbook exported as `am_evidence_<date>.xlsx` (KEY leftmost; columns: AM section, item, manual text, verdict/status, repo source, decision ID, notes); no counts 1–10 unsuppressed; no patient IDs in the document
 
 ### Team Review and Close-out (Phase 194)
