@@ -127,6 +127,12 @@ R --no-save
 source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 ```
 
+## Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261106-ize | Write phase 194 SUMMARY.md, update STATE.md to mark Phase 194 complete, and update ROADMAP.md to mark Phase 194 and v3.13 milestone as shipped | 2026-11-06 | 5bf4445 | [261106-ize-write-phase-194-summary-md-update-state-](./quick/261106-ize-write-phase-194-summary-md-update-state-/) |
+
 ## Session Continuity
 
 **Stopped at:** Phase 194 complete — v3.13 shipped 2026-11-06
