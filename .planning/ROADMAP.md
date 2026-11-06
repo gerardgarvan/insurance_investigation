@@ -28,7 +28,7 @@
 - ✅ **v3.10 Distance Missingness & Script Fixes** - Phases 178-180 (shipped 2026-10-13)
 - ✅ **v3.11 CBC Team Deliverable, Distance Completeness, Survivorship Modeling** - Phases 181-184 (shipped 2026-10-17)
 - ✅ **v3.12 Team To-Do Close-out** - Phases 185-189 (shipped 2026-10-27)
-- 🔄 **v3.13 Analytic Manual Fill-out and Verification** - Phases 190-194 (active)
+- ✅ **v3.13 Analytic Manual Fill-out and Verification** - Phases 190-194 (shipped 2026-11-06)
 
 ## Phases
 
@@ -789,7 +789,7 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 ---
 
-## 🚧 **v3.13 Analytic Manual Fill-out and Verification** (Active)
+## ✅ **v3.13 Analytic Manual Fill-out and Verification** (Shipped 2026-11-06)
 
 **Milestone Goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo. Every existing statement is checked against code and given a verdict. Every empty section the repo can answer is drafted from code, config, planning decisions, and team meeting notes. The result is a tracked-change new version of the manual and an evidence workbook tying each statement to its code source.
 
@@ -926,5 +926,5 @@ Plans:
 | 190. Evidence Map | v3.13 | 1/1 | Complete    | 2026-10-27 |
 | 191. Verify Existing Entries | v3.13 | 3/3 | Complete    | 2026-10-28 |
 | 192. Draft New Content | v3.13 | 3/3 | Complete    | 2026-10-28 |
-| 193. Produce Updated Manual | v3.13 | 2/5 | In Progress|  |
-| 194. Team Review Package and Close-out | v3.13 | 0/TBD | Not started | — |
+| 193. Produce Updated Manual | v3.13 | 4/5 | In Progress — pending Word review | — |
+| 194. Reference Manual Regeneration | v3.13 | 4/4 | Complete | 2026-11-06 |

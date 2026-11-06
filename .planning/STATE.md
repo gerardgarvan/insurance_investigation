@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.13
 milestone_name: Analytic Manual Fill-out and Verification
-status: executing
-stopped_at: Completed 194-04-PLAN.md
-last_updated: "2026-11-05T18:53:19.634Z"
-last_activity: 2026-11-05
+status: complete
+stopped_at: Phase 194 complete — v3.13 shipped 2026-11-06
+last_updated: "2026-11-06"
+last_activity: 2026-11-06
 progress:
   total_phases: 46
-  completed_phases: 37
+  completed_phases: 38
   total_plans: 126
-  completed_plans: 137
+  completed_plans: 141
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 193 — Produce Updated Manual
+**Current focus:** v3.13 complete — awaiting next milestone
 
 ## Current Position
 
@@ -41,7 +41,8 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
   - NEXT GATE: WORD-REVIEW-APPROVED (Plan 05) — Phase 193 is NOT complete until human Word review passes.
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
-Last activity: 2026-11-05
+Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
+Last activity: 2026-11-06
 
 ## Phase Map (v3.13)
 
@@ -51,7 +52,7 @@ Last activity: 2026-11-05
 | 191 | Verify Existing Entries | Phase 190 | Complete |
 | 192 | Draft New Content | Phase 191 | Complete |
 | 193 | Produce Updated Manual | Phase 192 | AUTOMATED-QA-PASSED (awaiting WORD-REVIEW-APPROVED) |
-| 194 | Reference Manual Regeneration | Phase 193 | AUTOMATED-QA-PASSED (Plans 01–04 complete; run source("R/89...") on HiPerGator to regenerate docs/REFERENCE_MANUAL.md, then commit) |
+| 194 | Reference Manual Regeneration | Phase 193 | Complete |
 
 ## Accumulated Context
 
@@ -128,4 +129,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Completed 194-03-PLAN.md
+**Stopped at:** Phase 194 complete — v3.13 shipped 2026-11-06
