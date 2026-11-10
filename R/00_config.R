@@ -249,6 +249,11 @@ CONFIG$distance_assoc_method   <- "rao_scott"  # D-165-01: 2026-10-08
 # breaking change). When TRUE: regression check is skipped; a KEY row records the reason.
 CONFIG$r165_accept_new_baseline <- FALSE
 
+# D-195-01: exclude telehealth (ENC_TYPE == "TH") from primary and sensitivity analyses.
+# TH encounters carry provider ZIP, not patient travel burden; default TRUE.
+# Set FALSE only to reproduce the 20261110 baseline (SENS_with_TH comparison row).
+CONFIG$exclude_telehealth <- TRUE
+
 # GEE working correlation structure. "exchangeable" is the default; R/163 falls
 # back to "independence" if exchangeable is infeasible at this cluster size and
 # logs why. The chosen value is reported in 165-METHODS.md.

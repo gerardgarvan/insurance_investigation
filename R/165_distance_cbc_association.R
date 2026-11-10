@@ -273,9 +273,15 @@ enc_with_rurality <- enc |>
     by = "ENCOUNTERID"
   )
 
-# 2b. Attach patient-level payer (join on ID)
+# 2b. Attach patient-level payer (join on ID); recode unmatched/NA → "Missing"
+# D-195-02: recode BEFORE QC counts so n_miss_payer reflects truly unresolvable cases.
 enc_full <- enc_with_rurality |>
-  dplyr::left_join(payer_summary, by = "ID")
+  dplyr::left_join(payer_summary, by = "ID") |>
+  dplyr::mutate(
+    PAYER_CATEGORY_PRIMARY = dplyr::if_else(
+      is.na(PAYER_CATEGORY_PRIMARY), "Missing", PAYER_CATEGORY_PRIMARY
+    )
+  )
 
 # 2c. QC: missing rurality / payer at encounter level
 n_miss_rurality_whole <- sum(is.na(enc_full$ruca_category))
@@ -544,18 +550,15 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     has_payer   <- !all(is.na(enc_win$PAYER_CATEGORY_PRIMARY))
     has_rurality <- !all(is.na(enc_win$ruca_category))
 
-    # Complete-case subset: require rurality + SOURCE; payer only if available
+    # Complete-case subset: require rurality + SOURCE.
+    # D-195-02: payer is recoded to "Missing" upstream, so NA payer is impossible here.
     # Existing sheets use SOURCE_raw — do NOT change to SOURCE_analytic (Phase 192.3 constraint)
     cc_filter <- !is.na(enc_win$ruca_category) & !is.na(enc_win$SOURCE_raw)
-    if (has_payer) cc_filter <- cc_filter & !is.na(enc_win$PAYER_CATEGORY_PRIMARY)
     enc_cc <- enc_win[cc_filter, ]
 
     n_cc         <- nrow(enc_cc)
     n_drop_ruca  <- sum(is.na(enc_win$ruca_category))
-    n_drop_payer <- if (has_payer)
-      sum(is.na(enc_win$PAYER_CATEGORY_PRIMARY) & !is.na(enc_win$ruca_category))
-      else nrow(enc_win)   # all missing
-    n_drop_src   <- sum(is.na(enc_win$SOURCE_raw) & cc_filter | (!cc_filter & !is.na(enc_win$SOURCE_raw)))
+    n_drop_payer <- 0L  # D-195-02: payer is never NA after upstream recode
     n_drop_src   <- sum(is.na(enc_win$SOURCE_raw))
 
     if (n_cc < 30L)
@@ -581,15 +584,13 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     if (has_payer)
       enc_cc <- collapse_to_other(enc_cc, "PAYER_CATEGORY_PRIMARY")
 
-    # P1.3 — recode unmatched payer IDs (not in payer_summary) to "Missing"
+    # D-195-02: payer recode to "Missing" is done upstream in Section 2b;
+    # guard here confirms no residual NA reaches the model frame.
     if (has_payer) {
-      n_payer_unmatched <- sum(is.na(enc_cc$PAYER_CATEGORY_PRIMARY) |
-                               !enc_cc$ID %in% payer_summary$ID)
-      enc_cc <- enc_cc |>
-        dplyr::mutate(PAYER_CATEGORY_PRIMARY =
-          dplyr::if_else(is.na(PAYER_CATEGORY_PRIMARY), "Missing", PAYER_CATEGORY_PRIMARY))
-      if (n_payer_unmatched > 0)
-        message(glue::glue("    sensitivity ({window}): {n_payer_unmatched} encounters recoded payer -> 'Missing'"))
+      n_payer_na_cc <- sum(is.na(enc_cc$PAYER_CATEGORY_PRIMARY))
+      if (n_payer_na_cc > 0L)
+        stop(glue::glue("[R/165] sensitivity ({window}): {n_payer_na_cc} NA payer rows ",
+                        "remain in complete-case frame — recode upstream failed."))
     }
 
     # P1.3 — drop SOURCE levels (raw) with zero CBC events to prevent quasi-separation
@@ -687,6 +688,38 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
 }
 
 # ==============================================================================
+# SECTION 4b: TELEHEALTH EXCLUSION (D-195-01) ----
+# ==============================================================================
+
+# Count TH encounters before exclusion (used for KEY and verification)
+n_th_whole <- sum(enc_full$ENC_TYPE == "TH", na.rm = TRUE)
+n_th_post  <- sum(enc_full$ENC_TYPE == "TH" & enc_full$post_anchor == 1L, na.rm = TRUE)
+message(glue("  TH encounters (whole): {format(n_th_whole, big.mark = ',')}"))
+message(glue("  TH encounters (post) : {format(n_th_post,  big.mark = ',')}"))
+
+# Payer assert (D-195-02): after recode, NA payer must be 0
+qc_missing_payer_whole <- sum(is.na(enc_full$PAYER_CATEGORY_PRIMARY))
+qc_missing_payer_post  <- sum(is.na(enc_full$PAYER_CATEGORY_PRIMARY) & enc_full$post_anchor == 1L)
+stopifnot(
+  "D-195-02: NA payer must be 0 after recode — check payer join" =
+    qc_missing_payer_whole == 0L
+)
+message("  Payer assert (D-195-02): PASSED — 0 NA payer after recode")
+
+# Save TH-included frame for SENS_with_TH comparison row
+enc_full_with_th <- enc_full
+
+# Apply TH exclusion (default TRUE per CONFIG$exclude_telehealth)
+if (isTRUE(CONFIG$exclude_telehealth)) {
+  enc_full <- enc_full |> dplyr::filter(ENC_TYPE != "TH" | is.na(ENC_TYPE))
+  message(glue("  TH excluded: {format(nrow(enc_full_with_th) - nrow(enc_full), big.mark=',')} encounters dropped"))
+  message(glue("  enc_full after TH exclusion (whole): {format(nrow(enc_full), big.mark=',')}"))
+  message(glue("  enc_full after TH exclusion (post) : {format(sum(enc_full$post_anchor), big.mark=',')}"))
+} else {
+  message("  TH exclusion SKIPPED (CONFIG$exclude_telehealth = FALSE)")
+}
+
+# ==============================================================================
 # SECTION 5: RUN BOTH WINDOWS ----
 # ==============================================================================
 
@@ -694,6 +727,12 @@ results <- lapply(c("whole", "post"), function(w) {
   analyse_window(w, enc_full, cbc_events, anchors)
 })
 names(results) <- c("whole", "post")
+
+# SENS_with_TH: reproduce primary on TH-included frame
+results_with_th <- lapply(c("whole", "post"), function(w) {
+  analyse_window(w, enc_full_with_th, cbc_events, anchors)
+})
+names(results_with_th) <- c("whole", "post")
 
 # ==============================================================================
 # SECTION 6: BUILD WORKBOOK ----
@@ -764,8 +803,11 @@ key_rows <- list(
   )),
   c("Anchor date src", "get_hl_any_dx_ids() from utils_treatment.R (earliest HL DX_DATE)"),
   c("Encounter scope", paste0(
-    "All ENC_TYPE retained (AV, OT, IC, ED, OA, TH, OS, IP, EI, IS, NI, UN). ",
-    "Telehealth (TH) encounters carry provider ZIP, not patient travel burden."
+    if (isTRUE(CONFIG$exclude_telehealth))
+      glue("Telehealth (TH) excluded: {suppress_display(n_th_whole)} whole / {suppress_display(n_th_post)} post. ")
+    else
+      "Telehealth (TH) INCLUDED (CONFIG$exclude_telehealth = FALSE). ",
+    "TH encounters carry provider ZIP, not patient travel burden (D-165-09 / D-195-01)."
   )),
   c("Primary",         "Unadjusted Rao-Scott F-statistic + svyglm OR (quasibinomial); clustering handled by survey design"),
   c("Sensitivity covariates", "rurality (ruca_category, R/116) + payer (PAYER_CATEGORY_PRIMARY, R/02) + SOURCE (site)"),
@@ -781,9 +823,12 @@ key_rows <- list(
   c("Sheet guide",     paste0(
     "KEY: this metadata. ",
     "A_crosstab: 2x2 counts + row % per window. ",
-    "B_test: primary test statistics. ",
+    "B_test: primary test statistics (TH excluded). ",
     "C_sensitivity: adjusted model. ",
-    "QC: analysis-set counts per window."
+    "D_excl_FLM: exploratory (non-claims only). ",
+    "E_source_composition: claims vs non-claims per window (D-195-03). ",
+    "QC: analysis-set counts per window. ",
+    "SUMMARY: all estimates side-by-side including SENS_with_TH and SENS_cbc_attributed."
   )),
   c("CBC lab caveat",  paste0(
     "CBC is captured only for labs recorded at OneFlorida+ partner sites; ",
@@ -847,6 +892,17 @@ key_rows <- list(
     "Disclosure protection: suppress_by_source_row() blanks OR/CI/p/stat for any BY_SOURCE row ",
     "where any count cell is '<11'. assert_no_back_calculable() stops build if a suppressed count ",
     "is recoverable from visible pct+marginal. MH and all statistics still use raw counts."
+  )),
+  c("D-165-09 / D-195-01 Telehealth", paste0(
+    "Telehealth (ENC_TYPE == 'TH') excluded from primary and sensitivity analyses ",
+    "(CONFIG$exclude_telehealth = TRUE). TH encounters carry provider ZIP, not patient travel burden. ",
+    glue("N excluded: {suppress_display(n_th_whole)} whole / {suppress_display(n_th_post)} post-anchor. "),
+    "SENS_with_TH on SUMMARY reproduces the 20261110 primary (TH included)."
+  )),
+  c("D-165-10 / D-195-02 Payer reconcile", paste0(
+    "Payer recoded to 'Missing' for unmatched IDs immediately after join in Section 2b (before QC counts). ",
+    "Previously, NA payer was dropped in complete-case filter, causing N_dropped_missing_payer > 0. ",
+    "Post-fix: N_dropped_missing_payer = 0; assert qc_missing_payer == 0 passes."
   ))
 )
 
@@ -1105,7 +1161,7 @@ for (wn in c("whole", "post")) {
     Window              = q$window,
     N_encounters        = suppress_display(q$n_enc_in),
     N_patients          = suppress_display(q$n_pat_in),
-    N_telehealth        = suppress_display(q$n_telehealth),
+    N_telehealth_in_window = suppress_display(q$n_telehealth),  # 0 when exclude_telehealth=TRUE
     N_missing_rurality  = suppress_display(q$n_miss_ruca),
     N_missing_payer     = suppress_display(q$n_miss_payer),
     CBC_match_rate_pct  = q$cbc_match_rate,
@@ -1217,7 +1273,13 @@ build_by_source_sheet <- function(enc_ws, window_label) {
     )
   })
   # P2: apply display suppression and back-calculability guard per row
+  # D-195-05: blank OR/CI/p for non-estimable strata (zero row or column)
   rows <- lapply(rows, function(row) {
+    if (!is.na(row$stratum_informative) && row$stratum_informative == "FALSE") {
+      for (col in intersect(names(row), c("chi_stat", "p_value", "OR", "CI_lo", "CI_hi")))
+        row[[col]] <- NA_character_
+      row[["test_method"]] <- "non-estimable"
+    }
     row <- suppress_by_source_row(row)
     assert_no_back_calculable(row)
     row
@@ -1306,7 +1368,13 @@ build_by_source_pat_sheet <- function(enc_ws, cbc_events, anchors, window, windo
     )
   })
   # P2: apply display suppression and back-calculability guard per row
+  # D-195-05: blank OR/CI/p for non-estimable strata (zero row or column)
   rows <- lapply(rows, function(row) {
+    if (!is.na(row$stratum_informative) && row$stratum_informative == "FALSE") {
+      for (col in intersect(names(row), c("chi_stat", "p_value", "OR", "CI_lo", "CI_hi")))
+        row[[col]] <- NA_character_
+      row[["test_method"]] <- "non-estimable"
+    }
     row <- suppress_by_source_row(row)
     assert_no_back_calculable(row)
     row
@@ -1665,6 +1733,152 @@ openxlsx::writeData(wb, "KEY", key_additional, startRow = nrow(key_df) + 2L, sta
                     colNames = FALSE)
 
 # ==============================================================================
+# SECTION 7c: E_source_composition SHEET (D-195-03) ----
+# Claims vs non-claims composition per window; computed on TH-excluded frame.
+# Verification row uses enc_full_with_th (TH-included) to match CONTEXT.md table.
+# ==============================================================================
+{
+  build_source_comp <- function(enc_ws, window_label) {
+    # SOURCE_raw captured before analytic reassignment (Phase 192.3 constraint)
+    is_claims <- enc_ws$SOURCE_raw %in% CONFIG$claims_source_codes
+    n_enc_claims  <- sum( is_claims)
+    n_enc_noncl   <- sum(!is_claims)
+    n_enc_total   <- nrow(enc_ws)
+    n_far_cl   <- sum( is_claims & enc_ws$far_from_care_100mi == 1L)
+    n_far_nc   <- sum(!is_claims & enc_ws$far_from_care_100mi == 1L)
+    n_cbc_cl   <- sum( is_claims & enc_ws$cbc_in_encounter    == 1L)
+    n_cbc_nc   <- sum(!is_claims & enc_ws$cbc_in_encounter    == 1L)
+    n_far_total  <- sum(enc_ws$far_from_care_100mi == 1L)
+    n_far_cl_pct <- if (n_far_total > 0) n_far_cl / n_far_total else NA_real_
+    make_row <- function(label, n_enc, n_total, n_far, n_cbc) {
+      pct_enc <- if (n_total > 0) n_enc / n_total * 100 else NA_real_
+      pct_far <- if (n_enc > 0)   n_far / n_enc  * 100 else NA_real_
+      pct_cbc <- if (n_enc > 0)   n_cbc / n_enc  * 100 else NA_real_
+      data.frame(
+        Window          = window_label,
+        Source_type     = label,
+        N_enc           = suppress_display(n_enc),
+        pct_of_enc      = if (is.na(pct_enc)) NA_character_ else sprintf("%.1f%%", pct_enc),
+        n_far           = suppress_display(n_far),
+        pct_far         = if (is.na(pct_far)) NA_character_ else sprintf("%.1f%%", pct_far),
+        n_cbc           = suppress_display(n_cbc),
+        pct_cbc         = if (is.na(pct_cbc)) NA_character_ else sprintf("%.1f%%", pct_cbc),
+        pct_of_far_that_are_claims = NA_character_,
+        stringsAsFactors = FALSE
+      )
+    }
+    rows <- list(
+      make_row("Claims (FLM)", n_enc_claims, n_enc_total, n_far_cl, n_cbc_cl),
+      make_row("Non-claims",   n_enc_noncl,  n_enc_total, n_far_nc,  n_cbc_nc)
+    )
+    # pct_of_far_that_are_claims on the claims row
+    rows[[1]]$pct_of_far_that_are_claims <- if (!is.na(n_far_cl_pct))
+      sprintf("%.1f%%", n_far_cl_pct * 100) else NA_character_
+    do.call(rbind, rows)
+  }
+
+  # TH-excluded (primary) + TH-included (verification)
+  comp_th_excl_whole <- build_source_comp(enc_full,         "Whole record (TH excl)")
+  comp_th_excl_post  <- build_source_comp(enc_full |> dplyr::filter(post_anchor == 1L), "Post-anchor (TH excl)")
+  comp_th_incl_whole <- build_source_comp(enc_full_with_th, "Whole record (TH incl, verification)")
+  comp_th_incl_post  <- build_source_comp(enc_full_with_th |> dplyr::filter(post_anchor == 1L), "Post-anchor (TH incl, verification)")
+
+  source_comp_df <- rbind(comp_th_excl_whole, comp_th_excl_post,
+                           comp_th_incl_whole, comp_th_incl_post)
+
+  openxlsx::addWorksheet(wb, "E_source_composition")
+  openxlsx::writeData(wb, "E_source_composition",
+    data.frame(X = "D-195-03: Claims vs non-claims source composition. TH-incl rows reproduce CONTEXT.md verification table."),
+    startRow = 1L, startCol = 1L)
+  openxlsx::addStyle(wb, "E_source_composition", style = section_style, rows = 1L, cols = 1L)
+  openxlsx::writeData(wb, "E_source_composition", source_comp_df, startRow = 2L, startCol = 1L,
+                      headerStyle = uf_header_style)
+  openxlsx::addStyle(wb, "E_source_composition", style = uf_header_style, rows = 2L,
+                     cols = seq_len(ncol(source_comp_df)))
+  openxlsx::setColWidths(wb, "E_source_composition", cols = seq_len(ncol(source_comp_df)), widths = 24)
+  message("  E_source_composition sheet written.")
+}
+
+# ==============================================================================
+# SECTION 7d: CBC ATTRIBUTION SENSITIVITY (D-195-06) ----
+# Each CBC event (ID, lab_date) assigned to ONE encounter (prefer non-claims,
+# then same SOURCE as lab, then earliest ADMIT_DATE). Report as SENS_cbc_attributed.
+# ==============================================================================
+
+sens_cbc_attr <- list(whole = NULL, post = NULL)
+{
+  # Build cbc_attr flag on enc_full: 1 for the one encounter chosen per CBC event
+  # cbc_events has columns ID and cbc_date (from build_cbc_events)
+  enc_attr <- enc_full |>
+    dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, DISCHARGE_DATE, SOURCE_raw, cbc_in_encounter)
+
+  # For each (ID, cbc_date) pair, find candidate encounters (CBC date in window)
+  candidates <- enc_attr |>
+    dplyr::inner_join(cbc_events, by = "ID", relationship = "many-to-many") |>
+    dplyr::filter(
+      !is.na(ADMIT_DATE),
+      cbc_date >= ADMIT_DATE,
+      cbc_date <= dplyr::coalesce(DISCHARGE_DATE, ADMIT_DATE)
+    )
+
+  # Priority: non-claims (1st), same SOURCE as lab (2nd not applicable without lab SOURCE),
+  # earliest ADMIT_DATE (tie-break). Prefer non-claims as primary criterion.
+  is_claims_attr <- candidates$SOURCE_raw %in% CONFIG$claims_source_codes
+  candidates_ranked <- candidates |>
+    dplyr::mutate(
+      claims_rank = as.integer(is_claims_attr),  # 0 = non-claims preferred
+    ) |>
+    dplyr::arrange(ID, cbc_date, claims_rank, ADMIT_DATE, ENCOUNTERID) |>
+    dplyr::group_by(ID, cbc_date) |>
+    dplyr::slice_head(n = 1L) |>
+    dplyr::ungroup() |>
+    dplyr::select(ID, cbc_date, ENCOUNTERID)
+
+  n_cbc_attributed <- nrow(candidates_ranked)
+  n_cbc_events_total <- nrow(cbc_events)
+  message(glue("  CBC attribution: {n_cbc_attributed} of {n_cbc_events_total} CBC events matched to >=1 encounter"))
+  stopifnot(
+    "D-195-06: attributed count must <= total CBC events" =
+      n_cbc_attributed <= n_cbc_events_total
+  )
+
+  # Join attribution back: cbc_attr = 1 only for the chosen encounter
+  enc_full_attr <- enc_full |>
+    dplyr::left_join(
+      candidates_ranked |> dplyr::mutate(cbc_attr = 1L) |>
+        dplyr::select(ENCOUNTERID, cbc_date, cbc_attr),
+      by = "ENCOUNTERID"
+    ) |>
+    dplyr::mutate(cbc_attr = dplyr::if_else(is.na(cbc_attr), 0L, cbc_attr))
+
+  # Run svyglm on cbc_attr for each window
+  for (wn in c("whole", "post")) {
+    enc_w <- if (wn == "post") {
+      enc_full_attr |> dplyr::filter(post_anchor == 1L)
+    } else {
+      enc_full_attr
+    }
+    res_attr <- tryCatch({
+      des_a <- survey::svydesign(ids = ~ID, data = enc_w)
+      glm_a <- survey::svyglm(cbc_attr ~ far_from_care_100mi,
+                               design = des_a, family = quasibinomial())
+      coe_a <- summary(glm_a)$coefficients
+      lor_a <- coe_a["far_from_care_100mi", "Estimate"]
+      se_a  <- coe_a["far_from_care_100mi", "Std. Error"]
+      list(or = exp(lor_a), ci_lo = exp(lor_a - 1.96*se_a),
+           ci_hi = exp(lor_a + 1.96*se_a),
+           p = coe_a["far_from_care_100mi", "Pr(>|t|)"],
+           n_cbc_attr = sum(enc_w$cbc_attr), error = NA_character_)
+    }, error = function(e) {
+      list(or=NA, ci_lo=NA, ci_hi=NA, p=NA, n_cbc_attr=NA, error=conditionMessage(e))
+    })
+    sens_cbc_attr[[wn]] <- res_attr
+    message(glue("  SENS_cbc_attributed ({wn}): OR={fmt_or(res_attr$or)} ",
+                 "[{fmt_or(res_attr$ci_lo)}, {fmt_or(res_attr$ci_hi)}], p={fmt_p(res_attr$p)}"))
+  }
+}
+
+# ==============================================================================
 # SECTION 7b: SUMMARY SHEET (sheet 2) — P4.8 ----
 # One table per window: primary OR (B_test), adjusted OR (C_sensitivity),
 # excl-FLM OR (D_excl_FLM), and MH pooled OR + BD_p for each reassignment scheme.
@@ -1678,33 +1892,48 @@ openxlsx::writeData(wb, "KEY", key_additional, startRow = nrow(key_df) + 2L, sta
          BD_p = if ("BD_p" %in% names(mh)) mh$BD_p[1] else NA_character_)
   }
   summary_rows <- lapply(c("whole", "post"), function(wn) {
-    win_label <- if (wn == "whole") "Whole record" else "Post-anchor"
-    pri  <- results[[wn]]$primary
-    sens <- results[[wn]]$sensitivity
+    win_label    <- if (wn == "whole") "Whole record" else "Post-anchor"
+    pri          <- results[[wn]]$primary
+    sens         <- results[[wn]]$sensitivity
+    pri_th       <- results_with_th[[wn]]$primary
+    cbc_attr_res <- sens_cbc_attr[[wn]]
     mh_enc  <- get_mh_row(by_src_enc_df,      win_label)
     mh_pat  <- get_mh_row(by_src_pat_df,      win_label)
     mh_addr <- get_mh_row(by_src_enc_addr_df, win_label)
     mh_flm  <- get_mh_row(by_src_enc_flm_df,  win_label)
-    excl_or <- if (!is.null(excl_flm_df)) {
+    excl_row <- if (!is.null(excl_flm_df)) {
       er <- excl_flm_df[excl_flm_df$Window == win_label, ]
-      if (nrow(er) > 0L) er$OR[1] else NA_character_
-    } else NA_character_
+      if (nrow(er) > 0L) er else NULL
+    } else NULL
+    excl_or <- if (!is.null(excl_row)) excl_row$OR[1]    else NA_character_
+    excl_ci <- if (!is.null(excl_row) && !is.na(excl_row$CI_lo[1]))
+      glue("{excl_row$CI_lo[1]}, {excl_row$CI_hi[1]}") else NA_character_
+    excl_p  <- if (!is.null(excl_row)) excl_row$p_RS[1]  else NA_character_
     data.frame(
-      Window          = win_label,
-      Primary_OR      = fmt_or(pri$or),
-      Primary_CI      = if (!is.na(pri$ci_lo)) glue("{fmt_or(pri$ci_lo)}, {fmt_or(pri$ci_hi)}") else NA_character_,
-      Primary_p       = fmt_p(pri$p_svyglm),
-      Primary_source  = "B_test",
-      Adj_OR          = fmt_or(sens$or_adj),
-      Adj_CI          = if (!is.na(sens$ci_lo_adj)) glue("{fmt_or(sens$ci_lo_adj)}, {fmt_or(sens$ci_hi_adj)}") else NA_character_,
-      Adj_p           = fmt_p(sens$p_adj),
-      Adj_source      = "C_sensitivity",
-      ExclFLM_OR      = excl_or,
-      ExclFLM_source  = "D_excl_FLM (exploratory)",
-      MH_enc_OR       = mh_enc$OR,   MH_enc_BD_p  = mh_enc$BD_p,   MH_enc_source  = "BY_SOURCE_enc",
-      MH_pat_OR       = mh_pat$OR,   MH_pat_BD_p  = mh_pat$BD_p,   MH_pat_source  = "BY_SOURCE_pat",
-      MH_addr_OR      = mh_addr$OR,  MH_addr_BD_p = mh_addr$BD_p,  MH_addr_source = "BY_SOURCE_enc_addr",
-      MH_flm_OR       = mh_flm$OR,   MH_flm_BD_p  = mh_flm$BD_p,  MH_flm_source  = "BY_SOURCE_enc_flm",
+      Window                 = win_label,
+      Primary_OR             = fmt_or(pri$or),
+      Primary_CI             = if (!is.na(pri$ci_lo)) glue("{fmt_or(pri$ci_lo)}, {fmt_or(pri$ci_hi)}") else NA_character_,
+      Primary_p              = fmt_p(pri$p_svyglm),
+      Primary_source         = "B_test",
+      Adj_OR                 = fmt_or(sens$or_adj),
+      Adj_CI                 = if (!is.na(sens$ci_lo_adj)) glue("{fmt_or(sens$ci_lo_adj)}, {fmt_or(sens$ci_hi_adj)}") else NA_character_,
+      Adj_p                  = fmt_p(sens$p_adj),
+      Adj_source             = "C_sensitivity",
+      ExclFLM_OR             = excl_or,
+      ExclFLM_CI             = excl_ci,
+      ExclFLM_p              = excl_p,
+      ExclFLM_source         = "D_excl_FLM (exploratory)",
+      MH_enc_OR              = mh_enc$OR,   MH_enc_BD_p   = mh_enc$BD_p,   MH_enc_source  = "BY_SOURCE_enc",
+      MH_pat_OR              = mh_pat$OR,   MH_pat_CI     = if (!is.na(mh_pat$CI_lo)) glue("{mh_pat$CI_lo}, {mh_pat$CI_hi}") else NA_character_,
+      MH_pat_BD_p            = mh_pat$BD_p, MH_pat_source = "BY_SOURCE_pat",
+      MH_addr_OR             = mh_addr$OR,  MH_addr_BD_p  = mh_addr$BD_p,  MH_addr_source = "BY_SOURCE_enc_addr",
+      MH_flm_OR              = mh_flm$OR,   MH_flm_BD_p   = mh_flm$BD_p,  MH_flm_source  = "BY_SOURCE_enc_flm",
+      SENS_with_TH_OR        = fmt_or(pri_th$or),
+      SENS_with_TH_CI        = if (!is.na(pri_th$ci_lo)) glue("{fmt_or(pri_th$ci_lo)}, {fmt_or(pri_th$ci_hi)}") else NA_character_,
+      SENS_with_TH_p         = fmt_p(pri_th$p_svyglm),
+      SENS_cbc_attributed_OR = fmt_or(cbc_attr_res$or),
+      SENS_cbc_attributed_CI = if (!is.na(cbc_attr_res$ci_lo)) glue("{fmt_or(cbc_attr_res$ci_lo)}, {fmt_or(cbc_attr_res$ci_hi)}") else NA_character_,
+      SENS_cbc_attributed_p  = fmt_p(cbc_attr_res$p),
       stringsAsFactors = FALSE
     )
   })
