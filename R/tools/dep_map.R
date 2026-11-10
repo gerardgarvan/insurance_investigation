@@ -206,6 +206,9 @@ res <- function(e, sc, cfg, depth = 0L) {
     return("{index}")
   }
   if (fn == "[") return(r(e[[2]]))
+  if (fn == "{") return(if (length(e) > 1) r(e[[length(e)]]) else "{}")
+  if (fn %in% c("local", "isolate", "withr::with_dir")) return(if (length(un)) r(un[[1]]) else "{local}")
+  if (fn %in% c("%||%", "%|%", "coalesce")) return(cap(unlist(lapply(un, r))))
   if (fn %in% PASS1 && length(un)) return(r(un[[1]]))
   if (fn %in% DATE_FNS) return("{DATE}")
   if (fn == "Sys.getenv") return(if (length(un)) paste0("{ENV:", r(un[[1]])[1], "}") else "{ENV}")
@@ -757,8 +760,8 @@ dir_compat <- function(d1, d2, rec = FALSE) {
 
 match_reads <- function(ed) {
   # returns data.frame(read_row, write_row) pairs
-  rd <- which(ed$edge_type %in% c("reads", "db_read") & !is.na(ed$artifact))
-  wr <- which(ed$edge_type %in% c("writes", "db_write") & !is.na(ed$artifact) & !ed$is_pattern)
+  rd <- which(ed$edge_type %in% c("reads", "db_read") & !is.na(ed$artifact) & ed$resolution != "none")
+  wr <- which(ed$edge_type %in% c("writes", "db_write") & !is.na(ed$artifact) & !ed$is_pattern & ed$resolution != "none")
   if (!length(rd) || !length(wr)) return(data.frame(r = integer(), w = integer()))
   wa <- ed$artifact[wr]; wdir <- art_dir(wa); wbase <- art_base(wa); wsamp <- sample_name(wbase)
   out <- list()
@@ -778,7 +781,7 @@ match_reads <- function(ed) {
     } else {
       b <- art_base(a); d <- art_dir(a)
       ok <- wa == a | (wbase == b & mapply(dir_compat, d, wdir))
-      if (has_tok(b) && nchar(gsub("[^A-Za-z0-9]", "", strip_tok(gsub("{DATE}", "", b, fixed = TRUE)))) >= 3) {
+      if (has_tok(b) && nchar(gsub("[^A-Za-z0-9]", "", sub("\\.[A-Za-z0-9]+$", "", strip_tok(gsub("{DATE}", "", b, fixed = TRUE))))) >= 3) {
         re <- paste0("^", pat_to_regex(gsub("([.+()^$|\\[\\]])", "\\\\\\1", b)), "$")
         ok <- ok | vapply(wsamp, function(s) isTRUE(tryCatch(grepl(re, s, perl = TRUE), error = function(e) FALSE)), logical(1))
       }
@@ -835,7 +838,7 @@ derive <- function(A) {
   } else fn_edges <- data.frame(file = character(), def_file = character(), fn = character(), line = integer())
 
   pe <- pkg_exports(A$pkgs)
-  local_names <- unique(c(A$assigned, A$formals, proj_fns))
+  local_names <- unique(c(A$assigned, A$formals, proj_fns, ".", "J", "CJ", "SJ", ".SD", ".N", ".I", ".GRP", ".BY"))
   und <- calls[is.na(calls$pkg) & !calls$fn %in% local_names & !calls$fn %in% pe$exports, , drop = FALSE]
   und <- und[!vapply(und$fn, function(f) exists(f, envir = baseenv()), logical(1)), , drop = FALSE]
   r7c <- if (nrow(und)) {
@@ -857,7 +860,7 @@ derive <- function(A) {
   wr_rows <- which(ed$edge_type %in% c("writes", "db_write") & !is.na(ed$artifact) & ed$resolution != "none")
   matched_r <- unique(pairs$r); matched_w <- unique(pairs$w)
   orph <- setdiff(rd_rows, matched_r)
-  is_external <- function(a) grepl("^(/|\\{CONFIG\\$data|\\{ENV|~)", a) & !grepl("^(output|R)/", a)
+  is_external <- function(a) (grepl("^(/|\\{CONFIG\\$data|\\{ENV|~|data/)", a) | !grepl("/", a)) & !grepl("^(output|R)/", a) & !is_list_val(a)
   orph_art <- ed$artifact[orph]
   orph_ext <- orph[is_external(orph_art) | startsWith(orph_art, "db:")]
   orph_int <- setdiff(orph, orph_ext)
@@ -949,6 +952,12 @@ derive <- function(A) {
   num <- function(x) suppressWarnings(as.numeric(sub("^R/(?:[a-z]+/)?([0-9]+).*", "\\1", x, perl = TRUE)))
   inv <- dag[!is.na(num(dag$pred)) & !is.na(num(dag$succ)) & num(dag$pred) > num(dag$succ), , drop = FALSE]
 
+  # R10 scripts that write R code / config
+  w10 <- which(ed$edge_type == "writes" & grepl("\\.[Rr](\\.bak)?$", ed$artifact))
+  r10 <- if (length(w10)) unique(data.frame(location = paste0(ed$from[w10], ":", ed$line[w10]), file = ed$from[w10],
+                                            artifact = ed$artifact[w10], stringsAsFactors = FALSE)) else
+    data.frame(location = character(), file = character(), artifact = character())
+
   # R9 isolated scripts
   scripts <- A$rel[A$ftype == "script"]
   connected <- unique(c(dag_s$pred, dag_s$succ, ed$to[ed$edge_type == "sources"]))
@@ -956,7 +965,7 @@ derive <- function(A) {
 
   list(pairs = pairs, dag = dag, dag_s = dag_s, fn_edges = fn_edges, r1 = r1, r1_ext = r1_ext, r2 = r2,
        r2_deliv = r2_deliv, r3 = r3, r4 = r4, r5 = r5, r6 = r6, r7a = dup_multi, r7b = never, r7c = r7c,
-       pkgs_missing = pe$missing, topo = topo, cycles = cyc, inversions = inv, r9 = r9)
+       pkgs_missing = pe$missing, topo = topo, cycles = cyc, inversions = inv, r9 = r9, r10 = r10)
 }
 
 # -----------------------------------------------------------------------------
@@ -1086,7 +1095,7 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
     if (nrow(D$r1)) data.frame(cat = "R1 orphan read", location = D$r1$reader, what = D$r1$artifact, file = D$r1$reader_file, stringsAsFactors = FALSE),
     if (nrow(D$r3[!D$r3$has_pin, ])) with(D$r3[!D$r3$has_pin, ], data.frame(cat = "R3 latest-file, no pin", location = location, what = pattern, file = file, stringsAsFactors = FALSE)),
     if (nrow(D$r4)) data.frame(cat = "R4 same-date overwrite", location = D$r4$location, what = D$r4$artifact, file = D$r4$file, stringsAsFactors = FALSE),
-    if (nrow(D$r2)) data.frame(cat = "R2 dead intermediate write", location = D$r2$writer, what = D$r2$artifact, file = D$r2$writer_file, stringsAsFactors = FALSE)
+    if (nrow(D$r10)) data.frame(cat = "R10 writes R code/config", location = D$r10$location, what = D$r10$artifact, file = D$r10$file, stringsAsFactors = FALSE)
   )
   if (!is.null(top) && nrow(top)) {
     top$downstream_scripts <- ds(top$file)
@@ -1097,10 +1106,10 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
                                     "R2 deliverable writes never read (info)", "R3 latest-file selections", "R3 ... without pin",
                                     "R4 same-date overwrite risk", "R5 not fully resolved edges", "R6 absolute paths",
                                     "R7a functions defined in >1 file", "R7b functions never called", "R7c called but undefined",
-                                    "R8 cycles", "R8 order inversions", "R9 isolated scripts"),
+                                    "R8 cycles", "R8 order inversions", "R9 isolated scripts", "R10 scripts writing R code/config"),
                        n = c(nrow(D$r1), nrow(D$r1_ext), nrow(D$r2), D$r2_deliv, nrow(D$r3), sum(!D$r3$has_pin), nrow(D$r4),
                              nrow(D$r5), nrow(D$r6), length(unique(D$r7a$fn)), nrow(D$r7b), nrow(D$r7c),
-                             length(D$cycles), nrow(D$inversions), length(D$r9)))
+                             length(D$cycles), nrow(D$inversions), length(D$r9), nrow(D$r10)))
   rpt <- c(
     paste0("# Dependency Risk Report -- ", dated, if (!gate_ok) "  (GATE FAILED -- forced output)" else ""), "",
     sprintf("Generated by `R/tools/dep_map.R` (v2) from %d files (%d scripts, %d utils, %d tools, %d archived). Root: `%s`",
@@ -1110,7 +1119,7 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
     if (length(D$pkgs_missing)) paste0("_Packages referenced but not installed (R7c may include their functions): ",
                                        paste(D$pkgs_missing, collapse = ", "), "_") else "", "",
     "## Summary", "", md_table(counts), "",
-    "### Top 10 findings by downstream reach", "", if (is.null(top)) "No findings." else md_table(top, c("cat", "location", "what", "downstream_scripts"), 10), "",
+    "### Top 10 findings by downstream reach (R1, R3 unpinned, R4, R10)", "", if (is.null(top)) "No findings." else md_table(top, c("cat", "location", "what", "downstream_scripts"), 10), "",
     "---", "",
     "## R1 -- Orphan reads", "", "Artifacts a script reads that no script in R/ writes (internal paths only). `near_miss` = a written artifact with the same stem or a different extension.", "",
     md_table(D$r1, c("artifact", "reader", "near_miss")), "",
@@ -1137,6 +1146,8 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
     md_table(D$inversions, c("pred", "succ", "via")), "",
     "## R9 -- Isolated scripts", "", "Scripts with no resolved data link (read or write) to any other script. Often one-off probes; check before deleting.", "",
     if (length(D$r9)) paste0("- ", D$r9) else "No findings.", "",
+    "## R10 -- Scripts that write R code or config", "", "A pipeline script that rewrites a .R file (e.g. R/00_config.R) changes the code every other script runs.", "",
+    md_table(D$r10, c("location", "artifact")), "",
     paste0("_Generated ", format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"), "_"))
   writeLines(unlist(rpt), P("risk_report", "md"))
 
@@ -1228,7 +1239,8 @@ self_test <- function() {
     '  p <- cands[which.max(file.mtime(cands))]', '}', 'x <- readRDS(p)',
     'pr <- list.files(CONFIG$output_dir, pattern = "^payer_summary.*\\\\.rds$", recursive = TRUE)',
     'y <- readRDS(pr[1])', 'z <- wrap_q(con, "SELECT * FROM stage1 s LEFT JOIN LAB_RESULT_CM l ON s.a = l.a")',
-    'h <- helper_b(1)', 'saveRDS(z, file.path("output", paste0("use_", format(Sys.Date(), "%Y%m%d"), ".rds")))')
+    'h <- helper_b(1)', 'cache <- { if (TRUE) file.path("output", "cache") else "x" }', 'saveRDS(z, file.path(cache, "blk.rds"))',
+    'od <- NULL %||% "output"', 'readRDS(file.path(od, "blk.rds"))', 'cat("x", file = "R/00_config.R", append = TRUE)', 'saveRDS(z, file.path("output", paste0("use_", format(Sys.Date(), "%Y%m%d"), ".rds")))')
   A <- analyze(td); D <- derive(A); ed <- A$edges
   has <- function(f, t, a) any(ed$from == f & ed$edge_type == t & grepl(a, ed$artifact, fixed = TRUE))
   checks <- c(
@@ -1247,7 +1259,11 @@ self_test <- function() {
     fn_def         = any(A$defs$fn == "helper_b" & A$defs$file == "R/utils/utils_b.R"),
     fn_edge        = any(D$fn_edges$file == "R/20_use.R" & D$fn_edges$fn == "helper_b"),
     r7b_unused     = "unused_b" %in% D$r7b$fn && !"helper_a" %in% D$r7b$fn,
-    r7c_clean      = !any(c("helper_a", "helper_b", "wrap_q") %in% D$r7c$fn)
+    r7c_clean      = !any(c("helper_a", "helper_b", "wrap_q") %in% D$r7c$fn),
+    brace_block    = has("R/20_use.R", "writes", "output/cache/blk.rds"),
+    null_coalesce  = has("R/20_use.R", "reads", "output/blk.rds"),
+    r10_config     = any(D$r10$file == "R/20_use.R"),
+    no_token_match = !any(D$dag$via == "{build_path()}")
   )
   unlink(td, recursive = TRUE)
   if (!all(checks)) stop("[dep_map] SELF-TEST FAILED: ", paste(names(checks)[!checks], collapse = ", "))
