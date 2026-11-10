@@ -243,7 +243,7 @@ enc_analysis <- build_enc_analysis(
 )
 
 analysis_source_freq <- enc_analysis |>
-  dplyr::count(SOURCE, name = "n_analysis_enc", sort = TRUE) |>
+  dplyr::count(SOURCE_raw, name = "n_analysis_enc", sort = TRUE) |>
   dplyr::mutate(n_display = suppress_display(n_analysis_enc))
 
 # ==============================================================================
@@ -273,7 +273,7 @@ print(as.data.frame(crosstab_src |> dplyr::select(match_category, enc_source, ad
 
 cat("\n--- SECTION (d): Analysis-set encounter counts by SOURCE_raw ---\n")
 cat("(build_enc_analysis() output — SOURCE column before any reassignment)\n")
-print(as.data.frame(analysis_source_freq |> dplyr::select(SOURCE, n_display)), row.names = FALSE)
+print(as.data.frame(analysis_source_freq |> dplyr::select(SOURCE_raw, n_display)), row.names = FALSE)
 
 cat("\n===END STEP0 OUTPUT===\n")
 message("[R/192] Step-0 probe complete. Paste the block above to the planner.")
