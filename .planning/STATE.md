@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.13
-milestone_name: Analytic Manual Fill-out and Verification
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: complete
-stopped_at: Phase 194 complete — v3.13 shipped 2026-11-06
-last_updated: "2026-11-06"
+stopped_at: quick-261110-hne complete — awaiting HiPerGator run
+last_updated: "2026-11-10T17:57:08.389Z"
 last_activity: 2026-11-06
 progress:
   total_phases: 46
   completed_phases: 38
   total_plans: 126
-  completed_plans: 141
+  completed_plans: 139
 ---
 
 # Project State
@@ -136,4 +136,4 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** Phase 194 complete — v3.13 shipped 2026-11-06
+**Stopped at:** quick-261110-hne complete — awaiting HiPerGator run
