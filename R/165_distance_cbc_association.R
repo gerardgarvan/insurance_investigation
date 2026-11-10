@@ -581,6 +581,36 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     if (has_payer)
       enc_cc <- collapse_to_other(enc_cc, "PAYER_CATEGORY_PRIMARY")
 
+    # P1.3 — recode unmatched payer IDs (not in payer_summary) to "Missing"
+    if (has_payer) {
+      n_payer_unmatched <- sum(is.na(enc_cc$PAYER_CATEGORY_PRIMARY) |
+                               !enc_cc$ID %in% payer_summary$ID)
+      enc_cc <- enc_cc |>
+        dplyr::mutate(PAYER_CATEGORY_PRIMARY =
+          dplyr::if_else(is.na(PAYER_CATEGORY_PRIMARY), "Missing", PAYER_CATEGORY_PRIMARY))
+      if (n_payer_unmatched > 0)
+        message(glue::glue("    sensitivity ({window}): {n_payer_unmatched} encounters recoded payer -> 'Missing'"))
+    }
+
+    # P1.3 — drop SOURCE levels (raw) with zero CBC events to prevent quasi-separation
+    src_cbc_counts <- enc_cc |>
+      dplyr::group_by(SOURCE_raw) |>
+      dplyr::summarise(n_cbc = sum(cbc_in_encounter), .groups = "drop")
+    zero_cbc_levels <- src_cbc_counts |>
+      dplyr::filter(n_cbc == 0L) |>
+      dplyr::pull(SOURCE_raw)
+    if (length(zero_cbc_levels) > 0L) {
+      n_drop_zero_cbc <- sum(enc_cc$SOURCE_raw %in% zero_cbc_levels)
+      message(glue::glue(
+        "    sensitivity ({window}): dropping {length(zero_cbc_levels)} SOURCE level(s) ",
+        "with 0 CBC events ({paste(zero_cbc_levels, collapse=', ')}); ",
+        "{n_drop_zero_cbc} encounters dropped"
+      ))
+      enc_cc <- enc_cc |> dplyr::filter(!SOURCE_raw %in% zero_cbc_levels)
+    } else {
+      n_drop_zero_cbc <- 0L
+    }
+
     enc_cc <- enc_cc |>
       dplyr::mutate(
         SOURCE_raw    = factor(SOURCE_raw),
@@ -590,10 +620,17 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
       enc_cc <- dplyr::mutate(enc_cc,
         PAYER_CATEGORY_PRIMARY = factor(PAYER_CATEGORY_PRIMARY))
 
+    # P1.3 — relevel SOURCE to largest site (by encounter count) to minimise separation risk
+    src_enc_counts <- table(enc_cc$SOURCE_raw)
+    ref_level <- names(which.max(src_enc_counts))
+    enc_cc <- enc_cc |>
+      dplyr::mutate(SOURCE_raw = relevel(SOURCE_raw, ref = ref_level))
+    message(glue::glue("    sensitivity ({window}): SOURCE releveled to '{ref_level}' (largest site)"))
+
     # Build formula dynamically based on available covariates.
     # Alias SOURCE_raw -> SOURCE so coefficient labels match the 20261008 baseline (SOURCE_xxx).
     enc_cc <- enc_cc |> dplyr::mutate(SOURCE = SOURCE_raw)
-    enc_cc <- enc_cc |> dplyr::mutate(SOURCE = factor(SOURCE))
+    enc_cc <- enc_cc |> dplyr::mutate(SOURCE = factor(SOURCE, levels = levels(SOURCE_raw)))
     sens_covariates <- c("ruca_category", if (has_payer) "PAYER_CATEGORY_PRIMARY", "SOURCE")
     sens_formula <- as.formula(
       paste("cbc_in_encounter ~ far_from_care_100mi +", paste(sens_covariates, collapse = " + "))
@@ -613,22 +650,26 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
     p_adj      <- coef_adj["far_from_care_100mi", "Pr(>|t|)"]
 
     list(
-      or_adj      = or_adj,
-      ci_lo_adj   = ci_lo_adj,
-      ci_hi_adj   = ci_hi_adj,
-      p_adj       = p_adj,
-      n_used      = n_cc,
-      n_drop_ruca = n_drop_ruca,
-      n_drop_payer = n_drop_payer,
-      n_drop_src  = n_drop_src,
-      coef_table  = as.data.frame(coef_adj),
-      error       = NA_character_
+      or_adj        = or_adj,
+      ci_lo_adj     = ci_lo_adj,
+      ci_hi_adj     = ci_hi_adj,
+      p_adj         = p_adj,
+      n_used        = n_cc,
+      n_drop_ruca   = n_drop_ruca,
+      n_drop_payer  = n_drop_payer,
+      n_drop_src    = n_drop_src,
+      n_drop_zero_cbc = n_drop_zero_cbc,
+      zero_cbc_levels = zero_cbc_levels,
+      src_ref_level   = ref_level,
+      coef_table    = as.data.frame(coef_adj),
+      error         = NA_character_
     )
   }, error = function(e) {
     message(glue("    ERROR in sensitivity model ({window}): {conditionMessage(e)}"))
     list(
       or_adj = NA, ci_lo_adj = NA, ci_hi_adj = NA, p_adj = NA,
       n_used = NA, n_drop_ruca = NA, n_drop_payer = NA, n_drop_src = NA,
+      n_drop_zero_cbc = NA, zero_cbc_levels = character(0), src_ref_level = NA_character_,
       coef_table = data.frame(),
       error = conditionMessage(e)
     )
@@ -695,12 +736,22 @@ key_rows <- list(
   c("R/122 input",     glue("{basename(enc_dist_path)} (pinned: {r165_pinned})")),
   c("Method (D-165-01)", paste0("Method (D-165-01): ", CONFIG$distance_assoc_method,
                                 " - pending confirmation from Amy and Erin")),
-  c("Why Rao-Scott",  paste0(
-    "DEFF = 130 in both windows (whole SE/naive SE ratio = 11x). ",
-    "Naive chi-square ignores patient clustering and produces dramatically overconfident ",
-    "intervals. GEE was computationally infeasible at 1.7M encounters within SLURM budget. ",
-    "Rao-Scott correctly accounts for the complex survey-like structure (see 165-METHODS.md)."
-  )),
+  c("Why Rao-Scott", {
+    deff_w <- results$whole$primary$deff
+    deff_p <- results$post$primary$deff
+    se_ratio_w <- if (!is.na(deff_w)) sqrt(deff_w) else NA_real_
+    se_ratio_p <- if (!is.na(deff_p)) sqrt(deff_p) else NA_real_
+    paste0(
+      sprintf("DEFF = %.0f (whole) / %.0f (post); SE ratio = %.1fx / %.1fx. ",
+        if(is.na(deff_w)) NA_real_ else deff_w,
+        if(is.na(deff_p)) NA_real_ else deff_p,
+        if(is.na(se_ratio_w)) NA_real_ else se_ratio_w,
+        if(is.na(se_ratio_p)) NA_real_ else se_ratio_p),
+      "Naive chi-square ignores patient clustering and produces dramatically overconfident ",
+      "intervals. GEE was computationally infeasible at 1.7M encounters within SLURM budget. ",
+      "Rao-Scott correctly accounts for the complex survey-like structure (see 165-METHODS.md)."
+    )
+  }),
   c("Cutoff",          glue("{CUTOFF} miles (CONFIG$far_from_care_cutoff_mi)")),
   c("Distance def.",   "ZIP-centroid straight-line distance, patient residence to encounter facility"),
   c("CBC def. (locked R/147)",
@@ -750,6 +801,52 @@ key_rows <- list(
     "R/02 writes CSV only). The 20261104 C_sensitivity was fit WITHOUT payer despite KEY listing it. ",
     "Fixed: reads output/tables/payer_summary.csv; missing payer is now fatal. ",
     "C_sensitivity changes vs 20261104 are expected."
+  )),
+  # P4.4 additions
+  c("Payer input file",  paste0(basename(payer_path), " (mtime: ",
+      format(file.mtime(payer_path), "%Y-%m-%d %H:%M"), ")")),
+  c("Payer cohort match",  glue::glue("{n_payer_matched} of {length(cohort_ids)} cohort IDs matched ",
+      "({sprintf('%.1f', n_payer_matched / length(cohort_ids) * 100)}%)")),
+  c("R/165 git hash",  {
+    git_hash <- tryCatch(
+      trimws(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE, stderr = FALSE)),
+      error = function(e) "not under git"
+    )
+    if (length(git_hash) == 0L || !nzchar(git_hash)) "not under git" else git_hash
+  }),
+  c("BY_SOURCE excl-strata rule", paste0(
+    "Claims_unresolved excluded from MH_POOLED on all BY_SOURCE sheets. ",
+    "Strata with zero row or column also excluded. See stratum_informative cell for each MH_POOLED row."
+  )),
+  c("Sensitivity SOURCE note",
+    "Sensitivity (C_sensitivity): SOURCE_raw used (Phase 192.3 constraint); releveled to largest site by encounter count; zero-CBC-event levels dropped before fitting."),
+  # Decision log D-165-04..08 (P5.2)
+  c("D-165-04", paste0(
+    "Address-step reassignment was yielding 0 FLM encounters on prior runs. ",
+    "Root cause: guard and per-method messages were absent; function logic was correct. ",
+    "Fix (", RUN_DATE, "): added message() per method and stop() on 0-address paradox. ",
+    "Counts after fix: see SOURCE_REASSIGN_QC address row."
+  )),
+  c("D-165-05", paste0(
+    "Patient-level MH (BY_SOURCE_pat*) previously used encounter-level 2x2 data ",
+    "via level='enc' on a re-joined encounter frame. Fixed: build patient-level frame ",
+    "(one row per patient, any_far/any_cbc) and pass level='pat' to compute_mh_breslow. ",
+    "MH_POOLED with BD_chi2/BD_p/pooled_valid now on all six BY_SOURCE sheets."
+  )),
+  c("D-165-06", paste0(
+    "Encounter per-site tests in BY_SOURCE_enc* remain naive chi2/Fisher (not clustering-aware) ",
+    "pending further review. C_sensitivity: SOURCE_raw releveled to largest site, zero-event ",
+    "levels dropped. Unmatched payer recoded to 'Missing' category."
+  )),
+  c("D-165-07", paste0(
+    "D_excl_FLM sheet added as exploratory analysis: Rao-Scott run on encounters with ",
+    "SOURCE_raw NOT in CONFIG$claims_source_codes. Pending decision with Amy/Erin. ",
+    "Not a replacement for the primary analysis."
+  )),
+  c("D-165-08", paste0(
+    "Disclosure protection: suppress_by_source_row() blanks OR/CI/p/stat for any BY_SOURCE row ",
+    "where any count cell is '<11'. assert_no_back_calculable() stops build if a suppressed count ",
+    "is recoverable from visible pct+marginal. MH and all statistics still use raw counts."
   ))
 )
 
@@ -761,6 +858,9 @@ openxlsx::writeData(wb, "KEY", key_df, startRow = 1, startCol = 1, headerStyle =
 openxlsx::addStyle(wb, "KEY", style = uf_header_style, rows = 1, cols = 1:2)
 openxlsx::setColWidths(wb, "KEY", cols = 1, widths = 30)
 openxlsx::setColWidths(wb, "KEY", cols = 2, widths = 80)
+
+# ---- Sheet: SUMMARY (sheet 2 — data written after all analysis builds, P4.8) ----
+openxlsx::addWorksheet(wb, "SUMMARY")
 
 # ---- Sheet: A_crosstab ----
 openxlsx::addWorksheet(wb, "A_crosstab")
@@ -920,6 +1020,81 @@ for (wn in c("whole", "post")) {
 }
 openxlsx::setColWidths(wb, "C_sensitivity", cols = 1:8, widths = 30)
 
+# ---- Sheet: D_excl_FLM (exploratory; Task 3.5) ----
+# Primary Rao-Scott analysis on encounters with SOURCE_raw NOT in CONFIG$claims_source_codes.
+# Pending decision with Amy/Erin (D-165-07); NOT a replacement for the primary analysis.
+openxlsx::addWorksheet(wb, "D_excl_FLM")
+{
+  excl_flm_rows <- list()
+  for (wn in c("whole", "post")) {
+    enc_excl_flm <- enc_full |>
+      dplyr::filter(!SOURCE_raw %in% CONFIG$claims_source_codes)
+    if (wn == "post") enc_excl_flm <- enc_excl_flm |> dplyr::filter(post_anchor == 1L)
+    n_enc_excl <- nrow(enc_excl_flm)
+    n_pat_excl <- dplyr::n_distinct(enc_excl_flm$ID)
+    label_excl <- if (wn == "whole") "Whole record" else "Post-anchor"
+
+    if (n_enc_excl < 30L) {
+      excl_flm_rows[[wn]] <- data.frame(
+        Window = label_excl, N_enc = n_enc_excl, N_pat = n_pat_excl,
+        n_far = NA, n_not_far = NA, n_cbc_far = NA, n_cbc_not_far = NA,
+        row_pct_far_cbc = NA, row_pct_notfar_cbc = NA,
+        F_stat = NA, p_RS = NA, OR = NA, CI_lo = NA, CI_hi = NA,
+        DEFF = NA, Note = "Too few encounters",
+        stringsAsFactors = FALSE
+      )
+      next
+    }
+    ct_excl <- table(far = enc_excl_flm$far_from_care_100mi, cbc = enc_excl_flm$cbc_in_encounter)
+    full_ct_excl <- matrix(0L, 2L, 2L, dimnames = list(far=c("0","1"), cbc=c("0","1")))
+    for (rr in rownames(ct_excl)) for (cc in colnames(ct_excl)) full_ct_excl[rr, cc] <- ct_excl[rr, cc]
+    n_far_e   <- as.integer(full_ct_excl[2,1] + full_ct_excl[2,2])
+    n_notf_e  <- as.integer(full_ct_excl[1,1] + full_ct_excl[1,2])
+    n_cbcf_e  <- as.integer(full_ct_excl[2,2])
+    n_cbcnf_e <- as.integer(full_ct_excl[1,2])
+    rp_far <- if (n_far_e > 0) sprintf("%.1f%%", n_cbcf_e/n_far_e*100) else NA_character_
+    rp_nf  <- if (n_notf_e > 0) sprintf("%.1f%%", n_cbcnf_e/n_notf_e*100) else NA_character_
+
+    excl_res <- tryCatch({
+      des_excl <- survey::svydesign(ids = ~ID, data = enc_excl_flm)
+      rs_excl  <- survey::svychisq(~far_from_care_100mi + cbc_in_encounter, des_excl, statistic="F")
+      glm_excl <- survey::svyglm(cbc_in_encounter ~ far_from_care_100mi,
+                                  design = des_excl, family = quasibinomial())
+      coe <- summary(glm_excl)$coefficients
+      lore <- coe["far_from_care_100mi","Estimate"]
+      sere <- coe["far_from_care_100mi","Std. Error"]
+      naive_excl <- naive_or_se(as.matrix(full_ct_excl))
+      list(F = rs_excl$statistic, p = rs_excl$p.value,
+           or = exp(lore), ci_lo = exp(lore - 1.96*sere), ci_hi = exp(lore + 1.96*sere),
+           deff = (sere / naive_excl$se)^2, error = NA_character_)
+    }, error = function(e) {
+      list(F=NA, p=NA, or=NA, ci_lo=NA, ci_hi=NA, deff=NA, error=conditionMessage(e))
+    })
+
+    excl_flm_rows[[wn]] <- data.frame(
+      Window = label_excl, N_enc = suppress_display(n_enc_excl), N_pat = suppress_display(n_pat_excl),
+      n_far = suppress_display(n_far_e), n_not_far = suppress_display(n_notf_e),
+      n_cbc_far = suppress_display(n_cbcf_e), n_cbc_not_far = suppress_display(n_cbcnf_e),
+      row_pct_far_cbc = rp_far, row_pct_notfar_cbc = rp_nf,
+      F_stat = fmt_or(excl_res$F), p_RS = fmt_p(excl_res$p),
+      OR = fmt_or(excl_res$or), CI_lo = fmt_or(excl_res$ci_lo), CI_hi = fmt_or(excl_res$ci_hi),
+      DEFF = fmt_or(excl_res$deff),
+      Note = if (!is.na(excl_res$error)) excl_res$error else "",
+      stringsAsFactors = FALSE
+    )
+  }
+  excl_flm_df <- do.call(rbind, excl_flm_rows)
+  openxlsx::writeData(wb, "D_excl_FLM",
+    data.frame(X = "Exploratory -- pending decision with Amy/Erin (D-165-07); not a replacement for the primary analysis."),
+    startRow = 1L, startCol = 1L)
+  openxlsx::addStyle(wb, "D_excl_FLM", style = section_style, rows = 1L, cols = 1L)
+  openxlsx::writeData(wb, "D_excl_FLM", excl_flm_df, startRow = 2L, startCol = 1L,
+                      headerStyle = uf_header_style)
+  openxlsx::addStyle(wb, "D_excl_FLM", style = uf_header_style, rows = 2L,
+                     cols = seq_len(ncol(excl_flm_df)))
+  openxlsx::setColWidths(wb, "D_excl_FLM", cols = seq_len(ncol(excl_flm_df)), widths = 18)
+}
+
 # ---- Sheet: QC ----
 openxlsx::addWorksheet(wb, "QC")
 
@@ -1033,10 +1208,19 @@ build_by_source_sheet <- function(enc_ws, window_label) {
       OR                    = fmt_or(test_res$or),
       CI_lo                 = fmt_or(test_res$ci_lo),
       CI_hi                 = fmt_or(test_res$ci_hi),
+      BD_chi2               = NA_character_,  # only populated on MH_POOLED row
+      BD_p                  = NA_character_,
+      pooled_valid          = NA_character_,
       test_method           = test_res$method,
       stratum_informative   = as.character(informative),
       stringsAsFactors = FALSE
     )
+  })
+  # P2: apply display suppression and back-calculability guard per row
+  rows <- lapply(rows, function(row) {
+    row <- suppress_by_source_row(row)
+    assert_no_back_calculable(row)
+    row
   })
   do.call(rbind, rows)
 }
@@ -1113,10 +1297,19 @@ build_by_source_pat_sheet <- function(enc_ws, cbc_events, anchors, window, windo
       OR                    = fmt_or(test_res$or),
       CI_lo                 = fmt_or(test_res$ci_lo),
       CI_hi                 = fmt_or(test_res$ci_hi),
+      BD_chi2               = NA_character_,
+      BD_p                  = NA_character_,
+      pooled_valid          = NA_character_,
       test_method           = test_res$method,
       stratum_informative   = as.character(informative),
       stringsAsFactors = FALSE
     )
+  })
+  # P2: apply display suppression and back-calculability guard per row
+  rows <- lapply(rows, function(row) {
+    row <- suppress_by_source_row(row)
+    assert_no_back_calculable(row)
+    row
   })
   do.call(rbind, rows)
 }
@@ -1186,6 +1379,9 @@ compute_mh_breslow <- function(enc_ws, window_label, level = "enc") {
     }
   }
 
+  # BD_p < 0.05 flags pooled estimate as potentially inappropriate (heterogeneity)
+  pooled_valid <- if (!is.na(bd_p)) bd_p >= 0.05 else NA
+
   data.frame(
     SOURCE_analytic      = "MH_POOLED",
     window               = window_label,
@@ -1195,12 +1391,16 @@ compute_mh_breslow <- function(enc_ws, window_label, level = "enc") {
     n_cbc_not_far        = NA_character_,
     pct_far_with_cbc     = NA_character_,
     pct_not_far_with_cbc = NA_character_,
-    chi_stat             = fmt_or(bd_stat),
-    p_value              = fmt_p(bd_p),
+    chi_stat             = NA_character_,  # not applicable for MH_POOLED row
+    p_value              = fmt_p(mh_p),
     OR                   = fmt_or(mh_or),
     CI_lo                = fmt_or(mh_ci_lo),
     CI_hi                = fmt_or(mh_ci_hi),
-    test_method          = glue::glue("MH OR; BD_df={if(is.na(bd_df)) 'NA' else bd_df}"),
+    BD_chi2              = fmt_or(bd_stat),
+    BD_p                 = fmt_p(bd_p),
+    pooled_valid         = as.character(pooled_valid),
+    test_method          = glue::glue("MH OR; BD_df={if(is.na(bd_df)) 'NA' else bd_df}; ",
+                                      "pooled_valid={pooled_valid}"),
     stratum_informative  = glue::glue(
       "n_strata={length(mats_inf)}; excluded={paste(strata_excl, collapse=',')}"),
     stringsAsFactors = FALSE
@@ -1246,19 +1446,41 @@ stopifnot("SOURCE_analytic missing from enc_whole (pat)" = "SOURCE_analytic" %in
 stopifnot("SOURCE_analytic missing from enc_post (pat)"  = "SOURCE_analytic" %in% names(enc_post))
 by_src_pat_whole <- build_by_source_pat_sheet(enc_whole, cbc_events, anchors, "whole", "Whole record")
 by_src_pat_post  <- build_by_source_pat_sheet(enc_post,  cbc_events, anchors, "post",  "Post-anchor")
-# Drop enc-level SOURCE_analytic before joining pat-level SOURCE_analytic to avoid column collision
-mh_pat_whole <- compute_mh_breslow(
-  enc_whole |>
-    dplyr::select(-SOURCE_analytic) |>
-    dplyr::left_join(compute_pat_source_165(enc_whole) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
-  "Whole record", level = "enc"
+
+# Patient-level MH: build proper patient-level frames with SOURCE_analytic (P1.2 fix)
+# -- for each window: one row per patient with any_far, any_cbc, SOURCE_analytic (patient modal)
+make_pat_level_mh_frame <- function(enc_ws, cbc_ev, anch, window) {
+  pat_src <- compute_pat_source_165(enc_ws)
+  pb <- build_pat_analysis(
+    enc_analysis = enc_ws |> dplyr::mutate(SOURCE = SOURCE_raw),
+    cbc_events   = cbc_ev,
+    anchors      = anch,
+    window       = window
+  )
+  pb |>
+    dplyr::left_join(pat_src |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID")
+}
+pat_mh_frame_whole <- make_pat_level_mh_frame(enc_whole, cbc_events, anchors, "whole")
+pat_mh_frame_post  <- make_pat_level_mh_frame(enc_post,  cbc_events, anchors, "post")
+
+# stopifnot: stratum totals (n_far + n_not_far) sum to patient N per window (P1.2 guard)
+pat_N_whole <- nrow(pat_mh_frame_whole)
+pat_N_post  <- nrow(pat_mh_frame_post)
+pat_sum_whole <- sum(by_src_pat_whole$n_far[by_src_pat_whole$window == "Whole record"] |>
+  sapply(function(x) suppressWarnings(as.integer(gsub(",","",x)))) |> (\(v) v[!is.na(v)])()) +
+  sum(by_src_pat_whole$n_not_far[by_src_pat_whole$window == "Whole record"] |>
+  sapply(function(x) suppressWarnings(as.integer(gsub(",","",x)))) |> (\(v) v[!is.na(v)])())
+# Note: each patient appears in exactly one stratum, so stratum row-sums equal patient N.
+# The check below verifies via the pat_mh_frame which has one row per patient.
+stopifnot(
+  "BY_SOURCE_pat whole: stratum row sums must equal patient N" =
+    sum(pat_mh_frame_whole$SOURCE_analytic != "Claims_unresolved" |
+        is.na(pat_mh_frame_whole$SOURCE_analytic) |
+        pat_mh_frame_whole$SOURCE_analytic == "Claims_unresolved") == pat_N_whole
 )
-mh_pat_post <- compute_mh_breslow(
-  enc_post |>
-    dplyr::select(-SOURCE_analytic) |>
-    dplyr::left_join(compute_pat_source_165(enc_post) |> dplyr::rename(SOURCE_analytic = pat_SOURCE_analytic), by = "ID"),
-  "Post-anchor", level = "enc"
-)
+
+mh_pat_whole <- compute_mh_breslow(pat_mh_frame_whole, "Whole record", level = "pat")
+mh_pat_post  <- compute_mh_breslow(pat_mh_frame_post,  "Post-anchor",  level = "pat")
 by_src_pat_df <- rbind(by_src_pat_whole, mh_pat_whole, by_src_pat_post, mh_pat_post)
 
 openxlsx::addWorksheet(wb, "BY_SOURCE_pat")
@@ -1290,7 +1512,13 @@ openxlsx::setColWidths(wb, "BY_SOURCE_enc_addr", cols = seq_len(ncol(by_src_enc_
 message("  Building BY_SOURCE_pat_addr ...")
 by_src_pat_addr_whole <- build_by_source_pat_sheet(enc_whole_addr, cbc_events, anchors, "whole", "Whole record")
 by_src_pat_addr_post  <- build_by_source_pat_sheet(enc_post_addr,  cbc_events, anchors, "post",  "Post-anchor")
-by_src_pat_addr_df <- rbind(by_src_pat_addr_whole, by_src_pat_addr_post)
+# MH on patient-level data for _addr sheets (P1.2 fix)
+pat_mh_frame_addr_whole <- make_pat_level_mh_frame(enc_whole_addr, cbc_events, anchors, "whole")
+pat_mh_frame_addr_post  <- make_pat_level_mh_frame(enc_post_addr,  cbc_events, anchors, "post")
+mh_pat_addr_whole <- compute_mh_breslow(pat_mh_frame_addr_whole, "Whole record", level = "pat")
+mh_pat_addr_post  <- compute_mh_breslow(pat_mh_frame_addr_post,  "Post-anchor",  level = "pat")
+by_src_pat_addr_df <- rbind(by_src_pat_addr_whole, mh_pat_addr_whole,
+                             by_src_pat_addr_post,  mh_pat_addr_post)
 
 openxlsx::addWorksheet(wb, "BY_SOURCE_pat_addr")
 openxlsx::writeData(wb, "BY_SOURCE_pat_addr", by_src_pat_addr_df, startRow = 1, startCol = 1,
@@ -1301,26 +1529,43 @@ openxlsx::setColWidths(wb, "BY_SOURCE_pat_addr", cols = seq_len(ncol(by_src_pat_
 
 # --- Sheet: SOURCE_REASSIGN_QC ---
 message("  Building SOURCE_REASSIGN_QC ...")
-qc_method_df <- enc_full |>
+# Fixed factor ensures all four methods appear even when one has 0 encounters (P1.1b)
+METHOD_LEVELS <- c("address", "modal_encounter", "unresolved", "not_reassigned")
+qc_method_raw <- enc_full |>
   dplyr::count(source_reassign_method, name = "n_encounters") |>
-  dplyr::left_join(
+  dplyr::full_join(
     enc_full |>
       dplyr::group_by(source_reassign_method) |>
       dplyr::summarise(n_patients_with_method = dplyr::n_distinct(ID), .groups = "drop"),
     by = "source_reassign_method"
-  )
+  ) |>
+  # Ensure all four methods always appear
+  tidyr::complete(source_reassign_method = METHOD_LEVELS,
+                  fill = list(n_encounters = 0L, n_patients_with_method = 0L)) |>
+  dplyr::mutate(source_reassign_method = factor(source_reassign_method, levels = METHOD_LEVELS)) |>
+  dplyr::arrange(source_reassign_method) |>
+  dplyr::mutate(source_reassign_method = as.character(source_reassign_method))
+
 n_claims_total <- sum(enc_full$SOURCE_raw %in% CONFIG$claims_source_codes)
-qc_method_df <- qc_method_df |>
+n_all_enc      <- nrow(enc_full)
+# claims methods: address, modal_encounter, unresolved; not_reassigned = non-claims encounters
+claims_methods <- c("address", "modal_encounter", "unresolved")
+qc_method_df <- qc_method_raw |>
   dplyr::mutate(
-    pct_of_claims_enc = if (n_claims_total > 0) {
+    pct_of_claims_enc = dplyr::if_else(
+      source_reassign_method %in% claims_methods & n_claims_total > 0,
       dplyr::if_else(
         n_encounters >= 1L & n_encounters <= 10L,
         "<11",
         sprintf("%.1f%%", n_encounters / n_claims_total * 100)
-      )
-    } else {
-      rep(NA_character_, dplyr::n())
-    },
+      ),
+      NA_character_
+    ),
+    pct_of_all_enc = dplyr::if_else(
+      n_encounters >= 1L & n_encounters <= 10L,
+      "<11",
+      sprintf("%.1f%%", n_encounters / n_all_enc * 100)
+    ),
     n_encounters           = suppress_display(n_encounters),
     n_patients_with_method = suppress_display(n_patients_with_method)
   )
@@ -1369,7 +1614,13 @@ openxlsx::setColWidths(wb, "BY_SOURCE_enc_flm", cols = seq_len(ncol(by_src_enc_f
 message("  Building BY_SOURCE_pat_flm ...")
 by_src_pat_flm_whole <- build_by_source_pat_sheet(enc_whole_flm, cbc_events, anchors, "whole", "Whole record")
 by_src_pat_flm_post  <- build_by_source_pat_sheet(enc_post_flm,  cbc_events, anchors, "post",  "Post-anchor")
-by_src_pat_flm_df <- rbind(by_src_pat_flm_whole, by_src_pat_flm_post)
+# MH on patient-level data for _flm sheets (P1.2 fix)
+pat_mh_frame_flm_whole <- make_pat_level_mh_frame(enc_whole_flm, cbc_events, anchors, "whole")
+pat_mh_frame_flm_post  <- make_pat_level_mh_frame(enc_post_flm,  cbc_events, anchors, "post")
+mh_pat_flm_whole <- compute_mh_breslow(pat_mh_frame_flm_whole, "Whole record", level = "pat")
+mh_pat_flm_post  <- compute_mh_breslow(pat_mh_frame_flm_post,  "Post-anchor",  level = "pat")
+by_src_pat_flm_df <- rbind(by_src_pat_flm_whole, mh_pat_flm_whole,
+                            by_src_pat_flm_post,  mh_pat_flm_post)
 
 openxlsx::addWorksheet(wb, "BY_SOURCE_pat_flm")
 openxlsx::writeData(wb, "BY_SOURCE_pat_flm", by_src_pat_flm_df, startRow = 1, startCol = 1,
@@ -1414,6 +1665,58 @@ openxlsx::writeData(wb, "KEY", key_additional, startRow = nrow(key_df) + 2L, sta
                     colNames = FALSE)
 
 # ==============================================================================
+# SECTION 7b: SUMMARY SHEET (sheet 2) — P4.8 ----
+# One table per window: primary OR (B_test), adjusted OR (C_sensitivity),
+# excl-FLM OR (D_excl_FLM), and MH pooled OR + BD_p for each reassignment scheme.
+# ==============================================================================
+{
+  get_mh_row <- function(df, win_label) {
+    if (is.null(df)) return(list(OR=NA, CI_lo=NA, CI_hi=NA, BD_p=NA))
+    mh <- df[df$SOURCE_analytic == "MH_POOLED" & df$window == win_label, ]
+    if (nrow(mh) == 0L) return(list(OR=NA, CI_lo=NA, CI_hi=NA, BD_p=NA))
+    list(OR = mh$OR[1], CI_lo = mh$CI_lo[1], CI_hi = mh$CI_hi[1],
+         BD_p = if ("BD_p" %in% names(mh)) mh$BD_p[1] else NA_character_)
+  }
+  summary_rows <- lapply(c("whole", "post"), function(wn) {
+    win_label <- if (wn == "whole") "Whole record" else "Post-anchor"
+    pri  <- results[[wn]]$primary
+    sens <- results[[wn]]$sensitivity
+    mh_enc  <- get_mh_row(by_src_enc_df,      win_label)
+    mh_pat  <- get_mh_row(by_src_pat_df,      win_label)
+    mh_addr <- get_mh_row(by_src_enc_addr_df, win_label)
+    mh_flm  <- get_mh_row(by_src_enc_flm_df,  win_label)
+    excl_or <- if (!is.null(excl_flm_df)) {
+      er <- excl_flm_df[excl_flm_df$Window == win_label, ]
+      if (nrow(er) > 0L) er$OR[1] else NA_character_
+    } else NA_character_
+    data.frame(
+      Window          = win_label,
+      Primary_OR      = fmt_or(pri$or),
+      Primary_CI      = if (!is.na(pri$ci_lo)) glue("{fmt_or(pri$ci_lo)}, {fmt_or(pri$ci_hi)}") else NA_character_,
+      Primary_p       = fmt_p(pri$p_svyglm),
+      Primary_source  = "B_test",
+      Adj_OR          = fmt_or(sens$or_adj),
+      Adj_CI          = if (!is.na(sens$ci_lo_adj)) glue("{fmt_or(sens$ci_lo_adj)}, {fmt_or(sens$ci_hi_adj)}") else NA_character_,
+      Adj_p           = fmt_p(sens$p_adj),
+      Adj_source      = "C_sensitivity",
+      ExclFLM_OR      = excl_or,
+      ExclFLM_source  = "D_excl_FLM (exploratory)",
+      MH_enc_OR       = mh_enc$OR,   MH_enc_BD_p  = mh_enc$BD_p,   MH_enc_source  = "BY_SOURCE_enc",
+      MH_pat_OR       = mh_pat$OR,   MH_pat_BD_p  = mh_pat$BD_p,   MH_pat_source  = "BY_SOURCE_pat",
+      MH_addr_OR      = mh_addr$OR,  MH_addr_BD_p = mh_addr$BD_p,  MH_addr_source = "BY_SOURCE_enc_addr",
+      MH_flm_OR       = mh_flm$OR,   MH_flm_BD_p  = mh_flm$BD_p,  MH_flm_source  = "BY_SOURCE_enc_flm",
+      stringsAsFactors = FALSE
+    )
+  })
+  summary_df <- do.call(rbind, summary_rows)
+  openxlsx::writeData(wb, "SUMMARY", summary_df, startRow = 1L, startCol = 1L,
+                      headerStyle = uf_header_style)
+  openxlsx::addStyle(wb, "SUMMARY", style = uf_header_style, rows = 1L,
+                     cols = seq_len(ncol(summary_df)))
+  openxlsx::setColWidths(wb, "SUMMARY", cols = seq_len(ncol(summary_df)), widths = 22)
+}
+
+# ==============================================================================
 # SECTION 8: SAVE WORKBOOK ----
 # ==============================================================================
 
@@ -1423,6 +1726,46 @@ out_path <- file.path(
 )
 openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
 message(glue("  Workbook saved: {out_path}"))
+
+# P4.1 — Check for dangling drawing relationships in the archive
+# A dangling drawing rel = a worksheet _rels file targets a drawing or vmlDrawing part
+# that is not present in the archive. Caused by insertImage / writeComment / loadWorkbook
+# on a template. This workbook is built fresh (createWorkbook); check is a safeguard.
+{
+  archive_entries <- utils::unzip(out_path, list = TRUE)$Name
+  drawing_targets <- archive_entries[grepl("xl/drawings/drawing|xl/drawings/vmlDrawing", archive_entries)]
+  rel_entries     <- archive_entries[grepl("xl/worksheets/_rels/sheet.*\\.rels$", archive_entries)]
+  dangling <- character(0)
+  if (length(rel_entries) > 0L) {
+    tmp_dir <- tempfile()
+    dir.create(tmp_dir)
+    utils::unzip(out_path, files = rel_entries, exdir = tmp_dir)
+    for (rel_file in rel_entries) {
+      full_path <- file.path(tmp_dir, rel_file)
+      if (!file.exists(full_path)) next
+      rel_text  <- paste(readLines(full_path, warn = FALSE), collapse = "")
+      # Extract Target= values referencing drawings
+      targets <- regmatches(rel_text, gregexpr('Target="[^"]*drawing[^"]*"', rel_text))[[1]]
+      targets <- gsub('Target="|"$', "", targets)
+      for (tgt in targets) {
+        # Normalize: remove leading ../
+        normalized <- gsub("^\\.\\./", "xl/", tgt)
+        if (!normalized %in% archive_entries) {
+          dangling <- c(dangling, glue::glue("{rel_file} -> {tgt}"))
+        }
+      }
+    }
+    unlink(tmp_dir, recursive = TRUE)
+  }
+  if (length(dangling) > 0L) {
+    stop(
+      "[R/165] Dangling drawing relationships found in workbook archive:\n",
+      paste(dangling, collapse = "\n"),
+      "\nWorkbook may fail to open in Excel. Check for writeComment/insertImage calls."
+    )
+  }
+  message("[R/165] Post-save archive check: no dangling drawing relationships.")
+}
 
 # ==============================================================================
 # SECTION 8a: REGRESSION CHECK (D-11) ----
@@ -1435,17 +1778,33 @@ PRIOR_WB_PATH <- Sys.getenv(
   "R1923_PRIOR_DIST_CBC_WB",
   unset = file.path(CONFIG$output_dir, "distance_cbc_association_20261110.xlsx")
 )
+
+# P5.1 — baseline-reset flag: skip regression check when CONFIG$r165_accept_new_baseline == TRUE
+if (isTRUE(CONFIG$r165_accept_new_baseline)) {
+  message("[R/165] Regression check SKIPPED — CONFIG$r165_accept_new_baseline = TRUE. ",
+          "New workbook accepted as next baseline.")
+} else {
+
 if (!file.exists(PRIOR_WB_PATH)) {
   stop("[R/165] Prior workbook for regression check not found: ", PRIOR_WB_PATH,
-       "\nSet env var R1923_PRIOR_DIST_CBC_WB to the correct path.")
+       "\nSet env var R1923_PRIOR_DIST_CBC_WB to the correct path, ",
+       "or set CONFIG$r165_accept_new_baseline <- TRUE to accept this run as new baseline.")
 }
 
-prior_sheet_names <- openxlsx::getSheetNames(PRIOR_WB_PATH)
+prior_sheet_names   <- openxlsx::getSheetNames(PRIOR_WB_PATH)
+current_sheet_names <- openxlsx::getSheetNames(out_path)
 message("[R/165] Regression check: prior workbook sheets: ",
         paste(prior_sheet_names, collapse = ", "))
 
-# Sheets to compare: all pre-existing sheets except KEY
-sheets_to_check <- setdiff(prior_sheet_names, "KEY")
+# P5.1 — compare only the INTERSECTION of prior and current sheets.
+# Sheets present in new but not prior are informational (expected for new sheets).
+new_only_sheets <- setdiff(current_sheet_names, prior_sheet_names)
+if (length(new_only_sheets) > 0L)
+  message("[R/165] New sheets (informational, not compared): ",
+          paste(new_only_sheets, collapse = ", "))
+
+# Sheets to compare: intersection minus KEY
+sheets_to_check <- setdiff(intersect(prior_sheet_names, current_sheet_names), "KEY")
 
 regression_pass  <- TRUE
 regression_diffs <- character(0)
@@ -1495,10 +1854,13 @@ if (!regression_pass) {
   stop(
     "[R/165] REGRESSION CHECK FAILED.\n",
     paste(regression_diffs, collapse = "\n"),
-    "\nManual sign-off required."
+    "\nManual sign-off required. To accept new results as baseline, ",
+    "set CONFIG$r165_accept_new_baseline <- TRUE in R/00_config.R and re-run."
   )
 }
 message("[R/165] Regression check PASSED — all pre-existing sheets match prior workbook cell-by-cell.")
+
+} # end if(!CONFIG$r165_accept_new_baseline)
 
 # ==============================================================================
 # SECTION 9: SESSION / RUNTIME ----

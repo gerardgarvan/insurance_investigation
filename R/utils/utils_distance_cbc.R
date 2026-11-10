@@ -319,6 +319,27 @@ assign_analytic_source <- function(enc, enc_all, addr_full, config) {
     dplyr::select(-addr_source_interval, -addr_source_recency, -addr_source_effective,
                   -addr_resolved, -modal_source)
 
+  # Per-method count messages (added for P1.1 — previously silent)
+  n_address  <- sum(enc_claims_resolved$source_reassign_method == "address")
+  n_modal    <- sum(enc_claims_resolved$source_reassign_method == "modal_encounter")
+  n_unresol  <- sum(enc_claims_resolved$source_reassign_method == "unresolved")
+  n_notreass <- nrow(enc_nonclaims)
+  message(glue::glue(
+    "assign_analytic_source: claims={nrow(enc_claims_resolved)} ",
+    "| address={n_address} | modal_encounter={n_modal} ",
+    "| unresolved={n_unresol} | not_reassigned={n_notreass}"
+  ))
+
+  # Stop if address reassignment yielded 0 while address history has FLM patient rows
+  n_flm_pats_in_addr <- sum(unique(enc_claims$ID) %in% unique(addr_full$ID))
+  if (n_address == 0L && n_flm_pats_in_addr > 0L) {
+    stop(glue::glue(
+      "assign_analytic_source: 0 claims encounters reassigned via address, ",
+      "but {n_flm_pats_in_addr} claims patient(s) appear in addr_full. ",
+      "Check ID class/format and date class of ADDRESS_PERIOD_START/END vs ADMIT_DATE."
+    ))
+  }
+
   # Restore caller's row order: bind, then re-index by the original ENCOUNTERID sequence.
   out <- dplyr::bind_rows(enc_nonclaims, enc_claims_resolved) |>
     dplyr::slice(match(enc$ENCOUNTERID, ENCOUNTERID))
@@ -328,6 +349,143 @@ assign_analytic_source <- function(enc, enc_all, addr_full, config) {
               nrow(out) == nrow(enc))
 
   out
+}
+
+# ------------------------------------------------------------------------------
+# suppress_by_source_row() -- display-only suppression for a single BY_SOURCE row
+#
+# Applied AFTER stats are computed (MH and all statistics use true counts).
+# Any row with a suppressed count cell gets its OR/CI/p/stat blanked and
+# test_method set to "suppressed". Percent cells are blanked when their
+# numerator or denominator is suppressed, or when pct is 0%/100% and the
+# denominator is small (<11).
+#
+# @param row  Single-row data.frame produced by build_by_source_sheet() or
+#             build_by_source_pat_sheet(). Must contain:
+#             n_far, n_not_far, n_cbc_far, n_cbc_not_far (character, possibly "<11"),
+#             pct_far_with_cbc, pct_not_far_with_cbc (character, possibly NA),
+#             chi_stat (or F_stat), p_value, OR, CI_lo, CI_hi, test_method.
+#
+# @return Modified row with stats blanked where required.
+# ------------------------------------------------------------------------------
+suppress_by_source_row <- function(row) {
+  suppressed_cells <- c("n_far", "n_not_far", "n_cbc_far", "n_cbc_not_far")
+  is_supp <- function(x) !is.na(x) && trimws(as.character(x)) == "<11"
+
+  any_count_suppressed <- any(vapply(suppressed_cells, function(col) {
+    if (col %in% names(row)) is_supp(row[[col]]) else FALSE
+  }, logical(1L)))
+
+  if (any_count_suppressed) {
+    # Blank OR, CI, stat, p; mark as suppressed
+    for (col in intersect(names(row), c("chi_stat", "F_stat", "p_value",
+                                         "OR", "CI_lo", "CI_hi"))) {
+      row[[col]] <- NA_character_
+    }
+    row[["test_method"]] <- "suppressed"
+  }
+
+  # Blank pct when numerator or denominator is suppressed
+  if (is_supp(row[["n_cbc_far"]]) || is_supp(row[["n_far"]]))
+    row[["pct_far_with_cbc"]] <- NA_character_
+  if (is_supp(row[["n_cbc_not_far"]]) || is_supp(row[["n_not_far"]]))
+    row[["pct_not_far_with_cbc"]] <- NA_character_
+
+  # Blank pct == "0.0%" or "100.0%" when denominator small (<11)
+  blank_extreme_pct <- function(pct_col, denom_col) {
+    pct <- row[[pct_col]]
+    den <- row[[denom_col]]
+    if (!is.na(pct) && !is.na(den) && !is_supp(den)) {
+      den_num <- suppressWarnings(as.integer(gsub(",", "", den)))
+      if (!is.na(den_num) && den_num < 11L) {
+        pv <- trimws(as.character(pct))
+        if (pv %in% c("0.0%", "100.0%")) row[[pct_col]] <<- NA_character_
+      }
+    }
+    row
+  }
+  if (all(c("pct_far_with_cbc", "n_far") %in% names(row)))
+    row <- blank_extreme_pct("pct_far_with_cbc", "n_far")
+  if (all(c("pct_not_far_with_cbc", "n_not_far") %in% names(row)))
+    row <- blank_extreme_pct("pct_not_far_with_cbc", "n_not_far")
+
+  row
+}
+
+# ------------------------------------------------------------------------------
+# assert_no_back_calculable() -- stop() if any visible cell determines a suppressed one
+#
+# Checks a single BY_SOURCE row: if the row has exactly one suppressed count cell
+# among {n_far, n_not_far, n_cbc_far, n_cbc_not_far} but the remaining cells plus
+# the visible totals allow back-calculation, we stop. In practice the row-level
+# 2x2 is: n_cbc_far, n_cbc_not_far, n_far-n_cbc_far (=n_notcbc_far),
+# n_not_far-n_cbc_not_far. Exactly one suppressed cell is determinable from the
+# others + row total. This function stops in that case.
+# ------------------------------------------------------------------------------
+assert_no_back_calculable <- function(row) {
+  count_cols <- c("n_far", "n_not_far", "n_cbc_far", "n_cbc_not_far")
+  is_supp <- function(x) !is.na(x) && trimws(as.character(x)) == "<11"
+  suppressed <- vapply(count_cols, function(col) {
+    if (col %in% names(row)) is_supp(row[[col]]) else FALSE
+  }, logical(1L))
+  n_supp <- sum(suppressed)
+  if (n_supp == 0L) return(invisible(NULL))  # nothing suppressed; fine
+
+  # Parse visible counts (non-suppressed, non-NA)
+  vals <- vapply(count_cols, function(col) {
+    if (!suppressed[[col]] && col %in% names(row)) {
+      v <- suppressWarnings(as.integer(gsub(",", "", as.character(row[[col]]))))
+      if (is.na(v)) NA_integer_ else v
+    } else NA_integer_
+  }, integer(1L))
+  names(vals) <- count_cols
+
+  # Back-calculation check: n_cbc_far + (n_far - n_cbc_far) = n_far, etc.
+  # If exactly 1 is suppressed and all 3 others are visible integers:
+  if (n_supp == 1L && sum(!is.na(vals)) == 3L) {
+    nf <- vals["n_far"]; nnf <- vals["n_not_far"]
+    ncf <- vals["n_cbc_far"]; ncnf <- vals["n_cbc_not_far"]
+    recoverable <- FALSE
+    # Can we derive n_cbc_far from n_far + (n_far - n_cbc_far)? Only if n_far - n_cbc_far visible.
+    # Equivalent: all three non-suppressed counts determine the fourth through row or col totals.
+    # Row totals: n_far = n_cbc_far + n_notcbc_far; n_not_far = n_cbc_not_far + n_notcbc_not_far
+    # Col totals: n_cbc_far + n_cbc_not_far = total_cbc; (n_far - n_cbc_far) + (n_not_far - n_cbc_not_far) = total_notcbc
+    if (suppressed["n_cbc_far"]    && !is.na(nf) && !is.na(ncnf)) {
+      # n_cbc_far = n_far - (n_far - n_cbc_far). We don't have n_notcbc_far separately but
+      # if n_far and n_not_far are both visible and n_cbc_not_far visible, we can get n_cbc_far
+      # from: n_cbc_far = (n_far + n_not_far - n_cbc_not_far) - n_not_far? No — but
+      # if n_far is visible AND n_notcbc_far can be derived: not directly.
+      # Simpler: if any two of the four cells are visible in the SAME row-group, the third
+      # interior cell in that group can be derived if we know the marginal.
+      # We DON'T expose n_far as separate from n_cbc_far here (they are distinct rows).
+      # The 2x2: a=n_notcbc_far, b=n_cbc_far, c=n_notcbc_not_far, d=n_cbc_not_far
+      # We have: n_far = a+b, n_not_far = c+d, n_cbc_far = b, n_cbc_not_far = d
+      # Suppressed = b (n_cbc_far). Visible: n_far (a+b), n_not_far (c+d), n_cbc_not_far (d).
+      # b = (a+b) - a. We know a+b but not a individually unless we know a from somewhere else.
+      # However if only n_far, n_not_far, n_cbc_not_far are shown (not a or c explicitly),
+      # b is NOT directly recoverable from visible cells alone.
+      # BUT if any pct_far_with_cbc is visible (= b/(a+b)*100) and n_far is visible -> b recoverable.
+      pct_far <- row[["pct_far_with_cbc"]]
+      if (!is.na(pct_far) && nchar(trimws(pct_far)) > 0 && trimws(pct_far) != "") {
+        recoverable <- TRUE
+      }
+    }
+    if (suppressed["n_cbc_not_far"] && !is.na(nnf)) {
+      pct_nf <- row[["pct_not_far_with_cbc"]]
+      if (!is.na(pct_nf) && nchar(trimws(pct_nf)) > 0 && trimws(pct_nf) != "") {
+        recoverable <- TRUE
+      }
+    }
+    if (recoverable) {
+      stop(glue::glue(
+        "assert_no_back_calculable: suppressed count is recoverable from visible pct+marginal ",
+        "in row SOURCE_analytic={if ('SOURCE_analytic' %in% names(row)) row[['SOURCE_analytic']] else '?'} ",
+        "window={if ('window' %in% names(row)) row[['window']] else '?'}. ",
+        "Blank the pct cell before writing."
+      ))
+    }
+  }
+  invisible(NULL)
 }
 
 # ------------------------------------------------------------------------------

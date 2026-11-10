@@ -243,6 +243,12 @@ CONFIG$medicare_source_codes <- character(0)
 # run while NA. Set to one of: "gee", "rao_scott", "patient_fisher".
 CONFIG$distance_assoc_method   <- "rao_scott"  # D-165-01: 2026-10-08
 
+# P5.1 baseline-reset flag for R/165 regression check.
+# Default FALSE: compare against PRIOR_WB_PATH cell-by-cell.
+# Set TRUE only when intentionally accepting a new baseline (e.g., after a confirmed
+# breaking change). When TRUE: regression check is skipped; a KEY row records the reason.
+CONFIG$r165_accept_new_baseline <- FALSE
+
 # GEE working correlation structure. "exchangeable" is the default; R/163 falls
 # back to "independence" if exchangeable is infeasible at this cluster size and
 # logs why. The chosen value is reported in 165-METHODS.md.
