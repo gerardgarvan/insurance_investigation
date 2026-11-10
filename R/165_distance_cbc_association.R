@@ -9,12 +9,14 @@
 #   and post-anchor). Produces the five-sheet deliverable workbook.
 #
 # Inputs:
-#   CONFIG$output_dir/encounter_distance_*.rds   (R/122 output; most recent by mtime)
+#   CONFIG$output_dir/encounter_distance_20261015.rds  (R/122 output; pinned via R165_R122_RDS or
+#                                                       hardcoded default; mtime fallback only when
+#                                                       env var unset AND default file absent)
 #   DuckDB: ENCOUNTER (ENCOUNTERID, ADMIT_DATE, DISCHARGE_DATE, ENC_TYPE, SOURCE)
 #   DuckDB: LAB_RESULT_CM (CBC re-derive; LOINCs 6690-2, 718-7, 777-3)
 #   get_hl_any_dx_ids() from utils_treatment.R    (anchor dates)
 #   R/116 output: encounter_ses_index_*.rds       (rurality; most recent by mtime)
-#   payer_summary from R/02_harmonize_payer.R     (reloaded via saved RDS)
+#   payer_summary: output/tables/payer_summary.csv (R/02_harmonize_payer.R); RDS preferred if present
 #
 # Outputs:
 #   CONFIG$output_dir/distance_cbc_association_<YYYYMMDD>.xlsx
@@ -76,8 +78,12 @@ message(glue("==================================================================
 # SECTION 1: INPUTS ----
 # ==============================================================================
 
-# 1a. enc_distance (R/122 output) -- pin with R165_R122_RDS or read most recent
-r165_override <- Sys.getenv("R165_R122_RDS", unset = "")
+# 1a. enc_distance (R/122 output) -- pin with R165_R122_RDS or pinned default; mtime fallback only
+#     if the pinned default is absent (should not happen in normal operation).
+r165_override <- Sys.getenv(
+  "R165_R122_RDS",
+  unset = file.path(CONFIG$output_dir, "encounter_distance_20261015.rds")
+)
 if (nzchar(r165_override)) {
   stopifnot("R165_R122_RDS file not found" = file.exists(r165_override))
   enc_dist_path <- r165_override; r165_pinned <- TRUE
@@ -184,22 +190,47 @@ if (length(ses_candidates) == 0L) {
     dplyr::select(PATID, ENCOUNTERID, ruca_code, ruca_category)
 }
 
-# 1j. Patient-level payer (payer_summary from R/02) -- read from output dir
-payer_candidates <- list.files(
+# 1j. Patient-level payer (payer_summary from R/02) -- prefer newest RDS; fall back to CSV
+payer_rds_candidates <- list.files(
   CONFIG$output_dir,
   pattern = "^payer_summary.*\\.rds$",
-  full.names = TRUE
+  full.names = TRUE,
+  recursive = TRUE
 )
-if (length(payer_candidates) == 0L) {
-  warning("payer_summary RDS not found in ", CONFIG$output_dir,
-          " -- payer covariate will be missing for all patients.")
-  payer_summary <- tibble::tibble(ID = character(0), PAYER_CATEGORY_PRIMARY = character(0))
+payer_csv_path <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")
+
+if (length(payer_rds_candidates) > 0L) {
+  payer_path <- payer_rds_candidates[which.max(file.mtime(payer_rds_candidates))]
+  payer_raw  <- readRDS(payer_path)
+} else if (file.exists(payer_csv_path)) {
+  payer_path <- payer_csv_path
+  payer_raw  <- readr::read_csv(payer_path, col_types = readr::cols(.default = "c"),
+                                show_col_types = FALSE)
 } else {
-  payer_path <- payer_candidates[which.max(file.mtime(payer_candidates))]
-  message(glue("  Loading payer_summary: {basename(payer_path)}"))
-  payer_summary <- readRDS(payer_path) |>
-    dplyr::select(ID, PAYER_CATEGORY_PRIMARY)
+  stop("[R/165] payer_summary not found as RDS in ", CONFIG$output_dir,
+       " or CSV at ", payer_csv_path, " -- run R/02_harmonize_payer.R first.")
 }
+
+if (!all(c("ID", "PAYER_CATEGORY_PRIMARY") %in% names(payer_raw)))
+  stop("[R/165] payer_summary is missing required columns ID and/or PAYER_CATEGORY_PRIMARY. ",
+       "Columns found: ", paste(names(payer_raw), collapse = ", "))
+if (anyDuplicated(payer_raw$ID))
+  stop("[R/165] payer_summary has duplicated IDs before transmute. ",
+       "n_dup=", sum(duplicated(payer_raw$ID)))
+
+payer_summary <- payer_raw |>
+  dplyr::transmute(ID = as.character(ID), PAYER_CATEGORY_PRIMARY)
+
+n_payer_matched <- sum(cohort_ids %in% payer_summary$ID)
+message(glue(
+  "  Loading payer_summary: {basename(payer_path)}",
+  "  (mtime: {format(file.mtime(payer_path), '%Y-%m-%d %H:%M')})",
+  "  n_patients={nrow(payer_summary)}, cohort_matched={n_payer_matched}",
+  .sep = "\n  "
+))
+if (n_payer_matched == 0L)
+  stop("[R/165] payer_summary matched 0 of ", length(cohort_ids),
+       " cohort IDs -- verify ID format (character vs numeric).")
 
 # ==============================================================================
 # SECTION 2: BUILD ENCOUNTER-LEVEL ANALYSIS SET ----
@@ -568,7 +599,8 @@ analyse_window <- function(window, enc_full, cbc_events, anchors) {
       paste("cbc_in_encounter ~ far_from_care_100mi +", paste(sens_covariates, collapse = " + "))
     )
     if (!has_payer)
-      message(glue("    sensitivity ({window}): payer unavailable, fitting without PAYER_CATEGORY_PRIMARY"))
+      stop(glue("[R/165] sensitivity ({window}): PAYER_CATEGORY_PRIMARY is entirely NA -- ",
+                "payer was not loaded correctly. Check 1j and re-run."))
 
     des_cc <- survey::svydesign(ids = ~ID, data = enc_cc)
     glm_adj <- survey::svyglm(sens_formula, design = des_cc, family = quasibinomial())
@@ -706,6 +738,18 @@ key_rows <- list(
     "CBC is captured only for labs recorded at OneFlorida+ partner sites; ",
     "labs drawn at outside facilities are missing, so lower CBC at far encounters ",
     "may partly reflect missing data."
+  )),
+  c("D-165-02 (2026-11-10)", paste0(
+    "Distance input moved from encounter_distance_20261006.rds to ",
+    "encounter_distance_20261015.rds (pinned). +38,078 newly geocoded encounters; ",
+    "0 existing distances changed; 0 crossed the 100 mi cutoff. ",
+    "A_crosstab/B_test/QC changes vs 20261104 are expected."
+  )),
+  c("D-165-03 (2026-11-10)", paste0(
+    "Payer covariate was never loaded in runs before 2026-11-10 (R/165 searched for an RDS; ",
+    "R/02 writes CSV only). The 20261104 C_sensitivity was fit WITHOUT payer despite KEY listing it. ",
+    "Fixed: reads output/tables/payer_summary.csv; missing payer is now fatal. ",
+    "C_sensitivity changes vs 20261104 are expected."
   ))
 )
 

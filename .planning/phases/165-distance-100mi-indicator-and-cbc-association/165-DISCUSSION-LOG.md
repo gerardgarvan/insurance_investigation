@@ -67,3 +67,29 @@
 ## Deferred Ideas
 
 None.
+
+---
+
+## D-165-02 (2026-11-10): Distance Input Re-pin
+
+**Decision:** Distance input moved from `encounter_distance_20261006.rds` to `encounter_distance_20261015.rds` (pinned).
+
+| Attribute | Value |
+|-----------|-------|
+| Prior file | encounter_distance_20261006.rds (pinned: TRUE in 20261104 run) |
+| New file | encounter_distance_20261015.rds (pinned: TRUE) |
+| Rows added | +38,078 newly geocoded encounters |
+| Existing distances changed | 0 |
+| Encounters crossing 100 mi cutoff | 0 |
+
+**Consequence:** A_crosstab, B_test, and QC changes vs 20261104 are expected. C_sensitivity may also change via sample size. 20261104 workbook is superseded; 20261110 re-run is the new baseline.
+
+---
+
+## D-165-03 (2026-11-10): Payer Covariate — Retrospective Fix
+
+**Decision:** Payer covariate was never loaded in runs before 2026-11-10. R/165 searched for `^payer_summary.*\.rds$` in `CONFIG$output_dir`; R/02 writes only `output/tables/payer_summary.csv`. The 20261104 C_sensitivity was therefore fit without `PAYER_CATEGORY_PRIMARY` despite the KEY sheet listing it as a covariate.
+
+**Fix:** 1j now prefers the newest RDS if one exists, then falls back to `output/tables/payer_summary.csv`; missing payer is fatal (stop() not warning). The silent `has_payer=FALSE` branch in the sensitivity model is also replaced with stop().
+
+**Consequence:** C_sensitivity changes vs 20261104 are expected (payer now included). All prior workbooks before 2026-11-10 carry a silent payer-omission defect in C_sensitivity.
