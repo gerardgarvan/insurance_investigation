@@ -1727,42 +1727,87 @@ out_path <- file.path(
 openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
 message(glue("  Workbook saved: {out_path}"))
 
-# P4.1 — Check for dangling drawing relationships in the archive
-# A dangling drawing rel = a worksheet _rels file targets a drawing or vmlDrawing part
-# that is not present in the archive. Caused by insertImage / writeComment / loadWorkbook
-# on a template. This workbook is built fresh (createWorkbook); check is a safeguard.
+# P4.1 — Strip dangling drawing relationships from the archive.
+# openxlsx 4.x writes Relationship entries for drawingN.xml / vmlDrawingN.vml in every
+# sheet's _rels file even when no drawing is inserted, but never writes the XML files.
+# Excel repairs silently; openpyxl fails. Strip them from the zip so the archive is clean.
 {
   archive_entries <- utils::unzip(out_path, list = TRUE)$Name
-  drawing_targets <- archive_entries[grepl("xl/drawings/drawing|xl/drawings/vmlDrawing", archive_entries)]
   rel_entries     <- archive_entries[grepl("xl/worksheets/_rels/sheet.*\\.rels$", archive_entries)]
-  dangling <- character(0)
+
   if (length(rel_entries) > 0L) {
     tmp_dir <- tempfile()
-    dir.create(tmp_dir)
-    utils::unzip(out_path, files = rel_entries, exdir = tmp_dir)
+    dir.create(tmp_dir, recursive = TRUE)
+    utils::unzip(out_path, exdir = tmp_dir)
+
+    n_stripped <- 0L
     for (rel_file in rel_entries) {
       full_path <- file.path(tmp_dir, rel_file)
       if (!file.exists(full_path)) next
-      rel_text  <- paste(readLines(full_path, warn = FALSE), collapse = "")
-      # Extract Target= values referencing drawings
-      targets <- regmatches(rel_text, gregexpr('Target="[^"]*drawing[^"]*"', rel_text))[[1]]
-      targets <- gsub('Target="|"$', "", targets)
-      for (tgt in targets) {
-        # Normalize: remove leading ../
+      rel_lines <- readLines(full_path, warn = FALSE)
+      rel_text  <- paste(rel_lines, collapse = "\n")
+
+      # Find Relationship entries whose Target references a drawing file absent from archive
+      rel_rx <- '<Relationship[^>]+Target="([^"]*drawing[^"]*)"[^/]*/>'
+      m <- gregexpr(rel_rx, rel_text, perl = TRUE)
+      rel_tags <- regmatches(rel_text, m)[[1]]
+
+      tags_to_remove <- character(0)
+      for (tag in rel_tags) {
+        tgt       <- sub('.*Target="([^"]*)".*', "\\1", tag)
         normalized <- gsub("^\\.\\./", "xl/", tgt)
         if (!normalized %in% archive_entries) {
-          dangling <- c(dangling, glue::glue("{rel_file} -> {tgt}"))
+          tags_to_remove <- c(tags_to_remove, tag)
+          n_stripped <- n_stripped + 1L
         }
       }
+
+      if (length(tags_to_remove) > 0L) {
+        for (tag in tags_to_remove) {
+          rel_text <- gsub(tag, "", rel_text, fixed = TRUE)
+        }
+        # Clean up blank lines left by removal
+        rel_text <- gsub("\n{2,}", "\n", rel_text)
+        writeLines(rel_text, full_path)
+      }
+    }
+
+    if (n_stripped > 0L) {
+      # Re-zip: delete original, recreate from tmp_dir contents
+      file.remove(out_path)
+      old_wd <- getwd()
+      setwd(tmp_dir)
+      all_files <- list.files(".", recursive = TRUE, all.files = TRUE)
+      utils::zip(file.path(old_wd, out_path), files = all_files)
+      setwd(old_wd)
+      message(glue::glue("[R/165] Stripped {n_stripped} dangling drawing rel(s) from archive (openxlsx 4.x artifact)."))
     }
     unlink(tmp_dir, recursive = TRUE)
   }
-  if (length(dangling) > 0L) {
-    stop(
-      "[R/165] Dangling drawing relationships found in workbook archive:\n",
-      paste(dangling, collapse = "\n"),
-      "\nWorkbook may fail to open in Excel. Check for writeComment/insertImage calls."
-    )
+
+  # Verify: re-check after stripping
+  archive_entries2 <- utils::unzip(out_path, list = TRUE)$Name
+  rel_entries2     <- archive_entries2[grepl("xl/worksheets/_rels/sheet.*\\.rels$", archive_entries2)]
+  dangling2 <- character(0)
+  if (length(rel_entries2) > 0L) {
+    tmp2 <- tempfile(); dir.create(tmp2, recursive = TRUE)
+    utils::unzip(out_path, files = rel_entries2, exdir = tmp2)
+    for (rel_file in rel_entries2) {
+      fp <- file.path(tmp2, rel_file)
+      if (!file.exists(fp)) next
+      txt <- paste(readLines(fp, warn = FALSE), collapse = "")
+      tgts <- regmatches(txt, gregexpr('Target="[^"]*drawing[^"]*"', txt))[[1]]
+      tgts <- gsub('Target="|"$', "", tgts)
+      for (tgt in tgts) {
+        norm <- gsub("^\\.\\./", "xl/", tgt)
+        if (!norm %in% archive_entries2) dangling2 <- c(dangling2, glue::glue("{rel_file} -> {tgt}"))
+      }
+    }
+    unlink(tmp2, recursive = TRUE)
+  }
+  if (length(dangling2) > 0L) {
+    stop("[R/165] Dangling drawing rels remain after stripping:\n",
+         paste(dangling2, collapse = "\n"))
   }
   message("[R/165] Post-save archive check: no dangling drawing relationships.")
 }
