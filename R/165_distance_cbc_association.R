@@ -1810,6 +1810,10 @@ sens_cbc_attr <- list(whole = NULL, post = NULL)
   # Build cbc_attr flag on enc_full: 1 for the one encounter chosen per CBC event
   # cbc_events has columns ID and cbc_date (from build_cbc_events)
   enc_attr <- enc_full |>
+    dplyr::left_join(
+      enc_dates_raw |> dplyr::select(ENCOUNTERID, DISCHARGE_DATE),
+      by = "ENCOUNTERID"
+    ) |>
     dplyr::select(ID, ENCOUNTERID, ADMIT_DATE, DISCHARGE_DATE, SOURCE_raw, cbc_in_encounter)
 
   # For each (ID, cbc_date) pair, find candidate encounters (CBC date in window)
