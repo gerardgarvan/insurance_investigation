@@ -1,0 +1,1128 @@
+flowchart LR
+  R_00_config_R["00_config.R"]
+  R_01_load_pcornet_R["01_load_pcornet.R"]
+  R_02_harmonize_payer_R["02_harmonize_payer.R"]
+  R_03_duckdb_ingest_R["03_duckdb_ingest.R"]
+  R_10_cohort_predicates_R["10_cohort_predicates.R"]
+  R_100_ruca_rurality_summary_R["100_ruca_rurality_summary.R"]
+  R_101_gantt_lifespan_collapse_R["101_gantt_lifespan_collapse.R"]
+  R_102_death_cause_nhl_flag_R["102_death_cause_nhl_flag.R"]
+  R_103_death_cause_diagnostic_R["103_death_cause_diagnostic.R"]
+  R_104_gantt_entire_history_R["104_gantt_entire_history.R"]
+  R_105_normalize_supportive_care_meaning_R["105_normalize_supportive_care_meaning.R"]
+  R_106_zip_change_frequency_R["106_zip_change_frequency.R"]
+  R_107_med_admin_dispensing_gap_diagnostic_R["107_med_admin_dispensing_gap_diagnostic.R"]
+  R_108_build_ndc_rxnorm_crosswalk_R["108_build_ndc_rxnorm_crosswalk.R"]
+  R_109_med_admin_dispensing_fix_impact_audit_R["109_med_admin_dispensing_fix_impact_audit.R"]
+  R_110_output_level_before_after_report_R["110_output_level_before_after_report.R"]
+  R_111_doi_classification_R["111_doi_classification.R"]
+  R_112_doi_attribution_report_R["112_doi_attribution_report.R"]
+  R_113_confirmed_hl_nhl_tumor_registry_counts_R["113_confirmed_hl_nhl_tumor_registry_counts.R"]
+  R_114_zip9_temporal_lookup_R["114_zip9_temporal_lookup.R"]
+  R_115_zip_stability_counts_R["115_zip_stability_counts.R"]
+  R_116_encounter_ses_index_R["116_encounter_ses_index.R"]
+  R_117_build_svi_zcta_R["117_build_svi_zcta.R"]
+  R_118_build_zip5_adi_summary_R["118_build_zip5_adi_summary.R"]
+  R_119_collate_adi_zip9_R["119_collate_adi_zip9.R"]
+  R_120_zip5_backfill_concordance_R["120_zip5_backfill_concordance.R"]
+  R_121_zip_problem_inventory_R["121_zip_problem_inventory.R"]
+  R_122_encounter_distance_R["122_encounter_distance.R"]
+  R_122a_build_zip9_centroid_crosswalk_R["122a_build_zip9_centroid_crosswalk.R"]
+  R_131_update_xlsx_med_admin_and_normalized_name_R["131_update_xlsx_med_admin_and_normalized_name.R"]
+  R_14_build_cohort_R["14_build_cohort.R"]
+  R_142_gantt_180_export_R["142_gantt_180_export.R"]
+  R_143_02_checkpoint_verify_R["143_02_checkpoint_verify.R"]
+  R_146_stage_sdi_reference_R["146_stage_sdi_reference.R"]
+  R_147_surveillance_modality_frequency_R["147_surveillance_modality_frequency.R"]
+  R_147_verify_vs_1006_R["147_verify_vs_1006.R"]
+  R_161_death_sensitivity_R["161_death_sensitivity.R"]
+  R_161_diag_anchor_followup_R["161_diag_anchor_followup.R"]
+  R_162_export_patient_modality_dates_R["162_export_patient_modality_dates.R"]
+  R_163_distance_cbc_methods_prototype_R["163_distance_cbc_methods_prototype.R"]
+  R_164_dox_baseline_counts_R["164_dox_baseline_counts.R"]
+  R_165_distance_cbc_association_R["165_distance_cbc_association.R"]
+  R_165_validate_workbook_R["165_validate_workbook.R"]
+  R_166_survivorship_modality_rates_R["166_survivorship_modality_rates.R"]
+  R_167_anthracycline_echo_R["167_anthracycline_echo.R"]
+  R_168_survivorship_workbook_R["168_survivorship_workbook.R"]
+  R_169_single_source_care_R["169_single_source_care.R"]
+  R_170_nhl_gantt_subsets_R["170_nhl_gantt_subsets.R"]
+  R_171_verify_survivorship_R["171_verify_survivorship.R"]
+  R_177_temporal_match_sizing_R["177_temporal_match_sizing.R"]
+  R_179_cbc_patient_year_R["179_cbc_patient_year.R"]
+  R_180_cbc_missing_capture_R["180_cbc_missing_capture.R"]
+  R_181_cbc_prior_year_R["181_cbc_prior_year.R"]
+  R_182_facility_zip_recovery_report_R["182_facility_zip_recovery_report.R"]
+  R_183_mice_sensitivity_distance_R["183_mice_sensitivity_distance.R"]
+  R_184_modality_rate_model_R["184_modality_rate_model.R"]
+  R_186_survivorship_rate_granularity_R["186_survivorship_rate_granularity.R"]
+  R_187_anthracycline_exposure_R["187_anthracycline_exposure.R"]
+  R_188_echo_rate_since_anthracycline_R["188_echo_rate_since_anthracycline.R"]
+  R_189_nhl_explainer_R["189_nhl_explainer.R"]
+  R_191_am_verification_R["191_am_verification.R"]
+  R_192_source_step0_probe_R["192_source_step0_probe.R"]
+  R_192b_payer_type_probe_R["192b_payer_type_probe.R"]
+  R_20_treatment_inventory_R["20_treatment_inventory.R"]
+  R_21_investigate_unmatched_R["21_investigate_unmatched.R"]
+  R_22_investigate_unmatched_ndc_R["22_investigate_unmatched_ndc.R"]
+  R_23_combine_reports_R["23_combine_reports.R"]
+  R_24_treatment_codes_resolved_R["24_treatment_codes_resolved.R"]
+  R_25_treatment_durations_R["25_treatment_durations.R"]
+  R_26_treatment_episodes_R["26_treatment_episodes.R"]
+  R_27_drug_name_resolution_R["27_drug_name_resolution.R"]
+  R_28_episode_classification_R["28_episode_classification.R"]
+  R_29_first_line_and_death_analysis_R["29_first_line_and_death_analysis.R"]
+  R_30_condition_linkage_investigation_R["30_condition_linkage_investigation.R"]
+  R_31_pre_diagnosis_treatments_R["31_pre_diagnosis_treatments.R"]
+  R_32_secondary_malignancy_table_R["32_secondary_malignancy_table.R"]
+  R_33_code_verification_R["33_code_verification.R"]
+  R_34_hl_nhl_overlap_validation_R["34_hl_nhl_overlap_validation.R"]
+  R_35_death_cause_quality_R["35_death_cause_quality.R"]
+  R_36_tableau_ready_tables_R["36_tableau_ready_tables.R"]
+  R_39_run_all_investigations_R["39_run_all_investigations.R"]
+  R_40_cancer_site_frequency_R["40_cancer_site_frequency.R"]
+  R_41_extract_all_codes_R["41_extract_all_codes.R"]
+  R_42_build_code_descriptions_R["42_build_code_descriptions.R"]
+  R_43_cancer_site_confirmation_R["43_cancer_site_confirmation.R"]
+  R_44_cancer_site_confirmation_7day_R["44_cancer_site_confirmation_7day.R"]
+  R_45_cancer_summary_R["45_cancer_summary.R"]
+  R_46_cancer_summary_table_R["46_cancer_summary_table.R"]
+  R_47_cancer_summary_refined_R["47_cancer_summary_refined.R"]
+  R_48_cancer_summary_post_hl_R["48_cancer_summary_post_hl.R"]
+  R_49_cancer_summary_pre_post_R["49_cancer_summary_pre_post.R"]
+  R_50_all_codes_resolved_R["50_all_codes_resolved.R"]
+  R_51_post_death_encounter_investigation_R["51_post_death_encounter_investigation.R"]
+  R_52_gantt_v2_export_R["52_gantt_v2_export.R"]
+  R_52_strange_death_source_and_enc_type_R["52_strange_death_source_and_enc_type.R"]
+  R_53_death_date_validation_R["53_death_date_validation.R"]
+  R_54_investigate_sct_0362_R["54_investigate_sct_0362.R"]
+  R_55_verify_replaced_by_codes_R["55_verify_replaced_by_codes.R"]
+  R_56_new_tables_from_groupings_R["56_new_tables_from_groupings.R"]
+  R_57_drug_grouping_instances_R["57_drug_grouping_instances.R"]
+  R_57_explore_dx_deduplication_R["57_explore_dx_deduplication.R"]
+  R_58_co_administration_analysis_R["58_co_administration_analysis.R"]
+  R_58_code_reference_tables_R["58_code_reference_tables.R"]
+  R_59_death_date_summary_R["59_death_date_summary.R"]
+  R_60_tiered_same_day_payer_R["60_tiered_same_day_payer.R"]
+  R_61_tiered_encounter_level_R["61_tiered_encounter_level.R"]
+  R_62_tiered_date_level_R["62_tiered_date_level.R"]
+  R_63_value_audit_R["63_value_audit.R"]
+  R_64_all_source_missingness_R["64_all_source_missingness.R"]
+  R_65_uf_insurance_missingness_R["65_uf_insurance_missingness.R"]
+  R_66_all_site_duplicate_dates_R["66_all_site_duplicate_dates.R"]
+  R_67_multi_source_overlap_detection_R["67_multi_source_overlap_detection.R"]
+  R_68_overlap_classification_R["68_overlap_classification.R"]
+  R_69_per_patient_source_detection_R["69_per_patient_source_detection.R"]
+  R_70_visualize_waterfall_R["70_visualize_waterfall.R"]
+  R_71_visualize_sankey_R["71_visualize_sankey.R"]
+  R_72_generate_pptx_R["72_generate_pptx.R"]
+  R_73_generate_phase19_20_pptx_R["73_generate_phase19_20_pptx.R"]
+  R_74_generate_documentation_R["74_generate_documentation.R"]
+  R_75_encounter_analysis_R["75_encounter_analysis.R"]
+  R_76_treatment_source_coverage_R["76_treatment_source_coverage.R"]
+  R_77_venn_hl_nlphl_R["77_venn_hl_nlphl.R"]
+  R_78_venn_lymphoma_3way_R["78_venn_lymphoma_3way.R"]
+  R_79_drug_name_consistency_audit_R["79_drug_name_consistency_audit.R"]
+  R_80_smoke_test_backends_R["80_smoke_test_backends.R"]
+  R_81_parity_test_cohort_R["81_parity_test_cohort.R"]
+  R_82_benchmark_cohort_R["82_benchmark_cohort.R"]
+  R_83_generate_speedup_report_R["83_generate_speedup_report.R"]
+  R_84_test_durations_R["84_test_durations.R"]
+  R_85_test_episodes_R["85_test_episodes.R"]
+  R_86_smoke_test_foundation_R["86_smoke_test_foundation.R"]
+  R_87_smoke_test_full_pipeline_R["87_smoke_test_full_pipeline.R"]
+  R_88_smoke_test_comprehensive_R["88_smoke_test_comprehensive.R"]
+  R_89_generate_reference_manual_R["89_generate_reference_manual.R"]
+  R_90_diagnostics_R["90_diagnostics.R"]
+  R_91_data_quality_summary_R["91_data_quality_summary.R"]
+  R_92_dx_gap_analysis_R["92_dx_gap_analysis.R"]
+  R_93_no_treatment_medicaid_R["93_no_treatment_medicaid.R"]
+  R_94_flm_duplicate_dates_R["94_flm_duplicate_dates.R"]
+  R_95_multi_source_overlap_av_th_R["95_multi_source_overlap_av_th.R"]
+  R_95_validate_dt_infrastructure_R["95_validate_dt_infrastructure.R"]
+  R_96_overlap_classification_av_th_R["96_overlap_classification_av_th.R"]
+  R_96_validate_payer_dt_R["96_validate_payer_dt.R"]
+  R_97_payer_code_frequency_av_th_R["97_payer_code_frequency_av_th.R"]
+  R_97_validate_r60_migration_R["97_validate_r60_migration.R"]
+  R_98_radiation_cpt_audit_R["98_radiation_cpt_audit.R"]
+  R_98_validate_r28_migration_R["98_validate_r28_migration.R"]
+  R_99_claude_diagnostics_R["99_claude_diagnostics.R"]
+  R_99_compare_drug_resolution_R["99_compare_drug_resolution.R"]
+  R_99_validate_gantt_consolidation_R["99_validate_gantt_consolidation.R"]
+  R_autoimmune_code_review_R["autoimmune_code_review.R"]
+  R_cbc_year1_chisq_R["cbc_year1_chisq.R"]
+  R_diagnostics_146_sdi_coverage_quantifier_R["146_sdi_coverage_quantifier.R"]
+  R_filter_strange_death_csvs_R["filter_strange_death_csvs.R"]
+  R_test_phase78_human_R["test_phase78_human.R"]
+  R_tests_R["tests.R"]
+  R_tools_build_hrsa_crosswalk_R["build_hrsa_crosswalk.R"]
+  R_utils_utils_address_R["utils_address.R"]
+  R_utils_utils_distance_hist_R["utils_distance_hist.R"]
+  R_utils_utils_duckdb_R["utils_duckdb.R"]
+  R_utils_utils_schema_probe_R["utils_schema_probe.R"]
+  R_utils_utils_snapshot_R["utils_snapshot.R"]
+  R_utils_utils_surveillance_R["utils_surveillance.R"]
+  R_utils_utils_treatment_R["utils_treatment.R"]
+  R_utils_utils_zip_crosswalk_R["utils_zip_crosswalk.R"]
+  _unresolved_list_files_(("<unresolved:list.files>"))
+  _unresolved_source_(("<unresolved:source>"))
+  _unresolved_readRDS_(("<unresolved:readRDS>"))
+  _unresolved_saveRDS_(("<unresolved:saveRDS>"))
+  _unresolved_write_csv_(("<unresolved:write_csv>"))
+  _unresolved_dbExecute_(("<unresolved:dbExecute>"))
+  _unresolved_read_excel_(("<unresolved:read_excel>"))
+  _unresolved_read_csv_(("<unresolved:read.csv>"))
+  _unresolved_write_csv_(("<unresolved:write.csv>"))
+  _unresolved_read_csv_(("<unresolved:read_csv>"))
+  _unresolved_saveWorkbook_(("<unresolved:saveWorkbook>"))
+  _unresolved_read_xlsx_(("<unresolved:read.xlsx>"))
+  _unresolved_png_(("<unresolved:png>"))
+  _unresolved_ggsave_(("<unresolved:ggsave>"))
+  _unresolved_loadWorkbook_(("<unresolved:loadWorkbook>"))
+  _unresolved_sys_source_(("<unresolved:sys.source>"))
+  R_00_config_R -->|reads| _unresolved_list_files_
+  R_01_load_pcornet_R -->|sources| _unresolved_source_
+  R_01_load_pcornet_R -->|reads| _unresolved_readRDS_
+  R_01_load_pcornet_R -->|writes| _unresolved_saveRDS_
+  R_01_load_pcornet_R -->|reads| _unresolved_readRDS_
+  R_01_load_pcornet_R -->|writes| _unresolved_saveRDS_
+  R_02_harmonize_payer_R -->|sources| _unresolved_source_
+  R_02_harmonize_payer_R -->|writes| _unresolved_write_csv_
+  R_03_duckdb_ingest_R -->|sources| _unresolved_source_
+  R_03_duckdb_ingest_R -->|sources| _unresolved_source_
+  R_03_duckdb_ingest_R -->|reads| _unresolved_readRDS_
+  R_03_duckdb_ingest_R -->|writes| _unresolved_dbExecute_
+  R_03_duckdb_ingest_R -->|writes| _unresolved_dbExecute_
+  R_03_duckdb_ingest_R -->|writes| _unresolved_write_csv_
+  R_10_cohort_predicates_R -->|writes| _unresolved_write_csv_
+  R_100_ruca_rurality_summary_R -->|sources| _unresolved_source_
+  R_100_ruca_rurality_summary_R -->|sources| _unresolved_source_
+  R_100_ruca_rurality_summary_R -->|sources| _unresolved_source_
+  R_100_ruca_rurality_summary_R -->|sources| _unresolved_source_
+  R_100_ruca_rurality_summary_R -->|reads| _unresolved_read_excel_
+  R_100_ruca_rurality_summary_R -->|reads| _unresolved_readRDS_
+  R_100_ruca_rurality_summary_R -->|reads| _unresolved_readRDS_
+  R_101_gantt_lifespan_collapse_R -->|sources| _unresolved_source_
+  R_101_gantt_lifespan_collapse_R -->|reads| _unresolved_read_csv_
+  R_101_gantt_lifespan_collapse_R -->|writes| _unresolved_write_csv_
+  R_102_death_cause_nhl_flag_R -->|sources| _unresolved_source_
+  R_102_death_cause_nhl_flag_R -->|sources| _unresolved_source_
+  R_102_death_cause_nhl_flag_R -->|sources| _unresolved_source_
+  R_102_death_cause_nhl_flag_R -->|writes| _unresolved_write_csv_
+  R_103_death_cause_diagnostic_R -->|sources| _unresolved_source_
+  R_103_death_cause_diagnostic_R -->|sources| _unresolved_source_
+  R_103_death_cause_diagnostic_R -->|sources| _unresolved_source_
+  R_103_death_cause_diagnostic_R -->|sources| _unresolved_source_
+  R_103_death_cause_diagnostic_R -->|writes| _unresolved_write_csv_
+  R_104_gantt_entire_history_R -->|sources| _unresolved_source_
+  R_104_gantt_entire_history_R -->|reads| _unresolved_read_csv_
+  R_104_gantt_entire_history_R -->|reads| _unresolved_read_csv_
+  R_104_gantt_entire_history_R -->|writes| _unresolved_write_csv_
+  R_105_normalize_supportive_care_meaning_R -->|sources| _unresolved_source_
+  R_105_normalize_supportive_care_meaning_R -->|reads| _unresolved_read_csv_
+  R_105_normalize_supportive_care_meaning_R -->|writes| _unresolved_write_csv_
+  R_106_zip_change_frequency_R -->|sources| _unresolved_source_
+  R_106_zip_change_frequency_R -->|reads| _unresolved_read_csv_
+  R_107_med_admin_dispensing_gap_diagnostic_R -->|sources| _unresolved_source_
+  R_107_med_admin_dispensing_gap_diagnostic_R -->|sources| _unresolved_source_
+  R_107_med_admin_dispensing_gap_diagnostic_R -->|sources| _unresolved_source_
+  R_107_med_admin_dispensing_gap_diagnostic_R -->|sources| _unresolved_source_
+  R_107_med_admin_dispensing_gap_diagnostic_R -->|writes| _unresolved_write_csv_
+  R_108_build_ndc_rxnorm_crosswalk_R -->|sources| _unresolved_source_
+  R_108_build_ndc_rxnorm_crosswalk_R -->|sources| _unresolved_source_
+  R_108_build_ndc_rxnorm_crosswalk_R -->|sources| _unresolved_source_
+  R_108_build_ndc_rxnorm_crosswalk_R -->|sources| _unresolved_source_
+  R_108_build_ndc_rxnorm_crosswalk_R -->|writes| _unresolved_saveRDS_
+  R_108_build_ndc_rxnorm_crosswalk_R -->|writes| _unresolved_write_csv_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|sources| _unresolved_source_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|sources| _unresolved_source_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|sources| _unresolved_source_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|sources| _unresolved_source_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|reads| _unresolved_readRDS_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|reads| _unresolved_read_csv_
+  R_109_med_admin_dispensing_fix_impact_audit_R -->|writes| _unresolved_write_csv_
+  R_110_output_level_before_after_report_R -->|sources| _unresolved_source_
+  R_110_output_level_before_after_report_R -->|reads| _unresolved_readRDS_
+  R_110_output_level_before_after_report_R -->|reads| _unresolved_readRDS_
+  R_110_output_level_before_after_report_R -->|reads| _unresolved_read_csv_
+  R_110_output_level_before_after_report_R -->|reads| _unresolved_read_csv_
+  R_110_output_level_before_after_report_R -->|reads| _unresolved_read_csv_
+  R_110_output_level_before_after_report_R -->|reads| _unresolved_readRDS_
+  R_111_doi_classification_R -->|sources| _unresolved_source_
+  R_111_doi_classification_R -->|sources| _unresolved_source_
+  R_111_doi_classification_R -->|sources| _unresolved_source_
+  R_111_doi_classification_R -->|sources| _unresolved_source_
+  R_111_doi_classification_R -->|sources| _unresolved_source_
+  R_111_doi_classification_R -->|sources| _unresolved_source_
+  R_111_doi_classification_R -->|writes| _unresolved_saveRDS_
+  R_111_doi_classification_R -->|writes| _unresolved_saveRDS_
+  R_112_doi_attribution_report_R -->|sources| _unresolved_source_
+  R_112_doi_attribution_report_R -->|sources| _unresolved_source_
+  R_112_doi_attribution_report_R -->|sources| _unresolved_source_
+  R_112_doi_attribution_report_R -->|sources| _unresolved_source_
+  R_112_doi_attribution_report_R -->|reads| _unresolved_readRDS_
+  R_112_doi_attribution_report_R -->|reads| _unresolved_readRDS_
+  R_112_doi_attribution_report_R -->|reads| _unresolved_readRDS_
+  R_113_confirmed_hl_nhl_tumor_registry_counts_R -->|sources| _unresolved_source_
+  R_113_confirmed_hl_nhl_tumor_registry_counts_R -->|sources| _unresolved_source_
+  R_114_zip9_temporal_lookup_R -->|sources| _unresolved_source_
+  R_114_zip9_temporal_lookup_R -->|reads| _unresolved_read_csv_
+  R_115_zip_stability_counts_R -->|sources| _unresolved_source_
+  R_115_zip_stability_counts_R -->|reads| _unresolved_read_csv_
+  R_115_zip_stability_counts_R -->|sources| _unresolved_source_
+  R_115_zip_stability_counts_R -->|writes| _unresolved_saveRDS_
+  R_116_encounter_ses_index_R -->|sources| _unresolved_source_
+  R_116_encounter_ses_index_R -->|reads| _unresolved_read_csv_
+  R_116_encounter_ses_index_R -->|reads| _unresolved_read_excel_
+  R_116_encounter_ses_index_R -->|writes| _unresolved_saveRDS_
+  R_117_build_svi_zcta_R -->|writes| _unresolved_write_csv_
+  R_118_build_zip5_adi_summary_R -->|writes| _unresolved_write_csv_
+  R_119_collate_adi_zip9_R -->|reads| _unresolved_list_files_
+  R_119_collate_adi_zip9_R -->|writes| _unresolved_write_csv_
+  R_120_zip5_backfill_concordance_R -->|sources| _unresolved_source_
+  R_121_zip_problem_inventory_R -->|sources| _unresolved_source_
+  R_121_zip_problem_inventory_R -->|writes| _unresolved_saveWorkbook_
+  R_121_zip_problem_inventory_R -->|writes| _unresolved_saveWorkbook_
+  R_121_zip_problem_inventory_R -->|writes| _unresolved_saveRDS_
+  R_122_encounter_distance_R -->|sources| _unresolved_source_
+  R_122_encounter_distance_R -->|sources| _unresolved_source_
+  R_122_encounter_distance_R -->|sources| _unresolved_source_
+  R_122_encounter_distance_R -->|sources| _unresolved_source_
+  R_122_encounter_distance_R -->|sources| _unresolved_source_
+  R_122_encounter_distance_R -->|sources| _unresolved_source_
+  R_122_encounter_distance_R -->|writes| _unresolved_saveRDS_
+  R_122_encounter_distance_R -->|writes| _unresolved_saveRDS_
+  R_122_encounter_distance_R -->|reads| _unresolved_readRDS_
+  R_122a_build_zip9_centroid_crosswalk_R -->|sources| _unresolved_source_
+  R_122a_build_zip9_centroid_crosswalk_R -->|reads| _unresolved_list_files_
+  R_122a_build_zip9_centroid_crosswalk_R -->|writes| _unresolved_dbExecute_
+  R_122a_build_zip9_centroid_crosswalk_R -->|writes| _unresolved_dbExecute_
+  R_122a_build_zip9_centroid_crosswalk_R -->|writes| _unresolved_dbExecute_
+  R_122a_build_zip9_centroid_crosswalk_R -->|writes| _unresolved_dbExecute_
+  R_122a_build_zip9_centroid_crosswalk_R -->|writes| _unresolved_dbExecute_
+  R_122a_build_zip9_centroid_crosswalk_R -->|writes| _unresolved_dbExecute_
+  R_131_update_xlsx_med_admin_and_normalized_name_R -->|sources| _unresolved_source_
+  R_131_update_xlsx_med_admin_and_normalized_name_R -->|sources| _unresolved_source_
+  R_131_update_xlsx_med_admin_and_normalized_name_R -->|reads| _unresolved_read_csv_
+  R_131_update_xlsx_med_admin_and_normalized_name_R -->|writes| _unresolved_write_csv_
+  R_131_update_xlsx_med_admin_and_normalized_name_R -->|writes| _unresolved_write_csv_
+  R_131_update_xlsx_med_admin_and_normalized_name_R -->|writes| _unresolved_write_csv_
+  R_14_build_cohort_R -->|sources| _unresolved_source_
+  R_14_build_cohort_R -->|sources| _unresolved_source_
+  R_14_build_cohort_R -->|writes| _unresolved_saveRDS_
+  R_14_build_cohort_R -->|writes| _unresolved_saveRDS_
+  R_14_build_cohort_R -->|writes| _unresolved_saveRDS_
+  R_14_build_cohort_R -->|sources| _unresolved_source_
+  R_14_build_cohort_R -->|sources| _unresolved_source_
+  R_14_build_cohort_R -->|sources| _unresolved_source_
+  R_14_build_cohort_R -->|writes| _unresolved_saveRDS_
+  R_14_build_cohort_R -->|writes| _unresolved_saveRDS_
+  R_14_build_cohort_R -->|writes| _unresolved_write_csv_
+  R_142_gantt_180_export_R -->|sources| _unresolved_source_
+  R_142_gantt_180_export_R -->|sources| _unresolved_source_
+  R_142_gantt_180_export_R -->|sources| _unresolved_source_
+  R_142_gantt_180_export_R -->|sources| _unresolved_source_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_142_gantt_180_export_R -->|reads| _unresolved_read_csv_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_142_gantt_180_export_R -->|writes| _unresolved_write_csv_
+  R_142_gantt_180_export_R -->|writes| _unresolved_write_csv_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_142_gantt_180_export_R -->|reads| _unresolved_read_csv_
+  R_142_gantt_180_export_R -->|reads| _unresolved_read_csv_
+  R_142_gantt_180_export_R -->|reads| _unresolved_read_csv_
+  R_142_gantt_180_export_R -->|reads| _unresolved_readRDS_
+  R_143_02_checkpoint_verify_R -->|sources| _unresolved_source_
+  R_143_02_checkpoint_verify_R -->|reads| _unresolved_readRDS_
+  R_143_02_checkpoint_verify_R -->|sources| _unresolved_source_
+  R_143_02_checkpoint_verify_R -->|sources| _unresolved_source_
+  R_143_02_checkpoint_verify_R -->|reads| _unresolved_readRDS_
+  R_143_02_checkpoint_verify_R -->|reads| _unresolved_readRDS_
+  R_143_02_checkpoint_verify_R -->|sources| _unresolved_source_
+  R_143_02_checkpoint_verify_R -->|reads| _unresolved_readRDS_
+  R_143_02_checkpoint_verify_R -->|sources| _unresolved_source_
+  R_146_stage_sdi_reference_R -->|reads| _unresolved_read_csv_
+  R_146_stage_sdi_reference_R -->|writes| _unresolved_write_csv_
+  R_146_stage_sdi_reference_R -->|reads| _unresolved_read_csv_
+  R_147_surveillance_modality_frequency_R -->|sources| _unresolved_source_
+  R_147_surveillance_modality_frequency_R -->|sources| _unresolved_source_
+  R_147_surveillance_modality_frequency_R -->|sources| _unresolved_source_
+  R_147_surveillance_modality_frequency_R -->|sources| _unresolved_source_
+  R_147_surveillance_modality_frequency_R -->|sources| _unresolved_source_
+  R_147_surveillance_modality_frequency_R -->|writes| _unresolved_write_csv_
+  R_147_surveillance_modality_frequency_R -->|reads| _unresolved_read_excel_
+  R_147_surveillance_modality_frequency_R -->|reads| _unresolved_read_excel_
+  R_147_surveillance_modality_frequency_R -->|writes| _unresolved_saveWorkbook_
+  R_147_surveillance_modality_frequency_R -->|writes| _unresolved_write_csv_
+  R_147_surveillance_modality_frequency_R -->|writes| _unresolved_saveRDS_
+  R_147_surveillance_modality_frequency_R -->|writes| _unresolved_saveRDS_
+  R_147_surveillance_modality_frequency_R -->|writes| _unresolved_write_csv_
+  R_147_verify_vs_1006_R -->|sources| _unresolved_source_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_read_excel_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_147_verify_vs_1006_R -->|reads| _unresolved_readRDS_
+  R_161_death_sensitivity_R -->|sources| _unresolved_source_
+  R_161_death_sensitivity_R -->|writes| _unresolved_write_csv_
+  R_161_death_sensitivity_R -->|writes| _unresolved_write_csv_
+  R_161_diag_anchor_followup_R -->|writes| _unresolved_write_csv_
+  R_161_diag_anchor_followup_R -->|reads| _unresolved_readRDS_
+  R_161_diag_anchor_followup_R -->|reads| _unresolved_read_csv_
+  R_162_export_patient_modality_dates_R -->|sources| _unresolved_source_
+  R_162_export_patient_modality_dates_R -->|reads| _unresolved_list_files_
+  R_162_export_patient_modality_dates_R -->|reads| _unresolved_readRDS_
+  R_162_export_patient_modality_dates_R -->|writes| _unresolved_write_csv_
+  R_163_distance_cbc_methods_prototype_R -->|sources| _unresolved_source_
+  R_163_distance_cbc_methods_prototype_R -->|reads| _unresolved_list_files_
+  R_163_distance_cbc_methods_prototype_R -->|reads| _unresolved_readRDS_
+  R_163_distance_cbc_methods_prototype_R -->|writes| _unresolved_saveRDS_
+  R_164_dox_baseline_counts_R -->|sources| _unresolved_source_
+  R_164_dox_baseline_counts_R -->|reads| _unresolved_readRDS_
+  R_164_dox_baseline_counts_R -->|writes| _unresolved_saveRDS_
+  R_164_dox_baseline_counts_R -->|writes| _unresolved_write_csv_
+  R_165_distance_cbc_association_R -->|sources| _unresolved_source_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_list_files_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_readRDS_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_list_files_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_readRDS_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_list_files_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_readRDS_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_read_csv_
+  R_165_distance_cbc_association_R -->|writes| _unresolved_saveWorkbook_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_list_files_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_read_xlsx_
+  R_165_distance_cbc_association_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|sources| _unresolved_source_
+  R_165_validate_workbook_R -->|reads| _unresolved_list_files_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_165_validate_workbook_R -->|reads| _unresolved_read_xlsx_
+  R_166_survivorship_modality_rates_R -->|sources| _unresolved_source_
+  R_166_survivorship_modality_rates_R -->|sources| _unresolved_source_
+  R_166_survivorship_modality_rates_R -->|sources| _unresolved_source_
+  R_166_survivorship_modality_rates_R -->|sources| _unresolved_source_
+  R_166_survivorship_modality_rates_R -->|sources| _unresolved_source_
+  R_166_survivorship_modality_rates_R -->|sources| _unresolved_source_
+  R_166_survivorship_modality_rates_R -->|reads| _unresolved_list_files_
+  R_166_survivorship_modality_rates_R -->|reads| _unresolved_readRDS_
+  R_166_survivorship_modality_rates_R -->|writes| _unresolved_saveRDS_
+  R_166_survivorship_modality_rates_R -->|writes| _unresolved_saveRDS_
+  R_167_anthracycline_echo_R -->|sources| _unresolved_source_
+  R_167_anthracycline_echo_R -->|sources| _unresolved_source_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_list_files_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_readRDS_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_list_files_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_readRDS_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_list_files_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_readRDS_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_list_files_
+  R_167_anthracycline_echo_R -->|reads| _unresolved_readRDS_
+  R_167_anthracycline_echo_R -->|sources| _unresolved_source_
+  R_167_anthracycline_echo_R -->|writes| _unresolved_saveRDS_
+  R_168_survivorship_workbook_R -->|sources| _unresolved_source_
+  R_168_survivorship_workbook_R -->|reads| _unresolved_list_files_
+  R_168_survivorship_workbook_R -->|reads| _unresolved_readRDS_
+  R_168_survivorship_workbook_R -->|reads| _unresolved_list_files_
+  R_168_survivorship_workbook_R -->|reads| _unresolved_readRDS_
+  R_168_survivorship_workbook_R -->|writes| _unresolved_saveRDS_
+  R_168_survivorship_workbook_R -->|writes| _unresolved_saveRDS_
+  R_168_survivorship_workbook_R -->|writes| _unresolved_write_csv_
+  R_168_survivorship_workbook_R -->|writes| _unresolved_saveWorkbook_
+  R_169_single_source_care_R -->|sources| _unresolved_source_
+  R_169_single_source_care_R -->|writes| _unresolved_write_csv_
+  R_169_single_source_care_R -->|writes| _unresolved_saveRDS_
+  R_169_single_source_care_R -->|writes| _unresolved_saveRDS_
+  R_169_single_source_care_R -->|writes| _unresolved_saveWorkbook_
+  R_170_nhl_gantt_subsets_R -->|sources| _unresolved_source_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_excel_
+  R_170_nhl_gantt_subsets_R -->|writes| _unresolved_write_csv_
+  R_170_nhl_gantt_subsets_R -->|writes| _unresolved_write_csv_
+  R_170_nhl_gantt_subsets_R -->|writes| _unresolved_saveWorkbook_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_170_nhl_gantt_subsets_R -->|reads| _unresolved_read_csv_
+  R_171_verify_survivorship_R -->|sources| _unresolved_source_
+  R_171_verify_survivorship_R -->|reads| _unresolved_read_excel_
+  R_177_temporal_match_sizing_R -->|sources| _unresolved_source_
+  R_177_temporal_match_sizing_R -->|sources| _unresolved_source_
+  R_177_temporal_match_sizing_R -->|reads| _unresolved_list_files_
+  R_177_temporal_match_sizing_R -->|reads| _unresolved_readRDS_
+  R_177_temporal_match_sizing_R -->|reads| _unresolved_list_files_
+  R_177_temporal_match_sizing_R -->|reads| _unresolved_readRDS_
+  R_177_temporal_match_sizing_R -->|reads| _unresolved_readRDS_
+  R_177_temporal_match_sizing_R -->|writes| _unresolved_saveWorkbook_
+  R_177_temporal_match_sizing_R -->|writes| _unresolved_saveRDS_
+  R_179_cbc_patient_year_R -->|sources| _unresolved_source_
+  R_179_cbc_patient_year_R -->|reads| _unresolved_readRDS_
+  R_179_cbc_patient_year_R -->|reads| _unresolved_list_files_
+  R_179_cbc_patient_year_R -->|reads| _unresolved_readRDS_
+  R_179_cbc_patient_year_R -->|reads| _unresolved_list_files_
+  R_179_cbc_patient_year_R -->|reads| _unresolved_readRDS_
+  R_179_cbc_patient_year_R -->|writes| _unresolved_saveRDS_
+  R_179_cbc_patient_year_R -->|reads| _unresolved_read_excel_
+  R_179_cbc_patient_year_R -->|writes| _unresolved_saveWorkbook_
+  R_180_cbc_missing_capture_R -->|sources| _unresolved_source_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_readRDS_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_list_files_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_readRDS_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_list_files_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_list_files_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_readRDS_
+  R_180_cbc_missing_capture_R -->|reads| _unresolved_read_xlsx_
+  R_180_cbc_missing_capture_R -->|writes| _unresolved_saveWorkbook_
+  R_180_cbc_missing_capture_R -->|writes| _unresolved_saveRDS_
+  R_181_cbc_prior_year_R -->|sources| _unresolved_source_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_readRDS_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_read_excel_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_read_excel_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_read_excel_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_read_excel_
+  R_181_cbc_prior_year_R -->|writes| _unresolved_saveWorkbook_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_read_xlsx_
+  R_181_cbc_prior_year_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|sources| _unresolved_source_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_readRDS_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_readRDS_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_list_files_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_readRDS_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_read_xlsx_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_readRDS_
+  R_182_facility_zip_recovery_report_R -->|reads| _unresolved_readRDS_
+  R_183_mice_sensitivity_distance_R -->|sources| _unresolved_source_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_readRDS_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_readRDS_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_readRDS_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_read_csv_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_list_files_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_readRDS_
+  R_183_mice_sensitivity_distance_R -->|writes| _unresolved_saveRDS_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_read_xlsx_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_read_xlsx_
+  R_183_mice_sensitivity_distance_R -->|writes| _unresolved_saveRDS_
+  R_183_mice_sensitivity_distance_R -->|writes| _unresolved_png_
+  R_183_mice_sensitivity_distance_R -->|writes| _unresolved_png_
+  R_183_mice_sensitivity_distance_R -->|reads| _unresolved_read_xlsx_
+  R_183_mice_sensitivity_distance_R -->|writes| _unresolved_saveWorkbook_
+  R_184_modality_rate_model_R -->|sources| _unresolved_source_
+  R_184_modality_rate_model_R -->|reads| _unresolved_readRDS_
+  R_184_modality_rate_model_R -->|reads| _unresolved_read_xlsx_
+  R_184_modality_rate_model_R -->|reads| _unresolved_readRDS_
+  R_184_modality_rate_model_R -->|writes| _unresolved_saveRDS_
+  R_184_modality_rate_model_R -->|writes| _unresolved_saveWorkbook_
+  R_186_survivorship_rate_granularity_R -->|reads| _unresolved_read_xlsx_
+  R_186_survivorship_rate_granularity_R -->|writes| _unresolved_saveWorkbook_
+  R_187_anthracycline_exposure_R -->|sources| _unresolved_source_
+  R_187_anthracycline_exposure_R -->|reads| _unresolved_readRDS_
+  R_187_anthracycline_exposure_R -->|reads| _unresolved_readRDS_
+  R_187_anthracycline_exposure_R -->|writes| _unresolved_saveRDS_
+  R_187_anthracycline_exposure_R -->|writes| _unresolved_saveWorkbook_
+  R_188_echo_rate_since_anthracycline_R -->|sources| _unresolved_source_
+  R_188_echo_rate_since_anthracycline_R -->|reads| _unresolved_readRDS_
+  R_188_echo_rate_since_anthracycline_R -->|reads| _unresolved_readRDS_
+  R_188_echo_rate_since_anthracycline_R -->|reads| _unresolved_readRDS_
+  R_188_echo_rate_since_anthracycline_R -->|writes| _unresolved_saveRDS_
+  R_188_echo_rate_since_anthracycline_R -->|writes| _unresolved_saveRDS_
+  R_188_echo_rate_since_anthracycline_R -->|writes| _unresolved_saveWorkbook_
+  R_189_nhl_explainer_R -->|sources| _unresolved_source_
+  R_189_nhl_explainer_R -->|reads| _unresolved_read_csv_
+  R_189_nhl_explainer_R -->|reads| _unresolved_read_csv_
+  R_191_am_verification_R -->|sources| _unresolved_source_
+  R_191_am_verification_R -->|writes| _unresolved_dbExecute_
+  R_191_am_verification_R -->|reads| _unresolved_read_csv_
+  R_191_am_verification_R -->|writes| _unresolved_saveRDS_
+  R_191_am_verification_R -->|writes| _unresolved_saveRDS_
+  R_191_am_verification_R -->|reads| _unresolved_readRDS_
+  R_191_am_verification_R -->|reads| _unresolved_list_files_
+  R_191_am_verification_R -->|reads| _unresolved_readRDS_
+  R_191_am_verification_R -->|writes| _unresolved_dbExecute_
+  R_191_am_verification_R -->|writes| _unresolved_saveWorkbook_
+  R_192_source_step0_probe_R -->|sources| _unresolved_source_
+  R_192_source_step0_probe_R -->|reads| _unresolved_readRDS_
+  R_192_source_step0_probe_R -->|reads| _unresolved_readRDS_
+  R_192_source_step0_probe_R -->|reads| _unresolved_readRDS_
+  R_192b_payer_type_probe_R -->|sources| _unresolved_source_
+  R_192b_payer_type_probe_R -->|reads| _unresolved_readRDS_
+  R_20_treatment_inventory_R -->|sources| _unresolved_source_
+  R_20_treatment_inventory_R -->|sources| _unresolved_source_
+  R_21_investigate_unmatched_R -->|sources| _unresolved_source_
+  R_21_investigate_unmatched_R -->|sources| _unresolved_source_
+  R_21_investigate_unmatched_R -->|reads| _unresolved_readRDS_
+  R_21_investigate_unmatched_R -->|sources| _unresolved_source_
+  R_21_investigate_unmatched_R -->|writes| _unresolved_saveRDS_
+  R_22_investigate_unmatched_ndc_R -->|sources| _unresolved_source_
+  R_22_investigate_unmatched_ndc_R -->|sources| _unresolved_source_
+  R_22_investigate_unmatched_ndc_R -->|writes| _unresolved_saveRDS_
+  R_22_investigate_unmatched_ndc_R -->|reads| _unresolved_readRDS_
+  R_22_investigate_unmatched_ndc_R -->|sources| _unresolved_source_
+  R_23_combine_reports_R -->|sources| _unresolved_source_
+  R_23_combine_reports_R -->|reads| _unresolved_readRDS_
+  R_23_combine_reports_R -->|reads| _unresolved_readRDS_
+  R_24_treatment_codes_resolved_R -->|sources| _unresolved_source_
+  R_25_treatment_durations_R -->|sources| _unresolved_source_
+  R_25_treatment_durations_R -->|sources| _unresolved_source_
+  R_25_treatment_durations_R -->|writes| _unresolved_saveRDS_
+  R_25_treatment_durations_R -->|writes| _unresolved_saveRDS_
+  R_25_treatment_durations_R -->|writes| _unresolved_saveRDS_
+  R_25_treatment_durations_R -->|writes| _unresolved_write_csv_
+  R_25_treatment_durations_R -->|writes| _unresolved_ggsave_
+  R_26_treatment_episodes_R -->|sources| _unresolved_source_
+  R_26_treatment_episodes_R -->|sources| _unresolved_source_
+  R_26_treatment_episodes_R -->|sources| _unresolved_source_
+  R_26_treatment_episodes_R -->|reads| _unresolved_readRDS_
+  R_26_treatment_episodes_R -->|writes| _unresolved_saveRDS_
+  R_26_treatment_episodes_R -->|writes| _unresolved_saveRDS_
+  R_26_treatment_episodes_R -->|writes| _unresolved_saveRDS_
+  R_26_treatment_episodes_R -->|writes| _unresolved_saveRDS_
+  R_26_treatment_episodes_R -->|writes| _unresolved_write_csv_
+  R_26_treatment_episodes_R -->|writes| _unresolved_write_csv_
+  R_26_treatment_episodes_R -->|reads| _unresolved_readRDS_
+  R_26_treatment_episodes_R -->|reads| _unresolved_readRDS_
+  R_27_drug_name_resolution_R -->|sources| _unresolved_source_
+  R_27_drug_name_resolution_R -->|sources| _unresolved_source_
+  R_27_drug_name_resolution_R -->|reads| _unresolved_readRDS_
+  R_27_drug_name_resolution_R -->|writes| _unresolved_saveRDS_
+  R_27_drug_name_resolution_R -->|writes| _unresolved_write_csv_
+  R_28_episode_classification_R -->|sources| _unresolved_source_
+  R_28_episode_classification_R -->|sources| _unresolved_source_
+  R_28_episode_classification_R -->|sources| _unresolved_source_
+  R_28_episode_classification_R -->|sources| _unresolved_source_
+  R_28_episode_classification_R -->|reads| _unresolved_readRDS_
+  R_28_episode_classification_R -->|reads| _unresolved_readRDS_
+  R_28_episode_classification_R -->|reads| _unresolved_readRDS_
+  R_28_episode_classification_R -->|writes| _unresolved_saveRDS_
+  R_28_episode_classification_R -->|writes| _unresolved_write_csv_
+  R_29_first_line_and_death_analysis_R -->|sources| _unresolved_source_
+  R_29_first_line_and_death_analysis_R -->|sources| _unresolved_source_
+  R_29_first_line_and_death_analysis_R -->|sources| _unresolved_source_
+  R_29_first_line_and_death_analysis_R -->|reads| _unresolved_readRDS_
+  R_29_first_line_and_death_analysis_R -->|reads| _unresolved_readRDS_
+  R_29_first_line_and_death_analysis_R -->|reads| _unresolved_readRDS_
+  R_29_first_line_and_death_analysis_R -->|writes| _unresolved_saveRDS_
+  R_29_first_line_and_death_analysis_R -->|writes| _unresolved_write_csv_
+  R_30_condition_linkage_investigation_R -->|sources| _unresolved_source_
+  R_30_condition_linkage_investigation_R -->|sources| _unresolved_source_
+  R_30_condition_linkage_investigation_R -->|sources| _unresolved_source_
+  R_30_condition_linkage_investigation_R -->|reads| _unresolved_readRDS_
+  R_31_pre_diagnosis_treatments_R -->|sources| _unresolved_source_
+  R_31_pre_diagnosis_treatments_R -->|sources| _unresolved_source_
+  R_31_pre_diagnosis_treatments_R -->|reads| _unresolved_readRDS_
+  R_31_pre_diagnosis_treatments_R -->|reads| _unresolved_readRDS_
+  R_32_secondary_malignancy_table_R -->|sources| _unresolved_source_
+  R_32_secondary_malignancy_table_R -->|sources| _unresolved_source_
+  R_32_secondary_malignancy_table_R -->|sources| _unresolved_source_
+  R_32_secondary_malignancy_table_R -->|sources| _unresolved_source_
+  R_32_secondary_malignancy_table_R -->|sources| _unresolved_source_
+  R_32_secondary_malignancy_table_R -->|reads| _unresolved_readRDS_
+  R_33_code_verification_R -->|sources| _unresolved_source_
+  R_33_code_verification_R -->|sources| _unresolved_source_
+  R_33_code_verification_R -->|sources| _unresolved_source_
+  R_34_hl_nhl_overlap_validation_R -->|sources| _unresolved_source_
+  R_34_hl_nhl_overlap_validation_R -->|sources| _unresolved_source_
+  R_34_hl_nhl_overlap_validation_R -->|sources| _unresolved_source_
+  R_34_hl_nhl_overlap_validation_R -->|sources| _unresolved_source_
+  R_34_hl_nhl_overlap_validation_R -->|reads| _unresolved_readRDS_
+  R_35_death_cause_quality_R -->|sources| _unresolved_source_
+  R_35_death_cause_quality_R -->|sources| _unresolved_source_
+  R_35_death_cause_quality_R -->|sources| _unresolved_source_
+  R_35_death_cause_quality_R -->|reads| _unresolved_readRDS_
+  R_35_death_cause_quality_R -->|writes| _unresolved_saveRDS_
+  R_36_tableau_ready_tables_R -->|sources| _unresolved_source_
+  R_36_tableau_ready_tables_R -->|sources| _unresolved_source_
+  R_36_tableau_ready_tables_R -->|sources| _unresolved_source_
+  R_36_tableau_ready_tables_R -->|sources| _unresolved_source_
+  R_36_tableau_ready_tables_R -->|reads| _unresolved_readRDS_
+  R_39_run_all_investigations_R -->|sources| _unresolved_source_
+  R_39_run_all_investigations_R -->|sources| _unresolved_source_
+  R_39_run_all_investigations_R -->|sources| _unresolved_source_
+  R_40_cancer_site_frequency_R -->|sources| _unresolved_source_
+  R_40_cancer_site_frequency_R -->|sources| _unresolved_source_
+  R_41_extract_all_codes_R -->|sources| _unresolved_source_
+  R_41_extract_all_codes_R -->|sources| _unresolved_source_
+  R_42_build_code_descriptions_R -->|sources| _unresolved_source_
+  R_42_build_code_descriptions_R -->|reads| _unresolved_readRDS_
+  R_42_build_code_descriptions_R -->|reads| _unresolved_readRDS_
+  R_42_build_code_descriptions_R -->|writes| _unresolved_saveRDS_
+  R_43_cancer_site_confirmation_R -->|sources| _unresolved_source_
+  R_43_cancer_site_confirmation_R -->|sources| _unresolved_source_
+  R_44_cancer_site_confirmation_7day_R -->|sources| _unresolved_source_
+  R_44_cancer_site_confirmation_7day_R -->|sources| _unresolved_source_
+  R_45_cancer_summary_R -->|sources| _unresolved_source_
+  R_45_cancer_summary_R -->|sources| _unresolved_source_
+  R_45_cancer_summary_R -->|sources| _unresolved_source_
+  R_45_cancer_summary_R -->|reads| _unresolved_readRDS_
+  R_45_cancer_summary_R -->|reads| _unresolved_readRDS_
+  R_45_cancer_summary_R -->|writes| _unresolved_write_csv_
+  R_46_cancer_summary_table_R -->|sources| _unresolved_source_
+  R_46_cancer_summary_table_R -->|sources| _unresolved_source_
+  R_46_cancer_summary_table_R -->|reads| _unresolved_read_csv_
+  R_47_cancer_summary_refined_R -->|sources| _unresolved_source_
+  R_47_cancer_summary_refined_R -->|sources| _unresolved_source_
+  R_47_cancer_summary_refined_R -->|sources| _unresolved_source_
+  R_47_cancer_summary_refined_R -->|reads| _unresolved_read_csv_
+  R_47_cancer_summary_refined_R -->|writes| _unresolved_saveRDS_
+  R_47_cancer_summary_refined_R -->|writes| _unresolved_write_csv_
+  R_48_cancer_summary_post_hl_R -->|sources| _unresolved_source_
+  R_48_cancer_summary_post_hl_R -->|sources| _unresolved_source_
+  R_48_cancer_summary_post_hl_R -->|sources| _unresolved_source_
+  R_48_cancer_summary_post_hl_R -->|reads| _unresolved_readRDS_
+  R_48_cancer_summary_post_hl_R -->|reads| _unresolved_read_csv_
+  R_48_cancer_summary_post_hl_R -->|writes| _unresolved_write_csv_
+  R_49_cancer_summary_pre_post_R -->|sources| _unresolved_source_
+  R_49_cancer_summary_pre_post_R -->|sources| _unresolved_source_
+  R_49_cancer_summary_pre_post_R -->|sources| _unresolved_source_
+  R_49_cancer_summary_pre_post_R -->|reads| _unresolved_readRDS_
+  R_49_cancer_summary_pre_post_R -->|reads| _unresolved_read_csv_
+  R_49_cancer_summary_pre_post_R -->|writes| _unresolved_write_csv_
+  R_49_cancer_summary_pre_post_R -->|writes| _unresolved_write_csv_
+  R_49_cancer_summary_pre_post_R -->|writes| _unresolved_saveRDS_
+  R_50_all_codes_resolved_R -->|sources| _unresolved_source_
+  R_50_all_codes_resolved_R -->|reads| _unresolved_readRDS_
+  R_50_all_codes_resolved_R -->|reads| _unresolved_readRDS_
+  R_50_all_codes_resolved_R -->|sources| _unresolved_source_
+  R_51_post_death_encounter_investigation_R -->|sources| _unresolved_source_
+  R_51_post_death_encounter_investigation_R -->|sources| _unresolved_source_
+  R_51_post_death_encounter_investigation_R -->|sources| _unresolved_source_
+  R_51_post_death_encounter_investigation_R -->|sources| _unresolved_source_
+  R_51_post_death_encounter_investigation_R -->|reads| _unresolved_readRDS_
+  R_51_post_death_encounter_investigation_R -->|reads| _unresolved_readRDS_
+  R_52_gantt_v2_export_R -->|sources| _unresolved_source_
+  R_52_gantt_v2_export_R -->|sources| _unresolved_source_
+  R_52_gantt_v2_export_R -->|sources| _unresolved_source_
+  R_52_gantt_v2_export_R -->|sources| _unresolved_source_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_readRDS_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_readRDS_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_read_csv_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_readRDS_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_readRDS_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_readRDS_
+  R_52_gantt_v2_export_R -->|reads| _unresolved_read_csv_
+  R_52_gantt_v2_export_R -->|writes| _unresolved_write_csv_
+  R_52_gantt_v2_export_R -->|writes| _unresolved_write_csv_
+  R_52_strange_death_source_and_enc_type_R -->|sources| _unresolved_source_
+  R_52_strange_death_source_and_enc_type_R -->|sources| _unresolved_source_
+  R_52_strange_death_source_and_enc_type_R -->|sources| _unresolved_source_
+  R_52_strange_death_source_and_enc_type_R -->|sources| _unresolved_source_
+  R_52_strange_death_source_and_enc_type_R -->|reads| _unresolved_readRDS_
+  R_53_death_date_validation_R -->|sources| _unresolved_source_
+  R_53_death_date_validation_R -->|sources| _unresolved_source_
+  R_53_death_date_validation_R -->|sources| _unresolved_source_
+  R_53_death_date_validation_R -->|reads| _unresolved_readRDS_
+  R_53_death_date_validation_R -->|reads| _unresolved_readRDS_
+  R_53_death_date_validation_R -->|reads| _unresolved_readRDS_
+  R_53_death_date_validation_R -->|writes| _unresolved_saveRDS_
+  R_53_death_date_validation_R -->|writes| _unresolved_write_csv_
+  R_54_investigate_sct_0362_R -->|sources| _unresolved_source_
+  R_54_investigate_sct_0362_R -->|sources| _unresolved_source_
+  R_54_investigate_sct_0362_R -->|sources| _unresolved_source_
+  R_55_verify_replaced_by_codes_R -->|sources| _unresolved_source_
+  R_56_new_tables_from_groupings_R -->|sources| _unresolved_source_
+  R_56_new_tables_from_groupings_R -->|sources| _unresolved_source_
+  R_56_new_tables_from_groupings_R -->|sources| _unresolved_source_
+  R_56_new_tables_from_groupings_R -->|sources| _unresolved_source_
+  R_56_new_tables_from_groupings_R -->|reads| _unresolved_readRDS_
+  R_57_drug_grouping_instances_R -->|sources| _unresolved_source_
+  R_57_drug_grouping_instances_R -->|sources| _unresolved_source_
+  R_57_drug_grouping_instances_R -->|sources| _unresolved_source_
+  R_57_drug_grouping_instances_R -->|sources| _unresolved_source_
+  R_57_drug_grouping_instances_R -->|reads| _unresolved_readRDS_
+  R_57_explore_dx_deduplication_R -->|sources| _unresolved_source_
+  R_57_explore_dx_deduplication_R -->|sources| _unresolved_source_
+  R_57_explore_dx_deduplication_R -->|sources| _unresolved_source_
+  R_57_explore_dx_deduplication_R -->|reads| _unresolved_readRDS_
+  R_58_co_administration_analysis_R -->|sources| _unresolved_source_
+  R_58_co_administration_analysis_R -->|sources| _unresolved_source_
+  R_58_co_administration_analysis_R -->|reads| _unresolved_readRDS_
+  R_58_co_administration_analysis_R -->|reads| _unresolved_readRDS_
+  R_58_code_reference_tables_R -->|sources| _unresolved_source_
+  R_58_code_reference_tables_R -->|sources| _unresolved_source_
+  R_58_code_reference_tables_R -->|reads| _unresolved_readRDS_
+  R_59_death_date_summary_R -->|sources| _unresolved_source_
+  R_59_death_date_summary_R -->|sources| _unresolved_source_
+  R_59_death_date_summary_R -->|sources| _unresolved_source_
+  R_59_death_date_summary_R -->|sources| _unresolved_source_
+  R_59_death_date_summary_R -->|reads| _unresolved_readRDS_
+  R_59_death_date_summary_R -->|reads| _unresolved_readRDS_
+  R_60_tiered_same_day_payer_R -->|sources| _unresolved_source_
+  R_60_tiered_same_day_payer_R -->|sources| _unresolved_source_
+  R_60_tiered_same_day_payer_R -->|writes| _unresolved_write_csv_
+  R_60_tiered_same_day_payer_R -->|writes| _unresolved_write_csv_
+  R_60_tiered_same_day_payer_R -->|writes| _unresolved_write_csv_
+  R_60_tiered_same_day_payer_R -->|writes| _unresolved_write_csv_
+  R_60_tiered_same_day_payer_R -->|writes| _unresolved_write_csv_
+  R_60_tiered_same_day_payer_R -->|writes| _unresolved_write_csv_
+  R_61_tiered_encounter_level_R -->|sources| _unresolved_source_
+  R_61_tiered_encounter_level_R -->|sources| _unresolved_source_
+  R_61_tiered_encounter_level_R -->|writes| _unresolved_write_csv_
+  R_61_tiered_encounter_level_R -->|writes| _unresolved_write_csv_
+  R_62_tiered_date_level_R -->|sources| _unresolved_source_
+  R_62_tiered_date_level_R -->|sources| _unresolved_source_
+  R_62_tiered_date_level_R -->|reads| _unresolved_readRDS_
+  R_62_tiered_date_level_R -->|writes| _unresolved_write_csv_
+  R_62_tiered_date_level_R -->|writes| _unresolved_write_csv_
+  R_62_tiered_date_level_R -->|writes| _unresolved_write_csv_
+  R_63_value_audit_R -->|sources| _unresolved_source_
+  R_63_value_audit_R -->|writes| _unresolved_write_csv_
+  R_63_value_audit_R -->|writes| _unresolved_write_csv_
+  R_64_all_source_missingness_R -->|sources| _unresolved_source_
+  R_64_all_source_missingness_R -->|sources| _unresolved_source_
+  R_64_all_source_missingness_R -->|writes| _unresolved_write_csv_
+  R_64_all_source_missingness_R -->|writes| _unresolved_write_csv_
+  R_64_all_source_missingness_R -->|writes| _unresolved_write_csv_
+  R_64_all_source_missingness_R -->|writes| _unresolved_write_csv_
+  R_64_all_source_missingness_R -->|writes| _unresolved_write_csv_
+  R_64_all_source_missingness_R -->|writes| _unresolved_write_csv_
+  R_65_uf_insurance_missingness_R -->|sources| _unresolved_source_
+  R_65_uf_insurance_missingness_R -->|writes| _unresolved_write_csv_
+  R_65_uf_insurance_missingness_R -->|writes| _unresolved_write_csv_
+  R_65_uf_insurance_missingness_R -->|writes| _unresolved_write_csv_
+  R_65_uf_insurance_missingness_R -->|writes| _unresolved_write_csv_
+  R_65_uf_insurance_missingness_R -->|writes| _unresolved_write_csv_
+  R_66_all_site_duplicate_dates_R -->|sources| _unresolved_source_
+  R_66_all_site_duplicate_dates_R -->|sources| _unresolved_source_
+  R_66_all_site_duplicate_dates_R -->|sources| _unresolved_source_
+  R_66_all_site_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_66_all_site_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_66_all_site_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_66_all_site_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_66_all_site_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_66_all_site_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_67_multi_source_overlap_detection_R -->|sources| _unresolved_source_
+  R_67_multi_source_overlap_detection_R -->|sources| _unresolved_source_
+  R_67_multi_source_overlap_detection_R -->|sources| _unresolved_source_
+  R_67_multi_source_overlap_detection_R -->|writes| _unresolved_write_csv_
+  R_67_multi_source_overlap_detection_R -->|writes| _unresolved_write_csv_
+  R_67_multi_source_overlap_detection_R -->|writes| _unresolved_write_csv_
+  R_67_multi_source_overlap_detection_R -->|writes| _unresolved_write_csv_
+  R_68_overlap_classification_R -->|sources| _unresolved_source_
+  R_68_overlap_classification_R -->|sources| _unresolved_source_
+  R_68_overlap_classification_R -->|reads| _unresolved_read_csv_
+  R_68_overlap_classification_R -->|reads| _unresolved_read_csv_
+  R_68_overlap_classification_R -->|writes| _unresolved_write_csv_
+  R_68_overlap_classification_R -->|writes| _unresolved_write_csv_
+  R_68_overlap_classification_R -->|writes| _unresolved_write_csv_
+  R_68_overlap_classification_R -->|writes| _unresolved_write_csv_
+  R_69_per_patient_source_detection_R -->|sources| _unresolved_source_
+  R_69_per_patient_source_detection_R -->|sources| _unresolved_source_
+  R_69_per_patient_source_detection_R -->|sources| _unresolved_source_
+  R_69_per_patient_source_detection_R -->|writes| _unresolved_write_csv_
+  R_69_per_patient_source_detection_R -->|writes| _unresolved_write_csv_
+  R_69_per_patient_source_detection_R -->|writes| _unresolved_write_csv_
+  R_70_visualize_waterfall_R -->|sources| _unresolved_source_
+  R_70_visualize_waterfall_R -->|writes| _unresolved_ggsave_
+  R_71_visualize_sankey_R -->|sources| _unresolved_source_
+  R_71_visualize_sankey_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|sources| _unresolved_source_
+  R_72_generate_pptx_R -->|sources| _unresolved_source_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_72_generate_pptx_R -->|writes| _unresolved_ggsave_
+  R_72_generate_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|sources| _unresolved_source_
+  R_73_generate_phase19_20_pptx_R -->|sources| _unresolved_source_
+  R_73_generate_phase19_20_pptx_R -->|sources| _unresolved_source_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|reads| _unresolved_read_csv_
+  R_73_generate_phase19_20_pptx_R -->|writes| _unresolved_ggsave_
+  R_73_generate_phase19_20_pptx_R -->|writes| _unresolved_ggsave_
+  R_73_generate_phase19_20_pptx_R -->|writes| _unresolved_ggsave_
+  R_73_generate_phase19_20_pptx_R -->|writes| _unresolved_ggsave_
+  R_74_generate_documentation_R -->|sources| _unresolved_source_
+  R_75_encounter_analysis_R -->|sources| _unresolved_source_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_write_csv_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_write_csv_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_75_encounter_analysis_R -->|writes| _unresolved_ggsave_
+  R_76_treatment_source_coverage_R -->|sources| _unresolved_source_
+  R_76_treatment_source_coverage_R -->|sources| _unresolved_source_
+  R_76_treatment_source_coverage_R -->|writes| _unresolved_write_csv_
+  R_77_venn_hl_nlphl_R -->|sources| _unresolved_source_
+  R_77_venn_hl_nlphl_R -->|sources| _unresolved_source_
+  R_77_venn_hl_nlphl_R -->|reads| _unresolved_readRDS_
+  R_77_venn_hl_nlphl_R -->|writes| _unresolved_ggsave_
+  R_78_venn_lymphoma_3way_R -->|sources| _unresolved_source_
+  R_78_venn_lymphoma_3way_R -->|sources| _unresolved_source_
+  R_78_venn_lymphoma_3way_R -->|writes| _unresolved_write_csv_
+  R_78_venn_lymphoma_3way_R -->|writes| _unresolved_write_csv_
+  R_79_drug_name_consistency_audit_R -->|sources| _unresolved_source_
+  R_79_drug_name_consistency_audit_R -->|sources| _unresolved_source_
+  R_79_drug_name_consistency_audit_R -->|reads| _unresolved_readRDS_
+  R_79_drug_name_consistency_audit_R -->|reads| _unresolved_readRDS_
+  R_80_smoke_test_backends_R -->|sources| _unresolved_source_
+  R_80_smoke_test_backends_R -->|sources| _unresolved_source_
+  R_80_smoke_test_backends_R -->|sources| _unresolved_source_
+  R_80_smoke_test_backends_R -->|sources| _unresolved_source_
+  R_81_parity_test_cohort_R -->|sources| _unresolved_source_
+  R_81_parity_test_cohort_R -->|sources| _unresolved_source_
+  R_81_parity_test_cohort_R -->|sources| _unresolved_source_
+  R_81_parity_test_cohort_R -->|sources| _unresolved_source_
+  R_81_parity_test_cohort_R -->|sources| _unresolved_source_
+  R_82_benchmark_cohort_R -->|sources| _unresolved_source_
+  R_82_benchmark_cohort_R -->|sources| _unresolved_source_
+  R_82_benchmark_cohort_R -->|sources| _unresolved_source_
+  R_82_benchmark_cohort_R -->|sources| _unresolved_source_
+  R_82_benchmark_cohort_R -->|writes| _unresolved_write_csv_
+  R_83_generate_speedup_report_R -->|sources| _unresolved_source_
+  R_83_generate_speedup_report_R -->|reads| _unresolved_read_csv_
+  R_84_test_durations_R -->|sources| _unresolved_source_
+  R_84_test_durations_R -->|reads| _unresolved_readRDS_
+  R_85_test_episodes_R -->|sources| _unresolved_source_
+  R_85_test_episodes_R -->|reads| _unresolved_readRDS_
+  R_85_test_episodes_R -->|reads| _unresolved_readRDS_
+  R_86_smoke_test_foundation_R -->|reads| _unresolved_list_files_
+  R_86_smoke_test_foundation_R -->|reads| _unresolved_list_files_
+  R_86_smoke_test_foundation_R -->|sources| _unresolved_source_
+  R_86_smoke_test_foundation_R -->|reads| _unresolved_list_files_
+  R_87_smoke_test_full_pipeline_R -->|reads| _unresolved_list_files_
+  R_87_smoke_test_full_pipeline_R -->|reads| _unresolved_list_files_
+  R_87_smoke_test_full_pipeline_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|sources| _unresolved_source_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|sources| _unresolved_source_
+  R_88_smoke_test_comprehensive_R -->|sources| _unresolved_source_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_loadWorkbook_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_loadWorkbook_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|sources| _unresolved_sys_source_
+  R_88_smoke_test_comprehensive_R -->|sources| _unresolved_sys_source_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_xlsx_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_readRDS_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_csv_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_list_files_
+  R_88_smoke_test_comprehensive_R -->|reads| _unresolved_read_xlsx_
+  R_89_generate_reference_manual_R -->|reads| _unresolved_list_files_
+  R_89_generate_reference_manual_R -->|reads| _unresolved_list_files_
+  R_89_generate_reference_manual_R -->|sources| _unresolved_source_
+  R_90_diagnostics_R -->|sources| _unresolved_source_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|reads| _unresolved_read_csv_
+  R_90_diagnostics_R -->|reads| _unresolved_read_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_90_diagnostics_R -->|writes| _unresolved_write_csv_
+  R_91_data_quality_summary_R -->|sources| _unresolved_source_
+  R_91_data_quality_summary_R -->|reads| _unresolved_read_csv_
+  R_91_data_quality_summary_R -->|writes| _unresolved_write_csv_
+  R_92_dx_gap_analysis_R -->|sources| _unresolved_source_
+  R_92_dx_gap_analysis_R -->|reads| _unresolved_read_csv_
+  R_92_dx_gap_analysis_R -->|writes| _unresolved_write_csv_
+  R_92_dx_gap_analysis_R -->|writes| _unresolved_write_csv_
+  R_92_dx_gap_analysis_R -->|writes| _unresolved_write_csv_
+  R_93_no_treatment_medicaid_R -->|writes| _unresolved_write_csv_
+  R_93_no_treatment_medicaid_R -->|writes| _unresolved_write_csv_
+  R_94_flm_duplicate_dates_R -->|sources| _unresolved_source_
+  R_94_flm_duplicate_dates_R -->|sources| _unresolved_source_
+  R_94_flm_duplicate_dates_R -->|sources| _unresolved_source_
+  R_94_flm_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_94_flm_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_94_flm_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_94_flm_duplicate_dates_R -->|writes| _unresolved_write_csv_
+  R_95_multi_source_overlap_av_th_R -->|sources| _unresolved_source_
+  R_95_multi_source_overlap_av_th_R -->|sources| _unresolved_source_
+  R_95_multi_source_overlap_av_th_R -->|sources| _unresolved_source_
+  R_95_multi_source_overlap_av_th_R -->|writes| _unresolved_write_csv_
+  R_95_multi_source_overlap_av_th_R -->|writes| _unresolved_write_csv_
+  R_95_multi_source_overlap_av_th_R -->|writes| _unresolved_write_csv_
+  R_95_multi_source_overlap_av_th_R -->|writes| _unresolved_write_csv_
+  R_95_multi_source_overlap_av_th_R -->|writes| _unresolved_write_csv_
+  R_95_validate_dt_infrastructure_R -->|sources| _unresolved_source_
+  R_96_overlap_classification_av_th_R -->|sources| _unresolved_source_
+  R_96_overlap_classification_av_th_R -->|sources| _unresolved_source_
+  R_96_overlap_classification_av_th_R -->|reads| _unresolved_read_csv_
+  R_96_overlap_classification_av_th_R -->|reads| _unresolved_read_csv_
+  R_96_overlap_classification_av_th_R -->|writes| _unresolved_write_csv_
+  R_96_overlap_classification_av_th_R -->|writes| _unresolved_write_csv_
+  R_96_overlap_classification_av_th_R -->|writes| _unresolved_write_csv_
+  R_96_overlap_classification_av_th_R -->|writes| _unresolved_write_csv_
+  R_96_validate_payer_dt_R -->|sources| _unresolved_source_
+  R_97_payer_code_frequency_av_th_R -->|sources| _unresolved_source_
+  R_97_payer_code_frequency_av_th_R -->|sources| _unresolved_source_
+  R_97_payer_code_frequency_av_th_R -->|reads| _unresolved_read_excel_
+  R_97_payer_code_frequency_av_th_R -->|writes| _unresolved_write_csv_
+  R_97_payer_code_frequency_av_th_R -->|writes| _unresolved_write_csv_
+  R_97_payer_code_frequency_av_th_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|sources| _unresolved_source_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_97_validate_r60_migration_R -->|writes| _unresolved_write_csv_
+  R_98_radiation_cpt_audit_R -->|sources| _unresolved_source_
+  R_98_radiation_cpt_audit_R -->|sources| _unresolved_source_
+  R_98_radiation_cpt_audit_R -->|sources| _unresolved_source_
+  R_98_validate_r28_migration_R -->|sources| _unresolved_source_
+  R_98_validate_r28_migration_R -->|reads| _unresolved_readRDS_
+  R_98_validate_r28_migration_R -->|writes| _unresolved_saveRDS_
+  R_98_validate_r28_migration_R -->|reads| _unresolved_readRDS_
+  R_99_claude_diagnostics_R -->|sources| _unresolved_source_
+  R_99_claude_diagnostics_R -->|sources| _unresolved_source_
+  R_99_claude_diagnostics_R -->|sources| _unresolved_source_
+  R_99_claude_diagnostics_R -->|sources| _unresolved_source_
+  R_99_compare_drug_resolution_R -->|sources| _unresolved_source_
+  R_99_compare_drug_resolution_R -->|writes| _unresolved_write_csv_
+  R_99_validate_gantt_consolidation_R -->|sources| _unresolved_source_
+  R_99_validate_gantt_consolidation_R -->|reads| _unresolved_read_csv_
+  R_99_validate_gantt_consolidation_R -->|reads| _unresolved_read_csv_
+  R_99_validate_gantt_consolidation_R -->|reads| _unresolved_read_csv_
+  R_99_validate_gantt_consolidation_R -->|reads| _unresolved_read_csv_
+  R_autoimmune_code_review_R -->|sources| _unresolved_source_
+  R_autoimmune_code_review_R -->|writes| _unresolved_saveWorkbook_
+  R_cbc_year1_chisq_R -->|reads| _unresolved_readRDS_
+  R_cbc_year1_chisq_R -->|reads| _unresolved_read_xlsx_
+  R_cbc_year1_chisq_R -->|writes| _unresolved_saveWorkbook_
+  R_diagnostics_146_sdi_coverage_quantifier_R -->|reads| _unresolved_list_files_
+  R_diagnostics_146_sdi_coverage_quantifier_R -->|reads| _unresolved_read_csv_
+  R_diagnostics_146_sdi_coverage_quantifier_R -->|reads| _unresolved_readRDS_
+  R_filter_strange_death_csvs_R -->|sources| _unresolved_source_
+  R_filter_strange_death_csvs_R -->|reads| _unresolved_readRDS_
+  R_filter_strange_death_csvs_R -->|reads| _unresolved_read_csv_
+  R_filter_strange_death_csvs_R -->|writes| _unresolved_write_csv_
+  R_filter_strange_death_csvs_R -->|reads| _unresolved_read_csv_
+  R_filter_strange_death_csvs_R -->|writes| _unresolved_write_csv_
+  R_test_phase78_human_R -->|sources| _unresolved_source_
+  R_test_phase78_human_R -->|sources| _unresolved_source_
+  R_test_phase78_human_R -->|reads| _unresolved_readRDS_
+  R_test_phase78_human_R -->|sources| _unresolved_source_
+  R_test_phase78_human_R -->|reads| _unresolved_readRDS_
+  R_test_phase78_human_R -->|sources| _unresolved_source_
+  R_test_phase78_human_R -->|reads| _unresolved_read_csv_
+  R_test_phase78_human_R -->|reads| _unresolved_read_csv_
+  R_test_phase78_human_R -->|reads| _unresolved_read_csv_
+  R_test_phase78_human_R -->|sources| _unresolved_source_
+  R_tests_R -->|sources| _unresolved_source_
+  R_tests_R -->|sources| _unresolved_source_
+  R_tests_R -->|sources| _unresolved_source_
+  R_tools_build_hrsa_crosswalk_R -->|writes| _unresolved_write_csv_
+  R_utils_utils_address_R -->|reads| _unresolved_read_csv_
+  R_utils_utils_address_R -->|reads| _unresolved_read_csv_
+  R_utils_utils_address_R -->|writes| _unresolved_dbExecute_
+  R_utils_utils_distance_hist_R -->|writes| _unresolved_ggsave_
+  R_utils_utils_duckdb_R -->|reads| _unresolved_readRDS_
+  R_utils_utils_duckdb_R -->|writes| _unresolved_dbExecute_
+  R_utils_utils_schema_probe_R -->|reads| _unresolved_readRDS_
+  R_utils_utils_schema_probe_R -->|reads| _unresolved_read_csv_
+  R_utils_utils_schema_probe_R -->|reads| _unresolved_read_xlsx_
+  R_utils_utils_snapshot_R -->|writes| _unresolved_saveRDS_
+  R_utils_utils_surveillance_R -->|reads| _unresolved_read_excel_
+  R_utils_utils_surveillance_R -->|reads| _unresolved_read_excel_
+  R_utils_utils_surveillance_R -->|reads| _unresolved_read_excel_
+  R_utils_utils_treatment_R -->|reads| _unresolved_readRDS_
+  R_utils_utils_zip_crosswalk_R -->|reads| _unresolved_read_csv_
