@@ -1389,7 +1389,7 @@ message(glue("  Workbook saved: {out_path}"))
 
 PRIOR_WB_PATH <- Sys.getenv(
   "R1923_PRIOR_DIST_CBC_WB",
-  unset = file.path(CONFIG$output_dir, "distance_cbc_association_20261008.xlsx")
+  unset = file.path(CONFIG$output_dir, "distance_cbc_association_20261110.xlsx")
 )
 if (!file.exists(PRIOR_WB_PATH)) {
   stop("[R/165] Prior workbook for regression check not found: ", PRIOR_WB_PATH,
