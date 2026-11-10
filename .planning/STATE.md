@@ -132,6 +132,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261106-ize | Write phase 194 SUMMARY.md, update STATE.md to mark Phase 194 complete, and update ROADMAP.md to mark Phase 194 and v3.13 milestone as shipped | 2026-11-06 | 5bf4445 | [261106-ize-write-phase-194-summary-md-update-state-](./quick/261106-ize-write-phase-194-summary-md-update-state-/) |
+| 261110-165-fix | Pin distance to 20261015, fix payer 1j to read CSV (fatal on missing), fatal has_payer branch; D-165-02 and D-165-03 decision entries | 2026-11-10 | 5d442e0 | R/165_distance_cbc_association.R |
 
 ## Session Continuity
 
