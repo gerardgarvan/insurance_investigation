@@ -111,6 +111,16 @@ Last activity: 2026-11-06
 - Echo rate since last anthracycline = 0.2501/py (Phase 188)
 - D-165-01 / D-09 carry-forward: Amy/Erin method confirmation still pending
 
+### R/165 Backlog (Phase 195 close-out, 2026-11-10)
+
+- **Regression check fix (D-165-11):** Select prior workbook BEFORE writing, honoring `R1923_PRIOR_DIST_CBC_WB` first, else newest file with run date < current run date. Never overwrite an existing same-date output silently — version as _v2/_v3 or add HHMM. `stop()` if prior path == new path.
+- **Unattributed CBC events by SOURCE:** Record 17,384 unattributed (of 126,474) as a KEY/QC row split by SOURCE.
+- **Decision pending Amy/Erin:** D-165-01 (Rao-Scott primary) and D-165-07 (D_excl_FLM role).
+- **SOURCE_REASSIGN_QC cleanup:** Remove stray "Label" row; add title row for the second table (Task 4.5 incomplete).
+- **D_excl_FLM / E_source_composition row 1:** Remove "X" placeholder (same issue already fixed on A_crosstab).
+- **C_sensitivity coefficient table:** Confirm SOURCE coefficients are now |log-OR| < 5; full-precision raw log-odds in display (3.3 incomplete).
+- **MH_POOLED chi_stat:** Populate MH chi2 column (currently blank, only p shown).
+
 ### Parked Items (no phases this milestone)
 
 - End-of-treatment date rules (pending Sharon)
