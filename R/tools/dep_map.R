@@ -532,7 +532,7 @@ node_color <- function(type) {
     util     = "#4455CC",
     artifact = "#CCCCCC",
     db_table = "#888888",
-    function = "#AAAAFF",
+    `function` = "#AAAAFF",
     archived = "#DDDDDD",
     "#CCCCCC"
   )
