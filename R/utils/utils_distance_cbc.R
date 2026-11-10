@@ -222,11 +222,11 @@ assign_analytic_source <- function(enc, enc_all, addr_full, config) {
   # Step 1: Address lookup for claims rows (temporal rule first, THEN SOURCE quality)
   addr <- addr_full |>
     dplyr::mutate(
-      period_start = lubridate::ymd(ADDRESS_PERIOD_START, quiet = TRUE),
+      period_start = parse_pcornet_date(ADDRESS_PERIOD_START),
       period_end   = dplyr::if_else(
         is.na(ADDRESS_PERIOD_END) | trimws(as.character(ADDRESS_PERIOD_END)) == "",
         as.Date("9999-12-31"),
-        lubridate::ymd(ADDRESS_PERIOD_END, quiet = TRUE)
+        parse_pcornet_date(ADDRESS_PERIOD_END)
       ),
       addr_source  = trimws(SOURCE)
     )
