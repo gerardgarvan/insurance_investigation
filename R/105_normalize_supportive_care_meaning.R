@@ -220,7 +220,9 @@ unique_codes <- tibble(rxcui = unique(codes[!is.na(codes)]))
 
 if (file.exists(CACHE_CSV)) {
   cache <- readr::read_csv(CACHE_CSV, col_types = "cccc")
+  cache_mtime <- format(file.mtime(CACHE_CSV), "%Y-%m-%d %H:%M")
   message(glue("  loaded cache: {nrow(cache)} rows from {CACHE_CSV}"))
+  message("[R/105] rxnorm cache last updated: ", cache_mtime)
 } else {
   cache <- tibble(
     rxcui           = character(0),

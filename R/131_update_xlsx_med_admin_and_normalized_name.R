@@ -15,7 +15,7 @@
 #
 # Outputs:  data/reference/all_codes_resolved_next_tables_v2.1_new.xlsx  (working copy)
 #           data/reference/all_codes_resolved_next_tables_v2.1.xlsx      (canonical)
-#           data/reference/rxnorm_ingredient_cache.csv                   (updated cache)
+# Note:     rxnorm_ingredient_cache.csv is READ-ONLY here; R/105 is the sole writer.
 #
 # Dependencies: openxlsx2, dplyr, readr, httr2, glue, here, stringr
 #               R/00_config.R, R/utils/utils_treatment.R
@@ -145,7 +145,10 @@ tryCatch({
 
   # --- Chemotherapy ---
   chemo_universe <- TREATMENT_CODES$chemo_rxnorm
-  chemo_existing <- chemo_df %>%
+  # Re-read immediately before guard to prevent stale anti_join
+  # (chemo_df was read at script start; re-read from wb captures any in-memory appends)
+  chemo_df_current <- wb_to_df(wb, sheet = "Chemotherapy", start_row = 2)
+  chemo_existing <- chemo_df_current %>%
     dplyr::filter(`Code Type` == "RXNORM") %>%
     dplyr::pull(Code)
   chemo_hits      <- query_med_admin_counts(med_admin_tbl, chemo_universe)
@@ -369,10 +372,13 @@ resolve_ingredient <- function(rxcui, sleep_sec = 0.15) {
   list(name = paste(sort(unique(ins)), collapse = "/"), source = "rxnav_IN_combo")
 }
 
-# Load or create cache
+# rxnorm_ingredient_cache.csv is managed by R/105 (sole writer).
+# R/131 reads it here and appends MED_ADMIN-exclusive CUIs to the xlsx only.
 if (file.exists(CACHE_PATH)) {
   cache_df <- readr::read_csv(CACHE_PATH, col_types = "cccc", show_col_types = FALSE)
+  cache_mtime <- format(file.mtime(CACHE_PATH), "%Y-%m-%d %H:%M")
   message(glue("  Loaded RxNorm cache: {nrow(cache_df)} entries from {CACHE_PATH}"))
+  message("[R/131] rxnorm cache last updated: ", cache_mtime)
 } else {
   cache_df <- tibble::tibble(
     rxcui           = character(0),
@@ -380,7 +386,7 @@ if (file.exists(CACHE_PATH)) {
     source          = character(0),
     resolved_at     = character(0)
   )
-  message("  No existing RxNorm cache — will build from scratch")
+  message("  No existing RxNorm cache — R/105 must run first to populate the cache")
 }
 cache_size_before <- nrow(cache_df)
 
@@ -438,14 +444,9 @@ resolve_tab_normalized_name <- function(wb, sheet_name, cache_df, sleep_sec = 0.
       cache_df <- dplyr::bind_rows(cache_df, new_entry) |>
         dplyr::distinct(rxcui, .keep_all = TRUE)
 
-      if (i %% flush_every == 0) {
-        readr::write_csv(cache_df, CACHE_PATH)
-        message(glue("    checkpoint: cache flushed at {i}/{n_uncached} ({sheet_name})"))
-      }
+      # (no cache flush here — rxnorm_ingredient_cache.csv is written by R/105 only)
     }
-    # Final cache flush for this tab
-    readr::write_csv(cache_df, CACHE_PATH)
-    message(glue("  {sheet_name}: cache updated, now {nrow(cache_df)} entries"))
+    message(glue("  {sheet_name}: {n_uncached} CUIs resolved in-memory, now {nrow(cache_df)} entries (cache not persisted here)"))
   }
 
   # Build normalized vector for RXNORM rows
@@ -509,9 +510,8 @@ res_unrelated <- resolve_tab_normalized_name(wb, "Unrelated",     cache_df)
 cache_df      <- res_unrelated$cache_df
 normalized_unrelated <- res_unrelated$vec
 
-# Final cache save
-readr::write_csv(cache_df, CACHE_PATH)
-message(glue("  Cache final: {nrow(cache_df)} entries (was {cache_size_before} before)"))
+# Cache is not written here — rxnorm_ingredient_cache.csv is managed by R/105 (sole writer).
+message(glue("  Cache in-memory: {nrow(cache_df)} entries (was {cache_size_before} at load; R/105 persists)"))
 
 # SECTION 7: WRITE normalized_name COLUMN TO ALL CODE TABS ----
 
@@ -610,6 +610,6 @@ for (tab in code_tabs) {
                  nzchar(trimws(as.character(df_s[["normalized_name"]]))))
   message(glue("    {tab}: {n_nn}/{n_tot} resolved"))
 }
-message(glue("  RxNorm cache: {cache_size_before} -> {nrow(cache_df)} entries"))
+message(glue("  RxNorm cache (in-memory, not persisted): {cache_size_before} -> {nrow(cache_df)} entries (R/105 is the writer)"))
 message(glue("  Canonical file size: {final_size_kb} KB ({XLSX_CANONICAL})"))
 message("  Round-trip verify: PASSED")
