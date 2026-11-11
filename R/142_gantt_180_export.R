@@ -64,6 +64,8 @@ DETAIL_RDS           <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_d
 DESCRIPTIONS_RDS     <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 COHORT_RDS           <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+# NEEDS DECISION (Phase 195): audit item 16 does not settle R/142. Same pattern as R/52.
+# Left on cancer_summary.csv (R/45 raw) pending clarification.
 CANCER_SUMMARY_CSV   <- build_output_path("tables", "cancer_summary.csv")
 CUTOFF_DATE <- as.Date(Sys.getenv("HL_CUTOFF_DATE", "2025-12-31"))  # study cutoff for death credibility check
 

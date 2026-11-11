@@ -99,13 +99,11 @@ message(glue("Output xlsx:     {OUT_XLSX}\n"))
 # HIPAA helper: patient counts 1-10 are suppressed in any persisted/printed
 # per-group breakdown to prevent re-identification. Applies to all n_patients
 # fields in all output sheets and console lines.
-# Copied VERBATIM from R/109 (line 111).
+# Phase 195 A2: updated from R/109 -- return "<11" string (not NA_integer_) so suppressed
+# cells are distinguishable from missing in xlsx output. Affects n_patients columns.
 suppress_small <- function(n) {
-  # Vectorized: works on both scalar counts (n_distinct(...)) and whole columns
-  # (across(...)). Uses & / ifelse (vectorized) rather than && (scalar-only) so a
-  # length > 1 input never triggers "'length = N' in coercion to 'logical(1)'".
   n <- as.integer(n)
-  ifelse(!is.na(n) & n >= 1L & n <= 10L, NA_integer_, n)
+  ifelse(!is.na(n) & n >= 1L & n <= 10L, "<11", as.character(n))
 }
 
 
@@ -410,37 +408,29 @@ message("\n--- Section 7: Sheet 4 — Payer-Anchor Window ---")
 # ---------------------------------------------------------------------------
 PAYER_CHEMO_CSV <- here::here("output", "payer_at_chemo.csv")
 
+# Phase 195 A6: R/14 now writes payer_at_chemo.csv after compute_payer_at_chemo().
+# Changed from silent placeholder to stop() so a missing file surfaces immediately
+# rather than producing an unlabelled placeholder sheet.
+if (!file.exists(PAYER_CHEMO_CSV))
+  stop("[R/110] payer_at_chemo.csv not found at ", PAYER_CHEMO_CSV,
+       " -- run R/14_build_cohort.R on HiPerGator first (Section 6.5).")
+
+payer_raw <- read.csv(PAYER_CHEMO_CSV, colClasses = "character", stringsAsFactors = FALSE)
+message(glue("  Payer-at-chemo CSV loaded: {format(nrow(payer_raw), big.mark = ',')} rows"))
+
+# Summarise payer distribution from available columns (any_of guard)
+payer_col <- intersect(c("payer_category", "payer_mode", "payer_type"), names(payer_raw))
 df_payer <- NULL
-if (file.exists(PAYER_CHEMO_CSV)) {
-  payer_raw <- read.csv(PAYER_CHEMO_CSV, colClasses = "character", stringsAsFactors = FALSE)
-  message(glue("  Payer-at-chemo CSV loaded: {format(nrow(payer_raw), big.mark = ',')} rows"))
-
-  # Summarise payer distribution from available columns (any_of guard)
-  payer_col <- intersect(c("payer_category", "payer_mode", "payer_type"), names(payer_raw))
-  if (length(payer_col) > 0) {
-    df_payer <- payer_raw |>
-      dplyr::group_by(payer = .data[[payer_col[1]]]) |>
-      dplyr::summarise(
-        n_patients = suppress_small(dplyr::n_distinct(.data[["patient_id"]] %||% .data[[names(payer_raw)[1]]])),
-        .groups = "drop"
-      ) |>
-      dplyr::mutate(
-        note = "After regeneration (treatment_episodes includes MED_ADMIN/DISPENSING sources)"
-      )
-  }
-}
-
-if (is.null(df_payer)) {
-  df_payer <- tibble::tibble(
-    payer = c("(placeholder)"),
-    n_patients = NA_integer_,
-    note = paste0(
-      "Payer-anchor artifact (output/payer_at_chemo.csv) not available at report time. ",
-      "Run R/11 on HiPerGator after Plan 04 regeneration to populate this sheet. ",
-      "The treatment-anchored payer window changes are documented in Phase 124 D-02 context."
+if (length(payer_col) > 0) {
+  df_payer <- payer_raw |>
+    dplyr::group_by(payer = .data[[payer_col[1]]]) |>
+    dplyr::summarise(
+      n_patients = suppress_small(dplyr::n_distinct(.data[["patient_id"]] %||% .data[[names(payer_raw)[1]]])),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      note = "After regeneration (treatment_episodes includes MED_ADMIN/DISPENSING sources)"
     )
-  )
-  message("  [PLACEHOLDER] payer_at_chemo.csv not found; placeholder row emitted.")
 }
 
 message(glue("  Payer-anchor sheet: {nrow(df_payer)} rows"))

@@ -59,6 +59,7 @@ message(glue("Defined {length(unique(CANCER_SITE_MAP))} cancer site categories c
 # ==============================================================================
 # Read Phase 6 output (patient-code level dataset)
 
+# R/45 unfiltered output (all patients, D-codes included) -- R/46 applies its own filters.
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 
 # SAFE-01: Validate input CSV exists

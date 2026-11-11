@@ -382,15 +382,15 @@ age_sex <- tryCatch({
   NULL
 })
 
-# 2h. Payer: PAYER_CATEGORY_PRIMARY from payer_summary RDS (R/165 line 156-170)
+# 2h. Payer: PAYER_CATEGORY_PRIMARY from payer_summary (R/02).
+# Phase 195 A1: replaced RDS-only list.files lookup with load_payer_summary() which
+# accepts RDS OR CSV fallback (output/tables/payer_summary.csv from R/02).
+# D-DECISION-195-01: MICE sensitivity results delivered before 2026-11-10 were fit
+# WITHOUT payer -- payer_summary.rds never existed and no CSV fallback was coded.
+# Fixed here; a rerun of R/183 is required to produce payer-inclusive MICE results.
 payer_avail <- FALSE
 payer_lkp <- tryCatch({
-  payer_files <- list.files(CONFIG$output_dir, pattern = "^payer_summary.*\\.rds$",
-                            full.names = TRUE)
-  if (length(payer_files) == 0L) stop("payer_summary RDS not found")
-  payer_path <- payer_files[order(file.mtime(payer_files), decreasing = TRUE)[1L]]
-  message(glue("  Loading payer_summary: {basename(payer_path)}"))
-  ps <- readRDS(payer_path) |> dplyr::select(ID, PAYER_CATEGORY_PRIMARY)
+  ps <- load_payer_summary()   # RDS preferred; CSV fallback; stop if neither
   ps$ID <- as_id(ps$ID)
   payer_avail <- TRUE
   ps
@@ -400,7 +400,7 @@ payer_lkp <- tryCatch({
   NULL
 })
 
-if (!payer_avail) DROPPED[["payer"]] <- "payer_summary RDS not found"
+if (!payer_avail) DROPPED[["payer"]] <- "payer_summary not found (run R/02)"
 
 # 2i. Assemble pat_mice
 pat_mice <- anchors |>

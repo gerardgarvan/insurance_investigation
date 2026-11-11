@@ -22,6 +22,67 @@
 #
 # ==============================================================================
 
+#' Load patient-level payer summary from pipeline output
+#'
+#' Finds payer_summary: newest RDS in CONFIG$output_dir, or CSV at
+#' output/tables/payer_summary.csv; stop() if neither exists.
+#' Validates required columns, duplicate IDs, and (optionally) match count
+#' against a cohort ID vector.
+#'
+#' @param cohort_ids Character vector of cohort patient IDs. When supplied,
+#'   emits a match-count message and stops if 0 match (ID format mismatch).
+#'   Pass NULL (default) to skip cohort-match check.
+#' @return Tibble with columns ID (character) and PAYER_CATEGORY_PRIMARY.
+load_payer_summary <- function(cohort_ids = NULL) {
+  payer_rds_candidates <- list.files(
+    CONFIG$output_dir,
+    pattern    = "^payer_summary.*\\.rds$",
+    full.names = TRUE,
+    recursive  = TRUE
+  )
+  payer_csv_path <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")
+
+  if (length(payer_rds_candidates) > 0L) {
+    payer_path <- payer_rds_candidates[which.max(file.mtime(payer_rds_candidates))]
+    payer_raw  <- readRDS(payer_path)
+  } else if (file.exists(payer_csv_path)) {
+    payer_path <- payer_csv_path
+    payer_raw  <- readr::read_csv(payer_path, col_types = readr::cols(.default = "c"),
+                                  show_col_types = FALSE)
+  } else {
+    stop("[load_payer_summary] payer_summary not found as RDS in ", CONFIG$output_dir,
+         " or CSV at ", payer_csv_path, " -- run R/02_harmonize_payer.R first.")
+  }
+
+  if (!all(c("ID", "PAYER_CATEGORY_PRIMARY") %in% names(payer_raw)))
+    stop("[load_payer_summary] payer_summary is missing required columns ID and/or ",
+         "PAYER_CATEGORY_PRIMARY. Columns found: ", paste(names(payer_raw), collapse = ", "))
+  if (anyDuplicated(payer_raw$ID))
+    stop("[load_payer_summary] payer_summary has duplicated IDs. ",
+         "n_dup=", sum(duplicated(payer_raw$ID)))
+
+  payer_summary <- payer_raw |>
+    dplyr::transmute(ID = as.character(ID), PAYER_CATEGORY_PRIMARY)
+
+  n_matched_msg <- if (!is.null(cohort_ids)) {
+    n_match <- sum(cohort_ids %in% payer_summary$ID)
+    if (n_match == 0L)
+      stop("[load_payer_summary] payer_summary matched 0 of ", length(cohort_ids),
+           " cohort IDs -- verify ID format (character vs numeric).")
+    paste0(", cohort_matched=", n_match)
+  } else ""
+
+  message(sprintf(
+    "  [load_payer_summary] file=%s mtime=%s n_patients=%d%s",
+    basename(payer_path),
+    format(file.mtime(payer_path), "%Y-%m-%d %H:%M"),
+    nrow(payer_summary),
+    n_matched_msg
+  ))
+
+  payer_summary
+}
+
 #' Check if payer value represents missing data
 #'
 #' Detects NA, empty string, or PCORnet sentinel values (NI, UN, OT, 99, 9999).

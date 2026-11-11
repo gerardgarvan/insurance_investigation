@@ -50,6 +50,10 @@ assert_df_valid(
 
 # Define paths
 INPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
+# NEEDS DECISION (Phase 195): header comments this script "Phase 47 output" but code removes
+# D-codes itself at line 169 (suggesting it expects R/45 raw with D-codes still present).
+# Left on cancer_summary.csv (R/45 raw) until intent is confirmed.
+# See .planning/phases/195-dep-audit-delivered-output-fixes/RERUN-AND-REISSUE.md.
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 OUTPUT_TABLE_XLSX <- build_output_path("tables", "cancer_summary_table_pre_post.xlsx")
 OUTPUT_CSV <- build_output_path("tables", "cancer_summary_table_pre_post.csv")

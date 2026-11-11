@@ -59,8 +59,10 @@ assert_df_valid(
 
 # Define output paths
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
-OUTPUT_CSV <- build_output_path("tables", "cancer_summary.csv")
-OUTPUT_XLSX <- build_output_path("tables", "cancer_summary.xlsx")
+# Phase 195 A4: write to cancer_summary_refined.csv/xlsx to avoid overwriting
+# cancer_summary.csv (R/45's unfiltered output that R/46 and other scripts expect).
+OUTPUT_CSV  <- build_output_path("tables", "cancer_summary_refined.csv")
+OUTPUT_XLSX <- build_output_path("tables", "cancer_summary_refined.xlsx")
 OUTPUT_TABLE_XLSX <- build_output_path("tables", "cancer_summary_table.xlsx")
 OUTPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 

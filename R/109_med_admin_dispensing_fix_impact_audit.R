@@ -97,7 +97,11 @@ CHEMO_RXNORM <- TREATMENT_CODES$chemo_rxnorm
 message(glue("Chemo RxNorm CUI list: {length(CHEMO_RXNORM)} codes loaded from TREATMENT_CODES$chemo_rxnorm\n"))
 
 OUTPUT_XLSX   <- file.path(CONFIG$output_dir, "med_admin_dispensing_fix_impact.xlsx")
-EPISODES_RDS  <- here::here("cache", "outputs", "treatment_episodes.rds")
+# Phase 195 A5: was here("cache","outputs",...) which resolves to a local path that
+# does not exist on HiPerGator (/blue/ is outside the project tree). Fixed to match
+# R/110 line 87. Section 9 guard keeps graceful skip because it is explicitly designed
+# to emit an empty tibble when the file is absent (see comment at line 338).
+EPISODES_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 NDC_AUDIT_CSV <- file.path(CONFIG$output_dir, "ndc_rxnorm_crosswalk_audit.csv")
 NDC_REQUERY_CSV <- file.path(CONFIG$output_dir, "ndc_rxnorm_crosswalk_requery.csv")
 
@@ -109,11 +113,10 @@ message(glue("NDC audit CSV path:     {NDC_AUDIT_CSV}\n"))
 # per-group breakdown to prevent re-identification. Applies to n_patients fields
 # in all output sheets and console lines.
 suppress_small <- function(n) {
-  # Vectorized: works on both scalar counts (n_distinct(...)) and whole columns
-  # (across(...)). Uses & / ifelse (vectorized) rather than && (scalar-only) so a
-  # length > 1 input never triggers "'length = N' in coercion to 'logical(1)'".
+  # Phase 195 A2: return "<11" string (not NA_integer_) so suppressed cells are
+  # distinguishable from missing in xlsx/CSV output. Vectorized; affects n_patients columns.
   n <- as.integer(n)
-  ifelse(!is.na(n) & n >= 1L & n <= 10L, NA_integer_, n)
+  ifelse(!is.na(n) & n >= 1L & n <= 10L, "<11", as.character(n))
 }
 
 

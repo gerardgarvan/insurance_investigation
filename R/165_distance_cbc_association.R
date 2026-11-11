@@ -190,47 +190,10 @@ if (length(ses_candidates) == 0L) {
     dplyr::select(PATID, ENCOUNTERID, ruca_code, ruca_category)
 }
 
-# 1j. Patient-level payer (payer_summary from R/02) -- prefer newest RDS; fall back to CSV
-payer_rds_candidates <- list.files(
-  CONFIG$output_dir,
-  pattern = "^payer_summary.*\\.rds$",
-  full.names = TRUE,
-  recursive = TRUE
-)
-payer_csv_path <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")
-
-if (length(payer_rds_candidates) > 0L) {
-  payer_path <- payer_rds_candidates[which.max(file.mtime(payer_rds_candidates))]
-  payer_raw  <- readRDS(payer_path)
-} else if (file.exists(payer_csv_path)) {
-  payer_path <- payer_csv_path
-  payer_raw  <- readr::read_csv(payer_path, col_types = readr::cols(.default = "c"),
-                                show_col_types = FALSE)
-} else {
-  stop("[R/165] payer_summary not found as RDS in ", CONFIG$output_dir,
-       " or CSV at ", payer_csv_path, " -- run R/02_harmonize_payer.R first.")
-}
-
-if (!all(c("ID", "PAYER_CATEGORY_PRIMARY") %in% names(payer_raw)))
-  stop("[R/165] payer_summary is missing required columns ID and/or PAYER_CATEGORY_PRIMARY. ",
-       "Columns found: ", paste(names(payer_raw), collapse = ", "))
-if (anyDuplicated(payer_raw$ID))
-  stop("[R/165] payer_summary has duplicated IDs before transmute. ",
-       "n_dup=", sum(duplicated(payer_raw$ID)))
-
-payer_summary <- payer_raw |>
-  dplyr::transmute(ID = as.character(ID), PAYER_CATEGORY_PRIMARY)
-
-n_payer_matched <- sum(cohort_ids %in% payer_summary$ID)
-message(glue(
-  "  Loading payer_summary: {basename(payer_path)}",
-  "  (mtime: {format(file.mtime(payer_path), '%Y-%m-%d %H:%M')})",
-  "  n_patients={nrow(payer_summary)}, cohort_matched={n_payer_matched}",
-  .sep = "\n  "
-))
-if (n_payer_matched == 0L)
-  stop("[R/165] payer_summary matched 0 of ", length(cohort_ids),
-       " cohort IDs -- verify ID format (character vs numeric).")
+# 1j. Patient-level payer (payer_summary from R/02) -- Phase 195 A1: extracted to
+# load_payer_summary() in utils_payer.R. Behaviour identical: RDS preferred, CSV fallback,
+# stop if neither; validates columns + duplicate IDs; stops if 0 cohort IDs match.
+payer_summary <- load_payer_summary(cohort_ids = cohort_ids)
 
 # ==============================================================================
 # SECTION 2: BUILD ENCOUNTER-LEVEL ANALYSIS SET ----

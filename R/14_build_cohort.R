@@ -389,6 +389,13 @@ source("R/11_treatment_payer.R")
 
 # Compute payer mode at first treatment for each type
 chemo_payer <- compute_payer_at_chemo()
+# Phase 195 A6: write payer_at_chemo.csv for R/110 Section 7 (payer-anchor window sheet).
+# Columns: patient_id (ID), payer_category (PAYER_AT_CHEMO) -- matching R/110:419 intersect.
+readr::write_csv(
+  dplyr::transmute(chemo_payer, patient_id = ID, payer_category = PAYER_AT_CHEMO),
+  file.path(CONFIG$output_dir, "payer_at_chemo.csv")
+)
+message("[R/14] payer_at_chemo.csv written: ", nrow(chemo_payer), " rows")
 rad_payer <- compute_payer_at_radiation()
 sct_payer <- compute_payer_at_sct()
 
