@@ -55,7 +55,7 @@ if (!exists("resolve_death_date")) {
   source(here::here("R/utils/utils_death.R"))
 }
 
-run_date <- format(Sys.Date(), "%Y%m%d")
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 out_dir  <- CONFIG$cache$outputs_dir
 
 message(glue("=== Survivorship modality rates (run {run_date}) ==="))
@@ -239,10 +239,10 @@ message(glue("  events_dated: {nrow(events_dated)} rows ",
              "{n_distinct(events_dated$modality)} modalities)"))
 
 # Save for Plan 03
-saveRDS(events_dated,
-        file.path(out_dir,
-                  glue("survivorship_dated_events_{run_date}.rds")))
-message(glue("  Saved: survivorship_dated_events_{run_date}.rds"))
+rds_events <- versioned_output_path(out_dir, "survivorship_dated_events", ".rds",
+                                     run_date = run_date)
+saveRDS(events_dated, rds_events)
+message("[R/166] output: ", basename(rds_events))
 
 # ==============================================================================
 # SECTION 5: FOLLOW-UP-YEAR INTERVAL BREAKDOWN (B) ----
@@ -319,8 +319,8 @@ out_list <- list(
   r147_run_date               = r147_run_date
 )
 
-out_path <- file.path(out_dir,
-                      glue("survivorship_modality_rates_parts_{run_date}.rds"))
+out_path <- versioned_output_path(out_dir, "survivorship_modality_rates_parts", ".rds",
+                                   run_date = run_date)
 saveRDS(out_list, out_path)
-message(glue("  Saved: survivorship_modality_rates_parts_{run_date}.rds"))
+message("[R/166] output: ", basename(out_path))
 message(glue("=== Done (run {run_date}) ==="))

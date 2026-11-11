@@ -30,7 +30,7 @@
 
 source("R/00_config.R")
 
-run_date <- format(Sys.Date(), "%Y%m%d")
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 message("==== R/187: Anthracycline Exposure Variables -- run_date = ", run_date, " ====")
 
 UF_BLUE   <- "#0021A5"
@@ -280,8 +280,9 @@ stopifnot(all(patient_out$years_since_last_anthracycline >= 0, na.rm = TRUE))
 # ==============================================================================
 
 # ---- Patient-grain RDS (internal — no sharing, contains ID and dates) ----
-out_rds_path <- here::here("output", "internal",
-                           glue::glue("anthracycline_exposure_patient_{run_date}.rds"))
+out_rds_path <- versioned_output_path(here::here("output", "internal"),
+                                       "anthracycline_exposure_patient", ".rds",
+                                       run_date = run_date)
 saveRDS(patient_out, out_rds_path)
 message("[187] Patient RDS written: ", out_rds_path)
 message("[187] Rows: ", nrow(patient_out),
@@ -435,10 +436,11 @@ openxlsx::writeData(wb, "FLAGS", flags_sheet, startRow = 1)
 openxlsx::addStyle(wb, "FLAGS",
                    style = hdr_orange, rows = 1, cols = 1:2, gridExpand = TRUE)
 
-out_xlsx_path <- here::here("output",
-                             glue::glue("anthracycline_exposure_summary_{run_date}.xlsx"))
-openxlsx::saveWorkbook(wb, out_xlsx_path, overwrite = TRUE)
-message("[187] Summary workbook written: ", out_xlsx_path)
+out_xlsx_path <- versioned_output_path(here::here("output"),
+                                        "anthracycline_exposure_summary", ".xlsx",
+                                        run_date = run_date)
+openxlsx::saveWorkbook(wb, out_xlsx_path, overwrite = FALSE)
+message("[R/187] output: ", out_xlsx_path)
 
 # ---- Final output path record (for 187-01-SUMMARY.md) ----
 message("========================================")

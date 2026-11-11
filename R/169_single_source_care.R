@@ -30,7 +30,7 @@ suppressPackageStartupMessages({
   library(glue)
   library(readr)
 })
-run_date <- format(Sys.Date(), "%Y%m%d")
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 
 # =============================================================================
 # SECTION 1B — pure helper (defined before any DuckDB code)
@@ -260,18 +260,13 @@ if (duckdb_ok) {
   int_dir <- file.path(CONFIG$output_dir, "internal")
   dir.create(int_dir, showWarnings = FALSE, recursive = TRUE)
 
-  readr::write_csv(
-    result,
-    file.path(int_dir, glue::glue("single_source_care_{run_date}.csv"))
-  )
-  message("[R/169] Wrote CSV: ", file.path(int_dir, glue::glue("single_source_care_{run_date}.csv")))
-
-  saveRDS(
-    result,
-    file.path(int_dir, glue::glue("single_source_care_{run_date}.rds"))
-  )
-  message("[R/169] Wrote RDS: ", file.path(int_dir, glue::glue("single_source_care_{run_date}.rds")))
-
+  ssc_csv   <- versioned_output_path(int_dir, "single_source_care",       ".csv", run_date = run_date)
+  ssc_rds   <- versioned_output_path(int_dir, "single_source_care",       ".rds", run_date = run_date)
+  ssc_parts <- versioned_output_path(int_dir, "single_source_care_parts", ".rds", run_date = run_date)
+  readr::write_csv(result, ssc_csv)
+  message("[R/169] output: ", ssc_csv)
+  saveRDS(result, ssc_rds)
+  message("[R/169] output: ", ssc_rds)
   saveRDS(
     list(
       result       = result,
@@ -280,10 +275,9 @@ if (duckdb_ok) {
       run_date     = run_date,
       date_range   = c(dmin, dmax)
     ),
-    file.path(int_dir, glue::glue("single_source_care_parts_{run_date}.rds"))
+    ssc_parts
   )
-  message("[R/169] Wrote parts RDS: ",
-          file.path(int_dir, glue::glue("single_source_care_parts_{run_date}.rds")))
+  message("[R/169] output: ", ssc_parts)
 
   # =============================================================================
   # SECTION 4 — workbook builder functions (computed on raw counts)
@@ -903,10 +897,10 @@ if (duckdb_ok) {
                          widths = "auto")
 
   # ---- Save workbook ----
-  xlsx_path <- file.path(CONFIG$output_dir,
-                         glue::glue("single_source_care_{run_date}.xlsx"))
-  openxlsx::saveWorkbook(wb, xlsx_path, overwrite = TRUE)
-  message("[R/169] Workbook saved: ", xlsx_path)
+  xlsx_path <- versioned_output_path(CONFIG$output_dir, "single_source_care", ".xlsx",
+                                      run_date = run_date)
+  openxlsx::saveWorkbook(wb, xlsx_path, overwrite = FALSE)
+  message("[R/169] output: ", xlsx_path)
 
   # ---------------------------------------------------------------------------
   # Cleanup — duckdb temp tables and connection

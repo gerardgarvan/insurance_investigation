@@ -57,9 +57,12 @@ message("=== Phase 144: Encounter-Level SES Index Linkage ===")
 
 # SECTION 2: CONSTANTS AND OUTPUT PATHS ----
 
-RUN_DATE    <- format(Sys.Date(), "%Y%m%d")
-OUTPUT_RDS  <- file.path(CONFIG$output_dir, glue("encounter_ses_index_{RUN_DATE}.rds"))
-OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("encounter_ses_index_summary_{RUN_DATE}.xlsx"))
+RUN_DATE    <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
+OUTPUT_RDS  <- versioned_output_path(CONFIG$output_dir, "encounter_ses_index", ".rds",
+                                      run_date = RUN_DATE)
+OUTPUT_XLSX <- versioned_output_path(CONFIG$output_dir, "encounter_ses_index_summary", ".xlsx",
+                                      run_date = RUN_DATE)
+message("[R/116] outputs: ", basename(OUTPUT_RDS), " | ", basename(OUTPUT_XLSX))
 
 # Reference file paths (all probe-first gated in SECTION 3)
 RUCA_PATH        <- file.path("data", "reference", "RUCA-codes-2020-zipcode.xlsx")

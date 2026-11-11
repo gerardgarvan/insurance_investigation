@@ -41,7 +41,7 @@ suppressPackageStartupMessages({
   library(readxl)
 })
 
-RUN_DATE <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 message(glue("==== R/181 cbc_prior_year -- RUN DATE {RUN_DATE} ===="))
 
 CUTOFF <- CONFIG$far_from_care_cutoff_mi
@@ -1096,11 +1096,12 @@ openxlsx::setColWidths(wb, "SOURCE_REASSIGN_QC", 1:2, c(36, 20))
 # Save workbook (all 9 sheets: KEY, A_2x2, B_rates, C_year_distribution, QC,
 #                              BY_SOURCE_pat, BY_SOURCE_pat_addr, BY_SOURCE_pat_flm,
 #                              SOURCE_REASSIGN_QC)
-OUT_181_PATH <- file.path(CONFIG$output_dir, glue("cbc_prior_year_{RUN_DATE}.xlsx"))
+OUT_181_PATH <- versioned_output_path(CONFIG$output_dir, "cbc_prior_year", ".xlsx",
+                                       run_date = RUN_DATE)
 wb_path <- OUT_181_PATH   # kept for backward compatibility with SECTION 6 MEMO references
 
-openxlsx::saveWorkbook(wb, OUT_181_PATH, overwrite = TRUE)
-message(glue("  Workbook saved: {OUT_181_PATH} (9 sheets)"))
+openxlsx::saveWorkbook(wb, OUT_181_PATH, overwrite = FALSE)
+message("[R/181] output: ", OUT_181_PATH, " (9 sheets)")
 
 # ==============================================================================
 # SECTION 6c: REGRESSION CHECK (D-11) ----
@@ -1285,8 +1286,8 @@ memo_lines <- c(
   ""
 )
 
-memo_path <- file.path(CONFIG$output_dir,
-                        glue("cbc_prior_year_memo_{RUN_DATE}.md"))
+memo_path <- versioned_output_path(CONFIG$output_dir, "cbc_prior_year_memo", ".md",
+                                    run_date = RUN_DATE)
 writeLines(memo_lines, memo_path)
 message(glue("  Memo saved: {memo_path}"))
 

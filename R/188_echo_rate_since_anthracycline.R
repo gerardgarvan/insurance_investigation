@@ -24,6 +24,8 @@
 # ==============================================================================
 
 source(here::here("R", "00_config.R"))
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
+message("==== R/188: Echo Rate Since Anthracycline -- run_date = ", run_date, " ====")
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
 # Counts 1-10 -> "<11"; 0 shown as "0". R/184's sup() is local to R/184,
@@ -362,8 +364,8 @@ if (nrow(echo_enc) != n_src_unique)
 message("[188] window_label counts:")
 print(table(echo_enc$window_label, useNA = "ifany"))
 
-enc_path <- file.path(CONFIG$output_dir, "internal",
-                      glue::glue("echo_enc_anthracycline_{format(Sys.Date(), '%Y%m%d')}.rds"))
+enc_path <- versioned_output_path(file.path(CONFIG$output_dir, "internal"),
+                                   "echo_enc_anthracycline", ".rds", run_date = run_date)
 saveRDS(echo_enc, enc_path)
 message("[188] Encounter-grain RDS: ", enc_path, " (", nrow(echo_enc), " rows)")
 
@@ -406,8 +408,8 @@ if (sum(chk$sum4) != nrow(echo_enc))
   stop("[188] D-06 dataset sum check failed.")
 message("[188] D-06 sum checks passed (per-patient and dataset-level).")
 
-pat_path <- file.path(CONFIG$output_dir, "internal",
-                      glue::glue("echo_rate_anthracycline_patient_{format(Sys.Date(), '%Y%m%d')}.rds"))
+pat_path <- versioned_output_path(file.path(CONFIG$output_dir, "internal"),
+                                   "echo_rate_anthracycline_patient", ".rds", run_date = run_date)
 saveRDS(pat, pat_path)
 message("[188] Patient-grain RDS: ", pat_path, " (", nrow(pat), " rows)")
 
@@ -792,10 +794,8 @@ openxlsx::addStyle(wb, "QC", hdr_style, rows = qc_row,
 openxlsx::setColWidths(wb, "QC", cols = 1:2, widths = c(60, 20))
 
 # ── Write workbook ────────────────────────────────────────────────────────────
-wb_path <- file.path(
-  CONFIG$output_dir,
-  glue::glue("{format(Sys.Date(), '%Y%m%d')}_188_echo_rate_anthracycline.xlsx")
-)
-openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
-message("[188] Workbook written: ", wb_path)
+wb_path <- versioned_output_path(CONFIG$output_dir, "188_echo_rate_anthracycline",
+                                   ".xlsx", run_date = run_date)
+openxlsx::saveWorkbook(wb, wb_path, overwrite = FALSE)
+message("[R/188] output: ", wb_path)
 message("[188] Phase 188 complete. Sheets: KEY, Rates, Anchor Comparison, QC")

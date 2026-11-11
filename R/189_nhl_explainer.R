@@ -17,8 +17,9 @@ suppressPackageStartupMessages({
   library(readr)
 })
 
-run_date  <- format(Sys.Date(), "%Y%m%d")
-out_path  <- here::here("output", paste0("189-NHL-EXPLAINER-", run_date, ".md"))
+run_date  <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
+out_path  <- versioned_output_path(here::here("output"), "189-NHL-EXPLAINER", ".md",
+                                    run_date = run_date)
 phase_path <- here::here(
   ".planning", "phases",
   "189-team-deliverables-and-milestone-closeout",

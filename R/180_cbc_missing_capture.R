@@ -46,7 +46,7 @@ suppressPackageStartupMessages({
 stopifnot("dplyr >= 1.1.0 required for inequality joins" =
             utils::packageVersion("dplyr") >= "1.1.0")
 
-RUN_DATE <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 message(glue("==== R/180 cbc_missing_capture -- RUN DATE {RUN_DATE} ===="))
 
 CUTOFF <- CONFIG$far_from_care_cutoff_mi
@@ -763,14 +763,16 @@ openxlsx::writeData(wb, "MISS-04", data.frame(Caveat = lab_source_caveat),
                     startRow = r0c + nrow(lab_source_df) + 3, headerStyle = hdr)
 openxlsx::setColWidths(wb, "MISS-04", 1:max(ncol(desc07_df), ncol(miss04_models_df), 3), 18)
 
-wb_path <- file.path(CONFIG$output_dir, glue("cbc_missing_capture_{RUN_DATE}.xlsx"))
-openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
-message(glue("  Workbook saved: {wb_path}"))
+wb_path <- versioned_output_path(CONFIG$output_dir, "cbc_missing_capture", ".xlsx",
+                                   run_date = RUN_DATE)
+openxlsx::saveWorkbook(wb, wb_path, overwrite = FALSE)
+message("[R/180] output: ", wb_path)
 
 # --- 5d. Internal RDS ---------------------------------------------------------
 internal_dir <- file.path(CONFIG$output_dir, "internal")
 dir.create(internal_dir, recursive = TRUE, showWarnings = FALSE)
-rds_out <- file.path(internal_dir, glue("cbc_missing_capture_{RUN_DATE}.rds"))
+rds_out <- versioned_output_path(internal_dir, "cbc_missing_capture", ".rds",
+                                   run_date = RUN_DATE)
 
 py_export <- py_m4 |>
   dplyr::select(ID, year_index, year_start, year_end, cbc_year, cbc_year_broad,

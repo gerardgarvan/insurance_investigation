@@ -4,7 +4,8 @@
 # Auto-sourced by R/00_config.R (D-04 glob).
 #
 # Functions
-#   resolve_input()   Resolve a dated input file with optional env-var pin.
+#   resolve_input()          Resolve a dated input file with optional env-var pin.
+#   versioned_output_path()  Return a dated output path, versioning if file exists.
 #
 # ==============================================================================
 
@@ -72,4 +73,32 @@ resolve_input <- function(dir, pattern, env_var, label = env_var) {
   path <- candidates[[1L]]
   message("[resolve_input] ", label, " (pinned=FALSE): ", path)
   invisible(path)
+}
+
+#' Return a dated output path, incrementing _v2/_v3... if the base path exists.
+#'
+#' Controlled by env var VERSIONED_OUTPUT (default "TRUE").
+#' Set VERSIONED_OUTPUT=FALSE to disable versioning (stop() if file exists instead).
+#'
+#' @param dir       Output directory.
+#' @param stem      File stem WITHOUT date suffix (e.g. "distance_cbc_association").
+#' @param ext       Extension including dot (e.g. ".xlsx").
+#' @param run_date  Date string (default: today in YYYYMMDD).
+#' @return          Full path string.
+versioned_output_path <- function(dir, stem, ext,
+                                  run_date = format(Sys.Date(), "%Y%m%d")) {
+  versioning <- !identical(Sys.getenv("VERSIONED_OUTPUT", unset = "TRUE"), "FALSE")
+  base <- file.path(dir, paste0(stem, "_", run_date, ext))
+  if (!file.exists(base)) return(base)
+
+  if (!versioning)
+    stop("[versioned_output_path] '", basename(base), "' already exists. ",
+         "Set VERSIONED_OUTPUT=TRUE (or unset) to enable auto-versioning.")
+
+  v <- 2L
+  repeat {
+    candidate <- file.path(dir, paste0(stem, "_", run_date, "_v", v, ext))
+    if (!file.exists(candidate)) return(candidate)
+    v <- v + 1L
+  }
 }

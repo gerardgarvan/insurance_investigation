@@ -24,6 +24,7 @@
 # ==============================================================================
 
 message("==== R/186: Survivorship Rate Granularity ====")
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 
 # ==============================================================================
 # SECTION 0: PINNED INPUT ----
@@ -657,7 +658,7 @@ key_data <- data.frame(
     "source"
   ),
   Value = c(
-    format(Sys.Date()),
+    run_date,
     Sys.info()[["nodename"]],
     r184_output_path,
     as.character(pinned_r184),
@@ -710,9 +711,10 @@ openxlsx::writeData(wb, "Secondary", secondary_tbl, startRow = cur_row_s)
 style_header_row(wb, "Secondary", cur_row_s, ncol(secondary_tbl))
 
 # ---- Save workbook ----
-out_path <- here::here(glue::glue("output/survivorship_rate_granularity_{format(Sys.Date(), '%Y%m%d')}.xlsx"))
-openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
-message(glue::glue("[R/186] wrote {out_path}"))
+out_path <- versioned_output_path(here::here("output"), "survivorship_rate_granularity",
+                                   ".xlsx", run_date = run_date)
+openxlsx::saveWorkbook(wb, out_path, overwrite = FALSE)
+message("[R/186] output: ", out_path)
 
 # Pin R186_OUTPUT for downstream Phase 188
 message(glue::glue(

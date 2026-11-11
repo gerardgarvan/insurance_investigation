@@ -51,7 +51,7 @@ if (requireNamespace("sandwich", quietly = TRUE)) {
 stopifnot("dplyr >= 1.1.0 required for inequality joins" =
             utils::packageVersion("dplyr") >= "1.1.0")
 
-RUN_DATE <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 message(glue("==== R/184 modality_rate_model -- RUN DATE {RUN_DATE} ===="))
 
 CUTOFF       <- CONFIG$far_from_care_cutoff_mi
@@ -654,7 +654,7 @@ print(as.data.frame(dplyr::select(QC_ELIG, modality, period, n_py_sup, n_patient
 # 3j. Save long frame
 internal_dir <- file.path(CONFIG$output_dir, "internal")
 dir.create(internal_dir, recursive = TRUE, showWarnings = FALSE)
-long_out <- file.path(internal_dir, glue("modality_long_{RUN_DATE}.rds"))
+long_out <- versioned_output_path(internal_dir, "modality_long", ".rds", run_date = RUN_DATE)
 saveRDS(long_df, long_out)
 message(glue("  Saved: {long_out} ({format(nrow(long_df), big.mark = ',')} rows)"))
 
@@ -1459,9 +1459,10 @@ openxlsx::writeData(wb, "QC", suppression_audit, startRow = qc_row)
 style_header_row(wb, "QC", qc_row, ncol(suppression_audit))
 
 # Save workbook
-wb_path <- file.path(CONFIG$output_dir, glue("modality_rate_model_{RUN_DATE}.xlsx"))
-openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
-message(glue("  Workbook saved: {wb_path}"))
+wb_path <- versioned_output_path(CONFIG$output_dir, "modality_rate_model", ".xlsx",
+                                   run_date = RUN_DATE)
+openxlsx::saveWorkbook(wb, wb_path, overwrite = FALSE)
+message("[R/184] output: ", wb_path)
 
 message("==== SECTION 8: workbook complete ====")
 
@@ -1564,7 +1565,7 @@ memo_lines <- c(memo_lines,
   glue("- Workbook: {basename(wb_path)}")
 )
 
-memo_path <- file.path(CONFIG$output_dir, glue("184-MEMO_{RUN_DATE}.md"))
+memo_path <- versioned_output_path(CONFIG$output_dir, "184-MEMO", ".md", run_date = RUN_DATE)
 writeLines(memo_lines, memo_path)
 message(glue("  Memo saved: {memo_path}"))
 

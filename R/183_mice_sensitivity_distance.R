@@ -50,7 +50,7 @@ suppressPackageStartupMessages({
 # SECTION 0: CONSTANTS AND HELPERS ----
 # ==============================================================================
 
-RUN_DATE    <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE    <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 MICE_M      <- 20L
 MICE_MAXIT  <- 20L
 MICE_SEED   <- 20261015L
@@ -556,9 +556,10 @@ if (length(DROPPED) > 0L) {
 }
 
 dir.create(file.path("output", "internal"), recursive = TRUE, showWarnings = FALSE)
-saveRDS(pat_mice, file.path("output", "internal",
-                             glue("mice_input_patient_{RUN_DATE}.rds")))
-message(glue("  Saved: output/internal/mice_input_patient_{RUN_DATE}.rds"))
+mice_input_path <- versioned_output_path(file.path("output", "internal"),
+                                          "mice_input_patient", ".rds", run_date = RUN_DATE)
+saveRDS(pat_mice, mice_input_path)
+message("[R/183] output: ", mice_input_path)
 
 # ==============================================================================
 # SECTION 3: REPRODUCTION GATE (D-16a) ----
@@ -660,9 +661,10 @@ imp_d02 <- run_mice("far", "logreg")
 message(glue("  D-02 complete: m={MICE_M}, maxit={MICE_MAXIT}, seed={MICE_SEED}"))
 
 # Save mids objects (patient-level — internal only, D-17)
-mids_path <- file.path("output", "internal", glue("mice_mids_{RUN_DATE}.rds"))
+mids_path <- versioned_output_path(file.path("output", "internal"),
+                                    "mice_mids", ".rds", run_date = RUN_DATE)
 saveRDS(list(d01 = imp_d01, d02 = imp_d02), mids_path)
-message(glue("  Saved: {mids_path}"))
+message("[R/183] output: ", mids_path)
 
 # --- D-10: Diagnostics (non-blocking) ---
 
@@ -713,7 +715,7 @@ message(glue("  D-10: D-02 imputed far proportion (missing patients, over m): ",
              "max={round(max(far_props_d02), 4)}"))
 
 # Trace plots: chainMean / chainVar for both runs (2x2 panels)
-trace_png <- file.path("output", glue("mice_trace_{RUN_DATE}.png"))
+trace_png <- versioned_output_path("output", "mice_trace", ".png", run_date = RUN_DATE)
 png(trace_png, width = 1200, height = 800)
 par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
 # D-01 chainMean / chainVar for log_dist
@@ -742,7 +744,7 @@ dev.off()
 message(glue("  D-10 trace PNG: {trace_png}"))
 
 # Density / proportion PNG
-density_png <- file.path("output", glue("mice_density_{RUN_DATE}.png"))
+density_png <- versioned_output_path("output", "mice_density", ".png", run_date = RUN_DATE)
 png(density_png, width = 1200, height = 500)
 par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
 # D-01: observed vs imputed log_dist (pooled over m datasets)
@@ -1122,9 +1124,10 @@ openxlsx::writeData(wb, "MICE-02", comp_tbl, startRow = 2, headerStyle = hdr)
 openxlsx::freezePane(wb, "MICE-02", firstRow = FALSE, firstActiveRow = 3)
 openxlsx::setColWidths(wb, "MICE-02", cols = 1:7, widths = c(40, 10, 10, 10, 10, 10, 25))
 
-wb_path <- file.path("output", glue("mice_sensitivity_distance_{RUN_DATE}.xlsx"))
-openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
-message(glue("  Workbook saved: {wb_path}"))
+wb_path <- versioned_output_path("output", "mice_sensitivity_distance", ".xlsx",
+                                   run_date = RUN_DATE)
+openxlsx::saveWorkbook(wb, wb_path, overwrite = FALSE)
+message("[R/183] output: ", wb_path)
 
 # ==============================================================================
 # SECTION 7: MEMO ----
@@ -1142,7 +1145,7 @@ pool_d02_pri <- pooled_results[["d02_pri"]]
 d02_agree_diff <- abs(pool_d02_pri$or - cc_or)
 d02_agree_word <- if (d02_agree_diff <= 0.05) "similar to" else "differs from"
 
-memo_path <- file.path("output", glue("183-MEMO_{RUN_DATE}.md"))
+memo_path <- versioned_output_path("output", "183-MEMO", ".md", run_date = RUN_DATE)
 memo_lines <- c(
   glue("# MICE Sensitivity Analysis for Distance Exposure — Memo ({RUN_DATE})"),
   "",
@@ -1211,5 +1214,5 @@ message(glue("  Trace PNG:   {trace_png}"))
 message(glue("  Density PNG: {density_png}"))
 message(glue("  Memo:        {memo_path}"))
 message(glue("  mids RDS:    {mids_path}"))
-message(glue("  Input RDS:   output/internal/mice_input_patient_{RUN_DATE}.rds"))
+message(glue("  Input RDS:   {mice_input_path}"))
 message("\n==== R/183 mice_sensitivity_distance COMPLETE ====")

@@ -52,7 +52,7 @@ if (!exists("last_anthracycline_dose")) {
   source(here::here("R", "utils", "utils_anthracycline_echo.R"))
 }
 
-run_date <- format(Sys.Date(), "%Y%m%d")
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 out_dir  <- CONFIG$cache$outputs_dir
 
 # ---------- 2. Load episode file ----------------------------------------------
@@ -409,10 +409,10 @@ output_list <- list(
   run_date                     = run_date
 )
 
-out_path <- file.path(out_dir,
-                      glue::glue("survivorship_echo_parts_{run_date}.rds"))
+out_path <- versioned_output_path(out_dir, "survivorship_echo_parts", ".rds",
+                                   run_date = run_date)
 saveRDS(output_list, out_path)
-message("Saved: ", out_path)
+message("[R/167] output: ", out_path)
 message("Done. Run date: ", run_date)
 
 # ==============================================================================

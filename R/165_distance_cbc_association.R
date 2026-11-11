@@ -54,7 +54,7 @@ suppressPackageStartupMessages({
 })
 
 RUN_START <- proc.time()
-RUN_DATE  <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE  <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 
 METHOD <- CONFIG$distance_assoc_method
 CUTOFF <- CONFIG$far_from_care_cutoff_mi
@@ -1916,12 +1916,10 @@ sens_cbc_attr <- list(whole = NULL, post = NULL)
 # SECTION 8: SAVE WORKBOOK ----
 # ==============================================================================
 
-out_path <- file.path(
-  CONFIG$output_dir,
-  glue("distance_cbc_association_{RUN_DATE}.xlsx")
-)
-openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
-message(glue("  Workbook saved: {out_path}"))
+out_path <- versioned_output_path(CONFIG$output_dir, "distance_cbc_association", ".xlsx",
+                                    run_date = RUN_DATE)
+openxlsx::saveWorkbook(wb, out_path, overwrite = FALSE)
+message("[R/165] output: ", out_path)
 
 # P4.1 — Strip dangling drawing relationships from the archive.
 # openxlsx 4.x writes Relationship entries for drawingN.xml / vmlDrawingN.vml in every

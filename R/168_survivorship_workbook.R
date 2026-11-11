@@ -36,7 +36,7 @@ suppressPackageStartupMessages({
 
 source(here::here("R/00_config.R"))
 
-run_date  <- format(Sys.Date(), "%Y%m%d")
+run_date  <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 out_dir   <- CONFIG$cache$outputs_dir
 
 # ==============================================================================
@@ -120,12 +120,12 @@ wide_all <- long_all |>
   )
 
 # Save INTERNAL unsuppressed per-patient objects
-long_out <- file.path(out_dir,
-  glue("survivorship_modality_rates_long_{run_date}.rds"))
-patient_rds_out <- file.path(out_dir,
-  glue("survivorship_modality_rates_patient_{run_date}.rds"))
-patient_csv_out <- file.path(out_dir,
-  glue("survivorship_modality_rates_patient_{run_date}.csv"))
+long_out        <- versioned_output_path(out_dir, "survivorship_modality_rates_long",
+                                          ".rds", run_date = run_date)
+patient_rds_out <- versioned_output_path(out_dir, "survivorship_modality_rates_patient",
+                                          ".rds", run_date = run_date)
+patient_csv_out <- versioned_output_path(out_dir, "survivorship_modality_rates_patient",
+                                          ".csv", run_date = run_date)
 
 saveRDS(long_all, long_out)
 saveRDS(wide_all, patient_rds_out)
@@ -435,10 +435,10 @@ if (!is.null(qc_anthracycline_drug_counts) &&
 # SECTION 10: SAVE WORKBOOK ----
 # ==============================================================================
 
-xlsx_out <- file.path(out_dir,
-  glue("survivorship_modality_rates_{run_date}.xlsx"))
+xlsx_out <- versioned_output_path(out_dir, "survivorship_modality_rates", ".xlsx",
+                                   run_date = run_date)
 
-openxlsx::saveWorkbook(wb, xlsx_out, overwrite = TRUE)
+openxlsx::saveWorkbook(wb, xlsx_out, overwrite = FALSE)
 
 message("\n  Outputs written:")
 message("    ", long_out)

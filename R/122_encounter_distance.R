@@ -101,10 +101,13 @@ section_done <- function(label) {
 # SECTION 2: CONSTANTS AND PROBE GATES ----
 # ==============================================================================
 
-RUN_DATE     <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE     <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 XLSX_ROW_CAP <- 1000000L   # Excel hard limit is 1,048,576 rows/sheet; A sheet is capped below it
-OUTPUT_RDS  <- file.path(CONFIG$output_dir, glue("encounter_distance_{RUN_DATE}.rds"))
-OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("encounter_distance_{RUN_DATE}.xlsx"))
+OUTPUT_RDS  <- versioned_output_path(CONFIG$output_dir, "encounter_distance", ".rds",
+                                      run_date = RUN_DATE)
+OUTPUT_XLSX <- versioned_output_path(CONFIG$output_dir, "encounter_distance", ".xlsx",
+                                      run_date = RUN_DATE)
+message("[R/122] outputs: ", basename(OUTPUT_RDS), " | ", basename(OUTPUT_XLSX))
 
 # ---------------------------------------------------------------------------
 # Probe gate 1: ZCTA Gazetteer centroids (ZIP5 path) -- BLOCKING
@@ -1347,8 +1350,8 @@ tail_by_patient_zip <- tail_rows %>%
 message(glue("  tail >= 350 mi: {nrow(tail_rows)} encounters ({round(100 * nrow(tail_rows) / nrow(computed_rows), 2)}% of computed)"))
 
 # ---- 12.5c Per-patient rds write ----
-OUTPUT_PATIENT_RDS <- file.path(CONFIG$output_dir,
-                                 glue("distance_patient_{RUN_DATE}.rds"))
+OUTPUT_PATIENT_RDS <- versioned_output_path(CONFIG$output_dir, "distance_patient", ".rds",
+                                             run_date = RUN_DATE)
 saveRDS(distance_patient, OUTPUT_PATIENT_RDS)
 message(glue(
   "  distance_patient rds written: {OUTPUT_PATIENT_RDS} ({nrow(distance_patient)} patients)"
@@ -1514,7 +1517,8 @@ section_done("SECTION 12 Phase 154 outputs")
 
 message("--- Phase 182: Building facility ZIP diagnostic workbook ---")
 
-DIAG_OUTPUT_XLSX <- file.path(CONFIG$output_dir, glue("182_facility_zip_diagnosis_{RUN_DATE}.xlsx"))
+DIAG_OUTPUT_XLSX <- versioned_output_path(CONFIG$output_dir, "182_facility_zip_diagnosis",
+                                           ".xlsx", run_date = RUN_DATE)
 
 # Suppression helper: counts 1-10 -> "<11"
 sup11 <- function(x) {

@@ -59,7 +59,7 @@ A3_TOP_N           <- 25L                            # 160 D-08: candidates kept
 CODESET_PATH       <- file.path("data", "reference", "surveillance_codeset.xlsx")
 CROSSWALK_PATH     <- file.path("data", "reference", "lab_code_crosswalk.xlsx")
 EXCLUDED_CDM_TABLES <- c("DIAGNOSIS")               # 163 D-01: surveillance-event collection skips these tables
-run_date <- format(Sys.Date(), "%Y%m%d")
+run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 out_dir  <- CONFIG$cache$outputs_dir
 
 message(glue("=== Surveillance modality frequency (run {run_date}) ==="))
@@ -631,8 +631,10 @@ write_workbook <- function(path, release) {
   message(glue("  Wrote {path}"))
 }
 
-write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_INTERNAL_{run_date}.xlsx")), release = FALSE)
-write_workbook(file.path(out_dir, glue("surveillance_modality_frequency_{run_date}.xlsx")), release = TRUE)
+write_workbook(versioned_output_path(out_dir, "surveillance_modality_frequency_INTERNAL",
+                                     ".xlsx", run_date = run_date), release = FALSE)
+write_workbook(versioned_output_path(out_dir, "surveillance_modality_frequency",
+                                     ".xlsx", run_date = run_date), release = TRUE)
 
 # ==============================================================================
 # SENSITIVITY ANALYSIS: exclude implausible / conflicting-unresolved deaths ----
@@ -694,10 +696,12 @@ sens_comparison |>
                 events_per_py_main, events_per_py_sens, rate_diff) |>
   print(n = Inf)
 
-saveRDS(pt_modality, file.path(out_dir, glue("surveillance_modality_patient_{run_date}.rds")))
-saveRDS(patient_wide, file.path(out_dir, glue("surveillance_patient_modality_dates_{run_date}.rds")))
-utils::write.csv(patient_wide, file.path(out_dir, glue("surveillance_patient_modality_dates_{run_date}.csv")),
-                 row.names = FALSE, na = "")
-message(glue("  Wrote surveillance_patient_modality_dates_{run_date}.rds/.csv ({nrow(patient_wide)} patients)"))
-message(glue("  Wrote surveillance_modality_patient_{run_date}.rds ({nrow(pt_modality)} ID x modality rows)"))
+rds_pt_mod  <- versioned_output_path(out_dir, "surveillance_modality_patient",       ".rds", run_date = run_date)
+rds_pt_wide <- versioned_output_path(out_dir, "surveillance_patient_modality_dates", ".rds", run_date = run_date)
+csv_pt_wide <- versioned_output_path(out_dir, "surveillance_patient_modality_dates", ".csv", run_date = run_date)
+saveRDS(pt_modality, rds_pt_mod)
+saveRDS(patient_wide, rds_pt_wide)
+utils::write.csv(patient_wide, csv_pt_wide, row.names = FALSE, na = "")
+message("[R/147] output: ", basename(rds_pt_wide), "/.csv (", nrow(patient_wide), " patients)")
+message("[R/147] output: ", basename(rds_pt_mod), " (", nrow(pt_modality), " ID x modality rows)")
 message("=== Surveillance modality frequency complete ===")

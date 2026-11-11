@@ -45,7 +45,7 @@ suppressPackageStartupMessages({
 stopifnot("dplyr >= 1.1.0 required for inequality joins" =
             utils::packageVersion("dplyr") >= "1.1.0")
 
-RUN_DATE <- format(Sys.Date(), "%Y%m%d")
+RUN_DATE <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 message(glue("==== R/179 cbc_patient_year -- RUN DATE {RUN_DATE} ===="))
 
 CUTOFF <- CONFIG$far_from_care_cutoff_mi
@@ -317,7 +317,7 @@ stopifnot(
 
 internal_dir <- file.path(CONFIG$output_dir, "internal")
 dir.create(internal_dir, recursive = TRUE, showWarnings = FALSE)
-rds_out <- file.path(internal_dir, glue("cbc_patient_year_{RUN_DATE}.rds"))
+rds_out <- versioned_output_path(internal_dir, "cbc_patient_year", ".rds", run_date = RUN_DATE)
 saveRDS(py_final, rds_out)
 message(glue("  Saved {rds_out} ({format(nrow(py_final), big.mark = ',')} patient-years, ",
              "{dplyr::n_distinct(py_final$ID)} patients)"))
@@ -553,8 +553,10 @@ fb <- which(grepl("FALLBACK", model_df$Method) | nzchar(model_df$Warnings)) + 1L
 if (length(fb)) openxlsx::addStyle(wb, "Model_Results", sec, rows = fb, cols = 1:ncol(model_df), gridExpand = TRUE)
 openxlsx::setColWidths(wb, "Model_Results", 1:ncol(model_df), c(46, 22, 14, 10, 8, 8, 8, 10, 8, 40, 30))
 
-wb_path <- file.path(CONFIG$output_dir, glue("cbc_patient_year_{RUN_DATE}.xlsx"))
-openxlsx::saveWorkbook(wb, wb_path, overwrite = TRUE)
+wb_path <- versioned_output_path(CONFIG$output_dir, "cbc_patient_year", ".xlsx",
+                                   run_date = RUN_DATE)
+openxlsx::saveWorkbook(wb, wb_path, overwrite = FALSE)
+message("[R/179] output: ", wb_path)
 
 # ==============================================================================
 # SECTION 7: SUMMARY ----
