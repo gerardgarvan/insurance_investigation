@@ -747,6 +747,11 @@ baseline_category <- baseline_raw %>%
   select(category = `Cancer Site Category`, baseline_patients = `Total Patients`) %>%
   mutate(baseline_patients = as.integer(baseline_patients))
 
+# D-196-01: Comparison baseline = R/47 refined (confirmed HL, D-codes removed,
+# 49 categories). The 2026-10-06 delivered version used R/46 raw (54 categories,
+# includes D-code rows) and had swapped Baseline/Post-HL column labels — values
+# were written as (post_hl, baseline) but headers read (Baseline, Post-HL).
+# Fix: column order in comparison_df now matches headers (baseline first).
 comparison_df <- category_summary_post_hl %>%
   select(category, post_hl_patients = total_patients) %>%
   full_join(baseline_category, by = "category") %>%
@@ -761,9 +766,24 @@ comparison_df <- category_summary_post_hl %>%
       NA_real_
     )
   ) %>%
+  select(category, baseline_patients, post_hl_patients, delta, pct_retained) %>%
   arrange(desc(baseline_patients))
 
-message(glue("  Comparison: {nrow(comparison_df)} categories"))
+n_joined <- sum(comparison_df$baseline_patients > 0L & comparison_df$post_hl_patients > 0L)
+n_baseline_only <- sum(comparison_df$baseline_patients > 0L & comparison_df$post_hl_patients == 0L)
+n_post_only <- sum(comparison_df$baseline_patients == 0L & comparison_df$post_hl_patients > 0L)
+message(glue(
+  "  Comparison: {nrow(comparison_df)} categories — ",
+  "{n_joined} joined, {n_baseline_only} baseline-only (post=0), ",
+  "{n_post_only} post-only (flag: unexpected)"
+))
+if (n_post_only > 0L) {
+  post_only_cats <- comparison_df$category[comparison_df$baseline_patients == 0L &
+    comparison_df$post_hl_patients > 0L]
+  warning(glue("Post-HL categories with no baseline match: {paste(post_only_cats, collapse=', ')}"))
+}
+stopifnot("post_hl_patients must not exceed baseline_patients for any category" =
+  all(comparison_df$post_hl_patients <= comparison_df$baseline_patients, na.rm = TRUE))
 
 # Data rows starting at row 3
 data_start3 <- 3

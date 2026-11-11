@@ -11,7 +11,8 @@ Prerequisites run before the scripts that depend on them.
 - After R/02: verify `payer_summary.csv` md5 matches `output/baselines/pre_phaseA_20261111_0852/inventory.csv`; list differences before continuing if mismatch.
 - After R/14: run `source("R/tools/check_cohort_fingerprint.R", local = new.env(parent = globalenv()))`. **STOP** rerun sequence on FAIL.
 - After R/165: regression check vs `output/baselines/distance_cbc_association_20261110_ph195.xlsx` must PASS unchanged (validates the load_payer_summary refactor).
-- R/48, R/49, R/52, R/142: **no rerun needed** (version unchanged).
+- R/49, R/52, R/142: **no rerun needed** (version unchanged).
+- R/48: **rerun required** — Comparison sheet column-label swap fixed and baseline switched to R/47 refined (see R/48 section below).
 
 ## Run order
 
@@ -60,6 +61,13 @@ Prerequisites run before the scripts that depend on them.
 - **dep_map note:** Rerun dep_map.R on HiPerGator after these reruns to confirm cancer_summary_table.xlsx no longer appears as an R/47 output in the dependency map.
 
 ---
+
+## R/48 — Comparison sheet column-label swap fixed (2026-11-11)
+
+- **Why:** The delivered 2026-10-06 workbook had "Baseline Patients" and "Post-HL Patients" column headers swapped relative to the data. Column B held post-HL counts but was labelled "Baseline Patients". Delta and % Retained were computed correctly. Additionally, the 2026-10-06 baseline was R/46 raw (9,331 patients, 54 categories including D-code rows); commit 1afc456 already rewired BASELINE_TABLE_XLSX to R/47 refined (7,696 confirmed HL patients, 49 categories, no D-codes), making the comparison like-for-like.
+- **Decision D-196-01:** Comparison baseline = R/47 refined (confirmed HL, D-codes removed). Column order now matches headers: baseline_patients written to Column B, post_hl_patients to Column C.
+- **Must rerun after R/47:** R/48_cancer_summary_post_hl.R — produces output/tables/cancer_summary_table_post_hl.xlsx with corrected Comparison sheet.
+- **Reissue note:** "Comparison sheet column labels were swapped in the prior delivered version (2026-10-06). Column B now correctly shows Baseline Patients (R/47 refined, 7,696 confirmed HL patients, 49 categories) and Column C shows Post-HL Patients. Delta and % Retained values were unaffected by the label error."
 
 ## A3 — R/30 workbook finding
 
