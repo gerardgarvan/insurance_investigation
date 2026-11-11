@@ -1,0 +1,538 @@
+flowchart LR
+  R_26_treatment_episodes_R["26_treatment_episodes.R"]
+  R_29_first_line_and_death_analysis_R["29_first_line_and_death_analysis.R"]
+  R_52_gantt_v2_export_R["52_gantt_v2_export.R"]
+  R_101_gantt_lifespan_collapse_R["101_gantt_lifespan_collapse.R"]
+  R_131_update_xlsx_med_admin_and_normalized_name_R["131_update_xlsx_med_admin_and_normalized_name.R"]
+  R_108_build_ndc_rxnorm_crosswalk_R["108_build_ndc_rxnorm_crosswalk.R"]
+  R_111_doi_classification_R["111_doi_classification.R"]
+  R_118_build_zip5_adi_summary_R["118_build_zip5_adi_summary.R"]
+  R_146_stage_sdi_reference_R["146_stage_sdi_reference.R"]
+  R_119_collate_adi_zip9_R["119_collate_adi_zip9.R"]
+  R_117_build_svi_zcta_R["117_build_svi_zcta.R"]
+  R_161_diag_anchor_followup_R["161_diag_anchor_followup.R"]
+  R_60_tiered_same_day_payer_R["60_tiered_same_day_payer.R"]
+  R_61_tiered_encounter_level_R["61_tiered_encounter_level.R"]
+  R_97_validate_r60_migration_R["97_validate_r60_migration.R"]
+  R_105_normalize_supportive_care_meaning_R["105_normalize_supportive_care_meaning.R"]
+  R_42_build_code_descriptions_R["42_build_code_descriptions.R"]
+  R_53_death_date_validation_R["53_death_date_validation.R"]
+  R_47_cancer_summary_refined_R["47_cancer_summary_refined.R"]
+  R_147_surveillance_modality_frequency_R["147_surveillance_modality_frequency.R"]
+  R_21_investigate_unmatched_R["21_investigate_unmatched.R"]
+  R_22_investigate_unmatched_ndc_R["22_investigate_unmatched_ndc.R"]
+  R_50_all_codes_resolved_R["50_all_codes_resolved.R"]
+  R_98_radiation_cpt_audit_R["98_radiation_cpt_audit.R"]
+  R_122_encounter_distance_R["122_encounter_distance.R"]
+  R_03_duckdb_ingest_R["03_duckdb_ingest.R"]
+  R_116_encounter_ses_index_R["116_encounter_ses_index.R"]
+  R_02_harmonize_payer_R["02_harmonize_payer.R"]
+  R_165_distance_cbc_association_R["165_distance_cbc_association.R"]
+  R_147_verify_vs_1006_R["147_verify_vs_1006.R"]
+  R_166_survivorship_modality_rates_R["166_survivorship_modality_rates.R"]
+  R_167_anthracycline_echo_R["167_anthracycline_echo.R"]
+  R_142_gantt_180_export_R["142_gantt_180_export.R"]
+  R_121_zip_problem_inventory_R["121_zip_problem_inventory.R"]
+  R_179_cbc_patient_year_R["179_cbc_patient_year.R"]
+  R_169_single_source_care_R["169_single_source_care.R"]
+  R_180_cbc_missing_capture_R["180_cbc_missing_capture.R"]
+  R_utils_utils_duckdb_R["utils_duckdb.R"]
+  R_27_drug_name_resolution_R["27_drug_name_resolution.R"]
+  R_25_treatment_durations_R["25_treatment_durations.R"]
+  R_67_multi_source_overlap_detection_R["67_multi_source_overlap_detection.R"]
+  R_64_all_source_missingness_R["64_all_source_missingness.R"]
+  R_66_all_site_duplicate_dates_R["66_all_site_duplicate_dates.R"]
+  R_65_uf_insurance_missingness_R["65_uf_insurance_missingness.R"]
+  R_94_flm_duplicate_dates_R["94_flm_duplicate_dates.R"]
+  R_102_death_cause_nhl_flag_R["102_death_cause_nhl_flag.R"]
+  R_162_export_patient_modality_dates_R["162_export_patient_modality_dates.R"]
+  R_168_survivorship_workbook_R["168_survivorship_workbook.R"]
+  R_170_nhl_gantt_subsets_R["170_nhl_gantt_subsets.R"]
+  R_163_distance_cbc_methods_prototype_R["163_distance_cbc_methods_prototype.R"]
+  R_184_modality_rate_model_R["184_modality_rate_model.R"]
+  R_186_survivorship_rate_granularity_R["186_survivorship_rate_granularity.R"]
+  R_187_anthracycline_exposure_R["187_anthracycline_exposure.R"]
+  R_188_echo_rate_since_anthracycline_R["188_echo_rate_since_anthracycline.R"]
+  R_189_nhl_explainer_R["189_nhl_explainer.R"]
+  R_10_cohort_predicates_R["10_cohort_predicates.R"]
+  R_95_multi_source_overlap_av_th_R["95_multi_source_overlap_av_th.R"]
+  R_35_death_cause_quality_R["35_death_cause_quality.R"]
+  R_01_load_pcornet_R["01_load_pcornet.R"]
+  R_100_ruca_rurality_summary_R["100_ruca_rurality_summary.R"]
+  R_104_gantt_entire_history_R["104_gantt_entire_history.R"]
+  R_109_med_admin_dispensing_fix_impact_audit_R["109_med_admin_dispensing_fix_impact_audit.R"]
+  R_110_output_level_before_after_report_R["110_output_level_before_after_report.R"]
+  R_112_doi_attribution_report_R["112_doi_attribution_report.R"]
+  R_143_02_checkpoint_verify_R["143_02_checkpoint_verify.R"]
+  R_164_dox_baseline_counts_R["164_dox_baseline_counts.R"]
+  R_165_validate_workbook_R["165_validate_workbook.R"]
+  R_171_verify_survivorship_R["171_verify_survivorship.R"]
+  R_177_temporal_match_sizing_R["177_temporal_match_sizing.R"]
+  R_181_cbc_prior_year_R["181_cbc_prior_year.R"]
+  R_183_mice_sensitivity_distance_R["183_mice_sensitivity_distance.R"]
+  R_191_am_verification_R["191_am_verification.R"]
+  R_192_source_step0_probe_R["192_source_step0_probe.R"]
+  R_192b_payer_type_probe_R["192b_payer_type_probe.R"]
+  R_23_combine_reports_R["23_combine_reports.R"]
+  R_28_episode_classification_R["28_episode_classification.R"]
+  R_30_condition_linkage_investigation_R["30_condition_linkage_investigation.R"]
+  R_31_pre_diagnosis_treatments_R["31_pre_diagnosis_treatments.R"]
+  R_32_secondary_malignancy_table_R["32_secondary_malignancy_table.R"]
+  R_34_hl_nhl_overlap_validation_R["34_hl_nhl_overlap_validation.R"]
+  R_36_tableau_ready_tables_R["36_tableau_ready_tables.R"]
+  R_45_cancer_summary_R["45_cancer_summary.R"]
+  R_48_cancer_summary_post_hl_R["48_cancer_summary_post_hl.R"]
+  R_49_cancer_summary_pre_post_R["49_cancer_summary_pre_post.R"]
+  R_51_post_death_encounter_investigation_R["51_post_death_encounter_investigation.R"]
+  R_52_strange_death_source_and_enc_type_R["52_strange_death_source_and_enc_type.R"]
+  R_56_new_tables_from_groupings_R["56_new_tables_from_groupings.R"]
+  R_57_drug_grouping_instances_R["57_drug_grouping_instances.R"]
+  R_57_explore_dx_deduplication_R["57_explore_dx_deduplication.R"]
+  R_58_co_administration_analysis_R["58_co_administration_analysis.R"]
+  R_58_code_reference_tables_R["58_code_reference_tables.R"]
+  R_59_death_date_summary_R["59_death_date_summary.R"]
+  R_62_tiered_date_level_R["62_tiered_date_level.R"]
+  R_68_overlap_classification_R["68_overlap_classification.R"]
+  R_72_generate_pptx_R["72_generate_pptx.R"]
+  R_73_generate_phase19_20_pptx_R["73_generate_phase19_20_pptx.R"]
+  R_77_venn_hl_nlphl_R["77_venn_hl_nlphl.R"]
+  R_79_drug_name_consistency_audit_R["79_drug_name_consistency_audit.R"]
+  R_80_smoke_test_backends_R["80_smoke_test_backends.R"]
+  R_84_test_durations_R["84_test_durations.R"]
+  R_85_test_episodes_R["85_test_episodes.R"]
+  R_86_smoke_test_foundation_R["86_smoke_test_foundation.R"]
+  R_87_smoke_test_full_pipeline_R["87_smoke_test_full_pipeline.R"]
+  R_88_smoke_test_comprehensive_R["88_smoke_test_comprehensive.R"]
+  R_90_diagnostics_R["90_diagnostics.R"]
+  R_91_data_quality_summary_R["91_data_quality_summary.R"]
+  R_92_dx_gap_analysis_R["92_dx_gap_analysis.R"]
+  R_96_overlap_classification_av_th_R["96_overlap_classification_av_th.R"]
+  R_98_validate_r28_migration_R["98_validate_r28_migration.R"]
+  R_99_validate_gantt_consolidation_R["99_validate_gantt_consolidation.R"]
+  R_autoimmune_code_review_R["autoimmune_code_review.R"]
+  R_diagnostics_146_sdi_coverage_quantifier_R["146_sdi_coverage_quantifier.R"]
+  R_filter_strange_death_csvs_R["filter_strange_death_csvs.R"]
+  R_test_phase78_human_R["test_phase78_human.R"]
+  R_utils_utils_doi_R["utils_doi.R"]
+  R_utils_utils_treatment_R["utils_treatment.R"]
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds(["treatment_episode_detail.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds(["treatment_episodes.rds"])
+  a_output_gantt_episodes_csv(["gantt_episodes.csv"])
+  a_output_gantt_lifespan_csv(["gantt_lifespan.csv"])
+  a_data_reference_rxnorm_ingredient_cache_csv(["rxnorm_ingredient_cache.csv"])
+  a_output_ndc_rxnorm_crosswalk_audit_csv(["ndc_rxnorm_crosswalk_audit.csv"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_encounters_rds(["doi_encounters.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_patients_rds(["doi_patients.rds"])
+  a_data_reference_zip5_adi_summary_csv(["zip5_adi_summary.csv"])
+  a_data_reference_zip5_sdi_reference_csv(["zip5_sdi_reference.csv"])
+  a_data_reference_neighborhood_atlas_zip9_adi_csv(["neighborhood_atlas_zip9_adi.csv"])
+  a_data_reference_svi_2020_zcta_derived_csv(["svi_2020_zcta_derived.csv"])
+  a__ENV_HL_DIAG_OUT___name__csv(["{name}.csv"])
+  a__output_dir__payer_primary_code_freq_suffix__csv(["payer_primary_code_freq{suffix}.csv"])
+  a__output_dir__payer_secondary_code_freq_suffix__csv(["payer_secondary_code_freq{suffix}.csv"])
+  a__output_dir__payer_category_summary_suffix__csv(["payer_category_summary{suffix}.csv"])
+  a__output_dir__payer_resolved_detail_suffix__csv(["payer_resolved_detail{suffix}.csv"])
+  a__output_dir__payer_resolved_patient_summary_suffix__csv(["payer_resolved_patient_summary{suffix}.csv"])
+  a__output_dir__payer_resolved_impact_suffix__csv(["payer_resolved_impact{suffix}.csv"])
+  a__output_dir__encounter_tier_detail_suffix__csv(["encounter_tier_detail{suffix}.csv"])
+  a__output_dir__encounter_tier_summary_suffix__csv(["encounter_tier_summary{suffix}.csv"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_180_rds(["treatment_episode_detail_180.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds(["code_descriptions.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds(["validated_death_dates.rds"])
+  a_output_confirmed_hl_cohort_rds(["confirmed_hl_cohort.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_patient_modality_dates__DATE__rds(["surveillance_patient_modality_dates_{DATE}.rds"])
+  a_R_00_config_R(["00_config.R"])
+  a_output_encounter_distance__DATE__rds(["encounter_distance_{DATE}.rds"])
+  a_db_ENCOUNTER(["db:ENCOUNTER"])
+  a_output_encounter_ses_index__DATE__rds(["encounter_ses_index_{DATE}.rds"])
+  a_output_tables_payer_summary_csv(["payer_summary.csv"])
+  a_output_distance_cbc_association__DATE__xlsx(["distance_cbc_association_{DATE}.xlsx"])
+  a_output_logs_147_verify_last_pass_txt(["147_verify_last_pass.txt"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_modality_patient__DATE__rds(["surveillance_modality_patient_{DATE}.rds"])
+  a_db_PROCEDURES(["db:PROCEDURES"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_dated_events__DATE__rds(["survivorship_dated_events_{DATE}.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates_parts__DATE__rds(["survivorship_modality_rates_parts_{DATE}.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_echo_parts__DATE__rds(["survivorship_echo_parts_{DATE}.rds"])
+  a_output_gantt_episodes_180_csv(["gantt_episodes_180.csv"])
+  a_output_zip_problem_inventory__DATE__rds(["zip_problem_inventory_{DATE}.rds"])
+  a_output_internal_cbc_patient_year__DATE__rds(["cbc_patient_year_{DATE}.rds"])
+  a_output_internal_single_source_care__DATE__rds(["single_source_care_{DATE}.rds"])
+  a_output_internal_single_source_care_parts__DATE__rds(["single_source_care_parts_{DATE}.rds"])
+  a_output_cbc_patient_year__DATE__xlsx(["cbc_patient_year_{DATE}.xlsx"])
+  a_output_cbc_missing_capture__DATE__xlsx(["cbc_missing_capture_{DATE}.xlsx"])
+  a_db_TUMOR_REGISTRY_ALL(["db:TUMOR_REGISTRY_ALL"])
+  a_db_DIAGNOSIS(["db:DIAGNOSIS"])
+  a_R_00_config_R_bak(["00_config.R.bak"])
+  a_output_unmatched_codes_classified_rds(["unmatched_codes_classified.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_drug_name_lookup_rds(["drug_name_lookup.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_encounterid_profile_rds(["encounterid_profile.rds"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_sct_audit_result_rds(["sct_audit_result.rds"])
+  a_output_tables_multi_source_same_date_detail_csv(["multi_source_same_date_detail.csv"])
+  a_output_tables_multi_source_same_week_detail_csv(["multi_source_same_week_detail.csv"])
+  a_output_tables_all_source_cross_site_summary_csv(["all_source_cross_site_summary.csv"])
+  a_output_tables_all_site_cross_site_summary_csv(["all_site_cross_site_summary.csv"])
+  a_output_tables_all_source_payer_missingness_by_enc_type_csv(["all_source_payer_missingness_by_enc_type.csv"])
+  a_output_tables_all_source_payer_raw_value_distribution_csv(["all_source_payer_raw_value_distribution.csv"])
+  a_output_tables_all_source_payer_raw_vs_harmonized_csv(["all_source_payer_raw_vs_harmonized.csv"])
+  a_output_tables_all_source_payer_missingness_by_year_csv(["all_source_payer_missingness_by_year.csv"])
+  a_output_tables_all_site_source_payer_completeness_csv(["all_site_source_payer_completeness.csv"])
+  a_output_tables_all_site_patient_duplicate_summary_csv(["all_site_patient_duplicate_summary.csv"])
+  a_output_tables_all_site_date_level_duplicate_detail_csv(["all_site_date_level_duplicate_detail.csv"])
+  a_output_tables_all_source_payer_missingness_year_x_enc_type_csv(["all_source_payer_missingness_year_x_enc_type.csv"])
+  a_output_tables_uf_payer_raw_value_distribution_csv(["uf_payer_raw_value_distribution.csv"])
+  a_output_tables_uf_payer_missingness_by_year_csv(["uf_payer_missingness_by_year.csv"])
+  a_output_tables_uf_payer_missingness_by_enc_type_csv(["uf_payer_missingness_by_enc_type.csv"])
+  a_output_tables_uf_payer_missingness_year_x_enc_type_csv(["uf_payer_missingness_year_x_enc_type.csv"])
+  a_output_tables_uf_payer_raw_vs_harmonized_csv(["uf_payer_raw_vs_harmonized.csv"])
+  a_output_tables_flm_patient_duplicate_summary_csv(["flm_patient_duplicate_summary.csv"])
+  a_output_tables_flm_date_level_duplicate_detail_csv(["flm_date_level_duplicate_detail.csv"])
+  a_output_tables_flm_duplicate_aggregate_summary_csv(["flm_duplicate_aggregate_summary.csv"])
+  a_output_tables_flm_source_payer_completeness_csv(["flm_source_payer_completeness.csv"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_durations_rds(["treatment_durations.rds"])
+  a_output_death_cause_nhl_flag_csv(["death_cause_nhl_flag.csv"])
+  a_db_ENROLLMENT(["db:ENROLLMENT"])
+  a_db_PRESCRIBING(["db:PRESCRIBING"])
+  a_output_patient_modality_dates_no_any__DATE__csv(["patient_modality_dates_no_any_{DATE}.csv"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates__DATE__xlsx(["survivorship_modality_rates_{DATE}.xlsx"])
+  a_output_single_source_care__DATE__xlsx(["single_source_care_{DATE}.xlsx"])
+  a_output_internal_nhl_gantt_subsets__DATE__xlsx(["nhl_gantt_subsets_{DATE}.xlsx"])
+  a_output_enc_far_from_care_rds(["enc_far_from_care.rds"])
+  a_output_modality_rate_model__DATE__xlsx(["modality_rate_model_{DATE}.xlsx"])
+  a_output_survivorship_rate_granularity__DATE__xlsx(["survivorship_rate_granularity_{DATE}.xlsx"])
+  a_output_internal_anthracycline_exposure_patient__DATE__rds(["anthracycline_exposure_patient_{DATE}.rds"])
+  a_output_anthracycline_exposure_summary__DATE__xlsx(["anthracycline_exposure_summary_{DATE}.xlsx"])
+  a_output__DATE__188_echo_rate_anthracycline_xlsx(["{DATE}_188_echo_rate_anthracycline.xlsx"])
+  a_output_internal_echo_enc_anthracycline__DATE__rds(["echo_enc_anthracycline_{DATE}.rds"])
+  a_output_internal_echo_rate_anthracycline_patient__DATE__rds(["echo_rate_anthracycline_patient_{DATE}.rds"])
+  a_output_189_NHL_EXPLAINER__DATE__md(["189-NHL-EXPLAINER-{DATE}.md"])
+  a__planning_phases_189_team_deliverables_and_milestone_closeout_189_NHL_EXPLAINER__DATE__md(["189-NHL-EXPLAINER-{DATE}.md"])
+  a_output_internal_nhl_only_episodes__DATE__csv(["nhl_only_episodes_{DATE}.csv"])
+  a_output_internal_hl_nhl_episodes__DATE__csv(["hl_nhl_episodes_{DATE}.csv"])
+  a_output_cohort_excluded_no_hl_evidence_csv(["excluded_no_hl_evidence.csv"])
+  a_output_tables_multi_source_same_date_detail_av_th_csv(["multi_source_same_date_detail_av_th.csv"])
+  a_output_tables_multi_source_same_week_detail_av_th_csv(["multi_source_same_week_detail_av_th.csv"])
+  a_output_gantt_detail_csv(["gantt_detail.csv"])
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_death_cause_quality_result_rds(["death_cause_quality_result.rds"])
+  a__cache_dir___table_name__rds(["{table_name}.rds"])
+  a_data_reference_ndc_rxnorm_crosswalk_rds(["ndc_rxnorm_crosswalk.rds"])
+  R_26_treatment_episodes_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds
+  R_26_treatment_episodes_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds
+  R_29_first_line_and_death_analysis_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds
+  R_52_gantt_v2_export_R --> a_output_gantt_episodes_csv
+  R_101_gantt_lifespan_collapse_R --> a_output_gantt_lifespan_csv
+  R_131_update_xlsx_med_admin_and_normalized_name_R --> a_data_reference_rxnorm_ingredient_cache_csv
+  R_108_build_ndc_rxnorm_crosswalk_R --> a_output_ndc_rxnorm_crosswalk_audit_csv
+  R_111_doi_classification_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_encounters_rds
+  R_111_doi_classification_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_patients_rds
+  R_118_build_zip5_adi_summary_R --> a_data_reference_zip5_adi_summary_csv
+  R_146_stage_sdi_reference_R --> a_data_reference_zip5_sdi_reference_csv
+  R_119_collate_adi_zip9_R --> a_data_reference_neighborhood_atlas_zip9_adi_csv
+  R_117_build_svi_zcta_R --> a_data_reference_svi_2020_zcta_derived_csv
+  R_161_diag_anchor_followup_R --> a__ENV_HL_DIAG_OUT___name__csv
+  R_60_tiered_same_day_payer_R --> a__output_dir__payer_primary_code_freq_suffix__csv
+  R_60_tiered_same_day_payer_R --> a__output_dir__payer_secondary_code_freq_suffix__csv
+  R_60_tiered_same_day_payer_R --> a__output_dir__payer_category_summary_suffix__csv
+  R_60_tiered_same_day_payer_R --> a__output_dir__payer_resolved_detail_suffix__csv
+  R_60_tiered_same_day_payer_R --> a__output_dir__payer_resolved_patient_summary_suffix__csv
+  R_60_tiered_same_day_payer_R --> a__output_dir__payer_resolved_impact_suffix__csv
+  R_61_tiered_encounter_level_R --> a__output_dir__encounter_tier_detail_suffix__csv
+  R_61_tiered_encounter_level_R --> a__output_dir__encounter_tier_summary_suffix__csv
+  R_97_validate_r60_migration_R --> a__output_dir__payer_primary_code_freq_suffix__csv
+  R_97_validate_r60_migration_R --> a__output_dir__payer_secondary_code_freq_suffix__csv
+  R_97_validate_r60_migration_R --> a__output_dir__payer_category_summary_suffix__csv
+  R_97_validate_r60_migration_R --> a__output_dir__payer_resolved_detail_suffix__csv
+  R_97_validate_r60_migration_R --> a__output_dir__payer_resolved_patient_summary_suffix__csv
+  R_97_validate_r60_migration_R --> a__output_dir__payer_resolved_impact_suffix__csv
+  R_105_normalize_supportive_care_meaning_R --> a_data_reference_rxnorm_ingredient_cache_csv
+  R_26_treatment_episodes_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_180_rds
+  R_42_build_code_descriptions_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds
+  R_53_death_date_validation_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds
+  R_47_cancer_summary_refined_R --> a_output_confirmed_hl_cohort_rds
+  R_147_surveillance_modality_frequency_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_patient_modality_dates__DATE__rds
+  R_21_investigate_unmatched_R --> a_R_00_config_R
+  R_22_investigate_unmatched_ndc_R --> a_R_00_config_R
+  R_50_all_codes_resolved_R --> a_R_00_config_R
+  R_98_radiation_cpt_audit_R --> a_R_00_config_R
+  R_122_encounter_distance_R --> a_output_encounter_distance__DATE__rds
+  R_03_duckdb_ingest_R --> a_db_ENCOUNTER
+  R_116_encounter_ses_index_R --> a_output_encounter_ses_index__DATE__rds
+  R_02_harmonize_payer_R --> a_output_tables_payer_summary_csv
+  R_165_distance_cbc_association_R --> a_output_distance_cbc_association__DATE__xlsx
+  R_147_verify_vs_1006_R --> a_output_logs_147_verify_last_pass_txt
+  R_147_surveillance_modality_frequency_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_modality_patient__DATE__rds
+  R_03_duckdb_ingest_R --> a_db_PROCEDURES
+  R_166_survivorship_modality_rates_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_dated_events__DATE__rds
+  R_166_survivorship_modality_rates_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates_parts__DATE__rds
+  R_167_anthracycline_echo_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_echo_parts__DATE__rds
+  R_142_gantt_180_export_R --> a_output_gantt_episodes_180_csv
+  R_121_zip_problem_inventory_R --> a_output_zip_problem_inventory__DATE__rds
+  R_179_cbc_patient_year_R --> a_output_internal_cbc_patient_year__DATE__rds
+  R_169_single_source_care_R --> a_output_internal_single_source_care__DATE__rds
+  R_169_single_source_care_R --> a_output_internal_single_source_care_parts__DATE__rds
+  R_179_cbc_patient_year_R --> a_output_cbc_patient_year__DATE__xlsx
+  R_180_cbc_missing_capture_R --> a_output_cbc_missing_capture__DATE__xlsx
+  R_utils_utils_duckdb_R --> a_db_TUMOR_REGISTRY_ALL
+  R_03_duckdb_ingest_R --> a_db_DIAGNOSIS
+  R_22_investigate_unmatched_ndc_R --> a_R_00_config_R_bak
+  R_50_all_codes_resolved_R --> a_R_00_config_R_bak
+  R_21_investigate_unmatched_R --> a_R_00_config_R_bak
+  R_21_investigate_unmatched_R --> a_output_unmatched_codes_classified_rds
+  R_27_drug_name_resolution_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_drug_name_lookup_rds
+  R_25_treatment_durations_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_encounterid_profile_rds
+  R_25_treatment_durations_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_sct_audit_result_rds
+  R_67_multi_source_overlap_detection_R --> a_output_tables_multi_source_same_date_detail_csv
+  R_67_multi_source_overlap_detection_R --> a_output_tables_multi_source_same_week_detail_csv
+  R_64_all_source_missingness_R --> a_output_tables_all_source_cross_site_summary_csv
+  R_66_all_site_duplicate_dates_R --> a_output_tables_all_site_cross_site_summary_csv
+  R_64_all_source_missingness_R --> a_output_tables_all_source_payer_missingness_by_enc_type_csv
+  R_64_all_source_missingness_R --> a_output_tables_all_source_payer_raw_value_distribution_csv
+  R_64_all_source_missingness_R --> a_output_tables_all_source_payer_raw_vs_harmonized_csv
+  R_64_all_source_missingness_R --> a_output_tables_all_source_payer_missingness_by_year_csv
+  R_66_all_site_duplicate_dates_R --> a_output_tables_all_site_source_payer_completeness_csv
+  R_66_all_site_duplicate_dates_R --> a_output_tables_all_site_patient_duplicate_summary_csv
+  R_66_all_site_duplicate_dates_R --> a_output_tables_all_site_date_level_duplicate_detail_csv
+  R_64_all_source_missingness_R --> a_output_tables_all_source_payer_missingness_year_x_enc_type_csv
+  R_65_uf_insurance_missingness_R --> a_output_tables_uf_payer_raw_value_distribution_csv
+  R_65_uf_insurance_missingness_R --> a_output_tables_uf_payer_missingness_by_year_csv
+  R_65_uf_insurance_missingness_R --> a_output_tables_uf_payer_missingness_by_enc_type_csv
+  R_65_uf_insurance_missingness_R --> a_output_tables_uf_payer_missingness_year_x_enc_type_csv
+  R_65_uf_insurance_missingness_R --> a_output_tables_uf_payer_raw_vs_harmonized_csv
+  R_94_flm_duplicate_dates_R --> a_output_tables_flm_patient_duplicate_summary_csv
+  R_94_flm_duplicate_dates_R --> a_output_tables_flm_date_level_duplicate_detail_csv
+  R_94_flm_duplicate_dates_R --> a_output_tables_flm_duplicate_aggregate_summary_csv
+  R_94_flm_duplicate_dates_R --> a_output_tables_flm_source_payer_completeness_csv
+  R_25_treatment_durations_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_durations_rds
+  R_102_death_cause_nhl_flag_R --> a_output_death_cause_nhl_flag_csv
+  R_03_duckdb_ingest_R --> a_db_ENROLLMENT
+  R_03_duckdb_ingest_R --> a_db_PRESCRIBING
+  R_162_export_patient_modality_dates_R --> a_output_patient_modality_dates_no_any__DATE__csv
+  R_168_survivorship_workbook_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates__DATE__xlsx
+  R_169_single_source_care_R --> a_output_single_source_care__DATE__xlsx
+  R_170_nhl_gantt_subsets_R --> a_output_internal_nhl_gantt_subsets__DATE__xlsx
+  R_163_distance_cbc_methods_prototype_R --> a_output_enc_far_from_care_rds
+  R_184_modality_rate_model_R --> a_output_modality_rate_model__DATE__xlsx
+  R_186_survivorship_rate_granularity_R --> a_output_survivorship_rate_granularity__DATE__xlsx
+  R_187_anthracycline_exposure_R --> a_output_internal_anthracycline_exposure_patient__DATE__rds
+  R_187_anthracycline_exposure_R --> a_output_anthracycline_exposure_summary__DATE__xlsx
+  R_188_echo_rate_since_anthracycline_R --> a_output__DATE__188_echo_rate_anthracycline_xlsx
+  R_188_echo_rate_since_anthracycline_R --> a_output_internal_echo_enc_anthracycline__DATE__rds
+  R_188_echo_rate_since_anthracycline_R --> a_output_internal_echo_rate_anthracycline_patient__DATE__rds
+  R_189_nhl_explainer_R --> a_output_189_NHL_EXPLAINER__DATE__md
+  R_189_nhl_explainer_R --> a__planning_phases_189_team_deliverables_and_milestone_closeout_189_NHL_EXPLAINER__DATE__md
+  R_170_nhl_gantt_subsets_R --> a_output_internal_nhl_only_episodes__DATE__csv
+  R_170_nhl_gantt_subsets_R --> a_output_internal_hl_nhl_episodes__DATE__csv
+  R_10_cohort_predicates_R --> a_output_cohort_excluded_no_hl_evidence_csv
+  R_95_multi_source_overlap_av_th_R --> a_output_tables_multi_source_same_date_detail_av_th_csv
+  R_95_multi_source_overlap_av_th_R --> a_output_tables_multi_source_same_week_detail_av_th_csv
+  R_52_gantt_v2_export_R --> a_output_gantt_detail_csv
+  R_35_death_cause_quality_R --> a__blue_erin_mobley_hl_bcu_clean_rds_outputs_death_cause_quality_result_rds
+  R_01_load_pcornet_R --> a__cache_dir___table_name__rds
+  R_108_build_ndc_rxnorm_crosswalk_R --> a_data_reference_ndc_rxnorm_crosswalk_rds
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_100_ruca_rurality_summary_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_100_ruca_rurality_summary_R
+  a_output_gantt_episodes_csv --> R_101_gantt_lifespan_collapse_R
+  a_output_gantt_lifespan_csv --> R_104_gantt_entire_history_R
+  a_output_gantt_episodes_csv --> R_104_gantt_entire_history_R
+  a_data_reference_rxnorm_ingredient_cache_csv --> R_105_normalize_supportive_care_meaning_R
+  a_output_ndc_rxnorm_crosswalk_audit_csv --> R_109_med_admin_dispensing_fix_impact_audit_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_110_output_level_before_after_report_R
+  a_output_gantt_episodes_csv --> R_110_output_level_before_after_report_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_110_output_level_before_after_report_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_encounters_rds --> R_112_doi_attribution_report_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_patients_rds --> R_112_doi_attribution_report_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_112_doi_attribution_report_R
+  a_data_reference_zip5_adi_summary_csv --> R_116_encounter_ses_index_R
+  a_data_reference_zip5_sdi_reference_csv --> R_116_encounter_ses_index_R
+  a_data_reference_neighborhood_atlas_zip9_adi_csv --> R_116_encounter_ses_index_R
+  a_data_reference_svi_2020_zcta_derived_csv --> R_116_encounter_ses_index_R
+  a_data_reference_neighborhood_atlas_zip9_adi_csv --> R_118_build_zip5_adi_summary_R
+  a__ENV_HL_DIAG_OUT___name__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__payer_primary_code_freq_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__payer_secondary_code_freq_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__payer_category_summary_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__payer_resolved_detail_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__payer_resolved_patient_summary_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__payer_resolved_impact_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__encounter_tier_detail_suffix__csv --> R_119_collate_adi_zip9_R
+  a__output_dir__encounter_tier_summary_suffix__csv --> R_119_collate_adi_zip9_R
+  a_data_reference_rxnorm_ingredient_cache_csv --> R_131_update_xlsx_med_admin_and_normalized_name_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_180_rds --> R_142_gantt_180_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds --> R_142_gantt_180_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_142_gantt_180_export_R
+  a_output_confirmed_hl_cohort_rds --> R_142_gantt_180_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_142_gantt_180_export_R
+  a_output_gantt_episodes_csv --> R_142_gantt_180_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_143_02_checkpoint_verify_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_patient_modality_dates__DATE__rds --> R_147_verify_vs_1006_R
+  a_R_00_config_R --> R_161_diag_anchor_followup_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_patient_modality_dates__DATE__rds --> R_162_export_patient_modality_dates_R
+  a_output_encounter_distance__DATE__rds --> R_163_distance_cbc_methods_prototype_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_164_dox_baseline_counts_R
+  a_output_encounter_distance__DATE__rds --> R_165_distance_cbc_association_R
+  a_db_ENCOUNTER --> R_165_distance_cbc_association_R
+  a_output_encounter_ses_index__DATE__rds --> R_165_distance_cbc_association_R
+  a_output_tables_payer_summary_csv --> R_165_distance_cbc_association_R
+  a_output_distance_cbc_association__DATE__xlsx --> R_165_validate_workbook_R
+  a_output_logs_147_verify_last_pass_txt --> R_166_survivorship_modality_rates_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_modality_patient__DATE__rds --> R_166_survivorship_modality_rates_R
+  a_db_PROCEDURES --> R_166_survivorship_modality_rates_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_180_rds --> R_167_anthracycline_echo_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_dated_events__DATE__rds --> R_167_anthracycline_echo_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates_parts__DATE__rds --> R_167_anthracycline_echo_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_modality_patient__DATE__rds --> R_167_anthracycline_echo_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates_parts__DATE__rds --> R_168_survivorship_workbook_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_echo_parts__DATE__rds --> R_168_survivorship_workbook_R
+  a_db_ENCOUNTER --> R_169_single_source_care_R
+  a_output_gantt_episodes_180_csv --> R_170_nhl_gantt_subsets_R
+  a_output_gantt_episodes_csv --> R_170_nhl_gantt_subsets_R
+  a_output_logs_147_verify_last_pass_txt --> R_171_verify_survivorship_R
+  a_output_zip_problem_inventory__DATE__rds --> R_177_temporal_match_sizing_R
+  a_output_encounter_distance__DATE__rds --> R_177_temporal_match_sizing_R
+  a_output_confirmed_hl_cohort_rds --> R_177_temporal_match_sizing_R
+  a_db_ENCOUNTER --> R_177_temporal_match_sizing_R
+  a_output_logs_147_verify_last_pass_txt --> R_179_cbc_patient_year_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_surveillance_modality_patient__DATE__rds --> R_179_cbc_patient_year_R
+  a_output_encounter_distance__DATE__rds --> R_179_cbc_patient_year_R
+  a_output_zip_problem_inventory__DATE__rds --> R_179_cbc_patient_year_R
+  a_output_distance_cbc_association__DATE__xlsx --> R_179_cbc_patient_year_R
+  a_output_internal_cbc_patient_year__DATE__rds --> R_180_cbc_missing_capture_R
+  a_output_encounter_distance__DATE__rds --> R_180_cbc_missing_capture_R
+  a_output_internal_single_source_care__DATE__rds --> R_180_cbc_missing_capture_R
+  a_output_internal_single_source_care_parts__DATE__rds --> R_180_cbc_missing_capture_R
+  a_output_cbc_patient_year__DATE__xlsx --> R_180_cbc_missing_capture_R
+  a_db_ENCOUNTER --> R_180_cbc_missing_capture_R
+  a_output_internal_cbc_patient_year__DATE__rds --> R_181_cbc_prior_year_R
+  a_db_ENCOUNTER --> R_181_cbc_prior_year_R
+  a_output_cbc_patient_year__DATE__xlsx --> R_181_cbc_prior_year_R
+  a_output_cbc_missing_capture__DATE__xlsx --> R_181_cbc_prior_year_R
+  a_db_ENCOUNTER --> R_183_mice_sensitivity_distance_R
+  a_output_logs_147_verify_last_pass_txt --> R_184_modality_rate_model_R
+  a_db_ENCOUNTER --> R_191_am_verification_R
+  a_db_TUMOR_REGISTRY_ALL --> R_191_am_verification_R
+  a_db_DIAGNOSIS --> R_191_am_verification_R
+  a_output_encounter_ses_index__DATE__rds --> R_191_am_verification_R
+  a_db_ENCOUNTER --> R_192_source_step0_probe_R
+  a_db_ENCOUNTER --> R_192b_payer_type_probe_R
+  a_R_00_config_R --> R_21_investigate_unmatched_R
+  a_R_00_config_R_bak --> R_21_investigate_unmatched_R
+  a_R_00_config_R --> R_22_investigate_unmatched_ndc_R
+  a_R_00_config_R_bak --> R_22_investigate_unmatched_ndc_R
+  a_output_unmatched_codes_classified_rds --> R_23_combine_reports_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_drug_name_lookup_rds --> R_26_treatment_episodes_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_encounterid_profile_rds --> R_26_treatment_episodes_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_sct_audit_result_rds --> R_26_treatment_episodes_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds --> R_28_episode_classification_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_29_first_line_and_death_analysis_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_29_first_line_and_death_analysis_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_29_first_line_and_death_analysis_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_30_condition_linkage_investigation_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_31_pre_diagnosis_treatments_R
+  a_output_confirmed_hl_cohort_rds --> R_31_pre_diagnosis_treatments_R
+  a_output_confirmed_hl_cohort_rds --> R_32_secondary_malignancy_table_R
+  a_output_confirmed_hl_cohort_rds --> R_34_hl_nhl_overlap_validation_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_35_death_cause_quality_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_36_tableau_ready_tables_R
+  a_output_unmatched_codes_classified_rds --> R_42_build_code_descriptions_R
+  a_output_unmatched_codes_classified_rds --> R_45_cancer_summary_R
+  a_output_confirmed_hl_cohort_rds --> R_48_cancer_summary_post_hl_R
+  a_output_confirmed_hl_cohort_rds --> R_49_cancer_summary_pre_post_R
+  a_output_unmatched_codes_classified_rds --> R_50_all_codes_resolved_R
+  a_R_00_config_R --> R_50_all_codes_resolved_R
+  a_R_00_config_R_bak --> R_50_all_codes_resolved_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_51_post_death_encounter_investigation_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_51_post_death_encounter_investigation_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_52_gantt_v2_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_52_gantt_v2_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds --> R_52_gantt_v2_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_52_gantt_v2_export_R
+  a_output_confirmed_hl_cohort_rds --> R_52_gantt_v2_export_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_52_strange_death_source_and_enc_type_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_53_death_date_validation_R
+  a_output_confirmed_hl_cohort_rds --> R_53_death_date_validation_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_56_new_tables_from_groupings_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_57_drug_grouping_instances_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_57_explore_dx_deduplication_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_58_co_administration_analysis_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_58_co_administration_analysis_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds --> R_58_code_reference_tables_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_59_death_date_summary_R
+  a_output_confirmed_hl_cohort_rds --> R_59_death_date_summary_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_62_tiered_date_level_R
+  a_output_tables_multi_source_same_date_detail_csv --> R_68_overlap_classification_R
+  a_output_tables_multi_source_same_week_detail_csv --> R_68_overlap_classification_R
+  a_output_tables_all_source_cross_site_summary_csv --> R_72_generate_pptx_R
+  a_output_tables_all_site_cross_site_summary_csv --> R_72_generate_pptx_R
+  a_output_tables_all_source_payer_missingness_by_enc_type_csv --> R_72_generate_pptx_R
+  a_output_tables_all_source_payer_raw_value_distribution_csv --> R_72_generate_pptx_R
+  a_output_tables_all_source_payer_raw_vs_harmonized_csv --> R_72_generate_pptx_R
+  a_output_tables_all_source_payer_missingness_by_year_csv --> R_72_generate_pptx_R
+  a_output_tables_all_site_source_payer_completeness_csv --> R_72_generate_pptx_R
+  a_output_tables_all_site_patient_duplicate_summary_csv --> R_72_generate_pptx_R
+  a_output_tables_all_site_date_level_duplicate_detail_csv --> R_72_generate_pptx_R
+  a_output_tables_all_source_payer_missingness_year_x_enc_type_csv --> R_72_generate_pptx_R
+  a_output_tables_uf_payer_raw_value_distribution_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_uf_payer_missingness_by_year_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_uf_payer_missingness_by_enc_type_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_uf_payer_missingness_year_x_enc_type_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_uf_payer_raw_vs_harmonized_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_flm_patient_duplicate_summary_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_flm_date_level_duplicate_detail_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_flm_duplicate_aggregate_summary_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_tables_flm_source_payer_completeness_csv --> R_73_generate_phase19_20_pptx_R
+  a_output_confirmed_hl_cohort_rds --> R_77_venn_hl_nlphl_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episode_detail_rds --> R_79_drug_name_consistency_audit_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_code_descriptions_rds --> R_79_drug_name_consistency_audit_R
+  a_db_TUMOR_REGISTRY_ALL --> R_80_smoke_test_backends_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_durations_rds --> R_84_test_durations_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_85_test_episodes_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_durations_rds --> R_85_test_episodes_R
+  a_R_00_config_R --> R_86_smoke_test_foundation_R
+  a_R_00_config_R --> R_87_smoke_test_full_pipeline_R
+  a_R_00_config_R --> R_88_smoke_test_comprehensive_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_88_smoke_test_comprehensive_R
+  a_output_death_cause_nhl_flag_csv --> R_88_smoke_test_comprehensive_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_encounters_rds --> R_88_smoke_test_comprehensive_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_doi_patients_rds --> R_88_smoke_test_comprehensive_R
+  a_db_ENROLLMENT --> R_88_smoke_test_comprehensive_R
+  a_db_DIAGNOSIS --> R_88_smoke_test_comprehensive_R
+  a_db_ENCOUNTER --> R_88_smoke_test_comprehensive_R
+  a_db_PRESCRIBING --> R_88_smoke_test_comprehensive_R
+  a_output_patient_modality_dates_no_any__DATE__csv --> R_88_smoke_test_comprehensive_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_survivorship_modality_rates__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_single_source_care__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_internal_single_source_care__DATE__rds --> R_88_smoke_test_comprehensive_R
+  a_output_internal_nhl_gantt_subsets__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_distance_cbc_association__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_enc_far_from_care_rds --> R_88_smoke_test_comprehensive_R
+  a_output_modality_rate_model__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_survivorship_rate_granularity__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_internal_anthracycline_exposure_patient__DATE__rds --> R_88_smoke_test_comprehensive_R
+  a_output_anthracycline_exposure_summary__DATE__xlsx --> R_88_smoke_test_comprehensive_R
+  a_output__DATE__188_echo_rate_anthracycline_xlsx --> R_88_smoke_test_comprehensive_R
+  a_output_internal_echo_enc_anthracycline__DATE__rds --> R_88_smoke_test_comprehensive_R
+  a_output_internal_echo_rate_anthracycline_patient__DATE__rds --> R_88_smoke_test_comprehensive_R
+  a_output_189_NHL_EXPLAINER__DATE__md --> R_88_smoke_test_comprehensive_R
+  a__planning_phases_189_team_deliverables_and_milestone_closeout_189_NHL_EXPLAINER__DATE__md --> R_88_smoke_test_comprehensive_R
+  a_output_gantt_episodes_csv --> R_88_smoke_test_comprehensive_R
+  a_output_gantt_episodes_180_csv --> R_88_smoke_test_comprehensive_R
+  a_output_internal_nhl_only_episodes__DATE__csv --> R_88_smoke_test_comprehensive_R
+  a_output_internal_hl_nhl_episodes__DATE__csv --> R_88_smoke_test_comprehensive_R
+  a_output_cohort_excluded_no_hl_evidence_csv --> R_90_diagnostics_R
+  a_output_tables_payer_summary_csv --> R_90_diagnostics_R
+  a_output_cohort_excluded_no_hl_evidence_csv --> R_91_data_quality_summary_R
+  a_output_cohort_excluded_no_hl_evidence_csv --> R_92_dx_gap_analysis_R
+  a_output_tables_multi_source_same_date_detail_av_th_csv --> R_96_overlap_classification_av_th_R
+  a_output_tables_multi_source_same_week_detail_av_th_csv --> R_96_overlap_classification_av_th_R
+  a_R_00_config_R --> R_98_radiation_cpt_audit_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_98_validate_r28_migration_R
+  a_output_gantt_episodes_csv --> R_99_validate_gantt_consolidation_R
+  a_output_gantt_detail_csv --> R_99_validate_gantt_consolidation_R
+  a_db_DIAGNOSIS --> R_autoimmune_code_review_R
+  a_data_reference_zip5_sdi_reference_csv --> R_diagnostics_146_sdi_coverage_quantifier_R
+  a_output_encounter_ses_index__DATE__rds --> R_diagnostics_146_sdi_coverage_quantifier_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_validated_death_dates_rds --> R_filter_strange_death_csvs_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_death_cause_quality_result_rds --> R_test_phase78_human_R
+  a__blue_erin_mobley_hl_bcu_clean_rds_outputs_treatment_episodes_rds --> R_test_phase78_human_R
+  a_db_DIAGNOSIS --> R_utils_utils_doi_R
+  a__cache_dir___table_name__rds --> R_utils_utils_duckdb_R
+  a_data_reference_ndc_rxnorm_crosswalk_rds --> R_utils_utils_treatment_R
