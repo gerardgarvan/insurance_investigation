@@ -1,0 +1,46 @@
+R/184 rerun 2026-10-16: gate PASSED; sex lookup OK; long_base 714,902 rows. Then CBC CHECK FAIL.
+
+Diagnostics run on HiPerGator (counts only):
+- Agreement R/166 CBC event (count>0) vs Phase 179 cbc_year, 55,068 complete-case patient-years:
+    ev0/p179=0 30,912 | ev0/p179=1 5,919 | ev1/p179=0 10,852 | ev1/p179=1 7,385
+- Disagreement is spread across all follow-up years (not only years 1-2).
+- Of the 5,919 "Phase 179 CBC but no event", 3,959 patient-years belong to patients with NO R/166 CBC events at all.
+- Distance from the nearest R/166 CBC event to the window edge: median 539 days (10th pct 70) -> not a window misalignment.
+- Conclusion: the R/147 "Complete blood count" modality is a different measure from the Phase 165/179 CBC (WBC 6690-2 + Hgb 718-7 + PLT 777-3 on the same date).
+- R/166 events file columns: ID, modality, event_date. CBC event dates span 2012-01-02 to 2025-03-29 (CDM cutoff is 2025-09-15).
+
+DECISION (user): the CBC row in Phase 184 uses the Phase 165/179 CBC definition. The other 13 modalities keep the R/147 definitions.
+
+Changes:
+
+1. CBC events. Replace the R/166 "Complete blood count" events with Phase 165 CBC event dates
+   from the same function R/179 uses (build_cbc_events() or equivalent; cite file:line and
+   copy the call exactly as R/179 makes it, same inputs/pins). Label the modality
+   "CBC (Phase 165 definition)" and use it as the reference level.
+   Drop the R/166 "Complete blood count" rows entirely (do not keep both in the model).
+
+2. CBC CHECK stays as a hard stop: for every complete-case patient-year,
+   as.integer(count > 0) must equal Phase 179 cbc_year. With the Phase 165 events this should
+   agree exactly; if not, stop and print the 2x2 (sup()) as now.
+
+3. Event-data coverage end. R/166 event dates stop at 2025-03-29 although Phase 179 years run
+   to 2025-09-15. Print max event_date per modality. Find the R/147/R/166 study-window end
+   in code (cite). Define EVENTS_COVERAGE_END from that (not from the observed max).
+   For the modality model and rate tables, keep only patient-years with
+   year_end <= EVENTS_COVERAGE_END for ALL modalities (CBC included), so modalities are
+   compared over the same years. Print and record in KEY/QC how many patient-years and
+   patients this removes (sup()). The reproduction gate and the CBC CHECK still use the full
+   Phase 179 years (they test reproduction, not the model sample).
+
+4. Eligibility "expected" N must come from R/166's own output (its workbook rate table or
+   KEY: eligible N per modality), read by exact label from a pinned file (add R184_R166_XLSX),
+   not recomputed with the same rule. Also report, with file:line, what restriction R/166
+   applies to Echocardiogram, MUGA, Pulmonary function test, Stress test (e.g. anthracycline,
+   bleomycin, chest RT). If R/166 applies none, say so and record in KEY that D-07 reduces to
+   the female restriction for Mammogram / Breast MRI.
+
+5. Update 184-CONTEXT.md: D-08 reference = "CBC (Phase 165 definition)"; D-16a now compares
+   Phase 165 CBC events with cbc_year; new D-29 for the coverage-end restriction; note that the
+   R/147 CBC modality is excluded and why (agreement table above).
+
+Commit and push. Local checks grep only.

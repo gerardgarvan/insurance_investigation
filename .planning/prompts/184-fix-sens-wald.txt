@@ -1,0 +1,28 @@
+R/184 run 2026-10-16: primary model now fits. Remaining issues before close-out:
+
+1. Global Wald reused from the primary fit (bug).
+   Printed Global Wald:
+     Primary years 2+   chi2=19.15 df=13 p=0.1184
+     Adjusted           chi2=19.15 df=13 p=0.1184   <- identical to primary, but its RRs differ
+     Half-year          chi2=19.15 df=13 p=0.1184   <- identical to primary
+     Data-end           chi2=19.11 df=13 p=0.1197   (differs, OK)
+   The adjusted and half-year Wald tests must use coef()/vcov() of THEIR OWN fit. Find where
+   global_wald() is called for these two and pass that model's beta and V. Add an assertion that
+   the coefficient vector passed to global_wald() belongs to the fit being reported
+   (e.g. identical(names(beta), names(coef(fit_this)))).
+
+2. Half-year sensitivity crashes after fitting:
+   "Half-year sensitivity FAILED: ... In argument: `RR = round(RR, 3)` ... object 'RR' not found".
+   The RR extraction for the half-year fit returns different column names than the other
+   models. Use the same modality_rr() extraction as the primary for this fit (same columns:
+   modality, RR, CI_low, CI_high, p). The period term must not be mistaken for a far:modality term.
+
+3. Data-end sensitivity label: "[Data-end] n_py=573,944 patients=6,970" — 573,944 is the number of
+   patient x year x modality rows, not patient-years. Print and record patient-years and
+   patients (sup()) and, separately, model rows.
+
+4. After a successful run, confirm in the workbook that Model_Results holds: primary years 2+,
+   secondary all years, NB, adjusted, half-year, data-end; Interaction holds a global Wald row
+   for each model with its own chi2/df/p.
+
+Commit and push. Local checks grep only.

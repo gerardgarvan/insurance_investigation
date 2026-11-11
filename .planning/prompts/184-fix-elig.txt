@@ -1,0 +1,7 @@
+R/184 run: gate PASSED (0.8339, 0.7192–0.9668). Then stopped: “8018 complete-case patients missing from CBC eligibility frame”.
+
+CBC label. The events RDS modality label is Complete blood count. Set LBL_CBC to that exact string. Add a stop if LBL_CBC isn’t among the event modalities, printing the modalities found.
+Eligibility (D-07). The current elig gives every patient all 14 modalities (8,018 × 14 = 112,252 rows), so nothing is restricted. Find in R/147 / R/166 / utils_surveillance_rates.R (Task 0 item 6) how each modality’s eligible population is defined (e.g. echo/MUGA after anthracycline, PFT after bleomycin, mammogram/breast MRI by sex and chest RT, any others). Apply exactly those rules in SECTION 3 of this plan, including sex. Copy the existing code, don’t re-derive it, and cite file:line. If eligibility is time-dependent (starts at an exposure date), apply it per patient-year. Print eligible patients per modality next to R/166’s eligible N, and stop if they differ.
+GATE counts. Print patients far=1 / far=0 (distinct IDs) and patient-years far=1 / far=0 separately, clearly labelled.
+
+Record the eligibility rules in the 184-01 SUMMARY. Commit and push.

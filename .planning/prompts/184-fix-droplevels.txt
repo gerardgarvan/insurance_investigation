@@ -1,0 +1,42 @@
+R/184 full run 2026-10-16: gate, CBC check, recount, half-year assertion all OK. But:
+
+  Fitting primary Poisson GEE (years 2+) ...
+  Factors not allowed to have unused levels... Levels of factor year_index_cat : 1 2 3 4 5+
+  Used levels: 2 3 4 5+
+  [Primary: years 2+] GEE FAILED
+  Adjusted sensitivity FAILED (same message)
+  Half-year sensitivity FAILED (period_cat, same message)
+  Overdispersion overall=NA (primary fit missing)
+  -> Workbook and memo were still written without the primary model.
+
+Fixes:
+
+1. Unused factor levels. geeglm refuses unused levels; R/179's run_gee() calls droplevels()
+   inside, but fit_poisson_gee() and the adjusted / half-year fits do not. In every model-fitting
+   function (primary, secondary, adjusted, half-year, NB, data-end sensitivity), apply
+   droplevels() to the data frame passed to the model, after any filtering
+   (year_index_cat, period_cat, modality, sex, any other factor). Keep CBC as reference level
+   after droplevels (relevel if needed) and assert it.
+
+2. Primary is required. If the primary model (years 2+) fails, stop with an error
+   (no workbook, no memo). Sensitivities may fail with a recorded "not estimated" note,
+   the primary may not.
+
+3. Data-end sensitivity (requested at the Plan 01 approval, not yet implemented):
+   refit the primary Poisson GEE on patient-years with year_end <= as.Date("2025-03-31")
+   (years 2+). Report modality RRs and global Wald in Model_Results / Interaction.
+   Record the observed max event_date per modality (already printed) in KEY and the memo,
+   with the note that event data in this extract end around March 2025 although
+   EXTRACT_DATE is 2025-09-15.
+
+4. Suppression audit printed an empty table (0 rows). Print one row per modality x table
+   (n_cells, n_suppressed, pct, flag) whether or not flagged; flag MUGA and Breast MRI as
+   sparse (events years 2+: 69 and 354).
+
+5. The many-to-many warning is still printed from the recount join
+   (inner_join(inner_join(elig, events_rds, ...)...)): assert elig has one row per
+   ID x modality, then set relationship = "many-to-many" on the join that is expected to be
+   many-to-many.
+
+Commit and push. Local checks grep only (droplevels present in every fit function;
+stop on primary failure; "2025-03-31" present).

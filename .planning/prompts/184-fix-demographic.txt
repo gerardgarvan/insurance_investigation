@@ -1,0 +1,17 @@
+R/184 rerun: gate PASSED again; connection fix works. New stop in the sex query:
+  Binder Error: Referenced column "PATID" not found ... SELECT PATID AS ID, SEX FROM DEMOGRAPHIC WHERE PATID IN ('...', ...)
+
+Fix in R/184:
+1. The DEMOGRAPHIC patient key in our DuckDB is `ID`, not `PATID` (R/183 uses
+   `SELECT ID, BIRTH_DATE, SEX FROM DEMOGRAPHIC` successfully). Use the same query
+   as R/183 (copy it, cite line).
+2. Do not build SQL with an IN (...) list of patient IDs. Query the columns needed
+   for the whole table and join to the cohort in R. This also keeps patient IDs out of
+   error messages and the console.
+3. Make sex a factor only after the join to cohort patients; merge categories with
+   < 11 cohort patients into "Other/Unknown"; droplevels() (same as R/183 fix).
+4. Check every other DuckDB query in R/184 for PATID or IN (...) lists and apply the same rule.
+5. Keep the earlier items (LBL_CBC, eligibility from saved R/166/R/147 objects where
+   available with R/166-N comparison, CBC CHECK).
+
+Commit and push. Local checks grep only: no "PATID" and no "IN ('" in R/184.

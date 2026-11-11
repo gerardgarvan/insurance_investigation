@@ -1,0 +1,40 @@
+R/184 rerun 2026-10-16: gate PASSED; R/166 CBC rows dropped (876,636 remaining).
+Stopped at: "Building Phase 165 CBC events via build_cbc_events() ... object 'cc_patient_ids' not found".
+
+Use the schema probes: .planning/schemas/184_schema_20261016.md, 184c_schema_20261016.md
+(R/166 outputs live in /blue/erin.mobley-hl.bcu/clean/rds/outputs, not output/).
+
+1. build_cbc_events() setup.
+   The call was copied without the objects R/179 creates before it. Copy from R/179 the full
+   block that prepares the inputs to build_cbc_events() (patient ID vector, LAB pull / DuckDB
+   query, any date bounds) and the call itself, verbatim, citing file:line. Use the Phase 179
+   complete-case patient IDs as the ID set. Use the DuckDB helper pattern from CLAUDE.md
+   (open-query-close; no IN (...) ID lists; ID not PATID).
+   CBC CHECK stays a hard stop (count > 0 == cbc_year for every complete-case patient-year).
+
+2. Eligibility — DECISION (user): sex restriction only, plus an echo sensitivity.
+   The probe shows R/166 has no eligibility denominators: survivorship_modality_rates_long has
+   rows only for patients with a record of that modality (Mammogram 1,223, MUGA 497, ...), plus an
+   anthracycline-restricted variant `echo_post_anthracycline` (2,387 patients).
+   - Primary: every complete-case patient is eligible for every modality, except Mammogram and
+     Breast MRI (SEX == "F" only; current code). Record this in KEY.
+   - Sensitivity (Plan 02): Echocardiogram and MUGA restricted to anthracycline-exposed patients,
+     defined exactly as R/166 defines the `echo_post_anthracycline` population (copy the rule,
+     cite file:line; pin any input it needs). Report modality RRs for this restricted set.
+   - Remove the "eligible N vs R/166 expected" stop and the R184_R166_XLSX requirement for it
+     (R/166 has no comparable denominator). Keep R184_R166_XLSX only if it is used for the
+     anthracycline rule or KEY provenance; otherwise drop the pin.
+   - Replacement construction check (hard stop): for each modality, the number of events in the
+     long frame must equal an independent recount of events-file rows for cohort patients whose
+     event_date falls in a cohort patient-year window (year_start < date <= year_end). Print
+     both numbers per modality (sup()).
+
+3. Keep from the previous fix file: events coverage end (EVENTS_COVERAGE_END from R/147/R/166
+   code, not the observed max; model years restricted to year_end <= it for all modalities;
+   rows removed reported). Phase 179 Model_Results CI columns are CI_low / CI_high — use exact
+   names here and in R/183 read_p179_or().
+
+4. Update 184-CONTEXT.md D-07 (sex-only primary; anthracycline echo/MUGA sensitivity) and
+   the 184-01 SUMMARY.
+
+Commit and push. Local checks grep only.

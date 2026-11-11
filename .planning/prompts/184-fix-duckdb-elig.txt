@@ -1,0 +1,40 @@
+R/184 rerun on HiPerGator (2026-10-16):
+- Gate PASSED: OR 0.8339 (0.7192-0.9668) vs Phase 179 0.834 (0.719-0.967).
+- GATE counts now correct: 7,262 patients (far=1 739, far=0 6,523); 47,050 patient-years (far=1 4,691, far=0 42,359).
+- Events RDS: 1,054,151 rows, 8,623 patients, 14 modalities.
+- Then stopped in the new eligibility code:
+    Error in dbSendQuery(conn, statement, ...) : Invalid connection
+    Context: rapi_prepare
+
+Fix:
+
+1. DuckDB connection. The query ran on a connection that had already been closed.
+   Likely causes: (a) `on.exit(dbDisconnect(con))` registered inside a tryCatch / local block
+   that finished before the query, or (b) another helper called `open_pcornet_con()`
+   (or closed the shared connection) between opening and querying.
+   For every DuckDB read in R/184: open the connection immediately before the query,
+   collect the result, disconnect immediately after, in one small helper, e.g.
+
+     duck_query <- function(sql) {
+       con <- open_pcornet_con()
+       on.exit(try(DBI::dbDisconnect(con), silent = TRUE), add = TRUE)
+       DBI::dbGetQuery(con, sql)
+     }
+
+   Never hold a connection open across calls to other pipeline helpers.
+
+2. Eligibility source. Before querying DuckDB for eligibility at all, check whether
+   R/166 / R/147 / utils_surveillance_rates.R already produce eligibility as an object
+   or RDS (patient x modality, or per-modality exposure date). If they do, read that
+   pinned file instead of re-deriving it (add an R184_ELIG_RDS pin). Only query DuckDB
+   for what is not already saved (e.g. sex for Mammogram / Breast MRI), using duck_query().
+   Cite file:line for every rule copied.
+
+3. Eligibility check. Print eligible patients per modality next to R/166's eligible N for
+   the same modality; stop if they differ (with the two numbers printed).
+
+4. Keep the earlier items: LBL_CBC = "Complete blood count" with a stop if not found;
+   CBC CHECK (count > 0 == cbc_year for every complete-case patient-year).
+
+Record the eligibility rules and their sources in 184-01-SUMMARY.md. Commit and push.
+Local checks grep only (no R on this machine).

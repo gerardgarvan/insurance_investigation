@@ -1,0 +1,22 @@
+R/184 rerun: gate PASSED; then inside the Phase 165 CBC block:
+  "Building Phase 165 CBC events via build_cbc_events() ...
+   Error in dbSendQuery(conn, statement, ...) : Invalid connection"
+
+Cause to confirm: open_pcornet_con() keeps ONE shared DuckDB connection — calling it again closes
+the previous one (the console shows "[DuckDB] Connection closed." / "Connection opened" pairs).
+So a `con` object opened earlier (or a lazy dplyr::tbl(con, ...) built on it) becomes invalid as
+soon as any other code calls open_pcornet_con() (e.g. the sex lookup / duck_query helper).
+
+Fix:
+1. Read how R/179 calls build_cbc_events() (file:line): what it passes (con? a lazy tbl? a
+   collected data frame?) and where it opens/closes the connection.
+2. In R/184, open the connection immediately before the CBC block, pass it exactly as R/179 does,
+   make sure everything that needs the database is collect()ed inside the block, then disconnect.
+   No other helper that calls open_pcornet_con() may run between opening and the last use.
+   No lazy tbl() objects may survive past the block.
+3. Apply the same rule to every DuckDB use in R/184 (sex lookup, anthracycline rule): each opens,
+   collects, closes in its own block; nothing holds `con` across blocks.
+4. Add a CLAUDE.md line under the DuckDB rule: "open_pcornet_con() is a single shared
+   connection; a new call invalidates any earlier con or lazy tbl()."
+
+Commit and push. Local checks grep only.

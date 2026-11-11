@@ -67,6 +67,7 @@ Last activity: 2026-11-06
 - Phase 192.1 inserted after Phase 192: Rebase v3.13 to the revised Analytic Manual (URGENT)
 - Phase 192.2 inserted after Phase 192.1: ICD-9 autoimmune codes in Gantt episodes (URGENT)
 - Phase 192.3 inserted after Phase 192.2: Distance >100 mi vs CBC stratified by SOURCE (Medicare reassigned to address source) (URGENT)
+- Phase 192.4 inserted after Phase 192.3: Distance x CBC telehealth payer source composition (URGENT)
 - Phase 192.1 renamed from "rebase-v3-13-to-the-revised-analytic-manual" to "autoimmune-diagnosis-flags-in-gantt-episodes" (canonical name)
 - Phase 192.1 COMPLETE 2026-10-29: has_autoimmune_dx + first_autoimmune_dx_date added to gantt_episodes.csv and gantt_episodes_180.csv
 

@@ -887,6 +887,13 @@ Plans:
 - [x] 192.3-02-PLAN.md — R/165 SOURCE stratification: assign_analytic_source() helper, CONFIG keys, BY_SOURCE_enc/pat/_addr, SOURCE_REASSIGN_QC, MH+Breslow-Day, regression check
 - [ ] 192.3-03-PLAN.md — R/181 SOURCE stratification: same new sheets as Plan 02 for prior-year CBC workbook, with year-1 window patient SOURCE and whole-record fallback
 
+### Phase 192.4: Distance x CBC telehealth payer source composition (INSERTED)
+
+**Goal:** TBD
+**Requirements**: TBD
+**Depends on:** Phase 192.3
+**Plans:** 0/0 plans executed
+
 ### Phase 193: Produce Updated Manual
 **Goal**: A new versioned manual copy exists with all Phase 192 content inserted as tracked changes; the evidence workbook is finalized; the original file is untouched
 **Depends on**: Phase 192

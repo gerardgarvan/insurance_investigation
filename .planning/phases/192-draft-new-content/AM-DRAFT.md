@@ -483,9 +483,9 @@
   STATUS: DRAFTED
   CITE: R/28_episode_classification.R:calculate_episodes_detailed():L328-L335
 
-- [S4-REG-01] Cleaning Rule — Nivo+AVD labeling: An episode is labeled Nivo+AVD when it contains nivolumab + doxorubicin + vinblastine + dacarbazine.
+- [S4-REG-01] Cleaning Rule — Nivo+AVD labeling: An episode is labeled Nivo+AVD when it contains nivolumab + doxorubicin + vinblastine + dacarbazine without bleomycin, has exactly four unique drugs, and the episode start is on or after 2024-01-01.
   STATUS: DRAFTED
-  CITE: R/28_episode_classification.R:calculate_episodes_detailed():L328-L352
+  CITE: R/28_episode_classification.R:calculate_episodes_detailed():L333-L336
 
 #### Unresolved Issues
 
@@ -742,7 +742,7 @@
 
 #### Cleaning Rules Applied
 
-- [S4-PDE-01] Cleaning Rule — post-death activity flag: `resolve_death_date()` computes `post_death_activity_days` as the number of days from `death_date_raw` to `last_observed`; the value is zero where no post-death activity exists (L101–L112). `death_flag` distinguishes alive, deceased-confirmed, and deceased-inferred states.
+- [S4-PDE-01] Cleaning Rule — post-death activity flag: `resolve_death_date()` computes `post_death_activity_days` as `pmax(0, last_observed - death_date_raw)`; the value is zero for patients with no post-death activity and for patients with no death record. `death_flag` takes five values: plausible, implausible_post_activity, conflicting_resolved, conflicting_unresolved, no_death_record.
   STATUS: DRAFTED
   CITE: R/utils/utils_death.R:resolve_death_date():L101-L116
 
