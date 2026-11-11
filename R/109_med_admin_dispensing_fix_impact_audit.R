@@ -236,22 +236,36 @@ df_source_counts <- after_labeled %>%
     .groups = "drop"
   )
 
-# Before vs after headline summary.
-df_before_after_summary <- tibble(
+# Before vs after headline summary — keep raw integers for arithmetic.
+df_before_after_summary_raw <- tibble(
   metric = c("n_patients_any_chemo", "n_distinct_id_date_pairs"),
-  before = c(
-    suppress_small(n_distinct(before$ID)),
-    nrow(before)
-  ),
-  after = c(
-    suppress_small(n_distinct(after$ID)),
-    nrow(after)
-  )
-) %>%
-  mutate(delta = after - before)
+  before = c(n_distinct(before$ID), nrow(before)),
+  after  = c(n_distinct(after$ID),  nrow(after)),
+  delta  = c(n_distinct(after$ID)   - n_distinct(before$ID),
+             nrow(after)            - nrow(before))
+)
 
-message(glue("  Headline: {df_before_after_summary$before[1]} patients before -> {df_before_after_summary$after[1]} patients after (delta = {df_before_after_summary$delta[1]})"))
-message(glue("  (ID,date) pairs: {df_before_after_summary$before[2]} before -> {df_before_after_summary$after[2]} after (delta = {df_before_after_summary$delta[2]})\n"))
+stopifnot(
+  "df_before_after_summary_raw must have integer before" =
+    is.integer(df_before_after_summary_raw$before),
+  "df_before_after_summary_raw must have integer delta" =
+    is.integer(df_before_after_summary_raw$delta)
+)
+
+# Display table: suppress patient counts; blank delta when either endpoint is suppressed.
+df_before_after_summary <- df_before_after_summary_raw %>%
+  mutate(
+    before_disp = suppress_small(before),
+    after_disp  = suppress_small(after),
+    delta_disp  = dplyr::case_when(
+      before < 11L | after < 11L ~ NA_character_,
+      TRUE                       ~ as.character(delta)
+    )
+  ) %>%
+  select(metric, before = before_disp, after = after_disp, delta = delta_disp)
+
+message(glue("  Headline: {suppress_small(df_before_after_summary_raw$before[1])} patients before -> {suppress_small(df_before_after_summary_raw$after[1])} patients after (delta = {df_before_after_summary_raw$delta[1]})"))
+message(glue("  (ID,date) pairs: {df_before_after_summary_raw$before[2]} before -> {df_before_after_summary_raw$after[2]} after (delta = {df_before_after_summary_raw$delta[2]})\n"))
 
 
 # ==============================================================================
@@ -320,16 +334,34 @@ ingredient_after <- bind_rows(hits_rx_coh, hits_ma_coh, hits_dp_coh) %>%
     .groups = "drop"
   )
 
-df_ingredient_delta <- full_join(ingredient_before, ingredient_after, by = "triggering_code") %>%
+df_ingredient_delta_raw <- full_join(ingredient_before, ingredient_after, by = "triggering_code") %>%
   mutate(
-    drug_name = unname(MEDICATION_LOOKUP[triggering_code]),
-    drug_name = coalesce(drug_name, paste0("RxCUI:", triggering_code)),
+    drug_name   = unname(MEDICATION_LOOKUP[triggering_code]),
+    drug_name   = coalesce(drug_name, paste0("RxCUI:", triggering_code)),
     delta_pts   = coalesce(n_pts_after,   0L) - coalesce(n_pts_before,   0L),
     delta_dates = coalesce(n_dates_after, 0L) - coalesce(n_dates_before, 0L)
   ) %>%
-  # Apply HIPAA suppression to patient-count columns
-  mutate(across(c(n_pts_before, n_pts_after, delta_pts), suppress_small)) %>%
   arrange(desc(delta_pts))
+
+stopifnot(
+  "df_ingredient_delta_raw delta_pts must be integer" =
+    is.integer(df_ingredient_delta_raw$delta_pts)
+)
+
+# Display table: suppress patient counts; sort already applied above on raw integers.
+df_ingredient_delta <- df_ingredient_delta_raw %>%
+  mutate(
+    n_pts_before_disp = suppress_small(n_pts_before),
+    n_pts_after_disp  = suppress_small(n_pts_after),
+    delta_pts_disp    = dplyr::case_when(
+      coalesce(n_pts_before, 0L) < 11L | coalesce(n_pts_after, 0L) < 11L ~ NA_character_,
+      TRUE ~ as.character(delta_pts)
+    )
+  ) %>%
+  select(-n_pts_before, -n_pts_after, -delta_pts,
+         n_pts_before = n_pts_before_disp,
+         n_pts_after  = n_pts_after_disp,
+         delta_pts    = delta_pts_disp)
 
 message(glue("  {nrow(df_ingredient_delta)} distinct ingredients with before/after counts\n"))
 

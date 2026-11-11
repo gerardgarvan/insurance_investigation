@@ -217,8 +217,9 @@ compute_episode_summary <- function(df, label) {
 
   total_chemo_episodes <- nrow(chemo_df)
 
+  # Return raw integers; suppression is applied at display/write time only.
   pts_any_chemo <- if (!is.null(pid_col)) {
-    suppress_small(dplyr::n_distinct(chemo_df[[pid_col]]))
+    dplyr::n_distinct(chemo_df[[pid_col]])
   } else {
     NA_integer_
   }
@@ -226,7 +227,7 @@ compute_episode_summary <- function(df, label) {
   pts_dispensing <- if (!is.null(pid_col) && !is.null(src_col)) {
     d_chemo <- chemo_df |>
       dplyr::filter(stringr::str_detect(.data[[src_col]], "DISPENSING"))
-    suppress_small(dplyr::n_distinct(d_chemo[[pid_col]]))
+    dplyr::n_distinct(d_chemo[[pid_col]])
   } else {
     NA_integer_
   }
@@ -234,7 +235,7 @@ compute_episode_summary <- function(df, label) {
   pts_med_admin <- if (!is.null(pid_col) && !is.null(src_col)) {
     m_chemo <- chemo_df |>
       dplyr::filter(stringr::str_detect(.data[[src_col]], "MED_ADMIN"))
-    suppress_small(dplyr::n_distinct(m_chemo[[pid_col]]))
+    dplyr::n_distinct(m_chemo[[pid_col]])
   } else {
     NA_integer_
   }
@@ -260,13 +261,48 @@ compute_episode_summary <- function(df, label) {
 summary_before <- compute_episode_summary(episodes_before, "before")
 summary_after  <- compute_episode_summary(episodes_after, "after")
 
-df_summary <- dplyr::left_join(summary_before, summary_after, by = "metric") |>
+df_summary_raw <- dplyr::left_join(summary_before, summary_after, by = "metric") |>
   dplyr::mutate(
     delta = dplyr::case_when(
       !is.na(before) & !is.na(after) ~ after - before,
       TRUE ~ NA_integer_
     )
   )
+
+stopifnot(
+  "df_summary_raw before must be integer" = is.integer(df_summary_raw$before),
+  "df_summary_raw after must be integer"  = is.integer(df_summary_raw$after),
+  "df_summary_raw delta must be integer"  = is.integer(df_summary_raw$delta)
+)
+
+# Metrics whose patient counts require HIPAA suppression.
+patient_count_metrics <- c(
+  "Patients with any chemo episode",
+  "Patients with DISPENSING-sourced chemo episode",
+  "Patients with MED_ADMIN-sourced chemo episode"
+)
+
+# Display table: suppress patient-count rows; blank delta when either endpoint suppressed.
+df_summary <- df_summary_raw |>
+  dplyr::mutate(
+    before_disp = dplyr::if_else(
+      metric %in% patient_count_metrics,
+      suppress_small(before), as.character(before)
+    ),
+    after_disp = dplyr::if_else(
+      metric %in% patient_count_metrics,
+      suppress_small(after), as.character(after)
+    ),
+    delta_disp = dplyr::case_when(
+      metric %in% patient_count_metrics &
+        (dplyr::coalesce(before, 0L) < 11L | dplyr::coalesce(after, 0L) < 11L) ~ NA_character_,
+      TRUE ~ as.character(delta)
+    )
+  ) |>
+  dplyr::select(metric,
+                before = before_disp,
+                after  = after_disp,
+                delta  = delta_disp)
 
 message(glue("  Summary sheet: {nrow(df_summary)} rows"))
 
