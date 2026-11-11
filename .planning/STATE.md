@@ -147,7 +147,8 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261110-luq | Write R/tools/dep_map.R — static dependency mapper (AST-based, 10 sections, five outputs, R1–R9 risk report) | 2026-11-10 | 4c5a7e3 | [261110-luq-build-static-dependency-map-of-r-code](./quick/261110-luq-build-static-dependency-map-of-r-code/) |
 | 261111-c91 | Update phase 192.4 frontmatter in CONTEXT, PLAN, SUMMARY | 2026-11-11 | 53faa42 | [261111-c91-update-phase-192-4-frontmatter-in-contex](./quick/261111-c91-update-phase-192-4-frontmatter-in-contex/) |
 | 261111-ce7 | Phase A follow-ups: suppress_small NA fix, phase folder move, cancer_summary reader comments, RERUN-AND-REISSUE updates, check_cohort_fingerprint tool | 2026-11-11 | 435e067 | [261111-ce7-phase-a-follow-ups-suppress-small-na-fix](./quick/261111-ce7-phase-a-follow-ups-suppress-small-na-fix/) |
+| 261111-cxn | Fix suppress_small applied before arithmetic in R/109/R/110: defer to display-only; raw integer tables for delta/sort; stopifnot guards; complementary suppression | 2026-11-11 | 6637ec4 | [261111-cxn-fix-suppress-small-applied-before-arithm](./quick/261111-cxn-fix-suppress-small-applied-before-arithm/) |
 
 ## Session Continuity
 
-**Stopped at:** quick-261111-ce7 complete — Phase A follow-ups: suppress_small NA fix, phase 196 folder, cancer_summary reader comments resolved, RERUN-AND-REISSUE updated, check_cohort_fingerprint.R created
+**Stopped at:** quick-261111-cxn complete — suppress_small deferred to display-only in R/109 and R/110; arithmetic uses raw integer tables
