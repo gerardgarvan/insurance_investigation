@@ -99,12 +99,19 @@ message(glue("Output xlsx:     {OUT_XLSX}\n"))
 # HIPAA helper: patient counts 1-10 are suppressed in any persisted/printed
 # per-group breakdown to prevent re-identification. Applies to all n_patients
 # fields in all output sheets and console lines.
-# Phase 195 A2: updated from R/109 -- return "<11" string (not NA_integer_) so suppressed
-# cells are distinguishable from missing in xlsx output. Affects n_patients columns.
 suppress_small <- function(n) {
+  # NA input returns NA_character_; 1-10 returns "<11"; else as.character(n).
   n <- as.integer(n)
-  ifelse(!is.na(n) & n >= 1L & n <= 10L, "<11", as.character(n))
+  dplyr::case_when(
+    is.na(n)           ~ NA_character_,
+    n >= 1L & n <= 10L ~ "<11",
+    TRUE               ~ as.character(n)
+  )
 }
+stopifnot(identical(
+  suppress_small(c(0L, 1L, 10L, 11L, NA_integer_)),
+  c("0", "<11", "<11", "11", NA_character_)
+))
 
 
 # ==============================================================================

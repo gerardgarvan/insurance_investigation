@@ -99,10 +99,18 @@ message(glue("Diagnostic artifact target: {OUTPUT_CSV}\n"))
 # per-group breakdown to prevent re-identification. Applies to n_patients fields
 # in the output CSV and to per-group patient-count console lines.
 suppress_small <- function(n) {
-  # Phase 195 A2: return "<11" string (not NA_integer_) so suppressed cells are
-  # distinguishable from missing in CSV/xlsx output. Affects n_patients columns.
-  ifelse(!is.na(n) & as.integer(n) >= 1L & as.integer(n) <= 10L, "<11", as.character(n))
+  # NA input returns NA_character_; 1-10 returns "<11"; else as.character(n).
+  n <- as.integer(n)
+  dplyr::case_when(
+    is.na(n)           ~ NA_character_,
+    n >= 1L & n <= 10L ~ "<11",
+    TRUE               ~ as.character(n)
+  )
 }
+stopifnot(identical(
+  suppress_small(c(0L, 1L, 10L, 11L, NA_integer_)),
+  c("0", "<11", "<11", "11", NA_character_)
+))
 
 
 # ==============================================================================
