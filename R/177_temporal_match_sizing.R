@@ -94,9 +94,13 @@ r121_path <- if (nzchar(r121_override) && file.exists(r121_override)) {
   if (length(candidates) == 0L)
     stop("[R/177] R/121 RDS not found in ", out_dir,
          " -- run R/121_zip_problem_inventory.R first, or set R177_R121_RDS.")
-  sel <- candidates[which.max(file.mtime(candidates))]
-  message(glue("  [R/121 RDS] Falling back to most recent: {basename(sel)}"))
-  message("  NOTE: Pin this path in R177_R121_RDS or r121_pinned once Phase 176 is validated.")
+  sel <- resolve_input(
+    dir     = out_dir,
+    pattern = "^zip_problem_inventory.*\\.rds$",
+    env_var = "R177_R121_RDS",
+    label   = "zip_problem_inventory"
+  )
+  message("  NOTE: Pin R177_R121_RDS once Phase 176 is validated.")
   sel
 }
 
@@ -106,24 +110,15 @@ message(glue("  R/121 patients: {nrow(pat121)}"))
 
 # --- 1b. R/122 RDS -----------------------------------------------------------
 # Priority: R177_R122_RDS env var > most recent by mtime (same file R/165 used).
+# resolve_input() used below; env var R177_R122_RDS overrides path
 r122_override <- Sys.getenv("R177_R122_RDS", unset = "")
 
-r122_path <- if (nzchar(r122_override) && file.exists(r122_override)) {
-  message(glue("  [R/122 RDS] Using R177_R122_RDS override: {r122_override}"))
-  r122_override
-} else {
-  candidates <- list.files(
-    out_dir,
-    pattern = "^encounter_distance.*\\.rds$",
-    full.names = TRUE
-  )
-  if (length(candidates) == 0L)
-    stop("[R/177] R/122 RDS not found in ", out_dir,
-         " -- run R/122_encounter_distance.R first, or set R177_R122_RDS.")
-  sel <- candidates[which.max(file.mtime(candidates))]
-  message(glue("  [R/122 RDS] Most recent by mtime: {basename(sel)}"))
-  sel
-}
+r122_path <- resolve_input(
+  dir     = out_dir,
+  pattern = "^encounter_distance.*\\.rds$",
+  env_var = "R177_R122_RDS",
+  label   = "enc_distance"
+)
 
 enc_distance <- readRDS(r122_path)
 message(glue("  enc_distance rows: {format(nrow(enc_distance), big.mark = ',')}"))

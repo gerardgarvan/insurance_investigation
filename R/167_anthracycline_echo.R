@@ -59,17 +59,13 @@ out_dir  <- CONFIG$cache$outputs_dir
 # Audit confirms: treatment_episode_detail_180.rds, patient_id column (not ID).
 # D-08a: first_line column absent -> all rows treated equivalently.
 
-episode_file_pattern <- "treatment_episode_detail_180\\.rds$"
-episode_candidates   <- list.files(out_dir, pattern = episode_file_pattern,
-                                   full.names = TRUE)
-if (length(episode_candidates) == 0L) {
-  stop(
-    "No treatment episode file found matching '", episode_file_pattern,
-    "' in: ", out_dir, "\n",
-    "Expected: treatment_episode_detail_180.rds"
-  )
-}
-episode_file_used <- sort(episode_candidates, decreasing = TRUE)[1L]
+# Pin via env var R167_EPISODE_RDS.
+episode_file_used <- resolve_input(
+  dir     = out_dir,
+  pattern = "treatment_episode_detail_180\\.rds$",
+  env_var = "R167_EPISODE_RDS",
+  label   = "treatment_episode_detail_180"
+)
 message("Loading episode file: ", episode_file_used)
 
 episodes_raw <- readRDS(episode_file_used)
@@ -164,19 +160,13 @@ message(d_166_01_record)
 
 # ---------- 4. Load echo events and follow-up ---------------------------------
 
-# Echo events from Plan 02's dated-events file
-dated_events_candidates <- list.files(
-  out_dir,
+# Echo events from Plan 02's dated-events file. Pin via env var R167_DATED_EVENTS_RDS.
+dated_events_file <- resolve_input(
+  dir     = out_dir,
   pattern = "survivorship_dated_events_.*\\.rds$",
-  full.names = TRUE
+  env_var = "R167_DATED_EVENTS_RDS",
+  label   = "survivorship_dated_events"
 )
-if (length(dated_events_candidates) == 0L) {
-  stop(
-    "No survivorship_dated_events_*.rds found in: ", out_dir, "\n",
-    "Run R/166_survivorship_modality_rates.R (Plan 02) first."
-  )
-}
-dated_events_file <- sort(dated_events_candidates, decreasing = TRUE)[1L]
 message("Loading dated events: ", dated_events_file)
 dated_events <- readRDS(dated_events_file)
 
@@ -188,14 +178,20 @@ echo_events <- dated_events |>
 message("Echo events loaded: ", nrow(echo_events), " rows")
 
 # Follow-up: ID, hl_anchor_date, follow_end
-# Try Plan 02 rates parts first, fall back to surveillance_modality_patient
+# Try Plan 02 rates parts first (R167_RATES_PARTS_RDS), fall back to
+# surveillance_modality_patient (R167_SURV_PATIENT_RDS).
 fu_candidates <- list.files(
   out_dir,
   pattern = "survivorship_modality_rates_parts_.*\\.rds$",
   full.names = TRUE
 )
-if (length(fu_candidates) > 0L) {
-  fu_file <- sort(fu_candidates, decreasing = TRUE)[1L]
+if (length(fu_candidates) > 0L || nzchar(Sys.getenv("R167_RATES_PARTS_RDS", ""))) {
+  fu_file <- resolve_input(
+    dir     = out_dir,
+    pattern = "survivorship_modality_rates_parts_.*\\.rds$",
+    env_var = "R167_RATES_PARTS_RDS",
+    label   = "survivorship_rates_parts (follow-up)"
+  )
   message("Loading follow-up from rates parts: ", fu_file)
   rates_parts <- readRDS(fu_file)
   if (is.list(rates_parts) && !is.null(rates_parts$followup)) {
@@ -211,21 +207,13 @@ if (length(fu_candidates) > 0L) {
     stop("Could not extract follow-up from survivorship_modality_rates_parts_*.rds")
   }
 } else {
-  # Fallback: surveillance_modality_patient_<date>.rds
-  surv_candidates <- list.files(
-    out_dir,
+  # Fallback: surveillance_modality_patient_<date>.rds. Pin via R167_SURV_PATIENT_RDS.
+  fu_file <- resolve_input(
+    dir     = out_dir,
     pattern = "surveillance_modality_patient_.*\\.rds$",
-    full.names = TRUE
+    env_var = "R167_SURV_PATIENT_RDS",
+    label   = "surveillance_modality_patient (follow-up fallback)"
   )
-  if (length(surv_candidates) == 0L) {
-    stop(
-      "No follow-up source found. Need either:\n",
-      "  survivorship_modality_rates_parts_*.rds (Plan 02), or\n",
-      "  surveillance_modality_patient_*.rds (R/147).\n",
-      "Run the appropriate upstream script first."
-    )
-  }
-  fu_file <- sort(surv_candidates, decreasing = TRUE)[1L]
   message("Loading follow-up from surveillance_modality_patient: ", fu_file)
   surv_patient <- readRDS(fu_file)
   followup <- surv_patient |>
@@ -426,3 +414,18 @@ out_path <- file.path(out_dir,
 saveRDS(output_list, out_path)
 message("Saved: ", out_path)
 message("Done. Run date: ", run_date)
+
+# ==============================================================================
+# KEY
+# ==============================================================================
+# Input env vars (resolve_input):
+#   R167_EPISODE_RDS      -- treatment_episode_detail_180.rds
+#                            (default: most recent in CONFIG$cache$outputs_dir)
+#   R167_DATED_EVENTS_RDS -- survivorship_dated_events_<date>.rds (from R/166)
+#                            (default: most recent in CONFIG$cache$outputs_dir)
+#   R167_RATES_PARTS_RDS  -- survivorship_modality_rates_parts_<date>.rds
+#                            (primary follow-up source; from R/166)
+#   R167_SURV_PATIENT_RDS -- surveillance_modality_patient_<date>.rds
+#                            (fallback follow-up source; from R/147)
+# Output:
+#   CONFIG$cache$outputs_dir/survivorship_echo_parts_<YYYYMMDD>.rds  (INTERNAL)

@@ -47,27 +47,23 @@ message(strrep("=", 70))
 message("R/168: Survivorship Workbook Assembler")
 message(strrep("=", 70))
 
-# Load most recent Plan 02 parts -------------------------------------------
-rates_files <- sort(list.files(out_dir,
-                               pattern = "^survivorship_modality_rates_parts_.*\\.rds$",
-                               full.names = TRUE), decreasing = TRUE)
-if (length(rates_files) == 0L) {
-  stop("[R/168] No 'survivorship_modality_rates_parts_*.rds' found in '", out_dir,
-       "'.\nRun R/166_survivorship_modality_rates.R first.")
-}
-rates_parts_path <- rates_files[[1L]]
+# Load Plan 02 parts. Pin via env var R168_RATES_PARTS_RDS. ----------------
+rates_parts_path <- resolve_input(
+  dir     = out_dir,
+  pattern = "^survivorship_modality_rates_parts_.*\\.rds$",
+  env_var = "R168_RATES_PARTS_RDS",
+  label   = "survivorship_rates_parts"
+)
 message("  Loading rates parts: ", basename(rates_parts_path))
 p02 <- readRDS(rates_parts_path)
 
-# Load most recent Plan 03 parts -------------------------------------------
-echo_files <- sort(list.files(out_dir,
-                              pattern = "^survivorship_echo_parts_.*\\.rds$",
-                              full.names = TRUE), decreasing = TRUE)
-if (length(echo_files) == 0L) {
-  stop("[R/168] No 'survivorship_echo_parts_*.rds' found in '", out_dir,
-       "'.\nRun R/167_anthracycline_echo.R first.")
-}
-echo_parts_path <- echo_files[[1L]]
+# Load Plan 03 parts. Pin via env var R168_ECHO_PARTS_RDS. ----------------
+echo_parts_path <- resolve_input(
+  dir     = out_dir,
+  pattern = "^survivorship_echo_parts_.*\\.rds$",
+  env_var = "R168_ECHO_PARTS_RDS",
+  label   = "survivorship_echo_parts"
+)
 message("  Loading echo parts:  ", basename(echo_parts_path))
 p03 <- readRDS(echo_parts_path)
 
@@ -450,3 +446,17 @@ message("    ", patient_rds_out)
 message("    ", patient_csv_out)
 message("    ", xlsx_out)
 message("\nR/168 complete.")
+
+# ==============================================================================
+# KEY
+# ==============================================================================
+# Input env vars (resolve_input):
+#   R168_RATES_PARTS_RDS -- survivorship_modality_rates_parts_<date>.rds
+#                           (from R/166; default: most recent in cache dir)
+#   R168_ECHO_PARTS_RDS  -- survivorship_echo_parts_<date>.rds
+#                           (from R/167; default: most recent in cache dir)
+# Outputs (CONFIG$cache$outputs_dir):
+#   survivorship_modality_rates_long_<date>.rds       (INTERNAL)
+#   survivorship_modality_rates_patient_<date>.rds    (INTERNAL)
+#   survivorship_modality_rates_patient_<date>.csv    (INTERNAL)
+#   survivorship_modality_rates_<date>.xlsx

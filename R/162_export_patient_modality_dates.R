@@ -33,24 +33,15 @@ run_date    <- format(Sys.Date(), "%Y%m%d")
 # ------------------------------------------------------------------
 # Load the most recent patient_modality_dates RDS if it exists,
 # otherwise source R/147 outputs (patient_wide must be in environment)
+# Pin via env var R162_PATIENT_MODALITY_RDS.
 # ------------------------------------------------------------------
-rds_files <- list.files(
-  CONFIG$cache$outputs_dir %||% file.path(CONFIG$output_dir %||% "output"),
+patient_modality_rds_path <- resolve_input(
+  dir     = CONFIG$cache$outputs_dir %||% file.path(CONFIG$output_dir %||% "output"),
   pattern = "^surveillance_patient_modality_dates_.*\\.rds$",
-  full.names = TRUE
+  env_var = "R162_PATIENT_MODALITY_RDS",
+  label   = "patient_modality_dates"
 )
-
-if (length(rds_files) > 0) {
-  latest <- rds_files[order(file.info(rds_files)$mtime, decreasing = TRUE)[1]]
-  message("Loading: ", latest)
-  message("RDS source: ", basename(latest),
-          "  (modified: ", format(file.info(latest)$mtime, "%Y-%m-%d %H:%M"), ")")
-  patient_wide <- readRDS(latest)
-} else {
-  stop("No surveillance_patient_modality_dates_*.rds found in ",
-       CONFIG$cache$outputs_dir %||% "output/", ". ",
-       "Run R/147_surveillance_modality_frequency.R first.")
-}
+patient_wide <- readRDS(patient_modality_rds_path)
 
 # ------------------------------------------------------------------
 # Drop *_any columns
@@ -68,3 +59,12 @@ out_path <- here::here("output", glue("patient_modality_dates_no_any_{run_date}.
 readr::write_csv(out, out_path)
 message("Written: ", out_path)
 message(sprintf("  %d patients x %d columns", nrow(out), ncol(out)))
+
+# ==============================================================================
+# KEY
+# ==============================================================================
+# Input env vars (resolve_input):
+#   R162_PATIENT_MODALITY_RDS -- surveillance_patient_modality_dates_<date>.rds
+#                                (from R/147; default: most recent in cache dir)
+# Output:
+#   output/patient_modality_dates_no_any_<YYYYMMDD>.csv  (INTERNAL)

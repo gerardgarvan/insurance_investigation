@@ -77,15 +77,13 @@ if (!exists("pcornet_con", envir = .GlobalEnv)) open_pcornet_con()
 con <- get("pcornet_con", envir = .GlobalEnv)
 
 # 1b. Load enc_distance (R/122 output, read-only)
-enc_dist_path <- list.files(
-  CONFIG$output_dir,
+# Pin via env var R163_R122_RDS.
+enc_dist_path <- resolve_input(
+  dir     = CONFIG$output_dir,
   pattern = "^encounter_distance.*\\.rds$",
-  full.names = TRUE
+  env_var = "R163_R122_RDS",
+  label   = "enc_distance"
 )
-if (length(enc_dist_path) == 0)
-  stop("enc_distance RDS not found in ", CONFIG$output_dir,
-       " -- run R/122_encounter_distance.R first")
-enc_dist_path <- enc_dist_path[which.max(file.mtime(enc_dist_path))]  # most recent
 message(glue("  Loading enc_distance: {basename(enc_dist_path)}"))
 enc_distance <- readRDS(enc_dist_path)
 message(glue("  enc_distance rows: {format(nrow(enc_distance), big.mark=',')}"))
@@ -456,3 +454,12 @@ message(glue("\n  Timing: whole-window {round(t_whole['elapsed'])}s | ",
              "total elapsed {round((proc.time()-RUN_START)['elapsed'])}s"))
 
 message("\n=== Phase 165 prototype complete ===")
+
+# ==============================================================================
+# KEY
+# ==============================================================================
+# Input env vars (resolve_input):
+#   R163_R122_RDS -- encounter_distance_<date>.rds (from R/122;
+#                    default: most recent in CONFIG$output_dir)
+# Output:
+#   CONFIG$cache$outputs_dir/enc_far_from_care.rds   (ACC-01)

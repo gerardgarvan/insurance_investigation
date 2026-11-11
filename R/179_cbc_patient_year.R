@@ -146,14 +146,13 @@ xcheck_text <- tryCatch({
 
 # --- 1b. enc_distance (R/122) -------------------------------------------------
 r122_override <- Sys.getenv("R179_R122_RDS", unset = "")
-if (nzchar(r122_override)) {
-  stopifnot("R179_R122_RDS file not found" = file.exists(r122_override))
-  enc_dist_path <- r122_override; r122_pinned <- TRUE
-} else {
-  cand <- list.files(CONFIG$output_dir, "^encounter_distance.*\\.rds$", full.names = TRUE)
-  stopifnot("enc_distance RDS not found -- run R/122 or set R179_R122_RDS" = length(cand) > 0L)
-  enc_dist_path <- cand[which.max(file.mtime(cand))]; r122_pinned <- FALSE
-}
+r122_pinned   <- nzchar(r122_override)
+enc_dist_path <- resolve_input(
+  dir     = CONFIG$output_dir,
+  pattern = "^encounter_distance.*\\.rds$",
+  env_var = "R179_R122_RDS",
+  label   = "enc_distance"
+)
 enc_distance <- readRDS(enc_dist_path)
 stopifnot("enc_distance missing required columns" =
             all(c("ID", "ADMIT_DATE", "distance_status", "distance_mi") %in% names(enc_distance)))
@@ -162,15 +161,12 @@ enc_distance <- enc_distance |>
 message(glue("  enc_distance: {basename(enc_dist_path)} ({format(nrow(enc_distance), big.mark = ',')} rows; pinned={r122_pinned})"))
 
 # --- 1c. R/121 triage ---------------------------------------------------------
-r121_override <- Sys.getenv("R179_R121_RDS", unset = "")
-if (nzchar(r121_override)) {
-  stopifnot("R179_R121_RDS file not found" = file.exists(r121_override))
-  r121_path <- r121_override
-} else {
-  cand <- list.files(CONFIG$output_dir, "^zip_problem_inventory.*\\.rds$", full.names = TRUE)
-  stopifnot("R/121 RDS not found -- run R/121 or set R179_R121_RDS" = length(cand) > 0L)
-  r121_path <- cand[which.max(file.mtime(cand))]
-}
+r121_path <- resolve_input(
+  dir     = CONFIG$output_dir,
+  pattern = "^zip_problem_inventory.*\\.rds$",
+  env_var = "R179_R121_RDS",
+  label   = "zip_problem_inventory"
+)
 r121_raw <- readRDS(r121_path)
 pat121 <- if (is.list(r121_raw) && !is.data.frame(r121_raw) && "patients" %in% names(r121_raw))
   r121_raw$patients else r121_raw

@@ -181,9 +181,13 @@ if (nzchar(r122_override)) {
   stopifnot("R180_R122_RDS file not found" = file.exists(r122_override))
   enc_dist_path <- r122_override; r122_pinned <- TRUE
 } else {
-  cand <- list.files(CONFIG$output_dir, "^encounter_distance.*\\.rds$", full.names = TRUE)
-  stopifnot("enc_distance RDS not found -- run R/122 or set R180_R122_RDS" = length(cand) > 0L)
-  enc_dist_path <- cand[which.max(file.mtime(cand))]; r122_pinned <- FALSE
+  enc_dist_path <- resolve_input(
+    dir     = CONFIG$output_dir,
+    pattern = "^encounter_distance.*\\.rds$",
+    env_var = "R180_R122_RDS",
+    label   = "enc_distance"
+  )
+  r122_pinned <- FALSE
 }
 enc_distance <- readRDS(enc_dist_path)
 stopifnot("enc_distance missing required columns" =
@@ -199,12 +203,17 @@ if (nzchar(r169_override)) {
   stopifnot("R180_R169_RDS file not found" = file.exists(r169_override))
   r169_path <- r169_override; r169_pinned <- TRUE
 } else {
-  cand <- list.files(file.path(CONFIG$output_dir, "internal"),
-                     "^single_source_care.*\\.rds$", full.names = TRUE)
-  if (length(cand) == 0L)
-    cand <- list.files(CONFIG$output_dir, "^single_source_care.*\\.rds$", full.names = TRUE)
-  stopifnot("R/169 single_source_care RDS not found -- run R/169 or set R180_R169_RDS" = length(cand) > 0L)
-  r169_path <- cand[which.max(file.mtime(cand))]; r169_pinned <- FALSE
+  # Try internal/ first, fall back to output/ root
+  r169_dir <- if (length(list.files(file.path(CONFIG$output_dir, "internal"),
+                                    "^single_source_care.*\\.rds$")) > 0L)
+    file.path(CONFIG$output_dir, "internal") else CONFIG$output_dir
+  r169_path <- resolve_input(
+    dir     = r169_dir,
+    pattern = "^single_source_care.*\\.rds$",
+    env_var = "R180_R169_RDS",
+    label   = "single_source_care"
+  )
+  r169_pinned <- FALSE
 }
 r169_raw <- readRDS(r169_path)
 # accept data.frame or list
