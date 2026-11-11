@@ -132,6 +132,8 @@ SPEC <- list(
   saveWidget  = list("writes", c("widget", "file"), "file"),
   save        = list("writes", character(), "file"),
   sink        = list("writes", c("file"), "file"),
+  writeLines  = list("writes", c("text", "con"), "con"),
+  readLines   = list("reads", c("con"), "con"),
   # db
   dbGetQuery  = list("sql", c("conn", "statement"), "statement"),
   dbExecute   = list("sql", c("conn", "statement"), "statement"),
@@ -288,7 +290,10 @@ res <- function(e, sc, cfg, depth = 0L) {
     pt <- match_arg(a, fa, "pattern", c("regexp"))
     gl <- a[["glob"]]
     rc <- match_arg(a, fa, "recursive")
-    dirv <- if (is.null(p)) "." else r(p)[1]
+    dirv <- if (is.null(p)) "." else {
+      dv <- r(p); ok <- !grepl("^\\{TMP\\}|^tests/|/tests/fixtures/", vapply(dv, norm_path, ""))
+      if (any(ok)) dv[ok][1] else dv[1]
+    }
     patv <- if (!is.null(pt)) r(pt)[1] else if (!is.null(gl)) utils::glob2rx(r(gl)[1]) else ""
     return(mk_list_val(norm_path(dirv), patv, isTRUE(rc) || identical(rc, quote(TRUE))))
   }
@@ -434,9 +439,15 @@ analyze <- function(root) {
   STATE <- new.env()
   STATE$mode_config <- FALSE
 
+  prefer_prod <- function(vals) {
+    if (length(vals) < 2) return(vals)
+    nv <- vapply(vals, function(v) if (is_list_val(v)) v else norm_path(v), "")
+    alt <- grepl("^\\{TMP\\}|^(LIST::)?tests/|/tests/fixtures/|^LIST::\\{TMP\\}", nv)
+    if (any(!alt)) vals[!alt] else vals
+  }
   record_path_edge <- function(type, expr, fn, file, line, sc) {
     if (is.null(expr)) { add_edge(file, line, type, NA, fn, "<no arg>", "none"); return(invisible()) }
-    vals <- res(expr, sc, CFG)
+    vals <- prefer_prod(res(expr, sc, CFG))
     raw <- paste(deparse(expr, width.cutoff = 200L), collapse = " ")
     for (v in vals) {
       if (is_list_val(v)) {
@@ -620,7 +631,7 @@ analyze <- function(root) {
       if (kind == "sources") {
         if (!is.null(arg)) record_source(arg, file, line, sc, fn)
       } else if (kind %in% c("reads", "writes")) {
-        if (!(fn == "png" && is.null(arg)) && !(fn %in% c("sink", "load", "save") && is.null(arg)))
+        if (!is.null(arg) || !fn %in% c("png", "sink", "load", "save", "writeLines", "readLines"))
           record_path_edge(kind, arg, fn, file, line, sc)
       } else if (kind == "sql") {
         if (!is.null(arg)) {
@@ -952,6 +963,16 @@ derive <- function(A) {
   num <- function(x) suppressWarnings(as.numeric(sub("^R/(?:[a-z]+/)?([0-9]+).*", "\\1", x, perl = TRUE)))
   inv <- dag[!is.na(num(dag$pred)) & !is.na(num(dag$succ)) & num(dag$pred) > num(dag$succ), , drop = FALSE]
 
+  # R11 artifacts written by more than one script (order-dependent results)
+  mw <- ed[wr_rows, c("artifact", "from")]
+  mw <- unique(mw[!startsWith(mw$artifact, "db:") | TRUE, ])
+  nw <- tapply(mw$from, mw$artifact, function(x) length(unique(x)))
+  multi <- names(nw)[nw > 1]
+  r11 <- if (length(multi)) data.frame(artifact = multi, writers = vapply(multi, function(a)
+    paste(sort(unique(mw$from[mw$artifact == a])), collapse = "; "), ""), n_writers = as.integer(nw[multi]),
+    stringsAsFactors = FALSE) else data.frame(artifact = character(), writers = character(), n_writers = integer())
+  r11 <- r11[order(-r11$n_writers, r11$artifact), , drop = FALSE]
+
   # R10 scripts that write R code / config
   w10 <- which(ed$edge_type == "writes" & grepl("\\.[Rr](\\.bak)?$", ed$artifact))
   r10 <- if (length(w10)) unique(data.frame(location = paste0(ed$from[w10], ":", ed$line[w10]), file = ed$from[w10],
@@ -965,7 +986,7 @@ derive <- function(A) {
 
   list(pairs = pairs, dag = dag, dag_s = dag_s, fn_edges = fn_edges, r1 = r1, r1_ext = r1_ext, r2 = r2,
        r2_deliv = r2_deliv, r3 = r3, r4 = r4, r5 = r5, r6 = r6, r7a = dup_multi, r7b = never, r7c = r7c,
-       pkgs_missing = pe$missing, topo = topo, cycles = cyc, inversions = inv, r9 = r9, r10 = r10)
+       pkgs_missing = pe$missing, topo = topo, cycles = cyc, inversions = inv, r9 = r9, r10 = r10, r11 = r11)
 }
 
 # -----------------------------------------------------------------------------
@@ -1106,10 +1127,10 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
                                     "R2 deliverable writes never read (info)", "R3 latest-file selections", "R3 ... without pin",
                                     "R4 same-date overwrite risk", "R5 not fully resolved edges", "R6 absolute paths",
                                     "R7a functions defined in >1 file", "R7b functions never called", "R7c called but undefined",
-                                    "R8 cycles", "R8 order inversions", "R9 isolated scripts", "R10 scripts writing R code/config"),
+                                    "R8 cycles", "R8 order inversions", "R9 isolated scripts", "R10 scripts writing R code/config", "R11 files written by >1 script"),
                        n = c(nrow(D$r1), nrow(D$r1_ext), nrow(D$r2), D$r2_deliv, nrow(D$r3), sum(!D$r3$has_pin), nrow(D$r4),
                              nrow(D$r5), nrow(D$r6), length(unique(D$r7a$fn)), nrow(D$r7b), nrow(D$r7c),
-                             length(D$cycles), nrow(D$inversions), length(D$r9), nrow(D$r10)))
+                             length(D$cycles), nrow(D$inversions), length(D$r9), nrow(D$r10), nrow(D$r11)))
   rpt <- c(
     paste0("# Dependency Risk Report -- ", dated, if (!gate_ok) "  (GATE FAILED -- forced output)" else ""), "",
     sprintf("Generated by `R/tools/dep_map.R` (v2) from %d files (%d scripts, %d utils, %d tools, %d archived). Root: `%s`",
@@ -1141,13 +1162,16 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
     md_table(D$r7c, c("fn", "n_calls", "callers"), 50), "",
     "## R8 -- Execution order (from data dependencies)", "",
     if (length(D$topo)) paste(seq_along(D$topo), D$topo, sep = ". ") else "No data dependencies resolved.", "",
-    if (length(D$cycles)) paste0("**Cycles:** ", paste(D$cycles, collapse = "; ")) else "No cycles detected.", "",
+    if (length(D$cycles)) paste0("**Cycles** (scripts on a loop of data dependencies; see R10/R11 for the files causing them): ", paste(D$cycles, collapse = "; ")) else "No cycles detected.", "",
     "**Order inversions** (higher-numbered script produces data a lower-numbered script reads):", "",
     md_table(D$inversions, c("pred", "succ", "via")), "",
     "## R9 -- Isolated scripts", "", "Scripts with no resolved data link (read or write) to any other script. Often one-off probes; check before deleting.", "",
     if (length(D$r9)) paste0("- ", D$r9) else "No findings.", "",
     "## R10 -- Scripts that write R code or config", "", "A pipeline script that rewrites a .R file (e.g. R/00_config.R) changes the code every other script runs.", "",
     md_table(D$r10, c("location", "artifact")), "",
+    "## R11 -- Files written by more than one script", "",
+    "The file's contents depend on which writer ran last. Usually the cause of R8 cycles (a script reads a file, then rewrites it).", "",
+    md_table(D$r11, c("artifact", "n_writers", "writers")), "",
     paste0("_Generated ", format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"), "_"))
   writeLines(unlist(rpt), P("risk_report", "md"))
 
@@ -1233,14 +1257,16 @@ self_test <- function() {
   w("R/02_payer.R", 'source("R/00_config.R")', 'p <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")', 'readr::write_csv(x, p)')
   w("R/10_make.R", 'source(here::here("R", "00_config.R"))', 'rd <- format(Sys.Date(), "%Y%m%d")',
     'out <- glue::glue("{CONFIG$output_dir}/thing_{rd}.rds")', 'x %>% saveRDS(out)',
-    'DBI::dbExecute(con, "CREATE OR REPLACE TABLE stage1 AS SELECT * FROM ENCOUNTER")')
+    'DBI::dbExecute(con, "CREATE OR REPLACE TABLE stage1 AS SELECT * FROM ENCOUNTER")', 'saveRDS(x, "output/shared.rds")')
   w("R/20_use.R", 'source("R/00_config.R")', 'pin <- Sys.getenv("PIN_THING")',
     'if (nzchar(pin)) { p <- pin } else {', '  cands <- list.files(CONFIG$output_dir, pattern = "^thing_.*\\\\.rds$", full.names = TRUE)',
     '  p <- cands[which.max(file.mtime(cands))]', '}', 'x <- readRDS(p)',
     'pr <- list.files(CONFIG$output_dir, pattern = "^payer_summary.*\\\\.rds$", recursive = TRUE)',
     'y <- readRDS(pr[1])', 'z <- wrap_q(con, "SELECT * FROM stage1 s LEFT JOIN LAB_RESULT_CM l ON s.a = l.a")',
     'h <- helper_b(1)', 'cache <- { if (TRUE) file.path("output", "cache") else "x" }', 'saveRDS(z, file.path(cache, "blk.rds"))',
-    'od <- NULL %||% "output"', 'readRDS(file.path(od, "blk.rds"))', 'cat("x", file = "R/00_config.R", append = TRUE)', 'saveRDS(z, file.path("output", paste0("use_", format(Sys.Date(), "%Y%m%d"), ".rds")))')
+    'od <- NULL %||% "output"', 'cd <- if (interactive()) file.path(tempdir(), "c") else file.path("output", "c")',
+    'saveRDS(z, file.path(cd, "alt.rds"))', 'writeLines("ok", file.path("output", "logs", "pass.txt"))',
+    'saveRDS(z, file.path("output", "shared.rds"))', 'readRDS(file.path(od, "blk.rds"))', 'cat("x", file = "R/00_config.R", append = TRUE)', 'saveRDS(z, file.path("output", paste0("use_", format(Sys.Date(), "%Y%m%d"), ".rds")))')
   A <- analyze(td); D <- derive(A); ed <- A$edges
   has <- function(f, t, a) any(ed$from == f & ed$edge_type == t & grepl(a, ed$artifact, fixed = TRUE))
   checks <- c(
@@ -1263,7 +1289,10 @@ self_test <- function() {
     brace_block    = has("R/20_use.R", "writes", "output/cache/blk.rds"),
     null_coalesce  = has("R/20_use.R", "reads", "output/blk.rds"),
     r10_config     = any(D$r10$file == "R/20_use.R"),
-    no_token_match = !any(D$dag$via == "{build_path()}")
+    no_token_match = !any(D$dag$via == "{build_path()}"),
+    prefer_prod    = has("R/20_use.R", "writes", "output/c/alt.rds") && !any(grepl("{TMP}", ed$artifact, fixed = TRUE)),
+    writelines     = has("R/20_use.R", "writes", "output/logs/pass.txt"),
+    r11_multi      = any(D$r11$artifact == "output/shared.rds" & D$r11$n_writers == 2)
   )
   unlink(td, recursive = TRUE)
   if (!all(checks)) stop("[dep_map] SELF-TEST FAILED: ", paste(names(checks)[!checks], collapse = ", "))
