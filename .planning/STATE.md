@@ -154,4 +154,8 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 ## Session Continuity
 
-**Stopped at:** quick-261111-eqg complete — load_payer_summary() now exposes provenance attrs; R/165 KEY rows fixed; pending HiPerGator rerun of R/165
+| 261111-hrc | fix(183): recode payer 'Missing'/'Unknown'/'' to NA before MICE; replace full loggedEvents print with table(dep,out); D-196 decision in KEY; RERUN-AND-REISSUE updated | 2026-11-11 | 4b2579e | inline |
+
+## Session Continuity
+
+**Stopped at:** quick-261111-hrc complete — R/183 payer sentinel recode in place; pending HiPerGator rerun of R/183 to produce payer-corrected MICE output
