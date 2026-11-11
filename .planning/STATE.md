@@ -162,4 +162,6 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Phase 197 — Wave 1 executing (197-01, 197-06, 197-07 in parallel)
+**Stopped at:** Phase 197 — 197-01 complete (8c0803d); Wave 1 continuing (197-06, 197-07 pending)
+
+**197-01 complete 2026-11-11:** R/53 before R/29 in R/39; R/26 writes treatment_episodes_stage1.rds; R/29 canonical writer; is_first_line guards in R/110, R/100, R/142; SCRIPT_INDEX and RERUN-AND-REISSUE.md updated. Commit: 8c0803d.
