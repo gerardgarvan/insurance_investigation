@@ -936,7 +936,7 @@ Plans:
 | 193. Produce Updated Manual | v3.13 | 4/5 | In Progress — pending Word review | — |
 | 194. Reference Manual Regeneration | v3.13 | 4/4 | Complete | 2026-11-06 |
 | 196. Phase A: Delivered-Output Fixes + Rerun | cross-milestone | 1/1 | Complete | 2026-11-11 |
-| 197. Phase B: Pipeline Hardening | cross-milestone | 0/9 | In Progress | — |
+| 197. Phase B: Pipeline Hardening | cross-milestone | 6/9 | In Progress|  |
 
 ### Phase 197: Phase B: Pipeline Hardening
 **Goal**: Harden pipeline mechanics: fix run order, enforce single writer for treatment_episodes.rds, pin unpinned file picks, add overwrite protection, give rxnorm cache a single owner, add config safety rollback to R/98, and deliver an R/183 MICE convergence diagnostic.
@@ -944,12 +944,12 @@ Plans:
 **Requirements**: audit findings from 2026-11-10-dependency-audit.md, 196-SUMMARY.md Phase B backlog
 **Plans**: 9 plans
 Plans:
-- [ ] 197-01-PLAN.md — Run order: R/53 before R/29 in R/39; R/26 writes stage1; treatment_episodes.rds single owner; column guards; R/02 dedup (Wave 1)
-- [ ] 197-02-PLAN.md — Column guard after R/29: post-write assert on treatment_episodes columns/types/keys (Wave 2, depends on 197-01)
-- [ ] 197-03-PLAN.md — Pin unpinned latest-file picks: resolve_input() helper; apply to R/162, R/163, R/167, R/168, R/180, R/183 and remaining audit list (Wave 2)
-- [ ] 197-04-PLAN.md — Overwrite protection: versioned_output_path() helper; apply to delivered-output writers; R/186/R/188 central run_date (Wave 2)
+- [x] 197-01-PLAN.md — Run order: R/53 before R/29 in R/39; R/26 writes stage1; treatment_episodes.rds single owner; column guards; R/02 dedup (Wave 1)
+- [x] 197-02-PLAN.md — Column guard after R/29: post-write assert on treatment_episodes columns/types/keys (Wave 2, depends on 197-01)
+- [x] 197-03-PLAN.md — Pin unpinned latest-file picks: resolve_input() helper; apply to R/162, R/163, R/167, R/168, R/180, R/183 and remaining audit list (Wave 2)
+- [x] 197-04-PLAN.md — Overwrite protection: versioned_output_path() helper; apply to delivered-output writers; R/186/R/188 central run_date (Wave 2)
 - [ ] 197-05-PLAN.md — rxnorm cache single owner: R/105 writes, R/131 reads; staleness message; idempotency guard fix (Wave 2)
-- [ ] 197-06-PLAN.md — Config safety: R/98 .bak + rollback + source verify; trim_config_bak() helper; stale .bak cleanup note (Wave 1)
-- [ ] 197-07-PLAN.md — Small fixes: check_cohort_fingerprint path; R/02 sort by ID (Wave 1)
+- [x] 197-06-PLAN.md — Config safety: R/98 .bak + rollback + source verify; trim_config_bak() helper; stale .bak cleanup note (Wave 1)
+- [x] 197-07-PLAN.md — Small fixes: check_cohort_fingerprint path; R/02 sort by ID (Wave 1)
 - [ ] 197-08-PLAN.md — R/183 MICE diagnostic: COLLAPSE_RARE_SOURCE flag (OFF); convergence diagnostic tool; MICE-CONVERGENCE.md (Wave 2)
 - [ ] 197-09-PLAN.md — dep_map rerun: document HiPerGator command; write 197-SUMMARY.md and 197-RERUN-VERIFICATION.md (Wave 3)
