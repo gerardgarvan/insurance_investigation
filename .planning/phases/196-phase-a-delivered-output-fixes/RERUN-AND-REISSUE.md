@@ -5,20 +5,28 @@ Prerequisites run before the scripts that depend on them.
 
 ---
 
+## Before rerun
+
+- Snapshot taken at `output/baselines/pre_phaseA_20261111_0852/` (33 files + inventory.csv + cohort_final_fingerprint.rds).
+- After R/02: verify `payer_summary.csv` md5 matches `output/baselines/pre_phaseA_20261111_0852/inventory.csv`; list differences before continuing if mismatch.
+- After R/14: run `source("R/tools/check_cohort_fingerprint.R", local = new.env(parent = globalenv()))`. **STOP** rerun sequence on FAIL.
+- After R/165: regression check vs `output/baselines/distance_cbc_association_20261110_ph195.xlsx` must PASS unchanged (validates the load_payer_summary refactor).
+- R/48, R/49, R/52, R/142: **no rerun needed** (version unchanged).
+
 ## Run order
 
 | Order | Script | Why |
 |-------|--------|-----|
 | 1 | `R/02_harmonize_payer.R` | Produces `output/tables/payer_summary.csv` consumed by all payer loaders |
-| 2 | `R/14_build_cohort.R` | Now writes `output/payer_at_chemo.csv` after `compute_payer_at_chemo()` |
+| 2 | `R/14_build_cohort.R` | Fingerprint check; now writes `output/payer_at_chemo.csv` |
 | 3 | `R/107_med_admin_dispensing_gap_diagnostic.R` | suppress_small fix |
 | 4 | `R/109_med_admin_dispensing_fix_impact_audit.R` | suppress_small fix + cache path fix |
-| 5 | `R/110_output_level_before_after_report.R` | suppress_small fix + stop() on missing payer_at_chemo.csv (needs step 2 first) |
+| 5 | `R/110_output_level_before_after_report.R` | suppress_small fix + stop() on missing payer_at_chemo.csv |
 | 6 | `R/45_cancer_summary.R` | Produces `cancer_summary.csv` (R/47 must not have run after R/45 since the fix) |
-| 7 | `R/46_cancer_summary_table.R` | Reads R/45 raw output (confirmed correct) |
-| 8 | `R/47_cancer_summary_refined.R` | Now writes `cancer_summary_refined.csv` instead of overwriting `cancer_summary.csv` |
-| 9 | `R/165_distance_cbc_association.R` | Payer loader now uses `load_payer_summary()` with CSV fallback (needs step 1) |
-| 10 | `R/183_mice_sensitivity_distance.R` | **Priority rerun** — MICE sensitivity now includes payer covariate (needs step 1) |
+| 7 | `R/46_cancer_summary_table.R` | Reads R/45 raw output |
+| 8 | `R/47_cancer_summary_refined.R` | Writes `cancer_summary_refined.csv` |
+| 9 | `R/165_distance_cbc_association.R` | Payer loader refactor — regression check vs baseline XLSX must PASS |
+| 10 | `R/183_mice_sensitivity_distance.R` | **Priority rerun** — MICE sensitivity now includes payer covariate |
 
 ---
 
@@ -42,21 +50,6 @@ Prerequisites run before the scripts that depend on them.
 - **R/110 reissue:** "Suppressed counts now `<11`; payer-anchor sheet now populated from R/14 output."
 - **R/183 reissue (priority):** "MICE sensitivity analysis now includes payer (PAYER_CATEGORY_PRIMARY) as a covariate. Prior runs lacked it because payer_summary was only written as CSV, not RDS. Results may differ."
 - **R/47:** `cancer_summary_refined.csv/xlsx` replaces `cancer_summary.csv` as the R/47 deliverable. `cancer_summary.csv` is now R/45's unfiltered output only.
-
----
-
-## NEEDS DECISION — cancer_summary reader version
-
-The following scripts were left reading `cancer_summary.csv` (R/45 raw, unfiltered) because audit item 16 did not settle which version they expect. Each has a `NEEDS DECISION` comment at the read line.
-
-| Script | Comment in code | Decision needed |
-|--------|-----------------|-----------------|
-| R/48 | Unclear if it needs D-code-inclusive (R/45) or HL-only (R/47 refined) | Check script purpose: "post-HL" suggests refined, but no explicit statement |
-| R/49 | Header says "Phase 47 output" but code removes D-codes itself at line 169 | If it expects R/45 raw, header is wrong; if it expects R/47, the D-code removal is redundant |
-| R/52 | Comment says "Phase 115: 7-day confirmed data" — ambiguous | Check which column subset it uses |
-| R/142 | Same pattern as R/52 | Same decision needed |
-
-**To resolve:** confirm intended input for each and change `INPUT_CSV` to `cancer_summary_refined.csv` if R/47 output is correct, or leave on `cancer_summary.csv` if R/45 raw is correct.
 
 ---
 
