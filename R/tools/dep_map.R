@@ -218,6 +218,10 @@ res <- function(e, sc, cfg, depth = 0L) {
     if (!length(un)) return("{ROOT}")
     return(combine(c(list("{ROOT}"), lapply(un, r)), "/"))
   }
+  if (fn == "build_output_path") {           # project helper (R/utils/utils_snapshot.R)
+    if (!length(un)) return("output")
+    return(combine(c(list("output"), lapply(un, r)), "/"))
+  }
   if (fn %in% c("file.path", "path")) {
     if (!length(un)) return("")
     return(combine(lapply(un, r), "/"))
@@ -755,6 +759,7 @@ analyze <- function(root) {
 # -----------------------------------------------------------------------------
 # 6. Derived analysis: matching, function index, risks
 # -----------------------------------------------------------------------------
+CODE_EXT <- "\\.(R|Rmd|md|qmd|sh|py)(\\.bak)?$"   # reading these = code inspection, not data flow
 INTERMEDIATE_EXT <- c("rds", "rda", "rdata", "csv", "tsv", "txt", "parquet", "feather", "fst", "json", "duckdb", "qs")
 
 art_dir  <- function(a) ifelse(grepl("/", a), sub("/[^/]*$", "", a), "")
@@ -771,7 +776,8 @@ dir_compat <- function(d1, d2, rec = FALSE) {
 
 match_reads <- function(ed) {
   # returns data.frame(read_row, write_row) pairs
-  rd <- which(ed$edge_type %in% c("reads", "db_read") & !is.na(ed$artifact) & ed$resolution != "none")
+  rd <- which(ed$edge_type %in% c("reads", "db_read") & !is.na(ed$artifact) & ed$resolution != "none" &
+              !grepl(CODE_EXT, ed$artifact, ignore.case = TRUE))
   wr <- which(ed$edge_type %in% c("writes", "db_write") & !is.na(ed$artifact) & !ed$is_pattern & ed$resolution != "none")
   if (!length(rd) || !length(wr)) return(data.frame(r = integer(), w = integer()))
   wa <- ed$artifact[wr]; wdir <- art_dir(wa); wbase <- art_base(wa); wsamp <- sample_name(wbase)
@@ -867,7 +873,8 @@ derive <- function(A) {
   never <- top[!top$fn %in% called, , drop = FALSE]
 
   # R1 orphan reads / R2 dead writes
-  rd_rows <- which(ed$edge_type %in% c("reads", "db_read") & !is.na(ed$artifact) & ed$resolution != "none")
+  rd_rows <- which(ed$edge_type %in% c("reads", "db_read") & !is.na(ed$artifact) & ed$resolution != "none" &
+                   !grepl(CODE_EXT, ed$artifact, ignore.case = TRUE))
   wr_rows <- which(ed$edge_type %in% c("writes", "db_write") & !is.na(ed$artifact) & ed$resolution != "none")
   matched_r <- unique(pairs$r); matched_w <- unique(pairs$w)
   orph <- setdiff(rd_rows, matched_r)
@@ -1266,7 +1273,7 @@ self_test <- function() {
     'h <- helper_b(1)', 'cache <- { if (TRUE) file.path("output", "cache") else "x" }', 'saveRDS(z, file.path(cache, "blk.rds"))',
     'od <- NULL %||% "output"', 'cd <- if (interactive()) file.path(tempdir(), "c") else file.path("output", "c")',
     'saveRDS(z, file.path(cd, "alt.rds"))', 'writeLines("ok", file.path("output", "logs", "pass.txt"))',
-    'saveRDS(z, file.path("output", "shared.rds"))', 'readRDS(file.path(od, "blk.rds"))', 'cat("x", file = "R/00_config.R", append = TRUE)', 'saveRDS(z, file.path("output", paste0("use_", format(Sys.Date(), "%Y%m%d"), ".rds")))')
+    'saveRDS(z, file.path("output", "shared.rds"))', 'write.csv(z, build_output_path("tables", "bop.csv"))', 'src <- readLines("R/10_make.R")', 'readRDS(file.path(od, "blk.rds"))', 'cat("x", file = "R/00_config.R", append = TRUE)', 'saveRDS(z, file.path("output", paste0("use_", format(Sys.Date(), "%Y%m%d"), ".rds")))')
   A <- analyze(td); D <- derive(A); ed <- A$edges
   has <- function(f, t, a) any(ed$from == f & ed$edge_type == t & grepl(a, ed$artifact, fixed = TRUE))
   checks <- c(
@@ -1292,7 +1299,9 @@ self_test <- function() {
     no_token_match = !any(D$dag$via == "{build_path()}"),
     prefer_prod    = has("R/20_use.R", "writes", "output/c/alt.rds") && !any(grepl("{TMP}", ed$artifact, fixed = TRUE)),
     writelines     = has("R/20_use.R", "writes", "output/logs/pass.txt"),
-    r11_multi      = any(D$r11$artifact == "output/shared.rds" & D$r11$n_writers == 2)
+    r11_multi      = any(D$r11$artifact == "output/shared.rds" & D$r11$n_writers == 2),
+    bop_helper     = has("R/20_use.R", "writes", "output/tables/bop.csv"),
+    code_read_skip = !any(D$r1$artifact == "R/10_make.R")
   )
   unlink(td, recursive = TRUE)
   if (!all(checks)) stop("[dep_map] SELF-TEST FAILED: ", paste(names(checks)[!checks], collapse = ", "))
