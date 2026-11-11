@@ -57,6 +57,25 @@ Final run after D-196 payer recode (commit 4b2579e), 90.1 min:
 
 ---
 
+## R/48 Rerun (2026-11-11, 17:03, 0.7 min) — commit 1deeca2
+
+**Label swap CONFIRMED** for 2026-10-06 delivered version. NHL post-HL count (4,068) sat under "Baseline Patients" with R/46's 5,279 under "Post-HL Patients", giving a spurious 77.1% retained. Corrected file: NHL baseline 4,494 (R/47 refined) / post 4,068 / 90.5% retained.
+
+Join diagnostic:
+- 49 categories — 47 joined, 2 baseline-only (post=0), 0 post-only
+- Baseline-only rows are the two HL anchor categories (expected; anchor codes excluded from post-HL universe):
+  - Hodgkin Lymphoma (non-NLPHL): baseline 7,471 / post 0
+  - NLPHL: baseline 1,782 / post 0
+- post ≤ baseline guard: PASS
+
+Run facts: confirmed cohort 7,696; post-HL 4,839 patients, 19,388 patient-code rows, 1,154 codes, 47 categories.
+
+Spot checks: Secondary-Other Sites 653/566 (86.7%); Breast 270/245 (90.7%).
+
+No downstream data consumers (R/39, R/87, R/88 reference R/48 by name only). Included in 2026-11-11 re-issue to Amy/Erin.
+
+---
+
 ## Phase B Backlog (not implemented)
 
 - Collapse `main_source` UCI level in R/183 (400 loggedEvents per model; also present in 10/15 baseline)
@@ -64,3 +83,7 @@ Final run after D-196 payer recode (commit 4b2579e), 90.1 min:
 - Fix `R/tools/check_cohort_fingerprint.R` path: cohort/ dir is under `dirname(CONFIG$cache$outputs_dir)`, not `output/`
 - R/02: sort output by ID so reruns are byte-identical
 - Drop R/02 from rerun lists when R/14 runs (R/14 calls R/02 internally)
+
+## Phase C Backlog (not implemented)
+
+- R/48 Comparison sheet has no TOTAL row

@@ -68,6 +68,7 @@ Prerequisites run before the scripts that depend on them.
 - **Decision D-196-01:** Comparison baseline = R/47 refined (confirmed HL, D-codes removed). Column order now matches headers: baseline_patients written to Column B, post_hl_patients to Column C.
 - **Must rerun after R/47:** R/48_cancer_summary_post_hl.R — produces output/tables/cancer_summary_table_post_hl.xlsx with corrected Comparison sheet.
 - **Reissue note:** "Comparison sheet column labels were swapped in the prior delivered version (2026-10-06). Column B now correctly shows Baseline Patients (R/47 refined, 7,696 confirmed HL patients, 49 categories) and Column C shows Post-HL Patients. Delta and % Retained values were unaffected by the label error."
+- **Status:** COMPLETE — rerun 2026-11-11 17:03 (0.7 min); label swap confirmed; included in 2026-11-11 re-issue to Amy/Erin.
 
 ## A3 — R/30 workbook finding
 
