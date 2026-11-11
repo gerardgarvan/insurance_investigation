@@ -146,7 +146,8 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261110-165-fix | Pin distance to 20261015, fix payer 1j to read CSV (fatal on missing), fatal has_payer branch; D-165-02 and D-165-03 decision entries | 2026-11-10 | 5d442e0 | R/165_distance_cbc_association.R |
 | 261110-luq | Write R/tools/dep_map.R — static dependency mapper (AST-based, 10 sections, five outputs, R1–R9 risk report) | 2026-11-10 | 4c5a7e3 | [261110-luq-build-static-dependency-map-of-r-code](./quick/261110-luq-build-static-dependency-map-of-r-code/) |
 | 261111-c91 | Update phase 192.4 frontmatter in CONTEXT, PLAN, SUMMARY | 2026-11-11 | 53faa42 | [261111-c91-update-phase-192-4-frontmatter-in-contex](./quick/261111-c91-update-phase-192-4-frontmatter-in-contex/) |
+| 261111-ce7 | Phase A follow-ups: suppress_small NA fix, phase folder move, cancer_summary reader comments, RERUN-AND-REISSUE updates, check_cohort_fingerprint tool | 2026-11-11 | 435e067 | [261111-ce7-phase-a-follow-ups-suppress-small-na-fix](./quick/261111-ce7-phase-a-follow-ups-suppress-small-na-fix/) |
 
 ## Session Continuity
 
-**Stopped at:** quick-261111-c91 complete — phase 192.4 frontmatter corrected
+**Stopped at:** quick-261111-ce7 complete — Phase A follow-ups: suppress_small NA fix, phase 196 folder, cancer_summary reader comments resolved, RERUN-AND-REISSUE updated, check_cohort_fingerprint.R created
