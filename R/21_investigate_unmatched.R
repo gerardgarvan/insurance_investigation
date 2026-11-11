@@ -569,8 +569,8 @@ update_config_treatment_codes <- function(classified_codes_path) {
   )
 
   # 4. Read R/00_config.R
-  config_path <- "R/00_config.R"
-  backup_path <- paste0(config_path, ".bak")
+  config_path <- here::here("R", "00_config.R")
+  backup_path <- paste0(config_path, ".", format(Sys.time(), "%Y%m%d_%H%M%S"), ".bak")
 
   if (!file.exists(config_path)) {
     stop(glue("Config file not found: {config_path}"))
@@ -794,7 +794,7 @@ update_config_treatment_codes <- function(classified_codes_path) {
   }
 
   message("  Config update validated successfully")
-  file.remove(backup_path)
+  trim_config_bak(here::here("R", "00_config.R"))
 
   # 7. Log summary of changes
   message("  Config update summary:")

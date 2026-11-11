@@ -610,11 +610,11 @@ codes_to_update <- all_codes_df %>%
 if (nrow(codes_to_update) > 0) {
   message(glue("  Found {nrow(codes_to_update)} codes with better descriptions available"))
 
-  config_path <- "R/00_config.R"
-  config_backup <- "R/00_config.R.bak"
+  config_path <- here::here("R", "00_config.R")
+  config_backup <- paste0(config_path, ".", format(Sys.time(), "%Y%m%d_%H%M%S"), ".bak")
 
   # Backup
-  file.copy(config_path, config_backup, overwrite = TRUE)
+  file.copy(config_path, config_backup, overwrite = FALSE)
   message(glue("  Created backup: {config_backup}"))
 
   # Read config
@@ -681,7 +681,7 @@ if (nrow(codes_to_update) > 0) {
 
   if (validation_ok) {
     message(glue("  Updated {n_updated} config comments successfully"))
-    file.remove(config_backup)
+    trim_config_bak(here::here("R", "00_config.R"))
   } else {
     message("  Validation failed, rolling back...")
     file.copy(config_backup, config_path, overwrite = TRUE)

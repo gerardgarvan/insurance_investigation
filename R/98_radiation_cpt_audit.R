@@ -271,8 +271,14 @@ if (length(new_treatment_codes) > 0) {
   message(glue("AUTO-ADD: Found {length(new_treatment_codes)} new radiation treatment codes in data: {paste(new_treatment_codes, collapse=', ')}"))
   message("Applying parse/source validated config update (Phase 39 pattern)...")
 
-  config_path <- "R/00_config.R"
+  config_path <- here::here("R", "00_config.R")
   config_text <- readLines(config_path)
+
+  # --- config rewrite safety (Phase 197-06 pattern) -------------------------
+  backup_path <- paste0(config_path, ".", format(Sys.time(), "%Y%m%d_%H%M%S"), ".bak")
+  file.copy(config_path, backup_path, overwrite = FALSE)
+  message("[R/98] Config backup written: ", backup_path)
+  # --------------------------------------------------------------------------
 
   # Find the closing paren of radiation_cpt vector
   # Look for the last entry before the closing paren
@@ -302,22 +308,34 @@ if (length(new_treatment_codes) > 0) {
       config_text[(rad_close_idx + 1):length(config_text)]
     )
 
-    # PATTERN-F: verify parse BEFORE writing to the real config path (temp-file validate)
+    # PATTERN-F: verify parse + source BEFORE writing to the real config path
     tmp_verify <- tempfile(fileext = ".R")
     writeLines(config_text, tmp_verify)
-    tryCatch({
-      parse(tmp_verify)
+
+    parse_ok <- tryCatch({ parse(tmp_verify); TRUE }, error = function(e) { FALSE })
+    if (!parse_ok) {
+      message("[R/98] Config parse failed — rolling back from backup")
+      if (file.exists(tmp_verify)) file.remove(tmp_verify)
+      file.copy(backup_path, config_path, overwrite = TRUE)
+      stop("[R/98] Config rewrite aborted: parse error in generated config.")
+    }
+
+    source_ok <- tryCatch({
       tmp_env <- new.env(parent = emptyenv())
       source(tmp_verify, local = tmp_env)
-      # If valid, overwrite original
-      writeLines(config_text, config_path)
-      message(glue("  Auto-added to radiation_cpt: {paste(new_treatment_codes, collapse=', ')}"))
-    }, error = function(e) {
-      warning(glue("[Config update] Parse check failed for {config_path}: {e$message}\n",
-                   "  Newly-discovered codes NOT written to config."))
-    }, finally = {
-      if (file.exists(tmp_verify)) file.remove(tmp_verify)
-    })
+      TRUE
+    }, error = function(e) { FALSE })
+    if (file.exists(tmp_verify)) file.remove(tmp_verify)
+    if (!source_ok) {
+      message("[R/98] Config source failed — rolling back from backup")
+      file.copy(backup_path, config_path, overwrite = TRUE)
+      stop("[R/98] Config rewrite aborted: source error in generated config.")
+    }
+
+    writeLines(config_text, config_path)
+    message(glue("  Auto-added to radiation_cpt: {paste(new_treatment_codes, collapse=', ')}"))
+    message("[R/98] 00_config.R updated successfully.")
+    trim_config_bak(config_path)
   } else {
     message("  WARNING: Could not locate 77525 anchor line in config. Manual review required.")
   }

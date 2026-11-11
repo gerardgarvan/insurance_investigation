@@ -5,6 +5,17 @@ Prerequisites run before the scripts that depend on them.
 
 ---
 
+## Before Phase 197 rerun (config safety)
+
+- **Stale backup check (Phase 197-06):** `R/00_config.R.bak` exists on disk from an interrupted R/22 or R/50 run. Before any Phase 197 script rewrites `R/00_config.R`, verify the backup matches the live config and delete it:
+  ```bash
+  diff R/00_config.R R/00_config.R.bak
+  rm R/00_config.R.bak
+  ```
+  Run these on HiPerGator from the repo root. If `diff` shows differences, review them before deleting. After Phase 197-06 ships, `trim_config_bak()` will keep only the last 5 timestamped backups and no plain `.bak` files will be written.
+
+---
+
 ## Before rerun
 
 - Snapshot taken at `output/baselines/pre_phaseA_20261111_0852/` (33 files + inventory.csv + cohort_final_fingerprint.rds).
