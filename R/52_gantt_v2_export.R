@@ -140,9 +140,7 @@ DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds"
 DESCRIPTIONS_RDS <- file.path(CONFIG$cache$outputs_dir, "code_descriptions.rds")
 VALIDATED_DEATHS_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
-# NEEDS DECISION (Phase 195): audit item 16 does not settle whether R/52 needs R/45 raw or
-# R/47 refined. Comment says "Phase 115: 7-day confirmed data" which is ambiguous. Left on
-# cancer_summary.csv (R/45 raw) pending clarification.
+# reads R/45 raw cancer_summary.csv -- matches delivered outputs as of 2026-11-03 (R/52, R/142)
 CANCER_SUMMARY_CSV <- build_output_path("tables", "cancer_summary.csv")
 CUTOFF_DATE <- as.Date(Sys.getenv("HL_CUTOFF_DATE", "2025-12-31"))  # study cutoff for death credibility check
 

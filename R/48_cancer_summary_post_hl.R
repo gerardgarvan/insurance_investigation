@@ -51,9 +51,7 @@ assert_df_valid(
 )
 
 # Define input/output paths
-# NEEDS DECISION (Phase 195): audit item 16 does not settle whether R/48 needs R/45 raw
-# or R/47 refined (HL-only, D-code-removed). Left on cancer_summary.csv (R/45 raw) pending
-# clarification. See .planning/phases/195-dep-audit-delivered-output-fixes/RERUN-AND-REISSUE.md.
+# reads R/45 raw cancer_summary.csv -- matches delivered outputs as of 2026-10-06 (R/48, R/49)
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 INPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 BASELINE_TABLE_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table.xlsx")
