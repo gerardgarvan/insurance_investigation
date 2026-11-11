@@ -811,10 +811,10 @@ key_rows <- list(
     "C_sensitivity changes vs 20261104 are expected."
   )),
   # P4.4 additions
-  c("Payer input file",  paste0(basename(payer_path), " (mtime: ",
-      format(file.mtime(payer_path), "%Y-%m-%d %H:%M"), ")")),
-  c("Payer cohort match",  glue::glue("{n_payer_matched} of {length(cohort_ids)} cohort IDs matched ",
-      "({sprintf('%.1f', n_payer_matched / length(cohort_ids) * 100)}%)")),
+  c("Payer input file",  paste0(basename(attr(payer_summary, "source_path")), " (mtime: ",
+      format(attr(payer_summary, "source_mtime"), "%Y-%m-%d %H:%M"), ")")),
+  c("Payer cohort match",  glue::glue("{attr(payer_summary, 'n_cohort_matched')} of {length(cohort_ids)} cohort IDs matched ",
+      "({sprintf('%.1f', attr(payer_summary, 'n_cohort_matched') / length(cohort_ids) * 100)}%)")),
   c("R/165 git hash",  {
     git_hash <- tryCatch(
       trimws(system2("git", c("rev-parse", "--short", "HEAD"), stdout = TRUE, stderr = FALSE)),

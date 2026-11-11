@@ -80,6 +80,10 @@ load_payer_summary <- function(cohort_ids = NULL) {
     n_matched_msg
   ))
 
+  attr(payer_summary, "source_path")      <- payer_path
+  attr(payer_summary, "source_mtime")     <- file.mtime(payer_path)
+  attr(payer_summary, "n_cohort_matched") <- if (!is.null(cohort_ids)) n_match else NA_integer_
+
   payer_summary
 }
 
