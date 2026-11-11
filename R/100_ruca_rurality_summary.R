@@ -311,6 +311,7 @@ message(glue("  Sheet 3 built: {nrow(sheet3)} rows"))
 message("--- Building Sheet 4: Rurality x Cancer Category (episode-level) ---")
 
 episodes <- readRDS(EPISODES_RDS)
+stopifnot("is_first_line" %in% names(episodes))
 message(glue("  treatment_episodes.rds: {format(nrow(episodes), big.mark=',')} rows"))
 
 ep_hl <- episodes %>%

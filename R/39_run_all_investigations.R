@@ -175,13 +175,15 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds"
   message("  [143] treatment_episodes_180.rds not found — skipping 180-day enrichment pass.")
 }
 
-# R/29 adds first-line flags and death validation
-# R/29 auto-sources: R/00, utils
-results <- run_script("R/29_first_line_and_death_analysis.R", results)
-
-# R/53 produces validated_death_dates.rds (needed by R/59, R/52)
+# R/53 must run before R/29 (validated_death_dates.rds)
+# R/53 produces validated_death_dates.rds (needed by R/29, R/59, R/52)
 # R/53 auto-sources: R/00, utils
 results <- run_script("R/53_death_date_validation.R", results)
+
+# R/29 adds first-line flags and death validation
+# R/29 reads treatment_episodes_stage1.rds (from R/26) and validated_death_dates.rds (from R/53)
+# R/29 auto-sources: R/00, utils
+results <- run_script("R/29_first_line_and_death_analysis.R", results)
 
 # R/42 builds code_descriptions.rds lookup (needed by R/52, R/58_code_reference)
 # Depends on cached outputs from R/21+R/22 (API scripts run separately)

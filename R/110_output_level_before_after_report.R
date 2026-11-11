@@ -128,6 +128,7 @@ message("--- Section 3a: Load AFTER treatment_episodes.rds ---")
 episodes_after <- NULL
 if (file.exists(EPISODES_AFTER)) {
   episodes_after <- readRDS(EPISODES_AFTER)
+  stopifnot("is_first_line" %in% names(episodes_after))
   message(glue("  AFTER episodes loaded: {format(nrow(episodes_after), big.mark = ',')} rows"))
 } else {
   message(glue("  [SKIP] {EPISODES_AFTER} not found (HiPerGator runtime required)"))

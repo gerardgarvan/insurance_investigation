@@ -6,8 +6,8 @@
 #
 # Inputs:      PCORnet treatment tables + treatment_durations.rds from R/25
 #
-# Outputs:     cache/outputs/treatment_episodes.rds, output/treatment_episodes.xlsx,
-#              per-type CSVs (chemotherapy_episodes.csv, etc.)
+# Outputs:     cache/outputs/treatment_episodes_stage1.rds (intermediate; R/29 writes canonical treatment_episodes.rds),
+#              output/treatment_episodes.xlsx, per-type CSVs (chemotherapy_episodes.csv, etc.)
 #
 # Dependencies: R/00_config.R, R/01_load_pcornet.R, R/25_treatment_durations.R
 #
@@ -72,7 +72,8 @@ source("R/01_load_pcornet.R")
 source("R/25_treatment_durations.R")
 
 # Output paths
-OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
+# Intermediate; R/29 writes the canonical treatment_episodes.rds
+OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage1.rds")
 OUTPUT_DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "treatment_episodes.xlsx")
 
@@ -870,7 +871,7 @@ warn_date_range(all_detail, "episode_stop",
 
 # Save RDS artifacts (now with drug name columns)
 saveRDS(all_episodes, OUTPUT_RDS)
-message(glue("\nRDS saved: {OUTPUT_RDS} ({nrow(all_episodes)} rows)"))
+message(glue("[R/26] treatment_episodes_stage1.rds written — {nrow(all_episodes)} rows"))
 
 saveRDS(all_detail, OUTPUT_DETAIL_RDS)
 message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))

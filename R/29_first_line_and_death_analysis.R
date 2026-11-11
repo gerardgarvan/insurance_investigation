@@ -7,8 +7,8 @@
 # Purpose:     First-line therapy flagging (60-day clean period before first treatment)
 #              and death date validation cross-referenced against treatment timeline.
 #
-# Inputs:      treatment_episodes.rds, treatment_episode_detail.rds,
-#              PCORnet DEATH table
+# Inputs:      treatment_episodes_stage1.rds (from R/26), treatment_episode_detail.rds,
+#              validated_death_dates.rds (from R/53), PCORnet DEATH table
 #
 # Outputs:     cache/outputs/treatment_episodes.rds (modified with is_first_line),
 #              cache/outputs/first_line_therapy.rds, output/death_analysis.xlsx
@@ -41,16 +41,17 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 
-# Output paths
+# Input: intermediate from R/26; Output: canonical treatment_episodes.rds (sole final writer per D-197-01)
+INPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage1.rds")
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
-DEATH_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
+DEATH_RDS  <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "death_analysis.xlsx")
 OUTPUT_CSV <- file.path(CONFIG$output_dir, "death_analysis.csv")
 
 message("=== Phase 62: First-Line Therapy & Death Analysis ===\n")
 message("Input files:")
-message(glue("  treatment_episodes.rds: {OUTPUT_RDS}"))
+message(glue("  treatment_episodes_stage1.rds: {INPUT_RDS}"))
 message(glue("  treatment_episode_detail.rds: {DETAIL_RDS}"))
 message(glue("  validated_death_dates.rds: {DEATH_RDS}"))
 message("\nOutput files:")
@@ -65,13 +66,13 @@ message(glue("  death_analysis.csv: {OUTPUT_CSV}\n"))
 message("--- Loading data ---")
 
 # SAFE-01: Validate all 3 input RDS files exist before loading
-assert_rds_exists(OUTPUT_RDS, script_name = "R/29")
+assert_rds_exists(INPUT_RDS,  script_name = "R/29")
 assert_rds_exists(DETAIL_RDS, script_name = "R/29")
-assert_rds_exists(DEATH_RDS, script_name = "R/29")
+assert_rds_exists(DEATH_RDS,  script_name = "R/29")
 
-# Load treatment episodes
-episodes <- readRDS(OUTPUT_RDS)
-message(glue("  Loaded treatment_episodes.rds: {nrow(episodes)} episodes"))
+# Load treatment episodes (stage1 from R/26)
+episodes <- readRDS(INPUT_RDS)
+message(glue("  Loaded treatment_episodes_stage1.rds: {nrow(episodes)} episodes"))
 
 # Load treatment episode detail (for individual chemo dates)
 episode_detail <- readRDS(DETAIL_RDS)
@@ -192,9 +193,9 @@ if (nrow(first_line_ids) == 0) {
     mutate(is_first_line = if_else(is.na(is_first_line), FALSE, is_first_line))
 }
 
-# Save modified RDS
+# Save canonical treatment_episodes.rds (sole final writer per D-197-01)
 saveRDS(episodes, OUTPUT_RDS)
-message(glue("  Saved treatment_episodes.rds with is_first_line column ({sum(episodes$is_first_line)} TRUE, {sum(!episodes$is_first_line)} FALSE)"))
+message(glue("[R/29] treatment_episodes.rds written (canonical) — {nrow(episodes)} rows, is_first_line: {sum(episodes$is_first_line)} TRUE, {sum(!episodes$is_first_line)} FALSE"))
 
 # Step 3f: Build first-line summary for xlsx (Claude's discretion — add as Sheet 3)
 first_line_summary <- episodes %>%

@@ -20,6 +20,7 @@ Prerequisites run before the scripts that depend on them.
 |-------|--------|-----|
 | 1 | `R/02_harmonize_payer.R` | Produces `output/tables/payer_summary.csv` consumed by all payer loaders |
 | 2 | `R/14_build_cohort.R` | Fingerprint check; now writes `output/payer_at_chemo.csv` |
+<!-- Note (D-197-01): R/14 sources R/02 internally — do not list both in R/39 or any rerun list that runs off R/39. This Phase 196 list is an exception: R/02 is listed first for the md5 verification step (line 11 above) before R/14 runs. -->
 | 3 | `R/107_med_admin_dispensing_gap_diagnostic.R` | suppress_small fix |
 | 4 | `R/109_med_admin_dispensing_fix_impact_audit.R` | suppress_small fix + cache path fix |
 | 5 | `R/110_output_level_before_after_report.R` | suppress_small fix + stop() on missing payer_at_chemo.csv |

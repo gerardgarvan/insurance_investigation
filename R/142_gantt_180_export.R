@@ -108,6 +108,7 @@ assert_rds_exists(DETAIL_RDS,   script_name = "R/142")
 message("=== Phase 142: 180-Day Gantt Export ===\n")
 
 episodes <- readRDS(EPISODES_RDS)
+stopifnot("is_first_line" %in% names(episodes))
 message(glue("  Loaded {format(nrow(episodes), big.mark = ',')} 180-day episode rows"))
 
 assert_df_valid(episodes, "treatment_episodes_180",
