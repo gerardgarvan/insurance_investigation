@@ -205,7 +205,7 @@ hits_dp_coh <- coh(hits_dp)
 # MEDADMIN_TYPE == 'ND' separately — they are already combined in hits_ma_coh.
 
 # Before set: PRESCRIBING-only (what the pipeline captured pre-fix).
-before <- hits_rx_coh %>% distinct(ID, treatment_date)
+chemo_before <- hits_rx_coh %>% distinct(ID, treatment_date)
 
 # After set: all three sources tagged by contributing source (D-03).
 after_labeled <- bind_rows(
@@ -215,10 +215,10 @@ after_labeled <- bind_rows(
 )
 
 # After union (deduplicated (ID, date) pairs regardless of source).
-after <- after_labeled %>% distinct(ID, treatment_date)
+chemo_after <- after_labeled %>% distinct(ID, treatment_date)
 
-message(glue("  Before (PRESCRIBING only): {format(n_distinct(before$ID), big.mark=',')} patients, {format(nrow(before), big.mark=',')} (ID,date) pairs"))
-message(glue("  After  (all sources):      {format(n_distinct(after$ID), big.mark=',')} patients, {format(nrow(after), big.mark=',')} (ID,date) pairs\n"))
+message(glue("  Before (PRESCRIBING only): {format(n_distinct(chemo_before$ID), big.mark=',')} patients, {format(nrow(chemo_before), big.mark=',')} (ID,date) pairs"))
+message(glue("  After  (all sources):      {format(n_distinct(chemo_after$ID), big.mark=',')} patients, {format(nrow(chemo_after), big.mark=',')} (ID,date) pairs\n"))
 
 
 # ==============================================================================
@@ -236,13 +236,19 @@ df_source_counts <- after_labeled %>%
     .groups = "drop"
   )
 
+# Pre-compute scalars to avoid name collision between data frames and tibble columns.
+n_pat_before  <- n_distinct(chemo_before$ID)
+n_pair_before <- nrow(chemo_before)
+n_pat_after   <- n_distinct(chemo_after$ID)
+n_pair_after  <- nrow(chemo_after)
+
 # Before vs after headline summary — keep raw integers for arithmetic.
 df_before_after_summary_raw <- tibble(
   metric = c("n_patients_any_chemo", "n_distinct_id_date_pairs"),
-  before = c(n_distinct(before$ID), nrow(before)),
-  after  = c(n_distinct(after$ID),  nrow(after)),
-  delta  = c(n_distinct(after$ID)   - n_distinct(before$ID),
-             nrow(after)            - nrow(before))
+  before = c(n_pat_before,  n_pair_before),
+  after  = c(n_pat_after,   n_pair_after),
+  delta  = c(n_pat_after  - n_pat_before,
+             n_pair_after - n_pair_before)
 )
 
 stopifnot(
