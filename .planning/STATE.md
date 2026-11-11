@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: active
-stopped_at: Completed 197-07-PLAN.md
-last_updated: "2026-11-11T22:31:12.397Z"
+stopped_at: Completed 197-02-PLAN.md
+last_updated: "2026-11-11T22:32:52.674Z"
 last_activity: 2026-11-06
 progress:
   total_phases: 187
   completed_phases: 162
   total_plans: 365
-  completed_plans: 364
+  completed_plans: 365
 ---
 
 # Project State
@@ -162,6 +162,6 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Completed 197-07-PLAN.md
+**Stopped at:** Completed 197-02-PLAN.md
 
 **197-01 complete 2026-11-11:** R/53 before R/29 in R/39; R/26 writes treatment_episodes_stage1.rds; R/29 canonical writer; is_first_line guards in R/110, R/100, R/142; SCRIPT_INDEX and RERUN-AND-REISSUE.md updated. Commit: 8c0803d.
