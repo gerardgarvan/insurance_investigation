@@ -145,7 +145,8 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261106-ize | Write phase 194 SUMMARY.md, update STATE.md to mark Phase 194 complete, and update ROADMAP.md to mark Phase 194 and v3.13 milestone as shipped | 2026-11-06 | 5bf4445 | [261106-ize-write-phase-194-summary-md-update-state-](./quick/261106-ize-write-phase-194-summary-md-update-state-/) |
 | 261110-165-fix | Pin distance to 20261015, fix payer 1j to read CSV (fatal on missing), fatal has_payer branch; D-165-02 and D-165-03 decision entries | 2026-11-10 | 5d442e0 | R/165_distance_cbc_association.R |
 | 261110-luq | Write R/tools/dep_map.R — static dependency mapper (AST-based, 10 sections, five outputs, R1–R9 risk report) | 2026-11-10 | 4c5a7e3 | [261110-luq-build-static-dependency-map-of-r-code](./quick/261110-luq-build-static-dependency-map-of-r-code/) |
+| 261111-c91 | Update phase 192.4 frontmatter in CONTEXT, PLAN, SUMMARY | 2026-11-11 | 53faa42 | [261111-c91-update-phase-192-4-frontmatter-in-contex](./quick/261111-c91-update-phase-192-4-frontmatter-in-contex/) |
 
 ## Session Continuity
 
-**Stopped at:** quick-261110-luq complete — awaiting HiPerGator run
+**Stopped at:** quick-261111-c91 complete — phase 192.4 frontmatter corrected
