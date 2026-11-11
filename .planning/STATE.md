@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: complete
-stopped_at: quick-261110-hne complete — awaiting HiPerGator run
+status: active
+stopped_at: Phase 197 in progress — Wave 1 executing
 last_updated: "2026-11-10T17:57:08.389Z"
 last_activity: 2026-11-11
 progress:
@@ -162,4 +162,4 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Phase 196-A complete — awaiting next milestone direction
+**Stopped at:** Phase 197 — Wave 1 executing (197-01, 197-06, 197-07 in parallel)
