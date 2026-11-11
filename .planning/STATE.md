@@ -148,7 +148,8 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261111-c91 | Update phase 192.4 frontmatter in CONTEXT, PLAN, SUMMARY | 2026-11-11 | 53faa42 | [261111-c91-update-phase-192-4-frontmatter-in-contex](./quick/261111-c91-update-phase-192-4-frontmatter-in-contex/) |
 | 261111-ce7 | Phase A follow-ups: suppress_small NA fix, phase folder move, cancer_summary reader comments, RERUN-AND-REISSUE updates, check_cohort_fingerprint tool | 2026-11-11 | 435e067 | [261111-ce7-phase-a-follow-ups-suppress-small-na-fix](./quick/261111-ce7-phase-a-follow-ups-suppress-small-na-fix/) |
 | 261111-cxn | Fix suppress_small applied before arithmetic in R/109/R/110: defer to display-only; raw integer tables for delta/sort; stopifnot guards; complementary suppression | 2026-11-11 | 6637ec4 | [261111-cxn-fix-suppress-small-applied-before-arithm](./quick/261111-cxn-fix-suppress-small-applied-before-arithm/) |
+| 261111-e1j | Fix R/109 before/after name collision ($ operator on atomic vector in Section 6 D-03): rename source frames to chemo_before/chemo_after, pre-compute scalars before tibble() | 2026-11-11 | eb9dfc3 | [261111-e1j-fix-r-109-before-after-name-collision-ca](./quick/261111-e1j-fix-r-109-before-after-name-collision-ca/) |
 
 ## Session Continuity
 
-**Stopped at:** quick-261111-cxn complete — suppress_small deferred to display-only in R/109 and R/110; arithmetic uses raw integer tables
+**Stopped at:** quick-261111-e1j complete — R/109 before/after name collision fixed; chemo_before/chemo_after rename + pre-computed scalars; R/107 and R/110 confirmed clean
