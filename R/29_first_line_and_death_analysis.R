@@ -197,6 +197,34 @@ if (nrow(first_line_ids) == 0) {
 saveRDS(episodes, OUTPUT_RDS)
 message(glue("[R/29] treatment_episodes.rds written (canonical) — {nrow(episodes)} rows, is_first_line: {sum(episodes$is_first_line)} TRUE, {sum(!episodes$is_first_line)} FALSE"))
 
+# --- post-write validation (197-02) -----------------------------------------
+local({
+  eps_check <- readRDS(OUTPUT_RDS)
+
+  # 1. Required columns
+  req_cols  <- c("patient_id", "episode_start", "episode_stop",
+                 "is_first_line", "treatment_type", "episode_number")
+  assert_df_valid(eps_check, "treatment_episodes", req_cols, "R/29")
+
+  # 2. No duplicate composite key rows
+  dup_keys <- eps_check |>
+    dplyr::count(patient_id, episode_start) |>
+    dplyr::filter(n > 1)
+  if (nrow(dup_keys) > 0)
+    stop("[R/29] treatment_episodes.rds has ", nrow(dup_keys),
+         " duplicate (patient_id, episode_start) rows")
+
+  # 3. is_first_line is logical
+  if (!is.logical(eps_check$is_first_line))
+    stop("[R/29] is_first_line is not logical — found: ",
+         class(eps_check$is_first_line))
+
+  message("[R/29] treatment_episodes.rds validation: PASS — ",
+          nrow(eps_check), " rows, ",
+          dplyr::n_distinct(eps_check$patient_id), " patients")
+})
+# ---------------------------------------------------------------------------
+
 # Step 3f: Build first-line summary for xlsx (Claude's discretion — add as Sheet 3)
 first_line_summary <- episodes %>%
   filter(is_first_line) %>%
