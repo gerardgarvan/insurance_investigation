@@ -55,6 +55,13 @@ MICE_M      <- 20L
 MICE_MAXIT  <- 20L
 MICE_SEED   <- 20261015L
 CUTOFF      <- CONFIG$far_from_care_cutoff_mi    # 100
+
+# Flag: collapse main_source levels with n < RARE_SOURCE_THRESHOLD to "Other" before mice().
+# Default OFF — requires explicit opt-in. Pending D-197-NN decision.
+# D-197-NN: COLLAPSE_RARE_SOURCE — pending Gerard's decision; default OFF until confirmed.
+# Evidence: 400 loggedEvents/model in 10/15 and 11/11 runs; "UCI" dropped every iteration.
+COLLAPSE_RARE_SOURCE  <- as.logical(Sys.getenv("COLLAPSE_RARE_SOURCE", "FALSE"))
+RARE_SOURCE_THRESHOLD <- as.integer(Sys.getenv("RARE_SOURCE_THRESHOLD", "30"))
 GEE_CORSTR  <- CONFIG$distance_gee_corstr        # "exchangeable"
 
 # --- Column name constants (Task 0) ---
@@ -618,6 +625,29 @@ message(glue("Task-0 PASS: complete-case OR {round(t0_fit$or, 3)} ",
              "({round(t0_fit$ci_lo, 3)}-{round(t0_fit$ci_hi, 3)}) matches ",
              "Phase 179 {round(P179_REF$or, 3)} ({round(P179_REF$ci_lo, 3)}-{round(P179_REF$ci_hi, 3)})"))
 
+
+# ==============================================================================
+# SECTION 3b: OPTIONAL RARE-SOURCE COLLAPSE ----
+# ==============================================================================
+
+if (COLLAPSE_RARE_SOURCE) {
+  source_counts <- table(pat_mice$main_source)
+  rare_levels   <- names(source_counts[source_counts < RARE_SOURCE_THRESHOLD])
+  if (length(rare_levels) > 0) {
+    message("[R/183] Collapsing rare main_source levels (n < ", RARE_SOURCE_THRESHOLD, "): ",
+            paste(rare_levels, collapse = ", "))
+    pat_mice$main_source <- forcats::fct_collapse(
+      pat_mice$main_source,
+      Other = rare_levels
+    )
+  }
+  message("[R/183] main_source after collapse:\n",
+          paste(capture.output(print(table(pat_mice$main_source))), collapse = "\n"))
+} else {
+  message("[R/183] COLLAPSE_RARE_SOURCE=FALSE — using raw main_source levels")
+  message("[R/183] main_source level counts:\n",
+          paste(capture.output(print(table(pat_mice$main_source))), collapse = "\n"))
+}
 
 # ==============================================================================
 # SECTION 4: MICE IMPUTATION — TWO SEPARATE RUNS (D-01 and D-02) ----
