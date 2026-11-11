@@ -64,3 +64,11 @@ Prerequisites run before the scripts that depend on them.
 ## A3 — R/30 workbook finding
 
 R/30 already uses `wb_load(AUDIT_XLSX)` at line 270 before saving — the audit concern was a false alarm. No code change made. `episode_classification_audit.xlsx` on HiPerGator should contain both R/28's and R/30's sheets; verify with `openxlsx2::wb_load("output/episode_classification_audit.xlsx")$get_sheet_names()` on HiPerGator.
+
+---
+
+## R/183 — payer 'Missing' recode to NA (2026-11-11, quick-261111-eqg)
+- **Why:** The literal "Missing" level (183 patients) was treated as an observed MICE category instead of being imputed. D-196 decision: MICE treats "Missing"/"Unknown"/"UNKNOWN"/"" as NA (imputed); R/165 tables keep "Missing" as a reported category (D-195-02 assert).
+- **Must rerun:** R/183_mice_sensitivity_distance.R — produces output/mice_sensitivity_distance_<date>.xlsx
+- **Reissue note:** "MICE sensitivity: payer 'Missing' (183 patients) now recoded to NA and imputed rather than treated as an observed category. Pooled ORs expected to move <=0.023 vs 20261111 run; no change in conclusions anticipated."
+- **Phase B/C candidate:** main_sourceUCI dropped from dist_to_source_facility_mi model in every iteration (~400 loggedEvents; also present in 10/15 run). Log the dep/out table from the new run.

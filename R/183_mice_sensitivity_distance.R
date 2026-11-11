@@ -461,6 +461,27 @@ if (payer_avail && !is.null(payer_lkp)) {
     DROPPED[["payer"]] <- "payer_summary RDS not found"
 }
 
+# D-196: recode payer sentinel strings to NA so MICE imputes them rather than
+# treating them as observed categories. R/165 intentionally keeps "Missing" as
+# a reported category (D-195-02 assert); this recode is local to R/183 only.
+if ("payer" %in% names(pat_mice)) {
+  PAYER_MISSING_SENTINELS <- c("Missing", "Unknown", "UNKNOWN", "")
+  n_recoded <- sum(as.character(pat_mice$payer) %in% PAYER_MISSING_SENTINELS, na.rm = TRUE)
+  pat_mice <- pat_mice |>
+    dplyr::mutate(
+      payer = dplyr::if_else(as.character(payer) %in% PAYER_MISSING_SENTINELS,
+                             NA_character_, as.character(payer)),
+      payer = droplevels(factor(payer))
+    )
+  lvl_counts <- table(pat_mice$payer, useNA = "always")
+  message(glue(
+    "  [D-196] payer sentinel recode: {n_recoded} values set to NA. ",
+    "Final levels (incl. NA): ",
+    paste(names(lvl_counts), lvl_counts, sep = "=", collapse = ", ")
+  ))
+  stopifnot(!any(levels(pat_mice$payer) %in% PAYER_MISSING_SENTINELS))
+}
+
 # Convert character/logical predictors to factor (D-08a)
 pat_mice <- pat_mice |>
   dplyr::mutate(
@@ -647,9 +668,21 @@ message(glue("  Saved: {mids_path}"))
 
 # loggedEvents
 message("\n  D-10: loggedEvents D-01:")
-if (is.null(imp_d01$loggedEvents)) message("    None") else print(imp_d01$loggedEvents)
+if (is.null(imp_d01$loggedEvents)) {
+  message("    None")
+} else {
+  le <- imp_d01$loggedEvents
+  message(glue("    Total events: {nrow(le)}"))
+  print(table(dep = le$dep, out = le$out))
+}
 message("  D-10: loggedEvents D-02:")
-if (is.null(imp_d02$loggedEvents)) message("    None") else print(imp_d02$loggedEvents)
+if (is.null(imp_d02$loggedEvents)) {
+  message("    None")
+} else {
+  le <- imp_d02$loggedEvents
+  message(glue("    Total events: {nrow(le)}"))
+  print(table(dep = le$dep, out = le$out))
+}
 
 # n patients imputed per target
 n_imp_d01 <- sup(sum(pat_mice$exposure_missing & !is.na(pat_mice$exposure_missing)))
@@ -978,6 +1011,11 @@ key_rows <- c(
     list(Field = "Task-0 line",
          Value = glue("PASS: OR={round(t0_fit$or, 3)} ({round(t0_fit$ci_lo, 3)}-{round(t0_fit$ci_hi, 3)})")),
     list(Field = "D-09 status",    Value = "PASS (script reached workbook step)"),
+    list(Field = "D-196",          Value = paste0(
+      "MICE treats payer 'Missing'/'Unknown'/'' as NA (imputed, not observed category). ",
+      "R/165 tables keep 'Missing' as a reported category (D-195-02 assert). ",
+      "main_sourceUCI dropped from dist_to_source_facility_mi model in every iteration ",
+      "(400 loggedEvents; also present in 10/15 run) — Phase B/C candidate for review.")),
     list(Field = "Privacy note",   Value = paste0(
       "Patient-level RDS in output/internal/ only. ",
       "No patient IDs or ZIPs in this workbook. Counts 1-10 as <11.")),
