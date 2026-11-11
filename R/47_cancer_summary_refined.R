@@ -11,7 +11,7 @@
 #
 # Outputs: output/tables/cancer_summary.csv (overwritten: D-codes removed, HL cohort only)
 #          output/tables/cancer_summary.xlsx (overwritten: single flat sheet)
-#          output/tables/cancer_summary_table.xlsx (overwritten: two-sheet styled workbook)
+#          output/tables/cancer_summary_refined_table.xlsx (two-sheet styled workbook)
 #          output/confirmed_hl_cohort.rds (for Phase 56, 57 consumption)
 #
 # Dependencies: R/00_config.R, R/01_load_pcornet.R, CANCER_SITE_MAP (R/00_config.R),
@@ -63,7 +63,7 @@ INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 # cancer_summary.csv (R/45's unfiltered output that R/46 and other scripts expect).
 OUTPUT_CSV  <- build_output_path("tables", "cancer_summary_refined.csv")
 OUTPUT_XLSX <- build_output_path("tables", "cancer_summary_refined.xlsx")
-OUTPUT_TABLE_XLSX <- build_output_path("tables", "cancer_summary_table.xlsx")
+OUTPUT_TABLE_XLSX <- build_output_path("tables", "cancer_summary_refined_table.xlsx")
 OUTPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
 # Sentinel date cutoff -- any DX_DATE before this is considered invalid/sentinel
@@ -399,7 +399,7 @@ wb_flat$save(OUTPUT_XLSX)
 message(glue("  Wrote {OUTPUT_XLSX}"))
 
 # -----------------------------------------------
-# 11c. Write cancer_summary_table.xlsx (two-sheet styled workbook)
+# 11c. Write cancer_summary_refined_table.xlsx (two-sheet styled workbook)
 # -----------------------------------------------
 
 # Styling constants (same as R/54)

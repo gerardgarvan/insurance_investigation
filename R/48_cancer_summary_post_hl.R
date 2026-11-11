@@ -9,7 +9,7 @@
 # Inputs:
 #   - output/confirmed_hl_cohort.rds (Phase 47 output: ID, first_hl_dx_date, first_hl_dx_source)
 #   - output/tables/cancer_summary.csv (Phase 47 output: description lookup only)
-#   - output/tables/cancer_summary_table.xlsx (Phase 47 output: baseline counts for Comparison)
+#   - output/tables/cancer_summary_refined_table.xlsx (Phase 47 output: baseline counts for Comparison)
 #   - DIAGNOSIS DuckDB table (raw DX_DATE rows for temporal filtering)
 #
 # Outputs:
@@ -54,7 +54,8 @@ assert_df_valid(
 # reads R/45 raw cancer_summary.csv -- matches delivered outputs as of 2026-10-06 (R/48, R/49)
 INPUT_CSV <- file.path(CONFIG$output_dir, "tables", "cancer_summary.csv")
 INPUT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
-BASELINE_TABLE_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_table.xlsx")
+# R/48 header (line 12) confirms this is Phase 47 (refined) output — 49 categories / 1396 codes
+BASELINE_TABLE_XLSX <- file.path(CONFIG$output_dir, "tables", "cancer_summary_refined_table.xlsx")
 OUTPUT_CSV <- build_output_path("tables", "cancer_summary_post_hl.csv")
 OUTPUT_XLSX <- build_output_path("tables", "cancer_summary_post_hl.xlsx")
 OUTPUT_TABLE_XLSX <- build_output_path("tables", "cancer_summary_table_post_hl.xlsx")
@@ -736,7 +737,7 @@ wb$add_font(
 # Freeze pane
 wb$freeze_pane(sheet = SHEET3, first_active_row = 3, first_active_col = 1)
 
-# Build comparison_df by reading baseline counts from cancer_summary_table.xlsx
+# Build comparison_df by reading baseline counts from cancer_summary_refined_table.xlsx
 # R/55 writes: Row 1 = title (merged), Row 2 = headers, Row 3+ = data
 # Use start_row = 2 to skip title row and use row 2 (headers) as column names
 baseline_raw <- openxlsx2::read_xlsx(BASELINE_TABLE_XLSX, sheet = "Category Summary", start_row = 2)
@@ -842,4 +843,4 @@ close_pcornet_con()
 
 message("\n=== Phase 56 complete ===")
 message(glue("  Post-HL cancer summary: {format(n_distinct(cancer_summary_post_hl$ID), big.mark=',')} patients, {format(nrow(cancer_summary_post_hl), big.mark=',')} rows"))
-message(glue("  Baseline files UNCHANGED (cancer_summary.csv, cancer_summary_table.xlsx)"))
+message(glue("  Baseline files UNCHANGED (cancer_summary.csv, cancer_summary_refined_table.xlsx)"))

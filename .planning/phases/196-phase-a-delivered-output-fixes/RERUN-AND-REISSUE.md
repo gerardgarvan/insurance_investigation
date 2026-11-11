@@ -53,6 +53,14 @@ Prerequisites run before the scripts that depend on them.
 
 ---
 
+## R/47 — output path renamed (2026-11-11, quick-261111-e84)
+- **Why:** OUTPUT_TABLE_XLSX renamed from cancer_summary_table.xlsx to cancer_summary_refined_table.xlsx to prevent overwriting R/46 output.
+- **Must rerun:** R/47_cancer_summary_refined.R — produces output/tables/cancer_summary_refined_table.xlsx
+- **Then rerun:** R/48_cancer_summary_post_hl.R — BASELINE_TABLE_XLSX now points to cancer_summary_refined_table.xlsx
+- **dep_map note:** Rerun dep_map.R on HiPerGator after these reruns to confirm cancer_summary_table.xlsx no longer appears as an R/47 output in the dependency map.
+
+---
+
 ## A3 — R/30 workbook finding
 
 R/30 already uses `wb_load(AUDIT_XLSX)` at line 270 before saving — the audit concern was a false alarm. No code change made. `episode_classification_audit.xlsx` on HiPerGator should contain both R/28's and R/30's sheets; verify with `openxlsx2::wb_load("output/episode_classification_audit.xlsx")$get_sheet_names()` on HiPerGator.

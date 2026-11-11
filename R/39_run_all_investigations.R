@@ -39,7 +39,8 @@
 #     - output/tables/cancer_site_confirmation.xlsx
 #     - output/tables/cancer_site_confirmation_7day.xlsx
 #     - output/tables/cancer_summary.xlsx
-#     - output/tables/cancer_summary_table.xlsx
+#     - output/tables/cancer_summary_table.xlsx (R/46: 54 categories / 1810 codes)
+#     - output/tables/cancer_summary_refined_table.xlsx (R/47: 49 categories / 1396 codes)
 #     - output/tables/cancer_summary_post_hl.xlsx
 #     - output/tables/cancer_summary_table_pre_post.xlsx
 #   Code Analysis & Exports:
