@@ -149,7 +149,8 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261111-ce7 | Phase A follow-ups: suppress_small NA fix, phase folder move, cancer_summary reader comments, RERUN-AND-REISSUE updates, check_cohort_fingerprint tool | 2026-11-11 | 435e067 | [261111-ce7-phase-a-follow-ups-suppress-small-na-fix](./quick/261111-ce7-phase-a-follow-ups-suppress-small-na-fix/) |
 | 261111-cxn | Fix suppress_small applied before arithmetic in R/109/R/110: defer to display-only; raw integer tables for delta/sort; stopifnot guards; complementary suppression | 2026-11-11 | 6637ec4 | [261111-cxn-fix-suppress-small-applied-before-arithm](./quick/261111-cxn-fix-suppress-small-applied-before-arithm/) |
 | 261111-e1j | Fix R/109 before/after name collision ($ operator on atomic vector in Section 6 D-03): rename source frames to chemo_before/chemo_after, pre-compute scalars before tibble() | 2026-11-11 | eb9dfc3 | [261111-e1j-fix-r-109-before-after-name-collision-ca](./quick/261111-e1j-fix-r-109-before-after-name-collision-ca/) |
+| 261111-e84 | Fix R/47 overwriting R/46 cancer_summary_table.xlsx: rename R/47 OUTPUT_TABLE_XLSX to cancer_summary_refined_table.xlsx; rewire R/48 BASELINE_TABLE_XLSX; update R/39 comment; RERUN-AND-REISSUE updated | 2026-11-11 | 1afc456 | [261111-e84-fix-r-47-overwriting-r-46-cancer-summary](./quick/261111-e84-fix-r-47-overwriting-r-46-cancer-summary/) |
 
 ## Session Continuity
 
-**Stopped at:** quick-261111-e1j complete — R/109 before/after name collision fixed; chemo_before/chemo_after rename + pre-computed scalars; R/107 and R/110 confirmed clean
+**Stopped at:** quick-261111-e84 complete — R/47 output renamed to cancer_summary_refined_table.xlsx; R/48 rewired; pending HiPerGator rerun of R/47 then R/48, then dep_map R11 verification
