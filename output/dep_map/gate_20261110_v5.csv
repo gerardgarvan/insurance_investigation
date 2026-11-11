@@ -1,0 +1,15 @@
+"check","pass","detail","blocking"
+"sources edges fully resolved >= 80%",TRUE,"99.1%",TRUE
+"reads/writes resolved (full+partial) >= 50%",TRUE,"85.2%",TRUE
+"no parse errors",TRUE,"",TRUE
+"R/122 -> R/165 via encounter_distance",TRUE,"",TRUE
+"R/165 reads payer_summary*.rds pattern",TRUE,"",TRUE
+"R/02 -> R/165 via payer_summary.csv",TRUE,"",TRUE
+"R/116 -> R/165 via encounter_ses_index",TRUE,"",TRUE
+"get_hl_any_dx_ids defined in utils_treatment.R",TRUE,"",TRUE
+"R/165 calls get_hl_any_dx_ids (calls_fn edge)",TRUE,"",TRUE
+"zi_normalise_xwalk not in R7c",TRUE,"",TRUE
+"zip_distance not in R7c",TRUE,"",TRUE
+"all 26 R/utils files reached by source() (26 reached)",TRUE,"",TRUE
+"R3 lists R/165 encounter_distance with has_pin = TRUE",TRUE,"",TRUE
+"[info] v1 R3 hits reappear (17/18) missing: R/167_anthracycline_echo.R:63",FALSE,"",FALSE
