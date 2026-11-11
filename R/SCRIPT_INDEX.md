@@ -63,8 +63,8 @@ Cancer code classification, site confirmation, Gantt export, and death date vali
 | 44_cancer_site_confirmation_7day.R | Confirm cancer site codes requiring diagnosis dates at least 7 calendar days apart | 00_config, 01_load_pcornet |
 | 45_cancer_summary.R | Cancer summary dataset: patient-code level with date-based confirmation metrics | 00_config, 01_load_pcornet |
 | 46_cancer_summary_table.R | Cancer summary table: category-level and code-level aggregation with styled xlsx output | 00_config, 01_load_pcornet |
-| 47_cancer_summary_refined.R | Refined cancer summary: remove D-codes, enforce HL cohort confirmation, compute first HL diagnosis date | 00_config, 01_load_pcornet |
-| 48_cancer_summary_post_hl.R | Cancer summary filtered to diagnoses after first HL diagnosis (exploratory temporal analysis) | 00_config, 01_load_pcornet |
+| 47_cancer_summary_refined.R | Refined cancer summary: remove D-codes, enforce HL cohort confirmation, compute first HL diagnosis date; writes output/tables/cancer_summary_refined_table.xlsx (49 categories / 1,396 codes) | 00_config, 01_load_pcornet |
+| 48_cancer_summary_post_hl.R | Cancer summary filtered to diagnoses after first HL diagnosis (exploratory temporal analysis); reads cancer_summary_refined_table.xlsx as baseline | 00_config, 01_load_pcornet |
 | 49_cancer_summary_pre_post.R | Cancer summary with pre/post HL diagnosis counts per code (temporal partition analysis) | 00_config, 01_load_pcornet |
 | 50_all_codes_resolved.R | Regenerate all_codes_resolved.xlsx with current TREATMENT_CODES, patient counts, and multi-source descriptions | 00_config |
 | 51_gantt_data_export.R | Gantt chart CSV export with human-readable code descriptions (v1 schema) | 00_config, utils/utils_duckdb, utils/utils_dates |

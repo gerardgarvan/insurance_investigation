@@ -935,3 +935,4 @@ Plans:
 | 192. Draft New Content | v3.13 | 3/3 | Complete    | 2026-10-28 |
 | 193. Produce Updated Manual | v3.13 | 4/5 | In Progress — pending Word review | — |
 | 194. Reference Manual Regeneration | v3.13 | 4/4 | Complete | 2026-11-06 |
+| 196. Phase A: Delivered-Output Fixes + Rerun | cross-milestone | 1/1 | Complete | 2026-11-11 |

@@ -156,6 +156,10 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 | 261111-hrc | fix(183): recode payer 'Missing'/'Unknown'/'' to NA before MICE; replace full loggedEvents print with table(dep,out); D-196 decision in KEY; RERUN-AND-REISSUE updated | 2026-11-11 | 4b2579e | inline |
 
+## Phase 196-A Complete
+
+Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fixes committed (1afc456, 61c355a, 4b2579e and earlier); full pipeline rerun PASS (log: output/logs/phase196_rerun_20261111_0907.log); R/183 MICE final run complete (90.1 min, D-01 pooled OR 0.846 [0.727–0.986] years 2+); outputs re-issued to Amy/Erin. Phase B backlog recorded in 196-SUMMARY.md.
+
 ## Session Continuity
 
-**Stopped at:** quick-261111-hrc complete — R/183 payer sentinel recode in place; pending HiPerGator rerun of R/183 to produce payer-corrected MICE output
+**Stopped at:** Phase 196-A complete — awaiting next milestone direction
