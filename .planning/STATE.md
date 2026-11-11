@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: active
-stopped_at: Completed 197-02-PLAN.md
+stopped_at: Completed 197-03-PLAN.md
 last_updated: "2026-11-11T22:32:52.674Z"
 last_activity: 2026-11-06
 progress:
@@ -162,6 +162,8 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Completed 197-02-PLAN.md
+**Stopped at:** Completed 197-03-PLAN.md
 
 **197-01 complete 2026-11-11:** R/53 before R/29 in R/39; R/26 writes treatment_episodes_stage1.rds; R/29 canonical writer; is_first_line guards in R/110, R/100, R/142; SCRIPT_INDEX and RERUN-AND-REISSUE.md updated. Commit: 8c0803d.
+
+**197-03 complete 2026-11-11:** resolve_input() helper in R/utils/utils_io.R; applied to R/162, R/163, R/167, R/168, R/180, R/179, R/177; R/183 left (D-15 already fully pinned); 14 env vars documented in KEY blocks. Commit: 52b3d48.
