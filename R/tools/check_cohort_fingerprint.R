@@ -1,5 +1,5 @@
 # check_cohort_fingerprint.R
-# Compares output/cohort_final.rds against the saved fingerprint.
+# Compares cohort/cohort_final.rds against the saved fingerprint.
 # Prints PASS or FAIL with details. STOP rerun sequence on FAIL.
 # Usage: source("R/tools/check_cohort_fingerprint.R", local = new.env(parent = globalenv()))
 
@@ -11,10 +11,16 @@ suppressPackageStartupMessages({
 
 FINGERPRINT_RDS <- here("output", "baselines", "pre_phaseA_20261111_0852",
                          "cohort_final_fingerprint.rds")
-COHORT_RDS      <- here("output", "cohort_final.rds")
+# cohort/ sits adjacent to cache/outputs/; not under output/ root
+cohort_path     <- file.path(dirname(CONFIG$cache$outputs_dir), "cohort", "cohort_final.rds")
+COHORT_RDS      <- cohort_path
+
+baseline_path   <- FINGERPRINT_RDS
 
 if (!file.exists(FINGERPRINT_RDS)) stop("Fingerprint not found: ", FINGERPRINT_RDS)
 if (!file.exists(COHORT_RDS))      stop("cohort_final.rds not found: ", COHORT_RDS)
+
+message("[fingerprint] Comparing against pre-phaseA baseline: ", baseline_path)
 
 fp  <- readRDS(FINGERPRINT_RDS)   # list: n_rows, n_id, sorted_id_md5, col_names
 coh <- readRDS(COHORT_RDS)

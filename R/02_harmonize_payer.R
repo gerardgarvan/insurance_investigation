@@ -480,6 +480,8 @@ output_path <- file.path(CONFIG$output_dir, "tables", "payer_summary.csv")
 # Create output directory if it doesn't exist
 dir.create(file.path(CONFIG$output_dir, "tables"), showWarnings = FALSE, recursive = TRUE)
 
+# Sort by ID for byte-identical reruns
+payer_summary <- arrange(payer_summary, ID)
 write_csv(payer_summary, output_path)
 message(glue("\nPayer summary saved to: {output_path}"))
 message(glue("Columns: {paste(names(payer_summary), collapse = ', ')}"))
