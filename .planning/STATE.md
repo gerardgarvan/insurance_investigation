@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: active
-stopped_at: Completed 197-05-PLAN.md
-last_updated: "2026-11-11T22:53:23.006Z"
+stopped_at: "Phase 197 code complete — awaiting HiPerGator verification (dep_map rerun, rerun table, mice diagnostic)"
+last_updated: "2026-11-11T23:30:00.000Z"
 last_activity: 2026-11-06
 progress:
   total_phases: 187
@@ -162,8 +162,18 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Completed 197-05-PLAN.md
+**Stopped at:** Phase 197 code complete — awaiting HiPerGator verification (dep_map rerun, rerun table, mice diagnostic)
 
-**197-01 complete 2026-11-11:** R/53 before R/29 in R/39; R/26 writes treatment_episodes_stage1.rds; R/29 canonical writer; is_first_line guards in R/110, R/100, R/142; SCRIPT_INDEX and RERUN-AND-REISSUE.md updated. Commit: 8c0803d.
+**Phase 197 all 9 plans complete (code-side) 2026-11-11:**
 
-**197-03 complete 2026-11-11:** resolve_input() helper in R/utils/utils_io.R; applied to R/162, R/163, R/167, R/168, R/180, R/179, R/177; R/183 left (D-15 already fully pinned); 14 env vars documented in KEY blocks. Commit: 52b3d48.
+- 197-01 (8c0803d): R/53 before R/29; R/26 → stage1; is_first_line guards in R/110, R/100, R/142
+- 197-02 (413bb7c): Post-write validation block in R/29 (dup-key, type, required columns)
+- 197-03 (52b3d48): resolve_input() helper; 14 env vars applied across 7 scripts
+- 197-04 (5293a04): versioned_output_path() helper; 17 scripts updated; RUN_DATE env var
+- 197-05 (52a7190): R/131 write_csv calls removed; R/105 sole writer; idempotency guard
+- 197-06 (27b7bb8): Timestamped .bak + rollback in R/98; trim_config_bak() util; R/21/22/50 updated
+- 197-07 (c4a2620): Fingerprint tool path fix; R/02 sort by ID before write_csv
+- 197-08 (6b5c754): COLLAPSE_RARE_SOURCE flag in R/183 (OFF); mice_convergence_diagnostic.R tool
+- 197-09: 197-SUMMARY.md, 197-RERUN-VERIFICATION.md, dep_map command documented
+
+**Next gate:** Gerard runs 197-RERUN-VERIFICATION.md steps 1–12 on HiPerGator and pastes back dep_map_risk_report_v*.md. Phase 197 is NOT marked complete until dep_map shows zero critical findings and rerun steps PASS.
