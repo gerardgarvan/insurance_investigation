@@ -315,13 +315,22 @@ summarise_autoimmune_dx <- function(dx, cohort_ids, sentinel,
 #' Uses \code{open_pcornet_con()} / \code{close_pcornet_con()} from
 #' utils_duckdb.R (single shared connection pattern).
 #'
-#' @param cohort_ids character vector of patient IDs
-#' @param sentinel   Date passed to \code{summarise_autoimmune_dx()}
-#' @param codes      Named list passed to \code{summarise_autoimmune_dx()}
+#' @param cohort_ids    character vector of patient IDs
+#' @param sentinel      Date passed to \code{summarise_autoimmune_dx()}
+#' @param codes         Named list passed to \code{summarise_autoimmune_dx()}
 #'   (default AUTOIMMUNE_DX_CODES). Phase 192.2 sensitivity runs pass a reduced list.
-#' @return tibble from \code{summarise_autoimmune_dx()}
+#' @param return_records logical (default FALSE). When TRUE, returns a named list:
+#'   \itemize{
+#'     \item \code{$flags}   — the standard tibble (unchanged from default behavior)
+#'     \item \code{$records} — qualifying, validly-dated rows with columns
+#'       ID, DX, DX_TYPE, dx_date, matched_key (longest config key that
+#'       prefix-matches the dot-stripped DX)
+#'   }
+#'   When FALSE (default), returns only the flags tibble (identical to prior behavior).
+#' @return tibble (return_records = FALSE) or named list (return_records = TRUE)
 build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
-                                      codes = AUTOIMMUNE_DX_CODES) {
+                                      codes = AUTOIMMUNE_DX_CODES,
+                                      return_records = FALSE) {
   opened_here <- FALSE
   if (!exists("pcornet_con", envir = .GlobalEnv) || !DBI::dbIsValid(pcornet_con)) {
     open_pcornet_con()
@@ -343,7 +352,164 @@ build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
      FROM DIAGNOSIS d JOIN aim_cohort c ON c.ID = d.ID"
   )
 
-  summarise_autoimmune_dx(dx, cohort_ids, sentinel, codes = codes)
+  flags <- summarise_autoimmune_dx(dx, cohort_ids, sentinel, codes = codes)
+
+  if (!return_records) return(flags)
+
+  # Build qualifying, validly-dated records for return_records = TRUE
+  dx_df   <- as.data.frame(dx)
+  keep    <- is_autoimmune_code(dx_df$DX, dx_df$DX_TYPE, codes = codes)
+  q       <- dx_df[keep, , drop = FALSE]
+
+  if (nrow(q) > 0) {
+    dx_clean <- normalize_icd(trimws(q$DX))
+    d1       <- as.Date(q$DX_DATE)
+    d2       <- as.Date(q$ADMIT_DATE)
+    ok1      <- !is.na(d1) & d1 > sentinel
+    ok2      <- !is.na(d2) & d2 > sentinel
+    dx_date  <- as.Date(ifelse(ok1, as.character(d1),
+                               ifelse(ok2, as.character(d2), NA_character_)))
+    valid    <- !is.na(dx_date)
+
+    q_valid  <- q[valid, , drop = FALSE]
+    dx_clean_valid <- dx_clean[valid]
+    dx_date_valid  <- dx_date[valid]
+
+    # Determine matched_key: longest prefix key that prefix-matches the normalized DX
+    all_keys <- c(names(codes$icd10), names(codes$icd9))
+    matched_key <- vapply(seq_len(nrow(q_valid)), function(i) {
+      cx <- dx_clean_valid[i]
+      hits <- all_keys[startsWith(cx, all_keys)]
+      if (length(hits) == 0L) NA_character_ else hits[which.max(nchar(hits))]
+    }, character(1))
+
+    records <- tibble::tibble(
+      ID          = q_valid$ID,
+      DX          = q_valid$DX,
+      DX_TYPE     = q_valid$DX_TYPE,
+      dx_date     = dx_date_valid,
+      matched_key = matched_key
+    )
+    records <- records[!is.na(records$matched_key), , drop = FALSE]
+  } else {
+    records <- tibble::tibble(
+      ID          = character(0),
+      DX          = character(0),
+      DX_TYPE     = character(0),
+      dx_date     = as.Date(character(0)),
+      matched_key = character(0)
+    )
+  }
+
+  list(flags = flags, records = records)
+}
+
+
+#' Build patient-level immune flags for Phase 199 (Rituximab/Methotrexate + qualifying diagnosis)
+#'
+#' Wraps \code{build_autoimmune_dx_flags(return_records = TRUE)} with IMMUNE_FLAG_DX_CODES,
+#' adds drug exposure flags from canonicalized episode drug_names, and builds immune_flag_dx.
+#'
+#' @param ids                character vector of patient IDs
+#' @param drug_names_by_patient tibble with columns patient_id and drug_names
+#'   (canonicalized, semicolon-separated — from episodes_export after Section 4D cleanup)
+#' @param codes              Named list ($icd10, $icd9) for the immune flag diagnosis codes
+#'   (default IMMUNE_FLAG_DX_CODES)
+#' @param drugs              character(2): canonical label for c(Rituximab, Methotrexate)
+#'   (default IMMUNE_FLAG_DRUGS). drugs[1] = Rituximab label, drugs[2] = Methotrexate label.
+#' @param brentuximab        canonical label for Brentuximab (default BRENTUXIMAB_DRUG)
+#' @param sentinel           Date; passed to build_autoimmune_dx_flags()
+#' @return tibble with one row per id: patient_id, immune_flag, ever_brentuximab,
+#'   immune_flag_dx, has_rituximab, has_methotrexate, has_immune_flag_dx,
+#'   qc_immune_dx_no_valid_date. All logical columns are coerced to FALSE (no NA).
+build_immune_flags <- function(ids,
+                               drug_names_by_patient,
+                               codes      = IMMUNE_FLAG_DX_CODES,
+                               drugs      = IMMUNE_FLAG_DRUGS,
+                               brentuximab = BRENTUXIMAB_DRUG,
+                               sentinel   = SENTINEL_CUTOFF) {
+
+  # --- 1. Diagnosis flags (DuckDB query) ---
+  aim_out <- build_autoimmune_dx_flags(ids, sentinel = sentinel, codes = codes,
+                                       return_records = TRUE)
+  aim_flags   <- aim_out$flags
+  aim_records <- aim_out$records
+
+  # Rename to immune-specific column names
+  aim_flags <- aim_flags |>
+    dplyr::rename(
+      has_immune_flag_dx        = has_autoimmune_dx,
+      qc_immune_dx_no_valid_date = qc_qualifying_no_valid_date
+    ) |>
+    dplyr::select(ID, has_immune_flag_dx, qc_immune_dx_no_valid_date)
+
+  # --- 2. Drug exposure flags ---
+  # drug_names_by_patient: distinct patient_id / drug_names; semicolon-separated tokens
+  drug_flags <- drug_names_by_patient |>
+    dplyr::group_by(patient_id) |>
+    dplyr::summarise(
+      all_drugs = paste(drug_names, collapse = ";"),
+      .groups   = "drop"
+    ) |>
+    dplyr::mutate(
+      tokens          = strsplit(all_drugs, ";"),
+      has_rituximab   = vapply(tokens, function(t) drugs[1] %in% trimws(t), logical(1)),
+      has_methotrexate = vapply(tokens, function(t) drugs[2] %in% trimws(t), logical(1)),
+      ever_brentuximab = vapply(tokens, function(t) brentuximab %in% trimws(t), logical(1))
+    ) |>
+    dplyr::select(patient_id, has_rituximab, has_methotrexate, ever_brentuximab)
+
+  # --- 3. Combine ---
+  base <- tibble::tibble(patient_id = unique(as.character(ids)))
+
+  out <- base |>
+    dplyr::left_join(
+      aim_flags |> dplyr::rename(patient_id = ID),
+      by = "patient_id"
+    ) |>
+    dplyr::left_join(drug_flags, by = "patient_id") |>
+    dplyr::mutate(
+      dplyr::across(c(has_rituximab, has_methotrexate, ever_brentuximab,
+                      has_immune_flag_dx, qc_immune_dx_no_valid_date),
+                    ~ dplyr::coalesce(.x, FALSE)),
+      immune_flag = (has_rituximab | has_methotrexate) & has_immune_flag_dx
+    )
+
+  # --- 4. immune_flag_dx: plain-language labels for immune_flag = TRUE patients ---
+  # Build a lookup from matched_key -> label (all keys across both systems)
+  all_labels <- c(codes$icd10, codes$icd9)  # named vector: key -> label
+
+  if (nrow(aim_records) > 0) {
+    dx_labels <- aim_records |>
+      dplyr::filter(!is.na(matched_key)) |>
+      dplyr::mutate(label = all_labels[matched_key]) |>
+      dplyr::filter(!is.na(label)) |>
+      dplyr::group_by(ID) |>
+      dplyr::summarise(
+        immune_flag_dx = paste(sort(unique(label)), collapse = "; "),
+        .groups = "drop"
+      ) |>
+      dplyr::rename(patient_id = ID)
+  } else {
+    dx_labels <- tibble::tibble(patient_id = character(0), immune_flag_dx = character(0))
+  }
+
+  out <- out |>
+    dplyr::left_join(dx_labels, by = "patient_id") |>
+    dplyr::mutate(
+      immune_flag_dx = dplyr::if_else(immune_flag,
+                                      dplyr::coalesce(immune_flag_dx, ""),
+                                      "")
+    )
+
+  # Assertions
+  stopifnot("build_immune_flags: duplicate patient_ids" = !anyDuplicated(out$patient_id))
+  stopifnot("build_immune_flags: immune_flag NA" = !anyNA(out$immune_flag))
+  stopifnot("build_immune_flags: ever_brentuximab NA" = !anyNA(out$ever_brentuximab))
+
+  out |> dplyr::select(patient_id, immune_flag, ever_brentuximab, immune_flag_dx,
+                        has_rituximab, has_methotrexate, has_immune_flag_dx,
+                        qc_immune_dx_no_valid_date)
 }
 
 # ==============================================================================

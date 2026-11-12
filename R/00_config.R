@@ -814,6 +814,38 @@ AUTOIMMUNE_DX_CODES <- list(
   )
 )
 
+# IMMUNE_FLAG_DX_CODES: Phase 199 — user-supplied list 2026-11-12; drives immune_flag only;
+# intentionally narrower than AUTOIMMUNE_DX_CODES.
+# Keys = normalized code prefix (dots removed, uppercase); values = plain-language labels
+# written to immune_flag_dx. 13 keys total: 5 ICD-10, 8 ICD-9.
+IMMUNE_FLAG_DX_CODES <- list(
+  icd10 = c(
+    "M05"   = "Rheumatoid arthritis",
+    "M06"   = "Rheumatoid arthritis",
+    "M313"  = "Granulomatosis with polyangiitis (Wegener's)",
+    "M317"  = "Microscopic polyangiitis",
+    "L100"  = "Pemphigus vulgaris"
+  ),
+  icd9 = c(
+    "7140"  = "Rheumatoid arthritis",
+    "7141"  = "Rheumatoid arthritis (Felty's syndrome)",
+    "7142"  = "Rheumatoid arthritis with systemic involvement",
+    "7148"  = "Other inflammatory polyarthritis",
+    "7149"  = "Inflammatory polyarthritis, unspecified",
+    "4464"  = "Granulomatosis with polyangiitis (Wegener's)",
+    "4460"  = "Polyarteritis nodosa",
+    "6944"  = "Pemphigus"
+  )
+)
+
+# IMMUNE_FLAG_DRUGS: canonical drug labels (from canonicalize_drug_name) used by build_immune_flags().
+# Phase 199: Rituximab and Methotrexate are the two qualifying drugs for immune_flag.
+IMMUNE_FLAG_DRUGS <- c("Rituximab", "Methotrexate")
+
+# BRENTUXIMAB_DRUG: canonical label for Brentuximab Vedotin (confirmed from DRUG_GROUPINGS /
+# canonicalize_drug_name maps — J9042 and RxNorm 1147327/1147324/1147323 all resolve to this label).
+BRENTUXIMAB_DRUG <- "Brentuximab Vedotin"
+
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
 # 2026-10-29) that identify ICD-9 and ICD-10 records. "OT" and "SM" are excluded
 # (not ICD coding systems). No trimming variants observed in the cohort DX_TYPE values.
