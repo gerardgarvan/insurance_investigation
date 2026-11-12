@@ -772,7 +772,6 @@ See `.planning/milestones/v3.11-ROADMAP.md` for full phase details.
 
 </details>
 
----
 
 <details>
 <summary>✅ v3.12 Team To-Do Close-out (Phases 185–189) — SHIPPED 2026-10-27</summary>
@@ -965,5 +964,11 @@ Plans:
 ### Phase 199: Immune and Brentuximab Flags in gantt_episodes_180
 **Goal**: Add three patient-level columns to gantt_episodes_180.csv (cols 24–26): `immune_flag` (ever Rituximab or Methotrexate AND ever dx M05, M06, M31.3, M31.7, L10.0 / 714.0, 714.1, 714.2, 714.8x, 714.9, 446.4, 446.0, 694.4), `ever_brentuximab`, and `immune_flag_dx` (plain-language qualifying diagnoses when immune_flag is TRUE). Logic lives in R/142.
 **Depends on**: Phase 198
+**Plans**: TBD
+Plans:
+
+### Phase 200: Immunotherapy MED_ADMIN DISPENSING capture fix
+**Goal**: Fix extract_immunotherapy_dates_with_codes() in R/26, which currently filters MED_ADMIN and DISPENSING on RXNORM_CUI — a column neither table has — so immunotherapy never reads those tables. Switch to get_chemo_hits()-style matching (MEDADMIN_CODE/MEDADMIN_TYPE for MED_ADMIN; NDC→RxNorm crosswalk for DISPENSING) against immunotherapy_rxnorm; add rituximab RxNorm codes and biosimilar HCPCS Q5115/Q5119/Q5123 to the treatment code lists; report before/after counts by drug; rerun R/26 → R/28 → R/29 → R/52 → R/142 and dependent outputs.
+**Depends on**: Phase 199
 **Plans**: TBD
 Plans:

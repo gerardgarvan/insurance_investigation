@@ -56,6 +56,10 @@ Last activity: 2026-11-12 -- Phase 199 execution started
 
 ## Accumulated Context
 
+### Phase 200 Team Decision (D-200-01)
+
+- **D-200-01 (2026-11-12, team):** Gantt treatment episodes capture ALL rituximab / methotrexate / immunotherapy administrations regardless of indication. Patients whose rituximab/MTX use may be for an autoimmune condition are identified by the Phase 199 `immune_flag` (with `immune_flag_dx` for the qualifying diagnosis), not removed from the timelines. No indication-based filtering is applied in R/26 or any downstream script.
+
 ### Phase 192.3 Decisions (Plan 01)
 
 - **D-192.3-01:** All 15 ENCOUNTER SOURCE values are data partner institution codes (FLM, UMI, UFH, UAB, AVH, AMS, UCI, EMY, ORL, USF, TMA, CHP, NCH, TMC, BND). No Medicare, CMS, or payer-type SOURCE exists. `CONFIG$medicare_source_codes = character(0)`.
@@ -71,6 +75,8 @@ Last activity: 2026-11-12 -- Phase 199 execution started
 - Phase 192.1 renamed from "rebase-v3-13-to-the-revised-analytic-manual" to "autoimmune-diagnosis-flags-in-gantt-episodes" (canonical name)
 - Phase 192.1 COMPLETE 2026-10-29: has_autoimmune_dx + first_autoimmune_dx_date added to gantt_episodes.csv and gantt_episodes_180.csv
 - Phase 199 added: Immune and Brentuximab Flags in gantt_episodes_180 (immune_flag, ever_brentuximab, immune_flag_dx cols 24–26 via R/142)
+- Phase 200 added: Immunotherapy MED_ADMIN/DISPENSING capture fix — switch R/26 extract_immunotherapy_dates_with_codes() from RXNORM_CUI filter to get_chemo_hits()-style matching; add rituximab codes + biosimilar HCPCS; rerun R/26→R/28→R/29→R/52→R/142
+- Phase 200 rescoped (2026-11-12): the R/26 fix and code additions were already implemented in Phase 199. Phase 200 records the team analytic decision: D-200-01.
 
 ### v3.13 Milestone Context
 
