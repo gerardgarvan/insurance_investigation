@@ -98,25 +98,50 @@ for (mids_nm in names(mids_list)) {
     message("[diag] ", mids_nm, ": chainMean is NULL — skipping.")
     next
   }
+  # mice >= 3: chainMean is [n_vars x maxit x m] (NOT [n_vars x m x maxit])
+  # get_chain_mat extracts a [m x maxit] matrix for downstream R-hat computation.
   if (is.array(cm) && length(dim(cm)) == 3) {
     vars_imp  <- dimnames(cm)[[1]]
-    get_chain_mat <- function(v) matrix(cm[v, , ], nrow = dim(cm)[2], ncol = dim(cm)[3])
+    get_chain_mat <- function(v) t(cm[v, , ])   # cm[v,,] is [maxit x m]; t() -> [m x maxit]
   } else {
     vars_imp  <- names(cm)
-    get_chain_mat <- function(v) cm[[v]]
+    get_chain_mat <- function(v) cm[[v]]         # older mice: already [m x maxit]
   }
   if (is.na(current_maxit) && length(vars_imp) > 0) {
     m0 <- get_chain_mat(vars_imp[1])
     if (!is.null(m0)) current_maxit <- ncol(m0)
   }
 
+  # method lookup for categorical detection
+  mids_method <- mids$method
+  is_categorical <- function(v) {
+    if (is.null(mids_method) || !v %in% names(mids_method)) return(FALSE)
+    mids_method[[v]] %in% c("polyreg", "polr", "logreg")
+    # logreg is binary — still meaningful for R-hat; only polyreg/polr are excluded
+  }
+  CATEGORICAL_METHODS <- c("polyreg", "polr")
+
   rhat_rows <- lapply(vars_imp, function(v) {
     mat <- get_chain_mat(v)   # [m x maxit]
-    if (is.null(mat) || !is.matrix(mat) || ncol(mat) < 2) return(NULL)
-    # skip variables with all-NA chainMean (not imputed by mice)
-    if (all(is.na(mat))) return(NULL)
+    meth <- if (!is.null(mids_method) && v %in% names(mids_method)) mids_method[[v]] else ""
+    is_cat <- meth %in% CATEGORICAL_METHODS
+
+    if (is.null(mat) || !is.matrix(mat) || ncol(mat) < 2) {
+      message(sprintf("[diag]   %s/%s: skipped (not a matrix or < 2 iterations)", mids_nm, v))
+      return(NULL)
+    }
+    if (all(is.na(mat))) {
+      message(sprintf("[diag]   %s/%s: skipped (all-NA chainMean; not imputed)", mids_nm, v))
+      return(NULL)
+    }
+    if (is_cat) {
+      message(sprintf("[diag]   %s/%s: extracted (method=%s; informational only, excluded from maxit rec)", mids_nm, v, meth))
+    } else {
+      message(sprintf("[diag]   %s/%s: extracted (method=%s)", mids_nm, v, meth))
+    }
+
     rhats <- sapply(seq_len(ncol(mat)), function(iter) {
-      chains_iter <- mat[, 1:iter, drop = FALSE]
+      chains_iter <- mat[, 1:iter, drop = FALSE]  # [m x iter]
       if (iter < 2 || nrow(chains_iter) < 2) return(NA_real_)
       chain_means <- apply(chains_iter, 1, mean)
       chain_vars  <- apply(chains_iter, 1, var)
@@ -126,7 +151,8 @@ for (mids_nm in names(mids_list)) {
       if (is.na(W_bar) || W_bar <= 0) return(NA_real_)
       sqrt(var_hat / W_bar)
     })
-    data.frame(mids_model = mids_nm, variable = v,
+    data.frame(mids_model = mids_nm, variable = v, method = meth,
+               is_categorical = is_cat,
                iteration = seq_along(rhats), rhat = rhats,
                stringsAsFactors = FALSE)
   })
@@ -139,11 +165,12 @@ if (nrow(rhat_df) == 0) {
   message("[diag] WARNING: no R-hat data extracted from any mids$chainMean. ",
           "chainMean may be empty or all variables are non-imputed. Skipping convergence table.")
   converge_iter <- data.frame(mids_model = character(), variable = character(),
+                              method = character(), is_categorical = logical(),
                               max_rhat = numeric(), converge_at = integer(),
                               stringsAsFactors = FALSE)
 } else {
   converge_iter <- rhat_df |>
-    group_by(mids_model, variable) |>
+    group_by(mids_model, variable, method, is_categorical) |>
     summarise(
       max_rhat   = max(rhat, na.rm = TRUE),
       converge_at = {
@@ -157,24 +184,30 @@ if (nrow(rhat_df) == 0) {
       },
       .groups = "drop"
     )
-  message("[diag] Convergence table:")
-  print(as.data.frame(converge_iter), row.names = FALSE)
+  message("[diag] Convergence table (all variables):")
+  print(as.data.frame(converge_iter[, c("mids_model", "variable", "method", "max_rhat", "converge_at")]),
+        row.names = FALSE)
 }
 
 if (is.na(current_maxit) && nrow(rhat_df) > 0) current_maxit <- max(rhat_df$iteration)
-recommended_maxit <- if (nrow(converge_iter) == 0 || all(is.na(converge_iter$converge_at))) {
-  paste0("INCREASE from ", current_maxit, " — not all variables converged")
+
+# maxit recommendation: based on continuous/binary variables only (exclude polyreg/polr)
+converge_cont <- converge_iter[!converge_iter$is_categorical, , drop = FALSE]
+recommended_maxit_n <- NA_integer_
+recommended_maxit <- if (nrow(converge_cont) == 0) {
+  paste0("INCREASE from ", current_maxit, " — no continuous/binary variables found")
+} else if (all(is.na(converge_cont$converge_at))) {
+  paste0("INCREASE from ", current_maxit, " — not all continuous/binary variables converged within ", current_maxit, " iterations")
 } else {
-  worst <- max(converge_iter$converge_at, na.rm = TRUE)
-  rec <- ceiling(worst * 1.5)
-  if (rec <= current_maxit) {
-    paste0("KEEP at ", current_maxit, " (worst convergence at iter ", worst,
-           "; 1.5x margin = ", rec, " <= current)")
-  } else {
-    paste0("INCREASE to ", rec, " (worst convergence at iter ", worst,
-           "; 1.5x margin; pending Gerard approval)")
-  }
+  worst      <- max(converge_cont$converge_at, na.rm = TRUE)
+  rec_raw    <- worst + 5L
+  rec        <- as.integer(ceiling(rec_raw / 5) * 5)
+  recommended_maxit_n <- rec
+  direction  <- if (rec < current_maxit) "REDUCE" else if (rec == current_maxit) "KEEP" else "INCREASE"
+  sprintf("%d (current %d) -> %s  [worst conv iter: %d; +5 rounded to mult-of-5]",
+          rec, current_maxit, direction, worst)
 }
+message("[diag] maxit recommendation: ", recommended_maxit)
 
 # --- 3. Write markdown report -----------------------------------------------
 src_md <- paste0(
@@ -191,10 +224,13 @@ src_md <- paste0(
 
 if (nrow(converge_iter) > 0) {
   conv_md <- paste0(
-    "| Model | Variable | First iter R-hat < 1.1 (stable) | Max R-hat |\n|---|---|---|---|\n",
-    paste(sprintf("| %s | %s | %s | %.3f |",
+    "| Model | Variable | Method | Use for maxit? | First iter R-hat < 1.1 | Max R-hat |\n",
+    "|---|---|---|---|---|---|\n",
+    paste(sprintf("| %s | %s | %s | %s | %s | %.3f |",
                   converge_iter$mids_model,
                   converge_iter$variable,
+                  converge_iter$method,
+                  ifelse(converge_iter$is_categorical, "No (categorical)", "Yes"),
                   ifelse(is.na(converge_iter$converge_at), "not converged",
                          as.character(converge_iter$converge_at)),
                   converge_iter$max_rhat),
@@ -225,7 +261,10 @@ report <- paste0(
   "## Convergence (Gelman-Rubin-style R-hat by Iteration)\n\n",
   "Current maxit: ", current_maxit, "\n\n",
   conv_md, "\n\n",
-  "**maxit recommendation:** ", recommended_maxit, "\n\n",
+  "**maxit recommendation:** `", recommended_maxit, "`\n\n",
+  "_Categorical variables (polyreg/polr: main\\_source, payer) are shown informational only ",
+  "and excluded from the recommendation — R-hat on numeric level codes is not a meaningful ",
+  "convergence measure for multinomial variables._\n\n",
   "_Note: maxit changes alter MICE results and require a full R/183 rerun. ",
   "Change only after Gerard approves._\n"
 )
