@@ -78,10 +78,14 @@ if (!exists("pcornet_con", envir = .GlobalEnv) || !DBI::dbIsValid(pcornet_con)) 
   open_pcornet_con(); opened_here <- TRUE
 }
 duckdb::duckdb_register(pcornet_con, "chk199_cohort", tibble::tibble(ID = cohort))
-on.exit({
-  try(duckdb::duckdb_unregister(pcornet_con, "chk199_cohort"), silent = TRUE)
+# NOTE: on.exit() cannot be used at the top level of a sourced script (it fires as
+# soon as that top-level expression finishes, closing the connection immediately).
+# Cleanup runs in the tryCatch(finally = ...) around Sections 3-4 instead.
+chk199_cleanup <- function() {
+  if (exists("pcornet_con", envir = .GlobalEnv) && DBI::dbIsValid(get("pcornet_con", envir = .GlobalEnv)))
+    try(duckdb::duckdb_unregister(get("pcornet_con", envir = .GlobalEnv), "chk199_cohort"), silent = TRUE)
   if (opened_here) try(close_pcornet_con(), silent = TRUE)
-}, add = TRUE)
+}
 
 flds <- function(tbl) toupper(DBI::dbListFields(pcornet_con, tbl))
 sql_in   <- function(x) paste0("'", gsub("'", "''", x), "'", collapse = ", ")
@@ -126,6 +130,8 @@ raw_hits <- function(def) {
     parts[[paste0("di_", nc)]] <- run_q("DISPENSING", sql_like(nc, def$names), "DISPENSE_DATE", "DISPENSING name")
   dplyr::bind_rows(parts)
 }
+
+tryCatch({
 
 # --- 3. Compare ---------------------------------------------------------------
 message("\n=== Phase 199 full-history check (all dates, all CDM medication sources) ===")
@@ -175,3 +181,5 @@ message(glue("  ever_brentuximab TRUE in CSV:                     {fmt_sup(lengt
 message(glue("  ever_brentuximab from raw full history:           {fmt_sup(length(raw_sets$Brentuximab))}"))
 message(glue("    would be added:   {fmt_sup(length(setdiff(raw_sets$Brentuximab, flag_brx)))}"))
 message("\nIf 'would be added' is 0 for all three, the episode-based flags already cover each patient's full history.")
+
+}, finally = chk199_cleanup())
