@@ -88,6 +88,12 @@ if (!exists("get_chemo_hits")) {
 
 message("=== Phase 123: MED_ADMIN/DISPENSING Fix Before/After Diff + Unmatched-NDC Audit ===\n")
 
+# Guard: remove any stale `before` / `after` objects that could mask missing
+# variables if this script is sourced into a long-lived RStudio session.
+# (D-197-12-01: Phase 196 renamed these to chemo_before / chemo_after;
+# a stale `after` in globalenv caused Section 7 to silently use wrong data.)
+rm(list = intersect(ls(), c("before", "after")))
+
 
 # ==============================================================================
 # SECTION 2: CONSTANTS AND HIPAA HELPER ----
@@ -285,7 +291,7 @@ before_first <- hits_rx_coh %>%
   group_by(ID) %>%
   summarise(first_before = min(treatment_date, na.rm = TRUE), .groups = "drop")
 
-after_first <- after %>%
+after_first <- chemo_after %>%
   group_by(ID) %>%
   summarise(first_after = min(treatment_date, na.rm = TRUE), .groups = "drop")
 
