@@ -109,7 +109,8 @@ OUTPUT_XLSX   <- file.path(CONFIG$output_dir, "med_admin_dispensing_fix_impact.x
 # to emit an empty tibble when the file is absent (see comment at line 338).
 EPISODES_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 NDC_AUDIT_CSV <- file.path(CONFIG$output_dir, "ndc_rxnorm_crosswalk_audit.csv")
-NDC_REQUERY_CSV <- file.path(CONFIG$output_dir, "ndc_rxnorm_crosswalk_requery.csv")
+NDC_REQUERY_CSV       <- file.path(CONFIG$output_dir, "ndc_rxnorm_crosswalk_requery.csv")
+NDC_REQUERY_CACHE_RDS <- file.path(CONFIG$cache$outputs_dir, "rxnav_ndc_requery_cache.rds")
 
 message(glue("Output xlsx target:     {OUTPUT_XLSX}"))
 message(glue("Episodes RDS path:      {EPISODES_RDS}"))
@@ -361,6 +362,9 @@ stopifnot(
 )
 
 # Display table: suppress patient counts; sort already applied above on raw integers.
+# Column order restored to July delivery:
+#   triggering_code, n_pts_before, n_dates_before, n_pts_after, n_dates_after,
+#   drug_name, delta_pts, delta_dates  (D-197-14).
 df_ingredient_delta <- df_ingredient_delta_raw %>%
   mutate(
     n_pts_before_disp = suppress_small(n_pts_before),
@@ -370,10 +374,16 @@ df_ingredient_delta <- df_ingredient_delta_raw %>%
       TRUE ~ as.character(delta_pts)
     )
   ) %>%
-  select(-n_pts_before, -n_pts_after, -delta_pts,
-         n_pts_before = n_pts_before_disp,
-         n_pts_after  = n_pts_after_disp,
-         delta_pts    = delta_pts_disp)
+  select(
+    triggering_code,
+    n_pts_before  = n_pts_before_disp,
+    n_dates_before,
+    n_pts_after   = n_pts_after_disp,
+    n_dates_after,
+    drug_name,
+    delta_pts     = delta_pts_disp,
+    delta_dates
+  )
 
 message(glue("  {nrow(df_ingredient_delta)} distinct ingredients with before/after counts\n"))
 
@@ -641,60 +651,142 @@ message(glue("  D-08: {nrow(df_ndc_freq_ranked)} unmatched NDCs in top-{N} frequ
 message("--- Section 13: D-09 — RxNav alternate-endpoint re-query ---")
 
 # IS_LOCAL is set in R/00_config.R (TRUE on Windows, FALSE on HiPerGator).
+# Empty sentinel tibble — columns written to xlsx Sheet 7 even when skipped.
+# D-197-15: added ndc_status, concept_name, request_failed; fixed URL and parse paths.
 df_ndc_requery <- tibble(
-  NDC           = character(),
-  rxcui_primary = character(),
+  NDC             = character(),
+  rxcui_primary   = character(),
   rxcui_alternate = character(),
-  endpoint_used = character(),
-  chemo_match   = logical()
+  ndc_status      = character(),   # ACTIVE / OBSOLETE / UNKNOWN / NA (parse failure)
+  concept_name    = character(),
+  endpoint_used   = character(),
+  request_failed  = logical(),     # TRUE = HTTP/network error; FALSE = success (even if no RxCUI)
+  chemo_match     = logical(),
+  query_date      = character()
 )
 
-# IS_LOCAL guard: if (!IS_LOCAL) the network re-query runs on HiPerGator; else skip.
+# IS_LOCAL guard: network re-query runs on HiPerGator only.
 if (exists("IS_LOCAL") && !IS_LOCAL && nrow(ndc_unmatched) > 0L) {
-  message(glue("  [D-09] Running alternate-endpoint re-query for {format(nrow(ndc_unmatched), big.mark=',')} unresolved NDCs (HiPerGator mode) ..."))
 
-  # Alternate-endpoint lookup: tries ndcproperties then ndcstatus.
-  # Mirrors R/108 req_retry / 0.1s sleep / NA-on-failure pattern (Pitfall 5).
+  # --- Cache load -------------------------------------------------------
+  rxnav_refresh <- identical(Sys.getenv("R109_RXNAV_REFRESH"), "1")
+  cache_exists  <- file.exists(NDC_REQUERY_CACHE_RDS)
+  cache_cutoff  <- Sys.Date() - 90L
+
+  df_cache <- if (!rxnav_refresh && cache_exists) {
+    raw <- readRDS(NDC_REQUERY_CACHE_RDS)
+    # Keep only rows queried within the last 90 days.
+    raw %>% filter(!is.na(query_date) & as.Date(query_date) >= cache_cutoff)
+  } else {
+    df_ndc_requery[0L, ]
+  }
+
+  requery_ndcs <- setdiff(ndc_unmatched$NDC, df_cache$NDC)
+  message(glue(
+    "  [D-09] Cache: {nrow(df_cache)} cached rows (<90 d); {length(requery_ndcs)} NDCs to query",
+    "{if (rxnav_refresh) ' (R109_RXNAV_REFRESH=1: forced full re-query)' else ''} ..."
+  ))
+
+  # --- Lookup function --------------------------------------------------
+  # Correct endpoint order and URL patterns (D-197-15):
+  #   1. ndcstatus.json?ndc=   -- returns status + RxCUI even for OBSOLETE NDCs
+  #   2. ndcproperties.json?id= -- supplementary; correct parse path is
+  #      ndcPropertyList$ndcProperty[[1]]$rxcui
   lookup_ndc_alternate <- function(ndc, sleep_sec = 0.1) {
-    for (endpoint in c("ndcproperties", "ndcstatus")) {
-      url <- glue("https://rxnav.nlm.nih.gov/REST/{endpoint}.json?id={ndc}")
-      result <- tryCatch({
-        resp <- httr2::request(url) |>
+    endpoints <- list(
+      list(name = "ndcstatus",    url = glue("https://rxnav.nlm.nih.gov/REST/ndcstatus.json?ndc={ndc}")),
+      list(name = "ndcproperties", url = glue("https://rxnav.nlm.nih.gov/REST/ndcproperties.json?id={ndc}"))
+    )
+    for (ep in endpoints) {
+      res <- tryCatch({
+        resp <- httr2::request(ep$url) |>
           httr2::req_timeout(10) |>
           httr2::req_retry(max_tries = 3,
             is_transient = ~ httr2::resp_status(.x) %in% c(429L, 503L, 504L)) |>
           httr2::req_perform()
         data <- httr2::resp_body_json(resp)
-        rxcui <- data[[if (endpoint == "ndcproperties") "ndcItem" else "ndcStatus"]][["rxcui"]]
-        if (!is.null(rxcui) && nchar(rxcui) > 0L) rxcui else NA_character_
-      }, error = function(e) NA_character_)
+        if (ep$name == "ndcstatus") {
+          s     <- data$ndcStatus
+          rxcui <- if (!is.null(s$rxcui) && nchar(s$rxcui) > 0L) s$rxcui else NA_character_
+          list(rxcui        = rxcui,
+               ndc_status   = if (!is.null(s$status))      s$status      else NA_character_,
+               concept_name = if (!is.null(s$conceptName)) s$conceptName else NA_character_,
+               endpoint     = ep$name,
+               failed       = FALSE)
+        } else {
+          props <- data$ndcPropertyList$ndcProperty
+          rxcui <- if (length(props) > 0L && !is.null(props[[1L]]$rxcui) &&
+                       nchar(props[[1L]]$rxcui) > 0L) props[[1L]]$rxcui else NA_character_
+          list(rxcui        = rxcui,
+               ndc_status   = NA_character_,
+               concept_name = NA_character_,
+               endpoint     = ep$name,
+               failed       = FALSE)
+        }
+      }, error = function(e) {
+        list(rxcui = NA_character_, ndc_status = NA_character_,
+             concept_name = NA_character_, endpoint = ep$name, failed = TRUE)
+      })
       Sys.sleep(sleep_sec)
-      if (!is.na(result)) return(list(rxcui = result, endpoint = endpoint))
+      if (!res$failed && !is.na(res$rxcui)) return(res)
+      if (!res$failed) {
+        # Successful request but no RxCUI — still return with status info so
+        # we don't re-query a known miss on the next endpoint.
+        if (!is.na(res$ndc_status)) return(res)
+      }
     }
-    list(rxcui = NA_character_, endpoint = NA_character_)
+    # Both endpoints failed or returned nothing.
+    list(rxcui = NA_character_, ndc_status = "UNKNOWN", concept_name = NA_character_,
+         endpoint = NA_character_, failed = FALSE)
   }
 
-  # Batch loop with progress every 100 NDCs.
-  requery_ndcs <- ndc_unmatched$NDC
-  requery_results <- vector("list", length(requery_ndcs))
+  # --- Batch loop -------------------------------------------------------
+  fresh_results <- vector("list", length(requery_ndcs))
+  today_str     <- as.character(Sys.Date())
 
   for (i in seq_along(requery_ndcs)) {
-    if (i %% 100L == 0L) message(glue("  [D-09] Progress: {i}/{length(requery_ndcs)} NDCs queried ..."))
+    if (i %% 100L == 0L)
+      message(glue("  [D-09] Progress: {i}/{length(requery_ndcs)} NDCs queried ..."))
     res <- lookup_ndc_alternate(requery_ndcs[[i]])
-    requery_results[[i]] <- tibble(
+    fresh_results[[i]] <- tibble(
       NDC             = requery_ndcs[[i]],
       rxcui_primary   = NA_character_,
       rxcui_alternate = res$rxcui,
-      endpoint_used   = res$endpoint
+      ndc_status      = res$ndc_status,
+      concept_name    = res$concept_name,
+      endpoint_used   = res$endpoint,
+      request_failed  = res$failed,
+      chemo_match     = !is.na(res$rxcui) & res$rxcui %in% CHEMO_RXNORM,
+      query_date      = today_str
     )
   }
 
-  df_ndc_requery <- bind_rows(requery_results) %>%
-    mutate(chemo_match = !is.na(rxcui_alternate) & rxcui_alternate %in% CHEMO_RXNORM)
+  df_fresh <- bind_rows(fresh_results)
+
+  # --- Failure guard ----------------------------------------------------
+  n_failed <- sum(df_fresh$request_failed, na.rm = TRUE)
+  pct_fail <- if (nrow(df_fresh) > 0L) n_failed / nrow(df_fresh) else 0
+  if (pct_fail > 0.20) {
+    stop(glue(
+      "[D-09] ABORT: {n_failed}/{nrow(df_fresh)} RxNav requests failed ({round(pct_fail*100)}%). ",
+      "Network problem — re-run when HiPerGator has connectivity."
+    ))
+  }
+
+  # --- Merge + cache save -----------------------------------------------
+  df_ndc_requery <- bind_rows(df_cache, df_fresh) %>%
+    filter(NDC %in% ndc_unmatched$NDC)
+
+  updated_cache <- bind_rows(
+    df_cache %>% filter(!NDC %in% df_fresh$NDC),
+    df_fresh
+  )
+  saveRDS(updated_cache, NDC_REQUERY_CACHE_RDS)
+  message(glue("  [D-09] Cache updated: {nrow(updated_cache)} total rows -> {NDC_REQUERY_CACHE_RDS}"))
 
   n_recovered   <- sum(!is.na(df_ndc_requery$rxcui_alternate), na.rm = TRUE)
   n_chemo_match <- sum(df_ndc_requery$chemo_match, na.rm = TRUE)
-  message(glue("  [D-09] Complete: {n_recovered} NDCs recovered alternate RxCUI; {n_chemo_match} match chemo_rxnorm"))
+  message(glue("  [D-09] Complete: {n_recovered} NDCs recovered; {n_chemo_match} match chemo_rxnorm"))
 
   write.csv(df_ndc_requery, NDC_REQUERY_CSV, row.names = FALSE, na = "")
   message(glue("  [D-09] Results written to {NDC_REQUERY_CSV}\n"))
@@ -893,7 +985,7 @@ wb <- add_styled_sheet(
   wb,
   sheet_name    = "RxNav Requery Results",
   title         = "RxNav Alternate-Endpoint Re-Query Results (D-09, HiPerGator only)",
-  subtitle_text = glue("Generated: {run_date} | ndcproperties + ndcstatus endpoints; empty on Windows (IS_LOCAL=TRUE)"),
+  subtitle_text = glue("Generated: {run_date} | ndcstatus?ndc= (primary) + ndcproperties?id=; ndc_status/concept_name/request_failed; empty on Windows"),
   data          = df_ndc_requery
 )
 
