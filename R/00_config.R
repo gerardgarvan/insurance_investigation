@@ -1236,6 +1236,11 @@ CANCER_SITE_MAP <- c(
   "C42" = "Hematopoietic System (ICD-O-3)"
 )
 
+# HL category vector — both NLPHL breakout labels produced by classify_codes().
+# Use %in% HL_CANCER_CATEGORIES for is_hodgkin and HL tie-break comparisons.
+# Never compare against the bare string "Hodgkin Lymphoma" (pre-breakout label).
+HL_CANCER_CATEGORIES <- c("Hodgkin Lymphoma (non-NLPHL)", "NLPHL")
+
 # ==============================================================================
 # SECTION 5b2: ICD-9 CANCER SITE CLASSIFICATION MAP ----
 # ==============================================================================

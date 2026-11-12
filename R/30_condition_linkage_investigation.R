@@ -144,7 +144,7 @@ condition_encounter_linked <- unlinked_encounters %>%
   inner_join(condition_with_encounter, by = "ENCOUNTERID", relationship = "many-to-many") %>%
   mutate(cancer_category = classify_codes(CONDITION)) %>%
   group_by(patient_id, treatment_type, episode_number) %>%
-  arrange(desc(cancer_category == "Hodgkin Lymphoma"), .by_group = TRUE) %>%
+  arrange(desc(cancer_category %in% HL_CANCER_CATEGORIES), .by_group = TRUE) %>%
   slice(1) %>%
   ungroup() %>%
   mutate(condition_link_method = "condition_encounter") %>%  # D-03 label
@@ -176,7 +176,7 @@ condition_temporal_linked <- still_unlinked %>%
   filter(days_before <= 30) %>%
   mutate(cancer_category = classify_codes(CONDITION)) %>%
   group_by(patient_id, treatment_type, episode_number) %>%
-  arrange(days_before, desc(cancer_category == "Hodgkin Lymphoma"), .by_group = TRUE) %>%
+  arrange(days_before, desc(cancer_category %in% HL_CANCER_CATEGORIES), .by_group = TRUE) %>%
   slice(1) %>%
   ungroup() %>%
   mutate(condition_link_method = "condition_date") %>%  # D-03 label

@@ -206,7 +206,7 @@ encounter_linked <- episode_encounters %>%
     cancer_category = classify_codes(DX)
   ) %>%
   group_by(patient_id, treatment_type, episode_number) %>%
-  arrange(desc(cancer_category == "Hodgkin Lymphoma"), .by_group = TRUE) %>%
+  arrange(desc(cancer_category %in% HL_CANCER_CATEGORIES), .by_group = TRUE) %>%
   slice(1) %>%
   ungroup() %>%
   mutate(cancer_link_method = "encounter_id") %>%
@@ -238,7 +238,7 @@ temporal_linked <- unlinked_episodes %>%
     cancer_category = classify_codes(DX)
   ) %>%
   group_by(patient_id, treatment_type, episode_number) %>%
-  arrange(days_before, desc(cancer_category == "Hodgkin Lymphoma"), .by_group = TRUE) %>%
+  arrange(days_before, desc(cancer_category %in% HL_CANCER_CATEGORIES), .by_group = TRUE) %>%
   slice(1) %>%
   ungroup() %>%
   mutate(cancer_link_method = "closest_date") %>%
@@ -261,11 +261,15 @@ episodes <- episodes %>%
   left_join(cancer_linkage, by = c("patient_id", "treatment_type", "episode_number")) %>%
   mutate(
     cancer_link_method = if_else(is.na(cancer_link_method), "none", cancer_link_method),
-    is_hodgkin = (!is.na(cancer_category) & cancer_category == "Hodgkin Lymphoma")
+    is_hodgkin = (!is.na(cancer_category) & cancer_category %in% HL_CANCER_CATEGORIES)
   )
 
 n_none <- sum(episodes$cancer_link_method == "none")
 message(glue("  Linkage summary: {n_encounter_linked} encounter_id, {n_temporal_linked} closest_date, {n_none} none"))
+message(glue("  Hodgkin episodes: {sum(episodes$is_hodgkin)}"))
+
+if (sum(episodes$is_hodgkin) == 0)
+  stop("[R/28] is_hodgkin is all FALSE — HL_CANCER_CATEGORIES does not match classify_codes() output; check CANCER_SITE_MAP and HL_CANCER_CATEGORIES in 00_config.R")
 
 # Step 4f: Second cancer confirmation (D-07, LINK-04) - for audit only
 all_dx_by_patient <- dx_data %>%
@@ -273,7 +277,7 @@ all_dx_by_patient <- dx_data %>%
     prefix = str_sub(DX, 1, 3),
     cancer_category = classify_codes(DX)
   ) %>%
-  filter(!is.na(cancer_category) & cancer_category != "Hodgkin Lymphoma") %>%
+  filter(!is.na(cancer_category) & !(cancer_category %in% HL_CANCER_CATEGORIES)) %>%
   group_by(ID, cancer_category) %>%
   summarise(
     n_diagnoses = n(),
