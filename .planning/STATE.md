@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: active
-stopped_at: "Phase 197 tool bugs fixed (2026-11-12); awaiting HiPerGator verification steps 5-7 + DuckDB ENCOUNTER query for UCI"
+stopped_at: "Phase 197 COMPLETE 2026-11-12 (all verification PASS); Phase 198 is next"
 last_updated: "2026-11-12T00:00:00.000Z"
-last_activity: 2026-11-06
+last_activity: 2026-11-12
 progress:
   total_phases: 187
   completed_phases: 162
@@ -162,31 +162,17 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Phase 197 tool bugs fixed 2026-11-12; awaiting HiPerGator steps 5–7 + DuckDB query for UCI FACILITY_LOCATION confirmation (D-197-10)
+Phase 197 — **COMPLETE 2026-11-12** (commit 7d76eed). All HiPerGator verification steps PASS:
 
-**Phase 197 tool fixes 2026-11-12:**
+- Step 5 `check_cohort_fingerprint.R`: PASS — 8,770 rows, 8,770 IDs, md5 4cee245c…
+- Step 6 `mice_convergence_diagnostic.R`: PASS — 11 imputed vars extracted; all continuous/binary vars converge within maxit=20; D-197-12 resolved: keep maxit=20, no rerun.
+- Step 7 `dep_map.R` v6: PASS — gate 15/15; resolve_input() 100% resolved (n=14); zero critical run-order or duplicate-writer findings.
 
-- check_cohort_fingerprint.R: added `if (!exists("CONFIG")) source("R/00_config.R")` bootstrap.
-- mice_convergence_diagnostic.R: fixed chainMean 3D-array extraction; replaced collapse logic with per-source missingness analysis; D-197-NN resolved as D-197-09 (COLLAPSE_RARE_SOURCE=FALSE correct; UCI is a data decision, not a collapse fix).
-- 197-UCI-DISTANCE.md: root cause confirmed as (a) — UCI ENCOUNTER has no FACILITY_LOCATION data; 259 patients affected (211 UCI + 48 NA source); proposed source_facility_zip_override.csv pending D-197-10; ORL 25.4% = patient-address gap (not facility gap).
-- New decisions: D-197-09 (resolved), D-197-10 (open — Amy/Erin UCI ZIP), D-197-11 (open — override CSV implementation).
+**Open items carried forward (not blocking closure):**
+- D-197-10: UCI facility ZIP — 29,158 UCI encounters blank FACILITY_LOCATION; 211 patients; awaiting Amy/Erin.
+- D-197-11: override CSV implementation in R/183 — gates on D-197-10.
+- 48 patients NA main_source: data quality gap, unconfirmed cause.
+- chemo_rxnorm SME scope (oral MTX 2.5 mg, gemcitabine, carboplatin, etoposide, bendamustine): awaiting SME.
+- Phase C backlog: unchanged.
 
-**Phase 197 all 9 plans complete (code-side) 2026-11-11:**
-
-- 197-01 (8c0803d): R/53 before R/29; R/26 → stage1; is_first_line guards in R/110, R/100, R/142
-- 197-02 (413bb7c): Post-write validation block in R/29 (dup-key, type, required columns)
-- 197-03 (52b3d48): resolve_input() helper; 14 env vars applied across 7 scripts
-- 197-04 (5293a04): versioned_output_path() helper; 17 scripts updated; RUN_DATE env var
-- 197-05 (52a7190): R/131 write_csv calls removed; R/105 sole writer; idempotency guard
-- 197-06 (27b7bb8): Timestamped .bak + rollback in R/98; trim_config_bak() util; R/21/22/50 updated
-- 197-07 (c4a2620): Fingerprint tool path fix; R/02 sort by ID before write_csv
-- 197-08 (6b5c754): COLLAPSE_RARE_SOURCE flag in R/183 (OFF); mice_convergence_diagnostic.R tool
-- 197-09: 197-SUMMARY.md, 197-RERUN-VERIFICATION.md, dep_map command documented
-
-**Next gate (Phase 197):** Run steps 5–7 from `197-RERUN-VERIFICATION.md` on HiPerGator and paste back results. Phase 197 is NOT marked complete until all three PASS:
-
-- Step 5: `check_cohort_fingerprint.R` — PASS vs pre-Phase-A baseline (OPEN)
-- Step 6: `mice_convergence_diagnostic.R` — produces 197-MICE-CONVERGENCE.md; content drives D-197-NN COLLAPSE_RARE_SOURCE decision (OPEN)
-- Step 7: `dep_map.R` — new risk report shows zero critical run-order and duplicate-writer findings (OPEN)
-
-**Phase 198 scaffold:** `198-CONTEXT.md` created; gates on SME confirmation of `chemo_rxnorm` scope (oral methotrexate 2.5 mg, gemcitabine, carboplatin, etoposide, bendamustine).
+**Phase 198 scaffold:** `198-CONTEXT.md` created; gates on chemo_rxnorm SME confirmation.

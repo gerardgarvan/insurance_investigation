@@ -936,7 +936,7 @@ Plans:
 | 193. Produce Updated Manual | v3.13 | 4/5 | In Progress — pending Word review | — |
 | 194. Reference Manual Regeneration | v3.13 | 4/4 | Complete | 2026-11-06 |
 | 196. Phase A: Delivered-Output Fixes + Rerun | cross-milestone | 1/1 | Complete | 2026-11-11 |
-| 197. Phase B: Pipeline Hardening | cross-milestone | 9/9 | Code-complete — awaiting HiPerGator verification (steps 5–7) |  |
+| 197. Phase B: Pipeline Hardening | cross-milestone | 9/9 | Complete | 2026-11-12 |
 | 198. NDC Crosswalk: Obsolete-NDC Fallback | cross-milestone | 0/1 | Planned |  |
 
 ### Phase 197: Phase B: Pipeline Hardening
@@ -954,11 +954,11 @@ Plans:
 - [x] 197-07-PLAN.md — Small fixes: check_cohort_fingerprint path; R/02 sort by ID (Wave 1)
 - [x] 197-08-PLAN.md — R/183 MICE diagnostic: COLLAPSE_RARE_SOURCE flag (OFF); convergence diagnostic tool; MICE-CONVERGENCE.md (Wave 2)
 - [x] 197-09-PLAN.md — dep_map rerun: document HiPerGator command; write 197-SUMMARY.md and 197-RERUN-VERIFICATION.md (Wave 3)
-- **Open (HiPerGator):** Steps 5–7 from 197-RERUN-VERIFICATION.md not yet run (check_cohort_fingerprint.R, mice_convergence_diagnostic.R, dep_map.R)
+- **HiPerGator verification PASS 2026-11-12:** fingerprint PASS (8770 rows/IDs, md5 4cee245c…); mice convergence PASS (maxit=20 retained — D-197-12); dep_map v6 gate 15/15 PASS.
 
 ### Phase 198: NDC Crosswalk: Obsolete-NDC Fallback
 **Goal**: Apply `ndcstatus.json?ndc=` second pass for OBSOLETE NDCs in R/108, reusing the R/109 D-09 cache; propagate any new chemo matches through the downstream chain; get SME confirmation on chemo_rxnorm scope.
-**Depends on**: Phase 197 (HiPerGator verification complete)
+**Depends on**: Phase 197 (complete)
 **Requirements**: 198-CONTEXT.md
 **Plans**: 1 plan (TBD)
 Plans:

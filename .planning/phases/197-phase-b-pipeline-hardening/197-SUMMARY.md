@@ -1,10 +1,11 @@
 ---
 phase: 197
 name: phase-b-pipeline-hardening
-status: code_complete_awaiting_verification
+status: complete
 completed_plans: 9
 started: 2026-11-11
 code_complete: 2026-11-11
+completed: 2026-11-12
 milestone: cross-milestone
 tags: [hardening, run-order, pinning, versioning, config-safety, mice, dep-map]
 
@@ -53,7 +54,8 @@ decisions:
   - "D-197-05: R/105 sole writer of rxnorm_ingredient_cache.csv; R/131 reads cache in-memory only"
   - "D-197-06-a: trim_config_bak() matches timestamped pattern only; plain .bak from pre-197 runs must be manually cleaned"
   - "D-197-06-b: R/21, R/22, R/50 backup_path switched to timestamped form for trim_config_bak() compatibility"
-  - "D-197-NN (pending): COLLAPSE_RARE_SOURCE defaults OFF; awaiting Gerard review of mice_convergence_diagnostic output"
+  - "D-197-09 (resolved): COLLAPSE_RARE_SOURCE=FALSE correct; UCI distance NA is a data gap, not a rare-level problem"
+  - "D-197-12 (resolved 2026-11-12): maxit=20 retained — convergence diagnostic confirms R-hat < 1.1 for all continuous/binary variables within maxit; no rerun required"
 
 metrics:
   duration_minutes: ~175 (9 plans, 2026-11-11)
@@ -354,24 +356,31 @@ R/00_config.R.
 
 build_hrsa_crosswalk.R uses `here::here()` but no CONFIG — standalone. ✓
 
-## Known Stubs
+## HiPerGator Verification Results (2026-11-12, commit 7d76eed)
 
-- `.planning/phases/197-phase-b-pipeline-hardening/197-MICE-CONVERGENCE.md` is a
-  placeholder; real content will be written by `mice_convergence_diagnostic.R` on
-  HiPerGator after the array-extraction fix.
-- `dep_map` delta section is pending Gerard's HiPerGator run.
+| Step | Tool | Result |
+|------|------|--------|
+| 5 | `check_cohort_fingerprint.R` | PASS — 8,770 rows, 8,770 IDs, md5 4cee245c… |
+| 6 | `mice_convergence_diagnostic.R` | PASS — 11 imputed vars extracted (4 non-imputed skipped); all continuous/binary vars converge within maxit=20; COLLAPSE_RARE_SOURCE=FALSE confirmed |
+| 7 | `dep_map.R` | PASS — gate 15/15; resolve_input() 100% resolved (n=14); outputs `*_20261112.*`; zero critical run-order or duplicate-writer findings |
 
-## Open Verification Steps (HiPerGator — not yet run)
+**D-197-12 (resolved):** maxit=20 retained. converge_at by variable:
 
-Steps 5–7 from `197-RERUN-VERIFICATION.md` are outstanding. Phase 197 is not
-complete until all three PASS:
+- d01: adi=11, dist=6, log_dist=8, main_source=11\*, payer=8\*, sex=9, single_source_care_post=7
+- d02: adi=8, dist=9, far=9, main_source=9\*, payer=9\*, sex=6, single_source_care_post=10
 
-| Step | Tool | Expected outcome |
-|------|------|-----------------|
-| 5 | `check_cohort_fingerprint.R` | PASS vs pre-Phase-A baseline |
-| 6 | `mice_convergence_diagnostic.R` | Produces 197-MICE-CONVERGENCE.md; chainMean fix allows convergence table to populate; confirms COLLAPSE_RARE_SOURCE=FALSE |
-| 7 | `dep_map.R` | New risk report shows zero critical run-order and duplicate-writer findings |
-| — | DuckDB ENCOUNTER query (197-UCI-DISTANCE.md) | Confirm UCI has blank FACILITY_LOCATION; paste result back |
+(\* informational — categorical vars excluded from maxit recommendation)
+
+**Small tool tweak (2026-11-12):** `mice_convergence_diagnostic.R` — added `final_rhat` column (R-hat at last iteration) next to `max_rhat`; labeled `max_rhat` as "max over all iterations (early iterations expected high)" in console and Markdown table.
+
+## Open Items Carried Forward (not blocking Phase 197 closure)
+
+- **D-197-10 (open):** UCI facility ZIP — all 29,158 UCI encounters have blank FACILITY_LOCATION; 211 patients affected; awaiting Amy/Erin confirmation of institutional ZIP5 for `source_facility_zip_override.csv`.
+- **D-197-11 (open):** Override CSV implementation in R/183 — gates on D-197-10 resolution.
+- **48 patients NA main_source:** cause unconfirmed (ENCOUNTER has no NA SOURCE rows at cohort level); data quality gap, not a pipeline bug.
+- **chemo_rxnorm SME scope (open):** oral methotrexate 2.5 mg, gemcitabine, carboplatin, etoposide, bendamustine — awaiting Amy/Erin confirmation.
+- **Phase 198 (planned):** R/108 obsolete-NDC fallback (gates on chemo_rxnorm scope SME confirmation).
+- **Phase C backlog (unchanged):** R/56 scope guard, hard-coded absolute paths, consolidated `sup()`, em-dash cleanup, R/02 enrollment-completeness % bug, LNK payer investigation, R/48 Comparison TOTAL row.
 
 ## Deviations from Plan (Phase-Level)
 

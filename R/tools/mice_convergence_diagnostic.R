@@ -166,13 +166,15 @@ if (nrow(rhat_df) == 0) {
           "chainMean may be empty or all variables are non-imputed. Skipping convergence table.")
   converge_iter <- data.frame(mids_model = character(), variable = character(),
                               method = character(), is_categorical = logical(),
-                              max_rhat = numeric(), converge_at = integer(),
+                              max_rhat = numeric(), final_rhat = numeric(),
+                              converge_at = integer(),
                               stringsAsFactors = FALSE)
 } else {
   converge_iter <- rhat_df |>
     group_by(mids_model, variable, method, is_categorical) |>
     summarise(
       max_rhat   = max(rhat, na.rm = TRUE),
+      final_rhat = rhat[which.max(iteration)],
       converge_at = {
         below <- which(rhat < 1.1)
         if (length(below) == 0) NA_integer_
@@ -184,8 +186,8 @@ if (nrow(rhat_df) == 0) {
       },
       .groups = "drop"
     )
-  message("[diag] Convergence table (all variables):")
-  print(as.data.frame(converge_iter[, c("mids_model", "variable", "method", "max_rhat", "converge_at")]),
+  message("[diag] Convergence table (max_rhat = max over all iterations; early iterations expected high):")
+  print(as.data.frame(converge_iter[, c("mids_model", "variable", "method", "max_rhat", "final_rhat", "converge_at")]),
         row.names = FALSE)
 }
 
@@ -224,16 +226,17 @@ src_md <- paste0(
 
 if (nrow(converge_iter) > 0) {
   conv_md <- paste0(
-    "| Model | Variable | Method | Use for maxit? | First iter R-hat < 1.1 | Max R-hat |\n",
-    "|---|---|---|---|---|---|\n",
-    paste(sprintf("| %s | %s | %s | %s | %s | %.3f |",
+    "| Model | Variable | Method | Use for maxit? | First iter R-hat < 1.1 | Max R-hat (all iters) | Final-iter R-hat |\n",
+    "|---|---|---|---|---|---|---|\n",
+    paste(sprintf("| %s | %s | %s | %s | %s | %.3f | %.3f |",
                   converge_iter$mids_model,
                   converge_iter$variable,
                   converge_iter$method,
                   ifelse(converge_iter$is_categorical, "No (categorical)", "Yes"),
                   ifelse(is.na(converge_iter$converge_at), "not converged",
                          as.character(converge_iter$converge_at)),
-                  converge_iter$max_rhat),
+                  converge_iter$max_rhat,
+                  converge_iter$final_rhat),
           collapse = "\n")
   )
 } else {
