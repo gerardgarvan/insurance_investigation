@@ -27,19 +27,33 @@ message("[fingerprint] Comparing against pre-phaseA baseline: ", baseline_path)
 fp  <- readRDS(FINGERPRINT_RDS)   # list: n_rows, n_id, sorted_id_md5, col_names
 coh <- readRDS(COHORT_RDS)
 
+safe_eq <- function(computed, stored) {
+  if (is.null(stored)) return(NA)   # field absent from fingerprint -> MISSING
+  v <- (computed == stored)
+  if (length(v) != 1L || is.na(v)) return(FALSE)
+  v
+}
+
 checks <- list(
-  n_rows        = nrow(coh) == fp$n_rows,
-  n_unique_id   = dplyr::n_distinct(coh$ID) == fp$n_id,
-  sorted_id_md5 = digest::digest(sort(coh$ID), algo = "md5") == fp$sorted_id_md5,
-  columns       = identical(sort(names(coh)), sort(fp$col_names))
+  n_rows        = safe_eq(nrow(coh),                                      fp$n_rows),
+  n_unique_id   = safe_eq(dplyr::n_distinct(coh$ID),                      fp$n_id),
+  sorted_id_md5 = safe_eq(digest::digest(sort(coh$ID), algo = "md5"),     fp$sorted_id_md5),
+  columns       = if (is.null(fp$col_names)) NA
+                  else isTRUE(identical(sort(names(coh)), sort(fp$col_names)))
 )
 
-pass   <- all(unlist(checks))
+pass   <- all(vapply(checks, isTRUE, logical(1)))
 status <- if (pass) "PASS" else "FAIL"
+
+label_check <- function(v) {
+  if (is.na(v))    "MISSING (field not in fingerprint)"
+  else if (isTRUE(v)) "OK"
+  else "MISMATCH"
+}
 
 message("cohort_final fingerprint check: ", status)
 for (nm in names(checks)) {
-  message("  ", nm, ": ", if (checks[[nm]]) "OK" else "MISMATCH")
+  message("  ", nm, ": ", label_check(checks[[nm]]))
 }
 
 if (!pass) {

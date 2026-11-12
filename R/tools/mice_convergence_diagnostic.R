@@ -74,52 +74,76 @@ message("[diag] main_source missingness for dist_to_source_facility_mi:")
 print(as.data.frame(src_tbl), row.names = FALSE)
 
 # --- 2. R-hat convergence by iteration -------------------------------------
-mids <- readRDS(MICE_MIDS_PATH)
-# chainMean structure differs by mice version:
-#   older mice: list[variable][m x maxit matrix]
-#   mice >= 3:  3D array [n_vars x m x maxit] with dimnames
-cm <- mids$chainMean
-if (is.array(cm) && length(dim(cm)) == 3) {
-  vars_imp  <- dimnames(cm)[[1]]
-  get_chain_mat <- function(v) {
-    # extract [m x maxit] matrix for variable v
-    matrix(cm[v, , ], nrow = dim(cm)[2], ncol = dim(cm)[3])
-  }
+mids_raw <- readRDS(MICE_MIDS_PATH)
+# mids RDS may be a single mids object OR a named list of mids objects (d01/d02/...).
+if (inherits(mids_raw, "mids")) {
+  mids_list <- list(all = mids_raw)
+} else if (is.list(mids_raw) && all(vapply(mids_raw, inherits, logical(1), "mids"))) {
+  mids_list <- mids_raw
 } else {
-  vars_imp  <- names(cm)
-  get_chain_mat <- function(v) cm[[v]]
+  stop("[diag] MICE_MIDS_RDS does not contain a mids object or a named list of mids objects.")
+}
+message("[diag] mids objects found: ", paste(names(mids_list), collapse = ", "))
+
+rhat_all <- list()
+current_maxit <- NA_integer_
+
+for (mids_nm in names(mids_list)) {
+  mids <- mids_list[[mids_nm]]
+  # chainMean structure differs by mice version:
+  #   older mice: list[variable][m x maxit matrix]
+  #   mice >= 3:  3D array [n_vars x m x maxit] with dimnames
+  cm <- mids$chainMean
+  if (is.null(cm)) {
+    message("[diag] ", mids_nm, ": chainMean is NULL — skipping.")
+    next
+  }
+  if (is.array(cm) && length(dim(cm)) == 3) {
+    vars_imp  <- dimnames(cm)[[1]]
+    get_chain_mat <- function(v) matrix(cm[v, , ], nrow = dim(cm)[2], ncol = dim(cm)[3])
+  } else {
+    vars_imp  <- names(cm)
+    get_chain_mat <- function(v) cm[[v]]
+  }
+  if (is.na(current_maxit) && length(vars_imp) > 0) {
+    m0 <- get_chain_mat(vars_imp[1])
+    if (!is.null(m0)) current_maxit <- ncol(m0)
+  }
+
+  rhat_rows <- lapply(vars_imp, function(v) {
+    mat <- get_chain_mat(v)   # [m x maxit]
+    if (is.null(mat) || !is.matrix(mat) || ncol(mat) < 2) return(NULL)
+    # skip variables with all-NA chainMean (not imputed by mice)
+    if (all(is.na(mat))) return(NULL)
+    rhats <- sapply(seq_len(ncol(mat)), function(iter) {
+      chains_iter <- mat[, 1:iter, drop = FALSE]
+      if (iter < 2 || nrow(chains_iter) < 2) return(NA_real_)
+      chain_means <- apply(chains_iter, 1, mean)
+      chain_vars  <- apply(chains_iter, 1, var)
+      W_bar <- mean(chain_vars, na.rm = TRUE)
+      B_comp <- var(chain_means, na.rm = TRUE) * nrow(mat)
+      var_hat <- ((iter - 1) / iter) * W_bar + (1 / iter) * B_comp
+      if (is.na(W_bar) || W_bar <= 0) return(NA_real_)
+      sqrt(var_hat / W_bar)
+    })
+    data.frame(mids_model = mids_nm, variable = v,
+               iteration = seq_along(rhats), rhat = rhats,
+               stringsAsFactors = FALSE)
+  })
+  rhat_all[[mids_nm]] <- bind_rows(Filter(Negate(is.null), rhat_rows))
 }
 
-rhat_rows <- lapply(vars_imp, function(v) {
-  mat <- get_chain_mat(v)   # [m x maxit]
-  if (is.null(mat) || ncol(mat) < 2) return(NULL)
-  rhats <- sapply(seq_len(ncol(mat)), function(iter) {
-    chains_iter <- mat[, 1:iter, drop = FALSE]
-    if (iter < 2 || nrow(chains_iter) < 2) return(NA_real_)
-    chain_means <- apply(chains_iter, 1, mean)   # one per chain
-    chain_vars  <- apply(chains_iter, 1, var)    # within-chain variance
-    n_iter <- iter
-    n_chains <- nrow(mat)
-    W_bar   <- mean(chain_vars)
-    B_comp  <- var(chain_means) * n_chains       # ~ B/n (Gelman-Rubin approximation)
-    var_hat <- ((n_iter - 1) / n_iter) * W_bar + (1 / n_iter) * B_comp
-    if (W_bar <= 0) return(NA_real_)
-    sqrt(var_hat / W_bar)
-  })
-  data.frame(variable = v, iteration = seq_along(rhats), rhat = rhats,
-             stringsAsFactors = FALSE)
-})
-rhat_df <- bind_rows(Filter(Negate(is.null), rhat_rows))
+rhat_df <- bind_rows(rhat_all)
 
 if (nrow(rhat_df) == 0) {
-  message("[diag] WARNING: no R-hat data extracted from mids$chainMean. ",
-          "chainMean may be empty (m=1 or maxit<2). Skipping convergence table.")
-  converge_iter <- data.frame(variable = character(), max_rhat = numeric(),
-                              converge_at = integer(), stringsAsFactors = FALSE)
+  message("[diag] WARNING: no R-hat data extracted from any mids$chainMean. ",
+          "chainMean may be empty or all variables are non-imputed. Skipping convergence table.")
+  converge_iter <- data.frame(mids_model = character(), variable = character(),
+                              max_rhat = numeric(), converge_at = integer(),
+                              stringsAsFactors = FALSE)
 } else {
-  # First iteration where R-hat < 1.1 and stays below for all remaining
   converge_iter <- rhat_df |>
-    group_by(variable) |>
+    group_by(mids_model, variable) |>
     summarise(
       max_rhat   = max(rhat, na.rm = TRUE),
       converge_at = {
@@ -128,10 +152,7 @@ if (nrow(rhat_df) == 0) {
         else {
           last_above <- max(which(rhat >= 1.1), 0L)
           if (last_above == 0L) min(below)
-          else {
-            after <- below[below > last_above]
-            if (length(after) == 0) NA_integer_ else min(after)
-          }
+          else { after <- below[below > last_above]; if (length(after) == 0) NA_integer_ else min(after) }
         }
       },
       .groups = "drop"
@@ -140,8 +161,7 @@ if (nrow(rhat_df) == 0) {
   print(as.data.frame(converge_iter), row.names = FALSE)
 }
 
-# maxit recommendation
-current_maxit <- ncol(get_chain_mat(vars_imp[1]))
+if (is.na(current_maxit) && nrow(rhat_df) > 0) current_maxit <- max(rhat_df$iteration)
 recommended_maxit <- if (nrow(converge_iter) == 0 || all(is.na(converge_iter$converge_at))) {
   paste0("INCREASE from ", current_maxit, " — not all variables converged")
 } else {
@@ -171,8 +191,9 @@ src_md <- paste0(
 
 if (nrow(converge_iter) > 0) {
   conv_md <- paste0(
-    "| Variable | First iter R-hat < 1.1 (stable) | Max R-hat |\n|---|---|---|\n",
-    paste(sprintf("| %s | %s | %.3f |",
+    "| Model | Variable | First iter R-hat < 1.1 (stable) | Max R-hat |\n|---|---|---|---|\n",
+    paste(sprintf("| %s | %s | %s | %.3f |",
+                  converge_iter$mids_model,
                   converge_iter$variable,
                   ifelse(is.na(converge_iter$converge_at), "not converged",
                          as.character(converge_iter$converge_at)),
@@ -180,7 +201,7 @@ if (nrow(converge_iter) > 0) {
           collapse = "\n")
   )
 } else {
-  conv_md <- "_No convergence data (chainMean empty or m=1)._"
+  conv_md <- "_No convergence data (chainMean empty, all-NA, or m=1)._"
 }
 
 report <- paste0(

@@ -1042,13 +1042,15 @@ gate_project <- function(A, D) {
     c("R3 lists R/165 encounter_distance with has_pin = TRUE",
       any(grepl("encounter_distance", r3_165$pattern) & r3_165$has_pin))
   )
-  # previous (v1) R3 hits must reappear within 10 lines
-  prev <- c("R/166_survivorship_modality_rates.R:79", "R/167_anthracycline_echo.R:63", "R/168_survivorship_workbook.R:51",
-            "R/168_survivorship_workbook.R:63", "R/179_cbc_patient_year.R:153", "R/179_cbc_patient_year.R:170",
-            "R/180_cbc_missing_capture.R:184", "R/180_cbc_missing_capture.R:205", "R/182_facility_zip_recovery_report.R:151",
-            "R/183_mice_sensitivity_distance.R:388", "R/88_smoke_test_comprehensive.R:6342", "R/88_smoke_test_comprehensive.R:7444",
-            "R/88_smoke_test_comprehensive.R:7446", "R/88_smoke_test_comprehensive.R:7575", "R/88_smoke_test_comprehensive.R:7577",
-            "R/88_smoke_test_comprehensive.R:7606", "R/89_generate_reference_manual.R:293", "R/89_generate_reference_manual.R:303")
+  # R3 hits that existed in the pre-Phase-B audit state.
+  # R/167, R/168, R/179, R/180, R/183 had pins added in Phase B — they no longer appear
+  # as R3 (unpinned reads). Only scripts that remain unpinned after Phase B are listed.
+  prev <- c("R/166_survivorship_modality_rates.R:79",
+            "R/182_facility_zip_recovery_report.R:151",
+            "R/88_smoke_test_comprehensive.R:6342", "R/88_smoke_test_comprehensive.R:7444",
+            "R/88_smoke_test_comprehensive.R:7446", "R/88_smoke_test_comprehensive.R:7575",
+            "R/88_smoke_test_comprehensive.R:7577", "R/88_smoke_test_comprehensive.R:7606",
+            "R/89_generate_reference_manual.R:293", "R/89_generate_reference_manual.R:303")
   prev <- prev[sub(":.*", "", prev) %in% A$rel]
   if (length(prev)) {
     miss <- prev[!vapply(prev, function(p) { f <- sub(":.*", "", p); l <- as.integer(sub(".*:", "", p))

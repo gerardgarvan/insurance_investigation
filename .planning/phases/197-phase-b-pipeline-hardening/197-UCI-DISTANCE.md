@@ -16,16 +16,22 @@ strategy is acceptable pending data confirmation.
 
 ## Why NA main_source?
 
-`main_source` is assigned in R/183 (line 279–282) as the modal SOURCE among
-post-anchor encounters per patient:
+**Correction (2026-11-12):** A DuckDB query on the full ENCOUNTER table confirms
+`COUNT(*) WHERE SOURCE IS NULL OR TRIM(SOURCE) = '' = 0`. There are **no blank SOURCE
+rows in ENCOUNTER**, so the earlier explanation (all SOURCE = NA) was wrong.
 
-```r
-main_source = { tbl <- sort(table(SOURCE), decreasing = TRUE); names(tbl)[1] }
-```
+The 48 patients with `main_source = NA` have **zero post-anchor encounters** in `enc_post`
+(the filtered encounter set produced by R/122). Because R/183's `pat_enc` summarise is a
+`group_by(ID) |> summarise(...)` over `enc_post`, patients with no rows in `enc_post` are
+absent from `pat_enc`. At the left-join (R/183 line 413–419), these patients receive
+`post_anchor_enc_count = NA`, which is then coalesced to 0 (line 423), and
+`main_source = NA` (never matched → stays NA). This is confirmed by the R/183 comment at
+line 421–422: *"Patients with no post-anchor encounters in R/122 get count=0, not NA.
+main_source stays NA so MICE can impute it."*
 
-`table()` excludes NAs by default, so patients whose post-anchor encounters ALL have
-`SOURCE = NA` get `main_source = NA` (empty table → `names(tbl)[1]` = NA). This is a
-data-quality gap (blank SOURCE in ENCOUNTER), not a pipeline bug.
+Likely cause: these 48 patients had an anchor date but no encounters that passed R/122's
+date/status filters after the anchor. This is a data-completeness issue, not a pipeline
+bug. `main_source = NA` is handled correctly — MICE imputes it.
 
 ## Root cause for UCI: (a) no FACILITY_LOCATION data
 
