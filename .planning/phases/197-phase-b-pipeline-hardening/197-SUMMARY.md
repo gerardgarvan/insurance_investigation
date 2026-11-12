@@ -87,7 +87,9 @@ Hardened pipeline mechanics from the 2026-11-10 dependency audit: single-owner c
 
 ## Decisions Made
 
-**D-197-01 (Plan 01):** R/29 is the sole final writer of `treatment_episodes.rds`. R/26 writes `treatment_episodes_stage1.rds` as an intermediate. R/53 must run before R/29 (provides `validated_death_dates.rds`). Three downstream readers (R/142, R/110, R/100) have `stopifnot("is_first_line" %in% names())` guards.
+**D-197-01 (Plan 01):** R/29 is the sole final writer of `treatment_episodes.rds`. R/26 writes `treatment_episodes_stage1.rds` as an intermediate. R/53 must run before R/29 (provides `validated_death_dates.rds`). Three downstream readers (R/142, R/110, R/100) were noted as having `stopifnot("is_first_line" %in% names())` guards.
+
+**Errata (Phase 199 fix):** The R/142 guard was incorrect — R/142 reads `treatment_episodes_180_enriched.rds` (built by R/28, never passes through R/29), which does not carry `is_first_line`. The guard has been removed (commit to follow). R/110 and R/100 both read `treatment_episodes.rds` (the 90-day file written by R/29), so their guards are correct and unchanged.
 
 **D-197-03 (Plan 03):** `resolve_input()` is the canonical helper for dated-input resolution. R/183's bespoke `load_pin()` retained under its D-15 contract — no migration needed.
 

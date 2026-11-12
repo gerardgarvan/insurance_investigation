@@ -110,7 +110,10 @@ assert_rds_exists(DETAIL_RDS,   script_name = "R/142")
 message("=== Phase 142: 180-Day Gantt Export ===\n")
 
 episodes <- readRDS(EPISODES_RDS)
-stopifnot("is_first_line" %in% names(episodes))
+# Phase 199 fix: the Phase 197-01 guard stopifnot("is_first_line" %in% names(episodes))
+# was removed here. is_first_line is created by R/29 for the 90-day treatment_episodes.rds
+# only; treatment_episodes_180_enriched.rds is built by R/28 (p143_out_suffix) and never
+# passes through R/29, so the guard could never pass. R/142 does not use is_first_line.
 message(glue("  Loaded {format(nrow(episodes), big.mark = ',')} 180-day episode rows"))
 
 assert_df_valid(episodes, "treatment_episodes_180",
