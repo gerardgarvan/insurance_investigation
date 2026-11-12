@@ -157,17 +157,19 @@ results <- run_script("R/47_cancer_summary_refined.R", results)
 # R/26 auto-sources: R/00, R/01, R/25
 results <- run_script("R/26_treatment_episodes.R", results)
 
-# R/28 enriches treatment_episodes.rds with cancer linkage + regimen detection
+# D-197 staged chain: R/26 → stage1 → R/28 → stage2 → R/53 → R/29 → canonical
+# R/28 reads treatment_episodes_stage1.rds → writes treatment_episodes_stage2.rds
 # R/28 auto-sources: R/00, utils
 results <- run_script("R/28_episode_classification.R", results)
 
 # Phase 143: run R/28 a second time for the 180-day episodes file.
 # withr::with_options scopes the p143 options so they cannot leak on error.
-# Produces treatment_episodes_180_enriched.rds; does NOT touch treatment_episodes.rds.
+# Produces treatment_episodes_180_enriched.rds; does NOT touch stage2 or canonical.
 if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds"))) {
   withr::with_options(
     list(p143_episodes_rds = file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds"),
          p143_detail_rds   = file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail_180.rds"),
+         p143_out_rds      = file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180_enriched.rds"),
          p143_out_suffix   = "_180_enriched"),
     source("R/28_episode_classification.R", local = new.env(parent = globalenv()))
   )
@@ -175,13 +177,13 @@ if (file.exists(file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds"
   message("  [143] treatment_episodes_180.rds not found — skipping 180-day enrichment pass.")
 }
 
-# R/53 must run before R/29 (validated_death_dates.rds)
-# R/53 produces validated_death_dates.rds (needed by R/29, R/59, R/52)
+# R/53 reads treatment_episodes_stage2.rds (from R/28) → writes validated_death_dates.rds
+# R/53 must run before R/29; also needed by R/59, R/52
 # R/53 auto-sources: R/00, utils
 results <- run_script("R/53_death_date_validation.R", results)
 
-# R/29 adds first-line flags and death validation
-# R/29 reads treatment_episodes_stage1.rds (from R/26) and validated_death_dates.rds (from R/53)
+# R/29 reads treatment_episodes_stage2.rds + validated_death_dates.rds → canonical treatment_episodes.rds
+# Sole final writer of treatment_episodes.rds (D-197-01)
 # R/29 auto-sources: R/00, utils
 results <- run_script("R/29_first_line_and_death_analysis.R", results)
 

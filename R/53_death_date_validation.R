@@ -7,7 +7,7 @@
 #
 # Inputs:
 #   - DuckDB DEATH table
-#   - cache/outputs/treatment_episodes.rds
+#   - cache/outputs/treatment_episodes_stage2.rds (from R/28; D-197 staged chain)
 #   - output/confirmed_hl_cohort.rds
 #   - DuckDB ENCOUNTER, DIAGNOSIS, DEMOGRAPHIC, ENROLLMENT tables
 #
@@ -51,7 +51,7 @@ OUTPUT_CSV <- file.path(CONFIG$output_dir, "death_date_validation.csv")
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
 
 # Define input paths
-EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
+EPISODES_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage2.rds")
 COHORT_RDS <- file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")
 
 message(glue("Output files:"))

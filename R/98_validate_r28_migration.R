@@ -60,11 +60,12 @@ message("======================================================================\
 
 message("--- Section 2: Load current output ---")
 
-OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
+# D-197 staged chain: R/28 now writes treatment_episodes_stage2.rds (not canonical treatment_episodes.rds)
+OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage2.rds")
 BASELINE_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_pre98_baseline.rds")
 
 if (!file.exists(OUTPUT_RDS)) {
-  stop(glue("ERROR: Output file not found: {OUTPUT_RDS}\nRun R/28 first to generate treatment_episodes.rds"))
+  stop(glue("ERROR: Output file not found: {OUTPUT_RDS}\nRun R/28 first to generate treatment_episodes_stage2.rds"))
 }
 
 current <- readRDS(OUTPUT_RDS)

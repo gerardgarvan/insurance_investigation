@@ -72,7 +72,7 @@ source("R/01_load_pcornet.R")
 source("R/25_treatment_durations.R")
 
 # Output paths
-# Intermediate; R/29 writes the canonical treatment_episodes.rds
+# Intermediate; R/28 enriches to stage2, R/29 writes the canonical treatment_episodes.rds
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage1.rds")
 OUTPUT_DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "treatment_episodes.xlsx")

@@ -9,11 +9,11 @@
 #              Phase 112: Added episode_dx_codes and episode_dx_categories columns
 #              (all cancer diagnoses within +/-30 days of episode span).
 #
-# Inputs:      treatment_episodes.rds, treatment_episode_detail.rds, PCORnet DIAGNOSIS,
-#              code_descriptions.rds (Phase 48b), DRUG_GROUPINGS (R/00_config.R),
+# Inputs:      treatment_episodes_stage1.rds (from R/26), treatment_episode_detail.rds,
+#              PCORnet DIAGNOSIS, code_descriptions.rds (Phase 48b), DRUG_GROUPINGS (R/00_config.R),
 #              all_codes_resolved2.xlsx (Phase 91: treatment metadata)
 #
-# Outputs:     cache/outputs/treatment_episodes.rds (modified with cancer linkage + code enrichments + xlsx metadata),
+# Outputs:     cache/outputs/treatment_episodes_stage2.rds (enriched; canonical writer is R/29),
 #              output/episode_classification_audit.xlsx, output/episode_classification_audit.csv,
 #              output/unresolved_codes_for_review.xlsx (Phase 91: TBD codes for SME review)
 #
@@ -56,7 +56,7 @@
 #         triggering_codes for regimen detection (J9000=dox, J9040=bleo, J9360=vin,
 #         J9130=dac, J9042=brex, J9299=nivo). Drug_names detection takes priority.
 #   D-20: Added-agent disqualification for J-codes uses count of distinct J9xxx codes
-#   D-15: treatment_episodes.rds modified in-place (readRDS → enrich → saveRDS)
+#   D-15: Staged write — R/28 reads stage1 → writes stage2; canonical treatment_episodes.rds written only by R/29 (D-197-01)
 #   D-16: Final column order: patient_id through regimen_label (was 15 columns, now 22 per Phase 91)
 #   D-17: Multi-sheet audit xlsx following R/59 pattern with openxlsx2
 #   D-18: Flat CSV export for episode classification results
@@ -66,13 +66,13 @@
 #   D-78-08: Unmapped codes get NA per-code position in both new columns
 #
 # INPUTS:
-#   - cache/outputs/treatment_episodes.rds (from R/44a + R/60)
+#   - cache/outputs/treatment_episodes_stage1.rds (from R/26; D-197 staged chain)
 #   - cache/outputs/treatment_episode_detail.rds (from R/44a + R/60)
 #   - DuckDB DIAGNOSIS table (via get_pcornet_table)
 #   - cache/outputs/code_descriptions.rds (Phase 48b: code -> description lookup)
 #
 # OUTPUTS:
-#   - cache/outputs/treatment_episodes.rds (modified with 11 new columns: 4 Phase 61-62 + 2 Phase 78 + 5 Phase 91)
+#   - cache/outputs/treatment_episodes_stage2.rds (enriched; 11 new columns: 4 Phase 61-62 + 2 Phase 78 + 5 Phase 91; canonical is R/29)
 #   - output/episode_classification_audit.xlsx (5 sheets)
 #   - output/episode_classification_audit.csv (flat export)
 #   - output/unresolved_codes_for_review.xlsx (Phase 91: TBD codes for SME review)
@@ -98,12 +98,14 @@ source("R/utils/utils_xlsx_lookups.R")  # Phase 91: xlsx metadata lookups
 OUTPUT_XLSX <- file.path(CONFIG$output_dir, "episode_classification_audit.xlsx")
 OUTPUT_CSV <- file.path(CONFIG$output_dir, "episode_classification_audit.csv")
 
-# Phase 143: parameterisable path and suffix so this script can enrich the 180-day
-# episodes file without being duplicated. Defaults reproduce 90-day behaviour exactly.
+# Phase 143: parameterisable paths so this script can enrich the 180-day episodes
+# file without duplication. D-197 staged chain: default input is stage1, output is stage2.
 EPISODES_RDS_PATH <- getOption("p143_episodes_rds",
-                                file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds"))
+                                file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage1.rds"))
 DETAIL_RDS_PATH   <- getOption("p143_detail_rds",
                                 file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds"))
+OUT_RDS_PATH      <- getOption("p143_out_rds",
+                                file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage2.rds"))
 OUT_SUFFIX        <- getOption("p143_out_suffix", "")
 
 message("=== Phase 61: Episode Classification - Cancer Linkage and Regimen Detection ===")
@@ -112,7 +114,7 @@ message(glue("  - {EPISODES_RDS_PATH}"))
 message(glue("  - {DETAIL_RDS_PATH}"))
 message(glue("  - DuckDB DIAGNOSIS table"))
 message("\nOutputs:")
-message(glue("  - {EPISODES_RDS_PATH} (enriched with 4 columns)"))
+message(glue("  - {OUT_RDS_PATH} (enriched with 4 columns)"))
 message(glue("  - {OUTPUT_XLSX}"))
 message(glue("  - {OUTPUT_CSV}"))
 
@@ -859,27 +861,29 @@ episodes <- episodes %>%
     episode_dx_codes, episode_dx_categories
   )
 
-out_rds <- file.path(CONFIG$cache$outputs_dir,
-                     paste0("treatment_episodes", OUT_SUFFIX, ".rds"))
+out_rds <- OUT_RDS_PATH
 
-# Any suffixed pass must write somewhere other than its input — a suffix of "_180" would
-# resolve to treatment_episodes_180.rds and overwrite the unenriched Phase 142 output.
-if (nzchar(OUT_SUFFIX) &&
-    normalizePath(out_rds, mustWork = FALSE) ==
+# Guard: output must not overwrite the input (protects stage1 on suffixed 180-day passes)
+if (normalizePath(out_rds, mustWork = FALSE) ==
     normalizePath(EPISODES_RDS_PATH, mustWork = FALSE)) {
-  stop("p143_out_suffix would overwrite the input RDS: ", out_rds)
+  stop("R/28: p143_out_rds would overwrite the input RDS: ", out_rds)
 }
 
-saveRDS(episodes, out_rds)
+# Verify required columns BEFORE writing (validate-then-write; D-197)
+req_cols_28 <- c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
+                 "triggering_code_description", "drug_group",
+                 "code_type", "source_table", "treatment_line",
+                 "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",
+                 "immuno_confidence", "episode_dx_codes", "episode_dx_categories")
+missing_cols <- setdiff(req_cols_28, names(episodes))
+if (length(missing_cols) > 0)
+  stop("R/28: required columns missing before save: ", paste(missing_cols, collapse = ", "))
+
+tmp_rds <- paste0(out_rds, ".tmp")
+saveRDS(episodes, tmp_rds)
+file.rename(tmp_rds, out_rds)
 message(glue("  Saved enriched episodes to: {out_rds}"))
 message(glue("  {nrow(episodes)} episodes, {ncol(episodes)} columns"))
-
-# Verify column presence
-stopifnot(all(c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
-                "triggering_code_description", "drug_group",
-                "code_type", "source_table", "treatment_line",
-                "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",
-                "immuno_confidence", "episode_dx_codes", "episode_dx_categories") %in% names(episodes)))
 
 
 # --- SECTION 6B: TBD CODE EXPORT FOR SME REVIEW (Phase 91, D-07) ---

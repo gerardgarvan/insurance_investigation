@@ -7,7 +7,7 @@
 # Purpose:     First-line therapy flagging (60-day clean period before first treatment)
 #              and death date validation cross-referenced against treatment timeline.
 #
-# Inputs:      treatment_episodes_stage1.rds (from R/26), treatment_episode_detail.rds,
+# Inputs:      treatment_episodes_stage2.rds (from R/28; D-197 staged chain), treatment_episode_detail.rds,
 #              validated_death_dates.rds (from R/53), PCORnet DEATH table
 #
 # Outputs:     cache/outputs/treatment_episodes.rds (modified with is_first_line),
@@ -41,8 +41,8 @@ source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
 source("R/utils/utils_dates.R")
 
-# Input: intermediate from R/26; Output: canonical treatment_episodes.rds (sole final writer per D-197-01)
-INPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage1.rds")
+# Input: enriched from R/28 (stage2); Output: canonical treatment_episodes.rds (sole final writer per D-197-01)
+INPUT_RDS  <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_stage2.rds")
 OUTPUT_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes.rds")
 DETAIL_RDS <- file.path(CONFIG$cache$outputs_dir, "treatment_episode_detail.rds")
 DEATH_RDS  <- file.path(CONFIG$cache$outputs_dir, "validated_death_dates.rds")
@@ -51,7 +51,7 @@ OUTPUT_CSV <- file.path(CONFIG$output_dir, "death_analysis.csv")
 
 message("=== Phase 62: First-Line Therapy & Death Analysis ===\n")
 message("Input files:")
-message(glue("  treatment_episodes_stage1.rds: {INPUT_RDS}"))
+message(glue("  treatment_episodes_stage2.rds: {INPUT_RDS}"))
 message(glue("  treatment_episode_detail.rds: {DETAIL_RDS}"))
 message(glue("  validated_death_dates.rds: {DEATH_RDS}"))
 message("\nOutput files:")
@@ -72,7 +72,7 @@ assert_rds_exists(DEATH_RDS,  script_name = "R/29")
 
 # Load treatment episodes (stage1 from R/26)
 episodes <- readRDS(INPUT_RDS)
-message(glue("  Loaded treatment_episodes_stage1.rds: {nrow(episodes)} episodes"))
+message(glue("  Loaded treatment_episodes_stage2.rds: {nrow(episodes)} episodes"))
 
 # Load treatment episode detail (for individual chemo dates)
 episode_detail <- readRDS(DETAIL_RDS)
@@ -93,14 +93,14 @@ assert_df_valid(validated_deaths, "validated_deaths",
                 required_cols = c("ID"),
                 script_name = "R/29", allow_empty = TRUE)
 
-# Guard for missing columns from Phase 61 (regimen_label, drug_names)
-if (!"regimen_label" %in% names(episodes)) {
-  warning("regimen_label column not found in treatment_episodes.rds — Phase 61 not yet run. First-line detection will produce 0 results.")
-  episodes <- episodes %>% mutate(regimen_label = NA_character_)
-}
-if (!"drug_names" %in% names(episodes)) {
-  episodes <- episodes %>% mutate(drug_names = NA_character_)
-}
+# Assert R/28 enrichment columns are present — stop() if missing (D-197; stage2 must come from R/28)
+req_cols_from_r28 <- c("regimen_label", "drug_names", "cancer_category",
+                        "cancer_link_method", "is_hodgkin",
+                        "triggering_code_description", "drug_group")
+missing_r28 <- setdiff(req_cols_from_r28, names(episodes))
+if (length(missing_r28) > 0)
+  stop("[R/29] R/28 enrichment columns missing from input — run R/28 before R/29. Missing: ",
+       paste(missing_r28, collapse = ", "))
 
 # Open DuckDB connection
 USE_DUCKDB <- TRUE
@@ -193,36 +193,48 @@ if (nrow(first_line_ids) == 0) {
     mutate(is_first_line = if_else(is.na(is_first_line), FALSE, is_first_line))
 }
 
-# Save canonical treatment_episodes.rds (sole final writer per D-197-01)
-saveRDS(episodes, OUTPUT_RDS)
-message(glue("[R/29] treatment_episodes.rds written (canonical) — {nrow(episodes)} rows, is_first_line: {sum(episodes$is_first_line)} TRUE, {sum(!episodes$is_first_line)} FALSE"))
-
-# --- post-write validation (197-02) -----------------------------------------
+# --- pre-write validation then atomic save (D-197-02) -----------------------
+# Validate the in-memory object; write only if all guards pass.
 local({
-  eps_check <- readRDS(OUTPUT_RDS)
+  # 1. Required columns from R/26, R/28, and R/29
+  req_cols <- c("patient_id", "episode_start", "episode_stop",
+                "treatment_type", "episode_number",
+                "regimen_label", "cancer_category", "cancer_link_method",
+                "is_hodgkin", "is_first_line")
+  missing_out <- setdiff(req_cols, names(episodes))
+  if (length(missing_out) > 0)
+    stop("[R/29] required output columns missing: ", paste(missing_out, collapse = ", "))
 
-  # 1. Required columns
-  req_cols  <- c("patient_id", "episode_start", "episode_stop",
-                 "is_first_line", "treatment_type", "episode_number")
-  assert_df_valid(eps_check, "treatment_episodes", req_cols, "R/29")
-
-  # 2. No duplicate composite key rows
-  dup_keys <- eps_check |>
-    dplyr::count(patient_id, episode_start) |>
+  # 2. No duplicate on (patient_id, treatment_type, episode_start) — same-day
+  #    episodes of different treatment types are valid (D-197-03)
+  dup_keys <- episodes |>
+    dplyr::count(patient_id, treatment_type, episode_start) |>
     dplyr::filter(n > 1)
   if (nrow(dup_keys) > 0)
     stop("[R/29] treatment_episodes.rds has ", nrow(dup_keys),
-         " duplicate (patient_id, episode_start) rows")
+         " duplicate (patient_id, treatment_type, episode_start) rows")
 
   # 3. is_first_line is logical
-  if (!is.logical(eps_check$is_first_line))
+  if (!is.logical(episodes$is_first_line))
     stop("[R/29] is_first_line is not logical — found: ",
-         class(eps_check$is_first_line))
+         class(episodes$is_first_line))
 
-  message("[R/29] treatment_episodes.rds validation: PASS — ",
-          nrow(eps_check), " rows, ",
-          dplyr::n_distinct(eps_check$patient_id), " patients")
-})
+  # 4. At least one first-line patient (guard against stage1 regression)
+  n_fl <- sum(episodes$is_first_line, na.rm = TRUE)
+  if (n_fl == 0)
+    stop("[R/29] is_first_line is all FALSE — regimen_label enrichment from R/28 may be missing")
+
+  message("[R/29] Pre-write validation: PASS — ",
+          nrow(episodes), " rows, ",
+          dplyr::n_distinct(episodes$patient_id), " patients, ",
+          n_fl, " first-line")
+}, envir = environment())
+
+# Atomic write: tmp → rename so a failed save never truncates the target
+tmp_rds <- paste0(OUTPUT_RDS, ".tmp")
+saveRDS(episodes, tmp_rds)
+file.rename(tmp_rds, OUTPUT_RDS)
+message(glue("[R/29] treatment_episodes.rds written (canonical) — {nrow(episodes)} rows, is_first_line: {sum(episodes$is_first_line)} TRUE, {sum(!episodes$is_first_line)} FALSE"))
 # ---------------------------------------------------------------------------
 
 # Step 3f: Build first-line summary for xlsx (Claude's discretion — add as Sheet 3)

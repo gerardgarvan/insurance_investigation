@@ -45,10 +45,10 @@ Treatment inventory, duration, episodes, drug resolution, and first-line therapy
 | 23_combine_reports.R | Merge Phase 39 (CPT/HCPCS) and Phase 40 (NDC/RXNORM) unmatched code reports into consolidated xlsx | 00_config |
 | 24_treatment_codes_resolved.R | Create per-treatment-type resolved xlsx files (Radiation, SCT, Immunotherapy, Supportive Care) | 00_config |
 | 25_treatment_durations.R | Extract treatment dates from 7 PCORnet tables, calculate per-patient duration metrics (span, date count, episodes) | 00_config, 01_load_pcornet |
-| 26_treatment_episodes.R | Per-episode start/stop dates with episode length, historical date flagging, triggering codes. Writes `treatment_episodes_stage1.rds` (intermediate); R/29 is the canonical writer of `treatment_episodes.rds` (D-197-01). | 00_config, 01_load_pcornet, 25_treatment_durations |
+| 26_treatment_episodes.R | Per-episode start/stop dates with episode length, historical date flagging, triggering codes. Writes `treatment_episodes_stage1.rds` (intermediate); D-197 staged chain: R/26→stage1→R/28→stage2→R/29→canonical. | 00_config, 01_load_pcornet, 25_treatment_durations |
 | 27_drug_name_resolution.R | Drug name resolution for chemotherapy via RxNorm API (chemotherapy only) | 00_config, utils/utils_duckdb |
-| 28_episode_classification.R | Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD) | 00_config, utils/utils_duckdb, utils/utils_dates |
-| 29_first_line_and_death_analysis.R | First-line therapy flagging (60-day clean period) and death date validation. Canonical writer of `treatment_episodes.rds` (D-197-01); reads `treatment_episodes_stage1.rds` from R/26 and `validated_death_dates.rds` from R/53. Must run after R/53 in R/39. | 00_config, 26_treatment_episodes (stage1), 53_death_date_validation, utils/utils_duckdb, utils/utils_dates |
+| 28_episode_classification.R | Episode-level cancer linkage (ENCOUNTERID + 30-day temporal fallback) with regimen detection (ABVD/BV+AVD/Nivo+AVD). D-197 staged chain: reads `treatment_episodes_stage1.rds` → writes `treatment_episodes_stage2.rds`. | 00_config, utils/utils_duckdb, utils/utils_dates |
+| 29_first_line_and_death_analysis.R | First-line therapy flagging (60-day clean period) and death date validation. Canonical writer of `treatment_episodes.rds` (D-197-01); reads `treatment_episodes_stage2.rds` from R/28 and `validated_death_dates.rds` from R/53. Run order: 26→28→53→29. | 00_config, 28_episode_classification (stage2), 53_death_date_validation, utils/utils_duckdb, utils/utils_dates |
 
 ## Cancer Site Analysis (40-53)
 
@@ -265,7 +265,9 @@ These scripts represent one-off investigations, superseded implementations, or e
 71_visualize_sankey -> 14_build_cohort
 25_treatment_durations -> 00_config, 01_load_pcornet
 26_treatment_episodes -> 00_config, 01_load_pcornet, 25_treatment_durations  # writes treatment_episodes_stage1.rds (intermediate)
-29_first_line_and_death_analysis -> 26_treatment_episodes (stage1), 53_death_date_validation  # canonical writer of treatment_episodes.rds
+28_episode_classification -> 26_treatment_episodes (stage1)  # reads stage1, writes treatment_episodes_stage2.rds
+53_death_date_validation -> 28_episode_classification (stage2)  # reads stage2 (D-197 staged chain)
+29_first_line_and_death_analysis -> 28_episode_classification (stage2), 53_death_date_validation  # reads stage2+validated_deaths, canonical writer of treatment_episodes.rds
 72_generate_pptx -> utils/utils_pptx, 75_encounter_analysis
 75_encounter_analysis -> 14_build_cohort
 73_generate_phase19_20_pptx -> utils/utils_pptx, 94_flm_duplicate_dates
