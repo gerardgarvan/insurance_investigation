@@ -162,7 +162,7 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Phase 197 code complete — awaiting HiPerGator verification (dep_map rerun, rerun table, mice diagnostic)
+**Stopped at:** Phase 197 code complete — awaiting HiPerGator verification steps 5–7 (check_cohort_fingerprint.R, mice_convergence_diagnostic.R, dep_map.R); Phase 198 scaffold created
 
 **Phase 197 all 9 plans complete (code-side) 2026-11-11:**
 
@@ -176,4 +176,10 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 - 197-08 (6b5c754): COLLAPSE_RARE_SOURCE flag in R/183 (OFF); mice_convergence_diagnostic.R tool
 - 197-09: 197-SUMMARY.md, 197-RERUN-VERIFICATION.md, dep_map command documented
 
-**Next gate:** Gerard runs 197-RERUN-VERIFICATION.md steps 1–12 on HiPerGator and pastes back dep_map_risk_report_v*.md. Phase 197 is NOT marked complete until dep_map shows zero critical findings and rerun steps PASS.
+**Next gate (Phase 197):** Run steps 5–7 from `197-RERUN-VERIFICATION.md` on HiPerGator and paste back results. Phase 197 is NOT marked complete until all three PASS:
+
+- Step 5: `check_cohort_fingerprint.R` — PASS vs pre-Phase-A baseline (OPEN)
+- Step 6: `mice_convergence_diagnostic.R` — produces 197-MICE-CONVERGENCE.md; content drives D-197-NN COLLAPSE_RARE_SOURCE decision (OPEN)
+- Step 7: `dep_map.R` — new risk report shows zero critical run-order and duplicate-writer findings (OPEN)
+
+**Phase 198 scaffold:** `198-CONTEXT.md` created; gates on SME confirmation of `chemo_rxnorm` scope (oral methotrexate 2.5 mg, gemcitabine, carboplatin, etoposide, bendamustine).

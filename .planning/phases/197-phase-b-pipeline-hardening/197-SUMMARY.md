@@ -217,10 +217,86 @@ Summary order:
 - LNK payer partner investigation
 - R/48 Comparison TOTAL row
 
+## Bug Fixes Included in Phase 197 (commits b82c86b–a30bb5c)
+
+### R/28 — Hodgkin label fix (commit a30bb5c / 197-11)
+
+`is_hodgkin` was always 0 due to a label mismatch; fixed to match the actual
+`histology_category` values in `cohort_final`. Second-cancer filter now excludes
+second HL diagnoses correctly.
+
+| Metric | Before | After |
+|--------|--------|-------|
+| is_hodgkin = TRUE | 0 | 10,101 |
+| second-cancer pairs | 13,026 | 5,511 |
+
+### R/29 — first-line fan-out fix (commit b2098f4 / 197-11)
+
+`is_first_line` was fanning out across all treatment types (chemo, radiation,
+immunotherapy) for each patient instead of being restricted to chemo episodes only
+before the first-line flag was set.
+
+| Metric | Before | After |
+|--------|--------|-------|
+| first_line patients | 2,174 | 1,379 |
+| chemo/ABVD classification | inflated | corrected |
+
+### R/109 Section 7 and Section 9 fixes (commits ee37a97–b633edd / 197-12, 197-13)
+
+- **Section 7 stale-global regression (197-12):** `after` object from Section 6
+  was used in Section 7 logic instead of the correct `chemo_after` frame; fixed.
+- **Section 9 D-06 key mismatch (197-13):** episodes join used `patient_id` vs `ID`
+  mismatch; fixed to use `ID` consistently.
+
+### R/109 D-09 — NDC re-query (commit b82c86b / 197-15)
+
+Second-pass RxNav query for OBSOLETE NDCs run on HiPerGator 2026-11-12:
+
+- 7,739 unmatched NDCs queried via `ndcstatus.json?ndc=`
+- 6,802 recovered (mostly OBSOLETE records)
+- 25 of those matched `chemo_rxnorm`
+- Cache written: `CONFIG$cache$outputs_dir/rxnav_ndc_requery_cache.rds`
+
+**Incremental impact vs `treatment_episode_detail.rds`** (baseline: chemo 4,498 pts, 63,745 pt-dates):
+
+| Source | Rows | Patients |
+|--------|------|----------|
+| MED_ADMIN matches | 190 | 53 |
+| DISPENSING matches | 557 | 87 |
+| PRESCRIBING | not checked (no NDC column) | — |
+
+- **629 pt-dates** added; 327 already detected by other sources → **302 NEW dates** for **62 pts**
+- **2 NEW chemo patients** (both in `cohort_final`)
+- **12 patients** with earlier first-chemo date (median 19.5 d earlier, max 685 d)
+
+**vs. July 14 delivered workbook:**
+
+- Before-After Summary and Timing Shift sections: identical
+- Regimen Impact: previously empty → ABVD 2526 → 2555 (+29; upper bound, reflects re-queried matches)
+
+### source_hints note
+
+`source_hints` column in `treatment_episode_detail.rds` records which pipeline
+source (MED_ADMIN, DISPENSING, PRESCRIBING, manual RXNORM match) contributed each
+chemo date. The D-09 re-query rows carry `source_hints = "rxnav_obsolete_requery"`.
+Downstream scripts that filter or pivot on `source_hints` should be aware of this
+new label.
+
 ## Known Stubs
 
 - `.planning/phases/197-phase-b-pipeline-hardening/197-MICE-CONVERGENCE.md` is a placeholder; real content will be written by `mice_convergence_diagnostic.R` on HiPerGator.
 - `dep_map` delta section is pending Gerard's HiPerGator run. The `risk_report_v*.md` output should be pasted back and appended here.
+
+## Open Verification Steps (HiPerGator — not yet run)
+
+Steps 5–7 from `197-RERUN-VERIFICATION.md` are outstanding. Phase 197 is not
+complete until all three PASS:
+
+| Step | Tool | Expected outcome |
+|------|------|-----------------|
+| 5 | `check_cohort_fingerprint.R` | PASS vs pre-Phase-A baseline |
+| 6 | `mice_convergence_diagnostic.R` | Produces 197-MICE-CONVERGENCE.md; content drives D-197-NN decision on COLLAPSE_RARE_SOURCE |
+| 7 | `dep_map.R` | New risk report shows zero critical run-order and duplicate-writer findings |
 
 ## Deviations from Plan (Phase-Level)
 
