@@ -347,10 +347,30 @@ build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
     if (opened_here) try(close_pcornet_con(), silent = TRUE)
   }, add = TRUE)
 
-  dx <- DBI::dbGetQuery(pcornet_con,
-    "SELECT d.ID, d.DX, d.DX_TYPE, d.DX_DATE, d.ADMIT_DATE
-     FROM DIAGNOSIS d JOIN aim_cohort c ON c.ID = d.ID"
-  )
+  # Phase 199 (performance): pre-filter DIAGNOSIS in DuckDB to rows whose code could
+  # match a config key, instead of collecting every cohort diagnosis row into R.
+  # The SQL filter is deliberately a SUPERSET of is_autoimmune_code(): it strips ALL
+  # non-alphanumeric characters (normalize_icd() strips fewer) and does not gate on
+  # DX_TYPE. summarise_autoimmune_dx() still applies the exact DX_TYPE-gated match,
+  # and its output row set comes from cohort_ids, not from dx, so flags are unchanged.
+  # Verified by the Phase 199 PRE199 regression (has_autoimmune_dx etc. are in the
+  # 23 original columns of gantt_episodes_180.csv).
+  all_keys <- unique(c(names(codes$icd10), names(codes$icd9)))
+  stopifnot("codes keys must be alphanumeric (safe to inline in SQL)" =
+              all(grepl("^[A-Za-z0-9]+$", all_keys)))
+  key_where <- if (length(all_keys) == 0L) {
+    "FALSE"
+  } else {
+    paste0("starts_with(dx_norm, '", toupper(all_keys), "')", collapse = " OR ")
+  }
+
+  dx <- DBI::dbGetQuery(pcornet_con, paste0(
+    "SELECT ID, DX, DX_TYPE, DX_DATE, ADMIT_DATE FROM (
+       SELECT d.ID, d.DX, d.DX_TYPE, d.DX_DATE, d.ADMIT_DATE,
+              regexp_replace(upper(trim(CAST(d.DX AS VARCHAR))), '[^A-Z0-9]', '', 'g') AS dx_norm
+       FROM DIAGNOSIS d JOIN aim_cohort c ON c.ID = d.ID
+     ) WHERE ", key_where
+  ))
 
   flags <- summarise_autoimmune_dx(dx, cohort_ids, sentinel, codes = codes)
 
@@ -412,7 +432,14 @@ build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
 #'
 #' @param ids                character vector of patient IDs
 #' @param drug_names_by_patient tibble with columns patient_id and drug_names
-#'   (canonicalized, semicolon-separated — from episodes_export after Section 4D cleanup)
+#'   (canonicalized, semicolon-separated — from episodes_export after Section 4D cleanup).
+#'   May hold several rows per patient; they are collapsed here.
+#'   Drug tokens are matched EXACTLY against \code{drugs} / \code{brentuximab}.
+#'   Name variants ("Methotrexate Sodium", "Rituximab (Truxima)", lowercase RxNorm
+#'   names, ...) must therefore be mapped to these labels BEFORE calling: R/142
+#'   does this with normalize_family_tokens() (case-insensitive prefix match on
+#'   ^rituximab / ^methotrexate / ^brentuximab, D-02a). Passing raw drug_names
+#'   undercounts the flags.
 #' @param codes              Named list ($icd10, $icd9) for the immune flag diagnosis codes
 #'   (default IMMUNE_FLAG_DX_CODES)
 #' @param drugs              character(2): canonical label for c(Rituximab, Methotrexate)

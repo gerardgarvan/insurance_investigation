@@ -787,8 +787,6 @@ See `.planning/milestones/v3.12-ROADMAP.md` for full phase details.
 
 </details>
 
----
-
 ## ✅ **v3.13 Analytic Manual Fill-out and Verification** (Shipped 2026-11-06)
 
 **Milestone Goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo. Every existing statement is checked against code and given a verdict. Every empty section the repo can answer is drafted from code, config, planning decisions, and team meeting notes. The result is a tracked-change new version of the manual and an evidence workbook tying each statement to its code source.
@@ -963,3 +961,9 @@ Plans:
 **Plans**: 1 plan (TBD)
 Plans:
 - [ ] 198-01-PLAN.md — R/108 obsolete-NDC re-query; cache reuse; rerun chain R/108 → R/10 → R/11 → R/25 → R/26 → R/28 → R/53 → R/29 → consumers; SME confirmation on chemo_rxnorm scope
+
+### Phase 199: Immune and Brentuximab Flags in gantt_episodes_180
+**Goal**: Add three patient-level columns to gantt_episodes_180.csv (cols 24–26): `immune_flag` (ever Rituximab or Methotrexate AND ever dx M05, M06, M31.3, M31.7, L10.0 / 714.0, 714.1, 714.2, 714.8x, 714.9, 446.4, 446.0, 694.4), `ever_brentuximab`, and `immune_flag_dx` (plain-language qualifying diagnoses when immune_flag is TRUE). Logic lives in R/142.
+**Depends on**: Phase 198
+**Plans**: TBD
+Plans:

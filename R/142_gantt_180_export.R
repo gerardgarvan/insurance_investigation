@@ -614,15 +614,43 @@ detail_export <- detail_export %>%
 
 message("  NA converted to empty; cancer_category filled; is_hodgkin derived")
 
+# --- Phase 199: drug-family matching for immune_flag / ever_brentuximab ---
+# drug_names tokens come from two sources (MEDICATION_LOOKUP title-cased names and
+# R/27 RxNorm names), and DRUG_NAME_ALIASES has no Rituximab/Methotrexate/Brentuximab
+# entries. Variants such as "Methotrexate Sodium", "Rituximab (Truxima)",
+# "Rituximab/Hyaluronidase" or lowercase "methotrexate" would be missed by an exact
+# match. Tokens are therefore matched by case-insensitive prefix and mapped to the
+# config label on a COPY passed to build_immune_flags(). The drug_names column
+# written to the CSV is NOT changed, so the PRE199 regression is unaffected.
+IMMUNE_DRUG_FAMILY_PATTERNS <- c(
+  stats::setNames("^rituximab",    IMMUNE_FLAG_DRUGS[1]),  # "Rituximab"
+  stats::setNames("^methotrexate", IMMUNE_FLAG_DRUGS[2]),  # "Methotrexate"
+  stats::setNames("^brentuximab",  BRENTUXIMAB_DRUG)       # "Brentuximab Vedotin"
+)
+stopifnot("IMMUNE_FLAG_DRUGS order must be Rituximab, Methotrexate" =
+            identical(tolower(IMMUNE_FLAG_DRUGS), c("rituximab", "methotrexate")))
+
+normalize_family_tokens <- function(dn_str) {
+  if (is.na(dn_str) || dn_str == "") return("")
+  toks <- trimws(strsplit(dn_str, ";", fixed = TRUE)[[1]])
+  for (lab in names(IMMUNE_DRUG_FAMILY_PATTERNS)) {
+    toks[grepl(IMMUNE_DRUG_FAMILY_PATTERNS[[lab]], toks, ignore.case = TRUE)] <- lab
+  }
+  toks <- toks[toks != ""]
+  if (length(toks) == 0) return("")
+  paste(sort(unique(toks)), collapse = ";")
+}
+
 # --- D-03 label discovery: confirm canonical Rituximab / Methotrexate / Brentuximab tokens ---
 # Print distinct tokens matching any of the three drug names (patient counts, suppressed).
 # If BRENTUXIMAB_DRUG is still a TODO placeholder, stop() and show tokens.
 {
   if (grepl("TODO", BRENTUXIMAB_DRUG, fixed = TRUE)) {
     all_tokens <- unlist(strsplit(episodes_export$drug_names, ";"))
+    # base grep(): use ignore.case (stringr::regex() options are ignored by base grep)
     hits <- unique(trimws(grep(
-      regex("rituximab|methotrexate|brentuximab", ignore_case = TRUE),
-      all_tokens, value = TRUE
+      "rituximab|methotrexate|brentuximab",
+      all_tokens, value = TRUE, ignore.case = TRUE
     )))
     stop(glue(
       "BRENTUXIMAB_DRUG is still a TODO. Canonical tokens found:\n",
@@ -645,9 +673,18 @@ message("  NA converted to empty; cancer_category filled; is_hodgkin derived")
   if (nrow(token_df) == 0) {
     message("  No matching tokens found.")
   } else {
+    # Show which flag family each raw token is counted under (case-insensitive prefix match)
+    token_df$family <- vapply(token_df$tokens, function(t) {
+      hit <- names(IMMUNE_DRUG_FAMILY_PATTERNS)[vapply(
+        IMMUNE_DRUG_FAMILY_PATTERNS, function(p) grepl(p, t, ignore.case = TRUE), logical(1))]
+      if (length(hit) == 0) "(not counted)" else hit[1]
+    }, character(1))
     for (i in seq_len(nrow(token_df))) {
-      message(glue("  token={token_df$tokens[i]}  n_patients={fmt_sup(token_df$n_patients[i])}"))
+      message(glue("  token={token_df$tokens[i]}  -> {token_df$family[i]}  n_patients={fmt_sup(token_df$n_patients[i])}"))
     }
+    n_variant <- sum(token_df$tokens != token_df$family & token_df$family != "(not counted)")
+    if (n_variant > 0)
+      message(glue("  NOTE (D-199-01): {n_variant} name variant(s) counted under their drug family above."))
   }
   message(glue("  IMMUNE_FLAG_DRUGS = {paste(IMMUNE_FLAG_DRUGS, collapse=', ')}"))
   message(glue("  BRENTUXIMAB_DRUG  = {BRENTUXIMAB_DRUG}"))
@@ -657,8 +694,18 @@ message("  NA converted to empty; cancer_category filled; is_hodgkin derived")
 
 message("\n--- Section 4C3: Immune flag and Brentuximab flag ---")
 
-dn <- episodes_export |> dplyr::distinct(patient_id, drug_names)
+# Family-normalized copy of drug_names (see normalize_family_tokens above); one or
+# more rows per patient. build_immune_flags() must collapse to one row per patient.
+dn <- episodes_export |>
+  dplyr::distinct(patient_id, drug_names) |>
+  dplyr::mutate(drug_names = vapply(drug_names, normalize_family_tokens, character(1), USE.NAMES = FALSE)) |>
+  dplyr::distinct()
 imm_full <- build_immune_flags(unique(episodes_export$patient_id), dn)
+stopifnot(
+  "build_immune_flags: one row per patient" = !anyDuplicated(imm_full$patient_id),
+  "build_immune_flags: covers every patient" =
+    setequal(imm_full$patient_id, unique(episodes_export$patient_id))
+)
 imm <- imm_full |> dplyr::select(patient_id, immune_flag, ever_brentuximab, immune_flag_dx)
 n0 <- nrow(episodes_export)
 episodes_export <- dplyr::left_join(episodes_export, imm, by = "patient_id") |>
@@ -847,7 +894,8 @@ message("\n=== 180-Day Gantt Export Complete ===\n")
 ep90_path <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
 if (file.exists(ep90_path)) {
   ep90 <- read.csv(ep90_path, nrows = 0)
-  message(glue("  Schema match vs gantt_episodes.csv: {identical(names(ep90), EPISODES_SCHEMA)}"))
+  # Phase 199: the 180-day file has 3 extra trailing columns; compare the shared first 23.
+  message(glue("  Schema match vs gantt_episodes.csv (first 23 cols): {identical(names(ep90), EPISODES_SCHEMA[1:23])}"))
 }
 message(glue("  Episodes:  {OUTPUT_EPISODES}"))
 message(glue("  Detail:    {OUTPUT_DETAIL}"))

@@ -2,15 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: active
-stopped_at: "Phase 197 COMPLETE 2026-11-12 (all verification PASS); Phase 198 is next"
-last_updated: "2026-11-12T00:00:00.000Z"
-last_activity: 2026-11-12
+status: Executing Phase 199
+last_updated: "2026-11-12T20:13:13.760Z"
+last_activity: 2026-11-12 -- Phase 199 execution started
 progress:
-  total_phases: 187
+  total_phases: 190
   completed_phases: 162
-  total_plans: 365
-  completed_plans: 368
+  total_plans: 370
+  completed_plans: 371
 ---
 
 # Project State
@@ -21,11 +20,12 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.13 complete — awaiting next milestone
+**Current focus:** Phase 199 — immune-brentuximab-flags-gantt-episodes-180
 
 ## Current Position
 
-Phase: 191 (verify-existing-entries) — COMPLETE 2026-10-28: all 3 plans done; 24 verdicts, 8 D-191-NN decisions (6 OPEN, 2 CONFIRMED); am_verdicts_20261027.xlsx produced; validate passes.
+Phase: 199 (immune-brentuximab-flags-gantt-episodes-180) — EXECUTING
+Plan: 1 of 2
 Phase: 192 (draft-new-content) — COMPLETE 2026-10-28: all 3 plans done; AM-DRAFT.md with sourced sections for all MISMATCH/PARTIAL leads; verification 16/16 passed.
 Phase 192.3 COMPLETE 2026-11-04: all 3 plans done; R/181 produces 9-sheet workbook with SOURCE stratification; regression check passed on HiPerGator.
 Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01–04 complete):
@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-06
+Last activity: 2026-11-12 -- Phase 199 execution started
 
 ## Phase Map (v3.13)
 
@@ -70,6 +70,7 @@ Last activity: 2026-11-06
 - Phase 192.4 inserted after Phase 192.3: Distance x CBC telehealth payer source composition (URGENT)
 - Phase 192.1 renamed from "rebase-v3-13-to-the-revised-analytic-manual" to "autoimmune-diagnosis-flags-in-gantt-episodes" (canonical name)
 - Phase 192.1 COMPLETE 2026-10-29: has_autoimmune_dx + first_autoimmune_dx_date added to gantt_episodes.csv and gantt_episodes_180.csv
+- Phase 199 added: Immune and Brentuximab Flags in gantt_episodes_180 (immune_flag, ever_brentuximab, immune_flag_dx cols 24–26 via R/142)
 
 ### v3.13 Milestone Context
 
@@ -169,6 +170,7 @@ Phase 197 — **COMPLETE 2026-11-12** (commit 7d76eed). All HiPerGator verificat
 - Step 7 `dep_map.R` v6: PASS — gate 15/15; resolve_input() 100% resolved (n=14); zero critical run-order or duplicate-writer findings.
 
 **Open items carried forward (not blocking closure):**
+
 - D-197-10: UCI facility ZIP — 29,158 UCI encounters blank FACILITY_LOCATION; 211 patients; awaiting Amy/Erin.
 - D-197-11: override CSV implementation in R/183 — gates on D-197-10.
 - 48 patients NA main_source: data quality gap, unconfirmed cause.
