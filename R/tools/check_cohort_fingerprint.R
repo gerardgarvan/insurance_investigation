@@ -1,68 +1,59 @@
 # check_cohort_fingerprint.R
 # Compares cohort/cohort_final.rds against the saved fingerprint.
-# Prints PASS or FAIL with details. STOP rerun sequence on FAIL.
+# Prints one line per field (OK / MISMATCH) and an overall PASS/FAIL.
+# STOP rerun sequence on FAIL or unrecognised baseline format.
 # Usage: source("R/tools/check_cohort_fingerprint.R", local = new.env(parent = globalenv()))
 
 suppressPackageStartupMessages({
   library(here)
-  library(dplyr)
-  library(digest)
 })
 
 if (!exists("CONFIG")) source("R/00_config.R")
+# cohort_fingerprint() is defined in R/utils/utils_io.R, auto-sourced by config.
 
 FINGERPRINT_RDS <- here("output", "baselines", "pre_phaseA_20261111_0852",
                          "cohort_final_fingerprint.rds")
-# cohort/ sits adjacent to cache/outputs/; not under output/ root
 cohort_path     <- file.path(dirname(CONFIG$cache$outputs_dir), "cohort", "cohort_final.rds")
-COHORT_RDS      <- cohort_path
-
-baseline_path   <- FINGERPRINT_RDS
 
 if (!file.exists(FINGERPRINT_RDS)) stop("Fingerprint not found: ", FINGERPRINT_RDS)
-if (!file.exists(COHORT_RDS))      stop("cohort_final.rds not found: ", COHORT_RDS)
+if (!file.exists(cohort_path))     stop("cohort_final.rds not found: ", cohort_path)
 
-message("[fingerprint] Comparing against pre-phaseA baseline: ", baseline_path)
+message("[fingerprint] Comparing against pre-phaseA baseline: ", FINGERPRINT_RDS)
 
-fp  <- readRDS(FINGERPRINT_RDS)   # list: n_rows, n_id, sorted_id_md5, col_names
-coh <- readRDS(COHORT_RDS)
+fp  <- readRDS(FINGERPRINT_RDS)
+coh <- readRDS(cohort_path)
 
-safe_eq <- function(computed, stored) {
-  if (is.null(stored)) return(NA)   # field absent from fingerprint -> MISSING
-  v <- (computed == stored)
-  if (length(v) != 1L || is.na(v)) return(FALSE)
-  v
+# Detect unrecognised baseline format before comparing fields
+EXPECTED_FIELDS <- c("rows", "ids", "cols", "id_md5")
+if (!any(EXPECTED_FIELDS %in% names(fp))) {
+  message("BASELINE FORMAT UNRECOGNISED -- fields found: ",
+          paste(names(fp), collapse = ", "))
+  quit(status = 1L)
 }
 
-checks <- list(
-  n_rows        = safe_eq(nrow(coh),                                      fp$n_rows),
-  n_unique_id   = safe_eq(dplyr::n_distinct(coh$ID),                      fp$n_id),
-  sorted_id_md5 = safe_eq(digest::digest(sort(coh$ID), algo = "md5"),     fp$sorted_id_md5),
-  columns       = if (is.null(fp$col_names)) NA
-                  else isTRUE(identical(sort(names(coh)), sort(fp$col_names)))
-)
+# Compute fingerprint with the canonical method (utils_io::cohort_fingerprint)
+got <- cohort_fingerprint(coh)
 
-pass   <- all(vapply(checks, isTRUE, logical(1)))
-status <- if (pass) "PASS" else "FAIL"
-
-label_check <- function(v) {
-  if (is.na(v))    "MISSING (field not in fingerprint)"
-  else if (isTRUE(v)) "OK"
-  else "MISMATCH"
+# Field-by-field comparison
+fields <- c(rows = "rows", ids = "ids", cols = "cols", id_md5 = "id_md5")
+all_ok <- TRUE
+for (nm in names(fields)) {
+  stored  <- fp[[nm]]
+  computed <- got[[nm]]
+  if (is.null(stored)) {
+    message("  ", nm, ": MISSING (field not in fingerprint)")
+    all_ok <- FALSE
+  } else if (identical(computed, stored)) {
+    message("  ", nm, ": OK")
+  } else {
+    message("  ", nm, ": MISMATCH  expected=", stored, "  got=", computed)
+    all_ok <- FALSE
+  }
 }
 
+status <- if (all_ok) "PASS" else "FAIL"
 message("cohort_final fingerprint check: ", status)
-for (nm in names(checks)) {
-  message("  ", nm, ": ", label_check(checks[[nm]]))
-}
 
-if (!pass) {
-  message("Expected: n_rows=", fp$n_rows, " n_id=", fp$n_id,
-          " md5=", fp$sorted_id_md5)
-  message("Got:      n_rows=", nrow(coh),
-          " n_id=", dplyr::n_distinct(coh$ID),
-          " md5=", digest::digest(sort(coh$ID), algo = "md5"))
-  stop("Fingerprint mismatch -- STOP rerun sequence.")
-}
+if (!all_ok) stop("Fingerprint mismatch -- STOP rerun sequence.")
 
-invisible(pass)
+invisible(TRUE)

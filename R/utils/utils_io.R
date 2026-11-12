@@ -102,3 +102,21 @@ versioned_output_path <- function(dir, stem, ext,
     v <- v + 1L
   }
 }
+
+#' Compute a reproducible fingerprint of a cohort data frame.
+#'
+#' Canonical method: sort unique IDs as character, write to a tempfile,
+#' compute md5sum with tools::md5sum(). This matches the baseline stored in
+#' output/baselines/pre_phaseA_*/cohort_final_fingerprint.rds.
+#'
+#' @param cohort Data frame with an ID column.
+#' @return Named list: rows (int), ids (int), cols (chr), id_md5 (chr).
+cohort_fingerprint <- function(cohort) {
+  ids    <- sort(unique(as.character(cohort$ID)))
+  f      <- tempfile()
+  on.exit(unlink(f), add = TRUE)
+  writeLines(ids, f)
+  id_md5 <- unname(tools::md5sum(f))
+  cols   <- paste(sort(names(cohort)), collapse = ",")
+  list(rows = nrow(cohort), ids = length(ids), cols = cols, id_md5 = id_md5)
+}
