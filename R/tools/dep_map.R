@@ -1,5 +1,5 @@
 # =============================================================================
-# dep_map.R -- Static dependency mapper for the R pipeline (v2)
+# dep_map.R -- Static dependency mapper for the R pipeline (v6)
 # =============================================================================
 # Read-only. Parses every R/**/*.R file as language objects (no pipeline code is
 # sourced or executed) and maps:
@@ -152,6 +152,33 @@ PASS1 <- c("head", "tail", "sort", "rev", "unique", "normalizePath", "path.expan
            "fs::path_norm", "path_norm", "suppressWarnings", "suppressMessages",
            "identity", "invisible", "force", "na.omit", "Filter")
 SQL_START <- "^\\s*\\(?\\s*(SELECT|WITH|CREATE|INSERT|COPY|UPDATE|DELETE|DROP|ALTER|ATTACH)\\b"
+
+# -----------------------------------------------------------------------------
+# 1b. Helper-function registry (project-specific I/O wrappers)
+#   Each entry maps a wrapper function name to the edge(s) it produces.
+#   Add one row here when a new wrapper is introduced; no other change needed.
+#   Types:
+#     reads_pin        resolve_input(dir, pattern, env_var, label)
+#                      -> READ LIST::<dir>::<pattern>; always pinned (has_pin=TRUE)
+#     reads_payer      load_payer_summary(cohort_ids=NULL)
+#                      -> READ LIST::<output_dir>::^payer_summary.*\.rds$  (RDS preferred)
+#                      -> READ <output_dir>/tables/payer_summary.csv       (CSV fallback)
+#     writes_versioned versioned_output_path(dir, stem, ext, run_date)
+#                      -> WRITE <dir>/<stem>_{DATE}<ext>
+# -----------------------------------------------------------------------------
+HELPER_REGISTRY <- list(
+  resolve_input = list(
+    type    = "reads_pin",
+    formals = c("dir", "pattern", "env_var", "label")
+  ),
+  load_payer_summary = list(
+    type = "reads_payer"
+  ),
+  versioned_output_path = list(
+    type    = "writes_versioned",
+    formals = c("dir", "stem", "ext", "run_date")
+  )
+)
 
 # -----------------------------------------------------------------------------
 # 2. Path resolver: expression -> character vector of alternatives
@@ -659,6 +686,34 @@ analyze <- function(root) {
       }
       handled <- TRUE
     }
+    # helper-function registry: project-specific wrappers that read/write files
+    if (!handled) {
+      hreg <- HELPER_REGISTRY[[fn]]
+      if (!is.null(hreg)) {
+        raw <- paste(deparse(e, width.cutoff = 200L), collapse = " ")
+        if (hreg$type == "reads_pin") {
+          dir_v  <- { d <- match_arg(a, hreg$formals, "dir");     if (!is.null(d)) res(d, sc, CFG)[1] else "{dir}" }
+          pat_v  <- { p <- match_arg(a, hreg$formals, "pattern"); if (!is.null(p)) res(p, sc, CFG)[1] else "" }
+          list_v <- mk_list_val(norm_path(dir_v %||% "."), pat_v %||% "")
+          add_edge(file, line, "reads", list_v, fn, raw, resolution_of(list_v), pattern = TRUE)
+          E$listings[[length(E$listings) + 1L]] <- list(file = file, line = line, value = list_v, pin = TRUE)
+        } else if (hreg$type == "reads_payer") {
+          out_dir <- norm_path(CFG[["output_dir"]] %||% "{CONFIG$output_dir}")
+          rds_v   <- mk_list_val(out_dir, "^payer_summary.*\\.rds$", rec = TRUE)
+          csv_v   <- norm_path(file.path(out_dir, "tables", "payer_summary.csv"))
+          add_edge(file, line, "reads", rds_v, fn, raw, resolution_of(rds_v), pattern = TRUE)
+          E$listings[[length(E$listings) + 1L]] <- list(file = file, line = line, value = rds_v, pin = FALSE)
+          add_edge(file, line, "reads", csv_v, fn, raw, resolution_of(csv_v))
+        } else if (hreg$type == "writes_versioned") {
+          dir_v  <- { d <- match_arg(a, hreg$formals, "dir");  if (!is.null(d)) res(d, sc, CFG)[1] else "{dir}" }
+          stem_v <- { s <- match_arg(a, hreg$formals, "stem"); if (!is.null(s)) res(s, sc, CFG)[1] else "{stem}" }
+          ext_v  <- { x <- match_arg(a, hreg$formals, "ext");  if (!is.null(x)) res(x, sc, CFG)[1] else "{ext}" }
+          art_v  <- norm_path(paste0(dir_v %||% ".", "/", stem_v %||% "{stem}", "_{DATE}", ext_v %||% ""))
+          add_edge(file, line, "writes", art_v, fn, raw, resolution_of(art_v))
+        }
+        handled <- TRUE
+      }
+    }
     # list.files: remember the listing for R3
     if (fn %in% c("list.files", "dir", "dir_ls", "Sys.glob")) {
       v <- res(e, sc, CFG)[1]
@@ -1059,6 +1114,13 @@ gate_project <- function(A, D) {
                                  length(miss) == 0)
     if (length(miss)) chk[[length(chk)]][1] <- paste0(chk[[length(chk)]][1], " missing: ", paste(miss, collapse = ", "))
   }
+  # New: resolve_input() path coverage (>= 90% calls must resolve to non-token path)
+  ri_edges <- ed[!is.na(ed$fn) & ed$fn == "resolve_input" & !is.na(ed$artifact), ]
+  ri_pct   <- if (nrow(ri_edges) == 0L) 1.0 else mean(ri_edges$resolution %in% c("full", "partial"))
+  chk[[length(chk) + 1L]] <- c(
+    sprintf("resolve_input() calls >= 90%% resolve (%.0f%%; n=%d)", 100 * ri_pct, nrow(ri_edges)),
+    ri_pct >= 0.9
+  )
   out <- data.frame(check = vapply(chk, `[`, "", 1), pass = as.logical(vapply(chk, `[`, "", 2)), detail = "",
                     blocking = TRUE, stringsAsFactors = FALSE)
   out$blocking[startsWith(out$check, "[info]")] <- FALSE   # v1 used a looser regex; differences are expected
@@ -1142,7 +1204,7 @@ write_outputs <- function(A, D, G, out_dir, gate_ok) {
                              length(D$cycles), nrow(D$inversions), length(D$r9), nrow(D$r10), nrow(D$r11)))
   rpt <- c(
     paste0("# Dependency Risk Report -- ", dated, if (!gate_ok) "  (GATE FAILED -- forced output)" else ""), "",
-    sprintf("Generated by `R/tools/dep_map.R` (v2) from %d files (%d scripts, %d utils, %d tools, %d archived). Root: `%s`",
+    sprintf("Generated by `R/tools/dep_map.R` (v6) from %d files (%d scripts, %d utils, %d tools, %d archived). Root: `%s`",
             length(A$rel), sum(A$ftype == "script"), sum(A$ftype == "util"), sum(A$ftype == "tool"), sum(A$archived), A$root), "",
     "## Validation gate", "", md_table(G), "",
     "## Resolution rates", "", md_table(res_tab), "",
