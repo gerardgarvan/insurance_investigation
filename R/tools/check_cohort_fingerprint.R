@@ -9,6 +9,8 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
+if (!exists("CONFIG")) source("R/00_config.R")
+
 FINGERPRINT_RDS <- here("output", "baselines", "pre_phaseA_20261111_0852",
                          "cohort_final_fingerprint.rds")
 # cohort/ sits adjacent to cache/outputs/; not under output/ root

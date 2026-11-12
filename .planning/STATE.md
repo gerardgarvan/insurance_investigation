@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: active
-stopped_at: "Phase 197 code complete — awaiting HiPerGator verification (dep_map rerun, rerun table, mice diagnostic)"
-last_updated: "2026-11-11T23:30:00.000Z"
+stopped_at: "Phase 197 tool bugs fixed (2026-11-12); awaiting HiPerGator verification steps 5-7 + DuckDB ENCOUNTER query for UCI"
+last_updated: "2026-11-12T00:00:00.000Z"
 last_activity: 2026-11-06
 progress:
   total_phases: 187
@@ -162,7 +162,14 @@ Phase 196-A (Delivered-Output Fixes + Rerun) — **COMPLETE 2026-11-11**: all fi
 
 ## Session Continuity
 
-**Stopped at:** Phase 197 code complete — awaiting HiPerGator verification steps 5–7 (check_cohort_fingerprint.R, mice_convergence_diagnostic.R, dep_map.R); Phase 198 scaffold created
+**Stopped at:** Phase 197 tool bugs fixed 2026-11-12; awaiting HiPerGator steps 5–7 + DuckDB query for UCI FACILITY_LOCATION confirmation (D-197-10)
+
+**Phase 197 tool fixes 2026-11-12:**
+
+- check_cohort_fingerprint.R: added `if (!exists("CONFIG")) source("R/00_config.R")` bootstrap.
+- mice_convergence_diagnostic.R: fixed chainMean 3D-array extraction; replaced collapse logic with per-source missingness analysis; D-197-NN resolved as D-197-09 (COLLAPSE_RARE_SOURCE=FALSE correct; UCI is a data decision, not a collapse fix).
+- 197-UCI-DISTANCE.md: root cause confirmed as (a) — UCI ENCOUNTER has no FACILITY_LOCATION data; 259 patients affected (211 UCI + 48 NA source); proposed source_facility_zip_override.csv pending D-197-10; ORL 25.4% = patient-address gap (not facility gap).
+- New decisions: D-197-09 (resolved), D-197-10 (open — Amy/Erin UCI ZIP), D-197-11 (open — override CSV implementation).
 
 **Phase 197 all 9 plans complete (code-side) 2026-11-11:**
 

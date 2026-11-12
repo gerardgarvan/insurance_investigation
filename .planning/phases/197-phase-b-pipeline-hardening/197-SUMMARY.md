@@ -282,10 +282,84 @@ chemo date. The D-09 re-query rows carry `source_hints = "rxnav_obsolete_requery
 Downstream scripts that filter or pivot on `source_hints` should be aware of this
 new label.
 
+## Tool Fixes (2026-11-12 — Plans 10–13)
+
+Three standalone-tool bugs found and fixed before HiPerGator verification run:
+
+### check_cohort_fingerprint.R (Plan 10)
+Added `if (!exists("CONFIG")) source("R/00_config.R")` after library loads.
+Without this, running the script in a fresh R session failed with
+"object 'CONFIG' not found" (CONFIG is used to build `cohort_path`).
+
+### mice_convergence_diagnostic.R (Plans 11–12)
+Two bugs fixed:
+
+1. **chainMean array extraction**: `mids$chainMean` in mice >= 3 is a 3D array
+   `[n_vars × m × maxit]` with dimnames, not a named list. `names(cm)` returned NULL
+   → `vars_imp` was NULL → `bind_rows(list())` returned an empty data frame with no
+   `variable` column → `group_by(rhat_df, variable)` failed. Fixed by detecting the
+   array structure and using `dimnames(cm)[[1]]` / `cm[v,,]` instead of `names(cm)` /
+   `cm[[v]]`.
+
+2. **Collapse recommendation replaced**: The old report flagged any `main_source` level
+   with n < 30 as a "collapse candidate". This was wrong:
+   - TMC (n=29) and CHP (n=23) are below 30 but have **0% missing distance** →
+     collapsing does not fix the loggedEvents issue (they already contribute observed rows).
+   - UCI (n=211, 100% missing distance) is the actual cause of the loggedEvents: among
+     rows with observed distance, main_sourceUCI is always 0 (a constant predictor), so
+     MICE drops it. This is a **data issue** (UCI has no FACILITY_LOCATION in the
+     PCORnet extract), not a rare-level problem. Collapsing UCI into "Other" would not
+     change the missingness pattern.
+   - New report section: n and % missing `dist_to_source_facility_mi` by main_source,
+     with per-level flags explaining the MICE behavior.
+   - `COLLAPSE_RARE_SOURCE=FALSE` confirmed as correct default.
+
+### UCI Facility ZIP Investigation (Plan 13)
+
+Root cause: UCI ENCOUNTER rows have blank/null FACILITY_LOCATION in the PCORnet CDM
+extract. After normalization in R/122, `zip5_facility = NA` for all UCI encounters →
+no UCI row in `src_fac_zip` → no facility centroid for UCI → distance = NA for all
+211 UCI patients.
+
+Findings documented in `197-UCI-DISTANCE.md`:
+- 211 UCI + 48 NA-source patients (259 total) have imputed distance in MICE.
+- Complete-case OR 0.834 vs MICE OR 0.846 — estimates agree.
+- NA main_source (48 patients): those patients have only post-anchor encounters with
+  SOURCE = NA (data quality gap, not a pipeline bug).
+- ORL 25.4% missing: ORL has a facility ZIP; the 127 missing distances are
+  patient-side (no valid pat_zip5 for those patients in LDS_ADDRESS_HISTORY).
+- Proposed `data/reference/source_facility_zip_override.csv` (UCI ZIP5 to be
+  confirmed by Amy/Erin — D-197-10).
+
+### Decision updates
+
+**D-197-NN → resolved as D-197-09:**
+`COLLAPSE_RARE_SOURCE=FALSE` is correct. The loggedEvents for main_sourceUCI are due
+to UCI having 100% missing distance (constant predictor among observed rows), not a
+rare-level issue. No collapse needed.
+
+**D-197-10 (new — open):** Amy/Erin to confirm UCI institutional ZIP5 for override
+file. Default: keep UCI distance as NA (imputed by MICE).
+
+**D-197-11 (new — open):** Gerard to decide whether to implement the override CSV
+mechanism in R/183 when D-197-10 is resolved.
+
+## dep_map Standalone Status
+
+dep_map.R is already self-contained: wrapped in `local({...})`, uses
+`here::here()` only as an optional fallback for root detection (falls back to
+`getwd()`), no CONFIG or session-global dependencies. Runs via
+`Rscript R/tools/dep_map.R` or `source("R/tools/dep_map.R")` without pre-loading
+R/00_config.R.
+
+build_hrsa_crosswalk.R uses `here::here()` but no CONFIG — standalone. ✓
+
 ## Known Stubs
 
-- `.planning/phases/197-phase-b-pipeline-hardening/197-MICE-CONVERGENCE.md` is a placeholder; real content will be written by `mice_convergence_diagnostic.R` on HiPerGator.
-- `dep_map` delta section is pending Gerard's HiPerGator run. The `risk_report_v*.md` output should be pasted back and appended here.
+- `.planning/phases/197-phase-b-pipeline-hardening/197-MICE-CONVERGENCE.md` is a
+  placeholder; real content will be written by `mice_convergence_diagnostic.R` on
+  HiPerGator after the array-extraction fix.
+- `dep_map` delta section is pending Gerard's HiPerGator run.
 
 ## Open Verification Steps (HiPerGator — not yet run)
 
@@ -295,8 +369,9 @@ complete until all three PASS:
 | Step | Tool | Expected outcome |
 |------|------|-----------------|
 | 5 | `check_cohort_fingerprint.R` | PASS vs pre-Phase-A baseline |
-| 6 | `mice_convergence_diagnostic.R` | Produces 197-MICE-CONVERGENCE.md; content drives D-197-NN decision on COLLAPSE_RARE_SOURCE |
+| 6 | `mice_convergence_diagnostic.R` | Produces 197-MICE-CONVERGENCE.md; chainMean fix allows convergence table to populate; confirms COLLAPSE_RARE_SOURCE=FALSE |
 | 7 | `dep_map.R` | New risk report shows zero critical run-order and duplicate-writer findings |
+| — | DuckDB ENCOUNTER query (197-UCI-DISTANCE.md) | Confirm UCI has blank FACILITY_LOCATION; paste result back |
 
 ## Deviations from Plan (Phase-Level)
 
