@@ -172,12 +172,12 @@ first_line_flags <- clean_episodes %>%
   mutate(rank = row_number()) %>%
   ungroup() %>%
   mutate(is_first_line = (rank == 1)) %>%
-  select(patient_id, episode_number, is_first_line)
+  select(patient_id, treatment_type, episode_number, is_first_line)
 
 # Keep only is_first_line=TRUE rows (the first qualifying per patient)
 first_line_ids <- first_line_flags %>%
   filter(is_first_line) %>%
-  select(patient_id, episode_number)
+  select(patient_id, treatment_type, episode_number)
 
 message(glue("  First-line episodes identified: {nrow(first_line_ids)} patients"))
 
@@ -188,7 +188,7 @@ if (nrow(first_line_ids) == 0) {
   episodes <- episodes %>%
     left_join(
       first_line_ids %>% mutate(is_first_line = TRUE),
-      by = c("patient_id", "episode_number")
+      by = c("patient_id", "treatment_type", "episode_number")
     ) %>%
     mutate(is_first_line = if_else(is.na(is_first_line), FALSE, is_first_line))
 }
@@ -223,6 +223,22 @@ local({
   n_fl <- sum(episodes$is_first_line, na.rm = TRUE)
   if (n_fl == 0)
     stop("[R/29] is_first_line is all FALSE — regimen_label enrichment from R/28 may be missing")
+
+  # 5. is_first_line TRUE only on Chemotherapy rows with non-NA regimen_label
+  bad_fl <- episodes %>%
+    dplyr::filter(is_first_line) %>%
+    dplyr::filter(treatment_type != "Chemotherapy" | is.na(regimen_label))
+  if (nrow(bad_fl) > 0)
+    stop("[R/29] is_first_line TRUE on ", nrow(bad_fl),
+         " non-Chemotherapy or NA-regimen rows — join key fan-out detected")
+
+  # 6. Exactly one is_first_line TRUE per patient
+  multi_fl <- episodes %>%
+    dplyr::filter(is_first_line) %>%
+    dplyr::count(patient_id) %>%
+    dplyr::filter(n > 1)
+  if (nrow(multi_fl) > 0)
+    stop("[R/29] ", nrow(multi_fl), " patients have more than one is_first_line=TRUE row")
 
   message("[R/29] Pre-write validation: PASS — ",
           nrow(episodes), " rows, ",
