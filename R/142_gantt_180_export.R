@@ -19,7 +19,7 @@
 #   - output/tables/cancer_summary.csv              (Phase 115: 7-day confirmed data)
 #
 # Outputs:
-#   - output/gantt_episodes_180.csv  (20 columns, same schema as gantt_episodes.csv)
+#   - output/gantt_episodes_180.csv  (26 columns, same schema as gantt_episodes.csv + Phase 199 flags)
 #   - output/gantt_detail_180.csv    (14 columns, same schema as gantt_detail.csv)
 #
 # Requirements: EP-180-01, EP-180-02
@@ -86,7 +86,9 @@ EPISODES_SCHEMA <- c(
   # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
   "has_autoimmune_dx", "first_autoimmune_dx_date",
   # Phase 192.2: ICD-9/10 code system column (+1 column, now 23 total)
-  "autoimmune_dx_code_system"
+  "autoimmune_dx_code_system",
+  # Phase 199: + immune_flag, ever_brentuximab, immune_flag_dx (+3 columns, now 26 total)
+  "immune_flag", "ever_brentuximab", "immune_flag_dx"
 )
 
 DETAIL_SCHEMA <- c(
@@ -612,6 +614,135 @@ detail_export <- detail_export %>%
 
 message("  NA converted to empty; cancer_category filled; is_hodgkin derived")
 
+# --- D-03 label discovery: confirm canonical Rituximab / Methotrexate / Brentuximab tokens ---
+# Print distinct tokens matching any of the three drug names (patient counts, suppressed).
+# If BRENTUXIMAB_DRUG is still a TODO placeholder, stop() and show tokens.
+{
+  if (grepl("TODO", BRENTUXIMAB_DRUG, fixed = TRUE)) {
+    all_tokens <- unlist(strsplit(episodes_export$drug_names, ";"))
+    hits <- unique(trimws(grep(
+      regex("rituximab|methotrexate|brentuximab", ignore_case = TRUE),
+      all_tokens, value = TRUE
+    )))
+    stop(glue(
+      "BRENTUXIMAB_DRUG is still a TODO. Canonical tokens found:\n",
+      paste(hits, collapse = "\n"),
+      "\nSet BRENTUXIMAB_DRUG in R/00_config.R and re-run."
+    ))
+  }
+  message("\n--- D-03: Rituximab / Methotrexate / Brentuximab token discovery ---")
+  token_df <- episodes_export |>
+    dplyr::select(patient_id, drug_names) |>
+    dplyr::mutate(
+      tokens = strsplit(drug_names, ";")
+    ) |>
+    tidyr::unnest(tokens) |>
+    dplyr::mutate(tokens = trimws(tokens)) |>
+    dplyr::filter(grepl("rituximab|methotrexate|brentuximab", tokens, ignore.case = TRUE)) |>
+    dplyr::group_by(tokens) |>
+    dplyr::summarise(n_patients = dplyr::n_distinct(patient_id), .groups = "drop") |>
+    dplyr::arrange(tokens)
+  if (nrow(token_df) == 0) {
+    message("  No matching tokens found.")
+  } else {
+    for (i in seq_len(nrow(token_df))) {
+      message(glue("  token={token_df$tokens[i]}  n_patients={fmt_sup(token_df$n_patients[i])}"))
+    }
+  }
+  message(glue("  IMMUNE_FLAG_DRUGS = {paste(IMMUNE_FLAG_DRUGS, collapse=', ')}"))
+  message(glue("  BRENTUXIMAB_DRUG  = {BRENTUXIMAB_DRUG}"))
+}
+
+# --- SECTION 4C3: IMMUNE FLAG AND BRENTUXIMAB FLAG ---
+
+message("\n--- Section 4C3: Immune flag and Brentuximab flag ---")
+
+dn <- episodes_export |> dplyr::distinct(patient_id, drug_names)
+imm_full <- build_immune_flags(unique(episodes_export$patient_id), dn)
+imm <- imm_full |> dplyr::select(patient_id, immune_flag, ever_brentuximab, immune_flag_dx)
+n0 <- nrow(episodes_export)
+episodes_export <- dplyr::left_join(episodes_export, imm, by = "patient_id") |>
+  dplyr::mutate(
+    dplyr::across(c(immune_flag, ever_brentuximab), ~ dplyr::coalesce(.x, FALSE)),
+    immune_flag_dx = dplyr::coalesce(immune_flag_dx, "")
+  )
+stopifnot(
+  "immune_flag_dx non-blank iff immune_flag" =
+    all((episodes_export$immune_flag_dx != "") == episodes_export$immune_flag),
+  "immune join must not change row count" =
+    nrow(episodes_export) == n0
+)
+
+# D-09 QC console block
+{
+  ep_pt <- episodes_export |> dplyr::distinct(patient_id, immune_flag, ever_brentuximab, immune_flag_dx,
+                                               has_autoimmune_dx)
+  ep_imm <- dplyr::left_join(ep_pt,
+    imm_full |> dplyr::select(patient_id, has_rituximab, has_methotrexate, has_immune_flag_dx,
+                               qc_immune_dx_no_valid_date),
+    by = "patient_id"
+  )
+
+  n_rituximab     <- sum(ep_imm$has_rituximab,    na.rm = TRUE)
+  n_methotrexate  <- sum(ep_imm$has_methotrexate, na.rm = TRUE)
+  n_both_drugs    <- sum(ep_imm$has_rituximab & ep_imm$has_methotrexate, na.rm = TRUE)
+  n_imm_dx        <- sum(ep_imm$has_immune_flag_dx, na.rm = TRUE)
+  n_immune_flag   <- sum(ep_imm$immune_flag, na.rm = TRUE)
+  n_case1_only    <- sum( ep_imm$has_rituximab & !ep_imm$has_methotrexate & ep_imm$immune_flag, na.rm = TRUE)
+  n_case2_only    <- sum(!ep_imm$has_rituximab &  ep_imm$has_methotrexate & ep_imm$immune_flag, na.rm = TRUE)
+  n_both_cases    <- sum( ep_imm$has_rituximab &  ep_imm$has_methotrexate & ep_imm$immune_flag, na.rm = TRUE)
+  n_no_valid_date <- sum(ep_imm$qc_immune_dx_no_valid_date & (ep_imm$has_rituximab | ep_imm$has_methotrexate), na.rm = TRUE)
+  n_brentuximab   <- sum(ep_imm$ever_brentuximab, na.rm = TRUE)
+
+  message("\n  === D-09 QC: immune_flag / ever_brentuximab ===")
+  message(glue("  Patients with Rituximab:               {fmt_sup(n_rituximab)}"))
+  message(glue("  Patients with Methotrexate:            {fmt_sup(n_methotrexate)}"))
+  message(glue("  Patients with both drugs:              {fmt_sup(n_both_drugs)}"))
+  message(glue("  Patients with IMMUNE_FLAG dx:          {fmt_sup(n_imm_dx)}"))
+  message(glue("  immune_flag = TRUE:                    {fmt_sup(n_immune_flag)}"))
+  message(glue("    Case 1 only (Rituximab, no MTX):     {fmt_sup(n_case1_only)}"))
+  message(glue("    Case 2 only (MTX, no Rituximab):     {fmt_sup(n_case2_only)}"))
+  message(glue("    Both cases (Rituximab AND MTX):      {fmt_sup(n_both_cases)}"))
+  message(glue("  Drug-exposed, qualifying dx, no valid date (D-05/D-199-03): {fmt_sup(n_no_valid_date)}"))
+  message(glue("  ever_brentuximab = TRUE:               {fmt_sup(n_brentuximab)}"))
+
+  # Label counts among immune_flag = TRUE patients
+  if (n_immune_flag > 0) {
+    immune_pts_dx <- ep_imm |>
+      dplyr::filter(immune_flag) |>
+      dplyr::mutate(labels = strsplit(immune_flag_dx, "; ")) |>
+      tidyr::unnest(labels) |>
+      dplyr::filter(trimws(labels) != "") |>
+      dplyr::group_by(labels) |>
+      dplyr::summarise(n = dplyr::n_distinct(patient_id), .groups = "drop") |>
+      dplyr::arrange(dplyr::desc(n))
+    message("  immune_flag_dx label counts (D-199-04):")
+    for (i in seq_len(nrow(immune_pts_dx))) {
+      message(glue("    {immune_pts_dx$labels[i]}: {fmt_sup(immune_pts_dx$n[i])}"))
+    }
+    n_multi_label <- sum(
+      vapply(strsplit(ep_imm$immune_flag_dx[ep_imm$immune_flag], "; "), length, integer(1)) > 1L
+    )
+    message(glue("  Patients with >1 label: {fmt_sup(n_multi_label)}"))
+  }
+
+  # Cross-tab immune_flag x has_autoimmune_dx
+  message("  Cross-tab immune_flag x has_autoimmune_dx (sanity check):")
+  ct <- table(immune_flag = ep_imm$immune_flag, has_autoimmune_dx = ep_imm$has_autoimmune_dx)
+  for (r in rownames(ct)) {
+    for (cc in colnames(ct)) {
+      message(glue("    immune_flag={r}, has_autoimmune_dx={cc}: {fmt_sup(ct[r, cc])}"))
+    }
+  }
+  n_flag_not_aim <- sum(ep_imm$immune_flag & !ep_imm$has_autoimmune_dx, na.rm = TRUE)
+  if (n_flag_not_aim > 0) {
+    message(glue("  WARNING: {fmt_sup(n_flag_not_aim)} patients have immune_flag=TRUE but has_autoimmune_dx=FALSE"))
+    message("  (These patients have an IMMUNE_FLAG code not in AUTOIMMUNE_DX_CODES — investigate.)")
+  } else {
+    message("  immune_flag=TRUE is a subset of has_autoimmune_dx=TRUE (expected).")
+  }
+}
+
 # Column trimming — drop encounter_ids, cancer_link_method, ENCOUNTERID (same as R/52)
 episodes_export <- episodes_export %>%
   select(
@@ -625,7 +756,9 @@ episodes_export <- episodes_export %>%
     # Phase 192.1: autoimmune diagnosis flag columns (+2 columns, now 22 total)
     has_autoimmune_dx, first_autoimmune_dx_date,
     # Phase 192.2: code system label (+1 column, now 23 total)
-    autoimmune_dx_code_system
+    autoimmune_dx_code_system,
+    # Phase 199: immune flag, brentuximab flag, immune dx labels (+3 columns, now 26 total)
+    immune_flag, ever_brentuximab, immune_flag_dx
   )
 
 detail_export <- detail_export %>%
@@ -658,9 +791,47 @@ message(glue("  Schema verification: PASSED ({length(EPISODES_SCHEMA)} episode c
 
 message("\n--- Writing 180-day CSV outputs ---")
 
+# PRE199 baseline: save the 23-column file before overwriting (keep-if-exists; re-run safe).
+pre199 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE199.csv")
+if (!file.exists(pre199)) {
+  if (file.exists(OUTPUT_EPISODES)) {
+    # Guard: baseline must be the 23-column file
+    base_check <- read.csv(OUTPUT_EPISODES, nrows = 1)
+    stopifnot("PRE199 baseline must have 23 columns" = ncol(base_check) == 23L)
+    file.copy(OUTPUT_EPISODES, pre199, overwrite = FALSE)
+    message(glue("  PRE199 baseline saved: {pre199}"))
+  } else {
+    message("  PRE199 baseline skipped: OUTPUT_EPISODES does not yet exist.")
+  }
+} else {
+  message(glue("  PRE199 baseline exists (kept): {pre199}"))
+}
+
 write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
+
+# Phase 199 regression: verify the 23 original columns are unchanged vs PRE199 baseline.
+if (file.exists(pre199)) {
+  message("\n--- Phase 199 regression check ---")
+  base_reg <- read.csv(pre199,       colClasses = "character")
+  new_reg  <- read.csv(OUTPUT_EPISODES, colClasses = "character")
+  stopifnot(
+    "regression: row count unchanged"        = nrow(new_reg)  == nrow(base_reg),
+    "regression: col 1-23 names unchanged"   = identical(names(new_reg)[1:23], names(base_reg))
+  )
+  # Multiset comparison: sorted pasted rows of first 23 columns
+  base_rows <- sort(do.call(paste, base_reg[, 1:23, drop = FALSE]))
+  new_rows  <- sort(do.call(paste, new_reg[,  1:23, drop = FALSE]))
+  if (!identical(base_rows, new_rows)) {
+    diffs <- which(base_rows != new_rows)
+    stop(glue("Phase 199 regression FAIL: {length(diffs)} row(s) differ in original 23 columns.
+Example diff (first mismatch):
+  PRE199: {base_rows[diffs[1]]}
+  NEW:    {new_rows[diffs[1]]}"))
+  }
+  message("Phase 199 regression: PASS (23 original columns unchanged)")
+}
 
 write.csv(detail_export, OUTPUT_DETAIL, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_DETAIL}"))
