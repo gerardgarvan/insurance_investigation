@@ -7525,11 +7525,13 @@ if (!file.exists(gantt_180_path_bb)) {
 } else {
   gantt_180_hdr_bb <- names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
-  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 23 columns",
-    length(gantt_180_hdr_bb) == 23L)
-  # (d)
-  p1922_chk("AUTOIMMUNE-FLAG-192.2 [d2] gantt_episodes_180.csv last column is autoimmune_dx_code_system",
-    gantt_180_hdr_bb[23L] == "autoimmune_dx_code_system")
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 26 columns", # 26 since Phase 199
+    length(gantt_180_hdr_bb) == 26L)
+  # (d) autoimmune_dx_code_system is at position 23 (cols 24-26 added in Phase 199)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [d2] gantt_episodes_180.csv autoimmune_dx_code_system at position 23",
+    which(names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
+      col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)) ==
+      "autoimmune_dx_code_system") == 23L)
 }
 
 # (e) autoimmune_dx_code_system value domain + (f) NA-iff-FALSE invariant
@@ -7620,6 +7622,167 @@ if (!IS_LOCAL && !is.na(r170_xlsx_latest_bb) && file.exists(r170_xlsx_latest_bb)
 }
 
 message(glue("\nAUTOIMMUNE-FLAG-192.2: {p1922_pass} PASS / {p1922_fail} FAIL / {p1922_skip} SKIP"))
+
+# ==============================================================================
+# SECTION 15bc: PHASE 199 IMMUNE_FLAG / EVER_BRENTUXIMAB / IMMUNE_FLAG_DX ----
+# ==============================================================================
+
+message("\n[IMMUNE-FLAG-199] Phase 199 immune_flag / ever_brentuximab / immune_flag_dx...")
+
+p199_pass <- 0L; p199_fail <- 0L; p199_skip <- 0L
+
+p199_chk <- function(label, condition) {
+  if (isTRUE(condition))  { message("  PASS: ", label); p199_pass <<- p199_pass + 1L; passed  <<- passed  + 1L }
+  else                    { message("  FAIL: ", label); p199_fail <<- p199_fail + 1L; failed  <<- failed  + 1L }
+}
+p199_skip_fn <- function(label) {
+  message("  SKIP: ", label)
+  p199_skip <<- p199_skip + 1L
+  skipped   <<- skipped   + 1L
+}
+
+# (a) IMMUNE_FLAG_DX_CODES has exactly the 13 keys from D-01
+p199_chk("IMMUNE-FLAG-199 [a1] IMMUNE_FLAG_DX_CODES is defined",
+  exists("IMMUNE_FLAG_DX_CODES"))
+p199_chk("IMMUNE-FLAG-199 [a2] IMMUNE_FLAG_DX_CODES has icd10 and icd9 slots",
+  is.list(IMMUNE_FLAG_DX_CODES) &&
+    all(c("icd10", "icd9") %in% names(IMMUNE_FLAG_DX_CODES)))
+p199_chk("IMMUNE-FLAG-199 [a3] IMMUNE_FLAG_DX_CODES has exactly 13 keys total",
+  length(c(names(IMMUNE_FLAG_DX_CODES$icd10), names(IMMUNE_FLAG_DX_CODES$icd9))) == 13L)
+p199_chk("IMMUNE-FLAG-199 [a4] icd10 slot has exactly 5 keys: M05 M06 M313 M317 L100",
+  identical(sort(names(IMMUNE_FLAG_DX_CODES$icd10)), sort(c("M05","M06","M313","M317","L100"))))
+p199_chk("IMMUNE-FLAG-199 [a5] icd9 slot has exactly 8 keys: 7140 7141 7142 7148 7149 4464 4460 6944",
+  identical(sort(names(IMMUNE_FLAG_DX_CODES$icd9)), sort(c("7140","7141","7142","7148","7149","4464","4460","6944"))))
+
+# (b) is_autoimmune_code() with codes = IMMUNE_FLAG_DX_CODES
+p199_chk("IMMUNE-FLAG-199 [b1] is_autoimmune_code('M0579','10', codes=IMMUNE_FLAG_DX_CODES) TRUE",
+  isTRUE(is_autoimmune_code("M0579", "10", codes = IMMUNE_FLAG_DX_CODES)))
+p199_chk("IMMUNE-FLAG-199 [b2] is_autoimmune_code('M083','10', codes=IMMUNE_FLAG_DX_CODES) FALSE",
+  isFALSE(is_autoimmune_code("M083", "10", codes = IMMUNE_FLAG_DX_CODES)))
+p199_chk("IMMUNE-FLAG-199 [b3] is_autoimmune_code('7140','09', codes=IMMUNE_FLAG_DX_CODES) TRUE",
+  isTRUE(is_autoimmune_code("7140", "09", codes = IMMUNE_FLAG_DX_CODES)))
+p199_chk("IMMUNE-FLAG-199 [b4] is_autoimmune_code('6961','09', codes=IMMUNE_FLAG_DX_CODES) FALSE",
+  isFALSE(is_autoimmune_code("6961", "09", codes = IMMUNE_FLAG_DX_CODES)))
+
+gantt_180_path_bc <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+
+if (!file.exists(gantt_180_path_bc)) {
+  p199_skip_fn("IMMUNE-FLAG-199 [c] gantt_episodes_180.csv absent — run R/142 first")
+  p199_skip_fn("IMMUNE-FLAG-199 [d] flag columns parse check (skipped — file absent)")
+  p199_skip_fn("IMMUNE-FLAG-199 [e] columns constant within patient_id (skipped — file absent)")
+} else {
+  # (c) 26 columns; immune_flag at 24, ever_brentuximab at 25, immune_flag_dx at 26
+  g180_bc <- readr::read_csv(gantt_180_path_bc, n_max = 0L,
+    col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
+  g180_nms <- names(g180_bc)
+  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 26 columns",
+    length(g180_nms) == 26L)
+  p199_chk("IMMUNE-FLAG-199 [c2] immune_flag at column 24",
+    isTRUE(g180_nms[24L] == "immune_flag"))
+  p199_chk("IMMUNE-FLAG-199 [c3] ever_brentuximab at column 25",
+    isTRUE(g180_nms[25L] == "ever_brentuximab"))
+  p199_chk("IMMUNE-FLAG-199 [c4] immune_flag_dx at column 26",
+    isTRUE(g180_nms[26L] == "immune_flag_dx"))
+
+  if (!IS_LOCAL) {
+    # Read a full copy (character) for data-level checks (d)–(i)
+    g180_dat <- readr::read_csv(gantt_180_path_bc,
+      col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
+
+    # (d) immune_flag and ever_brentuximab parse as logical with no NA
+    p199_chk("IMMUNE-FLAG-199 [d1] immune_flag parses as logical (TRUE/FALSE only, no NA)",
+      all(g180_dat$immune_flag %in% c("TRUE","FALSE")) && !anyNA(g180_dat$immune_flag))
+    p199_chk("IMMUNE-FLAG-199 [d2] ever_brentuximab parses as logical (TRUE/FALSE only, no NA)",
+      all(g180_dat$ever_brentuximab %in% c("TRUE","FALSE")) && !anyNA(g180_dat$ever_brentuximab))
+
+    # (e) all three new columns are constant within patient_id
+    p199_chk("IMMUNE-FLAG-199 [e] immune_flag / ever_brentuximab / immune_flag_dx constant within patient_id",
+      {
+        g180_grp <- g180_dat |>
+          dplyr::group_by(patient_id) |>
+          dplyr::summarise(
+            n_imm  = dplyr::n_distinct(immune_flag),
+            n_bren = dplyr::n_distinct(ever_brentuximab),
+            n_dx   = dplyr::n_distinct(immune_flag_dx),
+            .groups = "drop"
+          )
+        all(g180_grp$n_imm == 1L) && all(g180_grp$n_bren == 1L) && all(g180_grp$n_dx == 1L)
+      })
+
+    # (f) every immune_flag TRUE patient has Rituximab or Methotrexate token in drug_names
+    p199_chk("IMMUNE-FLAG-199 [f] every immune_flag==TRUE patient has rituximab or methotrexate token in drug_names",
+      {
+        g180_pt <- g180_dat |>
+          dplyr::group_by(patient_id) |>
+          dplyr::summarise(
+            imm_flag = any(immune_flag == "TRUE"),
+            has_ritu_meth = any(vapply(
+              strsplit(drug_names, ";", fixed = TRUE),
+              function(toks) any(grepl("^rituximab|^methotrexate", trimws(toks), ignore.case = TRUE)),
+              logical(1)
+            )),
+            .groups = "drop"
+          )
+        all(!g180_pt$imm_flag | g180_pt$has_ritu_meth)
+      })
+
+    # (g) ever_brentuximab both directions vs brentuximab token in drug_names
+    p199_chk("IMMUNE-FLAG-199 [g] ever_brentuximab TRUE iff brentuximab token present (both directions)",
+      {
+        g180_pt2 <- g180_dat |>
+          dplyr::group_by(patient_id) |>
+          dplyr::summarise(
+            bren_flag = any(ever_brentuximab == "TRUE"),
+            has_bren  = any(vapply(
+              strsplit(drug_names, ";", fixed = TRUE),
+              function(toks) any(grepl("^brentuximab", trimws(toks), ignore.case = TRUE)),
+              logical(1)
+            )),
+            .groups = "drop"
+          )
+        all(g180_pt2$bren_flag == g180_pt2$has_bren)
+      })
+
+    # (h) immune_flag_dx non-blank exactly when immune_flag == TRUE
+    p199_chk("IMMUNE-FLAG-199 [h] immune_flag_dx non-blank iff immune_flag==TRUE",
+      {
+        g180_pt3 <- g180_dat |>
+          dplyr::group_by(patient_id) |>
+          dplyr::summarise(
+            imm_flag = any(immune_flag == "TRUE"),
+            dx_blank = all(is.na(immune_flag_dx) | immune_flag_dx == ""),
+            .groups = "drop"
+          )
+        all(g180_pt3$imm_flag == !g180_pt3$dx_blank)
+      })
+
+    # (i) every token of immune_flag_dx is a valid config label; tokens unique and sorted within cell
+    p199_chk("IMMUNE-FLAG-199 [i] immune_flag_dx tokens are valid config labels, unique, and sorted",
+      {
+        valid_labels <- unique(unlist(IMMUNE_FLAG_DX_CODES))
+        dx_rows <- g180_dat$immune_flag_dx[!is.na(g180_dat$immune_flag_dx) & g180_dat$immune_flag_dx != ""]
+        if (length(dx_rows) == 0L) {
+          TRUE  # no rows to check
+        } else {
+          all(vapply(dx_rows, function(cell) {
+            toks <- trimws(strsplit(cell, ";", fixed = TRUE)[[1]])
+            all(toks %in% valid_labels) &&
+              !anyDuplicated(toks) &&
+              identical(toks, sort(toks))
+          }, logical(1)))
+        }
+      })
+  } else {
+    p199_skip_fn("IMMUNE-FLAG-199 [d] flag parse check (local — no data)")
+    p199_skip_fn("IMMUNE-FLAG-199 [e] within-patient consistency (local — no data)")
+    p199_skip_fn("IMMUNE-FLAG-199 [f] immune_flag drug token check (local — no data)")
+    p199_skip_fn("IMMUNE-FLAG-199 [g] ever_brentuximab bidirectional check (local — no data)")
+    p199_skip_fn("IMMUNE-FLAG-199 [h] immune_flag_dx blank-iff-FALSE check (local — no data)")
+    p199_skip_fn("IMMUNE-FLAG-199 [i] immune_flag_dx token validity/sort check (local — no data)")
+  }
+}
+
+message(glue("\nIMMUNE-FLAG-199: {p199_pass} PASS / {p199_fail} FAIL / {p199_skip} SKIP"))
 
 # ==============================================================================
 # SECTION 16: SUMMARY ----
@@ -7779,6 +7942,7 @@ message("  * SMOKE-188-01: R/88 validates Phase 188 echo rate since anthracyclin
 message("  * SMOKE-189-01: R/88 validates Phase 189 NHL explainer structural integrity (Section 15az, 3 checks)")
 message("  * AUTOIMMUNE-FLAG-01..05: R/88 validates Phase 192.1 autoimmune diagnosis flags (Section 15ba)")
 message("  * AUTOIMMUNE-FLAG-192.2: R/88 validates Phase 192.2 ICD-9 codes + autoimmune_dx_code_system column (Section 15bb)")
+message("  * IMMUNE-FLAG-199: R/88 validates Phase 199 immune_flag / ever_brentuximab / immune_flag_dx columns 24-26 in gantt_episodes_180.csv; config keys, is_autoimmune_code() with IMMUNE_FLAG_DX_CODES, and drug token checks (Section 15bc)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {
