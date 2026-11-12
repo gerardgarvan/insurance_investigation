@@ -25,7 +25,13 @@
 # ==============================================================================
 
 suppressPackageStartupMessages({ library(dplyr); library(glue) })
-if (!exists("CONFIG")) source("R/00_config.R")
+# Bootstrap on the objects this script actually needs: a bare CONFIG (e.g. from a
+# profile or a partial earlier run) does not guarantee the full config was sourced.
+if (!all(vapply(c("CONFIG", "RITUXIMAB_CODES", "MTX_CODES", "IMMUNE_FLAG_DX_CODES",
+                  "SENTINEL_CUTOFF"), exists, logical(1))) ||
+    !exists("build_autoimmune_dx_flags", mode = "function")) {
+  source("R/00_config.R")
+}
 
 fmt_sup <- function(n) if (n >= 1L && n <= 10L) "<11" else format(n, big.mark = ",")
 
