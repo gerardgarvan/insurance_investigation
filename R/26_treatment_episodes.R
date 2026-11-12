@@ -423,26 +423,34 @@ extract_immunotherapy_dates_with_codes <- function() {
       collect()
   }
 
-  # 4. DISPENSING: RXNORM_CUI — bare RxNorm CUI
-  disp_dates <- NULL
-  if (!is.null(get_pcornet_table("DISPENSING")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("DISPENSING"))) {
-    disp_dates <- get_pcornet_table("DISPENSING") %>%
-      filter(RXNORM_CUI %in% TREATMENT_CODES$immunotherapy_rxnorm) %>%
-      filter(!is.na(DISPENSE_DATE)) %>%
-      select(ID, treatment_date = DISPENSE_DATE, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
-      collect()
+  # 4. DISPENSING: NDC->RxNorm crosswalk (mirrors extract_chemo_dates_with_codes section 5)
+  #    Phase 200 fix 2026-11-12: DISPENSING has no RXNORM_CUI column in this extract;
+  #    previous guard `"RXNORM_CUI" %in% colnames(...)` always evaluated FALSE and
+  #    silently returned NULL.  Use get_chemo_hits() NDC crosswalk path instead.
+  # D-200-R2: exclude multivitamin RxNorm CUIs from MED_ADMIN/DISPENSING branches
+  # (expected ~19 codes pre-task-2c; re-confirm after rituximab CUI move)
+  immuno_ma_codes <- setdiff(
+    TREATMENT_CODES$immunotherapy_rxnorm,
+    names(QUESTIONABLE_IMMUNO_CODES)[QUESTIONABLE_IMMUNO_CODES == "questionable-vitamin"]
+  )
+  immuno_ndc_crosswalk <- load_ndc_crosswalk()
+  disp_dates <- get_chemo_hits("DISPENSING", immuno_ma_codes,
+                               immuno_ndc_crosswalk)
+  if (!is.null(disp_dates)) {
+    disp_dates <- disp_dates %>% mutate(ENCOUNTERID = NA_character_)
+    message(glue("  Immunotherapy DISPENSING: {nrow(disp_dates)} rows, ",
+                 "{n_distinct(disp_dates$ID)} patients"))
   }
 
-  # 5. MED_ADMIN: RXNORM_CUI — bare RxNorm CUI
-  ma_dates <- NULL
-  if (!is.null(get_pcornet_table("MED_ADMIN")) &&
-    "RXNORM_CUI" %in% colnames(get_pcornet_table("MED_ADMIN"))) {
-    ma_dates <- get_pcornet_table("MED_ADMIN") %>%
-      filter(RXNORM_CUI %in% TREATMENT_CODES$immunotherapy_rxnorm) %>%
-      filter(!is.na(MEDADMIN_START_DATE)) %>%
-      select(ID, treatment_date = MEDADMIN_START_DATE, triggering_code = RXNORM_CUI, ENCOUNTERID) %>%
-      collect()
+  # 5. MED_ADMIN: MEDADMIN_CODE + MEDADMIN_TYPE (mirrors extract_chemo_dates_with_codes section 6)
+  #    Phase 200 fix 2026-11-12: MED_ADMIN has no RXNORM_CUI column in this extract;
+  #    previous guard always evaluated FALSE.  Use get_chemo_hits() RX/ND path instead.
+  ma_dates <- get_chemo_hits("MED_ADMIN", immuno_ma_codes,
+                             immuno_ndc_crosswalk)
+  if (!is.null(ma_dates)) {
+    ma_dates <- ma_dates %>% mutate(ENCOUNTERID = NA_character_)
+    message(glue("  Immunotherapy MED_ADMIN: {nrow(ma_dates)} rows, ",
+                 "{n_distinct(ma_dates$ID)} patients"))
   }
 
   # 6. DIAGNOSIS: Z51.12 (ICD-10), V58.12 (ICD-9) — bare DX code
@@ -456,6 +464,26 @@ extract_immunotherapy_dates_with_codes <- function() {
       filter(!is.na(DX_DATE)) %>%
       select(ID, treatment_date = DX_DATE, triggering_code = DX, ENCOUNTERID) %>%
       collect()
+  }
+
+  # Before/after count checkpoint by triggering_code (Phase 200 fix 2026-11-12)
+  all_pre_dedup <- dplyr::bind_rows(
+    if (!is.null(px_dates))   dplyr::mutate(px_dates,  src = "PX")   else NULL,
+    if (!is.null(drg_dates))  dplyr::mutate(drg_dates, src = "DRG")  else NULL,
+    if (!is.null(rx_dates))   dplyr::mutate(rx_dates,  src = "RX")   else NULL,
+    if (!is.null(disp_dates)) dplyr::mutate(disp_dates,src = "DISP") else NULL,
+    if (!is.null(ma_dates))   dplyr::mutate(ma_dates,  src = "MA")   else NULL,
+    if (!is.null(dx_dates))   dplyr::mutate(dx_dates,  src = "DX")   else NULL
+  )
+  if (nrow(all_pre_dedup) > 0) {
+    drug_cts <- all_pre_dedup %>%
+      dplyr::count(triggering_code, src, name = "n_rows") %>%
+      dplyr::arrange(dplyr::desc(n_rows))
+    message("  Immunotherapy rows by code+source (pre-dedup):")
+    for (i in seq_len(nrow(drug_cts))) {
+      message(glue("    {drug_cts$triggering_code[i]} [{drug_cts$src[i]}]: {drug_cts$n_rows[i]} rows"))
+    }
+    message(glue("  Total pre-dedup rows: {nrow(all_pre_dedup)}"))
   }
 
   stack_and_dedup_with_codes(

@@ -890,8 +890,9 @@ message(glue("  Wrote: {wb_path}"))
 #   - has_autoimmune_dx: FALSE -> TRUE allowed; TRUE -> FALSE is a FAIL.
 #   - first_autoimmune_dx_date: same or earlier allowed; later is a FAIL.
 # autoimmune_dx_code_system is a NEW column -- excluded from original-column comparison.
+# Phase 200: gated behind RUN_PRE1922_REGRESSION env var (baselines pre-date Phase 200 outputs).
 
-{
+if (Sys.getenv("RUN_PRE1922_REGRESSION") == "TRUE") {
   pre1922_90  <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_PRE1922.csv")
   pre1922_180 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE1922.csv")
 

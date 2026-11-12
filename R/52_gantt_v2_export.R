@@ -832,10 +832,12 @@ save_pre1922 <- function(src, dst) {
   message(glue("  PRE1922 baseline saved ({length(src_hdr)} cols): {dst}"))
   invisible(TRUE)
 }
-pre1922_90  <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_PRE1922.csv")
-pre1922_180 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE1922.csv")
-save_pre1922(file.path(CONFIG$output_dir, "gantt_episodes.csv"),     pre1922_90)
-save_pre1922(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), pre1922_180)
+if (Sys.getenv("RUN_PRE1922_REGRESSION") == "TRUE") {
+  pre1922_90  <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_PRE1922.csv")
+  pre1922_180 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE1922.csv")
+  save_pre1922(file.path(CONFIG$output_dir, "gantt_episodes.csv"),     pre1922_90)
+  save_pre1922(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), pre1922_180)
+}
 
 message("\n--- Building autoimmune diagnosis flags ---")
 

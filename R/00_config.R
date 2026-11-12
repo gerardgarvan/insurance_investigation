@@ -746,7 +746,8 @@ RITUXIMAB_CODES <- list(
 # the MTX HCPCS J-code. Does NOT duplicate or modify TREATMENT_CODES$chemo_rxnorm.
 MTX_CODES <- list(
   hcpcs  = c("J9250",  # Methotrexate sodium 5 mg
-             "J9260"), # Methotrexate sodium 50 mg
+             "J9260",  # Methotrexate sodium 50 mg
+             "J8610"), # Phase 200: methotrexate oral 2.5 mg — PROCEDURES/PX_TYPE=CH
   rxnorm = c("6851",    # methotrexate (ingredient)
              "105585", "105586", "105587",  # oral tablets
              "1655956", "1655959", "1655960", "1655968",  # injections
@@ -818,23 +819,29 @@ AUTOIMMUNE_DX_CODES <- list(
 # intentionally narrower than AUTOIMMUNE_DX_CODES.
 # Keys = normalized code prefix (dots removed, uppercase); values = plain-language labels
 # written to immune_flag_dx. 13 keys total: 5 ICD-10, 8 ICD-9.
+# D-199-04 (resolved 2026-11-12, team terms): labels are the team's plain-language terms
+# (Rheumatoid Arthritis, GPA, MPA, Pemphigus Vulgaris). ICD-9 codes take the label of their
+# ICD-10 counterpart, following the 192.2 crosswalk: all 714.x -> Rheumatoid Arthritis,
+# 446.4 -> GPA, 446.0 -> MPA (446.0 is broader than M31.7), 694.4 -> Pemphigus Vulgaris
+# (694.4 is broader than L10.0). The team terms pJIA and Psoriasis have no codes in this
+# list (M08.x / L40 / 696.x are in AUTOIMMUNE_DX_CODES only) and are therefore not used here.
 IMMUNE_FLAG_DX_CODES <- list(
   icd10 = c(
-    "M05"   = "Rheumatoid arthritis",
-    "M06"   = "Rheumatoid arthritis",
-    "M313"  = "Granulomatosis with polyangiitis (Wegener's)",
-    "M317"  = "Microscopic polyangiitis",
-    "L100"  = "Pemphigus vulgaris"
+    "M05"   = "Rheumatoid Arthritis",
+    "M06"   = "Rheumatoid Arthritis",
+    "M313"  = "GPA",
+    "M317"  = "MPA",
+    "L100"  = "Pemphigus Vulgaris"
   ),
   icd9 = c(
-    "7140"  = "Rheumatoid arthritis",
-    "7141"  = "Rheumatoid arthritis (Felty's syndrome)",
-    "7142"  = "Rheumatoid arthritis with systemic involvement",
-    "7148"  = "Other inflammatory polyarthritis",
-    "7149"  = "Inflammatory polyarthritis, unspecified",
-    "4464"  = "Granulomatosis with polyangiitis (Wegener's)",
-    "4460"  = "Polyarteritis nodosa",
-    "6944"  = "Pemphigus"
+    "7140"  = "Rheumatoid Arthritis",
+    "7141"  = "Rheumatoid Arthritis",
+    "7142"  = "Rheumatoid Arthritis",
+    "7148"  = "Rheumatoid Arthritis",
+    "7149"  = "Rheumatoid Arthritis",
+    "4464"  = "GPA",
+    "4460"  = "MPA",                # broader than M31.7 (polyarteritis nodosa); 192.2 counterpart mapping
+    "6944"  = "Pemphigus Vulgaris"  # broader than L10.0 (pemphigus); 192.2 counterpart mapping
   )
 )
 
@@ -845,6 +852,37 @@ IMMUNE_FLAG_DRUGS <- c("Rituximab", "Methotrexate")
 # BRENTUXIMAB_DRUG: canonical label for Brentuximab Vedotin (confirmed from DRUG_GROUPINGS /
 # canonicalize_drug_name maps — J9042 and RxNorm 1147327/1147324/1147323 all resolve to this label).
 BRENTUXIMAB_DRUG <- "Brentuximab Vedotin"
+
+# IMMUNE_DRUG_DEFS: Phase 199 full-history drug exposure (D-02b, 2026-11-12).
+# immune_flag / ever_brentuximab use drug exposure from the patient's ENTIRE record:
+# Gantt episode drug_names UNION a direct search of PROCEDURES, PRESCRIBING, MED_ADMIN
+# and DISPENSING over all dates (get_drug_exposure_ids() in R/utils/utils_doi.R).
+# check_199_full_history.R (2026-11-12) found the episodes alone missed 409 rituximab,
+# 26 methotrexate and 365 brentuximab patients. Codes: HCPCS for PROCEDURES /
+# MED_ADMIN, RxNorm for PRESCRIBING / MED_ADMIN, plus case-insensitive generic/brand
+# NAME matching on the raw medication-name columns. List names MUST equal the labels in
+# IMMUNE_FLAG_DRUGS and BRENTUXIMAB_DRUG.
+# Rituximab biosimilar HCPCS: Q5115 Truxima, Q5119 Ruxience, Q5123 Riabni.
+# J8610 = methotrexate oral, 2.5 mg.
+IMMUNE_DRUG_DEFS <- list(
+  "Rituximab" = list(
+    hcpcs  = c("J9310", "J9311", "J9312", "Q5115", "Q5119", "Q5123"),
+    rxnorm = RITUXIMAB_CODES$rxnorm,
+    names  = c("rituximab", "rituxan", "truxima", "ruxience", "riabni")
+  ),
+  "Methotrexate" = list(
+    hcpcs  = MTX_CODES$hcpcs,  # J8610 now in MTX_CODES$hcpcs (Phase 200)
+    rxnorm = MTX_CODES$rxnorm,
+    names  = c("methotrexate", "trexall", "otrexup", "rasuvo", "xatmep", "jylamvo", "rheumatrex")
+  ),
+  "Brentuximab Vedotin" = list(
+    hcpcs  = c("J9042"),
+    rxnorm = c("1147320", "1147323", "1147324", "1147327"),
+    names  = c("brentuximab", "adcetris")
+  )
+)
+stopifnot("IMMUNE_DRUG_DEFS names must match IMMUNE_FLAG_DRUGS + BRENTUXIMAB_DRUG" =
+            setequal(names(IMMUNE_DRUG_DEFS), c(IMMUNE_FLAG_DRUGS, BRENTUXIMAB_DRUG)))
 
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
 # 2026-10-29) that identify ICD-9 and ICD-10 records. "OT" and "SM" are excluded
@@ -2018,6 +2056,9 @@ DRUG_GROUPINGS <- c(
   "J9310" = "Chemotherapy",
   "J9311" = "Chemotherapy",
   "J9312" = "Chemotherapy",
+  "Q5115" = "Chemotherapy",  # Phase 200: Rituximab-abbs biosimilar
+  "Q5119" = "Chemotherapy",  # Phase 200: Rituximab-pvvr biosimilar
+  "Q5123" = "Chemotherapy",  # Phase 200: Rituximab-arrx biosimilar
   "J9315" = "Chemotherapy",
   "J9318" = "Chemotherapy", # Replaces J9315 (romidepsin, non-lyophilized)
   "J9319" = "Chemotherapy",
@@ -2838,7 +2879,15 @@ MEDICATION_LOOKUP_JCODE_SUPPLEMENT <- c(
   "J9042" = "Brentuximab Vedotin",
   "J9130" = "Dacarbazine",
   "J9299" = "Nivolumab",
-  "J9360" = "Vinblastine Sulfate"
+  "J9360" = "Vinblastine Sulfate",
+  "Q5115" = "Rituximab",   # Phase 200: Truxima biosimilar
+  "Q5119" = "Rituximab",   # Phase 200: Ruxience biosimilar
+  "Q5123" = "Rituximab",   # Phase 200: Riabni biosimilar
+  "J8610" = "Methotrexate", # Phase 200: methotrexate oral
+  # Rituximab RxNorm CUIs (moved to chemo_rxnorm per D-200-R1; add if not in RxNorm name cache)
+  "121191"  = "Rituximab",
+  "1719312" = "Rituximab",
+  "2049106" = "Rituximab"
 )
 
 # Merge supplement (don't overwrite existing entries)
@@ -3156,6 +3205,7 @@ TREATMENT_CODES <- list(
     "J9246", # Phase 39: J9246
     "J9250", # Phase 39: J9250
     "J9260", # Phase 39: J9260
+    "J8610", # Phase 200: methotrexate oral 2.5 mg (PROCEDURES PX_TYPE=CH only — not MED_ADMIN/DISPENSING)
     "J9261", # Phase 39: J9261
     "J9263", # Phase 39: J9263
     "J9264", # Phase 39: J9264
@@ -3176,6 +3226,9 @@ TREATMENT_CODES <- list(
     "J9310", # Phase 39: J9310
     "J9311", # Phase 39: J9311
     "J9312", # Phase 39: J9312
+    "Q5115", # Phase 200: Rituximab-abbs (Truxima) biosimilar — Chemotherapy (D-200-R1)
+    "Q5119", # Phase 200: Rituximab-pvvr (Ruxience) biosimilar — Chemotherapy (D-200-R1)
+    "Q5123", # Phase 200: Rituximab-arrx (Riabni) biosimilar — Chemotherapy (D-200-R1)
     "J9315", # Phase 39: J9315
     "J9317", # Phase 39: J9317
     "J9319", # Phase 39: J9319
@@ -3294,7 +3347,12 @@ TREATMENT_CODES <- list(
     "1726676", # Phase 40: bleomycin 30 UNT Injection
     "197550", # Phase 40: cyclophosphamide 50 MG Oral Tablet
     "1441411", # Phase 40: 0.4 ML methotrexate 37.5 MG/ML Auto-Inje
-    "283511" # Phase 40: methotrexate 5 MG Oral Tablet
+    "283511", # Phase 40: methotrexate 5 MG Oral Tablet
+    # Phase 200: Rituximab RxNorm CUIs moved from immunotherapy_rxnorm (D-200-R1)
+    # Confirm via RxNav in 200-02 preflight before running chain.
+    "121191",  # Rituximab ingredient CUI (Rituxan/Truxima/Ruxience/Riabni)
+    "1719312", # Rituximab 10 MG/ML Injectable Solution
+    "2049106"  # Rituximab-abbs (Truxima) branded CUI
   ),
 
   # AMA CPT Radiation Oncology Chapter Structure (Codes 77261-77799)
@@ -3820,7 +3878,7 @@ TREATMENT_CODES <- list(
     "J9228", # Ipilimumab (anti-CTLA-4)
     "J9268", # Pembrolizumab (anti-PD-1)
     "J9271", # Pembrolizumab IV (anti-PD-1)
-    "J9299"  # Nivolumab (anti-PD-1)
+    "J9299", # Nivolumab (anti-PD-1)
   ),
 
   # Immunotherapy RXNORM codes (Phase 40: drug investigation + moved from chemo_rxnorm)
@@ -3852,7 +3910,7 @@ TREATMENT_CODES <- list(
     "1657750", # Pembrolizumab 25 MG/ML Injection
     "1657751", # Pembrolizumab 25 MG/ML Injection [Keytruda]
     "1991412", # Nivolumab 10 MG/ML Injection
-    "1991413"  # Nivolumab 10 MG/ML Injection [Opdivo]
+    "1991413", # Nivolumab 10 MG/ML Injection [Opdivo]
   ),
 
 

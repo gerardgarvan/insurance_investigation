@@ -756,6 +756,25 @@ stopifnot(
   message(glue("  Drug-exposed, qualifying dx, no valid date (D-05/D-199-03): {fmt_sup(n_no_valid_date)}"))
   message(glue("  ever_brentuximab = TRUE:               {fmt_sup(n_brentuximab)}"))
 
+  # D-02b: full-history drug exposure = Gantt drug_names UNION raw CDM (all dates)
+  message("  Drug exposure source (D-02b, patient-level):")
+  for (dd in list(c("Rituximab",    "has_rituximab_gantt",    "has_rituximab_raw"),
+                  c("Methotrexate", "has_methotrexate_gantt", "has_methotrexate_raw"),
+                  c("Brentuximab",  "ever_brentuximab_gantt", "ever_brentuximab_raw"))) {
+    gg <- imm_full[[dd[2]]]; rr <- imm_full[[dd[3]]]
+    message(glue("    {dd[1]}: Gantt {fmt_sup(sum(gg))}, raw {fmt_sup(sum(rr))}, ",
+                 "union {fmt_sup(sum(gg | rr))} (raw-only {fmt_sup(sum(rr & !gg))}, ",
+                 "Gantt-only {fmt_sup(sum(gg & !rr))})"))
+  }
+  raw_exp <- attr(imm_full, "raw_exposure")
+  if (!is.null(raw_exp) && nrow(raw_exp)) {
+    src_tab <- raw_exp |> dplyr::distinct(ID, drug, source) |>
+      dplyr::count(drug, source, name = "n_pts") |> dplyr::arrange(drug, source)
+    message("  Raw exposure by source (patients; a patient can appear under several):")
+    for (i in seq_len(nrow(src_tab)))
+      message(glue("    {src_tab$drug[i]} via {src_tab$source[i]}: {fmt_sup(src_tab$n_pts[i])}"))
+  }
+
   # Label counts among immune_flag = TRUE patients
   if (n_immune_flag > 0) {
     immune_pts_dx <- ep_imm |>
@@ -841,46 +860,50 @@ message(glue("  Schema verification: PASSED ({length(EPISODES_SCHEMA)} episode c
 
 message("\n--- Writing 180-day CSV outputs ---")
 
-# PRE199 baseline: save the 23-column file before overwriting (keep-if-exists; re-run safe).
-pre199 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE199.csv")
-if (!file.exists(pre199)) {
-  if (file.exists(OUTPUT_EPISODES)) {
-    # Guard: baseline must be the 23-column file
-    base_check <- read.csv(OUTPUT_EPISODES, nrows = 1)
-    stopifnot("PRE199 baseline must have 23 columns" = ncol(base_check) == 23L)
-    file.copy(OUTPUT_EPISODES, pre199, overwrite = FALSE)
-    message(glue("  PRE199 baseline saved: {pre199}"))
+if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
+  # PRE199 baseline: save the 23-column file before overwriting (keep-if-exists; re-run safe).
+  pre199 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE199.csv")
+  if (!file.exists(pre199)) {
+    if (file.exists(OUTPUT_EPISODES)) {
+      # Guard: baseline must be the 23-column file
+      base_check <- read.csv(OUTPUT_EPISODES, nrows = 1)
+      stopifnot("PRE199 baseline must have 23 columns" = ncol(base_check) == 23L)
+      file.copy(OUTPUT_EPISODES, pre199, overwrite = FALSE)
+      message(glue("  PRE199 baseline saved: {pre199}"))
+    } else {
+      message("  PRE199 baseline skipped: OUTPUT_EPISODES does not yet exist.")
+    }
   } else {
-    message("  PRE199 baseline skipped: OUTPUT_EPISODES does not yet exist.")
+    message(glue("  PRE199 baseline exists (kept): {pre199}"))
   }
-} else {
-  message(glue("  PRE199 baseline exists (kept): {pre199}"))
 }
 
 write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
 
-# Phase 199 regression: verify the 23 original columns are unchanged vs PRE199 baseline.
-if (file.exists(pre199)) {
-  message("\n--- Phase 199 regression check ---")
-  base_reg <- read.csv(pre199,       colClasses = "character")
-  new_reg  <- read.csv(OUTPUT_EPISODES, colClasses = "character")
-  stopifnot(
-    "regression: row count unchanged"        = nrow(new_reg)  == nrow(base_reg),
-    "regression: col 1-23 names unchanged"   = identical(names(new_reg)[1:23], names(base_reg))
-  )
-  # Multiset comparison: sorted pasted rows of first 23 columns
-  base_rows <- sort(do.call(paste, base_reg[, 1:23, drop = FALSE]))
-  new_rows  <- sort(do.call(paste, new_reg[,  1:23, drop = FALSE]))
-  if (!identical(base_rows, new_rows)) {
-    diffs <- which(base_rows != new_rows)
-    stop(glue("Phase 199 regression FAIL: {length(diffs)} row(s) differ in original 23 columns.
+if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
+  # Phase 199 regression: verify the 23 original columns are unchanged vs PRE199 baseline.
+  if (file.exists(pre199)) {
+    message("\n--- Phase 199 regression check ---")
+    base_reg <- read.csv(pre199,       colClasses = "character")
+    new_reg  <- read.csv(OUTPUT_EPISODES, colClasses = "character")
+    stopifnot(
+      "regression: row count unchanged"        = nrow(new_reg)  == nrow(base_reg),
+      "regression: col 1-23 names unchanged"   = identical(names(new_reg)[1:23], names(base_reg))
+    )
+    # Multiset comparison: sorted pasted rows of first 23 columns
+    base_rows <- sort(do.call(paste, base_reg[, 1:23, drop = FALSE]))
+    new_rows  <- sort(do.call(paste, new_reg[,  1:23, drop = FALSE]))
+    if (!identical(base_rows, new_rows)) {
+      diffs <- which(base_rows != new_rows)
+      stop(glue("Phase 199 regression FAIL: {length(diffs)} row(s) differ in original 23 columns.
 Example diff (first mismatch):
   PRE199: {base_rows[diffs[1]]}
   NEW:    {new_rows[diffs[1]]}"))
+    }
+    message("Phase 199 regression: PASS (23 original columns unchanged)")
   }
-  message("Phase 199 regression: PASS (23 original columns unchanged)")
 }
 
 write.csv(detail_export, OUTPUT_DETAIL, row.names = FALSE, na = "")

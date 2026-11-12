@@ -7726,8 +7726,25 @@ if (!file.exists(gantt_180_path_bc)) {
         all(!g180_pt$imm_flag | g180_pt$has_ritu_meth)
       })
 
-    # (g) ever_brentuximab both directions vs brentuximab token in drug_names
-    p199_chk("IMMUNE-FLAG-199 [g] ever_brentuximab TRUE iff brentuximab token present (both directions)",
+    # [f-autoimmune] immune_flag TRUE implies has_autoimmune_dx TRUE (Phase 199/200 15bc update)
+    local({
+      g180_pt <- read.csv(file.path(CONFIG$output_dir, "gantt_episodes_180.csv"), header = TRUE) %>%
+        group_by(patient_id) %>%
+        summarise(
+          imm_flag      = any(immune_flag %in% TRUE, na.rm = TRUE),
+          has_autoimmune = any(has_autoimmune_dx %in% TRUE, na.rm = TRUE),
+          .groups = "drop"
+        )
+      if (!all(!g180_pt$imm_flag | g180_pt$has_autoimmune)) {
+        n_fail <- sum(g180_pt$imm_flag & !g180_pt$has_autoimmune)
+        message(glue("  FAIL [f-autoimmune]: {n_fail} patients have immune_flag TRUE but has_autoimmune_dx FALSE"))
+      } else {
+        message("  PASS [f-autoimmune]: immune_flag TRUE implies has_autoimmune_dx TRUE")
+      }
+    })
+
+    # (g) brentuximab token implies ever_brentuximab TRUE (one direction; Phase 200 15bc update)
+    p199_chk("IMMUNE-FLAG-199 [g] brentuximab token in drug_names implies ever_brentuximab TRUE (one direction)",
       {
         g180_pt2 <- g180_dat |>
           dplyr::group_by(patient_id) |>
@@ -7740,7 +7757,7 @@ if (!file.exists(gantt_180_path_bc)) {
             )),
             .groups = "drop"
           )
-        all(g180_pt2$bren_flag == g180_pt2$has_bren)
+        all(!g180_pt2$has_bren | g180_pt2$bren_flag)
       })
 
     # (h) immune_flag_dx non-blank exactly when immune_flag == TRUE
@@ -7781,6 +7798,48 @@ if (!file.exists(gantt_180_path_bc)) {
     p199_skip_fn("IMMUNE-FLAG-199 [i] immune_flag_dx token validity/sort check (local — no data)")
   }
 }
+
+# Phase 200 checks (5a/5b/5c)
+local({
+  r26_text <- tryCatch(readLines("R/26_treatment_episodes.R"), error = function(e) character(0))
+  fn_start <- grep("extract_immunotherapy_dates_with_codes <- function", r26_text)
+  fn_end   <- if (length(fn_start) > 0) {
+    ends <- grep("^\\}", r26_text)
+    ends[ends > fn_start[1]][1]
+  } else NA_integer_
+  if (is.na(fn_start) || is.na(fn_end)) {
+    message("  FAIL [5a]: extract_immunotherapy_dates_with_codes() not found in R/26"); return(invisible(NULL))
+  }
+  fn_lines <- r26_text[fn_start:fn_end]
+  # 5a: no RXNORM_CUI guard; has get_chemo_hits for DISPENSING and MED_ADMIN
+  has_broken <- any(grepl("RXNORM_CUI.*colnames.*(DISPENSING|MED_ADMIN)", fn_lines))
+  has_disp   <- any(grepl('get_chemo_hits.*"DISPENSING"', fn_lines))
+  has_ma     <- any(grepl('get_chemo_hits.*"MED_ADMIN"', fn_lines))
+  if (has_broken)
+    message("  FAIL [5a]: RXNORM_CUI guard still present in immunotherapy DISPENSING/MED_ADMIN branch")
+  else if (!has_disp || !has_ma)
+    message("  FAIL [5a]: missing get_chemo_hits() call for DISPENSING or MED_ADMIN")
+  else
+    message("  PASS [5a]: no RXNORM_CUI guard; get_chemo_hits() used for DISPENSING and MED_ADMIN")
+  # 5b: immuno_ma_codes used (not raw immunotherapy_rxnorm)
+  has_immuno_ma <- any(grepl("get_chemo_hits.*immuno_ma_codes", fn_lines))
+  has_raw       <- any(grepl("get_chemo_hits.*immunotherapy_rxnorm", fn_lines))
+  if (!has_immuno_ma || has_raw)
+    message("  FAIL [5b]: get_chemo_hits() not using immuno_ma_codes (vitamin exclusion missing)")
+  else
+    message("  PASS [5b]: get_chemo_hits() uses immuno_ma_codes (vitamin codes excluded)")
+  # 5c: J8610 and Q5 codes in chemo_hcpcs; MEDICATION_LOOKUP names present
+  j8610_in_chemo <- "J8610" %in% TREATMENT_CODES$chemo_hcpcs
+  q5_in_chemo    <- all(c("Q5115","Q5119","Q5123") %in% TREATMENT_CODES$chemo_hcpcs)
+  j8610_named    <- !is.na(MEDICATION_LOOKUP["J8610"]) && nchar(MEDICATION_LOOKUP["J8610"]) > 0
+  q5115_named    <- !is.na(MEDICATION_LOOKUP["Q5115"]) && nchar(MEDICATION_LOOKUP["Q5115"]) > 0
+  if (!j8610_in_chemo || !q5_in_chemo)
+    message("  FAIL [5c]: J8610 or Q5115/Q5119/Q5123 not in TREATMENT_CODES$chemo_hcpcs")
+  else if (!j8610_named || !q5115_named)
+    message("  FAIL [5c]: MEDICATION_LOOKUP missing name for J8610 or Q5115")
+  else
+    message("  PASS [5c]: J8610 and Q5 biosimilars in chemo_hcpcs with drug names")
+})
 
 message(glue("\nIMMUNE-FLAG-199: {p199_pass} PASS / {p199_fail} FAIL / {p199_skip} SKIP"))
 
@@ -7943,6 +8002,7 @@ message("  * SMOKE-189-01: R/88 validates Phase 189 NHL explainer structural int
 message("  * AUTOIMMUNE-FLAG-01..05: R/88 validates Phase 192.1 autoimmune diagnosis flags (Section 15ba)")
 message("  * AUTOIMMUNE-FLAG-192.2: R/88 validates Phase 192.2 ICD-9 codes + autoimmune_dx_code_system column (Section 15bb)")
 message("  * IMMUNE-FLAG-199: R/88 validates Phase 199 immune_flag / ever_brentuximab / immune_flag_dx columns 24-26 in gantt_episodes_180.csv; config keys, is_autoimmune_code() with IMMUNE_FLAG_DX_CODES, and drug token checks (Section 15bc)")
+message("  * IMMUNE-FLAG-200: Phase 200 15bc additions — [f-autoimmune] immune_flag implies has_autoimmune_dx; [g] one-directional brentuximab token check; [5a] no RXNORM_CUI guard / get_chemo_hits used; [5b] immuno_ma_codes vitamin exclusion; [5c] J8610 + Q5115/Q5119/Q5123 in chemo_hcpcs with MEDICATION_LOOKUP names")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {
