@@ -411,8 +411,9 @@ if (!file.exists(EPISODES_RDS)) {
     collect() %>%
     mutate(BIRTH_DATE = parse_pcornet_date(BIRTH_DATE))
 
+  # episodes uses patient_id; demo_raw (from DuckDB) uses ID — bridge the keys.
   episodes_with_age <- episodes %>%
-    left_join(demo_raw, by = "ID") %>%
+    left_join(demo_raw, by = c("patient_id" = "ID")) %>%
     mutate(
       age_at_episode = floor(as.numeric(interval(BIRTH_DATE, episode_start) / years(1)))
     ) %>%
@@ -432,10 +433,12 @@ if (!file.exists(EPISODES_RDS)) {
       summarise(new_earliest_date = min(treatment_date, na.rm = TRUE), .groups = "drop")
 
     existing_episode_start <- episodes_with_age %>%
-      group_by(ID) %>%
+      group_by(patient_id) %>%
       summarise(min_episode_start = min(episode_start, na.rm = TRUE), .groups = "drop")
 
-    flagged <- inner_join(new_earliest, existing_episode_start, by = "ID") %>%
+    # new_earliest keyed by ID (DuckDB); existing_episode_start keyed by patient_id
+    flagged <- inner_join(new_earliest, existing_episode_start,
+                          by = c("ID" = "patient_id")) %>%
       filter(new_earliest_date < min_episode_start)
 
     n_flagged  <- n_distinct(flagged$ID)
