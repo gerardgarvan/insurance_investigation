@@ -7737,21 +7737,35 @@ if (!file.exists(gantt_180_path_bc)) {
     })
 
     # (f2) one-direction completeness: Gantt token + qualifying dx => immune_flag TRUE
+    # Qualifying dx = IMMUNE_FLAG_DX_CODES patients (284 pts), NOT broader has_autoimmune_dx (433 pts).
+    # Reads immune_flag_dx_ids.rds saved by R/142 Section 4C3. SKIPs if absent.
     local({
-      g180_pt_f2 <- g180_dat |>
-        dplyr::group_by(patient_id) |>
-        dplyr::summarise(
-          imm_flag   = any(immune_flag == "TRUE"),
-          has_aim_dx = any(has_autoimmune_dx %in% "TRUE"),
-          has_token  = any(vapply(
-            strsplit(drug_names, ";", fixed = TRUE),
-            function(toks) any(grepl("^rituximab|^methotrexate", trimws(toks), ignore.case = TRUE)),
-            logical(1)
-          )),
-          .groups = "drop"
-        )
-      p199_chk("IMMUNE-FLAG-199 [f2] Gantt token + qualifying dx => immune_flag TRUE (completeness)",
-        all(!(g180_pt_f2$has_token & g180_pt_f2$has_aim_dx) | g180_pt_f2$imm_flag))
+      dx_rds <- file.path(CONFIG$cache$outputs_dir, "immune_flag_dx_ids.rds")
+      if (!file.exists(dx_rds)) {
+        message("  SKIP [f2]: immune_flag_dx_ids.rds not found — rerun R/142 first")
+      } else {
+        immune_flag_dx_pts <- readRDS(dx_rds)
+        g180_pt_f2 <- g180_dat |>
+          dplyr::group_by(patient_id) |>
+          dplyr::summarise(
+            imm_flag   = any(immune_flag == "TRUE"),
+            has_aim_dx = any(patient_id[1L] %in% immune_flag_dx_pts),
+            has_token  = any(vapply(
+              strsplit(drug_names, ";", fixed = TRUE),
+              function(toks) any(grepl("^rituximab|^methotrexate", trimws(toks), ignore.case = TRUE)),
+              logical(1)
+            )),
+            .groups = "drop"
+          )
+        violators <- g180_pt_f2[g180_pt_f2$has_token & g180_pt_f2$has_aim_dx & !g180_pt_f2$imm_flag, ]
+        n_viol <- nrow(violators)
+        n_viol_str <- if (n_viol >= 1 && n_viol <= 10) "<11" else as.character(n_viol)
+        if (n_viol > 0) {
+          message(glue("  FAIL [f2]: {n_viol_str} patients have token + qualifying dx but immune_flag FALSE"))
+        }
+        p199_chk("IMMUNE-FLAG-199 [f2] Gantt token + qualifying dx (IMMUNE_FLAG_DX_CODES) => immune_flag TRUE (completeness)",
+          n_viol == 0L)
+      }
     })
 
     # [f-autoimmune] immune_flag TRUE implies has_autoimmune_dx TRUE (Phase 199/200 15bc update)

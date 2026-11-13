@@ -823,6 +823,16 @@ stopifnot(
                  "({dplyr::n_distinct(exp_df$patient_id)} patients) -> {out_rds}"))
   })
 
+  # Save patient-level IMMUNE_FLAG_DX qualifying-dx IDs for R/88 [f2] check (fix [f2] FAIL)
+  local({
+    dx_ids <- ep_imm$patient_id[isTRUE(ep_imm$has_immune_flag_dx) |
+                                  ep_imm$has_immune_flag_dx %in% TRUE]
+    dx_ids <- unique(dx_ids)
+    out_rds <- file.path(CONFIG$cache$outputs_dir, "immune_flag_dx_ids.rds")
+    saveRDS(dx_ids, out_rds)
+    message(glue("  Saved immune_flag_dx_ids.rds: {length(dx_ids)} patients -> {out_rds}"))
+  })
+
   # Label counts among immune_flag = TRUE patients
   if (n_immune_flag > 0) {
     immune_pts_dx <- ep_imm |>

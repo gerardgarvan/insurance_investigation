@@ -67,3 +67,17 @@ R/142 and R/88 updated to handle `raw_history=TRUE` in `build_immune_flags()` (i
 - (e) R/25 old immuno logic review
 - (f) Chemo_combos "Rituximab/Hyaluronidase" classification
 - (g) Stray `.planning/phases/01-immune-brentuximab-*` directory cleanup
+
+## Post-Summary Fix: [f2] qualifying-dx correction (2026-11-12)
+
+IMMUNE-FLAG-199 [f2] initially failed (20 PASS / 1 FAIL) because it used `has_autoimmune_dx`
+(broader AUTOIMMUNE_DX_CODES set, 433 pts) as the qualifying-dx proxy instead of the narrower
+IMMUNE_FLAG_DX_CODES set (284 pts). Patients with a Rituximab/MTX Gantt token and only a
+broader autoimmune code (e.g., ICD-9 696.0 psoriasis) are correctly NOT flagged, but [f2]
+wrongly counted them as violations.
+
+Correction:
+- R/142 Section 4C3 now saves `immune_flag_dx_ids.rds` (patient_ids where
+  `has_immune_flag_dx` is TRUE, derived from IMMUNE_FLAG_DX_CODES).
+- R/88 [f2] reads that RDS; SKIPs with a message if absent; uses the narrower set for
+  `has_aim_dx`; prints a small-cell-suppressed count on FAIL.
