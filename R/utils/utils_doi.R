@@ -425,6 +425,81 @@ build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
 }
 
 
+#' Full-history drug exposure from raw CDM tables (Phase 199, D-02b)
+#'
+#' Searches PROCEDURES (HCPCS), PRESCRIBING (RxNorm + medication name),
+#' MED_ADMIN (code + medication name) and DISPENSING (medication name) over ALL
+#' dates for the cohort. No date window is applied. Columns that do not exist
+#' in this extract are skipped (listed in a message); a query error is fatal.
+#'
+#' @param cohort_ids character vector of patient IDs
+#' @param defs       named list (drug label -> list(hcpcs, rxnorm, names));
+#'   default IMMUNE_DRUG_DEFS from R/00_config.R
+#' @return tibble(ID, drug, source): one row per patient x drug x source
+get_drug_exposure_ids <- function(cohort_ids, defs = IMMUNE_DRUG_DEFS) {
+  opened_here <- FALSE
+  if (!exists("pcornet_con", envir = .GlobalEnv) || !DBI::dbIsValid(pcornet_con)) {
+    open_pcornet_con()
+    opened_here <- TRUE
+  }
+  duckdb::duckdb_register(pcornet_con, "drx_cohort",
+                          tibble::tibble(ID = unique(as.character(cohort_ids))))
+  on.exit({
+    try(duckdb::duckdb_unregister(pcornet_con, "drx_cohort"), silent = TRUE)
+    if (opened_here) try(close_pcornet_con(), silent = TRUE)
+  }, add = TRUE)
+
+  flds     <- function(tbl) toupper(DBI::dbListFields(pcornet_con, tbl))
+  sql_in   <- function(x) paste0("'", gsub("'", "''", toupper(x)), "'", collapse = ", ")
+  sql_like <- function(col, words)
+    paste0("lower(CAST(t.", col, " AS VARCHAR)) LIKE '%", tolower(words), "%'", collapse = " OR ")
+  q_ids <- function(tbl, where) {
+    DBI::dbGetQuery(pcornet_con, paste0(
+      "SELECT DISTINCT t.ID FROM ", tbl, " t JOIN drx_cohort c ON c.ID = t.ID WHERE ", where))$ID
+  }
+
+  f_px <- flds("PROCEDURES"); f_rx <- flds("PRESCRIBING")
+  f_ma <- flds("MED_ADMIN");  f_di <- flds("DISPENSING")
+  rx_name_cols <- intersect(c("RAW_RX_MED_NAME", "RX_MED_NAME"), f_rx)
+  ma_name_cols <- intersect(c("RAW_MEDADMIN_MED_NAME", "MEDADMIN_MED_NAME"), f_ma)
+  di_name_cols <- intersect(c("RAW_DISPENSE_MED_NAME", "DISPENSE_MED_NAME"), f_di)
+  message("  [get_drug_exposure_ids] name columns used: PRESCRIBING=",
+          paste(c(rx_name_cols, "none")[1:max(1, length(rx_name_cols))], collapse = ","),
+          "; MED_ADMIN=", paste(c(ma_name_cols, "none")[1:max(1, length(ma_name_cols))], collapse = ","),
+          "; DISPENSING=", paste(c(di_name_cols, "none")[1:max(1, length(di_name_cols))], collapse = ","))
+
+  out <- list()
+  add <- function(ids, drug, source) {
+    if (length(ids)) out[[length(out) + 1L]] <<-
+        tibble::tibble(ID = as.character(ids), drug = drug, source = source)
+  }
+
+  for (drug in names(defs)) {
+    d <- defs[[drug]]
+    if ("PX" %in% f_px && length(d$hcpcs))
+      add(q_ids("PROCEDURES", paste0("upper(trim(CAST(t.PX AS VARCHAR))) IN (", sql_in(d$hcpcs), ")")),
+          drug, "PROCEDURES code")
+    if ("RXNORM_CUI" %in% f_rx && length(d$rxnorm))
+      add(q_ids("PRESCRIBING", paste0("trim(CAST(t.RXNORM_CUI AS VARCHAR)) IN (", sql_in(d$rxnorm), ")")),
+          drug, "PRESCRIBING code")
+    for (nc in rx_name_cols)
+      add(q_ids("PRESCRIBING", sql_like(nc, d$names)), drug, "PRESCRIBING name")
+    if ("MEDADMIN_CODE" %in% f_ma && length(c(d$rxnorm, d$hcpcs)))
+      add(q_ids("MED_ADMIN", paste0("upper(trim(CAST(t.MEDADMIN_CODE AS VARCHAR))) IN (",
+                                     sql_in(c(d$rxnorm, d$hcpcs)), ")")),
+          drug, "MED_ADMIN code")
+    for (nc in ma_name_cols)
+      add(q_ids("MED_ADMIN", sql_like(nc, d$names)), drug, "MED_ADMIN name")
+    for (nc in di_name_cols)
+      add(q_ids("DISPENSING", sql_like(nc, d$names)), drug, "DISPENSING name")
+  }
+
+  if (!length(out))
+    return(tibble::tibble(ID = character(0), drug = character(0), source = character(0)))
+  dplyr::distinct(dplyr::bind_rows(out))
+}
+
+
 #' Build patient-level immune flags for Phase 199 (Rituximab/Methotrexate + qualifying diagnosis)
 #'
 #' Wraps \code{build_autoimmune_dx_flags(return_records = TRUE)} with IMMUNE_FLAG_DX_CODES,
@@ -446,15 +521,21 @@ build_autoimmune_dx_flags <- function(cohort_ids, sentinel = SENTINEL_CUTOFF,
 #'   (default IMMUNE_FLAG_DRUGS). drugs[1] = Rituximab label, drugs[2] = Methotrexate label.
 #' @param brentuximab        canonical label for Brentuximab (default BRENTUXIMAB_DRUG)
 #' @param sentinel           Date; passed to build_autoimmune_dx_flags()
+#' @param raw_history        logical (default TRUE). Phase 199 D-02b: drug exposure is
+#'   the UNION of Gantt drug_names and get_drug_exposure_ids() (raw CDM, all dates).
+#'   FALSE reproduces the episode-only behaviour.
 #' @return tibble with one row per id: patient_id, immune_flag, ever_brentuximab,
 #'   immune_flag_dx, has_rituximab, has_methotrexate, has_immune_flag_dx,
-#'   qc_immune_dx_no_valid_date. All logical columns are coerced to FALSE (no NA).
+#'   qc_immune_dx_no_valid_date, plus QC columns *_gantt / *_raw for each drug.
+#'   All logical columns are coerced to FALSE (no NA). attr(, "raw_exposure") holds
+#'   the get_drug_exposure_ids() rows (ID, drug, source) for source QC.
 build_immune_flags <- function(ids,
                                drug_names_by_patient,
                                codes      = IMMUNE_FLAG_DX_CODES,
                                drugs      = IMMUNE_FLAG_DRUGS,
                                brentuximab = BRENTUXIMAB_DRUG,
-                               sentinel   = SENTINEL_CUTOFF) {
+                               sentinel   = SENTINEL_CUTOFF,
+                               raw_history = TRUE) {
 
   # --- 1. Diagnosis flags (DuckDB query) ---
   aim_out <- build_autoimmune_dx_flags(ids, sentinel = sentinel, codes = codes,
@@ -479,26 +560,46 @@ build_immune_flags <- function(ids,
       .groups   = "drop"
     ) |>
     dplyr::mutate(
-      tokens          = strsplit(all_drugs, ";"),
-      has_rituximab   = vapply(tokens, function(t) drugs[1] %in% trimws(t), logical(1)),
-      has_methotrexate = vapply(tokens, function(t) drugs[2] %in% trimws(t), logical(1)),
-      ever_brentuximab = vapply(tokens, function(t) brentuximab %in% trimws(t), logical(1))
+      tokens                = strsplit(all_drugs, ";"),
+      has_rituximab_gantt   = vapply(tokens, function(t) drugs[1] %in% trimws(t), logical(1)),
+      has_methotrexate_gantt = vapply(tokens, function(t) drugs[2] %in% trimws(t), logical(1)),
+      ever_brentuximab_gantt = vapply(tokens, function(t) brentuximab %in% trimws(t), logical(1))
     ) |>
-    dplyr::select(patient_id, has_rituximab, has_methotrexate, ever_brentuximab)
+    dplyr::select(patient_id, has_rituximab_gantt, has_methotrexate_gantt, ever_brentuximab_gantt)
+
+  # --- 2b. Raw full-history exposure (D-02b) ---
+  base <- tibble::tibble(patient_id = unique(as.character(ids)))
+  if (raw_history) {
+    raw_exp <- get_drug_exposure_ids(base$patient_id)
+    raw_flags <- base |>
+      dplyr::mutate(
+        has_rituximab_raw    = patient_id %in% raw_exp$ID[raw_exp$drug == drugs[1]],
+        has_methotrexate_raw = patient_id %in% raw_exp$ID[raw_exp$drug == drugs[2]],
+        ever_brentuximab_raw = patient_id %in% raw_exp$ID[raw_exp$drug == brentuximab]
+      )
+  } else {
+    raw_exp <- tibble::tibble(ID = character(0), drug = character(0), source = character(0))
+    raw_flags <- base |>
+      dplyr::mutate(has_rituximab_raw = FALSE, has_methotrexate_raw = FALSE,
+                    ever_brentuximab_raw = FALSE)
+  }
 
   # --- 3. Combine ---
-  base <- tibble::tibble(patient_id = unique(as.character(ids)))
-
   out <- base |>
     dplyr::left_join(
       aim_flags |> dplyr::rename(patient_id = ID),
       by = "patient_id"
     ) |>
     dplyr::left_join(drug_flags, by = "patient_id") |>
+    dplyr::left_join(raw_flags, by = "patient_id") |>
     dplyr::mutate(
-      dplyr::across(c(has_rituximab, has_methotrexate, ever_brentuximab,
+      dplyr::across(c(has_rituximab_gantt, has_methotrexate_gantt, ever_brentuximab_gantt,
+                      has_rituximab_raw, has_methotrexate_raw, ever_brentuximab_raw,
                       has_immune_flag_dx, qc_immune_dx_no_valid_date),
                     ~ dplyr::coalesce(.x, FALSE)),
+      has_rituximab    = has_rituximab_gantt    | has_rituximab_raw,
+      has_methotrexate = has_methotrexate_gantt | has_methotrexate_raw,
+      ever_brentuximab = ever_brentuximab_gantt | ever_brentuximab_raw,
       immune_flag = (has_rituximab | has_methotrexate) & has_immune_flag_dx
     )
 
@@ -534,9 +635,14 @@ build_immune_flags <- function(ids,
   stopifnot("build_immune_flags: immune_flag NA" = !anyNA(out$immune_flag))
   stopifnot("build_immune_flags: ever_brentuximab NA" = !anyNA(out$ever_brentuximab))
 
-  out |> dplyr::select(patient_id, immune_flag, ever_brentuximab, immune_flag_dx,
-                        has_rituximab, has_methotrexate, has_immune_flag_dx,
-                        qc_immune_dx_no_valid_date)
+  res <- out |> dplyr::select(patient_id, immune_flag, ever_brentuximab, immune_flag_dx,
+                               has_rituximab, has_methotrexate, has_immune_flag_dx,
+                               qc_immune_dx_no_valid_date,
+                               has_rituximab_gantt, has_rituximab_raw,
+                               has_methotrexate_gantt, has_methotrexate_raw,
+                               ever_brentuximab_gantt, ever_brentuximab_raw)
+  attr(res, "raw_exposure") <- raw_exp
+  res
 }
 
 # ==============================================================================

@@ -48,27 +48,33 @@ Column count for `gantt_episodes_180.csv` goes from 23 to 26.
 
   | System | Key | Source code | Plain-language label |
   |--------|-----|-------------|----------------------|
-  | ICD-10 | `M05` | M05 (all) | Rheumatoid arthritis |
-  | ICD-10 | `M06` | M06 (all) | Rheumatoid arthritis |
-  | ICD-10 | `M313` | M31.3 | Granulomatosis with polyangiitis (Wegener's) |
-  | ICD-10 | `M317` | M31.7 | Microscopic polyangiitis |
-  | ICD-10 | `L100` | L10.0 | Pemphigus vulgaris |
-  | ICD-9 | `7140` | 714.0 | Rheumatoid arthritis |
-  | ICD-9 | `7141` | 714.1 | Rheumatoid arthritis (Felty's syndrome) |
-  | ICD-9 | `7142` | 714.2 | Rheumatoid arthritis with systemic involvement |
-  | ICD-9 | `7148` | 714.8x | Other inflammatory polyarthritis (prefix covers 714.81/714.89) |
-  | ICD-9 | `7149` | 714.9 | Inflammatory polyarthritis, unspecified |
-  | ICD-9 | `4464` | 446.4 | Granulomatosis with polyangiitis (Wegener's) |
-  | ICD-9 | `4460` | 446.0 | Polyarteritis nodosa |
-  | ICD-9 | `6944` | 694.4 | Pemphigus |
+  | ICD-10 | `M05` | M05 (all) | Rheumatoid Arthritis |
+  | ICD-10 | `M06` | M06 (all) | Rheumatoid Arthritis |
+  | ICD-10 | `M313` | M31.3 | GPA |
+  | ICD-10 | `M317` | M31.7 | MPA |
+  | ICD-10 | `L100` | L10.0 | Pemphigus Vulgaris |
+  | ICD-9 | `7140` | 714.0 | Rheumatoid Arthritis |
+  | ICD-9 | `7141` | 714.1 | Rheumatoid Arthritis |
+  | ICD-9 | `7142` | 714.2 | Rheumatoid Arthritis |
+  | ICD-9 | `7148` | 714.8x | Rheumatoid Arthritis (prefix covers 714.81/714.89) |
+  | ICD-9 | `7149` | 714.9 | Rheumatoid Arthritis |
+  | ICD-9 | `4464` | 446.4 | GPA |
+  | ICD-9 | `4460` | 446.0 | MPA (446.0 broader than M31.7) |
+  | ICD-9 | `6944` | 694.4 | Pemphigus Vulgaris (694.4 broader than L10.0) |
 
-  ICD-9 and ICD-10 codes for the same condition share one label. A patient with both M06 and 714.0 therefore shows "Rheumatoid arthritis" once.
+  ICD-9 and ICD-10 codes for the same condition share one label. A patient with both M06 and 714.0 therefore shows "Rheumatoid Arthritis" once.
+
+  **D-199-04 RESOLVED 2026-11-12:** the labels are the team's plain-language terms (Rheumatoid Arthritis, GPA, MPA, Pemphigus Vulgaris). ICD-9 codes take their ICD-10 counterpart's label per the 192.2 crosswalk. The team terms pJIA and Psoriasis have no codes in IMMUNE_FLAG_DX_CODES and are unused here.
 
   The keys are exactly the list the user supplied (2026-11-12). Nothing is added or removed. DX_TYPE gating reuses `AUTOIMMUNE_DX_TYPE_ACCEPT` ("09" / "10").
 
 ### Drug match (D-02)
 
 - **D-02:** The drug test runs on the canonicalized `drug_names` field of `episodes_export`, after the R/142 Section 4D cleanup (semicolon-split, `canonicalize_drug_name()` applied). A patient "has Rituximab" if any token in any of their episodes equals the canonical Rituximab label exactly. The same rule applies to Methotrexate. Exact match on the canonical label means name variants (for example "Rituximab-abbs") count only if `canonicalize_drug_name()` already collapses them.
+- **D-02a (2026-11-12, post-implementation review):** Exact matching was replaced by **case-insensitive prefix matching per drug family** (`^rituximab`, `^methotrexate`, `^brentuximab`). The drug_names sources (MEDICATION_LOOKUP title-case names, R/27 RxNorm names) can produce variants such as "Methotrexate Sodium", "Rituximab (Truxima)", "Rituximab/Hyaluronidase" or lowercase forms, and DRUG_NAME_ALIASES has no entries for these drugs. Matching runs on a copy passed to build_immune_flags(), so the CSV `drug_names` column is unchanged. The D-03 printout shows which family each raw token is counted under.
+- **D-02b (2026-11-12, user: flags must reflect each patient's ENTIRE history):** drug exposure is the **UNION** of (1) Gantt episode `drug_names` (family-matched, D-02a) and (2) `get_drug_exposure_ids()` in `R/utils/utils_doi.R`. That function searches PROCEDURES (HCPCS), PRESCRIBING (RxNorm + medication name), MED_ADMIN (code + medication name) and DISPENSING (medication name) over **all dates** for the cohort, using `IMMUNE_DRUG_DEFS` in config. The defs add codes missing from the treatment code lists: rituximab biosimilar HCPCS Q5115/Q5119/Q5123, RITUXIMAB_CODES$rxnorm, oral MTX J8610, plus brand names. Evidence: `R/tools/check_199_full_history.R` (2026-11-12) found the episodes alone missed 409 rituximab, 26 methotrexate and 365 brentuximab patients. The raw search in turn missed 24 MTX patients that the episodes had (likely NDC-only), which is why both are combined. `build_immune_flags(raw_history = TRUE)` is the default; `FALSE` reproduces episode-only. Diagnoses were already full-history (all DIAGNOSIS rows; only the 1910 sentinel applies).
+  - *Open for team (D-199-05):* should a PRESCRIBING order alone (no administration or dispensing record) count as exposure? Default: yes, the same as the treatment pipeline.
+  - *Separate finding (not fixed here):* the Gantt treatment episodes themselves miss many MED_ADMIN rituximab and brentuximab records. Logged for a separate phase.
 - **D-03:** The executor must confirm the canonical labels before hard-coding them. Print the distinct canonical tokens that match `regex("rituximab|methotrexate|brentuximab", ignore_case = TRUE)` across `episodes_export$drug_names`. Then store the confirmed labels in config as `IMMUNE_FLAG_DRUGS <- c("Rituximab", "Methotrexate")` and `BRENTUXIMAB_DRUG <- "<confirmed label>"`. The label is expected to be "Brentuximab" or "Brentuximab Vedotin". If more than one raw variant is found that canonicalization does not merge, stop and record it as D-199-01 rather than guessing.
 
 ### Timing (D-04)
@@ -112,8 +118,8 @@ Column count for `gantt_episodes_180.csv` goes from 23 to 26.
     - (c) the 180 CSV has 26 columns, with `immune_flag` at 24, `ever_brentuximab` at 25, and `immune_flag_dx` at 26
     - (d) the two flag columns parse as logical with no NA
     - (e) all three new columns are constant within `patient_id`
-    - (f) every `immune_flag == TRUE` patient has Rituximab or Methotrexate in `drug_names` (checked from the CSV)
-    - (g) every `ever_brentuximab == TRUE` patient has the Brentuximab label in `drug_names`, and every patient with that label is TRUE (both directions)
+    - (f) every `immune_flag == TRUE` patient also has `has_autoimmune_dx == TRUE` (IMMUNE_FLAG_DX_CODES is a subset of AUTOIMMUNE_DX_CODES). The old token check was dropped in D-02b: exposure can come from raw history and not show in `drug_names`.
+    - (g) every patient with a `^brentuximab` token in `drug_names` has `ever_brentuximab == TRUE`. One direction only since D-02b.
     - (h) `immune_flag_dx` is non-blank exactly when `immune_flag == TRUE`
     - (i) every `;`-split token of `immune_flag_dx` is one of `unique(unlist(IMMUNE_FLAG_DX_CODES))`, and the tokens within a cell are unique and sorted
 
@@ -135,7 +141,7 @@ Column count for `gantt_episodes_180.csv` goes from 23 to 26.
   3. Map each key to its plain-language label (the config value).
   4. Remove duplicates, sort alphabetically, and join with `"; "`.
 
-  Example: `"Pemphigus vulgaris; Rheumatoid arthritis"`. Patients with `immune_flag == FALSE` get `""`, even if they have a qualifying diagnosis but no Rituximab/Methotrexate exposure. The labels live in config and can be edited. *Open for team (D-199-04):* confirm the label wording. Default: the D-01 table.
+  Example: `"Pemphigus Vulgaris; Rheumatoid Arthritis"`. Patients with `immune_flag == FALSE` get `""`, even if they have a qualifying diagnosis but no Rituximab/Methotrexate exposure. The labels live in config and can be edited. D-199-04 resolved 2026-11-12 (team terms; see D-01).
 
 ### Claude's Discretion
 - Whether `build_immune_flags()` lives in `utils_doi.R` (preferred, next to the autoimmune helpers) or in a new `utils_immune.R`.
