@@ -65,16 +65,16 @@ set_data_dir <- function(path) {
 # ---- Synthetic LDS data used by multiple tests ------------------------------
 
 lds_base <- tribble(
-  ~ID,    ~ADDRESS_ZIP9, ~ADDRESS_PERIOD_START, ~ADDRESS_PERIOD_END,
+  ~ID,    ~ADDRESS_ZIP5, ~ADDRESS_ZIP9, ~ADDRESS_PERIOD_START, ~ADDRESS_PERIOD_END,
   # ZIP5 12345: 3 records -> ZIP9 123450001 (modal, 2 patients), 123450002 (1 patient)
-  "P01",  "123450001",   "2020-01-01",           "2022-12-31",
-  "P02",  "123450001",   "2021-03-01",           NA,
-  "P03",  "123450002",   "2022-01-01",           NA,
+  "P01",  "12345",       "123450001",   "2020-01-01",           "2022-12-31",
+  "P02",  "12345",       "123450001",   "2021-03-01",           NA,
+  "P03",  "12345",       "123450002",   "2022-01-01",           NA,
   # ZIP5 99999: only bare-5-digit or invalid values -> no modal
-  "P04",  "99999",       "2020-06-01",           NA,
-  "P05",  "99999",       "2021-01-01",           NA,
+  "P04",  "99999",       "99999",       "2020-06-01",           NA,
+  "P05",  "99999",       "99999",       "2021-01-01",           NA,
   # ZIP5 12345 bare record that triggered AMEND-01: should become ZIP5 via coalesce
-  "P10",  "12345",       "2019-01-01",           "2021-12-31"
+  "P10",  "12345",       "12345",       "2019-01-01",           "2021-12-31"
 )
 
 # ---- Test 0 (integration — acceptance gate, AMEND-07a) ----------------------
@@ -213,7 +213,7 @@ test_that("Test 5: probe-first gate -- absent LDS returns same schema with refer
   )
 
   expected_cols <- c(names(input), "zip9_source", "zip5_modal_freq",
-                     "zip5_n_candidates", "zip5_modal_share")
+                     "zip5_n_candidates", "zip5_modal_share", "has_adi_zip5")
   expect_setequal(names(out), expected_cols)
   expect_equal(nrow(out), nrow(input))
 
@@ -249,7 +249,7 @@ test_that("Test 7: schema -- output has exactly input columns + 4 new, no modal_
   out <- run_approx(input, lds_base)
 
   expected_cols <- c(names(input), "zip9_source", "zip5_modal_freq",
-                     "zip5_n_candidates", "zip5_modal_share")
+                     "zip5_n_candidates", "zip5_modal_share", "has_adi_zip5")
   expect_setequal(names(out), expected_cols)
   expect_false("modal_zip9" %in% names(out))
   expect_equal(nrow(out), nrow(input))
@@ -305,7 +305,8 @@ test_that("Test 10: no_zip5 -- ZIP9=NA, ZIP5=NA, match_type != none -> no_zip5",
 
 test_that("Test 12: schema invariance -- names() identical on all four exit paths", {
   expected_cols <- c("ID", "query_date", "ZIP9", "ZIP5", "match_type",
-                     "zip9_source", "zip5_modal_freq", "zip5_n_candidates", "zip5_modal_share")
+                     "zip9_source", "zip5_modal_freq", "zip5_n_candidates", "zip5_modal_share",
+                     "has_adi_zip5")
 
   input <- make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval")
 
@@ -379,6 +380,33 @@ test_that("Test 15: gate labeling -- absent file labels approximable rows refere
   out <- suppressMessages(approximate_zip9(input))
 
   expect_equal(out$zip9_source, "reference_unavailable")
+})
+
+# ---- Regression: n_to_approx == 0 path (all rows already have ZIP9) ---------
+
+test_that("Regression: n_to_approx == 0 -- all rows pre-filled, no .x/.y collision", {
+  input <- make_result_row("P01", "2021-01-01", "123450001", "12345", "interval")
+  out   <- run_approx(input, lds_base)
+
+  expect_equal(nrow(out), 1L)
+  expect_equal(out$zip9_source, "zip9_observed")
+  expect_true("has_adi_zip5" %in% names(out))
+})
+
+# ---- Regression: file-absent path (empty tempdir, no lookup built) -----------
+
+test_that("Regression: file-absent path -- no .x/.y collision on empty_zip5_lookup()", {
+  td <- withr::local_tempdir()
+  old_dir <- CONFIG$data_dir
+  CONFIG$data_dir <<- td
+  on.exit(CONFIG$data_dir <<- old_dir, add = TRUE)
+  .zip5_lookup_cache$key <<- NULL; .zip5_lookup_cache$value <<- NULL
+
+  input <- make_result_row("P01", "2021-01-01", NA_character_, "12345", "interval")
+  out   <- suppressMessages(approximate_zip9(input))
+
+  expect_equal(nrow(out), 1L)
+  expect_true("has_adi_zip5" %in% names(out))
 })
 
 # ---- Test 16: sentinel rejection --------------------------------------------

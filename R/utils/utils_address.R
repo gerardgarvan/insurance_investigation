@@ -393,8 +393,7 @@ get_zip9_at_date <- function(ids, dates, addr_full = NULL) {
     modal_zip9        = character(),
     zip5_modal_freq   = integer(),
     zip5_n_candidates = integer(),
-    zip5_modal_share  = double(),
-    has_adi_zip5      = logical()
+    zip5_modal_share  = double()
   )
 }
 
