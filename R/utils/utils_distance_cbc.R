@@ -319,23 +319,26 @@ assign_analytic_source <- function(enc, enc_all, addr_full, config) {
     dplyr::select(-addr_source_interval, -addr_source_recency, -addr_source_effective,
                   -addr_resolved, -modal_source)
 
-  # Per-method count messages (added for P1.1 — previously silent)
+  # Per-method counts — encounter-level and patient-level for usable address rows
   n_address  <- sum(enc_claims_resolved$source_reassign_method == "address")
   n_modal    <- sum(enc_claims_resolved$source_reassign_method == "modal_encounter")
   n_unresol  <- sum(enc_claims_resolved$source_reassign_method == "unresolved")
   n_notreass <- nrow(enc_nonclaims)
+  usable_addr_ids <- unique(addr_full$ID[!addr_full$SOURCE %in% config$claims_source_codes])
+  n_pats_usable_addr <- sum(unique(enc_claims$ID) %in% usable_addr_ids)
   message(glue::glue(
     "assign_analytic_source: claims={nrow(enc_claims_resolved)} ",
+    "| pats_with_usable_addr={n_pats_usable_addr} ",
     "| address={n_address} | modal_encounter={n_modal} ",
     "| unresolved={n_unresol} | not_reassigned={n_notreass}"
   ))
 
-  # Stop if address reassignment yielded 0 while address history has FLM patient rows
-  n_flm_pats_in_addr <- sum(unique(enc_claims$ID) %in% unique(addr_full$ID))
-  if (n_address == 0L && n_flm_pats_in_addr > 0L) {
+  # Stop if address reassignment yielded 0 while claims patients have usable (non-claims-source)
+  # address rows — indicates a silent parse/join failure, not a legitimate fall-through.
+  if (n_address == 0L && n_pats_usable_addr > 0L) {
     stop(glue::glue(
       "assign_analytic_source: 0 claims encounters reassigned via address, ",
-      "but {n_flm_pats_in_addr} claims patient(s) appear in addr_full. ",
+      "but {n_pats_usable_addr} claims patient(s) have usable (non-claims-source) rows in addr_full. ",
       "Check ID class/format and date class of ADDRESS_PERIOD_START/END vs ADMIT_DATE."
     ))
   }

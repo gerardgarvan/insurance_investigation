@@ -189,6 +189,29 @@ test_that("enc_all broader than enc: modal drawn from enc_all, not from enc", {
   expect_equal(result$source_reassigned, 1L)
 })
 
+# ------------------------------------------------------------------------------
+# Test 8: REGRESSION GUARD — usable non-claims address rows present but dates
+# parse to NA (simulates the ymd() silent-failure that the guard was written to catch).
+# assign_analytic_source() must stop() with the guard message.
+# ------------------------------------------------------------------------------
+test_that("Guard fires when usable addr rows exist but dates are NA (parse failure simulation)", {
+  enc     <- make_enc("P1", "E1", "2020-06-01", "FLM")
+  enc_all <- make_enc_all(c("P1"), c("FLM"), c("2020-06-01"))
+  # Non-claims SOURCE (UFH) — usable — but ADDRESS_PERIOD_START is NA,
+  # simulating what happens when a date format fails to parse.
+  addr_bad <- data.frame(
+    ID                   = "P1",
+    ADDRESS_PERIOD_START = NA_character_,
+    ADDRESS_PERIOD_END   = NA_character_,
+    SOURCE               = "UFH",
+    stringsAsFactors     = FALSE
+  )
+  expect_error(
+    assign_analytic_source(enc, enc_all, addr_bad, test_config),
+    regexp = "0 claims encounters reassigned via address"
+  )
+})
+
 # ==============================================================================
 # Tests for build_flm_sensitivity_set()
 # ==============================================================================
