@@ -7709,22 +7709,50 @@ if (!file.exists(gantt_180_path_bc)) {
         all(g180_grp$n_imm == 1L) && all(g180_grp$n_bren == 1L) && all(g180_grp$n_dx == 1L)
       })
 
-    # (f) every immune_flag TRUE patient has Rituximab or Methotrexate token in drug_names
-    p199_chk("IMMUNE-FLAG-199 [f] every immune_flag==TRUE patient has rituximab or methotrexate token in drug_names",
-      {
-        g180_pt <- g180_dat |>
-          dplyr::group_by(patient_id) |>
-          dplyr::summarise(
-            imm_flag = any(immune_flag == "TRUE"),
-            has_ritu_meth = any(vapply(
-              strsplit(drug_names, ";", fixed = TRUE),
-              function(toks) any(grepl("^rituximab|^methotrexate", trimws(toks), ignore.case = TRUE)),
-              logical(1)
-            )),
-            .groups = "drop"
-          )
-        all(!g180_pt$imm_flag | g180_pt$has_ritu_meth)
-      })
+    # (f) every immune_flag==TRUE patient has rituximab or methotrexate in
+    #     Gantt drug_names OR in immune_flag_exposure_ids.rds (raw history).
+    #     Skips gracefully if the RDS is absent (run R/142 first).
+    local({
+      exp_rds <- file.path(CONFIG$cache$outputs_dir, "immune_flag_exposure_ids.rds")
+      if (!file.exists(exp_rds)) {
+        p199_skip_fn("IMMUNE-FLAG-199 [f] immune_flag drug token check (exposure RDS absent — run R/142 first)")
+        return(invisible(NULL))
+      }
+      exp_df  <- readRDS(exp_rds)
+      raw_pts <- unique(exp_df$patient_id[tolower(exp_df$drug) %in% c("rituximab", "methotrexate")])
+      g180_pt <- g180_dat |>
+        dplyr::group_by(patient_id) |>
+        dplyr::summarise(
+          imm_flag  = any(immune_flag == "TRUE"),
+          has_gantt = any(vapply(
+            strsplit(drug_names, ";", fixed = TRUE),
+            function(toks) any(grepl("^rituximab|^methotrexate", trimws(toks), ignore.case = TRUE)),
+            logical(1)
+          )),
+          .groups = "drop"
+        ) |>
+        dplyr::mutate(has_raw = patient_id %in% raw_pts)
+      p199_chk("IMMUNE-FLAG-199 [f] every immune_flag==TRUE patient has rituximab or methotrexate in Gantt drug_names or exposure RDS",
+        all(!g180_pt$imm_flag | g180_pt$has_gantt | g180_pt$has_raw))
+    })
+
+    # (f2) one-direction completeness: Gantt token + qualifying dx => immune_flag TRUE
+    local({
+      g180_pt_f2 <- g180_dat |>
+        dplyr::group_by(patient_id) |>
+        dplyr::summarise(
+          imm_flag   = any(immune_flag == "TRUE"),
+          has_aim_dx = any(has_autoimmune_dx %in% "TRUE"),
+          has_token  = any(vapply(
+            strsplit(drug_names, ";", fixed = TRUE),
+            function(toks) any(grepl("^rituximab|^methotrexate", trimws(toks), ignore.case = TRUE)),
+            logical(1)
+          )),
+          .groups = "drop"
+        )
+      p199_chk("IMMUNE-FLAG-199 [f2] Gantt token + qualifying dx => immune_flag TRUE (completeness)",
+        all(!(g180_pt_f2$has_token & g180_pt_f2$has_aim_dx) | g180_pt_f2$imm_flag))
+    })
 
     # [f-autoimmune] immune_flag TRUE implies has_autoimmune_dx TRUE (Phase 199/200 15bc update)
     local({
@@ -7793,6 +7821,7 @@ if (!file.exists(gantt_180_path_bc)) {
     p199_skip_fn("IMMUNE-FLAG-199 [d] flag parse check (local — no data)")
     p199_skip_fn("IMMUNE-FLAG-199 [e] within-patient consistency (local — no data)")
     p199_skip_fn("IMMUNE-FLAG-199 [f] immune_flag drug token check (local — no data)")
+    p199_skip_fn("IMMUNE-FLAG-199 [f2] completeness check (local — no data)")
     p199_skip_fn("IMMUNE-FLAG-199 [g] ever_brentuximab bidirectional check (local — no data)")
     p199_skip_fn("IMMUNE-FLAG-199 [h] immune_flag_dx blank-iff-FALSE check (local — no data)")
     p199_skip_fn("IMMUNE-FLAG-199 [i] immune_flag_dx token validity/sort check (local — no data)")
