@@ -55,6 +55,7 @@ test_that("get_zip9_at_date(addr_full = ...) covers interval/most_recent_before/
   #   P3: no address record at all -> "none"
   addr_full_fixture <- tibble(
     ID                    = c("P1", "P2"),
+    ADDRESS_ZIP5          = c(NA_character_, NA_character_),
     ADDRESS_ZIP9          = c("326111234", "326229999"),
     ADDRESS_PERIOD_START  = as.Date(c("2020-01-01", "2020-01-01")),
     ADDRESS_PERIOD_END    = as.Date(c("2020-12-31", "2020-06-30"))
