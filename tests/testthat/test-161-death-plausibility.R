@@ -23,9 +23,6 @@ library(testthat)
 library(tibble)
 library(dplyr)
 
-# Source utilities directly (no DuckDB needed)
-source(here::here("R/utils/utils_death.R"))
-source(here::here("R/utils/utils_surveillance.R"))
 
 # ---------------------------------------------------------------------------
 # Fixture helpers

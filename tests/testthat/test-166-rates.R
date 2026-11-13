@@ -3,8 +3,6 @@
 # Tests: (a) rate formula, (b) zero-event retention, (c) py=0 → NA,
 #        (d) boundary rule, (e) reconciliation invariants, (f) anchor/follow_end exclusion
 
-# Load the functions under test
-source(here::here("R/utils/utils_surveillance_rates.R"))
 
 library(dplyr)
 library(tibble)

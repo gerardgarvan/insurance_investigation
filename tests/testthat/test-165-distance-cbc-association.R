@@ -8,7 +8,6 @@ skip_if_not(file.exists(here::here("R/utils/utils_distance_cbc.R")))
 
 suppressPackageStartupMessages(library(dplyr))
 
-source(here::here("R/utils/utils_distance_cbc.R"))
 
 # ==============================================================================
 # Test 1: naive_or_se() integer-overflow regression
