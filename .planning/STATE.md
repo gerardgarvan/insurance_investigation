@@ -160,6 +160,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261111-eqg | Fix payer_path / n_payer_matched orphaned after load_payer_summary refactor: attach source_path/source_mtime/n_cohort_matched attrs to return value; fix R/165 KEY rows; R/183 confirmed clean | 2026-11-11 | 61c355a | [261111-eqg-fix-payer-path-leftovers-after-load-paye](./quick/261111-eqg-fix-payer-path-leftovers-after-load-paye/) |
 | 261112-t3s | Phase 200 post-rerun fixes: R/88 [f] union check + [f2], R/142 staleness guard + exposure RDS, 200-02-PLAN.md p143_out_rds, 200-02-SUMMARY.md | 2026-11-13 | 957e3df | [261112-t3s-phase-200-post-rerun-fixes-update-r-88-r](./quick/261112-t3s-phase-200-post-rerun-fixes-update-r-88-r/) |
 | 261112-tfm | Fix R/88 [f2] check to use IMMUNE_FLAG_DX_CODES set instead of has_autoimmune_dx proxy | 2026-11-13 | 11f3f09 | [261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-](./quick/261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-/) |
+| 261113-hap | Fix three test-suite failures: code_system fixture column, canonicalize_drug_name named-vector leak, local=FALSE in two source() calls | 2026-11-13 | aee6c84 | [261113-hap-fix-three-test-suite-failures-code-syste](./quick/261113-hap-fix-three-test-suite-failures-code-syste/) |
 
 ## Session Continuity
 
