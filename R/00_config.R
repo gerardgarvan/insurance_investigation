@@ -2887,7 +2887,13 @@ MEDICATION_LOOKUP_JCODE_SUPPLEMENT <- c(
   # Rituximab RxNorm CUIs (moved to chemo_rxnorm per D-200-R1; add if not in RxNorm name cache)
   "121191"  = "Rituximab",
   "1719312" = "Rituximab",
-  "2049106" = "Rituximab"
+  "2049106" = "Rituximab",
+  # Phase 200: immunotherapy RxNorm CUIs with no MEDICATION_LOOKUP / RxNorm-cache name
+  # (check_immuno_fix_preview.R 2026-11-12 showed drug=NA for these four)
+  "1094836" = "Ipilimumab",
+  "1792780" = "Atezolizumab",
+  "1919507" = "Durvalumab",
+  "2479140" = "Lisocabtagene Maraleucel"
 )
 
 # Merge supplement (don't overwrite existing entries)
@@ -2958,7 +2964,48 @@ DRUG_NAME_ALIASES <- c(
   "granix"     = "filgrastim",
   "procrit"    = "epoetin alfa",
   "retacrit"   = "epoetin alfa",
-  "aranesp"    = "darbepoetin alfa"
+  "aranesp"    = "darbepoetin alfa",
+  # Phase 200: immunotherapy / rituximab / methotrexate brand and case variants -> one
+  # canonical token, so Gantt drug_names and regimen labels count each drug once
+  # (check_immuno_fix_preview.R 2026-11-12: code 1147324 resolved to "Adcetris").
+  # Canonical forms match the existing drug_names tokens.
+  "adcetris"                     = "Brentuximab Vedotin",
+  "brentuximab"                  = "Brentuximab Vedotin",
+  "brentuximab vedotin"          = "Brentuximab Vedotin",
+  "opdivo"                       = "Nivolumab",
+  "nivolumab"                    = "Nivolumab",
+  "keytruda"                     = "Pembrolizumab",
+  "pembrolizumab"                = "Pembrolizumab",
+  "yervoy"                       = "Ipilimumab",
+  "ipilimumab"                   = "Ipilimumab",
+  "imfinzi"                      = "Durvalumab",
+  "durvalumab"                   = "Durvalumab",
+  "tecentriq"                    = "Atezolizumab",
+  "atezolizumab"                 = "Atezolizumab",
+  "breyanzi"                     = "Lisocabtagene Maraleucel",
+  "lisocabtagene maraleucel"     = "Lisocabtagene Maraleucel",
+  # Rituximab: all products collapse to one token (D-200-R1: all rituximab = Chemotherapy)
+  "rituximab"                    = "Rituximab",
+  "rituxan"                      = "Rituximab",
+  "rituxan hycela"               = "Rituximab",
+  "rituximab/hyaluronidase"      = "Rituximab",
+  "rituximab and hyaluronidase"  = "Rituximab",
+  "truxima"                      = "Rituximab",
+  "rituximab-abbs"               = "Rituximab",
+  "ruxience"                     = "Rituximab",
+  "rituximab-pvvr"               = "Rituximab",
+  "riabni"                       = "Rituximab",
+  "rituximab-arrx"               = "Rituximab",
+  "rituximab (truxima)"          = "Rituximab",
+  # Methotrexate: salt and brand forms
+  "methotrexate"                 = "Methotrexate",
+  "methotrexate sodium"          = "Methotrexate",
+  "trexall"                      = "Methotrexate",
+  "otrexup"                      = "Methotrexate",
+  "rasuvo"                       = "Methotrexate",
+  "xatmep"                       = "Methotrexate",
+  "jylamvo"                      = "Methotrexate",
+  "rheumatrex"                   = "Methotrexate"
 )
 
 # canonicalize_drug_name(): vectorized, NA-safe, case-insensitive alias lookup.
