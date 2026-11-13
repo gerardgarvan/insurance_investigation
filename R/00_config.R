@@ -3878,7 +3878,7 @@ TREATMENT_CODES <- list(
     "J9228", # Ipilimumab (anti-CTLA-4)
     "J9268", # Pembrolizumab (anti-PD-1)
     "J9271", # Pembrolizumab IV (anti-PD-1)
-    "J9299", # Nivolumab (anti-PD-1)
+    "J9299"  # Nivolumab (anti-PD-1)
   ),
 
   # Immunotherapy RXNORM codes (Phase 40: drug investigation + moved from chemo_rxnorm)
@@ -3910,7 +3910,7 @@ TREATMENT_CODES <- list(
     "1657750", # Pembrolizumab 25 MG/ML Injection
     "1657751", # Pembrolizumab 25 MG/ML Injection [Keytruda]
     "1991412", # Nivolumab 10 MG/ML Injection
-    "1991413", # Nivolumab 10 MG/ML Injection [Opdivo]
+    "1991413"  # Nivolumab 10 MG/ML Injection [Opdivo]
   ),
 
 
