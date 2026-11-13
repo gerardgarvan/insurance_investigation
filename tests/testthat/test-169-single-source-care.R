@@ -10,7 +10,7 @@ helper_path <- here::here("R/169_single_source_care.R")
 if (!file.exists(helper_path)) {
   testthat::skip("R/169_single_source_care.R not yet written")
 }
-source(helper_path, local = new.env(parent = globalenv()))
+source(helper_path, local = FALSE)
 
 library(dplyr)
 library(tibble)

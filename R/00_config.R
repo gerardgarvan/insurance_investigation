@@ -3014,7 +3014,7 @@ DRUG_NAME_ALIASES <- c(
 canonicalize_drug_name <- function(x) {
   key <- tolower(stringr::str_trim(x))
   hit <- DRUG_NAME_ALIASES[key]
-  out <- ifelse(!is.na(hit), unname(hit), x)
+  out <- unname(ifelse(!is.na(hit), unname(hit), x))
   out[is.na(x)] <- NA_character_
   out
 }

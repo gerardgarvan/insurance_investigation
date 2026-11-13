@@ -9,7 +9,7 @@ config_path <- here::here("R/00_config.R")
 if (!file.exists(config_path)) {
   testthat::skip("R/00_config.R not found")
 }
-source(config_path, local = new.env(parent = globalenv()))
+source(config_path, local = FALSE)
 
 library(dplyr)
 library(tibble)

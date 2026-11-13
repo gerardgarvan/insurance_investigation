@@ -9,7 +9,7 @@ d <- as.Date
 BMP8 <- c("SODIUM", "POTASSIUM", "CHLORIDE", "CO2", "BUN", "CREATININE", "GLUCOSE", "CALCIUM")
 rule <- function(id, mod, an, match, tier, k = "")
   tibble::tibble(codeset_row_id = id, modality = mod, submodality = "", code = paste(an, collapse = ";"),
-                 code_norm = paste(an, collapse = ";"), cdm_table = "", type_filter = "",
+                 code_norm = paste(an, collapse = ";"), code_system = "", cdm_table = "", type_filter = "",
                  match = match, tier = tier, min_analyte_count = k)
 cs <- dplyr::bind_rows(
   rule("SC125", "BMP", BMP8, "analyte_all_same_day", "primary"),
@@ -182,18 +182,19 @@ test_that("codeset summary: modality x tier x match block and analyte block", {
   cs2 <- dplyr::bind_rows(cs, tibble::tibble(codeset_row_id = c("SC001", "SC002"),
                                              modality = "Mammogram", submodality = "",
                                              code = c("77067", "77066"), code_norm = c("77067", "77066"),
-                                             match = "exact", tier = "primary", min_analyte_count = ""))
+                                             code_system = "", match = "exact", tier = "primary",
+                                             min_analyte_count = ""))
   an <- tibble::tibble(analyte_row_id = c("LA1", "LA2", "LA3"), analyte = c("CO2", "CO2", "SODIUM"),
                        code = c("2028-9", "1963-8", "2951-2"), code_norm = c("2028-9", "1963-8", "2951-2"))
   pres <- dplyr::mutate(an, present = c(TRUE, FALSE, TRUE))
   sm2 <- build_codeset_summary(cs2, an, pres)
-  m <- sm2$by_modality
-  expect_equal(m$n_codes[m$modality == "Mammogram"], 2L)
+  m <- dplyr::filter(sm2, row_type == "code")
+  expect_equal(as.integer(m$n_codes[m$modality == "Mammogram"]), 2L)
   expect_equal(m$codes[m$modality == "Mammogram"], "77066; 77067")
   expect_equal(m$threshold[m$modality == "BMP" & m$match == "analyte_min_same_day"],
                ">= 4 listed analytes")
   expect_equal(m$threshold[m$modality == "BMP" & m$match == "analyte_all_same_day"], "all listed")
-  a <- sm2$by_analyte
-  expect_equal(a$n_codes[a$analyte == "CO2"], 2L)
-  expect_equal(a$n_codes_present[a$analyte == "CO2"], 1L)
+  a <- dplyr::filter(sm2, row_type == "analyte")
+  expect_equal(as.integer(a$n_codes[a$analyte == "CO2"]), 2L)
+  expect_equal(as.integer(a$n_codes_present[a$analyte == "CO2"]), 1L)
 })
