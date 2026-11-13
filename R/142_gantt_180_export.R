@@ -104,6 +104,24 @@ DETAIL_SCHEMA <- c(
 assert_rds_exists(EPISODES_RDS, script_name = "R/142")
 assert_rds_exists(DETAIL_RDS,   script_name = "R/142")
 
+# Staleness guard: enriched file must be newer than the base 180-day file (D-200 fix)
+local({
+  base_rds <- file.path(CONFIG$cache$outputs_dir, "treatment_episodes_180.rds")
+  if (file.exists(base_rds) && file.exists(EPISODES_RDS) &&
+      file.mtime(EPISODES_RDS) < file.mtime(base_rds)) {
+    stop(glue(
+      "treatment_episodes_180_enriched.rds is older than treatment_episodes_180.rds.\n",
+      "Regenerate with:\n",
+      "  R --no-save -q -e '",
+      "options(",
+      "p143_episodes_rds = file.path(CONFIG$cache$outputs_dir, \"treatment_episodes_180.rds\"), ",
+      "p143_detail_rds = file.path(CONFIG$cache$outputs_dir, \"treatment_episode_detail_180.rds\"), ",
+      "p143_out_rds = file.path(CONFIG$cache$outputs_dir, \"treatment_episodes_180_enriched.rds\"), ",
+      "p143_out_suffix = \"_180_enriched\"",
+      "); source(\"R/28_episode_classification.R\", local = new.env(parent = globalenv()))'"
+    ))
+  }
+})
 
 # --- SECTION 2: LOAD INPUT DATA ----
 
@@ -774,6 +792,36 @@ stopifnot(
     for (i in seq_len(nrow(src_tab)))
       message(glue("    {src_tab$drug[i]} via {src_tab$source[i]}: {fmt_sup(src_tab$n_pts[i])}"))
   }
+
+  # Save patient-level drug exposure for R/88 union check (D-200 fix)
+  local({
+    gantt_col_map <- list(
+      Rituximab    = "has_rituximab_gantt",
+      Methotrexate = "has_methotrexate_gantt",
+      Brentuximab  = "ever_brentuximab_gantt"
+    )
+    raw_exp_now <- attr(imm_full, "raw_exposure")
+    rows <- lapply(names(gantt_col_map), function(drug) {
+      gantt_pts <- imm_full$patient_id[imm_full[[gantt_col_map[[drug]]]] %in% TRUE]
+      raw_pts   <- if (!is.null(raw_exp_now))
+        unique(raw_exp_now$ID[tolower(raw_exp_now$drug) == tolower(drug)])
+      else character(0)
+      all_pts <- unique(c(gantt_pts, raw_pts))
+      if (!length(all_pts)) return(NULL)
+      data.frame(
+        patient_id = all_pts,
+        drug       = drug,
+        in_gantt   = all_pts %in% gantt_pts,
+        in_raw     = all_pts %in% raw_pts,
+        stringsAsFactors = FALSE
+      )
+    })
+    exp_df <- do.call(rbind, Filter(Negate(is.null), rows))
+    out_rds <- file.path(CONFIG$cache$outputs_dir, "immune_flag_exposure_ids.rds")
+    saveRDS(exp_df, out_rds)
+    message(glue("  Saved immune_flag_exposure_ids.rds: {nrow(exp_df)} rows ",
+                 "({dplyr::n_distinct(exp_df$patient_id)} patients) -> {out_rds}"))
+  })
 
   # Label counts among immune_flag = TRUE patients
   if (n_immune_flag > 0) {
