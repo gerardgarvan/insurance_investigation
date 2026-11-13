@@ -63,7 +63,7 @@ test_that("liposomal doxorubicin variants map to Doxorubicin", {
   expect_equal(canonicalize_drug_name("doxorubicin liposomal"),      "Doxorubicin")
   expect_equal(canonicalize_drug_name("Doxorubicin Liposomal"),      "Doxorubicin")
   expect_equal(canonicalize_drug_name("doxorubicin hcl liposome"),   "Doxorubicin")
-  expect_equal(canonicalize_drug_name("doxorubicin (liposomal)",   ), "Doxorubicin")
+  expect_equal(canonicalize_drug_name("doxorubicin (liposomal)"),    "Doxorubicin")
   expect_equal(canonicalize_drug_name("Doxorubicin (Liposomal)"),    "Doxorubicin")
 })
 
