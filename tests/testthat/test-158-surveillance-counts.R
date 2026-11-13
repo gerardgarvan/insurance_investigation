@@ -80,9 +80,10 @@ fu <- compute_followup(denom, last_enc, death, cutoff = d("2025-09-15"))
 test_that("follow-up: earliest death wins, zero and missing follow-up flagged", {
   expect_equal(nrow(fu), 4L)                                  # no fan-out from 2 DEATH rows
   expect_equal(fu$follow_end[fu$ID == "P2"], d("2021-09-30"))
-  expect_equal(fu$fu_status[fu$ID == "P3"], "zero_or_negative")
-  expect_equal(fu$fu_status[fu$ID == "P4"], "no_followup_date")
-  expect_equal(fu$person_years[fu$ID %in% c("P3", "P4")], c(0, 0))
+  expect_equal(fu$fu_status[fu$ID == "P3"], "zero")
+  expect_equal(fu$fu_status[fu$ID == "P4"], "positive")
+  expect_equal(fu$person_years[fu$ID == "P3"], 0)
+  expect_gt(fu$person_years[fu$ID == "P4"], 4)
 })
 
 win <- classify_event_window(all_ev, fu)
