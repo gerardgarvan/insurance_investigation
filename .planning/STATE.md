@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-12 -- Phase 199 execution started
+Last activity: 2026-11-13 - Completed quick task 261112-t3s: Phase 200 post-rerun fixes (R/88 [f]+[f2], R/142 staleness guard, 200-02-SUMMARY)
 
 ## Phase Map (v3.13)
 
@@ -158,6 +158,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261111-e1j | Fix R/109 before/after name collision ($ operator on atomic vector in Section 6 D-03): rename source frames to chemo_before/chemo_after, pre-compute scalars before tibble() | 2026-11-11 | eb9dfc3 | [261111-e1j-fix-r-109-before-after-name-collision-ca](./quick/261111-e1j-fix-r-109-before-after-name-collision-ca/) |
 | 261111-e84 | Fix R/47 overwriting R/46 cancer_summary_table.xlsx: rename R/47 OUTPUT_TABLE_XLSX to cancer_summary_refined_table.xlsx; rewire R/48 BASELINE_TABLE_XLSX; update R/39 comment; RERUN-AND-REISSUE updated | 2026-11-11 | 1afc456 | [261111-e84-fix-r-47-overwriting-r-46-cancer-summary](./quick/261111-e84-fix-r-47-overwriting-r-46-cancer-summary/) |
 | 261111-eqg | Fix payer_path / n_payer_matched orphaned after load_payer_summary refactor: attach source_path/source_mtime/n_cohort_matched attrs to return value; fix R/165 KEY rows; R/183 confirmed clean | 2026-11-11 | 61c355a | [261111-eqg-fix-payer-path-leftovers-after-load-paye](./quick/261111-eqg-fix-payer-path-leftovers-after-load-paye/) |
+| 261112-t3s | Phase 200 post-rerun fixes: R/88 [f] union check + [f2], R/142 staleness guard + exposure RDS, 200-02-PLAN.md p143_out_rds, 200-02-SUMMARY.md | 2026-11-13 | 957e3df | [261112-t3s-phase-200-post-rerun-fixes-update-r-88-r](./quick/261112-t3s-phase-200-post-rerun-fixes-update-r-88-r/) |
 
 ## Session Continuity
 
