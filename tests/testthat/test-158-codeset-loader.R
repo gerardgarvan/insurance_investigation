@@ -66,6 +66,7 @@ test_that("blank cells become empty strings, not NA", {
 })
 
 test_that("loader rejects structural violations", {
+  skip_if_not_installed("writexl")
   expect_error(load_surveillance_codeset(write_cs(list(cs_row(tier = "intermediate")))), "tier")
   expect_error(load_surveillance_codeset(write_cs(list(cs_row(match = "fuzzy")))), "match")
   expect_error(load_surveillance_codeset(write_cs(list(cs_row(type_filter = "PX_TYPE='CH'")))),

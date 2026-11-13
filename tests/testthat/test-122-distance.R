@@ -1,4 +1,9 @@
-source("R/00_config.R")
+tryCatch(
+  source(here::here("R/00_config.R")),
+  error = function(e)
+    stop("R/00_config.R failed to source: ", conditionMessage(e),
+         "\n(Run from project root; on HiPerGator: module load R/4.5)")
+)
 
 # ==============================================================================
 # test-122-distance.R -- Unit tests for haversine_km() and get_zip_centroid()
@@ -217,7 +222,7 @@ test_that("get_zip_centroid returns zip9_bg source when ZIP9 is in crosswalk", {
   old_bg <- CONFIG$zip9_bg_centroid_path
   CONFIG$zip9_bg_centroid_path <<- tmp_bg
   on.exit(CONFIG$zip9_bg_centroid_path <<- old_bg, add = TRUE)
-  .zip9_bg_centroid_cache$key <<- NULL; .zip9_bg_centroid_cache$value <<- NULL
+  # NOTE: ZIP9 BG crosswalk is not memoised (utils_address.R line 315-316) -- no cache to reset.
 
   result <- get_zip_centroid("326110001", "zip9")
   expect_equal(result$centroid_source, "zip9_bg")
@@ -255,7 +260,7 @@ test_that("get_zip_centroid falls back to zip5 gazetteer when ZIP9 not in crossw
     CONFIG$zip9_bg_centroid_path <<- old_bg
     CONFIG$zcta_gazetteer_path   <<- old_gaz
   }, add = TRUE)
-  .zip9_bg_centroid_cache$key <<- NULL; .zip9_bg_centroid_cache$value <<- NULL
+  # NOTE: ZIP9 BG crosswalk is not memoised (utils_address.R line 315-316) -- no cache to reset.
   .zcta_gazetteer_cache$key   <<- NULL; .zcta_gazetteer_cache$value   <<- NULL
 
   # Query a ZIP9 that is NOT in the crosswalk (326110000)
