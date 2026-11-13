@@ -42,6 +42,7 @@ test_that("eligible_sex F and M are read back; the named vector is unchanged", {
 })
 
 test_that("an invalid eligible_sex value stops the load", {
+  skip_if_not_installed("writexl")
   m <- base_mods; m$eligible_sex <- c("X", "")
   expect_error(load_modality_lookup(mods_book(m)), "eligible_sex")
 })

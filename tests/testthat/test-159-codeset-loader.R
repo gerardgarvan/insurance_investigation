@@ -89,6 +89,7 @@ test_that("rule rows: all and min rows may share modality x code_norm", {
 })
 
 test_that("loader rejects bad rule rows", {
+  skip_if_not_installed("writexl")
   expect_error(load_surveillance_codeset(write_book(list(base_cs(cdm_table = "LAB_RESULT_CM")))),
                "blank cdm_table")
   expect_error(load_surveillance_codeset(write_book(list(base_cs(min_analyte_count = "1")))),
