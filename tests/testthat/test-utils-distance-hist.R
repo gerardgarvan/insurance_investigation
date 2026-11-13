@@ -259,11 +259,11 @@ test_that("make_distance_histograms passes linear_width / linear_cap through", {
   expect_equal(max(lin$lower), 200)
 })
 
-test_that("plot_distance_hist log axis has a '<1' tick", {
+test_that("plot_distance_hist log axis title names the sub-1-mile bar", {
   b <- bin_distance(mi_vec, scale = "log")
   stats <- tibble::tibble(n = length(mi_vec), n_excluded = 0L, median = median(mi_vec),
                           p90 = quantile(mi_vec, 0.9), n_zero = sum(mi_vec == 0))
   p <- plot_distance_hist(b, stats, level = "encounter")
-  lbls <- ggplot2::ggplot_build(p)$layout$panel_params[[1]]$x$get_labels()
-  expect_true("<1" %in% lbls)
+  xlab <- p$labels$x
+  expect_true(grepl("under 1 mile", xlab, fixed = TRUE))
 })

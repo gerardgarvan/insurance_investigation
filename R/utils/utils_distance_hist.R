@@ -50,7 +50,7 @@ bin_distance <- function(mi, scale = c("linear", "log"), width = 10, cap = 350) 
     x <- mi
   } else {
     x <- ifelse(mi < 1, -0.125, log10(mi))
-    top <- (floor(max(x) / 0.25) + 1) * 0.25   # strictly above max, >= 0.25
+    top <- max((floor(max(x) / 0.25) + 1) * 0.25, 0.25)  # strictly above max, >= 0.25
     edges <- c(-0.25, seq(0, top, by = 0.25))
   }
   cut_x <- cut(x, breaks = edges, right = FALSE, include.lowest = TRUE)
