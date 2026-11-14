@@ -7928,6 +7928,18 @@ p201_chk("ABVD-TR-201 [a5] classify_abvd_episode ABVD+Rituximab -> 'ABVD_PLUS'",
     isTRUE(classify_abvd_episode(
       "Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine", NA_character_) == "ABVD_PLUS"))
 
+# [a5b] AVD + Rituximab -> "ABVD_PLUS" (Phase 201b broadened rule)
+p201_chk("ABVD-TR-201 [a5b] classify_abvd_episode AVD+Rituximab -> 'ABVD_PLUS'",
+  exists("classify_abvd_episode") &&
+    isTRUE(classify_abvd_episode(
+      "Dacarbazine;Doxorubicin;Rituximab;Vinblastine", NA_character_) == "ABVD_PLUS"))
+
+# [a5c] BV+AVD -> NA (not ABVD_PLUS; has_excl guard)
+p201_chk("ABVD-TR-201 [a5c] classify_abvd_episode BV+AVD -> NA (not ABVD_PLUS)",
+  exists("classify_abvd_episode") &&
+    is.na(classify_abvd_episode(
+      "Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine", NA_character_)))
+
 # [a6] build_tr_lymphoma_flags() helper exists
 p201_chk("ABVD-TR-201 [a6] build_tr_lymphoma_flags() exists",
   exists("build_tr_lymphoma_flags"))
@@ -7935,19 +7947,25 @@ p201_chk("ABVD-TR-201 [a6] build_tr_lymphoma_flags() exists",
 # Real-data checks — skip all when gantt_episodes_180.csv is absent
 gantt_180_path_bd <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
 if (!file.exists(gantt_180_path_bd)) {
-  p201_skip_fn("ABVD-TR-201 [c1] 30 columns (file absent — run R/142 first)")
+  p201_skip_fn("ABVD-TR-201 [c1] 32 columns (file absent — run R/142 first)")  # 32 since Phase 201b
   p201_skip_fn("ABVD-TR-201 [c2] ever_abvd at column 27 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c3] abvd_episode at column 28 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c4] tr_hl_dx at column 29 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c5] tr_nhl_dx at column 30 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [c6] abvd_class at column 31 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [c7] ever_abvd_plus at column 32 (file absent)")
   p201_skip_fn("ABVD-TR-201 [d1] ever_abvd/abvd_episode value domain (file absent)")
   p201_skip_fn("ABVD-TR-201 [d2] tr_hl_dx/tr_nhl_dx value domain (file absent)")
+  p201_skip_fn("ABVD-TR-201 [d3] abvd_class value set valid (file absent)")
+  p201_skip_fn("ABVD-TR-201 [d4] ever_abvd_plus values only TRUE or FALSE (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1] ever_abvd constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1b] tr_hl_dx constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1c] tr_nhl_dx constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e2] ever_abvd iff any abvd_episode TRUE (file absent)")
   p201_skip_fn("ABVD-TR-201 [e3] abvd_episode TRUE only on Chemotherapy rows (file absent)")
   p201_skip_fn("ABVD-TR-201 [e4] tr_hl_dx blank iff tr_nhl_dx blank (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e5] ever_abvd_plus constant within patient_id (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e6] ever_abvd_plus TRUE iff patient has any abvd_class == ABVD_PLUS (file absent)")
   p201_skip_fn("ABVD-TR-201 [f1] at least one ever_abvd TRUE (file absent)")
   p201_skip_fn("ABVD-TR-201 [f2] at least one tr_hl_dx TRUE (file absent)")
   p201_skip_fn("ABVD-TR-201 [f3] at least one tr_hl_dx blank — cohort non-registry patients (file absent)")
@@ -7957,9 +7975,9 @@ if (!file.exists(gantt_180_path_bd)) {
     colClasses = "character", check.names = FALSE)
   g180_bd_nms <- names(g180_bd)
 
-  # [c1]--[c5] column count and positions
-  p201_chk("ABVD-TR-201 [c1] gantt_episodes_180.csv has 30 columns",
-    length(g180_bd_nms) == 30L)
+  # [c1]--[c7] column count and positions
+  p201_chk("ABVD-TR-201 [c1] gantt_episodes_180.csv has 32 columns",  # 32 since Phase 201b
+    length(g180_bd_nms) == 32L)
   p201_chk("ABVD-TR-201 [c2] ever_abvd at column 27",
     isTRUE(g180_bd_nms[27L] == "ever_abvd"))
   p201_chk("ABVD-TR-201 [c3] abvd_episode at column 28",
@@ -7968,6 +7986,12 @@ if (!file.exists(gantt_180_path_bd)) {
     isTRUE(g180_bd_nms[29L] == "tr_hl_dx"))
   p201_chk("ABVD-TR-201 [c5] tr_nhl_dx at column 30",
     isTRUE(g180_bd_nms[30L] == "tr_nhl_dx"))
+  p201_chk("ABVD-TR-201 [c6] abvd_class at column 31",
+    "abvd_class" %in% g180_bd_nms &&
+      which(g180_bd_nms == "abvd_class") == 31L)
+  p201_chk("ABVD-TR-201 [c7] ever_abvd_plus at column 32",
+    "ever_abvd_plus" %in% g180_bd_nms &&
+      which(g180_bd_nms == "ever_abvd_plus") == 32L)
 
   # Read full data for remaining checks
   g180_bd_dat <- read.csv(gantt_180_path_bd, header = TRUE,
@@ -7982,6 +8006,17 @@ if (!file.exists(gantt_180_path_bd)) {
   p201_chk("ABVD-TR-201 [d2] tr_hl_dx and tr_nhl_dx values only TRUE/FALSE/blank",
     all(g180_bd_dat$tr_hl_dx  %in% c("TRUE", "FALSE", "")) &&
     all(g180_bd_dat$tr_nhl_dx %in% c("TRUE", "FALSE", "")))
+
+  # [d3] abvd_class value set
+  p201_chk("ABVD-TR-201 [d3] abvd_class value set valid",
+    {
+      valid_cls <- c("ABVD", "AVD", "JCODE_ABVD", "ABVD_PLUS", "")
+      all(g180_bd_dat$abvd_class %in% valid_cls)
+    })
+
+  # [d4] ever_abvd_plus values only TRUE or FALSE (never blank)
+  p201_chk("ABVD-TR-201 [d4] ever_abvd_plus values only TRUE or FALSE",
+    all(g180_bd_dat$ever_abvd_plus %in% c("TRUE", "FALSE")))
 
   # Patient-level summaries for [e*] and [f*]
   g180_bd_pt <- g180_bd_dat |>
@@ -8030,6 +8065,28 @@ if (!file.exists(gantt_180_path_bd)) {
   # [e4] tr_hl_dx blank iff tr_nhl_dx blank (same NA set — both mean "not in registry")
   p201_chk("ABVD-TR-201 [e4] tr_hl_dx blank iff tr_nhl_dx blank",
     all((g180_bd_pt$tr_hl_dx_pt == "") == (g180_bd_pt$tr_nhl_dx_pt == "")))
+
+  # [e5] ever_abvd_plus constant within patient_id
+  p201_chk("ABVD-TR-201 [e5] ever_abvd_plus constant within patient_id",
+    {
+      pt_plus <- g180_bd_dat |>
+        dplyr::group_by(patient_id) |>
+        dplyr::summarise(n_vals = dplyr::n_distinct(ever_abvd_plus), .groups = "drop")
+      all(pt_plus$n_vals == 1L)
+    })
+
+  # [e6] ever_abvd_plus TRUE iff patient has any abvd_class == ABVD_PLUS
+  p201_chk("ABVD-TR-201 [e6] ever_abvd_plus TRUE iff patient has any abvd_class == ABVD_PLUS",
+    {
+      pt_derived <- g180_bd_dat |>
+        dplyr::group_by(patient_id) |>
+        dplyr::summarise(
+          flag_col  = any(ever_abvd_plus == "TRUE"),
+          has_plus  = any(abvd_class == "ABVD_PLUS", na.rm = TRUE),
+          .groups = "drop"
+        )
+      all(pt_derived$flag_col == pt_derived$has_plus)
+    })
 
   # [f1] at least one patient ever_abvd == "TRUE"
   p201_chk("ABVD-TR-201 [f1] at least one patient ever_abvd TRUE",
