@@ -896,6 +896,11 @@ ABVD_COMPONENTS      <- c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazin
 AVD_COMPONENTS       <- c("Doxorubicin", "Vinblastine", "Dacarbazine")   # D-11 bleomycin-dropped
 ABVD_EXCLUDING_DRUGS <- c(BRENTUXIMAB_DRUG, "Nivolumab")                 # BV+AVD / Nivo+AVD are not ABVD (D-201-01)
 
+# Phase 201b: date-level concurrency window for detecting BV+AVD / Nivo+AVD.
+# A brentuximab/nivolumab administration date within +/- this many days of a chemo
+# episode's administration-date span counts as concurrent (same regimen, not sequential).
+ABVD_CONCURRENT_WINDOW_DAYS <- 7L
+
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
 # 2026-10-29) that identify ICD-9 and ICD-10 records. "OT" and "SM" are excluded
 # (not ICD coding systems). No trimming variants observed in the cohort DX_TYPE values.
