@@ -19,7 +19,7 @@
 #   - output/tables/cancer_summary.csv              (Phase 115: 7-day confirmed data)
 #
 # Outputs:
-#   - output/gantt_episodes_180.csv  (30 columns, same schema as gantt_episodes.csv + Phase 199 flags + Phase 201 ABVD/TR flags)
+#   - output/gantt_episodes_180.csv  (32 columns; Phase 201b adds abvd_class / ever_abvd_plus at cols 31-32; cols 1-30 unchanged from Phase 201)
 #   - output/gantt_detail_180.csv    (14 columns, same schema as gantt_detail.csv)
 #
 # Requirements: EP-180-01, EP-180-02
@@ -90,7 +90,9 @@ EPISODES_SCHEMA <- c(
   # Phase 199: + immune_flag, ever_brentuximab, immune_flag_dx (+3 columns, now 26 total)
   "immune_flag", "ever_brentuximab", "immune_flag_dx",
   # Phase 201: + ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx (+4 columns, now 30 total)
-  "ever_abvd", "abvd_episode", "tr_hl_dx", "tr_nhl_dx"
+  "ever_abvd", "abvd_episode", "tr_hl_dx", "tr_nhl_dx",
+  # Phase 201b: + abvd_class, ever_abvd_plus (+2 columns, now 32 total)
+  "abvd_class", "ever_abvd_plus"
 )
 
 DETAIL_SCHEMA <- c(
@@ -895,13 +897,20 @@ episodes_export <- episodes_export |>
     abvd_episode = abvd_class %in% c("ABVD", "AVD", "JCODE_ABVD")
   ) |>
   dplyr::group_by(patient_id) |>
-  dplyr::mutate(ever_abvd = any(abvd_episode)) |>
+  dplyr::mutate(
+    ever_abvd      = any(abvd_episode),
+    ever_abvd_plus = any(abvd_class == "ABVD_PLUS", na.rm = TRUE)
+  ) |>
   dplyr::ungroup()
 
 stopifnot(
   "abvd_episode only on Chemotherapy rows" =
     !any(episodes_export$abvd_episode & episodes_export$treatment_type != "Chemotherapy"),
-  "ever_abvd never NA" = !anyNA(episodes_export$ever_abvd)
+  "ever_abvd never NA" = !anyNA(episodes_export$ever_abvd),
+  "ever_abvd_plus never NA" = !anyNA(episodes_export$ever_abvd_plus),
+  "ever_abvd_plus consistent: plus only where abvd_class == ABVD_PLUS" =
+    all(episodes_export$ever_abvd_plus[!is.na(episodes_export$abvd_class) &
+          episodes_export$abvd_class == "ABVD_PLUS"])
 )
 
 # D-08 ABVD QC block
@@ -1092,7 +1101,7 @@ stopifnot(
 
 
 # Column trimming — drop encounter_ids, cancer_link_method, ENCOUNTERID (same as R/52)
-# Phase 201: also drops regimen_label, abvd_class, tr_present (now 30 total)
+# Phase 201b: also exports abvd_class (retained), ever_abvd_plus (now 32 total)
 episodes_export <- episodes_export %>%
   select(
     patient_id, treatment_type, episode_number,
@@ -1109,7 +1118,9 @@ episodes_export <- episodes_export %>%
     # Phase 199: immune flag, brentuximab flag, immune dx labels (+3 columns, now 26 total)
     immune_flag, ever_brentuximab, immune_flag_dx,
     # Phase 201: ABVD and TR flags (+4 columns, now 30 total)
-    ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx
+    ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx,
+    # Phase 201b: ABVD class and patient-level ABVD_PLUS flag (+2 columns, now 32 total)
+    abvd_class, ever_abvd_plus
   )
 
 detail_export <- detail_export %>%
@@ -1177,9 +1188,47 @@ if (Sys.getenv("RUN_PRE201_REGRESSION") == "TRUE") {
   }
 }
 
+if (Sys.getenv("RUN_PRE201B_REGRESSION") == "TRUE") {
+  # PRE201B baseline: save the 30-column file before overwriting (keep-if-exists; re-run safe).
+  pre201b <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE201B.csv")
+  if (!file.exists(pre201b)) {
+    if (file.exists(OUTPUT_EPISODES)) {
+      base_check201b <- read.csv(OUTPUT_EPISODES, nrows = 1)
+      stopifnot("PRE201B baseline must have 30 columns" = ncol(base_check201b) == 30L)
+      file.copy(OUTPUT_EPISODES, pre201b, overwrite = FALSE)
+      message(glue("  PRE201B baseline saved: {pre201b}"))
+    } else {
+      message("  PRE201B baseline skipped: OUTPUT_EPISODES does not yet exist.")
+    }
+  } else {
+    message(glue("  PRE201B baseline exists (kept): {pre201b}"))
+  }
+}
+
 write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
+
+if (Sys.getenv("RUN_PRE201B_REGRESSION") == "TRUE") {
+  if (exists("pre201b") && file.exists(pre201b)) {
+    message("\n--- Phase 201B regression check (cols 1-30 unchanged) ---")
+    base_reg201b <- read.csv(pre201b,          colClasses = "character")
+    new_reg201b  <- read.csv(OUTPUT_EPISODES,  colClasses = "character")
+    # Check cols 1-30 only (cols 31-32 are new)
+    shared_cols <- colnames(base_reg201b)  # all 30 of the baseline
+    stopifnot("PRE201B: all 30 baseline columns present in new file" =
+      all(shared_cols %in% colnames(new_reg201b)))
+    base_subset <- base_reg201b[, shared_cols]
+    new_subset  <- new_reg201b[, shared_cols]
+    stopifnot("PRE201B row count unchanged" = nrow(base_subset) == nrow(new_subset))
+    mismatches <- which(rowSums(base_subset != new_subset) > 0)
+    if (length(mismatches) == 0L) {
+      message("  Phase 201B regression PASSED: cols 1-30 byte-identical.")
+    } else {
+      stop(glue("Phase 201B regression FAILED: {length(mismatches)} rows differ in cols 1-30."))
+    }
+  }
+}
 
 if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
   # Phase 199 regression: verify the 23 original columns are unchanged vs PRE199 baseline.
