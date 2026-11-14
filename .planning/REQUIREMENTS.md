@@ -80,9 +80,32 @@
 
 ## Traceability
 
-| REQ-ID | Phase | Plan(s) |
-|--------|-------|---------|
-| TRVAL-01..07 | 202 | TBD |
-| NOTX-01..07  | 203 | TBD |
-| MCAP-01..05  | 204 | TBD |
-| REGL-01..08  | 205 | TBD |
+| REQ-ID | Phase | Plan(s) | Status |
+|--------|-------|---------|--------|
+| TRVAL-01 | 202 | TBD | Pending |
+| TRVAL-02 | 202 | TBD | Pending |
+| TRVAL-03 | 202 | TBD | Pending |
+| TRVAL-04 | 202 | TBD | Pending |
+| TRVAL-05 | 202 | TBD | Pending |
+| TRVAL-06 | 202 | TBD | Pending |
+| TRVAL-07 | 202 | TBD | Pending |
+| NOTX-01 | 203 | TBD | Pending |
+| NOTX-02 | 203 | TBD | Pending |
+| NOTX-03 | 203 | TBD | Pending |
+| NOTX-04 | 203 | TBD | Pending |
+| NOTX-05 | 203 | TBD | Pending |
+| NOTX-06 | 203 | TBD | Pending |
+| NOTX-07 | 203 | TBD | Pending |
+| MCAP-01 | 204 | TBD | Pending |
+| MCAP-02 | 204 | TBD | Pending |
+| MCAP-03 | 204 | TBD | Pending |
+| MCAP-04 | 204 | TBD | Pending |
+| MCAP-05 | 204 | TBD | Pending |
+| REGL-01 | 205 | TBD | Pending |
+| REGL-02 | 205 | TBD | Pending |
+| REGL-03 | 205 | TBD | Pending |
+| REGL-04 | 205 | TBD | Pending |
+| REGL-05 | 205 | TBD | Pending |
+| REGL-06 | 205 | TBD | Pending |
+| REGL-07 | 205 | TBD | Pending |
+| REGL-08 | 205 | TBD | Pending |

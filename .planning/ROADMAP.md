@@ -982,3 +982,122 @@ Plans:
 **Depends on**: Phase 199
 **Plans**: TBD
 Plans:
+
+
+---
+
+### v3.14 HL Treatment Detection Quality (Active)
+
+**Milestone Goal:** Validate pipeline treatment-capture sensitivity against the tumor registry (Phase 202), characterize confirmed-cohort patients with no captured treatment (Phase 203), close the MED_ADMIN name-based drug capture gap in R/26 (Phase 204), and replace the R/28 `regimen_label` and Phase 201 relabel block with a date-level regimen + line-of-therapy engine covering all treatment types (Phase 205). No cohort-membership changes in any phase.
+
+## Phases (v3.14)
+
+- [ ] **Phase 202: Tumor-Registry Treatment Sensitivity** -- Inspect TR columns, compare registry vs Gantt capture, deliver sensitivity workbook (TRVAL-01..07)
+- [ ] **Phase 203: No-Treatment Patient Characterization** -- Side-by-side profile of 3,246 no-treatment vs 4,450 treated patients, with registry join and candidate eligibility rule (NOTX-01..07)
+- [ ] **Phase 204: MED_ADMIN Name-Based Capture** -- Add RAW_MEDADMIN_MED_NAME matching in R/26, rerun downstream chain, regression guard (MCAP-01..05)
+- [ ] **Phase 205: Regimen + Line-of-Therapy Engine** -- Date-level regimen dict + LOT counter, replaces R/28 `regimen_label` and Phase 201 relabel block; unit tests + Gantt regression guard (REGL-01..08)
+
+## Phase Details (v3.14)
+
+### Phase 202: Tumor-Registry Treatment Sensitivity
+
+**Goal**: Analysts can quantify how completely the Gantt pipeline captures treatments documented in the tumor registry, with sensitivity reported by treatment type, partner site, and diagnosis year -- and the reverse (PPV-direction) agreement reported from the pipeline's side.
+**Depends on**: Phase 201
+**Requirements**: TRVAL-01, TRVAL-02, TRVAL-03, TRVAL-04, TRVAL-05, TRVAL-06, TRVAL-07
+
+**Design constraints:**
+- TR column names (TR1/TR2/TR3 chemo, radiation, immunotherapy, transplant summary + first-course dates) inspected by probe run before any comparison code is written (TRVAL-01)
+- Denominator = TR HL patients present in gantt_episodes_180 (approx. 600); 121 TR-HL patients outside confirmed_hl_cohort.rds reported as a separate "not in pipeline" row, excluded from sensitivity denominator
+- Capture classification: exact match, +/-30 d, +/-90 d, not captured, no treatment in registry
+- <11 suppression on all patient counts in every output cell
+- KEY sheet leftmost; sheets: KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, QC
+- R/88 section verifies script exists, workbook sheets present, suppression applied
+- Can run in parallel with Phase 203
+
+**Success Criteria** (what must be TRUE):
+  1. A schema probe of TR1/TR2/TR3 columns is documented and all comparison code uses only column names confirmed in that probe
+  2. Sensitivity table (A_sensitivity) reports % of registry-flagged treatments captured by the pipeline for each treatment type, with numerators and denominators both shown and suppressed where < 11
+  3. Date-difference distribution (B_date_diff) shows counts at exact/+/-30 d/+/-90 d/not-captured tiers by treatment type; the 121 not-in-pipeline TR patients appear as a footnote row, not in the denominator
+  4. Reverse/PPV sheet reports, for each pipeline-captured treatment type, what fraction have a matching registry record
+  5. R/88 smoke-test section exits 0: script file exists, workbook present, KEY leftmost, all five content sheets present, suppression confirmed
+**Plans**: TBD
+
+### Phase 203: No-Treatment Patient Characterization
+
+**Goal**: The team has a complete, side-by-side profile of the approx. 3,246 confirmed-cohort patients with no captured treatment vs the 4,450 treated patients, with registry treatment fields joined and a candidate "treatment observable" eligibility rule documented for team decision -- but not applied.
+**Depends on**: Phase 201 (and Phase 202 for the registry join in NOTX-04 -- plan Phase 202 first)
+**Requirements**: NOTX-01, NOTX-02, NOTX-03, NOTX-04, NOTX-05, NOTX-06, NOTX-07
+
+**Design constraints:**
+- No cohort-membership changes; no eligibility rule applied in this phase
+- All characteristics (NOTX-01 through NOTX-04) reported for both no-treatment and treated groups side by side (NOTX-06)
+- Registry treatment fields joined from Phase 202 output (NOTX-04); Phase 203 must run after Phase 202 completes
+- "Treatment observable" rule documented as a proposed team decision item with patient counts, not applied (NOTX-05)
+- <11 suppression on all patient counts; KEY leftmost; sheets: KEY, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC
+- R/88 section for Phase 203 required
+
+**Success Criteria** (what must be TRUE):
+  1. A_profile sheet presents every NOTX-01..NOTX-04 characteristic with no-treatment and treated counts in adjacent columns; counts < 11 are suppressed
+  2. B_reasons_waterfall documents the fraction of no-treatment patients where: first_hl_dx_date precedes the data window, encounters within +/-90 days of dx are absent, or registry shows treatment the pipeline did not capture
+  3. Registry treatment fields from Phase 202 are joined for no-treatment patients; patients where the registry indicates treatment was given appear as a named stratum
+  4. D_candidate_rules sheet documents the proposed "treatment observable" eligibility rule with patient counts for both groups, with a clear label that the rule is not applied
+  5. R/88 smoke-test section exits 0: script exists, workbook present, KEY leftmost, all four content sheets and QC present
+**Plans**: TBD
+
+### Phase 204: MED_ADMIN Name-Based Capture
+
+**Goal**: R/26 captures drug administrations from RAW_MEDADMIN_MED_NAME using DRUG_NAME_ALIASES canonicalization, adding a "MED_ADMIN_NAME" source tag; the before/after gain is quantified per drug; all downstream outputs are regression-checked; and a QC list of newly matched name strings is produced for manual false-positive review.
+**Depends on**: Phase 201
+**Requirements**: MCAP-01, MCAP-02, MCAP-03, MCAP-04, MCAP-05
+
+**Design constraints:**
+- Name-based capture added alongside existing code-based capture in R/26; source tagged "MED_ADMIN_NAME" for traceability
+- DRUG_NAME_ALIASES canonicalization used for string matching (not ad-hoc regex)
+- Minimum drugs reported in before/after: rituximab, brentuximab, MTX
+- Downstream rerun: R/28 -> R/29 -> R/52 (90-day Gantt) AND R/142 (180-day Gantt); regression check on both outputs -- unchanged columns must match pre-Phase-204 values
+- Script stops for manual review if any unexpected drug family appears in matched MED_NAME strings (MCAP-05 safety gate)
+- output/internal/ before/after RDS snapshots written; R/88 checks added for name-based capture and regression guard
+- Must precede Phase 205
+
+**Success Criteria** (what must be TRUE):
+  1. R/26 reads RAW_MEDADMIN_MED_NAME and produces name-matched rows tagged source = "MED_ADMIN_NAME"; DRUG_NAME_ALIASES is the sole canonicalization path (no ad-hoc regex)
+  2. Before/after administration counts are reported for at minimum rituximab, brentuximab, and MTX; output/internal/ holds both the pre- and post-Phase-204 treatment RDS snapshots
+  3. Regression check on gantt_episodes (90-day) and gantt_episodes_180 (180-day) confirms all pre-Phase-204 columns are byte-identical; any deviation halts the script
+  4. The QC MED_NAME list (record counts, patient counts, suppressed to <11) is produced for manual review; script halts automatically if a name string maps to an unexpected drug family
+  5. R/88 checks confirm name-based capture logic is present and the regression guard is active
+**Plans**: TBD
+
+### Phase 205: Regimen + Line-of-Therapy Engine
+
+**Goal**: A date-level regimen + line-of-therapy engine exists in the pipeline, covering Chemotherapy and Immunotherapy administrations and SCT for LOT boundaries; it replaces R/28 `regimen_label` and the Phase 201 relabel block in R/142; per-patient LOT output is written to output/internal/; the Gantt schema change is guarded by regression; and unit tests cover the regimen dictionary and LOT rule.
+**Depends on**: Phase 204
+**Requirements**: REGL-01, REGL-02, REGL-03, REGL-04, REGL-05, REGL-06, REGL-07, REGL-08
+
+**Design constraints:**
+- Regimen dictionary in R/00_config.R covers all named families: ABVD, AVD, BV+AVD, Nivo+AVD, BEACOPP/escBEACOPP, pediatric regimens, NLPHL regimens, salvage regimens, BV consolidation, Other
+- Concurrency window stored as a named config constant (default +/-7 days); not a magic number
+- LOT counter: new line triggered by new non-maintenance drug class after a configurable gap or post-SCT; gap length is a named config constant
+- Engine operates across both Chemotherapy and Immunotherapy treatment_type rows; SCT dates used for LOT boundary
+- R/28 `regimen_label` column and Phase 201 R/142 relabel block are both replaced -- no duplicate labeling logic remains
+- Reconciliation table compares Phase 205 `regimen_label` vs Phase 201 `abvd_class` across all episodes (REGL-05)
+- Open decisions logged: SME regimen list confirmation, gap length, BV consolidation classification, NLPHL handling (REGL-06)
+- Per-patient output/internal/ RDS + CSV: line-1 regimen, line-1 start date, N lines, regimen per line
+- Gantt schema: regression guard on all pre-Phase-205 columns before schema change is merged
+- Unit tests: synthetic-patient coverage of regimen dict matching and LOT counter rule
+
+**Success Criteria** (what must be TRUE):
+  1. Regimen dictionary in R/00_config.R has named entries for all 10 families; concurrency window and LOT gap are named config constants; unit tests on synthetic patients confirm dictionary matching returns the expected regimen label for at least ABVD, BV+AVD, NLPHL, and a salvage regimen
+  2. LOT counter assigns line numbers correctly on synthetic cases: gap-triggered new line, post-SCT new line, maintenance drugs do not start a new line
+  3. R/28 `regimen_label` column and the Phase 201 relabel block in R/142 are removed; no duplicate labeling path remains in the pipeline
+  4. Reconciliation table (REGL-05) is present in phase output: for every episode the Phase 205 `regimen_label` and Phase 201 `abvd_class` are shown side by side; discrepancies are listed
+  5. Per-patient output/internal/ file exists with columns for line-1 regimen, line-1 start date, N lines, and per-line regimen; Gantt regression guard confirms all pre-Phase-205 columns are unchanged; R/88 section exits 0
+**Plans**: TBD
+
+## Progress Table (v3.14)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 202. Tumor-Registry Treatment Sensitivity | 0/TBD | Not started | - |
+| 203. No-Treatment Patient Characterization | 0/TBD | Not started | - |
+| 204. MED_ADMIN Name-Based Capture | 0/TBD | Not started | - |
+| 205. Regimen + Line-of-Therapy Engine | 0/TBD | Not started | - |
