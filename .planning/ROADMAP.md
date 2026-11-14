@@ -1045,7 +1045,11 @@ Plans:
   3. Registry treatment fields from Phase 202 are joined for no-treatment patients; patients where the registry indicates treatment was given appear as a named stratum
   4. D_candidate_rules sheet documents the proposed "treatment observable" eligibility rule with patient counts for both groups, with a clear label that the rule is not applied
   5. R/88 smoke-test section exits 0: script exists, workbook present, KEY leftmost, all four content sheets and QC present
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 203-01-PLAN.md — Schema probe (PENDING HiPerGator) + R/203 scaffold with pinned inputs and cohort split into no_tx/treated
+- [ ] 203-02-PLAN.md — NOTX-01..NOTX-04 characterization for both groups (data-window truncation, peri-dx encounters, demographics/care, registry treatment join)
+- [ ] 203-03-PLAN.md — NOTX-05 candidate treatment-observable rule (not applied) + styled xlsx (KEY, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression
+- [ ] 203-04-PLAN.md — R/88 SECTION 15bf smoke checks
 
 ### Phase 204: MED_ADMIN Name-Based Capture
 
