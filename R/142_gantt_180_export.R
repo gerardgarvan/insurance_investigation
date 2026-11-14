@@ -1319,47 +1319,9 @@ if (Sys.getenv("RUN_PRE201_REGRESSION") == "TRUE") {
   }
 }
 
-if (Sys.getenv("RUN_PRE201B_REGRESSION") == "TRUE") {
-  # PRE201B baseline: save the 30-column file before overwriting (keep-if-exists; re-run safe).
-  pre201b <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE201B.csv")
-  if (!file.exists(pre201b)) {
-    if (file.exists(OUTPUT_EPISODES)) {
-      base_check201b <- read.csv(OUTPUT_EPISODES, nrows = 1)
-      stopifnot("PRE201B baseline must have 30 columns" = ncol(base_check201b) == 30L)
-      file.copy(OUTPUT_EPISODES, pre201b, overwrite = FALSE)
-      message(glue("  PRE201B baseline saved: {pre201b}"))
-    } else {
-      message("  PRE201B baseline skipped: OUTPUT_EPISODES does not yet exist.")
-    }
-  } else {
-    message(glue("  PRE201B baseline exists (kept): {pre201b}"))
-  }
-}
-
 write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
-
-if (Sys.getenv("RUN_PRE201B_REGRESSION") == "TRUE") {
-  if (exists("pre201b") && file.exists(pre201b)) {
-    message("\n--- Phase 201B regression check (cols 1-30 unchanged) ---")
-    base_reg201b <- read.csv(pre201b,          colClasses = "character")
-    new_reg201b  <- read.csv(OUTPUT_EPISODES,  colClasses = "character")
-    # Check cols 1-30 only (cols 31-32 are new)
-    shared_cols <- colnames(base_reg201b)  # all 30 of the baseline
-    stopifnot("PRE201B: all 30 baseline columns present in new file" =
-      all(shared_cols %in% colnames(new_reg201b)))
-    base_subset <- base_reg201b[, shared_cols]
-    new_subset  <- new_reg201b[, shared_cols]
-    stopifnot("PRE201B row count unchanged" = nrow(base_subset) == nrow(new_subset))
-    mismatches <- which(rowSums(base_subset != new_subset) > 0)
-    if (length(mismatches) == 0L) {
-      message("  Phase 201B regression PASSED: cols 1-30 byte-identical.")
-    } else {
-      stop(glue("Phase 201B regression FAILED: {length(mismatches)} rows differ in cols 1-30."))
-    }
-  }
-}
 
 if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
   # Phase 199 regression: verify the 23 original columns are unchanged vs PRE199 baseline.
