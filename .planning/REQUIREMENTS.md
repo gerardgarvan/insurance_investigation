@@ -14,7 +14,7 @@
 - [x] **TRVAL-04**: Sensitivity stratified by SOURCE (partner site) and by diagnosis year (early vs late within study window)
 - [x] **TRVAL-05**: Styled xlsx (KEY leftmost, A_sensitivity, B_date_diff, C_by_source, D_by_year, QC) with <11 suppression on all patient counts
 - [x] **TRVAL-06**: Reverse direction (agreement / PPV-style): for pipeline-captured treatment episodes of each type, report what fraction have a matching registry record of that type — by treatment type
-- [ ] **TRVAL-07**: R/88 section for Phase 202: script exists, workbook KEY leftmost, expected sheets present, suppression applied
+- [x] **TRVAL-07**: R/88 section for Phase 202: script exists, workbook KEY leftmost, expected sheets present, suppression applied
 
 ### NOTX — No-Treatment Characterization (Phase 203)
 
@@ -23,7 +23,7 @@
 - [ ] **NOTX-03**: No-treatment patients characterized by: single_source_care flag (R/169), SOURCE (partner site), payer category, far_from_care_100mi, age group at diagnosis, NLPHL vs cHL
 - [ ] **NOTX-04**: Registry treatment fields from Phase 202 joined for no-treatment patients (registry says treatment given but pipeline did not capture it)
 - [ ] **NOTX-05**: A "treatment observable" eligibility rule is proposed as a team decision item — the rule is not applied; output documents the proposed definition and counts affected patients
-- [ ] **NOTX-06**: Comparison group = 4,450 confirmed-cohort patients with ≥1 treatment episode; every NOTX characteristic (NOTX-01 through NOTX-04) is reported for both groups side by side
+- [x] **NOTX-06**: Comparison group = 4,450 confirmed-cohort patients with ≥1 treatment episode; every NOTX characteristic (NOTX-01 through NOTX-04) is reported for both groups side by side
 - [ ] **NOTX-07**: Styled xlsx (KEY leftmost, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression; R/88 section for Phase 203
 
 ### MCAP — MED_ADMIN Name-Based Capture (Phase 204)
