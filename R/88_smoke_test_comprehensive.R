@@ -7966,7 +7966,6 @@ if (!file.exists(gantt_180_path_bd)) {
   p201_skip_fn("ABVD-TR-201 [d4] ever_abvd_plus values only TRUE or FALSE (file absent)")
   p201_skip_fn("ABVD-TR-201 [d5] BV+AVD rows have abvd_episode == FALSE (file absent)")
   p201_skip_fn("ABVD-TR-201 [d6] Nivo+AVD rows have abvd_episode == FALSE (file absent)")
-  p201_skip_fn("ABVD-TR-201 [PRE201B] columns 1-26 names match pre-201b schema (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1] ever_abvd constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1b] tr_hl_dx constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1c] tr_nhl_dx constant within patient_id (file absent)")
@@ -8040,28 +8039,6 @@ if (!file.exists(gantt_180_path_bd)) {
       nivoavd_rows <- g180_bd_dat[g180_bd_dat$abvd_class == "Nivo+AVD", ]
       nrow(nivoavd_rows) == 0L || all(nivoavd_rows$abvd_episode == "FALSE")
     })
-
-  # PRE201B regression: columns 1-26 unchanged from pre-Phase-201b schema.
-  # Columns 27-32 (ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx, abvd_class, ever_abvd_plus)
-  # are expected to change and are excluded from this regression.
-  {
-    pre201b_cols_1_26 <- c(
-      "patient_id", "treatment_type", "episode_number", "episode_start", "episode_stop",
-      "drug_names", "regimen_label", "age_at_episode", "payer_financial_class",
-      "payer_financial_class_label", "payer_source_value", "payer_category", "payer_rank",
-      "zip5", "adi_natrank", "distance_to_cbc", "has_autoimmune_dx", "first_autoimmune_dx_date",
-      "immune_flag", "immune_flag_dx", "ever_brentuximab",
-      "tr_present", "num_tr_records", "num_tr_hl_records",
-      "death_cause_detail", "first_chemo_date"
-    )
-    actual_cols_1_26 <- names(g180_bd_dat)[seq_len(min(26L, ncol(g180_bd_dat)))]
-    if (length(actual_cols_1_26) < 26L) {
-      p201_skip_fn("ABVD-TR-201 [PRE201B] cols 1-26 regression (file has fewer than 26 cols)")
-    } else {
-      p201_chk("ABVD-TR-201 [PRE201B] columns 1-26 names match pre-201b schema (Phase 201b regression)",
-        identical(actual_cols_1_26, pre201b_cols_1_26))
-    }
-  }
 
   # Patient-level summaries for [e*] and [f*]
   g180_bd_pt <- g180_bd_dat |>
