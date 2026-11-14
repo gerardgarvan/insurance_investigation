@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-14 - Completed quick task 261114-lv2: export abvd_class and ever_abvd_plus in gantt_episodes_180.csv
+Last activity: 2026-11-14 - Completed quick task 261114-m8m: R/88 15bb/15bc 30->32 col fixes; R/142 Section 4C4 abvd_class and ever_abvd_plus patient-count QC
 
 ## Phase Map (v3.13)
 
