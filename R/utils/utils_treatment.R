@@ -175,11 +175,21 @@ load_ndc_crosswalk <- function() {
 #'   (NDC-crosswalk-resolved). When FALSE (default), the return contract is
 #'   unchanged — the `source` column is never added — so all existing callers
 #'   in R/10, R/11, R/25, R/26, R/76, R/109 are unaffected.
+#' @param return_name_capture Logical (default FALSE). When TRUE, adds a
+#'   name-based capture tier for MED_ADMIN rows where MEDADMIN_TYPE is not
+#'   "RX" or "ND", using `canonicalize_drug_name()` on RAW_MEDADMIN_MED_NAME.
+#'   Triggers MCAP-05 safety gate: halts if a resolved canonical label is not
+#'   in the known drug set (unique values of DRUG_NAME_ALIASES). Source tag for
+#'   name-matched rows = "MED_ADMIN_NAME". triggering_code = "NAME:<canonical>".
+#'   Only rows not already captured by RX/ND paths are added (anti-join on
+#'   ID + treatment_date). Existing callers pass neither argument so they are
+#'   unaffected (default FALSE skips the name tier entirely).
 #' @return Tibble(ID, treatment_date, triggering_code) with distinct rows, or NULL.
 #'   When return_raw_name = TRUE: tibble(ID, treatment_date, triggering_code, raw_med_name).
 #'   When return_source = TRUE: adds a `source` column (see @param above).
 get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
-                           return_raw_name = FALSE, return_source = FALSE) {
+                           return_raw_name = FALSE, return_source = FALSE,
+                           return_name_capture = FALSE) {
   tbl <- safe_table(table_name)
   if (is.null(tbl)) {
     message(glue::glue("  [{table_name}] table not found — skipping chemo detection"))
@@ -281,13 +291,66 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
       if (return_source) nd_hits <- dplyr::mutate(nd_hits, source = "MED_ADMIN (NDC)")
     }
     result <- dplyr::bind_rows(rx_hits, nd_hits)
+
+    # --- Phase 204 (MCAP-01): NAME-typed rows ---
+    # MCAP-05 safety gate: halt if any resolved canonical is not in known drug set.
+    if (return_name_capture) {
+      name_rows <- tbl %>%
+        dplyr::filter(
+          !MEDADMIN_TYPE %in% c("RX", "ND"),
+          !is.na(RAW_MEDADMIN_MED_NAME),
+          nchar(trimws(RAW_MEDADMIN_MED_NAME)) > 0,
+          !is.na(MEDADMIN_START_DATE)
+        ) %>%
+        dplyr::select(ID, treatment_date = MEDADMIN_START_DATE,
+                      raw_name = RAW_MEDADMIN_MED_NAME) %>%
+        dplyr::collect()
+
+      name_rows <- name_rows %>%
+        dplyr::mutate(
+          canonical = canonicalize_drug_name(toupper(trimws(raw_name)))
+        )
+
+      known_canonicals <- unique(unname(DRUG_NAME_ALIASES))
+
+      # MCAP-05: halt on any alias-resolved canonical not in the known drug set
+      unexpected <- dplyr::filter(name_rows,
+        canonical != toupper(trimws(raw_name)),
+        !canonical %in% known_canonicals)
+      if (nrow(unexpected) > 0) {
+        stop(glue::glue(
+          "[get_chemo_hits] MCAP-05: unexpected drug family in RAW_MEDADMIN_MED_NAME. ",
+          "Review these strings before proceeding: ",
+          paste(unique(unexpected$raw_name), collapse = "; ")
+        ))
+      }
+
+      name_hits <- name_rows %>%
+        dplyr::filter(canonical %in% known_canonicals) %>%
+        dplyr::mutate(
+          triggering_code = paste0("NAME:", canonical),
+          raw_med_name    = raw_name
+        ) %>%
+        dplyr::select(ID, treatment_date, triggering_code, raw_med_name) %>%
+        dplyr::distinct(ID, treatment_date, triggering_code, raw_med_name)
+      if (return_source) name_hits <- dplyr::mutate(name_hits, source = "MED_ADMIN_NAME")
+
+      # Anti-join: only add rows not already captured by RX/ND paths
+      name_hits_new <- dplyr::anti_join(
+        name_hits,
+        dplyr::select(result, ID, treatment_date),
+        by = c("ID", "treatment_date")
+      )
+      result <- dplyr::bind_rows(result, name_hits_new)
+    }
+
     # Keep only the columns the caller asked for, preserving the original
     # 3-column contract when both return_raw_name and return_source are FALSE
     # (the default) so all existing callers are byte-identical to before.
     keep_cols <- c("ID", "treatment_date", "triggering_code")
-    if (return_raw_name) keep_cols <- c(keep_cols, "raw_med_name")
+    if (return_raw_name || return_name_capture) keep_cols <- c(keep_cols, "raw_med_name")
     if (return_source) keep_cols <- c(keep_cols, "source")
-    result <- dplyr::select(result, dplyr::all_of(keep_cols))
+    result <- dplyr::select(result, dplyr::any_of(keep_cols))
     result
 
   } else {
