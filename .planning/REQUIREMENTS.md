@@ -39,10 +39,10 @@
 - [x] **REGL-01**: A regimen dictionary exists in R/00_config.R covering: ABVD, AVD, BV+AVD, Nivo+AVD, BEACOPP/escBEACOPP, pediatric (ABVE-PC/OEPA-COPDAC/BV-AVEPC), NLPHL (R-CHOP/R-CVP/rituximab mono), salvage (ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembrolizumab/nivolumab mono), BV consolidation, Other
 - [x] **REGL-02**: Concurrency window for same-regimen drug co-occurrence is a named config constant (default ±7 days)
 - [x] **REGL-03**: Line-of-therapy counter assigned per patient: new line when a new non-maintenance drug class starts after a configurable gap or after SCT
-- [ ] **REGL-04**: Engine operates on per-date administrations across Chemotherapy AND Immunotherapy treatment types (not limited to one treatment_type); SCT dates are used for the LOT rule; R/28 `regimen_label` and the Phase 201 relabel block in R/142 are both replaced
+- [x] **REGL-04**: Engine operates on per-date administrations across Chemotherapy AND Immunotherapy treatment types (not limited to one treatment_type); SCT dates are used for the LOT rule; R/28 `regimen_label` and the Phase 201 relabel block in R/142 are both replaced
 - [ ] **REGL-05**: Reconciliation table compares Phase 205 `regimen_label` values vs Phase 201 `abvd_class` values across all episodes
 - [ ] **REGL-06**: Open team decisions logged in phase output: SME regimen list confirmation, gap length between lines, BV consolidation classification, NLPHL regimen handling
-- [ ] **REGL-07**: Per-patient internal output (RDS + CSV in output/internal/): line-1 regimen, line-1 start date, number of lines, regimen per line
+- [x] **REGL-07**: Per-patient internal output (RDS + CSV in output/internal/): line-1 regimen, line-1 start date, number of lines, regimen per line
 - [x] **REGL-08**: Gantt schema change guarded by regression on all pre-Phase-205 columns; R/88 section for Phase 205; unit tests for regimen dictionary + LOT rule on synthetic patients
 
 ---

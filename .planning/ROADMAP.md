@@ -977,7 +977,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
-- [ ] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
+- [x] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
 - [ ] 205-03-PLAN.md — Per-patient LOT output (output/internal/), reconciliation table, Gantt regression guard, R/88 SMOKE-205-01
 Plans:
 
@@ -986,7 +986,7 @@ Plans:
 **Depends on**: Phase 199
 **Plans**: 3 plans
 Plans:
-- [ ] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
+- [x] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
 - [ ] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
 - [ ] 205-03-PLAN.md — Per-patient LOT output (output/internal/), reconciliation table, Gantt regression guard, R/88 SMOKE-205-01
 Plans:
@@ -1123,4 +1123,4 @@ Plans:
 | 202. Tumor-Registry Treatment Sensitivity | 3/3 | Complete    | 2026-11-14 |
 | 203. No-Treatment Patient Characterization | 4/4 | Complete    | 2026-11-14 |
 | 204. MED_ADMIN Name-Based Capture | 2/3 | In Progress|  |
-| 205. Regimen + Line-of-Therapy Engine | 1/3 | In Progress|  |
+| 205. Regimen + Line-of-Therapy Engine | 2/3 | In Progress|  |
