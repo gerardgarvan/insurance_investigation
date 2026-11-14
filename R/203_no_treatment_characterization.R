@@ -12,7 +12,7 @@
 # Outputs: output/203_no_treatment_characterization_<date>.xlsx
 #            (KEY, A_profile, B_reasons_waterfall, C_by_source,
 #             D_candidate_rules, QC)
-#          output/internal/203_no_treatment_<date>.rds  (patient-level)
+#          output/internal/203_no_treatment_characterization_<date>.rds  (patient-level)
 # ==============================================================================
 
 # ==============================================================================
@@ -439,13 +439,399 @@ message(glue(
 
 out_rds <- file.path(
   CONFIG$output_dir, "internal",
-  glue("203_no_treatment_{RUN_DATE}.rds")
+  glue("203_no_treatment_characterization_{RUN_DATE}.rds")
 )
 dir.create(dirname(out_rds), showWarnings = FALSE, recursive = TRUE)
 saveRDS(char_pt, out_rds)
 message(glue("[R203] char_pt saved: {out_rds}"))
 
-# Plan 203-03 will read char_pt from this RDS and produce suppression-ready
-# workbook sheets (A_profile, B_reasons_waterfall, C_by_source).
-message("[R203] Section 203-02 characterization blocks complete. ",
-        "Output workbook produced in Plan 203-03.")
+# ==============================================================================
+# SECTION 10: NOTX-05 — CANDIDATE "TREATMENT OBSERVABLE" RULE (Plan 203-03) ----
+# RULE NOT APPLIED — proposed team decision item (D-203-01).
+# The flag is documented and counted per group but never used to filter the
+# cohort or remove any patient from the analysis.
+# ==============================================================================
+
+# treatment_observable: patient had >= 1 encounter within +/-90 days of dx AND
+# diagnosis is not truncated by the data window AND dates are not missing.
+# This is the proposed rule; it is NOT applied as a filter here.
+char_pt <- char_pt %>%
+  dplyr::mutate(
+    treatment_observable = (n_enc_peri_dx >= 1L) &
+                           (!window_truncated) &
+                           (!window_date_missing)
+  )
+
+# Detailed FALSE-reason breakdown (mutually exclusive — assign first applicable).
+char_pt <- char_pt %>%
+  dplyr::mutate(
+    tx_obs_false_reason = dplyr::case_when(
+      treatment_observable                    ~ NA_character_,
+      window_date_missing                     ~ "dates_missing",
+      window_truncated                        ~ "window_truncated",
+      n_enc_peri_dx == 0L                     ~ "no_peri_dx_encounter",
+      TRUE                                    ~ "other"
+    )
+  )
+
+# Per-group summary of treatment_observable TRUE/FALSE.
+message("[R203 NOTX-05] treatment_observable counts (RULE NOT APPLIED):")
+tx_obs_counts <- char_pt %>%
+  dplyr::count(group, treatment_observable) %>%
+  dplyr::arrange(group, treatment_observable)
+print(tx_obs_counts)
+
+# candidate_rules_tbl: per group, TRUE | FALSE and breakdown of FALSE reasons.
+# Includes an explicit label that this rule is not applied.
+#
+# RULE NOT APPLIED — proposed team decision item (D-203-01)
+candidate_rules_tbl <- dplyr::bind_rows(
+  # Row 1: label row (not applied)
+  tibble::tibble(
+    group              = "** RULE NOT APPLIED — proposed team decision item (D-203-01) **",
+    n_total            = NA_integer_,
+    n_observable_true  = NA_integer_,
+    n_observable_false = NA_integer_,
+    n_false_dates_missing    = NA_integer_,
+    n_false_window_truncated = NA_integer_,
+    n_false_no_peri_dx       = NA_integer_
+  ),
+  char_pt %>%
+    dplyr::group_by(group) %>%
+    dplyr::summarise(
+      n_total            = dplyr::n(),
+      n_observable_true  = sum(treatment_observable,  na.rm = TRUE),
+      n_observable_false = sum(!treatment_observable, na.rm = TRUE),
+      n_false_dates_missing    = sum(tx_obs_false_reason == "dates_missing",        na.rm = TRUE),
+      n_false_window_truncated = sum(tx_obs_false_reason == "window_truncated",     na.rm = TRUE),
+      n_false_no_peri_dx       = sum(tx_obs_false_reason == "no_peri_dx_encounter", na.rm = TRUE),
+      .groups = "drop"
+    )
+)
+
+message("[R203 NOTX-05] candidate_rules_tbl:")
+print(candidate_rules_tbl)
+
+# ==============================================================================
+# SECTION 11: WORKBOOK ASSEMBLY (Plan 203-03) ----
+# KEY leftmost, then A_profile, B_reasons_waterfall, C_by_source,
+# D_candidate_rules, QC. <11 suppression applied at display time.
+# Patient-level data written to output/internal/ ONLY (char_pt already saved
+# in Section 9; this section produces the team-facing xlsx).
+# ==============================================================================
+
+# --- Suppression helpers (local scope) ----------------------------------------
+suppress_small <- function(n) {
+  ifelse(!is.na(n) & n > 0L & n <= 10L, "<11", as.character(n))
+}
+sup_col <- function(x) vapply(x, function(v) suppress_small(v), character(1))
+
+# Apply suppression to a data frame: suppress all integer/numeric columns named
+# in `count_cols`; blank character columns named in `blank_cols` where
+# the corresponding count is suppressed (complementary suppression).
+sup_df <- function(df, count_cols, blank_cols = character(0)) {
+  for (col in count_cols) {
+    if (!col %in% names(df)) next
+    raw <- df[[col]]
+    hit <- !is.na(raw) & raw > 0L & raw <= 10L
+    if (length(blank_cols) > 0) {
+      for (bc in blank_cols) {
+        if (bc %in% names(df)) df[[bc]][hit] <- ""
+      }
+    }
+    df[[col]] <- suppress_small(raw)
+  }
+  df
+}
+
+# --- UF colours / styles -------------------------------------------------------
+UF_BLUE   <- "#0021A5"
+UF_ORANGE <- "#FA4616"
+
+hdr_style <- openxlsx::createStyle(
+  fgFill         = UF_BLUE,
+  fontColour     = "white",
+  textDecoration = "bold",
+  fontName       = "Arial",
+  fontSize       = 11,
+  halign         = "left"
+)
+accent_style <- openxlsx::createStyle(
+  fgFill         = UF_ORANGE,
+  fontColour     = "white",
+  textDecoration = "bold",
+  fontName       = "Arial",
+  fontSize       = 11
+)
+
+# Helper: add sheet, write data with header styling, optional accent on row 1.
+write_sheet <- function(wb, sheet_name, df, accent_first = FALSE,
+                        col_widths = 20) {
+  openxlsx::addWorksheet(wb, sheet_name)
+  openxlsx::writeData(wb, sheet_name, df, startRow = 1, headerStyle = hdr_style)
+  openxlsx::setColWidths(wb, sheet_name, cols = seq_len(ncol(df)),
+                         widths = col_widths)
+  if (accent_first && nrow(df) >= 1) {
+    openxlsx::addStyle(wb, sheet_name, accent_style,
+                       rows = 2, cols = seq_len(ncol(df)), stack = FALSE)
+  }
+}
+
+# --- Build display frames (suppression applied here) --------------------------
+
+# A_profile: side-by-side profile for each NOTX-01..NOTX-04 characteristic.
+# One long table pivoted so no_treatment and treated are ADJACENT columns.
+build_profile_section <- function(df_long, label_col, characteristic_name) {
+  # df_long has columns: group, <label_col>, n
+  df_long %>%
+    dplyr::rename(category = dplyr::all_of(label_col)) %>%
+    dplyr::mutate(category = as.character(category)) %>%
+    tidyr::pivot_wider(names_from = group, values_from = n, values_fill = 0L) %>%
+    dplyr::mutate(
+      characteristic = characteristic_name,
+      no_treatment = suppress_small(no_treatment),
+      treated      = suppress_small(treated)
+    ) %>%
+    dplyr::select(characteristic, category, no_treatment, treated)
+}
+
+a_window <- build_profile_section(
+  char_pt %>% dplyr::count(group, window_truncated),
+  "window_truncated", "NOTX-01 window_truncated"
+)
+a_dates_missing <- build_profile_section(
+  char_pt %>% dplyr::count(group, window_date_missing),
+  "window_date_missing", "NOTX-01 window_date_missing"
+)
+a_enc_band <- build_profile_section(
+  char_pt %>%
+    dplyr::mutate(enc_band = enc_band(n_enc_peri_dx)) %>%
+    dplyr::count(group, enc_band),
+  "enc_band", "NOTX-02 peri_dx_encounters"
+)
+a_ssc <- build_profile_section(
+  notx03_ssc, "single_source_care", "NOTX-03 single_source_care"
+)
+a_source <- build_profile_section(
+  notx03_source, SOURCE_COL, "NOTX-03 SOURCE"
+)
+a_payer <- build_profile_section(
+  notx03_payer, PAYER_CAT_COL, "NOTX-03 payer"
+)
+a_far <- build_profile_section(
+  notx03_far, FAR_COL, "NOTX-03 far_from_care_100mi"
+)
+a_age <- build_profile_section(
+  notx03_age, "age_group_dx", "NOTX-03 age_group_dx"
+)
+a_subtype <- build_profile_section(
+  notx03_subtype, "hl_subtype", "NOTX-03 hl_subtype"
+)
+# NOTX-04: registry
+a_reg_tx <- build_profile_section(
+  char_pt %>% dplyr::count(group, registry_tx_given),
+  "registry_tx_given", "NOTX-04 registry_tx_given"
+)
+a_reg_missed <- build_profile_section(
+  char_pt %>% dplyr::count(group, registry_says_tx_pipeline_missed),
+  "registry_says_tx_pipeline_missed",
+  "NOTX-04 registry_says_tx_pipeline_missed"
+)
+
+sheet_A <- dplyr::bind_rows(
+  a_window, a_dates_missing, a_enc_band, a_ssc, a_source,
+  a_payer, a_far, a_age, a_subtype, a_reg_tx, a_reg_missed
+)
+
+# B_reasons_waterfall: fraction of no_treatment patients for three reasons.
+n_notx_total <- sum(char_pt$group == "no_treatment")
+
+make_reason_row <- function(label, n_int) {
+  pct_str <- if (!is.na(n_int) && n_int >= 11L && n_notx_total >= 11L) {
+    sprintf("%.1f%%", 100 * n_int / n_notx_total)
+  } else {
+    ""
+  }
+  tibble::tibble(
+    reason    = label,
+    n         = suppress_small(n_int),
+    pct_of_no_treatment = pct_str
+  )
+}
+
+notx_pt <- char_pt %>% dplyr::filter(group == "no_treatment")
+
+sheet_B <- dplyr::bind_rows(
+  make_reason_row(
+    "Total no_treatment patients",
+    n_notx_total
+  ),
+  make_reason_row(
+    "window_truncated (dx before data window start)",
+    sum(notx_pt$window_truncated, na.rm = TRUE)
+  ),
+  make_reason_row(
+    "no peri-dx encounter (n_enc_peri_dx == 0)",
+    sum(notx_pt$n_enc_peri_dx == 0L, na.rm = TRUE)
+  ),
+  make_reason_row(
+    "registry_says_tx_pipeline_missed (TR says tx; pipeline captured 0)",
+    sum(notx_pt$registry_says_tx_pipeline_missed, na.rm = TRUE)
+  )
+)
+
+# C_by_source: NOTX characteristics by SOURCE, both groups.
+c_source_window <- char_pt %>%
+  dplyr::count(group, .data[[SOURCE_COL]], window_truncated, name = "n") %>%
+  dplyr::mutate(
+    characteristic = "window_truncated",
+    category = as.character(window_truncated),
+    n = suppress_small(n)
+  ) %>%
+  dplyr::select(group, SOURCE = dplyr::all_of(SOURCE_COL),
+                characteristic, category, n)
+
+c_source_ssc <- char_pt %>%
+  dplyr::count(group, .data[[SOURCE_COL]], single_source_care, name = "n") %>%
+  dplyr::mutate(
+    characteristic = "single_source_care",
+    category = as.character(single_source_care),
+    n = suppress_small(n)
+  ) %>%
+  dplyr::select(group, SOURCE = dplyr::all_of(SOURCE_COL),
+                characteristic, category, n)
+
+c_source_payer <- char_pt %>%
+  dplyr::count(group, .data[[SOURCE_COL]], .data[[PAYER_CAT_COL]], name = "n") %>%
+  dplyr::rename(category = dplyr::all_of(PAYER_CAT_COL)) %>%
+  dplyr::mutate(
+    characteristic = "payer",
+    category = as.character(category),
+    n = suppress_small(n)
+  ) %>%
+  dplyr::select(group, SOURCE = dplyr::all_of(SOURCE_COL),
+                characteristic, category, n)
+
+sheet_C <- dplyr::bind_rows(c_source_window, c_source_ssc, c_source_payer) %>%
+  dplyr::arrange(group, SOURCE, characteristic, category)
+
+# D_candidate_rules: candidate_rules_tbl with suppression on integer counts.
+sheet_D <- candidate_rules_tbl %>%
+  dplyr::mutate(
+    n_total            = suppress_small(n_total),
+    n_observable_true  = suppress_small(n_observable_true),
+    n_observable_false = suppress_small(n_observable_false),
+    n_false_dates_missing    = suppress_small(n_false_dates_missing),
+    n_false_window_truncated = suppress_small(n_false_window_truncated),
+    n_false_no_peri_dx       = suppress_small(n_false_no_peri_dx)
+  )
+
+# QC sheet.
+n_treated_total <- sum(char_pt$group == "treated")
+n_total_all     <- nrow(char_pt)
+n_dates_missing <- sum(char_pt$window_date_missing, na.rm = TRUE)
+n_r169_missing  <- sum(is.na(char_pt$single_source_care))
+n_tr_missing    <- sum(is.na(char_pt$registry_tx_given))
+
+sheet_QC <- tibble::tibble(
+  check = c(
+    "Population reconciliation: no_treatment + treated == total",
+    "no_treatment",
+    "treated",
+    "total cohort",
+    "reconciliation_ok",
+    "window_date_missing (either date NA)",
+    "patients missing R169 single_source_care join",
+    "patients missing TR-flags join (registry_tx_given NA before coalesce)",
+    "suppression_applied",
+    "D-203-01 note"
+  ),
+  value = c(
+    paste0(n_notx_total, " + ", n_treated_total, " == ", n_total_all),
+    suppress_small(n_notx_total),
+    suppress_small(n_treated_total),
+    suppress_small(n_total_all),
+    as.character(n_notx_total + n_treated_total == n_total_all),
+    suppress_small(n_dates_missing),
+    suppress_small(n_r169_missing),
+    suppress_small(n_tr_missing),
+    "YES — all patient counts 1-10 shown as <11",
+    "RULE NOT APPLIED — treatment_observable is a proposed candidate rule (D-203-01)"
+  )
+)
+
+# KEY sheet.
+sheet_KEY <- tibble::tibble(
+  item  = c(
+    "run_date",
+    "script",
+    "input: cohort_rds",
+    "input: gantt180_csv",
+    "input: r169_rds",
+    "input: trflags_rds",
+    "pinned: cohort_rds",
+    "pinned: gantt180_csv",
+    "pinned: r169_rds",
+    "pinned: trflags_rds",
+    "group: no_treatment",
+    "group: treated",
+    "sheet: KEY",
+    "sheet: A_profile",
+    "sheet: B_reasons_waterfall",
+    "sheet: C_by_source",
+    "sheet: D_candidate_rules",
+    "sheet: QC",
+    "suppression_note",
+    "D-203-01"
+  ),
+  value = c(
+    RUN_DATE,
+    "R/203_no_treatment_characterization.R",
+    pin_info$cohort_rds$path,
+    pin_info$gantt180_csv$path,
+    pin_info$r169_rds$path,
+    pin_info$trflags_rds$path,
+    as.character(pin_info$cohort_rds$pinned),
+    as.character(pin_info$gantt180_csv$pinned),
+    as.character(pin_info$r169_rds$pinned),
+    as.character(pin_info$trflags_rds$pinned),
+    "0 captured treatment episodes in gantt_episodes_180",
+    ">=1 captured treatment episode in gantt_episodes_180",
+    "this sheet — provenance, inputs, group definitions, notes",
+    "side-by-side NOTX-01..NOTX-04 profile: no_treatment vs treated",
+    "fraction of no_treatment patients meeting each truncation/capture reason",
+    "NOTX characteristics broken down by SOURCE/partner site, both groups",
+    "proposed treatment_observable candidate rule (RULE NOT APPLIED — D-203-01)",
+    "population reconciliation and join-completeness checks",
+    "Patient counts 1-10 are shown as <11. Rates/pct only when N and D >= 11.",
+    "RULE NOT APPLIED — treatment_observable is a proposed team decision item"
+  )
+)
+
+# --- Assemble workbook --------------------------------------------------------
+wb <- openxlsx::createWorkbook()
+
+# KEY leftmost — added first.
+write_sheet(wb, "KEY",                sheet_KEY,   accent_first = TRUE)
+write_sheet(wb, "A_profile",          sheet_A,     accent_first = FALSE)
+write_sheet(wb, "B_reasons_waterfall", sheet_B,    accent_first = FALSE)
+write_sheet(wb, "C_by_source",        sheet_C,     accent_first = FALSE)
+write_sheet(wb, "D_candidate_rules",  sheet_D,     accent_first = TRUE)
+write_sheet(wb, "QC",                 sheet_QC,    accent_first = FALSE)
+
+out_fname <- glue("203_no_treatment_characterization_{format(Sys.Date(), '%Y%m%d')}.xlsx")
+out_path  <- file.path(CONFIG$output_dir, out_fname)
+dir.create(CONFIG$output_dir, showWarnings = FALSE, recursive = TRUE)
+openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
+
+message(glue("[R203] Workbook written: {out_path}"))
+message(glue(
+  "[R203] Sheets: KEY ({nrow(sheet_KEY)} rows), ",
+  "A_profile ({nrow(sheet_A)}), B_reasons_waterfall ({nrow(sheet_B)}), ",
+  "C_by_source ({nrow(sheet_C)}), D_candidate_rules ({nrow(sheet_D)}), ",
+  "QC ({nrow(sheet_QC)})"
+))
+
+# patient-level char_pt already written to output/internal in Section 9;
+# the xlsx workbook above contains NO patient IDs.
+message("[R203] Plan 203-03 complete. Patient-level RDS in output/internal/ only.")
