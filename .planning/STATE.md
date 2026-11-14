@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-14 - Completed quick task 261114-mch: Phase 201 fix — date-level BV+AVD / Nivo+AVD relabel in R/142; R/88 15bd and PRE201B regression updated
+Last activity: 2026-11-14 - Completed quick task 261114-mpi: Remove RUN_PRE201B_REGRESSION block from R/142
 
 ## Phase Map (v3.13)
 
@@ -177,6 +177,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261114-lv2 | export abvd_class and ever_abvd_plus in gantt_episodes_180.csv (R/142 32-col; broaden ABVD_PLUS; R/88 15bd 7 new checks; 4 new unit tests) | 2026-11-14 | 84c1a5e | [261114-lv2-export-abvd-class-and-ever-abvd-plus-in-](./quick/261114-lv2-export-abvd-class-and-ever-abvd-plus-in-/) |
 | 261114-m8m | R/88 15bb [c2] and 15bc [c1] updated 30->32 columns; R/142 Section 4C4 adds per-abvd_class and ever_abvd_plus patient counts (fmt_sup) | 2026-11-14 | 54eaa27 | [261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q](./quick/261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q/) |
 | 261114-mch | Phase 201 fix: date-level BV+AVD / Nivo+AVD relabel in R/142 (admin-date window ±7d); ABVD_CONCURRENT_WINDOW_DAYS config constant; R/88 15bd BV+AVD/Nivo+AVD value set, [d5]/[d6], PRE201B cols 1-26 regression | 2026-11-14 | d4e80b6 | [261114-mch-phase-201-fix-detect-bv-avd-and-nivo-avd](./quick/261114-mch-phase-201-fix-detect-bv-avd-and-nivo-avd/) |
+| 261114-mpi | Remove RUN_PRE201B_REGRESSION block from R/142 (stopifnot always fails: 32-col output vs 30-col guard); rely on PRE201 26-col baseline | 2026-11-14 | 0716960 | [261114-mpi-r142-remove-pre201b-regression-block-use](./quick/261114-mpi-r142-remove-pre201b-regression-block-use/) |
 
 ## Session Continuity
 
