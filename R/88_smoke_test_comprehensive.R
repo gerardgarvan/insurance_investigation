@@ -7918,7 +7918,10 @@ p201_chk("ABVD-TR-201 [a3] classify_abvd_episode AVD string -> 'AVD'",
     isTRUE(classify_abvd_episode("Dacarbazine;Doxorubicin;Vinblastine", NA_character_) == "AVD"))
 
 # [a4] BV+AVD -> NA (not ABVD)
-p201_chk("ABVD-TR-201 [a4] classify_abvd_episode BV+AVD -> NA",
+# Note: classify_abvd_episode() uses drug_names tokens only. Brentuximab is an excluding
+# drug so the function returns NA. BV+AVD / Nivo+AVD relabelling happens at the R/142
+# date-level step (Section 4C4, Phase 201b), not inside this helper.
+p201_chk("ABVD-TR-201 [a4] classify_abvd_episode BV+AVD -> NA (excluding-drug rule; date-level relabel in R/142)",
   exists("classify_abvd_episode") &&
     is.na(classify_abvd_episode("Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine", NA_character_)))
 
@@ -7934,8 +7937,11 @@ p201_chk("ABVD-TR-201 [a5b] classify_abvd_episode AVD+Rituximab -> 'ABVD_PLUS'",
     isTRUE(classify_abvd_episode(
       "Dacarbazine;Doxorubicin;Rituximab;Vinblastine", NA_character_) == "ABVD_PLUS"))
 
-# [a5c] BV+AVD -> NA (not ABVD_PLUS; has_excl guard)
-p201_chk("ABVD-TR-201 [a5c] classify_abvd_episode BV+AVD -> NA (not ABVD_PLUS)",
+# [a5c] BV+AVD -> NA (not ABVD_PLUS; has_excl guard).
+# classify_abvd_episode() correctly returns NA for BV+AVD drug_names tokens because the
+# excluding-drug guard fires. The "BV+AVD" abvd_class label is applied by the date-level
+# relabel in R/142 Section 4C4 (Phase 201b), and only when the drug-name pass yields "AVD".
+p201_chk("ABVD-TR-201 [a5c] classify_abvd_episode BV+AVD -> NA (not ABVD_PLUS; date-level relabel in R/142)",
   exists("classify_abvd_episode") &&
     is.na(classify_abvd_episode(
       "Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine", NA_character_)))
@@ -7958,6 +7964,9 @@ if (!file.exists(gantt_180_path_bd)) {
   p201_skip_fn("ABVD-TR-201 [d2] tr_hl_dx/tr_nhl_dx value domain (file absent)")
   p201_skip_fn("ABVD-TR-201 [d3] abvd_class value set valid (file absent)")
   p201_skip_fn("ABVD-TR-201 [d4] ever_abvd_plus values only TRUE or FALSE (file absent)")
+  p201_skip_fn("ABVD-TR-201 [d5] BV+AVD rows have abvd_episode == FALSE (file absent)")
+  p201_skip_fn("ABVD-TR-201 [d6] Nivo+AVD rows have abvd_episode == FALSE (file absent)")
+  p201_skip_fn("ABVD-TR-201 [PRE201B] columns 1-26 names match pre-201b schema (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1] ever_abvd constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1b] tr_hl_dx constant within patient_id (file absent)")
   p201_skip_fn("ABVD-TR-201 [e1c] tr_nhl_dx constant within patient_id (file absent)")
@@ -8007,16 +8016,52 @@ if (!file.exists(gantt_180_path_bd)) {
     all(g180_bd_dat$tr_hl_dx  %in% c("TRUE", "FALSE", "")) &&
     all(g180_bd_dat$tr_nhl_dx %in% c("TRUE", "FALSE", "")))
 
-  # [d3] abvd_class value set
+  # [d3] abvd_class value set (Phase 201b adds BV+AVD and Nivo+AVD)
   p201_chk("ABVD-TR-201 [d3] abvd_class value set valid",
     {
-      valid_cls <- c("ABVD", "AVD", "JCODE_ABVD", "ABVD_PLUS", "")
+      valid_cls <- c("ABVD", "AVD", "JCODE_ABVD", "ABVD_PLUS", "BV+AVD", "Nivo+AVD", "")
       all(g180_bd_dat$abvd_class %in% valid_cls)
     })
 
   # [d4] ever_abvd_plus values only TRUE or FALSE (never blank)
   p201_chk("ABVD-TR-201 [d4] ever_abvd_plus values only TRUE or FALSE",
     all(g180_bd_dat$ever_abvd_plus %in% c("TRUE", "FALSE")))
+
+  # [d5] BV+AVD rows have abvd_episode == FALSE (Phase 201b: BV+AVD is not an abvd_episode)
+  p201_chk("ABVD-TR-201 [d5] BV+AVD rows have abvd_episode == FALSE",
+    {
+      bvavd_rows <- g180_bd_dat[g180_bd_dat$abvd_class == "BV+AVD", ]
+      nrow(bvavd_rows) == 0L || all(bvavd_rows$abvd_episode == "FALSE")
+    })
+
+  # [d6] Nivo+AVD rows have abvd_episode == FALSE (Phase 201b: Nivo+AVD is not an abvd_episode)
+  p201_chk("ABVD-TR-201 [d6] Nivo+AVD rows have abvd_episode == FALSE",
+    {
+      nivoavd_rows <- g180_bd_dat[g180_bd_dat$abvd_class == "Nivo+AVD", ]
+      nrow(nivoavd_rows) == 0L || all(nivoavd_rows$abvd_episode == "FALSE")
+    })
+
+  # PRE201B regression: columns 1-26 unchanged from pre-Phase-201b schema.
+  # Columns 27-32 (ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx, abvd_class, ever_abvd_plus)
+  # are expected to change and are excluded from this regression.
+  {
+    pre201b_cols_1_26 <- c(
+      "patient_id", "treatment_type", "episode_number", "episode_start", "episode_stop",
+      "drug_names", "regimen_label", "age_at_episode", "payer_financial_class",
+      "payer_financial_class_label", "payer_source_value", "payer_category", "payer_rank",
+      "zip5", "adi_natrank", "distance_to_cbc", "has_autoimmune_dx", "first_autoimmune_dx_date",
+      "immune_flag", "immune_flag_dx", "ever_brentuximab",
+      "tr_present", "num_tr_records", "num_tr_hl_records",
+      "death_cause_detail", "first_chemo_date"
+    )
+    actual_cols_1_26 <- names(g180_bd_dat)[seq_len(min(26L, ncol(g180_bd_dat)))]
+    if (length(actual_cols_1_26) < 26L) {
+      p201_skip_fn("ABVD-TR-201 [PRE201B] cols 1-26 regression (file has fewer than 26 cols)")
+    } else {
+      p201_chk("ABVD-TR-201 [PRE201B] columns 1-26 names match pre-201b schema (Phase 201b regression)",
+        identical(actual_cols_1_26, pre201b_cols_1_26))
+    }
+  }
 
   # Patient-level summaries for [e*] and [f*]
   g180_bd_pt <- g180_bd_dat |>
