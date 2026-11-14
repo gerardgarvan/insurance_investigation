@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: Executing Phase 199
-last_updated: "2026-11-12T20:13:13.760Z"
-last_activity: 2026-11-12 -- Phase 199 execution started
+status: Executing Phase 201
+last_updated: "2026-11-14T01:06:04.370Z"
+last_activity: 2026-11-14 -- Phase 201 execution started
 progress:
-  total_phases: 190
-  completed_phases: 162
-  total_plans: 370
-  completed_plans: 371
+  total_phases: 192
+  completed_phases: 163
+  total_plans: 374
+  completed_plans: 373
 ---
 
 # Project State
@@ -20,11 +20,11 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 199 — immune-brentuximab-flags-gantt-episodes-180
+**Current focus:** Phase 201 — abvd-and-tumor-registry-lymphoma-flags-in-gantt-episodes-180
 
 ## Current Position
 
-Phase: 199 (immune-brentuximab-flags-gantt-episodes-180) — EXECUTING
+Phase: 201 (abvd-and-tumor-registry-lymphoma-flags-in-gantt-episodes-180) — EXECUTING
 Plan: 1 of 2
 Phase: 192 (draft-new-content) — COMPLETE 2026-10-28: all 3 plans done; AM-DRAFT.md with sourced sections for all MISMATCH/PARTIAL leads; verification 16/16 passed.
 Phase 192.3 COMPLETE 2026-11-04: all 3 plans done; R/181 produces 9-sheet workbook with SOURCE stratification; regression check passed on HiPerGator.
@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-13 - Completed quick task 261112-tfm: Fix R/88 [f2] check to use IMMUNE_FLAG_DX_CODES set instead of has_autoimmune_dx proxy
+Last activity: 2026-11-13 - Completed quick task 261113-t4d: Fix R/142 Section 4C4 ABVD cross-tab crash
 
 ## Phase Map (v3.13)
 
@@ -76,6 +76,7 @@ Last activity: 2026-11-13 - Completed quick task 261112-tfm: Fix R/88 [f2] check
 - Phase 192.1 COMPLETE 2026-10-29: has_autoimmune_dx + first_autoimmune_dx_date added to gantt_episodes.csv and gantt_episodes_180.csv
 - Phase 199 added: Immune and Brentuximab Flags in gantt_episodes_180 (immune_flag, ever_brentuximab, immune_flag_dx cols 24–26 via R/142)
 - Phase 200 added: Immunotherapy MED_ADMIN/DISPENSING capture fix — switch R/26 extract_immunotherapy_dates_with_codes() from RXNORM_CUI filter to get_chemo_hits()-style matching; add rituximab codes + biosimilar HCPCS; rerun R/26→R/28→R/29→R/52→R/142
+- Phase 201 added: ABVD and Tumor-Registry Lymphoma Flags in gantt_episodes_180
 - Phase 200 rescoped (2026-11-12): the R/26 fix and code additions were already implemented in Phase 199. Phase 200 records the team analytic decision: D-200-01.
 
 ### v3.13 Milestone Context
@@ -153,6 +154,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261110-165-fix | Pin distance to 20261015, fix payer 1j to read CSV (fatal on missing), fatal has_payer branch; D-165-02 and D-165-03 decision entries | 2026-11-10 | 5d442e0 | R/165_distance_cbc_association.R |
 | 261110-luq | Write R/tools/dep_map.R — static dependency mapper (AST-based, 10 sections, five outputs, R1–R9 risk report) | 2026-11-10 | 4c5a7e3 | [261110-luq-build-static-dependency-map-of-r-code](./quick/261110-luq-build-static-dependency-map-of-r-code/) |
 | 261111-c91 | Update phase 192.4 frontmatter in CONTEXT, PLAN, SUMMARY | 2026-11-11 | 53faa42 | [261111-c91-update-phase-192-4-frontmatter-in-contex](./quick/261111-c91-update-phase-192-4-frontmatter-in-contex/) |
+| 261113-t4d | Fix R/142 Section 4C4 ABVD cross-tab crash (subscript out of bounds — empty-string regimen_label column) | 2026-11-13 | a691134 | [261113-t4d-fix-r-142-section-4c4-abvd-cross-tab-cra](./quick/261113-t4d-fix-r-142-section-4c4-abvd-cross-tab-cra/) |
 | 261111-ce7 | Phase A follow-ups: suppress_small NA fix, phase folder move, cancer_summary reader comments, RERUN-AND-REISSUE updates, check_cohort_fingerprint tool | 2026-11-11 | 435e067 | [261111-ce7-phase-a-follow-ups-suppress-small-na-fix](./quick/261111-ce7-phase-a-follow-ups-suppress-small-na-fix/) |
 | 261111-cxn | Fix suppress_small applied before arithmetic in R/109/R/110: defer to display-only; raw integer tables for delta/sort; stopifnot guards; complementary suppression | 2026-11-11 | 6637ec4 | [261111-cxn-fix-suppress-small-applied-before-arithm](./quick/261111-cxn-fix-suppress-small-applied-before-arithm/) |
 | 261111-e1j | Fix R/109 before/after name collision ($ operator on atomic vector in Section 6 D-03): rename source frames to chemo_before/chemo_after, pre-compute scalars before tibble() | 2026-11-11 | eb9dfc3 | [261111-e1j-fix-r-109-before-after-name-collision-ca](./quick/261111-e1j-fix-r-109-before-after-name-collision-ca/) |
