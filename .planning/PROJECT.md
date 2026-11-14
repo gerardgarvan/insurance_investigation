@@ -467,4 +467,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-03 — Phase 192.2 complete (icd-9-autoimmune-codes-in-gantt-episodes): ICD-9 slot populated in AUTOIMMUNE_DX_CODES; autoimmune_dx_code_system column added to all 5 Gantt exports; R/88 15bb smoke-test checks added. Phase 193 (produce-updated-manual) is next.*
+*Last updated: 2026-11-14 — Phase 202 complete (tumor-registry-treatment-sensitivity): R/202_tr_sensitivity.R created with IS_LOCAL guard, pinned inputs, classify_capture() function, all 7 output sheets (KEY leftmost, UF colours), and R/88 SECTION 15be smoke checks. Human verification pending HiPerGator probe run + xlsx execution. Phase 203 (no-treatment-patient-characterization) is next.*
