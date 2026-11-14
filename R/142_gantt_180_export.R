@@ -891,6 +891,102 @@ message("\n--- Section 4C4: ABVD episode flags ---")
 
 abvd_class <- classify_abvd_episode(episodes_export$drug_names, episodes_export$regimen_label)
 abvd_class[episodes_export$treatment_type != "Chemotherapy"] <- NA_character_
+
+# --- Phase 201b: date-level BV+AVD / Nivo+AVD relabel ---
+# classify_abvd_episode() uses drug_names tokens (Chemotherapy only). Brentuximab and
+# nivolumab are captured as Immunotherapy, so AVD episodes with concurrent BV or Nivo
+# remain labelled "AVD" after the drug-name pass. Detect concurrency from the 180-day
+# `detail` admin dates and relabel accordingly.
+
+# Step 1: Immunotherapy admin dates per patient for brentuximab / nivolumab.
+immuno_admin <- detail |>
+  dplyr::filter(treatment_type == "Immunotherapy", !is.na(treatment_date)) |>
+  dplyr::mutate(
+    bv   = grepl("^brentuximab", drug_name, ignore.case = TRUE),
+    nivo = grepl("^nivolumab",   drug_name, ignore.case = TRUE)
+  ) |>
+  dplyr::filter(bv | nivo) |>
+  dplyr::select(patient_id, treatment_date, bv, nivo)
+
+# Step 2: Chemo episode admin-date span (min/max treatment_date per patient+episode).
+chemo_span <- detail |>
+  dplyr::filter(treatment_type == "Chemotherapy", !is.na(treatment_date)) |>
+  dplyr::group_by(patient_id, episode_number) |>
+  dplyr::summarise(
+    chemo_first = min(treatment_date),
+    chemo_last  = max(treatment_date),
+    .groups = "drop"
+  )
+
+# Step 3: Detect admin-date concurrency within +/- ABVD_CONCURRENT_WINDOW_DAYS.
+win <- ABVD_CONCURRENT_WINDOW_DAYS
+conc <- chemo_span |>
+  dplyr::inner_join(immuno_admin, by = "patient_id", relationship = "many-to-many") |>
+  dplyr::filter(treatment_date >= chemo_first - win,
+                treatment_date <= chemo_last  + win) |>
+  dplyr::group_by(patient_id, episode_number) |>
+  dplyr::summarise(
+    conc_bv   = any(bv),
+    conc_nivo = any(nivo),
+    .groups = "drop"
+  )
+
+# Step 4: Span-overlap flag for sequential-use QC.
+# Immunotherapy episode spans (episode_start / episode_stop) from `episodes`.
+imm_spans <- episodes |>
+  dplyr::filter(treatment_type == "Immunotherapy") |>
+  dplyr::mutate(
+    imm_bv = grepl("^brentuximab", drug_names, ignore.case = TRUE)
+  ) |>
+  dplyr::filter(imm_bv) |>
+  dplyr::select(patient_id, imm_start = episode_start, imm_stop = episode_stop)
+
+bv_span_overlap <- chemo_span |>
+  dplyr::inner_join(imm_spans, by = "patient_id", relationship = "many-to-many") |>
+  dplyr::filter(imm_start <= chemo_last, imm_stop >= chemo_first) |>
+  dplyr::select(patient_id, episode_number) |>
+  dplyr::distinct()
+
+bv_span_not_admin <- bv_span_overlap |>
+  dplyr::anti_join(
+    conc |> dplyr::filter(conc_bv) |> dplyr::select(patient_id, episode_number),
+    by = c("patient_id", "episode_number")
+  )
+n_bv_span_not_admin <- nrow(bv_span_not_admin)
+
+# Step 5: Capture pre-relabel counts for QC, then apply relabel to abvd_class vector.
+abvd_class_pre <- abvd_class  # pre-relabel snapshot for QC
+
+conc_aligned <- episodes_export |>
+  dplyr::select(patient_id, episode_number) |>
+  dplyr::left_join(conc, by = c("patient_id", "episode_number")) |>
+  dplyr::mutate(
+    conc_bv   = tidyr::replace_na(conc_bv,   FALSE),
+    conc_nivo = tidyr::replace_na(conc_nivo, FALSE)
+  )
+
+conc_bv_vec   <- conc_aligned$conc_bv
+conc_nivo_vec <- conc_aligned$conc_nivo
+
+is_chemo   <- episodes_export$treatment_type == "Chemotherapy"
+relabel_ok <- is_chemo & !is.na(abvd_class) & abvd_class %in% c("ABVD", "AVD", "ABVD_PLUS")
+
+# AVD + BV -> BV+AVD (BV takes precedence over Nivo)
+mask_bv_avd  <- relabel_ok & abvd_class == "AVD" & conc_bv_vec
+# AVD + Nivo (not BV) -> Nivo+AVD
+mask_nivo_avd <- relabel_ok & abvd_class == "AVD" & conc_nivo_vec & !conc_bv_vec
+# ABVD or ABVD_PLUS + BV or Nivo -> ABVD_PLUS
+mask_plus    <- relabel_ok & abvd_class %in% c("ABVD", "ABVD_PLUS") & (conc_bv_vec | conc_nivo_vec)
+
+n_relabel_bv   <- sum(mask_bv_avd)
+n_relabel_nivo <- sum(mask_nivo_avd)
+n_relabel_plus <- sum(mask_plus)
+
+abvd_class[mask_bv_avd]   <- "BV+AVD"
+abvd_class[mask_nivo_avd] <- "Nivo+AVD"
+abvd_class[mask_plus]     <- "ABVD_PLUS"
+# --- end Phase 201b relabel ---
+
 episodes_export <- episodes_export |>
   dplyr::mutate(
     abvd_class   = abvd_class,
@@ -913,7 +1009,7 @@ stopifnot(
           episodes_export$abvd_class == "ABVD_PLUS"])
 )
 
-# D-08 ABVD QC block
+# D-08 ABVD QC block (Phase 201b: extended with before/after relabel counts)
 {
   chemo_ep <- episodes_export |> dplyr::filter(treatment_type == "Chemotherapy")
   n_chemo      <- nrow(chemo_ep)
@@ -921,13 +1017,22 @@ stopifnot(
   n_avd_ep     <- sum(chemo_ep$abvd_class == "AVD",        na.rm = TRUE)
   n_jcode_ep   <- sum(chemo_ep$abvd_class == "JCODE_ABVD", na.rm = TRUE)
   n_plus_ep    <- sum(chemo_ep$abvd_class == "ABVD_PLUS",  na.rm = TRUE)
+  n_bvavd_ep   <- sum(chemo_ep$abvd_class == "BV+AVD",     na.rm = TRUE)
+  n_nivoavd_ep <- sum(chemo_ep$abvd_class == "Nivo+AVD",   na.rm = TRUE)
   n_ever_abvd  <- dplyr::n_distinct(episodes_export$patient_id[episodes_export$ever_abvd])
   # Distinct patients per abvd_class (suppress 1-10 as <11)
-  n_abvd_pt   <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "ABVD"       & !is.na(chemo_ep$abvd_class)])
-  n_avd_pt    <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "AVD"        & !is.na(chemo_ep$abvd_class)])
-  n_jcode_pt  <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "JCODE_ABVD" & !is.na(chemo_ep$abvd_class)])
-  n_plus_pt   <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "ABVD_PLUS"  & !is.na(chemo_ep$abvd_class)])
+  n_abvd_pt    <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "ABVD"       & !is.na(chemo_ep$abvd_class)])
+  n_avd_pt     <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "AVD"        & !is.na(chemo_ep$abvd_class)])
+  n_jcode_pt   <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "JCODE_ABVD" & !is.na(chemo_ep$abvd_class)])
+  n_plus_pt    <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "ABVD_PLUS"  & !is.na(chemo_ep$abvd_class)])
+  n_bvavd_pt   <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "BV+AVD"     & !is.na(chemo_ep$abvd_class)])
+  n_nivoavd_pt <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "Nivo+AVD"   & !is.na(chemo_ep$abvd_class)])
   n_ever_abvd_plus_pt <- dplyr::n_distinct(episodes_export$patient_id[episodes_export$ever_abvd_plus])
+  # Phase 201b: pre-relabel counts from abvd_class_pre (before BV/Nivo relabel)
+  pre_chemo   <- abvd_class_pre[is_chemo]
+  n_pre_avd   <- sum(pre_chemo == "AVD",        na.rm = TRUE)
+  n_pre_plus  <- sum(pre_chemo == "ABVD_PLUS",  na.rm = TRUE)
+  n_pre_abvd  <- sum(pre_chemo == "ABVD",       na.rm = TRUE)
   # Patients whose earliest Chemotherapy episode has abvd_episode == TRUE
   first_chemo <- episodes_export |>
     dplyr::filter(treatment_type == "Chemotherapy") |>
@@ -938,14 +1043,29 @@ stopifnot(
 
   message("\n  === D-08 QC: ABVD flags ===")
   message(glue("  Chemotherapy episodes total:            {fmt_sup(n_chemo)}"))
+  message("  -- Pre-relabel (drug-name pass) --")
+  message(glue("  pre abvd_class ABVD:                   {fmt_sup(n_pre_abvd)}"))
+  message(glue("  pre abvd_class AVD:                    {fmt_sup(n_pre_avd)}"))
+  message(glue("  pre abvd_class ABVD_PLUS:              {fmt_sup(n_pre_plus)}"))
+  message("  -- Post-relabel (Phase 201b date-level) --")
   message(glue("  abvd_class ABVD (full):                {fmt_sup(n_abvd_ep)}"))
   message(glue("  abvd_class AVD (bleomycin-dropped):    {fmt_sup(n_avd_ep)}"))
   message(glue("  abvd_class JCODE_ABVD (J-code path):  {fmt_sup(n_jcode_ep)}"))
   message(glue("  abvd_class ABVD_PLUS (QC, excluded):  {fmt_sup(n_plus_ep)}"))
+  message(glue("  abvd_class BV+AVD:                     {fmt_sup(n_bvavd_ep)}"))
+  message(glue("  abvd_class Nivo+AVD:                   {fmt_sup(n_nivoavd_ep)}"))
+  message("  -- Relabel counts (Phase 201b) --")
+  message(glue("  n_relabel_bv   (AVD->BV+AVD):          {fmt_sup(n_relabel_bv)}"))
+  message(glue("  n_relabel_nivo (AVD->Nivo+AVD):        {fmt_sup(n_relabel_nivo)}"))
+  message(glue("  n_relabel_plus (ABVD/PLUS->ABVD_PLUS): {fmt_sup(n_relabel_plus)}"))
+  message(glue("  n_bv_span_not_admin (sequential BV):   {fmt_sup(n_bv_span_not_admin)}"))
+  message("  -- Distinct patients per post-relabel class --")
   message(glue("  abvd_class ABVD patients:              {fmt_sup(n_abvd_pt)}"))
   message(glue("  abvd_class AVD patients:               {fmt_sup(n_avd_pt)}"))
   message(glue("  abvd_class JCODE_ABVD patients:        {fmt_sup(n_jcode_pt)}"))
   message(glue("  abvd_class ABVD_PLUS patients:         {fmt_sup(n_plus_pt)}"))
+  message(glue("  abvd_class BV+AVD patients:            {fmt_sup(n_bvavd_pt)}"))
+  message(glue("  abvd_class Nivo+AVD patients:          {fmt_sup(n_nivoavd_pt)}"))
   message(glue("  ever_abvd_plus = TRUE patients:        {fmt_sup(n_ever_abvd_plus_pt)}"))
   message(glue("  ever_abvd = TRUE patients:             {fmt_sup(n_ever_abvd)}"))
   message(glue("  Patients with 1st Chemo = ABVD:        {fmt_sup(n_first_abvd)}"))
