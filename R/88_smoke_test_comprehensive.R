@@ -7525,8 +7525,8 @@ if (!file.exists(gantt_180_path_bb)) {
 } else {
   gantt_180_hdr_bb <- names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
-  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 26 columns", # 26 since Phase 199
-    length(gantt_180_hdr_bb) == 26L)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 30 columns", # 30 since Phase 201
+    length(gantt_180_hdr_bb) == 30L)
   # (d) autoimmune_dx_code_system is at position 23 (cols 24-26 added in Phase 199)
   p1922_chk("AUTOIMMUNE-FLAG-192.2 [d2] gantt_episodes_180.csv autoimmune_dx_code_system at position 23",
     which(names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
@@ -7671,12 +7671,12 @@ if (!file.exists(gantt_180_path_bc)) {
   p199_skip_fn("IMMUNE-FLAG-199 [d] flag columns parse check (skipped — file absent)")
   p199_skip_fn("IMMUNE-FLAG-199 [e] columns constant within patient_id (skipped — file absent)")
 } else {
-  # (c) 26 columns; immune_flag at 24, ever_brentuximab at 25, immune_flag_dx at 26
+  # (c) 30 columns; immune_flag at 24, ever_brentuximab at 25, immune_flag_dx at 26 (cols 27-30 added Phase 201)
   g180_bc <- readr::read_csv(gantt_180_path_bc, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
   g180_nms <- names(g180_bc)
-  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 26 columns",
-    length(g180_nms) == 26L)
+  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 30 columns", # 30 since Phase 201
+    length(g180_nms) == 30L)
   p199_chk("IMMUNE-FLAG-199 [c2] immune_flag at column 24",
     isTRUE(g180_nms[24L] == "immune_flag"))
   p199_chk("IMMUNE-FLAG-199 [c3] ever_brentuximab at column 25",
@@ -7885,6 +7885,181 @@ local({
 })
 
 message(glue("\nIMMUNE-FLAG-199: {p199_pass} PASS / {p199_fail} FAIL / {p199_skip} SKIP"))
+
+# ==============================================================================
+# SECTION 15bd: ABVD-TR-201 — Phase 201 ABVD and tumor-registry flags ----
+# ==============================================================================
+
+p201_pass <- 0L; p201_fail <- 0L; p201_skip <- 0L
+
+p201_chk <- function(label, condition) {
+  if (isTRUE(condition))  { message("  PASS: ", label); p201_pass <<- p201_pass + 1L; passed  <<- passed  + 1L }
+  else                    { message("  FAIL: ", label); p201_fail <<- p201_fail + 1L; failed  <<- failed  + 1L }
+}
+p201_skip_fn <- function(label) {
+  message("  SKIP: ", label); p201_skip <<- p201_skip + 1L; skipped <<- skipped + 1L
+}
+
+message("\nSection 15bd: ABVD-TR-201 config / unit checks")
+
+# [a1] ABVD_COMPONENTS constant exists and matches canonical tokens
+p201_chk("ABVD-TR-201 [a1] ABVD_COMPONENTS identical to canonical four",
+  exists("ABVD_COMPONENTS") &&
+    identical(ABVD_COMPONENTS, c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine")))
+
+# [a2] classify_abvd_episode() — full ABVD (all four drugs, semicolon-delimited, sorted)
+p201_chk("ABVD-TR-201 [a2] classify_abvd_episode full ABVD string -> 'ABVD'",
+  exists("classify_abvd_episode") &&
+    isTRUE(classify_abvd_episode("Bleomycin;Dacarbazine;Doxorubicin;Vinblastine", NA_character_) == "ABVD"))
+
+# [a3] AVD (bleomycin dropped) -> "AVD"
+p201_chk("ABVD-TR-201 [a3] classify_abvd_episode AVD string -> 'AVD'",
+  exists("classify_abvd_episode") &&
+    isTRUE(classify_abvd_episode("Dacarbazine;Doxorubicin;Vinblastine", NA_character_) == "AVD"))
+
+# [a4] BV+AVD -> NA (not ABVD)
+p201_chk("ABVD-TR-201 [a4] classify_abvd_episode BV+AVD -> NA",
+  exists("classify_abvd_episode") &&
+    is.na(classify_abvd_episode("Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine", NA_character_)))
+
+# [a5] ABVD + Rituximab -> "ABVD_PLUS" (added-agent rule)
+p201_chk("ABVD-TR-201 [a5] classify_abvd_episode ABVD+Rituximab -> 'ABVD_PLUS'",
+  exists("classify_abvd_episode") &&
+    isTRUE(classify_abvd_episode(
+      "Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine", NA_character_) == "ABVD_PLUS"))
+
+# [a6] build_tr_lymphoma_flags() helper exists
+p201_chk("ABVD-TR-201 [a6] build_tr_lymphoma_flags() exists",
+  exists("build_tr_lymphoma_flags"))
+
+# Real-data checks — skip all when gantt_episodes_180.csv is absent
+gantt_180_path_bd <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+if (!file.exists(gantt_180_path_bd)) {
+  p201_skip_fn("ABVD-TR-201 [c1] 30 columns (file absent — run R/142 first)")
+  p201_skip_fn("ABVD-TR-201 [c2] ever_abvd at column 27 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [c3] abvd_episode at column 28 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [c4] tr_hl_dx at column 29 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [c5] tr_nhl_dx at column 30 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [d1] ever_abvd/abvd_episode value domain (file absent)")
+  p201_skip_fn("ABVD-TR-201 [d2] tr_hl_dx/tr_nhl_dx value domain (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e1] ever_abvd constant within patient_id (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e1b] tr_hl_dx constant within patient_id (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e1c] tr_nhl_dx constant within patient_id (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e2] ever_abvd iff any abvd_episode TRUE (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e3] abvd_episode TRUE only on Chemotherapy rows (file absent)")
+  p201_skip_fn("ABVD-TR-201 [e4] tr_hl_dx blank iff tr_nhl_dx blank (file absent)")
+  p201_skip_fn("ABVD-TR-201 [f1] at least one ever_abvd TRUE (file absent)")
+  p201_skip_fn("ABVD-TR-201 [f2] at least one tr_hl_dx TRUE (file absent)")
+  p201_skip_fn("ABVD-TR-201 [f3] at least one tr_hl_dx blank — cohort non-registry patients (file absent)")
+  p201_skip_fn("ABVD-TR-201 [g1] tr_hl_not_in_gantt_180.csv exists with ID/reason columns (file absent)")
+} else {
+  g180_bd <- read.csv(gantt_180_path_bd, header = TRUE, nrows = 0L,
+    colClasses = "character", check.names = FALSE)
+  g180_bd_nms <- names(g180_bd)
+
+  # [c1]--[c5] column count and positions
+  p201_chk("ABVD-TR-201 [c1] gantt_episodes_180.csv has 30 columns",
+    length(g180_bd_nms) == 30L)
+  p201_chk("ABVD-TR-201 [c2] ever_abvd at column 27",
+    isTRUE(g180_bd_nms[27L] == "ever_abvd"))
+  p201_chk("ABVD-TR-201 [c3] abvd_episode at column 28",
+    isTRUE(g180_bd_nms[28L] == "abvd_episode"))
+  p201_chk("ABVD-TR-201 [c4] tr_hl_dx at column 29",
+    isTRUE(g180_bd_nms[29L] == "tr_hl_dx"))
+  p201_chk("ABVD-TR-201 [c5] tr_nhl_dx at column 30",
+    isTRUE(g180_bd_nms[30L] == "tr_nhl_dx"))
+
+  # Read full data for remaining checks
+  g180_bd_dat <- read.csv(gantt_180_path_bd, header = TRUE,
+    colClasses = "character", check.names = FALSE)
+
+  # [d1] ever_abvd and abvd_episode: only "TRUE"/"FALSE", no blanks
+  p201_chk("ABVD-TR-201 [d1] ever_abvd and abvd_episode values only TRUE/FALSE (no blanks)",
+    all(g180_bd_dat$ever_abvd    %in% c("TRUE", "FALSE")) &&
+    all(g180_bd_dat$abvd_episode %in% c("TRUE", "FALSE")))
+
+  # [d2] tr_hl_dx and tr_nhl_dx: only "TRUE"/"FALSE"/"" (blank = not in registry)
+  p201_chk("ABVD-TR-201 [d2] tr_hl_dx and tr_nhl_dx values only TRUE/FALSE/blank",
+    all(g180_bd_dat$tr_hl_dx  %in% c("TRUE", "FALSE", "")) &&
+    all(g180_bd_dat$tr_nhl_dx %in% c("TRUE", "FALSE", "")))
+
+  # Patient-level summaries for [e*] and [f*]
+  g180_bd_pt <- g180_bd_dat |>
+    dplyr::group_by(patient_id) |>
+    dplyr::summarise(
+      ever_abvd_pt     = dplyr::first(ever_abvd),
+      any_abvd_ep      = any(abvd_episode == "TRUE"),
+      tr_hl_dx_pt      = dplyr::first(tr_hl_dx),
+      tr_nhl_dx_pt     = dplyr::first(tr_nhl_dx),
+      abvd_on_nonchemo = any(abvd_episode == "TRUE" & treatment_type != "Chemotherapy"),
+      .groups = "drop"
+    )
+
+  # [e1] ever_abvd constant within patient_id
+  p201_chk("ABVD-TR-201 [e1] ever_abvd constant within patient_id",
+    {
+      pt_abvd <- g180_bd_dat |> dplyr::group_by(patient_id) |>
+        dplyr::summarise(n_vals = dplyr::n_distinct(ever_abvd), .groups = "drop")
+      all(pt_abvd$n_vals == 1L)
+    })
+
+  # [e1b] tr_hl_dx constant within patient_id
+  p201_chk("ABVD-TR-201 [e1b] tr_hl_dx constant within patient_id",
+    {
+      pt_hl <- g180_bd_dat |> dplyr::group_by(patient_id) |>
+        dplyr::summarise(n_vals = dplyr::n_distinct(tr_hl_dx), .groups = "drop")
+      all(pt_hl$n_vals == 1L)
+    })
+
+  # [e1c] tr_nhl_dx constant within patient_id
+  p201_chk("ABVD-TR-201 [e1c] tr_nhl_dx constant within patient_id",
+    {
+      pt_nhl <- g180_bd_dat |> dplyr::group_by(patient_id) |>
+        dplyr::summarise(n_vals = dplyr::n_distinct(tr_nhl_dx), .groups = "drop")
+      all(pt_nhl$n_vals == 1L)
+    })
+
+  # [e2] ever_abvd == "TRUE" iff any abvd_episode == "TRUE" for that patient
+  p201_chk("ABVD-TR-201 [e2] ever_abvd TRUE iff any abvd_episode TRUE",
+    all((g180_bd_pt$ever_abvd_pt == "TRUE") == g180_bd_pt$any_abvd_ep))
+
+  # [e3] abvd_episode == "TRUE" only where treatment_type == "Chemotherapy"
+  p201_chk("ABVD-TR-201 [e3] abvd_episode TRUE only on Chemotherapy rows",
+    !any(g180_bd_pt$abvd_on_nonchemo))
+
+  # [e4] tr_hl_dx blank iff tr_nhl_dx blank (same NA set — both mean "not in registry")
+  p201_chk("ABVD-TR-201 [e4] tr_hl_dx blank iff tr_nhl_dx blank",
+    all((g180_bd_pt$tr_hl_dx_pt == "") == (g180_bd_pt$tr_nhl_dx_pt == "")))
+
+  # [f1] at least one patient ever_abvd == "TRUE"
+  p201_chk("ABVD-TR-201 [f1] at least one patient ever_abvd TRUE",
+    any(g180_bd_pt$ever_abvd_pt == "TRUE"))
+
+  # [f2] at least one patient tr_hl_dx == "TRUE"
+  p201_chk("ABVD-TR-201 [f2] at least one patient tr_hl_dx TRUE",
+    any(g180_bd_pt$tr_hl_dx_pt == "TRUE"))
+
+  # [f3] at least one patient tr_hl_dx blank (non-registry); report rather than force FAIL
+  local({
+    n_blank <- sum(g180_bd_pt$tr_hl_dx_pt == "")
+    if (n_blank == 0L)
+      message("  NOTE [f3]: no patients have tr_hl_dx blank — cohort may be fully in registry; verify.")
+    else
+      message(glue("  PASS: ABVD-TR-201 [f3] tr_hl_dx blank for {n_blank} patients (not in registry)"))
+  })
+
+  # [g1] internal file: tr_hl_not_in_gantt_180.csv exists with ID and reason columns
+  p201_chk("ABVD-TR-201 [g1] output/internal/tr_hl_not_in_gantt_180.csv exists with ID/reason",
+    {
+      p_internal <- file.path(CONFIG$output_dir, "internal", "tr_hl_not_in_gantt_180.csv")
+      file.exists(p_internal) && {
+        hdr <- names(read.csv(p_internal, header = TRUE, nrows = 0L))
+        all(c("ID", "reason") %in% hdr)
+      }
+    })
+}
+
+message(glue("\nABVD-TR-201: {p201_pass} PASS / {p201_fail} FAIL / {p201_skip} SKIP"))
 
 # ==============================================================================
 # SECTION 16: SUMMARY ----
