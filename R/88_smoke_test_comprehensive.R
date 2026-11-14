@@ -8299,6 +8299,91 @@ if (length(p203_wb_path) == 0L) {
 message(glue("\nSMOKE-203-01: {p203_pass} PASS / {p203_fail} FAIL / {p203_skip} SKIP"))
 
 # ==============================================================================
+# SECTION 15bg: PHASE 205 REGIMEN + LINE-OF-THERAPY ENGINE (SMOKE-205-01) ----
+# ==============================================================================
+
+p205_pass <- 0L; p205_fail <- 0L; p205_skip <- 0L
+
+p205_chk <- function(label, condition) {
+  if (isTRUE(condition)) { message("  PASS: ", label); p205_pass <<- p205_pass + 1L; passed  <<- passed  + 1L }
+  else                   { message("  FAIL: ", label); p205_fail <<- p205_fail + 1L; failed  <<- failed  + 1L }
+}
+p205_skip_fn <- function(label) {
+  message("  SKIP: ", label); p205_skip <<- p205_skip + 1L; skipped <<- skipped + 1L
+}
+
+message("\nSection 15bg: Phase 205 regimen + line-of-therapy engine")
+
+# [a] R/205_lot_output.R exists
+p205_chk("SMOKE-205-01 [a] R/205_lot_output.R exists",
+         file.exists(here::here("R", "205_lot_output.R")))
+
+# [b] utils_regimen.R exists and exports expected functions
+p205_chk("SMOKE-205-01 [b] R/utils/utils_regimen.R exists",
+         file.exists(here::here("R", "utils", "utils_regimen.R")))
+p205_chk("SMOKE-205-01 [b2] assign_regimen defined in utils_regimen",
+         any(grepl("assign_regimen", readLines(here::here("R", "utils", "utils_regimen.R")))))
+p205_chk("SMOKE-205-01 [b3] assign_lot defined in utils_regimen",
+         any(grepl("assign_lot", readLines(here::here("R", "utils", "utils_regimen.R")))))
+
+# [c] Config constants in R/00_config.R
+config_lines_205 <- readLines(here::here("R", "00_config.R"))
+p205_chk("SMOKE-205-01 [c1] REGIMEN_DICT in R/00_config.R",
+         any(grepl("REGIMEN_DICT", config_lines_205)))
+p205_chk("SMOKE-205-01 [c2] CONCURRENCY_WINDOW_DAYS in R/00_config.R",
+         any(grepl("CONCURRENCY_WINDOW_DAYS", config_lines_205)))
+p205_chk("SMOKE-205-01 [c3] LOT_GAP_DAYS in R/00_config.R",
+         any(grepl("LOT_GAP_DAYS", config_lines_205)))
+
+# [d] R/28 no longer contains jcode_regimen (old fallback removed)
+r28_lines <- readLines(here::here("R", "28_episode_classification.R"))
+p205_chk("SMOKE-205-01 [d] jcode_regimen removed from R/28",
+         !any(grepl("jcode_regimen", r28_lines)))
+
+# [e] R/142 no longer contains Phase 201b relabel block
+r142_lines <- readLines(here::here("R", "142_gantt_180_export.R"))
+p205_chk("SMOKE-205-01 [e] Phase 201b relabel block removed from R/142",
+         !any(grepl("Phase 201b relabel", r142_lines)))
+
+# [f] Per-patient LOT output files (HiPerGator only)
+lot_rds_path <- here::here("output", "internal", "lot_summary_p205.rds")
+lot_csv_path <- here::here("output", "internal", "lot_summary_p205.csv")
+if (file.exists(lot_rds_path)) {
+  lot_summary <- readRDS(lot_rds_path)
+  required_lot_cols <- c("ID", "line_1_regimen", "line_1_start", "n_lines", "regimen_per_line")
+  p205_chk("SMOKE-205-01 [f] lot_summary_p205 has required columns",
+           all(required_lot_cols %in% names(lot_summary)))
+  p205_chk("SMOKE-205-01 [f2] lot_summary_p205 CSV exists",
+           file.exists(lot_csv_path))
+} else {
+  p205_skip_fn("SMOKE-205-01 [f] lot_summary_p205.rds absent — run R/205 on HiPerGator")
+  p205_skip_fn("SMOKE-205-01 [f2] lot_summary_p205.csv absent — run R/205 on HiPerGator")
+}
+
+# [g] REGL-06 open decisions file exists (created in Plan 03)
+p205_chk("SMOKE-205-01 [g] REGL-06-decisions.md exists",
+         file.exists(here::here(".planning", "phases",
+           "205-regimen-line-of-therapy-engine", "REGL-06-decisions.md")))
+
+# [h] Reconciliation CSV (HiPerGator only — written by Plan 03)
+recon_csv_path <- here::here("output", "internal", "regimen_reconciliation_p205.csv")
+if (file.exists(recon_csv_path)) {
+  recon <- vroom::vroom(recon_csv_path, col_types = vroom::cols(.default = "c"), show_col_types = FALSE)
+  p205_chk("SMOKE-205-01 [h] reconciliation has regimen_label column",
+           "regimen_label" %in% names(recon))
+  p205_chk("SMOKE-205-01 [h2] reconciliation has abvd_class column",
+           "abvd_class" %in% names(recon))
+  p205_chk("SMOKE-205-01 [h3] reconciliation has match column",
+           "match" %in% names(recon))
+} else {
+  p205_skip_fn("SMOKE-205-01 [h] regimen_reconciliation_p205.csv absent — run Plan 03 on HiPerGator")
+  p205_skip_fn("SMOKE-205-01 [h2] skipped")
+  p205_skip_fn("SMOKE-205-01 [h3] skipped")
+}
+
+message(glue("\nSMOKE-205-01: {p205_pass} PASS / {p205_fail} FAIL / {p205_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
