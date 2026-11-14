@@ -1105,6 +1105,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 202. Tumor-Registry Treatment Sensitivity | 3/3 | Complete    | 2026-11-14 |
-| 203. No-Treatment Patient Characterization | 4/4 | Complete   | 2026-11-14 |
+| 203. No-Treatment Patient Characterization | 4/4 | Complete    | 2026-11-14 |
 | 204. MED_ADMIN Name-Based Capture | 0/TBD | Not started | - |
 | 205. Regimen + Line-of-Therapy Engine | 0/TBD | Not started | - |
