@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-14
+Last activity: 2026-11-14 - Completed quick task 261114-lv2: export abvd_class and ever_abvd_plus in gantt_episodes_180.csv
 
 ## Phase Map (v3.13)
 
@@ -174,6 +174,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261112-t3s | Phase 200 post-rerun fixes: R/88 [f] union check + [f2], R/142 staleness guard + exposure RDS, 200-02-PLAN.md p143_out_rds, 200-02-SUMMARY.md | 2026-11-13 | 957e3df | [261112-t3s-phase-200-post-rerun-fixes-update-r-88-r](./quick/261112-t3s-phase-200-post-rerun-fixes-update-r-88-r/) |
 | 261112-tfm | Fix R/88 [f2] check to use IMMUNE_FLAG_DX_CODES set instead of has_autoimmune_dx proxy | 2026-11-13 | 11f3f09 | [261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-](./quick/261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-/) |
 | 261113-hap | Fix three test-suite failures: code_system fixture column, canonicalize_drug_name named-vector leak, local=FALSE in two source() calls | 2026-11-13 | aee6c84 | [261113-hap-fix-three-test-suite-failures-code-syste](./quick/261113-hap-fix-three-test-suite-failures-code-syste/) |
+| 261114-lv2 | export abvd_class and ever_abvd_plus in gantt_episodes_180.csv (R/142 32-col; broaden ABVD_PLUS; R/88 15bd 7 new checks; 4 new unit tests) | 2026-11-14 | 84c1a5e | [261114-lv2-export-abvd-class-and-ever-abvd-plus-in-](./quick/261114-lv2-export-abvd-class-and-ever-abvd-plus-in-/) |
 
 ## Session Continuity
 
