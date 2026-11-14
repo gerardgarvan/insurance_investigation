@@ -1,126 +1,103 @@
 ---
 phase: 201-abvd-and-tumor-registry-lymphoma-flags-in-gantt-180
 plan: 01
-status: partial — awaiting Task 3 (HiPerGator run)
-completed_tasks: 2 of 3
-subsystem: gantt-export
-tags: [abvd, tumor-registry, gantt, episode-flags]
-dependency_graph:
-  requires: [Phase 199 gantt_episodes_180.csv at 26 columns, Phase 200 D-200-01]
-  provides: [gantt_episodes_180.csv at 30 columns, classify_abvd_episode(), build_tr_lymphoma_flags()]
-  affects: [R/88 smoke test, AC handoff]
-tech_stack:
-  added: []
-  patterns: [prefix-family matching for drug name variants, three-state logical flags]
-key_files:
-  created:
-    - tests/testthat/test-201-abvd-tr-flags.R
-  modified:
-    - R/00_config.R
-    - R/utils/utils_cancer.R
-    - R/142_gantt_180_export.R
-decisions:
-  - "D-01: ABVD recomputed post-4D canonicalization to avoid salt-variant over-counting (R/28 B-01 backlog)"
-  - "D-04: Three-state TR flags (TRUE/FALSE/NA) using HISTOLOGICAL_TYPE and MORPH columns"
-  - "D-05: nhl_histology ships with UNVERIFIED caveat; unlisted 9590-9999 codes printed in QC"
-metrics:
-  duration: ~35 min (Tasks 1-2)
-  completed_date: 2026-11-14
-  tasks: 2
-  files: 4
+status: complete
+completed_tasks: 3 of 3
 ---
 
-# Phase 201 Plan 01: ABVD and TR Flags — Partial Summary (Tasks 1–2 Complete)
+# Phase 201 Plan 01 Summary: Config constants, helpers, R/142 Sections 4C4/4C5
 
-Tasks 1 and 2 complete; Task 3 (HiPerGator run) is the checkpoint.
+**Commits:** feafa44 (Task 1), 652916f (Task 2), a691134 (quick fix — Section 4C4 cross-tab crash)
 
 ## What was built
 
-### Task 1 — Config constants and helpers
+- `ABVD_COMPONENTS`, `AVD_COMPONENTS`, `ABVD_EXCLUDING_DRUGS` added to `R/00_config.R` (Phase 201 block).
+- `classify_abvd_episode()` and `build_tr_lymphoma_flags()` added to `R/utils/utils_cancer.R`.
+- Unit tests `tests/testthat/test-201-abvd-tr-flags.R` — all 7 cases pass locally.
+- `R/142_gantt_180_export.R`: EPISODES_SCHEMA extended to 30 columns; `regimen_label` carry-through; Section 4C4 (ABVD flags + D-08 QC); Section 4C5 (TR flags + D-06 CSV write); PRE201 regression block.
+- Quick fix (261113-t4d): Section 4C4 `ct_abvd` cross-tab recode extended to map `""` → `"(none)"`, preventing subscript-out-of-bounds crash from Section 4D's `NA → ""` conversion.
 
-**R/00_config.R** (after `BRENTUXIMAB_DRUG`, before `AUTOIMMUNE_DX_TYPE_ACCEPT`):
+## Canonical ABVD tokens (confirmed on HiPerGator)
 
-```r
-ABVD_COMPONENTS      <- c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine")
-AVD_COMPONENTS       <- c("Doxorubicin", "Vinblastine", "Dacarbazine")
-ABVD_EXCLUDING_DRUGS <- c(BRENTUXIMAB_DRUG, "Nivolumab")
-```
+`canonicalize_drug_name()` output: **Doxorubicin, Bleomycin, Vinblastine, Dacarbazine**
+Excluded: Brentuximab Vedotin, Nivolumab
 
-Canonical token rationale (from DRUG_NAME_ALIASES inspection):
-- `"Doxorubicin"` — `doxorubicin hydrochloride` alias present; bare form is canonical.
-- `"Bleomycin"` — no alias in DRUG_NAME_ALIASES; only bare generic reaches drug_names.
-- `"Vinblastine"` — `vinblastine sulfate` alias present; collapses to bare form.
-- `"Dacarbazine"` — no alias; bare generic only.
-- `"Nivolumab"` — alias present (opdivo -> Nivolumab).
-- `"Brentuximab Vedotin"` — alias present (adcetris, brentuximab -> Brentuximab Vedotin).
+## HiPerGator run results
 
-Note: HiPerGator token printout (Task 3) will confirm any unexpected variants in the live extract.
+**File:** `gantt_episodes_180.csv` — 22,520 rows, 30 columns. Schema verification PASSED.
+**Regression:** Phase 201 regression: PASS (26 original columns unchanged). PRE201 baseline saved.
 
-**R/utils/utils_cancer.R** — two functions added at end of file:
+### ABVD QC (D-08)
 
-`classify_abvd_episode(drug_names, regimen_label_r28)`:
-- Splits semicolons, maps tokens to families via case-insensitive prefix regex.
-- Returns `"ABVD"` / `"AVD"` / `"JCODE_ABVD"` / `"ABVD_PLUS"` / `NA`.
-- `abvd_episode` uses `result %in% c("ABVD","AVD","JCODE_ABVD")`.
+| Category | Count |
+|---|---|
+| Chemotherapy episodes | 8,194 |
+| `abvd_episode` TRUE — full ABVD | 1,151 |
+| `abvd_episode` TRUE — AVD | 529 |
+| `abvd_episode` TRUE — JCODE_ABVD | 0 |
+| `abvd_episode` FALSE — ABVD_PLUS | 103 |
+| `ever_abvd` TRUE patients | 1,525 |
+| Patients: first chemo episode is ABVD | 1,466 |
 
-`build_tr_lymphoma_flags(patient_ids)`:
-- Queries `TUMOR_REGISTRY_ALL`, detects `HISTOLOGICAL_TYPE` / `MORPH` columns dynamically.
-- Three-state logic: `NA` = not in TR; `TRUE` = HL/NHL code found; `FALSE` = in TR, no match.
-- Attributes: `tr_hl_ids_all` (all TR-HL IDs for D-06), `unlisted_lymphoid` (D-05 codes).
-- `stop()` if TUMOR_REGISTRY_ALL unavailable (all-NA silent return forbidden, D-04).
+ABVD_PLUS top added agents: Vincristine Sulfate 42, Etoposide 40, Cyclophosphamide 36, Procarbazine 15, Methotrexate 13, Rituximab 13, Gemcitabine/Ifosfamide/Carboplatin/Goserelin \<11 each.
 
-**tests/testthat/test-201-abvd-tr-flags.R** — 9 unit tests:
+### Cross-tab: `abvd_episode` × `regimen_label`
 
-| Input | r28 | Expected |
-|-------|-----|----------|
-| `"Bleomycin;Dacarbazine;Doxorubicin;Vinblastine"` | NA | ABVD |
-| `"Dacarbazine;Doxorubicin;Vinblastine"` | NA | AVD |
-| `"Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine"` | NA | NA |
-| `"Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine"` | NA | ABVD_PLUS |
-| `"Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vinblastine Sulfate"` | NA | ABVD (5 tokens → 4 families) |
-| `""` | `"ABVD"` | JCODE_ABVD |
-| `""` | NA | NA |
-| `"Cyclophosphamide;Doxorubicin;Vincristine"` | NA | NA |
-| vectorized 4-row | mixed | ABVD/AVD/JCODE_ABVD/NA |
+| abvd_episode | regimen_label | n |
+|---|---|---|
+| FALSE | (none) | 6,500 |
+| FALSE | ABVD | 14 |
+| TRUE | (none) | 0 |
+| TRUE | ABVD | 1,680 |
 
-All 9 pass locally (one expected warning: MEDICATION_LOOKUP empty without data reference Excel).
+**14 FALSE/ABVD episodes:** R/28 labeled these ABVD via its J-code fallback, which counts only J9xxx codes and ignores RxNorm-coded co-administered agents, and runs on any episode that failed drug-name detection (not only blank `drug_names`). All 14 contain added agents (ICE-type carboplatin/ifosfamide/etoposide, gemcitabine, vincristine, cyclophosphamide, or oral methotrexate RxNorm 105585). The new `abvd_episode` flag is correct — no code change. 4 of the 14 are ABVD + oral methotrexate 105585; \<11 patients, most with `immune_flag` TRUE (Rheumatoid Arthritis). → D-201-01 addendum.
 
-### Task 2 — R/142 Sections 4C4 / 4C5, schema, regression
+0 episodes new-TRUE / R/28-not-ABVD: the earlier raw-token concern (B-01) is not supported by the data.
 
-Changes to `R/142_gantt_180_export.R`:
+### Tumor-registry QC (D-08 / D-04)
 
-- **Header**: Outputs line updated to "30 columns".
-- **EPISODES_SCHEMA**: 4 columns appended with `# Phase 201` comment.
-- **Section 2**: `stopifnot("regimen_label missing …")` after `assert_df_valid`.
-- **Section 4 joins**: `regimen_label` added to `left_join` select and downstream `select`; `NA_character_` assigned on Death and HL Diagnosis pseudo-rows.
-- **Section 4C4** (new, after Section 4C3 / immune-flag QC, before column trim): calls `classify_abvd_episode()`, sets `abvd_episode` and `ever_abvd`, `stopifnot` guards, D-08 QC block (counts, cross-tab, top disagreement rows).
-- **Section 4C5** (new, after Section 4D): calls `build_tr_lymphoma_flags()`, left-joins, `stopifnot` guards, D-08 TR QC block (counts, cross-tab, unlisted codes), D-06 absent-patient CSV write to `output/internal/tr_hl_not_in_gantt_180.csv`.
-- **Column trim**: updated to 30 columns; drops `regimen_label`, `abvd_class`, `tr_present`.
-- **PRE201 regression**: saves `gantt_episodes_180_PRE201.csv` (26-col guard) before write; post-write check on row count, names[1:26], multiset comparison. Prints `"Phase 201 regression: PASS (26 original columns unchanged)"`.
-- **Section 6**: added `message(glue("  Phase 201 columns 27-30: {paste(EPISODES_SCHEMA[27:30], collapse = ', ')}"))`.
-- Parse: `tools/rcheck.sh parse R/142_gantt_180_export.R` exits 0.
+| Measure | Count |
+|---|---|
+| `tr_present` TRUE | 863 |
+| `tr_hl_dx` TRUE | 600 |
+| `tr_hl_dx` FALSE | 263 |
+| `tr_hl_dx` NA | 7,557 |
+| `tr_nhl_dx` TRUE | 154 |
+| `tr_nhl_dx` FALSE | 709 |
+| `tr_nhl_dx` NA | 7,557 |
+| Both TRUE | 11 |
 
-## Awaiting Task 3 (HiPerGator)
+Cross-tab `tr_hl_dx` × `any(is_hodgkin)`:
 
-Paste back after running with `Sys.setenv(RUN_PRE201_REGRESSION = "TRUE")`:
-1. Section 4C4 ABVD QC block output (counts; cross-tab abvd_episode × regimen_label; top disagreements)
-2. Section 4C5 TR QC block output (tr_present; tr_hl_dx/tr_nhl_dx TRUE/FALSE/NA; both-TRUE; unlisted codes)
-3. D-06 absent-from-Gantt counts (n_r1, n_r2, n_r3)
-4. `"Phase 201 regression: PASS"`
+| tr_hl_dx | is_hodgkin TRUE | is_hodgkin FALSE |
+|---|---|---|
+| TRUE | 549 | 51 |
+| FALSE | 222 | 41 |
+| NA | 6,945 | 612 |
 
-Summary will be completed with the QC numbers once the HiPerGator run is pasted back.
+NHL caveat: `nhl_histology` list has not been validated against this extract (D-05, D-201-03).
 
-## Commits
+### D-05 unlisted lymphoid histology codes (D-201-03)
 
-- `feafa44` — feat(201-01): add ABVD constants, classify_abvd_episode(), build_tr_lymphoma_flags(), unit tests
-- `652916f` — feat(201-01): update R/142 with Sections 4C4/4C5, 30-column schema, PRE201 regression
+Codes in ICD-O-3 lymphoid range (9590–9999) seen among export patients, in neither `hl_histology` nor `nhl_histology`:
 
-## Self-Check: PARTIAL
+9657, 9675, 9715, 9732, 9735, 9761, 9811, 9812, 9823 (n=13), 9831, 9834, 9836, 9837, 9861, 9867, 9920, 9950, 9962, 9980, 9986, 9989 (all others \<11)
 
-Tasks 1–2 artifacts verified:
-- `R/00_config.R`: ABVD_COMPONENTS, AVD_COMPONENTS, ABVD_EXCLUDING_DRUGS present (grep confirmed)
-- `R/utils/utils_cancer.R`: classify_abvd_episode(), build_tr_lymphoma_flags() present (parse OK)
-- `tests/testthat/test-201-abvd-tr-flags.R`: 9 tests pass locally
-- `R/142_gantt_180_export.R`: parses cleanly; 11 "Phase 201" references; 37 column-name references
+Notes: 9657 likely HL (ICD-O-2 lymphocyte predominance); 9675, 9715, 9735 NHL candidates; 9823 CLL/SLL is a team call; myeloma/Waldenström/leukemia/myeloid codes correctly excluded from both lists.
 
-Task 3 (HiPerGator): pending.
+### D-06 TR-HL patients absent from gantt_episodes_180
+
+| Reason | Count |
+|---|---|
+| r1: not in confirmed_hl_cohort.rds | 121 |
+| r2: in cohort, no dx date / no episodes | 0 |
+| r3: other | 0 |
+
+121 TR-HL patients absent, all r1. D-201-04 needed: follow-up phase to identify which cohort step drops them.
+`output/internal/tr_hl_not_in_gantt_180.csv` written (ID, reason — internal only).
+
+## Decisions updated after run
+
+- **B-01 revised:** R/28 J-code fallback (D-19/D-20) runs on episodes that failed drug-name detection and counts only J9xxx codes, so ABVD + RxNorm-coded added agents get `regimen_label = ABVD`. 14 such 180-day episodes found. Fix scope: restrict fallback to blank `drug_names`, or include non-J-code agents in the added-agent count. The earlier raw-token concern is not supported (0 new-TRUE / R/28-not-ABVD episodes).
+- **D-201-01 addendum:** Count ABVD + low-dose oral methotrexate (RxNorm 105585) as ABVD? 4 episodes, \<11 patients, most with RA `immune_flag`. Default: no.
+- **D-201-04 populated:** 121 TR-HL patients, all not in confirmed_hl_cohort.rds. Follow-up phase to find which cohort step drops them.

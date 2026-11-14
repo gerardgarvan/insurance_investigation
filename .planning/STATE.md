@@ -56,6 +56,17 @@ Last activity: 2026-11-13 - Completed quick task 261113-t4d: Fix R/142 Section 4
 
 ## Accumulated Context
 
+### Phase 201 Findings (Plan 01 HiPerGator run, 2026-11-13)
+
+- **gantt_episodes_180.csv:** 22,520 rows, 30 columns. Regression PASS (26 original columns unchanged).
+- **ABVD counts:** `abvd_episode` TRUE — ABVD 1,151, AVD 529, JCODE_ABVD 0; ABVD_PLUS 103 (top: Vincristine Sulfate 42, Etoposide 40, Cyclophosphamide 36). `ever_abvd` TRUE = 1,525 patients; first chemo = ABVD for 1,466.
+- **14 FALSE/ABVD cross-tab episodes:** R/28 J-code fallback labels these ABVD because it counts only J9xxx codes; all 14 have RxNorm-coded added agents. `abvd_episode` flag is correct — no code change. 4 are ABVD + oral MTX 105585 (\<11 patients, most RA immune_flag).
+- **B-01 revised:** Raw-token concern not supported (0 new-TRUE/R28-not-ABVD). Real issue: J-code fallback runs beyond blank `drug_names` and ignores non-J-code agents. Fix in a separate phase.
+- **D-201-01 addendum:** Count ABVD + oral MTX 105585 as ABVD? 4 episodes, \<11 patients. Default: no.
+- **TR flags:** `tr_present` 863; `tr_hl_dx` TRUE 600 / FALSE 263 / NA 7,557; `tr_nhl_dx` TRUE 154 / FALSE 709 / NA 7,557; both TRUE 11.
+- **D-201-04:** 121 TR-HL patients absent from gantt_episodes_180, all r1 (not in confirmed_hl_cohort.rds). Follow-up phase needed.
+- **D-201-03 unlisted lymphoid codes:** 9657, 9675, 9715, 9732, 9735, 9761, 9811, 9812, 9823 (n=13), 9831, 9834, 9836, 9837, 9861, 9867, 9920, 9950, 9962, 9980, 9986, 9989 (others \<11).
+
 ### Phase 200 Team Decision (D-200-01)
 
 - **D-200-01 (2026-11-12, team):** Gantt treatment episodes capture ALL rituximab / methotrexate / immunotherapy administrations regardless of indication. Patients whose rituximab/MTX use may be for an autoimmune condition are identified by the Phase 199 `immune_flag` (with `immune_flag_dx` for the qualifying diagnosis), not removed from the timelines. No indication-based filtering is applied in R/26 or any downstream script.
