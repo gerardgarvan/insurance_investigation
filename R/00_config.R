@@ -4463,4 +4463,84 @@ if (length(utils_files) == 0) {
 
 # ==============================================================================
 # End of configuration
+
+# ---- PHASE 205: REGIMEN + LINE-OF-THERAPY CONFIG ----
+
+# Concurrency window: drugs within +/- CONCURRENCY_WINDOW_DAYS of episode start
+# count toward the same regimen. REGL-02.
+CONCURRENCY_WINDOW_DAYS <- 7L
+
+# LOT gap: treatment-free gap of >= LOT_GAP_DAYS between non-maintenance drug
+# administrations triggers a new line. REGL-03. Open decision REGL-06.
+LOT_GAP_DAYS <- 90L
+
+# Drug families classified as maintenance (do not start a new LOT). REGL-03.
+MAINTENANCE_DRUG_CLASSES <- c("BV_consolidation", "Rituximab_mono")
+
+# Regimen dictionary. Each entry:
+#   drugs: canonical drug names (from DRUG_NAME_ALIASES values) that together
+#          define the regimen. All listed drugs must be present in the episode
+#          within CONCURRENCY_WINDOW_DAYS. REGL-01.
+#   exclusive: if TRUE, presence of any unlisted chemo agent disqualifies.
+#   maintenance: if TRUE, episodes matching this family do not start a new LOT.
+REGIMEN_DICT <- list(
+  ABVD = list(
+    drugs       = c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine"),
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  AVD = list(
+    drugs       = c("Doxorubicin", "Vinblastine", "Dacarbazine"),
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  `BV+AVD` = list(
+    drugs       = c("Brentuximab Vedotin", "Doxorubicin", "Vinblastine", "Dacarbazine"),
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  `Nivo+AVD` = list(
+    drugs       = c("Nivolumab", "Doxorubicin", "Vinblastine", "Dacarbazine"),
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  BEACOPP = list(
+    drugs       = c("Bleomycin", "Etoposide", "Doxorubicin", "Cyclophosphamide",
+                    "Vincristine", "Procarbazine", "Prednisone"),
+    exclusive   = FALSE,
+    maintenance = FALSE
+  ),
+  escBEACOPP = list(
+    drugs       = c("Bleomycin", "Etoposide", "Doxorubicin", "Cyclophosphamide",
+                    "Vincristine", "Procarbazine", "Prednisone"),
+    exclusive   = FALSE,
+    maintenance = FALSE,
+    note        = "Distinguish from BEACOPP by dose — requires SME confirmation (REGL-06)"
+  ),
+  Pediatric = list(
+    drugs       = c("Doxorubicin", "Vincristine", "Etoposide", "Prednisone",
+                    "Cyclophosphamide"),
+    exclusive   = FALSE,
+    maintenance = FALSE,
+    note        = "ABVE-PC/OEPA-COPDAC/BV-AVEPC — SME confirmation needed (REGL-06)"
+  ),
+  NLPHL = list(
+    drugs       = c("Rituximab"),
+    exclusive   = FALSE,
+    maintenance = FALSE,
+    note        = "R-CHOP/R-CVP/rituximab mono — NLPHL handling open (REGL-06)"
+  ),
+  Salvage = list(
+    drugs       = c("Ifosfamide", "Carboplatin", "Etoposide"),
+    exclusive   = FALSE,
+    maintenance = FALSE,
+    note        = "ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembro/nivo — SME list needed (REGL-06)"
+  ),
+  BV_consolidation = list(
+    drugs       = c("Brentuximab Vedotin"),
+    exclusive   = TRUE,
+    maintenance = TRUE,
+    note        = "BV mono post-SCT consolidation — classification open (REGL-06)"
+  )
+)
 # ==============================================================================
