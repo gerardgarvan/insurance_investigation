@@ -993,7 +993,7 @@ Plans:
 ## Phases (v3.14)
 
 - [x] **Phase 202: Tumor-Registry Treatment Sensitivity** -- Inspect TR columns, compare registry vs Gantt capture, deliver sensitivity workbook (TRVAL-01..07) (completed 2026-11-14)
-- [ ] **Phase 203: No-Treatment Patient Characterization** -- Side-by-side profile of 3,246 no-treatment vs 4,450 treated patients, with registry join and candidate eligibility rule (NOTX-01..07)
+- [x] **Phase 203: No-Treatment Patient Characterization** -- Side-by-side profile of 3,246 no-treatment vs 4,450 treated patients, with registry join and candidate eligibility rule (NOTX-01..07) (completed 2026-11-14)
 - [ ] **Phase 204: MED_ADMIN Name-Based Capture** -- Add RAW_MEDADMIN_MED_NAME matching in R/26, rerun downstream chain, regression guard (MCAP-01..05)
 - [ ] **Phase 205: Regimen + Line-of-Therapy Engine** -- Date-level regimen dict + LOT counter, replaces R/28 `regimen_label` and Phase 201 relabel block; unit tests + Gantt regression guard (REGL-01..08)
 
@@ -1048,7 +1048,7 @@ Plans:
 **Plans**: 4 plans
 - [x] 203-01-PLAN.md — Schema probe (PENDING HiPerGator) + R/203 scaffold with pinned inputs and cohort split into no_tx/treated
 - [x] 203-02-PLAN.md — NOTX-01..NOTX-04 characterization for both groups (data-window truncation, peri-dx encounters, demographics/care, registry treatment join)
-- [ ] 203-03-PLAN.md — NOTX-05 candidate treatment-observable rule (not applied) + styled xlsx (KEY, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression
+- [x] 203-03-PLAN.md — NOTX-05 candidate treatment-observable rule (not applied) + styled xlsx (KEY, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression
 - [x] 203-04-PLAN.md — R/88 SECTION 15bf smoke checks
 
 ### Phase 204: MED_ADMIN Name-Based Capture
@@ -1105,6 +1105,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 202. Tumor-Registry Treatment Sensitivity | 3/3 | Complete    | 2026-11-14 |
-| 203. No-Treatment Patient Characterization | 3/4 | In Progress|  |
+| 203. No-Treatment Patient Characterization | 4/4 | Complete   | 2026-11-14 |
 | 204. MED_ADMIN Name-Based Capture | 0/TBD | Not started | - |
 | 205. Regimen + Line-of-Therapy Engine | 0/TBD | Not started | - |
