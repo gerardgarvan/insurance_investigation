@@ -229,10 +229,31 @@ extract_chemo_dates_with_codes <- function() {
     disp_dates <- disp_dates %>% mutate(ENCOUNTERID = NA_character_)
   }
 
+  # --- Phase 204: pre-name-capture snapshot ---
+  # Save the current stage1 RDS (produced by a pre-204 run) before name-capture
+  # changes affect the output. Used for regression comparison in Plan 02.
+  p204_pre_rds <- file.path(CONFIG$output_dir, "internal",
+                             "treatment_episodes_pre_p204.rds")
+  if (file.exists(OUTPUT_RDS) && !file.exists(p204_pre_rds)) {
+    pre_snap <- readRDS(OUTPUT_RDS)
+    dir.create(dirname(p204_pre_rds), showWarnings = FALSE, recursive = TRUE)
+    saveRDS(pre_snap, p204_pre_rds)  # pre_p204 snapshot written here
+    message(glue("[R/26] Phase 204: pre-capture snapshot saved -> {p204_pre_rds} ({nrow(pre_snap)} rows)"))
+    rm(pre_snap)
+  } else if (file.exists(p204_pre_rds)) {
+    message(glue("[R/26] Phase 204: pre-capture snapshot already exists — not overwriting ({p204_pre_rds})"))
+  } else {
+    message("[R/26] Phase 204: no prior stage1 RDS to snapshot — name-capture is new from this run")
+  }
+
   # 6. MED_ADMIN: MEDADMIN_CODE+MEDADMIN_TYPE (D-12 revised Phase 122: RX-typed=RxNorm CUI, ND-typed=NDC via crosswalk)
   # Phase 124 Task 3: return_raw_name = TRUE so ma_dates carries RAW_MEDADMIN_MED_NAME for fallback tier
+  # Phase 204 (MCAP-01): return_name_capture = TRUE adds name-based tier from RAW_MEDADMIN_MED_NAME.
+  # return_source = TRUE so source_hints captures "MED_ADMIN_NAME" alongside "MED_ADMIN (RX)".
   ma_dates <- get_chemo_hits("MED_ADMIN", TREATMENT_CODES$chemo_rxnorm, ndc_crosswalk,
-                             return_raw_name = TRUE)
+                             return_raw_name = TRUE,
+                             return_source   = TRUE,
+                             return_name_capture = TRUE)
   if (!is.null(ma_dates)) {
     ma_dates <- ma_dates %>% mutate(ENCOUNTERID = NA_character_)
   }
@@ -257,6 +278,49 @@ extract_chemo_dates_with_codes <- function() {
       dplyr::summarise(raw_med_name = dplyr::first(raw_med_name), .groups = "drop")
   } else {
     raw_name_lookup <<- dplyr::tibble(triggering_code = character(0), raw_med_name = character(0))
+  }
+
+  # --- Phase 204: Before/after name-capture count report (MCAP-02) ---
+  # Drugs of interest per ROADMAP: Rituximab, Brentuximab Vedotin, Methotrexate.
+  # "Before" = rows with source "MED_ADMIN (RX)" or "MED_ADMIN (NDC)".
+  # "After" = additionally rows with source "MED_ADMIN_NAME".
+  p204_drugs_of_interest <- c("Rituximab", "Brentuximab Vedotin", "Methotrexate")
+  if (!is.null(ma_dates) && "source" %in% colnames(ma_dates)) {
+    p204_name_rows <- dplyr::filter(ma_dates, source == "MED_ADMIN_NAME")
+    if (nrow(p204_name_rows) > 0) {
+      p204_counts <- p204_name_rows %>%
+        dplyr::mutate(
+          canonical = sub("^NAME:", "", triggering_code)
+        ) %>%
+        dplyr::group_by(canonical) %>%
+        dplyr::summarise(
+          new_records   = dplyr::n(),
+          new_patients  = dplyr::n_distinct(ID),
+          .groups = "drop"
+        ) %>%
+        dplyr::arrange(dplyr::desc(new_records))
+      message("[R/26] Phase 204 — NEW administrations gained by name-based capture:")
+      for (i in seq_len(nrow(p204_counts))) {
+        pts <- p204_counts$new_patients[i]
+        recs <- p204_counts$new_records[i]
+        pts_disp  <- if (pts  < 11) "<11" else as.character(pts)
+        recs_disp <- if (recs < 11) "<11" else as.character(recs)
+        message(glue("  {p204_counts$canonical[i]}: {recs_disp} records, {pts_disp} patients"))
+      }
+      # Explicitly flag drugs of interest if zero gain
+      for (d in p204_drugs_of_interest) {
+        if (!d %in% p204_counts$canonical) {
+          message(glue("  {d}: 0 new records (no unmatched name strings resolved to this drug)"))
+        }
+      }
+    } else {
+      message("[R/26] Phase 204 — name-based capture returned 0 new rows (all administrations already code-matched or no matching name strings)")
+      for (d in p204_drugs_of_interest) {
+        message(glue("  {d}: 0 new records"))
+      }
+    }
+  } else {
+    message("[R/26] Phase 204 — ma_dates has no source column; name-capture count report skipped")
   }
 
   # Phase 76: Tumor registry source removed — claims-based sources only
