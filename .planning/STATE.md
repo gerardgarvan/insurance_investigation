@@ -175,6 +175,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261112-tfm | Fix R/88 [f2] check to use IMMUNE_FLAG_DX_CODES set instead of has_autoimmune_dx proxy | 2026-11-13 | 11f3f09 | [261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-](./quick/261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-/) |
 | 261113-hap | Fix three test-suite failures: code_system fixture column, canonicalize_drug_name named-vector leak, local=FALSE in two source() calls | 2026-11-13 | aee6c84 | [261113-hap-fix-three-test-suite-failures-code-syste](./quick/261113-hap-fix-three-test-suite-failures-code-syste/) |
 | 261114-lv2 | export abvd_class and ever_abvd_plus in gantt_episodes_180.csv (R/142 32-col; broaden ABVD_PLUS; R/88 15bd 7 new checks; 4 new unit tests) | 2026-11-14 | 84c1a5e | [261114-lv2-export-abvd-class-and-ever-abvd-plus-in-](./quick/261114-lv2-export-abvd-class-and-ever-abvd-plus-in-/) |
+| 261114-m8m | R/88 15bb [c2] and 15bc [c1] updated 30->32 columns; R/142 Section 4C4 adds per-abvd_class and ever_abvd_plus patient counts (fmt_sup) | 2026-11-14 | 54eaa27 | [261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q](./quick/261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q/) |
 
 ## Session Continuity
 
