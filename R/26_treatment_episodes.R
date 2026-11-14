@@ -965,6 +965,41 @@ warn_date_range(all_detail, "episode_stop",
 saveRDS(all_episodes, OUTPUT_RDS)
 message(glue("[R/26] treatment_episodes_stage1.rds written — {nrow(all_episodes)} rows"))
 
+# --- Phase 204: post-name-capture snapshot (MCAP-04) ---
+post_p204_rds <- file.path(CONFIG$output_dir, "internal",
+                            "treatment_episodes_post_p204.rds")
+dir.create(dirname(post_p204_rds), showWarnings = FALSE, recursive = TRUE)
+saveRDS(all_episodes, post_p204_rds)
+message(glue("[R/26] Phase 204: post-capture snapshot saved -> {post_p204_rds} ({nrow(all_episodes)} rows)"))
+
+# --- Phase 204: QC table of newly matched RAW_MEDADMIN_MED_NAME strings (MCAP-05) ---
+# ma_dates is in scope (produced in Section 4); guard in case it is NULL.
+if (!is.null(ma_dates) && "source" %in% colnames(ma_dates) &&
+    "raw_med_name" %in% colnames(ma_dates)) {
+  p204_qc <- ma_dates %>%
+    dplyr::filter(source == "MED_ADMIN_NAME", !is.na(raw_med_name)) %>%
+    dplyr::mutate(canonical = sub("^NAME:", "", triggering_code)) %>%
+    dplyr::group_by(canonical, raw_med_name) %>%
+    dplyr::summarise(
+      n_records  = dplyr::n(),
+      n_patients = dplyr::n_distinct(ID),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      n_records_disp  = dplyr::if_else(n_records  < 11L, "<11", as.character(n_records)),
+      n_patients_disp = dplyr::if_else(n_patients < 11L, "<11", as.character(n_patients))
+    ) %>%
+    dplyr::arrange(canonical, dplyr::desc(n_records))
+
+  p204_qc_rds <- file.path(CONFIG$output_dir, "internal", "p204_name_qc.rds")
+  saveRDS(p204_qc, p204_qc_rds)
+  message(glue("[R/26] Phase 204 QC table: {nrow(p204_qc)} distinct name strings saved -> {p204_qc_rds}"))
+  message("[R/26] Phase 204 QC — top matched name strings (for manual false-positive review):")
+  print(dplyr::select(p204_qc, canonical, raw_med_name, n_records_disp, n_patients_disp))
+} else {
+  message("[R/26] Phase 204 QC: no MED_ADMIN_NAME rows in ma_dates — QC table not written")
+}
+
 saveRDS(all_detail, OUTPUT_DETAIL_RDS)
 message(glue("Detail RDS saved: {OUTPUT_DETAIL_RDS} ({nrow(all_detail)} rows)"))
 
@@ -1609,3 +1644,62 @@ message(glue("  RDS (detail):    {OUTPUT_DETAIL_RDS}"))
 message(glue("  XLSX: {OUTPUT_XLSX}"))
 message(glue("  CSVs: {CONFIG$output_dir}/*_episodes.csv"))
 message(glue("  CSVs: {CONFIG$output_dir}/*_episode_detail.csv"))
+
+# ==============================================================================
+# Phase 204 Regression Check (MCAP-03)
+# ==============================================================================
+# Compare gantt_episodes.csv and gantt_episodes_180.csv (produced by downstream
+# R/52 and R/142) against snapshots saved before Phase 204 name-capture.
+# This block runs ONLY if the pre-204 baseline CSV snapshots exist in output/internal/.
+# Run R/52 and R/142 first, then source R/26 again (or run this block separately).
+# Any column mismatch halts with stop() so the analyst can investigate.
+
+p204_gantt_pre_90  <- file.path(CONFIG$output_dir, "internal",
+                                  "gantt_episodes_pre_p204.csv")
+p204_gantt_post_90 <- file.path(CONFIG$output_dir, "gantt_episodes.csv")
+
+p204_gantt_pre_180  <- file.path(CONFIG$output_dir, "internal",
+                                   "gantt_episodes_180_pre_p204.csv")
+p204_gantt_post_180 <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
+
+p204_run_regression <- all(
+  file.exists(p204_gantt_pre_90),
+  file.exists(p204_gantt_post_90),
+  file.exists(p204_gantt_pre_180),
+  file.exists(p204_gantt_post_180)
+)
+
+if (p204_run_regression) {
+  message("\n[R/26] Phase 204 Regression Check (MCAP-03) — comparing gantt CSVs ...")
+
+  for (pair in list(
+    list(label = "gantt_episodes (90-day)",  pre = p204_gantt_pre_90,  post = p204_gantt_post_90),
+    list(label = "gantt_episodes_180",        pre = p204_gantt_pre_180, post = p204_gantt_post_180)
+  )) {
+    pre_df  <- vroom::vroom(pair$pre,  col_types = vroom::cols(.default = "c"), show_col_types = FALSE)
+    post_df <- vroom::vroom(pair$post, col_types = vroom::cols(.default = "c"), show_col_types = FALSE)
+
+    # Only compare columns present in BOTH (pre-204 may have fewer columns if schema grew)
+    shared_cols <- intersect(colnames(pre_df), colnames(post_df))
+    pre_cmp  <- dplyr::select(pre_df,  dplyr::all_of(shared_cols))
+    post_cmp <- dplyr::select(post_df, dplyr::all_of(shared_cols))
+
+    if (!identical(pre_cmp, post_cmp)) {
+      differing <- shared_cols[!mapply(identical, pre_cmp, post_cmp)]
+      stop(glue::glue(
+        "[R/26] MCAP-03 REGRESSION FAIL in {pair$label}: ",
+        "columns differ: {paste(differing, collapse = ', ')}. ",
+        "Investigate before continuing to Phase 205."
+      ))
+    }
+    message(glue("  [PASS] {pair$label}: all {length(shared_cols)} shared columns identical"))
+  }
+  message("[R/26] Phase 204 Regression Check PASSED — gantt outputs unchanged by name-based capture")
+} else {
+  message(paste0(
+    "[R/26] Phase 204 Regression Check SKIPPED — pre-204 gantt baseline CSVs not found in output/internal/.\n",
+    "  To enable: copy output/gantt_episodes.csv and output/gantt_episodes_180.csv\n",
+    "  to output/internal/gantt_episodes_pre_p204.csv and gantt_episodes_180_pre_p204.csv\n",
+    "  BEFORE running R/28 -> R/52 -> R/142 with Phase 204 changes."
+  ))
+}
