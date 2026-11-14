@@ -8216,6 +8216,89 @@ if (nchar(p202_wb_path) == 0L) {
 message(glue("\nTR-VAL-202 (Phase 202): {p202_pass} PASS / {p202_fail} FAIL / {p202_skip} SKIP"))
 
 # ==============================================================================
+# SECTION 15bf: PHASE 203 NO-TREATMENT CHARACTERIZATION (SMOKE-203-01) ----
+# ==============================================================================
+
+p203_pass <- 0L; p203_fail <- 0L; p203_skip <- 0L
+
+p203_chk <- function(label, condition) {
+  if (isTRUE(condition)) { message("  PASS: ", label); p203_pass <<- p203_pass + 1L; passed  <<- passed  + 1L }
+  else                   { message("  FAIL: ", label); p203_fail <<- p203_fail + 1L; failed  <<- failed  + 1L }
+}
+p203_skip_fn <- function(label) {
+  message("  SKIP: ", label); p203_skip <<- p203_skip + 1L; skipped <<- skipped + 1L
+}
+
+message("\nSection 15bf: Phase 203 no-treatment characterization")
+
+# [a] Script file exists
+p203_chk("SMOKE-203-01 [a] R/203_no_treatment_characterization.R exists",
+  file.exists(here::here("R", "203_no_treatment_characterization.R")))
+
+# [b] Workbook present — glob for newest 203_no_treatment_characterization_*.xlsx
+p203_wb_candidates <- list.files(
+  CONFIG$output_dir,
+  pattern = "^203_no_treatment_characterization_.*\\.xlsx$",
+  full.names = TRUE
+)
+p203_wb_path <- if (length(p203_wb_candidates) > 0L) {
+  p203_wb_candidates[which.max(file.mtime(p203_wb_candidates))]
+} else {
+  character(0)
+}
+
+if (length(p203_wb_path) == 0L) {
+  p203_skip_fn("SMOKE-203-01 [b] workbook absent — run on HiPerGator")
+  p203_skip_fn("SMOKE-203-01 [c] KEY is first sheet (workbook absent)")
+  p203_skip_fn("SMOKE-203-01 [d] A_profile/B_reasons_waterfall/C_by_source/D_candidate_rules present (workbook absent)")
+  p203_skip_fn("SMOKE-203-01 [e] QC sheet present (workbook absent)")
+  p203_skip_fn("SMOKE-203-01 [f] <11 suppression token present in A_profile (workbook absent)")
+} else {
+  p203_chk("SMOKE-203-01 [b] workbook present",
+    file.exists(p203_wb_path))
+
+  p203_sheets <- tryCatch(
+    openxlsx::getSheetNames(p203_wb_path),
+    error = function(e) character(0)
+  )
+
+  # [c] KEY leftmost
+  p203_chk("SMOKE-203-01 [c] KEY is first sheet",
+    length(p203_sheets) >= 1L && p203_sheets[1] == "KEY")
+
+  # [d] four content sheets
+  p203_chk("SMOKE-203-01 [d] A_profile/B_reasons_waterfall/C_by_source/D_candidate_rules present",
+    all(c("A_profile", "B_reasons_waterfall", "C_by_source", "D_candidate_rules") %in% p203_sheets))
+
+  # [e] QC sheet
+  p203_chk("SMOKE-203-01 [e] QC sheet present",
+    "QC" %in% p203_sheets)
+
+  # [f] suppression token "<11" in A_profile; NOTE rather than FAIL if absent (may be legitimate)
+  local({
+    a_profile <- tryCatch(
+      openxlsx::read.xlsx(p203_wb_path, sheet = "A_profile"),
+      error = function(e) NULL
+    )
+    if (is.null(a_profile)) {
+      p203_fail <<- p203_fail + 1L; failed <<- failed + 1L
+      message("  FAIL: SMOKE-203-01 [f] could not read A_profile sheet")
+    } else {
+      has_sup <- any(vapply(a_profile, function(col)
+        any(as.character(col) == "<11", na.rm = TRUE), logical(1)))
+      if (has_sup) {
+        p203_pass <<- p203_pass + 1L; passed <<- passed + 1L
+        message("  PASS: SMOKE-203-01 [f] <11 suppression token present in A_profile")
+      } else {
+        message("  NOTE: SMOKE-203-01 [f] no <11 token in A_profile — verify suppression applied if any count < 11")
+      }
+    }
+  })
+}
+
+message(glue("\nSMOKE-203-01: {p203_pass} PASS / {p203_fail} FAIL / {p203_skip} SKIP"))
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 
