@@ -8,16 +8,15 @@ A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files f
 
 A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## Current Milestone: v3.13 Analytic Manual Fill-out and Verification
+## Current Milestone: v3.14 HL Treatment Detection Quality
 
-**Goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo — every existing statement checked against code with a verdict, every answerable empty section drafted from repo evidence, producing a tracked-change manual version and evidence workbook the team can review change by change.
+**Goal:** Validate pipeline treatment-capture sensitivity against the tumor registry, characterize confirmed-cohort patients with no captured treatment, close the MED_ADMIN name-based capture gap in R/26, and replace R/28 regimen_label with a date-level regimen + line-of-therapy engine covering all treatment types.
 
 **Target features:**
-- Evidence map: section-by-section crosswalk from the manual to repo sources (Phase 190)
-- Verification script: verdicts for all existing manual statements, including 9 known leads L1–L9 (Phase 191)
-- Drafted new content: front matter, §1–§3, new §4 domains, §5/§7/§8/§11 where repo has a source (Phase 192)
-- Updated manual: tracked-change .docx (original untouched) + evidence workbook (Phase 193)
-- Team review package: cover email, decision log, R/88 registration if applicable (Phase 194)
+- TR sensitivity analysis: inventory TR1/TR2/TR3 first-course treatment fields; compare registry "treatment given" + dates vs Gantt pipeline capture by SOURCE and diagnosis year (Phase 202)
+- No-treatment characterization: 3,246 confirmed-cohort patients with HL dx but zero treatment vs 4,450 treated; propose "treatment observable" eligibility rule as team decision (Phase 203)
+- MED_ADMIN name-based capture: add RAW_MEDADMIN_MED_NAME matching alongside code-based capture in R/26; rerun R/26→R/28→R/29→R/52→R/142 with before/after counts (Phase 204)
+- Regimen + line-of-therapy engine: regimen dict in config covering all treatment types; replace R/28 regimen_label and Phase 201 relabel block in R/142; LOT counter (Phase 205)
 
 ## Requirements
 

@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: Milestone complete
-last_updated: "2026-11-14T02:20:21.714Z"
+milestone: v3.14
+milestone_name: HL Treatment Detection Quality
+status: Defining requirements
+last_updated: "2026-11-14T00:00:00.000Z"
 last_activity: 2026-11-14
 progress:
-  total_phases: 192
-  completed_phases: 164
-  total_plans: 374
-  completed_plans: 375
+  total_phases: 201
+  completed_phases: 201
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -24,8 +24,13 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 201
-Plan: Not started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-11-14 — Milestone v3.14 started
+
+## Prior Position (v3.13 final)
+
 Phase: 192 (draft-new-content) — COMPLETE 2026-10-28: all 3 plans done; AM-DRAFT.md with sourced sections for all MISMATCH/PARTIAL leads; verification 16/16 passed.
 Phase 192.3 COMPLETE 2026-11-04: all 3 plans done; R/181 produces 9-sheet workbook with SOURCE stratification; regression check passed on HiPerGator.
 Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01–04 complete):
