@@ -18,13 +18,13 @@
 
 ### NOTX — No-Treatment Characterization (Phase 203)
 
-- [ ] **NOTX-01**: For each no-treatment patient (≈3,246), whether first_hl_dx_date falls before the data window (enrollment start / first encounter)
-- [ ] **NOTX-02**: Count of encounters within ±90 days of first_hl_dx_date, reported for no-treatment patients
-- [ ] **NOTX-03**: No-treatment patients characterized by: single_source_care flag (R/169), SOURCE (partner site), payer category, far_from_care_100mi, age group at diagnosis, NLPHL vs cHL
-- [ ] **NOTX-04**: Registry treatment fields from Phase 202 joined for no-treatment patients (registry says treatment given but pipeline did not capture it)
+- [x] **NOTX-01**: For each no-treatment patient (≈3,246), whether first_hl_dx_date falls before the data window (enrollment start / first encounter)
+- [x] **NOTX-02**: Count of encounters within ±90 days of first_hl_dx_date, reported for no-treatment patients
+- [x] **NOTX-03**: No-treatment patients characterized by: single_source_care flag (R/169), SOURCE (partner site), payer category, far_from_care_100mi, age group at diagnosis, NLPHL vs cHL
+- [x] **NOTX-04**: Registry treatment fields from Phase 202 joined for no-treatment patients (registry says treatment given but pipeline did not capture it)
 - [ ] **NOTX-05**: A "treatment observable" eligibility rule is proposed as a team decision item — the rule is not applied; output documents the proposed definition and counts affected patients
 - [x] **NOTX-06**: Comparison group = 4,450 confirmed-cohort patients with ≥1 treatment episode; every NOTX characteristic (NOTX-01 through NOTX-04) is reported for both groups side by side
-- [ ] **NOTX-07**: Styled xlsx (KEY leftmost, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression; R/88 section for Phase 203
+- [x] **NOTX-07**: Styled xlsx (KEY leftmost, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression; R/88 section for Phase 203
 
 ### MCAP — MED_ADMIN Name-Based Capture (Phase 204)
 
