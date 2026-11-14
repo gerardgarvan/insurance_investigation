@@ -1,8 +1,8 @@
 ---
 phase: 201-abvd-and-tumor-registry-lymphoma-flags-in-gantt-180
 plan: 02
-status: partial — awaiting Task 4 (HiPerGator R/88 run)
-completed_tasks: 3 of 5 (Tasks 1, 2, 3 done; Task 4 checkpoint; Task 5 drafted)
+status: complete
+completed_tasks: 5 of 5
 commits:
   - 3c1d1f4: "feat(201-02): update R/88 column checks 26->30 and add Section 15bd (ABVD-TR-201)"
   - e221ccd: "chore(201-02): update SCRIPT_INDEX R/142 entry to 30 columns, Phase 201 outputs"
@@ -34,17 +34,19 @@ ABVD-TR-201 occurrences: 43.
 
 R/142 entry updated: 30 columns; lists cols 24–26 (Phase 199) and cols 27–30 (Phase 201); notes `output/internal/tr_hl_not_in_gantt_180.csv`.
 
-## Task 4: HiPerGator run (PENDING — checkpoint)
+## Task 4: HiPerGator run (COMPLETE)
 
-After syncing, run:
+**Result:** FAILED: 9/1108 (3 skipped) — all 9 are pre-existing baseline FAILs. No new FAILs.
 
-```r
-module load R/4.5
-R --no-save
-source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
-```
+| Section | PASS | FAIL | SKIP |
+|---|---|---|---|
+| 15bb [c2] gantt_episodes_180 column count | PASS (30 cols) | 0 | — |
+| 15bc | 21 | 0 | — |
+| 15bd ABVD-TR-201 | 22 | 0 | — |
 
-Paste back the 15ba, 15bb, 15bc, 15bd tallies and the overall FAIL count. Expected: all four sections 0 FAIL; no new FAILs beyond the Phase 199 baseline of 9.
+[f3] `tr_hl_dx` blank for 7,557 patients — reported, not forced FAIL (per plan spec).
+
+Baseline FAILs (unchanged): 12 a/b-suffixed 192b_payer_type_probe.R; IMMU is_sct_conditioning_context + immuno_confidence; 30/32 Linkage Improvement sheet; SMOKE-165 [5] and [11]; AUTOIMMUNE-FLAG-192.2 [h3a-c].
 
 ---
 
@@ -97,6 +99,9 @@ Best, Gerard
 
 None. Plan executed as written.
 
-## Self-Check
+## Self-Check: PASSED
 
-Pending Task 4 (HiPerGator run). Will be completed on continuation.
+- R/88 15bd ABVD-TR-201: 22 PASS / 0 FAIL. No new FAILs vs baseline.
+- 15bb [c2] 30-column check: PASS.
+- AC handoff note drafted in this SUMMARY.
+- SCRIPT_INDEX updated.

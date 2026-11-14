@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: Executing Phase 201
-last_updated: "2026-11-14T01:06:04.370Z"
-last_activity: 2026-11-14 -- Phase 201 execution started
+status: Milestone complete
+last_updated: "2026-11-14T02:20:21.714Z"
+last_activity: 2026-11-14
 progress:
   total_phases: 192
-  completed_phases: 163
+  completed_phases: 164
   total_plans: 374
-  completed_plans: 373
+  completed_plans: 375
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 201 (abvd-and-tumor-registry-lymphoma-flags-in-gantt-episodes-180) — EXECUTING
-Plan: 1 of 2
+Phase: 201
+Plan: Not started
 Phase: 192 (draft-new-content) — COMPLETE 2026-10-28: all 3 plans done; AM-DRAFT.md with sourced sections for all MISMATCH/PARTIAL leads; verification 16/16 passed.
 Phase 192.3 COMPLETE 2026-11-04: all 3 plans done; R/181 produces 9-sheet workbook with SOURCE stratification; regression check passed on HiPerGator.
 Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01–04 complete):
@@ -42,7 +42,7 @@ Phase 193 (produce-updated-manual) — AUTOMATED-QA-PASSED 2026-11-05 (Plans 01�
     Required checks: file opens without repair; tracked changes visible attributed to Gerard Garvan;
     accept/reject works on a sample; c0/c1 replies show under Amy's comments; no layout damage.
 Phase 194 (reference-manual-regeneration) — COMPLETE 2026-11-06: all 4 plans done; R/89 rewrote with dynamic discovery, header parser, three-digit stage grouping, coverage gate; 8 scripts backfilled with five-field banners; docs/REFERENCE_MANUAL.md regeneration ready for HiPerGator.
-Last activity: 2026-11-13 - Completed quick task 261113-t4d: Fix R/142 Section 4C4 ABVD cross-tab crash
+Last activity: 2026-11-14
 
 ## Phase Map (v3.13)
 

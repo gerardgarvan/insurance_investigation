@@ -757,6 +757,16 @@ See `.planning/milestones/v3.9-ROADMAP.md` for full phase details.
 
 </details>
 
+### Phase 201: ABVD and Tumor-Registry Lymphoma Flags in gantt_episodes_180
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 200
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 201 to break down)
+
 ---
 
 <details>
