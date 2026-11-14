@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-last_updated: "2026-11-14T23:00:45.015Z"
+last_updated: "2026-11-14T23:04:42.899Z"
 last_activity: 2026-11-14
 progress:
   total_phases: 195
-  completed_phases: 164
-  total_plans: 381
-  completed_plans: 377
+  completed_phases: 165
+  total_plans: 384
+  completed_plans: 378
 ---
 
 # Project State
@@ -20,12 +20,12 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 202 — tumor-registry-treatment-sensitivity
+**Current focus:** Phase 203 — no-treatment-patient-characterization
 
 ## Current Position
 
-Phase: 202 (tumor-registry-treatment-sensitivity) — EXECUTING
-Plan: 3 of 3
+Phase: 203 (no-treatment-patient-characterization) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
 Last activity: 2026-11-14
 

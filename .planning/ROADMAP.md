@@ -992,7 +992,7 @@ Plans:
 
 ## Phases (v3.14)
 
-- [ ] **Phase 202: Tumor-Registry Treatment Sensitivity** -- Inspect TR columns, compare registry vs Gantt capture, deliver sensitivity workbook (TRVAL-01..07)
+- [x] **Phase 202: Tumor-Registry Treatment Sensitivity** -- Inspect TR columns, compare registry vs Gantt capture, deliver sensitivity workbook (TRVAL-01..07) (completed 2026-11-14)
 - [ ] **Phase 203: No-Treatment Patient Characterization** -- Side-by-side profile of 3,246 no-treatment vs 4,450 treated patients, with registry join and candidate eligibility rule (NOTX-01..07)
 - [ ] **Phase 204: MED_ADMIN Name-Based Capture** -- Add RAW_MEDADMIN_MED_NAME matching in R/26, rerun downstream chain, regression guard (MCAP-01..05)
 - [ ] **Phase 205: Regimen + Line-of-Therapy Engine** -- Date-level regimen dict + LOT counter, replaces R/28 `regimen_label` and Phase 201 relabel block; unit tests + Gantt regression guard (REGL-01..08)
@@ -1023,7 +1023,7 @@ Plans:
 **Plans**: 3 plans
 - [x] 202-01-PLAN.md — Schema probe (PENDING HIPERGATOR) + R/202 scaffold with IS_LOCAL guard, pin env vars, TR column constants, population join (denominator ≈600, footnote=121)
 - [x] 202-02-PLAN.md — Capture classification function + A_sensitivity, B_date_diff, C_by_source, D_by_year, PPV_reverse sheets + styled xlsx (KEY leftmost, UF colours)
-- [ ] 202-03-PLAN.md — R/88 SECTION 15be smoke checks + SCRIPT_INDEX registration + parse verification
+- [x] 202-03-PLAN.md — R/88 SECTION 15be smoke checks + SCRIPT_INDEX registration + parse verification
 
 ### Phase 203: No-Treatment Patient Characterization
 
@@ -1104,7 +1104,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 202. Tumor-Registry Treatment Sensitivity | 2/3 | In Progress|  |
+| 202. Tumor-Registry Treatment Sensitivity | 3/3 | Complete   | 2026-11-14 |
 | 203. No-Treatment Patient Characterization | 0/TBD | Not started | - |
 | 204. MED_ADMIN Name-Based Capture | 0/TBD | Not started | - |
 | 205. Regimen + Line-of-Therapy Engine | 0/TBD | Not started | - |
