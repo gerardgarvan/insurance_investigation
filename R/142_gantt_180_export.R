@@ -19,7 +19,7 @@
 #   - output/tables/cancer_summary.csv              (Phase 115: 7-day confirmed data)
 #
 # Outputs:
-#   - output/gantt_episodes_180.csv  (26 columns, same schema as gantt_episodes.csv + Phase 199 flags)
+#   - output/gantt_episodes_180.csv  (30 columns, same schema as gantt_episodes.csv + Phase 199 flags + Phase 201 ABVD/TR flags)
 #   - output/gantt_detail_180.csv    (14 columns, same schema as gantt_detail.csv)
 #
 # Requirements: EP-180-01, EP-180-02
@@ -88,7 +88,9 @@ EPISODES_SCHEMA <- c(
   # Phase 192.2: ICD-9/10 code system column (+1 column, now 23 total)
   "autoimmune_dx_code_system",
   # Phase 199: + immune_flag, ever_brentuximab, immune_flag_dx (+3 columns, now 26 total)
-  "immune_flag", "ever_brentuximab", "immune_flag_dx"
+  "immune_flag", "ever_brentuximab", "immune_flag_dx",
+  # Phase 201: + ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx (+4 columns, now 30 total)
+  "ever_abvd", "abvd_episode", "tr_hl_dx", "tr_nhl_dx"
 )
 
 DETAIL_SCHEMA <- c(
@@ -137,6 +139,10 @@ message(glue("  Loaded {format(nrow(episodes), big.mark = ',')} 180-day episode 
 assert_df_valid(episodes, "treatment_episodes_180",
   required_cols = c("patient_id", "treatment_type", "episode_start", "episode_stop"),
   script_name = "R/142")
+stopifnot(
+  "regimen_label missing from 180-day enriched RDS — rerun R/28 with p143 options" =
+    "regimen_label" %in% names(episodes)
+)
 
 detail <- readRDS(DETAIL_RDS)
 message(glue("  Loaded {format(nrow(detail), big.mark = ',')} 180-day detail rows"))
@@ -243,7 +249,8 @@ episodes_export <- episodes %>%
       patient_id, episode_number, treatment_type,
       cancer_category, is_hodgkin, cancer_link_method,
       code_type, source_table, sct_cross_use_flag,
-      episode_dx_codes, episode_dx_categories
+      episode_dx_codes, episode_dx_categories,
+      regimen_label
     ),
     by = c("patient_id", "episode_number", "treatment_type")
   ) %>%
@@ -259,7 +266,8 @@ episodes_export <- episodes %>%
     cancer_category, is_hodgkin, cancer_link_method,
     drug_group,
     code_type, source_table, sct_cross_use_flag,
-    episode_dx_codes, episode_dx_categories
+    episode_dx_codes, episode_dx_categories,
+    regimen_label
   )
 
 message(glue("  Built episodes_export: {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -392,7 +400,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         is_hodgkin = FALSE, cancer_link_method = "none", drug_group = "",
         code_type = "", source_table = "", sct_cross_use_flag = "",
         episode_dx_codes = NA_character_, episode_dx_categories = NA_character_,
-        episode_dx_7day_confirmed = ""
+        episode_dx_7day_confirmed = "",
+        regimen_label = NA_character_
       )
 
     if (!is.null(birth_dates)) {
@@ -416,7 +425,8 @@ if (file.exists(VALIDATED_DEATHS_RDS)) {
         cancer_category, is_hodgkin, cancer_link_method, drug_group,
         code_type, source_table, sct_cross_use_flag,
         episode_dx_codes, episode_dx_categories,
-        episode_dx_7day_confirmed, age_at_episode
+        episode_dx_7day_confirmed, age_at_episode,
+        regimen_label
       )
 
     death_detail <- death_data %>%
@@ -469,7 +479,8 @@ if (file.exists(COHORT_RDS)) {
         is_hodgkin = TRUE, cancer_link_method = "none", drug_group = "",
         code_type = "", source_table = "", sct_cross_use_flag = "",
         episode_dx_codes = NA_character_, episode_dx_categories = NA_character_,
-        episode_dx_7day_confirmed = ""
+        episode_dx_7day_confirmed = "",
+        regimen_label = NA_character_
       )
 
     if (!is.null(birth_dates)) {
@@ -493,7 +504,8 @@ if (file.exists(COHORT_RDS)) {
         cancer_category, is_hodgkin, cancer_link_method, drug_group,
         code_type, source_table, sct_cross_use_flag,
         episode_dx_codes, episode_dx_categories,
-        episode_dx_7day_confirmed, age_at_episode
+        episode_dx_7day_confirmed, age_at_episode,
+        regimen_label
       )
 
     hl_dx_detail <- hl_dx_data %>%
@@ -870,7 +882,217 @@ stopifnot(
   }
 }
 
+# --- SECTION 4C4: ABVD FLAGS (Phase 201) ---
+# Applied after Section 4D so drug_names tokens are already canonicalized.
+
+message("\n--- Section 4C4: ABVD episode flags ---")
+
+abvd_class <- classify_abvd_episode(episodes_export$drug_names, episodes_export$regimen_label)
+abvd_class[episodes_export$treatment_type != "Chemotherapy"] <- NA_character_
+episodes_export <- episodes_export |>
+  dplyr::mutate(
+    abvd_class   = abvd_class,
+    abvd_episode = abvd_class %in% c("ABVD", "AVD", "JCODE_ABVD")
+  ) |>
+  dplyr::group_by(patient_id) |>
+  dplyr::mutate(ever_abvd = any(abvd_episode)) |>
+  dplyr::ungroup()
+
+stopifnot(
+  "abvd_episode only on Chemotherapy rows" =
+    !any(episodes_export$abvd_episode & episodes_export$treatment_type != "Chemotherapy"),
+  "ever_abvd never NA" = !anyNA(episodes_export$ever_abvd)
+)
+
+# D-08 ABVD QC block
+{
+  chemo_ep <- episodes_export |> dplyr::filter(treatment_type == "Chemotherapy")
+  n_chemo      <- nrow(chemo_ep)
+  n_abvd_ep    <- sum(chemo_ep$abvd_class == "ABVD",       na.rm = TRUE)
+  n_avd_ep     <- sum(chemo_ep$abvd_class == "AVD",        na.rm = TRUE)
+  n_jcode_ep   <- sum(chemo_ep$abvd_class == "JCODE_ABVD", na.rm = TRUE)
+  n_plus_ep    <- sum(chemo_ep$abvd_class == "ABVD_PLUS",  na.rm = TRUE)
+  n_ever_abvd  <- dplyr::n_distinct(episodes_export$patient_id[episodes_export$ever_abvd])
+  # Patients whose earliest Chemotherapy episode has abvd_episode == TRUE
+  first_chemo <- episodes_export |>
+    dplyr::filter(treatment_type == "Chemotherapy") |>
+    dplyr::group_by(patient_id) |>
+    dplyr::slice_min(episode_start, n = 1L, with_ties = FALSE) |>
+    dplyr::ungroup()
+  n_first_abvd <- sum(first_chemo$abvd_episode, na.rm = TRUE)
+
+  message("\n  === D-08 QC: ABVD flags ===")
+  message(glue("  Chemotherapy episodes total:            {fmt_sup(n_chemo)}"))
+  message(glue("  abvd_class ABVD (full):                {fmt_sup(n_abvd_ep)}"))
+  message(glue("  abvd_class AVD (bleomycin-dropped):    {fmt_sup(n_avd_ep)}"))
+  message(glue("  abvd_class JCODE_ABVD (J-code path):  {fmt_sup(n_jcode_ep)}"))
+  message(glue("  abvd_class ABVD_PLUS (QC, excluded):  {fmt_sup(n_plus_ep)}"))
+  message(glue("  ever_abvd = TRUE patients:             {fmt_sup(n_ever_abvd)}"))
+  message(glue("  Patients with 1st Chemo = ABVD:        {fmt_sup(n_first_abvd)}"))
+
+  # Top added agents in ABVD_PLUS
+  if (n_plus_ep > 0) {
+    plus_rows <- chemo_ep |> dplyr::filter(abvd_class == "ABVD_PLUS")
+    added_agents <- plus_rows |>
+      dplyr::mutate(toks = strsplit(drug_names, ";")) |>
+      tidyr::unnest(toks) |>
+      dplyr::mutate(toks = trimws(toks)) |>
+      dplyr::filter(!(tolower(toks) %in% tolower(ABVD_COMPONENTS))) |>
+      dplyr::group_by(toks) |>
+      dplyr::summarise(n_pts = dplyr::n_distinct(patient_id), .groups = "drop") |>
+      dplyr::arrange(dplyr::desc(n_pts)) |>
+      dplyr::slice_head(n = 10L)
+    message("  ABVD_PLUS top added agents (by patient count):")
+    for (i in seq_len(nrow(added_agents)))
+      message(glue("    {added_agents$toks[i]}: {fmt_sup(added_agents$n_pts[i])}"))
+  }
+
+  # Cross-tab abvd_episode x regimen_label (Chemotherapy rows only)
+  ct_abvd <- table(
+    abvd_episode   = chemo_ep$abvd_episode,
+    regimen_label  = ifelse(is.na(chemo_ep$regimen_label), "(NA)", chemo_ep$regimen_label)
+  )
+  message("  Cross-tab abvd_episode x regimen_label (Chemotherapy rows):")
+  for (r in rownames(ct_abvd))
+    for (cc in colnames(ct_abvd))
+      message(glue("    abvd_episode={r}, regimen_label={cc}: {fmt_sup(ct_abvd[r, cc])}"))
+
+  # Top drug_names for disagreements: new TRUE, R/28 not ABVD
+  agree_miss <- chemo_ep |>
+    dplyr::filter(abvd_episode & (is.na(regimen_label) | regimen_label != "ABVD"))
+  if (nrow(agree_miss) > 0) {
+    top_miss <- agree_miss |>
+      dplyr::count(drug_names, sort = TRUE) |>
+      dplyr::slice_head(n = 10L)
+    message("  Top drug_names: new abvd_episode=TRUE, R/28 regimen_label != ABVD:")
+    for (i in seq_len(nrow(top_miss)))
+      message(glue("    n={fmt_sup(top_miss$n[i])}: {top_miss$drug_names[i]}"))
+  }
+}
+
+
+# --- SECTION 4C5: TUMOR-REGISTRY HL/NHL FLAGS (Phase 201) ---
+# Must sit after Section 4D: the across(where(is.character)) NA->blank conversion
+# runs in 4D so logical NAs survive to write.csv(na = "") as blank cells.
+
+message("\n--- Section 4C5: Tumor-registry HL/NHL flags ---")
+
+trf_full <- build_tr_lymphoma_flags(unique(episodes_export$patient_id))
+stopifnot(
+  "build_tr_lymphoma_flags: one row per patient" = !anyDuplicated(trf_full$patient_id),
+  "build_tr_lymphoma_flags: covers every patient" =
+    setequal(trf_full$patient_id, unique(episodes_export$patient_id))
+)
+
+n0 <- nrow(episodes_export)
+episodes_export <- dplyr::left_join(
+  episodes_export,
+  trf_full |> dplyr::select(patient_id, tr_present, tr_hl_dx, tr_nhl_dx),
+  by = "patient_id"
+)
+stopifnot(
+  "TR join must not change row count" = nrow(episodes_export) == n0,
+  "tr_hl_dx NA iff not in TR"  = all(is.na(episodes_export$tr_hl_dx)  == !episodes_export$tr_present),
+  "tr_nhl_dx NA iff not in TR" = all(is.na(episodes_export$tr_nhl_dx) == !episodes_export$tr_present)
+)
+
+# D-08 TR QC block
+{
+  pt_tr <- trf_full
+  n_tr_present  <- sum(pt_tr$tr_present, na.rm = TRUE)
+  n_hl_true  <- sum(pt_tr$tr_hl_dx  %in% TRUE)
+  n_hl_false <- sum(pt_tr$tr_hl_dx  %in% FALSE)
+  n_hl_na    <- sum(is.na(pt_tr$tr_hl_dx))
+  n_nhl_true  <- sum(pt_tr$tr_nhl_dx  %in% TRUE)
+  n_nhl_false <- sum(pt_tr$tr_nhl_dx  %in% FALSE)
+  n_nhl_na    <- sum(is.na(pt_tr$tr_nhl_dx))
+  n_both_true <- sum(pt_tr$tr_hl_dx %in% TRUE & pt_tr$tr_nhl_dx %in% TRUE)
+
+  message("\n  === D-08 QC: Tumor-registry flags ===")
+  message(glue("  tr_present patients (in TUMOR_REGISTRY_ALL): {fmt_sup(n_tr_present)}"))
+  message(glue("  tr_hl_dx  TRUE:  {fmt_sup(n_hl_true)}  FALSE: {fmt_sup(n_hl_false)}  NA: {fmt_sup(n_hl_na)}"))
+  message(glue("  tr_nhl_dx TRUE:  {fmt_sup(n_nhl_true)}  FALSE: {fmt_sup(n_nhl_false)}  NA: {fmt_sup(n_nhl_na)}"))
+  message(glue("  Both tr_hl_dx AND tr_nhl_dx TRUE: {fmt_sup(n_both_true)}"))
+  message("  CAVEAT: nhl_histology list is UNVERIFIED (D-05). Ship with caveat.")
+
+  # Cross-tab tr_hl_dx x patient-level any(is_hodgkin)
+  pt_hod <- episodes_export |>
+    dplyr::group_by(patient_id) |>
+    dplyr::summarise(any_is_hodgkin = any(is_hodgkin), .groups = "drop")
+  ct_trf <- pt_tr |>
+    dplyr::left_join(pt_hod, by = "patient_id") |>
+    dplyr::mutate(
+      tr_hl_label = dplyr::case_when(
+        is.na(tr_hl_dx)   ~ "NA",
+        tr_hl_dx          ~ "TRUE",
+        TRUE              ~ "FALSE"
+      )
+    )
+  message("  Cross-tab tr_hl_dx x any(is_hodgkin) (patient-level):")
+  for (th in c("TRUE", "FALSE", "NA"))
+    for (hh in c(TRUE, FALSE)) {
+      n_cell <- sum(ct_trf$tr_hl_label == th & ct_trf$any_is_hodgkin == hh, na.rm = TRUE)
+      message(glue("    tr_hl_dx={th}, any_is_hodgkin={hh}: {fmt_sup(n_cell)}"))
+    }
+
+  # D-05: unlisted lymphoid codes
+  unlist_lym <- attr(trf_full, "unlisted_lymphoid")
+  if (!is.null(unlist_lym) && nrow(unlist_lym) > 0) {
+    message("  D-201-03 Unlisted lymphoid codes (9590-9999, in neither HL nor NHL list):")
+    for (i in seq_len(nrow(unlist_lym)))
+      message(glue("    code={unlist_lym$code[i]}  n_patients={fmt_sup(unlist_lym$n_patients[i])}"))
+  } else {
+    message("  D-201-03: No unlisted lymphoid codes found.")
+  }
+}
+
+# D-06: TR-HL patients absent from gantt_episodes_180.csv
+{
+  tr_hl_all <- attr(trf_full, "tr_hl_ids_all")
+  gantt_ids <- unique(episodes_export$patient_id)
+  missing_ids <- setdiff(tr_hl_all, gantt_ids)
+
+  if (length(missing_ids) > 0) {
+    # Classify reason per missing ID
+    cohort_ids <- if (file.exists(COHORT_RDS)) {
+      hl_coh <- if (exists("hl_cohort")) hl_cohort else readRDS(COHORT_RDS)
+      hl_coh$ID
+    } else {
+      stop("COHORT_RDS not found — cannot classify absent TR-HL patients for D-06.")
+    }
+    hl_coh_full <- if (exists("hl_cohort")) hl_cohort else readRDS(COHORT_RDS)
+
+    reason_df <- dplyr::tibble(ID = missing_ids) |>
+      dplyr::mutate(
+        in_cohort     = ID %in% cohort_ids,
+        has_dx_date   = ID %in% hl_coh_full$ID[!is.na(hl_coh_full$first_hl_dx_date)],
+        reason = dplyr::case_when(
+          !in_cohort               ~ "r1_not_in_confirmed_cohort",
+          !has_dx_date             ~ "r2_in_cohort_no_dx_date_no_episodes",
+          TRUE                     ~ "r3_other"
+        )
+      )
+
+    n_r1 <- sum(reason_df$reason == "r1_not_in_confirmed_cohort")
+    n_r2 <- sum(reason_df$reason == "r2_in_cohort_no_dx_date_no_episodes")
+    n_r3 <- sum(reason_df$reason == "r3_other")
+
+    message(glue("  D-201-04: {fmt_sup(length(missing_ids))} TR-HL patients absent from gantt_episodes_180 — team decision needed"))
+    message(glue("    r1 (not in confirmed cohort):              {fmt_sup(n_r1)}"))
+    message(glue("    r2 (in cohort, no dx_date/no episodes):   {fmt_sup(n_r2)}"))
+    message(glue("    r3 (other):                               {fmt_sup(n_r3)}"))
+
+    out_absent <- file.path(CONFIG$output_dir, "internal", "tr_hl_not_in_gantt_180.csv")
+    readr::write_csv(reason_df |> dplyr::select(ID, reason), out_absent)
+    message(glue("  Wrote {out_absent}"))
+  } else {
+    message("  D-06: All TR-HL patients are present in gantt_episodes_180. No follow-up needed.")
+  }
+}
+
+
 # Column trimming — drop encounter_ids, cancer_link_method, ENCOUNTERID (same as R/52)
+# Phase 201: also drops regimen_label, abvd_class, tr_present (now 30 total)
 episodes_export <- episodes_export %>%
   select(
     patient_id, treatment_type, episode_number,
@@ -885,7 +1107,9 @@ episodes_export <- episodes_export %>%
     # Phase 192.2: code system label (+1 column, now 23 total)
     autoimmune_dx_code_system,
     # Phase 199: immune flag, brentuximab flag, immune dx labels (+3 columns, now 26 total)
-    immune_flag, ever_brentuximab, immune_flag_dx
+    immune_flag, ever_brentuximab, immune_flag_dx,
+    # Phase 201: ABVD and TR flags (+4 columns, now 30 total)
+    ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx
   )
 
 detail_export <- detail_export %>%
@@ -936,6 +1160,23 @@ if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
   }
 }
 
+if (Sys.getenv("RUN_PRE201_REGRESSION") == "TRUE") {
+  # PRE201 baseline: save the 26-column file before overwriting (keep-if-exists; re-run safe).
+  pre201 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE201.csv")
+  if (!file.exists(pre201)) {
+    if (file.exists(OUTPUT_EPISODES)) {
+      base_check201 <- read.csv(OUTPUT_EPISODES, nrows = 1)
+      stopifnot("PRE201 baseline must have 26 columns" = ncol(base_check201) == 26L)
+      file.copy(OUTPUT_EPISODES, pre201, overwrite = FALSE)
+      message(glue("  PRE201 baseline saved: {pre201}"))
+    } else {
+      message("  PRE201 baseline skipped: OUTPUT_EPISODES does not yet exist.")
+    }
+  } else {
+    message(glue("  PRE201 baseline exists (kept): {pre201}"))
+  }
+}
+
 write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -964,6 +1205,30 @@ Example diff (first mismatch):
   }
 }
 
+if (Sys.getenv("RUN_PRE201_REGRESSION") == "TRUE") {
+  # Phase 201 regression: verify columns 1-26 are unchanged vs PRE201 baseline.
+  if (exists("pre201") && file.exists(pre201)) {
+    message("\n--- Phase 201 regression check ---")
+    base_reg201 <- read.csv(pre201,          colClasses = "character")
+    new_reg201  <- read.csv(OUTPUT_EPISODES, colClasses = "character")
+    stopifnot(
+      "regression: row count unchanged"        = nrow(new_reg201)  == nrow(base_reg201),
+      "regression: col 1-26 names unchanged"   = identical(names(new_reg201)[1:26], names(base_reg201))
+    )
+    # Multiset comparison: sorted pasted rows of first 26 columns
+    base_rows201 <- sort(do.call(paste, base_reg201[, 1:26, drop = FALSE]))
+    new_rows201  <- sort(do.call(paste, new_reg201[,  1:26, drop = FALSE]))
+    if (!identical(base_rows201, new_rows201)) {
+      diffs201 <- which(base_rows201 != new_rows201)
+      stop(glue("Phase 201 regression FAIL: {length(diffs201)} row(s) differ in original 26 columns.
+Example diff (first mismatch):
+  PRE201: {base_rows201[diffs201[1]]}
+  NEW:    {new_rows201[diffs201[1]]}"))
+    }
+    message("Phase 201 regression: PASS (26 original columns unchanged)")
+  }
+}
+
 write.csv(detail_export, OUTPUT_DETAIL, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_DETAIL}"))
 message(glue("    {format(nrow(detail_export), big.mark = ',')} rows, {ncol(detail_export)} columns"))
@@ -983,6 +1248,7 @@ if (file.exists(ep90_path)) {
 }
 message(glue("  Episodes:  {OUTPUT_EPISODES}"))
 message(glue("  Detail:    {OUTPUT_DETAIL}"))
+message(glue("  Phase 201 columns 27-30: {paste(EPISODES_SCHEMA[27:30], collapse = ', ')}"))
 
 
 # Phase 143 D-04: fill-rate parity check
