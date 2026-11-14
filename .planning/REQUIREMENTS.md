@@ -8,8 +8,8 @@
 
 ### TRVAL — Tumor-Registry Treatment Sensitivity (Phase 202)
 
-- [ ] **TRVAL-01**: Analyst can inspect the actual column names and content of TR1/TR2/TR3 first-course treatment fields (chemo, radiation, immunotherapy, transplant summary + dates) before any comparison code is written
-- [ ] **TRVAL-02**: Denominator = TR HL patients present in gantt_episodes_180 (≈600). For each, pipeline compares registry "treatment given" flag + first-course date vs Gantt capture and classifies as: captured (exact/±30 d/±90 d), not captured, or no treatment in registry. The 121 TR-HL patients outside the confirmed cohort are reported as a separate "not in pipeline" row, not included in the sensitivity denominator.
+- [x] **TRVAL-01**: Analyst can inspect the actual column names and content of TR1/TR2/TR3 first-course treatment fields (chemo, radiation, immunotherapy, transplant summary + dates) before any comparison code is written
+- [x] **TRVAL-02**: Denominator = TR HL patients present in gantt_episodes_180 (≈600). For each, pipeline compares registry "treatment given" flag + first-course date vs Gantt capture and classifies as: captured (exact/±30 d/±90 d), not captured, or no treatment in registry. The 121 TR-HL patients outside the confirmed cohort are reported as a separate "not in pipeline" row, not included in the sensitivity denominator.
 - [ ] **TRVAL-03**: Sensitivity (% of TR-flagged treatments captured by pipeline) reported by treatment type (chemo, radiation, immunotherapy, transplant) with counts and date-difference distribution
 - [ ] **TRVAL-04**: Sensitivity stratified by SOURCE (partner site) and by diagnosis year (early vs late within study window)
 - [ ] **TRVAL-05**: Styled xlsx (KEY leftmost, A_sensitivity, B_date_diff, C_by_source, D_by_year, QC) with <11 suppression on all patient counts

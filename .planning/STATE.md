@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.14
-milestone_name: HL Treatment Detection Quality
-status: Defining requirements
-last_updated: "2026-11-14T00:00:00.000Z"
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: executing
+last_updated: "2026-11-14T22:57:51.458Z"
 last_activity: 2026-11-14
 progress:
-  total_phases: 201
-  completed_phases: 201
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 195
+  completed_phases: 164
+  total_plans: 381
+  completed_plans: 376
 ---
 
 # Project State
@@ -20,14 +20,14 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 201 — abvd-and-tumor-registry-lymphoma-flags-in-gantt-episodes-180
+**Current focus:** Phase 202 — tumor-registry-treatment-sensitivity
 
 ## Current Position
 
-Phase: 202 (ready to plan)
-Plan: —
-Status: Roadmap defined -- ready for /gsd:plan-phase 202
-Last activity: 2026-11-14 -- Milestone v3.14 roadmap created
+Phase: 202 (tumor-registry-treatment-sensitivity) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-11-14
 
 ## Prior Position (v3.13 final)
 

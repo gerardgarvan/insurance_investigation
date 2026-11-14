@@ -1021,7 +1021,7 @@ Plans:
   4. Reverse/PPV sheet reports, for each pipeline-captured treatment type, what fraction have a matching registry record
   5. R/88 smoke-test section exits 0: script file exists, workbook present, KEY leftmost, all five content sheets present, suppression confirmed
 **Plans**: 3 plans
-- [ ] 202-01-PLAN.md — Schema probe (PENDING HIPERGATOR) + R/202 scaffold with IS_LOCAL guard, pin env vars, TR column constants, population join (denominator ≈600, footnote=121)
+- [x] 202-01-PLAN.md — Schema probe (PENDING HIPERGATOR) + R/202 scaffold with IS_LOCAL guard, pin env vars, TR column constants, population join (denominator ≈600, footnote=121)
 - [ ] 202-02-PLAN.md — Capture classification function + A_sensitivity, B_date_diff, C_by_source, D_by_year, PPV_reverse sheets + styled xlsx (KEY leftmost, UF colours)
 - [ ] 202-03-PLAN.md — R/88 SECTION 15be smoke checks + SCRIPT_INDEX registration + parse verification
 
@@ -1104,7 +1104,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 202. Tumor-Registry Treatment Sensitivity | 0/TBD | Not started | - |
+| 202. Tumor-Registry Treatment Sensitivity | 1/3 | In Progress|  |
 | 203. No-Treatment Patient Characterization | 0/TBD | Not started | - |
 | 204. MED_ADMIN Name-Based Capture | 0/TBD | Not started | - |
 | 205. Regimen + Line-of-Therapy Engine | 0/TBD | Not started | - |
