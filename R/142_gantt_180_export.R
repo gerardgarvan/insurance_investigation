@@ -950,7 +950,7 @@ stopifnot(
   # Cross-tab abvd_episode x regimen_label (Chemotherapy rows only)
   ct_abvd <- table(
     abvd_episode   = chemo_ep$abvd_episode,
-    regimen_label  = ifelse(is.na(chemo_ep$regimen_label), "(NA)", chemo_ep$regimen_label)
+    regimen_label  = ifelse(is.na(chemo_ep$regimen_label) | chemo_ep$regimen_label == "", "(none)", chemo_ep$regimen_label)
   )
   message("  Cross-tab abvd_episode x regimen_label (Chemotherapy rows):")
   for (r in rownames(ct_abvd))
