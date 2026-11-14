@@ -974,13 +974,21 @@ Plans:
 ### Phase 199: Immune and Brentuximab Flags in gantt_episodes_180
 **Goal**: Add three patient-level columns to gantt_episodes_180.csv (cols 24–26): `immune_flag` (ever Rituximab or Methotrexate AND ever dx M05, M06, M31.3, M31.7, L10.0 / 714.0, 714.1, 714.2, 714.8x, 714.9, 446.4, 446.0, 694.4), `ever_brentuximab`, and `immune_flag_dx` (plain-language qualifying diagnoses when immune_flag is TRUE). Logic lives in R/142.
 **Depends on**: Phase 198
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
+- [ ] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
+- [ ] 205-03-PLAN.md — Per-patient LOT output (output/internal/), reconciliation table, Gantt regression guard, R/88 SMOKE-205-01
 Plans:
 
 ### Phase 200: Immunotherapy MED_ADMIN DISPENSING capture fix
 **Goal**: Fix extract_immunotherapy_dates_with_codes() in R/26, which currently filters MED_ADMIN and DISPENSING on RXNORM_CUI — a column neither table has — so immunotherapy never reads those tables. Switch to get_chemo_hits()-style matching (MEDADMIN_CODE/MEDADMIN_TYPE for MED_ADMIN; NDC→RxNorm crosswalk for DISPENSING) against immunotherapy_rxnorm; add rituximab RxNorm codes and biosimilar HCPCS Q5115/Q5119/Q5123 to the treatment code lists; report before/after counts by drug; rerun R/26 → R/28 → R/29 → R/52 → R/142 and dependent outputs.
 **Depends on**: Phase 199
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
+- [ ] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
+- [ ] 205-03-PLAN.md — Per-patient LOT output (output/internal/), reconciliation table, Gantt regression guard, R/88 SMOKE-205-01
 Plans:
 
 
@@ -1072,7 +1080,11 @@ Plans:
   3. Regression check on gantt_episodes (90-day) and gantt_episodes_180 (180-day) confirms all pre-Phase-204 columns are byte-identical; any deviation halts the script
   4. The QC MED_NAME list (record counts, patient counts, suppressed to <11) is produced for manual review; script halts automatically if a name string maps to an unexpected drug family
   5. R/88 checks confirm name-based capture logic is present and the regression guard is active
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
+- [ ] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
+- [ ] 205-03-PLAN.md — Per-patient LOT output (output/internal/), reconciliation table, Gantt regression guard, R/88 SMOKE-205-01
 
 ### Phase 205: Regimen + Line-of-Therapy Engine
 
@@ -1098,7 +1110,11 @@ Plans:
   3. R/28 `regimen_label` column and the Phase 201 relabel block in R/142 are removed; no duplicate labeling path remains in the pipeline
   4. Reconciliation table (REGL-05) is present in phase output: for every episode the Phase 205 `regimen_label` and Phase 201 `abvd_class` are shown side by side; discrepancies are listed
   5. Per-patient output/internal/ file exists with columns for line-1 regimen, line-1 start date, N lines, and per-line regimen; Gantt regression guard confirms all pre-Phase-205 columns are unchanged; R/88 section exits 0
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 205-01-PLAN.md — Regimen dictionary + LOT engine in R/utils/utils_regimen.R (new utility; unit tests)
+- [ ] 205-02-PLAN.md — Wire engine into R/28 (replace regimen_label) + remove Phase 201b relabel block from R/142
+- [ ] 205-03-PLAN.md — Per-patient LOT output (output/internal/), reconciliation table, Gantt regression guard, R/88 SMOKE-205-01
 
 ## Progress Table (v3.14)
 
