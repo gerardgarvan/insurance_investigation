@@ -139,13 +139,14 @@ classify_codes <- function(codes) {
 #' string (already canonicalized by canonicalize_drug_name). `regimen_label_r28`
 #' is R/28's regimen_label (used only for the J-code fallback).
 #'
-#' Rules (D-01 in 201-CONTEXT.md):
+#' Rules (D-01 in 201-CONTEXT.md; broadened in Phase 201b):
 #'   ABVD       — all four components, no excluding drug, n_families <= 4
 #'   AVD        — Doxorubicin + Vinblastine + Dacarbazine, no Bleomycin and no
 #'                excluding drug, n_families <= 3
 #'   JCODE_ABVD — blank drug_names AND regimen_label_r28 == "ABVD" (J-code path)
-#'   ABVD_PLUS  — all four components present but fails n <= 4 or has an excluding
-#'                drug (QC marker; not counted as abvd_episode)
+#'   ABVD_PLUS  — Dox+Vin+Dac present (Bleomycin optional) plus at least one
+#'                non-component drug other than Brentuximab/Nivolumab (QC marker;
+#'                not counted as abvd_episode). BV+AVD and Nivo+AVD remain NA.
 #'   NA         — none of the above
 #'
 #' Drug-family matching is case-insensitive prefix so stray salt/brand variants
@@ -153,7 +154,9 @@ classify_codes <- function(codes) {
 #'
 #' @param drug_names Character vector of semicolon-separated canonical drug names
 #' @param regimen_label_r28 Character vector of R/28 regimen labels (NA allowed)
-#' @return Character vector of classification labels (same length as drug_names)
+#' @return Character vector: "ABVD" | "AVD" | "JCODE_ABVD" | "ABVD_PLUS" | NA_character_.
+#'   ABVD_PLUS — Dox+Vin+Dac present (Bleomycin optional) plus at least one
+#'   non-component drug other than Brentuximab/Nivolumab.
 classify_abvd_episode <- function(drug_names, regimen_label_r28) {
   stopifnot(length(drug_names) == length(regimen_label_r28))
 
@@ -204,9 +207,14 @@ classify_abvd_episode <- function(drug_names, regimen_label_r28) {
 
     if (all_four) {
       if (!has_excl && n_fam <= 4L) return("ABVD")
-      return("ABVD_PLUS")  # all four but fails clean ABVD criteria (QC only)
+      if (!has_excl) return("ABVD_PLUS")  # all 4 cores + extra non-excl drug
+      return(NA_character_)               # has BV or Nivo — BV+ABVD follows R/28 rules
     }
-    if (has_dox && has_vin && has_dac && !has_bleo && !has_excl && n_fam <= 3L) return("AVD")
+    # Three-core (Dox+Vin+Dac), Bleomycin absent
+    if (has_dox && has_vin && has_dac && !has_bleo && !has_excl) {
+      if (n_fam <= 3L) return("AVD")
+      return("ABVD_PLUS")  # three cores + extra non-excl drug (Bleomycin optional per spec)
+    }
     NA_character_
   }, character(1))
 }

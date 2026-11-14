@@ -73,6 +73,42 @@ test_that("non-ABVD regimen (CHOP-like) -> NA", {
   expect_true(is.na(result))
 })
 
+test_that("AVD + extra non-excl drug (Rituximab) -> ABVD_PLUS", {
+  # T-NEW-1: three cores + extra non-BV/Nivo drug, no Bleomycin
+  result <- classify_abvd_episode(
+    "Dacarbazine;Doxorubicin;Rituximab;Vinblastine",
+    NA_character_
+  )
+  expect_equal(result, "ABVD_PLUS")
+})
+
+test_that("BV+AVD (no Bleo, has BV) -> NA", {
+  # T-NEW-2: regression — BV+AVD was NA before, stays NA after broadening
+  result <- classify_abvd_episode(
+    "Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine",
+    NA_character_
+  )
+  expect_true(is.na(result))
+})
+
+test_that("Nivo+AVD -> NA", {
+  # T-NEW-3: Nivolumab+AVD (no Bleo, has excl) -> NA
+  result <- classify_abvd_episode(
+    "Dacarbazine;Doxorubicin;Nivolumab;Vinblastine",
+    NA_character_
+  )
+  expect_true(is.na(result))
+})
+
+test_that("ABVD+BV -> NA (5 families but has_excl; not ABVD_PLUS)", {
+  # T-NEW-4: all four ABVD components + BV (has_excl=TRUE) -> NA
+  result <- classify_abvd_episode(
+    "Bleomycin;Brentuximab Vedotin;Dacarbazine;Doxorubicin;Vinblastine",
+    NA_character_
+  )
+  expect_true(is.na(result))
+})
+
 test_that("vectorized over multiple rows", {
   drug_vec <- c(
     "Bleomycin;Dacarbazine;Doxorubicin;Vinblastine",
