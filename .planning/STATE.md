@@ -178,6 +178,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261114-m8m | R/88 15bb [c2] and 15bc [c1] updated 30->32 columns; R/142 Section 4C4 adds per-abvd_class and ever_abvd_plus patient counts (fmt_sup) | 2026-11-14 | 54eaa27 | [261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q](./quick/261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q/) |
 | 261114-mch | Phase 201 fix: date-level BV+AVD / Nivo+AVD relabel in R/142 (admin-date window ±7d); ABVD_CONCURRENT_WINDOW_DAYS config constant; R/88 15bd BV+AVD/Nivo+AVD value set, [d5]/[d6], PRE201B cols 1-26 regression | 2026-11-14 | d4e80b6 | [261114-mch-phase-201-fix-detect-bv-avd-and-nivo-avd](./quick/261114-mch-phase-201-fix-detect-bv-avd-and-nivo-avd/) |
 | 261114-mpi | Remove RUN_PRE201B_REGRESSION block from R/142 (stopifnot always fails: 32-col output vs 30-col guard); rely on PRE201 26-col baseline | 2026-11-14 | 0716960 | [261114-mpi-r142-remove-pre201b-regression-block-use](./quick/261114-mpi-r142-remove-pre201b-regression-block-use/) |
+| 261114-15bd | Remove stale [PRE201B] cols-1-26 check from R/88 15bd (file absent skip + live block); R/142 PRE201 regression covers it | 2026-11-14 | cbb152b | R/88_smoke_test_comprehensive.R |
 
 ## Session Continuity
 
