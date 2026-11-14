@@ -1,94 +1,88 @@
-# Requirements — v3.13 Analytic Manual Fill-out and Verification
+# Requirements — v3.14 HL Treatment Detection Quality
 
-**Milestone goal:** Bring `AnalyticManual_2026.01.30.docx` up to date with the work done in this repo. Every existing statement is checked against code and given a verdict. Every empty section the repo can answer is drafted from code, config, planning decisions, and team meeting notes. The result is a reviewed new version of the manual and an evidence workbook tying each statement to its code source.
-
----
-
-## v1 Requirements
-
-### Evidence Mapping (Phase 190)
-
-- [x] **AM-MAP-01**: Every manual item (including both Amy comments c0/c1) mapped to repo evidence with a status: `FILLED-NEEDS-CHECK`, `EMPTY-REPO-CAN-ANSWER`, `EMPTY-NEEDS-TEAM`, or `OUT-OF-SCOPE`
-- [x] **AM-MAP-02**: Repo domains not yet mentioned in the manual identified for addition — including single-health-system flag, MED_ADMIN/DISPENSING chemo detection with NDC→RxNorm, drug-name normalization, first-line regimens, treatment episodes, anthracycline exposure, CBC definition, rurality (RUCA/RUCC), SDI, diagnoses of interest, HL vs NHL classification, and post-death encounters
-- [x] **AM-MAP-03**: Team decisions mined from `TeamMtgNotes2026.docx` and all phase CONTEXT.md files; OneFLquestions document status recorded (D-190-01)
-
-### Verification (Phase 191)
-
-- [x] **AM-VER-01**: Every `FILLED-NEEDS-CHECK` row from Phase 190 has a verdict (`MATCH`, `MISMATCH`, `PARTIAL`, or `CANNOT-VERIFY`) with evidence citation (script + function + line, or CONFIG key, or decision ID)
-- [x] **AM-VER-02**: Amy's comments c0 and c1 and the Insurance "Gerard to confirm" item each have an explicit answer
-- [x] **AM-VER-03**: Each `MISMATCH` recorded as a team decision row (D-191-NN) — neither code nor manual text changed in this milestone
-- [x] **AM-VER-04**: Verification script (`R/NNN_am_verification.R`) runs read-only HiPerGator queries for leads L1–L6; L5/L7/L8/L9 covered by code-reading citations; outputs `am_verification_<date>.xlsx` (KEY leftmost, one sheet per check, QC)
-
-### Draft New Content (Phase 192)
-
-- [x] **AM-FILL-01**: Front matter (§0), §1 Data Ingest & Change Log, §2 Cohort, §3 Decision Log drafted where the repo has a source; every statement tagged with its source
-- [x] **AM-FILL-02**: New §4 domains drafted in the manual's format (Expected structure / Observed issues / Cleaning rules applied / Unresolved issues) for each `EMPTY-REPO-CAN-ANSWER` domain from Phase 190
-- [x] **AM-FILL-03**: §5 EHR vs Claims, §7 Status Tracker, §8 Parking Lot (parked D-IDs from STATE.md), §11 Known Limitations drafted where repo has a source; §6 technical checks annotated with script evidence, sign-off boxes untouched
-- [x] **AM-FILL-04**: Every Phase 191 `MISMATCH` appears in §8 as an open question, not as resolved text
-
-### Updated Manual (Phase 193)
-
-- [x] **AM-DOC-01**: New versioned manual copy (`AnalyticManual_<YYYY.MM.DD>.docx`) with all Phase 192 content inserted as Word tracked changes authored "Gerard Garvan", each with a comment citing evidence; original file untouched
-- [x] **AM-DOC-02**: Amy's existing comments replied to with Phase 191 answers; document version and "Date last updated" field updated
-- [ ] **AM-DOC-03**: Evidence workbook exported as `am_evidence_<date>.xlsx` (KEY leftmost; columns: AM section, item, manual text, verdict/status, repo source, decision ID, notes); no counts 1–10 unsuppressed; no patient IDs in the document
-
-### Team Review and Close-out (Phase 194)
-
-- [ ] **AM-TEAM-01**: Cover email to Amy (cc Erin, Ray) drafted: what was filled, what was confirmed, each mismatch needing a team decision, items needing MPI input; signed "Best, Gerard"
-- [ ] **AM-TEAM-02**: Team-decision rows current (D-190-01, D-190-02, D-193-01, all D-191-NN); code changes if any scheduled for a later milestone
-- [ ] **AM-TEAM-03**: Verification script listed in R/SCRIPT_INDEX.md. If added to the pipeline, also registered in R/39 and structural checks added to R/88; R/88 passes on HiPerGator. If kept standalone, no R/39 or R/88 change required.
-
-### Autoimmune Diagnosis Flags (Phase 192.1)
-
-- [x] **AUTOIMMUNE-FLAG-01**: `AUTOIMMUNE_DX_CODES` constant added to `R/00_config.R` Section 4c with ICD-10 and ICD-9 sub-lists, every code verified against CMS GEM files; `AUTOIMMUNE_DX_TYPE_ACCEPT` constant added listing observed DX_TYPE values
-- [x] **AUTOIMMUNE-FLAG-02**: `is_autoimmune_code()`, `summarise_autoimmune_dx()` (pure, in-memory), and `build_autoimmune_dx_flags()` (DuckDB wrapper) implemented in `R/utils/utils_doi.R`; mirroring the HL flag/date rule for sentinel and date handling
-- [x] **AUTOIMMUNE-FLAG-03**: `has_autoimmune_dx` (logical, never NA) and `first_autoimmune_dx_date` (Date) appended as the final two columns to `gantt_episodes.csv` (R/52) and `gantt_episodes_180.csv` (R/142); original row count, column order, and values unchanged (D-08 comparison passes)
-- [x] **AUTOIMMUNE-FLAG-04**: R/170 handles D-09 re-pin or join branch; chemo-combos key check recorded in QC; R/88 checks cover both columns in all inventoried outputs
-- [x] **AUTOIMMUNE-FLAG-05**: testthat fixtures in `tests/testthat/test_autoimmune_flags.R` pass on HiPerGator; 0 failures covering all specified cases (no-qualifying, ICD-10, ICD-9, DX_TYPE gating, earliest-date, sentinel, ADMIT_DATE fallback, join invariants)
+**Milestone goal:** Validate pipeline treatment-capture sensitivity against the tumor registry, characterize confirmed-cohort patients with no captured treatment, close the MED_ADMIN name-based capture gap in R/26, and replace R/28 `regimen_label` with a date-level regimen + line-of-therapy engine covering all treatment types.
 
 ---
 
-## Future Requirements
+## Active Requirements
 
-- Incorporating team responses and agreed-upon code corrections — once D-191-NN decisions are made, scheduled for a later milestone
-- Treatment-window and relapse rules (pending Sharon)
-- Sign-off sections (§6 boxes) — filled by biostatistician and MPI, not in scope for this milestone
+### TRVAL — Tumor-Registry Treatment Sensitivity (Phase 202)
+
+- [ ] **TRVAL-01**: Analyst can inspect the actual column names and content of TR1/TR2/TR3 first-course treatment fields (chemo, radiation, immunotherapy, transplant summary + dates) before any comparison code is written
+- [ ] **TRVAL-02**: Denominator = TR HL patients present in gantt_episodes_180 (≈600). For each, pipeline compares registry "treatment given" flag + first-course date vs Gantt capture and classifies as: captured (exact/±30 d/±90 d), not captured, or no treatment in registry. The 121 TR-HL patients outside the confirmed cohort are reported as a separate "not in pipeline" row, not included in the sensitivity denominator.
+- [ ] **TRVAL-03**: Sensitivity (% of TR-flagged treatments captured by pipeline) reported by treatment type (chemo, radiation, immunotherapy, transplant) with counts and date-difference distribution
+- [ ] **TRVAL-04**: Sensitivity stratified by SOURCE (partner site) and by diagnosis year (early vs late within study window)
+- [ ] **TRVAL-05**: Styled xlsx (KEY leftmost, A_sensitivity, B_date_diff, C_by_source, D_by_year, QC) with <11 suppression on all patient counts
+- [ ] **TRVAL-06**: Reverse direction (agreement / PPV-style): for pipeline-captured treatment episodes of each type, report what fraction have a matching registry record of that type — by treatment type
+- [ ] **TRVAL-07**: R/88 section for Phase 202: script exists, workbook KEY leftmost, expected sheets present, suppression applied
+
+### NOTX — No-Treatment Characterization (Phase 203)
+
+- [ ] **NOTX-01**: For each no-treatment patient (≈3,246), whether first_hl_dx_date falls before the data window (enrollment start / first encounter)
+- [ ] **NOTX-02**: Count of encounters within ±90 days of first_hl_dx_date, reported for no-treatment patients
+- [ ] **NOTX-03**: No-treatment patients characterized by: single_source_care flag (R/169), SOURCE (partner site), payer category, far_from_care_100mi, age group at diagnosis, NLPHL vs cHL
+- [ ] **NOTX-04**: Registry treatment fields from Phase 202 joined for no-treatment patients (registry says treatment given but pipeline did not capture it)
+- [ ] **NOTX-05**: A "treatment observable" eligibility rule is proposed as a team decision item — the rule is not applied; output documents the proposed definition and counts affected patients
+- [ ] **NOTX-06**: Comparison group = 4,450 confirmed-cohort patients with ≥1 treatment episode; every NOTX characteristic (NOTX-01 through NOTX-04) is reported for both groups side by side
+- [ ] **NOTX-07**: Styled xlsx (KEY leftmost, A_profile, B_reasons_waterfall, C_by_source, D_candidate_rules, QC) with <11 suppression; R/88 section for Phase 203
+
+### MCAP — MED_ADMIN Name-Based Capture (Phase 204)
+
+- [ ] **MCAP-01**: R/26 adds name-based capture from RAW_MEDADMIN_MED_NAME alongside existing code-based capture, using DRUG_NAME_ALIASES canonicalization; source tagged as "MED_ADMIN_NAME"
+- [ ] **MCAP-02**: Before/after counts per drug (minimum: rituximab, brentuximab, MTX) for administrations gained by name-based capture
+- [ ] **MCAP-03**: All downstream scripts rerun: R/28→R/29→R/52 (90-day Gantt) and R/142 (180-day Gantt); unchanged columns match pre-Phase-204 values in a regression check on both outputs
+- [ ] **MCAP-04**: R/88 checks added for name-based capture and regression guard; output/internal/ before/after RDS snapshots written
+- [ ] **MCAP-05**: QC list of distinct RAW_MEDADMIN_MED_NAME strings newly matched per drug (with record/patient counts, suppressed to <11) for manual review of false positives (order text, non-HL formulations); script stops for review if any unexpected drug family appears
+
+### REGL — Regimen + Line-of-Therapy Engine (Phase 205)
+
+- [ ] **REGL-01**: A regimen dictionary exists in R/00_config.R covering: ABVD, AVD, BV+AVD, Nivo+AVD, BEACOPP/escBEACOPP, pediatric (ABVE-PC/OEPA-COPDAC/BV-AVEPC), NLPHL (R-CHOP/R-CVP/rituximab mono), salvage (ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembrolizumab/nivolumab mono), BV consolidation, Other
+- [ ] **REGL-02**: Concurrency window for same-regimen drug co-occurrence is a named config constant (default ±7 days)
+- [ ] **REGL-03**: Line-of-therapy counter assigned per patient: new line when a new non-maintenance drug class starts after a configurable gap or after SCT
+- [ ] **REGL-04**: Engine operates on per-date administrations across Chemotherapy AND Immunotherapy treatment types (not limited to one treatment_type); SCT dates are used for the LOT rule; R/28 `regimen_label` and the Phase 201 relabel block in R/142 are both replaced
+- [ ] **REGL-05**: Reconciliation table compares Phase 205 `regimen_label` values vs Phase 201 `abvd_class` values across all episodes
+- [ ] **REGL-06**: Open team decisions logged in phase output: SME regimen list confirmation, gap length between lines, BV consolidation classification, NLPHL regimen handling
+- [ ] **REGL-07**: Per-patient internal output (RDS + CSV in output/internal/): line-1 regimen, line-1 start date, number of lines, regimen per line
+- [ ] **REGL-08**: Gantt schema change guarded by regression on all pre-Phase-205 columns; R/88 section for Phase 205; unit tests for regimen dictionary + LOT rule on synthetic patients
+
+---
+
+## Ground Rules (all phases)
+
+- No change to cohort membership in any phase
+- Phases 202 and 203 can run in parallel (no dependency between them)
+- Phase 204 must precede Phase 205 (205 consumes updated treatment episodes)
+- R/88 structural checks required in every phase
+- Patient counts 1–10 → `"<11"` in every output
+- KEY sheet leftmost in all xlsx workbooks
+- UF colors: `#0021A5` (blue), `#FA4616` (orange)
+- Runtime: HiPerGator interactive R/4.5; local edits first, sync to HiPerGator for pipeline runs
+
+---
+
+## Future Requirements (deferred)
+
+- D-201-04: 121 TR-HL patients absent from confirmed_hl_cohort.rds — cohort-definition decision, not in scope for v3.14
+- Application of "treatment observable" eligibility rule to cohort (dependent on team decision from NOTX-05)
+- Multi-line therapy sequencing beyond LOT counter (requires episode boundary formalization)
 
 ---
 
 ## Out of Scope
 
-- Changing pipeline logic to match the manual or vice versa — mismatch → team decision → later milestone
-- Filling grant number, project title, or PI/co-I fields without a source in the repo or meeting notes
-- Treatment-window and relapse rules (still pending Sharon's input)
-- Statistical modeling or new analysis output
-- Any new R scripts beyond the verification script (Phase 191); no new numbered analysis scripts
+- D-201-04 / any cohort-membership change — cohort is fixed for this milestone
+- Applying the NOTX eligibility rule — proposed only, team decides
+- Changing 7-day confirmation logic (cancer_summary_table gap criterion unchanged)
+- Changes to payer classification, distance calculation, or survivorship logic
+- Publication-ready figure formatting
 
 ---
 
 ## Traceability
 
-| REQ-ID | Phase | Notes |
-|--------|-------|-------|
-| AM-MAP-01 | 190 | Manual items → evidence map |
-| AM-MAP-02 | 190 | Unlisted repo domains |
-| AM-MAP-03 | 190 | Team decisions + meeting notes |
-| AM-VER-01 | 191 | Verdicts for all FILLED items |
-| AM-VER-02 | 191 | Amy's c0/c1 and Insurance question answered |
-| AM-VER-03 | 191 | Mismatches → D-191-NN |
-| AM-VER-04 | 191 | Verification script + workbook |
-| AM-FILL-01 | 192 | §0/§1/§2/§3 drafted |
-| AM-FILL-02 | 192 | New §4 domains |
-| AM-FILL-03 | 192 | §5/§6/§7/§8/§11 |
-| AM-FILL-04 | 192 | Mismatches in §8 only |
-| AM-DOC-01 | 193 | Tracked-change .docx |
-| AM-DOC-02 | 193 | Amy comments replied to |
-| AM-DOC-03 | 193 | Evidence workbook |
-| AM-TEAM-01 | 194 | Cover email |
-| AM-TEAM-02 | 194 | Decision rows current |
-| AM-TEAM-03 | 194 | SCRIPT_INDEX always; R/39 + R/88 only if pipeline-registered |
-| AUTOIMMUNE-FLAG-01 | 192.1 | Config constant with verified ICD codes + DX_TYPE |
-| AUTOIMMUNE-FLAG-02 | 192.1 | Helper functions in utils_doi.R |
-| AUTOIMMUNE-FLAG-03 | 192.1 | Gantt column injection + D-08 verification |
-| AUTOIMMUNE-FLAG-04 | 192.1 | R/170 re-pin/join branch + R/88 checks |
-| AUTOIMMUNE-FLAG-05 | 192.1 | testthat fixtures pass on HiPerGator |
+| REQ-ID | Phase | Plan(s) |
+|--------|-------|---------|
+| TRVAL-01..07 | 202 | TBD |
+| NOTX-01..07  | 203 | TBD |
+| MCAP-01..05  | 204 | TBD |
+| REGL-01..08  | 205 | TBD |
