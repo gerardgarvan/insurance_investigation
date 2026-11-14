@@ -30,20 +30,20 @@
 
 - [x] **MCAP-01**: R/26 adds name-based capture from RAW_MEDADMIN_MED_NAME alongside existing code-based capture, using DRUG_NAME_ALIASES canonicalization; source tagged as "MED_ADMIN_NAME"
 - [x] **MCAP-02**: Before/after counts per drug (minimum: rituximab, brentuximab, MTX) for administrations gained by name-based capture
-- [ ] **MCAP-03**: All downstream scripts rerun: R/28→R/29→R/52 (90-day Gantt) and R/142 (180-day Gantt); unchanged columns match pre-Phase-204 values in a regression check on both outputs
-- [ ] **MCAP-04**: R/88 checks added for name-based capture and regression guard; output/internal/ before/after RDS snapshots written
+- [x] **MCAP-03**: All downstream scripts rerun: R/28→R/29→R/52 (90-day Gantt) and R/142 (180-day Gantt); unchanged columns match pre-Phase-204 values in a regression check on both outputs
+- [x] **MCAP-04**: R/88 checks added for name-based capture and regression guard; output/internal/ before/after RDS snapshots written
 - [x] **MCAP-05**: QC list of distinct RAW_MEDADMIN_MED_NAME strings newly matched per drug (with record/patient counts, suppressed to <11) for manual review of false positives (order text, non-HL formulations); script stops for review if any unexpected drug family appears
 
 ### REGL — Regimen + Line-of-Therapy Engine (Phase 205)
 
-- [ ] **REGL-01**: A regimen dictionary exists in R/00_config.R covering: ABVD, AVD, BV+AVD, Nivo+AVD, BEACOPP/escBEACOPP, pediatric (ABVE-PC/OEPA-COPDAC/BV-AVEPC), NLPHL (R-CHOP/R-CVP/rituximab mono), salvage (ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembrolizumab/nivolumab mono), BV consolidation, Other
-- [ ] **REGL-02**: Concurrency window for same-regimen drug co-occurrence is a named config constant (default ±7 days)
-- [ ] **REGL-03**: Line-of-therapy counter assigned per patient: new line when a new non-maintenance drug class starts after a configurable gap or after SCT
+- [x] **REGL-01**: A regimen dictionary exists in R/00_config.R covering: ABVD, AVD, BV+AVD, Nivo+AVD, BEACOPP/escBEACOPP, pediatric (ABVE-PC/OEPA-COPDAC/BV-AVEPC), NLPHL (R-CHOP/R-CVP/rituximab mono), salvage (ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembrolizumab/nivolumab mono), BV consolidation, Other
+- [x] **REGL-02**: Concurrency window for same-regimen drug co-occurrence is a named config constant (default ±7 days)
+- [x] **REGL-03**: Line-of-therapy counter assigned per patient: new line when a new non-maintenance drug class starts after a configurable gap or after SCT
 - [ ] **REGL-04**: Engine operates on per-date administrations across Chemotherapy AND Immunotherapy treatment types (not limited to one treatment_type); SCT dates are used for the LOT rule; R/28 `regimen_label` and the Phase 201 relabel block in R/142 are both replaced
 - [ ] **REGL-05**: Reconciliation table compares Phase 205 `regimen_label` values vs Phase 201 `abvd_class` values across all episodes
 - [ ] **REGL-06**: Open team decisions logged in phase output: SME regimen list confirmation, gap length between lines, BV consolidation classification, NLPHL regimen handling
 - [ ] **REGL-07**: Per-patient internal output (RDS + CSV in output/internal/): line-1 regimen, line-1 start date, number of lines, regimen per line
-- [ ] **REGL-08**: Gantt schema change guarded by regression on all pre-Phase-205 columns; R/88 section for Phase 205; unit tests for regimen dictionary + LOT rule on synthetic patients
+- [x] **REGL-08**: Gantt schema change guarded by regression on all pre-Phase-205 columns; R/88 section for Phase 205; unit tests for regimen dictionary + LOT rule on synthetic patients
 
 ---
 
