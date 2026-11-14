@@ -884,6 +884,18 @@ IMMUNE_DRUG_DEFS <- list(
 stopifnot("IMMUNE_DRUG_DEFS names must match IMMUNE_FLAG_DRUGS + BRENTUXIMAB_DRUG" =
             setequal(names(IMMUNE_DRUG_DEFS), c(IMMUNE_FLAG_DRUGS, BRENTUXIMAB_DRUG)))
 
+# Phase 201: ABVD regimen components as canonical drug tokens (post canonicalize_drug_name).
+# Canonical forms confirmed: canonicalize_drug_name maps "bleomycin sulfate" -> "Bleomycin"
+# is NOT in DRUG_NAME_ALIASES (bleomycin enters as the bare generic "Bleomycin" only);
+# "dacarbazine" -> "Dacarbazine" (also not aliased; bare generic only);
+# "doxorubicin hydrochloride" -> "Doxorubicin" (alias present);
+# "vinblastine sulfate" -> "Vinblastine" (alias present);
+# "nivolumab" -> "Nivolumab" (alias present);
+# "brentuximab vedotin" -> "Brentuximab Vedotin" (alias present).
+ABVD_COMPONENTS      <- c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine")
+AVD_COMPONENTS       <- c("Doxorubicin", "Vinblastine", "Dacarbazine")   # D-11 bleomycin-dropped
+ABVD_EXCLUDING_DRUGS <- c(BRENTUXIMAB_DRUG, "Nivolumab")                 # BV+AVD / Nivo+AVD are not ABVD (D-201-01)
+
 # AUTOIMMUNE_DX_TYPE_ACCEPT: DX_TYPE values observed in the cohort (Task 1 preflight,
 # 2026-10-29) that identify ICD-9 and ICD-10 records. "OT" and "SM" are excluded
 # (not ICD coding systems). No trimming variants observed in the cohort DX_TYPE values.
