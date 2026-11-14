@@ -7525,8 +7525,8 @@ if (!file.exists(gantt_180_path_bb)) {
 } else {
   gantt_180_hdr_bb <- names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
-  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 30 columns", # 30 since Phase 201
-    length(gantt_180_hdr_bb) == 30L)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 32 columns", # 32 since Phase 201b abvd_class/ever_abvd_plus
+    length(gantt_180_hdr_bb) == 32L)
   # (d) autoimmune_dx_code_system is at position 23 (cols 24-26 added in Phase 199)
   p1922_chk("AUTOIMMUNE-FLAG-192.2 [d2] gantt_episodes_180.csv autoimmune_dx_code_system at position 23",
     which(names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
@@ -7671,12 +7671,12 @@ if (!file.exists(gantt_180_path_bc)) {
   p199_skip_fn("IMMUNE-FLAG-199 [d] flag columns parse check (skipped — file absent)")
   p199_skip_fn("IMMUNE-FLAG-199 [e] columns constant within patient_id (skipped — file absent)")
 } else {
-  # (c) 30 columns; immune_flag at 24, ever_brentuximab at 25, immune_flag_dx at 26 (cols 27-30 added Phase 201)
+  # (c) 32 columns; immune_flag at 24, ever_brentuximab at 25, immune_flag_dx at 26 (cols 27-30 added Phase 201; cols 31-32 abvd_class/ever_abvd_plus added Phase 201b)
   g180_bc <- readr::read_csv(gantt_180_path_bc, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
   g180_nms <- names(g180_bc)
-  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 30 columns", # 30 since Phase 201
-    length(g180_nms) == 30L)
+  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 32 columns", # 32 since Phase 201b abvd_class/ever_abvd_plus
+    length(g180_nms) == 32L)
   p199_chk("IMMUNE-FLAG-199 [c2] immune_flag at column 24",
     isTRUE(g180_nms[24L] == "immune_flag"))
   p199_chk("IMMUNE-FLAG-199 [c3] ever_brentuximab at column 25",
