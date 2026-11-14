@@ -922,6 +922,12 @@ stopifnot(
   n_jcode_ep   <- sum(chemo_ep$abvd_class == "JCODE_ABVD", na.rm = TRUE)
   n_plus_ep    <- sum(chemo_ep$abvd_class == "ABVD_PLUS",  na.rm = TRUE)
   n_ever_abvd  <- dplyr::n_distinct(episodes_export$patient_id[episodes_export$ever_abvd])
+  # Distinct patients per abvd_class (suppress 1-10 as <11)
+  n_abvd_pt   <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "ABVD"       & !is.na(chemo_ep$abvd_class)])
+  n_avd_pt    <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "AVD"        & !is.na(chemo_ep$abvd_class)])
+  n_jcode_pt  <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "JCODE_ABVD" & !is.na(chemo_ep$abvd_class)])
+  n_plus_pt   <- dplyr::n_distinct(chemo_ep$patient_id[chemo_ep$abvd_class == "ABVD_PLUS"  & !is.na(chemo_ep$abvd_class)])
+  n_ever_abvd_plus_pt <- dplyr::n_distinct(episodes_export$patient_id[episodes_export$ever_abvd_plus])
   # Patients whose earliest Chemotherapy episode has abvd_episode == TRUE
   first_chemo <- episodes_export |>
     dplyr::filter(treatment_type == "Chemotherapy") |>
@@ -936,6 +942,11 @@ stopifnot(
   message(glue("  abvd_class AVD (bleomycin-dropped):    {fmt_sup(n_avd_ep)}"))
   message(glue("  abvd_class JCODE_ABVD (J-code path):  {fmt_sup(n_jcode_ep)}"))
   message(glue("  abvd_class ABVD_PLUS (QC, excluded):  {fmt_sup(n_plus_ep)}"))
+  message(glue("  abvd_class ABVD patients:              {fmt_sup(n_abvd_pt)}"))
+  message(glue("  abvd_class AVD patients:               {fmt_sup(n_avd_pt)}"))
+  message(glue("  abvd_class JCODE_ABVD patients:        {fmt_sup(n_jcode_pt)}"))
+  message(glue("  abvd_class ABVD_PLUS patients:         {fmt_sup(n_plus_pt)}"))
+  message(glue("  ever_abvd_plus = TRUE patients:        {fmt_sup(n_ever_abvd_plus_pt)}"))
   message(glue("  ever_abvd = TRUE patients:             {fmt_sup(n_ever_abvd)}"))
   message(glue("  Patients with 1st Chemo = ABVD:        {fmt_sup(n_first_abvd)}"))
 
