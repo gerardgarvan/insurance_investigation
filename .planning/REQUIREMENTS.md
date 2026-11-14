@@ -28,11 +28,11 @@
 
 ### MCAP — MED_ADMIN Name-Based Capture (Phase 204)
 
-- [ ] **MCAP-01**: R/26 adds name-based capture from RAW_MEDADMIN_MED_NAME alongside existing code-based capture, using DRUG_NAME_ALIASES canonicalization; source tagged as "MED_ADMIN_NAME"
-- [ ] **MCAP-02**: Before/after counts per drug (minimum: rituximab, brentuximab, MTX) for administrations gained by name-based capture
+- [x] **MCAP-01**: R/26 adds name-based capture from RAW_MEDADMIN_MED_NAME alongside existing code-based capture, using DRUG_NAME_ALIASES canonicalization; source tagged as "MED_ADMIN_NAME"
+- [x] **MCAP-02**: Before/after counts per drug (minimum: rituximab, brentuximab, MTX) for administrations gained by name-based capture
 - [ ] **MCAP-03**: All downstream scripts rerun: R/28→R/29→R/52 (90-day Gantt) and R/142 (180-day Gantt); unchanged columns match pre-Phase-204 values in a regression check on both outputs
 - [ ] **MCAP-04**: R/88 checks added for name-based capture and regression guard; output/internal/ before/after RDS snapshots written
-- [ ] **MCAP-05**: QC list of distinct RAW_MEDADMIN_MED_NAME strings newly matched per drug (with record/patient counts, suppressed to <11) for manual review of false positives (order text, non-HL formulations); script stops for review if any unexpected drug family appears
+- [x] **MCAP-05**: QC list of distinct RAW_MEDADMIN_MED_NAME strings newly matched per drug (with record/patient counts, suppressed to <11) for manual review of false positives (order text, non-HL formulations); script stops for review if any unexpected drug family appears
 
 ### REGL — Regimen + Line-of-Therapy Engine (Phase 205)
 

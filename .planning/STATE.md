@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v3.3
 milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
 status: executing
-last_updated: "2026-11-14T23:16:35.770Z"
+last_updated: "2026-11-14T23:20:05.658Z"
 last_activity: 2026-11-14
 progress:
   total_phases: 195
   completed_phases: 166
   total_plans: 384
-  completed_plans: 382
+  completed_plans: 383
 ---
 
 # Project State
@@ -24,9 +24,9 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 204
-Plan: Not started
-Status: Executing Phase 204
+Phase: 204 (med-admin-name-based-capture) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-11-14
 
 ## Prior Position (v3.13 final)
