@@ -40,10 +40,14 @@ message("=== R/193: Tumor-registry HL/NHL flags, all patients ===\n")
 fmt_sup <- function(n) if (n >= 1L && n <= 10L) "<11" else format(n, big.mark = ",")
 
 # --- SECTION 1: ALL PATIENT IDS (DEMOGRAPHIC) ---
+# get_pcornet_table() needs an open connection; close it before the helper,
+# which opens and closes its own.
+open_pcornet_con()
 all_ids <- get_pcornet_table("DEMOGRAPHIC") |>
   distinct(ID) |>
   collect() |>
   pull(ID)
+close_pcornet_con()
 all_ids <- unique(all_ids[!is.na(all_ids) & all_ids != ""])
 message(glue("  DEMOGRAPHIC patients: {format(length(all_ids), big.mark = ',')}"))
 
@@ -55,8 +59,8 @@ out <- trf |>
   arrange(ID)
 
 stopifnot(
-  "one row per patient"              = !anyDuplicated(out$ID),
-  "covers every DEMOGRAPHIC patient" = setequal(out$ID, all_ids),
+  "one row per patient"               = !anyDuplicated(out$ID),
+  "covers every DEMOGRAPHIC patient"  = setequal(out$ID, all_ids),
   "tr_hl_dx / tr_nhl_dx share NA set" = all(is.na(out$tr_hl_dx) == is.na(out$tr_nhl_dx))
 )
 
