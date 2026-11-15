@@ -311,7 +311,12 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
           canonical = canonicalize_drug_name(toupper(trimws(raw_name)))
         )
 
-      known_canonicals <- unique(unname(DRUG_NAME_ALIASES))
+      # Supportive care (G-CSF, antiemetics, ESAs, steroids) is not treatment: drop
+      # before the safety gate and capture. Falls back to empty if config lacks it.
+      sc_names <- if (exists("SUPPORTIVE_CARE_NAMES")) SUPPORTIVE_CARE_NAMES else character(0)
+      name_rows <- dplyr::filter(name_rows, !tolower(trimws(canonical)) %in% sc_names)
+
+      known_canonicals <- setdiff(unique(unname(DRUG_NAME_ALIASES)), sc_names)
 
       # MCAP-05: halt on any alias-resolved canonical not in the known drug set
       unexpected <- dplyr::filter(name_rows,
@@ -357,6 +362,29 @@ get_chemo_hits <- function(table_name, chemo_rxnorm, ndc_crosswalk = NULL,
     message(glue::glue("  [{table_name}] unrecognised table for get_chemo_hits() — skipping"))
     NULL
   }
+}
+
+#' Phase 204 QC table of name-captured MED_ADMIN strings (MCAP-05)
+#'
+#' @param ma_dates Tibble from get_chemo_hits("MED_ADMIN", return_source = TRUE,
+#'   return_raw_name = TRUE, return_name_capture = TRUE).
+#' @return Tibble(canonical, raw_med_name, n_records, n_patients, *_disp) with
+#'   counts 1-10 displayed as "<11".
+build_p204_name_qc <- function(ma_dates) {
+  ma_dates %>%
+    dplyr::filter(source == "MED_ADMIN_NAME", !is.na(raw_med_name)) %>%
+    dplyr::mutate(canonical = sub("^NAME:", "", triggering_code)) %>%
+    dplyr::group_by(canonical, raw_med_name) %>%
+    dplyr::summarise(
+      n_records  = dplyr::n(),
+      n_patients = dplyr::n_distinct(ID),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      n_records_disp  = dplyr::if_else(n_records  < 11L, "<11", as.character(n_records)),
+      n_patients_disp = dplyr::if_else(n_patients < 11L, "<11", as.character(n_patients))
+    ) %>%
+    dplyr::arrange(canonical, dplyr::desc(n_records))
 }
 
 #' Get all patients with at least one HL diagnosis code (SURV-02, D-01..D-04, D-24)

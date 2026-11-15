@@ -257,6 +257,9 @@ extract_chemo_dates_with_codes <- function() {
   if (!is.null(ma_dates)) {
     ma_dates <- ma_dates %>% mutate(ENCOUNTERID = NA_character_)
   }
+  # Phase 204 fix: ma_dates is local to this function. Propagate it to script scope
+  # (<<-, same pattern as raw_name_lookup) so the post-snapshot QC block can read it.
+  p204_ma_dates <<- ma_dates
 
   # Phase 124 Task 3: Build per-triggering_code raw-name lookup from DISPENSING + MED_ADMIN.
   # raw_med_name is NA for DISPENSING (no free-text in extract) and populated from
@@ -973,23 +976,11 @@ saveRDS(all_episodes, post_p204_rds)
 message(glue("[R/26] Phase 204: post-capture snapshot saved -> {post_p204_rds} ({nrow(all_episodes)} rows)"))
 
 # --- Phase 204: QC table of newly matched RAW_MEDADMIN_MED_NAME strings (MCAP-05) ---
-# ma_dates is in scope (produced in Section 4); guard in case it is NULL.
-if (!is.null(ma_dates) && "source" %in% colnames(ma_dates) &&
-    "raw_med_name" %in% colnames(ma_dates)) {
-  p204_qc <- ma_dates %>%
-    dplyr::filter(source == "MED_ADMIN_NAME", !is.na(raw_med_name)) %>%
-    dplyr::mutate(canonical = sub("^NAME:", "", triggering_code)) %>%
-    dplyr::group_by(canonical, raw_med_name) %>%
-    dplyr::summarise(
-      n_records  = dplyr::n(),
-      n_patients = dplyr::n_distinct(ID),
-      .groups = "drop"
-    ) %>%
-    dplyr::mutate(
-      n_records_disp  = dplyr::if_else(n_records  < 11L, "<11", as.character(n_records)),
-      n_patients_disp = dplyr::if_else(n_patients < 11L, "<11", as.character(n_patients))
-    ) %>%
-    dplyr::arrange(canonical, dplyr::desc(n_records))
+# ma_dates is local to the chemo extract function; use p204_ma_dates (set via <<-).
+if (!exists("p204_ma_dates", inherits = TRUE)) p204_ma_dates <- NULL
+if (!is.null(p204_ma_dates) && "source" %in% colnames(p204_ma_dates) &&
+    "raw_med_name" %in% colnames(p204_ma_dates)) {
+  p204_qc <- build_p204_name_qc(p204_ma_dates)
 
   p204_qc_rds <- file.path(CONFIG$output_dir, "internal", "p204_name_qc.rds")
   saveRDS(p204_qc, p204_qc_rds)

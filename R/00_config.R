@@ -3041,6 +3041,19 @@ canonicalize_drug_name <- function(x) {
 MEDICATION_LOOKUP <- setNames(canonicalize_drug_name(unname(MEDICATION_LOOKUP)), names(MEDICATION_LOOKUP))
 message(glue("  DRUG_NAME_ALIASES: {length(DRUG_NAME_ALIASES)} canonical aliases applied to MEDICATION_LOOKUP"))
 
+# SUPPORTIVE_CARE_NAMES (Phase 204 fix): lowercased canonical names of supportive-care
+# drugs (G-CSF, antiemetics, ESAs, steroids). Excluded from MED_ADMIN name-based
+# treatment capture. Union of (a) MEDICATION_LOOKUP names for codes grouped as
+# "Supportive Care" in DRUG_GROUPINGS and (b) the supportive-care alias targets above.
+SUPPORTIVE_CARE_NAMES <- local({
+  sc_codes <- names(DRUG_GROUPINGS)[unname(DRUG_GROUPINGS) == "Supportive Care"]
+  from_lookup <- unname(MEDICATION_LOOKUP[names(MEDICATION_LOOKUP) %in% sc_codes])
+  from_alias <- c("ondansetron", "dexamethasone", "aprepitant", "pegfilgrastim",
+                  "filgrastim", "epoetin alfa", "darbepoetin alfa")
+  nm <- tolower(trimws(c(from_lookup, from_alias)))
+  sort(unique(nm[!is.na(nm) & nzchar(nm)]))
+})
+
 # ==============================================================================
 # fallback_normalize_medication() -- Phase 131 heuristic drug-name normalizer
 # ==============================================================================
