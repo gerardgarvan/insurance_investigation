@@ -66,3 +66,34 @@ assign_notx_reason <- function(df) {
   )
   factor(reason, levels = NOTX_REASON_LEVELS)
 }
+
+# E_by_primary_source builder. All counts and percentages are computed from raw
+# integers; sup_col()/pct_sup() are applied only in the final formatting step
+# (never format a count before using it in arithmetic).
+# char_pt needs: primary_source, group, treatment_observable.
+build_sheet_E <- function(char_pt, sup_col, pct_sup) {
+  num <- char_pt |>
+    dplyr::mutate(SOURCE = dplyr::coalesce(primary_source, "Unknown")) |>
+    dplyr::group_by(SOURCE) |>
+    dplyr::summarise(
+      n_no_tx            = sum(group == "no_treatment"),
+      n_treated          = sum(group == "treated"),
+      n_no_tx_observable = sum(group == "no_treatment" & treatment_observable),
+      n_observable_all   = sum(treatment_observable),
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(dplyr::desc(n_no_tx + n_treated))
+  num |>
+    dplyr::mutate(
+      pct_no_tx                  = pct_sup(n_no_tx, n_no_tx + n_treated),
+      pct_no_tx_among_observable = pct_sup(n_no_tx_observable, n_observable_all)
+    ) |>
+    dplyr::transmute(
+      primary_source = SOURCE,
+      n_no_tx = sup_col(n_no_tx), n_treated = sup_col(n_treated),
+      pct_no_tx,
+      n_no_tx_observable = sup_col(n_no_tx_observable),
+      n_observable_all = sup_col(n_observable_all),
+      pct_no_tx_among_observable
+    )
+}

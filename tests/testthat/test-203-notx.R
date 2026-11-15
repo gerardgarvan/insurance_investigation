@@ -103,3 +103,33 @@ test_that("prevalent flag boundaries", {
   expect_equal(fl$f_tr_early_dx, c(FALSE, FALSE, FALSE, TRUE))   # 365d not > 365; 366d is
   expect_equal(fl$f_prevalent_hl, c(TRUE, FALSE, FALSE, TRUE))
 })
+
+test_that("build_sheet_E: arithmetic on raw counts, suppression at the end", {
+  fmt_sup <- function(n) {
+    if (is.na(n)) return(NA_character_)
+    n <- as.integer(n)
+    if (n >= 1L & n <= 10L) "<11" else format(n, big.mark = ",")
+  }
+  sup_col <- function(x) vapply(x, fmt_sup, character(1))
+  pct_sup <- function(num, den) {
+    ifelse(!is.na(num) & num >= 11L & den >= 11L, sprintf("%.1f%%", 100 * num / den), "")
+  }
+  mk <- function(src, grp, obs, n) tibble::tibble(
+    primary_source = src, group = grp, treatment_observable = obs)[rep(1, n), ]
+  cp <- dplyr::bind_rows(
+    mk("UFH", "no_treatment", TRUE, 20), mk("UFH", "treated", TRUE, 60),
+    mk("ORL", "no_treatment", FALSE, 5), mk("ORL", "treated", TRUE, 30),
+    mk(NA_character_, "treated", FALSE, 12)
+  )
+  e <- build_sheet_E(cp, sup_col, pct_sup)
+  expect_true(is.character(e$n_no_tx))
+  u <- e[e$primary_source == "UFH", ]
+  expect_equal(u$n_no_tx, "20"); expect_equal(u$n_treated, "60")
+  expect_equal(u$pct_no_tx, "25.0%")                       # 20 / 80
+  expect_equal(u$pct_no_tx_among_observable, "25.0%")      # 20 / 80
+  o <- e[e$primary_source == "ORL", ]
+  expect_equal(o$n_no_tx, "<11"); expect_equal(o$pct_no_tx, "")
+  expect_equal(o$pct_no_tx_among_observable, "")           # num 0 < 11
+  expect_true("Unknown" %in% e$primary_source)
+  expect_equal(e$primary_source[1], "UFH")                 # sorted by total desc
+})

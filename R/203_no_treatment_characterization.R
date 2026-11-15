@@ -574,26 +574,7 @@ d_counts <- char_pt |>
 
 # E_by_primary_source: one row per R/169 primary_source. Observable = D rule
 # (descriptive only; not applied).
-sheet_E_num <- char_pt |>
-  mutate(SOURCE = coalesce(primary_source, "Unknown")) |>
-  group_by(SOURCE) |>
-  summarise(
-    n_no_tx           = sum(group == "no_treatment"),
-    n_treated         = sum(group == "treated"),
-    n_no_tx_observable = sum(group == "no_treatment" & treatment_observable),
-    n_observable_all  = sum(treatment_observable),
-    .groups = "drop"
-  ) |>
-  arrange(desc(n_no_tx + n_treated))
-sheet_E <- sheet_E_num |>
-  transmute(
-    primary_source = SOURCE,
-    n_no_tx = sup_col(n_no_tx), n_treated = sup_col(n_treated),
-    pct_no_tx = pct_sup(n_no_tx, n_no_tx + n_treated),
-    n_no_tx_observable = sup_col(n_no_tx_observable),
-    n_observable_all = sup_col(n_observable_all),
-    pct_no_tx_among_observable = pct_sup(n_no_tx_observable, n_observable_all)
-  )
+sheet_E <- build_sheet_E(char_pt, sup_col, pct_sup)  # R/utils/utils_notx.R
 
 # QC
 n_missing <- function(x) sum(is.na(x))
