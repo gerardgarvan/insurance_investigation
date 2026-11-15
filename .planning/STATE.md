@@ -208,6 +208,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 
 | 261111-hrc | fix(183): recode payer 'Missing'/'Unknown'/'' to NA before MICE; replace full loggedEvents print with table(dep,out); D-196 decision in KEY; RERUN-AND-REISSUE updated | 2026-11-11 | 4b2579e | inline |
 | 261114-sir | Phase 205 revision: episode-level label fallback, regimen dictionary, recognized-only LOT, first-line, 204 reconciliation (INCOMPLETE: PENDING HIPERGATOR run) | 2026-11-14 | (see git log) | [261114-sir-phase-205-revision-label-mapping-regimen](./quick/261114-sir-phase-205-revision-label-mapping-regimen/) |
+| 261114-uzz | W-RAD R/207, W-NOTX R/208, W-COMBO assign_lot cross-type merge (205 candidate only); PENDING HIPERGATOR probe + runs | 2026-11-14 | (see git log) | [261114-uzz-v3-14-w-rad-w-notx-w-combo](./quick/261114-uzz-v3-14-w-rad-w-notx-w-combo/) |
 
 ## Phase 196-A Complete
 

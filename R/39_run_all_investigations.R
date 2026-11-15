@@ -258,7 +258,9 @@ investigation_scripts <- c(
   "R/184_modality_rate_model.R",             # Modality rate model (Phase 184); per-modality Poisson GEE rates + far x modality interaction; MODR-01, MODR-02
   "R/186_survivorship_rate_granularity.R",   # Survivorship rate granularity (Phase 186); section-header block reader + complementary suppression stacker; annual + biannual rates per patient-year; RATE-02, RATE-03
   "R/187_anthracycline_exposure.R",          # Anthracycline exposure variables (Phase 187); patient-grain flags (any_anthracycline, last_anthracycline_date, years_since); internal RDS + aggregate workbook; ANTH-01, ANTH-02, ANTH-03
-  "R/188_echo_rate_since_anthracycline.R"    # Echo rate since last anthracycline dose (Phase 188); encounter-grain dedup + window labeling; Anchor Comparison vs Phase 166; ECHO-01, ECHO-02
+  "R/188_echo_rate_since_anthracycline.R",   # Echo rate since last anthracycline dose (Phase 188); encounter-grain dedup + window labeling; Anchor Comparison vs Phase 166; ECHO-01, ECHO-02
+  "R/207_radiation_gap_probe.R",             # W-RAD (quick 261114-uzz): radiation-like evidence for registry-radiation patients without a pipeline Radiation/Proton episode; findings only
+  "R/208_site_treatment_data_completeness.R" # W-NOTX (quick 261114-uzz): per-site treatment-table completeness vs R/203 no-treatment %; analysis only
 )
 
 for (script in investigation_scripts) {

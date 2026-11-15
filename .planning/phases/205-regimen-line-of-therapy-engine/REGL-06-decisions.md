@@ -201,3 +201,8 @@ Status: CANDIDATE BUILT, NOT SHIPPED. Delivered/live files remain the Phase 204 
 | REGL-06-J (205-2) | **NO**: "ABVD/AVD partial" does NOT count toward `ever_abvd` | No new abvd_class value introduced; `ever_abvd` recomputed from ABVD / AVD episodes only |
 
 Deferred to 2026-12-07: D-203-02, D-201-02/03/04, D-203-01, 205-3 (NHL-family first-line, REGL-06-K2), 205-4 (365-day restart threshold, D-205-LOT-RESTART), 205-5 (full 205 replacement, D-205-SHIP), 166 death-only patients.
+
+## W-COMBO (2026-11-14, quick 261114-uzz)
+
+D-205-XTYPE cross-type combinations are implemented **for the Phase 205 candidate only**: `assign_lot(combine_cross_type = TRUE)` in `R/utils/utils_regimen.R` merges Immunotherapy-only (BV mono, PD-1 mono, BV+Nivo, BV+PD-1) and non-ABVD-family Chemotherapy episodes that overlap or start within `CONCURRENCY_WINDOW_DAYS` into one `lot_family` (e.g. "BV+Bendamustine", "PD-1+Salvage", "BV+Salvage"). Episode `regimen_label` unchanged; BV+AVD / Nivo+AVD kept; 365-day same-family restart kept. Default is FALSE, so R/28 and the delivered `gantt_episodes_180.csv` are unchanged. Run with `R205_LOT_ONLY=TRUE` in `R/205_lot_output.R` (writes `output/internal/lot_summary_p205_combo.rds/.csv`; Gantt reconciliation skipped). Not adopted; decision D-205-XTYPE stays OPEN pending the HiPerGator before/after report.
+

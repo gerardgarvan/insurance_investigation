@@ -628,7 +628,10 @@ assign_lot <- function(episode_df,
                        maintenance_classes = MAINTENANCE_DRUG_CLASSES,
                        sct_dates_df        = NULL,
                        same_family_restart_days = if (exists("LOT_SAME_FAMILY_RESTART_DAYS"))
-                         LOT_SAME_FAMILY_RESTART_DAYS else 365L) {
+                         LOT_SAME_FAMILY_RESTART_DAYS else 365L,
+                       combine_cross_type = FALSE,
+                       concurrency_window_days = if (exists("CONCURRENCY_WINDOW_DAYS"))
+                         CONCURRENCY_WINDOW_DAYS else 7L) {
 
   stopifnot(
     is.data.frame(episode_df),
@@ -645,7 +648,7 @@ assign_lot <- function(episode_df,
   attach_labels <- unique(c(maintenance_classes, REGIMEN_CONDITIONING_LABEL))
   has_type <- "treatment_type" %in% names(episode_df)
 
-  lot_for_patient <- function(start, end, label, ttype) {
+  lot_for_patient <- function(start, end, label, ttype, fam_vec = NULL) {
     n <- length(start)
     lot <- rep(NA_integer_, n)
     cur <- 0L
@@ -659,7 +662,7 @@ assign_lot <- function(episode_df,
         lot[i] <- if (cur > 0L) cur else NA_integer_
         next
       }
-      fam <- regimen_lot_family(lab)
+      fam <- if (is.null(fam_vec)) regimen_lot_family(lab) else fam_vec[i]
       if (cur == 0L) {
         cur <- 1L
       } else {
@@ -676,13 +679,74 @@ assign_lot <- function(episode_df,
     lot
   }
 
-  episode_df %>%
+  out <- episode_df %>%
     dplyr::arrange(.data$ID, .data$start_date, .data$episode_number) %>%
-    dplyr::group_by(.data$ID) %>%
-    dplyr::mutate(line_of_therapy = lot_for_patient(
-      .data$start_date, .data$end_date, .data$regimen_label,
-      if (has_type) .data$treatment_type else NULL)) %>%
-    dplyr::ungroup()
+    dplyr::group_by(.data$ID)
+  if (isTRUE(combine_cross_type)) {
+    # W-COMBO (candidate only): Chemotherapy + Immunotherapy episodes that overlap or
+    # start within concurrency_window_days share one combined lot_family.
+    out <- out %>%
+      dplyr::mutate(
+        lot_family = combine_cross_type_family(
+          .data$start_date, .data$end_date, .data$regimen_label,
+          if (has_type) .data$treatment_type else NULL,
+          concurrency_window_days, attach_labels)) %>%
+      dplyr::mutate(line_of_therapy = lot_for_patient(
+        .data$start_date, .data$end_date, .data$regimen_label,
+        if (has_type) .data$treatment_type else NULL,
+        .data$lot_family))
+  } else {
+    out <- out %>%
+      dplyr::mutate(line_of_therapy = lot_for_patient(
+        .data$start_date, .data$end_date, .data$regimen_label,
+        if (has_type) .data$treatment_type else NULL))
+  }
+  dplyr::ungroup(out)
+}
+
+
+# ------------------------------------------------------------------------------
+# combine_cross_type_family()
+# W-COMBO (Phase 205 candidate). For one patient's episodes (sorted by start),
+# returns the LOT family per episode. An immunotherapy-only episode (label in
+# REGIMEN_IMMUNO_ONLY_LABELS, Immunotherapy type) and a Chemotherapy episode
+# overlapping it or starting within `window` days (either direction) share the
+# family "<immuno>+<chemo>" with " mono" stripped (BV mono + Bendamustine mono ->
+# "BV+Bendamustine"; PD-1 mono + Salvage -> "PD-1+Salvage").
+#   - Chemotherapy episodes in the ABVD family are skipped (BV+AVD / Nivo+AVD are
+#     already single labels).
+#   - Each immuno episode pairs with the earliest-starting still-unpaired chemo match.
+#   - regimen_label is untouched. Non-line rows (NA / not recognized / attach
+#     labels / non-systemic type) return NA.
+# ------------------------------------------------------------------------------
+combine_cross_type_family <- function(start, end, label, ttype, window,
+                                      attach_labels = character(0)) {
+  n <- length(start)
+  fam <- rep(NA_character_, n)
+  ok <- !is.na(label) & !(label %in% REGIMEN_NOT_RECOGNIZED_LABELS) &
+    !(label %in% attach_labels)
+  if (!is.null(ttype)) ok <- ok & ttype %in% REGIMEN_SYSTEMIC_TYPES
+  fam[ok] <- regimen_lot_family(label[ok])
+  if (is.null(ttype)) return(fam)
+  short <- function(x) sub(" mono$", "", x)
+  imm  <- which(ok & ttype == "Immunotherapy" & label %in% REGIMEN_IMMUNO_ONLY_LABELS)
+  chem <- which(ok & ttype == "Chemotherapy" &
+                !(label %in% REGIMEN_IMMUNO_ONLY_LABELS) &
+                !(regimen_lot_family(label) %in% "ABVD family"))
+  paired <- rep(FALSE, n)
+  for (i in imm) {
+    cand <- chem[!paired[chem] &
+      as.integer(start[chem] - end[i]) <= window &
+      as.integer(start[i] - end[chem]) <= window]
+    cand <- cand[!is.na(cand)]
+    if (length(cand) == 0L) next
+    j <- cand[which.min(start[cand])]
+    f <- paste0(short(label[i]), "+", short(label[j]))
+    fam[i] <- f
+    fam[j] <- f
+    paired[j] <- TRUE
+  }
+  fam
 }
 
 

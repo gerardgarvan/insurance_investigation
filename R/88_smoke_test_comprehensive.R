@@ -8466,6 +8466,58 @@ if (file.exists(p206_live) && file.exists(p206_pre)) {
 
 message(glue("\nDECISIONS-206: {p206_pass} PASS / {p206_fail} FAIL / {p206_skip} SKIP"))
 
+# ==============================================================================
+# SECTION 15bi: W-RAD / W-NOTX / W-COMBO (quick 261114-uzz; SMOKE-207-01) ----
+# ==============================================================================
+
+p207_pass <- 0L; p207_fail <- 0L; p207_skip <- 0L
+p207_chk <- function(label, condition) {
+  if (isTRUE(condition)) { message("  PASS: ", label); p207_pass <<- p207_pass + 1L; passed  <<- passed  + 1L }
+  else                   { message("  FAIL: ", label); p207_fail <<- p207_fail + 1L; failed  <<- failed  + 1L }
+}
+
+message("\nSection 15bi: W-RAD / W-NOTX / W-COMBO structural checks")
+p207_rd <- function(f) if (file.exists(f)) paste(readLines(f, warn = FALSE), collapse = "\n") else ""
+p207_t <- p207_rd(file.path("R", "207_radiation_gap_probe.R"))
+p207_u <- p207_rd(file.path("R", "208_site_treatment_data_completeness.R"))
+p207_r <- p207_rd(file.path("R", "utils", "utils_regimen.R"))
+p207_l <- p207_rd(file.path("R", "205_lot_output.R"))
+p207_idx <- p207_rd(file.path("R", "SCRIPT_INDEX.md"))
+p207_39 <- p207_rd(file.path("R", "39_run_all_investigations.R"))
+p207_has <- function(txt, pat) grepl(pat, txt, fixed = TRUE)
+
+p207_chk("SMOKE-207-01 [a] R/207 and R/208 exist", nzchar(p207_t) && nzchar(p207_u))
+p207_chk("SMOKE-207-01 [b] both scripts use open_pcornet_con/close_pcornet_con and no dbDisconnect",
+         p207_has(p207_t, "open_pcornet_con()") && p207_has(p207_t, "close_pcornet_con()") &&
+         p207_has(p207_u, "open_pcornet_con()") && p207_has(p207_u, "close_pcornet_con()") &&
+         !p207_has(p207_t, "dbDisconnect") && !p207_has(p207_u, "dbDisconnect"))
+p207_chk("SMOKE-207-01 [c] both scripts suppress counts 1-10 as '<11' and write KEY first",
+         p207_has(p207_t, '"<11"') && p207_has(p207_u, '"<11"') &&
+         p207_has(p207_t, 'write_sheet(wb, "KEY"') && p207_has(p207_u, 'write_sheet(wb, "KEY"'))
+p207_chk("SMOKE-207-01 [d] R/207 sheets: KEY, A_summary, B_codes_not_in_pipeline, C_codes_in_pipeline_but_missed, D_by_source, QC",
+         all(vapply(c("KEY", "A_summary", "B_codes_not_in_pipeline", "C_codes_in_pipeline_but_missed", "D_by_source", "QC"),
+                    function(n) p207_has(p207_t, paste0('"', n, '"')), logical(1L))))
+p207_chk("SMOKE-207-01 [e] R/208 sheets: KEY, A_site_table_presence, B_site_treatment_capture, C_vs_203_no_tx, QC",
+         all(vapply(c("KEY", "A_site_table_presence", "B_site_treatment_capture", "C_vs_203_no_tx", "QC"),
+                    function(n) p207_has(p207_u, paste0('"', n, '"')), logical(1L))))
+p207_chk("SMOKE-207-01 [f] R/207 reuses build_tr_treatment_flags and the sentinel guard; R/208 uses get_chemo_hits",
+         p207_has(p207_t, "build_tr_treatment_flags") && p207_has(p207_t, "ENC_DATE_SENTINEL_BEFORE") &&
+         p207_has(p207_u, "get_chemo_hits"))
+p207_chk("SMOKE-207-01 [g] neither script writes a CSV (delivered Gantt untouched)",
+         !grepl("write_csv|write.csv|vroom_write", p207_t) && !grepl("write_csv|write.csv|vroom_write", p207_u))
+p207_chk("SMOKE-207-01 [h] R/207 and R/208 registered in R/39 and SCRIPT_INDEX.md",
+         p207_has(p207_39, "R/207_radiation_gap_probe.R") && p207_has(p207_39, "R/208_site_treatment_data_completeness.R") &&
+         p207_has(p207_idx, "`R/207_radiation_gap_probe.R`") && p207_has(p207_idx, "`R/208_site_treatment_data_completeness.R`"))
+p207_chk("SMOKE-207-01 [i] W-COMBO: assign_lot has combine_cross_type (default FALSE) and combine_cross_type_family exists",
+         p207_has(p207_r, "combine_cross_type = FALSE") && p207_has(p207_r, "combine_cross_type_family <- function"))
+p207_chk("SMOKE-207-01 [j] R/205 R205_LOT_ONLY: reads R205_PREV_LOT_RDS, writes combo outputs, skips Gantt reconciliation",
+         p207_has(p207_l, "R205_LOT_ONLY") && p207_has(p207_l, "R205_PREV_LOT_RDS") &&
+         p207_has(p207_l, "lot_summary_p205_combo") && p207_has(p207_l, "if (!R205_LOT_ONLY) {"))
+p207_chk("SMOKE-207-01 [k] test-205-lot-counter.R covers the cross-type merge rule",
+         p207_has(p207_rd(file.path("tests", "testthat", "test-205-lot-counter.R")), "combine_cross_type"))
+
+message(glue("\nSMOKE-207-01: {p207_pass} PASS / {p207_fail} FAIL / {p207_skip} SKIP"))
+
 
 # ==============================================================================
 # SECTION 16: SUMMARY ----
@@ -8628,6 +8680,7 @@ message("  * AUTOIMMUNE-FLAG-192.2: R/88 validates Phase 192.2 ICD-9 codes + aut
 message("  * IMMUNE-FLAG-199: R/88 validates Phase 199 immune_flag / ever_brentuximab / immune_flag_dx columns 24-26 in gantt_episodes_180.csv; config keys, is_autoimmune_code() with IMMUNE_FLAG_DX_CODES, and drug token checks (Section 15bc)")
 message("  * IMMUNE-FLAG-200: Phase 200 15bc additions — [f-autoimmune] immune_flag implies has_autoimmune_dx; [g] one-directional brentuximab token check; [5a] no RXNORM_CUI guard / get_chemo_hits used; [5b] immuno_ma_codes vitamin exclusion; [5c] J8610 + Q5115/Q5119/Q5123 in chemo_hcpcs with MEDICATION_LOOKUP names")
 message("  * TR-VAL-202: Phase 202 tumor-registry treatment sensitivity — script exists, workbook KEY leftmost, expected sheets (KEY/A_sensitivity/B_date_diff/C_by_source/D_by_year/E_coverage_window/PPV_reverse/QC), renamed tiers + not-captured split present, suppression '<11' applied (Section 15be)")
+message("  * SMOKE-207-01: W-RAD R/207, W-NOTX R/208, W-COMBO assign_lot cross-type merge + R205_LOT_ONLY: structural checks (Section 15bi, 11 checks)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {

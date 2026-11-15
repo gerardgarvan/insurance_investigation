@@ -87,3 +87,79 @@ test_that("REGL-03: Maintenance episode inherits current LOT, does not increment
 })
 # Post-SCT increment and SCT-gap three-line tests removed (quick 261114-sir):
 # SCT no longer starts a line. New LOT rules are tested in test-205-regimen-revision.R.
+
+
+# ==============================================================================
+# W-COMBO (candidate): cross-type combined lot_family via combine_cross_type = TRUE
+# ==============================================================================
+lot_w <- function(eps, combine = FALSE) {
+  assign_lot(eps, lot_gap_days = LOT_GAP_DAYS,
+             maintenance_classes = MAINTENANCE_DRUG_CLASSES,
+             same_family_restart_days = 365L,
+             combine_cross_type = combine, concurrency_window_days = 7L)
+}
+make_ep_t <- function(id, ep_num, start, end, label, type) {
+  dplyr::mutate(make_ep(id, ep_num, start, end, label), treatment_type = type)
+}
+
+test_that("combine_cross_type merges BV mono + Bendamustine mono into one line", {
+  eps <- dplyr::bind_rows(
+    make_ep_t("P1", 1, "2020-01-01", "2020-03-01", "BV mono", "Immunotherapy"),
+    make_ep_t("P1", 1, "2020-01-05", "2020-03-05", "Bendamustine mono", "Chemotherapy"))
+  off <- lot_w(eps)
+  on  <- lot_w(eps, TRUE)
+  expect_equal(sort(unique(off$line_of_therapy)), 1:2)   # default: unchanged, 2 lines
+  expect_false("lot_family" %in% names(off))
+  expect_equal(on$line_of_therapy, c(1L, 1L))
+  expect_equal(unique(on$lot_family), "BV+Bendamustine")
+  expect_equal(on$regimen_label, c("BV mono", "Bendamustine mono"))  # labels unchanged
+})
+
+test_that("combine_cross_type merges PD-1 mono + Salvage; starts within window count", {
+  eps <- dplyr::bind_rows(
+    make_ep_t("P1", 1, "2020-01-01", "2020-01-20", "PD-1 mono", "Immunotherapy"),
+    make_ep_t("P1", 1, "2020-01-25", "2020-03-01", "Salvage", "Chemotherapy"))
+  on <- lot_w(eps, TRUE)
+  expect_equal(on$line_of_therapy, c(1L, 1L))
+  expect_equal(unique(on$lot_family), "PD-1+Salvage")
+})
+
+test_that("combine_cross_type does not merge outside the window", {
+  eps <- dplyr::bind_rows(
+    make_ep_t("P1", 1, "2020-01-01", "2020-01-20", "BV mono", "Immunotherapy"),
+    make_ep_t("P1", 1, "2020-02-15", "2020-04-01", "Salvage", "Chemotherapy"))
+  on <- lot_w(eps, TRUE)
+  expect_equal(on$line_of_therapy, c(1L, 2L))
+  expect_equal(on$lot_family, c("BV mono", "Salvage"))
+})
+
+test_that("combine_cross_type leaves ABVD-family chemo alone (BV+AVD handled already)", {
+  eps <- dplyr::bind_rows(
+    make_ep_t("P1", 1, "2020-01-01", "2020-03-01", "BV mono", "Immunotherapy"),
+    make_ep_t("P1", 1, "2020-01-02", "2020-03-01", "BV+AVD", "Chemotherapy"))
+  on <- lot_w(eps, TRUE)
+  expect_equal(on$lot_family[on$regimen_label == "BV+AVD"], "ABVD family")
+  expect_equal(on$lot_family[on$regimen_label == "BV mono"], "BV mono")
+})
+
+test_that("combine_cross_type keeps the 365-day same-family restart rule", {
+  eps <- dplyr::bind_rows(
+    make_ep_t("P1", 1, "2020-01-01", "2020-02-01", "BV mono", "Immunotherapy"),
+    make_ep_t("P1", 1, "2020-01-03", "2020-02-01", "Salvage", "Chemotherapy"),
+    make_ep_t("P1", 2, "2020-06-01", "2020-07-01", "BV mono", "Immunotherapy"),
+    make_ep_t("P1", 2, "2020-06-03", "2020-07-01", "Salvage", "Chemotherapy"),
+    make_ep_t("P1", 3, "2021-09-01", "2021-10-01", "BV mono", "Immunotherapy"),
+    make_ep_t("P1", 3, "2021-09-02", "2021-10-01", "Salvage", "Chemotherapy"))
+  on <- lot_w(eps, TRUE)
+  # 2020-06 restart is < 365 d after previous end -> same line; 2021-09 is > 365 d -> new
+  expect_equal(on$line_of_therapy, c(1L, 1L, 1L, 1L, 2L, 2L))
+  expect_true(all(on$lot_family == "BV+Salvage"))
+})
+
+test_that("combine_cross_type: patients are independent", {
+  eps <- dplyr::bind_rows(
+    make_ep_t("A", 1, "2020-01-01", "2020-02-01", "BV mono", "Immunotherapy"),
+    make_ep_t("B", 1, "2020-01-02", "2020-02-01", "Salvage", "Chemotherapy"))
+  on <- lot_w(eps, TRUE)
+  expect_equal(on$lot_family, c("BV mono", "Salvage"))
+})

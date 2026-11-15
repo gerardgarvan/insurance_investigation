@@ -48,16 +48,30 @@ R205_BASELINE_GANTT <- Sys.getenv("R205_BASELINE_GANTT",
 R205_RECON_CSV  <- Sys.getenv("R205_RECON_CSV",
   here::here("output", "internal", "regimen_reconciliation_p205.csv"))
 
-for (f in c(R205_STAGE2_RDS, R205_GANTT_CSV, R205_BASELINE_GANTT)) {
+# W-COMBO candidate mode: recompute LOT only (cross-type combined lot_family), write
+# lot_summary_p205_combo.*, skip the Gantt reconciliation (delivered Gantt untouched).
+R205_LOT_ONLY <- toupper(Sys.getenv("R205_LOT_ONLY", "FALSE")) %in% c("TRUE", "T", "1")
+R205_PREV_LOT_RDS <- Sys.getenv("R205_PREV_LOT_RDS",
+  here::here("output", "internal", "p205_candidate_v4", "lot_summary_p205.rds"))
+if (R205_LOT_ONLY) {
+  R205_LOT_RDS <- Sys.getenv("R205_LOT_RDS",
+    here::here("output", "internal", "lot_summary_p205_combo.rds"))
+  R205_LOT_CSV <- Sys.getenv("R205_LOT_CSV",
+    here::here("output", "internal", "lot_summary_p205_combo.csv"))
+}
+
+required_inputs <- if (R205_LOT_ONLY) c(R205_STAGE2_RDS, R205_PREV_LOT_RDS) else
+  c(R205_STAGE2_RDS, R205_GANTT_CSV, R205_BASELINE_GANTT)
+for (f in required_inputs) {
   if (!file.exists(f)) stop("[R/205] input not found: ", f)
 }
 
 pin_names <- c("R205_STAGE2_RDS", "R205_LOT_RDS", "R205_LOT_CSV", "R205_GANTT_CSV",
-               "R205_BASELINE_GANTT", "R205_RECON_CSV")
+               "R205_BASELINE_GANTT", "R205_RECON_CSV", "R205_PREV_LOT_RDS", "R205_LOT_ONLY")
 key_df <- tibble::tibble(
   item   = pin_names,
   path   = c(R205_STAGE2_RDS, R205_LOT_RDS, R205_LOT_CSV, R205_GANTT_CSV,
-             R205_BASELINE_GANTT, R205_RECON_CSV),
+             R205_BASELINE_GANTT, R205_RECON_CSV, R205_PREV_LOT_RDS, as.character(R205_LOT_ONLY)),
   pinned = vapply(pin_names, function(n) nchar(Sys.getenv(n)) > 0, logical(1L))
 )
 message("[R/205] KEY:"); print(key_df)
@@ -136,7 +150,9 @@ lot_episodes <- assign_lot(
     dplyr::rename(ID = patient_id, start_date = episode_start, end_date = episode_stop),
   lot_gap_days        = LOT_GAP_DAYS,
   maintenance_classes = MAINTENANCE_DRUG_CLASSES,
-  same_family_restart_days = LOT_SAME_FAMILY_RESTART_DAYS
+  same_family_restart_days = LOT_SAME_FAMILY_RESTART_DAYS,
+  combine_cross_type       = R205_LOT_ONLY,
+  concurrency_window_days  = CONCURRENCY_WINDOW_DAYS
 )
 message("[R/205] LOT rule: new line on regimen-family change, or same-family restart after >= ",
         LOT_SAME_FAMILY_RESTART_DAYS, " days")
@@ -207,7 +223,46 @@ readr::write_csv(lot_summary, R205_LOT_CSV)
 message("[R/205] REGL-07: lot_summary written: ", fmt_n(nrow(lot_summary)), " patients - ", R205_LOT_RDS)
 
 
+# --- SECTION 3B: W-COMBO BEFORE / AFTER REPORT (R205_LOT_ONLY only) ----
+
+if (R205_LOT_ONLY) {
+  prev <- readRDS(R205_PREV_LOT_RDS)
+  stopifnot(all(c("ID", "n_lines", "regimen_per_line") %in% names(prev)))
+  message("[R/205] W-COMBO: n_lines before (", basename(R205_PREV_LOT_RDS),
+          ") vs after (counts 1-10 shown as <11):")
+  nl <- dplyr::full_join(
+    dplyr::count(prev, n_lines, name = "before"),
+    dplyr::count(lot_summary, n_lines, name = "after"), by = "n_lines") %>%
+    dplyr::arrange(n_lines)
+  print(as.data.frame(dplyr::transmute(nl, n_lines, before = fmt_n(before), after = fmt_n(after))),
+        row.names = FALSE)
+  message("[R/205] W-COMBO patients with > 4 lines: before ", fmt_n(sum(prev$n_lines > 4L)),
+          "; after ", fmt_n(sum(lot_summary$n_lines > 4L)))
+  top_gt4 <- function(d) {
+    d %>% dplyr::filter(n_lines > 4L) %>%
+      dplyr::count(regimen_per_line, sort = TRUE, name = "n") %>%
+      dplyr::slice_head(n = 10L) %>% dplyr::mutate(n = fmt_n(n))
+  }
+  message("[R/205] W-COMBO top 10 sequences, > 4 lines, BEFORE:")
+  print(as.data.frame(top_gt4(prev)), row.names = FALSE)
+  message("[R/205] W-COMBO top 10 sequences, > 4 lines, AFTER:")
+  print(as.data.frame(top_gt4(lot_summary)), row.names = FALSE)
+  top_fam <- lot_episodes %>%
+    dplyr::filter(!is.na(line_of_therapy)) %>%
+    dplyr::count(lot_family, sort = TRUE, name = "n_episodes") %>%
+    dplyr::slice_head(n = 15L) %>% dplyr::mutate(n_episodes = fmt_n(n_episodes))
+  message("[R/205] W-COMBO top 15 lot_family values (episodes):")
+  print(as.data.frame(top_fam), row.names = FALSE)
+  n_comb <- sum(!is.na(lot_episodes$lot_family) &
+                  lot_episodes$lot_family != regimen_lot_family(lot_episodes$regimen_label), na.rm = TRUE)
+  message("[R/205] W-COMBO episodes in a cross-type combined family: ", fmt_n(n_comb))
+  message("[R/205] R205_LOT_ONLY = TRUE: Gantt reconciliation skipped; delivered Gantt not read or written.")
+}
+
+
 # --- SECTION 4: GANTT RECONCILIATION VS PINNED 204 BASELINE (REGL-08) ----
+
+if (!R205_LOT_ONLY) {
 
 read_gantt <- function(path) {
   g <- vroom::vroom(path, col_types = vroom::cols(.default = "c"), show_col_types = FALSE)
@@ -382,3 +437,4 @@ recon <- dplyr::bind_rows(
   recon_cls)
 readr::write_csv(recon, R205_RECON_CSV)
 message("[R/205] reconciliation written: ", nrow(recon), " rows - ", R205_RECON_CSV)
+}  # end if (!R205_LOT_ONLY)
