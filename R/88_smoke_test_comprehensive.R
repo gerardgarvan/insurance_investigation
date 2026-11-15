@@ -8268,6 +8268,7 @@ if (length(p203_wb_path) == 0L) {
   p203_skip_fn("SMOKE-203-01 [d] A_profile/B_reasons_waterfall/C_by_source/D_candidate_rules present (workbook absent)")
   p203_skip_fn("SMOKE-203-01 [e] QC sheet present (workbook absent)")
   p203_skip_fn("SMOKE-203-01 [f] <11 suppression token present in A_profile (workbook absent)")
+  p203_skip_fn("SMOKE-203-01 [g] E_by_primary_source sheet + QC TR-treated-and-observable row (workbook absent)")
 } else {
   p203_chk("SMOKE-203-01 [b] workbook present",
     file.exists(p203_wb_path))
@@ -8288,6 +8289,15 @@ if (length(p203_wb_path) == 0L) {
   # [e] QC sheet
   p203_chk("SMOKE-203-01 [e] QC sheet present",
     "QC" %in% p203_sheets)
+
+  # [g] E_by_primary_source sheet (quick 261114-rbs) and QC row for TR-treated AND observable
+  p203_chk("SMOKE-203-01 [g] E_by_primary_source sheet present",
+    "E_by_primary_source" %in% p203_sheets)
+  local({
+    qc <- tryCatch(openxlsx::read.xlsx(p203_wb_path, sheet = "QC"), error = function(e) NULL)
+    p203_chk("SMOKE-203-01 [g2] QC has 'TR says treated AND observable' row",
+      !is.null(qc) && any(grepl("TR says treated AND observable", qc[[1]], fixed = TRUE)))
+  })
 
   # [f] suppression token "<11" in A_profile; NOTE rather than FAIL if absent (may be legitimate)
   local({

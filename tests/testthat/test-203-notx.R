@@ -49,29 +49,57 @@ test_that("build_tr_treatment_flags: ids filter and by_source", {
   expect_equal(nrow(empty), 0L)
 })
 
-test_that("waterfall: first-match order and non-exclusive flags", {
+test_that("waterfall: first-match order, prevalent flag, non-exclusive flags", {
   d0 <- as.Date("2015-01-01")
+  n  <- 12
   df <- tibble::tibble(
-    first_hl_dx_date = rep(d0, 9),
-    first_enc_date   = c(d0, d0 + 200, d0, d0, d0, d0, d0 + 91, d0 + 90, NA),
-    followup_days    = c(1000L, 1000L, 100L, 1000L, 1000L, 1000L, 1000L, 1000L, NA),
-    single_source_care = c(1L, 1L, 1L, 0L, 1L, 1L, 1L, 1L, 1L),
-    far_any_post     = c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE),
-    nlphl_any        = c(FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE),
-    tr_any_tx_given  = c(TRUE, TRUE, NA, NA, NA, NA, NA, NA, NA)
+    first_hl_dx_date = rep(d0, n),
+    first_enc_date   = c(d0, d0 + 200, d0, d0, d0, d0, d0 + 91, d0 + 90, NA, d0, d0, d0),
+    followup_days    = c(1000L, 1000L, 100L, 1000L, 1000L, 1000L, 1000L, 1000L, NA, 100L, 1000L, 1000L),
+    single_source_care = c(1L, 1L, 1L, 0L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L),
+    far_any_post     = c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, rep(FALSE, 6)),
+    nlphl_any        = c(rep(FALSE, 5), TRUE, rep(FALSE, 3), FALSE, TRUE, TRUE),
+    nlphl_only       = c(rep(FALSE, 5), TRUE, rep(FALSE, 6)),
+    tr_any_tx_given  = c(TRUE, TRUE, rep(NA, 10)),
+    first_hist_dx_date = as.Date(c(NA, NA, NA, NA, NA, NA, NA, NA, NA, "2015-01-31", NA, NA)),
+    tr_dx_date       = as.Date(c(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, "2013-12-31", NA))
   )
   fl <- add_notx_flags(df)
   r  <- as.character(assign_notx_reason(fl))
   expect_equal(r[1], NOTX_REASON_LEVELS[1])   # TR beats everything
   expect_equal(r[2], NOTX_REASON_LEVELS[1])   # TR beats coverage gap
   expect_equal(r[3], NOTX_REASON_LEVELS[3])   # short follow-up
-  expect_equal(r[4], NOTX_REASON_LEVELS[4])   # multi-source
-  expect_equal(r[5], NOTX_REASON_LEVELS[5])   # far
-  expect_equal(r[6], NOTX_REASON_LEVELS[6])   # NLPHL
-  expect_equal(r[7], NOTX_REASON_LEVELS[2])   # first enc = dx + 91 -> coverage gap
-  expect_equal(r[8], NOTX_REASON_LEVELS[7])   # exactly dx + 90 -> not a gap -> unexplained
-  expect_equal(r[9], NOTX_REASON_LEVELS[2])   # no usable encounter -> coverage gap
+  expect_equal(r[4], NOTX_REASON_LEVELS[6])   # multi-source is no longer a reason
+  expect_equal(r[5], NOTX_REASON_LEVELS[6])   # far-from-care is no longer a reason
+  expect_equal(r[6], NOTX_REASON_LEVELS[5])   # NLPHL only
+  expect_equal(r[7], NOTX_REASON_LEVELS[4])   # first enc = dx + 91 -> coverage gap
+  expect_equal(r[8], NOTX_REASON_LEVELS[6])   # exactly dx + 90 -> not a gap
+  expect_equal(r[9], NOTX_REASON_LEVELS[4])   # no usable encounter -> coverage gap
+  # prevalent: history code at dx + 30d (boundary, TRUE) beats short follow-up
+  expect_true(fl$f_hist_code[10]); expect_true(fl$f_short_followup[10])
+  expect_equal(r[10], NOTX_REASON_LEVELS[2])
+  # TR dx 366d before first dx -> prevalent (b)
+  expect_true(fl$f_tr_early_dx[11]); expect_false(fl$f_hist_code[11])
+  expect_equal(r[11], NOTX_REASON_LEVELS[2])
+  # nlphl_any alone (not only) does not drive the waterfall
+  expect_true(fl$f_nlphl_any[12]); expect_false(fl$f_nlphl_only[12])
+  expect_equal(r[12], NOTX_REASON_LEVELS[6])
   expect_true(fl$f_dx_before_coverage[2] && fl$f_tr_treated[2])   # overlap kept in flags
   expect_false(anyNA(r))
   expect_equal(levels(assign_notx_reason(fl)), NOTX_REASON_LEVELS)
+})
+
+test_that("prevalent flag boundaries", {
+  d0 <- as.Date("2015-01-01")
+  df <- tibble::tibble(
+    first_hl_dx_date = rep(d0, 4),
+    first_enc_date = d0, followup_days = 1000L, single_source_care = 1L,
+    far_any_post = FALSE, nlphl_any = FALSE, nlphl_only = FALSE, tr_any_tx_given = NA,
+    first_hist_dx_date = as.Date(c("2015-01-31", "2015-02-01", NA, NA)),
+    tr_dx_date = as.Date(c(NA, NA, "2014-01-01", "2013-12-31"))
+  )
+  fl <- add_notx_flags(df)
+  expect_equal(fl$f_hist_code, c(TRUE, FALSE, FALSE, FALSE))     # dx + 30d inclusive
+  expect_equal(fl$f_tr_early_dx, c(FALSE, FALSE, FALSE, TRUE))   # 365d not > 365; 366d is
+  expect_equal(fl$f_prevalent_hl, c(TRUE, FALSE, FALSE, TRUE))
 })
