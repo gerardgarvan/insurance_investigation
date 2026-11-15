@@ -85,3 +85,31 @@ Before the next run:
 - BV_consolidation 1,325 needs review under REGL-06-C.
 
 Scope input from Phase 204: only 54.6% of treatment episodes carry `drug_names`. The remaining Rituximab (Gantt 478 vs raw 772) and Brentuximab (776 vs 954) gaps come from drug-name attribution on episodes, not missed administrations. Regimen assignment depends on `drug_names`, so the engine will under-label until attribution is addressed. Decide in scope review whether to fix attribution before or inside Phase 205.
+
+## Second HiPerGator run (2026-11-14) and revision (quick 261114-sir)
+
+Outputs NOT shipped; Phase 204 files restored; 205 candidates in `output/internal/p205_candidate/`.
+
+Findings (180-day file):
+- abvd_class 204 -> 205 (chemo episodes): ABVD 1,109 -> 851 (+18 AVD, 50 Unrecognized, **190 blank**); ABVD_PLUS 186 -> mostly ABVD/AVD/BV+AVD/Unrecognized (26 blank); AVD 236 -> 197 (31 blank); BV+AVD 251 -> 175 (38 blank); Nivo+AVD 42 -> 34 (1 blank).
+- All 190 ABVD blanks have episode drug set exactly Bleomycin;Dacarbazine;Doxorubicin;Vinblastine; all 38 BV+AVD blanks have Dacarbazine;Doxorubicin;Vinblastine.
+- "Unrecognized systemic" (2,464 episodes) holds known regimens: CHOP backbone 110, BEAM components 94, BEACOPP 82, R-CHOP 73, full ABVD 54, CHOEP 47, partial ABVD (Bleo+Dac+Dox) 35, AVD 29, plus Bendamustine, salvage agents, methotrexate alone (253), leuprolide (30).
+- LOT assigned to all 19,324 episodes incl. Radiation/SCT/Proton; n_lines up to 19. R/29 first-line counted any label: 2,536 patients (1,245 Unrecognized) vs 1,379 before.
+- R/205 default stage2 path pointed at output/internal/; column-count guard did not compare values.
+
+Root cause of blanks (code reading; confirm on HiPerGator): `assign_regimen()` built episode keys only from date-level rows (`episode_detail` rows with a non-blank `drug_name`). Episodes with `drug_names` but no such rows were never keyed, so the left join in R/28 returned NA. The date-level pool could also be polluted by neighbouring drugs within +/-7 days. R/28 now prints the count of systemic episodes with drug_names but no date-level rows, so the cause can be confirmed.
+
+Changes:
+- Labels: every Chemotherapy/Immunotherapy episode with drug_names gets a label, never NA. Priority: strict date-level match, strict episode-level match (pooled), strict own-drugs match, loose matches (ABVD_PLUS, ABVD/AVD partial), then "Unrecognized systemic". `regimen_basis` = "date" or "episode"; `regimen_detail` holds the salvage family or other detail. Separators "," and ";" both handled (`split_drug_names()`).
+- Immunotherapy episodes outside any regimen now get "Unrecognized systemic" (previously NA); R/205 QC no longer stops on this.
+- REGIMEN_DICT: BEACOPP (+/- procarbazine, prednisone), CHOP, R-CHOP, CHOEP, BR, Bendamustine mono, BEAM (Conditioning (BEAM) within BEAM_SCT_WINDOW_DAYS = 30 of an SCT episode, else Salvage), salvage families (ICE, ESHAP, DHAP, GVD, GDP, gemcitabine-based, platinum-based) under one "Salvage" label, ABVD/AVD partial, Non-lymphoma / supportive (leuprolide; methotrexate alone with immune_flag / autoimmune dx, applied in R/142). escBEACOPP stays in the dictionary but is not auto-matched (dose-based).
+- LOT: only recognized systemic regimens; NA for Unrecognized, Non-lymphoma, Radiation, SCT, Proton. New line on family change or same family after gap >= LOT_GAP_DAYS. BV_consolidation, Rituximab_mono and Conditioning (BEAM) attach to the current line. SCT no longer starts a line. Families: `REGIMEN_LOT_FAMILY_MAP` in utils_regimen.R (ABVD family = ABVD, AVD, BV+AVD, Nivo+AVD, ABVD_PLUS, partial).
+- R/29 first-line: `first_line_eligible()` (ABVD family, BEACOPP, BV+AVD, Nivo+AVD, CHOP family, BR, Pediatric); excludes Unrecognized, Salvage, Conditioning, Non-lymphoma, maintenance.
+- R/205: stage2 default from `CONFIG$cache$outputs_dir`; value-level reconciliation vs pinned `R205_BASELINE_GANTT`; warns (does not stop) on > 5% change in any ABVD-family class; QC lists patients with > 4 lines and top sequences.
+
+Open decisions:
+- **D-201-01 (ABVD_PLUS):** kept as a loose class (AVD drugs + any agent other than BV / nivolumab) so `abvd_class` stays comparable to the delivered file. Decide whether to keep, rename or retire it.
+- **Partial AVD:** "ABVD/AVD partial" = two or more ABVD drugs and nothing else, from the drug set alone. Decide whether a partial set counts as ABVD for `ever_abvd` / first-line (currently counted for first-line, not for `abvd_episode`), and whether the "within an ABVD course" wording needs a date-based rule.
+- BEAM window (30 days), CHOP-family grouping for LOT, and Pediatric first-line eligibility are assumptions.
+
+PENDING HIPERGATOR: re-run, then paste the output lines named in the SUMMARY.

@@ -888,6 +888,11 @@ stopifnot(
 # abvd_class column now comes from assign_regimen() output written into
 # stage2 RDS by R/28 (Plan 205-02). No duplicate labeling here. REGL-04.
 # The column name abvd_class is preserved for downstream compatibility.
+# Quick 261114-sir: methotrexate alone in a patient with immune_flag / autoimmune
+# dx is not lymphoma therapy ("Non-lymphoma / supportive").
+episodes_export$regimen_label <- relabel_methotrexate_autoimmune(
+  episodes_export$regimen_label, episodes_export$drug_names,
+  episodes_export$immune_flag | dplyr::coalesce(episodes_export$has_autoimmune_dx, FALSE))
 abvd_class <- episodes_export$regimen_label
 abvd_class[episodes_export$treatment_type != "Chemotherapy"] <- NA_character_
 

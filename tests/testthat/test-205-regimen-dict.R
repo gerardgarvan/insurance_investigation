@@ -175,17 +175,17 @@ test_that("Immunotherapy BV episode alongside AVD chemo is BV+AVD on both episod
   expect_equal(sort(result$treatment_type), c("Chemotherapy", "Immunotherapy"))
 })
 
-test_that("Immunotherapy agent outside any regimen gets NA", {
+test_that("Immunotherapy agent outside any regimen is Unrecognized, never NA", {
   df <- make_episode_df("Pembrolizumab", type = "Immunotherapy")
   result <- assign_regimen(df, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)
-  expect_true(is.na(result$regimen_label))
+  expect_equal(result$regimen_label, "Unrecognized systemic")
 })
 
 # ── BV_consolidation requires SCT within window ───────────────────────────────
-test_that("BV alone without SCT is NA, with SCT inside window is BV_consolidation", {
+test_that("BV alone without SCT is Unrecognized, with SCT inside window is BV_consolidation", {
   bv <- make_episode_df("Brentuximab Vedotin", type = "Immunotherapy",
                         start_date = as.Date("2022-03-01"))
-  expect_true(is.na(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)$regimen_label))
+  expect_equal(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)$regimen_label, "Unrecognized systemic")
 
   sct_near <- tibble::tibble(ID = "P001", sct_start = as.Date("2022-01-15"),
                              sct_stop = as.Date("2022-01-20"))
@@ -195,13 +195,13 @@ test_that("BV alone without SCT is NA, with SCT inside window is BV_consolidatio
 
   sct_far <- tibble::tibble(ID = "P001", sct_start = as.Date("2021-01-01"),
                             sct_stop = as.Date("2021-01-10"))
-  expect_true(is.na(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
-                                   sct_df = sct_far, sct_window_days = 90L)$regimen_label))
+  expect_equal(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
+                                   sct_df = sct_far, sct_window_days = 90L)$regimen_label, "Unrecognized systemic")
 
   sct_after <- tibble::tibble(ID = "P001", sct_start = as.Date("2022-06-01"),
                               sct_stop = as.Date("2022-06-05"))
-  expect_true(is.na(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
-                                   sct_df = sct_after, sct_window_days = 90L)$regimen_label))
+  expect_equal(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
+                                   sct_df = sct_after, sct_window_days = 90L)$regimen_label, "Unrecognized systemic")
 })
 
 # ── REGL-02: Window enforcement ───────────────────────────────────────────────

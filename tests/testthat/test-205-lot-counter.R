@@ -73,20 +73,6 @@ test_that("REGL-03: Gap >= LOT_GAP_DAYS triggers new line", {
   expect_equal(result$line_of_therapy, c(1L, 2L))
 })
 
-# ── REGL-03: Post-SCT episode increments regardless of gap ────────────────────
-test_that("REGL-03: Post-SCT episode increments LOT regardless of gap length", {
-  df <- dplyr::bind_rows(
-    make_ep("P001", 1, "2022-01-01", "2022-04-01", "ABVD"),
-    make_ep("P001", 2, "2022-05-01", "2022-08-01", "BV_consolidation")  # gap = 30 days
-  )
-  sct <- tibble::tibble(ID = "P001", sct_date = as.Date("2022-04-15"))
-  result <- assign_lot(df, lot_gap_days = LOT_GAP_DAYS,
-                       maintenance_classes = character(0),  # not maintenance for this test
-                       sct_dates_df = sct)
-  # Episode 2 starts after SCT → line 2
-  expect_equal(result$line_of_therapy, c(1L, 2L))
-})
-
 # ── REGL-03: Maintenance episode inherits LOT ─────────────────────────────────
 test_that("REGL-03: Maintenance episode inherits current LOT, does not increment", {
   df <- dplyr::bind_rows(
@@ -99,17 +85,5 @@ test_that("REGL-03: Maintenance episode inherits current LOT, does not increment
   # BV_consolidation is maintenance → stays at line 1
   expect_equal(result$line_of_therapy, c(1L, 1L))
 })
-
-# ── REGL-03: Three-line patient ───────────────────────────────────────────────
-test_that("REGL-03: Three-line patient — gap + SCT + gap → lines 1, 2, 3", {
-  df <- dplyr::bind_rows(
-    make_ep("P001", 1, "2021-01-01", "2021-06-01", "ABVD"),          # LOT 1
-    make_ep("P001", 2, "2021-11-01", "2022-02-01", "Salvage"),       # gap 153d → LOT 2
-    make_ep("P001", 3, "2023-01-01", "2023-04-01", "BV_consolidation")  # post-SCT → LOT 3
-  )
-  sct <- tibble::tibble(ID = "P001", sct_date = as.Date("2022-06-01"))
-  result <- assign_lot(df, lot_gap_days = LOT_GAP_DAYS,
-                       maintenance_classes = character(0),  # not maintenance for ep3
-                       sct_dates_df = sct)
-  expect_equal(result$line_of_therapy, c(1L, 2L, 3L))
-})
+# Post-SCT increment and SCT-gap three-line tests removed (quick 261114-sir):
+# SCT no longer starts a line. New LOT rules are tested in test-205-regimen-revision.R.

@@ -358,20 +358,45 @@ regimen_assignments <- assign_regimen(
   regimen_dict    = REGIMEN_DICT,
   window_days     = CONCURRENCY_WINDOW_DAYS,
   sct_df          = sct_episodes,
-  sct_window_days = BV_CONSOLIDATION_SCT_WINDOW_DAYS
+  sct_window_days = BV_CONSOLIDATION_SCT_WINDOW_DAYS,
+  # Episode-level fallback (quick 261114-sir): episodes with drug_names but no
+  # usable date-level rows (or a polluted date-level pool) are labeled from
+  # their own drug_names. Separators "," and ";" are both handled.
+  episode_df      = episodes %>%
+    dplyr::select(ID = patient_id, treatment_type, episode_number,
+                  start_date = episode_start, drug_names),
+  beam_window_days = BEAM_SCT_WINDOW_DAYS
 )
+# Diagnostic: systemic episodes with drug_names that had NO date-level rows
+# (the root cause of unlabeled ABVD / BV+AVD episodes in the first 205 run).
+{
+  sys_named <- episodes %>%
+    dplyr::filter(treatment_type %in% REGIMEN_SYSTEMIC_TYPES,
+                  !is.na(drug_names), nzchar(trimws(drug_names)))
+  date_keys <- date_level_drugs %>%
+    dplyr::distinct(patient_id = ID, treatment_type, episode_number)
+  n_no_date <- nrow(dplyr::anti_join(
+    sys_named, date_keys, by = c("patient_id", "treatment_type", "episode_number")))
+  message(glue("  Systemic episodes with drug_names: {nrow(sys_named)}; without date-level rows: ",
+               "{ifelse(n_no_date < 11L && n_no_date > 0L, '<11', as.character(n_no_date))}"))
+  message("  regimen_basis: ",
+          paste(names(table(regimen_assignments$regimen_basis)),
+                ifelse(table(regimen_assignments$regimen_basis) < 11L, "<11",
+                       as.character(table(regimen_assignments$regimen_basis))),
+                sep = "=", collapse = "; "))
+}
 # regimen_assignments columns: ID, treatment_type, episode_number, regimen_label
 # episode_number is unique only within (patient_id, treatment_type): join on all three.
 
 # Drop prior regimen_label to prevent .x/.y suffixes on re-run.
-if ("regimen_label" %in% names(episodes)) {
-  episodes <- episodes %>% dplyr::select(-regimen_label)
-}
+episodes <- episodes %>%
+  dplyr::select(-dplyr::any_of(c("regimen_label", "regimen_detail", "regimen_basis")))
 episodes <- episodes %>%
   dplyr::left_join(
     regimen_assignments %>%
       dplyr::rename(patient_id = ID) %>%
-      dplyr::select(patient_id, treatment_type, episode_number, regimen_label),
+      dplyr::select(patient_id, treatment_type, episode_number, regimen_label,
+                    regimen_detail, regimen_basis),
     by = c("patient_id", "treatment_type", "episode_number")
   )
 
@@ -381,6 +406,12 @@ n_bad_label <- sum(!is.na(episodes$regimen_label) &
                    !episodes$treatment_type %in% REGIMEN_SYSTEMIC_TYPES)
 if (n_bad_label > 0L) {
   stop("[R/28] regimen_label set on ", n_bad_label, " non-systemic episodes")
+}
+n_na_label <- sum(is.na(episodes$regimen_label) &
+                  episodes$treatment_type %in% REGIMEN_SYSTEMIC_TYPES &
+                  !is.na(episodes$drug_names) & nzchar(trimws(episodes$drug_names)))
+if (n_na_label > 0L) {
+  stop("[R/28] ", n_na_label, " systemic episodes with drug_names have NA regimen_label")
 }
 
 # Assign line of therapy. REGL-03, REGL-04.
@@ -804,6 +835,7 @@ episodes <- episodes %>%
     episode_length_days, distinct_dates_in_episode, historical_flag,
     triggering_codes, encounter_ids, drug_names,
     cancer_category, cancer_link_method, is_hodgkin, regimen_label,
+    regimen_detail, regimen_basis,
     triggering_code_description, drug_group,
     code_type, source_table, treatment_line, sct_cross_use_flag,
     # --- Phase 93: Temporal context + confidence flags (IMMU-01, IMMU-02) ---
@@ -822,6 +854,7 @@ if (normalizePath(out_rds, mustWork = FALSE) ==
 
 # Verify required columns BEFORE writing (validate-then-write; D-197)
 req_cols_28 <- c("cancer_category", "cancer_link_method", "is_hodgkin", "regimen_label",
+                 "regimen_detail", "regimen_basis",
                  "triggering_code_description", "drug_group",
                  "code_type", "source_table", "treatment_line",
                  "sct_cross_use_flag", "is_sct_conditioning_context", "days_to_nearest_sct",

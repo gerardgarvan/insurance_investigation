@@ -120,10 +120,14 @@ message(glue("  Loaded DEMOGRAPHIC table: {nrow(demographics)} patients with bir
 
 message("\n--- First-Line Therapy Identification ---")
 
-# Step 3a: Filter to eligible episodes (per D-01: must have regimen_label)
+# Step 3a: Filter to eligible episodes (per D-01: must have regimen_label).
+# Quick 261114-sir: recognized regimens only (ABVD family, BEACOPP, BV+AVD,
+# Nivo+AVD, CHOP family). Excludes Unrecognized systemic, Salvage, Conditioning
+# (BEAM), Non-lymphoma / supportive and maintenance labels. first_line_eligible()
+# is in R/utils/utils_regimen.R.
 eligible_episodes <- episodes %>%
   filter(treatment_type == "Chemotherapy") %>%
-  filter(!is.na(regimen_label))
+  filter(first_line_eligible(regimen_label))
 
 message(glue("  Episodes with regimen labels: {nrow(eligible_episodes)} from {n_distinct(eligible_episodes$patient_id)} patients"))
 

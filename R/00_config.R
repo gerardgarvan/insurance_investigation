@@ -4497,6 +4497,7 @@ MAINTENANCE_DRUG_CLASSES <- c("BV_consolidation", "Rituximab_mono")
 #   exclusive: if TRUE, presence of any unlisted chemo agent disqualifies.
 #   maintenance: if TRUE, episodes matching this family do not start a new LOT.
 REGIMEN_DICT <- list(
+  # --- Strict ABVD family (exclusive: no other agent) ---
   ABVD = list(
     drugs       = c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine"),
     exclusive   = TRUE,
@@ -4517,10 +4518,30 @@ REGIMEN_DICT <- list(
     exclusive   = TRUE,
     maintenance = FALSE
   ),
+  # ABVD_PLUS (Phase 201 concept, kept until D-201-01 is decided): AVD drugs plus
+  # any agent other than BV / nivolumab. Reached only after the strict entries
+  # above fail, so it never shadows ABVD / AVD / BV+AVD / Nivo+AVD.
+  ABVD_PLUS = list(
+    drugs       = c("Doxorubicin", "Vinblastine", "Dacarbazine"),
+    exclusive   = FALSE,
+    maintenance = FALSE,
+    loose       = TRUE
+  ),
+  # Two or more ABVD drugs, nothing else (e.g. Bleomycin+Dacarbazine+Doxorubicin).
+  # subset_min = minimum number of distinct ABVD drugs present. REGL-06 partial-AVD.
+  `ABVD/AVD partial` = list(
+    drugs       = c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine"),
+    subset_min  = 2L,
+    exclusive   = TRUE,
+    maintenance = FALSE,
+    loose       = TRUE
+  ),
+  # --- BEACOPP: bleo + etop + dox + cyclo + vincr, +/- procarbazine / prednisone ---
   BEACOPP = list(
     drugs       = c("Bleomycin", "Etoposide", "Doxorubicin", "Cyclophosphamide",
-                    "Vincristine", "Procarbazine", "Prednisone"),
-    exclusive   = FALSE,
+                    "Vincristine"),
+    optional    = c("Procarbazine", "Prednisone"),
+    exclusive   = TRUE,
     maintenance = FALSE
   ),
   escBEACOPP = list(
@@ -4528,19 +4549,13 @@ REGIMEN_DICT <- list(
                     "Vincristine", "Procarbazine", "Prednisone"),
     exclusive   = FALSE,
     maintenance = FALSE,
-    note        = "Distinguish from BEACOPP by dose — requires SME confirmation (REGL-06)"
+    detectable  = FALSE,
+    note        = "Distinguish from BEACOPP by dose; not auto-matched. Needs SME confirmation (REGL-06)"
   ),
-  Pediatric = list(
-    drugs       = c("Doxorubicin", "Vincristine", "Etoposide", "Prednisone",
-                    "Cyclophosphamide"),
-    exclusive   = FALSE,
-    maintenance = FALSE,
-    note        = "ABVE-PC/OEPA-COPDAC/BV-AVEPC — SME confirmation needed (REGL-06)"
-  ),
-  # NLPHL is a diagnosis, not a regimen; replaced by the rituximab regimen families.
-  # Order matters (first match wins): R-CHOP before R-CVP before Rituximab_mono.
+  # --- CHOP family. Order: R-CHOP, R-CVP, CHOEP, CHOP (first match wins) ---
   `R-CHOP` = list(
-    drugs       = c("Rituximab", "Cyclophosphamide", "Doxorubicin", "Vincristine", "Prednisone"),
+    drugs       = c("Rituximab", "Cyclophosphamide", "Doxorubicin", "Vincristine"),
+    optional    = "Prednisone",
     exclusive   = FALSE,
     maintenance = FALSE
   ),
@@ -4549,12 +4564,96 @@ REGIMEN_DICT <- list(
     exclusive   = TRUE,
     maintenance = FALSE
   ),
-  Salvage = list(
-    drugs       = c("Ifosfamide", "Carboplatin", "Etoposide"),
+  CHOEP = list(
+    drugs       = c("Cyclophosphamide", "Doxorubicin", "Vincristine", "Etoposide"),
+    optional    = "Prednisone",
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  CHOP = list(
+    drugs       = c("Cyclophosphamide", "Doxorubicin", "Vincristine"),
+    optional    = "Prednisone",
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  Pediatric = list(
+    drugs       = c("Doxorubicin", "Vincristine", "Etoposide", "Prednisone",
+                    "Cyclophosphamide"),
     exclusive   = FALSE,
     maintenance = FALSE,
-    note        = "ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembro/nivo — SME list needed (REGL-06)"
+    note        = "ABVE-PC/OEPA-COPDAC/BV-AVEPC; SME confirmation needed (REGL-06)"
   ),
+  # --- Bendamustine ---
+  BR = list(
+    drugs       = c("Bendamustine", "Rituximab"),
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  `Bendamustine mono` = list(
+    drugs       = "Bendamustine",
+    exclusive   = TRUE,
+    maintenance = FALSE
+  ),
+  # --- BEAM: conditioning only near an SCT episode, otherwise Salvage ---
+  BEAM_conditioning = list(
+    drugs            = c("Carmustine", "Etoposide"),
+    optional         = c("Cytarabine", "Melphalan"),
+    exclusive        = TRUE,
+    maintenance      = FALSE,
+    requires_near_sct = TRUE,
+    label            = "Conditioning (BEAM)"
+  ),
+  BEAM_salvage = list(
+    drugs       = c("Carmustine", "Etoposide"),
+    optional    = c("Cytarabine", "Melphalan"),
+    exclusive   = TRUE,
+    maintenance = FALSE,
+    label       = "Salvage",
+    detail      = "BEAM (no SCT nearby)"
+  ),
+  # --- Salvage families: one label, family kept in regimen_detail ---
+  Salvage_ICE = list(
+    drugs = c("Ifosfamide", "Carboplatin", "Etoposide"),
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage", detail = "ICE"
+  ),
+  Salvage_ESHAP = list(
+    drugs = c("Etoposide", "Cisplatin", "Cytarabine"),
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage", detail = "ESHAP"
+  ),
+  Salvage_DHAP = list(
+    drugs = c("Cisplatin", "Cytarabine"),
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage", detail = "DHAP"
+  ),
+  Salvage_GVD = list(
+    drugs = c("Gemcitabine", "Vinorelbine", "Doxorubicin"),
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage", detail = "GVD"
+  ),
+  Salvage_GDP = list(
+    drugs = c("Gemcitabine", "Cisplatin"),
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage", detail = "GDP"
+  ),
+  Salvage_gemcitabine = list(
+    drugs = "Gemcitabine",
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage",
+    detail = "gemcitabine-based"
+  ),
+  Salvage_platinum = list(
+    drugs = character(0),
+    any_of = c("Cisplatin", "Carboplatin", "Oxaliplatin"),
+    exclusive = FALSE, maintenance = FALSE, label = "Salvage",
+    detail = "platinum-based"
+  ),
+  # --- Not lymphoma-directed: excluded from LOT and first-line ---
+  Leuprolide = list(
+    drugs = "Leuprolide", exclusive = TRUE, maintenance = FALSE,
+    label = "Non-lymphoma / supportive", detail = "leuprolide"
+  ),
+  Methotrexate_autoimmune = list(
+    drugs = "Methotrexate", exclusive = TRUE, maintenance = FALSE,
+    requires_immune = TRUE,
+    label = "Non-lymphoma / supportive", detail = "methotrexate alone, autoimmune dx"
+  ),
+  # --- Maintenance families ---
   Rituximab_mono = list(
     drugs       = c("Rituximab"),
     exclusive   = TRUE,
@@ -4568,6 +4667,10 @@ REGIMEN_DICT <- list(
     note             = "BV mono only when an SCT episode precedes it within BV_CONSOLIDATION_SCT_WINDOW_DAYS (REGL-06-C)"
   )
 )
+
+# BEAM conditioning counts as "near SCT" when the episode starts within this many
+# days before sct_start or after sct_stop.
+BEAM_SCT_WINDOW_DAYS <- 30L
 
 # BV consolidation must start on/after an SCT episode start and no later than
 # SCT episode stop + this many days. Assumed default = LOT_GAP_DAYS (REGL-06-C).
