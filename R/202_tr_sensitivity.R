@@ -6,7 +6,7 @@
 #   Tumor-registry treatment sensitivity analysis.
 #   Compares registry first-course treatment fields against Gantt pipeline
 #   capture for TR-HL patients in gantt_episodes_180 (denominator approx 600).
-#   Reports sensitivity by treatment type, SOURCE, and diagnosis year;
+#   Reports sensitivity by treatment type, SOURCE (UFH/ORL/TMH), and diagnosis year;
 #   reverse (PPV-direction) agreement; date-difference distribution.
 #   The 121 TR-HL patients outside confirmed_hl_cohort.rds are reported as
 #   a footnote row, not in the sensitivity denominator.
@@ -92,27 +92,86 @@ message(glue("  tr_flags:    {tr_flags_path}"))
 message(glue("  cohort_rds:  {cohort_rds_path}"))
 message(glue("  output_dir:  {output_dir}\n"))
 
-# --- TR COLUMN CONSTANTS (PENDING-PROBE) ------------------------------------
-# Source: R/10_cohort_predicates.R (lines 248-249, 398-399, 558, 568-571).
-# Confirm column names with probe output in .planning/schemas/202_schema_*.md
-# before running the comparison section below.
+# --- TR COLUMN MAP (from schema probe) ---------------------------------------
+# Source: .planning/schemas/202_schema_tr_treatment_cols_20261114.md
+# TUMOR_REGISTRY_ALL has no TR1/TR2/TR3 split: stratify by SOURCE (UFH/ORL/TMH).
+#
+# code_scheme (the meaning of 0 is OPPOSITE between the two schemes):
+#   reason_no : REASON_NO_* / R_N_* fields.  0 = treatment GIVEN; other codes =
+#               reason not given.
+#   naaccr_rx : NAACCR summary codes (*_CODE_SUMMARY, HORMONE_CODE, ...).
+#               00 = none; listed given_values = given (01-03 chemo, 01 immuno ...).
+#   rx_summ   : RX Summ fields (DRAD_SUM, DBRM_SUM, HTE_SUM).  0 = NONE.
+# Unknown codes (counted "unknown", never "not given"):
+CODE_UNKNOWN <- list(
+  reason_no = c(8L, 9L),
+  naaccr_rx = c(88L, 99L),
+  rx_summ   = c(8L, 9L, 88L, 99L)
+)
 
-# Chemotherapy: TR1 uses CHEMO_START_DATE_SUMMARY; TR2/TR3 use DT_CHEMO
-TR_CHEMO_COLS <- c("CHEMO_START_DATE_SUMMARY", "DT_CHEMO")  # PENDING-PROBE
+tr_map_row <- function(source, trtype, date_col = NA_character_,
+                       code_col = NA_character_, code_scheme = NA_character_,
+                       given_values = integer(0)) {
+  tibble(source = source, trtype = trtype, date_col = date_col,
+         code_col = code_col, code_scheme = code_scheme,
+         given_values = list(as.integer(given_values)))
+}
 
-# Radiation: TR1 uses RAD_START_DATE_SUMMARY; TR2/TR3 use DT_RAD
-TR_RAD_COLS   <- c("RAD_START_DATE_SUMMARY", "DT_RAD")      # PENDING-PROBE
+SCT_GIVEN <- c(10L, 11L, 12L, 20L)   # 10 BMT NOS; 11 auto; 12 allo; 20 SC harvest+infusion
 
-# Immunotherapy: column name unknown — PENDING PROBE
-# Common candidates: RX_SUMM_IMMUNO, DT_IMMUNO, IMMUNO_DATE_SUMMARY
-TR_IMMUNO_COLS <- character(0)  # PENDING-PROBE: fill after schema probe
+TR_MAP <- bind_rows(
+  # UFH (NAACCR summary items)
+  tr_map_row("UFH", "chemo",     "CHEMO_START_DATE_SUMMARY",       "CHEMO_CODE_SUMMARY",               "naaccr_rx", 1:3),
+  tr_map_row("UFH", "systemic",  "DATE_SYSTEMIC_THERAPY_STARTED"),
+  tr_map_row("UFH", "radiation", NA_character_,                    "REASON_NO_RADIATION",              "reason_no", 0L),
+  tr_map_row("UFH", "immuno",    "IMMUNO_START_DATE",              "IMMUNOTHERAPY_CODE",               "naaccr_rx", 1L),
+  tr_map_row("UFH", "sct",       NA_character_,                    "HEMATOLOGIC_TRANSPLANT_AND_ENDOC", "naaccr_rx", SCT_GIVEN),
+  tr_map_row("UFH", "hormone",   "HORMONE_START_DATE",             "HORMONE_CODE",                     "naaccr_rx", 1L),
+  # ORL (abstract-style)
+  tr_map_row("ORL", "chemo",     "DT_CHEMO",                       "R_N_CHEMO",                        "reason_no", 0L),
+  tr_map_row("ORL", "systemic",  "DT_SYS"),
+  tr_map_row("ORL", "radiation", "DT_RAD",                         "R_N_RAD",                          "reason_no", 0L),
+  tr_map_row("ORL", "immuno",    NA_character_,                    "DBRM_SUM",                         "rx_summ",   1L),
+  tr_map_row("ORL", "sct",       NA_character_,                    "HTE_SUM",                          "rx_summ",   SCT_GIVEN),
+  tr_map_row("ORL", "hormone",   "DT_HORM",                        "R_N_HORM",                         "reason_no", 0L),
+  # TMH (15 TR rows; counts only, no sensitivity). DRAD_SUM: 0 = none; 8/9 unknown;
+  # the probe lists no "given" value for it, so given_values is empty.
+  tr_map_row("TMH", "chemo",     "DT_CHEMO"),
+  tr_map_row("TMH", "systemic",  "DT_SYS"),
+  tr_map_row("TMH", "radiation", NA_character_,                    "DRAD_SUM",                         "rx_summ"),
+  tr_map_row("TMH", "immuno",    NA_character_,                    "DBRM_SUM",                         "rx_summ",   1L),
+  tr_map_row("TMH", "sct",       NA_character_,                    "HTE_SUM",                          "rx_summ",   SCT_GIVEN)
+)
 
-# Transplant/SCT:
-#   TR1: HEMATOLOGIC_TRANSPLANT_AND_ENDOC (code; non-NA/non-""/non-"00" = flagged)
-#   TR2/TR3: DT_HTE, DT_SCT (dates)
-TR_SCT_CODE_COL  <- "HEMATOLOGIC_TRANSPLANT_AND_ENDOC"  # PENDING-PROBE (TR1)
-TR_SCT_DATE_COLS <- c("DT_HTE", "DT_SCT", "DT_TRANSPLANT", "HCT_DATE",
-                      "TRANSPLANT_DATE", "SCT_DATE", "BMT_DATE") # PENDING-PROBE (TR2/3)
+# Histology columns used to restrict to HL rows (same two columns and substr(1, 4)
+# rule as R/10_cohort_predicates.R:83,92; not listed in the 202 probe).
+TR_HIST_COLS <- c("HISTOLOGICAL_TYPE", "MORPH")
+
+# Treatment type -> label and Gantt treatment_type. systemic has no Gantt
+# counterpart (descriptive counts only). "Hormone" is an UNCONFIRMED Gantt label:
+# it is checked against gantt$treatment_type at run time (Section 5).
+TYPE_DEF <- tibble(
+  trtype     = c("chemo", "radiation", "immuno", "sct", "hormone", "systemic"),
+  label      = c("Chemotherapy", "Radiation", "Immunotherapy",
+                 "Stem Cell Transplant", "Hormone", "Systemic therapy"),
+  gantt_type = c("Chemotherapy", "Radiation", "Immunotherapy",
+                 "Stem Cell Transplant", "Hormone", NA_character_)
+)
+
+# Type/source pairs with a TR date column: only these get B_date_diff rows.
+# Transplant is code-only (no date anywhere), so it has no B row.
+B_PAIRS <- tibble(
+  source = c("UFH", "ORL", "ORL", "UFH", "UFH", "ORL"),
+  trtype = c("chemo", "chemo", "radiation", "immuno", "hormone", "hormone")
+)
+stopifnot(nrow(semi_join(TR_MAP |> filter(!is.na(date_col)), B_PAIRS,
+                         by = c("source", "trtype"))) == nrow(B_PAIRS))
+
+# Sources with sensitivity computed (TMH reported as counts only)
+SENS_SOURCES <- c("UFH", "ORL")
+
+# Reference values shown as percentages only when numerator and denominator >= 11
+pct_sup <- function(num, den) ifelse(num >= 11L & den >= 11L, round(100 * num / den, 1), NA_real_)
 
 # --- SECTION 1: LOAD GANTT_EPISODES_180 -------------------------------------
 message("=== Section 1: Load gantt_episodes_180 ===")
@@ -128,7 +187,7 @@ gantt <- vroom(gantt_180_path, col_types = cols(
 
 # Patient-level gantt population (one row per patient)
 gantt_pts <- gantt |>
-  distinct(patient_id, tr_hl_dx, tr_nhl_dx, SOURCE) |>
+  distinct(patient_id, tr_hl_dx, tr_nhl_dx) |>
   # tr_hl_dx/tr_nhl_dx are constant within patient_id (checked by R/88 Phase 201)
   group_by(patient_id) |>
   slice(1L) |>
@@ -143,58 +202,107 @@ tr_flags <- readRDS(tr_flags_path)
 n_tr_hl_all <- sum(tr_flags$tr_hl_dx == TRUE, na.rm = TRUE)
 message(glue("  TR flags: {nrow(tr_flags)} patients; {n_tr_hl_all} with tr_hl_dx TRUE"))
 
-# --- SECTION 3: LOAD TR TREATMENT COLUMNS -----------------------------------
-# Collect only columns needed for comparison (avoid loading full table).
+# --- SECTION 3: LOAD TR TREATMENT COLUMNS, RESTRICT TO HL ROWS --------------
+# Collect only columns needed (avoid loading the full 483-column table).
 message("=== Section 3: Load TR treatment columns from TUMOR_REGISTRY_ALL ===")
 open_pcornet_con()
 tr_tbl_raw <- get_pcornet_table("TUMOR_REGISTRY_ALL")
 tr_all_cols <- colnames(tr_tbl_raw)
 
-# Intersect with known column sets (PENDING-PROBE: update constants above)
-tr_chemo_present  <- intersect(TR_CHEMO_COLS,    tr_all_cols)
-tr_rad_present    <- intersect(TR_RAD_COLS,      tr_all_cols)
-tr_immuno_present <- intersect(TR_IMMUNO_COLS,   tr_all_cols)
-tr_sct_code_pres  <- TR_SCT_CODE_COL %in% tr_all_cols
-tr_sct_date_pres  <- intersect(TR_SCT_DATE_COLS, tr_all_cols)
+map_cols <- unique(na.omit(c(TR_MAP$date_col, TR_MAP$code_col)))
+missing_map_cols <- setdiff(map_cols, tr_all_cols)
+if (length(missing_map_cols) > 0L) {
+  close_pcornet_con()
+  stop("[R202] TR_MAP columns not in TUMOR_REGISTRY_ALL: ",
+       paste(missing_map_cols, collapse = ", "),
+       "\nAvailable columns matching DT_|CODE|R_N_|SUM: ",
+       paste(grep("^DT_|CODE|^R_N_|SUM", tr_all_cols, value = TRUE), collapse = ", "))
+}
+hist_present <- intersect(TR_HIST_COLS, tr_all_cols)
+if (!"SOURCE" %in% tr_all_cols || length(hist_present) == 0L) {
+  close_pcornet_con()
+  stop("[R202] SOURCE or histology column (", paste(TR_HIST_COLS, collapse = "/"),
+       ") missing from TUMOR_REGISTRY_ALL")
+}
 
-needed_cols <- unique(c(
-  "ID",
-  tr_chemo_present, tr_rad_present, tr_immuno_present,
-  if (tr_sct_code_pres) TR_SCT_CODE_COL,
-  tr_sct_date_pres
-))
-
+needed_cols <- unique(c("ID", "SOURCE", hist_present, map_cols))
 tr_data <- tr_tbl_raw |>
   select(all_of(needed_cols)) |>
   collect()
 close_pcornet_con()
-message(glue("  TUMOR_REGISTRY_ALL: {nrow(tr_data)} rows; columns: {paste(needed_cols, collapse=', ')}"))
+
+tr_hl <- tr_data |>
+  mutate(is_hl_row = Reduce(`|`, lapply(hist_present, function(cn)
+    substr(as.character(.data[[cn]]), 1, 4) %in% ICD_CODES$hl_histology))) |>
+  filter(is_hl_row)
+n_tr_rows    <- nrow(tr_data)
+n_tr_hl_rows <- nrow(tr_hl)
+n_tmh_rows   <- sum(tr_hl$SOURCE == "TMH")
+message(glue("  TUMOR_REGISTRY_ALL: {n_tr_rows} rows; {n_tr_hl_rows} HL-histology rows ",
+             "({n_distinct(tr_hl$ID)} patients); columns pulled: {length(needed_cols)}"))
+message("  HL rows by SOURCE: ",
+        paste(names(table(tr_hl$SOURCE)), as.integer(table(tr_hl$SOURCE)), collapse = "; "))
+
+# --- SECTION 3b: PATIENT-LEVEL COLLAPSE --------------------------------------
+# Per map row (source x treatment type): row-level evidence on HL rows.
+#   row_given   = date present OR code in given_values
+#   row_unknown = code in the scheme's unknown codes (88, 99, 8, 9)
+# Per patient: tr_given = any HL row given; tr_first_date = earliest non-missing
+# date across HL rows; unknown (and not given) is "unknown", not "not_given".
+tr_row_evidence <- function(rows, map_row) {
+  src_rows <- rows |> filter(SOURCE == map_row$source)
+  n <- nrow(src_rows)
+  dt <- if (!is.na(map_row$date_col)) as.Date(src_rows[[map_row$date_col]]) else rep(as.Date(NA), n)
+  cd <- if (!is.na(map_row$code_col)) {
+    suppressWarnings(as.integer(as.character(src_rows[[map_row$code_col]])))
+  } else rep(NA_integer_, n)
+  unk_codes <- if (is.na(map_row$code_scheme)) integer(0) else CODE_UNKNOWN[[map_row$code_scheme]]
+  tibble(
+    ID = src_rows$ID, SOURCE = map_row$source, trtype = map_row$trtype,
+    row_date    = dt,
+    row_given   = !is.na(dt) | cd %in% unlist(map_row$given_values),
+    row_unknown = cd %in% unk_codes
+  )
+}
+
+collapse_evidence <- function(ev, by) {
+  ev |>
+    group_by(across(all_of(by))) |>
+    summarise(
+      tr_given       = any(row_given),
+      tr_unknown_any = any(row_unknown),
+      tr_first_date  = if (any(!is.na(row_date))) min(row_date, na.rm = TRUE) else as.Date(NA),
+      .groups = "drop"
+    ) |>
+    mutate(tr_status = case_when(tr_given ~ "given", tr_unknown_any ~ "unknown", TRUE ~ "not_given"))
+}
+
+tr_evidence <- bind_rows(lapply(seq_len(nrow(TR_MAP)), function(i) tr_row_evidence(tr_hl, TR_MAP[i, ])))
+tr_pt_src <- collapse_evidence(tr_evidence, c("ID", "SOURCE", "trtype"))              # per source (C, B)
+tr_pt_all <- collapse_evidence(filter(tr_evidence, SOURCE %in% SENS_SOURCES),
+                               c("ID", "trtype"))                                      # UFH+ORL (A, D, PPV)
+message(glue("  tr_pt_src: {nrow(tr_pt_src)} patient x source x type rows; ",
+             "tr_pt_all: {nrow(tr_pt_all)} patient x type rows"))
 
 # --- SECTION 4: BUILD POPULATIONS -------------------------------------------
 # pop_denom   = TR-HL patients who ARE in gantt_episodes_180 (sensitivity denominator)
 # pop_footnote = TR-HL patients NOT in gantt_episodes_180 (D-201-04; footnote only)
 message("=== Section 4: Build denominator and footnote populations ===")
 
-# TR-HL patient IDs (from tr_flags, confirmed by tr_hl_dx == TRUE)
 tr_hl_ids <- tr_flags |>
   filter(tr_hl_dx == TRUE) |>
   pull(ID)
 
 gantt_pt_ids <- gantt_pts$patient_id
 
-# Denominator: in gantt AND tr_hl_dx TRUE
 pop_denom <- gantt_pts |>
-  filter(patient_id %in% tr_hl_ids) |>
-  left_join(tr_data, by = c("patient_id" = "ID"))
+  filter(patient_id %in% tr_hl_ids)
+denom_ids <- pop_denom$patient_id
 
-# Footnote: tr_hl_dx TRUE but NOT in gantt
 pop_footnote_ids <- setdiff(tr_hl_ids, gantt_pt_ids)
-pop_footnote <- tr_flags |>
-  filter(ID %in% pop_footnote_ids) |>
-  left_join(tr_data, by = "ID")
 
 n_denom    <- nrow(pop_denom)
-n_footnote <- nrow(pop_footnote)
+n_footnote <- length(pop_footnote_ids)
 message(glue("  Denominator (in gantt + TR-HL): {n_denom} patients (expected approx 600)"))
 message(glue("  Footnote (TR-HL not in gantt):  {n_footnote} patients (expected 121)"))
 
@@ -203,150 +311,95 @@ if (n_denom < 500L || n_denom > 700L)
 if (n_footnote < 100L || n_footnote > 150L)
   warning(glue("R202: footnote count {n_footnote} outside expected 100-150 range — verify inputs"))
 
-# --- TREATMENT TYPE MAPPING --------------------------------------------------
-# Maps analysis labels to:
-#   tr_date_cols: columns in pop_denom that signal TR records this treatment
-#   gantt_type:   treatment_type value in gantt_episodes_180
-# PENDING-PROBE: tr_immuno_cols is empty until probe confirms immunotherapy column name.
-
-TRTYPES <- list(
-  chemo = list(
-    label        = "Chemotherapy",
-    tr_date_cols = tr_chemo_present,     # e.g. CHEMO_START_DATE_SUMMARY / DT_CHEMO
-    tr_code_col  = NULL,
-    tr_code_vals = NULL,
-    gantt_type   = "Chemotherapy"
-  ),
-  radiation = list(
-    label        = "Radiation",
-    tr_date_cols = tr_rad_present,       # e.g. RAD_START_DATE_SUMMARY / DT_RAD
-    tr_code_col  = NULL,
-    tr_code_vals = NULL,
-    gantt_type   = "Radiation"
-  ),
-  immunotherapy = list(
-    label        = "Immunotherapy",
-    tr_date_cols = tr_immuno_present,    # PENDING-PROBE: empty until probe
-    tr_code_col  = NULL,
-    tr_code_vals = NULL,
-    gantt_type   = "Immunotherapy"
-  ),
-  sct = list(
-    label        = "Stem Cell Transplant",
-    tr_date_cols = tr_sct_date_pres,
-    tr_code_col  = if (tr_sct_code_pres) TR_SCT_CODE_COL else NULL,
-    tr_code_vals = c("00"),              # "00" = not done; anything else = flagged
-    gantt_type   = "Stem Cell Transplant"
-  )
-)
-
-# Returns the first TR date for a treatment type column set,
-# or NA if no non-NA value found. For SCT code columns, returns
-# as.Date("1900-01-01") as a sentinel when code is non-"00"/non-NA/non-"".
-tr_first_date <- function(row, type_def) {
-  # Date-column approach (chemo, rad, immuno, sct date cols)
-  for (col in type_def$tr_date_cols) {
-    if (col %in% names(row) && !is.na(row[[col]])) {
-      d <- suppressWarnings(as.Date(row[[col]]))
-      if (!is.na(d)) return(d)
-    }
-  }
-  # Code-column approach (SCT TR1: HEMATOLOGIC_TRANSPLANT_AND_ENDOC)
-  if (!is.null(type_def$tr_code_col)) {
-    code_col <- type_def$tr_code_col
-    if (code_col %in% names(row)) {
-      v <- row[[code_col]]
-      if (!is.na(v) && v != "" && !v %in% type_def$tr_code_vals) {
-        return(as.Date("1900-01-01"))  # sentinel: TR says yes but no date
-      }
-    }
-  }
-  return(NA_Date_)
-}
-
-# --- SECTION 5: GANTT FIRST-EPISODE DATES PER PATIENT ----------------------
+# --- SECTION 5: GANTT FIRST-EPISODE DATES PER PATIENT -----------------------
 message("=== Section 5: Gantt first-episode dates per patient x treatment type ===")
 gantt_first <- gantt |>
-  filter(patient_id %in% pop_denom$patient_id) |>
+  filter(patient_id %in% denom_ids) |>
   filter(!is.na(episode_start)) |>
   group_by(patient_id, treatment_type) |>
   summarise(gantt_first_date = min(episode_start, na.rm = TRUE), .groups = "drop")
 message(glue("  gantt_first: {nrow(gantt_first)} patient x type rows"))
 
-# --- SECTION 6: CAPTURE CLASSIFICATION --------------------------------------
-# Classifies each denominator patient x treatment type into one of:
-#   exact         tr_date == gantt_date (same day)
-#   within_30d    |tr_date - gantt_date| <= 30
-#   within_90d    |tr_date - gantt_date| <= 90
-#   not_captured  TR says treatment given; no matching gantt episode
-#   no_registry   TR does not record this treatment (not in denominator for this type)
-#
-# Note: immunotherapy classification will be "no_registry" for all patients
-# until PENDING-PROBE fills TR_IMMUNO_COLS. This is correct behavior —
-# the probe must confirm the column before any captures can be classified.
-message("=== Section 6: Capture classification ===")
-
-classify_capture <- function(denom_df, gantt_first_df, type_key, type_def) {
-  gtype <- type_def$gantt_type
-  g_dates <- gantt_first_df |>
-    filter(treatment_type == gtype) |>
-    select(patient_id, gantt_first_date)
-
-  denom_df |>
-    rowwise() |>
-    mutate(
-      tr_date = tr_first_date(across(everything()), type_def),
-      has_tr  = !is.na(tr_date)
-    ) |>
-    ungroup() |>
-    left_join(g_dates, by = "patient_id") |>
-    mutate(
-      capture_tier = case_when(
-        !has_tr                                              ~ "no_registry",
-        !is.na(gantt_first_date) & tr_date == as.Date("1900-01-01") ~ "not_datable",
-        !is.na(gantt_first_date) & abs(as.integer(tr_date - gantt_first_date)) == 0 ~ "exact",
-        !is.na(gantt_first_date) & abs(as.integer(tr_date - gantt_first_date)) <= 30 ~ "within_30d",
-        !is.na(gantt_first_date) & abs(as.integer(tr_date - gantt_first_date)) <= 90 ~ "within_90d",
-        is.na(gantt_first_date)                              ~ "not_captured",
-        TRUE                                                 ~ "not_captured"
-      ),
-      treatment_label = type_def$label
-    ) |>
-    select(patient_id, SOURCE, treatment_label, tr_date, gantt_first_date, capture_tier)
+# Hormone: Gantt label unconfirmed. If absent, hormone is not compared.
+gantt_labels <- sort(unique(gantt$treatment_type))
+hormone_comparable <- "Hormone" %in% gantt_labels
+if (!hormone_comparable) {
+  message("  NOTE: no 'Hormone' treatment_type in gantt; hormone not compared. Labels: ",
+          paste(gantt_labels, collapse = ", "))
+  TYPE_DEF$gantt_type[TYPE_DEF$trtype == "hormone"] <- NA_character_
 }
 
-classified <- bind_rows(lapply(names(TRTYPES), function(k) {
-  classify_capture(pop_denom, gantt_first, k, TRTYPES[[k]])
-}))
-message(glue("  Classified rows: {nrow(classified)} ({n_distinct(classified$patient_id)} patients x treatment types)"))
+# --- SECTION 6: CAPTURE CLASSIFICATION --------------------------------------
+# Per patient x treatment type (x SOURCE for the source-level table):
+#   unknown_code  TR code is unknown (88/99/8/9) and no HL row says given
+#   no_registry   TR does not record this treatment as given
+#   not_captured  TR given; no Gantt episode of that type (or first dates >90 d apart)
+#   not_datable   TR given by code only (no date); Gantt episode exists
+#   exact / within_30d / within_90d   |TR first date - Gantt first date|
+message("=== Section 6: Capture classification ===")
+GIVEN_TIERS <- c("exact", "within_30d", "within_90d", "not_datable", "not_captured")
+HIT_TIERS   <- c("exact", "within_30d", "within_90d")
+
+classify_capture <- function(tr_pt, gantt_first_df, ids) {
+  tr_pt |>
+    filter(ID %in% ids) |>
+    inner_join(filter(TYPE_DEF, !is.na(gantt_type)), by = "trtype") |>
+    left_join(gantt_first_df, by = c("ID" = "patient_id", "gantt_type" = "treatment_type")) |>
+    mutate(
+      d = abs(as.integer(tr_first_date - gantt_first_date)),
+      capture_tier = case_when(
+        tr_status == "unknown"        ~ "unknown_code",
+        tr_status != "given"          ~ "no_registry",
+        is.na(gantt_first_date)       ~ "not_captured",
+        is.na(tr_first_date)          ~ "not_datable",
+        d == 0L                       ~ "exact",
+        d <= 30L                      ~ "within_30d",
+        d <= 90L                      ~ "within_90d",
+        TRUE                          ~ "not_captured"
+      ),
+      treatment_label = label
+    )
+}
+
+classified     <- classify_capture(tr_pt_all, gantt_first, denom_ids)
+classified_src <- classify_capture(filter(tr_pt_src, SOURCE %in% SENS_SOURCES),
+                                   gantt_first, denom_ids)
+message(glue("  classified: {nrow(classified)} patient x type rows; ",
+             "classified_src: {nrow(classified_src)} patient x source x type rows"))
 
 # --- SECTION 7: A_SENSITIVITY TABLE -----------------------------------------
 message("=== Section 7: A_sensitivity ===")
 
-# Denominator per treatment type = patients where TR records treatment (has_tr TRUE)
-# Numerator = patients classified as exact / within_30d / within_90d (any capture)
+# Denominator per type = patients with TR evidence of treatment (given).
+# Unknown-code patients are reported separately, not in the denominator.
 sensitivity_raw <- classified |>
-  filter(capture_tier != "no_registry") |>  # denominator: TR records treatment
+  filter(capture_tier %in% GIVEN_TIERS) |>
   group_by(treatment_label) |>
   summarise(
-    n_denom   = n(),
-    n_exact   = sum(capture_tier == "exact"),
-    n_30d     = sum(capture_tier %in% c("exact", "within_30d")),
-    n_90d     = sum(capture_tier %in% c("exact", "within_30d", "within_90d")),
-    n_captured = n_90d,
+    n_denom        = n(),
+    n_exact        = sum(capture_tier == "exact"),
+    n_30d          = sum(capture_tier %in% c("exact", "within_30d")),
+    n_90d          = sum(capture_tier %in% HIT_TIERS),
+    n_undated      = sum(capture_tier == "not_datable"),
     n_not_captured = sum(capture_tier == "not_captured"),
     .groups = "drop"
   ) |>
+  left_join(
+    classified |> filter(capture_tier == "unknown_code") |> count(treatment_label, name = "n_unknown"),
+    by = "treatment_label"
+  ) |>
   mutate(
-    pct_exact     = ifelse(n_denom >= 11L, round(100 * n_exact / n_denom, 1), NA_real_),
-    pct_30d       = ifelse(n_denom >= 11L, round(100 * n_30d  / n_denom, 1), NA_real_),
-    pct_90d       = ifelse(n_denom >= 11L, round(100 * n_90d  / n_denom, 1), NA_real_),
-    # Suppress patient counts < 11
-    n_denom_disp       = sup_col(n_denom),
-    n_exact_disp       = sup_col(n_exact),
-    n_30d_disp         = sup_col(n_30d),
-    n_90d_disp         = sup_col(n_90d),
-    n_not_captured_disp = sup_col(n_not_captured)
+    n_unknown = coalesce(n_unknown, 0L),
+    pct_exact = pct_sup(n_exact, n_denom),
+    pct_30d   = pct_sup(n_30d,   n_denom),
+    pct_90d   = pct_sup(n_90d,   n_denom),
+    n_denom_disp        = sup_col(n_denom),
+    n_exact_disp        = sup_col(n_exact),
+    n_30d_disp          = sup_col(n_30d),
+    n_90d_disp          = sup_col(n_90d),
+    n_undated_disp      = sup_col(n_undated),
+    n_not_captured_disp = sup_col(n_not_captured),
+    n_unknown_disp      = sup_col(n_unknown)
   )
 
 sheet_A <- sensitivity_raw |>
@@ -359,65 +412,98 @@ sheet_A <- sensitivity_raw |>
     `Within 30d %`       = pct_30d,
     `Within 90d n`       = n_90d_disp,
     `Within 90d %`       = pct_90d,
-    `Not captured n`     = n_not_captured_disp
+    `Captured, TR undated n` = n_undated_disp,
+    `Not captured n`     = n_not_captured_disp,
+    `TR unknown code n (not in denominator)` = n_unknown_disp
   )
 message(glue("  A_sensitivity: {nrow(sheet_A)} rows"))
 
 # --- SECTION 8: B_DATE_DIFF TABLE -------------------------------------------
+# Only type/source pairs that have a TR date column (B_PAIRS); only TR-dated rows.
 message("=== Section 8: B_date_diff ===")
 
 tiers <- c("exact", "within_30d", "within_90d", "not_captured")
 tier_labels <- c("Exact match", "Within 30d", "Within 90d", "Not captured")
 
-sheet_B_main <- classified |>
-  filter(capture_tier != "no_registry") |>
-  group_by(treatment_label, capture_tier) |>
+sheet_B_main <- classified_src |>
+  semi_join(B_PAIRS, by = c("SOURCE" = "source", "trtype")) |>
+  filter(capture_tier %in% GIVEN_TIERS, !is.na(tr_first_date)) |>
+  group_by(SOURCE, treatment_label, capture_tier) |>
   summarise(n = n(), .groups = "drop") |>
   mutate(
     tier_label = factor(capture_tier, levels = tiers, labels = tier_labels),
     n_disp     = sup_col(n)
   ) |>
   select(
+    `SOURCE`         = SOURCE,
     `Treatment Type` = treatment_label,
     `Capture Tier`   = tier_label,
     `Count`          = n_disp
   ) |>
-  arrange(`Treatment Type`, `Capture Tier`)
+  arrange(`SOURCE`, `Treatment Type`, `Capture Tier`)
 
-# Footnote row: TR-HL patients not in pipeline (D-201-04; not in denominator)
-footnote_row <- tibble(
-  `Treatment Type` = "(footnote) TR-HL patients not in confirmed cohort (excluded from denominator)",
+footnote_rows <- tibble(
+  `SOURCE`         = "N/A",
+  `Treatment Type` = c("(footnote) TR-HL patients not in confirmed cohort (excluded from denominator)",
+                       "(footnote) Stem Cell Transplant is code-only; no TR date, so no date-difference row"),
   `Capture Tier`   = "N/A",
-  `Count`          = as.character(n_footnote)   # 121 — not patient-level, so no suppression needed
+  `Count`          = c(fmt_sup(n_footnote), "N/A")
 )
+if (!hormone_comparable) {
+  footnote_rows <- bind_rows(footnote_rows, tibble(
+    `SOURCE` = "N/A",
+    `Treatment Type` = "(footnote) Hormone not compared: no 'Hormone' treatment_type in gantt_episodes_180",
+    `Capture Tier` = "N/A", `Count` = "N/A"))
+}
 
-sheet_B <- bind_rows(sheet_B_main, footnote_row)
-message(glue("  B_date_diff: {nrow(sheet_B)} rows (including footnote row)"))
+sheet_B <- bind_rows(sheet_B_main, footnote_rows)
+message(glue("  B_date_diff: {nrow(sheet_B)} rows (including footnote rows)"))
 
 # --- SECTION 9: C_BY_SOURCE TABLE -------------------------------------------
+# All sources incl. TMH (counts only). Sensitivity for UFH/ORL only.
 message("=== Section 9: C_by_source ===")
 
-sheet_C <- classified |>
-  filter(capture_tier != "no_registry") |>
-  group_by(SOURCE, treatment_label) |>
+c_counts <- tr_pt_src |>
+  filter(ID %in% denom_ids) |>
+  group_by(SOURCE, trtype) |>
   summarise(
-    n_denom    = n(),
-    n_captured = sum(capture_tier %in% c("exact", "within_30d", "within_90d")),
-    .groups    = "drop"
-  ) |>
+    n_given   = sum(tr_status == "given"),
+    n_unknown = sum(tr_status == "unknown"),
+    .groups = "drop"
+  )
+c_sens <- classified_src |>
+  filter(capture_tier %in% GIVEN_TIERS) |>
+  group_by(SOURCE, trtype) |>
+  summarise(n_sens_denom = n(), n_captured = sum(capture_tier %in% HIT_TIERS), .groups = "drop")
+
+sheet_C_raw <- c_counts |>
+  left_join(c_sens, by = c("SOURCE", "trtype")) |>
+  left_join(TYPE_DEF |> select(trtype, label), by = "trtype") |>
   mutate(
-    pct_captured    = ifelse(n_denom >= 11L, round(100 * n_captured / n_denom, 1), NA_real_),
-    n_denom_disp    = sup_col(n_denom),
-    n_captured_disp = sup_col(n_captured)
+    pct_captured = pct_sup(n_captured, n_sens_denom),
+    note = case_when(
+      SOURCE == "TMH"        ~ "TMH: counts only; too few for sensitivity",
+      is.na(n_sens_denom)    ~ "no Gantt counterpart / not compared",
+      TRUE                   ~ ""
+    )
   ) |>
-  select(
+  arrange(SOURCE, label)
+
+sheet_C <- sheet_C_raw |>
+  transmute(
     `SOURCE (partner site)` = SOURCE,
-    `Treatment Type`        = treatment_label,
-    `TR n`                  = n_denom_disp,
-    `Pipeline captured n`   = n_captured_disp,
-    `Sensitivity %`         = pct_captured
-  ) |>
-  arrange(`SOURCE (partner site)`, `Treatment Type`)
+    `Treatment Type`        = label,
+    `TR given n`            = sup_col(n_given),
+    `TR unknown code n`     = sup_col(n_unknown),
+    `Pipeline captured n`   = ifelse(SOURCE == "TMH" | is.na(n_captured), NA_character_, sup_col(n_captured)),
+    `Sensitivity %`         = ifelse(SOURCE == "TMH", NA_real_, pct_captured),
+    Note                    = note
+  )
+sheet_C <- bind_rows(sheet_C, tibble(
+  `SOURCE (partner site)` = "TMH",
+  `Treatment Type`        = "(footnote)",
+  Note = as.character(glue("n = {fmt_sup(n_tmh_rows)} TR rows; too few for sensitivity"))
+))
 message(glue("  C_by_source: {nrow(sheet_C)} rows"))
 
 # --- SECTION 10: D_BY_YEAR TABLE --------------------------------------------
@@ -431,7 +517,7 @@ cohort_dx <- readRDS(cohort_rds_path) |>
 message(glue("  cohort_dx: {nrow(cohort_dx)} patients with dx year"))
 
 classified_yr <- classified |>
-  left_join(cohort_dx, by = c("patient_id" = "ID"))
+  left_join(cohort_dx, by = "ID")
 
 # Year grouping: define early / late split at median dx_year
 yr_median <- median(classified_yr$dx_year, na.rm = TRUE)
@@ -444,15 +530,15 @@ classified_yr <- classified_yr |>
   ))
 
 sheet_D <- classified_yr |>
-  filter(capture_tier != "no_registry") |>
+  filter(capture_tier %in% GIVEN_TIERS) |>
   group_by(dx_year_group, treatment_label) |>
   summarise(
     n_denom    = n(),
-    n_captured = sum(capture_tier %in% c("exact", "within_30d", "within_90d")),
+    n_captured = sum(capture_tier %in% HIT_TIERS),
     .groups    = "drop"
   ) |>
   mutate(
-    pct_captured    = ifelse(n_denom >= 11L, round(100 * n_captured / n_denom, 1), NA_real_),
+    pct_captured    = pct_sup(n_captured, n_denom),
     n_denom_disp    = sup_col(n_denom),
     n_captured_disp = sup_col(n_captured)
   ) |>
@@ -467,31 +553,29 @@ sheet_D <- classified_yr |>
 message(glue("  D_by_year: {nrow(sheet_D)} rows"))
 
 # --- SECTION 11: PPV_REVERSE SHEET ------------------------------------------
-# For each pipeline treatment type: what fraction of pipeline-captured episodes
-# have a matching registry record of that type?
-# Denominator = distinct patients in gantt with that treatment_type.
-# Numerator   = those patients who also have a TR flag for that type (tr_date non-NA).
+# For each pipeline treatment type: what fraction of pipeline-captured patients
+# have a matching registry record (TR given, UFH/ORL) of that type?
 message("=== Section 11: PPV_reverse ===")
 
 gantt_pts_treated <- gantt |>
-  filter(patient_id %in% pop_denom$patient_id,
+  filter(patient_id %in% denom_ids,
          treatment_type %in% c("Chemotherapy", "Radiation", "Immunotherapy",
                                "Stem Cell Transplant")) |>
   distinct(patient_id, treatment_type)
 
 ppv_raw <- gantt_pts_treated |>
   left_join(
-    classified |> select(patient_id, treatment_label, capture_tier),
-    by = c("patient_id", "treatment_type" = "treatment_label")
+    classified |> select(ID, treatment_label, capture_tier),
+    by = c("patient_id" = "ID", "treatment_type" = "treatment_label")
   ) |>
   group_by(treatment_type) |>
   summarise(
-    n_pipeline = n(),
-    n_in_registry = sum(!is.na(capture_tier) & capture_tier != "no_registry", na.rm = TRUE),
+    n_pipeline    = n(),
+    n_in_registry = sum(capture_tier %in% GIVEN_TIERS, na.rm = TRUE),
     .groups = "drop"
   ) |>
   mutate(
-    ppv_pct         = ifelse(n_pipeline >= 11L, round(100 * n_in_registry / n_pipeline, 1), NA_real_),
+    ppv_pct         = pct_sup(n_in_registry, n_pipeline),
     n_pipeline_disp = sup_col(n_pipeline),
     n_in_reg_disp   = sup_col(n_in_registry)
   )
@@ -508,6 +592,27 @@ message(glue("  PPV_reverse: {nrow(sheet_PPV)} rows"))
 # --- SECTION 12: QC SHEET ---------------------------------------------------
 message("=== Section 12: QC sheet ===")
 run_dt <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+
+# ORL chemo disagreement: DT_CHEMO present vs R_N_CHEMO == 0 (HL rows, row-level counts)
+orl_chemo_cross <- tr_hl |>
+  filter(SOURCE == "ORL") |>
+  transmute(
+    dt_chemo = ifelse(!is.na(as.Date(DT_CHEMO)), "DT_CHEMO present", "DT_CHEMO missing"),
+    rn = {
+      v <- suppressWarnings(as.integer(as.character(R_N_CHEMO)))
+      case_when(is.na(v) ~ "R_N_CHEMO missing", v == 0L ~ "R_N_CHEMO = 0 (given)",
+                TRUE ~ "R_N_CHEMO other code")
+    }
+  ) |>
+  count(dt_chemo, rn, name = "n")
+orl_chemo_grid <- expand.grid(
+  dt_chemo = c("DT_CHEMO present", "DT_CHEMO missing"),
+  rn = c("R_N_CHEMO = 0 (given)", "R_N_CHEMO other code", "R_N_CHEMO missing"),
+  stringsAsFactors = FALSE
+) |>
+  left_join(orl_chemo_cross, by = c("dt_chemo", "rn")) |>
+  mutate(n = coalesce(n, 0L))
+
 sheet_QC <- tibble(
   Item  = c(
     "Run timestamp",
@@ -518,12 +623,13 @@ sheet_QC <- tibble(
     "TR-HL patients (all in extract)",
     "Denominator (in gantt AND TR-HL)",
     "Footnote (TR-HL not in gantt)",
-    "TR chemo columns found",
-    "TR radiation columns found",
-    "TR immunotherapy columns found (PENDING-PROBE if 0)",
-    "TR SCT code column found",
-    "TR SCT date columns found",
-    "Suppression check: any raw count 1-10 in sheet_A"
+    "TUMOR_REGISTRY_ALL rows / HL-histology rows",
+    "HL rows: UFH / ORL / TMH",
+    "TR_MAP columns verified present",
+    "Histology columns used",
+    "Hormone compared to Gantt (label 'Hormone' present)",
+    "Suppression check: any raw count 1-10 in sheet_A",
+    paste0("ORL chemo (HL rows): ", orl_chemo_grid$dt_chemo, " x ", orl_chemo_grid$rn)
   ),
   Value = c(
     run_dt,
@@ -533,17 +639,19 @@ sheet_QC <- tibble(
     as.character(n_gantt_pts),
     as.character(n_tr_hl_all),
     as.character(n_denom),
-    as.character(n_footnote),
-    paste(tr_chemo_present,  collapse = ", "),
-    paste(tr_rad_present,    collapse = ", "),
-    paste(tr_immuno_present, collapse = ", "),
-    as.character(tr_sct_code_pres),
-    paste(tr_sct_date_pres,  collapse = ", "),
+    fmt_sup(n_footnote),
+    paste(fmt_sup(n_tr_rows), "/", fmt_sup(n_tr_hl_rows)),
+    paste(vapply(c("UFH", "ORL", "TMH"), function(s) fmt_sup(sum(tr_hl$SOURCE == s)), character(1)),
+          collapse = " / "),
+    paste(map_cols, collapse = ", "),
+    paste(hist_present, collapse = ", "),
+    as.character(hormone_comparable),
     as.character(any(
       sensitivity_raw$n_denom   %in% 1:10 |
       sensitivity_raw$n_exact   %in% 1:10 |
       sensitivity_raw$n_90d     %in% 1:10
-    ))
+    )),
+    vapply(orl_chemo_grid$n, fmt_sup, character(1))
   )
 )
 
@@ -555,6 +663,18 @@ sheet_KEY <- tibble(
     "Input: confirmed_hl_cohort.rds",
     "Denominator",
     "Footnote (not in denominator)",
+    "Stratification",
+    "Patient-level collapse",
+    "Code scheme: reason_no (REASON_NO_*, R_N_*)",
+    "Code scheme: naaccr_rx (NAACCR summary codes)",
+    "Code scheme: rx_summ (DRAD_SUM, DBRM_SUM, HTE_SUM)",
+    "Meaning of 0 (opposite between schemes)",
+    "Unknown codes",
+    "Given values",
+    "TMH",
+    "Transplant (SCT)",
+    "Hormone / Systemic",
+    "Capture tiers",
     "Sheet A_sensitivity", "Sheet B_date_diff",
     "Sheet C_by_source", "Sheet D_by_year",
     "Sheet PPV_reverse",
@@ -564,17 +684,31 @@ sheet_KEY <- tibble(
     "R/202_tr_sensitivity.R",
     "202 — Tumor-Registry Treatment Sensitivity",
     format(Sys.Date(), "%Y-%m-%d"),
-    gantt_180_path,
-    tr_flags_path,
-    cohort_rds_path,
-    glue("{n_denom} TR-HL patients present in gantt_episodes_180"),
-    glue("{n_footnote} TR-HL patients outside confirmed cohort (D-201-04); excluded from sensitivity denominator"),
-    "% of TR-flagged treatments captured by pipeline, by treatment type",
-    "Counts at exact/+/-30d/+/-90d/not-captured tiers; footnote row for excluded patients",
-    "Sensitivity stratified by SOURCE (partner site)",
+    paste0(gantt_180_path, " (pinned: ", nzchar(Sys.getenv("R202_GANTT_180")), ")"),
+    paste0(tr_flags_path, " (pinned: ", nzchar(Sys.getenv("R202_TR_FLAGS")), ")"),
+    paste0(cohort_rds_path, " (pinned: ", nzchar(Sys.getenv("R202_COHORT_RDS")), ")"),
+    glue("{fmt_sup(n_denom)} TR-HL patients present in gantt_episodes_180"),
+    glue("{fmt_sup(n_footnote)} TR-HL patients outside confirmed cohort (D-201-04); excluded from sensitivity denominator"),
+    "By TR SOURCE (UFH / ORL / TMH); the table has no TR1/TR2/TR3 split. A/D/PPV pool UFH + ORL.",
+    paste0("HL-histology rows only (substr(", paste(hist_present, collapse = "/"),
+           ", 1, 4) in ICD_CODES$hl_histology). tr_given = any HL row with a date OR a code in given values; ",
+           "tr_first_date = earliest non-missing date across HL rows."),
+    "0 = treatment GIVEN. Other codes = reason not given (R_N_CHEMO, R_N_RAD, R_N_HORM, REASON_NO_RADIATION).",
+    "00 = none. Given: chemo 01/02/03; immuno 01; hormone 01; SCT 10/11/12/20 (HEMATOLOGIC_TRANSPLANT_AND_ENDOC).",
+    "0 = NONE. Given: DBRM_SUM 1; HTE_SUM 10/11/12/20. DRAD_SUM: 0 none, 8/9 unknown (no given value in probe).",
+    "reason_no: 0 means given. rx_summ: 0 means none. Do not compare codes across schemes.",
+    "reason_no 8/9; naaccr_rx 88/99; rx_summ 8/9/88/99. Counted 'unknown', not 'not given'; shown separately, outside the denominator.",
+    "Date present OR given code. UFH chemo CHEMO_CODE_SUMMARY, ORL chemo R_N_CHEMO; see TR_MAP in script.",
+    glue("n = {fmt_sup(n_tmh_rows)} TR rows; counts only in C_by_source, no sensitivity"),
+    "Code-only (no TR date in any source). Shown in A_sensitivity; no date-difference row in B_date_diff.",
+    "Hormone compared to Gantt only if a 'Hormone' treatment_type exists (QC row). Systemic: descriptive counts only (C_by_source).",
+    "exact / within 30 d / within 90 d of first Gantt episode; TR given by code only = 'not datable' (Gantt episode exists); first dates >90 d apart count as not captured.",
+    "% of TR-given patients captured by pipeline (exact/30/90 d), by treatment type",
+    "Date-difference tiers for type/source pairs with a TR date: chemo UFH/ORL, radiation ORL, immuno UFH, hormone UFH/ORL; footnote rows",
+    "Counts by SOURCE for UFH/ORL/TMH; sensitivity for UFH/ORL only",
     "Sensitivity stratified by diagnosis year group",
-    "For pipeline captures, fraction with matching registry record (PPV direction)",
-    "Patient counts 1-10 displayed as '<11'"
+    "For pipeline captures, fraction with matching registry record (PPV direction; UFH + ORL)",
+    "Counts 1-10 displayed as '<11'; percentages only when numerator and denominator >= 11"
   )
 )
 
