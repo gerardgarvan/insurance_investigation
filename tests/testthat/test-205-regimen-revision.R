@@ -196,10 +196,14 @@ test_that("Regimen family change starts a new line; same family inside the gap d
   expect_equal(lot_of(df), c(1L, 1L, 2L))
 })
 
-test_that("Same family restarting after gap >= LOT_GAP_DAYS is a new line", {
+test_that("Same family restart: same line under 365 days (round 5), new line at >= 365", {
   df <- dplyr::bind_rows(
     mk("P1", 1, "2022-01-01", "2022-03-01", "ABVD"),
-    mk("P1", 2, "2022-08-01", "2022-10-01", "ABVD"))
+    mk("P1", 2, "2022-08-01", "2022-10-01", "ABVD"))   # gap 153 days
+  expect_equal(lot_of(df), c(1L, 1L))
+  df <- dplyr::bind_rows(
+    mk("P1", 1, "2022-01-01", "2022-03-01", "ABVD"),
+    mk("P1", 2, "2023-04-01", "2023-06-01", "ABVD"))   # gap 396 days
   expect_equal(lot_of(df), c(1L, 2L))
 })
 

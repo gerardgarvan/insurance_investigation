@@ -4487,6 +4487,11 @@ CONCURRENCY_WINDOW_DAYS <- 7L
 # administrations triggers a new line. REGL-03. Open decision REGL-06.
 LOT_GAP_DAYS <- 90L
 
+# Round 5: a same-family restart (e.g. BV mono -> BV mono) stays on the same line
+# unless the gap is >= LOT_SAME_FAMILY_RESTART_DAYS. A change of regimen family
+# always starts a new line. Open decision REGL-06 (D-205-LOT-RESTART).
+LOT_SAME_FAMILY_RESTART_DAYS <- 365L
+
 # Drug families classified as maintenance (do not start a new LOT). REGL-03.
 MAINTENANCE_DRUG_CLASSES <- c("BV_consolidation", "Rituximab_mono")
 

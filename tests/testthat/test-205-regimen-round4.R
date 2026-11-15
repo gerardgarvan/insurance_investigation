@@ -185,3 +185,54 @@ test_that("classify_abvd_set pure rule", {
   expect_equal(classify_abvd_set(c(abvd4, "Leuprolide"))$label, "ABVD")
   expect_equal(classify_abvd_set(c(abvd3, "Goserelin", "Vincristine"))$label, "ABVD_PLUS")
 })
+
+# -- Round 5 ---------------------------------------------------------------------
+if (!exists("LOT_SAME_FAMILY_RESTART_DAYS")) LOT_SAME_FAMILY_RESTART_DAYS <- 365L
+
+test_that("LOT round 5: same-family restart after 90-364 days stays on the same line", {
+  mk <- function(labels, gaps) {
+    n <- length(labels)
+    st <- as.Date("2022-01-01") + cumsum(c(0, gaps + 30))
+    tibble::tibble(ID = "P1", episode_number = seq_len(n), start_date = st,
+                   end_date = st + 30, regimen_label = labels)
+  }
+  lot <- function(df) assign_lot(df, lot_gap_days = LOT_GAP_DAYS, maintenance_classes = MAINTENANCE_DRUG_CLASSES, same_family_restart_days = LOT_SAME_FAMILY_RESTART_DAYS)$line_of_therapy
+  expect_equal(lot(mk(c("BV mono", "BV mono"), 120)), c(1L, 1L))
+  expect_equal(lot(mk(c("ABVD", "ABVD", "ABVD"), c(100, 200))), c(1L, 1L, 1L))
+  expect_equal(lot(mk(c("PD-1 mono", "PD-1 mono"), 364)), c(1L, 1L))
+  # restart after >= 365 days opens a new line
+  expect_equal(lot(mk(c("PD-1 mono", "PD-1 mono"), 365)), c(1L, 2L))
+  # family change always opens a new line, even with no gap
+  expect_equal(lot(mk(c("BV mono", "PD-1 mono", "BV+Nivo", "BV+PD-1"), c(5, 5, 5))), 1:4)
+  # ABVD-family members are one family
+  expect_equal(lot(mk(c("ABVD", "BV+AVD"), 120)), c(1L, 1L))
+})
+
+test_that("round 5: non-AVD chemo set concurrent with BV / nivolumab is not relabelled", {
+  for (set in list("Bendamustine", c("Carmustine", "Etoposide"), "Gemcitabine",
+                   c("Cisplatin", "Gemcitabine"))) {
+    for (io in c("Brentuximab Vedotin", "Nivolumab", "Pembrolizumab")) {
+      df <- two_ep(set, "2022-01-01", io, "Immunotherapy", "2022-01-03")
+      lab <- chemo_label(df)$regimen_label
+      expect_false(lab %in% REGIMEN_IMMUNO_ONLY_LABELS,
+                   info = paste(paste(set, collapse = "+"), "with", io, "->", lab))
+    }
+  }
+  # date-level only (no episode_df): same guarantee
+  df <- two_ep("Bendamustine", "2022-01-01", "Nivolumab", "Immunotherapy", "2022-01-01")
+  expect_false(chemo_label(df)$regimen_label %in% REGIMEN_IMMUNO_ONLY_LABELS)
+})
+
+test_that("round 5: Chemotherapy episode with its own BV / PD-1 keeps the immuno label; Immunotherapy episodes unchanged", {
+  df <- rows("Brentuximab Vedotin", type = "Chemotherapy")
+  expect_equal(lab1(df)$regimen_label, "BV mono")
+  df <- rows("Nivolumab", type = "Immunotherapy")
+  expect_equal(lab1(df, "Immunotherapy")$regimen_label, "PD-1 mono")
+})
+
+test_that("round 5: AVD family still upgrades to BV+AVD / Nivo+AVD with concurrent immunotherapy", {
+  df <- two_ep(abvd3, "2022-01-01", "Brentuximab Vedotin", "Immunotherapy", "2022-01-03")
+  expect_equal(chemo_label(df)$regimen_label, "BV+AVD")
+  df <- two_ep(abvd3, "2022-01-01", "Nivolumab", "Immunotherapy", "2022-01-03")
+  expect_equal(chemo_label(df)$regimen_label, "Nivo+AVD")
+})

@@ -144,3 +144,30 @@ source("R/205_lot_output.R", local = new.env(parent = globalenv()))
 | D-201-01 | Does ABVD_PLUS exclude supportive agents (leuprolide, goserelin, GnRH agonists)? | Yes (implemented via SUPPORTIVE_AGENTS) | OPEN, confirm |
 | REGL-06-J | Does "ABVD/AVD partial" count toward `ever_abvd`? | No (unchanged) | OPEN |
 | REGL-06-K | Bendamustine mono / BR in HL first-line: likely NHL or elderly patients | Exclude from HL first-line and report separately. NOT yet implemented: both remain in REGIMEN_FIRST_LINE_LABELS until decided | OPEN |
+
+## Fix round 5 (2026-11-14, HiPerGator run 4 = commit 02c067e, results in output/internal/p205_candidate_v3)
+
+Run-4 reconciliation vs 204: ABVD 1108/1109 kept; AVD 236/236; Nivo+AVD 42/42; BV+AVD 242/251 (13 episodes differ); ABVD_PLUS 166/186 (16 -> ABVD, supportive leuprolide/goserelin); ever_abvd 1230 -> 1250.
+
+- **LOT rule (REGL-06-B, revised).** A new line starts only when the regimen family changes. A same-family restart stays on the same line unless the gap is >= `LOT_SAME_FAMILY_RESTART_DAYS` (new constant in R/00_config.R, default 365). `LOT_GAP_DAYS` (90) is kept for compatibility but no longer opens lines. BV mono, PD-1 mono, BV+Nivo and BV+PD-1 are separate families (each is its own label); consecutive identical labels collapse onto one line. Reason: run 4 had 76 patients with > 4 lines (max 14) from same-regimen restarts after >= 90 days (e.g. `3:BV mono;4:BV mono`, `1:ABVD;2:ABVD;3:ABVD`, `PD-1 mono;PD-1 mono`). New n_lines distribution and the > 4-line QC are printed by R/205 (section 3).
+- **Chemotherapy episode labels (own drugs first).** 68 Chemotherapy episodes (90-day stage2) were labelled BV mono / PD-1 mono although their own drug_names lacked brentuximab / nivolumab / pembrolizumab (e.g. Bendamustine; Carmustine+Etoposide; Gemcitabine; Cisplatin+Gemcitabine), because the date-level pooled concurrency pass won. `assign_regimen()` now drops an immunotherapy-only candidate (`REGIMEN_IMMUNO_ONLY_LABELS`: BV mono, PD-1 mono, BV+Nivo, BV+PD-1) on a Chemotherapy episode whose own drug set (`own_drug_sets_chemo()`) has none of those agents, and falls back to the own-drugs label. Concurrent BV / nivolumab only upgrades an AVD-family set to BV+AVD / Nivo+AVD (`adjust_abvd_family()`, Phase 201 rule). Hard QC in R/205 section 1B stops if any such episode remains (must be 0).
+- **BV+AVD residual (13 episodes).** R/205 now prints their drug sets by direction (204 vs 205) and writes them to the reconciliation CSV (section `bv_avd_residual_drugsets`). Counts 1-10 shown as `<11`.
+
+PENDING HIPERGATOR: re-run R/28, R/142 (p143 options), R/205. Paste back: the R/205 `QC Chemotherapy episodes labelled BV mono / PD-1 mono` line, the `n_lines distribution` table, the `QC patients with > 4 lines` block, the `BV+AVD residual episodes by direction and drug set` table, and the two `residual vs 204` lines.
+
+```r
+module load R/4.5
+R --no-save
+source("R/28_episode_classification.R", local = new.env(parent = globalenv()))
+source("R/142_gantt_180_export.R", local = new.env(parent = globalenv()))
+source("R/205_lot_output.R", local = new.env(parent = globalenv()))
+```
+
+### Open team decisions (round 5)
+
+| ID | Question | Current behaviour | Status |
+|----|----------|-------------------|--------|
+| D-201-01 | Supportive agents (leuprolide, goserelin, other GnRH agonists) excluded from ABVD_PLUS? | Excluded via SUPPORTIVE_AGENTS; 16 ABVD_PLUS episodes in 204 become ABVD | OPEN, confirm |
+| REGL-06-J | Do "ABVD/AVD partial" episodes count toward `ever_abvd`? | Not counted (unchanged) | OPEN |
+| REGL-06-K2 | NHL-family first-line regimens (R-CHOP 115, CHOP 108, Bendamustine 82, BR 48 patients) suggest non-HL or composite cases | Still in REGIMEN_FIRST_LINE_LABELS; report separately, no exclusion implemented | OPEN, report separately |
+| D-205-LOT-RESTART | Same-family restart threshold for a new line | 365 days (`LOT_SAME_FAMILY_RESTART_DAYS`) | OPEN, confirm |

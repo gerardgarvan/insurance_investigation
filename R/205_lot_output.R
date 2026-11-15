@@ -108,6 +108,19 @@ if (n_na_named > 0L) {
   stop("[R/205] QC FAIL: ", n_na_named,
        " systemic episodes with drug_names have NA regimen_label (re-run R/28)")
 }
+# Round 5 hard QC: a Chemotherapy episode labelled with an immunotherapy-only label
+# must itself contain brentuximab / nivolumab / pembrolizumab in drug_names.
+n_immuno_mislabel <- sum(
+  episodes$treatment_type %in% "Chemotherapy" &
+  episodes$regimen_label %in% REGIMEN_IMMUNO_ONLY_LABELS &
+  !grepl("brentuximab|nivolumab|pembrolizumab", tolower(dplyr::coalesce(episodes$drug_names, ""))))
+message("[R/205] QC Chemotherapy episodes labelled BV mono / PD-1 mono (or BV+Nivo / BV+PD-1) ",
+        "without those agents in drug_names: ", n_immuno_mislabel, " (must be 0)")
+if (n_immuno_mislabel > 0L) {
+  stop("[R/205] QC FAIL: ", n_immuno_mislabel,
+       " Chemotherapy episodes carry an immunotherapy-only label without BV / nivolumab / ",
+       "pembrolizumab in their own drug_names (re-run R/28 with the round-5 utils_regimen.R)")
+}
 message("[R/205] QC PASS: labels only on Chemotherapy/Immunotherapy; none NA where drug_names present")
 if ("regimen_basis" %in% names(episodes)) {
   message("[R/205] regimen_basis (counts 1-10 shown as <11):")
@@ -122,8 +135,11 @@ lot_episodes <- assign_lot(
   episode_df = episodes %>%
     dplyr::rename(ID = patient_id, start_date = episode_start, end_date = episode_stop),
   lot_gap_days        = LOT_GAP_DAYS,
-  maintenance_classes = MAINTENANCE_DRUG_CLASSES
+  maintenance_classes = MAINTENANCE_DRUG_CLASSES,
+  same_family_restart_days = LOT_SAME_FAMILY_RESTART_DAYS
 )
+message("[R/205] LOT rule: new line on regimen-family change, or same-family restart after >= ",
+        LOT_SAME_FAMILY_RESTART_DAYS, " days")
 lot_episodes <- lot_episodes %>%
   dplyr::rename(patient_id = ID, episode_start = start_date, episode_stop = end_date)
 
@@ -282,6 +298,25 @@ for (cls in c("BV+AVD", "Nivo+AVD")) {
           "; episodes that differ = ", fmt_n(n_diff), " (target 0)")
 }
 
+# (a3) Drug sets of the BV+AVD residual episodes (204 vs 205 disagree), by direction.
+recon_bv <- NULL
+if ("drug_names" %in% names(g205)) {
+  bv_res <- chemo %>%
+    dplyr::filter((class_204 %in% "BV+AVD") != (class_205 %in% "BV+AVD")) %>%
+    dplyr::left_join(g205 %>% dplyr::select(dplyr::all_of(keys), drug_names), by = keys) %>%
+    dplyr::mutate(direction = ifelse(class_204 %in% "BV+AVD",
+                                     paste0("204 BV+AVD -> 205 ", blank_to(class_205)),
+                                     paste0("204 ", blank_to(class_204), " -> 205 BV+AVD")),
+                  drug_set = drugset_key(drug_names)) %>%
+    dplyr::count(direction, drug_set, name = "n") %>%
+    dplyr::arrange(direction, dplyr::desc(n))
+  message("[R/205] BV+AVD residual episodes by direction and drug set (counts 1-10 shown as <11):")
+  print(as.data.frame(dplyr::transmute(bv_res, direction, drug_set, n = fmt_n(n))), row.names = FALSE)
+  recon_bv <- bv_res %>%
+    dplyr::transmute(section = "bv_avd_residual_drugsets", class_204 = direction,
+                     class_205 = drug_set, n_display = fmt_n(n))
+}
+
 # (b) patient-level ever_abvd and first-chemo-ABVD, before / after.
 abvd_cls <- c("ABVD", "AVD", "JCODE_ABVD")
 pt <- ep_cmp %>%
@@ -343,6 +378,7 @@ recon <- dplyr::bind_rows(
   recon_xtab,
   recon_pt %>% dplyr::select(section, class_204, class_205, n_display),
   recon_ds,
+  recon_bv,
   recon_cls)
 readr::write_csv(recon, R205_RECON_CSV)
 message("[R/205] reconciliation written: ", nrow(recon), " rows - ", R205_RECON_CSV)

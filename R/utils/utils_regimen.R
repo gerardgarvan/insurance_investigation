@@ -271,6 +271,39 @@ label_one_regimen_episode <- function(pooled_drugs, own_drugs, ep_type,
 }
 
 
+# Immunotherapy-only labels: must never sit on a Chemotherapy episode whose own
+# drugs lack brentuximab / nivolumab / pembrolizumab (round 5).
+REGIMEN_IMMUNO_ONLY_LABELS <- c("BV mono", "PD-1 mono", "BV+Nivo", "BV+PD-1")
+REGIMEN_IMMUNO_AGENTS <- c("brentuximab vedotin", "nivolumab", "pembrolizumab")
+
+# Per Chemotherapy episode: does its own drug set (date-level rows within
+# window_days of the start, plus episode-level drug_names) contain any of
+# REGIMEN_IMMUNO_AGENTS? Returns ID, treatment_type, episode_number,
+# own_has_immuno.
+own_drug_sets_chemo <- function(date_level_df, ep_rows, window_days) {
+  cols <- c("ID", "treatment_type", "episode_number", "canonical_drug")
+  dl <- date_level_df %>%
+    dplyr::filter(.data$treatment_type == "Chemotherapy",
+                  !is.na(.data$canonical_drug), nzchar(.data$canonical_drug),
+                  is.na(.data$treatment_date) |
+                    abs(as.integer(.data$treatment_date - .data$start_date)) <=
+                      as.integer(window_days)) %>%
+    dplyr::select(dplyr::all_of(cols))
+  src <- dl
+  if (!is.null(ep_rows)) {
+    src <- dplyr::bind_rows(
+      src,
+      ep_rows %>% dplyr::filter(.data$treatment_type == "Chemotherapy") %>%
+        dplyr::select(dplyr::all_of(cols)))
+  }
+  src %>%
+    dplyr::mutate(canonical_drug = tolower(normalize_regimen_drug(.data$canonical_drug))) %>%
+    dplyr::group_by(.data$ID, .data$treatment_type, .data$episode_number) %>%
+    dplyr::summarise(own_has_immuno = any(.data$canonical_drug %in% REGIMEN_IMMUNO_AGENTS),
+                     .groups = "drop")
+}
+
+
 # ------------------------------------------------------------------------------
 # assign_regimen()
 # REGL-01, REGL-02, REGL-04 (revised quick 261114-sir)
@@ -370,6 +403,30 @@ assign_regimen <- function(date_level_df,
                           episode_number = integer(), regimen_label = character(),
                           regimen_detail = character(), regimen_basis = character()))
   }
+
+  # Round 5: a Chemotherapy episode is labelled from its own drug set first.
+  # Concurrent BV / nivolumab / pembrolizumab never replaces a non-immunotherapy
+  # chemo set with an immunotherapy-only label (BV mono, PD-1 mono, BV+Nivo,
+  # BV+PD-1); a candidate with such a label is dropped when the episode's own
+  # drugs contain none of those agents. The own-drugs-only candidate (date-level
+  # own rows, prio 4) is added back for exactly those episodes. AVD-family
+  # upgrades to BV+AVD / Nivo+AVD are applied afterwards by adjust_abvd_family().
+  keycols_ep <- c("ID", "treatment_type", "episode_number")
+  own_agents <- own_drug_sets_chemo(date_level_df, ep_rows_all, window_days)
+  cands <- dplyr::left_join(cands, own_agents, by = keycols_ep)
+  bad_immuno <- cands$treatment_type == "Chemotherapy" &
+    cands$label %in% REGIMEN_IMMUNO_ONLY_LABELS &
+    !dplyr::coalesce(cands$own_has_immuno, FALSE)
+  if (any(bad_immuno)) {
+    dropped <- dplyr::distinct(cands[bad_immuno, keycols_ep])
+    cands <- cands[!bad_immuno, ]
+    own_dl <- .regimen_pass(date_level_df, regimen_dict, window_days, sct_df,
+                            sct_window_days, beam_window_days, immune_ids,
+                            pool_own_only = TRUE)
+    own_dl <- dplyr::semi_join(own_dl, dropped, by = keycols_ep)
+    cands <- dplyr::bind_rows(cands, tag(own_dl, "date", 4L))
+  }
+  cands$own_has_immuno <- NULL
 
   # rank 1 = strict recognized, 2 = loose recognized, 3 = Unrecognized systemic
   cands <- cands %>%
@@ -548,7 +605,10 @@ adjust_abvd_family <- function(res, date_level_df, ep_rows, window_days) {
 #     present). Radiation, SCT and Proton episodes therefore carry no line.
 #   - A new line starts only when the regimen family changes
 #     (regimen_lot_family(); e.g. ABVD family -> Salvage), or the same family
-#     restarts after a gap >= lot_gap_days since the previous line episode.
+#     restarts after a gap >= same_family_restart_days (LOT_SAME_FAMILY_RESTART_DAYS,
+#     default 365) since the previous line episode. Round 5: a same-family restart
+#     after 90-364 days stays on the same line. lot_gap_days is retained in the
+#     signature for backward compatibility and is no longer used by this rule.
 #   - Maintenance labels (maintenance_classes: BV_consolidation, Rituximab_mono)
 #     and "Conditioning (BEAM)" never start a line; they take the current line
 #     (NA if no line has started).
@@ -566,10 +626,13 @@ adjust_abvd_family <- function(res, date_level_df, ep_rows, window_days) {
 assign_lot <- function(episode_df,
                        lot_gap_days        = LOT_GAP_DAYS,
                        maintenance_classes = MAINTENANCE_DRUG_CLASSES,
-                       sct_dates_df        = NULL) {
+                       sct_dates_df        = NULL,
+                       same_family_restart_days = if (exists("LOT_SAME_FAMILY_RESTART_DAYS"))
+                         LOT_SAME_FAMILY_RESTART_DAYS else 365L) {
 
   stopifnot(
     is.data.frame(episode_df),
+    is.numeric(same_family_restart_days), length(same_family_restart_days) == 1L,
     all(c("ID", "episode_number", "start_date", "end_date",
           "regimen_label") %in% names(episode_df)),
     is.numeric(lot_gap_days) || is.integer(lot_gap_days),
@@ -602,7 +665,7 @@ assign_lot <- function(episode_df,
       } else {
         gap <- as.integer(start[i] - prev_end)
         if (!identical(fam, prev_fam) ||
-            (!is.na(gap) && gap >= as.integer(lot_gap_days))) {
+            (!is.na(gap) && gap >= as.integer(same_family_restart_days))) {
           cur <- cur + 1L
         }
       }
