@@ -154,6 +154,20 @@ code_family <- function(code, ctype) {
     ctype == "Provider specialty" ~ "Encounter with radiation-oncology provider (NUCC 2085R0001X)",
     TRUE ~ NA_character_)
 }
+# TREATMENT = codes that record radiation planned / delivered (CPT 77261-77799, HCPCS
+# G6001-G6017 / G0339 / G0340, revenue 033x, ICD-10-PCS D*, ICD-9 92.2x, Z51.0 / V58.0).
+# SURVIVORSHIP/OTHER = history of irradiation, rad-onc provider visit, 77xxx imaging /
+# guidance / DXA / breast imaging outside 77261-77799. Q3001 (brachytherapy radioelements)
+# is classed TREATMENT (assumption; it is a brachytherapy supply code).
+OTHER_FAMILIES <- c("Personal history of irradiation",
+                    "Encounter with radiation-oncology provider (NUCC 2085R0001X)",
+                    "CPT 77xxx outside 77261-77799 (imaging / other)")
+CLASS_TREAT <- "TREATMENT"
+CLASS_OTHER <- "SURVIVORSHIP/OTHER"
+code_class_of <- function(family) {
+  dplyr::if_else(is.na(family) | family %in% OTHER_FAMILIES, CLASS_OTHER, CLASS_TREAT)
+}
+WINDOW_D <- 180L
 
 # --- SECTION 1: POPULATION ------------------------------------------------------
 message("=== Section 1: Population (Phase 202 denominator, TR radiation given) ===")
@@ -279,6 +293,7 @@ ev <- bind_rows(px_ev, dx_ev, enc_ev) |>
   inner_join(select(pop, ID, group, in_window, tr_rad_date), by = "ID") |>
   mutate(in_pipe   = in_pipeline(code, code_type),
          family    = code_family(code, code_type),
+         code_class = code_class_of(family),
          days_from_tr = as.integer(ev_date - tr_rad_date))
 message(glue("  evidence rows for the TR-radiation population: {nrow(ev)}"))
 
@@ -286,7 +301,7 @@ message(glue("  evidence rows for the TR-radiation population: {nrow(ev)}"))
 code_table <- function(d_ii, d_i) {
   agg <- function(d, sfx) {
     d |>
-      group_by(code, code_type, family, in_pipe) |>
+      group_by(code, code_type, family, code_class, in_pipe) |>
       summarise("patients_{sfx}" := n_distinct(ID), "records_{sfx}" := n(),
                 "n_dated_{sfx}" := sum(!is.na(days_from_tr)),
                 "n_within90d_{sfx}" := sum(!is.na(days_from_tr) & abs(days_from_tr) <= 90L),
@@ -294,14 +309,14 @@ code_table <- function(d_ii, d_i) {
                   as.numeric(median(days_from_tr, na.rm = TRUE)) else NA_real_,
                 .groups = "drop")
   }
-  full_join(agg(d_ii, "ii"), agg(d_i, "i"), by = c("code", "code_type", "family", "in_pipe")) |>
+  full_join(agg(d_ii, "ii"), agg(d_i, "i"), by = c("code", "code_type", "family", "code_class", "in_pipe")) |>
     mutate(across(starts_with(c("patients_", "records_", "n_dated_", "n_within90d_")),
                   ~ coalesce(.x, 0L))) |>
     arrange(desc(patients_ii), desc(patients_i), code)
 }
 display_code_table <- function(ct) {
   ct |>
-    transmute(code, code_type, description = family,
+    transmute(code, code_type, code_class, description = family,
               `patients, group ii` = fmt_sup(patients_ii),
               `records, group ii` = fmt_sup(records_ii),
               `ii: evidence dated n` = fmt_sup(n_dated_ii),
@@ -320,14 +335,17 @@ ct_all <- code_table(ev_ii, ev_i)
 # A_summary: per population scope, group (ii) and group (i)
 summ_one <- function(pp, e, label) {
   n <- nrow(pp)
-  ids_any  <- unique(e$ID[e$ID %in% pp$ID])
-  ids_out  <- unique(e$ID[e$ID %in% pp$ID & !e$in_pipe])
-  ids_th   <- unique(e$ID[e$ID %in% pp$ID & !e$in_pipe & e$family != "Personal history of irradiation"])
-  ids_pipe_only <- setdiff(ids_any, ids_out)
+  e <- e[e$ID %in% pp$ID, ]
+  ids_any   <- unique(e$ID)
+  tr_e      <- e[e$code_class == CLASS_TREAT, ]
+  ids_tr    <- unique(tr_e$ID)
+  ids_tr_w  <- unique(tr_e$ID[!is.na(tr_e$days_from_tr) & abs(tr_e$days_from_tr) <= WINDOW_D])
+  ids_other <- setdiff(ids_any, ids_tr)
   tibble(scope = label, n_patients = n,
-         n_any = length(ids_any), n_not_in_lists = length(ids_out),
-         n_not_in_lists_excl_history = length(ids_th),
-         n_only_in_lists = length(ids_pipe_only),
+         n_any = length(ids_any),
+         n_tx_window = length(ids_tr_w),
+         n_tx_any_time = length(ids_tr),
+         n_other_only = length(ids_other),
          n_none = n - length(ids_any))
 }
 sheet_A_raw <- bind_rows(
@@ -341,9 +359,11 @@ sheet_A <- sheet_A_raw |>
     `Patients (TR radiation given)` = fmt_sup(n_patients),
     `Any radiation-like evidence n` = fmt_sup(n_any),
     `Any evidence, % of patients` = pct_sup(n_any, n_patients),
-    `Evidence NOT in pipeline lists n` = fmt_sup(n_not_in_lists),
-    `Evidence NOT in pipeline lists, excluding history-of-irradiation codes n` = fmt_sup(n_not_in_lists_excl_history),
-    `Evidence only in pipeline lists n (extraction check)` = fmt_sup(n_only_in_lists),
+    `TREATMENT codes within +/-180 d of registry radiation date n` = fmt_sup(n_tx_window),
+    `TREATMENT codes within +/-180 d, % of patients` = pct_sup(n_tx_window, n_patients),
+    `TREATMENT codes at any time n` = fmt_sup(n_tx_any_time),
+    `TREATMENT codes at any time, % of patients` = pct_sup(n_tx_any_time, n_patients),
+    `SURVIVORSHIP/OTHER evidence only n (no treatment code)` = fmt_sup(n_other_only),
     `No evidence n (likely outside-network care)` = fmt_sup(n_none),
     `No evidence, % of patients` = pct_sup(n_none, n_patients))
 
@@ -388,7 +408,7 @@ sheet_KEY <- tibble(
            "ENCOUNTER / PROVIDER", "Dates", "Sheet: A_summary", "Sheet: B_codes_not_in_pipeline",
            "Sheet: C_codes_in_pipeline_but_missed", "Sheet: D_by_source", "Sheet: QC",
            "Pinned input: gantt_episodes_180", "Pinned input: TR flags",
-           "Suppression", "Status"),
+           "Suppression", "Code class", "Interpretation", "Status"),
   value = c(
     "W-RAD: radiation-like evidence for registry-radiation patients with no pipeline Radiation / Proton episode. Findings only; pipeline code lists unchanged.",
     "Phase 202 denominator patients (in gantt_episodes_180 and tr_hl_dx TRUE) with TR radiation given (build_tr_treatment_flags, UFH + ORL).",
@@ -399,7 +419,7 @@ sheet_KEY <- tibble(
     "TREATMENT_CODES radiation_cpt, proton_cpt, radiation_icd9, radiation_icd10pcs_prefixes, radiation_dx_icd10/icd9 plus DRUG_GROUPINGS Radiation. Revenue codes and Z92.3 / V15.3 / specialty are in no pipeline list.",
     if (is.null(enc_note)) "Radiation-oncology provider = PROVIDER_SPECIALTY_PRIMARY 2085R0001X (PROVIDER_SPECIALTIES). ENC_TYPE has no radiation value in PCORnet CDM, so it is not used." else as.character(enc_note),
     "Evidence dates before 1990-01-01 are treated as missing. Days from registry radiation date = evidence date - TR first radiation date.",
-    "Per scope: group counts, patients with any evidence, evidence not in pipeline lists, none.",
+    "Per scope: patients with TREATMENT codes within +/-180 d of the registry radiation date, with TREATMENT codes at any time (incl. undated), with SURVIVORSHIP/OTHER evidence only, and with no evidence. TREATMENT evidence counts all searched codes, whether or not in a pipeline list.",
     "Candidate codes to add: codes for group (ii) patients that are in no pipeline list. Counts and median days from the registry date; group (i) shown for comparison.",
     "Codes already in the pipeline lists but present for group (ii) patients. Non-empty = possible extraction or episode-building gap.",
     "Evidence by record SOURCE (site) and table.",
@@ -407,6 +427,8 @@ sheet_KEY <- tibble(
     glue("{p_gantt$path} (pinned: {p_gantt$pinned})"),
     glue("{p_flags$path} (pinned: {p_flags$pinned})"),
     "Counts 1-10 shown as '<11'; percentages only when numerator and denominator >= 11. No patient IDs in the workbook.",
+    "code_class (sheets B and C): TREATMENT = CPT 77261-77799, HCPCS G6001-G6017 / G0339 / G0340 / Q3001, revenue 033x, ICD-10-PCS D*, ICD-9 92.2x, Z51.0 / V58.0. SURVIVORSHIP/OTHER = history of irradiation (Z92.3 / V15.3), radiation-oncology provider visit (NUCC 2085R0001X), CPT 77xxx outside 77261-77799 (imaging, guidance, DXA, breast imaging).",
+    "Working conclusion (pending the A_summary numbers): the gap is consistent with radiation delivered outside the network, not a pipeline code-list gap. Most non-pipeline evidence is survivorship or non-treatment imaging, not treatment.",
     "Findings report; descriptive only."))
 
 # --- SECTION 5: WRITE -----------------------------------------------------------

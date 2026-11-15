@@ -158,8 +158,9 @@ table_by_site <- function(tbl_name, date_col) {
                   min_date = character(), max_date = character(),
                   link = "no SOURCE or ENCOUNTERID: not attributable"))
   }
+  date_sym <- rlang::sym(date_col)
   res <- base |>
-    mutate(.d = as.character(.data[[date_col]])) |>
+    mutate(.d = as.character(!!date_sym)) |>
     mutate(.d_ok = if_else(!is.na(.d) & .d >= !!SENTINEL_ISO, .d, NA_character_)) |>
     group_by(.site) |>
     summarise(n_rows = n(), n_patients = n_distinct(ID),
