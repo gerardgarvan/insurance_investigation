@@ -305,7 +305,13 @@ for (nm in names(ev_sets)) {
 # --- SECTION 4: R/203 COMPARISON ------------------------------------------------
 message("=== Section 4: Compare with R/203 (no-treatment % among observable) ===")
 r203 <- readRDS(p_203$path)
-need_cols(r203, c("ID", "group", "primary_source", "treatment_observable"), "R/203 char_pt")
+need_cols(r203, c("ID", "group", "primary_source", "first_hl_dx_date",
+                  "f_dx_before_coverage", "f_short_followup"), "R/203 char_pt")
+# treatment_observable is derived in R/203 (Section 5, lines 414-415) after char_pt is
+# built, so it is not in the saved RDS. Identical logic reproduced here.
+r203 <- r203 |>
+  mutate(treatment_observable = !is.na(first_hl_dx_date) & !f_dx_before_coverage &
+           !f_short_followup)
 c203 <- r203 |>
   mutate(primary_source = coalesce(as.character(primary_source), "(none)")) |>
   group_by(primary_source) |>
